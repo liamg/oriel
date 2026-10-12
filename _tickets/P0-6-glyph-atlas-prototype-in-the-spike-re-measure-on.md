@@ -20,7 +20,7 @@ under 1.2 ms p99; the GPU time is Gio stenciling every glyph as a path (`spikes/
 ## Do
 
 - Text through a glyph atlas (go-text shaping, rasterised coverage, stem darkening) drawn as image quads, behind the
-  spike's existing scenes. Time box: one week (`shell.md`).
+  spike's existing scenes.
 - Profile RSS (heap vs fonts vs GPU buffers) and the 2.9% idle CPU.
 - Re-run `-auto` and `-bench` on macOS against the P0-4 baseline.
 

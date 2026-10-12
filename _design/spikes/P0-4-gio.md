@@ -97,7 +97,7 @@ Measured on Liam's Mac (go1.26.5 darwin/arm64, 120 Hz, 1600×1000 @1×), 2026-10
 cost the glyph atlas removes, so 1, 3 and probably 4 hinge on it. Memory is partly fixed overhead we chose (the Go
 fonts, glyph path caches) and needs a profile before it's judged.
 
-Per `shell.md`, a failure of 1 or 2 means a week of renderer work before falling back. Next: **P0-6**, a time-boxed
+Per `shell.md`, a failure of 1 or 2 gets one focused round of renderer work before falling back. Next: **P0-6**, a time-boxed
 glyph-atlas prototype in the spike, then re-run the same commands.
 
 <details><summary>Raw macOS output</summary>
@@ -140,36 +140,64 @@ peak RSS after every scene: 212 MB
 
 </details>
 
-## For Liam to run on macOS
+## How to measure (macOS)
 
-Needs Xcode's command-line tools (for cgo). From the repo root:
+Run everything from the repo root. Close other heavy apps first, and keep the laptop on power.
+
+### 0 · Once
+
+1. Xcode command-line tools, needed for cgo: `xcode-select --install`.
+2. Java, for typometer: `brew install --cask temurin`, then check with `java -version`.
+3. Typometer: download and unzip it.
+   ```sh
+   curl -LO https://github.com/pavelfatin/typometer/releases/download/v1.0.1/typometer-1.0.1-bin.zip
+   unzip typometer-1.0.1-bin.zip -d ~/typometer
+   ```
+4. Build the spike once so later runs don't include compile time: `go build -tags spike -o /tmp/oriel-spike ./cmd/oriel-spike`.
+
+### 1 · Frame time, CPU and memory (budgets 1, 3, 4, 6)
 
 ```sh
-go run -tags spike ./cmd/oriel-spike -auto                        # windowed: the scripted run, prints every number above
-go run -tags spike ./cmd/oriel-spike -bench                       # headless, Metal: build vs GPU time per scene
-go run -tags spike ./cmd/oriel-spike -shot /tmp/spike -scales 1,2 # PNGs of every scene
-go run -tags spike ./cmd/oriel-spike -scene type                  # then point typometer at it
-go run -tags spike ./cmd/oriel-spike -scene text                  # drag to the 1× monitor and compare with a terminal
+/tmp/oriel-spike -auto     # opens a 1600×1000 window and runs every scene; ~30 s. Don't touch it.
+/tmp/oriel-spike -bench    # headless (Metal): build time vs GPU time per scene
 ```
 
-`-auto` opens a 1600×1000 window and runs:
+Paste both outputs into the thread. Run on the built-in Retina display. To also get 1× numbers, drag the `-auto` window to
+the external 1× monitor as soon as it opens.
 
-1. 120 frames of `ide`.
-2. 1200 frames of `scroll`, moving the cursor down one line every frame (held `j` at 120 Hz).
-3. 600 frames of `glow`.
-4. 60 frames of `text`.
-5. 10 s of `hud` redrawing at 4 Hz.
-6. 5 s idle.
+### 2 · Keypress-to-photon with typometer (budget 2)
 
-It prints:
+1. Start the target: `/tmp/oriel-spike -scene type`. It shows a solid background, a "TYPE HERE" label and a bar caret on
+   an empty line, which is what typometer needs.
+2. Start typometer: `java -jar ~/typometer/typometer-1.0.1/typometer-1.0.1.jar` (the exact jar name may differ; use the
+   `.jar` in the unzipped folder).
+3. macOS asks for two permissions for the app that launched Java (your terminal): **Accessibility**, so it can type,
+   and **Screen Recording**, so it can read pixels. Grant them in System Settings → Privacy & Security, then restart
+   typometer.
+4. In typometer, click **Benchmark**. When it prompts you, click into the spike window within the countdown. It types
+   `.....` to calibrate, then a run of dots, and measures each one. Leave the keyboard and mouse alone until it finishes.
+   Clicking back on typometer stops it.
+5. Run it again with a reference editor for comparison: a terminal running `nvim`, or Zed. Typometer goes through Java's
+   AWT robot on macOS, which adds its own overhead, so the comparison matters more than the absolute number.
+6. Paste the summary (min, avg, max, SD), or export the CSV, into the thread.
 
-- startup to the first presented frame
-- build, `Frame()` and frame-to-frame interval percentiles for each continuous phase (an interval p99 over 8.3 ms means dropped frames at 120 Hz)
-- CPU % for the HUD and idle phases
-- the in-app part of key latency
-- peak RSS
+### 3 · Text quality by eye (budget 3)
 
-Paste the output into this doc. On Linux, run the same commands in a Wayland session at 1.25× and 1.5×.
+1. `/tmp/oriel-spike -scene text`, then drag the window to the external 1× monitor.
+2. Next to it, open a terminal (Terminal.app or Ghostty) showing the same code at 13 px in JetBrains Mono.
+3. Compare sharpness, weight and spacing, plus emoji and CJK in the fallback rows. A screenshot of both side by side is
+   enough. Repeat on the Retina display.
+
+### 4 · Screenshots (optional)
+
+`/tmp/oriel-spike -shot /tmp/spike -scales 1,2` writes PNGs of every scene. Compare `ide` with
+`_design/mockups/01-ide.png`.
+
+### 5 · Linux (budget 5)
+
+The same commands in a **Wayland** session, with display scaling at 1.25× and then 1.5×, checking that text isn't blurry.
+They need the libraries listed in `.crit/sandbox.Dockerfile` (`pkg-config libwayland-dev libxkbcommon-dev
+libegl1-mesa-dev …`).
 
 ## What the spike found (gaps and what we do about them)
 
@@ -189,7 +217,7 @@ clipping, and fractional scaling all work through Gio's public API.
 ## Recommendation
 
 - **Not yet a go.** On macOS, 1, 4 and 6 fail, and all of them trace to glyph rendering or memory we haven't profiled.
-  Do P0-6 (glyph atlas in the spike, a week at most), re-measure, then decide. If 1 still fails, fall back per `shell.md`.
+  Do P0-6 (glyph atlas in the spike), re-measure, then decide. If 1 still fails, fall back per `shell.md`.
 - Build `typeset` (go-text shaping with features and tracking, then a glyph atlas with stem darkening) early in
   phase 1. It fixes three of the findings above.
 - Theme tokens resolve to opaque colours where the surface is known (`theming.md` already derives with `mix()`).

@@ -130,7 +130,7 @@ How everything hangs together, built and tested before features land on it.
 
 ## What "Start work" does
 
-The full inventory is roughly six to seven months of agent-heavy work. Pressing **Start work** on this plan does **phase 0** only:
+Pressing **Start work** on this plan does **phase 0** only:
 
 1. **Repo**: `liamg/oriel` (private) with `go.work`, the module skeleton from `architecture.md`, and `CLAUDE.md`/`AGENTS.md` carrying
    the rules from `testing.md`, `deps.md` and the coding style.

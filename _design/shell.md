@@ -102,7 +102,7 @@ with a CPU fallback for paths where the GPU path isn't available.
 
 None of these limits rules out anything in the mockups. Glows, blur and hinted small text are the three places to prove.
 
-## Spike before committing (2 weeks)
+## Spike before committing
 
 **Gio is approved** (`deps.md`), on condition that the spike shows it can match the mockups in `ui.md` and finds no
 limit that rules them out. Exit criterion 0: render `01-ide` and `06-review` natively, side by side with the PNGs.
@@ -121,7 +121,7 @@ Build a throwaway `oriel-spike` binary on Gio and measure it **on macOS (primary
 5. Wayland fractional scaling at 1.25× and 1.5× with no blurry text.
 6. Idle RSS under 120 MB.
 
-If 1, 2 or 5 fails and can't be fixed in a week of renderer work, fall back to
+If 1, 2 or 5 fails and one focused round of renderer work (P0-6) doesn't fix it, fall back to
 **A+J**. The core, the vim engine and the AI layers all survive that switch,
 because none of them import the UI.
 

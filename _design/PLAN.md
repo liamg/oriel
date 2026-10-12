@@ -25,7 +25,7 @@ none of the room.
 
 | Doc | Decision |
 |---|---|
-| `shell.md` | Native Go GPU app on **Gio**, behind our own `render`/`ui` seams. Electron is the fallback if a 2-week spike fails. Wails ruled out (WebKitGTK). |
+| `shell.md` | Native Go GPU app on **Gio**, behind our own `render`/`ui` seams. Electron is the fallback if the spike fails. Wails ruled out (WebKitGTK). |
 | `editor.md` | **Decided: our own vim engine in Go, all the way** (no embedded neovim), held to vim behaviour by differential tests against headless neovim. |
 | `rendering.md` | Own immediate-mode `ui` toolkit, HarfBuzz-grade shaping, glyph atlas, a handful of shader effects for the look. |
 | `sessions.md` | **Sessions, not folders.** You start work (plan, work, review, tour, job, new repo) on repos, and Oriel creates worktrees on a branch. Also a `direct` mode for editing a checkout in place, and `scratch`. The app opens on mission control, not a file dialog. |
@@ -88,18 +88,18 @@ flowchart LR
 - **Order comes from per-ticket dependencies** (`features.md` → After). `_tickets/README.md` lists what's **ready now**
   and a full topological order. Phases are just a coarse grouping of that.
 - **What Start work does**: phase 0 only (`features.md` → "What Start work does").
-- **0. Spike and repo (2 wk).** Prove Gio meets the `shell.md` budgets and can match the mockups. Repo skeleton, CI, `vimtest` and the nvim oracle.
-- **1. Framework (3–4 wk).** How everything hangs together: the core store and events, registries, the `ui` toolkit
+- **0. Spike and repo.** Prove Gio meets the `shell.md` budgets and can match the mockups. Repo skeleton, CI, `vimtest` and the nvim oracle.
+- **1. Framework.** How everything hangs together: the core store and events, registries, the `ui` toolkit
   with hover, focus and press states and springs, widgets, theme tokens, the headless snapshot backend, and the layout
   tree with drag-any-pane-anywhere. It has to look and feel right before features land on it.
-- **2. Editor core (4–6 wk).** `text`, then `vim` test-first against the oracle, then `syntax` on wazero. Usable as a plain editor.
-- **3. Shell (2–3 wk).** Session tabs, omnibox, pickers, which-key, help, Lua config.
-- **4. IDE (4 wk).** LSP, running tests, terminals, git, search. Daily-drivable without AI.
-- **5. AI (4 wk).** Worker and wire, the Claude and Codex providers, sessions, requests, plan and work.
-- **6. Review (3 wk).** Diff views, review ledger, explain, AI review, PR and Ship pages, verify.
-- **7. The rest (4 wk).** DAP, HUD and mission control, plugins and security, integrations, assistant, tours, self-update. Then cut-over: crit is archived.
+- **2. Editor core.** `text`, then `vim` test-first against the oracle, then `syntax` on wazero. Usable as a plain editor.
+- **3. Shell.** Session tabs, omnibox, pickers, which-key, help, Lua config.
+- **4. IDE.** LSP, running tests, terminals, git, search. Daily-drivable without AI.
+- **5. AI.** Worker and wire, the Claude and Codex providers, sessions, requests, plan and work.
+- **6. Review.** Diff views, review ledger, explain, AI review, PR and Ship pages, verify.
+- **7. The rest.** DAP, HUD and mission control, plugins and security, integrations, assistant, tours, self-update. Then cut-over: crit is archived.
 
-Rough total: 7 months of agent-heavy work, usable as a daily editor after phase 4.
+Usable as a daily editor after phase 4.
 
 ## Risks
 
