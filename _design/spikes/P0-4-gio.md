@@ -169,7 +169,7 @@ the external 1× monitor as soon as it opens.
 ### 2 · Keypress-to-photon with typometer (budget 2)
 
 1. Start the target: `/tmp/oriel-spike -scene type`. It shows a solid background, a "TYPE HERE" label and an empty line
-   with no caret, in a small 900×160 window. Typometer types dots and deletes them with Backspace.
+   with no caret, in a small 900×160 window, and a yellow bar that ends the line. Typometer types dots and deletes them with Backspace.
 2. Start typometer (it predates Java's module system, so it needs `--add-opens`): `$(brew --prefix openjdk)/bin/java --add-opens java.desktop/java.awt=ALL-UNNAMED -jar ~/typometer/typometer-1.0.1/typometer-1.0.1.jar` (the exact jar name may differ; use the
    `.jar` in the unzipped folder).
 3. macOS asks for two permissions for the app that launched Java (your terminal): **Accessibility**, so it can type,

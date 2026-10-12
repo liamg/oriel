@@ -263,4 +263,6 @@ func Type(c *Canvas, st *State) {
 	y := float32(60)
 	// No caret, so typometer only sees the dots it types.
 	c.codeLine(68, y, []Token{{string(st.Typed), fg, false}})
+	// Typometer takes the line to run until the background changes; this bar ends it inside the window.
+	c.Fill(Rect{780, 0, 4, IDEHeight}, accent)
 }
