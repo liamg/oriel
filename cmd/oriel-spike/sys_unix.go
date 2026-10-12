@@ -3,7 +3,11 @@
 package main
 
 import (
+	"os"
+	"os/exec"
 	"runtime"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -23,4 +27,17 @@ func peakRSS() float64 {
 		return float64(ru.Maxrss) / (1 << 20) // bytes
 	}
 	return float64(ru.Maxrss) / (1 << 10) // KB
+}
+
+// currentRSS is the process's resident set now, in MB, from ps (the same on macOS and Linux).
+func currentRSS() float64 {
+	out, err := exec.Command("ps", "-o", "rss=", "-p", strconv.Itoa(os.Getpid())).Output()
+	if err != nil {
+		return -1
+	}
+	kb, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
+	if err != nil {
+		return -1
+	}
+	return kb / 1024
 }

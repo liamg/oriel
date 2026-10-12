@@ -3,6 +3,8 @@
 **Verdict so far: provisional GO on Gio.** It reproduces `01-ide` closely, with no limit that rules out a mockup.
 The budget numbers that decide it (frame time, keypress-to-photon, 1× text, idle RSS, Wayland scaling) have to come
 from real GPUs on macOS and Linux. This sandbox only has software GL. **Status: review** until the macOS run below is in.
+P0-6 (below) adds the glyph-atlas text path and baked shapes that the first macOS run called for; its macOS numbers
+are outstanding.
 
 Code: `cmd/oriel-spike` (its own module, build tag `spike`, so the rest of the workspace builds without Gio's
 cgo headers). `scene/` holds the drawing in pure Go; `main` holds the window, headless, benchmark and compare
@@ -83,7 +85,7 @@ Measured on Liam's Mac (go1.26.5 darwin/arm64, 120 Hz, 1600×1000 @1×), 2026-10
 | # | Check (`shell.md`) | Result | Status |
 |---|---|---|---|
 | 1 | Hold `j` in a 50k-line file: frame p99 < 8 ms at 120 Hz | interval p99 11.87 ms (p50 8.33); build p99 1.13 ms, `Frame()` p99 5.38 ms; headless GPU draw p99 11.67 ms | **fail**: GPU-bound, frames dropped |
-| 2 | Keypress-to-photon < 8 ms | in-app part 3.65 ms (n=1); typometer not run yet | **open** |
+| 2 | Keypress-to-photon < 8 ms | in-app part, typing by hand in `-scene type`: n=199 p50 1.45 ms, p99 3.88 ms, max 5.53 ms | **accepted** on the in-app number; end-to-end not measured, by Liam's decision (2026-10-12) |
 | 3 | Glow on 50 elements at 120 Hz | interval p99 16.75 ms; GPU draw p99 12.6 ms | **fail** (same cause as 1) |
 | 3 | Emoji, CJK, 13 px at 1× by eye | not reported | **open** |
 | 4 | 30-pane HUD at 4 Hz < 3% CPU | 7.46% | **fail** |
@@ -97,7 +99,7 @@ Measured on Liam's Mac (go1.26.5 darwin/arm64, 120 Hz, 1600×1000 @1×), 2026-10
 cost the glyph atlas removes, so 1, 3 and probably 4 hinge on it. Memory is partly fixed overhead we chose (the Go
 fonts, glyph path caches) and needs a profile before it's judged.
 
-Per `shell.md`, a failure of 1 or 2 gets one focused round of renderer work before falling back. Next: **P0-6**, a time-boxed
+Per `shell.md`, a failure of 1 or 2 gets one focused round of renderer work before falling back. Next: **P0-6**, a
 glyph-atlas prototype in the spike, then re-run the same commands.
 
 <details><summary>Raw macOS output</summary>
@@ -120,6 +122,8 @@ hud     redrawing at 4 Hz over 10.033s: CPU 7.46% of one core (62 frames)
 ide     idle over 5.025s: CPU 2.90% of one core (2 frames)
 key event → frame presented (in-app part only): n=1 p50=3.65ms p99=3.65ms max=3.65ms
 peak RSS: 279 MB
+# -scene type, typing by hand, then Esc:
+key event → frame presented (in-app part only): n=199 p50=1.45ms p99=3.88ms max=5.53ms
 startup: first ide frame drawn 221ms after start (headless)
 RSS after the first ide frame: 146 MB (peak so far)
 go1.26.5 darwin/arm64, 300 frames per scene at 1600×1000 @1×
@@ -147,35 +151,32 @@ Run everything from the repo root. Close other heavy apps first, and keep the la
 ### 0 · Once
 
 1. Xcode command-line tools, needed for cgo: `xcode-select --install`.
-2. Java, for typometer: `brew install openjdk`. This is Homebrew's own build: keg-only, no sudo, nothing installed system-wide.
-   Run Java as `$(brew --prefix openjdk)/bin/java`.
-3. Typometer: download and unzip it.
-   ```sh
-   curl -LO https://github.com/pavelfatin/typometer/releases/download/v1.0.1/typometer-1.0.1-bin.zip
-   unzip typometer-1.0.1-bin.zip -d ~/typometer
-   ```
-4. Build the spike once so later runs don't include compile time: `go build -tags spike -o /tmp/oriel-spike ./cmd/oriel-spike`.
+2. Build the spike once so later runs don't include compile time: `go build -tags spike -o /tmp/oriel-spike ./cmd/oriel-spike`.
 
 ### 1 · Frame time, CPU and memory (budgets 1, 3, 4, 6)
 
 ```sh
-/tmp/oriel-spike -auto     # opens a 1600×1000 window and runs every scene; ~30 s. Don't touch it.
-/tmp/oriel-spike -bench    # headless (Metal): build time vs GPU time per scene
+/tmp/oriel-spike -auto -text atlas -shapes baked    # opens a 1600×1000 window and runs every scene; ~30 s. Don't touch it.
+/tmp/oriel-spike -bench -text atlas -shapes baked   # headless (Metal): build time vs GPU time per scene
+/tmp/oriel-spike -bench                             # the same with P0-4's paths, as the baseline
 ```
 
-Paste both outputs into the thread. Run on the built-in Retina display. To also get 1× numbers, drag the `-auto` window to
+`-text` picks the text path (`paths`, `atlas` or `runs`) and `-shapes` the rounded rects and borders (`paths` or
+`baked`); see P0-6 below. Paste the outputs into the thread. Run on the built-in Retina display. To also get 1× numbers, drag the `-auto` window to
 the external 1× monitor as soon as it opens.
 
 ### 2 · Keypress-to-photon (budget 2)
 
-**Use the in-app numbers plus the camera method below.** Typometer doesn't work on current macOS: tried on 2026-10-12, its
-pixel reads (Java's AWT robot) went stale. The spike kept drawing every dot, but typometer only saw them after a screenshot
-forced a refresh, so it stalled at 13/100 and reported 10–25 s "latencies".
+**Accepted on the in-app number** (Liam, 2026-10-12): run `/tmp/oriel-spike -scene type`, type for about 20 s, press
+**Esc**, and it prints key event → frame presented percentiles. End-to-end isn't measured; the camera method at the end
+of this section is optional.
 
-In-app part: run `/tmp/oriel-spike -scene type`, type for about 20 s, press **Esc**, and it prints key event → frame
-presented percentiles.
-
-The typometer steps are kept for Linux, where it reads pixels through XLib:
+Typometer doesn't work on current macOS: tried on 2026-10-12, its pixel reads (Java's AWT robot) went stale. The spike
+kept drawing every dot, but typometer only saw them after a screenshot forced a refresh, so it stalled at 13/100 and
+reported 10–25 s "latencies". The typometer steps are kept for Linux, where it reads pixels through XLib. It needs Java
+(`brew install openjdk` on a Mac, which is keg-only with no sudo; run it as `$(brew --prefix openjdk)/bin/java`) and the
+jar from `https://github.com/pavelfatin/typometer/releases/download/v1.0.1/typometer-1.0.1-bin.zip`, unzipped to
+`~/typometer`.
 
 1. Start the target: `/tmp/oriel-spike -scene type`. It shows a solid background, a "TYPE HERE" label and an empty line
    with no caret, in a small 900×160 window, and a yellow bar that ends the line. Typometer types dots and deletes them with Backspace.
@@ -192,7 +193,7 @@ The typometer steps are kept for Linux, where it reads pixels through XLib:
    AWT robot on macOS, which adds its own overhead, so the comparison matters more than the absolute number.
 6. Paste the summary (min, avg, max, SD), or export the CSV, into the thread.
 
-No-software alternative: film the keyboard and the screen together with an iPhone in 240 fps slow-mo, press a key in
+Optional, no software: film the keyboard and the screen together with an iPhone in 240 fps slow-mo, press a key in
 `-scene type` about 20 times, and count frames from key-down to the dot appearing (each frame ≈ 4.2 ms). Do the same
 with nvim in a terminal for comparison.
 
@@ -220,19 +221,106 @@ libegl1-mesa-dev …`).
 |---|---|---|
 | **Gio blends in linear light; the mockups (CSS) blend in sRGB.** A 7% green row tint came out 3× too bright (`21,66,45` vs `11,21,16`). | Every translucent token (`accentBg`, diff rows, chips, scrims, glows, opacity layers) looks far stronger than designed. | The spike remaps alpha so blending over dark surfaces matches sRGB (`Canvas.SRGBBlend`, `srgbAlpha`). Then the same pixel is `8,21,14`. For real: `theme` resolves translucent component tokens to **opaque colours over their known surface**, and `render/gio` keeps the remap for overlays over unknown backdrops. Added to `rendering.md`. |
 | **Dark text on light looks thin** (linear-light blending of glyph coverage). | The light theme (`17-light`) will look weak. | The glyph atlas with stem darkening and gamma (`rendering.md`) is needed before the light theme ships, not just for 1× sharpness. |
-| **No letter-spacing** in Gio's text API. | Every cap micro-label (`.14em`) and the brand. | Drawn glyph by glyph in the spike; `typeset` owns tracking. |
-| **No font-feature control** in Gio's shaper (go-text supports it; Gio doesn't pass it through). | Terminals and anything that sets `ligatures: none` or `ss01…`. | `typeset` shapes with go-text directly and hands glyphs or outlines to the backend. |
-| **Glyphs are vector paths stenciled every frame.** | Most of the GPU time per frame; fine on a GPU, a ceiling for big scroll scenes. | Glyph atlas (way 1 in `shell.md`), measured against this baseline. |
-| **No blur.** Glows are baked Gaussian 9-slices (`scene/glow.go`). They look right, and are cached per size, blur and colour, so animate glows with an opacity layer, not by changing their colour. | As designed in `shell.md`. | Keep; move into `render/gio` as `Effect(glow)`. |
+| **No letter-spacing** in Gio's text API. | Every cap micro-label (`.14em`) and the brand. | `typeset` owns tracking. Done in the spike's atlas path (P0-6): tracking goes after each cluster. |
+| **No font-feature control** in Gio's shaper (go-text supports it; Gio doesn't pass it through). | Terminals and anything that sets `ligatures: none` or `ss01…`. | `typeset` shapes with go-text directly. The spike's atlas path does (P0-6); feature switches aren't wired to a scene yet. |
+| **Glyphs are vector paths stenciled every frame.** | Most of the GPU time per frame; fine on a GPU, a ceiling for big scroll scenes. | Glyph atlas (way 1 in `shell.md`), built in P0-6. |
+| **Rounded rects and borders are stenciled every frame too.** | After the atlas, the HUD's 30 panes cost more than its text. | Baked 9-slices (P0-6, `-shapes baked`). |
+| **No blur.** Glows are baked Gaussian 9-slices (`scene/glow.go`). They look right, and are cached per size, blur and colour, so animate glows with an opacity layer, not by changing their colour. | As designed in `shell.md`. | Keep; move into `render/gio` as `Effect(glow)`. Images need no alpha remap (P0-6). |
 | `gioui.org/app` pulls in the Go fonts and material icons (for fallback window decorations), and IBus over D-Bus on X11. | 32 MB `vendor/`, and `godbus` (approved). | Accept. |
 
 Nothing found rules out a mockup. Glows, the opacity modal, hairlines, gradients, rounded and stroked shapes,
 clipping, and fractional scaling all work through Gio's public API.
 
+## P0-6 · Glyph atlas and baked shapes
+
+The first macOS run missed budgets 1, 3, 4 and 6, with the GPU time going to stencilled vector glyphs. P0-6 adds two
+switches to the spike, so every scene can be compared on the same build:
+
+- **`-text atlas`**: shapes with go-text directly (features and tracking), rasterises each glyph once per (face, size,
+  quarter-pixel x offset) with `x/image/vector`, and packs it, already tinted, into 1024² atlas pages with a shelf
+  packer. Each glyph draws as one quad: an offset, a rect clip and the page's `ImageOp`. Glyphs added mid-frame
+  join the page that frame. A page's `ImageOp` is replaced only after a change, so it's uploaded again only then. When
+  four pages are full the atlas starts over with fresh pages, and pages already handed to the GPU are never written.
+  Runes the bundled fonts lack (emoji, CJK, symbols) fall back to Gio's path text.
+  `scene/atlas.go`, `scene/typeset.go`; tests in `scene/atlas_test.go`.
+- **`-text runs`**: the same shaping and glyphs, composed into one cached image per run (a line of code, a label) and
+  drawn as one quad. Runs unused for two frames are dropped.
+- **`-shapes baked`**: rounded rects and borders as stretched 9-slices of a baked corner image (`scene/shapes.go`),
+  the same way glows are drawn.
+
+Text quality: atlas glyphs are slightly lighter than paths and closer to the mockup. Tracked caps now space evenly
+("EXPLORER" was uneven with paths). Against `01-ide.png`, mean difference **6.48/255 with atlas + baked**, against 7.17 for
+paths; pixels off by more than 32/255 drop from 5.47% to 5.04%. Rows: mockup, paths, atlas + baked; 1×, zoomed.
+
+![code: mockup, paths, atlas](P0-4-gio/p06-code-1x-zoom3.png)
+![labels: mockup, paths, atlas](P0-4-gio/p06-labels-1x-zoom2.png)
+
+### Numbers here (llvmpipe, so relative only)
+
+`-bench`, GPU draw p50 / p99 in ms, 300 frames per scene at 1600×1000 @1×. Building the ops stays at 1.4 ms p99 or
+less in every mode.
+
+| Scene | paths | atlas | runs | atlas + baked | runs + baked |
+|---|---|---|---|---|---|
+| `ide` | 36.5 / 41.6 | 17.4 / 25.5 | 16.5 / 23.9 | 19.5 / 24.9 | 18.6 / 25.5 |
+| `scroll` | 29.6 / 37.0 | **9.2** / 18.1 | 12.3 / 21.4 | 9.3 / 18.0 | 11.7 / 18.8 |
+| `text` | 17.2 / 19.4 | 7.0 / 9.9 | 3.3 / 4.7 | 5.8 / 7.8 | **3.0** / 4.3 |
+| `glow` | 43.7 / 51.4 | 25.1 / 35.8 | 27.8 / 34.3 | 24.4 / 33.1 | 28.2 / 37.9 |
+| `hud` | 33.0 / 36.4 | 27.7 / 38.4 | 27.9 / 37.9 | **15.7** / 22.8 | 18.8 / 25.0 |
+| `type` | 2.4 / 3.3 | 0.4 / 0.5 | 0.2 / 0.3 | 0.3 / 0.5 | 0.2 / 0.3 |
+
+- The atlas halves `ide` and cuts `scroll` by 69% and `text` by 59%. Baked shapes take the HUD from 28 to 16 ms.
+- **runs** is best for static text, and worse for scrolling, because every line entering the view composes and uploads a
+  new image. **atlas + baked** is the candidate: best or close on every scene.
+- What remains, by CPU profile: stencilled paths that are still paths (strokes, rings, icons, squiggles) and one
+  draw call per quad.
+
+### Memory
+
+`-bench` now reports RSS at each step (`ps`, so the same on macOS) and splits Go from the rest. Before anything is
+drawn, RSS goes 13 MB at start → 34 MB with fonts loaded → 108 MB with the GPU context.
+
+| | paths | atlas | runs | atlas + baked |
+|---|---|---|---|---|
+| after the first `ide` frame | 192 MB | 153 MB | 150 MB | 156 MB |
+| after every scene, after returning free Go memory | 327 MB | 290 MB | 265 MB | 243 MB |
+| Go heap in use / Go runtime total | 18 / 89 MB | 18 / 61 MB | 13 / 49 MB | 18 / 61 MB |
+
+- Go's own heap is under 20 MB. Most of RSS is outside Go: here, 75 MB for creating the GL context alone, plus
+  llvmpipe's buffers, which count as RAM because there's no GPU. Fonts (bundled plus the system font index) are ~20 MB.
+- So the 120 MB budget is mostly a question of what Metal and AppKit cost on a Mac. The new `-bench` lines give that
+  split there. The first macOS number (146 MB) was **peak** RSS from `getrusage`, not idle RSS; `-auto` and `-bench` now
+  print the current RSS too.
+
+### Fixes to the measurements
+
+- **The windowed loop built a new canvas every frame**, so in `-auto` every glow was baked and uploaded again on every
+  frame, and font metrics were re-measured. `-bench` didn't do this. That inflated the first macOS run's windowed `glow`
+  and `hud` numbers and its 279 MB peak. The canvas now lives across frames (`Canvas.Begin`).
+- **Idle and HUD CPU included the scene switch**: the first frame of a new scene, with its cache filling, inside a
+  5 s window that only had two frames. Timed phases now start after the scene's first frame and a GC.
+- **Images don't need the alpha remap.** Gio samples images as premultiplied sRGB, which already blends like CSS over a
+  dark backdrop, so the remap made glows fainter than designed. Removed for glows, baked shapes and atlas glyphs. Only
+  solid fills keep it. `rendering.md` updated.
+
+### For Liam (macOS)
+
+```sh
+go build -tags spike -o /tmp/oriel-spike ./cmd/oriel-spike
+/tmp/oriel-spike -auto -text atlas -shapes baked
+/tmp/oriel-spike -bench -text atlas -shapes baked
+/tmp/oriel-spike -bench                              # P0-4's paths baseline on the same build
+```
+
+Optionally `-text runs -shapes baked` too. Paste the outputs into the thread; they decide budgets 1, 3, 4 and 6.
+
+**Status: review**, waiting on those numbers.
+
 ## Recommendation
 
-- **Not yet a go.** On macOS, 1, 4 and 6 fail, and all of them trace to glyph rendering or memory we haven't profiled.
-  Do P0-6 (glyph atlas in the spike), re-measure, then decide. If 1 still fails, fall back per `shell.md`.
+- **Not yet a go.** On macOS, 1, 4 and 6 failed with Gio's path text. P0-6 built the atlas and baked shapes; decide on
+  the next macOS run of `-text atlas -shapes baked`. If 1 still fails, fall back per `shell.md`.
 - Build `typeset` (go-text shaping with features and tracking, then a glyph atlas with stem darkening) early in
-  phase 1. It fixes three of the findings above.
+  phase 1, from the spike's `scene/atlas.go` and `scene/typeset.go`. `render/gio` draws rounded rects and borders as
+  baked 9-slices.
 - Theme tokens resolve to opaque colours where the surface is known (`theming.md` already derives with `mix()`).

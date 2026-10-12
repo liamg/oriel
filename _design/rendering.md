@@ -23,6 +23,8 @@ flowchart TB
   comes from a handful of cheap shader effects, never from 3D.
 - Implemented first on Gio's `op` lists. Effects Gio lacks (blur, glow) are
   drawn with prebaked textures until we own a renderer.
+- Gio stencils every path on every frame, so `render/gio` draws rounded rects and borders as stretched 9-slices of
+  baked corner images, as it does glows (P0-6: halves the HUD scene's draw time; `spikes/P0-4-gio.md`).
 
 ## Text (`typeset`)
 
@@ -30,12 +32,15 @@ flowchart TB
 - Fonts: bundled JetBrains Mono, Inter and Space Grotesk, plus system fallback via fontconfig and CoreText.
 - Rasterise to a **glyph atlas**, keyed by (font, size, subpixel x-offset in quarters).
   Grayscale AA by default; subpixel LCD AA when the backend allows.
+- Gio can't tint an image, so `render/gio`'s atlas holds glyphs already tinted, keyed by colour too, over a
+  colour-free coverage cache. A backend with its own shaders samples one coverage atlas and tints in the shader.
 - Monospace fast path: shape a whole line once, cache it by content hash, and
   reuse it while the line is unchanged.
 - Proportional text (plan docs, threads, tours) goes through the same pipeline,
   with paragraph layout and line breaking (UAX #14).
-- Gamma-correct blending and stem darkening for light-on-dark text. This is
-  most of what makes the difference between "terminal" and "beautiful".
+- Gamma-correct blending and stem darkening. This is most of what makes the difference between "terminal" and
+  "beautiful". Coverage is mapped so Gio's blending matches CSS: light text against black, dark text against white,
+  with dark text's coverage raised to the power 1/1.25 (`scene/atlas.go` in the spike).
 - Letter-spacing (tracking) and font features (`liga`, `calt`, `ss01`…) are `typeset`'s job: Gio's text API
   has neither, so `typeset` shapes with go-text directly (P0-4).
 
@@ -44,7 +49,9 @@ flowchart TB
 - Gio blends in **linear light**; CSS, and so the mockups, blend in sRGB. A translucent token that looks right in
   a mockup comes out much stronger in Gio (a 7% tint about 3× as bright; `spikes/P0-4-gio.md`).
 - So `theme` resolves translucent component tokens to **opaque colours over the surface they sit on**, and
-  `render/gio` remaps alpha for overlays whose backdrop isn't known (scrims, glows, opacity layers).
+  `render/gio` remaps alpha for solid fills whose backdrop isn't known (scrims, opacity layers).
+- Images are different: Gio samples them as premultiplied sRGB, which already blends like CSS over a dark backdrop.
+  Glows, baked shapes and the glyph atlas take their colours unchanged (P0-6).
 - Dark text on light looks thin under linear blending, so the glyph atlas's gamma and stem darkening must land
   before the light theme.
 
@@ -109,7 +116,8 @@ type Shaper interface {
 }
 
 type Atlas interface {
-    Glyph(font FontID, gid GlyphID, size float32, subpx uint8) (TexRegion, error)
+    // c is ignored by atlases that tint in a shader; render/gio's atlas keys by it.
+    Glyph(font FontID, gid GlyphID, size float32, subpx uint8, c Color) (TexRegion, error)
 }
 ```
 

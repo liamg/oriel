@@ -32,6 +32,7 @@ func render(s scene.Scene, st *scene.State, scale float32) (*image.RGBA, error) 
 	}
 	var ops op.Ops
 	c := scene.NewCanvas(&ops, sh, scale)
+	c.Mode, c.BakedShapes = textMode, bakedShapes
 	s.Draw(c, st)
 	if err := win.Frame(&ops); err != nil {
 		return nil, err

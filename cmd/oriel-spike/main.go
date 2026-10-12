@@ -10,6 +10,14 @@ import (
 	"os"
 	"runtime/pprof"
 	"strings"
+
+	"github.com/liamg/oriel/cmd/oriel-spike/scene"
+)
+
+var (
+	textMode    scene.TextMode
+	bakedShapes bool
+	memProfile  string
 )
 
 func main() {
@@ -20,7 +28,16 @@ func main() {
 	cmp := flag.String("compare", "", "mockup.png,native.png,out.png: write them side by side with a diff")
 	sceneName := flag.String("scene", "ide", "windowed: the scene to open (ide, scroll, text, glow, hud, type)")
 	cpuprofile := flag.String("cpuprofile", "", "write a CPU profile here")
+	memprofile := flag.String("memprofile", "", "write a heap profile here on exit (-bench)")
+	textFlag := flag.String("text", "paths", "text path: paths (Gio vector glyphs), atlas (glyph atlas quads) or runs (one cached image per run)")
+	shapesFlag := flag.String("shapes", "paths", "rounded rects and borders: paths, or baked (9-slices of baked corners)")
 	flag.Parse()
+	mode, err := scene.ParseTextMode(*textFlag)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "oriel-spike:", err)
+		os.Exit(2)
+	}
+	textMode, memProfile, bakedShapes = mode, *memprofile, *shapesFlag == "baked"
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err == nil {
@@ -29,7 +46,6 @@ func main() {
 		}
 	}
 
-	var err error
 	switch {
 	case *shot != "":
 		err = shots(*shot, *scales)

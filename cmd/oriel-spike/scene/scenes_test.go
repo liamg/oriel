@@ -12,14 +12,18 @@ func TestScenesDraw(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, s := range All() {
-		for _, scale := range []float32{1, 1.25, 2} {
-			var ops op.Ops
-			c := NewCanvas(&ops, sh, scale)
-			st := NewState()
-			for i := range 3 {
-				st.Frame, st.T, st.Line = i, float64(i)/4, FileLines+i
-				ops.Reset()
-				s.Draw(c, st)
+		for _, mode := range []TextMode{TextPaths, TextAtlas, TextRuns} {
+			for _, scale := range []float32{1, 1.25, 2} {
+				var ops op.Ops
+				c := NewCanvas(&ops, sh, scale)
+				c.Mode, c.BakedShapes = mode, mode != TextPaths
+				st := NewState()
+				for i := range 3 {
+					st.Frame, st.T, st.Line = i, float64(i)/4, FileLines+i
+					ops.Reset()
+					c.Begin(&ops, scale)
+					s.Draw(c, st)
+				}
 			}
 		}
 	}

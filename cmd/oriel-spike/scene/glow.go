@@ -33,10 +33,10 @@ func (c *Canvas) Glow(r Rect, blur float32, col color.NRGBA) {
 	k := glowKey{cw, ch, pad, sigma, col, false}
 	img, ok := c.glows[k]
 	if !ok {
-		img = paint.NewImageOp(boxGlow(w, h, cw, ch, pad, sigma, col, c.SRGBBlend))
+		img = paint.NewImageOp(boxGlow(w, h, cw, ch, pad, sigma, col))
 		c.glows[k] = img
 	}
-	c.nineSlice(img, cw+2*pad, ch+2*pad, ir.Inset(-pad))
+	c.nineSlice(img, cw+2*pad, ch+2*pad, ir.Inset(-pad), false)
 }
 
 // GlowDisc draws a glow around a circle of radius r centred on (cx, cy).
@@ -47,7 +47,7 @@ func (c *Canvas) GlowDisc(cx, cy, r, blur float32, col color.NRGBA) {
 	k := glowKey{d, d, pad, sigma, col, true}
 	img, ok := c.glows[k]
 	if !ok {
-		img = paint.NewImageOp(discGlow(d, pad, sigma, col, c.SRGBBlend))
+		img = paint.NewImageOp(discGlow(d, pad, sigma, col))
 		c.glows[k] = img
 	}
 	x := int(math.Round(float64(cx*c.Scale))) - d/2 - pad
@@ -59,7 +59,7 @@ func (c *Canvas) GlowDisc(cx, cy, r, blur float32, col color.NRGBA) {
 
 // boxGlow bakes the blurred box. When the box is wider (taller) than cw (ch), only its
 // edges are baked and the middle column (row) is stretched.
-func boxGlow(w, h, cw, ch, pad int, sigma float32, col color.NRGBA, srgb bool) *image.NRGBA {
+func boxGlow(w, h, cw, ch, pad int, sigma float32, col color.NRGBA) *image.NRGBA {
 	prof := func(n, core int) []float64 {
 		out := make([]float64, core+2*pad)
 		for i := range out {
@@ -76,13 +76,13 @@ func boxGlow(w, h, cw, ch, pad int, sigma float32, col color.NRGBA, srgb bool) *
 	img := image.NewNRGBA(image.Rect(0, 0, len(px), len(py)))
 	for y, vy := range py {
 		for x, vx := range px {
-			img.SetNRGBA(x, y, glowPixel(col, vx*vy, srgb))
+			img.SetNRGBA(x, y, glowPixel(col, vx*vy))
 		}
 	}
 	return img
 }
 
-func discGlow(d, pad int, sigma float32, col color.NRGBA, srgb bool) *image.NRGBA {
+func discGlow(d, pad int, sigma float32, col color.NRGBA) *image.NRGBA {
 	n := d + 2*pad
 	r := float64(d) / 2
 	c := float64(n) / 2
@@ -135,19 +135,20 @@ func discGlow(d, pad int, sigma float32, col color.NRGBA, srgb bool) *image.NRGB
 					v += tmp[yy*n+x] * kv
 				}
 			}
-			img.SetNRGBA(x, y, glowPixel(col, v, srgb))
+			img.SetNRGBA(x, y, glowPixel(col, v))
 		}
 	}
 	return img
 }
 
 // nineSlice draws a tw×th texture into dst, stretching its middle row and column.
-func (c *Canvas) nineSlice(img paint.ImageOp, tw, th int, dst image.Rectangle) {
+// hollow skips the middle piece, for borders.
+func (c *Canvas) nineSlice(img paint.ImageOp, tw, th int, dst image.Rectangle, hollow bool) {
 	xs := splits(tw, dst.Min.X, dst.Dx())
 	ys := splits(th, dst.Min.Y, dst.Dy())
-	for _, sy := range ys {
-		for _, sx := range xs {
-			if sx.dn <= 0 || sy.dn <= 0 {
+	for j, sy := range ys {
+		for i, sx := range xs {
+			if sx.dn <= 0 || sy.dn <= 0 || hollow && i == 1 && j == 1 {
 				continue
 			}
 			cl := clip.Rect(image.Rect(sx.d0, sy.d0, sx.d0+sx.dn, sy.d0+sy.dn)).Push(c.Ops)
@@ -172,10 +173,9 @@ func splits(tn, d0, dn int) []span {
 	return []span{{0, m, d0, m}, {m, 1, d0 + m, dn - m - right}, {m + 1, right, d0 + dn - right, right}}
 }
 
-func glowPixel(col color.NRGBA, cov float64, srgb bool) color.NRGBA {
+// glowPixel is col at coverage cov. Gio samples images as premultiplied sRGB, which already
+// blends like CSS, so unlike solid fills the alpha needs no remapping.
+func glowPixel(col color.NRGBA, cov float64) color.NRGBA {
 	a := cov * float64(col.A) / 255
-	if srgb {
-		a = srgbAlpha(a, float64(max(col.R, col.G, col.B))/255)
-	}
 	return color.NRGBA{col.R, col.G, col.B, uint8(math.Min(255, math.Round(a*255)))}
 }

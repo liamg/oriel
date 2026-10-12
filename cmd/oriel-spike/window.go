@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"gioui.org/app"
@@ -68,6 +69,8 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 		return err
 	}
 	var ops op.Ops
+	c := scene.NewCanvas(&ops, sh, 1)
+	c.Mode, c.BakedShapes = textMode, bakedShapes
 	st := scene.NewState()
 	start := time.Now()
 	var firstFrame time.Duration
@@ -129,7 +132,7 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 			gtx.Execute(key.SnippetCmd{Tag: tag, Snippet: key.Snippet{Range: key.Range{Start: 0, End: n}, Text: string(st.Typed)}})
 			gtx.Execute(key.SelectionCmd{Tag: tag, Range: key.Range{Start: n, End: n}})
 			st.T = time.Since(start).Seconds()
-			c := scene.NewCanvas(gtx.Ops, sh, gtx.Metric.PxPerDp)
+			c.Begin(gtx.Ops, gtx.Metric.PxPerDp)
 			s.Draw(c, st)
 			t1 := time.Now()
 			e.Frame(gtx.Ops)
@@ -152,6 +155,12 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 			p := script[pi]
 			if pframes == 0 {
 				pstart, pcpu = t0, cpuTime()
+				if p.frames == 0 {
+					// Timed phases start after the scene's first frame and a GC, so they measure
+					// the steady state rather than the switch.
+					runtime.GC()
+					pstart, pcpu = time.Now(), cpuTime()
+				}
 			} else {
 				ps := &stats[pi]
 				ps.build = append(ps.build, t1.Sub(t0))
@@ -204,6 +213,7 @@ func printKeys(auto bool, keys scene.Durations) {
 }
 
 func report(first time.Duration, stats []phaseStats, keys scene.Durations) {
+	fmt.Printf("text=%s shapes=%s\n", textMode, map[bool]string{false: "paths", true: "baked"}[bakedShapes])
 	fmt.Printf("startup: first frame presented %s after start\n", first.Round(time.Millisecond))
 	for i, p := range script {
 		ps := stats[i]
@@ -213,10 +223,11 @@ func report(first time.Duration, stats []phaseStats, keys scene.Durations) {
 			continue
 		}
 		cpu := 100 * ps.cpu.Seconds() / ps.wall.Seconds()
-		fmt.Printf(" %s over %s: CPU %.2f%% of one core (%d frames)\n", map[bool]string{true: "redrawing at 4 Hz", false: "idle"}[p.invalidate > 0], ps.wall.Round(time.Millisecond), cpu, len(ps.build))
+		fmt.Printf(" %s over %s: CPU %.2f%% of one core (%d frames)\n", map[bool]string{true: "redrawing at 4 Hz", false: "idle"}[p.invalidate > 0]+" (after its first frame)", ps.wall.Round(time.Millisecond), cpu, len(ps.build))
 	}
 	if len(keys) > 0 {
 		fmt.Printf("key event → frame presented (in-app part only): %s\n", keys)
 	}
 	fmt.Printf("peak RSS: %.0f MB\n", peakRSS())
+	memReport(os.Stdout)
 }
