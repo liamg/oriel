@@ -457,6 +457,27 @@ after `text` and `glow` well under the old 900 MB, and the fallback fonts listed
 
 **Status: review**, waiting on run 4.
 
+### macOS run 4 (2026-10-12): after the run 3 follow-ups
+
+Window 1600×1000 px at 1×, `-text atlas -shapes baked`, window in front and untouched.
+
+| # | Budget | Result | |
+|---|---|---|---|
+| 1 | scroll p99 < 8 ms @120 Hz | `frame()` p99 **3.54 ms**; interval p50 8.33, p99 **8.63**, max 9.81 (one vsync, no drops) | ✓ |
+| 2 | key → photon < 8 ms | in-app p99 3.88 ms (accepted, end-to-end not measured) | ✓ |
+| 3 | glow at 120 Hz | `frame()` p99 6.19 ms; interval p99 9.36, max 13.42; GPU pipelined 4.67 ms | ✓ |
+| 4 | HUD 4 Hz < 3% CPU | **4.57%**: 9.47 ms CPU per frame = build 0.98 + `frame()` 4.10 + rest 4.39 | ✗ |
+| 6 | idle RSS < 120 MB | 125 MB windowed at the first frame; 66 MB headless; 159–203 MB after every scene's caches | ≈ |
+| – | pacing | 2 late frames at startup only (103 and 198 ms after due); none in steady state | SH-1 |
+| – | fallback fonts | Apple Symbols, Hiragino Sans GB, Apple SD Gothic Neo loaded; RSS after the text scene 109 MB (was 903) | ✓ |
+| – | idle CPU | 0.18% | ✓ |
+
+- **HUD:** our code is 1 ms of the 9.5 ms. The rest is Gio's `frame()` and AppKit's present on a CPU that has clocked
+  down between 4 Hz frames; the idle scene's single frame costs the same 9 ms. So any full-window redraw at 4 Hz costs
+  about 3.5–4.5% on this Mac, whatever it draws. 3% at 4 Hz isn't reachable by drawing less.
+- **RSS:** the first frame sits at the budget. Growth after that is caches (atlas pages, baked glows, fallback faces)
+  with no limits yet, which `render/gio` gets.
+
 ## Recommendation
 
 **What's proven on the Mac:** rendering fits the budgets. GPU time per frame under load is 2–5.4 ms in every scene,
@@ -470,8 +491,8 @@ Text matches the mockup more closely than before.
   often the HUD redraws, not on Gio.
 
 **Nothing found argues against Gio.** The two costs that are Gio's, stencilling every path and every scaled image, have
-clean workarounds (the atlas and integer-offset 9-slices). They belong in `render/gio` from the start. If run 4 holds,
-**go**: SH-1 starts on Gio.
+clean workarounds (the atlas and integer-offset 9-slices). They belong in `render/gio` from the start. Run 4 confirms:
+**go**. SH-1 starts on Gio, carrying the startup pacing, cache limits and the HUD redraw rate (pending Liam's call on budget 4).
 
 - Build `typeset` (go-text shaping with features and tracking, then a glyph atlas with stem darkening) early in
   phase 1, from the spike's `scene/atlas.go` and `scene/typeset.go`. `render/gio` draws rounded rects and borders as
