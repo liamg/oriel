@@ -24,6 +24,11 @@ button (scripted manual check on macOS), and Orca does the same on Linux.
 
 ## Notes
 
+- **Deferred** (Liam, 2026-10-12): phase 1 closes without it, and FW-10 waits in review for it.
+- The plan, no new dependency either way: on macOS, our own `NSAccessibilityElement`s set as the children of Gio's
+  `NSView` (from `app.AppKitViewEvent`), through cgo in `render/gio` under `darwin` (Gio needs cgo there already); on
+  Linux, pure Go: an AT-SPI tree over D-Bus with our own small D-Bus client on the standard library.
+
 - Gio has no accessibility support, so the bridge reaches the platform itself: either AccessKit's C library through
   cgo (a new dependency: ask first, `deps.md`), or our own NSAccessibility elements on Gio's NSView (Objective-C
   through cgo) and an AT-SPI tree over D-Bus.
