@@ -51,9 +51,13 @@ func IDE(c *Canvas) {
 
 func (c *Canvas) logo(x, cy, size float32) {
 	s := size / 100
-	c.GlowDisc(x+38*s, cy+3*s, 21*s, 8*s, rgba(0xffaa28, .35))
+	// The SVG mark: a ring and a bar with the same top and bottom (28 to 78 of 100), under
+	// drop-shadow(0 0 4px). The bar isn't snapped to pixels, so it stays level with the ring.
+	cursor := Rect{x + 68*s, cy + (28-50)*s, 13 * s, 50 * s}
+	c.GlowDisc(x+38*s, cy+3*s, 25*s, 4, rgba(0xffaa28, .22))
+	c.Glow(cursor, 4, rgba(0xffaa28, .3))
 	c.Ring(x+38*s, cy+(53-50)*s, 21*s, 8*s, accent)
-	c.Fill(Rect{x + 68*s, cy + (28-50)*s, 13 * s, 50 * s}, brand2)
+	c.FillFree(cursor, brand2)
 }
 
 func (c *Canvas) titlebar() {

@@ -49,6 +49,13 @@ func (r Rect) r() render.Rect { return render.XYWH(r.X, r.Y, r.W, r.H) }
 
 func (c *Canvas) Fill(r Rect, col color.NRGBA) { c.F.Rect(r.r(), render.Style{Fill: col}) }
 
+// FillFree paints r at its exact position, antialiased rather than snapped to device pixels.
+func (c *Canvas) FillFree(r Rect, col color.NRGBA) {
+	p := new(render.Path).MoveTo(render.Point{X: r.X, Y: r.Y}).LineTo(render.Point{X: r.X + r.W, Y: r.Y}).
+		LineTo(render.Point{X: r.X + r.W, Y: r.Y + r.H}).LineTo(render.Point{X: r.X, Y: r.Y + r.H}).Close()
+	c.F.Path(p, render.Style{Fill: col})
+}
+
 func (c *Canvas) RRect(r Rect, rad float32, col color.NRGBA) {
 	c.F.Rect(r.r(), render.Style{Fill: col, Radius: rad})
 }
