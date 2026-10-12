@@ -97,12 +97,15 @@ flowchart TB
 // package render — what a backend (Gio now, wgpu later) implements
 type Backend interface {
     NewWindow(o WindowOpts) (Window, error)
+    Shaper() typeset.Shaper                       // the backend's fonts; the headless one is fixed-pitch
 }
 
 type Window interface {
-    Frame(fn func(f Frame)) error                 // called on vsync when damaged
-    Events() <-chan Event                         // keys, IME, pointer, resize, scale, focus
+    Frame(fn func(f Frame)) error                 // draws one frame; the app calls it when state or input changed
+    Events() <-chan Event                         // keys, IME, pointer, resize, scale, focus; closed when the window is
     Scale() float32
+    Size() Point                                  // logical pixels
+    Close()
 }
 
 type Frame interface {

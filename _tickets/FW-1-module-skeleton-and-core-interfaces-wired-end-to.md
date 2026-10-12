@@ -2,7 +2,7 @@
 id: FW-1
 title: "Module skeleton and core interfaces wired end to end: app → core.Store → registry → a view"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: all
 depends_on: [P0-1]

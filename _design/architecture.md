@@ -75,12 +75,12 @@ flowchart LR
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear, slack, ical; agentbus via the `oriel-agentbus` helper process (keeps its sqlite dependency out of Oriel) | core |
-| `render` | GPU surface interface; `render/gio` impl | – |
+| `render` | GPU surface interface; `render/typeset` (shaping, atlas); `render/headless` (records display lists, for tests); `render/gio` impl | – |
 | `ui` | widgets, layout, theme, animation, input routing | render |
 | `app` | the desktop app: screens, panels, HUD; wires it all together | everything |
-| `registry` | contribution registry: commands, events/hooks, options, views, decorations | – |
+| `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`) |
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
-| `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry |
+| `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
 | `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker |
 | `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. The only module that imports Gio until `render/gio` | gioui.org |
@@ -89,7 +89,7 @@ flowchart LR
 
 Rules:
 
-- `text`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` never import `ui` or `render`.
+- `text`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` never import `ui` or `render`. `tools/layout` reads this line and fails on any such import, tests included.
 - Every "swap me" seam is an interface in the consumer package, with impls in subpackages.
 - Each module has its own tests; `vim` has the nvim conformance suite.
 - Every module is listed in `go.work`, and `tools/layout` fails if a module in this table has no directory or a `go.mod` is missing from `go.work`.

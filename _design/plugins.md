@@ -147,13 +147,18 @@ first open the way direnv works.
 // package registry — everything registers here, from any tier
 type Registry interface {
     Command(c Command) Disposable
+    Keymap(k Keymap) Disposable                   // keys in vim notation → a command, per mode
     Option(o OptionSpec) Disposable               // fields and the settings page: settings.md
-    View(id string, v View) Disposable            // override = register the same id later
+    View(id string, v View) Disposable            // override = register the same id later; disposing it restores the one beneath
     Decorations(id string, p DecorationProvider) Disposable
     Input(e input.Engine) Disposable
     Provider(p agent.Provider) Disposable
     AgentTool(t AgentTool) Disposable
     Theme(t theme.Source) Disposable
+
+    Run(ctx Ctx, id string, args Args) error      // every tier runs commands the same way
+    Key(mode, keys string) (Keymap, bool)
+    ViewByID(id string) (View, bool)
 }
 
 type Command struct {
@@ -172,6 +177,13 @@ func On[E any](r Registry, h Hook[E], opts ...HookOpt) Disposable
 type CommentSend struct{ Thread ThreadID; Body string; Urgent bool }
 type Permission  struct{ Session SessionID; Tool string; Input json.RawMessage; Decision *Decision }
 type Commit      struct{ Project string; Message string; Unread int }
+
+type Keymap struct {
+    Mode    string                                // "n", "i", or a panel's own mode ("requests")
+    Keys    string                                // "x", "<C-w>"
+    Command string
+    Args    Args
+}
 
 type View interface {
     Build(ctx ViewCtx) ui.Node                    // pure: state in, tree out
