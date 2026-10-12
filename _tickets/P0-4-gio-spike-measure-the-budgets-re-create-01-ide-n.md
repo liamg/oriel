@@ -2,7 +2,7 @@
 id: P0-4
 title: "Gio spike: measure the budgets, re-create 01-ide natively, go/no-go report"
 phase: P0
-status: review
+status: done
 area: Spike and repo
 module: -
 depends_on: [P0-1]

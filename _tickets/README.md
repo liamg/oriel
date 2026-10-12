@@ -12,8 +12,8 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 
 ## Ready now (no unmet dependencies)
 
-- [P0-1](P0-1-repo-skeleton-go-work-module-stubs-from-architec.md): Repo skeleton: go.work, module stubs from architecture.md
-- [P0-5](P0-5-codex-app-server-billing-check-subscription-or-p.md): Codex app-server billing check: subscription or per-token
+- [FW-1](FW-1-module-skeleton-and-core-interfaces-wired-end-to.md): Module skeleton and core interfaces wired end to end
+- [SH-1](SH-1-window-gpu-rendering-hidpi-and-1-text.md): Window, GPU rendering, HiDPI and 1× text
 
 ## Suggested order
 

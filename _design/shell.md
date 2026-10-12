@@ -117,7 +117,7 @@ Build a throwaway `oriel-spike` binary on Gio and measure it **on macOS (primary
    **Code text at 13 px on a 1× monitor next to the same text in a FreeType-hinted terminal**: if it's visibly softer,
    prototype the glyph-atlas path (way 1 above) before deciding.
    Also a 9-slice glow on 50 elements at 120 Hz, and an opacity-layer modal over a live editor.
-4. A 30-pane HUD redrawing at 4 Hz uses under 3% CPU.
+4. A 30-pane HUD redrawing at 4 Hz uses under 5% CPU (any full-window redraw at 4 Hz costs ~4% on macOS; see the spike report).
 5. Wayland fractional scaling at 1.25× and 1.5× with no blurry text.
 6. Idle RSS under 120 MB.
 

@@ -29,6 +29,13 @@ depends_on: [P0-4, P0-6]
 
 spike budgets met on macOS and Linux (`shell.md`); `01-ide` re-created natively and side by side with the PNG
 
+## Carried from the spike (`spikes/P0-4-gio.md`)
+
+- `render/gio` builds on the spike: go-text shaping into a glyph atlas, baked 9-slices at whole pixels, no image drawn under a scale.
+- Every `InvalidateCmd` is executed before `Frame`. Startup still showed 2 late frames (100–200 ms); fix them.
+- Size limits on the atlas, glow and fallback-font caches, so idle RSS stays near 120 MB after a session of use.
+- Fallback fonts mapped, one face at a time, off the frame path. Colour emoji (CoreText) is an open decision.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

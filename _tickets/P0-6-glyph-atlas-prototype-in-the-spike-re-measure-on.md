@@ -2,7 +2,7 @@
 id: P0-6
 title: "Glyph-atlas prototype in the spike; re-measure on macOS; go/no-go"
 phase: P0
-status: review
+status: done
 area: Spike and repo
 module: -
 depends_on: [P0-4]

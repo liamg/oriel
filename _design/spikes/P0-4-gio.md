@@ -466,7 +466,7 @@ Window 1600×1000 px at 1×, `-text atlas -shapes baked`, window in front and un
 | 1 | scroll p99 < 8 ms @120 Hz | `frame()` p99 **3.54 ms**; interval p50 8.33, p99 **8.63**, max 9.81 (one vsync, no drops) | ✓ |
 | 2 | key → photon < 8 ms | in-app p99 3.88 ms (accepted, end-to-end not measured) | ✓ |
 | 3 | glow at 120 Hz | `frame()` p99 6.19 ms; interval p99 9.36, max 13.42; GPU pipelined 4.67 ms | ✓ |
-| 4 | HUD 4 Hz < 3% CPU | **4.57%**: 9.47 ms CPU per frame = build 0.98 + `frame()` 4.10 + rest 4.39 | ✗ |
+| 4 | HUD 4 Hz < 5% CPU (raised from 3% by Liam) | **4.57%**: 9.47 ms CPU per frame = build 0.98 + `frame()` 4.10 + rest 4.39 | ✓ |
 | 6 | idle RSS < 120 MB | 125 MB windowed at the first frame; 66 MB headless; 159–203 MB after every scene's caches | ≈ |
 | – | pacing | 2 late frames at startup only (103 and 198 ms after due); none in steady state | SH-1 |
 | – | fallback fonts | Apple Symbols, Hiragino Sans GB, Apple SD Gothic Neo loaded; RSS after the text scene 109 MB (was 903) | ✓ |
@@ -492,7 +492,7 @@ Text matches the mockup more closely than before.
 
 **Nothing found argues against Gio.** The two costs that are Gio's, stencilling every path and every scaled image, have
 clean workarounds (the atlas and integer-offset 9-slices). They belong in `render/gio` from the start. Run 4 confirms:
-**go**. SH-1 starts on Gio, carrying the startup pacing, cache limits and the HUD redraw rate (pending Liam's call on budget 4).
+**go**. SH-1 starts on Gio, carrying the startup pacing and cache limits. Budget 4 is now 5% at 4 Hz (Liam, 2026-10-12).
 
 - Build `typeset` (go-text shaping with features and tracking, then a glyph atlas with stem darkening) early in
   phase 1, from the spike's `scene/atlas.go` and `scene/typeset.go`. `render/gio` draws rounded rects and borders as
