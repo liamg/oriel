@@ -120,10 +120,14 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 					}
 					pendingKey = t0
 				case key.EditEvent:
-					st.Typed = append(st.Typed, []rune(ev.Text)...)
+					st.Typed = replaceRunes(st.Typed, ev.Range, ev.Text)
 					pendingKey = t0
 				}
 			}
+			// Keep the platform's text-input state in step with ours, as a real editor must.
+			n := len(st.Typed)
+			gtx.Execute(key.SnippetCmd{Tag: tag, Snippet: key.Snippet{Range: key.Range{Start: 0, End: n}, Text: string(st.Typed)}})
+			gtx.Execute(key.SelectionCmd{Tag: tag, Range: key.Range{Start: n, End: n}})
 			st.T = time.Since(start).Seconds()
 			c := scene.NewCanvas(gtx.Ops, sh, gtx.Metric.PxPerDp)
 			s.Draw(c, st)
@@ -181,6 +185,15 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 			}
 		}
 	}
+}
+
+// replaceRunes replaces the runes in r (clamped to t) with text.
+func replaceRunes(t []rune, r key.Range, text string) []rune {
+	start, end := min(r.Start, r.End), max(r.Start, r.End)
+	start, end = max(0, min(start, len(t))), max(0, min(end, len(t)))
+	out := append([]rune{}, t[:start]...)
+	out = append(out, []rune(text)...)
+	return append(out, t[end:]...)
 }
 
 // printKeys reports key latency when a manual (non -auto) run ends.
