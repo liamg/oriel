@@ -170,7 +170,7 @@ the external 1× monitor as soon as it opens.
 
 1. Start the target: `/tmp/oriel-spike -scene type`. It shows a solid background, a "TYPE HERE" label and a bar caret on
    an empty line, which is what typometer needs.
-2. Start typometer: `$(brew --prefix openjdk)/bin/java -jar ~/typometer/typometer-1.0.1/typometer-1.0.1.jar` (the exact jar name may differ; use the
+2. Start typometer (it predates Java's module system, so it needs `--add-opens`): `$(brew --prefix openjdk)/bin/java --add-opens java.desktop/java.awt=ALL-UNNAMED -jar ~/typometer/typometer-1.0.1/typometer-1.0.1.jar` (the exact jar name may differ; use the
    `.jar` in the unzipped folder).
 3. macOS asks for two permissions for the app that launched Java (your terminal): **Accessibility**, so it can type,
    and **Screen Recording**, so it can read pixels. Grant them in System Settings → Privacy & Security, then restart
