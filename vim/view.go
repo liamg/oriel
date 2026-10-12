@@ -41,12 +41,33 @@ func (v *view) pos(off int) Pos {
 }
 
 // char returns the rune at p and its size, or 0, 0 on the NUL past the end of the line.
+// char returns the character at p and its size, its composing characters included,
+// or 0, 0 on the NUL past the end of the line.
 func (v *view) char(p Pos) (rune, int) {
 	l := v.line(p.Line)
 	if p.Col >= len(l) {
 		return 0, 0
 	}
-	return utf8.DecodeRune(l[p.Col:])
+	r, n := utf8.DecodeRune(l[p.Col:])
+	return r, n + composingAfter(l[p.Col+n:])
+}
+
+// composing reports whether r is a combining character, which belongs to the character before it.
+func composing(r rune) bool {
+	return r >= 0x300 && unicode.In(r, unicode.Mn, unicode.Me, unicode.Mc)
+}
+
+// composingAfter is the size of the composing characters at the start of b.
+func composingAfter(b []byte) int {
+	n := 0
+	for n < len(b) {
+		r, size := utf8.DecodeRune(b[n:])
+		if !composing(r) {
+			break
+		}
+		n += size
+	}
+	return n
 }
 
 func (v *view) gchar(p Pos) rune {
@@ -59,8 +80,15 @@ func (v *view) prevCol(line, col int) int {
 	if col <= 0 {
 		return 0
 	}
-	_, n := utf8.DecodeLastRune(v.line(line)[:col])
-	return col - n
+	l := v.line(line)
+	for col > 0 {
+		r, n := utf8.DecodeLastRune(l[:col])
+		col -= n
+		if !composing(r) {
+			break
+		}
+	}
+	return col
 }
 
 // lastCol is the start of the last character on the line, or 0 when it's empty.
@@ -71,7 +99,7 @@ func (v *view) lastCol(line int) int { return v.prevCol(line, v.lineLen(line)) }
 func (v *view) inc(p *Pos) int {
 	l := v.line(p.Line)
 	if p.Col < len(l) {
-		_, n := utf8.DecodeRune(l[p.Col:])
+		_, n := v.char(*p)
 		p.Col += n
 		if p.Col < len(l) {
 			return 0
@@ -146,8 +174,12 @@ func charWidth(r rune, vcol int) int {
 	switch {
 	case r == '\t':
 		return tabstop - vcol%tabstop
+	case composing(r):
+		return 0
 	case r < 0x20 || r == 0x7f:
 		return 2 // ^X
+	case r >= 0x80 && r < 0xa0:
+		return 4 // <80>
 	case wide(r):
 		return 2
 	}

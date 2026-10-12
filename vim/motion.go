@@ -1009,6 +1009,7 @@ func screenLine(e *Engine, v *view, m motionCtx) (target, bool) {
 // nextMark is ]` and friends: the next or previous lowercase mark.
 func nextMark(e *Engine, v *view, m motionCtx) (target, bool) {
 	fwd := m.key[0] == ']'
+	byLine := m.key[1] == '\''
 	p := e.cur
 	for n := m.count1(); n > 0; n-- {
 		best, found := Pos{}, false
@@ -1017,8 +1018,8 @@ func nextMark(e *Engine, v *view, m motionCtx) (target, bool) {
 			if !ok {
 				continue
 			}
-			after := q.Line > p.Line || q.Line == p.Line && q.Col > p.Col
-			before := q.Line < p.Line || q.Line == p.Line && q.Col < p.Col
+			after := q.Line > p.Line || !byLine && q.Line == p.Line && q.Col > p.Col
+			before := q.Line < p.Line || !byLine && q.Line == p.Line && q.Col < p.Col
 			if fwd && after && (!found || q.Line < best.Line || q.Line == best.Line && q.Col < best.Col) ||
 				!fwd && before && (!found || q.Line > best.Line || q.Line == best.Line && q.Col > best.Col) {
 				best, found = q, true

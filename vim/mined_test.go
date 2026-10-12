@@ -10,18 +10,14 @@ import (
 	"github.com/liamg/oriel/vim/vimtest/nvim"
 )
 
-// minedPassRate is the share of mined cases (vim's own tests, see vimtest/mine) the engine must pass.
-const minedPassRate = 0.90
-
-// TestMined runs the cases mined from vim's tests. A failing case doesn't fail the test; the pass rate
-// falling below minedPassRate does. In oracle mode every case must also match nvim.
+// TestMined runs the cases mined from vim's tests (see vimtest/mine). Every case must pass, as the
+// hand-written ones must; one we choose not to match says so with deviation:, which is logged instead.
+// In oracle mode every case must also match nvim.
 func TestMined(t *testing.T) {
-	cases := vimtest.Load(t, "testdata/mined/*.vt")
-	var failed []string
-	for _, c := range cases {
-		c.RequireRef(t)
-		if vimtest.Oracle() {
-			t.Run(c.Name, func(t *testing.T) {
+	for _, c := range vimtest.Load(t, "testdata/mined/*.vt") {
+		t.Run(c.Name, func(t *testing.T) {
+			c.RequireRef(t)
+			if vimtest.Oracle() {
 				got := vimtest.Run(t, nvim.New(), c)
 				if c.Follows == "vim" || c.Deviation != "" {
 					for _, d := range c.Diff(got) {
@@ -30,20 +26,15 @@ func TestMined(t *testing.T) {
 				} else {
 					c.Compare(t, got)
 				}
-			})
-		}
-		if diffs := runQuietly(c); len(diffs) > 0 {
-			failed = append(failed, fmt.Sprintf("%s (%s:%d): %s", c.Name, c.File, c.Line, oneLine(diffs[0])))
-		}
-	}
-	passed := len(cases) - len(failed)
-	rate := float64(passed) / float64(len(cases))
-	t.Logf("mined: %d/%d cases pass (%.1f%%)", passed, len(cases), 100*rate)
-	for _, f := range failed {
-		t.Logf("  FAIL %s", f)
-	}
-	if rate < minedPassRate {
-		t.Errorf("mined pass rate %.1f%% is below %.0f%%", 100*rate, 100*minedPassRate)
+			}
+			for _, d := range runQuietly(c) {
+				if c.Deviation != "" {
+					t.Logf("engine (deviation: %s): %s", c.Deviation, oneLine(d))
+				} else {
+					t.Errorf("%s:%d: engine: %s", c.File, c.Line, d)
+				}
+			}
+		})
 	}
 }
 

@@ -24,7 +24,7 @@ depends_on: [ED-1, P0-3]
 
 ## Done when
 
-the `.vt` suite passes, oracle mode passes, mined vim tests above 90% passing
+the `.vt` suite passes, oracle mode passes, every mined vim test passes (a case we choose not to match carries a reviewed `deviation:`)
 
 ## Rules
 

@@ -110,7 +110,9 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
   - A value vim didn't assert (often the cursor) is taken from nvim, and the case says so in a `# … from oracle` comment.
   - Every case is replayed alone in nvim before it's written; one nvim disagrees with is dropped.
   - The output is `vim/testdata/mined/*.vt`, generated, never edited by hand. `TestMined` runs it against the engine and
-    fails only if fewer than 90% of the cases pass; `TestConformance` runs the hand-written cases, which must all pass.
+    every case must pass, as the hand-written ones in `TestConformance` must. A mined case we choose not to match needs
+    a reviewed `deviation:` like any other; since the files are generated, the miner will need a list of them to
+    write that from, added with the first one.
 - **Differential fuzzing**: random keystroke sequences (weighted towards real usage) run against both
   engines. Any divergence is minimised (delta debugging) into a small `.vt` case and saved as a regression.
   It runs nightly and for a time-boxed slice on each PR.

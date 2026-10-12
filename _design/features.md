@@ -48,7 +48,7 @@ How everything hangs together, built and tested before features land on it.
 | ID | Feature | Mockup | Module | Phase | After | Done when |
 |---|---|---|---|---|---|---|
 | ED-1 | Rope, snapshots, anchors, authorship, undo tree | – | text | P2 | FW-1 | property tests against a naive model; fuzzing with no failures for 1 hour |
-| ED-2 | Vim engine: motions, operators, text objects, registers, marks, dot, counts | 01 | vim | P2 | ED-1, P0-3 | the `.vt` suite passes, oracle mode passes, mined vim tests above 90% passing |
+| ED-2 | Vim engine: motions, operators, text objects, registers, marks, dot, counts | 01 | vim | P2 | ED-1, P0-3 | the `.vt` suite passes, oracle mode passes, every mined vim test passes (or carries a reviewed `deviation:`) |
 | ED-3 | Visual and visual-block, `:s`/`:g` with vim regex, ranges | 09 | vim | P2 | ED-2 | the same, plus the regex conformance suite |
 | ED-4 | Macros, folds, splits, buffers, quickfix | – | vim | P2–P4 | ED-2, FW-9 | the same |
 | ED-5 | `plain` engine and the `input.Engine` interface (emacs as a plugin) | – | input | P3 | ED-2, FW-3 | an engine swap at runtime per buffer; a sample emacs plugin passes its tests |

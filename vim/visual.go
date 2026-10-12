@@ -35,15 +35,17 @@ type visualSize struct {
 }
 
 func (e *Engine) startVisual(mode rune, count int) {
-	if count > 0 && e.lastVisSize != nil && (mode == 'v' || mode == 'V') {
+	if count > 0 && e.lastVisSize != nil {
+		// A count reselects the last Visual operation's amount of text, in its mode, multiplied.
 		s := *e.lastVisSize
-		if s.mode == 'v' && s.lines == 1 {
+		switch {
+		case s.mode == ctrlV:
 			s.cols *= count
-		} else {
 			s.lines *= count
-		}
-		if mode == 'V' {
-			s.mode = 'V'
+		case s.mode == 'v' && s.lines == 1:
+			s.cols *= count
+		default:
+			s.lines *= count
 		}
 		e.restoreArea(e.view(), &s)
 		return
@@ -111,7 +113,7 @@ func (e *Engine) clampVisual(v *view) {
 	e.cur.Line = min(max(e.cur.Line, 0), v.lines()-1)
 	n := v.lineLen(e.cur.Line)
 	if e.cur.Col >= n {
-		if e.want == maxCol && e.vmode == 'v' {
+		if e.want == maxCol && e.vmode != 'V' {
 			e.cur.Col = n
 		} else if n > 0 {
 			e.cur.Col = v.lastCol(e.cur.Line)
@@ -132,8 +134,9 @@ func (e *Engine) execVisual(c cmd) {
 		if c.key == "y" || c.key == "Y" {
 			e.rec = nil
 		}
-		if e.mode == Normal {
+		if e.mode == Normal && e.visual == nil {
 			e.endChange()
+			e.setWant(e.view())
 		}
 	case c.key == "/" || c.key == "?":
 		e.startCmdline(c.key[0], c, "")
@@ -151,7 +154,7 @@ func (e *Engine) execVisual(c cmd) {
 			e.cur.Col = v.colAt(e.cur.Line, e.want, e.want == maxCol && e.vmode == 'v')
 		case t.wantEnd:
 			e.want = maxCol
-			if e.vmode == 'v' {
+			if e.vmode != 'V' {
 				e.cur.Col = v.lineLen(e.cur.Line)
 			}
 		}
@@ -192,6 +195,10 @@ func (e *Engine) visualObject(v *view, c cmd) {
 		}
 	}
 	s, ok := objects[c.obj](e, v, c.count1(), inner)
+	if ok && s.empty && kind == 't' {
+		// An empty tag block selects the tags themselves.
+		s, ok = objects["at"](e, v, c.count1(), false)
+	}
 	if !ok || s.empty {
 		return
 	}
@@ -637,9 +644,10 @@ func (e *Engine) visualReplace(v *view, r oprange, ch rune) {
 	old := string(v.s.Slice(text.Range{Start: from, End: to}))
 	var b strings.Builder
 	for _, c := range old {
-		if c == '\n' {
+		switch {
+		case c == '\n':
 			b.WriteRune(c)
-		} else {
+		case !composing(c):
 			b.WriteRune(ch)
 		}
 	}
@@ -692,8 +700,8 @@ func (e *Engine) visualPut(v *view, r oprange, c cmd, keep bool) {
 		e.cur = nv.pos(max(from, from+len(body)-n))
 	}
 	e.marks['['] = nv.pos(from)
-	e.marks[']'] = nv.pos(max(from, from+len(body)-1))
-	e.lastVisual = &visualArea{start: nv.pos(from), end: nv.pos(max(from, from+len(body)-1)), mode: e.lastVisualMode(r)}
+	e.marks[']'] = nv.pos(max(from, lastRuneStart(nv, from+len(body))))
+	e.lastVisual = &visualArea{start: nv.pos(from), end: nv.pos(max(from, lastRuneStart(nv, from+len(body)))), mode: e.lastVisualMode(r)}
 	e.clamp(nv)
 }
 
@@ -708,9 +716,14 @@ func (e *Engine) lastVisualMode(r oprange) rune {
 func (e *Engine) blockCols(v *view) (int, int) {
 	a, c := *e.visual, e.cur
 	va, vc := v.vcol(a.Line, a.Col), v.vcol(c.Line, c.Col)
-	ra, _ := v.char(a)
-	rc, _ := v.char(c)
-	ea, ec := va+max(charWidth(ra, va), 1), vc+max(charWidth(rc, vc), 1)
+	width := func(p Pos, vc int) int {
+		r, n := v.char(p)
+		if n == 0 {
+			return 1
+		}
+		return max(charWidth(r, vc), 1)
+	}
+	ea, ec := va+width(a, va), vc+width(c, vc)
 	return min(va, vc), max(ea, ec)
 }
 
@@ -872,27 +885,26 @@ func (e *Engine) blockOp(v *view, op string, c cmd) {
 		e.cur = startPos
 	case ">", "<":
 		var rs []text.Replace
-		sw := e.opts.ShiftWidth * c.count1()
+		amount := e.opts.ShiftWidth * c.count1()
 		for _, sp := range spans {
 			l := v.line(sp.line)
 			if sp.from >= len(l) {
 				continue
 			}
 			st := v.s.LineStart(sp.line)
-			ws := sp.from
-			for ws < len(l) && isWhite(rune(l[ws])) {
-				ws++
-			}
-			startV := v.vcol(sp.line, sp.from)
-			endV := v.vcol(sp.line, ws)
-			total := endV - startV
 			if op == ">" {
-				total += sw
-			} else {
-				total = max(0, total-sw)
+				ws := sp.from
+				for ws < len(l) && isWhite(rune(l[ws])) {
+					ws++
+				}
+				startV := v.vcol(sp.line, sp.from)
+				total := v.vcol(sp.line, ws) - startV + amount
+				rs = append(rs, text.Replace{Range: text.Range{Start: st + sp.from, End: st + ws}, Text: []byte(e.makeIndentFrom(startV, total))})
+				continue
 			}
-			ind := makeIndentFrom(startV, total)
-			rs = append(rs, text.Replace{Range: text.Range{Start: st + sp.from, End: st + ws}, Text: []byte(ind)})
+			if r, ok := e.shiftBlockLeft(v, sp.line, left, amount); ok {
+				rs = append(rs, text.Replace{Range: text.Range{Start: st, End: st + len(l)}, Text: []byte(r)})
+			}
 		}
 		e.cur = startPos
 		if len(rs) > 0 {
@@ -910,8 +922,49 @@ func (e *Engine) blockOp(v *view, op string, c cmd) {
 	}
 }
 
-// makeIndentFrom builds white space covering width screen columns starting at column start.
-func makeIndentFrom(start, width int) string {
+// shiftBlockLeft is vim's shift_block() to the left: the white space at the block's start shrinks by up to
+// amount columns, and the text before it is kept, with a tab it cuts into turned into spaces.
+func (e *Engine) shiftBlockLeft(v *view, line, left, amount int) (string, bool) {
+	l := v.line(line)
+	f, _, _ := lineSpan(v, line, left, left+1)
+	if f >= len(l) {
+		return "", false
+	}
+	nonWhite := f
+	nonWhiteCol := v.vcol(line, f)
+	if nonWhiteCol < left {
+		// A character straddles the block's start: start after it.
+		_, n := v.char(Pos{line, f})
+		nonWhite += n
+		nonWhiteCol = v.vcol(line, nonWhite)
+	}
+	for nonWhite < len(l) && isWhite(rune(l[nonWhite])) {
+		nonWhite++
+	}
+	nonWhiteCol = v.vcol(line, nonWhite)
+	shift := min(nonWhiteCol-left, amount)
+	if shift <= 0 {
+		return "", false
+	}
+	dest := nonWhiteCol - shift
+	end := 0
+	for end < len(l) {
+		_, n := v.char(Pos{line, end})
+		if v.vcol(line, end+n) > dest {
+			break
+		}
+		end += n
+	}
+	fill := dest - v.vcol(line, end)
+	return string(l[:end]) + strings.Repeat(" ", fill) + string(l[nonWhite:]), true
+}
+
+// makeIndentFrom builds white space covering width screen columns starting at column start: tabs and
+// spaces, or only spaces with 'expandtab'.
+func (e *Engine) makeIndentFrom(start, width int) string {
+	if e.opts.ExpandTab {
+		return strings.Repeat(" ", width)
+	}
 	var b strings.Builder
 	col := start
 	end := start + width
@@ -946,7 +999,7 @@ func (e *Engine) blockInsert(top, bot, vcol int, appendMode bool, c cmd) {
 		e.cur = Pos{top, f}
 	}
 	e.startInsert(v, cmd{count: 1}, "i")
-	e.ins.block = &blockInsert{top: top, bot: bot, vcol: vcol, appendMode: appendMode, start: e.cur, startLen: v.lineLen(top), change: c.key == "c" || c.key == "C" || c.key == "s", left: e.cur}
+	e.ins.block = &blockInsert{top: top, bot: bot, vcol: vcol, appendMode: appendMode, start: e.cur, startLen: v.lineLen(top), startText: string(v.line(top)), change: c.key == "c" || c.key == "C" || c.key == "s", left: e.cur}
 }
 
 // blockInsert is a pending block insert, applied to the other lines when insert mode ends.
@@ -955,6 +1008,7 @@ type blockInsert struct {
 	appendMode     bool
 	start          Pos
 	startLen       int
+	startText      string
 	change         bool // c and C leave the cursor after the text, I and A at the block's start
 	left           Pos
 }
@@ -965,9 +1019,23 @@ func (e *Engine) finishBlock(b *blockInsert) {
 	if e.cur.Line != b.top || v.lineLen(b.top) < b.startLen {
 		return
 	}
-	typed := string(v.line(b.top)[b.start.Col : b.start.Col+v.lineLen(b.top)-b.startLen])
+	// What was typed is what the first line gained, wherever the cursor keys put it.
+	now := string(v.line(b.top))
+	pre := 0
+	for pre < len(b.startText) && pre < len(now) && b.startText[pre] == now[pre] {
+		pre++
+	}
+	pre = min(pre, b.start.Col+len(now)-len(b.startText))
+	if pre < b.start.Col {
+		pre = b.start.Col
+	}
+	typed := now[pre : pre+len(now)-len(b.startText)]
 	if typed == "" || strings.Contains(typed, "\n") {
 		return
+	}
+	if pre != b.start.Col && b.vcol != maxCol {
+		b.vcol = v.vcol(b.top, pre)
+		b.left = Pos{b.top, pre}
 	}
 	var rs []text.Replace
 	for l := b.top + 1; l <= b.bot; l++ {
@@ -980,12 +1048,17 @@ func (e *Engine) finishBlock(b *blockInsert) {
 			}
 			f, _, _ := lineSpan(v, l, b.vcol, b.vcol+1)
 			col = f
-			if vf := v.vcol(l, f); vf < b.vcol && v.gchar(Pos{l, f}) == '\t' {
-				// The column falls inside a tab: split it into spaces around the text.
-				ve := v.vcol(l, f+1)
+			if vf := v.vcol(l, f); vf < b.vcol && f < v.lineLen(l) {
 				st := v.s.LineStart(l) + f
-				body := strings.Repeat(" ", b.vcol-vf) + typed + strings.Repeat(" ", ve-b.vcol)
-				rs = append(rs, text.Replace{Range: text.Range{Start: st, End: st + 1}, Text: []byte(body)})
+				if v.gchar(Pos{l, f}) == '\t' {
+					// The column falls inside a tab: split it into spaces around the text.
+					ve := v.vcol(l, f+1)
+					body := strings.Repeat(" ", b.vcol-vf) + typed + strings.Repeat(" ", ve-b.vcol)
+					rs = append(rs, text.Replace{Range: text.Range{Start: st, End: st + 1}, Text: []byte(body)})
+				} else {
+					// Inside a wider character: pad up to the column and put the text before it.
+					rs = append(rs, text.Replace{Range: text.Range{Start: st, End: st}, Text: []byte(strings.Repeat(" ", b.vcol-vf) + typed)})
+				}
 				continue
 			}
 		}
@@ -1014,6 +1087,20 @@ func (e *Engine) blockPut(v *view, firstCol, top, bot, left, right int, c cmd, k
 		parts = append(parts, string(v.line(l)[f:t]))
 		st := v.s.LineStart(l)
 		rs = append(rs, text.Replace{Range: text.Range{Start: st + f, End: st + t}})
+	}
+	if val.Kind == edit.Linewise {
+		e.cur = Pos{top, firstCol}
+		e.do(e.group, rs...)
+		nv := e.view()
+		e.insertLines(nv, bot, strings.Repeat(val.Text, c.count1()))
+		nv = e.view()
+		e.cur = Pos{bot + 1, nv.firstNonBlank(bot + 1)}
+		if !keep {
+			e.setReg('"', edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise})
+			e.ed.SetRegister('1', edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise})
+			e.unnamed = '1'
+		}
+		return
 	}
 	if val.Kind == edit.Blockwise || !strings.Contains(val.Text, "\n") {
 		lines := strings.Split(val.Text, "\n")

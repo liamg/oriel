@@ -88,6 +88,7 @@ func (e *Engine) applyOp(v *view, c cmd, r oprange, oldWant int) {
 		e.yank(v, r, c.reg)
 		e.cur = r.curStart
 		e.clamp(v)
+		e.setWant(v)
 	case "d":
 		e.delete(v, r, c.reg)
 		if r.kind == linewise && !r.adjusted {
@@ -475,7 +476,7 @@ func (e *Engine) put(v *view, c cmd) {
 	start := nv.pos(at)
 	endOff := at + len(body)
 	e.marks['['] = start
-	e.marks[']'] = nv.pos(max(at, endOff-1))
+	e.marks[']'] = nv.pos(max(at, lastRuneStart(nv, endOff)))
 	switch {
 	case gp:
 		e.cur = nv.pos(endOff)
@@ -543,4 +544,16 @@ func indentWidth(l string) int {
 		}
 	}
 	return w
+}
+
+// lastRuneStart is the offset of the character that ends at off.
+func lastRuneStart(v *view, off int) int {
+	if off <= 0 {
+		return 0
+	}
+	p := v.pos(off)
+	if p.Col == 0 {
+		return off - 1
+	}
+	return off - (p.Col - v.prevCol(p.Line, p.Col))
 }
