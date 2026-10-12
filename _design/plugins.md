@@ -157,15 +157,22 @@ type Registry interface {
     Theme(t theme.Source) Disposable
 
     Run(ctx Ctx, id string, args Args) error      // every tier runs commands the same way
-    Key(mode, keys string) (Keymap, bool)
+    Commands() []Command                          // what :Commands lists, with sources
+    Keymaps() []Keymap                            // what :Keys lists, with sources
+    Lookup(modes, keys []string) (exact *Keymap, more bool) // modes most specific first: a panel's, then "n"
     ViewByID(id string) (View, bool)
+    Options() Options                             // values by layer: settings.md
 }
 
+// Each extension registers through registry.WithSource(r, id), which stamps Source on what it registers:
+// "builtin:introspect", "init.lua:14", a plugin's id.
+
 type Command struct {
-    ID    string                                  // "git.commit"
-    Title string
-    Args  Schema                                  // typed, so the omnibox can prompt for them
-    Run   func(ctx Ctx, args Args) error
+    ID     string                                 // "git.commit"
+    Title  string
+    Args   Schema                                 // typed, so the omnibox can prompt for them
+    Run    func(ctx Ctx, args Args) error
+    Source string
 }
 
 // typed events; hooks are generic over the payload
@@ -180,9 +187,11 @@ type Commit      struct{ Project string; Message string; Unread int }
 
 type Keymap struct {
     Mode    string                                // "n", "i", or a panel's own mode ("requests")
-    Keys    string                                // "x", "<C-w>"
+    Keys    string                                // "x", "<C-w>", "<Leader>rr"; <Leader> is expanded when it's defined
     Command string
     Args    Args
+    Desc    string
+    Source  string
 }
 
 type View interface {
@@ -213,6 +222,9 @@ type Host interface {
 }
 ```
 
+- Keys resolve like vim's mappings (`registry.Resolver`): an ambiguous prefix waits up to `keymap.timeoutlen`
+  (default 1 s, off with `keymap.timeout = false`), then the longest complete mapping runs, or the first key passes on
+  unmapped. `keymap.leader` defaults to Space.
 - Lua sees the same API through generated bindings (`oriel.on("Commit", fn)` is `registry.On[Commit]`).
 - Process extensions see it as JSON-RPC methods. WASM sees it as host functions.
   One declaration, three bindings.

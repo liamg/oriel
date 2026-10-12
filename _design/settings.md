@@ -37,6 +37,9 @@ flowchart LR
 ```
 
 - `init.lua` beats the user file, so a value computed in Lua is never silently overridden by a GUI click.
+- A window value beats a buffer value; an option is usually only one of the two.
+- In code these are `registry.Layer`s, and a value is read at an `At{Project, Session, Buffer, Window}`: each layer
+  applies only where its key matches. `Get` returns the value and the layer it came from, which is what the page shows.
 - A project file is trusted on first open, the same way as `.oriel/` Lua (`plugins.md`).
 - Session, buffer and window values are runtime only: `:set`, the page's session scope, or a plugin. They aren't
   written to disk unless you choose "save to user" or "save to project".

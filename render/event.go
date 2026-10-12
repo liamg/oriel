@@ -11,7 +11,8 @@ const (
 	ModSuper
 )
 
-// KeyEvent is a key press. Key is the key's name: a printable character, or a name such as "Escape" or "Enter".
+// KeyEvent is a key press. Key is a printable character, or a key name from vim's key notation without the <>:
+// "Esc", "CR", "Tab", "BS", "Up", "F1".
 type KeyEvent struct {
 	Key  string
 	Mods Mods

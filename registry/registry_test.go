@@ -47,13 +47,25 @@ func TestKeymapsArePerMode(t *testing.T) {
 	r := registry.New()
 	r.Keymap(registry.Keymap{Mode: "n", Keys: "x", Command: "a"})
 	r.Keymap(registry.Keymap{Mode: "requests", Keys: "x", Command: "b"})
-	if k, ok := r.Key("n", "x"); !ok || k.Command != "a" {
-		t.Errorf("n x = %v, %v", k, ok)
+	if k, _ := r.Lookup([]string{"n"}, []string{"x"}); k == nil || k.Command != "a" {
+		t.Errorf("n x = %v", k)
 	}
-	if k, ok := r.Key("requests", "x"); !ok || k.Command != "b" {
-		t.Errorf("requests x = %v, %v", k, ok)
+	if k, _ := r.Lookup([]string{"requests"}, []string{"x"}); k == nil || k.Command != "b" {
+		t.Errorf("requests x = %v", k)
 	}
-	if _, ok := r.Key("i", "x"); ok {
+	if k, _ := r.Lookup([]string{"i"}, []string{"x"}); k != nil {
 		t.Error("i x is bound")
+	}
+}
+
+func TestDisposedKeymapStopsWaiting(t *testing.T) {
+	r := registry.New()
+	d := r.Keymap(registry.Keymap{Mode: "n", Keys: "qq", Command: "twice"})
+	if _, more := r.Lookup([]string{"n"}, []string{"q"}); !more {
+		t.Fatal("q isn't a prefix of qq")
+	}
+	d.Dispose()
+	if _, more := r.Lookup([]string{"n"}, []string{"q"}); more {
+		t.Error("q is still a prefix after qq was disposed")
 	}
 }

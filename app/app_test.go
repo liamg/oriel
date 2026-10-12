@@ -23,11 +23,20 @@ type counter struct{ n int }
 func (c *counter) Manifest() ext.Manifest { return ext.Manifest{ID: "test.counter"} }
 
 func (c *counter) Activate(_ context.Context, h ext.Host) error {
-	h.Command(registry.Command{ID: "counter.add", Title: "Add one", Run: func(registry.Ctx, registry.Args) error {
-		c.n++
+	h.Command(registry.Command{ID: "counter.add", Title: "Add one", Run: func(_ registry.Ctx, args registry.Args) error {
+		if n, ok := args["n"].(int); ok {
+			c.n += n
+		} else {
+			c.n++
+		}
 		return nil
 	}})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "x", Command: "counter.add"})
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "g", Command: "counter.add"})
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "gx", Command: "counter.add", Args: registry.Args{"n": 10}})
+	if err := h.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 50*time.Millisecond); err != nil {
+		return err
+	}
 	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		rows := []ui.Node{ui.Text(fmt.Sprintf("count %d", c.n))}
 		for _, s := range h.Sessions() {
@@ -117,5 +126,64 @@ func TestEventUpdatesView(t *testing.T) {
 		t.Fatal(err)
 	}
 	b.waitText(t, "s1 working")
+	b.close(t)
+}
+
+func TestChordsWaitForTheirTimeout(t *testing.T) {
+	b := boot(t, &counter{})
+	b.waitText(t, "count 0")
+	b.win.Send(render.KeyEvent{Key: "g"})
+	b.waitText(t, "count 1") // g alone, once keymap.timeoutlen passes
+	b.win.Send(render.KeyEvent{Key: "g"})
+	b.win.Send(render.KeyEvent{Key: "x"})
+	b.waitText(t, "count 11")
+	b.close(t)
+}
+
+// lister binds keys to the built-in :Keys and :Commands.
+type lister struct{}
+
+func (lister) Manifest() ext.Manifest { return ext.Manifest{ID: "test.lister"} }
+func (lister) Activate(_ context.Context, h ext.Host) error {
+	h.Command(registry.Command{ID: "lister.noop", Title: "Do nothing", Run: func(registry.Ctx, registry.Args) error { return nil }})
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "<C-k>", Command: "Keys"})
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "<C-c>", Command: "Commands"})
+	return nil
+}
+func (lister) Deactivate(context.Context) error { return nil }
+
+func (b *booted) waitLine(t *testing.T, parts ...string) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool {
+		for _, line := range strings.Split(f.Text(), "\n") {
+			if containsAll(line, parts) {
+				return true
+			}
+		}
+		return false
+	})
+	if err != nil {
+		t.Fatalf("no frame has a line with %q; last frame:\n%s", parts, f.Text())
+	}
+}
+
+func containsAll(s string, parts []string) bool {
+	for _, p := range parts {
+		if !strings.Contains(s, p) {
+			return false
+		}
+	}
+	return true
+}
+
+func TestKeysAndCommandsListSources(t *testing.T) {
+	b := boot(t, lister{})
+	b.win.Send(render.KeyEvent{Key: "k", Mods: render.ModCtrl})
+	b.waitLine(t, "n", "<C-k>", "Keys", "test.lister")
+	b.win.Send(render.KeyEvent{Key: "c", Mods: render.ModCtrl})
+	b.waitLine(t, "lister.noop", "Do nothing", "test.lister")
+	b.waitLine(t, "Keys", "builtin:introspect")
 	b.close(t)
 }
