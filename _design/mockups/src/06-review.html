@@ -1,0 +1,173 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0}
+.files{width:230px;background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column}
+.fr{display:flex;align-items:center;gap:7px;padding:5px 12px;font-size:12px;color:var(--fg2)}
+.fr.on{background:var(--cyanbg);color:var(--fg);box-shadow:inset 2px 0 var(--cyan)}
+.fr .st{margin-left:auto;font:10px var(--mono)}
+.ck{width:13px;height:13px;border-radius:3px;border:1px solid var(--line2);display:grid;place-items:center;font-size:9px;flex:none}
+.ck.on{background:rgba(79,224,160,.15);border-color:var(--green);color:var(--green)}
+.ck.half{border-color:var(--yellow);background:linear-gradient(90deg,rgba(255,207,92,.3) 50%,transparent 50%)}
+.center{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg0)}
+.ledger{height:46px;flex:none;display:flex;align-items:center;gap:14px;padding:0 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(255,207,92,.06),transparent 60%),var(--bg1);position:relative}
+.ledger .lbar{flex:1;max-width:420px;height:6px;background:var(--bg4);border-radius:3px;position:relative;overflow:hidden}
+.ledger .lbar i{position:absolute;left:0;top:0;bottom:0;width:45.8%;background:linear-gradient(90deg,var(--green),#9be8c4);box-shadow:0 0 10px var(--green)}
+.ledger .lbar b{position:absolute;top:0;bottom:0;left:45.8%;width:9%;background:repeating-linear-gradient(45deg,rgba(255,207,92,.6) 0 3px,transparent 3px 6px)}
+.lock{font:600 10px var(--mono);letter-spacing:.08em;color:var(--yellow);border:1px solid rgba(255,207,92,.4);padding:3px 8px;border-radius:4px;text-transform:uppercase}
+.fhead{height:34px;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--bg2);border-bottom:1px solid var(--line);font:12px var(--mono);color:var(--fg)}
+.hunkh{height:26px;display:flex;align-items:center;gap:10px;padding:0 14px;background:rgba(255,210,63,.04);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--fg3)}
+.hunkh .q{width:18px;height:18px;border-radius:50%;border:1px solid var(--cyan);color:var(--cyan);display:grid;place-items:center;font:700 10px var(--mono)}
+.hunkh .rv{margin-left:auto;display:flex;align-items:center;gap:6px;font:600 10px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.split{display:flex}
+.split>.code{flex:1;min-width:0}
+.split>.code+.code{border-left:1px solid var(--line)}
+.split .ln .g{width:48px;padding-right:10px}
+.code{font-size:12.5px;line-height:20px}
+.ixd{background:rgba(255,95,109,.28);border-radius:2px}
+.ixa{background:rgba(79,224,160,.25);border-radius:2px}
+.empty{background:repeating-linear-gradient(135deg,transparent 0 5px,rgba(255,255,255,.018) 5px 10px)}
+.slot{padding:8px 14px 10px 62px;background:var(--bg0);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.explain{border:1px solid rgba(255,210,63,.3);background:linear-gradient(180deg,rgba(255,210,63,.06),rgba(255,210,63,.01));border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--fg2);max-width:820px}
+.explain .h{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.right{width:360px;background:var(--bg1);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.find{margin:8px 10px 0;border:1px solid var(--line2);border-radius:7px;background:var(--bg2);padding:9px 10px;position:relative;overflow:hidden}
+.find::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px}
+.find.hi::before{background:var(--red);box-shadow:0 0 8px var(--red)} .find.md::before{background:var(--orange)} .find.lo::before{background:var(--fg3)}
+.find .t{font:500 12.5px var(--ui);color:var(--fg);margin:4px 0 3px}
+.find .w{font:10.5px var(--mono);color:var(--cyan)}
+.find .d{font-size:11.5px;color:var(--fg3);line-height:1.45}
+.explain code{font:11.5px var(--mono);background:var(--bg4);color:var(--p);padding:0 4px;border-radius:3px}
+.find .acts{display:flex;gap:6px;margin-top:7px}
+.find .acts .btn{height:22px;font-size:11px;padding:0 8px}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs">
+    <div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">plan</span><span class="k">⌘1</span></div>
+    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
+    <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
+    <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div><div class="stab"><span class="dot g"></span>tour: auth flow<span class="k">⌘6</span></div>
+    
+  </div>
+  <div class="tbright">
+    <div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div>
+    <div class="tat">WK <div class="bar w"><i style="width:71%"></i></div><b>71%</b></div>
+    <div class="tat"><span class="dot g"></span>BUS 4</div>
+    <span class="kbd">⌘K</span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="rail">
+    <div class="ic">⌥</div><div class="ic">⌕</div><div class="ic on">±<span class="badge">7</span></div><div class="ic">◈<span class="badge">2</span></div><div class="ic">▷</div><div class="ic">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="files">
+    <div class="ph"><span class="cap">Changes</span><span class="dim mono" style="font-size:10px;margin-left:auto">6 files · +214 −38</span></div>
+    <div class="fr"><span class="ck on">✓</span>currency.go<span class="st" style="color:var(--green)">+48</span></div>
+    <div class="fr on"><span class="ck half"></span>round.go<span class="st"><span style="color:var(--green)">+31</span> <span style="color:var(--red)">−9</span></span></div>
+    <div class="fr"><span class="ck"></span>round_test.go<span class="st"><span style="color:var(--green)">+86</span></span></div>
+    <div class="fr"><span class="ck"></span>invoice.go<span class="st"><span style="color:var(--green)">+22</span> <span style="color:var(--red)">−17</span></span></div>
+    <div class="fr"><span class="ck on">✓</span>tiers.go<span class="st"><span style="color:var(--green)">+4</span> <span style="color:var(--red)">−4</span></span></div>
+    <div class="fr"><span class="ck"></span>CHANGELOG.md<span class="st"><span style="color:var(--green)">+3</span></span></div>
+    <div class="ph" style="margin-top:12px;border-top:1px solid var(--line)"><span class="cap">Authorship</span></div>
+    <div style="padding:8px 12px" class="col gap8">
+      <div class="row gap8" style="font-size:12px"><span class="av cl" style="width:16px;height:16px;font-size:8px">C</span>Claude<span class="mono dim" style="margin-left:auto;font-size:10.5px">310 lines</span></div>
+      <div class="row gap8" style="font-size:12px"><span class="av me" style="width:16px;height:16px;font-size:8px">LG</span>you<span class="mono dim" style="margin-left:auto;font-size:10.5px">22 lines</span></div>
+      <div class="row gap8" style="font-size:12px"><span class="av" style="width:16px;height:16px;font-size:8px;background:var(--fg4)">ƒ</span>gofmt<span class="mono dim" style="margin-left:auto;font-size:10.5px">6 lines</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="padding:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--fg3);line-height:1.5">
+      <span class="kbd">]h</span> next hunk &nbsp;<span class="kbd">r</span> mark read<br><span class="kbd">gc</span> comment &nbsp;<span class="kbd">?</span> explain
+    </div>
+  </div>
+  <div class="center">
+    <div class="ledger">
+      <span class="cap" style="color:var(--yellow)">Review ledger</span>
+      <span style="font:500 12.5px var(--ui);color:var(--fg)">You have read <b class="mono" style="color:var(--green)">142</b><span class="dim"> / 310</span> agent-written lines</span>
+      <div class="lbar"><i></i><b></b></div>
+      <span class="mono dim" style="font-size:10.5px">28 skimmed</span>
+      <span class="lock" style="margin-left:auto">⏻ commit gated until 100%</span>
+      <span class="btn" style="opacity:.5">Commit</span>
+    </div>
+    <div class="fhead"><span class="fi" style="background:#4fc1e9"></span>internal/pricing/round.go<span class="dim" style="font-size:11px">pricing</span><span style="margin-left:auto" class="row gap8"><span class="chip">split</span><span class="chip">unified</span></span></div>
+    <div class="hunkh"><span class="q">?</span>@@ -38,9 +38,16 @@ func roundHalfEven<span class="rv" style="color:var(--green)"><span class="ck on">✓</span>reviewed</span></div>
+    <div class="split">
+      <div class="code">
+        <div class="ln"><span class="g">38</span><span class="t"><span class="k">func</span> <span class="f">roundHalfEven</span>(v <span class="ty">decimal.Decimal</span>, p <span class="ty">int32</span>) <span class="ty">decimal.Decimal</span> {</span></div>
+        <div class="ln"><span class="g">39</span><span class="t">    scaled <span class="p">:=</span> v.<span class="f">Shift</span>(p)</span></div>
+        <div class="ln del"><span class="g">40</span><span class="t">    <span class="ixd">r <span class="p">:=</span> scaled.<span class="f">Round</span>(<span class="n">0</span>)</span></span></div>
+        <div class="ln del"><span class="g">41</span><span class="t">    <span class="k">return</span> <span class="ixd">r</span>.<span class="f">Shift</span>(<span class="p">-</span>p)</span></div>
+        <div class="ln empty"><span class="g"></span><span class="t"> </span></div>
+        <div class="ln empty"><span class="g"></span><span class="t"> </span></div>
+        <div class="ln empty"><span class="g"></span><span class="t"> </span></div>
+        <div class="ln"><span class="g">42</span><span class="t">}</span></div>
+      </div>
+      <div class="code">
+        <div class="ln"><span class="g">38</span><span class="t"><span class="k">func</span> <span class="f">roundHalfEven</span>(v <span class="ty">decimal.Decimal</span>, p <span class="ty">int32</span>) <span class="ty">decimal.Decimal</span> {</span></div>
+        <div class="ln"><span class="g">39</span><span class="t">    scaled <span class="p">:=</span> v.<span class="f">Shift</span>(p)</span></div>
+        <div class="ln add"><span class="g">40</span><span class="t">    <span class="ixa">t <span class="p">:=</span> scaled.<span class="f">Truncate</span>(<span class="n">0</span>)</span></span></div>
+        <div class="ln add"><span class="g">41</span><span class="t">    diff <span class="p">:=</span> scaled.<span class="f">Sub</span>(t).<span class="f">Abs</span>()</span></div>
+        <div class="ln add"><span class="g">42</span><span class="t">    <span class="k">if</span> diff.<span class="f">Equal</span>(half) <span class="p">&amp;&amp;</span> t.<span class="f">IntPart</span>()<span class="p">%</span><span class="n">2</span> <span class="p">==</span> <span class="n">0</span> {</span></div>
+        <div class="ln add"><span class="g">43</span><span class="t">        <span class="k">return</span> <span class="ixa">t</span>.<span class="f">Shift</span>(<span class="p">-</span>p)</span></div>
+        <div class="ln add"><span class="g">44</span><span class="t">    }</span></div>
+        <div class="ln add"><span class="g">45</span><span class="t">    <span class="k">return</span> <span class="ixa">scaled.<span class="f">Round</span>(<span class="n">0</span>)</span>.<span class="f">Shift</span>(<span class="p">-</span>p)</span></div>
+      </div>
+    </div>
+    <div class="slot">
+      <div class="explain">
+        <div class="h"><span class="q" style="width:16px;height:16px;border-radius:50%;border:1px solid var(--cyan);color:var(--cyan);display:grid;place-items:center;font:700 9px var(--mono)">?</span><span class="cap" style="color:var(--cyan)">Explain hunk</span><span class="dim mono" style="font-size:10px">fork of claude · cached for this hunk</span></div>
+        <code>decimal.Round</code> rounds ties away from zero, so <code>2.5→3</code>. The new path truncates toward zero, detects an exact tie, and keeps the even neighbour; anything else falls back to <code>Round</code>, which is correct when there's no tie. Negative ties work because <code>Truncate</code> and <code>Abs</code> are symmetric.
+      </div>
+    </div>
+    <div class="hunkh"><span class="q">?</span>@@ -71,6 +78,14 @@ func RoundMinor<span class="rv" style="color:var(--fg3)"><span class="ck"></span>mark reviewed</span></div>
+    <div class="split">
+      <div class="code">
+        <div class="ln"><span class="g">71</span><span class="t"><span class="k">func</span> <span class="f">RoundMinor</span>(amt <span class="ty">Money</span>) <span class="ty">Money</span> {</span></div>
+        <div class="ln del"><span class="g">72</span><span class="t">    p <span class="p">:=</span> <span class="ixd">precision[amt.Currency]</span></span></div>
+        <div class="ln empty"><span class="g"></span><span class="t"> </span></div>
+        <div class="ln"><span class="g">73</span><span class="t">    <span class="k">return</span> <span class="ty">Money</span>{amt.Currency, <span class="f">roundHalfEven</span>(amt.V, p)}</span></div>
+      </div>
+      <div class="code">
+        <div class="ln"><span class="g">78</span><span class="t"><span class="k">func</span> <span class="f">RoundMinor</span>(amt <span class="ty">Money</span>) <span class="ty">Money</span> {</span></div>
+        <div class="ln add"><span class="g">79</span><span class="t">    p, ok <span class="p">:=</span> <span class="ixa">currency.<span class="f">Precision</span>(amt.Currency)</span></span></div>
+        <div class="ln add"><span class="g">80</span><span class="t">    <span class="k">if</span> <span class="p">!</span>ok { p <span class="p">=</span> <span class="n">2</span> }</span></div>
+        <div class="ln"><span class="g">81</span><span class="t">    <span class="k">return</span> <span class="ty">Money</span>{amt.Currency, <span class="f">roundHalfEven</span>(amt.V, p)}</span></div>
+      </div>
+    </div>
+    <div class="slot" style="padding-top:10px">
+      <div class="thread" style="max-width:820px">
+        <div class="th"><span class="av gh" style="width:18px;height:18px;font-size:9px">GH</span><b style="color:var(--fg)">GitHub review</b> · L80 · <span class="chip v">@priya-k</span><span class="chip y">changes requested</span><span class="mono dim" style="margin-left:auto;font-size:10px">synced 30s ago</span></div>
+        <div class="msg"><div class="av gh">PK</div><div><span class="who">priya-k</span><span class="when">12m · github</span><div class="body">Silently defaulting unknown currencies to 2 will hide config mistakes. Can this return an error instead?</div></div></div>
+        <div class="msg" style="padding-top:0;background:rgba(169,139,255,.04);margin:0 8px 8px;border:1px dashed rgba(169,139,255,.35);border-radius:6px"><div class="av cl">C</div><div class="grow"><span class="who">Claude</span><span class="when">draft · not sent</span><div class="body">Agreed. <code>RoundMinor</code> now returns <code>(Money, error)</code> and the three callers propagate it; see the <code>invoice.go</code> hunk.</div>
+          <div class="row gap8" style="margin-top:8px"><span class="btn pri" style="background:var(--violet);border-color:var(--violet);height:24px;font-size:11.5px">↗ Forward to GitHub</span><span class="btn ghost" style="height:24px;font-size:11.5px">Edit</span><span class="dim" style="font-size:11px">Claude never posts to GitHub. You do.</span></div></div></div>
+      </div>
+    </div>
+    <div class="fhead" style="border-top:1px solid var(--line)"><span class="fi" style="background:#4fc1e9"></span>internal/billing/invoice.go<span class="dim" style="font-size:11px">pricing</span><span class="chip y">unread · 39 lines</span><span style="margin-left:auto;font-size:10.5px" class="dim mono">⌄ expand</span></div>
+    <div class="fhead"><span class="fi" style="background:#4fc1e9"></span>internal/pricing/round_test.go<span class="dim" style="font-size:11px">pricing</span><span class="chip y">unread · 86 lines</span><span class="chip c">tests pass ✓</span><span style="margin-left:auto" class="dim mono">⌄ expand</span></div>
+  </div>
+  <div class="right">
+    <div class="ph"><span class="cap">AI review</span><span class="chip c" style="margin-left:6px">codex · gpt-5</span><span class="mono dim" style="margin-left:auto;font-size:10px">since a3f9e1</span></div>
+    <div class="row gap6" style="padding:8px 10px 0"><span class="chip r">1 high</span><span class="chip o">2 med</span><span class="chip">3 low</span><span class="dim" style="margin-left:auto;font-size:11px">2 dismissed</span></div>
+    <div class="find hi"><div class="row gap6"><span class="chip r">high</span><span class="chip">correctness</span></div><div class="t">Historic invoices re-rounded on regenerate</div><div class="w">billing/invoice.go:118</div><div class="d"><code style="font-size:10.5px">Regenerate()</code> calls <code style="font-size:10.5px">RoundMinor</code> on stored lines, so PDFs of old invoices would change.</div><div class="acts"><span class="btn">→ Thread</span><span class="btn ghost">Fix</span><span class="btn ghost">Dismiss</span></div></div>
+    <div class="find md"><div class="row gap6"><span class="chip o">med</span><span class="chip">tests</span></div><div class="t">No test for BHD (3 dp) ties</div><div class="w">round_test.go:31</div><div class="d">The table covers JPY and USD only.</div><div class="acts"><span class="btn">→ Thread</span><span class="btn ghost">Fix</span><span class="btn ghost">Dismiss</span></div></div>
+    <div class="find md"><div class="row gap6"><span class="chip o">med</span><span class="chip">api</span></div><div class="t">Exported signature change</div><div class="w">round.go:78</div><div class="d">billing-ui calls <code style="font-size:10.5px">RoundMinor</code>; that repo isn't in this workspace.</div><div class="acts"><span class="btn">Add project</span><span class="btn ghost">Dismiss</span></div></div>
+    <div class="find lo"><div class="row gap6"><span class="chip">low</span><span class="chip">style</span></div><div class="t">Magic number 2 for default precision</div><div class="w">round.go:80</div></div>
+    <div style="flex:1"></div>
+    <div style="padding:10px 12px;border-top:1px solid var(--line)" class="col gap6">
+      <div class="row gap8"><span class="cap">Reviewer</span><span class="mono dim" style="font-size:10px;margin-left:auto">different model from the author</span></div>
+      <div class="row gap8"><span class="btn">Re-review changes</span><span class="btn ghost">Prompt…</span></div>
+    </div>
+  </div>
+</div>
+<div class="status">
+  <span class="mode vis">REVIEW</span>
+  <span>round.go</span><span class="dim">hunk 2/7</span><span class="sep"></span>
+  <span style="color:var(--green)">read 142</span><span style="color:var(--yellow)">skimmed 28</span><span class="dim">unread 140</span><span class="sep"></span>
+  <span style="color:var(--violet)">GH 1 changes requested</span>
+  <span style="margin-left:auto" class="row gap16">
+    <span class="tat"><span class="dot b"></span>CI 4/6</span>
+    <span class="sep"></span><span>Go · split</span><span style="padding-right:12px">80:12</span>
+  </span>
+</div>

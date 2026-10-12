@@ -1,0 +1,164 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0}
+.wrap{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg0)}
+.top{height:48px;display:flex;align-items:center;gap:14px;padding:0 22px;border-bottom:1px solid var(--line);background:var(--bg1);flex:none}
+.top h1{font:600 15px var(--disp);letter-spacing:.04em;color:var(--fg)}
+.cols{flex:1;display:flex;gap:18px;padding:18px 22px;min-height:0}
+.repo{flex:1;display:flex;flex-direction:column;min-width:0}
+.rh{display:flex;align-items:center;gap:10px;padding:0 0 12px 4px}
+.rh .nm{font:600 14px var(--ui);color:var(--fg)}
+.rh .br{font:11px var(--mono);color:var(--fg3)}
+.chk{position:relative;padding-left:34px}
+.chk::before{content:"";position:absolute;left:12px;top:0;bottom:0;width:1px;background:var(--line2)}
+.step{position:relative;margin-bottom:10px}
+.step .nd{position:absolute;left:-30px;top:12px;width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font:700 9px var(--mono);background:var(--bg0);border:1.5px solid var(--line2);color:var(--fg3);z-index:1}
+.step.done .nd{border-color:var(--green);color:var(--green);box-shadow:0 0 8px rgba(79,224,160,.35)}
+.step.act .nd{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(255,210,63,.5)}
+.step.warn .nd{border-color:var(--yellow);color:var(--yellow)}
+.step.blk .nd{border-color:#5c8dff;color:#7ea6ff;box-shadow:0 0 8px rgba(92,141,255,.45)}
+.btn{white-space:nowrap}
+.card{background:var(--bg1);border:1px solid var(--line);border-radius:8px}
+.card .hd{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.card .hd .t{font:600 12.5px var(--ui);color:var(--fg)}
+.card .hd .s{font:11px var(--mono);color:var(--fg3)}
+.card .hd .r{margin-left:auto;display:flex;gap:6px;align-items:center}
+.step.done .card .hd{opacity:.7}
+.step.act .card{border-color:rgba(255,210,63,.35)}
+.bd{border-top:1px solid var(--line);padding:10px 12px}
+.fl{display:flex;align-items:center;gap:8px;font:12px/24px var(--mono);color:var(--fg2)}
+.fl .x{width:13px;height:13px;border:1px solid var(--line2);border-radius:3px;display:grid;place-items:center;font-size:9px;line-height:1;color:var(--cyan)}
+.fl .x.on{background:var(--cyanbg);border-color:rgba(255,210,63,.5)}
+.fl em{font-style:normal;margin-left:auto;font-size:11px}
+.fl .rv{font-size:10px;color:var(--fg4);margin-left:8px;width:76px;text-align:right}
+.msgbox{border:1px solid var(--line2);border-radius:6px;background:var(--bg0);padding:8px 10px;font:12px/19px var(--mono);color:var(--fg);margin-top:8px;position:relative}
+.msgbox .tag{float:right;margin:0 0 4px 8px}
+.cm{display:flex;gap:10px;font:12px/24px var(--mono);color:var(--fg2)}
+.cm .h{color:var(--yellow)}
+.ci{display:flex;align-items:center;gap:8px;font:12px/24px var(--ui);color:var(--fg2)}
+.ci em{margin-left:auto;font:11px var(--mono);font-style:normal;color:var(--fg4)}
+.ci .ic2{width:14px;text-align:center;font:12px var(--mono)}
+.rvw{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--fg2);line-height:26px}
+.av.sm{width:18px;height:18px;font-size:8.5px;border-radius:5px}
+.link{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px dashed var(--line2);border-radius:6px;font:11.5px var(--mono);color:var(--fg2);margin-top:8px}
+.link b{color:var(--violet);font-weight:500}
+.sum{width:300px;border-left:1px solid var(--line);background:var(--bg1);padding:16px;display:flex;flex-direction:column;gap:14px}
+.gate{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--fg2);line-height:24px}
+.gate .ck{width:16px;text-align:center;font:12px var(--mono)}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs">
+    <div class="stab"><span class="dot o"></span>pricing-rounding<span class="mini">working</span><span class="k">⌘1</span></div>
+    <div class="stab on"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
+    <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
+    <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div>
+    <div class="stab"><span class="dot g"></span>tour: auth flow<span class="k">⌘6</span></div>
+  </div>
+  <div class="tbright">
+    <div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div>
+    <div class="tat">WK <div class="bar w"><i style="width:71%"></i></div><b>71%</b></div>
+    <div class="tat"><span class="dot g"></span>BUS 4</div>
+    <span class="kbd">⌘K</span>
+  </div>
+</div>
+<div class="main">
+  <div class="rail">
+    <div class="ic">⌥</div><div class="ic">⌕</div><div class="ic">±</div><div class="ic">◈</div><div class="ic">▷</div><div class="ic on">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="wrap">
+    <div class="top">
+      <h1>SHIP</h1><span class="dim mono" style="font-size:11px">INF-2231 · usage API rate-limit headers · 2 projects · branch rethink/usage-endpoint</span>
+      <span style="margin-left:auto" class="row gap8"><span class="btn ghost">Sync all</span><span class="btn">Commit all</span><span class="btn pri">Push + raise both PRs</span></span>
+    </div>
+    <div class="cols">
+      <!-- repo 1 -->
+      <div class="repo">
+        <div class="rh"><span class="fi" style="background:#4fc1e9;width:12px;height:12px"></span><span class="nm">usage-api</span><span class="br">rethink/usage-endpoint ← main</span><span class="chip r" style="margin-left:auto">needs you</span></div>
+        <div class="chk">
+          <div class="step act"><span class="nd">1</span><div class="card">
+            <div class="hd"><span class="t">Uncommitted</span><span class="s">3 files · +41 −6</span><div class="r"><span class="chip y">21 lines unreviewed</span></div></div>
+            <div class="bd">
+              <div class="fl"><span class="x on">✓</span>internal/api/usage/handler.go<em><span style="color:var(--green)">+3</span> <span style="color:var(--red)">−1</span></em><span class="rv" style="color:var(--green)">reviewed ✓</span></div>
+              <div class="fl"><span class="x"></span>internal/api/usage/handler_test.go<em><span style="color:var(--green)">+18</span></em><span class="rv" style="color:var(--yellow)">0 / 18</span></div>
+              <div class="fl"><span class="x"></span>internal/api/usage/routes.go<em><span style="color:var(--green)">+20</span> <span style="color:var(--red)">−5</span></em><span class="rv" style="color:var(--yellow)">17 / 20</span></div>
+              <div class="msgbox"><span class="tag chip c">drafted by codex</span><span style="color:var(--violet)">feat(api):</span> set Retry-After on rate-limited usage responses<br><br><span class="dim">Both the single and batch usage endpoints now return Retry-After<br>from the limiter's reset time, rounded up to whole seconds.<br><br>Refs INF-2231</span></div>
+              <div class="row gap8" style="margin-top:10px"><span class="btn pri">Review 21 lines</span><span class="btn ghost" style="opacity:.6">Commit anyway…</span><span class="btn ghost">Redraft</span><span class="dim mono" style="font-size:10.5px;margin-left:auto">review gate on</span></div>
+            </div>
+          </div></div>
+          <div class="step warn"><span class="nd">2</span><div class="card">
+            <div class="hd"><span class="t">Behind main</span><span class="s">4 commits · no conflicts predicted</span><div class="r"><span class="btn" style="height:22px;font-size:11px">Rebase</span></div></div>
+          </div></div>
+          <div class="step"><span class="nd">3</span><div class="card">
+            <div class="hd"><span class="t">Unpushed</span><span class="s">2 commits</span><div class="r"><span class="btn ghost" style="height:22px;font-size:11px">Push</span></div></div>
+            <div class="bd">
+              <div class="cm"><span class="h">a41c9e2</span>feat(ratelimit): expose Reservation.ResetAt</div>
+              <div class="cm"><span class="h">7be0d13</span>test(api): table-test the 429 path</div>
+            </div>
+          </div></div>
+          <div class="step"><span class="nd">4</span><div class="card">
+            <div class="hd"><span class="t">Pull request</span><span class="s">not raised · draft ready</span><div class="r"><span class="chip c">template filled</span></div></div>
+            <div class="bd">
+              <div class="rvw"><span class="cap" style="width:70px">Reviewers</span><div class="av gh sm">PL</div>platform-team<div class="av me sm" style="margin-left:8px">JK</div>jkowalski<span class="dim" style="margin-left:auto;font-size:11px">CODEOWNERS</span></div>
+              <div class="link">↔ pairs with <b>web-dashboard</b> → will cross-link both descriptions</div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+      <!-- repo 2 -->
+      <div class="repo">
+        <div class="rh"><span class="fi" style="background:#ffcf5c;width:12px;height:12px"></span><span class="nm">web-dashboard</span><span class="br">rethink/usage-endpoint ← main</span><span class="chip b" style="margin-left:auto;color:#7ea6ff;border-color:rgba(92,141,255,.4);background:rgba(92,141,255,.08)">ci running</span></div>
+        <div class="chk">
+          <div class="step done"><span class="nd">✓</span><div class="card"><div class="hd"><span class="t">Uncommitted</span><span class="s">clean</span></div></div></div>
+          <div class="step done"><span class="nd">✓</span><div class="card"><div class="hd"><span class="t">Up to date with main</span><span class="s">rebased 6m ago</span></div></div></div>
+          <div class="step done"><span class="nd">✓</span><div class="card"><div class="hd"><span class="t">Pushed</span><span class="s">3 commits</span></div></div></div>
+          <div class="step blk"><span class="nd">4</span><div class="card" style="border-color:rgba(92,141,255,.35)">
+            <div class="hd"><span class="t">#812 · feat(usage): back off on 429 using Retry-After</span><div class="r"><span class="chip">draft</span></div></div>
+            <div class="bd">
+              <div class="cap" style="margin-bottom:4px">Checks · 5 of 7</div>
+              <div class="ci"><span class="ic2" style="color:var(--green)">✓</span>lint<em>38s</em></div>
+              <div class="ci"><span class="ic2" style="color:var(--green)">✓</span>typecheck<em>51s</em></div>
+              <div class="ci"><span class="ic2" style="color:var(--green)">✓</span>unit (shard 1/2)<em>1m 42s</em></div>
+              <div class="ci"><span class="ic2" style="color:var(--green)">✓</span>unit (shard 2/2)<em>1m 39s</em></div>
+              <div class="ci"><span class="ic2" style="color:var(--green)">✓</span>build<em>2m 05s</em></div>
+              <div class="ci"><span class="ic2" style="color:#7ea6ff">◌</span>e2e · chromium<em>running 3m</em></div>
+              <div class="ci"><span class="ic2" style="color:var(--fg4)">○</span>preview deploy<em>queued</em></div>
+              <div class="rvw" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span class="cap" style="width:70px">Reviewers</span><span class="dim">none yet — raise usage-api first</span></div>
+              <div class="link">↔ depends on <b>usage-api</b> PR (not raised) · merge order: api → dashboard</div>
+              <div class="row gap8" style="margin-top:10px"><span class="btn">Ready for review</span><span class="btn ghost">Fix CI with agent</span><span class="btn ghost" style="margin-left:auto">Open on GitHub ↗</span></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sum">
+    <div class="cap">Before this ships</div>
+    <div class="gate"><span class="ck" style="color:var(--green)">✓</span>Plan approved</div>
+    <div class="gate"><span class="ck" style="color:var(--green)">✓</span>All threads resolved <span class="dim mono" style="font-size:10.5px;margin-left:auto">9</span></div>
+    <div class="gate"><span class="ck" style="color:var(--yellow)">!</span>Agent lines reviewed<span class="mono" style="font-size:10.5px;margin-left:auto;color:var(--yellow)">38 / 59</span></div>
+    <div class="gate"><span class="ck" style="color:var(--green)">✓</span>Tests ran this session <span class="dim mono" style="font-size:10.5px;margin-left:auto">go test 2m ago</span></div>
+    <div class="gate"><span class="ck dim">○</span>Verify quiz <span class="dim mono" style="font-size:10.5px;margin-left:auto">before raise</span></div>
+    <div class="gate"><span class="ck dim">○</span>AI review <span class="dim mono" style="font-size:10.5px;margin-left:auto">optional</span></div>
+    <div style="height:1px;background:var(--line)"></div>
+    <div class="cap">Merge order</div>
+    <div class="mono" style="font-size:11.5px;line-height:22px;color:var(--fg2)">1 · usage-api <span class="dim">→ #—</span><br>2 · web-dashboard <span class="dim">→ #812</span></div>
+    <div style="height:1px;background:var(--line)"></div>
+    <div class="cap">Ticket</div>
+    <div style="font-size:12px;color:var(--fg2)"><span class="mono" style="color:var(--violet)">INF-2231</span> In Progress → <span style="color:var(--fg)">In Review</span> when both PRs are up</div>
+    <div style="flex:1"></div>
+    <div class="dim" style="font-size:11px;line-height:1.5">Commits and pushes run on the host through the gateway. The agent can draft, never send.</div>
+  </div>
+</div>
+<div class="status">
+  <span class="mode">NORMAL</span>
+  <span>rethink/usage-endpoint</span><span class="dim">↑2 ↓4 ●3</span><span class="sep"></span>
+  <span style="color:#7ea6ff">◌ CI #812 5/7</span><span class="sep"></span>
+  <span class="dim">gh · liamg · yubikey ready</span>
+  <span style="margin-left:auto" class="row gap16">
+    <span class="tat">WKR devbox cpu <b>41%</b> mem <b>22.0G</b></span>
+    <span class="sep"></span><span style="padding-right:12px" class="dim">2 projects</span>
+  </span>
+</div>

@@ -1,0 +1,171 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0}
+.left{flex:1.15;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+.rightc{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg1)}
+.code .ln .g{width:48px;padding-right:14px}
+.code{font-size:12.5px;line-height:19.4px}
+.split-label{font:600 9.5px var(--mono);letter-spacing:.14em;color:var(--fg3)}
+table.hooks{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
+table.hooks th{font:600 9px var(--mono);letter-spacing:.14em;color:var(--fg3);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);text-transform:uppercase;background:var(--bg1)}
+table.hooks td{padding:6px 10px;border-bottom:1px solid rgba(31,40,52,.7);color:var(--fg2);white-space:nowrap}
+table.hooks td.ev{color:var(--fg)}
+table.hooks tr.grp td{color:var(--fg3);font:600 9.5px var(--mono);letter-spacing:.1em;background:var(--bg0);padding:4px 10px}
+table.hooks td.src{color:var(--cyan)}
+table.hooks td.num{text-align:right}
+table.hooks tr.warn td{background:rgba(255,207,92,.06)}
+table.hooks tr.warn td.num{color:var(--yellow)}
+table.hooks tr.sel td{background:var(--cyanbg)}
+.kind{font:600 9px var(--mono);letter-spacing:.08em;padding:1px 6px;border-radius:3px;text-transform:uppercase}
+.kind.obs{color:var(--fg2);background:var(--bg4)}
+.kind.veto{color:var(--red);background:rgba(255,95,109,.1)}
+.kind.rw{color:var(--violet);background:rgba(169,139,255,.12)}
+.kind.dec{color:var(--green);background:rgba(79,224,160,.1)}
+.p99bar{display:inline-block;width:40px;height:3px;background:var(--bg4);border-radius:2px;vertical-align:middle;margin-left:8px;position:relative;overflow:hidden}
+.p99bar i{position:absolute;left:0;top:0;bottom:0;background:var(--cyan)}
+.warnnote{margin:8px 10px 0;padding:8px 10px;border:1px solid rgba(255,207,92,.35);background:rgba(255,207,92,.06);border-radius:6px;font-size:11.5px;color:var(--fg2);display:flex;gap:8px;align-items:flex-start}
+.warnnote b{color:var(--yellow);font-weight:600}
+.repl{font:12.5px/20px var(--mono);padding:8px 12px;position:relative;flex:1;background:var(--bg0)}
+.repl .in{color:var(--fg)} .repl .pr{color:var(--cyan)} .repl .out{color:var(--fg2)} .repl .mu{color:var(--fg4)}
+.comp{position:absolute;left:92px;top:110px;width:520px;background:var(--bg2);border:1px solid var(--line2);border-radius:7px;box-shadow:0 14px 40px rgba(0,0,0,.55);overflow:hidden;font:12px/1 var(--mono)}
+.comp .it{display:flex;align-items:center;gap:8px;padding:6px 10px;color:var(--fg2)}
+.comp .it.on{background:var(--cyanbg);color:var(--fg);box-shadow:inset 2px 0 var(--cyan)}
+.comp .kd{width:16px;height:16px;border-radius:3px;display:grid;place-items:center;font:700 9.5px var(--mono);flex:none}
+.comp .kd.f{background:rgba(255,210,63,.14);color:var(--cyan)} .comp .kd.m{background:rgba(169,139,255,.14);color:var(--violet)} .comp .kd.t{background:rgba(255,207,92,.14);color:var(--yellow)}
+.comp .sig{margin-left:auto;color:var(--fg4);font-size:11px}
+.comp .doc{border-top:1px solid var(--line);padding:9px 11px;font:12px/1.5 var(--ui);color:var(--fg2);background:var(--bg1)}
+.comp .doc code{font:11.5px var(--mono);color:var(--p);background:var(--bg4);padding:0 4px;border-radius:3px}
+.comp .doc .sg{font:11.5px/1.6 var(--mono);color:var(--fg);margin-bottom:5px}
+.toast{position:absolute;left:505px;top:212px;background:var(--bg2);border:1px solid rgba(79,224,160,.35);border-radius:7px;padding:8px 12px;display:flex;align-items:center;gap:10px;font:500 11.5px var(--mono);color:var(--fg2);box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 18px rgba(79,224,160,.12);z-index:20}
+.toast b{color:var(--green);font-weight:500}
+.ctag{font:500 9.5px var(--mono);color:var(--fg4);margin-left:auto}
+.tbright .tat.dep{padding:2px 8px;border:1px solid rgba(255,207,92,.35);border-radius:4px;background:rgba(255,207,92,.06)}
+.custom-mark{font:500 9px var(--mono);color:var(--violet);opacity:.85;letter-spacing:.05em}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs">
+    <div class="stab on"><span class="dot g"></span>config<span class="mini">~/.config/oriel</span><span class="k">⌘1</span></div>
+    <div class="stab"><span class="dot o"></span>pricing-rounding<span class="mini">work</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘3</span></div>
+    <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘4</span></div>
+    <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘5</span></div>
+  </div>
+  <div class="tbright">
+    <div class="tat dep"><span class="dot y"></span>DEPLOY <b>2</b></div>
+    <div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div>
+    <div class="tat">WK <div class="bar w"><i style="width:71%"></i></div><b>71%</b></div>
+    <div class="tat"><span class="dot g"></span>BUS 4</div>
+    <span class="kbd">⌘K</span>
+  </div>
+</div>
+<div class="main">
+  <div class="rail">
+    <div class="ic on">⌥</div><div class="ic">⌕</div><div class="ic">±</div><div class="ic">◈</div><div class="ic">▷</div><div class="ic">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="left">
+    <div class="edtabs">
+      <div class="edtab on"><span class="fi" style="background:#5c8dff"></span>init.lua</div>
+      <div class="edtab"><span class="fi" style="background:#5c8dff"></span>lua/my/thread_row.lua</div>
+      <div class="edtab"><span class="fi" style="background:#5c8dff"></span>ftplugin/go.lua</div>
+    </div>
+    <div class="crumbs">~ › .config › oriel › init.lua › <span style="color:var(--f)">L.on("Permission")</span><span style="margin-left:auto" class="row gap12"><span class="chip g">auto-reload</span><span class="chip c">lua-ls ✓ oriel 0.4 types</span></span></div>
+    <div class="code grow" style="padding-top:4px">
+<div class="ln"><span class="g">1</span><span class="t"><span class="c">-- ~/.config/oriel/init.lua</span></span></div>
+<div class="ln"><span class="g">2</span><span class="t"><span class="k">local</span> <span class="ty">L</span> <span class="p">=</span> <span class="ty">oriel</span></span></div>
+<div class="ln"><span class="g">3</span><span class="t"></span></div>
+<div class="ln"><span class="g">4</span><span class="t"><span class="ty">L</span><span class="p">.</span>o<span class="p">.</span>relativenumber <span class="p">=</span> <span class="k">true</span></span></div>
+<div class="ln"><span class="g">5</span><span class="t"><span class="ty">L</span><span class="p">.</span>o<span class="p">.</span>theme <span class="p">=</span> <span class="s">&quot;graphite&quot;</span></span></div>
+<div class="ln"><span class="g">6</span><span class="t"><span class="ty">L</span><span class="p">.</span>so<span class="p">.</span>agent <span class="p">=</span> <span class="s">&quot;claude&quot;</span></span></div>
+<div class="ln"><span class="g">7</span><span class="t"></span></div>
+<div class="ln"><span class="g">8</span><span class="t"><span class="c">-- keymaps</span></span></div>
+<div class="ln"><span class="g">9</span><span class="t"><span class="ty">L</span><span class="p">.</span>keymap<span class="p">.</span><span class="f">set</span>(<span class="s">&quot;n&quot;</span><span class="p">,</span> <span class="s">&quot;&lt;leader&gt;rr&quot;</span><span class="p">,</span> <span class="s">&quot;agent.review&quot;</span>)</span></div>
+<div class="ln"><span class="g">10</span><span class="t"><span class="ty">L</span><span class="p">.</span>keymap<span class="p">.</span><span class="f">set</span>({ <span class="s">&quot;n&quot;</span><span class="p">,</span> <span class="s">&quot;x&quot;</span> }<span class="p">,</span> <span class="s">&quot;ga&quot;</span><span class="p">,</span> <span class="k">function</span>() <span class="ty">L</span><span class="p">.</span>thread<span class="p">.</span><span class="f">new</span>() <span class="k">end</span>)</span></div>
+<div class="ln"><span class="g">11</span><span class="t"><span class="ty">L</span><span class="p">.</span>keymap<span class="p">.</span><span class="f">set</span>(<span class="s">&quot;requests&quot;</span><span class="p">,</span> <span class="s">&quot;x&quot;</span><span class="p">,</span> <span class="s">&quot;thread.resolve&quot;</span>)</span></div>
+<div class="ln"><span class="g">12</span><span class="t"></span></div>
+<div class="ln"><span class="g">13</span><span class="t"><span class="c">-- auto-allow test runs in this workspace</span></span></div>
+<div class="ln"><span class="g">14</span><span class="t"><span class="ty">L</span><span class="p">.</span><span class="f">on</span>(<span class="s">&quot;Permission&quot;</span><span class="p">,</span> <span class="k">function</span>(ev)</span></div>
+<div class="ln"><span class="g">15</span><span class="t">  <span class="k">if</span> ev<span class="p">.</span>tool <span class="p">=</span><span class="p">=</span> <span class="s">&quot;Bash&quot;</span> <span class="k">and</span> ev<span class="p">.</span>input<span class="p">:</span><span class="f">match</span>(<span class="s">&quot;^go test &quot;</span>) <span class="k">then</span></span></div>
+<div class="ln cur"><span class="g">16</span><span class="t">    <span class="k">return</span> <span class="s">&quot;allow&quot;<span class="cursor"></span></span></span></div>
+<div class="ln"><span class="g">17</span><span class="t">  <span class="k">end</span></span></div>
+<div class="ln"><span class="g">18</span><span class="t"><span class="k">end</span>)</span></div>
+<div class="ln"><span class="g">19</span><span class="t"></span></div>
+<div class="ln"><span class="g">20</span><span class="t"><span class="c">-- a tool the agent can call</span></span></div>
+<div class="ln"><span class="g">21</span><span class="t"><span class="ty">L</span><span class="p">.</span>agent<span class="p">.</span><span class="f">tool</span>{</span></div>
+<div class="ln"><span class="g">22</span><span class="t">  name <span class="p">=</span> <span class="s">&quot;staging_logs&quot;</span><span class="p">,</span></span></div>
+<div class="ln"><span class="g">23</span><span class="t">  desc <span class="p">=</span> <span class="s">&quot;Tail the staging logs for a service&quot;</span><span class="p">,</span></span></div>
+<div class="ln"><span class="g">24</span><span class="t">  params <span class="p">=</span> { service <span class="p">=</span> <span class="s">&quot;string&quot;</span><span class="p">,</span> lines <span class="p">=</span> <span class="s">&quot;number?&quot;</span> }<span class="p">,</span></span></div>
+<div class="ln"><span class="g">25</span><span class="t">  run <span class="p">=</span> <span class="k">function</span>(p)</span></div>
+<div class="ln"><span class="g">26</span><span class="t">    <span class="k">return</span> <span class="ty">L</span><span class="p">.</span><span class="f">exec</span>{ <span class="s">&quot;kubectl&quot;</span><span class="p">,</span> <span class="s">&quot;logs&quot;</span><span class="p">,</span> <span class="s">&quot;-n&quot;</span><span class="p">,</span> <span class="s">&quot;staging&quot;</span><span class="p">,</span> p<span class="p">.</span>service }</span></div>
+<div class="ln"><span class="g">27</span><span class="t">  <span class="k">end</span><span class="p">,</span></span></div>
+<div class="ln"><span class="g">28</span><span class="t">}</span></div>
+<div class="ln"><span class="g">29</span><span class="t"></span></div>
+<div class="ln"><span class="g">30</span><span class="t"><span class="c">-- statusline</span></span></div>
+<div class="ln"><span class="g">31</span><span class="t"><span class="ty">L</span><span class="p">.</span><span class="f">statusline</span>(<span class="k">function</span>(w)</span></div>
+<div class="ln"><span class="g">32</span><span class="t">  <span class="k">return</span> <span class="ty">L</span><span class="p">.</span>ui<span class="p">.</span><span class="f">row</span>{</span></div>
+<div class="ln"><span class="g">33</span><span class="t">    <span class="ty">L</span><span class="p">.</span>ui<span class="p">.</span><span class="f">mode</span>()<span class="p">,</span></span></div>
+<div class="ln"><span class="g">34</span><span class="t">    <span class="ty">L</span><span class="p">.</span>ui<span class="p">.</span><span class="f">text</span>(w<span class="p">.</span>session<span class="p">.</span>branch<span class="p">,</span> <span class="s">&quot;dim&quot;</span>)<span class="p">,</span></span></div>
+<div class="ln"><span class="g">35</span><span class="t">    <span class="ty">L</span><span class="p">.</span>ui<span class="p">.</span><span class="f">spacer</span>()<span class="p">,</span></span></div>
+<div class="ln"><span class="g">36</span><span class="t">    <span class="ty">L</span><span class="p">.</span>ui<span class="p">.</span><span class="f">tat</span>{ label <span class="p">=</span> <span class="s">&quot;CTX&quot;</span><span class="p">,</span> bar <span class="p">=</span> w<span class="p">.</span>session<span class="p">.</span>ctx_frac }<span class="p">,</span></span></div>
+<div class="ln"><span class="g">37</span><span class="t">    <span class="ty">L</span><span class="p">.</span>ui<span class="p">.</span><span class="f">tat</span>{ label <span class="p">=</span> <span class="s">&quot;LEDGER&quot;</span><span class="p">,</span> bar <span class="p">=</span> <span class="ty">L</span><span class="p">.</span>ledger<span class="p">.</span><span class="f">frac</span>()<span class="p">,</span> warn <span class="p">=</span> <span class="n">0.8</span> }<span class="p">,</span></span></div>
+<div class="ln"><span class="g">38</span><span class="t">  }</span></div>
+<div class="ln"><span class="g">39</span><span class="t"><span class="k">end</span>)</span></div>
+<div class="ln"><span class="g">40</span><span class="t"></span></div>
+<div class="ln"><span class="g">41</span><span class="t"><span class="ty">L</span><span class="p">.</span>hud<span class="p">.</span><span class="f">tat</span>(<span class="s">&quot;deploys&quot;</span><span class="p">,</span> { slot <span class="p">=</span> <span class="s">&quot;titlebar.right&quot;</span><span class="p">,</span> every <span class="p">=</span> <span class="s">&quot;30s&quot;</span> }<span class="p">,</span> <span class="k">function</span>()</span></div>
+<div class="ln"><span class="g">42</span><span class="t">  <span class="k">local</span> n <span class="p">=</span> <span class="ty">L</span><span class="p">.</span><span class="f">json</span>(<span class="ty">L</span><span class="p">.</span>http<span class="p">.</span><span class="f">get</span>(<span class="s">&quot;https://deploy.internal/api/pending&quot;</span>))<span class="p">.</span>count</span></div>
+<div class="ln"><span class="g">43</span><span class="t">  <span class="k">return</span> <span class="ty">L</span><span class="p">.</span>ui<span class="p">.</span><span class="f">tat</span>{ label <span class="p">=</span> <span class="s">&quot;DEPLOY&quot;</span><span class="p">,</span> value <span class="p">=</span> n<span class="p">,</span> tone <span class="p">=</span> n <span class="p">&gt;</span> <span class="n">0</span> <span class="k">and</span> <span class="s">&quot;warn&quot;</span> <span class="k">or</span> <span class="s">&quot;ok&quot;</span> }</span></div>
+<div class="ln"><span class="g">44</span><span class="t"><span class="k">end</span>)</span></div>
+    </div>
+  </div>
+  <div class="rightc">
+    <div class="ph"><span class="cap" style="color:var(--fg)">:Hooks</span><span class="dim mono" style="font-size:10.5px">21 hooks · 9 events · filter: <span style="color:var(--fg2)">all</span></span><span style="margin-left:auto" class="row gap8"><span class="kbd">gd</span><span class="dim mono" style="font-size:10px">jump to source</span></span></div>
+    <div style="overflow:hidden">
+    <table class="hooks">
+      <tr><th>event</th><th>hook</th><th>kind</th><th>source</th><th style="text-align:right">p99</th></tr>
+      <tr class="grp"><td colspan="5">AGENT</td></tr>
+      <tr class="sel"><td class="ev">Permission</td><td>allow go test</td><td><span class="kind dec">decide</span></td><td class="src">init.lua:14</td><td class="num">38µs<span class="p99bar"><i style="width:4%"></i></span></td></tr>
+      <tr><td class="ev">Permission</td><td>gateway.policy</td><td><span class="kind dec">decide</span></td><td class="src">builtin:sandbox</td><td class="num">12µs<span class="p99bar"><i style="width:2%"></i></span></td></tr>
+      <tr class="warn"><td class="ev">CommentSend</td><td>expand @ticket</td><td><span class="kind rw">rewrite</span></td><td class="src">lua/my/tickets.lua:8</td><td class="num">4.1ms<span class="p99bar"><i style="width:82%;background:var(--yellow)"></i></span></td></tr>
+      <tr><td class="ev">CommentSend</td><td>slop.gate</td><td><span class="kind veto">veto</span></td><td class="src">builtin:slop</td><td class="num">210µs<span class="p99bar"><i style="width:8%"></i></span></td></tr>
+      <tr><td class="ev">AgentTurnEnd</td><td>draft commit + PR</td><td><span class="kind obs">observe</span></td><td class="src">builtin:drafts</td><td class="num">—</td></tr>
+      <tr class="grp"><td colspan="5">GIT</td></tr>
+      <tr><td class="ev">Commit</td><td>ledger gate</td><td><span class="kind veto">veto</span></td><td class="src">init.lua:61</td><td class="num">90µs<span class="p99bar"><i style="width:5%"></i></span></td></tr>
+      <tr><td class="ev">PrRaise</td><td>verify quiz</td><td><span class="kind veto">veto</span></td><td class="src">builtin:verify</td><td class="num">—</td></tr>
+      <tr class="grp"><td colspan="5">EDITOR</td></tr>
+      <tr><td class="ev">BufWritePre</td><td>lsp.format *.go</td><td><span class="kind obs">observe</span></td><td class="src">ftplugin/go.lua:3</td><td class="num">1.2ms<span class="p99bar"><i style="width:30%"></i></span></td></tr>
+      <tr><td class="ev">ModeChanged</td><td>cursor glow</td><td><span class="kind obs">observe</span></td><td class="src">user/glowcursor</td><td class="num">6µs<span class="p99bar"><i style="width:1%"></i></span></td></tr>
+    </table>
+    </div>
+    <div class="warnnote"><span class="dot y" style="margin-top:4px"></span><div><b>4.1ms on CommentSend</b> · over the 2ms hot-path budget. <code style="font:11px var(--mono);color:var(--p);background:var(--bg4);padding:0 4px;border-radius:3px">tickets.lua:8</code> calls <code style="font:11px var(--mono);color:var(--p);background:var(--bg4);padding:0 4px;border-radius:3px">L.linear.link</code> synchronously — wrap it in <code style="font:11px var(--mono);color:var(--p);background:var(--bg4);padding:0 4px;border-radius:3px">L.async</code> or cache it.</div></div>
+    <div style="flex:1"></div>
+    <div class="ph" style="border-top:1px solid var(--line)"><span class="cap" style="color:var(--fg)">:lua</span><span class="dim mono" style="font-size:10.5px">REPL · oriel api 0.4</span><span class="ctag">⇥ complete · ⏎ eval · ctrl-l clear</span></div>
+    <div class="repl" style="flex:0 0 380px">
+<div><span class="pr">›</span> <span class="in">L.ledger.unread("pricing")</span></div>
+<div class="out">38</div>
+<div><span class="pr">›</span> <span class="in">#L.session.list():filter(<span class="s">"red"</span>)</span></div>
+<div class="out">1</div>
+<div><span class="pr">›</span> <span class="in">L.agent.<span style="background:var(--bg4)">to</span><span class="cursor bar" style="height:16px;vertical-align:-3px"></span></span></div>
+      <div class="comp">
+        <div class="it on"><span class="kd f">ƒ</span>tool<span class="sig">(spec: oriel.AgentTool)</span></div>
+        <div class="it"><span class="kd f">ƒ</span>tools<span class="sig">(session?: integer) → AgentTool[]</span></div>
+        <div class="it"><span class="kd t">T</span>tool_policy<span class="sig">oriel.ToolPolicy</span></div>
+        <div class="it"><span class="kd m">m</span>total_tokens<span class="sig">(session?: integer) → integer</span></div>
+        <div class="doc">
+          <div class="sg"><span class="f">oriel.agent.tool</span>(spec: { name: string, desc: string, params: table, run: fun(p): any })</div>
+          Register a tool offered to the session's agent over MCP. Calls show in the agent pane and go through <code>Permission</code> hooks like any other tool. Needs the <code>agent</code> permission when used from a plugin.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast"><span class="dot g"></span>reloaded <b>init.lua</b> · 3ms · +1 tool, statusline</div>
+<div class="status">
+  <span class="mode">NORMAL</span>
+  <span class="dim">main</span>
+  <span style="margin-left:auto" class="row gap16">
+    <span class="tat">CTX <div class="bar"><i style="width:22%"></i></div><b>22%</b></span>
+    <span class="tat">LEDGER <div class="bar w"><i style="width:76%"></i></div><b>76%</b></span>
+    <span class="custom-mark" style="padding-right:12px">⟨ statusline · init.lua:31 ⟩</span>
+  </span>
+</div>

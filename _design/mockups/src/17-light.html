@@ -1,0 +1,172 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0}
+.side{width:250px;background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column}
+.center{flex:1;display:flex;flex-direction:column;min-width:0}
+.right{width:380px;background:var(--bg1);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.minimap{position:absolute;right:0;top:0;bottom:0;width:70px;border-left:1px solid var(--line);background:var(--bg0)}
+.minimap i{display:block;height:2px;margin:2px 8px;background:var(--fg4);opacity:.5;border-radius:1px}
+.lower{height:200px;border-top:1px solid var(--line);display:flex;background:var(--bg1)}
+.ltabs{display:flex;gap:16px;align-items:center;padding:0 12px;height:28px;border-bottom:1px solid var(--line)}
+.ltabs>span{font:600 10px var(--mono);letter-spacing:.1em;color:var(--fg3);text-transform:uppercase;height:28px;display:flex;align-items:center}
+.ltabs>span.on{color:var(--fg);box-shadow:inset 0 -2px var(--orange)}
+.req{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;gap:10px}
+.req .q{font-size:12.5px;color:var(--fg)}
+.req .meta{font:10.5px var(--mono);color:var(--fg3);margin-top:3px}
+.gutthread{position:absolute;left:44px;top:4px;width:12px;height:12px;border-radius:3px;background:var(--orange);box-shadow:0 0 8px rgba(76,201,240,.6)}
+.inthread{margin:4px 90px 6px 68px;font-family:var(--ui)}
+.hudline{height:22px;display:flex;align-items:center;gap:18px;padding:0 12px;background:linear-gradient(180deg,var(--bg1),var(--bg0));border-bottom:1px solid var(--line);flex:none}
+</style>
+<style>
+:root{
+  --bg0:#fbfaf7; --bg1:#f3f1ec; --bg2:#ebe8e1; --bg3:#e3dfd6; --bg4:#d9d4c9;
+  --line:#dcd7cc; --line2:#c9c3b6; --hair:rgba(20,60,90,.12);
+  --fg:#1b2129; --fg2:#424b57; --fg3:#717a86; --fg4:#a3a9b1;
+  --cyan:#0a84b8; --cyan2:#0a6a96; --cyanbg:rgba(10,132,184,.08);
+  --green:#138a5b; --yellow:#b88200; --red:#d1343f; --orange:#d9661a; --violet:#6b4fd6; --pink:#c43c8c;
+  --k:#7a3fd1; --s:#3f7f1a; --n:#c0560e; --f:#0a6fa3; --t:#9a6a00; --c:#8f969f; --p:#0f7f99; --v:#1b2129;
+}
+html,body{background:var(--bg0)}
+.dot.g,.dot.y,.dot.r,.dot.o,.dot.c,.dot.v,.dot.b{box-shadow:none}
+.titlebar::after{opacity:.5}
+.cursor{background:var(--cyan);box-shadow:none;mix-blend-mode:normal;opacity:.85}
+.mode{color:#fff}
+.btn.pri{color:#fff}
+.av{color:#fff}
+.term{background:#f6f4ef;color:#2b323b}
+.term .mu{color:#9aa0a8}
+.ln.add{background:rgba(19,138,91,.07)} .ln.add .g{color:#5a9c80}
+.ln.cur{background:rgba(10,40,70,.035)}
+.thread{background:#fff;box-shadow:0 6px 24px rgba(40,30,10,.08)}
+.msg code,.body code{background:var(--bg2);color:var(--p)}
+.brand i{box-shadow:none}
+.stab.on::before{box-shadow:none}
+.code{background:var(--bg0)}
+.minimap{background:var(--bg1)!important}
+.minimap i{background:var(--fg3)}
+.inlay,.vtext{color:var(--fg3)}
+.spark i{opacity:.9}
+/* paper grain + blueprint grid on the editor */
+.code::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(10,132,184,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(10,132,184,.035) 1px,transparent 1px);background-size:21px 21px}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs">
+    <div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">plan</span><span class="k">⌘1</span></div>
+    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
+    <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
+    <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div><div class="stab"><span class="dot g"></span>tour: auth flow<span class="k">⌘6</span></div>
+    
+  </div>
+  <div class="tbright">
+    <div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div>
+    <div class="tat">WK <div class="bar w"><i style="width:71%"></i></div><b>71%</b></div>
+    <div class="tat"><span class="dot g"></span>BUS 4</div>
+    <span class="kbd">⌘K</span>
+  </div>
+</div>
+<div class="main">
+  <div class="rail">
+    <div class="ic on">⌥</div><div class="ic">⌕</div><div class="ic">±<span class="badge">7</span></div><div class="ic">◈<span class="badge">2</span></div><div class="ic">▷</div><div class="ic">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="side">
+    <div class="ph"><span class="cap">Explorer</span><span class="dim mono" style="font-size:10px;margin-left:auto">pricing · rethink/rounding</span></div>
+    <div class="tree">
+      <div style="--d:0">▾ <span class="fi" style="background:#5cd2ff"></span>internal</div>
+      <div style="--d:1">▾ <span class="fi" style="background:#5cd2ff"></span>pricing</div>
+      <div style="--d:2" class="on"><span class="fi" style="background:#4fc1e9"></span>round.go<span class="m M">M</span></div>
+      <div style="--d:2"><span class="fi" style="background:#4fc1e9"></span>round_test.go<span class="m M">M</span></div>
+      <div style="--d:2"><span class="fi" style="background:#4fc1e9"></span>tiers.go</div>
+      <div style="--d:2"><span class="fi" style="background:#4fc1e9"></span>currency.go<span class="m A">A</span></div>
+      <div style="--d:1">▸ <span class="fi" style="background:#5cd2ff"></span>usage</div>
+      <div style="--d:1">▸ <span class="fi" style="background:#5cd2ff"></span>billing</div>
+      <div style="--d:0">▸ <span class="fi" style="background:#5cd2ff"></span>cmd</div>
+      <div style="--d:0"><span class="fi" style="background:#ffcf5c"></span>PLAN.md<span class="m A">A</span></div>
+      <div style="--d:0"><span class="fi" style="background:#9aa6b4"></span>go.mod</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="ph" style="border-top:1px solid var(--line)"><span class="cap">Outline</span></div>
+    <div class="tree" style="font-family:var(--mono);font-size:11.5px">
+      <div><span class="f">ƒ</span> RoundMinor</div><div class="on"><span class="f">ƒ</span> roundHalfEven</div><div><span class="ty">T</span> Mode</div><div><span class="n">c</span> defaultPrecision</div>
+    </div>
+  </div>
+  <div class="center">
+    <div class="edtabs">
+      <div class="edtab on"><span class="fi" style="background:#4fc1e9"></span>round.go<span class="dim">●</span></div>
+      <div class="edtab"><span class="fi" style="background:#4fc1e9"></span>round_test.go</div>
+      <div class="edtab"><span class="fi" style="background:#ffcf5c"></span>PLAN.md</div>
+    </div>
+    <div class="crumbs">internal › pricing › round.go › <span style="color:var(--f)">roundHalfEven</span><span style="margin-left:auto" class="row gap12"><span class="chip o">1 open thread</span><span class="chip c">gopls ✓</span></span></div>
+    <div class="code grow" style="padding-top:6px">
+      <div class="ln"><span class="g">38</span><span class="t"><span class="c">// roundHalfEven rounds v to p decimal places, ties to even.</span></span></div>
+      <div class="ln"><span class="g">39</span><span class="t"><span class="k">func</span> <span class="f">roundHalfEven</span>(v <span class="ty">decimal.Decimal</span>, p <span class="ty">int32</span>) <span class="ty">decimal.Decimal</span> {</span></div>
+      <div class="ln"><span class="g">40</span><span class="t">    scaled <span class="p">:=</span> v.<span class="f">Shift</span>(p)</span></div>
+      <div class="ln"><span class="g">41</span><span class="t">    floor <span class="p">:=</span> scaled.<span class="f">Floor</span>()</span></div>
+      <div class="ln add"><span class="g">42</span><span class="t">    diff <span class="p">:=</span> scaled.<span class="f">Sub</span>(floor)<span class="vtext">← agent · 2m ago</span></span></div>
+      <div class="ln add"><span class="g">43</span><span class="t">    <span class="k">switch</span> diff.<span class="f">Cmp</span>(half) {</span></div>
+      <div class="ln add"><span class="g">44</span><span class="t">    <span class="k">case</span> <span class="n">1</span>:</span></div>
+      <div class="ln add"><span class="g">45</span><span class="t">        <span class="k">return</span> floor.<span class="f">Add</span>(one).<span class="f">Shift</span>(<span class="p">-</span>p)</span></div>
+      <div class="ln add cur"><span class="g">46<span class="gutthread"></span></span><span class="t">    <span class="k">case</span> <span class="n">0</span>:<span class="cursor"></span></span></div>
+      <div class="inthread">
+        <div class="thread brk">
+          <div class="th"><span class="dot o"></span><b style="color:var(--fg)">Thread</b> · L46 · <span class="chip c">claude · working</span><span style="margin-left:auto" class="mono dim">t:7d45</span></div>
+          <div class="msg"><div class="av me">LG</div><div><span class="who">liam</span><span class="when">1m</span><div class="body">ties go to even — but what about negative values? <code>-2.5</code> should give <code>-2</code>, and Floor goes the wrong way.</div></div></div>
+          <div class="msg" style="padding-top:0"><div class="av cl">C</div><div><span class="who">Claude</span><span class="when">now</span><div class="body">Right — Floor rounds toward −∞. Switching to <code>Truncate</code> with sign handling and adding the negative cases to <code>TestRoundHalfEven</code>. <span class="dim">running go test ./internal/pricing…</span></div></div></div>
+        </div>
+      </div>
+      <div class="ln add"><span class="g">47</span><span class="t">        <span class="k">if</span> floor.<span class="f">IntPart</span>()<span class="p">%</span><span class="n">2</span> <span class="p">==</span> <span class="n">0</span> { <span class="k">return</span> floor.<span class="f">Shift</span>(<span class="p">-</span>p) }</span></div>
+      <div class="ln add"><span class="g">48</span><span class="t">        <span class="k">return</span> floor.<span class="f">Add</span>(one).<span class="f">Shift</span>(<span class="p">-</span>p)</span></div>
+      <div class="ln"><span class="g">49</span><span class="t">    }</span></div>
+      <div class="ln"><span class="g">50</span><span class="t">    <span class="k">return</span> <span class="squigy">floor</span>.<span class="f">Shift</span>(<span class="p">-</span>p)<span class="vtext" style="color:#9a6a00">● S1023: redundant return (staticcheck)</span></span></div>
+      <div class="ln"><span class="g">51</span><span class="t">}</span></div>
+      <div class="minimap"><i style="width:30px"></i><i style="width:44px"></i><i style="width:20px"></i><i style="width:38px"></i><i style="width:26px;background:var(--green)"></i><i style="width:40px;background:var(--green)"></i><i style="width:18px;background:var(--green)"></i><i style="width:32px;background:var(--yellow)"></i><i style="width:36px"></i><i style="width:12px"></i><i style="width:30px"></i><i style="width:44px"></i><i style="width:20px"></i><i style="width:38px"></i><i style="width:20px"></i>
+        <div style="position:absolute;left:0;right:0;top:20px;height:90px;background:rgba(255,210,63,.06);border-top:1px solid rgba(255,210,63,.3);border-bottom:1px solid rgba(255,210,63,.3)"></div></div>
+    </div>
+    <div class="lower">
+      <div class="grow col">
+        <div class="ltabs"><span class="on">Agent ▸ claude</span><span>Terminal</span><span>Problems 1</span><span>Debug</span><span>Tests</span><span style="margin-left:auto" class="row gap8"><span class="dot o"></span><span style="color:var(--orange)">go test</span></span></div>
+        <div class="term grow"><span class="mu">● Edit internal/pricing/round.go (+7 −1)</span>
+<span class="mu">● Bash</span> <span class="cy">go test ./internal/pricing/ -run TestRoundHalfEven -v</span>
+  <span class="ok">=== RUN   TestRoundHalfEven/2.5→2</span>
+  <span class="ok">=== RUN   TestRoundHalfEven/3.5→4</span>
+  <span class="er">--- FAIL: TestRoundHalfEven/-2.5→-2 (0.00s)</span>
+      round_test.go:31: got -3, want -2
+<span class="or">⠼ thinking · 14.2k ctx · 0:41</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="ph"><span class="cap">Requests</span><span class="chip r" style="margin-left:6px">1 needs you</span><span class="chip o">1 working</span><span style="margin-left:auto" class="dim mono" style="font-size:10px">3 resolved</span></div>
+    <div class="req"><span class="dot o" style="margin-top:5px"></span><div><div class="q">Negative values round the wrong way</div><div class="meta">round.go:46 · claude working · 1m</div></div></div>
+    <div class="req"><span class="dot r" style="margin-top:5px"></span><div><div class="q">Move currency precision table to config?</div><div class="meta">PLAN.md:22 · awaiting you · 4m</div></div></div>
+    <div class="req" style="opacity:.55"><span class="dot g" style="margin-top:5px"></span><div><div class="q">Use banker's rounding for JPY</div><div class="meta">resolved · 12m</div></div></div>
+    <div class="req" style="opacity:.55"><span class="dot g" style="margin-top:5px"></span><div><div class="q">Rename Mode → RoundingMode</div><div class="meta">resolved · 19m</div></div></div>
+    <div class="ph" style="border-top:1px solid var(--line);margin-top:6px"><span class="cap">Tasks</span><span class="dim mono" style="font-size:10px;margin-left:auto">2/5</span></div>
+    <div style="padding:8px 12px;font-size:12px;line-height:24px;color:var(--fg2)">
+      <div><span style="color:var(--green)">✓</span>  Add RoundingMode type</div>
+      <div><span style="color:var(--green)">✓</span>  Half-even for minor units</div>
+      <div style="color:var(--fg)"><span style="color:var(--orange)">◐</span>  Negative tie handling</div>
+      <div><span class="dim">○</span>  Currency precision table</div>
+      <div><span class="dim">○</span>  Commit + PR draft</div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="border-top:1px solid var(--line);padding:10px 12px" class="col gap8">
+      <div class="row" style="justify-content:space-between"><span class="cap">Session</span><span class="mono dim" style="font-size:10px">claude opus · high</span></div>
+      <div class="row gap12"><div class="tat">CTX <div class="bar"><i style="width:22%"></i></div><b>44k</b></div><div class="tat">CACHE <b>91%</b></div><div class="tat">$ <b>1.84</b></div></div>
+      <div class="row gap12"><div class="tat">REVIEWED <div class="bar g"><i style="width:60%"></i></div><b>12/20</b></div><div class="tat">TESTS <span style="color:var(--red)">1 fail</span></div></div>
+    </div>
+  </div>
+</div>
+<div class="status">
+  <span class="mode">NORMAL</span>
+  <span>rethink/rounding</span><span class="dim">↑2 ●3</span><span class="sep"></span>
+  <span style="color:var(--red)">✕ 0</span><span style="color:var(--yellow)">⚠ 1</span><span class="sep"></span>
+  <span class="dim">"a</span><span class="dim">q recording @q</span>
+  <span style="margin-left:auto" class="row gap16">
+    <span class="tat">WKR mbp <span class="spark"><i style="height:4px"></i><i style="height:7px"></i><i style="height:5px"></i><i style="height:9px"></i><i style="height:11px"></i><i style="height:6px"></i><i style="height:8px"></i></span> cpu <b>34%</b> mem <b>11.2G</b></span>
+    <span class="tat">devbox <span class="dot g"></span> <b>8%</b></span>
+    <span class="sep"></span><span>Go · utf-8 · LF</span><span>46:13</span><span style="padding-right:12px" class="dim">≡ 48%</span>
+  </span>
+</div>

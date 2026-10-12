@@ -1,0 +1,86 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0;position:relative}
+.bgx{flex:1;filter:saturate(.6)}
+.scrim2{position:absolute;inset:0;background:rgba(3,5,8,.66);z-index:5}
+.dlg{position:absolute;left:50%;top:40px;transform:translateX(-50%);width:1080px;z-index:10;background:var(--bg1);border:1px solid var(--line2);border-radius:12px;box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 0 1px rgba(255,210,63,.08);overflow:hidden;display:flex;flex-direction:column}
+.dh{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.logo{width:40px;height:40px;border-radius:9px;background:linear-gradient(135deg,#5c6bff,#a98bff);display:grid;place-items:center;font:700 16px var(--disp);color:#fff}
+.dh h1{font:600 17px var(--disp);color:var(--fg)}
+.dh .meta{font:11px var(--mono);color:var(--fg3);margin-top:2px}
+.db{display:flex;min-height:0}
+.caps{flex:1;padding:12px 20px 14px}
+.grp{font:600 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fg3);margin:12px 0 6px;display:flex;gap:8px;align-items:center}
+.cp{display:flex;align-items:center;gap:12px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;background:var(--bg0)}
+.cp .nm{font:600 12px var(--mono);color:var(--fg);min-width:140px}
+.cp .ds{font-size:12.5px;color:var(--fg2);flex:1}
+.why{font-size:11.5px;color:var(--fg3);margin-top:3px;font-style:italic}
+.why b{font-style:normal;font-weight:600;color:var(--fg4);font:600 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-right:6px}
+.cp .ds code{font:11px var(--mono);color:var(--p);background:var(--bg3);padding:0 4px;border-radius:3px}
+.cp.warn{border-color:rgba(76,201,240,.4);background:linear-gradient(90deg,rgba(76,201,240,.06),transparent 60%)}
+.cp.crit{border-color:rgba(255,95,109,.45);background:linear-gradient(90deg,rgba(255,95,109,.07),transparent 60%)}
+.ch3{display:flex;border:1px solid var(--line2);border-radius:5px;overflow:hidden;flex:none}
+.ch3 span{font:600 9.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-right:1px solid var(--line2);color:var(--fg3)}
+.ch3 span:last-child{border-right:0}
+.ch3 span.g{background:rgba(79,224,160,.12);color:var(--green)}
+.ch3 span.a{background:rgba(255,207,92,.12);color:var(--yellow)}
+.ch3 span.d{background:rgba(255,95,109,.12);color:var(--red)}
+.risk{font:700 9px var(--mono);letter-spacing:.08em;padding:2px 6px;border-radius:3px;text-transform:uppercase;flex:none}
+.risk.l{color:var(--fg3);border:1px solid var(--line2)}
+.risk.m{color:var(--yellow);border:1px solid rgba(255,207,92,.4)}
+.risk.h{color:var(--orange);border:1px solid rgba(76,201,240,.45)}
+.risk.c{color:var(--red);border:1px solid rgba(255,95,109,.5)}
+.side{width:330px;border-left:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:14px;background:var(--bg1)}
+.kv{display:flex;justify-content:space-between;font:11.5px/22px var(--mono);color:var(--fg3)}
+.kv b{color:var(--fg2);font-weight:500}
+.where{border:1px solid var(--line2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--fg2);line-height:1.55}
+.df{display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid var(--line);background:var(--bg2)}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs"><div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">work</span><span class="k">⌘1</span></div><div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div></div>
+  <div class="tbright"><span class="kbd">⌘K</span></div>
+</div>
+<div class="main">
+  <div class="bgx code" style="padding-top:10px">
+    <div class="ln"><span class="g">1</span><span class="t"><span class="c">-- ~/.config/oriel/init.lua</span></span></div>
+    <div class="ln"><span class="g">2</span><span class="t">oriel.<span class="f">plugins</span>{ { <span class="s">"acme/oriel-jira"</span> } }</span></div>
+  </div>
+  <div class="scrim2"></div>
+  <div class="dlg">
+    <div class="dh">
+      <div class="logo">J</div>
+      <div><h1>Install oriel-jira</h1><div class="meta">github.com/acme/oriel-jira · v0.4.2 · commit 9c1e07a · process plugin (Go) · runs: both</div></div>
+      <span style="margin-left:auto" class="row gap8"><span class="chip y">community</span><span class="chip">3 deps · all allowlisted</span></span>
+    </div>
+    <div class="db">
+      <div class="caps">
+        <div style="font-size:12.5px;color:var(--fg2);margin-top:4px">Installing grants <b style="color:var(--fg)">all</b> of these. Anything not listed is denied. Explanations in plain type are Oriel's; <i>italic</i> lines are the author's own reasons.</div>
+        
+        <div class="grp">Network &amp; secrets</div>
+        <div class="cp"><span class="risk m">med</span><span class="nm">net</span><span class="ds"><div>HTTPS to <code>acme.atlassian.net</code> only</div><div class="why"><b>author says</b>Fetch and update tickets on your Jira site</div></span></div>
+        <div class="cp"><span class="risk h">high</span><span class="nm">secrets</span><span class="ds"><div><code>JIRA_TOKEN</code> → bound to <code>acme.atlassian.net</code>; the plugin never sees the value</div><div class="why"><b>author says</b>Authenticate to your Jira</div></span></div>
+        <div class="grp">Your code &amp; agents</div>
+        <div class="cp"><span class="risk m">med</span><span class="nm">editor.read</span><span class="ds"><div>read the worktree to find ticket keys in branch names and commits</div><div class="why"><b>author says</b>Spot ticket keys like INF-2231 in branches and commits</div></span></div>
+        <div class="cp warn"><span class="risk h">high</span><span class="nm">agent.tools</span><span class="ds"><div>offer <code>jira_ticket</code> and <code>jira_comment</code> to agents — tool output reaches the agent</div><div class="why"><b>author says</b>Let the agent read the ticket it is working on, and post progress comments</div></span></div>
+        <div class="cp warn"><span class="risk h">high</span><span class="nm">agent.prompt</span><span class="ds"><div>send a ticket's text as the first prompt when you "Start work"</div><div class="why"><b>author says</b>"Start work" on a ticket hands its description to the agent as the first prompt</div></span></div>
+        <div class="grp" style="color:var(--red)">Critical</div>
+        <div class="cp crit"><span class="risk c">crit</span><span class="nm">gate · decide</span><span class="ds"><div>answer <code>Permission</code> prompts for <code>Bash(jira-cli *)</code> automatically</div><div class="why"><b>author says</b>Skip prompts for our read-only jira-cli commands</div></span></div>
+      </div>
+      <div class="side">
+        <div><div class="cap" style="margin-bottom:6px">Where it runs</div>
+          <div class="where"><b style="color:var(--fg)">UI part</b> → in the app, Lua/WASM, grants checked in-VM.<br><b style="color:var(--fg)">Worker part</b> → inside each session's <span style="color:var(--cyan)">sandbox container</span>: worktree only, network via the egress proxy, no home dir.</div>
+        </div>
+        <div><div class="cap" style="margin-bottom:4px">Provenance</div>
+          <div class="kv"><span>pinned</span><b>9c1e07a · sha256 ok</b></div>
+          <div class="kv"><span>go deps</span><b>3 · in deps allowlist</b></div>
+          <div class="kv"><span>maintainer</span><b>acme (verified org)</b></div>
+          <div class="kv"><span>source</span><b style="color:var(--cyan)">view diff ↗</b></div>
+        </div>
+        <div><div class="cap" style="margin-bottom:4px">Also</div><div style="font-size:12px;color:var(--fg2);line-height:1.6">Adds UI (panel, omnibox source, HUD tat) — always allowed, not listed.<br><span class="dim">Updates that add capabilities ask again: take the update, or stay on this version.</span></div></div>
+      </div>
+    </div>
+    <div class="df"><span class="dim mono" style="font-size:10.5px">all or nothing · 6 capabilities · 1 critical · audit log in :Plugins</span><span style="margin-left:auto" class="row gap8"><span class="btn ghost">Cancel</span><span class="btn pri">Install</span></span></div>
+  </div>
+</div>
+<div class="status"><span class="mode">NORMAL</span><span>:Plugins install acme/oriel-jira</span></div>

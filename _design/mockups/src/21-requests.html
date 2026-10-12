@@ -1,0 +1,194 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0}
+.list{width:320px;background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column;flex:none}
+.filters{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.grp{padding:10px 12px 4px;display:flex;align-items:center;gap:8px}
+.it{padding:8px 12px 9px 12px;display:flex;gap:10px;border-left:2px solid transparent}
+.it.on{background:var(--cyanbg);border-left-color:var(--cyan)}
+.it .t{font-size:12.5px;color:var(--fg);line-height:1.35}
+.it .m{font:10.5px var(--mono);color:var(--fg3);margin-top:3px}
+.it .pv{font-size:11.5px;color:var(--fg3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px}
+.it.done .t{color:var(--fg2)}
+.conv{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg0)}
+.chead{height:52px;display:flex;align-items:center;gap:12px;padding:0 28px;border-bottom:1px solid var(--line);background:var(--bg1);flex:none}
+.chead h1{font:600 15px var(--disp);letter-spacing:.01em;color:var(--fg)}
+.scroll{flex:1;overflow:hidden;padding:20px 0 0}
+.colw{max-width:900px;margin:0 auto;padding:0 28px}
+.anchor{border:1px solid var(--line2);border-radius:8px;overflow:hidden;margin-bottom:18px}
+.anchor .ah{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg2);font:11px var(--mono);color:var(--fg2);border-bottom:1px solid var(--line)}
+.anchor .code{font-size:12.5px;line-height:19px;padding:4px 0}
+.anchor .ln .g{width:48px;padding-right:12px}
+.m2{display:flex;gap:14px;margin-bottom:20px}
+.m2 .av{width:30px;height:30px;border-radius:8px;font-size:11px}
+.m2 .hd{display:flex;align-items:baseline;gap:8px}
+.m2 .who{font:600 13px var(--ui)} .m2 .when{font:10.5px var(--mono);color:var(--fg4)}
+.prose{font-size:13.5px;line-height:1.62;color:#c3ccd7;margin-top:4px}
+.prose p{margin:0 0 8px}
+.prose ul{margin:4px 0 8px 18px} .prose li{margin:2px 0}
+.prose code{font:12px var(--mono);background:var(--bg3);color:var(--p);padding:1px 5px;border-radius:4px}
+.prose h4{font:600 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--fg3);margin:12px 0 6px}
+.blk{font:12.5px/19px var(--mono);background:var(--bg1);border:1px solid var(--line);border-radius:6px;padding:8px 12px;white-space:pre;margin:6px 0 10px;color:var(--fg)}
+.act{border:1px solid var(--line);border-radius:7px;background:var(--bg1);margin:8px 0 12px;font:11.5px var(--mono);color:var(--fg2)}
+.act div{display:flex;align-items:center;gap:10px;padding:5px 12px;border-top:1px solid var(--line)}
+.act div:first-child{border-top:0}
+.act .r{margin-left:auto;color:var(--fg4)}
+.ev{display:inline-flex;align-items:center;gap:6px;font:600 10px var(--mono);padding:3px 8px;border-radius:5px;border:1px solid rgba(79,224,160,.35);color:var(--green);background:rgba(79,224,160,.06);margin-right:6px;letter-spacing:.04em}
+.img{width:360px;height:120px;border-radius:6px;border:1px solid var(--line2);background:linear-gradient(135deg,#121a24,#0b1018);display:flex;align-items:flex-end;padding:8px;font:10px var(--mono);color:var(--fg3);margin:4px 0 8px;position:relative;overflow:hidden}
+.img::before{content:"";position:absolute;left:14px;top:14px;right:14px;height:60px;background:repeating-linear-gradient(90deg,rgba(255,210,63,.25) 0 22px,transparent 22px 30px);opacity:.5;border-radius:3px}
+.composer{border-top:1px solid var(--line);background:var(--bg1);padding:14px 0 14px;flex:none}
+.box{border:1px solid rgba(255,210,63,.4);border-radius:10px;background:var(--bg0);box-shadow:0 0 0 3px rgba(255,210,63,.06),0 0 30px rgba(255,210,63,.05)}
+.box .ta{padding:12px 14px;font-size:13.5px;line-height:1.6;color:var(--fg);min-height:132px}
+.box .ta .mention{color:var(--cyan);background:var(--cyanbg);border-radius:4px;padding:0 4px;font:12px var(--mono)}
+.box .tb{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}
+.tg{font:600 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);border:1px solid var(--line2);border-radius:5px;padding:3px 8px}
+.tg.on{color:var(--orange);border-color:rgba(76,201,240,.45);background:rgba(76,201,240,.07)}
+.side{width:300px;background:var(--bg1);border-left:1px solid var(--line);flex:none;display:flex;flex-direction:column}
+.sec{padding:12px 14px;border-bottom:1px solid var(--line)}
+.kv{display:flex;justify-content:space-between;font:11px var(--mono);color:var(--fg3);line-height:22px}
+.kv b{color:var(--fg2);font-weight:500}
+.fl{font:11.5px var(--mono);color:var(--fg2);line-height:23px;display:flex;gap:8px}
+.fl .n{margin-left:auto;font-size:10.5px}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs">
+    <div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">work</span><span class="k">⌘1</span></div>
+    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
+    <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
+    <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div>
+    <div class="stab"><span class="dot g"></span>tour: auth flow<span class="k">⌘6</span></div>
+  </div>
+  <div class="tbright">
+    <div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div>
+    <div class="tat">WK <div class="bar w"><i style="width:71%"></i></div><b>71%</b></div>
+    <div class="tat"><span class="dot g"></span>BUS 4</div>
+    <span class="kbd">⌘K</span>
+  </div>
+</div>
+<div class="main">
+  <div class="rail">
+    <div class="ic">⌥</div><div class="ic">⌕</div><div class="ic">±<span class="badge">7</span></div><div class="ic on">◈<span class="badge">2</span></div><div class="ic">▷</div><div class="ic">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="list">
+    <div class="ph"><span class="cap">Requests</span><span class="dim mono" style="font-size:10px;margin-left:auto">g r · ⌘⇧R</span></div>
+    <div class="filters"><span class="chip c">all 9</span><span class="chip r">needs you 1</span><span class="chip o">working 1</span><span class="chip">open 2</span><span class="chip g">resolved 5</span></div>
+    <div style="padding:8px 10px;border-bottom:1px solid var(--line)"><div class="input" style="height:28px">⌕ <span style="margin-left:6px">search requests…</span></div></div>
+    <div class="grp"><span class="cap" style="color:var(--orange)">Working</span></div>
+    <div class="it on"><span class="dot o" style="margin-top:5px"></span><div><div class="t">Negative values round the wrong way</div><div class="pv">Claude: Floor rounds toward −∞. Switching to Truncate…</div><div class="m">round.go:46 · 6 msgs · 1m</div></div></div>
+    <div class="grp"><span class="cap" style="color:var(--red)">Needs you</span></div>
+    <div class="it"><span class="dot r" style="margin-top:5px"></span><div><div class="t">Move currency precision table to config?</div><div class="pv">Claude: Two options — a TOML table loaded at start…</div><div class="m">PLAN.md:22 · 3 msgs · 4m</div></div></div>
+    <div class="grp"><span class="cap">Open</span></div>
+    <div class="it"><span class="dot i" style="margin-top:5px"></span><div><div class="t">Add a fuzz test for RoundMinor</div><div class="pv">queued · sends when the current turn ends</div><div class="m">whole change · queued</div></div></div>
+    <div class="it"><span class="dot i" style="margin-top:5px"></span><div><div class="t">btw — why decimal and not big.Rat?</div><div class="pv">side question · answered by a fork, not the session</div><div class="m">btw · 9m</div></div></div>
+    <div class="grp"><span class="cap" style="color:var(--green)">Resolved</span><span class="dim mono" style="font-size:10px;margin-left:auto">5</span></div>
+    <div class="it done"><span class="dot g" style="margin-top:5px;box-shadow:none;opacity:.6"></span><div><div class="t">Use banker's rounding for JPY</div><div class="m">tiers.go:12 · 12m</div></div></div>
+    <div class="it done"><span class="dot g" style="margin-top:5px;box-shadow:none;opacity:.6"></span><div><div class="t">Rename Mode → RoundingMode</div><div class="m">round.go:8 · 19m</div></div></div>
+    <div style="flex:1"></div>
+    <div style="padding:10px 12px;border-top:1px solid var(--line)" class="row gap8"><span class="btn pri" style="height:28px">＋ New request</span><span class="dim mono" style="font-size:10.5px">⌘N · not anchored to a line</span></div>
+  </div>
+
+  <div class="conv">
+    <div class="chead">
+      <span class="dot o"></span><h1>Negative values round the wrong way</h1>
+      <span class="chip o">claude · working</span>
+      <span style="margin-left:auto" class="row gap8"><span class="btn ghost">Open in editor ↗</span><span class="btn ghost">View diff</span><span class="btn">Resolve</span></span>
+    </div>
+    <div class="scroll">
+      <div class="colw">
+        <div class="anchor">
+          <div class="ah"><span class="fi" style="background:#4fc1e9"></span>internal/pricing/round.go<span class="dim">:43–46</span><span style="margin-left:auto" class="dim">anchored · follows edits</span></div>
+          <div class="code">
+            <div class="ln"><span class="g">43</span><span class="t">    <span class="k">switch</span> diff.<span class="f">Cmp</span>(half) {</span></div>
+            <div class="ln"><span class="g">44</span><span class="t">    <span class="k">case</span> <span class="n">1</span>:</span></div>
+            <div class="ln"><span class="g">45</span><span class="t">        <span class="k">return</span> floor.<span class="f">Add</span>(one).<span class="f">Shift</span>(<span class="p">-</span>p)</span></div>
+            <div class="ln hl"><span class="g">46</span><span class="t">    <span class="k">case</span> <span class="n">0</span>:</span></div>
+          </div>
+        </div>
+
+        <div class="m2"><div class="av me">LG</div><div class="grow">
+          <div class="hd"><span class="who">liam</span><span class="when">4m</span></div>
+          <div class="prose">
+            <p>Ties go to even, but what about negative values? <code>-2.5</code> should give <code>-2</code>, and <code>Floor</code> goes the wrong way for negatives.</p>
+            <p>While you're in here:</p>
+            <ul><li>make the negative cases table-driven alongside the positive ones</li><li>check <code>RoundMinor</code> callers in <code>billing/invoice.go</code> — I suspect they pre-round</li><li>don't change the exported signature</li></ul>
+            <div class="img">pasted · invoice-diff.png · 1280×420</div>
+          </div>
+        </div></div>
+
+        <div class="m2"><div class="av cl">C</div><div class="grow">
+          <div class="hd"><span class="who">Claude</span><span class="when">2m</span><span class="chip" style="margin-left:4px">opus · high</span></div>
+          <div class="prose">
+            <p>Right — <code>Floor</code> rounds toward −∞, so <code>-2.5</code> floors to <code>-3</code> and the tie check then picks the odd neighbour.</p>
+            <h4>Change</h4>
+            <div class="blk"><span class="n">−</span>    floor <span class="p">:=</span> scaled.<span class="f">Floor</span>()
+<span class="s">+</span>    t <span class="p">:=</span> scaled.<span class="f">Truncate</span>(<span class="n">0</span>)
+<span class="s">+</span>    diff <span class="p">:=</span> scaled.<span class="f">Sub</span>(t).<span class="f">Abs</span>()</div>
+            <div class="act">
+              <div><span style="color:var(--green)">✓</span> Edit internal/pricing/round.go <span class="r">+7 −1 · view</span></div>
+              <div><span style="color:var(--green)">✓</span> Edit internal/pricing/round_test.go <span class="r">+18 · 6 negative cases</span></div>
+              <div><span style="color:var(--green)">✓</span> lsp.references RoundMinor <span class="r">3 callers</span></div>
+              <div><span style="color:var(--orange)">◐</span> go test ./internal/pricing/… <span class="r">running 0:12</span></div>
+            </div>
+            <p><code>invoice.go:118</code> does pre-round with <code>Round(2)</code> before calling <code>RoundMinor</code> — that's a double rounding. I've left it alone and opened it as its own request, since it changes historic invoices.</p>
+            <span class="ev">✓ EVIDENCE · tests 14/14 pending</span><span class="ev" style="color:var(--fg3);border-color:var(--line2);background:none">signature unchanged</span>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="composer"><div class="colw">
+      <div class="box">
+        <div class="ta">Good. For the invoice one: don't touch stored invoices — add a <span class="mention">@billing/invoice.go</span> flag so only invoices generated after the deploy use single rounding, and write up the migration risk in <span class="mention">@PLAN.md</span> under Risks before you change anything.<span class="cursor bar"></span></div>
+        <div class="tb">
+          <span class="tg">@ file</span><span class="tg">＃ symbol</span><span class="tg">⎘ image</span><span class="tg">🎙 dictate</span>
+          <span class="sep"></span>
+          <span class="tg on">urgent · interrupts turn</span><span class="tg">btw</span>
+          <span style="margin-left:auto" class="dim mono" style="font-size:10.5px">markdown · claude opus</span>
+          <span class="btn pri">Send <span class="kbd" style="background:transparent;border-color:rgba(0,0,0,.25);color:#04121a">⌘⏎</span></span>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <div class="side">
+    <div class="sec">
+      <div class="cap" style="margin-bottom:8px">This request</div>
+      <div class="kv"><span>anchor</span><b>round.go:46</b></div>
+      <div class="kv"><span>opened</span><b>4m ago · liam</b></div>
+      <div class="kv"><span>agent</span><b style="color:var(--orange)">working · 0:41</b></div>
+      <div class="kv"><span>turn cost</span><b>12.4k tok · $0.21</b></div>
+    </div>
+    <div class="sec">
+      <div class="cap" style="margin-bottom:6px">Changed by this request</div>
+      <div class="fl"><span style="color:var(--yellow)">M</span>pricing/round.go<span class="n"><span style="color:var(--green)">+7</span> <span style="color:var(--red)">−1</span></span></div>
+      <div class="fl"><span style="color:var(--yellow)">M</span>pricing/round_test.go<span class="n"><span style="color:var(--green)">+18</span></span></div>
+      <div class="row gap8" style="margin-top:6px"><div class="tat">READ <div class="bar g"><i style="width:30%"></i></div><b>8/26</b></div><span class="btn ghost" style="height:22px;font-size:11px">Review</span></div>
+    </div>
+    <div class="sec">
+      <div class="cap" style="margin-bottom:6px">Spawned</div>
+      <div class="fl"><span class="dot r" style="margin-top:8px"></span>Double rounding in invoice.go</div>
+      <div class="fl"><span style="color:var(--orange)">◐</span>task · Negative tie handling</div>
+    </div>
+    <div class="sec">
+      <div class="cap" style="margin-bottom:6px">Related</div>
+      <div class="fl"><span class="dot g" style="margin-top:8px;box-shadow:none;opacity:.6"></span>Use banker's rounding for JPY</div>
+      <div class="fl"><span class="dot i" style="margin-top:8px"></span>Add a fuzz test for RoundMinor</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="sec" style="border-top:1px solid var(--line);border-bottom:0">
+      <div class="dim mono" style="font-size:10.5px;line-height:18px">j/k next request · ⏎ focus composer<br>o open anchor · R resolve · e explain</div>
+    </div>
+  </div>
+</div>
+<div class="status">
+  <span class="mode ins">INSERT</span>
+  <span>requests › negative-values</span><span class="sep"></span>
+  <span class="dim">composer · 412 chars</span>
+  <span style="margin-left:auto" class="row gap16">
+    <span class="tat">CTX <div class="bar"><i style="width:22%"></i></div><b>44k</b></span>
+    <span class="tat">LEDGER <div class="bar w"><i style="width:60%"></i></div><b>60%</b></span>
+    <span style="padding-right:12px" class="dim">claude · pricing-rounding</span>
+  </span>
+</div>
