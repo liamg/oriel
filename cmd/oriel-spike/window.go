@@ -23,7 +23,12 @@ func runWindow(name string, auto bool) error {
 	}
 	go func() {
 		w := new(app.Window)
-		w.Option(app.Title("oriel-spike"), app.Size(unit.Dp(scene.IDEWidth), unit.Dp(scene.IDEHeight)))
+		width, height := unit.Dp(scene.IDEWidth), unit.Dp(scene.IDEHeight)
+		if name == "type" {
+			// Typometer measures the line up to the window edge, so the window must fit on screen.
+			width, height = 900, 160
+		}
+		w.Option(app.Title("oriel-spike"), app.Size(width, height))
 		if err := loop(w, s, auto); err != nil {
 			fmt.Fprintln(os.Stderr, "oriel-spike:", err)
 			os.Exit(1)
