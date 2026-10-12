@@ -29,7 +29,7 @@ var goTypes = map[string]bool{
 const goOps = ":=!<>+-*/%&|^="
 
 // LexGo splits one line of Go into coloured tokens. It is a highlighter for the spike, not a parser.
-func LexGo(line string) []Token {
+func LexGo(p palette, line string) []Token {
 	var out []Token
 	emit := func(s string, c color.NRGBA, it bool) {
 		if s != "" {
@@ -41,7 +41,7 @@ func LexGo(line string) []Token {
 		r, n := utf8.DecodeRuneInString(line[i:])
 		switch {
 		case strings.HasPrefix(line[i:], "//"):
-			emit(line[i:], synC, true)
+			emit(line[i:], p.synC, true)
 			return out
 		case r == '"' || r == '`':
 			j := i + 1
@@ -52,14 +52,14 @@ func LexGo(line string) []Token {
 				j++
 			}
 			j = min(j+1, len(line))
-			emit(line[i:j], synS, false)
+			emit(line[i:j], p.synS, false)
 			i = j
 		case unicode.IsDigit(r):
 			j := i
 			for j < len(line) && (line[j] == '.' || line[j] == 'x' || unicode.IsDigit(rune(line[j]))) {
 				j++
 			}
-			emit(line[i:j], synN, false)
+			emit(line[i:j], p.synN, false)
 			i = j
 		case unicode.IsLetter(r) || r == '_':
 			j := i
@@ -73,13 +73,13 @@ func LexGo(line string) []Token {
 			w := line[i:j]
 			switch {
 			case goKeywords[w]:
-				emit(w, synK, false)
+				emit(w, p.synK, false)
 			case goTypes[w]:
-				emit(w, synT, false)
+				emit(w, p.synT, false)
 			case j < len(line) && line[j] == '(':
-				emit(w, synF, false)
+				emit(w, p.synF, false)
 			default:
-				emit(w, fg, false)
+				emit(w, p.fg, false)
 			}
 			i = j
 		case strings.ContainsRune(goOps, r):
@@ -87,7 +87,7 @@ func LexGo(line string) []Token {
 			for j < len(line) && strings.ContainsRune(goOps, rune(line[j])) {
 				j++
 			}
-			emit(line[i:j], synP, false)
+			emit(line[i:j], p.synP, false)
 			i = j
 		default:
 			j := i + n
@@ -98,7 +98,7 @@ func LexGo(line string) []Token {
 				}
 				j++
 			}
-			emit(line[i:j], fg, false)
+			emit(line[i:j], p.fg, false)
 			i = j
 		}
 	}

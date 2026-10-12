@@ -20,6 +20,7 @@ use (
 	./syntax
 	./testrun
 	./text
+	./theme
 	./toml
 	./tools
 	./ui

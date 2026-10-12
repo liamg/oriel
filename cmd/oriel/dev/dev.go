@@ -20,16 +20,22 @@ import (
 	"github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/render/scenes"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 var started = time.Now()
 
-// Shots renders every scene offscreen at each scale into dir, as <scene>@<scale>x.png.
-func Shots(dir, scales string) error {
+// Shots renders every scene offscreen at each scale into dir, as <scene>@<scale>x.png, in the built-in
+// theme's variant v.
+func Shots(dir, scales string, v theme.Variant) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	ts, err := typeset.New(nil)
+	if err != nil {
+		return err
+	}
+	th, err := scenes.Builtin(v)
 	if err != nil {
 		return err
 	}
@@ -39,7 +45,7 @@ func Shots(dir, scales string) error {
 			return err
 		}
 		for _, s := range scenes.All() {
-			img, err := shot(ts, s, float32(scale))
+			img, err := shot(ts, th, s, float32(scale))
 			if err != nil {
 				return fmt.Errorf("%s: %w", s.Name(), err)
 			}
@@ -51,14 +57,14 @@ func Shots(dir, scales string) error {
 	return nil
 }
 
-func shot(ts *typeset.Typesetter, s scenes.Scene, scale float32) (*image.RGBA, error) {
+func shot(ts *typeset.Typesetter, th *theme.Resolved, s scenes.Scene, scale float32) (*image.RGBA, error) {
 	w, h := s.Size()
 	hl, err := gio.NewHeadless(w, h, scale)
 	if err != nil {
 		return nil, err
 	}
 	defer hl.Release()
-	c := scenes.NewCanvas(ts)
+	c := scenes.NewCanvas(ts, th)
 	st := scenes.NewState()
 	if err := hl.Draw(func(f render.Frame) { c.Begin(f); s.Draw(c, st) }); err != nil {
 		return nil, err
@@ -125,7 +131,11 @@ func Bench(out io.Writer, only string) error {
 	}
 	defer hl.Release()
 	fmt.Fprintf(out, "RSS with the GPU context: %.0f MB\n", currentRSS())
-	c := scenes.NewCanvas(ts)
+	th, err := scenes.Builtin(theme.Dark)
+	if err != nil {
+		return err
+	}
+	c := scenes.NewCanvas(ts, th)
 	ide, _ := scenes.ByName("ide")
 	st := scenes.NewState()
 	if err := hl.Draw(func(f render.Frame) { record(c, ide, st, f) }); err != nil {

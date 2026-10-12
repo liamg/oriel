@@ -16,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 // ID is a node's stable identity: its parent's id hashed with its key.
@@ -66,6 +67,8 @@ type UI struct {
 	states map[ID]*state
 	hits   []hit
 	flags  map[ID]flags // from the latest frame, which input resolves against
+
+	theme *theme.Resolved
 
 	in        input
 	springs   map[ID]*spring
@@ -527,6 +530,9 @@ func (u *UI) Paint(f render.Frame) {
 		return
 	}
 	full := render.XYWH(0, 0, u.root.size[0], u.root.size[1])
+	if u.theme != nil {
+		f.Backdrop(u.theme.C(theme.BgBase))
+	}
 	u.paint(f, u.root, full)
 	floats := slices.Clone(u.floats)
 	slices.SortStableFunc(floats, func(a, b *elem) int { return a.style.Z - b.style.Z })
@@ -627,3 +633,16 @@ func num(v float32) string {
 	}
 	return strconv.FormatFloat(float64(v), 'f', 2, 32)
 }
+
+// SetTheme takes the UI's own colours (text, focus ring, tooltips) from r, and paints over its base background.
+func (u *UI) SetTheme(r *theme.Resolved) {
+	u.theme = r
+	u.text.Color = r.C(theme.Fg)
+	u.opts.FocusRing = r.C(theme.FocusRing)
+	u.opts.Tooltip.Color = r.C(theme.Fg)
+	u.opts.TooltipFill = r.C(theme.BgOverlay)
+	u.opts.TooltipStroke = r.C(theme.LineStrong)
+}
+
+// Theme is the theme set last, or nil.
+func (u *UI) Theme() *theme.Resolved { return u.theme }

@@ -3,7 +3,8 @@ package scenes
 import "testing"
 
 func TestLexGo(t *testing.T) {
-	toks := LexGo(`	if x := f(1); x != "a" { return } // done`)
+	p := darkPalette(t)
+	toks := LexGo(p, `	if x := f(1); x != "a" { return } // done`)
 	var got []string
 	for _, tk := range toks {
 		got = append(got, tk.Text)
@@ -17,7 +18,7 @@ func TestLexGo(t *testing.T) {
 			t.Fatalf("token %d: got %q, want %q (all %q)", i, got[i], want[i], got)
 		}
 	}
-	if toks[1].Color != synK || toks[7].Color != synF || toks[9].Color != synN || toks[15].Color != synS || !toks[19].Italic {
+	if toks[1].Color != p.synK || toks[7].Color != p.synF || toks[9].Color != p.synN || toks[15].Color != p.synS || !toks[19].Italic {
 		t.Errorf("colours wrong: %+v", toks)
 	}
 }

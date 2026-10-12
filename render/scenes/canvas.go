@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 const (
@@ -20,20 +21,24 @@ const (
 	Display = typeset.Display
 )
 
-// Canvas draws in CSS pixels on a render.Frame.
+// Canvas draws in CSS pixels on a render.Frame, in a theme's colours.
 type Canvas struct {
 	F  render.Frame
 	Sh typeset.Shaper
+	p  palette
 
 	bars  map[uint64]*barsImage
 	frame int
 }
 
-func NewCanvas(sh typeset.Shaper) *Canvas { return &Canvas{Sh: sh, bars: map[uint64]*barsImage{}} }
+func NewCanvas(sh typeset.Shaper, th *theme.Resolved) *Canvas {
+	return &Canvas{Sh: sh, p: paletteOf(th), bars: map[uint64]*barsImage{}}
+}
 
 // Begin starts drawing a frame into f, keeping caches from earlier frames.
 func (c *Canvas) Begin(f render.Frame) {
 	c.F = f
+	f.Backdrop(c.p.bg0)
 	c.frame++
 	for k, b := range c.bars {
 		if c.frame-b.used > 2 {
@@ -115,14 +120,22 @@ func (c *Canvas) Opacity(a float32) func() {
 	return c.F.Pop
 }
 
-// Glow draws a `box-shadow: 0 0 blur col` around r.
+// Glow draws a `box-shadow: 0 0 blur col` around r, at the theme's glow strength.
 func (c *Canvas) Glow(r Rect, blur float32, col color.NRGBA) {
-	c.F.Effect(render.Glow, r.r(), blur, col)
+	if col = c.glowColor(col); col.A > 0 {
+		c.F.Effect(render.Glow, r.r(), blur, col)
+	}
 }
 
 // GlowDisc draws a glow around a circle of radius r centred on (cx, cy).
 func (c *Canvas) GlowDisc(cx, cy, r, blur float32, col color.NRGBA) {
-	c.F.Effect(render.GlowDisc, render.XYWH(cx-r, cy-r, 2*r, 2*r), blur, col)
+	if col = c.glowColor(col); col.A > 0 {
+		c.F.Effect(render.GlowDisc, render.XYWH(cx-r, cy-r, 2*r, 2*r), blur, col)
+	}
+}
+
+func (c *Canvas) glowColor(col color.NRGBA) color.NRGBA {
+	return alpha(col, min(c.p.glow, 1))
 }
 
 // TextStyle describes a run of text.

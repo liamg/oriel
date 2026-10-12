@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/registry/keymap"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -20,6 +21,7 @@ type Registry interface {
 	Keymap(k Keymap) Disposable
 	Option(o OptionSpec) Disposable // panics if the default doesn't fit the spec
 	View(id string, v View) Disposable
+	Theme(s theme.Source) Disposable
 
 	Run(ctx Ctx, id string, args Args) error
 	Commands() []Command // the registration that wins for each id, sorted by id
@@ -28,6 +30,7 @@ type Registry interface {
 	// mapping that starts with keys.
 	Lookup(modes []string, keys []string) (exact *Keymap, more bool)
 	ViewByID(id string) (View, bool)
+	Themes() []theme.Source // in registration order; a later theme with the same name wins
 	Options() Options
 }
 
@@ -117,6 +120,7 @@ type reg struct {
 	keymaps  stacks[keymapKey, Keymap]
 	prefixes map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
 	views    stacks[string, View]
+	themes   []entry[theme.Source]
 	options  *options
 }
 
@@ -209,6 +213,28 @@ func (r *reg) View(id string, v View) Disposable {
 		defer r.mu.Unlock()
 		r.views.remove(id, tok)
 	})
+}
+
+func (r *reg) Theme(s theme.Source) Disposable {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	tok := tokens.Add(1)
+	r.themes = append(r.themes, entry[theme.Source]{tok, s})
+	return disposeOnce(func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		r.themes = slices.DeleteFunc(r.themes, func(e entry[theme.Source]) bool { return e.token == tok })
+	})
+}
+
+func (r *reg) Themes() []theme.Source {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]theme.Source, len(r.themes))
+	for i, e := range r.themes {
+		out[i] = e.value
+	}
+	return out
 }
 
 func (r *reg) Run(ctx Ctx, id string, args Args) error {

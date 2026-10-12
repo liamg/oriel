@@ -3,6 +3,8 @@ package app_test
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -57,11 +59,18 @@ type booted struct {
 
 func boot(t *testing.T, exts ...ext.Extension) *booted {
 	t.Helper()
+	return bootIn(t, t.TempDir(), exts...)
+}
+
+func bootIn(t *testing.T, configDir string, exts ...ext.Extension) *booted {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
 	be := headless.New()
 	b := &booted{store: eventstore.New(), done: make(chan error, 1)}
-	go func() { b.done <- app.Run(ctx, be, app.Config{Store: b.store, Extensions: exts}) }()
+	go func() {
+		b.done <- app.Run(ctx, be, app.Config{Store: b.store, Extensions: exts, ConfigDir: configDir})
+	}()
 	select {
 	case b.win = <-be.Windows():
 	case err := <-b.done:
@@ -219,6 +228,61 @@ func TestPointerSetsTheCursor(t *testing.T) {
 			t.Fatalf("cursor is %v off the link", b.win.Cursor())
 		}
 		time.Sleep(time.Millisecond)
+	}
+	b.close(t)
+}
+
+// themePicker sets ui.theme, as a user's settings would.
+type themePicker string
+
+func (p themePicker) Manifest() ext.Manifest { return ext.Manifest{ID: "test.theme"} }
+func (p themePicker) Activate(_ context.Context, h ext.Host) error {
+	return h.Options().Set("ui.theme", registry.LayerUser, registry.At{}, string(p))
+}
+func (themePicker) Deactivate(context.Context) error { return nil }
+
+func background(f headless.Frame) render.Color {
+	if len(f.Ops) == 0 || f.Ops[0].Kind != render.OpRect {
+		return render.Color{}
+	}
+	return f.Ops[0].Style.Fill
+}
+
+func TestThemeFileReloadsLive(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "themes", "mine.toml")
+	os.MkdirAll(filepath.Dir(path), 0o755)
+	write := func(bg string) {
+		src := "name = \"mine\"\nextends = \"oriel\"\n[semantic]\n\"bg.base\" = \"" + bg + "\"\n"
+		if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("#102030")
+	b := bootIn(t, dir, themePicker("mine"))
+	wait := func(want render.Color) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == want }); err != nil {
+			t.Fatalf("background %v, want %v", background(f), want)
+		}
+	}
+	wait(render.Color{R: 0x10, G: 0x20, B: 0x30, A: 255})
+	write("#405060")
+	wait(render.Color{R: 0x40, G: 0x50, B: 0x60, A: 255})
+	b.close(t)
+}
+
+func TestBrokenThemeFallsBackToTheBuiltIn(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "themes"), 0o755)
+	os.WriteFile(filepath.Join(dir, "themes", "bad.toml"), []byte("name = \"bad\"\n[semantic]\naccent = \"nope\"\n"), 0o644)
+	b := bootIn(t, dir, themePicker("bad"))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == render.Color{R: 6, G: 6, B: 6, A: 255} }); err != nil {
+		t.Fatalf("background %v; want the built-in bg.base", background(f))
 	}
 	b.close(t)
 }

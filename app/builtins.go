@@ -3,14 +3,16 @@ package app
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
-func builtins() []ext.Extension {
-	return []ext.Extension{&uiOptions{}, &layout{}, &introspect{}}
+func builtins(cfg Config) []ext.Extension {
+	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, &layout{}, &introspect{}}
 }
 
 // disposer is the usual way for an extension to undo what it registered.
@@ -90,5 +92,28 @@ func (o *uiOptions) Manifest() ext.Manifest { return ext.Manifest{ID: "ui"} }
 func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
 	o.add(h.Option(registry.OptionSpec{Name: "ui.reduced_motion", Type: registry.Bool, Default: false,
 		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
+	o.add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel",
+		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme, by name: a built-in, or a file in your themes directory."}))
+	o.add(h.Option(registry.OptionSpec{Name: "ui.variant", Type: registry.Enum, Values: []string{"dark", "light"}, Default: "dark",
+		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme's dark or light variant."}))
+	return nil
+}
+
+// themes registers the built-in themes and the theme files in the user's themes directory.
+type themes struct {
+	disposer
+	dir string
+}
+
+func (t *themes) Manifest() ext.Manifest { return ext.Manifest{ID: "themes"} }
+
+func (t *themes) Activate(_ context.Context, h ext.Host) error {
+	for _, s := range theme.Builtins() {
+		t.add(h.Theme(s))
+	}
+	files, _ := filepath.Glob(filepath.Join(t.dir, "*.toml"))
+	for _, f := range files {
+		t.add(h.Theme(theme.File{Path: f}))
+	}
 	return nil
 }

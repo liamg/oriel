@@ -17,6 +17,7 @@ const (
 	OpPushClip
 	OpPushOpacity
 	OpPop
+	OpBackdrop
 )
 
 // Op is one recorded call on a Frame.
@@ -65,6 +66,8 @@ func (l *List) Replay(f Frame) {
 			f.PushOpacity(op.Amount)
 		case OpPop:
 			f.Pop()
+		case OpBackdrop:
+			f.Backdrop(op.Color)
 		}
 	}
 }
@@ -87,4 +90,5 @@ func (r recorder) PushClip(rc Rect, radius float32) {
 }
 func (r recorder) PushOpacity(a float32) { r.add(Op{Kind: OpPushOpacity, Amount: a}) }
 func (r recorder) Pop()                  { r.add(Op{Kind: OpPop}) }
+func (r recorder) Backdrop(c Color)      { r.add(Op{Kind: OpBackdrop, Color: c}) }
 func (r recorder) Scale() float32        { return r.l.scale }

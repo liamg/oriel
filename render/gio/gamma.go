@@ -84,23 +84,47 @@ func luma(c color.NRGBA) float64 {
 	return (0.2126*float64(c.R) + 0.7152*float64(c.G) + 0.0722*float64(c.B)) / 255
 }
 
-// srgbAlpha returns a' with lin(a'·lin(c)) over black equal to sRGB a·c, for c's brightest channel.
-func srgbAlpha(a, cmax float64) float64 {
-	if cmax <= 0 {
-		return a
-	}
-	return lin(a*cmax) / lin(cmax)
-}
-
-// solid remaps a translucent fill's alpha so Gio's linear-light blending over a dark backdrop
-// matches CSS's sRGB blending (rendering.md, "Blending").
-func solid(v color.NRGBA) color.NRGBA {
+// solid remaps a translucent fill's alpha so Gio's linear-light blending over the backdrop matches CSS's
+// sRGB blending (rendering.md, "Blending"), for the channel where the two differ most.
+func (f *Frame) solid(v color.NRGBA) color.NRGBA {
 	if v.A == 255 || v.A == 0 {
 		return v
 	}
-	m := float64(max(v.R, v.G, v.B)) / 255
-	v.A = uint8(math.Round(255 * srgbAlpha(float64(v.A)/255, m)))
+	k := [2]color.NRGBA{v, f.backdrop}
+	if a, ok := f.alphas[k]; ok {
+		v.A = a
+		return v
+	}
+	b := f.backdrop
+	ch, bg, best := 0.0, 0.0, -1.0
+	for _, p := range [][2]uint8{{v.R, b.R}, {v.G, b.G}, {v.B, b.B}} {
+		c, g := float64(p[0])/255, float64(p[1])/255
+		if d := math.Abs(c - g); d > best {
+			ch, bg, best = c, g, d
+		}
+	}
+	a := float64(v.A) / 255
+	out := v.A
+	if best > 0.01 {
+		out = uint8(math.Round(255 * solveAlpha(ch, bg, ch*a+(1-a)*bg)))
+	}
+	if len(f.alphas) > 4096 {
+		clear(f.alphas)
+	}
+	f.alphas[k] = out
+	v.A = out
 	return v
+}
+
+// layerAlpha remaps an opacity layer's alpha, taking its content to be the backdrop's opposite.
+func (f *Frame) layerAlpha(a float32) float32 {
+	bg := luma(f.backdrop)
+	c := 1 - bg
+	if math.Abs(c-bg) < 0.01 {
+		return a
+	}
+	want := c*float64(a) + (1-float64(a))*bg
+	return float32(solveAlpha(c, bg, want))
 }
 
 // tint writes cov in colour col into dst at p, as premultiplied sRGB.

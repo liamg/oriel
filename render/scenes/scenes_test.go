@@ -6,7 +6,23 @@ import (
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
+
+func resolved(t *testing.T, v theme.Variant) *theme.Resolved {
+	t.Helper()
+	st, err := theme.Stack(theme.Builtins(), "oriel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := theme.Resolve(st, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
+func darkPalette(t *testing.T) palette { return paletteOf(resolved(t, theme.Dark)) }
 
 func TestScenesDraw(t *testing.T) {
 	ts, err := typeset.New(nil)
@@ -15,7 +31,7 @@ func TestScenesDraw(t *testing.T) {
 	}
 	for _, s := range All() {
 		for _, scale := range []float32{1, 1.25, 2} {
-			c := NewCanvas(ts)
+			c := NewCanvas(ts, resolved(t, theme.Dark))
 			st := NewState()
 			var l render.List
 			for i := range 3 {
@@ -49,7 +65,7 @@ func TestScenesDraw(t *testing.T) {
 func TestIDEHasItsText(t *testing.T) {
 	ts, _ := typeset.New(nil)
 	var l render.List
-	c := NewCanvas(ts)
+	c := NewCanvas(ts, resolved(t, theme.Dark))
 	c.Begin(l.Record(1))
 	IDE(c)
 	var text []string

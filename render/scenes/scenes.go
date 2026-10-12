@@ -97,7 +97,7 @@ func Scroll(c *Canvas, st *State) {
 	if st.file == nil {
 		st.file = GoFile(FileLines)
 	}
-	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, bg0)
+	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, c.p.bg0)
 	rows := int((IDEHeight - 12) / codeLH)
 	const off = 5
 	st.Line = max(0, min(st.Line, len(st.file)-1))
@@ -108,39 +108,39 @@ func Scroll(c *Canvas, st *State) {
 		st.top = st.Line - rows + 1 + off
 	}
 	y := float32(6)
-	gutter := mono(codeSz, typeset.Normal, fg4)
+	gutter := mono(codeSz, typeset.Normal, c.p.fg4)
 	for i := st.top; i < min(st.top+rows, len(st.file)); i++ {
 		if i == st.Line {
-			c.Fill(Rect{0, y, IDEWidth, codeLH}, rgba(0xffffff, .025))
+			c.Fill(Rect{0, y, IDEWidth, codeLH}, c.p.lineCur)
 		}
 		if i%23 == 4 {
-			c.Fill(Rect{0, y, IDEWidth, codeLH}, rgba(0x4fe0a0, .07))
-			c.Fill(Rect{62, y, 2, codeLH}, green)
+			c.Fill(Rect{0, y, IDEWidth, codeLH}, c.p.diffAdd)
+			c.Fill(Rect{62, y, 2, codeLH}, c.p.green)
 		}
 		num := itoa(i + 1)
 		g := gutter
 		if i == st.Line {
-			g.Color = fg2
+			g.Color = c.p.fg2
 		}
 		c.Text(48-c.Measure(num, g), c.Baseline(y+codeLH/2, g), num, g)
 		toks, ok := st.toks[i]
 		if !ok {
-			toks = LexGo(st.file[i])
+			toks = LexGo(c.p, st.file[i])
 			st.toks[i] = toks
 		}
 		end := c.codeLine(68, y, toks)
-		base := c.Baseline(y+codeLH/2, codeStyle)
+		base := c.Baseline(y+codeLH/2, c.codeStyle())
 		switch {
 		case i%37 == 9:
-			c.Wavy(68+8.1*4, end, base+4, red)
-			c.Text(end+22, base, "● undefined: math (compiler)", TextStyle{Face: Mono, Size: 12, Italic: true, Color: alpha(red, .7)})
+			c.Wavy(68+8.1*4, end, base+4, c.p.red)
+			c.Text(end+22, base, "● undefined: math (compiler)", TextStyle{Face: Mono, Size: 12, Italic: true, Color: alpha(c.p.red, .7)})
 		case i%11 == 2:
-			c.Text(end+22, base, "← agent · 2m ago", TextStyle{Face: Mono, Size: 12, Italic: true, Color: fg4})
+			c.Text(end+22, base, "← agent · 2m ago", TextStyle{Face: Mono, Size: 12, Italic: true, Color: c.p.fg4})
 		}
 		if i == st.Line {
 			cur := Rect{68, base + 4 - 19, 8.1, 19}
-			c.Glow(cur, 10, accent)
-			c.Fill(cur, accent)
+			c.Glow(cur, 10, c.p.accent)
+			c.Fill(cur, c.p.accent)
 		}
 		y += codeLH
 	}
@@ -149,36 +149,36 @@ func Scroll(c *Canvas, st *State) {
 // TextSampler shows the text-quality cases from shell.md: ligatures, italics, emoji and CJK
 // fallback, hairlines, and code at every size the UI uses.
 func TextSampler(c *Canvas, _ *State) {
-	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, bg0)
+	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, c.p.bg0)
 	y := float32(40)
 	label := func(s string) {
-		c.Text(40, y, strings.ToUpper(s), capStyle)
+		c.Text(40, y, strings.ToUpper(s), c.capStyle())
 		y += 24
 	}
 	label("ligatures (JetBrains Mono calt)")
-	c.codeLine(40, y-15, LexGo(`if a != b && c >= d || e <= f { x := y => z; p -> q; i++; s == "==="; www }`))
+	c.codeLine(40, y-15, LexGo(c.p, `if a != b && c >= d || e <= f { x := y => z; p -> q; i++; s == "==="; www }`))
 	y += 30
 	label("italic, bold, weights")
-	c.Text(40, y, "// italic comment in JetBrains Mono Italic", TextStyle{Face: Mono, Size: codeSz, Italic: true, Color: synC})
-	c.Text(560, y, "Bold mono", mono(codeSz, typeset.Bold, fg))
-	c.Text(720, y, "Inter regular · medium", ui(13, typeset.Normal, fg))
-	c.Text(900, y, "semibold", ui(13, typeset.SemiBold, fg))
-	c.Text(1000, y, "SPACE GROTESK", TextStyle{Face: Display, Weight: typeset.Medium, Size: 16, Color: fg, Spacing: .2})
+	c.Text(40, y, "// italic comment in JetBrains Mono Italic", TextStyle{Face: Mono, Size: codeSz, Italic: true, Color: c.p.synC})
+	c.Text(560, y, "Bold mono", mono(codeSz, typeset.Bold, c.p.fg))
+	c.Text(720, y, "Inter regular · medium", ui(13, typeset.Normal, c.p.fg))
+	c.Text(900, y, "semibold", ui(13, typeset.SemiBold, c.p.fg))
+	c.Text(1000, y, "SPACE GROTESK", TextStyle{Face: Display, Weight: typeset.Medium, Size: 16, Color: c.p.fg, Spacing: .2})
 	y += 40
 	label("fallback: emoji, CJK, symbols (system fonts)")
-	c.Text(40, y, "emoji 🙂🚀✅🔥  CJK 漢字かなカナ 한국어  symbols ⌘⌥⇧⌃ ƒ ⎇ ◈ ▷ ⌕ ± ✓ ◐ ○ −∞ →", ui(16, typeset.Normal, fg))
+	c.Text(40, y, "emoji 🙂🚀✅🔥  CJK 漢字かなカナ 한국어  symbols ⌘⌥⇧⌃ ƒ ⎇ ◈ ▷ ⌕ ± ✓ ◐ ○ −∞ →", ui(16, typeset.Normal, c.p.fg))
 	y += 40
 	label("hairlines: 0.5 px and 1 px, horizontal, vertical, diagonal")
 	for i, w := range []float32{0.5, 1} {
 		yy := y + float32(i)*20
-		c.Line(40, yy, 600, yy, w, fg2)
-		c.Line(640+float32(i)*40, y-10, 640+float32(i)*40, y+30, w, fg2)
-		c.Line(720+float32(i)*80, y-10, 780+float32(i)*80, y+30, w, fg2)
+		c.Line(40, yy, 600, yy, w, c.p.fg2)
+		c.Line(640+float32(i)*40, y-10, 640+float32(i)*40, y+30, w, c.p.fg2)
+		c.Line(720+float32(i)*80, y-10, 780+float32(i)*80, y+30, w, c.p.fg2)
 	}
 	y += 60
 	label("code sizes")
 	for _, sz := range []float32{11, 12, 13, 13.5, 14, 16} {
-		t := codeStyle
+		t := c.codeStyle()
 		t.Size = sz
 		c.Text(40, y, fmt.Sprintf("%-5v func roundHalfEven(v decimal.Decimal, p int32) decimal.Decimal { // 0O 1lI |", sz), t)
 		y += sz * 1.6
@@ -186,7 +186,7 @@ func TextSampler(c *Canvas, _ *State) {
 	y += 20
 	label("ui sizes")
 	for _, sz := range []float32{9.5, 10.5, 11.5, 12.5, 13} {
-		c.Text(40, y, fmt.Sprintf("%v px  Negative values round the wrong way · round.go:46 · claude working · 1m", sz), ui(sz, typeset.Normal, fg2))
+		c.Text(40, y, fmt.Sprintf("%v px  Negative values round the wrong way · round.go:46 · claude working · 1m", sz), ui(sz, typeset.Normal, c.p.fg2))
 		y += sz * 1.7
 	}
 	y += 20
@@ -194,14 +194,14 @@ func TextSampler(c *Canvas, _ *State) {
 	c.Fill(Rect{40, y - 16, 700, 60}, hex(0xf6f3ea))
 	c.codeLine(50, y-12, []Token{{"func roundHalfEven(v decimal.Decimal, p int32) decimal.Decimal {", hex(0x1b1a17), false}})
 	c.codeLine(50, y+12, []Token{{"    return floor.Add(one).Shift(-p) // dark text on light", hex(0x56514a), true}})
-	c.codeLine(800, y-12, ideTokens("func roundHalfEven(v decimal.Decimal, p int32) decimal.Decimal {"))
-	c.codeLine(800, y+12, ideTokens("    return floor.Add(one).Shift(-p) // light text on dark"))
+	c.codeLine(800, y-12, ideTokens(c.p, "func roundHalfEven(v decimal.Decimal, p int32) decimal.Decimal {"))
+	c.codeLine(800, y+12, ideTokens(c.p, "    return floor.Add(one).Shift(-p) // light text on dark"))
 }
 
 // Glows draws the IDE with 50 pulsing glows and an opacity-layer modal over it.
 func Glows(c *Canvas, st *State) {
 	IDE(c)
-	cols := []color.NRGBA{accent, working, red, violet, pink, green, warn}
+	cols := []color.NRGBA{c.p.accent, c.p.working, c.p.red, c.p.violet, c.p.pink, c.p.green, c.p.warn}
 	for i := range 50 {
 		x := float32(320 + (i%10)*80)
 		y := float32(140 + (i/10)*90)
@@ -216,10 +216,10 @@ func Glows(c *Canvas, st *State) {
 	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, rgba(0x030508, .72))
 	card := Rect{500, 300, 600, 300}
 	c.Glow(card, 30, rgba(0x000000, .8))
-	c.RRect(card, 10, bg2)
-	c.Border(card, 10, 1, line2)
-	c.Text(card.X+20, card.Y+36, "Opacity layer over a live editor", ui(16, typeset.SemiBold, fg))
-	c.Text(card.X+20, card.Y+62, "Scrim at .72, card in a .94 opacity layer; 50 glows pulse underneath.", ui(12.5, typeset.Normal, fg2))
+	c.RRect(card, 10, c.p.bg2)
+	c.Border(card, 10, 1, c.p.line2)
+	c.Text(card.X+20, card.Y+36, "Opacity layer over a live editor", ui(16, typeset.SemiBold, c.p.fg))
+	c.Text(card.X+20, card.Y+62, "Scrim at .72, card in a .94 opacity layer; 50 glows pulse underneath.", ui(12.5, typeset.Normal, c.p.fg2))
 	pop()
 }
 
@@ -235,31 +235,31 @@ func HUD(c *Canvas, st *State) {
 			}
 		}
 	}
-	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, bg0)
+	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, c.p.bg0)
 	names := []string{"5H", "WK", "CTX", "CACHE", "CPU", "MEM", "BUS", "CI", "TESTS", "REVIEW"}
 	for i := range 30 {
 		x := float32(20 + (i%6)*262)
 		y := float32(20 + (i/6)*194)
 		r := Rect{x, y, 250, 182}
-		c.RRect(r, 6, bg1)
-		c.Border(r, 6, 1, line)
-		c.Text(x+12, y+22, names[i%len(names)]+" · "+itoa(i+1), capStyle)
+		c.RRect(r, 6, c.p.bg1)
+		c.Border(r, 6, 1, c.p.line)
+		c.Text(x+12, y+22, names[i%len(names)]+" · "+itoa(i+1), c.capStyle())
 		h := st.hud[i]
 		v := h[len(h)-1]
-		c.Text(x+12, y+62, fmt.Sprintf("%.1f%%", v*100), TextStyle{Face: Display, Weight: typeset.Medium, Size: 28, Color: fg})
-		c.RRect(Rect{x + 12, y + 76, 226, 4}, 2, bg4)
-		c.RRect(Rect{x + 12, y + 76, 226 * v, 4}, 2, accent)
-		c.Bars(x+12, y+168, 5.6, 3.5, 70, h, alpha(working, .75))
+		c.Text(x+12, y+62, fmt.Sprintf("%.1f%%", v*100), TextStyle{Face: Display, Weight: typeset.Medium, Size: 28, Color: c.p.fg})
+		c.RRect(Rect{x + 12, y + 76, 226, 4}, 2, c.p.bg4)
+		c.RRect(Rect{x + 12, y + 76, 226 * v, 4}, 2, c.p.accent)
+		c.Bars(x+12, y+168, 5.6, 3.5, 70, h, alpha(c.p.working, .75))
 	}
 }
 
 // Type is an empty buffer that echoes typed text, for typometer.
 func Type(c *Canvas, st *State) {
-	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, bg0)
-	c.Text(68, 40, "TYPE HERE: KEYPRESS-TO-PHOTON (TYPOMETER)", capStyle)
+	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, c.p.bg0)
+	c.Text(68, 40, "TYPE HERE: KEYPRESS-TO-PHOTON (TYPOMETER)", c.capStyle())
 	y := float32(60)
 	// No caret, so typometer only sees the dots it types.
-	c.codeLine(68, y, []Token{{string(st.Typed), fg, false}})
+	c.codeLine(68, y, []Token{{string(st.Typed), c.p.fg, false}})
 	// Typometer takes the line to run until the background changes; this bar ends it inside the window.
-	c.Fill(Rect{780, 0, 4, IDEHeight}, accent)
+	c.Fill(Rect{780, 0, 4, IDEHeight}, c.p.accent)
 }

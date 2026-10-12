@@ -4,6 +4,7 @@ import (
 	"image/color"
 
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 func hex(v uint32) color.NRGBA {
@@ -21,33 +22,48 @@ func alpha(c color.NRGBA, a float32) color.NRGBA {
 	return c
 }
 
-// The default theme's tokens, as in the mockups' base.css.
+// Component tokens the reference screens paint with, beyond the semantic ones.
 var (
-	bg0, bg1, bg2, bg3, bg4 = hex(0x060606), hex(0x0c0c0b), hex(0x121210), hex(0x191815), hex(0x23211c)
-	line, line2             = hex(0x24221d), hex(0x332f27)
-	fg, fg2, fg3, fg4       = hex(0xece6d8), hex(0xb3ab99), hex(0x7c7566), hex(0x4f4a40)
-
-	accent   = hex(0xffd23f)
-	accentBg = rgba(0xffd23f, .08)
-	brand2   = hex(0xff8a1f)
-	green    = hex(0x4fe0a0)
-	warn     = hex(0xff9b45)
-	red      = hex(0xff5f6d)
-	working  = hex(0x4cc9f0)
-	violet   = hex(0xa98bff)
-	pink     = hex(0xff6fae)
-	ciBlue   = hex(0x5c8dff)
-	synK     = hex(0xc792ff)
-	synS     = hex(0xa5e075)
-	synN     = hex(0xff9e64)
-	synF     = hex(0x5cd2ff)
-	synT     = hex(0xffcf5c)
-	synC     = hex(0x5c6b7e)
-	synP     = hex(0x89ddff)
-	termFg   = hex(0xc8d2dc)
-	termBg   = hex(0x05070a)
-	ink      = hex(0x141006)
+	terminalBg  = theme.Declare("terminal.bg", "#05070a")
+	terminalFg  = theme.Declare("terminal.fg", "#c8d2dc")
+	threadCard  = theme.Declare("thread.card.bg", "bg.raised")
+	gutterAdd   = theme.Declare("gutter.add.fg", "#3c8f6b")
+	textVirtual = theme.Declare("text.virtual", "#a08a4a")
+	lineCurrent = theme.DeclareOn("line.current", "alpha(#ffffff, 2.5%)", "bg.base")
 )
+
+// palette is a theme's colours under the names the mockups' CSS uses.
+type palette struct {
+	bg0, bg1, bg2, bg3, bg4 color.NRGBA
+	line, line2             color.NRGBA
+	fg, fg2, fg3, fg4       color.NRGBA
+
+	accent, accentBg, brand2, ink                   color.NRGBA
+	green, warn, red, working, violet, pink, ciBlue color.NRGBA
+	synK, synS, synN, synF, synT, synC, synP        color.NRGBA
+	termFg, termBg                                  color.NRGBA
+	card, gutterAdd, vtext, lineCur, diffAdd        color.NRGBA
+
+	glow float32 // the theme's glow strength: 0 turns glows off
+	grid float32
+}
+
+func paletteOf(r *theme.Resolved) palette {
+	syn := func(group string) color.NRGBA { return r.Syntax(group).FG }
+	return palette{
+		bg0: r.C(theme.BgBase), bg1: r.C(theme.BgSurface), bg2: r.C(theme.BgRaised), bg3: r.C(theme.BgOverlay), bg4: r.C(theme.BgStrong),
+		line: r.C(theme.Line), line2: r.C(theme.LineStrong),
+		fg: r.C(theme.Fg), fg2: r.C(theme.FgMuted), fg3: r.C(theme.FgFaint), fg4: r.C(theme.FgGhost),
+		accent: r.C(theme.Accent), accentBg: r.C(theme.AccentBg), brand2: r.C(theme.Brand), ink: r.C(theme.AccentInk),
+		green: r.C(theme.StatusQuiet), warn: r.C(theme.Warn), red: r.C(theme.Error), working: r.C(theme.StatusWorking),
+		violet: r.C(theme.StatusPermission), pink: r.C(theme.StatusReviewer), ciBlue: r.C(theme.StatusCI),
+		synK: syn("@keyword"), synS: syn("@string"), synN: syn("@number"), synF: syn("@function"), synT: syn("@type"),
+		synC: syn("@comment"), synP: syn("@punctuation"),
+		termFg: r.C(terminalFg), termBg: r.C(terminalBg),
+		card: r.C(threadCard), gutterAdd: r.C(gutterAdd), vtext: r.C(textVirtual), lineCur: r.C(lineCurrent), diffAdd: r.C(theme.DiffAdd),
+		glow: float32(r.Effect("glow")), grid: float32(r.Effect("grid")),
+	}
+}
 
 func mono(size float32, w typeset.Weight, c color.NRGBA) TextStyle {
 	return TextStyle{Face: Mono, Weight: w, Size: size, Color: c}
@@ -58,4 +74,15 @@ func ui(size float32, w typeset.Weight, c color.NRGBA) TextStyle {
 }
 
 // capStyle is the mono micro-label: 600 9.5px, .14em, uppercase.
-var capStyle = TextStyle{Face: Mono, Weight: typeset.SemiBold, Size: 9.5, Color: fg3, Spacing: .14}
+func (c *Canvas) capStyle() TextStyle {
+	return TextStyle{Face: Mono, Weight: typeset.SemiBold, Size: 9.5, Color: c.p.fg3, Spacing: .14}
+}
+
+// Builtin resolves Oriel's built-in theme in variant v, which the reference screens are drawn from.
+func Builtin(v theme.Variant) (*theme.Resolved, error) {
+	st, err := theme.Stack(theme.Builtins(), "oriel")
+	if err != nil {
+		return nil, err
+	}
+	return theme.Resolve(st, v)
+}

@@ -39,6 +39,9 @@ type Frame struct {
 	baked  map[any]*bakedEntry
 	images map[*image.RGBA]*imageEntry
 	stack  []func()
+
+	backdrop color.NRGBA
+	alphas   map[[2]color.NRGBA]uint8
 }
 
 type covKey struct {
@@ -67,13 +70,18 @@ var _ render.Frame = (*Frame)(nil)
 
 func NewFrame() *Frame {
 	return &Frame{
-		atlas:  newAtlas(),
-		gamma:  textGamma{darken: 0.25},
-		covs:   map[covKey]typeset.Coverage{},
-		baked:  map[any]*bakedEntry{},
-		images: map[*image.RGBA]*imageEntry{},
+		atlas:    newAtlas(),
+		gamma:    textGamma{darken: 0.25},
+		covs:     map[covKey]typeset.Coverage{},
+		baked:    map[any]*bakedEntry{},
+		images:   map[*image.RGBA]*imageEntry{},
+		alphas:   map[[2]color.NRGBA]uint8{},
+		backdrop: color.NRGBA{A: 255},
 	}
 }
+
+// Backdrop sets what translucent fills and opacity layers are corrected over; black until set.
+func (c *Frame) Backdrop(col color.NRGBA) { c.backdrop = col }
 
 // Begin starts a frame into ops at scale device pixels per logical pixel.
 func (c *Frame) Begin(ops *op.Ops, scale float32) {
@@ -126,7 +134,7 @@ func (c *Frame) Rect(r render.Rect, s render.Style) {
 		if s.Radius > 0 {
 			c.bakedShape(r, s.Radius, 0, s.Fill)
 		} else {
-			paint.FillShape(c.ops, solid(s.Fill), clip.Rect(c.irect(r)).Op())
+			paint.FillShape(c.ops, c.solid(s.Fill), clip.Rect(c.irect(r)).Op())
 		}
 	}
 	if s.Width > 0 && s.Stroke.A > 0 {
@@ -136,7 +144,7 @@ func (c *Frame) Rect(r render.Rect, s render.Style) {
 
 func (c *Frame) gradient(r render.Rect, g *render.Gradient) {
 	ir := c.irect(r)
-	lg := paint.LinearGradientOp{Color1: solid(g.From), Color2: solid(g.To), Stop1: f32.Pt(float32(ir.Min.X), float32(ir.Min.Y))}
+	lg := paint.LinearGradientOp{Color1: c.solid(g.From), Color2: c.solid(g.To), Stop1: f32.Pt(float32(ir.Min.X), float32(ir.Min.Y))}
 	if g.Horizontal {
 		lg.Stop2 = f32.Pt(float32(ir.Max.X), float32(ir.Min.Y))
 	} else {
@@ -169,10 +177,10 @@ func (c *Frame) Path(p *render.Path, s render.Style) {
 		return cp.End()
 	}
 	if s.Fill.A > 0 {
-		paint.FillShape(c.ops, solid(s.Fill), clip.Outline{Path: spec()}.Op())
+		paint.FillShape(c.ops, c.solid(s.Fill), clip.Outline{Path: spec()}.Op())
 	}
 	if s.Width > 0 && s.Stroke.A > 0 {
-		paint.FillShape(c.ops, solid(s.Stroke), clip.Stroke{Path: spec(), Width: s.Width * c.scale}.Op())
+		paint.FillShape(c.ops, c.solid(s.Stroke), clip.Stroke{Path: spec(), Width: s.Width * c.scale}.Op())
 	}
 }
 
@@ -253,8 +261,7 @@ func (c *Frame) PushClip(r render.Rect, radius float32) {
 }
 
 func (c *Frame) PushOpacity(a float32) {
-	a = float32(srgbAlpha(float64(a), 0.9))
-	c.stack = append(c.stack, paint.PushOpacity(c.ops, a).Pop)
+	c.stack = append(c.stack, paint.PushOpacity(c.ops, c.layerAlpha(a)).Pop)
 }
 
 func (c *Frame) Pop() {

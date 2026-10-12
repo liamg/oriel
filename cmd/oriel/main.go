@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/cmd/oriel/dev"
 	"github.com/liamg/oriel/render/gio"
+	"github.com/liamg/oriel/theme"
 )
 
 var version = "dev"
@@ -61,7 +62,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 }
 
-const devUsage = `oriel dev shot [-scales 1,2] DIR      render every reference scene offscreen into DIR
+const devUsage = `oriel dev shot [-scales 1,2] [-light] DIR
+                                       render every reference scene offscreen into DIR
 oriel dev compare MOCKUP NATIVE OUT    write them side by side with a diff, and print how far apart they are
 oriel dev bench [-scenes a,b]          measure every scene offscreen: build, frame(), GPU time, RSS
 oriel dev window [-auto] [-scenes a,b] [SCENE]
@@ -75,6 +77,7 @@ func runDev(args []string, stdout io.Writer) error {
 	scales := fs.String("scales", "1,2", "device scales")
 	only := fs.String("scenes", "", "only these scenes, comma-separated")
 	auto := fs.Bool("auto", false, "run the scripted measurements, print them, exit")
+	light := fs.Bool("light", false, "the built-in theme's light variant")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -84,10 +87,14 @@ func runDev(args []string, stdout io.Writer) error {
 		if len(rest) != 1 {
 			return fmt.Errorf("usage: %s", strings.Split(devUsage, "\n")[0])
 		}
-		return dev.Shots(rest[0], *scales)
+		v := theme.Dark
+		if *light {
+			v = theme.Light
+		}
+		return dev.Shots(rest[0], *scales, v)
 	case "compare":
 		if len(rest) != 3 {
-			return fmt.Errorf("usage: %s", strings.Split(devUsage, "\n")[1])
+			return fmt.Errorf("usage: %s", strings.Split(devUsage, "\n")[2])
 		}
 		return dev.Compare(stdout, rest[0], rest[1], rest[2])
 	case "bench":

@@ -19,6 +19,7 @@ import (
 	giorender "github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/render/scenes"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 // Window opens a scene in a window. With auto it runs the scripted measurements, prints them and
@@ -139,7 +140,11 @@ func loop(w *app.Window, s scenes.Scene, auto bool) error {
 		return err
 	}
 	var ops op.Ops
-	c := scenes.NewCanvas(ts)
+	th, err := scenes.Builtin(theme.Dark)
+	if err != nil {
+		return err
+	}
+	c := scenes.NewCanvas(ts, th)
 	f := giorender.NewFrame()
 	st := scenes.NewState()
 	start := time.Now()

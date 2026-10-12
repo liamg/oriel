@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -67,5 +68,18 @@ func TestDisposedKeymapStopsWaiting(t *testing.T) {
 	d.Dispose()
 	if _, more := r.Lookup([]string{"n"}, []string{"q"}); more {
 		t.Error("q is still a prefix after qq was disposed")
+	}
+}
+
+func TestThemes(t *testing.T) {
+	r := registry.New()
+	builtin := theme.Builtins()[0]
+	d := r.Theme(builtin)
+	if ts := r.Themes(); len(ts) != 1 || ts[0].Name() != builtin.Name() {
+		t.Errorf("themes %v", ts)
+	}
+	d.Dispose()
+	if ts := r.Themes(); len(ts) != 0 {
+		t.Errorf("a disposed theme is still listed: %v", ts)
 	}
 }

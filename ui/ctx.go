@@ -5,6 +5,7 @@ import (
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 // Ctx builds the children of one node. Widgets are functions over a Ctx.
@@ -17,6 +18,9 @@ type Ctx struct {
 func (c *Ctx) ID() ID { return c.e.id }
 
 func (c *Ctx) Shaper() typeset.Shaper { return c.u.sh }
+
+// Theme is the resolved theme widgets read their colours from, by token id.
+func (c *Ctx) Theme() *theme.Resolved { return c.u.theme }
 
 // Next is the id the next child added with key will have, so a widget can ask for its interaction
 // before it builds itself.

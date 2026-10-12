@@ -57,7 +57,8 @@ flowchart TB
 - Gio blends in **linear light**; CSS, and so the mockups, blend in sRGB. A translucent token that looks right in
   a mockup comes out much stronger in Gio (a 7% tint about 3× as bright; `spikes/P0-4-gio.md`).
 - So `theme` resolves translucent component tokens to **opaque colours over the surface they sit on**, and
-  `render/gio` remaps alpha for solid fills whose backdrop isn't known (scrims, opacity layers).
+  `render/gio` remaps alpha for solid fills whose backdrop isn't known (scrims, opacity layers), solving over the
+  frame's `Backdrop` (the theme's `bg.base`), so the remap holds in light themes too.
 - Images are different: Gio samples them as premultiplied sRGB, which already blends like CSS over a dark backdrop.
   Glows, baked shapes and the glyph atlas take their colours unchanged (P0-6).
 - Dark text on light looks thin under linear blending, so the glyph atlas's gamma and stem darkening must land
@@ -118,6 +119,7 @@ type Frame interface {
     PushClip(r Rect, radius float32)
     PushOpacity(a float32)
     Pop()
+    Backdrop(c Color)                             // the theme's base background, which unknown backdrops blend over
     Scale() float32
 }
 ```

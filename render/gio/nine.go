@@ -92,7 +92,7 @@ func (c *Frame) drawNine(n *nine, dst image.Rectangle, hollow bool) {
 		return
 	}
 	defer clip.Rect(image.Rect(x1, y1, x2, y2)).Push(c.ops).Pop()
-	paint.ColorOp{Color: n.centre}.Add(c.ops)
+	paint.ColorOp{Color: c.solid(n.centre)}.Add(c.ops)
 	paint.PaintOp{}.Add(c.ops)
 }
 

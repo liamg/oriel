@@ -73,5 +73,8 @@ type Frame interface {
 	PushClip(r Rect, radius float32)
 	PushOpacity(a float32) // everything until the matching Pop composites as one layer
 	Pop()
+	// Backdrop is what translucent fills and opacity layers sit on, for a backend that has to correct their
+	// blending (Gio blends in linear light, the mockups in sRGB). It's the theme's base background.
+	Backdrop(c Color)
 	Scale() float32 // device pixels per logical pixel
 }

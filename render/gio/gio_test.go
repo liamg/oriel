@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/scenes"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 // shots is where tests write what they drew, when ORIEL_SHOTS names a directory.
@@ -45,9 +46,13 @@ func readPNG(t *testing.T, path string) image.Image {
 	return img
 }
 
-func drawScene(t *testing.T, s scenes.Scene, scale float32) *image.RGBA {
+func drawScene(t *testing.T, s scenes.Scene, scale float32, v theme.Variant) *image.RGBA {
 	t.Helper()
 	ts, err := typeset.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	th, err := scenes.Builtin(v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +62,7 @@ func drawScene(t *testing.T, s scenes.Scene, scale float32) *image.RGBA {
 		t.Fatalf("no offscreen GPU surface (Gio needs EGL/Mesa on Linux): %v", err)
 	}
 	defer hl.Release()
-	c := scenes.NewCanvas(ts)
+	c := scenes.NewCanvas(ts, th)
 	st := scenes.NewState()
 	if err := hl.Draw(func(f render.Frame) { c.Begin(f); s.Draw(c, st) }); err != nil {
 		t.Fatal(err)
@@ -74,7 +79,7 @@ func drawScene(t *testing.T, s scenes.Scene, scale float32) *image.RGBA {
 // fractional mono advances (Chrome rounds them) and the terminal pane's ligatures.
 func TestIDEMatchesTheMockup(t *testing.T) {
 	ide, _ := scenes.ByName("ide")
-	got := drawScene(t, ide, 1)
+	got := drawScene(t, ide, 1, theme.Dark)
 	d, side := Compare(readPNG(t, "../../_design/mockups/01-ide.png"), got)
 	shot(t, "ide-1x.png", got)
 	shot(t, "ide-mockup-native-diff.png", side)
@@ -87,11 +92,24 @@ func TestIDEMatchesTheMockup(t *testing.T) {
 func TestEveryScaleDraws(t *testing.T) {
 	for _, s := range scenes.All() {
 		for _, scale := range []float32{1, 1.25, 1.5, 2} {
-			img := drawScene(t, s, scale)
+			img := drawScene(t, s, scale, theme.Dark)
 			w, h := s.Size()
 			if b := img.Bounds(); b.Dx() != int(float32(w)*scale+0.5) || b.Dy() != int(float32(h)*scale+0.5) {
 				t.Errorf("%s at %v× is %v", s.Name(), scale, b)
 			}
 		}
+	}
+}
+
+// The same fixture in the light variant, against the light mockup drawn from it.
+func TestIDELightMatchesTheMockup(t *testing.T) {
+	ide, _ := scenes.ByName("ide")
+	got := drawScene(t, ide, 1, theme.Light)
+	d, side := Compare(readPNG(t, "../../_design/mockups/17-light.png"), got)
+	shot(t, "ide-light-1x.png", got)
+	shot(t, "ide-light-mockup-native-diff.png", side)
+	t.Logf("17-light @1×: mean abs diff %.2f/255, %.2f%% of pixels off by more than 32/255", d.Mean, 100*d.Off)
+	if d.Mean > 8 || d.Off > 0.065 {
+		t.Errorf("light 01-ide is %.2f/255 and %.2f%% off the mockup", d.Mean, 100*d.Off)
 	}
 }

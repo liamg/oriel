@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"slices"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -17,6 +20,7 @@ import (
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -28,15 +32,19 @@ type Config struct {
 	Registry   registry.Registry // a fresh one if nil
 	Extensions []ext.Extension   // activated in order, after the built-ins
 	Log        *slog.Logger
+	ConfigDir  string // ~/.config/oriel unless set; user themes live in its themes/
 }
 
-var (
-	background = render.Color{R: 0x06, G: 0x06, B: 0x06, A: 0xff}
-	textStyle  = ui.TextStyle{
-		Font:  typeset.FontSpec{Family: typeset.Mono, Size: 13},
-		Color: render.Color{R: 0xec, G: 0xe6, B: 0xd8, A: 0xff},
+var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
+
+// DefaultConfigDir is $XDG_CONFIG_HOME/oriel, or ~/.config/oriel, on every platform (plugins.md, "Runtime path").
+func DefaultConfigDir() string {
+	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
+		return filepath.Join(d, "oriel")
 	}
-)
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".config", "oriel")
+}
 
 // Run opens a window and runs the app until the window closes or ctx is done.
 func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
@@ -48,6 +56,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	if cfg.Log == nil {
 		cfg.Log = slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+	if cfg.ConfigDir == "" {
+		cfg.ConfigDir = DefaultConfigDir()
 	}
 	var active []ext.Extension
 	defer func() {
@@ -63,7 +74,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		active = append(active, e)
 		return nil
 	}
-	for _, e := range builtins() {
+	for _, e := range builtins(cfg) {
 		if err := activate(e, "builtin:"+e.Manifest().ID); err != nil {
 			return err
 		}
@@ -81,15 +92,24 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	defer w.Close()
 
 	dirty := make(chan struct{}, 1)
-	cancel := cfg.Store.Subscribe(core.Filter{}, func(core.Event) {
+	poke := func() {
 		select {
 		case dirty <- struct{}{}:
 		default:
 		}
-	})
+	}
+	cancel := cfg.Store.Subscribe(core.Filter{}, func(core.Event) { poke() })
 	defer cancel()
 
 	l := &loop{reg: cfg.Registry, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: cfg.Log, modes: []string{"n"}}
+	l.themeDirty.Store(true)
+	retheme := func() { l.themeDirty.Store(true); poke() }
+	for _, src := range cfg.Registry.Themes() {
+		defer src.Watch(retheme)()
+	}
+	for _, opt := range []string{"ui.theme", "ui.variant"} {
+		defer cfg.Registry.Options().Watch(opt, retheme)()
+	}
 	timer := time.NewTimer(0)
 	<-timer.C
 	for {
@@ -128,12 +148,47 @@ func (h *host) Sessions() []core.Session                       { return h.store.
 func (h *host) Log() *slog.Logger                              { return h.log }
 
 type loop struct {
+	themeDirty atomic.Bool
+	theme      *theme.Resolved
+
 	reg   registry.Registry
 	keys  *registry.Resolver
 	win   render.Window
 	ui    *ui.UI
 	log   *slog.Logger
 	modes []string // the focused mode first
+}
+
+// loadTheme resolves the theme ui.theme names, in ui.variant. If it doesn't resolve, the theme already
+// showing stays; with none showing, the built-in one does.
+func (l *loop) loadTheme() {
+	name, variant := "oriel", theme.Dark
+	if v, _, err := l.reg.Options().Get("ui.theme", registry.At{}); err == nil {
+		name = v.(string)
+	}
+	if v, _, err := l.reg.Options().Get("ui.variant", registry.At{}); err == nil {
+		variant = theme.Variant(v.(string))
+	}
+	r, err := resolveTheme(l.reg.Themes(), name, variant)
+	if err != nil {
+		l.log.Error("theme", "name", name, "err", err)
+		if l.theme != nil {
+			return
+		}
+		if r, err = resolveTheme(theme.Builtins(), "oriel", variant); err != nil {
+			panic(err) // the built-in theme always resolves; its tests say so
+		}
+	}
+	l.theme = r
+	l.ui.SetTheme(r)
+}
+
+func resolveTheme(sources []theme.Source, name string, v theme.Variant) (*theme.Resolved, error) {
+	st, err := theme.Stack(sources, name)
+	if err != nil {
+		return nil, err
+	}
+	return theme.Resolve(st, v)
 }
 
 // frameInterval paces redraws while something animates.
@@ -182,9 +237,12 @@ func (l *loop) draw() error {
 		o.ReducedMotion = on == true
 		l.ui.SetOptions(o)
 	}
+	if l.themeDirty.Swap(false) {
+		l.loadTheme()
+	}
 	defer func() { l.win.SetCursor(l.ui.Cursor()) }()
 	return l.win.Frame(func(f render.Frame) {
-		f.Rect(render.Rect{Max: size}, render.Style{Fill: background})
+		f.Rect(render.Rect{Max: size}, render.Style{Fill: l.theme.C(theme.BgBase)})
 		l.ui.Frame(f, size, func(c *ui.Ctx) {
 			v, ok := l.reg.ViewByID(RootView)
 			if !ok {
