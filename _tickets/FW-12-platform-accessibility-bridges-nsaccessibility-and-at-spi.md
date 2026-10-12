@@ -10,7 +10,7 @@ depends_on: [FW-10]
 
 # FW-12 · Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
 
-**Phase** 1 · framework · **After** [FW-10](FW-10-accessibility-tree-emitted-from-widget-ids.md) · **Unblocks** FW-10's done-when
+**Phase** 1 · framework · **After** [FW-10](FW-10-accessibility-tree-emitted-from-widget-ids.md) · **Unblocks** nothing yet
 
 ## Design
 
@@ -24,7 +24,7 @@ button (scripted manual check on macOS), and Orca does the same on Linux.
 
 ## Notes
 
-- **Deferred** (Liam, 2026-10-12): phase 1 closes without it, and FW-10 waits in review for it.
+- **Deferred** (Liam, 2026-10-12): phase 1 closes without it. FW-10 is done; the screen-reader check lives here.
 - The plan, no new dependency either way: on macOS, our own `NSAccessibilityElement`s set as the children of Gio's
   `NSView` (from `app.AppKitViewEvent`), through cgo in `render/gio` under `darwin` (Gio needs cgo there already); on
   Linux, pure Go: an AT-SPI tree over D-Bus with our own small D-Bus client on the standard library.

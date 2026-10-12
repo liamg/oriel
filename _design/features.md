@@ -23,7 +23,7 @@ How everything hangs together, built and tested before features land on it.
 | FW-7 | Theme tokens: layered resolution, live reload, the default black/yellow/orange theme | 17, 23 | theme | P1 | FW-4, FW-11 | token resolution tables; the fixture renders in every built-in theme |
 | FW-8 | Headless backend: display-list snapshots plus perceptual PNG diffs against the mockups | – | render | P1 | FW-4 | CI renders the fixture workspace and diffs it within threshold |
 | FW-9 | Layout tree and tab groups: **drag any pane to any tab group, dock, split or float**, animated drop targets, zoom, `⌃W` keys | 24 | layout | P1 | FW-6, FW-8 | snapshot tests for every move and drop target; drag and drop scripted in tests; layouts saved and restored |
-| FW-10 | Accessibility tree emitted from widget ids | – | ui | P1 | FW-6 | VoiceOver reads the fixture's main regions (scripted manual check) |
+| FW-10 | Accessibility tree emitted from widget ids | – | ui | P1 | FW-6 | the fixture's tree has its main regions with roles and names (screen readers: FW-12) |
 | FW-12 | Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux) | – | render/gio | P1 | FW-10 | VoiceOver and Orca read the fixture's main regions and press a button (scripted manual check) |
 
 ## Shell and navigation
