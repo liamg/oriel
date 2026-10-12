@@ -1,0 +1,177 @@
+=== di" deletes inside the quotes
+ref:    motion.txt *i`*
+quote:  Like a", a' and a`, but exclude the quotes
+given:  say "he|llo" now
+keys:   di"
+expect: say "|" now
+regs:   "" = "hello"
+undo:   say "|hello" now
+
+=== da" deletes the quotes and the white space after them
+ref:    motion.txt *a`*
+quote:  Any trailing white space is included, unless there is none, then leading white space is included.
+given:  say "he|llo" now
+keys:   da"
+expect: say |now
+regs:   "" = "\"hello\" "
+
+=== da" at the end of the line takes the white space before the string
+ref:    motion.txt *a`*
+quote:  Any trailing white space is included, unless there is none, then leading white space is included.
+given:  say "h|i"
+keys:   da"
+expect: sa|y
+regs:   "" = " \"hi\""
+
+=== da" followed by punctuation takes no white space after
+ref:    motion.txt *a`*
+quote:  Any trailing white space is included, unless there is none, then leading white space is included.
+given:  f( "a|b");
+keys:   da"
+expect: f(|);
+regs:   "" = " \"ab\""
+
+=== di" before the first quote on the line uses the first string
+ref:    motion.txt *a`*
+quote:  "\"a quoted string\". Selects the text from the previous quote until the next quote."
+given:  |x = "abc"
+keys:   di"
+expect: x = "|"
+regs:   "" = "abc"
+
+=== di" with the cursor on the opening quote
+ref:    motion.txt *a`*
+quote:  When the cursor starts on a quote, Vim will figure out which quote pairs form a string by searching from the start of the line.
+given:  x |"abc" y
+keys:   di"
+expect: x "|" y
+regs:   "" = "abc"
+
+=== di" with the cursor on the closing quote
+ref:    motion.txt *a`*
+quote:  When the cursor starts on a quote, Vim will figure out which quote pairs form a string by searching from the start of the line.
+given:  x "abc|" y
+keys:   di"
+expect: x "|" y
+regs:   "" = "abc"
+
+=== di" on the opening quote of the second string
+ref:    motion.txt *a`*
+quote:  Vim will figure out which quote pairs form a string by searching from the start of the line.
+given:  "a" |"b"
+keys:   di"
+expect: "a" "|"
+regs:   "" = "b"
+
+=== di" between two strings uses the white space between them
+ref:    oracle nvim v0.11.7
+given:  "a" | "b"
+keys:   di"
+expect: "a"|"b"
+regs:   "" = "  "
+
+=== di" skips an escaped quote
+ref:    motion.txt *a`*
+quote:  The 'quoteescape' option is used to skip escaped quotes.
+given:  x "a\"|b" y
+keys:   di"
+expect: x "|" y
+regs:   "" = "a\\\"b"
+
+=== di" with no quotes on the line does nothing
+ref:    motion.txt *a`*
+quote:  Only works within one line.
+given:  foo |bar
+keys:   di"
+expect: foo |bar
+regs:   "" = (unset)
+
+=== di" does not reach a quote on another line
+ref:    motion.txt *a`*
+quote:  Only works within one line.
+given:
+  "a
+  |b"
+keys:   di"
+expect:
+  "a
+  |b"
+
+=== d2i" deletes the quotes but no white space
+ref:    motion.txt *i`*
+quote:  Special case: With a count of 2 the quotes are included, but no extra white space as with a"/a'/a`.
+given:  x "a|b" y
+keys:   d2i"
+expect: x | y
+regs:   "" = "\"ab\""
+
+=== di" on an empty string does nothing
+ref:    motion.txt *i`*
+quote:  Like a", a' and a`, but exclude the quotes
+given:  x "|" y
+keys:   di"
+expect: x "|" y
+
+=== ci" on an empty string inserts between the quotes
+ref:    motion.txt *i`*
+quote:  Like a", a' and a`, but exclude the quotes
+given:  x "|" y
+keys:   ci"ab<Esc>
+expect: x "a|b" y
+undo:   x "|" y
+
+=== ci" replaces the string contents and repeats with dot
+ref:    motion.txt *i`*
+quote:  Like a", a' and a`, but exclude the quotes
+given:  "a|b" "cd"
+keys:   ci"x<Esc>
+expect: "|x" "cd"
+dot:    "|x" "cd"
+
+=== yi" yanks the string contents and moves to their start
+ref:    motion.txt *i`*
+quote:  Like a", a' and a`, but exclude the quotes
+given:  x "ab|c"
+keys:   yi"
+expect: x "|abc"
+regs:   "0 = "abc"
+
+=== di' deletes inside single quotes
+ref:    motion.txt *i`*
+quote:  Like a", a' and a`, but exclude the quotes
+given:  x 'a|b' y
+keys:   di'
+expect: x '|' y
+regs:   "" = "ab"
+
+=== da' deletes the single-quoted string and trailing white space
+ref:    motion.txt *a`*
+quote:  Any trailing white space is included
+given:  x 'a|b' y
+keys:   da'
+expect: x |y
+regs:   "" = "'ab' "
+
+=== di` deletes inside backticks
+ref:    motion.txt *i`*
+quote:  Like a", a' and a`, but exclude the quotes
+given:  run `l|s -l` now
+keys:   di`
+expect: run `|` now
+regs:   "" = "ls -l"
+
+=== da` deletes the backtick string and trailing white space
+ref:    motion.txt *a`*
+quote:  Any trailing white space is included
+given:  run `l|s` now
+keys:   da`
+expect: run |now
+regs:   "" = "`ls` "
+
+=== di" ignores other kinds of quotes
+ref:    motion.txt *i`*
+quote:  Like a", a' and a`, but exclude the quotes
+given:  "it's |ok"
+keys:   di"
+expect: "|"
+regs:   "" = "it's ok"

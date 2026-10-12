@@ -1,0 +1,353 @@
+# The jumplist: which motions are jumps, CTRL-O / CTRL-I, and how entries are kept.
+# Cases start on line 1 so a jump from there is the oldest entry.
+
+=== G is a jump
+ref:    motion.txt *G*
+quote:  "G is one of the |jump-motions|."
+given:
+  o|ne
+  two
+  three
+keys:   G
+expect:
+  one
+  two
+  t|hree
+jumps:  1:1
+
+=== gg is a jump
+ref:    motion.txt *jump-motions*
+quote:  "If you make the cursor \"jump\" the position of the cursor before the jump is remembered."
+given:
+  o|ne
+  two
+  three
+keys:   Ggg
+expect:
+  o|ne
+  two
+  three
+jumps:  1:1 3:1
+
+=== % is a jump
+ref:    motion.txt *jump-motions*
+quote:  "The following commands are \"jump\" commands: \"'\", \"`\", \"G\", \"/\", \"?\", \"n\", \"N\", \"%\""
+given:
+  |(a
+  b)
+keys:   %
+expect:
+  (a
+  b|)
+jumps:  1:0
+
+=== ) is a jump
+ref:    motion.txt *jump-motions*
+quote:  "\"%\", \"(\", \")\", \"[[\", \"]]\", \"{\", \"}\""
+given:
+  |One.
+  Two.
+keys:   )
+expect:
+  One.
+  |Two.
+jumps:  1:0
+
+=== } is a jump
+ref:    motion.txt *jump-motions*
+quote:  "\"%\", \"(\", \")\", \"[[\", \"]]\", \"{\", \"}\""
+given:
+  |one
+
+  two
+keys:   }
+expect:
+  one
+  |
+  two
+jumps:  1:0
+
+=== L is a jump
+ref:    motion.txt *jump-motions*
+quote:  "\":s\", \":tag\", \"L\", \"M\", \"H\""
+given:
+  |one
+  two
+  three
+keys:   L
+expect:
+  one
+  two
+  |three
+jumps:  1:0
+
+=== * and n are jumps
+ref:    motion.txt *jump-motions*
+quote:  "\"G\", \"/\", \"?\", \"n\", \"N\""
+given:
+  |foo
+  bar
+  foo
+  foo
+keys:   *n
+expect:
+  foo
+  bar
+  foo
+  |foo
+jumps:  1:0 3:0
+
+=== `a is a jump
+ref:    motion.txt *jump-motions*
+quote:  "The following commands are \"jump\" commands: \"'\", \"`\""
+given:
+  |one
+  two
+  three
+keys:   jjmagg`a
+expect:
+  one
+  two
+  |three
+jumps:  3:0 1:0
+
+=== j is not a jump
+ref:    motion.txt *jump-motions*
+quote:  "A \"jump\" is a command that normally moves the cursor several lines away."
+given:
+  |one
+  two
+  three
+  four
+keys:   3Gj
+expect:
+  one
+  two
+  three
+  |four
+marks:  ''=1:0
+
+=== CTRL-O goes back to the position before the jump
+ref:    motion.txt *CTRL-O*
+quote:  "Go to [count] Older cursor position in jump list (not a motion command)."
+given:
+  o|ne
+  two
+  three
+keys:   G<C-o>
+expect:
+  o|ne
+  two
+  three
+
+=== CTRL-O from the end adds the cursor position to the list
+ref:    motion.txt *jumplist*
+quote:  "In this case the CTRL-O command will cause the cursor position to be added to the jump list, so you can get back to the position before the CTRL-O."
+given:
+  |one
+  two
+  three
+keys:   G<C-o>
+expect:
+  |one
+  two
+  three
+jumps:  1:0 3:0
+
+=== CTRL-I goes forward again
+ref:    motion.txt *CTRL-I*
+quote:  "Go to [count] newer cursor position in jump list (not a motion command)."
+given:
+  |one
+  two
+  three
+keys:   G<C-o><C-i>
+expect:
+  one
+  two
+  |three
+
+=== <Tab> is CTRL-I
+ref:    motion.txt *<Tab>*
+quote:  "Go to [count] newer cursor position in jump list"
+given:
+  |one
+  two
+  three
+keys:   G<C-o><Tab>
+expect:
+  one
+  two
+  |three
+
+=== 2 CTRL-O goes back two entries
+ref:    motion.txt *CTRL-O*
+quote:  "Go to [count] Older cursor position in jump list"
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   3G5G2<C-o>
+expect:
+  |one
+  two
+  three
+  four
+  five
+jumps:  1:0 3:0 5:0
+
+=== 2 CTRL-I goes forward two entries
+ref:    motion.txt *CTRL-I*
+quote:  "Go to [count] newer cursor position in jump list"
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   3G5G<C-o><C-o><C-o>2<C-i>
+expect:
+  one
+  two
+  three
+  four
+  |five
+
+=== CTRL-O at the oldest entry stays put
+ref:    motion.txt *jumplist*
+quote:  "With more CTRL-O commands you will go to lines 70 and 1."
+given:
+  |one
+  two
+  three
+keys:   G<C-o><C-o>
+expect:
+  |one
+  two
+  three
+
+=== CTRL-O with a count past the oldest entry does nothing
+ref:    motion.txt *CTRL-O*
+quote:  "Go to [count] Older cursor position in jump list"
+given:
+  |one
+  two
+  three
+  four
+keys:   2G4G5<C-o>
+expect:
+  one
+  two
+  three
+  |four
+
+=== CTRL-I at the newest entry stays put
+ref:    motion.txt *CTRL-I*
+quote:  "Go to [count] newer cursor position in jump list"
+given:
+  |one
+  two
+  three
+keys:   G<C-i>
+expect:
+  one
+  two
+  |three
+
+=== a jump from a line already in the list moves it to the end
+ref:    motion.txt *jumplist*
+quote:  "If you use a jump command, the current line number is inserted at the end of the jump list.  If the same line was already in the jump list, it is removed."
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   3G5Ggg3G
+expect:
+  one
+  two
+  |three
+  four
+  five
+jumps:  3:0 5:0 1:0
+
+=== a jump after CTRL-O appends the line it left
+ref:    motion.txt *jumplist*
+quote:  "After the CTRL-O command that got you into line 1154 you could give another jump command (e.g., \"G\").  The jump list would then become:"
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   2G4Gj<C-o>G
+expect:
+  one
+  two
+  three
+  four
+  five
+  |six
+jumps:  1:0 5:0 2:0
+
+=== jumplist lines follow inserted lines
+ref:    motion.txt *jumplist*
+quote:  "The line numbers will be adjusted for deleted and inserted lines."
+given:
+  |one
+  two
+  three
+keys:   3GggOnew<Esc>
+expect:
+  ne|w
+  one
+  two
+  three
+jumps:  2:0 4:0
+
+=== m' adds a jump
+ref:    motion.txt *jumplist*
+quote:  "You can explicitly add a jump by setting the ' mark with \"m'\"."
+given:
+  |one
+  two
+  three
+  four
+keys:   llm'jjj<C-o>
+expect:
+  on|e
+  two
+  three
+  four
+
+=== `` is itself a jump
+ref:    motion.txt *jump-motions*
+quote:  "You can return to that position with the \"''\" and \"``\" commands"
+given:
+  |one
+  two
+  three
+keys:   3G``
+expect:
+  |one
+  two
+  three
+jumps:  1:0 3:0
+
+# nvim/vim_diff.txt (*nvim-changed*, past refcheck's 100-line section cap): "The |jumplist| avoids useless/phantom jumps."
+=== nvim drops the newest entry when it is the cursor line
+ref:    oracle nvim v0.11.7
+given:
+  |one
+  two
+  three
+keys:   3Gm'
+expect:
+  one
+  two
+  |three
+jumps:  1:0

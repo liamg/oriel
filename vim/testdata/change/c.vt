@@ -1,0 +1,146 @@
+=== c with a motion deletes and starts insert
+ref:    change.txt *c*
+quote:  "Delete {motion} text [into register x] and start insert."
+given:  foo |bar baz
+keys:   c$
+expect: foo |
+mode:   insert
+regs:   "" = "bar baz"   "- = "bar baz"
+
+=== c2w then <Esc> leaves the cursor on the last typed character
+ref:    change.txt *c*
+quote:  "Delete {motion} text [into register x] and start insert."
+given:  |foo bar baz
+keys:   c2wX<Esc>
+expect: |X baz
+mode:   normal
+regs:   "" = "foo bar"
+undo:   |foo bar baz
+dot:    |X
+
+=== 2cw is the same as c2w
+ref:    motion.txt *motion-count-multiplied*
+quote:  "the two counts are multiplied"
+given:  |a b c d
+keys:   2cwX<Esc>
+expect: |X c d
+
+=== cw repeated with . on the next word
+ref:    change.txt *cw*
+quote:  "they only change up to the end of the word"
+given:  |foo bar baz
+keys:   cwX<Esc>w
+expect: X |bar baz
+dot:    X |X baz
+
+=== cc replaces the line and keeps its indent with 'autoindent'
+ref:    change.txt *cc*
+quote:  "Delete [count] lines [into register x] and start insert |linewise|. If 'autoindent' is on, preserve the indent of the first line."
+given:
+      fo|o
+  bar
+keys:   ccnew<Esc>
+expect:
+      ne|w
+  bar
+regs:   "" = "    foo\n"   "1 = "    foo\n"   "- = (unset)
+undo:
+      |foo
+  bar
+
+=== 2cc replaces two lines with one
+ref:    change.txt *cc*
+quote:  "Delete [count] lines [into register x] and start insert |linewise|."
+given:
+  |one
+  two
+  three
+keys:   2ccX<Esc>
+expect:
+  |X
+  three
+regs:   "1 = "one\ntwo\n"
+
+=== cc on an empty buffer
+ref:    change.txt *cc*
+quote:  "Delete [count] lines"
+given:  |
+keys:   ccX<Esc>
+expect: |X
+
+=== C changes to the end of the line
+ref:    change.txt *C*
+quote:  "Delete from the cursor position to the end of the line and [count]-1 more lines [into register x], and start insert. Synonym for c$ (not |linewise|)."
+given:  fo|o bar
+keys:   CX<Esc>
+expect: fo|X
+regs:   "" = "o bar"   "- = "o bar"
+
+=== 2C also takes the next line
+ref:    change.txt *C*
+quote:  "Delete from the cursor position to the end of the line and [count]-1 more lines"
+given:
+  a|bc
+  def
+  ghi
+keys:   2CX<Esc>
+expect:
+  a|X
+  ghi
+regs:   "" = "bc\ndef"   "1 = "bc\ndef"
+
+=== C at the end of the line stays in insert mode
+ref:    change.txt *C*
+quote:  "Delete from the cursor position to the end of the line"
+given:  ab|c
+keys:   C
+expect: ab|
+mode:   insert
+regs:   "- = "c"
+
+=== s substitutes the character under the cursor
+ref:    change.txt *s*
+quote:  "Delete [count] characters [into register x] and start insert (s stands for Substitute). Synonym for \"cl\" (not |linewise|)."
+given:  a|bc
+keys:   sXY<Esc>
+expect: aX|Yc
+regs:   "" = "b"   "- = "b"
+dot:    aXX|Yc
+
+=== 3s substitutes three characters
+ref:    change.txt *s*
+quote:  "Delete [count] characters [into register x] and start insert"
+given:  |abcde
+keys:   3sX<Esc>
+expect: |Xde
+regs:   "" = "abc"
+
+=== s on a multibyte character
+ref:    change.txt *s*
+quote:  "Delete [count] characters [into register x] and start insert"
+given:  |漢字
+keys:   sé<Esc>
+expect: |é字
+regs:   "" = "漢"
+
+=== S is cc
+ref:    change.txt *S*
+quote:  "Delete [count] lines [into register x] and start insert. Synonym for \"cc\" |linewise|."
+given:
+  one
+  t|wo
+  three
+keys:   SX<Esc>
+expect:
+  one
+  |X
+  three
+regs:   "" = "two\n"   "1 = "two\n"
+
+=== "a before c stores the change into a
+ref:    change.txt *c*
+quote:  "Delete {motion} text [into register x] and start insert."
+given:  |foo bar
+keys:   "acwX<Esc>
+expect: |X bar
+regs:   "a = "foo"   "" = "foo"   "- = (unset)

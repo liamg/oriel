@@ -65,12 +65,14 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 - `|` sits before the character under the cursor (in insert mode, before the character after it). `[`…`]` enclose a
   charwise visual selection, and `^` sits before the visual start when it matters. `\` escapes `|[]^\`.
 - Values are trimmed. A field with nothing after the colon takes the following lines indented by two spaces as a
-  multi-line value (that's how a buffer gets several lines or leading whitespace).
+  multi-line value (that's how a buffer gets several lines or leading whitespace). Blank lines at the end of such a value
+  aren't part of it, but a line holding just the two-space indent is an empty line, even at the end.
 - Optional checks: `mode` (`normal`, `insert`, `replace`, `visual`, `visual-line`, `visual-block`, `select`,
   `op-pending`, `cmdline`), `regs`, `marks` (`a=1:0 b=(unset)`), `jumps` (`1:0 3:4`), `undo` (the buffer after the keys,
   `<Esc>` and `u`), `dot` (after the keys, `<Esc>` and `.`), `msg` (the last line of `:messages`). Positions are
   `line:col`: 1-based line, 0-based byte column, as `:marks` shows them.
-- `ref` is `file.txt *tag*` (in `spec/vim`), `nvim/file.txt *tag*` (in `spec/nvim`), or `oracle nvim v0.11.7`. A `quote`,
+- `ref` is `file.txt *tag*` (in `spec/vim`), `nvim/file.txt *tag*` (in `spec/nvim`), `testdir/test_x.vim#Test_name`
+  (a function in vim's vendored tests, for mined cases), or `oracle nvim v0.11.7`. A `quote`,
   when given, must sit in that tag's section, whitespace-normalised. `RequireRef` checks both; so does `refcheck`.
 - The **runner** (`vim/vimtest`) drives a `vimtest.Engine` (load a buffer, feed keys, snapshot what the case declares)
   and compares every declared field. `undo` and `dot` each replay the case on a fresh engine.
@@ -99,6 +101,15 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 
 - **Mined cases**: vim's own `src/testdir/test_*.vim` (normal, textobjects, visual, change, undo, put, registers…)
   are translated into `.vt` cases by a converter. Each case keeps a `ref` to the original test function.
+  - The converter (`vim/vimtest/mine`, run with `cd vim && go run ./vimtest/mine/cmd`) replays each test function in
+    nvim, statement by statement. Keys typed with `:normal`, `:exe "normal …"` or `feedkeys(…, 'x')` become a case's
+    keys; the buffer and cursor before them its `given`; the `assert_equal`s that follow (buffer lines, cursor, registers,
+    marks) its `expect`. Anything it can't convert faithfully is skipped: non-default options, mappings, visual mode,
+    search, ex commands, macros, folds, windows, screen-relative motions.
+  - A value vim didn't assert (often the cursor) is taken from nvim, and the case says so in a `# … from oracle` comment.
+  - Every case is replayed alone in nvim before it's written; one nvim disagrees with is dropped.
+  - The output is `vim/testdata/mined/*.vt`, generated, never edited by hand. `TestMined` runs it against the engine and
+    fails only if fewer than 90% of the cases pass; `TestConformance` runs the hand-written cases, which must all pass.
 - **Differential fuzzing**: random keystroke sequences (weighted towards real usage) run against both
   engines. Any divergence is minimised (delta debugging) into a small `.vt` case and saved as a regression.
   It runs nightly and for a time-boxed slice on each PR.
@@ -109,7 +120,7 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 
 | Module | Tests | Source of truth |
 |---|---|---|
-| `text` | property tests against a naive model; UTF-16/grapheme offsets | UAX #29, LSP "position encoding" |
+| `text` | property tests and fuzzing against a naive model (`[]byte`, per-byte authors, plain-offset anchors); UTF-16 offsets | the model; LSP "position encoding" |
 | `syntax` | highlight snapshots per language (query captures over fixture files); unit/text-object ranges | tree-sitter query docs; grammar test corpora |
 | `lsp` | recorded JSON-RPC transcripts replayed against a fake server; each message shape cites a spec section | LSP 3.17 |
 | `dap` | recorded sessions with real dlv and debugpy, replayed; live runs in CI | DAP spec |

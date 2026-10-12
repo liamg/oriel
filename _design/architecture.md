@@ -62,7 +62,8 @@ flowchart LR
 | Module | Owns | Depends on |
 |---|---|---|
 | `text` | rope, snapshots, anchors, authorship, undo tree | – |
-| `vim` | modal engine over `text` | text |
+| `edit` | the editing primitives every input engine drives: cursors, edits with authorship and undo, registers, marks, messages | text |
+| `vim` | modal engine over `edit` | text, edit |
 | `syntax` | tree-sitter (wazero), highlight, folds, textobjects | text |
 | `lsp` | LSP client, server registry, capabilities | text |
 | `dap` | DAP client, adapter registry | – |
@@ -91,7 +92,7 @@ flowchart LR
 
 Rules:
 
-- `text`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` never import `ui` or `render`. `tools/layout` reads this line and fails on any such import, tests included.
+- `text`, `edit`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` never import `ui` or `render`. `tools/layout` reads this line and fails on any such import, tests included.
 - Every "swap me" seam is an interface in the consumer package, with impls in subpackages.
 - Each module has its own tests; `vim` has the nvim conformance suite.
 - Every module is listed in `go.work`, and `tools/layout` fails if a module in this table has no directory or a `go.mod` is missing from `go.work`.

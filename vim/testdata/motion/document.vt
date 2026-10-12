@@ -1,0 +1,150 @@
+# nvim leaves 'startofline' off, so gg and G keep the column.
+
+=== G goes to the last line, keeping the column
+ref:    nvim/vim_diff.txt *nvim-defaults*
+quote:  "'startofline' is disabled"
+given:
+  a|bc
+  def
+  ghi
+keys:   G
+expect:
+  abc
+  def
+  g|hi
+
+=== G keeps the column clamped to a shorter line
+ref:    motion.txt *G*
+quote:  "If 'startofline' not set, keep the same column."
+given:
+  abc|def
+  gh
+keys:   G
+expect:
+  abcdef
+  g|h
+
+=== 2G goes to line 2
+ref:    motion.txt *G*
+quote:  "Goto line [count], default last line"
+given:
+  |one
+  two
+  three
+keys:   2G
+expect:
+  one
+  |two
+  three
+
+=== 9G past the end goes to the last line
+ref:    motion.txt *G*
+quote:  "Goto line [count], default last line"
+given:
+  |one
+  two
+keys:   9G
+expect:
+  one
+  |two
+
+=== gg goes to the first line, keeping the column
+ref:    motion.txt *gg*
+quote:  "Goto line [count], default first line, on the first non-blank character |linewise|.  If 'startofline' not set, keep the same column."
+given:
+  abc
+  de|f
+keys:   gg
+expect:
+  ab|c
+  def
+
+=== 3gg goes to line 3
+ref:    motion.txt *gg*
+quote:  "Goto line [count], default first line"
+given:
+  |one
+  two
+  three
+  four
+keys:   3gg
+expect:
+  one
+  two
+  |three
+  four
+
+=== G remembers the column across a shorter line
+ref:    motion.txt *G*
+quote:  "If 'startofline' not set, keep the same column."
+given:
+  ab
+  abc|def
+  abcdef
+keys:   ggG
+expect:
+  ab
+  abcdef
+  abc|def
+
+=== dG deletes to the end of the buffer (linewise)
+ref:    motion.txt *G*
+quote:  "Goto line [count], default last line, on the first non-blank character |linewise|."
+given:
+  one
+  t|wo
+  three
+keys:   dG
+expect: o|ne
+regs:   "" = "two\nthree\n"
+
+=== dgg deletes to the start of the buffer (linewise)
+ref:    motion.txt *gg*
+quote:  "Goto line [count], default first line, on the first non-blank character |linewise|."
+given:
+  one
+  t|wo
+  three
+keys:   dgg
+expect: t|hree
+regs:   "" = "one\ntwo\n"
+
+=== go goes to the start of the buffer
+ref:    motion.txt *go*
+quote:  "Default [count] is one, start of the file."
+given:
+  abc
+  d|ef
+keys:   go
+expect:
+  |abc
+  def
+
+=== 5go counts the end-of-line as a byte
+ref:    motion.txt *go*
+quote:  "Go to [count] byte in the buffer."
+given:
+  |abc
+  def
+keys:   5go
+expect:
+  abc
+  |def
+
+=== go counts bytes, not characters
+ref:    motion.txt *go*
+quote:  "Go to [count] byte in the buffer."
+given:  |éx
+keys:   3go
+expect: é|x
+
+=== go past the end of the buffer goes to the last character
+ref:    motion.txt *go*
+quote:  "Go to [count] byte in the buffer."
+given:
+  |abc
+  def
+keys:   99go
+expect:
+  abc
+  de|f

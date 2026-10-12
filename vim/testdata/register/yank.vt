@@ -1,0 +1,133 @@
+=== yw yanks into "" and "0 and leaves the buffer alone
+ref:    change.txt *y*
+quote:  "Yank {motion} text [into register x]."
+given:  |foo bar
+keys:   yw
+expect: |foo bar
+regs:   "" = "foo "   "0 = "foo "   "1 = (unset)   "- = (unset)
+
+=== yb moves the cursor to the start of the yanked text
+ref:    change.txt *blockwise-register*
+quote:  "\"yl\" doesn't move the cursor, but \"yh\" moves the cursor one character left."
+given:  foo ba|r
+keys:   yb
+expect: foo |bar
+regs:   "0 = "ba"
+
+=== y$ keeps the cursor
+ref:    change.txt *y*
+quote:  "Yank {motion} text [into register x]."
+given:  f|oo bar
+keys:   y$
+expect: f|oo bar
+regs:   "0 = "oo bar"
+
+=== y0 in the first column yanks an empty string
+ref:    change.txt *y*
+quote:  "When no characters are to be yanked (e.g., \"y0\" in column 1), this is an error when 'cpoptions' includes the 'E' flag."
+given:  |foo
+keys:   y0
+expect: |foo
+regs:   "" = ""   "0 = ""
+
+=== yy yanks the line linewise
+ref:    change.txt *yy*
+quote:  "Yank [count] lines [into register x] |linewise|."
+given:
+  o|ne
+  two
+keys:   yy
+expect:
+  o|ne
+  two
+regs:   "" = "one\n"   "0 = "one\n"   "1 = (unset)
+
+=== 2y3y yanks six lines
+ref:    motion.txt *operator-doubled*
+quote:  "A count before and after the first character is multiplied, thus `2y3y` yanks six lines."
+given:
+  |1
+  2
+  3
+  4
+  5
+  6
+  7
+keys:   2y3y
+expect:
+  |1
+  2
+  3
+  4
+  5
+  6
+  7
+regs:   "0 = "1\n2\n3\n4\n5\n6\n"
+
+=== 5yy with fewer lines yanks to the end
+ref:    change.txt *yy*
+quote:  "Yank [count] lines [into register x] |linewise|."
+given:
+  one
+  |two
+  three
+keys:   5yy
+expect:
+  one
+  |two
+  three
+regs:   "0 = "two\nthree\n"
+
+=== 2yy on the last line fails
+ref:    change.txt *yy*
+quote:  "Yank [count] lines [into register x] |linewise|."
+given:
+  one
+  |two
+keys:   2yy
+expect:
+  one
+  |two
+regs:   "" = (unset)   "0 = (unset)
+
+=== yk moves the cursor to the first yanked line, keeping the column
+ref:    change.txt *blockwise-register*
+quote:  "With a linewise yank command the cursor is put in the first line, but the column is unmodified"
+given:
+  one
+  tw|o
+keys:   yk
+expect:
+  on|e
+  two
+regs:   "0 = "one\ntwo\n"
+
+=== Y yanks the line like yy
+ref:    change.txt *Y*
+quote:  "yank [count] lines [into register x] (synonym for yy, |linewise|)."
+given:
+  f|oo
+  bar
+  baz
+keys:   2Y
+expect:
+  f|oo
+  bar
+  baz
+regs:   "" = "foo\nbar\n"   "0 = "foo\nbar\n"
+
+=== yw yanks multibyte characters
+ref:    change.txt *y*
+quote:  "Yank {motion} text [into register x]."
+given:  |漢字 é
+keys:   yw
+expect: |漢字 é
+regs:   "0 = "漢字 "
+
+=== yy on an empty buffer yanks an empty line
+ref:    change.txt *yy*
+quote:  "Yank [count] lines [into register x] |linewise|."
+given:  |
+keys:   yy
+expect: |
+regs:   "" = "\n"   "0 = "\n"

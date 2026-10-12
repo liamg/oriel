@@ -2,7 +2,7 @@
 id: ED-2
 title: "Vim engine: motions, operators, text objects, registers, marks, dot, counts"
 phase: P2
-status: todo
+status: review
 area: Editor
 module: vim
 depends_on: [ED-1, P0-3]
@@ -10,7 +10,7 @@ depends_on: [ED-1, P0-3]
 
 # ED-2 · Vim engine: motions, operators, text objects, registers, marks, dot, counts
 
-**Phase** 2 · editor core · **After** [ED-1](ED-1-rope-snapshots-anchors-authorship-undo-tree.md), [P0-3](P0-3-vimtest-harness-the-vt-format-and-the-nvim-oracl.md) · **Unblocks** [ED-3](ED-3-visual-and-visual-block-s-g-with-vim-regex-range.md), [ED-4](ED-4-macros-folds-splits-buffers-quickfix.md), [ED-5](ED-5-plain-engine-and-the-input-engine-interface-emac.md)
+**Phase** 2 · editor core · **After** [ED-1](ED-1-rope-snapshots-anchors-authorship-undo-tree.md), [P0-3](P0-3-vimtest-harness-the-vt-format-and-the-nvim-oracl.md) · **Unblocks** [ED-3](ED-3-visual-and-visual-block-s-g-with-vim-regex-range.md), [ED-4](ED-4-macros-folds-splits-buffers-quickfix.md), [ED-5](ED-5-plain-engine-and-the-input-engine-interface-emac.md), [ED-9](ED-9-editorconfig-and-per-file-editor-conventions.md)
 
 ## Design
 

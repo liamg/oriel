@@ -76,6 +76,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 29. [SH-10](SH-10-help-everywhere-right-click-help-k-help.md): Help everywhere (right-click → Help, K, ⌘?, :help) · after FW-6
 30. [SH-11](SH-11-light-dark-and-theme-editor-theme-pick-mode.md): Light, dark and theme editor (:Theme, pick mode) · after FW-7
 30. [SH-12](SH-12-settings-page-settings-sections-search-typed-co.md): Settings page (:Settings, ⌘,) and settings.toml storage · after FW-3, FW-6, FW-11
+30. [ED-9](ED-9-editorconfig-and-per-file-editor-conventions.md): .editorconfig and other per-file editor conventions · after ED-2, SH-12
 
 ### Phase 4 · IDE
 

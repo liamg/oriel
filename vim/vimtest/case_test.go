@@ -98,6 +98,20 @@ func TestParseErrors(t *testing.T) {
 	}
 }
 
+func TestParseTrailingEmptyLine(t *testing.T) {
+	in := "=== e\nref: oracle nvim v0.11.7\ngiven:\n  |a\n  \n\nkeys: x\nexpect:\n  |\n\n"
+	cs, err := Parse("t.vt", strings.NewReader(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := cs[0].Given.Lines; len(got) != 2 || got[1] != "" {
+		t.Errorf("given lines = %q, want [\"a\" \"\"]", got)
+	}
+	if got := cs[0].Expect.Lines; len(got) != 1 {
+		t.Errorf("expect lines = %q, want one line", got)
+	}
+}
+
 func TestCheckRef(t *testing.T) {
 	tests := []struct {
 		ref, quote, wantErr string
@@ -115,6 +129,12 @@ func TestCheckRef(t *testing.T) {
 		{"../x.txt *w*", "", "bad spec path"},
 		{"motion.txt *w*", "[count] wordz forward.", "is not in"},
 		{"motion.txt *w*", "[count] WORDS forward.", "is not in the *w* section"},
+		{"testdir/test_join.vim#Test_join_with_count", "", ""},
+		{"testdir/test_join.vim#Test_join_with_count", "normal 10J", ""},
+		{"testdir/test_join.vim#Test_join_with_count", "normal 11J", "is not in Test_join_with_count"},
+		{"testdir/test_join.vim#Test_join_marks", "normal 10J", "is not in Test_join_marks"},
+		{"testdir/test_join.vim#Test_no_such", "", "no function Test_no_such"},
+		{"test_join.vim#Test_join_with_count", "", "testdir/"},
 	}
 	for _, tt := range tests {
 		err := Case{Ref: tt.ref, Quote: tt.quote}.CheckRef()

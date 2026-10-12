@@ -58,6 +58,9 @@ func token(s string) (string, bool) {
 		return "<" + prefix + strings.Trim(nameOf(name), "<>") + ">", true
 	}
 	if prefix != "" && utf8.RuneCountInString(s) == 1 {
+		if prefix == "C-" {
+			s = string(lower(s[0])) + s[1:]
+		}
 		return "<" + prefix + s + ">", true
 	}
 	return "", false

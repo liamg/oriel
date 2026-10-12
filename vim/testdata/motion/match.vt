@@ -1,0 +1,142 @@
+=== % jumps from ( to its )
+ref:    motion.txt *%*
+quote:  "Find the next item in this line after or under the cursor and jump to its match.  |inclusive| motion."
+given:  |(a)
+keys:   %
+expect: (a|)
+
+=== % jumps from ) back to its (
+ref:    motion.txt *%*
+quote:  "Find the next item in this line after or under the cursor and jump to its match."
+given:  x(a|)
+keys:   %
+expect: x|(a)
+
+=== % skips nested pairs
+ref:    motion.txt *%*
+quote:  "([{}])		parenthesis or (curly/square) brackets"
+given:  |((a)b)c
+keys:   %
+expect: ((a)b|)c
+
+=== % matches square brackets
+ref:    motion.txt *%*
+quote:  "([{}])		parenthesis or (curly/square) brackets"
+given:  |\[a\[b\]\]
+keys:   %
+expect: \[a\[b\]|\]
+
+=== % finds the next bracket after the cursor in the line
+ref:    motion.txt *%*
+quote:  "Find the next item in this line after or under the cursor"
+given:  |ab(c)
+keys:   %
+expect: ab(c|)
+
+=== % matches across lines
+ref:    motion.txt *%*
+quote:  "Find the next item in this line after or under the cursor and jump to its match."
+given:
+  if {
+    a
+  |}
+keys:   %
+expect:
+  if |{
+    a
+  }
+
+=== % with no bracket in the line does not move
+ref:    motion.txt *%*
+quote:  "Find the next item in this line after or under the cursor"
+given:
+  a|bc
+  (d)
+keys:   %
+expect:
+  a|bc
+  (d)
+
+=== % on an unmatched bracket does not move
+ref:    motion.txt *%*
+quote:  "Find the next item in this line after or under the cursor and jump to its match."
+given:  |(ab
+keys:   %
+expect: |(ab
+
+=== % ignores a paren inside double quotes
+ref:    motion.txt *%*
+quote:  "When the '%' character is not present in 'cpoptions' |cpo-%|, parens and braces inside double quotes are ignored, unless the number of parens/braces in a line is uneven"
+given:  |(a ")(" b)
+keys:   %
+expect: (a ")(" b|)
+
+=== % jumps between the ends of a C comment
+ref:    motion.txt *%*
+quote:  "/* */		start or end of C-style comment"
+given:  |/* a */
+keys:   %
+expect: /* a *|/
+
+=== d% deletes through the matching bracket (inclusive)
+ref:    motion.txt *%*
+quote:  "|inclusive| motion."
+given:  x|(a)y
+keys:   d%
+expect: x|y
+regs:   "" = "(a)"
+
+=== 75% goes to the line three quarters down, keeping the column
+ref:    motion.txt *N%*
+quote:  "({count} * number-of-lines + 99) / 100"
+given:
+  |one
+  two
+    three
+  four
+keys:   75%
+expect:
+  one
+  two
+  |  three
+  four
+
+=== 100% goes to the last line
+ref:    motion.txt *N%*
+quote:  "Go to {count} percentage in the file"
+given:
+  |one
+  two
+  three
+keys:   100%
+expect:
+  one
+  two
+  |three
+
+=== 1% rounds up to the first line
+ref:    motion.txt *N%*
+quote:  "({count} * number-of-lines + 99) / 100"
+given:
+  one
+  two
+  t|hree
+keys:   1%
+expect:
+  o|ne
+  two
+  three
+
+=== d50% deletes to the halfway line (linewise)
+ref:    motion.txt *N%*
+quote:  "on the first non-blank in the line |linewise|."
+given:
+  |one
+  two
+  three
+  four
+keys:   d50%
+expect:
+  |three
+  four
+regs:   "" = "one\ntwo\n"

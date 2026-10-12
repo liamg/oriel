@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
 )
 
 // RequireRef fails the test unless the case cites a source: `file.txt *tag*` naming a tag in
-// spec/vim (or `nvim/file.txt *tag*` for spec/nvim), or `oracle nvim vX.Y.Z`. A quote, when
-// given, must appear in the cited file, ignoring differences in whitespace.
+// spec/vim (or `nvim/file.txt *tag*` for spec/nvim), `testdir/test_x.vim#Test_name` naming a
+// function in vim's vendored tests, or `oracle nvim vX.Y.Z`. A quote, when given, must appear in
+// the cited section or function, ignoring differences in whitespace.
 func (c Case) RequireRef(t testing.TB) {
 	t.Helper()
 	if err := c.CheckRef(); err != nil {
@@ -32,6 +34,9 @@ func (c Case) CheckRef() error {
 		}
 		return nil
 	}
+	if file, fn, ok := strings.Cut(ref, "#"); ok && strings.HasSuffix(file, ".vim") {
+		return c.checkTestFunc(ref, file, fn)
+	}
 	file, tag, ok := strings.Cut(ref, " ")
 	tag = strings.TrimSpace(tag)
 	if !ok || len(tag) < 3 || tag[0] != '*' || tag[len(tag)-1] != '*' {
@@ -49,6 +54,36 @@ func (c Case) CheckRef() error {
 		return fmt.Errorf("quote %q is not in the %s section of %s", c.Quote, tag, file)
 	}
 	return nil
+}
+
+var (
+	vimFuncRe = regexp.MustCompile(`(?m)^fu(?:n|nc|nct|ncti|nctio|nction)?!?\s+([\w:#]+)\s*\(`)
+	endfuncRe = regexp.MustCompile(`(?m)^endf`)
+)
+
+// checkTestFunc checks a `testdir/test_x.vim#Test_name` ref: the function is defined in the file.
+func (c Case) checkTestFunc(ref, file, fn string) error {
+	if !strings.HasPrefix(file, "testdir/") {
+		return fmt.Errorf("ref %q: vim test refs are `testdir/test_x.vim#Test_name`", ref)
+	}
+	text, err := specFile(file)
+	if err != nil {
+		return fmt.Errorf("ref %q: %w", ref, err)
+	}
+	for _, m := range vimFuncRe.FindAllStringSubmatchIndex(text, -1) {
+		if text[m[2]:m[3]] != fn {
+			continue
+		}
+		body := text[m[0]:]
+		if end := endfuncRe.FindStringIndex(body); end != nil {
+			body = body[:end[1]]
+		}
+		if c.Quote != "" && !strings.Contains(squash(body), squash(c.Quote)) {
+			return fmt.Errorf("quote %q is not in %s in %s", c.Quote, fn, file)
+		}
+		return nil
+	}
+	return fmt.Errorf("ref %q: no function %s in %s", ref, fn, file)
 }
 
 // tagAt returns the offset of the line defining tag (a `*tag*` delimited by whitespace), or -1.

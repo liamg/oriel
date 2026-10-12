@@ -1,0 +1,189 @@
+=== } goes to the empty line after the paragraph
+ref:    motion.txt *}*
+quote:  "[count] |paragraph|s forward.  |exclusive| motion."
+given:
+  |a
+  b
+
+  c
+keys:   }
+expect:
+  a
+  b
+  |
+  c
+
+=== 2} goes forward two paragraphs
+ref:    motion.txt *}*
+quote:  "[count] |paragraph|s forward."
+given:
+  |a
+
+  b
+
+  c
+keys:   2}
+expect:
+  a
+
+  b
+  |
+  c
+
+=== } in the last paragraph goes to the end of the buffer
+ref:    motion.txt *}*
+quote:  "[count] |paragraph|s forward."
+given:
+  a
+
+  |b
+  cd
+keys:   }
+expect:
+  a
+
+  b
+  c|d
+
+=== } from an empty line skips the run of empty lines
+ref:    motion.txt *paragraph*
+quote:  "A paragraph begins after each empty line"
+given:
+  a
+  |
+
+
+  b
+
+  c
+keys:   }
+expect:
+  a
+
+
+
+  b
+  |
+  c
+
+=== } does not stop at a line of only blanks
+ref:    motion.txt *paragraph*
+quote:  "Note that a blank line (only containing white space) is NOT a paragraph boundary."
+given:
+  |a
+     
+  b
+
+  c
+keys:   }
+expect:
+  a
+     
+  b
+  |
+  c
+
+=== { goes to the empty line before the paragraph
+ref:    motion.txt *{*
+quote:  "[count] |paragraph|s backward.  |exclusive| motion."
+given:
+  a
+
+  b
+  |c
+keys:   {
+expect:
+  a
+  |
+  b
+  c
+
+=== { in the first paragraph goes to the start of the buffer
+ref:    motion.txt *{*
+quote:  "[count] |paragraph|s backward."
+given:
+  ab
+  c|d
+
+  e
+keys:   {
+expect:
+  |ab
+  cd
+
+  e
+
+=== 2{ goes back two paragraphs
+ref:    motion.txt *{*
+quote:  "[count] |paragraph|s backward."
+given:
+  a
+
+  b
+
+  |c
+keys:   2{
+expect:
+  a
+  |
+  b
+
+  c
+
+=== d} from mid-line stops at the end of the paragraph's last line
+ref:    motion.txt *exclusive*
+quote:  "If the motion is exclusive and the end of the motion is in column 1, the end of the motion is moved to the end of the previous line and the motion becomes inclusive."
+given:
+  a|bc
+  def
+
+  x
+keys:   d}
+expect:
+  |a
+
+  x
+regs:   "" = "bc\ndef"
+
+=== d} from the first non-blank deletes whole lines
+ref:    motion.txt *exclusive-linewise*
+quote:  "If the motion is exclusive, the end of the motion is in column 1 and the start of the motion was at or before the first non-blank in the line, the motion becomes linewise."
+given:
+  |abc
+  def
+
+  x
+keys:   d}
+expect:
+  |
+  x
+regs:   "" = "abc\ndef\n"
+
+=== d} on the last paragraph deletes through the end of the buffer
+ref:    motion.txt *}*
+quote:  "[count] |paragraph|s forward.  |exclusive| motion."
+given:
+  x
+
+  a|bc
+  def
+keys:   d}
+expect:
+  x
+
+  |a
+regs:   "" = "bc\ndef"
+
+=== d{ deletes back to the empty line (exclusive)
+ref:    motion.txt *{*
+quote:  "[count] |paragraph|s backward.  |exclusive| motion."
+given:
+  x
+
+  abc
+  de|f
+keys:   d{
+expect:
+  x
+  |f
+regs:   "" = "\nabc\nde"

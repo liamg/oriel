@@ -14,6 +14,9 @@ func TestParse(t *testing.T) {
 		{"<C-w>h", []string{"<C-w>", "h"}},
 		{"<c-w>", []string{"<C-w>"}},
 		{"<d-S-x>", []string{"<D-S-x>"}},
+		// ref:   intro.txt *CTRL-{char}*
+		// quote: "The case of {char} does not matter; thus CTRL-A and CTRL-a are equivalent."
+		{"<C-R><C-r><C-S-R>", []string{"<C-r>", "<C-r>", "<C-S-R>"}},
 		// ref:   intro.txt *<Enter>*
 		// quote: "<Enter>		same as <CR>"
 		{"<Enter><Return><cr>", []string{"<CR>", "<CR>", "<CR>"}},

@@ -55,7 +55,10 @@ type engine struct {
 	c   *client
 }
 
-func start() (*engine, error) {
+func start() (*engine, error) { return startIn("") }
+
+// startIn starts nvim with dir as its working directory ("" for ours).
+func startIn(dir string) (*engine, error) {
 	path, err := Path()
 	if err != nil {
 		return nil, fmt.Errorf("oracle: no nvim (set ORIEL_NVIM or put nvim %s on PATH): %w", Version, err)
@@ -65,6 +68,7 @@ func start() (*engine, error) {
 	}
 	cmd := exec.Command(path, "--headless", "--clean", "--embed", "-n", "-i", "NONE")
 	cmd.Env = append(os.Environ(), "NVIM_APPNAME=oriel-vimtest")
+	cmd.Dir = dir
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -91,8 +95,15 @@ func (e *engine) Close() error {
 	return nil
 }
 
+// Load sets the buffer as if it had been read from a file: not an undoable change, and with no jumps.
 func (e *engine) Load(b vimtest.Buffer) error {
+	if _, err := e.c.call("nvim_exec2", "set undolevels=-1", map[string]any{}); err != nil {
+		return err
+	}
 	if _, err := e.c.call("nvim_buf_set_lines", 0, 0, -1, true, b.Lines); err != nil {
+		return err
+	}
+	if _, err := e.c.call("nvim_exec2", "set undolevels& | clearjumps", map[string]any{}); err != nil {
 		return err
 	}
 	if b.Visual == nil {

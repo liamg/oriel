@@ -84,7 +84,8 @@ func Load(t testing.TB, glob string) []Case {
 
 // Parse reads the cases in a .vt file. Lines starting with '#' outside a value are comments.
 // A field whose value is empty takes the following lines indented by two spaces, with the
-// indent removed, as a multi-line value.
+// indent removed, as a multi-line value. Blank lines at its end aren't part of it; a line of just the
+// indent is an empty line, even at the end.
 func Parse(file string, r io.Reader) ([]Case, error) {
 	var (
 		cases  []Case
@@ -132,13 +133,15 @@ func Parse(file string, r io.Reader) ([]Case, error) {
 			}
 			val = strings.TrimSpace(val)
 			if val == "" {
-				var block []string
+				var block, raw []string
 				for i+1 < len(lines) && (strings.HasPrefix(lines[i+1], "  ") || lines[i+1] == "") {
 					i++
 					block = append(block, strings.TrimPrefix(lines[i], "  "))
+					raw = append(raw, lines[i])
 				}
-				for len(block) > 0 && block[len(block)-1] == "" {
-					block = block[:len(block)-1]
+				// Blank lines at the end separate cases; an indented empty line is part of the value.
+				for len(raw) > 0 && raw[len(raw)-1] == "" {
+					block, raw = block[:len(block)-1], raw[:len(raw)-1]
 				}
 				val = strings.Join(block, "\n")
 			}

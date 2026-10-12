@@ -25,6 +25,7 @@ func fakeSpec(t *testing.T) string {
 		"w\t\t\t[count] words forward.  |exclusive|\n\t\t\tmotion.\n\n"+
 		"<C-Right>\tor\t\t*<C-Right>* *W*\nW\t\t\t[count] WORDS forward.\n")
 	write(t, root, "spec/nvim/motion.txt", "*w*\nnvim words forward.\n")
+	write(t, root, "spec/vim/testdir/test_x.vim", "\" header\nfunc Test_one()\n  normal! dw\nendfunc\n\nfunc! Test_two()\n  normal! x\nendfunc\n")
 	write(t, root, "spec/lsp/spec.md", "# Spec\n\n## Text Documents\n\nPositions are zero-based.\n\n## Other\n\nElsewhere.\n")
 	write(t, root, "spec/css/Overview.bs", "<h2 id=\"mix\">Mixing</h2>\n<p>Mix &amp; <em>match</em>\n colours.\n<h3 id=\"sub\">Sub</h3>\nStill mixing.\n<h2 id='next'>Next</h2>\nElsewhere.\nset |x| to 1, giving&nbsp;''red'' or `blue`\n")
 	write(t, root, "spec/css/code.js", "// header\nfunction lin(RGB) {\n\treturn val / 12.92;\n}\n\nfunction gam(RGB) {\n\treturn 1.055;\n}\n")
@@ -60,6 +61,12 @@ func TestCheck(t *testing.T) {
 		{"css/code.js#lin", "return 1.055;", false},
 		{"css/code.js#gam", "", true},
 		{"css/code.js#cube", "", false},
+		{"testdir/test_x.vim#Test_one", "", true},
+		{"testdir/test_x.vim#Test_one", "normal! dw", true},
+		{"vim/testdir/test_x.vim#Test_two", "normal! x", true},
+		{"testdir/test_x.vim#Test_one", "normal! x", false},
+		{"testdir/test_x.vim#Test_three", "", false},
+		{"testdir/test_y.vim#Test_one", "", false},
 		{"oracle", "", true},
 		{"oracle nvim v0.11.7", "", true},
 		{"made up", "", false},

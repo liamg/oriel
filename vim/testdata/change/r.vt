@@ -1,0 +1,86 @@
+=== r replaces the character under the cursor
+ref:    change.txt *r*
+quote:  "Replace the character under the cursor with {char}."
+given:  f|oo
+keys:   rx
+expect: f|xo
+undo:   f|oo
+regs:   "" = (unset)
+
+=== 3r replaces three characters and leaves the cursor on the last; . then lacks room
+ref:    change.txt *r*
+quote:  "If you give a [count], Vim replaces [count] characters with [count] {char}s."
+given:  |abcd
+keys:   3rx
+expect: xx|xd
+dot:    xx|xd
+
+=== a count past the end of the line makes r fail
+ref:    change.txt *r*
+quote:  "If you give a [count], Vim replaces [count] characters with [count] {char}s."
+given:  a|bc
+keys:   5rx
+expect: a|bc
+
+=== r<CR> replaces the character with a line break
+ref:    change.txt *r*
+quote:  "If {char} is a <CR> or <NL>, a line break replaces the character."
+given:  foo| bar
+keys:   r<CR>
+expect:
+  foo
+  |bar
+undo:   foo| bar
+
+=== 3r<CR> replaces three characters with a single line break
+ref:    change.txt *r*
+quote:  "\"5r<CR>\" replaces five characters with a single line break."
+given:  ab|cdef
+keys:   3r<CR>
+expect:
+  ab
+  |f
+
+=== r<CR> autoindents like i<CR><Esc>, so the cursor ends on the indent
+ref:    change.txt *r*
+quote:  "When {char} is a <CR> or <NL>, Vim performs autoindenting. This works just like deleting the characters that are replaced and then doing \"i<CR><Esc>\"."
+given:
+      ab|-cd
+keys:   r<CR>
+expect:
+      ab
+     | cd
+
+=== r on a multibyte character
+ref:    change.txt *r*
+quote:  "Replace the character under the cursor with {char}."
+given:  a|漢字
+keys:   ré
+expect: a|é字
+
+=== r on an empty line does nothing
+ref:    change.txt *r*
+quote:  "Replace the character under the cursor with {char}."
+given:
+  foo
+  |
+keys:   rx
+expect:
+  foo
+  |
+
+=== r<Esc> cancels the replace
+ref:    change.txt *r*
+quote:  "Replace the character under the cursor with {char}."
+given:  a|bc
+keys:   r<Esc>
+expect: a|bc
+mode:   normal
+
+=== r repeated with . on the next character
+ref:    change.txt *r*
+quote:  "Replace the character under the cursor with {char}."
+given:  |abcd
+keys:   rxl
+expect: x|bcd
+dot:    x|xcd
