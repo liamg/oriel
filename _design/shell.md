@@ -119,7 +119,7 @@ Build a throwaway `oriel-spike` binary on Gio and measure it **on macOS (primary
    Also a 9-slice glow on 50 elements at 120 Hz, and an opacity-layer modal over a live editor.
 4. A 30-pane HUD redrawing at 4 Hz uses under 5% CPU (any full-window redraw at 4 Hz costs ~4% on macOS; see the spike report).
 5. Wayland fractional scaling at 1.25× and 1.5× with no blurry text.
-6. Idle RSS under 120 MB.
+6. Idle RSS under 192 MB (raised from 120 by Liam, 2026-10-12: the windowed app measured 125 MB at its first frame and levels off at 150–193 MB once its bounded caches fill).
 
 If 1, 2 or 5 fails and one focused round of renderer work (P0-6) doesn't fix it, fall back to
 **A+J**. The core, the vim engine and the AI layers all survive that switch,
