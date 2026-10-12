@@ -1,0 +1,37 @@
+=== dd deletes the line into the unnamed and "1 registers
+ref:    change.txt *dd*
+quote:  "Delete [count] lines [into register x] |linewise|."
+given:
+  one
+  |two
+  three
+keys:   dd
+expect:
+  one
+  |three
+regs:   "" = "two\n"   "1 = "two\n"
+undo:
+  one
+  |two
+  three
+dot:
+  |one
+
+=== 2dd with a count
+ref:    change.txt *dd*
+quote:  "Delete [count] lines"
+given:
+  |one
+  two
+  three
+keys:   2dd
+expect: |three
+
+=== x deletes the character under the cursor into the small delete register
+ref:    change.txt *x*
+quote:  "Delete [count] characters under and after the cursor [into register x] (not |linewise|)."
+given:  f|oo
+keys:   x
+expect: f|o
+regs:   "" = "o"   "- = "o"
+dot:    |f

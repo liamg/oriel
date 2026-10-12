@@ -1,0 +1,15 @@
+=== v then e selects to the end of the word
+ref:    visual.txt *v*
+quote:  "Start Visual mode per character."
+given:  |foo bar
+keys:   ve
+expect: [fo|o] bar
+mode:   visual
+
+=== a given selection, extended with w
+ref:    visual.txt *v*
+quote:  "Start Visual mode per character."
+given:  [f|o]o bar
+keys:   w
+expect: [^foo |b]ar
+mode:   visual

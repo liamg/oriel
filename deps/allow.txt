@@ -1,0 +1,15 @@
+# Approved modules (direct and indirect): module path, then major version.
+# A module is added here only once it is approved in _design/deps.md.
+
+# Go team (tier A)
+golang.org/x/exp/shiny v0
+golang.org/x/image v0
+golang.org/x/net v0
+golang.org/x/sys v0
+golang.org/x/text v0
+
+# Gio and its tree (cmd/oriel-spike only)
+gioui.org v0
+gioui.org/shader v1
+github.com/go-text/typesetting v0
+github.com/godbus/dbus/v5 v5

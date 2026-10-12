@@ -1,0 +1,17 @@
+=== cw on a word acts like ce
+ref:    change.txt *cw*
+quote:  "Special case: When the cursor is in a word, \"cw\" and \"cW\" do not include the white space after a word"
+given:  |foo bar
+keys:   cwxy<Esc>
+expect: x|y bar
+mode:   normal
+regs:   "" = "foo"   "1 = (unset)   "- = "foo"
+undo:   |foo bar
+
+=== cw stays in insert mode until <Esc>
+ref:    change.txt *cw*
+quote:  "they only change up to the end of the word"
+given:  |foo bar
+keys:   cwxy
+expect: xy| bar
+mode:   insert

@@ -1,0 +1,140 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0}
+.steps{width:270px;background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column}
+.st{display:flex;gap:10px;padding:9px 14px;font-size:12.5px;color:var(--fg3);align-items:flex-start}
+.st .n{font:600 10px/18px var(--mono);width:20px;height:18px;text-align:center;border:1px solid var(--line2);border-radius:4px;flex:none;color:var(--fg3)}
+.st.done{color:var(--fg2)} .st.done .n{color:var(--green);border-color:rgba(79,224,160,.35)}
+.st.on{background:var(--cyanbg);color:var(--fg);box-shadow:inset 2px 0 var(--cyan)}
+.st.on .n{color:#04121a;background:var(--cyan);border-color:var(--cyan)}
+.reader{flex:1;overflow:hidden;background:var(--bg0);display:flex;justify-content:center}
+.rcol{width:820px;padding:30px 0 0}
+.kicker{font:600 10px var(--mono);letter-spacing:.16em;color:var(--cyan);text-transform:uppercase}
+h1{font:600 28px/1.2 var(--disp);color:var(--fg);margin:8px 0 12px;letter-spacing:-.01em}
+p{font:15px/1.65 var(--ui);color:#b9c3cf;margin:0 0 14px}
+p code,li code{font:13px var(--mono);background:var(--bg3);color:var(--p);padding:1px 5px;border-radius:4px}
+.q{border:1px solid var(--line2);border-radius:8px;overflow:hidden;margin:6px 0 18px;background:var(--bg1)}
+.qh{display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--fg3)}
+.qh b{color:var(--fg2);font-weight:500}
+.qh .repo{color:var(--violet)}
+.q .code{background:var(--bg0);padding:6px 0;font-size:13px;line-height:20px}
+.q .ln .g{width:56px}
+.pin{margin:4px 18px 6px 64px;display:flex;gap:10px;align-items:flex-start;background:rgba(169,139,255,.07);border:1px solid rgba(169,139,255,.3);border-radius:6px;padding:8px 10px;font:12.5px/1.5 var(--ui);color:var(--fg2)}
+.pin .pn{font:700 10px/18px var(--mono);width:18px;height:18px;border-radius:50%;background:var(--violet);color:#120b26;text-align:center;flex:none}
+.side2{width:380px;background:var(--bg1);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.diag{padding:14px;border-bottom:1px solid var(--line)}
+.nav{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);align-items:center}
+.prog{height:3px;background:var(--bg4);margin:0 14px 10px}
+.prog i{display:block;height:100%;width:44%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs">
+    <div class="stab"><span class="dot o"></span>pricing-rounding<span class="mini">plan</span><span class="k">⌘1</span></div>
+    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
+    <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
+    <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div>
+    <div class="stab on"><span class="dot g"></span>tour: auth flow<span class="mini">4/9</span><span class="k">⌘6</span></div>
+  </div>
+  <div class="tbright">
+    <div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div>
+    <div class="tat">WK <div class="bar w"><i style="width:71%"></i></div><b>71%</b></div>
+    <div class="tat"><span class="dot g"></span>BUS 4</div>
+    <span class="kbd">⌘K</span>
+  </div>
+</div>
+<div class="main">
+  <div class="rail">
+    <div class="ic">⌥</div><div class="ic">⌕</div><div class="ic on">❖</div><div class="ic">◈</div><div class="ic">▷</div><div class="ic">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="steps">
+    <div style="padding:14px 14px 10px">
+      <div class="cap" style="color:var(--cyan)">Tour · walkthrough</div>
+      <div style="font:600 15px var(--disp);color:var(--fg);margin-top:6px">How authentication works</div>
+      <div class="row gap6" style="margin-top:8px;flex-wrap:wrap"><span class="chip v">infracost/api</span><span class="chip v">dashboard</span><span class="chip">pinned @ 3f2a91c</span></div>
+    </div>
+    <div class="prog"><i></i></div>
+    <div class="st done"><span class="n">✓</span>The login request arrives</div>
+    <div class="st done"><span class="n">✓</span>OAuth callback and state check</div>
+    <div class="st done"><span class="n">✓</span>Finding or creating the user</div>
+    <div class="st on"><span class="n">4</span>Session tokens are minted</div>
+    <div class="st"><span class="n">5</span>The cookie, and why it's split</div>
+    <div class="st"><span class="n">6</span>Middleware on every request</div>
+    <div class="st"><span class="n">7</span>Refresh without a round trip</div>
+    <div class="st"><span class="n">8</span>API keys: the other door</div>
+    <div class="st"><span class="n">9</span>Where it can go wrong</div>
+    <div style="flex:1"></div>
+    <div style="padding:12px 14px;border-top:1px solid var(--line)" class="col gap8">
+      <span class="btn ghost" style="justify-content:center">⇩ Export as HTML</span>
+      <span class="dim mono" style="font-size:10px;text-align:center">self-contained · no fetches · share as artifact</span>
+    </div>
+  </div>
+  <div class="reader">
+    <div class="rcol">
+      <div class="kicker">Step 4 of 9</div>
+      <h1>Session tokens are minted</h1>
+      <p>Once the user exists, the callback hands off to <code>session.Mint</code>. It issues two tokens with very different lifetimes: a short <b style="color:var(--fg)">access token</b> the API checks on every request, and a long <b style="color:var(--fg)">refresh token</b> that only the refresh endpoint ever reads.</p>
+      <div class="q">
+        <div class="qh"><span class="repo">infracost/api</span><b>internal/auth/session.go</b><span style="margin-left:auto">L42–56</span><span class="chip">go</span></div>
+        <div class="code">
+          <div class="ln"><span class="g">42</span><span class="t"><span class="k">func</span> (m <span class="p">*</span><span class="ty">Minter</span>) <span class="f">Mint</span>(ctx <span class="ty">context.Context</span>, u <span class="ty">User</span>) (<span class="ty">Pair</span>, <span class="ty">error</span>) {</span></div>
+          <div class="ln"><span class="g">43</span><span class="t">    now <span class="p">:=</span> m.clock.<span class="f">Now</span>()</span></div>
+          <div class="ln hl"><span class="g">44</span><span class="t">    access, err <span class="p">:=</span> m.<span class="f">sign</span>(claims{Sub: u.ID, Exp: now.<span class="f">Add</span>(<span class="n">15</span> <span class="p">*</span> time.Minute)})</span></div>
+          <div class="ln"><span class="g">45</span><span class="t">    <span class="k">if</span> err <span class="p">!=</span> <span class="k">nil</span> { <span class="k">return</span> <span class="ty">Pair</span>{}, err }</span></div>
+          <div class="pin"><span class="pn">1</span><div>Fifteen minutes is the whole blast radius of a leaked access token: no revocation list is checked on the hot path.</div></div>
+          <div class="ln"><span class="g">46</span><span class="t">    family <span class="p">:=</span> <span class="f">newFamilyID</span>()</span></div>
+          <div class="ln hl"><span class="g">47</span><span class="t">    refresh <span class="p">:=</span> m.store.<span class="f">Insert</span>(ctx, family, u.ID, now.<span class="f">Add</span>(<span class="n">30</span> <span class="p">*</span> <span class="n">24</span> <span class="p">*</span> time.Hour))</span></div>
+          <div class="pin"><span class="pn">2</span><div>The refresh token is a row, not a JWT: the <code style="font:12px var(--mono);color:var(--p)">family</code> lets step 7 revoke every descendant when a reused token shows up.</div></div>
+          <div class="ln"><span class="g">48</span><span class="t">    <span class="k">return</span> <span class="ty">Pair</span>{Access: access, Refresh: refresh}, <span class="k">nil</span></span></div>
+          <div class="ln"><span class="g">49</span><span class="t">}</span></div>
+        </div>
+      </div>
+      <p>The dashboard never sees the refresh token's value. It only learns when the access token will expire, so it can schedule a refresh before the user notices:</p>
+      <div class="q">
+        <div class="qh"><span class="repo">dashboard</span><b>src/auth/useSession.ts</b><span style="margin-left:auto">L18–22</span><span class="chip">ts</span></div>
+        <div class="code">
+          <div class="ln"><span class="g">18</span><span class="t"><span class="k">const</span> expiresAt <span class="p">=</span> <span class="f">decodeExp</span>(res.headers.<span class="f">get</span>(<span class="s">"x-access-exp"</span>))</span></div>
+          <div class="ln hl"><span class="g">19</span><span class="t"><span class="f">setTimeout</span>(refresh, expiresAt <span class="p">-</span> Date.<span class="f">now</span>() <span class="p">-</span> <span class="n">60_000</span>)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="side2">
+    <div class="ph"><span class="cap">Diagram</span><span class="dim mono" style="font-size:10px;margin-left:auto">mermaid · sequence</span></div>
+    <div class="diag">
+      <svg width="350" height="330" viewBox="0 0 350 330" font-family="JetBrains Mono" font-size="10">
+        <g fill="#10151d" stroke="#2a3544">
+          <rect x="4" y="4" width="92" height="24" rx="4"/><rect x="128" y="4" width="92" height="24" rx="4"/><rect x="252" y="4" width="92" height="24" rx="4"/>
+        </g>
+        <g fill="#d6dde6" text-anchor="middle"><text x="50" y="20">callback</text><text x="174" y="20">Minter</text><text x="298" y="20">store</text></g>
+        <g stroke="#2a3544" stroke-dasharray="3 3"><path d="M50 28V320M174 28V320M298 28V320"/></g>
+        <rect x="168" y="62" width="12" height="180" fill="rgba(255,210,63,.15)" stroke="#5cd2ff" stroke-width=".8"/>
+        <g stroke="#5cd2ff" fill="none" stroke-width="1.2"><path d="M50 62H164"/><path d="M180 112h28v18h-28"/><path d="M180 166H294"/></g>
+        <g fill="#5cd2ff"><path d="M164 58l6 4-6 4z"/><path d="M180 126l-6 4 6 4z" /><path d="M294 162l6 4-6 4z"/></g>
+        <g stroke="#9aa6b4" stroke-dasharray="4 3" fill="none" stroke-width="1"><path d="M298 196H182"/><path d="M168 242H56"/></g>
+        <g fill="#9aa6b4"><path d="M182 192l-6 4 6 4z"/><path d="M56 238l-6 4 6 4z"/></g>
+        <g fill="#b9c3cf"><text x="60" y="54">Mint(user)</text><text x="214" y="125">sign(15m)</text><text x="186" y="158">Insert(family,30d)</text><text x="200" y="210">refresh id</text><text x="70" y="234">Pair{access, refresh}</text></g>
+        <g><circle cx="230" cy="98" r="8" fill="#a98bff"/><text x="230" y="101.5" text-anchor="middle" fill="#120b26" font-weight="700">1</text><circle cx="318" cy="182" r="8" fill="#a98bff"/><text x="318" y="185.5" text-anchor="middle" fill="#120b26" font-weight="700">2</text></g>
+        <rect x="20" y="270" width="310" height="40" rx="5" fill="rgba(255,207,92,.06)" stroke="rgba(255,207,92,.35)"/>
+        <text x="32" y="287" fill="#ffcf5c">note</text><text x="32" y="301" fill="#b9c3cf">refresh never leaves the server as a JWT</text>
+      </svg>
+    </div>
+    <div class="ph"><span class="cap">Ask about this step</span></div>
+    <div style="padding:12px 14px" class="col gap8">
+      <div class="thread" style="border-radius:6px">
+        <div class="msg"><div class="av me">LG</div><div><span class="who">liam</span><span class="when">3m</span><div class="body">what stops a stolen refresh token being used twice?</div></div></div>
+        <div class="msg" style="padding-top:0"><div class="av cl">C</div><div><span class="who">Claude</span><span class="when">2m</span><div class="body">Reuse detection, which is step 7. I've added a pinned note here pointing forward to it (note 2).</div></div></div>
+      </div>
+      <div class="input" style="height:34px">Ask, or ask to rework this step… <span class="kbd" style="margin-left:auto">⏎</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="nav"><span class="btn">← Prev</span><span class="dim mono" style="font-size:10.5px;flex:1;text-align:center">step 4 / 9</span><span class="btn pri">Next →</span></div>
+  </div>
+</div>
+<div class="status">
+  <span class="mode" style="background:var(--violet)">TOUR</span>
+  <span>auth flow</span><span class="dim">walkthrough · 2 repos · 14 quotes</span>
+  <span style="margin-left:auto" class="row gap16"><span class="dim">h/l step · j/k scroll · gd open quote in editor</span><span style="padding-right:12px">4/9</span></span>
+</div>

@@ -1,0 +1,97 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0;position:relative}
+.bg{flex:1;display:flex;filter:saturate(.7)}
+.scrim2{position:absolute;inset:0;background:rgba(3,5,8,.62);z-index:5}
+.pk{position:absolute;left:50%;top:70px;transform:translateX(-50%);width:1240px;height:720px;z-index:10;display:flex;flex-direction:column;background:var(--bg1);border:1px solid var(--line2);border-radius:10px;box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 0 1px rgba(255,210,63,.08),0 0 60px rgba(255,210,63,.05);overflow:hidden}
+.pkh{display:flex;align-items:center;gap:10px;padding:0 14px;height:40px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.srcs{display:flex;gap:4px}
+.srcs span{font:600 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:5px;color:var(--fg3);border:1px solid transparent}
+.srcs span.on{color:var(--cyan);border-color:rgba(255,210,63,.4);background:var(--cyanbg)}
+.srcs span i{font-style:normal;color:var(--fg4);margin-left:5px}
+.pkb{flex:1;display:flex;min-height:0}
+.left{width:560px;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+.inp{display:flex;align-items:center;gap:10px;height:46px;padding:0 14px;border-bottom:1px solid var(--line);font:15px var(--mono);color:var(--fg)}
+.inp .pr{color:var(--cyan);font-weight:700}
+.inp .ct{margin-left:auto;font:11px var(--mono);color:var(--fg3)}
+.res{flex:1;padding:6px 0;overflow:hidden}
+.rr{display:flex;align-items:center;gap:9px;padding:0 14px;height:30px;font:12.5px var(--mono);color:var(--fg2);white-space:nowrap}
+.rr.on{background:var(--cyanbg);color:var(--fg);box-shadow:inset 2px 0 var(--cyan)}
+.rr .dir{color:var(--fg4)}
+.rr m{color:var(--yellow);font-weight:700;text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(255,207,92,.4)}
+.rr .rt{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:10.5px;color:var(--fg4)}
+.st{font:700 10px var(--mono)} .M{color:var(--yellow)} .A{color:var(--green)}
+.prev{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg0)}
+.prevh{height:32px;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--fg3)}
+.prev .code{flex:1;padding-top:6px;font-size:12.5px;line-height:20px}
+.pkf{height:30px;display:flex;align-items:center;gap:14px;padding:0 14px;border-top:1px solid var(--line);font:10.5px var(--mono);color:var(--fg3);background:var(--bg2)}
+.pkf .kbd{margin-right:3px}
+.strip{position:absolute;left:50%;transform:translateX(-50%);bottom:28px;z-index:10;display:flex;gap:10px}
+.strip div{background:var(--bg2);border:1px solid var(--line2);border-radius:7px;padding:7px 11px;font:11px var(--mono);color:var(--fg2);display:flex;gap:8px;align-items:center}
+.strip b{color:var(--cyan);font-weight:600}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs"><div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">work</span><span class="k">⌘1</span></div><div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div><div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div></div>
+  <div class="tbright"><div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div><span class="kbd">⌘K</span></div>
+</div>
+<div class="main">
+  <div class="bg">
+    <div class="rail"><div class="ic on">⌥</div><div class="ic">⌕</div><div class="ic">±</div><div class="ic">◈</div></div>
+    <div class="code grow" style="padding-top:10px">
+      <div class="ln"><span class="g">39</span><span class="t"><span class="k">func</span> <span class="f">roundHalfEven</span>(v <span class="ty">Decimal</span>, p <span class="ty">int32</span>) <span class="ty">Decimal</span> {</span></div>
+      <div class="ln"><span class="g">40</span><span class="t">    scaled <span class="p">:=</span> v.<span class="f">Shift</span>(p)</span></div>
+      <div class="ln"><span class="g">41</span><span class="t">    t <span class="p">:=</span> scaled.<span class="f">Truncate</span>(<span class="n">0</span>)</span></div>
+    </div>
+  </div>
+  <div class="scrim2"></div>
+  <div class="pk">
+    <div class="pkh">
+      <span class="cap" style="color:var(--fg2)">Pick</span>
+      <div class="srcs"><span class="on">Files<i>␣␣</i></span><span>Grep<i>␣/</i></span><span>Buffers<i>␣,</i></span><span>Symbols<i>␣s</i></span><span>Keymaps<i>␣k</i></span><span>Commands<i>␣:</i></span><span>Threads<i>␣t</i></span><span>Git log<i>␣gl</i></span><span>Help<i>␣h</i></span></div>
+      <span style="margin-left:auto" class="dim mono" style="font-size:10.5px">⇥ next source · scope: <span style="color:var(--fg2)">pricing + billing-ui</span></span>
+    </div>
+    <div class="pkb">
+      <div class="left">
+        <div class="inp"><span class="pr">❯</span>rndtst<span class="cursor bar"></span><span class="ct">6 / 412 · fuzzy</span></div>
+        <div class="res">
+          <div class="rr on"><span class="fi" style="background:#4fc1e9"></span><span><span class="dir">internal/pricing/</span><m>r</m>ou<m>nd</m>_<m>t</m>e<m>st</m>.go</span><span class="rt"><span class="st M">M</span><span>2m</span></span></div>
+          <div class="rr"><span class="fi" style="background:#4fc1e9"></span><span><span class="dir">internal/pricing/</span><m>r</m>ou<m>nd</m>.go</span><span class="rt"><span class="st M">M</span><span>open</span></span></div>
+          <div class="rr"><span class="fi" style="background:#4fc1e9"></span><span><span class="dir">internal/billing/</span><m>r</m>ou<m>nd</m>ing_<m>t</m>e<m>st</m>.go</span><span class="rt"><span>3d</span></span></div>
+          <div class="rr"><span class="fi" style="background:#ffcf5c"></span><span><span class="dir">billing-ui/src/</span><m>r</m>ou<m>nd</m>.<m>t</m>e<m>st</m>.ts</span><span class="rt"><span>2w</span></span></div>
+          <div class="rr"><span class="fi" style="background:#4fc1e9"></span><span><span class="dir">internal/usage/</span>g<m>r</m>i<m>nd</m>_<m>t</m>e<m>st</m>.go</span><span class="rt"><span>1mo</span></span></div>
+          <div class="rr"><span class="fi" style="background:#9aa6b4"></span><span><span class="dir">testdata/</span><m>r</m>ou<m>nd</m>_<m>t</m>e<m>st</m>s.golden</span><span class="rt"><span>1mo</span></span></div>
+          <div style="padding:14px 14px 0" class="cap">Ranking</div>
+          <div style="padding:6px 14px;font-size:11.5px;color:var(--fg3);line-height:1.6">fuzzy score · then <span style="color:var(--fg2)">changed on branch</span> · <span style="color:var(--fg2)">recently opened</span> · <span style="color:var(--fg2)">open in a buffer</span> · path depth. Typing <span class="kbd">'</span> forces exact, <span class="kbd">!</span> negates, <span class="kbd">^</span>/<span class="kbd">$</span> anchor (fzf syntax).</div>
+        </div>
+      </div>
+      <div class="prev">
+        <div class="prevh"><span class="fi" style="background:#4fc1e9"></span>internal/pricing/round_test.go<span style="margin-left:auto">preview · ⌃d/⌃u scroll</span></div>
+        <div class="code">
+          <div class="ln"><span class="g">18</span><span class="t"><span class="k">func</span> <span class="f">TestRoundHalfEven</span>(t <span class="p">*</span><span class="ty">testing.T</span>) {</span></div>
+          <div class="ln"><span class="g">19</span><span class="t">    cases <span class="p">:=</span> []<span class="k">struct</span>{ in <span class="ty">string</span>; p <span class="ty">int32</span>; want <span class="ty">string</span> }{</span></div>
+          <div class="ln"><span class="g">20</span><span class="t">        {<span class="s">"2.5"</span>, <span class="n">0</span>, <span class="s">"2"</span>},</span></div>
+          <div class="ln"><span class="g">21</span><span class="t">        {<span class="s">"3.5"</span>, <span class="n">0</span>, <span class="s">"4"</span>},</span></div>
+          <div class="ln add"><span class="g">22</span><span class="t">        {<span class="s">"-2.5"</span>, <span class="n">0</span>, <span class="s">"-2"</span>},</span></div>
+          <div class="ln add"><span class="g">23</span><span class="t">        {<span class="s">"-3.5"</span>, <span class="n">0</span>, <span class="s">"-4"</span>},</span></div>
+          <div class="ln"><span class="g">24</span><span class="t">        {<span class="s">"1.005"</span>, <span class="n">2</span>, <span class="s">"1.00"</span>},</span></div>
+          <div class="ln"><span class="g">25</span><span class="t">    }</span></div>
+          <div class="ln"><span class="g">26</span><span class="t">    <span class="k">for</span> _, c <span class="p">:=</span> <span class="k">range</span> cases {</span></div>
+          <div class="ln"><span class="g">27</span><span class="t">        got <span class="p">:=</span> <span class="f">roundHalfEven</span>(<span class="f">dec</span>(c.in), c.p)</span></div>
+          <div class="ln"><span class="g">28</span><span class="t">        <span class="k">if</span> got.<span class="f">String</span>() <span class="p">!=</span> c.want {</span></div>
+          <div class="ln"><span class="g">29</span><span class="t">            t.<span class="f">Errorf</span>(<span class="s">"%s@%d: got %s, want %s"</span>, c.in, c.p, got, c.want)</span></div>
+          <div class="ln"><span class="g">30</span><span class="t">        }</span></div>
+          <div class="ln"><span class="g">31</span><span class="t">    }</span></div>
+          <div class="ln"><span class="g">32</span><span class="t">}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="pkf"><span><span class="kbd">⏎</span>open</span><span><span class="kbd">⌃v</span>vsplit</span><span><span class="kbd">⌃s</span>split</span><span><span class="kbd">⌃t</span>tab</span><span><span class="kbd">⌃q</span>to quickfix</span><span><span class="kbd">⌃a</span>attach to request</span><span><span class="kbd">⇥</span>multi-select</span><span style="margin-left:auto"><span class="kbd">esc</span>close · <span class="kbd">⌃r</span>resume last picker</span></div>
+  </div>
+  <div class="strip">
+    <div><b>Grep</b> live as you type · regex · rg on the worker</div>
+    <div><b>Keymaps</b> ␣k · every mapping, its desc and source</div>
+    <div><b>Resume</b> ␣' reopens the last picker where you left it</div>
+  </div>
+</div>
+<div class="status"><span class="mode">NORMAL</span><span>picker · files</span><span style="margin-left:auto;padding-right:12px" class="dim">pickers are a plugin source API: oriel.picker.source{…}</span></div>

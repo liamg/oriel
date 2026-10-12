@@ -1,0 +1,25 @@
+=== w moves to the start of the next word
+ref:    motion.txt *w*
+quote:  "[count] words forward."
+given:  foo |bar baz
+keys:   w
+expect: foo bar |baz
+mode:   normal
+
+=== 2w with a count
+ref:    motion.txt *w*
+quote:  "[count] words forward."
+given:  |foo bar baz
+keys:   2w
+expect: foo bar |baz
+
+=== w crosses a line break
+ref:    motion.txt *w*
+quote:  "[count] words forward."
+given:
+  foo |bar
+  baz
+keys:   w
+expect:
+  foo bar
+  |baz

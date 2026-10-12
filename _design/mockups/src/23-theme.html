@@ -1,0 +1,160 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0}
+.toks{width:300px;background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column;flex:none}
+.tg2{padding:8px 12px 3px;font:600 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fg3);display:flex;gap:8px;align-items:center}
+.tk{display:flex;align-items:center;gap:8px;padding:3px 12px 3px 20px;font:11.5px/20px var(--mono);color:var(--fg2)}
+.tk .sw{width:14px;height:14px;border-radius:3px;border:1px solid rgba(255,255,255,.12);flex:none}
+.tk .v{margin-left:auto;color:var(--fg4);font-size:10.5px}
+.tk.mod{color:var(--fg)} .tk.mod::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--orange);margin-left:-11px;margin-right:2px;box-shadow:0 0 6px var(--orange)}
+.tk.on{background:var(--cyanbg);box-shadow:inset 2px 0 var(--cyan);color:var(--fg)}
+.stage{flex:1;display:flex;flex-direction:column;min-width:0;background:#05070a}
+.stagebar{height:36px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--bg1)}
+.seg2{display:flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden}
+.seg2 span{font:600 10px/22px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg3);padding:0 10px;border-right:1px solid var(--line2)}
+.seg2 span:last-child{border-right:0}
+.seg2 span.on{background:var(--cyanbg);color:var(--cyan)}
+.frame{margin:18px auto 0;width:860px;height:560px;border:1px solid var(--line2);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);position:relative;
+  --bg0:#0c0907;--bg1:#120d0a;--bg2:#18110d;--bg3:#1f1611;--line:#2a1f18;--line2:#3a2b21;--cyan:#ff9b45;--cyanbg:rgba(76,201,240,.09);--fg:#ecdfd3;--fg2:#b3a293;--fg3:#7d6b5d;--fg4:#54463b;--k:#e7a3ff;--f:#ffb86b;--s:#c9e27a}
+.frame .titlebar{height:30px}
+.frame .stab{font-size:11px}
+.frame .code{font-size:12px;line-height:19px}
+.pick{position:absolute;border:1.5px dashed var(--pink);border-radius:6px;box-shadow:0 0 0 4000px rgba(0,0,0,.18),0 0 18px rgba(255,122,198,.45);pointer-events:none}
+.picklbl{position:absolute;font:600 10px var(--mono);background:var(--pink);color:#160811;padding:2px 7px;border-radius:3px;letter-spacing:.04em}
+.diffbar{border-top:1px solid var(--line);background:var(--bg1);padding:10px 14px;display:flex;gap:16px;flex:none}
+.toml{font:12px/19px var(--mono);white-space:pre;color:var(--fg2);flex:1}
+.toml .a{color:var(--green)} .toml .h{color:var(--violet)} .toml .q{color:var(--s)}
+.insp{width:340px;background:var(--bg1);border-left:1px solid var(--line);display:flex;flex-direction:column;flex:none}
+.sec{padding:12px 14px;border-bottom:1px solid var(--line)}
+.chain{display:flex;flex-direction:column;gap:0;margin-top:8px}
+.ch{display:flex;align-items:center;gap:9px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;font:11.5px var(--mono);color:var(--fg2);background:var(--bg2)}
+.ch.on{border-color:var(--cyan);color:var(--fg);box-shadow:0 0 0 2px rgba(255,210,63,.1)}
+.ch .sw{width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,.15)}
+.ch .lv{margin-left:auto;font-size:9.5px;color:var(--fg4);letter-spacing:.08em;text-transform:uppercase}
+.arrow{height:12px;margin-left:15px;border-left:1px solid var(--line2)}
+.sq{height:150px;border-radius:6px;position:relative;background:linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#8a8a8a,#ff7a00);margin-top:10px}
+.sq i{position:absolute;left:72%;top:22%;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #000,0 0 10px rgba(0,0,0,.6);transform:translate(-50%,-50%)}
+.sl{margin-top:9px;display:flex;align-items:center;gap:8px;font:10.5px var(--mono);color:var(--fg3)}
+.sl .tr{flex:1;height:8px;border-radius:4px;position:relative}
+.sl .tr i{position:absolute;top:-3px;width:4px;height:14px;background:#fff;border-radius:2px;box-shadow:0 0 0 1px #000}
+.sl b{width:44px;text-align:right;color:var(--fg);font-weight:500}
+.ct{display:flex;gap:8px;margin-top:10px}
+.ct div{flex:1;border:1px solid var(--line2);border-radius:6px;padding:7px 9px;font:10.5px var(--mono);color:var(--fg3)}
+.ct b{display:block;font:600 15px var(--mono);color:var(--green);margin-top:2px}
+.lint{font-size:12px;color:var(--fg2);line-height:1.5;display:flex;gap:8px;margin-top:6px}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs"><div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">work</span><span class="k">⌘1</span></div><div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div><div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div></div>
+  <div class="tbright"><span class="cap" style="color:var(--fg2)">:Theme</span><span class="kbd">⌘K</span></div>
+</div>
+<div class="main">
+  <div class="toks">
+    <div class="ph"><span class="cap">Theme</span><span class="mono" style="font-size:11px;color:var(--fg)">graphite-warm</span><span class="dim mono" style="font-size:10px;margin-left:auto">extends graphite</span></div>
+    <div style="padding:8px 10px;border-bottom:1px solid var(--line)"><div class="input" style="height:28px">⌕ <span style="margin-left:6px">filter tokens…  </span><span class="dim mono" style="margin-left:auto;font-size:10px">● 7 overridden</span></div></div>
+    <div class="tg2">Palette</div>
+    <div class="tk"><span class="sw" style="background:#0c0907"></span>ink<span class="v">#0c0907</span></div>
+    <div class="tk mod"><span class="sw" style="background:#ff9b45"></span>ember<span class="v">#ff9b45</span></div>
+    <div class="tk"><span class="sw" style="background:#5cd2ff"></span>cyan<span class="v">oklch .80 .12 220</span></div>
+    <div class="tk"><span class="sw" style="background:#ecdfd3"></span>paper<span class="v">#ecdfd3</span></div>
+    <div class="tg2">Semantic</div>
+    <div class="tk mod"><span class="sw" style="background:#ff9b45"></span>accent<span class="v">ember</span></div>
+    <div class="tk mod"><span class="sw" style="background:#0c0907"></span>bg.base<span class="v">mix(ink,ember,3%)</span></div>
+    <div class="tk on mod"><span class="sw" style="background:#1f1611"></span>surface.raised<span class="v">lighten(bg.base,6%)</span></div>
+    <div class="tk"><span class="sw" style="background:#b3a293"></span>fg.muted<span class="v">↳ graphite</span></div>
+    <div class="tg2">Status</div>
+    <div class="tk"><span class="sw" style="background:#ff5f6d"></span>status.needs_you</div>
+    <div class="tk"><span class="sw" style="background:#a98bff"></span>status.permission</div>
+    <div class="tk mod"><span class="sw" style="background:#ffd36b"></span>status.working<span class="v">#ffd36b</span></div>
+    <div class="tk"><span class="sw" style="background:#5c8dff"></span>status.ci</div>
+    <div class="tg2">Component <span class="dim" style="letter-spacing:0;text-transform:none;font-weight:400">312</span></div>
+    <div class="tk"><span class="sw" style="background:#1f1611"></span>thread.card.bg<span class="v">surface.raised</span></div>
+    <div class="tk mod"><span class="sw" style="background:#ff9b45"></span>tab.active.edge<span class="v">accent</span></div>
+    <div class="tg2">Syntax · Effects · Type</div>
+    <div class="tk"><span class="sw" style="background:#e7a3ff"></span>@keyword</div>
+    <div class="tk mod"><span class="sw" style="background:#54463b"></span>@comment<span class="v">italic</span></div>
+    <div class="tk"><span class="sw" style="background:linear-gradient(90deg,#ff9b45,transparent)"></span>effects.glow<span class="v">0.4</span></div>
+    <div style="flex:1"></div>
+    <div style="padding:10px 12px;border-top:1px solid var(--line)" class="row gap8"><span class="btn">New theme from…</span><span class="btn ghost">Import</span></div>
+  </div>
+
+  <div class="stage">
+    <div class="stagebar">
+      <span class="seg2"><span class="on">Live UI</span><span>Fixture</span><span>Split vs graphite</span></span>
+      <span class="seg2"><span class="on">Dark</span><span>Light</span></span>
+      <span class="chip" style="border-color:rgba(255,122,198,.5);color:var(--pink)">⌖ pick mode · click anything</span>
+      <span style="margin-left:auto" class="dim mono" style="font-size:10.5px">repainted in 0.6ms</span>
+    </div>
+    <div class="frame">
+      <div class="titlebar"><div class="brand" style="font-size:11px"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div><div class="stabs"><div class="stab on"><span class="dot" style="background:#ffd36b;box-shadow:0 0 8px #ffd36b"></span>pricing-rounding<span class="mini">work</span></div><div class="stab"><span class="dot r"></span>INF-2231 usage api</div><div class="stab"><span class="dot v"></span>review #4410</div></div></div>
+      <div class="row grow" style="align-items:stretch">
+        <div style="width:170px;background:var(--bg1);border-right:1px solid var(--line)" class="tree">
+          <div style="--d:0">▾ pricing</div><div style="--d:1" class="on">round.go<span class="m M">M</span></div><div style="--d:1">round_test.go<span class="m M">M</span></div><div style="--d:1">tiers.go</div><div style="--d:0">PLAN.md<span class="m A">A</span></div>
+        </div>
+        <div class="grow code" style="padding-top:8px">
+          <div class="ln"><span class="g">39</span><span class="t"><span class="k">func</span> <span class="f">roundHalfEven</span>(v <span class="ty">Decimal</span>, p <span class="ty">int32</span>) <span class="ty">Decimal</span> {</span></div>
+          <div class="ln"><span class="g">40</span><span class="t">    scaled <span class="p">:=</span> v.<span class="f">Shift</span>(p)</span></div>
+          <div class="ln"><span class="g">41</span><span class="t">    <span class="c">// ties go to the even neighbour</span></span></div>
+          <div class="ln cur"><span class="g">42</span><span class="t">    t <span class="p">:=</span> scaled.<span class="f">Truncate</span>(<span class="n">0</span>)<span class="cursor" style="background:#ff9b45;box-shadow:0 0 10px #ff9b45"></span></span></div>
+          <div style="margin:6px 40px 6px 50px;font-family:var(--ui)" id="card">
+            <div class="thread" style="background:#1f1611;border-color:var(--line2)">
+              <div class="th"><span class="dot" style="background:#ffd36b;box-shadow:0 0 8px #ffd36b"></span><b style="color:var(--fg)">Thread</b> · L42</div>
+              <div class="msg"><div class="av me">LG</div><div><span class="who">liam</span><div class="body">what about <code>-2.5</code>?</div></div></div>
+              <div class="msg" style="padding-top:0"><div class="av cl">C</div><div><span class="who">Claude</span><div class="body">Truncate keeps the sign — adding negative cases now.</div></div></div>
+            </div>
+          </div>
+          <div class="ln"><span class="g">43</span><span class="t">    diff <span class="p">:=</span> scaled.<span class="f">Sub</span>(t).<span class="f">Abs</span>()</span></div>
+        </div>
+      </div>
+      <div class="status" style="height:22px"><span class="mode" style="background:#ff9b45">NORMAL</span><span>rethink/rounding</span></div>
+      <div class="pick" style="left:218px;top:121px;width:600px;height:148px"></div>
+      <div class="picklbl" style="left:218px;top:101px">thread.card.bg</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="diffbar">
+      <div style="width:150px"><div class="cap">Writing to</div><div class="mono" style="font-size:11px;color:var(--fg);margin-top:5px">themes/<br>graphite-warm.toml</div><div class="dim mono" style="font-size:10px;margin-top:6px">7 overrides · 14 lines</div></div>
+      <div class="toml"><span class="h">[semantic]</span>
+accent           = <span class="q">"ember"</span>
+bg.base          = <span class="q">"mix(ink, ember, 3%)"</span>
+<span class="a">surface.raised   = "lighten(bg.base, 6%)"      # ← just now</span>
+status.working   = <span class="q">"#ffd36b"</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;justify-content:flex-end"><span class="btn ghost">Open file</span><span class="btn ghost">Undo ⌘Z</span></div>
+    </div>
+  </div>
+
+  <div class="insp">
+    <div class="sec">
+      <div class="row"><span class="cap">Picked</span><span class="mono" style="font-size:11px;color:var(--pink);margin-left:auto">thread card · background</span></div>
+      <div class="chain">
+        <div class="ch"><span class="sw" style="background:#1f1611"></span>thread.card.bg<span class="lv">component</span></div>
+        <div class="arrow"></div>
+        <div class="ch on"><span class="sw" style="background:#1f1611"></span>surface.raised<span class="lv">semantic · edit</span></div>
+        <div class="arrow"></div>
+        <div class="ch"><span class="sw" style="background:#0c0907"></span>bg.base<span class="lv">semantic</span></div>
+        <div class="arrow"></div>
+        <div class="ch"><span class="sw" style="background:#0c0907"></span>ink + ember 3%<span class="lv">palette</span></div>
+      </div>
+      <div class="dim" style="font-size:11.5px;margin-top:8px">Editing <b style="color:var(--fg2)">surface.raised</b> also changes 23 other components. Pick the top link to change only thread cards.</div>
+    </div>
+    <div class="sec">
+      <div class="row"><span class="cap">Value</span><span class="seg2" style="margin-left:auto"><span class="on">derive</span><span>fixed</span></span></div>
+      <div class="input" style="margin-top:8px;color:var(--fg);font-family:var(--mono);font-size:12px">lighten(bg.base, 6%)<span class="dim" style="margin-left:auto">= #1f1611</span></div>
+      <div class="sq"><i></i></div>
+      <div class="sl"><span>L</span><div class="tr" style="background:linear-gradient(90deg,#000,#fff)"><i style="left:18%"></i></div><b>0.21</b></div>
+      <div class="sl"><span>C</span><div class="tr" style="background:linear-gradient(90deg,#3a3a3a,#ff7a00)"><i style="left:12%"></i></div><b>0.018</b></div>
+      <div class="sl"><span>H</span><div class="tr" style="background:linear-gradient(90deg,#f55,#fd5,#5f5,#5ff,#55f,#f5f,#f55)"><i style="left:14%"></i></div><b>52°</b></div>
+    </div>
+    <div class="sec">
+      <div class="cap">Contrast on this surface</div>
+      <div class="ct"><div>fg.base<b>Lc 92</b></div><div>fg.muted<b>Lc 68</b></div><div>fg.faint<b style="color:var(--yellow)">Lc 38</b></div></div>
+      <div class="lint"><span style="color:var(--yellow)">⚠</span><span><code style="font:11px var(--mono);color:var(--p)">fg.faint</code> timestamps fall below Lc 45 on raised cards. <span style="color:var(--cyan)">Fix: lighten fg.faint 8%</span></span></div>
+      <div class="lint"><span style="color:var(--yellow)">⚠</span><span><code style="font:11px var(--mono);color:var(--p)">status.working</code> is ΔE 9 from <code style="font:11px var(--mono);color:var(--p)">accent</code> — hard to tell apart on tabs.</span></div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="sec" style="border-top:1px solid var(--line);border-bottom:0"><div class="row gap8"><span class="btn ghost">Reset to inherited</span><span class="btn pri" style="margin-left:auto">Save theme</span></div></div>
+  </div>
+</div>
+<div class="status">
+  <span class="mode">THEME</span><span>graphite-warm</span><span class="dim">● 7 overrides · unsaved 1</span>
+  <span style="margin-left:auto;padding-right:12px" class="dim">p pick · r reset · gd go to definition in toml · :hi works too</span>
+</div>

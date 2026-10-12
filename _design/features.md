@@ -1,0 +1,147 @@
+# Feature inventory
+
+Every capability the mockups show or the docs promise, with where it lives, when it lands, and a **testable**
+definition of done. This is the contract for "the app the screenshots imply". A feature isn't done until its
+acceptance check passes in CI (or, where noted, in a scripted manual check recorded in the PR).
+
+Phases are from `PLAN.md`: **P0** spike · **P1** framework · **P2** editor core · **P3** shell · **P4** IDE · **P5** AI ·
+**P6** review · **P7** the rest. **After** lists the tickets that must be done first; the order in `_tickets/README.md` is generated from it.
+
+## Framework (first, after the spike)
+
+How everything hangs together, built and tested before features land on it.
+
+| ID | Feature | Mockup | Module | Phase | After | Done when |
+|---|---|---|---|---|---|---|
+| FW-1 | Module skeleton and core interfaces wired end to end: app → `core.Store` → registry → a view | – | all | P1 | P0-1 | an empty app boots; a registered command runs from a keymap and an event updates a view; an import-rule test fails if `text`/`vim`/`core`/`agent` import `ui` or `render` |
+| FW-2 | Event store: typed events, materialised `core.State`, subscriptions, replay | – | core | P1 | FW-1 | replaying a recorded event log reproduces the state byte-for-byte |
+| FW-3 | Registries: commands, keymaps (modes, chords, panel-local), options (scoped) | 19 | registry, input | P1 | FW-1 | `:Keys`/`:Commands` list sources; chords resolve with timeouts; scope precedence tests |
+| FW-4 | `ui` toolkit core: `Ctx`, ids, flex layout, anchors, scroll, clipping, z-order | – | ui | P1 | FW-1, SH-1 | layout golden tests; a 10k-row scroll at 120 Hz |
+| FW-5 | Interaction states: hover, press, focus rings, disabled, cursors, tooltips; spring animation | all | ui | P1 | FW-4 | display-list snapshots per state; 200 hover targets stay within the frame budget; reduced-motion respected |
+| FW-6 | Widgets: buttons, chips, inputs, virtual lists, trees, tabs, menus, context menus, modals, popovers, toasts | all | ui | P1 | FW-5, FW-7 | each widget has snapshot tests in dark and light, keyboard and mouse paths, and a help id |
+| FW-11 | `toml` module: TOML 1.0 parser and round-tripping editor | – | toml | P1 | P0-1 | the `toml-test` suite passes; set, add and delete a key leave every other byte unchanged |
+| FW-7 | Theme tokens: layered resolution, live reload, the default black/yellow/orange theme | 17, 23 | theme | P1 | FW-4, FW-11 | token resolution tables; the fixture renders in every built-in theme |
+| FW-8 | Headless backend: display-list snapshots plus perceptual PNG diffs against the mockups | – | render | P1 | FW-4 | CI renders the fixture workspace and diffs it within threshold |
+| FW-9 | Layout tree and tab groups: **drag any pane to any tab group, dock, split or float**, animated drop targets, zoom, `⌃W` keys | 24 | layout | P1 | FW-6, FW-8 | snapshot tests for every move and drop target; drag and drop scripted in tests; layouts saved and restored |
+| FW-10 | Accessibility tree emitted from widget ids | – | ui | P1 | FW-6 | VoiceOver reads the fixture's main regions (scripted manual check) |
+
+## Shell and navigation
+
+| ID | Feature | Mockup | Module | Phase | After | Done when |
+|---|---|---|---|---|---|---|
+| P0-6 | Glyph-atlas prototype in the spike; re-measure on macOS; go/no-go | 01 | spike | P0 | P0-4 | budgets 1, 4 and 6 pass on macOS, or the report recommends the fallback |
+| SH-1 | Window, GPU rendering, HiDPI and 1× text | 01 | render, typeset | P0 | P0-4, P0-6 | spike budgets met on macOS and Linux (`shell.md`); `01-ide` re-created natively and side by side with the PNG |
+| SH-2 | Session tabs with status dots and `⌘1–9` | 01 | app | P3 | FW-6, FW-2 | 7 statuses render correctly from a fixture `core.State`; keys switch in under one frame |
+| SH-4 | ⌘K omnibox (sessions, commands, files, symbols, tickets, PRs) with prefixes | 02 | app, picker | P3 | FW-6, FW-3 | fuzzy ranking golden tests; preview pane renders for each source |
+| SH-5 | Pickers (`␣␣` files, `␣/` grep, `␣k` keymaps…) with preview and actions | 26 | picker | P3–P4 | SH-4 | each source returns, ranks and previews; `␣'` resumes; quickfix and attach actions work |
+| SH-6 | Which-key popup | 27 | plugin (built-in) | P3 | FW-3, FW-6 | appears after 300 ms for any prefix, lists `desc`, `⌫` backs up |
+| SH-7 | Mission control (`⌘⇧K`) with live terminals and inline asks | 03 | app | P7 | SH-2, AI-1 | grouped by worker; working cards stream output; Allow/Deny works from the card |
+| SH-8 | HUD drawer (hold ⌥) and tats in slots | 10, 01 | app, hud | P7 | FW-6, FW-2 | every panel bound to live events; tats updatable from Lua |
+| SH-9 | Inbox and interrupt cards (agentbus, network, gateway, security key) | 12 | app | P7 | FW-6 | each card type acts and dismisses; badge counts on tabs |
+| SH-10 | Help everywhere (right-click → Help, `K`, `⌘?`, `:help`) | 28 | help | P3→ | FW-6 | CI lint: every interactive element resolves to a help page and anchor |
+| SH-11 | Light, dark and theme editor (`:Theme`, pick mode) | 17, 23 | theme | P3, P7 | FW-7 | token resolution tests; the fixture renders in all built-in themes; pick-to-override writes the smallest TOML diff |
+| SH-12 | Settings page (`:Settings`, ⌘,): sections, search, typed controls, scopes, modified and reset; `settings.toml` storage | 19 | app, registry | P3 | FW-3, FW-6, FW-11 | `settings.md` precedence tests; a GUI edit and a reset each change exactly one line of a hand-commented file; Lua-set options are read-only with their source |
+
+## Editor
+
+| ID | Feature | Mockup | Module | Phase | After | Done when |
+|---|---|---|---|---|---|---|
+| ED-1 | Rope, snapshots, anchors, authorship, undo tree | – | text | P2 | FW-1 | property tests against a naive model; fuzzing with no failures for 1 hour |
+| ED-2 | Vim engine: motions, operators, text objects, registers, marks, dot, counts | 01 | vim | P2 | ED-1, P0-3 | the `.vt` suite passes, oracle mode passes, mined vim tests above 90% passing |
+| ED-3 | Visual and visual-block, `:s`/`:g` with vim regex, ranges | 09 | vim | P2 | ED-2 | the same, plus the regex conformance suite |
+| ED-4 | Macros, folds, splits, buffers, quickfix | – | vim | P2–P4 | ED-2, FW-9 | the same |
+| ED-5 | `plain` engine and the `input.Engine` interface (emacs as a plugin) | – | input | P3 | ED-2, FW-3 | an engine swap at runtime per buffer; a sample emacs plugin passes its tests |
+| ED-6 | Tree-sitter highlighting, folds, outline, code units | 01, 25 | syntax | P2 | ED-1 | highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1 ms |
+| ED-7 | Decorations between lines: threads, explain cards, diffs, virtual text | 01 | ui, editor | P3 | ED-1, FW-6 | the layout engine places blocks at anchors and survives edits above them |
+| ED-8 | Multi-cursor and LSP rename preview | 09 | edit | P4 | ED-7, LS-1 | – |
+
+## Files, git, terminals
+
+| ID | Feature | Mockup | Module | Phase | After | Done when |
+|---|---|---|---|---|---|---|
+| FG-1 | Explorer scopes: Changed, Uncommitted, All, with markers | 22 | gitx, app | P4 | FW-6, ED-6 | fixture repos produce the expected markers; `⌥1–3` switch scopes |
+| FG-2 | Gutter hunks, stage and unstage hunks, inline blame by author kind | 06 | gitx | P4 | ED-7 | staging a hunk matches `git apply --cached` |
+| FG-3 | Project search and replace preview | 26 | search | P4 | SH-5 | ripgrep on the worker streams results; replace shows a diff before applying |
+| FG-4 | Terminals: Ghostty VT under wazero, our renderer, placements, terminal-normal mode | 24 | term | P4 | FW-9 | vttest-style suite; parse throughput ≥ 200 MB/s; snapshot on reconnect |
+| FG-5 | Shell integration (OSC 133/7): prompt jumps, exit dots, send output to a request | 24 | term | P4 | FG-4 | – |
+| FG-6 | Ship page: uncommitted → behind → unpushed → PR → checks, multi-project | 18 | gitx, gh | P6 | FG-2 | flows tested against fixture repos and a fake GitHub |
+
+## LSP, tests, debugging
+
+| ID | Feature | Mockup | Module | Phase | After | Done when |
+|---|---|---|---|---|---|---|
+| LS-1 | Completion, hover, signature help, diagnostics, code actions, inlay hints | 09 | lsp | P4 | ED-7 | recorded gopls/tsserver/pyright transcripts replay to the expected UI state |
+| LS-2 | Definition, references peek, rename, symbols, call hierarchy | 09 | lsp | P4 | LS-1 | the same |
+| LS-3 | Agent LSP tools over MCP | – | lsp, agent | P5 | LS-1, AI-2 | agents can call definition/references/diagnostics read-only |
+| TR-1 | ▶ gutter run for tests, subtests and table rows; ✓/✕ inline | 36 | testrun | P4 | ED-6, ED-7 | Go, pytest, vitest/jest and cargo adapters pass recorded-output suites |
+| TR-2 | Inline failure block: want/got diff, output, jump, debug, **ask to explain**, ask to fix | 36 | testrun, app | P4 | TR-1 | a failing fixture test renders the block at the assertion line; explain returns a card without editing any file |
+| TR-6 | "Ask to explain" next to every "ask to fix" (tests, diagnostics, CI, conflicts, failed terminal commands) | 36, 09, 18 | explain | P6 | TR-2, RV-5 | each fix entry point has an explain twin; explain runs tool-less |
+| TR-3 | Tests panel: tree, filters, flaky detection, run history | 36 | testrun, app | P4 | TR-1, FW-6 | – |
+| TR-4 | Watch mode (affected tests) and coverage gutter | 36 | testrun | P4 | TR-1 | a save re-runs only the affected packages in the Go fixture |
+| TR-5 | Agent test runs as evidence | 21, 36 | testrun, agent | P5 | TR-1, AI-2 | an agent's "tests pass" claim links to a run id |
+| DB-1 | DAP: breakpoints (conditional, logpoints), stepping, stack, variables, watch, REPL | 08 | dap | P7 | ED-7, FW-9 | dlv and debugpy recorded sessions plus live CI runs |
+| DB-2 | Inline values while stopped; debug a single test case | 08, 36 | dap, testrun | P7 | DB-1, TR-1 | – |
+| DB-3 | Agent debugger tools with scoped access | 08 | dap, agent | P7 | DB-1, AI-2 | the scope is enforced: eval allowed, step denied when not granted |
+
+## Sessions and AI
+
+| ID | Feature | Mockup | Module | Phase | After | Done when |
+|---|---|---|---|---|---|---|
+| AI-1 | Worker, wire, sessions, workspaces with multi-repo worktrees | – | worker, core | P5 | FW-2 | crit's workspace layout is read in place |
+| SE-1 | Session kinds plan, work, review, tour, job, new repo, direct and scratch (`sessions.md`) | 04 | core, worker | P5 | AI-1 | each kind starts from the launcher and the CLI; direct never creates a worktree; new repo inits and registers |
+| SE-2 | Session lifecycle: worktrees from a fetched base, Start next PR, archive, resume after restart | 03, 18 | core, worker | P5 | SE-1 | archived sessions keep threads and transcripts searchable; restart restores the layout |
+| SE-3 | Files outside the session open read-only; app opens on mission control | 01 | app | P5 | SE-1 | – |
+| AI-2 | Claude provider: interactive PTY plus mod hooks (no `-p`) | 15 | agent/claude | P5 | AI-1 | conformance suite against a fake `claude` and a live smoke run |
+| AI-3 | Codex provider: `app-server` (billing checked in P0) | 15 | agent/codex | P5 | AI-1 | the same |
+| AI-4 | New-session launcher: modes, provider, repos, worker, sandbox | 04 | app | P5 | AI-1, FW-6 | each mode starts the right prompt pack |
+| AI-5 | Requests: inline threads plus the main Requests view, composer, urgent, btw | 01, 21 | core, app | P5 | AI-2, ED-7 | a comment reaches the agent within 1 s; replies render as markdown with activity blocks |
+| AI-6 | Agent console: structured transcript, subagents, composer | 15 | app | P5 | AI-2 | – |
+| AI-7 | Permissions, three layers; network and gateway approvals | 15, 12 | agent, sandbox | P5 | AI-2, AI-11 | each layer holds or denies as `agents.md` describes |
+| AI-8 | Plan mode: rendered docs, margin threads, readiness, Start work | 05 | app, plan | P5 | AI-5 | the crit plan flow works end to end |
+| AI-9 | Tasks rail, session tally, usage windows | 01 | core | P5 | AI-2 | – |
+| AI-10 | Commit and PR drafts when the agent goes idle | 18 | agent | P6 | AI-2, FG-6 | – |
+| AI-11 | Sandbox, gateway MCP, egress proxy (ported) | – | sandbox | P5 | AI-1 | crit's tests ported and passing |
+
+## Review and explain
+
+| ID | Feature | Mockup | Module | Phase | After | Done when |
+|---|---|---|---|---|---|---|
+| RV-1 | Split and unified diff, intraline, per-hunk reviewed | 06 | app, diff | P6 | ED-7, FG-2 | – |
+| RV-2 | Review ledger and commit gate (hard, soft, off by session kind) | 06, 18 | core | P6 | RV-1 | the gate blocks; "commit anyway" writes the trailer |
+| RV-3 | Cross-model AI review findings | 06 | agent | P6 | RV-1, AI-3 | – |
+| RV-4 | GitHub review mirroring and Forward to GitHub | 06 | gh | P6 | RV-1, FG-6 | the agent never posts; the user's forward does |
+| RV-5 | Explain by code unit, `[`/`]` widen and narrow, Explain this on a selection | 25 | explain, syntax | P6 | ED-6, AI-2 | units are correct for fixtures in 4 languages; cache invalidated only by edits inside the unit |
+| RV-6 | Explain this change walkthrough | 07 | explain | P6 | RV-5 | – |
+| RV-7 | Verify & raise quiz | 13 | agent | P6 | AI-5 | – |
+| RV-8 | Tours: reader, 7 kinds, export | 14 | tour | P7 | RV-5 | crit's tour features ported |
+
+## Platform
+
+| ID | Feature | Mockup | Module | Phase | After | Done when |
+|---|---|---|---|---|---|---|
+| PL-1 | Lua config and plugins, `:Hooks`, `:Inspect`, LuaLS types | 19, 20 | script, registry | P3 | FW-3 | the `scripting.md` sample `init.lua` runs as written |
+| PL-2 | Process plugins with an OS sandbox; WASM plugins; `oriel build --with` | 16 | ext | P7 | PL-1 | the capability guard rejects undeclared calls; Landlock/sandbox-exec profiles applied |
+| PL-3 | All-or-nothing install consent, update capability diff | 29 | ext | P7 | PL-2 | – |
+| PL-4 | Comms assistant drawer (utility session, no `-p`) | 11 | assistant | P7 | AI-2 | – |
+| PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | integ/agentbus | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus |
+| PL-8 | Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source | 04, 02 | integ/linear (plugin) | P7 | PL-2, SE-1 | `crit-reference.md` → Linear, against a recorded Linear API |
+| PL-9 | Slack PTAL via webhook | 18 | integ/slack (plugin) | P7 | PL-2 | – |
+| PL-10 | Calendar: next meeting tat (iCal URL or macOS EventKit) | 10 | integ/ical (plugin) | P7 | PL-2 | – |
+| PL-11 | Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation | – | prompts, voice | P7 | AI-2 | `crit-reference.md` → Prompts and Voice |
+| PL-6 | Self-update for the app and workers (self-signed, ed25519) | – | update | P7 | AI-1 | an update round-trips on macOS and Linux with rollback on a failed health check |
+
+## What "Start work" does
+
+Pressing **Start work** on this plan does **phase 0** only:
+
+1. **Repo**: `liamg/oriel` (private) with `go.work`, the module skeleton from `architecture.md`, and `CLAUDE.md`/`AGENTS.md` carrying
+   the rules from `testing.md`, `deps.md` and the coding style.
+2. **CI**: macOS and Linux runners, the dependency allowlist, `go mod vendor` checks, `govulncheck`, `refcheck`, and the
+   `vendor`ed `spec/` docs.
+3. **Test harness**: `vimtest` with the `.vt` format and the nvim oracle, so P1 can start test-first.
+4. **The Gio spike** (`cmd/oriel-spike`): the measurements in `shell.md` and a native re-creation of `01-ide`, ending in a written
+   go/no-go report against the mockups.
+5. **Codex billing check**: confirm `app-server` uses the subscription.
+
+Each later phase then runs as its own session, planned against this inventory, with every row's "done when" written as tests
+first. Mission control shows them side by side.
