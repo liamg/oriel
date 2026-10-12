@@ -1,0 +1,9 @@
+box root 0,0 400x300
+  box col 0,0 200x300
+    box a 100,55 100x20
+    box half 150,75 50x150
+    box b 150,225 50x20
+  box between 0,300 200x100
+    box a 90,300 20x10
+    box b 80,345 40x10
+    box c 70,390 60x10

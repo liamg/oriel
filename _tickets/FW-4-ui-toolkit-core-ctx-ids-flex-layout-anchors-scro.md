@@ -2,7 +2,7 @@
 id: FW-4
 title: "ui toolkit core: Ctx, ids, flex layout, anchors, scroll, clipping, z-order"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: ui
 depends_on: [FW-1, SH-1]

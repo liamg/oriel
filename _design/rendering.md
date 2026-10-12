@@ -157,18 +157,40 @@ type Atlas struct{ … }                            // shelf-packed pages; start
   diffs a render against a mockup. `render/gio`'s tests hold 01-ide within 8/255 mean and 6.5% of pixels of its mockup.
 
 ```go
-// package ui — immediate-mode widgets are just functions over a Ctx
-type Ctx interface {
-    ID(key any) Ctx                               // stable identity for state and animation
-    Theme() *theme.Resolved
-    Frame() render.Frame
-    Input() *InputState
-    Anim(target float32) float32                  // spring towards target, keyed by ID
+// package ui — widgets are functions over a *Ctx; each call adds a node to this frame's tree
+func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID // Row and Column set st.Dir
+func (c *Ctx) Text(key any, s string, ts TextStyle) ID
+func (c *Ctx) Paint(key any, w, h Size, fn func(f render.Frame, r render.Rect)) ID
+func (c *Ctx) Node(n Node)                        // a plugin's view tree: *Box, *Text, *Paint
+func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i int)) ID // builds only the rows in view
+
+type Style struct {
+    Dir         Dir                               // Row or Column
+    W, H        Size                              // Px(v), Flex(weight), Pct(f), or fit (zero); Clamp(min, max)
+    Pad         Insets
+    Gap         float32
+    Main, Cross Align                             // Start, Center, End; SpaceBetween on the main axis
+    Fill, Stroke render.Color; Border, Radius float32
+    Clip, ScrollX, ScrollY bool                   // scroll offsets persist by id
+    Float *Float                                  // out of the flow, against another id's rect, a point, or the parent
+    Z     int                                     // floats paint after the flow, in Z order, outside their parent's clip
 }
 
-func Tat(c ui.Ctx, label string, frac float32, tone theme.Token) // a HUD readout
-func Panel(c ui.Ctx, title string, body func(ui.Ctx))
+func (u *UI) Frame(f render.Frame, size render.Point, build func(c *Ctx)) // build, lay out, paint
+func (u *UI) Rect(id ID) (render.Rect, bool)      // last frame's layout
+func (u *UI) Hit(p render.Point) []ID              // topmost first, as clipped when painted
+func (u *UI) ScrollBy(id ID, dx, dy float32)
+
+func Tat(c *ui.Ctx, label string, frac float32, tone theme.Token) // a HUD readout
+func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
 ```
+
+- **Layout** (FW-4) works like Clay's: sizes are fitted up the tree on each axis, then grow and percent space is
+  shared down it (weights, honouring min and max), then boxes are placed, then floats. It's deterministic and
+  allocation-light; `ui/testdata/layout/*.golden` pins the behaviour. Text is one line until wrapping lands with
+  the first widget that needs it.
+- Ids hash the parent's id with a key (the child's index when there's none; duplicates get `#n`). State not built
+  in a frame is dropped. `Theme`, input and springs join the `Ctx` with FW-5 and FW-7.
 
 ```go
 // package layout — one tree for every view; docks are its edges

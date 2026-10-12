@@ -1,0 +1,4 @@
+box root 0,0 400x300
+  box r 0,0 12x14
+    text x 0,0 6x14 "a"
+    text x#1 6,0 6x14 "b"

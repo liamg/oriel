@@ -34,11 +34,11 @@ func TestOverrideAndDispose(t *testing.T) {
 
 func TestDisposeUnderneathKeepsOverride(t *testing.T) {
 	r := registry.New()
-	base := r.View("v", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.Text("base") }))
-	r.View("v", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.Text("override") }))
+	base := r.View("v", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("base") }))
+	r.View("v", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("override") }))
 	base.Dispose()
 	v, ok := r.ViewByID("v")
-	if !ok || v.Build(registry.ViewCtx{}) != ui.Text("override") {
+	if tx, isText := v.Build(registry.ViewCtx{}).(*ui.Text); !ok || !isText || tx.Text != "override" {
 		t.Error("disposing the base view removed the override")
 	}
 }

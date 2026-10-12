@@ -47,7 +47,7 @@ func (l *layout) Activate(_ context.Context, h ext.Host) error {
 		if v, ok := h.ViewByID(l.open); ok {
 			return v.Build(vc)
 		}
-		return ui.Column()
+		return ui.ColumnNode()
 	})))
 	return nil
 }
@@ -66,18 +66,18 @@ func (i *introspect) Activate(_ context.Context, h ext.Host) error {
 	i.add(h.Command(registry.Command{ID: "Keys", Title: "List keymaps", Run: open("keys")}))
 	i.add(h.Command(registry.Command{ID: "Commands", Title: "List commands", Run: open("commands")}))
 	i.add(h.View("keys", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
-		rows := []ui.Node{ui.Text(fmt.Sprintf("%-10s %-14s %-24s %s", "MODE", "KEYS", "COMMAND", "SOURCE"))}
+		rows := []ui.Node{ui.TextNode(fmt.Sprintf("%-10s %-14s %-24s %s", "MODE", "KEYS", "COMMAND", "SOURCE"))}
 		for _, k := range h.Keymaps() {
-			rows = append(rows, ui.Text(fmt.Sprintf("%-10s %-14s %-24s %s", k.Mode, k.Keys, k.Command, k.Source)))
+			rows = append(rows, ui.TextNode(fmt.Sprintf("%-10s %-14s %-24s %s", k.Mode, k.Keys, k.Command, k.Source)))
 		}
-		return ui.Column(rows...)
+		return ui.ColumnNode(rows...)
 	})))
 	i.add(h.View("commands", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
-		rows := []ui.Node{ui.Text(fmt.Sprintf("%-24s %-30s %s", "COMMAND", "TITLE", "SOURCE"))}
+		rows := []ui.Node{ui.TextNode(fmt.Sprintf("%-24s %-30s %s", "COMMAND", "TITLE", "SOURCE"))}
 		for _, c := range h.Commands() {
-			rows = append(rows, ui.Text(fmt.Sprintf("%-24s %-30s %s", c.ID, c.Title, c.Source)))
+			rows = append(rows, ui.TextNode(fmt.Sprintf("%-24s %-30s %s", c.ID, c.Title, c.Source)))
 		}
-		return ui.Column(rows...)
+		return ui.ColumnNode(rows...)
 	})))
 	return nil
 }

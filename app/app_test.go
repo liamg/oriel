@@ -38,11 +38,11 @@ func (c *counter) Activate(_ context.Context, h ext.Host) error {
 		return err
 	}
 	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
-		rows := []ui.Node{ui.Text(fmt.Sprintf("count %d", c.n))}
+		rows := []ui.Node{ui.TextNode(fmt.Sprintf("count %d", c.n))}
 		for _, s := range h.Sessions() {
-			rows = append(rows, ui.Text(fmt.Sprintf("%s %s", s.ID(), s.Status())))
+			rows = append(rows, ui.TextNode(fmt.Sprintf("%s %s", s.ID(), s.Status())))
 		}
-		return ui.Column(rows...)
+		return ui.ColumnNode(rows...)
 	}))
 	return nil
 }

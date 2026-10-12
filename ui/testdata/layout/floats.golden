@@ -1,0 +1,6 @@
+box root 0,0 400x300
+  box line 0,0 400x20
+    text word 5,5 78x14 "roundHalfEven"
+    box card 5,23 80x30 float z=2
+    box tip 280,190 40x10 float z=1
+    box corner 390,0 10x10 float z=0

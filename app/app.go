@@ -32,9 +32,9 @@ type Config struct {
 
 var (
 	background = render.Color{R: 0x06, G: 0x06, B: 0x06, A: 0xff}
-	textStyle  = ui.Style{
-		Font: typeset.FontSpec{Family: "JetBrains Mono", Size: 13},
-		FG:   render.Color{R: 0xec, G: 0xe6, B: 0xd8, A: 0xff},
+	textStyle  = ui.TextStyle{
+		Font:  typeset.FontSpec{Family: typeset.Mono, Size: 13},
+		Color: render.Color{R: 0xec, G: 0xe6, B: 0xd8, A: 0xff},
 	}
 )
 
@@ -89,7 +89,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	})
 	defer cancel()
 
-	l := &loop{reg: cfg.Registry, keys: registry.NewResolver(cfg.Registry), win: w, shaper: be.Shaper(), log: cfg.Log, modes: []string{"n"}}
+	l := &loop{reg: cfg.Registry, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: cfg.Log, modes: []string{"n"}}
 	timer := time.NewTimer(0)
 	<-timer.C
 	for {
@@ -127,12 +127,12 @@ func (h *host) Sessions() []core.Session                       { return h.store.
 func (h *host) Log() *slog.Logger                              { return h.log }
 
 type loop struct {
-	reg    registry.Registry
-	keys   *registry.Resolver
-	win    render.Window
-	shaper typeset.Shaper
-	log    *slog.Logger
-	modes  []string // the focused mode first
+	reg   registry.Registry
+	keys  *registry.Resolver
+	win   render.Window
+	ui    *ui.UI
+	log   *slog.Logger
+	modes []string // the focused mode first
 }
 
 func (l *loop) handle(ctx context.Context, ev render.Event) {
@@ -158,9 +158,15 @@ func (l *loop) draw() error {
 	size := l.win.Size()
 	return l.win.Frame(func(f render.Frame) {
 		f.Rect(render.Rect{Max: size}, render.Style{Fill: background})
-		if v, ok := l.reg.ViewByID(RootView); ok {
-			ui.Draw(f, l.shaper, textStyle, v.Build(registry.ViewCtx{Width: size.X, Height: size.Y}), render.Point{X: 16, Y: 16})
-		}
+		l.ui.Frame(f, size, func(c *ui.Ctx) {
+			v, ok := l.reg.ViewByID(RootView)
+			if !ok {
+				return
+			}
+			c.Box(RootView, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(16)}, func(c *ui.Ctx) {
+				c.Node(v.Build(registry.ViewCtx{Width: size.X, Height: size.Y}))
+			})
+		})
 	})
 }
 

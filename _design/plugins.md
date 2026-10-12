@@ -94,9 +94,10 @@ flowchart TB
 
 ## UI from extensions: the view tree
 
-- Views are functions returning a tree: `Stack`, `Row`, `Text`, `Code`,
-  `Markdown`, `Button`, `Input`, `List`, `Table`, `Bar`, `Spark`, `Chart`,
-  `Badge`, `Term`, `Editor` (an embedded buffer), and `Canvas` (draw ops).
+- Views are functions returning a tree of `ui.Node`s: `Box` (rows and columns, with sizes, padding, gaps, alignment,
+  clipping, scrolling and floats), `Text` and `Paint` today. `Code`, `Markdown`, `Button`, `Input`, `List`, `Table`,
+  `Bar`, `Spark`, `Chart`, `Badge`, `Term`, `Editor` (an embedded buffer) and `Canvas` (draw ops) join them as their
+  widgets land. Built-in widgets lay out through the same nodes, so a plugin's view and a built-in one behave alike.
 - Lua and Go build them directly. Process extensions send the same tree as
   JSON, with id-keyed patches.
 - Built-in panels are written this way, so you can **replace** one:
