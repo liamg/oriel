@@ -23,16 +23,6 @@ func TestPct(t *testing.T) {
 	}
 }
 
-func TestSplits(t *testing.T) {
-	if s := splits(10, 5, 10); len(s) != 1 || s[0] != (span{0, 10, 5, 10}) {
-		t.Errorf("unstretched: %v", s)
-	}
-	s := splits(9, 0, 100)
-	if s[0] != (span{0, 4, 0, 4}) || s[1] != (span{4, 1, 4, 92}) || s[2] != (span{5, 4, 96, 4}) {
-		t.Errorf("stretched: %v", s)
-	}
-}
-
 func TestGoFile(t *testing.T) {
 	f := GoFile(FileLines)
 	if len(f) != FileLines || f[0] != "package pricing" {

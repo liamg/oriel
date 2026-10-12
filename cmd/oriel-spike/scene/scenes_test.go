@@ -7,10 +7,11 @@ import (
 )
 
 func TestScenesDraw(t *testing.T) {
-	sh, err := NewShaper(true)
+	sh, err := NewFonts()
 	if err != nil {
 		t.Fatal(err)
 	}
+	sh.NoFallback = true
 	for _, s := range All() {
 		for _, mode := range []TextMode{TextPaths, TextAtlas, TextRuns} {
 			for _, scale := range []float32{1, 1.25, 2} {

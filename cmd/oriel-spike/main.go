@@ -14,6 +14,9 @@ import (
 	"github.com/liamg/oriel/cmd/oriel-spike/scene"
 )
 
+// stopProfile ends -cpuprofile. The window exits with os.Exit, so it calls this itself.
+func stopProfile() { pprof.StopCPUProfile() }
+
 var (
 	textMode    scene.TextMode
 	bakedShapes bool
@@ -30,6 +33,7 @@ func main() {
 	cpuprofile := flag.String("cpuprofile", "", "write a CPU profile here")
 	memprofile := flag.String("memprofile", "", "write a heap profile here on exit (-bench)")
 	textFlag := flag.String("text", "paths", "text path: paths (Gio vector glyphs), atlas (glyph atlas quads) or runs (one cached image per run)")
+	phases := flag.String("phases", "", "run only these scenes, comma-separated (e.g. hud): -auto's phases, or -bench's scenes")
 	shapesFlag := flag.String("shapes", "paths", "rounded rects and borders: paths, or baked (9-slices of baked corners)")
 	flag.Parse()
 	mode, err := scene.ParseTextMode(*textFlag)
@@ -42,7 +46,7 @@ func main() {
 		f, err := os.Create(*cpuprofile)
 		if err == nil {
 			pprof.StartCPUProfile(f)
-			defer pprof.StopCPUProfile()
+			defer stopProfile()
 		}
 	}
 
@@ -57,12 +61,12 @@ func main() {
 		}
 		err = compare(p[0], p[1], p[2])
 	case *bench:
-		err = benchmarks(os.Stdout)
+		err = benchmarks(os.Stdout, *phases)
 	default:
-		err = runWindow(*sceneName, *auto)
+		err = runWindow(*sceneName, *auto, *phases)
 	}
 	if err != nil {
-		pprof.StopCPUProfile()
+		stopProfile()
 		fmt.Fprintln(os.Stderr, "oriel-spike:", err)
 		os.Exit(1)
 	}

@@ -3,6 +3,7 @@ package scene
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"math"
 
 	"github.com/go-text/typesetting/font"
@@ -194,7 +195,7 @@ type AtlasPage struct {
 	next    int // y of the next shelf
 }
 
-// Atlas packs tinted glyphs into fixed-size pages with a shelf packer. When every page is
+// Atlas packs tinted glyphs and other small baked images into fixed-size pages with a shelf packer. When every page is
 // full it starts over with fresh pages (Gen increments), so pages already handed to the
 // GPU are never overwritten.
 type Atlas struct {
@@ -202,19 +203,19 @@ type Atlas struct {
 	MaxPages int
 	Pages    []*AtlasPage
 	Gen      int
-	entries  map[glyphKey]AtlasEntry
+	entries  map[any]AtlasEntry
 }
 
 // NewAtlas returns an empty atlas.
 func NewAtlas(pageSize, maxPages int) *Atlas {
-	return &Atlas{PageSize: pageSize, MaxPages: maxPages, entries: map[glyphKey]AtlasEntry{}}
+	return &Atlas{PageSize: pageSize, MaxPages: maxPages, entries: map[any]AtlasEntry{}}
 }
 
 // Len is the number of glyphs held.
 func (a *Atlas) Len() int { return len(a.entries) }
 
-// Lookup returns a glyph already in the atlas.
-func (a *Atlas) Lookup(k glyphKey) (AtlasEntry, bool) {
+// Lookup returns a glyph or image already in the atlas.
+func (a *Atlas) Lookup(k any) (AtlasEntry, bool) {
 	e, ok := a.entries[k]
 	return e, ok
 }
@@ -226,7 +227,19 @@ func (a *Atlas) Add(k glyphKey, cov Coverage, g *TextGamma) AtlasEntry {
 		a.entries[k] = e
 		return e
 	}
-	size := cov.Mask.Bounds().Size()
+	return a.add(k, cov.Mask.Bounds().Size(), cov.Off, func(dst *image.RGBA, at image.Point) {
+		Tint(dst, at, cov.Mask, k.col, g)
+	})
+}
+
+// AddImage places img, evicting everything if the atlas is full. k must be comparable.
+func (a *Atlas) AddImage(k any, img *image.NRGBA) AtlasEntry {
+	return a.add(k, img.Bounds().Size(), image.Point{}, func(dst *image.RGBA, at image.Point) {
+		draw.Draw(dst, image.Rectangle{Min: at, Max: at.Add(img.Bounds().Size())}, img, img.Bounds().Min, draw.Src)
+	})
+}
+
+func (a *Atlas) add(k any, size, off image.Point, paint func(dst *image.RGBA, at image.Point)) AtlasEntry {
 	page, r, ok := a.place(size)
 	if !ok {
 		a.Reset()
@@ -239,9 +252,9 @@ func (a *Atlas) Add(k glyphKey, cov Coverage, g *TextGamma) AtlasEntry {
 		}
 	}
 	p := a.Pages[page]
-	Tint(p.Img, r.Min, cov.Mask, k.col, g)
+	paint(p.Img, r.Min)
 	p.Version++
-	e := AtlasEntry{Page: page, Src: r, Off: cov.Off}
+	e := AtlasEntry{Page: page, Src: r, Off: off}
 	a.entries[k] = e
 	return e
 }
@@ -249,7 +262,7 @@ func (a *Atlas) Add(k glyphKey, cov Coverage, g *TextGamma) AtlasEntry {
 // Reset drops every glyph and starts new pages.
 func (a *Atlas) Reset() {
 	a.Pages = nil
-	a.entries = map[glyphKey]AtlasEntry{}
+	a.entries = map[any]AtlasEntry{}
 	a.Gen++
 }
 

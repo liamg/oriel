@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"gioui.org/app"
@@ -17,10 +18,16 @@ import (
 	"github.com/liamg/oriel/cmd/oriel-spike/scene"
 )
 
-func runWindow(name string, auto bool) error {
+func runWindow(name string, auto bool, phases string) error {
 	s, ok := scene.ByName(name)
 	if !ok {
 		return fmt.Errorf("no scene %q", name)
+	}
+	if auto {
+		if err := pickPhases(phases); err != nil {
+			return err
+		}
+		fmt.Println("Keep the oriel-spike window visible and in front, and don't touch the mouse or keyboard until it prints.")
 	}
 	go func() {
 		w := new(app.Window)
@@ -30,7 +37,9 @@ func runWindow(name string, auto bool) error {
 			width, height = 900, 160
 		}
 		w.Option(app.Title("oriel-spike"), app.Size(width, height))
-		if err := loop(w, s, auto); err != nil {
+		err := loop(w, s, auto)
+		stopProfile()
+		if err != nil {
 			fmt.Fprintln(os.Stderr, "oriel-spike:", err)
 			os.Exit(1)
 		}
@@ -57,14 +66,41 @@ var script = []phase{
 	{scene: "ide", dur: 5 * time.Second},
 }
 
+// pickPhases keeps the script's phases for the named scenes, in order.
+func pickPhases(names string) error {
+	if names == "" {
+		return nil
+	}
+	var out []phase
+	for _, n := range strings.Split(names, ",") {
+		found := false
+		for _, p := range script {
+			if p.scene == n {
+				out, found = append(out, p), true
+			}
+		}
+		if !found {
+			return fmt.Errorf("-phases: no phase for scene %q", n)
+		}
+	}
+	script = out
+	return nil
+}
+
+// stallAt is the frame interval treated as a stall (window hidden, occluded, or the display asleep)
+// rather than a slow frame.
+const stallAt = 100 * time.Millisecond
+
 type phaseStats struct {
 	build, frame, interval scene.Durations
+	stalls                 scene.Durations
 	cpu                    time.Duration
 	wall                   time.Duration
+	gcs                    uint32
 }
 
 func loop(w *app.Window, s scene.Scene, auto bool) error {
-	sh, err := scene.NewShaper(false)
+	sh, err := scene.NewFonts()
 	if err != nil {
 		return err
 	}
@@ -84,6 +120,9 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 	stats := make([]phaseStats, len(script))
 	var keyLat scene.Durations
 	var pendingKey time.Time
+	var pgc uint32
+	var firstRSS float64
+	var size string
 	if auto {
 		s, _ = scene.ByName(script[0].scene)
 	}
@@ -139,6 +178,9 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 			t2 := time.Now()
 			if firstFrame == 0 {
 				firstFrame = t2.Sub(start)
+				firstRSS = currentRSS()
+				px := e.Size.X * e.Size.Y * 4
+				size = fmt.Sprintf("%d×%d px at %.3g×; one drawable is %.0f MB", e.Size.X, e.Size.Y, gtx.Metric.PxPerDp, float64(px)/(1<<20))
 			}
 			if !pendingKey.IsZero() {
 				keyLat = append(keyLat, t2.Sub(pendingKey))
@@ -161,11 +203,16 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 					runtime.GC()
 					pstart, pcpu = time.Now(), cpuTime()
 				}
+				pgc = numGC()
 			} else {
 				ps := &stats[pi]
 				ps.build = append(ps.build, t1.Sub(t0))
 				ps.frame = append(ps.frame, t2.Sub(t1))
-				ps.interval = append(ps.interval, t0.Sub(lastFrame))
+				if d := t0.Sub(lastFrame); d >= stallAt && p.frames > 0 {
+					ps.stalls = append(ps.stalls, d)
+				} else {
+					ps.interval = append(ps.interval, d)
+				}
 			}
 			lastFrame = t0
 			pframes++
@@ -174,9 +221,10 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 			if done {
 				stats[pi].cpu = cpuTime() - pcpu
 				stats[pi].wall = time.Since(pstart)
+				stats[pi].gcs = numGC() - pgc
 				pi, pframes = pi+1, 0
 				if pi == len(script) {
-					report(firstFrame, stats, keyLat)
+					report(firstFrame, firstRSS, size, stats, keyLat)
 					return nil
 				}
 				s, _ = scene.ByName(script[pi].scene)
@@ -212,22 +260,57 @@ func printKeys(auto bool, keys scene.Durations) {
 	}
 }
 
-func report(first time.Duration, stats []phaseStats, keys scene.Durations) {
-	fmt.Printf("text=%s shapes=%s\n", textMode, map[bool]string{false: "paths", true: "baked"}[bakedShapes])
-	fmt.Printf("startup: first frame presented %s after start\n", first.Round(time.Millisecond))
+func numGC() uint32 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.NumGC
+}
+
+func mean(ds scene.Durations) time.Duration {
+	if len(ds) == 0 {
+		return 0
+	}
+	var t time.Duration
+	for _, d := range ds {
+		t += d
+	}
+	return t / time.Duration(len(ds))
+}
+
+func report(first time.Duration, firstRSS float64, size string, stats []phaseStats, keys scene.Durations) {
+	fmt.Printf("text=%s shapes=%s; window %s\n", textMode, map[bool]string{false: "paths", true: "baked"}[bakedShapes], size)
+	fmt.Printf("startup: first frame presented %s after start; RSS then %.0f MB\n", first.Round(time.Millisecond), firstRSS)
+	stalled := false
 	for i, p := range script {
 		ps := stats[i]
 		fmt.Printf("%-7s", p.scene)
 		if p.frames > 0 {
 			fmt.Printf(" build ops %s\n        frame()   %s\n        interval  %s\n", ps.build, ps.frame, ps.interval)
+			if len(ps.stalls) > 0 {
+				stalled = true
+				fmt.Printf("        stalls (window hidden?) %s, not in interval\n", ps.stalls)
+			}
 			continue
 		}
 		cpu := 100 * ps.cpu.Seconds() / ps.wall.Seconds()
-		fmt.Printf(" %s over %s: CPU %.2f%% of one core (%d frames)\n", map[bool]string{true: "redrawing at 4 Hz", false: "idle"}[p.invalidate > 0]+" (after its first frame)", ps.wall.Round(time.Millisecond), cpu, len(ps.build))
+		kind := map[bool]string{true: "redrawing at 4 Hz", false: "idle"}[p.invalidate > 0]
+		fmt.Printf(" %s (after its first frame) over %s: CPU %.2f%% of one core (%d frames, %d GCs)\n", kind, ps.wall.Round(time.Millisecond), cpu, len(ps.build), ps.gcs)
+		if n := len(ps.build); n > 0 {
+			per := ps.cpu / time.Duration(n)
+			b, f := mean(ps.build), mean(ps.frame)
+			fmt.Printf("        per frame: CPU %.2f ms = build ops %.2f + frame() %.2f + the rest %.2f (event loop, present, GC, other threads)\n",
+				ms(per), ms(b), ms(f), ms(per-b-f))
+		}
 	}
 	if len(keys) > 0 {
 		fmt.Printf("key event → frame presented (in-app part only): %s\n", keys)
 	}
 	fmt.Printf("peak RSS: %.0f MB\n", peakRSS())
 	memReport(os.Stdout)
+	if stalled {
+		fmt.Println("WARNING: frames stalled for 100 ms or more, so the window was probably hidden, covered or the display slept.")
+		fmt.Println("Run again with the window visible and in front, without touching anything.")
+	}
 }
+
+func ms(d time.Duration) float64 { return float64(d) / float64(time.Millisecond) }

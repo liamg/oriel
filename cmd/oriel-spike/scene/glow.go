@@ -4,11 +4,6 @@ import (
 	"image"
 	"image/color"
 	"math"
-
-	"gioui.org/f32"
-	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 )
 
 // Glows stand in for CSS box-shadow blur, which Gio can't draw: a Gaussian-blurred
@@ -31,12 +26,12 @@ func (c *Canvas) Glow(r Rect, blur float32, col color.NRGBA) {
 	pad := int(math.Ceil(float64(3 * sigma)))
 	cw, ch := min(w, 2*pad+2), min(h, 2*pad+2)
 	k := glowKey{cw, ch, pad, sigma, col, false}
-	img, ok := c.glows[k]
+	n, ok := c.glows[k]
 	if !ok {
-		img = paint.NewImageOp(boxGlow(w, h, cw, ch, pad, sigma, col))
-		c.glows[k] = img
+		n = newNine(boxGlow(w, h, cw, ch, pad, sigma, col))
+		c.glows[k] = n
 	}
-	c.nineSlice(img, cw+2*pad, ch+2*pad, ir.Inset(-pad), false)
+	c.drawNine(n, ir.Inset(-pad), false)
 }
 
 // GlowDisc draws a glow around a circle of radius r centred on (cx, cy).
@@ -45,16 +40,15 @@ func (c *Canvas) GlowDisc(cx, cy, r, blur float32, col color.NRGBA) {
 	sigma := blur * c.Scale / 2
 	pad := int(math.Ceil(float64(3 * sigma)))
 	k := glowKey{d, d, pad, sigma, col, true}
-	img, ok := c.glows[k]
+	n, ok := c.glows[k]
 	if !ok {
-		img = paint.NewImageOp(discGlow(d, pad, sigma, col))
-		c.glows[k] = img
+		n = &nine{pieces: [9]*image.NRGBA{discGlow(d, pad, sigma, col)}}
+		c.glows[k] = n
 	}
 	x := int(math.Round(float64(cx*c.Scale))) - d/2 - pad
 	y := int(math.Round(float64(cy*c.Scale))) - d/2 - pad
-	defer op.Offset(image.Pt(x, y)).Push(c.Ops).Pop()
-	img.Add(c.Ops)
-	paint.PaintOp{}.Add(c.Ops)
+	at := image.Pt(x, y)
+	c.piece(n, 0, at, image.Rectangle{Min: at, Max: at.Add(n.pieces[0].Bounds().Size())})
 }
 
 // boxGlow bakes the blurred box. When the box is wider (taller) than cw (ch), only its
@@ -139,38 +133,6 @@ func discGlow(d, pad int, sigma float32, col color.NRGBA) *image.NRGBA {
 		}
 	}
 	return img
-}
-
-// nineSlice draws a tw×th texture into dst, stretching its middle row and column.
-// hollow skips the middle piece, for borders.
-func (c *Canvas) nineSlice(img paint.ImageOp, tw, th int, dst image.Rectangle, hollow bool) {
-	xs := splits(tw, dst.Min.X, dst.Dx())
-	ys := splits(th, dst.Min.Y, dst.Dy())
-	for j, sy := range ys {
-		for i, sx := range xs {
-			if sx.dn <= 0 || sy.dn <= 0 || hollow && i == 1 && j == 1 {
-				continue
-			}
-			cl := clip.Rect(image.Rect(sx.d0, sy.d0, sx.d0+sx.dn, sy.d0+sy.dn)).Push(c.Ops)
-			scale := f32.Pt(float32(sx.dn)/float32(sx.sn), float32(sy.dn)/float32(sy.sn))
-			tr := op.Affine(f32.AffineId().Scale(f32.Pt(0, 0), scale).Offset(f32.Pt(float32(sx.d0)-float32(sx.s0)*scale.X, float32(sy.d0)-float32(sy.s0)*scale.Y))).Push(c.Ops)
-			img.Add(c.Ops)
-			paint.PaintOp{}.Add(c.Ops)
-			tr.Pop()
-			cl.Pop()
-		}
-	}
-}
-
-type span struct{ s0, sn, d0, dn int }
-
-func splits(tn, d0, dn int) []span {
-	if tn == dn {
-		return []span{{0, tn, d0, dn}}
-	}
-	m := tn / 2
-	right := tn - m - 1
-	return []span{{0, m, d0, m}, {m, 1, d0 + m, dn - m - right}, {m + 1, right, d0 + dn - right, right}}
 }
 
 // glowPixel is col at coverage cov. Gio samples images as premultiplied sRGB, which already

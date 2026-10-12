@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
+	"slices"
+	"strings"
 	"time"
 
 	"gioui.org/gpu/headless"
@@ -22,10 +24,10 @@ var started = time.Now()
 
 // benchmarks measures each scene headless: the CPU time to build a frame's ops (what
 // shell.md's "< 4 ms CPU" budget is about) and the time for the GPU backend to draw it.
-func benchmarks(out io.Writer) error {
+func benchmarks(out io.Writer, only string) error {
 	const frames = 300
 	fmt.Fprintf(out, "RSS at start: %.0f MB\n", currentRSS())
-	sh, err := scene.NewShaper(false)
+	sh, err := scene.NewFonts()
 	if err != nil {
 		return err
 	}
@@ -53,26 +55,55 @@ func benchmarks(out io.Writer) error {
 	fmt.Fprintf(out, "RSS after the first ide frame: %.0f MB now, %.0f MB peak\n", currentRSS(), peakRSS())
 
 	fmt.Fprintf(out, "%s %s/%s, %d frames per scene at 1600×1000 @1×, text=%s shapes=%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH, frames, textMode, map[bool]string{false: "paths", true: "baked"}[bakedShapes])
+	fmt.Fprintln(out, "frame(): Gio's CPU work to collect, encode and submit. sync: a 1-pixel readback, which waits for the GPU")
+	fmt.Fprintln(out, "  and includes its wake-up after idling. pipelined: frames submitted back to back, one sync per batch of 30,")
+	fmt.Fprintln(out, "  so it's GPU time per frame under load.")
 	for _, s := range scene.All() {
-		var build, draw scene.Durations
+		if only != "" && !slices.Contains(strings.Split(only, ","), s.Name()) {
+			continue
+		}
+		var build, frame, sync, piped scene.Durations
 		st = scene.NewState()
-		for i := range frames {
+		draw := func(i int) (time.Duration, error) {
 			st.Frame, st.T, st.Line = i, float64(i)/120, i
 			t0 := time.Now()
 			ops.Reset()
 			c.Begin(&ops, 1)
 			s.Draw(c, st)
 			t1 := time.Now()
-			if err := win.Frame(&ops); err != nil {
+			build = append(build, t1.Sub(t0))
+			err := win.Frame(&ops)
+			frame = append(frame, time.Since(t1))
+			return t1.Sub(t0), err
+		}
+		for i := range frames {
+			if _, err := draw(i); err != nil {
 				return err
 			}
-			// Screenshot waits for the GPU to finish the frame.
+			t := time.Now()
 			_ = win.Screenshot(img)
-			build = append(build, t1.Sub(t0))
-			draw = append(draw, time.Since(t1))
+			sync = append(sync, time.Since(t))
 		}
-		fmt.Fprintf(out, "%-7s build ops: %s\n        gpu draw:  %s\n", s.Name(), build, draw)
+		// build and frame() are reported from the frames with a sync each.
+		build, frame = build[:frames:frames], frame[:frames:frames]
+		const batch = 30
+		for i := 0; i < frames; i += batch {
+			t := time.Now()
+			var cpu time.Duration
+			for j := range batch {
+				d, err := draw(frames + i + j)
+				if err != nil {
+					return err
+				}
+				cpu += d
+			}
+			_ = win.Screenshot(img)
+			piped = append(piped, (time.Since(t)-cpu)/batch)
+		}
+		fmt.Fprintf(out, "%-7s build ops: %s\n        frame():   %s\n        sync:      %s\n        pipelined: %s\n        RSS now:   %.0f MB\n", s.Name(), build[:frames], frame[:frames], sync, piped, currentRSS())
 	}
+	files, missing := sh.Fallbacks()
+	fmt.Fprintf(out, "system fallback fonts loaded: %q; %d runes had none\n", files, len(missing))
 	fmt.Fprintf(out, "peak RSS after every scene: %.0f MB\n", peakRSS())
 	memReport(out)
 	return nil

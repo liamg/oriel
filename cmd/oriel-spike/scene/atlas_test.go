@@ -126,7 +126,7 @@ func TestSubStep(t *testing.T) {
 }
 
 func TestShapedText(t *testing.T) {
-	ts, err := newTypesetter()
+	ts, err := newTypesetter(newAtlasOps())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,10 +154,11 @@ func TestShapedText(t *testing.T) {
 }
 
 func TestTextModesMeasureAlike(t *testing.T) {
-	sh, err := NewShaper(true)
+	sh, err := NewFonts()
 	if err != nil {
 		t.Fatal(err)
 	}
+	sh.NoFallback = true
 	var ops op.Ops
 	paths := NewCanvas(&ops, sh, 1)
 	atlas := NewCanvas(&ops, sh, 1)

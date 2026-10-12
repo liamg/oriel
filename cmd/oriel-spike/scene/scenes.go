@@ -249,10 +249,7 @@ func HUD(c *Canvas, st *State) {
 		c.Text(x+12, y+62, fmt.Sprintf("%.1f%%", v*100), TextStyle{Face: Display, Weight: font.Medium, Size: 28, Color: fg})
 		c.RRect(Rect{x + 12, y + 76, 226, 4}, 2, bg4)
 		c.RRect(Rect{x + 12, y + 76, 226 * v, 4}, 2, accent)
-		for j, hv := range h {
-			bh := hv * 70
-			c.Fill(Rect{x + 12 + float32(j)*5.6, y + 168 - bh, 3.5, bh}, alpha(working, .75))
-		}
+		c.Bars(x+12, y+168, 5.6, 3.5, 70, h, alpha(working, .75))
 	}
 }
 

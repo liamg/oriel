@@ -50,17 +50,80 @@ func Collection() ([]font.FontFace, error) {
 	return coll, collErr
 }
 
-// NewShaper returns a shaper over the bundled fonts, with system fonts as fallback unless noSystem.
-func NewShaper(noSystem bool) (*text.Shaper, error) {
+// Fonts is the bundled faces plus system faces loaded one at a time, the first time a rune
+// needs one. Nothing scans or indexes the system fonts.
+type Fonts struct {
+	// NoFallback leaves runes the bundled faces lack as tofu.
+	NoFallback bool
+
+	coll    []font.FontFace
+	known   map[rune]bool
+	missing []rune
+	loaded  map[string]bool
+	names   []string
+	shaper  *text.Shaper
+}
+
+// NewFonts parses the bundled fonts.
+func NewFonts() (*Fonts, error) {
 	c, err := Collection()
 	if err != nil {
 		return nil, err
 	}
-	opts := []text.ShaperOption{text.WithCollection(c)}
-	if noSystem {
-		opts = append(opts, text.NoSystemFonts())
+	f := &Fonts{coll: append([]font.FontFace(nil), c...), known: map[rune]bool{}, loaded: map[string]bool{}}
+	f.shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(f.coll))
+	return f, nil
+}
+
+// Shaper shapes with every face loaded so far.
+func (f *Fonts) Shaper() *text.Shaper { return f.shaper }
+
+// Fallbacks lists the system fonts loaded so far, and the runes no fallback covered.
+func (f *Fonts) Fallbacks() (files []string, missing []rune) { return f.names, f.missing }
+
+// Need loads system fallback faces for any rune in s the loaded faces lack.
+func (f *Fonts) Need(s string) {
+	var want []rune
+	for _, r := range s {
+		if r < 0x80 || f.known[r] {
+			continue
+		}
+		f.known[r] = true
+		if !f.covers(f.coll, r) {
+			want = append(want, r)
+		}
 	}
-	return text.NewShaper(opts...), nil
+	if len(want) == 0 || f.NoFallback {
+		f.missing = append(f.missing, want...)
+		return
+	}
+	added := false
+	for _, r := range want {
+		if f.covers(f.coll, r) {
+			continue
+		}
+		if faces, name := loadFallback(r, f.loaded); faces != nil {
+			f.coll = append(f.coll, faces...)
+			f.names = append(f.names, name)
+			added = true
+		} else {
+			f.missing = append(f.missing, r)
+		}
+	}
+	if added {
+		f.shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(f.coll))
+	}
+}
+
+func (f *Fonts) covers(coll []font.FontFace, r rune) bool {
+	for _, c := range coll {
+		if of, ok := c.Face.(opentype.Face); ok {
+			if _, ok := of.Face().NominalGlyph(r); ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // FaceNames lists the bundled faces, for the report.

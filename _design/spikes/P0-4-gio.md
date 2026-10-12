@@ -303,24 +303,94 @@ drawn, RSS goes 13 MB at start → 34 MB with fonts loaded → 108 MB with the G
   dark backdrop, so the remap made glows fainter than designed. Removed for glows, baked shapes and atlas glyphs. Only
   solid fills keep it. `rendering.md` updated.
 
-### For Liam (macOS)
+### macOS run 1 (2026-10-12): `-text atlas -shapes baked`
+
+| # | Budget | Result | Status |
+|---|---|---|---|
+| 1 | Scroll p99 < 8 ms at 120 Hz | `frame()` p99 7.83 ms. Interval p99 141.75 ms, but the run stalled (max 24.7 s: window hidden or display asleep) | **re-run** with the stall-proof `-auto` |
+| 2 | Keypress-to-photon | in-app 2.70 ms (n=1) | accepted (above) |
+| 3 | Glow at 120 Hz | `frame()` p99 7.38 ms, interval p99 16.95 ms | **re-run**: the headless p99 was the readback artifact (below) |
+| 4 | HUD at 4 Hz < 3% CPU | 4.47% (45 frames) | **fail**, cut in the follow-ups |
+| 6 | Idle RSS < 120 MB | 120 MB after the first `ide` frame headless (paths: 149). 215 MB now in the window | **fail**: fonts cost 68 MB of it, fixed in the follow-ups |
+| – | Idle CPU | 0.60% with 2 frames in 5 s | fine |
+| – | Startup | 333 ms windowed, 298 ms headless | no budget |
+
+Headless GPU draw, p50 / p99 ms, atlas + baked against paths: `ide` 4.71 / 12.21 against 4.26 / 11.69,
+`scroll` 3.68 / 10.72 against 5.10 / 11.94, `text` 2.09 / 10.18 against 2.52 / 11.61, `glow` 5.71 / 12.39 against
+6.03 / 12.51, `hud` 2.80 / 10.25 against 5.51 / 12.34, `type` 0.77 / 7.30 against 1.43 / 10.04. Every scene's p99,
+even the nearly empty `type`, sits at 10–12 ms. That is the per-frame readback and sync (and the GPU's clock dropping
+between frames), not drawing.
+
+<details><summary>Raw output</summary>
+
+```
+-auto text=atlas shapes=baked:
+startup 333ms; ide build p50 0.66 p99 2.37; frame() p50 2.99 p99 7.52; interval p50 8.39 p99 231.29 max 45483
+scroll build p50 0.45 p99 1.04; frame() p50 2.27 p99 7.83 max 42.31; interval p50 8.33 p99 141.75 max 24671
+glow build p50 0.56 p99 1.22; frame() p50 3.17 p99 7.38; interval p50 8.34 p99 16.95 max 34604
+text frame() p50 1.27 p99 5.61; interval p50 8.34 p99 366.68 max 135076
+hud 4 Hz over 10.03 s: CPU 4.47% (45 frames); idle 5.02 s: CPU 0.60% (2 frames); key latency n=1 2.70 ms
+peak RSS 268 MB; RSS now 215; go heap 21 MB, runtime total 195 (161 released)
+-bench text=atlas shapes=baked: RSS start 14, fonts 82, GPU ctx 91, after first ide frame 120 (startup 298 ms)
+ide build p50 .47 p99 .97 / gpu p50 4.71 p99 12.21; scroll .38/.87 / 3.68/10.72; text .21/.40 / 2.09/10.18; glow .55/1.11 / 5.71/12.39; hud .18/.59 / 2.80/10.25; type .01/.03 / .77/7.30; peak 203, now 202
+-bench paths: RSS start 14, fonts 83, GPU 92, after first ide frame 149 (startup 204 ms)
+ide .45/.66 / 4.26/11.69; scroll .46/.83 / 5.10/11.94; text .21/.34 / 2.52/11.61; glow .50/1.07 / 6.03/12.51; hud .24/1.16 / 5.51/12.34; type .02/.08 / 1.43/10.04; peak 225, now 221
+```
+
+</details>
+
+### Follow-ups after run 1
+
+- **Fonts (68 MB on macOS).** `NewShaper(false)` let Gio scan every system font into a package-global index that is
+  never freed. Now only the bundled faces load (`text.NoSystemFonts`). A rune they lack loads one system face on first
+  need (`scene/fallback.go`): fontconfig's match on Linux, then a short list of known macOS fonts (Apple Symbols, Menlo,
+  Apple Braille, Apple Color Emoji, Hiragino, Apple SD Gothic Neo, STHeiti, Arial Unicode), then at most 8 others from
+  the font directories. This stands in for the CoreText and fontconfig fallback that `rendering.md` specifies. The sandbox
+  has almost no system fonts, so both versions cost 13 MB here (parsing the bundled TTFs into go-text's structures);
+  the macOS saving shows in the next run's "RSS with fonts loaded" line. `-bench` lists which fallback fonts loaded.
+- **The headless p99.** `-bench` now splits each frame into `frame()` (Gio's CPU work to collect, encode and submit),
+  `sync` (a 1-pixel readback, which waits for the GPU and includes its wake-up) and `pipelined` (30 frames back to back
+  with one sync per batch: GPU time per frame under load). It also prints RSS after each scene.
+- **Stalls in `-auto`.** Intervals of 100 ms or more are reported as "stalls (window hidden?)" rather than mixed into the
+  interval percentiles, with a warning to re-run. `-auto` tells you up front to keep the window visible and not touch
+  anything. It also prints the window's pixel size and the size of one drawable, and the RSS after the first frame.
+- **Where the windowed 215 MB goes** (arithmetic, to check against the next run): 120 MB headless after the first frame,
+  plus the window's drawables at 2×. That's 3200×2000×4 B ≈ 24 MB each, and CAMetalLayer keeps up to three (73 MB).
+  Add one more full-size offscreen buffer for the opacity layer (24 MB) and you get ≈ 217 MB.
+- **HUD CPU.** The timed phases now print CPU per frame split into build ops, `frame()` and the rest (event loop,
+  present, GC). A profile of the HUD showed two cheap wins, now in:
+  - **Gio stencils any image drawn under a scale or a fractional offset** (`gpu.go`, `boundsForTransformedRect` adds a
+    clip path). Every stretched 9-slice middle, for glows and baked shapes alike, was a stencilled path. 9-slices now
+    never scale (`scene/nine.go`). Their corners and pre-stretched edge strips sit in the shared atlas and draw at
+    integer offsets, and a uniform centre is a plain fill. Pills thinner than their corners (the HUD's 4 px bars) bake
+    at their real height instead of falling back to a path.
+  - **The HUD's 1,200 bars** are one image per pane, redrawn only when its data changes (`Canvas.Bars`).
+  - Small images are one atlas texture now, not one texture each, which also stops the RSS growth they caused.
+- **`-phases`** runs a subset (`-auto -phases hud`, `-bench -phases hud`), and `-cpuprofile` now works with `-auto`.
+
+Here, after the follow-ups (llvmpipe, `frame()` p50, atlas + baked): `ide` 18.5 → 14.2 ms, `glow` 21.2 → 18.7 ms,
+`hud` 12.0 → **6.3 ms**. RSS after the first `ide` frame went from 164 to 146 MB. Against the mockup, 6.48/255, as before.
+
+### For Liam (macOS), run 2
+
+Keep the window visible and in front, and don't touch anything while `-auto` runs.
 
 ```sh
 go build -tags spike -o /tmp/oriel-spike ./cmd/oriel-spike
 /tmp/oriel-spike -auto -text atlas -shapes baked
 /tmp/oriel-spike -bench -text atlas -shapes baked
-/tmp/oriel-spike -bench                              # P0-4's paths baseline on the same build
+/tmp/oriel-spike -auto -phases hud -text atlas -shapes baked -cpuprofile /tmp/hud.prof   # if HUD is still over 3%
 ```
 
-Optionally `-text runs -shapes baked` too. Paste the outputs into the thread; they decide budgets 1, 3, 4 and 6.
+Paste the outputs into the thread (and keep `/tmp/hud.prof` if you made it). They decide budgets 1, 3, 4 and 6.
 
-**Status: review**, waiting on those numbers.
+**Status: review**, waiting on run 2.
 
 ## Recommendation
 
-- **Not yet a go.** On macOS, 1, 4 and 6 failed with Gio's path text. P0-6 built the atlas and baked shapes; decide on
-  the next macOS run of `-text atlas -shapes baked`. If 1 still fails, fall back per `shell.md`.
+- **Not yet a go.** On macOS, 1, 4 and 6 failed with Gio's path text. P0-6 built the atlas and baked shapes, and its
+  follow-ups cut the fonts' memory and the HUD's cost. Decide on macOS run 2. If 1 still fails, fall back per `shell.md`.
 - Build `typeset` (go-text shaping with features and tracking, then a glyph atlas with stem darkening) early in
   phase 1, from the spike's `scene/atlas.go` and `scene/typeset.go`. `render/gio` draws rounded rects and borders as
-  baked 9-slices.
+  baked 9-slices from the same atlas, and never draws an image under a scale.
 - Theme tokens resolve to opaque colours where the surface is known (`theming.md` already derives with `mix()`).

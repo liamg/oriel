@@ -26,7 +26,7 @@ func render(s scene.Scene, st *scene.State, scale float32) (*image.RGBA, error) 
 		return nil, err
 	}
 	defer win.Release()
-	sh, err := scene.NewShaper(false)
+	sh, err := scene.NewFonts()
 	if err != nil {
 		return nil, err
 	}

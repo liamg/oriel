@@ -17,9 +17,9 @@ import (
 
 // Canvas draws in CSS pixels; Scale maps them to device pixels.
 type Canvas struct {
-	Ops    *op.Ops
-	Shaper *text.Shaper
-	Scale  float32
+	Ops   *op.Ops
+	Fonts *Fonts
+	Scale float32
 
 	// SRGBBlend remaps translucent alphas so Gio's linear-light blending over a dark
 	// backdrop matches CSS's sRGB blending.
@@ -32,24 +32,34 @@ type Canvas struct {
 
 	glyphs  []text.Glyph
 	metrics map[metricKey]metric
-	glows   map[glowKey]paint.ImageOp
-	shapes  map[bakedKey]paint.ImageOp
+	glows   map[glowKey]*nine
+	shapes  map[bakedKey]*nine
+	bars    map[uint64]*barsImage
+	frame   int
+	atlas   *atlasOps
 	ts      *typesetter
 }
 
 // NewCanvas returns a canvas drawing into ops.
-func NewCanvas(ops *op.Ops, sh *text.Shaper, scale float32) *Canvas {
-	return &Canvas{Ops: ops, Shaper: sh, Scale: scale, SRGBBlend: true, metrics: map[metricKey]metric{}, glows: map[glowKey]paint.ImageOp{}, shapes: map[bakedKey]paint.ImageOp{}}
+func NewCanvas(ops *op.Ops, fonts *Fonts, scale float32) *Canvas {
+	return &Canvas{Ops: ops, Fonts: fonts, Scale: scale, SRGBBlend: true, metrics: map[metricKey]metric{}, glows: map[glowKey]*nine{}, shapes: map[bakedKey]*nine{}, atlas: newAtlasOps()}
 }
 
 // Begin starts a frame into ops, keeping the caches (glows, metrics, glyphs) from earlier frames.
 func (c *Canvas) Begin(ops *op.Ops, scale float32) {
 	if scale != c.Scale {
 		c.metrics = map[metricKey]metric{}
-		c.glows = map[glowKey]paint.ImageOp{}
-		c.shapes = map[bakedKey]paint.ImageOp{}
+		c.glows = map[glowKey]*nine{}
+		c.shapes = map[bakedKey]*nine{}
 	}
 	c.Ops, c.Scale = ops, scale
+	c.frame++
+	c.atlas.beginFrame()
+	for k, b := range c.bars {
+		if c.frame-b.used > 2 {
+			delete(c.bars, k)
+		}
+	}
 	if c.ts != nil {
 		c.ts.beginFrame()
 	}
@@ -98,7 +108,8 @@ func (c *Canvas) Fill(r Rect, col color.NRGBA) {
 
 // RRect paints a rounded rectangle.
 func (c *Canvas) RRect(r Rect, rad float32, col color.NRGBA) {
-	if c.BakedShapes && c.bakedShape(r, rad, 0, col) {
+	if c.BakedShapes {
+		c.bakedShape(r, rad, 0, col)
 		return
 	}
 	rad = min(rad, r.W/2, r.H/2)
@@ -107,7 +118,8 @@ func (c *Canvas) RRect(r Rect, rad float32, col color.NRGBA) {
 
 // Border strokes the inside of r, like a CSS border.
 func (c *Canvas) Border(r Rect, rad, width float32, col color.NRGBA) {
-	if c.BakedShapes && c.bakedShape(r, rad, width, col) {
+	if c.BakedShapes {
+		c.bakedShape(r, rad, width, col)
 		return
 	}
 	rad = min(rad, r.W/2, r.H/2)
@@ -237,7 +249,9 @@ func (t TextStyle) font() font.Font {
 }
 
 func (c *Canvas) shape(s string, t TextStyle) []text.Glyph {
-	c.Shaper.LayoutString(text.Parameters{
+	c.Fonts.Need(s)
+	sh := c.Fonts.Shaper()
+	sh.LayoutString(text.Parameters{
 		Font:             t.font(),
 		PxPerEm:          fixed.Int26_6(t.Size * c.Scale * 64),
 		MaxWidth:         1 << 24,
@@ -245,7 +259,7 @@ func (c *Canvas) shape(s string, t TextStyle) []text.Glyph {
 	}, s)
 	c.glyphs = c.glyphs[:0]
 	for {
-		g, ok := c.Shaper.NextGlyph()
+		g, ok := sh.NextGlyph()
 		if !ok {
 			break
 		}
@@ -332,11 +346,12 @@ func (c *Canvas) textPaths(x, y float32, s string, t TextStyle) float32 {
 	}
 	base := float32(math.Round(float64(y * c.Scale)))
 	tr := op.Affine(f32.AffineId().Offset(f32.Pt(x*c.Scale+fx(gs[0].X), base))).Push(c.Ops)
-	cl := clip.Outline{Path: c.Shaper.Shape(gs)}.Op().Push(c.Ops)
+	sh := c.Fonts.Shaper()
+	cl := clip.Outline{Path: sh.Shape(gs)}.Op().Push(c.Ops)
 	paint.ColorOp{Color: c.col(t.Color)}.Add(c.Ops)
 	paint.PaintOp{}.Add(c.Ops)
 	cl.Pop()
-	c.Shaper.Bitmaps(gs).Add(c.Ops)
+	sh.Bitmaps(gs).Add(c.Ops)
 	tr.Pop()
 	last := gs[len(gs)-1]
 	return fx(last.X+last.Advance) / c.Scale

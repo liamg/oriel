@@ -9,7 +9,6 @@ import (
 	giofont "gioui.org/font"
 	"gioui.org/font/opentype"
 	"gioui.org/op"
-	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"github.com/go-text/typesetting/di"
 	"github.com/go-text/typesetting/font"
@@ -47,24 +46,15 @@ func (m TextMode) String() string { return [...]string{"paths", "atlas", "runs"}
 
 // typesetter shapes and rasterises text for the atlas and runs modes, and keeps its caches across frames.
 type typesetter struct {
-	faces   []*font.Face
-	fonts   []giofont.Font
-	shaper  shaping.HarfbuzzShaper
-	shaped  map[shapeKey]*shapedRun
-	covs    map[coverageKey]Coverage
-	gamma   TextGamma
-	atlas   *Atlas
-	pageOps []pageOp
-	runs    map[runKey]*runImage
-	frame   int
-}
-
-type pageOp struct {
-	op      paint.ImageOp
-	gen     int
-	version int
-	frame   int
-	valid   bool
+	faces  []*font.Face
+	fonts  []giofont.Font
+	shaper shaping.HarfbuzzShaper
+	shaped map[shapeKey]*shapedRun
+	covs   map[coverageKey]Coverage
+	gamma  TextGamma
+	atlas  *atlasOps
+	runs   map[runKey]*runImage
+	frame  int
 }
 
 type shapeKey struct {
@@ -98,7 +88,7 @@ type runImage struct {
 	used int
 }
 
-func newTypesetter() (*typesetter, error) {
+func newTypesetter(atlas *atlasOps) (*typesetter, error) {
 	coll, err := Collection()
 	if err != nil {
 		return nil, err
@@ -107,7 +97,7 @@ func newTypesetter() (*typesetter, error) {
 		shaped: map[shapeKey]*shapedRun{},
 		covs:   map[coverageKey]Coverage{},
 		gamma:  TextGamma{Darken: 0.25},
-		atlas:  NewAtlas(1024, 4),
+		atlas:  atlas,
 		runs:   map[runKey]*runImage{},
 	}
 	for _, f := range coll {
@@ -123,13 +113,6 @@ func newTypesetter() (*typesetter, error) {
 
 // beginFrame ages the per-frame caches.
 func (ts *typesetter) beginFrame() {
-	for i := range ts.pageOps {
-		p := &ts.pageOps[i]
-		// An op first used last frame was uploaded with everything added during that frame.
-		if p.valid && p.frame == ts.frame && p.gen == ts.atlas.Gen && i < len(ts.atlas.Pages) {
-			p.version = ts.atlas.Pages[i].Version
-		}
-	}
 	for k, r := range ts.runs {
 		if ts.frame-r.used > 2 {
 			delete(ts.runs, k)
@@ -221,23 +204,6 @@ func subStep(frac float32) uint8 {
 	return uint8(min(SubpixelSteps-1, int(frac*SubpixelSteps+0.5)%SubpixelSteps))
 }
 
-// pageImageOp returns the ImageOp for an atlas page, replacing it when the page has changed
-// since the op was uploaded.
-func (ts *typesetter) pageImageOp(i int) paint.ImageOp {
-	for len(ts.pageOps) <= i {
-		ts.pageOps = append(ts.pageOps, pageOp{})
-	}
-	p := &ts.pageOps[i]
-	pg := ts.atlas.Pages[i]
-	stale := !p.valid || p.gen != ts.atlas.Gen || (p.version != pg.Version && p.frame != ts.frame)
-	if stale {
-		op := paint.NewImageOp(pg.Img)
-		op.Filter = paint.FilterNearest
-		*p = pageOp{op: op, gen: ts.atlas.Gen, version: pg.Version, frame: ts.frame, valid: true}
-	}
-	return p.op
-}
-
 // segments splits s into runs the bundled face can shape and runs it can't.
 func (ts *typesetter) segments(fi int, s string, fn func(seg string, ok bool)) {
 	start, prev := 0, true
@@ -256,7 +222,7 @@ func (ts *typesetter) segments(fi int, s string, fn func(seg string, ok bool)) {
 
 func (c *Canvas) typeset() *typesetter {
 	if c.ts == nil {
-		ts, err := newTypesetter()
+		ts, err := newTypesetter(c.atlas)
 		if err != nil {
 			panic(err)
 		}
@@ -335,17 +301,7 @@ func (c *Canvas) drawGlyphs(ts *typesetter, k shapeKey, run *shapedRun, x float3
 		if !ok {
 			e = ts.atlas.Add(gk, ts.coverage(ck), &ts.gamma)
 		}
-		if e.Page < 0 {
-			continue
-		}
-		img := ts.pageImageOp(e.Page)
-		dst := image.Pt(int(ix)+e.Off.X, base+int(math.Round(float64(fx(g.y))))+e.Off.Y)
-		tr := op.Offset(dst.Sub(e.Src.Min)).Push(c.Ops)
-		cl := clip.Rect(e.Src).Push(c.Ops)
-		img.Add(c.Ops)
-		paint.PaintOp{}.Add(c.Ops)
-		cl.Pop()
-		tr.Pop()
+		ts.atlas.draw(c.Ops, e, image.Pt(int(ix)+e.Off.X, base+int(math.Round(float64(fx(g.y))))+e.Off.Y), image.Rectangle{})
 	}
 }
 
