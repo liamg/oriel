@@ -32,3 +32,19 @@ func TestNotation(t *testing.T) {
 		}
 	}
 }
+
+func TestFromNotationUndoesNotation(t *testing.T) {
+	for _, ev := range []render.KeyEvent{
+		{Key: "x"}, {Key: "X"}, {Key: " "}, {Key: "<"}, {Key: "CR"}, {Key: "Esc"}, {Key: "BS"},
+		{Key: "w", Mods: render.ModCtrl}, {Key: " ", Mods: render.ModCtrl}, {Key: "s", Mods: render.ModSuper},
+		{Key: "CR", Mods: render.ModShift}, {Key: "Left", Mods: render.ModShift},
+	} {
+		want := ev
+		if len(ev.Key) == 1 {
+			want.Mods &^= render.ModShift
+		}
+		if got := fromNotation(notation(ev)); got != want {
+			t.Errorf("fromNotation(notation(%+v)) = %+v", ev, got)
+		}
+	}
+}

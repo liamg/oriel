@@ -243,3 +243,10 @@ func TestOtherBundledFacesFillGaps(t *testing.T) {
 		t.Errorf("%q drawn by %s, %s", "a"+string(r), run.Glyphs[0].Face.Name, run.Glyphs[1].Face.Name)
 	}
 }
+
+func TestShapeEmpty(t *testing.T) {
+	r := newTS(t, nil).Shape("", FontSpec{Family: UI, Size: 12})
+	if len(r.Glyphs) != 0 || r.Advance != 0 || r.Ascent <= 0 {
+		t.Errorf("empty run %+v: no glyphs, no advance, but the font's ascent", r)
+	}
+}

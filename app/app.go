@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
@@ -101,7 +102,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	cancel := cfg.Store.Subscribe(core.Filter{}, func(core.Event) { poke() })
 	defer cancel()
 
-	l := &loop{reg: cfg.Registry, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: cfg.Log, modes: []string{"n"}}
+	l := &loop{reg: cfg.Registry, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: cfg.Log}
 	l.themeDirty.Store(true)
 	retheme := func() { l.themeDirty.Store(true); poke() }
 	for _, src := range cfg.Registry.Themes() {
@@ -151,12 +152,11 @@ type loop struct {
 	themeDirty atomic.Bool
 	theme      *theme.Resolved
 
-	reg   registry.Registry
-	keys  *registry.Resolver
-	win   render.Window
-	ui    *ui.UI
-	log   *slog.Logger
-	modes []string // the focused mode first
+	reg  registry.Registry
+	keys *registry.Resolver
+	win  render.Window
+	ui   *ui.UI
+	log  *slog.Logger
 }
 
 // loadTheme resolves the theme ui.theme names, in ui.variant. If it doesn't resolve, the theme already
@@ -214,14 +214,27 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 	case render.PointerEvent:
 		l.ui.Pointer(ev)
 	case render.KeyEvent:
-		l.run(ctx, l.keys.Feed(l.modes, notation(ev), time.Now()))
+		l.run(ctx, l.keys.Feed(l.modes(), notation(ev), time.Now()))
 	}
 }
 
 // run runs mapped commands. Unmapped keys go nowhere until there is an input engine (ED-2).
+// modes are the keymap modes keys resolve in, most specific first: a focused widget's own mode (an input's
+// "input", a list's "list"), or the editor's "n"; then "global", for app chords that work everywhere.
+func (l *loop) modes() []string {
+	if m := l.ui.KeyMode(); m != "" {
+		return []string{m, "global"}
+	}
+	return []string{"n", "global"}
+}
+
+// run runs mapped commands, and gives unmapped keys to the focused widget.
 func (l *loop) run(ctx context.Context, acts []registry.Action) {
 	for _, a := range acts {
 		if a.Keymap == nil {
+			for _, k := range a.Keys {
+				l.ui.Key(fromNotation(k))
+			}
 			continue
 		}
 		if err := l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args); err != nil {
@@ -253,6 +266,32 @@ func (l *loop) draw() error {
 			})
 		})
 	})
+}
+
+// fromNotation reads a keymap token back into a key press: "x", "<CR>", "<C-w>", "<D-S-s>".
+func fromNotation(tok string) render.KeyEvent {
+	if !strings.HasPrefix(tok, "<") || len(tok) < 3 {
+		return render.KeyEvent{Key: tok}
+	}
+	body := tok[1 : len(tok)-1]
+	var mods render.Mods
+	for len(body) > 2 && body[1] == '-' {
+		switch body[0] {
+		case 'C':
+			mods |= render.ModCtrl
+		case 'M':
+			mods |= render.ModAlt
+		case 'D':
+			mods |= render.ModSuper
+		case 'S':
+			mods |= render.ModShift
+		}
+		body = body[2:]
+	}
+	if toks := keymap.Parse("<" + body + ">"); len(toks) == 1 && utf8.RuneCountInString(toks[0]) == 1 {
+		body = toks[0] // <Space> is " ", <lt> is "<"
+	}
+	return render.KeyEvent{Key: body, Mods: mods}
 }
 
 // notation writes a key press as a canonical keymap token: "x", "X", "<C-x>", "<D-s>", "<CR>".

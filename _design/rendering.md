@@ -216,6 +216,21 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
   `NextFrame()` while anything moves or a tooltip is due, and the app redraws at 120 Hz until then. The option
   `ui.reduced_motion` makes every spring jump.
 - `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer.
+- **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
+  selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal` and `Toasts`. Each paints with component tokens
+  it declares (`button.bg`, `input.border.focus`, `list.row.selected`, `menu.item.hover`, `modal.scrim`…), takes a
+  help id, and has keyboard and mouse paths (see each widget's doc comment). Snapshots of a gallery of all of them
+  are pinned in dark and light (display lists and PNGs), and a test fails if any interactive node lacks a help id.
+- **Keys reach widgets** through the keymap layer: a focused node with a `KeyMode` ("input", "list", "menu"…) puts
+  that mode first, then `global` (app chords such as `⌘K`); otherwise `n`, then `global`. Keys no mapping takes go
+  to the focused node (`u.Key`), and a widget reads them from `Interaction.Keys`. So `L.keymap.set("list", "dd", …)`
+  is a list-local mapping, and nothing in `n` fires while an input has focus.
+- A press focuses the nearest focusable node at or above it. `Style.Trap` (a modal) keeps focus inside while it's
+  up. Focus a widget moves itself (`Ctx.Focus`) draws no focus ring; keyboard focus does.
+- A right-click gives the node `Interaction.Context`; `ContextMenu` opens there and always ends with Help for the
+  target's help id (`help.md`).
+- `ui.Func` lets a Go view build with the frame's `*Ctx` (and so use widgets and keep their state by id, through
+  `ui.State[T]`). Process plugins' JSON views get the widgets as node types when PL-2 lands.
 
 ```go
 // package layout — one tree for every view; docks are its edges

@@ -29,9 +29,17 @@ type Paint struct {
 	Fn   func(f render.Frame, r render.Rect)
 }
 
+// Func builds its part of the tree with the frame's Ctx, so a Go view can use widgets (ui/widget) and keep
+// their state by id.
+type Func struct {
+	Key any
+	Fn  func(c *Ctx)
+}
+
 func (*Box) isNode()   {}
 func (*Text) isNode()  {}
 func (*Paint) isNode() {}
+func (*Func) isNode()  {}
 
 // Dir is the axis a box lays its children along.
 type Dir uint8
@@ -103,6 +111,9 @@ type Style struct {
 	Disabled    bool // takes neither, and hides what's under it from the pointer
 	Cursor      render.Cursor
 	Tooltip     string // shown after the pointer rests on it
+	Help        string // its help page and anchor, "hud/usage#weekly-window" (help.md)
+	KeyMode     string // when focused, keymaps in this mode come first and unmapped keys come to it
+	Trap        bool   // keeps keyboard focus inside while it's up, as a modal does
 }
 
 // Float places a box against an anchor: the rect of the node with id To (from this frame's layout),

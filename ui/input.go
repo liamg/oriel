@@ -17,6 +17,10 @@ type Interaction struct {
 	Focused      bool
 	FocusVisible bool // focused from the keyboard, so it draws a focus ring
 	Disabled     bool
+	Keys         []render.KeyEvent // keys typed at it since the last frame, while focused
+	Context      *render.Point     // where it was right-clicked since the last frame
+	Pointer      render.Point      // the pointer, wherever it is
+	Mods         render.Mods       // the modifiers held at its last press
 }
 
 // Options are how the UI looks and behaves where widgets don't say.
@@ -51,6 +55,9 @@ type input struct {
 	focus   ID
 	visible bool // focus came from the keyboard
 	clicks  map[ID]bool
+	keys    map[ID][]render.KeyEvent
+	context map[ID]render.Point
+	mods    render.Mods
 }
 
 // Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame.
@@ -70,14 +77,24 @@ func (u *UI) Pointer(ev render.PointerEvent) {
 	u.setHot(u.topInteractive(ev.Pos))
 	switch ev.Kind {
 	case render.PointerPress:
+		if ev.Buttons&render.ButtonSecondary != 0 && in.hot != 0 {
+			if in.context == nil {
+				in.context = map[ID]render.Point{}
+			}
+			in.context[in.hot] = ev.Pos
+			return
+		}
 		if ev.Buttons&render.ButtonPrimary == 0 {
 			return
 		}
-		in.active = in.hot
-		if f := u.flags[in.hot]; f.focusable {
-			in.focus, in.visible = in.hot, false
-		} else if in.hot == 0 || !f.focusable {
-			in.focus = 0
+		in.active, in.mods = in.hot, ev.Mods
+		// A press focuses the nearest focusable node at or above what's pressed, or nothing.
+		in.focus, in.visible = 0, false
+		for id := in.hot; id != 0; id = u.parents[id] {
+			if f := u.flags[id]; f.focusable && !f.disabled {
+				in.focus = id
+				break
+			}
 		}
 	case render.PointerRelease:
 		if ev.Buttons&render.ButtonPrimary == 0 {
@@ -135,13 +152,83 @@ func (u *UI) Interaction(id ID) Interaction {
 		return Interaction{Disabled: true}
 	}
 	in := &u.in
-	return Interaction{
+	it := Interaction{
 		Hovered:      in.hot == id && id != 0,
 		Pressed:      in.active == id && in.hot == id && id != 0,
 		Clicked:      in.clicks[id],
 		Focused:      in.focus == id && id != 0,
 		FocusVisible: in.focus == id && in.visible && id != 0,
+		Keys:         in.keys[id],
+		Pointer:      in.pos,
+		Mods:         in.mods,
 	}
+	if p, ok := in.context[id]; ok {
+		it.Context = &p
+	}
+	return it
+}
+
+// Key gives a key to the focused node, for its next frame. It reports whether the focused node takes keys
+// (it has a KeyMode); if not, nothing does.
+func (u *UI) Key(ev render.KeyEvent) bool {
+	id := u.in.focus
+	if id == 0 || u.flags[id].keyMode == "" {
+		return false
+	}
+	if u.in.keys == nil {
+		u.in.keys = map[ID][]render.KeyEvent{}
+	}
+	u.in.keys[id] = append(u.in.keys[id], ev)
+	u.in.visible = true
+	return true
+}
+
+// KeyMode is the focused node's key mode, or "" when nothing focused takes keys.
+func (u *UI) KeyMode() string { return u.flags[u.in.focus].keyMode }
+
+// Help is id's help id, or that of the nearest ancestor with one.
+func (u *UI) Help(id ID) string {
+	for id != 0 {
+		if h := u.flags[id].help; h != "" {
+			return h
+		}
+		id = u.parents[id]
+	}
+	return ""
+}
+
+// WithoutHelp lists interactive nodes in the latest frame that have no help id, themselves or above them:
+// help.md's lint.
+func (u *UI) WithoutHelp() []ID {
+	var out []ID
+	for id, f := range u.flags {
+		if f.interactive && u.Help(id) == "" {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// within reports whether id is root or inside it.
+func (u *UI) within(id, root ID) bool {
+	for ; id != 0; id = u.parents[id] {
+		if id == root {
+			return true
+		}
+	}
+	return false
+}
+
+// trap is the focus trap traversal is held in: the topmost open one, or 0.
+func (u *UI) trap() ID {
+	var best ID
+	z := math.MinInt
+	for _, h := range u.hits {
+		if f := u.flags[h.id]; f.trap && f.z >= z {
+			best, z = h.id, f.z
+		}
+	}
+	return best
 }
 
 // Focus moves keyboard focus to id, drawing its focus ring.
@@ -153,8 +240,9 @@ func (u *UI) Focused() ID { return u.in.focus }
 // FocusNext moves focus to the next focusable, enabled node in paint order (back with -1), wrapping.
 func (u *UI) FocusNext(dir int) {
 	var order []ID
+	trap := u.trap()
 	for _, h := range u.hits {
-		if f := u.flags[h.id]; f.focusable && !f.disabled {
+		if f := u.flags[h.id]; f.focusable && !f.disabled && (trap == 0 || u.within(h.id, trap)) {
 			order = append(order, h.id)
 		}
 	}

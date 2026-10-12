@@ -101,6 +101,9 @@ func (t *Typesetter) shape(text string, f FontSpec) *Run {
 		run.Ascent, run.Descent = ext.Ascender*scale, -ext.Descender*scale
 	}
 	runes := []rune(text)
+	if len(runes) == 0 {
+		return run
+	}
 	start, cur := 0, t.faceFor(face, runes, 0)
 	for i := 1; i <= len(runes); i++ {
 		var next *Face

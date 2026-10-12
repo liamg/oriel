@@ -51,6 +51,7 @@ type state struct {
 	rect   render.Rect
 	scroll [2]float32
 	seen   int
+	data   any // a widget's own state: State[T]
 }
 
 // UI holds what lasts between frames.
@@ -61,12 +62,13 @@ type UI struct {
 	frame int
 	clock func() time.Time
 
-	root   *elem
-	byID   map[ID]*elem
-	floats []*elem
-	states map[ID]*state
-	hits   []hit
-	flags  map[ID]flags // from the latest frame, which input resolves against
+	root    *elem
+	byID    map[ID]*elem
+	floats  []*elem
+	states  map[ID]*state
+	hits    []hit
+	flags   map[ID]flags // from the latest frame, which input resolves against
+	parents map[ID]ID
 
 	theme *theme.Resolved
 
@@ -80,7 +82,10 @@ type flags struct {
 	interactive, focusable, disabled bool
 	scrollX, scrollY                 bool
 	cursor                           render.Cursor
-	tooltip                          string
+	tooltip, help, keyMode           string
+	trap                             bool
+	z                                int
+	parent                           ID
 }
 
 type hit struct {
@@ -111,7 +116,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.floats = u.floats[:0]
 	u.animating, u.wake = false, time.Time{}
 	build(&Ctx{u: u, e: u.root})
-	u.in.clicks = nil
+	u.in.clicks, u.in.keys, u.in.context = nil, nil, nil
 	u.tooltip()
 	for axis := range 2 {
 		u.fit(u.root, axis)
@@ -134,8 +139,20 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	clear(u.flags)
 	for id, e := range u.byID {
 		s := e.style
-		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" {
-			u.flags[id] = flags{s.Interactive || s.Focusable || s.Tooltip != "", s.Focusable, s.Disabled, s.ScrollX, s.ScrollY, s.Cursor, s.Tooltip}
+		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" || s.Help != "" || s.Trap {
+			var parent ID
+			if e.parent != nil {
+				parent = e.parent.id
+			}
+			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
+				scrollX: s.ScrollX, scrollY: s.ScrollY, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
+				trap: s.Trap, z: s.Z, parent: parent}
+		}
+	}
+	u.parents = map[ID]ID{}
+	for id, e := range u.byID {
+		if e.parent != nil {
+			u.parents[id] = e.parent.id
 		}
 	}
 	if _, ok := u.byID[u.in.focus]; !ok || u.flags[u.in.focus].disabled {
@@ -523,6 +540,10 @@ func (u *UI) Paint(f render.Frame) {
 	defer func() {
 		if u.in.inside {
 			u.setHot(u.topInteractive(u.in.pos))
+		}
+		// While a trap is up, focus can't leave it.
+		if t := u.trap(); t != 0 && !u.within(u.in.focus, t) {
+			u.in.focus, u.in.visible = t, false
 		}
 	}()
 	u.hits = u.hits[:0]

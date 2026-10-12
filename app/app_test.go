@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // counter is a plugin built only on the public API: a command, a keymap and a view.
@@ -284,5 +285,43 @@ func TestBrokenThemeFallsBackToTheBuiltIn(t *testing.T) {
 	if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == render.Color{R: 6, G: 6, B: 6, A: 255} }); err != nil {
 		t.Fatalf("background %v; want the built-in bg.base", background(f))
 	}
+	b.close(t)
+}
+
+// form is a native plugin whose view uses widgets: an input, and a global chord that works while it's focused.
+type form struct {
+	text  string
+	saved int
+}
+
+func (*form) Manifest() ext.Manifest { return ext.Manifest{ID: "test.form"} }
+func (f *form) Activate(_ context.Context, h ext.Host) error {
+	h.Command(registry.Command{ID: "form.save", Run: func(registry.Ctx, registry.Args) error { f.saved++; return nil }})
+	h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-s>", Command: "form.save"})
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "h", Command: "form.save"}) // vim's h mustn't fire inside the input
+	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+		return &ui.Func{Key: "form", Fn: func(c *ui.Ctx) {
+			widget.Input(c, "name", &f.text, widget.InputOpts{Width: ui.Px(300), Help: "test/form"})
+			c.Text("echo", "typed:"+f.text, ui.TextStyle{})
+			c.Text("saved", fmt.Sprintf("saved:%d", f.saved), ui.TextStyle{})
+		}}
+	}))
+	return nil
+}
+func (*form) Deactivate(context.Context) error { return nil }
+
+func TestWidgetsTakeKeysInTheirOwnMode(t *testing.T) {
+	b := boot(t, &form{})
+	b.waitText(t, "typed:")
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 40, Y: 30}})
+	b.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 40, Y: 30}, Buttons: render.ButtonPrimary})
+	b.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 40, Y: 30}, Buttons: render.ButtonPrimary})
+	b.waitText(t, "typed:")
+	for _, k := range []string{"h", "i"} {
+		b.win.Send(render.KeyEvent{Key: k})
+	}
+	b.waitText(t, "typed:hi")
+	b.win.Send(render.KeyEvent{Key: "s", Mods: render.ModSuper})
+	b.waitText(t, "saved:1")
 	b.close(t)
 }

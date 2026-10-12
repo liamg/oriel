@@ -2,6 +2,7 @@ package ui
 
 import (
 	"math"
+	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -91,6 +92,8 @@ func (c *Ctx) Node(n Node) {
 		c.Text(n.Key, n.Text, n.Style)
 	case *Paint:
 		c.Paint(n.Key, n.W, n.H, n.Fn)
+	case *Func:
+		c.Box(n.Key, Style{W: Flex(1), H: Flex(1), Dir: Column}, n.Fn)
 	}
 }
 
@@ -114,3 +117,48 @@ func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i in
 		lc.Box("below", Style{H: Px(float32(n-last) * rowH)}, nil)
 	})
 }
+
+// State is the widget state kept for id while it's built each frame, created zero the first time.
+func State[T any](c *Ctx, id ID) *T {
+	st := c.u.state(id)
+	st.seen = c.u.frame
+	if v, ok := st.data.(*T); ok {
+		return v
+	}
+	v := new(T)
+	st.data = v
+	return v
+}
+
+// Focus moves keyboard focus to id without a focus ring: focus a widget moves itself isn't the keyboard's.
+func (c *Ctx) Focus(id ID) { c.u.in.focus, c.u.in.visible = id, false }
+
+// Blur drops keyboard focus.
+func (c *Ctx) Blur() { c.u.in.focus = 0 }
+
+// Now is the UI's clock.
+func (c *Ctx) Now() time.Time { return c.u.now() }
+
+// WakeAt asks for a frame at t, for a widget waiting on time (a toast's timeout).
+func (c *Ctx) WakeAt(t time.Time) {
+	if c.u.wake.IsZero() || t.Before(c.u.wake) {
+		c.u.wake = t
+	}
+}
+
+// Size is the window's logical size.
+func (c *Ctx) Size() render.Point {
+	return render.Point{X: c.u.root.style.W.Value, Y: c.u.root.style.H.Value}
+}
+
+// Scroll is id's scroll offset.
+func (c *Ctx) Scroll(id ID) render.Point { return c.u.Scroll(id) }
+
+// ScrollTo sets id's scroll offset; layout clamps it.
+func (c *Ctx) ScrollTo(id ID, p render.Point) { c.u.ScrollTo(id, p) }
+
+// Help is the help id of id or its nearest ancestor with one.
+func (c *Ctx) Help(id ID) string { return c.u.Help(id) }
+
+// Child is the id a child built with key under parent gets (the first with that key).
+func Child(parent ID, key any) ID { return childID(parent, key) }

@@ -2,7 +2,7 @@
 id: FW-6
 title: "Widgets: buttons, chips, inputs, virtual lists, trees, tabs, menus, context menus, modals, popovers, toasts"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: ui
 depends_on: [FW-5, FW-7]
