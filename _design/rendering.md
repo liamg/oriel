@@ -151,6 +151,19 @@ type Atlas struct{ … }                            // shelf-packed pages; start
 - `render/gio` keeps every cache bounded: atlas 8 × 1024² pages, 8192 coverages, 512 baked shapes and glows (unused
   ones go after 120 frames), Image ops for 2 frames, 24 fallback faces.
 
+## Headless and snapshots (FW-8)
+
+- `render/raster` draws a display list on the CPU, blending in sRGB as CSS does, so UI tests and theme screenshots
+  need no GPU (`shell.md`). It shares glow and rounded-rect baking with `render/gio` (`render/bake`). The fixture
+  draws in about 150 ms at 1×.
+- `render/snapshot`: `List(l)` writes a display list one op per line for golden files; `Compare(want, got, t)` is a
+  perceptual diff (deltaE OK per pixel, the fraction past `t`, and a want | got | heat map image); `GoldenPNG` and
+  `Golden` check against files, rewritten with `ORIEL_UPDATE=1`.
+- In CI, `make test` draws the fixture workspace (01-ide) in both built-in variants and holds it to the mockups
+  (mean deltaE ≤ 0.025, ≤ 6% of pixels past 0.1) and to its own goldens (≤ 0.1% past one JND, 0.02).
+- `typeset.NewBundled()` shapes with the bundled fonts only, so goldens are the same on every machine.
+- `headless.NewWith(shaper)` and `Window.Shot(frame, bg)` give tests real text and pixels.
+
 ## Measuring
 
 - `oriel dev window [-auto] [SCENE]` opens a reference scene (`render/scenes`: ide, scroll, text, glow, hud, type);

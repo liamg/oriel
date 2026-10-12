@@ -3,26 +3,33 @@ package headless
 
 import (
 	"context"
+	"image"
 	"strings"
 	"sync"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/typeset"
 )
 
 type Backend struct {
 	windows chan *Window
+	shaper  typeset.Shaper
 }
 
-func New() *Backend {
-	return &Backend{windows: make(chan *Window, 16)}
+// New returns a backend with a fixed-pitch stand-in shaper: fast and font-free, for layout and logic tests.
+func New() *Backend { return NewWith(Shaper{}) }
+
+// NewWith returns a backend that shapes with sh, such as typeset.NewBundled(), so Shot draws real text.
+func NewWith(sh typeset.Shaper) *Backend {
+	return &Backend{windows: make(chan *Window, 16), shaper: sh}
 }
 
 // Windows yields each window as it opens.
 func (b *Backend) Windows() <-chan *Window { return b.windows }
 
-func (b *Backend) Shaper() typeset.Shaper { return Shaper{} }
+func (b *Backend) Shaper() typeset.Shaper { return b.shaper }
 
 func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 	w := &Window{
@@ -41,6 +48,11 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 // Frame is one recorded frame.
 type Frame struct {
 	render.List
+}
+
+// Shot draws the frame on the CPU at the window's size and scale, over bg.
+func (w *Window) Shot(f Frame, bg render.Color) *image.RGBA {
+	return raster.Render(&f.List, w.Size(), w.Scale(), bg)
 }
 
 // Text is every glyph run's text, one run per line.

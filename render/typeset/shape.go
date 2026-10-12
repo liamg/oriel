@@ -46,6 +46,17 @@ func New(onLoad func()) (*Typesetter, error) {
 	return &Typesetter{bundled: faces, fb: newFallbacks(onLoad), runs: map[runKey]*Run{}}, nil
 }
 
+// NewBundled returns a typesetter with the bundled faces only: no system fallback, so a render is the same on
+// every machine. Runes the bundled faces lack draw as tofu.
+func NewBundled() (*Typesetter, error) {
+	t, err := New(nil)
+	if err != nil {
+		return nil, err
+	}
+	t.fb.find = func(rune) []string { return nil }
+	return t, nil
+}
+
 // Fallbacks lists the system faces loaded so far, and the runes no face covered.
 func (t *Typesetter) Fallbacks() (names []string, missing []rune) { return t.fb.list() }
 
