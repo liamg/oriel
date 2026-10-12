@@ -88,6 +88,7 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 	for {
 		switch e := w.Event().(type) {
 		case app.DestroyEvent:
+			printKeys(auto, keyLat)
 			return e.Err
 		case app.FrameEvent:
 			t0 := time.Now()
@@ -110,6 +111,7 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 					case "K":
 						st.Line--
 					case key.NameEscape:
+						printKeys(auto, keyLat)
 						return nil
 					case key.NameDeleteBackward:
 						if len(st.Typed) > 0 {
@@ -178,6 +180,13 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 				gtx.Execute(op.InvalidateCmd{At: pstart.Add(p.dur)})
 			}
 		}
+	}
+}
+
+// printKeys reports key latency when a manual (non -auto) run ends.
+func printKeys(auto bool, keys scene.Durations) {
+	if !auto && len(keys) > 0 {
+		fmt.Printf("key event → frame presented (in-app part only): %s\n", keys)
 	}
 }
 
