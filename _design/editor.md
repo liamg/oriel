@@ -116,6 +116,10 @@ can't host the UI we want.
   The host runs their predicates and directives: `#eq?`, `#any-of?`, `#lua-match?` (our own Lua-pattern matcher),
   `#match?` (Go regexp), `#contains?`, `#has-parent?`, `#set!` and `#offset!`. Injections (code in Markdown, inline
   Markdown) parse the injected ranges with the other language's grammar. `units.scm` is ours.
+- **Languages are plugins** (ED-11): each registers a language contribution (filetypes, grammar, queries) in the
+  registry. The built-in ones are a built-in plugin with a compressed core set of about 25 grammars; others are
+  grammar packs, from a local directory now and from the plugin manager with PL-3. ED-6's hard-coded table is the
+  stopgap until then.
 - Overlapping captures resolve as nvim's highlighter does: higher `priority` wins, then deeper injections, then the
   later pattern.
 - Incremental: an edit is applied to the old tree and the text reparsed, reusing everything unchanged: under 1 ms

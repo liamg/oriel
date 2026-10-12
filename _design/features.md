@@ -56,6 +56,7 @@ How everything hangs together, built and tested before features land on it.
 | ED-7 | Decorations between lines: threads, explain cards, diffs, virtual text | 01 | ui, editor | P3 | ED-1, FW-6 | the layout engine places blocks at anchors and survives edits above them |
 | ED-8 | Multi-cursor and LSP rename preview | 09 | edit | P4 | ED-7, LS-1 | – |
 | ED-9 | `.editorconfig`, the IDE-relevant `.gitattributes` (eol, binary, encoding, generated), and opt-in modelines as a buffer-scoped settings layer | 19 | registry, edit | P3 | ED-2, SH-12 | EditorConfig core test suite passes; `.gitattributes` fixtures match `git check-attr`; properties show with their source on the settings page; edits re-apply live |
+| ED-11 | Languages as plugins: a registry language contribution, the built-in languages as a built-in plugin, a compressed core set of ~25 grammars, an on-disk compile cache, local grammar packs | – | syntax, registry | P3 | ED-6, FW-3 | a registered language highlights and shadows a built-in; every core grammar has a golden fixture; binary grows < 8 MB; a cached grammar opens in < 20 ms; a dropped-in pack is used |
 | ED-10 | PCRE2 regex outside the vim engine: project search, the `plain` engine, the plugin and Lua API | – | regex | P3 | ED-3 | PCRE2's own test suite passes for supported features; the Lua API takes PCRE2 patterns |
 
 ## Files, git, terminals
@@ -124,7 +125,7 @@ How everything hangs together, built and tested before features land on it.
 |---|---|---|---|---|---|---|
 | PL-1 | Lua config and plugins, `:Hooks`, `:Inspect`, LuaLS types | 19, 20 | script, registry | P3 | FW-3 | the `scripting.md` sample `init.lua` runs as written |
 | PL-2 | Process plugins with an OS sandbox; WASM plugins; `oriel build --with` | 16 | ext | P7 | PL-1 | the capability guard rejects undeclared calls; Landlock/sandbox-exec profiles applied |
-| PL-3 | All-or-nothing install consent, update capability diff | 29 | ext | P7 | PL-2 | – |
+| PL-3 | All-or-nothing install consent, update capability diff; grammar packs (CI-built, checksummed) | 29 | ext | P7 | PL-2, ED-11 | – |
 | PL-4 | Comms assistant drawer (utility session, no `-p`) | 11 | assistant | P7 | AI-2 | – |
 | PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | integ/agentbus | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus |
 | PL-8 | Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source | 04, 02 | integ/linear (plugin) | P7 | PL-2, SE-1 | `crit-reference.md` → Linear, against a recorded Linear API |

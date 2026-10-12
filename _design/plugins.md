@@ -157,6 +157,7 @@ type Registry interface {
     Provider(p agent.Provider) Disposable
     AgentTool(t AgentTool) Disposable
     Theme(t theme.Source) Disposable
+    Language(l LanguageSpec) Disposable           // filetypes, grammar .wasm, queries (ED-11)
 
     Run(ctx Ctx, id string, args Args) error      // every tier runs commands the same way
     Commands() []Command                          // what :Commands lists, with sources
