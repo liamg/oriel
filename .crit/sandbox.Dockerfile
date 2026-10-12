@@ -1,8 +1,10 @@
 # Oriel's crit sandbox: crit's base image plus Gio's Linux build deps, Xvfb and
-# Mesa for headless renders, and the pinned nvim the vim oracle needs.
+# Mesa for headless renders, the pinned nvim the vim oracle needs, and wasi-sdk to build the
+# tree-sitter grammars to WASM from source.
 FROM debian:bookworm-slim
 ARG MISE_VERSION=v2026.6.10
 ARG NVIM_VERSION=v0.11.7
+ARG WASI_SDK_VERSION=34
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       git ca-certificates curl wget ripgrep openssh-client less procps jq make gcc g++ libc6-dev \
@@ -22,5 +24,15 @@ RUN apt-get update \
  && echo "${sum}  nvim.tar.gz" | sha256sum -c - \
  && tar -xzf nvim.tar.gz -C /opt \
  && ln -s "/opt/${nvim}/bin/nvim" /usr/local/bin/nvim \
- && rm nvim.tar.gz
+ && rm nvim.tar.gz \
+ && case "$(dpkg --print-architecture)" in \
+      amd64) wasi=x86_64; sum=b761e3a0721dbae9c09a0059e5fdb2bf917d1b4a8a7b430fb3b5aafb0984b2c4 ;; \
+      arm64) wasi=arm64; sum=f7e243dff54d60bcc576e94d6166b69f410f2500ae4a9ceef34315be10e77971 ;; \
+    esac \
+ && curl -fsSLo wasi-sdk.tar.gz "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VERSION}/wasi-sdk-${WASI_SDK_VERSION}.0-${wasi}-linux.tar.gz" \
+ && echo "${sum}  wasi-sdk.tar.gz" | sha256sum -c - \
+ && tar -xzf wasi-sdk.tar.gz -C /opt \
+ && ln -s "/opt/wasi-sdk-${WASI_SDK_VERSION}.0-${wasi}-linux" /opt/wasi-sdk \
+ && rm wasi-sdk.tar.gz
 ENV ORIEL_NVIM=/usr/local/bin/nvim
+ENV WASI_SDK_PATH=/opt/wasi-sdk
