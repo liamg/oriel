@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/core/memstore"
+	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -39,7 +39,7 @@ var (
 // Run opens a window and runs the app until the window closes or ctx is done.
 func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	if cfg.Store == nil {
-		cfg.Store = memstore.New()
+		cfg.Store = eventstore.New()
 	}
 	if cfg.Registry == nil {
 		cfg.Registry = registry.New()

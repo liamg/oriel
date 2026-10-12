@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/core/memstore"
+	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -51,7 +51,7 @@ func boot(t *testing.T, exts ...ext.Extension) *booted {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
 	be := headless.New()
-	b := &booted{store: memstore.New(), done: make(chan error, 1)}
+	b := &booted{store: eventstore.New(), done: make(chan error, 1)}
 	go func() { b.done <- app.Run(ctx, be, app.Config{Store: b.store, Extensions: exts}) }()
 	select {
 	case b.win = <-be.Windows():

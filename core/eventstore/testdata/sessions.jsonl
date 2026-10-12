@@ -1,0 +1,7 @@
+{"seq":1,"type":"SessionOpened","event":{"id":"s1","kind":"work","status":"quiet"}}
+{"seq":2,"type":"SessionOpened","event":{"id":"s2","kind":"review","status":"reviewer"}}
+{"seq":3,"type":"SessionStatusChanged","event":{"id":"s1","status":"working"}}
+{"seq":4,"type":"SessionOpened","event":{"id":"s3","kind":"plan","status":"quiet"}}
+{"seq":5,"type":"SessionStatusChanged","event":{"id":"s1","status":"permission"}}
+{"seq":6,"type":"SessionClosed","event":{"id":"s2"}}
+{"seq":7,"type":"SessionStatusChanged","event":{"id":"s3","status":"needs_you"}}

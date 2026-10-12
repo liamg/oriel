@@ -32,6 +32,7 @@ type Store interface {
 	Session(id SessionID) (Session, bool)
 	Apply(ev Event) error // the only mutation path; events come from the worker
 	Subscribe(filter Filter, fn func(Event)) (cancel func())
+	State() State // a copy; the store keeps changing
 }
 
 // Session is a read-only view of one session.
@@ -42,8 +43,11 @@ type Session interface {
 }
 
 // Event is something that happened. Scope is the session it belongs to, or "" for app-wide events.
+// Apply is the event's effect on state; it returns an error, and may leave s half-changed, when the event doesn't fit.
+// Events are values that round-trip through JSON, registered with RegisterEvent so a log can be replayed.
 type Event interface {
 	Scope() SessionID
+	Apply(s *State) error
 }
 
 // Filter selects events for a subscription. The zero Filter matches everything.

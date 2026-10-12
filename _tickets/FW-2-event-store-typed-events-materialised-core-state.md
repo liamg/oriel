@@ -2,7 +2,7 @@
 id: FW-2
 title: "Event store: typed events, materialised core.State, subscriptions, replay"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: core
 depends_on: [FW-1]

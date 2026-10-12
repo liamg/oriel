@@ -102,6 +102,11 @@ Rules:
 - The app keeps a materialised `core.State` and the UI reads from it. The UI
   never asks the network on a frame.
 - The same event log feeds the HUD, notifications, the assistant's context and tests.
+- An event is a plain struct with `Scope()` (its session, or none) and `Apply(*State) error`, its effect on state.
+  A store applies it to a copy and keeps the copy only if it applied cleanly, so a rejected event changes nothing.
+- `core.RegisterEvent[E](name)` names an event type in logs; plugins register theirs the same way.
+  A log is JSON lines, `{"seq":1,"type":"SessionOpened","event":{…}}`, written by a `core.Recorder` subscribed to the store.
+- `core.Replay` applies a log to a fresh store. Replaying it reproduces the state's JSON byte for byte.
 
 ## What crit code carries over
 
@@ -122,6 +127,7 @@ type Store interface {
     Session(id SessionID) (Session, bool)
     Apply(ev Event) error                          // the only mutation path; events come from the worker
     Subscribe(filter Filter, fn func(Event)) (cancel func())
+    State() State                                  // a copy of the materialised state
 }
 
 type Session interface {
