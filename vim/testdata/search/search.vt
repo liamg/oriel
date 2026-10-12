@@ -1,0 +1,202 @@
+# / ? n N: searching forward and backward, counts and repeats. 'ignorecase' is off by default.
+
+=== / moves to the start of the next match
+ref:    pattern.txt */*
+quote:  Search forward for the [count]'th occurrence of {pattern} |exclusive|.
+given:  |one foo two foo
+keys:   /foo<CR>
+expect: one |foo two foo
+
+=== / skips a match under the cursor
+ref:    pattern.txt */*
+quote:  Search forward for the [count]'th occurrence of {pattern} |exclusive|.
+given:  one |foo two foo
+keys:   /foo<CR>
+expect: one foo two |foo
+
+=== / finds a match on a later line
+ref:    pattern.txt */*
+quote:  Search forward for the [count]'th occurrence of {pattern} |exclusive|.
+given:
+  |one
+  two
+  three foo
+keys:   /foo<CR>
+expect:
+  one
+  two
+  three |foo
+
+=== / with a count finds the count'th match
+ref:    pattern.txt */*
+quote:  Search forward for the [count]'th occurrence of {pattern} |exclusive|.
+given:  |x a1 a2 a3
+keys:   2/a<CR>
+expect: x a1 |a2 a3
+
+=== / with a closing slash and no offset
+ref:    pattern.txt */*
+quote:  /{pattern}[/]<CR>
+given:  |x foo
+keys:   /foo/<CR>
+expect: x |foo
+
+=== ? moves to the start of the previous match
+ref:    pattern.txt *?*
+quote:  Search backward for the [count]'th previous occurrence of {pattern} |exclusive|.
+given:  foo one foo |two
+keys:   ?foo<CR>
+expect: foo one |foo two
+
+=== ? from inside a match goes to its start
+ref:    pattern.txt *?*
+quote:  Search backward for the [count]'th previous occurrence of {pattern} |exclusive|.
+given:  x foo|bar
+keys:   ?foo<CR>
+expect: x |foobar
+
+=== ? with a count
+ref:    pattern.txt *?*
+quote:  Search backward for the [count]'th previous occurrence of {pattern} |exclusive|.
+given:  a1 a2 a3 |x
+keys:   2?a<CR>
+expect: a1 |a2 a3 x
+
+=== ? finds a match on an earlier line
+ref:    pattern.txt *?*
+quote:  Search backward for the [count]'th previous occurrence of {pattern} |exclusive|.
+given:
+  foo one
+  two
+  |three
+keys:   ?foo<CR>
+expect:
+  |foo one
+  two
+  three
+
+=== n repeats the last /
+ref:    pattern.txt *n*
+quote:  Repeat the latest "/" or "?" [count] times.
+given:  |a1 a2 a3 a4
+keys:   /a<CR>n
+expect: a1 a2 |a3 a4
+
+=== n with a count
+ref:    pattern.txt *n*
+quote:  Repeat the latest "/" or "?" [count] times.
+given:  |a1 a2 a3 a4 a5
+keys:   /a<CR>3n
+expect: a1 a2 a3 a4 |a5
+
+=== N repeats / in the opposite direction
+ref:    pattern.txt *N*
+quote:  Repeat the latest "/" or "?" [count] times in opposite direction.
+given:  a1 a2 |x a3
+keys:   /a<CR>N
+expect: a1 |a2 x a3
+
+=== n after ? keeps searching backward
+ref:    pattern.txt *n*
+quote:  Repeat the latest "/" or "?" [count] times.
+given:  a1 a2 a3 |x
+keys:   ?a<CR>n
+expect: a1 |a2 a3 x
+
+=== N after ? searches forward
+ref:    pattern.txt *N*
+quote:  Repeat the latest "/" or "?" [count] times in opposite direction.
+given:  a1 a2 a3 |x
+keys:   ?a<CR>?a<CR>N
+expect: a1 a2 |a3 x
+
+=== /<CR> searches again for the last pattern
+ref:    pattern.txt */<CR>*
+quote:  Search forward for the [count]'th occurrence of the latest used pattern |last-pattern| with latest used |{offset}|.
+given:  |a1 a2 a3
+keys:   /a<CR>/<CR>
+expect: a1 a2 |a3
+
+=== ?<CR> searches back for the last pattern
+ref:    pattern.txt *?<CR>*
+quote:  Search backward for the [count]'th occurrence of the latest used pattern |last-pattern| with latest used |{offset}|.
+given:  a1 a2 a3 |x
+keys:   ?a<CR>?<CR>
+expect: a1 |a2 a3 x
+
+=== / is a jump
+ref:    motion.txt *jump-motions*
+quote:  The following commands are "jump" commands: "'", "`", "G", "/", "?", "n", "N"
+given:
+  o|ne
+  two foo
+keys:   /foo<CR>
+expect:
+  one
+  two |foo
+jumps:  1:1
+
+=== n is a jump
+ref:    motion.txt *jump-motions*
+quote:  The following commands are "jump" commands: "'", "`", "G", "/", "?", "n", "N"
+given:
+  |foo
+  foo
+  foo
+keys:   /foo<CR>n
+expect:
+  foo
+  foo
+  |foo
+jumps:  1:0 2:0
+
+=== 'ignorecase' is off by default
+ref:    options.txt *'ignorecase'*
+quote:  'ignorecase' 'ic'	boolean	(default off)
+given:  |x Foo FOO foo
+keys:   /foo<CR>
+expect: x Foo FOO |foo
+
+=== \c in a search ignores case
+ref:    pattern.txt */\c*
+quote:  When "\c" appears anywhere in the pattern, the whole pattern is handled like 'ignorecase' is on.
+given:  |x FOO foo
+keys:   /foo\c<CR>
+expect: x |FOO foo
+
+=== \C in a search matches case
+ref:    pattern.txt */\C*
+quote:  "\"\\C\" does the opposite: Force matching case for the whole pattern."
+given:  |x FOO foo
+keys:   /\Cfoo<CR>
+expect: x FOO |foo
+
+=== search for a pattern that isn't there gives E486
+ref:    pattern.txt *E486*
+quote:  When no match is found you get the error: *E486* Pattern not found
+given:  o|ne two
+keys:   /zzz<CR>
+expect: o|ne two
+msg:    E486: Pattern not found: zzz
+
+=== n with no match gives E486 and stays put
+ref:    pattern.txt *E486*
+quote:  When no match is found you get the error: *E486* Pattern not found
+given:  o|ne two
+keys:   /zzz<CR>0n
+expect: |one two
+msg:    E486: Pattern not found: zzz
+
+=== search lands on a multibyte line at the byte column
+ref:    pattern.txt *pattern-multibyte*
+quote:  Patterns will also work with multibyte characters, mostly as you would expect.
+given:  |é漢字 foo
+keys:   /foo<CR>
+expect: é漢字 |foo
+
+=== search for a multibyte character
+ref:    pattern.txt *pattern-multibyte*
+quote:  Patterns will also work with multibyte characters, mostly as you would expect.
+given:  |abc 漢字 字
+keys:   /字<CR>n
+expect: abc 漢字 |字

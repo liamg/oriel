@@ -77,6 +77,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 30. [SH-11](SH-11-light-dark-and-theme-editor-theme-pick-mode.md): Light, dark and theme editor (:Theme, pick mode) · after FW-7
 30. [SH-12](SH-12-settings-page-settings-sections-search-typed-co.md): Settings page (:Settings, ⌘,) and settings.toml storage · after FW-3, FW-6, FW-11
 30. [ED-9](ED-9-editorconfig-and-per-file-editor-conventions.md): .editorconfig and other per-file editor conventions · after ED-2, SH-12
+30. [ED-10](ED-10-pcre2-regex-outside-the-vim-engine.md): PCRE2 regex outside the vim engine · after ED-3
 
 ### Phase 4 · IDE
 

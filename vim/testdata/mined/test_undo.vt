@@ -56,3 +56,24 @@ expect:
   two
   two
   thre|e
+
+=== Test_undo_range_normal #1
+ref:    testdir/test_undo.vim#Test_undo_range_normal
+given:
+  |asa
+  bsb
+keys:   :%normal dfs<CR>
+# cursor from oracle
+expect:
+  a
+  |b
+
+=== Test_restore_cursor_position_after_undo #1
+ref:    testdir/test_undo.vim#Test_restore_cursor_position_after_undo
+given:
+  |
+keys:   :1 delete<CR>
+# cursor column from oracle
+# lines 1 from oracle
+expect:
+  |

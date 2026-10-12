@@ -66,41 +66,139 @@ func TestIsLiteral(t *testing.T) {
 func TestScan(t *testing.T) {
 	tests := []struct {
 		keys     string
+		from     State
 		insert   bool
 		category string
 	}{
-		{"dw", false, ""},
-		{`3"a2yy`, false, ""},
-		{"ciwfoo", true, ""},
-		{"ciwfoo<Esc>x", false, ""},
-		{"ofoo<CR>bar<Esc>", false, ""},
-		{"d2aW", false, ""},
-		{"g~iwgUU", false, ""},
-		{"fxrz;", false, ""},
-		{"i/<Esc>", false, ""},
-		{"Rab<C-R>-<Esc>", false, ""},
-		{"vwy", false, "visual/select mode"},
-		{"dvj", false, "visual/select mode"},
-		{"/foo<CR>", false, "search"},
-		{"dn", false, "search"},
-		{"qaxq", false, "macro"},
-		{":s/a/b<CR>", false, "ex command"},
-		{"zt", false, "folds/scrolling"},
-		{"<C-D>", false, "screen-relative"},
-		{"gqq", false, "formatting/filter/opfunc"},
-		{"d", false, "incomplete command"},
-		{`"=`, false, "special register"},
-		{"ifoo<C-N>", false, "insert completion"},
-		{"ia<C-O>x", false, "insert-mode key"},
+		{"dw", State{}, false, ""},
+		{`3"a2yy`, State{}, false, ""},
+		{"ciwfoo", State{}, true, ""},
+		{"ciwfoo<Esc>x", State{}, false, ""},
+		{"ofoo<CR>bar<Esc>", State{}, false, ""},
+		{"d2aW", State{}, false, ""},
+		{"g~iwgUU", State{}, false, ""},
+		{"fxrz;", State{}, false, ""},
+		{"i/<Esc>", State{}, false, ""},
+		{"Rab<C-R>-<Esc>", State{}, false, ""},
+		{"vwy", State{}, false, ""},
+		{"Vjd", State{}, false, ""},
+		{"<C-V>2j$Afoo<Esc>", State{}, false, ""},
+		{"<C-V>jIx", State{}, true, ""},
+		{"viwoawU", State{}, false, ""},
+		{`v3l"ap`, State{}, false, ""},
+		{"vjrx", State{}, false, ""},
+		{"vjcx", State{}, true, ""},
+		{"gvd", State{}, false, ""},
+		{"vVd", State{}, false, ""},
+		{"d", State{Visual: "v"}, false, ""},
+		{"j", State{Visual: "V"}, false, ""},
+		{"/foo<CR>", State{}, false, ""},
+		{"?a\\/b?e<CR>x", State{}, false, ""},
+		{"d/foo/e<CR>", State{}, false, ""},
+		{"dnN*#g*", State{}, false, ""},
+		{"/fo<BS><BS><BS><BS>x", State{}, false, ""},
+		{"/<C-R>a<CR>", State{}, false, ""},
+		{"/foo", State{}, false, "incomplete command"},
+		{"/foo<Up><CR>", State{}, false, "command-line key"},
+		{"/foo<Esc>", State{}, false, "command-line key"},
+		{":s/a/b<CR>", State{}, false, ""},
+		{":%s/x\\|y/z/g<CR>", State{}, false, ""},
+		{":'<,'>s/a/b/gc<CR>yyq", State{}, false, ""},
+		{"vj:s/a/b/<CR>", State{}, false, ""},
+		{":2,$-1d a<CR>:.t0<CR>:1,2m$<CR>:j!<CR>:3><CR>", State{}, false, ""},
+		{":g/foo/normal Ax<CR>", State{}, false, ""},
+		{":v/./d<CR>:g!/x/s//y/<CR>", State{}, false, ""},
+		{":set sw=2 et noic<CR>", State{}, false, ""},
+		{":&&<CR>&g&:~<CR>", State{}, false, ""},
+		{":5<CR>", State{}, false, ""},
+		{":sort<CR>", State{}, false, "ex command"},
+		{":set tw=10<CR>", State{}, false, "ex command"},
+		{":s/a/b/|s/c/d/<CR>", State{}, false, "ex command"},
+		{":g/a/g/b/d<CR>", State{}, false, "ex command"},
+		{":g/a/normal <C-V><CR>", State{}, false, "command-line key"},
+		{":<C-R>a<CR>", State{}, false, "ex command"},
+		{"d:foo<CR>", State{}, false, "ex command"},
+		{"@:", State{}, false, "ex command"},
+		{"qaxjq@a2@@", State{}, false, ""},
+		{"x", State{Recording: true}, false, ""},
+		{"q:", State{}, false, "windows"},
+		{"vgh", State{}, false, "select mode"},
+		{"gh", State{}, false, "select mode"},
+		{"dgn", State{}, false, "gn/gN"},
+		{"vjzf", State{}, false, "folds/scrolling"},
+		{"vj=", State{}, false, "formatting/filter/opfunc"},
+		{"dvj", State{}, false, "forced motion"},
+		{"zt", State{}, false, "folds/scrolling"},
+		{"<C-D>", State{}, false, "screen-relative"},
+		{"gqq", State{}, false, "formatting/filter/opfunc"},
+		{"d", State{}, false, "incomplete command"},
+		{`"=`, State{}, false, "special register"},
+		{"ifoo<C-N>", State{}, false, "insert completion"},
+		{"ia<C-O>x", State{}, false, "insert-mode key"},
 	}
 	for _, tt := range tests {
-		insert, err := Scan(vimtest.ParseKeys(tt.keys))
+		_, insert, err := Scan(vimtest.ParseKeys(tt.keys), tt.from)
 		cat := ""
 		if err != nil {
 			cat = err.Category
 		}
 		if cat != tt.category || err == nil && insert != tt.insert {
 			t.Errorf("Scan(%q) = %v, %v; want insert=%v category %q", tt.keys, insert, err, tt.insert, tt.category)
+		}
+	}
+}
+
+func TestScanState(t *testing.T) {
+	tests := []struct {
+		keys     string
+		from, to State
+	}{
+		{"vj", State{}, State{Visual: "v"}},
+		{"<C-V>jV", State{}, State{Visual: "V"}},
+		{"Vjd", State{}, State{}},
+		{"y", State{Visual: "v"}, State{}},
+		{"gv", State{}, State{Visual: "?"}},
+		{"vj:s/a/b<CR>", State{}, State{}},
+		{"qax", State{}, State{Recording: true}},
+		{"jq", State{Recording: true}, State{}},
+	}
+	for _, tt := range tests {
+		to, _, err := Scan(vimtest.ParseKeys(tt.keys), tt.from)
+		if err != nil || to != tt.to {
+			t.Errorf("Scan(%q, %+v) = %+v, %v; want %+v", tt.keys, tt.from, to, err, tt.to)
+		}
+	}
+}
+
+func TestCheckEx(t *testing.T) {
+	tests := []struct {
+		line    string
+		confirm bool
+		ok      bool
+	}{
+		{"%s/a/b/g", false, true},
+		{"s#a#b#gc", true, true},
+		{"'<,'>s/a\\/b/c/", false, true},
+		{"/foo/,/bar/-1d", false, true},
+		{"silent! %s/x//", false, true},
+		{"1,3co$", false, true},
+		{"2pu a", false, true},
+		{"g/a/s/b/c/c", true, true},
+		{"set ws noscs report=0", false, true},
+		{"norm! dw", false, true},
+		{"put =range(3)", false, false},
+		{"set ws=1", false, false},
+		{"set sw", false, false},
+		{"sno/a/b/", false, false},
+		{"p", false, false},
+		{"new", false, false},
+		{"call foo()", false, false},
+		{"norm vgh", false, false},
+	}
+	for _, tt := range tests {
+		confirm, err := checkEx(tt.line, false)
+		if (err == nil) != tt.ok || confirm != tt.confirm {
+			t.Errorf("checkEx(%q) = %v, %v; want confirm=%v ok=%v", tt.line, confirm, err, tt.confirm, tt.ok)
 		}
 	}
 }
@@ -116,6 +214,7 @@ func TestKeysOf(t *testing.T) {
 		{"norm 2J", true, "2J", ""},
 		{"silent! normal! x", true, "x", ""},
 		{`exe "norm! Sfoo\<Esc>"`, true, "Sfoo<Esc>", ""},
+		{`exe "normal /x\<CR>"`, true, "/x<CR>", ""},
 		{`exe ":norm! ciw'\<C-R>-'"`, true, "ciw'<C-R>-'", ""},
 		{`exe "norm! " .. n .. "x"`, true, "", "keys not literal"},
 		{`call feedkeys("i\<CR>x\<Esc>", 'xt')`, true, "i<CR>x<Esc>", ""},

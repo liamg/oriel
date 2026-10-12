@@ -17,6 +17,8 @@ type oprange struct {
 	useRegOne  bool // the motion always fills "1, even within a line
 	curStart   Pos  // where the cursor goes for a yank
 	adjusted   bool
+	visual     bool // from a Visual area: no exclusive-motion rules
+	shiftBy    int  // how many shiftwidths > and < move
 }
 
 func (r oprange) lines() int { return r.end.Line - r.start.Line + 1 }
@@ -58,7 +60,7 @@ func (e *Engine) operator(v *view, c cmd) {
 			r = e.adjust(v, s.start, s.end, s.kind, false)
 		}
 	default:
-		t, ok := motions[c.key](e, v, motionCtx{count: c.count, arg: c.arg, op: c.op, key: c.key})
+		t, ok := motions[c.key](e, v, motionCtx{count: c.count, arg: c.arg, op: c.op, key: c.key, search: c.searchTarget})
 		if !ok {
 			e.rec = nil
 			return
@@ -76,6 +78,11 @@ func (e *Engine) operator(v *view, c cmd) {
 		r = e.adjust(v, e.cur, to, t.kind, true)
 		r.useRegOne = regOneMotions[c.key]
 	}
+	e.applyOp(v, c, r, oldWant)
+}
+
+// applyOp runs operator c.op over r.
+func (e *Engine) applyOp(v *view, c cmd, r oprange, oldWant int) {
 	switch c.op {
 	case "y":
 		e.yank(v, r, c.reg)
@@ -90,7 +97,7 @@ func (e *Engine) operator(v *view, c cmd) {
 	case "c":
 		e.change(v, r, c)
 	case "<", ">":
-		e.shift(v, r, c.op == ">", 1)
+		e.shift(v, r, c.op == ">", max(r.shiftBy, 1))
 		e.cur.Line = r.start.Line
 		e.cur.Col = e.view().colAt(e.cur.Line, oldWant, false)
 		e.want = oldWant
@@ -232,7 +239,7 @@ func (e *Engine) deleteRegs(v *view, r oprange, reg rune) {
 }
 
 func (e *Engine) delete(v *view, r oprange, reg rune) {
-	if r.kind == exclusive && r.lines() > 1 {
+	if r.kind == exclusive && r.lines() > 1 && !r.visual {
 		// A charwise delete that leaves only white space and starts in the indent becomes linewise.
 		rest := v.line(r.end.Line)[min(r.end.Col, v.lineLen(r.end.Line)):]
 		if len(strings.TrimLeft(string(rest), " \t")) == 0 && v.inindent(r.start, 0) {
@@ -306,14 +313,14 @@ func (e *Engine) shift(v *view, r oprange, right bool, amount int) {
 		}
 		ind := v.indentEnd(l)
 		width := v.vcol(l, ind)
-		sw := 8
+		sw := e.opts.ShiftWidth
 		if right {
 			width += sw * amount
 		} else {
 			width = max(0, width-sw*amount)
 		}
 		start := v.s.LineStart(l)
-		rs = append(rs, text.Replace{Range: text.Range{Start: start, End: start + ind}, Text: []byte(makeIndent(width))})
+		rs = append(rs, text.Replace{Range: text.Range{Start: start, End: start + ind}, Text: []byte(e.makeIndent(width))})
 	}
 	if len(rs) > 0 {
 		e.do(e.group, rs...)
@@ -323,8 +330,11 @@ func (e *Engine) shift(v *view, r oprange, right bool, amount int) {
 	e.marks[']'] = Pos{last, nv.lineLen(last)}
 }
 
-// makeIndent builds width columns of indent with tabs, as 'noexpandtab' does.
-func makeIndent(width int) string {
+// makeIndent builds width columns of indent: tabs then spaces, or only spaces with 'expandtab'.
+func (e *Engine) makeIndent(width int) string {
+	if e.opts.ExpandTab {
+		return strings.Repeat(" ", width)
+	}
 	return strings.Repeat("\t", width/tabstop) + strings.Repeat(" ", width%tabstop)
 }
 
@@ -338,12 +348,20 @@ func rot13(r rune) rune {
 	return r
 }
 
+// toUpper is unicode.ToUpper, except that ß becomes ẞ as it does in nvim.
+func toUpper(r rune) rune {
+	if r == 'ß' {
+		return 'ẞ'
+	}
+	return unicode.ToUpper(r)
+}
+
 func caseFunc(op string) func(rune) rune {
 	switch op {
 	case "gu":
 		return unicode.ToLower
 	case "gU":
-		return unicode.ToUpper
+		return toUpper
 	case "g?":
 		return rot13
 	}
@@ -351,7 +369,7 @@ func caseFunc(op string) func(rune) rune {
 		if unicode.IsUpper(r) {
 			return unicode.ToLower(r)
 		}
-		return unicode.ToUpper(r)
+		return toUpper(r)
 	}
 }
 
@@ -366,7 +384,7 @@ func (e *Engine) changeCase(v *view, r oprange, op string) {
 		e.do(e.group, text.Replace{Range: text.Range{Start: from, End: to}, Text: nw})
 	}
 	e.cur = r.start
-	if r.kind == linewise && r.lines() == 1 {
+	if r.kind == linewise && (r.lines() == 1 || r.visual) {
 		e.cur.Col = 0
 	} else if r.kind == linewise {
 		e.cur.Col = min(e.cur.Col, e.changeCursor.Col)
@@ -415,6 +433,10 @@ func (e *Engine) put(v *view, c cmd) {
 	after := c.key == "p" || c.key == "gp"
 	gp := c.key[0] == 'g'
 	n := c.count1()
+	if val.Kind == edit.Blockwise {
+		e.putBlock(v, val, after, gp, n)
+		return
+	}
 	if val.Kind == edit.Linewise {
 		body := strings.Repeat(val.Text, n)
 		line := e.cur.Line
@@ -470,4 +492,55 @@ func (e *Engine) put(v *view, c cmd) {
 		e.clamp(nv)
 	}
 	e.setWant(nv)
+}
+
+// putIndented is ]p and [p: put a linewise register with its indent adjusted to the cursor line's.
+func (e *Engine) putIndented(v *view, c cmd) {
+	reg := c.reg
+	if reg == 0 || reg == '"' {
+		reg = e.unnamed
+	}
+	val, ok := e.ed.Register(unicode.ToLower(reg))
+	c2 := c
+	c2.key = "P"
+	if c.key == "]p" {
+		c2.key = "p"
+	}
+	if !ok || val.Kind != edit.Linewise {
+		e.put(v, c2)
+		return
+	}
+	lines := strings.Split(strings.TrimSuffix(val.Text, "\n"), "\n")
+	firstInd := indentWidth(lines[0])
+	target := v.vcol(e.cur.Line, v.indentEnd(e.cur.Line))
+	for i, l := range lines {
+		trimmed := strings.TrimLeft(l, " \t")
+		w := max(0, indentWidth(l)-firstInd+target)
+		if trimmed == "" {
+			lines[i] = ""
+			continue
+		}
+		lines[i] = e.makeIndent(w) + trimmed
+	}
+	saved := val
+	e.ed.SetRegister(unicode.ToLower(reg), edit.Register{Text: strings.Join(lines, "\n") + "\n", Kind: edit.Linewise})
+	c2.reg = unicode.ToLower(reg)
+	e.put(v, c2)
+	e.ed.SetRegister(unicode.ToLower(reg), saved)
+}
+
+// indentWidth is how many screen columns a line's leading white space takes.
+func indentWidth(l string) int {
+	w := 0
+	for _, r := range l {
+		switch r {
+		case ' ':
+			w++
+		case '\t':
+			w += tabstop - w%tabstop
+		default:
+			return w
+		}
+	}
+	return w
 }

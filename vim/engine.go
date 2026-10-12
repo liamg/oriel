@@ -51,7 +51,21 @@ type Engine struct {
 	uCol         int
 	inU          bool
 	visual       *Pos // the start of the Visual area, while in Visual mode
-	search       searchCmd
+	vmode        rune // 'v', 'V' or Ctrl-V
+	lastVisual   *visualArea
+	lastVisSize  *visualSize
+	search       lastSearch
+	lastSub      string // the last :s replacement, for ~
+	lastSubFlags string
+	cmdline      *cmdline
+	opts         Options
+	gstack       []*lineMarks // lines :g and :normal still have to visit, innermost last
+	inGlobal     bool
+	silent       bool
+	confirm      *confirmation
+	recReg       rune     // the register q is recording into, or 0
+	recKeys      []string // keys recorded so far
+	lastPlayed   rune
 	group        text.UndoGroup // the undo step the current change goes into
 	changeCursor Pos            // the cursor when the current command started
 }
@@ -63,11 +77,12 @@ type dotCmd struct {
 	reg   rune
 	body  []string
 	ins   []string
+	vis   *visualSize // a Visual operator: repeat on the same amount of text
 }
 
 // New returns an engine editing through ed, in normal mode.
 func New(ed *edit.Editor) *Engine {
-	e := &Engine{ed: ed, marks: map[rune]Pos{}, undoCur: map[int]Pos{}, undoMarks: map[int]map[rune]Pos{}, aiPending: -1, uLine: -1}
+	e := &Engine{ed: ed, marks: map[rune]Pos{}, undoCur: map[int]Pos{}, undoMarks: map[int]map[rune]Pos{}, aiPending: -1, uLine: -1, opts: DefaultOptions()}
 	ed.Subscribe(e.adjustMarks)
 	e.sync()
 	return e
@@ -81,10 +96,13 @@ func (e *Engine) Mode() string {
 	case Replace:
 		return "replace"
 	}
-	if e.visual != nil {
-		return "visual"
+	if e.cmdline != nil {
+		return "cmdline"
 	}
-	if c, st := parse(e.pend); st == incomplete && c.op != "" {
+	if e.visual != nil {
+		return map[rune]string{'v': "visual", 'V': "visual-line", 0x16: "visual-block"}[e.vmode]
+	}
+	if c, st := parse(e.pend, false); e.visual == nil && st == incomplete && c.op != "" {
 		return "op-pending"
 	}
 	return "normal"
@@ -138,7 +156,21 @@ func (e *Engine) setWant(v *view) { e.want = v.vcol(e.cur.Line, e.cur.Col) }
 
 // Key handles one key press.
 func (e *Engine) Key(k string) {
-	if e.mode != Normal {
+	if c := e.confirm; c != nil {
+		e.confirm = nil
+		if k == "y" || k == "Y" {
+			c.yes()
+			e.clamp(e.view())
+		}
+		e.sync()
+		return
+	}
+	if e.recReg != 0 {
+		e.recKeys = append(e.recKeys, k)
+	}
+	if e.cmdline != nil {
+		e.cmdlineKey(k)
+	} else if e.mode != Normal {
 		e.insertKey(k)
 	} else {
 		e.normalKey(k)
@@ -147,12 +179,12 @@ func (e *Engine) Key(k string) {
 }
 
 func (e *Engine) normalKey(k string) {
-	if e.visual != nil && len(e.pend) == 0 && (k == "<Esc>" || k == "v" || k == "<C-c>") {
-		e.endVisual()
+	if e.recReg != 0 && len(e.pend) == 0 && k == "q" {
+		e.stopRecording()
 		return
 	}
 	e.pend = append(e.pend, k)
-	c, st := parse(e.pend)
+	c, st := parse(e.pend, e.visual != nil)
 	switch st {
 	case incomplete:
 		return
@@ -161,6 +193,10 @@ func (e *Engine) normalKey(k string) {
 		return
 	}
 	e.pend = nil
+	if e.visual != nil {
+		e.execVisual(c)
+		return
+	}
 	e.exec(c)
 }
 
@@ -182,6 +218,8 @@ type cmd struct {
 	key   string // a command or motion
 	arg   rune   // the character after f, t, r, m, ' and the like
 	body  []string
+
+	searchTarget *target // for / and ?: the search the command line ran
 }
 
 func (c cmd) count1() int { return max(c.count, 1) }
@@ -189,7 +227,7 @@ func (c cmd) count1() int { return max(c.count, 1) }
 var operators = map[string]string{"d": "d", "c": "c", "y": "y", "<": "<", ">": ">", "g~": "~", "gu": "u", "gU": "U", "g?": "?"}
 
 // takesArg lists the keys whose next key is a character argument.
-var takesArg = map[string]bool{"f": true, "F": true, "t": true, "T": true, "r": true, "m": true, "'": true, "`": true, "g'": true, "g`": true}
+var takesArg = map[string]bool{"q": true, "@": true, "f": true, "F": true, "t": true, "T": true, "r": true, "m": true, "'": true, "`": true, "g'": true, "g`": true}
 
 var prefixes = map[string]bool{"g": true, "z": true, "[": true, "]": true, "<C-w>": true}
 
@@ -212,7 +250,7 @@ func argRune(k string) (rune, bool) {
 	return r, true
 }
 
-func parse(keys []string) (c cmd, st status) {
+func parse(keys []string, visual bool) (c cmd, st status) {
 	i := 0
 	readCount := func() (int, bool) {
 		n, any := 0, false
@@ -260,6 +298,35 @@ func parse(keys []string) (c cmd, st status) {
 	k, st := key()
 	if st != complete {
 		return c, st
+	}
+	if visual {
+		_, isOp := operators[k]
+		switch {
+		case k == "i" || k == "a":
+			if i >= len(keys) {
+				return c, incomplete
+			}
+			c.obj = k + keys[i]
+			if _, ok := objects[c.obj]; !ok {
+				return c, invalid
+			}
+			return c, complete
+		case isOp || visualCmds[k]:
+			c.key = k
+			c.body = append(c.body, k)
+			if takesArg[k] {
+				if i >= len(keys) {
+					return c, incomplete
+				}
+				r, ok := argRune(keys[i])
+				if !ok {
+					return c, invalid
+				}
+				c.arg = r
+				c.body = append(c.body, keys[i])
+			}
+			return c, complete
+		}
 	}
 	if second, ok := operators[k]; ok {
 		c.op = k
@@ -320,11 +387,13 @@ var commands = map[string]bool{
 	"p": true, "P": true, "gp": true, "gP": true, "i": true, "a": true, "I": true, "A": true, "o": true, "O": true,
 	"gi": true, "gI": true, "R": true, "~": true, "u": true, "<C-r>": true, "U": true, ".": true, "m": true,
 	"<C-o>": true, "<C-i>": true, "<Tab>": true, "<Esc>": true, "g-": true, "g+": true, "<Del>": true,
-	"v": true,
+	"v": true, "V": true, "<C-v>": true, "gv": true, ":": true, "&": true, "g&": true, "q": true, "@": true,
+	"]p": true, "[p": true, "]P": true, "[P": true,
 }
 
 // changes are the commands "." repeats.
 var changes = map[string]bool{
+	"]p": true, "[p": true, "]P": true, "[P": true,
 	"x": true, "X": true, "D": true, "C": true, "s": true, "S": true, "r": true, "J": true, "gJ": true,
 	"p": true, "P": true, "gp": true, "gP": true, "i": true, "a": true, "I": true, "A": true, "o": true, "O": true,
 	"gi": true, "gI": true, "R": true, "~": true, "<Del>": true,
@@ -333,6 +402,10 @@ var changes = map[string]bool{
 func (e *Engine) exec(c cmd) {
 	v := e.view()
 	e.changeCursor = e.cur
+	if (c.key == "/" || c.key == "?") && c.searchTarget == nil {
+		e.startCmdline(c.key[0], c, "")
+		return
+	}
 	switch {
 	case c.op != "":
 		e.startChange(c)
@@ -375,8 +448,11 @@ func (e *Engine) repeat(c cmd) {
 		return
 	}
 	n := d.count
-	if c.count > 0 {
+	if c.count > 0 && d.vis == nil {
 		n = c.count
+	}
+	if d.vis != nil {
+		e.restoreArea(e.view(), d.vis)
 	}
 	reg := d.reg
 	if reg >= '1' && reg < '9' {

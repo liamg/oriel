@@ -16,3 +16,26 @@ expect:
   
   |Line 1
   Line2
+
+=== Test_multibyte_op_end_mark #1
+ref:    testdir/test_put.vim#Test_multibyte_op_end_mark
+given:
+  |тест
+keys:   viwdp
+# cursor from oracle
+# lines 1 from oracle
+expect:
+  тес|т
+marks:  ]=1:6
+
+=== Test_multibyte_op_end_mark #2
+ref:    testdir/test_put.vim#Test_multibyte_op_end_mark
+given:
+  тес|т
+keys:   Vyp
+# cursor from oracle
+# lines 1-2 from oracle
+expect:
+  тест
+  |тест
+marks:  ]=2:6

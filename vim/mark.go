@@ -168,6 +168,18 @@ func (e *Engine) adjustMarks(ch text.Change) {
 				e.pcmark = &np
 			}
 		}
+		for _, m := range e.gstack {
+			for i, l := range m.lines {
+				if l < 0 {
+					continue
+				}
+				if np, ok := move(Pos{l, 0}); ok {
+					m.lines[i] = np.Line
+				} else {
+					m.lines[i] = -1
+				}
+			}
+		}
 		if e.uLine >= 0 {
 			if np, ok := move(Pos{e.uLine, 0}); ok {
 				e.uLine = np.Line
@@ -362,16 +374,6 @@ func (e *Engine) undoLine() {
 	e.setWant(e.view())
 }
 
-func (e *Engine) endVisual() {
-	start, end := *e.visual, e.cur
-	if less(end, start) {
-		start, end = end, start
-	}
-	e.marks['<'] = start
-	e.marks['>'] = end
-	e.visual = nil
-}
-
 // Visual returns the start of the Visual area, while in Visual mode.
 func (e *Engine) Visual() (Pos, bool) {
 	if e.visual == nil {
@@ -383,4 +385,5 @@ func (e *Engine) Visual() (Pos, bool) {
 // SetVisual starts charwise Visual mode with the area running from start to the cursor.
 func (e *Engine) SetVisual(start Pos) {
 	e.visual = &start
+	e.vmode = 'v'
 }

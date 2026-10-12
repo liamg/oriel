@@ -1,0 +1,422 @@
+# Line-wise Ex commands with ranges, typed from normal mode (change.txt, various.txt).
+
+=== :d x deletes into a register
+ref:    change.txt *:d*
+quote:  Delete [range] lines (default: current line) [into register x].
+given:
+  one
+  |two
+  three
+keys:   :d a<CR>
+expect:
+  one
+  |three
+regs:   "a = "two\n"   "" = "two\n"   "1 = "two\n"
+mode:   normal
+
+=== :d x with a count
+ref:    change.txt *:d*
+quote:  Delete {count} lines, starting with [range]
+given:
+  |one
+  two
+  three
+  four
+keys:   :2d b 2<CR>
+expect:
+  one
+  |four
+regs:   "b = "two\nthree\n"
+mode:   normal
+
+=== :d A appends to a register
+ref:    change.txt *:d*
+quote:  Delete [range] lines (default: current line) [into register x].
+given:
+  |one
+  two
+  three
+keys:   :1d a<CR>:1d A<CR>
+expect: |three
+regs:   "a = "one\ntwo\n"
+mode:   normal
+
+=== :y yanks lines without moving the cursor
+ref:    change.txt *:y*
+quote:  Yank [range] lines [into register x].
+given:
+  one
+  tw|o
+  three
+keys:   :1,2y<CR>
+expect:
+  one
+  tw|o
+  three
+regs:   "" = "one\ntwo\n"   "0 = "one\ntwo\n"
+mode:   normal
+
+=== :y reports more than 'report' lines
+ref:    options.txt *'report'*
+quote:  When the number of changed lines is more than 'report' a message will be given for most ":" commands.
+given:
+  |one
+  two
+  three
+keys:   :%y<CR>
+expect:
+  |one
+  two
+  three
+msg:    3 lines yanked
+mode:   normal
+
+=== :y x {count} starts at the last line of the range
+ref:    change.txt *:y*
+quote:  Yank {count} lines, starting with last line number in [range]
+given:
+  |one
+  two
+  three
+  four
+keys:   :1,2y c 2<CR>
+expect:
+  |one
+  two
+  three
+  four
+regs:   "c = "two\nthree\n"
+mode:   normal
+
+=== :m moves a line below an address
+ref:    change.txt *:m*
+quote:  Move the lines given by [range] to below the line given by {address}.
+given:
+  |one
+  two
+  three
+  four
+keys:   :m3<CR>
+expect:
+  two
+  three
+  |one
+  four
+mode:   normal
+
+=== :m0 moves a line to the top
+ref:    change.txt *:m*
+quote:  Move the lines given by [range] to below the line given by {address}.
+given:
+  one
+  two
+  |three
+keys:   :m0<CR>
+expect:
+  |three
+  one
+  two
+mode:   normal
+
+=== :m-2 moves a line up one
+ref:    change.txt *:m*
+quote:  Move the lines given by [range] to below the line given by {address}.
+given:
+  one
+  two
+  |three
+keys:   :m-2<CR>
+expect:
+  one
+  |three
+  two
+mode:   normal
+
+=== :m with a range reports moved lines
+ref:    options.txt *'report'*
+quote:  When the number of changed lines is more than 'report' a message will be given for most ":" commands.
+given:
+  |one
+  two
+  three
+  four
+keys:   :1,3m$<CR>
+expect:
+  four
+  one
+  two
+  |three
+msg:    3 lines moved
+mode:   normal
+
+=== :m into its own range is an error
+ref:    change.txt *E134*
+quote:  Move the lines given by [range] to below the line given by {address}.
+given:
+  |one
+  two
+  three
+keys:   :1,2m1<CR>
+expect:
+  |one
+  two
+  three
+msg:    "E134: Cannot move a range of lines into itself"
+mode:   normal
+
+=== :t copies a line below an address
+ref:    change.txt *:t*
+quote:  Synonym for copy.
+given:
+  |one
+  two
+  three
+keys:   :t$<CR>
+expect:
+  one
+  two
+  three
+  |one
+mode:   normal
+
+=== :co with a range copies to the top
+ref:    change.txt *:co*
+quote:  Copy the lines given by [range] to below the line given by {address}.
+given:
+  one
+  two
+  |three
+keys:   :2,3co0<CR>
+expect:
+  two
+  |three
+  one
+  two
+  three
+mode:   normal
+
+=== :t. duplicates the cursor line
+ref:    change.txt *:t*
+quote:  Synonym for copy.
+given:
+  o|ne
+  two
+keys:   :t.<CR>
+expect:
+  one
+  o|ne
+  two
+mode:   normal
+
+=== :j joins with the next line
+ref:    change.txt *:j*
+quote:  The default behavior is to join the current line with the line below it.
+given:
+  |one
+      two
+  three
+keys:   :j<CR>
+expect:
+  |one two
+  three
+mode:   normal
+
+=== :j with a range joins every line in it
+ref:    change.txt *:j*
+quote:  Join [range] lines.
+given:
+  |one
+  two
+  three
+  four
+keys:   :1,3j<CR>
+expect:
+  |one two three
+  four
+mode:   normal
+
+=== :j! keeps white space
+ref:    change.txt *:j*
+quote:  with [!] the join does not insert or delete any spaces.
+given:
+  |one
+    two
+keys:   :j!<CR>
+expect: |one  two
+mode:   normal
+
+=== :j with a count
+ref:    change.txt *:j*
+quote:  Join {count} lines, starting with [range]
+given:
+  |one
+  two
+  three
+  four
+keys:   :2j 3<CR>
+expect:
+  one
+  |two three four
+mode:   normal
+
+=== :j with equal start and end does nothing
+ref:    change.txt *:j*
+quote:  If a [range] has equal start and end values, this command does nothing.
+given:
+  |one
+  two
+keys:   :1,1j<CR>
+expect:
+  |one
+  two
+mode:   normal
+
+=== :> shifts lines right
+ref:    change.txt *:>*
+quote:  Shift [range] lines one 'shiftwidth' right.
+given:
+  |one
+  two
+  three
+keys:   :set sw=2 et<CR>:1,2><CR>
+expect:
+    one
+    |two
+  three
+mode:   normal
+
+=== :>> shifts twice and reports
+ref:    change.txt *:>*
+quote:  Repeat '>' for shifting multiple 'shiftwidth's.
+given:
+  |one
+  two
+  three
+keys:   :set sw=2 et<CR>:%>><CR>
+expect:
+      one
+      two
+      |three
+msg:    3 lines >ed 2 times
+mode:   normal
+
+=== :> with a count
+ref:    change.txt *:>*
+quote:  Shift {count} lines one 'shiftwidth' right, starting with [range]
+given:
+  |one
+  two
+  three
+keys:   :set sw=2 et<CR>:> 2<CR>
+expect:
+    one
+    |two
+  three
+mode:   normal
+
+=== :< shifts lines left
+ref:    change.txt *:<*
+quote:  Shift [range] lines one 'shiftwidth' left.
+given:
+  |    one
+      two
+  three
+keys:   :set sw=2 et<CR>:%<<CR>
+expect:
+    one
+    two
+  th|ree
+msg:    3 lines <ed 1 time
+mode:   normal
+
+=== :normal with a range runs on each line
+ref:    various.txt *:normal-range*
+quote:  Execute Normal mode commands {commands} for each line in the {range}.
+given:
+  |one
+  two
+  three
+keys:   :1,2normal Ax<CR>
+expect:
+  onex
+  two|x
+  three
+mode:   normal
+
+=== :normal starts each line in the first column
+ref:    various.txt *:normal-range*
+quote:  Before executing the {commands}, the cursor is positioned in the first column of the range, for each line.
+given:
+  one tw|o
+  three four
+keys:   :%norm dw<CR>
+expect:
+  two
+  |four
+mode:   normal
+
+=== :normal on the visual area
+ref:    various.txt *:normal-range*
+quote:  Execute Normal mode commands {commands} for each line in the {range}.
+given:
+  |one
+  two
+  three
+keys:   Vj:norm I-<CR>
+expect:
+  -one
+  |-two
+  three
+mode:   normal
+
+=== :pu puts a register as new lines below
+ref:    change.txt *:pu*
+quote:  Put the text [from register x] after [line] (default current line).  This always works |linewise|
+given:
+  |one two
+  three
+keys:   yiw:pu<CR>
+expect:
+  one two
+  |one
+  three
+mode:   normal
+
+=== :pu! puts above
+ref:    change.txt *:pu*
+quote:  Put the text [from register x] before [line] (default current line).
+given:
+  one
+  |two
+keys:   yy:pu!<CR>
+expect:
+  one
+  |two
+  two
+mode:   normal
+
+=== :0pu puts above the first line
+ref:    change.txt *:pu*
+quote:  Put the text [from register x] after [line] (default current line).
+given:
+  one
+  |two
+keys:   yy:0pu<CR>
+expect:
+  |two
+  one
+  two
+mode:   normal
+
+=== :$pu x puts a named register at the end
+ref:    change.txt *:pu*
+quote:  Put the text [from register x] after [line] (default current line).
+given:
+  |one
+  two
+keys:   "ayy:$pu a<CR>
+expect:
+  one
+  two
+  |one
+mode:   normal

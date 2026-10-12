@@ -1,0 +1,416 @@
+# :global and :vglobal typed from normal mode (repeat.txt *:g*).
+
+=== :g/pat/d deletes every matching line
+ref:    repeat.txt *:g*
+quote:  Execute the Ex command [cmd] (default ":p") on the lines within [range] where {pattern} matches.
+given:
+  |x one
+  two
+  x three
+  four
+  x five
+keys:   :g/x/d<CR>
+expect:
+  two
+  |four
+mode:   normal
+
+=== :g/pat/d reports the deleted lines
+ref:    options.txt *'report'*
+quote:  When the number of changed lines is more than 'report' a message will be given for most ":" commands.
+given:
+  |x one
+  two
+  x three
+  x four
+keys:   :g/x/d<CR>
+expect: |two
+msg:    3 fewer lines
+mode:   normal
+
+=== :g is undone in one step
+ref:    repeat.txt *E147*
+quote:  The undo/redo command will undo/redo the whole global command at once.
+given:
+  |x one
+  two
+  x three
+keys:   :g/x/d<CR>
+expect: |two
+undo:
+  |x one
+  two
+  x three
+mode:   normal
+
+=== :g/pat/d leaves the deleted register holding the last line
+ref:    repeat.txt *:v*
+quote:  In a second scan the [cmd] is executed for each marked line, as if the cursor was in that line.
+given:
+  |x one
+  two
+  x three
+keys:   :g/x/d<CR>
+expect: |two
+regs:   "" = "x three\n"   "1 = "x three\n"   "2 = "x one\n"
+mode:   normal
+
+=== :g/pat/d _ leaves the registers alone
+ref:    repeat.txt *:v*
+quote:  Using the underscore after `:d` avoids clobbering registers or the clipboard.
+given:
+  |x one
+  two
+  x three
+keys:   :g/x/d _<CR>
+expect: |two
+regs:   "" = (unset)   "1 = (unset)
+mode:   normal
+
+=== :g! runs on the lines that don't match
+ref:    repeat.txt *:g*
+quote:  Execute the Ex command [cmd] (default ":p") on the lines within [range] where {pattern} does NOT match.
+given:
+  |x one
+  two
+  x three
+  four
+keys:   :g!/x/d<CR>
+expect:
+  x one
+  |x three
+mode:   normal
+
+=== :v is the same as :g!
+ref:    repeat.txt *:v*
+quote:  Same as :g!.
+given:
+  |x one
+  two
+  x three
+  four
+keys:   :v/x/d<CR>
+expect:
+  x one
+  |x three
+mode:   normal
+
+=== :g with a range only looks at those lines
+ref:    repeat.txt *:v*
+quote:  The default for [range] is the whole buffer (1,$).
+given:
+  |x
+  x
+  x
+  x
+keys:   :2,3g/x/s/x/y/<CR>
+expect:
+  x
+  y
+  |y
+  x
+mode:   normal
+
+=== :g with another delimiter
+ref:    repeat.txt *:v*
+quote:  Instead of the '/' which surrounds the {pattern}, you can use any other single byte character, but not an alphabetic character
+given:
+  |a/b
+  c
+  d/e
+keys:   :g#/#d<CR>
+expect: |c
+mode:   normal
+
+=== :g without a match gives a plain message
+ref:    pattern.txt *E486*
+quote:  Note that for the `:global` command, when used in legacy script, you get a normal message "Pattern not found", for Vi compatibility.
+given:
+  |one
+  two
+keys:   :g/zzz/d<CR>
+expect:
+  |one
+  two
+msg:    "Pattern not found: zzz"
+mode:   normal
+
+=== :v matching every line gives a message
+ref:    pattern.txt *E538*
+quote:  when the pattern matches in every line with `:vglobal`.
+given:
+  |one
+  two
+keys:   :v/o/d<CR>
+expect:
+  |one
+  two
+msg:    "Pattern found in every line: o"
+mode:   normal
+
+=== :g/^/m0 reverses the buffer
+ref:    usr_12.txt *12.4*
+quote:  The |:global| command can be combined with the |:move| command to move all the lines before the first line, resulting in a reversed file.
+given:
+  |one
+  two
+  three
+  four
+keys:   :g/^/m0<CR>
+expect:
+  |four
+  three
+  two
+  one
+undo:
+  one
+  |two
+  three
+  four
+mode:   normal
+
+=== :g/pat/m$ moves matching lines to the end
+ref:    change.txt *:m*
+quote:  Move the lines given by [range] to below the line given by {address}.
+given:
+  |x one
+  two
+  x three
+  four
+keys:   :g/x/m$<CR>
+expect:
+  two
+  four
+  x one
+  |x three
+mode:   normal
+
+=== :g/pat/t. duplicates matching lines
+ref:    change.txt *:co*
+quote:  Copy the lines given by [range] to below the line given by {address}.
+given:
+  |x one
+  two
+  x three
+keys:   :g/x/t.<CR>
+expect:
+  x one
+  x one
+  two
+  x three
+  |x three
+mode:   normal
+
+=== :g/pat/t$ copies matching lines to the end
+ref:    change.txt *:co*
+quote:  Copy the lines given by [range] to below the line given by {address}.
+given:
+  |x one
+  two
+  x three
+keys:   :g/x/t$<CR>
+expect:
+  x one
+  two
+  x three
+  x one
+  |x three
+mode:   normal
+
+=== :g/pat/s substitutes in matching lines
+ref:    repeat.txt *E147*
+quote:  Any Ex command can be used, see |ex-cmd-index|.
+given:
+  |x a
+  a
+  x a
+keys:   :g/x/s/a/b/<CR>
+expect:
+  x b
+  a
+  |x b
+mode:   normal
+
+=== :g/pat/s//new/ reuses the global pattern
+ref:    repeat.txt *E147*
+quote:  The global command sets both the last used search pattern and the last used substitute pattern (this is vi compatible).
+given:
+  |pat pat
+  other
+  pat
+keys:   :g/pat/s//PAT/g<CR>
+expect:
+  PAT PAT
+  other
+  |PAT
+mode:   normal
+
+=== :g sets the last search pattern
+ref:    repeat.txt *E147*
+quote:  The global command sets both the last used search pattern and the last used substitute pattern (this is vi compatible).
+given:
+  |one
+  foo
+  three
+  foo
+keys:   :g/foo/normal A!<CR>ggn
+expect:
+  one
+  |foo!
+  three
+  foo!
+mode:   normal
+
+=== :g/pat/normal runs normal-mode keys on each line
+ref:    repeat.txt *E147*
+quote:  To execute a Normal mode command, you can use the `:normal` command
+given:
+  |x one
+  two
+  x three
+keys:   :g/x/normal A;<CR>
+expect:
+  x one;
+  two
+  x three|;
+mode:   normal
+
+=== :g/pat/normal dw
+ref:    repeat.txt *E147*
+quote:  To execute a Normal mode command, you can use the `:normal` command
+given:
+  |x one
+  two
+  x three
+keys:   :g/x/norm dw<CR>
+expect:
+  one
+  two
+  |three
+mode:   normal
+
+=== :g/pat/j joins each match with the next line
+ref:    change.txt *:j*
+quote:  The default behavior is to join the current line with the line below it.
+given:
+  |key:
+  a
+  key:
+  b
+keys:   :g/key/j<CR>
+expect:
+  key: a
+  |key: b
+mode:   normal
+
+=== :g with a relative range in the command
+ref:    repeat.txt *:v*
+quote:  NOTE [cmd] may contain a range
+given:
+  |a
+  x
+  b
+  x
+keys:   :g/x/-1d<CR>
+expect:
+  x
+  |x
+mode:   normal
+
+=== :g/pat/.,+1d loses the marks of deleted lines
+ref:    repeat.txt *:v*
+quote:  If a line is deleted its mark disappears.
+given:
+  |x1
+  x2
+  b
+  x3
+  c
+keys:   :g/x/.,+1d<CR>
+expect: |b
+mode:   normal
+
+=== :g/pat/+1d deletes the line after each match
+ref:    repeat.txt *:v*
+quote:  NOTE [cmd] may contain a range
+given:
+  |head
+  one
+  head
+  two
+keys:   :g/head/+1d<CR>
+expect:
+  head
+  |head
+mode:   normal
+
+=== :g nested with :v
+ref:    repeat.txt *E147*
+quote:  This is useful to find all lines that match a pattern and do not match another pattern
+given:
+  |found one
+  found notfound
+  other
+  found two
+keys:   :g/found/v/notfound/d<CR>
+expect:
+  found notfound
+  |other
+mode:   normal
+
+=== :g/^$/d deletes the empty lines
+ref:    repeat.txt *:g*
+quote:  Execute the Ex command [cmd] (default ":p") on the lines within [range] where {pattern} matches.
+given:
+  |one
+
+  two
+
+keys:   :g/^$/d<CR>
+expect:
+  one
+  |two
+mode:   normal
+
+=== :g/pat/y A appends matching lines to an emptied register
+ref:    change.txt *:y*
+quote:  Yank [range] lines [into register x].
+given:
+  |x one
+  two
+  x three
+keys:   qaq:g/x/y A<CR>
+expect:
+  x one
+  two
+  |x three
+regs:   "a = "\nx one\nx three\n"
+mode:   normal
+
+=== :g/pat/> shifts matching lines
+ref:    change.txt *:>*
+quote:  Shift [range] lines one 'shiftwidth' right.
+given:
+  |x one
+  two
+  x three
+keys:   :set sw=2 et<CR>:g/x/><CR>
+expect:
+    x one
+  two
+    |x three
+mode:   normal
+
+=== :g/pat/s with a pattern that fails on some lines
+ref:    repeat.txt *:v*
+quote:  If an error message is given for a line, the command for that line is aborted and the global command continues with the next marked or unmarked line.
+given:
+  |x a
+  x
+  x a
+keys:   :g/x/s/a/b/<CR>
+expect:
+  x b
+  x
+  |x b
+mode:   normal

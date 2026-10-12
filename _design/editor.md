@@ -38,7 +38,7 @@ can't host the UI we want.
 ### Scope, in order
 
 1. Motions, operators, counts, registers, dot-repeat, text objects, marks, jumplist, undo tree.
-2. Visual, visual-block, `:s` with vim regex (via our own `vimregex` translator), `:g`, ranges.
+2. Visual, visual-block, `:s` with vim regex, `:g`, ranges.
 3. Macros, `:normal`, abbreviations, `ctrl-a/x`, folds, splits, buffers, quickfix and location lists.
 4. Text objects from tree-sitter (`af`, `if`, `ac`): better than vim's own.
 5. Config is Lua (`init.lua`, see `scripting.md`). Ex commands like `:set`, `:map` and `:hi` work live.
@@ -79,6 +79,14 @@ can't host the UI we want.
 - Anchors (stable positions) for threads, breakpoints, diagnostics and
   annotations: they survive edits from any author. An anchor at either end of replaced text keeps its side; one
   inside it, or at a pure insertion, goes to the side its `Bias` says.
+
+## Regex
+
+- **Two dialects, one matcher.** The vim engine (`/`, `?`, `:s`, `:g`, `*`) speaks **vim's dialect** (`pattern.txt`), as
+  nvim does. Everything else (project search, the `plain` engine, plugins and Lua) speaks **PCRE2** (ED-10).
+- Both parse into one **backtracking matcher** of our own, `vimregex` (Go's `regexp` is RE2: no look-around, no
+  backreferences, no editor-state atoms like `\%V` and `\%#`). It runs over the buffer line by line, with a step budget
+  and a recursion limit in place of RE2's linear-time guarantee.
 
 ## Syntax
 

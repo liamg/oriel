@@ -1,6 +1,7 @@
 package vim
 
 import (
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -48,6 +49,8 @@ func (e *Engine) command(v *view, c cmd) {
 		e.join(v, max(c.count, 2), c.key == "J")
 	case "p", "P", "gp", "gP":
 		e.put(v, c)
+	case "]p", "[p", "]P", "[P":
+		e.putIndented(v, c)
 	case "~":
 		e.tilde(v, c)
 	case "i", "a", "I", "A", "o", "O", "gi", "gI", "R":
@@ -62,9 +65,27 @@ func (e *Engine) command(v *view, c cmd) {
 		}
 	case "U":
 		e.undoLine()
-	case "v":
-		p := e.cur
-		e.visual = &p
+	case "v", "V", "<C-v>":
+		e.startVisual(map[string]rune{"v": 'v', "V": 'V', "<C-v>": 0x16}[c.key], c.count)
+	case "gv":
+		e.reselect()
+	case ":":
+		pre := ""
+		if c.count > 0 {
+			pre = "."
+			if c.count > 1 {
+				pre = ".,.+" + strconv.Itoa(c.count-1)
+			}
+		}
+		e.startCmdline(':', c, pre)
+	case "q":
+		e.startRecording(c.arg)
+	case "@":
+		e.playRegister(c.arg, c.count1())
+	case "&":
+		e.ex(v, "s")
+	case "g&":
+		e.ex(v, "%s//~/&")
 	case "g-", "g+":
 		e.undoTime(c.key == "g+", c.count1())
 	case ".":

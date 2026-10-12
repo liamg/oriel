@@ -87,11 +87,14 @@ type assertion struct {
 // asserts first, then, if those depend on what came before, all the segment's keys.
 type segment struct {
 	given  vimtest.Buffer
+	prefix []vimtest.Key // :set for the options in effect at given
 	keys   []vimtest.Key
 	broken *Reject
+	state  State // after keys
 
 	short       vimtest.Buffer // the state after the previous asserts
-	from        int            // index in keys where short starts
+	shortPrefix []vimtest.Key
+	from        int // index in keys where short starts
 	shortBroken *Reject
 
 	asserts []assertion
@@ -155,7 +158,7 @@ func (m *miner) kill(reason string) {
 
 var (
 	exeRe      = regexp.MustCompile(`^(?::\s*)?exe(?:c|cu|cut|cute)?\s+(.+)$`)
-	normPrefix = regexp.MustCompile(`^:*\s*norm(?:a|al)?!?\s*`)
+	normPrefix = regexp.MustCompile(`^:*\s*norm(?:al|a)?!?\s*`)
 	setRe      = regexp.MustCompile(`^(?::\s*)?(?:set|se|setl|setlocal|setg|setglobal)\s+(.*)$`)
 	letOptRe   = regexp.MustCompile(`^let\s+&(?:l:|g:)?(\w+)\s*=\s*(.*)$`)
 	letRe      = regexp.MustCompile(`^let\s+([A-Za-z_][\w:]*)\s*(=<<|=)\s*(.*)$`)
@@ -204,10 +207,20 @@ func (m *miner) stmt(st Stmt) {
 			return
 		}
 		t = vimtest.Notation(k)
+		if plain, ok := plainText(k); ok {
+			if keys, ok := m.exKeys(plain); ok {
+				m.keys(st, keys, nil)
+				return
+			}
+		}
 	}
 	if mapRe.MatchString(t) {
 		m.drop("mappings/autocmds/functions", strings.Fields(t)[0], asserts)
 		m.kill("mappings/autocmds/functions")
+		return
+	}
+	if keys, ok := m.exKeys(t); ok {
+		m.keys(st, keys, nil)
 		return
 	}
 	m.trackOptions(t)
@@ -342,27 +355,45 @@ func keysOf(t string) (keys []vimtest.Key, isKeys bool, err *Reject) {
 
 func (m *miner) keys(st Stmt, keys []vimtest.Key, kerr *Reject) {
 	buf, mode, err := m.sim.State()
+	split := true
 	switch {
 	case m.seg == nil:
 		m.seg = &segment{given: buf, short: buf}
+		prefix, perr := m.optionKeys()
+		if perr != nil {
+			m.seg.breakWith(perr)
+		}
+		m.seg.prefix, m.seg.shortPrefix = prefix, prefix
 	case len(m.seg.asserts) > 0:
 		m.finish(false)
 		m.seg.short, m.seg.from, m.seg.shortBroken = buf, len(m.seg.keys), nil
+		prefix, perr := m.optionKeys()
+		m.seg.shortPrefix, m.seg.shortBroken = prefix, perr
+	default:
+		split = false
 	}
-	if err != nil || mode != vimtest.ModeNormal {
+	vis := visualKind[mode]
+	rec := m.recording()
+	if split && m.seg.broken != nil {
+		m.seg.state = State{Visual: vis, Recording: rec}
+	}
+	if err != nil || mode != vimtest.ModeNormal && vis == "" || (vis == "") != (m.seg.state.Visual == "") || rec != m.seg.state.Recording {
 		m.seg.breakWith(reject("not in Normal mode before the keys", "%s", mode))
+	} else if vis != "" {
+		m.seg.state.Visual = vis
 	}
-	if opts := m.nonDefault(); len(opts) > 0 {
-		m.seg.breakWith(reject("options set", "%s", strings.Join(opts, " ")))
+	if split && (vis != "" || rec) && m.seg.shortBroken == nil {
+		m.seg.shortBroken = reject("not in Normal mode before the keys", "%s", mode)
 	}
 	if kerr != nil {
 		m.seg.breakWith(kerr)
 	}
 	if m.seg.broken == nil || m.seg.shortBroken == nil {
-		insert, err := Scan(keys)
+		state, insert, err := Scan(keys, m.seg.state)
 		if err != nil {
 			m.seg.breakWith(err)
 		} else {
+			m.seg.state = state
 			m.seg.keys = append(m.seg.keys, keys...)
 			if insert {
 				m.seg.keys = append(m.seg.keys, vimtest.Key{Name: "Esc"})
@@ -373,6 +404,72 @@ func (m *miner) keys(st Stmt, keys []vimtest.Key, kerr *Reject) {
 		m.kill("statement failed in nvim")
 		m.drop("statement failed in nvim", st.Text+": "+err.Error(), 0)
 	}
+}
+
+var visualKind = map[string]string{vimtest.ModeVisual: "v", vimtest.ModeVisualLine: "V", vimtest.ModeVisualBlock: "C-v"}
+
+func (m *miner) recording() bool {
+	v, err := m.sim.Eval("reg_recording()")
+	r, _ := v.(string)
+	return err == nil && r != ""
+}
+
+// optionKeys is a :set for the non-default options in effect, which a case has to type first.
+func (m *miner) optionKeys() ([]vimtest.Key, *Reject) {
+	opts := m.nonDefault()
+	if len(opts) == 0 {
+		return nil, nil
+	}
+	var args []string
+	for _, n := range opts {
+		num, ok := exOptions[n]
+		v, err := m.sim.Eval("&" + n)
+		i, isInt := v.(int64)
+		if !ok || err != nil || !isInt {
+			return nil, reject("options set", "%s", strings.Join(opts, " "))
+		}
+		switch {
+		case num:
+			args = append(args, fmt.Sprintf("%s=%d", n, i))
+		case i != 0:
+			args = append(args, n)
+		default:
+			args = append(args, "no"+n)
+		}
+	}
+	return rawKeys(":set " + strings.Join(args, " ") + "\r"), nil
+}
+
+// exKeys types an ex statement as a `:` command line, when it's a command our engine runs. :set stays
+// a statement: options are tracked and set by optionKeys.
+func (m *miner) exKeys(t string) ([]vimtest.Key, bool) {
+	t = strings.TrimLeft(t, ": \t")
+	if t == "" || m.seg != nil && m.seg.state.Visual != "" {
+		return nil, false
+	}
+	if _, err := checkEx(t, false); err != nil {
+		return nil, false
+	}
+	rest, _ := skipRange(t)
+	if rest = strings.TrimLeft(rest, " "); rest == "" {
+		return rawKeys(":" + t + "\r"), true
+	}
+	if name, _ := splitEx(rest); strings.HasPrefix("set", name) && len(name) >= 2 {
+		return nil, false
+	}
+	return rawKeys(":" + t + "\r"), true
+}
+
+// plainText is keys as the text they type, when they're all plain characters.
+func plainText(keys []vimtest.Key) (string, bool) {
+	var b strings.Builder
+	for _, k := range keys {
+		if k.Name != "" || k.Mods != 0 || k.Rune < 0x20 {
+			return "", false
+		}
+		b.WriteRune(k.Rune)
+	}
+	return b.String(), true
 }
 
 func sortedSet(s map[string]bool) []string {
@@ -662,7 +759,7 @@ func (m *miner) finish(end bool) {
 	name := fmt.Sprintf("%s #%d", m.fn, m.n)
 	var cat, detail string
 	if seg.shortBroken == nil {
-		mined, c, d := m.build(name, seg.short, seg.keys[seg.from:], asserts)
+		mined, c, d := m.build(name, seg.short, append(slices.Clone(seg.shortPrefix), seg.keys[seg.from:]...), asserts)
 		if mined != nil {
 			m.keep(*mined, n)
 			return
@@ -670,7 +767,7 @@ func (m *miner) finish(end bool) {
 		cat, detail = c, d
 	}
 	if seg.broken == nil && (seg.from > 0 || seg.shortBroken != nil) {
-		mined, c, d := m.build(name, seg.given, seg.keys, asserts)
+		mined, c, d := m.build(name, seg.given, append(slices.Clone(seg.prefix), seg.keys...), asserts)
 		if mined != nil {
 			m.keep(*mined, n)
 			return

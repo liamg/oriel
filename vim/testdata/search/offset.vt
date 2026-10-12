@@ -1,0 +1,218 @@
+# Search offsets (*search-offset*), ;-chained searches and search as an operator motion.
+
+=== /pat/e lands on the last character of the match
+ref:    pattern.txt *search-offset*
+quote:  e[+num]	[num] characters to the right of the end of the match
+given:  |x test y
+keys:   /test/e<CR>
+expect: x tes|t y
+
+=== /pat/e+1 lands one past the end of the match
+ref:    pattern.txt *search-offset*
+quote:  e[+num]	[num] characters to the right of the end of the match
+given:  |x test y
+keys:   /test/e+1<CR>
+expect: x test| y
+
+=== /pat/e-1 lands one before the end of the match
+ref:    pattern.txt *search-offset*
+quote:  e[-num]	[num] characters to the left of the end of the match
+given:  |x test y
+keys:   /test/e-1<CR>
+expect: x te|st y
+
+=== /pat/s+2 lands two after the start of the match
+ref:    pattern.txt *search-offset*
+quote:  /test/s+2		on the 's' of "test"
+given:  |x test y
+keys:   /test/s+2<CR>
+expect: x te|st y
+
+=== /pat/s-1 lands one before the start of the match
+ref:    pattern.txt *search-offset*
+quote:  s[-num]	[num] characters to the left of the start of the match
+given:  |x test y
+keys:   /test/s-1<CR>
+expect: x| test y
+
+=== /pat/b+1 is the same as s+1
+ref:    pattern.txt *search-offset*
+quote:  b[+num]	[num] identical to s[+num] above (mnemonic: begin)
+given:  |x test y
+keys:   /test/b+1<CR>
+expect: x t|est y
+
+=== /pat/b-3 lands three before the match
+ref:    pattern.txt *search-offset*
+quote:  /test/b-3		three characters before "test"
+given:  |abcdef test
+keys:   /test/b-3<CR>
+expect: abcd|ef test
+
+=== /pat/e+ with no number means e+1
+ref:    pattern.txt *search-offset*
+quote:  If a '-' or '+' is given but [num] is omitted, a count of one will be used.
+given:  |x test y
+keys:   /test/e+<CR>
+expect: x test| y
+
+=== /pat/+1 lands one line below in column 1
+ref:    pattern.txt *search-offset*
+quote:  /test/+1		one line below "test", in column 1
+given:
+  |a
+  b test
+  cde
+keys:   /test/+1<CR>
+expect:
+  a
+  b test
+  |cde
+
+=== /pat/1 is the same as +1
+ref:    pattern.txt *search-offset*
+quote:  [num]	[num] lines downwards, in column 1
+given:
+  |a
+  b test
+  cde
+keys:   /test/1<CR>
+expect:
+  a
+  b test
+  |cde
+
+=== /pat/- lands one line above
+ref:    pattern.txt *search-offset*
+quote:  -[num]	[num] lines upwards, in column 1
+given:
+  |a
+  bcd
+  e test
+keys:   /test/-<CR>
+expect:
+  a
+  |bcd
+  e test
+
+=== ?pat?e searches backward with an end offset
+ref:    pattern.txt *?*
+quote:  ?{pattern}?{offset}<CR>
+given:  x test |y
+keys:   ?test?e<CR>
+expect: x tes|t y
+
+=== n reuses the last offset
+ref:    pattern.txt *last-pattern*
+quote:  The last used pattern and offset are remembered.
+given:  |test test test
+keys:   /test/e<CR>n
+expect: test tes|t test
+
+=== //e gives the last pattern a new offset
+ref:    pattern.txt */<CR>*
+quote:  Search forward for the [count]'th occurrence of the latest used pattern |last-pattern| with new |{offset}|.
+given:  |x test test
+keys:   /test<CR>//e<CR>
+expect: x tes|t test
+
+=== // with no offset drops the old one
+ref:    pattern.txt */<CR>*
+quote:  If {offset} is empty no offset is used.
+given:  |x test test test
+keys:   /test/e<CR>//<CR>
+expect: x test |test test
+
+=== /pat/s-1 skips a match that would not move the cursor
+ref:    pattern.txt *last-pattern*
+quote:  The search usually skips matches that don't move the cursor.
+given:  |xab xab xab
+keys:   /ab/s-1<CR>
+expect: xab |xab xab
+
+=== n with an s-1 offset moves on to the next match
+ref:    pattern.txt *n*
+quote:  If the cursor doesn't move the search is repeated with count + 1.
+given:  |xab xab xab
+keys:   /ab/s-1<CR>n
+expect: xab xab |xab
+
+=== ; runs a second search from the first match
+ref:    pattern.txt *//;*
+quote:  The first one first finds the next occurrence of "test 1", and then the first occurrence of "test" after that.
+given:  |test 2 test 1 x test
+keys:   /test 1/;/test<CR>
+expect: test 2 test 1 x |test
+
+=== ; with a backward second search
+ref:    pattern.txt *//;*
+quote:  A very special offset is ';' followed by another search command.
+given:  |a b c foo
+keys:   /foo/;?b<CR>
+expect: a |b c foo
+
+=== ; that fails does not move the cursor
+ref:    pattern.txt *//;*
+quote:  When an error occurs the cursor is not moved at all.
+given:  |a foo b
+keys:   /foo/;/zzz<CR>
+expect: |a foo b
+
+=== d/pat deletes up to the match, exclusive
+ref:    pattern.txt */*
+quote:  Search forward for the [count]'th occurrence of {pattern} |exclusive|.
+given:  |one two foo three
+keys:   d/foo<CR>
+expect: |foo three
+regs:   "" = "one two "
+
+=== d?pat deletes back to the match, exclusive
+ref:    pattern.txt *?*
+quote:  Search backward for the [count]'th previous occurrence of {pattern} |exclusive|.
+given:  foo one |two
+keys:   d?one<CR>
+expect: foo |two
+
+=== d/pat/e includes the end of the match
+ref:    pattern.txt *search-offset*
+quote:  When including an offset with 'e', the search becomes inclusive (the character the cursor lands on is included in operations).
+given:  |one foo two
+keys:   d/foo/e<CR>
+expect: | two
+
+=== d/pat/+0 deletes whole lines
+ref:    pattern.txt *search-offset*
+quote:  However, if a line offset is given, the whole lines between the two cursor positions are affected.
+given:
+  a|aa
+  bbb
+  ccc foo
+  ddd
+keys:   d/foo/+0<CR>
+expect:
+  d|dd
+
+=== c//e changes to the end of the match
+ref:    pattern.txt *search-offset*
+quote:  c//e<CR>	change until end of match
+given:  |x foo y foo
+keys:   /foo<CR>c//e<CR>bar<Esc>
+expect: x ba|r y foo
+
+=== y/pat yanks up to the match
+ref:    pattern.txt */*
+quote:  Search forward for the [count]'th occurrence of {pattern} |exclusive|.
+given:  |one two foo
+keys:   y/foo<CR>
+expect: |one two foo
+regs:   "0 = "one two "
+
+=== d/pat across lines is still exclusive
+ref:    pattern.txt */*
+quote:  Search forward for the [count]'th occurrence of {pattern} |exclusive|.
+given:
+  a|bc
+  de foo
+keys:   d/foo<CR>
+expect:
+  a|foo

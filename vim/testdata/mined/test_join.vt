@@ -106,7 +106,45 @@ given:
   
   c
   d
+keys:   :%join<CR>
+# cursor from oracle
+expect:
+  |a b c d
+
+=== Test_join_lines #2
+ref:    testdir/test_join.vim#Test_join_lines
+given:
+  |a
+  b
+  
+  c
+  d
 keys:   5J
 # cursor from oracle
 expect:
   a b c| d
+
+=== Test_join_lines #3
+ref:    testdir/test_join.vim#Test_join_lines
+given:
+  |a
+  b
+  c
+keys:   :2,2join<CR>
+# cursor column from oracle
+expect:
+  a
+  |b
+  c
+
+=== Test_join_lines #4
+ref:    testdir/test_join.vim#Test_join_lines
+given:
+  a
+  |b
+  c
+keys:   :2join<CR>
+# cursor from oracle
+expect:
+  a
+  |b c

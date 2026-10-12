@@ -24,10 +24,11 @@ type target struct {
 
 // motionCtx is what a motion knows about how it was typed.
 type motionCtx struct {
-	count int // 0 when none was typed
-	arg   rune
-	op    string // the pending operator, if any
-	key   string
+	count  int // 0 when none was typed
+	arg    rune
+	op     string // the pending operator, if any
+	key    string
+	search *target // a / or ? search already run from the command line
 }
 
 func (m motionCtx) count1() int { return max(m.count, 1) }
@@ -53,7 +54,8 @@ func init() {
 		"[[": section, "]]": section, "[]": section, "][": section,
 		"[(": bracketBlock, "[{": bracketBlock, "])": bracketBlock, "]}": bracketBlock,
 		"[m": bracketBlock, "]m": bracketBlock, "[M": bracketBlock, "]M": bracketBlock,
-		"H": screenLine, "M": screenLine, "L": screenLine, "*": starSearch, "#": starSearch, "n": searchNext, "N": searchNext, "]`": nextMark, "[`": nextMark, "]'": nextMark, "['": nextMark,
+		"H": screenLine, "M": screenLine, "L": screenLine, "*": starSearch, "#": starSearch, "g*": starSearch, "g#": starSearch, "n": searchNext, "N": searchNext,
+		"/": searchTyped, "?": searchTyped, "]`": nextMark, "[`": nextMark, "]'": nextMark, "['": nextMark,
 	} {
 		motions[k] = m
 	}
@@ -1004,75 +1006,6 @@ func screenLine(e *Engine, v *view, m motionCtx) (target, bool) {
 	return target{pos: Pos{line, 0}, kind: linewise, jump: true, keepCol: true}, true
 }
 
-// searchCmd is the last search, for n and N.
-type searchCmd struct {
-	word string
-	fwd  bool
-	set  bool
-}
-
-func starSearch(e *Engine, v *view, m motionCtx) (target, bool) {
-	l := v.line(e.cur.Line)
-	start := e.cur.Col
-	for start < len(l) && !isKeyword(rune(l[start])) {
-		start++
-	}
-	if start >= len(l) {
-		e.echo("E348: No string under cursor")
-		return target{}, false
-	}
-	for start > 0 && isKeyword(rune(l[start-1])) {
-		start--
-	}
-	end := start
-	for end < len(l) && isKeyword(rune(l[end])) {
-		end++
-	}
-	e.search = searchCmd{word: string(l[start:end]), fwd: m.key == "*", set: true}
-	return findWord(e, v, Pos{e.cur.Line, start}, e.search.word, e.search.fwd, m.count1())
-}
-
-func searchNext(e *Engine, v *view, m motionCtx) (target, bool) {
-	if !e.search.set {
-		e.echo("E35: No previous regular expression")
-		return target{}, false
-	}
-	fwd := e.search.fwd == (m.key == "n")
-	return findWord(e, v, e.cur, e.search.word, fwd, m.count1())
-}
-
-// findWord finds the count-th whole-word match from p, wrapping around the buffer.
-func findWord(e *Engine, v *view, p Pos, word string, fwd bool, count int) (target, bool) {
-	s := v.s.String()
-	off := v.offset(p)
-	isWord := func(i int) bool {
-		if i+len(word) > len(s) || s[i:i+len(word)] != word {
-			return false
-		}
-		return (i == 0 || !isKeyword(rune(s[i-1]))) && (i+len(word) == len(s) || !isKeyword(rune(s[i+len(word)])))
-	}
-	for range count {
-		found := -1
-		for k := 1; k <= len(s); k++ {
-			i := off + k
-			if !fwd {
-				i = off - k
-			}
-			i = (i%len(s) + len(s)) % len(s)
-			if isWord(i) {
-				found = i
-				break
-			}
-		}
-		if found < 0 {
-			e.echo("E486: Pattern not found: \\<" + word + "\\>")
-			return target{}, false
-		}
-		off = found
-	}
-	return target{pos: v.pos(off), jump: true}, true
-}
-
 // nextMark is ]` and friends: the next or previous lowercase mark.
 func nextMark(e *Engine, v *view, m motionCtx) (target, bool) {
 	fwd := m.key[0] == ']'
@@ -1100,4 +1033,12 @@ func nextMark(e *Engine, v *view, m motionCtx) (target, bool) {
 		return target{pos: Pos{p.Line, v.firstNonBlank(p.Line)}, kind: linewise}, true
 	}
 	return target{pos: p}, true
+}
+
+// searchTyped is / and ?: the command line has already been typed, and the search's target rides on the command.
+func searchTyped(e *Engine, v *view, m motionCtx) (target, bool) {
+	if m.search == nil {
+		return target{}, false
+	}
+	return *m.search, true
 }

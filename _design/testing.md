@@ -104,8 +104,9 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
   - The converter (`vim/vimtest/mine`, run with `cd vim && go run ./vimtest/mine/cmd`) replays each test function in
     nvim, statement by statement. Keys typed with `:normal`, `:exe "normal …"` or `feedkeys(…, 'x')` become a case's
     keys; the buffer and cursor before them its `given`; the `assert_equal`s that follow (buffer lines, cursor, registers,
-    marks) its `expect`. Anything it can't convert faithfully is skipped: non-default options, mappings, visual mode,
-    search, ex commands, macros, folds, windows, screen-relative motions.
+    marks) its `expect`. Ex statements the engine runs (`:s`, `:g`, `:d`…) are typed as `:` command lines, and the
+    options it knows (`sw`, `et`, `ic`, `scs`, `ws`, `report`) as a leading `:set`. Anything it can't convert faithfully
+    is skipped: other options, mappings, select mode, `gn`, other ex commands, folds, windows, screen-relative motions.
   - A value vim didn't assert (often the cursor) is taken from nvim, and the case says so in a `# … from oracle` comment.
   - Every case is replayed alone in nvim before it's written; one nvim disagrees with is dropped.
   - The output is `vim/testdata/mined/*.vt`, generated, never edited by hand. `TestMined` runs it against the engine and

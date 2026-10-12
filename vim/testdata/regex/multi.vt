@@ -1,0 +1,227 @@
+# Multis: * \+ \= \? \{n,m} and the lazy \{-n,m}, empty matches, \@> and greedy versus lazy.
+
+=== * matches as many as possible
+ref:    pattern.txt */star*
+quote:  Matches 0 or more of the preceding atom, as many as possible.
+given:  |baaac
+keys:   :s/ba*/(&)/<CR>
+expect: |(baaa)c
+
+=== * matches zero times
+ref:    pattern.txt */star*
+quote:  a*	   a\*		"", "a", "aa", "aaa", etc.
+given:  |bc
+keys:   :s/ba*c/(&)/<CR>
+expect: |(bc)
+
+=== * at the start of the pattern is a literal star
+ref:    pattern.txt */star*
+quote:  Exception: When "*" is used at the start of the pattern or just after "^" it matches the star character.
+given:  |a*b
+keys:   :s/*/(&)/<CR>
+expect: |a(*)b
+
+=== * just after ^ is a literal star
+ref:    pattern.txt */star*
+quote:  Exception: When "*" is used at the start of the pattern or just after "^" it matches the star character.
+given:  |*a*
+keys:   :s/^*/(&)/g<CR>
+expect: |(*)a*
+
+=== an empty match with * is replaced between characters
+ref:    pattern.txt */star*
+quote:  a*	   a\*		"", "a", "aa", "aaa", etc.
+given:  |abc
+keys:   :s/x*/-/g<CR>
+expect: |-a-b-c
+
+=== .* stops at the end of the line
+ref:    pattern.txt */star*
+quote:  .*	   \.\*		anything, also an empty string, no end-of-line
+given:
+  |a=1
+  b=2
+keys:   :%s/=.*/(&)/<CR>
+expect:
+  a(=1)
+  |b(=2)
+
+=== \_.* matches to the end of the buffer
+ref:    pattern.txt */star*
+quote:  \_.*	   \_.\*	everything up to the end of the buffer
+given:
+  |a=1
+  b=2
+keys:   :%s/=\_.*/X/<CR>
+expect:
+  |aX
+
+=== \_.*END matches up to the last END
+ref:    pattern.txt */star*
+quote:  \_.*END	   \_.\*END	everything up to and including the last "END" in the buffer
+given:
+  |a END
+  b END c
+keys:   :%s/a\_.*END/X/<CR>
+expect:
+  |X c
+
+=== \+ matches one or more
+ref:    pattern.txt */\+*
+quote:  Matches 1 or more of the preceding atom, as many as possible.
+given:  |b ab aab
+keys:   :s/a\+b/(&)/g<CR>
+expect: |b (ab) (aab)
+
+=== ^.\+$ matches a non-empty line
+ref:    pattern.txt */\+*
+quote:  ^.\+$		any non-empty line
+given:
+  |a
+
+  b
+keys:   :%s/^.\+$/(&)/<CR>
+expect:
+  (a)
+
+  |(b)
+
+=== \= matches zero or one
+ref:    pattern.txt */\=*
+quote:  foo\=		"fo" and "foo"
+given:  |fo foo fooo
+keys:   :s/foo\=/(&)/g<CR>
+expect: |(fo) (foo) (foo)o
+
+=== \? is the same as \=
+ref:    pattern.txt */\?*
+quote:  Just like \=.
+given:  |fo foo
+keys:   :s/foo\?/(&)/g<CR>
+expect: |(fo) (foo)
+
+=== \{n,m} matches n to m times
+ref:    pattern.txt *non-greedy*
+quote:  ab\{2,3}c		"abbc" or "abbbc"
+given:  |abc abbc abbbc abbbbc
+keys:   :s/ab\{2,3}c/(&)/g<CR>
+expect: |abc (abbc) (abbbc) abbbbc
+
+=== \{n} matches exactly n times
+ref:    pattern.txt *non-greedy*
+quote:  a\{5}			"aaaaa"
+given:  |aaaaaaa
+keys:   :s/a\{5}/(&)/<CR>
+expect: |(aaaaa)aa
+
+=== \{n,} matches at least n times
+ref:    pattern.txt *non-greedy*
+quote:  ab\{2,}c		"abbc", "abbbc", "abbbbc", etc.
+given:  |abc abbbbc
+keys:   :s/ab\{2,}c/(&)/g<CR>
+expect: |abc (abbbbc)
+
+=== \{,m} matches at most m times
+ref:    pattern.txt *non-greedy*
+quote:  ab\{,3}c		"ac", "abc", "abbc" or "abbbc"
+given:  |ac abbbc abbbbc
+keys:   :s/ab\{,3}c/(&)/g<CR>
+expect: |(ac) (abbbc) abbbbc
+
+=== \{} is the same as *
+ref:    pattern.txt */\{*
+quote:  Matches 0 or more of the preceding atom, as many as possible (like *)
+given:  |baaac
+keys:   :s/ba\{}/(&)/<CR>
+expect: |(baaa)c
+
+=== \{n,m\} may close with a backslash
+ref:    pattern.txt *non-greedy*
+quote:  The } may optionally be preceded with a backslash: \{n,m\}.
+given:  |aaa
+keys:   :s/a\{2\}/(&)/<CR>
+expect: |(aa)a
+
+=== \{n} on a group
+ref:    pattern.txt *non-greedy*
+quote:  a\(bc\)\{1,2}d		"abcd" or "abcbcd"
+given:  |abcd abcbcd abcbcbcd
+keys:   :s/a\(bc\)\{1,2}d/(&)/g<CR>
+expect: |(abcd) (abcbcd) abcbcbcd
+
+=== \{-} matches as few as possible
+ref:    pattern.txt *non-greedy*
+quote:  a[bc]\{-}[cd]		"abc" in "abcd"
+given:  |abcd
+keys:   :s/a[bc]\{-}[cd]/(&)/<CR>
+expect: |(abc)d
+
+=== * against \{-} on the same text
+ref:    pattern.txt *non-greedy*
+quote:  a[bc]*[cd]		"abcd" in "abcd"
+given:  |abcd
+keys:   :s/a[bc]*[cd]/(&)/<CR>
+expect: |(abcd)
+
+=== \{-} prefers a match that starts earlier
+ref:    pattern.txt *non-greedy*
+quote:  A match that starts earlier is preferred over a shorter match: "a\{-}b" matches "aaab" in "xaaab".
+given:  |xaaab
+keys:   :s/a\{-}b/(&)/<CR>
+expect: |x(aaab)
+
+=== .\{-} is a lazy .*
+ref:    pattern.txt *non-greedy*
+quote:  In particular, "\{-}" is the same as "*" but uses the shortest match first algorithm.
+given:  |<a><b>
+keys:   :s/<.\{-}>/(&)/g<CR>
+expect: |(<a>)(<b>)
+
+=== .* is greedy
+ref:    pattern.txt */star*
+quote:  Matches 0 or more of the preceding atom, as many as possible.
+given:  |<a><b>
+keys:   :s/<.*>/(&)/g<CR>
+expect: |(<a><b>)
+
+=== \{-1,} matches once when it can
+ref:    pattern.txt */\{-*
+quote:  matches at least n of the preceding atom, as few as possible
+given:  |aaa
+keys:   :s/a\{-1,}/(&)/g<CR>
+expect: |(a)(a)(a)
+
+=== \{-n,m} takes n when that is enough
+ref:    pattern.txt */\{-*
+quote:  matches n to m of the preceding atom, as few as possible
+given:  |aaaaa
+keys:   :s/a\{-2,4}/(&)/g<CR>
+expect: |(aa)(aa)a
+
+=== \{-,m} can match nothing
+ref:    pattern.txt */\{-*
+quote:  matches 0 to m of the preceding atom, as few as possible
+given:  |bab
+keys:   :s/a\{-,2}b/(&)/g<CR>
+expect: |(b)(ab)
+
+=== \@> does not give back
+ref:    pattern.txt */\@>*
+quote:  \(a*\)\@>a	nothing (the "a*" takes all the "a"'s, there can't be another one following)
+given:  |aab
+keys:   :s/\(a*\)\@>a\|b/(&)/g<CR>
+expect: |aa(b)
+
+=== \@> matches when what follows still fits
+ref:    pattern.txt */\@>*
+quote:  Matches the preceding atom like matching a whole pattern.
+given:  |aab
+keys:   :s/\(a*\)\@>b/(&)/<CR>
+expect: |(aab)
+
+=== a multi on a group repeats the whole group
+ref:    pattern.txt *non-greedy*
+quote:  a[bc]\{3}d		"abbbd", "abbcd", "acbcd", "acccd", etc.
+given:  |abbcd abcd
+keys:   :s/a[bc]\{3}d/(&)/g<CR>
+expect: |(abbcd) abcd

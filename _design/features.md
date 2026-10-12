@@ -56,6 +56,7 @@ How everything hangs together, built and tested before features land on it.
 | ED-7 | Decorations between lines: threads, explain cards, diffs, virtual text | 01 | ui, editor | P3 | ED-1, FW-6 | the layout engine places blocks at anchors and survives edits above them |
 | ED-8 | Multi-cursor and LSP rename preview | 09 | edit | P4 | ED-7, LS-1 | – |
 | ED-9 | `.editorconfig`, the IDE-relevant `.gitattributes` (eol, binary, encoding, generated), and opt-in modelines as a buffer-scoped settings layer | 19 | registry, edit | P3 | ED-2, SH-12 | EditorConfig core test suite passes; `.gitattributes` fixtures match `git check-attr`; properties show with their source on the settings page; edits re-apply live |
+| ED-10 | PCRE2 regex outside the vim engine: project search, the `plain` engine, the plugin and Lua API | – | regex | P3 | ED-3 | PCRE2's own test suite passes for supported features; the Lua API takes PCRE2 patterns |
 
 ## Files, git, terminals
 

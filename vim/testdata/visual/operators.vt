@@ -1,0 +1,337 @@
+# Operators on a charwise Visual area, and repeating them with ".".
+
+=== vd deletes the selected characters
+ref:    change.txt *v_d*
+quote:  "Delete the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:  foo |bar baz
+keys:   ved
+expect: foo | baz
+regs:   "" = "bar"   "- = "bar"
+undo:   foo |bar baz
+
+=== vx is like vd
+ref:    change.txt *v_x*
+quote:  "Delete the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:  a|bcdef
+keys:   vlx
+expect: a|def
+regs:   "" = "bc"
+
+=== vd across lines joins what is left
+ref:    change.txt *v_d*
+quote:  "Delete the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  ab|cd
+  efgh
+keys:   vjd
+expect:  ab|h
+regs:   "" = "cd\nefg"   "1 = "cd\nefg"
+
+=== v"ad deletes into a named register
+ref:    visual.txt *visual-operators*
+quote:  "If you want to give a register name using the \"\"\" command, do this just before typing the operator character: \"v{move-around}\"xd\"."
+given:  foo |bar baz
+keys:   ve"ad
+expect: foo | baz
+regs:   "a = "bar"   "" = "bar"
+
+=== vy yanks and goes to the start of the area
+ref:    change.txt *v_y*
+quote:  "Yank the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:  foo ba|r baz
+keys:   vby
+expect: foo |bar baz
+regs:   "" = "bar"   "0 = "bar"
+mode:   normal
+
+=== vc deletes and starts Insert mode
+ref:    change.txt *v_c*
+quote:  "Delete the highlighted text [into register x] and start insert (for {Visual} see |Visual-mode|)."
+given:  foo |bar baz
+keys:   vecX
+expect: foo X| baz
+mode:   insert
+regs:   "" = "bar"
+
+=== vc then Esc
+ref:    change.txt *v_c*
+quote:  "Delete the highlighted text [into register x] and start insert (for {Visual} see |Visual-mode|)."
+given:  foo |bar baz
+keys:   vecXY<Esc>
+expect: foo X|Y baz
+mode:   normal
+
+=== vs is like vc
+ref:    change.txt *v_s*
+quote:  "Delete the highlighted text [into register x] and start insert (for {Visual} see |Visual-mode|)."
+given:  a|bcd
+keys:   vlsX<Esc>
+expect: a|Xd
+
+=== vr replaces every selected character
+ref:    change.txt *v_r*
+quote:  "Replace all selected characters by {char}."
+given:  foo |bar baz
+keys:   verx
+expect: foo |xxx baz
+
+=== vr across lines keeps the line break
+ref:    change.txt *v_r*
+quote:  "Replace all selected characters by {char}."
+given:
+  ab|c
+  def
+keys:   vjr-
+expect:
+  ab|-
+  ---
+
+=== vr on multibyte characters
+ref:    change.txt *v_r*
+quote:  "Replace all selected characters by {char}."
+given:  a|äöüb
+keys:   vllrx
+expect: a|xxxb
+
+=== vJ joins the lines of a charwise area
+ref:    change.txt *v_J*
+quote:  "Join the highlighted lines, with a minimum of two lines."
+given:
+  o|ne
+  two
+  three
+keys:   vjJ
+expect:
+  one| two
+  three
+
+=== vgJ joins without spaces
+ref:    change.txt *v_gJ*
+quote:  "Don't insert or remove any spaces."
+given:
+  o|ne
+    two
+keys:   vgJ
+expect:  one|  two
+
+=== v~ switches case
+ref:    change.txt *v_~*
+quote:  "Switch case of highlighted text (for {Visual} see |Visual-mode|)."
+given:  |aBc dE
+keys:   ve~
+expect: |AbC dE
+
+=== vu makes lowercase
+ref:    change.txt *v_u*
+quote:  "Make highlighted text lowercase (for {Visual} see |Visual-mode|)."
+given:  FOO |BAR
+keys:   v$u
+expect: FOO |bar
+
+=== vU makes uppercase across lines
+ref:    change.txt *v_U*
+quote:  "Make highlighted text uppercase (for {Visual} see |Visual-mode|)."
+given:
+  ab|c
+  def
+keys:   vjU
+expect:
+  ab|C
+  DEF
+
+=== vU on multibyte characters
+ref:    change.txt *v_U*
+quote:  "Make highlighted text uppercase (for {Visual} see |Visual-mode|)."
+given:  |äöü x
+keys:   veU
+expect: |ÄÖÜ x
+
+=== vg? rot13 encodes
+ref:    change.txt *v_g?*
+quote:  "Rot13 encode the highlighted text (for {Visual} see |Visual-mode|)."
+given:  |Hello world
+keys:   veg?
+expect: |Uryyb world
+
+=== v> shifts the whole line
+ref:    change.txt *v_>*
+quote:  "Shift the highlighted lines [count] 'shiftwidth' rightwards (for {Visual} see |Visual-mode|)."
+given:  foo |bar
+keys:   vl>
+expect: |	foo bar
+
+=== v2> takes a count
+ref:    visual.txt *visual-operators*
+quote:  "If you want to give a count to the command, do this just before typing the operator character: \"v{move-around}3>\" (move lines 3 indents to the right)."
+given:
+  fo|o
+  bar
+keys:   vj2>
+expect:
+  |		foo
+  		bar
+
+=== v< shifts left
+ref:    change.txt *v_<*
+quote:  "Shift the highlighted lines [count] 'shiftwidth' leftwards (for {Visual} see |Visual-mode|)."
+given:
+  		foo |bar
+keys:   v<
+expect:
+  	foo ba|r
+
+=== vp replaces the area and keeps what was there
+ref:    change.txt *v_p*
+quote:  "With |p| the previously selected text is put in the unnamed register (and possibly the selection and/or clipboard)."
+given:  |foo bar
+keys:   yiwwviwp
+expect: foo fo|o
+regs:   "" = "bar"   "0 = "foo"
+
+=== vP keeps the unnamed register so it can be repeated
+ref:    change.txt *v_P*
+quote:  "With |P| the unnamed register is not changed (and neither the selection or clipboard), you can repeat the same change."
+given:  |foo bar baz
+keys:   yiwwviwPwviwP
+expect: foo foo fo|o
+regs:   "" = "foo"
+
+=== "0p puts the yanked text again
+ref:    change.txt *v_p*
+quote:  "E.g., yank the text to copy, Visually select the text to replace and use \"0p ."
+given:  |foo bar baz
+keys:   yiwwviwpwviw"0p
+expect: foo foo fo|o
+regs:   "" = "baz"
+
+=== vp with a linewise register splits the line
+ref:    change.txt *put-Visual-mode*
+quote:  "Whether this works well depends on the type of selection and the type of the text in the register."
+given:
+  |one
+  a b c
+keys:   yyjwvp
+expect:
+  one
+  a 
+  |one
+   c
+
+=== gv after p selects the put text
+ref:    visual.txt *gv*
+quote:  "After using \"p\" or \"P\" in Visual mode the text that was put will be selected."
+given:  |foo xy
+keys:   yiwwviwpgv
+expect: foo [fo|o]
+mode:   visual
+
+=== . repeats vd on the same number of characters
+ref:    visual.txt *visual-repeat*
+quote:  "Normal Visual mode within one line: The same number of characters."
+given:  |abcdefgh
+keys:   vld
+expect: |cdefgh
+dot:    |efgh
+
+=== . repeats viwU on the same number of characters, not a word
+ref:    visual.txt *visual-repeat*
+quote:  "When repeating a Visual mode operator, the operator will be applied to the same amount of text as the last time:"
+given:  |foo barbaz
+keys:   viwUw.
+expect: FOO |BARbaz
+
+=== . repeats a multi-line charwise delete
+ref:    visual.txt *visual-repeat*
+quote:  "Normal Visual mode with several lines: The same number of lines, in the last line the same number of characters as in the last line the last time."
+given:
+  a|bc
+  def
+  ghi
+  jkl
+keys:   vjd
+expect:
+  a|f
+  ghi
+  jkl
+dot:
+  a|i
+  jkl
+
+=== . repeats Vd on the same number of lines
+ref:    visual.txt *visual-repeat*
+quote:  "Linewise Visual mode: The same number of lines."
+given:
+  |1
+  2
+  3
+  4
+  5
+keys:   Vjd
+expect:
+  |3
+  4
+  5
+dot:    |5
+
+=== . repeats V> on the same number of lines
+ref:    visual.txt *visual-repeat*
+quote:  "Linewise Visual mode: The same number of lines."
+given:
+  |a
+  b
+  c
+keys:   Vj>j.
+expect:
+  	a
+  |		b
+  	c
+
+=== . ignores a count for a Visual operator
+ref:    visual.txt *visual-repeat*
+quote:  "Any count passed to the `.` command is not used."
+given:  |abcdefgh
+keys:   vld3.
+expect: |efgh
+
+=== . repeats a block delete on the same rectangle
+ref:    visual.txt *visual-repeat*
+quote:  "Blockwise Visual mode: The same number of lines and columns."
+given:
+  |abcdef
+  ghijkl
+  mnopqr
+keys:   <C-v>jld
+expect:
+  |cdef
+  ijkl
+  mnopqr
+dot:
+  |ef
+  kl
+  mnopqr
+
+=== . repeats a block I
+ref:    visual.txt *visual-repeat*
+quote:  "Blockwise Visual mode: The same number of lines and columns."
+given:
+  |abc
+  def
+keys:   <C-v>jI-<Esc>ll.
+expect:
+  -a|-bc
+  -d-ef
+
+=== . after $ in a block repeats to the end of every line
+ref:    visual.txt *visual-repeat*
+quote:  "If the \"$\" command was used as one of the last commands to extend the highlighted text, the repeating will be applied up to the rightmost column of the longest line."
+given:
+  a|bc
+  defgh
+  ij
+  klmnop
+keys:   <C-v>j$d2jl.
+expect:
+  a
+  d
+  |i
+  k

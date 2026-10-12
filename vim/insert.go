@@ -15,6 +15,7 @@ type insertState struct {
 	aiLine int      // the line holding only autoindent nothing has been typed on, or -1
 	start  Pos
 
+	block        *blockInsert
 	pendingCtrlG bool
 	pendingCtrlR bool
 }
@@ -219,6 +220,22 @@ func (e *Engine) dropAutoindent(v *view) {
 
 func (e *Engine) finishInsert() {
 	in := e.ins
+	if in.block != nil {
+		e.finishBlock(in.block)
+		if !in.block.change {
+			e.marks['^'] = e.cur
+			e.cur = in.block.left
+			e.mode = Normal
+			e.ins = nil
+			e.clamp(e.view())
+			e.setWant(e.view())
+			if e.rec != nil {
+				e.endChange()
+			}
+			e.group = 0
+			return
+		}
+	}
 	for n := in.count - 1; n > 0; n-- {
 		if in.kind == "o" || in.kind == "O" {
 			e.openLine(e.view(), true)

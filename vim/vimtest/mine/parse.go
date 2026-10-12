@@ -133,7 +133,7 @@ func statements(lines []string, first int) []Stmt {
 	return out
 }
 
-var normalRe = regexp.MustCompile(`^(?::\s*)?(?:sil(?:e|en|ent)?!?\s+)?norm(?:a|al)?!?(?:\s|$)`)
+var normalRe = regexp.MustCompile(`^(?::\s*)?(?:sil(?:e|en|ent)?!?\s+)?norm(?:al|a)?!?(?:\s|$)`)
 
 // splitBar splits a line at `|` command separators. `:normal` takes the rest of the line, and a `"`
 // that can't start a string starts a comment.
