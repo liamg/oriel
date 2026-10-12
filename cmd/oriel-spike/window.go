@@ -7,11 +7,13 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gioui.org/app"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/system"
 	"gioui.org/op"
 	"gioui.org/unit"
 
@@ -37,6 +39,10 @@ func runWindow(name string, auto bool, phases string) error {
 			width, height = 900, 160
 		}
 		w.Option(app.Title("oriel-spike"), app.Size(width, height))
+		w.Perform(system.ActionRaise)
+		if auto {
+			go kick(w)
+		}
 		err := loop(w, s, auto)
 		stopProfile()
 		if err != nil {
@@ -97,6 +103,28 @@ type phaseStats struct {
 	cpu                    time.Duration
 	wall                   time.Duration
 	gcs                    uint32
+}
+
+// nextFrame is when -auto expects its next frame (unix nanos), for kick.
+var nextFrame atomic.Int64
+
+// kicks counts frames kick had to request.
+var kicks atomic.Int64
+
+// kick invalidates the window when an expected frame is 50 ms late. On macOS the
+// display link can stall until the window gets an input event.
+func kick(w *app.Window) {
+	const late = 50 * time.Millisecond
+	nextFrame.Store(time.Now().UnixNano())
+	for {
+		if wait := time.Until(time.Unix(0, nextFrame.Load()).Add(late)); wait > 0 {
+			time.Sleep(wait)
+			continue
+		}
+		kicks.Add(1)
+		w.Invalidate()
+		time.Sleep(late)
+	}
 }
 
 func loop(w *app.Window, s scene.Scene, auto bool) error {
@@ -229,17 +257,22 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 				}
 				s, _ = scene.ByName(script[pi].scene)
 				st = scene.NewState()
+				nextFrame.Store(time.Now().UnixNano())
 				gtx.Execute(op.InvalidateCmd{})
 				continue
 			}
+			next := time.Now()
 			switch {
 			case p.frames > 0:
 				gtx.Execute(op.InvalidateCmd{})
 			case p.invalidate > 0:
-				gtx.Execute(op.InvalidateCmd{At: t0.Add(p.invalidate)})
+				next = t0.Add(p.invalidate)
+				gtx.Execute(op.InvalidateCmd{At: next})
 			default:
-				gtx.Execute(op.InvalidateCmd{At: pstart.Add(p.dur)})
+				next = pstart.Add(p.dur)
+				gtx.Execute(op.InvalidateCmd{At: next})
 			}
+			nextFrame.Store(next.UnixNano())
 		}
 	}
 }
@@ -280,6 +313,9 @@ func mean(ds scene.Durations) time.Duration {
 func report(first time.Duration, firstRSS float64, size string, stats []phaseStats, keys scene.Durations) {
 	fmt.Printf("text=%s shapes=%s; window %s\n", textMode, map[bool]string{false: "paths", true: "baked"}[bakedShapes], size)
 	fmt.Printf("startup: first frame presented %s after start; RSS then %.0f MB\n", first.Round(time.Millisecond), firstRSS)
+	if n := kicks.Load(); n > 0 {
+		fmt.Printf("kicked %d late frames: the display link stalled (window hidden or not yet active?)\n", n)
+	}
 	stalled := false
 	for i, p := range script {
 		ps := stats[i]
