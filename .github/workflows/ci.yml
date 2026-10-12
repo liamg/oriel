@@ -23,6 +23,18 @@ jobs:
       - run: make check
       - run: make test
       - run: make build
+      - name: Install nvim for the oracle
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux) asset=nvim-linux-x86_64; sum=38a7c6317f94503841096c00e8fde05ef04b9472fc9d7d62b6e033cecd6f7991 ;;
+            macOS) asset=nvim-macos-arm64; sum=9c84686ce84bbab725ff3d88ca3ac1d6da5a72128b68d9dd8094e34d4049a126 ;;
+          esac
+          curl -sSfL -o nvim.tar.gz "https://github.com/neovim/neovim/releases/download/v0.11.7/$asset.tar.gz"
+          echo "$sum  nvim.tar.gz" | shasum -a 256 -c -
+          tar -xzf nvim.tar.gz -C "$RUNNER_TEMP"
+          echo "ORIEL_NVIM=$RUNNER_TEMP/$asset/bin/nvim" >> "$GITHUB_ENV"
+      - run: make oracle
 
   vulncheck:
     runs-on: ubuntu-latest

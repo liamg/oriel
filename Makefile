@@ -1,9 +1,12 @@
 MODULES := $(shell go list -m -f '{{.Path}}/...')
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
-.PHONY: test vet build check fmt-check depcheck refcheck vendor-check vulncheck
+.PHONY: test vet build oracle check fmt-check depcheck refcheck vendor-check vulncheck
 test:
 	go test $(MODULES)
+
+oracle:
+	ORIEL_ORACLE=1 go test ./vim/...
 
 vet:
 	go vet $(MODULES)
