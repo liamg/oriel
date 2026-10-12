@@ -2,7 +2,7 @@
 id: SH-1
 title: "Window, GPU rendering, HiDPI and 1× text"
 phase: P0
-status: todo
+status: review
 area: Shell and navigation
 module: render, typeset
 depends_on: [P0-4, P0-6]

@@ -21,5 +21,9 @@ type KeyEvent struct {
 // ResizeEvent reports a new window size in logical pixels.
 type ResizeEvent struct{ Size Point }
 
+// RedrawEvent asks for a new frame: something the last one drew has changed, such as a font landing.
+type RedrawEvent struct{}
+
 func (KeyEvent) isEvent()    {}
 func (ResizeEvent) isEvent() {}
+func (RedrawEvent) isEvent() {}

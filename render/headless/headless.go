@@ -38,52 +38,21 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 	return w, nil
 }
 
-type OpKind int
-
-const (
-	OpRect OpKind = iota
-	OpGlyphs
-	OpPush
-	OpPop
-)
-
-type Op struct {
-	Kind  OpKind
-	Rect  render.Rect // rect, push
-	At    render.Point
-	Style render.Style
-	Color render.Color
-	Run   *typeset.Run
-}
-
-// Frame is one recorded display list.
+// Frame is one recorded frame.
 type Frame struct {
-	Ops []Op
+	render.List
 }
 
 // Text is every glyph run's text, one run per line.
 func (f Frame) Text() string {
 	var lines []string
 	for _, op := range f.Ops {
-		if op.Kind == OpGlyphs {
+		if op.Kind == render.OpGlyphs {
 			lines = append(lines, op.Run.Text)
 		}
 	}
 	return strings.Join(lines, "\n")
 }
-
-type recorder struct{ ops []Op }
-
-func (r *recorder) Rect(rc render.Rect, s render.Style) {
-	r.ops = append(r.ops, Op{Kind: OpRect, Rect: rc, Style: s})
-}
-
-func (r *recorder) Glyphs(run *typeset.Run, at render.Point, c render.Color) {
-	r.ops = append(r.ops, Op{Kind: OpGlyphs, Run: run, At: at, Color: c})
-}
-
-func (r *recorder) Push(clip render.Rect) { r.ops = append(r.ops, Op{Kind: OpPush, Rect: clip}) }
-func (r *recorder) Pop()                  { r.ops = append(r.ops, Op{Kind: OpPop}) }
 
 type Window struct {
 	mu     sync.Mutex
@@ -98,10 +67,10 @@ type Window struct {
 }
 
 func (w *Window) Frame(fn func(render.Frame)) error {
-	var r recorder
-	fn(&r)
+	var l render.List
+	fn(l.Record(1))
 	w.mu.Lock()
-	w.frames = append(w.frames, Frame{Ops: r.ops})
+	w.frames = append(w.frames, Frame{l})
 	w.mu.Unlock()
 	w.cond.Broadcast()
 	return nil
@@ -186,10 +155,10 @@ type Shaper struct{}
 
 func (Shaper) Shape(text string, f typeset.FontSpec) *typeset.Run {
 	adv := f.Size * 0.6
-	run := &typeset.Run{Text: text, Font: f, Height: f.Size * 1.4, Glyphs: make([]typeset.Glyph, 0, utf8.RuneCountInString(text))}
+	run := &typeset.Run{Text: text, Font: f, Ascent: f.Size * 1.1, Descent: f.Size * 0.3, Glyphs: make([]typeset.Glyph, 0, utf8.RuneCountInString(text))}
 	for _, r := range text {
-		run.Glyphs = append(run.Glyphs, typeset.Glyph{ID: typeset.GlyphID(r), X: run.Width})
-		run.Width += adv
+		run.Glyphs = append(run.Glyphs, typeset.Glyph{ID: typeset.GlyphID(r), X: run.Advance})
+		run.Advance += adv
 	}
 	return run
 }

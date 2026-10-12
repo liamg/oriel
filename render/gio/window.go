@@ -1,0 +1,165 @@
+package gio
+
+import (
+	"sync"
+	"sync/atomic"
+
+	"gioui.org/app"
+	"gioui.org/io/event"
+	"gioui.org/io/key"
+	"gioui.org/io/system"
+	"gioui.org/op"
+	"gioui.org/unit"
+
+	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/typeset"
+)
+
+// Main runs the platform's event loop. It must be called from the main goroutine, and doesn't return:
+// run the app on another goroutine and os.Exit when it's done.
+func Main() { app.Main() }
+
+// Backend opens Gio windows that share one typesetter.
+type Backend struct {
+	ts      *typeset.Typesetter
+	mu      sync.Mutex
+	windows []*Window
+}
+
+var _ render.Backend = (*Backend)(nil)
+
+func New() (*Backend, error) {
+	b := &Backend{}
+	ts, err := typeset.New(b.invalidate)
+	if err != nil {
+		return nil, err
+	}
+	b.ts = ts
+	return b, nil
+}
+
+func (b *Backend) Shaper() typeset.Shaper { return b.ts }
+
+// invalidate redraws every window, when a fallback font lands.
+func (b *Backend) invalidate() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, w := range b.windows {
+		w.redraw.Store(true)
+		w.win.Invalidate()
+	}
+}
+
+func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
+	w := &Window{win: new(app.Window), events: make(chan render.Event), queue: make(chan render.Event, 1024)}
+	w.scale.Store(float32(1))
+	opts := []app.Option{app.Title(o.Title)}
+	if o.Width > 0 && o.Height > 0 {
+		opts = append(opts, app.Size(unit.Dp(o.Width), unit.Dp(o.Height)))
+	}
+	w.win.Option(opts...)
+	b.mu.Lock()
+	b.windows = append(b.windows, w)
+	b.mu.Unlock()
+	go func() {
+		w.loop()
+		b.mu.Lock()
+		defer b.mu.Unlock()
+		for i, x := range b.windows {
+			if x == w {
+				b.windows = append(b.windows[:i], b.windows[i+1:]...)
+				break
+			}
+		}
+	}()
+	return w, nil
+}
+
+// Window is a Gio window. The app records frames on its own goroutine; the window's event loop
+// replays the latest one whenever Gio asks for a frame.
+type Window struct {
+	win    *app.Window
+	events chan render.Event // to the app, in order
+	queue  chan render.Event // from the event loop, which never blocks on the app
+	latest atomic.Pointer[render.List]
+	redraw atomic.Bool
+	scale  atomic.Value // float32
+	size   atomic.Value // render.Point
+}
+
+func (w *Window) Scale() float32 { return w.scale.Load().(float32) }
+
+func (w *Window) Size() render.Point {
+	s, _ := w.size.Load().(render.Point)
+	return s
+}
+
+func (w *Window) Events() <-chan render.Event { return w.events }
+
+func (w *Window) Close() { w.win.Perform(system.ActionClose) }
+
+func (w *Window) Frame(fn func(render.Frame)) error {
+	l := new(render.List)
+	fn(l.Record(w.Scale()))
+	w.latest.Store(l)
+	w.win.Invalidate()
+	return nil
+}
+
+// post queues ev for the app. It drops ev only if the app is 1024 events behind.
+func (w *Window) post(ev render.Event) {
+	select {
+	case w.queue <- ev:
+	default:
+	}
+}
+
+func (w *Window) forward() {
+	defer close(w.events)
+	for ev := range w.queue {
+		w.events <- ev
+	}
+}
+
+func (w *Window) loop() {
+	go w.forward()
+	defer close(w.queue)
+	var ops op.Ops
+	f := NewFrame()
+	tag := new(int)
+	for {
+		switch e := w.win.Event().(type) {
+		case app.DestroyEvent:
+			return
+		case app.FrameEvent:
+			gtx := app.NewContext(&ops, e)
+			scale := gtx.Metric.PxPerDp
+			size := render.Point{X: float32(e.Size.X) / scale, Y: float32(e.Size.Y) / scale}
+			if scale != w.Scale() || size != w.Size() {
+				w.scale.Store(scale)
+				w.size.Store(size)
+				w.post(render.ResizeEvent{Size: size})
+			}
+			event.Op(gtx.Ops, tag)
+			gtx.Execute(key.FocusCmd{Tag: tag})
+			for {
+				ev, ok := gtx.Event(key.FocusFilter{Target: tag}, key.Filter{Focus: tag, Optional: key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand})
+				if !ok {
+					break
+				}
+				for _, k := range translate(ev) {
+					w.post(k)
+				}
+			}
+			if w.redraw.Swap(false) {
+				w.post(render.RedrawEvent{})
+			}
+			f.Begin(gtx.Ops, scale)
+			if l := w.latest.Load(); l != nil {
+				l.Replay(f)
+			}
+			f.End()
+			e.Frame(gtx.Ops)
+		}
+	}
+}

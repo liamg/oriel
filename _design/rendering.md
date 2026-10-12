@@ -101,36 +101,60 @@ type Backend interface {
 }
 
 type Window interface {
-    Frame(fn func(f Frame)) error                 // draws one frame; the app calls it when state or input changed
-    Events() <-chan Event                         // keys, IME, pointer, resize, scale, focus; closed when the window is
+    Frame(fn func(f Frame)) error                 // records a frame as a display list; the backend draws it on its own loop
+    Events() <-chan Event                         // keys, IME, pointer, resize, redraw; closed when the window is
     Scale() float32
     Size() Point                                  // logical pixels
     Close()
 }
 
+// Logical (CSS) pixels throughout; rects snap to device pixels, paths and lines don't.
 type Frame interface {
-    Rect(r Rect, s Style)                         // fill, border, radius, gradient
-    Path(p *Path, s Style)
-    Glyphs(run *typeset.Run, at Point, c Color)
-    Image(img ImageID, dst Rect)
-    Effect(kind EffectKind, r Rect, amt float32)  // glow, blur, grid, scanline
-    Push(clip Rect, t Transform)
+    Rect(r Rect, s Style)                         // fill or gradient, radius, inside stroke (a CSS border)
+    Path(p *Path, s Style)                        // fill and/or stroke
+    Glyphs(run *typeset.Run, at Point, c Color)   // at is the pen on the baseline
+    Image(img *image.RGBA, at Point)              // premultiplied, device pixels, never scaled
+    Effect(kind EffectKind, r Rect, blur float32, c Color) // Glow, GlowDisc
+    PushClip(r Rect, radius float32)
+    PushOpacity(a float32)
     Pop()
-    Damage() []Rect
+    Scale() float32
 }
 ```
+
+- Transforms, blur, scanline and damage rects come when something needs them.
+- `render.List` is a recorded frame. The app records on its goroutine and the backend replays the latest list
+  whenever its platform asks for a frame, so no app code runs on the platform's loop. `render/headless` keeps the
+  lists for tests.
 
 ```go
 // package typeset — shaping and the atlas, independent of the backend
 type Shaper interface {
-    Shape(text []byte, f FontSpec, feats Features) *Run // cached by (text, font, features)
+    Shape(text string, f FontSpec) *Run           // FontSpec: family, weight, italic, size, tracking, features
 }
 
-type Atlas interface {
-    // c is ignored by atlases that tint in a shader; render/gio's atlas keys by it.
-    Glyph(font FontID, gid GlyphID, size float32, subpx uint8, c Color) (TexRegion, error)
+type Run struct {                                 // logical pixels
+    Text            string
+    Glyphs          []Glyph                       // each with its *Face, so fallback faces mix in one run
+    Advance         float32
+    Ascent, Descent float32
 }
+
+func Rasterise(face *Face, gid GlyphID, ppem float32, sub uint8) Coverage // one of SubpixelSteps (4) positions
+type Atlas struct{ … }                            // shelf-packed pages; starts again on new pages when full
 ```
+
+- `typeset.Typesetter` shapes with go-text against the bundled faces (JetBrains Mono, Inter, Space Grotesk), then the
+  other bundled faces, then system fallbacks loaded off the frame path. It caches up to 8192 runs.
+- `render/gio` keeps every cache bounded: atlas 8 × 1024² pages, 8192 coverages, 512 baked shapes and glows (unused
+  ones go after 120 frames), Image ops for 2 frames, 24 fallback faces.
+
+## Measuring
+
+- `oriel dev window [-auto] [SCENE]` opens a reference scene (`render/scenes`: ide, scroll, text, glow, hud, type);
+  `-auto` runs the budget script and prints frame times, CPU, RSS and late frames.
+- `oriel dev bench` measures every scene offscreen; `oriel dev shot DIR` renders them to PNGs; `oriel dev compare`
+  diffs a render against a mockup. `render/gio`'s tests hold 01-ide within 8/255 mean and 6.5% of pixels of its mockup.
 
 ```go
 // package ui — immediate-mode widgets are just functions over a Ctx

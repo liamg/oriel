@@ -75,7 +75,8 @@ flowchart LR
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear, slack, ical; agentbus via the `oriel-agentbus` helper process (keeps its sqlite dependency out of Oriel) | core |
-| `render` | GPU surface interface; `render/typeset` (shaping, atlas); `render/headless` (records display lists, for tests); `render/gio` impl | – |
+| `render` | GPU surface interface and display lists; `render/typeset` (shaping, fonts, rasterising, atlas); `render/headless` (keeps display lists, for tests); `render/scenes` (01-ide and the budget scenes, drawn through `render.Frame`) | go-text, x/image |
+| `render/gio` | the Gio backend: windows, input, offscreen rendering, the glyph atlas and baked shapes | render, gioui.org |
 | `ui` | widgets, layout, theme, animation, input routing | render |
 | `app` | the desktop app: screens, panels, HUD; wires it all together | everything |
 | `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`) |
@@ -83,7 +84,7 @@ flowchart LR
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
 | `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker |
-| `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. The only module that imports Gio until `render/gio` | gioui.org |
+| `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. Superseded by `render/gio`; kept for its report | gioui.org |
 | `toml` | TOML 1.0 parser and round-tripping editor, for settings and themes (`settings.md`) | – |
 | `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck` | – |
 

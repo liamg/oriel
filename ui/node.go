@@ -30,8 +30,8 @@ func Draw(f render.Frame, sh typeset.Shaper, st Style, n Node, at render.Point) 
 	switch n := n.(type) {
 	case TextNode:
 		run := sh.Shape(n.Text, st.Font)
-		f.Glyphs(run, at, st.FG)
-		return run.Height
+		f.Glyphs(run, render.Point{X: at.X, Y: at.Y + run.Ascent}, st.FG)
+		return run.Ascent + run.Descent
 	case ColumnNode:
 		var h float32
 		for _, c := range n.Children {

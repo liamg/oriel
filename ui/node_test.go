@@ -24,7 +24,7 @@ func TestDrawStacksAColumn(t *testing.T) {
 	for i, want := range []struct {
 		text string
 		y    float32
-	}{{"a", 7}, {"b", 21}, {"c", 35}} {
+	}{{"a", 18}, {"b", 32}, {"c", 46}} { // baselines: each line's top plus its ascent
 		if ops[i].Run.Text != want.text || ops[i].At != (render.Point{X: 5, Y: want.y}) {
 			t.Errorf("op %d: %q at %v; want %q at y %v", i, ops[i].Run.Text, ops[i].At, want.text, want.y)
 		}
