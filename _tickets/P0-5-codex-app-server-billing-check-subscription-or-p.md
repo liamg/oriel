@@ -2,7 +2,7 @@
 id: P0-5
 title: "Codex app-server billing check: subscription or per-token"
 phase: P0
-status: todo
+status: done
 area: Spike and repo
 module: -
 depends_on: []

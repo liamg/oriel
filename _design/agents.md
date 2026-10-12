@@ -5,24 +5,25 @@ Each provider is driven the way its **subscription** allows.
 - `claude -p` and the Agent SDK are billed per token. Only the interactive `claude` CLI uses your
   Max subscription. So Claude runs as a **full interactive session in a PTY**, driven by Oriel's
   Claude Code mod through function hooks, the way crit does it today.
-- Codex's `app-server` is what the official IDE extensions use with a ChatGPT login.
-  Verify it's subscription-billed in the spike. If it isn't, Codex gets the same PTY-and-hooks treatment.
+- Codex's `app-server` is what the official IDE extensions use with a ChatGPT login, and it is billed to the
+  ChatGPT plan (checked in P0-5: `spikes/P0-5-codex-billing.md`). Billing follows the auth mode, so the provider requires
+  `account/read` → `chatgpt` and asks before running on an `apiKey` login.
 - Oriel draws the conversation itself from hook events plus the transcript. The PTY is still there for when you want it raw.
 
 ## Providers
 
 | | Claude | Codex |
 |---|---|---|
-| Process | interactive `claude --plugin-dir <oriel-mod>` in a PTY (subscription) | `codex app-server`, JSON-RPC over stdio (verify billing) |
+| Process | interactive `claude --plugin-dir <oriel-mod>` in a PTY (subscription) | `codex app-server`, JSON-RPC (JSONL) over stdio, ChatGPT login (subscription) |
 | Control channel | the mod's function hooks ↔ the session host over a unix socket | JSON-RPC requests |
-| Send a prompt | `$.prompt.submit` (the mod receives it from the host) | `sendUserMessage` |
-| Interrupt | `$.turn.abort` | `interruptConversation` |
+| Send a prompt | `$.prompt.submit` (the mod receives it from the host) | `turn/start` |
+| Interrupt | `$.turn.abort` | `turn/interrupt` |
 | Our tools | `$.tool.register` (`mcp__oriel__*`), backed by the host | MCP server `oriel` |
-| Permissions | `classic.PermissionRequest` hook → host → card → answer | `execCommandApproval` / `applyPatchApproval` |
-| Side questions (btw, explain, verify quiz) | `$.model.fork`: tool-less, outside the main conversation | a new thread from the same rollout |
+| Permissions | `classic.PermissionRequest` hook → host → card → answer | `item/commandExecution/requestApproval` / `item/fileChange/requestApproval` |
+| Side questions (btw, explain, verify quiz) | `$.model.fork`: tool-less, outside the main conversation | `thread/fork` |
 | Turn and subagent lifecycle | hook events (turn start/complete, subagent spawn/end, StopFailure) | notifications |
 | Messages and tool calls | tail `~/.claude/projects/*.jsonl` (crit's `transcript` package) | notifications + rollout files |
-| Usage / quota | `$.session.usage()` + the `/usage` probe (client-side, costs no tokens) | rate-limit events |
+| Usage / quota | `$.session.usage()` + the `/usage` probe (client-side, costs no tokens) | `account/rateLimits/read` + `account/rateLimits/updated` |
 | Guard rails | `tool.check`: deny edits outside the worktree, deny raw network git/gh | sandbox policy + approvals |
 
 - **Terminal view comes free** for Claude: it *is* a PTY session, so "Show terminal" attaches to it.
@@ -160,23 +161,26 @@ func (p Provider) Start(ctx context.Context, s agent.StartSpec) (agent.Session, 
         return nil, err
     }
     rpc := jsonrpc.New(proc.Stdout, proc.Stdin)
-    var r struct{ ConversationID string }
-    if err := rpc.Call(ctx, "newConversation", newConvParams(s), &r); err != nil {
+    if err := requireChatGPT(ctx, rpc); err != nil { // account/read → account.type == "chatgpt"
         return nil, err
     }
-    sess := &session{rpc: rpc, id: r.ConversationID, ev: make(chan agent.Event, 64)}
-    rpc.OnNotify(sess.translate)                            // codex/event → agent.Event
-    rpc.OnRequest("execCommandApproval", sess.askPermission) // → agent.Permission, waits for Answer
-    rpc.OnRequest("applyPatchApproval", sess.askPermission)
+    var r struct{ Thread struct{ ID string } }
+    if err := rpc.Call(ctx, "thread/start", threadParams(s), &r); err != nil {
+        return nil, err
+    }
+    sess := &session{rpc: rpc, id: r.Thread.ID, ev: make(chan agent.Event, 64)}
+    rpc.OnNotify(sess.translate)                            // thread, turn and item notifications → agent.Event
+    rpc.OnRequest("item/commandExecution/requestApproval", sess.askPermission) // → agent.Permission, waits for Answer
+    rpc.OnRequest("item/fileChange/requestApproval", sess.askPermission)
     return sess, nil
 }
 
 func (s *session) Send(ctx context.Context, in agent.Input) error {
-    return s.rpc.Call(ctx, "sendUserMessage", userMessage(s.id, in), nil)
+    return s.rpc.Call(ctx, "turn/start", turnParams(s.id, in), nil)
 }
 
 func (s *session) Interrupt(ctx context.Context) error {
-    return s.rpc.Call(ctx, "interruptConversation", map[string]any{"conversationId": s.id}, nil)
+    return s.rpc.Call(ctx, "turn/interrupt", map[string]any{"threadId": s.id, "turnId": s.turn}, nil)
 }
 ```
 
@@ -201,7 +205,7 @@ func init() { agent.Register("claude", claude.Provider{Bin: "claude"}) }
 
 - A process-extension provider (Gemini, say) implements the same methods as JSON-RPC.
   Its RPC adapter is also an `agent.Provider`, so the session host can't tell them apart.
-- The parts of the protocols above (`newConversation`, `execCommandApproval`, the Claude hook API
+- The parts of the protocols above (`thread/start`, `item/commandExecution/requestApproval`, the Claude hook API
   and transcript format) get pinned and checked against the installed CLI version in `Detect`, because they move.
 
 ## Permissions: three layers
