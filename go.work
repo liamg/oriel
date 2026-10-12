@@ -1,0 +1,27 @@
+go 1.26.0
+
+use (
+	./agent
+	./app
+	./cmd/oriel
+	./core
+	./dap
+	./ext
+	./gh
+	./gitx
+	./integ
+	./lsp
+	./registry
+	./render
+	./sandbox
+	./script
+	./syntax
+	./testrun
+	./text
+	./tools
+	./ui
+	./update
+	./vim
+	./wire
+	./worker
+)

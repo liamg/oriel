@@ -2,7 +2,7 @@
 id: P0-1
 title: "Repo skeleton: go.work, module stubs from architecture.md"
 phase: P0
-status: todo
+status: done
 area: Spike and repo
 module: -
 depends_on: []

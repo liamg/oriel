@@ -83,12 +83,15 @@ flowchart LR
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
 | `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker |
+| `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck` | – |
 
 Rules:
 
 - `text`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` never import `ui` or `render`.
 - Every "swap me" seam is an interface in the consumer package, with impls in subpackages.
 - Each module has its own tests; `vim` has the nvim conformance suite.
+- Every module is listed in `go.work`, and `tools/layout` fails if a module in this table has no directory or a `go.mod` is missing from `go.work`.
+- `make test` runs every module's tests (`go test` over `go list -m`).
 
 ## Events
 
