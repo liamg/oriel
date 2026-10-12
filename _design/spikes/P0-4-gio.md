@@ -166,7 +166,16 @@ Run everything from the repo root. Close other heavy apps first, and keep the la
 Paste both outputs into the thread. Run on the built-in Retina display. To also get 1× numbers, drag the `-auto` window to
 the external 1× monitor as soon as it opens.
 
-### 2 · Keypress-to-photon with typometer (budget 2)
+### 2 · Keypress-to-photon (budget 2)
+
+**Use the in-app numbers plus the camera method below.** Typometer doesn't work on current macOS: tried on 2026-10-12, its
+pixel reads (Java's AWT robot) went stale. The spike kept drawing every dot, but typometer only saw them after a screenshot
+forced a refresh, so it stalled at 13/100 and reported 10–25 s "latencies".
+
+In-app part: run `/tmp/oriel-spike -scene type`, type for about 20 s, press **Esc**, and it prints key event → frame
+presented percentiles.
+
+The typometer steps are kept for Linux, where it reads pixels through XLib:
 
 1. Start the target: `/tmp/oriel-spike -scene type`. It shows a solid background, a "TYPE HERE" label and an empty line
    with no caret, in a small 900×160 window, and a yellow bar that ends the line. Typometer types dots and deletes them with Backspace.
