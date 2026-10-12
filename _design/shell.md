@@ -88,6 +88,8 @@ with a CPU fallback for paths where the GPU path isn't available.
 | **No custom shaders** in the public API | glow, blur, scanlines and noise (the "effects" in `rendering.md`) | prebaked textures: a 9-slice glow sprite per radius and colour, cached and tinted. Cheap, and good enough for glows |
 | **No blur / backdrop filter** | frosted scrims behind modals | a plain dark scrim (the mockups barely need blur); or our own offscreen pass (below) |
 | **No radial or conic gradients, no blend modes** beyond normal over | some sci-fi flourishes | textures, or avoid them: the design language barely uses them |
+| **Blending is in linear light**, not sRGB like CSS (found in P0-4) | translucent colours look much stronger than in the mockups; dark-on-light text looks thin | opaque theme tokens over known surfaces, an alpha remap for the rest (`rendering.md` → Blending) |
+| **No letter-spacing or font-feature control** in the text API (found in P0-4) | cap labels, and ligatures off in terminals | `typeset` shapes with go-text directly |
 | **Glyphs are drawn as vector outlines, unhinted, with greyscale AA** | text at small sizes on **1× (non-HiDPI) screens** looks softer than FreeType-hinted text. On HiDPI it's fine | the biggest risk to "beautiful text". Options: our own glyph atlas (hinted, optionally subpixel LCD) uploaded as images through Gio; or own the text pass |
 
 **Ways past the limits, in order of cost:**
@@ -104,6 +106,7 @@ None of these limits rules out anything in the mockups. Glows, blur and hinted s
 
 **Gio is approved** (`deps.md`), on condition that the spike shows it can match the mockups in `ui.md` and finds no
 limit that rules them out. Exit criterion 0: render `01-ide` and `06-review` natively, side by side with the PNGs.
+**Results: `spikes/P0-4-gio.md`** (01-ide done; the GPU budgets are still to be measured on macOS).
 
 
 Build a throwaway `oriel-spike` binary on Gio and measure it **on macOS (primary, Metal, Retina plus an external 1× monitor) and on Linux (Wayland)**:

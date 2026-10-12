@@ -83,6 +83,7 @@ flowchart LR
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
 | `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker |
+| `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. The only module that imports Gio until `render/gio` | gioui.org |
 | `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck` | – |
 
 Rules:

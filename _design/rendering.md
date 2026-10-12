@@ -36,6 +36,17 @@ flowchart TB
   with paragraph layout and line breaking (UAX #14).
 - Gamma-correct blending and stem darkening for light-on-dark text. This is
   most of what makes the difference between "terminal" and "beautiful".
+- Letter-spacing (tracking) and font features (`liga`, `calt`, `ss01`…) are `typeset`'s job: Gio's text API
+  has neither, so `typeset` shapes with go-text directly (P0-4).
+
+## Blending
+
+- Gio blends in **linear light**; CSS, and so the mockups, blend in sRGB. A translucent token that looks right in
+  a mockup comes out much stronger in Gio (a 7% tint about 3× as bright; `spikes/P0-4-gio.md`).
+- So `theme` resolves translucent component tokens to **opaque colours over the surface they sit on**, and
+  `render/gio` remaps alpha for overlays whose backdrop isn't known (scrims, glows, opacity layers).
+- Dark text on light looks thin under linear blending, so the glyph atlas's gamma and stem darkening must land
+  before the light theme.
 
 ## `ui` toolkit
 

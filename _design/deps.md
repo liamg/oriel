@@ -43,6 +43,9 @@ Each tier-C row is a **question for you**: approve, reject, or "write our own".
 | ↳ `tailscale.com` (indirect via agentbus) | tsnet | Tailscale | B ✓ | – |
 | ↳ `modernc.org/sqlite` + `libc`, `mathutil`, `memory` (indirect via agentbus) | pure-Go SQLite | individual (cznic) | **kept out of Oriel**: agentbus runs as a separate `oriel-agentbus` helper process | the helper has its own module tree; Oriel's has no sqlite |
 | `gioui.org` | windowing, GPU, input, IME (**the shell decision**) | Elias Naur + contributors, sponsored | **C ✓ approved**, on condition the spike reproduces the mockups' look with no blocking limits | own windowing layer, or Electron, if the spike fails |
+| ↳ `gioui.org/shader v1.0.9`, `gioui.org/cpu` (graph only) | Gio's own shaders | Gio project | C ✓ (part of Gio) | – |
+| ↳ `github.com/godbus/dbus/v5 v5.2.2` (indirect via Gio's X11 IME, `app/internal/ibus`) | IBus input method over D-Bus on Linux X11 | godbus org; its only dependency is `x/sys` | **C ✓ approved by Liam** (2026-10-12, P0-4) | Wayland-only build (`nox11`), or our own D-Bus client |
+| ↳ `golang.org/x/{image,exp/shiny,net,text,sys}` (indirect via Gio) | Go fonts and material icons for Gio's fallback window decorations, IDNA, syscalls | Go team | A ✓ | – |
 | `github.com/go-text/typesetting` | shaping (HarfBuzz port), font parsing | go-text org (Gio/Fyne maintainers) | **C ✓ approved** | – |
 | `github.com/tetratelabs/wazero` | WASM runtime: tree-sitter grammars, Ghostty VT, wasm plugins | Tetrate (company) → community | **C ✓ approved** | – |
 | tree-sitter core + per-language grammars (as wasm) | syntax highlighting, text objects | tree-sitter org; **grammars by many individuals** | **C ✓ approved**: grammars pinned per language and added one at a time, run sandboxed in wazero | – |
@@ -52,6 +55,11 @@ Each tier-C row is a **question for you**: approve, reject, or "write our own".
 | `github.com/creack/pty` | PTYs (from crit) | individual; used by Docker, Kubernetes, many others | **rejected: write our own** | `oriel/pty` over `x/sys/unix`, ~300 lines |
 | `github.com/alecthomas/chroma` | highlighting (crit today) | individual | C, **dropped**: tree-sitter replaces it | – |
 | Fonts: JetBrains Mono, Inter, Space Grotesk | bundled UI fonts (OFL, assets not code) | JetBrains (B); individuals | **✓ approved** (data) | – |
+
+**Gio's tree** (`gioui.org v0.10.3`, `go mod graph`): the rows above, plus modules that appear only in the module graph
+and are never built, so they're not in `vendor/` or `deps/allow.txt`: `eliasnaur.com/font` (Gio's author), `github.com/go-text/typesetting-utils`
+(go-text test data), and via `x/exp/shiny`: `dmitri.shuralyov.com/gpu/mtl`, `github.com/go-gl/glfw/v3.3/glfw`, `github.com/jezek/xgb`,
+`golang.org/x/mobile`. `gioui.org/app` pulls in the Go fonts (12 MB of the 32 MB `vendor/`) for its fallback decorations.
 
 **Not dependencies**: LSP servers, DAP adapters (delve, debugpy…), ripgrep, git, `claude`, `codex`. These are
 external programs we spawn, usually inside the sandbox. They're listed in the pre-flight panel, not in `go.mod`.

@@ -2,7 +2,7 @@
 id: P0-4
 title: "Gio spike: measure the budgets, re-create 01-ide natively, go/no-go report"
 phase: P0
-status: todo
+status: review
 area: Spike and repo
 module: -
 depends_on: [P0-1]
@@ -21,6 +21,11 @@ depends_on: [P0-1]
 ## Done when
 
 As described in the design docs, with the results written up in the PR.
+
+## Progress
+
+- `cmd/oriel-spike` and the report in `_design/spikes/P0-4-gio.md`. 01-ide is re-created natively and compared with the PNG.
+- **Outstanding**: the macOS run (`go run -tags spike ./cmd/oriel-spike -auto`, typometer, the 1× monitor) and a Wayland session at 1.25× and 1.5×.
 
 ## Rules
 
