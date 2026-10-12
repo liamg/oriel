@@ -249,7 +249,6 @@ func (t TextStyle) font() font.Font {
 }
 
 func (c *Canvas) shape(s string, t TextStyle) []text.Glyph {
-	c.Fonts.Need(s)
 	sh := c.Fonts.Shaper()
 	sh.LayoutString(text.Parameters{
 		Font:             t.font(),

@@ -25,6 +25,8 @@ flowchart TB
   drawn with prebaked textures until we own a renderer.
 - Gio stencils every path on every frame, so `render/gio` draws rounded rects and borders as 9-slices of baked
   images, as it does glows (P0-6; `spikes/P0-4-gio.md`).
+- The next frame is requested (`op.InvalidateCmd`) **before** `Frame`. Gio reads it while processing that frame, and
+  one executed after `Frame` returns races the main thread and can be lost until the next input event (P0-6).
 - Gio also stencils any image drawn under a scale or a fractional offset. So `render/gio` never scales an image: a
   9-slice's corners and pre-stretched edge strips live in the shared atlas and draw at integer offsets, and a uniform
   centre is a plain fill. Small baked images share atlas pages rather than each being a texture.
@@ -34,6 +36,8 @@ flowchart TB
 - Shaping: `go-text/typesetting` (a HarfBuzz port): ligatures, kerning, `calt`, `ss01..ss20`.
 - Fonts: bundled JetBrains Mono, Inter and Space Grotesk, plus system fallback via fontconfig and CoreText, one face
   at a time, the first time a rune needs it. Never a scan or index of every system font: on macOS that cost 68 MB (P0-6).
+  A fallback file is mapped, not read, only the face that covers the rune is parsed, and loading runs off the frame:
+  the rune shows as tofu for a frame or two. Loading whole collections onto the heap cost 1 GB on macOS (P0-6).
 - Rasterise to a **glyph atlas**, keyed by (font, size, subpixel x-offset in quarters).
   Grayscale AA by default; subpixel LCD AA when the backend allows.
 - Gio can't tint an image, so `render/gio`'s atlas holds glyphs already tinted, keyed by colour too, over a

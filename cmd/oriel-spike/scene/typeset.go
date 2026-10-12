@@ -55,6 +55,9 @@ type typesetter struct {
 	atlas  *atlasOps
 	runs   map[runKey]*runImage
 	frame  int
+	source *Fonts // fallback faces; nil leaves missing runes as tofu
+	// bundled is how many of faces are the bundled ones; fallbacks follow.
+	bundled int
 }
 
 type shapeKey struct {
@@ -88,7 +91,7 @@ type runImage struct {
 	used int
 }
 
-func newTypesetter(atlas *atlasOps) (*typesetter, error) {
+func newTypesetter(atlas *atlasOps, fonts *Fonts) (*typesetter, error) {
 	coll, err := Collection()
 	if err != nil {
 		return nil, err
@@ -99,6 +102,7 @@ func newTypesetter(atlas *atlasOps) (*typesetter, error) {
 		gamma:  TextGamma{Darken: 0.25},
 		atlas:  atlas,
 		runs:   map[runKey]*runImage{},
+		source: fonts,
 	}
 	for _, f := range coll {
 		of, ok := f.Face.(opentype.Face)
@@ -108,11 +112,18 @@ func newTypesetter(atlas *atlasOps) (*typesetter, error) {
 		ts.faces = append(ts.faces, of.Face())
 		ts.fonts = append(ts.fonts, f.Font)
 	}
+	ts.bundled = len(ts.faces)
 	return ts, nil
 }
 
-// beginFrame ages the per-frame caches.
+// beginFrame takes in fallback faces that have landed and ages the per-frame caches.
 func (ts *typesetter) beginFrame() {
+	if ts.source != nil {
+		for _, f := range ts.source.Landed() {
+			ts.faces = append(ts.faces, f.Face)
+			ts.fonts = append(ts.fonts, giofont.Font{Typeface: giofont.Typeface("fallback: " + f.Name)})
+		}
+	}
 	for k, r := range ts.runs {
 		if ts.frame-r.used > 2 {
 			delete(ts.runs, k)
@@ -205,24 +216,40 @@ func subStep(frac float32) uint8 {
 }
 
 // segments splits s into runs the bundled face can shape and runs it can't.
-func (ts *typesetter) segments(fi int, s string, fn func(seg string, ok bool)) {
-	start, prev := 0, true
+func (ts *typesetter) segments(fi int, s string, fn func(seg string, face int)) {
+	start, prev := 0, fi
 	for i, r := range s {
-		ok := ts.supported(fi, r)
-		if i > start && ok != prev {
+		face := ts.faceFor(fi, r)
+		if i > start && face != prev {
 			fn(s[start:i], prev)
 			start = i
 		}
-		prev = ok
+		prev = face
 	}
 	if start < len(s) {
 		fn(s[start:], prev)
 	}
 }
 
+// faceFor is fi if it has r, else a fallback face that does, else -1 (and asks for one).
+func (ts *typesetter) faceFor(fi int, r rune) int {
+	if ts.supported(fi, r) {
+		return fi
+	}
+	for j := ts.bundled; j < len(ts.faces); j++ {
+		if ts.supported(j, r) {
+			return j
+		}
+	}
+	if ts.source != nil {
+		ts.source.Request(r)
+	}
+	return -1
+}
+
 func (c *Canvas) typeset() *typesetter {
 	if c.ts == nil {
-		ts, err := newTypesetter(c.atlas)
+		ts, err := newTypesetter(c.atlas, c.Fonts)
 		if err != nil {
 			panic(err)
 		}
@@ -239,9 +266,9 @@ func (c *Canvas) measureShaped(s string, t TextStyle) float32 {
 		return c.measurePaths(s, t)
 	}
 	var w float32
-	ts.segments(fi, s, func(seg string, ok bool) {
-		if ok {
-			w += fx(ts.shape(c.shapeKey(fi, seg, t)).advance) / c.Scale
+	ts.segments(fi, s, func(seg string, face int) {
+		if face >= 0 {
+			w += fx(ts.shape(c.shapeKey(face, seg, t)).advance) / c.Scale
 		} else {
 			w += c.measurePaths(seg, t)
 		}
@@ -258,7 +285,8 @@ func (c *Canvas) shapeKey(fi int, s string, t TextStyle) shapeKey {
 	}
 }
 
-// textShaped is Text for the atlas and runs modes. Runes the bundled face lacks fall back to paths.
+// textShaped is Text for the atlas and runs modes. Runes no loaded face has draw through Gio
+// (as tofu) until a fallback face lands.
 func (c *Canvas) textShaped(x, y float32, s string, t TextStyle) float32 {
 	ts := c.typeset()
 	fi := ts.face(t.font())
@@ -269,12 +297,12 @@ func (c *Canvas) textShaped(x, y float32, s string, t TextStyle) float32 {
 	base := int(math.Round(float64(y * c.Scale)))
 	// Images blend like CSS already, so the colour goes in without SRGBBlend's remap.
 	col := t.Color
-	ts.segments(fi, s, func(seg string, ok bool) {
-		if !ok {
+	ts.segments(fi, s, func(seg string, face int) {
+		if face < 0 {
 			x += c.textPaths(x, y, seg, t)
 			return
 		}
-		k := c.shapeKey(fi, seg, t)
+		k := c.shapeKey(face, seg, t)
 		run := ts.shape(k)
 		if c.Mode == TextRuns {
 			c.drawRun(ts, k, run, x, base, col)

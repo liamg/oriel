@@ -11,6 +11,7 @@ import (
 	"gioui.org/font"
 	"gioui.org/font/opentype"
 	"gioui.org/text"
+	gtfont "github.com/go-text/typesetting/font"
 )
 
 //go:embed fonts/*/*.ttf
@@ -50,18 +51,28 @@ func Collection() ([]font.FontFace, error) {
 	return coll, collErr
 }
 
-// Fonts is the bundled faces plus system faces loaded one at a time, the first time a rune
-// needs one. Nothing scans or indexes the system fonts.
+// Fonts is the bundled faces, shaped through Gio, plus system faces for runes they lack. A
+// fallback face loads on a worker the first time a rune needs one, and is used by the atlas text
+// path once it lands; until then the rune draws as tofu. Nothing scans or indexes the system fonts.
 type Fonts struct {
 	// NoFallback leaves runes the bundled faces lack as tofu.
 	NoFallback bool
+	// OnLoad is called, on the worker, when a fallback face has loaded.
+	OnLoad func()
 
-	coll    []font.FontFace
-	known   map[rune]bool
-	missing []rune
-	loaded  map[string]bool
-	names   []string
-	shaper  *text.Shaper
+	shaper    *text.Shaper
+	requested map[rune]bool
+	work      chan rune
+	mu        sync.Mutex
+	landed    []Fallback
+	names     []string
+	missing   []rune
+}
+
+// Fallback is a system face loaded for runes the bundled faces lack.
+type Fallback struct {
+	Face *gtfont.Face
+	Name string
 }
 
 // NewFonts parses the bundled fonts.
@@ -70,60 +81,77 @@ func NewFonts() (*Fonts, error) {
 	if err != nil {
 		return nil, err
 	}
-	f := &Fonts{coll: append([]font.FontFace(nil), c...), known: map[rune]bool{}, loaded: map[string]bool{}}
-	f.shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(f.coll))
-	return f, nil
+	return &Fonts{
+		shaper:    text.NewShaper(text.NoSystemFonts(), text.WithCollection(c)),
+		requested: map[rune]bool{},
+	}, nil
 }
 
-// Shaper shapes with every face loaded so far.
+// Shaper shapes with the bundled faces.
 func (f *Fonts) Shaper() *text.Shaper { return f.shaper }
 
 // Fallbacks lists the system fonts loaded so far, and the runes no fallback covered.
-func (f *Fonts) Fallbacks() (files []string, missing []rune) { return f.names, f.missing }
+func (f *Fonts) Fallbacks() (files []string, missing []rune) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.names...), append([]rune(nil), f.missing...)
+}
 
-// Need loads system fallback faces for any rune in s the loaded faces lack.
-func (f *Fonts) Need(s string) {
-	var want []rune
-	for _, r := range s {
-		if r < 0x80 || f.known[r] {
-			continue
-		}
-		f.known[r] = true
-		if !f.covers(f.coll, r) {
-			want = append(want, r)
-		}
-	}
-	if len(want) == 0 || f.NoFallback {
-		f.missing = append(f.missing, want...)
+// Request asks the worker for a face covering r, once per rune.
+func (f *Fonts) Request(r rune) {
+	if f.NoFallback || f.requested[r] {
 		return
 	}
-	added := false
-	for _, r := range want {
-		if f.covers(f.coll, r) {
-			continue
-		}
-		if faces, name := loadFallback(r, f.loaded); faces != nil {
-			f.coll = append(f.coll, faces...)
-			f.names = append(f.names, name)
-			added = true
-		} else {
-			f.missing = append(f.missing, r)
-		}
+	f.requested[r] = true
+	if f.work == nil {
+		f.work = make(chan rune, 1024)
+		go f.worker()
 	}
-	if added {
-		f.shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(f.coll))
+	select {
+	case f.work <- r:
+	default: // the queue is full; the rune stays tofu
 	}
 }
 
-func (f *Fonts) covers(coll []font.FontFace, r rune) bool {
-	for _, c := range coll {
-		if of, ok := c.Face.(opentype.Face); ok {
-			if _, ok := of.Face().NominalGlyph(r); ok {
-				return true
+// Landed returns the faces loaded since the last call.
+func (f *Fonts) Landed() []Fallback {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	l := f.landed
+	f.landed = nil
+	return l
+}
+
+func (f *Fonts) worker() {
+	var faces []*gtfont.Face
+	tried := map[string]bool{}
+	for r := range f.work {
+		covered := false
+		for _, face := range faces {
+			if _, ok := face.NominalGlyph(r); ok {
+				covered = true
+				break
 			}
 		}
+		if covered {
+			continue
+		}
+		face, name, key := loadFallback(r, tried)
+		f.mu.Lock()
+		if face == nil {
+			f.missing = append(f.missing, r)
+			f.mu.Unlock()
+			continue
+		}
+		tried[key] = true
+		faces = append(faces, face)
+		f.names = append(f.names, name)
+		f.landed = append(f.landed, Fallback{face, name})
+		f.mu.Unlock()
+		if f.OnLoad != nil {
+			f.OnLoad()
+		}
 	}
-	return false
 }
 
 // FaceNames lists the bundled faces, for the report.

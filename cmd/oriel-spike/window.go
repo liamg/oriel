@@ -108,8 +108,13 @@ type phaseStats struct {
 // nextFrame is when -auto expects its next frame (unix nanos), for kick.
 var nextFrame atomic.Int64
 
-// kicks counts frames kick had to request.
-var kicks atomic.Int64
+// kicks counts frames kick had to request; kickedAt is when the latest kicked frame was due
+// (unix nanos), cleared when it arrives.
+var (
+	kicks    atomic.Int64
+	kickedAt atomic.Int64
+	kickLate scene.Durations
+)
 
 // kick invalidates the window when an expected frame is 50 ms late. On macOS the
 // display link can stall until the window gets an input event.
@@ -122,6 +127,7 @@ func kick(w *app.Window) {
 			continue
 		}
 		kicks.Add(1)
+		kickedAt.CompareAndSwap(0, nextFrame.Load())
 		w.Invalidate()
 		time.Sleep(late)
 	}
@@ -132,6 +138,7 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 	if err != nil {
 		return err
 	}
+	sh.OnLoad = w.Invalidate
 	var ops op.Ops
 	c := scene.NewCanvas(&ops, sh, 1)
 	c.Mode, c.BakedShapes = textMode, bakedShapes
@@ -199,6 +206,32 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 			gtx.Execute(key.SnippetCmd{Tag: tag, Snippet: key.Snippet{Range: key.Range{Start: 0, End: n}, Text: string(st.Typed)}})
 			gtx.Execute(key.SelectionCmd{Tag: tag, Range: key.Range{Start: n, End: n}})
 			st.T = time.Since(start).Seconds()
+			if at := kickedAt.Swap(0); at != 0 {
+				kickLate = append(kickLate, t0.Sub(time.Unix(0, at)))
+			}
+			// The next frame is requested before Frame: Gio reads InvalidateCmd while it processes
+			// this frame, and one executed after Frame returns can be missed (see P0-4-gio.md).
+			var ends bool
+			if auto {
+				p := script[pi]
+				ends = p.frames > 0 && pframes+1 > p.frames || p.frames == 0 && pframes > 0 && t0.Sub(pstart) >= p.dur
+				next := t0
+				switch {
+				case ends || p.frames > 0:
+				case p.invalidate > 0:
+					next = t0.Add(p.invalidate)
+				case pframes == 0:
+					next = t0.Add(p.dur)
+				default:
+					next = pstart.Add(p.dur)
+				}
+				if !ends || pi+1 < len(script) {
+					gtx.Execute(op.InvalidateCmd{At: next})
+					nextFrame.Store(next.UnixNano())
+				}
+			} else if s.Name() == "glow" || s.Name() == "hud" {
+				gtx.Execute(op.InvalidateCmd{})
+			}
 			c.Begin(gtx.Ops, gtx.Metric.PxPerDp)
 			s.Draw(c, st)
 			t1 := time.Now()
@@ -215,9 +248,6 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 				pendingKey = time.Time{}
 			}
 			if !auto {
-				if s.Name() == "glow" || s.Name() == "hud" {
-					gtx.Execute(op.InvalidateCmd{})
-				}
 				continue
 			}
 
@@ -245,8 +275,7 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 			lastFrame = t0
 			pframes++
 			st.Line++
-			done := p.frames > 0 && pframes > p.frames || p.frames == 0 && time.Since(pstart) >= p.dur
-			if done {
+			if ends {
 				stats[pi].cpu = cpuTime() - pcpu
 				stats[pi].wall = time.Since(pstart)
 				stats[pi].gcs = numGC() - pgc
@@ -257,22 +286,7 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 				}
 				s, _ = scene.ByName(script[pi].scene)
 				st = scene.NewState()
-				nextFrame.Store(time.Now().UnixNano())
-				gtx.Execute(op.InvalidateCmd{})
-				continue
 			}
-			next := time.Now()
-			switch {
-			case p.frames > 0:
-				gtx.Execute(op.InvalidateCmd{})
-			case p.invalidate > 0:
-				next = t0.Add(p.invalidate)
-				gtx.Execute(op.InvalidateCmd{At: next})
-			default:
-				next = pstart.Add(p.dur)
-				gtx.Execute(op.InvalidateCmd{At: next})
-			}
-			nextFrame.Store(next.UnixNano())
 		}
 	}
 }
@@ -314,7 +328,9 @@ func report(first time.Duration, firstRSS float64, size string, stats []phaseSta
 	fmt.Printf("text=%s shapes=%s; window %s\n", textMode, map[bool]string{false: "paths", true: "baked"}[bakedShapes], size)
 	fmt.Printf("startup: first frame presented %s after start; RSS then %.0f MB\n", first.Round(time.Millisecond), firstRSS)
 	if n := kicks.Load(); n > 0 {
-		fmt.Printf("kicked %d late frames: the display link stalled (window hidden or not yet active?)\n", n)
+		fmt.Printf("kicked %d times for %d late frames, which then came %s after they were due\n", n, len(kickLate), kickLate)
+	} else {
+		fmt.Println("no late frames to kick")
 	}
 	stalled := false
 	for i, p := range script {

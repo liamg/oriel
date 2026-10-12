@@ -1,11 +1,11 @@
 package scene
 
 import (
+	"bytes"
 	"encoding/binary"
 	"hash/fnv"
 	"image"
 	"image/color"
-	"image/draw"
 	"math"
 
 	"gioui.org/op"
@@ -113,10 +113,17 @@ func (c *Canvas) Bars(x, bottom, step, w, maxH float32, vals []float32, col colo
 	bi, ok := c.bars[k]
 	if !ok {
 		area := c.irect(Rect{x, bottom - maxH, float32(len(vals)) * step, maxH})
-		img := image.NewNRGBA(image.Rectangle{Max: area.Size()})
+		// Premultiplied RGBA, filled row by row: NewImageOp keeps an *image.RGBA without converting it.
+		img := image.NewRGBA(image.Rectangle{Max: area.Size()})
+		a := uint32(col.A)
+		px := []byte{uint8(uint32(col.R) * a / 255), uint8(uint32(col.G) * a / 255), uint8(uint32(col.B) * a / 255), col.A}
+		row := bytes.Repeat(px, area.Dx())
 		for i, v := range vals {
 			r := c.irect(Rect{x + float32(i)*step, bottom - v*maxH, w, v * maxH}).Sub(area.Min).Intersect(img.Rect)
-			draw.Draw(img, r, image.NewUniform(col), image.Point{}, draw.Src)
+			for y := r.Min.Y; y < r.Max.Y; y++ {
+				off := img.PixOffset(r.Min.X, y)
+				copy(img.Pix[off:off+4*r.Dx()], row)
+			}
 		}
 		bi = &barsImage{op: paint.NewImageOp(img), at: area.Min}
 		bi.op.Filter = paint.FilterNearest

@@ -371,7 +371,78 @@ ide .45/.66 / 4.26/11.69; scroll .46/.83 / 5.10/11.94; text .21/.34 / 2.52/11.61
 Here, after the follow-ups (llvmpipe, `frame()` p50, atlas + baked): `ide` 18.5 → 14.2 ms, `glow` 21.2 → 18.7 ms,
 `hud` 12.0 → **6.3 ms**. RSS after the first `ide` frame went from 164 to 146 MB. Against the mockup, 6.48/255, as before.
 
-### For Liam (macOS), run 2
+### macOS run 3 (2026-10-12): after the follow-ups
+
+With the coordinator's kick watchdog in `-auto`, which raises the window and invalidates when an expected frame is
+more than 50 ms late.
+
+| # | Budget | Result | Status |
+|---|---|---|---|
+| 1 | Scroll p99 < 8 ms at 120 Hz | **render fits**: `frame()` p99 5.53 ms, GPU 3.53 ms per frame pipelined. Interval p99 ~58 ms: frames were dropped and kicked (122 kicks) | **pacing bug, ours** (below) |
+| 3 | Glow at 120 Hz | **render fits**: `frame()` p99 4.97 ms, GPU 5.41 ms per frame pipelined | pacing, as 1 |
+| 4 | HUD at 4 Hz < 3% CPU | 4.00%: per frame 8.43 ms = build ops 2.00 + `frame()` 2.98 + the rest 3.46 | **fail**, cut below |
+| 6 | Idle RSS < 120 MB | **65 MB** headless after the first `ide` frame (fonts 30 MB, was 82), 126 MB windowed at the first frame. Then 903–1105 MB once fallback fonts loaded | **fallback memory**, fixed below |
+| – | Idle CPU | 0.42% | fine |
+| – | Startup | 242 ms windowed | no budget |
+
+Pipelined GPU time per frame (p50): `ide` 4.37, `scroll` 3.53, `text` 3.31, `glow` 5.41, `hud` 3.58, `type` 2.05 ms.
+`sync` p99 is still ~10 ms: the GPU waking up after idling between single frames, which continuous drawing doesn't
+pay. The fallback fonts loaded were Apple Symbols, Apple Color Emoji, Hiragino Sans GB and Apple SD Gothic Neo. The Go
+runtime held 1114 MB, 1076 MB of it already released, which macOS keeps counted in RSS. The text scene's build ops max of
+330 ms was those loads running on the frame.
+
+### Follow-ups after run 3
+
+**1 · Frame pacing: our bug, not Gio's.** `-auto` executed `op.InvalidateCmd` *after* `e.Frame()` returned. Gio reads
+it in only one place, while processing that frame:
+
+- `FrameEvent.Frame` (`app/os.go:260`) returns as soon as the main thread acks it. `validateAndProcess` acks
+  (`app/window.go:200`, `signal()`) *before* `Present` and before `processFrame` calls `updateState()`
+  (`app/window.go:238`).
+- `updateState()` is where a pending `InvalidateCmd` (stored by `io/input/router.go:567`) becomes the next frame
+  (`app/window.go:270`, `q.WakeupTime()`). Then `updateAnimation` stops the display link when no frame is due
+  (`app/window.go:354` → `os_macos.go:569` → `os_darwin.go:160`, `running = 0`, which `os_darwin.go:203` checks
+  on every tick).
+- So our `Execute` raced the main thread's `Present` + `updateState`. When it won, the next frame came on time. When
+  it lost, the wakeup sat unread in the router until something else made Gio look: an input event, a `ConfigEvent`,
+  or the kick's `Invalidate`. That's the 1-in-15 drop. Executing a command on the router from the client goroutine
+  after `Frame` is also a data race.
+- **Fix (ours, no fork):** the next frame is requested before `e.Frame`, as Gio's own examples do. In `-auto` the
+  phase bookkeeping now decides before the frame whether the phase ends. The kick stays as a watchdog and now reports
+  how many frames it rescued and how late they came. Run 4 should show `no late frames to kick`.
+- **Upstream (optional):** Gio could make a post-`Frame` `InvalidateCmd` safe, for example by having `Source.Execute`
+  wake the window when it lands outside a frame. That's worth an issue, but nothing here needs it.
+
+**2 · Fallback fonts never hit the heap whole.** `scene/fallback.go`:
+
+- Each candidate file is mmapped (`scene/mmap_unix.go`, `x/sys/unix` on both OSes; a read fallback elsewhere).
+- Each face's `cmap` is read alone, and only the face that covers the rune is parsed (`gtfont.NewFont` on that one
+  loader). The file is unmapped afterwards, since go-text copies what it keeps.
+- Loads run on a worker goroutine, never on the frame. A rune draws as tofu until its face lands, then the window is
+  invalidated (`Fonts.OnLoad`) and the next frame takes the face in (`typesetter.beginFrame`).
+- **Apple Color Emoji is left out.** go-text copies its whole colour-bitmap table onto the heap, and the atlas only
+  rasterises outlines anyway. Colour emoji need CoreText, or a reader that maps one strike entry at a time.
+- Fallback faces go to the atlas path only. Gio's shaper can't take a go-text face, so the `-text paths` baseline
+  shows tofu for them.
+- Can't be measured here: the sandbox has no system fonts that cover the scenes' symbols, so nothing loads. Run 4's
+  `RSS now` after `text` gives the number.
+
+**3 · HUD CPU.** The headless bench ticked the HUD's data only every 30th frame, but in the window every 4 Hz frame is
+a tick. With every frame a tick, build ops were 4.8 ms here, and most of that was the per-pane bar images: `draw.Draw`
+into `NRGBA`, then `NewImageOp` copying to `RGBA`. Now the bars fill premultiplied `RGBA` row by row, which `NewImageOp`
+keeps without copying: **4.77 → 0.75 ms** per tick here. That should take the Mac's 2.0 ms build to a few tenths. The
+bench's HUD now ticks every frame.
+
+- Caching unchanged panes as `op.CallOp` macros wouldn't help. At 4 Hz every pane's data changes each tick, and a macro
+  only saves our build. Gio collects and encodes every op on every frame regardless (there's no retained tree or
+  damage tracking), so `frame()` (2.98 ms on the Mac) is the floor for redrawing 30 panes.
+- The rest, 3.46 ms of the Mac's 8.43 ms (41%), is present, AppKit, the event loop and GC: fixed per frame, and not ours
+  to cut. Estimate for run 4: (0.3 + 3.0 + 3.5) ms × 4 Hz ≈ **2.7%**, just inside 3%. If it isn't, the remaining lever
+  is redrawing less: a HUD that updates panes on separate ticks, or at 2 Hz.
+
+Here, now (llvmpipe, atlas + baked): HUD `frame()` 6.8 ms against 22.9 ms with path shapes; text scene build max 8 ms.
+
+### For Liam (macOS), run 4
 
 Keep the window visible and in front, and don't touch anything while `-auto` runs.
 
@@ -379,18 +450,32 @@ Keep the window visible and in front, and don't touch anything while `-auto` run
 go build -tags spike -o /tmp/oriel-spike ./cmd/oriel-spike
 /tmp/oriel-spike -auto -text atlas -shapes baked
 /tmp/oriel-spike -bench -text atlas -shapes baked
-/tmp/oriel-spike -auto -phases hud -text atlas -shapes baked -cpuprofile /tmp/hud.prof   # if HUD is still over 3%
 ```
 
-Paste the outputs into the thread (and keep `/tmp/hud.prof` if you made it). They decide budgets 1, 3, 4 and 6.
+Look for: `no late frames to kick` and interval p99 under 8.4 ms (budget 1); HUD CPU under 3% (budget 4); `RSS now`
+after `text` and `glow` well under the old 900 MB, and the fallback fonts listed (budget 6).
 
-**Status: review**, waiting on run 2.
+**Status: review**, waiting on run 4.
 
 ## Recommendation
 
-- **Not yet a go.** On macOS, 1, 4 and 6 failed with Gio's path text. P0-6 built the atlas and baked shapes, and its
-  follow-ups cut the fonts' memory and the HUD's cost. Decide on macOS run 2. If 1 still fails, fall back per `shell.md`.
+**What's proven on the Mac:** rendering fits the budgets. GPU time per frame under load is 2–5.4 ms in every scene,
+`frame()` p99 is 5–6 ms, building ops is about 1 ms, idle CPU is 0.4%, and headless RSS after the first frame is 65 MB.
+Text matches the mockup more closely than before.
+
+**What's left, none of it Gio's limit:**
+- **Pacing** was our misuse of `InvalidateCmd` (fixed; run 4 confirms).
+- **Fallback memory** was loading whole font collections (fixed; run 4 measures).
+- **HUD CPU** is close to the line. About 41% of each frame is fixed AppKit and present cost, so it depends on how
+  often the HUD redraws, not on Gio.
+
+**Nothing found argues against Gio.** The two costs that are Gio's, stencilling every path and every scaled image, have
+clean workarounds (the atlas and integer-offset 9-slices). They belong in `render/gio` from the start. If run 4 holds,
+**go**: SH-1 starts on Gio.
+
 - Build `typeset` (go-text shaping with features and tracking, then a glyph atlas with stem darkening) early in
   phase 1, from the spike's `scene/atlas.go` and `scene/typeset.go`. `render/gio` draws rounded rects and borders as
   baked 9-slices from the same atlas, and never draws an image under a scale.
+- Font fallback goes through CoreText and fontconfig, one face at a time, mapped and off the frame path.
+- Every `InvalidateCmd` is executed before `Frame`; `ui` owns the frame loop, so this is one place to get right.
 - Theme tokens resolve to opaque colours where the surface is known (`theming.md` already derives with `mix()`).

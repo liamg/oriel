@@ -64,8 +64,13 @@ func benchmarks(out io.Writer, only string) error {
 		}
 		var build, frame, sync, piped scene.Durations
 		st = scene.NewState()
+		// The HUD only redraws when its data ticks (4 Hz), so every HUD frame is a tick.
+		fps := 120.0
+		if s.Name() == "hud" {
+			fps = 4
+		}
 		draw := func(i int) (time.Duration, error) {
-			st.Frame, st.T, st.Line = i, float64(i)/120, i
+			st.Frame, st.T, st.Line = i, float64(i)/fps, i
 			t0 := time.Now()
 			ops.Reset()
 			c.Begin(&ops, 1)

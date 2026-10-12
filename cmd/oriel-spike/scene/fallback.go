@@ -1,6 +1,7 @@
 package scene
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -10,22 +11,25 @@ import (
 	"sort"
 	"strings"
 
-	"gioui.org/font"
-	"gioui.org/font/opentype"
+	gtfont "github.com/go-text/typesetting/font"
+	ot "github.com/go-text/typesetting/font/opentype"
+	"github.com/go-text/typesetting/font/opentype/tables"
 )
 
 // The spike's stand-in for CoreText and fontconfig fallback (rendering.md): known system fonts
-// first, then a few others, parsed one at a time until one covers the rune.
+// first, then a few others. Files are mapped, not read, and only the one face that covers the
+// rune is parsed, so a collection never lands on the heap whole.
 
-// fallbackTries caps how many fonts outside the preferred list are parsed for one rune.
+// fallbackTries caps how many fonts outside the preferred list are opened for one rune.
 const fallbackTries = 8
 
+// Apple Color Emoji is left out: its colour bitmaps are one huge table that go-text copies to
+// the heap whole, and the atlas only rasterises outlines.
 var preferredFallbacks = map[string][]string{
 	"darwin": {
 		"/System/Library/Fonts/Apple Symbols.ttf",
 		"/System/Library/Fonts/Menlo.ttc",
 		"/System/Library/Fonts/Apple Braille.ttf",
-		"/System/Library/Fonts/Apple Color Emoji.ttc",
 		"/System/Library/Fonts/Hiragino Sans GB.ttc",
 		"/System/Library/Fonts/AppleSDGothicNeo.ttc",
 		"/System/Library/Fonts/STHeiti Medium.ttc",
@@ -38,52 +42,75 @@ var fontDirs = map[string][]string{
 	"linux":  {"/usr/share/fonts", "/usr/local/share/fonts", "~/.local/share/fonts", "~/.fonts"},
 }
 
-// loadFallback finds a system font covering r that isn't loaded yet and parses it.
-func loadFallback(r rune, loaded map[string]bool) ([]font.FontFace, string) {
-	tries := 0
+// loadFallback finds a face covering r in a system font and parses that face alone. key
+// identifies the face (file and index in its collection).
+func loadFallback(r rune, tried map[string]bool) (face *gtfont.Face, name, key string) {
+	opened := 0
 	for _, file := range fallbackCandidates(r) {
-		if loaded[file] {
-			continue
-		}
 		if !isPreferred(file) {
-			if tries >= fallbackTries {
+			if opened >= fallbackTries {
 				break
 			}
-			tries++
+			opened++
 		}
-		faces, err := parseFontFile(file)
-		if err != nil || !coversAny(faces, r) {
+		if face, i := loadFace(file, r, tried); face != nil {
+			name := filepath.Base(file)
+			if i > 0 {
+				name = fmt.Sprintf("%s#%d", name, i)
+			}
+			return face, name, fmt.Sprintf("%s#%d", file, i)
+		}
+	}
+	return nil, "", ""
+}
+
+// loadFace maps file and parses its first face, not already loaded, whose cmap has r.
+func loadFace(file string, r rune, tried map[string]bool) (*gtfont.Face, int) {
+	data, unmap, err := mapFile(file)
+	if err != nil {
+		return nil, 0
+	}
+	defer unmap()
+	lds, err := ot.NewLoaders(bytes.NewReader(data))
+	if err != nil {
+		return nil, 0
+	}
+	for i, ld := range lds {
+		if tried[fmt.Sprintf("%s#%d", file, i)] || !cmapHas(ld, r) {
 			continue
 		}
-		loaded[file] = true
-		return faces, filepath.Base(file)
+		// go-text copies the tables it reads, so nothing refers to data after this.
+		f, err := gtfont.NewFont(ld)
+		if err != nil {
+			continue
+		}
+		return gtfont.NewFace(f), i
 	}
-	return nil, ""
+	return nil, 0
+}
+
+// cmapHas reads only the cmap table.
+func cmapHas(ld *ot.Loader, r rune) bool {
+	raw, err := ld.RawTable(ot.MustNewTag("cmap"))
+	if err != nil {
+		return false
+	}
+	tb, _, err := tables.ParseCmap(raw)
+	if err != nil {
+		return false
+	}
+	cm, _, err := gtfont.ProcessCmap(tb, tables.FPNone)
+	if err != nil {
+		return false
+	}
+	_, ok := cm.Lookup(r)
+	return ok
 }
 
 func isPreferred(file string) bool {
 	for _, p := range preferredFallbacks[runtime.GOOS] {
 		if p == file {
 			return true
-		}
-	}
-	return false
-}
-
-func parseFontFile(file string) ([]font.FontFace, error) {
-	b, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	return opentype.ParseCollection(b)
-}
-
-func coversAny(faces []font.FontFace, r rune) bool {
-	for _, f := range faces {
-		if of, ok := f.Face.(opentype.Face); ok {
-			if _, ok := of.Face().NominalGlyph(r); ok {
-				return true
-			}
 		}
 	}
 	return false

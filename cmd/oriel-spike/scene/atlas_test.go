@@ -126,7 +126,7 @@ func TestSubStep(t *testing.T) {
 }
 
 func TestShapedText(t *testing.T) {
-	ts, err := newTypesetter(newAtlasOps())
+	ts, err := newTypesetter(newAtlasOps(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
