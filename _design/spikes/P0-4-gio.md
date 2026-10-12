@@ -500,3 +500,19 @@ clean workarounds (the atlas and integer-offset 9-slices). They belong in `rende
 - Font fallback goes through CoreText and fontconfig, one face at a time, mapped and off the frame path.
 - Every `InvalidateCmd` is executed before `Frame`; `ui` owns the frame loop, so this is one place to get right.
 - Theme tokens resolve to opaque colours where the surface is known (`theming.md` already derives with `mix()`).
+
+## SH-1 · render/gio on Liam's Mac (2026-10-12)
+
+The same measurements on the real backend (`oriel dev window -auto`, `oriel dev bench`), not the spike:
+
+| # | Budget | Result | |
+|---|---|---|---|
+| 1 | scroll p99 < 8 ms @120 Hz | interval p50 8.33, p99 **8.52**, max 8.91; `frame()` p99 3.05 ms; GPU 2.85 ms pipelined | ✓ |
+| 2 | key → photon < 8 ms | in-app p99 3.51 ms | ✓ |
+| 3 | 50 glows at 120 Hz | interval p99 8.69 ms; GPU 4.31 ms pipelined | ✓ |
+| 4 | HUD 4 Hz < 5% CPU | 4.27% (build 1.01 + `frame()` 3.84 + the rest 4.57 ms per frame) | ✓ |
+| 5 | Wayland 1.25× / 1.5× | not run: Gio is taken to handle it, to be raised if it doesn't | – |
+| 6 | idle RSS < 192 MB | 125 MB at the first windowed frame, 64 MB offscreen; 150–193 MB after every scene | ✓ |
+| – | idle CPU | 0.22% | ✓ |
+| – | startup | first frame presented at 224 ms; 2 late frames (129, 184 ms) at startup only, accepted for now | – |
+| – | fallback fonts | Apple Symbols, Hiragino Sans GB, Apple SD Gothic Neo; 4 runes uncovered | ✓ |

@@ -2,7 +2,7 @@
 id: FW-11
 title: "toml module: TOML 1.0 parser and round-tripping editor"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: toml
 depends_on: [P0-1]

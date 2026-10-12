@@ -2,7 +2,7 @@
 id: FW-5
 title: "Interaction states: hover, press, focus rings, disabled, cursors, tooltips; spring animation"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: ui
 depends_on: [FW-4]

@@ -75,21 +75,23 @@ flowchart LR
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear, slack, ical; agentbus via the `oriel-agentbus` helper process (keeps its sqlite dependency out of Oriel) | core |
-| `render` | GPU surface interface; `render/gio` impl | – |
+| `render` | GPU surface interface and display lists; `render/typeset` (shaping, fonts, rasterising, atlas); `render/raster` (draws display lists on the CPU); `render/bake` (glows and rounded rects as images); `render/headless` (keeps display lists and shoots them, for tests); `render/snapshot` (golden lists and perceptual PNG diffs); `render/scenes` (01-ide and the budget scenes) | go-text, x/image, theme |
+| `render/gio` | the Gio backend: windows, input, offscreen rendering, the glyph atlas and baked shapes | render, gioui.org |
 | `ui` | widgets, layout, theme, animation, input routing | render |
 | `app` | the desktop app: screens, panels, HUD; wires it all together | everything |
-| `registry` | contribution registry: commands, events/hooks, options, views, decorations | – |
+| `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`) |
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
-| `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry |
+| `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
 | `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker |
-| `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. The only module that imports Gio until `render/gio` | gioui.org |
+| `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. Superseded by `render/gio`; kept for its report | gioui.org |
 | `toml` | TOML 1.0 parser and round-tripping editor, for settings and themes (`settings.md`) | – |
+| `theme` | theme files, colour maths (CSS Color 4, OkLCh) and token resolution into a flat table (`theming.md`) | toml |
 | `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck` | – |
 
 Rules:
 
-- `text`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` never import `ui` or `render`.
+- `text`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` never import `ui` or `render`. `tools/layout` reads this line and fails on any such import, tests included.
 - Every "swap me" seam is an interface in the consumer package, with impls in subpackages.
 - Each module has its own tests; `vim` has the nvim conformance suite.
 - Every module is listed in `go.work`, and `tools/layout` fails if a module in this table has no directory or a `go.mod` is missing from `go.work`.
@@ -102,6 +104,11 @@ Rules:
 - The app keeps a materialised `core.State` and the UI reads from it. The UI
   never asks the network on a frame.
 - The same event log feeds the HUD, notifications, the assistant's context and tests.
+- An event is a plain struct with `Scope()` (its session, or none) and `Apply(*State) error`, its effect on state.
+  A store applies it to a copy and keeps the copy only if it applied cleanly, so a rejected event changes nothing.
+- `core.RegisterEvent[E](name)` names an event type in logs; plugins register theirs the same way.
+  A log is JSON lines, `{"seq":1,"type":"SessionOpened","event":{…}}`, written by a `core.Recorder` subscribed to the store.
+- `core.Replay` applies a log to a fresh store. Replaying it reproduces the state's JSON byte for byte.
 
 ## What crit code carries over
 
@@ -122,6 +129,7 @@ type Store interface {
     Session(id SessionID) (Session, bool)
     Apply(ev Event) error                          // the only mutation path; events come from the worker
     Subscribe(filter Filter, fn func(Event)) (cancel func())
+    State() State                                  // a copy of the materialised state
 }
 
 type Session interface {

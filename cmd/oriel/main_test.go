@@ -13,6 +13,8 @@ func TestRun(t *testing.T) {
 	}{
 		{[]string{"version"}, 0, "oriel dev\n"},
 		{[]string{"worker"}, 1, ""},
+		{[]string{"dev"}, 1, ""},
+		{[]string{"dev", "nope"}, 1, ""},
 		{[]string{"nope"}, 2, ""},
 	}
 	for _, tt := range tests {

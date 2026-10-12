@@ -94,9 +94,10 @@ flowchart TB
 
 ## UI from extensions: the view tree
 
-- Views are functions returning a tree: `Stack`, `Row`, `Text`, `Code`,
-  `Markdown`, `Button`, `Input`, `List`, `Table`, `Bar`, `Spark`, `Chart`,
-  `Badge`, `Term`, `Editor` (an embedded buffer), and `Canvas` (draw ops).
+- Views are functions returning a tree of `ui.Node`s: `Box` (rows and columns, with sizes, padding, gaps, alignment,
+  clipping, scrolling and floats), `Text`, `Paint`, and `Func` (Go views that build with widgets) today. `Code`, `Markdown`, `Button`, `Input`, `List`, `Table`,
+  `Bar`, `Spark`, `Chart`, `Badge`, `Term`, `Editor` (an embedded buffer) and `Canvas` (draw ops) join them as their
+  widgets land. Built-in widgets lay out through the same nodes, so a plugin's view and a built-in one behave alike.
 - Lua and Go build them directly. Process extensions send the same tree as
   JSON, with id-keyed patches.
 - Built-in panels are written this way, so you can **replace** one:
@@ -147,20 +148,32 @@ first open the way direnv works.
 // package registry — everything registers here, from any tier
 type Registry interface {
     Command(c Command) Disposable
+    Keymap(k Keymap) Disposable                   // keys in vim notation → a command, per mode
     Option(o OptionSpec) Disposable               // fields and the settings page: settings.md
-    View(id string, v View) Disposable            // override = register the same id later
+    View(id string, v View) Disposable            // override = register the same id later; disposing it restores the one beneath
     Decorations(id string, p DecorationProvider) Disposable
     Input(e input.Engine) Disposable
     Provider(p agent.Provider) Disposable
     AgentTool(t AgentTool) Disposable
     Theme(t theme.Source) Disposable
+
+    Run(ctx Ctx, id string, args Args) error      // every tier runs commands the same way
+    Commands() []Command                          // what :Commands lists, with sources
+    Keymaps() []Keymap                            // what :Keys lists, with sources
+    Lookup(modes, keys []string) (exact *Keymap, more bool) // modes most specific first: a panel's, then "n"
+    ViewByID(id string) (View, bool)
+    Options() Options                             // values by layer: settings.md
 }
 
+// Each extension registers through registry.WithSource(r, id), which stamps Source on what it registers:
+// "builtin:introspect", "init.lua:14", a plugin's id.
+
 type Command struct {
-    ID    string                                  // "git.commit"
-    Title string
-    Args  Schema                                  // typed, so the omnibox can prompt for them
-    Run   func(ctx Ctx, args Args) error
+    ID     string                                 // "git.commit"
+    Title  string
+    Args   Schema                                 // typed, so the omnibox can prompt for them
+    Run    func(ctx Ctx, args Args) error
+    Source string
 }
 
 // typed events; hooks are generic over the payload
@@ -172,6 +185,15 @@ func On[E any](r Registry, h Hook[E], opts ...HookOpt) Disposable
 type CommentSend struct{ Thread ThreadID; Body string; Urgent bool }
 type Permission  struct{ Session SessionID; Tool string; Input json.RawMessage; Decision *Decision }
 type Commit      struct{ Project string; Message string; Unread int }
+
+type Keymap struct {
+    Mode    string                                // "n", "i", or a panel's own mode ("requests")
+    Keys    string                                // "x", "<C-w>", "<Leader>rr"; <Leader> is expanded when it's defined
+    Command string
+    Args    Args
+    Desc    string
+    Source  string
+}
 
 type View interface {
     Build(ctx ViewCtx) ui.Node                    // pure: state in, tree out
@@ -201,6 +223,9 @@ type Host interface {
 }
 ```
 
+- Keys resolve like vim's mappings (`registry.Resolver`): an ambiguous prefix waits up to `keymap.timeoutlen`
+  (default 1 s, off with `keymap.timeout = false`), then the longest complete mapping runs, or the first key passes on
+  unmapped. `keymap.leader` defaults to Space.
 - Lua sees the same API through generated bindings (`oriel.on("Commit", fn)` is `registry.On[Commit]`).
 - Process extensions see it as JSON-RPC methods. WASM sees it as host functions.
   One declaration, three bindings.

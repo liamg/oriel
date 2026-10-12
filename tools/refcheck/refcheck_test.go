@@ -26,6 +26,8 @@ func fakeSpec(t *testing.T) string {
 		"<C-Right>\tor\t\t*<C-Right>* *W*\nW\t\t\t[count] WORDS forward.\n")
 	write(t, root, "spec/nvim/motion.txt", "*w*\nnvim words forward.\n")
 	write(t, root, "spec/lsp/spec.md", "# Spec\n\n## Text Documents\n\nPositions are zero-based.\n\n## Other\n\nElsewhere.\n")
+	write(t, root, "spec/css/Overview.bs", "<h2 id=\"mix\">Mixing</h2>\n<p>Mix &amp; <em>match</em>\n colours.\n<h3 id=\"sub\">Sub</h3>\nStill mixing.\n<h2 id='next'>Next</h2>\nElsewhere.\nset |x| to 1, giving&nbsp;''red'' or `blue`\n")
+	write(t, root, "spec/css/code.js", "// header\nfunction lin(RGB) {\n\treturn val / 12.92;\n}\n\nfunction gam(RGB) {\n\treturn 1.055;\n}\n")
 	return root
 }
 
@@ -47,6 +49,17 @@ func TestCheck(t *testing.T) {
 		{"lsp/spec.md#text-documents", "", true},
 		{"lsp/spec.md#Text Documents", "Elsewhere.", false},
 		{"lsp/spec.md#Missing", "", false},
+		{"css/Overview.bs#mix", "Mix & match colours.", true},
+		{"css/Overview.bs#mix", "Still mixing.", true},
+		{"css/Overview.bs#mix", "Elsewhere.", false},
+		{"css/Overview.bs#next", "set x to 1, giving red or blue", true},
+		{"css/Overview.bs#sub", "Still mixing.", true},
+		{"css/Overview.bs#next", "", true},
+		{"css/Overview.bs#gone", "", false},
+		{"css/code.js#lin", "return val / 12.92;", true},
+		{"css/code.js#lin", "return 1.055;", false},
+		{"css/code.js#gam", "", true},
+		{"css/code.js#cube", "", false},
 		{"oracle", "", true},
 		{"oracle nvim v0.11.7", "", true},
 		{"made up", "", false},

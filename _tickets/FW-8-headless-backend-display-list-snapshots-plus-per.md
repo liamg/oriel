@@ -2,7 +2,7 @@
 id: FW-8
 title: "Headless backend: display-list snapshots plus perceptual PNG diffs against the mockups"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: render
 depends_on: [FW-4]

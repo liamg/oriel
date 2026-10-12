@@ -2,7 +2,7 @@
 id: FW-7
 title: "Theme tokens: layered resolution, live reload, the default black/yellow/orange theme"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: theme
 depends_on: [FW-4, FW-11]

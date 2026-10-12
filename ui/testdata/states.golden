@@ -1,0 +1,35 @@
+=== idle
+rect 10,10 80x24 fill #191815
+text save @18,26
+rect 100,10 80x24 fill #121210
+text quit @108,26
+=== hovered save
+rect 10,10 80x24 fill #23211c
+text save @18,26
+rect 100,10 80x24 fill #121210
+text quit @108,26
+=== pressed save
+rect 10,10 80x24 fill #332f27
+text save @18,26
+rect 100,10 80x24 fill #121210
+text quit @108,26
+=== save focused from the keyboard
+rect 10,10 80x24 fill #191815
+text save @18,26
+rect 6,6 88x32 stroke 2 #ffd23f
+rect 100,10 80x24 fill #121210
+text quit @108,26
+=== disabled quit under the pointer
+rect 10,10 80x24 fill #191815
+text save @18,26
+rect 6,6 88x32 stroke 2 #ffd23f
+rect 100,10 80x24 fill #121210
+text quit @108,26
+=== tooltip
+rect 10,10 80x24 fill #23211c
+text save @18,26
+rect 6,6 88x32 stroke 2 #ffd23f
+rect 100,10 80x24 fill #121210
+text quit @108,26
+rect 32,38 105.70x24.10 fill #191815 stroke 1 #332f27
+text Save the file @40,54.65

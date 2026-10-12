@@ -57,7 +57,8 @@ flowchart TB
 - Gio blends in **linear light**; CSS, and so the mockups, blend in sRGB. A translucent token that looks right in
   a mockup comes out much stronger in Gio (a 7% tint about 3× as bright; `spikes/P0-4-gio.md`).
 - So `theme` resolves translucent component tokens to **opaque colours over the surface they sit on**, and
-  `render/gio` remaps alpha for solid fills whose backdrop isn't known (scrims, opacity layers).
+  `render/gio` remaps alpha for solid fills whose backdrop isn't known (scrims, opacity layers), solving over the
+  frame's `Backdrop` (the theme's `bg.base`), so the remap holds in light themes too.
 - Images are different: Gio samples them as premultiplied sRGB, which already blends like CSS over a dark backdrop.
   Glows, baked shapes and the glyph atlas take their colours unchanged (P0-6).
 - Dark text on light looks thin under linear blending, so the glyph atlas's gamma and stem darkening must land
@@ -77,6 +78,15 @@ flowchart TB
   (`⌘K`, `⌘1..9`), then the focused widget. Everything is rebindable.
 - **Accessibility**: an AccessKit-style tree emitted from the same widget ids,
   so screen readers aren't an afterthought. This matters if we open-source it.
+  - As built (FW-10): a box with a `Role` is in the tree (window, region, group, button, textbox, list, tree, tab,
+    menu, dialog, status…); one without is transparent. Its name is its `Label`, or else the text inside it; its
+    value, selection, expansion, focus, `Modal` (a focus trap) and help id (as its description) come from its style,
+    its bounds from layout, and its actions (click, focus, scroll) from what it takes. Every widget and the layout's
+    regions (Main, the docks, each pane and its tabs) set roles.
+  - `render.AccessDiff` turns two trees into an update: nodes added or changed, removed, and the focus. A window
+    that implements `render.Accessible` gets an update after each frame and reports a screen reader's actions, which
+    the app runs through `UI.Act` (a click is a click, focus is focus). The headless window implements it for tests.
+  - The platform bridges (NSAccessibility on macOS, AT-SPI on Linux) are FW-12; Gio has none.
 
 ## Performance budgets
 
@@ -97,68 +107,171 @@ flowchart TB
 // package render — what a backend (Gio now, wgpu later) implements
 type Backend interface {
     NewWindow(o WindowOpts) (Window, error)
+    Shaper() typeset.Shaper                       // the backend's fonts; the headless one is fixed-pitch
 }
 
 type Window interface {
-    Frame(fn func(f Frame)) error                 // called on vsync when damaged
-    Events() <-chan Event                         // keys, IME, pointer, resize, scale, focus
+    Frame(fn func(f Frame)) error                 // records a frame as a display list; the backend draws it on its own loop
+    Events() <-chan Event                         // keys, IME, pointer, resize, redraw; closed when the window is
     Scale() float32
+    Size() Point                                  // logical pixels
+    Close()
 }
 
+// Logical (CSS) pixels throughout; rects snap to device pixels, paths and lines don't.
 type Frame interface {
-    Rect(r Rect, s Style)                         // fill, border, radius, gradient
-    Path(p *Path, s Style)
-    Glyphs(run *typeset.Run, at Point, c Color)
-    Image(img ImageID, dst Rect)
-    Effect(kind EffectKind, r Rect, amt float32)  // glow, blur, grid, scanline
-    Push(clip Rect, t Transform)
+    Rect(r Rect, s Style)                         // fill or gradient, radius, inside stroke (a CSS border)
+    Path(p *Path, s Style)                        // fill and/or stroke
+    Glyphs(run *typeset.Run, at Point, c Color)   // at is the pen on the baseline
+    Image(img *image.RGBA, at Point)              // premultiplied, device pixels, never scaled
+    Effect(kind EffectKind, r Rect, blur float32, c Color) // Glow, GlowDisc
+    PushClip(r Rect, radius float32)
+    PushOpacity(a float32)
     Pop()
-    Damage() []Rect
+    Backdrop(c Color)                             // the theme's base background, which unknown backdrops blend over
+    Scale() float32
 }
 ```
+
+- Transforms, blur, scanline and damage rects come when something needs them.
+- `render.List` is a recorded frame. The app records on its goroutine and the backend replays the latest list
+  whenever its platform asks for a frame, so no app code runs on the platform's loop. `render/headless` keeps the
+  lists for tests.
 
 ```go
 // package typeset — shaping and the atlas, independent of the backend
 type Shaper interface {
-    Shape(text []byte, f FontSpec, feats Features) *Run // cached by (text, font, features)
+    Shape(text string, f FontSpec) *Run           // FontSpec: family, weight, italic, size, tracking, features
 }
 
-type Atlas interface {
-    // c is ignored by atlases that tint in a shader; render/gio's atlas keys by it.
-    Glyph(font FontID, gid GlyphID, size float32, subpx uint8, c Color) (TexRegion, error)
+type Run struct {                                 // logical pixels
+    Text            string
+    Glyphs          []Glyph                       // each with its *Face, so fallback faces mix in one run
+    Advance         float32
+    Ascent, Descent float32
 }
+
+func Rasterise(face *Face, gid GlyphID, ppem float32, sub uint8) Coverage // one of SubpixelSteps (4) positions
+type Atlas struct{ … }                            // shelf-packed pages; starts again on new pages when full
 ```
+
+- `typeset.Typesetter` shapes with go-text against the bundled faces (JetBrains Mono, Inter, Space Grotesk), then the
+  other bundled faces, then system fallbacks loaded off the frame path. It caches up to 8192 runs.
+- `render/gio` keeps every cache bounded: atlas 8 × 1024² pages, 8192 coverages, 512 baked shapes and glows (unused
+  ones go after 120 frames), Image ops for 2 frames, 24 fallback faces.
+
+## Headless and snapshots (FW-8)
+
+- `render/raster` draws a display list on the CPU, blending in sRGB as CSS does, so UI tests and theme screenshots
+  need no GPU (`shell.md`). It shares glow and rounded-rect baking with `render/gio` (`render/bake`). The fixture
+  draws in about 150 ms at 1×.
+- `render/snapshot`: `List(l)` writes a display list one op per line for golden files; `Compare(want, got, t)` is a
+  perceptual diff (deltaE OK per pixel, the fraction past `t`, and a want | got | heat map image); `GoldenPNG` and
+  `Golden` check against files, rewritten with `ORIEL_UPDATE=1`.
+- In CI, `make test` draws the fixture workspace (01-ide) in both built-in variants and holds it to the mockups
+  (mean deltaE ≤ 0.025, ≤ 6% of pixels past 0.1) and to its own goldens (≤ 0.1% past one JND, 0.02).
+- `typeset.NewBundled()` shapes with the bundled fonts only, so goldens are the same on every machine.
+- `headless.NewWith(shaper)` and `Window.Shot(frame, bg)` give tests real text and pixels.
+
+## Measuring
+
+- `oriel dev window [-auto] [SCENE]` opens a reference scene (`render/scenes`: ide, scroll, text, glow, hud, type);
+  `-auto` runs the budget script and prints frame times, CPU, RSS and late frames.
+- `oriel dev bench` measures every scene offscreen; `oriel dev shot DIR` renders them to PNGs; `oriel dev compare`
+  diffs a render against a mockup. `render/gio`'s tests hold 01-ide within 8/255 mean and 6.5% of pixels of its mockup.
 
 ```go
-// package ui — immediate-mode widgets are just functions over a Ctx
-type Ctx interface {
-    ID(key any) Ctx                               // stable identity for state and animation
-    Theme() *theme.Resolved
-    Frame() render.Frame
-    Input() *InputState
-    Anim(target float32) float32                  // spring towards target, keyed by ID
+// package ui — widgets are functions over a *Ctx; each call adds a node to this frame's tree
+func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID // Row and Column set st.Dir
+func (c *Ctx) Text(key any, s string, ts TextStyle) ID
+func (c *Ctx) Paint(key any, w, h Size, fn func(f render.Frame, r render.Rect)) ID
+func (c *Ctx) Node(n Node)                        // a plugin's view tree: *Box, *Text, *Paint
+func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i int)) ID // builds only the rows in view
+
+type Style struct {
+    Dir         Dir                               // Row or Column
+    W, H        Size                              // Px(v), Flex(weight), Pct(f), or fit (zero); Clamp(min, max)
+    Pad         Insets
+    Gap         float32
+    Main, Cross Align                             // Start, Center, End; SpaceBetween on the main axis
+    Fill, Stroke render.Color; Border, Radius float32
+    Clip, ScrollX, ScrollY bool                   // scroll offsets persist by id
+    Float *Float                                  // out of the flow, against another id's rect, a point, or the parent
+    Z     int                                     // floats paint after the flow, in Z order, outside their parent's clip
 }
 
-func Tat(c ui.Ctx, label string, frac float32, tone theme.Token) // a HUD readout
-func Panel(c ui.Ctx, title string, body func(ui.Ctx))
+func (u *UI) Frame(f render.Frame, size render.Point, build func(c *Ctx)) // build, lay out, paint
+func (u *UI) Rect(id ID) (render.Rect, bool)      // last frame's layout
+func (u *UI) Hit(p render.Point) []ID              // topmost first, as clipped when painted
+func (u *UI) ScrollBy(id ID, dx, dy float32)
+
+func Tat(c *ui.Ctx, label string, frac float32, tone theme.Token) // a HUD readout
+func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
 ```
+
+- **Layout** (FW-4) works like Clay's: sizes are fitted up the tree on each axis, then grow and percent space is
+  shared down it (weights, honouring min and max), then boxes are placed, then floats. It's deterministic and
+  allocation-light; `ui/testdata/layout/*.golden` pins the behaviour. Text is one line until wrapping lands with
+  the first widget that needs it.
+- Ids hash the parent's id with a key (the child's index when there's none; duplicates get `#n`). State not built
+  in a frame is dropped. `Theme` joins the `Ctx` with FW-7.
+- **Interaction** (FW-5): boxes opt in with `Interactive`, `Focusable`, `Disabled`, `Cursor` and `Tooltip`.
+  `u.Pointer(ev)` resolves hover and press against the latest painted frame (immediate mode's one frame of lag), and
+  a widget asks `c.Interaction(c.Next(key))` for hovered, pressed, clicked, focused and focus-visible before it
+  builds itself. A click is press and release on the same node. Disabled nodes take nothing and hide what's under
+  them. The wheel scrolls the topmost scroller on its axis. `FocusNext(±1)` walks focusables in paint order, and a
+  node focused from the keyboard gets a 2 px focus ring. A tooltip shows after the pointer rests 500 ms.
+- **Springs**: `c.Anim(key, target)` is critically damped (within 2% at 200 ms, settled by 500 ms). The UI reports
+  `NextFrame()` while anything moves or a tooltip is due, and the app redraws at 120 Hz until then. The option
+  `ui.reduced_motion` makes every spring jump.
+- `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer.
+- **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
+  selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal` and `Toasts`. Each paints with component tokens
+  it declares (`button.bg`, `input.border.focus`, `list.row.selected`, `menu.item.hover`, `modal.scrim`…), takes a
+  help id, and has keyboard and mouse paths (see each widget's doc comment). Snapshots of a gallery of all of them
+  are pinned in dark and light (display lists and PNGs), and a test fails if any interactive node lacks a help id.
+- **Keys reach widgets** through the keymap layer: a focused node with a `KeyMode` ("input", "list", "menu"…) puts
+  that mode first, then `global` (app chords such as `⌘K`); otherwise `n`, then `global`. Keys no mapping takes go
+  to the focused node (`u.Key`), and a widget reads them from `Interaction.Keys`. So `L.keymap.set("list", "dd", …)`
+  is a list-local mapping, and nothing in `n` fires while an input has focus.
+- A press focuses the nearest focusable node at or above it. `Style.Trap` (a modal) keeps focus inside while it's
+  up. Focus a widget moves itself (`Ctx.Focus`) draws no focus ring; keyboard focus does.
+- A right-click gives the node `Interaction.Context`; `ContextMenu` opens there and always ends with Help for the
+  target's help id (`help.md`).
+- `ui.Func` lets a Go view build with the frame's `*Ctx` (and so use widgets and keep their state by id, through
+  `ui.State[T]`). Process plugins' JSON views get the widgets as node types when PL-2 lands.
 
 ```go
-// package layout — one tree for every view; docks are its edges
-type Placement int // Docked | Split | Tab | Float | DropDown
-
-type Node interface{ isNode() }
-type Split struct{ Dir Axis; Children []Node; Weights []float32 }
-type Leaf  struct{ Tabs []ViewRef; Active int }
-type Root  struct{ Main Node; Docks map[Edge]*Leaf; Floats []*Float; Zoomed *ViewRef }
-
-type Layout interface {
-    Open(v ViewRef, p Placement, opts Opts) error
-    Move(v ViewRef, p Placement, opts Opts) error // ⌃W M, drag and drop
-    Zoom(v ViewRef)                                // toggle; restores the saved tree
-    Focus(dir Dir)                                 // ⌃W h/j/k/l across main and docks
-    Save(name string) Snapshot
-    Restore(s Snapshot)
+// package ui/layout — one tree for every view; docks are its edges (FW-9)
+type ViewRef struct{ ID, Instance, Title string }  // a registered view, and which one
+type Node struct {                                   // a split (Split set) or a tab group (Tabs)
+    Split   Axis; Kids []*Node; Weights []float32
+    Tabs    []ViewRef; Active int
 }
+type Root struct {
+    Main *Node; Docks map[Edge]*Dock; Floats []*Float; DropDown *Dock
+    Zoomed, Focus *ViewRef
+}
+
+func (r *Root) Open(v ViewRef, p Placement, o Opts) error // Docked | Split | Tab | Float | DropDown
+func (r *Root) Move(v ViewRef, p Placement, o Opts) error // ⌃W J/L/T/F, ⌃W M's menu
+func (r *Root) Drop(v ViewRef, t Target) error            // a drag: a leaf's centre or edge, a dock, open space
+func (r *Root) ToggleZoom(v ViewRef)                      // the tree isn't touched, so ⌃W Z again restores it exactly
+func (r *Root) FocusDir(d Dir, rects map[*Node]render.Rect) bool // ⌃W h/j/k/l across main and docks alike
+func (r *Root) Save() Snapshot; func Restore(Snapshot) (*Root, error) // JSON
+
+func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool // draws it; tabs drag, splitters resize
 ```
+
+- The model is plain data, so every move and drop is a golden of the tree it leaves (`ui/layout/testdata`), and
+  drags are scripted with real pointer events in tests. Dropping a view on its own leaf's edge splits it off, unless
+  it's the leaf's only tab. Splitting the same way twice gives one split with three children.
+- A drag lights its target (the half of a leaf an edge drop takes, the whole leaf for its centre, a dock, a 24px
+  window edge for a dock that's closed) with an accent fill and glow that glide between targets on springs.
+- `⌃W h/j/k/l` goes to the nearest pane in that direction by last frame's rects; a tie goes back to where focus came
+  from, as vim's window moves feel.
+- The app's built-in `layout` extension owns the root and registers `view.open {id, place, edge, side}`,
+  `view.close`, `layout.move`, `layout.zoom`, `layout.focus {dir}`, `layout.dock {edge}`, `layout.equalize`,
+  `layout.save/restore {name}` and `layout.menu`, with the ⌃W keys, `⌃J` and ``⌃` `` bound in `global`. Saved layouts
+  are in memory until sessions persist them (SE-2).
 

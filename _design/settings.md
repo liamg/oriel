@@ -37,6 +37,9 @@ flowchart LR
 ```
 
 - `init.lua` beats the user file, so a value computed in Lua is never silently overridden by a GUI click.
+- A window value beats a buffer value; an option is usually only one of the two.
+- In code these are `registry.Layer`s, and a value is read at an `At{Project, Session, Buffer, Window}`: each layer
+  applies only where its key matches. `Get` returns the value and the layer it came from, which is what the page shows.
 - A project file is trusted on first open, the same way as `.oriel/` Lua (`plugins.md`).
 - Session, buffer and window values are runtime only: `:set`, the page's session scope, or a plugin. They aren't
   written to disk unless you choose "save to user" or "save to project".
@@ -53,6 +56,14 @@ flowchart LR
 - It covers TOML 1.0, tested against the `toml-test` suite vendored under `spec/`.
 - It keeps a concrete syntax tree, so edits are surgical: set, add or delete a key in place and keep everything else
   byte for byte.
+- `toml.Parse` returns a `Document`: `Value()`, `Get(path…)`, `Set(path, v)`, `Delete(path…)`, `Bytes()`. The tree is
+  the source itself plus the span of every key, value and table header; an edit splices bytes and reparses, and an edit
+  that would make the document invalid is refused with the document unchanged.
+  - Setting an existing key replaces only its value's bytes.
+  - A new key goes after the last key of the deepest `[table]` that holds it (with that key's indent), next to the
+    dotted keys that define its table, or in a new `[table]` at the end. Line endings follow the file's.
+  - Deleting a key removes its line (comment included); deleting a table removes its sections and everything under it.
+- Parse errors carry a line and column. Spec: `spec/toml` (TOML 1.0.0); suite: `spec/toml-test` (v1.5.0, the 1.0.0 file list).
 
 ## Options (`OptionSpec`)
 

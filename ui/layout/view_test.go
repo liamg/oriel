@@ -1,0 +1,199 @@
+package layout
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/raster"
+	"github.com/liamg/oriel/render/snapshot"
+	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
+)
+
+var screen = render.Point{X: 1200, Y: 800}
+
+type harness struct {
+	t     *testing.T
+	u     *ui.UI
+	r     *Root
+	panes Panes
+	list  *render.List
+	now   time.Time
+	held  bool // the primary button is down, for moves
+}
+
+func newHarness(t *testing.T) *harness {
+	t.Helper()
+	ts, err := typeset.NewBundled()
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, _ := theme.Stack(theme.Builtins(), "oriel")
+	th, err := theme.Resolve(st, theme.Dark)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := ui.New(ts, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}})
+	u.SetTheme(th)
+	u.SetOptions(func() ui.Options { o := u.Options(); o.ReducedMotion = true; return o }())
+	h := &harness{t: t, u: u, r: start(t), now: time.Unix(1000, 0)}
+	u.SetClock(func() time.Time { return h.now })
+	h.frame()
+	h.frame()
+	return h
+}
+
+func (h *harness) frame() {
+	h.list = new(render.List)
+	h.u.Frame(h.list.Record(1), screen, func(c *ui.Ctx) {
+		View(c, "layout", h.r, &h.panes, func(c *ui.Ctx, v ViewRef, focused bool) {
+			c.Text("name", v.String(), ui.TextStyle{})
+		})
+	})
+}
+
+func (h *harness) ptr(k render.PointerKind, p render.Point) {
+	b := render.Buttons(0)
+	if k == render.PointerPress || k == render.PointerRelease || k == render.PointerMove && h.held {
+		b = render.ButtonPrimary
+	}
+	h.u.Pointer(render.PointerEvent{Kind: k, Pos: p, Buttons: b})
+	h.frame()
+}
+
+// tabAt is the centre of v's tab, from the latest frame's display list.
+func (h *harness) tabAt(v ViewRef) render.Point {
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == v.String() && op.At.Y < 1000 {
+			// Tab labels sit in 30px strips; the content's copy of the name is lower down its pane.
+			if row := int(op.At.Y); row%30 >= 10 && h.isTab(op) {
+				return render.Point{X: op.At.X + 10, Y: op.At.Y - 4}
+			}
+		}
+	}
+	h.t.Fatalf("no tab for %s", v)
+	return render.Point{}
+}
+
+func (h *harness) isTab(op render.Op) bool {
+	return op.Run.Font.Size == 12 && op.Color != (render.Color{})
+}
+
+func TestRenderSnapshot(t *testing.T) {
+	h := newHarness(t)
+	snapshot.Golden(t, "testdata/view-start.list", []byte(snapshot.List(h.list)))
+}
+
+// Drag the terminal's tab over every drop target, pinning what lights up, then drop it on each.
+func TestDragToEveryTarget(t *testing.T) {
+	targets := []struct {
+		name string
+		at   func(main render.Rect) render.Point
+	}{
+		{"main, left edge", func(m render.Rect) render.Point { return render.Point{X: m.Min.X + m.Dx()*.1, Y: m.Min.Y + m.Dy()/2} }},
+		{"main, right edge", func(m render.Rect) render.Point { return render.Point{X: m.Min.X + m.Dx()*.9, Y: m.Min.Y + m.Dy()/2} }},
+		{"main, top edge", func(m render.Rect) render.Point { return render.Point{X: m.Min.X + m.Dx()/2, Y: m.Min.Y + m.Dy()*.1} }},
+		{"main, bottom edge", func(m render.Rect) render.Point { return render.Point{X: m.Min.X + m.Dx()/2, Y: m.Min.Y + m.Dy()*.9} }},
+		{"main, middle", func(m render.Rect) render.Point { return render.Point{X: m.Min.X + m.Dx()/2, Y: m.Min.Y + m.Dy()/2} }},
+		{"the left window edge", func(render.Rect) render.Point { return render.Point{X: 5, Y: 300} }},
+		{"the right window edge", func(render.Rect) render.Point { return render.Point{X: screen.X - 5, Y: 300} }},
+		{"the bottom window edge", func(render.Rect) render.Point { return render.Point{X: 600, Y: screen.Y - 5} }},
+		{"the left dock", func(render.Rect) render.Point { return render.Point{X: 120, Y: 300} }},
+	}
+	var b strings.Builder
+	for _, tg := range targets {
+		h := newHarness(t)
+		main := h.panes.Rects(h.u)[h.r.Main]
+		from := h.tabAt(term)
+		h.held = true
+		h.ptr(render.PointerMove, from)
+		h.ptr(render.PointerPress, from)
+		h.ptr(render.PointerMove, render.Point{X: from.X + 10, Y: from.Y - 10})
+		to := tg.at(main)
+		h.ptr(render.PointerMove, to)
+		h.ptr(render.PointerMove, to)
+		fmt.Fprintf(&b, "=== %s at %v,%v\n", tg.name, to.X, to.Y)
+		for _, op := range h.list.Ops {
+			if op.Kind == render.OpRect && op.Style.Width == 1.5 {
+				fmt.Fprintf(&b, "lit %s\n", strings.TrimPrefix(snapshot.List(&render.List{Ops: []render.Op{op}}), "rect "))
+			}
+		}
+		h.held = false
+		h.ptr(render.PointerRelease, to)
+		b.WriteString(h.r.Dump())
+	}
+	snapshot.Golden(t, "testdata/drag.golden", []byte(b.String()))
+}
+
+func TestClickTabAndContent(t *testing.T) {
+	h := newHarness(t)
+	h.ptr(render.PointerMove, h.tabAt(probs))
+	p := h.tabAt(probs)
+	h.ptr(render.PointerPress, p)
+	h.ptr(render.PointerRelease, p)
+	if w := h.r.Find(probs); w.Leaf.Tabs[w.Leaf.Active] != probs || h.r.Focus == nil || *h.r.Focus != probs {
+		t.Errorf("clicking problems' tab: %s", h.r.Dump())
+	}
+}
+
+func TestSplitterDrag(t *testing.T) {
+	h := newHarness(t)
+	h.r.Move(term, Split, Opts{Side: SideRight})
+	h.frame()
+	h.frame()
+	rects := h.panes.Rects(h.u)
+	var left render.Rect
+	for l, rc := range rects {
+		if len(l.Tabs) > 0 && l.Tabs[0] == code {
+			left = rc
+		}
+	}
+	x := left.Max.X
+	h.held = true
+	h.ptr(render.PointerMove, render.Point{X: x, Y: 300})
+	h.ptr(render.PointerPress, render.Point{X: x, Y: 300})
+	h.ptr(render.PointerMove, render.Point{X: x + 100, Y: 300})
+	h.held = false
+	h.ptr(render.PointerRelease, render.Point{X: x + 100, Y: 300})
+	if w := h.r.Main.Weights; !(w[0] > w[1]) {
+		t.Errorf("dragging the splitter right: weights %v", w)
+	}
+}
+
+func TestFocusDir(t *testing.T) {
+	h := newHarness(t)
+	h.r.Move(term, Split, Opts{Side: SideRight})
+	h.r.Focus = &code
+	h.frame()
+	h.frame()
+	rects := h.panes.Rects(h.u)
+	for _, step := range []struct {
+		d    Dir
+		want ViewRef
+	}{{DirRight, term}, {DirLeft, code}, {DirLeft, tree}, {DirRight, code}, {DirDown, probs}, {DirUp, code}} {
+		h.r.FocusDir(step.d, rects)
+		if *h.r.Focus != step.want {
+			t.Fatalf("⌃W %s: focus %s, want %s", step.d, h.r.Focus, step.want)
+		}
+	}
+}
+
+// A drag in progress, as drawn: the terminal's tab over main's right edge, which lights up.
+func TestDragShot(t *testing.T) {
+	h := newHarness(t)
+	main := h.panes.Rects(h.u)[h.r.Main]
+	from := h.tabAt(term)
+	h.held = true
+	h.ptr(render.PointerMove, from)
+	h.ptr(render.PointerPress, from)
+	h.ptr(render.PointerMove, render.Point{X: from.X + 10, Y: from.Y - 10})
+	to := render.Point{X: main.Min.X + main.Dx()*.9, Y: main.Min.Y + main.Dy()/2}
+	h.ptr(render.PointerMove, to)
+	h.ptr(render.PointerMove, to)
+	bg := h.u.Theme().C(theme.BgBase)
+	snapshot.GoldenPNG(t, "testdata/drag-right.png", raster.Render(h.list, screen, 1, bg), 0.02, 0.001)
+}

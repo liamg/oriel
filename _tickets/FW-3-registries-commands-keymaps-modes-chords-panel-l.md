@@ -2,7 +2,7 @@
 id: FW-3
 title: "Registries: commands, keymaps (modes, chords, panel-local), options (scoped)"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: registry, input
 depends_on: [FW-1]

@@ -115,6 +115,29 @@ run = { lua = "init.lua" }                        # optional: dynamic themes
   so updating the plugin never clobbers your tweaks.
 - `:Theme publish` writes the manifest and turns your local theme into a shareable plugin repo.
 
+## As built (FW-7)
+
+- The `theme` module. A theme file has `name`, `extends`, `variant`, and `[palette]`, `[semantic]`, `[component]`,
+  `[syntax]` and `[effects]` tables, shared or under `[dark]` and `[light]`. Token keys may be dotted (`bg.base = …`)
+  or quoted.
+- Expressions: hex, `rgb()`, `oklch()`, a name, or `mix(a, b, p)` (CSS `color-mix` in OkLCh: shorter hue, premultiplied
+  alpha), `lighten(c, p)`, `darken(c, p)` (OkLCh lightness), `alpha(c, p)` and `over(fg, bg)` (sRGB compositing). Out
+  of gamut results are mapped as CSS Color 4 does (binary search with local MINDE). Tests cite the vendored spec
+  (`spec/css-color-4`). `contrast()` comes with the theme editor's lint (SH-11), with APCA vendored.
+- A name in a token's expression is a token unless it's the token's own name (that's the palette colour of that
+  name), and falls back to the palette. Cycles and unknown names are errors that name the chain.
+- **Tokens are declared** by whoever paints with them: `theme.Declare("tab.active.edge", "accent")`, in Go or by a
+  plugin. Semantic tokens are declared by `theme` itself. `DeclareOn(name, expr, "bg.surface")` (or `{ color, on }`
+  in a file) makes a translucent value opaque over the token it sits on, which is how `accent.bg` stays faithful in
+  both variants (`rendering.md`, "Blending").
+- `Resolved.C(id)` is an index into a flat slice. `Syntax("@keyword.return")` falls back along the dotted path, then to
+  `fg`. `Chain(name)` gives the editor's pick mode its links, each with the theme that set it.
+- The built-in theme is `oriel`, one file with `[dark]` (base.css) and `[light]` (17-light). Light turns glows off.
+  The reference fixture (`render/scenes`) renders in both, each against its mockup within 8/255 and 6.5%.
+- The app takes `ui.theme` (a name) and `ui.variant` (dark or light; following the OS comes with SH-11). User themes
+  are `*.toml` in `~/.config/oriel/themes`, and any plugin can register a `theme.Source`. Files are polled every
+  250 ms, so a save shows within that; a theme that fails to resolve leaves the last good one showing and logs why.
+
 ## Implementation notes
 
 - The `ui` module resolves tokens at theme-load time into a flat table of IDs. Widgets read by ID, so lookups are free per frame.

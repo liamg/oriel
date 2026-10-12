@@ -6,6 +6,8 @@
 //	ref:    motion.txt *w*              vim help tag (spec/vim)
 //	ref:    nvim/motion.txt *w*         nvim help tag (spec/nvim)
 //	ref:    lsp/specification.md#Text Documents   markdown heading
+//	ref:    css-color-4/Overview.bs#hue-interpolation   HTML or Bikeshed section, by its heading's id
+//	ref:    css-color-4/conversions.js#OKLab_to_XYZ     a function in vendored sample code
 //	ref:    oracle                      expectation taken from the nvim oracle; no quote
 //	quote:  "[count] words forward."
 package refcheck
@@ -13,6 +15,7 @@ package refcheck
 import (
 	"bufio"
 	"fmt"
+	"html"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -90,8 +93,15 @@ func (c *Checker) Check(r Ref) error {
 	if ref == "oracle" || strings.HasPrefix(ref, "oracle ") {
 		return nil
 	}
-	if file, heading, ok := strings.Cut(ref, "#"); ok && strings.HasSuffix(file, ".md") {
-		return c.checkMarkdown(r, file, heading)
+	if file, heading, ok := strings.Cut(ref, "#"); ok {
+		switch filepath.Ext(file) {
+		case ".md":
+			return c.checkMarkdown(r, file, heading)
+		case ".bs", ".html":
+			return c.checkHTML(r, file, heading)
+		case ".js":
+			return c.checkFunc(r, file, heading)
+		}
 	}
 	file, anchor, ok := strings.Cut(ref, " ")
 	anchor = strings.TrimSpace(anchor)
@@ -246,4 +256,66 @@ func Run(root string) (checked int, problems []string, err error) {
 		return nil
 	})
 	return checked, problems, err
+}
+
+var htmlHeading = regexp.MustCompile(`<h([1-6])\b[^>]*\bid=["']([^"']+)["']`)
+
+// checkHTML finds the heading with id and checks the quote in its section, which runs to the next heading
+// of the same or a higher level. Tags are dropped and whitespace normalised before matching.
+func (c *Checker) checkHTML(r Ref, file, id string) error {
+	lines, err := c.lines(file)
+	if err != nil {
+		return fmt.Errorf("%s: %v", r, err)
+	}
+	for i, line := range lines {
+		m := htmlHeading.FindStringSubmatch(line)
+		if m == nil || m[2] != id {
+			continue
+		}
+		end := i + 1
+		for ; end < len(lines); end++ {
+			if n := htmlHeading.FindStringSubmatch(lines[end]); n != nil && n[1] <= m[1] {
+				break
+			}
+		}
+		if r.Quote == "" || containsQuote(bikeshedText(strings.Join(lines[i:end], "\n")), r.Quote) {
+			return nil
+		}
+		return fmt.Errorf("%s: quote not found in #%s in spec/%s: %q", r, id, file, r.Quote)
+	}
+	return fmt.Errorf("%s: no heading with id %q in spec/%s", r, id, file)
+}
+
+var (
+	htmlTag     = regexp.MustCompile(`<[^>]*>`)
+	bikeshedVar = regexp.MustCompile(`\|([^|\s]+)\|`)
+)
+
+// bikeshedText is a section as a reader sees it: no tags or entities, and Bikeshed's ”value”, |variable| and
+// `code` markup gone.
+func bikeshedText(s string) string {
+	s = html.UnescapeString(htmlTag.ReplaceAllString(s, ""))
+	s = strings.NewReplacer("\u00a0", " ", "''", "", "`", "").Replace(s)
+	return bikeshedVar.ReplaceAllString(s, "$1")
+}
+
+// checkFunc finds `function name(` and checks the quote in its body, up to the next top-level function.
+func (c *Checker) checkFunc(r Ref, file, name string) error {
+	lines, err := c.lines(file)
+	if err != nil {
+		return fmt.Errorf("%s: %v", r, err)
+	}
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "function "+name+"(") && !strings.HasPrefix(line, "function "+name+" (") {
+			continue
+		}
+		end := i + 1
+		for ; end < len(lines) && !strings.HasPrefix(lines[end], "function "); end++ {
+		}
+		if r.Quote == "" || containsQuote(strings.Join(lines[i:end], "\n"), r.Quote) {
+			return nil
+		}
+		return fmt.Errorf("%s: quote not found in function %s in spec/%s: %q", r, name, file, r.Quote)
+	}
+	return fmt.Errorf("%s: no function %s in spec/%s", r, name, file)
 }

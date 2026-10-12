@@ -14,11 +14,13 @@ use (
 	./lsp
 	./registry
 	./render
+	./render/gio
 	./sandbox
 	./script
 	./syntax
 	./testrun
 	./text
+	./theme
 	./toml
 	./tools
 	./ui

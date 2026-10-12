@@ -1,0 +1,9 @@
+box root 0,0 400x300
+  box chip 0,0 67x34
+    box dot 7,13.50 7x7
+    box lines 18,2 42x30
+      text 0 18,2 36x14 "claude"
+      text 1 18,18 42x14 "working"
+  box 1 0,34 60x14
+    text 0 0,34 24x14 "from"
+    text 1 24,34 36x14 "a view"

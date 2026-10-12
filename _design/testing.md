@@ -114,7 +114,7 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 | `lsp` | recorded JSON-RPC transcripts replayed against a fake server; each message shape cites a spec section | LSP 3.17 |
 | `dap` | recorded sessions with real dlv and debugpy, replayed; live runs in CI | DAP spec |
 | `term` | `vttest`/esctest-style scripts: bytes in, expected grid out; every case cites a `ctlseqs` entry | xterm ctlseqs, ECMA-48, kitty docs |
-| `render`, `ui` | the headless backend records display lists, compared as snapshots; plus golden PNGs with a perceptual-diff threshold | the mockups (`ui.md`) as reference |
+| `render`, `ui` | the headless backend records display lists, compared as snapshots (`render/snapshot`); `render/raster` draws them on the CPU (sRGB blending, as CSS) into golden PNGs compared by deltaE OK; the fixture is also held against the mockups (FW-8) | the mockups (`ui.md`) as reference |
 | `theme` | token resolution tables; every built-in theme rendered on the fixture workspace; contrast lint | CSS Color 4, APCA |
 | `agent/*` | the provider conformance suite (start, send, tool call, permission, interrupt, fork, resume) against a **fake `claude`/`codex` binary** that replays recorded hook and transcript traffic; plus a slow live suite run on demand | recorded sessions from real CLIs, re-recorded when versions bump |
 | `wire`, `worker` | in-process worker tests; chaos tests (drop the connection mid-stream, reconnect, compare state) | – |

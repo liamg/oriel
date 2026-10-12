@@ -1,0 +1,89 @@
+backdrop #060606
+rect 0,0 1000x640 fill #060606
+rect 20,20 80.921875x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+text "Allow host" @30,37.365234 #141006 Inter 12
+rect 110.921875,20 50.390625x26 fill #191815 radius 6 stroke 1 #332f27
+text "Once" @120.921875,37.365234 #ece6d8 Inter 12
+rect 171.3125,20 53.984375x26 radius 6 stroke 1 #332f27
+text "Ghost" @181.3125,37.365234 #ece6d8 Inter 12
+rect 235.29688,20 69.890625x26 fill #191815 radius 6 stroke 1 #332f27
+text "Disabled" @245.29688,37.365234 #4f4a40 Inter 12
+rect 315.1875,24.73 86.26999x16.539997 fill #ff5f6d12 radius 10 stroke 1 #ff5f6d59
+text "1 NEEDS YOU" @322.1875,36.42 #ff5f6d JetBrains Mono 9.5
+rect 411.4575,24.73 73.130005x16.539997 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
+text "1 WORKING" @418.4575,36.42 #4cc9f0 JetBrains Mono 9.5
+rect 494.5875,24.73 59.99002x16.539997 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
+text "GOPLS ✓" @501.5875,36.42 #ffd23f JetBrains Mono 9.5
+rect 564.5775,20 68.203125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Popover" @574.5775,37.365234 #ece6d8 Inter 12
+rect 20,62 420x30 fill #060606 radius 6 stroke 1 #332f27
+clip 20,62 420x30 r 6
+  text "round half even" @30,81.54712 #ece6d8 Inter 12.5
+pop
+rect 20,108 382x28 fill #0c0c0b
+text "AGENT · CLAUDE" @32,124.6 #7c7566 JetBrains Mono 10
+text "TERMINAL" @146,124.6 #ece6d8 JetBrains Mono 10
+rect 146,134 56x2 fill #ffd23f
+text "PROBLEMS 1" @218,124.6 #7c7566 JetBrains Mono 10
+text "DEBUG" @304,124.6 #7c7566 JetBrains Mono 10
+text "TESTS" @355,124.6 #7c7566 JetBrains Mono 10
+rect 20,152 250x200 fill #0c0c0b
+clip 20,152 250x200 r 0
+  rect 20,152 250x22 fill #1f1c0f
+  rect 20,152 2x22 fill #ffd23f
+  text "▸" @32,167.54712 #ece6d8 Inter 12.5
+  rect 46,158 10x10 fill #5cd2ffd9 radius 2
+  text "internal" @62,167.54712 #ece6d8 Inter 12.5
+  rect 32,180 10x10 fill #ffcf5cd9 radius 2
+  text "PLAN.md" @48,189.54712 #b3ab99 Inter 12.5
+  text "A" @254,188.59999 #4fe0a0 JetBrains Mono 10
+pop
+rect 286,152 250x200 fill #0c0c0b
+clip 286,152 250x200 r 0
+  text "Negative values round the wrong way" @298,167.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong way" @298,189.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong way" @298,211.54712 #b3ab99 Inter 12.5
+  rect 286,218 250x22 fill #1f1c0f
+  rect 286,218 2x22 fill #ffd23f
+  text "Negative values round the wrong way" @298,233.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong way" @298,255.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong way" @298,277.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong way" @298,299.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong way" @298,321.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong way" @298,343.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong way" @298,365.54712 #b3ab99 Inter 12.5
+pop
+rect 552,152 250x137 fill #121210 radius 6 stroke 1 #332f27
+rect 552,156 250x30 fill #191815
+text "Open usage details" @564,175.54712 #ece6d8 Inter 12.5
+text "Copy value" @564,205.54712 #ece6d8 Inter 12.5
+rect 774,193.4 16x15.199997 fill #121210 radius 4 stroke 1 #332f27
+text "y" @779,204.59999 #7c7566 JetBrains Mono 10
+rect 552,220 250x1 fill #24221d
+text "Hide this tat" @564,244.54712 #4f4a40 Inter 12.5
+text "Move to statusline…" @564,274.54712 #ece6d8 Inter 12.5
+rect 20,368 120x24 fill #121210 radius 4
+rect 564.5775,50 220x39.12451 fill #121210 radius 8 stroke 1 #332f27
+text "A popover under its anchor." @576.5775,74.109375 #ece6d8 Inter 12.5
+rect 80,380 250x107 fill #121210 radius 6 stroke 1 #332f27
+rect 80,384 250x30 fill #191815
+text "Open usage details" @92,403.54712 #ece6d8 Inter 12.5
+text "Copy value" @92,433.54712 #ece6d8 Inter 12.5
+rect 302,421.4 16x15.200012 fill #121210 radius 4 stroke 1 #332f27
+text "y" @307,432.6 #7c7566 JetBrains Mono 10
+rect 80,448 250x1 fill #24221d
+text "? Help" @92,472.54712 #ece6d8 Inter 12.5
+rect 302,460.4 16x15.200012 fill #121210 radius 4 stroke 1 #332f27
+text "K" @307,471.6 #7c7566 JetBrains Mono 10
+rect 644,510.03098 340x52.984528 fill #121210 radius 8 stroke 1 #332f27
+clip 644,510.03098 340x52.984528 r 8
+  rect 644,510.03098 2x52.984528 fill #4cc9f0
+  text "git push origin rethink/rounding" @658,532.1404 #ece6d8 Inter 12.5
+  text "gateway · 3 commits" @658,549.86554 #7c7566 JetBrains Mono 10.5
+pop
+rect 644,571.0155 340x52.984497 fill #121210 radius 8 stroke 1 #332f27
+clip 644,571.0155 340x52.984497 r 8
+  rect 644,571.0155 2x52.984497 fill #4fe0a0
+  text "CI passed #4417" @658,593.1249 #ece6d8 Inter 12.5
+  text "github · 12 checks" @658,610.85004 #7c7566 JetBrains Mono 10.5
+pop
