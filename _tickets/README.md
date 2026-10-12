@@ -27,7 +27,8 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 3. [P0-3](P0-3-vimtest-harness-the-vt-format-and-the-nvim-oracl.md): vimtest harness: the .vt format and the nvim oracle · after P0-1
 4. [P0-4](P0-4-gio-spike-measure-the-budgets-re-create-01-ide-n.md): Gio spike: measure the budgets, re-create 01-ide natively, go/no-go report · after P0-1
 5. [P0-5](P0-5-codex-app-server-billing-check-subscription-or-p.md): Codex app-server billing check: subscription or per-token
-6. [SH-1](SH-1-window-gpu-rendering-hidpi-and-1-text.md): Window, GPU rendering, HiDPI and 1× text · after P0-4
+6. [P0-6](P0-6-glyph-atlas-prototype-in-the-spike-re-measure-on.md): Glyph-atlas prototype in the spike; re-measure on macOS; go/no-go · after P0-4
+7. [SH-1](SH-1-window-gpu-rendering-hidpi-and-1-text.md): Window, GPU rendering, HiDPI and 1× text · after P0-4, P0-6
 
 ### Phase 1 · framework
 

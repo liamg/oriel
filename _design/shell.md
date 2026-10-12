@@ -106,7 +106,7 @@ None of these limits rules out anything in the mockups. Glows, blur and hinted s
 
 **Gio is approved** (`deps.md`), on condition that the spike shows it can match the mockups in `ui.md` and finds no
 limit that rules them out. Exit criterion 0: render `01-ide` and `06-review` natively, side by side with the PNGs.
-**Results: `spikes/P0-4-gio.md`** (01-ide done; the GPU budgets are still to be measured on macOS).
+**Results: `spikes/P0-4-gio.md`**: 01-ide matches; on macOS the CPU side is well within budget, but scroll frame time, HUD CPU and RSS miss, GPU-bound on vector glyphs. A glyph-atlas prototype (P0-6) comes before the go/no-go.
 
 
 Build a throwaway `oriel-spike` binary on Gio and measure it **on macOS (primary, Metal, Retina plus an external 1× monitor) and on Linux (Wayland)**:

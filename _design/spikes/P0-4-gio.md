@@ -78,16 +78,67 @@ The text sampler (`-scene text`) covers ligatures, italics, weights, hairlines, 
 
 ## Budgets: status
 
-| # | Check (`shell.md`) | Status |
-|---|---|---|
-| 1 | Hold `j` in a 50k-line file: frame time p99 < 8 ms at 120 Hz | **macOS run needed.** CPU side measured here: build p99 0.85 ms |
-| 2 | Keypress-to-photon < 8 ms (typometer) | **macOS run needed.** `-scene type` is the typometer target; `-auto` also prints the in-app part |
-| 3 | Ligatures, italics, emoji, CJK, 0.5 px hairline | Ligatures, italics and hairlines ✓ here. Emoji and CJK use system fallback: **check on macOS** (the sandbox has no such fonts) |
-| 3 | 13 px code at 1× vs a FreeType-hinted terminal | Close to Chrome/FreeType here. **Check by eye on the external 1× monitor** |
-| 3 | 9-slice glow on 50 elements at 120 Hz; opacity modal over a live editor | Both drawn (`-scene glow`). Build p99 0.94 ms. **GPU time: macOS run** |
-| 4 | 30-pane HUD at 4 Hz < 3% CPU | **macOS run needed** (`-auto` measures it) |
-| 5 | Wayland fractional scaling 1.25× and 1.5×, no blur | Headless renders at 1.25× and 1.5× are crisp. **A real Wayland session is still needed** (not available here) |
-| 6 | Idle RSS < 120 MB | **macOS run needed** (`-auto` ends with 5 s idle on `ide`) |
+Measured on Liam's Mac (go1.26.5 darwin/arm64, 120 Hz, 1600×1000 @1×), 2026-10-12. Raw output below.
+
+| # | Check (`shell.md`) | Result | Status |
+|---|---|---|---|
+| 1 | Hold `j` in a 50k-line file: frame p99 < 8 ms at 120 Hz | interval p99 11.87 ms (p50 8.33); build p99 1.13 ms, `Frame()` p99 5.38 ms; headless GPU draw p99 11.67 ms | **fail**: GPU-bound, frames dropped |
+| 2 | Keypress-to-photon < 8 ms | in-app part 3.65 ms (n=1); typometer not run yet | **open** |
+| 3 | Glow on 50 elements at 120 Hz | interval p99 16.75 ms; GPU draw p99 12.6 ms | **fail** (same cause as 1) |
+| 3 | Emoji, CJK, 13 px at 1× by eye | not reported | **open** |
+| 4 | 30-pane HUD at 4 Hz < 3% CPU | 7.46% | **fail** |
+| 5 | Wayland 1.25× / 1.5× | not run | **open** |
+| 6 | Idle RSS < 120 MB | 146 MB after the first frame (headless), 212 MB after every scene, 279 MB peak windowed | **fail** |
+| – | Startup | 648 ms to first presented frame (windowed), 221 ms headless | no budget |
+| – | Idle CPU | 2.9% with 2 frames in 5 s | should be ~0: investigate |
+
+**Reading.** The CPU side is well inside budget everywhere (build p99 ≤ 1.15 ms). The GPU side is not: 5–7 ms p50 and
+~12 ms p99 for scenes that are mostly text, which is Gio stenciling every glyph as a vector path each frame. That is the
+cost the glyph atlas removes, so 1, 3 and probably 4 hinge on it. Memory is partly fixed overhead we chose (the Go
+fonts, glyph path caches) and needs a profile before it's judged.
+
+Per `shell.md`, a failure of 1 or 2 means a week of renderer work before falling back. Next: **P0-6**, a time-boxed
+glyph-atlas prototype in the spike, then re-run the same commands.
+
+<details><summary>Raw macOS output</summary>
+
+```
+startup: first frame presented 648ms after start
+ide     build ops n=120 p50=1.52ms p99=2.36ms max=2.40ms
+        frame()   n=120 p50=2.67ms p99=6.65ms max=6.74ms
+        interval  n=120 p50=8.33ms p99=16.84ms max=574.37ms
+scroll  build ops n=1200 p50=0.59ms p99=1.13ms max=4.92ms
+        frame()   n=1200 p50=2.58ms p99=5.38ms max=26.84ms
+        interval  n=1200 p50=8.33ms p99=11.87ms max=3029.46ms
+glow    build ops n=600 p50=2.71ms p99=3.63ms max=4.32ms
+        frame()   n=600 p50=3.67ms p99=9.59ms max=10.26ms
+        interval  n=600 p50=8.36ms p99=16.75ms max=29.20ms
+text    build ops n=60 p50=0.33ms p99=0.68ms max=0.77ms
+        frame()   n=60 p50=1.27ms p99=3.03ms max=3.68ms
+        interval  n=60 p50=8.33ms p99=8.51ms max=18.44ms
+hud     redrawing at 4 Hz over 10.033s: CPU 7.46% of one core (62 frames)
+ide     idle over 5.025s: CPU 2.90% of one core (2 frames)
+key event → frame presented (in-app part only): n=1 p50=3.65ms p99=3.65ms max=3.65ms
+peak RSS: 279 MB
+startup: first ide frame drawn 221ms after start (headless)
+RSS after the first ide frame: 146 MB (peak so far)
+go1.26.5 darwin/arm64, 300 frames per scene at 1600×1000 @1×
+ide     build ops: n=300 p50=0.49ms p99=1.00ms max=1.16ms
+        gpu draw:  n=300 p50=5.26ms p99=11.86ms max=13.41ms
+scroll  build ops: n=300 p50=0.42ms p99=0.75ms max=3.97ms
+        gpu draw:  n=300 p50=5.30ms p99=11.67ms max=12.69ms
+text    build ops: n=300 p50=0.25ms p99=0.47ms max=7.57ms
+        gpu draw:  n=300 p50=3.04ms p99=10.98ms max=11.53ms
+glow    build ops: n=300 p50=0.52ms p99=1.15ms max=3.08ms
+        gpu draw:  n=300 p50=7.20ms p99=12.60ms max=15.89ms
+hud     build ops: n=300 p50=0.23ms p99=0.92ms max=1.62ms
+        gpu draw:  n=300 p50=5.97ms p99=12.17ms max=13.05ms
+type    build ops: n=300 p50=0.04ms p99=0.09ms max=0.23ms
+        gpu draw:  n=300 p50=2.27ms p99=9.60ms max=10.15ms
+peak RSS after every scene: 212 MB
+```
+
+</details>
 
 ## For Liam to run on macOS
 
@@ -137,7 +188,8 @@ clipping, and fractional scaling all work through Gio's public API.
 
 ## Recommendation
 
-- **Go**, pending the macOS numbers: if 1, 2 and 6 pass there, SH-1 starts on Gio.
+- **Not yet a go.** On macOS, 1, 4 and 6 fail, and all of them trace to glyph rendering or memory we haven't profiled.
+  Do P0-6 (glyph atlas in the spike, a week at most), re-measure, then decide. If 1 still fails, fall back per `shell.md`.
 - Build `typeset` (go-text shaping with features and tracking, then a glyph atlas with stem darkening) early in
   phase 1. It fixes three of the findings above.
 - Theme tokens resolve to opaque colours where the surface is known (`theming.md` already derives with `mix()`).

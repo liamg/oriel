@@ -5,12 +5,12 @@ phase: P0
 status: todo
 area: Shell and navigation
 module: render, typeset
-depends_on: [P0-4]
+depends_on: [P0-4, P0-6]
 ---
 
 # SH-1 · Window, GPU rendering, HiDPI and 1× text
 
-**Phase** 0 · spike and repo · **After** [P0-4](P0-4-gio-spike-measure-the-budgets-re-create-01-ide-n.md) · **Unblocks** [FW-4](FW-4-ui-toolkit-core-ctx-ids-flex-layout-anchors-scro.md)
+**Phase** 0 · spike and repo · **After** [P0-4](P0-4-gio-spike-measure-the-budgets-re-create-01-ide-n.md), [P0-6](P0-6-glyph-atlas-prototype-in-the-spike-re-measure-on.md) · **Unblocks** [FW-4](FW-4-ui-toolkit-core-ctx-ids-flex-layout-anchors-scro.md)
 
 ## Design
 

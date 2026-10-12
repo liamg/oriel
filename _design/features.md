@@ -28,7 +28,8 @@ How everything hangs together, built and tested before features land on it.
 
 | ID | Feature | Mockup | Module | Phase | After | Done when |
 |---|---|---|---|---|---|---|
-| SH-1 | Window, GPU rendering, HiDPI and 1× text | 01 | render, typeset | P0 | P0-4 | spike budgets met on macOS and Linux (`shell.md`); `01-ide` re-created natively and side by side with the PNG |
+| P0-6 | Glyph-atlas prototype in the spike; re-measure on macOS; go/no-go | 01 | spike | P0 | P0-4 | budgets 1, 4 and 6 pass on macOS, or the report recommends the fallback |
+| SH-1 | Window, GPU rendering, HiDPI and 1× text | 01 | render, typeset | P0 | P0-4, P0-6 | spike budgets met on macOS and Linux (`shell.md`); `01-ide` re-created natively and side by side with the PNG |
 | SH-2 | Session tabs with status dots and `⌘1–9` | 01 | app | P3 | FW-6, FW-2 | 7 statuses render correctly from a fixture `core.State`; keys switch in under one frame |
 | SH-4 | ⌘K omnibox (sessions, commands, files, symbols, tickets, PRs) with prefixes | 02 | app, picker | P3 | FW-6, FW-3 | fuzzy ranking golden tests; preview pane renders for each source |
 | SH-5 | Pickers (`␣␣` files, `␣/` grep, `␣k` keymaps…) with preview and actions | 26 | picker | P3–P4 | SH-4 | each source returns, ranks and previews; `␣'` resumes; quickfix and attach actions work |
