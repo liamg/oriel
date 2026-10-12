@@ -1,0 +1,5 @@
+source: https://github.com/toml-lang/toml-test
+ref: v1.5.0
+commit: f0b5cddb0e7299fe29f2b881f383ea932950fba3
+path: tests/files-toml-1.0.0 and the files it lists
+license: MIT (see COPYING)

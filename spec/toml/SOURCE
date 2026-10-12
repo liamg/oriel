@@ -1,0 +1,5 @@
+source: https://github.com/toml-lang/toml
+ref: 1.0.0
+commit: 8eae5e1c005bc5836098505f85a7aa06568999dd
+path: toml.md, toml.abnf
+license: MIT (see LICENSE)
