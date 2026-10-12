@@ -47,6 +47,16 @@ can't host the UI we want.
 - No embedded neovim, not even as an escape hatch: one buffer model, one engine,
   and nothing we design around. Gaps get fixed in the engine, with an oracle test.
 
+### Options and defaults
+
+- **Not vim exactly.** Oriel has its own options, with meaningful names and sensible defaults. We don't copy vim's option list.
+- **nvim's behaviour is the starting point**: where vim and nvim differ (e.g. `'startofline'`), the engine follows nvim's
+  defaults, so the oracle runs unmodified. We can change a default later; the case then says `deviation:` with the reason.
+- **Options live at the layer they affect.** Only what changes how keys edit text belongs to the input engine
+  (`shiftwidth`, `wrapscan`, `startofline`…). Display and app concerns (line numbers, wrap, cursorline, list chars)
+  are app-level options in the registry, the same for every input engine.
+- `:set` accepts vim's names as aliases where an Oriel option has the same meaning.
+
 ## Buffer model (`text` module)
 
 - Written in this repo, not taken from `liamg/rope`. That library is fine as a small rope, but it stores `[]rune` and

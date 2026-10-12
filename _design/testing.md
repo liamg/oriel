@@ -79,7 +79,7 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
   mappings are cleared first, and keys go in with `nvim_input`. Buffer, cursor, selection, mode, registers, marks,
   jumps and messages are read back and compared with the case.
   - If **our expectation disagrees with nvim**, the case fails. The test was wrong, not just the code.
-  - If vim and nvim differ from each other, the case says which it follows (`follows: vim`), with the `:help` reference
+  - Where vim and nvim differ, we follow nvim by default (`editor.md` → Options and defaults). A case that follows vim instead says so (`follows: vim`), with the `:help` reference
     that shows the difference. A `follows: vim` or `deviation:` case logs its disagreements with nvim instead of failing.
   - Keys that leave nvim waiting for more (a lone count or register name) can't be read back, so such a case fails.
   - nvim is found at `$ORIEL_NVIM`, then on `PATH`, and must be the pinned version (`nvim.Version`, v0.11.7).
