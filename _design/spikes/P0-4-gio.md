@@ -147,7 +147,8 @@ Run everything from the repo root. Close other heavy apps first, and keep the la
 ### 0 · Once
 
 1. Xcode command-line tools, needed for cgo: `xcode-select --install`.
-2. Java, for typometer: `brew install --cask temurin`, then check with `java -version`.
+2. Java, for typometer: `brew install openjdk`. This is Homebrew's own build: keg-only, no sudo, nothing installed system-wide.
+   Run Java as `$(brew --prefix openjdk)/bin/java`.
 3. Typometer: download and unzip it.
    ```sh
    curl -LO https://github.com/pavelfatin/typometer/releases/download/v1.0.1/typometer-1.0.1-bin.zip
@@ -169,17 +170,22 @@ the external 1× monitor as soon as it opens.
 
 1. Start the target: `/tmp/oriel-spike -scene type`. It shows a solid background, a "TYPE HERE" label and a bar caret on
    an empty line, which is what typometer needs.
-2. Start typometer: `java -jar ~/typometer/typometer-1.0.1/typometer-1.0.1.jar` (the exact jar name may differ; use the
+2. Start typometer: `$(brew --prefix openjdk)/bin/java -jar ~/typometer/typometer-1.0.1/typometer-1.0.1.jar` (the exact jar name may differ; use the
    `.jar` in the unzipped folder).
 3. macOS asks for two permissions for the app that launched Java (your terminal): **Accessibility**, so it can type,
    and **Screen Recording**, so it can read pixels. Grant them in System Settings → Privacy & Security, then restart
-   typometer.
+   typometer. Those grants cover everything run from that terminal, so **revoke them when you're done**.
+   Typometer is an unsigned jar from an individual (Pavel Fatin); if that's not acceptable, use the camera method below.
 4. In typometer, click **Benchmark**. When it prompts you, click into the spike window within the countdown. It types
    `.....` to calibrate, then a run of dots, and measures each one. Leave the keyboard and mouse alone until it finishes.
    Clicking back on typometer stops it.
 5. Run it again with a reference editor for comparison: a terminal running `nvim`, or Zed. Typometer goes through Java's
    AWT robot on macOS, which adds its own overhead, so the comparison matters more than the absolute number.
 6. Paste the summary (min, avg, max, SD), or export the CSV, into the thread.
+
+No-software alternative: film the keyboard and the screen together with an iPhone in 240 fps slow-mo, press a key in
+`-scene type` about 20 times, and count frames from key-down to the dot appearing (each frame ≈ 4.2 ms). Do the same
+with nvim in a terminal for comparison.
 
 ### 3 · Text quality by eye (budget 3)
 
