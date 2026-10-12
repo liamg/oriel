@@ -24,6 +24,12 @@ in microseconds, and can touch everything.
   neovim's where it's good, and a `vim` compatibility shim (stretch goal) can
   run simple neovim plugins: surround, comment, text-object packs.
 
+## Lua and `settings.toml`
+
+- Plain values live in `settings.toml`, which the settings page writes (`settings.md`). `init.lua` is for logic:
+  keymaps, hooks, commands, and values computed at load.
+- A value set in `init.lua` beats `settings.toml`, and the page shows it read-only with a link to the line.
+
 ## Execution model
 
 - One VM on the UI loop, like neovim. Script calls are synchronous and never block.

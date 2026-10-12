@@ -14,6 +14,7 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 
 - [FW-1](FW-1-module-skeleton-and-core-interfaces-wired-end-to.md): Module skeleton and core interfaces wired end to end
 - [SH-1](SH-1-window-gpu-rendering-hidpi-and-1-text.md): Window, GPU rendering, HiDPI and 1× text
+- [FW-11](FW-11-toml-module-toml-1-0-parser-and-round-tripping.md): toml module: TOML 1.0 parser and round-tripping editor
 
 ## Suggested order
 
@@ -37,7 +38,8 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 9. [FW-3](FW-3-registries-commands-keymaps-modes-chords-panel-l.md): Registries: commands, keymaps (modes, chords, panel-local), options (scoped) · after FW-1
 10. [FW-4](FW-4-ui-toolkit-core-ctx-ids-flex-layout-anchors-scro.md): ui toolkit core: Ctx, ids, flex layout, anchors, scroll, clipping, z-order · after FW-1, SH-1
 11. [FW-5](FW-5-interaction-states-hover-press-focus-rings-disab.md): Interaction states: hover, press, focus rings, disabled, cursors, tooltips; spring animation · after FW-4
-12. [FW-7](FW-7-theme-tokens-layered-resolution-live-reload-the-.md): Theme tokens: layered resolution, live reload, the default black/yellow/orange theme · after FW-4
+12. [FW-11](FW-11-toml-module-toml-1-0-parser-and-round-tripping.md): toml module: TOML 1.0 parser and round-tripping editor · after P0-1
+12. [FW-7](FW-7-theme-tokens-layered-resolution-live-reload-the-.md): Theme tokens: layered resolution, live reload, the default black/yellow/orange theme · after FW-4, FW-11
 13. [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md): Widgets: buttons, chips, inputs, virtual lists, trees, tabs, menus, context menus, modals, popovers, toasts · after FW-5, FW-7
 14. [FW-8](FW-8-headless-backend-display-list-snapshots-plus-per.md): Headless backend: display-list snapshots plus perceptual PNG diffs against the mockups · after FW-4
 15. [FW-9](FW-9-layout-tree-and-tab-groups-drag-any-pane-to-any-.md): Layout tree and tab groups: drag any pane to any tab group, dock, split or float, animated drop targets, zoom, ⌃W keys · after FW-6, FW-8
@@ -62,6 +64,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 28. [SH-6](SH-6-which-key-popup.md): Which-key popup · after FW-3, FW-6
 29. [SH-10](SH-10-help-everywhere-right-click-help-k-help.md): Help everywhere (right-click → Help, K, ⌘?, :help) · after FW-6
 30. [SH-11](SH-11-light-dark-and-theme-editor-theme-pick-mode.md): Light, dark and theme editor (:Theme, pick mode) · after FW-7
+30. [SH-12](SH-12-settings-page-settings-sections-search-typed-co.md): Settings page (:Settings, ⌘,) and settings.toml storage · after FW-3, FW-6, FW-11
 
 ### Phase 4 · IDE
 

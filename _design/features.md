@@ -19,7 +19,8 @@ How everything hangs together, built and tested before features land on it.
 | FW-4 | `ui` toolkit core: `Ctx`, ids, flex layout, anchors, scroll, clipping, z-order | – | ui | P1 | FW-1, SH-1 | layout golden tests; a 10k-row scroll at 120 Hz |
 | FW-5 | Interaction states: hover, press, focus rings, disabled, cursors, tooltips; spring animation | all | ui | P1 | FW-4 | display-list snapshots per state; 200 hover targets stay within the frame budget; reduced-motion respected |
 | FW-6 | Widgets: buttons, chips, inputs, virtual lists, trees, tabs, menus, context menus, modals, popovers, toasts | all | ui | P1 | FW-5, FW-7 | each widget has snapshot tests in dark and light, keyboard and mouse paths, and a help id |
-| FW-7 | Theme tokens: layered resolution, live reload, the default black/yellow/orange theme | 17, 23 | theme | P1 | FW-4 | token resolution tables; the fixture renders in every built-in theme |
+| FW-11 | `toml` module: TOML 1.0 parser and round-tripping editor | – | toml | P1 | P0-1 | the `toml-test` suite passes; set, add and delete a key leave every other byte unchanged |
+| FW-7 | Theme tokens: layered resolution, live reload, the default black/yellow/orange theme | 17, 23 | theme | P1 | FW-4, FW-11 | token resolution tables; the fixture renders in every built-in theme |
 | FW-8 | Headless backend: display-list snapshots plus perceptual PNG diffs against the mockups | – | render | P1 | FW-4 | CI renders the fixture workspace and diffs it within threshold |
 | FW-9 | Layout tree and tab groups: **drag any pane to any tab group, dock, split or float**, animated drop targets, zoom, `⌃W` keys | 24 | layout | P1 | FW-6, FW-8 | snapshot tests for every move and drop target; drag and drop scripted in tests; layouts saved and restored |
 | FW-10 | Accessibility tree emitted from widget ids | – | ui | P1 | FW-6 | VoiceOver reads the fixture's main regions (scripted manual check) |
@@ -39,6 +40,7 @@ How everything hangs together, built and tested before features land on it.
 | SH-9 | Inbox and interrupt cards (agentbus, network, gateway, security key) | 12 | app | P7 | FW-6 | each card type acts and dismisses; badge counts on tabs |
 | SH-10 | Help everywhere (right-click → Help, `K`, `⌘?`, `:help`) | 28 | help | P3→ | FW-6 | CI lint: every interactive element resolves to a help page and anchor |
 | SH-11 | Light, dark and theme editor (`:Theme`, pick mode) | 17, 23 | theme | P3, P7 | FW-7 | token resolution tests; the fixture renders in all built-in themes; pick-to-override writes the smallest TOML diff |
+| SH-12 | Settings page (`:Settings`, ⌘,): sections, search, typed controls, scopes, modified and reset; `settings.toml` storage | 19 | app, registry | P3 | FW-3, FW-6, FW-11 | `settings.md` precedence tests; a GUI edit and a reset each change exactly one line of a hand-commented file; Lua-set options are read-only with their source |
 
 ## Editor
 

@@ -147,7 +147,7 @@ first open the way direnv works.
 // package registry — everything registers here, from any tier
 type Registry interface {
     Command(c Command) Disposable
-    Option(o OptionSpec) Disposable
+    Option(o OptionSpec) Disposable               // fields and the settings page: settings.md
     View(id string, v View) Disposable            // override = register the same id later
     Decorations(id string, p DecorationProvider) Disposable
     Input(e input.Engine) Disposable

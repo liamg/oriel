@@ -19,6 +19,7 @@ use (
 	./syntax
 	./testrun
 	./text
+	./toml
 	./tools
 	./ui
 	./update

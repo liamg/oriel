@@ -14,6 +14,7 @@ The design of Oriel, carried over from the planning session. **Start with `PLAN.
 | `agents.md` | providers (Claude via PTY and hooks, Codex), permissions, guardrails, commit gate |
 | `plugins.md`, `scripting.md` | extension tiers, contribution points, hooks, Lua API, native plugins |
 | `security.md` | capabilities, all-or-nothing consent, sandboxing plugins |
+| `settings.md` | settings storage (TOML), precedence, `OptionSpec`, the settings page |
 | `theming.md` | tokens, the theme editor, themes as plugins |
 | `ide.md` | LSP, running tests, DAP, terminals (Ghostty), explorer scopes, git, pickers |
 | `ui.md` | every screen, with mockups, the design language and the logo |

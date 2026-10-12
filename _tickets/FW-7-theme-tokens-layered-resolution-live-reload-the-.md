@@ -5,12 +5,12 @@ phase: P1
 status: todo
 area: Framework (first, after the spike)
 module: theme
-depends_on: [FW-4]
+depends_on: [FW-4, FW-11]
 ---
 
 # FW-7 · Theme tokens: layered resolution, live reload, the default black/yellow/orange theme
 
-**Phase** 1 · framework · **After** [FW-4](FW-4-ui-toolkit-core-ctx-ids-flex-layout-anchors-scro.md) · **Unblocks** [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md), [SH-11](SH-11-light-dark-and-theme-editor-theme-pick-mode.md)
+**Phase** 1 · framework · **After** [FW-4](FW-4-ui-toolkit-core-ctx-ids-flex-layout-anchors-scro.md), [FW-11](FW-11-toml-module-toml-1-0-parser-and-round-tripping.md) · **Unblocks** [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md), [SH-11](SH-11-light-dark-and-theme-editor-theme-pick-mode.md)
 
 ## Design
 

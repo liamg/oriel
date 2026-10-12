@@ -84,6 +84,7 @@ flowchart LR
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
 | `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker |
 | `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. The only module that imports Gio until `render/gio` | gioui.org |
+| `toml` | TOML 1.0 parser and round-tripping editor, for settings and themes (`settings.md`) | – |
 | `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck` | – |
 
 Rules:
