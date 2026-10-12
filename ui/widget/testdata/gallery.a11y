@@ -1,0 +1,46 @@
+window
+  button "Allow host" help=gallery/button
+  button "Once" help=gallery/button
+  button "Ghost" help=gallery/button
+  button "Disabled" disabled help=gallery/button
+  text "1 needs you" help=gallery/chip
+  text "1 working" help=gallery/chip
+  text "gopls ✓" help=gallery/chip
+  button "Popover" help=gallery/button
+  textbox "Ask" value="round half even" help=gallery/input
+  tablist help=gallery/tabs
+    tab "AGENT · CLAUDE"
+    tab "TERMINAL" selected
+    tab "PROBLEMS 1"
+    tab "DEBUG"
+    tab "TESTS"
+  tree help=gallery/tree
+    treeitem "internal" selected collapsed
+    treeitem "PLAN.md A"
+  list help=gallery/list
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way" selected
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way"
+    listitem "Negative values round the wrong way"
+  menu help=gallery/menu
+    menuitem "Open usage details"
+    menuitem "Copy value"
+    menuitem "Hide this tat" disabled
+    menuitem "Move to statusline…"
+  dialog "A popover under its anchor." help=gallery/popover
+  menu help=ui/context-menu
+    menuitem "Open usage details"
+    menuitem "Copy value"
+    menuitem "? Help" help=hud/usage#weekly-window
+  group "Notifications"
+    status "git push origin rethink/rounding gateway · 3 commits" help=gallery/toast
+    status "CI passed #4417 github · 12 checks" help=gallery/toast
+  dialog "Settings" focused modal help=gallery/modal
+    button "OK" help=gallery/button

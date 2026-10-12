@@ -95,7 +95,7 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			changed = dock(c, r, st, Left, content) || changed
 			c.Column("centre", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-				c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+				c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Role: ui.RoleRegion, Label: "Main"}, func(c *ui.Ctx) {
 					changed = node(c, r, st, r.Main, content) || changed
 				})
 				changed = dock(c, r, st, Bottom, content) || changed
@@ -104,14 +104,14 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 		})
 		for i, f := range r.Floats {
 			c.Column(fk{i}, ui.Style{W: ui.Px(f.Rect.Dx()), H: ui.Px(f.Rect.Dy()), Z: 500 + i, Fill: th.C(tDockBg), Stroke: th.C(tFloatEdge),
-				Border: 1, Radius: 8, Clip: true, Float: &ui.Float{Point: &f.Rect.Min}}, func(c *ui.Ctx) {
+				Border: 1, Radius: 8, Clip: true, Float: &ui.Float{Point: &f.Rect.Min}, Role: ui.RoleRegion, Label: "Floating pane"}, func(c *ui.Ctx) {
 				changed = leaf(c, r, st, f.Leaf, content) || changed
 			})
 		}
 		if r.DropDown.Open && len(r.DropDown.Leaf.Tabs) > 0 {
 			size := c.Size()
 			c.Column("dropdown", ui.Style{W: ui.Px(size.X), H: ui.Px(r.DropDown.Size), Z: 600, Fill: th.C(tDropDownBg),
-				Stroke: th.C(tFloatEdge), Border: 1, Float: &ui.Float{Point: &render.Point{}}}, func(c *ui.Ctx) {
+				Stroke: th.C(tFloatEdge), Border: 1, Float: &ui.Float{Point: &render.Point{}}, Role: ui.RoleRegion, Label: "Drop-down"}, func(c *ui.Ctx) {
 				changed = leaf(c, r, st, r.DropDown.Leaf, content) || changed
 			})
 		}
@@ -134,6 +134,7 @@ func dock(c *ui.Ctx, r *Root, st *viewState, e Edge, content Content) bool {
 		s = ui.Style{W: ui.Flex(1), H: ui.Px(d.Size), Fill: c.Theme().C(tDockBg)}
 	}
 	changed := false
+	s.Role, s.Label = ui.RoleRegion, dockNames[e]
 	st.docks[e] = c.Column("dock-"+string(e), s, func(c *ui.Ctx) {
 		changed = leaf(c, r, st, d.Leaf, content)
 	})
@@ -216,7 +217,7 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
 	th := c.Theme()
 	focused := r.Focus != nil && l.Active < len(l.Tabs) && l.Tabs[l.Active] == *r.Focus
 	st.leaves[l] = c.Column(l, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip)}, func(c *ui.Ctx) {
+		c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: ui.RoleTabList}, func(c *ui.Ctx) {
 			for i, v := range l.Tabs {
 				if tab(c, r, st, l, i, v) {
 					changed = true
@@ -231,7 +232,8 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
 				r.Focus = &v
 				changed = true
 			}
-			c.Column("content", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Interactive: true, Help: HelpPane}, func(c *ui.Ctx) {
+			c.Column("content", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Interactive: true, Help: HelpPane, Role: ui.RoleGroup,
+				Label: title(v)}, func(c *ui.Ctx) {
 				content(c, v, focused)
 			})
 		}
@@ -283,7 +285,7 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 	if title == "" {
 		title = v.String()
 	}
-	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab}, func(c *ui.Ctx) {
+	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on}, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
 		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: fg})
@@ -482,4 +484,13 @@ func (p *Panes) RectsIn(c *ui.Ctx) map[*Node]render.Rect {
 		}
 	}
 	return out
+}
+
+var dockNames = map[Edge]string{Left: "Left dock", Right: "Right dock", Bottom: "Bottom dock"}
+
+func title(v ViewRef) string {
+	if v.Title != "" {
+		return v.Title
+	}
+	return v.String()
 }

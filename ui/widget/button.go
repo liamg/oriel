@@ -41,7 +41,7 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 		weight = typeset.SemiBold
 	}
 	c.Row(key, ui.Style{H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 6, Cross: ui.Center, Fill: bg, Stroke: border, Border: 1, Radius: 6,
-		Focusable: true, Disabled: o.Disabled, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button"}, func(c *ui.Ctx) {
+		Focusable: true, Disabled: o.Disabled, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button", Role: ui.RoleButton}, func(c *ui.Ctx) {
 		c.Text(nil, label, uiText(c, 12, weight, fg))
 	})
 	return !o.Disabled && (in.Clicked || pressedKey(in.Keys))
@@ -49,7 +49,8 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 
 // Chip is the uppercase status pill (base.css .chip): tone sets its text, border and tint.
 func Chip(c *ui.Ctx, key any, label string, tone color.NRGBA, help string) ui.ID {
-	return c.Row(key, ui.Style{Pad: ui.PadXY(7, 2), Cross: ui.Center, Fill: alpha(tone, .07), Stroke: alpha(tone, .35), Border: 1, Radius: 10, Help: help}, func(c *ui.Ctx) {
+	return c.Row(key, ui.Style{Pad: ui.PadXY(7, 2), Cross: ui.Center, Fill: alpha(tone, .07), Stroke: alpha(tone, .35), Border: 1, Radius: 10, Help: help,
+		Role: ui.RoleText, Label: label}, func(c *ui.Ctx) {
 		c.Text(nil, strings.ToUpper(label), monoText(9.5, typeset.SemiBold, tone, .06))
 	})
 }

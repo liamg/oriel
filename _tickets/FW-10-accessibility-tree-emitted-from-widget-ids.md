@@ -2,7 +2,7 @@
 id: FW-10
 title: "Accessibility tree emitted from widget ids"
 phase: P1
-status: todo
+status: review
 area: Framework (first, after the spike)
 module: ui
 depends_on: [FW-6]

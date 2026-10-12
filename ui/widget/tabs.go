@@ -22,7 +22,7 @@ func Tabs(c *ui.Ctx, key any, labels []string, active *int, o TabsOpts) bool {
 			*active = max(*active-1, 0)
 		}
 	}
-	c.Row(key, ui.Style{H: ui.Px(28), Gap: 16, Pad: ui.PadXY(12, 0), Fill: col(c, tTabBg), Focusable: true, KeyMode: "tabs", Help: o.Help}, func(c *ui.Ctx) {
+	c.Row(key, ui.Style{H: ui.Px(28), Gap: 16, Pad: ui.PadXY(12, 0), Fill: col(c, tTabBg), Focusable: true, KeyMode: "tabs", Help: o.Help, Role: ui.RoleTabList}, func(c *ui.Ctx) {
 		for i, l := range labels {
 			ti := c.Interaction(c.Next(i))
 			if ti.Clicked {
@@ -38,7 +38,7 @@ func Tabs(c *ui.Ctx, key any, labels []string, active *int, o TabsOpts) bool {
 			if on {
 				edge = col(c, tTabEdge)
 			}
-			c.Column(i, ui.Style{H: ui.Flex(1), Interactive: true, Cursor: render.CursorPointer}, func(c *ui.Ctx) {
+			c.Column(i, ui.Style{H: ui.Flex(1), Interactive: true, Cursor: render.CursorPointer, Role: ui.RoleTab, Selected: on}, func(c *ui.Ctx) {
 				c.Box("above", ui.Style{H: ui.Flex(1)}, nil)
 				c.Text("label", l, monoText(10, typeset.SemiBold, fg, .1))
 				c.Box("below", ui.Style{H: ui.Flex(1)}, nil)

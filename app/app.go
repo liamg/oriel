@@ -103,6 +103,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	defer cancel()
 
 	l := &loop{reg: cfg.Registry, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: cfg.Log}
+	l.ui.Title = "Oriel"
 	l.themeDirty.Store(true)
 	retheme := func() { l.themeDirty.Store(true); poke() }
 	for _, src := range cfg.Registry.Themes() {
@@ -113,11 +114,26 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	timer := time.NewTimer(0)
 	<-timer.C
+	var acts <-chan render.AccessAction
+	accessible, _ := w.(render.Accessible)
+	if accessible != nil {
+		acts = accessible.AccessActions()
+	}
+	var tree *render.AccessNode
 	for {
 		if err := l.draw(); err != nil {
 			return err
 		}
+		if accessible != nil {
+			next := l.ui.AccessTree()
+			if up := render.AccessDiff(tree, next); len(up.Changed) > 0 || len(up.Removed) > 0 || tree == nil {
+				accessible.UpdateAccess(up)
+			}
+			tree = next
+		}
 		select {
+		case a := <-acts:
+			l.ui.Act(ui.ID(a.ID), a.Action)
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-dirty:

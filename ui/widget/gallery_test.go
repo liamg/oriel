@@ -41,7 +41,7 @@ func (g *gallery) build(c *ui.Ctx) {
 			c.Text("t", "A popover under its anchor.", ui.TextStyle{})
 		})
 		g.input = c.Next("input")
-		Input(c, "input", &g.text, InputOpts{Placeholder: "Why did it jump 9% this morning?", Width: ui.Px(420), Help: "gallery/input"})
+		Input(c, "input", &g.text, InputOpts{Label: "Ask", Placeholder: "Why did it jump 9% this morning?", Width: ui.Px(420), Help: "gallery/input"})
 		Tabs(c, "tabs", []string{"AGENT · CLAUDE", "TERMINAL", "PROBLEMS 1", "DEBUG", "TESTS"}, &g.tab, TabsOpts{Help: "gallery/tabs"})
 		c.Row("panes", ui.Style{Gap: 16, W: ui.Flex(1), H: ui.Px(200)}, func(c *ui.Ctx) {
 			c.Column("tree", ui.Style{W: ui.Px(250), H: ui.Flex(1), Fill: th.C(theme.BgSurface)}, func(c *ui.Ctx) {

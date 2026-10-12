@@ -78,6 +78,15 @@ flowchart TB
   (`⌘K`, `⌘1..9`), then the focused widget. Everything is rebindable.
 - **Accessibility**: an AccessKit-style tree emitted from the same widget ids,
   so screen readers aren't an afterthought. This matters if we open-source it.
+  - As built (FW-10): a box with a `Role` is in the tree (window, region, group, button, textbox, list, tree, tab,
+    menu, dialog, status…); one without is transparent. Its name is its `Label`, or else the text inside it; its
+    value, selection, expansion, focus, `Modal` (a focus trap) and help id (as its description) come from its style,
+    its bounds from layout, and its actions (click, focus, scroll) from what it takes. Every widget and the layout's
+    regions (Main, the docks, each pane and its tabs) set roles.
+  - `render.AccessDiff` turns two trees into an update: nodes added or changed, removed, and the focus. A window
+    that implements `render.Accessible` gets an update after each frame and reports a screen reader's actions, which
+    the app runs through `UI.Act` (a click is a click, focus is focus). The headless window implements it for tests.
+  - The platform bridges (NSAccessibility on macOS, AT-SPI on Linux) are FW-12; Gio has none.
 
 ## Performance budgets
 

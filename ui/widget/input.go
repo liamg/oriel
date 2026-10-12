@@ -10,6 +10,7 @@ import (
 )
 
 type InputOpts struct {
+	Label       string // its accessible name; the placeholder isn't one
 	Placeholder string
 	Width       ui.Size // grows to fill by default
 	Disabled    bool
@@ -136,7 +137,8 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	selFrom, selTo, caret := prefix(lo), prefix(hi), prefix(st.cursor)
 	focused, scroll := in.Focused, st.scroll
 	c.Row(key, ui.Style{W: width, H: ui.Px(30), Pad: ui.PadXY(10, 0), Cross: ui.Center, Fill: col(c, tInputBg), Stroke: border, Border: 1,
-		Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled, Cursor: render.CursorText, Help: o.Help, KeyMode: "input"}, func(rc *ui.Ctx) {
+		Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled, Cursor: render.CursorText, Help: o.Help, KeyMode: "input",
+		Role: ui.RoleTextBox, Label: o.Label, Value: string(runes)}, func(rc *ui.Ctx) {
 		rc.Paint("text", ui.Flex(1), ui.Px(30), func(f render.Frame, r render.Rect) {
 			if focused && hi > lo {
 				sel := c.Theme().C(tRowSelected)

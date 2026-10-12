@@ -12,6 +12,10 @@ type ListOpts struct {
 	RowHeight float32 // 22 by default
 	Height    ui.Size // grows to fill by default
 	Help      string
+	Label     string // its accessible name
+
+	role, rowRole ui.Role           // a tree is a list with tree roles
+	expanded      func(i int) *bool // a tree row's expanded state
 }
 
 type ListResult struct {
@@ -73,7 +77,11 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 		h = ui.Flex(1)
 	}
 	selected := *sel
-	c.List(key, ui.Style{W: ui.Flex(1), H: h, Focusable: true, Help: o.Help, KeyMode: "list"}, n, rh, func(rc *ui.Ctx, i int) {
+	role, rowRole := ui.RoleList, ui.RoleListItem
+	if o.role != "" {
+		role, rowRole = o.role, o.rowRole
+	}
+	c.List(key, ui.Style{W: ui.Flex(1), H: h, Focusable: true, Help: o.Help, KeyMode: "list", Role: role, Label: o.Label}, n, rh, func(rc *ui.Ctx, i int) {
 		item := rc.Next("item")
 		ri := rc.Interaction(item)
 		if ri.Clicked {
@@ -88,7 +96,12 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 		case ri.Hovered:
 			fill = col(c, tRowHover)
 		}
-		rc.Row("item", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: fill, Cross: ui.Center, Interactive: true, Cursor: render.CursorPointer}, func(rc *ui.Ctx) {
+		var expanded *bool
+		if o.expanded != nil {
+			expanded = o.expanded(i)
+		}
+		rc.Row("item", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: fill, Cross: ui.Center, Interactive: true, Cursor: render.CursorPointer,
+			Role: rowRole, Selected: i == selected, Expanded: expanded}, func(rc *ui.Ctx) {
 			edge := render.Color{}
 			if i == selected {
 				edge = col(c, tRowEdge)
@@ -116,6 +129,7 @@ type TreeOpts struct {
 	RowHeight float32 // 22 by default
 	Height    ui.Size
 	Help      string
+	Label     string
 }
 
 type TreeResult struct {
@@ -201,7 +215,15 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 		rh = 22
 	}
 	label := uiText(c, 12.5, typeset.Normal, col(c, tRowFg))
-	lr := List(c, key, len(flat), &st.sel, ListOpts{RowHeight: rh, Height: o.Height, Help: o.Help}, func(rc *ui.Ctx, i int, selected bool) {
+	expanded := func(i int) *bool {
+		if len(flat[i].item.Children) == 0 {
+			return nil
+		}
+		open := st.open[flat[i].item.ID]
+		return &open
+	}
+	lo := ListOpts{RowHeight: rh, Height: o.Height, Help: o.Help, Label: o.Label, role: ui.RoleTree, rowRole: ui.RoleTreeItem, expanded: expanded}
+	lr := List(c, key, len(flat), &st.sel, lo, func(rc *ui.Ctx, i int, selected bool) {
 		it := flat[i].item
 		t := label
 		if selected {
@@ -213,7 +235,7 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 				if st.open[it.ID] {
 					caret = "▾"
 				}
-				rc.Text("caret", caret, t)
+				rc.Box("caret", ui.Style{Role: ui.RoleNone}, func(rc *ui.Ctx) { rc.Paint("glyph", ui.Px(8), ui.Px(14), caretPainter(c, caret, t)) })
 			}
 			if it.Swatch.A > 0 {
 				rc.Box("swatch", ui.Style{W: ui.Px(10), H: ui.Px(10), Fill: alpha(it.Swatch, .85), Radius: 2}, nil)
@@ -239,4 +261,12 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 		res.Selected = flat[st.sel].item.ID
 	}
 	return res
+}
+
+// caretPainter draws a tree's caret as a glyph without making it text a reader would say.
+func caretPainter(c *ui.Ctx, caret string, t ui.TextStyle) func(f render.Frame, r render.Rect) {
+	run := c.Shaper().Shape(caret, t.Font)
+	return func(f render.Frame, r render.Rect) {
+		f.Glyphs(run, render.Point{X: r.Min.X, Y: r.Min.Y + (r.Dy()+run.Ascent-run.Descent)/2}, t.Color)
+	}
 }

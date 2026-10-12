@@ -56,6 +56,8 @@ type state struct {
 
 // UI holds what lasts between frames.
 type UI struct {
+	Title string // the window's accessible name
+
 	sh    typeset.Shaper
 	text  TextStyle
 	opts  Options

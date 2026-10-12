@@ -32,8 +32,8 @@ clip 20,152 250x200 r 0
   rect 20,152 250x22 fill #e1e8e8
   rect 20,152 2x22 fill #0a84b8
   text "▸" @32,167.54712 #1b2129 Inter 12.5
-  rect 45.796875,158 10x10 fill #5cd2ffd9 radius 2
-  text "internal" @61.796875,167.54712 #1b2129 Inter 12.5
+  rect 46,158 10x10 fill #5cd2ffd9 radius 2
+  text "internal" @62,167.54712 #1b2129 Inter 12.5
   rect 32,180 10x10 fill #ffcf5cd9 radius 2
   text "PLAN.md" @48,189.54712 #424b57 Inter 12.5
   text "A" @254,188.59999 #138a5b JetBrains Mono 10

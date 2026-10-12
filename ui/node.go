@@ -114,6 +114,13 @@ type Style struct {
 	Help        string // its help page and anchor, "hud/usage#weekly-window" (help.md)
 	KeyMode     string // when focused, keymaps in this mode come first and unmapped keys come to it
 	Trap        bool   // keeps keyboard focus inside while it's up, as a modal does
+
+	// Accessibility (a11y.go): a node with a Role is in the accessibility tree; one without is transparent.
+	Role     Role
+	Label    string // its accessible name; by default, the text inside it
+	Value    string // a text field's text, a slider's value
+	Selected bool
+	Expanded *bool // nil when it doesn't expand
 }
 
 // Float places a box against an anchor: the rect of the node with id To (from this frame's layout),

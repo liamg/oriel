@@ -44,6 +44,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 14. [FW-8](FW-8-headless-backend-display-list-snapshots-plus-per.md): Headless backend: display-list snapshots plus perceptual PNG diffs against the mockups · after FW-4
 15. [FW-9](FW-9-layout-tree-and-tab-groups-drag-any-pane-to-any-.md): Layout tree and tab groups: drag any pane to any tab group, dock, split or float, animated drop targets, zoom, ⌃W keys · after FW-6, FW-8
 16. [FW-10](FW-10-accessibility-tree-emitted-from-widget-ids.md): Accessibility tree emitted from widget ids · after FW-6
+16. [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux) · after FW-10
 
 ### Phase 2 · editor core
 

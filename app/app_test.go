@@ -369,3 +369,29 @@ func TestLayoutCommandsAndKeys(t *testing.T) {
 	}
 	b.close(t)
 }
+
+// The window's accessibility tree: the app's main regions, as a screen reader meets them, and a reader's
+// click running a widget's action.
+func TestAccessTree(t *testing.T) {
+	b := boot(t, panes{})
+	b.win.Send(render.KeyEvent{Key: "a"})
+	b.waitText(t, "content of alpha")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var dump string
+	for ctx.Err() == nil {
+		if tr := b.win.Access(); tr != nil {
+			dump = tr.Dump()
+			if strings.Contains(dump, `group "alpha"`) {
+				break
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	for _, want := range []string{`window "Oriel"`, `region "Main"`, `tablist`, `tab "alpha" selected`, `group "alpha"`} {
+		if !strings.Contains(dump, want) {
+			t.Errorf("no %s in the tree:\n%s", want, dump)
+		}
+	}
+	b.close(t)
+}

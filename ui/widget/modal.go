@@ -46,7 +46,8 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 	}
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}
 	c.Column(key, ui.Style{W: ui.Px(w), Fill: col(c, tModalBg), Stroke: col(c, tModalBorder), Border: 1, Radius: 10, Z: 1001, Clip: true,
-		Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Trap: true, Focusable: true, KeyMode: "modal", Help: o.Help}, func(c *ui.Ctx) {
+		Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Trap: true, Focusable: true, KeyMode: "modal", Help: o.Help,
+		Role: ui.RoleDialog, Label: title}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.PadXY(16, 0), Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("title", title, uiText(c, 13, typeset.SemiBold, col(c, tModalTitle)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -105,7 +106,7 @@ func ShowToasts(c *ui.Ctx, key any, t *Toasts) {
 	}
 	size := c.Size()
 	corner := render.Point{X: size.X - 16, Y: size.Y - 16}
-	c.Column(key, ui.Style{Gap: 8, Z: 950, Float: &ui.Float{Point: &corner, Self: render.Point{X: 1, Y: 1}}}, func(c *ui.Ctx) {
+	c.Column(key, ui.Style{Gap: 8, Z: 950, Float: &ui.Float{Point: &corner, Self: render.Point{X: 1, Y: 1}}, Role: ui.RoleGroup, Label: "Notifications"}, func(c *ui.Ctx) {
 		var gone []int
 		for _, x := range t.list {
 			in := c.Interaction(c.Next(x.id))
@@ -113,7 +114,7 @@ func ShowToasts(c *ui.Ctx, key any, t *Toasts) {
 				gone = append(gone, x.id)
 			}
 			c.Row(x.id, ui.Style{W: ui.Px(340), Fill: col(c, tToastBg), Stroke: col(c, tToastBorder), Border: 1, Radius: 8, Clip: true,
-				Focusable: true, KeyMode: "toast", Cursor: render.CursorPointer, Help: x.Help}, func(c *ui.Ctx) {
+				Focusable: true, KeyMode: "toast", Cursor: render.CursorPointer, Help: x.Help, Role: ui.RoleStatus}, func(c *ui.Ctx) {
 				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: x.Tone}, nil)
 				c.Column("text", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 4}, func(c *ui.Ctx) {
 					c.Text("title", x.Title, uiText(c, 12.5, typeset.SemiBold, col(c, tToastFg)))

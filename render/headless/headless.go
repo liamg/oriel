@@ -77,7 +77,61 @@ type Window struct {
 	sendMu sync.RWMutex
 	closed bool
 	cursor render.Cursor
+
+	access  map[uint64]*render.AccessNode
+	actions chan render.AccessAction
 }
+
+var _ render.Accessible = (*Window)(nil)
+
+// UpdateAccess applies an accessibility update, as a platform bridge would.
+func (w *Window) UpdateAccess(u render.AccessUpdate) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.access == nil {
+		w.access = map[uint64]*render.AccessNode{}
+	}
+	for _, n := range u.Changed {
+		w.access[n.ID] = n
+	}
+	for _, id := range u.Removed {
+		delete(w.access, id)
+	}
+}
+
+func (w *Window) AccessActions() <-chan render.AccessAction {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.actions == nil {
+		w.actions = make(chan render.AccessAction, 16)
+	}
+	return w.actions
+}
+
+// Access is the accessibility tree the updates have built, or nil before the first.
+func (w *Window) Access() *render.AccessNode {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	var build func(id uint64) *render.AccessNode
+	build = func(id uint64) *render.AccessNode {
+		n, ok := w.access[id]
+		if !ok {
+			return nil
+		}
+		out := *n
+		out.Children = nil
+		for _, k := range n.Children {
+			if c := build(k.ID); c != nil {
+				out.Children = append(out.Children, c)
+			}
+		}
+		return &out
+	}
+	return build(0)
+}
+
+// Act asks the app to do something, as a screen reader would.
+func (w *Window) Act(a render.AccessAction) { w.AccessActions(); w.actions <- a }
 
 func (w *Window) SetCursor(c render.Cursor) {
 	w.mu.Lock()
