@@ -1,0 +1,46 @@
+# Checks the oracle reads back every field. Expectations came from running nvim v0.11.7.
+
+=== marks, set and unset
+ref:    oracle nvim v0.11.7
+given:
+  |one
+  two
+keys:   majmb
+expect:
+  one
+  |two
+marks:  a=1:0 b=2:0 c=(unset)
+
+=== jumps
+ref:    oracle nvim v0.11.7
+given:
+  o|ne
+  two
+  three
+keys:   G
+expect:
+  one
+  two
+  t|hree
+jumps:  1:1
+
+=== msg
+ref:    oracle nvim v0.11.7
+given:  |one
+keys:   :echomsg "hi"<CR>
+expect: |one
+msg:    hi
+
+=== op-pending
+ref:    oracle nvim v0.11.7
+given:  |one
+keys:   d
+expect: |one
+mode:   op-pending
+
+=== visual anchor after o
+ref:    oracle nvim v0.11.7
+given:  |one two
+keys:   veo
+expect: [|on^e] two
+mode:   visual

@@ -62,14 +62,29 @@ mode:   normal
 regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 ```
 
-- `|` is the cursor. `[`…`]` mark a visual selection, and `^` the visual start when it matters.
-- Optional checks: `mode`, `regs`, `marks`, `jumps`, `undo` (the text after `u`), `dot` (the text after `.`), `msg` (the echo line).
-- The **runner** (`vim/vimtest`) feeds `keys` into our engine and compares every declared field.
-- **Oracle mode** (`go test ./vim/... -oracle`): the same case runs in `nvim --headless --clean` over its
-  RPC API. Buffer, cursor, mode, registers and marks are read back and compared with `expect`.
+- `|` sits before the character under the cursor (in insert mode, before the character after it). `[`…`]` enclose a
+  charwise visual selection, and `^` sits before the visual start when it matters. `\` escapes `|[]^\`.
+- Values are trimmed. A field with nothing after the colon takes the following lines indented by two spaces as a
+  multi-line value (that's how a buffer gets several lines or leading whitespace).
+- Optional checks: `mode` (`normal`, `insert`, `replace`, `visual`, `visual-line`, `visual-block`, `select`,
+  `op-pending`, `cmdline`), `regs`, `marks` (`a=1:0 b=(unset)`), `jumps` (`1:0 3:4`), `undo` (the buffer after the keys,
+  `<Esc>` and `u`), `dot` (after the keys, `<Esc>` and `.`), `msg` (the last line of `:messages`). Positions are
+  `line:col`: 1-based line, 0-based byte column, as `:marks` shows them.
+- `ref` is `file.txt *tag*` (in `spec/vim`), `nvim/file.txt *tag*` (in `spec/nvim`), or `oracle nvim v0.11.7`. A `quote`,
+  when given, must sit in that tag's section, whitespace-normalised. `RequireRef` checks both; so does `refcheck`.
+- The **runner** (`vim/vimtest`) drives a `vimtest.Engine` (load a buffer, feed keys, snapshot what the case declares)
+  and compares every declared field. `undo` and `dot` each replay the case on a fresh engine.
+- **Oracle mode** (`go test ./vim/... -oracle`, or `ORIEL_ORACLE=1` for test binaries that don't link `vimtest`): the same
+  case runs in `nvim --headless --clean --embed` (`vim/vimtest/nvim`, our own msgpack-RPC client). nvim's default
+  mappings are cleared first, and keys go in with `nvim_input`. Buffer, cursor, selection, mode, registers, marks,
+  jumps and messages are read back and compared with the case.
   - If **our expectation disagrees with nvim**, the case fails. The test was wrong, not just the code.
-  - If vim and nvim differ from each other, the case says which it follows (`follows: vim`), with the `:help` reference that shows the difference.
+  - If vim and nvim differ from each other, the case says which it follows (`follows: vim`), with the `:help` reference
+    that shows the difference. A `follows: vim` or `deviation:` case logs its disagreements with nvim instead of failing.
+  - Keys that leave nvim waiting for more (a lone count or register name) can't be read back, so such a case fails.
+  - nvim is found at `$ORIEL_NVIM`, then on `PATH`, and must be the pinned version (`nvim.Version`, v0.11.7).
 - CI runs both modes. Oracle mode needs nvim, which is pinned in the CI image.
+- Until the engine exists (ED-2), engine mode skips and the oracle checks the cases themselves.
 
 ### Workflow for an agent adding a feature
 
@@ -109,14 +124,13 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 ## Example: a test that can't hallucinate
 
 ```go
-func TestMotions(t *testing.T) {
-    for _, c := range vimtest.Load(t, "testdata/motion/*.vt") {
+func TestConformance(t *testing.T) {
+    for _, c := range vimtest.Load(t, "testdata/*/*.vt") {
         t.Run(c.Name, func(t *testing.T) {
-            c.RequireRef(t)                 // has ref + resolvable tag; quote verified by refcheck
-            got := vimtest.Run(engine.New(), c.Given, c.Keys)
-            c.Compare(t, got)               // buffer, cursor, mode, regs… whatever the case declares
-            if *oracle {
-                c.Compare(t, nvimOracle.Run(c.Given, c.Keys)) // the expectation itself must match nvim
+            c.RequireRef(t)                          // the tag resolves and the quote is in its section
+            c.Compare(t, vimtest.Run(t, engine.New, c)) // buffer, cursor, mode, regs… whatever the case declares
+            if vimtest.Oracle() {
+                c.Compare(t, vimtest.Run(t, nvim.New(), c)) // the expectation itself must match nvim
             }
         })
     }

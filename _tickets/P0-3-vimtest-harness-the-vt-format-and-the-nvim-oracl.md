@@ -2,7 +2,7 @@
 id: P0-3
 title: "vimtest harness: the .vt format and the nvim oracle"
 phase: P0
-status: todo
+status: done
 area: Spike and repo
 module: -
 depends_on: [P0-1]
