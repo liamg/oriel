@@ -66,6 +66,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 
 ### Phase 3 · shell
 
+21. [ED-12](ED-12-editor-pane-files-and-the-first-usable-editor.md): Editor pane and files: open, edit, save, the first usable editor · after ED-4, ED-6, FW-6, FW-9
 22. [ED-5](ED-5-plain-engine-and-the-input-engine-interface-emac.md): plain engine and the input.Engine interface (emacs as a plugin) · after ED-2, FW-3
 23. [ED-7](ED-7-decorations-between-lines-threads-explain-cards-.md): Decorations between lines: threads, explain cards, diffs, virtual text · after ED-1, FW-6
 24. [PL-1](PL-1-lua-config-and-plugins-hooks-inspect-luals-types.md): Lua config and plugins, :Hooks, :Inspect, LuaLS types · after FW-3
