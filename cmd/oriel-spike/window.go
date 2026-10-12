@@ -90,7 +90,7 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 			event.Op(gtx.Ops, tag)
 			gtx.Execute(key.FocusCmd{Tag: tag})
 			for {
-				ev, ok := gtx.Event(key.FocusFilter{Target: tag}, key.Filter{Focus: tag, Name: ""}, key.Filter{Focus: tag, Name: "J"}, key.Filter{Focus: tag, Name: "K"})
+				ev, ok := gtx.Event(key.FocusFilter{Target: tag}, key.Filter{Focus: tag, Name: ""}, key.Filter{Focus: tag, Name: "J"}, key.Filter{Focus: tag, Name: "K"}, key.Filter{Focus: tag, Name: key.NameDeleteBackward})
 				if !ok {
 					break
 				}
@@ -106,6 +106,10 @@ func loop(w *app.Window, s scene.Scene, auto bool) error {
 						st.Line--
 					case key.NameEscape:
 						return nil
+					case key.NameDeleteBackward:
+						if len(st.Typed) > 0 {
+							st.Typed = st.Typed[:len(st.Typed)-1]
+						}
 					}
 					pendingKey = t0
 				case key.EditEvent:
