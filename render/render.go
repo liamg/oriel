@@ -58,6 +58,7 @@ type Window interface {
 	Events() <-chan Event         // closed when the window is gone
 	Scale() float32
 	Size() Point
+	SetCursor(c Cursor)
 	Close()
 }
 

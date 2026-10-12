@@ -102,13 +102,14 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		case <-dirty:
 		case now := <-timer.C:
 			l.run(ctx, l.keys.Timeout(now))
+			// and a redraw, for a spring or a tooltip that was due
 		case ev, ok := <-w.Events():
 			if !ok {
 				return nil
 			}
 			l.handle(ctx, ev)
 		}
-		if d := l.keys.Deadline(); !d.IsZero() {
+		if d := l.wake(); !d.IsZero() {
 			timer.Reset(time.Until(d))
 		} else {
 			timer.Stop()
@@ -135,8 +136,28 @@ type loop struct {
 	modes []string // the focused mode first
 }
 
+// frameInterval paces redraws while something animates.
+const frameInterval = time.Second / 120
+
+// wake is when the loop next has work without input: a pending chord's timeout, the next animation
+// frame, or a tooltip's delay.
+func (l *loop) wake() time.Time {
+	d := l.keys.Deadline()
+	if u := l.ui.NextFrame(); !u.IsZero() {
+		if soon := time.Now().Add(frameInterval); u.Before(soon) {
+			u = soon
+		}
+		if d.IsZero() || u.Before(d) {
+			d = u
+		}
+	}
+	return d
+}
+
 func (l *loop) handle(ctx context.Context, ev render.Event) {
 	switch ev := ev.(type) {
+	case render.PointerEvent:
+		l.ui.Pointer(ev)
 	case render.KeyEvent:
 		l.run(ctx, l.keys.Feed(l.modes, notation(ev), time.Now()))
 	}
@@ -156,6 +177,12 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 
 func (l *loop) draw() error {
 	size := l.win.Size()
+	if on, _, err := l.reg.Options().Get("ui.reduced_motion", registry.At{}); err == nil {
+		o := l.ui.Options()
+		o.ReducedMotion = on == true
+		l.ui.SetOptions(o)
+	}
+	defer func() { l.win.SetCursor(l.ui.Cursor()) }()
 	return l.win.Frame(func(f render.Frame) {
 		f.Rect(render.Rect{Max: size}, render.Style{Fill: background})
 		l.ui.Frame(f, size, func(c *ui.Ctx) {

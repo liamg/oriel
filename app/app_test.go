@@ -187,3 +187,38 @@ func TestKeysAndCommandsListSources(t *testing.T) {
 	b.waitLine(t, "Keys", "builtin:introspect")
 	b.close(t)
 }
+
+// pointy is a plugin view with a box that asks for the pointer cursor.
+type pointy struct{}
+
+func (pointy) Manifest() ext.Manifest { return ext.Manifest{ID: "test.pointy"} }
+func (pointy) Activate(_ context.Context, h ext.Host) error {
+	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+		return &ui.Box{Key: "link", Style: ui.Style{W: ui.Px(100), H: ui.Px(20), Cursor: render.CursorPointer}}
+	}))
+	return nil
+}
+func (pointy) Deactivate(context.Context) error { return nil }
+
+func TestPointerSetsTheCursor(t *testing.T) {
+	b := boot(t, pointy{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
+	// The root view sits inside the app's 16px padding.
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 30, Y: 25}})
+	for b.win.Cursor() != render.CursorPointer {
+		if ctx.Err() != nil {
+			t.Fatalf("cursor is %v over the link", b.win.Cursor())
+		}
+		time.Sleep(time.Millisecond)
+	}
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 300}})
+	for b.win.Cursor() != render.CursorDefault {
+		if ctx.Err() != nil {
+			t.Fatalf("cursor is %v off the link", b.win.Cursor())
+		}
+		time.Sleep(time.Millisecond)
+	}
+	b.close(t)
+}

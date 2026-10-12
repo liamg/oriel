@@ -7,8 +7,10 @@ import (
 	"gioui.org/app"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 	"gioui.org/io/system"
 	"gioui.org/op"
+	"gioui.org/op/clip"
 	"gioui.org/unit"
 
 	"github.com/liamg/oriel/render"
@@ -85,6 +87,19 @@ type Window struct {
 	redraw atomic.Bool
 	scale  atomic.Value // float32
 	size   atomic.Value // render.Point
+	cursor atomic.Uint32
+}
+
+var cursors = map[render.Cursor]pointer.Cursor{
+	render.CursorDefault: pointer.CursorDefault, render.CursorPointer: pointer.CursorPointer, render.CursorText: pointer.CursorText,
+	render.CursorNotAllowed: pointer.CursorNotAllowed, render.CursorGrab: pointer.CursorGrab, render.CursorResizeCol: pointer.CursorColResize,
+	render.CursorResizeRow: pointer.CursorRowResize, render.CursorCrosshair: pointer.CursorCrosshair,
+}
+
+func (w *Window) SetCursor(c render.Cursor) {
+	if render.Cursor(w.cursor.Swap(uint32(c))) != c {
+		w.win.Invalidate()
+	}
 }
 
 func (w *Window) Scale() float32 { return w.scale.Load().(float32) }
@@ -140,14 +155,22 @@ func (w *Window) loop() {
 				w.size.Store(size)
 				w.post(render.ResizeEvent{Size: size})
 			}
+			area := clip.Rect{Max: e.Size}.Push(gtx.Ops)
 			event.Op(gtx.Ops, tag)
+			cursors[render.Cursor(w.cursor.Load())].Add(gtx.Ops)
+			area.Pop()
 			gtx.Execute(key.FocusCmd{Tag: tag})
 			for {
-				ev, ok := gtx.Event(key.FocusFilter{Target: tag}, key.Filter{Focus: tag, Optional: key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand})
+				ev, ok := gtx.Event(
+					key.FocusFilter{Target: tag},
+					key.Filter{Focus: tag, Optional: key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand},
+					pointer.Filter{Target: tag, Kinds: pointer.Move | pointer.Drag | pointer.Press | pointer.Release | pointer.Scroll | pointer.Leave,
+						ScrollX: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}},
+				)
 				if !ok {
 					break
 				}
-				for _, k := range translate(ev) {
+				for _, k := range translate(ev, scale) {
 					w.post(k)
 				}
 			}

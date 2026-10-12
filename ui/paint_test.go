@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -20,7 +21,14 @@ func describe(ops []render.Op) string {
 	for _, op := range ops {
 		switch op.Kind {
 		case render.OpRect:
-			out = append(out, "rect "+fmtRect(op.Rect))
+			d := "rect " + fmtRect(op.Rect)
+			if op.Style.Fill.A > 0 {
+				d += fmt.Sprintf(" fill #%02x%02x%02x", op.Style.Fill.R, op.Style.Fill.G, op.Style.Fill.B)
+			}
+			if op.Style.Width > 0 {
+				d += fmt.Sprintf(" stroke %s #%02x%02x%02x", num(op.Style.Width), op.Style.Stroke.R, op.Style.Stroke.G, op.Style.Stroke.B)
+			}
+			out = append(out, d)
 		case render.OpGlyphs:
 			out = append(out, "text "+op.Run.Text+" @"+num(op.At.X)+","+num(op.At.Y))
 		case render.OpPushClip:
@@ -51,12 +59,12 @@ func TestPaintOrderAndClipping(t *testing.T) {
 		c.Box("low", low, nil)
 	})
 	want := strings.Join([]string{
-		"rect 0,0 100x14", // the pane, one line tall; floats come after the flow
+		"rect 0,0 100x14 fill #010000", // the pane, one line tall; floats come after the flow
 		"clip 0,0 100x14",
-		"text inside @0,11", // baseline: top plus ascent
-		"pop",               // "clipped away" starts at the clip's bottom edge, so it isn't painted
-		"rect 0,90 10x10",   // z=1
-		"rect 150,0 30x10",  // z=5
+		"text inside @0,11",             // baseline: top plus ascent
+		"pop",                           // "clipped away" starts at the clip's bottom edge, so it isn't painted
+		"rect 0,90 10x10 fill #010000",  // z=1
+		"rect 150,0 30x10 fill #010000", // z=5
 	}, "\n")
 	if got := describe(ops); got != want {
 		t.Errorf("painted:\n%s\nwant:\n%s", got, want)

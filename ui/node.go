@@ -97,6 +97,12 @@ type Style struct {
 
 	Float *Float // out of the flow, placed against another node or a point
 	Z     int    // floats paint in Z order, after the flow
+
+	Interactive bool // takes hover and press
+	Focusable   bool // takes focus; implies Interactive
+	Disabled    bool // takes neither, and hides what's under it from the pointer
+	Cursor      render.Cursor
+	Tooltip     string // shown after the pointer rests on it
 }
 
 // Float places a box against an anchor: the rect of the node with id To (from this frame's layout),

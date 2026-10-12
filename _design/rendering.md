@@ -190,7 +190,17 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
   allocation-light; `ui/testdata/layout/*.golden` pins the behaviour. Text is one line until wrapping lands with
   the first widget that needs it.
 - Ids hash the parent's id with a key (the child's index when there's none; duplicates get `#n`). State not built
-  in a frame is dropped. `Theme`, input and springs join the `Ctx` with FW-5 and FW-7.
+  in a frame is dropped. `Theme` joins the `Ctx` with FW-7.
+- **Interaction** (FW-5): boxes opt in with `Interactive`, `Focusable`, `Disabled`, `Cursor` and `Tooltip`.
+  `u.Pointer(ev)` resolves hover and press against the latest painted frame (immediate mode's one frame of lag), and
+  a widget asks `c.Interaction(c.Next(key))` for hovered, pressed, clicked, focused and focus-visible before it
+  builds itself. A click is press and release on the same node. Disabled nodes take nothing and hide what's under
+  them. The wheel scrolls the topmost scroller on its axis. `FocusNext(±1)` walks focusables in paint order, and a
+  node focused from the keyboard gets a 2 px focus ring. A tooltip shows after the pointer rests 500 ms.
+- **Springs**: `c.Anim(key, target)` is critically damped (within 2% at 200 ms, settled by 500 ms). The UI reports
+  `NextFrame()` while anything moves or a tooltip is due, and the app redraws at 120 Hz until then. The option
+  `ui.reduced_motion` makes every spring jump.
+- `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer.
 
 ```go
 // package layout — one tree for every view; docks are its edges

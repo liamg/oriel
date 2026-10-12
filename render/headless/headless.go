@@ -64,6 +64,20 @@ type Window struct {
 	once   sync.Once
 	sendMu sync.RWMutex
 	closed bool
+	cursor render.Cursor
+}
+
+func (w *Window) SetCursor(c render.Cursor) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.cursor = c
+}
+
+// Cursor is the last cursor the app set.
+func (w *Window) Cursor() render.Cursor {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.cursor
 }
 
 func (w *Window) Frame(fn func(render.Frame)) error {

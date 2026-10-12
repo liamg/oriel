@@ -4,13 +4,16 @@ import (
 	"reflect"
 	"testing"
 
+	"gioui.org/f32"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 
 	"github.com/liamg/oriel/render"
 )
 
 func TestTranslate(t *testing.T) {
+	// Pointer positions arrive in device pixels; these are at 2×, except keys, which have none.
 	for _, tt := range []struct {
 		in   event.Event
 		want []render.Event
@@ -25,8 +28,11 @@ func TestTranslate(t *testing.T) {
 		{key.Event{Name: key.NameSpace, State: key.Press}, nil},
 		{key.Event{Name: key.NameSpace, State: key.Press, Modifiers: key.ModCtrl}, []render.Event{render.KeyEvent{Key: " ", Mods: render.ModCtrl}}},
 		{key.Event{Name: key.NameEscape, State: key.Release}, nil},
+		{pointer.Event{Kind: pointer.Press, Position: f32.Pt(20, 40), Buttons: pointer.ButtonPrimary}, []render.Event{render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 10, Y: 20}, Buttons: render.ButtonPrimary}}},
+		{pointer.Event{Kind: pointer.Drag, Position: f32.Pt(4, 4), Buttons: pointer.ButtonPrimary}, []render.Event{render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 2, Y: 2}, Buttons: render.ButtonPrimary}}},
+		{pointer.Event{Kind: pointer.Scroll, Scroll: f32.Pt(0, 30)}, []render.Event{render.PointerEvent{Kind: render.PointerScroll, Scroll: render.Point{Y: 15}}}},
 	} {
-		if got := translate(tt.in); !reflect.DeepEqual(got, tt.want) {
+		if got := translate(tt.in, 2); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("translate(%+v) = %+v, want %+v", tt.in, got, tt.want)
 		}
 	}

@@ -104,6 +104,7 @@ var cases = map[string]func(c *Ctx){
 		c.Row("r", Style{}, func(c *Ctx) {
 			c.Text("x", "a", TextStyle{})
 			c.Text("x", "b", TextStyle{})
+			c.Text("x", "c", TextStyle{})
 		})
 	},
 }

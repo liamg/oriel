@@ -18,6 +18,16 @@ func (c *Ctx) ID() ID { return c.e.id }
 
 func (c *Ctx) Shaper() typeset.Shaper { return c.u.sh }
 
+// Next is the id the next child added with key will have, so a widget can ask for its interaction
+// before it builds itself.
+func (c *Ctx) Next(key any) ID {
+	k, _ := c.e.nextKey(key)
+	return childID(c.e.id, k)
+}
+
+// Interaction is id's hover, press, click and focus state.
+func (c *Ctx) Interaction(id ID) Interaction { return c.u.Interaction(id) }
+
 // Rect is where id was laid out last frame.
 func (c *Ctx) Rect(id ID) (render.Rect, bool) { return c.u.Rect(id) }
 

@@ -10,7 +10,7 @@ import (
 )
 
 func builtins() []ext.Extension {
-	return []ext.Extension{&layout{}, &introspect{}}
+	return []ext.Extension{&uiOptions{}, &layout{}, &introspect{}}
 }
 
 // disposer is the usual way for an extension to undo what it registered.
@@ -79,5 +79,16 @@ func (i *introspect) Activate(_ context.Context, h ext.Host) error {
 		}
 		return ui.ColumnNode(rows...)
 	})))
+	return nil
+}
+
+// uiOptions registers the toolkit's own options.
+type uiOptions struct{ disposer }
+
+func (o *uiOptions) Manifest() ext.Manifest { return ext.Manifest{ID: "ui"} }
+
+func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
+	o.add(h.Option(registry.OptionSpec{Name: "ui.reduced_motion", Type: registry.Bool, Default: false,
+		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
 	return nil
 }

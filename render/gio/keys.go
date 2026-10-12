@@ -6,6 +6,7 @@ import (
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 
 	"github.com/liamg/oriel/render"
 )
@@ -23,8 +24,27 @@ var names = map[key.Name]string{
 // translate turns Gio input into key events. Typed text comes from EditEvents, so a key press
 // that only types a character is left to its EditEvent; presses with Ctrl, Alt or Super, and named
 // keys, come from key.Events.
-func translate(ev event.Event) []render.Event {
+func translate(ev event.Event, scale float32) []render.Event {
 	switch ev := ev.(type) {
+	case pointer.Event:
+		pe := render.PointerEvent{Pos: render.Point{X: ev.Position.X / scale, Y: ev.Position.Y / scale}, Mods: mods(ev.Modifiers)}
+		pe.Buttons = render.Buttons(ev.Buttons & (pointer.ButtonPrimary | pointer.ButtonSecondary | pointer.ButtonTertiary))
+		switch ev.Kind {
+		case pointer.Move, pointer.Drag:
+			pe.Kind = render.PointerMove
+		case pointer.Press:
+			pe.Kind = render.PointerPress
+		case pointer.Release:
+			pe.Kind = render.PointerRelease
+		case pointer.Scroll:
+			pe.Kind = render.PointerScroll
+			pe.Scroll = render.Point{X: ev.Scroll.X / scale, Y: ev.Scroll.Y / scale}
+		case pointer.Leave:
+			pe.Kind = render.PointerLeave
+		default:
+			return nil
+		}
+		return []render.Event{pe}
 	case key.EditEvent:
 		var out []render.Event
 		for _, r := range ev.Text {
@@ -35,19 +55,7 @@ func translate(ev event.Event) []render.Event {
 		if ev.State != key.Press {
 			return nil
 		}
-		var mods render.Mods
-		if ev.Modifiers.Contain(key.ModShift) {
-			mods |= render.ModShift
-		}
-		if ev.Modifiers.Contain(key.ModCtrl) {
-			mods |= render.ModCtrl
-		}
-		if ev.Modifiers.Contain(key.ModAlt) {
-			mods |= render.ModAlt
-		}
-		if ev.Modifiers.Contain(key.ModSuper) || ev.Modifiers.Contain(key.ModCommand) {
-			mods |= render.ModSuper
-		}
+		mods := mods(ev.Modifiers)
 		name, named := names[ev.Name]
 		if !named {
 			name = string(ev.Name)
@@ -66,4 +74,21 @@ func translate(ev event.Event) []render.Event {
 		return []render.Event{render.KeyEvent{Key: name, Mods: mods}}
 	}
 	return nil
+}
+
+func mods(m key.Modifiers) render.Mods {
+	var out render.Mods
+	if m.Contain(key.ModShift) {
+		out |= render.ModShift
+	}
+	if m.Contain(key.ModCtrl) {
+		out |= render.ModCtrl
+	}
+	if m.Contain(key.ModAlt) {
+		out |= render.ModAlt
+	}
+	if m.Contain(key.ModSuper) || m.Contain(key.ModCommand) {
+		out |= render.ModSuper
+	}
+	return out
 }

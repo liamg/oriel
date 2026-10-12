@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -55,13 +56,28 @@ type state struct {
 type UI struct {
 	sh    typeset.Shaper
 	text  TextStyle
+	opts  Options
 	frame int
+	clock func() time.Time
 
 	root   *elem
 	byID   map[ID]*elem
 	floats []*elem
 	states map[ID]*state
 	hits   []hit
+	flags  map[ID]flags // from the latest frame, which input resolves against
+
+	in        input
+	springs   map[ID]*spring
+	animating bool
+	wake      time.Time
+}
+
+type flags struct {
+	interactive, focusable, disabled bool
+	scrollX, scrollY                 bool
+	cursor                           render.Cursor
+	tooltip                          string
 }
 
 type hit struct {
@@ -71,8 +87,12 @@ type hit struct {
 
 // New returns a UI that shapes text with sh, in text by default.
 func New(sh typeset.Shaper, text TextStyle) *UI {
-	return &UI{sh: sh, text: text, states: map[ID]*state{}, byID: map[ID]*elem{}}
+	return &UI{sh: sh, text: text, opts: defaultOptions(text), states: map[ID]*state{}, byID: map[ID]*elem{},
+		flags: map[ID]flags{}, springs: map[ID]*spring{}}
 }
+
+func (u *UI) Options() Options     { return u.opts }
+func (u *UI) SetOptions(o Options) { u.opts = o }
 
 // Frame builds, lays out and paints one frame of the given logical size.
 func (u *UI) Frame(f render.Frame, size render.Point, build func(c *Ctx)) {
@@ -86,7 +106,10 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.root = &elem{name: "root", style: Style{Dir: Column, W: Px(size.X), H: Px(size.Y)}}
 	u.byID = map[ID]*elem{0: u.root}
 	u.floats = u.floats[:0]
+	u.animating, u.wake = false, time.Time{}
 	build(&Ctx{u: u, e: u.root})
+	u.in.clicks = nil
+	u.tooltip()
 	for axis := range 2 {
 		u.fit(u.root, axis)
 		u.grow(u.root, axis)
@@ -100,7 +123,47 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 			delete(u.states, id)
 		}
 	}
+	for id, sp := range u.springs {
+		if sp.seen != u.frame {
+			delete(u.springs, id)
+		}
+	}
+	clear(u.flags)
+	for id, e := range u.byID {
+		s := e.style
+		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" {
+			u.flags[id] = flags{s.Interactive || s.Focusable || s.Tooltip != "", s.Focusable, s.Disabled, s.ScrollX, s.ScrollY, s.Cursor, s.Tooltip}
+		}
+	}
+	if _, ok := u.byID[u.in.focus]; !ok || u.flags[u.in.focus].disabled {
+		u.in.focus = 0
+	}
+	if _, ok := u.byID[u.in.hot]; !ok {
+		u.in.hot = 0
+	}
 }
+
+// tooltip shows the hovered node's tooltip once the pointer has rested on it for the delay.
+func (u *UI) tooltip() {
+	in := &u.in
+	tip := u.flags[in.hot].tooltip
+	if tip == "" || !in.inside || in.active != 0 {
+		return
+	}
+	due := in.hotAt.Add(u.opts.TooltipDelay)
+	if u.now().Before(due) {
+		u.wake = due
+		return
+	}
+	at := in.pos
+	c := &Ctx{u: u, e: u.root}
+	c.Box(tooltipKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: u.opts.TooltipStroke, Border: 1, Radius: 4,
+		Z: math.MaxInt32, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}}, func(c *Ctx) {
+		c.Text(nil, tip, u.opts.Tooltip)
+	})
+}
+
+type tooltipKey struct{}
 
 func (u *UI) state(id ID) *state {
 	st, ok := u.states[id]
@@ -174,20 +237,31 @@ func keyName(key any) string {
 	return fmt.Sprint(key)
 }
 
-// add appends a child built from key to e, giving it an id unique among its siblings.
-func (u *UI) add(e *elem, key any, k kind) *elem {
+// nextKey is the key the next child of e built from key gets: key itself, its index when nil, or key#n for
+// the nth duplicate among its siblings.
+func (e *elem) nextKey(key any) (any, string) {
 	if key == nil {
 		key = len(e.kids)
 	}
 	name := keyName(key)
-	if e.keys == nil {
-		e.keys = map[string]int{}
-	}
 	if n := e.keys[name]; n > 0 {
 		key = fmt.Sprintf("%v#%d", key, n)
 		name = fmt.Sprintf("%s#%d", name, n)
 	}
-	e.keys[keyName(key)]++
+	return key, name
+}
+
+// add appends a child built from key to e, giving it an id unique among its siblings.
+func (u *UI) add(e *elem, key any, k kind) *elem {
+	base := key
+	if base == nil {
+		base = len(e.kids)
+	}
+	key, name := e.nextKey(key)
+	if e.keys == nil {
+		e.keys = map[string]int{}
+	}
+	e.keys[keyName(base)]++
 	c := &elem{id: childID(e.id, key), name: name, kind: k, parent: e}
 	e.kids = append(e.kids, c)
 	u.byID[c.id] = c
@@ -441,7 +515,13 @@ func (u *UI) placeFloat(e *elem) {
 }
 
 // Paint draws the latest layout: the flow, then floats in Z order, each float outside its parent's clip.
+// Hover then follows whatever is now under a pointer that hasn't moved.
 func (u *UI) Paint(f render.Frame) {
+	defer func() {
+		if u.in.inside {
+			u.setHot(u.topInteractive(u.in.pos))
+		}
+	}()
 	u.hits = u.hits[:0]
 	if u.root == nil {
 		return
@@ -503,6 +583,11 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	}
 	if clips {
 		f.Pop()
+	}
+	if e.id == u.in.focus && u.in.visible && e.id != 0 {
+		const w, gap = 2, 2
+		ring := render.Rect{Min: render.Point{X: r.Min.X - gap - w, Y: r.Min.Y - gap - w}, Max: render.Point{X: r.Max.X + gap + w, Y: r.Max.Y + gap + w}}
+		f.Rect(ring, render.Style{Stroke: u.opts.FocusRing, Width: w, Radius: s.Radius + gap + w})
 	}
 }
 
