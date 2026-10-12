@@ -261,7 +261,6 @@ func Type(c *Canvas, st *State) {
 	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, bg0)
 	c.Text(68, 40, "TYPE HERE: KEYPRESS-TO-PHOTON (TYPOMETER)", capStyle)
 	y := float32(60)
-	end := c.codeLine(68, y, []Token{{string(st.Typed), fg, false}})
-	base := c.Baseline(y+codeLH/2, codeStyle)
-	c.Fill(Rect{end, base + 4 - 19, 2, 19}, accent)
+	// No caret: typometer reads one ahead of the text as a block cursor and refuses to run.
+	c.codeLine(68, y, []Token{{string(st.Typed), fg, false}})
 }
