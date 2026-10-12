@@ -1,0 +1,201 @@
+=== start
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [problems *terminal#1]
+focus editor#round.go
+=== ⌃W J: dock the terminal at the bottom (already there)
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [problems *terminal#1]
+focus terminal#1
+=== ⌃W L: split the terminal right of the focused file
+main
+  split h [1 1]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*terminal#1]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== split the terminal below
+main
+  split v [1 1]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*terminal#1]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== split the terminal left
+main
+  split h [1 1]
+    leaf [*terminal#1]
+    leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== split the terminal above
+main
+  split v [1 1]
+    leaf [*terminal#1]
+    leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== ⌃W T: the terminal as a tab in main
+main
+  leaf [editor#round.go editor#round_test.go *terminal#1]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== ⌃W F: float the terminal
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+float 200,120 640x400 [*terminal#1]
+focus terminal#1
+=== ⌃`: the terminal in the drop-down
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+dropdown open=true [*terminal#1]
+focus terminal#1
+=== dock the explorer right
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock right open=true [*explorer]
+dock bottom open=true [problems *terminal#1]
+focus explorer
+=== drop on a leaf's middle: a tab there
+main
+  leaf [editor#round.go editor#round_test.go *problems]
+dock left open=true [*explorer]
+dock bottom open=true [*terminal#1]
+focus problems
+=== drop on a leaf's left edge
+main
+  split h [1 1]
+    leaf [*terminal#1]
+    leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== drop on a leaf's right edge
+main
+  split h [1 1]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*terminal#1]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== drop on a leaf's top edge
+main
+  split v [1 1]
+    leaf [*terminal#1]
+    leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== drop on a leaf's bottom edge
+main
+  split v [1 1]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*terminal#1]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== drop a tab on its own leaf's edge: splits it off
+main
+  split h [1 1]
+    leaf [*editor#round.go]
+    leaf [*editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [problems *terminal#1]
+focus editor#round_test.go
+=== drop a lone tab on its own leaf's edge: nothing
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [problems *terminal#1]
+focus editor#round.go
+=== drop on the left dock
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [explorer *problems]
+dock bottom open=true [*terminal#1]
+focus problems
+=== drop on the right dock
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock right open=true [*problems]
+dock bottom open=true [*terminal#1]
+focus problems
+=== drop in open space: a float there
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+float 300,200 500x300 [*terminal#1]
+focus terminal#1
+=== split twice the same way: one split, three children
+main
+  split h [1 0.5 0.5]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*terminal#1]
+    leaf [*problems]
+dock left open=true [*explorer]
+focus problems
+=== moving the last view out of a split collapses it
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [problems *terminal#1]
+focus terminal#1
+=== close the focused tab: focus goes to its neighbour
+main
+  leaf [*editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=true [problems *terminal#1]
+focus editor#round_test.go
+=== ⌃J: close the bottom dock
+main
+  leaf [*editor#round.go editor#round_test.go]
+dock left open=true [*explorer]
+dock bottom open=false [problems *terminal#1]
+focus editor#round.go
+=== ⌃W =: even out the splits
+main
+  split h [1 1]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*terminal#1]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== ⌃W Z: zoom the terminal
+main
+  split h [1 1]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*terminal#1]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+zoomed terminal#1
+focus terminal#1
+=== ⌃W Z again: the exact tree comes back
+main
+  split h [1 1]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*terminal#1]
+dock left open=true [*explorer]
+dock bottom open=true [*problems]
+focus terminal#1
+=== open something new as a split
+main
+  split h [1 1]
+    leaf [*editor#round.go editor#round_test.go]
+    leaf [*requests]
+dock left open=true [*explorer]
+dock bottom open=true [problems *terminal#1]
+focus requests

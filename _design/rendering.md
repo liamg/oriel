@@ -233,21 +233,36 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
   `ui.State[T]`). Process plugins' JSON views get the widgets as node types when PL-2 lands.
 
 ```go
-// package layout — one tree for every view; docks are its edges
-type Placement int // Docked | Split | Tab | Float | DropDown
-
-type Node interface{ isNode() }
-type Split struct{ Dir Axis; Children []Node; Weights []float32 }
-type Leaf  struct{ Tabs []ViewRef; Active int }
-type Root  struct{ Main Node; Docks map[Edge]*Leaf; Floats []*Float; Zoomed *ViewRef }
-
-type Layout interface {
-    Open(v ViewRef, p Placement, opts Opts) error
-    Move(v ViewRef, p Placement, opts Opts) error // ⌃W M, drag and drop
-    Zoom(v ViewRef)                                // toggle; restores the saved tree
-    Focus(dir Dir)                                 // ⌃W h/j/k/l across main and docks
-    Save(name string) Snapshot
-    Restore(s Snapshot)
+// package ui/layout — one tree for every view; docks are its edges (FW-9)
+type ViewRef struct{ ID, Instance, Title string }  // a registered view, and which one
+type Node struct {                                   // a split (Split set) or a tab group (Tabs)
+    Split   Axis; Kids []*Node; Weights []float32
+    Tabs    []ViewRef; Active int
 }
+type Root struct {
+    Main *Node; Docks map[Edge]*Dock; Floats []*Float; DropDown *Dock
+    Zoomed, Focus *ViewRef
+}
+
+func (r *Root) Open(v ViewRef, p Placement, o Opts) error // Docked | Split | Tab | Float | DropDown
+func (r *Root) Move(v ViewRef, p Placement, o Opts) error // ⌃W J/L/T/F, ⌃W M's menu
+func (r *Root) Drop(v ViewRef, t Target) error            // a drag: a leaf's centre or edge, a dock, open space
+func (r *Root) ToggleZoom(v ViewRef)                      // the tree isn't touched, so ⌃W Z again restores it exactly
+func (r *Root) FocusDir(d Dir, rects map[*Node]render.Rect) bool // ⌃W h/j/k/l across main and docks alike
+func (r *Root) Save() Snapshot; func Restore(Snapshot) (*Root, error) // JSON
+
+func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool // draws it; tabs drag, splitters resize
 ```
+
+- The model is plain data, so every move and drop is a golden of the tree it leaves (`ui/layout/testdata`), and
+  drags are scripted with real pointer events in tests. Dropping a view on its own leaf's edge splits it off, unless
+  it's the leaf's only tab. Splitting the same way twice gives one split with three children.
+- A drag lights its target (the half of a leaf an edge drop takes, the whole leaf for its centre, a dock, a 24px
+  window edge for a dock that's closed) with an accent fill and glow that glide between targets on springs.
+- `⌃W h/j/k/l` goes to the nearest pane in that direction by last frame's rects; a tie goes back to where focus came
+  from, as vim's window moves feel.
+- The app's built-in `layout` extension owns the root and registers `view.open {id, place, edge, side}`,
+  `view.close`, `layout.move`, `layout.zoom`, `layout.focus {dir}`, `layout.dock {edge}`, `layout.equalize`,
+  `layout.save/restore {name}` and `layout.menu`, with the ⌃W keys, `⌃J` and ``⌃` `` bound in `global`. Saved layouts
+  are in memory until sessions persist them (SE-2).
 

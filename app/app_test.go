@@ -325,3 +325,47 @@ func TestWidgetsTakeKeysInTheirOwnMode(t *testing.T) {
 	b.waitText(t, "saved:1")
 	b.close(t)
 }
+
+// panes is a plugin with two views and keys that put them on screen through the layout's commands.
+type panes struct{}
+
+func (panes) Manifest() ext.Manifest { return ext.Manifest{ID: "test.panes"} }
+func (panes) Activate(_ context.Context, h ext.Host) error {
+	for _, name := range []string{"alpha", "beta"} {
+		h.View(name, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("content of " + name) }))
+	}
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "a", Command: "view.open", Args: registry.Args{"id": "alpha"}})
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "b", Command: "view.open", Args: registry.Args{"id": "beta", "place": "split", "side": "right"}})
+	return nil
+}
+func (panes) Deactivate(context.Context) error { return nil }
+
+func TestLayoutCommandsAndKeys(t *testing.T) {
+	b := boot(t, panes{})
+	b.win.Send(render.KeyEvent{Key: "a"})
+	b.waitText(t, "content of alpha")
+	b.win.Send(render.KeyEvent{Key: "b"})
+	b.waitText(t, "content of beta")
+	b.waitLine(t, "content of alpha")
+	// ⌃W Z zooms beta, the focused view: alpha goes.
+	b.win.Send(render.KeyEvent{Key: "w", Mods: render.ModCtrl})
+	b.win.Send(render.KeyEvent{Key: "Z", Mods: render.ModShift})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool {
+		return strings.Contains(f.Text(), "content of beta") && !strings.Contains(f.Text(), "content of alpha")
+	}); err != nil {
+		t.Fatalf("after ⌃W Z:\n%s", f.Text())
+	}
+	seen := len(b.win.Frames())
+	b.win.Send(render.KeyEvent{Key: "w", Mods: render.ModCtrl})
+	b.win.Send(render.KeyEvent{Key: "Z", Mods: render.ModShift})
+	n := 0
+	if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool {
+		n++
+		return n > seen && strings.Contains(f.Text(), "content of alpha") && strings.Contains(f.Text(), "content of beta")
+	}); err != nil {
+		t.Fatalf("after ⌃W Z again, both should be back:\n%s", f.Text())
+	}
+	b.close(t)
+}

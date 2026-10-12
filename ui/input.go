@@ -12,7 +12,8 @@ import (
 // can't be hit yet, so hover and press resolve against the previous frame's.
 type Interaction struct {
 	Hovered      bool // the pointer is over it, and it's the topmost interactive node there
-	Pressed      bool // the primary button went down on it and hasn't come up
+	Pressed      bool // the primary button went down on it and hasn't come up, and the pointer's still on it
+	Held         bool // the primary button went down on it and hasn't come up, wherever the pointer is: a drag
 	Clicked      bool // pressed and released on it since the last frame
 	Focused      bool
 	FocusVisible bool // focused from the keyboard, so it draws a focus ring
@@ -155,6 +156,7 @@ func (u *UI) Interaction(id ID) Interaction {
 	it := Interaction{
 		Hovered:      in.hot == id && id != 0,
 		Pressed:      in.active == id && in.hot == id && id != 0,
+		Held:         in.active == id && id != 0,
 		Clicked:      in.clicks[id],
 		Focused:      in.focus == id && id != 0,
 		FocusVisible: in.focus == id && in.visible && id != 0,

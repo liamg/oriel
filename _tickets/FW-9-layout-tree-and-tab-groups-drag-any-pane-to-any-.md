@@ -2,7 +2,7 @@
 id: FW-9
 title: "Layout tree and tab groups: drag any pane to any tab group, dock, split or float, animated drop targets, zoom, ⌃W keys"
 phase: P1
-status: todo
+status: done
 area: Framework (first, after the spike)
 module: layout
 depends_on: [FW-6, FW-8]
