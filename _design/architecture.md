@@ -64,7 +64,7 @@ flowchart LR
 | `text` | rope, snapshots, anchors, authorship, undo tree | – |
 | `edit` | the editing primitives every input engine drives: cursors, edits with authorship and undo, registers, marks, messages | text |
 | `vim` | modal engine over `edit` | text, edit |
-| `syntax` | tree-sitter (wazero), highlight, folds, textobjects | text |
+| `syntax` | tree-sitter (wazero), highlight, folds, units, outline | text, wazero |
 | `lsp` | LSP client, server registry, capabilities | text |
 | `dap` | DAP client, adapter registry | – |
 | `testrun` | test discovery, runner adapters (go, pytest, vitest/jest, cargo), result streams, watch, coverage | text, syntax |

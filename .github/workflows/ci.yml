@@ -42,6 +42,20 @@ jobs:
           echo "ORIEL_NVIM=$RUNNER_TEMP/$asset/bin/nvim" >> "$GITHUB_ENV"
       - run: make oracle
 
+  grammars:
+    # The tree-sitter grammars are rebuilt from their pinned sources and must match what's committed (deps.md).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install wasi-sdk 34
+        run: |
+          curl -sSfL -o wasi-sdk.tar.gz https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
+          echo "b761e3a0721dbae9c09a0059e5fdb2bf917d1b4a8a7b430fb3b5aafb0984b2c4  wasi-sdk.tar.gz" | sha256sum -c -
+          tar -xzf wasi-sdk.tar.gz -C "$RUNNER_TEMP"
+          echo "WASI_SDK_PATH=$RUNNER_TEMP/wasi-sdk-34.0-x86_64-linux" >> "$GITHUB_ENV"
+      - run: syntax/grammars/build.sh
+      - run: git diff --exit-code -- syntax/grammars
+
   vulncheck:
     runs-on: ubuntu-latest
     steps:

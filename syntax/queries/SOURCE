@@ -1,0 +1,5 @@
+source: https://github.com/nvim-treesitter/nvim-treesitter
+commit: f603a2f4da48728f80257fb5fbb90145fd1dc173 (2026-09-19)
+path: runtime/queries/{go,typescript,ecma,python,rust,lua,markdown,markdown_inline}/{highlights,folds,injections}.scm
+license: Apache-2.0 (LICENSE)
+units.scm files are ours.

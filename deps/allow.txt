@@ -13,3 +13,6 @@ gioui.org v0
 gioui.org/shader v1
 github.com/go-text/typesetting v0
 github.com/godbus/dbus/v5 v5
+
+# WASM runtime (syntax)
+github.com/tetratelabs/wazero v1

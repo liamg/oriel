@@ -1,0 +1,218 @@
+   1 | // Areas of shapes.
+     | ^^^^^^^^^^^^^^^^^^^ comment
+   2 | import { readFile } from "node:fs/promises";
+     | ^^^^^^ keyword.import
+     |        ^ punctuation.bracket
+     |          ^^^^^^^^ variable
+     |                   ^ punctuation.bracket
+     |                     ^^^^ keyword.import
+     |                          ^^^^^^^^^^^^^^^^^^ string
+     |                                            ^ punctuation.delimiter
+   3 | 
+   4 | export interface Shape {
+     | ^^^^^^ keyword.import
+     |        ^^^^^^^^^ keyword.type
+     |                  ^^^^^ type
+     |                        ^ punctuation.bracket
+   5 |   area(): number;
+     |   ^^^^ function.method
+     |       ^^ punctuation.bracket
+     |         ^ punctuation.delimiter
+     |           ^^^^^^ type.builtin
+     |                 ^ punctuation.delimiter
+   6 |   readonly name?: string;
+     |   ^^^^^^^^ keyword.modifier
+     |            ^^^^ variable.member
+     |                ^ punctuation.special
+     |                 ^ punctuation.delimiter
+     |                   ^^^^^^ type.builtin
+     |                         ^ punctuation.delimiter
+   7 | }
+     | ^ punctuation.bracket
+   8 | 
+   9 | enum Kind { Circle = 1, Square }
+     | ^^^^ keyword.type
+     |      ^^^^ type
+     |           ^ punctuation.bracket
+     |             ^^^^^^ variable.member
+     |                    ^ operator
+     |                      ^ number
+     |                       ^ punctuation.delimiter
+     |                         ^^^^^^ variable.member
+     |                                ^ punctuation.bracket
+  10 | 
+  11 | export class Circle implements Shape {
+     | ^^^^^^ keyword.import
+     |        ^^^^^ keyword.type
+     |              ^^^^^^ type
+     |                     ^^^^^^^^^^ keyword
+     |                                ^^^^^ type
+     |                                      ^ punctuation.bracket
+  12 |   #secret = 42;
+     |   ^^^^^^^ variable.member
+     |           ^ operator
+     |             ^^ number
+     |               ^ punctuation.delimiter
+  13 |   constructor(private radius: number) {}
+     |   ^^^^^^^^^^^ constructor
+     |              ^ punctuation.bracket
+     |               ^^^^^^^ keyword.modifier
+     |                       ^^^^^^ variable.parameter
+     |                             ^ punctuation.delimiter
+     |                               ^^^^^^ type.builtin
+     |                                     ^ punctuation.bracket
+     |                                       ^^ punctuation.bracket
+  14 |   area(): number {
+     |   ^^^^ function.method
+     |       ^^ punctuation.bracket
+     |         ^ punctuation.delimiter
+     |           ^^^^^^ type.builtin
+     |                  ^ punctuation.bracket
+  15 |     return Math.PI * this.radius ** 2;
+     |     ^^^^^^ keyword.return
+     |            ^^^^ type.builtin
+     |                ^ punctuation.delimiter
+     |                 ^^ variable.member
+     |                    ^ operator
+     |                      ^^^^ variable.builtin
+     |                          ^ punctuation.delimiter
+     |                           ^^^^^^ variable.member
+     |                                  ^^ operator
+     |                                     ^ number
+     |                                      ^ punctuation.delimiter
+  16 |   }
+     |   ^ punctuation.bracket
+  17 | }
+     | ^ punctuation.bracket
+  18 | 
+  19 | type Pair<T> = [T, T];
+     | ^^^^ keyword
+     |      ^^^^ type
+     |          ^ punctuation.bracket
+     |           ^ type
+     |            ^ punctuation.bracket
+     |              ^ operator
+     |                ^ punctuation.bracket
+     |                 ^ type
+     |                  ^ punctuation.delimiter
+     |                    ^ type
+     |                     ^ punctuation.bracket
+     |                      ^ punctuation.delimiter
+  20 | 
+  21 | export async function total(shapes: Shape[]): Promise<number> {
+     | ^^^^^^ keyword.import
+     |        ^^^^^ keyword.coroutine
+     |              ^^^^^^^^ keyword.function
+     |                       ^^^^^ function
+     |                            ^ punctuation.bracket
+     |                             ^^^^^^ variable.parameter
+     |                                   ^ punctuation.delimiter
+     |                                     ^^^^^ type
+     |                                          ^^^ punctuation.bracket
+     |                                             ^ punctuation.delimiter
+     |                                               ^^^^^^^ type
+     |                                                      ^ punctuation.bracket
+     |                                                       ^^^^^^ type.builtin
+     |                                                             ^ punctuation.bracket
+     |                                                               ^ punctuation.bracket
+  22 |   let sum = 0;
+     |   ^^^ keyword
+     |       ^^^ variable
+     |           ^ operator
+     |             ^ number
+     |              ^ punctuation.delimiter
+  23 |   for (const s of shapes) {
+     |   ^^^ keyword.repeat
+     |       ^ punctuation.bracket
+     |        ^^^^^ keyword
+     |              ^ variable
+     |                ^^ keyword.repeat
+     |                   ^^^^^^ variable
+     |                         ^ punctuation.bracket
+     |                           ^ punctuation.bracket
+  24 |     if (s.area() < 0) throw new Error(`bad ${s.name ?? "shape"}`);
+     |     ^^ keyword.conditional
+     |        ^ punctuation.bracket
+     |         ^ variable
+     |          ^ punctuation.delimiter
+     |           ^^^^ function.method.call
+     |               ^^ punctuation.bracket
+     |                  ^ operator
+     |                    ^ number
+     |                     ^ punctuation.bracket
+     |                       ^^^^^ keyword.exception
+     |                             ^^^ keyword.operator
+     |                                 ^^^^^ constructor
+     |                                      ^ punctuation.bracket
+     |                                       ^^^^^ string
+     |                                            ^^^^^^^^^^^^^^^^^^^ none
+     |                                                               ^ punctuation.special
+     |                                                                ^ string
+     |                                                                 ^ punctuation.bracket
+     |                                                                  ^ punctuation.delimiter
+  25 |     sum += s.area();
+     |     ^^^ variable
+     |         ^^ operator
+     |            ^ variable
+     |             ^ punctuation.delimiter
+     |              ^^^^ function.method.call
+     |                  ^^ punctuation.bracket
+     |                    ^ punctuation.delimiter
+  26 |   }
+     |   ^ punctuation.bracket
+  27 |   const re = /a+b/gi;
+     |   ^^^^^ keyword
+     |         ^^ variable
+     |            ^ operator
+     |              ^ punctuation.bracket
+     |               ^^^ string.regexp
+     |                  ^ punctuation.bracket
+     |                   ^^ character.special
+     |                     ^ punctuation.delimiter
+  28 |   const f = (x: number): boolean => x > 0 && re.test(String(x));
+     |   ^^^^^ keyword
+     |         ^ function
+     |           ^ operator
+     |             ^ punctuation.bracket
+     |              ^ variable.parameter
+     |               ^ punctuation.delimiter
+     |                 ^^^^^^ type.builtin
+     |                       ^ punctuation.bracket
+     |                        ^ punctuation.delimiter
+     |                          ^^^^^^^ type.builtin
+     |                                  ^^ operator
+     |                                     ^ variable
+     |                                       ^ operator
+     |                                         ^ number
+     |                                           ^^ operator
+     |                                              ^^ variable
+     |                                                ^ punctuation.delimiter
+     |                                                 ^^^^ function.method.call
+     |                                                     ^ punctuation.bracket
+     |                                                      ^^^^^^ function.call
+     |                                                            ^ punctuation.bracket
+     |                                                             ^ variable
+     |                                                              ^^ punctuation.bracket
+     |                                                                ^ punctuation.delimiter
+  29 |   await readFile("x.txt", "utf8");
+     |   ^^^^^ keyword.coroutine
+     |         ^^^^^^^^ function.call
+     |                 ^ punctuation.bracket
+     |                  ^^^^^^^ string
+     |                         ^ punctuation.delimiter
+     |                           ^^^^^^ string
+     |                                 ^ punctuation.bracket
+     |                                  ^ punctuation.delimiter
+  30 |   return f(sum) ? sum : 0;
+     |   ^^^^^^ keyword.return
+     |          ^ function.call
+     |           ^ punctuation.bracket
+     |            ^^^ variable
+     |               ^ punctuation.bracket
+     |                 ^ keyword.conditional.ternary
+     |                   ^^^ variable
+     |                       ^ keyword.conditional.ternary
+     |                         ^ number
+     |                          ^ punctuation.delimiter
+  31 | }
+     | ^ punctuation.bracket

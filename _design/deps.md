@@ -48,8 +48,8 @@ Each tier-C row is a **question for you**: approve, reject, or "write our own".
 | ↳ `golang.org/x/{image,exp/shiny,net,text,sys}` (indirect via Gio) | Go fonts and material icons for Gio's fallback window decorations, IDNA, syscalls | Go team | A ✓ | – |
 | `github.com/go-text/typesetting` | shaping (HarfBuzz port), font parsing | go-text org (Gio/Fyne maintainers) | **C ✓ approved** | – |
 | `github.com/tetratelabs/wazero` | WASM runtime: tree-sitter grammars, Ghostty VT, wasm plugins | Tetrate (company) → community | **C ✓ approved** | – |
-| tree-sitter core + per-language grammars (as wasm) | syntax highlighting, text objects | tree-sitter org; **grammars by many individuals** | **C ✓ approved**: grammars pinned per language and added one at a time, run sandboxed in wazero | – |
-| nvim-treesitter highlight queries (`.scm` data) | highlight rules | neovim community | **C ✓ approved** (data) | – |
+| tree-sitter core + per-language grammars (as wasm) | syntax highlighting, text objects | tree-sitter org; **grammars by many individuals** | **C ✓ approved**: grammars pinned per language and added one at a time, run sandboxed in wazero. So far (ED-6): runtime v0.27.0; Go, TypeScript, Python, Rust, Lua, Markdown and inline Markdown (`syntax/grammars/manifest.tsv`) | – |
+| nvim-treesitter highlight queries (`.scm` data) | highlight rules | neovim community, Apache-2.0 | **C ✓ approved** (data), vendored in `syntax/queries/` | – |
 | Ghostty VT core (`libghostty-vt`, as wasm) | terminal emulation | Ghostty, Mitchell Hashimoto (HashiCorp co-founder), non-profit | **C ✓ approved** | – |
 | `github.com/yuin/gopher-lua` | Lua VM | individual | **C ✓ approved**, behind `script.VM` | our own Lua VM later, if ever needed |
 | `github.com/creack/pty` | PTYs (from crit) | individual; used by Docker, Kubernetes, many others | **rejected: write our own** | `oriel/pty` over `x/sys/unix`, ~300 lines |

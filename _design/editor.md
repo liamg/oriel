@@ -93,8 +93,21 @@ can't host the UI we want.
 - **Tree-sitter** for highlighting, folds, text objects and outline.
 - Run the grammars as **WASM under wazero**: pure Go, no cgo, grammars
   sandboxed, and a plugin can ship a grammar as a `.wasm`.
-- Highlight queries come from nvim-treesitter, which is MIT.
-- Incremental: an edit reparses a single range, and the highlighter repaints only changed lines.
+- **One WASM module per grammar**: the tree-sitter runtime, the grammar and `syntax/grammars/shim.c` (a flat ABI:
+  parse, edit, run a query) built together with wasi-sdk by `syntax/grammars/build.sh`, from sources pinned by
+  revision and sha256 in `manifest.tsv`. The build is reproducible; CI rebuilds and checks the committed `.wasm`.
+- Grammar revisions follow nvim-treesitter's `parsers.lua` at the commit the queries come from, so they agree.
+- Highlight, fold and injection queries come from nvim-treesitter (Apache-2.0), vendored in `syntax/queries/`.
+  The host runs their predicates and directives: `#eq?`, `#any-of?`, `#lua-match?` (our own Lua-pattern matcher),
+  `#match?` (Go regexp), `#contains?`, `#has-parent?`, `#set!` and `#offset!`. Injections (code in Markdown, inline
+  Markdown) parse the injected ranges with the other language's grammar. `units.scm` is ours.
+- Overlapping captures resolve as nvim's highlighter does: higher `priority` wins, then deeper injections, then the
+  later pattern.
+- Incremental: an edit is applied to the old tree and the text reparsed, reusing everything unchanged: under 1 ms
+  for a 600-line file, 2.7 ms at 2,000 lines (WASM costs about 3.6× native). So parsing is **off the keystroke
+  path**: a `syntax.Document` reparses on its own goroutine, and readers get the last highlights moved through the
+  edits made since. Plugins add a
+  language with `syntax.Register(Language{Name, Wasm, Extensions, Queries})`, the same call the built-ins use.
 
 ## Code units
 
