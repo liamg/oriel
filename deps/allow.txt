@@ -1,0 +1,2 @@
+# Approved modules (direct and indirect): module path, then major version.
+# A module is added here only once it is approved in _design/deps.md.

@@ -20,9 +20,13 @@ Third-party code is a liability we choose deliberately, one dependency at a time
 ## Enforcement
 
 - `go.mod` is guarded in CI by an **allowlist** (`deps/allow.txt`, module path plus the approved major version).
-  Any new module, direct or indirect, fails the build until it's added here and approved.
-- `go mod vendor` is committed. Every upgrade is a reviewed diff of the actual source, not just a version bump.
-- `govulncheck` and `go mod verify` run on every PR. Versions are pinned, never `latest`.
+  Any new module, direct or indirect, fails the build until it's added here and approved (`make depcheck`).
+  It checks what we build: every module in a `go.mod` and in `vendor/modules.txt`. Modules that only appear in
+  `go mod graph` and are never linked aren't checked.
+- The workspace vendor directory (`go work vendor`) is committed. Every upgrade is a reviewed diff of the actual source,
+  not just a version bump. CI fails if `vendor/` is out of date (`make vendor-check`).
+- `govulncheck` and `go mod verify` run on every PR (`make vulncheck`, `make vendor-check`). Versions are pinned,
+  never `latest`, and so are the CI actions (by commit).
 - WASM blobs (grammars, the Ghostty VT core) are **built in CI from pinned upstream commits**, with checksums
   committed. We never download prebuilt `.wasm` from anywhere.
 - The `oriel build --with` native-plugin path shows a plugin's full module tree and asks before building it in.

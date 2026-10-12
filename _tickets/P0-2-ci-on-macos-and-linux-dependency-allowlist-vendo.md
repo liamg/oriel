@@ -2,7 +2,7 @@
 id: P0-2
 title: "CI on macOS and Linux: dependency allowlist, vendor check, govulncheck, refcheck, vendored spec/"
 phase: P0
-status: todo
+status: review
 area: Spike and repo
 module: -
 depends_on: [P0-1]
