@@ -15,7 +15,8 @@ var visualCmds = map[string]bool{
 	"<Esc>": true, "<C-c>": true, "v": true, "V": true, "<C-v>": true, "o": true, "O": true, "gv": true,
 	"x": true, "X": true, "D": true, "Y": true, "C": true, "S": true, "R": true, "s": true, "r": true,
 	"J": true, "gJ": true, "~": true, "u": true, "U": true, "p": true, "P": true, "I": true, "A": true,
-	"<Del>": true, ":": true,
+	"<Del>": true, ":": true, "<C-a>": true, "<C-x>": true, "g<C-a>": true, "g<C-x>": true,
+	"zd": true, "zD": true, "zo": true, "zO": true, "zc": true, "zC": true,
 }
 
 // visualArea is a Visual area as gv brings it back.
@@ -127,6 +128,15 @@ func (e *Engine) execVisual(c cmd) {
 	v := e.view()
 	e.changeCursor = e.cur
 	switch {
+	case strings.HasPrefix(c.key, "<C-w>"):
+		buf, cur := e.buffer, e.cur
+		e.windowCmd(strings.TrimPrefix(c.key, "<C-w>"), c.count)
+		if e.buffer != buf {
+			e.endVisual()
+		} else {
+			// The window's cursor moves so the same Visual area stays selected.
+			e.cur = cur
+		}
 	case c.obj != "":
 		e.visualObject(v, c)
 	case visualCmds[c.key] || operators[c.key] != "":
@@ -545,7 +555,7 @@ func (e *Engine) visualCmd(v *view, c cmd) {
 	// Everything else is an operator on the area.
 	e.rec = &dotCmd{count: c.count, reg: c.reg, body: c.body, vis: e.size(v)}
 	e.lastVisSize = e.rec.vis
-	e.group = e.ed.NewGroup()
+	e.group = e.newGroup()
 	block := e.vmode == ctrlV
 	line := e.vmode == 'V'
 	switch key {
@@ -582,6 +592,29 @@ func (e *Engine) visualCmd(v *view, c cmd) {
 		key = "gu"
 	case "U":
 		key = "gU"
+	}
+	if fk := strings.TrimPrefix(key, "z"); fk != key && len(fk) == 1 && strings.Contains("dDoOcC", fk) {
+		start, end := *e.visual, e.cur
+		if less(end, start) {
+			start, end = end, start
+		}
+		e.endVisual()
+		e.rec = nil
+		e.cur = start
+		switch fk {
+		case "d", "D":
+			if e.foldManualAllowed(false) {
+				e.deleteFolds(start.Line, end.Line, fk == "D")
+			}
+		default:
+			e.foldRange(start.Line, end.Line, fk == "o" || fk == "O", fk == "O" || fk == "C")
+		}
+		e.clamp(e.view())
+		return
+	}
+	if strings.HasSuffix(key, "<C-a>") || strings.HasSuffix(key, "<C-x>") {
+		e.visualIncrement(v, c, strings.HasSuffix(key, "<C-x>"), key[0] == 'g')
+		return
 	}
 	if line && !block {
 		e.vmode = 'V'

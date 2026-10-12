@@ -79,6 +79,7 @@ func RegisterMotion(key string, m func(e *Engine, from Pos, count int) (Pos, boo
 func (e *Engine) move(v *view, c cmd) {
 	t, ok := motions[c.key](e, v, motionCtx{count: c.count, arg: c.arg, key: c.key})
 	if !ok {
+		e.failed = true
 		return
 	}
 	if t.jump {
@@ -95,6 +96,21 @@ func (e *Engine) move(v *view, c cmd) {
 	if !t.keepWant && !t.keepCol && !t.wantEnd {
 		e.setWant(v)
 	}
+	if foldOpeners[c.key] && e.feeding == 0 {
+		e.openCursorFold()
+	}
+}
+
+// foldOpeners are the motions that open a closed fold they move into, as the default 'foldopen'
+// (block,hor,mark,percent,quickfix,search,tag,undo) has it.
+var foldOpeners = map[string]bool{
+	"h": true, "l": true, "<Left>": true, "<Right>": true, " ": true, "<BS>": true, "<C-h>": true, "0": true,
+	"<Home>": true, "^": true, "$": true, "<End>": true, "g_": true, "|": true, "f": true, "F": true, "t": true,
+	"T": true, ";": true, ",": true,
+	"(": true, ")": true, "{": true, "}": true, "[[": true, "]]": true, "[]": true, "][": true, "[(": true,
+	"[{": true, "])": true, "]}": true, "%": true,
+	"'": true, "`": true, "g'": true, "g`": true, "]`": true, "[`": true, "]'": true, "['": true,
+	"n": true, "N": true, "*": true, "#": true, "g*": true, "g#": true, "/": true, "?": true,
 }
 
 func left(e *Engine, v *view, m motionCtx) (target, bool) {
@@ -164,12 +180,44 @@ func up(e *Engine, v *view, m motionCtx) (target, bool) {
 }
 
 func vertical(e *Engine, v *view, n int) (target, bool) {
-	line := e.cur.Line + n
 	if n > 0 && e.cur.Line >= v.lines()-1 || n < 0 && e.cur.Line == 0 {
 		return target{}, false
 	}
-	line = min(max(line, 0), v.lines()-1)
+	line, ok := foldStep(v, e.cur.Line, n)
+	if !ok {
+		return target{}, false
+	}
 	return target{pos: Pos{Line: line, Col: v.colAt(line, e.want, false)}, kind: linewise, keepWant: true}, true
+}
+
+// foldStep is vim's cursor_down() and cursor_up(): n lines on, a closed fold counting as one.
+func foldStep(v *view, line, n int) (int, bool) {
+	if v.folds == nil || !v.folds.any() {
+		return min(max(line+n, 0), v.lines()-1), true
+	}
+	last := v.lines() - 1
+	if n > 0 {
+		if _, end, _ := v.folded(line); end >= last {
+			return line, false
+		}
+		for ; n > 0; n-- {
+			_, end, _ := v.folded(line)
+			line = end + 1
+			if line >= last {
+				break
+			}
+		}
+		return min(line, last), true
+	}
+	line, _, _ = v.folded(line)
+	for n = -n; n > 0; n-- {
+		line--
+		if line <= 0 {
+			break
+		}
+		line, _, _ = v.folded(line)
+	}
+	return max(line, 0), true
 }
 
 func lineDown(e *Engine, v *view, m motionCtx) (target, bool) {
@@ -177,6 +225,7 @@ func lineDown(e *Engine, v *view, m motionCtx) (target, bool) {
 	if line >= v.lines() {
 		return target{}, false
 	}
+	line, _ = foldStep(v, e.cur.Line, m.count1())
 	return target{pos: Pos{line, v.firstNonBlank(line)}, kind: linewise}, true
 }
 
@@ -185,6 +234,7 @@ func lineUp(e *Engine, v *view, m motionCtx) (target, bool) {
 	if line < 0 {
 		return target{}, false
 	}
+	line, _ = foldStep(v, e.cur.Line, -m.count1())
 	return target{pos: Pos{line, v.firstNonBlank(line)}, kind: linewise}, true
 }
 
@@ -292,6 +342,9 @@ func word(e *Engine, v *view, m motionCtx) (target, bool) {
 
 func fwdWord(v *view, p *Pos, count int, big, eol bool) bool {
 	for count--; count >= 0; count-- {
+		if _, end, ok := v.folded(p.Line); ok {
+			*p = Pos{end, v.lastCol(end)}
+		}
 		sclass := v.cls(*p, big)
 		last := p.Line == v.lines()-1
 		i := v.inc(p)
@@ -324,6 +377,9 @@ func fwdWord(v *view, p *Pos, count int, big, eol bool) bool {
 
 func endWord(v *view, p *Pos, count int, big, stop, empty bool) bool {
 	for ; count > 0; count-- {
+		if _, end, ok := v.folded(p.Line); ok {
+			*p = Pos{end, v.lastCol(end)}
+		}
 		sclass := v.cls(*p, big)
 		if v.inc(p) == -1 {
 			return false
@@ -374,6 +430,9 @@ func skipChars(v *view, p *Pos, class int, big, fwd bool) bool {
 
 func bckWord(v *view, p *Pos, count int, big, stop bool) bool {
 	for ; count > 0; count-- {
+		if top, _, ok := v.folded(p.Line); ok {
+			*p = Pos{top, 0}
+		}
 		sclass := v.cls(*p, big)
 		if v.dec(p) == -1 {
 			return false

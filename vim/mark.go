@@ -47,6 +47,8 @@ func (e *Engine) Mark(r rune) (Pos, bool) {
 			return Pos{}, false
 		}
 		return *e.pcmark, true
+	case '"':
+		return e.buffer.last, true
 	}
 	return e.markPos(r)
 }
@@ -113,7 +115,9 @@ func (e *Engine) jump(v *view, n int) {
 
 // adjustMarks moves marks and jumps through a change the way vim's mark_adjust does: by whole lines.
 // A mark on a line that is deleted is deleted.
-func (e *Engine) adjustMarks(ch text.Change) {
+// adjustMarks moves a buffer's marks, and the jumplists and cursors of the windows showing it, through a
+// change to it. The current window's cursor is left to the command that made the change.
+func (e *Engine) adjustMarks(buf *buffer, ch text.Change) {
 	before := ch.Before
 	for i, r := range ch.Replaces {
 		a := before.PosAt(r.Range.Start)
@@ -144,51 +148,76 @@ func (e *Engine) adjustMarks(ch text.Change) {
 			}
 			return p, true
 		}
-		for k, p := range e.marks {
+		for k, p := range buf.marks {
 			if np, ok := move(p); ok {
-				e.marks[k] = np
+				buf.marks[k] = np
 			} else if k >= 'a' && k <= 'z' || k >= 'A' && k <= 'Z' {
 				if ch.Cause == text.CauseEdit {
-					seq := e.ed.UndoSeq()
-					if e.undoMarks[seq] == nil {
-						e.undoMarks[seq] = map[rune]Pos{}
+					seq := buf.text.UndoSeq()
+					if buf.undoMarks[seq] == nil {
+						buf.undoMarks[seq] = map[rune]Pos{}
 					}
-					e.undoMarks[seq][k] = p
+					buf.undoMarks[seq][k] = p
 				}
-				delete(e.marks, k)
+				delete(buf.marks, k)
 			}
 		}
-		for i, p := range e.jumps {
-			if np, ok := move(p); ok {
-				e.jumps[i] = np
+		for _, w := range e.windows {
+			if w.buf != buf {
+				continue
 			}
-		}
-		if e.pcmark != nil {
-			if np, ok := move(*e.pcmark); ok {
-				e.pcmark = &np
-			}
-		}
-		for _, m := range e.gstack {
-			for i, l := range m.lines {
-				if l < 0 {
-					continue
-				}
-				if np, ok := move(Pos{l, 0}); ok {
-					m.lines[i] = np.Line
-				} else {
-					m.lines[i] = -1
-				}
-			}
-		}
-		if e.uLine >= 0 {
-			if np, ok := move(Pos{e.uLine, 0}); ok {
-				e.uLine = np.Line
+			if removed > 0 {
+				n := last - first + 1
+				w.fold.adjustFolds(first, n, max(delta+n, 0))
 			} else {
-				e.uLine = -1
+				w.fold.adjustFolds(first, 0, added)
+			}
+			for i, p := range w.jumps {
+				if np, ok := move(p); ok {
+					w.jumps[i] = np
+				}
+			}
+			if w.pcmark != nil {
+				if np, ok := move(*w.pcmark); ok {
+					w.pcmark = &np
+				}
+			}
+			if w != e.window {
+				np, ok := move(w.cur)
+				if !ok {
+					np = Pos{min(first, max(0, before.Lines()-1+delta-1)), 0}
+				}
+				w.cur = np
+			}
+		}
+		if buf == e.buffer {
+			for _, m := range e.gstack {
+				for i, l := range m.lines {
+					if l < 0 {
+						continue
+					}
+					if np, ok := move(Pos{l, 0}); ok {
+						m.lines[i] = np.Line
+					} else {
+						m.lines[i] = -1
+					}
+				}
+			}
+		}
+		if buf.uLine >= 0 {
+			if np, ok := move(Pos{buf.uLine, 0}); ok {
+				buf.uLine = np.Line
+			} else {
+				buf.uLine = -1
 			}
 		}
 		if i+1 < len(ch.Replaces) {
 			before = applyReplace(before, r)
+		}
+	}
+	for _, w := range e.windows {
+		if w.buf == buf {
+			e.updateFolds(w)
 		}
 	}
 }
@@ -367,7 +396,7 @@ func (e *Engine) undoLine() {
 	start := v.s.LineStart(e.uLine)
 	e.cur = Pos{e.uLine, col}
 	e.inU = true
-	e.do(e.ed.NewGroup(), text.Replace{Range: text.Range{Start: start, End: start + len(cur)}, Text: []byte(e.uText)})
+	e.do(e.newGroup(), text.Replace{Range: text.Range{Start: start, End: start + len(cur)}, Text: []byte(e.uText)})
 	e.inU = false
 	e.uText = cur
 	e.clamp(e.view())

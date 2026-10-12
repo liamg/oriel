@@ -34,17 +34,32 @@ type Cursor struct {
 type Editor struct {
 	buf    *text.Buffer
 	author text.Author
+	shared *shared
 
 	mu      sync.Mutex
 	cursors []Cursor
-	regs    map[rune]Register
-	msgs    []string
+}
+
+// shared is what every editor opened from the same one shares: registers and messages.
+type shared struct {
+	mu   sync.Mutex
+	regs map[rune]Register
+	msgs []string
 }
 
 // New returns an editor over buf whose edits are by author.
 func New(buf *text.Buffer, author text.Author) *Editor {
-	return &Editor{buf: buf, author: author, cursors: []Cursor{{}}, regs: map[rune]Register{}}
+	return &Editor{buf: buf, author: author, cursors: []Cursor{{}}, shared: &shared{regs: map[rune]Register{}}}
 }
+
+// Open returns an editor over buf, another buffer or the same one in another window, that shares this
+// editor's registers and messages.
+func (e *Editor) Open(buf *text.Buffer) *Editor {
+	return &Editor{buf: buf, author: e.author, cursors: []Cursor{{}}, shared: e.shared}
+}
+
+// Buffer is the buffer the editor edits.
+func (e *Editor) Buffer() *text.Buffer { return e.buf }
 
 func (e *Editor) Buf() text.Snapshot { return e.buf.Snapshot() }
 
@@ -79,28 +94,28 @@ func (e *Editor) Subscribe(fn func(text.Change)) (cancel func()) { return e.buf.
 
 // Register returns register r's contents.
 func (e *Editor) Register(r rune) (Register, bool) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	v, ok := e.regs[r]
+	e.shared.mu.Lock()
+	defer e.shared.mu.Unlock()
+	v, ok := e.shared.regs[r]
 	return v, ok
 }
 
 func (e *Editor) SetRegister(r rune, v Register) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.regs[r] = v
+	e.shared.mu.Lock()
+	defer e.shared.mu.Unlock()
+	e.shared.regs[r] = v
 }
 
 // Echo shows a message, as vim's :echo and error messages do.
 func (e *Editor) Echo(msg string) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.msgs = append(e.msgs, msg)
+	e.shared.mu.Lock()
+	defer e.shared.mu.Unlock()
+	e.shared.msgs = append(e.shared.msgs, msg)
 }
 
 // Messages returns every message so far, oldest first.
 func (e *Editor) Messages() []string {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	return slices.Clone(e.msgs)
+	e.shared.mu.Lock()
+	defer e.shared.mu.Unlock()
+	return slices.Clone(e.shared.msgs)
 }

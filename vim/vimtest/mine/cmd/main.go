@@ -18,7 +18,7 @@ import (
 	"github.com/liamg/oriel/vim/vimtest/nvim"
 )
 
-var files = []string{"test_normal", "test_visual", "test_textobjects", "test_undo", "test_put", "test_registers", "test_marks", "test_jumplist", "test_join"}
+var files = []string{"test_normal", "test_visual", "test_textobjects", "test_undo", "test_put", "test_registers", "test_marks", "test_jumplist", "test_join", "test_increment"}
 
 func main() {
 	verbose := flag.Bool("v", false, "list every drop")

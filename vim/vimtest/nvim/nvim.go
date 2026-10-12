@@ -248,6 +248,25 @@ func (e *engine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 		}
 	}
 
+	if q.Win {
+		v, err := e.c.call("nvim_eval", "[winnr(), winnr('$')]")
+		if err != nil {
+			return r, err
+		}
+		w, _ := v.([]any)
+		cur, _ := w[0].(int64)
+		count, _ := w[1].(int64)
+		r.Win = vimtest.Win{Cur: int(cur), Count: int(count)}
+	}
+
+	if q.Bufs {
+		v, err := e.c.call("nvim_eval", `join(map(getbufinfo({'buflisted': 1}), {_, b -> b.bufnr .. (b.bufnr == bufnr('%') ? '%' : b.bufnr == bufnr('#') ? '#' : '')}))`)
+		if err != nil {
+			return r, err
+		}
+		r.Bufs, _ = v.(string)
+	}
+
 	if q.Msg {
 		v, err := e.c.call("nvim_exec2", "messages", map[string]any{"output": true})
 		if err != nil {

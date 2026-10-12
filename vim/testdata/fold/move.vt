@@ -1,0 +1,477 @@
+# Moving over and between folds.
+
+=== j moves over a closed fold as one line
+ref:    fold.txt *fold-behavior*
+quote:  When the cursor is already on a folded line, it moves to the next unfolded line or the next closed fold.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :2,4fold<CR>jj
+expect:
+  one
+  two
+  three
+  four
+  |five
+
+=== k onto a closed fold lands on its first line
+ref:    fold.txt *fold-behavior*
+quote:  When moving the cursor upwards or downwards and when scrolling, the cursor will move to the first line of a sequence of folded lines.
+given:
+  one
+  two
+  three
+  four
+  |five
+keys:   :2,4fold<CR>k
+expect:
+  one
+  |two
+  three
+  four
+  five
+
+=== a count of j counts a closed fold once
+ref:    fold.txt *fold-behavior*
+quote:  When the cursor is already on a folded line, it moves to the next unfolded line or the next closed fold.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :2,4fold<CR>2j
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== j from one closed fold to the next
+ref:    fold.txt *fold-behavior*
+quote:  When the cursor is already on a folded line, it moves to the next unfolded line or the next closed fold.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :1,2fold<CR>:3,4fold<CR>jj
+expect:
+  one
+  two
+  three
+  four
+  |five
+
+=== G into a closed fold leaves it closed
+ref:    options.txt *'foldopen'*
+quote:  jump far jumps: "G", "gg", etc.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,4fold<CR>Gk
+expect:
+  |one
+  two
+  three
+  four
+
+=== G keeps the cursor on the last line of a closed fold
+ref:    fold.txt *fold-behavior*
+quote:  While the cursor is on folded lines, the cursor is always displayed in the first column.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,4fold<CR>G
+expect:
+  one
+  two
+  three
+  |four
+
+=== {count}G into the middle of a closed fold
+ref:    options.txt *'foldopen'*
+quote:  jump far jumps: "G", "gg", etc.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :2,4fold<CR>3Gj
+expect:
+  one
+  two
+  three
+  four
+  |five
+
+=== gg into a closed fold leaves it closed
+ref:    options.txt *'foldopen'*
+quote:  jump far jumps: "G", "gg", etc.
+given:
+  one
+  two
+  three
+  |four
+keys:   :1,2fold<CR>ggj
+expect:
+  one
+  two
+  |three
+  four
+
+=== :{number} into a closed fold leaves it closed
+ref:    fold.txt *fold-behavior*
+quote:  When the cursor is already on a folded line, it moves to the next unfolded line or the next closed fold.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :2,4fold<CR>:3<CR>j
+expect:
+  one
+  two
+  three
+  four
+  |five
+
+=== w stops once on a closed fold
+ref:    fold.txt *fold-behavior*
+quote:  Many movement commands handle a sequence of folded lines like an empty line. For example, the "w" command stops once in the first column.
+given:
+  one
+  |two
+  three
+  four
+  five
+keys:   :2,4fold<CR>w
+expect:
+  one
+  two
+  three
+  four
+  |five
+
+=== zj moves to the start of the next fold
+ref:    fold.txt *zj*
+quote:  Move downwards to the start of the next fold.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :3,4fold<CR>zozj
+expect:
+  one
+  two
+  |three
+  four
+  five
+
+=== zj counts a closed fold as one fold
+ref:    fold.txt *zj*
+quote:  A closed fold is counted as one fold.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zj
+expect:
+  one
+  |two
+  three
+  four
+  five
+  six
+
+=== zj enters a nested open fold
+ref:    fold.txt *zj*
+quote:  Move downwards to the start of the next fold.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zRzjzj
+expect:
+  one
+  two
+  |three
+  four
+  five
+  six
+
+=== zj with a count
+ref:    fold.txt *zj*
+quote:  When a count is used, repeats the command [count] times.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :2,3fold<CR>:5,6fold<CR>zR2zj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== zj with no fold below does not move
+ref:    fold.txt *zj*
+quote:  Move downwards to the start of the next fold.
+given:
+  one
+  two
+  three
+  |four
+keys:   :1,2fold<CR>zj
+expect:
+  one
+  two
+  three
+  |four
+
+=== zk moves to the end of the previous fold
+ref:    fold.txt *zk*
+quote:  Move upwards to the end of the previous fold.
+given:
+  one
+  two
+  three
+  four
+  |five
+keys:   :2,3fold<CR>zRzk
+expect:
+  one
+  two
+  |three
+  four
+  five
+
+=== zk with a count
+ref:    fold.txt *zk*
+quote:  When a count is used, repeats the command [count] times.
+given:
+  one
+  two
+  three
+  four
+  five
+  |six
+keys:   :1,2fold<CR>:4,5fold<CR>zR2zk
+expect:
+  one
+  |two
+  three
+  four
+  five
+  six
+
+=== dzj deletes to the start of the next fold
+ref:    fold.txt *zj*
+quote:  This command can be used after an |operator|.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :3,4fold<CR>zRdzj
+expect:
+  |three
+  four
+  five
+
+=== [z moves to the start of the open fold
+ref:    fold.txt *[z*
+quote:  Move to the start of the current open fold.
+given:
+  one
+  two
+  three
+  |four
+  five
+keys:   :2,4fold<CR>zo[z
+expect:
+  one
+  |two
+  three
+  four
+  five
+
+=== [z at the start moves to the containing fold's start
+ref:    fold.txt *[z*
+quote:  If already at the start, move to the start of the fold that contains it.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zO[z
+expect:
+  one
+  |two
+  three
+  four
+  five
+  six
+
+=== [z with no containing fold does not move
+ref:    fold.txt *[z*
+quote:  If there is no containing fold, the command fails.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>zo[z
+expect:
+  one
+  |two
+  three
+  four
+
+=== ]z moves to the end of the open fold
+ref:    fold.txt *]z*
+quote:  Move to the end of the current open fold.
+given:
+  one
+  |two
+  three
+  four
+  five
+keys:   :2,4fold<CR>zo]z
+expect:
+  one
+  two
+  three
+  |four
+  five
+
+=== ]z at the end moves to the containing fold's end
+ref:    fold.txt *]z*
+quote:  If already at the end, move to the end of the fold that contains it.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zO]z]z
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== 2]z repeats
+ref:    fold.txt *]z*
+quote:  When a count is used, repeats the command [count] times.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zO2]z
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== d]z is an exclusive motion
+ref:    fold.txt *]z*
+quote:  Move to the end of the current open fold.
+given:
+  one
+  |two
+  three
+  four
+  five
+keys:   :2,4fold<CR>zojd]z
+expect:
+  one
+  two
+  |four
+  five
+
+=== zj is a jump
+ref:    fold.txt *zj*
+quote:  Move downwards to the start of the next fold.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,3fold<CR>zj
+expect:
+  one
+  |two
+  three
+  four
+jumps:  1:0
+
+=== [z is a jump
+ref:    fold.txt *[z*
+quote:  Move to the start of the current open fold.
+given:
+  one
+  two
+  |three
+  four
+keys:   :2,4fold<CR>zo[z
+expect:
+  one
+  |two
+  three
+  four
+jumps:  3:0
+
+=== j over a closed fold is not a jump
+ref:    fold.txt *fold-behavior*
+quote:  When the cursor is already on a folded line, it moves to the next unfolded line or the next closed fold.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,3fold<CR>jj
+expect:
+  one
+  two
+  three
+  |four
+jumps:

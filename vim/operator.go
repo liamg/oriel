@@ -38,12 +38,18 @@ func (e *Engine) operator(v *view, c cmd) {
 			e.rec = nil
 			return
 		}
-		last := min(e.cur.Line+n-1, v.lines()-1)
-		r = oprange{start: e.cur, end: Pos{last, 0}, kind: linewise, curStart: e.cur}
+		last, _ := foldStep(v, e.cur.Line, n-1)
+		start := e.cur
+		if top, _, ok := v.folded(start.Line); ok {
+			start = Pos{top, 0}
+		}
+		_, last, _ = v.folded(last)
+		r = oprange{start: start, end: Pos{last, 0}, kind: linewise, curStart: start}
 	case c.obj != "":
 		s, ok := objects[c.obj](e, v, c.count1(), c.obj[0] == 'i')
 		if !ok {
 			e.rec = nil
+			e.failed = true
 			return
 		}
 		if s.empty {
@@ -63,6 +69,7 @@ func (e *Engine) operator(v *view, c cmd) {
 		t, ok := motions[c.key](e, v, motionCtx{count: c.count, arg: c.arg, op: c.op, key: c.key, search: c.searchTarget})
 		if !ok {
 			e.rec = nil
+			e.failed = true
 			return
 		}
 		if t.jump {
@@ -75,7 +82,9 @@ func (e *Engine) operator(v *view, c cmd) {
 		if t.wantEnd {
 			e.want = maxCol
 		}
-		r = e.adjust(v, e.cur, to, t.kind, true)
+		from := e.cur
+		from, to = includeFolds(v, from, to, t.kind)
+		r = e.adjust(v, from, to, t.kind, true)
 		r.useRegOne = regOneMotions[c.key]
 	}
 	e.applyOp(v, c, r, oldWant)
@@ -104,6 +113,14 @@ func (e *Engine) applyOp(v *view, c cmd, r oprange, oldWant int) {
 		e.want = oldWant
 	case "g~", "gu", "gU", "g?":
 		e.changeCase(v, r, c.op)
+	case "zf":
+		end := r.end.Line
+		if r.kind != linewise && r.end.Col == 0 && end > r.start.Line {
+			end--
+		}
+		e.cur = r.start
+		e.createFold(r.start.Line, end)
+		e.rec = nil
 	}
 }
 
@@ -441,6 +458,12 @@ func (e *Engine) put(v *view, c cmd) {
 	if val.Kind == edit.Linewise {
 		body := strings.Repeat(val.Text, n)
 		line := e.cur.Line
+		if top, end, ok := v.folded(line); ok {
+			line = top
+			if after {
+				line = end
+			}
+		}
 		var at int
 		if after {
 			line++
@@ -556,4 +579,28 @@ func lastRuneStart(v *view, off int) int {
 		return off - 1
 	}
 	return off - (p.Col - v.prevCol(p.Line, p.Col))
+}
+
+// includeFolds widens an operator's range to whole closed folds at either end, as vim does.
+func includeFolds(v *view, from, to Pos, kind motionKind) (Pos, Pos) {
+	if less(from, to) {
+		if top, _, ok := v.folded(from.Line); ok {
+			from = Pos{top, 0}
+		}
+		if to.Col > 0 || kind != exclusive {
+			if _, end, ok := v.folded(to.Line); ok {
+				to = Pos{end, v.lineLen(end)}
+			}
+		}
+		return from, to
+	}
+	if kind == linewise {
+		if top, _, ok := v.folded(to.Line); ok {
+			to = Pos{top, 0}
+		}
+		if _, end, ok := v.folded(from.Line); ok {
+			from = Pos{end, v.lineLen(end)}
+		}
+	}
+	return from, to
 }

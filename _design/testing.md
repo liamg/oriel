@@ -69,8 +69,11 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
   aren't part of it, but a line holding just the two-space indent is an empty line, even at the end.
 - Optional checks: `mode` (`normal`, `insert`, `replace`, `visual`, `visual-line`, `visual-block`, `select`,
   `op-pending`, `cmdline`), `regs`, `marks` (`a=1:0 b=(unset)`), `jumps` (`1:0 3:4`), `undo` (the buffer after the keys,
-  `<Esc>` and `u`), `dot` (after the keys, `<Esc>` and `.`), `msg` (the last line of `:messages`). Positions are
-  `line:col`: 1-based line, 0-based byte column, as `:marks` shows them.
+  `<Esc>` and `u`), `dot` (after the keys, `<Esc>` and `.`), `msg` (the last line of `:messages`), `win` (`2/3`:
+  the current window's number and the tab page's window count, as `winnr()` and `winnr('$')`), `bufs` (`1# 2% 3`: the
+  listed buffers in order, `%` on the current one and `#` on the alternate, as `:ls` flags them). The buffer, cursor and
+  mode are always the current window's. Positions are `line:col`: 1-based line, 0-based byte column, as `:marks` shows
+  them.
 - `ref` is `file.txt *tag*` (in `spec/vim`), `nvim/file.txt *tag*` (in `spec/nvim`), `testdir/test_x.vim#Test_name`
   (a function in vim's vendored tests, for mined cases), or `oracle nvim v0.11.7`. A `quote`,
   when given, must sit in that tag's section, whitespace-normalised. `RequireRef` checks both; so does `refcheck`.
@@ -79,7 +82,7 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 - **Oracle mode** (`go test ./vim/... -oracle`, or `ORIEL_ORACLE=1` for test binaries that don't link `vimtest`): the same
   case runs in `nvim --headless --clean --embed` (`vim/vimtest/nvim`, our own msgpack-RPC client). nvim's default
   mappings are cleared first, and keys go in with `nvim_input`. Buffer, cursor, selection, mode, registers, marks,
-  jumps and messages are read back and compared with the case.
+  jumps, messages, windows and the buffer list are read back and compared with the case.
   - If **our expectation disagrees with nvim**, the case fails. The test was wrong, not just the code.
   - Where vim and nvim differ, we follow nvim by default (`editor.md` → Options and defaults). A case that follows vim instead says so (`follows: vim`), with the `:help` reference
     that shows the difference. A `follows: vim` or `deviation:` case logs its disagreements with nvim instead of failing.
@@ -99,7 +102,8 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 
 ### Beyond hand-written cases
 
-- **Mined cases**: vim's own `src/testdir/test_*.vim` (normal, textobjects, visual, change, undo, put, registers…)
+- **Mined cases**: vim's own `src/testdir/test_*.vim` (normal, textobjects, visual, change, undo, put, registers,
+  increment…)
   are translated into `.vt` cases by a converter. Each case keeps a `ref` to the original test function.
   - The converter (`vim/vimtest/mine`, run with `cd vim && go run ./vimtest/mine/cmd`) replays each test function in
     nvim, statement by statement. Keys typed with `:normal`, `:exe "normal …"` or `feedkeys(…, 'x')` become a case's
@@ -107,6 +111,8 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
     marks) its `expect`. Ex statements the engine runs (`:s`, `:g`, `:d`…) are typed as `:` command lines, and the
     options it knows (`sw`, `et`, `ic`, `scs`, `ws`, `report`) as a leading `:set`. Anything it can't convert faithfully
     is skipped: other options, mappings, select mode, `gn`, other ex commands, folds, windows, screen-relative motions.
+    Fold, window, buffer, quickfix and mapping tests assert through functions (`foldclosed()`, `winnr()`,
+    `getqflist()`) the converter can't read back, so those files yield no cases and are covered by hand-written ones.
   - A value vim didn't assert (often the cursor) is taken from nvim, and the case says so in a `# … from oracle` comment.
   - Every case is replayed alone in nvim before it's written; one nvim disagrees with is dropped.
   - The output is `vim/testdata/mined/*.vt`, generated, never edited by hand. `TestMined` runs it against the engine and

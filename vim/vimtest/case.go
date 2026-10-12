@@ -35,8 +35,15 @@ type Case struct {
 	Undo    *Buffer          // the buffer after the keys and then `u`
 	Dot     *Buffer          // the buffer after the keys and then `.`
 	Msg     *string          // the last message
+	Win     *Win             // the current window's number and the window count
+	Bufs    *string          // the listed buffers, as `1# 2%`
 	RawKeys string
 }
+
+// Win is the current window's number (1-based, as winnr()) and how many windows the tab page has.
+type Win struct{ Cur, Count int }
+
+func (w Win) String() string { return fmt.Sprintf("%d/%d", w.Cur, w.Count) }
 
 // Modes, as written in a case's `mode:` field.
 const (
@@ -218,6 +225,20 @@ func (c *Case) fill(f map[string]string) error {
 		}
 		c.Msg = &m
 	}
+	if w, ok := take("win"); ok {
+		cur, count, ok := strings.Cut(w, "/")
+		n, err1 := strconv.Atoi(cur)
+		m, err2 := strconv.Atoi(count)
+		if !ok || err1 != nil || err2 != nil || n < 1 || n > m {
+			return fmt.Errorf("win: want current/count, got %q", w)
+		}
+		c.Win = &Win{n, m}
+	}
+	if b, ok := take("bufs"); ok {
+		if c.Bufs, err = parseBufs(b); err != nil {
+			return fmt.Errorf("bufs: %w", err)
+		}
+	}
 	if r, ok := take("regs"); ok {
 		if c.Regs, err = parseRegs(r); err != nil {
 			return fmt.Errorf("regs: %w", err)
@@ -303,6 +324,22 @@ func parseMarks(s string) (map[rune]*Pos, error) {
 		marks[r] = &p
 	}
 	return marks, nil
+}
+
+// parseBufs reads listed buffer numbers in ascending order, each flagged `%` (current) or `#`
+// (alternate) as :ls does, and returns them space-separated.
+func parseBufs(s string) (*string, error) {
+	fields := strings.Fields(s)
+	prev := 0
+	for _, f := range fields {
+		n, err := strconv.Atoi(strings.TrimRight(f, "%#"))
+		if err != nil || n <= prev || len(f)-len(strings.TrimRight(f, "%#")) > 1 {
+			return nil, fmt.Errorf("want ascending numbers flagged %% or #, got %q", s)
+		}
+		prev = n
+	}
+	out := strings.Join(fields, " ")
+	return &out, nil
 }
 
 // parsePos reads `line:col`: 1-based line, 0-based byte column, as in :marks.

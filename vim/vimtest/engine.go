@@ -31,6 +31,8 @@ type Query struct {
 	Marks []rune
 	Jumps bool
 	Msg   bool
+	Win   bool
+	Bufs  bool
 }
 
 // Result is an engine's state after a case's keys.
@@ -43,6 +45,8 @@ type Result struct {
 	Marks  map[rune]*Pos
 	Jumps  []Pos
 	Msg    string
+	Win    Win
+	Bufs   string // the listed buffers, as a case's `bufs:` writes them
 
 	Undo *Buffer // the buffer after the keys and `u`, when the case checks it
 	Dot  *Buffer // the buffer after the keys and `.`, when the case checks it
@@ -54,7 +58,7 @@ type NewEngine func() (Engine, error)
 // Run plays the case's keys on fresh engines and reads back everything the case declares.
 func Run(t testing.TB, newEngine NewEngine, c Case) Result {
 	t.Helper()
-	q := Query{Jumps: c.Jumps != nil, Msg: c.Msg != nil}
+	q := Query{Jumps: c.Jumps != nil, Msg: c.Msg != nil, Win: c.Win != nil, Bufs: c.Bufs != nil}
 	for r := range c.Regs {
 		q.Regs = append(q.Regs, r)
 	}
@@ -137,6 +141,12 @@ func (c Case) Diff(got Result) []string {
 	}
 	if c.Msg != nil && *c.Msg != got.Msg {
 		add("msg: got %q, want %q", got.Msg, *c.Msg)
+	}
+	if c.Win != nil && *c.Win != got.Win {
+		add("win: got %s, want %s", got.Win, c.Win)
+	}
+	if c.Bufs != nil && *c.Bufs != got.Bufs {
+		add("bufs: got %q, want %q", got.Bufs, *c.Bufs)
 	}
 	for _, b := range []struct {
 		name      string

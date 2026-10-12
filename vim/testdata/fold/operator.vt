@@ -1,0 +1,302 @@
+# Operators and edits on closed folds, and folds following edits around them.
+
+=== dd on a closed fold deletes all its lines
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+  five
+keys:   :2,4fold<CR>dd
+expect:
+  one
+  |five
+regs:   "" = "two\nthree\nfour\n"   "1 = "two\nthree\nfour\n"
+
+=== yy on a closed fold yanks all its lines
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>yy
+expect:
+  one
+  |two
+  three
+  four
+regs:   "" = "two\nthree\n"   "0 = "two\nthree\n"
+
+=== >> on a closed fold shifts all its lines
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+keys:   :set sw=2 et<CR>:2,3fold<CR>>>
+expect:
+  one
+  |  two
+    three
+  four
+
+=== cc on a closed fold replaces all its lines
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>ccX<Esc>
+expect:
+  one
+  |X
+  four
+
+=== x on a closed fold deletes the whole fold
+ref:    fold.txt *fold-behavior*
+quote:  Thus "dl" deletes the whole closed fold under the cursor.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>x
+expect:
+  one
+  |four
+regs:   "" = "two\nthree\n"
+
+=== dj from a closed fold deletes the fold and the next line
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+  five
+keys:   :2,3fold<CR>dj
+expect:
+  one
+  |five
+
+=== dk onto a closed fold deletes the whole fold
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  two
+  three
+  |four
+  five
+keys:   :2,3fold<CR>dk
+expect:
+  one
+  |five
+
+=== 2dd on a closed fold counts it as one line
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+  five
+keys:   :2,3fold<CR>2dd
+expect:
+  one
+  |five
+
+=== g~~ on a closed fold changes case in all its lines
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>g~~
+expect:
+  one
+  |TWO
+  THREE
+  four
+
+=== p on a closed fold puts after its last line
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,3fold<CR>yyjp
+expect:
+  one
+  two
+  three
+  |one
+  four
+
+=== P on a closed fold puts before its first line
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  two
+  three
+  |four
+keys:   :2,3fold<CR>yykP
+expect:
+  one
+  |four
+  two
+  three
+  four
+
+=== o on a closed fold opens a line after the fold
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>onew<Esc>
+expect:
+  one
+  two
+  three
+  ne|w
+  four
+
+=== :s on a closed fold works on all its lines
+ref:    fold.txt *fold-behavior*
+quote:  when used with the cursor on a closed fold, will replace "foo" with "bar" in all lines of the fold.
+given:
+  foo
+  |foo
+  foo
+  foo
+keys:   :2,3fold<CR>:s/foo/bar/<CR>
+expect:
+  foo
+  bar
+  |bar
+  foo
+
+=== :d on a closed fold deletes all its lines
+ref:    fold.txt *fold-behavior*
+quote:  For Ex commands that operate on buffer lines, the range is adjusted to always start at the first line of a closed fold and end at the last line of a closed fold.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>:d<CR>
+expect:
+  one
+  |four
+
+=== dd on an open fold deletes one line
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>zodd
+expect:
+  one
+  |three
+  four
+
+=== u after dd on a closed fold restores all its lines
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>dd
+expect:
+  one
+  |four
+undo:
+  one
+  |two
+  three
+  four
+
+=== a line inserted above moves the fold down
+ref:    fold.txt *fold-manual*
+quote:  Use commands to manually define the fold regions.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,3fold<CR>Onew<Esc>jjj
+expect:
+  new
+  one
+  two
+  three
+  fo|ur
+
+=== a line deleted above moves the fold up
+ref:    fold.txt *fold-manual*
+quote:  Use commands to manually define the fold regions.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,3fold<CR>ddj
+expect:
+  two
+  three
+  |four
+
+=== a line added inside an open fold extends it
+ref:    fold.txt *fold-manual*
+quote:  Use commands to manually define the fold regions.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>zoonew<Esc>zcj
+expect:
+  one
+  two
+  new
+  three
+  fo|ur
+
+=== a line deleted inside an open fold shrinks it
+ref:    fold.txt *fold-manual*
+quote:  Use commands to manually define the fold regions.
+given:
+  one
+  |two
+  three
+  four
+  five
+keys:   :2,4fold<CR>zojddzcj
+expect:
+  one
+  two
+  four
+  |five

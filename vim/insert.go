@@ -18,6 +18,8 @@ type insertState struct {
 	block        *blockInsert
 	pendingCtrlG bool
 	pendingCtrlR bool
+	pendingCtrlV bool
+	replaced     []string // in Replace mode, what each typed character covered, for <BS> to put back
 }
 
 // insertCmd runs i, a, I, A, o, O, gi, gI and R.
@@ -39,6 +41,12 @@ func (e *Engine) insertCmd(v *view, c cmd) {
 			e.cur = Pos{p.Line, min(p.Col, v.lineLen(p.Line))}
 		}
 	case "o", "O":
+		if top, end, ok := v.folded(e.cur.Line); ok {
+			e.cur.Line = top
+			if c.key == "o" {
+				e.cur.Line = end
+			}
+		}
 		e.openLine(v, c.key == "o")
 	}
 	e.startInsert(e.view(), c, c.key)
@@ -70,8 +78,9 @@ func (e *Engine) openLine(v *view, below bool) {
 }
 
 func (e *Engine) startInsert(v *view, c cmd, kind string) {
+	e.openCursorFold()
 	if e.group == 0 {
-		e.group = e.ed.NewGroup()
+		e.group = e.newGroup()
 	}
 	e.mode = Insert
 	e.ins = &insertState{kind: kind, count: c.count1(), aiLine: e.aiPending, start: e.cur}
@@ -86,7 +95,21 @@ func (e *Engine) insertKey(k string) {
 		e.rec.ins = append(e.rec.ins, k)
 	}
 	in := e.ins
+	if e.insertAbbrev(k) {
+		return
+	}
+	if in.pendingCtrlV {
+		in.pendingCtrlV = false
+		in.keys = append(in.keys, "<C-v>", k)
+		e.typeLiteral(k)
+		return
+	}
 	switch k {
+	case "<C-v>", "<C-q>":
+		in.pendingCtrlV = true
+		return
+	case "<C-]>":
+		return
 	case "<Esc>", "<C-[>", "<C-c>":
 		e.finishInsert()
 		return
@@ -126,6 +149,20 @@ func (e *Engine) typeKey(k string) {
 		if e.cur.Col > 0 {
 			prev = Pos{e.cur.Line, v.prevCol(e.cur.Line, e.cur.Col)}
 		}
+		if e.mode == Replace && e.cur.Line == in.start.Line && e.cur.Col > in.start.Col {
+			e.cur = prev
+			var orig string
+			if n := len(in.replaced); n > 0 {
+				orig = in.replaced[n-1]
+				in.replaced = in.replaced[:n-1]
+			}
+			e.do(e.group, text.Replace{Range: text.Range{Start: v.offset(prev), End: off}, Text: []byte(orig)})
+			return
+		}
+		if e.mode == Replace {
+			e.cur = prev
+			return
+		}
 		e.do(e.group, text.Replace{Range: text.Range{Start: v.offset(prev), End: off}})
 		e.cur = prev
 		return
@@ -158,6 +195,9 @@ func (e *Engine) typeKey(k string) {
 	case "<C-g>":
 		in.pendingCtrlG = true
 		return
+	case "<C-v>", "<C-q>":
+		in.pendingCtrlV = true
+		return
 	case "<C-r>":
 		in.pendingCtrlR = true
 		return
@@ -180,10 +220,15 @@ func (e *Engine) typeKey(k string) {
 		}
 		return
 	}
+	if in.pendingCtrlV {
+		in.pendingCtrlV = false
+		e.typeLiteral(k)
+		return
+	}
 	if in.pendingCtrlG {
 		in.pendingCtrlG = false
 		if k == "u" {
-			e.group = e.ed.NewGroup()
+			e.group = e.newGroup()
 		}
 		return
 	}
@@ -201,6 +246,7 @@ func (e *Engine) typeKey(k string) {
 		if _, n := v.char(e.cur); n > 0 {
 			end += n
 		}
+		in.replaced = append(in.replaced, string(v.s.Slice(text.Range{Start: off, End: end})))
 	}
 	e.do(e.group, text.Replace{Range: text.Range{Start: off, End: end}, Text: []byte(s)})
 	e.cur.Col += len(s)
@@ -298,4 +344,22 @@ func insertedText(keys []string) string {
 		}
 	}
 	return b.String()
+}
+
+// typeLiteral is the key after CTRL-V: inserted as the character it is, a control key as its control character.
+func (e *Engine) typeLiteral(k string) {
+	raw := keysToRaw([]string{k})
+	if r, _ := utf8.DecodeRuneInString(raw); r < 0x80 && len(raw) > 1 {
+		return
+	}
+	v := e.view()
+	off := v.offset(e.cur)
+	end := off
+	if e.mode == Replace {
+		if _, n := v.char(e.cur); n > 0 {
+			end += n
+		}
+	}
+	e.do(e.group, text.Replace{Range: text.Range{Start: off, End: end}, Text: []byte(raw)})
+	e.cur.Col += len(raw)
 }

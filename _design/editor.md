@@ -57,6 +57,21 @@ can't host the UI we want.
   are app-level options in the registry, the same for every input engine.
 - `:set` accepts vim's names as aliases where an Oriel option has the same meaning.
 
+### Windows, buffers, folds and lists (ED-4)
+
+- The engine keeps vim's state per window (cursor, jumplist, alternate buffer, folds, location list) and per
+  buffer (text, marks, undo cursors, name, modified). Window commands keep a layout tree of rows and columns
+  as vim's, so `CTRL-W h/j/k/l`, `:close` and `:only` mean what they mean in vim; the UI's layout tree (FW-9)
+  shows it.
+- Buffers have no files yet: `:file` names one, and `:e` reaches only buffers already open. `'hidden'` is on, as nvim.
+- Folds follow vim's model: each fold is open, closed, or follows `'foldlevel'`, and the methods are manual,
+  indent and marker. Tree-sitter folds come through the same structure later.
+- Quickfix and location lists parse the `file:line:col:message` and `file:line:message` parts of the
+  default `'errorformat'`. `:cexpr` takes string literals only, since there is no expression language;
+  `:vimgrep` searches buffers already open.
+- `:map`, `:noremap` and `:abbreviate` and their mode forms are engine-local tables for now, so vim
+  configs and tests work. They move onto the registry keymap (`plugins.md`) when Lua config lands.
+
 ## Buffer model (`text` module)
 
 - Written in this repo, not taken from `liamg/rope`. That library is fine as a small rope, but it stores `[]rune` and

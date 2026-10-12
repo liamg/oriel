@@ -27,6 +27,7 @@ func (t *testEngine) Load(b vimtest.Buffer) error {
 		t.e.SetVisual(t.e.Cursor())
 	}
 	t.e.SetCursor(vim.Pos{Line: b.Cursor.Line, Col: b.Cursor.Col})
+	t.e.SetModified(true)
 	return nil
 }
 
@@ -39,7 +40,7 @@ func (t *testEngine) Feed(keys []vimtest.Key) error {
 
 func (t *testEngine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 	r := vimtest.Result{Source: "engine", Mode: t.e.Mode()}
-	snap := t.ed.Buf()
+	snap := t.e.Buf()
 	for i := range snap.Lines() {
 		r.Lines = append(r.Lines, string(snap.Line(i)))
 	}
@@ -77,6 +78,12 @@ func (t *testEngine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 		for _, p := range t.e.Jumps() {
 			r.Jumps = append(r.Jumps, vimtest.Pos{Line: p.Line, Col: p.Col})
 		}
+	}
+	if q.Win {
+		r.Win = vimtest.Win{Cur: t.e.Window(), Count: t.e.Windows()}
+	}
+	if q.Bufs {
+		r.Bufs = t.e.Buffers()
 	}
 	if q.Msg {
 		r.Msg = t.e.LastMessage()

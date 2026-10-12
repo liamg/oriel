@@ -2,6 +2,7 @@ package vim
 
 import (
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/edit"
@@ -22,22 +23,21 @@ const maxCol = 1 << 30 // curswant after $: the end of every line
 // Engine is vim's modal editing over an edit.Editor. Keys come in as vim key notation tokens,
 // one per key press ("x", "<Esc>", "<C-r>"), as registry/keymap.Parse returns them.
 type Engine struct {
-	ed   *edit.Editor
+	// The current window and its buffer; their fields read as the engine's own.
+	*window
+	*buffer
+	windows []*window
+	buffers []*buffer
+	layout  *frame
+	prevWin *window
+	nextBuf int
+	nextWin int
+
 	mode Mode
-	cur  Pos
-	want int // curswant: the screen column vertical moves aim for
 
 	pend    []string // the normal-mode command typed so far
 	find    findCmd  // the last f, F, t or T
 	unnamed rune     // the register "" reads
-
-	marks      map[rune]Pos
-	pcmark     *Pos
-	prevPcmark *Pos
-	jumps      []Pos
-	jumpIdx    int
-	undoCur    map[int]Pos          // the cursor before each undo step
-	undoMarks  map[int]map[rune]Pos // marks each undo step deleted, which undoing it restores
 
 	dot      *dotCmd // the last change, for "."
 	rec      *dotCmd // the change being recorded
@@ -46,13 +46,9 @@ type Engine struct {
 	msg      string
 
 	aiPending    int // the line o or O just autoindented, or -1
-	uLine        int // the line U restores, or -1
-	uText        string
-	uCol         int
 	inU          bool
 	visual       *Pos // the start of the Visual area, while in Visual mode
 	vmode        rune // 'v', 'V' or Ctrl-V
-	lastVisual   *visualArea
 	lastVisSize  *visualSize
 	search       lastSearch
 	lastSub      string // the last :s replacement, for ~
@@ -66,6 +62,23 @@ type Engine struct {
 	recReg       rune     // the register q is recording into, or 0
 	recKeys      []string // keys recorded so far
 	lastPlayed   rune
+	lastRecorded rune
+	vmodeAtOp    rune // the Visual mode and curswant a Visual CTRL-A started in
+	wantAtOp     int
+	failed       bool // a command failed: a playing register stops, as vim flushes typeahead on a beep
+	playing      int
+	feeding      int            // keys come from a register or :normal, not the user
+	outerGroup   text.UndoGroup // while set, every change joins it: a register's or :normal's changes undo as one
+	lastCmdline  string
+	qf           qfStack
+	exLine       string // the Ex command running, as typed
+	maps         map[byte]map[string]mapping
+	mapBuf       []string
+	noremap      int
+	mapDepth     int
+	abbrs        map[byte]map[string]abbrev
+	noAbbr       int
+	lastExReg    rune
 	group        text.UndoGroup // the undo step the current change goes into
 	changeCursor Pos            // the cursor when the current command started
 }
@@ -82,10 +95,67 @@ type dotCmd struct {
 
 // New returns an engine editing through ed, in normal mode.
 func New(ed *edit.Editor) *Engine {
-	e := &Engine{ed: ed, marks: map[rune]Pos{}, undoCur: map[int]Pos{}, undoMarks: map[int]map[rune]Pos{}, aiPending: -1, uLine: -1, opts: DefaultOptions()}
-	ed.Subscribe(e.adjustMarks)
+	e := &Engine{aiPending: -1, opts: DefaultOptions()}
+	b := e.newBuffer(ed.Buffer())
+	w := e.newWindow(ed, b)
+	e.layout = &frame{win: w}
+	e.window, e.buffer = w, b
 	e.sync()
 	return e
+}
+
+// buffer is what the engine keeps per buffer: its text, marks and undo cursors.
+type buffer struct {
+	text       *text.Buffer
+	num        int
+	name       string
+	marks      map[rune]Pos
+	undoCur    map[int]Pos          // the cursor before each undo step
+	undoMarks  map[int]map[rune]Pos // marks each undo step deleted, which undoing it restores
+	uLine      int                  // the line U restores, or -1
+	uText      string
+	uCol       int
+	lastVisual *visualArea
+	last       Pos  // where the cursor was when the buffer was last left, the '" mark
+	unlisted   bool // deleted with :bdelete
+	modified   bool
+	notEdited  bool     // named with :file rather than read from its file
+	qf         *qfStack // the list a quickfix or location-list window's buffer shows
+}
+
+// window is what the engine keeps per window: its editor (cursor) on a buffer, and its jumplist.
+type window struct {
+	ed         *edit.Editor
+	buf        *buffer
+	id         int
+	cur        Pos
+	want       int // curswant: the screen column vertical moves aim for
+	pcmark     *Pos
+	prevPcmark *Pos
+	jumps      []Pos
+	jumpIdx    int
+	alt        *buffer // the alternate buffer, for CTRL-^
+	fold       foldState
+	loc        *qfStack // the location list
+	locOwner   *window  // for a location-list window, the window whose list it shows
+}
+
+func (e *Engine) newBuffer(t *text.Buffer) *buffer {
+	e.nextBuf++
+	b := &buffer{text: t, num: e.nextBuf, marks: map[rune]Pos{}, undoCur: map[int]Pos{}, undoMarks: map[int]map[rune]Pos{}, uLine: -1}
+	e.buffers = append(e.buffers, b)
+	t.Subscribe(func(ch text.Change) {
+		b.modified = true
+		e.adjustMarks(b, ch)
+	})
+	return b
+}
+
+func (e *Engine) newWindow(ed *edit.Editor, b *buffer) *window {
+	e.nextWin++
+	w := &window{ed: ed, buf: b, id: e.nextWin, fold: foldState{method: "manual", enable: true}}
+	e.windows = append(e.windows, w)
+	return w
 }
 
 // Mode reports the current mode; op-pending while an operator waits for its motion.
@@ -126,7 +196,11 @@ func (e *Engine) SetCursor(p Pos) {
 // LastMessage is the last message shown, as :messages ends with.
 func (e *Engine) LastMessage() string { return e.msg }
 
-func (e *Engine) view() *view { return newView(e.ed.Buf()) }
+func (e *Engine) view() *view {
+	v := newView(e.ed.Buf())
+	v.folds = &e.window.fold
+	return v
+}
 
 func (e *Engine) echo(msg string) {
 	e.msg = msg
@@ -156,6 +230,15 @@ func (e *Engine) setWant(v *view) { e.want = v.vcol(e.cur.Line, e.cur.Col) }
 
 // Key handles one key press.
 func (e *Engine) Key(k string) {
+	if e.recReg != 0 && e.feeding == 0 && e.confirm == nil {
+		e.recKeys = append(e.recKeys, k)
+	}
+	e.input(k)
+	e.sync()
+}
+
+// dispatch runs a key after mappings.
+func (e *Engine) dispatch(k string) {
 	if c := e.confirm; c != nil {
 		e.confirm = nil
 		if k == "y" || k == "Y" {
@@ -164,9 +247,6 @@ func (e *Engine) Key(k string) {
 		}
 		e.sync()
 		return
-	}
-	if e.recReg != 0 {
-		e.recKeys = append(e.recKeys, k)
 	}
 	if e.cmdline != nil {
 		e.cmdlineKey(k)
@@ -179,17 +259,33 @@ func (e *Engine) Key(k string) {
 }
 
 func (e *Engine) normalKey(k string) {
-	if e.recReg != 0 && len(e.pend) == 0 && k == "q" {
-		e.stopRecording()
+	if k == "<CR>" && len(e.pend) == 0 && e.window.buf.qf != nil && e.visual == nil {
+		e.qfEnter()
 		return
 	}
+	if k == "q" && onlyCount(e.pend) {
+		if e.recReg != 0 {
+			e.pend = nil
+			e.stopRecording()
+			return
+		}
+		if e.playing > 0 {
+			e.pend = nil
+			return
+		}
+	}
 	e.pend = append(e.pend, k)
+	if n := len(e.pend); n >= 2 && e.pend[n-2] == "z" && k == "f" && onlyCount(e.pend[:n-2]) && !e.foldManualAllowed(true) {
+		e.pend = nil
+		return
+	}
 	c, st := parse(e.pend, e.visual != nil)
 	switch st {
 	case incomplete:
 		return
 	case invalid:
 		e.pend = nil
+		e.failed = true
 		return
 	}
 	e.pend = nil
@@ -224,12 +320,21 @@ type cmd struct {
 
 func (c cmd) count1() int { return max(c.count, 1) }
 
-var operators = map[string]string{"d": "d", "c": "c", "y": "y", "<": "<", ">": ">", "g~": "~", "gu": "u", "gU": "U", "g?": "?"}
+var operators = map[string]string{"zf": "zf", "d": "d", "c": "c", "y": "y", "<": "<", ">": ">", "g~": "~", "gu": "u", "gU": "U", "g?": "?"}
 
 // takesArg lists the keys whose next key is a character argument.
 var takesArg = map[string]bool{"q": true, "@": true, "f": true, "F": true, "t": true, "T": true, "r": true, "m": true, "'": true, "`": true, "g'": true, "g`": true}
 
 var prefixes = map[string]bool{"g": true, "z": true, "[": true, "]": true, "<C-w>": true}
+
+func onlyCount(keys []string) bool {
+	for _, k := range keys {
+		if !isDigit(k) {
+			return false
+		}
+	}
+	return true
+}
 
 func isDigit(k string) bool { return len(k) == 1 && k[0] >= '0' && k[0] <= '9' }
 
@@ -298,6 +403,10 @@ func parse(keys []string, visual bool) (c cmd, st status) {
 	k, st := key()
 	if st != complete {
 		return c, st
+	}
+	if visual && strings.HasPrefix(k, "<C-w>") && commands[k] {
+		c.key = k
+		return c, complete
 	}
 	if visual {
 		_, isOp := operators[k]
@@ -389,11 +498,23 @@ var commands = map[string]bool{
 	"<C-o>": true, "<C-i>": true, "<Tab>": true, "<Esc>": true, "g-": true, "g+": true, "<Del>": true,
 	"v": true, "V": true, "<C-v>": true, "gv": true, ":": true, "&": true, "g&": true, "q": true, "@": true,
 	"]p": true, "[p": true, "]P": true, "[P": true,
+	"zF": true, "zd": true, "zD": true, "zE": true, "zo": true, "zO": true, "zc": true, "zC": true, "za": true,
+	"zA": true, "zv": true, "zx": true, "zX": true, "zm": true, "zM": true, "zr": true, "zR": true, "zn": true,
+	"zN": true, "zi": true,
+	"Q": true, "<C-g>": true, "<C-a>": true, "<C-x>": true, "<C-^>": true, "<C-6>": true,
+}
+
+func init() {
+	for _, k := range []string{"s", "S", "<C-s>", "v", "<C-v>", "n", "<C-n>", "w", "<C-w>", "W", "p", "<C-p>",
+		"t", "<C-t>", "b", "<C-b>", "h", "j", "k", "l", "<C-h>", "<C-j>", "<C-k>", "<C-l>", "<Left>", "<Down>",
+		"<Up>", "<Right>", "^", "<C-^>", "<C-6>", "c", "<C-c>", "q", "<C-q>", "o", "<C-o>", "x", "<C-x>", "r", "<C-r>", "R"} {
+		commands["<C-w>"+k] = true
+	}
 }
 
 // changes are the commands "." repeats.
 var changes = map[string]bool{
-	"]p": true, "[p": true, "]P": true, "[P": true,
+	"]p": true, "[p": true, "]P": true, "[P": true, "<C-a>": true, "<C-x>": true,
 	"x": true, "X": true, "D": true, "C": true, "s": true, "S": true, "r": true, "J": true, "gJ": true,
 	"p": true, "P": true, "gp": true, "gP": true, "i": true, "a": true, "I": true, "A": true, "o": true, "O": true,
 	"gi": true, "gI": true, "R": true, "~": true, "<Del>": true,
@@ -425,13 +546,20 @@ func (e *Engine) exec(c cmd) {
 }
 
 // startChange begins recording a change for ".".
+func (e *Engine) newGroup() text.UndoGroup {
+	if e.outerGroup != 0 {
+		return e.outerGroup
+	}
+	return e.ed.NewGroup()
+}
+
 func (e *Engine) startChange(c cmd) {
 	if c.op == "y" {
 		e.rec = nil
 		return
 	}
 	e.rec = &dotCmd{count: c.count, reg: c.reg, body: c.body}
-	e.group = e.ed.NewGroup()
+	e.group = e.newGroup()
 }
 
 func (e *Engine) endChange() {
@@ -468,6 +596,8 @@ func (e *Engine) repeat(c cmd) {
 		}
 	}
 	keys = append(append(keys, d.body...), d.ins...)
+	e.feeding++
+	defer func() { e.feeding-- }()
 	for _, k := range keys {
 		e.Key(k)
 	}

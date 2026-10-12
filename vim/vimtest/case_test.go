@@ -17,6 +17,8 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 marks:  a=1:0 'b=(unset)
 jumps:  1:0 2:3
 msg:    "E21: x"
+win:    2/3
+bufs:   1#  2%   4
 undo:   |foo bar
 
 === multi-line
@@ -68,6 +70,12 @@ func TestParse(t *testing.T) {
 	if c.Msg == nil || *c.Msg != "E21: x" {
 		t.Errorf("msg: %v", c.Msg)
 	}
+	if c.Win == nil || *c.Win != (Win{2, 3}) {
+		t.Errorf("win: %v", c.Win)
+	}
+	if c.Bufs == nil || *c.Bufs != "1# 2% 4" {
+		t.Errorf("bufs: %v", c.Bufs)
+	}
 	m := cs[1]
 	if got := strings.Join(m.Given.Lines, "/"); got != "one/  two//four" || m.Given.Cursor != (Pos{1, 2}) {
 		t.Errorf("block given: %q %v", got, m.Given.Cursor)
@@ -89,6 +97,11 @@ func TestParseErrors(t *testing.T) {
 		{"=== a\ngiven: |a\ngiven: |a", "twice"},
 		{"=== a\ngiven: a\nkeys: x\nexpect: |a", "no cursor"},
 		{"=== a\ngiven: |a\nkeys: x\nexpect: |a\nfollows: emacs", "follows"},
+		{"=== a\ngiven: |a\nkeys: x\nexpect: |a\nwin: 3/2", "current/count"},
+		{"=== a\ngiven: |a\nkeys: x\nexpect: |a\nwin: 1", "current/count"},
+		{"=== a\ngiven: |a\nkeys: x\nexpect: |a\nbufs: 2 1%", "ascending"},
+		{"=== a\ngiven: |a\nkeys: x\nexpect: |a\nbufs: 1%#", "ascending"},
+		{"=== a\ngiven: |a\nkeys: x\nexpect: |a\nbufs: x", "ascending"},
 	}
 	for _, tt := range tests {
 		_, err := Parse("t.vt", strings.NewReader(tt.in))
@@ -157,6 +170,8 @@ func TestDiff(t *testing.T) {
 		Marks: map[rune]*Pos{'a': {0, 0}},
 		Jumps: []Pos{{0, 0}, {1, 3}},
 		Msg:   "E21: x",
+		Win:   Win{2, 3},
+		Bufs:  "1# 2% 4",
 		Undo:  &c.Given,
 	}
 	if d := c.Diff(good); len(d) != 0 {
@@ -169,8 +184,10 @@ func TestDiff(t *testing.T) {
 	bad.Marks = map[rune]*Pos{'a': {0, 0}, 'b': {0, 1}}
 	bad.Jumps = nil
 	bad.Msg = ""
+	bad.Win = Win{1, 3}
+	bad.Bufs = "1% 2# 4"
 	bad.Undo = nil
-	want := []string{"buffer", "mode", "register '1'", "mark 'b'", "jumps", "msg", "undo: not run"}
+	want := []string{"buffer", "mode", "register '1'", "mark 'b'", "jumps", "msg", "win", "bufs", "undo: not run"}
 	d := c.Diff(bad)
 	if len(d) != len(want) {
 		t.Fatalf("got diffs %q, want %d", d, len(want))

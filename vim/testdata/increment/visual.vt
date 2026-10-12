@@ -1,0 +1,235 @@
+# CTRL-A and CTRL-X on a Visual selection, and g CTRL-A / g CTRL-X (change.txt).
+
+=== v_CTRL-A adds to the first number on each selected line
+ref:    nvim/change.txt *v_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:
+  |1. a 1
+  1. b 1
+  1. c 1
+keys:   Vj<C-a>
+expect:
+  |2. a 1
+  2. b 1
+  1. c 1
+mode:   normal
+
+=== v_CTRL-A with a count
+ref:    nvim/change.txt *v_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:
+  |1
+  1
+keys:   Vj5<C-a>
+expect:
+  |6
+  6
+mode:   normal
+
+=== v_CTRL-A only sees the selected digits
+ref:    nvim/change.txt *v_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:  1|234
+keys:   vl<C-a>
+expect: 1|244
+mode:   normal
+
+=== v_CTRL-A puts the cursor at the start of the selection
+ref:    nvim/change.txt *v_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:
+  x 1
+  x |1
+keys:   Vk<C-a>
+expect:
+  |x 2
+  x 2
+mode:   normal
+
+=== v_CTRL-A on just the digits ignores the sign
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  To ignore the sign Visually select the number before using CTRL-A or CTRL-X.
+given:  x-|5
+keys:   v<C-a>
+expect: x-|6
+mode:   normal
+
+=== v_CTRL-A over the sign counts it
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  For decimals a leading negative sign is considered for incrementing or decrementing
+given:  x|-5
+keys:   vl<C-a>
+expect: x|-4
+mode:   normal
+
+=== v_CTRL-X subtracts on each line
+ref:    nvim/change.txt *v_CTRL-X*
+quote:  Subtract [count] from the number or alphabetic character in the highlighted text.
+given:
+  |10
+  20
+  30
+keys:   VG3<C-x>
+expect:
+  |7
+  17
+  27
+mode:   normal
+
+=== v_CTRL-A skips lines with no number
+ref:    nvim/change.txt *v_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:
+  |1
+  none
+  1
+keys:   VG<C-a>
+expect:
+  |2
+  none
+  2
+mode:   normal
+
+=== v_CTRL-A in a block selection uses the number in the block
+ref:    nvim/change.txt *v_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:
+  1 |1 1
+  1 1 1
+keys:   <C-v>j<C-a>
+expect:
+  1 |2 1
+  1 2 1
+mode:   normal
+
+=== v_g_CTRL-A makes an incrementing sequence
+ref:    nvim/change.txt *v_g_CTRL-A*
+quote:  Move to the second "1." and Visually select three lines, pressing g CTRL-A results in:
+given:
+  1.
+  |1.
+  1.
+  1.
+keys:   VGg<C-a>
+expect:
+  1.
+  |2.
+  3.
+  4.
+mode:   normal
+
+=== v_g_CTRL-A with a count steps by the count
+ref:    nvim/change.txt *v_g_CTRL-A*
+quote:  each one will be incremented by an additional [count] (so effectively creating a [count] incrementing sequence).
+given:
+  |0
+  0
+  0
+keys:   VG2g<C-a>
+expect:
+  |2
+  4
+  6
+mode:   normal
+
+=== v_g_CTRL-A skips a line with no number in the sequence
+ref:    nvim/change.txt *v_g_CTRL-A*
+quote:  If several lines are highlighted, each one will be incremented by an additional [count]
+given:
+  |0
+  x
+  0
+keys:   VGg<C-a>
+expect:
+  |1
+  x
+  2
+mode:   normal
+
+=== v_g_CTRL-X makes a decrementing sequence
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  each value will be decremented by an additional [count] (so effectively creating a [count] decrementing sequence).
+given:
+  |10
+  10
+  10
+keys:   VGg<C-x>
+expect:
+  |9
+  8
+  7
+mode:   normal
+
+=== v_g_CTRL-A on a block column
+ref:    nvim/change.txt *v_g_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:
+  a |0 0
+  a 0 0
+  a 0 0
+keys:   <C-v>jjg<C-a>
+expect:
+  a |1 0
+  a 2 0
+  a 3 0
+mode:   normal
+
+=== v_g_CTRL-A on hex numbers
+ref:    nvim/change.txt *v_g_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:
+  |0x0e
+  0x0e
+keys:   Vjg<C-a>
+expect:
+  |0x0f
+  0x10
+mode:   normal
+
+=== . repeats v_CTRL-A on the same number of lines
+ref:    repeat.txt *.*
+quote:  Note that when repeating a command that used a Visual selection, the same SIZE of area is used
+given:
+  |1
+  1
+  1
+keys:   Vj<C-a>
+expect:
+  |2
+  2
+  1
+dot:
+  |3
+  3
+  1
+mode:   normal
+
+=== . repeats v_g_CTRL-A as a sequence
+ref:    repeat.txt *.*
+quote:  Note that when repeating a command that used a Visual selection, the same SIZE of area is used
+given:
+  |0
+  0
+keys:   Vjg<C-a>
+expect:
+  |1
+  2
+dot:
+  |2
+  4
+mode:   normal
+
+=== u undoes v_CTRL-A on every line
+ref:    nvim/change.txt *v_CTRL-A*
+quote:  Add [count] to the number or alphabetic character in the highlighted text.
+given:
+  |1
+  1
+keys:   Vj<C-a>
+expect:
+  |2
+  2
+undo:
+  |1
+  1
+mode:   normal

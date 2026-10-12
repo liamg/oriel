@@ -16,6 +16,15 @@ type Pos struct {
 type view struct {
 	s     text.Snapshot
 	cache map[int][]byte
+	folds *foldState // the window's folds, for motions that treat a closed fold as one line
+}
+
+// folded is the closed fold holding line.
+func (v *view) folded(line int) (int, int, bool) {
+	if v.folds == nil {
+		return line, line, false
+	}
+	return v.folds.closedAt(line)
 }
 
 func newView(s text.Snapshot) *view { return &view{s: s, cache: map[int][]byte{}} }

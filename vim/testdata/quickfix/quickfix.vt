@@ -1,0 +1,1115 @@
+# The quickfix list (quickfix.txt). With no files on disk, each case names its buffer x.txt with
+# :file and fills the list with entries for it, from literal :cexpr strings or from the buffer's
+# own lines in the default 'errorformat' (file:line:col:text). Unless a case says otherwise the
+# snapshot reads the window on x.txt, the only one.
+
+=== :cexpr makes a list and jumps to the first entry
+ref:    quickfix.txt *:cexpr*
+quote:  "Create a quickfix list using the result of {expr} and jump to the first error."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 2): first
+jumps:  1:1
+mode:   normal
+
+=== :cexpr takes a single String too
+ref:    quickfix.txt *:cexpr*
+quote:  "If {expr} is a String, then each newline terminated line in the String is processed using the global value of 'errorformat'"
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr "x.txt:5:2:only"<CR>
+expect:
+  one
+  two
+  three
+  four
+  f|ive
+msg:    (1 of 1): only
+
+=== an entry without a column goes to the start of its line
+ref:    quickfix.txt *:cexpr*
+quote:  "If {expr} is a List, then each String item in the list is processed and added to the quickfix list."
+given:
+  o|ne
+  two
+  three
+keys:   :file x.txt<CR>:cexpr ["x.txt:3:hello"]<CR>
+expect:
+  one
+  two
+  |three
+msg:    (1 of 1): hello
+
+=== an entry past the end of the buffer goes to the last line
+ref:    quickfix.txt *:cexpr*
+quote:  "Create a quickfix list using the result of {expr} and jump to the first error."
+given:
+  o|ne
+  two
+  three
+keys:   :file x.txt<CR>:cexpr ["x.txt:9:1:far"]<CR>
+expect:
+  one
+  two
+  |three
+msg:    (1 of 1): far
+
+=== :cexpr jumps past lines that aren't errors to the first valid one
+ref:    quickfix.txt *:cnext*
+quote:  "Entries without a file name are skipped, since Vim cannot use them to jump to a file."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["junk", "x.txt:4:1:second"]<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): second
+
+=== :cexpr with an empty list leaves the cursor and :cnext has nowhere to go
+ref:    quickfix.txt *E42*
+quote:  "The idea is to save the error messages from the compiler in a file and use Vim to jump to the errors one by one."
+given:
+  o|ne
+  two
+keys:   :file x.txt<CR>:cexpr []<CR>:cnext<CR>
+expect:
+  o|ne
+  two
+msg:    E42: No Errors
+
+=== :cnext with no list at all
+ref:    quickfix.txt *E42*
+quote:  "In Vim the quickfix commands are used more generally to find a list of positions in files."
+given:
+  o|ne
+  two
+keys:   :cnext<CR>
+expect:
+  o|ne
+  two
+msg:    E42: No Errors
+
+=== :cgetexpr makes a list without jumping
+ref:    quickfix.txt *:cgetexpr*
+quote:  "Just like |:cexpr|, but don't jump to the first error."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cgetexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>
+expect:
+  o|ne
+  two
+  three
+  four
+jumps:
+
+=== :cc after :cgetexpr goes to the first entry
+ref:    quickfix.txt *:cc*
+quote:  "Display error [nr].  If [nr] is omitted, the same"
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cgetexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:cc<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 2): first
+
+=== :cnext after :cgetexpr goes to the second entry
+ref:    quickfix.txt *:cnext*
+quote:  "Display the [count] next error in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cgetexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:cnext<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): second
+
+=== :caddexpr adds entries without moving the cursor
+ref:    quickfix.txt *:caddexpr*
+quote:  "Evaluate {expr} and add the resulting lines to the current quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first"]<CR>G:caddexpr "x.txt:4:1:second"<CR>
+expect:
+  one
+  two
+  three
+  four
+  fi|ve
+msg:    (1 of 1): first
+
+=== the entry :caddexpr added is at the end of the list
+ref:    quickfix.txt *:caddexpr*
+quote:  "The current cursor position will not be changed."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first"]<CR>G:caddexpr "x.txt:4:1:second"<CR>:clast<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 2): second
+
+=== :caddexpr with no list makes one
+ref:    quickfix.txt *:caddexpr*
+quote:  "If a quickfix list is not present, then a new list is created."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:caddexpr "x.txt:4:1:second"<CR>:cc<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (1 of 1): second
+
+=== :cnext goes to the next entry and records a jump
+ref:    quickfix.txt *:cnext*
+quote:  "Display the [count] next error in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:cnext<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): second
+jumps:  1:1 2:2
+
+=== :cnext at the last entry fails with E553
+ref:    quickfix.txt *E553*
+quote:  "Display the [count] next error in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:cnext<CR>:cnext<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    E553: No more items
+
+=== :cnext skips entries that aren't valid
+ref:    quickfix.txt *:cnext*
+quote:  "Entries without a file name are skipped, since Vim cannot use them to jump to a file."
+given:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  not an error
+  |x.txt:1:2:third
+  five
+keys:   :file x.txt<CR>:cbuffer<CR>:cnext<CR>:cnext<CR>
+expect:
+  x|.txt:2:3:first
+  x.txt:4:1:second
+  not an error
+  x.txt:1:2:third
+  five
+msg:    (4 of 5): third
+
+=== :cnext with a count
+ref:    quickfix.txt *:cnext*
+quote:  "Display the [count] next error in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:2cnext<CR>
+expect:
+  one
+  two
+  three
+  four
+  f|ive
+msg:    (3 of 3): third
+
+=== :cnext with a count past the end stops at the last entry
+ref:    quickfix.txt *:cnext*
+quote:  "Display the [count] next error in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:5cnext<CR>
+expect:
+  one
+  two
+  three
+  four
+  f|ive
+msg:    (3 of 3): third
+
+=== :cprevious at the first entry fails with E553
+ref:    quickfix.txt *:cprevious*
+quote:  "Display the [count] previous error in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:cprev<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    E553: No more items
+
+=== :cNext is :cprevious
+ref:    quickfix.txt *:cNext*
+quote:  "Display the [count] previous error in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:clast<CR>:cNext<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 3): second
+
+=== :cprevious with a count
+ref:    quickfix.txt *:cprevious*
+quote:  "Display the [count] previous error in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:clast<CR>:2cprev<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+  five
+msg:    (1 of 3): first
+
+=== :cc N goes to entry N
+ref:    quickfix.txt *:cc*
+quote:  "Display error [nr]."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:cc 2<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 3): second
+
+=== :Ncc takes the number as a count
+ref:    quickfix.txt *:cc*
+quote:  "Display error [nr]."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:2cc<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 3): second
+
+=== :cc with a number past the end goes to the last entry
+ref:    quickfix.txt *:cc*
+quote:  "Display error [nr]."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:cc 9<CR>
+expect:
+  one
+  two
+  three
+  four
+  f|ive
+msg:    (3 of 3): third
+
+=== :cc without a number goes back to the current entry
+ref:    quickfix.txt *:cc*
+quote:  "If [nr] is omitted, the same"
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>G:cc<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+  five
+msg:    (1 of 3): first
+
+=== :cc can go to an entry that isn't valid, and stays put
+ref:    quickfix.txt *:cc*
+quote:  "Display error [nr]."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["junk", "x.txt:4:1:second"]<CR>:cfirst<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (1 of 2): junk
+
+=== :clast goes to the last entry
+ref:    quickfix.txt *:clast*
+quote:  "If [nr] is omitted, the LAST error is displayed."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:clast<CR>
+expect:
+  one
+  two
+  three
+  four
+  f|ive
+msg:    (3 of 3): third
+
+=== :clast N goes to entry N
+ref:    quickfix.txt *:clast*
+quote:  "Display error [nr]."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:clast 2<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 3): second
+
+=== :cfirst goes back to the first entry
+ref:    quickfix.txt *:cfirst*
+quote:  "Same as \":crewind\"."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:clast<CR>:cfirst<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+  five
+msg:    (1 of 3): first
+jumps:  1:1 2:2 5:1
+
+=== :crewind goes to the first entry
+ref:    quickfix.txt *:crewind*
+quote:  "If [nr] is omitted, the FIRST error is displayed."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:clast<CR>:crewind<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+  five
+msg:    (1 of 3): first
+
+=== :cbuffer reads the list from the buffer's lines and jumps
+ref:    quickfix.txt *:cbuffer*
+quote:  "Read the error list from the current buffer."
+given:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+keys:   :file x.txt<CR>:cbuffer<CR>
+expect:
+  x.txt:2:3:first
+  x.|txt:4:1:second
+  three
+msg:    (1 of 3): first
+
+=== :cgetbuffer reads the list without jumping
+ref:    quickfix.txt *:cgetbuffer*
+quote:  "Just like \":cbuffer\" but don't jump to the first error."
+given:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+keys:   :file x.txt<CR>:cgetbuffer<CR>
+expect:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+jumps:
+
+=== :cbuffer with a range reads only those lines
+ref:    quickfix.txt *:cbuffer*
+quote:  "A range can be specified for the lines to be used"
+given:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  not an error
+  |x.txt:1:2:third
+  five
+keys:   :file x.txt<CR>:2,4cbuffer<CR>
+# the first entry read is "second", at line 4
+expect:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  not an error
+  |x.txt:1:2:third
+  five
+msg:    (1 of 3): second
+
+=== :caddbuffer adds the buffer's lines to the list
+ref:    quickfix.txt *:caddbuffer*
+quote:  "Read the error list from the current buffer and add the errors to the current quickfix list."
+given:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+keys:   :file x.txt<CR>:1cbuffer<CR>:2caddbuffer<CR>:clast<CR>
+# "second" is at line 4, past the end: the last line
+expect:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+msg:    (2 of 2): second
+
+=== :cabove goes to the entry above the cursor line
+ref:    quickfix.txt *:cabove*
+quote:  "Go to the [count] error above the current line in the current buffer."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>G:cabove<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 3): second
+
+=== :cbelow goes to the entry below the cursor line
+ref:    quickfix.txt *:cbelow*
+quote:  "Go to the [count] error below the current line in the current buffer."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cgetexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>jj:cbelow<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 3): second
+
+=== :cbefore goes to the entry before the cursor on the same line
+ref:    quickfix.txt *:cbefore*
+quote:  "Go to the [count] error before the current cursor position in the current buffer."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>G$:cbefore<CR>
+expect:
+  one
+  two
+  three
+  four
+  f|ive
+msg:    (3 of 3): third
+
+=== :cafter goes to the entry after the cursor
+ref:    quickfix.txt *:cafter*
+quote:  "Go to the [count] error after the current cursor position in the current buffer."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cgetexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>j$:cafter<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 3): second
+
+=== :cnfile goes to the first entry in the next file
+ref:    quickfix.txt *:cnfile*
+quote:  "Display the first error in the [count] next file in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:enew<CR>iy1<CR>y2<CR>y3<Esc>:file y.txt<CR>:cexpr ["x.txt:2:1:a", "x.txt:4:1:b", "y.txt:1:1:c", "y.txt:3:2:d"]<CR>:cnfile<CR>
+# the window is on y.txt now
+expect:
+  |y1
+  y2
+  y3
+msg:    (3 of 4): c
+bufs:   1# 2%
+
+=== :cpfile goes to the last entry in the previous file
+ref:    quickfix.txt *:cpfile*
+quote:  "Display the last error in the [count] previous file in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:enew<CR>iy1<CR>y2<CR>y3<Esc>:file y.txt<CR>:cexpr ["x.txt:2:1:a", "x.txt:4:1:b", "y.txt:1:1:c", "y.txt:3:2:d"]<CR>:clast<CR>:cpfile<CR>
+# back on x.txt
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 4): b
+bufs:   1% 2#
+
+=== :cnfile in the last file fails with E553
+ref:    quickfix.txt *:cnfile*
+quote:  "Display the first error in the [count] next file in the list that includes a file name."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:enew<CR>iy1<CR>y2<CR>y3<Esc>:file y.txt<CR>:cexpr ["x.txt:2:1:a", "x.txt:4:1:b", "y.txt:1:1:c", "y.txt:3:2:d"]<CR>:cnfile<CR>:cnfile<CR>
+expect:
+  |y1
+  y2
+  y3
+msg:    E553: No more items
+
+=== jumping to an entry in another buffer edits it
+ref:    quickfix.txt *:cc*
+quote:  "The 'switchbuf' settings are respected when jumping to a buffer."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:enew<CR>iy1<CR>y2<CR>y3<Esc>:file y.txt<CR>:cgetexpr ["x.txt:2:1:a", "y.txt:3:2:b"]<CR>:b1<CR>:clast<CR>
+# the window is on y.txt, at line 3 column 2
+expect:
+  y1
+  y2
+  y|3
+msg:    (2 of 2): b
+bufs:   1# 2%
+
+=== :colder goes back to the previous list without jumping
+ref:    quickfix.txt *:colder*
+quote:  "Go to older error list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr "x.txt:2:3:a"<CR>:cexpr "x.txt:4:1:b"<CR>:colder<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    "error list 1 of 2; 1 errors       :cexpr \"x.txt:2:3:a\""
+
+=== :cc in the older list goes to its entry
+ref:    quickfix.txt *quickfix-error-lists*
+quote:  "They set one of the existing error lists as the current one."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr "x.txt:2:3:a"<CR>:cexpr "x.txt:4:1:b"<CR>:colder<CR>:cc<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 1): a
+
+=== :colder with a count
+ref:    quickfix.txt *:colder*
+quote:  "When [count] is given, do this [count] times."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr "x.txt:2:3:a"<CR>:cexpr "x.txt:4:1:b"<CR>:cexpr "x.txt:5:1:c"<CR>:colder 2<CR>
+expect:
+  one
+  two
+  three
+  four
+  |five
+msg:    "error list 1 of 3; 1 errors       :cexpr \"x.txt:2:3:a\""
+
+=== :cnewer goes forward again
+ref:    quickfix.txt *:cnewer*
+quote:  "Go to newer error list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr "x.txt:2:3:a"<CR>:cexpr "x.txt:4:1:b"<CR>:colder<CR>:cnewer<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    "error list 2 of 2; 1 errors       :cexpr \"x.txt:4:1:b\""
+
+=== a new list after :colder replaces the newer one
+ref:    quickfix.txt *:lhistory*
+quote:  "When \":colder\" has been used and \":make\" or \":grep\" is used to add a new error list, one newer list is overwritten."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr "x.txt:2:3:a"<CR>:cexpr "x.txt:4:1:b"<CR>:colder<CR>:cexpr "x.txt:5:1:c"<CR>:chistory<CR>
+expect:
+  one
+  two
+  three
+  four
+  |five
+msg:    "> error list 2 of 2; 1 errors     :cexpr \"x.txt:5:1:c\""
+
+=== :chistory with a count makes that list current
+ref:    quickfix.txt *:chistory*
+quote:  "When [count] is given, then the count'th quickfix list is made the current list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr "x.txt:2:3:a"<CR>:cexpr "x.txt:4:1:b"<CR>:1chistory<CR>:cc<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 1): a
+
+=== :copen opens the quickfix window and enters it
+ref:    quickfix.txt *:copen*
+quote:  "Open a window to show the current list of errors."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:copen<CR>
+# the quickfix window, on the current entry
+expect:
+  |x.txt\|2 col 3\| first
+  x.txt\|4 col 1\| second
+win:    2/2
+
+=== the quickfix window's cursor is on the current entry
+ref:    quickfix.txt *:lbottom*
+quote:  "In the quickfix window, each line is one error.  The line number is equal to the error number."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:cnext<CR>:copen<CR>
+# the quickfix window
+expect:
+  x.txt\|2 col 3\| first
+  |x.txt\|4 col 1\| second
+win:    2/2
+
+=== the quickfix window opens below every other window
+ref:    quickfix.txt *:lbottom*
+quote:  "Normally the quickfix window is at the bottom of the screen."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:split<CR>:copen<CR>
+# the quickfix window
+expect:
+  |x.txt\|2 col 3\| first
+  x.txt\|4 col 1\| second
+win:    3/3
+
+=== :copen with an empty list opens an empty window
+ref:    quickfix.txt *:copen*
+quote:  "Open a window to show the current list of errors."
+given:
+  o|ne
+  two
+keys:   :file x.txt<CR>:copen<CR>
+# the quickfix window
+expect: |
+win:    2/2
+
+=== <CR> in the quickfix window jumps to that entry in the window above
+ref:    quickfix.txt *:lbottom*
+quote:  "Hitting the <Enter> key or double-clicking the mouse on a line has the same effect.  The file containing the error is opened in the window above the quickfix window."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second", "x.txt:5:2:third"]<CR>:copen<CR>jj<CR>
+# the x.txt window above the quickfix window
+expect:
+  one
+  two
+  three
+  four
+  f|ive
+win:    1/2
+
+=== :cnext from the quickfix window moves the window above
+ref:    quickfix.txt *:lbottom*
+quote:  "The file containing the error is opened in the window above the quickfix window."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:copen<CR>:cnext<CR>
+# the x.txt window
+expect:
+  one
+  two
+  three
+  |four
+win:    1/2
+
+=== CTRL-W p goes from the quickfix window back to the buffer
+ref:    windows.txt *CTRL-W_p*
+quote:  "Go to previous (last accessed) window."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:copen<CR><C-W>p
+# the x.txt window
+expect:
+  one
+  tw|o
+  three
+  four
+win:    1/2
+
+=== :cclose closes the quickfix window
+ref:    quickfix.txt *:cclose*
+quote:  "Close the quickfix window."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:copen<CR>:cclose<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+win:    1/1
+
+=== an entry chosen in the quickfix window holds after :cclose
+ref:    quickfix.txt *:cclose*
+quote:  "Close the quickfix window."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:copen<CR>G<CR>:cclose<CR>
+expect:
+  one
+  two
+  three
+  |four
+win:    1/1
+
+=== :cwindow with no errors opens no window
+ref:    quickfix.txt *:cwindow*
+quote:  "Open the quickfix window when there are recognized errors."
+given:
+  o|ne
+  two
+keys:   :file x.txt<CR>:cwindow<CR>
+expect:
+  o|ne
+  two
+win:    1/1
+
+=== :cwindow with errors opens the quickfix window
+ref:    quickfix.txt *:cwindow*
+quote:  "Open the quickfix window when there are recognized errors."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:first", "x.txt:4:1:second"]<CR>:cwindow<CR>
+# the quickfix window
+expect:
+  |x.txt\|2 col 3\| first
+  x.txt\|4 col 1\| second
+win:    2/2
+
+=== :cdo runs a command at every entry
+ref:    quickfix.txt *:cdo*
+quote:  "Execute {cmd} in each valid entry in the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:1:1:a", "x.txt:2:1:b", "x.txt:4:1:c"]<CR>:cdo s/$/!/<CR>
+expect:
+  one!
+  two!
+  three
+  |four!
+msg:    (3 of 3): c
+
+=== :vimgrep searches a buffer that has a name and jumps to the first match
+ref:    quickfix.txt *:vimgrep*
+quote:  "Search for {pattern} in the files {file} ... and set the error list to the matches."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:vimgrep /o/ %<CR>
+expect:
+  |one
+  two
+  three
+  four
+  five
+msg:    (1 of 3): one
+
+=== :cnext after :vimgrep goes to the next match's column
+ref:    quickfix.txt *:vimgrep*
+quote:  "Search for {pattern} in the files {file} ... and set the error list to the matches."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:vimgrep /e$/ %<CR>:cnext<CR>
+expect:
+  one
+  two
+  thre|e
+  four
+  five
+msg:    (2 of 3): three
+
+=== :vimgrep adds each line once without g
+ref:    quickfix.txt *:vimgrep*
+quote:  "Without the 'g' flag each line is added only once."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:vimgrep /e/ %<CR>:clast<CR>
+expect:
+  one
+  two
+  three
+  four
+  fiv|e
+msg:    (3 of 3): five
+
+=== :vimgrep with g adds every match
+ref:    quickfix.txt *:vimgrep*
+quote:  "With 'g' every match is added."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:vimgrep /e/g %<CR>:cc 3<CR>
+# the second match in "three"
+expect:
+  one
+  two
+  thre|e
+  four
+  five
+msg:    (3 of 4): three
+
+=== :vimgrep with j only fills the list
+ref:    quickfix.txt *:vimgrep*
+quote:  "With 'j' only the quickfix list is updated."
+given:
+  o|ne
+  two
+  three
+keys:   :file x.txt<CR>:vimgrep /e$/j %<CR>
+expect:
+  o|ne
+  two
+  three
+jumps:
+
+=== :vimgrep with no match
+ref:    quickfix.txt *:vimgrep*
+quote:  "Search for {pattern} in the files {file} ... and set the error list to the matches."
+given:
+  o|ne
+  two
+keys:   :file x.txt<CR>:vimgrep /zzz/ %<CR>
+expect:
+  o|ne
+  two
+msg:    E480: No match: zzz
+
+=== :vimgrep takes a pattern without slashes
+ref:    quickfix.txt *:vimgrep*
+quote:  "Like above, but instead of enclosing the pattern in a non-ID character use a white space separated pattern."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:vimgrep o %<CR>:cnext<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+  five
+msg:    (2 of 3): two

@@ -16,6 +16,14 @@ func (e *Engine) command(v *view, c cmd) {
 		c2.op, c2.key = op, key
 		e.operator(v, c2)
 	}
+	if strings.HasPrefix(c.key, "z") && e.foldCmd(v, c.key, c.count) {
+		e.rec = nil
+		return
+	}
+	if k, ok := strings.CutPrefix(c.key, "<C-w>"); ok {
+		e.windowCmd(k, c.count)
+		return
+	}
 	switch c.key {
 	case "x", "<Del>":
 		if v.lineLen(e.cur.Line) == 0 {
@@ -49,6 +57,12 @@ func (e *Engine) command(v *view, c cmd) {
 		e.join(v, max(c.count, 2), c.key == "J")
 	case "p", "P", "gp", "gP":
 		e.put(v, c)
+	case "<C-^>", "<C-6>":
+		e.alternate(c.count)
+	case "<C-g>":
+		e.fileInfo()
+	case "<C-a>", "<C-x>":
+		e.increment(v, c, c.key == "<C-x>")
 	case "]p", "[p", "]P", "[P":
 		e.putIndented(v, c)
 	case "~":
@@ -82,6 +96,12 @@ func (e *Engine) command(v *view, c cmd) {
 		e.startRecording(c.arg)
 	case "@":
 		e.playRegister(c.arg, c.count1())
+	case "Q":
+		if e.lastRecorded == 0 {
+			e.failed = true
+			return
+		}
+		e.playRegister(e.lastRecorded, c.count1())
 	case "&":
 		e.ex(v, "s")
 	case "g&":
@@ -96,6 +116,12 @@ func (e *Engine) command(v *view, c cmd) {
 		e.jump(v, -c.count1())
 	case "<C-i>", "<Tab>":
 		e.jump(v, c.count1())
+	}
+	switch c.key {
+	case "u", "<C-r>", "U", "g-", "g+", "<C-o>", "<C-i>", "<Tab>":
+		if e.feeding == 0 {
+			e.openCursorFold()
+		}
 	}
 }
 

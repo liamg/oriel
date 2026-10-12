@@ -2,7 +2,7 @@
 id: ED-4
 title: "Macros, folds, splits, buffers, quickfix"
 phase: P2
-status: todo
+status: review
 area: Editor
 module: vim
 depends_on: [ED-2, FW-9]

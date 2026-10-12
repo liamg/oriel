@@ -17,11 +17,13 @@ type Options struct {
 	WrapScan   bool
 	Magic      bool
 	Report     int
+	NrFormats  string // 'nrformats'
+	Hidden     bool
 }
 
 // DefaultOptions are nvim's defaults.
 func DefaultOptions() Options {
-	return Options{ShiftWidth: 8, WrapScan: true, Magic: true, Report: 2}
+	return Options{ShiftWidth: 8, WrapScan: true, Magic: true, Report: 2, NrFormats: "bin,hex", Hidden: true}
 }
 
 // lastSearch is the last search pattern and offset, shared by /, ?, n, N, * and :s.
@@ -300,6 +302,14 @@ func (e *Engine) runSearch(v *view, p Pos, pat string, fwd bool, off searchOffse
 		e.echo(err.Error())
 		return target{}, false
 	}
+	// A search from a closed fold starts after it, or backward from its first line.
+	if top, end, ok := v.folded(p.Line); ok {
+		if fwd {
+			p = Pos{end, v.lineLen(end)}
+		} else {
+			p = Pos{top, 0}
+		}
+	}
 	// With an e, s or b offset a match at the cursor counts, unless its offset position is the cursor.
 	withOff := off.set && off.kind != 0
 	m, ok, _ := e.findPattern(v, re, p, fwd, count, withOff)
@@ -430,6 +440,9 @@ func (e *Engine) startCmdline(kind byte, c cmd, prefill string) {
 
 func (e *Engine) cmdlineKey(k string) {
 	cl := e.cmdline
+	if !cl.ctrlR && cl.kind == ':' {
+		e.cmdlineAbbrev(cl, k)
+	}
 	if cl.ctrlR {
 		cl.ctrlR = false
 		if r, ok := argRune(k); ok {
@@ -481,6 +494,9 @@ func (e *Engine) runCmdline(cl *cmdline) {
 			e.endVisual()
 		}
 		e.ex(v, cl.text)
+		if strings.TrimSpace(cl.text) != "" {
+			e.lastCmdline = cl.text
+		}
 		e.clamp(e.view())
 		return
 	}
@@ -518,6 +534,9 @@ func (e *Engine) runCmdline(cl *cmdline) {
 	e.cur = t.pos
 	e.clamp(v)
 	e.setWant(v)
+	if e.feeding == 0 {
+		e.openCursorFold()
+	}
 }
 
 // keysOf turns typed text back into keys, for "." to replay.

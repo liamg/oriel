@@ -1,0 +1,635 @@
+# Opening and closing folds. Nested cases start on line 3 with an inner fold on lines
+# 3-4 inside an outer fold on lines 2-5, both closed.
+
+=== zo opens the fold under the cursor
+ref:    fold.txt *zo*
+quote:  Open one fold under the cursor.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjzoj
+expect:
+  one
+  two
+  |three
+  four
+
+=== zc closes the fold under the cursor
+ref:    fold.txt *zc*
+quote:  Close one fold under the cursor.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjzozcj
+expect:
+  one
+  two
+  three
+  |four
+
+=== zc sets foldenable
+ref:    fold.txt *zc*
+quote:  'foldenable' will be set.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjznzcj
+expect:
+  one
+  two
+  three
+  |four
+
+=== za opens a closed fold
+ref:    fold.txt *za*
+quote:  When on a closed fold: open it.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjzaj
+expect:
+  one
+  two
+  |three
+  four
+
+=== za closes an open fold
+ref:    fold.txt *za*
+quote:  When on an open fold: close it and set 'foldenable'.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjzazaj
+expect:
+  one
+  two
+  three
+  |four
+
+=== zo opens one level of nested folds
+ref:    fold.txt *zo*
+quote:  Open one fold under the cursor.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zoj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== 2zo opens two levels
+ref:    fold.txt *zo*
+quote:  When a count is given, that many folds deep will be opened.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>2zoj
+expect:
+  one
+  two
+  three
+  |four
+  five
+  six
+
+=== zO opens nested folds recursively
+ref:    fold.txt *zO*
+quote:  Open all folds under the cursor recursively.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zOj
+expect:
+  one
+  two
+  three
+  |four
+  five
+  six
+
+=== zO opens folds nested in the fold under the cursor
+ref:    fold.txt *zO*
+quote:  Open all folds under the cursor recursively.
+given:
+  one
+  |two
+  three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zOjj
+expect:
+  one
+  two
+  three
+  |four
+  five
+  six
+
+=== zO leaves folds without the cursor line alone
+ref:    fold.txt *zO*
+quote:  Folds that don't contain the cursor line are unchanged.
+given:
+  one
+  |two
+  three
+  four
+  five
+  six
+  seven
+  eight
+keys:   :5,6fold<CR>:2,3fold<CR>zOjjjj
+expect:
+  one
+  two
+  three
+  four
+  five
+  six
+  |seven
+  eight
+
+=== zc closes the innermost open fold
+ref:    fold.txt *zc*
+quote:  Close one fold under the cursor.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zOzcj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== 2zc closes two levels
+ref:    fold.txt *zc*
+quote:  When a count is given, that many folds deep are closed.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zO2zcj
+expect:
+  one
+  two
+  three
+  four
+  five
+  |six
+
+=== zC closes nested folds recursively
+ref:    fold.txt *zC*
+quote:  Close all folds under the cursor recursively.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zOzCj
+expect:
+  one
+  two
+  three
+  four
+  five
+  |six
+
+=== za on nested closed folds opens one
+ref:    fold.txt *za*
+quote:  When folds are nested, you may have to use "za" several times.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zaj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== 2za opens two closed folds
+ref:    fold.txt *za*
+quote:  When a count is given, that many closed folds are opened.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>2zaj
+expect:
+  one
+  two
+  three
+  |four
+  five
+  six
+
+=== zA opens a closed fold recursively
+ref:    fold.txt *zA*
+quote:  When on a closed fold: open it recursively.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zAj
+expect:
+  one
+  two
+  three
+  |four
+  five
+  six
+
+=== zA closes an open fold recursively
+ref:    fold.txt *zA*
+quote:  When on an open fold: close it recursively and set 'foldenable'.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zOzAj
+expect:
+  one
+  two
+  three
+  four
+  five
+  |six
+
+=== zv opens just enough folds to show the cursor line
+ref:    fold.txt *zv*
+quote:  View cursor line: Open just enough folds to make the line in which the cursor is located not folded.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zvj
+expect:
+  one
+  two
+  three
+  |four
+  five
+  six
+
+=== zx re-applies foldlevel and then shows the cursor line
+ref:    fold.txt *zx*
+quote:  Undo manually opened and closed folds: re-apply 'foldlevel', then do "zv": View cursor line.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zOjzxj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== zx closes manually opened folds away from the cursor
+ref:    fold.txt *zx*
+quote:  Undo manually opened and closed folds: re-apply 'foldlevel'
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zOggzxjj
+expect:
+  one
+  two
+  three
+  four
+  five
+  |six
+
+=== zX re-applies foldlevel without opening the cursor line
+ref:    fold.txt *zX*
+quote:  Undo manually opened and closed folds: re-apply 'foldlevel'.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zOjzXj
+expect:
+  one
+  two
+  three
+  four
+  five
+  |six
+
+=== zR opens all folds
+ref:    fold.txt *zR*
+quote:  Open all folds. This sets 'foldlevel' to highest fold level.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zRjj
+expect:
+  one
+  two
+  |three
+  four
+  five
+  six
+
+=== zM closes all folds
+ref:    fold.txt *zM*
+quote:  Close all folds: set 'foldlevel' to 0.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zRzMjj
+expect:
+  one
+  two
+  three
+  four
+  five
+  |six
+
+=== zr opens one more level
+ref:    fold.txt *zr*
+quote:  Reduce folding: Add |v:count1| to 'foldlevel'.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zrjjj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== zm closes one more level
+ref:    fold.txt *zm*
+quote:  Fold more: Subtract |v:count1| from 'foldlevel'.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zRzmjjj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== :set foldlevel=1 closes only nested folds
+ref:    fold.txt *fold-foldlevel*
+quote:  When 'foldlevel' is positive, some folds are closed.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>:set foldlevel=1<CR>jjj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== changing foldlevel re-applies it to manually opened folds
+ref:    fold.txt *fold-foldlevel*
+quote:  'foldlevel' is applied when it is changed.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zO:set fdl=1<CR>ggjjj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== zn opens every fold
+ref:    fold.txt *zn*
+quote:  Fold none: reset 'foldenable'. All folds will be open.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjznj
+expect:
+  one
+  two
+  |three
+  four
+
+=== zN restores the folds
+ref:    fold.txt *zN*
+quote:  Fold normal: set 'foldenable'. All folds will be as they were before.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjznzNj
+expect:
+  one
+  two
+  three
+  |four
+
+=== zi turns folding off
+ref:    fold.txt *zi*
+quote:  Invert 'foldenable'.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjzij
+expect:
+  one
+  two
+  |three
+  four
+
+=== zi twice turns folding back on
+ref:    fold.txt *zi*
+quote:  Invert 'foldenable'.
+given:
+  one
+  |two
+  three
+  four
+keys:   zfjzizij
+expect:
+  one
+  two
+  three
+  |four
+
+=== :foldopen opens one level in the range
+ref:    fold.txt *:foldopen*
+quote:  Without [!] one level of folds is opened.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>:2,5foldopen<CR>j
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== :foldopen! opens every fold in the range
+ref:    fold.txt *:foldopen*
+quote:  When [!] is added all folds are opened.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>:2,5foldopen!<CR>j
+expect:
+  one
+  two
+  three
+  |four
+  five
+  six
+
+=== :foldclose closes one level in the range
+ref:    fold.txt *:foldclose*
+quote:  Without [!] one level of folds is closed.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zR:3foldclose<CR>j
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== :foldclose! closes every fold in the range
+ref:    fold.txt *:foldclose*
+quote:  When [!] is added all folds are closed.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zR:3foldclose!<CR>j
+expect:
+  one
+  two
+  three
+  four
+  five
+  |six
