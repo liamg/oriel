@@ -1,0 +1,134 @@
+=== >> shifts a line one 'shiftwidth' right, with a tab, keeping the screen column
+ref:    change.txt *>>*
+quote:  "Shift [count] lines one 'shiftwidth' rightwards."
+given:  f|oo
+keys:   >>
+expect:
+  |	foo
+undo:   f|oo
+dot:
+  |		foo
+
+=== 3>> shifts three lines
+ref:    change.txt *>>*
+quote:  "Shift [count] lines one 'shiftwidth' rightwards."
+given:
+  |a
+  b
+  c
+  d
+keys:   3>>
+expect:
+  |	a
+  	b
+  	c
+  d
+
+=== >> leaves empty lines alone
+ref:    change.txt *:>*
+quote:  "The shift right does not affect empty lines."
+given:
+  |a
+
+  b
+keys:   >2j
+expect:
+  |	a
+
+  	b
+
+=== >> turns a space indent into tabs
+ref:    change.txt *:>*
+quote:  "When the 'expandtab' option is off (this is the default) Vim uses <Tab>s as much as possible to make the indent."
+given:
+      |foo
+keys:   >>
+expect:
+  |	    foo
+
+=== << removes one 'shiftwidth' of indent
+ref:    change.txt *<<*
+quote:  "Shift [count] lines one 'shiftwidth' leftwards."
+given:
+  		f|oo
+keys:   <<
+expect:
+  	fo|o
+dot:
+  fo|o
+
+=== << stops when there is no indent
+ref:    change.txt *:>*
+quote:  "The shift leftwards stops when there is no indent."
+given:
+     |foo
+keys:   <<
+expect: fo|o
+
+=== << on an unindented line does nothing
+ref:    change.txt *<<*
+quote:  "Shift [count] lines one 'shiftwidth' leftwards."
+given:  f|oo
+keys:   <<
+expect: f|oo
+
+=== << keeps the remainder of a space indent
+ref:    change.txt *<<*
+quote:  "Shift [count] lines one 'shiftwidth' leftwards."
+given:
+              |foo
+keys:   <<
+expect:
+      fo|o
+
+=== 2<< shifts two lines left
+ref:    change.txt *<<*
+quote:  "Shift [count] lines one 'shiftwidth' leftwards."
+given:
+  	|a
+  	b
+  	c
+keys:   2<<
+expect:
+  |a
+  b
+  	c
+
+=== >j shifts the motion's lines
+ref:    change.txt *>*
+quote:  "Shift {motion} lines one 'shiftwidth' rightwards."
+given:
+  a
+  |b
+  c
+keys:   >j
+expect:
+  a
+  |	b
+  	c
+
+=== <k shifts the motion's lines left
+ref:    change.txt *<*
+quote:  "Shift {motion} lines one 'shiftwidth' leftwards."
+given:
+  	a
+  	|b
+  	c
+keys:   <k
+expect:
+  |a
+  b
+  	c
+
+=== >G shifts to the end of the buffer
+ref:    change.txt *>*
+quote:  "Shift {motion} lines one 'shiftwidth' rightwards."
+given:
+  a
+  |b
+  c
+keys:   >G
+expect:
+  a
+  |	b
+  	c

@@ -5,7 +5,7 @@ phase: P4
 status: todo
 area: Files, git, terminals
 module: search
-depends_on: [SH-5]
+depends_on: [SH-5, ED-10]
 ---
 
 # FG-3 · Project search and replace preview
@@ -21,6 +21,10 @@ depends_on: [SH-5]
 ## Mockups
 
 ![26-picker](../_design/mockups/26-picker.png)
+
+## Notes
+
+- Patterns are PCRE2 (ED-10). If the search runs on ripgrep, use its PCRE2 mode (`-P`) so both agree, or our own matcher.
 
 ## Done when
 

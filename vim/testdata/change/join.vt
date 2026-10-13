@@ -1,0 +1,161 @@
+=== J joins the next line with one space
+ref:    change.txt *J*
+quote:  "Join [count] lines, with a minimum of two lines."
+given:
+  f|oo
+  bar
+  baz
+keys:   J
+expect:
+  foo| bar
+  baz
+undo:
+  f|oo
+  bar
+  baz
+dot:    foo bar| baz
+
+=== J removes the indent of the joined line
+ref:    change.txt *J*
+quote:  "Remove the indent and insert up to two spaces"
+given:
+  |foo
+      bar
+keys:   J
+expect: foo| bar
+
+=== J inserts no space after trailing white space
+ref:    change.txt *:join*
+quote:  "insert one space in place of the <EOL> unless there is trailing white space or the next line starts with a ')'."
+given:
+  |foo 
+  bar
+keys:   J
+expect: foo |bar
+
+=== J inserts no space before a line starting with )
+ref:    change.txt *:join*
+quote:  "insert one space in place of the <EOL> unless there is trailing white space or the next line starts with a ')'."
+given:
+  |f(x
+     )
+keys:   J
+expect: f(x|)
+
+=== J with an empty next line adds no space
+ref:    change.txt *J*
+quote:  "Join [count] lines, with a minimum of two lines."
+given:
+  |foo
+
+  bar
+keys:   J
+expect:
+  fo|o
+  bar
+
+=== J on an empty line takes the next line
+ref:    change.txt *J*
+quote:  "Join [count] lines, with a minimum of two lines."
+given:
+  |
+  bar
+keys:   J
+expect: |bar
+
+=== 3J joins three lines
+ref:    change.txt *J*
+quote:  "Join [count] lines, with a minimum of two lines."
+given:
+  |a
+  b
+  c
+  d
+keys:   3J
+expect:
+  a b| c
+  d
+
+=== 1J still joins two lines
+ref:    change.txt *J*
+quote:  "Join [count] lines, with a minimum of two lines."
+given:
+  |a
+  b
+  c
+keys:   1J
+expect:
+  a| b
+  c
+
+=== 10J is reduced to the lines available
+ref:    change.txt *J*
+quote:  "If [count] is too big it is reduced to the number of lines available."
+given:
+  a
+  |b
+  c
+keys:   10J
+expect:
+  a
+  b| c
+
+=== J on the last line fails
+ref:    change.txt *J*
+quote:  "Fails when on the last line of the buffer."
+given:
+  a
+  |b
+keys:   J
+expect:
+  a
+  |b
+
+=== J after a period inserts one space because 'joinspaces' is off
+ref:    nvim/vim_diff.txt *nvim-defaults*
+quote:  "'joinspaces' is disabled"
+given:
+  |end.
+  next
+keys:   J
+expect: end.| next
+
+=== J joins multibyte lines
+ref:    change.txt *J*
+quote:  "Join [count] lines, with a minimum of two lines."
+given:
+  |漢
+  字
+keys:   J
+expect: 漢| 字
+
+=== gJ joins without touching spaces
+ref:    change.txt *gJ*
+quote:  "Join [count] lines, with a minimum of two lines. Don't insert or remove any spaces."
+given:
+  |foo
+    bar
+keys:   gJ
+expect: foo|  bar
+undo:
+  |foo
+    bar
+
+=== gJ with no indent joins directly
+ref:    change.txt *gJ*
+quote:  "Don't insert or remove any spaces."
+given:
+  |foo
+  bar
+keys:   gJ
+expect: foo|bar
+
+=== 3gJ joins three lines
+ref:    change.txt *gJ*
+quote:  "Join [count] lines, with a minimum of two lines."
+given:
+  |a
+  b
+  c
+keys:   3gJ
+expect: ab|c

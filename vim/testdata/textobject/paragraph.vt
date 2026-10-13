@@ -1,0 +1,133 @@
+=== dip deletes the lines of the paragraph
+ref:    motion.txt *ip*
+quote:  "\"inner paragraph\", select [count] paragraphs (see |paragraph|)."
+given:
+  a
+  |b
+  
+  c
+keys:   dip
+expect:
+  |
+  c
+regs:   "" = "a\nb\n"   "1 = "a\nb\n"
+undo:
+  |a
+  b
+  
+  c
+
+=== dap deletes the paragraph and the blank line after it
+ref:    motion.txt *ap*
+quote:  "\"a paragraph\", select [count] paragraphs (see |paragraph|)."
+given:
+  a
+  |b
+  
+  c
+keys:   dap
+expect: |c
+regs:   "" = "a\nb\n\n"
+
+=== dap on the last paragraph takes the blank lines before it
+ref:    motion.txt *o_object-select*
+quote:  If there is no white space after the object or when the cursor was in the white space before the object, the white space before the object is included.
+given:
+  a
+  
+  
+  |c
+  d
+keys:   dap
+expect: |a
+regs:   "" = "\n\nc\nd\n"
+
+=== dip on blank lines deletes the run of blank lines
+ref:    motion.txt *o_object-select*
+quote:  If the cursor was on white space, the operator applies to the white space.
+given:
+  a
+  |
+  
+  b
+keys:   dip
+expect:
+  a
+  |b
+regs:   "" = "\n\n"
+
+=== a line of only white space is a paragraph boundary for ip
+ref:    motion.txt *ip*
+quote:  Exception: a blank line (only containing white space) is also a paragraph boundary.
+given:
+  |a
+  b
+     
+  c
+keys:   dip
+expect:
+  |   
+  c
+regs:   "" = "a\nb\n"
+
+=== d2ip counts the blank lines as a paragraph
+ref:    motion.txt *ip*
+quote:  select [count] paragraphs
+given:
+  |a
+  b
+  
+  c
+  
+  d
+keys:   d2ip
+expect:
+  |c
+  
+  d
+regs:   "" = "a\nb\n\n"
+
+=== d2ap deletes two paragraphs with their blank lines
+ref:    motion.txt *ap*
+quote:  select [count] paragraphs
+given:
+  |a
+  
+  b
+  
+  c
+keys:   d2ap
+expect: |c
+regs:   "" = "a\n\nb\n\n"
+dot:    |c
+
+=== yip yanks the paragraph and moves to its first line
+ref:    motion.txt *ip*
+quote:  select [count] paragraphs
+given:
+  a
+  b|b
+  
+  c
+keys:   yip
+expect:
+  |a
+  bb
+  
+  c
+regs:   "0 = "a\nbb\n"
+
+=== cip replaces the paragraph with one empty line
+ref:    motion.txt *ip*
+quote:  select [count] paragraphs
+given:
+  a
+  |b
+  
+  c
+keys:   cipX<Esc>
+expect:
+  |X
+  
+  c
+regs:   "" = "a\nb\n"

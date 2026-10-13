@@ -2,7 +2,7 @@
 id: ED-3
 title: "Visual and visual-block, :s/:g with vim regex, ranges"
 phase: P2
-status: todo
+status: done
 area: Editor
 module: vim
 depends_on: [ED-2]
@@ -10,7 +10,7 @@ depends_on: [ED-2]
 
 # ED-3 · Visual and visual-block, :s/:g with vim regex, ranges
 
-**Phase** 2 · editor core · **After** [ED-2](ED-2-vim-engine-motions-operators-text-objects-regist.md) · **Unblocks** nothing yet
+**Phase** 2 · editor core · **After** [ED-2](ED-2-vim-engine-motions-operators-text-objects-regist.md) · **Unblocks** [ED-10](ED-10-pcre2-regex-outside-the-vim-engine.md)
 
 ## Design
 

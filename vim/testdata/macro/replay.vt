@@ -1,0 +1,263 @@
+# Replaying registers with @{reg}, @@, @: and :@ (repeat.txt, complex-repeat).
+
+=== 3@a replays a register three times
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |abcdefgh
+keys:   qaxq3@a
+expect: |efgh
+mode:   normal
+
+=== 2@a replays an insert twice
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |x
+keys:   qaA-<Esc>q2@a
+expect: x--|-
+mode:   normal
+
+=== @@ repeats the last @a
+ref:    nvim/repeat.txt *@@*
+quote:  Repeat the previous @{0-9a-z":*} [count] times.
+given:  |abcdefgh
+keys:   qaxq@a@@
+expect: |defgh
+mode:   normal
+
+=== 2@@ repeats the last @a twice
+ref:    nvim/repeat.txt *@@*
+quote:  Repeat the previous @{0-9a-z":*} [count] times.
+given:  |abcdefgh
+keys:   qaxq@a2@@
+expect: |efgh
+mode:   normal
+
+=== @@ before any @ fails
+ref:    nvim/repeat.txt *@@*
+quote:  Repeat the previous @{0-9a-z":*} [count] times.
+given:  |abc
+keys:   @@
+expect: |abc
+msg:    "E748: No previously used register"
+mode:   normal
+
+=== @a on an unset register does nothing
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |abc
+keys:   @a
+expect: |abc
+mode:   normal
+
+=== a macro stops at the first command that fails
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |abcd
+keys:   qafzxq@a
+expect: |bcd
+mode:   normal
+
+=== a count stops when a motion fails
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:
+  |ab
+  ab
+  ab
+  ab
+keys:   qajxq9@a
+expect:
+  ab
+  b
+  b
+  |b
+mode:   normal
+
+=== a recursive macro runs until a motion fails
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:
+  |one
+  two
+  three
+  four
+keys:   qaqqaA!<Esc>j@aq@a
+expect:
+  one!
+  two!
+  three!
+  four|!
+regs:   "a = "A!\x1bj@a"
+mode:   normal
+
+=== a recursive macro over a word list stops at the end of the buffer
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |a b c d e
+keys:   qbqqb~w@bq@b
+expect: A B C D |E
+mode:   normal
+
+=== @a runs a yanked line as keys
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:
+  |jx
+  abc
+  abc
+keys:   "ayy@a
+expect:
+  jx
+  bc
+  |abc
+regs:   "a = "jx\n"
+mode:   normal
+
+=== @a runs a yanked word as keys
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |dw one two
+keys:   "ayiww@a
+expect: dw |two
+mode:   normal
+
+=== @" runs the unnamed register
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |dw one two
+keys:   yiww@"
+expect: dw |two
+mode:   normal
+
+=== an edited macro put back with "ayy runs the new keys
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:
+  |abcdef
+  
+keys:   qaxqj"apI3<Esc>0"ay$dd@a
+expect: |ef
+mode:   normal
+
+=== a macro with a search finds each match in turn
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |a x b x c x
+keys:   qa/x<CR>rYq2@a
+expect: a Y b Y c |Y
+mode:   normal
+
+=== u after @a undoes the whole replay
+ref:    nvim/repeat.txt *@*
+quote:  undo might not be synced in the same way.
+given:  |abcdefgh
+keys:   qaxxxq@a
+expect: |gh
+undo:   |defgh
+mode:   normal
+
+=== . after @a repeats the macro's last change, not the macro
+ref:    nvim/repeat.txt *@*
+quote:  The register is executed like a mapping
+given:  |abc abc abc
+keys:   qaxA!<Esc>0q@a
+expect: |c abc abc!!
+dot:    c abc abc!!|!
+mode:   normal
+
+=== a macro can use . to repeat a change made before recording
+ref:    repeat.txt *.*
+quote:  Simple changes can be repeated with the "." command.
+given:  |abcdef
+keys:   xqa.q@a
+expect: |def
+regs:   "a = "."
+mode:   normal
+
+=== a macro that changes with dw replays as many words as asked
+ref:    nvim/repeat.txt *@*
+quote:  Execute the contents of register {0-9a-z".=*+} [count] times.
+given:  |one two three four five
+keys:   qadwq2@a
+expect: |four five
+regs:   "a = "dw"   "" = "three "
+mode:   normal
+
+=== @: repeats the last command line
+ref:    nvim/repeat.txt *@:*
+quote:  Repeat last command-line [count] times.
+given:
+  |a1
+  a2
+keys:   :s/a/b/<CR>j@:
+expect:
+  b1
+  |b2
+mode:   normal
+
+=== 2@: repeats the last command line twice
+ref:    nvim/repeat.txt *@:*
+quote:  Repeat last command-line [count] times.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :d<CR>2@:
+expect:
+  |four
+  five
+mode:   normal
+
+=== @@ after @: repeats the command line again
+ref:    nvim/repeat.txt *@@*
+quote:  Repeat the previous @{0-9a-z":*} [count] times.
+given:
+  |one
+  two
+  three
+  four
+keys:   :d<CR>@:@@
+expect: |four
+mode:   normal
+
+=== :@a runs a yanked line as an Ex command
+ref:    nvim/repeat.txt *:@*
+quote:  Execute the contents of register {0-9a-z".=*+} as an Ex command.
+given:
+  |s/a/X/
+  ab
+keys:   "ayy:2@a<CR>
+expect:
+  s/a/X/
+  |Xb
+mode:   normal
+
+=== :@: repeats the last command line at a line
+ref:    nvim/repeat.txt *:@:*
+quote:  Repeat last command-line.  First set cursor at line [addr] (default is current line).
+given:
+  |a1
+  a2
+  a3
+keys:   :s/a/b/<CR>:3@:<CR>
+expect:
+  b1
+  a2
+  |b3
+mode:   normal
+
+=== :@@ repeats the last :@ at a line
+ref:    nvim/repeat.txt *:@@*
+quote:  Repeat the previous :@{register}.  First set cursor at line [addr] (default is current line).
+given:
+  |s/a/X/
+  ab
+  ab
+keys:   "ayy:2@a<CR>:3@@<CR>
+expect:
+  s/a/X/
+  Xb
+  |Xb
+mode:   normal

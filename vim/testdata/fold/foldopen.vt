@@ -1,0 +1,268 @@
+# Commands that open a closed fold they move into ('foldopen', default
+# "block,hor,mark,percent,quickfix,search,tag,undo"). A trailing j shows the fold is open.
+
+=== a search into a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  search search for a pattern: "/", "n", "*", "gd", etc.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :2,4fold<CR>/three<CR>j
+expect:
+  one
+  two
+  three
+  |four
+  five
+
+=== n into a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  search search for a pattern: "/", "n", "*", "gd", etc.
+given:
+  |x one
+  two
+  x three
+  four
+  x five
+keys:   /x<CR>:2,4fold<CR>ggnj
+expect:
+  x one
+  two
+  x three
+  |four
+  x five
+
+=== a search from a closed fold skips matches in it
+ref:    fold.txt *fold-behavior*
+quote:  When starting a search in a closed fold it will not find a match in the current fold.
+given:
+  one
+  |x two
+  x three
+  four
+  x five
+keys:   :2,4fold<CR>/x<CR>
+expect:
+  one
+  x two
+  x three
+  four
+  |x five
+
+=== a backward search from a closed fold starts at its first line
+ref:    fold.txt *fold-behavior*
+quote:  a backwards search starts from the start of the closed fold.
+given:
+  x one
+  two
+  x three
+  |four
+  five
+keys:   :2,4fold<CR>?x<CR>
+expect:
+  |x one
+  two
+  x three
+  four
+  five
+
+=== l in a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  hor horizontal movements: "l", "w", "fx", etc.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>lj
+expect:
+  one
+  two
+  t|hree
+  four
+
+=== % into a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  percent "%"
+given:
+  one
+  |two (
+  three
+  four )
+  five
+keys:   :2,4fold<CR>%j
+expect:
+  one
+  two (
+  three
+  four )
+  fiv|e
+
+=== } into a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  block "(", "{", "[[", "[{", etc.
+given:
+  |one
+  two
+  
+  four
+  five
+keys:   :2,4fold<CR>}j
+expect:
+  one
+  two
+  
+  |four
+  five
+
+=== 'a into a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  mark jumping to a mark: "'m", CTRL-O, etc.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   jjma:2,4fold<CR>gg'aj
+expect:
+  one
+  two
+  three
+  |four
+  five
+
+=== `a into a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  mark jumping to a mark: "'m", CTRL-O, etc.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   jjlma:2,4fold<CR>gg`aj
+expect:
+  one
+  two
+  three
+  f|our
+  five
+
+=== CTRL-O into a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  mark jumping to a mark: "'m", CTRL-O, etc.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   3G:2,4fold<CR>gg<C-o>j
+expect:
+  one
+  two
+  three
+  |four
+  five
+
+=== u opens the fold holding the change
+ref:    options.txt *'foldopen'*
+quote:  undo undo or redo: "u" and CTRL-R
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   jjx:2,4fold<CR>gguj
+expect:
+  one
+  two
+  three
+  |four
+  five
+
+=== CTRL-R opens the fold holding the change
+ref:    options.txt *'foldopen'*
+quote:  undo undo or redo: "u" and CTRL-R
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   jjxu:2,4fold<CR>gg<C-r>j
+expect:
+  one
+  two
+  hree
+  |four
+  five
+
+=== inserting in a closed fold opens it
+ref:    options.txt *'foldopen'*
+quote:  In insert mode the folds containing the cursor will always be open when text is inserted.
+given:
+  one
+  |two
+  three
+  four
+keys:   :2,3fold<CR>ix<Esc>j
+expect:
+  one
+  xtwo
+  |three
+  four
+
+=== an operator with a search into a closed fold leaves it closed
+ref:    options.txt *'foldopen'*
+quote:  When a movement command is used for an operator (e.g., "dl" or "y%") this option is not used.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :3,4fold<CR>y/four<CR>jjj
+expect:
+  one
+  two
+  three
+  four
+  |five
+
+=== a search into a closed fold is a jump
+ref:    options.txt *'foldopen'*
+quote:  search search for a pattern: "/", "n", "*", "gd", etc.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,4fold<CR>/three<CR>
+expect:
+  one
+  two
+  |three
+  four
+jumps:  1:0
+
+=== G into a closed fold is a jump
+ref:    options.txt *'foldopen'*
+quote:  jump far jumps: "G", "gg", etc.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,4fold<CR>G
+expect:
+  one
+  two
+  three
+  |four
+jumps:  1:0

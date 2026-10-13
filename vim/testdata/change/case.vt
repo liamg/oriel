@@ -1,0 +1,146 @@
+=== ~ switches case and moves right
+ref:    change.txt *~*
+quote:  "'notildeop' option: Switch case of the character under the cursor and move the cursor to the right."
+given:  |abc
+keys:   ~
+expect: A|bc
+undo:   |abc
+dot:    AB|c
+
+=== 3~ switches three characters
+ref:    change.txt *~*
+quote:  "If a [count] is given, do that many characters."
+given:  |aBcd
+keys:   3~
+expect: AbC|d
+
+=== ~ with a count past the end stops on the last character
+ref:    change.txt *~*
+quote:  "If a [count] is given, do that many characters."
+given:  a|bc
+keys:   10~
+expect: aB|C
+
+=== ~ on a non-letter only moves
+ref:    change.txt *~*
+quote:  "Switch case of the character under the cursor and move the cursor to the right."
+given:  |1a
+keys:   ~
+expect: 1|a
+
+=== ~ on a multibyte letter
+ref:    change.txt *~*
+quote:  "Switch case of the character under the cursor and move the cursor to the right."
+given:  |éa
+keys:   ~
+expect: É|a
+
+=== g~w switches the case of a word and keeps the cursor
+ref:    change.txt *g~*
+quote:  "Switch case of {motion} text."
+given:  |fOo bar
+keys:   g~w
+expect: |FoO bar
+dot:    |fOo bar
+
+=== g~~ switches the case of the line
+ref:    change.txt *g~~*
+quote:  "Switch case of current line."
+given:  foo |Bar
+keys:   g~~
+expect: |FOO bAR
+
+=== g~g~ is g~~
+ref:    change.txt *g~g~*
+quote:  "Switch case of current line."
+given:  |aB
+keys:   g~g~
+expect: |Ab
+
+=== gUw makes a word uppercase
+ref:    change.txt *gU*
+quote:  "Make {motion} text uppercase."
+given:  |foo bar
+keys:   gUw
+expect: |FOO bar
+undo:   |foo bar
+
+=== gU$ from the middle of the line
+ref:    change.txt *gU*
+quote:  "Make {motion} text uppercase."
+given:  foo |bar baz
+keys:   gU$
+expect: foo |BAR BAZ
+
+=== gUw on multibyte letters
+ref:    change.txt *gU*
+quote:  "Make {motion} text uppercase."
+given:  |été x
+keys:   gUw
+expect: |ÉTÉ x
+
+=== gUU makes the line uppercase
+ref:    change.txt *gUU*
+quote:  "Make current line uppercase."
+given:  a|bc def
+keys:   gUU
+expect: |ABC DEF
+
+=== 2gUU makes two lines uppercase
+ref:    motion.txt *operator-doubled*
+quote:  "When using a count, before or after the first character, that many lines are operated upon."
+given:
+  a|b
+  cd
+  ef
+keys:   2gUU
+expect:
+  A|B
+  CD
+  ef
+dot:
+  A|B
+  CD
+  ef
+
+=== gugu makes the line lowercase
+ref:    change.txt *gugu*
+quote:  "Make current line lowercase."
+given:  |ABC Def
+keys:   gugu
+expect: |abc def
+
+=== guj makes two lines lowercase
+ref:    change.txt *gu*
+quote:  "Make {motion} text lowercase."
+given:
+  A|B
+  CD
+  EF
+keys:   guj
+expect:
+  a|b
+  cd
+  EF
+
+=== g?w rot13 encodes a word
+ref:    change.txt *g?*
+quote:  "Rot13 encode {motion} text."
+given:  |Hello world
+keys:   g?w
+expect: |Uryyb world
+dot:    |Hello world
+
+=== g?? rot13 encodes the line
+ref:    change.txt *g??*
+quote:  "Rot13 encode current line."
+given:  ab|c xyz
+keys:   g??
+expect: |nop klm
+
+=== g?g? is g??
+ref:    change.txt *g?g?*
+quote:  "Rot13 encode current line."
+given:  |Nop
+keys:   g?g?
+expect: |Abc

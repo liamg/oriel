@@ -1,0 +1,210 @@
+# Dot repeat: what . repeats, and how counts and numbered registers carry over.
+
+=== . repeats x
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:  |abcd
+keys:   x.
+expect: |cd
+
+=== . repeats dw
+ref:    repeat.txt *.*
+quote:  "Repeat last change, with count replaced with [count]."
+given:  |one two three
+keys:   dw.
+expect: |three
+regs:   "" = "two "   "- = "two "
+
+=== . repeats cw with its inserted text
+ref:    repeat.txt *.*
+quote:  "Repeat last change, with count replaced with [count]."
+given:  |one two three
+keys:   cwX<Esc>w.
+expect: X |X three
+
+=== . repeats A with its text on another line
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:
+  |one
+  two
+keys:   A!<Esc>j.
+expect:
+  one!
+  two|!
+
+=== . repeats o with its text
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:  |one
+keys:   ox<Esc>.
+expect:
+  one
+  x
+  |x
+
+=== . repeats p
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:  |ab
+keys:   ylp.
+expect: aa|ab
+
+=== . repeats a linewise p
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:
+  |one
+  two
+keys:   yyp.
+expect:
+  one
+  one
+  |one
+  two
+
+=== . repeats J
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:
+  |one
+  two
+  three
+keys:   J.
+expect: one two| three
+
+=== . repeats ~
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:  |abc
+keys:   ~.
+expect: AB|c
+
+=== . repeats >>
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:  |one
+keys:   >>.
+expect:
+  |		one
+
+=== . repeats r
+ref:    repeat.txt *.*
+quote:  "Simple changes can be repeated with the \".\" command."
+given:  |abc
+keys:   rxl.
+expect: x|xc
+
+=== . repeats the count of the last change
+ref:    repeat.txt *.*
+quote:  "Without a count, the count of the last change is used."
+given:  |abcdefg
+keys:   2x.
+expect: |efg
+
+=== 3. replaces the count of the last change
+ref:    repeat.txt *.*
+quote:  "If you enter a count, it will replace the last one."
+given:  |one two three four five
+keys:   dw3.
+expect: |five
+
+=== a new count stays for the next .
+ref:    repeat.txt *.*
+quote:  "If you enter a count, it will replace the last one."
+given:  |abcdefghij
+keys:   x2x.
+expect: |fghij
+
+=== 3. on cw changes three words
+ref:    repeat.txt *.*
+quote:  "Repeat last change, with count replaced with [count]."
+given:  |one two three four
+keys:   cwX<Esc>w3.
+expect: X |X
+
+=== . after 3i repeats the count
+ref:    repeat.txt *.*
+quote:  "Without a count, the count of the last change is used."
+given:  |x
+keys:   3ia<Esc>.
+expect: aaaa|aax
+
+=== . after undo repeats the undone change
+ref:    repeat.txt *.*
+quote:  "Repeat last change, with count replaced with [count]."
+given:  |one two three
+keys:   dwu.
+expect: |two three
+
+=== a motion between changes is not repeated
+ref:    repeat.txt *.*
+quote:  "Repeat last change"
+given:
+  |ab
+  cd
+keys:   xj.
+expect:
+  b
+  |d
+
+=== a yank is not repeated
+ref:    repeat.txt *.*
+quote:  "Also repeat a yank command, when the 'y' flag is included in 'cpoptions'."
+given:  |abcd
+keys:   xyl.
+expect: |cd
+
+=== "1p then . puts register 2
+ref:    undo.txt *redo-register*
+quote:  "So if you first do '\"1P', the following \".\" will result in a '\"2P'."
+given:
+  |one
+  two
+  three
+keys:   dddddd"1p.
+expect:
+
+  three
+  |two
+regs:   "1 = "three\n"   "2 = "two\n"   "3 = "one\n"
+
+=== dd.... restored with "1P....
+ref:    undo.txt *redo-register*
+quote:  "If you deleted text with 'dd....' it can be restored with '\"1P....'."
+given:
+  |one
+  two
+  three
+  four
+  five
+  end
+keys:   dd...."1P....
+expect:
+  |one
+  two
+  three
+  four
+  five
+  end
+
+=== u. after "1P puts the next register instead
+ref:    undo.txt *redo-register*
+quote:  "An alternative is to try the first register with '\"1P', and if it is not what you want do 'u.'."
+given:
+  |one
+  two
+  three
+keys:   dddd"1Pu.
+expect:
+  |one
+  three
+
+=== dot field: dw then . on a fresh run
+ref:    repeat.txt *.*
+quote:  "Repeat last change"
+given:  |one two three
+keys:   dw
+expect: |two three
+dot:    |three
+undo:   |one two three

@@ -44,3 +44,17 @@ given:  |one two
 keys:   veo
 expect: [|on^e] two
 mode:   visual
+
+=== win
+ref:    oracle nvim v0.11.7
+given:  |one
+keys:   :split<CR>:vsplit<CR><C-W>l
+expect: |one
+win:    2/3
+
+=== bufs
+ref:    oracle nvim v0.11.7
+given:  |one
+keys:   :enew<CR>ix<Esc>:enew<CR>iy<Esc>:b1<CR>
+expect: |one
+bufs:   1% 2 3#

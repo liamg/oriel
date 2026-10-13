@@ -1,0 +1,10 @@
+# Grammars built into WASM by build.sh: name, repository, revision, directory in it, sha256 of the source tarball.
+# Revisions follow nvim-treesitter's parsers.lua at the commit the queries are from (../queries/SOURCE).
+runtime	tree-sitter/tree-sitter	v0.27.0	lib	d35c96e68736bd9569d2757c3cc71052485f33082c3825f1aed9d0e86013a159
+go	tree-sitter/tree-sitter-go	2346a3ab1bb3857b48b29d779a1ef9799a248cd7	.	94d08fc0f727a8dbe03203e2aaf1c5dc33a57e496b583049324eddc79769797b
+typescript	tree-sitter/tree-sitter-typescript	75b3874edb2dc714fb1fd77a32013d0f8699989f	typescript	96ce4d1b513767d414bcca408efd9b49879162cceecdbed79a88e8ad2184f385
+python	tree-sitter/tree-sitter-python	v0.25.0	.	4609a3665a620e117acf795ff01b9e965880f81745f287a16336f4ca86cf270c
+rust	tree-sitter/tree-sitter-rust	77a3747266f4d621d0757825e6b11edcbf991ca5	.	dee82ddfd01bfc3a8ed201cc03b56448107d3217a4b3a7a8fc7fa6bc32b2405b
+lua	tree-sitter-grammars/tree-sitter-lua	10fe0054734eec83049514ea2e718b2a56acd0c9	.	82c3ca5808de02addd9c7fb5275d89260c6557019aa6e40ca52c0595bf1d33cd
+markdown	tree-sitter-grammars/tree-sitter-markdown	a0a00f817d02412bd92c54d316f164d827b57b5c	tree-sitter-markdown	a712569a59f127fd44a1cb59eecdb05d63fa2ccb4622b7d822bff199bf6fb133
+markdown_inline	tree-sitter-grammars/tree-sitter-markdown	a0a00f817d02412bd92c54d316f164d827b57b5c	tree-sitter-markdown-inline	a712569a59f127fd44a1cb59eecdb05d63fa2ccb4622b7d822bff199bf6fb133

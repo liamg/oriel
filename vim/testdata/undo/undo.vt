@@ -1,0 +1,222 @@
+# Undo and redo from normal mode: u, CTRL-R, U, g- and g+.
+
+=== u undoes the last change
+ref:    undo.txt *u*
+quote:  "Undo [count] changes."
+given:  a|bc
+keys:   xu
+expect: a|bc
+
+=== u undoes a whole insert session at once
+ref:    undo.txt *undo-blocks*
+quote:  "One undo command normally undoes a typed command, no matter how many changes that command makes."
+given:  one |two
+keys:   inew <Esc>u
+expect: one |two
+
+=== u undoes a counted command as one change
+ref:    undo.txt *undo-blocks*
+quote:  "One undo command normally undoes a typed command"
+given:  |abcdef
+keys:   3xu
+expect: |abcdef
+
+=== uu undoes two changes
+ref:    undo.txt *undo-two-ways*
+quote:  "In the Vim way, \"uu\" undoes two changes."
+given:  |abcd
+keys:   xxuu
+expect: |abcd
+
+=== 2u undoes two changes
+ref:    undo.txt *u*
+quote:  "Undo [count] changes."
+given:  |abcd
+keys:   xxx2u
+expect: |bcd
+
+=== CTRL-R redoes an undone change
+ref:    undo.txt *CTRL-R*
+quote:  "Redo [count] changes which were undone."
+given:  |abcd
+keys:   xu<C-r>
+expect: |bcd
+
+=== 2 CTRL-R redoes two changes
+ref:    undo.txt *CTRL-R*
+quote:  "Redo [count] changes which were undone."
+given:  |abcd
+keys:   xxx3u2<C-r>
+expect: |cd
+
+=== u then CTRL-R is a no-op
+ref:    undo.txt *undo-two-ways*
+quote:  "\"u CTRL-R\" no-op"
+given:  |abcd
+keys:   xxu<C-r>
+expect: |cd
+
+=== CTRL-R with nothing undone says so
+ref:    undo.txt *CTRL-R*
+quote:  "Redo [count] changes which were undone."
+given:  |abcd
+keys:   x<C-r>
+expect: |bcd
+msg:    "Already at newest change"
+
+=== a new change after undo drops the redo
+ref:    undo.txt *undo-two-ways*
+quote:  "If you make a new change after the undo command, the redo will not be possible anymore."
+given:  |abcd
+keys:   xu$x<C-r>
+expect: ab|c
+
+=== undo puts the cursor back on the changed line
+ref:    undo.txt *u*
+quote:  "Undo [count] changes."
+given:
+  one
+  t|wo
+  three
+keys:   ddggu
+expect:
+  one
+  t|wo
+  three
+
+=== undo of a delete at the end of a line puts the cursor on the restored text
+ref:    undo.txt *u*
+quote:  "Undo [count] changes."
+given:  one |two
+keys:   D0u
+expect: one |two
+
+=== undo of a linewise put leaves the cursor on the line above
+ref:    undo.txt *u*
+quote:  "Undo [count] changes."
+given:
+  |one
+  two
+keys:   yyjpu
+expect:
+  one
+  |two
+
+=== undo of o
+ref:    undo.txt *undo-blocks*
+quote:  "One undo command normally undoes a typed command, no matter how many changes that command makes."
+given:
+  o|ne
+  two
+keys:   onew<Esc>u
+expect:
+  o|ne
+  two
+
+=== undo of J
+ref:    undo.txt *u*
+quote:  "Undo [count] changes."
+given:
+  o|ne
+  two
+keys:   Ju
+expect:
+  o|ne
+  two
+
+=== undo of a dot repeat undoes only the repeat
+ref:    undo.txt *undo-blocks*
+quote:  "One undo command normally undoes a typed command"
+given:  |one two three
+keys:   dw.u
+expect: |two three
+
+=== CTRL-G u splits an insert into two undo steps
+ref:    insert.txt *i_CTRL-G_u*
+quote:  "close undo sequence, start new change"
+given:  |x
+keys:   ione<C-g>u two<Esc>u
+expect: one|x
+
+=== U undoes all changes on the last changed line
+ref:    undo.txt *U*
+quote:  "Undo all latest changes on one line, the line where the latest change was made."
+given:
+  one
+  |abcd
+keys:   xxxU
+expect:
+  one
+  |abcd
+
+=== U undoes a previous U
+ref:    undo.txt *U*
+quote:  "|U| itself also counts as a change, and thus |U| undoes a previous |U|."
+given:
+  one
+  |abcd
+keys:   xxUU
+expect:
+  one
+  |cd
+
+=== u undoes U
+ref:    undo.txt *U*
+quote:  "Thus a \"u\" command undoes a \"U\" command and a 'CTRL-R' command redoes it again."
+given:
+  one
+  |abcd
+keys:   xxUu
+expect:
+  one
+  |cd
+
+=== CTRL-R redoes U
+ref:    undo.txt *U*
+quote:  "Thus a \"u\" command undoes a \"U\" command and a 'CTRL-R' command redoes it again."
+given:
+  one
+  |abcd
+keys:   xxUu<C-r>
+expect:
+  one
+  |abcd
+
+=== U after changes on two lines only restores the last line
+ref:    undo.txt *U*
+quote:  "the line where the latest change was made"
+given:
+  |ab
+  cd
+keys:   xjxxU
+expect:
+  b
+  |cd
+
+=== g- goes back into an earlier undo branch
+ref:    undo.txt *:later*
+quote:  "Now undo that by using \"g-\" three times:"
+given:  |one two three
+keys:   xxxuuuwxxxg-g-g-
+expect: | two three
+
+=== g- with a count walks through both branches to the original text
+ref:    undo.txt *g-*
+quote:  "Go to older text state.  With a count repeat that many times."
+given:  |one two three
+keys:   xxxuuuwxxx6g-
+expect: one |two three
+
+=== g+ goes forward to a newer text state
+ref:    undo.txt *g+*
+quote:  "Go to newer text state.  With a count repeat that many times."
+given:  |one two three
+keys:   xxxuuuwxxx3g-g+
+expect: one |wo three
+
+=== CTRL-R after undoing to the root follows the newest branch
+ref:    undo.txt *:later*
+quote:  "Note that using \"u\" and CTRL-R will not get you to all possible text states while repeating \"g-\" and \"g+\" does."
+given:  |one two three
+keys:   xxxuuuwxxx3u3<C-r>
+expect: one | three

@@ -2,7 +2,7 @@
 id: FW-10
 title: "Accessibility tree emitted from widget ids"
 phase: P1
-status: review
+status: done
 area: Framework (first, after the spike)
 module: ui
 depends_on: [FW-6]
@@ -24,7 +24,8 @@ depends_on: [FW-6]
 
 ## Done when
 
-VoiceOver reads the fixture's main regions (scripted manual check)
+the fixture's accessibility tree, emitted from widget ids, has its main regions with roles and names. A screen reader
+reading it needs the platform bridges, which are [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md)
 
 ## Rules
 

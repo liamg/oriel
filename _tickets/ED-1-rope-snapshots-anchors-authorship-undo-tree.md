@@ -2,7 +2,7 @@
 id: ED-1
 title: "Rope, snapshots, anchors, authorship, undo tree"
 phase: P2
-status: todo
+status: done
 area: Editor
 module: text
 depends_on: [FW-1]

@@ -367,3 +367,16 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Pick mode: click anything and see its token chain (component ← semantic ← palette), then choose which link to edit.
 - An OKLCH picker, derived or fixed values, and contrast and distinguishability lint on the spot.
 - Every edit is a minimal override written to your theme TOML, shown live at the bottom. Details are in `theming.md`.
+
+## 22 · Errors and the log (`:Log`)
+
+![37-errors](mockups/37-errors.png)
+
+- Error and warning toasts at the top right, with actions; the ✕/⚠ counts in the status line.
+- A config error marks its line in the file, and the toast's **Edit init.lua** link goes there; saving reloads.
+- The Log tab: Oriel, Session and All scopes, level chips, a filter, and an entry open on its traceback with the
+  failing source highlighted. Details are in `errors.md`.
+
+![38-crash](mockups/38-crash.png)
+
+- After a crash, the next launch shows the report with **Copy report** and a link to a new GitHub issue. Nothing is sent.

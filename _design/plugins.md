@@ -58,7 +58,8 @@ flowchart TB
 ## Contribution points
 
 **Editor**
-- keymaps (per mode, including custom modes), operators, motions, text objects.
+- keymaps (per mode, including custom modes), operators, motions, text objects (`vim.RegisterMotion`,
+  `vim.RegisterObject` in Go today; their Lua bindings come with PL-1).
 - ex commands with ranges, bang, counts and completion.
 - decorations: highlights, signs, virtual text, virtual lines, inline blocks, conceal.
 - filetypes and ftplugins, grammars, queries, formatters, linters, LSP and DAP specs.
@@ -156,6 +157,7 @@ type Registry interface {
     Provider(p agent.Provider) Disposable
     AgentTool(t AgentTool) Disposable
     Theme(t theme.Source) Disposable
+    Language(l LanguageSpec) Disposable           // filetypes, grammar .wasm, queries (ED-11)
 
     Run(ctx Ctx, id string, args Args) error      // every tier runs commands the same way
     Commands() []Command                          // what :Commands lists, with sources

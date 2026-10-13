@@ -1,6 +1,7 @@
 package vim_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/liamg/oriel/vim/vimtest"
@@ -9,6 +10,9 @@ import (
 
 func TestConformance(t *testing.T) {
 	for _, c := range vimtest.Load(t, "testdata/*/*.vt") {
+		if filepath.Base(filepath.Dir(c.File)) == "mined" {
+			continue // run by TestMined
+		}
 		t.Run(c.Name, func(t *testing.T) {
 			c.RequireRef(t)
 			if vimtest.Oracle() {
@@ -21,7 +25,7 @@ func TestConformance(t *testing.T) {
 					c.Compare(t, got)
 				}
 			}
-			t.Skip("no vim engine yet: ED-2 runs these cases against it")
+			c.Compare(t, vimtest.Run(t, newTestEngine, c))
 		})
 	}
 }

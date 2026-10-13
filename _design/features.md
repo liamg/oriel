@@ -23,7 +23,7 @@ How everything hangs together, built and tested before features land on it.
 | FW-7 | Theme tokens: layered resolution, live reload, the default black/yellow/orange theme | 17, 23 | theme | P1 | FW-4, FW-11 | token resolution tables; the fixture renders in every built-in theme |
 | FW-8 | Headless backend: display-list snapshots plus perceptual PNG diffs against the mockups | – | render | P1 | FW-4 | CI renders the fixture workspace and diffs it within threshold |
 | FW-9 | Layout tree and tab groups: **drag any pane to any tab group, dock, split or float**, animated drop targets, zoom, `⌃W` keys | 24 | layout | P1 | FW-6, FW-8 | snapshot tests for every move and drop target; drag and drop scripted in tests; layouts saved and restored |
-| FW-10 | Accessibility tree emitted from widget ids | – | ui | P1 | FW-6 | VoiceOver reads the fixture's main regions (scripted manual check) |
+| FW-10 | Accessibility tree emitted from widget ids | – | ui | P1 | FW-6 | the fixture's tree has its main regions with roles and names (screen readers: FW-12) |
 | FW-12 | Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux) | – | render/gio | P1 | FW-10 | VoiceOver and Orca read the fixture's main regions and press a button (scripted manual check) |
 
 ## Shell and navigation
@@ -42,19 +42,25 @@ How everything hangs together, built and tested before features land on it.
 | SH-10 | Help everywhere (right-click → Help, `K`, `⌘?`, `:help`) | 28 | help | P3→ | FW-6 | CI lint: every interactive element resolves to a help page and anchor |
 | SH-11 | Light, dark and theme editor (`:Theme`, pick mode) | 17, 23 | theme | P3, P7 | FW-7 | token resolution tests; the fixture renders in all built-in themes; pick-to-override writes the smallest TOML diff |
 | SH-12 | Settings page (`:Settings`, ⌘,): sections, search, typed controls, scopes, modified and reset; `settings.toml` storage | 19 | app, registry | P3 | FW-3, FW-6, FW-11 | `settings.md` precedence tests; a GUI edit and a reset each change exactly one line of a hand-commented file; Lua-set options are read-only with their source |
+| SH-13 | Errors, notifications and the log panel: one `Notified` event for every notice, an Oriel log and a log per session, the status line, toasts and ✕/⚠ counts, `:Log` with stack traces and highlighted source, `log/slog` to a ring and a rotating file, panics recovered per contribution, crash reports | 37, 38 | core, app, ui | P3 | FW-2, FW-6, FW-9, ED-6 | snapshots of each notice placement and the log panel; repeats collapse; panicking contributions are turned off and the app keeps going; crash report offered on next launch; secrets redacted; replay reproduces the history |
 
 ## Editor
 
 | ID | Feature | Mockup | Module | Phase | After | Done when |
 |---|---|---|---|---|---|---|
 | ED-1 | Rope, snapshots, anchors, authorship, undo tree | – | text | P2 | FW-1 | property tests against a naive model; fuzzing with no failures for 1 hour |
-| ED-2 | Vim engine: motions, operators, text objects, registers, marks, dot, counts | 01 | vim | P2 | ED-1, P0-3 | the `.vt` suite passes, oracle mode passes, mined vim tests above 90% passing |
+| ED-2 | Vim engine: motions, operators, text objects, registers, marks, dot, counts | 01 | vim | P2 | ED-1, P0-3 | the `.vt` suite passes, oracle mode passes, every mined vim test passes (or carries a reviewed `deviation:`) |
 | ED-3 | Visual and visual-block, `:s`/`:g` with vim regex, ranges | 09 | vim | P2 | ED-2 | the same, plus the regex conformance suite |
 | ED-4 | Macros, folds, splits, buffers, quickfix | – | vim | P2–P4 | ED-2, FW-9 | the same |
 | ED-5 | `plain` engine and the `input.Engine` interface (emacs as a plugin) | – | input | P3 | ED-2, FW-3 | an engine swap at runtime per buffer; a sample emacs plugin passes its tests |
-| ED-6 | Tree-sitter highlighting, folds, outline, code units | 01, 25 | syntax | P2 | ED-1 | highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1 ms |
+| ED-6 | Tree-sitter highlighting, folds, outline, code units | 01, 25 | syntax | P2 | ED-1 | highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1 ms in a 600-line file, and no keystroke waits on a parse at any size |
 | ED-7 | Decorations between lines: threads, explain cards, diffs, virtual text | 01 | ui, editor | P3 | ED-1, FW-6 | the layout engine places blocks at anchors and survives edits above them |
 | ED-8 | Multi-cursor and LSP rename preview | 09 | edit | P4 | ED-7, LS-1 | – |
+| ED-9 | `.editorconfig`, the IDE-relevant `.gitattributes` (eol, binary, encoding, generated), and opt-in modelines as a buffer-scoped settings layer | 19 | registry, edit | P3 | ED-2, SH-12 | EditorConfig core test suite passes; `.gitattributes` fixtures match `git check-attr`; properties show with their source on the settings page; edits re-apply live |
+| ED-12 | Editor pane and files: the buffer drawn with highlights, cursor, selections and folds; keys through the keymap registry; the engine's windows as FW-9's panes; load and save (BOM, CRLF, atomic writes), modified, reload on change; `:w`/`:q`/`:e`; `oriel {file}` | 01 | editor, edit | P3 | ED-4, ED-6, FW-6, FW-9, SH-13 | pane snapshots and a golden PNG against the mockup; edits written byte-for-byte as nvim writes them; notices, `:ls`, quickfix and the clipboard go through the IDE; `:q` on changes and reload behave as vim; splits and drags change one tree; under 8 ms keypress to frame in a 10k-line file |
+| ED-11 | Languages as plugins: a registry language contribution, the built-in languages as a built-in plugin, a compressed core set of ~25 grammars, an on-disk compile cache, local grammar packs | – | syntax, registry | P3 | ED-6, FW-3 | a registered language highlights and shadows a built-in; every core grammar has a golden fixture; binary grows < 8 MB; a cached grammar opens in < 20 ms; a dropped-in pack is used |
+| ED-13 | Editor options in the registry: the engine's options as `OptionSpec`s with vim aliases, `:set` and the settings page on one value, `editor.clipboard`, and the option list checked against the registry | – | vim, registry | P3 | ED-12, SH-12 | the `.vt` suite passes with options from the registry; `:set` shows on the settings page; `editor.clipboard` switches `y`/`p` between the system clipboard and registers; the option-list test passes |
+| ED-10 | PCRE2 regex outside the vim engine: project search, the `plain` engine, the plugin and Lua API | – | regex | P3 | ED-3 | PCRE2's own test suite passes for supported features; the Lua API takes PCRE2 patterns |
 
 ## Files, git, terminals
 
@@ -121,8 +127,9 @@ How everything hangs together, built and tested before features land on it.
 | ID | Feature | Mockup | Module | Phase | After | Done when |
 |---|---|---|---|---|---|---|
 | PL-1 | Lua config and plugins, `:Hooks`, `:Inspect`, LuaLS types | 19, 20 | script, registry | P3 | FW-3 | the `scripting.md` sample `init.lua` runs as written |
+| PL-12 | Lua errors: source names and tracebacks, a notice plus a diagnostic on the line, the `:lua` REPL, last good config kept, hooks turned off after 3 errors | 19 | script | P3 | PL-1, SH-13 | fixture configs give the right `file:line`, frames and diagnostics; a broken reload keeps the old config; a failing hook is turned off and back on |
 | PL-2 | Process plugins with an OS sandbox; WASM plugins; `oriel build --with` | 16 | ext | P7 | PL-1 | the capability guard rejects undeclared calls; Landlock/sandbox-exec profiles applied |
-| PL-3 | All-or-nothing install consent, update capability diff | 29 | ext | P7 | PL-2 | – |
+| PL-3 | All-or-nothing install consent, update capability diff; grammar packs (CI-built, checksummed) | 29 | ext | P7 | PL-2, ED-11 | – |
 | PL-4 | Comms assistant drawer (utility session, no `-p`) | 11 | assistant | P7 | AI-2 | – |
 | PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | integ/agentbus | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus |
 | PL-8 | Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source | 04, 02 | integ/linear (plugin) | P7 | PL-2, SE-1 | `crit-reference.md` → Linear, against a recorded Linear API |

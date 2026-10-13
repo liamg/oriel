@@ -1,0 +1,300 @@
+   1 | //! Areas of shapes.
+     | ^^^^^^^^^^^^^^^^^^^^ comment.documentation
+   2 | use std::collections::HashMap;
+     | ^^^ keyword.import
+     |     ^^^ module
+     |        ^^ punctuation.delimiter
+     |          ^^^^^^^^^^^ module
+     |                     ^^ punctuation.delimiter
+     |                       ^^^^^^^ type
+     |                              ^ punctuation.delimiter
+   3 | use std::fmt;
+     | ^^^ keyword.import
+     |     ^^^ module
+     |        ^^ punctuation.delimiter
+     |          ^^^ variable
+     |             ^ punctuation.delimiter
+   4 | 
+   5 | /// Anything with an area.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.documentation
+   6 | pub trait Shape {
+     | ^^^ keyword.modifier
+     |     ^^^^^ keyword.type
+     |           ^^^^^ type
+     |                 ^ punctuation.bracket
+   7 |     fn area(&self) -> f64;
+     |     ^^ keyword.function
+     |        ^^^^ function
+     |            ^ punctuation.bracket
+     |             ^ operator
+     |              ^^^^ variable.builtin
+     |                  ^ punctuation.bracket
+     |                    ^^ punctuation.delimiter
+     |                       ^^^ type.builtin
+     |                          ^ punctuation.delimiter
+   8 | }
+     | ^ punctuation.bracket
+   9 | 
+  10 | #[derive(Debug, Clone)]
+     | ^ punctuation.special
+     |  ^ punctuation.bracket
+     |   ^^^^^^ function.macro
+     |         ^ punctuation.bracket
+     |          ^^^^^ type
+     |               ^ punctuation.delimiter
+     |                 ^^^^^ type
+     |                      ^^ punctuation.bracket
+  11 | pub struct Circle {
+     | ^^^ keyword.modifier
+     |     ^^^^^^ keyword.type
+     |            ^^^^^^ type
+     |                   ^ punctuation.bracket
+  12 |     pub radius: f64,
+     |     ^^^ keyword.modifier
+     |         ^^^^^^ variable.member
+     |               ^ punctuation.delimiter
+     |                 ^^^ type.builtin
+     |                    ^ punctuation.delimiter
+  13 | }
+     | ^ punctuation.bracket
+  14 | 
+  15 | impl Shape for Circle {
+     | ^^^^ keyword
+     |      ^^^^^ type
+     |            ^^^ keyword
+     |                ^^^^^^ type
+     |                       ^ punctuation.bracket
+  16 |     fn area(&self) -> f64 {
+     |     ^^ keyword.function
+     |        ^^^^ function
+     |            ^ punctuation.bracket
+     |             ^ operator
+     |              ^^^^ variable.builtin
+     |                  ^ punctuation.bracket
+     |                    ^^ punctuation.delimiter
+     |                       ^^^ type.builtin
+     |                           ^ punctuation.bracket
+  17 |         std::f64::consts::PI * self.radius.powi(2)
+     |         ^^^ module
+     |            ^^ punctuation.delimiter
+     |              ^^^ module
+     |                 ^^ punctuation.delimiter
+     |                   ^^^^^^ module
+     |                         ^^ punctuation.delimiter
+     |                           ^^ constant
+     |                              ^ operator
+     |                                ^^^^ variable.builtin
+     |                                    ^ punctuation.delimiter
+     |                                     ^^^^^^ variable.member
+     |                                           ^ punctuation.delimiter
+     |                                            ^^^^ function.call
+     |                                                ^ punctuation.bracket
+     |                                                 ^ number
+     |                                                  ^ punctuation.bracket
+  18 |     }
+     |     ^ punctuation.bracket
+  19 | }
+     | ^ punctuation.bracket
+  20 | 
+  21 | pub enum Kind<'a> {
+     | ^^^ keyword.modifier
+     |     ^^^^ keyword.type
+     |          ^^^^ type
+     |              ^ punctuation.bracket
+     |               ^ keyword.modifier
+     |                ^ attribute
+     |                 ^ punctuation.bracket
+     |                   ^ punctuation.bracket
+  22 |     Named(&'a str),
+     |     ^^^^^ constant
+     |          ^ punctuation.bracket
+     |           ^ operator
+     |            ^ keyword.modifier
+     |             ^ attribute
+     |               ^^^ type.builtin
+     |                  ^ punctuation.bracket
+     |                   ^ punctuation.delimiter
+  23 |     Unit,
+     |     ^^^^ constant
+     |         ^ punctuation.delimiter
+  24 | }
+     | ^ punctuation.bracket
+  25 | 
+  26 | impl fmt::Display for Circle {
+     | ^^^^ keyword
+     |      ^^^ module
+     |         ^^ punctuation.delimiter
+     |           ^^^^^^^ type
+     |                   ^^^ keyword
+     |                       ^^^^^^ type
+     |                              ^ punctuation.bracket
+  27 |     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+     |     ^^ keyword.function
+     |        ^^^ function
+     |           ^ punctuation.bracket
+     |            ^ operator
+     |             ^^^^ variable.builtin
+     |                 ^ punctuation.delimiter
+     |                   ^ variable.parameter
+     |                    ^ punctuation.delimiter
+     |                      ^ operator
+     |                       ^^^ keyword.modifier
+     |                           ^^^ module
+     |                              ^^ punctuation.delimiter
+     |                                ^^^^^^^^^ type
+     |                                         ^ punctuation.bracket
+     |                                          ^ keyword.modifier
+     |                                           ^ attribute.builtin
+     |                                            ^^ punctuation.bracket
+     |                                               ^^ punctuation.delimiter
+     |                                                  ^^^ module
+     |                                                     ^^ punctuation.delimiter
+     |                                                       ^^^^^^ type
+     |                                                              ^ punctuation.bracket
+  28 |         write!(f, "circle r={}", self.radius)
+     |         ^^^^^^ function.macro
+     |               ^ punctuation.bracket
+     |                ^ variable
+     |                 ^ punctuation.delimiter
+     |                   ^^^^^^^^^^^^^ string
+     |                                ^ punctuation.delimiter
+     |                                  ^^^^ variable.builtin
+     |                                      ^ punctuation.delimiter
+     |                                       ^^^^^^ variable.member
+     |                                             ^ punctuation.bracket
+  29 |     }
+     |     ^ punctuation.bracket
+  30 | }
+     | ^ punctuation.bracket
+  31 | 
+  32 | pub fn total(shapes: &[Box<dyn Shape>]) -> Result<f64, String> {
+     | ^^^ keyword.modifier
+     |     ^^ keyword.function
+     |        ^^^^^ function
+     |             ^ punctuation.bracket
+     |              ^^^^^^ variable.parameter
+     |                    ^ punctuation.delimiter
+     |                      ^ operator
+     |                       ^ punctuation.bracket
+     |                        ^^^ type
+     |                           ^ punctuation.bracket
+     |                            ^^^ keyword.modifier
+     |                                ^^^^^ type
+     |                                     ^^^ punctuation.bracket
+     |                                         ^^ punctuation.delimiter
+     |                                            ^^^^^^ type
+     |                                                  ^ punctuation.bracket
+     |                                                   ^^^ type.builtin
+     |                                                      ^ punctuation.delimiter
+     |                                                        ^^^^^^ type
+     |                                                              ^ punctuation.bracket
+     |                                                                ^ punctuation.bracket
+  33 |     let mut sum = 0.0_f64;
+     |     ^^^ keyword
+     |         ^^^ keyword.modifier
+     |             ^^^ variable
+     |                 ^ operator
+     |                   ^^^^^^^ number.float
+     |                          ^ punctuation.delimiter
+  34 |     let mut seen: HashMap<usize, bool> = HashMap::new();
+     |     ^^^ keyword
+     |         ^^^ keyword.modifier
+     |             ^^^^ variable
+     |                 ^ punctuation.delimiter
+     |                   ^^^^^^^ type
+     |                          ^ punctuation.bracket
+     |                           ^^^^^ type.builtin
+     |                                ^ punctuation.delimiter
+     |                                  ^^^^ type.builtin
+     |                                      ^ punctuation.bracket
+     |                                        ^ operator
+     |                                          ^^^^^^^ type
+     |                                                 ^^ punctuation.delimiter
+     |                                                   ^^^ function.call
+     |                                                      ^^ punctuation.bracket
+     |                                                        ^ punctuation.delimiter
+  35 |     for (i, s) in shapes.iter().enumerate() {
+     |     ^^^ keyword.repeat
+     |         ^ punctuation.bracket
+     |          ^ variable
+     |           ^ punctuation.delimiter
+     |             ^ variable
+     |              ^ punctuation.bracket
+     |                ^^ keyword.repeat
+     |                   ^^^^^^ variable
+     |                         ^ punctuation.delimiter
+     |                          ^^^^ function.call
+     |                              ^^ punctuation.bracket
+     |                                ^ punctuation.delimiter
+     |                                 ^^^^^^^^^ function.call
+     |                                          ^^ punctuation.bracket
+     |                                             ^ punctuation.bracket
+  36 |         match s.area() {
+     |         ^^^^^ keyword.conditional
+     |               ^ variable
+     |                ^ punctuation.delimiter
+     |                 ^^^^ function.call
+     |                     ^^ punctuation.bracket
+     |                        ^ punctuation.bracket
+  37 |             a if a < 0.0 => return Err(format!("shape {i}")),
+     |             ^ variable
+     |               ^^ keyword.conditional
+     |                  ^ variable
+     |                    ^ operator
+     |                      ^^^ number.float
+     |                          ^^ punctuation.delimiter
+     |                             ^^^^^^ keyword.return
+     |                                    ^^^ constant.builtin
+     |                                       ^ punctuation.bracket
+     |                                        ^^^^^^^ function.macro
+     |                                               ^ punctuation.bracket
+     |                                                ^^^^^^^^^^^ string
+     |                                                           ^^ punctuation.bracket
+     |                                                             ^ punctuation.delimiter
+  38 |             a => sum += a,
+     |             ^ variable
+     |               ^^ punctuation.delimiter
+     |                  ^^^ variable
+     |                      ^^ operator
+     |                         ^ variable
+     |                          ^ punctuation.delimiter
+  39 |         }
+     |         ^ punctuation.bracket
+  40 |         seen.insert(i, true);
+     |         ^^^^ variable
+     |             ^ punctuation.delimiter
+     |              ^^^^^^ function.call
+     |                    ^ punctuation.bracket
+     |                     ^ variable
+     |                      ^ punctuation.delimiter
+     |                        ^^^^ boolean
+     |                            ^ punctuation.bracket
+     |                             ^ punctuation.delimiter
+  41 |     }
+     |     ^ punctuation.bracket
+  42 |     let add = |x: f64| -> f64 { x + 1.0 };
+     |     ^^^ keyword
+     |         ^^^ variable
+     |             ^ operator
+     |               ^ punctuation.bracket
+     |                ^ variable.parameter
+     |                 ^ punctuation.delimiter
+     |                  ^^^^ variable.parameter
+     |                      ^ punctuation.bracket
+     |                        ^^ punctuation.delimiter
+     |                           ^^^ type.builtin
+     |                               ^ punctuation.bracket
+     |                                 ^ variable
+     |                                   ^ operator
+     |                                     ^^^ number.float
+     |                                         ^ punctuation.bracket
+     |                                          ^ punctuation.delimiter
+  43 |     Ok(add(sum))
+     |     ^^ constant.builtin
+     |       ^ punctuation.bracket
+     |        ^^^ function.call
+     |           ^ punctuation.bracket
+     |            ^^^ variable
+     |               ^^ punctuation.bracket
+  44 | }
+     | ^ punctuation.bracket

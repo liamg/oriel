@@ -1,0 +1,150 @@
+# * # g* g#, wrapscan, and the last search pattern shared with :s.
+
+=== * searches for the whole keyword under the cursor
+ref:    pattern.txt *star*
+quote:  Only whole keywords are searched for, like with the command "/\<keyword\>".
+given:  f|oo foobar foo
+keys:   *
+expect: foo foobar |foo
+
+=== * uses the first keyword after the cursor
+ref:    pattern.txt *star*
+quote:  2. the first keyword after the cursor, in the current line
+given:  |  bar x bar
+keys:   *
+expect:
+    bar x |bar
+
+=== * on punctuation uses the non-blank word under the cursor
+ref:    pattern.txt *star*
+quote:  3. the non-blank word under the cursor
+given:  |+++ --- +++
+keys:   *
+expect: +++ --- |+++
+
+=== * with a count
+ref:    pattern.txt *star*
+quote:  Search forward for the [count]'th occurrence of the word nearest to the cursor.
+given:  |ab ab ab ab
+keys:   2*
+expect: ab ab |ab ab
+
+=== * is not affected by 'ignorecase' being off
+ref:    pattern.txt *star*
+quote:  'ignorecase' is used, 'smartcase' is not.
+given:  |ab AB ab
+keys:   *
+expect: ab AB |ab
+
+=== # searches backward for the whole keyword
+ref:    pattern.txt *#*
+quote:  Same as "*", but search backward.
+given:  foo foobar f|oo
+keys:   #
+expect: |foo foobar foo
+
+=== g* also finds the word inside other words
+ref:    pattern.txt *gstar*
+quote:  This makes the search also find matches that are not a whole word.
+given:  f|oo foobar foo
+keys:   g*
+expect: foo |foobar foo
+
+=== g# also finds the word inside other words
+ref:    pattern.txt *g#*
+quote:  This makes the search also find matches that are not a whole word.
+given:  barfoo x f|oo
+keys:   g#
+expect: bar|foo x foo
+
+=== n after * keeps searching for the word
+ref:    pattern.txt *star*
+quote:  Only whole keywords are searched for, like with the command "/\<keyword\>".
+given:  |ab abc ab ab
+keys:   *n
+expect: ab abc ab |ab
+
+=== n after # keeps searching backward
+ref:    pattern.txt *#*
+quote:  Same as "*", but search backward.
+given:  ab ab ab a|b
+keys:   #n
+expect: ab |ab ab ab
+
+=== :s is a jump
+ref:    motion.txt *jump-motions*
+quote:  following commands are "jump" commands: "'", "`", "G", "/", "?", "n", "N", "%", "(", ")", "[[", "]]", "{", "}", ":s"
+given:
+  |ab
+  ab
+keys:   :2s/a/x/<CR>
+expect:
+  ab
+  |xb
+jumps:  1:0
+
+=== * on the only occurrence wraps back to it
+ref:    options.txt *'wrapscan'*
+quote:  Searches wrap around the end of the file.
+given:  x |ab y
+keys:   *
+expect: x |ab y
+
+=== / wraps around the end of the buffer
+ref:    pattern.txt *last-pattern*
+quote:  If the 'wrapscan' option is on (which is the default), searches wrap around the end of the buffer.
+given:
+  foo a
+  b|ar
+keys:   /foo<CR>
+expect:
+  |foo a
+  bar
+
+=== ? wraps around the start of the buffer
+ref:    pattern.txt *last-pattern*
+quote:  If the 'wrapscan' option is on (which is the default), searches wrap around the end of the buffer.
+given:
+  b|ar
+  a foo
+keys:   ?foo<CR>
+expect:
+  bar
+  a |foo
+
+=== n wraps around too
+ref:    options.txt *'wrapscan'*
+quote:  Searches wrap around the end of the file.
+given:  |x a1 a2
+keys:   /a<CR>nn
+expect: x |a1 a2
+
+=== search with no match does not move the cursor even with wrapscan
+ref:    pattern.txt *last-pattern*
+quote:  If 'wrapscan' is set and the pattern was not found the error message "pattern not found" is given, and the cursor will not be moved.
+given:
+  one
+  t|wo
+keys:   /zzz<CR>
+expect:
+  one
+  t|wo
+msg:    E486: Pattern not found: zzz
+
+=== :s sets the pattern n searches for
+ref:    pattern.txt *last-pattern*
+quote:  Note that two patterns are remembered: One for "normal" search commands and one for the substitute command ":s".
+given:
+  |foo x
+  y foo
+keys:   :s/foo/bar/<CR>n
+expect:
+  bar x
+  y |foo
+
+=== * sets the pattern used by :s//
+ref:    pattern.txt *last-pattern*
+quote:  Each time an empty pattern is given, the previously used pattern is used.
+given:  |ab abc ab
+keys:   *:s//X/g<CR>
+expect: |X abc X

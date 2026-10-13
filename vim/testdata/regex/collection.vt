@@ -1,0 +1,246 @@
+# Collections: [abc], [^abc], ranges, [:class:] expressions, escapes inside [], and \_[] with line breaks.
+# Buffer markup escapes [ and ] as \[ and \].
+
+=== [] matches any one character in it
+ref:    pattern.txt */[]*
+quote:  It matches any single character in the collection.
+given:  |xaybz
+keys:   :s/[xyz]/(&)/g<CR>
+expect: |(x)a(y)b(z)
+
+=== [^] matches any character not in it
+ref:    pattern.txt *E944*
+quote:  "\"[^xyz]\" matches anything but 'x', 'y' and 'z'."
+given:  |xaybz
+keys:   :s/[^xyz]/(&)/g<CR>
+expect: |x(a)y(b)z
+
+=== [a-z] is a range
+ref:    pattern.txt *E944*
+quote:  "\"[0-9]\" matches any decimal digit."
+given:  |a1B2c
+keys:   :s/[a-z0-9]\+/(&)/g<CR>
+expect: |(a1)B(2c)
+
+=== [a-zA-Z]$ matches a letter at the end of the line
+ref:    pattern.txt */[]*
+quote:  any alphabetic character at the end of a line
+given:  |ab1 cD
+keys:   :s/[a-zA-Z]$/(&)/<CR>
+expect: |ab1 c(D)
+
+=== a range of non-ASCII characters
+ref:    pattern.txt *E944*
+quote:  Non-ASCII characters can be used, but the character values must not be more than 256 apart in the old regexp engine.
+given:  |aéèz
+keys:   :s/[à-ÿ]\+/(&)/<CR>
+expect: |a(éè)z
+
+=== [^] does not match an end-of-line
+ref:    pattern.txt */[\n]*
+quote:  Without the "\_" or "\n" the collection does not match an end-of-line.
+given:
+  |a
+  b
+keys:   :%s/a[^x]b/X/e<CR>
+expect:
+  |a
+  b
+
+=== [\n] in a collection matches an end-of-line
+ref:    pattern.txt */[\n]*
+quote:  The same can be done by including "\n" in the collection.
+given:
+  |a
+  b
+keys:   :%s/a[\n]b/X/<CR>
+expect:
+  |X
+
+=== \_[] adds the end-of-line to a collection
+ref:    pattern.txt */[\n]*
+quote:  With "\_" prepended the collection also includes the end-of-line.
+given:
+  |a
+  b
+keys:   :%s/a\_[xyz]b/X/<CR>
+expect:
+  |X
+
+=== \_[^ab] matches the end-of-line too
+ref:    pattern.txt */[\n]*
+quote:  Thus "\_[^ab]" matches the end-of-line and any character but "a" and "b".
+given:
+  |x
+  y x-y
+keys:   :%s/x\_[^ab]y/Z/g<CR>
+expect:
+  |Z Z
+
+=== [:alpha:] matches ASCII letters
+ref:    pattern.txt *[:alpha:]*
+quote:  ASCII letters
+given:  |ab1c
+keys:   :s/[[:alpha:]]\+/(&)/g<CR>
+expect: |(ab)1(c)
+
+=== [:digit:] matches digits
+ref:    pattern.txt *[:digit:]*
+quote:  decimal digits '0' to '9'
+given:  |ab12c
+keys:   :s/[[:digit:]]\+/(&)/g<CR>
+expect: |ab(12)c
+
+=== [:alnum:] matches letters and digits
+ref:    pattern.txt *[:alnum:]*
+quote:  ASCII letters and digits
+given:  |a1-b2
+keys:   :s/[[:alnum:]]\+/(&)/g<CR>
+expect: |(a1)-(b2)
+
+=== [:space:] matches white space
+ref:    pattern.txt *[:space:]*
+quote:  whitespace characters: space, tab, CR, NL, vertical tab, form feed
+given:  |a b	c
+keys:   :s/[[:space:]]/_/g<CR>
+expect: |a_b_c
+
+=== [:blank:] matches space and tab
+ref:    pattern.txt *[:blank:]*
+quote:  space and tab
+given:  |a b	c
+keys:   :s/[[:blank:]]/_/g<CR>
+expect: |a_b_c
+
+=== [:upper:] matches uppercase letters
+ref:    pattern.txt *[:upper:]*
+quote:  uppercase letters
+given:  |aBcD
+keys:   :s/[[:upper:]]/(&)/g<CR>
+expect: |a(B)c(D)
+
+=== [:lower:] matches multibyte lowercase letters
+ref:    pattern.txt *[:fname:]*
+quote:  These items only work for 8-bit characters, except [:lower:] and [:upper:] also work for multibyte characters when using the new regexp engine.
+given:  |ÉéAa
+keys:   :s/[[:lower:]]/(&)/g<CR>
+expect: |É(é)A(a)
+
+=== [:upper:] matches multibyte uppercase letters
+ref:    pattern.txt *[:fname:]*
+quote:  These items only work for 8-bit characters, except [:lower:] and [:upper:] also work for multibyte characters when using the new regexp engine.
+given:  |ÉéAa
+keys:   :s/[[:upper:]]/(&)/g<CR>
+expect: |(É)é(A)a
+
+=== [:punct:] matches punctuation
+ref:    pattern.txt *[:punct:]*
+quote:  ASCII punctuation characters
+given:  |a,b!c
+keys:   :s/[[:punct:]]/(&)/g<CR>
+expect: |a(,)b(!)c
+
+=== [:xdigit:] matches hex digits
+ref:    pattern.txt *[:xdigit:]*
+quote:  hexadecimal digits: 0-9, a-f, A-F
+given:  |fg0
+keys:   :s/[[:xdigit:]]/(&)/g<CR>
+expect: |(f)g(0)
+
+=== [:keyword:] is the same as \k
+ref:    pattern.txt *[:keyword:]*
+quote:  keyword character (same as "\k")
+given:  |café-x
+keys:   :s/[[:keyword:]]\+/(&)/g<CR>
+expect: |(café)-(x)
+
+=== class expressions combine with other characters
+ref:    pattern.txt *[:fname:]*
+quote:  "\"[-./[:alnum:]_~]\\+\".  That is, a list of at least one character, each of which is either '-', '.', '/', alphabetic, numeric, '_' or '~'."
+given:  |see ./a-b_c~ ok
+keys:   :s/[-./[:alnum:]_~]\+/(&)/g<CR>
+expect: |(see) (./a-b_c~) (ok)
+
+=== ] first in a collection is literal
+ref:    pattern.txt */\]*
+quote:  For ']' you can also make it the first character (following a possible "^"):  "[]xyz]" or "[^]xyz]".
+given:  |a\]b
+keys:   :s/[]b]/(&)/g<CR>
+expect: |a(\])(b)
+
+=== \] inside a collection is literal
+ref:    pattern.txt */\]*
+quote:  To include a literal ']', '^', '-' or '\' in the collection, put a backslash before it:
+given:  |a\]b
+keys:   :s/[x\]]/(&)/g<CR>
+expect: |a(\])b
+
+=== - at the end of a collection is literal
+ref:    pattern.txt */\]*
+quote:  For '-' you can also make it the first or last character: "[-xyz]", "[^-xyz]" or "[xyz-]".
+given:  |a-b
+keys:   :s/[x-]/(&)/g<CR>
+expect: |a(-)b
+
+=== \^ inside a collection is literal
+ref:    pattern.txt */\]*
+quote:  To include a literal ']', '^', '-' or '\' in the collection, put a backslash before it:
+given:  |a\^b
+keys:   :s/[\^b]/(&)/g<CR>
+expect: |a(\^)(b)
+
+=== \\ inside a collection is a backslash
+ref:    pattern.txt */\]*
+quote:  To include a literal ']', '^', '-' or '\' in the collection, put a backslash before it:
+given:  |a\b
+keys:   :s/[\\]/(&)/g<CR>
+expect: |a(\)b
+
+=== \t inside a collection is a tab
+ref:    pattern.txt */\]*
+quote:  The following translations are accepted when the 'l' flag is not included in 'cpoptions':
+given:  |a	b
+keys:   :s/[\t]/T/g<CR>
+expect: |aTb
+
+=== \d123 inside a collection is a decimal character code
+ref:    pattern.txt */\]*
+quote:  decimal number of character
+given:  |bab
+keys:   :s/[\d97]/(&)/g<CR>
+expect: |b(a)b
+
+=== \u inside a collection is a multibyte character code
+ref:    pattern.txt */\]*
+quote:  hex. number of multibyte character up to 0xffff
+given:  |5€ 6$
+keys:   :s/[€$]/(&)/g<CR>
+expect: |5(€) 6($)
+
+=== an unclosed [ is a literal [
+ref:    pattern.txt *E769*
+quote:  When the ']' is not there Vim will not give an error message but assume no collection is used.  Useful to search for '['.
+given:  |x a\[b
+keys:   /a[b<CR>
+expect: x |a\[b
+
+=== :s/[/x/ treats the whole command as the pattern
+ref:    pattern.txt *E769*
+quote:  "\":s/[/x/\" searches for \"[/x\" and replaces it with nothing."
+given:  |a\[/x/b
+keys:   :s/[/x/<CR>
+expect: |ab
+
+=== [[=e=]] matches equivalent characters
+ref:    pattern.txt */[[=*
+quote:  An equivalence class.  This means that characters are matched that have almost the same meaning, e.g., when ignoring accents.
+given:  |eéèx
+keys:   :s/[[=e=]]/(&)/g<CR>
+expect: |(e)(é)(è)x
+
+=== [[.a.]] is a collation element
+ref:    pattern.txt */[[.*
+quote:  A collation element.  This currently simply accepts a single character in the form:
+given:  |bab
+keys:   :s/[[.a.]]/(&)/g<CR>
+expect: |b(a)b

@@ -1,0 +1,183 @@
+   1 | -- Areas of shapes.
+     | ^^^^^^^^^^^^^^^^^^^ comment
+   2 | local M = {}
+     | ^^^^^ keyword
+     |       ^ constant
+     |         ^ operator
+     |           ^^ constructor
+   3 | 
+   4 | local PI <const> = math.pi
+     | ^^^^^ keyword
+     |       ^^ constant
+     |          ^ punctuation.bracket
+     |           ^^^^^ attribute
+     |                ^ punctuation.bracket
+     |                  ^ operator
+     |                    ^^^^ module.builtin
+     |                        ^ punctuation.delimiter
+     |                         ^^ variable.member
+   5 | 
+   6 | ---@param r number
+     | ^^^^^^^^^^^^^^^^^^ comment.documentation
+   7 | ---@return number
+     | ^^^^^^^^^^^^^^^^^ comment.documentation
+   8 | function M.circle(r)
+     | ^^^^^^^^ keyword.function
+     |          ^ constant
+     |           ^ punctuation.delimiter
+     |            ^^^^^^ function
+     |                  ^ punctuation.bracket
+     |                   ^ variable.parameter
+     |                    ^ punctuation.bracket
+   9 |   return PI * r ^ 2
+     |   ^^^^^^ keyword.return
+     |          ^^ constant
+     |             ^ operator
+     |               ^ variable
+     |                 ^ operator
+     |                   ^ number
+  10 | end
+     | ^^^ keyword.function
+  11 | 
+  12 | function M:total(shapes)
+     | ^^^^^^^^ keyword.function
+     |          ^ constant
+     |           ^ punctuation.delimiter
+     |            ^^^^^ function.method
+     |                 ^ punctuation.bracket
+     |                  ^^^^^^ variable.parameter
+     |                        ^ punctuation.bracket
+  13 |   local sum = 0
+     |   ^^^^^ keyword
+     |         ^^^ variable
+     |             ^ operator
+     |               ^ number
+  14 |   for i, s in ipairs(shapes) do
+     |   ^^^ keyword.repeat
+     |       ^ variable
+     |        ^ punctuation.delimiter
+     |          ^ variable
+     |            ^^ keyword
+     |               ^^^^^^ function.builtin
+     |                     ^ punctuation.bracket
+     |                      ^^^^^^ variable
+     |                            ^ punctuation.bracket
+     |                              ^^ keyword.repeat
+  15 |     if type(s) ~= "table" then
+     |     ^^ keyword.conditional
+     |        ^^^^ function.builtin
+     |            ^ punctuation.bracket
+     |             ^ variable
+     |              ^ punctuation.bracket
+     |                ^^ operator
+     |                   ^^^^^^^ string
+     |                           ^^^^ keyword.conditional
+  16 |       error(("shape %d is not a table"):format(i))
+     |       ^^^^^ function.builtin
+     |            ^^ punctuation.bracket
+     |              ^^^^^^^^^^^^^^^^^^^^^^^^^ string
+     |                                       ^ punctuation.bracket
+     |                                        ^ punctuation.delimiter
+     |                                         ^^^^^^ function.method.call
+     |                                               ^ punctuation.bracket
+     |                                                ^ variable
+     |                                                 ^^ punctuation.bracket
+  17 |     elseif s.area == nil then
+     |     ^^^^^^ keyword.conditional
+     |            ^ variable
+     |             ^ punctuation.delimiter
+     |              ^^^^ variable.member
+     |                   ^^ operator
+     |                      ^^^ constant.builtin
+     |                          ^^^^ keyword.conditional
+  18 |       goto continue
+     |       ^^^^ keyword
+     |            ^^^^^^^^ label
+  19 |     end
+     |     ^^^ keyword.conditional
+  20 |     sum = sum + s:area()
+     |     ^^^ variable
+     |         ^ operator
+     |           ^^^ variable
+     |               ^ operator
+     |                 ^ variable
+     |                  ^ punctuation.delimiter
+     |                   ^^^^ function.method.call
+     |                       ^^ punctuation.bracket
+  21 |     ::continue::
+     |     ^^ punctuation.delimiter
+     |       ^^^^^^^^ label
+     |               ^^ punctuation.delimiter
+  22 |   end
+     |   ^^^ keyword.repeat
+  23 |   local t = { a = 1, [2] = "two", ... }
+     |   ^^^^^ keyword
+     |         ^ variable
+     |           ^ operator
+     |             ^ constructor
+     |               ^ property
+     |                 ^ operator
+     |                   ^ number
+     |                    ^ punctuation.delimiter
+     |                      ^ punctuation.bracket
+     |                       ^ number
+     |                        ^ punctuation.bracket
+     |                          ^ operator
+     |                            ^^^^^ string
+     |                                 ^ punctuation.delimiter
+     |                                   ^^^ variable.parameter.builtin
+     |                                       ^ constructor
+  24 |   while sum > 1e6 and not M.done do
+     |   ^^^^^ keyword.repeat
+     |         ^^^ variable
+     |             ^ operator
+     |               ^^^ number
+     |                   ^^^ keyword.operator
+     |                       ^^^ keyword.operator
+     |                           ^ constant
+     |                            ^ punctuation.delimiter
+     |                             ^^^^ variable.member
+     |                                  ^^ keyword.repeat
+  25 |     sum = sum // 2
+     |     ^^^ variable
+     |         ^ operator
+     |           ^^^ variable
+     |               ^^ operator
+     |                  ^ number
+  26 |   end
+     |   ^^^ keyword.repeat
+  27 |   repeat sum = sum - 1 until sum <= 0 or #t > 3
+     |   ^^^^^^ keyword.repeat
+     |          ^^^ variable
+     |              ^ operator
+     |                ^^^ variable
+     |                    ^ operator
+     |                      ^ number
+     |                        ^^^^^ keyword.repeat
+     |                              ^^^ variable
+     |                                  ^^ operator
+     |                                     ^ number
+     |                                       ^^ keyword.operator
+     |                                          ^ operator
+     |                                           ^ variable
+     |                                             ^ operator
+     |                                               ^ number
+  28 |   return sum, [[long
+     |   ^^^^^^ keyword.return
+     |          ^^^ variable
+     |             ^ punctuation.delimiter
+     |               ^^^^^^ string
+  29 | string]], 0x1F, true, nil
+     | ^^^^^^^^ string
+     |         ^ punctuation.delimiter
+     |           ^^^^ number
+     |               ^ punctuation.delimiter
+     |                 ^^^^ boolean
+     |                     ^ punctuation.delimiter
+     |                       ^^^ constant.builtin
+  30 | end
+     | ^^^ keyword.function
+  31 | 
+  32 | return M
+     | ^^^^^^ keyword.return
+     |        ^ constant

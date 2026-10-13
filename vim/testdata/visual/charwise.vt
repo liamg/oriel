@@ -1,0 +1,248 @@
+# Charwise Visual mode: entering, leaving, switching, and growing the area.
+
+=== v selects the character under the cursor
+ref:    visual.txt *visual-use*
+quote:  "The character under the cursor will be used as the start."
+given:  foo |bar
+keys:   v
+expect: foo [|b]ar
+mode:   visual
+
+=== v moving left keeps the start as the anchor
+ref:    visual.txt *visual-use*
+quote:  "The text from the start of the Visual mode up to and including the character under the cursor is highlighted."
+given:  foo b|ar
+keys:   vb
+expect: foo [|ba]r
+mode:   visual
+
+=== v then j extends over the line break
+ref:    visual.txt *visual-use*
+quote:  "Move to the end of the text."
+given:
+  fo|o
+  bar
+keys:   vj
+expect:
+  fo[o
+  ba|r]
+mode:   visual
+
+=== 3v with no previous Visual selects three characters
+ref:    visual.txt *v*
+quote:  "When there was no previous Visual operation [count] characters are selected."
+given:  |abcdef
+keys:   3v
+expect: [ab|c]def
+mode:   visual
+
+=== 2v selects twice the characters of the last Visual operation
+ref:    visual.txt *v*
+quote:  "With [count] select the same number of characters or lines as used for the last Visual operation, but at the current cursor position, multiplied by [count]."
+given:  |abc defghijk
+keys:   vlly4l2vd
+expect: abc |jk
+
+=== v in charwise Visual stops Visual mode
+ref:    visual.txt *v_v*
+quote:  "new mode after typing:"
+given:  |foo bar
+keys:   vlv
+expect: f|oo bar
+mode:   normal
+
+=== V in charwise Visual switches to linewise
+ref:    visual.txt *v_V*
+quote:  "new mode after typing:"
+given:  |foo bar
+keys:   vlV
+expect: f|oo bar
+mode:   visual-line
+
+=== CTRL-V in charwise Visual switches to blockwise
+ref:    visual.txt *v_CTRL-V*
+quote:  "new mode after typing:"
+given:  |foo bar
+keys:   vl<C-v>
+expect: f|oo bar
+mode:   visual-block
+
+=== v in linewise Visual switches to charwise and keeps the area's ends
+ref:    visual.txt *v_v*
+quote:  "new mode after typing:"
+given:
+  f|oo
+  bar
+keys:   Vjv
+expect:
+  f[oo
+  b|a]r
+mode:   visual
+
+=== Esc stops Visual mode and leaves the cursor at its end
+ref:    visual.txt *v_<Esc>*
+quote:  "In Visual mode: Stop Visual mode."
+given:  |foo bar
+keys:   vll<Esc>
+expect: fo|o bar
+mode:   normal
+
+=== Esc after o leaves the cursor at the start
+ref:    visual.txt *v_<Esc>*
+quote:  "In Visual mode: Stop Visual mode."
+given:  |foo bar
+keys:   veo<Esc>
+expect: |foo bar
+mode:   normal
+
+=== Esc after $ leaves the cursor on the last character
+ref:    visual.txt *v_<Esc>*
+quote:  "In Visual mode: Stop Visual mode."
+given:
+  |foo
+  bar
+keys:   v$<Esc>
+expect:
+  fo|o
+  bar
+mode:   normal
+
+=== $ in Visual mode goes past the last character
+ref:    motion.txt *$*
+quote:  "In Visual mode the cursor goes to just after the last character in the line."
+given:
+  f|oo
+  bar
+keys:   v$
+expect:
+  f[oo|
+  ]bar
+mode:   visual
+
+=== v$y yanks the line break too
+ref:    motion.txt *$*
+quote:  "In Visual mode the cursor goes to just after the last character in the line."
+given:
+  f|oo
+  bar
+keys:   v$y
+expect:
+  f|oo
+  bar
+regs:   "" = "oo\n"
+
+=== o goes to the other end
+ref:    visual.txt *v_o*
+quote:  "The current cursor position becomes the start of the highlighted text and the cursor is moved to the other end of the highlighted text."
+given:  [^fo|o] bar
+keys:   o
+expect: [|fo^o] bar
+mode:   visual
+
+=== o then a motion moves the other end
+ref:    visual.txt *v_o*
+quote:  "The highlighted area remains the same."
+given:  foo |bar baz
+keys:   vwob
+expect: [|foo bar ^b]az
+mode:   visual
+
+=== O in charwise Visual is like o
+ref:    visual.txt *v_O*
+quote:  "This is like \"o\", but in Visual block mode the cursor moves to the other corner in the same line."
+given:  foo |bar baz
+keys:   veO
+expect: foo [|ba^r] baz
+mode:   visual
+
+=== gv reselects the previous area
+ref:    visual.txt *gv*
+quote:  "Start Visual mode with the same area as the previous area and the same mode."
+given:  |foo bar
+keys:   vl<Esc>wgv
+expect: [f|o]o bar
+mode:   visual
+
+=== gv in Visual mode exchanges the current and previous area
+ref:    visual.txt *gv*
+quote:  "In Visual mode the current and the previous Visual area are exchanged."
+given:  |foo bar
+keys:   vl<Esc>wvegv
+expect: [f|o]o bar
+mode:   visual
+
+=== gv twice in Visual mode comes back to the current area
+ref:    visual.txt *gv*
+quote:  "In Visual mode the current and the previous Visual area are exchanged."
+given:  |foo bar
+keys:   vl<Esc>wvegvgv
+expect: foo [ba|r]
+mode:   visual
+
+=== gv restores linewise mode
+ref:    visual.txt *gv*
+quote:  "Start Visual mode with the same area as the previous area and the same mode."
+given:
+  |one
+  two
+  three
+keys:   Vj<Esc>Ggv
+expect:
+  one
+  |two
+  three
+mode:   visual-line
+
+=== '< and '> are set when Visual mode stops
+ref:    motion.txt *'<*
+quote:  "To the first line or character of the last selected Visual area in the current buffer."
+given:  a|bcdef
+keys:   vll<Esc>
+expect: abc|def
+marks:  <=1:1 >=1:3
+
+=== '< and '> are in order for a backward selection
+ref:    motion.txt *'>*
+quote:  "To the last line or character of the last selected Visual area in the current buffer."
+given:
+  abc
+  de|f
+keys:   vkh<Esc>
+expect:
+  a|bc
+  def
+marks:  <=1:1 >=2:2
+
+=== `< jumps to the start of the last Visual area
+ref:    motion.txt *`<*
+quote:  "To the first line or character of the last selected Visual area in the current buffer."
+given:  foo |bar baz
+keys:   ve<Esc>0`<
+expect: foo |bar baz
+
+=== `> jumps to the end of the last Visual area
+ref:    motion.txt *`>*
+quote:  "To the last line or character of the last selected Visual area in the current buffer."
+given:  foo |bar baz
+keys:   ve<Esc>0`>
+expect: foo ba|r baz
+
+=== v on a multibyte character selects the whole character
+ref:    visual.txt *visual-use*
+quote:  "The highlighted characters will be operated upon."
+given:  a|äöü b
+keys:   vly
+expect: a|äöü b
+regs:   "" = "äö"
+
+=== v over a tab yanks the tab
+ref:    visual.txt *visual-use*
+quote:  "The highlighted characters will be operated upon."
+given:
+  ab|c
+  	x
+keys:   vjy
+expect:
+  ab|c
+  	x
+regs:   "" = "c\n\t"

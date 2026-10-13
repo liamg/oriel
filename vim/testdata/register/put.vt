@@ -1,0 +1,200 @@
+=== xp exchanges two characters
+ref:    change.txt *linewise-register*
+quote:  "You can exchange two characters with the command sequence \"xp\"."
+given:  |ab
+keys:   xp
+expect: b|a
+regs:   "" = "a"
+undo:   |b
+
+=== ddp exchanges two lines
+ref:    change.txt *linewise-register*
+quote:  "You can exchange two lines with the command sequence \"ddp\"."
+given:
+  |one
+  two
+  three
+keys:   ddp
+expect:
+  two
+  |one
+  three
+dot:
+  two
+  one
+  |one
+  three
+
+=== deep exchanges two words
+ref:    change.txt *linewise-register*
+quote:  "You can exchange two words with the command sequence \"deep\" (start with the cursor in the blank space before the first word)."
+given:  x| foo bar
+keys:   deep
+expect: x bar fo|o
+
+=== p puts a charwise register after the cursor and lands on its last character
+ref:    change.txt *p*
+quote:  "Put the text [from register x] after the cursor [count] times."
+given:  |foo bar
+keys:   ywwp
+expect: foo bfoo| ar
+regs:   "" = "foo "
+
+=== P puts a charwise register before the cursor
+ref:    change.txt *P*
+quote:  "Put the text [from register x] before the cursor [count] times."
+given:  |foo bar
+keys:   ywwP
+expect: foo foo| bar
+undo:   foo |bar
+dot:    foo foofoo|  bar
+
+=== 3p puts a charwise register three times
+ref:    change.txt *p*
+quote:  "Put the text [from register x] after the cursor [count] times."
+given:  |ab
+keys:   yl3p
+expect: aaa|ab
+undo:   |ab
+
+=== yyp puts the line below and moves to its first non-blank
+ref:    change.txt *linewise-register*
+quote:  "If the command that was used to get the text into the register was |linewise|, Vim inserts the text below (\"p\") or above (\"P\") the line where the cursor is."
+given:
+    f|oo
+  bar
+keys:   yyp
+expect:
+    foo
+    |foo
+  bar
+
+=== yyP puts the line above
+ref:    change.txt *linewise-register*
+quote:  "Vim inserts the text below (\"p\") or above (\"P\") the line where the cursor is."
+given:
+  foo
+  b|ar
+keys:   yyP
+expect:
+  foo
+  |bar
+  bar
+
+=== 3p puts a linewise register three times
+ref:    change.txt *p*
+quote:  "Put the text [from register x] after the cursor [count] times."
+given:
+  |a
+  b
+keys:   yy3p
+expect:
+  a
+  |a
+  a
+  a
+  b
+undo:
+  |a
+  b
+
+=== p of a multi-line charwise register
+ref:    change.txt *linewise-register*
+quote:  "Otherwise Vim inserts the text after (\"p\") or before (\"P\") the cursor."
+given:
+  a|bc
+  def
+  xyz
+keys:   2Djp
+expect:
+  a
+  x|bc
+  defyz
+
+=== p with a multibyte register
+ref:    change.txt *p*
+quote:  "Put the text [from register x] after the cursor [count] times."
+given:  |漢字é
+keys:   xp
+expect: 字|漢é
+
+=== gp leaves the cursor just after charwise text
+ref:    change.txt *gp*
+quote:  "Just like \"p\", but leave the cursor just after the new text."
+given:  |ab cd
+keys:   ylgp
+expect: aa|b cd
+
+=== gp leaves the cursor on the line after linewise text
+ref:    change.txt *gp*
+quote:  "Just like \"p\", but leave the cursor just after the new text."
+given:
+  |a
+  b
+keys:   yy2gp
+expect:
+  a
+  a
+  a
+  |b
+
+=== gP leaves the cursor just after charwise text
+ref:    change.txt *gP*
+quote:  "Just like \"P\", but leave the cursor just after the new text."
+given:  a|b
+keys:   ylgP
+expect: ab|b
+
+=== gP with linewise text lands on the original line
+ref:    change.txt *gP*
+quote:  "Just like \"P\", but leave the cursor just after the new text."
+given:
+  |a
+  b
+keys:   yygP
+expect:
+  a
+  |a
+  b
+
+=== p of an empty register is an error
+ref:    change.txt *p*
+quote:  "Put the text [from register x] after the cursor [count] times."
+given:  |foo
+keys:   p
+expect: |foo
+msg:    "E353: Nothing in register \""
+
+=== p on an empty buffer with a linewise register
+ref:    change.txt *linewise-register*
+quote:  "Vim inserts the text below (\"p\") or above (\"P\") the line where the cursor is."
+given:  |
+keys:   yyp
+expect:
+  
+  |
+
+=== "ap puts from register a
+ref:    change.txt *p*
+quote:  "Put the text [from register x] after the cursor [count] times."
+given:  |foo bar
+keys:   "ayiwwyiw0"ap
+expect: ffo|ooo bar
+regs:   "" = "bar"   "a = "foo"
+
+=== "1p repeated with . puts "2
+ref:    undo.txt *redo-register*
+quote:  "So if you first do '\"1P', the following \".\" will result in a '\"2P'."
+given:
+  |a
+  b
+  c
+  x
+keys:   dddddd"1p
+expect:
+  x
+  |c
+dot:
+  x
+  c
+  |b

@@ -55,7 +55,10 @@ type engine struct {
 	c   *client
 }
 
-func start() (*engine, error) {
+func start() (*engine, error) { return startIn("") }
+
+// startIn starts nvim with dir as its working directory ("" for ours).
+func startIn(dir string) (*engine, error) {
 	path, err := Path()
 	if err != nil {
 		return nil, fmt.Errorf("oracle: no nvim (set ORIEL_NVIM or put nvim %s on PATH): %w", Version, err)
@@ -65,6 +68,7 @@ func start() (*engine, error) {
 	}
 	cmd := exec.Command(path, "--headless", "--clean", "--embed", "-n", "-i", "NONE")
 	cmd.Env = append(os.Environ(), "NVIM_APPNAME=oriel-vimtest")
+	cmd.Dir = dir
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -91,8 +95,15 @@ func (e *engine) Close() error {
 	return nil
 }
 
+// Load sets the buffer as if it had been read from a file: not an undoable change, and with no jumps.
 func (e *engine) Load(b vimtest.Buffer) error {
+	if _, err := e.c.call("nvim_exec2", "set undolevels=-1", map[string]any{}); err != nil {
+		return err
+	}
 	if _, err := e.c.call("nvim_buf_set_lines", 0, 0, -1, true, b.Lines); err != nil {
+		return err
+	}
+	if _, err := e.c.call("nvim_exec2", "set undolevels& | clearjumps", map[string]any{}); err != nil {
 		return err
 	}
 	if b.Visual == nil {
@@ -235,6 +246,25 @@ func (e *engine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 				r.Jumps = append(r.Jumps, vimtest.Pos{Line: int(line) - 1, Col: int(col)})
 			}
 		}
+	}
+
+	if q.Win {
+		v, err := e.c.call("nvim_eval", "[winnr(), winnr('$')]")
+		if err != nil {
+			return r, err
+		}
+		w, _ := v.([]any)
+		cur, _ := w[0].(int64)
+		count, _ := w[1].(int64)
+		r.Win = vimtest.Win{Cur: int(cur), Count: int(count)}
+	}
+
+	if q.Bufs {
+		v, err := e.c.call("nvim_eval", `join(map(getbufinfo({'buflisted': 1}), {_, b -> b.bufnr .. (b.bufnr == bufnr('%') ? '%' : b.bufnr == bufnr('#') ? '#' : '')}))`)
+		if err != nil {
+			return r, err
+		}
+		r.Bufs, _ = v.(string)
 	}
 
 	if q.Msg {

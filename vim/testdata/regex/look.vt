@@ -1,0 +1,131 @@
+# Look-around: \@= \@! \@<= \@<! and their limits.
+
+=== \@= requires a match after without including it
+ref:    pattern.txt */\@=*
+quote:  foo\(bar\)\@=		"foo" in "foobar"
+given:  |foobaz foobar
+keys:   :s/foo\(bar\)\@=/(&)/g<CR>
+expect: |foobaz (foo)bar
+
+=== \@= followed by more pattern matches at the same position
+ref:    pattern.txt */\@=*
+quote:  foo\(bar\)\@=foo	nothing
+given:  |foobarfoo
+keys:   :s/foo\(bar\)\@=foo/X/e<CR>
+expect: |foobarfoo
+
+=== \@! requires no match after
+ref:    pattern.txt */\@!*
+quote:  foo\(bar\)\@!		any "foo" not followed by "bar"
+given:  |foobar foobaz
+keys:   :s/foo\(bar\)\@!/(&)/g<CR>
+expect: |foobar (foo)baz
+
+=== \@! after a lazy multi
+ref:    pattern.txt */\@!*
+quote:  a.\{-}p\@!		"a", "ap", "app", "appp", etc. not immediately followed by a "p"
+given:  |appq
+keys:   :s/a.\{-}p\@!/(&)/<CR>
+expect: |(app)q
+
+=== \@! after .* matches to the end of the line
+ref:    pattern.txt */\@!*
+quote:  "\"a.*p\\@!\" will match from an \"a\" to the end of the line, because \".*\" can match all characters in the line and the \"p\" doesn't match at the end of the line."
+given:  |xapp
+keys:   :s/a.*p\@!/(&)/<CR>
+expect: |x(app)
+
+=== \@! before the match does not look behind
+ref:    pattern.txt */\@!*
+quote:  "\"\\(foo\\)\\@!bar\" will match \"bar\" in \"foobar\", because at the position where \"bar\" matches, \"foo\" does not match."
+given:  |foobar
+keys:   :s/\(foo\)\@!bar/(&)/<CR>
+expect: |foo(bar)
+
+=== \@! finds foo in a line without bar
+ref:    pattern.txt */\@!*
+quote:  Useful example: to find "foo" in a line that does not contain "bar":
+given:
+  |x foo bar
+  y foo
+keys:   /^\%(.*bar\)\@!.*\zsfoo<CR>
+expect:
+  x foo bar
+  y |foo
+
+=== if not followed by then
+ref:    pattern.txt */\@!*
+quote:  if \(\(then\)\@!.\)*$	"if " not followed by "then"
+given:
+  |if a then b
+  if a else b
+keys:   :%s/if \(\(then\)\@!.\)*$/X/<CR>
+expect:
+  if a then b
+  |X
+
+=== \@<= requires a match before
+ref:    pattern.txt */\@<=*
+quote:  \(an\_s\+\)\@<=file	"file" after "an" and white space or an end-of-line
+given:  |a file an file
+keys:   :s/\(an\_s\+\)\@<=file/(&)/g<CR>
+expect: |a file an (file)
+
+=== \@<= looks back across a line break
+ref:    pattern.txt */\@<=*
+quote:  But to limit the time needed, only the line where what follows matches is searched, and one line before that (if there is one).
+given:
+  |an
+  file
+keys:   :%s/\(an\_s\+\)\@<=file/X/<CR>
+expect:
+  an
+  |X
+
+=== \@<= allows a variable-width look-behind
+ref:    pattern.txt */\@<=*
+quote:  Like "(?<=pattern)" in Perl, but Vim allows non-fixed-width patterns.
+given:  |aab b ab
+keys:   :s/\(a\+\)\@<=b/(&)/g<CR>
+expect: |aa(b) b a(b)
+
+=== \zs instead of \@<=
+ref:    pattern.txt */\@<=*
+quote:  \([a-z]\+\)\zs,\1		",abc" in "abc,abc"
+given:  |abc,abc
+keys:   :s/\([a-z]\+\)\zs,\1/(&)/<CR>
+expect: |abc(,abc)
+
+=== \@1<= only looks back one byte
+ref:    pattern.txt */\@<=*
+quote:  This will try matching "<" only one byte before "span", which is the only place that works anyway.
+given:  |<span x span
+keys:   :s/<\@1<=span/(&)/g<CR>
+expect: |<(span) x span
+
+=== \@<! requires no match before
+ref:    pattern.txt */\@<!*
+quote:  \(foo\)\@<!bar		any "bar" that's not in "foobar"
+given:  |foobar xbar
+keys:   :s/\(foo\)\@<!bar/(&)/g<CR>
+expect: |foobar x(bar)
+
+=== \@<! with .* in the look-behind
+ref:    pattern.txt */\@<!*
+quote:  \(\/\/.*\)\@<!in	"in" which is not after "//"
+given:  |in // in
+keys:   :s/\(\/\/.*\)\@<!in/(&)/g<CR>
+expect: |(in) // in
+
+=== \@<! sees the previous line
+ref:    pattern.txt */\@<!*
+quote:  Thus this matches if there is no position in the current or previous line where the atom matches such that it ends just before what follows.
+given:
+  |a
+  b
+  b
+keys:   :%s/\(a\n\)\@<!b/X/<CR>
+expect:
+  a
+  b
+  |X

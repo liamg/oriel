@@ -1,0 +1,109 @@
+=== ) goes to the start of the next sentence
+ref:    motion.txt *)*
+quote:  "[count] |sentence|s forward.  |exclusive| motion."
+given:  |Hello there. How are you?
+keys:   )
+expect: Hello there. |How are you?
+
+=== 2) with a count
+ref:    motion.txt *)*
+quote:  "[count] |sentence|s forward."
+given:  |One. Two! Three? Four.
+keys:   2)
+expect: One. Two! |Three? Four.
+
+=== ) skips the run of spaces after the sentence end
+ref:    motion.txt *sentence*
+quote:  "A sentence is defined as ending at a '.', '!' or '?' followed by either the end of a line, or by a space or tab."
+given:  |One.   Two.
+keys:   )
+expect: One.   |Two.
+
+=== a period not followed by white space does not end a sentence
+ref:    motion.txt *sentence*
+quote:  "A sentence is defined as ending at a '.', '!' or '?' followed by either the end of a line, or by a space or tab."
+given:  |a.b c. d
+keys:   )
+expect: a.b c. |d
+
+=== closing quotes and brackets may follow the sentence end
+ref:    motion.txt *sentence*
+quote:  "Any number of closing ')', ']', '\"' and ''' characters may appear after the '.', '!' or '?' before the spaces, tabs or end of line."
+given:  |He said "Hi.") Then
+keys:   )
+expect: He said "Hi.") |Then
+
+=== a sentence ending at the end of a line continues on the next
+ref:    motion.txt *sentence*
+quote:  "followed by either the end of a line"
+given:
+  |One.
+  Two.
+keys:   )
+expect:
+  One.
+  |Two.
+
+=== ) stops at an empty line
+ref:    motion.txt *sentence*
+quote:  "A paragraph and section boundary is also a sentence boundary."
+given:
+  |foo bar
+
+  baz
+keys:   )
+expect:
+  foo bar
+  |
+  baz
+
+=== ) in the last sentence goes to the end of the buffer
+ref:    motion.txt *)*
+quote:  "[count] |sentence|s forward."
+given:  One. |Two
+keys:   )
+expect: One. Tw|o
+
+=== ( goes to the start of the current sentence
+ref:    motion.txt *(*
+quote:  "[count] |sentence|s backward.  |exclusive| motion."
+given:  Hello there. How a|re you?
+keys:   (
+expect: Hello there. |How are you?
+
+=== ( at the start of a sentence goes to the previous one
+ref:    motion.txt *(*
+quote:  "[count] |sentence|s backward."
+given:  One. Two. |Three.
+keys:   (
+expect: One. |Two. Three.
+
+=== 2( with a count
+ref:    motion.txt *(*
+quote:  "[count] |sentence|s backward."
+given:  One. Two. Th|ree.
+keys:   2(
+expect: One. |Two. Three.
+
+=== ( at the start of the buffer does not move
+ref:    motion.txt *(*
+quote:  "[count] |sentence|s backward."
+given:  |One. Two.
+keys:   (
+expect: |One. Two.
+
+=== d) deletes to the next sentence, excluding it (exclusive)
+ref:    motion.txt *)*
+quote:  "[count] |sentence|s forward.  |exclusive| motion."
+given:  |One. Two.
+keys:   d)
+expect: |Two.
+regs:   "" = "One. "
+
+=== d( deletes back to the start of the sentence (exclusive)
+ref:    motion.txt *(*
+quote:  "[count] |sentence|s backward.  |exclusive| motion."
+given:  One. Two |three.
+keys:   d(
+expect: One. |three.
+regs:   "" = "Two "

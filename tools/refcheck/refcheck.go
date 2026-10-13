@@ -8,6 +8,7 @@
 //	ref:    lsp/specification.md#Text Documents   markdown heading
 //	ref:    css-color-4/Overview.bs#hue-interpolation   HTML or Bikeshed section, by its heading's id
 //	ref:    css-color-4/conversions.js#OKLab_to_XYZ     a function in vendored sample code
+//	ref:    testdir/test_normal.vim#Test_normal_dw      a test function in vim's vendored tests (spec/vim)
 //	ref:    oracle                      expectation taken from the nvim oracle; no quote
 //	quote:  "[count] words forward."
 package refcheck
@@ -101,6 +102,8 @@ func (c *Checker) Check(r Ref) error {
 			return c.checkHTML(r, file, heading)
 		case ".js":
 			return c.checkFunc(r, file, heading)
+		case ".vim":
+			return c.checkVimFunc(r, file, heading)
 		}
 	}
 	file, anchor, ok := strings.Cut(ref, " ")
@@ -313,6 +316,33 @@ func (c *Checker) checkFunc(r Ref, file, name string) error {
 		for ; end < len(lines) && !strings.HasPrefix(lines[end], "function "); end++ {
 		}
 		if r.Quote == "" || containsQuote(strings.Join(lines[i:end], "\n"), r.Quote) {
+			return nil
+		}
+		return fmt.Errorf("%s: quote not found in function %s in spec/%s: %q", r, name, file, r.Quote)
+	}
+	return fmt.Errorf("%s: no function %s in spec/%s", r, name, file)
+}
+
+var vimFunc = regexp.MustCompile(`^fu(?:n|nc|nct|ncti|nctio|nction)?!?\s+([\w:#]+)\s*\(`)
+
+// checkVimFunc finds `func name(` in a vendored Vimscript file (under spec/vim unless the path says
+// otherwise) and checks the quote in its body, up to its `endfunc`.
+func (c *Checker) checkVimFunc(r Ref, file, name string) error {
+	if !strings.HasPrefix(file, "vim/") && !strings.HasPrefix(file, "nvim/") {
+		file = "vim/" + file
+	}
+	lines, err := c.lines(file)
+	if err != nil {
+		return fmt.Errorf("%s: %v", r, err)
+	}
+	for i, line := range lines {
+		if m := vimFunc.FindStringSubmatch(line); m == nil || m[1] != name {
+			continue
+		}
+		end := i + 1
+		for ; end < len(lines) && !strings.HasPrefix(lines[end], "endf"); end++ {
+		}
+		if r.Quote == "" || containsQuote(strings.Join(lines[i:min(end+1, len(lines))], "\n"), r.Quote) {
 			return nil
 		}
 		return fmt.Errorf("%s: quote not found in function %s in spec/%s: %q", r, name, file, r.Quote)

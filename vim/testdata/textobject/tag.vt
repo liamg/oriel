@@ -1,0 +1,124 @@
+=== dit deletes between the tags
+ref:    motion.txt *it*
+quote:  "\"inner tag block\", select [count] tag blocks"
+given:  <b>fo|o</b>
+keys:   dit
+expect: <b>|</b>
+regs:   "" = "foo"
+undo:   <b>|foo</b>
+
+=== dat deletes the tags too
+ref:    motion.txt *at*
+quote:  "including the \"<aaa>\" and \"</aaa>\"."
+given:  x <b>fo|o</b> y
+keys:   dat
+expect: x | y
+regs:   "" = "<b>foo</b>"
+
+=== dit with the cursor on the opening tag
+ref:    motion.txt *tag-blocks*
+quote:  The normal method is to select a <tag> until the matching </tag>.
+given:  <|b>foo</b>
+keys:   dit
+expect: <b>|</b>
+regs:   "" = "foo"
+
+=== dit with the cursor on the closing tag
+ref:    motion.txt *tag-blocks*
+quote:  The normal method is to select a <tag> until the matching </tag>.
+given:  <b>foo</|b>
+keys:   dit
+expect: <b>|</b>
+regs:   "" = "foo"
+
+=== dit picks the innermost tag block
+ref:    motion.txt *it*
+quote:  "from the [count]'th unmatched \"<aaa>\" backwards to the matching \"</aaa>\""
+given:  <a><b>|x</b></a>
+keys:   dit
+expect: <a><b>|</b></a>
+regs:   "" = "x"
+
+=== d2it deletes inside the second enclosing tag block
+ref:    motion.txt *it*
+quote:  select [count] tag blocks
+given:  <a>1<b>|x</b>2</a>
+keys:   d2it
+expect: <a>|</a>
+regs:   "" = "1<b>x</b>2"
+
+=== d2at deletes the second enclosing tag block
+ref:    motion.txt *at*
+quote:  select [count] tag blocks
+given:  z<a>1<b>|x</b>2</a>z
+keys:   d2at
+expect: z|z
+regs:   "" = "<a>1<b>x</b>2</a>"
+
+=== dat on a tag nested between text keeps the outer block
+ref:    motion.txt *at*
+quote:  "including the \"<aaa>\" and \"</aaa>\"."
+given:  <a>1<b>|x</b>2</a>
+keys:   dat
+expect: <a>1|2</a>
+regs:   "" = "<b>x</b>"
+
+=== dit matches tags ignoring case
+ref:    motion.txt *tag-blocks*
+quote:  Case is ignored, also for XML where case does matter.
+given:  <B>fo|o</b>
+keys:   dit
+expect: <B>|</b>
+regs:   "" = "foo"
+
+=== dit skips self-closing tags
+ref:    motion.txt *tag-blocks*
+quote:  "\"<aaa/>\" items are skipped."
+given:  <p>a<br/>|b</p>
+keys:   dit
+expect: <p>|</p>
+regs:   "" = "a<br/>b"
+
+=== dit tolerates a tag with attributes
+ref:    motion.txt *tag-blocks*
+quote:  The normal method is to select a <tag> until the matching </tag>.
+given:  <a href="x">l|ink</a>
+keys:   dit
+expect: <a href="x">|</a>
+regs:   "" = "link"
+
+=== dit over several lines
+ref:    motion.txt *it*
+quote:  excluding the "<aaa>" and "</aaa>".
+given:
+  <div>
+    |x
+  </div>
+keys:   dit
+expect:
+  <div>|</div>
+regs:   "" = "\n  x\n"
+
+=== dit on an empty tag block deletes nothing
+ref:    motion.txt *tag-blocks*
+quote:  Also, "it" used on a tag block with no contents will select the leading tag.
+given:  x <b>|</b> y
+keys:   dit
+expect: x <b>|</b> y
+regs:   "" = (unset)
+
+=== dit with no tags does nothing
+ref:    motion.txt *it*
+quote:  "\"inner tag block\", select [count] tag blocks"
+given:  foo |bar
+keys:   dit
+expect: foo |bar
+regs:   "" = (unset)
+
+=== cit replaces the tag contents
+ref:    motion.txt *it*
+quote:  excluding the "<aaa>" and "</aaa>".
+given:  <i>o|ld</i>
+keys:   citnew<Esc>
+expect: <i>ne|w</i>
+regs:   "" = "old"

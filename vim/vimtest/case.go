@@ -35,8 +35,15 @@ type Case struct {
 	Undo    *Buffer          // the buffer after the keys and then `u`
 	Dot     *Buffer          // the buffer after the keys and then `.`
 	Msg     *string          // the last message
+	Win     *Win             // the current window's number and the window count
+	Bufs    *string          // the listed buffers, as `1# 2%`
 	RawKeys string
 }
+
+// Win is the current window's number (1-based, as winnr()) and how many windows the tab page has.
+type Win struct{ Cur, Count int }
+
+func (w Win) String() string { return fmt.Sprintf("%d/%d", w.Cur, w.Count) }
 
 // Modes, as written in a case's `mode:` field.
 const (
@@ -84,7 +91,8 @@ func Load(t testing.TB, glob string) []Case {
 
 // Parse reads the cases in a .vt file. Lines starting with '#' outside a value are comments.
 // A field whose value is empty takes the following lines indented by two spaces, with the
-// indent removed, as a multi-line value.
+// indent removed, as a multi-line value. Blank lines at its end aren't part of it; a line of just the
+// indent is an empty line, even at the end.
 func Parse(file string, r io.Reader) ([]Case, error) {
 	var (
 		cases  []Case
@@ -132,13 +140,15 @@ func Parse(file string, r io.Reader) ([]Case, error) {
 			}
 			val = strings.TrimSpace(val)
 			if val == "" {
-				var block []string
+				var block, raw []string
 				for i+1 < len(lines) && (strings.HasPrefix(lines[i+1], "  ") || lines[i+1] == "") {
 					i++
 					block = append(block, strings.TrimPrefix(lines[i], "  "))
+					raw = append(raw, lines[i])
 				}
-				for len(block) > 0 && block[len(block)-1] == "" {
-					block = block[:len(block)-1]
+				// Blank lines at the end separate cases; an indented empty line is part of the value.
+				for len(raw) > 0 && raw[len(raw)-1] == "" {
+					block, raw = block[:len(block)-1], raw[:len(raw)-1]
 				}
 				val = strings.Join(block, "\n")
 			}
@@ -214,6 +224,20 @@ func (c *Case) fill(f map[string]string) error {
 			return fmt.Errorf("msg: %w", err)
 		}
 		c.Msg = &m
+	}
+	if w, ok := take("win"); ok {
+		cur, count, ok := strings.Cut(w, "/")
+		n, err1 := strconv.Atoi(cur)
+		m, err2 := strconv.Atoi(count)
+		if !ok || err1 != nil || err2 != nil || n < 1 || n > m {
+			return fmt.Errorf("win: want current/count, got %q", w)
+		}
+		c.Win = &Win{n, m}
+	}
+	if b, ok := take("bufs"); ok {
+		if c.Bufs, err = parseBufs(b); err != nil {
+			return fmt.Errorf("bufs: %w", err)
+		}
 	}
 	if r, ok := take("regs"); ok {
 		if c.Regs, err = parseRegs(r); err != nil {
@@ -300,6 +324,22 @@ func parseMarks(s string) (map[rune]*Pos, error) {
 		marks[r] = &p
 	}
 	return marks, nil
+}
+
+// parseBufs reads listed buffer numbers in ascending order, each flagged `%` (current) or `#`
+// (alternate) as :ls does, and returns them space-separated.
+func parseBufs(s string) (*string, error) {
+	fields := strings.Fields(s)
+	prev := 0
+	for _, f := range fields {
+		n, err := strconv.Atoi(strings.TrimRight(f, "%#"))
+		if err != nil || n <= prev || len(f)-len(strings.TrimRight(f, "%#")) > 1 {
+			return nil, fmt.Errorf("want ascending numbers flagged %% or #, got %q", s)
+		}
+		prev = n
+	}
+	out := strings.Join(fields, " ")
+	return &out, nil
 }
 
 // parsePos reads `line:col`: 1-based line, 0-based byte column, as in :marks.

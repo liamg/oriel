@@ -1,0 +1,364 @@
+# Linewise Visual mode, and the charwise operators that act on whole lines.
+
+=== V starts linewise Visual mode
+ref:    visual.txt *V*
+quote:  "Start Visual mode linewise."
+given:
+  one
+  t|wo
+keys:   V
+expect:
+  one
+  t|wo
+mode:   visual-line
+
+=== V in linewise Visual stops Visual mode
+ref:    visual.txt *v_V*
+quote:  "new mode after typing:"
+given:
+  |one
+  two
+keys:   VjV
+expect:
+  one
+  |two
+mode:   normal
+
+=== CTRL-V in linewise Visual switches to blockwise
+ref:    visual.txt *v_CTRL-V*
+quote:  "new mode after typing:"
+given:
+  |one
+  two
+keys:   Vj<C-v>
+expect:
+  one
+  |two
+mode:   visual-block
+
+=== Vd deletes the line
+ref:    change.txt *v_d*
+quote:  "Delete the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  one
+  t|wo
+  three
+keys:   Vd
+expect:
+  one
+  t|hree
+regs:   "" = "two\n"   "1 = "two\n"
+
+=== Vjd deletes both lines
+ref:    change.txt *v_d*
+quote:  "Delete the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  |one
+  two
+  three
+keys:   Vjd
+expect:
+  |three
+regs:   "" = "one\ntwo\n"
+
+=== Vkd deletes upwards and keeps the cursor column
+ref:    change.txt *v_d*
+quote:  "Delete the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   Vkd
+expect:
+  one
+  fo|ur
+
+=== 2V with no previous Visual selects two lines
+ref:    visual.txt *V*
+quote:  "When there was no previous Visual operation [count] lines are selected."
+given:
+  |one
+  two
+  three
+keys:   2Vd
+expect:
+  |three
+
+=== 2V selects twice the lines of the last Visual operation
+ref:    visual.txt *V*
+quote:  "With [count] select the same number of lines as used for the last Visual operation, but at the current cursor position, multiplied by [count]."
+given:
+  |1
+  2
+  3
+  4
+  5
+  6
+keys:   Vjyjj2Vd
+expect:
+  1
+  |2
+regs:   "" = "3\n4\n5\n6\n"
+
+=== Vy yanks the lines and moves to the first one, keeping the column
+ref:    change.txt *v_y*
+quote:  "Yank the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  one
+  t|wo
+  three
+keys:   Vky
+expect:
+  o|ne
+  two
+  three
+regs:   "" = "one\ntwo\n"   "0 = "one\ntwo\n"
+
+=== Vy on a single line moves to the start of the line
+ref:    change.txt *v_y*
+quote:  "Yank the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:  ab|cd
+keys:   Vy
+expect: |abcd
+regs:   "0 = "abcd\n"
+
+=== Esc after Vj leaves the cursor where it moved
+ref:    visual.txt *v_<Esc>*
+quote:  "In Visual mode: Stop Visual mode."
+given:
+  ab|cd
+  ef
+keys:   Vj<Esc>
+expect:
+  abcd
+  e|f
+mode:   normal
+
+=== '< and '> lines after V
+ref:    motion.txt *'<*
+quote:  "To the first line or character of the last selected Visual area in the current buffer."
+given:
+  one
+  t|wo
+  three
+keys:   Vj<Esc>gg'>
+expect:
+  one
+  two
+  |three
+marks:  <=2:0
+
+=== Vc replaces the line
+ref:    change.txt *v_c*
+quote:  "Delete the highlighted text [into register x] and start insert (for {Visual} see |Visual-mode|)."
+given:
+  one
+  t|wo
+  three
+keys:   VjcX<Esc>
+expect:
+  one
+  |X
+regs:   "" = "two\nthree\n"
+
+=== VS is like Vc
+ref:    change.txt *v_S*
+quote:  "Delete the highlighted lines [into register x] and start insert (for {Visual} see |Visual-mode|)."
+given:
+  one
+  t|wo
+keys:   VSX<Esc>
+expect:
+  one
+  |X
+
+=== VJ joins the lines
+ref:    change.txt *v_J*
+quote:  "Join the highlighted lines, with a minimum of two lines."
+given:
+  |one
+    two
+  three
+  four
+keys:   VjjJ
+expect:
+  one two| three
+  four
+
+=== VJ on one line still joins two
+ref:    change.txt *v_J*
+quote:  "Join the highlighted lines, with a minimum of two lines."
+given:
+  |one
+  two
+  three
+keys:   VJ
+expect:
+  one| two
+  three
+
+=== VgJ joins without touching the spaces
+ref:    change.txt *v_gJ*
+quote:  "Join the highlighted lines, with a minimum of two lines. Don't insert or remove any spaces."
+given:
+  |one
+    two
+keys:   VjgJ
+expect:  one|  two
+
+=== V> shifts the lines one shiftwidth
+ref:    change.txt *v_>*
+quote:  "Shift the highlighted lines [count] 'shiftwidth' rightwards (for {Visual} see |Visual-mode|)."
+given:
+  |a
+  b
+  c
+keys:   Vj>
+expect:
+  |	a
+  	b
+  c
+
+=== V3> shifts three shiftwidths
+ref:    change.txt *v_>*
+quote:  "Shift the highlighted lines [count] 'shiftwidth' rightwards (for {Visual} see |Visual-mode|)."
+given:
+  |a
+  b
+keys:   Vj3>
+expect:
+  |			a
+  			b
+
+=== V2< shifts two shiftwidths left
+ref:    change.txt *v_<*
+quote:  "Shift the highlighted lines [count] 'shiftwidth' leftwards (for {Visual} see |Visual-mode|)."
+given:
+  			|a
+  	b
+keys:   Vj2<
+expect:
+  	|a
+  b
+
+=== VU uppercases the lines
+ref:    change.txt *v_U*
+quote:  "Make highlighted text uppercase (for {Visual} see |Visual-mode|)."
+given:
+  o|ne
+  two
+  three
+keys:   VjU
+expect:
+  |ONE
+  TWO
+  three
+
+=== Vr replaces every character on the lines
+ref:    change.txt *v_r*
+quote:  "Replace all selected characters by {char}."
+given:
+  o|ne
+  ab
+keys:   Vjrx
+expect:
+  |xxx
+  xx
+
+=== Vp replaces the line with a yanked line
+ref:    change.txt *v_p*
+quote:  "With |p| the previously selected text is put in the unnamed register (and possibly the selection and/or clipboard)."
+given:
+  |one
+  two
+keys:   yyjVp
+expect:
+  one
+  |one
+regs:   "" = "two\n"   "0 = "one\n"
+
+=== VP keeps the unnamed register
+ref:    change.txt *v_P*
+quote:  "With |P| the unnamed register is not changed (and neither the selection or clipboard), you can repeat the same change."
+given:
+  |one
+  two
+  three
+keys:   yyjVPjVP
+expect:
+  one
+  one
+  |one
+regs:   "" = "one\n"
+
+=== Vp with a charwise register puts it on its own line
+ref:    change.txt *put-Visual-mode*
+quote:  "Whether this works well depends on the type of selection and the type of the text in the register."
+given:
+  |one
+  two
+keys:   yiwjVp
+expect:
+  one
+  |one
+regs:   "" = "two\n"
+
+=== vX deletes whole lines from a charwise area
+ref:    change.txt *v_X*
+quote:  "Delete the highlighted lines [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  o|ne
+  two
+  three
+keys:   vlX
+expect:
+  tw|o
+  three
+regs:   "" = "one\n"
+
+=== vD deletes whole lines too
+ref:    change.txt *v_D*
+quote:  "Delete the highlighted lines [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  o|ne
+  two
+  three
+keys:   vjD
+expect:
+  t|hree
+
+=== vY yanks whole lines
+ref:    change.txt *v_Y*
+quote:  "Yank the highlighted lines [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  o|ne
+  two
+keys:   vlY
+expect:
+  |one
+  two
+regs:   "0 = "one\n"
+
+=== vC changes whole lines
+ref:    change.txt *v_C*
+quote:  "Delete the highlighted lines [into register x] and start insert."
+given:
+  o|ne
+  two
+keys:   vlCX<Esc>
+expect:
+  |X
+  two
+regs:   "" = "one\n"
+
+=== vR is like vS
+ref:    change.txt *v_R*
+quote:  "Currently just like {Visual}[\"x]S."
+given:
+  o|ne
+  two
+keys:   vRX<Esc>
+expect:
+  |X
+  two

@@ -12,9 +12,24 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 
 ## Ready now (no unmet dependencies)
 
-- [FW-1](FW-1-module-skeleton-and-core-interfaces-wired-end-to.md): Module skeleton and core interfaces wired end to end
-- [SH-1](SH-1-window-gpu-rendering-hidpi-and-1-text.md): Window, GPU rendering, HiDPI and 1× text
-- [FW-11](FW-11-toml-module-toml-1-0-parser-and-round-tripping.md): toml module: TOML 1.0 parser and round-tripping editor
+- [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
+- [SH-13](SH-13-errors-notifications-and-the-log-panel.md): Errors, notifications and the log panel: toasts, status line, :Log, slog, panics, crash reports
+- [ED-5](ED-5-plain-engine-and-the-input-engine-interface-emac.md): plain engine and the input.Engine interface (emacs as a plugin)
+- [ED-7](ED-7-decorations-between-lines-threads-explain-cards-.md): Decorations between lines: threads, explain cards, diffs, virtual text
+- [PL-1](PL-1-lua-config-and-plugins-hooks-inspect-luals-types.md): Lua config and plugins, :Hooks, :Inspect, LuaLS types
+- [SH-2](SH-2-session-tabs-with-status-dots-and-1-9.md): Session tabs with status dots and ⌘1–9
+- [SH-4](SH-4-k-omnibox-sessions-commands-files-symbols-ticket.md): ⌘K omnibox (sessions, commands, files, symbols, tickets, PRs) with prefixes
+- [SH-6](SH-6-which-key-popup.md): Which-key popup
+- [SH-10](SH-10-help-everywhere-right-click-help-k-help.md): Help everywhere (right-click → Help, K, ⌘?, :help)
+- [SH-11](SH-11-light-dark-and-theme-editor-theme-pick-mode.md): Light, dark and theme editor (:Theme, pick mode)
+- [SH-12](SH-12-settings-page-settings-sections-search-typed-co.md): Settings page (:Settings, ⌘,) and settings.toml storage
+- [ED-10](ED-10-pcre2-regex-outside-the-vim-engine.md): PCRE2 regex outside the vim engine
+- [ED-11](ED-11-languages-as-plugins-core-grammar-set-and-local-packs.md): Languages as plugins: a language contribution, a core grammar set, local grammar packs
+- [FG-1](FG-1-explorer-scopes-changed-uncommitted-all-with-mar.md): Explorer scopes: Changed, Uncommitted, All, with markers
+- [FG-4](FG-4-terminals-ghostty-vt-under-wazero-our-renderer-p.md): Terminals: Ghostty VT under wazero, our renderer, placements, terminal-normal mode
+- [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md): Worker, wire, sessions, workspaces with multi-repo worktrees
+- [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and tats in slots
+- [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key)
 
 ## Suggested order
 
@@ -56,9 +71,12 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 
 ### Phase 3 · shell
 
+20. [SH-13](SH-13-errors-notifications-and-the-log-panel.md): Errors, notifications and the log panel: toasts, status line, :Log, slog, panics, crash reports · after FW-2, FW-6, FW-9, ED-6
+21. [ED-12](ED-12-editor-pane-files-and-the-first-usable-editor.md): Editor pane and files: open, edit, save, the first usable editor · after ED-4, ED-6, FW-6, FW-9, SH-13
 22. [ED-5](ED-5-plain-engine-and-the-input-engine-interface-emac.md): plain engine and the input.Engine interface (emacs as a plugin) · after ED-2, FW-3
 23. [ED-7](ED-7-decorations-between-lines-threads-explain-cards-.md): Decorations between lines: threads, explain cards, diffs, virtual text · after ED-1, FW-6
 24. [PL-1](PL-1-lua-config-and-plugins-hooks-inspect-luals-types.md): Lua config and plugins, :Hooks, :Inspect, LuaLS types · after FW-3
+24. [PL-12](PL-12-lua-errors-tracebacks-diagnostics-and-turning-off-failing-hooks.md): Lua errors: tracebacks, diagnostics in the file, turning off failing hooks · after PL-1, SH-13
 25. [SH-2](SH-2-session-tabs-with-status-dots-and-1-9.md): Session tabs with status dots and ⌘1–9 · after FW-6, FW-2
 26. [SH-4](SH-4-k-omnibox-sessions-commands-files-symbols-ticket.md): ⌘K omnibox (sessions, commands, files, symbols, tickets, PRs) with prefixes · after FW-6, FW-3
 27. [SH-5](SH-5-pickers-files-grep-k-keymaps-with-preview-and-ac.md): Pickers (␣␣ files, ␣/ grep, ␣k keymaps…) with preview and actions · after SH-4
@@ -66,6 +84,10 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 29. [SH-10](SH-10-help-everywhere-right-click-help-k-help.md): Help everywhere (right-click → Help, K, ⌘?, :help) · after FW-6
 30. [SH-11](SH-11-light-dark-and-theme-editor-theme-pick-mode.md): Light, dark and theme editor (:Theme, pick mode) · after FW-7
 30. [SH-12](SH-12-settings-page-settings-sections-search-typed-co.md): Settings page (:Settings, ⌘,) and settings.toml storage · after FW-3, FW-6, FW-11
+30. [ED-9](ED-9-editorconfig-and-per-file-editor-conventions.md): .editorconfig and other per-file editor conventions · after ED-2, SH-12
+30. [ED-10](ED-10-pcre2-regex-outside-the-vim-engine.md): PCRE2 regex outside the vim engine · after ED-3
+30. [ED-11](ED-11-languages-as-plugins-core-grammar-set-and-local-packs.md): Languages as plugins: a language contribution, a core grammar set, local grammar packs · after ED-6, FW-3
+30. [ED-13](ED-13-editor-options-in-the-registry-and-editor-clipboard.md): Editor options in the registry: :set, the settings page, editor.clipboard · after ED-12, SH-12
 
 ### Phase 4 · IDE
 

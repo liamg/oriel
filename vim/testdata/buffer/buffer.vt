@@ -1,0 +1,806 @@
+# Buffers: the buffer list, switching, deleting, the alternate buffer (windows.txt, editing.txt).
+# There are no files: buffers are made with :enew and named with :file. One window throughout;
+# `bufs:` lists the listed buffers, `%` the current one and `#` the alternate, as :ls flags them.
+# The given buffer is buffer 1, and it counts as modified.
+
+=== :enew edits a new, unnamed buffer
+ref:    editing.txt *:enew*
+quote:  "Edit a new, unnamed buffer."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>
+expect: |
+bufs:   1# 2%
+mode:   normal
+
+=== 'hidden' is on: :enew leaves a changed buffer hidden
+ref:    nvim/vim_diff.txt *nvim-defaults*
+quote:  "'hidden' is enabled"
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>
+expect: |
+bufs:   1# 2%
+
+=== with 'nohidden', :enew refuses to abandon a changed buffer
+ref:    editing.txt *:enew*
+quote:  "This fails when changes have been made to the current buffer, unless 'hidden' is set"
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :set nohidden<CR>:enew<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1%
+msg:    E37: No write since last change (add ! to override)
+
+=== with 'nohidden', :enew! discards the changes
+ref:    nvim/options.txt *'hidden'*
+quote:  "When off a buffer is unloaded (including loss of undo information) when it is |abandon|ed."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :set nohidden<CR>:enew!<CR><C-^>
+# buffer 1 again: unloaded, and with no file to read it back from
+expect: |
+
+=== a second :enew reuses the new buffer while it is empty
+ref:    windows.txt *buffer-reuse*
+quote:  "if a new empty buffer is created and it is not modified, the buffer will be re-used when loading another file into that buffer."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:enew<CR>
+expect: |
+bufs:   1# 2%
+
+=== CTRL-^ goes back to the alternate buffer, where the cursor was
+ref:    editing.txt *CTRL-^*
+quote:  "Edit the alternate file.  Mostly the alternate file is the previously edited file."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR><C-^>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+
+=== CTRL-^ twice toggles between the two buffers
+ref:    editing.txt *CTRL-^*
+quote:  "This is a quick way to toggle between two files."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ix<Esc><C-^><C-^>
+expect: |x
+bufs:   1# 2%
+
+=== :e # fails on an alternate buffer with no name, where CTRL-^ works
+ref:    editing.txt *CTRL-^*
+quote:  "It is equivalent to \":e #\", except that it also works when there is no file name."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:e #<CR>
+expect: |
+bufs:   1# 2%
+msg:    "E499: Empty file name for '%' or '#', only works with \":p:h\""
+
+=== :e # edits a named alternate buffer
+ref:    editing.txt *:edit_#*
+quote:  "This command does the same as [count] CTRL-^."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :file x.txt<CR>:enew<CR>:e #<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+
+=== CTRL-^ with no alternate buffer fails with E23
+ref:    message.txt *E23*
+quote:  "The alternate file is not defined yet."
+given:
+  one
+  t|wo
+keys:   <C-^>
+expect:
+  one
+  t|wo
+msg:    E23: No alternate file
+
+=== a count to CTRL-^ edits that buffer
+ref:    editing.txt *CTRL-^*
+quote:  "Edit [count]th file in the buffer list"
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>2<C-^>
+expect: |a
+bufs:   1 2% 3#
+
+=== a count to CTRL-^ that names no buffer fails with E92
+ref:    message.txt *E92*
+quote:  "The buffer you requested does not exist."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>5<C-^>
+expect: |
+bufs:   1# 2%
+msg:    E92: Buffer 5 not found
+
+=== the alternate buffer is remembered for each window
+ref:    editing.txt *alternate-file*
+quote:  "An alternate file name is remembered for each window."
+given:
+  one
+  t|wo
+keys:   :new<CR>:close<CR><C-^>
+# the first window never edited another buffer
+expect:
+  one
+  t|wo
+msg:    E23: No alternate file
+
+=== :b N edits buffer N
+ref:    windows.txt *:buffer*
+quote:  "Edit buffer [N] from the buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:b 2<CR>
+expect: |a
+bufs:   1 2% 3#
+
+=== :b# edits the alternate buffer
+ref:    windows.txt *:buffer*
+quote:  "Edit buffer [N] from the buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:b#<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+
+=== :b without a number stays in the current buffer
+ref:    windows.txt *:buffer*
+quote:  "If [N] is not given, the current buffer remains being edited."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:b<CR>
+expect: |
+bufs:   1# 2%
+
+=== :b with a buffer that doesn't exist fails with E86
+ref:    windows.txt *:buffer*
+quote:  "Edit buffer [N] from the buffer list."
+given:
+  one
+  t|wo
+keys:   :b 5<CR>
+expect:
+  one
+  t|wo
+msg:    E86: Buffer 5 does not exist
+
+=== :b name edits the buffer of that name
+ref:    windows.txt *{bufname}*
+quote:  "Edit buffer for {bufname} from the buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :file x.txt<CR>:enew<CR>:b x.txt<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+
+=== :b takes a unique part of a name
+ref:    windows.txt *{bufname}*
+quote:  "A partial name also works, so long as it is unique in the list of buffers."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :file alpha.txt<CR>:enew<CR>:file beta.txt<CR>:b alp<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+
+=== :b with a part of more than one name fails with E93
+ref:    windows.txt *{bufname}*
+quote:  "A partial name also works, so long as it is unique in the list of buffers."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :file x1.txt<CR>:enew<CR>:file x2.txt<CR>:b x<CR>
+expect: |
+bufs:   1# 2%
+msg:    E93: More than one match for x
+
+=== :b with a name no buffer has fails with E94
+ref:    windows.txt *{bufname}*
+quote:  "Edit buffer for {bufname} from the buffer list."
+given:
+  one
+  t|wo
+keys:   :b nope<CR>
+expect:
+  one
+  t|wo
+msg:    E94: No matching buffer for nope
+
+=== :bnext goes to the next buffer in the list
+ref:    windows.txt *:bnext*
+quote:  "Go to [N]th next buffer in buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:bfirst<CR>:bnext<CR>
+expect: |a
+bufs:   1# 2% 3
+
+=== :bnext wraps from the last buffer to the first
+ref:    windows.txt *:bnext*
+quote:  "Wraps around the end of the buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:bnext<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2 3#
+
+=== :bnext with a count skips buffers
+ref:    windows.txt *:bnext*
+quote:  "Go to [N]th next buffer in buffer list.  [N] defaults to one."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:bfirst<CR>:2bnext<CR>
+expect: |b
+bufs:   1# 2 3%
+
+=== :bnext N counts as the argument too
+ref:    windows.txt *:bnext*
+quote:  "Go to [N]th next buffer in buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:bnext 2<CR>
+expect: |a
+bufs:   1 2% 3#
+
+=== :bnext with one buffer stays in it
+ref:    windows.txt *:bnext*
+quote:  "Wraps around the end of the buffer list."
+given:
+  one
+  t|wo
+keys:   :bnext<CR>
+expect:
+  one
+  t|wo
+bufs:   1%
+
+=== :bprevious wraps from the first buffer to the last
+ref:    windows.txt *:bprevious*
+quote:  "Go to [N]th previous buffer in buffer list.  [N] defaults to one.  Wraps around the start of the buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:bfirst<CR>:bprevious<CR>
+expect: |b
+bufs:   1# 2 3%
+
+=== :bNext is :bprevious
+ref:    windows.txt *:bNext*
+quote:  "Go to [N]th previous buffer in buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:bNext<CR>
+expect: |a
+bufs:   1 2% 3#
+
+=== :bprevious with a count
+ref:    windows.txt *:bprevious*
+quote:  "Go to [N]th previous buffer in buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:2bprevious<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2 3#
+
+=== :bfirst goes to the first buffer
+ref:    windows.txt *:brewind*
+quote:  "Go to first buffer in buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:bfirst<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2 3#
+
+=== :brewind is :bfirst
+ref:    windows.txt *:brewind*
+quote:  "Go to first buffer in buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:brewind<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+
+=== :blast goes to the last buffer
+ref:    windows.txt *:blast*
+quote:  "Go to last buffer in buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:enew<CR>ib<Esc>:bfirst<CR>:blast<CR>
+expect: |b
+bufs:   1# 2 3%
+
+=== each buffer keeps its own text
+ref:    windows.txt *hidden-buffer*
+quote:  "The buffer is not displayed.  If there is a file for this buffer, it has been read into the buffer.  Otherwise it's the same as an active buffer, you just can't see it."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ifoo<Esc>:b1<CR>:b2<CR>
+expect: fo|o
+bufs:   1# 2%
+
+=== each buffer keeps its own cursor position
+ref:    motion.txt *'quote*
+quote:  "To the cursor position when last exiting the current buffer."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ix<CR>yz<Esc>:b1<CR>:b2<CR>
+expect:
+  x
+  y|z
+bufs:   1# 2%
+
+=== the '" mark is where the buffer was left
+ref:    motion.txt *'quote*
+quote:  "To the cursor position when last exiting the current buffer."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:b1<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+marks:  "=3:2
+
+=== a new buffer's '" mark is the first line
+ref:    motion.txt *'quote*
+quote:  "Defaults to the first character of the first line."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>
+expect: |
+marks:  "=1:0
+
+=== each buffer keeps its own undo history
+ref:    nvim/options.txt *'hidden'*
+quote:  "When on a buffer becomes hidden when it is |abandon|ed."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   dd:enew<CR>ia<Esc>:b1<CR>u
+# buffer 1: its dd is undone, not buffer 2's insert
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+
+=== undo in one buffer leaves the other's change alone
+ref:    nvim/options.txt *'hidden'*
+quote:  "When on a buffer becomes hidden when it is |abandon|ed."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   dd:enew<CR>ia<Esc>:b1<CR>u:b2<CR>
+expect: |a
+bufs:   1# 2%
+
+=== undo in a buffer you come back to still works
+ref:    nvim/options.txt *'hidden'*
+quote:  "When on a buffer becomes hidden when it is |abandon|ed."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:b1<CR>:b2<CR>u
+expect: |
+bufs:   1# 2%
+
+=== :bdelete removes the current buffer from the list and shows another
+ref:    windows.txt *:bdelete*
+quote:  "Unload buffer [N] (default: current buffer) and delete it from the buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:bdelete<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1%
+
+=== :bdelete N deletes another buffer
+ref:    windows.txt *:bdelete*
+quote:  "Unload buffer [N] (default: current buffer) and delete it from the buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:b1<CR>:bdelete 2<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1%
+
+=== :bdelete of a changed buffer fails
+ref:    windows.txt *:bdelete*
+quote:  "If the buffer was changed, this fails, unless [!] is specified, in which case changes are lost."
+given:
+  one
+  t|wo
+keys:   :bdelete<CR>
+expect:
+  one
+  t|wo
+bufs:   1%
+msg:    E89: No write since last change for buffer 1 (add ! to override)
+
+=== :bdelete! of the only buffer loses its changes
+ref:    windows.txt *:bdelete*
+quote:  "If the buffer was changed, this fails, unless [!] is specified, in which case changes are lost."
+given:
+  one
+  t|wo
+keys:   :bdelete!<CR>
+# nvim shows a new empty buffer
+expect: |
+bufs:   2%
+
+=== :bdelete! N of a changed buffer
+ref:    windows.txt *:bdelete*
+quote:  "If the buffer was changed, this fails, unless [!] is specified, in which case changes are lost."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:b1<CR>:bdelete! 2<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1%
+
+=== :bdelete with a number no buffer has
+ref:    windows.txt *:bdelete*
+quote:  "Unload buffer [N] (default: current buffer) and delete it from the buffer list."
+given:
+  one
+  t|wo
+keys:   :bdelete 5<CR>
+expect:
+  one
+  t|wo
+msg:    E516: No buffers were deleted
+
+=== :bdelete by name
+ref:    windows.txt *E93*
+quote:  "Like \":bdelete[!] [N]\", but buffer given by name, see |{bufname}|."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:file x.txt<CR>:b1<CR>:bdelete x.txt<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1%
+
+=== a deleted buffer can still be edited, but stays unlisted
+ref:    windows.txt *:buffer*
+quote:  "This will also edit a buffer that is not in the buffer list, without setting the 'buflisted' flag."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>ia<Esc>:b1<CR>:bdelete! 2<CR>:b 2<CR>
+expect: |
+bufs:   1#
+
+=== a wiped out buffer is gone
+ref:    windows.txt *:bwipeout*
+quote:  "Like |:bdelete|, but really delete the buffer.  Everything related to the buffer is lost."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:bwipeout<CR>:b 2<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1%
+msg:    E86: Buffer 2 does not exist
+
+=== :bwipeout of a changed buffer fails
+ref:    windows.txt *:bwipeout*
+quote:  "Like |:bdelete|, but really delete the buffer."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:bwipeout 1<CR>
+expect: |
+bufs:   1# 2%
+msg:    E89: No write since last change for buffer 1 (add ! to override)
+
+=== :bmodified goes to the next changed buffer
+ref:    windows.txt *:bmodified*
+quote:  "Go to [N]th next modified buffer."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:bmodified<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+
+=== :bmodified with no changed buffer fails with E84
+ref:    windows.txt *:bmodified*
+quote:  "If there is no modified buffer the command fails."
+given:
+  one
+  t|wo
+keys:   :set nomodified<CR>:bmodified<CR>
+expect:
+  one
+  t|wo
+msg:    E84: No modified buffer found
+
+=== :badd adds a buffer to the list without editing it
+ref:    windows.txt *:badd*
+quote:  "Add file name {fname} to the buffer list, without loading it, if it wasn't listed yet."
+given:
+  one
+  t|wo
+keys:   :badd foo<CR>
+expect:
+  one
+  t|wo
+bufs:   1% 2
+
+=== :balt also makes it the alternate buffer
+ref:    windows.txt *:balt*
+quote:  "Like `:badd` and also set the alternate file for the current window to {fname}."
+given:
+  one
+  t|wo
+keys:   :balt foo<CR>
+expect:
+  one
+  t|wo
+bufs:   1% 2#
+
+=== :file name names the buffer, and :file shows it
+ref:    editing.txt *:file_f*
+quote:  "Sets the current file name to {name}."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :file x.txt<CR>:file<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+msg:    "\"x.txt\" [Modified][Not edited] 4 lines --75%--"
+
+=== CTRL-G shows a buffer with no name as [No Name]
+ref:    editing.txt *CTRL-G*
+quote:  "Prints the current file name (as typed, unless \":cd\" was used), the cursor position (unless the 'ruler' option is set), and the file status"
+given:
+  one
+  two
+  th|ree
+  four
+keys:   <C-G>
+expect:
+  one
+  two
+  th|ree
+  four
+msg:    "\"[No Name]\" [Modified] 4 lines --75%--"
+
+=== renaming a named buffer keeps the old name in an unlisted buffer
+ref:    editing.txt *:file_f*
+quote:  "If the buffer did have a name, that name becomes the |alternate-file| name.  An unlisted buffer is created to hold the old name."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :file x.txt<CR>:file y.txt<CR>:file<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1%
+msg:    "\"y.txt\" [Modified][Not edited] 4 lines --75%--"
+
+=== :sbuffer splits and edits the buffer
+ref:    windows.txt *:sbuffer*
+quote:  "Split window and edit buffer [N] from the buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:sbuffer 1<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+win:    1/2
+bufs:   1% 2#
+
+=== :sbnext splits and goes to the next buffer
+ref:    windows.txt *:sbnext*
+quote:  "Split window and go to [N]th next buffer in buffer list."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :enew<CR>:sbnext<CR>
+expect:
+  one
+  two
+  th|ree
+  four
+win:    1/2
+bufs:   1% 2#

@@ -1,0 +1,206 @@
+# Position atoms: \%^ \%$ \%V \%# \%'m \%l \%c \%v.
+
+=== \%^ matches only at the start of the file
+ref:    pattern.txt */\%^*
+quote:  Matches start of the file.
+given:
+  |a
+  a
+keys:   :%s/\%^a/X/<CR>
+expect:
+  |X
+  a
+
+=== \%^\_.\{-}\zs finds the first match in the file
+ref:    pattern.txt */\%^*
+quote:  For example, to find the first "VIM" in a file:
+given:
+  x VIM
+  y V|IM
+keys:   /\%^\_.\{-}\zsVIM<CR>
+expect:
+  x |VIM
+  y VIM
+
+=== \%$ matches only at the end of the file
+ref:    pattern.txt */\%$*
+quote:  Matches end of the file.
+given:
+  |a
+  a
+keys:   :%s/a\%$/X/<CR>
+expect:
+  a
+  |X
+
+=== finding the last match in the file with \%$
+ref:    pattern.txt */\%$*
+quote:  This one will find the last "VIM" in the file:
+given:
+  |VIM
+  VIM x
+  VIM y
+keys:   /VIM\ze\(\(VIM\)\@!\_.\)*\%$<CR>
+expect:
+  VIM
+  VIM x
+  |VIM y
+
+=== \%23l matches in one line
+ref:    pattern.txt */\%l*
+quote:  Matches in a specific line.
+given:
+  |a
+  a
+  a
+keys:   :%s/\%2la/X/<CR>
+expect:
+  a
+  |X
+  a
+
+=== \%<23l matches above a line
+ref:    pattern.txt */\%l*
+quote:  Matches above a specific line (lower line number).
+given:
+  |a
+  a
+  a
+keys:   :%s/\%<3la/X/<CR>
+expect:
+  X
+  |X
+  a
+
+=== \%>23l matches below a line
+ref:    pattern.txt */\%l*
+quote:  Matches below a specific line (higher line number).
+given:
+  |a
+  a
+  a
+keys:   :%s/\%>1la/X/<CR>
+expect:
+  a
+  X
+  |X
+
+=== \%.l matches in the cursor line
+ref:    pattern.txt */\%l*
+quote:  Matches at the cursor line.
+given:
+  a
+  |b a
+  a
+keys:   /\%.la<CR>
+expect:
+  a
+  b |a
+  a
+
+=== \%23c matches in a byte column
+ref:    pattern.txt */\%c*
+quote:  Matches in a specific column.
+given:  |abcd
+keys:   :s/\%3c./(&)/<CR>
+expect: |ab(c)d
+
+=== \%c counts bytes, not characters
+ref:    pattern.txt */\%c*
+quote:  Actually, the column is the byte number (thus it's not exactly right for multibyte characters).
+given:  |éab
+keys:   :s/\%3c./(&)/<CR>
+expect: |é(a)b
+
+=== \%>c and \%<c bound a column range
+ref:    pattern.txt */\%c*
+quote:  Note that "\%<46c" matches in column 45 when the "." matches a byte in column 44.
+given:  |abcdef
+keys:   :s/\%>2c.\%<5c/(&)/g<CR>
+expect: |ab(c)def
+
+=== \%23v matches in a virtual column
+ref:    pattern.txt */\%v*
+quote:  Matches in a specific virtual column.
+given:  |	ab
+keys:   :s/\%9v./(&)/<CR>
+expect:
+  	|(a)b
+
+=== \%v never matches halfway through a tab
+ref:    pattern.txt */\%v*
+quote:  Note that some virtual column positions will never match, because they are halfway through a tab or other character that occupies more than one screen character.
+given:  |	ab
+keys:   :s/\%3v./(&)/e<CR>
+expect: |	ab
+
+=== ^.*\%17v matches up to a virtual column
+ref:    pattern.txt */\%v*
+quote:  To match the text up to column 17:
+given:  |abcdefg
+keys:   :s/^.*\%4v/(&)/<CR>
+expect: |(abc)defg
+
+=== \%# matches at the cursor
+ref:    pattern.txt */\%#*
+quote:  Matches with the cursor position.
+given:  |x ab ab
+keys:   wl:s/.\%#./(&)/<CR>
+expect: |x (ab) ab
+
+=== \%'m matches at a mark
+ref:    pattern.txt */\%'m*
+quote:  Matches with the position of mark m.
+given:  ab|cd
+keys:   ma0:s/\%'a./(&)/<CR>
+expect: |ab(c)d
+
+=== \%>'m matches after a mark
+ref:    pattern.txt */\%'m*
+quote:  Matches after the position of mark m.
+given:  ab|cd
+keys:   ma0:s/\%>'a./(&)/g<CR>
+expect: |abc(d)
+
+=== \%V matches inside the Visual area
+ref:    pattern.txt */\%V*
+quote:  Match inside the Visual area.
+given:  |aaaaa
+keys:   lvl<Esc>:s/\%Va/X/g<CR>
+expect: |aXXaa
+
+=== \%V uses the last Visual area after it ended
+ref:    pattern.txt */\%V*
+quote:  When Visual mode has already been stopped match in the area that |gv| would reselect.
+given:  |aaaaa
+keys:   lvl<Esc>0/\%Va<CR>
+expect: a|aaaa
+
+=== \%V at both ends keeps the match inside the area
+ref:    pattern.txt */\%V*
+quote:  To make sure the whole pattern is inside the Visual area put it at the start and just before the end of the pattern
+given:  |foo bar foo bar
+keys:   v6l<Esc>:s/\%Vfoo.*ba\%Vr/(&)/<CR>
+expect: |(foo bar) foo bar
+
+=== \%V limits a :s to a Visual block
+ref:    change.txt *pattern-delimiter*
+quote:  In Visual block mode, use |/\%V| in the pattern to have the substitute work in the block only.
+given:
+  |aaaa
+  aaaa
+keys:   l<C-v>jl:s/\%Va/X/g<CR>
+expect:
+  aXXa
+  |aXXa
+
+=== without \%V a Visual :s works on whole lines
+ref:    change.txt *pattern-delimiter*
+quote:  Otherwise it works on whole lines anyway.
+given:
+  |aaaa
+  aaaa
+keys:   l<C-v>jl:s/a/X/g<CR>
+expect:
+  XXXX
+  |XXXX

@@ -19,6 +19,7 @@ The design of Oriel, carried over from the planning session. **Start with `PLAN.
 | `ide.md` | LSP, running tests, DAP, terminals (Ghostty), explorer scopes, git, pickers |
 | `ui.md` | every screen, with mockups, the design language and the logo |
 | `help.md` | help everywhere |
+| `errors.md` | notices, toasts, the log panel, Lua errors and tracebacks, panics, logs on disk, debugging Oriel |
 | `testing.md` | test-first, verified spec references, the nvim oracle |
 | `deps.md` | the dependency policy and every approved or rejected module |
 | `distribution.md` | signing, self-update, worker updates |

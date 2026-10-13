@@ -1,0 +1,652 @@
+# :substitute typed from normal mode (change.txt *:s*).
+
+=== :s replaces the first match in the line
+ref:    change.txt *:s*
+quote:  For each line in [range] replace a match of {pattern} with {string}.
+given:  one tw|o one two
+keys:   :s/two/2/<CR>
+expect: |one 2 one two
+mode:   normal
+
+=== :s with g replaces every match in the line
+ref:    change.txt *:s_g*
+quote:  Replace all occurrences in the line.
+given:  |a-a-a
+keys:   :s/a/b/g<CR>
+expect: |b-b-b
+mode:   normal
+
+=== :s leaves the cursor on the first non-blank of the line
+ref:    change.txt *:s*
+quote:  When [range] and [count] are omitted, replace in the current line only.
+given:
+  one
+      foo ba|r
+  three
+keys:   :s/bar/baz/<CR>
+expect:
+  one
+      |foo baz
+  three
+mode:   normal
+
+=== :%s leaves the cursor on the last substituted line
+ref:    change.txt *:s*
+quote:  For each line in [range] replace a match of {pattern} with {string}.
+given:
+  |x one
+  two
+  x three
+  four
+keys:   :%s/x/y/<CR>
+expect:
+  y one
+  two
+  |y three
+  four
+mode:   normal
+
+=== :%s is undone in one step
+ref:    change.txt *:s*
+quote:  For each line in [range] replace a match of {pattern} with {string}.
+given:
+  |x one
+  x two
+keys:   :%s/x/y/<CR>
+expect:
+  y one
+  |y two
+undo:
+  |x one
+  x two
+mode:   normal
+
+=== :s on a range
+ref:    change.txt *:s*
+quote:  For each line in [range] replace a match of {pattern} with {string}.
+given:
+  |x
+  x
+  x
+  x
+keys:   :2,3s/x/y/<CR>
+expect:
+  x
+  y
+  |y
+  x
+mode:   normal
+
+=== :s with a count replaces in that many lines
+ref:    change.txt *:s*
+quote:  When [count] is given, replace in [count] lines, starting with the last line in [range].
+given:
+  x
+  |x
+  x
+  x
+  x
+keys:   :s/x/y/ 3<CR>
+expect:
+  x
+  y
+  y
+  |y
+  x
+mode:   normal
+
+=== :s with a range and a count starts at the range's last line
+ref:    change.txt *:s*
+quote:  When [count] is given, replace in [count] lines, starting with the last line in [range].
+given:
+  |x
+  x
+  x
+  x
+  x
+keys:   :1,2s/x/y/g 2<CR>
+expect:
+  x
+  y
+  |y
+  x
+  x
+mode:   normal
+
+=== more than 'report' substitutions are reported
+ref:    options.txt *'report'*
+quote:  For the ":substitute" command the number of substitutions is used instead of the number of lines.
+given:
+  |a a
+  a
+  b
+keys:   :%s/a/x/g<CR>
+expect:
+  x x
+  |x
+  b
+msg:    3 substitutions on 2 lines
+mode:   normal
+
+=== substitutions on one line are reported
+ref:    options.txt *'report'*
+quote:  For the ":substitute" command the number of substitutions is used instead of the number of lines.
+given:  |a a a a
+keys:   :s/a/x/g<CR>
+expect: |x x x x
+msg:    4 substitutions on 1 line
+mode:   normal
+
+=== two substitutions are not reported
+ref:    options.txt *'report'*
+quote:  For the ":substitute" command the number of substitutions is used instead of the number of lines.
+given:  |a a
+keys:   :s/a/x/g<CR>
+expect: |x x
+msg:    ""
+mode:   normal
+
+=== a missing pattern is an error
+ref:    pattern.txt *E486*
+quote:  Pattern not found
+given:  |one two
+keys:   :s/three/3/<CR>
+expect: |one two
+msg:    "E486: Pattern not found: three"
+mode:   normal
+
+=== :%s without any match is an error
+ref:    pattern.txt *E486*
+quote:  Pattern not found
+given:
+  |one
+  two
+keys:   :%s/three/3/<CR>
+expect:
+  |one
+  two
+msg:    "E486: Pattern not found: three"
+mode:   normal
+
+=== the e flag suppresses the not-found error
+ref:    change.txt *:s_e*
+quote:  When the search pattern fails, do not issue an error message
+given:  |one two
+keys:   :s/three/3/e<CR>
+expect: |one two
+msg:    ""
+mode:   normal
+
+=== the i flag ignores case
+ref:    change.txt *:s_i*
+quote:  Ignore case for the pattern.
+given:  |one FOO two
+keys:   :s/foo/bar/i<CR>
+expect: |one bar two
+mode:   normal
+
+=== without i the match is case sensitive
+ref:    change.txt *:s_i*
+quote:  Ignore case for the pattern.
+given:  |one FOO foo
+keys:   :s/foo/bar/<CR>
+expect: |one FOO bar
+mode:   normal
+
+=== the I flag matches case even with ignorecase
+ref:    change.txt *:s_I*
+quote:  Don't ignore case for the pattern.  The 'ignorecase' and 'smartcase' options are not used.
+given:  |FOO foo
+keys:   :set ic<CR>:s/foo/bar/I<CR>
+expect: |FOO bar
+mode:   normal
+
+=== the n flag counts matches without substituting
+ref:    change.txt *:s_n*
+quote:  Report the number of matches, do not actually substitute.
+given:
+  |a a
+  b
+  a
+keys:   :%s/a/x/gn<CR>
+expect:
+  |a a
+  b
+  a
+msg:    3 matches on 2 lines
+mode:   normal
+
+=== the n flag reports a single match
+ref:    change.txt *:s_n*
+quote:  The matches are reported as if 'report' is zero.
+given:  |a b
+keys:   :s/a//n<CR>
+expect: |a b
+msg:    1 match on 1 line
+mode:   normal
+
+=== :& repeats the last substitute without its flags
+ref:    change.txt *:&*
+quote:  Repeat last :substitute with same search pattern and substitute string, but without the same flags.
+given:
+  |a a
+  a a
+keys:   :s/a/b/g<CR>j:&<CR>
+expect:
+  b b
+  |b a
+mode:   normal
+
+=== :&& keeps the flags
+ref:    change.txt *:&&*
+quote:  Must be the first one: Keep the flags from the previous substitute command.
+given:
+  |a a
+  a a
+keys:   :s/a/b/g<CR>j:&&<CR>
+expect:
+  b b
+  |b b
+mode:   normal
+
+=== :s/// with the & flag keeps the flags
+ref:    change.txt *:&&*
+quote:  :s/this/that/&
+given:
+  |a a
+  a a
+keys:   :s/a/b/g<CR>j:s/a/c/&<CR>
+expect:
+  b b
+  |c c
+mode:   normal
+
+=== :%& repeats on every line
+ref:    change.txt *:&*
+quote:  Repeat last :substitute with same search pattern and substitute string
+given:
+  |a a
+  a a
+  a a
+keys:   :s/a/b/<CR>:%&&<CR>
+expect:
+  b b
+  b a
+  |b a
+mode:   normal
+
+=== :s without a pattern repeats the last substitute
+ref:    change.txt *&*
+quote:  Synonym for `:s` (repeat last substitute).
+given:
+  |a a
+  a a
+keys:   :s/a/b/g<CR>j:s<CR>
+expect:
+  b b
+  |b a
+mode:   normal
+
+=== & in normal mode repeats the last substitute
+ref:    change.txt *&*
+quote:  Synonym for `:s` (repeat last substitute).
+given:
+  |a a
+  a a
+keys:   :s/a/b/g<CR>j&
+expect:
+  b b
+  |b a
+mode:   normal
+
+=== g& repeats the last substitute on all lines with its flags
+ref:    change.txt *g&*
+quote:  Synonym for `:%s//~/&` (repeat last substitute with last search pattern on all lines with the same flags).
+given:
+  |a a
+  a a
+  a a
+keys:   :s/a/b/g<CR>g&
+expect:
+  b b
+  b b
+  |b b
+mode:   normal
+
+=== an empty pattern uses the last search pattern
+ref:    change.txt *:s_r*
+quote:  If the {pattern} for the substitute command is empty, the command uses the pattern from the last substitute or `:global` command.  If there is none, but there is a previous search pattern, that one is used.
+given:  |one two three
+keys:   /two<CR>:s//2/<CR>
+expect: |one 2 three
+mode:   normal
+
+=== an empty pattern after a substitute and a search uses the search
+ref:    change.txt *:s_r*
+quote:  For `:s` with an argument this already happens
+given:  |blue green
+keys:   :s/blue/red/<CR>/green<CR>:s//red/<CR>
+expect: |red red
+mode:   normal
+
+=== :& after a search still uses the substitute pattern
+ref:    change.txt *:s_r*
+quote:  The last command will replace "blue" with "red".
+given:
+  |blue green
+  blue green
+keys:   :s/blue/red/<CR>j/green<CR>:&<CR>
+expect:
+  red green
+  |red green
+mode:   normal
+
+=== :~ uses the last search pattern
+ref:    change.txt *:~*
+quote:  Repeat last substitute with same substitute string but with last used search pattern.
+given:
+  |blue green
+  blue green
+keys:   :s/blue/red/<CR>j/green<CR>:~<CR>
+expect:
+  red green
+  |blue red
+mode:   normal
+
+=== :&r works like :~
+ref:    change.txt *:s_r*
+quote:  `:&r` works the same way as `:~`
+given:
+  |blue green
+  blue green
+keys:   :s/blue/red/<CR>j/green<CR>:&r<CR>
+expect:
+  red green
+  |blue red
+mode:   normal
+
+=== an omitted string deletes the match
+ref:    change.txt *:s_r*
+quote:  If the {string} is omitted the substitute is done as if it's empty.  Thus the matched pattern is deleted.
+given:  |one TESTING two
+keys:   :s/TESTING<CR>
+expect: |one  two
+mode:   normal
+
+=== the closing delimiter may be left out
+ref:    change.txt *:s_r*
+quote:  If [flags] are omitted the separator after {string} may also be left out.
+given:  |one two
+keys:   :s/one/1<CR>
+expect: |1 two
+mode:   normal
+
+=== another delimiter allows / in the pattern
+ref:    change.txt *pattern-delimiter*
+quote:  This is useful if you want to include a '/' in the search pattern or replacement string.
+given:  |a/b/c
+keys:   :s+/+-+g<CR>
+expect: |a-b-c
+mode:   normal
+
+=== an escaped delimiter is literal
+ref:    change.txt *pattern-delimiter*
+quote:  This is useful if you want to include a '/' in the search pattern or replacement string.
+given:  |a-b
+keys:   :s/-/\//<CR>
+expect: |a/b
+mode:   normal
+
+=== & in the string is the whole match
+ref:    change.txt *s/\&*
+quote:  replaced with the whole matched pattern
+given:  |one two
+keys:   :s/two/[&]/<CR>
+expect: |one \[two\]
+mode:   normal
+
+=== \& in the string is a literal &
+ref:    change.txt *s/\&*
+quote:  replaced with &
+given:  |one two
+keys:   :s/two/\&/<CR>
+expect: |one &
+mode:   normal
+
+=== \0 is the whole match
+ref:    change.txt *s/\0*
+quote:  replaced with the whole matched pattern
+given:  |one two
+keys:   :s/two/<\0>/<CR>
+expect: |one <two>
+mode:   normal
+
+=== \1 and \2 are the groups
+ref:    change.txt *s/\\*
+quote:  :s/\([abc]\)\([efg]\)/\2\1/g	 modifies "af fa bg" to "fa fa gb"
+given:  |af fa bg
+keys:   :s/\([abc]\)\([efg]\)/\2\1/g<CR>
+expect: |fa fa gb
+mode:   normal
+
+=== an unmatched group is empty
+ref:    change.txt *s/\\*
+quote:  either the first or second pattern in parentheses did not match, so either \1 or \2 is empty.
+given:  |ab
+keys:   :s/\(a\)\(x*\)b/[\1\2]/<CR>
+expect: |\[a\]
+mode:   normal
+
+=== ~ is the previous replacement string
+ref:    change.txt *s~*
+quote:  substitute
+given:
+  |a b
+  a b
+keys:   :s/a/X/<CR>j:s/b/~Y/<CR>
+expect:
+  X b
+  |a XY
+mode:   normal
+
+=== \~ is a literal tilde
+ref:    change.txt *s/\~*
+quote:  replaced with ~
+given:
+  |a b
+  a b
+keys:   :s/a/X/<CR>j:s/b/\~/<CR>
+expect:
+  X b
+  |a ~
+mode:   normal
+
+=== \u uppercases the next character
+ref:    change.txt *s/\u*
+quote:  next character made uppercase
+given:  |bla bla
+keys:   :s/bla/\u&/g<CR>
+expect: |Bla Bla
+mode:   normal
+
+=== \U uppercases until \E
+ref:    change.txt *s/\U*
+quote:  following characters made uppercase, until \E
+given:  |one two
+keys:   :s/one/\U&\E!x/<CR>
+expect: |ONE!x two
+mode:   normal
+
+=== \U runs to the end of the string without \E
+ref:    change.txt *s/\U*
+quote:  following characters made uppercase, until \E
+given:  |one two
+keys:   :s/one/\U&x/<CR>
+expect: |ONEX two
+mode:   normal
+
+=== \l lowercases the next character
+ref:    change.txt *s/\l*
+quote:  next character made lowercase
+given:  |ONE TWO
+keys:   :s/ONE/\l&/<CR>
+expect: |oNE TWO
+mode:   normal
+
+=== \L lowercases until \e
+ref:    change.txt *s/\e*
+quote:  end of \u, \U, \l and \L (NOTE: not <Esc>!)
+given:  |ONE TWO
+keys:   :s/ONE/\L&\eX/<CR>
+expect: |oneX TWO
+mode:   normal
+
+=== \L\u capitalises a word
+ref:    change.txt *s/\\*
+quote:  :s/\w\+/\L\u\0/g		 modifies "BLA bla"  to "Bla Bla"
+given:  |BLA bla
+keys:   :s/\w\+/\L\u\0/g<CR>
+expect: |Bla Bla
+mode:   normal
+
+=== \r splits the line
+ref:    change.txt *s/\r*
+quote:  \r	  idem
+given:  |one,two
+keys:   :s/,/\r/<CR>
+expect:
+  one
+  |two
+mode:   normal
+
+=== \r on several lines splits each
+ref:    change.txt *s/\r*
+quote:  \r	  idem
+given:
+  |a,b
+  c,d
+keys:   :%s/,/\r/<CR>
+expect:
+  a
+  b
+  c
+  |d
+mode:   normal
+
+=== \\ is a single backslash
+ref:    change.txt *s/\\*
+quote:  insert a single backslash
+given:  |a b
+keys:   :s/ /\\/<CR>
+expect: |a\\b
+mode:   normal
+
+=== \n in the pattern joins lines
+ref:    pattern.txt */\n*
+quote:  matches an end-of-line
+given:
+  |one
+  two
+  three
+keys:   :s/e\nt/e-t/<CR>
+expect:
+  |one-two
+  three
+mode:   normal
+
+=== :%s with \n joins every line pair it matches
+ref:    pattern.txt */\n*
+quote:  matches an end-of-line
+given:
+  |a
+  b
+  c
+  d
+keys:   :%s/\n/,/<CR>
+expect: |a,b,c,d,
+mode:   normal
+
+=== ^ inserts at the start of each line
+ref:    change.txt *:s*
+quote:  For each line in [range] replace a match of {pattern} with {string}.
+given:
+  |one
+  two
+keys:   :%s/^/> /<CR>
+expect:
+  > one
+  |> two
+mode:   normal
+
+=== $ appends at the end of each line
+ref:    change.txt *:s*
+quote:  For each line in [range] replace a match of {pattern} with {string}.
+given:
+  |one
+  two
+keys:   :%s/$/;/<CR>
+expect:
+  one;
+  |two;
+mode:   normal
+
+=== an empty match with g matches before every character
+ref:    change.txt *:s_g*
+quote:  Replace all occurrences in the line.
+given:  |abc
+keys:   :s/x*/-/g<CR>
+expect: |-a-b-c
+mode:   normal
+
+=== an empty line is matched by ^$
+ref:    change.txt *:s*
+quote:  For each line in [range] replace a match of {pattern} with {string}.
+given:
+  |one
+
+  two
+keys:   :%s/^$/--/<CR>
+expect:
+  one
+  |--
+  two
+mode:   normal
+
+=== word boundaries limit the match
+ref:    change.txt *:s*
+quote:  For the {pattern} see |pattern|.
+given:  |a ab ba a
+keys:   :s/\<a\>/X/g<CR>
+expect: |X ab ba X
+mode:   normal
+
+=== . and * in the pattern
+ref:    change.txt *:s*
+quote:  For the {pattern} see |pattern|.
+given:  |key = value
+keys:   :s/=.*/= x/<CR>
+expect: |key = x
+mode:   normal
+
+=== :s on the visual area
+ref:    cmdline.txt *v_:*
+quote:  Starts a command-line with the Visual selected lines as a range.
+given:
+  |a
+  a
+  a
+keys:   Vj:s/a/b/<CR>
+expect:
+  b
+  |b
+  a
+mode:   normal
+
+=== a zero count is an error
+ref:    cmdline.txt *:range-pattern*
+quote:  The count cannot be negative.
+given:  |a
+keys:   :s/a/b/ 0<CR>
+expect: |a
+msg:    "E939: Positive count required"
+mode:   normal

@@ -1,0 +1,50 @@
+# Case: \c and \C in a pattern, with 'ignorecase' at its default (off).
+
+=== a pattern matches case by default
+ref:    pattern.txt */\c*
+quote:  foo	  off		-		foo
+given:  |Foo foo FOO
+keys:   :s/foo/(&)/g<CR>
+expect: |Foo (foo) FOO
+
+=== \c at the start ignores case
+ref:    pattern.txt */\c*
+quote:  \cfoo	  -		-		foo Foo FOO
+given:  |Foo foo FOO
+keys:   :s/\cfoo/(&)/g<CR>
+expect: |(Foo) (foo) (FOO)
+
+=== \c anywhere in the pattern applies to all of it
+ref:    pattern.txt */\c*
+quote:  When "\c" appears anywhere in the pattern, the whole pattern is handled like 'ignorecase' is on.
+given:  |Foo FOO
+keys:   :s/fo\co/(&)/g<CR>
+expect: |(Foo) (FOO)
+
+=== \C forces matching case
+ref:    pattern.txt */\c*
+quote:  foo\C	  -		-		foo
+given:  |Foo foo
+keys:   :s/foo\C/(&)/g<CR>
+expect: |Foo (foo)
+
+=== \c with a collection
+ref:    pattern.txt */[]*
+quote:  \c[a-z]$	same
+given:  |ab cD
+keys:   :s/\c[a-z]$/(&)/<CR>
+expect: |ab c(D)
+
+=== \c ignores case of a backreference
+ref:    pattern.txt */\c*
+quote:  When "\c" appears anywhere in the pattern, the whole pattern is handled like 'ignorecase' is on.
+given:  |aA bc
+keys:   :s/\c\(a\)\1/(&)/<CR>
+expect: |(aA) bc
+
+=== \c ignores case of multibyte letters
+ref:    pattern.txt */\c*
+quote:  When "\c" appears anywhere in the pattern, the whole pattern is handled like 'ignorecase' is on.
+given:  |xÉé
+keys:   :s/\cé/(&)/g<CR>
+expect: |x(É)(é)
