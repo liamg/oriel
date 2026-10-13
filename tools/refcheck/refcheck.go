@@ -9,6 +9,8 @@
 //	ref:    css-color-4/Overview.bs#hue-interpolation   HTML or Bikeshed section, by its heading's id
 //	ref:    css-color-4/conversions.js#OKLab_to_XYZ     a function in vendored sample code
 //	ref:    testdir/test_normal.vim#Test_normal_dw      a test function in vim's vendored tests (spec/vim)
+//	ref:    go/src/testing/match.go#rewrite   a Go declaration (func, method as T.name, type, var, const)
+//	ref:    go/help-testflag.txt        a whole file, for text with no sections (a tool's help output)
 //	ref:    oracle                      expectation taken from the nvim oracle; no quote
 //	quote:  "[count] words forward."
 package refcheck
@@ -104,6 +106,8 @@ func (c *Checker) Check(r Ref) error {
 			return c.checkFunc(r, file, heading)
 		case ".vim":
 			return c.checkVimFunc(r, file, heading)
+		case ".go":
+			return c.checkGoDecl(r, file, heading)
 		case ".rst", ".txt":
 			return c.checkUnderlined(r, file, heading)
 		}
@@ -116,7 +120,27 @@ func (c *Checker) Check(r Ref) error {
 		}
 		return c.checkHelp(r, file, strings.Trim(anchor, "*"))
 	}
+	if !strings.ContainsAny(ref, " \t#") && fileExists(filepath.Join(c.Root, "spec", filepath.FromSlash(ref))) {
+		return c.checkWhole(r, ref)
+	}
 	return fmt.Errorf("%s: unrecognised ref %q", r, ref)
+}
+
+func fileExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && !st.IsDir()
+}
+
+// checkWhole checks the quote anywhere in a file.
+func (c *Checker) checkWhole(r Ref, file string) error {
+	lines, err := c.lines(file)
+	if err != nil {
+		return fmt.Errorf("%s: %v", r, err)
+	}
+	if r.Quote == "" || containsQuote(strings.Join(lines, "\n"), r.Quote) {
+		return nil
+	}
+	return fmt.Errorf("%s: quote not found in spec/%s: %q", r, file, r.Quote)
 }
 
 func (c *Checker) lines(file string) ([]string, error) {
@@ -210,12 +234,13 @@ func (c *Checker) checkMarkdown(r Ref, file, heading string) error {
 
 var mdAnchor = regexp.MustCompile(`<a\b[^>]*\bname=["']([^"']+)["']`)
 
-// markdownHeading matches a heading by its text with any HTML tags dropped, or by the name of an anchor in it.
+// markdownHeading matches a heading by its text, with or without what looks like HTML tags (an <a> anchor, or a
+// placeholder such as <regex>), or by the name of an anchor in it.
 func markdownHeading(line, want string) bool {
 	if m := mdAnchor.FindStringSubmatch(line); m != nil && m[1] == strings.TrimSpace(want) {
 		return true
 	}
-	return sameHeading(htmlTag.ReplaceAllString(line, ""), want)
+	return sameHeading(line, want) || sameHeading(htmlTag.ReplaceAllString(line, ""), want)
 }
 
 // underline is a reStructuredText or AsciiDoc heading's underline: one punctuation character, repeated.
@@ -444,4 +469,57 @@ func (c *Checker) checkVimFunc(r Ref, file, name string) error {
 		return fmt.Errorf("%s: quote not found in function %s in spec/%s: %q", r, name, file, r.Quote)
 	}
 	return fmt.Errorf("%s: no function %s in spec/%s", r, name, file)
+}
+
+var goDecl = regexp.MustCompile(`^(?:func\s+(?:\(\s*\w*\s*\*?\s*(\w+)(?:\[[^\]]*\])?\s*\)\s*)?(\w+)\s*[\[(]|(?:type|var|const)\s+(\w+)\b)`)
+
+// checkGoDecl finds a top-level Go declaration, name or Recv.name for a method, and checks the quote in it and its
+// doc comment, up to the next top-level declaration.
+func (c *Checker) checkGoDecl(r Ref, file, name string) error {
+	lines, err := c.lines(file)
+	if err != nil {
+		return fmt.Errorf("%s: %v", r, err)
+	}
+	recv, fn, isMethod := strings.Cut(name, ".")
+	if !isMethod {
+		recv, fn = "", name
+	}
+	decl := func(l string) bool { return goDecl.MatchString(l) }
+	for i, line := range lines {
+		m := goDecl.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		got, gotRecv := m[2], m[1]
+		if got == "" {
+			got = m[3]
+		}
+		if got != fn || isMethod && gotRecv != recv {
+			continue
+		}
+		start := i
+		for start > 0 && strings.HasPrefix(lines[start-1], "//") {
+			start--
+		}
+		end := i + 1
+		for ; end < len(lines) && !decl(lines[end]); end++ {
+		}
+		for end > i+1 && strings.HasPrefix(lines[end-1], "//") {
+			end--
+		}
+		if r.Quote == "" || containsQuote(goCommentText(lines[start:end]), r.Quote) {
+			return nil
+		}
+		return fmt.Errorf("%s: quote not found in %s in spec/%s: %q", r, name, file, r.Quote)
+	}
+	return fmt.Errorf("%s: no declaration %s in spec/%s", r, name, file)
+}
+
+// goCommentText is Go source with each line's comment marker dropped, so a quote can run across comment lines.
+func goCommentText(lines []string) string {
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = strings.TrimPrefix(strings.TrimSpace(l), "//")
+	}
+	return strings.Join(out, "\n")
 }

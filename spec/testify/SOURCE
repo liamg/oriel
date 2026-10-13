@@ -1,0 +1,4 @@
+source: https://github.com/stretchr/testify
+ref: v1.10.0
+path: assert/assertions.go (data, for the failure message format; no code from it is linked)
+license: MIT (see LICENSE)

@@ -20,7 +20,7 @@ import (
 func builtins(sh *shell) []ext.Extension {
 	sh.layout = &layoutExt{sh: sh}
 	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
-		&editorExt{sh: sh}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspExt{sh: sh}, &settingsExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
+		&editorExt{sh: sh}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspExt{sh: sh}, &testsExt{sh: sh}, &settingsExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
 }
 
 // disposer is the usual way for an extension to undo what it registered.

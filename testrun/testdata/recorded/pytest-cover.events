@@ -1,0 +1,14 @@
+{"kind":"output","line":"============================= test session starts =============================="}
+{"kind":"output","line":"platform linux -- Python 3.11.2, pytest-8.3.4, pluggy-1.6.0"}
+{"kind":"output","line":"rootdir: $ROOT"}
+{"kind":"output","line":"configfile: pytest.ini"}
+{"kind":"output","line":"plugins: cov-6.0.0"}
+{"kind":"output","line":"collected 1 item"}
+{"kind":"output","line":"tests/test_calc.py "}
+{"kind":"started","package":"tests/test_calc.py","test":"test_pass","time":"2026-10-13T20:45:51.047039488Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_pass","time":"2026-10-13T20:45:51.048222464Z","elapsed":844024}
+{"kind":"output","line":"                                                     [100%]"}
+{"kind":"output","line":"---------- coverage: platform linux, python 3.11.2-final-0 -----------"}
+{"kind":"output","line":"Coverage JSON written to file $RUNDIR/coverage.json"}
+{"kind":"output","line":"============================== 1 passed in 0.03s ==============================="}

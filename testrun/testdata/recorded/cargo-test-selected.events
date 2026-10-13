@@ -1,0 +1,17 @@
+{"kind":"output","line":"    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s"}
+{"kind":"output","package":"lib","line":"     Running unittests src/lib.rs (target/debug/deps/basic-5aec12ec0fa00873)"}
+{"kind":"output","package":"lib"}
+{"kind":"started","package":"lib"}
+{"kind":"started","package":"lib","test":"tests::inner::deep"}
+{"kind":"passed","package":"lib","test":"tests::inner::deep"}
+{"kind":"output","package":"lib"}
+{"kind":"passed","package":"lib"}
+{"kind":"output","package":"lib"}
+{"kind":"output","package":"test/integration","line":"     Running tests/integration.rs (target/debug/deps/integration-8886ad3d52605080)"}
+{"kind":"output","package":"test/integration"}
+{"kind":"started","package":"test/integration"}
+{"kind":"started","package":"test/integration","test":"adds"}
+{"kind":"passed","package":"test/integration","test":"adds"}
+{"kind":"output","package":"test/integration"}
+{"kind":"passed","package":"test/integration"}
+{"kind":"output","package":"test/integration"}

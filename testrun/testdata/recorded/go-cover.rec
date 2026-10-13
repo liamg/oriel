@@ -1,0 +1,46 @@
+#oriel-record args: go test -json -coverprofile=$RUNDIR/cover.out ./...
+#oriel-record env: GOWORK=off
+#oriel-record env: GOFLAGS=-count=1
+#oriel-record version: go version: go version go1.26.0 linux/amd64
+#oriel-record platform: linux/amd64
+#oriel-record exit: 0
+{"Time":"2026-10-13T20:24:22.621006058Z","Action":"start","Package":"example.com/watch/a"}
+{"Time":"2026-10-13T20:24:22.622577702Z","Action":"run","Package":"example.com/watch/a","Test":"TestDouble"}
+{"Time":"2026-10-13T20:24:22.622586103Z","Action":"output","Package":"example.com/watch/a","Test":"TestDouble","Output":"=== RUN   TestDouble\n"}
+{"Time":"2026-10-13T20:24:22.622609879Z","Action":"output","Package":"example.com/watch/a","Test":"TestDouble","Output":"--- PASS: TestDouble (0.00s)\n"}
+{"Time":"2026-10-13T20:24:22.622614164Z","Action":"pass","Package":"example.com/watch/a","Test":"TestDouble","Elapsed":0}
+{"Time":"2026-10-13T20:24:22.622618299Z","Action":"run","Package":"example.com/watch/a","Test":"TestSign"}
+{"Time":"2026-10-13T20:24:22.622620592Z","Action":"output","Package":"example.com/watch/a","Test":"TestSign","Output":"=== RUN   TestSign\n"}
+{"Time":"2026-10-13T20:24:22.622625495Z","Action":"output","Package":"example.com/watch/a","Test":"TestSign","Output":"--- PASS: TestSign (0.00s)\n"}
+{"Time":"2026-10-13T20:24:22.622628578Z","Action":"pass","Package":"example.com/watch/a","Test":"TestSign","Elapsed":0}
+{"Time":"2026-10-13T20:24:22.622631225Z","Action":"output","Package":"example.com/watch/a","Output":"PASS\n"}
+{"Time":"2026-10-13T20:24:22.622850462Z","Action":"output","Package":"example.com/watch/a","Output":"coverage: 50.0% of statements\n"}
+{"Time":"2026-10-13T20:24:22.623242512Z","Action":"output","Package":"example.com/watch/a","Output":"ok  \texample.com/watch/a\t0.002s\tcoverage: 50.0% of statements\n"}
+{"Time":"2026-10-13T20:24:22.623250945Z","Action":"pass","Package":"example.com/watch/a","Elapsed":0.002}
+{"Time":"2026-10-13T20:24:22.628330319Z","Action":"start","Package":"example.com/watch/b"}
+{"Time":"2026-10-13T20:24:22.628420098Z","Action":"start","Package":"example.com/watch/c"}
+{"Time":"2026-10-13T20:24:22.628460051Z","Action":"start","Package":"example.com/watch/d"}
+{"Time":"2026-10-13T20:24:22.629508494Z","Action":"run","Package":"example.com/watch/c","Test":"TestSixteen"}
+{"Time":"2026-10-13T20:24:22.629526065Z","Action":"output","Package":"example.com/watch/c","Test":"TestSixteen","Output":"=== RUN   TestSixteen\n"}
+{"Time":"2026-10-13T20:24:22.629550331Z","Action":"output","Package":"example.com/watch/c","Test":"TestSixteen","Output":"--- PASS: TestSixteen (0.00s)\n"}
+{"Time":"2026-10-13T20:24:22.629553202Z","Action":"pass","Package":"example.com/watch/c","Test":"TestSixteen","Elapsed":0}
+{"Time":"2026-10-13T20:24:22.629555834Z","Action":"output","Package":"example.com/watch/c","Output":"PASS\n"}
+{"Time":"2026-10-13T20:24:22.629564601Z","Action":"run","Package":"example.com/watch/d","Test":"TestHello"}
+{"Time":"2026-10-13T20:24:22.629566711Z","Action":"output","Package":"example.com/watch/d","Test":"TestHello","Output":"=== RUN   TestHello\n"}
+{"Time":"2026-10-13T20:24:22.629577683Z","Action":"output","Package":"example.com/watch/d","Test":"TestHello","Output":"--- PASS: TestHello (0.00s)\n"}
+{"Time":"2026-10-13T20:24:22.629581327Z","Action":"pass","Package":"example.com/watch/d","Test":"TestHello","Elapsed":0}
+{"Time":"2026-10-13T20:24:22.629584281Z","Action":"output","Package":"example.com/watch/d","Output":"PASS\n"}
+{"Time":"2026-10-13T20:24:22.629597249Z","Action":"run","Package":"example.com/watch/b","Test":"TestQuadruple"}
+{"Time":"2026-10-13T20:24:22.629601099Z","Action":"output","Package":"example.com/watch/b","Test":"TestQuadruple","Output":"=== RUN   TestQuadruple\n"}
+{"Time":"2026-10-13T20:24:22.629613203Z","Action":"output","Package":"example.com/watch/b","Test":"TestQuadruple","Output":"--- PASS: TestQuadruple (0.00s)\n"}
+{"Time":"2026-10-13T20:24:22.629615116Z","Action":"pass","Package":"example.com/watch/b","Test":"TestQuadruple","Elapsed":0}
+{"Time":"2026-10-13T20:24:22.629616858Z","Action":"output","Package":"example.com/watch/b","Output":"PASS\n"}
+{"Time":"2026-10-13T20:24:22.62981709Z","Action":"output","Package":"example.com/watch/c","Output":"coverage: 100.0% of statements\n"}
+{"Time":"2026-10-13T20:24:22.629840481Z","Action":"output","Package":"example.com/watch/d","Output":"coverage: 100.0% of statements\n"}
+{"Time":"2026-10-13T20:24:22.629907792Z","Action":"output","Package":"example.com/watch/b","Output":"coverage: 100.0% of statements\n"}
+{"Time":"2026-10-13T20:24:22.63011807Z","Action":"output","Package":"example.com/watch/c","Output":"ok  \texample.com/watch/c\t0.002s\tcoverage: 100.0% of statements\n"}
+{"Time":"2026-10-13T20:24:22.630127475Z","Action":"pass","Package":"example.com/watch/c","Elapsed":0.002}
+{"Time":"2026-10-13T20:24:22.630149257Z","Action":"output","Package":"example.com/watch/b","Output":"ok  \texample.com/watch/b\t0.002s\tcoverage: 100.0% of statements\n"}
+{"Time":"2026-10-13T20:24:22.63016208Z","Action":"pass","Package":"example.com/watch/b","Elapsed":0.002}
+{"Time":"2026-10-13T20:24:22.630178217Z","Action":"output","Package":"example.com/watch/d","Output":"ok  \texample.com/watch/d\t0.002s\tcoverage: 100.0% of statements\n"}
+{"Time":"2026-10-13T20:24:22.630186608Z","Action":"pass","Package":"example.com/watch/d","Elapsed":0.002}

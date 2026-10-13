@@ -1,0 +1,7 @@
+{
+  "name": "jest-basic",
+  "private": true,
+  "devDependencies": {
+    "jest": "29.7.0"
+  }
+}

@@ -33,6 +33,10 @@ type Decoration struct {
 	Text     string
 	Node     ui.Node // a Block's content
 	Priority int     // higher draws over lower
+	// Command, for a Sign, runs with Args when the sign is clicked: a test's ▶, a breakpoint.
+	Command string
+	Args    Args
+	Tooltip string
 }
 
 // DecorationCtx is the buffer a provider decorates and the lines in view, [Top, Bottom).

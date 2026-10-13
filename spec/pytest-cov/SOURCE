@@ -1,0 +1,4 @@
+source: https://github.com/pytest-dev/pytest-cov
+ref: v6.0.0
+path: docs/reporting.rst
+license: MIT (see LICENSE)

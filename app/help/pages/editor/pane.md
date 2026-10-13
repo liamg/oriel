@@ -75,3 +75,21 @@ them. Each command, with the typing after it, undoes as one step. `esc` goes bac
 
 A `:s` of a whole word (`:%s/\<Mode\>/RoundingMode/g`) shows how many matches it has and, with a language server,
 offers its rename: `⇥` renames the symbol instead, after showing the diff.
+
+## Tests {#tests}
+
+A `▶` in the gutter marks every test, subtest and table row the file's test runner can run (Go, pytest, vitest, jest,
+cargo, or a plugin's); click it to run that one. After a run each shows `✓`, `✕` or `◌` (flaky) and how long it took.
+`␣tt` runs the test at the cursor, `␣tf` the file's, `␣tp` the package's, `␣ta` everything, `␣tF` what failed last
+time, `␣tl` the last run again; `]t` goes to the next failure. The buttons at the top right run the file, re-run
+failures, turn **watch** on (a save re-runs the tests it affects) and run with **coverage** (covered lines are marked
+green in the gutter, the rest red).
+
+A failure shows under its assertion: want and got side by side with what differs marked, the output, and **jump to
+assertion**, **debug this case**, **ask agent to explain** (an answer under the failure; nothing is changed) and **ask
+agent to fix**. The last three need the debugger and the agent, and are dimmed until they're there.
+
+The Tests panel (`␣to`) has every test by package, with its recent runs, the failed-only and slowest filters, flaky
+tests marked, and the output of the one picked, of the whole run, or the raw JSON.
+
+{{keys "test.*"}}

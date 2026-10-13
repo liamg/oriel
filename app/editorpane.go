@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -167,6 +168,28 @@ func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
 		if ro := p.ReadOnly(); ro != "" {
 			c.Text("ro", "read-only · "+ro, ui.TextStyle{Font: style.Font, Color: th.C(theme.Warn)})
 		}
+		path := p.Name()
+		if path != "" && !filepath.IsAbs(path) {
+			path = filepath.Join(x.dir, path)
+		}
+		if acts := registry.EditorActions(x.h, path); len(acts) > 0 {
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			for _, a := range acts {
+				on := false
+				if a.On != nil {
+					registry.Call(func() error { on = a.On(); return nil })
+				}
+				label := a.Label
+				if a.Icon != "" {
+					label = a.Icon + " " + label
+				}
+				if widget.ToggleChip(c, "act-"+a.Name, label, on, widget.ToggleChipOpts{Help: cmpOr(a.Help, "editor/pane")}) != on {
+					if err := x.h.Run(context.Background(), a.Command, a.Args); err != nil {
+						x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, Key: true, Text: err.Error()})
+					}
+				}
+			}
+		}
 	})
 }
 
@@ -217,7 +240,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 			c.Row("gutter", ui.Style{W: ui.Px(gw), Pad: ui.Insets{R: 16}, Main: ui.End}, func(c *ui.Ctx) {
 				c.Text("n", num, ns)
 			})
-			signs(c, th, ds)
+			x.signs(c, th, ds)
 			if edge.A > 0 {
 				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.lineH), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
 			}

@@ -19,6 +19,8 @@ type Document struct {
 	err     error
 	busy    bool
 	closed  bool
+	// querying holds off the next parse while Query reads the tree.
+	querying bool
 	// OnUpdate, when set, is called on the document's goroutine after each parse, to repaint.
 	OnUpdate func()
 }
@@ -49,7 +51,7 @@ func (d *Document) Change(ch text.Change) {
 func (d *Document) run() {
 	for {
 		d.mu.Lock()
-		for len(d.pending) == 0 && !d.closed {
+		for len(d.pending) == 0 && !d.closed || d.querying {
 			d.cond.Wait()
 		}
 		if d.closed {

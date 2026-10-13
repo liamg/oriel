@@ -1,0 +1,112 @@
+#oriel-record args: $TOOLS/py/bin/python -m pytest -p oriel_pytest $ROOT/tests/test_calc.py $ROOT/tests/test_zslow.py
+#oriel-record env: PYTHONPATH=$RUNDIR
+#oriel-record version: $TOOLS/py/bin/python --version: Python 3.11.2
+#oriel-record version: $TOOLS/py/bin/python -m pytest --version: pytest 8.3.4
+#oriel-record version: $TOOLS/py/bin/python -c import pytest_cov, coverage; print('pytest-cov', pytest_cov.__version__, 'coverage', coverage.__version__): pytest-cov 6.0.0 coverage 7.6.10
+#oriel-record platform: linux/amd64
+#oriel-record killed: after 20s
+#oriel-record exit: -1
+
+@@oriel-event {"event":"sessionstart","rootdir":"$ROOT","time":1791923461.819526}
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.3.4, pluggy-1.6.0
+rootdir: $ROOT
+configfile: pytest.ini
+plugins: cov-6.0.0
+collected 25 items
+
+tests/test_calc.py 
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_pass","location":["tests/test_calc.py",5,"test_pass"],"time":1791923461.8339727}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_pass","duration":0.00026889092987403274,"outcome":"passed","when":"call","sections":[],"time":1791923461.834459}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_fail","location":["tests/test_calc.py",9,"test_fail"],"time":1791923461.8345976}
+F
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_fail","duration":0.0003947990480810404,"outcome":"failed","when":"call","longrepr":"def test_fail():\n        print(\"about to add\")\n>       assert add(2, 2) == 5\nE       assert 4 == 5\nE        +  where 4 = add(2, 2)\n\ntests/test_calc.py:12: AssertionError","crash":{"path":"$ROOT/tests/test_calc.py","lineno":12,"message":"assert 4 == 5\n +  where 4 = add(2, 2)"},"sections":[["Captured stdout call","about to add\n"]],"time":1791923461.8451664}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_raises","location":["tests/test_calc.py",14,"test_raises"],"time":1791923461.8453186}
+F
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_raises","duration":0.00025948602706193924,"outcome":"failed","when":"call","longrepr":"def test_raises():\n>       div(1, 0)\n\ntests/test_calc.py:16: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\na = 1, b = 0\n\n    def div(a, b):\n        if b == 0:\n>           raise ZeroDivisionError(\"b is zero\")\nE           ZeroDivisionError: b is zero\n\ncalc.py:7: ZeroDivisionError","crash":{"path":"$ROOT/calc.py","lineno":7,"message":"ZeroDivisionError: b is zero"},"sections":[],"time":1791923461.8473372}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_skip","location":["tests/test_calc.py",18,"test_skip"],"time":1791923461.8474815}
+s
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_skip","duration":0.00015227298717945814,"outcome":"skipped","when":"setup","message":"Skipped: not today","sections":[],"time":1791923461.847835}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_skip_inside","location":["tests/test_calc.py",23,"test_skip_inside"],"time":1791923461.8479667}
+s
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_skip_inside","duration":0.00023985101142898202,"outcome":"skipped","when":"call","message":"Skipped: skipped inside","sections":[],"time":1791923461.8484132}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_xfail","location":["tests/test_calc.py",27,"test_xfail"],"time":1791923461.8485396}
+x
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_xfail","duration":0.0003089969395659864,"outcome":"skipped","when":"call","xfail":"known bug","sections":[],"time":1791923461.8502226}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_setup_error","location":["tests/test_calc.py",37,"test_setup_error"],"time":1791923461.8504283}
+E
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_setup_error","duration":0.00029975298093631864,"outcome":"failed","when":"setup","longrepr":"@pytest.fixture\n    def broken():\n>       raise RuntimeError(\"fixture broke\")\nE       RuntimeError: fixture broke\n\ntests/test_calc.py:35: RuntimeError","crash":{"path":"$ROOT/tests/test_calc.py","lineno":35,"message":"RuntimeError: fixture broke"},"sections":[],"time":1791923461.852368}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::TestNested::test_inner","location":["tests/test_calc.py",42,"TestNested.test_inner"],"time":1791923461.8525083}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::TestNested::test_inner","duration":0.000215450010728091,"outcome":"passed","when":"call","sections":[],"time":1791923461.8528821}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::TestNested::TestDeeper::test_deep","location":["tests/test_calc.py",46,"TestNested.TestDeeper.test_deep"],"time":1791923461.853003}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::TestNested::TestDeeper::test_deep","duration":0.0002064919681288302,"outcome":"passed","when":"call","sections":[],"time":1791923461.8533652}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_add_table[1-1-2]","location":["tests/test_calc.py",61,"test_add_table[1-1-2]"],"time":1791923461.853482}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_add_table[1-1-2]","duration":0.0003148560645058751,"outcome":"passed","when":"call","sections":[],"time":1791923461.853945}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_add_table[2-2-5]","location":["tests/test_calc.py",61,"test_add_table[2-2-5]"],"time":1791923461.8540611}
+F
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_add_table[2-2-5]","duration":0.0004214390064589679,"outcome":"failed","when":"call","longrepr":"a = 2, b = 2, want = 5\n\n    @pytest.mark.parametrize(\"a,b,want\", [(1, 1, 2), (2, 2, 5), (-1, 1, 0)])\n    def test_add_table(a, b, want):\n>       assert add(a, b) == want\nE       assert 4 == 5\nE        +  where 4 = add(2, 2)\n\ntests/test_calc.py:64: AssertionError","crash":{"path":"$ROOT/tests/test_calc.py","lineno":64,"message":"assert 4 == 5\n +  where 4 = add(2, 2)"},"sections":[],"time":1791923461.8559015}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_add_table[-1-1-0]","location":["tests/test_calc.py",61,"test_add_table[-1-1-0]"],"time":1791923461.8560271}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_add_table[-1-1-0]","duration":0.0003222390078008175,"outcome":"passed","when":"call","sections":[],"time":1791923461.8565638}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_words[hi]","location":["tests/test_calc.py",66,"test_words[hi]"],"time":1791923461.856682}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_words[hi]","duration":0.00023453898029401898,"outcome":"passed","when":"call","sections":[],"time":1791923461.8570762}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_words[two words]","location":["tests/test_calc.py",66,"test_words[two words]"],"time":1791923461.8571937}
+F
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_words[two words]","duration":0.00031491596018895507,"outcome":"failed","when":"call","longrepr":"word = 'two words'\n\n    @pytest.mark.parametrize(\n        \"word\",\n        [\n            \"hi\",\n            \"two words\",\n            pytest.param(\"named\", id=\"custom-id\"),\n            3.5,\n            True,\n            None,\n            [1, 2],\n        ],\n    )\n    def test_words(word):\n>       assert word != \"two words\"\nE       AssertionError: assert 'two words' != 'two words'\n\ntests/test_calc.py:80: AssertionError","crash":{"path":"$ROOT/tests/test_calc.py","lineno":80,"message":"AssertionError: assert 'two words' != 'two words'"},"sections":[],"time":1791923461.858914}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_words[custom-id]","location":["tests/test_calc.py",66,"test_words[custom-id]"],"time":1791923461.8590405}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_words[custom-id]","duration":0.000240529072470963,"outcome":"passed","when":"call","sections":[],"time":1791923461.8594313}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_words[3.5]","location":["tests/test_calc.py",66,"test_words[3.5]"],"time":1791923461.8595493}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_words[3.5]","duration":0.00023595395032316446,"outcome":"passed","when":"call","sections":[],"time":1791923461.8599331}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_words[True]","location":["tests/test_calc.py",66,"test_words[True]"],"time":1791923461.8600512}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_words[True]","duration":0.00023657700512558222,"outcome":"passed","when":"call","sections":[],"time":1791923461.860435}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_words[None]","location":["tests/test_calc.py",66,"test_words[None]"],"time":1791923461.8605518}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_words[None]","duration":0.00022942700888961554,"outcome":"passed","when":"call","sections":[],"time":1791923461.8609276}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_words[word6]","location":["tests/test_calc.py",66,"test_words[word6]"],"time":1791923461.8610458}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_words[word6]","duration":0.0002359069767408073,"outcome":"passed","when":"call","sections":[],"time":1791923461.8614316}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_stacked[2-zero]","location":["tests/test_calc.py",82,"test_stacked[2-zero]"],"time":1791923461.861547}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_stacked[2-zero]","duration":0.0002557779080234468,"outcome":"passed","when":"call","sections":[],"time":1791923461.8619494}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_stacked[2-one]","location":["tests/test_calc.py",82,"test_stacked[2-one]"],"time":1791923461.8620648}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_stacked[2-one]","duration":0.00025736598763614893,"outcome":"passed","when":"call","sections":[],"time":1791923461.8624752}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_stacked[3-zero]","location":["tests/test_calc.py",82,"test_stacked[3-zero]"],"time":1791923461.8625915}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_stacked[3-zero]","duration":0.00025845097843557596,"outcome":"passed","when":"call","sections":[],"time":1791923461.8629966}
+
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_stacked[3-one]","location":["tests/test_calc.py",82,"test_stacked[3-one]"],"time":1791923461.863112}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_stacked[3-one]","duration":0.000263236986938864,"outcome":"passed","when":"call","sections":[],"time":1791923461.8635247}
+                               [ 92%]
+tests/test_zslow.py 
+@@oriel-event {"event":"start","nodeid":"tests/test_zslow.py::test_slow","location":["tests/test_zslow.py",3,"test_slow"],"time":1791923461.8637466}

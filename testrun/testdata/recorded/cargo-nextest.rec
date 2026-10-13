@@ -1,0 +1,37 @@
+#oriel-record args: cargo nextest run --message-format libtest-json-plus --no-fail-fast
+#oriel-record env: NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1
+#oriel-record version: cargo --version: cargo 1.83.0 (5ffbef321 2024-10-29)
+#oriel-record version: rustc --version: rustc 1.83.0 (90b35a623 2024-11-26)
+#oriel-record version: cargo nextest --version: cargo-nextest 0.9.87 (fee71ad7b 2024-12-17) release: 0.9.87 commit-hash: fee71ad7ba08be06519cf9eeb495c6fce0a2e888 commit-date: 2024-12-17 host: x86_64-unknown-linux-gnu
+#oriel-record platform: linux/amd64
+#oriel-record exit: 100
+{"type":"suite","event":"started","test_count":2,"nextest":{"crate":"basic","test_binary":"integration","kind":"test"}}
+{"type":"test","event":"started","name":"basic::integration$adds"}
+{"type":"test","event":"started","name":"basic::integration$fails_too"}
+{"type":"test","event":"ok","name":"basic::integration$adds","exec_time":0.002820157}
+{"type":"test","event":"failed","name":"basic::integration$fails_too","exec_time":0.002884889,"stdout":"thread 'fails_too' panicked at tests/integration.rs:8:5:\nassertion failed: basic::sign(1) < 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"}
+{"type":"suite","event":"failed","passed":1,"failed":1,"ignored":0,"measured":0,"filtered_out":0,"exec_time":0.005705046,"nextest":{"crate":"basic","test_binary":"integration","kind":"test"}}
+{"type":"suite","event":"started","test_count":7,"nextest":{"crate":"basic","test_binary":"basic","kind":"lib"}}
+{"type":"test","event":"started","name":"basic::basic$tests::inner::deep"}
+{"type":"test","event":"started","name":"basic::basic$tests::ignored"}
+{"type":"test","event":"started","name":"basic::basic$tests::fails"}
+{"type":"test","event":"started","name":"basic::basic$shapes::tests::square"}
+{"type":"test","event":"started","name":"basic::basic$tests::passes"}
+{"type":"test","event":"started","name":"basic::basic$tests::panics"}
+{"type":"test","event":"started","name":"basic::basic$tests::should_panic"}
+{"type":"test","event":"ignored","name":"basic::basic$tests::ignored"}
+{"type":"test","event":"ok","name":"basic::basic$tests::should_panic","exec_time":0.002381712}
+{"type":"test","event":"ok","name":"basic::basic$tests::passes","exec_time":0.002421962}
+{"type":"test","event":"failed","name":"basic::basic$tests::fails","exec_time":0.002450809,"stdout":"about to add\nthread 'tests::fails' panicked at src/lib.rs:26:9:\nassertion `left == right` failed\n  left: 4\n right: 5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"}
+{"type":"test","event":"failed","name":"basic::basic$tests::panics","exec_time":0.002465764,"stdout":"thread 'tests::panics' panicked at src/lib.rs:32:18:\nindex out of bounds: the len is 0 but the index is 3\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"}
+{"type":"test","event":"ok","name":"basic::basic$shapes::tests::square","exec_time":0.003177639}
+{"type":"suite","event":"failed","passed":3,"failed":2,"ignored":1,"measured":0,"filtered_out":0,"exec_time":0.012897886,"nextest":{"crate":"basic","test_binary":"basic","kind":"lib"}}
+{"type":"suite","event":"started","test_count":2,"nextest":{"crate":"basic","test_binary":"slow","kind":"test"}}
+{"type":"test","event":"started","name":"basic::slow$quick"}
+{"type":"test","event":"started","name":"basic::slow$slow"}
+{"type":"test","event":"ok","name":"basic::slow$quick","exec_time":0.003175541}
+{"type":"test","event":"failed","name":"basic::slow$slow","exec_time":4.002960089,"reason":"time limit exceeded"}
+{"type":"suite","event":"failed","passed":1,"failed":1,"ignored":0,"measured":0,"filtered_out":0,"exec_time":4.00613563,"nextest":{"crate":"basic","test_binary":"slow","kind":"test"}}
+{"type":"suite","event":"started","test_count":7,"nextest":{"crate":"basic","test_binary":"basic","kind":"lib"}}
+{"type":"test","event":"ok","name":"basic::basic$tests::inner::deep","exec_time":0.003218463}
+{"type":"suite","event":"ok","passed":1,"failed":0,"ignored":1,"measured":0,"filtered_out":5,"exec_time":0.003218463,"nextest":{"crate":"basic","test_binary":"basic","kind":"lib"}}

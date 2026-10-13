@@ -65,7 +65,16 @@ flowchart TB
 - ex commands with ranges, bang, counts and completion.
 - decorations: highlights, signs, virtual text, virtual lines, inline blocks, conceal. A provider gets the buffer, the
   lines in view and `FileBytes` (the buffer as it would be written), for diffing against a file's other versions.
-- filetypes and ftplugins, grammars, queries, formatters, linters, LSP and DAP specs.
+- filetypes and ftplugins, grammars, queries, formatters, linters, LSP and DAP specs. A query kind is any name:
+  `syntax.Parser.Query(kind)` and `syntax.Document.Query(kind)` run a language's `<kind>.scm` and return its matches
+  with named captures and `#set!` properties. Built-in kinds: `highlights`, `folds`, `injections`, `units`, and
+  `tests` (test discovery, below); a plugin's language brings its own the same way.
+- **test adapters** (`testrun.Adapter`: Detect, Discover, Command, Parse; optionally `Coverer` and `Watcher`), as a
+  `testrun.Contribution{Adapter}` of kind `testrun.adapter` (`Registry.Contribute`). The app adds every one to its
+  `testrun.Set` with `testrun.Contribute(set, reg.Contributions("testrun.adapter"))`; a later adapter of the same
+  name shadows the built-in until disposed. An adapter for a language with a grammar usually finds tests with that
+  language's `tests.scm` (`Source.Syntax.Query("tests")`). Go, pytest, vitest, jest and cargo are built-ins written
+  the same way (`ide.md` → Running tests). Lua bindings come with PL-1's binding work.
 - registers (e.g. a `"*` provider), completion sources, snippet engines.
 
 **Shell**
@@ -74,6 +83,11 @@ flowchart TB
   one outside the main area, such as the log). A tab's ✕, shown while the pointer is on it, closes its view.
 - command-line hints (`registry.CmdlineHint`): text at the right of the `:` line while it applies, as the LSP's
   "⇥ use LSP rename" on a `:s` of a whole word.
+- editor actions (`registry.EditorAction`): buttons at the right of an editor's breadcrumb for the files they apply to,
+  lit while `On` says so (the tests' file, failed, watch and coverage).
+- explainers (`registry.Explainer`): answer an `ExplainRequest` (a failure, a diagnostic, a selection) in markdown,
+  with no way to change anything; every "ask to explain" uses the first. The agent's comes with AI.
+- clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - key layers (`registry.KeyLayer`): a keymap mode laid over every other while its `Active` says so, as the completion
   menu's `⌃n` and `⏎`; keys it doesn't map go on as before.
 - picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.

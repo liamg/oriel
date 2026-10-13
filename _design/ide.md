@@ -157,16 +157,97 @@ below.
 ```go
 // package testrun
 type Adapter interface {
-    Detect(ws Workspace) bool                       // go.mod, pyproject, package.json, Cargo.toml…
-    Discover(buf text.Snapshot) []Item              // gutter ▶ positions; cheap, runs on every edit
-    Command(items []Item, mode Mode) (Cmd, error)   // Mode: Run | Debug | Coverage | Watch
-    Parse(r io.Reader, emit func(Event))            // streaming: Started, Output, Passed, Failed{Want,Got,Loc}, Skipped
+    Name() string
+    Detect(ws Workspace) bool                                 // go.mod, pyproject, package.json, Cargo.toml…
+    Discover(src Source) []Item                               // gutter ▶ positions; cheap, runs on every edit
+    Command(ws Workspace, items []Item, mode Mode) (Cmd, error) // ModeRun | ModeDebug | ModeCoverage | ModeWatch
+    Parse(r io.Reader, emit func(Event)) error                // streaming: Started, Output, Passed, Failed{Want,Got,Loc}, Skipped, BuildFailed
 }
 ```
 
 - Testing is covered by `testing.md`: each adapter is checked against recorded runner output for every case (pass, fail,
   panic, timeout, skip, nested, parallel).
 
+### As built (TR core)
+
+The UI-free core of TR-1, TR-3 and TR-4 is in `testrun` (it imports only `text` and `syntax`). The gutter, inline
+results, failure block and tests panel are still to build on it.
+
+- **Discovery.** `Adapter.Discover(Source{Path, Text, Syntax})`. `Syntax` is the buffer's `*syntax.Document`, and the
+  adapter runs the language's `tests.scm` on it with the general `Document.Query(kind)` (a plain snapshot is parsed on
+  a pooled parser instead). `Set.Discover(ws, src)` picks the workspace's adapter. Items carry `Package` and `Name`
+  (`Item.Key()` matches events and history), `Path` (the name's parts), `File`, the 0-based `Line` of the name, and a
+  `Kind`: test, subtest, row, suite, package or file.
+  - Go: `func TestXxx(*testing.T)`, static `t.Run("…")`, and table rows: a slice or map composite literal ranged over
+    by a loop that calls `t.Run(tc.<field>, …)` or `t.Run(<map key>, …)`, keyed or positional. Names are rewritten as
+    go test does (spaces to underscores, unprintables escaped, `#NN` for repeats), checked against a real run.
+    Subtests inside a table row's closure aren't listed.
+  - pytest: `test*` functions and methods of `Test*` classes without `__init__` (nested classes too), and
+    `@pytest.mark.parametrize` ids for literal values, `ids=[…]` and `pytest.param(…, id=…)`, stacked decorators
+    included; checked against `pytest --collect-only`. unittest classes aren't listed.
+  - vitest/jest: `describe`/`it`/`test` (with `.skip`/`.only`/`.concurrent`…) and `.each([…])` tables with printf
+    placeholders and `$name` (vitest formats `$name` with chai, jest with pretty-format, so the adapters differ there);
+    tagged-template tables aren't listed. A test's `Package` is its file's absolute path, as the reports name it.
+  - Rust: functions with `#[test]`, `#[tokio::test]` or any `…::test` attribute, named by module path; `Package` is
+    the target (`lib`, `test/<name>`, `bin/<name>`).
+- **Running.** `Start(ctx, Request{Adapter, Workspace, Items, Mode, Trigger, By, Change, Timeout}, emit)` returns an
+  `Exec` (`Cancel`, `Done`, `Wait() (*Run, error)`); events stream to `emit` and fold into the `Run`. The process runs in
+  its own process group, killed on cancel or timeout; tests still running when a timeout fires fail with
+  `ReasonTimeout`. `Cmd.Files` are written to a fresh run directory (`${ORIEL_TESTRUN_DIR}`), which is how the
+  pytest plugin and coverage files travel. Relative failure locations are made absolute.
+  - Go: `go test -json [-run '^A$/^b$'] pkgs…` with each level regex-quoted; several items are cut to the shallowest
+    depth so none loses subtests (a superset runs). `Go.Flags` adds flags.
+  - pytest: `python -m pytest -p oriel_pytest`, the plugin (`testrun/pytest/oriel_pytest.py`, embedded) writing
+    `@@oriel-event {json}` lines to the stdout pytest started with; node ids are passed as absolute paths.
+  - vitest `run --reporter=json -t <pattern>`, jest `--json --testLocationInResults --testNamePattern … --runTestsByPath`.
+    Both print one report at the end, so their events arrive together; vitest's JSON has no test output.
+  - Rust: `cargo nextest run --message-format libtest-json-plus` (the `-plus` form names each suite's target) with
+    `NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1` and an `-E` filterset when nextest is installed, otherwise `cargo test` with
+    stderr merged (`Cmd.Stderr`) for its "Running …" lines.
+  - Debug: Go returns `dlv test`, pytest `debugpy`; DB-2 wires them to DAP. The others return `ErrUnsupported`.
+- **Events.** `Started`, `Output` (a raw line), `Passed`, `Failed{Failure{Reason, Message, Want, Got, Loc}}`, `Skipped`
+  (with the reason), `BuildFailed`, each with `Elapsed`; an empty `Test` is the package's own. Reasons: assert, panic,
+  timeout, build, error (pytest setup or teardown). Want and got are best effort from Go's `got X, want Y` shapes,
+  testify, pytest's `assert a == b`, chai and jest's expected/received, and Rust's left/right.
+- **History (TR-3).** `Run` has its id, trigger, scope, `By` (user, agent, watch), `Change` (a fingerprint of the code
+  run), start and end, results per test with durations and output, package results, the raw output and coverage;
+  `Failed()`, `Slowest(n)`, `Counts()`. `History` keeps the last N runs and N outcomes per test, saved and loaded as
+  JSON: `Entries(key)` (the sparkline), `Flaky(key)` (failed then passed with the same `Change`, or pass and fail
+  alternating more than once in the last N), `FlakyTests`, `Failing`, `Slowest`, `Run(id)` and `Last(by)`.
+- **Watch (TR-4).** `Set.Affected(ws, file)` asks each adapter that implements `Watcher`; the items run with
+  `ModeWatch`. Go: the file's package and every package in the module that imports it, directly or through others,
+  from code or tests (`go list -e -json ./...`, cached until go.mod or go.work changes or an unknown directory shows
+  up). vitest: `vitest related <file> --run`; jest `--findRelatedTests`. pytest: the test file itself; for
+  `conftest.py` its directory; else test files that import the module by dotted name, failing that by its bare name.
+  cargo: the crate.
+- **Coverage.** `ModeCoverage` runs with Go's `-coverprofile`, pytest-cov's JSON (`--cov=<root>`), istanbul JSON from
+  vitest (with `--coverage.reportOnFailure`) and jest, and `cargo llvm-cov --json --ignore-run-fail`. Each becomes one
+  `Coverage`: per file, 0-based line → hits, with `Ranges(file)` of covered and uncovered lines and `Percent`. The pytest
+  and llvm-cov results agree with those tools' own line summaries.
+- **Plugins.** `Set.Register(a)`, or a `testrun.Contribution` of kind `testrun.adapter` (`plugins.md`).
+- **Deviations from the sketch above**: `Command` takes the workspace and `Parse` returns an error; modes are prefixed
+  (`ModeRun`…) because `Run` and `Coverage` are the model's types; `Discover` takes a `Source` so it can use the
+  buffer's syntax document rather than parse again.
+
+
+### As built (TR-1..TR-4 UI)
+
+- `app/tests*.go`, a built-in: adapters come from `testrun.Builtin()` plus `testrun.adapter` contributions. A
+  decoration provider puts `▶` signs (decorations can now run a command when clicked: `Decoration.Command`) on every
+  discovered item and the latest result after it; a failure is a block at its assertion's line (TR-2) with want/got
+  (the differing middle marked), output and four actions.
+- Explain and fix go through extension points so they work the moment the agent exists: explain asks the first
+  `registry.Explainer` (it answers text only, so explaining can't change a file), fix runs `request.new`, debug runs
+  `debug.test` (DB-2); each is dimmed while nothing provides it.
+- Run scopes: `␣tt` nearest, `␣tf` file, `␣tp` package, `␣ta` all, `␣tF` failed, `␣tl` last, `]t` next failure; the
+  file buttons over the editor are `registry.EditorAction`s. A run's `Change` is `testrun.Fingerprint` (paths, sizes,
+  times), so flaky detection needs no git. History (20 runs) persists per work dir in the state directory.
+- The Tests panel is the `tests` view (the rail's Tests lights up): a tree by package and test (subtests and rows
+  under their test), all / failed / slowest, sparklines of recent runs, flaky marks, and output (case, run, raw JSON).
+  The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.tat` for the HUD (SH-8).
+- Watch (TR-4) is a `BufWritePost` hook running `Set.Affected`; coverage (`␣tc`) marks covered and uncovered lines with
+  gutter edges until toggled off.
+- Not yet: running in the worker's sandbox (AI-1), the agent's runs as evidence (TR-5), debug (DB-2).
 ## Terminals
 
 ### How a terminal is rendered

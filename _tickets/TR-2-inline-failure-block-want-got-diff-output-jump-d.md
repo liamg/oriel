@@ -2,7 +2,7 @@
 id: TR-2
 title: "Inline failure block: want/got diff, output, jump, debug, ask to explain, ask to fix"
 phase: P4
-status: todo
+status: done
 area: LSP, tests, debugging
 module: testrun, app
 depends_on: [TR-1]

@@ -1,17 +1,20 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"image/color"
 	"path/filepath"
 	"slices"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -84,19 +87,34 @@ func lineBg(th *theme.Resolved, ds []registry.Decoration) (bg, edge color.NRGBA)
 	return bg, edge
 }
 
-// signs draws a line's gutter signs, left of its number.
-func signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration) {
+// signs draws a line's gutter signs, left of its number; one with a command runs it when clicked.
+func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration) {
 	c.Row("signs", ui.Style{W: ui.Px(16), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Float: &ui.Float{Offset: render.Point{X: 42}}}, func(c *ui.Ctx) {
 		for i, d := range ds {
 			if d.Kind != registry.Sign {
 				continue
 			}
 			col := tokenColour(th, d.Style, th.C(theme.FgMuted))
-			if d.Text == "" {
-				c.Box(i, ui.Style{W: ui.Px(12), H: ui.Px(12), Radius: 3, Fill: col}, nil)
+			draw := func(c *ui.Ctx) {
+				if d.Text == "" {
+					c.Box("box", ui.Style{W: ui.Px(12), H: ui.Px(12), Radius: 3, Fill: col}, nil)
+					return
+				}
+				c.Text("t", d.Text, ui.TextStyle{Font: codeFont, Color: col})
+			}
+			if d.Command == "" {
+				c.Box(i, ui.Style{}, draw)
 				continue
 			}
-			c.Text(i, d.Text, ui.TextStyle{Font: codeFont, Color: col})
+			tip := d.Tooltip
+			if tip == "" {
+				tip = d.Command
+			}
+			if widget.Clickable(c, i, ui.Style{Radius: 3, Label: tip, Tooltip: tip, Help: "editor/pane"}, draw).Clicked {
+				if err := x.h.Run(context.Background(), d.Command, d.Args); err != nil {
+					x.h.Notify(core.Notice{ID: "editor.sign", Severity: core.SevWarning, Key: true, Text: err.Error()})
+				}
+			}
 		}
 	})
 }

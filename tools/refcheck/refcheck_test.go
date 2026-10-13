@@ -26,13 +26,15 @@ func fakeSpec(t *testing.T) string {
 		"<C-Right>\tor\t\t*<C-Right>* *W*\nW\t\t\t[count] WORDS forward.\n")
 	write(t, root, "spec/nvim/motion.txt", "*w*\nnvim words forward.\n")
 	write(t, root, "spec/vim/testdir/test_x.vim", "\" header\nfunc Test_one()\n  normal! dw\nendfunc\n\nfunc! Test_two()\n  normal! x\nendfunc\n")
-	write(t, root, "spec/lsp/spec.md", "# Spec\n\n## Text Documents\n\nPositions are zero-based.\n\n## Other\n\nElsewhere.\n")
+	write(t, root, "spec/lsp/spec.md", "# Spec\n\n## Text Documents\n\nPositions are zero-based.\n\n## Other\n\nElsewhere.\n\n### `--testNamePattern=<regex>`\n\nRun only tests that match.\n")
 	write(t, root, "spec/lsp/hover.md", "#### <a href=\"#textDocument_hover\" name=\"textDocument_hover\" class=\"anchor\">Hover Request (:leftwards_arrow_with_hook:)</a>\n\nHover info.\n\n#### <a href=\"#next\" name=\"next\" class=\"anchor\">Next</a>\n\nElsewhere.\n")
 	write(t, root, "spec/css/Overview.bs", "<h2 id=\"mix\">Mixing</h2>\n<p>Mix &amp; <em>match</em>\n colours.\n<h3 id=\"sub\">Sub</h3>\nStill mixing.\n<h2 id='next'>Next</h2>\nElsewhere.\nset |x| to 1, giving&nbsp;''red'' or `blue`\n")
 	write(t, root, "spec/wcag/terms.html", "<dt><dfn id=\"dfn-ratio\">ratio</dfn></dt>\n<dd>\n  <p>(L1 + 0.05) /\n (L2 + 0.05)</p>\n</dd>\n<dt><dfn id=\"dfn-other\">other</dfn></dt>\n<dd>Elsewhere.</dd>\n")
 	write(t, root, "spec/wcag/sc.html", "<section id=\"min\" class=\"sc\">\n<h4>Minimum</h4>\n<p>at least 4.5:1</p>\n<section id=\"inner\">Inner.</section>\n</section>\nAfter.\n")
 	write(t, root, "spec/ec/index.rst", "Title\n^^^^^\n\nFile Format\n===========\n\nRead ``one`` line\nat a time.\n\nSub\n---\n\nStill format.\n\nGlobs\n=====\n\nElsewhere.\n")
 	write(t, root, "spec/git/attrs.txt", "gitattributes(5)\n================\n\nEffects\n-------\n\n`text`\n^^^^^^\n\nThis attribute marks the path as a text file.\n\nOther\n-----\n\nElsewhere.\n")
+	write(t, root, "spec/go/help.txt", "The flags:\n\n\t-run regexp\n\t    Run only those tests matching\n\t    the regular expression.\n")
+	write(t, root, "spec/go/src/match.go", "package testing\n\n// rewrite rewrites a subname to having only printable characters and no white\n// space.\nfunc rewrite(s string) string {\n\treturn s\n}\n\n// unique creates a unique name.\nfunc (m *matcher) unique(parent, subname string) string {\n\treturn parent\n}\n\ntype matcher struct {\n\tfilter filterMatch\n}\n")
 	write(t, root, "spec/css/code.js", "// header\nfunction lin(RGB) {\n\treturn val / 12.92;\n}\n\nfunction gam(RGB) {\n\treturn 1.055;\n}\n")
 	return root
 }
@@ -55,6 +57,7 @@ func TestCheck(t *testing.T) {
 		{"lsp/spec.md#text-documents", "", true},
 		{"lsp/spec.md#Text Documents", "Elsewhere.", false},
 		{"lsp/spec.md#Missing", "", false},
+		{"lsp/spec.md#--testnamepatternregex", "Run only tests that match.", true},
 		{"lsp/hover.md#textDocument_hover", "Hover info.", true},
 		{"lsp/hover.md#Hover Request (:leftwards_arrow_with_hook:)", "Hover info.", true},
 		{"lsp/hover.md#textDocument_hover", "Elsewhere.", false},
@@ -90,6 +93,18 @@ func TestCheck(t *testing.T) {
 		{"testdir/test_x.vim#Test_one", "normal! x", false},
 		{"testdir/test_x.vim#Test_three", "", false},
 		{"testdir/test_y.vim#Test_one", "", false},
+		{"go/help.txt", "Run only those tests matching the regular expression.", true},
+		{"go/help.txt", "", true},
+		{"go/help.txt", "Run every test.", false},
+		{"go/nope.txt", "", false},
+		{"go/src/match.go#rewrite", "rewrite rewrites a subname to having only printable characters and no white space.", true},
+		{"go/src/match.go#rewrite", "return s", true},
+		{"go/src/match.go#rewrite", "unique creates", false},
+		{"go/src/match.go#matcher.unique", "unique creates a unique name.", true},
+		{"go/src/match.go#unique", "return parent", true},
+		{"go/src/match.go#other.unique", "", false},
+		{"go/src/match.go#matcher", "filter filterMatch", true},
+		{"go/src/match.go#missing", "", false},
 		{"oracle", "", true},
 		{"oracle nvim v0.11.7", "", true},
 		{"made up", "", false},

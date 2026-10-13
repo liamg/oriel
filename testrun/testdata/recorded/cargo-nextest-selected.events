@@ -1,0 +1,11 @@
+{"kind":"started","package":"lib"}
+{"kind":"started","package":"lib","test":"tests::inner::deep"}
+{"kind":"started","package":"lib","test":"tests::ignored"}
+{"kind":"passed","package":"lib"}
+{"kind":"started","package":"test/integration"}
+{"kind":"started","package":"test/integration","test":"adds"}
+{"kind":"passed","package":"test/integration","test":"adds","elapsed":2341352}
+{"kind":"passed","package":"test/integration","elapsed":2341352}
+{"kind":"started","package":"lib"}
+{"kind":"passed","package":"lib","test":"tests::inner::deep","elapsed":2341294}
+{"kind":"passed","package":"lib","elapsed":2341294}

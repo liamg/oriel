@@ -37,7 +37,12 @@ like this" isn't a source.
   editorconfig-core-test) or that tests are mined from, and the licence they need. The rest of a spec is linked
   from its `SOURCE`. Where a tool is the oracle (`git check-attr`, headless nvim), the test cites `ref: oracle …`
   and the doc's URL instead of a copy.
-- `refcheck` understands each format: vim `*tags*`, markdown headings, RFC section numbers, man page sections.
+- `refcheck` understands each format: vim `*tags*`, markdown headings, RFC section numbers, man page sections,
+  reStructuredText and AsciiDoc underlined headings, HTML ids, Go declarations (`go/src/testing/match.go#rewrite`,
+  `#Type.method` for a method), and a whole file (`go/help-testflag.txt`, no anchor) for a tool's help output.
+- A test runner's own output is recorded rather than written by hand: `testrun/testdata/recorded/*.rec` hold real
+  `go test -json`, pytest, vitest, jest and cargo output from the fixtures, with the tools' versions in their
+  headers, and each adapter's events are compared with an expected golden (`testrun/testdata/recorded/README.md`).
 
 ## The vim engine: keystroke tests
 

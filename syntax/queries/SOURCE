@@ -5,4 +5,4 @@ path: runtime/queries/{go,typescript,tsx,ecma,jsx,javascript,python,rust,lua,mar
   hcl,terraform,kotlin,c_sharp,php,php_only,zig,nix,proto,graphql,xml,ini,
   elixir,scala,gitignore,vue,svelte}/{highlights,folds,injections}.scm
 license: Apache-2.0 (LICENSE)
-units.scm files are ours.
+units.scm and tests.scm files are ours.

@@ -1,0 +1,22 @@
+#oriel-record args: go test -json -run ^TestNested$/^outer$/^inner_pass$ ./calc
+#oriel-record env: GOWORK=off
+#oriel-record env: GOFLAGS=-count=1
+#oriel-record version: go version: go version go1.26.0 linux/amd64
+#oriel-record platform: linux/amd64
+#oriel-record exit: 0
+{"Time":"2026-10-13T20:24:35.254000758Z","Action":"start","Package":"example.com/basic/calc"}
+{"Time":"2026-10-13T20:24:35.25521373Z","Action":"run","Package":"example.com/basic/calc","Test":"TestNested"}
+{"Time":"2026-10-13T20:24:35.255224213Z","Action":"output","Package":"example.com/basic/calc","Test":"TestNested","Output":"=== RUN   TestNested\n"}
+{"Time":"2026-10-13T20:24:35.255280596Z","Action":"run","Package":"example.com/basic/calc","Test":"TestNested/outer"}
+{"Time":"2026-10-13T20:24:35.255282651Z","Action":"output","Package":"example.com/basic/calc","Test":"TestNested/outer","Output":"=== RUN   TestNested/outer\n"}
+{"Time":"2026-10-13T20:24:35.255285787Z","Action":"run","Package":"example.com/basic/calc","Test":"TestNested/outer/inner_pass"}
+{"Time":"2026-10-13T20:24:35.255287442Z","Action":"output","Package":"example.com/basic/calc","Test":"TestNested/outer/inner_pass","Output":"=== RUN   TestNested/outer/inner_pass\n"}
+{"Time":"2026-10-13T20:24:35.255291984Z","Action":"output","Package":"example.com/basic/calc","Test":"TestNested/outer/inner_pass","Output":"--- PASS: TestNested/outer/inner_pass (0.00s)\n"}
+{"Time":"2026-10-13T20:24:35.255294034Z","Action":"pass","Package":"example.com/basic/calc","Test":"TestNested/outer/inner_pass","Elapsed":0}
+{"Time":"2026-10-13T20:24:35.255393982Z","Action":"output","Package":"example.com/basic/calc","Test":"TestNested/outer","Output":"--- PASS: TestNested/outer (0.00s)\n"}
+{"Time":"2026-10-13T20:24:35.255400376Z","Action":"pass","Package":"example.com/basic/calc","Test":"TestNested/outer","Elapsed":0}
+{"Time":"2026-10-13T20:24:35.25540303Z","Action":"output","Package":"example.com/basic/calc","Test":"TestNested","Output":"--- PASS: TestNested (0.00s)\n"}
+{"Time":"2026-10-13T20:24:35.255404905Z","Action":"pass","Package":"example.com/basic/calc","Test":"TestNested","Elapsed":0}
+{"Time":"2026-10-13T20:24:35.255406495Z","Action":"output","Package":"example.com/basic/calc","Output":"PASS\n"}
+{"Time":"2026-10-13T20:24:35.255637195Z","Action":"output","Package":"example.com/basic/calc","Output":"ok  \texample.com/basic/calc\t0.002s\n"}
+{"Time":"2026-10-13T20:24:35.255648078Z","Action":"pass","Package":"example.com/basic/calc","Elapsed":0.002}

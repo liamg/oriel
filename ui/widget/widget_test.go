@@ -660,3 +660,18 @@ func TestInputSelectOnFocus(t *testing.T) {
 		t.Errorf("typing over the selected name gave %q", text)
 	}
 }
+
+// A sparkline's bars stand on the same baseline, as tall as their values.
+func TestSpark(t *testing.T) {
+	var id ui.ID
+	red := render.Color{R: 255, A: 255}
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("s")
+		Spark(c, "s", []SparkBar{{H: 1, Tone: red}, {H: .5, Tone: red}, {H: 0, Tone: red}}, "3 runs")
+	})
+	h.frame()
+	a, b, z := h.rect(ui.Child(id, 0)), h.rect(ui.Child(id, 1)), h.rect(ui.Child(id, 2))
+	if a.Dy() != 12 || b.Dy() != 6 || z.Dy() != 2 || a.Max.Y != b.Max.Y || b.Max.Y != z.Max.Y {
+		t.Errorf("bars %v %v %v", a, b, z)
+	}
+}
