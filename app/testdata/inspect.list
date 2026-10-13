@@ -264,7 +264,7 @@ clip 20,109.44 816x516.12 r 8
   clip 392,282.5 352.0625x15.179993 r 0
     text "lua.1" @392,294.23 #b3ab99 JetBrains Mono 11.5
   pop
-  text "init.lua:1" @756.0625,293.72 #ffd23f JetBrains Mono 11
+  text "init.lua:2" @756.0625,293.72 #ffd23f JetBrains Mono 11
   clip 160,301.68 220x15.179993 r 0
     text "<Space>'" @160,313.41 #ece6d8 JetBrains Mono 11.5
   pop

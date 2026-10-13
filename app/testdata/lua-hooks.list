@@ -25,17 +25,17 @@ clip 0,622.84 760x260 r 0
     text "REPL · oriel api 0.4.0" @58,686.08 #7c7566 JetBrains Mono 12
     text "⇥ complete · ↵ eval · ↑ history" @507.95312,686.08 #4f4a40 JetBrains Mono 12
     clip 24,695.68005 712x109.32001 r 0
-      text "› L.api.version" @24,707.92004 #ece6d8 JetBrains Mono 12
+      text "› oriel.api.version" @24,707.92004 #ece6d8 JetBrains Mono 12
       text "\"0.4.0\"" @24,727.7601 #b3ab99 JetBrains Mono 12
-      text "› #L.ui.row{}.children" @24,747.60004 #ece6d8 JetBrains Mono 12
+      text "› #oriel.ui.row{}.children" @24,747.60004 #ece6d8 JetBrains Mono 12
       text "0" @24,767.44006 #b3ab99 JetBrains Mono 12
-      text "› L.ledger.unread('pricing')" @24,787.28 #ece6d8 JetBrains Mono 12
+      text "› oriel.ledger.unread('pricing')" @24,787.28 #ece6d8 JetBrains Mono 12
       text "repl:1: oriel.ledger.unread isn't available until RV-2 (the review ledger)" @24,807.12006 #ff5f6d JetBrains Mono 12
     pop
     text "›" @24,830.32 #ffd23f JetBrains Mono 12
     rect 39.203125,811 696.7969x30 fill #060606 radius 6 stroke 1 #332f27
     clip 39.203125,811 696.7969x30 r 6
-      text "L.agent.to" @49.203125,830.5471 #ece6d8 Inter 12.5
+      text "oriel.agent.to" @49.203125,830.5471 #ece6d8 Inter 12.5
     pop
     text "tool" @24,859.24 #7c7566 JetBrains Mono 12
   pop

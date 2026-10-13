@@ -95,14 +95,14 @@ clip 0,614 1600x360 r 0
         text "init.lua" @196.3125,756.39996 #ffd23f JetBrains Mono 11
       pop
       clip 386.75,744.85 1155.25x15.179993 r 0
-        text "init.lua:6: attempt to index a nil value (field 'args') · Permission hook turned off after 3 errors" @386.75,756.57996 #ece6d8 JetBrains Mono 11.5
+        text "init.lua:7: attempt to index a nil value (field 'args') · Permission hook turned off after 3 errors" @386.75,756.57996 #ece6d8 JetBrains Mono 11.5
       pop
       rect 1554,745.17 24x14.539978 fill #191815 radius 8
       text "×3" @1560,755.86 #7c7566 JetBrains Mono 9.5
       text "TRACEBACK" @96,783.63 #7c7566 JetBrains Mono 9.5
       rect 96,792.48 637.3913x19 fill #121210 radius 3
       clip 102,794.72 180x14.52002 r 0
-        text "init.lua:6" @102,805.93994 #ffd23f JetBrains Mono 11
+        text "init.lua:7" @102,805.93994 #ffd23f JetBrains Mono 11
       pop
       clip 294,794.72 433.3913x14.52002 r 0
         text "in hook Permission" @294,805.93994 #b3ab99 JetBrains Mono 11
@@ -114,7 +114,7 @@ clip 0,614 1600x360 r 0
         text "dispatch · Permission (Bash)" @294,824.93994 #b3ab99 JetBrains Mono 11
       pop
       clip 102,832.72 180x14.52002 r 0
-        text "init.lua:5" @102,843.93994 #ffd23f JetBrains Mono 11
+        text "init.lua:6" @102,843.93994 #ffd23f JetBrains Mono 11
       pop
       clip 294,832.72 433.3913x14.52002 r 0
         text "in main chunk" @294,843.93994 #b3ab99 JetBrains Mono 11
@@ -128,11 +128,11 @@ clip 0,614 1600x360 r 0
       rect 749.3913,773.94 828.6087x120 fill #060606 radius 6 stroke 1 #24221d
       clip 749.3913,773.94 828.6087x120 r 6
         text "~/.config/oriel/init.lua" @759.3913,789.72003 #7c7566 JetBrains Mono 10.5
-        text "4" @761.3913,810.89996 #4f4a40 JetBrains Mono 11
+        text "5" @761.3913,810.89996 #4f4a40 JetBrains Mono 11
         clip 793.3913,799.35 784.6087x15.179993 r 0
           text "-- auto-allow test runs in this workspace" @793.3913,811.07996 #5c6b7e JetBrains Mono 11.5
         pop
-        text "5" @761.3913,828.89996 #4f4a40 JetBrains Mono 11
+        text "6" @761.3913,828.89996 #4f4a40 JetBrains Mono 11
         clip 793.3913,817.35 784.6087x15.179993 r 0
           text "L" @793.3913,829.07996 #ece6d8 JetBrains Mono 11.5
           text "." @800.5944,829.07996 #89ddff JetBrains Mono 11.5
@@ -148,7 +148,7 @@ clip 0,614 1600x360 r 0
         pop
         rect 749.3913,833.94 828.6087x18 fill #1a0d0e
         rect 749.3913,833.94 2x18 fill #ff5f6d
-        text "6" @761.3913,846.89996 #4f4a40 JetBrains Mono 11
+        text "7" @761.3913,846.89996 #4f4a40 JetBrains Mono 11
         clip 793.3913,835.35 784.6087x15.179993 r 0
           text "  " @793.3913,847.07996 #ece6d8 JetBrains Mono 11.5
           text "if" @807.79755,847.07996 #c792ff JetBrains Mono 11.5
@@ -176,14 +176,14 @@ clip 0,614 1600x360 r 0
           text " " @1175.157,847.07996 #ece6d8 JetBrains Mono 11.5
           text "then" @1182.3601,847.07996 #c792ff JetBrains Mono 11.5
         pop
-        text "7" @761.3913,864.89996 #4f4a40 JetBrains Mono 11
+        text "8" @761.3913,864.89996 #4f4a40 JetBrains Mono 11
         clip 793.3913,853.35 784.6087x15.179993 r 0
           text "    " @793.3913,865.07996 #ece6d8 JetBrains Mono 11.5
           text "return" @822.2038,865.07996 #c792ff JetBrains Mono 11.5
           text " " @865.42255,865.07996 #ece6d8 JetBrains Mono 11.5
           text "\"allow\"" @872.6257,865.07996 #a5e075 JetBrains Mono 11.5
         pop
-        text "8" @761.3913,882.89996 #4f4a40 JetBrains Mono 11
+        text "9" @761.3913,882.89996 #4f4a40 JetBrains Mono 11
         clip 793.3913,871.35 784.6087x15.179993 r 0
           text "  " @793.3913,883.07996 #ece6d8 JetBrains Mono 11.5
           text "end" @807.79755,883.07996 #c792ff JetBrains Mono 11.5
@@ -222,7 +222,7 @@ rect 1158,27.154785 7x7 fill #ff5f6d radius 3.5
 text "CONFIG ERROR" @1173,34.074783 #ff5f6d JetBrains Mono 9.5
 text "init.lua" @1268.96,34.074783 #7c7566 JetBrains Mono 9.5
 text "✕" @1561.4062,34.65625 #7c7566 Inter 11
-text "init.lua:6: attempt to index a nil value (field 'args') · Permission" @1158,58.418945 #ece6d8 Inter 12.5
+text "init.lua:7: attempt to index a nil value (field 'args') · Permission" @1158,58.418945 #ece6d8 Inter 12.5
 text "hook turned off after 3 errors" @1158,76.54346 #ece6d8 Inter 12.5
 text "Open at line" @1158,104.92383 #ffd23f Inter 12
 rect 1158,108.81836 68.515625x1 fill #ffd23fb3

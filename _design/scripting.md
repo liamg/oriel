@@ -183,7 +183,8 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
 - Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
   `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `ui`, `regex` (PCRE2),
-  `language`, and `o`, `bo`, `so` over the registry's options (`oriel.o` sets the Lua layer). `L` is `oriel`.
+  `language`, and `o`, `bo`, `so` over the registry's options (`oriel.o` sets the Lua layer). There's one global, `oriel`; a config that wants a short name writes
+  `local L = oriel`, as the sample does.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
   `thread`, `lsp`, `coverage`, `http` and `async` load, and calling into one says which ticket brings it. An option
@@ -194,7 +195,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   `PrRaise` and `ModeChanged` are declared for the features that fire them.
 - Saving `init.lua` or anything under `lua/` reloads the config within 500 ms: everything it registered goes, it
   loads again, and a toast says how long and how many things it registered; an error is a notice with its line.
-- `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`/`L`, history) and
+- `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`, history) and
   `:Inspect` (20-inspect) are built. `:Inspect`'s parts are contributions (`registry.InspectSection`): the editor
   gives the tree-sitter path (a new `node_path` in the grammar shim), the highlight and decorations; the Lua extension
   gives the keymaps that apply and the window's views, with what replaced them (`Registry.ViewSource`).

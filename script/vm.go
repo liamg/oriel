@@ -284,8 +284,6 @@ func (vm *VM) Bind(ns string, fns map[string]GoFunc) {
 	}
 }
 
-// Alias makes a global name for the oriel table.
-func (vm *VM) Alias(name string) { vm.L.SetGlobal(name, vm.namespace("")) }
 
 // SetValue puts a plain value in a namespace: oriel.api.version.
 func (vm *VM) SetValue(ns, name string, v any) { vm.namespace(ns).RawSetString(name, vm.toLua(v)) }

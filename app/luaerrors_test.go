@@ -258,12 +258,12 @@ func TestREPLError(t *testing.T) {
 	s := luaScene(t, "local M = {}\nfunction M.boom() error('deep') end\noriel.boom = M.boom\n")
 	x := s.lua()
 	s.run("lua", registry.Args{"args": `error("x")`})
-	s.run("lua", registry.Args{"args": `L.boom()`})
+	s.run("lua", registry.Args{"args": `oriel.boom()`})
 	var got []string
 	for _, l := range x.repl {
 		got = append(got, l.text)
 	}
-	want := []string{`error("x")`, "repl:1: x", "  repl:1: in main chunk", "L.boom()", "init.lua:2: deep", "  init.lua:2: in function 'boom'", "  repl:1: in main chunk"}
+	want := []string{`error("x")`, "repl:1: x", "  repl:1: in main chunk", "oriel.boom()", "init.lua:2: deep", "  init.lua:2: in function 'boom'", "  repl:1: in main chunk"}
 	if !slices.Equal(got, want) {
 		t.Errorf("repl\n%q\nwant\n%q", got, want)
 	}

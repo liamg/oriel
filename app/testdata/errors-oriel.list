@@ -78,7 +78,7 @@ clip 0,614 1600x360 r 0
         text "init.lua" @196.3125,729.45996 #ffd23f JetBrains Mono 11
       pop
       clip 386.75,717.91 1155.25x15.179993 r 0
-        text "init.lua:6: attempt to index a nil value (field 'args') · Permission hook turned off after 3 errors" @386.75,729.63995 #ece6d8 JetBrains Mono 11.5
+        text "init.lua:7: attempt to index a nil value (field 'args') · Permission hook turned off after 3 errors" @386.75,729.63995 #ece6d8 JetBrains Mono 11.5
       pop
       rect 1554,718.23 24x14.539978 fill #191815 radius 8
       text "×3" @1560,728.92 #7c7566 JetBrains Mono 9.5

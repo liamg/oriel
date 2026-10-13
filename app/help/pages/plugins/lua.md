@@ -7,7 +7,7 @@ related: [plugins/hooks, plugins/inspect, shell/settings]
 # Lua
 
 Your config is `~/.config/oriel/init.lua`, with modules under `lua/` for `require`. It runs in one Lua VM with the
-`oriel` API (also called `L`): options, keymaps, commands, hooks, views, decorations, and registrations for agent
+`oriel` API (write `local L = oriel` for a short name): options, keymaps, commands, hooks, views, decorations, and registrations for agent
 tools, prompt packs, session kinds, HUD tats and status rules. Saving it reloads it, with a toast; an error says
 where.
 
@@ -23,8 +23,8 @@ the line, a mark on the line, and a row in `:Problems`.
 
 ## The REPL {#repl}
 
-`:lua` opens it; `:lua <code>` runs one line. A line is tried as an expression first, so `L.api.version` shows its
-value. `⇥` completes names under `oriel` and `L`, `↑` brings back earlier lines. An error shows with its trace
+`:lua` opens it; `:lua <code>` runs one line. A line is tried as an expression first, so `oriel.api.version` shows its
+value. `⇥` completes names under `oriel`, `↑` brings back earlier lines. An error shows with its trace
 under the line.
 
 ## UI {#ui}

@@ -277,9 +277,9 @@ func (x *luaExt) eval(line string) {
 	x.repl = append(x.repl, replLine{text: line})
 	x.history = append(x.history, line)
 	x.hist = len(x.history)
-	out, err := x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("local L = oriel; return unpack({ " + line + "\n})")})
+	out, err := x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("return unpack({ " + line + "\n})")})
 	if err != nil && (strings.Contains(err.Error(), "syntax error") || strings.Contains(err.Error(), "parse error")) {
-		out, err = x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("local L = oriel; " + line)})
+		out, err = x.vm.Eval(script.Chunk{Name: "repl", Source: []byte(line)})
 	}
 	if err != nil {
 		x.repl = append(x.repl, replLine{text: err.Error(), kind: 2})
@@ -335,7 +335,7 @@ func show(v any) string {
 
 var completeRe = regexp.MustCompile(`([A-Za-z_][\w.]*)$`)
 
-// complete is what the REPL offers for the word before the cursor: the names under oriel (or L) that it starts.
+// complete is what the REPL offers for the word before the cursor: the names under oriel that it starts.
 func (x *luaExt) complete(line string) (prefix string, names []string) {
 	m := completeRe.FindString(line)
 	if m == "" {
@@ -346,7 +346,7 @@ func (x *luaExt) complete(line string) (prefix string, names []string) {
 		path, last = m[:i], m[i+1:]
 	}
 	root, rest, _ := strings.Cut(path, ".")
-	if root != "oriel" && root != "L" {
+	if root != "oriel" {
 		return "", nil
 	}
 	if path == root {
@@ -403,7 +403,7 @@ func (x *luaExt) replView(c *ui.Ctx) {
 		_, names := x.complete(x.input)
 		c.Row("input", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("p", "›", mono(tLuaPrompt))
-			if widget.Input(c, "in", &x.input, widget.InputOpts{Label: "Lua", Placeholder: "L.", Help: "plugins/lua"}).Submitted && x.input != "" {
+			if widget.Input(c, "in", &x.input, widget.InputOpts{Label: "Lua", Placeholder: "oriel.", Help: "plugins/lua"}).Submitted && x.input != "" {
 				x.eval(x.input)
 				x.input = ""
 			}

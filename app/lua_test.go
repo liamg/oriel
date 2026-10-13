@@ -167,14 +167,14 @@ L.on("CommentSend", function(ev) ev.body = ev.body:upper(); return ev end)
 
 	x := s.lua()
 	x.eval("1 + 1")
-	x.eval("L.api.version")
-	x.eval("L.nope()")
+	x.eval("oriel.api.version")
+	x.eval("oriel.nope()")
 	got := []string{x.repl[1].text, x.repl[3].text}
 	if got[0] != "2" || got[1] != `"0.4.0"` || x.repl[5].kind != 2 {
 		t.Errorf("repl %+v", x.repl)
 	}
-	if _, names := x.complete("L.ke"); !slices.Equal(names, []string{"keymap"}) {
-		t.Errorf("completing L.ke: %v", names)
+	if _, names := x.complete("oriel.ke"); !slices.Equal(names, []string{"keymap"}) {
+		t.Errorf("completing oriel.ke: %v", names)
 	}
 	if _, names := x.complete("oriel.regex.f"); !slices.Equal(names, []string{"find", "find_all"}) {
 		t.Errorf("completing oriel.regex.f: %v", names)
@@ -223,10 +223,10 @@ func TestLuaSnapshots(t *testing.T) {
 	s.run("Hooks", nil)
 	s.run("lua", nil)
 	x := s.lua()
-	x.eval("L.api.version")
-	x.eval("#L.ui.row{}.children")
-	x.eval("L.ledger.unread('pricing')")
-	x.input = "L.agent.to"
+	x.eval("oriel.api.version")
+	x.eval("#oriel.ui.row{}.children")
+	x.eval("oriel.ledger.unread('pricing')")
+	x.input = "oriel.agent.to"
 	s.frame() // the status line's third error in a row turns it off
 	s.golden("lua-hooks")
 

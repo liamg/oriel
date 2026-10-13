@@ -48,7 +48,6 @@ func Install(vm *script.VM, h ext.Host) *APIs {
 	a.bind(vm)
 	a.options(vm)
 	vm.SetValue("api", "version", Version)
-	vm.Alias("L") // oriel's short name, as configs and the REPL write it
 	for ns, ticket := range futures {
 		vm.Future(ns, ticket)
 	}

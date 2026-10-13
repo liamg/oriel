@@ -26,37 +26,13 @@ clip 0,38 1400x476 r 0
       text "init.lua" @155.5,85.96 #b3ab99 JetBrains Mono 11
       clip 0,95 1400x419 r 0
         text "1" @39.59375,116.36 #4f4a40 JetBrains Mono 13.5
-        text "L" @68,116.36 #ece6d8 JetBrains Mono 13.5
-        text "." @76.40625,116.36 #89ddff JetBrains Mono 13.5
-        text "keymap" @84.8125,116.36 #d6dde6 JetBrains Mono 13.5
-        text "." @135.25,116.36 #89ddff JetBrains Mono 13.5
-        text "set" @143.65625,116.36 #5cd2ff JetBrains Mono 13.5
-        text "(" @168.875,116.36 #89ddff JetBrains Mono 13.5
-        text "{" @177.28125,116.36 #ece6d8 JetBrains Mono 13.5
-        text " " @185.6875,116.36 #ece6d8 JetBrains Mono 13.5
-        text "\"n\"" @194.09375,116.36 #a5e075 JetBrains Mono 13.5
-        text "," @219.3125,116.36 #89ddff JetBrains Mono 13.5
-        text " " @227.71875,116.36 #ece6d8 JetBrains Mono 13.5
-        text "\"x\"" @236.125,116.36 #a5e075 JetBrains Mono 13.5
-        text " " @261.34375,116.36 #ece6d8 JetBrains Mono 13.5
-        text "}" @269.75,116.36 #ece6d8 JetBrains Mono 13.5
-        text "," @278.15625,116.36 #89ddff JetBrains Mono 13.5
-        text " " @286.5625,116.36 #ece6d8 JetBrains Mono 13.5
-        text "\"ga\"" @294.96875,116.36 #a5e075 JetBrains Mono 13.5
-        text "," @328.59375,116.36 #89ddff JetBrains Mono 13.5
-        text " " @337,116.36 #ece6d8 JetBrains Mono 13.5
-        text "function" @345.40625,116.36 #c792ff JetBrains Mono 13.5
-        text "()" @412.65625,116.36 #89ddff JetBrains Mono 13.5
-        text " " @429.46875,116.36 #ece6d8 JetBrains Mono 13.5
-        text "L" @437.875,116.36 #ece6d8 JetBrains Mono 13.5
-        text "." @446.28125,116.36 #89ddff JetBrains Mono 13.5
-        text "thread" @454.6875,116.36 #d6dde6 JetBrains Mono 13.5
-        text "." @505.125,116.36 #89ddff JetBrains Mono 13.5
-        text "new" @513.53125,116.36 #5cd2ff JetBrains Mono 13.5
-        text "()" @538.75,116.36 #89ddff JetBrains Mono 13.5
-        text " " @555.5625,116.36 #ece6d8 JetBrains Mono 13.5
-        text "end" @563.96875,116.36 #c792ff JetBrains Mono 13.5
-        text ")" @589.1875,116.36 #89ddff JetBrains Mono 13.5
+        text "local" @68,116.36 #c792ff JetBrains Mono 13.5
+        text " " @110.03125,116.36 #ece6d8 JetBrains Mono 13.5
+        text "L" @118.4375,116.36 #ece6d8 JetBrains Mono 13.5
+        text " " @126.84375,116.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @135.25,116.36 #89ddff JetBrains Mono 13.5
+        text " " @143.65625,116.36 #ece6d8 JetBrains Mono 13.5
+        text "oriel" @152.0625,116.36 #d6dde6 JetBrains Mono 13.5
         text "2" @39.59375,137.36 #4f4a40 JetBrains Mono 13.5
         text "L" @68,137.36 #ece6d8 JetBrains Mono 13.5
         text "." @76.40625,137.36 #89ddff JetBrains Mono 13.5
@@ -64,68 +40,100 @@ clip 0,38 1400x476 r 0
         text "." @135.25,137.36 #89ddff JetBrains Mono 13.5
         text "set" @143.65625,137.36 #5cd2ff JetBrains Mono 13.5
         text "(" @168.875,137.36 #89ddff JetBrains Mono 13.5
-        text "\"requests\"" @177.28125,137.36 #a5e075 JetBrains Mono 13.5
-        text "," @261.34375,137.36 #89ddff JetBrains Mono 13.5
-        text " " @269.75,137.36 #ece6d8 JetBrains Mono 13.5
-        text "\"x\"" @278.15625,137.36 #a5e075 JetBrains Mono 13.5
-        text "," @303.375,137.36 #89ddff JetBrains Mono 13.5
-        text " " @311.78125,137.36 #ece6d8 JetBrains Mono 13.5
-        text "\"thread.resolve\"" @320.1875,137.36 #a5e075 JetBrains Mono 13.5
-        text ")" @454.6875,137.36 #89ddff JetBrains Mono 13.5
+        text "{" @177.28125,137.36 #ece6d8 JetBrains Mono 13.5
+        text " " @185.6875,137.36 #ece6d8 JetBrains Mono 13.5
+        text "\"n\"" @194.09375,137.36 #a5e075 JetBrains Mono 13.5
+        text "," @219.3125,137.36 #89ddff JetBrains Mono 13.5
+        text " " @227.71875,137.36 #ece6d8 JetBrains Mono 13.5
+        text "\"x\"" @236.125,137.36 #a5e075 JetBrains Mono 13.5
+        text " " @261.34375,137.36 #ece6d8 JetBrains Mono 13.5
+        text "}" @269.75,137.36 #ece6d8 JetBrains Mono 13.5
+        text "," @278.15625,137.36 #89ddff JetBrains Mono 13.5
+        text " " @286.5625,137.36 #ece6d8 JetBrains Mono 13.5
+        text "\"ga\"" @294.96875,137.36 #a5e075 JetBrains Mono 13.5
+        text "," @328.59375,137.36 #89ddff JetBrains Mono 13.5
+        text " " @337,137.36 #ece6d8 JetBrains Mono 13.5
+        text "function" @345.40625,137.36 #c792ff JetBrains Mono 13.5
+        text "()" @412.65625,137.36 #89ddff JetBrains Mono 13.5
+        text " " @429.46875,137.36 #ece6d8 JetBrains Mono 13.5
+        text "L" @437.875,137.36 #ece6d8 JetBrains Mono 13.5
+        text "." @446.28125,137.36 #89ddff JetBrains Mono 13.5
+        text "thread" @454.6875,137.36 #d6dde6 JetBrains Mono 13.5
+        text "." @505.125,137.36 #89ddff JetBrains Mono 13.5
+        text "new" @513.53125,137.36 #5cd2ff JetBrains Mono 13.5
+        text "()" @538.75,137.36 #89ddff JetBrains Mono 13.5
+        text " " @555.5625,137.36 #ece6d8 JetBrains Mono 13.5
+        text "end" @563.96875,137.36 #c792ff JetBrains Mono 13.5
+        text ")" @589.1875,137.36 #89ddff JetBrains Mono 13.5
         text "3" @39.59375,158.36 #4f4a40 JetBrains Mono 13.5
+        text "L" @68,158.36 #ece6d8 JetBrains Mono 13.5
+        text "." @76.40625,158.36 #89ddff JetBrains Mono 13.5
+        text "keymap" @84.8125,158.36 #d6dde6 JetBrains Mono 13.5
+        text "." @135.25,158.36 #89ddff JetBrains Mono 13.5
+        text "set" @143.65625,158.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @168.875,158.36 #89ddff JetBrains Mono 13.5
+        text "\"requests\"" @177.28125,158.36 #a5e075 JetBrains Mono 13.5
+        text "," @261.34375,158.36 #89ddff JetBrains Mono 13.5
+        text " " @269.75,158.36 #ece6d8 JetBrains Mono 13.5
+        text "\"x\"" @278.15625,158.36 #a5e075 JetBrains Mono 13.5
+        text "," @303.375,158.36 #89ddff JetBrains Mono 13.5
+        text " " @311.78125,158.36 #ece6d8 JetBrains Mono 13.5
+        text "\"thread.resolve\"" @320.1875,158.36 #a5e075 JetBrains Mono 13.5
+        text ")" @454.6875,158.36 #89ddff JetBrains Mono 13.5
         text "4" @39.59375,179.36 #4f4a40 JetBrains Mono 13.5
-        text "-- auto-allow test runs in this workspace" @68,179.36 #5c6b7e JetBrains Mono 13.5
         text "5" @39.59375,200.36 #4f4a40 JetBrains Mono 13.5
-        text "L" @68,200.36 #ece6d8 JetBrains Mono 13.5
-        text "." @76.40625,200.36 #89ddff JetBrains Mono 13.5
-        text "on" @84.8125,200.36 #5cd2ff JetBrains Mono 13.5
-        text "(" @101.625,200.36 #89ddff JetBrains Mono 13.5
-        text "\"Permission\"" @110.03125,200.36 #a5e075 JetBrains Mono 13.5
-        text "," @210.90625,200.36 #89ddff JetBrains Mono 13.5
-        text " " @219.3125,200.36 #ece6d8 JetBrains Mono 13.5
-        text "function" @227.71875,200.36 #c792ff JetBrains Mono 13.5
-        text "(" @294.96875,200.36 #89ddff JetBrains Mono 13.5
-        text "ev" @303.375,200.36 #d6dde6 JetBrains Mono 13.5
-        text ")" @320.1875,200.36 #89ddff JetBrains Mono 13.5
-        rect 0,206 1400x21 fill #ff5f6d14
-        text "6" @39.59375,221.36 #ff5f6dbf JetBrains Mono 13.5
-        text "  " @68,221.36 #ece6d8 JetBrains Mono 13.5
-        text "if" @84.8125,221.36 #c792ff JetBrains Mono 13.5
-        text " " @101.625,221.36 #ece6d8 JetBrains Mono 13.5
-        text "ev" @110.03125,221.36 #d6dde6 JetBrains Mono 13.5
-        text "." @126.84375,221.36 #89ddff JetBrains Mono 13.5
-        text "tool" @135.25,221.36 #d6dde6 JetBrains Mono 13.5
-        text " " @168.875,221.36 #ece6d8 JetBrains Mono 13.5
-        text "==" @177.28125,221.36 #89ddff JetBrains Mono 13.5
-        text " " @194.09375,221.36 #ece6d8 JetBrains Mono 13.5
-        text "\"Bash\"" @202.5,221.36 #a5e075 JetBrains Mono 13.5
-        text " " @252.9375,221.36 #ece6d8 JetBrains Mono 13.5
-        text "and" @261.34375,221.36 #c792ff JetBrains Mono 13.5
-        text " " @286.5625,221.36 #ece6d8 JetBrains Mono 13.5
-        text "ev" @294.96875,221.36 #d6dde6 JetBrains Mono 13.5
-        text "." @311.78125,221.36 #89ddff JetBrains Mono 13.5
-        text "args" @320.1875,221.36 #d6dde6 JetBrains Mono 13.5
-        text ":" @353.8125,221.36 #89ddff JetBrains Mono 13.5
-        text "match" @362.21875,221.36 #5cd2ff JetBrains Mono 13.5
-        text "(" @404.25,221.36 #89ddff JetBrains Mono 13.5
-        text "\"" @412.65625,221.36 #a5e075 JetBrains Mono 13.5
-        text "^go test " @421.0625,221.36 #a5e075 JetBrains Mono 13.5
-        text "\"" @496.71875,221.36 #a5e075 JetBrains Mono 13.5
-        text ")" @505.125,221.36 #89ddff JetBrains Mono 13.5
-        text " " @513.53125,221.36 #ece6d8 JetBrains Mono 13.5
-        text "then" @521.9375,221.36 #c792ff JetBrains Mono 13.5
-        text "attempt to index a non-table object(nil) with key 'match'" @577.5625,220.82 #ff5f6d JetBrains Mono 12
-        text "7" @39.59375,242.36 #4f4a40 JetBrains Mono 13.5
-        text "    " @68,242.36 #ece6d8 JetBrains Mono 13.5
-        text "return" @101.625,242.36 #c792ff JetBrains Mono 13.5
-        text " " @152.0625,242.36 #ece6d8 JetBrains Mono 13.5
-        text "\"allow\"" @160.46875,242.36 #a5e075 JetBrains Mono 13.5
+        text "-- auto-allow test runs in this workspace" @68,200.36 #5c6b7e JetBrains Mono 13.5
+        text "6" @39.59375,221.36 #4f4a40 JetBrains Mono 13.5
+        text "L" @68,221.36 #ece6d8 JetBrains Mono 13.5
+        text "." @76.40625,221.36 #89ddff JetBrains Mono 13.5
+        text "on" @84.8125,221.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @101.625,221.36 #89ddff JetBrains Mono 13.5
+        text "\"Permission\"" @110.03125,221.36 #a5e075 JetBrains Mono 13.5
+        text "," @210.90625,221.36 #89ddff JetBrains Mono 13.5
+        text " " @219.3125,221.36 #ece6d8 JetBrains Mono 13.5
+        text "function" @227.71875,221.36 #c792ff JetBrains Mono 13.5
+        text "(" @294.96875,221.36 #89ddff JetBrains Mono 13.5
+        text "ev" @303.375,221.36 #d6dde6 JetBrains Mono 13.5
+        text ")" @320.1875,221.36 #89ddff JetBrains Mono 13.5
+        rect 0,227 1400x21 fill #ff5f6d14
+        text "7" @39.59375,242.36 #ff5f6dbf JetBrains Mono 13.5
+        text "  " @68,242.36 #ece6d8 JetBrains Mono 13.5
+        text "if" @84.8125,242.36 #c792ff JetBrains Mono 13.5
+        text " " @101.625,242.36 #ece6d8 JetBrains Mono 13.5
+        text "ev" @110.03125,242.36 #d6dde6 JetBrains Mono 13.5
+        text "." @126.84375,242.36 #89ddff JetBrains Mono 13.5
+        text "tool" @135.25,242.36 #d6dde6 JetBrains Mono 13.5
+        text " " @168.875,242.36 #ece6d8 JetBrains Mono 13.5
+        text "==" @177.28125,242.36 #89ddff JetBrains Mono 13.5
+        text " " @194.09375,242.36 #ece6d8 JetBrains Mono 13.5
+        text "\"Bash\"" @202.5,242.36 #a5e075 JetBrains Mono 13.5
+        text " " @252.9375,242.36 #ece6d8 JetBrains Mono 13.5
+        text "and" @261.34375,242.36 #c792ff JetBrains Mono 13.5
+        text " " @286.5625,242.36 #ece6d8 JetBrains Mono 13.5
+        text "ev" @294.96875,242.36 #d6dde6 JetBrains Mono 13.5
+        text "." @311.78125,242.36 #89ddff JetBrains Mono 13.5
+        text "args" @320.1875,242.36 #d6dde6 JetBrains Mono 13.5
+        text ":" @353.8125,242.36 #89ddff JetBrains Mono 13.5
+        text "match" @362.21875,242.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @404.25,242.36 #89ddff JetBrains Mono 13.5
+        text "\"" @412.65625,242.36 #a5e075 JetBrains Mono 13.5
+        text "^go test " @421.0625,242.36 #a5e075 JetBrains Mono 13.5
+        text "\"" @496.71875,242.36 #a5e075 JetBrains Mono 13.5
+        text ")" @505.125,242.36 #89ddff JetBrains Mono 13.5
+        text " " @513.53125,242.36 #ece6d8 JetBrains Mono 13.5
+        text "then" @521.9375,242.36 #c792ff JetBrains Mono 13.5
+        text "attempt to index a non-table object(nil) with key 'match'" @577.5625,241.82 #ff5f6d JetBrains Mono 12
         text "8" @39.59375,263.36 #4f4a40 JetBrains Mono 13.5
-        text "  " @68,263.36 #ece6d8 JetBrains Mono 13.5
-        text "end" @84.8125,263.36 #c792ff JetBrains Mono 13.5
+        text "    " @68,263.36 #ece6d8 JetBrains Mono 13.5
+        text "return" @101.625,263.36 #c792ff JetBrains Mono 13.5
+        text " " @152.0625,263.36 #ece6d8 JetBrains Mono 13.5
+        text "\"allow\"" @160.46875,263.36 #a5e075 JetBrains Mono 13.5
         text "9" @39.59375,284.36 #4f4a40 JetBrains Mono 13.5
-        text "end" @68,284.36 #c792ff JetBrains Mono 13.5
-        text ")" @93.21875,284.36 #89ddff JetBrains Mono 13.5
+        text "  " @68,284.36 #ece6d8 JetBrains Mono 13.5
+        text "end" @84.8125,284.36 #c792ff JetBrains Mono 13.5
+        text "10" @31.1875,305.36 #4f4a40 JetBrains Mono 13.5
+        text "end" @68,305.36 #c792ff JetBrains Mono 13.5
+        text ")" @93.21875,305.36 #89ddff JetBrains Mono 13.5
       pop
     pop
   pop
@@ -169,17 +177,17 @@ clip 0,514 1400x360 r 0
       clip 144.75,595.24 230x14.52002 r 0
         text "oriel" @144.75,606.45996 #7c7566 JetBrains Mono 11
         text "›" @183.71875,606.45996 #4f4a40 JetBrains Mono 11
-        text "init.lua:5" @196.3125,606.45996 #ffd23f JetBrains Mono 11
+        text "init.lua:6" @196.3125,606.45996 #ffd23f JetBrains Mono 11
       pop
       clip 386.75,594.91 955.25x15.179993 r 0
-        text "init.lua:6: attempt to index a non-table object(nil) with key 'match' · Permission hook turned off after 3 errors" @386.75,606.63995 #ece6d8 JetBrains Mono 11.5
+        text "init.lua:7: attempt to index a non-table object(nil) with key 'match' · Permission hook turned off after 3 errors" @386.75,606.63995 #ece6d8 JetBrains Mono 11.5
       pop
       rect 1354,595.23 24x14.539978 fill #191815 radius 8
       text "×3" @1360,605.92 #7c7566 JetBrains Mono 9.5
       text "TRACEBACK" @96,633.69 #7c7566 JetBrains Mono 9.5
       rect 96,642.54 550.4348x19 fill #121210 radius 3
       clip 102,644.77997 180x14.52002 r 0
-        text "init.lua:6" @102,655.99994 #ffd23f JetBrains Mono 11
+        text "init.lua:7" @102,655.99994 #ffd23f JetBrains Mono 11
       pop
       clip 294,644.77997 346.4348x14.52002 r 0
         text "in main chunk" @294,655.99994 #b3ab99 JetBrains Mono 11
@@ -197,11 +205,11 @@ clip 0,514 1400x360 r 0
       rect 662.4348,624 715.5652x120 fill #060606 radius 6 stroke 1 #24221d
       clip 662.4348,624 715.5652x120 r 6
         text "~/.config/oriel/init.lua" @672.4348,639.78 #7c7566 JetBrains Mono 10.5
-        text "4" @674.4348,660.95996 #4f4a40 JetBrains Mono 11
+        text "5" @674.4348,660.95996 #4f4a40 JetBrains Mono 11
         clip 706.4348,649.41 671.5652x15.179993 r 0
           text "-- auto-allow test runs in this workspace" @706.4348,661.13995 #5c6b7e JetBrains Mono 11.5
         pop
-        text "5" @674.4348,678.95996 #4f4a40 JetBrains Mono 11
+        text "6" @674.4348,678.95996 #4f4a40 JetBrains Mono 11
         clip 706.4348,667.41 671.5652x15.179993 r 0
           text "L" @706.4348,679.13995 #ece6d8 JetBrains Mono 11.5
           text "." @713.63794,679.13995 #89ddff JetBrains Mono 11.5
@@ -217,7 +225,7 @@ clip 0,514 1400x360 r 0
         pop
         rect 662.4348,684 715.5652x18 fill #1a0d0e
         rect 662.4348,684 2x18 fill #ff5f6d
-        text "6" @674.4348,696.95996 #4f4a40 JetBrains Mono 11
+        text "7" @674.4348,696.95996 #4f4a40 JetBrains Mono 11
         clip 706.4348,685.41 671.5652x15.179993 r 0
           text "  " @706.4348,697.13995 #ece6d8 JetBrains Mono 11.5
           text "if" @720.84106,697.13995 #c792ff JetBrains Mono 11.5
@@ -245,14 +253,14 @@ clip 0,514 1400x360 r 0
           text " " @1088.2004,697.13995 #ece6d8 JetBrains Mono 11.5
           text "then" @1095.4036,697.13995 #c792ff JetBrains Mono 11.5
         pop
-        text "7" @674.4348,714.95996 #4f4a40 JetBrains Mono 11
+        text "8" @674.4348,714.95996 #4f4a40 JetBrains Mono 11
         clip 706.4348,703.41 671.5652x15.179993 r 0
           text "    " @706.4348,715.13995 #ece6d8 JetBrains Mono 11.5
           text "return" @735.2473,715.13995 #c792ff JetBrains Mono 11.5
           text " " @778.46606,715.13995 #ece6d8 JetBrains Mono 11.5
           text "\"allow\"" @785.6692,715.13995 #a5e075 JetBrains Mono 11.5
         pop
-        text "8" @674.4348,732.95996 #4f4a40 JetBrains Mono 11
+        text "9" @674.4348,732.95996 #4f4a40 JetBrains Mono 11
         clip 706.4348,721.41 671.5652x15.179993 r 0
           text "  " @706.4348,733.13995 #ece6d8 JetBrains Mono 11.5
           text "end" @720.84106,733.13995 #c792ff JetBrains Mono 11.5
@@ -269,19 +277,19 @@ text "1" @98.71625,890.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @119.31,890.95996 #b3ab99 JetBrains Mono 11
 text "0" @130.90375,890.95996 #b3ab99 JetBrains Mono 11
 text "Lua · utf-8 · LF" @1193.75,884.71 #b3ab99 JetBrains Mono 10.5
-text "6:1" @1315.25,884.71 #b3ab99 JetBrains Mono 10.5
-text "≡ 66%" @1351.0312,884.71 #b3ab99 JetBrains Mono 10.5
-text "●" @45.796875,219.77 #ff5f6d JetBrains Mono 13.5
-rect 62,206 2x21 fill #ff5f6d
-rect 68,207 8.40625x19 fill #ffd23f
-text " " @68,220.77 #141006 JetBrains Mono 13.5
+text "7:1" @1315.25,884.71 #b3ab99 JetBrains Mono 10.5
+text "≡ 70%" @1351.0312,884.71 #b3ab99 JetBrains Mono 10.5
+text "●" @45.796875,240.77 #ff5f6d JetBrains Mono 13.5
+rect 62,227 2x21 fill #ff5f6d
+rect 68,228 8.40625x19 fill #ffd23f
+text " " @68,241.77 #141006 JetBrains Mono 13.5
 path 237 segments stroke 1 #ff5f6d
 rect 944,12 440x114.55859 fill #121210 radius 8 stroke 1 #ff5f6d8c
 rect 958,27.154785 7x7 fill #ff5f6d radius 3.5
 text "HOOK ERROR" @973,34.074783 #ff5f6d JetBrains Mono 9.5
-text "init.lua:5" @1054.3,34.074783 #7c7566 JetBrains Mono 9.5
+text "init.lua:6" @1054.3,34.074783 #7c7566 JetBrains Mono 9.5
 text "✕" @1361.4062,34.65625 #7c7566 Inter 11
-text "init.lua:6: attempt to index a non-table object(nil) with key 'match' ·" @958,58.418945 #ece6d8 Inter 12.5
+text "init.lua:7: attempt to index a non-table object(nil) with key 'match' ·" @958,58.418945 #ece6d8 Inter 12.5
 text "Permission hook turned off after 3 errors" @958,76.54346 #ece6d8 Inter 12.5
 text "Open at line" @958,104.92383 #ffd23f Inter 12
 rect 958,108.81836 68.515625x1 fill #ffd23fb3

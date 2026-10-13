@@ -120,7 +120,8 @@ func (s *errScene) golden(name string) {
 	snapshot.GoldenPNG(s.t, "testdata/"+name+".png", img, 0.02, 0.001)
 }
 
-const initLua = `L.keymap.set({ "n", "x" }, "ga", function() L.thread.new() end)
+const initLua = `local L = oriel
+L.keymap.set({ "n", "x" }, "ga", function() L.thread.new() end)
 L.keymap.set("requests", "x", "thread.resolve")
 
 -- auto-allow test runs in this workspace
@@ -132,9 +133,9 @@ end)
 `
 
 const luaTrace = `stack traceback:
-	init.lua:6: in hook Permission
+	init.lua:7: in hook Permission
 	oriel.on: dispatch · Permission (Bash)
-	init.lua:5: in main chunk
+	init.lua:6: in main chunk
 github.com/liamg/oriel/script.(*VM).call(...)
 	/src/oriel/script/vm.go:88 +0x1c
 github.com/liamg/oriel/script.(*VM).Hook(...)
@@ -174,12 +175,12 @@ func (s *errScene) populate() {
 	}
 	for i := range 3 {
 		s.host.Notify(core.Notice{ID: "lua.error", Severity: core.SevError, Source: "init.lua", Title: "Config error",
-			Text:     "init.lua:6: attempt to index a nil value (field 'args') · Permission hook turned off after 3 errors",
+			Text:     "init.lua:7: attempt to index a nil value (field 'args') · Permission hook turned off after 3 errors",
 			Detail:   luaTrace,
-			Location: "init.lua:6",
+			Location: "init.lua:7",
 			Actions: []core.Action{
-				{Title: "Open at line", Command: "editor.open", Args: map[string]any{"path": "init.lua", "line": 6}},
-				{Title: "Turn hook back on", Command: "contribution.turn_on", Args: map[string]any{"kind": "hook", "id": "init.lua:5"}},
+				{Title: "Open at line", Command: "editor.open", Args: map[string]any{"path": "init.lua", "line": 7}},
+				{Title: "Turn hook back on", Command: "contribution.turn_on", Args: map[string]any{"kind": "hook", "id": "init.lua:6"}},
 			},
 			Time: at(14, 7, 1+i)})
 	}
