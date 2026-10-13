@@ -72,7 +72,7 @@ flowchart LR
 | `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | wire |
 | `agent` | `Provider` interface + shared turn/transcript types | core |
 | `agent/claude`, `agent/codex` | provider impls | agent |
-| `worker` | session host, pty, worktrees, launches providers | core, agent, lsp, dap |
+| `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep) | core, agent, lsp, dap, gitx, regex |
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear, slack, ical; agentbus via the `oriel-agentbus` helper process (keeps its sqlite dependency out of Oriel) | core |

@@ -839,3 +839,40 @@ func keyMode(m string) string {
 	}
 	return "n"
 }
+
+// unsearchable are the work dir's files .gitattributes marks generated or vendored, which search leaves out.
+func (x *editorExt) unsearchable() []string {
+	all := (&fileList{dir: x.dir}).list()
+	keep := map[string]bool{}
+	for _, f := range x.conv.searchable(all) {
+		keep[f] = true
+	}
+	var out []string
+	for _, f := range all {
+		if !keep[f] {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// openBuffer is the listed buffer holding the file at path, if one does.
+func (x *editorExt) openBuffer(path string) (vim.FileState, bool) {
+	for _, f := range x.e.Files() {
+		if f.File != nil && filepath.Clean(f.File.Path) == filepath.Clean(path) {
+			return f, true
+		}
+	}
+	return vim.FileState{}, false
+}
+
+// openFileBytes is an open buffer's text as it would be written, by its path relative to the work dir.
+func (x *editorExt) openFileBytes(rel string) ([]byte, bool) {
+	f, ok := x.openBuffer(filepath.Join(x.dir, rel))
+	if !ok {
+		return nil, false
+	}
+	return f.Bytes(), true
+}
+
+func layoutRef(id string) layout.ViewRef { return layout.ViewRef{ID: id} }

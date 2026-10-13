@@ -224,25 +224,15 @@ func (g *gitSigns) decorations(ctx registry.DecorationCtx) []registry.Decoration
 			if h.NewLines > 0 {
 				end = h.NewStart - 2 + h.NewLines
 			}
-			out = append(out, registry.Decoration{Kind: registry.Block, Line: end, Node: hunkPreview(h), Priority: 5})
+			out = append(out, registry.Decoration{Kind: registry.Block, Line: end, Node: &ui.Func{Key: "hunk", Fn: func(c *ui.Ctx) {
+				diffBlock(c, "diff", h, false)
+			}}, Priority: 5})
 		}
 	}
 	if line, ok := g.blameLine(ctx, f); ok {
 		out = append(out, line)
 	}
 	return out
-}
-
-// hunkPreview is the lines a hunk replaced, as a diff shows deleted lines.
-func hunkPreview(h gitx.Hunk) ui.Node {
-	return &ui.Func{Key: "hunk", Fn: func(c *ui.Ctx) {
-		th := c.Theme()
-		c.Column("old", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 4), Radius: 4, Fill: th.C(theme.DiffDel), Help: "editor/pane#hunks"}, func(c *ui.Ctx) {
-			for i, l := range h.Old {
-				c.Text(i, "- "+strings.TrimRight(l, "\r\n"), ui.TextStyle{Font: codeFont, Color: th.C(tGitDeleted)})
-			}
-		})
-	}}
 }
 
 // blameLine is the cursor line's blame, after it, while the pane is the current one.
@@ -381,25 +371,11 @@ func (g *gitSigns) reset(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) er
 	if !ok {
 		return fmt.Errorf("no hunk on this line")
 	}
-	snap := p.Buf()
-	start := snap.Len()
-	if l := h.NewStart - 1; h.NewLines > 0 && l < snap.Lines() {
-		start = snap.LineStart(l)
-	} else if h.NewLines == 0 && h.NewStart < snap.Lines() {
-		start = snap.LineStart(h.NewStart)
+	line := h.NewStart - 1
+	if h.NewLines == 0 {
+		line = h.NewStart
 	}
-	end := start
-	if h.NewLines > 0 {
-		end = snap.Len()
-		if l := h.NewStart - 1 + h.NewLines; l < snap.Lines() {
-			end = snap.LineStart(l)
-		}
-	}
-	old := strings.Join(h.Old, "")
-	if h.NewStart == 0 && h.NewLines == 0 {
-		start, end = 0, 0
-	}
-	_, err := p.Editor().Do([]text.Replace{{Range: text.Range{Start: start, End: end}, Text: []byte(old)}}, 0)
+	_, err := p.Editor().Do([]text.Replace{lineReplace(p.Buf(), line, h.NewLines, h.Old)}, 0)
 	return err
 }
 

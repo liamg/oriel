@@ -1,11 +1,10 @@
 package app
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/worker/search"
 )
 
 // buffersSource is the open buffers, as :ls lists them; it's what :ls opens.
@@ -86,7 +86,7 @@ func (x *editorExt) fileSymbolsSource(all registry.PickerSource) registry.Picker
 	return s
 }
 
-// grep is the live grep's state: the query it last ran, its results, and whether one is running.
+// grep is the live grep's state: the query it last ran, its results, and the search running.
 type grep struct {
 	mu      sync.Mutex
 	query   string
@@ -96,92 +96,59 @@ type grep struct {
 
 const maxGrep = 1000
 
-// grepSource searches the work dir's files as you type, leaving out generated and vendored ones unless the query
-// starts "@all ": the query is a PCRE2 pattern (a literal when it
-// isn't one), and the search runs off the UI's goroutine, its results showing when it's done.
+// grepSource searches the work dir's files as you type, with project search's engine (ripgrep, streamed), leaving
+// out generated and vendored files unless the query starts "@all ". The query is a PCRE2 pattern, or a literal
+// when it isn't one.
 func (x *editorExt) grepSource() registry.PickerSource {
 	g := &grep{}
-	files := &fileList{dir: x.dir}
 	run := func(q string) {
 		g.mu.Lock()
+		defer g.mu.Unlock()
 		if g.query == q {
-			g.mu.Unlock()
 			return
 		}
 		if g.cancel != nil {
 			g.cancel()
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		g.query, g.cancel = q, cancel
-		g.mu.Unlock()
+		g.query, g.results = q, nil
 		if q == "" {
-			g.mu.Lock()
-			g.results = nil
-			g.mu.Unlock()
 			return
 		}
 		pat, all := strings.CutPrefix(q, "@all ")
-		re, err := regex.Compile(pat, regex.Flags{})
-		if err != nil {
-			re = regex.MustCompile(`\Q`+pat+`\E`, regex.Flags{})
+		if _, err := regex.Compile(pat, regex.Flags{}); err != nil {
+			pat = `\Q` + pat + `\E`
 		}
-		list := append([]string(nil), files.list()...)
+		sq := search.Query{Pattern: pat, Dir: x.dir, Max: maxGrep}
 		if !all {
-			list = x.conv.searchable(list)
+			sq.Exclude = x.unsearchable()
 		}
-		go func() {
-			out := searchFiles(ctx, x.dir, list, re)
+		ctx, cancel := context.WithCancel(context.Background())
+		g.cancel = cancel
+		go search.Run(ctx, sq, func(ms []search.Match) {
 			g.mu.Lock()
 			if g.query == q {
-				g.results = out
+				for _, m := range ms {
+					col := 1
+					if len(m.Spans) > 0 {
+						col = m.Spans[0][0] + 1
+					}
+					g.results = append(g.results, registry.PickerItem{ID: fmt.Sprintf("%s:%d", m.Path, m.Line), Label: strings.TrimSpace(m.Text),
+						Detail: fmt.Sprintf("%s:%d", m.Path, m.Line), IconStyle: "status.working", Path: m.Path, Line: m.Line, Col: col, Boost: -len(g.results)})
+				}
 			}
 			g.mu.Unlock()
 			x.h.Redraw()
-		}()
+		})
 	}
 	return registry.PickerSource{ID: "grep", Title: "Grep", Order: 31, Live: true, PickerOnly: true,
 		Items: func(_ registry.Ctx, q string) []registry.PickerItem {
 			run(q)
 			g.mu.Lock()
 			defer g.mu.Unlock()
-			return g.results
+			return slices.Clone(g.results)
 		},
 		Preview: func(it registry.PickerItem) ui.Node { return x.filePreview(it.Path, it.Line-1) },
 	}
-}
-
-// searchFiles is every line of files that re matches, as picker items, up to maxGrep.
-func searchFiles(ctx context.Context, dir string, files []string, re *regex.Regex) []registry.PickerItem {
-	var out []registry.PickerItem
-	for _, f := range files {
-		if ctx.Err() != nil || len(out) >= maxGrep {
-			break
-		}
-		fh, err := os.Open(filepath.Join(dir, f))
-		if err != nil {
-			continue
-		}
-		sc := bufio.NewScanner(fh)
-		sc.Buffer(make([]byte, 64<<10), 1<<20)
-		for n := 1; sc.Scan(); n++ {
-			b := sc.Bytes()
-			if n == 1 && strings.ContainsRune(string(b[:min(len(b), 512)]), 0) {
-				break // binary
-			}
-			loc, err := re.FindIndex(string(b), 0)
-			if loc == nil || err != nil {
-				continue
-			}
-			text := strings.TrimSpace(string(b))
-			out = append(out, registry.PickerItem{ID: fmt.Sprintf("%s:%d", f, n), Label: text, Detail: fmt.Sprintf("%s:%d", f, n),
-				IconStyle: "status.working", Path: f, Line: n, Col: loc[0] + 1, Boost: -len(out)})
-			if len(out) >= maxGrep {
-				break
-			}
-		}
-		fh.Close()
-	}
-	return out
 }
 
 // keymapsSource is every keymap, with its mode, keys and source: Enter runs it, ⌃e opens where it's defined.

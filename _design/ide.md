@@ -162,6 +162,13 @@ flowchart LR
 - Pickers (snacks/telescope-style): `␣␣` files, `␣/` live grep, `␣k` keymaps, `␣s` symbols, `␣'` resume. Same engine
   as the omnibox, one source at a time, with preview (`ui.md` 02b). Which-key hints after a prefix (`ui.md` 02c).
 - Project search: ripgrep on the worker, results streamed into a quickfix panel, with replace-in-files preview.
+- As built (FG-3): `worker/search` runs `rg --json -P` (PCRE2, streamed in batches) and the same matching in Go
+  (`regex`) when rg isn't installed; tests hold the two to the same results. It runs in the app until the worker
+  exists (AI-1). Generated and vendored files go to rg as an `--ignore-file`, unless the query starts `@all `. The
+  Search view (the rail's Search, `⌘F`, `⌘⇧F`, `search.open {query}`) streams matches by file; a replacement
+  previews per match, and Replace all… opens `search.replace`, a tab with every file's diff (`search.Plan`,
+  PCRE2's `$n`), which writes nothing until Apply. Apply edits open buffers in the buffer (one undo step) and writes
+  other files atomically, refusing one that changed since. The grep picker runs on the same engine.
 - Jumplist and changelist across files and sessions (`ctrl-o` goes back to the other session you were in).
 - Marks across sessions: `mA` on one worktree, `'A` from anywhere.
 

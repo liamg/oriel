@@ -242,7 +242,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Built in SH-5: `⇥` steps to the next source keeping the query, and `⌃␣` multi-selects (the mockup gives `⇥`
   both; the source strip keeps it). An item with a place (a path and line) gets open, `⌃v`, `⌃s`, `⌃t`, `⌃q` and
   `⌃a` from the picker; `⌃a` runs `request.attach`, which the requests (AI-5) provide. Sources today: files,
-  grep (Go's regexp in the app, off the UI's goroutine, until the worker runs ripgrep), buffers (`:ls`), symbols
+  grep (ripgrep, streamed, on FG-3's search engine), buffers (`:ls`), symbols
   here and in the open buffers, keymaps (`⌃e` to the definition), commands, sessions and quickfix (`:copen`).
   Ranking is the fuzzy score, then open buffers and shallower paths; "changed on this branch" and "recently
   opened" join with FG-1 and the session's history. Threads, git log and status, and help come with their tickets.

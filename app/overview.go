@@ -186,7 +186,7 @@ func (o *overview) build(c *ui.Ctx) {
 			o.cardView(c, dir)
 		}
 		c.Row("hint", ui.Style{W: ui.Flex(1), Main: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", "open a file with ␣␣ · search with "+cmp.Or(boundKey(o.h, "picker.open", registry.Args{"source": "grep"}), "␣/")+
+			c.Text("t", "open a file with ␣␣ · search with "+cmp.Or(boundKey(o.h, "search.open", nil), boundKey(o.h, "picker.open", registry.Args{"source": "grep"}), "␣/")+
 				" · everything with ⌘K", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgGhost)})
 		})
 	})
