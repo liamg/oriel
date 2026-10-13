@@ -1,0 +1,98 @@
+backdrop #060606
+rect 0,0 1400x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1269.0625x38 r 0
+pop
+rect 0,38 1400x844.84 fill #060606
+clip 0,38 760x584.84 r 0
+  rect 0,38 760x30 fill #0c0c0b
+  rect 0,68 760x1 fill #24221d
+pop
+rect 0,622.84 760x260 fill #0c0c0b
+clip 0,622.84 760x260 r 0
+  rect 0,622.84 760x30 fill #0c0c0b
+  rect 0,622.84 48.609375x30 fill #121210
+  rect 0,622.84 48.609375x2 fill #ffd23f
+  text "Lua" @14,643.20526 #ece6d8 Inter 12
+  rect 0,652.84 760x1 fill #24221d
+  clip 0,653.84 760x229 r 0
+    text ":LUA" @24,684.04004 #ffd23f JetBrains Mono 10
+    text "REPL · oriel api 0.4.0" @58,686.08 #7c7566 JetBrains Mono 12
+    text "⇥ complete · ↵ eval · ↑ history" @507.95312,686.08 #4f4a40 JetBrains Mono 12
+    clip 24,695.68005 712x109.32001 r 0
+      text "› L.api.version" @24,707.92004 #ece6d8 JetBrains Mono 12
+      text "\"0.4.0\"" @24,727.7601 #b3ab99 JetBrains Mono 12
+      text "› #L.ui.row{}.children" @24,747.60004 #ece6d8 JetBrains Mono 12
+      text "0" @24,767.44006 #b3ab99 JetBrains Mono 12
+      text "› L.ledger.unread('pricing')" @24,787.28 #ece6d8 JetBrains Mono 12
+      text "repl:2: oriel.ledger.unread isn't available until RV-2 (the review ledger)" @24,807.12006 #ff5f6d JetBrains Mono 12
+    pop
+    text "›" @24,830.32 #ffd23f JetBrains Mono 12
+    rect 39.203125,811 696.7969x30 fill #060606 radius 6 stroke 1 #332f27
+    clip 39.203125,811 696.7969x30 r 6
+      text "L.agent.to" @49.203125,830.5471 #ece6d8 Inter 12.5
+    pop
+    text "tool" @24,859.24 #7c7566 JetBrains Mono 12
+  pop
+pop
+rect 760,38 640x844.84 fill #0c0c0b
+clip 760,38 640x844.84 r 0
+  rect 760,38 640x30 fill #0c0c0b
+  rect 760,38 64.25x30 fill #121210
+  text "Hooks" @774,58.365234 #ece6d8 Inter 12
+  rect 760,68 640x1 fill #24221d
+  clip 760,69 640x813.84 r 0
+    clip 770,79 620x793.84 r 0
+      text ":HOOKS" @784,99.2 #ffd23f JetBrains Mono 10
+      text "4 hooks · 4 events" @830,99.71 #7c7566 JetBrains Mono 10.5
+      text "EVENT" @784,118.55 #7c7566 JetBrains Mono 9.5
+      text "HOOK" @932,118.55 #7c7566 JetBrains Mono 9.5
+      text "KIND" @1110,118.55 #7c7566 JetBrains Mono 9.5
+      text "SOURCE" @1198,118.55 #7c7566 JetBrains Mono 9.5
+      text "P99" @1406,118.55 #7c7566 JetBrains Mono 9.5
+      text "BufWritePre" @784,143.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,131.81 170x15.179993 r 0
+        text "—" @932,143.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "—" @1110,142.82 #a98bff JetBrains Mono 9.5
+      clip 1198,132.14 200x14.520004 r 0
+        text "init.lua:20" @1198,143.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,143.36 #4f4a40 JetBrains Mono 11
+      text "CommentSend" @784,173.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,161.81 170x15.179993 r 0
+        text "—" @932,173.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "—" @1110,172.81999 #a98bff JetBrains Mono 9.5
+      clip 1198,162.14 200x14.520004 r 0
+        text "init.lua:28" @1198,173.36 #ffd23f JetBrains Mono 11
+      pop
+      text "waits: A comment about to go to an agent (AI-5); a rewrite changes it. { thread, body, urgent }" @1406,172.99998 #4f4a40 JetBrains Mono 10
+      text "Commit" @784,203.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,191.81 170x15.179993 r 0
+        text "—" @932,203.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "—" @1110,202.81999 #a98bff JetBrains Mono 9.5
+      clip 1198,192.14 200x14.520004 r 0
+        text "init.lua:22" @1198,203.36 #ffd23f JetBrains Mono 11
+      pop
+      text "waits: A commit about to be made (FG-6); a veto stops it. { project, message, unread }" @1406,202.99998 #4f4a40 JetBrains Mono 10
+      text "Permission" @784,233.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,221.81 170x15.179993 r 0
+        text "—" @932,233.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "DECIDE" @1110,232.81999 #a98bff JetBrains Mono 9.5
+      clip 1198,222.14 200x14.520004 r 0
+        text "init.lua:33" @1198,233.36 #ffd23f JetBrains Mono 11
+      pop
+      text "waits: An agent asking to run a tool (AI-7); a decision answers it. { session, tool, input }" @1406,232.99998 #4f4a40 JetBrains Mono 10
+      text "set before anything registered them: agent (init.lua:6), relativenumber (init.lua:4)" @784,258.11 #7c7566 JetBrains Mono 10.5
+    pop
+  pop
+pop
+text "view app.statusline is turned off: panic: init.lua:56: oriel.ledger.frac isn't available until RV-2 (the review ledger)" @0,896.10004 #ece6d8 JetBrains Mono 13

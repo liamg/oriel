@@ -137,7 +137,7 @@ func (w *whichKey) build(c *ui.Ctx) {
 			if title != "" {
 				c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(tWKGroup)})
 			}
-			c.Text("how", fmt.Sprintf("shown after %dms · ⌫ back up · esc cancel", WhichKeyDelay.Milliseconds()), mono(10, theme.FgFaint))
+			c.Text("how", fmt.Sprintf("shown after %dms · ⌫ back up · ? all · esc cancel", WhichKeyDelay.Milliseconds()), mono(10, theme.FgFaint))
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		cols := max(1, min(4, int(min(1180, size.X-32)/280)))

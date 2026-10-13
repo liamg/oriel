@@ -43,6 +43,7 @@ type Host interface {
 	Layout() *layout.Root
 	PaneRect(v layout.ViewRef) (render.Rect, bool) // where v's pane was drawn last frame
 	Redraw()                                       // asks for a frame; safe from any goroutine
+	Do(fn func())                                  // runs fn on the app's loop, before the next frame; safe from any goroutine
 	Pending() Pending                              // keys typed towards a longer mapping or command, for which-key
 	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
 	CurrentTheme() *theme.Resolved                 // the theme the window is drawn in

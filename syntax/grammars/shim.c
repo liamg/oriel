@@ -116,3 +116,25 @@ EXPORT(query_matches) const uint32_t *ts_shim_query_matches(TSQuery *q, TSTree *
 EXPORT(symbol_for_name) uint32_t ts_shim_symbol_for_name(const char *name, uint32_t len) {
   return ts_language_symbol_for_name(LANGUAGE_FN(), name, len, true);
 }
+
+// node_path is the kinds of the named nodes from the root down to the smallest one at byte off, each followed by a
+// NUL, for :Inspect.
+static char path_buf[4096];
+EXPORT(node_path) const char *ts_shim_node_path(TSTree *t, uint32_t off, uint32_t *len) {
+  TSNode n = ts_node_named_descendant_for_byte_range(ts_tree_root_node(t), off, off);
+  const char *kinds[256];
+  int k = 0;
+  for (; !ts_node_is_null(n) && k < 256; n = ts_node_parent(n)) {
+    if (ts_node_is_named(n)) kinds[k++] = ts_node_type(n);
+  }
+  uint32_t w = 0;
+  for (int i = k - 1; i >= 0; i--) {
+    size_t l = strlen(kinds[i]);
+    if (w + l + 1 > sizeof(path_buf)) break;
+    memcpy(path_buf + w, kinds[i], l);
+    w += l;
+    path_buf[w++] = 0;
+  }
+  *len = w;
+  return path_buf;
+}

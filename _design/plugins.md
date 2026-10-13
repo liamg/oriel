@@ -268,6 +268,11 @@ type Host interface {
 - `Host.CurrentTheme()` is the theme the window is drawn in, and `Host.Shot(th)` the window built and drawn again on
   the CPU in another theme, without touching the live frame (`ui.UI.Fork`). Drawn in `theme.Probe(th)`, every token
   and syntax group in a colour of its own, it tells what painted each pixel: the theme editor's pick mode.
+- Hooks (PL-1): `Registry.Hook(Hook{Event, Pattern, Priority, Kind, Label, Fn, Source})`, `Fire(ctx, event, subject,
+  ev)`, `DeclareEvent` and `Hooks()`, with `registry.On[E]` for a typed Go hook. `Registry.Contribute` and
+  `Contributions(kind)` are the general contribution point for later features (agent tools, prompt packs, session
+  kinds, HUD tats, status rules, `:Inspect` sections). `Host.Do(fn)` runs fn on the loop from any goroutine.
+  `registry.SourcedView` and `Registry.ViewSource` say who registered a view.
 - `Host.Here()` is where the user is, as an `At`: the session in front (or `oriel` with none), the project, and
   the focused editor's buffer and window; read options there. `core.Store.Focus()` is the session in front, cheaply.
 - Plugins search text with `regex` (PCRE2's syntax), the same engine as project search; Lua's `L.regex` binds it.

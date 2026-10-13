@@ -46,6 +46,13 @@ The `:Hooks` budget warning ("4.1 ms on CommentSend · over the 2 ms budget").
 - A hook failing three times is off, shown in `:Hooks`, and back on after "Turn back on".
 - `:lua error("x")` shows the error and trace under the input.
 
+## From PL-1
+
+- Lua errors are `script.Error{Message, Traceback}`; load errors are notices with `Location` (`init.lua:12`), and a
+  Lua view or decoration that errors is turned off through the registry's fault path. Hooks report errors from
+  `Fire`, and the editor notifies them.
+- `:Hooks` shows p99s and marks hooks past 2 ms; the VM's `OnSlow` only logs today.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

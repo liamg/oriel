@@ -162,6 +162,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	var tree *render.AccessNode
 	for {
+		sh.runTodo()
 		if err := l.draw(); err != nil {
 			return err
 		}
@@ -212,6 +213,24 @@ func (sh *shell) host(source string) *host {
 
 func (h *host) Layout() *layout.Root { return h.sh.layout.root }
 func (h *host) Redraw()              { h.sh.poke() }
+
+func (h *host) Do(fn func()) {
+	h.sh.todoMu.Lock()
+	h.sh.todo = append(h.sh.todo, fn)
+	h.sh.todoMu.Unlock()
+	h.sh.poke()
+}
+
+// runTodo runs what Host.Do queued, on the loop.
+func (sh *shell) runTodo() {
+	sh.todoMu.Lock()
+	fns := sh.todo
+	sh.todo = nil
+	sh.todoMu.Unlock()
+	for _, fn := range fns {
+		fn()
+	}
+}
 
 func (h *host) UI() ext.UIView {
 	if h.sh.ui == nil {
@@ -389,10 +408,15 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 		l.themeDirty.Store(true)
 	case render.KeyEvent:
 		k := notation(ev)
-		if len(l.keys.Pending()) > 0 && (k == "<BS>" || k == "<Esc>") {
-			if k == "<BS>" {
+		if p := l.keys.Pending(); len(p) > 0 && (k == "<BS>" || k == "<Esc>" || k == "?") {
+			switch k {
+			case "<BS>":
 				l.keys.BackUp(time.Now())
-			} else {
+			case "?":
+				// Which-key's ?: every keymap under the prefix, in the keymaps picker.
+				l.keys.Cancel()
+				l.run(ctx, []registry.Action{{Keymap: &registry.Keymap{Command: "picker.open", Args: registry.Args{"source": "keymaps", "query": keymap.Format(p)}}}})
+			default:
 				l.keys.Cancel()
 			}
 			return

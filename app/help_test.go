@@ -75,6 +75,12 @@ func TestHelpLint(t *testing.T) {
 	s.frame()
 	s.frame()
 	s.lint("the settings page")
+	s.settings().open = false
+	s.run("lua", nil)
+	s.run("Hooks", nil)
+	s.frame()
+	s.frame()
+	s.lint("the Lua REPL and :Hooks")
 }
 
 func TestHelpWays(t *testing.T) {

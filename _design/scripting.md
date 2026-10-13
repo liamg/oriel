@@ -170,3 +170,35 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - One source of truth, so Lua, process RPC, WASM, the docs and the LuaLS types can't drift apart.
 - A Lua-defined input engine goes through a small adapter that implements `input.Engine` and calls
   the VM per key. That's the path an emacs mode written in Lua would take (see `editor.md`).
+
+## As built (PL-1)
+
+- `script.VM` is gopher-lua (approved in deps.md): one state on the UI loop, Lua's standard libraries, `require`
+  from `~/.config/oriel/lua`. The watchdog logs a call past 50 ms as slow and interrupts one past 500 ms (a config
+  load gets 2 s); per-function times feed `:Hooks`. Errors are `script.Error`: the message, with the traceback kept
+  apart for PL-12.
+- The API is `script/api`: annotated Go (`//oriel:api name=…` on a namespace type, `//oriel:api doc=… optional=…
+  returns=…` on its methods). `tools/cmd/apigen` (`go generate ./script/api`) writes the VM glue (`zz_bind.go`), the
+  LuaLS types (`script/types/oriel.d.lua`) and the reference (`docs/api.md`); a test fails when they're stale. A
+  parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
+- Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
+  `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `ui`, `regex` (PCRE2),
+  `language`, and `o`, `bo`, `so` over the registry's options (`oriel.o` sets the Lua layer). `L` is `oriel`.
+- Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
+  general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
+  `thread`, `lsp`, `coverage`, `http` and `async` load, and calling into one says which ticket brings it. An option
+  set before anything registers it waits, and `:Hooks` lists it.
+- Hooks are the registry's (`Registry.Hook`, `Fire`, `DeclareEvent`): in priority order, a veto or decision stops
+  them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead`,
+  `BufWritePre` (a veto stops the write) and `BufWritePost`; `Commit`, `CommentSend`, `Permission`, `AgentTurnEnd`,
+  `PrRaise` and `ModeChanged` are declared for the features that fire them.
+- Saving `init.lua` or anything under `lua/` reloads the config within 500 ms: everything it registered goes, it
+  loads again, and a toast says how long and how many things it registered; an error is a notice with its line.
+- `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`/`L`, history) and
+  `:Inspect` (20-inspect) are built. `:Inspect`'s parts are contributions (`registry.InspectSection`): the editor
+  gives the tree-sitter path (a new `node_path` in the grammar shim), the highlight and decorations; the Lua extension
+  gives the keymaps that apply and the window's views, with what replaced them (`Registry.ViewSource`).
+- Which-key's `?` opens the keymaps picker on the prefix.
+- Not yet: the LuaJIT swap, process and WASM bindings of the same declarations, a `vim` shim, `:Plugins`, jumping
+  from a source to its line (`gd`), and a project's `.oriel/init.lua` (it needs the trust prompt security.md
+  describes).

@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/ext"
@@ -33,6 +34,8 @@ type shell struct {
 	// enginePending is the focused editor's pending keys, when the editor is in front.
 	enginePending func() ext.Pending
 	theme         func() *theme.Resolved
+	todoMu        sync.Mutex
+	todo          []func()                         // Host.Do's, for the loop
 	editorAt      func(at registry.At) registry.At // the focused editor's buffer and window, added to at
 	shot          func(th *theme.Resolved) *image.RGBA
 }

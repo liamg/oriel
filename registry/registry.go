@@ -24,6 +24,9 @@ type Registry interface {
 	View(id string, v View) Disposable
 	Theme(s theme.Source) Disposable
 	Language(l Language) Disposable
+	Hook(h Hook) Disposable
+	DeclareEvent(e EventInfo) Disposable
+	Contribute(c Contribution) Disposable
 	Input(e input.Engine) Disposable // an input engine the editor's input option can pick
 	Decorations(id string, p DecorationProvider) Disposable
 	Picker(s PickerSource) Disposable
@@ -37,9 +40,15 @@ type Registry interface {
 	// mapping that starts with keys.
 	Lookup(modes []string, keys []string) (exact *Keymap, more bool)
 	ViewByID(id string) (View, bool)
-	Views() []string               // every registered view id, sorted
-	Themes() ([]theme.Source, int) // in registration order, a later theme with the same name winning; and a generation that moves when they change
-	Languages() ([]Language, int)  // the language that wins each name, in the order they were registered, and a generation
+	Views() []string                     // every registered view id, sorted
+	ViewSource(id string) (string, bool) // who registered the view that wins id
+	Themes() ([]theme.Source, int)       // in registration order, a later theme with the same name winning; and a generation that moves when they change
+	Languages() ([]Language, int)        // the language that wins each name, in the order they were registered, and a generation
+	Hooks() []HookInfo                   // by event, then priority
+	Events() []EventInfo                 // declared events, by name
+	// Fire runs event's hooks (registry/hook.go): a veto or decision, and the hooks' errors.
+	Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error)
+	Contributions(kind string) []Contribution // by name
 	InputByID(id string) (input.Engine, bool)
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
 	Pickers() []PickerSource              // the winning source for each id, by Order then id
@@ -166,6 +175,8 @@ type reg struct {
 	themes    []entry[theme.Source]
 	themeGen  int
 	languages stacks[string, Language]
+	hooks     hooks
+	contribs  stacks[string, Contribution]
 	langGen   int
 	options   *options
 	faults    faults
@@ -181,6 +192,7 @@ func New() Registry {
 		decor:     stacks[string, DecorationProvider]{},
 		pickers:   stacks[string, PickerSource]{},
 		languages: stacks[string, Language]{},
+		contribs:  stacks[string, Contribution]{},
 		live:      stacks[string, func(c *ui.Ctx)]{},
 		options:   newOptions(),
 	}
@@ -407,4 +419,17 @@ func (r *reg) Views() []string {
 	}
 	slices.Sort(out)
 	return out
+}
+
+func (r *reg) ViewSource(id string) (string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.views.top(id)
+	if !ok {
+		return "", false
+	}
+	if sv, ok := v.(interface{ ViewSource() string }); ok {
+		return sv.ViewSource(), true
+	}
+	return "", true
 }

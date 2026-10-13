@@ -24,9 +24,9 @@ type Host interface {
 }
 
 // BeforeWriter is a Host that changes a buffer or its file's format just before the buffer is written: trims
-// trailing white space, sets the line endings (vim's BufWritePre).
+// trailing white space, sets the line endings (vim's BufWritePre). An error stops the write, and is its message.
 type BeforeWriter interface {
-	BeforeWrite(name string, buf *text.Buffer, f *edit.File)
+	BeforeWrite(name string, buf *text.Buffer, f *edit.File) error
 }
 
 // Disk is the Host for files on this machine, with names relative to Dir, and nothing to quit or show.
@@ -183,7 +183,9 @@ func (e *Engine) write(b *buffer, name string, force bool, then func()) error {
 	}
 	do := func() error {
 		if h, ok := e.host.(BeforeWriter); ok {
-			h.BeforeWrite(b.name, b.text, f)
+			if err := h.BeforeWrite(b.name, b.text, f); err != nil {
+				return err
+			}
 		}
 		data := b.text.Snapshot().Bytes()
 		isNew := f.New

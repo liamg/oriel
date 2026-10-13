@@ -73,6 +73,14 @@ func TestWhichKeyLeader(t *testing.T) {
 	r.waitFrame("back at the leader", func(s string) bool {
 		return strings.Contains(s, "Find files") && !strings.Contains(s, "Interrupt agent")
 	})
+	// ? lists every keymap under the prefix, in the keymaps picker.
+	r.typeKeys("?")
+	r.waitFrame("the keymaps picker on <Space>", func(s string) bool {
+		return strings.Contains(s, "Keymaps") && strings.Contains(s, "<Space>") && !strings.Contains(s, "shown after")
+	})
+	r.typeKeys("<Esc>")
+	r.typeKeys("<Space>")
+	r.waitText("shown after 300ms")
 	r.typeKeys("<Esc>")
 	r.waitFrame("which-key gone", func(s string) bool { return !strings.Contains(s, "shown after") })
 	// Esc cancelled the leader: the space didn't move the cursor.

@@ -2,7 +2,7 @@
 id: PL-1
 title: "Lua config and plugins, :Hooks, :Inspect, LuaLS types"
 phase: P3
-status: todo
+status: review
 area: Platform
 module: script, registry
 depends_on: [FW-3]
@@ -46,6 +46,13 @@ the `scripting.md` sample `init.lua` runs as written
 ## From ED-11
 
 - Bind `Registry.Language` (name, extensions, filenames, shebangs, grammar path, queries) as a Lua contribution.
+
+## As built
+
+- See scripting.md, "As built (PL-1)". The sample `init.lua` loads as written (a test reads it from scripting.md),
+  and everything it registers shows in `:Hooks`, `:Keys` and `:Commands` with its line. Its status line calls
+  `L.ledger.frac`, so it turns itself off with "isn't available until RV-2" until the ledger lands.
+- The SH-6, SH-13, ED-10 and ED-11 handoffs above are done.
 
 ## Rules
 

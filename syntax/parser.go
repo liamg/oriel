@@ -184,3 +184,19 @@ func (p *Parser) parseRanges(src []byte, ranges [][2]int) {
 	}
 	p.reparse()
 }
+
+// NodePath is the kinds of the named nodes from the root down to the smallest at byte off, for :Inspect.
+func (p *Parser) NodePath(off int) []string {
+	if p.tree == 0 {
+		return nil
+	}
+	lenp := p.m.scratch(1)
+	defer p.m.free(lenp)
+	at := p.m.call("node_path", uint64(p.tree), uint64(off), uint64(lenp))
+	b := p.m.bytes(at, p.m.u32(lenp))
+	var out []string
+	for _, k := range bytes.Split(bytes.TrimSuffix(b, []byte{0}), []byte{0}) {
+		out = append(out, string(k))
+	}
+	return out
+}

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
@@ -83,6 +84,16 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	}
 	for _, s := range conventionOptions() {
 		x.add(h.Option(s))
+	}
+	for _, s := range x.inspectSections() {
+		x.add(h.Contribute(s))
+	}
+	for _, e := range []registry.EventInfo{
+		{Name: "BufRead", Doc: "A file read into a buffer; the subject is its name.", Payload: BufRead{}, Fired: true},
+		{Name: "BufWritePre", Doc: "A buffer about to be written; a veto stops the write.", Payload: BufWritePre{}, Fired: true},
+		{Name: "BufWritePost", Doc: "A buffer just written.", Payload: BufWritePost{}, Fired: true},
+	} {
+		x.add(h.DeclareEvent(e))
 	}
 	x.conv = newConventions(h, x.dir, func() []string {
 		var out []string
@@ -296,14 +307,47 @@ func (h *editorHost) ReadFile(name string) ([]byte, *edit.File, error) {
 	if err == nil && f.ReadOnly == "" && !f.New {
 		f.ReadOnly = h.x.conv.readOnly(f.Path)
 	}
+	if err == nil {
+		_, errs := h.x.h.Fire(context.Background(), "BufRead", name, &BufRead{Buf: name, File: f.Path})
+		h.x.hookErrors(errs)
+	}
 	return b, f, err
 }
 
-func (h *editorHost) BeforeWrite(name string, buf *text.Buffer, f *edit.File) {
+// The editor's events, which hooks (and Lua's oriel.on) can be on.
+type (
+	// BufRead is a file read into a buffer.
+	BufRead struct{ Buf, File string }
+	// BufWritePre is a buffer about to be written: a hook can veto it.
+	BufWritePre struct{ Buf, File string }
+	// BufWritePost is a buffer just written.
+	BufWritePost struct{ Buf, File string }
+)
+
+// hookErrors tells the user about hooks that failed.
+func (x *editorExt) hookErrors(errs []error) {
+	for _, err := range errs {
+		x.h.Notify(core.Notice{ID: "hook", Severity: core.SevError, Title: "Hook", Text: err.Error()})
+	}
+}
+
+func (h *editorHost) BeforeWrite(name string, buf *text.Buffer, f *edit.File) error {
 	h.x.conv.beforeWrite(name, buf, f)
+	ev := &BufWritePre{Buf: name, File: f.Path}
+	v, errs := h.x.h.Fire(context.Background(), "BufWritePre", name, ev)
+	h.x.hookErrors(errs)
+	if v.Veto {
+		return fmt.Errorf("not written: %s", cmp.Or(v.Reason, "a BufWritePre hook vetoed it"))
+	}
+	return nil
 }
 func (h *editorHost) WriteFile(f *edit.File, t []byte, noLines bool) error {
-	return h.disk.WriteFile(f, t, noLines)
+	if err := h.disk.WriteFile(f, t, noLines); err != nil {
+		return err
+	}
+	_, errs := h.x.h.Fire(context.Background(), "BufWritePost", f.Path, &BufWritePost{Buf: f.Path, File: f.Path})
+	h.x.hookErrors(errs)
+	return nil
 }
 func (h *editorHost) Exists(name string) bool { return h.disk.Exists(name) }
 

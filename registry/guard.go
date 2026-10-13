@@ -178,7 +178,7 @@ func As[T any](v View) (T, bool) {
 }
 
 func (g guardedView) Title(instance string) (title string) {
-	t, ok := g.v.(Titled)
+	t, ok := As[Titled](g.v)
 	if !ok {
 		return ""
 	}

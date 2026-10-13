@@ -159,3 +159,10 @@ func shiftSpans(spans []Span, chs []text.Change) []Span {
 	}
 	return out
 }
+
+// NodePath is the parser's NodePath once every queued change is parsed. Call it from the goroutine that makes the
+// changes, so none come in meanwhile.
+func (d *Document) NodePath(off int) []string {
+	d.Wait()
+	return d.p.NodePath(off)
+}

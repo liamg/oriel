@@ -354,3 +354,19 @@ func spanRuns(src []byte, spans []Span) string {
 	}
 	return strings.Join(caps, "\x00")
 }
+
+// :Inspect's tree-sitter path: the named nodes from the root down to the one at the cursor.
+func TestNodePath(t *testing.T) {
+	l, _ := Builtin().Language("go")
+	p, err := NewParser(l)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	src := []byte("package x\n\nfunc f() { return }\n")
+	p.Parse(src)
+	got := strings.Join(p.NodePath(bytes.Index(src, []byte("return"))+1), " > ")
+	if got != "source_file > function_declaration > block > statement_list > return_statement" {
+		t.Errorf("path %q", got)
+	}
+}
