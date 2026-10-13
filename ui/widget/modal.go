@@ -38,14 +38,14 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 		st.shown = true
 		c.Focus(id)
 	}
-	c.Box(struct{ k any }{key}, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Fill: col(c, tScrim), Z: 1000, Interactive: true,
+	c.Box(struct{ k any }{key}, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Fill: col(c, tScrim), Z: ui.LayerDialog, Interactive: true,
 		Help: o.Help, Float: &ui.Float{Point: &render.Point{}}, Enter: fade, Exit: fade}, nil)
 	w := o.Width
 	if w == 0 {
 		w = 600
 	}
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}
-	c.Column(key, ui.Style{W: ui.Px(w), Fill: col(c, tModalBg), Stroke: col(c, tModalBorder), Border: 1, Radius: 10, Z: 1001, Clip: true,
+	c.Column(key, ui.Style{W: ui.Px(w), Fill: col(c, tModalBg), Stroke: col(c, tModalBorder), Border: 1, Radius: 10, Z: ui.LayerDialog, Clip: true,
 		Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Enter: riseIn, Exit: fade, Trap: true, Focusable: true, KeyMode: "modal", Help: o.Help,
 		Role: ui.RoleDialog, Label: title}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.PadXY(16, 0), Cross: ui.Center}, func(c *ui.Ctx) {
@@ -55,6 +55,35 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: col(c, tMenuSeparator)}, nil)
 		c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Pad(16), Gap: 10}, body)
+	})
+}
+
+type PageOpts struct {
+	Top     float32 // where it starts, under a title bar
+	KeyMode string  // its keymap mode
+	Label   string  // its accessible name
+	Help    string
+}
+
+// Page is a full-window page (settings, the theme editor) from Top down while *open. It holds keyboard focus, taking
+// it back whenever nothing on it has it, and Escape, on the page or passed up from a control on it, closes it.
+func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
+	id := c.Next(key)
+	if !*open {
+		return
+	}
+	if hasKey(c.Interaction(id).Keys, "Esc") {
+		*open = false
+		return
+	}
+	size := c.Size()
+	at := render.Point{Y: o.Top}
+	c.Column(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y - o.Top), Z: ui.LayerPage, Fill: col(c, tPageBg), Clip: true, Trap: true,
+		Focusable: true, KeyMode: o.KeyMode, Float: &ui.Float{Point: &at}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, func(c *ui.Ctx) {
+		if !c.FocusWithin(id) {
+			c.Focus(id)
+		}
+		body(c)
 	})
 }
 
@@ -106,7 +135,7 @@ func ShowToasts(c *ui.Ctx, key any, t *Toasts) {
 	}
 	size := c.Size()
 	corner := render.Point{X: size.X - 16, Y: size.Y - 16}
-	c.Column(key, ui.Style{Gap: 8, Z: 950, Float: &ui.Float{Point: &corner, Self: render.Point{X: 1, Y: 1}}, Role: ui.RoleGroup, Label: "Notifications"}, func(c *ui.Ctx) {
+	c.Column(key, ui.Style{Gap: 8, Z: ui.LayerToast, Float: &ui.Float{Point: &corner, Self: render.Point{X: 1, Y: 1}}, Role: ui.RoleGroup, Label: "Notifications"}, func(c *ui.Ctx) {
 		var gone []int
 		for _, x := range t.list {
 			in := c.Interaction(c.Next(x.id))

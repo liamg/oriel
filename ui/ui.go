@@ -85,6 +85,7 @@ type UI struct {
 	noHits    bool
 	animating bool
 	wake      time.Time
+	clip      render.Clipboard
 }
 
 type flags struct {
@@ -132,6 +133,9 @@ func (u *UI) Fork() *UI {
 	return &f
 }
 
+// SetClipboard gives widgets the system clipboard, for a text field's cut, copy and paste.
+func (u *UI) SetClipboard(c render.Clipboard) { u.clip = c }
+
 func (u *UI) Options() Options     { return u.opts }
 func (u *UI) SetOptions(o Options) { u.opts = o }
 
@@ -153,7 +157,12 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.floats = u.floats[:0]
 	u.animating, u.wake = false, time.Time{}
 	build(&Ctx{u: u, e: u.root})
+	u.settleFocus()
+	if u.in.pending() {
+		u.wake = u.now() // what the input changed shows next frame
+	}
 	u.in.clicks, u.in.keys, u.in.context, u.in.wheel, u.in.claimed, u.in.dropped = nil, nil, nil, nil, nil, nil
+	u.bubble()
 	u.tooltip()
 	u.dragShown()
 	for axis := range 2 {
@@ -223,7 +232,7 @@ func (u *UI) tooltip() {
 	at := in.pos
 	c := &Ctx{u: u, e: u.root}
 	c.Box(tooltipKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: u.opts.TooltipStroke, Border: 1, Radius: 4,
-		Z: math.MaxInt32, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}}, func(c *Ctx) {
+		Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}}, func(c *Ctx) {
 		c.Text(nil, tip, u.opts.Tooltip)
 	})
 }

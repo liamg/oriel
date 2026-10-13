@@ -40,8 +40,8 @@ right-click entry.
 
 ## Options {#options}
 
-`L.o.name = value` sets your settings (by name or vim alias, at the Lua layer, which beats settings.toml);
-`L.bo` the current buffer's; `L.so` the session's. A value for an option nothing has registered yet waits for it.
+`oriel.option.name = value` sets your settings (by name or vim alias, at the Lua layer, which beats settings.toml);
+`oriel.buffer_option` the current buffer's; `oriel.session_option` the session's. A value for an option nothing has registered yet waits for it.
 
 ## Later features {#later}
 

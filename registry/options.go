@@ -107,7 +107,8 @@ type OptionSpec struct {
 	Source   string
 }
 
-func (s OptionSpec) check(v any) error {
+// Check says why v isn't a value s can hold: the wrong type, out of range, or not one of an Enum's values.
+func (s OptionSpec) Check(v any) error {
 	ok := false
 	switch s.Type {
 	case Bool:
@@ -262,7 +263,7 @@ func (o *options) SetFrom(name string, l Layer, at At, v any, source string) err
 		o.mu.Unlock()
 		return fmt.Errorf("setting %s at the %s layer needs a %s", s.Name, l, l)
 	}
-	if err := s.check(v); err != nil {
+	if err := s.Check(v); err != nil {
 		o.mu.Unlock()
 		return err
 	}
@@ -339,7 +340,7 @@ func (o *options) Watch(name string, fn func()) (cancel func()) {
 }
 
 func (o *options) register(s OptionSpec) (Disposable, error) {
-	if err := s.check(s.Default); err != nil {
+	if err := s.Check(s.Default); err != nil {
 		return nil, fmt.Errorf("default: %w", err)
 	}
 	o.mu.Lock()

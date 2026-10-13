@@ -127,16 +127,20 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			}
 			return h.Run(ctx, "view.open", a)
 		}},
-		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance}; with {docked}, only one outside the main area", Run: func(_ registry.Ctx, a registry.Args) error {
 			if id := str(a, "id"); id != "" {
 				l.root.Close(layout.ViewRef{ID: id, Instance: str(a, "instance")})
 				return nil
 			}
 			v, err := focused()
-			if err == nil {
-				l.root.Close(v)
+			if err != nil {
+				return err
 			}
-			return err
+			if w := l.root.Find(v); a["docked"] == true && (w == nil || w.Placement == layout.Tab) {
+				return nil
+			}
+			l.root.Close(v)
+			return nil
 		}},
 		{ID: "layout.move", Title: "Move the focused view", Run: func(_ registry.Ctx, a registry.Args) error {
 			v, err := focused()
@@ -209,6 +213,7 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 		{Keys: "q", Command: "view.close", Desc: "Close"},
 		{Keys: "<C-w>c", Command: "view.close", Desc: "Close"},
 		{Keys: "<C-w>q", Command: "view.close", Desc: "Close"},
+		{Keys: "<Esc>", Command: "view.close", Args: registry.Args{"docked": true}, Desc: "Close a docked view"},
 	} {
 		k.Mode = ViewKeyMode
 		l.add(h.Keymap(k))
@@ -251,7 +256,7 @@ func (l *layoutExt) moveMenu(c *ui.Ctx, h ext.Host) {
 	if c.Interaction(menu).Keys == nil {
 		c.Focus(menu)
 	}
-	c.Box("move", ui.Style{Z: 1500, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+	c.Box("move", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
 		chosen, closed := widget.Menu(c, "menu", items, widget.MenuOpts{Width: 320, Help: layout.HelpPane})
 		switch {
 		case closed:

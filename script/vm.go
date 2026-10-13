@@ -326,7 +326,7 @@ func (vm *VM) Future(ns, ticket string) {
 	vm.L.SetMetatable(t, mt)
 }
 
-// Metatable gives oriel.<ns> __index and __newindex in Go: options tables (oriel.o) read and write the registry.
+// Metatable gives oriel.<ns> __index and __newindex in Go: options tables (oriel.option) read and write the registry.
 func (vm *VM) Metatable(ns string, get func(a *Args, key string) (any, error), set func(a *Args, key string, v any) error) {
 	t := vm.namespace(ns)
 	mt := vm.L.NewTable()

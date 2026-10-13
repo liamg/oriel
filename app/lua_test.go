@@ -118,7 +118,7 @@ func TestSampleInitLua(t *testing.T) {
 	if src, _ := s.reg.ViewSource("requests"); src != line(`L.view.override("requests"`) {
 		t.Errorf("requests is from %q", src)
 	}
-	if v, src := s.option(t, "editor.tab_stop", registry.At{}); v != 4 || src != line("L.bo.tabstop") {
+	if v, src := s.option(t, "editor.tab_stop", registry.At{}); v != 4 || src != line("L.buffer_option.tabstop") {
 		t.Errorf("tabstop %v from %q", v, src)
 	}
 

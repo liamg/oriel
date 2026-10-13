@@ -42,12 +42,31 @@ If the design is silent or ambiguous on something that matters, ask rather than 
     `Chip`…). No view repeats `c.Next` / `c.Interaction(...).Clicked` / `Interactive` / `Cursor` / `Role` to make
     something clickable (`TestViewsUseWidgetsForClicks` fails if one does). If no widget fits, add a general one to
     `ui/widget` with its theme tokens and a test, then use it.
+  - **UI behaviour lives in the toolkit too** (`_design/rendering.md`), so every screen gets it and none re-solves it:
+    - A float's `Z` is a named layer (`ui.LayerPage`, `ui.LayerDialog`…), never a number; a float inside another
+      inherits its layer (`TestFloatsUseLayers`).
+    - A full-window page is `widget.Page`; a dialog over a scrim is `widget.Scrim` (an outside click closes it)
+      with Escape. Any closable surface gets both an Escape path and a visible close (a tab's ✕, a button). Docked
+      views close with Escape and their tab's ✕.
+    - A key that never arrives may be the backend's: gio keeps Tab for its own focus moves unless the window's key
+      filter names it (`render/gio/window.go`).
+    - A widget hands keys it doesn't use up with `Ctx.PassKeys`, so Escape on a focused control reaches its page.
+    - `Ctx.Focus` from under the float that holds focus is ignored; a page that grabs focus every frame can't steal
+      it from a dialog over it. Test a new overlay opened over the others (settings, the omnibox), not alone.
+    - A frame that reads input asks for the next; don't add a `WakeAt(now)` to show what a click changed.
+    - Text fields edit with the platform's keys (`widget.Input`); a number field takes `Accept: widget.Digits`
+      and shows `Invalid` while it's wrong.
   - **Code**: shared logic lives in the module that owns it (`gitx` for git, `registry` for contributions, `core`
     for state), not copied into each caller; tests share harnesses (`errScene`, `startApp`, `vimtest`) rather than
     growing new ones.
 - **Test-first, with sources.** Behaviour tests cite a vendored spec with a verbatim quote, and vim expectations are
   checked against headless nvim (`_design/testing.md`). Never write an expected value from memory, and never weaken
   a failing test to get to green.
+- **Test the way it's used.** Drive a control through the toolkit (click it, press keys on it, with timeouts on and
+  over other overlays), not by setting the state it would set; a test that turns off a timeout or opens one view
+  alone misses the bugs people hit.
+- **Names are plain words.** Public API (Lua, commands, options) says what it is: `oriel.option`, not `oriel.o`; a
+  user who wants it short aliases it (`local o = oriel.option`).
 - **Dependencies.** Stdlib, `golang.org/x/*` and `github.com/liamg/*` are free to use. Anything else must be listed and
   approved in `_design/deps.md` first. Ask; don't add.
 - **Claude is driven through its interactive CLI in a PTY with hooks, never `claude -p`** (that path is billed per token)

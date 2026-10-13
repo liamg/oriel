@@ -69,7 +69,8 @@ flowchart TB
 
 **Shell**
 - commands, picker/omnibox sources and actions, panels, docks, layouts. Which-key is a built-in plugin built only on the public API.
-- the `view` keymap mode: keys for a focused view with no key mode of its own (`q` and `⌃W c` close it).
+- the `view` keymap mode: keys for a focused view with no key mode of its own (`q` and `⌃W c` close it; Escape closes
+  one outside the main area, such as the log). A tab's ✕, shown while the pointer is on it, closes its view.
 - rail entries (`RailEntry`, `oriel.rail.add`) and start view actions (`StartEntry`, `oriel.start.add`). Both are
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
@@ -272,7 +273,9 @@ type Host interface {
   query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
   selection. Sessions, commands, files and symbols are built-in sources; tickets and PRs come from their plugins.
 - `Host.Pending()` is the keys typed towards a longer mapping or engine command, with the engine's next keys, for
-  which-key. A keymap with no command is a group's label, never run.
+  which-key. A keymap with no command is a group's label, never run. `Host.HoldPending()` keeps the pending mapping
+  from timing out until the next key: which-key calls it while it shows the keys, so the popup doesn't vanish at
+  `keymap.timeoutlen`.
 - Views named `app.overlay.<name>` float over the window: the omnibox is `app.overlay.omnibox`.
 - The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
   in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.

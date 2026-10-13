@@ -80,6 +80,7 @@ func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errSce
 		t.Fatal(err)
 	}
 	s.ui = ui.New(ts, textStyle)
+	s.ui.SetClipboard(s.clip)
 	st, _ := theme.Stack(theme.Builtins(), "oriel")
 	r, err := theme.Resolve(st, theme.Dark)
 	if err != nil {

@@ -21,6 +21,7 @@ type ButtonOpts struct {
 func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 	id := c.Next(key)
 	in := c.Interaction(id)
+	passOn(c, id, in.Keys, activates)
 	bg, hover, pressed, fg, border := col(c, tButtonBg), col(c, tButtonHover), col(c, tButtonPressed), col(c, tButtonFg), col(c, tButtonBorder)
 	if o.Primary {
 		bg, hover, pressed, fg = col(c, tPrimaryBg), col(c, tPrimaryHover), col(c, tPrimaryPressed), col(c, tPrimaryFg)

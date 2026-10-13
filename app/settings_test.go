@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 )
 
 func (s *errScene) settings() *settingsExt {
@@ -243,4 +244,82 @@ func TestSettingsSnapshot(t *testing.T) {
 	s.reg.Options().SetFrom("ui.reduced_motion", registry.LayerLua, registry.At{}, true, "init.lua:12")
 	s.run("Settings", registry.Args{"args": "ui"})
 	s.golden("settings")
+}
+
+// settingsAt is the settings page searched for query, drawn.
+func settingsAt(t *testing.T, query string) *errScene {
+	s := newScene(t, "", t.TempDir(), mockupSize)
+	s.run("settings.open", registry.Args{"query": query})
+	s.frame()
+	s.frame()
+	return s
+}
+
+func TestSettingsInputIsAMenuOfEngines(t *testing.T) {
+	s := settingsAt(t, "editor.input")
+	s.clickText(t, "vim ▾")
+	s.clickText(t, "plain")
+	if v, _, _ := s.reg.Options().Get(InputOption, registry.At{}); v != "plain" {
+		t.Errorf("picking plain from editor.input's menu: %v", v)
+	}
+}
+
+func TestSettingsEscapeAfterAToggle(t *testing.T) {
+	s := settingsAt(t, "editor.expand_tab")
+	s.click(centre(s.access("editor.expand_tab").Bounds))
+	if !s.settings().open {
+		t.Fatal("clicking a toggle closed the page")
+	}
+	s.typeKeys("Esc")
+	s.frame()
+	if s.settings().open {
+		t.Error("Escape with a toggle focused didn't close the settings page")
+	}
+}
+
+func TestSettingsNumberField(t *testing.T) {
+	s := settingsAt(t, "editor.max_line_length")
+	s.click(centre(s.access("editor.max_line_length").Bounds))
+	s.typeKeys("End", "1", "x", "2")
+	if v := s.access("editor.max_line_length").Value; v != "012" {
+		t.Errorf("typing 1 x 2 into a whole number's field: %q, want 012", v)
+	}
+	s.typeKeys("CR")
+	if v, _, _ := s.reg.Options().Get("editor.max_line_length", registry.At{}); v != 12 {
+		t.Errorf("after Enter, editor.max_line_length = %v", v)
+	}
+	s.typeKeys("0", "0", "0", "0")
+	s.frame()
+	if !strings.Contains(s.frameText(), "is between") {
+		t.Error("an out-of-range value doesn't say why under the field")
+	}
+	s.typeKeys("CR")
+	if v, _, _ := s.reg.Options().Get("editor.max_line_length", registry.At{}); v != 12 {
+		t.Errorf("Enter on an out-of-range value set it: %v", v)
+	}
+	s.typeKeys("Esc")
+	s.frame()
+	if v := s.access("editor.max_line_length").Value; v != "12" {
+		t.Errorf("Escape leaves %q in the field, want it back to 12", v)
+	}
+}
+
+func TestOmniboxOverSettings(t *testing.T) {
+	s := settingsAt(t, "")
+	s.run("omnibox.open", nil)
+	s.frame()
+	s.frame()
+	if m := s.ui.KeyMode(); m != "input" {
+		t.Fatalf("with the omnibox over settings, keys go to %q, not the omnibox's input", m)
+	}
+	s.typeKeys("Esc")
+	if s.omni().open {
+		t.Error("Escape didn't close the omnibox")
+	}
+	s.run("omnibox.open", nil)
+	s.frame()
+	s.click(render.Point{X: 8, Y: s.size.Y - 8})
+	if s.omni().open {
+		t.Error("a click outside didn't close the omnibox")
+	}
 }

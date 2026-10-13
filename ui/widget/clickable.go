@@ -8,17 +8,16 @@ import (
 
 // Clickable is a box that takes clicks, built with body: interactive, with the pointer cursor and a button's role
 // unless st says otherwise, so it gets the toolkit's hover and press. Focusable, Enter or Space click it too. It
-// returns its interaction this frame; a click asks for another frame, which shows what it changed.
+// returns its interaction this frame.
 func Clickable(c *ui.Ctx, key any, st ui.Style, body func(c *ui.Ctx)) ui.Interaction {
-	in := c.Interaction(c.Next(key))
+	id := c.Next(key)
+	in := c.Interaction(id)
 	if st.Focusable && pressedKey(in.Keys) {
 		in.Clicked = true
 	}
+	passOn(c, id, in.Keys, activates)
 	if st.Disabled {
 		in.Clicked = false
-	}
-	if in.Clicked {
-		c.WakeAt(c.Now()) // what the click changes shows next frame
 	}
 	st.Interactive = true
 	if st.Cursor == render.CursorDefault {

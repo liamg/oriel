@@ -583,7 +583,7 @@ func (x *luaExt) inspectView(c *ui.Ctx) {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size}, Color: th.C(tok)}
 	}
 	c.Column("inspect", ui.Style{W: ui.Px(min(1000, size.X-40)), Fill: th.C(tOmniBg), Stroke: th.C(tOmniBorder), Border: 1, Radius: 8, Clip: true,
-		Z: 1000, Float: &ui.Float{Point: &at, Self: render.Point{X: .5, Y: .5}}, Enter: &ui.Transition{Fade: true, Shift: render.Point{Y: 6}},
+		Z: ui.LayerDialog, Float: &ui.Float{Point: &at, Self: render.Point{X: .5, Y: .5}}, Enter: &ui.Transition{Fade: true, Shift: render.Point{Y: 6}},
 		Focusable: true, Trap: true, KeyMode: "inspect", Role: ui.RoleDialog, Label: "Inspect", Help: "plugins/inspect"}, func(c *ui.Ctx) {
 		if !c.Interaction(id).Focused {
 			c.Focus(id)

@@ -617,7 +617,6 @@ func (s *settingsExt) build(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	size := c.Size()
 	o := s.h.Options()
 	specs := o.Specs()
 	sections := map[string]int{}
@@ -638,20 +637,7 @@ func (s *settingsExt) build(c *ui.Ctx) {
 			rows = append(rows, sp)
 		}
 	}
-	boxID := c.Next("settings")
-	in := c.Interaction(boxID)
-	for _, k := range in.Keys {
-		if k.Key == "Esc" {
-			s.open = false
-			return
-		}
-	}
-	top := render.Point{Y: titleH}
-	c.Column("settings", ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y - titleH), Z: 900, Fill: th.C(theme.BgBase), Clip: true, Trap: true,
-		Focusable: true, KeyMode: "settings", Float: &ui.Float{Point: &top}, Role: ui.RoleDialog, Label: "Settings", Help: "shell/settings"}, func(c *ui.Ctx) {
-		if u := s.h.UI(); u != nil && !in.Focused && !strings.HasPrefix(u.Help(u.Focused()), "shell/settings") {
-			c.Focus(boxID)
-		}
+	widget.Page(c, "settings", &s.open, widget.PageOpts{Top: titleH, KeyMode: "settings", Label: "Settings", Help: "shell/settings"}, func(c *ui.Ctx) {
 		s.header(c, th)
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
@@ -772,7 +758,7 @@ func (s *settingsExt) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec,
 			if s.asTOML {
 				sec, key, _ := strings.Cut(sp.Name, ".")
 				c.Text("toml", fmt.Sprintf("[%s] %s = %s", sec, key, formatValue(toTOML(sp, v))), monoAt(th, 11, tThemeTOMLVal))
-				c.Text("lua", fmt.Sprintf("L.o[%q] = %s", sp.Name, formatValue(toTOML(sp, v))), monoAt(th, 11, theme.FgFaint))
+				c.Text("lua", fmt.Sprintf("oriel.option[%q] = %s", sp.Name, formatValue(toTOML(sp, v))), monoAt(th, 11, theme.FgFaint))
 			} else if sp.Help != "" {
 				widget.Wrap(c, "h", sp.Help, 560, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(theme.FgFaint)})
 			}
@@ -857,7 +843,7 @@ func (s *settingsExt) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, va
 	}
 }
 
-// field is a text field for a value, checked when entered.
+// field is a text field for a value, checked as it's typed and set when entered.
 func (s *settingsExt) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled bool) {
 	text := fieldText(v)
 	fid := c.Next("field")
@@ -865,13 +851,31 @@ func (s *settingsExt) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled b
 	if !c.Interaction(ui.Child(fid, "in")).Focused && st.from != text {
 		st.text, st.from = text, text
 	}
-	c.Box("field", ui.Style{W: ui.Px(200)}, func(c *ui.Ctx) {
-		if widget.Input(c, "in", &st.text, widget.InputOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}).Submitted {
-			val, err := parseField(sp, st.text)
-			if err == nil {
-				err = s.set(sp.Name, val, s.scope)
+	var accept func(rune) bool
+	switch sp.Type {
+	case registry.Int:
+		accept = widget.Digits
+	case registry.Float:
+		accept = widget.Decimal
+	}
+	val, bad := parseField(sp, st.text)
+	if bad == nil {
+		bad = sp.Check(val)
+	}
+	c.Column("field", ui.Style{W: ui.Px(200), Gap: 4}, func(c *ui.Ctx) {
+		res := widget.Input(c, "in", &st.text, widget.InputOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows", Accept: accept,
+			Invalid: bad != nil})
+		switch {
+		case res.Cancelled:
+			st.text = text
+		case res.Submitted:
+			if bad == nil {
+				bad = s.set(sp.Name, val, s.scope)
 			}
-			s.fail(err)
+			s.fail(bad)
+		}
+		if bad != nil && st.text != text {
+			widget.Wrap(c, "bad", bad.Error(), 200, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11}, Color: c.Theme().C(theme.Error)})
 		}
 	})
 }

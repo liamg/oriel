@@ -74,17 +74,17 @@ func (a *APIs) Handover(next *APIs) {
 	}
 }
 
-// options binds oriel.o (your settings, at the Lua layer), oriel.bo (the current buffer's) and oriel.so (the
-// session's), each by an option's name or vim alias.
+// options binds oriel.option (your settings, at the Lua layer), oriel.buffer_option (the current buffer's) and
+// oriel.session_option (the session's), each by an option's name or vim alias.
 func (a *APIs) options(vm *script.VM) {
 	o := a.Host.Options()
-	for _, ns := range []string{"o", "bo", "so"} {
+	for _, ns := range []string{"option", "buffer_option", "session_option"} {
 		where := func() (registry.Layer, registry.At) {
 			here := a.Host.Here()
 			switch {
-			case ns == "bo" && here.Buffer != "":
+			case ns == "buffer_option" && here.Buffer != "":
 				return registry.LayerBuffer, registry.At{Buffer: here.Buffer}
-			case ns == "so" && here.Session != "":
+			case ns == "session_option" && here.Session != "":
 				return registry.LayerSession, registry.At{Session: here.Session}
 			}
 			return registry.LayerLua, registry.At{}

@@ -62,6 +62,7 @@ func WrapLines(sh typeset.Shaper, s string, width float32, f typeset.FontSpec) [
 func Link(c *ui.Ctx, key any, label string, help string) bool {
 	id := c.Next(key)
 	in := c.Interaction(id)
+	passOn(c, id, in.Keys, activates)
 	fg := col(c, tLink)
 	c.Column(key, ui.Style{Gap: 1, Focusable: true, Cursor: render.CursorPointer, Help: help, KeyMode: "button", Role: ui.RoleButton,
 		Label: label}, func(c *ui.Ctx) {

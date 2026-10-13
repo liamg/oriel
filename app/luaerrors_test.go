@@ -67,7 +67,7 @@ func TestLuaErrorFixtures(t *testing.T) {
 		frames []string
 		action string
 	}{
-		{name: "syntax error", files: map[string]string{"init.lua": "local L = oriel\nL.o.tabstop = = 4\n"},
+		{name: "syntax error", files: map[string]string{"init.lua": "local L = oriel\nL.option.tabstop = = 4\n"},
 			notice: "lua.load", at: "init.lua:2", action: "Edit init.lua"},
 		{name: "runtime error in a hook", files: map[string]string{"init.lua": `local L = oriel
 L.on("Permission", function(ev)
@@ -118,14 +118,14 @@ end)
 // PL-12: "A failing `init.lua` on reload leaves the previous keymaps and hooks working."
 func TestBrokenReloadKeepsTheLastGoodConfig(t *testing.T) {
 	s := luaScene(t, `local L = oriel
-L.o.tabstop = 4
+L.option.tabstop = 4
 L.keymap.set("n", "<leader>rr", "agent.review")
 L.on("Permission", function() return "allow" end)
 `)
 	x := s.lua()
 	for _, broken := range []string{
-		"local L = oriel\nL.o.tabstop = = 8\n",                                                        // doesn't parse
-		"local L = oriel\nL.o.tabstop = 8\nL.keymap.set('n', 'gx', 'nope')\nlocal x = nil\nx.y = 1\n", // runs part way
+		"local L = oriel\nL.option.tabstop = = 8\n",                                                        // doesn't parse
+		"local L = oriel\nL.option.tabstop = 8\nL.keymap.set('n', 'gx', 'nope')\nlocal x = nil\nx.y = 1\n", // runs part way
 	} {
 		s.writeConfig(t, map[string]string{"init.lua": broken})
 		x.reload(true)
@@ -280,7 +280,7 @@ func TestREPLError(t *testing.T) {
 
 // Diagnostics show in Problems, and a click there opens the file at the line.
 func TestProblems(t *testing.T) {
-	s := luaScene(t, "local L = oriel\n\nL.o.tabstop = = 4\n")
+	s := luaScene(t, "local L = oriel\n\nL.option.tabstop = = 4\n")
 	s.reg.SetDiagnostics("gopls", filepath.Join(s.sh.cfg.ConfigDir, "x.go"), []registry.Diagnostic{{Line: 9, Severity: registry.SevWarning, Message: "x declared and not used"}})
 	s.run("Problems", nil)
 	s.frame()

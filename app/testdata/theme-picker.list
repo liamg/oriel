@@ -267,9 +267,11 @@ clip 180,108 1240x720 r 10
   text "⇥ next source" @1332.8099,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #5cc8ff Inter 16
-  rect 211.59375,155 420.6875x30 fill #071018 radius 6 stroke 1 #332f27
+  rect 211.59375,155 420.6875x30 fill #071018 radius 6 stroke 1 #5cc8ff
   clip 211.59375,155 420.6875x30 r 6
+    rect 221.59375,162 1x16 fill #5cc8ff
   pop
+  rect 207.59375,151 428.6875x38 radius 10 stroke 2 #5cc8ff
   text "2 / 2 · fuzzy" @640.28125,173.78001 #7c7566 JetBrains Mono 10.5
   rect 180,193 560x1 fill #24221d
   clip 180,194 560x601 r 0

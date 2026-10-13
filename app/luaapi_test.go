@@ -149,10 +149,10 @@ L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severit
 // Options from Lua take each type's values, and say what's wrong with one that doesn't fit.
 func TestLuaOptionTypes(t *testing.T) {
 	s := luaScene(t, `local L = oriel
-L.o.tabstop = 4
-L.o.expandtab = true
-L.o["ui.variant"] = "light"
-L.o["ui.variant"] = nil
+L.option.tabstop = 4
+L.option.expandtab = true
+L.option["ui.variant"] = "light"
+L.option["ui.variant"] = nil
 `)
 	if v, _ := s.option(t, "editor.tab_stop", registry.At{}); v != 4 {
 		t.Errorf("tabstop %v", v)
@@ -161,16 +161,16 @@ L.o["ui.variant"] = nil
 		t.Errorf("expandtab %v", v)
 	}
 	for line, want := range map[string]string{
-		`L.o.tabstop = "four"`: "tab_stop",
-		`L.o.tabstop = 1.5`:    "tab_stop",
-		`L.o.expandtab = 3`:    "expand_tab",
+		`L.option.tabstop = "four"`: "tab_stop",
+		`L.option.tabstop = 1.5`:    "tab_stop",
+		`L.option.expandtab = 3`:    "expand_tab",
 	} {
 		if err := s.evalErr(t, line); !strings.Contains(err, want) {
 			t.Errorf("%s: %s", line, err)
 		}
 	}
-	if got := show(s.eval(t, `L.o.tabstop`)[0]); got != "4" {
-		t.Errorf("reading L.o.tabstop: %s", got)
+	if got := show(s.eval(t, `L.option.tabstop`)[0]); got != "4" {
+		t.Errorf("reading L.option.tabstop: %s", got)
 	}
 }
 

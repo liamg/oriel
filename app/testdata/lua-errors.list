@@ -305,9 +305,9 @@ text "7:1" @1315.25,884.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 70%" @1351.0312,884.71 #b3ab99 JetBrains Mono 10.5
 text "●" @89.796875,240.77 #ff5f6d JetBrains Mono 13.5
 rect 106,227 2x21 fill #ff5f6d
+path 237 segments stroke 1 #ff5f6d
 rect 112,228 8.40625x19 fill #ffd23f
 text " " @112,241.77 #141006 JetBrains Mono 13.5
-path 237 segments stroke 1 #ff5f6d
 rect 944,12 440x114.55859 fill #121210 radius 8 stroke 1 #ff5f6d8c
 rect 958,27.154785 7x7 fill #ff5f6d radius 3.5
 text "HOOK ERROR" @973,34.074783 #ff5f6d JetBrains Mono 9.5

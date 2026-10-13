@@ -44,9 +44,9 @@ in microseconds, and can touch everything.
 local L = oriel
 
 -- options
-L.o.relativenumber = true
-L.bo.tabstop = 4                       -- buffer-local
-L.so.agent = "claude"                  -- session-local
+L.option.relativenumber = true
+L.buffer_option.tabstop = 4                       -- buffer-local
+L.session_option.agent = "claude"                  -- session-local
 
 -- keymaps, any mode, including panels' own modes
 L.keymap.set("n", "<leader>rr", "agent.review")             -- a command
@@ -193,7 +193,8 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
 - Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
   `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `ui`, `regex` (PCRE2),
-  `language`, and `o`, `bo`, `so` over the registry's options (`oriel.o` sets the Lua layer). There's one global, `oriel`; a config that wants a short name writes
+  `language`, and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
+  `local o = oriel.option` if you want it short). There's one global, `oriel`; a config that wants a short name writes
   `local L = oriel`, as the sample does.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,

@@ -145,10 +145,9 @@ func (p *picker) build(c *ui.Ctx) {
 	}
 	size := c.Size()
 	at := render.Point{X: size.X / 2, Y: 108}
-	c.Box("picker", ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: 980, Fill: th.C(tScrimOmni), Interactive: true, Float: &ui.Float{Point: &render.Point{}},
-		Help: "shell/pickers"}, func(c *ui.Ctx) {
+	if widget.Scrim(c, "picker", widget.ScrimOpts{Z: ui.LayerDialog, Fill: th.C(tScrimOmni), Help: "shell/pickers"}, func(c *ui.Ctx) {
 		c.Column("box", ui.Style{W: ui.Px(min(1240, size.X-32)), H: ui.Px(min(720, size.Y-130)), Fill: th.C(tOmniBg), Stroke: th.C(tOmniBorder), Border: 1,
-			Radius: 10, Clip: true, Trap: true, Z: 981, Float: &ui.Float{Point: &at, Self: render.Point{X: .5}}, Role: ui.RoleDialog, Label: s.Title},
+			Radius: 10, Clip: true, Trap: true, Interactive: true, Float: &ui.Float{Point: &at, Self: render.Point{X: .5}}, Role: ui.RoleDialog, Label: s.Title},
 			func(c *ui.Ctx) {
 				p.sourceStrip(c, s)
 				c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
@@ -178,7 +177,9 @@ func (p *picker) build(c *ui.Ctx) {
 				c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 				p.footer(c, s, len(g.hits) > 0 && g.hits[p.sel].item.Path != "")
 			})
-	})
+	}) {
+		p.close(true)
+	}
 }
 
 // keys are the picker's own: moving, picking, the actions, and ⇥ to the next source.

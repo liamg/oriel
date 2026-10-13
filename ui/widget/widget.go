@@ -27,6 +27,7 @@ var (
 	tInputBg        = theme.Declare("input.bg", "bg.base")
 	tInputBorder    = theme.Declare("input.border", "line.strong")
 	tInputFocus     = theme.Declare("input.border.focus", "accent")
+	tInputInvalid   = theme.Declare("input.border.invalid", "error")
 	tInputFg        = theme.Declare("input.fg", "fg")
 	tInputHint      = theme.Declare("input.placeholder", "fg.faint")
 	tInputCaret     = theme.Declare("input.caret", "accent")
@@ -48,6 +49,7 @@ var (
 	tMenuSeparator  = theme.Declare("menu.separator", "line")
 	tScrim          = theme.Declare("modal.scrim", "alpha(#030508, 72%)")
 	tModalBg        = theme.Declare("modal.bg", "bg.surface")
+	tPageBg         = theme.Declare("page.bg", "bg.base")
 	tModalBorder    = theme.Declare("modal.border", "line.strong")
 	tToastBg        = theme.Declare("toast.bg", "bg.raised")
 	tToastBorder    = theme.Declare("toast.border", "line.strong")
@@ -81,6 +83,20 @@ func monoText(size float32, w typeset.Weight, fg color.NRGBA, tracking float32) 
 }
 
 func alpha(c color.NRGBA, a float64) color.NRGBA { return theme.WithAlpha(c, a*float64(c.A)/255) }
+
+// passOn hands the keys id was given that take doesn't take up to what it's in: Escape on a focused button reaches
+// its page.
+func passOn(c *ui.Ctx, id ui.ID, keys []render.KeyEvent, take func(k render.KeyEvent) bool) {
+	var rest []render.KeyEvent
+	for _, k := range keys {
+		if !take(k) {
+			rest = append(rest, k)
+		}
+	}
+	c.PassKeys(id, rest)
+}
+
+func activates(k render.KeyEvent) bool { return pressedKey([]render.KeyEvent{k}) }
 
 // pressedKey reports whether keys hold one that activates a control: Enter or Space.
 func pressedKey(keys []render.KeyEvent) bool {
