@@ -64,3 +64,14 @@ the workspace's, and `␣ci`/`␣co` list a function's callers and callees.
 files change in their buffers, others are written.
 
 {{keys "lsp.*"}}
+
+## Multiple cursors {#multi}
+
+`⌃n` selects the word under the cursor; each `⌃n` after it adds the next whole-word match. `⌃↓` and `⌃↑` add a
+cursor on the line below or above. With words selected, `c` (or `s`) changes them all, `d` (or `x`) deletes them, `I`
+and `A` type before or after each, `o` swaps their ends, `q` skips the last match for the next, `Q` drops it, and `⇥`
+switches to plain cursors. With cursors, any normal-mode command runs at every one, and insert mode types at all of
+them. Each command, with the typing after it, undoes as one step. `esc` goes back to one cursor.
+
+A `:s` of a whole word (`:%s/\<Mode\>/RoundingMode/g`) shows how many matches it has and, with a language server,
+offers its rename: `⇥` renames the symbol instead, after showing the diff.

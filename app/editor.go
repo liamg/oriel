@@ -194,6 +194,18 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 			x.e.SetQuickfix(str(a, "title"), items)
 			return nil
 		}},
+		{ID: "editor.multi.next", Title: "Add a cursor at the next match of the word under the cursor", Run: func(registry.Ctx, registry.Args) error {
+			x.e.MultiNext()
+			return nil
+		}},
+		{ID: "editor.multi.down", Title: "Add a cursor on the line below", Run: func(registry.Ctx, registry.Args) error {
+			x.e.MultiVertical(1)
+			return nil
+		}},
+		{ID: "editor.multi.up", Title: "Add a cursor on the line above", Run: func(registry.Ctx, registry.Args) error {
+			x.e.MultiVertical(-1)
+			return nil
+		}},
 		{ID: "editor.grep-word", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
 		}},
@@ -213,6 +225,13 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 		x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: k.keys, Command: "picker.open", Args: registry.Args{"source": k.source}, Desc: k.desc}))
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>*", Command: "editor.grep-word", Desc: "Grep the word under the cursor"}))
+	for _, k := range []registry.Keymap{
+		{Mode: "n", Keys: "<C-n>", Command: "editor.multi.next", Desc: "Cursor at the next match"},
+		{Mode: "n", Keys: "<C-Down>", Command: "editor.multi.down", Desc: "Cursor below"},
+		{Mode: "n", Keys: "<C-Up>", Command: "editor.multi.up", Desc: "Cursor above"},
+	} {
+		x.add(h.Keymap(k))
+	}
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>'", Command: "picker.resume", Desc: "Resume the last picker"}))
 	x.add(h.View("statusline.left.00-mode", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "mode", Fn: x.modeSegment} })))
 	x.add(h.View("statusline.right.80-file", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "file", Fn: x.fileSegment} })))

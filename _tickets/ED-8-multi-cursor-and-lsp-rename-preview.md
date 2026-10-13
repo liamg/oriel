@@ -2,7 +2,7 @@
 id: ED-8
 title: "Multi-cursor and LSP rename preview"
 phase: P4
-status: todo
+status: done
 area: Editor
 module: edit
 depends_on: [ED-7, LS-1]

@@ -124,3 +124,28 @@ func ActiveKeyModes(r Registry) []string {
 	}
 	return out
 }
+
+// CmdlineHint is text shown at the right of the editor's : line while it applies: the matches a :s has, or a better
+// way to do what's typed.
+type CmdlineHint struct {
+	Name   string
+	Hint   func(line string) string // "" for none
+	Source string
+}
+
+func (CmdlineHint) ContributionKind() string   { return "cmdline.hint" }
+func (h CmdlineHint) ContributionName() string { return h.Name }
+
+// CmdlineHints are the hints that apply to line, by name.
+func CmdlineHints(r Registry, line string) []string {
+	var out []string
+	for _, c := range r.Contributions("cmdline.hint") {
+		h := c.(CmdlineHint)
+		s := ""
+		Call(func() error { s = h.Hint(line); return nil })
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}

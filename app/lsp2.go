@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -129,6 +130,7 @@ func (x *lspExt) navigation(h ext.Host) {
 	}
 	x.add(h.Contribute(registry.KeyLayer{Name: "lsp.peek", Mode: PeekKeyMode, Active: func() bool { return x.peek != nil }}))
 	x.symbolSources(h)
+	x.substituteHints(h)
 }
 
 // jump opens a location's file at its start.
@@ -535,4 +537,68 @@ func (x *lspExt) callsSource() registry.PickerSource {
 			return x.sh.editor.filePreview(it.Path, it.Line-1)
 		},
 	}
+}
+
+// substituteRe is a :s of one whole word, which a rename can do better.
+var substituteRe = regexp.MustCompile(`^:(?:%|[0-9.,$]*)s/\\<(\w+)\\>/(\w*)/`)
+
+// substitution is the word a :s on the command line replaces and what with, when a server could rename it instead.
+func (x *lspExt) substitution() (old, new string, ok bool) {
+	line, open := x.sh.editor.e.Cmdline()
+	if !open {
+		return "", "", false
+	}
+	m := substituteRe.FindStringSubmatch(line)
+	if m == nil || m[2] == "" {
+		return "", "", false
+	}
+	if _, _, d := x.current(); d == nil || d.client == nil || d.client.Capabilities().RenameProvider == nil {
+		return "", "", false
+	}
+	return m[1], m[2], true
+}
+
+// substituteHints offer the rename while a :s of a whole word is typed (09-lsp), with how many matches the :s has.
+func (x *lspExt) substituteHints(h ext.Host) {
+	x.add(h.Contribute(registry.CmdlineHint{Name: "lsp.rename", Hint: func(string) string {
+		old, _, ok := x.substitution()
+		if !ok {
+			return ""
+		}
+		n := len(regexp.MustCompile(`\b`+regexp.QuoteMeta(old)+`\b`).FindAllIndex(x.sh.editor.current().Buf().Bytes(), -1))
+		return fmt.Sprintf("%d %s · ⇥ use LSP rename", n, plural(n, "match", "matches"))
+	}}))
+	x.add(h.Contribute(registry.KeyLayer{Name: "lsp.substitute", Mode: "lsp.substitute", Active: func() bool { _, _, ok := x.substitution(); return ok }}))
+	x.add(h.Keymap(registry.Keymap{Mode: "lsp.substitute", Keys: "<Tab>", Command: "lsp.rename.substitute", Desc: "Use LSP rename"}))
+	x.add(h.Command(registry.Command{ID: "lsp.rename.substitute", Title: "Rename the word the :s on the command line replaces, with the language server",
+		Run: func(registry.Ctx, registry.Args) error {
+			old, nw, ok := x.substitution()
+			if !ok {
+				return fmt.Errorf("the command line isn't a :s of a whole word")
+			}
+			e := x.sh.editor.e
+			e.Key("<Esc>")
+			p, path, d := x.current()
+			b := p.Buf().Bytes()
+			re := regexp.MustCompile(`\b` + regexp.QuoteMeta(old) + `\b`)
+			snap := p.Buf()
+			from := snap.Offset(text.Pos(p.Cursor()))
+			at := -1
+			for _, loc := range re.FindAllIndex(b, -1) {
+				if loc[1] > from && at < 0 || loc[0] <= from && from < loc[1] {
+					at = loc[0]
+					break
+				}
+			}
+			if at < 0 {
+				if locs := re.FindAllIndex(b, 1); len(locs) > 0 {
+					at = locs[0][0]
+				}
+			}
+			if at < 0 {
+				return fmt.Errorf("no %s in this file", old)
+			}
+			x.doRename(&renamePrompt{path: path, at: snap.PosAt(at), old: old, value: nw, c: d.client})
+			return nil
+		}}))
 }

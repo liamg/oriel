@@ -72,6 +72,8 @@ flowchart TB
 - commands, picker/omnibox sources and actions, panels, docks, layouts. Which-key is a built-in plugin built only on the public API.
 - the `view` keymap mode: keys for a focused view with no key mode of its own (`q` and `⌃W c` close it; Escape closes
   one outside the main area, such as the log). A tab's ✕, shown while the pointer is on it, closes its view.
+- command-line hints (`registry.CmdlineHint`): text at the right of the `:` line while it applies, as the LSP's
+  "⇥ use LSP rename" on a `:s` of a whole word.
 - key layers (`registry.KeyLayer`): a keymap mode laid over every other while its `Active` says so, as the completion
   menu's `⌃n` and `⏎`; keys it doesn't map go on as before.
 - picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.

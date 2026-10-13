@@ -329,7 +329,8 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 			showCursor, cur = true, vim.Pos{Line: line}
 		}
 	}
-	if !sel && !showCursor {
+	others := x.otherCursors(p, line)
+	if !sel && !showCursor && len(others) == 0 {
 		return
 	}
 	b := p.Buf().Line(line)
@@ -343,6 +344,18 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 			sx := x0 + float32(a)*m.charW
 			c.Box("sel", ui.Style{W: ui.Px(max(float32(z-a), 0) * m.charW), H: ui.Px(m.lineH), Fill: th.C(theme.Selection),
 				Float: &ui.Float{To: rowID, Offset: render.Point{X: sx}}}, nil)
+		}
+		for i, r := range others {
+			if r.selFrom >= 0 {
+				a, z := p.VCol(line, r.selFrom)+inlayShift(ds, r.selFrom, true), p.VCol(line, r.selTo)+inlayShift(ds, r.selTo, false)
+				c.Box(fmt.Sprint("msel", i), ui.Style{W: ui.Px(max(float32(z-a), 0) * m.charW), H: ui.Px(m.lineH), Fill: th.C(theme.Selection),
+					Float: &ui.Float{To: rowID, Offset: render.Point{X: x0 + float32(a)*m.charW}}}, nil)
+			}
+			if r.head >= 0 && !(showCursor && r.head == cur.Col) {
+				vc := p.VCol(line, r.head) + inlayShift(ds, r.head, true)
+				c.Box(fmt.Sprint("mcur", i), ui.Style{W: ui.Px(m.charW), H: ui.Px(m.lineH - 2), Fill: theme.WithAlpha(th.C(tCursorBg), .55),
+					Float: &ui.Float{To: rowID, Offset: render.Point{X: x0 + float32(vc)*m.charW, Y: 1}}, Role: ui.RoleText, Label: "cursor"}, nil)
+			}
 		}
 		if !showCursor {
 			return
@@ -434,6 +447,10 @@ func (x *editorExt) cmdline(c *ui.Ctx, line string) {
 		Stroke: th.C(theme.LineStrong), Role: ui.RoleTextBox, Label: "Command line", Value: line}, func(c *ui.Ctx) {
 		c.Text("text", line, ui.TextStyle{Font: codeFont, Color: th.C(tCodeFg)})
 		c.Box("caret", ui.Style{W: ui.Px(2), H: ui.Px(16), Fill: th.C(tCursorBg)}, nil)
+		if hints := registry.CmdlineHints(x.h, line); len(hints) > 0 {
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			c.Text("hints", strings.Join(hints, " · "), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgFaint)})
+		}
 	})
 }
 
@@ -457,6 +474,13 @@ func (x *editorExt) modeSegment(c *ui.Ctx) {
 		c.Text("m", label, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Bold, Tracking: .12},
 			Color: th.C(tModeFg)})
 	})
+	if m, ok := x.e.Multi(); ok {
+		c.Row("multi", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(10, 0), Cross: ui.Center, Fill: th.C(tModeVisual), Role: ui.RoleStatus, Label: "Cursors"},
+			func(c *ui.Ctx) {
+				c.Text("n", fmt.Sprintf("%d CURSORS", len(m.Regions)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5,
+					Weight: typeset.Bold, Tracking: .12}, Color: th.C(tModeFg)})
+			})
+	}
 }
 
 // shown reports whether any editor window is in the layout.
@@ -513,4 +537,46 @@ func (x *editorExt) positionSegment(c *ui.Ctx) {
 
 func statusText(c *ui.Ctx, tok theme.TokenID) ui.TextStyle {
 	return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Medium}, Color: c.Theme().C(tok)}
+}
+
+// lineCursor is one of the multi-cursors on a line: its head's column (-1 if it isn't on the line), and the part of
+// its region the line holds (-1 for none).
+type lineCursor struct{ head, selFrom, selTo int }
+
+// otherCursors are the cursors of a multi-cursor edit on line, in the current window.
+func (x *editorExt) otherCursors(p vim.Pane, line int) []lineCursor {
+	if !p.Current() {
+		return nil
+	}
+	m, ok := x.e.Multi()
+	if !ok {
+		return nil
+	}
+	var out []lineCursor
+	n := len(p.Buf().Line(line))
+	for _, r := range m.Regions {
+		lc := lineCursor{head: -1, selFrom: -1, selTo: -1}
+		if r.Head.Line == line {
+			lc.head = r.Head.Col
+		}
+		if m.Extend {
+			a, b := r.Anchor, r.Head
+			if b.Line < a.Line || b.Line == a.Line && b.Col < a.Col {
+				a, b = b, a
+			}
+			if line >= a.Line && line <= b.Line {
+				lc.selFrom, lc.selTo = 0, n
+				if line == a.Line {
+					lc.selFrom = a.Col
+				}
+				if line == b.Line {
+					lc.selTo = min(b.Col+1, n)
+				}
+			}
+		}
+		if lc.head >= 0 || lc.selFrom >= 0 {
+			out = append(out, lc)
+		}
+	}
+	return out
 }
