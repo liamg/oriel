@@ -19,7 +19,16 @@ type PickerItem struct {
 	BadgeStyle string
 	Key        string // a shortcut shown at the far right: "⌘2"
 	Boost      int    // added to the match score: recently used, needs you
+	Path       string // a file, for an item that's a place: then open, split, quickfix and attach work on it
+	Line, Col  int    // 1-based; 0 for the file's start
 	Data       any    // the source's own, for its Preview and Run
+}
+
+// PickerAction is something a picker does to the selected items (or the highlighted one) on a key.
+type PickerAction struct {
+	Key   string // in vim notation: "<C-e>"
+	Title string
+	Run   func(ctx Ctx, items []PickerItem) error
 }
 
 // PickerSource is a source of results for the omnibox and the pickers: sessions, commands, files, symbols, and
@@ -32,7 +41,11 @@ type PickerSource struct {
 	Items   func(ctx Ctx, query string) []PickerItem
 	Preview func(item PickerItem) ui.Node // nil for none
 	Run     func(ctx Ctx, item PickerItem) error
-	Source  string
+	Actions []PickerAction // beyond the ones every item with a Path has
+	// Live sources match the query themselves, as grep does: their items are the results, not candidates.
+	Live       bool
+	PickerOnly bool // in the pickers, not the omnibox's merged list
+	Source     string
 }
 
 func (r *reg) Picker(s PickerSource) Disposable {

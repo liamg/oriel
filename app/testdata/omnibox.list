@@ -139,7 +139,7 @@ clip 250,92 1100x660 r 10
     rect 909,261.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
     text "⌘3" @914,272.6 #b3ab99 JetBrains Mono 10
     text "COMMANDS" @268,301.42 #7c7566 JetBrains Mono 9.5
-    text "4 of 6" @895,301.42 #7c7566 JetBrains Mono 9.5
+    text "4 of 11" @889,301.42 #7c7566 JetBrains Mono 9.5
     text "›" @275.6953,331.36523 #7c7566 Inter 12
     text "Run job: " @296,331.729 #ece6d8 Inter 13
     text "pri" @349.70312,331.729 #ffd23f Inter 13
@@ -151,21 +151,23 @@ clip 250,92 1100x660 r 10
     text "ce…" @406.64062,363.729 #ece6d8 Inter 13
     text "plan.new" @442.875,362.78 #7c7566 JetBrains Mono 10.5
     text "›" @275.6953,395.36523 #7c7566 Inter 12
-    text "Type keys into the editor, as a map" @296,395.729 #ece6d8 Inter 13
-    text "p" @511.59375,395.729 #ffd23f Inter 13
-    text "ing's " @519.7031,395.729 #ece6d8 Inter 13
-    text "ri" @552.9219,395.729 #ffd23f Inter 13
-    text "ght-hand side" @561.4844,395.729 #ece6d8 Inter 13
-    text "editor.keys" @657.2031,394.78 #7c7566 JetBrains Mono 10.5
+    text "Reopen the last " @296,395.729 #ece6d8 Inter 13
+    text "p" @395,395.729 #ffd23f Inter 13
+    text "icke" @403.10938,395.729 #ece6d8 Inter 13
+    text "r" @428.40625,395.729 #ffd23f Inter 13
+    text " where " @433.5625,395.729 #ece6d8 Inter 13
+    text "i" @479.25,395.729 #ffd23f Inter 13
+    text "t was left" @482.65625,395.729 #ece6d8 Inter 13
+    text "picker.resume" @548.8125,394.78 #7c7566 JetBrains Mono 10.5
+    rect 873,383.4 58x15.200012 fill #121210 radius 4 stroke 1 #332f27
+    text "<Space>'" @878,394.6 #b3ab99 JetBrains Mono 10
     text "›" @275.6953,427.36523 #7c7566 Inter 12
-    text "O" @296,427.729 #ece6d8 Inter 13
-    text "p" @305.9375,427.729 #ffd23f Inter 13
-    text "en the log, o" @314.04688,427.729 #ece6d8 Inter 13
-    text "r" @390.26562,427.729 #ffd23f Inter 13
-    text " set " @395.42188,427.729 #ece6d8 Inter 13
-    text "i" @421.42188,427.729 #ffd23f Inter 13
-    text "ts level (:Log level debug)" @424.82812,427.729 #ece6d8 Inter 13
-    text "Log" @593.59375,426.78 #7c7566 JetBrains Mono 10.5
+    text "Type keys into the editor, as a map" @296,427.729 #ece6d8 Inter 13
+    text "p" @511.59375,427.729 #ffd23f Inter 13
+    text "ing's " @519.7031,427.729 #ece6d8 Inter 13
+    text "ri" @552.9219,427.729 #ffd23f Inter 13
+    text "ght-hand side" @561.4844,427.729 #ece6d8 Inter 13
+    text "editor.keys" @657.2031,426.78 #7c7566 JetBrains Mono 10.5
     text "FILES" @268,455.42 #7c7566 JetBrains Mono 9.5
     rect 274.5,477.5 7x7 fill #4cc9f0 radius 3.5
     text "internal/" @296,485.729 #ece6d8 Inter 13
@@ -183,6 +185,10 @@ clip 250,92 1100x660 r 10
     text "ceForTier" @312.95312,575.729 #ece6d8 Inter 13
     text "internal/pricing/tiers.go:4" @381.82812,574.78 #7c7566 JetBrains Mono 10.5
     text "function" @883,574.60004 #4f4a40 JetBrains Mono 10
+    text "ƒ" @275.66406,607.36523 #5cd2ff Inter 12
+    text "roundHalfEven" @296,607.729 #ece6d8 Inter 13
+    text "internal/pricing/round.go:39" @397.32812,606.78 #7c7566 JetBrains Mono 10.5
+    text "function" @883,606.60004 #4f4a40 JetBrains Mono 10
   pop
   rect 949,151 1x566 fill #24221d
   clip 950,151 400x566 r 0

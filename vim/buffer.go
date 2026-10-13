@@ -211,7 +211,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 			}
 			return nil
 		}
-		b, err := e.openFile(args)
+		b, err := e.openFile(args, true)
 		if err != nil {
 			return err
 		}

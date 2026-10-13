@@ -188,8 +188,12 @@ func TestEditorIDEViews(t *testing.T) {
 	r.waitText("two")
 	r.typeKeys(":ls<CR>")
 	r.waitFrame("the buffer switcher", func(s string) bool { return strings.Contains(s, "a.txt") && strings.Contains(s, "%") })
-	r.typeKeys("<Esc>:cexpr 'a.txt:1:oops'<CR>:copen<CR>")
+	r.typeKeys("<Esc>")
+	r.waitFrame("the switcher closed", func(s string) bool { return !strings.Contains(s, "PICK") })
+	r.typeKeys(":cexpr 'a.txt:1:oops'<CR>:copen<CR>")
 	r.waitText("oops")
+	r.typeKeys("<Esc>")
+	r.waitFrame("the quickfix picker closed", func(s string) bool { return !strings.Contains(s, "PICK") })
 	r.typeKeys(":messages<CR>")
 	r.waitText("Copy report")
 }

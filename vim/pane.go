@@ -150,10 +150,12 @@ func (e *Engine) ScrollTo(id WindowID, line int) {
 // NewWindow opens a window on the file name ("" for an empty buffer) without placing it: the IDE has put a view
 // for it in its layout, or is about to. It becomes the current window.
 func (e *Engine) NewWindow(name string) (WindowID, error) {
-	b := e.emptyBuffer()
-	if name != "" {
+	var b *buffer
+	if name == "" {
+		b = e.emptyBuffer()
+	} else {
 		var err error
-		if b, err = e.openFile(name); err != nil {
+		if b, err = e.openFile(name, false); err != nil {
 			return 0, err
 		}
 	}
@@ -238,7 +240,8 @@ type BufferInfo struct {
 	Name              string
 	Modified, Current bool
 	Alternate         bool
-	Line              int // where the cursor was, 0-based
+	File              bool // it has a file; Name is "[No Name]" when it hasn't a name
+	Line              int  // where the cursor was, 0-based
 }
 
 // BufferList is the listed buffers, as :ls lists them.
@@ -250,7 +253,7 @@ func (e *Engine) BufferList() []BufferInfo {
 			line = e.cur.Line
 		}
 		out = append(out, BufferInfo{Num: b.num, Name: b.displayName(), Modified: b.modified, Current: b == e.buffer,
-			Alternate: b == e.window.alt, Line: line})
+			Alternate: b == e.window.alt, File: b.name != "", Line: line})
 	}
 	return out
 }
@@ -296,4 +299,45 @@ func (e *Engine) Follow(off int) {
 	e.cur = v.pos(min(off, v.s.Len()))
 	e.setWant(v)
 	e.updateTop(v)
+}
+
+// SetQuickfix makes items a new quickfix list, as :cexpr would, without jumping to the first.
+func (e *Engine) SetQuickfix(title string, items []QfItem) {
+	s := e.stack(false, true)
+	var entries []qfEntry
+	for _, it := range items {
+		entries = append(entries, qfEntry{name: it.Name, line: it.Line, col: it.Col, text: it.Text, valid: it.Name != "" && it.Line > 0})
+	}
+	s.push(&qfList{entries: entries, title: title})
+	e.refreshQfBuf(s)
+}
+
+// QuickfixJump goes to entry idx of the quickfix list, as :cc does.
+func (e *Engine) QuickfixJump(idx int) error {
+	err := e.qfJump(false, idx)
+	e.updateTop(e.view())
+	e.sync()
+	return err
+}
+
+// WordUnderCursor is the keyword under or after the cursor, as * finds it, or "".
+func (e *Engine) WordUnderCursor() string {
+	v := e.view()
+	l := v.line(e.cur.Line)
+	i := e.cur.Col
+	for i < len(l) && !isKeywordByte(l[i]) {
+		i++
+	}
+	j := i
+	for i > 0 && isKeywordByte(l[i-1]) {
+		i--
+	}
+	for j < len(l) && isKeywordByte(l[j]) {
+		j++
+	}
+	return string(l[i:j])
+}
+
+func isKeywordByte(b byte) bool {
+	return b == '_' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b >= 0x80
 }

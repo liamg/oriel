@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"image/color"
 	"math"
 	"path/filepath"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
-	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -485,70 +483,4 @@ func (x *editorExt) positionSegment(c *ui.Ctx) {
 
 func statusText(c *ui.Ctx, tok theme.TokenID) ui.TextStyle {
 	return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Medium}, Color: c.Theme().C(tok)}
-}
-
-// buffersView stands in for the switcher (SH-5 replaces it): the open buffers, and Enter or a click to switch.
-func (x *editorExt) buffersView(c *ui.Ctx) {
-	bufs := x.e.BufferList()
-	sel := ui.State[int](c, c.Next("buffers"))
-	items := make([]widget.MenuItem, len(bufs))
-	for i, b := range bufs {
-		flag := " "
-		switch {
-		case b.Current:
-			flag = "%"
-		case b.Alternate:
-			flag = "#"
-		}
-		mod := ""
-		if b.Modified {
-			mod = " ●"
-		}
-		items[i] = widget.MenuItem{Label: fmt.Sprintf("%3d %s %s%s", b.Num, flag, b.Name, mod), Help: "editor/buffers"}
-		if b.Current && *sel == 0 {
-			*sel = i
-		}
-	}
-	chosen, closed := widget.Menu(c, "buffers", items, widget.MenuOpts{Width: 420, Help: "editor/buffers"})
-	switch {
-	case chosen >= 0:
-		x.e.Run(fmt.Sprintf("buffer %d", bufs[chosen].Num))
-		x.h.Run(context.Background(), "view.close", registry.Args{"id": "buffers"})
-	case closed:
-		x.h.Run(context.Background(), "view.close", registry.Args{"id": "buffers"})
-	}
-}
-
-// quickfixView stands in for the results panel: the quickfix list, and Enter or a click to jump.
-func (x *editorExt) quickfixView(c *ui.Ctx) {
-	items, title, current := x.e.Quickfix()
-	th := c.Theme()
-	c.Column("qf", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
-		if title != "" {
-			c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgFaint)})
-		}
-		if len(items) == 0 {
-			c.Text("empty", "No entries", ui.TextStyle{Color: th.C(theme.FgFaint)})
-			return
-		}
-		for i, it := range items {
-			id := c.Next(i)
-			if c.Interaction(id).Clicked {
-				x.e.Run(fmt.Sprintf("cc %d", i+1))
-			}
-			fill := color.NRGBA{}
-			if i == current {
-				fill = th.C(theme.AccentBg)
-			}
-			c.Row(i, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 2), Gap: 12, Fill: fill, Interactive: true, Cursor: render.CursorPointer,
-				Help: "editor/quickfix", Role: ui.RoleButton, Label: it.Text}, func(c *ui.Ctx) {
-				loc := it.Name
-				if it.Line > 0 {
-					loc += fmt.Sprintf(":%d", it.Line)
-				}
-				c.Text("loc", loc, ui.TextStyle{Font: codeFont, Color: th.C(tLogSource)})
-				c.Text("text", it.Text, ui.TextStyle{Font: codeFont, Color: th.C(theme.Fg)})
-			})
-		}
-	})
 }

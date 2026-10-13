@@ -26,6 +26,10 @@ depends_on: [FW-6, ED-6]
 
 fixture repos produce the expected markers; `⌥1–3` switch scopes
 
+## From SH-5
+
+- The files source ranks by fuzzy score, open buffers and depth; add a boost for files changed on this branch.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

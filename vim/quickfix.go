@@ -316,8 +316,10 @@ func (e *Engine) qfJump(loc bool, idx int) error {
 			}
 		}
 		if b == nil {
-			b = e.emptyBuffer()
-			b.name = en.name
+			var err error
+			if b, err = e.openFile(en.name, false); err != nil {
+				return err
+			}
 		}
 		e.setPcmark()
 		if b != e.buffer {

@@ -513,7 +513,8 @@ type sourceFile struct {
 	first   int // the line number of lines[0]
 	spans   [][]span
 	modTime time.Time
-	mark    bool // the failing line, marked
+	mark    bool   // the failing line, marked
+	title   string // the path its header shows; the file's own, home as ~, if ""
 }
 
 type span struct {
@@ -609,6 +610,9 @@ func (f *sourceFile) build(c *ui.Ctx, n *core.Notification) {
 	shown := f.path
 	if home != "" && strings.HasPrefix(shown, home+string(filepath.Separator)) {
 		shown = "~" + shown[len(home):]
+	}
+	if f.title != "" {
+		shown = f.title
 	}
 	c.Column("src", ui.Style{W: ui.Flex(1), Fill: th.C(theme.BgBase), Stroke: th.C(theme.Line), Border: 1, Radius: 6, Clip: true}, func(c *ui.Ctx) {
 		c.Row("path", ui.Style{W: ui.Flex(1), H: ui.Px(24), Pad: ui.PadXY(10, 0), Cross: ui.Center}, func(c *ui.Ctx) {

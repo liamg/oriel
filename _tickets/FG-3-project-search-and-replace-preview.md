@@ -30,6 +30,10 @@ depends_on: [SH-5, ED-10]
 
 ripgrep on the worker streams results; replace shows a diff before applying
 
+## From SH-5
+
+- The grep source searches in the app with Go's regexp; move it to ripgrep on the worker, streamed as you type.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

@@ -169,7 +169,7 @@ func (x *editorExt) filesSource() registry.PickerSource {
 			}
 			var out []registry.PickerItem
 			for _, f := range files.list() {
-				it := registry.PickerItem{ID: f, Label: f, IconStyle: "status.working", Boost: -strings.Count(f, "/")}
+				it := registry.PickerItem{ID: f, Label: f, IconStyle: "status.working", Boost: -strings.Count(f, "/"), Path: f}
 				if open[f] {
 					it.Boost += 10
 					it.Note = "open"
@@ -195,7 +195,7 @@ func (x *editorExt) filePreview(name string, line int) ui.Node {
 			return
 		}
 		f := highlightAround(path, src, line+1, 3, 30)
-		f.mark = line > 0
+		f.mark, f.title = line > 0, name
 		f.build(c, nil)
 	}}
 }
@@ -253,7 +253,7 @@ func (x *editorExt) symbolsSource() registry.PickerSource {
 					}
 					out = append(out, registry.PickerItem{ID: fmt.Sprintf("%s:%d", p.Name(), line+1), Label: u.Name,
 						Detail: fmt.Sprintf("%s:%d", p.Name(), line+1), Icon: icon, IconStyle: style, Note: u.Kind,
-						Data: sym{p.Name(), line}})
+						Path: p.Name(), Line: line + 1, Data: sym{p.Name(), line}})
 				}
 			}
 			return dedupe(out)

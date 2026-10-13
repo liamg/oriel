@@ -87,38 +87,57 @@ func (o *omnibox) results() []group {
 			break
 		}
 	}
-	terms := fuzzy.Parse(q)
 	limit := omniGroupMax
 	if scope != "" {
 		limit = omniScopeMax
 	}
 	var out []group
 	for _, s := range srcs {
-		if scope != "" && s.ID != scope || s.Items == nil {
+		if scope != "" && s.ID != scope || scope == "" && s.PickerOnly {
 			continue
 		}
-		var items []registry.PickerItem
-		if err := registry.Call(func() error { items = s.Items(context.Background(), q); return nil }); err != nil {
-			o.h.TurnOff("picker", s.ID, err)
-			continue
+		if g, ok := rankSource(o.h, s, q, limit); ok {
+			out = append(out, g)
 		}
-		var hits []hit
-		for _, it := range items {
-			score, pos, ok := fuzzy.MatchQuery(terms, it.Label)
-			if !ok {
-				continue
-			}
-			hits = append(hits, hit{s, it, score + it.Boost, pos})
-		}
-		slices.SortStableFunc(hits, func(a, b hit) int { return b.score - a.score })
-		if len(hits) == 0 {
-			continue
-		}
-		g := group{src: s, total: len(hits)}
-		g.hits = hits[:min(len(hits), limit)]
-		out = append(out, g)
 	}
 	return out
+}
+
+// rankSource is a source's items for query, best first, at most limit of them. A live source's items are its
+// results already, in its order.
+func rankSource(h ext.Host, s registry.PickerSource, q string, limit int) (group, bool) {
+	if s.Items == nil {
+		return group{}, false
+	}
+	var items []registry.PickerItem
+	if err := registry.Call(func() error { items = s.Items(context.Background(), q); return nil }); err != nil {
+		h.TurnOff("picker", s.ID, err)
+		return group{}, false
+	}
+	terms := fuzzy.Parse(q)
+	var hits []hit
+	for _, it := range items {
+		if s.Live {
+			hits = append(hits, hit{s, it, it.Boost, nil})
+			continue
+		}
+		text := it.Label
+		if it.Detail != "" {
+			text += "  " + it.Detail // matched too, as fzf matches the whole line; only the label's matches light
+		}
+		score, pos, ok := fuzzy.MatchQuery(terms, text)
+		if !ok {
+			continue
+		}
+		hits = append(hits, hit{s, it, score + it.Boost, pos})
+	}
+	if !s.Live {
+		slices.SortStableFunc(hits, func(a, b hit) int { return b.score - a.score })
+	}
+	if len(hits) == 0 {
+		return group{src: s}, false
+	}
+	return group{src: s, hits: hits[:min(len(hits), limit)], total: len(hits)}, true
 }
 
 func (o *omnibox) build(c *ui.Ctx) {
@@ -231,6 +250,9 @@ func (o *omnibox) chips(c *ui.Ctx) {
 	}
 	chip("", "All")
 	for _, s := range o.h.Pickers() {
+		if s.PickerOnly {
+			continue
+		}
 		label := s.Title
 		if s.Prefix != "" {
 			label += " " + s.Prefix
@@ -242,7 +264,9 @@ func (o *omnibox) chips(c *ui.Ctx) {
 func (o *omnibox) cycleScope(back bool) {
 	ids := []string{""}
 	for _, s := range o.h.Pickers() {
-		ids = append(ids, s.ID)
+		if !s.PickerOnly {
+			ids = append(ids, s.ID)
+		}
 	}
 	i := slices.Index(ids, o.scope)
 	if back {
@@ -282,22 +306,25 @@ func (o *omnibox) list(c *ui.Ctx, groups []group) {
 			}
 		})
 		for _, h := range g.hits {
-			o.row(c, n, h)
+			if resultRow(c, n, h, n == o.sel, false) {
+				o.sel = n
+				o.run(h)
+			}
 			n++
 		}
 	}
 }
 
-func (o *omnibox) row(c *ui.Ctx, i int, h hit) {
+// resultRow is one result: its icon, label with the matched characters lit, detail, note, badge and key. on is
+// the highlighted row; picked a row multi-selected. It reports a click.
+func resultRow(c *ui.Ctx, i int, h hit, on, picked bool) bool {
 	th := c.Theme()
 	id := c.Next(fmt.Sprint("r", i))
-	in := c.Interaction(id)
-	if in.Clicked {
-		o.sel = i
-		o.run(h)
-	}
-	on := i == o.sel
+	clicked := c.Interaction(id).Clicked
 	fill, edge := color.NRGBA{}, color.NRGBA{}
+	if picked {
+		edge = th.C(theme.Warn)
+	}
 	if on {
 		fill, edge = th.C(tOmniSel), th.C(tOmniSelEdge)
 	}
@@ -328,6 +355,7 @@ func (o *omnibox) row(c *ui.Ctx, i int, h hit) {
 			kbdKey(c, it.Key)
 		}
 	})
+	return clicked
 }
 
 // matchedLabel draws a label with the matched characters in the match colour.

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -81,15 +82,16 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	for _, c := range []registry.Command{
-		{ID: "editor.open", Title: "Open a file in the editor, at {line} if given", Run: func(ctx registry.Ctx, a registry.Args) error {
-			if err := x.open(ctx, str(a, "path")); err != nil {
-				return err
-			}
-			if n, ok := a["line"].(int); ok && n > 0 {
-				x.e.Run(fmt.Sprint(n))
-			}
-			return nil
-		}},
+		{ID: "editor.open", Title: "Open a file in the editor, at {line} if given, in a {place}: tab, split or vsplit",
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				if err := x.open(ctx, str(a, "path"), str(a, "place")); err != nil {
+					return err
+				}
+				if n, ok := a["line"].(int); ok && n > 0 {
+					x.e.Run(fmt.Sprint(n))
+				}
+				return nil
+			}},
 		{ID: "editor.keys", Title: "Type keys into the editor, as a mapping's right-hand side", Run: func(_ registry.Ctx, a registry.Args) error {
 			noremap, _ := a["noremap"].(bool)
 			x.e.TypeMapped(keymap.Parse(str(a, "keys")), noremap)
@@ -123,10 +125,26 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 			return nil
 		}},
 		{ID: "buffers.switch", Title: "Switch to an open buffer", Run: func(ctx registry.Ctx, _ registry.Args) error {
-			return h.Run(ctx, "view.open", registry.Args{"id": "buffers", "place": "float", "title": "Buffers"})
+			return h.Run(ctx, "picker.open", registry.Args{"source": "buffers"})
 		}},
 		{ID: "quickfix.open", Title: "Show the quickfix list", Run: func(ctx registry.Ctx, _ registry.Args) error {
-			return h.Run(ctx, "view.open", registry.Args{"id": "quickfix", "place": "dock", "edge": "bottom", "title": "Quickfix", "size": 200})
+			return h.Run(ctx, "picker.open", registry.Args{"source": "quickfix"})
+		}},
+		{ID: "quickfix.set", Title: "Make a new quickfix list: {title}, {items} of {path, line, col, text}", Run: func(_ registry.Ctx, a registry.Args) error {
+			var items []vim.QfItem
+			raw, _ := a["items"].([]map[string]any)
+			for _, it := range raw {
+				name, _ := it["path"].(string)
+				text, _ := it["text"].(string)
+				line, _ := it["line"].(int)
+				col, _ := it["col"].(int)
+				items = append(items, vim.QfItem{Name: name, Line: line, Col: col, Text: text})
+			}
+			x.e.SetQuickfix(str(a, "title"), items)
+			return nil
+		}},
+		{ID: "editor.grep-word", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
 		}},
 	} {
 		x.add(h.Command(c))
@@ -134,16 +152,24 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.Keymap(registry.Keymap{Mode: "c", Keys: "<Tab>", Command: "editor.complete", Desc: "Complete the command line"}))
 	x.add(h.View(EditorView, editorView{x}))
 	x.add(h.Picker(x.filesSource()))
-	x.add(h.Picker(x.symbolsSource()))
-	x.add(h.View("buffers", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "buffers", Fn: x.buffersView} })))
-	x.add(h.View("quickfix", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "quickfix", Fn: x.quickfixView} })))
+	syms := x.symbolsSource()
+	x.add(h.Picker(syms))
+	x.add(h.Picker(x.fileSymbolsSource(syms)))
+	x.add(h.Picker(x.buffersSource()))
+	x.add(h.Picker(x.quickfixSource()))
+	x.add(h.Picker(x.grepSource()))
+	for _, k := range pickerKeys {
+		x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: k.keys, Command: "picker.open", Args: registry.Args{"source": k.source}, Desc: k.desc}))
+	}
+	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>*", Command: "editor.grep-word", Desc: "Grep the word under the cursor"}))
+	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>'", Command: "picker.resume", Desc: "Resume the last picker"}))
 	x.add(h.View("statusline.left.00-mode", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "mode", Fn: x.modeSegment} })))
 	x.add(h.View("statusline.right.80-file", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "file", Fn: x.fileSegment} })))
 	x.add(h.View("statusline.right.90-position", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "position", Fn: x.positionSegment}
 	})))
 	for _, f := range x.sh.cfg.Files {
-		if err := x.open(context.Background(), f); err != nil {
+		if err := x.open(context.Background(), f, ""); err != nil {
 			return err
 		}
 	}
@@ -173,15 +199,16 @@ func windowOf(v layout.ViewRef) (vim.WindowID, bool) {
 	return vim.WindowID(n), err == nil
 }
 
-// open opens path in a new editor tab beside the focused editor, or shows the tab that has it.
-func (x *editorExt) open(ctx registry.Ctx, path string) error {
+// open opens path in a new editor tab beside the focused editor, or shows the tab that has it. place "split" or
+// "vsplit" opens a new window on it beside the focused editor instead.
+func (x *editorExt) open(ctx registry.Ctx, path, place string) error {
 	name := path
 	if rel, err := filepath.Rel(x.dir, path); err == nil && filepath.IsAbs(path) && !strings.HasPrefix(rel, "..") {
 		name = rel
 	}
 	root := x.h.Layout()
 	for _, id := range x.e.WindowIDs() {
-		if p, ok := x.e.Pane(id); ok && p.Name() == name && root.Find(windowRef(id)) != nil {
+		if p, ok := x.e.Pane(id); ok && p.Name() == name && root.Find(windowRef(id)) != nil && place != "split" && place != "vsplit" {
 			root.Show(windowRef(id))
 			x.e.EnterWindow(id)
 			return nil
@@ -198,6 +225,12 @@ func (x *editorExt) open(ctx registry.Ctx, path string) error {
 		}
 	}
 	args := registry.Args{"id": EditorView, "instance": strconv.Itoa(int(id)), "place": "tab"}
+	switch place {
+	case "split":
+		args["place"], args["side"] = "split", "down"
+	case "vsplit":
+		args["place"], args["side"] = "split", "right"
+	}
 	if f := root.Focus; f != nil && f.ID == EditorView {
 		args["beside"] = f.ID + "#" + f.Instance
 	}

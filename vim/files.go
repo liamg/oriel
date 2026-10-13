@@ -80,8 +80,9 @@ func (e *Engine) Edit(name string) {
 	e.sync()
 }
 
-// openFile finds the buffer named name, or reads its file into a new one.
-func (e *Engine) openFile(name string) (*buffer, error) {
+// openFile finds the buffer named name, or reads its file into a new one. With reuse, a current buffer that's
+// empty, unnamed and unchanged takes the file instead, as vim's buflist_new reuses it.
+func (e *Engine) openFile(name string, reuse bool) (*buffer, error) {
 	var b *buffer
 	for _, o := range e.buffers {
 		if o.name == name {
@@ -96,10 +97,19 @@ func (e *Engine) openFile(name string) (*buffer, error) {
 	if err != nil {
 		return nil, errReadFailed.with(name, err)
 	}
+	cur := e.buffer
+	if b == nil && reuse && cur != nil && cur.name == "" && !cur.modified && cur.file == nil && cur.text.Snapshot().Len() == 0 && cur.qf == nil {
+		b = cur
+	}
 	if b == nil {
 		b = e.newBuffer(text.New(data, text.Author{Kind: text.File}))
 	} else {
 		e.setText(b, text.New(data, text.Author{Kind: text.File}))
+		for _, w := range e.windows {
+			if w.buf == b {
+				w.ed = e.ed.Open(b.text)
+			}
+		}
 	}
 	b.name, b.file = name, f
 	b.markSaved()
