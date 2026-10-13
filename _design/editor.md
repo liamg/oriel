@@ -198,6 +198,10 @@ engine never feels like another binary running in a pane.
   the tree-sitter runtime (about 115 KB gzipped), so the budget fits about three more; past that, languages are
   packs (PL-3), or the runtime moves into a module of its own that the grammars link against. Swift's repository
   has no generated parser, so it waits for a pack.
+- Highlight queries (ED-14) run inside a window of the top-level nodes the range touches, so their cost follows
+  the range, not the file; patterns on the root node are rewritten as sibling groups with `#has-parent?`, or run
+  apart. The parser queries 1 KB at a time, each call under 2 ms, as wasm can't be preempted. An edit re-highlights
+  the lines it touched and the ranges tree-sitter reports changed.
 - wazero compiles into `<user cache>/oriel` (`Config.CacheDir`), so a grammar compiles once per version: opening a
   file from the cache takes about 12 ms, against 100 ms cold.
 - A local pack is `~/.config/oriel/languages/<name>/`: `language.toml` (`name`, `extensions`, `filenames`,

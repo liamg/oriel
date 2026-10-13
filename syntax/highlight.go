@@ -38,14 +38,18 @@ func (p *Parser) Highlights(start, end int) ([]Span, error) {
 }
 
 // highlightChunk bounds one highlight query. Compiled wasm can't be preempted, so a long query would hold up
-// the Go runtime's stop-the-world, and every goroutine with it; chunks keep each call short.
-const highlightChunk = 16 << 10
+// the Go runtime's stop-the-world, and every goroutine with it; chunks keep each call under a millisecond
+// (tree-sitter's matcher costs about 1.6 µs a match under wazero, dense code a match every 3 or 4 bytes).
+const highlightChunk = 1 << 10
 
 // highlightsInChunks is Highlights over [0, n), queried a chunk at a time, each chunk's spans clipped to it.
-func (p *Parser) highlightsInChunks(n int) ([]Span, error) {
+func (p *Parser) highlightsInChunks(n int) ([]Span, error) { return p.highlightsIn(0, n) }
+
+// highlightsIn is Highlights over [from, to), queried a chunk at a time, each chunk's spans clipped to it.
+func (p *Parser) highlightsIn(from, to int) ([]Span, error) {
 	var out []Span
-	for start := 0; start < n; start += highlightChunk {
-		end := min(start+highlightChunk, n)
+	for start := from; start < to; start += highlightChunk {
+		end := min(start+highlightChunk, to)
 		spans, err := p.Highlights(start, end)
 		if err != nil {
 			return out, err
@@ -66,12 +70,13 @@ func (p *Parser) highlightsInChunks(n int) ([]Span, error) {
 }
 
 func (p *Parser) collect(start, end int, hls *[]hl) error {
-	q, ms, err := p.run("highlights", start, end)
+	p.queried += end - start
+	_, ms, err := p.run("highlights", start, end)
 	if err != nil {
 		return err
 	}
 	for _, mt := range ms {
-		pat := q.patterns[mt.pattern]
+		pat := mt.q.patterns[mt.pattern]
 		prio := 100
 		if v, ok := pat.set["priority"]; ok {
 			if n, err := strconv.Atoi(v); err == nil {
@@ -79,7 +84,7 @@ func (p *Parser) collect(start, end int, hls *[]hl) error {
 			}
 		}
 		for _, c := range mt.captures {
-			name := q.captures[c.index]
+			name := mt.q.captures[c.index]
 			if strings.HasPrefix(name, "_") || name == "spell" || name == "nospell" || name == "conceal" {
 				continue
 			}
@@ -87,7 +92,7 @@ func (p *Parser) collect(start, end int, hls *[]hl) error {
 			if s >= e {
 				continue
 			}
-			*hls = append(*hls, hl{start: s, end: e, name: name, priority: prio, depth: p.depth, order: mt.pattern})
+			*hls = append(*hls, hl{start: s, end: e, name: name, priority: prio, depth: p.depth, order: mt.q.orderOf(mt.pattern)})
 		}
 	}
 	if p.depth >= maxInjectionDepth {
@@ -125,11 +130,11 @@ func (p *Parser) injections(start, end int, fn func(*Parser) error) error {
 	var groups []group
 	byLang := map[string]int{}
 	for _, mt := range ms {
-		pat := q.patterns[mt.pattern]
+		pat := mt.q.patterns[mt.pattern]
 		lang := pat.set["injection.language"]
 		var content [][2]int
 		for _, c := range mt.captures {
-			switch q.captures[c.index] {
+			switch mt.q.captures[c.index] {
 			case "injection.language":
 				lang = strings.ToLower(string(p.src[c.start:c.end]))
 			case "injection.content":

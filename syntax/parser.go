@@ -23,6 +23,9 @@ type Parser struct {
 	// injected holds a parser per language other languages' text is injected as (code in Markdown).
 	injected map[string]*Parser
 	depth    int
+	queried  int    // bytes run through the highlights query, for tests of how much an edit re-highlights
+	prev     uint32 // the tree before the last reparse, edited, for Changed
+	whole    bool   // the last parse was from scratch
 }
 
 // NewParser starts a parser for a language.
@@ -60,10 +63,26 @@ func (p *Parser) reparse() {
 	sp := p.m.put(p.src)
 	t := p.m.call("parse", uint64(p.parser), uint64(p.tree), uint64(sp), uint64(len(p.src)))
 	p.m.free(sp)
-	if p.tree != 0 {
-		p.m.call("tree_delete", uint64(p.tree))
+	if p.prev != 0 {
+		p.m.call("tree_delete", uint64(p.prev))
 	}
-	p.tree = t
+	p.prev, p.tree, p.whole = p.tree, t, false
+}
+
+// Changed is where the last reparse's syntax differs from the tree before it, worked out when asked: all of the
+// text after a parse from scratch.
+func (p *Parser) Changed() []text.Range {
+	if p.whole || p.prev == 0 {
+		return []text.Range{{Start: 0, End: len(p.src)}}
+	}
+	lp := p.m.scratch(1)
+	r := p.m.u32s(p.m.call("changed_ranges", uint64(p.prev), uint64(p.tree), uint64(lp)), p.m.u32(lp))
+	p.m.free(lp)
+	var out []text.Range
+	for i := 0; i+1 < len(r); i += 2 {
+		out = append(out, text.Range{Start: int(r[i]), End: int(r[i+1])})
+	}
+	return out
 }
 
 // ParseSnapshot parses a buffer snapshot from scratch, and remembers its version for Update.
@@ -78,6 +97,7 @@ func (p *Parser) ParseSnapshot(s text.Snapshot) {
 func (p *Parser) Update(ch text.Change) {
 	if p.tree == 0 || !p.synced || ch.Before.Version() != p.version {
 		p.ParseSnapshot(ch.After)
+		p.whole = true
 		return
 	}
 	single := len(ch.Replaces) == 1
@@ -140,11 +160,70 @@ func (p *Parser) query(kind string) (*query, error) {
 		return nil, nil
 	}
 	q, err := compileQuery(p.m, src)
+	if err == nil && p.tree != 0 {
+		q, err = p.splitRoot(q, src)
+	}
+	if err == nil && kind == "injections" {
+		p.dropMissingInjections(q)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%s %s: %w", p.lang.Name, kind, err)
 	}
 	p.queries[kind] = q
 	return q, nil
+}
+
+// splitRoot recompiles q without its patterns on the root node, which run apart (splitRootPatterns); q as it
+// is when it has none.
+func (p *Parser) splitRoot(q *query, src string) (*query, error) {
+	root := p.m.str("root_type", uint64(p.tree))
+	var pats []string
+	found := false
+	sp := p.m.scratch(2)
+	defer p.m.free(sp)
+	for i := range q.patterns {
+		p.m.call("query_pattern_span", uint64(q.ptr), uint64(i), uint64(sp))
+		pat := src[p.m.u32(sp):p.m.u32(sp+4)]
+		pats = append(pats, pat)
+		found = found || mentions(pat, root)
+	}
+	if !found {
+		return q, nil
+	}
+	p.m.call("query_delete", uint64(q.ptr))
+	main, rest, mainOrder, restOrder := splitRootPatterns(pats, root)
+	q, err := compileQuery(p.m, main)
+	if err != nil {
+		return nil, err
+	}
+	q.order = mainOrder
+	if len(restOrder) > 0 {
+		if q.root, err = compileQuery(p.m, rest); err != nil {
+			return nil, err
+		}
+		q.root.order = restOrder
+	}
+	return q, nil
+}
+
+// dropMissingInjections turns off injection patterns into a language the set doesn't have, which would only be
+// matched to be thrown away.
+func (p *Parser) dropMissingInjections(q *query) {
+	for _, qq := range []*query{q, q.root} {
+		if qq == nil {
+			continue
+		}
+		off := 0
+		for i, pat := range qq.patterns {
+			if lang := pat.set["injection.language"]; lang != "" {
+				if _, ok := p.lang.lookup(lang); !ok {
+					p.m.call("query_disable_pattern", uint64(qq.ptr), uint64(i))
+					off++
+				}
+			}
+		}
+		qq.off = off == len(qq.patterns)
+	}
 }
 
 func (p *Parser) symbol(name string) uint32 {

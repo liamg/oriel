@@ -12,6 +12,18 @@ type query struct {
 	ptr      uint32
 	captures []string
 	patterns []pattern
+	want     uint32 // in the module: a byte per capture, set for those #has-parent? reads, which alone get a parent
+	root     *query // patterns on the root node that run without the window (splitRootPatterns)
+	order    []int  // each pattern's index in the language's query, when it's been split
+	off      bool   // every pattern is turned off: running it would find nothing
+}
+
+// orderOf is pattern i's place in the language's query: later ones win.
+func (q *query) orderOf(i int) int {
+	if i < len(q.order) {
+		return q.order[i]
+	}
+	return i
 }
 
 type pattern struct {
@@ -71,6 +83,15 @@ func compileQuery(m *module, src string) (*query, error) {
 		}
 		q.patterns = append(q.patterns, p)
 	}
+	want := make([]byte, max(1, len(q.captures)))
+	for _, p := range q.patterns {
+		for _, pr := range p.preds {
+			if strings.TrimPrefix(pr.name, "not-") == "has-parent?" && len(pr.args) > 0 && pr.args[0].capture >= 0 {
+				want[pr.args[0].capture] = 1
+			}
+		}
+	}
+	q.want = m.put(want)
 	return q, nil
 }
 
@@ -151,20 +172,36 @@ type capture struct {
 }
 
 type match struct {
+	q        *query // the query it's from, for its patterns and capture names
 	pattern  int
 	captures []capture
 }
 
 // matches runs q over [start, end) of tree t and returns the matches whose predicates hold.
 func (q *query) matches(m *module, tree uint32, start, end int, src []byte, symbol func(string) uint32) []match {
+	out := q.run(m, tree, start, end, src, symbol, true)
+	if q.root != nil {
+		out = append(out, q.root.run(m, tree, start, end, src, symbol, false)...)
+	}
+	return out
+}
+
+func (q *query) run(m *module, tree uint32, start, end int, src []byte, symbol func(string) uint32, windowed bool) []match {
+	if q.off {
+		return nil
+	}
+	win := 0
+	if windowed {
+		win = 1
+	}
 	lp := m.scratch(1)
-	p := m.call("query_matches", uint64(q.ptr), uint64(tree), uint64(start), uint64(end), uint64(lp))
+	p := m.call("query_matches", uint64(q.ptr), uint64(tree), uint64(start), uint64(end), uint64(lp), uint64(q.want), uint64(win))
 	n := m.u32(lp)
 	m.free(lp)
 	raw := m.u32s(p, n)
 	var out []match
 	for i := 0; i < len(raw); {
-		mt := match{pattern: int(raw[i])}
+		mt := match{q: q, pattern: int(raw[i])}
 		count := int(raw[i+1])
 		i += 2
 		for range count {

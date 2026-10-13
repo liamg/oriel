@@ -22,9 +22,9 @@ func (p *Parser) Folds() ([]Fold, error) {
 	seen := map[Fold]bool{}
 	var out []Fold
 	for _, mt := range ms {
-		_, trim := q.patterns[mt.pattern].set["trim!"]
+		_, trim := mt.q.patterns[mt.pattern].set["trim!"]
 		for _, c := range mt.captures {
-			if q.captures[c.index] != "fold" {
+			if mt.q.captures[c.index] != "fold" {
 				continue
 			}
 			f := Fold{c.startRow, c.endRow}
@@ -65,7 +65,7 @@ func (p *Parser) Units() ([]text.Unit, error) {
 		var u text.Unit
 		found := false
 		for _, c := range mt.captures {
-			name := q.captures[c.index]
+			name := mt.q.captures[c.index]
 			switch {
 			case strings.HasPrefix(name, "unit."):
 				u.Kind = strings.TrimPrefix(name, "unit.")

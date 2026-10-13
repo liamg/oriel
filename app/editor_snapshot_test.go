@@ -212,7 +212,8 @@ func TestEditorTypingBudget(t *testing.T) {
 	slices.Sort(times)
 	mean := total / keys
 	t.Logf("keypress to frame: mean %v, p95 %v, worst %v over %d keys", mean, times[keys*95/100], times[keys-1], keys)
-	if mean > 8*time.Millisecond {
-		t.Errorf("keypress to frame takes %v on average; the budget is 8 ms", mean)
+	// ED-14: "TestEditorTypingBudget's worst keypress to frame is under 8 ms, not only its mean."
+	if worst := times[keys-1]; worst > 8*time.Millisecond {
+		t.Errorf("the worst keypress to frame took %v; the budget is 8 ms", worst)
 	}
 }

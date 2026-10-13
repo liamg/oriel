@@ -62,11 +62,20 @@ func (d *Document) run() {
 		d.busy = true
 		d.mu.Unlock()
 
+		var dirty []text.Range // what to highlight again, in the latest text
 		for _, ch := range chs {
+			for _, r := range ch.Replaces {
+				dirty = shiftRanges(dirty, r)
+				dirty = append(dirty, text.Range{Start: r.Range.Start, End: r.Range.Start + len(r.Text)})
+			}
 			d.p.Update(ch)
+			dirty = append(dirty, d.p.Changed()...)
 		}
 		last := chs[len(chs)-1].After
-		spans, err := d.p.highlightsInChunks(last.Len())
+		d.mu.Lock()
+		old := d.spans
+		d.mu.Unlock()
+		spans, err := d.rehighlight(shiftSpans(old, chs), lines(last, dirty))
 
 		d.mu.Lock()
 		d.spans, d.err, d.version, d.busy = spans, err, last.Version(), false
@@ -127,6 +136,81 @@ func (d *Document) Close() {
 	d.closed = true
 	d.mu.Unlock()
 	d.cond.Broadcast()
+}
+
+// rehighlight is spans with the dirty ranges highlighted again: spans outside them kept, cut at their edges.
+func (d *Document) rehighlight(spans []Span, dirty []text.Range) ([]Span, error) {
+	var out []Span
+	i := 0
+	var err error
+	for _, r := range dirty {
+		for i < len(spans) && spans[i].Range.Start < r.Start {
+			s := spans[i]
+			s.Range.End = min(s.Range.End, r.Start)
+			out = append(out, s)
+			if spans[i].Range.End > r.End { // it runs past r: what's after r is kept
+				spans[i].Range.Start = r.End
+				break
+			}
+			i++
+		}
+		fresh, e := d.p.highlightsIn(r.Start, r.End)
+		if e != nil {
+			err = e
+		}
+		out = append(out, fresh...)
+		for ; i < len(spans) && spans[i].Range.Start < r.End; i++ {
+			if s := spans[i]; s.Range.End > r.End {
+				s.Range.Start = r.End
+				spans[i] = s
+				break
+			}
+		}
+	}
+	out = append(out, spans[i:]...)
+	sort.SliceStable(out, func(a, b int) bool { return out[a].Range.Start < out[b].Range.Start })
+	return out, err
+}
+
+// lines is ranges widened to whole lines of s, sorted and merged.
+func lines(s text.Snapshot, rs []text.Range) []text.Range {
+	for i, r := range rs {
+		a := s.LineStart(s.PosAt(min(r.Start, s.Len())).Line)
+		end := s.PosAt(min(r.End, s.Len())).Line
+		b := s.Len()
+		if end+1 < s.Lines() {
+			b = s.LineStart(end + 1)
+		}
+		rs[i] = text.Range{Start: a, End: b}
+	}
+	sort.Slice(rs, func(i, j int) bool { return rs[i].Start < rs[j].Start })
+	var out []text.Range
+	for _, r := range rs {
+		if k := len(out) - 1; k >= 0 && r.Start <= out[k].End {
+			out[k].End = max(out[k].End, r.End)
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+// shiftRanges moves ranges through a replace made after them, growing one it touches to cover what's there now.
+func shiftRanges(rs []text.Range, r text.Replace) []text.Range {
+	from, to, n := r.Range.Start, r.Range.End, len(r.Text)
+	move := func(off int) int {
+		switch {
+		case off <= from:
+			return off
+		case off >= to:
+			return off + n - (to - from)
+		}
+		return from + n
+	}
+	for i := range rs {
+		rs[i] = text.Range{Start: move(rs[i].Start), End: move(rs[i].End)}
+	}
+	return rs
 }
 
 // shiftSpans moves spans through changes made after they were computed: text after an edit moves with it,
