@@ -41,6 +41,9 @@ type DecorationCtx struct {
 	Buffer      *text.Buffer
 	Snap        text.Snapshot
 	Top, Bottom int
+	// FileBytes is the buffer as writing it would put it on disk (line endings, BOM, the last newline), for
+	// comparing with a file's other versions.
+	FileBytes func() []byte
 }
 
 // DecorationProvider gives the decorations of the lines in view; it's called each frame they're drawn.

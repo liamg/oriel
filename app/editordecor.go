@@ -22,7 +22,7 @@ func (x *editorExt) decorations(p vim.Pane, top, bottom int) map[int][]registry.
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(x.dir, path)
 	}
-	ctx := registry.DecorationCtx{Name: p.Name(), Path: path, Buffer: p.Buffer(), Snap: snap, Top: top, Bottom: bottom}
+	ctx := registry.DecorationCtx{Name: p.Name(), Path: path, Buffer: p.Buffer(), Snap: snap, Top: top, Bottom: bottom, FileBytes: p.FileBytes}
 	off := map[string]bool{}
 	for _, o := range x.h.TurnedOff() {
 		if o.Kind == registry.KindDecoration {

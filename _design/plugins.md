@@ -63,7 +63,8 @@ flowchart TB
 - keymaps (per mode, including custom modes), operators, motions, text objects (`vim.RegisterMotion`,
   `vim.RegisterObject` in Go today; their Lua bindings come with PL-1).
 - ex commands with ranges, bang, counts and completion.
-- decorations: highlights, signs, virtual text, virtual lines, inline blocks, conceal.
+- decorations: highlights, signs, virtual text, virtual lines, inline blocks, conceal. A provider gets the buffer, the
+  lines in view and `FileBytes` (the buffer as it would be written), for diffing against a file's other versions.
 - filetypes and ftplugins, grammars, queries, formatters, linters, LSP and DAP specs.
 - registers (e.g. a `"*` provider), completion sources, snippet engines.
 

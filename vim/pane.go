@@ -357,3 +357,13 @@ func (e *Engine) WordUnderCursor() string {
 func isKeywordByte(b byte) bool {
 	return b == '_' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b >= 0x80
 }
+
+// FileBytes is the window's buffer as writing it would put it on disk: in its file's format (line endings, BOM,
+// the last line's newline).
+func (p Pane) FileBytes() []byte {
+	var f edit.Format
+	if p.w.buf.file != nil {
+		f = p.w.buf.file.Format
+	}
+	return edit.Encode(p.w.buf.text.Snapshot().Bytes(), f, p.w.buf.noLines)
+}

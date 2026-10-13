@@ -3,10 +3,13 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
@@ -71,6 +74,18 @@ type explorer struct {
 	changedOnly bool
 	flat        bool
 	selected    string // the selected row's id: a repo path, a directory "dir/", or a section
+	hunks       explorerHunks
+}
+
+// explorerHunks are the staged and unstaged hunks of the file last selected in Uncommitted.
+type explorerHunks struct {
+	mu       sync.Mutex
+	path     string
+	loaded   bool
+	loading  bool
+	staged   []gitx.Hunk
+	unstaged []gitx.Hunk
+	busy     sync.WaitGroup
 }
 
 func (e *explorer) Manifest() ext.Manifest { return ext.Manifest{ID: "explorer"} }
@@ -101,7 +116,22 @@ func (e *explorer) Activate(_ context.Context, h ext.Host) error {
 			e.changedOnly = !e.changedOnly
 			return nil
 		}},
-		{ID: "explorer.stage", Title: "Stage the selected file, or unstage it if it's staged", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "explorer.stage", Title: "Stage the selected file or hunk, or unstage it if it's staged", Run: func(ctx registry.Ctx, _ registry.Args) error {
+			if h, staged, ok := e.selectedHunk(); ok {
+				path := e.hunks.path
+				e.sh.git.async(func(ctx context.Context) error {
+					repo := e.sh.git.status.Repo()
+					if staged {
+						return repo.UnstageHunk(ctx, path, h)
+					}
+					work, err := os.ReadFile(e.sh.git.abs(path))
+					if err != nil {
+						return err
+					}
+					return repo.StageHunk(ctx, path, work, h)
+				})
+				return nil
+			}
 			f, ok := e.selectedFile()
 			if !ok {
 				return nil
@@ -150,7 +180,74 @@ func (e *explorer) Activate(_ context.Context, h ext.Host) error {
 		e.add(h.Keymap(k))
 	}
 	e.add(h.View(ExplorerView, explorerView{e}))
+	if st := e.sh.git.status; st != nil {
+		e.add(disposeFn(st.Watch(func([]string) {
+			e.hunks.mu.Lock()
+			e.hunks.loaded = false
+			e.hunks.mu.Unlock()
+		})))
+	}
 	return nil
+}
+
+func (e *explorer) Deactivate(ctx context.Context) error {
+	e.hunks.busy.Wait()
+	return e.disposer.Deactivate(ctx)
+}
+
+func (e *explorer) wait() { e.hunks.busy.Wait() }
+
+// fileHunks are path's staged and unstaged hunks, read off the loop; nil until they're read.
+func (e *explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool) {
+	x := &e.hunks
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if x.path != path {
+		x.path, x.loaded, x.staged, x.unstaged = path, false, nil, nil
+	}
+	if !x.loaded && !x.loading {
+		x.loading = true
+		x.busy.Add(1)
+		go func() {
+			defer x.busy.Done()
+			ctx, repo := context.Background(), e.sh.git.status.Repo()
+			st, _ := repo.StagedHunks(ctx, path)
+			work, _ := os.ReadFile(e.sh.git.abs(path))
+			un, _ := repo.UnstagedHunks(ctx, path, work)
+			x.mu.Lock()
+			if x.path == path {
+				x.staged, x.unstaged, x.loaded = st, un, true
+			}
+			x.loading = false
+			x.mu.Unlock()
+			e.h.Redraw()
+		}()
+	}
+	return x.staged, x.unstaged, x.loaded
+}
+
+// hunkRow is a hunk row's id: its side and index.
+func hunkRow(side string, i int) string { return fmt.Sprintf("hunk\x00%s\x00%d", side, i) }
+
+// selectedHunk is the selected hunk row's hunk, and whether it's staged.
+func (e *explorer) selectedHunk() (gitx.Hunk, bool, bool) {
+	parts := strings.Split(e.selected, "\x00")
+	if len(parts) != 3 || parts[0] != "hunk" {
+		return gitx.Hunk{}, false, false
+	}
+	i, _ := strconv.Atoi(parts[2])
+	st, un, ok := e.fileHunks(e.hunks.path)
+	if !ok {
+		return gitx.Hunk{}, false, false
+	}
+	hs := un
+	if parts[1] == "staged" {
+		hs = st
+	}
+	if i >= len(hs) {
+		return gitx.Hunk{}, false, false
+	}
+	return hs[i], parts[1] == "staged", true
 }
 
 func (e *explorer) session() core.SessionID { return e.h.State().Focus }
@@ -323,6 +420,14 @@ func (e *explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.Tree
 				out = append(out, sec)
 			}
 		}
+		if f, ok := e.selectedFile(); ok && f.Area != gitx.Untracked && f.Code != 'D' {
+			e.hunks.path = f.Path
+		}
+		if p := e.hunks.path; p != "" && slices.ContainsFunc(files, func(f gitx.FileState) bool { return f.Path == p }) {
+			if sec, ok := e.hunkSection(th, p); ok {
+				out = append(out, sec)
+			}
+		}
 		return out
 	case gitx.Changed:
 		if e.flat {
@@ -347,6 +452,36 @@ func (e *explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.Tree
 	}
 	return []widget.TreeItem{{ID: "\x02", Label: root, Note: note, Swatch: th.C(theme.Accent), Open: true, Children: e.tree(th, files, sc),
 		Help: "files/explorer"}}
+}
+
+// hunkSection is a file's hunks, staged ticked, each row its first line and size.
+func (e *explorer) hunkSection(th *theme.Resolved, path string) (widget.TreeItem, bool) {
+	st, un, ok := e.fileHunks(path)
+	if !ok || len(st)+len(un) == 0 {
+		return widget.TreeItem{}, false
+	}
+	sec := widget.TreeItem{ID: "\x01hunks", Label: "hunks in " + filepath.Base(path), Section: true, Open: true, Help: "files/explorer#keys"}
+	for _, side := range []struct {
+		name string
+		hs   []gitx.Hunk
+	}{{"staged", st}, {"unstaged", un}} {
+		for i, h := range side.hs {
+			first := h.New
+			if len(first) == 0 {
+				first = h.Old
+			}
+			it := widget.TreeItem{ID: hunkRow(side.name, i), Label: fmt.Sprintf("@@ %d", h.NewStart), Glyph: "☐", GlyphTone: th.C(theme.FgFaint),
+				Help: "files/explorer#keys"}
+			if side.name == "staged" {
+				it.Glyph, it.GlyphTone = "☑", th.C(tGitAdded)
+			}
+			if len(first) > 0 {
+				it.Note = strings.TrimSpace(first[0])
+			}
+			sec.Children = append(sec.Children, it)
+		}
+	}
+	return sec, true
 }
 
 // tree nests files by directory, directories first.
@@ -448,6 +583,19 @@ func (e *explorer) trailing(c *ui.Ctx, st *gitx.State, sc gitx.Scope, it widget.
 			}
 		}
 		c.Text("n", fmt.Sprint(n), monoTok(c, 10, theme.FgFaint))
+		return
+	}
+	if strings.HasPrefix(it.ID, "hunk\x00") {
+		parts := strings.Split(it.ID, "\x00")
+		i, _ := strconv.Atoi(parts[2])
+		st, un, _ := e.fileHunks(e.hunks.path)
+		hs := un
+		if parts[1] == "staged" {
+			hs = st
+		}
+		if i < len(hs) {
+			widget.DiffStat(c, "stat", hs[i].NewLines, hs[i].OldLines, widget.DiffStatOpts{})
+		}
 		return
 	}
 	area, p, isFile := strings.Cut(it.ID, "\x00")

@@ -342,3 +342,24 @@ func TestNextKeysAreCommands(t *testing.T) {
 		}
 	}
 }
+
+// A pane's file bytes are what :w writes, the last line's newline fixed as 'fixendofline' does.
+func TestPaneFileBytes(t *testing.T) {
+	for _, body := range []string{"a\nb\n", "a\r\nb\r\n", "a\nb", "\ufeffa\n", ""} {
+		want := body
+		if body == "a\nb" {
+			want = "a\nb\n"
+		}
+		dir := t.TempDir()
+		p := filepath.Join(dir, "f.txt")
+		os.WriteFile(p, []byte(body), 0o644)
+		ed := edit.New(text.New(nil, text.Author{}), text.Author{Kind: text.User})
+		e := vim.New(ed)
+		e.SetHost(vim.Disk{Dir: dir})
+		e.Edit("f.txt")
+		pane, _ := e.Pane(e.WindowID())
+		if got := string(pane.FileBytes()); got != want {
+			t.Errorf("%q: file bytes %q", body, got)
+		}
+	}
+}

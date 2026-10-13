@@ -62,7 +62,7 @@ const diskInterval = time.Second
 func (x *editorExt) Manifest() ext.Manifest { return ext.Manifest{ID: "editor"} }
 
 func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
-	x.h = h
+	x.h, x.sh.editor = h, x
 	x.dir = x.sh.cfg.WorkDir
 	if x.dir == "" {
 		x.dir, _ = os.Getwd()

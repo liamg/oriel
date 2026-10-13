@@ -118,6 +118,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.binary` | false | app | | ED-9 |
 | `editor.modelines` | false | app | | ED-9 |
 | `files.generated` | false | app | | ED-9 |
+| `git.blame.inline` | true: who last changed the cursor's line, after it | app | | FG-2 |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
 | `keymap.leader` | Space | app | | FW-3 |
 | `keymap.timeout` | true | app | `timeout`, `to` | FW-3 |

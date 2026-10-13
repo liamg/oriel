@@ -268,3 +268,41 @@ func TestEditorTabsCarryGitMarks(t *testing.T) {
 	}
 	t.Errorf("the round.go tab isn't marked M:\n%s", s.frameText())
 }
+
+// ui.md 01c: "Stage or unstage whole files or single hunks": selecting a file in Uncommitted lists its hunks, and s
+// on one stages just it, as git apply --cached would.
+// ref: oracle git
+func TestExplorerStagesHunks(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"f.txt": gittest.Lines(30)})
+	r.Commit("Ada", "base")
+	work := strings.Replace(strings.Replace(gittest.Lines(30), "line 3\n", "three\n", 1), "line 25\n", "twenty-five\n", 1)
+	r.Write(map[string]string{"f.txt": work})
+	s := newScene(t, "", r.Dir, mockupSize)
+	s.sh.git.wait()
+	s.run("explorer.scope", registry.Args{"scope": "uncommitted"})
+	s.frame()
+	s.frame()
+	s.click(s.textPoint(t, "UNSTAGED"))
+	s.click(s.textPoint(t, "UNSTAGED"))
+	s.selectRow(t, "f.txt")
+	s.frame()
+	s.explorer().wait()
+	s.frame()
+	s.frame()
+	if !strings.Contains(s.frameText(), "HUNKS IN F.TXT") {
+		t.Fatalf("no hunks for f.txt:\n%s", s.frameText())
+	}
+	for range 10 {
+		if strings.HasPrefix(s.explorer().selected, "hunk\x00") {
+			break
+		}
+		s.keyCommand(t, "j")
+	}
+	s.keyCommand(t, "s")
+	s.sh.git.wait()
+	want := strings.Replace(gittest.Lines(30), "line 3\n", "three\n", 1)
+	if got := r.Git("show", ":f.txt"); got != want {
+		t.Errorf("after s on the first hunk the index is:\n%s", got)
+	}
+}

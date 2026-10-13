@@ -41,6 +41,7 @@ type shell struct {
 	reopen        chan string // Open Directory's directory, for the loop to start again on
 	recents       *recents
 	git           *gitExt // the work tree's git status
+	editor        *editorExt
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

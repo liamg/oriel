@@ -168,6 +168,14 @@ flowchart LR
 ## Git
 
 - Gutter hunks, stage and unstage a hunk (`<leader>hs`), inline blame with author kind (you, agent, other).
+- As built (FG-2): hunks are `gitx.DiffLines` (Myers, no context, git's numbering) from the index's version to the
+  buffer as it would be written (`DecorationCtx.FileBytes`, `vim.Pane.FileBytes`), so unsaved edits show. Staging
+  writes the index blob directly (`hash-object` + `update-index`, keeping the mode); tests hold each hunk against `git
+  apply --cached` with git's own patch. Keys: `␣hs` stage, `␣hu` unstage, `␣hr` reset (one undo step), `␣hp` preview
+  (a block of the old lines), `]c`/`[c`, `␣hb` blame (`git.blame.inline`). Blame is `git blame --contents -` on the
+  buffer; an author is an agent by name or email (claude, codex, anthropic, openai, copilot, `[bot]`) or a
+  Co-Authored-By trailer naming one, and "you" by `user.email`. The Explorer's Uncommitted lists the selected file's
+  staged and unstaged hunks, and `s` stages or unstages one.
 - crit's Git and PR flow carried over: uncommitted → behind base → unpushed →
   PR → checks → merge, per project, cross-linked across projects.
 - Conflict resolution as a 3-way merge view, with "ask the agent" on a conflict block.

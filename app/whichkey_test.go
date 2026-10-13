@@ -81,7 +81,7 @@ func TestWhichKeyLeader(t *testing.T) {
 	// ? lists every keymap under the prefix, in the keymaps picker.
 	r.typeKeys("?")
 	r.waitFrame("the keymaps picker on <Space>", func(s string) bool {
-		return strings.Contains(s, "Keymaps") && strings.Contains(s, "<Space>") && !strings.Contains(s, "shown after")
+		return strings.Contains(s, "❯\n<Space>\n") && strings.Contains(s, "⌨") && !strings.Contains(s, "shown after")
 	})
 	r.typeKeys("<Esc>")
 	r.typeKeys("<Space>")
