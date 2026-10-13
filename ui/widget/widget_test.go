@@ -481,3 +481,136 @@ func TestIconButtonInARow(t *testing.T) {
 		t.Error("the button stays with the pointer gone")
 	}
 }
+
+// texts are the runs of text the last frame drew, in order.
+func (h *harness) texts() []string {
+	var out []string
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs {
+			out = append(out, op.Run.Text)
+		}
+	}
+	return out
+}
+
+func (h *harness) drew(s string) bool {
+	for _, t := range h.texts() {
+		if t == s {
+			return true
+		}
+	}
+	return false
+}
+
+// A tree's rows can carry a note after the label, a tint, a strike-through and content at their right; items
+// that say Open start expanded; and the tree takes keys in the mode its owner names.
+func TestTreeRowsAndOptions(t *testing.T) {
+	var id ui.ID
+	var res TreeResult
+	red := render.Color{R: 255, A: 255}
+	items := []TreeItem{
+		{ID: "staged", Label: "STAGED", Section: true, Open: true, Children: []TreeItem{
+			{ID: "round.go", Label: "round.go", Note: "← amount.go", Tone: red, Strike: true},
+		}},
+		{ID: "closed", Label: "closed", Children: []TreeItem{{ID: "hidden.go", Label: "hidden.go"}}},
+	}
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("tree")
+		res = Tree(c, "tree", items, TreeOpts{Height: ui.Px(300), Help: "test/tree", KeyMode: "explorer",
+			Trailing: func(c *ui.Ctx, it TreeItem, selected bool) {
+				c.Text("n", "+31 -9 "+it.ID, ui.TextStyle{})
+			}})
+	})
+	h.frame()
+	for _, want := range []string{"STAGED", "round.go", "← amount.go", "+31 -9 round.go", "+31 -9 staged"} {
+		if !h.drew(want) {
+			t.Errorf("no %q in %q", want, h.texts())
+		}
+	}
+	if h.drew("hidden.go") {
+		t.Error("an item without Open started expanded")
+	}
+	r := h.rect(id)
+	h.click(r.Min.X+40, r.Min.Y+33)
+	if res.Activated != "round.go" {
+		t.Errorf("click on the open section's child: %+v", res)
+	}
+	if m := h.u.KeyMode(); m != "explorer" {
+		t.Errorf("the focused tree takes keys in %q", m)
+	}
+	h.keys("k", "CR")
+	if h.drew("round.go") {
+		t.Error("Enter on an open section didn't close it")
+	}
+}
+
+// A diff stat leaves out a side with nothing in it, and its bar splits between adds and deletes.
+func TestDiffStat(t *testing.T) {
+	var id ui.ID
+	add, del := 31, 9
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("ds")
+		DiffStat(c, "ds", add, del, DiffStatOpts{Bar: true, Scale: 40, Width: 40})
+	})
+	h.frame()
+	if !h.drew("+31") || !h.drew("-9") {
+		t.Errorf("drew %q", h.texts())
+	}
+	a, d := h.rect(ui.Child(ui.Child(id, "bar"), "a")), h.rect(ui.Child(ui.Child(id, "bar"), "d"))
+	if a.Dx() != 31 || d.Dx() != 9 {
+		t.Errorf("bar split %v / %v, want 31 / 9", a.Dx(), d.Dx())
+	}
+	add, del = 0, 62
+	h.frame()
+	if h.drew("+0") || !h.drew("-62") {
+		t.Errorf("a delete-only change drew %q", h.texts())
+	}
+}
+
+// A toggle chip flips on a click and on Space while focused.
+func TestToggleChip(t *testing.T) {
+	var id ui.ID
+	on := false
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("chip")
+		on = ToggleChip(c, "chip", "± lines", on, ToggleChipOpts{Help: "test/chip"})
+	})
+	h.click(mid(h.rect(id)))
+	if !on {
+		t.Fatal("a click didn't turn it on")
+	}
+	h.frame()
+	if n := h.access(id); n == nil || !n.Selected {
+		t.Errorf("its accessible state: %+v", n)
+	}
+	h.keys(" ")
+	if on {
+		t.Error("Space didn't turn it off")
+	}
+}
+
+// When the rows change under it (a file staged moves to another section), the selection stays on the same item.
+func TestTreeSelectionFollowsItsItem(t *testing.T) {
+	var res TreeResult
+	items := []TreeItem{{ID: "a", Label: "a"}, {ID: "b", Label: "b"}, {ID: "c", Label: "c"}}
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("tree")
+		res = Tree(c, "tree", items, TreeOpts{Height: ui.Px(300), Help: "test/tree"})
+	})
+	r := h.rect(id)
+	h.click(r.Min.X+40, r.Min.Y+11+22)
+	if res.Selected != "b" {
+		t.Fatalf("selected %q", res.Selected)
+	}
+	items = []TreeItem{{ID: "b", Label: "b"}, {ID: "a", Label: "a"}, {ID: "c", Label: "c"}}
+	h.frame()
+	if res.Selected != "b" {
+		t.Errorf("after b moved up, selected %q", res.Selected)
+	}
+	items = []TreeItem{{ID: "a", Label: "a"}, {ID: "c", Label: "c"}}
+	h.frame()
+	if res.Selected != "a" {
+		t.Errorf("after b went, selected %q, want the row in its place", res.Selected)
+	}
+}

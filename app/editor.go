@@ -600,6 +600,20 @@ func (v editorView) Location(instance string) (string, bool) {
 	return path, p.Current() && strings.HasPrefix(v.x.e.Mode(), "visual")
 }
 
+// Mark is the window's file's git status letter, for its tab.
+func (v editorView) Mark(instance string) (string, string) {
+	path, _ := v.Location(instance)
+	if path == "" {
+		return "", ""
+	}
+	f, ok := v.x.sh.git.state().File(v.x.sh.git.rel(path))
+	if !ok || f.Code == 0 {
+		return "", ""
+	}
+	letter, _ := gitCodeTokens(f.Code)
+	return string(f.Code), letter.Name()
+}
+
 func (v editorView) Title(instance string) string {
 	n, err := strconv.Atoi(instance)
 	if err != nil {

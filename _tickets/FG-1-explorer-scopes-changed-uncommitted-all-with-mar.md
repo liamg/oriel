@@ -2,7 +2,7 @@
 id: FG-1
 title: "Explorer scopes: Changed, Uncommitted, All, with markers"
 phase: P4
-status: todo
+status: done
 area: Files, git, terminals
 module: gitx, app
 depends_on: [FW-6, ED-6]

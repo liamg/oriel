@@ -40,6 +40,7 @@ type shell struct {
 	shot          func(th *theme.Resolved) *image.RGBA
 	reopen        chan string // Open Directory's directory, for the loop to start again on
 	recents       *recents
+	git           *gitExt // the work tree's git status
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

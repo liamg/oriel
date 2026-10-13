@@ -32,10 +32,45 @@ clip 20,152 250x200 r 0
   rect 20,152 2x22 fill #ffd23f
   text "▸" @32,167.54712 #ece6d8 Inter 12.5
   rect 46,158 10x10 fill #5cd2ffd9 radius 2
-  text "internal" @62,167.54712 #ece6d8 Inter 12.5
+  clip 62,155.43774 192x15.124512 r 0
+    text "internal" @62,167.54712 #ece6d8 Inter 12.5
+  pop
   rect 32,180 10x10 fill #ffcf5cd9 radius 2
-  text "PLAN.md" @48,189.54712 #b3ab99 Inter 12.5
+  clip 48,177.43774 121.03125x15.124512 r 0
+    text "PLAN.md" @48,189.54712 #b3ab99 Inter 12.5
+  pop
+  text "+31" @175.03125,188.78001 #4fe0a0 JetBrains Mono 10.5
+  text "-9" @200.8125,188.78001 #ff5f6d JetBrains Mono 10.5
+  rect 220,183 28x4 fill #332f2780 radius 2
+  clip 220,183 28x4 r 2
+    rect 220,183 8.679993x4 fill #4fe0a0
+    rect 228.68,183 2.5200043x4 fill #ff5f6d
+  pop
   text "A" @254,188.59999 #4fe0a0 JetBrains Mono 10
+  text "●" @32,210.23999 #ff9b45 JetBrains Mono 9
+  clip 43.40625,199.43774 125.625x15.124512 r 0
+    text "money.go" @43.40625,211.54712 #b3ab99 Inter 12.5
+    text "← amount.go" @110.6875,210.78001 #7c7566 JetBrains Mono 10.5
+  pop
+  text "+31" @175.03125,210.78001 #4fe0a0 JetBrains Mono 10.5
+  text "-9" @200.8125,210.78001 #ff5f6d JetBrains Mono 10.5
+  rect 220,205 28x4 fill #332f2780 radius 2
+  clip 220,205 28x4 r 2
+    rect 220,205 8.679993x4 fill #4fe0a0
+    rect 228.68,205 2.5200043x4 fill #ff5f6d
+  pop
+  text "R" @254,210.59999 #b98aff JetBrains Mono 10
+  clip 32,221.43774 137.03125x15.124512 r 0
+    text "legacy.go" @32,233.54712 #ff5f6d Inter 12.5
+  pop
+  text "+31" @175.03125,232.78001 #4fe0a0 JetBrains Mono 10.5
+  text "-9" @200.8125,232.78001 #ff5f6d JetBrains Mono 10.5
+  rect 220,227 28x4 fill #332f2780 radius 2
+  clip 220,227 28x4 r 2
+    rect 220,227 8.679993x4 fill #4fe0a0
+    rect 228.68,227 2.5200043x4 fill #ff5f6d
+  pop
+  text "D" @254,232.59999 #ff5f6d JetBrains Mono 10
 pop
 rect 286,152 250x200 fill #0c0c0b
 clip 286,152 250x200 r 0
@@ -63,6 +98,7 @@ text "Hide this tat" @564,244.54712 #4f4a40 Inter 12.5
 text "Move to statusline…" @564,274.54712 #ece6d8 Inter 12.5
 rect 20,368 120x24 fill #121210 radius 4
 rect 146,134 56x2 fill #ffd23f
+rect 32,229 60.25x1 fill #ff5f6d
 rect 564.5775,50 220x39.12451 fill #121210 radius 8 stroke 1 #332f27
 text "A popover under its anchor." @576.5775,74.109375 #ece6d8 Inter 12.5
 rect 80,380 250x107 fill #121210 radius 6 stroke 1 #332f27

@@ -138,3 +138,12 @@ func (r Repo) Authors(ctx context.Context) ([]Author, error) {
 	}
 	return as, nil
 }
+
+// Root is the top of the work tree dir is in, and whether it's in one.
+func Root(ctx context.Context, dir string) (string, bool) {
+	out, err := Repo{Dir: dir}.git(ctx, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", false
+	}
+	return filepath.FromSlash(strings.TrimSpace(string(out))), true
+}

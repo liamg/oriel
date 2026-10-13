@@ -155,6 +155,14 @@ What an open directory or session shows with no buffer open: right after opening
   - `⌥C` toggles "changed only", which filters All down to Changed without leaving the tree.
 - Multi-project workspaces show each project as a root with its branch and ahead/behind.
 - The same markers appear on editor tabs and in the omnibox file results.
+- Built in FG-1: the `explorer` view (the rail's Explorer lights up), `explorer.scope {scope}` on `⌥1–3`,
+  `explorer.changed-only` on `⌥C`, and in its own key mode `explorer` the keys `s` (stage, or unstage a staged file),
+  `u`, `x` (asks first; an untracked file is deleted) and `=`. They run the general `git.stage`, `git.unstage` and
+  `git.discard {path}`. Rows are `widget.Tree` rows (a note, a tint, a strike-through, a leading glyph, trailing
+  content, sections, items open by default) with `widget.DiffStat` and `widget.ToggleChip`. Changed opens a file
+  with `diff.open` when something registers it (RV-1), the file until then. Tabs carry the letter through the
+  `registry.Marked` view interface; the files picker ranks changed files up and notes their letter. Not yet: the
+  agent and threads columns (P5), the read bar and "by review" (the ledger, P6), and more than one project.
 
 ## 01d · Layout: any pane, anywhere
 

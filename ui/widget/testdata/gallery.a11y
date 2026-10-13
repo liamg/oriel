@@ -17,6 +17,11 @@ window
   tree help=gallery/tree
     treeitem "internal" selected collapsed
     treeitem "PLAN.md A"
+      text "+31 -9"
+    treeitem "● money.go ← amount.go R"
+      text "+31 -9"
+    treeitem "legacy.go D"
+      text "+31 -9"
   list help=gallery/list
     listitem "Negative values round the wrong way"
     listitem "Negative values round the wrong way"

@@ -128,10 +128,14 @@ func (n *notices) Activate(_ context.Context, h ext.Host) error {
 		{ID: "Events", Title: "Show the live core event stream", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.open", registry.Args{"id": "events", "place": "dock", "edge": "bottom", "title": "Events"})
 		}},
-		{ID: "notice.dismiss", Title: "Dismiss a notice's toast", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "notice.dismiss", Title: "Dismiss a notice's toast, by {seq} or every one with {id}", Run: func(_ registry.Ctx, a registry.Args) error {
 			seq, ok := argSeq(a)
+			if id := a.String("id"); !ok && id != "" {
+				h.Dismiss(id)
+				return nil
+			}
 			if !ok {
-				return fmt.Errorf("notice.dismiss needs a seq")
+				return fmt.Errorf("notice.dismiss needs a seq or an id")
 			}
 			return n.sh.cfg.Store.Apply(core.NoticeDismissed{Seq: seq})
 		}},

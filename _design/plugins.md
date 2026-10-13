@@ -71,6 +71,8 @@ flowchart TB
 - commands, picker/omnibox sources and actions, panels, docks, layouts. Which-key is a built-in plugin built only on the public API.
 - the `view` keymap mode: keys for a focused view with no key mode of its own (`q` and `⌃W c` close it; Escape closes
   one outside the main area, such as the log). A tab's ✕, shown while the pointer is on it, closes its view.
+- tab markers: a view implementing `registry.Marked` gives each instance a small marker after its tab title (the
+  editor gives its file's git status letter), in a theme token's colour.
 - rail entries (`RailEntry`, `oriel.rail.add`) and start view actions (`StartEntry`, `oriel.start.add`). Both are
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves

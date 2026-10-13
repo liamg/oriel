@@ -150,6 +150,11 @@ flowchart LR
   **All** (the whole tree, with git status, ± lines, agent-unread, thread and diagnostic markers).
 - Backed by one `gitx.Status` model on the worker: it streams file states and line counts, and refreshes on fs-notify.
 - See `ui.md` 01c.
+- As built (FG-1): `gitx.Repo.Status` reads every scope in one go (`git status --porcelain=v2`, `git diff --numstat`
+  against HEAD, the index and the merge-base with origin's default branch, else main or master); `gitx.Status` keeps
+  it, tells watchers which paths changed, and runs in the app until the worker exists (AI-1). It refreshes every 2 s,
+  after a write and after each git command, rather than on fs-notify: a watcher over x/sys (inotify, kqueue) comes
+  with the worker. Fixture repos for tests are built with `gitx/gittest`.
 
 ## Navigation and search
 

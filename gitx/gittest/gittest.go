@@ -1,0 +1,102 @@
+// Package gittest builds fixture repos by script, for tests of anything that reads git.
+package gittest
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+)
+
+// Repo is a fixture work tree in a temporary directory, with git's global and system config out of the way.
+type Repo struct {
+	T    testing.TB
+	Dir  string
+	When time.Time // the next commit's time; each commit moves it on a minute
+}
+
+// New is an empty repo on branch main.
+func New(t testing.TB) *Repo {
+	t.Helper()
+	r := &Repo{T: t, Dir: t.TempDir(), When: time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)}
+	r.Git("init", "-q", "-b", "main")
+	return r
+}
+
+// Env is the environment git runs in for fixtures, with an identity for commits a command makes itself (a merge).
+func Env() []string {
+	return append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null", "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C",
+		"GIT_AUTHOR_NAME=Fixture", "GIT_AUTHOR_EMAIL=fixture@example.com", "GIT_COMMITTER_NAME=Fixture", "GIT_COMMITTER_EMAIL=fixture@example.com")
+}
+
+// Git runs git in the repo and returns its output; a failure fails the test.
+func (r *Repo) Git(args ...string) string {
+	r.T.Helper()
+	return r.GitEnv(nil, args...)
+}
+
+func (r *Repo) GitEnv(env []string, args ...string) string {
+	r.T.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = r.Dir
+	cmd.Env = append(Env(), env...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		r.T.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+	return string(out)
+}
+
+// Write writes files, by path relative to the repo, making their directories.
+func (r *Repo) Write(files map[string]string) {
+	r.T.Helper()
+	for name, body := range files {
+		p := filepath.Join(r.Dir, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			r.T.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			r.T.Fatal(err)
+		}
+	}
+}
+
+// Remove deletes files from the work tree.
+func (r *Repo) Remove(names ...string) {
+	r.T.Helper()
+	for _, n := range names {
+		if err := os.Remove(filepath.Join(r.Dir, n)); err != nil {
+			r.T.Fatal(err)
+		}
+	}
+}
+
+// Commit stages everything and commits it as who.
+func (r *Repo) Commit(who, msg string) {
+	r.T.Helper()
+	r.Git("add", "-A")
+	r.CommitStaged(who, msg)
+}
+
+// CommitStaged commits what's staged as who.
+func (r *Repo) CommitStaged(who, msg string) {
+	r.T.Helper()
+	d := r.When.Format(time.RFC3339)
+	r.When = r.When.Add(time.Minute)
+	r.GitEnv([]string{"GIT_AUTHOR_NAME=" + who, "GIT_AUTHOR_EMAIL=" + strings.ToLower(who) + "@example.com", "GIT_COMMITTER_NAME=" + who,
+		"GIT_COMMITTER_EMAIL=" + strings.ToLower(who) + "@example.com", "GIT_AUTHOR_DATE=" + d, "GIT_COMMITTER_DATE=" + d}, "commit", "-qm", msg)
+}
+
+// Lines is n numbered lines, "line 1\n" on.
+func Lines(n int) string {
+	var b strings.Builder
+	for i := 1; i <= n; i++ {
+		b.WriteString("line ")
+		b.WriteString(strconv.Itoa(i))
+		b.WriteByte('\n')
+	}
+	return b.String()
+}

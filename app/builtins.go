@@ -19,7 +19,7 @@ import (
 
 func builtins(sh *shell) []ext.Extension {
 	sh.layout = &layoutExt{sh: sh}
-	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &rail{}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
+	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
 		&editorExt{sh: sh}, &settingsExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
 }
 
@@ -80,6 +80,21 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			}
 		}
 		return ""
+	}
+	l.panes.Mark = func(v layout.ViewRef) (string, render.Color) {
+		view, ok := h.ViewByID(v.ID)
+		if !ok {
+			return "", render.Color{}
+		}
+		m, ok := registry.As[registry.Marked](view)
+		if !ok {
+			return "", render.Color{}
+		}
+		text, style := m.Mark(v.Instance)
+		if text == "" {
+			return "", render.Color{}
+		}
+		return text, tokenColour(h.CurrentTheme(), style, h.CurrentTheme().C(theme.FgFaint))
 	}
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	focused := func() (layout.ViewRef, error) {

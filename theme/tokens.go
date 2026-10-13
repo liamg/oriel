@@ -37,6 +37,16 @@ func DeclareOn(name, def, on string) TokenID {
 	return id
 }
 
+// Name is the token's name, as themes and decorations write it; "" for one never declared.
+func (id TokenID) Name() string {
+	tokensMu.RLock()
+	defer tokensMu.RUnlock()
+	if int(id) < 0 || int(id) >= len(tokens) {
+		return ""
+	}
+	return tokens[id].Name
+}
+
 // Tokens lists every declared token.
 func Tokens() []Token {
 	tokensMu.RLock()

@@ -55,3 +55,25 @@ func Chip(c *ui.Ctx, key any, label string, tone color.NRGBA, help string) ui.ID
 		c.Text(nil, strings.ToUpper(label), monoText(9.5, typeset.SemiBold, tone, .06))
 	})
 }
+
+type ToggleChipOpts struct {
+	Help    string
+	Tooltip string
+}
+
+// ToggleChip is a small mono button that's lit while on, for a column or filter that toggles. It returns the value
+// after this frame's clicks.
+func ToggleChip(c *ui.Ctx, key any, label string, on bool, o ToggleChipOpts) bool {
+	fg, border, fill := col(c, tSegFg), col(c, tSegBorder), color.NRGBA{}
+	if on {
+		fg, border, fill = col(c, tSegOnFg), alpha(col(c, tSegOnFg), .45), col(c, tSegOnBg)
+	}
+	in := Clickable(c, key, ui.Style{Dir: ui.Row, H: ui.Px(18), Pad: ui.PadXY(6, 0), Cross: ui.Center, Radius: 4, Stroke: border, Border: 1,
+		Fill: fill, Focusable: true, Selected: on, Label: label, Tooltip: o.Tooltip, Help: o.Help}, func(c *ui.Ctx) {
+		c.Text("l", label, monoText(10, typeset.Medium, fg, 0))
+	})
+	if in.Clicked {
+		return !on
+	}
+	return on
+}

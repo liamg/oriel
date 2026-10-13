@@ -83,6 +83,23 @@ type Ctx interface{ context.Context }
 
 type Args map[string]any
 
+// String is the string argument k, or "".
+func (a Args) String(k string) string { s, _ := a[k].(string); return s }
+
+// Int is the numeric argument k: an int from Go, a float64 from Lua or JSON; 0 if it's neither.
+func (a Args) Int(k string) int {
+	switch n := a[k].(type) {
+	case int:
+		return n
+	case float64:
+		return int(n)
+	}
+	return 0
+}
+
+// Bool is the boolean argument k.
+func (a Args) Bool(k string) bool { b, _ := a[k].(bool); return b }
+
 type Command struct {
 	ID    string // "git.commit"
 	Title string
@@ -124,6 +141,12 @@ type EdgeToEdge interface {
 // Titled is a view whose instances name themselves, for their tabs: an editor names its buffer.
 type Titled interface {
 	Title(instance string) string
+}
+
+// Marked is a view whose instances carry a small marker on their tabs: an editor's file's git status letter. Style
+// is a theme token.
+type Marked interface {
+	Mark(instance string) (text, style string)
 }
 
 type ViewFunc func(ViewCtx) ui.Node

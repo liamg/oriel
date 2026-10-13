@@ -11,7 +11,7 @@ pop
 text "DEPLOY" @1531.8438,22.779999 #b3ab99 JetBrains Mono 10.5
 text "3" @1579.4062,22.779999 #ff9b45 JetBrains Mono 10.5
 rect 0,38 44x936 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40

@@ -62,6 +62,7 @@ type viewState struct {
 	docks  map[Edge]ui.ID
 	resize *resize
 	title  func(ViewRef) string
+	mark   func(ViewRef) (string, render.Color)
 }
 
 type resize struct {
@@ -79,10 +80,10 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 	id := c.Next(key)
 	st := ui.State[viewState](c, id)
 	st.leaves, st.docks = map[*Node]ui.ID{}, map[Edge]ui.ID{}
-	st.title = nil
+	st.title, st.mark = nil, nil
 	if panes != nil {
 		panes.leaves = st.leaves
-		st.title = panes.Title
+		st.title, st.mark = panes.Title, panes.Mark
 	}
 	changed := false
 	th := c.Theme()
@@ -316,11 +317,19 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 	if title == "" {
 		title = v.String()
 	}
+	var mark string
+	var markTone render.Color
+	if st.mark != nil {
+		mark, markTone = st.mark(v)
+	}
 	closed := false
 	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on}, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
-		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Cross: ui.Center}, func(c *ui.Ctx) {
+		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: fg})
+			if mark != "" {
+				c.Text("mark", mark, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold}, Color: markTone})
+			}
 		})
 		if in.Inside && st.drag == nil {
 			c.Box("close", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: .5}, Self: render.Point{X: 1, Y: .5}, Offset: render.Point{X: -1, Y: 1}}}, func(c *ui.Ctx) {
@@ -507,7 +516,9 @@ func abs(v float32) float32 {
 type Panes struct {
 	leaves map[*Node]ui.ID
 	Title  func(v ViewRef) string
-	Empty  func(c *ui.Ctx) // draws the main area while it holds no views, unless a pane is being dragged there
+	// Mark, when set, is a small marker after a view's tab title, in its colour: a file's git status letter.
+	Mark  func(v ViewRef) (string, render.Color)
+	Empty func(c *ui.Ctx) // draws the main area while it holds no views, unless a pane is being dragged there
 }
 
 // Rects is where each leaf was drawn in the latest frame.

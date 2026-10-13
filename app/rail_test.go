@@ -45,21 +45,21 @@ func TestRailSnapshot(t *testing.T) {
 func TestRailTogglesAView(t *testing.T) {
 	s := newErrScene(t, "")
 	s.frame()
-	explorer := railAt(0)
-	s.click(explorer)
+	git := railAt(2)
+	s.click(git)
 	if len(s.sh.layout.root.Visible()) != 0 {
 		t.Fatal("an unavailable entry opened something")
 	}
-	s.reg.View("explorer", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("the explorer") }))
+	s.reg.View("git", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("the git view") }))
 	s.frame()
-	s.click(explorer)
-	if v := s.sh.layout.root.Visible(); len(v) != 1 || v[0].ID != "explorer" {
+	s.click(git)
+	if v := s.sh.layout.root.Visible(); len(v) != 1 || v[0].ID != "git" {
 		t.Fatalf("after a click the layout shows %v", v)
 	}
 	if w := s.sh.layout.root.Find(s.sh.layout.root.Visible()[0]); w == nil || w.Edge != layout.Left {
-		t.Errorf("the explorer isn't in the left dock: %+v", w)
+		t.Errorf("the git view isn't in the left dock: %+v", w)
 	}
-	s.click(explorer)
+	s.click(git)
 	if v := s.sh.layout.root.Visible(); len(v) != 0 {
 		t.Errorf("a second click left %v showing", v)
 	}
@@ -95,8 +95,8 @@ func TestRailPluginEntries(t *testing.T) {
 func TestRailKeyUnavailable(t *testing.T) {
 	r := startApp(t, t.TempDir(), t.TempDir(), nil)
 	r.waitText("ORIEL")
-	r.typeKeys("<D-E>")
-	r.waitText("Explorer isn't available yet")
+	r.typeKeys("<D-G>")
+	r.waitText("Git isn't available yet")
 	for _, n := range r.store.State().Notifications {
 		if n.Severity == core.SevError {
 			t.Errorf("an error: %s", n.Text)
