@@ -193,11 +193,11 @@ engine never feels like another binary running in a pane.
 - `builtin:languages` registers the core set: Go, TypeScript, TSX, JavaScript, Python, Rust, Lua, Markdown, C, C++,
   Java, Ruby, Bash, JSON, YAML, TOML, HTML, CSS, SQL, Dockerfile, Make, Diff, Git commit and vimdoc, then HCL,
   Terraform (`.tf`, `.tfvars`; OpenTofu's `.tofu`, `.tofuvars`), Kotlin, C#, PHP, Zig, Nix, Protobuf, GraphQL, XML
-  and INI (36 grammars, 7.6 MB gzipped, under the 8 MB budget; each decompressed on first use, and compiled modules
-  kept by checksum). Their queries are nvim-treesitter's at the pinned commit. Every module carries its own copy of
-  the tree-sitter runtime (about 115 KB gzipped), so the budget fits about three more; past that, languages are
-  packs (PL-3), or the runtime moves into a module of its own that the grammars link against. Swift's repository
-  has no generated parser, so it waits for a pack.
+  INI, Elixir, Scala, gitignore, Vue and Svelte (41 grammars, 9.0 MB gzipped, under a 12 MB budget, raised from 8 MB
+  in P3; each decompressed on first use, and compiled modules kept by checksum). Their queries are nvim-treesitter's at
+  the pinned commit. Every module carries its own copy of the tree-sitter runtime (about 115 KB gzipped); if the set
+  outgrows the budget, the runtime can move into a module of its own that the grammars link against. Swift's
+  repository has no generated parser, so it waits for a pack.
 - Highlight queries (ED-14) run inside a window of the top-level nodes the range touches, so their cost follows
   the range, not the file; patterns on the root node are rewritten as sibling groups with `#has-parent?`, or run
   apart. The parser queries 1 KB at a time, each call under 2 ms, as wasm can't be preempted. An edit re-highlights

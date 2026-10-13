@@ -48,7 +48,8 @@ func TestGrammarChecksums(t *testing.T) {
 	}
 }
 
-// ED-11: "The binary grows by under 8 MB for the core set": the grammars are embedded compressed.
+// ED-11: "The binary grows by under 8 MB for the core set", raised to 12 MB when the set grew (your call, P3):
+// the grammars are embedded compressed.
 func TestCoreSetSize(t *testing.T) {
 	total := 0
 	fs.WalkDir(grammarFS, ".", func(p string, d fs.DirEntry, err error) error {
@@ -59,8 +60,8 @@ func TestCoreSetSize(t *testing.T) {
 		return nil
 	})
 	t.Logf("the core grammars take %.1f MB", float64(total)/(1<<20))
-	if total >= 8<<20 {
-		t.Errorf("the core grammars take %d bytes; the budget is 8 MB", total)
+	if total >= 12<<20 {
+		t.Errorf("the core grammars take %d bytes; the budget is 12 MB", total)
 	}
 }
 
@@ -117,6 +118,8 @@ func TestMoreLanguagesByFile(t *testing.T) {
 		"schema.graphql": "graphql", "q.gql": "graphql",
 		"pom.xml": "xml", "icon.svg": "xml",
 		"setup.ini": "ini",
+		"lib/app.ex": "elixir", "mix.exs": "elixir", "Main.scala": "scala", "build.sbt": "scala",
+		".gitignore": "gitignore", ".dockerignore": "gitignore", "App.vue": "vue", "Page.svelte": "svelte",
 	} {
 		l, ok := Builtin().ForFile(file, nil)
 		if !ok || l.Name != want {

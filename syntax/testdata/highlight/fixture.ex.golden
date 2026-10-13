@@ -1,0 +1,81 @@
+   1 | defmodule Pricing do
+     | ^^^^^^^^^ keyword.function
+     |           ^^^^^^^ module
+     |                   ^^ keyword
+   2 |   @moduledoc "A tier's price, in pence."
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment.documentation
+   3 | 
+   4 |   @discount 0.9
+     |   ^^^^^^^^^^^^^ constant
+   5 | 
+   6 |   def price_for(%{pence: pence}, qty) when qty >= 100 do
+     |   ^^^ keyword.function
+     |       ^^^^^^^^^ function
+     |                ^ punctuation.bracket
+     |                 ^ punctuation.special
+     |                  ^ punctuation.bracket
+     |                   ^^^^^^^ string.special.symbol
+     |                          ^^^^^ variable
+     |                               ^ punctuation.bracket
+     |                                ^ punctuation.delimiter
+     |                                  ^^^ variable
+     |                                     ^ punctuation.bracket
+     |                                       ^^^^ keyword
+     |                                            ^^^ variable
+     |                                                ^^ operator
+     |                                                   ^^^ number
+     |                                                       ^^ keyword
+   7 |     round(pence * qty * @discount)
+     |     ^^^^^ function.call
+     |          ^ punctuation.bracket
+     |           ^^^^^ variable
+     |                 ^ operator
+     |                   ^^^ variable
+     |                       ^ operator
+     |                         ^^^^^^^^^ constant
+     |                                  ^ punctuation.bracket
+   8 |   end
+     |   ^^^ keyword
+   9 | 
+  10 |   def price_for(%{pence: pence}, qty) when qty > 0, do: pence * qty
+     |   ^^^ keyword.function
+     |       ^^^^^^^^^ function
+     |                ^ punctuation.bracket
+     |                 ^ punctuation.special
+     |                  ^ punctuation.bracket
+     |                   ^^^^^^^ string.special.symbol
+     |                          ^^^^^ variable
+     |                               ^ punctuation.bracket
+     |                                ^ punctuation.delimiter
+     |                                  ^^^ variable
+     |                                     ^ punctuation.bracket
+     |                                       ^^^^ keyword
+     |                                            ^^^ variable
+     |                                                ^ operator
+     |                                                  ^ number
+     |                                                   ^ punctuation.delimiter
+     |                                                     ^^^^ string.special.symbol
+     |                                                         ^^^^^ variable
+     |                                                               ^ operator
+     |                                                                 ^^^ variable
+  11 |   def price_for(_tier, qty), do: {:error, "bad quantity #{qty}"}
+     |   ^^^ keyword.function
+     |       ^^^^^^^^^ function
+     |                ^ punctuation.bracket
+     |                 ^^^^^ comment
+     |                      ^ punctuation.delimiter
+     |                        ^^^ variable
+     |                           ^ punctuation.bracket
+     |                            ^ punctuation.delimiter
+     |                              ^^^^ string.special.symbol
+     |                                  ^ punctuation.bracket
+     |                                   ^^^^^^ string.special.symbol
+     |                                         ^ punctuation.delimiter
+     |                                           ^^^^^^^^^^^^^^ string
+     |                                                         ^^ string.special
+     |                                                           ^^^ string
+     |                                                              ^ string.special
+     |                                                               ^ string
+     |                                                                ^ punctuation.bracket
+  12 | end
+     | ^^^ keyword

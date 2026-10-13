@@ -63,6 +63,11 @@ var core = []struct {
 	{name: "graphql", exts: []string{".graphql", ".graphqls", ".gql"}},
 	{name: "xml", exts: []string{".xml", ".xsd", ".xsl", ".xslt", ".svg", ".plist"}},
 	{name: "ini", exts: []string{".ini"}},
+	{name: "elixir", exts: []string{".ex", ".exs"}, filenames: []string{"mix.lock"}, bangs: []string{"elixir"}},
+	{name: "scala", exts: []string{".scala", ".sc", ".sbt"}},
+	{name: "gitignore", filenames: []string{".gitignore", ".dockerignore", ".ignore"}},
+	{name: "vue", exts: []string{".vue"}},
+	{name: "svelte", exts: []string{".svelte"}},
 }
 
 var builtin struct {
