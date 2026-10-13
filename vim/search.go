@@ -249,7 +249,7 @@ func (e *Engine) searchMotion(v *view, typed string, fwd bool, count int) (targe
 		offText, next, chained := strings.Cut(rest, ";")
 		if pat == "" {
 			if !e.search.set {
-				e.echo("E35: No previous regular expression")
+				e.notify(errNoPrevPattern.with())
 				return target{}, false
 			}
 			pat = e.search.pat
@@ -299,7 +299,7 @@ func (e *Engine) searchMotion(v *view, typed string, fwd bool, count int) (targe
 func (e *Engine) runSearch(v *view, p Pos, pat string, fwd bool, off searchOffset, count int) (target, bool) {
 	re, err := e.compile(pat)
 	if err != nil {
-		e.echo(err.Error())
+		e.fail(err)
 		return target{}, false
 	}
 	// A search from a closed fold starts after it, or backward from its first line.
@@ -317,7 +317,7 @@ func (e *Engine) runSearch(v *view, p Pos, pat string, fwd bool, off searchOffse
 		m, ok, _ = e.findPattern(v, re, toPos(m.Start), fwd, 1, false)
 	}
 	if !ok {
-		e.echo("E486: Pattern not found: " + pat)
+		e.notify(errPatternNotFound.with(pat))
 		return target{}, false
 	}
 	t := target{pos: toPos(m.Start), jump: true}
@@ -370,7 +370,7 @@ func offsetPos(v *view, m vimregex.Match, off searchOffset) Pos {
 
 func searchNext(e *Engine, v *view, m motionCtx) (target, bool) {
 	if !e.search.set {
-		e.echo("E35: No previous regular expression")
+		e.notify(errNoPrevPattern.with())
 		return target{}, false
 	}
 	fwd := e.search.fwd == (m.key == "n")
@@ -393,7 +393,7 @@ func starSearch(e *Engine, v *view, m motionCtx) (target, bool) {
 			start++
 		}
 		if start >= len(l) {
-			e.echo("E348: No string under cursor")
+			e.notify(errNoWord.with())
 			return target{}, false
 		}
 	}

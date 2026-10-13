@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/text"
 )
 
@@ -135,9 +136,9 @@ func (e *Engine) exQuickfix(name, args string, r exRange, bang bool, line string
 	l := s.list()
 	if l == nil || len(l.entries) == 0 {
 		if loc && s == nil {
-			return exError("E776: No location list")
+			return errNoLocList.with()
 		}
-		return exError("E42: No Errors")
+		return errListEmpty.with()
 	}
 	idx := l.idx
 	switch cmd {
@@ -155,23 +156,23 @@ func (e *Engine) exQuickfix(name, args string, r exRange, bang bool, line string
 	case "next", "previous", "Next":
 		n, ok := l.step(idx, max(count, 1), cmd == "next")
 		if !ok {
-			return exError("E553: No more items")
+			return errNoMoreItems.with()
 		}
 		idx = n
 	case "nfile", "pfile", "Nfile":
 		n, ok := l.stepFile(idx, max(count, 1), cmd == "nfile")
 		if !ok {
-			return exError("E553: No more items")
+			return errNoMoreItems.with()
 		}
 		idx = n
 	case "above", "below", "before", "after":
 		n, ok := e.nearEntry(l, cmd, max(count, 1))
 		if !ok {
-			return exError("E553: No more items")
+			return errNoMoreItems.with()
 		}
 		idx = n
 	default:
-		return exError("E492: Not an editor command: " + name)
+		return errUnknownCommand.with(name)
 	}
 	return e.qfJump(loc, idx)
 }
@@ -305,7 +306,7 @@ func (e *Engine) qfJump(loc bool, idx int) error {
 	l.idx = idx
 	en := l.entries[idx]
 	e.leaveQfWindow(loc)
-	msg := fmt.Sprintf("(%d of %d): %s", idx+1, len(l.entries), en.text)
+	msg := msgQfEntry.with(idx+1, len(l.entries), en.text)
 	if en.valid {
 		var b *buffer
 		for _, x := range e.buffers {
@@ -337,7 +338,7 @@ func (e *Engine) qfJump(loc bool, idx int) error {
 		e.openCursorFold()
 	}
 	e.refreshQfCursor(s)
-	e.echo(msg)
+	e.notify(msg)
 	return nil
 }
 
@@ -411,7 +412,7 @@ func (e *Engine) qfWindow(loc bool, cmd string) error {
 		if cmd == "close" {
 			return nil
 		}
-		return exError("E776: No location list")
+		return errNoLocList.with()
 	}
 	var shown *window
 	for _, w := range e.order() {
@@ -468,23 +469,23 @@ func (e *Engine) qfHistory(loc bool, cmd string, count int, given bool) error {
 	s := e.stack(loc, false)
 	if s == nil || len(s.lists) == 0 {
 		if loc {
-			return exError("E776: No location list")
+			return errNoLocList.with()
 		}
 		if cmd == "history" {
-			e.echo("No entries")
+			e.notify(msgNoLists.with())
 			return nil
 		}
-		return exError("E42: No Errors")
+		return errListEmpty.with()
 	}
 	switch cmd {
 	case "older":
 		if s.cur == 0 {
-			return exError("E380: At bottom of quickfix stack")
+			return errOldestList.with()
 		}
 		s.cur = max(s.cur-max(count, 1), 0)
 	case "newer":
 		if s.cur == len(s.lists)-1 {
-			return exError("E381: At top of quickfix stack")
+			return errNewestList.with()
 		}
 		s.cur = min(s.cur+max(count, 1), len(s.lists)-1)
 	case "history":
@@ -494,27 +495,23 @@ func (e *Engine) qfHistory(loc bool, cmd string, count int, given bool) error {
 			return nil
 		}
 		for i := range s.lists {
-			lead := "  "
+			mark := " "
 			if i == s.cur {
-				lead = "> "
+				mark = ">"
 			}
-			e.echo(qfMsg(s, i, lead))
+			e.notify(qfMsg(s, i, mark))
 		}
 		return nil
 	}
 	e.refreshQfBuf(s)
-	e.echo(qfMsg(s, s.cur, ""))
+	e.notify(qfMsg(s, s.cur, ""))
 	return nil
 }
 
-// qfMsg is vim's qf_msg(): which list this is, its size and its title.
-func qfMsg(s *qfStack, i int, lead string) string {
-	l := s.lists[i]
-	m := fmt.Sprintf("%serror list %d of %d; %d errors ", lead, i+1, len(s.lists), len(l.entries))
-	if len(m) < 34 {
-		m += strings.Repeat(" ", 34-len(m))
-	}
-	return m + l.title
+// qfMsg is which list this is, its size and its title. In a history, mark is ">" for the current list
+// and " " for the others.
+func qfMsg(s *qfStack, i int, mark string) edit.Notice {
+	return msgQfList.with(mark, i+1, len(s.lists), len(s.lists[i].entries), s.lists[i].title)
 }
 
 // qfDo is :cdo and :ldo: go to each valid entry and run cmd there.
@@ -546,7 +543,7 @@ func (e *Engine) vimgrep(loc bool, args, title string) error {
 		d := args[0]
 		end := strings.IndexByte(args[1:], d)
 		if end < 0 {
-			return exError("E682: Invalid search pattern or delimiter")
+			return errGrepDelim.with()
 		}
 		pat = args[1 : end+1]
 		rest = args[end+2:]
@@ -559,7 +556,7 @@ func (e *Engine) vimgrep(loc bool, args, title string) error {
 	}
 	files := strings.Fields(rest)
 	if len(files) == 0 {
-		return exError("E683: File name missing or invalid pattern")
+		return errGrepArgs.with()
 	}
 	re, err := e.compile(pat)
 	if err != nil {
@@ -594,7 +591,7 @@ func (e *Engine) vimgrep(loc bool, args, title string) error {
 		}
 	}
 	if len(entries) == 0 {
-		return exError("E480: No match: " + pat)
+		return errNoMatch.with(pat)
 	}
 	s := e.stack(loc, true)
 	s.push(&qfList{entries: entries, title: ":" + strings.TrimLeft(title, ": ")})
@@ -613,7 +610,7 @@ func (e *Engine) qfEnter() {
 	}
 	loc := e.window.locOwner != nil
 	if err := e.qfJump(loc, min(e.cur.Line, len(s.list().entries)-1)); err != nil {
-		e.echo(err.Error())
+		e.fail(err)
 	}
 }
 
@@ -633,7 +630,7 @@ func evalList(s string) ([]string, error) {
 		end := 0
 		q := s[0]
 		if q != '"' && q != '\'' {
-			return nil, exError("E15: Invalid expression: " + s)
+			return nil, errBadExpr.with(s)
 		}
 		for end = 1; end < len(s); end++ {
 			if q == '"' && s[end] == '\\' {

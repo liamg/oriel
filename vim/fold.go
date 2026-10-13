@@ -176,7 +176,7 @@ func (e *Engine) repeatFold(line, count int, opening bool) {
 	for i := range count {
 		found, acted := s.setManual(line, opening, false)
 		if !found && i == 0 {
-			e.echo("E490: No fold found")
+			e.notify(errNoFold.with())
 			return
 		}
 		if !acted {
@@ -187,7 +187,7 @@ func (e *Engine) repeatFold(line, count int, opening bool) {
 
 func (e *Engine) recurseFold(line int, opening bool) {
 	if found, _ := e.window.fold.setManual(line, opening, true); !found {
-		e.echo("E490: No fold found")
+		e.notify(errNoFold.with())
 	}
 }
 
@@ -300,7 +300,7 @@ func (e *Engine) deleteFolds(start, end int, recursive bool) {
 		*holder = slices.Replace(*holder, at, at+1, up...)
 	}
 	if !did {
-		e.echo("E490: No fold found")
+		e.notify(errNoFold.with())
 	}
 }
 
@@ -395,7 +395,7 @@ func (e *Engine) foldCmd(v *view, k string, count int) bool {
 		e.deleteFolds(line, line, k == "zD")
 	case "zE":
 		if m := s.method; m != "manual" && m != "marker" {
-			e.echo("E352: Cannot erase folds with current 'foldmethod'")
+			e.notify(errFoldErase.with())
 			return true
 		}
 		if s.method == "marker" {
@@ -473,9 +473,9 @@ func (e *Engine) foldManualAllowed(create bool) bool {
 		return true
 	}
 	if create {
-		e.echo("E350: Cannot create fold with current 'foldmethod'")
+		e.notify(errFoldCreate.with())
 	} else {
-		e.echo("E351: Cannot delete fold with current 'foldmethod'")
+		e.notify(errFoldDelete.with())
 	}
 	return false
 }
@@ -512,7 +512,7 @@ func (e *Engine) foldRange(first, last int, opening, recurse bool) {
 		l = next + 1
 	}
 	if !any {
-		e.echo("E490: No fold found")
+		e.notify(errNoFold.with())
 	}
 	if !opening {
 		s.enable = true

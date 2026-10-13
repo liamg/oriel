@@ -8,6 +8,7 @@ import (
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/vim"
 	"github.com/liamg/oriel/vim/vimtest"
+	"github.com/liamg/oriel/vim/vimtest/nvimtext"
 )
 
 // testEngine runs vimtest cases against the engine.
@@ -86,7 +87,7 @@ func (t *testEngine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 		r.Bufs = t.e.Buffers()
 	}
 	if q.Msg {
-		r.Msg = t.e.LastMessage()
+		r.Msg = nvimtext.Notice(t.e.LastNotice())
 	}
 	return r, nil
 }

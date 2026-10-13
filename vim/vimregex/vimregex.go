@@ -10,7 +10,7 @@ package vimregex
 
 import (
 	"bytes"
-	"errors"
+
 	"strings"
 )
 
@@ -65,7 +65,7 @@ type Group struct {
 }
 
 // ErrTooComplex is returned when matching runs past the step or depth budget.
-var ErrTooComplex = errors.New("E363: pattern uses more memory than 'maxmempattern'")
+var ErrTooComplex = &Error{ID: "too-complex"}
 
 // The budget for one Exec or MatchAt call; variables so tests can lower them.
 var (
@@ -81,10 +81,10 @@ type Regex struct {
 	first    byte // an ASCII character every match starts with, or 0
 }
 
-// Compile compiles a vim pattern. Errors carry vim's message, e.g. "E54: Unmatched \(".
+// Compile compiles a vim pattern. Errors are *Error.
 func Compile(pattern string, o Options) (*Regex, error) {
 	if strings.HasPrefix(pattern, `\%#=`) && (len(pattern) < 5 || pattern[4] < '0' || pattern[4] > '2') {
-		return nil, errors.New(`E864: \%#= can only be followed by 0, 1, or 2. The automatic engine will be used `)
+		return nil, &Error{ID: "bad-engine"}
 	}
 	pattern = stripEngine(pattern)
 	magic := magicOff

@@ -80,6 +80,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 30. [ED-9](ED-9-editorconfig-and-per-file-editor-conventions.md): .editorconfig and other per-file editor conventions · after ED-2, SH-12
 30. [ED-10](ED-10-pcre2-regex-outside-the-vim-engine.md): PCRE2 regex outside the vim engine · after ED-3
 30. [ED-11](ED-11-languages-as-plugins-core-grammar-set-and-local-packs.md): Languages as plugins: a language contribution, a core grammar set, local grammar packs · after ED-6, FW-3
+30. [ED-13](ED-13-editor-options-in-the-registry-and-editor-clipboard.md): Editor options in the registry: :set, the settings page, editor.clipboard · after ED-12, SH-12
 
 ### Phase 4 · IDE
 

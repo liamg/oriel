@@ -84,6 +84,23 @@ help and validation are all generated from the spec.
 | `Restart` | the change applies only after a restart |
 | `Secret` | never written to settings files; kept in the secrets store (`security.md`) |
 
+## Option list
+
+Every option Oriel registers, so there is one place to look. A test checks it against the registry (ED-13).
+
+| Option | Default | Layer | Aliases | Added by |
+|---|---|---|---|---|
+| `editor.clipboard` | `system`: `y`, `d` and `p` use the system clipboard; `registers` keeps them in vim's registers | input | `clipboard` | ED-13 |
+| `editor.shift_width` | 8 | input | `shiftwidth`, `sw` | ED-13 |
+| `editor.expand_tab` | false | input | `expandtab`, `et` | ED-13 |
+| `editor.ignore_case` | false | input | `ignorecase`, `ic` | ED-13 |
+| `editor.smart_case` | false | input | `smartcase`, `scs` | ED-13 |
+| `editor.wrap_scan` | true | input | `wrapscan`, `ws` | ED-13 |
+| `editor.magic` | true | input | `magic` | ED-13 |
+| `editor.report` | 2 | input | `report` | ED-13 |
+| `editor.number_formats` | `bin,hex` | input | `nrformats`, `nf` | ED-13 |
+| `editor.hidden` | true | input | `hidden`, `hid` | ED-13 |
+
 ## The settings page (`:Settings`, ⌘,)
 
 - **Sections** down the left, from the registry. Plugin options get their plugin's section.

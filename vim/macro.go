@@ -43,7 +43,7 @@ func (e *Engine) stopRecording() {
 func (e *Engine) playRegister(reg rune, count int) {
 	if reg == '@' {
 		if e.lastPlayed == 0 {
-			e.echo("E748: No previously used register")
+			e.notify(errNoPrevRegister.with())
 			e.failed = true
 			return
 		}
@@ -51,7 +51,7 @@ func (e *Engine) playRegister(reg rune, count int) {
 	}
 	if reg == ':' {
 		if e.lastCmdline == "" {
-			e.echo("E30: No previous command line")
+			e.notify(errNoPrevCommand.with())
 			return
 		}
 		e.lastPlayed = ':'

@@ -112,7 +112,7 @@ func (e *Engine) split(vertical bool, b *buffer) {
 // when w was current, the cursor.
 func (e *Engine) closeWindow(w *window) bool {
 	if len(e.order()) == 1 {
-		e.echo("E444: Cannot close last window")
+		e.notify(errLastWindow.with())
 		return false
 	}
 	f := e.frameOf(w)
@@ -153,7 +153,7 @@ func (e *Engine) closeWindow(w *window) bool {
 // only closes every window but the current one.
 func (e *Engine) only() {
 	if len(e.order()) == 1 {
-		e.echo("Already only one window")
+		e.notify(msgOnlyWindow.with())
 		return
 	}
 	e.layout = &frame{win: e.window}
@@ -290,7 +290,7 @@ func (e *Engine) windowCmd(k string, count int) {
 			alt = e.bufferByNum(count)
 		}
 		if alt == nil {
-			e.echo("E23: No alternate file")
+			e.notify(errNoAlternate.with())
 			return
 		}
 		e.split(false, alt)
@@ -334,7 +334,7 @@ func (e *Engine) rotate(back bool, count int) {
 	}
 	for _, c := range p.children {
 		if c.win == nil {
-			e.echo("E443: Cannot rotate when another window is split")
+			e.notify(errRotateSplit.with())
 			return
 		}
 	}

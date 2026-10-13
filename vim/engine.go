@@ -43,7 +43,7 @@ type Engine struct {
 	rec      *dotCmd // the change being recorded
 	ins      *insertState
 	inserted string // the last inserted text, for ". and gi
-	msg      string
+	notice   edit.Notice
 
 	aiPending    int // the line o or O just autoindented, or -1
 	inU          bool
@@ -193,8 +193,8 @@ func (e *Engine) SetCursor(p Pos) {
 	e.sync()
 }
 
-// LastMessage is the last message shown, as :messages ends with.
-func (e *Engine) LastMessage() string { return e.msg }
+// LastNotice is the last notice the engine gave.
+func (e *Engine) LastNotice() edit.Notice { return e.notice }
 
 func (e *Engine) view() *view {
 	v := newView(e.ed.Buf())
@@ -202,10 +202,13 @@ func (e *Engine) view() *view {
 	return v
 }
 
-func (e *Engine) echo(msg string) {
-	e.msg = msg
-	e.ed.Echo(msg)
+func (e *Engine) notify(n edit.Notice) {
+	e.notice = n
+	e.ed.Notify(n)
 }
+
+// fail shows an error as a notice.
+func (e *Engine) fail(err error) { e.notify(asNotice(err)) }
 
 // sync tells the editor where the cursor is.
 func (e *Engine) sync() {

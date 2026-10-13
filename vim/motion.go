@@ -1034,7 +1034,7 @@ func matchComment(v *view, p Pos, open bool) (Pos, bool) {
 func markLine(e *Engine, v *view, m motionCtx) (target, bool) {
 	p, ok := e.markPos(m.arg)
 	if !ok || p.Line >= v.lines() {
-		e.echo("E20: Mark not set")
+		e.notify(errMarkNotSet.with())
 		return target{}, false
 	}
 	return target{pos: Pos{p.Line, v.firstNonBlank(p.Line)}, kind: linewise, jump: m.key[0] != 'g'}, true
@@ -1043,7 +1043,7 @@ func markLine(e *Engine, v *view, m motionCtx) (target, bool) {
 func markChar(e *Engine, v *view, m motionCtx) (target, bool) {
 	p, ok := e.markPos(m.arg)
 	if !ok || p.Line >= v.lines() {
-		e.echo("E20: Mark not set")
+		e.notify(errMarkNotSet.with())
 		return target{}, false
 	}
 	p.Col = min(p.Col, v.lineLen(p.Line))

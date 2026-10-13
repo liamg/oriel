@@ -1,15 +1,12 @@
 package vim
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/liamg/oriel/text"
 )
-
-const errNoWrite = "E37: No write since last change (add ! to override)"
 
 // SetModified sets whether the current buffer has changes not written, as 'modified'.
 func (e *Engine) SetModified(on bool) { e.buffer.modified = on }
@@ -26,7 +23,7 @@ func (e *Engine) switchBuffer(b *buffer, force bool) error {
 	old := e.buffer
 	if !e.opts.Hidden && old.modified && !e.shownElsewhere(old) {
 		if !force {
-			return exError(errNoWrite)
+			return errUnsaved.with()
 		}
 		defer e.unload(old)
 	}
@@ -91,16 +88,16 @@ func (e *Engine) alternate(count int) {
 	b := e.window.alt
 	if count > 0 {
 		if b = e.bufferByNum(count); b == nil {
-			e.echo(fmt.Sprintf("E92: Buffer %d not found", count))
+			e.notify(errBufferNotFound.with(count))
 			return
 		}
 	} else if b == nil {
-		e.echo("E23: No alternate file")
+		e.notify(errNoAlternate.with())
 		return
 	}
 	b.unlisted = false
 	if err := e.switchBuffer(b, false); err != nil {
-		e.echo(err.Error())
+		e.fail(err)
 	}
 }
 
@@ -136,7 +133,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 			return nil
 		}
 		if !e.opts.Hidden && b.modified && !bang && !e.shownElsewhere(b) {
-			return exError(errNoWrite)
+			return errUnsaved.with()
 		}
 		return e.switchBuffer(e.emptyBuffer(), bang)
 	case "bnext":
@@ -154,7 +151,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 				return e.switchBuffer(b, bang)
 			}
 		}
-		return exError("E84: No modified buffer found")
+		return errNoModified.with()
 	case "buffer":
 		b, err := e.findBuffer(args, r)
 		if err != nil || b == nil {
@@ -172,28 +169,28 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 		if args != "" {
 			if n, err := strconv.Atoi(args); err == nil {
 				if b = e.bufferByNum(n); b == nil {
-					return exError("E516: No buffers were deleted")
+					return errNoneDeleted.with()
 				}
 			} else if b, err = e.findBuffer(args, exRange{}); err != nil {
 				return err
 			}
 		} else if r.given > 0 {
 			if b = e.bufferByNum(r.to + 1); b == nil {
-				return exError("E516: No buffers were deleted")
+				return errNoneDeleted.with()
 			}
 		}
 		if b.modified && !bang {
-			return exError(fmt.Sprintf("E89: No write since last change for buffer %d (add ! to override)", b.num))
+			return errUnsavedBuffer.with(b.num)
 		}
 		e.deleteBuffer(b, name == "bwipeout", name == "bunload")
 	case "edit":
 		switch args {
 		case "#":
 			if e.window.alt == nil {
-				return exError("E23: No alternate file")
+				return errNoAlternate.with()
 			}
 			if e.window.alt.name == "" {
-				return exError(`E499: Empty file name for '%' or '#', only works with ":p:h"`)
+				return errNoFileName.with()
 			}
 			return e.switchBuffer(e.window.alt, bang)
 		case "":
@@ -222,15 +219,11 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 			case e.visible(b):
 				flags = " a"
 			}
-			mod := " "
-			if b.modified {
-				mod = "+"
-			}
 			line := b.last.Line + 1
 			if b == e.buffer {
 				line = e.cur.Line + 1
 			}
-			e.echo(fmt.Sprintf("%3d %s %s %-30s line %d", b.num, flags, mod, `"`+b.displayName()+`"`, line))
+			e.notify(msgBufferLine.with(b.num, flags, flag(b.modified), b.displayName(), line))
 		}
 	case "file":
 		if args != "" {
@@ -265,26 +258,12 @@ func (b *buffer) displayName() string {
 // fileInfo is CTRL-G and :file: the buffer's name, state and where the cursor is in it.
 func (e *Engine) fileInfo() {
 	b := e.buffer
-	var flags string
-	if b.modified {
-		flags += "[Modified]"
+	v := e.view()
+	n, pct := v.lines(), (e.cur.Line+1)*100/v.lines()
+	if v.s.Len() == 0 {
+		n = 0
 	}
-	if b.notEdited {
-		flags += "[Not edited]"
-	}
-	if flags != "" {
-		flags = " " + flags
-	}
-	n := e.view().lines()
-	if e.view().s.Len() == 0 {
-		e.echo(fmt.Sprintf(`"%s"%s --No lines in buffer--`, b.displayName(), flags))
-		return
-	}
-	unit := "lines"
-	if n == 1 {
-		unit = "line"
-	}
-	e.echo(fmt.Sprintf(`"%s"%s %d %s --%d%%--`, b.displayName(), flags, n, unit, (e.cur.Line+1)*100/n))
+	e.notify(msgFileInfo.with(b.displayName(), flag(b.modified), flag(b.notEdited), n, pct))
 }
 
 func (e *Engine) visible(b *buffer) bool {
@@ -303,13 +282,13 @@ func (e *Engine) findBuffer(arg string, r exRange) (*buffer, error) {
 			if b := e.bufferByNum(r.to + 1); b != nil {
 				return b, nil
 			}
-			return nil, exError(fmt.Sprintf("E86: Buffer %d does not exist", r.to+1))
+			return nil, errNoBuffer.with(r.to + 1)
 		}
 		return nil, nil
 	}
 	if arg == "#" {
 		if e.window.alt == nil {
-			return nil, exError("E23: No alternate file")
+			return nil, errNoAlternate.with()
 		}
 		return e.window.alt, nil
 	}
@@ -320,7 +299,7 @@ func (e *Engine) findBuffer(arg string, r exRange) (*buffer, error) {
 		if b := e.bufferByNum(n); b != nil {
 			return b, nil
 		}
-		return nil, exError(fmt.Sprintf("E86: Buffer %d does not exist", n))
+		return nil, errNoBuffer.with(n)
 	}
 	var found []*buffer
 	for _, b := range e.listed() {
@@ -333,11 +312,11 @@ func (e *Engine) findBuffer(arg string, r exRange) (*buffer, error) {
 	}
 	switch len(found) {
 	case 0:
-		return nil, exError("E94: No matching buffer for " + arg)
+		return nil, errNoBufferMatch.with(arg)
 	case 1:
 		return found[0], nil
 	}
-	return nil, exError("E93: More than one match for " + arg)
+	return nil, errManyBufferMatch.with(arg)
 }
 
 // deleteBuffer unloads and unlists a buffer (wipe: forgets it); windows showing it move to the alternate

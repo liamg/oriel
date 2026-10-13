@@ -213,7 +213,7 @@ func (p *parser) collection(nl bool) *node {
 				endc = p.collGetChar()
 			}
 			if startc > endc {
-				return p.fail("E944: Reverse range in character class")
+				return p.fail("reverse-range")
 			}
 			set.addRange(nul(rune(startc)), rune(endc))
 			startc = -1

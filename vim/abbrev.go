@@ -142,7 +142,7 @@ func (e *Engine) exAbbrev(name, args string) error {
 			}
 		}
 		if !found {
-			return exError("E24: No such abbreviation")
+			return errNoAbbrev.with()
 		}
 		return nil
 	}

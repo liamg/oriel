@@ -29,7 +29,7 @@ type Cursor struct {
 	Off int
 }
 
-// Editor is one window's view of a buffer: its cursors, plus the registers and messages it shares
+// Editor is one window's view of a buffer: its cursors, plus the registers and notices it shares
 // with whatever else edits through it.
 type Editor struct {
 	buf    *text.Buffer
@@ -40,11 +40,11 @@ type Editor struct {
 	cursors []Cursor
 }
 
-// shared is what every editor opened from the same one shares: registers and messages.
+// shared is what every editor opened from the same one shares: registers and notices.
 type shared struct {
-	mu   sync.Mutex
-	regs map[rune]Register
-	msgs []string
+	mu      sync.Mutex
+	regs    map[rune]Register
+	notices []Notice
 }
 
 // New returns an editor over buf whose edits are by author.
@@ -53,7 +53,7 @@ func New(buf *text.Buffer, author text.Author) *Editor {
 }
 
 // Open returns an editor over buf, another buffer or the same one in another window, that shares this
-// editor's registers and messages.
+// editor's registers and notices.
 func (e *Editor) Open(buf *text.Buffer) *Editor {
 	return &Editor{buf: buf, author: e.author, cursors: []Cursor{{}}, shared: e.shared}
 }
@@ -106,16 +106,16 @@ func (e *Editor) SetRegister(r rune, v Register) {
 	e.shared.regs[r] = v
 }
 
-// Echo shows a message, as vim's :echo and error messages do.
-func (e *Editor) Echo(msg string) {
+// Notify gives the IDE a notice to show.
+func (e *Editor) Notify(n Notice) {
 	e.shared.mu.Lock()
 	defer e.shared.mu.Unlock()
-	e.shared.msgs = append(e.shared.msgs, msg)
+	e.shared.notices = append(e.shared.notices, n)
 }
 
-// Messages returns every message so far, oldest first.
-func (e *Editor) Messages() []string {
+// Notices returns every notice so far, oldest first.
+func (e *Editor) Notices() []Notice {
 	e.shared.mu.Lock()
 	defer e.shared.mu.Unlock()
-	return slices.Clone(e.shared.msgs)
+	return slices.Clone(e.shared.notices)
 }

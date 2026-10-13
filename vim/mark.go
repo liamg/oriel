@@ -235,9 +235,9 @@ func (e *Engine) undo(redo bool) {
 	}
 	if !ok {
 		if redo {
-			e.echo("Already at newest change")
+			e.notify(msgNewestChange.with())
 		} else {
-			e.echo("Already at oldest change")
+			e.notify(msgOldestChange.with())
 		}
 		return
 	}

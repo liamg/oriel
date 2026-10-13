@@ -1,7 +1,6 @@
 package vim
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,11 +13,6 @@ import (
 	"github.com/liamg/oriel/vim/vimregex"
 )
 
-// exError is an ex command's error, shown as a message.
-type exError string
-
-func (e exError) Error() string { return string(e) }
-
 // exRange is the lines an ex command works on, 0-based and inclusive.
 type exRange struct {
 	from, to int
@@ -29,7 +23,7 @@ type exRange struct {
 func (e *Engine) ex(v *view, line string) {
 	e.group = e.newGroup()
 	if err := e.exec1(v, line); err != nil {
-		e.echo(err.Error())
+		e.fail(err)
 	}
 	e.group = 0
 }
@@ -79,19 +73,19 @@ func (e *Engine) exec1(v *view, line string) error {
 			r.from, r.to = r.to, r.from
 		} else {
 			r.from, r.to = r.to, r.from
-			e.confirm = &confirmation{prompt: "Backwards range given, OK to swap (y/n)?", yes: func() {
+			e.confirm = &confirmation{yes: func() {
 				e.group = e.newGroup()
 				if err := e.runCommand(e.view(), r, name, args); err != nil {
-					e.echo(err.Error())
+					e.fail(err)
 				}
 				e.group = 0
 			}}
-			e.echo(e.confirm.prompt)
+			e.notify(askSwapRange.with())
 			return nil
 		}
 	}
 	if r.to >= v.lines() || r.from < -1 {
-		return exError("E16: Invalid range")
+		return errInvalidRange.with()
 	}
 	// A range starts and ends on whole closed folds.
 	if len(e.gstack) == 0 && r.from >= 0 && (r.given >= 2 || !strings.HasPrefix(name, "fold")) {
@@ -188,7 +182,7 @@ func (e *Engine) runCommand(v *view, r exRange, name, args string) error {
 		}
 		keys := keymap.Parse(strings.TrimSpace(args))
 		if len(keys) == 0 {
-			return exError("E471: Argument required")
+			return errArgRequired.with()
 		}
 		e.windowCmd(keys[0], count)
 		return nil
@@ -200,7 +194,7 @@ func (e *Engine) runCommand(v *view, r exRange, name, args string) error {
 		e.cur = Pos{r.to, v.firstNonBlank(r.to)}
 		return nil
 	}
-	return exError("E492: Not an editor command: " + strings.TrimSpace(name+args))
+	return errUnknownCommand.with(strings.TrimSpace(name + args))
 }
 
 // splitCommand splits a command line after its range into the command name and its arguments.
@@ -368,7 +362,7 @@ func (e *Engine) parseAddress(v *view, s string, cur int) (int, string, bool, er
 	case s[0] == '\'' && len(s) > 1:
 		p, ok := e.markPos(rune(s[1]))
 		if !ok {
-			return 0, s, false, exError("E20: Mark not set")
+			return 0, s, false, errMarkNotSet.with()
 		}
 		n, s, got = p.Line, s[2:], true
 	case s[0] == '/' || s[0] == '?':
@@ -403,7 +397,7 @@ func (e *Engine) parseAddress(v *view, s string, cur int) (int, string, bool, er
 			// The search starts on the line after (or before) the cursor line.
 			m2, ok2 := e.searchLine(v, re, cur, s[0] == '/')
 			if !ok2 {
-				return 0, s, false, exError("E486: Pattern not found: " + pat)
+				return 0, s, false, errPatternNotFound.with(pat)
 			}
 			n = m2
 		} else {
@@ -412,7 +406,7 @@ func (e *Engine) parseAddress(v *view, s string, cur int) (int, string, bool, er
 		s, got = rest, true
 	case s[0] == '\\' && len(s) > 1 && (s[1] == '/' || s[1] == '?' || s[1] == '&'):
 		if !e.search.set {
-			return 0, s, false, exError("E35: No previous regular expression")
+			return 0, s, false, errNoPrevPattern.with()
 		}
 		re, err := e.compile(e.search.pat)
 		if err != nil {
@@ -420,7 +414,7 @@ func (e *Engine) parseAddress(v *view, s string, cur int) (int, string, bool, er
 		}
 		l, ok := e.searchLine(v, re, cur, s[1] != '?')
 		if !ok {
-			return 0, s, false, exError("E486: Pattern not found: " + e.search.pat)
+			return 0, s, false, errPatternNotFound.with(e.search.pat)
 		}
 		n, s, got = l, s[2:], true
 	}
@@ -464,7 +458,7 @@ func (e *Engine) patternAddress(v *view, s string, line int) (int, string, error
 	}
 	l, ok := e.searchLine(v, re, line, s[0] == '/')
 	if !ok {
-		return 0, s, exError("E486: Pattern not found: " + pat)
+		return 0, s, errPatternNotFound.with(pat)
 	}
 	return l, rest, nil
 }
@@ -504,7 +498,7 @@ func regAndCount(args string) (rune, int, error) {
 	}
 	n, err := strconv.Atoi(args)
 	if err != nil || n <= 0 {
-		return 0, 0, exError("E488: Trailing characters: " + args)
+		return 0, 0, errTrailing.with(args)
 	}
 	return reg, n, nil
 }
@@ -518,20 +512,13 @@ func withCount(v *view, r exRange, count int) exRange {
 	return r
 }
 
-func (e *Engine) report(n int, msg string) {
+func (e *Engine) report(n int, msg edit.Notice) {
 	if e.inGlobal {
 		return
 	}
 	if n > e.opts.Report {
-		e.echo(msg)
+		e.notify(msg)
 	}
-}
-
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return fmt.Sprintf("%d %s", n, one)
-	}
-	return fmt.Sprintf("%d %s", n, many)
 }
 
 func (e *Engine) exDelete(v *view, r exRange, args string) error {
@@ -553,7 +540,7 @@ func (e *Engine) exDelete(v *view, r exRange, args string) error {
 	e.cur = Pos{line, nv.firstNonBlank(line)}
 	e.setWant(nv)
 	n := r.to - r.from + 1
-	e.report(n, fmt.Sprintf("%d fewer lines", n))
+	e.report(n, msgFewerLines.with(n))
 	return nil
 }
 
@@ -566,7 +553,7 @@ func (e *Engine) exYank(v *view, r exRange, args string) error {
 	op := oprange{start: Pos{r.from, 0}, end: Pos{r.to, 0}, kind: linewise}
 	e.yank(v, op, reg)
 	n := r.to - r.from + 1
-	e.report(n, fmt.Sprintf("%d lines yanked", n))
+	e.report(n, msgYanked.with(n))
 	return nil
 }
 
@@ -574,7 +561,7 @@ func (e *Engine) exYank(v *view, r exRange, args string) error {
 func (e *Engine) destination(v *view, args string) (int, error) {
 	args = strings.TrimSpace(args)
 	if args == "" {
-		return 0, exError("E14: Invalid address")
+		return 0, errInvalidAddress.with()
 	}
 	if args == "0" {
 		return -1, nil
@@ -584,10 +571,10 @@ func (e *Engine) destination(v *view, args string) (int, error) {
 		return 0, err
 	}
 	if !ok || strings.TrimSpace(rest) != "" {
-		return 0, exError("E14: Invalid address")
+		return 0, errInvalidAddress.with()
 	}
 	if n < -1 || n >= v.lines() {
-		return 0, exError("E16: Invalid range")
+		return 0, errInvalidRange.with()
 	}
 	return n, nil
 }
@@ -626,7 +613,7 @@ func (e *Engine) exMove(v *view, r exRange, args string) error {
 		return err
 	}
 	if dest >= r.from && dest < r.to {
-		return exError("E134: Cannot move a range of lines into itself")
+		return errMoveIntoItself.with()
 	}
 	n := r.to - r.from + 1
 	if dest == r.to || dest == r.from-1 {
@@ -634,7 +621,7 @@ func (e *Engine) exMove(v *view, r exRange, args string) error {
 		if dest < r.from {
 			e.cur.Line = r.to
 		}
-		e.report(n, fmt.Sprintf("%d lines moved", n))
+		e.report(n, msgMoved.with(n))
 		return nil
 	}
 	body := linesText(v, r.from, r.to)
@@ -651,7 +638,7 @@ func (e *Engine) exMove(v *view, r exRange, args string) error {
 	nv := e.view()
 	e.cur.Col = nv.firstNonBlank(e.cur.Line)
 	e.setWant(nv)
-	e.report(n, fmt.Sprintf("%d lines moved", n))
+	e.report(n, msgMoved.with(n))
 	return nil
 }
 
@@ -715,7 +702,7 @@ func (e *Engine) exShift(v *view, r exRange, dir, args string) error {
 	e.cur = Pos{r.to, nv.colAt(r.to, nv.vcol(r.from, nv.firstNonBlank(r.from)), false)}
 	e.setWant(nv)
 	n := r.to - r.from + 1
-	e.report(n, fmt.Sprintf("%d lines %sed %s", n, dir, plural(times, "time", "times")))
+	e.report(n, msgShifted.with(n, dir, times))
 	return nil
 }
 
@@ -797,7 +784,7 @@ func (e *Engine) exPut(v *view, r exRange, args string, above bool) error {
 	}
 	val, ok := e.ed.Register(unicode.ToLower(reg))
 	if !ok {
-		return exError(fmt.Sprintf("E353: Nothing in register %c", reg))
+		return errEmptyRegister.with(string(reg))
 	}
 	body := val.Text
 	if val.Kind != edit.Linewise {
@@ -867,7 +854,7 @@ func (e *Engine) exSubstitute(v *view, r exRange, args string, repeat bool) erro
 		}
 		if pat == "" {
 			if !e.search.set {
-				return exError("E35: No previous regular expression")
+				return errNoPrevPattern.with()
 			}
 			pat = e.search.pat
 		}
@@ -878,7 +865,7 @@ func (e *Engine) exSubstitute(v *view, r exRange, args string, repeat bool) erro
 		e.search.pat, e.search.set = pat, true
 	} else {
 		if e.search.subPat == "" && !e.search.set {
-			return exError("E35: No previous regular expression")
+			return errNoPrevPattern.with()
 		}
 		pat = e.search.subPat
 		if useSearch || strings.HasPrefix(args, "r") {
@@ -897,10 +884,10 @@ func (e *Engine) exSubstitute(v *view, r exRange, args string, repeat bool) erro
 	if rest != "" {
 		n, err := strconv.Atoi(rest)
 		if err != nil {
-			return exError("E488: Trailing characters: " + rest)
+			return errTrailing.with(rest)
 		}
 		if n <= 0 {
-			return exError("E939: Positive count required")
+			return errPositiveCount.with()
 		}
 		r = withCount(v, r, n)
 	}
@@ -934,7 +921,7 @@ func cutUnescaped(s string, delim byte) (string, string, bool) {
 
 func (e *Engine) exTilde(v *view, r exRange, args string) error {
 	if !e.search.set {
-		return exError("E35: No previous regular expression")
+		return errNoPrevPattern.with()
 	}
 	e.search.subPat = e.search.pat
 	return e.exSubstitute(v, r, args, true)
@@ -1056,10 +1043,10 @@ func (e *Engine) substitute(v *view, r exRange, re *vimregex.Regex, rep string, 
 		if f.ignoreErr || e.inGlobal {
 			return nil
 		}
-		return exError("E486: Pattern not found: " + pat)
+		return errPatternNotFound.with(pat)
 	}
 	if f.count {
-		e.echo(fmt.Sprintf("%s on %s", plural(subs, "match", "matches"), plural(lines, "line", "lines")))
+		e.notify(msgMatchCount.with(subs, lines))
 		return nil
 	}
 	if !e.inGlobal {
@@ -1070,7 +1057,7 @@ func (e *Engine) substitute(v *view, r exRange, re *vimregex.Regex, rep string, 
 	e.cur = Pos{lastLine, v.firstNonBlank(lastLine)}
 	e.setWant(v)
 	if !e.inGlobal && (subs > e.opts.Report || lines > e.opts.Report) {
-		e.echo(fmt.Sprintf("%s on %s", plural(subs, "substitution", "substitutions"), plural(lines, "line", "lines")))
+		e.notify(msgSubstituted.with(subs, lines))
 	}
 	return nil
 }
@@ -1094,13 +1081,13 @@ func (e *Engine) exGlobal(v *view, r exRange, args string, invert, whole bool) e
 		r = exRange{from: 0, to: v.lines() - 1}
 	}
 	if args == "" {
-		return exError("E35: No previous regular expression")
+		return errNoPrevPattern.with()
 	}
 	delim := args[0]
 	pat, cmdText, _ := parseSearch(args[1:], delim)
 	if pat == "" {
 		if !e.search.set {
-			return exError("E35: No previous regular expression")
+			return errNoPrevPattern.with()
 		}
 		pat = e.search.pat
 	}
@@ -1120,9 +1107,9 @@ func (e *Engine) exGlobal(v *view, r exRange, args string, invert, whole bool) e
 	}
 	if len(marked) == 0 {
 		if invert {
-			e.echo("Pattern found in every line: " + pat)
+			e.notify(msgEveryLine.with(pat))
 		} else {
-			e.echo("Pattern not found: " + pat)
+			e.notify(msgNoLine.with(pat))
 		}
 		return nil
 	}
@@ -1162,9 +1149,9 @@ func (e *Engine) exGlobal(v *view, r exRange, args string, invert, whole bool) e
 		after := e.view().lines()
 		switch {
 		case before-after > e.opts.Report:
-			e.echo(fmt.Sprintf("%d fewer lines", before-after))
+			e.notify(msgFewerLines.with(before - after))
 		case after-before > e.opts.Report:
-			e.echo(fmt.Sprintf("%d more lines", after-before))
+			e.notify(msgMoreLines.with(after - before))
 		}
 	}
 	return nil
@@ -1186,7 +1173,7 @@ func (e *Engine) exSet(args string) error {
 		case "sw", "shiftwidth":
 			n, err := strconv.Atoi(val)
 			if err != nil {
-				return exError("E521: Number required after =: " + a)
+				return errNumberRequired.with(a)
 			}
 			e.opts.ShiftWidth = n
 		case "et", "expandtab":
@@ -1211,7 +1198,7 @@ func (e *Engine) exSet(args string) error {
 		case "fdl", "foldlevel":
 			n, err := strconv.Atoi(val)
 			if err != nil {
-				return exError("E521: Number required after =: " + a)
+				return errNumberRequired.with(a)
 			}
 			e.window.fold.level = n
 			e.window.fold.manual = true
@@ -1227,11 +1214,11 @@ func (e *Engine) exSet(args string) error {
 		case "report":
 			n, err := strconv.Atoi(val)
 			if err != nil {
-				return exError("E521: Number required after =: " + a)
+				return errNumberRequired.with(a)
 			}
 			e.opts.Report = n
 		default:
-			return exError("E518: Unknown option: " + name)
+			return errUnknownOption.with(name)
 		}
 	}
 	e.updateFolds(e.window)
@@ -1240,8 +1227,7 @@ func (e *Engine) exSet(args string) error {
 
 // confirmation is a yes/no question waiting for the next key.
 type confirmation struct {
-	prompt string
-	yes    func()
+	yes func()
 }
 
 // exAt is :@{reg}: run a register's lines as Ex commands, at the range's last line.
@@ -1252,7 +1238,7 @@ func (e *Engine) exAt(v *view, r exRange, args string) error {
 	}
 	if reg == '@' {
 		if e.lastExReg == 0 {
-			return exError("E748: No previously used register")
+			return errNoPrevRegister.with()
 		}
 		reg = e.lastExReg
 	}
@@ -1265,7 +1251,7 @@ func (e *Engine) exAt(v *view, r exRange, args string) error {
 	}
 	val, ok := e.ed.Register(unicode.ToLower(reg))
 	if !ok {
-		return exError(fmt.Sprintf("E748: No previously used register"))
+		return errNoPrevRegister.with()
 	}
 	e.lastExReg = reg
 	for _, line := range strings.Split(strings.TrimSuffix(val.Text, "\n"), "\n") {
@@ -1313,7 +1299,7 @@ func evalStrings(s string) (string, error) {
 				}
 			}
 			if i >= len(s) {
-				return "", exError("E114: Missing double quote: " + s)
+				return "", errMissingDouble.with(s)
 			}
 			s = s[i+1:]
 		case '\'':
@@ -1329,11 +1315,11 @@ func evalStrings(s string) (string, error) {
 				b.WriteByte(s[i])
 			}
 			if i >= len(s) {
-				return "", exError("E115: Missing single quote: " + s)
+				return "", errMissingSingle.with(s)
 			}
 			s = s[i+1:]
 		default:
-			return "", exError("E121: Undefined variable: " + s)
+			return "", errUndefinedVar.with(s)
 		}
 		parts = append(parts, b.String())
 		s = strings.TrimLeft(s, " \t")

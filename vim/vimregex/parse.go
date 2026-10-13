@@ -1,8 +1,8 @@
 package vimregex
 
 import (
-	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -143,14 +143,14 @@ func (p *parser) parse() *node {
 	return n
 }
 
-func (p *parser) fail(format string, args ...any) *node {
+func (p *parser) fail(id string, args ...string) *node {
 	if p.err == nil {
-		p.err = fmt.Errorf(format, args...)
+		p.err = &Error{ID: id, Args: args}
 	}
 	return nil
 }
 
-// bs is the backslash vim's messages put before an item, empty when the item needs none.
+// bs is the backslash an item is written with, empty when the item needs none.
 func bs(noBackslash bool) string {
 	if noBackslash {
 		return ""
@@ -326,7 +326,7 @@ func (p *parser) reg(paren int) *node {
 	capIdx := -1
 	if paren == regParen {
 		if p.npar >= 10 {
-			return p.fail("E872: (NFA regexp) Too many '('")
+			return p.fail("too-many-groups")
 		}
 		capIdx = p.npar
 		p.npar++
@@ -346,15 +346,15 @@ func (p *parser) reg(paren int) *node {
 	if paren != regNoParen {
 		if p.get() != mg(')') {
 			if paren == regNParen {
-				return p.fail("E53: Unmatched %s%%(", bs(p.magic == magicAll))
+				return p.fail("unmatched-open-noncapture", bs(p.magic == magicAll)+"%(")
 			}
-			return p.fail("E54: Unmatched %s(", bs(p.magic == magicAll))
+			return p.fail("unmatched-open", bs(p.magic == magicAll)+"(")
 		}
 	} else if p.peek() != tokEOF {
 		if p.cur == mg(')') {
-			return p.fail("E55: Unmatched %s)", bs(p.magic == magicAll))
+			return p.fail("unmatched-close", bs(p.magic == magicAll)+")")
 		}
-		return p.fail("E488: Trailing characters")
+		return p.fail("trailing")
 	}
 	n := alts[0]
 	if len(alts) > 1 {
@@ -471,7 +471,7 @@ func (p *parser) piece() *node {
 			}
 		}
 		if o == 0 {
-			return p.unknownOp("E869", `\@`, opc)
+			return p.unknownOp("unknown-lookaround", `\@`, opc)
 		}
 		n = &node{op: o, subs: []*node{atom}, num: max(int(limit), 0)}
 	case mg('{'):
@@ -482,7 +482,7 @@ func (p *parser) piece() *node {
 		n = &node{op: opRepeat, subs: []*node{atom}, min: lo, max: hi, greedy: !lazy}
 	}
 	if c2 := p.peek(); multiType(c2) != 0 {
-		return p.fail("E871: (NFA regexp) Can't have a multi follow a multi")
+		return p.fail("multi-after-multi")
 	}
 	return n
 }
@@ -513,7 +513,7 @@ func (p *parser) readLimits() (lo, hi int, lazy, ok bool) {
 		p.pos++
 	}
 	if p.at(p.pos) != '}' || p.pos >= len(p.src) {
-		p.fail("E554: Syntax error in %s{...}", bs(p.magic == magicAll))
+		p.fail("bad-brace", bs(p.magic == magicAll)+"{...}")
 		return 0, 0, false, false
 	}
 	if (!rev && minv > maxv) || (rev && minv < maxv) {
@@ -637,37 +637,37 @@ func (p *parser) atom() *node {
 			return classNode(byte(c2), true)
 		}
 		if c2 == tokEOF {
-			return p.fail("E865: (NFA) Regexp end encountered prematurely")
+			return p.fail("premature-end")
 		}
-		return p.fail("E877: (NFA regexp) Invalid character class: %d", c2)
+		return p.fail("bad-class", strconv.Itoa(c2))
 	case mg('n'):
 		return &node{op: opNL}
 	case mg('('):
 		return p.reg(regParen)
 	case tokEOF:
-		return p.fail("E865: (NFA) Regexp end encountered prematurely")
+		return p.fail("premature-end")
 	case mg('|'), mg('&'), mg(')'), mg('='), mg('?'), mg('+'), mg('@'), mg('{'), mg('*'):
-		return p.fail("E866: (NFA regexp) Misplaced %c", rune(noMagic(c)))
+		return p.fail("misplaced", string(rune(noMagic(c))))
 	case mg('~'):
 		return p.lastSubNode()
 	case mg('z'):
 		switch noMagic(p.get()) {
 		case 's':
 			if multiType(p.peek()) == 2 {
-				return p.fail(`E888: (NFA regexp) cannot repeat \zs`)
+				return p.fail("repeat-zs", `\zs`)
 			}
 			return &node{op: opZS}
 		case 'e':
 			if multiType(p.peek()) == 2 {
-				return p.fail(`E888: (NFA regexp) cannot repeat \ze`)
+				return p.fail("repeat-zs", `\ze`)
 			}
 			return &node{op: opZE}
 		case '(':
-			return p.fail(`E66: \z( not allowed here`)
+			return p.fail("z-group")
 		case '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			return p.fail(`E67: \z1 - \z9 not allowed here`)
+			return p.fail("z-ref")
 		}
-		return p.unknownOp("E867", `\z`, p.prev)
+		return p.unknownOp("unknown-z", `\z`, p.prev)
 	case mg('%'):
 		return p.percent(savePrevAtStart)
 	case mg('['):
@@ -702,13 +702,12 @@ func (p *parser) atom() *node {
 	return p.literal(r)
 }
 
-// unknownOp fails with nvim's message for an unknown item; at the end of the pattern the message
-// stops short, as nvim's does at the NUL.
-func (p *parser) unknownOp(code, item string, c int) *node {
+// unknownOp fails for an unknown item; at the end of the pattern the item is just its prefix.
+func (p *parser) unknownOp(id, item string, c int) *node {
 	if c < 0 {
-		return p.fail("%s: (NFA) Unknown operator '%s", code, item)
+		return p.fail(id, item)
 	}
-	return p.fail("%s: (NFA) Unknown operator '%s%c'", code, item, rune(noMagic(c)))
+	return p.fail(id, item+string(rune(noMagic(c))))
 }
 
 func classNode(c byte, nl bool) *node {
@@ -769,7 +768,7 @@ func (p *parser) seenEndBrace(ref int) bool {
 	if strings.Contains(p.src[p.pos:], "@<=") || strings.Contains(p.src[p.pos:], "@<!") {
 		return true
 	}
-	p.fail("E65: Illegal back reference")
+	p.fail("bad-backref")
 	return false
 }
 
@@ -784,7 +783,7 @@ func (p *parser) percent(savePrevAtStart bool) *node {
 		return &node{op: opEOF}
 	case '#':
 		if p.at(p.pos) == '=' && p.at(p.pos+1) >= '0' && p.at(p.pos+1) <= '2' {
-			return p.fail(`E1281: Atom '\%%#=%c' must be at the start of the pattern`, rune(p.at(p.pos+1)))
+			return p.fail("engine-not-first", `\%#=`+string(rune(p.at(p.pos+1))))
 		}
 		return &node{op: opCursor}
 	case 'V':
@@ -808,7 +807,7 @@ func (p *parser) percent(savePrevAtStart bool) *node {
 			i = p.getHex(8)
 		}
 		if i < 0 || i > math.MaxInt32 {
-			return p.fail("E678: Invalid character after %s%%[dxouU]", bs(p.magic == magicAll))
+			return p.fail("bad-code-point", bs(p.magic == magicAll)+"%[dxouU]")
 		}
 		return &node{op: opChar, r: nul(rune(i))}
 	}
@@ -823,7 +822,7 @@ func (p *parser) percent(savePrevAtStart bool) *node {
 			cur = true
 			cc = p.get()
 			if cc >= '0' && cc <= '9' {
-				return p.fail(`E1204: No Number allowed after .: '\%%%c'`, rune(cc))
+				return p.fail("number-after-dot", `\%`+string(rune(cc)))
 			}
 		}
 		n, gotDigit := 0, false
@@ -858,7 +857,7 @@ func (p *parser) percent(savePrevAtStart bool) *node {
 			return nd
 		}
 	}
-	return p.unknownOp("E867", `\%`, p.prev)
+	return p.unknownOp("unknown-percent", `\%`, p.prev)
 }
 
 // optSeq parses \%[...]: each atom is optional, but only when the ones before it matched.
@@ -870,7 +869,7 @@ func (p *parser) optSeq() *node {
 			break
 		}
 		if c == tokEOF {
-			return p.fail("E69: Missing ] after %s%%[", bs(p.magic == magicAll))
+			return p.fail("missing-bracket", bs(p.magic == magicAll)+"%[")
 		}
 		p.unget()
 		a := p.atom()
@@ -880,7 +879,7 @@ func (p *parser) optSeq() *node {
 		items = append(items, a)
 	}
 	if len(items) == 0 {
-		return p.fail("E70: Empty %s%%[]", bs(p.magic == magicAll))
+		return p.fail("empty-optional", bs(p.magic == magicAll)+"%[]")
 	}
 	var rest *node
 	for i := len(items) - 1; i >= 0; i-- {

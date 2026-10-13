@@ -79,7 +79,7 @@ func (c sc) run(t *testing.T) string {
 	t.Helper()
 	re, err := Compile(c.pat, Options{IgnoreCase: c.ic, SmartCase: c.scs, Magic: !c.nomagic, LastSub: c.last})
 	if err != nil {
-		return "error: " + err.Error()
+		return "error: " + nvimText(err)
 	}
 	b := lines(c.in)
 	st := c.state(b)

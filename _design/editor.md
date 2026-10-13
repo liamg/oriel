@@ -57,6 +57,28 @@ can't host the UI we want.
   are app-level options in the registry, the same for every input engine.
 - `:set` accepts vim's names as aliases where an Oriel option has the same meaning.
 
+### Part of the IDE, not a program inside it
+
+Keys, motions, operators and ex commands behave as nvim's. Everything around them is the IDE's own, so the vim
+engine never feels like another binary running in a pane.
+
+- **Notices, not vim messages.** The engine gives `edit.Notice`s: a stable ID (`vim.unsaved`), a severity (info,
+  warning, error, question), the arguments and Oriel's own text ("Unsaved changes (add ! to discard them)"). No
+  `E37:` numbers and no vim jargon. The IDE shows them through its own notification handling (status line, toasts,
+  history), and `:messages` opens that history. Tests compare them with nvim's messages through
+  `vim/vimtest/nvimtext`, which only tests import.
+- **Prompts** ("the range is backwards, swap it?") are `Question` notices, shown as the IDE's confirm; the answer is
+  the next key, as in vim.
+- In ED-12, where the editor first appears in the UI:
+  - windows are the layout's panes, and buffers are the IDE's open files and tabs (`:ls` opens the switcher)
+  - the `:` line is an IDE input with completion, that also runs palette commands
+  - quickfix and location lists show in the IDE's results panel
+  - `y`, `d` and `p` use the system clipboard (`"+`; `"*` is the primary selection on Linux), through the IDE's
+    clipboard service
+  - `:map` and `:abbreviate` write to the registry keymap, so they show in the keybinding UI
+- In ED-13: the engine's options are registry options, so `:set` and the settings page change the same value, and
+  the clipboard behaviour becomes `editor.clipboard`.
+
 ### Windows, buffers, folds and lists (ED-4)
 
 - The engine keeps vim's state per window (cursor, jumplist, alternate buffer, folds, location list) and per
@@ -196,7 +218,7 @@ func (e *Editor) Do(rs []text.Replace, g text.UndoGroup) (text.Change, error) //
 func (e *Editor) Undo() (text.Change, bool)       // also Redo, UndoTo, UndoSeq, UndoParent, NewGroup
 func (e *Editor) Anchor(off int, b text.Bias) text.AnchorID
 func (e *Editor) Register(r rune) (Register, bool) // and SetRegister: {Text, Charwise | Linewise | Blockwise}
-func (e *Editor) Echo(msg string)                 // and Messages()
+func (e *Editor) Notify(n Notice)                 // and Notices(): {ID, Severity, Args, Text} for the IDE
 // Still to come, when a second engine needs them (ED-5): Motion, Object and Search by name, Exec,
 // Scroll and Prompt. Until then motions and text objects are the vim engine's own tables, which
 // plugins extend with vim.RegisterMotion and vim.RegisterObject.

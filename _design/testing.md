@@ -69,7 +69,8 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
   aren't part of it, but a line holding just the two-space indent is an empty line, even at the end.
 - Optional checks: `mode` (`normal`, `insert`, `replace`, `visual`, `visual-line`, `visual-block`, `select`,
   `op-pending`, `cmdline`), `regs`, `marks` (`a=1:0 b=(unset)`), `jumps` (`1:0 3:4`), `undo` (the buffer after the keys,
-  `<Esc>` and `u`), `dot` (after the keys, `<Esc>` and `.`), `msg` (the last line of `:messages`), `win` (`2/3`:
+  `<Esc>` and `u`), `dot` (after the keys, `<Esc>` and `.`), `msg` (the last line of `:messages`; the engine's last notice is worded as nvim words it by
+  `vim/vimtest/nvimtext`, since Oriel shows its own text), `win` (`2/3`:
   the current window's number and the tab page's window count, as `winnr()` and `winnr('$')`), `bufs` (`1# 2% 3`: the
   listed buffers in order, `%` on the current one and `#` on the alternate, as `:ls` flags them). The buffer, cursor and
   mode are always the current window's. Positions are `line:col`: 1-based line, 0-based byte column, as `:marks` shows

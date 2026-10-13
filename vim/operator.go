@@ -1,7 +1,6 @@
 package vim
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -444,7 +443,7 @@ func (e *Engine) put(v *view, c cmd) {
 		if name == 0 {
 			name = '"'
 		}
-		e.echo(fmt.Sprintf("E353: Nothing in register %c", name))
+		e.notify(errEmptyRegister.with(string(name)))
 		e.rec = nil
 		return
 	}

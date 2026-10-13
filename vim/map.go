@@ -100,7 +100,7 @@ func (e *Engine) resolveMaps(flush bool) {
 
 func (e *Engine) runMapping(mp mapping) {
 	if e.mapDepth >= maxMapDepth {
-		e.echo("E223: Recursive mapping")
+		e.notify(errRecursiveMapping.with())
 		e.failed = true
 		return
 	}
@@ -185,7 +185,7 @@ func (e *Engine) exMap(name, args string, bang bool) error {
 			}
 		}
 		if !found {
-			return exError("E31: No such mapping")
+			return errNoMapping.with()
 		}
 		return nil
 	}
