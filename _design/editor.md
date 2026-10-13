@@ -70,12 +70,29 @@ engine never feels like another binary running in a pane.
 - **Prompts** ("the range is backwards, swap it?") are `Question` notices, shown as the IDE's confirm; the answer is
   the next key, as in vim.
 - In ED-12, where the editor first appears in the UI:
-  - windows are the layout's panes, and buffers are the IDE's open files and tabs (`:ls` opens the switcher)
-  - the `:` line is an IDE input with completion, that also runs palette commands
-  - quickfix and location lists show in the IDE's results panel
-  - `y`, `d` and `p` use the system clipboard (`"+`; `"*` is the primary selection on Linux), through the IDE's
-    clipboard service
-  - `:map` and `:abbreviate` write to the registry keymap, so they show in the keybinding UI
+  - windows are the layout's panes: each window is a view `editor#<id>`, and the engine asks the layout (through
+    `vim.Layout`) for the window order, the neighbour in a direction and each window's rows. `:split` opens a
+    split in the layout, `:close` closes the pane, a dragged pane is where `CTRL-W` finds it, and closing a tab
+    closes the window. Without an IDE the engine lays its windows out over nvim's 80×23 screen, as tests need.
+  - a tab is a window, titled with its buffer: `:e`, `:b` and `CTRL-^` change what that tab shows, `:bd` closes the
+    tabs showing the buffer, and opening a file from the IDE opens a new tab (or shows the one that has it).
+    `:q` on the last window closes the editor's panes, not Oriel.
+  - `:ls` runs `buffers.switch` and `:copen` runs `quickfix.open`. Until the pickers (SH-5) and the results panel
+    exist, plain built-in views stand in for them; those tickets replace them by registering the same ids.
+  - the `:` line is an IDE input along the bottom of the pane; `<Tab>` (mapped in mode `c` to `editor.complete`)
+    completes ex commands, registry commands, buffers and files, and a command the engine doesn't know runs the
+    registry command of that name
+  - `y`, `d`, `c`, `x` and `p` use the system clipboard, as nvim with `clipboard=unnamedplus`, through the clipboard
+    service in `edit`. Gio has no primary selection, so `"*` is the clipboard on Linux too for now.
+  - `:map` and its mode forms write to the registry keymap (mode `n`, `x`, `o`, `i` or `c`), each running
+    `editor.keys` with the right-hand side, so they show in `:Keys`. `:abbreviate` stays the engine's: the keymap
+    has no place for insert-mode text expansions yet.
+  - lines are drawn without wrapping, so the engine's scrolling counts one row per line (a closed fold is one
+    row); `'wrap'` comes with the display options.
+  - files: UTF-8 with or without a BOM and LF or CRLF are kept as found; a file that isn't UTF-8, or holds a NUL,
+    opens read-only. A buffer with no lines at all writes nothing, and one empty line writes its newline, as
+    vim's `ML_EMPTY`. `modified` follows the undo state. A file changed on disk reloads when its buffer is
+    unchanged, and asks (Reload, Keep mine) when it isn't; `:w` over a changed file asks first.
 - In ED-13: the engine's options are registry options, so `:set` and the settings page change the same value, and
   the clipboard behaviour becomes `editor.clipboard`.
 

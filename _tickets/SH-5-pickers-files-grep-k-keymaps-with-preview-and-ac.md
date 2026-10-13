@@ -29,6 +29,11 @@ depends_on: [SH-4]
 
 each source returns, ranks and previews; `␣'` resumes; quickfix and attach actions work
 
+## From ED-12
+
+- `:ls` runs `buffers.switch` and `:copen` runs `quickfix.open`; ED-12 registers stand-in views (`buffers`,
+  `quickfix`) for them. Replace both by registering the same command ids.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

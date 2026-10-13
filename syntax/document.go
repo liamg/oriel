@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"sort"
 	"sync"
 
 	"github.com/liamg/oriel/text"
@@ -65,7 +66,7 @@ func (d *Document) run() {
 			d.p.Update(ch)
 		}
 		last := chs[len(chs)-1].After
-		spans, err := d.p.Highlights(0, last.Len())
+		spans, err := d.p.highlightsInChunks(last.Len())
 
 		d.mu.Lock()
 		d.spans, d.err, d.version, d.busy = spans, err, last.Version(), false
@@ -91,7 +92,16 @@ func (d *Document) Highlights(start, end int) ([]Span, error) {
 	}
 	d.mu.Unlock()
 	if len(moving) > 0 {
-		spans = shiftSpans(spans, moving)
+		// Only spans within reach of [start, end) can land in it: the edits move text by at most reach.
+		reach := 0
+		for _, ch := range moving {
+			for _, r := range ch.Replaces {
+				reach += max(len(r.Text), r.Range.Len())
+			}
+		}
+		lo := sort.Search(len(spans), func(i int) bool { return spans[i].Range.End > start-reach })
+		hi := sort.Search(len(spans), func(i int) bool { return spans[i].Range.Start >= end+reach })
+		spans = shiftSpans(spans[lo:max(lo, hi)], moving)
 	}
 	var out []Span
 	for _, s := range spans {

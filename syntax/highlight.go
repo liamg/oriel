@@ -37,6 +37,34 @@ func (p *Parser) Highlights(start, end int) ([]Span, error) {
 	return resolve(hls), nil
 }
 
+// highlightChunk bounds one highlight query. Compiled wasm can't be preempted, so a long query would hold up
+// the Go runtime's stop-the-world, and every goroutine with it; chunks keep each call short.
+const highlightChunk = 16 << 10
+
+// highlightsInChunks is Highlights over [0, n), queried a chunk at a time, each chunk's spans clipped to it.
+func (p *Parser) highlightsInChunks(n int) ([]Span, error) {
+	var out []Span
+	for start := 0; start < n; start += highlightChunk {
+		end := min(start+highlightChunk, n)
+		spans, err := p.Highlights(start, end)
+		if err != nil {
+			return out, err
+		}
+		for _, s := range spans {
+			s.Range.Start, s.Range.End = max(s.Range.Start, start), min(s.Range.End, end)
+			if s.Range.Start >= s.Range.End {
+				continue
+			}
+			if k := len(out) - 1; k >= 0 && out[k].Capture == s.Capture && out[k].Range.End == s.Range.Start {
+				out[k].Range.End = s.Range.End
+				continue
+			}
+			out = append(out, s)
+		}
+	}
+	return out, nil
+}
+
 func (p *Parser) collect(start, end int, hls *[]hl) error {
 	q, ms, err := p.run("highlights", start, end)
 	if err != nil {

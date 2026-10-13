@@ -43,6 +43,11 @@ depends_on: [ED-12, SH-12]
   `yy` sets it.
 - The option-list test passes.
 
+## From ED-12
+
+- The clipboard is on for the editor today (unnamedplus, through `edit.Clipboard`); `editor.clipboard` makes it a
+  setting. `"*` is the clipboard on Linux until there's a primary selection.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

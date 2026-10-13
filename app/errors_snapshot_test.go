@@ -32,7 +32,7 @@ func (c *clipboard) OpenURL(u string) error        { return nil }
 
 // errScene is the app's built-ins over a store, drawn the way Run draws the window, on a fixed clock.
 type errScene struct {
-	t     *testing.T
+	t     testing.TB
 	sh    *shell
 	store core.Store
 	reg   registry.Registry
@@ -42,9 +42,15 @@ type errScene struct {
 	list  *render.List
 	clip  *clipboard
 	exts  []ext.Extension
+	size  render.Point
 }
 
 func newErrScene(t *testing.T, crashDir string) *errScene {
+	return newScene(t, crashDir, "", mockupSize)
+}
+
+// newScene is the built-ins drawn at size, with files relative to workDir.
+func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errScene {
 	t.Helper()
 	time.Local = time.UTC
 	home := t.TempDir()
@@ -53,8 +59,9 @@ func newErrScene(t *testing.T, crashDir string) *errScene {
 	os.MkdirAll(conf, 0o755)
 	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(initLua), 0o644)
 
-	s := &errScene{t: t, store: eventstore.New(), reg: registry.New(), clip: &clipboard{}}
-	cfg := Config{Store: s.store, Registry: s.reg, Logs: NewLogs(LogOpts{}), ConfigDir: conf, CrashDir: crashDir, Version: "v0.4.2"}
+	s := &errScene{t: t, store: eventstore.New(), reg: registry.New(), clip: &clipboard{}, size: size}
+	cfg := Config{Store: s.store, Registry: s.reg, Logs: NewLogs(LogOpts{}), ConfigDir: conf, CrashDir: crashDir, Version: "v0.4.2",
+		WorkDir: workDir}
 	s.sh = &shell{cfg: cfg, events: newEventTail(500), desktop: s.clip, poke: func() {}}
 	s.store.Subscribe(core.Filter{}, s.sh.events.add)
 	s.store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(s.store, cfg.Logs.Logger("core"), ev) })
@@ -83,7 +90,7 @@ func newErrScene(t *testing.T, crashDir string) *errScene {
 
 func (s *errScene) frame() {
 	s.list = new(render.List)
-	s.ui.Frame(s.list.Record(1), mockupSize, func(c *ui.Ctx) { buildWindow(c, s.reg, mockupSize) })
+	s.ui.Frame(s.list.Record(1), s.size, func(c *ui.Ctx) { buildWindow(c, s.reg, s.size) })
 }
 
 func (s *errScene) run(id string, args registry.Args) {
@@ -98,7 +105,7 @@ func (s *errScene) golden(name string) {
 	s.frame()
 	s.frame()
 	snapshot.Golden(s.t, "testdata/"+name+".list", []byte(snapshot.List(s.list)))
-	img := raster.Render(s.list, mockupSize, 1, s.ui.Theme().C(theme.BgBase))
+	img := raster.Render(s.list, s.size, 1, s.ui.Theme().C(theme.BgBase))
 	snapshot.GoldenPNG(s.t, "testdata/"+name+".png", img, 0.02, 0.001)
 }
 

@@ -277,3 +277,46 @@ func TestShiftSpans(t *testing.T) {
 		t.Fatalf("shiftSpans = %v, want %v", got, want)
 	}
 }
+
+// Highlighting a file a chunk at a time gives what highlighting it whole does.
+func TestChunkedHighlightsMatchWhole(t *testing.T) {
+	for _, name := range []string{"go", "lua", "markdown", "python", "rust", "typescript"} {
+		l, ok := Lookup(name)
+		if !ok {
+			continue
+		}
+		files, _ := filepath.Glob("testdata/highlight/*." + map[string]string{"go": "go", "lua": "lua", "markdown": "md", "python": "py", "rust": "rs", "typescript": "ts"}[name])
+		for _, f := range files {
+			src, _ := os.ReadFile(f)
+			src = bytes.Repeat(src, 1+2*highlightChunk/max(len(src), 1))
+			p, err := NewParser(l)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.Parse(src)
+			whole, err := p.Highlights(0, len(src))
+			if err != nil {
+				t.Fatal(err)
+			}
+			chunked, err := p.highlightsInChunks(len(src))
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.Close()
+			if a, b := spanRuns(src, whole), spanRuns(src, chunked); a != b {
+				t.Errorf("%s: chunked highlights differ from whole", f)
+			}
+		}
+	}
+}
+
+// spanRuns is the capture at every byte, so adjacent spans of one capture compare equal to one span.
+func spanRuns(src []byte, spans []Span) string {
+	caps := make([]string, len(src))
+	for _, s := range spans {
+		for i := s.Range.Start; i < s.Range.End && i < len(src); i++ {
+			caps[i] = s.Capture
+		}
+	}
+	return strings.Join(caps, "\x00")
+}

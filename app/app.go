@@ -356,7 +356,7 @@ func buildWindow(c *ui.Ctx, reg registry.Registry, size render.Point) {
 	vc := registry.ViewCtx{Width: size.X, Height: size.Y}
 	c.Column("shell", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		if v, ok := reg.ViewByID(RootView); ok {
-			c.Box(RootView, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(16)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
+			c.Box(RootView, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
 		}
 		if v, ok := reg.ViewByID(StatusLineView); ok {
 			c.Box(StatusLineView, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })

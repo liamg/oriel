@@ -1,8 +1,8 @@
 backdrop #060606
-rect 16,16 1568x942 fill #060606
-clip 16,16 1568x942 r 0
-  rect 16,16 1568x30 fill #0c0c0b
-  rect 16,46 1568x1 fill #24221d
+rect 0,0 1600x974 fill #060606
+clip 0,0 1600x974 r 0
+  rect 0,0 1600x30 fill #0c0c0b
+  rect 0,30 1600x1 fill #24221d
 pop
 rect 0,974 1600x26 fill #0c0c0b
 text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11

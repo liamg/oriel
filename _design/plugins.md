@@ -241,6 +241,17 @@ type Host interface {
 
 - The window is made of views like any other, each replaceable by registering the same id: `app.root`,
   `app.statusline`, `app.notifications` (toasts) and `app.modal`. The log panel is `log`, and `:Events` is `events`.
+- The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
+  in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.
+- A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`) and
+  `ViewCtx.Focused`. A view can implement `registry.Titled` to name each instance's tab, and
+  `registry.EdgeToEdge` to be drawn without the pane's padding; `registry.As[T](view)` sees through the guard.
+  `Registry.Views()` lists every view id.
+- `Host.Layout()` is the layout tree, to change from commands and views (`Open`, `Close`, `Show`, `Swap`, `Row`,
+  `Shown`, `OnClose`), `Host.PaneRect(v)` where a view's pane was drawn, and `Host.Redraw()` asks for a frame from
+  any goroutine. `view.open` takes `beside` (`"editor#3"`) and `size`, and `view.close` an `id` and `instance`.
+- A box with `ui.Style.Wheel` takes the scroll wheel itself, as `Interaction.Scroll`, for content it scrolls on
+  its own (an editor that draws only the lines in view).
 
 - Keys resolve like vim's mappings (`registry.Resolver`): an ambiguous prefix waits up to `keymap.timeoutlen`
   (default 1 s, off with `keymap.timeout = false`), then the longest complete mapping runs, or the first key passes on
