@@ -1,0 +1,146 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.main{display:flex;flex:1;min-height:0}
+.center{flex:1;display:flex;flex-direction:column;min-width:0}
+.code{font-size:12.5px;line-height:19.4px}
+.code .ln .g{width:48px;padding-right:14px;position:relative}
+.ln.err{background:rgba(255,95,109,.07)}
+.gerr{position:absolute;left:8px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px rgba(255,95,109,.6)}
+.vterr{color:var(--red);opacity:.85;font-style:italic;margin-left:22px;font-size:12px}
+.toasts{position:absolute;right:16px;top:50px;width:440px;display:flex;flex-direction:column;gap:8px;z-index:20}
+.tst{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;box-shadow:0 12px 34px rgba(0,0,0,.55);overflow:hidden}
+.tst.e{border-color:rgba(255,95,109,.45);box-shadow:0 12px 34px rgba(0,0,0,.55),0 0 18px rgba(255,95,109,.12)}
+.tst.w{border-color:rgba(255,155,69,.4)}
+.tst .hd{display:flex;align-items:center;gap:8px;padding:9px 12px 0}
+.tst .bd{padding:6px 12px 10px;font:12.5px/1.45 var(--ui);color:var(--fg)}
+.tst .bd code{font:11.5px var(--mono);color:var(--p);background:var(--bg4);padding:0 4px;border-radius:3px}
+.tst .acts{display:flex;gap:8px;align-items:center;padding:0 12px 10px}
+.tst .src{font:500 10px var(--mono);color:var(--fg3)}
+.tst .x{margin-left:auto;color:var(--fg4);font:12px var(--mono)}
+.link{color:var(--cyan);text-decoration:underline;text-underline-offset:3px;font:500 12px var(--ui)}
+.panel{flex:0 0 372px;display:flex;flex-direction:column;border-top:1px solid var(--line);background:var(--bg1);min-height:0}
+.ptabs{display:flex;gap:18px;align-items:center;padding:0 12px;height:30px;border-bottom:1px solid var(--line);font:600 9.5px var(--mono);letter-spacing:.14em;color:var(--fg3)}
+.ptabs .on{color:var(--fg);box-shadow:inset 0 -2px var(--cyan);height:100%;display:flex;align-items:center}
+.ptabs .n{color:var(--red);margin-left:4px}
+.lbar{display:flex;gap:8px;align-items:center;padding:7px 12px;border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font:500 11px var(--ui)}
+.seg span{padding:4px 10px;color:var(--fg3)} .seg span.on{background:var(--cyanbg);color:var(--cyan)}
+.seg span+span{border-left:1px solid var(--line2)}
+.log{font:11.5px/1 var(--mono);overflow:hidden;flex:1}
+.lr{display:flex;gap:12px;padding:5px 12px;align-items:center;color:var(--fg2);border-bottom:1px solid rgba(36,34,29,.6)}
+.lr .t{color:var(--fg4);width:62px;flex:none}
+.lr .lv{width:42px;flex:none;font-weight:600;font-size:10px;letter-spacing:.08em}
+.lr .s{width:230px;flex:none;color:var(--cyan2);overflow:hidden;white-space:nowrap}
+.lr .m{flex:1;white-space:nowrap;overflow:hidden}
+.lr .cnt{color:var(--fg3);background:var(--bg4);border-radius:8px;padding:1px 6px;font-size:10px}
+.lv.e{color:var(--red)} .lv.w{color:var(--yellow)} .lv.i{color:var(--fg3)} .lv.d{color:var(--fg4)}
+.lr.open{background:rgba(255,95,109,.06);box-shadow:inset 2px 0 var(--red);color:var(--fg)}
+.detail{padding:8px 12px 10px 86px;border-bottom:1px solid var(--line);background:var(--bg0);display:flex;gap:16px}
+.frames{flex:0 0 430px;font:11.5px/19px var(--mono)}
+.frames .fr{display:flex;gap:10px;color:var(--fg2);padding:0 6px;border-radius:4px}
+.frames .fr.on{background:var(--cyanbg);color:var(--fg)}
+.frames .fr .loc{color:var(--cyan);width:170px;flex:none}
+.frames .go{color:var(--fg4)}
+.snip{flex:1;border:1px solid var(--line);border-radius:6px;background:var(--bg1);font:11.5px/18px var(--mono);overflow:hidden}
+.snip .sh{display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--line);font:500 10px var(--mono);color:var(--fg3)}
+.snip .l{white-space:pre} .snip .l .g{display:inline-block;width:38px;text-align:right;padding-right:10px;color:var(--fg4)}
+.snip .l.hit{background:rgba(255,95,109,.09);box-shadow:inset 2px 0 var(--red)}
+.side{width:260px;flex:none;border-left:1px solid var(--line);background:var(--bg1);display:flex;flex-direction:column}
+.side .it{padding:9px 12px;border-bottom:1px solid var(--line);font:12px/1.4 var(--ui);color:var(--fg2)}
+.side .it b{color:var(--fg);font-weight:600}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs">
+    <div class="stab on"><span class="dot g"></span>config<span class="mini">~/.config/oriel</span><span class="k">⌘1</span></div>
+    <div class="stab"><span class="dot o"></span>pricing-rounding<span class="mini">work</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘3</span></div>
+  </div>
+  <div class="tbright">
+    <div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div>
+    <div class="tat"><span class="dot g"></span>BUS 4</div>
+    <span class="kbd">⌘K</span>
+  </div>
+</div>
+<div class="main">
+  <div class="rail">
+    <div class="ic on">⌥</div><div class="ic">⌕</div><div class="ic">±</div><div class="ic">◈</div><div class="ic">▷</div><div class="ic">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="center">
+    <div class="edtabs">
+      <div class="edtab on"><span class="fi" style="background:#5c8dff"></span>init.lua</div>
+      <div class="edtab"><span class="fi" style="background:#5cd2ff"></span>round.go</div>
+    </div>
+    <div class="crumbs">~ › .config › oriel › init.lua › <span style="color:var(--f)">L.on("Permission")</span><span style="margin-left:auto" class="row gap12"><span class="chip r">config error · running last good</span><span class="chip g">auto-reload</span></span></div>
+    <div class="code grow" style="padding-top:4px">
+<div class="ln"><span class="g">10</span><span class="t"><span class="ty">L</span><span class="p">.</span>keymap<span class="p">.</span><span class="f">set</span>({ <span class="s">&quot;n&quot;</span><span class="p">,</span> <span class="s">&quot;x&quot;</span> }<span class="p">,</span> <span class="s">&quot;ga&quot;</span><span class="p">,</span> <span class="k">function</span>() <span class="ty">L</span><span class="p">.</span>thread<span class="p">.</span><span class="f">new</span>() <span class="k">end</span>)</span></div>
+<div class="ln"><span class="g">11</span><span class="t"><span class="ty">L</span><span class="p">.</span>keymap<span class="p">.</span><span class="f">set</span>(<span class="s">&quot;requests&quot;</span><span class="p">,</span> <span class="s">&quot;x&quot;</span><span class="p">,</span> <span class="s">&quot;thread.resolve&quot;</span>)</span></div>
+<div class="ln"><span class="g">12</span><span class="t"></span></div>
+<div class="ln"><span class="g">13</span><span class="t"><span class="c">-- auto-allow test runs in this workspace</span></span></div>
+<div class="ln"><span class="g">14</span><span class="t"><span class="ty">L</span><span class="p">.</span><span class="f">on</span>(<span class="s">&quot;Permission&quot;</span><span class="p">,</span> <span class="k">function</span>(ev)</span></div>
+<div class="ln err"><span class="g"><i class="gerr"></i>15</span><span class="t">  <span class="k">if</span> ev<span class="p">.</span>tool <span class="p">=</span><span class="p">=</span> <span class="s">&quot;Bash&quot;</span> <span class="k">and</span> <span class="squig">ev<span class="p">.</span>args<span class="p">:</span><span class="f">match</span></span>(<span class="s">&quot;^go test &quot;</span>) <span class="k">then</span><span class="vterr">attempt to index a nil value (field 'args')</span></span></div>
+<div class="ln"><span class="g">16</span><span class="t">    <span class="k">return</span> <span class="s">&quot;allow&quot;</span></span></div>
+<div class="ln"><span class="g">17</span><span class="t">  <span class="k">end</span></span></div>
+<div class="ln cur"><span class="g">18</span><span class="t"><span class="k">end</span>)<span class="cursor"></span></span></div>
+<div class="ln"><span class="g">19</span><span class="t"></span></div>
+<div class="ln"><span class="g">20</span><span class="t"><span class="c">-- a tool the agent can call</span></span></div>
+<div class="ln"><span class="g">21</span><span class="t"><span class="ty">L</span><span class="p">.</span>agent<span class="p">.</span><span class="f">tool</span>{</span></div>
+<div class="ln"><span class="g">22</span><span class="t">  name <span class="p">=</span> <span class="s">&quot;staging_logs&quot;</span><span class="p">,</span></span></div>
+<div class="ln"><span class="g">23</span><span class="t">  desc <span class="p">=</span> <span class="s">&quot;Tail the staging logs for a service&quot;</span><span class="p">,</span></span></div>
+    </div>
+    <div class="panel">
+      <div class="ptabs"><span>AGENT</span><span>TERMINAL</span><span>PROBLEMS<span class="n">1</span></span><span class="on">LOG</span><span>TESTS</span><span style="margin-left:auto;font-weight:500;letter-spacing:0;color:var(--fg4)">:Log</span></div>
+      <div class="lbar">
+        <div class="seg"><span>Oriel</span><span>Session · config</span><span class="on">All</span></div>
+        <span class="chip r">error 1</span><span class="chip">warn 2</span><span class="chip">info</span><span class="chip" style="opacity:.5">debug</span>
+        <div class="input" style="height:24px;width:220px;font-size:11.5px;margin-left:6px">⌕ filter · source:init.lua</div>
+        <span style="margin-left:auto" class="row gap8"><span class="btn ghost" style="height:24px;font-size:11px">Copy</span><span class="btn" style="height:24px;font-size:11px">Copy report</span></span>
+      </div>
+      <div class="log">
+        <div class="lr"><span class="t">14:02:11</span><span class="lv i">INFO</span><span class="s"><span class="dim">pricing-rounding ›</span> session</span><span class="m">worktree ready · rethink/rounding from origin/main @ 4e1c2a9</span></div>
+        <div class="lr"><span class="t">14:02:12</span><span class="lv i">INFO</span><span class="s"><span class="dim">pricing-rounding ›</span> gopls</span><span class="m">started · go 1.26 · 214 packages</span></div>
+        <div class="lr"><span class="t">14:06:40</span><span class="lv w">WARN</span><span class="s"><span class="dim">oriel ›</span> tickets.lua:8</span><span class="m">4.1ms on CommentSend · over the 2ms budget</span><span class="cnt">×6</span></div>
+        <div class="lr open"><span class="t">14:07:03</span><span class="lv e">ERROR</span><span class="s"><span class="dim">oriel ›</span> init.lua</span><span class="m">init.lua:15: attempt to index a nil value (field 'args') · Permission hook turned off after 3 errors</span><span class="cnt">×3</span></div>
+        <div class="detail">
+          <div class="frames">
+            <div class="cap" style="margin-bottom:6px">traceback</div>
+            <div class="fr on"><span class="loc">init.lua:15</span><span>in hook <span style="color:var(--f)">Permission</span></span></div>
+            <div class="fr"><span class="loc">oriel.on</span><span class="go">dispatch · Permission (Bash)</span></div>
+            <div class="fr"><span class="loc">init.lua:14</span><span>in main chunk</span></div>
+            <div class="fr"><span class="go" style="width:170px">+4 Go frames</span><span class="go">show</span></div>
+            <div class="row gap8" style="margin-top:8px"><span class="btn pri" style="height:24px;font-size:11px">Open at line</span><span class="btn" style="height:24px;font-size:11px">Turn hook back on</span></div>
+          </div>
+          <div class="snip">
+            <div class="sh">~/.config/oriel/init.lua<span style="margin-left:auto">ev = { tool = "Bash", input = "go test ./…" }</span></div>
+<div class="l"><span class="g">13</span><span class="c">-- auto-allow test runs in this workspace</span></div>
+<div class="l"><span class="g">14</span><span class="ty">L</span><span class="p">.</span><span class="f">on</span>(<span class="s">"Permission"</span><span class="p">,</span> <span class="k">function</span>(ev)</div>
+<div class="l hit"><span class="g">15</span>  <span class="k">if</span> ev<span class="p">.</span>tool <span class="p">==</span> <span class="s">"Bash"</span> <span class="k">and</span> <span class="squig">ev<span class="p">.</span>args</span><span class="p">:</span><span class="f">match</span>(<span class="s">"^go test "</span>) <span class="k">then</span></div>
+<div class="l"><span class="g">16</span>    <span class="k">return</span> <span class="s">"allow"</span></div>
+<div class="l"><span class="g">17</span>  <span class="k">end</span></div>
+          </div>
+        </div>
+        <div class="lr"><span class="t">14:07:20</span><span class="lv w">WARN</span><span class="s"><span class="dim">pricing-rounding ›</span> gopls</span><span class="m">exited (signal: killed) · restarted in 0.4s</span></div>
+        <div class="lr"><span class="t">14:07:58</span><span class="lv i">INFO</span><span class="s"><span class="dim">pricing-rounding ›</span> claude</span><span class="m">turn 12 done · 3 files changed · go test ./internal/pricing/ passed</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toasts">
+  <div class="tst e">
+    <div class="hd"><span class="dot r"></span><span class="cap" style="color:var(--red)">Config error</span><span class="src">init.lua</span><span class="x">✕</span></div>
+    <div class="bd"><code>init.lua:15</code>: attempt to index a nil value (field <code>'args'</code>). The <b>Permission</b> hook is off; everything else in your config is running.</div>
+    <div class="acts"><span class="link">Edit init.lua</span><span class="btn ghost" style="height:24px;font-size:11px">Show trace</span><span class="src" style="margin-left:auto">saving reloads it</span></div>
+  </div>
+  <div class="tst w">
+    <div class="hd"><span class="dot" style="background:var(--yellow)"></span><span class="cap" style="color:var(--yellow)">gopls restarted</span><span class="src">lsp · pricing-rounding</span><span class="x">8s</span></div>
+    <div class="bd" style="padding-bottom:10px">It exited (killed) and came back in 0.4 s.</div>
+  </div>
+</div>
+<div class="status">
+  <span class="mode">NORMAL</span>
+  <span>main</span><span class="sep"></span>
+  <span style="color:var(--red)">✕ 1</span><span style="color:var(--yellow)">⚠ 2</span><span class="sep"></span>
+  <span class="dim">init.lua</span>
+  <span style="margin-left:auto;padding-right:12px" class="dim">18:4</span>
+</div>

@@ -22,6 +22,7 @@ depends_on: [PL-1, SH-13]
 ## Mockups
 
 ![19-config](../_design/mockups/19-config.png)
+![37-errors](../_design/mockups/37-errors.png)
 
 The `:Hooks` budget warning ("4.1 ms on CommentSend · over the 2 ms budget").
 
@@ -31,7 +32,8 @@ The `:Hooks` budget warning ("4.1 ms on CommentSend · over the 2 ms budget").
 - Lua errors carry the traceback, with `oriel` API frames shown as the API call and Go frames hidden by default.
 - An error is a notice with "Open at line" and "Show trace", a diagnostic on the line in the open file and in
   Problems, and inline in the `:lua` REPL.
-- A config that fails to load keeps the last good one running.
+- A config that fails to load keeps the last good one running. At startup Oriel opens without the failing part and
+  shows the error with an **Edit init.lua** link to the line; saving reloads it, and the toast clears on success.
 - A hook or view erroring 3 times in a row is turned off, with a notice and "Turn back on"; `:Hooks` shows it off with
   its last error. Over-budget hooks are warnings.
 
@@ -39,7 +41,8 @@ The `:Hooks` budget warning ("4.1 ms on CommentSend · over the 2 ms budget").
 
 - Fixture configs with a syntax error, a runtime error in a hook, an error inside a nested `require`, and an error
   raised through an `oriel` API call each give the right `file:line`, traceback frames and diagnostic location.
-- A failing `init.lua` on reload leaves the previous keymaps and hooks working.
+- A failing `init.lua` on reload leaves the previous keymaps and hooks working; at startup Oriel opens, the toast's
+  link opens the file at the line, and saving a fix reloads it and clears the toast.
 - A hook failing three times is off, shown in `:Hooks`, and back on after "Turn back on".
 - `:lua error("x")` shows the error and trace under the input.
 

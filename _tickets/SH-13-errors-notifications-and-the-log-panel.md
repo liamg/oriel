@@ -14,7 +14,8 @@ depends_on: [FW-2, FW-6, FW-9, ED-6]
 
 ## Design
 
-- `_design/errors.md` (all of it; answer its open questions first)
+- `_design/errors.md` (all of it)
+- `_design/sessions.md` (the session log lives with the session)
 - `_design/architecture.md` (events), `_design/plugins.md` (the notify API)
 - `_design/ui.md`, `_design/rendering.md` (toasts, panels), `_design/security.md` (redaction)
 - `_design/testing.md`
@@ -22,30 +23,32 @@ depends_on: [FW-2, FW-6, FW-9, ED-6]
 
 ## Mockups
 
-![19-config](../_design/mockups/19-config.png)
-![12-inbox](../_design/mockups/12-inbox.png)
+![37-errors](../_design/mockups/37-errors.png)
+![38-crash](../_design/mockups/38-crash.png)
 
-The "reloaded init.lua" toast (19) and the status line's ✕/⚠ counts (12). Draw a mockup of an error toast and the
-log panel with an expanded stack trace before starting.
+Also the "reloaded init.lua" toast in `19-config.png` and the status line's ✕/⚠ counts in `12-inbox.png`.
 
 ## What
 
 - The `Notified` core event and the notification history in `core.State`, with IDs, severity, source, detail,
   location, actions, and repeats collapsed with a count. `edit.Notice` maps onto it. A registry API to send and read.
-- Where each notice shows, per the table in `errors.md`: status line, toasts, ✕/⚠ counts, modal only when Oriel
-  can't go on.
-- The log panel (`:messages`, `:Log`): history plus log records, filters, search, stack traces with each frame
+- Two logs: the Oriel log and one per session, kept on the session's worker and archived with it. Each notice goes
+  to one by its source; errors from an unfocused session mark its tab instead of toasting.
+- Where each notice shows, per the table in `errors.md`: toasts for now, ✕/⚠ counts, modal only when Oriel can't go on.
+- The log panel (`:messages`, `:Log`): Oriel, Session and All scopes, history plus log records, filters, search, stack traces with each frame
   linked, the failing source highlighted, "Copy" and "Copy report".
 - `log/slog` everywhere, an in-memory ring and a rotating file per platform, worker records streamed to the app,
   LSP/DAP/process-plugin stderr captured, levels by flag, env and `:Log level`, secrets redacted.
 - `recover` around every contribution call: a panic is an error notice with its Go stack and turns that
-  contribution off. A crash report on Oriel's own panic, offered on the next launch.
+  contribution off. A crash report on Oriel's own panic, offered on the next launch with Copy report and a link to a new GitHub
+  issue; nothing is sent.
 - `:Events` and `oriel --debug`.
 
 ## Done when
 
-- Display-list snapshots: a key-caused error in the status line, an info toast, an error toast with actions, the
-  ✕/⚠ counts, and the log panel with an expanded trace and highlighted source.
+- Display-list snapshots match `37-errors.png` and `38-crash.png`: an info toast, an error toast with actions, the
+  ✕/⚠ counts, the log panel in each scope with an expanded trace and highlighted source, and the crash modal.
+- A session's log survives a worker restart, and an error in an unfocused session marks its tab without a toast.
 - A notice repeated 100 times is one history row with ×100, and one toast.
 - A panicking hook, view and command each produce an error notice with the Go stack, are turned off, and the app
   keeps handling keys.

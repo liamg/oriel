@@ -1,7 +1,8 @@
 # Errors, logs and debugging Oriel
 
 How Oriel tells you something went wrong, where you look later, and how you debug your config, a plugin or Oriel
-itself. Status: proposed (SH-13, PL-12); the open questions at the end need answers before those start.
+itself. Built in SH-13 and PL-12. Mockups: `37-errors.png` (toasts, the error in the file, the log panel with a
+trace) and `38-crash.png` (the crash report on the next launch).
 
 ## One path for every notice
 
@@ -14,17 +15,28 @@ itself. Status: proposed (SH-13, PL-12); the open questions at the end need answ
 - The same ID repeating collapses into one entry with a count, so a hook failing on every keystroke is one row.
 - Plugins send notices and read the history through the same API (`plugins.md`).
 
+## Two logs: Oriel's and each session's
+
+- **The Oriel log** is the app's: config and plugin errors, rendering, the GUI, update checks, Oriel's own panics.
+- **A session log** belongs to one session (`sessions.md`): its agent, worktree, LSP servers, test runs, terminals and
+  gateway. It lives with the session on its worker, survives a restart, and is archived with the session.
+- A notice goes to exactly one of them, by its source. The log panel switches between **Oriel**, **Session · {name}**
+  (the focused one) and **All**, which interleaves them with the session's name on each row.
+- Errors from a session you're not looking at don't toast: they put an error mark on that session's tab and wait in
+  its log. The status line's ✕/⚠ counts are the focused session's plus Oriel's.
+
 ## How they look
 
-What you are doing decides where a notice shows, so typing never gets buried in toasts.
+Toasts for now, everywhere: it's the one place to look while we find out what's too noisy. Revisit once the editor
+is in daily use.
 
 | Notice | Where | Stays |
 |---|---|---|
-| From a key you just typed (`vim.pattern-not-found`, "3 lines yanked") | the status line, where vim shows messages; errors in the error colour | until the next key |
+| From a key you just typed (`vim.pattern-not-found`, "3 lines yanked") | a toast; info ones short | info 3 s, errors 8 s |
 | Background info ("reloaded `init.lua` · 3 ms", mockup 19) | a small toast at the top right of the focused pane | 3 s |
 | Warning | a toast, and the status line's ⚠ count (mockup 12) | 8 s, or until hovered |
 | Error not caused by your last key (a plugin, LSP, a hook, a failed save) | a toast with its actions and "Details", and the status line's ✕ count | until dismissed or opened |
-| Question from a key (`vim.swap-range`) | inline in the status line, answered by the next key | until answered |
+| Question from a key (`vim.swap-range`) | a toast with the choices, answered by the next key or a click | until answered |
 | Question needing attention while you're elsewhere (approvals, agentbus) | an interrupt card (SH-9, mockup 12) | until answered |
 | Oriel can't go on (quit with unsaved buffers, crash recovery on launch) | a modal | until answered |
 
@@ -52,6 +64,9 @@ What you are doing decides where a notice shows, so typing never gets buried in 
     diagnostics), and an entry in Problems
   - in the `:lua` REPL, under the input that failed
 - A config that fails to load keeps the last good config running (as `settings.md` does for TOML), and says so.
+- At startup a broken config doesn't block anything: Oriel opens as usual, without the failing part, and shows the
+  error toast with an **Edit init.lua** link. The link opens the file in the config session at the failing line;
+  saving it reloads the config (it's watched), and the toast clears when the reload succeeds.
 - A hook or view that errors 3 times in a row is turned off with a notice ("`tickets.lua:8` turned off after 3
   errors", action "Turn back on"). `:Hooks` shows it as off, with its last error.
 - A hook over its time budget is a warning, as mockup 19 shows ("4.1 ms on CommentSend · over the 2 ms budget").
@@ -60,8 +75,9 @@ What you are doing decides where a notice shows, so typing never gets buried in 
 
 - Every call into a plugin, hook, view, provider or command runs under `recover`. A panic becomes an error notice
   with the Go stack as its detail, the offending contribution is turned off as above, and the app keeps running.
-- A panic outside those (Oriel's own bug) writes a crash report and exits. The next launch offers it in a modal:
-  view, copy, or delete. Nothing is sent anywhere.
+- A panic outside those (Oriel's own bug) writes a crash report and exits. The next launch offers it in a modal
+  (`38-crash.png`): the report, **Copy report**, a link to open a GitHub issue
+  (`github.com/liamg/oriel/issues/new`), and delete. It stays on the machine: nothing is sent anywhere.
 
 ## Logs on disk
 
@@ -80,10 +96,3 @@ What you are doing decides where a notice shows, so typing never gets buried in 
 - `oriel --debug` turns on debug logging and the frame-time overlay.
 - "Copy report": version, OS, the settings that differ from defaults, enabled plugins, the last 500 log records and
   the event-log tail, redacted, as one block of text.
-
-## Open questions
-
-- Is the status line the right place for key-caused errors, or should those be toasts too?
-- Should Lua errors in your own `init.lua` open the file at the line automatically on startup, or only notify?
-- Crash reports stay local only, or with an opt-in "send" later?
-- No mockup shows an error toast or the log panel yet. One should be drawn (`mockups/src`) before SH-13 starts.
