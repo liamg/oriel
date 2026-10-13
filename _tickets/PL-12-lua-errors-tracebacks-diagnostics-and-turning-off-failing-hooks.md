@@ -2,7 +2,7 @@
 id: PL-12
 title: "Lua errors: tracebacks, diagnostics in the file, turning off failing hooks"
 phase: P3
-status: review
+status: done
 area: Platform
 module: script
 depends_on: [PL-1, SH-13]

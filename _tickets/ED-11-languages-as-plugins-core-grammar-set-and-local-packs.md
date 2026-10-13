@@ -2,7 +2,7 @@
 id: ED-11
 title: "Languages as plugins: a language contribution, a core grammar set, local grammar packs"
 phase: P3
-status: review
+status: done
 area: Editor
 module: syntax
 depends_on: [ED-6, FW-3]

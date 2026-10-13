@@ -2,7 +2,7 @@
 id: PL-15
 title: "Drag and drop for plugins: drag sources, drop targets, and files dropped on the window"
 phase: P3
-status: review
+status: done
 area: Platform
 module: ui, registry, script/api, app
 depends_on: [FW-9, PL-1]

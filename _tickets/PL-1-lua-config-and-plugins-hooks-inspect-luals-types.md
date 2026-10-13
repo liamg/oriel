@@ -2,7 +2,7 @@
 id: PL-1
 title: "Lua config and plugins, :Hooks, :Inspect, LuaLS types"
 phase: P3
-status: review
+status: done
 area: Platform
 module: script, registry
 depends_on: [FW-3]

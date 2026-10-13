@@ -2,7 +2,7 @@
 id: PL-13
 title: "Context menu entries from plugins: a contribution point for right-click menus"
 phase: P3
-status: review
+status: done
 area: Platform
 module: app, registry, script/api
 depends_on: [PL-1, SH-10]

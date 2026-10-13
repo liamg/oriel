@@ -2,7 +2,7 @@
 id: SH-13
 title: "Errors, notifications and the log panel: toasts, status line, :Log, slog, panics, crash reports"
 phase: P3
-status: review
+status: done
 area: Shell and navigation
 module: core, app, ui
 depends_on: [FW-2, FW-6, FW-9, ED-6]

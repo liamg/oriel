@@ -2,7 +2,7 @@
 id: SH-5
 title: "Pickers (␣␣ files, ␣/ grep, ␣k keymaps…) with preview and actions"
 phase: P3
-status: review
+status: done
 area: Shell and navigation
 module: picker
 depends_on: [SH-4]

@@ -2,7 +2,7 @@
 id: ED-14
 title: "Highlight queries without a parent walk per capture"
 phase: P3
-status: review
+status: done
 area: Editor
 module: syntax
 depends_on: [ED-6]

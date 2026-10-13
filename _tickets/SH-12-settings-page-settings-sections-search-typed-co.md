@@ -2,7 +2,7 @@
 id: SH-12
 title: "Settings page (:Settings, ⌘,) and settings.toml storage"
 phase: P3
-status: review
+status: done
 area: Shell and navigation
 module: app, registry
 depends_on: [FW-3, FW-6, FW-11]

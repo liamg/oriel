@@ -2,7 +2,7 @@
 id: ED-13
 title: "Editor options in the registry: :set, the settings page, editor.clipboard"
 phase: P3
-status: review
+status: done
 area: Editor
 module: vim, registry
 depends_on: [ED-12, SH-12]

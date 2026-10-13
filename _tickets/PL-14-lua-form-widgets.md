@@ -2,7 +2,7 @@
 id: PL-14
 title: "Form widgets from Lua: inputs, toggles, selects and a view's own state"
 phase: P3
-status: review
+status: done
 area: Platform
 module: script/api, app
 depends_on: [PL-1]

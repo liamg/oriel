@@ -2,7 +2,7 @@
 id: ED-12
 title: "Editor pane and files: open, edit, save — the first usable editor"
 phase: P3
-status: review
+status: done
 area: Editor
 module: editor
 depends_on: [ED-4, ED-6, FW-6, FW-9, SH-13]

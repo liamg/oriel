@@ -2,7 +2,7 @@
 id: ED-5
 title: "plain engine and the input.Engine interface (emacs as a plugin)"
 phase: P3
-status: review
+status: done
 area: Editor
 module: input
 depends_on: [ED-2, FW-3]

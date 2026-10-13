@@ -2,7 +2,7 @@
 id: FW-13
 title: "UI motion polish: subtle animations for panels, menus, popups and toasts"
 phase: P3
-status: review
+status: done
 area: Framework
 module: ui, ui/widget, ui/layout
 depends_on: [FW-5, FW-6, FW-9]

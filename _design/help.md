@@ -10,7 +10,8 @@ statusline segments, status colours. You never see help until you ask for it, an
 - **Right-click anything → Help: \<name\>**, always the last item in every context menu.
 - **`K`** on the focused element, as vim's `K` looks up the keyword under the cursor. **F1** does the same.
 - **Help mode** (`⌘?`): every element with help gets a faint `?` marker. Hover for a one-line tooltip, click for the full page, `esc` to leave.
-- **`:help topic`** and the `␣h` picker search all of it. `:help dw` opens vim's own entry from the vendored `:help` (`testing.md`).
+- **`:help topic`** and the `␣h` picker search all of it: Oriel's pages and plugins'. Vim's own `:help` isn't
+  included (decided in P3): vim's reference is online, and Oriel doesn't ship its docs.
 - **Which-key** (`ui.md` 02c) and the keymaps picker link each mapping to its help page.
 
 ## What a help page shows
@@ -71,7 +72,7 @@ Your plan allows a fixed amount of model use per rolling week…
   `K` is vim's). `⌘?` toggles help mode. `:help topic` matches ids, anchors and titles; `␣h` is the picker.
 - `{{keys "glob"}}` lists the keymaps whose command matches, `{{options "prefix"}}` the options and their values,
   `{{live "name"}}` a registered block. `{{api}}` waits for the generated Lua API (PL-1), and the **Ask** box for the
-  agents (P5). `:help dw` for vim's own entries needs the vendored `:help` files in a Go module to embed.
+  agents (P5). Vim's own `:help` entries aren't shipped (decided in P3).
 - The lint (`TestHelpLint`) walks the omnibox, a picker, toasts and the log, a help page and help mode.
 
 ## Go interfaces

@@ -2,7 +2,7 @@
 id: SH-11
 title: "Light, dark and theme editor (:Theme, pick mode)"
 phase: P3
-status: review
+status: done
 area: Shell and navigation
 module: theme
 depends_on: [FW-7]

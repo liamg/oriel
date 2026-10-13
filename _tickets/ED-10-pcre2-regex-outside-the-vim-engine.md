@@ -2,7 +2,7 @@
 id: ED-10
 title: "PCRE2 regex outside the vim engine"
 phase: P3
-status: review
+status: done
 area: Editor
 module: regex
 depends_on: [ED-3]

@@ -2,7 +2,7 @@
 id: ED-9
 title: ".editorconfig and other per-file editor conventions"
 phase: P3
-status: review
+status: done
 area: Editor
 module: registry, edit
 depends_on: [ED-2, SH-12]
