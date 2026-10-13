@@ -104,6 +104,22 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Overview{a: a}
+		vm.Bind("overview", map[string]script.GoFunc{
+			"add": func(c *script.Args) ([]any, error) {
+				return nil, x.Add(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
+		x := Rail{a: a}
+		vm.Bind("rail", map[string]script.GoFunc{
+			"add": func(c *script.Args) ([]any, error) {
+				return nil, x.Add(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := Regex{a: a}
 		vm.Bind("regex", map[string]script.GoFunc{
 			"find": func(c *script.Args) ([]any, error) {
@@ -127,6 +143,14 @@ func (a *APIs) bind(vm *script.VM) {
 		vm.Bind("session", map[string]script.GoFunc{
 			"kind": func(c *script.Args) ([]any, error) {
 				return nil, x.Kind(c.String(0), c.Table(1), c.Where())
+			},
+		})
+	}
+	{
+		x := Start{a: a}
+		vm.Bind("start", map[string]script.GoFunc{
+			"add": func(c *script.Args) ([]any, error) {
+				return nil, x.Add(c.Table(0), c.Where())
 			},
 		})
 	}

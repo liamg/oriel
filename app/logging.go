@@ -96,12 +96,20 @@ func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, e
 		lv = slog.LevelDebug
 	}
 	state := logs.StateDir()
+	files, dir := fs.Args(), ""
+	if len(files) == 1 {
+		if st, err := os.Stat(files[0]); err == nil && st.IsDir() {
+			dir, _ = filepath.Abs(files[0])
+			files = nil
+		}
+	}
 	return Config{
 		Logs: NewLogs(LogOpts{File: filepath.Join(logs.Dir(), "oriel.log"), SessionLogs: logs.Dirs{Root: filepath.Join(state, "sessions")},
 			Level: lv}),
 		CrashDir: filepath.Join(state, "crashes"),
 		Version:  version,
 		Debug:    *debug,
-		Files:    fs.Args(),
+		Files:    files,
+		WorkDir:  dir,
 	}, nil
 }

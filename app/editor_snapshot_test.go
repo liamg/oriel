@@ -66,6 +66,7 @@ func editorScene(t *testing.T) *errScene {
 	size := render.Point{X: float32(editorColumn.Dx()), Y: float32(editorColumn.Dy())}
 	s := newScene(t, "", dir, size)
 	s.reg.View(TitleBarView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() })) // the column starts under it
+	s.reg.View(RailView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() }))     // and right of the rail
 	s.run("editor.open", registry.Args{"path": "internal/pricing/round.go"})
 	s.frame()
 	s.frame()

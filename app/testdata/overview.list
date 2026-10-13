@@ -1,0 +1,497 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1469.0625x38 r 0
+pop
+rect 0,38 44x936 fill #0c0c0b
+path 7 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #4f4a40
+path 4 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+rect 43,38 1x936 fill #24221d
+rect 44,38 1556x936 fill #060606
+clip 44,38 1556x936 r 0
+  rect 78,64 1488x296.2875 fill #0c0c0b radius 12 stroke 1 #24221d
+  clip 78,64 1488x296.2875 r 12
+    text "usage" @96,95.712 #ece6d8 Space Grotesk 18
+    text "~/src/usage" @168.05624,93.444 #7c7566 JetBrains Mono 11
+    rect 1417.75,85.98399 7x7 fill #4cc9f0 radius 3.5
+    text "fix/stale-prices" @1432.75,93.624 #b3ab99 JetBrains Mono 11.5
+    rect 78,114.968 1488x1 fill #24221d
+    clip 78,115.968 330x169.27602 r 0
+      text "LANGUAGES" @96,139.658 #7c7566 JetBrains Mono 9.5
+      text "1,300" @96,178.092 #ece6d8 Space Grotesk 26
+      text "lines · 6 files" @169.6875,182.384 #7c7566 JetBrains Mono 11
+      rect 96,199.68399 200.20001x10 fill #4cc9f0 radius 2
+      rect 298.2,199.68399 37.399994x10 fill #b98aff radius 2
+      rect 337.6,199.68399 19.799988x10 fill #4fe0a0 radius 2
+      rect 359.4,199.68399 15.399994x10 fill #ff9b45 radius 2
+      rect 376.8,199.68399 13.200012x10 fill #4f4a40 radius 2
+      rect 96,222.94398 8x8 fill #4cc9f0 radius 2
+      text "Go" @111,230.90399 #b3ab99 JetBrains Mono 11
+      text "70%" @216.21875,230.90399 #7c7566 JetBrains Mono 11
+      rect 250,222.94398 8x8 fill #b98aff radius 2
+      text "SQL" @265,230.90399 #b3ab99 JetBrains Mono 11
+      text "13%" @370.21875,230.90399 #7c7566 JetBrains Mono 11
+      rect 96,241.46399 8x8 fill #4fe0a0 radius 2
+      text "YAML" @111,249.424 #b3ab99 JetBrains Mono 11
+      text "7%" @222.8125,249.424 #7c7566 JetBrains Mono 11
+      rect 250,241.46399 8x8 fill #ff9b45 radius 2
+      text "Markdown" @265,249.424 #b3ab99 JetBrains Mono 11
+      text "5%" @376.8125,249.424 #7c7566 JetBrains Mono 11
+      rect 96,259.984 8x8 fill #4f4a40 radius 2
+      text "Other" @111,267.944 #b3ab99 JetBrains Mono 11
+      text "5%" @376.8125,267.944 #7c7566 JetBrains Mono 11
+    pop
+    rect 408,115.968 1x244.31953 fill #24221d
+    clip 409,115.968 856x244.31953 r 0
+      text "COMMIT ACTIVITY" @427,139.658 #7c7566 JetBrains Mono 9.5
+      text "60 commits in the last year · busiest Tue" @427,163.218 #7c7566 JetBrains Mono 10.5
+      rect 427,176.368 12x12 fill #191815 radius 2
+      rect 427,191.368 12x12 fill #191815 radius 2
+      rect 427,206.368 12x12 fill #191815 radius 2
+      rect 427,221.368 12x12 fill #191815 radius 2
+      rect 427,236.368 12x12 fill #191815 radius 2
+      rect 427,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 427,266.36798 12x12 fill #191815 radius 2
+      rect 442.84314,176.368 12x12 fill #191815 radius 2
+      rect 442.84314,191.368 12x12 fill #191815 radius 2
+      rect 442.84314,206.368 12x12 fill #191815 radius 2
+      rect 442.84314,221.368 12x12 fill #191815 radius 2
+      rect 442.84314,236.368 12x12 fill #ffd23f radius 2
+      rect 442.84314,251.368 12x11.999985 fill #191815 radius 2
+      rect 442.84314,266.36798 12x12 fill #191815 radius 2
+      rect 458.68628,176.368 12x12 fill #191815 radius 2
+      rect 458.68628,191.368 12x12 fill #ffd23f radius 2
+      rect 458.68628,206.368 12x12 fill #191815 radius 2
+      rect 458.68628,221.368 12x12 fill #191815 radius 2
+      rect 458.68628,236.368 12x12 fill #191815 radius 2
+      rect 458.68628,251.368 12x11.999985 fill #191815 radius 2
+      rect 458.68628,266.36798 12x12 fill #191815 radius 2
+      rect 474.52942,176.368 12x12 fill #ffd23f radius 2
+      rect 474.52942,191.368 12x12 fill #191815 radius 2
+      rect 474.52942,206.368 12x12 fill #191815 radius 2
+      rect 474.52942,221.368 12x12 fill #191815 radius 2
+      rect 474.52942,236.368 12x12 fill #191815 radius 2
+      rect 474.52942,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 474.52942,266.36798 12x12 fill #191815 radius 2
+      rect 490.37256,176.368 12x12 fill #191815 radius 2
+      rect 490.37256,191.368 12x12 fill #191815 radius 2
+      rect 490.37256,206.368 12x12 fill #191815 radius 2
+      rect 490.37256,221.368 12x12 fill #ffd23f radius 2
+      rect 490.37256,236.368 12x12 fill #191815 radius 2
+      rect 490.37256,251.368 12x11.999985 fill #191815 radius 2
+      rect 490.37256,266.36798 12x12 fill #191815 radius 2
+      rect 506.2157,176.368 12x12 fill #191815 radius 2
+      rect 506.2157,191.368 12x12 fill #191815 radius 2
+      rect 506.2157,206.368 12x12 fill #191815 radius 2
+      rect 506.2157,221.368 12x12 fill #191815 radius 2
+      rect 506.2157,236.368 12x12 fill #191815 radius 2
+      rect 506.2157,251.368 12x11.999985 fill #191815 radius 2
+      rect 506.2157,266.36798 12x12 fill #191815 radius 2
+      rect 522.05884,176.368 12x12 fill #ffd23f radius 2
+      rect 522.05884,191.368 12x12 fill #191815 radius 2
+      rect 522.05884,206.368 12x12 fill #191815 radius 2
+      rect 522.05884,221.368 12x12 fill #191815 radius 2
+      rect 522.05884,236.368 12x12 fill #191815 radius 2
+      rect 522.05884,251.368 12x11.999985 fill #191815 radius 2
+      rect 522.05884,266.36798 12x12 fill #ffd23f radius 2
+      rect 537.902,176.368 12x12 fill #191815 radius 2
+      rect 537.902,191.368 12x12 fill #191815 radius 2
+      rect 537.902,206.368 12x12 fill #191815 radius 2
+      rect 537.902,221.368 12x12 fill #ffd23f radius 2
+      rect 537.902,236.368 12x12 fill #191815 radius 2
+      rect 537.902,251.368 12x11.999985 fill #191815 radius 2
+      rect 537.902,266.36798 12x12 fill #191815 radius 2
+      rect 553.7451,176.368 12x12 fill #191815 radius 2
+      rect 553.7451,191.368 12x12 fill #191815 radius 2
+      rect 553.7451,206.368 12x12 fill #ffd23f radius 2
+      rect 553.7451,221.368 12x12 fill #191815 radius 2
+      rect 553.7451,236.368 12x12 fill #191815 radius 2
+      rect 553.7451,251.368 12x11.999985 fill #191815 radius 2
+      rect 553.7451,266.36798 12x12 fill #191815 radius 2
+      rect 569.58826,176.368 12x12 fill #ffd23f radius 2
+      rect 569.58826,191.368 12x12 fill #191815 radius 2
+      rect 569.58826,206.368 12x12 fill #191815 radius 2
+      rect 569.58826,221.368 12x12 fill #191815 radius 2
+      rect 569.58826,236.368 12x12 fill #191815 radius 2
+      rect 569.58826,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 569.58826,266.36798 12x12 fill #191815 radius 2
+      rect 585.4314,176.368 12x12 fill #191815 radius 2
+      rect 585.4314,191.368 12x12 fill #191815 radius 2
+      rect 585.4314,206.368 12x12 fill #191815 radius 2
+      rect 585.4314,221.368 12x12 fill #191815 radius 2
+      rect 585.4314,236.368 12x12 fill #191815 radius 2
+      rect 585.4314,251.368 12x11.999985 fill #191815 radius 2
+      rect 585.4314,266.36798 12x12 fill #191815 radius 2
+      rect 601.27454,176.368 12x12 fill #191815 radius 2
+      rect 601.27454,191.368 12x12 fill #191815 radius 2
+      rect 601.27454,206.368 12x12 fill #ffd23f radius 2
+      rect 601.27454,221.368 12x12 fill #191815 radius 2
+      rect 601.27454,236.368 12x12 fill #191815 radius 2
+      rect 601.27454,251.368 12x11.999985 fill #191815 radius 2
+      rect 601.27454,266.36798 12x12 fill #191815 radius 2
+      rect 617.1177,176.368 12x12 fill #191815 radius 2
+      rect 617.1177,191.368 12x12 fill #ffd23f radius 2
+      rect 617.1177,206.368 12x12 fill #191815 radius 2
+      rect 617.1177,221.368 12x12 fill #191815 radius 2
+      rect 617.1177,236.368 12x12 fill #191815 radius 2
+      rect 617.1177,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 617.1177,266.36798 12x12 fill #191815 radius 2
+      rect 632.9608,176.368 12x12 fill #191815 radius 2
+      rect 632.9608,191.368 12x12 fill #191815 radius 2
+      rect 632.9608,206.368 12x12 fill #191815 radius 2
+      rect 632.9608,221.368 12x12 fill #191815 radius 2
+      rect 632.9608,236.368 12x12 fill #ffd23f radius 2
+      rect 632.9608,251.368 12x11.999985 fill #191815 radius 2
+      rect 632.9608,266.36798 12x12 fill #191815 radius 2
+      rect 648.8039,176.368 12x12 fill #191815 radius 2
+      rect 648.8039,191.368 12x12 fill #191815 radius 2
+      rect 648.8039,206.368 12x12 fill #ffd23f radius 2
+      rect 648.8039,221.368 12x12 fill #191815 radius 2
+      rect 648.8039,236.368 12x12 fill #191815 radius 2
+      rect 648.8039,251.368 12x11.999985 fill #191815 radius 2
+      rect 648.8039,266.36798 12x12 fill #191815 radius 2
+      rect 664.64703,176.368 12x12 fill #191815 radius 2
+      rect 664.64703,191.368 12x12 fill #ffd23f radius 2
+      rect 664.64703,206.368 12x12 fill #191815 radius 2
+      rect 664.64703,221.368 12x12 fill #191815 radius 2
+      rect 664.64703,236.368 12x12 fill #191815 radius 2
+      rect 664.64703,251.368 12x11.999985 fill #191815 radius 2
+      rect 664.64703,266.36798 12x12 fill #191815 radius 2
+      rect 680.4902,176.368 12x12 fill #191815 radius 2
+      rect 680.4902,191.368 12x12 fill #191815 radius 2
+      rect 680.4902,206.368 12x12 fill #191815 radius 2
+      rect 680.4902,221.368 12x12 fill #191815 radius 2
+      rect 680.4902,236.368 12x12 fill #ffd23f radius 2
+      rect 680.4902,251.368 12x11.999985 fill #191815 radius 2
+      rect 680.4902,266.36798 12x12 fill #191815 radius 2
+      rect 696.3333,176.368 12x12 fill #191815 radius 2
+      rect 696.3333,191.368 12x12 fill #191815 radius 2
+      rect 696.3333,206.368 12x12 fill #191815 radius 2
+      rect 696.3333,221.368 12x12 fill #ffd23f radius 2
+      rect 696.3333,236.368 12x12 fill #191815 radius 2
+      rect 696.3333,251.368 12x11.999985 fill #191815 radius 2
+      rect 696.3333,266.36798 12x12 fill #191815 radius 2
+      rect 712.17645,176.368 12x12 fill #ffd23f radius 2
+      rect 712.17645,191.368 12x12 fill #191815 radius 2
+      rect 712.17645,206.368 12x12 fill #191815 radius 2
+      rect 712.17645,221.368 12x12 fill #191815 radius 2
+      rect 712.17645,236.368 12x12 fill #191815 radius 2
+      rect 712.17645,251.368 12x11.999985 fill #191815 radius 2
+      rect 712.17645,266.36798 12x12 fill #ffd23f radius 2
+      rect 728.0196,176.368 12x12 fill #191815 radius 2
+      rect 728.0196,191.368 12x12 fill #191815 radius 2
+      rect 728.0196,206.368 12x12 fill #191815 radius 2
+      rect 728.0196,221.368 12x12 fill #191815 radius 2
+      rect 728.0196,236.368 12x12 fill #ffd23f radius 2
+      rect 728.0196,251.368 12x11.999985 fill #191815 radius 2
+      rect 728.0196,266.36798 12x12 fill #191815 radius 2
+      rect 743.86273,176.368 12x12 fill #191815 radius 2
+      rect 743.86273,191.368 12x12 fill #191815 radius 2
+      rect 743.86273,206.368 12x12 fill #191815 radius 2
+      rect 743.86273,221.368 12x12 fill #ffd23f radius 2
+      rect 743.86273,236.368 12x12 fill #191815 radius 2
+      rect 743.86273,251.368 12x11.999985 fill #191815 radius 2
+      rect 743.86273,266.36798 12x12 fill #191815 radius 2
+      rect 759.7059,176.368 12x12 fill #191815 radius 2
+      rect 759.7059,191.368 12x12 fill #191815 radius 2
+      rect 759.7059,206.368 12x12 fill #191815 radius 2
+      rect 759.7059,221.368 12x12 fill #191815 radius 2
+      rect 759.7059,236.368 12x12 fill #191815 radius 2
+      rect 759.7059,251.368 12x11.999985 fill #191815 radius 2
+      rect 759.7059,266.36798 12x12 fill #ffd23f radius 2
+      rect 775.549,176.368 12x12 fill #191815 radius 2
+      rect 775.549,191.368 12x12 fill #191815 radius 2
+      rect 775.549,206.368 12x12 fill #191815 radius 2
+      rect 775.549,221.368 12x12 fill #191815 radius 2
+      rect 775.549,236.368 12x12 fill #191815 radius 2
+      rect 775.549,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 775.549,266.36798 12x12 fill #191815 radius 2
+      rect 791.39215,176.368 12x12 fill #191815 radius 2
+      rect 791.39215,191.368 12x12 fill #191815 radius 2
+      rect 791.39215,206.368 12x12 fill #ffd23f radius 2
+      rect 791.39215,221.368 12x12 fill #191815 radius 2
+      rect 791.39215,236.368 12x12 fill #191815 radius 2
+      rect 791.39215,251.368 12x11.999985 fill #191815 radius 2
+      rect 791.39215,266.36798 12x12 fill #191815 radius 2
+      rect 807.2353,176.368 12x12 fill #191815 radius 2
+      rect 807.2353,191.368 12x12 fill #ffd23f radius 2
+      rect 807.2353,206.368 12x12 fill #191815 radius 2
+      rect 807.2353,221.368 12x12 fill #191815 radius 2
+      rect 807.2353,236.368 12x12 fill #191815 radius 2
+      rect 807.2353,251.368 12x11.999985 fill #191815 radius 2
+      rect 807.2353,266.36798 12x12 fill #ffd23f radius 2
+      rect 823.0784,176.368 12x12 fill #191815 radius 2
+      rect 823.0784,191.368 12x12 fill #191815 radius 2
+      rect 823.0784,206.368 12x12 fill #191815 radius 2
+      rect 823.0784,221.368 12x12 fill #191815 radius 2
+      rect 823.0784,236.368 12x12 fill #191815 radius 2
+      rect 823.0784,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 823.0784,266.36798 12x12 fill #191815 radius 2
+      rect 838.9216,176.368 12x12 fill #191815 radius 2
+      rect 838.9216,191.368 12x12 fill #191815 radius 2
+      rect 838.9216,206.368 12x12 fill #191815 radius 2
+      rect 838.9216,221.368 12x12 fill #191815 radius 2
+      rect 838.9216,236.368 12x12 fill #191815 radius 2
+      rect 838.9216,251.368 12x11.999985 fill #191815 radius 2
+      rect 838.9216,266.36798 12x12 fill #191815 radius 2
+      rect 854.76465,176.368 12x12 fill #191815 radius 2
+      rect 854.76465,191.368 12x12 fill #ffd23f radius 2
+      rect 854.76465,206.368 12x12 fill #191815 radius 2
+      rect 854.76465,221.368 12x12 fill #191815 radius 2
+      rect 854.76465,236.368 12x12 fill #191815 radius 2
+      rect 854.76465,251.368 12x11.999985 fill #191815 radius 2
+      rect 854.76465,266.36798 12x12 fill #191815 radius 2
+      rect 870.6078,176.368 12x12 fill #ffd23f radius 2
+      rect 870.6078,191.368 12x12 fill #191815 radius 2
+      rect 870.6078,206.368 12x12 fill #191815 radius 2
+      rect 870.6078,221.368 12x12 fill #191815 radius 2
+      rect 870.6078,236.368 12x12 fill #ffd23f radius 2
+      rect 870.6078,251.368 12x11.999985 fill #191815 radius 2
+      rect 870.6078,266.36798 12x12 fill #191815 radius 2
+      rect 886.4509,176.368 12x12 fill #191815 radius 2
+      rect 886.4509,191.368 12x12 fill #191815 radius 2
+      rect 886.4509,206.368 12x12 fill #191815 radius 2
+      rect 886.4509,221.368 12x12 fill #ffd23f radius 2
+      rect 886.4509,236.368 12x12 fill #191815 radius 2
+      rect 886.4509,251.368 12x11.999985 fill #191815 radius 2
+      rect 886.4509,266.36798 12x12 fill #191815 radius 2
+      rect 902.29407,176.368 12x12 fill #191815 radius 2
+      rect 902.29407,191.368 12x12 fill #ffd23f radius 2
+      rect 902.29407,206.368 12x12 fill #191815 radius 2
+      rect 902.29407,221.368 12x12 fill #191815 radius 2
+      rect 902.29407,236.368 12x12 fill #191815 radius 2
+      rect 902.29407,251.368 12x11.999985 fill #191815 radius 2
+      rect 902.29407,266.36798 12x12 fill #191815 radius 2
+      rect 918.1372,176.368 12x12 fill #ffd23f radius 2
+      rect 918.1372,191.368 12x12 fill #191815 radius 2
+      rect 918.1372,206.368 12x12 fill #191815 radius 2
+      rect 918.1372,221.368 12x12 fill #191815 radius 2
+      rect 918.1372,236.368 12x12 fill #191815 radius 2
+      rect 918.1372,251.368 12x11.999985 fill #191815 radius 2
+      rect 918.1372,266.36798 12x12 fill #191815 radius 2
+      rect 933.98035,176.368 12x12 fill #191815 radius 2
+      rect 933.98035,191.368 12x12 fill #191815 radius 2
+      rect 933.98035,206.368 12x12 fill #191815 radius 2
+      rect 933.98035,221.368 12x12 fill #ffd23f radius 2
+      rect 933.98035,236.368 12x12 fill #191815 radius 2
+      rect 933.98035,251.368 12x11.999985 fill #191815 radius 2
+      rect 933.98035,266.36798 12x12 fill #191815 radius 2
+      rect 949.8235,176.368 12x12 fill #191815 radius 2
+      rect 949.8235,191.368 12x12 fill #191815 radius 2
+      rect 949.8235,206.368 12x12 fill #ffd23f radius 2
+      rect 949.8235,221.368 12x12 fill #191815 radius 2
+      rect 949.8235,236.368 12x12 fill #191815 radius 2
+      rect 949.8235,251.368 12x11.999985 fill #191815 radius 2
+      rect 949.8235,266.36798 12x12 fill #ffd23f radius 2
+      rect 965.6666,176.368 12x12 fill #191815 radius 2
+      rect 965.6666,191.368 12x12 fill #191815 radius 2
+      rect 965.6666,206.368 12x12 fill #191815 radius 2
+      rect 965.6666,221.368 12x12 fill #191815 radius 2
+      rect 965.6666,236.368 12x12 fill #191815 radius 2
+      rect 965.6666,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 965.6666,266.36798 12x12 fill #191815 radius 2
+      rect 981.50977,176.368 12x12 fill #191815 radius 2
+      rect 981.50977,191.368 12x12 fill #191815 radius 2
+      rect 981.50977,206.368 12x12 fill #191815 radius 2
+      rect 981.50977,221.368 12x12 fill #ffd23f radius 2
+      rect 981.50977,236.368 12x12 fill #191815 radius 2
+      rect 981.50977,251.368 12x11.999985 fill #191815 radius 2
+      rect 981.50977,266.36798 12x12 fill #191815 radius 2
+      rect 997.3529,176.368 12x12 fill #191815 radius 2
+      rect 997.3529,191.368 12x12 fill #191815 radius 2
+      rect 997.3529,206.368 12x12 fill #ffd23f radius 2
+      rect 997.3529,221.368 12x12 fill #191815 radius 2
+      rect 997.3529,236.368 12x12 fill #191815 radius 2
+      rect 997.3529,251.368 12x11.999985 fill #191815 radius 2
+      rect 997.3529,266.36798 12x12 fill #191815 radius 2
+      rect 1013.19604,176.368 12x12 fill #191815 radius 2
+      rect 1013.19604,191.368 12x12 fill #191815 radius 2
+      rect 1013.19604,206.368 12x12 fill #191815 radius 2
+      rect 1013.19604,221.368 12x12 fill #191815 radius 2
+      rect 1013.19604,236.368 12x12 fill #191815 radius 2
+      rect 1013.19604,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 1013.19604,266.36798 12x12 fill #191815 radius 2
+      rect 1029.0392,176.368 12x12 fill #191815 radius 2
+      rect 1029.0392,191.368 12x12 fill #191815 radius 2
+      rect 1029.0392,206.368 12x12 fill #191815 radius 2
+      rect 1029.0392,221.368 12x12 fill #191815 radius 2
+      rect 1029.0392,236.368 12x12 fill #ffd23f radius 2
+      rect 1029.0392,251.368 12x11.999985 fill #191815 radius 2
+      rect 1029.0392,266.36798 12x12 fill #191815 radius 2
+      rect 1044.8823,176.368 12x12 fill #191815 radius 2
+      rect 1044.8823,191.368 12x12 fill #191815 radius 2
+      rect 1044.8823,206.368 12x12 fill #ffd23f radius 2
+      rect 1044.8823,221.368 12x12 fill #191815 radius 2
+      rect 1044.8823,236.368 12x12 fill #191815 radius 2
+      rect 1044.8823,251.368 12x11.999985 fill #191815 radius 2
+      rect 1044.8823,266.36798 12x12 fill #191815 radius 2
+      rect 1060.7255,176.368 12x12 fill #ffd23f radius 2
+      rect 1060.7255,191.368 12x12 fill #191815 radius 2
+      rect 1060.7255,206.368 12x12 fill #191815 radius 2
+      rect 1060.7255,221.368 12x12 fill #191815 radius 2
+      rect 1060.7255,236.368 12x12 fill #191815 radius 2
+      rect 1060.7255,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 1060.7255,266.36798 12x12 fill #191815 radius 2
+      rect 1076.5686,176.368 12x12 fill #191815 radius 2
+      rect 1076.5686,191.368 12x12 fill #191815 radius 2
+      rect 1076.5686,206.368 12x12 fill #191815 radius 2
+      rect 1076.5686,221.368 12x12 fill #191815 radius 2
+      rect 1076.5686,236.368 12x12 fill #ffd23f radius 2
+      rect 1076.5686,251.368 12x11.999985 fill #191815 radius 2
+      rect 1076.5686,266.36798 12x12 fill #191815 radius 2
+      rect 1092.4117,176.368 12x12 fill #191815 radius 2
+      rect 1092.4117,191.368 12x12 fill #191815 radius 2
+      rect 1092.4117,206.368 12x12 fill #191815 radius 2
+      rect 1092.4117,221.368 12x12 fill #191815 radius 2
+      rect 1092.4117,236.368 12x12 fill #191815 radius 2
+      rect 1092.4117,251.368 12x11.999985 fill #191815 radius 2
+      rect 1092.4117,266.36798 12x12 fill #191815 radius 2
+      rect 1108.2549,176.368 12x12 fill #ffd23f radius 2
+      rect 1108.2549,191.368 12x12 fill #191815 radius 2
+      rect 1108.2549,206.368 12x12 fill #191815 radius 2
+      rect 1108.2549,221.368 12x12 fill #191815 radius 2
+      rect 1108.2549,236.368 12x12 fill #191815 radius 2
+      rect 1108.2549,251.368 12x11.999985 fill #191815 radius 2
+      rect 1108.2549,266.36798 12x12 fill #ffd23f radius 2
+      rect 1124.098,176.368 12x12 fill #191815 radius 2
+      rect 1124.098,191.368 12x12 fill #191815 radius 2
+      rect 1124.098,206.368 12x12 fill #191815 radius 2
+      rect 1124.098,221.368 12x12 fill #191815 radius 2
+      rect 1124.098,236.368 12x12 fill #ffd23f radius 2
+      rect 1124.098,251.368 12x11.999985 fill #191815 radius 2
+      rect 1124.098,266.36798 12x12 fill #191815 radius 2
+      rect 1139.9412,176.368 12x12 fill #191815 radius 2
+      rect 1139.9412,191.368 12x12 fill #191815 radius 2
+      rect 1139.9412,206.368 12x12 fill #ffd23f radius 2
+      rect 1139.9412,221.368 12x12 fill #191815 radius 2
+      rect 1139.9412,236.368 12x12 fill #191815 radius 2
+      rect 1139.9412,251.368 12x11.999985 fill #191815 radius 2
+      rect 1139.9412,266.36798 12x12 fill #191815 radius 2
+      rect 1155.7843,176.368 12x12 fill #ffd23f radius 2
+      rect 1155.7843,191.368 12x12 fill #191815 radius 2
+      rect 1155.7843,206.368 12x12 fill #191815 radius 2
+      rect 1155.7843,221.368 12x12 fill #191815 radius 2
+      rect 1155.7843,236.368 12x12 fill #191815 radius 2
+      rect 1155.7843,251.368 12x11.999985 fill #191815 radius 2
+      rect 1155.7843,266.36798 12x12 fill #ffd23f radius 2
+      rect 1171.6274,176.368 12x12 fill #191815 radius 2
+      rect 1171.6274,191.368 12x12 fill #191815 radius 2
+      rect 1171.6274,206.368 12x12 fill #191815 radius 2
+      rect 1171.6274,221.368 12x12 fill #191815 radius 2
+      rect 1171.6274,236.368 12x12 fill #191815 radius 2
+      rect 1171.6274,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 1171.6274,266.36798 12x12 fill #191815 radius 2
+      rect 1187.4706,176.368 12x12 fill #191815 radius 2
+      rect 1187.4706,191.368 12x12 fill #191815 radius 2
+      rect 1187.4706,206.368 12x12 fill #ffd23f radius 2
+      rect 1187.4706,221.368 12x12 fill #191815 radius 2
+      rect 1187.4706,236.368 12x12 fill #191815 radius 2
+      rect 1187.4706,251.368 12x11.999985 fill #191815 radius 2
+      rect 1187.4706,266.36798 12x12 fill #191815 radius 2
+      rect 1203.3137,176.368 12x12 fill #191815 radius 2
+      rect 1203.3137,191.368 12x12 fill #ffd23f radius 2
+      rect 1203.3137,206.368 12x12 fill #191815 radius 2
+      rect 1203.3137,221.368 12x12 fill #191815 radius 2
+      rect 1203.3137,236.368 12x12 fill #191815 radius 2
+      rect 1203.3137,251.368 12x11.999985 fill #191815 radius 2
+      rect 1203.3137,266.36798 12x12 fill #ffd23f radius 2
+      rect 1219.1569,176.368 12x12 fill #191815 radius 2
+      rect 1219.1569,191.368 12x12 fill #191815 radius 2
+      rect 1219.1569,206.368 12x12 fill #191815 radius 2
+      rect 1219.1569,221.368 12x12 fill #191815 radius 2
+      rect 1219.1569,236.368 12x12 fill #ffd23f radius 2
+      rect 1219.1569,251.368 12x11.999985 fill #191815 radius 2
+      rect 1219.1569,266.36798 12x12 fill #191815 radius 2
+      rect 1235,176.368 12x12 fill #191815 radius 2
+      rect 1235,191.368 12x12 fill #191815 radius 2
+      rect 1235,206.368 12x12 fill #ffd23f radius 2
+      rect 1235,221.368 12x12 fill #191815 radius 2
+      rect 1235,236.368 12x12 fill #191815 radius 2
+      rect 1235,251.368 12x11.999985 fill #191815 radius 2
+      rect 1235,266.36798 12x12 fill #191815 radius 2
+      text "Nov" @427,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Dec" @499.9091,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Jan" @572.8182,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Feb" @645.7273,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Mar" @718.63635,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Apr" @791.5454,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "May" @864.4545,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Jun" @937.36365,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Jul" @1010.2727,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Aug" @1083.1818,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Sep" @1156.0908,298.05798 #4f4a40 JetBrains Mono 9.5
+      text "Oct" @1228.9999,298.05798 #4f4a40 JetBrains Mono 9.5
+      rect 427,314.908 2x31.379547 fill #332f27
+      text "Change 1" @439,326.533 #b3ab99 Inter 12
+      text "1a1346b · Liam Galvin · 3w ago" @439,343.1375 #7c7566 JetBrains Mono 10.5
+    pop
+    rect 1265,115.968 1x244.31953 fill #24221d
+    clip 1266,115.968 300x176.39998 r 0
+      text "CONTRIBUTORS" @1284,139.658 #7c7566 JetBrains Mono 9.5
+      rect 1284,152.508 20x20 fill #4cc9f0 radius 5
+      text "C" @1291.2969,165.568 #141006 JetBrains Mono 8.5
+      clip 1313,155.24823 110x14.519531 r 0
+        text "Claude" @1313,166.87323 #b3ab99 Inter 12
+      pop
+      rect 1432,160.008 67x5 fill #191815 radius 2.5
+      rect 1432,160.008 67x5 fill #ffd23f radius 2.5
+      text "16" @1534.8125,166.28801 #7c7566 JetBrains Mono 10.5
+      rect 1284,180.508 20x20 fill #b98aff radius 5
+      text "SK" @1288.5938,193.568 #141006 JetBrains Mono 8.5
+      clip 1313,183.24823 110x14.519531 r 0
+        text "Sam Kim" @1313,194.87323 #b3ab99 Inter 12
+      pop
+      rect 1432,188.008 67x5 fill #191815 radius 2.5
+      rect 1432,188.008 67x5 fill #ffd23f radius 2.5
+      text "16" @1534.8125,194.28801 #7c7566 JetBrains Mono 10.5
+      rect 1284,208.508 20x20 fill #4fe0a0 radius 5
+      text "JP" @1288.5938,221.568 #141006 JetBrains Mono 8.5
+      clip 1313,211.24823 110x14.519531 r 0
+        text "Jo Park" @1313,222.87323 #b3ab99 Inter 12
+      pop
+      rect 1432,216.008 67x5 fill #191815 radius 2.5
+      rect 1432,216.008 50.25x5 fill #ffd23f radius 2.5
+      text "12" @1534.8125,222.28801 #7c7566 JetBrains Mono 10.5
+      rect 1284,236.508 20x20 fill #ff9b45 radius 5
+      text "LG" @1288.5938,249.568 #141006 JetBrains Mono 8.5
+      clip 1313,239.24823 110x14.519531 r 0
+        text "Liam Galvin" @1313,250.87323 #b3ab99 Inter 12
+      pop
+      rect 1432,244.008 67x5 fill #191815 radius 2.5
+      rect 1432,244.008 50.25x5 fill #ffd23f radius 2.5
+      text "12" @1534.8125,250.28801 #7c7566 JetBrains Mono 10.5
+      text "+ 1 more · 5 people" @1284,275.218 #7c7566 JetBrains Mono 10.5
+    pop
+  pop
+  text "open a file with ␣␣ · search with ⇧⌘F · everything with ⌘K" @630.78125,393.5075 #4f4a40 JetBrains Mono 11
+pop
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11

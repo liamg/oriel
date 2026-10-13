@@ -18,8 +18,8 @@ import (
 )
 
 func builtins(sh *shell) []ext.Extension {
-	sh.layout = &layoutExt{}
-	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
+	sh.layout = &layoutExt{sh: sh}
+	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &rail{}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
 		&editorExt{sh: sh}, &settingsExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
 }
 
@@ -40,6 +40,7 @@ func (d *disposer) Deactivate(context.Context) error {
 // around it. view.open is how anything, built-in or plugin, puts a view on screen.
 type layoutExt struct {
 	disposer
+	sh    *shell
 	root  *layout.Root
 	panes layout.Panes
 	rects map[*layout.Node]render.Rect
@@ -63,6 +64,15 @@ var movePlacements = []struct {
 
 func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 	l.root, l.saved = layout.New(), map[string]layout.Snapshot{}
+	l.panes.Empty = func(c *ui.Ctx) {
+		id := StartView
+		if l.sh != nil && l.sh.cfg.WorkDir != "" {
+			id = OverviewView
+		}
+		if v, ok := h.ViewByID(id); ok {
+			c.Column(id, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(registry.ViewCtx{})) })
+		}
+	}
 	l.panes.Title = func(v layout.ViewRef) string {
 		if view, ok := h.ViewByID(v.ID); ok {
 			if t, ok := view.(registry.Titled); ok {
@@ -78,8 +88,16 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 		}
 		return *l.root.Focus, nil
 	}
+	viewRegistered := func(a registry.Args) bool {
+		id := str(a, "id")
+		if id == "" {
+			return true
+		}
+		_, ok := h.ViewByID(id)
+		return ok
+	}
 	cmds := []registry.Command{
-		{ID: "view.open", Title: "Open a view", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "view.open", Title: "Open a view", Available: viewRegistered, Run: func(_ registry.Ctx, a registry.Args) error {
 			id := str(a, "id")
 			if _, ok := h.ViewByID(id); !ok {
 				return fmt.Errorf("no view %q", id)
@@ -98,6 +116,16 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 				o.Beside = &layout.ViewRef{ID: id, Instance: inst}
 			}
 			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title")}, place, o)
+		}},
+		{ID: "view.toggle", Title: "Show a view {id}, or close it if it's showing", Available: viewRegistered, Run: func(ctx registry.Ctx, a registry.Args) error {
+			v := layout.ViewRef{ID: str(a, "id"), Instance: str(a, "instance")}
+			for _, s := range l.root.Visible() {
+				if s.ID == v.ID && (v.Instance == "" || s.Instance == v.Instance) {
+					l.root.Close(s)
+					return nil
+				}
+			}
+			return h.Run(ctx, "view.open", a)
 		}},
 		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance}", Run: func(_ registry.Ctx, a registry.Args) error {
 			if id := str(a, "id"); id != "" {
@@ -177,6 +205,14 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 		k.Mode = "global"
 		l.add(h.Keymap(k))
 	}
+	for _, k := range []registry.Keymap{
+		{Keys: "q", Command: "view.close", Desc: "Close"},
+		{Keys: "<C-w>c", Command: "view.close", Desc: "Close"},
+		{Keys: "<C-w>q", Command: "view.close", Desc: "Close"},
+	} {
+		k.Mode = ViewKeyMode
+		l.add(h.Keymap(k))
+	}
 	l.add(h.View(RootView, registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "layout", Fn: func(c *ui.Ctx) {
 			l.rects = l.panes.RectsIn(c)
@@ -232,7 +268,7 @@ func (l *layoutExt) moveMenu(c *ui.Ctx, h ext.Host) {
 	})
 }
 
-// introspect is :Keys and :Commands: every keymap and command, with where it came from.
+// introspect is :Keys and :Commands: every keymap and command, with where it came from, in a picker.
 type introspect struct {
 	disposer
 	configDir string
@@ -241,29 +277,15 @@ type introspect struct {
 func (i *introspect) Manifest() ext.Manifest { return ext.Manifest{ID: "introspect"} }
 
 func (i *introspect) Activate(_ context.Context, h ext.Host) error {
-	open := func(view string) func(registry.Ctx, registry.Args) error {
+	pick := func(source string) func(registry.Ctx, registry.Args) error {
 		return func(ctx registry.Ctx, _ registry.Args) error {
-			return h.Run(ctx, "view.open", registry.Args{"id": view})
+			return h.Run(ctx, "picker.open", registry.Args{"source": source})
 		}
 	}
 	i.add(h.Picker(commandsSource(h)))
 	i.add(h.Picker(keymapsSource(h, i.configDir)))
-	i.add(h.Command(registry.Command{ID: "Keys", Title: "List keymaps", Run: open("keys")}))
-	i.add(h.Command(registry.Command{ID: "Commands", Title: "List commands", Run: open("commands")}))
-	i.add(h.View("keys", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
-		rows := []ui.Node{ui.TextNode(fmt.Sprintf("%-10s %-14s %-24s %s", "MODE", "KEYS", "COMMAND", "SOURCE"))}
-		for _, k := range h.Keymaps() {
-			rows = append(rows, ui.TextNode(fmt.Sprintf("%-10s %-14s %-24s %s", k.Mode, k.Keys, k.Command, k.Source)))
-		}
-		return ui.ColumnNode(rows...)
-	})))
-	i.add(h.View("commands", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
-		rows := []ui.Node{ui.TextNode(fmt.Sprintf("%-24s %-30s %s", "COMMAND", "TITLE", "SOURCE"))}
-		for _, c := range h.Commands() {
-			rows = append(rows, ui.TextNode(fmt.Sprintf("%-24s %-30s %s", c.ID, c.Title, c.Source)))
-		}
-		return ui.ColumnNode(rows...)
-	})))
+	i.add(h.Command(registry.Command{ID: "Keys", Title: "List keymaps", Run: pick("keymaps")}))
+	i.add(h.Command(registry.Command{ID: "Commands", Title: "List commands", Run: pick("commands")}))
 	return nil
 }
 

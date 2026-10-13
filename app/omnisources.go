@@ -91,6 +91,9 @@ func commandsSource(h ext.Host) registry.PickerSource {
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem
 			for _, c := range h.Commands() {
+				if !h.Available(c.ID, nil) {
+					continue
+				}
 				label := c.Title
 				if label == "" {
 					label = c.ID

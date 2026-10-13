@@ -37,3 +37,7 @@ fixture repos produce the expected markers; `⌥1–3` switch scopes
 - Test-first, with verified spec references (`_design/testing.md`).
 - No new dependency without approval (`_design/deps.md`).
 - Update the design doc in the same PR if behaviour differs from it.
+
+## From SH-16
+
+- The rail already has an entry for this view, greyed until the view is registered; registering it lights the entry up.

@@ -1,0 +1,118 @@
+package app
+
+import (
+	"math"
+
+	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/ui"
+)
+
+// icons are the built-in icon set, drawn as strokes in a 16-unit square, so they don't depend on a font having
+// the glyph. A rail or start entry names one in Icon; any other Icon is drawn as text.
+var icons = map[string]func(p *iconPen){
+	"files": func(p *iconPen) {
+		p.poly(true, 2, 3.5, 6.5, 3.5, 8, 5, 14, 5, 14, 13, 2, 13)
+	},
+	"search": func(p *iconPen) {
+		p.circle(7, 7, 4.5)
+		p.line(10.4, 10.4, 14, 14)
+	},
+	"git": func(p *iconPen) {
+		p.circle(4.5, 3.5, 1.8)
+		p.circle(4.5, 12.5, 1.8)
+		p.circle(11.5, 5.5, 1.8)
+		p.line(4.5, 5.3, 4.5, 10.7)
+		p.curve(11.5, 7.3, 11.5, 10, 4.5, 9, 4.5, 10.7)
+	},
+	"requests": func(p *iconPen) {
+		p.poly(true, 8, 1.5, 14.5, 8, 8, 14.5, 1.5, 8)
+		p.poly(true, 8, 5, 11, 8, 8, 11, 5, 8)
+	},
+	"debug": func(p *iconPen) {
+		p.poly(true, 4, 2.5, 13.5, 8, 4, 13.5)
+	},
+	"tests": func(p *iconPen) {
+		p.poly(false, 2.5, 8.5, 6.5, 12.5, 13.5, 3.5)
+	},
+	"settings": func(p *iconPen) {
+		p.circle(8, 8, 2.2)
+		p.circle(8, 8, 4.6)
+		for i := range 8 {
+			a := float64(i) * math.Pi / 4
+			p.line(8+4.6*cos(a), 8+4.6*sin(a), 8+6.6*cos(a), 8+6.6*sin(a))
+		}
+	},
+	"plus": func(p *iconPen) {
+		p.line(8, 3, 8, 13)
+		p.line(3, 8, 13, 8)
+	},
+	"resume": func(p *iconPen) {
+		p.curve(12.5, 8, 12.5, 11, 10, 13, 8, 13)
+		p.curve(8, 13, 5, 13, 3.5, 10.5, 3.5, 8)
+		p.curve(3.5, 8, 3.5, 5, 6, 3, 8, 3)
+		p.curve(8, 3, 10, 3, 11.5, 4, 12.3, 5.5)
+		p.poly(false, 12.6, 2.5, 12.6, 5.8, 9.4, 5.8)
+	},
+	"folder": func(p *iconPen) {
+		p.poly(true, 2, 3.5, 6.5, 3.5, 8, 5, 14, 5, 14, 13, 2, 13)
+		p.line(2, 7, 14, 7)
+	},
+}
+
+func cos(a float64) float32 { return float32(math.Cos(a)) }
+func sin(a float64) float32 { return float32(math.Sin(a)) }
+
+// iconPen strokes an icon's 16-unit square into r.
+type iconPen struct {
+	f     render.Frame
+	r     render.Rect
+	style render.Style
+}
+
+func (p *iconPen) pt(x, y float32) render.Point {
+	s := min(p.r.Dx(), p.r.Dy()) / 16
+	return render.Point{X: p.r.Min.X + x*s, Y: p.r.Min.Y + y*s}
+}
+
+func (p *iconPen) line(x0, y0, x1, y1 float32) {
+	var path render.Path
+	path.MoveTo(p.pt(x0, y0)).LineTo(p.pt(x1, y1))
+	p.f.Path(&path, p.style)
+}
+
+func (p *iconPen) curve(x0, y0, c1x, c1y, c2x, c2y, x1, y1 float32) {
+	var path render.Path
+	path.MoveTo(p.pt(x0, y0)).CubeTo(p.pt(c1x, c1y), p.pt(c2x, c2y), p.pt(x1, y1))
+	p.f.Path(&path, p.style)
+}
+
+func (p *iconPen) poly(closed bool, xy ...float32) {
+	var path render.Path
+	path.MoveTo(p.pt(xy[0], xy[1]))
+	for i := 2; i+1 < len(xy); i += 2 {
+		path.LineTo(p.pt(xy[i], xy[i+1]))
+	}
+	if closed {
+		path.Close()
+	}
+	p.f.Path(&path, p.style)
+}
+
+func (p *iconPen) circle(x, y, rad float32) {
+	a, b := p.pt(x-rad, y-rad), p.pt(x+rad, y+rad)
+	p.f.Path(render.Ellipse(render.Rect{Min: a, Max: b}), p.style)
+}
+
+// icon draws a named icon from the set, or name as a glyph, in a size-square box.
+func icon(c *ui.Ctx, key any, name string, size float32, col render.Color) {
+	if draw, ok := icons[name]; ok {
+		c.Paint(key, ui.Px(size), ui.Px(size), func(f render.Frame, r render.Rect) {
+			draw(&iconPen{f: f, r: r, style: render.Style{Stroke: col, Width: max(1.25, size/11)}})
+		})
+		return
+	}
+	c.Box(key, ui.Style{W: ui.Px(size), H: ui.Px(size), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
+		c.Text("glyph", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size * .85, Weight: typeset.SemiBold}, Color: col})
+	})
+}

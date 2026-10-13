@@ -30,54 +30,78 @@ clip 102.9375,0 1469.0625x38 r 0
   text "⌘4" @853.2969,23.42 #4f4a40 JetBrains Mono 9.5
   rect 877.2969,0 1x38 fill #24221d
 pop
-rect 0,38 1600x936 fill #060606
-clip 0,38 1600x936 r 0
-  rect 0,38 1600x30 fill #0c0c0b
-  text "round.go" @14,58.365234 #7c7566 Inter 12
-  rect 79.265625,38 70.6875x30 fill #121210
-  rect 79.265625,38 70.6875x2 fill #ffd23f
-  text "tiers.go" @93.265625,58.365234 #ece6d8 Inter 12
-  rect 0,68 1600x1 fill #24221d
-  clip 0,69 1600x905 r 0
-    rect 0,69 1600x905 fill #060606
-    clip 0,69 1600x905 r 0
-      text "internal" @14,85.96 #7c7566 JetBrains Mono 11
-      text "›" @72.75,85.96 #7c7566 JetBrains Mono 11
-      text "pricing" @85.34375,85.96 #7c7566 JetBrains Mono 11
-      text "›" @137.5,85.96 #7c7566 JetBrains Mono 11
-      text "tiers.go" @150.09375,85.96 #b3ab99 JetBrains Mono 11
-      clip 0,95 1600x879 r 0
-        text "1" @39.59375,116.36 #7c7566 JetBrains Mono 13.5
-        text "package" @68,116.36 #c792ff JetBrains Mono 13.5
-        text " " @126.84375,116.36 #ece6d8 JetBrains Mono 13.5
-        text "pricing" @135.25,116.36 #ece6d8 JetBrains Mono 13.5
-        text "2" @39.59375,137.36 #4f4a40 JetBrains Mono 13.5
-        text "3" @39.59375,158.36 #4f4a40 JetBrains Mono 13.5
-        text "// PriceForTier is a tier's price." @68,158.36 #5c6b7e JetBrains Mono 13.5
-        text "4" @39.59375,179.36 #4f4a40 JetBrains Mono 13.5
-        text "func" @68,179.36 #c792ff JetBrains Mono 13.5
-        text " " @101.625,179.36 #ece6d8 JetBrains Mono 13.5
-        text "PriceForTier" @110.03125,179.36 #5cd2ff JetBrains Mono 13.5
-        text "(" @210.90625,179.36 #89ddff JetBrains Mono 13.5
-        text "t" @219.3125,179.36 #d6dde6 JetBrains Mono 13.5
-        text " " @227.71875,179.36 #ece6d8 JetBrains Mono 13.5
-        text "int" @236.125,179.36 #ffcf5c JetBrains Mono 13.5
-        text ")" @261.34375,179.36 #89ddff JetBrains Mono 13.5
-        text " " @269.75,179.36 #ece6d8 JetBrains Mono 13.5
-        text "int" @278.15625,179.36 #ffcf5c JetBrains Mono 13.5
-        text " " @303.375,179.36 #ece6d8 JetBrains Mono 13.5
-        text "{" @311.78125,179.36 #89ddff JetBrains Mono 13.5
-        text "5" @39.59375,200.36 #4f4a40 JetBrains Mono 13.5
-        text "        " @68,200.36 #ece6d8 JetBrains Mono 13.5
-        text "return" @135.25,200.36 #c792ff JetBrains Mono 13.5
-        text " " @185.6875,200.36 #ece6d8 JetBrains Mono 13.5
-        text "t" @194.09375,200.36 #d6dde6 JetBrains Mono 13.5
-        text " " @202.5,200.36 #ece6d8 JetBrains Mono 13.5
-        text "*" @210.90625,200.36 #89ddff JetBrains Mono 13.5
-        text " " @219.3125,200.36 #ece6d8 JetBrains Mono 13.5
-        text "100" @227.71875,200.36 #ff9e64 JetBrains Mono 13.5
-        text "6" @39.59375,221.36 #4f4a40 JetBrains Mono 13.5
-        text "}" @68,221.36 #89ddff JetBrains Mono 13.5
+rect 0,38 44x936 fill #0c0c0b
+path 7 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #4f4a40
+path 4 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+rect 43,38 1x936 fill #24221d
+rect 44,38 1556x936 fill #060606
+clip 44,38 1556x936 r 0
+  rect 44,38 1556x30 fill #0c0c0b
+  text "round.go" @58,58.365234 #7c7566 Inter 12
+  rect 123.265625,38 70.6875x30 fill #121210
+  rect 123.265625,38 70.6875x2 fill #ffd23f
+  text "tiers.go" @137.26562,58.365234 #ece6d8 Inter 12
+  rect 44,68 1556x1 fill #24221d
+  clip 44,69 1556x905 r 0
+    rect 44,69 1556x905 fill #060606
+    clip 44,69 1556x905 r 0
+      text "internal" @58,85.96 #7c7566 JetBrains Mono 11
+      text "›" @116.75,85.96 #7c7566 JetBrains Mono 11
+      text "pricing" @129.34375,85.96 #7c7566 JetBrains Mono 11
+      text "›" @181.5,85.96 #7c7566 JetBrains Mono 11
+      text "tiers.go" @194.09375,85.96 #b3ab99 JetBrains Mono 11
+      clip 44,95 1556x879 r 0
+        text "1" @83.59375,116.36 #7c7566 JetBrains Mono 13.5
+        text "package" @112,116.36 #c792ff JetBrains Mono 13.5
+        text " " @170.84375,116.36 #ece6d8 JetBrains Mono 13.5
+        text "pricing" @179.25,116.36 #ece6d8 JetBrains Mono 13.5
+        text "2" @83.59375,137.36 #4f4a40 JetBrains Mono 13.5
+        text "3" @83.59375,158.36 #4f4a40 JetBrains Mono 13.5
+        text "// PriceForTier is a tier's price." @112,158.36 #5c6b7e JetBrains Mono 13.5
+        text "4" @83.59375,179.36 #4f4a40 JetBrains Mono 13.5
+        text "func" @112,179.36 #c792ff JetBrains Mono 13.5
+        text " " @145.625,179.36 #ece6d8 JetBrains Mono 13.5
+        text "PriceForTier" @154.03125,179.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @254.90625,179.36 #89ddff JetBrains Mono 13.5
+        text "t" @263.3125,179.36 #d6dde6 JetBrains Mono 13.5
+        text " " @271.71875,179.36 #ece6d8 JetBrains Mono 13.5
+        text "int" @280.125,179.36 #ffcf5c JetBrains Mono 13.5
+        text ")" @305.34375,179.36 #89ddff JetBrains Mono 13.5
+        text " " @313.75,179.36 #ece6d8 JetBrains Mono 13.5
+        text "int" @322.15625,179.36 #ffcf5c JetBrains Mono 13.5
+        text " " @347.375,179.36 #ece6d8 JetBrains Mono 13.5
+        text "{" @355.78125,179.36 #89ddff JetBrains Mono 13.5
+        text "5" @83.59375,200.36 #4f4a40 JetBrains Mono 13.5
+        text "        " @112,200.36 #ece6d8 JetBrains Mono 13.5
+        text "return" @179.25,200.36 #c792ff JetBrains Mono 13.5
+        text " " @229.6875,200.36 #ece6d8 JetBrains Mono 13.5
+        text "t" @238.09375,200.36 #d6dde6 JetBrains Mono 13.5
+        text " " @246.5,200.36 #ece6d8 JetBrains Mono 13.5
+        text "*" @254.90625,200.36 #89ddff JetBrains Mono 13.5
+        text " " @263.3125,200.36 #ece6d8 JetBrains Mono 13.5
+        text "100" @271.71875,200.36 #ff9e64 JetBrains Mono 13.5
+        text "6" @83.59375,221.36 #4f4a40 JetBrains Mono 13.5
+        text "}" @112,221.36 #89ddff JetBrains Mono 13.5
       pop
     pop
   pop
@@ -92,25 +116,26 @@ text "0" @130.90375,990.95996 #b3ab99 JetBrains Mono 11
 text "Go · utf-8 · LF" @1400.3438,984.71 #b3ab99 JetBrains Mono 10.5
 text "1:1" @1515.25,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 16%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
-rect 68,102 8.40625x19 fill #ffd23f
-text "p" @68,115.770004 #141006 JetBrains Mono 13.5
+rect 112,102 8.40625x19 fill #ffd23f
+text "p" @112,115.770004 #141006 JetBrains Mono 13.5
 rect 0,0 1600x1000 fill #03050899
 rect 180,108 1240x720 fill #0c0c0b radius 10 stroke 1 #332f27
 clip 180,108 1240x720 r 10
   text "PICK" @194,130.42 #7c7566 JetBrains Mono 9.5
   text "SESSIONS" @237.56,130.42 #7c7566 JetBrains Mono 9.5
-  text "COMMANDS ␣:" @316.68,130.42 #7c7566 JetBrains Mono 9.5
-  rect 410.21997,118.73 66.56x16.54 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
-  text "FILES ␣␣" @417.21997,130.42 #ffd23f JetBrains Mono 9.5
-  text "GREP ␣/" @491.77997,130.42 #7c7566 JetBrains Mono 9.5
-  text "BUFFERS ␣," @563.75995,130.42 #7c7566 JetBrains Mono 9.5
-  text "SYMBOLS ␣S" @657.1599,130.42 #7c7566 JetBrains Mono 9.5
-  text "SYMBOLS HERE ␣s" @750.55994,130.42 #7c7566 JetBrains Mono 9.5
-  text "KEYMAPS ␣k" @879.6599,130.42 #7c7566 JetBrains Mono 9.5
-  text "QUICKFIX" @973.05994,130.42 #7c7566 JetBrains Mono 9.5
-  text "HELP ␣h" @1052.1799,130.42 #7c7566 JetBrains Mono 9.5
-  text "THEMES ␣T" @1124.1599,130.42 #7c7566 JetBrains Mono 9.5
-  text "⇥ next source" @1313.1799,130.42 #7c7566 JetBrains Mono 9.5
+  text "DIRECTORIES" @316.68,130.42 #7c7566 JetBrains Mono 9.5
+  text "COMMANDS ␣:" @417.21997,130.42 #7c7566 JetBrains Mono 9.5
+  rect 510.75998,118.73 66.55997x16.54 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
+  text "FILES ␣␣" @517.76,130.42 #ffd23f JetBrains Mono 9.5
+  text "GREP <D-F>" @592.31995,130.42 #7c7566 JetBrains Mono 9.5
+  text "BUFFERS ␣," @685.72,130.42 #7c7566 JetBrains Mono 9.5
+  text "SYMBOLS ␣S" @779.12,130.42 #7c7566 JetBrains Mono 9.5
+  text "SYMBOLS HERE ␣s" @872.52,130.42 #7c7566 JetBrains Mono 9.5
+  text "KEYMAPS ␣k" @1001.62,130.42 #7c7566 JetBrains Mono 9.5
+  text "QUICKFIX" @1095.02,130.42 #7c7566 JetBrains Mono 9.5
+  text "HELP ␣h" @1174.14,130.42 #7c7566 JetBrains Mono 9.5
+  text "THEMES ␣T" @1246.12,130.42 #7c7566 JetBrains Mono 9.5
+  text "⇥ next source" @1333.38,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #ffd23f Inter 16
   rect 211.59375,155 420.6875x30 fill #060606 radius 6 stroke 1 #332f27

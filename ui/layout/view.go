@@ -99,6 +99,10 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 			changed = dock(c, r, st, Left, content) || changed
 			c.Column("centre", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Role: ui.RoleRegion, Label: "Main"}, func(c *ui.Ctx) {
+					if panes != nil && panes.Empty != nil && len(r.Shown()) == 0 && st.drag == nil {
+						panes.Empty(c)
+						return
+					}
 					changed = node(c, r, st, r.Main, content) || changed
 				})
 				changed = dock(c, r, st, Bottom, content) || changed
@@ -491,6 +495,7 @@ func abs(v float32) float32 {
 type Panes struct {
 	leaves map[*Node]ui.ID
 	Title  func(v ViewRef) string
+	Empty  func(c *ui.Ctx) // draws the main area while it holds no views, unless a pane is being dragged there
 }
 
 // Rects is where each leaf was drawn in the latest frame.

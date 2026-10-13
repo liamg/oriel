@@ -44,6 +44,8 @@ type errScene struct {
 	clip  *clipboard
 	exts  []ext.Extension
 	size  render.Point
+	// overviewOff hides the project overview, whose temporary paths would change every run; overview tests dispose it.
+	overviewOff registry.Disposable
 }
 
 func newErrScene(t *testing.T, crashDir string) *errScene {
@@ -88,6 +90,7 @@ func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errSce
 	o.ReducedMotion = true // scenes are of the settled UI on a stopped clock
 	s.ui.SetOptions(o)
 	s.ui.SetClock(func() time.Time { return s.now })
+	s.overviewOff = s.reg.View(OverviewView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() }))
 	s.sh.ui = s.ui
 	s.sh.theme = s.ui.Theme
 	s.sh.shot = func(th *theme.Resolved) *image.RGBA {

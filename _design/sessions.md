@@ -30,14 +30,14 @@ flowchart LR
 | **tour** | a question | a pinned, read-only worktree | writes the tour |
 | **job** | a saved prompt | created by the agent as needed | runs to done or blocked |
 | **new repo** | a name and a template | a fresh repo | optional |
-| **direct** | `oriel ~/src/foo` | **none: your checkout itself** | optional, with a warning |
+| **direct** | `oriel ~/src/foo`, or the launcher | **none: the directory itself**, git repo or not | optional, with a warning |
 | **scratch** | nothing | none | optional |
 
 - **New repo**: pick a name, where it lives (this Mac or a worker), and a template (empty, Go module, Go CLI, or any GitHub
   template repo). Oriel runs `git init`, optionally creates the GitHub repo (private by default, through the gateway with approval),
   registers it, and continues as a plan session ("what are we building?").
-- **Direct** is the escape hatch for "I just want to edit this file". It opens a checkout in place, with no worktree and no new
-  branch. The tab is marked `direct`, and an agent there gets a warning first because it would be editing your real checkout.
+- **Direct** is "classic" editing: it opens any directory in place, git repo or not, with no worktree and no new
+  branch. It's a first-class choice in the launcher, not only a CLI escape hatch. The tab is marked `direct`, and an agent there gets a warning first because it would be editing your real checkout.
 - **Scratch** holds notes, the assistant, and terminals with no repo.
 
 ## Starting one

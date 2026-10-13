@@ -296,3 +296,45 @@ func TestOmniboxOpensAFile(t *testing.T) {
 	r.typeKeys("@tiers<CR>")
 	r.waitFrame("tiers.go open", func(s string) bool { return strings.Contains(s, "PriceForTier") && !strings.Contains(s, "FILES") })
 }
+
+// SH-14: every built-in view opened in the layout closes from the keyboard with ⌃W c.
+func TestEveryViewClosesWithCtrlWC(t *testing.T) {
+	r := runEditor(t, map[string]string{"a.txt": "alpha\n"}, nil)
+	var views []string
+	for _, id := range r.host.Views() {
+		if !strings.HasPrefix(id, "app.") {
+			views = append(views, id)
+		}
+	}
+	for _, id := range views {
+		t.Run(id, func(t *testing.T) {
+			if err := r.do(func() error { return r.host.Run(context.Background(), "view.open", registry.Args{"id": id}) }); err != nil {
+				t.Skipf("doesn't open on its own: %v", err)
+			}
+			if len(r.shown()) == 0 {
+				t.Skip("opens nothing in the layout")
+			}
+			r.typeKeys("<C-w>c")
+			deadline := time.Now().Add(5 * time.Second)
+			for len(r.shown()) > 0 {
+				if time.Now().After(deadline) {
+					t.Fatalf("%s is still open after ⌃W c: %v", id, r.shown())
+				}
+			}
+		})
+	}
+}
+
+// do runs fn on the app's loop and returns its error.
+func (r *running) do(fn func() error) error {
+	r.t.Helper()
+	got := make(chan error, 1)
+	r.host.Do(func() { got <- fn() })
+	select {
+	case err := <-got:
+		return err
+	case <-time.After(5 * time.Second):
+		r.t.Fatal("the loop never ran it")
+	}
+	return nil
+}

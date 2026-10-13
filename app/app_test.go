@@ -161,12 +161,17 @@ func TestChordsWaitForTheirTimeout(t *testing.T) {
 	b.close(t)
 }
 
-// lister binds keys to the built-in :Keys and :Commands.
-type lister struct{}
+// lister binds keys to the built-in :Keys and :Commands, and says when its command runs.
+type lister struct{ ran chan struct{} }
 
 func (lister) Manifest() ext.Manifest { return ext.Manifest{ID: "test.lister"} }
-func (lister) Activate(_ context.Context, h ext.Host) error {
-	h.Command(registry.Command{ID: "lister.noop", Title: "Do nothing", Run: func(registry.Ctx, registry.Args) error { return nil }})
+func (l lister) Activate(_ context.Context, h ext.Host) error {
+	h.Command(registry.Command{ID: "lister.noop", Title: "Do nothing", Run: func(registry.Ctx, registry.Args) error {
+		if l.ran != nil {
+			l.ran <- struct{}{}
+		}
+		return nil
+	}})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "<C-k>", Command: "Keys"})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "<C-c>", Command: "Commands"})
 	return nil
@@ -199,14 +204,66 @@ func containsAll(s string, parts []string) bool {
 	return true
 }
 
-func TestKeysAndCommandsListSources(t *testing.T) {
-	b := boot(t, lister{})
+func (b *booted) typeText(s string) {
+	for _, r := range s {
+		b.win.Send(render.KeyEvent{Key: string(r)})
+	}
+}
+
+// SH-14: :Keys and :Commands are pickers: they list with sources, filter, and run on Enter.
+func TestKeysAndCommandsArePickers(t *testing.T) {
+	l := lister{ran: make(chan struct{}, 1)}
+	b := boot(t, l)
 	b.win.Send(render.KeyEvent{Key: "k", Mods: render.ModCtrl})
-	b.waitLine(t, "n", "<C-k>", "Keys", "test.lister")
+	b.typeText("Keys <C-k>")
+	b.waitLine(t, "Keys", "<C-k>")
+	b.waitLine(t, "test.lister")
+	b.win.Send(render.KeyEvent{Key: "Esc"})
 	b.win.Send(render.KeyEvent{Key: "c", Mods: render.ModCtrl})
-	b.waitLine(t, "lister.noop", "Do nothing", "test.lister")
-	b.waitLine(t, "Keys", "builtin:introspect")
+	b.typeText("do nothing")
+	b.waitText(t, "Do nothing")
+	b.waitText(t, "lister.noop")
+	b.win.Send(render.KeyEvent{Key: "CR"})
+	select {
+	case <-l.ran:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Enter in :Commands didn't run the command")
+	}
 	b.close(t)
+}
+
+// SH-14: a view in the layout closes from the keyboard: q in a view with no keys of its own, and ⌃W c.
+func TestViewsCloseFromTheKeyboard(t *testing.T) {
+	b := boot(t, &counter{tab: true}, opener{})
+	b.waitText(t, "count 0")
+	b.win.Send(render.KeyEvent{Key: "q"})
+	b.waitGone(t, "count 0")
+	b.win.Send(render.KeyEvent{Key: "F2"})
+	b.waitText(t, "count 0")
+	b.win.Send(render.KeyEvent{Key: "w", Mods: render.ModCtrl})
+	b.win.Send(render.KeyEvent{Key: "c"})
+	b.waitGone(t, "count 0")
+	b.close(t)
+}
+
+// opener opens the counter's view on F2.
+type opener struct{}
+
+func (opener) Manifest() ext.Manifest { return ext.Manifest{ID: "test.opener"} }
+func (opener) Activate(_ context.Context, h ext.Host) error {
+	h.Keymap(registry.Keymap{Mode: "global", Keys: "<F2>", Command: "view.open", Args: registry.Args{"id": "counter"}})
+	return nil
+}
+func (opener) Deactivate(context.Context) error { return nil }
+
+func (b *booted) waitGone(t *testing.T, s string) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return !strings.Contains(f.Text(), s) })
+	if err != nil {
+		t.Fatalf("%q never went; last frame:\n%s", s, f.Text())
+	}
 }
 
 // pointy is a plugin view with a box that asks for the pointer cursor.
@@ -226,8 +283,8 @@ func TestPointerSetsTheCursor(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
-	// The root view sits under the 38px titlebar.
-	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 30, Y: 48}})
+	// The root view sits under the 38px titlebar, right of the 44px rail.
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 74, Y: 48}})
 	for b.win.Cursor() != render.CursorPointer {
 		if ctx.Err() != nil {
 			t.Fatalf("cursor is %v over the link", b.win.Cursor())
@@ -344,9 +401,9 @@ func (*form) Deactivate(context.Context) error { return nil }
 func TestWidgetsTakeKeysInTheirOwnMode(t *testing.T) {
 	b := boot(t, &form{})
 	b.waitText(t, "typed:")
-	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 40, Y: 50}})
-	b.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 40, Y: 50}, Buttons: render.ButtonPrimary})
-	b.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 40, Y: 50}, Buttons: render.ButtonPrimary})
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 84, Y: 50}})
+	b.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 84, Y: 50}, Buttons: render.ButtonPrimary})
+	b.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 84, Y: 50}, Buttons: render.ButtonPrimary})
 	b.waitText(t, "typed:")
 	for _, k := range []string{"h", "i"} {
 		b.win.Send(render.KeyEvent{Key: k})

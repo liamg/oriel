@@ -18,6 +18,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
+	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
@@ -37,6 +38,13 @@ const (
 	OverlayPrefix     = "app.overlay."      // views named so float over the window: the omnibox, which-key
 )
 
+// ViewKeyMode is the keymap mode of a view in the layout that has focus but no keys of its own: q closes it.
+// EmptyKeyMode is the mode while the main area is empty and shows the start view or the project overview.
+const (
+	ViewKeyMode  = "view"
+	EmptyKeyMode = "empty"
+)
+
 type Config struct {
 	Store      core.Store        // the materialised state the worker feeds; in-memory if nil
 	Registry   registry.Registry // a fresh one if nil
@@ -48,7 +56,8 @@ type Config struct {
 	Desktop    Desktop  // the clipboard and the browser; the window's, or the OS's, if nil
 	Debug      bool     // oriel --debug: the frame-time overlay
 	Files      []string // open in the editor at start
-	WorkDir    string   // where relative paths are; the current directory if ""
+	WorkDir    string   // the directory open in the window, where relative paths are; none if "" (the start view shows)
+	StateDir   string   // state that isn't config, such as the recent directories; logs.StateDir() if ""
 	CacheDir   string   // compiled grammars and the like; the user's cache directory's oriel/ if ""
 }
 
@@ -96,34 +105,45 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		default:
 		}
 	}
-	sh := &shell{cfg: cfg, events: events, poke: poke}
+	if cfg.StateDir == "" {
+		cfg.StateDir = logs.StateDir()
+	}
+	sh := &shell{cfg: cfg, events: events, poke: poke, reopen: make(chan string, 1)}
+	sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
+	if cfg.WorkDir != "" {
+		sh.recents.add(cfg.WorkDir, time.Now())
+	}
 	defer func() {
 		if v := recover(); v != nil {
 			err = sh.crashed(v, debug.Stack())
 		}
 	}()
 	var active []ext.Extension
-	defer func() {
+	deactivate := func() (err error) {
 		for _, e := range slices.Backward(active) {
 			err = errors.Join(err, e.Deactivate(context.WithoutCancel(ctx)))
 		}
-	}()
-	activate := func(e ext.Extension, source string) error {
-		if err := e.Activate(ctx, sh.host(source)); err != nil {
-			return fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
+		active = nil
+		return err
+	}
+	defer func() { err = errors.Join(err, deactivate()) }()
+	activate := func() error {
+		for _, e := range builtins(sh) {
+			if err := e.Activate(ctx, sh.host("builtin:"+e.Manifest().ID)); err != nil {
+				return fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
+			}
+			active = append(active, e)
 		}
-		active = append(active, e)
+		for _, e := range cfg.Extensions {
+			if err := e.Activate(ctx, sh.host(e.Manifest().ID)); err != nil {
+				return fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
+			}
+			active = append(active, e)
+		}
 		return nil
 	}
-	for _, e := range builtins(sh) {
-		if err := activate(e, "builtin:"+e.Manifest().ID); err != nil {
-			return err
-		}
-	}
-	for _, e := range cfg.Extensions {
-		if err := activate(e, e.Manifest().ID); err != nil {
-			return err
-		}
+	if err := activate(); err != nil {
+		return err
 	}
 
 	w, err := be.NewWindow(render.WindowOpts{Title: "Oriel"})
@@ -183,6 +203,17 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-dirty:
+		case dir := <-sh.reopen:
+			// Open Directory: every extension starts again on dir, in the same window.
+			if err := deactivate(); err != nil {
+				log.Error("reopen", "dir", dir, "err", err)
+			}
+			sh.cfg.WorkDir, sh.cfg.Files = dir, nil
+			sh.recents.add(dir, time.Now())
+			if err := activate(); err != nil {
+				return err
+			}
+			l.themeDirty.Store(true)
 		case now := <-timer.C:
 			l.run(ctx, l.keys.Timeout(now))
 			// and a redraw, for a spring or a tooltip that was due
@@ -434,12 +465,18 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 	}
 }
 
-// run runs mapped commands. Unmapped keys go nowhere until there is an input engine (ED-2).
 // modes are the keymap modes keys resolve in, most specific first: a focused widget's own mode (an input's
-// "input", a list's "list"), or the editor's "n"; then "global", for app chords that work everywhere.
+// "input", a list's "list"); or, with none, ViewKeyMode while a view in the layout has focus, or EmptyKeyMode while the
+// main area is empty, then the editor's "n"; then "global", for app chords that work everywhere.
 func (l *loop) modes() []string {
 	if m := l.ui.KeyMode(); m != "" {
 		return []string{m, "global"}
+	}
+	if l.sh.layout.root.Focus != nil {
+		return []string{ViewKeyMode, "n", "global"}
+	}
+	if len(l.sh.layout.root.Shown()) == 0 {
+		return []string{EmptyKeyMode, "n", "global"}
 	}
 	return []string{"n", "global"}
 }
@@ -502,17 +539,22 @@ func shotOf(u *ui.UI, reg registry.Registry, size render.Point, th *theme.Resolv
 	return raster.Render(&list, size, 1, th.C(theme.BgBase))
 }
 
-// buildWindow is the window: the root view with the status line under it, and the notifications and modal
-// over both.
+// buildWindow is the window: the title bar, the rail beside the root view, the status line under them, and the
+// notifications and modal over it all.
 func buildWindow(c *ui.Ctx, reg registry.Registry, size render.Point) {
 	vc := registry.ViewCtx{Width: size.X, Height: size.Y}
 	c.Column("shell", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		if v, ok := reg.ViewByID(TitleBarView); ok {
 			c.Box(TitleBarView, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
 		}
-		if v, ok := reg.ViewByID(RootView); ok {
-			c.Box(RootView, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
-		}
+		c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+			if v, ok := reg.ViewByID(RailView); ok {
+				c.Box(RailView, ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
+			}
+			if v, ok := reg.ViewByID(RootView); ok {
+				c.Box(RootView, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
+			}
+		})
 		if v, ok := reg.ViewByID(StatusLineView); ok {
 			c.Box(StatusLineView, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
 		}

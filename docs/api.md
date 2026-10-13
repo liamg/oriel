@@ -45,6 +45,14 @@ Version 0.4.0.
 
 - `oriel.menu.add(spec)`: Add a right-click menu entry: { label, run = fn(at) or a command id, when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help.
 
+## oriel.overview
+
+- `oriel.overview.add(spec)`: Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick.
+
+## oriel.rail
+
+- `oriel.rail.add(spec)`: Add an icon to the rail down the window's left edge: { name, icon, title, command, args, order (50 by default), bottom }. icon is a built-in icon's name (files, search, git, requests, debug, tests, settings) or a glyph. It's dimmed while the command isn't available.
+
 ## oriel.regex
 
 - `oriel.regex.find(pat, s, flags?)`: The first PCRE2 match of pat in s: its start and end (1-based, inclusive, as string.find), then its groups; nil if none. flags: imsxn.
@@ -55,6 +63,10 @@ Version 0.4.0.
 ## oriel.session
 
 - `oriel.session.kind(name, spec)`: A kind of session: { pack, gates, status }.
+
+## oriel.start
+
+- `oriel.start.add(spec)`: Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default) }. It's dimmed while the command isn't available.
 
 ## oriel.status
 

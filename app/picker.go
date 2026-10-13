@@ -37,7 +37,10 @@ func (p *picker) Manifest() ext.Manifest { return ext.Manifest{ID: "picker"} }
 
 func (p *picker) Activate(_ context.Context, h ext.Host) error {
 	p.h, p.picked = h, map[string]bool{}
-	p.add(h.Command(registry.Command{ID: "picker.open", Title: "Open a picker: {source}, and a {query}", Run: func(_ registry.Ctx, a registry.Args) error {
+	p.add(h.Command(registry.Command{ID: "picker.open", Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
+		src, _ := a["source"].(string)
+		return src == "" || slices.ContainsFunc(h.Pickers(), func(s registry.PickerSource) bool { return s.ID == src })
+	}, Run: func(_ registry.Ctx, a registry.Args) error {
 		src, _ := a["source"].(string)
 		if !slices.ContainsFunc(h.Pickers(), func(s registry.PickerSource) bool { return s.ID == src }) {
 			return fmt.Errorf("no picker source %q", src)
