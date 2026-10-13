@@ -68,7 +68,10 @@ func TestLSPRenamePreview(t *testing.T) {
 		t.Fatalf("no preview:\n%s", s.frameText())
 	}
 	s.wantText(t, "the rename's diff", "Rename greeting → salute", "lib.go", "main.go", "- func greeting(name string) string {",
-		"+ func salute(name string) string {", "+ \t\tout += salute(n)")
+		"+ func salute(name string) string {", "+         out += salute(n)")
+	if text := s.frameText(); strings.Contains(text, root) || strings.Contains(text, "\t") {
+		t.Errorf("the diff shows the work dir's path or a raw tab:\n%s", text)
+	}
 	if b, _ := os.ReadFile(filepath.Join(root, "lib.go")); strings.Contains(string(b), "salute") {
 		t.Fatal("the preview wrote lib.go")
 	}

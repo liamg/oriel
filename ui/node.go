@@ -141,6 +141,7 @@ type Style struct {
 // Layers are where floats paint, lowest first; a float in another float is at least at its layer, and over it. Add a
 // little to one (LayerOverlay + 1) to order floats within it.
 const (
+	LayerUnder   = -1  // behind its parent's content: a selection under the text
 	LayerContent = 0   // in a view: highlights, a cursor
 	LayerPane    = 100 // floating panes and the drop-down terminal
 	LayerPage    = 200 // full-window pages: settings, the theme editor

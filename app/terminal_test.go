@@ -221,3 +221,22 @@ func TestTerminalClickMovesKeys(t *testing.T) {
 		t.Errorf("after a click on the terminal keys go to %q", m)
 	}
 }
+
+// FG-4: terminal-normal mode keeps the program's colours, and the scrollback above the screen keeps them too.
+func TestTerminalNormalKeepsColours(t *testing.T) {
+	s := termScene(t, registry.Args{"cmd": []string{"sh", "-c", "printf '\\033[31mred line\\033[0m\\n'; for i in $(seq 1 40); do echo filler $i; done; exec cat"}})
+	s.waitTerm(t, "filler 40")
+	s.keyCommand(t, "<C-Esc>")
+	s.typeTerm(t, "gg")
+	s.frame()
+	plain := s.ui.Theme().C(tTermFg)
+	for _, op := range s.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "red line" {
+			if op.Color == plain {
+				t.Error("the red line is drawn in the plain colour")
+			}
+			return
+		}
+	}
+	t.Fatalf("no red line in terminal-normal mode:\n%s", s.frameText())
+}

@@ -104,7 +104,7 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 		}
 		y := top + (ls.from+(float32(ls.to)-ls.from)*p)*rh
 		at := render.Point{X: r.Min.X, Y: y}
-		lc.Row("selection", ui.Style{W: ui.Px(r.Dx()), H: ui.Px(rh), Fill: col(c, tRowSelected), Z: -1, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+		lc.Row("selection", ui.Style{W: ui.Px(r.Dx()), H: ui.Px(rh), Fill: col(c, tRowSelected), Z: ui.LayerUnder, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: col(c, tRowEdge)}, nil)
 		})
 	}

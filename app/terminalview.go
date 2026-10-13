@@ -362,7 +362,9 @@ func (x *terminals) drawNormal(c *ui.Ctx, t *terminal, charW float32) {
 				f.Rect(render.Rect{Min: render.Point{X: r.Min.X + 4, Y: y + 6}, Max: render.Point{X: r.Min.X + 9, Y: y + 11}},
 					render.Style{Fill: th.C(tok), Radius: 2.5})
 			}
-			if s := string(snap.Line(line)); s != "" {
+			if line < len(t.cells) && t.cells[line] != nil {
+				drawTermLine(f, c.Shaper(), th, t.cells[line], x0, y, charW)
+			} else if s := string(snap.Line(line)); s != "" {
 				g := c.Shaper().Shape(s, termFont)
 				f.Glyphs(g, render.Point{X: x0, Y: y + (termLineH+g.Ascent-g.Descent)/2}, th.C(tTermFg))
 			}
@@ -396,7 +398,7 @@ func (x *terminals) key(c *ui.Ctx, t *terminal, k render.KeyEvent) {
 		if t.vim.Mode() == "normal" && len(t.vim.Pending()) == 0 {
 			switch n {
 			case "i", "a", "I", "A":
-				t.normal, t.vim, t.ed = false, nil, nil
+				t.normal, t.vim, t.ed, t.cells = false, nil, nil, nil
 				t.emu.Scroll(term.Scroll{To: term.ScrollBottom})
 				return
 			case "[", "]":

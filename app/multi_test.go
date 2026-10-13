@@ -6,6 +6,7 @@ import (
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/theme"
 )
 
 // ED-8: ⌃n in the editor adds cursors at each next match, every one is drawn, the mode says how many, and typing
@@ -30,6 +31,10 @@ func TestMultiCursorInTheEditor(t *testing.T) {
 		t.Errorf("%d cursors drawn, want 2", got)
 	}
 	s.wantText(t, "the mode", "2 CURSORS")
+	s.wantTextOverSelection(t, "Round")
+	if mode, n := s.access("Mode"), s.access("Cursors"); mode.Bounds.Min.Y != n.Bounds.Min.Y || n.Bounds.Min.X < mode.Bounds.Max.X {
+		t.Errorf("the cursors chip at %v isn't beside the mode at %v", n.Bounds, mode.Bounds)
+	}
 	s.keys("cR<Esc><Esc>")
 	if got := s.line(2); got != "func R(v int) int { return v * 100 }" {
 		t.Errorf("line 3: %q", got)
@@ -73,5 +78,23 @@ func TestSubstituteOffersLSPRename(t *testing.T) {
 	s.wantText(t, "the rename", "Rename greeting → salute")
 	if _, ok := s.editor().e.Cmdline(); ok {
 		t.Error("the command line stayed open")
+	}
+}
+
+// wantTextOverSelection checks the selection boxes are painted before (under) the text run reading text.
+func (s *errScene) wantTextOverSelection(t *testing.T, text string) {
+	t.Helper()
+	sel := s.ui.Theme().C(theme.Selection)
+	glyphs, under := -1, -1
+	for i, op := range s.list.Ops {
+		switch {
+		case op.Kind == render.OpGlyphs && op.Run.Text == text && glyphs < 0:
+			glyphs = i
+		case op.Kind == render.OpRect && op.Style.Fill == sel && under < 0:
+			under = i
+		}
+	}
+	if glyphs < 0 || under < 0 || under > glyphs {
+		t.Errorf("the selection (op %d) isn't under the text %q (op %d)", under, text, glyphs)
 	}
 }

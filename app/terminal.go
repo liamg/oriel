@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,7 +63,8 @@ type terminal struct {
 	normal  bool
 	ed      *edit.Editor
 	vim     *vim.Engine
-	bracket string // [ or ] typed in terminal-normal mode, waiting for its twin
+	cells   [][]term.Cell // each terminal-normal line's cells, for its colours
+	bracket string        // [ or ] typed in terminal-normal mode, waiting for its twin
 }
 
 func (x *terminals) Manifest() ext.Manifest { return ext.Manifest{ID: "terminal"} }
@@ -371,6 +373,12 @@ func (x *terminals) enterNormal(t *terminal) {
 	for i, l := range lines {
 		lines[i] = strings.TrimRight(l, " ")
 	}
+	t.cells = styledLines(t.emu)
+	for i := range min(len(t.cells), len(lines)) {
+		if cellsText(t.cells[i]) != lines[i] {
+			t.cells[i] = nil // drawn plain rather than out of step with the text
+		}
+	}
 	buf := text.New([]byte(strings.Join(lines, "\n")), text.Author{})
 	t.ed = edit.New(buf, text.Author{Kind: text.User})
 	t.ed.SetClipboard(desktopClipboard{x.sh})
@@ -380,6 +388,50 @@ func (x *terminals) enterNormal(t *terminal) {
 	line := sb.Offset + cs.ViewY
 	t.vim.SetCursor(vim.Pos{Line: min(line, len(lines)-1), Col: cs.ViewX})
 	t.normal = true
+}
+
+// styledLines are the cells of every row of the scrollback and screen, soft-wrapped rows joined into one line as
+// Emulator.Text joins them. The viewport is moved over the scrollback to read them, and put back.
+func styledLines(emu term.Emulator) [][]term.Cell {
+	sb := emu.Scrollbar()
+	defer emu.Scroll(term.Scroll{To: term.ScrollRow, Row: sb.Offset})
+	var out [][]term.Cell
+	joining := false
+	for row := 0; row < sb.Total; {
+		emu.Scroll(term.Scroll{To: term.ScrollRow, Row: row})
+		off := emu.Scrollbar().Offset
+		g := emu.Grid()
+		for i, l := range g.Lines {
+			if off+i < row {
+				continue
+			}
+			if joining {
+				out[len(out)-1] = append(out[len(out)-1], l.Cells...)
+			} else {
+				out = append(out, slices.Clone(l.Cells))
+			}
+			joining = l.Wrapped
+		}
+		row = off + len(g.Lines)
+		if len(g.Lines) == 0 {
+			break
+		}
+	}
+	return out
+}
+
+func cellsText(cells []term.Cell) string {
+	var b strings.Builder
+	for _, c := range cells {
+		switch {
+		case c.Width == term.SpacerTail || c.Width == term.SpacerHead:
+		case c.Text == "":
+			b.WriteByte(' ')
+		default:
+			b.WriteString(c.Text)
+		}
+	}
+	return strings.TrimRight(b.String(), " ")
 }
 
 // normalLine is the terminal-normal cursor's row, from the top of the scrollback.

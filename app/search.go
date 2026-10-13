@@ -129,6 +129,17 @@ func (p *projectSearch) wait() { p.busy.Wait() }
 
 func (p *projectSearch) dir() string { return p.sh.editor.dir }
 
+// shownPath is path as the preview names it: relative to the work dir when it's in it.
+func (p *projectSearch) shownPath(path string) string {
+	if !filepath.IsAbs(path) {
+		return path
+	}
+	if r, err := filepath.Rel(p.dir(), path); err == nil && filepath.IsLocal(r) {
+		return r
+	}
+	return path
+}
+
 // queryFor is the engine's query for what's typed: "@all " first searches generated and vendored files too.
 func (p *projectSearch) queryFor(r searchRun) search.Query {
 	q := search.Query{Pattern: r.pattern, Dir: p.dir(), IgnoreCase: r.icase}
@@ -486,7 +497,7 @@ func (p *projectSearch) buildPreview(c *ui.Ctx) {
 			for i, f := range plan.edits {
 				c.Column(i, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 					c.Row("name", ui.Style{Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Text("p", f.Path, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+						c.Text("p", p.shownPath(f.Path), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 						add, del := 0, 0
 						for _, h := range f.Hunks {
 							add, del = add+h.NewLines, del+h.OldLines
@@ -513,7 +524,7 @@ func diffBlock(c *ui.Ctx, key any, h gitx.Hunk, withNew bool) {
 		line := func(k string, i int, sign, s string, fill, fg theme.TokenID) {
 			c.Row(fmt.Sprint(k, i), ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 1), Fill: th.C(fill)}, func(c *ui.Ctx) {
 				code.Color = th.C(fg)
-				c.Text("t", sign+" "+strings.TrimRight(s, "\r\n"), code)
+				c.Text("t", sign+" "+expandTabs(strings.TrimRight(s, "\r\n")), code)
 			})
 		}
 		for i, l := range h.Old {

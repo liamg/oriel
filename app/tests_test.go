@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/ui/widget"
 )
@@ -146,6 +147,29 @@ func TestTestGutter(t *testing.T) {
 	}
 	if ds := s.testDecor(9); slices.ContainsFunc(ds, func(d registry.Decoration) bool { return d.Text == "▶" }) {
 		t.Error("a ▶ on a line with no test")
+	}
+	s.frame()
+	s.wantSignBesideNumber(t, "14", "▶")
+}
+
+// wantSignBesideNumber checks the sign drawn on the row numbered num starts after the number ends.
+func (s *errScene) wantSignBesideNumber(t *testing.T, num, sign string) {
+	t.Helper()
+	var n, g *render.Op
+	for i, op := range s.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == num {
+			n = &s.list.Ops[i]
+		}
+		if op.Kind == render.OpGlyphs && op.Run.Text == sign && n != nil && op.At.Y > n.At.Y-8 && op.At.Y < n.At.Y+8 {
+			g = &s.list.Ops[i]
+			break
+		}
+	}
+	if n == nil || g == nil {
+		t.Fatalf("no %q and %q on one row", num, sign)
+	}
+	if end := n.At.X + n.Run.Advance; g.At.X < end {
+		t.Errorf("the sign at x=%.1f covers the number, which ends at x=%.1f", g.At.X, end)
 	}
 }
 

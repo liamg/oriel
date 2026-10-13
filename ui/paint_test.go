@@ -182,3 +182,28 @@ func TestListScrollBudget(t *testing.T) {
 		t.Errorf("p99 %v per frame, budget 4ms", p99)
 	}
 }
+
+// A clipping box's border is drawn over its children, so content that fills it doesn't hide its edge.
+func TestBorderOverClippedContent(t *testing.T) {
+	edge, fill := render.Color{R: 255, A: 255}, render.Color{B: 255, A: 255}
+	ops := paintOps(newUI(), render.Point{X: 100, Y: 100}, func(c *Ctx) {
+		c.Box("pane", Style{W: Px(80), H: Px(80), Stroke: edge, Border: 1, Radius: 8, Clip: true}, func(c *Ctx) {
+			c.Box("content", Style{W: Flex(1), H: Flex(1), Fill: fill}, nil)
+		})
+	})
+	content, border := -1, -1
+	for i, op := range ops {
+		if op.Kind != render.OpRect {
+			continue
+		}
+		if op.Style.Fill == fill {
+			content = i
+		}
+		if op.Style.Stroke == edge {
+			border = i
+		}
+	}
+	if content < 0 || border < content {
+		t.Errorf("the border (op %d) is under the content (op %d)", border, content)
+	}
+}

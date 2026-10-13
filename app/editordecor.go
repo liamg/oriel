@@ -87,9 +87,9 @@ func lineBg(th *theme.Resolved, ds []registry.Decoration) (bg, edge color.NRGBA)
 	return bg, edge
 }
 
-// signs draws a line's gutter signs, left of its number; one with a command runs it when clicked.
-func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration) {
-	c.Row("signs", ui.Style{W: ui.Px(16), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Float: &ui.Float{Offset: render.Point{X: 42}}}, func(c *ui.Ctx) {
+// signs draws a line's gutter signs, between its number and its text; one with a command runs it when clicked.
+func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration, gw float32) {
+	c.Row("signs", ui.Style{W: ui.Px(14), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
 		for i, d := range ds {
 			if d.Kind != registry.Sign {
 				continue

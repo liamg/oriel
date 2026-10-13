@@ -272,11 +272,14 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
 - A press focuses the nearest focusable node at or above it. `Style.Trap` (a modal) keeps focus inside while it's
   up. Focus a widget moves itself (`Ctx.Focus`) draws no focus ring; keyboard focus does. `Ctx.Focus` from under the
   float that holds focus, or took it this frame, is ignored, so a page can't take focus back from a dialog over it.
-- A float's `Z` is a named layer, lowest first: `LayerContent` (highlights, a cursor), `LayerPane` (floating panes),
+- A float's `Z` is a named layer, lowest first: `LayerUnder` (behind its parent's content: a selection under the
+  text), `LayerContent` (highlights, a cursor), `LayerPane` (floating panes),
   `LayerPage` (settings, the theme editor), `LayerPopup` (menus, popovers), `LayerToast`, `LayerDialog` (the omnibox,
   pickers, help, modals), `LayerOverlay` (which-key, help markers, pick mode), `LayerDrag` and `LayerTooltip`; add a
   little (`LayerOverlay + 1`) to order floats within one. A float inside another is at least at its layer and paints
   over it, so a popover opened in a dialog is over the dialog. A test fails on a bare number for `Z`.
+- A box that clips draws its border over its children, so content that fills it (a terminal in a floating pane)
+  doesn't hide its edge.
 - A right-click gives the node `Interaction.Context`; `ContextMenu` opens there and always ends with Help for the
   target's help id (`help.md`).
 - `ui.Func` lets a Go view build with the frame's `*Ctx` (and so use widgets and keep their state by id, through
