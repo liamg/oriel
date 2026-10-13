@@ -26,8 +26,8 @@ like this" isn't a source.
 | PCRE2 | PCRE2's own test suite (`testdata/testinput*`, `testoutput*`) | release tag |
 | LSP | the LSP 3.17 specification (markdown source) | commit |
 | DAP | the Debug Adapter Protocol spec + JSON schema | commit |
-| terminal | xterm `ctlseqs`, ECMA-48, kitty keyboard and graphics protocol docs, Ghostty's VT docs | commit |
-| text | Unicode UAX #29 (graphemes), #14 (line breaks), #11 (width), plus the UCD data files | Unicode version |
+| terminal | xterm `ctlseqs` (`spec/xterm`), Ghostty's VT docs (`spec/ghostty`), kitty's docs (`spec/kitty`), FinalTerm/OSC 133 semantic prompts (`spec/semantic-prompts`), synchronized output (`spec/contour`); ECMA-48 and the kitty keyboard and graphics protocol docs when a test needs them | XTerm patch / commit |
+| text | Unicode UAX #29 (graphemes), #14 (line breaks), #11 (width), plus the UCD data files (`spec/unicode`: #11 and #29 so far) | Unicode version |
 | colour | CSS Color 4 (OKLCH), WCAG 2 (contrast ratio) | commit |
 | git | the `git` binary as the oracle (`git check-attr`, porcelain output); docs linked, not vendored | git version |
 | editor conventions | the EditorConfig specification and its core-test suite | commit |
@@ -37,9 +37,11 @@ like this" isn't a source.
   editorconfig-core-test) or that tests are mined from, and the licence they need. The rest of a spec is linked
   from its `SOURCE`. Where a tool is the oracle (`git check-attr`, headless nvim), the test cites `ref: oracle …`
   and the doc's URL instead of a copy.
-- `refcheck` understands each format: vim `*tags*`, markdown headings, RFC section numbers, man page sections,
-  reStructuredText and AsciiDoc underlined headings, HTML ids, Go declarations (`go/src/testing/match.go#rewrite`,
-  `#Type.method` for a method), and a whole file (`go/help-testflag.txt`, no anchor) for a tool's help output.
+- `refcheck` understands each format: vim `*tags*`, markdown headings (and an `.mdx` page's front-matter title), HTML
+  ids and `<a name>` anchors, reStructuredText and AsciiDoc underlined headings, plain-text definition lists like
+  `ctlseqs.txt` (`xterm/ctlseqs.txt CSI Ps ; Ps H`), Go declarations (`go/src/testing/match.go#rewrite`, `#Type.method`
+  for a method), a whole file (`go/help-testflag.txt`, no anchor) for a tool's help output, RFC section numbers and
+  man page sections.
 - A test runner's own output is recorded rather than written by hand: `testrun/testdata/recorded/*.rec` hold real
   `go test -json`, pytest, vitest, jest and cargo output from the fixtures, with the tools' versions in their
   headers, and each adapter's events are compared with an expected golden (`testrun/testdata/recorded/README.md`).

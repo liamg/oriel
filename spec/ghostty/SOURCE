@@ -1,0 +1,4 @@
+source: https://github.com/ghostty-org/website
+commit: 7962e91e190ff226be1a4983eb9368b7ddb4dff9
+path: docs/vt/{concepts,control,csi,esc,osc}/*.mdx (only the pages a test quotes; the rest is at the source), LICENSE
+license: MIT (see LICENSE)

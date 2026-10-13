@@ -143,6 +143,12 @@ type Titled interface {
 	Title(instance string) string
 }
 
+// Moded is a view with a mode of its own the status line's mode chip shows while it has focus: a terminal's
+// TERMINAL or TERM-NORMAL. Style is a theme token for the chip.
+type Moded interface {
+	ModeLabel(instance string) (label, style string)
+}
+
 // Marked is a view whose instances carry a small marker on their tabs: an editor's file's git status letter. Style
 // is a theme token.
 type Marked interface {

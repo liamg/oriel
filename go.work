@@ -20,6 +20,7 @@ use (
 	./sandbox
 	./script
 	./syntax
+	./term
 	./testrun
 	./text
 	./theme

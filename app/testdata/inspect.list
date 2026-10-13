@@ -343,7 +343,7 @@ clip 20,109.44 816x516.12 r 8
   pop
   text "builtin:themes" @729.6875,504.69998 #ffd23f JetBrains Mono 11
   clip 160,512.66 220x15.179993 r 0
-    text "and 75 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
+    text "and 76 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
   pop
   clip 392,512.66 418x15.179993 r 0
     text ":Keys lists them" @392,524.38995 #4f4a40 JetBrains Mono 11.5

@@ -164,7 +164,7 @@ clip 250,92 1100x660 r 10
     rect 909,261.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
     text "⌘3" @914,272.6 #b3ab99 JetBrains Mono 10
     text "COMMANDS" @268,301.42 #7c7566 JetBrains Mono 9.5
-    text "4 of 39" @889,301.42 #7c7566 JetBrains Mono 9.5
+    text "4 of 43" @889,301.42 #7c7566 JetBrains Mono 9.5
     text "›" @275.6953,331.36523 #7c7566 Inter 12
     text "Run job: " @296,331.729 #ece6d8 Inter 13
     text "pri" @349.70312,331.729 #ffd23f Inter 13

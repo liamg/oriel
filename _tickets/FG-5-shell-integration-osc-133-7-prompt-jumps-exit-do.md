@@ -2,7 +2,7 @@
 id: FG-5
 title: "Shell integration (OSC 133/7): prompt jumps, exit dots, send output to a request"
 phase: P4
-status: todo
+status: done
 area: Files, git, terminals
 module: term
 depends_on: [FG-4]

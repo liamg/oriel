@@ -1,0 +1,4 @@
+source: https://www.unicode.org/reports/
+version: Unicode 17.0.0
+path: tr11/tr11-44.html (as tr11.html, UAX #11 East Asian Width), tr29/tr29-47.html (as tr29.html, UAX #29 Text Segmentation), https://www.unicode.org/license.txt (as license.txt)
+license: Unicode License v3 (see license.txt)

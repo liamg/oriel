@@ -1,0 +1,47 @@
+# OSC: the window title (0, 2) and the shell's working directory (7).
+
+=== OSC 0 sets the title, ended by BEL
+ref:    xterm/ctlseqs.txt OSC Ps ; Pt ST
+quote:  "Ps = 0  -> Change Icon Name and Window Title to Pt."
+ref:    ghostty/osc/0.mdx#Change Icon and Window Title (OSC 0)
+quote:  "Since Ghostty does not support changing the window icon, this is treated as an alias of [Change Window Title (OSC 2)]."
+size:   10x1
+input:  "\x1b]0;hello\x07"
+title:  "hello"
+screen:
+  |          |
+
+=== OSC 2 sets the title, ended by ST
+ref:    xterm/ctlseqs.txt OSC Ps ; Pt ST
+quote:  "Ps = 2  -> Change Window Title to Pt."
+ref:    xterm/ctlseqs.txt OSC Ps ; Pt ST
+quote:  "XTerm accepts either BEL  or ST  for terminating OSC sequences"
+size:   10x1
+input:  "\x1b]2;one\x07\x1b]2;two words\x1b\\"
+title:  "two words"
+
+=== OSC 2 takes UTF-8
+ref:    ghostty/osc/2.mdx#Change Window Title (OSC 2)
+quote:  "Ghostty always unconditionally expects `t` to be directly UTF-8-encoded."
+size:   10x1
+input:  "\x1b]2;café ☕\x07"
+title:  "café ☕"
+
+=== a title split across writes
+ref:    xterm/ctlseqs.txt OSC Ps ; Pt ST
+quote:  "Ps = 2  -> Change Window Title to Pt."
+size:   10x1
+setup:  "\x1b]2;sp"
+input:  "lit\x07x"
+title:  "split"
+screen:
+  |x         |
+
+=== OSC 7 reports the working directory as a file URL
+ref:    ghostty/osc/7.mdx#Change Working Directory (OSC 7)
+quote:  "Change the current working directory to the path denoted by the URI `u`. The URI should always have a scheme of `file://` and point to an existent folder."
+size:   10x1
+input:  "\x1b]7;file://myhost/home/me/my%20src\x07"
+cwd:    /home/me/my src
+screen:
+  |          |

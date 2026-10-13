@@ -2,7 +2,7 @@
 id: FG-4
 title: "Terminals: Ghostty VT under wazero, our renderer, placements, terminal-normal mode"
 phase: P4
-status: todo
+status: review
 area: Files, git, terminals
 module: term
 depends_on: [FW-9]

@@ -58,6 +58,20 @@ jobs:
       # check that what's embedded decompresses to the same.
       - run: git diff --exit-code -- syntax/grammars/SHA256SUMS syntax/grammars/manifest.tsv
 
+  ghostty:
+    # libghostty-vt is rebuilt from its pinned commit and must match what's committed (deps.md).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install zig 0.16.0
+        run: |
+          curl -sSfL -o zig.tar.xz https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
+          echo "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  zig.tar.xz" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/zig" && tar -xJf zig.tar.xz -C "$RUNNER_TEMP/zig" --strip-components=1
+          echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
+      - run: term/ghostty/wasm/build.sh
+      - run: git diff --exit-code -- term/ghostty/wasm/SHA256SUMS
+
   vulncheck:
     runs-on: ubuntu-latest
     steps:

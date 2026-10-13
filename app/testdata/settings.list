@@ -67,11 +67,12 @@ clip 0,38 1600x962 r 0
     text "files" @18,174.26901 #b3ab99 Inter 13
     text "git" @18,204.26901 #b3ab99 Inter 13
     text "keymap" @18,234.26901 #b3ab99 Inter 13
-    rect 8,245.54001 224x28 fill #1f1c0f radius 5
-    text "ui" @18,264.269 #ece6d8 Inter 13
-    text "● 2" @204,263.14 #ffd23f JetBrains Mono 10
-    text "whichkey" @18,294.269 #b3ab99 Inter 13
-    text "● 1" @204,293.14 #ffd23f JetBrains Mono 10
+    text "terminal" @18,264.269 #b3ab99 Inter 13
+    rect 8,275.54 224x28 fill #1f1c0f radius 5
+    text "ui" @18,294.269 #ece6d8 Inter 13
+    text "● 2" @204,293.14 #ffd23f JetBrains Mono 10
+    text "whichkey" @18,324.269 #b3ab99 Inter 13
+    text "● 1" @204,323.14 #ffd23f JetBrains Mono 10
   pop
   rect 240,91 1x879 fill #24221d
   clip 241,91 1359x879 r 0

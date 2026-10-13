@@ -1,0 +1,107 @@
+# SGR: colours (16, 256, direct), attributes, underline styles and colours. Palette indices are xterm's: the eight
+# ISO colours, then their bright versions, then the 88/256-colour extension.
+
+=== SGR 30-37 and 40-47 set ISO foreground and background colours
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 3 1  -> Set foreground color to Red."
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 4 2  -> Set background color to Green."
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "XTerm maintains a color palette whose entries are identified by an index beginning with zero."
+size:   6x1
+input:  "\x1b[31mR\x1b[42mG\x1b[0mN"
+cell:   0,0 text="R" fg=1 bg=default
+cell:   1,0 text="G" fg=1 bg=2
+cell:   2,0 text="N" fg=default bg=default
+
+=== SGR 90-97 and 100-107 set the bright colours
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Assume that xterm's resources are set so that the ISO color codes are the first 8 of a set of 16. Then the aixterm colors are the bright versions of the ISO colors:"
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 1 0 3  -> Set background color to Yellow."
+size:   6x1
+input:  "\x1b[91mB\x1b[103mY"
+cell:   0,0 fg=9 bg=default
+cell:   1,0 fg=9 bg=11
+
+=== SGR 39 and 49 restore the default colours
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 3 9  -> Set foreground color to default, ECMA-48 3rd."
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 4 9  -> Set background color to default, ECMA-48 3rd."
+size:   6x1
+input:  "\x1b[31;41mA\x1b[39mB\x1b[49mC"
+cell:   0,0 fg=1 bg=1
+cell:   1,0 fg=default bg=1
+cell:   2,0 fg=default bg=default
+
+=== SGR 38:5 and 48:5 pick from the 256-colour palette, with colons or semicolons
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 3 8 : 5 : Ps -> Set foreground color to Ps, using indexed color."
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "xterm allows either colons (standard) or semicolons (legacy) to separate the subparameters (but after the first colon, colons must be used)."
+size:   6x1
+input:  "\x1b[38;5;196mA\x1b[48:5:21mB"
+cell:   0,0 fg=196 bg=default
+cell:   1,0 fg=196 bg=21
+
+=== SGR 38:2 and 48:2 set direct RGB colours
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 3 8 ; 2 ; Pr ; Pg ; Pb -> Set foreground color using RGB values."
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 4 8 : 2 : Pi : Pr : Pg : Pb -> Set background color using RGB values."
+size:   6x1
+input:  "\x1b[38;2;10;20;30mA\x1b[48:2::40:50:60mB"
+cell:   0,0 fg=rgb:10,20,30 bg=default
+cell:   1,0 fg=rgb:10,20,30 bg=rgb:40,50,60
+
+=== SGR sets each attribute
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 1  -> Bold, VT100. Ps = 2  -> Faint, decreased intensity, ECMA-48 2nd. Ps = 3  -> Italicized, ECMA-48 2nd. Ps = 4  -> Underlined, VT100. Ps = 5  -> Blink, VT100."
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 7  -> Inverse, VT100. Ps = 8  -> Invisible, i.e., hidden, ECMA-48 2nd, VT300. Ps = 9  -> Crossed-out characters, ECMA-48 3rd. Ps = 2 1  -> Doubly-underlined, ECMA-48 3rd."
+size:   10x1
+input:  "\x1b[1mA\x1b[0;2mB\x1b[0;3mC\x1b[0;4mD\x1b[0;5mE\x1b[0;7mF\x1b[0;8mG\x1b[0;9mH\x1b[0;21mI\x1b[0mJ"
+cell:   0,0 bold faint=false
+cell:   1,0 faint bold=false
+cell:   2,0 italic
+cell:   3,0 underline=single
+cell:   4,0 blink
+cell:   5,0 inverse
+cell:   6,0 invisible
+cell:   7,0 strike
+cell:   8,0 underline=double
+cell:   9,0 bold=false faint=false italic=false underline=none blink=false inverse=false invisible=false strike=false
+
+=== SGR 22-29 reset each attribute
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 2 2  -> Normal (neither bold nor faint), ECMA-48 3rd. Ps = 2 3  -> Not italicized, ECMA-48 3rd. Ps = 2 4  -> Not underlined, ECMA-48 3rd. Ps = 2 5  -> Steady (not blinking), ECMA-48 3rd."
+ref:    xterm/ctlseqs.txt CSI Pm m
+quote:  "Ps = 2 7  -> Positive (not inverse), ECMA-48 3rd. Ps = 2 8  -> Visible, i.e., not hidden, ECMA-48 3rd, VT300. Ps = 2 9  -> Not crossed-out, ECMA-48 3rd."
+size:   6x1
+input:  "\x1b[1;3;4;5;7;8;9mA\x1b[22;23;24;25;27;28;29mB"
+cell:   0,0 bold italic underline=single blink inverse invisible strike
+cell:   1,0 bold=false italic=false underline=none blink=false inverse=false invisible=false strike=false
+
+=== SGR 4 subparameters pick the underline style
+ref:    kitty/underlines.rst#Colored and styled underlines
+quote:  "<ESC>[4:0m # no underline <ESC>[4:1m # straight underline <ESC>[4:2m # double underline <ESC>[4:3m # curly underline <ESC>[4:4m # dotted underline <ESC>[4:5m # dashed underline"
+size:   6x1
+input:  "\x1b[4:3mA\x1b[4:4mB\x1b[4:5mC\x1b[4:2mD\x1b[4:1mE\x1b[4:0mF"
+cell:   0,0 underline=curly
+cell:   1,0 underline=dotted
+cell:   2,0 underline=dashed
+cell:   3,0 underline=double
+cell:   4,0 underline=single
+cell:   5,0 underline=none
+
+=== SGR 58 sets the underline colour like 38, and 59 resets it
+ref:    kitty/underlines.rst#Colored and styled underlines
+quote:  "This works exactly like the codes 38, 48 that are used to set foreground and background color respectively."
+ref:    kitty/underlines.rst#Colored and styled underlines
+quote:  "To reset the underline color (also previously reserved and unused):: <ESC>[59m"
+size:   6x1
+input:  "\x1b[4:3;58:2::255:0:0mA\x1b[58:5:9mB\x1b[59mC"
+cell:   0,0 underline=curly ul=rgb:255,0,0 fg=default
+cell:   1,0 underline=curly ul=9
+cell:   2,0 underline=curly ul=default

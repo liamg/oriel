@@ -300,6 +300,31 @@ flowchart LR
 **Budgets**: parse at least 200 MB/s, keypress-to-echo latency within the editor's 8 ms
 (local PTY), and full-screen redraw under 2 ms.
 
+### As built (FG-4 core)
+
+The UI-free core is in module `term`; the renderer, panes, placements and terminal-normal mode come next.
+
+- `term.Emulator` grew past the five methods below to what panes need: `Size`, `CursorState`, `Mode`, `AltScreen`,
+  `Held` (DEC 2026), `Scroll`/`Scrollbar`/`Text` (scrollback), `Commands`/`Cwd` (OSC 133/7), `EncodeKey`, `Paste`,
+  `Snapshot`/`Restore`, `Close`. `term/ghostty.New` implements it; `term/pty.Start` runs a program on a PTY.
+- libghostty-vt and a small C shim (`term/ghostty/wasm/shim.c`) are one wasm module with no imports, one instance
+  per terminal. The shim makes calls bulk: a write is one call per MB, and `Grid` copies out only the dirty rows.
+- Ghostty marks OSC 133 prompt/input/output per cell but keeps no exit codes or command boundaries, so a Go pre-pass
+  (`term.MarkScanner`) splits writes at each OSC 133 and anchors the mark with a Ghostty tracked grid ref, which
+  follows scrolling, reflow and scrollback pruning. OSC 7 is Ghostty's own pwd. `term.LastOutput` reads the text
+  between C and D through Ghostty's formatter.
+- A snapshot is ours (commands, a half-received mark) followed by Ghostty's (screens, scrollback, modes, an
+  unfinished sequence), so restoring and then writing the rest of a split sequence gives the same screen.
+- Synchronized output: the frame is captured when the hold begins and `Grid` returns it until the hold ends or
+  `Options.HoldTimeout` (1 s) passes.
+- Grapheme clustering (mode 2027) is on by default, as in Ghostty, so an emoji ZWJ sequence is one wide cell.
+- **Deviation, for review: parse throughput.** On a mixed stream (logs, test results, coloured `ls`, `git log`,
+  compiler errors; 14 escapes per KB) the wasm core parses about 80 MB/s (plain text about 190 MB/s). The same
+  library built natively parses that stream at about 285 MB/s, so wasm costs about 3.5×, not 1.5–2×: Ghostty's SIMD
+  paths are C++ (highway, simdutf) and off for freestanding wasm, and wazero checks bounds explicitly. 80 MB/s is
+  still far above what a PTY delivers, but under the 200 MB/s budget; `TestParseThroughput` reports the deviation
+  and fails only under 40 MB/s. Meeting the budget means the cgo build named above.
+
 ### Panes and modes
 
 - Panes are splittable, attach to session PTYs on the worker, and survive app restarts.
@@ -308,6 +333,26 @@ flowchart LR
 - Terminal-normal mode (`⌃\ ⌃N`) gives vim motions, search and yank over the scrollback.
 - Claude's own PTY is just another terminal view. The agent console (`ui.md` 15) is the structured view of the same session.
 
+
+### As built (FG-4/FG-5 UI)
+
+- `app/terminal*.go`, a built-in: `term.open {cmd, env, place, instance}` and the ex commands `:term` (`:term!` in the
+  main area), `:vterm` and `:sterm`; terminals are `terminal#<n>` views, so every placement, move and zoom is the
+  layout's. Each runs its program on our PTY with Ghostty's VT (the worker's copy comes with AI-1), resized to its pane.
+- Drawn in one paint per terminal from the VT's grid: runs of one style placed on the cell grid, backgrounds, cursor
+  shapes, and box-drawing, block and shade characters drawn as shapes so they join at any size. Colours are the
+  theme's `terminal.ansi.0`–`15`, `terminal.fg/bg`, 256-colour and truecolor.
+- Keys go through the VT's encoder (`EncodeKey`, `Paste`). `⌃\ ⌃N` enters terminal-normal mode: a vim engine over a
+  read-only buffer of the screen and scrollback, so every motion, search and yank is the editor's; `i`/`a` go back.
+  The mode shows in the status line through `registry.Moded`, which any view can implement.
+- FG-5: exit dots from the OSC 133 command log, `[[`/`]]` between prompts, copy/send/re-run the last command, the
+  OSC 7 directory in the tab.
+- "Snapshot on reconnect": the screens are snapshotted when the app stops and restored into the same instances when it
+  opens the directory again (the worker will keep the live PTYs).
+- Deviation, for review: parsing runs ~80 MB/s under wazero against the 200 MB/s budget (native Ghostty ~285 MB/s);
+  `TestParseThroughput` reports it and fails only under 40 MB/s until it's decided (keep wasm, or the cgo build).
+- Not yet: mouse reporting, selection with the pointer, OSC 8 links, images, ligatures, terminal search outside
+  terminal-normal mode, and the Explorer following the terminal's directory.
 ## Explorer scopes
 
 - **Changed** (branch vs merge-base, uncommitted included; opens diffs), **Uncommitted** (vs HEAD; staging),

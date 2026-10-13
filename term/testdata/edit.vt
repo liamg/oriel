@@ -1,0 +1,137 @@
+# ICH, DCH, IL and DL. Ghostty's validation scripts, delivered through a tty ("\n" as "\r\n"); "_" is a blank and
+# "c" the cursor. Their screens show the top rows; the rest are blank.
+
+=== ICH inserts blanks at the cursor
+ref:    xterm/ctlseqs.txt CSI Ps @
+quote:  "Insert Ps (Blank) Character(s) (default = 1) (ICH)."
+ref:    ghostty/csi/ich.mdx#ICH V-1: No Scroll Region, Fits on Screen
+quote:  "|XcABC_____|"
+size:   10x1
+input:  "ABC\x1b[1G\x1b[2@X"
+screen:
+  |X ABC     |
+cursor: 1,0
+
+=== ICH shifts content off the right edge
+ref:    ghostty/csi/ich.mdx#ICH V-3: Shifting Content Off the Screen
+quote:  "|_______XcA|"
+size:   10x1
+input:  "\x1b[10G\x1b[2DABC\x1b[2D\x1b[2@X"
+screen:
+  |       X A|
+cursor: 8,0
+
+=== ICH leaves the inserted cells in the background colour
+ref:    ghostty/csi/ich.mdx#ICH V-2: SGR State
+quote:  "The `c_` cells should both have a red background. The `ABC` cells should remain unchanged in style."
+size:   10x1
+input:  "ABC\x1b[1G\x1b[41m\x1b[2@"
+cell:   0,0 bg=1
+cell:   1,0 bg=1
+cell:   2,0 text="A" bg=default
+
+=== DCH deletes characters, pulling the rest left
+ref:    xterm/ctlseqs.txt CSI Ps P
+quote:  "Delete Ps Character(s) (default = 1) (DCH)."
+ref:    ghostty/csi/dch.mdx#DCH V-1: Simple Delete Character
+quote:  "|AB23____|"
+size:   8x1
+input:  "ABC123\x1b[3G\x1b[2P"
+screen:
+  |AB23    |
+cursor: 2,0
+
+=== DCH fills from the right with the background colour
+ref:    ghostty/csi/dch.mdx#DCH V-2: SGR State
+quote:  "The two rightmost cells should have a red background color."
+size:   8x1
+input:  "ABC123\x1b[3G\x1b[41m\x1b[2P"
+screen:
+  |AB23    |
+cell:   3,0 text="3" bg=default
+cell:   6,0 bg=1
+cell:   7,0 bg=1
+
+=== DCH in the middle of a wide character erases it
+ref:    ghostty/csi/dch.mdx#DCH V-5: Split Wide Character
+quote:  "|A_123_____|"
+size:   10x1
+input:  "\x1b[1;1H\x1b[0JA橋123\x1b[3G\x1b[P"
+screen:
+  |A 123     |
+
+=== IL inserts a line at the cursor
+ref:    xterm/ctlseqs.txt CSI Ps L
+quote:  "Insert Ps Line(s) (default = 1) (IL)."
+ref:    ghostty/csi/il.mdx#IL V-1: Simple Insert Line
+quote:  "|ABC_____| |c_______| |DEF_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[2;2H\x1b[L"
+screen:
+  |ABC     |
+  |        |
+  |DEF     |
+  |GHI     |
+cursor: 0,1
+
+=== IL outside the scroll region does nothing
+ref:    ghostty/csi/il.mdx#IL V-2: Cursor Outside of Scroll Region
+quote:  "|ABC_____| |DEF_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[3;4r\x1b[2;2H\x1b[L"
+screen:
+  |ABC     |
+  |DEF     |
+  |GHI     |
+  |        |
+
+=== IL within a scroll region pushes lines out of its bottom
+ref:    ghostty/csi/il.mdx#IL V-3: Top/Bottom Scroll Regions
+quote:  "|ABC_____| |c_______| |DEF_____| |123_____|"
+size:   8x5
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n123\r\n\x1b[1;3r\x1b[2;2H\x1b[L"
+screen:
+  |ABC     |
+  |        |
+  |DEF     |
+  |123     |
+  |        |
+cursor: 0,1
+
+=== DL deletes the cursor's line
+ref:    xterm/ctlseqs.txt CSI Ps M
+quote:  "Delete Ps Line(s) (default = 1) (DL)."
+ref:    ghostty/csi/dl.mdx#DL V-1: Simple Delete Line
+quote:  "|ABC_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[2;2H\x1b[M"
+screen:
+  |ABC     |
+  |GHI     |
+  |        |
+  |        |
+cursor: 0,1
+
+=== DL outside the scroll region does nothing
+ref:    ghostty/csi/dl.mdx#DL V-2: Cursor Outside of Scroll Region
+quote:  "|ABC_____| |DEF_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[3;4r\x1b[2;2H\x1b[M"
+screen:
+  |ABC     |
+  |DEF     |
+  |GHI     |
+  |        |
+
+=== DL within a scroll region pulls blank lines in at its bottom
+ref:    ghostty/csi/dl.mdx#DL V-3: Top/Bottom Scroll Regions
+quote:  "|ABC_____| |GHI_____| |________| |123_____|"
+size:   8x5
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n123\r\n\x1b[1;3r\x1b[2;2H\x1b[M"
+screen:
+  |ABC     |
+  |GHI     |
+  |        |
+  |123     |
+  |        |
+cursor: 0,1

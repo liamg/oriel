@@ -35,6 +35,15 @@ func fakeSpec(t *testing.T) string {
 	write(t, root, "spec/git/attrs.txt", "gitattributes(5)\n================\n\nEffects\n-------\n\n`text`\n^^^^^^\n\nThis attribute marks the path as a text file.\n\nOther\n-----\n\nElsewhere.\n")
 	write(t, root, "spec/go/help.txt", "The flags:\n\n\t-run regexp\n\t    Run only those tests matching\n\t    the regular expression.\n")
 	write(t, root, "spec/go/src/match.go", "package testing\n\n// rewrite rewrites a subname to having only printable characters and no white\n// space.\nfunc rewrite(s string) string {\n\treturn s\n}\n\n// unique creates a unique name.\nfunc (m *matcher) unique(parent, subname string) string {\n\treturn parent\n}\n\ntype matcher struct {\n\tfilter filterMatch\n}\n")
+	write(t, root, "spec/xterm/ctlseqs.txt", "Functions using CSI , ordered by the final character(s)\n\n"+
+		"CSI Ps A  Cursor Up Ps Times (default = 1) (CUU).\n\nCSI Ps ; Ps H\n          Cursor Position [row;column] (default = [1,1]) (CUP).\n\n"+
+		"CSI # P\nCSI Pm # P\n          Push current dynamic- and ANSI-palette colors\n          onto stack.\n\nESC 7     Save Cursor (DECSC), VT100.\n\n"+
+		"Bracketed Paste Mode\n\nWhen bracketed paste mode is set, pasted text\nis bracketed:\n   ESC [ 2 0 0 ~ ,\nfollowed by the text.\n\nReadline Modes\n\nOther.\n")
+	write(t, root, "spec/gh/osc/7.mdx", "---\ntitle: Change Working Directory (OSC 7)\ndescription: Change it.\n---\n\nChange the current working directory.\n")
+	write(t, root, "spec/uni/tr.html", "<h2>4 <a name=\"Definitions\" href=\"#Definitions\">Definitions</a></h2>\n"+
+		"<p><i><b><a name=\"ED4\" href=\"#ED4\">ED4</a>.</b> Wide (W)</i>: always wide.</p>\n<p><a name=\"ED5\">ED5</a>. Narrow.</p>\n"+
+		"<table><tr>\n<td><a name=\"GB11\" href=\"#GB11\">GB11</a></td>\n<td>ExtPict ZWJ</td>\n<td>&times;</td>\n</tr><tr><td>after</td></tr></table>\n"+
+		"<h2>5 <a name=\"Next\">Next</a></h2>\nElsewhere.\n")
 	write(t, root, "spec/css/code.js", "// header\nfunction lin(RGB) {\n\treturn val / 12.92;\n}\n\nfunction gam(RGB) {\n\treturn 1.055;\n}\n")
 	return root
 }
@@ -105,6 +114,26 @@ func TestCheck(t *testing.T) {
 		{"go/src/match.go#other.unique", "", false},
 		{"go/src/match.go#matcher", "filter filterMatch", true},
 		{"go/src/match.go#missing", "", false},
+		{"xterm/ctlseqs.txt CSI Ps A", "Cursor Up Ps Times", true},
+		{"xterm/ctlseqs.txt CSI Ps ; Ps H", "Cursor Position [row;column] (default = [1,1]) (CUP).", true},
+		{"xterm/ctlseqs.txt CSI Ps ; Ps H", "Cursor Up", false},
+		{"xterm/ctlseqs.txt CSI # P", "Push current dynamic- and ANSI-palette colors onto stack.", true},
+		{"xterm/ctlseqs.txt ESC 7", "Save Cursor (DECSC)", true},
+		{"xterm/ctlseqs.txt ESC 7", "Cursor Up", false},
+		{"xterm/ctlseqs.txt CSI Ps B", "", false},
+		{"xterm/ctlseqs.txt CSI Ps", "", false},
+		{"xterm/ctlseqs.txt Bracketed Paste Mode", "pasted text is bracketed: ESC [ 2 0 0 ~ , followed by the text.", true},
+		{"xterm/ctlseqs.txt Bracketed Paste Mode", "Other.", false},
+		{"gh/osc/7.mdx#Change Working Directory (OSC 7)", "Change the current working directory.", true},
+		{"gh/osc/7.mdx#Change Working Directory (OSC 7)", "Elsewhere.", false},
+		{"gh/osc/7.mdx#Other", "", false},
+		{"uni/tr.html#Definitions", "always wide.", true},
+		{"uni/tr.html#Definitions", "Elsewhere.", false},
+		{"uni/tr.html#ED4", "ED4. Wide (W): always wide.", true},
+		{"uni/tr.html#ED4", "Narrow.", false},
+		{"uni/tr.html#GB11", "GB11 ExtPict ZWJ ×", true},
+		{"uni/tr.html#GB11", "after", false},
+		{"uni/tr.html#Next", "Elsewhere.", true},
 		{"oracle", "", true},
 		{"oracle nvim v0.11.7", "", true},
 		{"made up", "", false},
@@ -162,6 +191,11 @@ func TestVendoredSpec(t *testing.T) {
 		{Ref: "motion.txt *w*", Quote: "[count] words forward."},
 		{Ref: "change.txt *cw*", Quote: `Special case: When the cursor is in a word, "cw" and "cW" do not include the white space after a word`},
 		{Ref: "nvim/change.txt *cw*", Quote: `Special case: When the cursor is in a word, "cw" and "cW" do not include the white space after a word`},
+		{Ref: "xterm/ctlseqs.txt CSI Ps ; Ps H", Quote: "Cursor Position [row;column] (default = [1,1]) (CUP)."},
+		{Ref: "xterm/ctlseqs.txt PC-Style Function Keys", Quote: "Cursor Up | CSI A | SS3 A"},
+		{Ref: "ghostty/osc/7.mdx#Change Working Directory (OSC 7)", Quote: "Change the current working directory to the path denoted by the URI `u`."},
+		{Ref: "unicode/tr29.html#GB11", Quote: `GB11 \p{Extended_Pictographic} Extend* ZWJ × \p{Extended_Pictographic}`},
+		{Ref: "unicode/tr11.html#Definitions", Quote: "East Asian Wide (W): All other characters that are always wide."},
 	} {
 		if err := c.Check(r); err != nil {
 			t.Error(err)

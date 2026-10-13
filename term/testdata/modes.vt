@@ -1,0 +1,137 @@
+# Modes panes read (alternate screen, bracketed paste, cursor keys, mouse, synchronized output), cursor style, and
+# replies to queries.
+
+=== 1049 saves the cursor and switches to a cleared alternate screen
+ref:    xterm/ctlseqs.txt CSI ? Pm h
+quote:  "Ps = 1 0 4 9  -> Save cursor as in DECSC, xterm. After saving the cursor, switch to the Alternate Screen Buffer, clearing it first."
+size:   10x2
+input:  "abc\x1b[?1049hX"
+screen:
+  |   X      |
+  |          |
+alt:    true
+mode:   1049 on
+
+=== leaving 1049 restores the normal screen and the cursor
+ref:    xterm/ctlseqs.txt CSI ? Pm l
+quote:  "Ps = 1 0 4 9  -> Use Normal Screen Buffer and restore cursor as in DECRC, xterm."
+size:   10x2
+input:  "abc\x1b[?1049hXYZ\r\nmore\x1b[?1049lQ"
+screen:
+  |abcQ      |
+  |          |
+alt:    false
+mode:   1049 off
+cursor: 4,0
+
+=== the alternate screen keeps no scrollback
+ref:    xterm/ctlseqs.txt CSI ? Pm h
+quote:  "Ps = 1 0 4 7  -> Use Alternate Screen Buffer, xterm."
+ref:    ghostty/esc/ind.mdx#Index (IND)
+quote:  "If the scroll region is the full terminal screen and the terminal is on the [primary screen](#TODO), this may create scrollback."
+size:   5x2
+input:  "\x1b[?1049hone\r\ntwo\r\nthree"
+screen:
+  |two  |
+  |three|
+history:
+
+=== 2004 turns on bracketed paste
+ref:    xterm/ctlseqs.txt CSI ? Pm h
+quote:  "Ps = 2 0 0 4  -> Set bracketed paste mode, xterm."
+size:   5x1
+input:  "\x1b[?2004h"
+mode:   2004 on
+
+=== DECCKM turns on application cursor keys
+ref:    xterm/ctlseqs.txt CSI ? Pm h
+quote:  "Ps = 1  -> Application Cursor Keys (DECCKM), VT100."
+size:   5x1
+input:  "\x1b[?1h"
+mode:   1 on
+
+=== DECCKM reset turns them off
+ref:    xterm/ctlseqs.txt CSI ? Pm l
+quote:  "Ps = 1  -> Normal Cursor Keys (DECCKM), VT100."
+size:   5x1
+input:  "\x1b[?1h\x1b[?1l"
+mode:   1 off
+
+=== DECTCEM hides the cursor
+ref:    xterm/ctlseqs.txt CSI ? Pm l
+quote:  "Ps = 2 5  -> Hide cursor (DECTCEM), VT220."
+size:   5x1
+input:  "\x1b[?25l"
+mode:   25 off
+
+=== mouse tracking modes and the SGR encoding
+ref:    xterm/ctlseqs.txt CSI ? Pm h
+quote:  "Ps = 1 0 0 0  -> Send Mouse X & Y on button press and release."
+ref:    xterm/ctlseqs.txt CSI ? Pm h
+quote:  "Ps = 1 0 0 2  -> Use Cell Motion Mouse Tracking, xterm."
+ref:    xterm/ctlseqs.txt CSI ? Pm h
+quote:  "Ps = 1 0 0 6  -> Enable SGR Mouse Mode, xterm."
+size:   5x1
+input:  "\x1b[?1000h\x1b[?1002h\x1b[?1006h"
+mode:   1000 on
+mode:   1002 on
+mode:   1003 off
+mode:   1006 on
+
+=== synchronized output keeps the last frame while it's on
+ref:    contour/synchronized-output.md#Semantics
+quote:  "When the synchronization mode is enabled following render calls will keep rendering the last rendered state. The terminal Emulator keeps processing incoming text and sequences."
+size:   10x1
+setup:  "abc"
+input:  "\x1b[?2026hXYZ"
+screen:
+  |abc       |
+held:   true
+mode:   2026 on
+cursor: 6,0
+
+=== ending synchronized output shows the latest state
+ref:    contour/synchronized-output.md#Using the feature
+quote:  "Use `CSI ? 2026 l` when done with your current frame rendering, implicitly updating the render state by reading out the latest grid buffer state."
+size:   10x1
+setup:  "abc"
+input:  "\x1b[?2026hXYZ\x1b[?2026l"
+screen:
+  |abcXYZ    |
+held:   false
+mode:   2026 off
+
+=== DECSCUSR sets the cursor style
+ref:    xterm/ctlseqs.txt CSI Ps SP q
+quote:  "Ps = 4  -> steady underline."
+size:   5x1
+input:  "\x1b[4 q"
+shape:  underline
+
+=== DECSCUSR 6 is a bar
+ref:    xterm/ctlseqs.txt CSI Ps SP q
+quote:  "Ps = 6  -> steady bar, xterm."
+size:   5x1
+input:  "\x1b[6 q"
+shape:  bar
+
+=== DECSCUSR 2 is a block
+ref:    xterm/ctlseqs.txt CSI Ps SP q
+quote:  "Ps = 2  -> steady block."
+size:   5x1
+input:  "\x1b[6 q\x1b[2 q"
+shape:  block
+
+=== DSR 6 reports the cursor position
+ref:    xterm/ctlseqs.txt CSI Ps n
+quote:  "Ps = 6  -> Report Cursor Position (CPR) [row;column]. Result is CSI r ; c R"
+size:   10x3
+input:  "\x1b[2;5H\x1b[6n"
+reply:  "\x1b[2;5R"
+
+=== DSR 5 reports OK
+ref:    xterm/ctlseqs.txt CSI Ps n
+quote:  "Ps = 5  -> Status Report. Result (\"OK\") is CSI 0 n"
+size:   10x3
+input:  "\x1b[5n"
+reply:  "\x1b[0n"

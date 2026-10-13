@@ -1,0 +1,183 @@
+# Cursor movement: CUP, CUU, CUD, CUF, CUB, DECSC/DECRC. Ghostty's validation scripts, delivered through a tty
+# ("\n" as "\r\n"); "_" is a blank and "c" the cursor.
+
+=== CUP moves to row;column, one-based
+ref:    xterm/ctlseqs.txt CSI Ps ; Ps H
+quote:  "Cursor Position [row;column] (default = [1,1]) (CUP)."
+ref:    ghostty/csi/cup.mdx#CUP V-1: Normal Usage
+quote:  "|__________| |__Ac______|"
+size:   10x2
+input:  "\x1b[1;1H\x1b[0J\x1b[2;3HA"
+screen:
+  |          |
+  |  A       |
+cursor: 3,1
+
+=== CUP clamps to the screen
+ref:    ghostty/csi/cup.mdx#CUP V-2: Off the Screen
+quote:  "|__________| |__________| |_________Ac"
+size:   10x3
+input:  "\x1b[1;1H\x1b[0J\x1b[500;500HA"
+screen:
+  |          |
+  |          |
+  |         A|
+cursor: 9,2
+
+=== CUP with no parameters goes home
+ref:    xterm/ctlseqs.txt CSI Ps ; Ps H
+quote:  "(default = [1,1])"
+size:   10x2
+input:  "abc\r\nde\x1b[HX"
+screen:
+  |Xbc       |
+  |de        |
+cursor: 1,0
+
+=== CUP unsets pending wrap
+ref:    ghostty/csi/cup.mdx#CUP V-6: Pending Wrap is Unset
+quote:  "|Xc_______X|"
+size:   10x1
+input:  "\x1b[10GA\x1b[1;1HX"
+screen:
+  |X        A|
+cursor: 1,0
+
+=== CUU moves up
+ref:    xterm/ctlseqs.txt CSI Ps A
+quote:  "Cursor Up Ps Times (default = 1) (CUU)."
+ref:    ghostty/csi/cuu.mdx#CUU V-1: Cursor Up
+quote:  "|_Xc_______| |__________| |A_________|"
+size:   10x3
+input:  "\x1b[1;1H\x1b[0J\x1b[3;1HA\x1b[2AX"
+screen:
+  | X        |
+  |          |
+  |A         |
+cursor: 2,0
+
+=== CUU stops at the top margin
+ref:    ghostty/csi/cuu.mdx#CUU V-2: Cursor Up Below Top Margin
+quote:  "|__________| |_Xc_______| |A_________| |__________|"
+size:   10x4
+input:  "\x1b[1;1H\x1b[0J\r\n\r\n\r\n\r\n\x1b[2;4r\x1b[3;1HA\x1b[5AX"
+screen:
+  |          |
+  | X        |
+  |A         |
+  |          |
+cursor: 2,1
+
+=== CUU above the top margin stops at the first row
+ref:    ghostty/csi/cuu.mdx#CUU V-3: Cursor Up Above Top Margin
+quote:  "|Xc________| |__________| |A_________| |__________| |__________|"
+size:   10x5
+input:  "\x1b[1;1H\x1b[0J\r\n\r\n\r\n\r\n\r\n\x1b[3;5r\x1b[3;1HA\x1b[2;1H\x1b[5AX"
+screen:
+  |X         |
+  |          |
+  |A         |
+  |          |
+  |          |
+cursor: 1,0
+
+=== CUD moves down
+ref:    xterm/ctlseqs.txt CSI Ps B
+quote:  "Cursor Down Ps Times (default = 1) (CUD)."
+ref:    ghostty/csi/cud.mdx#CUD V-1: Cursor Down
+quote:  "|A_________| |__________| |_Xc_______|"
+size:   10x3
+input:  "A\x1b[2BX"
+screen:
+  |A         |
+  |          |
+  | X        |
+cursor: 2,2
+
+=== CUD stops at the bottom margin
+ref:    ghostty/csi/cud.mdx#CUD V-2: Cursor Down Above Bottom Margin
+quote:  "|A_________| |__________| |_Xc_______| |__________|"
+size:   10x4
+input:  "\x1b[1;1H\x1b[0J\r\n\r\n\r\n\r\n\x1b[1;3rA\x1b[5BX"
+screen:
+  |A         |
+  |          |
+  | X        |
+  |          |
+cursor: 2,2
+
+=== CUF unsets pending wrap
+ref:    xterm/ctlseqs.txt CSI Ps C
+quote:  "Cursor Forward Ps Times (default = 1) (CUF)."
+ref:    ghostty/csi/cuf.mdx#CUF V-1: Pending Wrap is Unset
+quote:  "|_________X| |YZ________|"
+size:   10x2
+input:  "\x1b[10GA\x1b[CXYZ"
+screen:
+  |         X|
+  |YZ        |
+cursor: 2,1
+
+=== CUF stops at the right edge
+ref:    ghostty/csi/cuf.mdx#CUF V-2: Rightmost Boundary with Reverse Wrap Disabled
+quote:  "|A________Bc"
+size:   10x1
+input:  "A\x1b[500CB"
+screen:
+  |A        B|
+cursor: 9,0
+
+=== CUB unsets pending wrap
+ref:    xterm/ctlseqs.txt CSI Ps D
+quote:  "Cursor Backward Ps Times (default = 1) (CUB)."
+ref:    ghostty/csi/cub.mdx#CUB V-1: Pending Wrap is Unset
+quote:  "|________XY| |Zc________|"
+size:   10x2
+input:  "\x1b[10GA\x1b[DXYZ"
+screen:
+  |        XY|
+  |Z         |
+cursor: 1,1
+
+=== CUB stops at the left edge
+ref:    ghostty/csi/cub.mdx#CUB V-2: Leftmost Boundary with Reverse Wrap Disabled
+quote:  "|A_________| |Bc________|"
+size:   10x2
+input:  "\x1b[?45lA\r\n\x1b[10DB"
+screen:
+  |A         |
+  |B         |
+cursor: 1,1
+
+=== DECSC and DECRC save and restore the position
+ref:    xterm/ctlseqs.txt ESC 7
+quote:  "Save Cursor (DECSC), VT100."
+ref:    xterm/ctlseqs.txt ESC 8
+quote:  "Restore Cursor (DECRC), VT100."
+ref:    ghostty/esc/decsc.mdx#SC V-1: Cursor Position
+quote:  "|B___AX____|"
+size:   10x1
+input:  "\x1b[1;1H\x1b[0J\x1b[1;5HA\x1b7\x1b[1;1HB\x1b8X"
+screen:
+  |B   AX    |
+cursor: 6,0
+
+=== DECRC restores pending wrap
+ref:    ghostty/esc/decsc.mdx#SC V-2: Pending Wrap State
+quote:  "|B________A| |X_________|"
+size:   10x2
+input:  "\x1b[1;1H\x1b[0J\x1b[10GA\x1b7\x1b[1;1HB\x1b8X"
+screen:
+  |B        A|
+  |X         |
+cursor: 1,1
+
+=== DECRC restores SGR attributes
+ref:    ghostty/esc/decsc.mdx#SC V-3: SGR Attributes
+quote:  "The \"A\" and \"X\" should have identical styling."
+size:   10x1
+input:  "\x1b[1;1H\x1b[0J\x1b[1;4;33;44mA\x1b7\x1b[0mB\x1b8X"
+screen:
+  |AX        |
+cell:   0,0 bold underline=single fg=3 bg=4
+cell:   1,0 bold underline=single fg=3 bg=4

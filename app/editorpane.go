@@ -479,10 +479,23 @@ func (x *editorExt) cmdline(c *ui.Ctx, line string) {
 
 // modeSegment is the status line's mode chip: the current window's engine and its mode.
 func (x *editorExt) modeSegment(c *ui.Ctx) {
+	th := c.Theme()
+	if f := x.h.Layout().Focus; f != nil && f.ID != EditorView {
+		if v, ok := x.h.ViewByID(f.ID); ok {
+			if m, ok := registry.As[registry.Moded](v); ok {
+				label, style := m.ModeLabel(f.Instance)
+				c.Row("mode", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: tokenColour(th, style, th.C(tModeNormal)),
+					Role: ui.RoleStatus, Label: "Mode"}, func(c *ui.Ctx) {
+					c.Text("m", label, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Bold, Tracking: .12},
+						Color: th.C(tModeFg)})
+				})
+				return
+			}
+		}
+	}
 	if !x.shown() {
 		return
 	}
-	th := c.Theme()
 	mode := x.e.Mode()
 	label := modeName(mode)
 	if st := x.inputFor(x.current()); !isVim(st) {
