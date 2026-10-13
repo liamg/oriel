@@ -24,7 +24,7 @@ clip 102.9375,0 1469.0625x38 r 0
   text "off" @643.2656,23.599998 #7c7566 JetBrains Mono 10
   text "⌘3" @668.2656,23.42 #4f4a40 JetBrains Mono 9.5
   rect 692.2656,0 1x38 fill #24221d
-  rect 705.2656,16 8x8 fill #ff6fae radius 4
+  rect 705.2656,16 8x8 fill #ff7ad6 radius 4
   text "dash-filters" @720.2656,24.365234 #b3ab99 Inter 12
   text "in review" @792.2969,23.599998 #7c7566 JetBrains Mono 10
   text "⌘4" @853.2969,23.42 #4f4a40 JetBrains Mono 9.5

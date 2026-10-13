@@ -88,9 +88,9 @@ clip 0,38 1600x962 r 0
     rect 22,613 14x14 fill #332f27 radius 3 stroke 1 #332f27
     text "line2" @44,624.13995 #b3ab99 JetBrains Mono 11.5
     text "#332f27" @248,623.60004 #4f4a40 JetBrains Mono 10
-    rect 22,639 14x14 fill #ff6fae radius 3 stroke 1 #332f27
+    rect 22,639 14x14 fill #ff7ad6 radius 3 stroke 1 #332f27
     text "pink" @44,650.13995 #b3ab99 JetBrains Mono 11.5
-    text "#ff6fae" @248,649.60004 #4f4a40 JetBrains Mono 10
+    text "#ff7ad6" @248,649.60004 #4f4a40 JetBrains Mono 10
     rect 22,665 14x14 fill #ff5f6d radius 3 stroke 1 #332f27
     text "red" @44,676.13995 #b3ab99 JetBrains Mono 11.5
     text "#ff5f6d" @248,675.60004 #4f4a40 JetBrains Mono 10
@@ -118,9 +118,9 @@ clip 0,38 1600x962 r 0
     rect 22,873 14x14 fill #d6dde6 radius 3 stroke 1 #332f27
     text "syn.variable" @44,884.13995 #b3ab99 JetBrains Mono 11.5
     text "#d6dde6" @248,883.60004 #4f4a40 JetBrains Mono 10
-    rect 22,899 14x14 fill #a98bff radius 3 stroke 1 #332f27
+    rect 22,899 14x14 fill #b98aff radius 3 stroke 1 #332f27
     text "violet" @44,910.13995 #b3ab99 JetBrains Mono 11.5
-    text "#a98bff" @248,909.60004 #4f4a40 JetBrains Mono 10
+    text "#b98aff" @248,909.60004 #4f4a40 JetBrains Mono 10
     text "SEMANTIC" @12,942.15 #7c7566 JetBrains Mono 9.5
     rect 22,951 14x14 fill #ffd23f radius 3 stroke 1 #332f27
     text "accent" @44,962.13995 #b3ab99 JetBrains Mono 11.5
@@ -142,8 +142,8 @@ clip 0,38 1600x962 r 0
     text "DARK" @514,61.42 #ffd23f JetBrains Mono 9.5
     text "LIGHT" @561.8,61.42 #7c7566 JetBrains Mono 9.5
   pop
-  rect 616.55,46 200.69995x24 radius 12 stroke 1 #ff6fae
-  text "PICK MODE · CLICK ANYTHING" @626.55,61.42 #ff6fae JetBrains Mono 9.5
+  rect 616.55,46 200.69995x24 radius 12 stroke 1 #ff7ad6
+  text "PICK MODE · CLICK ANYTHING" @626.55,61.42 #ff7ad6 JetBrains Mono 9.5
   text "repainted in 0.0ms" @1126.3125,61.96 #7c7566 JetBrains Mono 11
   rect 301,78 958x763 fill #060606
   rect 317,94 926x731 radius 6 stroke 1 #332f27
@@ -173,8 +173,8 @@ clip 0,38 1600x962 r 0
       text "needs you" @746.6719,116.1 #7c7566 JetBrains Mono 10
       text "⌘2" @807.6719,115.92 #4f4a40 JetBrains Mono 9.5
       rect 831.6719,94 1x37 fill #24221d
-      effect glow-disc 844.6719,109 7x7 blur 8 #a98bffe6
-      path 6 segments fill #a98bff
+      effect glow-disc 844.6719,109 7x7 blur 8 #b98affe6
+      path 6 segments fill #b98aff
       text "review #4410" @858.6719,116.865234 #b3ab99 Inter 12
       text "permission" @942.3594,116.1 #7c7566 JetBrains Mono 10
       text "⌘3" @1009.3594,115.92 #4f4a40 JetBrains Mono 9.5
@@ -185,8 +185,8 @@ clip 0,38 1600x962 r 0
       text "ci" @1160.3438,116.1 #7c7566 JetBrains Mono 10
       text "⌘4" @1179.3438,115.92 #4f4a40 JetBrains Mono 9.5
       rect 1203.3438,94 1x37 fill #24221d
-      effect glow-disc 1216.3438,109 7x7 blur 8 #ff6faee6
-      path 6 segments fill #ff6fae
+      effect glow-disc 1216.3438,109 7x7 blur 8 #ff7ad6e6
+      path 6 segments fill #ff7ad6
       text "dash-filters" @1230.3438,116.865234 #b3ab99 Inter 12
       text "in review" @1302.375,116.1 #7c7566 JetBrains Mono 10
       text "⌘5" @1363.375,115.92 #4f4a40 JetBrains Mono 9.5
@@ -283,7 +283,7 @@ clip 0,38 1600x962 r 0
       rect 611,132 926x32 fill #0c0c0b
       rect 611,163 926x1 fill #24221d
       rect 611,132 114.234375x32 fill #060606
-      rect 611,132 114.234375x2 fill #a98bff
+      rect 611,132 114.234375x2 fill #b98aff
       rect 625,143 10x10 fill #4fc1e9d9 radius 2
       text "round.go" @642,152.36523 #ece6d8 Inter 12
       text "●" @700.2656,152.36523 #7c7566 Inter 12
@@ -676,7 +676,7 @@ clip 0,38 1600x962 r 0
   rect 1260,38 340x936 fill #0c0c0b
   clip 1260,38 340x885 r 0
     text "PICKED" @1274,61.69 #7c7566 JetBrains Mono 9.5
-    text "bg.raised" @1532,62.2 #ff6fae JetBrains Mono 10
+    text "bg.raised" @1532,62.2 #ff7ad6 JetBrains Mono 10
     rect 1274,73.2 312x34 fill #060606 radius 5 stroke 1 #ffd23f
     rect 1284,83.2 14x14 fill #121210 radius 3 stroke 1 #332f27
     text "bg.raised" @1308,94.340004 #ece6d8 JetBrains Mono 11.5
@@ -709,10 +709,6 @@ clip 0,38 1600x962 r 0
     rect 1487.3334,293.74002 98.666626x51.01999 fill #121210 radius 5 stroke 1 #24221d
     text "fg.faint" @1495.3334,311.43002 #7c7566 JetBrains Mono 9.5
     text "4.1:1" @1495.3334,332.56003 #4fe0a0 JetBrains Mono 14
-    text "⚠ status.needs_you and status.reviewer are ΔE 9" @1274,366.385 #b3ab99 Inter 12
-    text "apart, hard to tell apart" @1274,383.90454 #b3ab99 Inter 12
-    text "⚠ status.ci and status.permission are ΔE 10 apart," @1274,408.42407 #b3ab99 Inter 12
-    text "hard to tell apart" @1274,425.9436 #b3ab99 Inter 12
   pop
   rect 1260,923 340x1 fill #24221d
   rect 1274,936 120.890625x26 fill #191815 radius 6 stroke 1 #332f27

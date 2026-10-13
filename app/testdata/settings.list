@@ -60,9 +60,9 @@ clip 0,38 1600x962 r 0
     rect 269,165.74225 3x36 fill #ffd23f radius 2
     text "ui.reduced_motion" @288,169.75 #ece6d8 JetBrains Mono 12.5
     text "Jump straight to the end of every animation." @288,189.60938 #7c7566 Inter 12.5
-    text "init.lua wins over settings.toml" @288,207.33452 #a98bff JetBrains Mono 10.5
+    text "init.lua wins over settings.toml" @288,207.33452 #b98aff JetBrains Mono 10.5
     text "Open init.lua:12" @507,207.33452 #ffd23f JetBrains Mono 10.5
-    text "set in init.lua:12" @1129.8594,187.52226 #a98bff JetBrains Mono 10.5
+    text "set in init.lua:12" @1129.8594,187.52226 #b98aff JetBrains Mono 10.5
     opacity 0.45
       rect 1492.5469,174.74225 32x18 fill #ffd23f radius 9
       rect 1508.5469,176.74225 14x14 fill #ece6d8 radius 7

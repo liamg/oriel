@@ -59,7 +59,7 @@ clip 760,38 640x844.84 r 0
       clip 932,131.81 170x15.179993 r 0
         text "—" @932,143.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,142.82 #a98bff JetBrains Mono 9.5
+      text "—" @1110,142.82 #b98aff JetBrains Mono 9.5
       clip 1198,132.14 200x14.520004 r 0
         text "init.lua:20" @1198,143.36 #ffd23f JetBrains Mono 11
       pop
@@ -68,7 +68,7 @@ clip 760,38 640x844.84 r 0
       clip 932,161.81 170x15.179993 r 0
         text "—" @932,173.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,172.81999 #a98bff JetBrains Mono 9.5
+      text "—" @1110,172.81999 #b98aff JetBrains Mono 9.5
       clip 1198,162.14 200x14.520004 r 0
         text "init.lua:28" @1198,173.36 #ffd23f JetBrains Mono 11
       pop
@@ -77,7 +77,7 @@ clip 760,38 640x844.84 r 0
       clip 932,191.81 170x15.179993 r 0
         text "—" @932,203.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,202.81999 #a98bff JetBrains Mono 9.5
+      text "—" @1110,202.81999 #b98aff JetBrains Mono 9.5
       clip 1198,192.14 200x14.520004 r 0
         text "init.lua:22" @1198,203.36 #ffd23f JetBrains Mono 11
       pop
@@ -86,7 +86,7 @@ clip 760,38 640x844.84 r 0
       clip 932,221.81 170x15.179993 r 0
         text "—" @932,233.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "DECIDE" @1110,232.81999 #a98bff JetBrains Mono 9.5
+      text "DECIDE" @1110,232.81999 #b98aff JetBrains Mono 9.5
       clip 1198,222.14 200x14.520004 r 0
         text "init.lua:33" @1198,233.36 #ffd23f JetBrains Mono 11
       pop

@@ -227,7 +227,7 @@ clip 16,578 824x117 r 10
   text "␣" @37,603.60004 #b3ab99 JetBrains Mono 10
   rect 56,592.4 16x15.200012 fill #121210 radius 4 stroke 1 #332f27
   text "a" @61,603.60004 #b3ab99 JetBrains Mono 10
-  text "+agent" @80,604.5471 #a98bff Inter 12.5
+  text "+agent" @80,604.5471 #b98aff Inter 12.5
   text "shown after 300ms · ⌫ back up · ? all · esc cancel" @132.57812,603.60004 #7c7566 JetBrains Mono 10
   rect 16,622 824x1 fill #24221d
   clip 24,631 400x28 r 0
@@ -249,7 +249,7 @@ clip 16,578 824x117 r 10
   clip 432,659 400x28 r 0
     text "p" @442,677.32 #ffd23f JetBrains Mono 12
     text "→" @459.20312,676.95996 #4f4a40 JetBrains Mono 11
-    text "+permissions" @475.79688,677.5471 #a98bff Inter 12.5
+    text "+permissions" @475.79688,677.5471 #b98aff Inter 12.5
     text "2" @816,676.60004 #4f4a40 JetBrains Mono 10
   pop
 pop

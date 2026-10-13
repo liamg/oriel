@@ -210,7 +210,7 @@ clip 0,0 856x709 r 0
   pop
 pop
 rect 0,709 856x26 fill #0c0c0b
-rect 0,709 78.97624x26 fill #ff6fae
+rect 0,709 78.97624x26 fill #ff7ad6
 text "V-BLOCK" @12,725.78 #141006 JetBrains Mono 10.5
 text "✕" @94.97624,725.95996 #b3ab99 JetBrains Mono 11
 text "0" @106.56999,725.95996 #b3ab99 JetBrains Mono 11

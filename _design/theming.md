@@ -140,6 +140,14 @@ run = { lua = "init.lua" }                        # optional: dynamic themes
 
 ## As built (SH-11)
 
+- **The built-in theme passes its own lint** (`theme.TestBuiltinPassesLint`), so five colours differ from the
+  mockups' `base.css`, each the same hue nudged:
+  - dark pink `#ff6fae` → `#ff7ad6` and violet `#a98bff` → `#b98aff`, so the reviewer and permission dots stand
+    apart from needs-you red and CI blue;
+  - light accent `#0a84b8` → `#0a78a8`, so white text on it reaches 4.5:1;
+  - light blue `#5c8dff` → `#3f72e6`, so the CI dot reaches 3:1 on surfaces, and light violet `#6b4fd6` → `#8645c9`
+    to stay apart from it.
+
 - `:Theme` (or `theme.edit`) opens the editor over the window: tokens on the left (palette, semantic, status,
   component, syntax; a dot on your overrides; a filter), the fixture workspace in the middle (or split against the
   theme yours extends), and the picked token on the right: its chain, its value, contrast and lint. The theme file
