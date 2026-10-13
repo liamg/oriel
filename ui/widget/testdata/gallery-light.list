@@ -1,6 +1,6 @@
 backdrop #fbfaf7
 rect 0,0 1000x640 fill #fbfaf7
-rect 20,20 80.921875x26 fill #0a84b8 radius 6 stroke 1 #0a84b8
+rect 20,20 80.921875x26 fill #0a78a8 radius 6 stroke 1 #0a78a8
 text "Allow host" @30,37.365234 #ffffff Inter 12
 rect 110.921875,20 50.390625x26 fill #e3dfd6 radius 6 stroke 1 #c9c3b6
 text "Once" @120.921875,37.365234 #1b2129 Inter 12
@@ -12,8 +12,8 @@ rect 315.1875,24.73 86.26999x16.539997 fill #d1343f12 radius 10 stroke 1 #d1343f
 text "1 NEEDS YOU" @322.1875,36.42 #d1343f JetBrains Mono 9.5
 rect 411.4575,24.73 73.130005x16.539997 fill #d9661a12 radius 10 stroke 1 #d9661a59
 text "1 WORKING" @418.4575,36.42 #d9661a JetBrains Mono 9.5
-rect 494.5875,24.73 59.99002x16.539997 fill #0a84b812 radius 10 stroke 1 #0a84b859
-text "GOPLS ✓" @501.5875,36.42 #0a84b8 JetBrains Mono 9.5
+rect 494.5875,24.73 59.99002x16.539997 fill #0a78a812 radius 10 stroke 1 #0a78a859
+text "GOPLS ✓" @501.5875,36.42 #0a78a8 JetBrains Mono 9.5
 rect 564.5775,20 68.203125x26 fill #e3dfd6 radius 6 stroke 1 #c9c3b6
 text "Popover" @574.5775,37.365234 #1b2129 Inter 12
 rect 20,62 420x30 fill #fbfaf7 radius 6 stroke 1 #c9c3b6
@@ -28,8 +28,8 @@ text "DEBUG" @304,124.6 #717a86 JetBrains Mono 10
 text "TESTS" @355,124.6 #717a86 JetBrains Mono 10
 rect 20,152 250x200 fill #f3f1ec
 clip 20,152 250x200 r 0
-  rect 20,152 250x22 fill #e1e8e8
-  rect 20,152 2x22 fill #0a84b8
+  rect 20,152 250x22 fill #e1e8e7
+  rect 20,152 2x22 fill #0a78a8
   text "▸" @32,167.54712 #1b2129 Inter 12.5
   rect 46,158 10x10 fill #5cd2ffd9 radius 2
   text "internal" @62,167.54712 #1b2129 Inter 12.5
@@ -39,8 +39,8 @@ clip 20,152 250x200 r 0
 pop
 rect 286,152 250x200 fill #f3f1ec
 clip 286,152 250x200 r 0
-  rect 286,218 250x22 fill #e1e8e8
-  rect 286,218 2x22 fill #0a84b8
+  rect 286,218 250x22 fill #e1e8e7
+  rect 286,218 2x22 fill #0a78a8
   text "Negative values round the wrong way" @298,167.54712 #424b57 Inter 12.5
   text "Negative values round the wrong way" @298,189.54712 #424b57 Inter 12.5
   text "Negative values round the wrong way" @298,211.54712 #424b57 Inter 12.5
@@ -62,7 +62,7 @@ rect 552,220 250x1 fill #dcd7cc
 text "Hide this tat" @564,244.54712 #a3a9b1 Inter 12.5
 text "Move to statusline…" @564,274.54712 #1b2129 Inter 12.5
 rect 20,368 120x24 fill #ebe8e1 radius 4
-rect 146,134 56x2 fill #0a84b8
+rect 146,134 56x2 fill #0a78a8
 rect 564.5775,50 220x39.12451 fill #ebe8e1 radius 8 stroke 1 #c9c3b6
 text "A popover under its anchor." @576.5775,74.109375 #1b2129 Inter 12.5
 rect 80,380 250x107 fill #ebe8e1 radius 6 stroke 1 #c9c3b6
