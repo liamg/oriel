@@ -1,2 +1,5 @@
 bin/
 *.test
+*.failed.png
+*.prof
+cover.out
