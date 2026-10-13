@@ -670,6 +670,9 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	if s.Fill.A > 0 || (s.Border > 0 && s.Stroke.A > 0) {
 		f.Rect(r, render.Style{Fill: s.Fill, Radius: s.Radius, Stroke: s.Stroke, Width: s.Border})
 	}
+	if w := u.wash(e); w.A > 0 {
+		f.Rect(r, render.Style{Fill: w, Radius: s.Radius})
+	}
 	clips := s.Clip || s.ScrollX || s.ScrollY
 	if clips {
 		f.PushClip(r, s.Radius)
@@ -697,6 +700,18 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 		ring := render.Rect{Min: render.Point{X: r.Min.X - gap - w, Y: r.Min.Y - gap - w}, Max: render.Point{X: r.Max.X + gap + w, Y: r.Max.Y + gap + w}}
 		f.Rect(ring, render.Style{Stroke: u.opts.FocusRing, Width: w, Radius: s.Radius + gap + w})
 	}
+}
+
+// wash is what's washed over e for hover or press: a box clickable with the pointer that doesn't draw its own.
+func (u *UI) wash(e *elem) render.Color {
+	s := e.style
+	if e.id == 0 || e.id != u.in.hot || !(s.Interactive || s.Focusable) || s.Disabled || s.NoHover || s.Cursor != render.CursorPointer {
+		return render.Color{}
+	}
+	if u.in.active == e.id {
+		return u.opts.Pressed
+	}
+	return u.opts.Hover
 }
 
 // Dump writes the latest layout as an indented tree, for golden tests.
@@ -742,6 +757,7 @@ func (u *UI) SetTheme(r *theme.Resolved) {
 	u.theme = r
 	u.text.Color = r.C(theme.Fg)
 	u.opts.FocusRing = r.C(theme.FocusRing)
+	u.opts.Hover, u.opts.Pressed = r.C(theme.Hover), r.C(theme.Pressed)
 	u.opts.Tooltip.Color = r.C(theme.Fg)
 	u.opts.TooltipFill = r.C(theme.BgOverlay)
 	u.opts.TooltipStroke = r.C(theme.LineStrong)

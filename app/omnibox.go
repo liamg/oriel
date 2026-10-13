@@ -235,18 +235,15 @@ func kbdKey(c *ui.Ctx, k string) {
 func (o *omnibox) chips(c *ui.Ctx) {
 	th := c.Theme()
 	chip := func(id, label string) {
-		key := c.Next(fmt.Sprint("chip-", id))
-		if c.Interaction(key).Clicked {
-			o.scope, o.sel = id, 0
-		}
 		tone := th.C(theme.FgMuted)
 		if o.scope == id {
 			tone = th.C(theme.Accent)
 		}
-		c.Box(fmt.Sprint("chip-", id), ui.Style{Interactive: true, Cursor: render.CursorPointer, Help: "shell/omnibox", Role: ui.RoleButton, Label: label,
-			Selected: o.scope == id}, func(c *ui.Ctx) {
+		if widget.Clickable(c, fmt.Sprint("chip-", id), ui.Style{Help: "shell/omnibox", Label: label, Selected: o.scope == id}, func(c *ui.Ctx) {
 			widget.Chip(c, "c", label, tone, "shell/omnibox")
-		})
+		}).Clicked {
+			o.scope, o.sel = id, 0
+		}
 	}
 	chip("", "All")
 	for _, s := range o.h.Pickers() {
@@ -319,8 +316,6 @@ func (o *omnibox) list(c *ui.Ctx, groups []group) {
 // the highlighted row; picked a row multi-selected. It reports a click.
 func resultRow(c *ui.Ctx, i int, h hit, on, picked bool) bool {
 	th := c.Theme()
-	id := c.Next(fmt.Sprint("r", i))
-	clicked := c.Interaction(id).Clicked
 	fill, edge := color.NRGBA{}, color.NRGBA{}
 	if picked {
 		edge = th.C(theme.Warn)
@@ -329,8 +324,8 @@ func resultRow(c *ui.Ctx, i int, h hit, on, picked bool) bool {
 		fill, edge = th.C(tOmniSel), th.C(tOmniSelEdge)
 	}
 	it := h.item
-	c.Row(fmt.Sprint("r", i), ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.Insets{R: 10}, Gap: 10, Cross: ui.Center, Fill: fill, Radius: 6,
-		Interactive: true, Cursor: render.CursorPointer, Help: "shell/omnibox", Role: ui.RoleListItem, Selected: on, Label: it.Label}, func(c *ui.Ctx) {
+	return widget.Clickable(c, fmt.Sprint("r", i), ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(32), Pad: ui.Insets{R: 10}, Gap: 10, Cross: ui.Center,
+		Fill: fill, Radius: 6, Help: "shell/omnibox", Role: ui.RoleListItem, Selected: on, Label: it.Label}, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(20), Fill: edge}, nil)
 		icon := tokenColour(th, it.IconStyle, th.C(theme.FgFaint))
 		c.Row("icon", ui.Style{W: ui.Px(16), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -354,8 +349,7 @@ func resultRow(c *ui.Ctx, i int, h hit, on, picked bool) bool {
 		if it.Key != "" {
 			kbdKey(c, it.Key)
 		}
-	})
-	return clicked
+	}).Clicked
 }
 
 // matchedLabel draws a label with the matched characters in the match colour.

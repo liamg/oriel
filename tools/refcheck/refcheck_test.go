@@ -141,7 +141,7 @@ func TestVendoredSpec(t *testing.T) {
 	for _, r := range []Ref{
 		{Ref: "motion.txt *w*", Quote: "[count] words forward."},
 		{Ref: "change.txt *cw*", Quote: `Special case: When the cursor is in a word, "cw" and "cW" do not include the white space after a word`},
-		{Ref: "nvim/motion.txt *w*", Quote: "[count] words forward."},
+		{Ref: "nvim/change.txt *cw*", Quote: `Special case: When the cursor is in a word, "cw" and "cW" do not include the white space after a word`},
 	} {
 		if err := c.Check(r); err != nil {
 			t.Error(err)

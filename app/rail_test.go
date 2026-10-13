@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
@@ -87,5 +88,18 @@ func TestRailPluginEntries(t *testing.T) {
 	s.frame()
 	if strings.Contains("\n"+s.frameText()+"\n", "\n7\n") {
 		t.Error("the badge outlived its entry")
+	}
+}
+
+// SH-16: the key of an entry that isn't available yet says so, rather than failing.
+func TestRailKeyUnavailable(t *testing.T) {
+	r := startApp(t, t.TempDir(), t.TempDir(), nil)
+	r.waitText("ORIEL")
+	r.typeKeys("<D-E>")
+	r.waitText("Explorer isn't available yet")
+	for _, n := range r.store.State().Notifications {
+		if n.Severity == core.SevError {
+			t.Errorf("an error: %s", n.Text)
+		}
 	}
 }

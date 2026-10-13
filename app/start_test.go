@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
@@ -58,10 +59,7 @@ func startApp(t *testing.T, state, workDir string, setup func(h ext.Host)) *runn
 		t.Fatalf("app exited: %v", err)
 	}
 	r.host = g.h
-	t.Cleanup(func() {
-		r.win.Close()
-		<-r.done
-	})
+	t.Cleanup(r.stop)
 	return r
 }
 
@@ -69,7 +67,7 @@ func startApp(t *testing.T, state, workDir string, setup func(h ext.Host)) *runn
 func TestStartViewAtLaunch(t *testing.T) {
 	r := startApp(t, t.TempDir(), "", nil)
 	r.waitFrame("the start view", func(s string) bool {
-		return containsAll(s, "New Session", "Resume a Session", "Open Directory", "Settings", "⌘N", "⌘O", "⇧⌘O", "⌘,", "nothing recent yet")
+		return containsAll(s, "New Session", "Resume a Session", "Open Directory", "Settings", "⌘N", "⌘O", "⇧⌘O", "⌘,")
 	})
 }
 
@@ -114,7 +112,7 @@ func TestOpenDirectory(t *testing.T) {
 
 	r2 := startApp(t, state, "", nil)
 	r2.waitFrame("proj in the recents", func(s string) bool {
-		return containsAll(s, "proj", "DIRECTORIES") && !strings.Contains(s, "nothing recent")
+		return containsAll(s, "proj", "DIRECTORIES")
 	})
 }
 
@@ -153,19 +151,7 @@ func TestStartViewSnapshots(t *testing.T) {
 			s := newErrScene(t, "")
 			s.sh.recents = &recents{path: filepath.Join(t.TempDir(), "recent.json")}
 			if tt.recents {
-				home, _ := os.UserHomeDir()
-				for _, d := range []struct {
-					name string
-					ago  time.Duration
-				}{{"notes", 7 * 24 * time.Hour}, {"dotfiles", 3 * 24 * time.Hour}, {"oriel", 10 * time.Minute}} {
-					p := filepath.Join(home, "src", d.name)
-					os.MkdirAll(p, 0o755)
-					if d.name != "notes" {
-						os.MkdirAll(filepath.Join(p, ".git"), 0o755)
-						os.WriteFile(filepath.Join(p, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
-					}
-					s.sh.recents.add(p, time.Now().Add(-d.ago))
-				}
+				addRecents(s)
 			}
 			st, _ := theme.Stack(theme.Builtins(), "oriel")
 			r, err := theme.Resolve(st, tt.variant)
@@ -211,5 +197,170 @@ func TestTypedDirs(t *testing.T) {
 		if strings.Join(got, " ") != tt.want {
 			t.Errorf("typedDirs(%q) = %q, want %q", tt.q, got, tt.want)
 		}
+	}
+}
+
+// addRecents puts 39-start's three directories in s's recents.
+func addRecents(s *errScene) {
+	home, _ := os.UserHomeDir()
+	for _, d := range []struct {
+		name string
+		ago  time.Duration
+	}{{"notes", 7 * 24 * time.Hour}, {"dotfiles", 3 * 24 * time.Hour}, {"oriel", 10 * time.Minute}} {
+		p := filepath.Join(home, "src", d.name)
+		os.MkdirAll(p, 0o755)
+		if d.name != "notes" {
+			os.MkdirAll(filepath.Join(p, ".git"), 0o755)
+			os.WriteFile(filepath.Join(p, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
+		}
+		s.sh.recents.add(p, time.Now().Add(-d.ago))
+	}
+}
+
+// startCard is the start view's card or row named label, not the rail's entry of the same name.
+func (s *errScene) startCard(label string) *render.AccessNode {
+	s.t.Helper()
+	var found *render.AccessNode
+	var find func(n *render.AccessNode)
+	find = func(n *render.AccessNode) {
+		if n.Name == label && n.Role == render.RoleButton && n.Bounds.Min.X > railW {
+			found = n
+		}
+		for _, k := range n.Children {
+			find(k)
+		}
+	}
+	find(s.ui.AccessTree())
+	if found == nil {
+		s.t.Fatalf("no start card %q:\n%s", label, s.frameText())
+	}
+	return found
+}
+
+// SH-15: the start view fits the window: the columns shrink, and when both won't fit, Start and Recent become tabs.
+func TestStartViewFits(t *testing.T) {
+	for _, tt := range []struct {
+		width float32
+		tabs  bool
+	}{{1400, false}, {1000, false}, {640, true}, {420, true}} {
+		s := newScene(t, "", "", render.Point{X: tt.width, Y: 700})
+		s.sh.recents = &recents{path: filepath.Join(t.TempDir(), "recent.json")}
+		addRecents(s)
+		s.frame()
+		s.frame()
+		s.frame()
+		for _, l := range []string{"Open Directory", "Settings"} {
+			if b := s.startCard(l).Bounds; b.Min.X < railW || b.Max.X > tt.width {
+				t.Errorf("at %v wide, %s is at %v", tt.width, l, b)
+			}
+		}
+		text := s.frameText()
+		if got := strings.Contains(text, "notes"); got == tt.tabs {
+			t.Errorf("at %v wide, the recents show: %v\n%s", tt.width, got, text)
+		}
+		if !tt.tabs {
+			continue
+		}
+		for range 4 {
+			s.run("start.next", nil)
+		}
+		s.frame()
+		s.frame()
+		text = s.frameText()
+		if !strings.Contains(text, "notes") || strings.Contains(text, "Open Directory") {
+			t.Errorf("at %v wide, selecting a recent didn't switch to its tab:\n%s", tt.width, text)
+		}
+		if b := s.startCard("oriel").Bounds; b.Max.X > tt.width {
+			t.Errorf("at %v wide, the recent oriel is at %v", tt.width, b)
+		}
+		s.click(centre(s.access("START").Bounds))
+		if text := s.frameText(); !strings.Contains(text, "Open Directory") {
+			t.Errorf("at %v wide, clicking the Start tab didn't show the actions:\n%s", tt.width, text)
+		}
+	}
+}
+
+// SH-15: the pointer moving onto a card selects it, as the keys do; the keys still move off it.
+func TestStartViewHover(t *testing.T) {
+	s := newErrScene(t, "")
+	s.frame()
+	s.frame()
+	if !s.startCard("Open Directory").Selected {
+		t.Fatal("Open Directory isn't selected at first")
+	}
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: centre(s.startCard("Settings").Bounds)})
+	s.frame()
+	s.frame()
+	if !s.startCard("Settings").Selected || s.startCard("Open Directory").Selected {
+		t.Fatal("hovering Settings didn't select it")
+	}
+	s.run("start.prev", nil)
+	s.frame()
+	s.frame()
+	if !s.startCard("Open Directory").Selected || s.startCard("Settings").Selected {
+		t.Error("k didn't move the selection off the hovered card")
+	}
+}
+
+// The window opens where it was when it last closed: its frame is kept in the state directory.
+func TestWindowPlaceKept(t *testing.T) {
+	state := t.TempDir()
+	r := startApp(t, state, "", nil)
+	if f := r.win.Opts().Frame; f != (render.Rect{}) {
+		t.Fatalf("the first window asked for %v", f)
+	}
+	r.waitText("Open Directory")
+	moved := render.XYWH(200, 150, 1100, 700)
+	r.win.Move(moved)
+	r.stop()
+
+	r2 := startApp(t, state, "", nil)
+	if f := r2.win.Opts().Frame; f != moved {
+		t.Errorf("the next window asked for %v, want %v", f, moved)
+	}
+}
+
+// SH-15: a ✕ shows on a recent under the pointer; clicking it forgets the directory, for the next launch too.
+func TestStartViewForgetOnHover(t *testing.T) {
+	s := newErrScene(t, "")
+	s.sh.recents = &recents{path: filepath.Join(t.TempDir(), "recent.json")}
+	addRecents(s)
+	s.frame()
+	s.frame()
+	forgets := func() (n int) {
+		var walk func(a *render.AccessNode)
+		walk = func(a *render.AccessNode) {
+			if strings.HasPrefix(a.Name, "Forget ") {
+				n++
+			}
+			for _, k := range a.Children {
+				walk(k)
+			}
+		}
+		walk(s.ui.AccessTree())
+		return n
+	}
+	if n := forgets(); n != 0 {
+		t.Fatalf("%d ✕ show with the pointer away", n)
+	}
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: centre(s.startCard("dotfiles").Bounds)})
+	s.frame()
+	s.frame()
+	if n := forgets(); n != 1 {
+		t.Fatalf("%d ✕ show with the pointer on dotfiles, want 1", n)
+	}
+	x := s.access("Forget dotfiles")
+	s.click(centre(x.Bounds))
+	for _, d := range s.sh.recents.list() {
+		if filepath.Base(d.Path) == "dotfiles" {
+			t.Fatal("dotfiles is still in the recents")
+		}
+	}
+	if s.ui.NextFrame().IsZero() {
+		t.Error("the click asked for no frame to show it")
+	}
+	s.frame()
+	if strings.Contains(s.frameText(), "dotfiles") {
+		t.Error("dotfiles still shows")
 	}
 }

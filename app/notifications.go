@@ -264,18 +264,15 @@ func (n *notices) status(c *ui.Ctx) {
 	errs, warns := st.Counts(st.Focus)
 	c.Row("status", ui.Style{H: ui.Flex(1), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		count := func(key, glyph string, k int, sev core.Severity, tone color.NRGBA) {
-			id := c.Next(key)
-			if c.Interaction(id).Clicked {
-				n.h.Run(context.Background(), "log.open", registry.Args{"severity": string(sev)})
-			}
 			if k == 0 {
 				tone = c.Theme().C(tStatusFg)
 			}
-			c.Row(key, ui.Style{Gap: 5, Cross: ui.Center, Interactive: true, Cursor: render.CursorPointer, Help: "errors#log", Role: ui.RoleButton,
-				Label: fmt.Sprintf("%d %ss", k, sev)}, func(c *ui.Ctx) {
+			if widget.Clickable(c, key, ui.Style{Dir: ui.Row, Gap: 5, Cross: ui.Center, Help: "errors#log", Label: fmt.Sprintf("%d %ss", k, sev)}, func(c *ui.Ctx) {
 				c.Text("glyph", glyph, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: tone})
 				c.Text("n", fmt.Sprint(k), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: c.Theme().C(tStatusFg)})
-			})
+			}).Clicked {
+				n.h.Run(context.Background(), "log.open", registry.Args{"severity": string(sev)})
+			}
 		}
 		count("errors", "✕", errs, core.SevError, c.Theme().C(theme.Error))
 		count("warnings", "⚠", warns, core.SevWarning, c.Theme().C(theme.Warn))

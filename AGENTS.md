@@ -17,6 +17,8 @@ When asked to do a ticket ("do PL-8", "do the Linear plugin"):
 
 1. Find it in `_tickets/`. Read it, then **every design doc and mockup it links**.
 2. Check its phase is unblocked: earlier phases' exit criteria pass. If not, say so before starting.
+   Then look for what already exists that the ticket can build on (widgets, registry and host helpers, `gitx`, test
+   harnesses), and name the general pieces it needs that don't exist yet: they're built first, as their own units.
 3. Write the acceptance tests first, from the ticket's "done when" and the design docs. They fail.
 4. Implement until they pass on macOS and Linux.
 5. If the code has to differ from the design, update the design doc in the same change and say why.
@@ -33,6 +35,16 @@ If the design is silent or ambiguous on something that matters, ask rather than 
   - Built-ins are written as if they were plugins: replaceable, removable, and configurable from Lua.
   - A good test: could someone build this feature as a third-party plugin with the same result? If not, the API is incomplete. Fix that first.
   - New contribution points or API surface go into `_design/plugins.md` / `scripting.md` in the same change.
+- **Reuse before you build, everywhere.** Search for an existing component, helper or harness before writing one.
+  When the same thing would exist twice, extract it into the package that owns it and use it from both. Fix a
+  behaviour where every user gets it (the toolkit, the shared package), never by patching one screen or caller.
+  - **UI**: views are composed from `ui/widget` (`Clickable`, `Button`, `IconButton`, `Segmented`, `Tabs`, `List`,
+    `Chip`…). No view repeats `c.Next` / `c.Interaction(...).Clicked` / `Interactive` / `Cursor` / `Role` to make
+    something clickable (`TestViewsUseWidgetsForClicks` fails if one does). If no widget fits, add a general one to
+    `ui/widget` with its theme tokens and a test, then use it.
+  - **Code**: shared logic lives in the module that owns it (`gitx` for git, `registry` for contributions, `core`
+    for state), not copied into each caller; tests share harnesses (`errScene`, `startApp`, `vimtest`) rather than
+    growing new ones.
 - **Test-first, with sources.** Behaviour tests cite a vendored spec with a verbatim quote, and vim expectations are
   checked against headless nvim (`_design/testing.md`). Never write an expected value from memory, and never weaken
   a failing test to get to green.

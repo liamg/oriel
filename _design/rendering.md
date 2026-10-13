@@ -118,6 +118,14 @@ type Window interface {
     Close()
 }
 
+// A window that knows where it is. The app keeps its frame in the state directory (window.json) when it closes, and
+// passes it back as WindowOpts.Frame; the backend fits it to the screens as they are then (PlaceWindow: kept on the
+// screen it's mostly on, shrunk and moved inside its work area; on no screen, centred on the main one). Gio places
+// with AppKit on macOS and Xlib on X11; Wayland won't let a window place itself, so there it keeps only its size.
+type Placed interface {
+    Placement() (r Rect, ok bool)                 // logical pixels, from the main screen's top left
+}
+
 // Logical (CSS) pixels throughout; rects snap to device pixels, paths and lines don't.
 type Frame interface {
     Rect(r Rect, s Style)                         // fill or gradient, radius, inside stroke (a CSS border)
@@ -221,6 +229,8 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
   builds itself. A click is press and release on the same node. Disabled nodes take nothing and hide what's under
   them. The wheel scrolls the topmost scroller on its axis. `FocusNext(±1)` walks focusables in paint order, and a
   node focused from the keyboard gets a 2 px focus ring. A tooltip shows after the pointer rests 500 ms.
+  Anything clickable (enabled, `Interactive` or `Focusable`, with the pointer cursor) gets a wash under the pointer and
+  a stronger one pressed, the theme's `hover` and `pressed`; a widget that draws its own sets `NoHover`.
 - **Motion** (FW-13): one spring for everything that moves, `c.Motion(key, target)` on a 0..1 progress, critically
   damped at ω = 45 (within 2% by 130 ms, settled by about 210 ms; nothing runs past 250 ms). The theme's `motion`
   effect scales it (0 turns it off) and `ui.reduced_motion` makes it jump. On it, generally in `ui`: `Style.Enter`
@@ -241,6 +251,11 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
   it declares (`button.bg`, `input.border.focus`, `list.row.selected`, `menu.item.hover`, `modal.scrim`…), takes a
   help id, and has keyboard and mouse paths (see each widget's doc comment). Snapshots of a gallery of all of them
   are pinned in dark and light (display lists and PNGs), and a test fails if any interactive node lacks a help id.
+- **Views compose widgets; they don't hand-build controls.** Anything clicked is a `widget.Clickable` (a box with the
+  click, hover, press, focus keys and button role done once) or a widget built on it, such as `Segmented` (a strip of
+  mono options, one lit). A control a view needs that no widget covers is added to `ui/widget` first, with its tokens
+  and a test. Only pointer surfaces (the editor's text, the theme editor's pick and preview) read the pointer
+  themselves.
 - **Keys reach widgets** through the keymap layer: a focused node with a `KeyMode` ("input", "list", "menu"…) puts
   that mode first, then `global` (app chords such as `⌘K`); otherwise `n`, then `global`. Keys no mapping takes go
   to the focused node (`u.Key`), and a widget reads them from `Interaction.Keys`. So `L.keymap.set("list", "dd", …)`

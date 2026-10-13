@@ -107,7 +107,10 @@ What the window shows with no directory and no session open: at launch (plain `o
   with a description and the key bound now. **Recent**: sessions, then directories, newest first; with none, the big `o▌`.
 - Entries are a contribution point. An entry whose command isn't available is dimmed with a `soon` tag; New Session and
   Resume a Session stay that way until sessions exist (AI-4, SE-1).
-- `j`/`k` or arrows move, `⏎` runs, `⌫` forgets a recent. The same actions are commands, so they're in the omnibox too.
+- `j`/`k` or arrows move, `⏎` runs, `⌫` (or the `✕` on a recent under the pointer) forgets a recent, until it's opened again. The same actions are commands, so they're in the omnibox too.
+- The pointer moving onto a row selects it, as `j`/`k` do.
+- It fits the window: the columns shrink to fit, and below 760 wide Start and Recent become tabs. Taller than the window, it
+  scrolls from the top.
 - **Open Directory** opens a directory as it is, git repo or not: no worktree, no branch. It's a picker over typed paths
   and directories under `~`, with a **Browse…** row for the OS's folder chooser. The window reopens on it: every
   extension starts again there. `oriel <dir>` does the same. With sessions, this becomes the **direct** kind (`sessions.md`).
@@ -120,6 +123,7 @@ with Settings pinned at the bottom.
 
 - A contribution point: icon, title, badge, and the command it runs. Plugins add entries the same way.
 - An entry whose command isn't available yet is dimmed. Clicking the active entry hides its dock.
+- An available entry lights under the pointer.
 
 ## 01g · Project overview: a directory or session with nothing open
 

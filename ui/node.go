@@ -118,6 +118,7 @@ type Style struct {
 	Focusable   bool // takes focus; implies Interactive
 	Disabled    bool // takes neither, and hides what's under it from the pointer
 	Cursor      render.Cursor
+	NoHover     bool      // draws its own hover and press, so a clickable box doesn't get the toolkit's wash
 	Tooltip     string    // shown after the pointer rests on it
 	Help        string    // its help page and anchor, "hud/usage#weekly-window" (help.md)
 	KeyMode     string    // when focused, keymaps in this mode come first and unmapped keys come to it

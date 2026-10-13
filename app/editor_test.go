@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,6 +28,15 @@ type running struct {
 	dir   string
 	done  chan error
 	host  ext.Host
+	once  sync.Once
+}
+
+// stop closes the window and waits for the app to exit; it's safe to call again.
+func (r *running) stop() {
+	r.once.Do(func() {
+		r.win.Close()
+		<-r.done
+	})
 }
 
 // grabHost hands a test its host. It runs commands only through keymaps, on the app's loop.

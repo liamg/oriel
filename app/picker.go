@@ -299,23 +299,20 @@ func (p *picker) sourceStrip(c *ui.Ctx, cur registry.PickerSource) {
 	c.Row("strip", ui.Style{W: ui.Flex(1), H: ui.Px(38), Pad: ui.PadXY(14, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("pick", "PICK", label)
 		for _, s := range p.h.Pickers() {
-			id := c.Next("src-" + s.ID)
-			if c.Interaction(id).Clicked {
-				p.source, p.sel = s.ID, 0
-			}
 			on := s.ID == cur.ID
 			text := strings.ToUpper(s.Title)
 			if k := p.keyFor(s.ID); k != "" {
 				text += " " + k
 			}
-			c.Box("src-"+s.ID, ui.Style{Interactive: true, Cursor: render.CursorPointer, Help: "shell/pickers", Role: ui.RoleTab, Selected: on, Label: s.Title},
-				func(c *ui.Ctx) {
-					if on {
-						widget.Chip(c, "on", text, th.C(theme.Accent), "shell/pickers")
-						return
-					}
-					c.Row("off", ui.Style{Pad: ui.PadXY(7, 2)}, func(c *ui.Ctx) { c.Text(nil, text, label) })
-				})
+			if widget.Clickable(c, "src-"+s.ID, ui.Style{Help: "shell/pickers", Role: ui.RoleTab, Selected: on, Label: s.Title}, func(c *ui.Ctx) {
+				if on {
+					widget.Chip(c, "on", text, th.C(theme.Accent), "shell/pickers")
+					return
+				}
+				c.Row("off", ui.Style{Pad: ui.PadXY(7, 2)}, func(c *ui.Ctx) { c.Text(nil, text, label) })
+			}).Clicked {
+				p.source, p.sel = s.ID, 0
+			}
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		c.Text("next", "⇥ next source", label)

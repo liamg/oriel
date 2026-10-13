@@ -116,14 +116,18 @@ L.decor.provider("coverage", function(buf, top, bot)
   end)
 end)
 
--- plugin side (catalog.md): options, own assets, own wasm and binaries
+-- status colours are rules too
+L.status.rule(function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
+```
+
+A plugin's own Lua also has these (catalog.md; P8, not built yet), which an `init.lua` doesn't:
+
+```lua
+local L = oriel
 L.option{ name = "plugin.jira.site", type = "string", help = "Your Jira host", default = "" }
 local icon = L.asset("icons/jira.svg")
 local rpc = L.process.spawn("bin/oriel-jira")          -- JSON-RPC, OS-sandboxed
 local fmt = L.wasm.load("wasm/fmt.wasm")
-
--- status colours are rules too
-L.status.rule(function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
 ```
 
 ## Introspection

@@ -103,3 +103,20 @@ func (h *harness) rect(id ui.ID) render.Rect {
 }
 
 func mid(r render.Rect) (float32, float32) { return (r.Min.X + r.Max.X) / 2, (r.Min.Y + r.Max.Y) / 2 }
+
+// access is id's node in the accessibility tree, or nil.
+func (h *harness) access(id ui.ID) *render.AccessNode {
+	var find func(n *render.AccessNode) *render.AccessNode
+	find = func(n *render.AccessNode) *render.AccessNode {
+		if n == nil || n.ID == uint64(id) {
+			return n
+		}
+		for _, k := range n.Children {
+			if f := find(k); f != nil {
+				return f
+			}
+		}
+		return nil
+	}
+	return find(h.u.AccessTree())
+}

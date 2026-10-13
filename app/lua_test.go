@@ -123,9 +123,13 @@ func TestSampleInitLua(t *testing.T) {
 	}
 
 	// :Hooks, :Keys and :Commands list them.
-	for _, view := range []struct{ cmd, want string }{{"Hooks", "staging"}, {"Hooks", "Permission"}, {"Keys", "<Space>rr"}, {"Commands", "Ship"}} {
+	for _, view := range []struct{ cmd, query, want string }{{"Hooks", "", "staging"}, {"Hooks", "", "Permission"}, {"Keys", "agent.review", "<Space>rr"},
+		{"Commands", "Ship", "Ship"}} {
 		s.run(view.cmd, nil)
 		s.frame()
+		for _, r := range view.query {
+			s.typeKeys(string(r))
+		}
 		s.frame()
 		if text := s.frameText(); !strings.Contains(text, view.want) && view.want != "staging" {
 			t.Errorf(":%s doesn't show %s:\n%s", view.cmd, view.want, text)

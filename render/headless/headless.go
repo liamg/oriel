@@ -33,12 +33,17 @@ func (b *Backend) Shaper() typeset.Shaper { return b.shaper }
 
 func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 	w := &Window{
+		opts:   o,
 		size:   render.Point{X: o.Width, Y: o.Height},
 		events: make(chan render.Event, 64),
 		done:   make(chan struct{}),
 	}
 	if w.size == (render.Point{}) {
 		w.size = render.Point{X: 1280, Y: 800}
+	}
+	w.at = render.Rect{Max: w.size}
+	if o.Frame.Dx() > 0 && o.Frame.Dy() > 0 {
+		w.at, w.size = o.Frame, render.Point{X: o.Frame.Dx(), Y: o.Frame.Dy()}
 	}
 	w.cond = sync.NewCond(&w.mu)
 	b.windows <- w
@@ -67,6 +72,8 @@ func (f Frame) Text() string {
 }
 
 type Window struct {
+	opts   render.WindowOpts
+	at     render.Rect // where it is, as Placed says
 	mu     sync.Mutex
 	cond   *sync.Cond
 	frames []Frame
@@ -86,7 +93,25 @@ type Window struct {
 var (
 	_ render.Accessible = (*Window)(nil)
 	_ render.Clipboard  = (*Window)(nil)
+	_ render.Placed     = (*Window)(nil)
 )
+
+// Opts is what the window was opened with.
+func (w *Window) Opts() render.WindowOpts { return w.opts }
+
+// Move puts the window at r, as the user dragging it would.
+func (w *Window) Move(r render.Rect) {
+	w.mu.Lock()
+	w.at = r
+	w.mu.Unlock()
+	w.Send(render.ResizeEvent{Size: render.Point{X: r.Dx(), Y: r.Dy()}})
+}
+
+func (w *Window) Placement() (render.Rect, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.at, true
+}
 
 func (w *Window) SetClipboard(text string) {
 	w.mu.Lock()

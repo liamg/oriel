@@ -59,7 +59,8 @@ func Tabs(c *ui.Ctx, key any, labels []string, active *int, o TabsOpts) bool {
 				fg = col(c, tTabActiveFg)
 			}
 			on := i == *active
-			c.Column(i, ui.Style{H: ui.Flex(1), Interactive: true, Cursor: render.CursorPointer, Role: ui.RoleTab, Selected: on}, func(c *ui.Ctx) {
+			c.Column(i, ui.Style{H: ui.Flex(1), Interactive: true, NoHover: true, Cursor: render.CursorPointer, Role: ui.RoleTab,
+				Selected: on}, func(c *ui.Ctx) {
 				c.Box("above", ui.Style{H: ui.Flex(1)}, nil)
 				c.Text("label", l, monoText(10, typeset.SemiBold, fg, .1))
 				c.Box("below", ui.Style{H: ui.Flex(1)}, nil)

@@ -23,19 +23,25 @@ var names = map[key.Name]string{
 
 // translate turns Gio input into key events. Typed text comes from EditEvents, so a key press
 // that only types a character is left to its EditEvent; presses with Ctrl, Alt or Super, and named
-// keys, come from key.Events.
-func translate(ev event.Event, scale float32) []render.Event {
+// keys, come from key.Events. held is the buttons down before ev: Gio's press and release carry those
+// down after it, and ours the one pressed or released.
+func translate(ev event.Event, scale float32, held *pointer.Buttons) []render.Event {
 	switch ev := ev.(type) {
 	case pointer.Event:
 		pe := render.PointerEvent{Pos: render.Point{X: ev.Position.X / scale, Y: ev.Position.Y / scale}, Mods: mods(ev.Modifiers)}
-		pe.Buttons = render.Buttons(ev.Buttons & (pointer.ButtonPrimary | pointer.ButtonSecondary | pointer.ButtonTertiary))
+		now := ev.Buttons & (pointer.ButtonPrimary | pointer.ButtonSecondary | pointer.ButtonTertiary)
+		pe.Buttons = render.Buttons(now)
 		switch ev.Kind {
 		case pointer.Move, pointer.Drag:
 			pe.Kind = render.PointerMove
 		case pointer.Press:
 			pe.Kind = render.PointerPress
+			if b := now &^ *held; b != 0 {
+				pe.Buttons = render.Buttons(b)
+			}
 		case pointer.Release:
 			pe.Kind = render.PointerRelease
+			pe.Buttons = render.Buttons(*held &^ now)
 		case pointer.Scroll:
 			pe.Kind = render.PointerScroll
 			pe.Scroll = render.Point{X: ev.Scroll.X / scale, Y: ev.Scroll.Y / scale}
@@ -43,6 +49,9 @@ func translate(ev event.Event, scale float32) []render.Event {
 			pe.Kind = render.PointerLeave
 		default:
 			return nil
+		}
+		if ev.Kind != pointer.Scroll {
+			*held = now
 		}
 		return []render.Event{pe}
 	case key.EditEvent:

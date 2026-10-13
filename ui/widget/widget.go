@@ -55,6 +55,11 @@ var (
 	tToastMuted     = theme.Declare("toast.fg.muted", "fg.faint")
 	tLabel          = theme.Declare("label.fg", "fg.faint")
 	tModalTitle     = theme.Declare("modal.title", "fg")
+	tSegBorder      = theme.Declare("segmented.border", "line.strong")
+	tSegFg          = theme.Declare("segmented.fg", "fg.faint")
+	tSegOnBg        = theme.Declare("segmented.active.bg", "accent.bg")
+	tSegOnFg        = theme.Declare("segmented.active.fg", "accent")
+	tIconButtonFg   = theme.Declare("iconbutton.fg", "fg.faint")
 )
 
 func col(c *ui.Ctx, id theme.TokenID) color.NRGBA { return c.Theme().C(id) }

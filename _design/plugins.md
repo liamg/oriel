@@ -73,7 +73,7 @@ flowchart TB
 - rail entries (`RailEntry`, `oriel.rail.add`) and start view actions (`StartEntry`, `oriel.start.add`). Both are
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
-  unavailable commands out.
+  unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
 - icons: the built-in set (`files`, `search`, `git`, `requests`, `debug`, `tests`, `settings`, `plus`, `resume`,
   `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD tats, notification cards.
