@@ -1,20 +1,22 @@
 == start
 backdrop #060606
-rect 284,331.0155 340x52.984497 fill #121210 radius 8 stroke 1 #332f27
+rect 284,331.0155 340x52.984497 fill #121210 radius 8
 clip 284,331.0155 340x52.984497 r 8
   rect 284,331.0155 2x52.984497 fill #4cc9f0
   text "git push" @298,353.12488 #ece6d8 Inter 12.5
   text "3 commits" @298,370.85 #7c7566 JetBrains Mono 10.5
 pop
+rect 284,331.0155 340x52.984497 radius 8 stroke 1 #332f27
 == mid
 backdrop #060606
 opacity 0.19580138
-  rect 284,331.0155 340x52.984497 fill #121210 radius 8 stroke 1 #332f27
+  rect 284,331.0155 340x52.984497 fill #121210 radius 8
   clip 284,331.0155 340x52.984497 r 8
     rect 284,331.0155 2x52.984497 fill #4cc9f0
     text "git push" @298,353.12488 #ece6d8 Inter 12.5
     text "3 commits" @298,370.85 #7c7566 JetBrains Mono 10.5
   pop
+  rect 284,331.0155 340x52.984497 radius 8 stroke 1 #332f27
 pop
 == settled
 backdrop #060606

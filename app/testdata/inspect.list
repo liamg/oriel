@@ -221,7 +221,7 @@ text "46:11" @758.0625,719.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 57%" @807.03125,719.71 #b3ab99 JetBrains Mono 10.5
 rect 152.0625,232 8.40625x19 fill #ffd23f
 text ":" @152.0625,245.77 #141006 JetBrains Mono 13.5
-rect 20,109.44 816x516.12 fill #0c0c0b radius 8 stroke 1 #332f27
+rect 20,109.44 816x516.12 fill #0c0c0b radius 8
 clip 20,109.44 816x516.12 r 8
   text ":INSPECT" @34,131.04001 #ffd23f JetBrains Mono 10
   rect 794,119.840004 28x15.200005 fill #121210 radius 4 stroke 1 #332f27
@@ -376,3 +376,4 @@ clip 20,109.44 816x516.12 r 8
   pop
   text "builtin:editor" @729.6875,613.5999 #ffd23f JetBrains Mono 11
 pop
+rect 20,109.44 816x516.12 radius 8 stroke 1 #332f27

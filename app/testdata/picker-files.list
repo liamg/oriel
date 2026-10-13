@@ -119,7 +119,7 @@ text "≡ 16%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
 rect 112,102 8.40625x19 fill #ffd23f
 text "p" @112,115.770004 #141006 JetBrains Mono 13.5
 rect 0,0 1600x1000 fill #03050899
-rect 180,108 1240x720 fill #0c0c0b radius 10 stroke 1 #332f27
+rect 180,108 1240x720 fill #0c0c0b radius 10
 clip 180,108 1240x720 r 10
   text "PICK" @194,130.42 #7c7566 JetBrains Mono 9.5
   text "SESSIONS" @237.56,130.42 #7c7566 JetBrains Mono 9.5
@@ -138,11 +138,12 @@ clip 180,108 1240x720 r 10
   text "⇥ next source" @1313.18,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #ffd23f Inter 16
-  rect 211.59375,155 420.6875x30 fill #060606 radius 6 stroke 1 #ffd23f
+  rect 211.59375,155 420.6875x30 fill #060606 radius 6
   clip 211.59375,155 420.6875x30 r 6
     text "rndgo" @221.59375,174.54712 #ece6d8 Inter 12.5
     rect 221.59375,162 1x16 fill #ffd23f
   pop
+  rect 211.59375,155 420.6875x30 radius 6 stroke 1 #ffd23f
   text "1 / 1 · fuzzy" @640.28125,173.78001 #7c7566 JetBrains Mono 10.5
   rect 180,193 560x1 fill #24221d
   clip 180,194 560x601 r 0
@@ -159,7 +160,7 @@ clip 180,108 1240x720 r 10
   pop
   rect 740,147 1x648 fill #24221d
   clip 741,147 679x648 r 0
-    rect 755,161 651x588 fill #060606 radius 6 stroke 1 #24221d
+    rect 755,161 651x588 fill #060606 radius 6
     clip 755,161 651x588 r 6
       text "internal/pricing/round.go" @765,176.78001 #7c7566 JetBrains Mono 10.5
       text "1" @767,197.96 #4f4a40 JetBrains Mono 11
@@ -565,6 +566,7 @@ clip 180,108 1240x720 r 10
         text ")" @1043.9062,738.13995 #89ddff JetBrains Mono 11.5
       pop
     pop
+    rect 755,161 651x588 radius 6 stroke 1 #24221d
   pop
   rect 180,795 1240x1 fill #24221d
   rect 194,804.4 19.953125x15.200012 fill #121210 radius 4 stroke 1 #332f27
@@ -592,3 +594,4 @@ clip 180,108 1240x720 r 10
   text "esc" @1347,815.60004 #b3ab99 JetBrains Mono 10
   text "close" @1376,815.60004 #7c7566 JetBrains Mono 10
 pop
+rect 180,108 1240x720 radius 10 stroke 1 #332f27

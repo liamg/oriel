@@ -119,14 +119,15 @@ text "≡ 16%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
 rect 112,102 8.40625x19 fill #ffd23f
 text "p" @112,115.770004 #141006 JetBrains Mono 13.5
 rect 0,0 1600x1000 fill #03050899
-rect 250,92 1100x660 fill #0c0c0b radius 10 stroke 1 #332f27
+rect 250,92 1100x660 fill #0c0c0b radius 10
 clip 250,92 1100x660 r 10
   text "⌘" @268,127.54785 #ffd23f Inter 18
-  rect 296.01562,106 672.89435x30 fill #060606 radius 6 stroke 1 #ffd23f
+  rect 296.01562,106 672.89435x30 fill #060606 radius 6
   clip 296.01562,106 672.89435x30 r 6
     text "pri" @306.01562,125.54712 #ece6d8 Inter 12.5
     rect 306.01562,113 1x16 fill #ffd23f
   pop
+  rect 296.01562,106 672.89435x30 radius 6 stroke 1 #ffd23f
   rect 978.91,112.729996 33.710022x16.539993 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
   text "ALL" @985.91,124.42 #ffd23f JetBrains Mono 9.5
   rect 1022.62,112.729996 66.55994x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
@@ -236,3 +237,4 @@ clip 250,92 1100x660 r 10
   text "close" @435.95312,738.60004 #7c7566 JetBrains Mono 10
   text "fuzzy · ranked by match, then recency and what needs you" @996,738.60004 #7c7566 JetBrains Mono 10
 pop
+rect 250,92 1100x660 radius 10 stroke 1 #332f27

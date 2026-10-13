@@ -16,10 +16,11 @@ rect 494.5875,24.73 59.99002x16.539997 fill #0a78a812 radius 10 stroke 1 #0a78a8
 text "GOPLS ✓" @501.5875,36.42 #0a78a8 JetBrains Mono 9.5
 rect 564.5775,20 68.203125x26 fill #e3dfd6 radius 6 stroke 1 #c9c3b6
 text "Popover" @574.5775,37.365234 #1b2129 Inter 12
-rect 20,62 420x30 fill #fbfaf7 radius 6 stroke 1 #c9c3b6
+rect 20,62 420x30 fill #fbfaf7 radius 6
 clip 20,62 420x30 r 6
   text "round half even" @30,81.54712 #1b2129 Inter 12.5
 pop
+rect 20,62 420x30 radius 6 stroke 1 #c9c3b6
 rect 20,108 382x28 fill #f3f1ec
 text "AGENT · CLAUDE" @32,124.6 #717a86 JetBrains Mono 10
 text "TERMINAL" @146,124.6 #1b2129 JetBrains Mono 10
@@ -111,15 +112,17 @@ rect 80,448 250x1 fill #dcd7cc
 text "? Help" @92,472.54712 #1b2129 Inter 12.5
 rect 302,460.4 16x15.200012 fill #ebe8e1 radius 4 stroke 1 #c9c3b6
 text "K" @307,471.6 #717a86 JetBrains Mono 10
-rect 644,510.03098 340x52.984528 fill #ebe8e1 radius 8 stroke 1 #c9c3b6
+rect 644,510.03098 340x52.984528 fill #ebe8e1 radius 8
 clip 644,510.03098 340x52.984528 r 8
   rect 644,510.03098 2x52.984528 fill #4cc9f0
   text "git push origin rethink/rounding" @658,532.1404 #1b2129 Inter 12.5
   text "gateway · 3 commits" @658,549.86554 #717a86 JetBrains Mono 10.5
 pop
-rect 644,571.0155 340x52.984497 fill #ebe8e1 radius 8 stroke 1 #c9c3b6
+rect 644,510.03098 340x52.984528 radius 8 stroke 1 #c9c3b6
+rect 644,571.0155 340x52.984497 fill #ebe8e1 radius 8
 clip 644,571.0155 340x52.984497 r 8
   rect 644,571.0155 2x52.984497 fill #4fe0a0
   text "CI passed #4417" @658,593.1249 #1b2129 Inter 12.5
   text "github · 12 checks" @658,610.85004 #717a86 JetBrains Mono 10.5
 pop
+rect 644,571.0155 340x52.984497 radius 8 stroke 1 #c9c3b6

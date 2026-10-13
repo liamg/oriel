@@ -53,10 +53,11 @@ clip 44,622.84 716x260 r 0
       text "repl:1: oriel.ledger.unread isn't available until RV-2 (the review ledger)" @68,807.12006 #ff5f6d JetBrains Mono 12
     pop
     text "›" @68,830.32 #ffd23f JetBrains Mono 12
-    rect 83.203125,811 652.7969x30 fill #060606 radius 6 stroke 1 #332f27
+    rect 83.203125,811 652.7969x30 fill #060606 radius 6
     clip 83.203125,811 652.7969x30 r 6
       text "oriel.agent.to" @93.203125,830.5471 #ece6d8 Inter 12.5
     pop
+    rect 83.203125,811 652.7969x30 radius 6 stroke 1 #332f27
     text "tool" @68,859.24 #7c7566 JetBrains Mono 12
   pop
 pop

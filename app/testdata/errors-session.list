@@ -118,13 +118,13 @@ clip 44,614 1556x360 r 0
   text "Log" @58,634.36523 #ece6d8 Inter 12
   rect 44,644 1556x1 fill #24221d
   clip 44,645 1556x329 r 0
-    rect 54,658 226.79999x24 radius 5 stroke 1 #332f27
     clip 54,658 226.79999x24 r 5
       text "ORIEL" @64,673.42 #7c7566 JetBrains Mono 9.5
       rect 108.75,658 131.19998x24 fill #1f1c0f
       text "SESSION · CONFIG" @118.75,673.42 #ffd23f JetBrains Mono 9.5
       text "ALL" @249.94998,673.42 #7c7566 JetBrains Mono 9.5
     pop
+    rect 54,658 226.79999x24 radius 5 stroke 1 #332f27
     rect 290.8,661.73 46.850006x16.539978 fill #ff5f6d12 radius 10 stroke 1 #ff5f6d59
     text "ERROR" @297.8,673.42 #ff5f6d JetBrains Mono 9.5
     rect 347.65,661.73 40.28x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
@@ -133,10 +133,11 @@ clip 44,614 1556x360 r 0
     text "INFO" @404.93,673.42 #b3ab99 JetBrains Mono 9.5
     rect 448.21,661.73 46.850006x16.539978 fill #4f4a4012 radius 10 stroke 1 #4f4a4059
     text "DEBUG" @455.21,673.42 #4f4a40 JetBrains Mono 9.5
-    rect 505.06,655 220x30 fill #060606 radius 6 stroke 1 #332f27
+    rect 505.06,655 220x30 fill #060606 radius 6
     clip 505.06,655 220x30 r 6
       text "filter · source:init.lua" @515.06,674.5471 #7c7566 Inter 12.5
     pop
+    rect 505.06,655 220x30 radius 6 stroke 1 #332f27
     rect 1440.9688,657 50.375x26 fill #191815 radius 6 stroke 1 #332f27
     text "Copy" @1450.9688,674.36523 #ece6d8 Inter 12
     rect 1501.3438,657 88.65625x26 fill #191815 radius 6 stroke 1 #332f27

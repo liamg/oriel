@@ -248,7 +248,7 @@ text "≡ 57%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
 rect 152.0625,232 8.40625x19 fill #5cc8ff
 text ":" @152.0625,245.77 #141006 JetBrains Mono 13.5
 rect 0,0 1600x1000 fill #03050899
-rect 180,108 1240x720 fill #0b1620 radius 10 stroke 1 #332f27
+rect 180,108 1240x720 fill #0b1620 radius 10
 clip 180,108 1240x720 r 10
   text "PICK" @194,130.42 #7c7566 JetBrains Mono 9.5
   text "SESSIONS" @237.56,130.42 #7c7566 JetBrains Mono 9.5
@@ -267,10 +267,11 @@ clip 180,108 1240x720 r 10
   text "⇥ next source" @1313.18,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #5cc8ff Inter 16
-  rect 211.59375,155 420.6875x30 fill #071018 radius 6 stroke 1 #5cc8ff
+  rect 211.59375,155 420.6875x30 fill #071018 radius 6
   clip 211.59375,155 420.6875x30 r 6
     rect 221.59375,162 1x16 fill #5cc8ff
   pop
+  rect 211.59375,155 420.6875x30 radius 6 stroke 1 #5cc8ff
   rect 207.59375,151 428.6875x38 radius 10 stroke 2 #5cc8ff
   text "2 / 2 · fuzzy" @640.28125,173.78001 #7c7566 JetBrains Mono 10.5
   rect 180,193 560x1 fill #24221d
@@ -286,7 +287,7 @@ clip 180,108 1240x720 r 10
   rect 740,147 1x648 fill #24221d
   clip 741,147 679x648 r 0
     text "GLACIER · dark" @755,171.2 #7c7566 JetBrains Mono 10
-    rect 755,186.2 651x460.8 fill #071018 radius 6 stroke 1 #24221d
+    rect 755,186.2 651x460.8 fill #071018 radius 6
     clip 755,186.2 651x460.8 r 6
       text "sample.go" @765,201.98001 #7c7566 JetBrains Mono 10.5
       clip 755,210.2 651x436.8 r 0
@@ -438,6 +439,7 @@ clip 180,108 1240x720 r 10
         pop
       pop
     pop
+    rect 755,186.2 651x460.8 radius 6 stroke 1 #24221d
     rect 755,659 44x18 fill #071018 radius 4 stroke 1 #332f27
     text "bg.base" @811,671.95996 #b3ab99 JetBrains Mono 11
     rect 755,685 44x18 fill #0b1620 radius 4 stroke 1 #332f27
@@ -467,3 +469,4 @@ clip 180,108 1240x720 r 10
   text "esc" @1347,815.60004 #b3ab99 JetBrains Mono 10
   text "close" @1376,815.60004 #7c7566 JetBrains Mono 10
 pop
+rect 180,108 1240x720 radius 10 stroke 1 #332f27

@@ -34,7 +34,7 @@ path 2 segments stroke 1.4545455 #7c7566
 rect 43,38 1x936 fill #24221d
 rect 44,38 1556x936 fill #060606
 clip 44,38 1556x936 r 0
-  rect 78,64 1488x296.2875 fill #0c0c0b radius 12 stroke 1 #24221d
+  rect 78,64 1488x296.2875 fill #0c0c0b radius 12
   clip 78,64 1488x296.2875 r 12
     text "usage" @96,95.712 #ece6d8 Space Grotesk 18
     text "~/src/usage" @168.05624,93.444 #7c7566 JetBrains Mono 11
@@ -488,6 +488,7 @@ clip 44,38 1556x936 r 0
       text "+ 1 more · 5 people" @1284,275.218 #7c7566 JetBrains Mono 10.5
     pop
   pop
+  rect 78,64 1488x296.2875 radius 12 stroke 1 #24221d
   text "open a file with ␣␣ · search with ⇧⌘F · everything with ⌘K" @630.78125,393.5075 #4f4a40 JetBrains Mono 11
 pop
 rect 0,974 1600x26 fill #0c0c0b

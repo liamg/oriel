@@ -1,7 +1,7 @@
 == start
 backdrop #060606
 rect 0,0 640x400 fill #030508b8
-rect 170,155.93774 300x88.12451 fill #0c0c0b radius 10 stroke 1 #332f27
+rect 170,155.93774 300x88.12451 fill #0c0c0b radius 10
 clip 170,155.93774 300x88.12451 r 10
   text "Crash report" @186,180.66675 #ece6d8 Inter 13
   rect 426,168.33774 28x15.199997 fill #121210 radius 4 stroke 1 #332f27
@@ -9,13 +9,14 @@ clip 170,155.93774 300x88.12451 r 10
   rect 170,195.93774 300x1 fill #24221d
   text "Oriel stopped." @186,225.04712 #ece6d8 Inter 12.5
 pop
+rect 170,155.93774 300x88.12451 radius 10 stroke 1 #332f27
 == mid
 backdrop #060606
 opacity 0.19580138
   rect 0,0 640x400 fill #030508b8
 pop
 opacity 0.19580138
-  rect 170,155.93774 300x88.12451 fill #0c0c0b radius 10 stroke 1 #332f27
+  rect 170,155.93774 300x88.12451 fill #0c0c0b radius 10
   clip 170,155.93774 300x88.12451 r 10
     text "Crash report" @186,180.66675 #ece6d8 Inter 13
     rect 426,168.33774 28x15.199997 fill #121210 radius 4 stroke 1 #332f27
@@ -23,6 +24,7 @@ opacity 0.19580138
     rect 170,195.93774 300x1 fill #24221d
     text "Oriel stopped." @186,225.04712 #ece6d8 Inter 12.5
   pop
+  rect 170,155.93774 300x88.12451 radius 10 stroke 1 #332f27
 pop
 == settled
 backdrop #060606
