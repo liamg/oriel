@@ -17,6 +17,13 @@ depends_on: [LS-1, AI-2]
 - `_design/ide.md`
 - `_design/features.md` (this row)
 
+## Notes
+
+- We might want to use [owenrumney/go-lsp](https://github.com/owenrumney/go-lsp) for the LSP 3.17 protocol types (its
+  `lsp` package, stdlib only). It is a server framework, and its JSON-RPC layer is `internal/` and server-side. A client
+  is being added upstream and may have landed by now: check before writing our own client transport. A new
+  dependency: ask first (`_design/deps.md`).
+
 ## Done when
 
 agents can call definition/references/diagnostics read-only
