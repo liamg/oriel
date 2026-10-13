@@ -58,10 +58,11 @@ Version 0.4.0.
 
 ## oriel.ui
 
-- `oriel.ui.column(children)`: A column of nodes.
+- `oriel.ui.button(spec)`: A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
+- `oriel.ui.column(children)`: A column of nodes; options beside them: gap, pad (px).
 - `oriel.ui.list(items, row)`: A list: each of items through row(item), which returns a node.
 - `oriel.ui.mode()`: The editor's mode, as the built-in status line shows it.
-- `oriel.ui.row(children)`: A row of nodes.
+- `oriel.ui.row(children)`: A row of nodes; options beside them: gap, pad (px).
 - `oriel.ui.spacer()`: Space that takes what's left.
 - `oriel.ui.tat(spec)`: A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
 - `oriel.ui.text(s, style?)`: Text, in a style: dim, faint, accent, warn, error or ok.

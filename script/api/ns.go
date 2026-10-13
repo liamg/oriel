@@ -52,7 +52,7 @@ func (v View) Override(id string, fn *script.Fn, where string) error {
 				return
 			}
 			if len(out) > 0 {
-				build(c, out[0], v.a)
+				buildView(c, out[0], v.a)
 			}
 		}}
 	})}))
@@ -163,7 +163,7 @@ func (h HUD) Tat(name string, opts script.Table, fn *script.Fn, where string) er
 			if len(out) > 0 {
 				v = out[0]
 			}
-			return &ui.Func{Key: name, Fn: func(c *ui.Ctx) { build(c, v, h.a) }}, nil
+			return &ui.Func{Key: name, Fn: func(c *ui.Ctx) { buildView(c, v, h.a) }}, nil
 		}}))
 	return nil
 }

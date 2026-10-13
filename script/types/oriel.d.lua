@@ -176,7 +176,12 @@ function oriel.status.rule(fn) end
 ---@class oriel.ui
 oriel.ui = {}
 
---- A column of nodes.
+--- A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
+---@param spec table
+---@return table
+function oriel.ui.button(spec) end
+
+--- A column of nodes; options beside them: gap, pad (px).
 ---@param children any
 ---@return table
 function oriel.ui.column(children) end
@@ -191,7 +196,7 @@ function oriel.ui.list(items, row) end
 ---@return table
 function oriel.ui.mode() end
 
---- A row of nodes.
+--- A row of nodes; options beside them: gap, pad (px).
 ---@param children any
 ---@return table
 function oriel.ui.row(children) end

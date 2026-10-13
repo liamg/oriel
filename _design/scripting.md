@@ -225,3 +225,8 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - `L.diagnostics.set(owner, file, list)` and `L.diagnostics.list()` bind the registry's diagnostics.
 - Not yet: a column for runtime errors (gopher-lua gives none, so the whole line is underlined), and the toast's
   "saving reloads it" hint.
+- UI from Lua: `L.ui.button{ label, on_click, primary, id }` runs Lua when clicked; `row` and `column` take `gap` and
+  `pad` beside their children. A view whose top node is a single line (a row, text, a tat, a button) is centred in
+  the height it's given, so it sits right in a bar; a column runs from the top, as a panel does. A demo plugin
+  (`app/plugindemo_test.go`) adds a dock panel with buttons, a tab, title-bar and status-line segments and editor
+  marks, using only this API.

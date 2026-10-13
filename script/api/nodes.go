@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strconv"
 	"reflect"
 	"strings"
 	"unicode"
@@ -13,6 +14,7 @@ import (
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 func coreSession(id string) core.SessionID { return core.SessionID(id) }
@@ -20,12 +22,35 @@ func coreSession(id string) core.SessionID { return core.SessionID(id) }
 //oriel:api name=ui
 type UI struct{ a *APIs }
 
-//oriel:api doc="A row of nodes." returns=table
-func (UI) Row(children any) script.Table { return script.Table{"type": "row", "children": children} }
+//oriel:api doc="A row of nodes; options beside them: gap, pad (px)." returns=table
+func (UI) Row(children any) script.Table { return container("row", children) }
 
-//oriel:api doc="A column of nodes." returns=table
-func (UI) Column(children any) script.Table {
-	return script.Table{"type": "column", "children": children}
+//oriel:api doc="A column of nodes; options beside them: gap, pad (px)." returns=table
+func (UI) Column(children any) script.Table { return container("column", children) }
+
+// container is a row or column from Lua's table: its list part the children, its named fields the options.
+func container(kind string, v any) script.Table {
+	t := script.Table{"type": kind}
+	switch v := v.(type) {
+	case []any:
+		t["children"] = v
+	case script.Table:
+		var kids []any
+		for i := 1; ; i++ {
+			x, ok := v[strconv.Itoa(i)]
+			if !ok {
+				break
+			}
+			kids = append(kids, x)
+		}
+		t["children"] = kids
+		for k, x := range v {
+			if _, err := strconv.Atoi(k); err != nil {
+				t[k] = x
+			}
+		}
+	}
+	return t
 }
 
 //oriel:api doc="Text, in a style: dim, faint, accent, warn, error or ok." optional=style returns=table
@@ -52,6 +77,15 @@ func (UI) Tat(spec script.Table) script.Table {
 	return t
 }
 
+//oriel:api doc="A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change." returns=table
+func (UI) Button(spec script.Table) script.Table {
+	t := script.Table{"type": "button"}
+	for k, v := range spec {
+		t[k] = v
+	}
+	return t
+}
+
 //oriel:api doc="A list: each of items through row(item), which returns a node." returns=table
 func (UI) List(items any, row *script.Fn) script.Table {
 	return script.Table{"type": "list", "items": items, "row": row}
@@ -59,6 +93,16 @@ func (UI) List(items any, row *script.Fn) script.Table {
 
 var styles = map[string]theme.TokenID{"dim": theme.FgMuted, "faint": theme.FgFaint, "accent": theme.Accent, "warn": theme.Warn,
 	"error": theme.Error, "ok": theme.OK}
+
+// buildView adds a view's nodes to c: a single line of them (a row, text, a tat, a button) is centred in the height
+// the view is given, as a bar's segment is; a column runs from the top, as a panel does.
+func buildView(c *ui.Ctx, v any, a *APIs) {
+	if t, ok := v.(script.Table); ok && str(t, "type") == "column" {
+		build(c, v, a)
+		return
+	}
+	c.Row(nil, ui.Style{H: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) { build(c, v, a) })
+}
 
 // build adds a node table, as oriel.ui makes them, to c.
 func build(c *ui.Ctx, v any, a *APIs) {
@@ -78,7 +122,13 @@ func build(c *ui.Ctx, v any, a *APIs) {
 		case "row", "column":
 			st := ui.Style{Gap: 12, Cross: ui.Center, W: ui.Flex(1)}
 			if str(n, "type") == "column" {
-				st = ui.Style{Dir: ui.Column, Gap: 4}
+				st = ui.Style{Dir: ui.Column, Gap: 4, W: ui.Flex(1)}
+			}
+			if g, ok := n["gap"].(float64); ok {
+				st.Gap = float32(g)
+			}
+			if p, ok := n["pad"].(float64); ok {
+				st.Pad = ui.Pad(float32(p))
 			}
 			c.Box(nil, st, func(c *ui.Ctx) {
 				kids, _ := n["children"].([]any)
@@ -100,6 +150,17 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			}
 		case "tat":
 			tat(c, n, th)
+		case "button":
+			key := cmpOr(str(n, "id"), str(n, "label"))
+			primary, _ := n["primary"].(bool)
+			if widget.Button(c, key, str(n, "label"), widget.ButtonOpts{Primary: primary, Help: "plugins/lua"}) {
+				if fn, ok := n["on_click"].(*script.Fn); ok {
+					if _, err := a.VM.Call(fn); err != nil {
+						a.Host.Notify(core.Notice{ID: "lua.button", Severity: core.SevError, Title: "Lua", Text: err.Error()})
+					}
+					a.Host.Redraw()
+				}
+			}
 		case "list":
 			row, _ := n["row"].(*script.Fn)
 			items, _ := n["items"].([]any)

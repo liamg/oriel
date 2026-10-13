@@ -27,6 +27,13 @@ the line, a mark on the line, and a row in `:Problems`.
 value. `⇥` completes names under `oriel` and `L`, `↑` brings back earlier lines. An error shows with its trace
 under the line.
 
+## UI {#ui}
+
+`L.view.override(id, fn)` registers a view: a new one (a panel, opened with `view.open` in a dock, a split or a
+tab), a segment of the title bar or status line (`titlebar.right.*`, `statusline.left.*`, `statusline.right.*`),
+or a built-in it replaces. `fn` returns `L.ui` nodes: `row` and `column` (with `gap` and `pad`), `text`, `spacer`,
+`tat`, `list`, `button` (`on_click` runs Lua), and `mode`. `L.decor.provider` marks lines in the editor.
+
 ## Options {#options}
 
 `L.o.name = value` sets your settings (by name or vim alias, at the Lua layer, which beats settings.toml);
