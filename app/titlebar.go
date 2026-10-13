@@ -162,7 +162,9 @@ func logo(f render.Frame, r render.Rect, th *theme.Resolved) {
 	s := r.Dx() / 100
 	cx, cy := r.Min.X+38*s, r.Min.Y+r.Dy()/2+3*s
 	ring, cursor := th.C(tLogoRing), th.C(tLogoCursor)
-	f.Effect(render.GlowDisc, render.XYWH(cx-25*s, cy-25*s, 50*s, 50*s), 4, theme.WithAlpha(cursor, .22))
+	if r.Dx() <= 64 {
+		f.Effect(render.GlowDisc, render.XYWH(cx-25*s, cy-25*s, 50*s, 50*s), 4, theme.WithAlpha(cursor, .22)) // a big logo glows from its bar alone: this would fill the ring
+	}
 	bar := render.XYWH(r.Min.X+68*s, r.Min.Y+r.Dy()/2-22*s, 13*s, 50*s)
 	f.Effect(render.Glow, bar, 4, theme.WithAlpha(cursor, .3))
 	f.Path(render.Ellipse(render.XYWH(cx-21*s, cy-21*s, 42*s, 42*s)), render.Style{Stroke: ring, Width: 8 * s})

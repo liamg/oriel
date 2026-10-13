@@ -69,6 +69,13 @@ flowchart TB
 
 **Shell**
 - commands, picker/omnibox sources and actions, panels, docks, layouts. Which-key is a built-in plugin built only on the public API.
+- the `view` keymap mode: keys for a focused view with no key mode of its own (`q` and `⌃W c` close it).
+- rail entries (`RailEntry`, `oriel.rail.add`) and start view actions (`StartEntry`, `oriel.start.add`). Both are
+  dimmed while their command isn't available: a command's optional `Available(args)` says so, and
+  `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
+  unavailable commands out.
+- icons: the built-in set (`files`, `search`, `git`, `requests`, `debug`, `tests`, `settings`, `plus`, `resume`,
+  `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD tats, notification cards.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 

@@ -10,8 +10,11 @@
 ---@field keymap oriel.keymap
 ---@field language oriel.language
 ---@field menu oriel.menu
+---@field overview oriel.overview
+---@field rail oriel.rail
 ---@field regex oriel.regex
 ---@field session oriel.session
+---@field start oriel.start
 ---@field status oriel.status
 ---@field ui oriel.ui
 ---@field view oriel.view
@@ -134,6 +137,20 @@ oriel.menu = {}
 ---@param spec table
 function oriel.menu.add(spec) end
 
+---@class oriel.overview
+oriel.overview = {}
+
+--- Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick.
+---@param spec table
+function oriel.overview.add(spec) end
+
+---@class oriel.rail
+oriel.rail = {}
+
+--- Add an icon to the rail down the window's left edge: { name, icon, title, command, args, order (50 by default), bottom }. icon is a built-in icon's name (files, search, git, requests, debug, tests, settings) or a glyph. It's dimmed while the command isn't available.
+---@param spec table
+function oriel.rail.add(spec) end
+
 ---@class oriel.regex
 oriel.regex = {}
 
@@ -173,6 +190,13 @@ oriel.session = {}
 ---@param name string
 ---@param spec table
 function oriel.session.kind(name, spec) end
+
+---@class oriel.start
+oriel.start = {}
+
+--- Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default) }. It's dimmed while the command isn't available.
+---@param spec table
+function oriel.start.add(spec) end
 
 ---@class oriel.status
 oriel.status = {}

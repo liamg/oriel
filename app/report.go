@@ -38,6 +38,8 @@ type shell struct {
 	todo          []func()                         // Host.Do's, for the loop
 	editorAt      func(at registry.At) registry.At // the focused editor's buffer and window, added to at
 	shot          func(th *theme.Resolved) *image.RGBA
+	reopen        chan string // Open Directory's directory, for the loop to start again on
+	recents       *recents
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

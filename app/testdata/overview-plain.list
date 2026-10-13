@@ -1,0 +1,86 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1469.0625x38 r 0
+pop
+rect 0,38 44x936 fill #0c0c0b
+path 7 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #4f4a40
+path 4 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+rect 43,38 1x936 fill #24221d
+rect 44,38 1556x936 fill #060606
+clip 44,38 1556x936 r 0
+  rect 78,64 1488x184.204 fill #0c0c0b radius 12 stroke 1 #24221d
+  clip 78,64 1488x184.204 r 12
+    text "notes" @96,95.712 #ece6d8 Space Grotesk 18
+    text "~/notes" @165.11874,93.444 #7c7566 JetBrains Mono 11
+    rect 78,114.968 1488x1 fill #24221d
+    clip 78,115.968 330x132.236 r 0
+      text "LANGUAGES" @96,139.658 #7c7566 JetBrains Mono 9.5
+      text "52" @96,178.092 #ece6d8 Space Grotesk 26
+      text "lines · 2 files" @132.92188,182.384 #7c7566 JetBrains Mono 11
+      rect 96,199.68399 294x10 fill #4cc9f0 radius 2
+      rect 96,222.94398 8x8 fill #4cc9f0 radius 2
+      text "Markdown" @111,230.90399 #b3ab99 JetBrains Mono 11
+      text "100%" @363.625,230.90399 #7c7566 JetBrains Mono 11
+    pop
+    rect 408,115.968 1x132.236 fill #24221d
+    clip 409,115.968 856x100.09999 r 0
+      text "SIZE" @427,139.658 #7c7566 JetBrains Mono 9.5
+      clip 427,152.508 803.40625x14.520004 r 0
+        text "files" @427,163.728 #b3ab99 JetBrains Mono 11
+      pop
+      text "2" @1240.4062,163.728 #7c7566 JetBrains Mono 11
+      clip 427,170.028 803.40625x14.520004 r 0
+        text "directories" @427,181.248 #b3ab99 JetBrains Mono 11
+      pop
+      text "2" @1240.4062,181.248 #7c7566 JetBrains Mono 11
+      clip 427,187.548 777.03125x14.520004 r 0
+        text "on disk" @427,198.768 #b3ab99 JetBrains Mono 11
+      pop
+      text "472 B" @1214.0312,198.768 #7c7566 JetBrains Mono 11
+    pop
+    rect 1265,115.968 1x132.236 fill #24221d
+    clip 1266,115.968 300x82.58 r 0
+      text "LARGEST FILES" @1284,139.658 #7c7566 JetBrains Mono 9.5
+      clip 1284,152.508 240.8125x14.520004 r 0
+        text "todo.md" @1284,163.728 #b3ab99 JetBrains Mono 11
+      pop
+      text "40" @1534.8125,163.728 #7c7566 JetBrains Mono 11
+      clip 1284,170.028 240.8125x14.520004 r 0
+        text "2026/oct.md" @1284,181.248 #b3ab99 JetBrains Mono 11
+      pop
+      text "12" @1534.8125,181.248 #7c7566 JetBrains Mono 11
+    pop
+  pop
+  text "open a file with ␣␣ · search with ⇧⌘F · everything with ⌘K" @630.78125,281.42398 #4f4a40 JetBrains Mono 11
+pop
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11

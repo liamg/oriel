@@ -44,6 +44,7 @@ Each tier-C row is a **question for you**: approve, reject, or "write our own".
 | ↳ `modernc.org/sqlite` + `libc`, `mathutil`, `memory` (indirect via agentbus) | pure-Go SQLite | individual (cznic) | **kept out of Oriel**: agentbus runs as a separate `oriel-agentbus` helper process | the helper has its own module tree; Oriel's has no sqlite |
 | `gioui.org` | windowing, GPU, input, IME (**the shell decision**) | Elias Naur + contributors, sponsored | **C ✓ approved**, on condition the spike reproduces the mockups' look with no blocking limits | own windowing layer, or Electron, if the spike fails |
 | ↳ `gioui.org/shader v1.0.9`, `gioui.org/cpu` (graph only) | Gio's own shaders | Gio project | C ✓ (part of Gio) | – |
+| `gioui.org/*` (any Gio project module; `gioui.org/x/explorer` was the candidate for Open Directory's Browse…, but it only chooses files, so Browse… runs `osascript`/`zenity`/`kdialog` instead) | Gio's extras | Gio project | **C ✓ approved by Liam** (2026-10-13, SH-15): every `gioui.org` module; their own non-Gio dependencies are still checked as usual | – |
 | ↳ `github.com/godbus/dbus/v5 v5.2.2` (indirect via Gio's X11 IME, `app/internal/ibus`) | IBus input method over D-Bus on Linux X11 | godbus org; its only dependency is `x/sys` | **C ✓ approved by Liam** (2026-10-12, P0-4) | Wayland-only build (`nox11`), or our own D-Bus client |
 | ↳ `golang.org/x/{image,exp/shiny,net,text,sys}` (indirect via Gio) | Go fonts and material icons for Gio's fallback window decorations, IDNA, syscalls | Go team | A ✓ | – |
 | `github.com/go-text/typesetting` | shaping (HarfBuzz port), font parsing | go-text org (Gio/Fyne maintainers) | **C ✓ approved** | – |
@@ -61,7 +62,8 @@ and are never built, so they're not in `vendor/` or `deps/allow.txt`: `eliasnaur
 (go-text test data), and via `x/exp/shiny`: `dmitri.shuralyov.com/gpu/mtl`, `github.com/go-gl/glfw/v3.3/glfw`, `github.com/jezek/xgb`,
 `golang.org/x/mobile`. `gioui.org/app` pulls in the Go fonts (12 MB of the 32 MB `vendor/`) for its fallback decorations.
 
-**Not dependencies**: LSP servers, DAP adapters (delve, debugpy…), ripgrep, git, `claude`, `codex`. These are
+**Not dependencies**: LSP servers, DAP adapters (delve, debugpy…), ripgrep, git, `claude`, `codex`, and the OS folder
+choosers Open Directory's Browse… runs (`osascript` on macOS, `zenity` or `kdialog` on Linux, whichever is there). These are
 external programs we spawn, usually inside the sandbox. They're listed in the pre-flight panel, not in `go.mod`.
 
 ## The ones that shape the architecture

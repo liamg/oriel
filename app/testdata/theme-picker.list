@@ -252,18 +252,19 @@ rect 180,108 1240x720 fill #0b1620 radius 10 stroke 1 #332f27
 clip 180,108 1240x720 r 10
   text "PICK" @194,130.42 #7c7566 JetBrains Mono 9.5
   text "SESSIONS" @237.56,130.42 #7c7566 JetBrains Mono 9.5
-  text "COMMANDS ␣:" @316.68,130.42 #7c7566 JetBrains Mono 9.5
-  text "FILES ␣␣" @417.21997,130.42 #7c7566 JetBrains Mono 9.5
-  text "GREP ␣/" @496.33997,130.42 #7c7566 JetBrains Mono 9.5
-  text "BUFFERS ␣," @568.31995,130.42 #7c7566 JetBrains Mono 9.5
-  text "SYMBOLS ␣S" @661.72,130.42 #7c7566 JetBrains Mono 9.5
-  text "SYMBOLS HERE ␣s" @755.11993,130.42 #7c7566 JetBrains Mono 9.5
-  text "KEYMAPS ␣k" @884.2199,130.42 #7c7566 JetBrains Mono 9.5
-  text "QUICKFIX" @977.6199,130.42 #7c7566 JetBrains Mono 9.5
-  text "HELP ␣h" @1056.7399,130.42 #7c7566 JetBrains Mono 9.5
-  rect 1121.7198,118.73 73.130005x16.54 fill #5cc8ff12 radius 10 stroke 1 #5cc8ff59
-  text "THEMES ␣T" @1128.7198,130.42 #5cc8ff JetBrains Mono 9.5
-  text "⇥ next source" @1313.1799,130.42 #7c7566 JetBrains Mono 9.5
+  text "DIRECTORIES" @316.68,130.42 #7c7566 JetBrains Mono 9.5
+  text "COMMANDS ␣:" @417.21997,130.42 #7c7566 JetBrains Mono 9.5
+  text "FILES ␣␣" @517.76,130.42 #7c7566 JetBrains Mono 9.5
+  text "GREP <D-F>" @596.88,130.42 #7c7566 JetBrains Mono 9.5
+  text "BUFFERS ␣," @690.27997,130.42 #7c7566 JetBrains Mono 9.5
+  text "SYMBOLS ␣S" @783.67993,130.42 #7c7566 JetBrains Mono 9.5
+  text "SYMBOLS HERE ␣s" @877.07996,130.42 #7c7566 JetBrains Mono 9.5
+  text "KEYMAPS ␣k" @1006.17993,130.42 #7c7566 JetBrains Mono 9.5
+  text "QUICKFIX" @1099.58,130.42 #7c7566 JetBrains Mono 9.5
+  text "HELP ␣h" @1178.7,130.42 #7c7566 JetBrains Mono 9.5
+  rect 1243.6799,118.73 73.130005x16.54 fill #5cc8ff12 radius 10 stroke 1 #5cc8ff59
+  text "THEMES ␣T" @1250.6799,130.42 #5cc8ff JetBrains Mono 9.5
+  text "⇥ next source" @1332.8099,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #5cc8ff Inter 16
   rect 211.59375,155 420.6875x30 fill #071018 radius 6 stroke 1 #332f27

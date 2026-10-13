@@ -1,0 +1,215 @@
+package app
+
+import (
+	"context"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/liamg/oriel/core/eventstore"
+	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render/headless"
+	"github.com/liamg/oriel/render/raster"
+	"github.com/liamg/oriel/render/snapshot"
+	"github.com/liamg/oriel/theme"
+)
+
+// SH-15: plain oriel opens nothing, oriel <dir> opens dir, and oriel <file>… opens files.
+func TestConfigFromFlagsDirectory(t *testing.T) {
+	dir := t.TempDir()
+	wd, _ := os.Getwd()
+	for _, tt := range []struct {
+		args  []string
+		dir   string
+		files int
+	}{
+		{nil, "", 0},
+		{[]string{dir}, dir, 0},
+		{[]string{"."}, wd, 0},
+		{[]string{"a.go", "b.go"}, "", 2},
+	} {
+		cfg, err := ConfigFromFlags(tt.args, "v1", io.Discard)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.WorkDir != tt.dir || len(cfg.Files) != tt.files {
+			t.Errorf("%q: dir %q files %q, want %q and %d files", tt.args, cfg.WorkDir, cfg.Files, tt.dir, tt.files)
+		}
+	}
+}
+
+// startApp runs the app with nothing open, its state in state, and a grab host.
+func startApp(t *testing.T, state, workDir string, setup func(h ext.Host)) *running {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	t.Cleanup(cancel)
+	be := headless.New()
+	g := &grabHost{setup: setup}
+	r := &running{t: t, store: eventstore.New(), dir: workDir, done: make(chan error, 1)}
+	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), StateDir: state, WorkDir: workDir, Extensions: []ext.Extension{g}}
+	go func() { r.done <- Run(ctx, be, cfg) }()
+	select {
+	case r.win = <-be.Windows():
+	case err := <-r.done:
+		t.Fatalf("app exited: %v", err)
+	}
+	r.host = g.h
+	t.Cleanup(func() {
+		r.win.Close()
+		<-r.done
+	})
+	return r
+}
+
+// SH-15: with nothing open the window shows the start view: the actions with their keys, and the logo for recents.
+func TestStartViewAtLaunch(t *testing.T) {
+	r := startApp(t, t.TempDir(), "", nil)
+	r.waitFrame("the start view", func(s string) bool {
+		return containsAll(s, "New Session", "Resume a Session", "Open Directory", "Settings", "⌘N", "⌘O", "⇧⌘O", "⌘,", "nothing recent yet")
+	})
+}
+
+// SH-15: an entry runs its command on Enter; one whose command isn't registered doesn't, and a plugin adds its own.
+func TestStartViewEntries(t *testing.T) {
+	ran := make(chan string, 4)
+	r := startApp(t, t.TempDir(), "", func(h ext.Host) {
+		h.Command(registry.Command{ID: "test.hello", Run: func(registry.Ctx, registry.Args) error { ran <- "hello"; return nil }})
+		h.Contribute(registry.StartEntry{Name: "hello", Title: "Say hello", Desc: "A plugin's action", Command: "test.hello", Order: 5})
+	})
+	r.waitText("Say hello")
+	r.typeKeys("<CR>") // the first entry is selected
+	select {
+	case got := <-ran:
+		if got != "hello" {
+			t.Fatalf("ran %q", got)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Enter didn't run the selected entry")
+	}
+	r.typeKeys("j<CR>") // New Session: nothing registers it yet
+	r.typeKeys("jjj<CR>")
+	r.waitText("SETTINGS") // the settings page's heading
+}
+
+// SH-15: Open Directory on a path reopens the window on it, and remembers it for the next launch's recents.
+func TestOpenDirectory(t *testing.T) {
+	state := t.TempDir()
+	dir := filepath.Join(t.TempDir(), "proj")
+	os.MkdirAll(dir, 0o755)
+	os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hi\n"), 0o644)
+	r := startApp(t, state, "", nil)
+	r.waitText("Open Directory")
+	if err := r.do(func() error {
+		return r.host.Run(context.Background(), "directory.open", registry.Args{"path": dir})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	r.waitFrame("the start view gone", func(s string) bool { return !strings.Contains(s, "Open Directory") })
+	r.typeKeys("<Space><Space>")
+	r.waitText("hello.txt")
+
+	r2 := startApp(t, state, "", nil)
+	r2.waitFrame("proj in the recents", func(s string) bool {
+		return containsAll(s, "proj", "DIRECTORIES") && !strings.Contains(s, "nothing recent")
+	})
+}
+
+// SH-15: closing the last view with nothing open brings the start view back.
+func TestStartViewComesBack(t *testing.T) {
+	r := startApp(t, t.TempDir(), "", nil)
+	r.waitText("Open Directory")
+	r.do(func() error { return r.host.Run(context.Background(), "view.open", registry.Args{"id": "problems"}) })
+	r.waitFrame("the start view gone", func(s string) bool { return !strings.Contains(s, "Open Directory") })
+	r.do(func() error { return r.host.Run(context.Background(), "view.close", nil) })
+	r.waitText("Open Directory")
+}
+
+func containsAll(s string, parts ...string) bool {
+	for _, p := range parts {
+		if !strings.Contains(s, p) {
+			return false
+		}
+	}
+	return true
+}
+
+// SH-15: the start view against 39-start and 39b-start-empty, in both variants.
+func TestStartViewSnapshots(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		recents bool
+		variant theme.Variant
+		mockup  string
+	}{
+		{"start-empty", false, theme.Dark, "39b-start-empty"},
+		{"start-recents", true, theme.Dark, "39-start"},
+		{"start-light", true, theme.Light, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newErrScene(t, "")
+			s.sh.recents = &recents{path: filepath.Join(t.TempDir(), "recent.json")}
+			if tt.recents {
+				home, _ := os.UserHomeDir()
+				for _, d := range []struct {
+					name string
+					ago  time.Duration
+				}{{"notes", 7 * 24 * time.Hour}, {"dotfiles", 3 * 24 * time.Hour}, {"oriel", 10 * time.Minute}} {
+					p := filepath.Join(home, "src", d.name)
+					os.MkdirAll(p, 0o755)
+					if d.name != "notes" {
+						os.MkdirAll(filepath.Join(p, ".git"), 0o755)
+						os.WriteFile(filepath.Join(p, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
+					}
+					s.sh.recents.add(p, time.Now().Add(-d.ago))
+				}
+			}
+			st, _ := theme.Stack(theme.Builtins(), "oriel")
+			r, err := theme.Resolve(st, tt.variant)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s.ui.SetTheme(r)
+			s.frame()
+			s.frame()
+			s.golden(tt.name)
+			if tt.mockup == "" {
+				return
+			}
+			img := raster.Render(s.list, s.size, 1, s.ui.Theme().C(theme.BgBase))
+			mock, err := snapshot.ReadPNG("../_design/mockups/" + tt.mockup + ".png")
+			if err != nil {
+				t.Fatal(err)
+			}
+			d, _ := snapshot.Compare(mock, img, 0.1)
+			t.Logf("%s against %s: %s", tt.name, tt.mockup, d)
+			if d.Mean > 0.05 {
+				t.Errorf("%s is %s off %s", tt.name, d, tt.mockup)
+			}
+		})
+	}
+}
+
+// SH-15: a typed path lists itself and the directories in it that start with what's typed after its last slash.
+func TestTypedDirs(t *testing.T) {
+	home := t.TempDir()
+	for _, d := range []string{"src/oriel", "src/other", "src/.hidden", "docs"} {
+		os.MkdirAll(filepath.Join(home, d), 0o755)
+	}
+	for _, tt := range []struct{ q, want string }{
+		{"~/src/", "~/src ~/src/oriel ~/src/other"},
+		{"~/src/or", "~/src/oriel"},
+		{"~/do", "~/docs"},
+	} {
+		var got []string
+		for _, p := range typedDirs(tt.q, home) {
+			got = append(got, "~"+strings.TrimPrefix(p, home))
+		}
+		if strings.Join(got, " ") != tt.want {
+			t.Errorf("typedDirs(%q) = %q, want %q", tt.q, got, tt.want)
+		}
+	}
+}

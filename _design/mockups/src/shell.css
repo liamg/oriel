@@ -1,0 +1,5 @@
+/* shared chrome for the start and overview mockups */
+.main{display:flex;flex:1;min-height:0}
+.rail .ic.off{color:var(--fg4);opacity:.45}
+.stage{flex:1;min-width:0;position:relative;background:var(--bg0);overflow:hidden}
+.ref{position:absolute;z-index:60;font:700 11px var(--mono);color:#111;background:var(--pink);border-radius:10px;padding:2px 8px;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 4px 18px rgba(255,111,174,.35)}

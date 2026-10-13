@@ -34,6 +34,9 @@ type Registry interface {
 	HelpLive(name string, fn func(c *ui.Ctx)) Disposable
 
 	Run(ctx Ctx, id string, args Args) error
+	// Available says whether id would run with args: it's registered, not turned off, and its Available agrees.
+	// The rail and the start view dim what isn't; the omnibox leaves it out.
+	Available(id string, args Args) bool
 	Commands() []Command // the registration that wins for each id, sorted by id
 	Keymaps() []Keymap   // the registration that wins for each mode and keys, sorted by mode, then keys
 	// Lookup finds the mapping for keys in the first of modes that has one, and whether any of modes has a longer
@@ -81,10 +84,13 @@ type Ctx interface{ context.Context }
 type Args map[string]any
 
 type Command struct {
-	ID     string // "git.commit"
-	Title  string
-	Run    func(ctx Ctx, args Args) error
-	Source string // who registered it: "builtin:git", "init.lua:14", a plugin's id
+	ID    string // "git.commit"
+	Title string
+	Run   func(ctx Ctx, args Args) error
+	// Available says whether the command can run with args now; nil means it always can. view.open of a view
+	// nobody has registered can't.
+	Available func(args Args) bool
+	Source    string // who registered it: "builtin:git", "init.lua:14", a plugin's id
 }
 
 // Keymap binds keys, in vim notation, to a command in one mode. One with no command names a group of the
@@ -360,6 +366,21 @@ func (r *reg) Run(ctx Ctx, id string, args Args) error {
 		r.faults.fault(Fault{Kind: KindCommand, ID: id, Source: c.Source, Err: p})
 	}
 	return err
+}
+
+func (r *reg) Available(id string, args Args) bool {
+	r.mu.Lock()
+	c, ok := r.commands.top(id)
+	r.mu.Unlock()
+	if !ok || c.Run == nil || r.faults.isOff(KindCommand, id) != nil {
+		return false
+	}
+	if c.Available == nil {
+		return true
+	}
+	ok = false
+	Call(func() error { ok = c.Available(args); return nil })
+	return ok
 }
 
 func (r *reg) Commands() []Command {

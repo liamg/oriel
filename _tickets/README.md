@@ -84,6 +84,10 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 30. [FW-13](FW-13-ui-motion-polish-subtle-animations-for-panels-menus-and-popups.md): UI motion polish: subtle animations for panels, menus, popups and toasts · after FW-5, FW-6, FW-9
 30. [ED-14](ED-14-highlight-queries-without-a-parent-walk-per-capture.md): Highlight queries without a parent walk per capture · after ED-6
 30. [ED-13](ED-13-editor-options-in-the-registry-and-editor-clipboard.md): Editor options in the registry: :set, the settings page, editor.clipboard · after ED-12, SH-12
+31. [SH-14](SH-14-closing-views-and-real-keys-and-commands-lists.md): Closing views, and :Keys/:Commands as real lists · after FW-9, SH-5
+31. [SH-16](SH-16-the-rail-main-views-down-the-left-edge.md): The rail: main views down the left edge · after FW-9, SH-14
+32. [SH-15](SH-15-start-view-what-the-window-shows-with-nothing-open.md): Start view: what the window shows with nothing open · after SH-14, ED-12, SH-4, SH-12
+33. [FG-7](FG-7-project-overview-stats-for-each-repo-with-nothing-open.md): Project overview: stats for each repo or directory, shown with nothing open · after SH-15, ED-11
 
 ### Phase 4 · IDE
 

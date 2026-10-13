@@ -44,6 +44,9 @@ How everything hangs together, built and tested before features land on it.
 | SH-11 | Light, dark and theme editor (`:Theme`, pick mode) | 17, 23 | theme | P3, P7 | FW-7 | token resolution tests; the fixture renders in all built-in themes; pick-to-override writes the smallest TOML diff |
 | SH-12 | Settings page (`:Settings`, ⌘,): sections, search, typed controls, scopes, modified and reset; `settings.toml` storage | 19 | app, registry | P3 | FW-3, FW-6, FW-11 | `settings.md` precedence tests; a GUI edit and a reset each change exactly one line of a hand-commented file; Lua-set options are read-only with their source |
 | SH-13 | Errors, notifications and the log panel: one `Notified` event for every notice, an Oriel log and a log per session, the status line, toasts and ✕/⚠ counts, `:Log` with stack traces and highlighted source, `log/slog` to a ring and a rotating file, panics recovered per contribution, crash reports | 37, 38 | core, app, ui | P3 | FW-2, FW-6, FW-9, ED-6 | snapshots of each notice placement and the log panel; repeats collapse; panicking contributions are turned off and the app keeps going; crash report offered on next launch; secrets redacted; replay reproduces the history |
+| SH-14 | Closing views (`⌃W c`, `q` on read-only views) and `:Keys`/`:Commands` as pickers | – | app | P3 | FW-9, SH-5 | every built-in view closes from the keyboard; `:Commands` filters and runs |
+| SH-15 | Start view: what the window shows with nothing open | – | app | P3 | SH-14, ED-12, SH-4, SH-12 | shown at launch and when the last view closes; every entry runs its command; plugins add entries |
+| SH-16 | The rail: main views down the left edge, as a contribution point | 01 | app | P3 | FW-9, SH-14 | snapshot against 01's strip; plugin entries appear, badge and toggle their view |
 
 ## Editor
 
@@ -74,6 +77,7 @@ How everything hangs together, built and tested before features land on it.
 | FG-4 | Terminals: Ghostty VT under wazero, our renderer, placements, terminal-normal mode | 24 | term | P4 | FW-9 | vttest-style suite; parse throughput ≥ 200 MB/s; snapshot on reconnect |
 | FG-5 | Shell integration (OSC 133/7): prompt jumps, exit dots, send output to a request | 24 | term | P4 | FG-4 | – |
 | FG-6 | Ship page: uncommitted → behind → unpushed → PR → checks, multi-project | 18 | gitx, gh | P6 | FG-2 | flows tested against fixture repos and a fake GitHub |
+| FG-7 | Project overview: languages, size, commit activity, contributors and branch for each repo, shown when nothing's open in a directory or session | – | app, gitx | P3 | SH-15, ED-11 | shows in one frame; panels fill within budget on a 100k-file repo; closing the last tab returns to it |
 
 ## LSP, tests, debugging
 

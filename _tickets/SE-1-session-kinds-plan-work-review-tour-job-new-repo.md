@@ -33,3 +33,9 @@ each kind starts from the launcher and the CLI; direct never creates a worktree;
 - Test-first, with verified spec references (`_design/testing.md`).
 - No new dependency without approval (`_design/deps.md`).
 - Update the design doc in the same PR if behaviour differs from it.
+
+## From SH-15
+
+- SH-15's Open Directory is the pre-session **direct** kind; its recent directories carry over as direct sessions.
+- `oriel <dir>` opens the directory directly today. With sessions, ask first: start a session on it, or open it directly.
+- Register `session.new` and `session.resume`; the start view's greyed entries light up on their own.

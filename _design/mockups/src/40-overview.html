@@ -1,0 +1,119 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="shell.css">
+<style>
+.ov{position:absolute;inset:0;padding:26px 34px;overflow:hidden;display:flex;flex-direction:column;gap:22px}
+.repo{border:1px solid var(--line);border-radius:12px;background:var(--bg1);position:relative}
+.rh{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.rh h2{font:700 18px var(--disp);letter-spacing:.06em}
+.rh .path{font:11px var(--mono);color:var(--fg3)}
+.rh .br{font:11.5px var(--mono);color:var(--fg2);display:flex;align-items:center;gap:8px}
+.rh .ab{font:600 10.5px var(--mono)}
+.panels{display:grid;grid-template-columns:330px 1fr 300px;gap:0}
+.pn{padding:14px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:10px;min-width:0}
+.pn:last-child{border-right:0}
+.big{font:600 26px var(--disp);color:var(--fg)}
+.big small{font:11px var(--mono);color:var(--fg3);margin-left:6px;font-weight:400}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats div{display:flex;flex-direction:column;gap:2px}
+.stats b{font:600 17px var(--disp)} .stats span{font:10px var(--mono);color:var(--fg3);text-transform:uppercase;letter-spacing:.1em}
+.langbar{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px}
+.langbar i{display:block;height:100%}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font:11px var(--mono);color:var(--fg2)}
+.legend div{display:flex;align-items:center;gap:7px}
+.legend s{width:8px;height:8px;border-radius:2px;display:inline-block;text-decoration:none}
+.legend em{margin-left:auto;color:var(--fg3);font-style:normal}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,11px);gap:3px}
+.heat i{width:11px;height:11px;border-radius:2px;background:var(--bg3);display:block}
+.months{display:flex;justify-content:space-between;font:9.5px var(--mono);color:var(--fg4);padding-right:4px}
+.who{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--fg2)}
+.who .av{width:20px;height:20px;font-size:9px}
+.who .b{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.who .b i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan2),var(--cyan))}
+.who em{font:10.5px var(--mono);color:var(--fg3);font-style:normal;width:44px;text-align:right}
+.largest{font:11px var(--mono);color:var(--fg2);display:flex;flex-direction:column;gap:3px}
+.largest div{display:flex} .largest em{margin-left:auto;color:var(--fg3);font-style:normal}
+.last{font-size:12px;color:var(--fg2);border-left:2px solid var(--line2);padding-left:10px}
+.last .h{font:10.5px var(--mono);color:var(--fg3);margin-top:3px}
+.hint{text-align:center;font:11px var(--mono);color:var(--fg4)}
+.hint .kbd{margin:0 3px}
+.load{font:10px var(--mono);color:var(--fg4);display:flex;align-items:center;gap:6px}
+.load i{width:40px;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;position:relative;display:block}
+.load i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:60%;background:var(--cyan);opacity:.6}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5))"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs"><div class="stab on"><span class="dot o"></span>usage-and-billing<span class="mini">work</span><span class="k">⌘1</span></div></div>
+  <div class="tbright"><span class="kbd">⌘K</span></div>
+</div>
+<div class="main">
+  <div class="rail">
+    <div class="ic off">⌥</div><div class="ic">⌕</div><div class="ic off">±</div><div class="ic off">◈</div><div class="ic off">▷</div><div class="ic off">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="stage grid-bg">
+    <div class="ov">
+      <div class="repo brk" data-repo="usage" data-seed="7">
+        <div class="rh"><h2>usage</h2><span class="path">~/.oriel/workspaces/usage-and-billing/usage</span>
+          <span style="margin-left:auto" class="br"><span class="dot o"></span>fix/stale-prices <span class="ab" style="color:var(--green)">↑3</span><span class="ab" style="color:var(--yellow)">↓1</span> <span class="dim">vs origin/main</span></span></div>
+        <div class="panels">
+          <div class="pn">
+            <span class="cap">Languages</span>
+            <div class="big">48,210<small>lines · 612 files</small></div>
+            <div class="langbar"><i style="width:61%;background:#5cd2ff"></i><i style="width:17%;background:#c792ff"></i><i style="width:9%;background:#a5e075"></i><i style="width:7%;background:#ffcf5c"></i><i style="width:6%;background:var(--fg4)"></i></div>
+            <div class="legend"><div><s style="background:#5cd2ff"></s>Go<em>61%</em></div><div><s style="background:#c792ff"></s>SQL<em>17%</em></div><div><s style="background:#a5e075"></s>YAML<em>9%</em></div><div><s style="background:#ffcf5c"></s>Markdown<em>7%</em></div><div><s style="background:var(--fg4)"></s>Other<em>6%</em></div></div>
+          </div>
+          <div class="pn">
+            <div class="row"><span class="cap">Commit activity</span><span class="mono dim" style="font-size:10.5px;margin-left:auto">1,284 commits in the last year · busiest Tue</span></div>
+            <div class="heat"></div>
+            <div class="months"><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span></div>
+            <div class="last">Invalidate usage cache on plan change<div class="h">a3f9c21 · Liam Galvin · 2h ago</div></div>
+          </div>
+          <div class="pn">
+            <span class="cap">Contributors</span>
+            <div class="who"><div class="av me">LG</div>Liam Galvin<div class="b"><i style="width:100%"></i></div><em>512</em></div>
+            <div class="who"><div class="av cl">C</div>Claude<div class="b"><i style="width:74%"></i></div><em>381</em></div>
+            <div class="who"><div class="av gh">AR</div>Alex Rivera<div class="b"><i style="width:41%"></i></div><em>209</em></div>
+            <div class="who"><div class="av cx">SK</div>Sam Kim<div class="b"><i style="width:22%"></i></div><em>114</em></div>
+            <div class="mono dim" style="font-size:10.5px">+ 9 more · 13 people</div>
+          </div>
+        </div>
+      </div>
+      <div class="repo brk" data-seed="3">
+        <div class="rh"><h2>billing</h2><span class="path">~/.oriel/workspaces/usage-and-billing/billing</span>
+          <span style="margin-left:auto" class="br"><span class="dot o"></span>fix/stale-prices <span class="ab" style="color:var(--green)">↑1</span> <span class="dim">vs origin/main</span></span></div>
+        <div class="panels">
+          <div class="pn">
+            <span class="cap">Languages</span>
+            <div class="big">21,903<small>lines · 288 files</small></div>
+            <div class="langbar"><i style="width:44%;background:#5cd2ff"></i><i style="width:31%;background:#ff9e64"></i><i style="width:15%;background:#89ddff"></i><i style="width:10%;background:var(--fg4)"></i></div>
+            <div class="legend"><div><s style="background:#5cd2ff"></s>Go<em>44%</em></div><div><s style="background:#ff9e64"></s>TypeScript<em>31%</em></div><div><s style="background:#89ddff"></s>Protobuf<em>15%</em></div><div><s style="background:var(--fg4)"></s>Other<em>10%</em></div></div>
+          </div>
+          <div class="pn">
+            <div class="row"><span class="cap">Commit activity</span><span class="mono dim" style="font-size:10.5px;margin-left:auto">402 commits in the last year · busiest Thu</span></div>
+            <div class="heat"></div>
+            <div class="months"><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span></div>
+            <div class="last">Price tiers read the currency table<div class="h">71b0e4d · Alex Rivera · 3d ago</div></div>
+          </div>
+          <div class="pn">
+            <span class="cap">Largest files</span>
+            <div class="largest"><div>proto/billing.pb.go<em>4,812</em></div><div>web/src/invoice.tsx<em>1,207</em></div><div>internal/tiers/table.go<em>988</em></div><div>internal/stripe/hooks.go<em>731</em></div></div>
+            <div class="load"><i></i>contributors…</div>
+          </div>
+        </div>
+      </div>
+      <div class="hint">open a file with <span class="kbd">␣␣</span> · search with <span class="kbd">⌘⇧F</span> · everything with <span class="kbd">⌘K</span></div>
+    </div>
+  </div>
+</div>
+<div class="status"><span class="mode">NORMAL</span><span>fix/stale-prices</span><span class="dim">2 repos</span><span style="margin-left:auto;margin-right:12px" class="dim">usage-and-billing</span></div>
+<script>
+document.querySelectorAll('.repo').forEach(r=>{
+  let x=+r.dataset.seed; const rnd=()=>(x=(x*16807)%2147483647)/2147483647;
+  r.querySelectorAll('.heat').forEach(h=>{
+    for(let w=0;w<52;w++)for(let d=0;d<7;d++){
+      const i=document.createElement('i'); const wk=d>0&&d<6;
+      let v=rnd()*(wk?1:.35)*(0.5+0.5*Math.sin(w/6)+0.3); v=Math.min(1,v);
+      if(v>.3){i.style.background='rgba(255,210,63,'+(0.12+v*.7).toFixed(2)+')'; if(v>.9)i.style.boxShadow='0 0 6px rgba(255,210,63,.5)'}
+      h.appendChild(i)}
+  })
+})
+</script>
