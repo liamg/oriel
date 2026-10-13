@@ -374,7 +374,7 @@ func (s *settingsExt) fileFor(scope int) (*settingsFile, error) {
 }
 
 func (s *settingsExt) sessionAt() registry.At {
-	return registry.At{Session: string(s.h.State().Focus)}
+	return registry.At{Session: s.h.Here().Session}
 }
 
 // readOnly says why the page can't change name: a value set in Lua, which wins over the files.
@@ -536,16 +536,8 @@ func (s *settingsExt) layerFor(scope int) registry.Layer {
 	return [...]registry.Layer{registry.LayerUser, registry.LayerProject, registry.LayerSession}[scope]
 }
 
-func (s *settingsExt) atFor(scope int) registry.At {
-	at := registry.At{}
-	if s.project != nil {
-		at.Project = s.project.at.Project
-	}
-	if scope == 2 {
-		at.Session = s.sessionAt().Session
-	}
-	return at
-}
+// atFor is where the page reads: where the user is, so a buffer's :set shows too.
+func (s *settingsExt) atFor(int) registry.At { return s.h.Here() }
 
 // --- the page ---
 
@@ -744,6 +736,10 @@ func (s *settingsExt) sourceLabel(name string, l registry.Layer, at registry.At)
 		return "default"
 	case registry.LayerLua:
 		return "set in " + s.h.Options().Source(name, at)
+	case registry.LayerSession, registry.LayerBuffer, registry.LayerWindow:
+		if src := s.h.Options().Source(name, at); src != "" {
+			return l.String() + " · " + src
+		}
 	}
 	return l.String()
 }

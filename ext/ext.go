@@ -35,6 +35,9 @@ type Host interface {
 	// the extension's id and Time to now; the text is redacted before it's kept.
 	Notify(n core.Notice)
 	State() core.State // a copy: notification history, focus, sessions
+	// Here is where the user is, for reading options: the session in front, the project, and the focused editor's
+	// buffer and window.
+	Here() registry.At
 	// Layout is the tree every view is placed in (ui.md 01d). Change it only from commands and views, which run
 	// on the app's loop.
 	Layout() *layout.Root

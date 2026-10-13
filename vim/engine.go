@@ -55,6 +55,7 @@ type Engine struct {
 	lastSubFlags string
 	cmdline      *cmdline
 	opts         Options
+	settings     Settings
 	gstack       []*lineMarks // lines :g and :normal still have to visit, innermost last
 	inGlobal     bool
 	silent       bool
@@ -248,6 +249,7 @@ func (e *Engine) Key(k string) {
 	if e.recReg != 0 && e.feeding == 0 && e.confirm == nil {
 		e.recKeys = append(e.recKeys, k)
 	}
+	e.loadOptions()
 	e.updateTop(e.view())
 	e.input(k)
 	if e.mode == Normal || e.mode == Insert || e.mode == Replace {
@@ -308,7 +310,7 @@ func (e *Engine) normalKey(k string) {
 		return
 	}
 	e.pend = nil
-	if c.reg == 0 && e.ed.HasClipboard() && (c.op != "" || registerCmds[c.key] || e.visual != nil && visualRegisterCmds[c.key]) {
+	if c.reg == 0 && e.ed.HasClipboard() && e.opts.Clipboard == "system" && (c.op != "" || registerCmds[c.key] || e.visual != nil && visualRegisterCmds[c.key]) {
 		c.reg = '+' // 'clipboard' unnamedplus: the system clipboard is the default register
 	}
 	if e.visual != nil {

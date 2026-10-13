@@ -193,6 +193,19 @@ backgrounds with their gutter edge, highlights and wavy underlines over columns,
 blocks between lines, which push the lines below them down. Blocks at anchors stay with their text through edits.
 The engine's scrolling counts lines, not the rows blocks take, so a tall block can push the last lines out of view.
 
+## Options (ED-13)
+
+- The engine's options are `vim.OptionDefs()`: vim's name and short name, kind, nvim's default, and whether it lives
+  per buffer, per window or globally. `vim/vimreg` registers them as `editor.*` options with vim's names as
+  aliases, and is the engine's `vim.Settings`: the engine reads its options from the registry before each key and
+  Ex command, at the buffer and window (`Host.Here()`).
+- `:set` writes through the same settings: a buffer option at the buffer, a window option at the window, a global
+  one for the session in front, each with `:set` as its source. `+=`, `-=` and `^=` work on numbers.
+- `editor.clipboard` is `system` (the clipboard is the default register, as `unnamedplus`) or `registers`;
+  `:set clipboard=unnamedplus` and `:set clipboard=` mean those.
+- Folding options (`foldmethod`, `foldlevel`, `foldenable`) stay window state in the engine: setting them acts on
+  the window's folds at once.
+
 ## Go interfaces
 
 The editor is three layers, each of them swappable:

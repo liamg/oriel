@@ -2,7 +2,7 @@
 id: ED-13
 title: "Editor options in the registry: :set, the settings page, editor.clipboard"
 phase: P3
-status: todo
+status: review
 area: Editor
 module: vim, registry
 depends_on: [ED-12, SH-12]
@@ -53,6 +53,11 @@ depends_on: [ED-12, SH-12]
 - The settings page lists every registered option by section, with its source and controls; `:set` should write
   `LayerSession`/`LayerBuffer`/`LayerWindow` through `Options`, and the page's session scope shows it.
 - `Options.Spec(alias)` already resolves vim aliases.
+
+## As built
+
+- See editor.md, "Options (ED-13)". The `.vt` suite runs with its options from a registry (`vim/vimreg`); new
+  `testdata/options/set.vt` checks `:set` against nvim.
 
 ## Rules
 

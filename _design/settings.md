@@ -100,6 +100,14 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.report` | 2 | input | `report` | ED-13 |
 | `editor.number_formats` | `bin,hex` | input | `nrformats`, `nf` | ED-13 |
 | `editor.hidden` | true | input | `hidden`, `hid` | ED-13 |
+| `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
+| `keymap.leader` | Space | app | | FW-3 |
+| `keymap.timeout` | true | app | `timeout`, `to` | FW-3 |
+| `keymap.timeoutlen` | 1s | app | `timeoutlen`, `tm` | FW-3 |
+| `ui.reduced_motion` | false | app | | FW-5 |
+| `ui.theme` | `oriel` | app | | FW-7 |
+| `ui.variant` | `system`: follows the OS; or `dark`, `light` | app | | FW-7, SH-11 |
+| `whichkey.enabled` | true | app | | SH-6 |
 
 ## The settings page (`:Settings`, ⌘,)
 

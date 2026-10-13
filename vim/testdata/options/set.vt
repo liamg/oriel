@@ -1,0 +1,49 @@
+# :set on the engine's options, which the IDE keeps in its registry (options.txt, ED-13).
+
+=== :set sw+= adds to a number option
+ref:    nvim/options.txt *:set+=*
+quote:  Add the {value} to a number option
+given:  |x
+keys:   :set sw=2 et<CR>:set sw+=2<CR>>>
+expect:
+  |    x
+mode:   normal
+
+=== :set sw-= subtracts from it
+ref:    nvim/options.txt *:set-=*
+quote:  Subtract the {value} from a number option
+given:  |x
+keys:   :set sw=6 et<CR>:set sw-=4<CR>>>
+expect:
+  |  x
+mode:   normal
+
+=== :set sw^= multiplies it
+ref:    nvim/options.txt *:set^=*
+quote:  Multiply the {value} to a number option
+given:  |x
+keys:   :set sw=3 et<CR>:set sw^=2<CR>>>
+expect:
+  |      x
+mode:   normal
+
+=== :set noet goes back to tabs
+ref:    nvim/options.txt *'expandtab'*
+quote:  Spaces are used in indents with the '>' and '<' commands
+given:  |x
+keys:   :set sw=8 et<CR>:set noet<CR>>>
+expect:
+  |	x
+mode:   normal
+
+=== :set ic makes a search ignore case
+ref:    nvim/options.txt *'ignorecase'*
+quote:  Ignore case in search patterns
+given:
+  |a
+  FOO
+keys:   :set ic<CR>/foo<CR>
+expect:
+  a
+  |FOO
+mode:   normal

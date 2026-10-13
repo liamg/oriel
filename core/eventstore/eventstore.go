@@ -31,6 +31,12 @@ func (s *Store) State() core.State {
 	return s.state.Clone()
 }
 
+func (s *Store) Focus() core.SessionID {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state.Focus
+}
+
 func (s *Store) Sessions() []core.Session {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

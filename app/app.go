@@ -214,6 +214,20 @@ func (h *host) UI() ext.UIView {
 	return h.sh.ui
 }
 
+// noSession is the session runtime options go to while none is in front.
+const noSession = "oriel"
+
+func (h *host) Here() registry.At {
+	at := registry.At{Session: string(h.store.Focus()), Project: h.sh.cfg.WorkDir}
+	if at.Session == "" {
+		at.Session = noSession
+	}
+	if h.sh.editorAt != nil {
+		at = h.sh.editorAt(at)
+	}
+	return at
+}
+
 func (h *host) CurrentTheme() *theme.Resolved {
 	if h.sh.theme == nil {
 		return nil

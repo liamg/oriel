@@ -260,6 +260,7 @@ func (e *Engine) BufferList() []BufferInfo {
 
 // Run runs an ex command line, as typing it after ":" would.
 func (e *Engine) Run(line string) {
+	e.loadOptions()
 	e.ex(e.view(), strings.TrimPrefix(line, ":"))
 	e.clamp(e.view())
 	e.updateTop(e.view())

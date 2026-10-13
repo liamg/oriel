@@ -19,11 +19,12 @@ type Options struct {
 	Report     int
 	NrFormats  string // 'nrformats'
 	Hidden     bool
+	Clipboard  string // "system": the default register is the clipboard (unnamedplus); "registers": it isn't
 }
 
 // DefaultOptions are nvim's defaults.
 func DefaultOptions() Options {
-	return Options{ShiftWidth: 8, WrapScan: true, Magic: true, Report: 2, NrFormats: "bin,hex", Hidden: true}
+	return Options{ShiftWidth: 8, WrapScan: true, Magic: true, Report: 2, NrFormats: "bin,hex", Hidden: true, Clipboard: "system"}
 }
 
 // lastSearch is the last search pattern and offset, shared by /, ?, n, N, * and :s.

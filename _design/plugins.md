@@ -268,6 +268,8 @@ type Host interface {
 - `Host.CurrentTheme()` is the theme the window is drawn in, and `Host.Shot(th)` the window built and drawn again on
   the CPU in another theme, without touching the live frame (`ui.UI.Fork`). Drawn in `theme.Probe(th)`, every token
   and syntax group in a colour of its own, it tells what painted each pixel: the theme editor's pick mode.
+- `Host.Here()` is where the user is, as an `At`: the session in front (or `oriel` with none), the project, and
+  the focused editor's buffer and window; read options there. `core.Store.Focus()` is the session in front, cheaply.
 - `Options` keeps where each value came from: `SetFrom(name, layer, at, v, source)`, `Source(name, at)`,
   `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").
 - `Registry.Themes()` returns a generation with the sources; the window watches a theme registered at any time.

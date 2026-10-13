@@ -1191,23 +1191,20 @@ func (e *Engine) exSet(args string) error {
 			on = false
 			name = name[2:]
 		}
-		switch name {
-		case "sw", "shiftwidth":
-			n, err := strconv.Atoi(val)
-			if err != nil {
-				return errNumberRequired.with(a)
+		if d, ok := optionDef(name); ok {
+			if d.Kind != "bool" && !on {
+				return errUnknownOption.with("no" + name)
 			}
-			e.opts.ShiftWidth = n
-		case "et", "expandtab":
-			e.opts.ExpandTab = on
-		case "ic", "ignorecase":
-			e.opts.IgnoreCase = on
-		case "scs", "smartcase":
-			e.opts.SmartCase = on
-		case "ws", "wrapscan":
-			e.opts.WrapScan = on
-		case "magic":
-			e.opts.Magic = on
+			v, err := e.setValue(d, a, val, hasVal, on, op)
+			if err != nil {
+				return err
+			}
+			if err := e.setOption(d, v); err != nil {
+				return err
+			}
+			continue
+		}
+		switch name {
 		case "fdm", "foldmethod":
 			s := &e.window.fold
 			if val != s.method {
@@ -1227,18 +1224,8 @@ func (e *Engine) exSet(args string) error {
 			e.window.fold.applyLevel()
 		case "fen", "foldenable":
 			e.window.fold.enable = on
-		case "hid", "hidden":
-			e.opts.Hidden = on
 		case "mod", "modified":
 			e.buffer.modified = on
-		case "nf", "nrformats":
-			e.opts.NrFormats = listOption(e.opts.NrFormats, val, op)
-		case "report":
-			n, err := strconv.Atoi(val)
-			if err != nil {
-				return errNumberRequired.with(a)
-			}
-			e.opts.Report = n
 		default:
 			return errUnknownOption.with(name)
 		}

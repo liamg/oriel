@@ -53,7 +53,6 @@ func newErrScene(t *testing.T, crashDir string) *errScene {
 // newScene is the built-ins drawn at size, with files relative to workDir.
 func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errScene {
 	t.Helper()
-	time.Local = time.UTC
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	conf := filepath.Join(home, ".config", "oriel")

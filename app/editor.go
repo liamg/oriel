@@ -22,6 +22,7 @@ import (
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/layout"
 	"github.com/liamg/oriel/vim"
+	"github.com/liamg/oriel/vim/vimreg"
 )
 
 // EditorView is the editor pane's view id; each window is an instance of it, named by the window's id.
@@ -76,6 +77,18 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.e = vim.New(x.ed)
 	x.e.SetHost(&editorHost{x: x, disk: vim.Disk{Dir: x.dir}})
 	x.e.SetLayout(&editorLayout{x: x})
+	for _, d := range vimreg.Register(h) {
+		x.add(d)
+	}
+	x.sh.editorAt = func(at registry.At) registry.At {
+		at.Buffer, at.Window = x.e.Name(), strconv.Itoa(int(x.e.WindowID()))
+		return at
+	}
+	x.e.SetSettings(vimreg.Settings{Options: h.Options(), At: func(buf, win string) registry.At {
+		at := h.Here()
+		at.Buffer, at.Window = buf, win
+		return at
+	}})
 	x.add(disposeFn(h.Layout().OnClose(func(v layout.ViewRef) {
 		if id, ok := windowOf(v); ok {
 			x.e.WindowClosed(id)
