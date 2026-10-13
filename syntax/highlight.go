@@ -142,7 +142,7 @@ func (p *Parser) injections(start, end int, fn func(*Parser) error) error {
 		if lang == "" || len(content) == 0 {
 			continue
 		}
-		if _, ok := Lookup(lang); !ok {
+		if _, ok := p.lang.lookup(lang); !ok {
 			continue
 		}
 		if _, combined := pat.set["injection.combined"]; combined {
@@ -176,7 +176,7 @@ func (p *Parser) injectedParser(name string) (*Parser, error) {
 	if ip, ok := p.injected[name]; ok {
 		return ip, nil
 	}
-	l, _ := Lookup(name)
+	l, _ := p.lang.lookup(name)
 	ip, err := NewParser(l)
 	if err != nil {
 		return nil, err

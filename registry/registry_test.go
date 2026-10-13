@@ -89,3 +89,21 @@ func TestThemes(t *testing.T) {
 		t.Errorf("the generation didn't move: %d, %d, %d", gen0, gen1, gen2)
 	}
 }
+
+// A language registered later under a name shadows the earlier one until it's disposed.
+func TestLanguages(t *testing.T) {
+	r := registry.New()
+	r.Language(registry.Language{Name: "go", Source: "builtin"})
+	r.Language(registry.Language{Name: "lua", Source: "builtin"})
+	_, gen0 := r.Languages()
+	d := r.Language(registry.Language{Name: "go", Source: "pack"})
+	ls, gen1 := r.Languages()
+	if len(ls) != 2 || ls[1].Name != "go" || ls[1].Source != "pack" || gen1 == gen0 {
+		t.Fatalf("with the pack: %+v (gen %d → %d)", ls, gen0, gen1)
+	}
+	d.Dispose()
+	ls, _ = r.Languages()
+	if len(ls) != 2 || ls[0].Name != "go" || ls[0].Source != "builtin" {
+		t.Errorf("after disposing the pack: %+v", ls)
+	}
+}

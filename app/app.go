@@ -49,6 +49,7 @@ type Config struct {
 	Debug      bool     // oriel --debug: the frame-time overlay
 	Files      []string // open in the editor at start
 	WorkDir    string   // where relative paths are; the current directory if ""
+	CacheDir   string   // compiled grammars and the like; the user's cache directory's oriel/ if ""
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -72,6 +73,11 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	if cfg.Logs == nil {
 		cfg.Logs = NewLogs(LogOpts{})
+	}
+	if cfg.CacheDir == "" {
+		if d, err := os.UserCacheDir(); err == nil {
+			cfg.CacheDir = filepath.Join(d, "oriel")
+		}
 	}
 	if cfg.ConfigDir == "" {
 		cfg.ConfigDir = DefaultConfigDir()

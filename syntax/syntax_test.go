@@ -56,16 +56,9 @@ func snapshot(src []byte, spans []Span) string {
 // TestHighlightSnapshots checks highlighting of a fixture per built-in language against its golden snapshot.
 // Regenerate with -update and review the diff.
 func TestHighlightSnapshots(t *testing.T) {
-	files, _ := filepath.Glob("testdata/highlight/fixture.*")
-	if len(files) < 6 {
-		t.Fatalf("want a fixture for Go, TypeScript, Python, Rust, Lua and Markdown; found %v", files)
-	}
-	for _, f := range files {
-		if strings.HasSuffix(f, ".golden") {
-			continue
-		}
-		t.Run(filepath.Ext(f)[1:], func(t *testing.T) {
-			l, ok := ForPath(f)
+	for _, f := range fixtures() {
+		t.Run(filepath.Base(f), func(t *testing.T) {
+			l, ok := forFile(f)
 			if !ok {
 				t.Fatalf("no language for %s", f)
 			}
@@ -105,6 +98,47 @@ func TestHighlightSnapshots(t *testing.T) {
 	}
 }
 
+// fixtures are the highlight fixtures: fixture.<ext>, or <name>.fixture for a file known by its name (or a
+// language by its name, when no file is).
+func fixtures() []string {
+	a, _ := filepath.Glob("testdata/highlight/fixture.*")
+	b, _ := filepath.Glob("testdata/highlight/*.fixture")
+	var out []string
+	for _, f := range append(a, b...) {
+		if !strings.HasSuffix(f, ".golden") {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// forFile finds a fixture's language among the built-ins, by its name or first line.
+func forFile(path string) (*Language, bool) {
+	b, _ := os.ReadFile(path)
+	first, _, _ := bytes.Cut(b, []byte("\n"))
+	name := strings.TrimSuffix(path, ".fixture")
+	if l, ok := Builtin().ForFile(name, first); ok {
+		return l, true
+	}
+	return Builtin().Language(filepath.Base(name))
+}
+
+// ED-11: "Every core grammar has a highlight golden fixture that parses cleanly."
+func TestEveryGrammarHasAFixture(t *testing.T) {
+	covered := map[string]bool{}
+	for _, f := range fixtures() {
+		if l, ok := forFile(f); ok {
+			covered[l.Name] = true
+		}
+	}
+	for _, l := range Builtin().Languages() {
+		// markdown_inline is parsed through markdown's injections, in markdown's fixture.
+		if l.Grammar != nil && !covered[l.Name] && l.Name != "markdown_inline" {
+			t.Errorf("%s has no fixture", l.Name)
+		}
+	}
+}
+
 func firstDiff(want, got string) string {
 	w, g := strings.Split(want, "\n"), strings.Split(got, "\n")
 	for i := 0; i < max(len(w), len(g)); i++ {
@@ -125,14 +159,14 @@ func firstDiff(want, got string) string {
 // TestIncrementalMatchesFullParse edits fixtures at random and checks that the incrementally updated tree
 // highlights exactly as a fresh parse of the same text does.
 func TestIncrementalMatchesFullParse(t *testing.T) {
-	files, _ := filepath.Glob("testdata/highlight/fixture.*")
+	files := fixtures()
 	r := rand.New(rand.NewPCG(1, 2))
 	inserts := []string{"x", " ", "\n", "(", ")", "\"", "{", "}", "//", "é", "0"}
 	for _, f := range files {
 		if strings.HasSuffix(f, ".golden") {
 			continue
 		}
-		l, _ := ForPath(f)
+		l, _ := forFile(f)
 		src, _ := os.ReadFile(f)
 		inc, _ := NewParser(l)
 		full, _ := NewParser(l)
@@ -203,7 +237,7 @@ func bigGo(t *testing.T, n int) (*Parser, *text.Buffer) {
 	for i := 0; strings.Count(big.String(), "\n") < n; i++ {
 		big.Write(bytes.ReplaceAll(body, []byte("Total"), []byte(fmt.Sprintf("Total%d", i))))
 	}
-	l, _ := Lookup("go")
+	l, _ := Builtin().Language("go")
 	p, err := NewParser(l)
 	if err != nil {
 		t.Fatal(err)
@@ -232,7 +266,7 @@ func typeInIdentifier(t *testing.T, buf *text.Buffer, line int) text.Change {
 func TestDocumentNeverBlocksTyping(t *testing.T) {
 	p, buf := bigGo(t, 2000)
 	p.Close()
-	l, _ := Lookup("go")
+	l, _ := Builtin().Language("go")
 	d, err := NewDocument(l, buf.Snapshot())
 	if err != nil {
 		t.Fatal(err)
@@ -281,7 +315,7 @@ func TestShiftSpans(t *testing.T) {
 // Highlighting a file a chunk at a time gives what highlighting it whole does.
 func TestChunkedHighlightsMatchWhole(t *testing.T) {
 	for _, name := range []string{"go", "lua", "markdown", "python", "rust", "typescript"} {
-		l, ok := Lookup(name)
+		l, ok := Builtin().Language(name)
 		if !ok {
 			continue
 		}

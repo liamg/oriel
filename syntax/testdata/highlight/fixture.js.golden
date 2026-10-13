@@ -1,0 +1,86 @@
+   1 | // prices
+     | ^^^^^^^^^ comment
+   2 | import { round } from "./round.js";
+     | ^^^^^^ keyword.import
+     |        ^ punctuation.bracket
+     |          ^^^^^ variable
+     |                ^ punctuation.bracket
+     |                  ^^^^ keyword.import
+     |                       ^^^^^^^^^^^^ string
+     |                                   ^ punctuation.delimiter
+   3 | 
+   4 | export class Tier {
+     | ^^^^^^ keyword.import
+     |        ^^^^^ keyword.type
+     |              ^^^^ type
+     |                   ^ punctuation.bracket
+   5 |   #rate = 1.5;
+     |   ^^^^^ variable.member
+     |         ^ operator
+     |           ^^^ number
+     |              ^ punctuation.delimiter
+   6 | 
+   7 |   constructor(name) {
+     |   ^^^^^^^^^^^ constructor
+     |              ^ punctuation.bracket
+     |               ^^^^ variable.parameter
+     |                   ^ punctuation.bracket
+     |                     ^ punctuation.bracket
+   8 |     this.name = name;
+     |     ^^^^ variable.builtin
+     |         ^ punctuation.delimiter
+     |          ^^^^ variable.member
+     |               ^ operator
+     |                 ^^^^ variable
+     |                     ^ punctuation.delimiter
+   9 |   }
+     |   ^ punctuation.bracket
+  10 | 
+  11 |   price(base) {
+     |   ^^^^^ function.method
+     |        ^ punctuation.bracket
+     |         ^^^^ variable.parameter
+     |             ^ punctuation.bracket
+     |               ^ punctuation.bracket
+  12 |     return round(base * this.#rate, 2);
+     |     ^^^^^^ keyword.return
+     |            ^^^^^ function.call
+     |                 ^ punctuation.bracket
+     |                  ^^^^ variable
+     |                       ^ operator
+     |                         ^^^^ variable.builtin
+     |                             ^ punctuation.delimiter
+     |                              ^^^^^ variable.member
+     |                                   ^ punctuation.delimiter
+     |                                     ^ number
+     |                                      ^ punctuation.bracket
+     |                                       ^ punctuation.delimiter
+  13 |   }
+     |   ^ punctuation.bracket
+  14 | }
+     | ^ punctuation.bracket
+  15 | 
+  16 | const gold = new Tier("gold");
+     | ^^^^^ keyword
+     |       ^^^^ variable
+     |            ^ operator
+     |              ^^^ keyword.operator
+     |                  ^^^^ constructor
+     |                      ^ punctuation.bracket
+     |                       ^^^^^^ string
+     |                             ^ punctuation.bracket
+     |                              ^ punctuation.delimiter
+  17 | console.log(`${gold.name}: ${gold.price(10)}`);
+     | ^^^^^^^ variable.builtin
+     |        ^ punctuation.delimiter
+     |         ^^^ function.method.call
+     |            ^ punctuation.bracket
+     |             ^ string
+     |              ^^^^^^^^^^^ none
+     |                         ^ punctuation.special
+     |                          ^^ string
+     |                            ^^^^^^^^^^^^^^^^ none
+     |                                            ^ punctuation.special
+     |                                             ^ string
+     |                                              ^ punctuation.bracket
+     |                                               ^ punctuation.delimiter

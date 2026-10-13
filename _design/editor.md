@@ -183,6 +183,22 @@ engine never feels like another binary running in a pane.
   edits made since. Plugins add a
   language with `syntax.Register(Language{Name, Wasm, Extensions, Queries})`, the same call the built-ins use.
 
+### Languages as plugins (ED-11)
+
+- A language is a registry contribution, `Registry.Language(registry.Language{Name, Extensions, Filenames, Shebangs,
+  Grammar, Queries, Source})`: a later one of a name shadows the earlier until disposed. `syntax` has no table of its
+  own; the app makes the registry's languages a `syntax.Set` (again when they change) and finds a file's language
+  by whole name, then extension, then the interpreter its `#!` line runs. A language with no grammar is queries
+  for others to inherit (`ecma`, `jsx`, `html_tags`), and inheriting and injecting look names up in the same set.
+- `builtin:languages` registers the core set: Go, TypeScript, TSX, JavaScript, Python, Rust, Lua, Markdown, C, C++,
+  Java, Ruby, Bash, JSON, YAML, TOML, HTML, CSS, SQL, Dockerfile, Make, Diff, Git commit and vimdoc (25 grammars,
+  5.4 MB gzipped; each decompressed on first use, and compiled modules kept by checksum). Their queries are
+  nvim-treesitter's at the pinned commit.
+- wazero compiles into `<user cache>/oriel` (`Config.CacheDir`), so a grammar compiles once per version: opening a
+  file from the cache takes about 12 ms, against 100 ms cold.
+- A local pack is `~/.config/oriel/languages/<name>/`: `language.toml` (`name`, `extensions`, `filenames`,
+  `shebangs`), `grammar.wasm` and `queries/*.scm`. It registers after the core set, so it can shadow one.
+
 ## Code units
 
 - A **unit** is a syntax node worth talking about: function, method, type, block, `if`/`switch`/`case`, loop, closure.

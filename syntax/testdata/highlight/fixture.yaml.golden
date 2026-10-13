@@ -1,0 +1,52 @@
+   1 | # CI
+     | ^^^^ comment
+   2 | name: test
+     | ^^^^ property
+     |     ^ punctuation.delimiter
+     |       ^^^^ string
+   3 | on:
+     | ^^ property
+     |   ^ punctuation.delimiter
+   4 |   push:
+     |   ^^^^ property
+     |       ^ punctuation.delimiter
+   5 |     branches: [main]
+     |     ^^^^^^^^ property
+     |             ^ punctuation.delimiter
+     |               ^ punctuation.bracket
+     |                ^^^^ string
+     |                    ^ punctuation.bracket
+   6 | jobs:
+     | ^^^^ property
+     |     ^ punctuation.delimiter
+   7 |   test:
+     |   ^^^^ property
+     |       ^ punctuation.delimiter
+   8 |     runs-on: ubuntu-latest
+     |     ^^^^^^^ property
+     |            ^ punctuation.delimiter
+     |              ^^^^^^^^^^^^^ string
+   9 |     steps:
+     |     ^^^^^ property
+     |          ^ punctuation.delimiter
+  10 |       - uses: actions/checkout@v4
+     |       ^ punctuation.delimiter
+     |         ^^^^ property
+     |             ^ punctuation.delimiter
+     |               ^^^^^^^^^^^^^^^^^^^ string
+  11 |       - run: go test ./...
+     |       ^ punctuation.delimiter
+     |         ^^^ property
+     |            ^ punctuation.delimiter
+     |              ^^ function.call
+     |                ^ string
+     |                 ^^^^ variable.parameter
+     |                     ^ string
+     |                      ^^^^^ variable.parameter
+  12 |         env:
+     |         ^^^ property
+     |            ^ punctuation.delimiter
+  13 |           CGO_ENABLED: "0"
+     |           ^^^^^^^^^^^ property
+     |                      ^ punctuation.delimiter
+     |                        ^^^ string

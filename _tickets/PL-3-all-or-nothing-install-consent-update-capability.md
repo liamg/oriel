@@ -33,6 +33,11 @@ depends_on: [PL-2, ED-11]
 
 Acceptance tests derived from the design docs above, written first, all passing in CI on macOS and Linux.
 
+## From ED-11
+
+- A grammar pack installs into `~/.config/oriel/languages/<name>/` (`language.toml`, `grammar.wasm`, `queries/`);
+  `builtin:languages` registers what's there at startup. Grammars have no host imports, so they need no capabilities.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

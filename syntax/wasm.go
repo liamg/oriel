@@ -18,18 +18,44 @@ var runtime struct {
 	err      error
 	rt       wazero.Runtime
 	mu       sync.Mutex
-	compiled map[*Language]wazero.CompiledModule
+	compiled map[[32]byte]wazero.CompiledModule // by the grammar's checksum
+	cacheDir string
+}
+
+// SetCacheDir keeps compiled grammars in dir, so each compiles once per version of it and of wazero, not once per
+// run. It takes effect only before the first grammar is used.
+func SetCacheDir(dir string) {
+	runtime.mu.Lock()
+	defer runtime.mu.Unlock()
+	runtime.cacheDir = dir
 }
 
 func wasmRuntime() (wazero.Runtime, error) {
 	runtime.once.Do(func() {
-		ctx := context.Background()
-		runtime.rt = wazero.NewRuntime(ctx)
-		runtime.compiled = map[*Language]wazero.CompiledModule{}
-		// The runtime's libc needs WASI; grammars get no files, environment or clock beyond the defaults.
-		_, runtime.err = wasi_snapshot_preview1.Instantiate(ctx, runtime.rt)
+		runtime.mu.Lock()
+		dir := runtime.cacheDir
+		runtime.mu.Unlock()
+		runtime.rt, runtime.err = newRuntime(dir)
+		runtime.compiled = map[[32]byte]wazero.CompiledModule{}
 	})
 	return runtime.rt, runtime.err
+}
+
+// newRuntime is a wazero runtime, compiling into a cache in dir when it's set.
+func newRuntime(dir string) (wazero.Runtime, error) {
+	ctx := context.Background()
+	cfg := wazero.NewRuntimeConfig()
+	if dir != "" {
+		cache, err := wazero.NewCompilationCacheWithDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		cfg = cfg.WithCompilationCache(cache)
+	}
+	rt := wazero.NewRuntimeWithConfig(ctx, cfg)
+	// The runtime's libc needs WASI; grammars get no files, environment or clock beyond the defaults.
+	_, err := wasi_snapshot_preview1.Instantiate(ctx, rt)
+	return rt, err
 }
 
 // module is one instance of a grammar's WASM: the tree-sitter runtime, the grammar and shim.c.
@@ -43,16 +69,20 @@ func instantiate(l *Language) (*module, error) {
 	if err != nil {
 		return nil, err
 	}
+	wasm, sum, err := l.load()
+	if err != nil {
+		return nil, err
+	}
 	ctx := context.Background()
 	runtime.mu.Lock()
-	cm, ok := runtime.compiled[l]
+	cm, ok := runtime.compiled[sum]
 	if !ok {
-		cm, err = rt.CompileModule(ctx, l.Wasm)
+		cm, err = rt.CompileModule(ctx, wasm)
 		if err != nil {
 			runtime.mu.Unlock()
 			return nil, fmt.Errorf("syntax: compiling %s: %w", l.Name, err)
 		}
-		runtime.compiled[l] = cm
+		runtime.compiled[sum] = cm
 	}
 	runtime.mu.Unlock()
 	m, err := rt.InstantiateModule(ctx, cm, wazero.NewModuleConfig().WithName("").WithStartFunctions("_initialize"))

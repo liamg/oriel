@@ -23,6 +23,7 @@ type Registry interface {
 	Option(o OptionSpec) Disposable // panics if the default doesn't fit the spec
 	View(id string, v View) Disposable
 	Theme(s theme.Source) Disposable
+	Language(l Language) Disposable
 	Input(e input.Engine) Disposable // an input engine the editor's input option can pick
 	Decorations(id string, p DecorationProvider) Disposable
 	Picker(s PickerSource) Disposable
@@ -38,6 +39,7 @@ type Registry interface {
 	ViewByID(id string) (View, bool)
 	Views() []string               // every registered view id, sorted
 	Themes() ([]theme.Source, int) // in registration order, a later theme with the same name winning; and a generation that moves when they change
+	Languages() ([]Language, int)  // the language that wins each name, in the order they were registered, and a generation
 	InputByID(id string) (input.Engine, bool)
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
 	Pickers() []PickerSource              // the winning source for each id, by Order then id
@@ -150,34 +152,37 @@ const sep = "\x00"
 type keymapKey struct{ mode, seq string }
 
 type reg struct {
-	mu       sync.Mutex
-	commands stacks[string, Command]
-	keymaps  stacks[keymapKey, Keymap]
-	prefixes map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
-	views    stacks[string, View]
-	inputs   stacks[string, input.Engine]
-	decor    stacks[string, DecorationProvider]
-	pickers  stacks[string, PickerSource]
-	help     []entry[HelpSource]
-	helpGen  int
-	live     stacks[string, func(c *ui.Ctx)]
-	themes   []entry[theme.Source]
-	themeGen int
-	options  *options
-	faults   faults
+	mu        sync.Mutex
+	commands  stacks[string, Command]
+	keymaps   stacks[keymapKey, Keymap]
+	prefixes  map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
+	views     stacks[string, View]
+	inputs    stacks[string, input.Engine]
+	decor     stacks[string, DecorationProvider]
+	pickers   stacks[string, PickerSource]
+	help      []entry[HelpSource]
+	helpGen   int
+	live      stacks[string, func(c *ui.Ctx)]
+	themes    []entry[theme.Source]
+	themeGen  int
+	languages stacks[string, Language]
+	langGen   int
+	options   *options
+	faults    faults
 }
 
 func New() Registry {
 	r := &reg{
-		commands: stacks[string, Command]{},
-		keymaps:  stacks[keymapKey, Keymap]{},
-		prefixes: map[keymapKey]int{},
-		views:    stacks[string, View]{},
-		inputs:   stacks[string, input.Engine]{},
-		decor:    stacks[string, DecorationProvider]{},
-		pickers:  stacks[string, PickerSource]{},
-		live:     stacks[string, func(c *ui.Ctx)]{},
-		options:  newOptions(),
+		commands:  stacks[string, Command]{},
+		keymaps:   stacks[keymapKey, Keymap]{},
+		prefixes:  map[keymapKey]int{},
+		views:     stacks[string, View]{},
+		inputs:    stacks[string, input.Engine]{},
+		decor:     stacks[string, DecorationProvider]{},
+		pickers:   stacks[string, PickerSource]{},
+		languages: stacks[string, Language]{},
+		live:      stacks[string, func(c *ui.Ctx)]{},
+		options:   newOptions(),
 	}
 	for _, o := range builtinOptions {
 		r.Option(o)

@@ -581,7 +581,7 @@ func (x *editorExt) highlights(p vim.Pane) *highlighter {
 	}
 	h := &highlighter{}
 	x.docs[b] = h
-	lang, ok := syntax.ForPath(p.Name())
+	lang, ok := languageFor(x.h, p.Name(), b.Snapshot().Bytes())
 	if !ok {
 		return h
 	}

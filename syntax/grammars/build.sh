@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Builds each grammar in manifest.tsv, with the tree-sitter runtime and shim.c, into <name>.wasm, from
-# sources fetched at their pinned revisions and checked against their sha256. Needs wasi-sdk at
-# $WASI_SDK_PATH (default /opt/wasi-sdk). Writes SHA256SUMS; CI rebuilds and checks the result matches.
+# Builds each grammar in manifest.tsv, with the tree-sitter runtime and shim.c, into <name>.wasm.gz, from
+# sources fetched at their pinned revisions and checked against their sha256. Needs wasi-sdk 34 at
+# $WASI_SDK_PATH (default /opt/wasi-sdk). SHA256SUMS is of the uncompressed .wasm; CI rebuilds and checks it
+# matches (gzip's own bytes vary with its version, so they aren't compared).
 set -euo pipefail
 cd "$(dirname "$0")"
 sdk=${WASI_SDK_PATH:-/opt/wasi-sdk}
@@ -32,7 +33,8 @@ grep -v '^#' manifest.tsv | while IFS=$'\t' read -r name repo rev sub sum; do
 	"$sdk/bin/clang" --target=wasm32-wasip1 -O2 -mexec-model=reactor -std=c11 -D_DEFAULT_SOURCE -DNDEBUG -ffile-prefix-map="$work"=. \
 		-DLANGUAGE_FN="tree_sitter_$name" -I"$rt/include" -I"$rt/src" -I"$src/$sub/src" \
 		-Wno-unused-parameter -Wno-unused-but-set-variable \
-		-o "$name.wasm" "${files[@]}"
-	echo "built $name.wasm"
+		-o "$work/$name.wasm" "${files[@]}"
+	gzip -9 -n -c "$work/$name.wasm" >"$name.wasm.gz"
+	echo "built $name.wasm.gz"
 done
-sha256 *.wasm >SHA256SUMS
+(cd "$work" && sha256 *.wasm) >SHA256SUMS

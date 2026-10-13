@@ -541,7 +541,7 @@ func (p *logPanel) source(loc string) *sourceFile {
 	if err != nil {
 		return nil
 	}
-	f := highlightAround(path, src, line, sourceContext, sourceContext)
+	f := highlightAround(p.h, path, src, line, sourceContext, sourceContext)
 	f.mark = true
 	f.modTime = st.ModTime()
 	p.files[loc] = f
@@ -549,7 +549,7 @@ func (p *logPanel) source(loc string) *sourceFile {
 }
 
 // highlightAround is the lines from before lines above line to after lines below it, highlighted.
-func highlightAround(path string, src []byte, line, before, after int) *sourceFile {
+func highlightAround(r registry.Registry, path string, src []byte, line, before, after int) *sourceFile {
 	all := strings.Split(string(src), "\n")
 	first := max(1, line-before)
 	last := min(len(all), line+after)
@@ -559,7 +559,7 @@ func highlightAround(path string, src []byte, line, before, after int) *sourceFi
 	}
 	f.lines = all[first-1 : last]
 	var hl []syntax.Span
-	if lang, ok := syntax.ForPath(path); ok {
+	if lang, ok := languageFor(r, path, src); ok {
 		if ps, err := syntax.NewParser(lang); err == nil {
 			ps.Parse(src)
 			start := offsetOfLine(all, first)

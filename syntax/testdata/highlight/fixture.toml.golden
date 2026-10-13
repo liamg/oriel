@@ -1,0 +1,31 @@
+   1 | # settings
+     | ^^^^^^^^^^ comment
+   2 | [editor]
+     | ^ punctuation.bracket
+     |  ^^^^^^ property
+     |        ^ punctuation.bracket
+   3 | line_numbers = "relative"
+     | ^^^^^^^^^^^^ property
+     |              ^ operator
+     |                ^^^^^^^^^^ string
+   4 | tab_width = 4
+     | ^^^^^^^^^ property
+     |           ^ operator
+     |             ^ number
+   5 | wrap = false
+     | ^^^^ property
+     |      ^ operator
+     |        ^^^^^ boolean
+   6 | 
+   7 | [[plugins]]
+     | ^^ punctuation.bracket
+     |   ^^^^^^^ property
+     |          ^^ punctuation.bracket
+   8 | id = "linear"
+     | ^^ property
+     |    ^ operator
+     |      ^^^^^^^^ string
+   9 | pinned = 2026-10-13
+     | ^^^^^^ property
+     |        ^ operator
+     |          ^^^^^^^^^^ string.special

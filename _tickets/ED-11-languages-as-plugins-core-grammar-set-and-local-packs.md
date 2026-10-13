@@ -2,7 +2,7 @@
 id: ED-11
 title: "Languages as plugins: a language contribution, a core grammar set, local grammar packs"
 phase: P3
-status: todo
+status: review
 area: Editor
 module: syntax
 depends_on: [ED-6, FW-3]
@@ -47,6 +47,12 @@ depends_on: [ED-6, FW-3]
 - The binary grows by under 8 MB for the core set.
 - Opening a file in an already-compiled language is under 20 ms from cache, measured in a test.
 - A grammar pack dropped into the languages directory is used for its files, and wins over a built-in of the same name.
+
+## As built
+
+- See editor.md, "Languages as plugins (ED-11)". The grammars build with wasi-sdk 34 (CI pins it), and CI compares
+  the rebuilt checksums (`SHA256SUMS`, of the uncompressed `.wasm`); a Go test checks the embedded `.wasm.gz` match.
+- Lua bindings for `Registry.Language` follow with PL-1; downloading packs, signatures and consent are PL-3's.
 
 ## Rules
 

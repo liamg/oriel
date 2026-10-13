@@ -194,7 +194,7 @@ func (x *editorExt) filePreview(name string, line int) ui.Node {
 			c.Text("err", err.Error(), ui.TextStyle{Color: c.Theme().C(theme.FgFaint)})
 			return
 		}
-		f := highlightAround(path, src, line+1, 3, 30)
+		f := highlightAround(x.h, path, src, line+1, 3, 30)
 		f.mark, f.title = line > 0, name
 		f.build(c, nil)
 	}}
@@ -216,7 +216,7 @@ func (x *editorExt) symbolsSource() registry.PickerSource {
 		}
 		s := &symbols{version: snap.Version()}
 		cache[b] = s
-		lang, ok := syntax.ForPath(name)
+		lang, ok := languageFor(x.h, name, snap.Bytes())
 		if !ok {
 			return nil
 		}

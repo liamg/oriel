@@ -43,6 +43,10 @@ the `scripting.md` sample `init.lua` runs as written
 - Bind `regex` (PCRE2) as `L.regex`: compile with flags, find, find all, replace with `$n`/`${name}`. ED-10's
   "the Lua API takes a PCRE2 pattern" is done when this is.
 
+## From ED-11
+
+- Bind `Registry.Language` (name, extensions, filenames, shebangs, grammar path, queries) as a Lua contribution.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

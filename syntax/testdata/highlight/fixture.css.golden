@@ -1,0 +1,64 @@
+   1 | /* theme */
+     | ^^^^^^^^^^^ comment
+   2 | :root {
+     | ^ punctuation.delimiter
+     |  ^^^^ attribute
+     |       ^ punctuation.bracket
+   3 |   --accent: #ffd23f;
+     |   ^^^^^^^^ variable
+     |           ^ punctuation.delimiter
+     |             ^ punctuation.delimiter
+     |              ^^^^^^ string
+     |                    ^ punctuation.delimiter
+   4 | }
+     | ^ punctuation.bracket
+   5 | 
+   6 | .tab.active > .edge,
+     | ^ punctuation.delimiter
+     |  ^^^ type
+     |     ^ punctuation.delimiter
+     |      ^^^^^^ type
+     |             ^ operator
+     |               ^ punctuation.delimiter
+     |                ^^^^ type
+     |                    ^ punctuation.delimiter
+   7 | a:hover {
+     | ^ tag
+     |  ^ punctuation.delimiter
+     |   ^^^^^ attribute
+     |         ^ punctuation.bracket
+   8 |   color: var(--accent);
+     |   ^^^^^ property
+     |        ^ punctuation.delimiter
+     |          ^^^ function
+     |             ^ punctuation.bracket
+     |              ^^^^^^^^ variable
+     |                      ^ punctuation.bracket
+     |                       ^ punctuation.delimiter
+   9 |   margin: 0 4px;
+     |   ^^^^^^ property
+     |         ^ punctuation.delimiter
+     |           ^ number
+     |             ^^^ number
+     |                ^ punctuation.delimiter
+  10 | }
+     | ^ punctuation.bracket
+  11 | 
+  12 | @media (max-width: 600px) {
+     | ^^^^^^ keyword.directive
+     |        ^ punctuation.bracket
+     |         ^^^^^^^^^ property
+     |                  ^ punctuation.delimiter
+     |                    ^^^^^ number
+     |                         ^ punctuation.bracket
+     |                           ^ punctuation.bracket
+  13 |   body { font-size: 14px; }
+     |   ^^^^ tag
+     |        ^ punctuation.bracket
+     |          ^^^^^^^^^ property
+     |                   ^ punctuation.delimiter
+     |                     ^^^^ number
+     |                         ^ punctuation.delimiter
+     |                           ^ punctuation.bracket
+  14 | }
+     | ^ punctuation.bracket

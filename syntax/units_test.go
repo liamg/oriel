@@ -7,7 +7,7 @@ import (
 
 func parse(t *testing.T, lang, file string) (*Parser, []byte) {
 	t.Helper()
-	l, ok := Lookup(lang)
+	l, ok := Builtin().Language(lang)
 	if !ok {
 		t.Fatalf("no %s", lang)
 	}
@@ -83,11 +83,12 @@ func TestFolds(t *testing.T) {
 
 // TestRegisterLanguage registers a language the way a plugin would, under a name of its own, and parses with it.
 func TestRegisterLanguage(t *testing.T) {
-	g, _ := Lookup("go")
-	Register(&Language{Name: "plugin-go", Wasm: g.Wasm, Extensions: []string{".gox"}, Queries: map[string]string{
-		"highlights": `(identifier) @variable ((identifier) @constant (#lua-match? @constant "^[A-Z][A-Z_]+$"))`,
-	}})
-	l, ok := ForPath("x.gox")
+	g, _ := Builtin().Language("go")
+	set := NewSet(append(Builtin().Languages(), &Language{Name: "plugin-go", Grammar: g.Grammar, Extensions: []string{".gox"},
+		Queries: map[string]string{
+			"highlights": `(identifier) @variable ((identifier) @constant (#lua-match? @constant "^[A-Z][A-Z_]+$"))`,
+		}})...)
+	l, ok := set.ForFile("x.gox", nil)
 	if !ok || l.Name != "plugin-go" {
 		t.Fatalf("ForPath = %v, %v", l, ok)
 	}

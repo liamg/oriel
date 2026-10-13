@@ -54,7 +54,9 @@ jobs:
           tar -xzf wasi-sdk.tar.gz -C "$RUNNER_TEMP"
           echo "WASI_SDK_PATH=$RUNNER_TEMP/wasi-sdk-34.0-x86_64-linux" >> "$GITHUB_ENV"
       - run: syntax/grammars/build.sh
-      - run: git diff --exit-code -- syntax/grammars
+      # The .wasm.gz bytes depend on gzip's version; what's built is checked by its checksums, and the Go tests
+      # check that what's embedded decompresses to the same.
+      - run: git diff --exit-code -- syntax/grammars/SHA256SUMS syntax/grammars/manifest.tsv
 
   vulncheck:
     runs-on: ubuntu-latest
