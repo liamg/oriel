@@ -41,10 +41,19 @@ func (c *Ctx) Rect(id ID) (render.Rect, bool) { return c.u.Rect(id) }
 func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID {
 	e := c.u.add(c.e, key, kBox)
 	e.style = st
+	stackFloat(e)
 	if body != nil {
 		body(&Ctx{u: c.u, e: e})
 	}
 	return e.id
+}
+
+// stackFloat lifts a float inside another float to at least that float's Z, so a popover in a page paints over it.
+func stackFloat(e *elem) {
+	if e.style.Float == nil || e.style.Z < 0 {
+		return
+	}
+	e.style.Z = max(e.style.Z, e.parent.layer())
 }
 
 // Guard adds a box like Box, but a panic in body doesn't escape: what body built is dropped, and fallback
@@ -167,14 +176,50 @@ func State[T any](c *Ctx, id ID) *T {
 	return v
 }
 
-// Focus moves keyboard focus to id without a focus ring: focus a widget moves itself isn't the keyboard's.
-func (c *Ctx) Focus(id ID) { c.u.in.focus, c.u.in.visible = id, false }
+// Focus moves keyboard focus to id once the frame is built, without a focus ring: focus a widget moves itself isn't
+// the keyboard's. Of the frame's calls the one from the highest layer wins, and none from under the float that holds
+// focus: a page behind a dialog can't take it back.
+func (c *Ctx) Focus(id ID) {
+	z := c.e.layer()
+	if r := &c.u.in.ask; !r.set || z >= r.z {
+		*r = focusAsk{id: id, z: z, set: true}
+	}
+}
+
+// layer is the Z of the float e is in, or 0 in the flow.
+func (e *elem) layer() int {
+	for ; e != nil; e = e.parent {
+		if e.style.Float != nil && e.style.Z >= 0 {
+			return e.style.Z
+		}
+	}
+	return 0
+}
+
+// PassKeys hands keys id was given and doesn't take to the nearest node above it that takes keys, next frame.
+func (c *Ctx) PassKeys(id ID, keys []render.KeyEvent) { c.u.PassKeys(id, keys) }
 
 // Blur drops keyboard focus.
 func (c *Ctx) Blur() { c.u.in.focus = 0 }
 
 // FocusNext moves keyboard focus to the next focusable node (back with -1), as last frame laid them out.
 func (c *Ctx) FocusNext(dir int) { c.u.FocusNext(dir) }
+
+// FocusWithin reports whether id or something inside it has keyboard focus, as last frame laid them out.
+func (c *Ctx) FocusWithin(id ID) bool { return c.u.in.focus != 0 && c.u.within(c.u.in.focus, id) }
+
+// Clipboard is the system clipboard, or one that holds nothing when the UI has none.
+func (c *Ctx) Clipboard() render.Clipboard {
+	if c.u.clip == nil {
+		return noClipboard{}
+	}
+	return c.u.clip
+}
+
+type noClipboard struct{}
+
+func (noClipboard) SetClipboard(string)           {}
+func (noClipboard) ReadClipboard() (string, bool) { return "", false }
 
 // Now is the UI's clock.
 func (c *Ctx) Now() time.Time { return c.u.now() }

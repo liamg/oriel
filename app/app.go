@@ -167,6 +167,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	cfg.Logs.Ring.OnWrite(poke)
 
 	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
+	l.ui.SetClipboard(sh.desktop)
 	l.ui.Title = "Oriel"
 	sh.keys, sh.modes, sh.ui = l.keys, l.modes, l.ui
 	sh.theme, sh.shot = func() *theme.Resolved { return l.theme }, l.shot
@@ -311,6 +312,12 @@ func (h *host) Pending() ext.Pending {
 		return h.sh.enginePending()
 	}
 	return ext.Pending{}
+}
+
+func (h *host) HoldPending() {
+	if k := h.sh.keys; k != nil {
+		k.Hold()
+	}
 }
 
 func (h *host) PaneRect(v layout.ViewRef) (render.Rect, bool) {
@@ -474,14 +481,16 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 // modes are the keymap modes keys resolve in, most specific first: a focused widget's own mode (an input's
 // "input", a list's "list"); or, with none, ViewKeyMode while a view in the layout has focus, or EmptyKeyMode while the
 // main area is empty, then the editor's "n"; then "global", for app chords that work everywhere.
-func (l *loop) modes() []string {
-	if m := l.ui.KeyMode(); m != "" {
+func (l *loop) modes() []string { return l.sh.keyModes() }
+
+func (sh *shell) keyModes() []string {
+	if m := sh.ui.KeyMode(); m != "" {
 		return []string{m, "global"}
 	}
-	if l.sh.layout.root.Focus != nil {
+	if sh.layout.root.Focus != nil {
 		return []string{ViewKeyMode, "n", "global"}
 	}
-	if len(l.sh.layout.root.Shown()) == 0 {
+	if len(sh.layout.root.Shown()) == 0 {
 		return []string{EmptyKeyMode, "n", "global"}
 	}
 	return []string{"n", "global"}
@@ -601,7 +610,7 @@ func buildWindow(c *ui.Ctx, reg registry.Registry, size render.Point) {
 // frameOverlay is --debug's frame time, at the bottom right.
 func frameOverlay(c *ui.Ctx, d time.Duration) {
 	at := render.Point{X: c.Size().X - 8, Y: c.Size().Y - 30}
-	c.Box("frametime", ui.Style{Pad: ui.PadXY(6, 2), Radius: 4, Fill: c.Theme().C(theme.BgOverlay), Z: 2000,
+	c.Box("frametime", ui.Style{Pad: ui.PadXY(6, 2), Radius: 4, Fill: c.Theme().C(theme.BgOverlay), Z: ui.LayerTooltip,
 		Float: &ui.Float{Point: &at, Self: render.Point{X: 1, Y: 1}}}, func(c *ui.Ctx) {
 		c.Text(nil, fmt.Sprintf("frame %.2f ms", float64(d.Microseconds())/1000), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10},
 			Color: c.Theme().C(theme.Brand)})

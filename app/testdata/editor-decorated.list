@@ -224,6 +224,6 @@ rect 44,231 12x12 fill #4cc9f0 radius 3
 rect 62,231 2x21 fill #4fe0a0
 rect 62,438 2x21 fill #4fe0a0
 rect 62,459 2x21 fill #4fe0a0
+path 23 segments stroke 1 #ff9b45
 rect 152.0625,232 8.40625x19 fill #ffd23f
 text ":" @152.0625,245.77 #141006 JetBrains Mono 13.5
-path 23 segments stroke 1 #ff9b45

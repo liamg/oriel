@@ -125,11 +125,11 @@ func spans(c *ui.Ctx, th *theme.Resolved, p vim.Pane, line int, ds []registry.De
 		col := tokenColour(th, d.Style, th.C(theme.Accent))
 		x, w := x0+float32(a)*m.charW, float32(z-a)*m.charW
 		if d.Kind == registry.Highlight {
-			c.Box(fmt.Sprint("hl", i), ui.Style{W: ui.Px(w), H: ui.Px(m.lineH), Fill: theme.WithAlpha(col, .22), Z: 1,
+			c.Box(fmt.Sprint("hl", i), ui.Style{W: ui.Px(w), H: ui.Px(m.lineH), Fill: theme.WithAlpha(col, .22), Z: ui.LayerContent + 1,
 				Float: &ui.Float{To: rowID, Offset: render.Point{X: x}}}, nil)
 			continue
 		}
-		c.Box(fmt.Sprint("ul", i), ui.Style{W: ui.Px(w), H: ui.Px(4), Z: 1, Float: &ui.Float{To: rowID,
+		c.Box(fmt.Sprint("ul", i), ui.Style{W: ui.Px(w), H: ui.Px(4), Z: ui.LayerContent + 1, Float: &ui.Float{To: rowID,
 			Offset: render.Point{X: x, Y: m.lineH - 5}}}, func(c *ui.Ctx) {
 			c.Paint("wave", ui.Px(w), ui.Px(4), func(f render.Frame, r render.Rect) {
 				var path render.Path

@@ -40,7 +40,7 @@ func (s vimState) Pending() string { return strings.Join(s.x.e.Pending(), "") }
 func (x *editorExt) builtinInputs() {
 	x.add(x.h.Input(vimInput{x}))
 	x.add(x.h.Input(plain.Engine{}))
-	x.add(x.h.Option(registry.OptionSpec{Name: InputOption, Type: registry.String, Default: "vim",
+	x.add(x.h.Option(registry.OptionSpec{Name: InputOption, Type: registry.String, Default: "vim", Choices: x.h.Inputs,
 		Scopes: registry.ScopeUser | registry.ScopeProject | registry.ScopeBuffer,
 		Help:   "The input engine: vim, plain (CUA keys), or one a plugin adds. Set per buffer to change one buffer's."}))
 }

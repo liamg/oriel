@@ -122,9 +122,10 @@ rect 0,0 1600x1000 fill #03050899
 rect 250,92 1100x660 fill #0c0c0b radius 10 stroke 1 #332f27
 clip 250,92 1100x660 r 10
   text "⌘" @268,127.54785 #ffd23f Inter 18
-  rect 296.01562,106 672.89435x30 fill #060606 radius 6 stroke 1 #332f27
+  rect 296.01562,106 672.89435x30 fill #060606 radius 6 stroke 1 #ffd23f
   clip 296.01562,106 672.89435x30 r 6
     text "pri" @306.01562,125.54712 #ece6d8 Inter 12.5
+    rect 306.01562,113 1x16 fill #ffd23f
   pop
   rect 978.91,112.729996 33.710022x16.539993 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
   text "ALL" @985.91,124.42 #ffd23f JetBrains Mono 9.5

@@ -231,6 +231,8 @@ func (w *Window) loop() {
 					transfer.TargetFilter{Target: tag, Type: "application/text"},
 					key.FocusFilter{Target: tag},
 					key.Filter{Focus: tag, Optional: key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand},
+					// Tab and ⇧Tab are gio's focus moves unless asked for by name; the app moves focus itself.
+					key.Filter{Focus: tag, Name: key.NameTab, Optional: key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand},
 					pointer.Filter{Target: tag, Kinds: pointer.Move | pointer.Drag | pointer.Press | pointer.Release | pointer.Scroll | pointer.Leave,
 						ScrollX: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}},
 				)

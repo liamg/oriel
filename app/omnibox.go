@@ -165,10 +165,9 @@ func (o *omnibox) build(c *ui.Ctx) {
 	o.sel = min(max(o.sel, 0), max(len(flat)-1, 0))
 	size := c.Size()
 	centre := render.Point{X: size.X / 2, Y: 92}
-	c.Box("omni", ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: 990, Fill: th.C(tScrimOmni), Interactive: true, Float: &ui.Float{Point: &render.Point{}},
-		Help: "shell/omnibox"}, func(c *ui.Ctx) {
+	if widget.Scrim(c, "omni", widget.ScrimOpts{Z: ui.LayerDialog, Fill: th.C(tScrimOmni), Help: "shell/omnibox"}, func(c *ui.Ctx) {
 		c.Column("box", ui.Style{W: ui.Px(min(omniW, size.X-32)), H: ui.Px(min(omniH, size.Y-110)), Fill: th.C(tOmniBg), Stroke: th.C(tOmniBorder),
-			Border: 1, Radius: 10, Clip: true, Trap: true, Z: 991, Float: &ui.Float{Point: &centre, Self: render.Point{X: .5}}, Role: ui.RoleDialog,
+			Border: 1, Radius: 10, Clip: true, Trap: true, Interactive: true, Float: &ui.Float{Point: &centre, Self: render.Point{X: .5}}, Role: ui.RoleDialog,
 			Label: "Search everything"}, func(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(58), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("cmd", "⌘", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 18}, Color: th.C(theme.Accent)})
@@ -219,7 +218,9 @@ func (o *omnibox) build(c *ui.Ctx) {
 					ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgFaint)})
 			})
 		})
-	})
+	}) {
+		o.open = false
+	}
 }
 
 var tScrimOmni = theme.Declare("omnibox.scrim", "alpha(#030508, 60%)")

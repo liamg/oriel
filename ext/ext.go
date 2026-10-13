@@ -47,6 +47,7 @@ type Host interface {
 	Redraw()                                       // asks for a frame; safe from any goroutine
 	Do(fn func())                                  // runs fn on the app's loop, before the next frame; safe from any goroutine
 	Pending() Pending                              // keys typed towards a longer mapping or command, for which-key
+	HoldPending()                                  // keeps the pending mapping waiting past keymap.timeoutlen, until the next key
 	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
 	CurrentTheme() *theme.Resolved                 // the theme the window is drawn in
 	// Shot is the window as it is now, built and drawn again on the CPU in th (its own theme when nil), in logical

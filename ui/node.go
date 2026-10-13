@@ -105,7 +105,7 @@ type Style struct {
 	Wheel   bool // takes the wheel itself: movement over it comes as Interaction.Scroll, for content it scrolls itself
 
 	Float *Float  // out of the flow, placed against another node or a point
-	Z     int     // floats paint in Z order, after the flow; one below 0 paints behind its parent's content instead
+	Z     int     // a float's layer (LayerPage…); one inside another float is at least that one's. Below 0 paints behind its parent's content
 	Fade  float32 // how faded it's drawn, 0 (opaque) to 1
 
 	// Motion (FW-13), on the motion spring: how the node comes in and goes (an Exit keeps it drawn, without input,
@@ -138,6 +138,20 @@ type Style struct {
 // or Point when To is zero, or the parent's rect when both are. Self's corner (0..1 on each axis)
 // goes on the anchor's corner At, plus Offset. A box anchored to a buffer position uses a Point
 // the editor publishes.
+// Layers are where floats paint, lowest first; a float in another float is at least at its layer, and over it. Add a
+// little to one (LayerOverlay + 1) to order floats within it.
+const (
+	LayerContent = 0   // in a view: highlights, a cursor
+	LayerPane    = 100 // floating panes and the drop-down terminal
+	LayerPage    = 200 // full-window pages: settings, the theme editor
+	LayerPopup   = 300 // menus and popovers, over what opened them
+	LayerToast   = 400 // notifications
+	LayerDialog  = 500 // dialogs over a scrim: the omnibox, pickers, help, modals
+	LayerOverlay = 600 // over everything: which-key, help markers, pick mode
+	LayerDrag    = 700 // a drag's target, glow and ghost
+	LayerTooltip = 800 // tooltips and debug readouts
+)
+
 type Float struct {
 	To     ID
 	Point  *render.Point

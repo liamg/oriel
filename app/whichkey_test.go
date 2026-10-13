@@ -27,6 +27,11 @@ var agentKeys = []registry.Keymap{
 
 func whichKeyApp(t *testing.T) *running {
 	t.Helper()
+	return whichKeyAppWith(t, func(h ext.Host) { h.Options().Set("keymap.timeout", registry.LayerUser, registry.At{}, false) })
+}
+
+func whichKeyAppWith(t *testing.T, opts func(h ext.Host)) *running {
+	t.Helper()
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("alpha beta\n"), 0o644)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -34,7 +39,7 @@ func whichKeyApp(t *testing.T) *running {
 	be := headless.New()
 	g := &grabHost{keys: agentKeys, setup: func(h ext.Host) {
 		h.Command(registry.Command{ID: "test.noop", Run: func(registry.Ctx, registry.Args) error { return nil }})
-		h.Options().Set("keymap.timeout", registry.LayerUser, registry.At{}, false)
+		opts(h)
 	}}
 	r := &running{t: t, store: eventstore.New(), dir: dir, done: make(chan error, 1)}
 	go func() {
@@ -117,4 +122,19 @@ func TestWhichKeySnapshot(t *testing.T) {
 	if !strings.Contains(s.frameText(), "+agent") {
 		t.Errorf("no +agent:\n%s", s.frameText())
 	}
+}
+
+// Once which-key shows a prefix, it waits for the next key past keymap.timeoutlen, as which-key.nvim does.
+func TestWhichKeyHoldsThePrefix(t *testing.T) {
+	r := whichKeyAppWith(t, func(h ext.Host) {
+		h.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 500*time.Millisecond)
+	})
+	r.typeKeys("<Space>")
+	r.waitText("shown after 300ms")
+	time.Sleep(time.Second)
+	if fs := r.win.Frames(); !strings.Contains(fs[len(fs)-1].Text(), "shown after 300ms") {
+		t.Fatalf("which-key went after keymap.timeoutlen:\n%s", fs[len(fs)-1].Text())
+	}
+	r.typeKeys("a")
+	r.waitText("Interrupt agent")
 }

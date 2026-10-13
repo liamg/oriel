@@ -122,13 +122,14 @@ func (w *whichKey) build(c *ui.Ctx) {
 	if len(es) == 0 {
 		return
 	}
+	w.h.HoldPending()
 	th := c.Theme()
 	size := c.Size()
 	at := render.Point{X: size.X / 2, Y: size.Y - 40}
 	mono := func(sz float32, tok theme.TokenID) ui.TextStyle {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: sz}, Color: th.C(tok)}
 	}
-	c.Column("wk", ui.Style{W: ui.Px(min(1180, size.X-32)), Fill: th.C(tOmniBg), Stroke: th.C(tOmniBorder), Border: 1, Radius: 10, Clip: true, Z: 970,
+	c.Column("wk", ui.Style{W: ui.Px(min(1180, size.X-32)), Fill: th.C(tOmniBg), Stroke: th.C(tOmniBorder), Border: 1, Radius: 10, Clip: true, Z: ui.LayerOverlay,
 		Float: &ui.Float{Point: &at, Self: render.Point{X: .5, Y: 1}}, Role: ui.RoleDialog, Label: "Keys that can follow"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(16, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			for i, k := range p.Keys {

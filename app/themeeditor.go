@@ -446,14 +446,14 @@ func (e *themeEditor) buildPick(c *ui.Ctx) {
 		return
 	}
 	pink := th.C(tThemePick)
-	c.Box("pick", ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: 1200, Interactive: true, Focusable: true, KeyMode: "themepick",
+	c.Box("pick", ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: ui.LayerOverlay, Interactive: true, Focusable: true, KeyMode: "themepick",
 		Cursor: render.CursorCrosshair, Float: &ui.Float{Point: &render.Point{}}, Help: "shell/theme#pick", Role: ui.RoleDialog,
 		Label: "Pick mode: click anything"}, func(c *ui.Ctx) {
 		if !in.Focused {
 			c.Focus(id)
 		}
 		top := render.Point{X: size.X / 2, Y: 52}
-		c.Row("banner", ui.Style{Pad: ui.PadXY(12, 5), Gap: 8, Cross: ui.Center, Fill: th.C(theme.BgBase), Stroke: pink, Border: 1, Radius: 12, Z: 1202,
+		c.Row("banner", ui.Style{Pad: ui.PadXY(12, 5), Gap: 8, Cross: ui.Center, Fill: th.C(theme.BgBase), Stroke: pink, Border: 1, Radius: 12, Z: ui.LayerOverlay + 2,
 			Float: &ui.Float{Point: &top, Self: render.Point{X: .5}}}, func(c *ui.Ctx) {
 			c.Text("t", "PICK MODE · CLICK ANYTHING · ESC", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold, Tracking: .1}, Color: pink})
 		})
@@ -462,10 +462,10 @@ func (e *themeEditor) buildPick(c *ui.Ctx) {
 		}
 		r := e.hoverR
 		at := r.Min
-		c.Box("outline", ui.Style{W: ui.Px(r.Dx() + 2), H: ui.Px(r.Dy() + 2), Stroke: pink, Border: 1, Radius: 3, Z: 1201,
+		c.Box("outline", ui.Style{W: ui.Px(r.Dx() + 2), H: ui.Px(r.Dy() + 2), Stroke: pink, Border: 1, Radius: 3, Z: ui.LayerOverlay + 1,
 			Float: &ui.Float{Point: &render.Point{X: at.X - 1, Y: at.Y - 1}}}, nil)
 		tag := render.Point{X: at.X, Y: max(0, at.Y-18)}
-		c.Row("tag", ui.Style{Pad: ui.PadXY(6, 2), Fill: pink, Radius: 3, Z: 1202, Float: &ui.Float{Point: &tag}}, func(c *ui.Ctx) {
+		c.Row("tag", ui.Style{Pad: ui.PadXY(6, 2), Fill: pink, Radius: 3, Z: ui.LayerOverlay + 2, Float: &ui.Float{Point: &tag}}, func(c *ui.Ctx) {
 			c.Text("n", e.hover, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.SemiBold}, Color: th.C(tThemePickInk)})
 		})
 	})
@@ -478,25 +478,10 @@ func (e *themeEditor) build(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	size := c.Size()
 	if e.picked == "" {
 		e.choose("accent")
 	}
-	boxID := c.Next("theme")
-	in := c.Interaction(boxID)
-	for _, k := range in.Keys {
-		switch k.Key {
-		case "Esc":
-			e.open = false
-			return
-		}
-	}
-	at := render.Point{Y: titleH}
-	c.Column("theme", ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y - titleH), Z: 900, Fill: th.C(theme.BgBase), Clip: true, Trap: true,
-		Focusable: true, KeyMode: "theme", Float: &ui.Float{Point: &at}, Role: ui.RoleDialog, Label: "Theme editor", Help: "shell/theme"}, func(c *ui.Ctx) {
-		if !in.Focused && !e.childFocused(c, boxID) {
-			c.Focus(boxID)
-		}
+	widget.Page(c, "theme", &e.open, widget.PageOpts{Top: titleH, KeyMode: "theme", Label: "Theme editor", Help: "shell/theme"}, func(c *ui.Ctx) {
 		c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			e.tokens(c, th)
 			c.Box("d1", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
@@ -511,16 +496,6 @@ func (e *themeEditor) build(c *ui.Ctx) {
 		})
 		e.footer(c, th)
 	})
-}
-
-// childFocused reports whether focus is inside the editor (an input, a slider), which keeps it there.
-func (e *themeEditor) childFocused(c *ui.Ctx, root ui.ID) bool {
-	u := e.h.UI()
-	if u == nil {
-		return false
-	}
-	f := u.Focused()
-	return f != 0 && f != root && strings.HasPrefix(u.Help(f), "shell/theme")
 }
 
 var (

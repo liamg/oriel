@@ -160,7 +160,9 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
   its SHA-256 in `~/.config/oriel/trusted.toml`, so a change needs trusting again (security.md, direnv-style). An
   edit from the page re-trusts it.
 - Controls: a toggle, choices (four or fewer inline, else a menu), a menu for a string with `Choices` (`ui.theme`:
-  the registered themes), and a field for numbers, durations and other strings, checked on Enter. "TOML" shows each row's line and its Lua. Undo is per change.
+  the registered themes; `editor.input`: the registered input engines), and a field for numbers, durations and other
+  strings. A number's field takes only what a number is typed with; a field is checked as it's typed (its type, then
+  `OptionSpec.Check`'s range), says why under it while it's wrong, sets on Enter, and Escape puts it back. "TOML" shows each row's line and its Lua. Undo is per change.
 - Not yet: colour, key, list and map types; `Restart`, `Resettable` and `Secret`; undo for reset section and reset all as one step.
 
 ## As built (ED-9)

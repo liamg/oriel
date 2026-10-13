@@ -243,11 +243,16 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
   with their content fading. Rendering has no scale transform, so menus move rather than scale (0.97 → 1). A key
   acts at once whatever is moving. Six things animating take about 0.1 ms a frame.
 - **Springs**: `c.Anim(key, target)` is critically damped (within 2% at 200 ms, settled by 500 ms). The UI reports
-  `NextFrame()` while anything moves or a tooltip is due, and the app redraws at 120 Hz until then. The option
+  `NextFrame()` while anything moves or a tooltip is due, and the app redraws at 120 Hz until then. A frame that read
+  input (a click, keys, the wheel) asks for the next one too, since what the input changed shows only then. The option
   `ui.reduced_motion` makes every spring jump.
 - `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer.
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
-  selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal` and `Toasts`. Each paints with component tokens
+  selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,
+  Escape closes it), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with
+  an `input.border.invalid` border. It edits with the platform's keys: on macOS ⌘←/→ (line), ⌥←/→ (word), ⌘⌫, ⌥⌫,
+  ⌘A/C/X/V; elsewhere Home/End, Ctrl+←/→, Ctrl+⌫/Del, Ctrl+A/C/X/V. The clipboard is the UI's (`UI.SetClipboard`,
+  `Ctx.Clipboard`). Each paints with component tokens
   it declares (`button.bg`, `input.border.focus`, `list.row.selected`, `menu.item.hover`, `modal.scrim`…), takes a
   help id, and has keyboard and mouse paths (see each widget's doc comment). Snapshots of a gallery of all of them
   are pinned in dark and light (display lists and PNGs), and a test fails if any interactive node lacks a help id.
@@ -259,9 +264,17 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
 - **Keys reach widgets** through the keymap layer: a focused node with a `KeyMode` ("input", "list", "menu"…) puts
   that mode first, then `global` (app chords such as `⌘K`); otherwise `n`, then `global`. Keys no mapping takes go
   to the focused node (`u.Key`), and a widget reads them from `Interaction.Keys`. So `L.keymap.set("list", "dd", …)`
-  is a list-local mapping, and nothing in `n` fires while an input has focus.
+  is a list-local mapping, and nothing in `n` fires while an input has focus. A widget hands keys it doesn't take
+  up to the nearest node above it with a `KeyMode` (`Ctx.PassKeys`), for its next frame: Escape on a focused button or
+  toggle reaches the page it's on.
 - A press focuses the nearest focusable node at or above it. `Style.Trap` (a modal) keeps focus inside while it's
-  up. Focus a widget moves itself (`Ctx.Focus`) draws no focus ring; keyboard focus does.
+  up. Focus a widget moves itself (`Ctx.Focus`) draws no focus ring; keyboard focus does. `Ctx.Focus` from under the
+  float that holds focus, or took it this frame, is ignored, so a page can't take focus back from a dialog over it.
+- A float's `Z` is a named layer, lowest first: `LayerContent` (highlights, a cursor), `LayerPane` (floating panes),
+  `LayerPage` (settings, the theme editor), `LayerPopup` (menus, popovers), `LayerToast`, `LayerDialog` (the omnibox,
+  pickers, help, modals), `LayerOverlay` (which-key, help markers, pick mode), `LayerDrag` and `LayerTooltip`; add a
+  little (`LayerOverlay + 1`) to order floats within one. A float inside another is at least at its layer and paints
+  over it, so a popover opened in a dialog is over the dialog. A test fails on a bare number for `Z`.
 - A right-click gives the node `Interaction.Context`; `ContextMenu` opens there and always ends with Help for the
   target's help id (`help.md`).
 - `ui.Func` lets a Go view build with the frame's `*Ctx` (and so use widgets and keep their state by id, through

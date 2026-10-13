@@ -105,10 +105,22 @@ func kbd(c *ui.Ctx, label string) {
 // catcher is a transparent float over the whole window, under a popup, that closes it when clicked.
 // It shares the popup's help.
 func catcher(c *ui.Ctx, key any, z int, help string) bool {
-	id := c.Next(key)
-	clicked := c.Interaction(id).Clicked
+	return Scrim(c, key, ScrimOpts{Z: z, Help: help}, nil)
+}
+
+type ScrimOpts struct {
+	Z    int
+	Fill render.Color
+	Help string
+}
+
+// Scrim is a float over the whole window, under the dialog body builds in it. It reports a click on the scrim itself,
+// which closes the dialog; the dialog is Interactive, so a click on it isn't one.
+func Scrim(c *ui.Ctx, key any, o ScrimOpts, body func(c *ui.Ctx)) bool {
+	clicked := c.Interaction(c.Next(key)).Clicked
 	size := c.Size()
-	c.Box(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: z, Interactive: true, Help: help, Float: &ui.Float{Point: &render.Point{}}}, nil)
+	c.Box(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: o.Z, Fill: o.Fill, Interactive: true, Help: o.Help,
+		Float: &ui.Float{Point: &render.Point{}}}, body)
 	return clicked
 }
 
@@ -148,7 +160,7 @@ func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResu
 		}
 		all = append(all, MenuItem{Label: "? Help", Shortcut: "K", Help: help})
 	}
-	if catcher(c, struct{ k any }{key}, 900, ContextMenuHelp) {
+	if catcher(c, struct{ k any }{key}, ui.LayerPopup, ContextMenuHelp) {
 		st.open = false
 		return res
 	}
@@ -159,7 +171,7 @@ func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResu
 	}
 	var chosen int
 	var closed bool
-	c.Box(key, ui.Style{Z: 901, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+	c.Box(key, ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
 		chosen, closed = Menu(c, "menu", all, MenuOpts{Width: w, Help: ContextMenuHelp})
 	})
 	switch {
@@ -189,7 +201,7 @@ func Popover(c *ui.Ctx, key any, anchor ui.ID, open *bool, o PopoverOpts, body f
 		st.shown = false
 		return
 	}
-	if hasKey(c.Interaction(id).Keys, "Esc") || catcher(c, struct{ k any }{key}, 800, o.Help) {
+	if hasKey(c.Interaction(id).Keys, "Esc") || catcher(c, struct{ k any }{key}, ui.LayerPopup, o.Help) {
 		*open, st.shown = false, false
 		return
 	}
@@ -201,7 +213,7 @@ func Popover(c *ui.Ctx, key any, anchor ui.ID, open *bool, o PopoverOpts, body f
 	if o.Width > 0 {
 		w = ui.Px(o.Width)
 	}
-	c.Column(key, ui.Style{W: w, Pad: ui.Pad(12), Gap: 8, Fill: col(c, tMenuBg), Stroke: col(c, tMenuBorder), Border: 1, Radius: 8, Z: 801,
+	c.Column(key, ui.Style{W: w, Pad: ui.Pad(12), Gap: 8, Fill: col(c, tMenuBg), Stroke: col(c, tMenuBorder), Border: 1, Radius: 8, Z: ui.LayerPopup,
 		Enter: dropIn, Exit: fade,
 		Float: &ui.Float{To: anchor, At: render.Point{Y: 1}, Offset: render.Point{Y: 4}}, Focusable: true, KeyMode: "popover", Help: o.Help,
 		Role: ui.RoleDialog, Label: o.Label}, body)

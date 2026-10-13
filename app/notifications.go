@@ -207,7 +207,7 @@ func (n *notices) toasts(c *ui.Ctx) {
 		return
 	}
 	corner := render.Point{X: c.Size().X - 16, Y: 12}
-	c.Column("toasts", ui.Style{Gap: 8, Z: 950, Float: &ui.Float{Point: &corner, Self: render.Point{X: 1}}, Role: ui.RoleGroup, Label: "Notifications"}, func(c *ui.Ctx) {
+	c.Column("toasts", ui.Style{Gap: 8, Z: ui.LayerToast, Float: &ui.Float{Point: &corner, Self: render.Point{X: 1}}, Role: ui.RoleGroup, Label: "Notifications"}, func(c *ui.Ctx) {
 		for _, row := range due {
 			n.toast(c, row, now)
 		}

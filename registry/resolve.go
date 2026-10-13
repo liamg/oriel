@@ -53,6 +53,9 @@ func (r *Resolver) Since() time.Time { return r.since }
 // Modes are the modes the pending keys are looked up in.
 func (r *Resolver) Modes() []string { return slices.Clone(r.modes) }
 
+// Hold stops the pending keys timing out until the next key comes: which-key holds them while it shows them.
+func (r *Resolver) Hold() { r.deadline = time.Time{} }
+
 // Cancel drops the pending keys, as Esc in a half-typed mapping does: nothing runs.
 func (r *Resolver) Cancel() {
 	r.pending, r.cand, r.candLen, r.deadline = nil, nil, 0, time.Time{}

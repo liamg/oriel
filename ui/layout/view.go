@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 var (
@@ -110,14 +111,14 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 			changed = dock(c, r, st, Right, content) || changed
 		})
 		for i, f := range r.Floats {
-			c.Column(fk{i}, ui.Style{W: ui.Px(f.Rect.Dx()), H: ui.Px(f.Rect.Dy()), Z: 500 + i, Fill: th.C(tDockBg), Stroke: th.C(tFloatEdge),
+			c.Column(fk{i}, ui.Style{W: ui.Px(f.Rect.Dx()), H: ui.Px(f.Rect.Dy()), Z: ui.LayerPane + i, Fill: th.C(tDockBg), Stroke: th.C(tFloatEdge),
 				Border: 1, Radius: 8, Clip: true, Float: &ui.Float{Point: &f.Rect.Min}, Role: ui.RoleRegion, Label: "Floating pane"}, func(c *ui.Ctx) {
 				changed = leaf(c, r, st, f.Leaf, content) || changed
 			})
 		}
 		if r.DropDown.Open && len(r.DropDown.Leaf.Tabs) > 0 {
 			size := c.Size()
-			c.Column("dropdown", ui.Style{W: ui.Px(size.X), H: ui.Px(r.DropDown.Size), Z: 600, Fill: th.C(tDropDownBg),
+			c.Column("dropdown", ui.Style{W: ui.Px(size.X), H: ui.Px(r.DropDown.Size), Z: ui.LayerPane + 50, Fill: th.C(tDropDownBg),
 				Stroke: th.C(tFloatEdge), Border: 1, Float: &ui.Float{Point: &render.Point{}}, Role: ui.RoleRegion, Label: "Drop-down"}, func(c *ui.Ctx) {
 				changed = leaf(c, r, st, r.DropDown.Leaf, content) || changed
 			})
@@ -265,7 +266,8 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
 	return changed
 }
 
-// tab is one tab: a click activates it, and dragging it past a few pixels starts a move.
+// tab is one tab: a click activates it, dragging it past a few pixels starts a move, and its ✕, shown while the
+// pointer is on it, closes it.
 func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 	th := c.Theme()
 	id := c.Next(v)
@@ -314,12 +316,22 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 	if title == "" {
 		title = v.String()
 	}
+	closed := false
 	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on}, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
 		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: fg})
 		})
+		if in.Inside && st.drag == nil {
+			c.Box("close", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: .5}, Self: render.Point{X: 1, Y: .5}, Offset: render.Point{X: -1, Y: 1}}}, func(c *ui.Ctx) {
+				closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: 13})
+			})
+		}
 	})
+	if closed {
+		r.Close(v)
+		return true
+	}
 	if st.drag != nil && st.drag.view == v && st.drag.moving {
 		st.drag.ok, st.drag.target, st.drag.targetR = target(c, r, st, st.drag.at)
 	}
@@ -390,15 +402,15 @@ func indicator(c *ui.Ctx, d *drag) {
 	h := c.Anim("h", d.targetR.Dy())
 	at := render.Point{X: x, Y: y}
 	// The glow sits behind the target, as a box-shadow does; the target's fill covers its inside.
-	c.Box("glow", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: 1999, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+	c.Box("glow", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
 		c.Paint("fx", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
 			f.Effect(render.Glow, r, 12, theme.WithAlpha(th.C(tDropEdge), 0.35*th.Effect("glow")))
 		})
 	})
-	c.Box("drop", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: 2000, Fill: th.C(tDrop), Stroke: th.C(tDropEdge), Border: 1.5, Radius: 6,
+	c.Box("drop", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Fill: th.C(tDrop), Stroke: th.C(tDropEdge), Border: 1.5, Radius: 6,
 		Float: &ui.Float{Point: &at}, Help: HelpDrop}, nil)
 	ghost := render.Point{X: d.at.X + 10, Y: d.at.Y + 10}
-	c.Row("ghost", ui.Style{Pad: ui.PadXY(10, 4), Z: 2001, Fill: th.C(tTabActive), Stroke: th.C(tDropEdge), Border: 1, Radius: 4,
+	c.Row("ghost", ui.Style{Pad: ui.PadXY(10, 4), Z: ui.LayerDrag + 1, Fill: th.C(tTabActive), Stroke: th.C(tDropEdge), Border: 1, Radius: 4,
 		Float: &ui.Float{Point: &ghost}}, func(c *ui.Ctx) {
 		title := d.view.Title
 		if title == "" {

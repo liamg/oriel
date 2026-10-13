@@ -318,7 +318,7 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 	}
 	b := p.Buf().Line(line)
 	x0 := gw + 4
-	c.Box(fmt.Sprint("over", line), ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH), Z: 2, Float: &ui.Float{To: rowID}}, func(c *ui.Ctx) {
+	c.Box(fmt.Sprint("over", line), ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH), Z: ui.LayerContent + 2, Float: &ui.Float{To: rowID}}, func(c *ui.Ctx) {
 		if sel {
 			a, z := p.VCol(line, from), p.VCol(line, to)
 			if eol {

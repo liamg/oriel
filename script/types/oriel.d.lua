@@ -18,9 +18,9 @@
 ---@field status oriel.status
 ---@field ui oriel.ui
 ---@field view oriel.view
----@field o table<string, any> Your settings, by name or vim alias, as init.lua sets them
----@field bo table<string, any> The current buffer's settings
----@field so table<string, any> The current session's settings
+---@field option table<string, any> Your settings, by name or vim alias, as init.lua sets them
+---@field buffer_option table<string, any> The current buffer's settings
+---@field session_option table<string, any> The current session's settings
 ---@field api { version: string }
 oriel = {}
 

@@ -128,7 +128,7 @@ func TestKeyboardDragAndDrop(t *testing.T) {
 // keyCommand types a key as the window does: through the focused node's key mode, else to the node.
 func (s *errScene) keyCommand(t *testing.T, key string) {
 	t.Helper()
-	if k, _ := s.reg.Lookup([]string{s.ui.KeyMode(), "global"}, keymap.Parse(key)); k != nil {
+	if k, _ := s.reg.Lookup(s.sh.keyModes(), keymap.Parse(key)); k != nil {
 		s.run(k.Command, k.Args)
 	} else {
 		s.ui.Key(fromNotation(key))

@@ -23,6 +23,7 @@ type ToggleOpts struct {
 func Toggle(c *ui.Ctx, key any, on bool, o ToggleOpts) bool {
 	id := c.Next(key)
 	in := c.Interaction(id)
+	passOn(c, id, in.Keys, activates)
 	track, side := col(c, tToggleOff), ui.Start
 	if on {
 		track, side = col(c, tToggleOn), ui.End

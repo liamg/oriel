@@ -66,12 +66,12 @@ func TestFutureAndMetatable(t *testing.T) {
 	defer vm.Close()
 	vm.Future("ledger", "RV-2")
 	store := map[string]any{}
-	vm.Metatable("o", func(_ *Args, k string) (any, error) { return store[k], nil }, func(a *Args, k string, v any) error {
+	vm.Metatable("option", func(_ *Args, k string) (any, error) { return store[k], nil }, func(a *Args, k string, v any) error {
 		store[k] = v
 		store["at"] = a.Where()
 		return nil
 	})
-	if err := vm.Load(Chunk{Name: "init.lua", Source: []byte("oriel.o.tabstop = 4\nlocal f = oriel.ledger.unread\n")}); err != nil {
+	if err := vm.Load(Chunk{Name: "init.lua", Source: []byte("oriel.option.tabstop = 4\nlocal f = oriel.ledger.unread\n")}); err != nil {
 		t.Fatal(err)
 	}
 	if store["tabstop"] != 4.0 || store["at"] != "init.lua:1" {
@@ -81,7 +81,7 @@ func TestFutureAndMetatable(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "oriel.ledger.unread isn't available until RV-2") {
 		t.Errorf("calling a future API: %v", err)
 	}
-	if keys := vm.Keys(""); strings.Join(keys, ",") != "ledger,o" {
+	if keys := vm.Keys(""); strings.Join(keys, ",") != "ledger,option" {
 		t.Errorf("keys %v", keys)
 	}
 }

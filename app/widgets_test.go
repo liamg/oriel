@@ -82,3 +82,35 @@ func funcName(fn *ast.FuncDecl) string {
 	}
 	return fn.Name.Name
 }
+
+// A float's Z is a named layer (ui.LayerPage, ui.LayerOverlay + 1…), never a bare number.
+func TestFloatsUseLayers(t *testing.T) {
+	var files []string
+	for _, dir := range []string{".", "../ui", "../ui/widget", "../ui/layout"} {
+		fs, _ := filepath.Glob(filepath.Join(dir, "*.go"))
+		files = append(files, fs...)
+	}
+	fset := token.NewFileSet()
+	for _, name := range files {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		f, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			kv, ok := n.(*ast.KeyValueExpr)
+			if !ok {
+				return true
+			}
+			if k, ok := kv.Key.(*ast.Ident); !ok || k.Name != "Z" {
+				return true
+			}
+			if lit, ok := kv.Value.(*ast.BasicLit); ok && lit.Kind == token.INT {
+				t.Errorf("%s: Z: %s; use a ui.Layer… constant", fset.Position(kv.Pos()), lit.Value)
+			}
+			return true
+		})
+	}
+}

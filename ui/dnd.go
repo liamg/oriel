@@ -153,7 +153,7 @@ func (u *UI) dragShown() {
 		at := render.Point{X: r.Min.X - out, Y: r.Min.Y - out}
 		glow := ring
 		glow.A = 0x24
-		c.Box(dragGlowKey{}, Style{W: Px(r.Dx() + 2*out), H: Px(r.Dy() + 2*out), Fill: glow, Stroke: ring, Border: 2, Radius: 6, Z: math.MaxInt32 - 1,
+		c.Box(dragGlowKey{}, Style{W: Px(r.Dx() + 2*out), H: Px(r.Dy() + 2*out), Fill: glow, Stroke: ring, Border: 2, Radius: 6, Z: LayerDrag,
 			Float: &Float{Point: &at}}, nil)
 	}
 	at := d.at
@@ -166,7 +166,7 @@ func (u *UI) dragShown() {
 	if label == "" {
 		label = d.data.Kind
 	}
-	c.Box(dragGhostKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: ring, Border: 1, Radius: 4, Z: math.MaxInt32,
+	c.Box(dragGhostKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: ring, Border: 1, Radius: 4, Z: LayerDrag + 1,
 		Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 12}}}, func(c *Ctx) {
 		c.Text(nil, label, u.opts.Tooltip)
 	})

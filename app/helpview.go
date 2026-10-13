@@ -237,7 +237,7 @@ func (v *helpView) markers(c *ui.Ctx) {
 		seen[n.Help] = true
 		at := render.Point{X: n.Rect.Max.X - 6, Y: n.Rect.Min.Y - 4}
 		if widget.Clickable(c, fmt.Sprint("m", i), ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 7, Fill: th.C(tHelpMarkerBg), Stroke: th.C(tHelpMarker),
-			Border: 1, Main: ui.Center, Cross: ui.Center, Z: 1100, Float: &ui.Float{Point: &at}, Tooltip: v.title(n.Help), Help: "shell/help",
+			Border: 1, Main: ui.Center, Cross: ui.Center, Z: ui.LayerOverlay, Float: &ui.Float{Point: &at}, Tooltip: v.title(n.Help), Help: "shell/help",
 			Label: "Help: " + v.title(n.Help)}, func(c *ui.Ctx) {
 			c.Text("q", "?", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold}, Color: th.C(tHelpMarker)})
 		}).Clicked {
@@ -264,10 +264,9 @@ func (v *helpView) page(c *ui.Ctx) {
 		}
 	}
 	label := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium, Tracking: .14}, Color: th.C(tHelpLabel)}
-	c.Box("helppage", ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: 1000, Fill: th.C(tScrimOmni), Interactive: true, Float: &ui.Float{Point: &render.Point{}},
-		Help: "shell/help"}, func(c *ui.Ctx) {
+	if widget.Scrim(c, "helppage", widget.ScrimOpts{Z: ui.LayerDialog, Fill: th.C(tScrimOmni), Help: "shell/help"}, func(c *ui.Ctx) {
 		c.Column("box", ui.Style{W: ui.Px(min(880, size.X-32)), H: ui.Px(min(800, size.Y-140)), Fill: th.C(tOmniBg), Stroke: th.C(tOmniBorder), Border: 1,
-			Radius: 10, Clip: true, Trap: true, Z: 1001, Focusable: true, KeyMode: "help", Float: &ui.Float{Point: &at, Self: render.Point{X: .5}},
+			Radius: 10, Clip: true, Trap: true, Focusable: true, KeyMode: "help", Float: &ui.Float{Point: &at, Self: render.Point{X: .5}},
 			Role: ui.RoleDialog, Label: "Help: " + v.title(v.cur), Help: "shell/help"}, func(c *ui.Ctx) {
 			if !c.Interaction(boxID).Focused {
 				c.Focus(boxID)
@@ -318,7 +317,9 @@ func (v *helpView) page(c *ui.Ctx) {
 				})
 			})
 		})
-	})
+	}) {
+		v.open = false
+	}
 }
 
 // body is a help id's section: its title, then its blocks, the generated ones filled from the registries.

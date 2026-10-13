@@ -76,6 +76,35 @@ type input struct {
 	help    string // a help page asked for since the last frame
 	dnd     *dragging
 	dropped map[ID]DragData
+	passed  map[ID][]render.KeyEvent // keys a node was given and didn't take, by that node
+	ask     focusAsk                 // Ctx.Focus's, this frame
+}
+
+type focusAsk struct {
+	id  ID
+	z   int // the layer it was asked from
+	set bool
+}
+
+// settleFocus moves focus where this frame asked, unless what has it is in a higher layer and still there.
+func (u *UI) settleFocus() {
+	a := u.in.ask
+	u.in.ask = focusAsk{}
+	if !a.set {
+		return
+	}
+	if e, ok := u.byID[a.id]; ok {
+		a.z = max(a.z, e.layer())
+	}
+	if e, ok := u.byID[u.in.focus]; ok && u.in.focus != 0 && e.layer() > a.z {
+		return
+	}
+	u.in.focus, u.in.visible = a.id, false
+}
+
+// pending reports whether input arrived for this frame's widgets to read.
+func (in *input) pending() bool {
+	return len(in.clicks) > 0 || len(in.keys) > 0 || len(in.context) > 0 || len(in.wheel) > 0 || len(in.dropped) > 0
 }
 
 // Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame.
@@ -219,6 +248,39 @@ func (u *UI) Key(ev render.KeyEvent) bool {
 	u.in.keys[id] = append(u.in.keys[id], ev)
 	u.in.visible = true
 	return true
+}
+
+// PassKeys hands keys id was given and doesn't take to the nearest node above it that takes keys, for its next frame:
+// Escape on a focused toggle reaches the page it's on.
+func (u *UI) PassKeys(id ID, keys []render.KeyEvent) {
+	if len(keys) == 0 {
+		return
+	}
+	if u.in.passed == nil {
+		u.in.passed = map[ID][]render.KeyEvent{}
+	}
+	u.in.passed[id] = append(u.in.passed[id], keys...)
+}
+
+// bubble gives this frame's passed keys to the nodes above that take keys, for the next frame.
+func (u *UI) bubble() {
+	for id, keys := range u.in.passed {
+		e, ok := u.byID[id]
+		if !ok {
+			continue
+		}
+		for e = e.parent; e != nil && e.style.KeyMode == ""; e = e.parent {
+		}
+		if e == nil {
+			continue
+		}
+		if u.in.keys == nil {
+			u.in.keys = map[ID][]render.KeyEvent{}
+		}
+		u.in.keys[e.id] = append(u.in.keys[e.id], keys...)
+		u.wake = u.now()
+	}
+	u.in.passed = nil
 }
 
 // KeyMode is the focused node's key mode, or "" when nothing focused takes keys.
