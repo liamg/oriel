@@ -1,4 +1,0 @@
-source: https://github.com/git/git
-ref: v2.39.5
-path: Documentation/gitattributes.txt, Documentation/gitignore.txt, COPYING
-license: GPL-2.0 (see COPYING); data for tests, no code linked

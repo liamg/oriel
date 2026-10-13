@@ -46,8 +46,9 @@ right section, visible with its source on the settings page; editing `.editorcon
 
 ## As built
 
-- See settings.md, "As built (ED-9)". Specs vendored: `spec/editorconfig`, `spec/editorconfig-core-test` (BSD) and
-  `spec/git` (gitattributes.txt and gitignore.txt at v2.39.5, GPL-2.0, as test data only).
+- See settings.md, "As built (ED-9)". Specs vendored: `spec/editorconfig` and
+  `spec/editorconfig-core-test` (BSD). `.gitattributes` is checked against `git check-attr` as the oracle, citing
+  gitattributes(5) by URL rather than vendoring git's GPL docs.
 - Decided: no other files (`.vscode/settings.json`, formatter configs) for now.
 - Left for their tickets: generated files collapsed in diffs and the review ledger and marked in the explorer
   (read `files.generated`); a `max_line_length` guide.

@@ -1,5 +1,5 @@
 source: https://github.com/neovim/neovim
 ref: v0.11.7
 commit: cd90ec7cdcdc55b617dfae5317b2c24b76b4148a
-path: runtime/doc/*.txt
+path: runtime/doc/*.txt (only the files a test quotes or mines, and uganda.txt for the licence; the rest is at the source)
 license: Vim license (see uganda.txt)

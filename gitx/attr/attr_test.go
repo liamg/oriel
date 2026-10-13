@@ -60,8 +60,7 @@ func format(v Value) string {
 
 // Every path in the fixture gets what `git check-attr -a` says, the oracle: patterns as gitignore(5) has them,
 // precedence by directory and $GIT_DIR/info/attributes, macros and the built-in binary.
-// ref:   git/gitattributes.txt#DESCRIPTION
-// quote: "When more than one pattern matches the path, a later line overrides an earlier line. This overriding is done per attribute."
+// ref:   oracle git check-attr; gitattributes(5), https://git-scm.com/docs/gitattributes
 func TestMatchesGitCheckAttr(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("no git")

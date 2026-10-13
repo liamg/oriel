@@ -29,10 +29,14 @@ like this" isn't a source.
 | terminal | xterm `ctlseqs`, ECMA-48, kitty keyboard and graphics protocol docs, Ghostty's VT docs | commit |
 | text | Unicode UAX #29 (graphemes), #14 (line breaks), #11 (width), plus the UCD data files | Unicode version |
 | colour | CSS Color 4 (OKLCH), WCAG 2 (contrast ratio) | commit |
-| git | `git-*` man pages for porcelain output we parse; gitattributes(5) and gitignore(5) | git version |
+| git | the `git` binary as the oracle (`git check-attr`, porcelain output); docs linked, not vendored | git version |
 | editor conventions | the EditorConfig specification and its core-test suite | commit |
 
 - `spec/` is data: no code from it is linked. Updating a pin is a PR that re-runs every referencing test.
+- Only what a test reads is vendored: the files a `ref` quotes, a suite a test runs (PCRE2's, toml-test,
+  editorconfig-core-test) or that tests are mined from, and the licence they need. The rest of a spec is linked
+  from its `SOURCE`. Where a tool is the oracle (`git check-attr`, headless nvim), the test cites `ref: oracle …`
+  and the doc's URL instead of a copy.
 - `refcheck` understands each format: vim `*tags*`, markdown headings, RFC section numbers, man page sections.
 
 ## The vim engine: keystroke tests

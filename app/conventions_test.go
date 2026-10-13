@@ -127,8 +127,8 @@ func TestEditorConfigApplies(t *testing.T) {
 }
 
 // .gitattributes: eol under .editorconfig's end_of_line, binary opens read-only, generated is marked.
-// ref:   git/gitattributes.txt#eol
-// quote: "This attribute sets a specific line-ending style to be used in the working directory."
+// ref:   oracle git check-attr: gitx/attr matches it (TestMatchesGitCheckAttr); gitattributes(5), "eol",
+// https://git-scm.com/docs/gitattributes#_eol
 func TestGitAttributesApply(t *testing.T) {
 	s, dir := conventionsScene(t)
 	at := s.open(t, "run.bat")

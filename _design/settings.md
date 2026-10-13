@@ -67,7 +67,7 @@ flowchart LR
   - A new key goes after the last key of the deepest `[table]` that holds it (with that key's indent), next to the
     dotted keys that define its table, or in a new `[table]` at the end. Line endings follow the file's.
   - Deleting a key removes its line (comment included); deleting a table removes its sections and everything under it.
-- Parse errors carry a line and column. Spec: `spec/toml` (TOML 1.0.0); suite: `spec/toml-test` (v1.5.0, the 1.0.0 file list).
+- Parse errors carry a line and column. Spec: TOML 1.0.0 (https://toml.io/en/v1.0.0); suite: `spec/toml-test` (v1.5.0, the 1.0.0 file list).
 
 ## Options (`OptionSpec`)
 
