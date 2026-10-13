@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
@@ -15,7 +16,9 @@ import (
 )
 
 func builtins(sh *shell) []ext.Extension {
-	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, &layoutExt{}, &introspect{}, &notices{sh: sh}}
+	sh.layout = &layoutExt{}
+	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &introspect{}, &statusLine{}, &notices{sh: sh},
+		&editorExt{sh: sh}}
 }
 
 // disposer is the usual way for an extension to undo what it registered.
@@ -58,6 +61,14 @@ var movePlacements = []struct {
 
 func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 	l.root, l.saved = layout.New(), map[string]layout.Snapshot{}
+	l.panes.Title = func(v layout.ViewRef) string {
+		if view, ok := h.ViewByID(v.ID); ok {
+			if t, ok := view.(registry.Titled); ok {
+				return t.Title(v.Instance)
+			}
+		}
+		return ""
+	}
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	focused := func() (layout.ViewRef, error) {
 		if l.root.Focus == nil {
@@ -79,10 +90,18 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			if n, ok := a["size"].(int); ok {
 				size = float64(n)
 			}
-			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title")}, place,
-				layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size)})
+			o := layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size)}
+			if b := str(a, "beside"); b != "" {
+				id, inst, _ := strings.Cut(b, "#")
+				o.Beside = &layout.ViewRef{ID: id, Instance: inst}
+			}
+			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title")}, place, o)
 		}},
-		{ID: "view.close", Title: "Close the focused view", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance}", Run: func(_ registry.Ctx, a registry.Args) error {
+			if id := str(a, "id"); id != "" {
+				l.root.Close(layout.ViewRef{ID: id, Instance: str(a, "instance")})
+				return nil
+			}
 			v, err := focused()
 			if err == nil {
 				l.root.Close(v)
@@ -165,7 +184,13 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 					c.Text("missing", "no view "+v.ID, ui.TextStyle{})
 					return
 				}
-				c.Column("view", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(10)}, func(c *ui.Ctx) {
+				pad := ui.Pad(10)
+				if _, edge := registry.As[registry.EdgeToEdge](view); edge {
+					pad = ui.Insets{}
+				}
+				vc := vc
+				vc.Instance, vc.Focused = v.Instance, focused
+				c.Column("view", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: pad}, func(c *ui.Ctx) {
 					c.Node(view.Build(vc))
 				})
 			})

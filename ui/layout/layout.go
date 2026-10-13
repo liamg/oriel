@@ -72,6 +72,74 @@ type Root struct {
 	Zoomed   *ViewRef       `json:"zoomed,omitempty"`
 	Focus    *ViewRef       `json:"focus,omitempty"`
 	prev     *ViewRef       // focus before the last FocusDir, which breaks its ties
+	onClose  []func(ViewRef)
+}
+
+// OnClose calls fn after each view is closed.
+func (r *Root) OnClose(fn func(ViewRef)) (cancel func()) {
+	r.onClose = append(r.onClose, fn)
+	i := len(r.onClose) - 1
+	return func() { r.onClose[i] = nil }
+}
+
+// Shown is the view each of main's leaves shows, top-left to bottom-right.
+func (r *Root) Shown() []ViewRef {
+	var out []ViewRef
+	var walk func(n *Node)
+	walk = func(n *Node) {
+		if n.leaf() {
+			if len(n.Tabs) > 0 {
+				out = append(out, n.Tabs[n.Active])
+			}
+			return
+		}
+		for _, k := range n.Kids {
+			walk(k)
+		}
+	}
+	walk(r.Main)
+	return out
+}
+
+// Row is the views shown side by side (or stacked) with v in the split holding v's leaf, in order, and v's place
+// among them. A place that's a split itself holds the zero ViewRef. ok is false when v's leaf isn't in a split.
+func (r *Root) Row(v ViewRef) (row []ViewRef, at int, ok bool) {
+	l := r.leafIn(r.Main, v)
+	if l == nil {
+		return nil, 0, false
+	}
+	parent, i := r.parentOf(r.Main, l)
+	if parent == nil {
+		return nil, 0, false
+	}
+	for _, k := range parent.Kids {
+		if k.leaf() && len(k.Tabs) > 0 {
+			row = append(row, k.Tabs[k.Active])
+		} else {
+			row = append(row, ViewRef{})
+		}
+	}
+	return row, i, true
+}
+
+// Swap exchanges where a and b are.
+func (r *Root) Swap(a, b ViewRef) {
+	wa, wb := r.Find(a), r.Find(b)
+	if wa == nil || wb == nil {
+		return
+	}
+	ia, ib := slices.Index(wa.Leaf.Tabs, a), slices.Index(wb.Leaf.Tabs, b)
+	wa.Leaf.Tabs[ia], wb.Leaf.Tabs[ib] = b, a
+}
+
+// Show makes v the tab its leaf shows, and focuses it.
+func (r *Root) Show(v ViewRef) {
+	w := r.Find(v)
+	if w == nil {
+		return
+	}
+	w.Leaf.Active = slices.Index(w.Leaf.Tabs, v)
+	r.Focus = &v
 }
 
 // New returns an empty layout: an empty main, closed docks.
@@ -305,6 +373,13 @@ func (r *Root) Close(v ViewRef) {
 		if len(l.Tabs) > 0 {
 			f := l.Tabs[l.Active]
 			r.Focus = &f
+		} else if shown := r.Shown(); len(shown) > 0 {
+			r.Focus = &shown[0]
+		}
+	}
+	for _, fn := range r.onClose {
+		if fn != nil {
+			fn(v)
 		}
 	}
 }

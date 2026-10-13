@@ -22,7 +22,7 @@ func main() {
 	if len(args) > 0 && args[0] == "app" {
 		args = args[1:]
 	}
-	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") || !subcommands[args[0]] {
 		runApp(args)
 		return
 	}
@@ -50,6 +50,9 @@ func runApp(args []string) {
 	}()
 	gio.Main()
 }
+
+// subcommands are the first arguments that aren't files to open.
+var subcommands = map[string]bool{"version": true, "worker": true, "dev": true}
 
 func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {

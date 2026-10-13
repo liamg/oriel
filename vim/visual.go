@@ -137,6 +137,7 @@ func (e *Engine) execVisual(c cmd) {
 			// The window's cursor moves so the same Visual area stays selected.
 			e.cur = cur
 		}
+	case e.scrollCmd(v, c.key, c.count):
 	case c.obj != "":
 		e.visualObject(v, c)
 	case visualCmds[c.key] || operators[c.key] != "":

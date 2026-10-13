@@ -161,6 +161,7 @@ func failingFrame(fs []Frame) (Frame, bool) {
 // Desktop is what Oriel asks of the OS: the clipboard and the browser.
 type Desktop interface {
 	SetClipboard(text string)
+	ReadClipboard() (string, bool)
 	OpenURL(url string) error
 }
 
@@ -175,6 +176,13 @@ func (d osDesktop) SetClipboard(text string) {
 	if d.clip != nil {
 		d.clip.SetClipboard(text)
 	}
+}
+
+func (d osDesktop) ReadClipboard() (string, bool) {
+	if d.clip == nil {
+		return "", false
+	}
+	return d.clip.ReadClipboard()
 }
 
 func (d osDesktop) OpenURL(url string) error {

@@ -21,6 +21,8 @@ type shell struct {
 	cfg     Config
 	events  *eventTail
 	desktop Desktop
+	layout  *layoutExt
+	poke    func() // asks the loop for a frame
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

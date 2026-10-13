@@ -26,8 +26,9 @@ var mockupSize = render.Point{X: 1600, Y: 1000}
 
 type clipboard struct{ text string }
 
-func (c *clipboard) SetClipboard(s string)  { c.text = s }
-func (c *clipboard) OpenURL(u string) error { return nil }
+func (c *clipboard) SetClipboard(s string)         { c.text = s }
+func (c *clipboard) ReadClipboard() (string, bool) { return c.text, c.text != "" }
+func (c *clipboard) OpenURL(u string) error        { return nil }
 
 // errScene is the app's built-ins over a store, drawn the way Run draws the window, on a fixed clock.
 type errScene struct {
@@ -54,13 +55,12 @@ func newErrScene(t *testing.T, crashDir string) *errScene {
 
 	s := &errScene{t: t, store: eventstore.New(), reg: registry.New(), clip: &clipboard{}}
 	cfg := Config{Store: s.store, Registry: s.reg, Logs: NewLogs(LogOpts{}), ConfigDir: conf, CrashDir: crashDir, Version: "v0.4.2"}
-	s.sh = &shell{cfg: cfg, events: newEventTail(500), desktop: s.clip}
+	s.sh = &shell{cfg: cfg, events: newEventTail(500), desktop: s.clip, poke: func() {}}
 	s.store.Subscribe(core.Filter{}, s.sh.events.add)
 	s.store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(s.store, cfg.Logs.Logger("core"), ev) })
 	s.exts = builtins(s.sh)
 	for _, e := range s.exts {
-		h := &host{Registry: registry.WithSource(s.reg, "builtin:"+e.Manifest().ID), store: s.store, source: "builtin:" + e.Manifest().ID,
-			logs: cfg.Logs, log: cfg.Logs.Logger("builtin:" + e.Manifest().ID)}
+		h := s.sh.host("builtin:" + e.Manifest().ID)
 		if err := e.Activate(context.Background(), h); err != nil {
 			t.Fatal(err)
 		}

@@ -39,3 +39,6 @@ func (s *Session) State() (vimtest.Buffer, string, error) {
 }
 
 func (s *Session) Close() error { return s.e.Close() }
+
+// Input types keys in vim notation, as nvim_input, and waits for nvim to take them.
+func (s *Session) Input(keys string) error { return s.e.feed(keys) }

@@ -198,3 +198,16 @@ func TestDiff(t *testing.T) {
 		}
 	}
 }
+
+func TestRangesAndTop(t *testing.T) {
+	cs, err := Parse("x.vt", strings.NewReader("=== a\ngiven:\n  {1..3}\n  |x\n  {9..10}\nkeys: x\nexpect: |a\ntop: 4\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(cs[0].Given.Lines, ","); got != "1,2,3,x,9,10" || cs[0].Given.Cursor != (Pos{3, 0}) {
+		t.Errorf("given = %q at %v", got, cs[0].Given.Cursor)
+	}
+	if cs[0].Top == nil || *cs[0].Top != 4 {
+		t.Errorf("top = %v", cs[0].Top)
+	}
+}

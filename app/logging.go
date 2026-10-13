@@ -74,8 +74,8 @@ func LevelFromEnv(def slog.Level) slog.Level {
 	return def
 }
 
-// ConfigFromFlags is the app's config from its command line: --log-level (or ORIEL_LOG) and --debug, with the
-// log, session logs and crash reports in their places on this platform.
+// ConfigFromFlags is the app's config from its command line: --log-level (or ORIEL_LOG), --debug, and files to
+// open, with the log, session logs and crash reports in their places on this platform.
 func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, error) {
 	fs := flag.NewFlagSet("oriel", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -102,5 +102,6 @@ func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, e
 		CrashDir: filepath.Join(state, "crashes"),
 		Version:  version,
 		Debug:    *debug,
+		Files:    fs.Args(),
 	}, nil
 }

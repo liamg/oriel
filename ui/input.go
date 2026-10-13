@@ -21,6 +21,7 @@ type Interaction struct {
 	Keys         []render.KeyEvent // keys typed at it since the last frame, while focused
 	Context      *render.Point     // where it was right-clicked since the last frame
 	Pointer      render.Point      // the pointer, wherever it is
+	Scroll       render.Point      // wheel movement over it since the last frame, for a box with Wheel
 	Mods         render.Mods       // the modifiers held at its last press
 }
 
@@ -58,6 +59,7 @@ type input struct {
 	clicks  map[ID]bool
 	keys    map[ID][]render.KeyEvent
 	context map[ID]render.Point
+	wheel   map[ID]render.Point
 	mods    render.Mods
 }
 
@@ -133,6 +135,14 @@ func (u *UI) topInteractive(p render.Point) ID {
 func (u *UI) scrollAt(p render.Point, d render.Point) {
 	for _, id := range u.Hit(p) {
 		f := u.flags[id]
+		if f.wheel {
+			if u.in.wheel == nil {
+				u.in.wheel = map[ID]render.Point{}
+			}
+			w := u.in.wheel[id]
+			u.in.wheel[id] = render.Point{X: w.X + d.X, Y: w.Y + d.Y}
+			return
+		}
 		if (f.scrollX && d.X != 0) || (f.scrollY && d.Y != 0) {
 			if !f.scrollX {
 				d.X = 0
@@ -162,6 +172,7 @@ func (u *UI) Interaction(id ID) Interaction {
 		FocusVisible: in.focus == id && in.visible && id != 0,
 		Keys:         in.keys[id],
 		Pointer:      in.pos,
+		Scroll:       in.wheel[id],
 		Mods:         in.mods,
 	}
 	if p, ok := in.context[id]; ok {

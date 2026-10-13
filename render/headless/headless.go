@@ -94,6 +94,12 @@ func (w *Window) SetClipboard(text string) {
 	w.clip = text
 }
 
+func (w *Window) ReadClipboard() (string, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.clip, w.clip != ""
+}
+
 // Clipboard is what was last put on the clipboard.
 func (w *Window) Clipboard() string {
 	w.mu.Lock()

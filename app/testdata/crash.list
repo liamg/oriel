@@ -1,14 +1,14 @@
 backdrop #060606
-rect 16,16 1568x944 fill #060606
-clip 16,16 1568x944 r 0
+rect 16,16 1568x942 fill #060606
+clip 16,16 1568x942 r 0
   rect 16,16 1568x30 fill #0c0c0b
   rect 16,46 1568x1 fill #24221d
 pop
-rect 0,976 1600x24 fill #0c0c0b
-text "✕" @12,991.95996 #b3ab99 JetBrains Mono 11
-text "0" @23.59375,991.95996 #b3ab99 JetBrains Mono 11
-text "⚠" @44.1875,991.95996 #b3ab99 JetBrains Mono 11
-text "0" @55.78125,991.95996 #b3ab99 JetBrains Mono 11
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
 rect 0,0 1600x1000 fill #030508b8
 rect 440,286.9455 720x426.109 fill #0c0c0b radius 10 stroke 1 #332f27
 clip 440,286.9455 720x426.109 r 10

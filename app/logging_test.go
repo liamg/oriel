@@ -31,6 +31,9 @@ func TestConfigFromFlags(t *testing.T) {
 	if cfg, _ := ConfigFromFlags(nil, "v1", io.Discard); cfg.Logs.Level.Level() != slog.LevelInfo {
 		t.Errorf("default level %v", cfg.Logs.Level.Level())
 	}
+	if cfg, _ := ConfigFromFlags([]string{"--debug", "a.go", "b/c.txt"}, "v1", io.Discard); len(cfg.Files) != 2 || cfg.Files[1] != "b/c.txt" {
+		t.Errorf("files = %q", cfg.Files)
+	}
 	if _, err := ConfigFromFlags([]string{"--log-level=loud"}, "v1", io.Discard); err == nil {
 		t.Error("took a level that doesn't exist")
 	}

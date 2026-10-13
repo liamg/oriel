@@ -102,6 +102,12 @@ func (e *Engine) runCommand(v *view, r exRange, name, args string) error {
 		bang = true
 		args = args[1:]
 	}
+	if ok, err := e.fileCmd(name, args, bang); ok {
+		return err
+	}
+	if hostCommands[name] && e.host.Command(name, strings.TrimSpace(args), bang) {
+		return nil
+	}
 	switch name {
 	case "d", "delete":
 		return e.exDelete(v, r, args)
@@ -167,6 +173,9 @@ func (e *Engine) runCommand(v *view, r exRange, name, args string) error {
 			order := e.order()
 			w = order[min(max(r.to, 0), len(order)-1)]
 		}
+		if name == "quit" && r.given == 0 {
+			return e.quit(bang)
+		}
 		if name == "quit" && len(e.order()) == 1 {
 			return nil
 		}
@@ -194,8 +203,16 @@ func (e *Engine) runCommand(v *view, r exRange, name, args string) error {
 		e.cur = Pos{r.to, v.firstNonBlank(r.to)}
 		return nil
 	}
+	if e.host.Command(name, strings.TrimSpace(args), bang) {
+		return nil
+	}
 	return errUnknownCommand.with(strings.TrimSpace(name + args))
 }
+
+// hostCommands are the ex commands the IDE shows in its own views when it has them: the buffer switcher, the
+// results panel and the notification history.
+var hostCommands = map[string]bool{"ls": true, "buffers": true, "files": true, "copen": true, "cwindow": true,
+	"lopen": true, "lwindow": true, "messages": true}
 
 // splitCommand splits a command line after its range into the command name and its arguments.
 func splitCommand(s string) (string, string) {
@@ -275,6 +292,8 @@ var exNames = []struct {
 	{"llast", 3}, {"labove", 3}, {"lbelow", 3}, {"lbefore", 4}, {"lafter", 3}, {"lnfile", 3}, {"lpfile", 3},
 	{"lNfile", 3}, {"lolder", 3}, {"lnewer", 4}, {"lhistory", 3}, {"lopen", 3}, {"lwindow", 2}, {"lclose", 3},
 	{"ldo", 3}, {"lvimgrep", 2},
+	{"write", 1}, {"wq", 2}, {"wall", 2}, {"wqall", 3}, {"xit", 1}, {"xall", 2}, {"exit", 3}, {"saveas", 3},
+	{"update", 2}, {"qall", 2}, {"quitall", 5}, {"messages", 3},
 }
 
 // exName finds the command an abbreviated name stands for.
@@ -605,6 +624,9 @@ func (e *Engine) deleteLines(v *view, from, to int) {
 		a--
 	}
 	e.do(e.group, text.Replace{Range: text.Range{Start: a, End: b}})
+	if from == 0 && to+1 >= v.lines() {
+		e.buffer.noLines = true
+	}
 }
 
 func (e *Engine) exMove(v *view, r exRange, args string) error {

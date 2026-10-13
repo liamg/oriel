@@ -57,6 +57,10 @@ var fixed = map[string]string{
 	"vim.missing-double-quote": "E114: Missing double quote: %s",
 	"vim.missing-single-quote": "E115: Missing single quote: %s",
 	"vim.undefined-variable":   "E121: Undefined variable: %s",
+	"vim.write-no-name":        "E32: No file name",
+	"vim.file-exists":          "E13: File exists (add ! to override)",
+	"vim.unsaved-file":         `E162: No write since last change for buffer "%s"`,
+	"vim.no-name-for-buffer":   "E141: No file name for buffer %s",
 	"vim.only-window":          "Already only one window",
 	"vim.newest-change":        "Already at newest change",
 	"vim.oldest-change":        "Already at oldest change",
@@ -133,6 +137,22 @@ func Notice(n edit.Notice) string {
 			return fmt.Sprintf(`"%s"%s --No lines in buffer--`, a[0], flags)
 		}
 		return fmt.Sprintf(`"%s"%s %s --%s%%--`, a[0], flags, plural(a[3], "line", "lines"), a[4])
+	case "vim.read-only-file":
+		return "E45: 'readonly' option is set (add ! to override)"
+	case "vim.write-failed":
+		return "E212: Can't open file for writing"
+	case "vim.read-failed":
+		return "E484: Can't open file " + a[0]
+	case "vim.opened-read-only":
+		return `"` + a[0] + `" [readonly]`
+	case "vim.write-changed":
+		return "WARNING: The file has been changed since reading it!!!"
+	case "vim.written":
+		isNew := ""
+		if a[1] == "1" {
+			isNew = "[New] "
+		}
+		return fmt.Sprintf(`"%s" %s%sL, %sB written`, a[0], isNew, a[2], a[3])
 	case "vim.error":
 		return n.Text
 	}

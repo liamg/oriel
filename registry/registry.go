@@ -30,6 +30,7 @@ type Registry interface {
 	// mapping that starts with keys.
 	Lookup(modes []string, keys []string) (exact *Keymap, more bool)
 	ViewByID(id string) (View, bool)
+	Views() []string        // every registered view id, sorted
 	Themes() []theme.Source // in registration order; a later theme with the same name wins
 	Options() Options
 
@@ -68,8 +69,22 @@ type View interface {
 	Build(ctx ViewCtx) ui.Node // pure: state in, tree out
 }
 
+// ViewCtx is what a view is built with: the window's size and, for a view open in the layout, which instance
+// of it this is and whether it has focus.
 type ViewCtx struct {
 	Width, Height float32
+	Instance      string
+	Focused       bool
+}
+
+// EdgeToEdge is a view drawn right to its pane's edges, with no padding around it: an editor, a terminal.
+type EdgeToEdge interface {
+	EdgeToEdge()
+}
+
+// Titled is a view whose instances name themselves, for their tabs: an editor names its buffer.
+type Titled interface {
+	Title(instance string) string
 }
 
 type ViewFunc func(ViewCtx) ui.Node
@@ -323,3 +338,14 @@ func (r *reg) ViewByID(id string) (View, bool) {
 }
 
 func (r *reg) Options() Options { return r.options }
+
+func (r *reg) Views() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]string, 0, len(r.views))
+	for id := range r.views {
+		out = append(out, id)
+	}
+	slices.Sort(out)
+	return out
+}

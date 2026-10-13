@@ -137,7 +137,7 @@ func (n *notices) Activate(_ context.Context, h ext.Host) error {
 	n.add(h.View(NotificationsView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "toasts", Fn: n.toasts}
 	})))
-	n.add(h.View(StatusLineView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	n.add(h.View("statusline.left.50-counts", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "status", Fn: n.status}
 	})))
 	n.add(h.View("log", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
@@ -249,7 +249,7 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 func (n *notices) status(c *ui.Ctx) {
 	st := n.h.State()
 	errs, warns := st.Counts(st.Focus)
-	c.Row("status", ui.Style{W: ui.Flex(1), H: ui.Px(24), Pad: ui.PadXY(12, 0), Gap: 14, Cross: ui.Center, Fill: c.Theme().C(tStatusBg)}, func(c *ui.Ctx) {
+	c.Row("status", ui.Style{H: ui.Flex(1), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		count := func(key, glyph string, k int, sev core.Severity, tone color.NRGBA) {
 			id := c.Next(key)
 			if c.Interaction(id).Clicked {

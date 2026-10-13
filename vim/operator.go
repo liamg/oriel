@@ -275,6 +275,9 @@ func (e *Engine) delete(v *view, r oprange, reg rune) {
 	e.cur = r.start
 	e.do(e.group, text.Replace{Range: text.Range{Start: from, End: to}})
 	nv := e.view()
+	if r.kind == linewise && r.start.Line == 0 && r.end.Line+1 >= v.lines() {
+		e.buffer.noLines = true
+	}
 	if r.kind == linewise {
 		e.cur = Pos{min(r.start.Line, nv.lines()-1), 0}
 		e.cur.Col = nv.firstNonBlank(e.cur.Line)

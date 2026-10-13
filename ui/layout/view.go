@@ -60,6 +60,7 @@ type viewState struct {
 	leaves map[*Node]ui.ID // this frame's leaves, for drop targets and ⌃W h/j/k/l
 	docks  map[Edge]ui.ID
 	resize *resize
+	title  func(ViewRef) string
 }
 
 type resize struct {
@@ -77,8 +78,10 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 	id := c.Next(key)
 	st := ui.State[viewState](c, id)
 	st.leaves, st.docks = map[*Node]ui.ID{}, map[Edge]ui.ID{}
+	st.title = nil
 	if panes != nil {
 		panes.leaves = st.leaves
+		st.title = panes.Title
 	}
 	changed := false
 	th := c.Theme()
@@ -282,6 +285,11 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 		}
 	}
 	title := v.Title
+	if st.title != nil {
+		if t := st.title(v); t != "" {
+			title = t
+		}
+	}
 	if title == "" {
 		title = v.String()
 	}
@@ -461,8 +469,12 @@ func abs(v float32) float32 {
 	return v
 }
 
-// Panes tracks where View drew each leaf, for FocusDir.
-type Panes struct{ leaves map[*Node]ui.ID }
+// Panes tracks where View drew each leaf, for FocusDir. Title, when set, names a view's tab; a view it gives no
+// name keeps its own.
+type Panes struct {
+	leaves map[*Node]ui.ID
+	Title  func(v ViewRef) string
+}
 
 // Rects is where each leaf was drawn in the latest frame.
 func (p *Panes) Rects(u *ui.UI) map[*Node]render.Rect {

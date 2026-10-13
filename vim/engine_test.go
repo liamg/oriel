@@ -83,6 +83,9 @@ func (t *testEngine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 	if q.Win {
 		r.Win = vimtest.Win{Cur: t.e.Window(), Count: t.e.Windows()}
 	}
+	if q.Top {
+		r.Top = t.e.Top() + 1
+	}
 	if q.Bufs {
 		r.Bufs = t.e.Buffers()
 	}

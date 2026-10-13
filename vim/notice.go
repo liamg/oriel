@@ -102,8 +102,24 @@ var (
 	errMissingDouble    = errKind("missing-double-quote", "Missing closing quote: %s")
 	errMissingSingle    = errKind("missing-single-quote", "Missing closing quote: %s")
 	errUndefinedVar     = errKind("undefined-variable", "Undefined variable: %s")
+	errWriteNoName      = errKind("write-no-name", "The buffer has no file name to write to")
+	errFileExists       = errKind("file-exists", "The file exists (add ! to overwrite it)")
+	errReadOnlyFile     = errKind("read-only-file", "%s is read-only: %s")
+	errWriteFailed      = errKind("write-failed", "Couldn't write %s: %s")
+	errReadFailed       = errKind("read-failed", "Couldn't read %s: %s")
+	errUnsavedFile      = errKind("unsaved-file", "%s has unsaved changes (add ! to discard them)")
+	errNoNameForBuffer  = errKind("no-name-for-buffer", "Buffer %s has no file name")
 
 	msgOnlyWindow   = infoKind("only-window", "There's only one window")
+	msgReadOnlyFile = infoKind("opened-read-only", "Opened %s read-only: %s")
+	msgWritten      = kind(noticeKind{id: "vim.written", sev: edit.Info, textf: func(a []string) string {
+		what := "Wrote "
+		if a[1] == "1" {
+			what = "Wrote new file "
+		}
+		return what + a[0] + ": " + count(a[2], "line", "lines") + ", " + count(a[3], "byte", "bytes")
+	}})
+	askWriteChanged = kind(noticeKind{id: "vim.write-changed", sev: edit.Question, text: "%s changed on disk since it was read. Write it anyway? (y/n)"})
 	msgNewestChange = infoKind("newest-change", "Already at the newest change")
 	msgOldestChange = infoKind("oldest-change", "Already at the oldest change")
 	msgFewerLines   = infoKind("fewer-lines", "%s fewer lines")

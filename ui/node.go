@@ -102,6 +102,7 @@ type Style struct {
 	Clip    bool
 	ScrollX bool // scroll offsets persist by id; scrolling clips
 	ScrollY bool
+	Wheel   bool // takes the wheel itself: movement over it comes as Interaction.Scroll, for content it scrolls itself
 
 	Float *Float // out of the flow, placed against another node or a point
 	Z     int    // floats paint in Z order, after the flow

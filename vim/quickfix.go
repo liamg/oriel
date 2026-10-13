@@ -450,15 +450,7 @@ func (e *Engine) qfWindow(loc bool, cmd string) error {
 		}
 	}
 	// The quickfix window goes below every other window, across the whole screen.
-	nf := &frame{win: w}
-	if e.layout.win == nil && !e.layout.vertical {
-		nf.parent = e.layout
-		e.layout.children = append(e.layout.children, nf)
-	} else {
-		root := &frame{children: []*frame{e.layout, nf}}
-		e.layout.parent, nf.parent = root, root
-		e.layout = root
-	}
+	e.layout.Bottom(WindowID(w.id))
 	e.refreshQfBuf(s)
 	e.enter(w)
 	return nil

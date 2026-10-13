@@ -62,9 +62,11 @@ type Window interface {
 	Close()
 }
 
-// Clipboard is a window that can put text on the system clipboard.
+// Clipboard is a window's access to the system clipboard. ReadClipboard is what it held when the window last
+// looked, which it does whenever it takes a key or gets focus.
 type Clipboard interface {
 	SetClipboard(text string)
+	ReadClipboard() (string, bool)
 }
 
 // Frame is one frame's drawing. Rects and fills snap to device pixels; paths and lines don't,

@@ -23,6 +23,7 @@ import (
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/layout"
 )
 
 // The views the window is made of. Each is an ordinary view: override one to replace that part of the screen.
@@ -41,8 +42,10 @@ type Config struct {
 	ConfigDir  string            // ~/.config/oriel unless set; user themes live in its themes/
 	CrashDir   string            // crash reports are written to and offered from here; none if ""
 	Version    string
-	Desktop    Desktop // the clipboard and the browser; the window's, or the OS's, if nil
-	Debug      bool    // oriel --debug: the frame-time overlay
+	Desktop    Desktop  // the clipboard and the browser; the window's, or the OS's, if nil
+	Debug      bool     // oriel --debug: the frame-time overlay
+	Files      []string // open in the editor at start
+	WorkDir    string   // where relative paths are; the current directory if ""
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -78,7 +81,14 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	defer cfg.Store.Subscribe(core.Filter{}, events.add)()
 	defer cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })()
 	defer cfg.Registry.OnFault(func(f registry.Fault) { cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs)}) }).Dispose()
-	sh := &shell{cfg: cfg, events: events}
+	dirty := make(chan struct{}, 1)
+	poke := func() {
+		select {
+		case dirty <- struct{}{}:
+		default:
+		}
+	}
+	sh := &shell{cfg: cfg, events: events, poke: poke}
 	defer func() {
 		if v := recover(); v != nil {
 			err = sh.crashed(v, debug.Stack())
@@ -91,9 +101,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		}
 	}()
 	activate := func(e ext.Extension, source string) error {
-		h := &host{Registry: registry.WithSource(cfg.Registry, source), store: cfg.Store, source: source, logs: cfg.Logs,
-			log: cfg.Logs.Logger(source)}
-		if err := e.Activate(ctx, h); err != nil {
+		if err := e.Activate(ctx, sh.host(source)); err != nil {
 			return fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
 		}
 		active = append(active, e)
@@ -120,13 +128,6 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		sh.desktop = windowDesktop(w)
 	}
 
-	dirty := make(chan struct{}, 1)
-	poke := func() {
-		select {
-		case dirty <- struct{}{}:
-		default:
-		}
-	}
 	cancel := cfg.Store.Subscribe(core.Filter{}, func(core.Event) { poke() })
 	defer cancel()
 	cfg.Logs.Ring.OnWrite(poke)
@@ -160,6 +161,11 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			}
 			tree = next
 		}
+		if d := l.wake(); !d.IsZero() {
+			timer.Reset(time.Until(d))
+		} else {
+			timer.Stop()
+		}
 		select {
 		case a := <-acts:
 			l.ui.Act(ui.ID(a.ID), a.Action)
@@ -175,11 +181,6 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			}
 			l.handle(ctx, ev)
 		}
-		if d := l.wake(); !d.IsZero() {
-			timer.Reset(time.Until(d))
-		} else {
-			timer.Stop()
-		}
 	}
 }
 
@@ -189,6 +190,25 @@ type host struct {
 	source string
 	logs   *Logs
 	log    *slog.Logger
+	sh     *shell
+}
+
+// host is what an extension registered as source sees.
+func (sh *shell) host(source string) *host {
+	return &host{Registry: registry.WithSource(sh.cfg.Registry, source), store: sh.cfg.Store, source: source, logs: sh.cfg.Logs,
+		log: sh.cfg.Logs.Logger(source), sh: sh}
+}
+
+func (h *host) Layout() *layout.Root { return h.sh.layout.root }
+func (h *host) Redraw()              { h.sh.poke() }
+
+func (h *host) PaneRect(v layout.ViewRef) (render.Rect, bool) {
+	w := h.sh.layout.root.Find(v)
+	if w == nil {
+		return render.Rect{}, false
+	}
+	r, ok := h.sh.layout.rects[w.Leaf]
+	return r, ok
 }
 
 func (h *host) Session(id core.SessionID) (core.Session, bool) { return h.store.Session(id) }

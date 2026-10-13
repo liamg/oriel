@@ -82,7 +82,7 @@ type UI struct {
 
 type flags struct {
 	interactive, focusable, disabled bool
-	scrollX, scrollY                 bool
+	scrollX, scrollY, wheel          bool
 	cursor                           render.Cursor
 	tooltip, help, keyMode           string
 	trap                             bool
@@ -118,7 +118,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.floats = u.floats[:0]
 	u.animating, u.wake = false, time.Time{}
 	build(&Ctx{u: u, e: u.root})
-	u.in.clicks, u.in.keys, u.in.context = nil, nil, nil
+	u.in.clicks, u.in.keys, u.in.context, u.in.wheel = nil, nil, nil, nil
 	u.tooltip()
 	for axis := range 2 {
 		u.fit(u.root, axis)
@@ -147,7 +147,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 				parent = e.parent.id
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
-				scrollX: s.ScrollX, scrollY: s.ScrollY, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
+				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
 				trap: s.Trap, z: s.Z, parent: parent}
 		}
 	}

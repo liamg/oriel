@@ -159,6 +159,32 @@ func (g guardedView) Build(vc ViewCtx) ui.Node {
 	}}
 }
 
+func (g guardedView) Unwrap() View { return g.v }
+
+// As is v as a T, looking through the guard around it: As[EdgeToEdge](view).
+func As[T any](v View) (T, bool) {
+	for {
+		if t, ok := v.(T); ok {
+			return t, true
+		}
+		u, ok := v.(interface{ Unwrap() View })
+		if !ok {
+			var zero T
+			return zero, false
+		}
+		v = u.Unwrap()
+	}
+}
+
+func (g guardedView) Title(instance string) (title string) {
+	t, ok := g.v.(Titled)
+	if !ok {
+		return ""
+	}
+	Call(func() error { title = t.Title(instance); return nil })
+	return title
+}
+
 func offNode(id string, err error) ui.Node {
 	return ui.TextNode(fmt.Sprintf("view %s is turned off: %v", id, err))
 }
