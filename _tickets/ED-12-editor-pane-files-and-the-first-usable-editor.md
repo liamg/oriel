@@ -5,12 +5,12 @@ phase: P3
 status: todo
 area: Editor
 module: editor
-depends_on: [ED-4, ED-6, FW-6, FW-9]
+depends_on: [ED-4, ED-6, FW-6, FW-9, SH-13]
 ---
 
 # ED-12 · Editor pane and files: open, edit, save — the first usable editor
 
-**Phase** 3 · **After** [ED-4](ED-4-macros-folds-splits-buffers-quickfix.md), [ED-6](ED-6-tree-sitter-highlighting-folds-outline-code-unit.md), [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md), [FW-9](FW-9-layout-tree-and-tab-groups-drag-any-pane-to-any-.md) · **Unblocks** everything that shows a buffer (ED-7, SH-5, FG-1, LS-1…)
+**Phase** 3 · **After** [ED-4](ED-4-macros-folds-splits-buffers-quickfix.md), [ED-6](ED-6-tree-sitter-highlighting-folds-outline-code-unit.md), [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md), [FW-9](FW-9-layout-tree-and-tab-groups-drag-any-pane-to-any-.md), [SH-13](SH-13-errors-notifications-and-the-log-panel.md) · **Unblocks** everything that shows a buffer (ED-7, SH-5, FG-1, LS-1…)
 
 ## Design
 
@@ -40,7 +40,7 @@ Threads, the minimap, the agent dock and the side panels are other tickets.
   in the UI is seen by the engine. One model, not two. `zt`/`zz`/`zb`, `CTRL-E`/`CTRL-Y`, `CTRL-D`/`CTRL-U`/`CTRL-F`/`CTRL-B`
   and `H`/`M`/`L` use the pane's real height.
 - **Part of the IDE, not a program inside it** (`editor.md`):
-  - the engine's notices go through the IDE's notification handling (status line, toasts, history), with Oriel's
+  - the engine's notices go through the IDE's notification handling (SH-13, `errors.md`), with Oriel's
     wording and no vim error numbers; `:messages` opens the history, and `Question` notices are the IDE's confirm
   - the `:` line is an IDE input with completion of ex commands, buffers and files, and it also runs palette commands
   - buffers are the IDE's open files and tabs: `:e`, `:b`, `:bd` and `CTRL-^` open, switch and close tabs, and `:ls`

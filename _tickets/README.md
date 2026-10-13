@@ -66,10 +66,12 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 
 ### Phase 3 · shell
 
-21. [ED-12](ED-12-editor-pane-files-and-the-first-usable-editor.md): Editor pane and files: open, edit, save, the first usable editor · after ED-4, ED-6, FW-6, FW-9
+20. [SH-13](SH-13-errors-notifications-and-the-log-panel.md): Errors, notifications and the log panel: toasts, status line, :Log, slog, panics, crash reports · after FW-2, FW-6, FW-9, ED-6
+21. [ED-12](ED-12-editor-pane-files-and-the-first-usable-editor.md): Editor pane and files: open, edit, save, the first usable editor · after ED-4, ED-6, FW-6, FW-9, SH-13
 22. [ED-5](ED-5-plain-engine-and-the-input-engine-interface-emac.md): plain engine and the input.Engine interface (emacs as a plugin) · after ED-2, FW-3
 23. [ED-7](ED-7-decorations-between-lines-threads-explain-cards-.md): Decorations between lines: threads, explain cards, diffs, virtual text · after ED-1, FW-6
 24. [PL-1](PL-1-lua-config-and-plugins-hooks-inspect-luals-types.md): Lua config and plugins, :Hooks, :Inspect, LuaLS types · after FW-3
+24. [PL-12](PL-12-lua-errors-tracebacks-diagnostics-and-turning-off-failing-hooks.md): Lua errors: tracebacks, diagnostics in the file, turning off failing hooks · after PL-1, SH-13
 25. [SH-2](SH-2-session-tabs-with-status-dots-and-1-9.md): Session tabs with status dots and ⌘1–9 · after FW-6, FW-2
 26. [SH-4](SH-4-k-omnibox-sessions-commands-files-symbols-ticket.md): ⌘K omnibox (sessions, commands, files, symbols, tickets, PRs) with prefixes · after FW-6, FW-3
 27. [SH-5](SH-5-pickers-files-grep-k-keymaps-with-preview-and-ac.md): Pickers (␣␣ files, ␣/ grep, ␣k keymaps…) with preview and actions · after SH-4
