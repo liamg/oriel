@@ -290,6 +290,10 @@ type Host interface {
   Severity, Message}` as LSP does; the built-in `problems` extension marks them in the editor through a decoration
   provider (`DecorationCtx.Path` is the buffer's absolute file) and lists them in `:Problems`. Lua's
   `L.diagnostics.set` binds it; the Lua config publishes its errors as owner `lua`.
+- Picker sources can show an item live as it's highlighted (`PickerSource.Hover`) and undo that when the picker
+  closes without picking (`Cancel`); `PickerItem.Current` is where the list opens. The themes picker is built on
+  them. A String option can offer `OptionSpec.Choices`, worked out when asked; the settings page makes it a menu
+  (`ui.theme` lists the registered themes).
 - Plugins search text with `regex` (PCRE2's syntax), the same engine as project search; Lua's `L.regex` binds it.
 - `Options` keeps where each value came from: `SetFrom(name, layer, at, v, source)`, `Source(name, at)`,
   `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").

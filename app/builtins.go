@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/render/typeset"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/ext"
@@ -273,8 +275,8 @@ func (o *uiOptions) Manifest() ext.Manifest { return ext.Manifest{ID: "ui"} }
 func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
 	o.add(h.Option(registry.OptionSpec{Name: "ui.reduced_motion", Type: registry.Bool, Default: false,
 		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
-	o.add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel",
-		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme, by name: a built-in, or a file in your themes directory."}))
+	o.add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel", Choices: func() []string { return themeNames(h) },
+		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme, by name: a built-in, or a file in your themes directory. :Themes previews them."}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.variant", Type: registry.Enum, Values: []string{"system", "dark", "light"}, Default: "system",
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme's dark or light variant; system follows the OS."}))
 	return nil
@@ -296,5 +298,114 @@ func (t *themes) Activate(_ context.Context, h ext.Host) error {
 	for _, f := range files {
 		t.add(h.Theme(theme.File{Path: f}))
 	}
+	t.add(h.Picker(themePicker(h)))
+	t.add(h.Command(registry.Command{ID: "Themes", Title: "Pick a theme, each shown as it's highlighted", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		return h.Run(ctx, "picker.open", registry.Args{"source": "themes"})
+	}}))
+	t.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>T", Command: "picker.open", Args: registry.Args{"source": "themes"}, Desc: "Themes"}))
 	return nil
+}
+
+// themeSwatches are a theme's main colours, in the variant in use, for the picker's preview.
+func themeSwatches(h ext.Host, name string) ui.Node {
+	variant := theme.Dark
+	if cur := h.CurrentTheme(); cur != nil {
+		variant = cur.Variant
+	}
+	srcs, _ := h.Themes()
+	r, err := resolveTheme(srcs, name, variant)
+	return &ui.Func{Key: "swatches", Fn: func(c *ui.Ctx) {
+		th := c.Theme()
+		mono := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgMuted)}
+		c.Column("swatches", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+			c.Text("name", strings.ToUpper(name)+" · "+string(variant), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.FgFaint)})
+			if err != nil {
+				c.Text("err", err.Error(), ui.TextStyle{Font: mono.Font, Color: th.C(theme.Error)})
+				return
+			}
+			for i, sw := range []struct {
+				tok  theme.TokenID
+				name string
+			}{{theme.BgBase, "bg.base"}, {theme.BgSurface, "bg.surface"}, {theme.BgRaised, "bg.raised"}, {theme.Fg, "fg"},
+				{theme.FgMuted, "fg.muted"}, {theme.Accent, "accent"}, {theme.Brand, "brand"}, {theme.OK, "ok"}, {theme.Warn, "warn"},
+				{theme.Error, "error"}} {
+				c.Row(i, ui.Style{Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
+					c.Box("sw", ui.Style{W: ui.Px(44), H: ui.Px(18), Radius: 4, Fill: r.C(sw.tok), Stroke: th.C(theme.LineStrong), Border: 1}, nil)
+					c.Text("n", sw.name, mono)
+				})
+			}
+		})
+	}}
+}
+
+// themeNames are the registered themes' names, sorted.
+func themeNames(h registry.Registry) []string {
+	srcs, _ := h.Themes()
+	var out []string
+	for _, src := range srcs {
+		if !slices.Contains(out, src.Name()) {
+			out = append(out, src.Name())
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// themePicker is :Themes: each theme shows as it's highlighted, Enter keeps it in your settings, and Esc goes back
+// to the one before.
+func themePicker(h ext.Host) registry.PickerSource {
+	type prev struct {
+		v      any // the user layer's
+		had    bool
+		source string
+		cur    any // what was in use
+	}
+	var before *prev // the user layer's ui.theme before the first preview
+	o := h.Options()
+	restore := func() {
+		if before == nil {
+			return
+		}
+		if before.had {
+			o.SetFrom("ui.theme", registry.LayerUser, registry.At{}, before.v, before.source)
+		} else {
+			o.Unset("ui.theme", registry.LayerUser, registry.At{})
+		}
+		before = nil
+	}
+	return registry.PickerSource{ID: "themes", Title: "Themes", Order: 80, PickerOnly: true, Source: "builtin:themes",
+		Items: func(registry.Ctx, string) []registry.PickerItem {
+			cur, _, _ := o.Get("ui.theme", registry.At{})
+			if before != nil {
+				cur = before.cur
+			}
+			var out []registry.PickerItem
+			for _, n := range themeNames(h) {
+				it := registry.PickerItem{ID: n, Label: n, Current: n == cur}
+				if it.Current {
+					it.Note = "current"
+				}
+				out = append(out, it)
+			}
+			return out
+		},
+		Hover: func(it registry.PickerItem) {
+			if before == nil {
+				v, had := o.Lookup("ui.theme", registry.LayerUser, registry.At{})
+				cur, l, _ := o.Get("ui.theme", registry.At{})
+				src := ""
+				if l == registry.LayerUser {
+					src = o.Source("ui.theme", registry.At{})
+				}
+				before = &prev{v, had, src, cur}
+			}
+			o.Set("ui.theme", registry.LayerUser, registry.At{}, it.ID)
+		},
+		Cancel:  restore,
+		Preview: func(it registry.PickerItem) ui.Node { return themeSwatches(h, it.ID) },
+		Run: func(ctx registry.Ctx, it registry.PickerItem) error {
+			restore()
+			return h.Run(ctx, "settings.set", registry.Args{"name": "ui.theme", "value": it.ID, "scope": "user"})
+		},
+	}
 }

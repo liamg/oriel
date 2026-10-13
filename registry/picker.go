@@ -22,6 +22,7 @@ type PickerItem struct {
 	Path       string // a file, for an item that's a place: then open, split, quickfix and attach work on it
 	Line, Col  int    // 1-based; 0 for the file's start
 	Data       any    // the source's own, for its Preview and Run
+	Current    bool   // the one in use now (the current theme): the picker opens on it
 }
 
 // PickerAction is something a picker does to the selected items (or the highlighted one) on a key.
@@ -41,6 +42,10 @@ type PickerSource struct {
 	Items   func(ctx Ctx, query string) []PickerItem
 	Preview func(item PickerItem) ui.Node // nil for none
 	Run     func(ctx Ctx, item PickerItem) error
+	// Hover is called as an item becomes the highlighted one, to show it live (a theme); Cancel when the
+	// picker closes, or moves to another source, without running one, to put things back.
+	Hover   func(item PickerItem)
+	Cancel  func()
 	Actions []PickerAction // beyond the ones every item with a Path has
 	// Live sources match the query themselves, as grep does: their items are the results, not candidates.
 	Live       bool

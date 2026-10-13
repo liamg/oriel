@@ -315,35 +315,35 @@ clip 20,109.44 816x516.12 r 8
   pop
   text "builtin:editor" @729.6875,427.98 #ffd23f JetBrains Mono 11
   clip 160,435.94 220x15.179993 r 0
-    text "<Space>h" @160,447.67 #ece6d8 JetBrains Mono 11.5
+    text "<Space>T" @160,447.67 #ece6d8 JetBrains Mono 11.5
   pop
-  clip 392,435.94 338.875x15.179993 r 0
+  clip 392,435.94 325.6875x15.179993 r 0
     text "picker.open" @392,447.67 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:help" @742.875,447.16 #ffd23f JetBrains Mono 11
+  text "builtin:themes" @729.6875,447.16 #ffd23f JetBrains Mono 11
   clip 160,455.12 220x15.179993 r 0
-    text "<Space>k" @160,466.85 #ece6d8 JetBrains Mono 11.5
+    text "<Space>h" @160,466.85 #ece6d8 JetBrains Mono 11.5
   pop
-  clip 392,455.12 325.6875x15.179993 r 0
+  clip 392,455.12 338.875x15.179993 r 0
     text "picker.open" @392,466.85 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:editor" @729.6875,466.34 #ffd23f JetBrains Mono 11
+  text "builtin:help" @742.875,466.34 #ffd23f JetBrains Mono 11
   clip 160,474.3 220x15.179993 r 0
-    text "<Space>s" @160,486.03 #ece6d8 JetBrains Mono 11.5
+    text "<Space>k" @160,486.03 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,474.3 325.6875x15.179993 r 0
     text "picker.open" @392,486.03 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,485.52 #ffd23f JetBrains Mono 11
   clip 160,493.47998 220x15.179993 r 0
-    text "<C-`>" @160,505.21 #ece6d8 JetBrains Mono 11.5
+    text "<Space>s" @160,505.21 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,493.47998 325.6875x15.179993 r 0
-    text "layout.move" @392,505.21 #b3ab99 JetBrains Mono 11.5
+    text "picker.open" @392,505.21 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:layout" @729.6875,504.69998 #ffd23f JetBrains Mono 11
+  text "builtin:editor" @729.6875,504.69998 #ffd23f JetBrains Mono 11
   clip 160,512.66 220x15.179993 r 0
-    text "and 25 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
+    text "and 26 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
   pop
   clip 392,512.66 418x15.179993 r 0
     text ":Keys lists them" @392,524.38995 #4f4a40 JetBrains Mono 11.5

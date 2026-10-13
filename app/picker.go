@@ -30,6 +30,7 @@ type picker struct {
 	sel     int
 	picked  map[string]bool // multi-selected, by item id
 	resumed bool
+	hovered string // the source and item last given to Hover
 }
 
 func (p *picker) Manifest() ext.Manifest { return ext.Manifest{ID: "picker"} }
@@ -41,15 +42,18 @@ func (p *picker) Activate(_ context.Context, h ext.Host) error {
 		if !slices.ContainsFunc(h.Pickers(), func(s registry.PickerSource) bool { return s.ID == src }) {
 			return fmt.Errorf("no picker source %q", src)
 		}
-		p.open, p.source, p.sel, p.picked = true, src, 0, map[string]bool{}
+		p.open, p.source, p.sel, p.picked, p.hovered = true, src, 0, map[string]bool{}, ""
 		p.query, _ = a["query"].(string)
+		if s, ok := p.src(); ok {
+			p.sel = startAt(s, p.query, h)
+		}
 		return nil
 	}}))
 	p.add(h.Command(registry.Command{ID: "picker.resume", Title: "Reopen the last picker where it was left", Run: func(registry.Ctx, registry.Args) error {
 		if p.source == "" {
 			return fmt.Errorf("no picker yet")
 		}
-		p.open = true
+		p.open, p.hovered = true, ""
 		return nil
 	}}))
 	p.add(h.View(OverlayPrefix+"picker", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
@@ -127,6 +131,15 @@ func (p *picker) build(c *ui.Ctx) {
 	inputID := ui.Child(ui.Child(ui.Child(ui.Child(ui.Child(c.Next("picker"), "box"), "body"), "left"), "head"), "input")
 	p.keys(c, s, g, c.Interaction(inputID).Keys)
 	p.sel = min(max(p.sel, 0), max(len(g.hits)-1, 0))
+	if p.open && len(g.hits) > 0 && s.Hover != nil {
+		if key := s.ID + "\x00" + g.hits[p.sel].item.ID; key != p.hovered {
+			p.hovered = key
+			registry.Call(func() error { s.Hover(g.hits[p.sel].item); return nil })
+		}
+	}
+	if !p.open {
+		return
+	}
 	size := c.Size()
 	at := render.Point{X: size.X / 2, Y: 108}
 	c.Box("picker", ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: 980, Fill: th.C(tScrimOmni), Interactive: true, Float: &ui.Float{Point: &render.Point{}},
@@ -160,7 +173,7 @@ func (p *picker) build(c *ui.Ctx) {
 					})
 				})
 				c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-				p.footer(c, s)
+				p.footer(c, s, len(g.hits) > 0 && g.hits[p.sel].item.Path != "")
 			})
 	})
 }
@@ -216,14 +229,33 @@ func (p *picker) act(a registry.PickerAction, g group) {
 			items = append(items, h.item)
 		}
 	}
-	p.open = false
+	p.close(false)
 	if err := registry.Call(func() error { return a.Run(context.Background(), items) }); err != nil {
 		p.h.Notify(core.Notice{ID: "picker.action", Severity: core.SevError, Source: "picker", Key: true, Text: a.Title + ": " + err.Error()})
 	}
 }
 
+// close shuts the picker; cancelled, the source puts back what Hover showed.
+func (p *picker) close(cancelled bool) {
+	p.open, p.hovered = false, ""
+	if s, ok := p.src(); ok && cancelled && s.Cancel != nil {
+		registry.Call(func() error { s.Cancel(); return nil })
+	}
+}
+
+// startAt is where a source's list starts: on its current item (the theme in use), else the top.
+func startAt(s registry.PickerSource, query string, h ext.Host) int {
+	g, _ := rankSource(h, s, query, pickerMax)
+	for i, x := range g.hits {
+		if x.item.Current {
+			return i
+		}
+	}
+	return 0
+}
+
 func (p *picker) run(s registry.PickerSource, h hit) {
-	p.open = false
+	p.close(false)
 	run := s.Run
 	if run == nil && h.item.Path != "" {
 		run = func(ctx registry.Ctx, it registry.PickerItem) error {
@@ -244,6 +276,10 @@ func (p *picker) step(back bool) {
 	for _, s := range p.h.Pickers() {
 		ids = append(ids, s.ID)
 	}
+	if s, ok := p.src(); ok && s.Cancel != nil {
+		registry.Call(func() error { s.Cancel(); return nil })
+	}
+	p.hovered = ""
 	i := slices.Index(ids, p.source)
 	if back {
 		i--
@@ -304,7 +340,7 @@ func (p *picker) input(c *ui.Ctx, id ui.ID, s registry.PickerSource, g group) {
 		}
 		switch {
 		case res.Cancelled:
-			p.open = false
+			p.close(true)
 		case res.Submitted && len(g.hits) > 0:
 			p.run(s, g.hits[p.sel])
 		case res.Changed:
@@ -319,7 +355,8 @@ func (p *picker) input(c *ui.Ctx, id ui.ID, s registry.PickerSource, g group) {
 	})
 }
 
-func (p *picker) footer(c *ui.Ctx, s registry.PickerSource) {
+// footer lists the keys: the place actions only when the highlighted item is a place.
+func (p *picker) footer(c *ui.Ctx, s registry.PickerSource, place bool) {
 	th := c.Theme()
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		hint := func(k, what string) {
@@ -329,10 +366,16 @@ func (p *picker) footer(c *ui.Ctx, s registry.PickerSource) {
 			})
 		}
 		hint("↵", "open")
-		for _, a := range p.actions(s) {
+		acts := s.Actions
+		if place {
+			acts = p.actions(s)
+		}
+		for _, a := range acts {
 			hint(strings.NewReplacer("<C-", "^", ">", "").Replace(a.Key), a.Title)
 		}
-		hint("^␣", "multi-select")
+		if place {
+			hint("^␣", "multi-select")
+		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		hint("esc", "close")
 	})

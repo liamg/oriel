@@ -19,9 +19,9 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/toml"
 	"github.com/liamg/oriel/ui"
@@ -857,43 +857,60 @@ func (s *settingsExt) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionS
 			}
 			return
 		}
-		id := c.Next("drop")
-		if widget.Button(c, "drop", cur+" ▾", widget.ButtonOpts{Disabled: disabled, Help: "shell/settings#rows"}) {
-			s.menu = sp.Name
+		s.dropdown(c, sp, cur, sp.Values, disabled)
+	case registry.String:
+		if sp.Choices != nil {
+			cur, _ := v.(string)
+			s.dropdown(c, sp, cur, sp.Choices(), disabled)
+			return
 		}
-		open := s.menu == sp.Name
-		widget.Popover(c, "menu", id, &open, widget.PopoverOpts{Label: sp.Name, Width: 220, Help: "shell/settings#rows"}, func(c *ui.Ctx) {
-			items := make([]widget.MenuItem, len(sp.Values))
-			for i, val := range sp.Values {
-				items[i] = widget.MenuItem{Label: val, Help: "shell/settings#rows"}
-			}
-			if i, closed := widget.Menu(c, "m", items, widget.MenuOpts{Width: 220, Help: "shell/settings#rows"}); i >= 0 {
-				s.fail(s.set(sp.Name, sp.Values[i], s.scope))
-				open = false
-			} else if closed {
-				open = false
-			}
-		})
-		if !open && s.menu == sp.Name {
-			s.menu = ""
-		}
+		s.field(c, sp, v, disabled)
 	default:
-		text := fieldText(v)
-		fid := c.Next("field")
-		st := ui.State[fieldState](c, fid)
-		if !c.Interaction(ui.Child(fid, "in")).Focused && st.from != text {
-			st.text, st.from = text, text
-		}
-		c.Box("field", ui.Style{W: ui.Px(200)}, func(c *ui.Ctx) {
-			if widget.Input(c, "in", &st.text, widget.InputOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}).Submitted {
-				val, err := parseField(sp, st.text)
-				if err == nil {
-					err = s.set(sp.Name, val, s.scope)
-				}
-				s.fail(err)
-			}
-		})
+		s.field(c, sp, v, disabled)
 	}
+}
+
+// dropdown is a button showing the value, opening a menu of values.
+func (s *settingsExt) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, values []string, disabled bool) {
+	id := c.Next("drop")
+	if widget.Button(c, "drop", cur+" ▾", widget.ButtonOpts{Disabled: disabled, Help: "shell/settings#rows"}) {
+		s.menu = sp.Name
+	}
+	open := s.menu == sp.Name
+	widget.Popover(c, "menu", id, &open, widget.PopoverOpts{Label: sp.Name, Width: 220, Help: "shell/settings#rows"}, func(c *ui.Ctx) {
+		items := make([]widget.MenuItem, len(values))
+		for i, val := range values {
+			items[i] = widget.MenuItem{Label: val, Help: "shell/settings#rows"}
+		}
+		if i, closed := widget.Menu(c, "m", items, widget.MenuOpts{Width: 220, Help: "shell/settings#rows"}); i >= 0 {
+			s.fail(s.set(sp.Name, values[i], s.scope))
+			open = false
+		} else if closed {
+			open = false
+		}
+	})
+	if !open && s.menu == sp.Name {
+		s.menu = ""
+	}
+}
+
+// field is a text field for a value, checked when entered.
+func (s *settingsExt) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled bool) {
+	text := fieldText(v)
+	fid := c.Next("field")
+	st := ui.State[fieldState](c, fid)
+	if !c.Interaction(ui.Child(fid, "in")).Focused && st.from != text {
+		st.text, st.from = text, text
+	}
+	c.Box("field", ui.Style{W: ui.Px(200)}, func(c *ui.Ctx) {
+		if widget.Input(c, "in", &st.text, widget.InputOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}).Submitted {
+			val, err := parseField(sp, st.text)
+			if err == nil {
+				err = s.set(sp.Name, val, s.scope)
+			}
+			s.fail(err)
+		}
+	})
 }
 
 // fieldState is a field's text, and the value it was last filled from.

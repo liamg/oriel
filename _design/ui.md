@@ -188,7 +188,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - **The matcher is our own**, a Go implementation of fzf-style scoring (per `deps.md`), and runs on the app for
   file and buffer lists. Grep and workspace symbols stream from the worker.
 - **Pickers are a plugin API**: `oriel.picker.source{ name, items = fn, preview = fn, actions = {…} }`.
-  Tickets, PRs, sessions and themes are all sources.
+  Tickets, PRs, sessions and themes are all sources. The themes picker (`␣T`, `:Themes`) shows each theme in the
+  whole window as it's highlighted; `↵` keeps it in settings.toml, `esc` puts the old one back (a source's `Hover`
+  and `Cancel`).
 - Built in SH-5: `⇥` steps to the next source keeping the query, and `⌃␣` multi-selects (the mockup gives `⇥`
   both; the source strip keeps it). An item with a place (a path and line) gets open, `⌃v`, `⌃s`, `⌃t`, `⌃q` and
   `⌃a` from the picker; `⌃a` runs `request.attach`, which the requests (AI-5) provide. Sources today: files,

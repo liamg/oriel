@@ -7,7 +7,8 @@ related: [shell/help]
 # Theme editor
 
 `:Theme` opens the editor: every token on the left, a preview in the middle, and the one you picked on the right.
-Edits are overrides: each writes the smallest change into your theme file, and the window repaints.
+Edits are overrides: each writes the smallest change into your theme file, and the window repaints. To switch
+themes, `:Themes` (`␣T`) previews each as you move through them.
 
 ## Tokens {#tokens}
 

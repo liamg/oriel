@@ -92,11 +92,14 @@ func (a At) key(l Layer) string {
 }
 
 type OptionSpec struct {
-	Name     string // "editor.line_numbers"; the section is the prefix
-	Section  string // the settings page's section, when it differs from the prefix
-	Type     OptionType
-	Values   []string // an Enum's values
-	Min, Max float64  // an Int's or Float's range, when Max > Min
+	Name    string // "editor.line_numbers"; the section is the prefix
+	Section string // the settings page's section, when it differs from the prefix
+	Type    OptionType
+	Values  []string // an Enum's values
+	// Choices are the values a String suggests, worked out when asked (the themes there are now); other
+	// values are still allowed, as a theme file can come later.
+	Choices  func() []string
+	Min, Max float64 // an Int's or Float's range, when Max > Min
 	Default  any
 	Help     string
 	Scopes   Scope

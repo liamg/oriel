@@ -154,8 +154,8 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 - **Project trust**: a project file applies only once trusted (`settings.trust`, offered by a notice), recorded by
   its SHA-256 in `~/.config/oriel/trusted.toml`, so a change needs trusting again (security.md, direnv-style). An
   edit from the page re-trusts it.
-- Controls: a toggle, choices (four or fewer inline, else a menu), and a field for numbers, durations and
-  strings, checked on Enter. "TOML" shows each row's line and its Lua. Undo is per change.
+- Controls: a toggle, choices (four or fewer inline, else a menu), a menu for a string with `Choices` (`ui.theme`:
+  the registered themes), and a field for numbers, durations and other strings, checked on Enter. "TOML" shows each row's line and its Lua. Undo is per change.
 - Not yet: colour, key, list and map types; `Restart`, `Resettable` and `Secret`; undo for reset section and reset all as one step.
 
 ## As built (ED-9)

@@ -71,12 +71,10 @@ clip 0,38 1600x962 r 0
     text "↺" @1550.5469,188.10748 #4f4a40 Inter 12
     rect 269,234.48451 3x35.999985 fill #ffd23f radius 2
     text "ui.theme" @288,247.42226 #ece6d8 JetBrains Mono 12.5
-    text "The theme, by name: a built-in, or a file in your themes directory." @288,267.28162 #7c7566 Inter 12.5
+    text "The theme, by name: a built-in, or a file in your themes directory. :Themes previews them." @288,267.28162 #7c7566 Inter 12.5
     text "user" @1222.1719,256.2645 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,237.48451 200x29.999985 fill #060606 radius 6 stroke 1 #332f27
-    clip 1324.5469,237.48451 200x29.999985 r 6
-      text "oriel" @1334.5469,257.03162 #ece6d8 Inter 12.5
-    pop
+    rect 1469.1406,239.48451 55.40625x25.999985 fill #191815 radius 6 stroke 1 #332f27
+    text "oriel ▾" @1479.1406,256.84973 #ece6d8 Inter 12
     rect 1540.5469,239.48451 31.453125x25.999985 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,256.84973 #ece6d8 Inter 12
     text "ui.variant" @288,307.42224 #ece6d8 JetBrains Mono 12.5
