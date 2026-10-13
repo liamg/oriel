@@ -517,6 +517,8 @@ type sourceFile struct {
 	mark    bool            // the failing line, marked
 	title   string          // the path its header shows; the file's own, home as ~, if ""
 	theme   *theme.Resolved // drawn in this, not the window's: a theme's preview
+	size    float32         // the code's font size; 11.5 if 0
+	fill    bool            // take the height it's given, scrolling the code in it
 }
 
 type span struct {
@@ -619,11 +621,19 @@ func (f *sourceFile) build(c *ui.Ctx, n *core.Notification) {
 	if f.title != "" {
 		shown = f.title
 	}
-	c.Column("src", ui.Style{W: ui.Flex(1), Fill: th.C(theme.BgBase), Stroke: th.C(theme.Line), Border: 1, Radius: 6, Clip: true}, func(c *ui.Ctx) {
+	size, lineH, numW := float32(11.5), float32(18), float32(22)
+	if f.size != 0 {
+		size, lineH, numW = f.size, f.size*1.6, f.size*2
+	}
+	box, lines := ui.Style{W: ui.Flex(1), Fill: th.C(theme.BgBase), Stroke: th.C(theme.Line), Border: 1, Radius: 6, Clip: true}, ui.Style{W: ui.Flex(1), Pad: ui.Insets{B: 6}}
+	if f.fill {
+		box.H, lines.H, lines.ScrollY = ui.Flex(1), ui.Flex(1), true
+	}
+	c.Column("src", box, func(c *ui.Ctx) {
 		c.Row("path", ui.Style{W: ui.Flex(1), H: ui.Px(24), Pad: ui.PadXY(10, 0), Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text(nil, shown, mono(10.5, typeset.Normal, th.C(theme.FgFaint)))
 		})
-		c.Column("lines", ui.Style{W: ui.Flex(1), Pad: ui.Insets{B: 6}}, func(c *ui.Ctx) {
+		c.Column("lines", lines, func(c *ui.Ctx) {
 			for i, ln := range f.spans {
 				no := f.first + i
 				failing := f.mark && no == f.line
@@ -631,14 +641,14 @@ func (f *sourceFile) build(c *ui.Ctx, n *core.Notification) {
 				if failing {
 					fill = th.C(tLogFailLine)
 				}
-				c.Row(no, ui.Style{W: ui.Flex(1), H: ui.Px(18), Gap: 10, Cross: ui.Center, Fill: fill}, func(c *ui.Ctx) {
+				c.Row(no, ui.Style{W: ui.Flex(1), H: ui.Px(lineH), Gap: 10, Cross: ui.Center, Fill: fill}, func(c *ui.Ctx) {
 					edge := color.NRGBA{}
 					if failing {
 						edge = th.C(theme.Error)
 					}
 					c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
-					c.Box("no", ui.Style{W: ui.Px(22)}, func(c *ui.Ctx) {
-						c.Text(nil, fmt.Sprint(no), mono(11, typeset.Normal, th.C(theme.FgGhost)))
+					c.Box("no", ui.Style{W: ui.Px(numW)}, func(c *ui.Ctx) {
+						c.Text(nil, fmt.Sprint(no), mono(size-0.5, typeset.Normal, th.C(theme.FgGhost)))
 					})
 					c.Row("code", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 						for j, s := range ln {
@@ -646,7 +656,7 @@ func (f *sourceFile) build(c *ui.Ctx, n *core.Notification) {
 							if s.capture != "" {
 								col = th.Syntax("@" + s.capture).FG
 							}
-							c.Text(j, expandTabs(s.text), mono(11.5, typeset.Normal, col))
+							c.Text(j, expandTabs(s.text), mono(size, typeset.Normal, col))
 						}
 					})
 				})

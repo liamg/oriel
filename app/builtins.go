@@ -317,7 +317,7 @@ func themeSwatches(h ext.Host, name string) ui.Node {
 	return &ui.Func{Key: "swatches", Fn: func(c *ui.Ctx) {
 		th := c.Theme()
 		mono := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgMuted)}
-		c.Column("swatches", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+		c.Column("swatches", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 			c.Text("name", strings.ToUpper(name)+" · "+string(variant), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.FgFaint)})
 			if err != nil {
 				c.Text("err", err.Error(), ui.TextStyle{Font: mono.Font, Color: th.C(theme.Error)})
@@ -325,7 +325,7 @@ func themeSwatches(h ext.Host, name string) ui.Node {
 			}
 			sample := strings.TrimRight(themeSample, "\n")
 			code := highlightAround(h, "sample.go", []byte(sample), 1, 0, strings.Count(sample, "\n"))
-			code.title, code.theme = "sample.go", r
+			code.title, code.theme, code.size, code.fill = "sample.go", r, 13.5, true
 			code.build(c, nil)
 			swatches := []struct {
 				tok  theme.TokenID
@@ -350,13 +350,37 @@ func themeSwatches(h ext.Host, name string) ui.Node {
 }
 
 // themeSample is the code a theme's preview highlights: keywords, types, strings, numbers, comments and calls.
-const themeSample = `// PriceFor is a tier's price, in pence.
-func PriceFor(t Tier, qty int) (int, error) {
+const themeSample = `package pricing
+
+import (
+	"errors"
+	"fmt"
+	"time"
+)
+
+// ErrNoTier is returned for a tier nobody has heard of.
+var ErrNoTier = errors.New("pricing: no such tier")
+
+// Tier is a plan's price, in pence, and when it changed.
+type Tier struct {
+	Name    string
+	Pence   int
+	Changed time.Time
+}
+
+// PriceFor is a tier's price for qty seats, with 10% off from 100.
+func PriceFor(t *Tier, qty int) (int, error) {
+	if t == nil {
+		return 0, ErrNoTier
+	}
 	if qty <= 0 {
 		return 0, fmt.Errorf("bad quantity %d", qty)
 	}
 	total := t.Pence * qty
-	return total * 9 / 10, nil // 10% off
+	if qty >= 100 {
+		total = total * 9 / 10 // volume discount
+	}
+	return total, nil
 }
 `
 
