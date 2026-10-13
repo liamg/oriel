@@ -24,7 +24,7 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 - [FG-6](FG-6-ship-page-uncommitted-behind-unpushed-pr-checks-.md): Ship page: uncommitted → behind → unpushed → PR → checks, multi-project
 - [RV-1](RV-1-split-and-unified-diff-intraline-per-hunk-review.md): Split and unified diff, intraline, per-hunk reviewed
 
-P4 is done but for FG-4, in review: its parse throughput is under budget (`_design/ide.md`, "As built (FG-4/FG-5 UI)").
+P4 is done.
 
 ## Suggested order
 

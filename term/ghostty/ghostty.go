@@ -1,28 +1,19 @@
-// Package ghostty is term.Emulator over Ghostty's libghostty-vt, compiled to wasm with shim.c (wasm/build.sh) and
-// run under wazero: one module instance, with its own memory, per terminal.
+// Package ghostty is term.Emulator over Ghostty's libghostty-vt and shim.c. It runs natively through cgo where it's
+// built with the ghostty_native tag (native/build.sh makes the library), and otherwise as wasm under wazero
+// (wasm/build.sh): one module instance, with its own memory, per terminal. Both run the same shim, and the same tests.
 package ghostty
 
 import (
-	"bytes"
-	"compress/gzip"
-	"context"
-	_ "embed"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/term"
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 )
-
-//go:embed wasm/oriel-vt.wasm.gz
-var wasmGz []byte
 
 // Options configure a terminal. The zero value is usable.
 type Options struct {
@@ -31,68 +22,8 @@ type Options struct {
 	HoldTimeout time.Duration    // how long synchronized output may hold a frame; 0 is a second
 	MaxCommands int              // shell commands remembered; 0 is 1000
 	Now         func() time.Time // the clock for HoldTimeout; nil is time.Now
+	Backend     string           // "native" or "wasm"; "" is native where it's built in (the ghostty_native tag), else wasm
 }
-
-var runtime struct {
-	once     sync.Once
-	err      error
-	rt       wazero.Runtime
-	cm       wazero.CompiledModule
-	mu       sync.Mutex
-	cacheDir string
-}
-
-// SetCacheDir keeps the compiled module in dir, so it compiles once per version rather than once per run. It takes
-// effect only before the first terminal is made.
-func SetCacheDir(dir string) {
-	runtime.mu.Lock()
-	defer runtime.mu.Unlock()
-	runtime.cacheDir = dir
-}
-
-func compiled() (wazero.Runtime, wazero.CompiledModule, error) {
-	runtime.once.Do(func() {
-		runtime.mu.Lock()
-		dir := runtime.cacheDir
-		runtime.mu.Unlock()
-		ctx := context.Background()
-		cfg := wazero.NewRuntimeConfig()
-		if dir != "" {
-			cache, err := wazero.NewCompilationCacheWithDir(dir)
-			if err != nil {
-				runtime.err = err
-				return
-			}
-			cfg = cfg.WithCompilationCache(cache)
-		}
-		runtime.rt = wazero.NewRuntimeWithConfig(ctx, cfg)
-		wasm, err := wasmBytes()
-		if err != nil {
-			runtime.err = err
-			return
-		}
-		runtime.cm, runtime.err = runtime.rt.CompileModule(ctx, wasm)
-	})
-	return runtime.rt, runtime.cm, runtime.err
-}
-
-func wasmBytes() ([]byte, error) {
-	zr, err := gzip.NewReader(bytes.NewReader(wasmGz))
-	if err != nil {
-		return nil, err
-	}
-	return io.ReadAll(zr)
-}
-
-// The shim's Term struct, as the host reads it.
-const (
-	offOut      = 0
-	offIn       = 8
-	offInCap    = 12
-	offReplyLen = 24
-	offEvents   = 32
-	offHeld     = 36
-)
 
 const (
 	evTitle = 1 << iota
@@ -107,13 +38,9 @@ const chunk = 1 << 20
 
 // Terminal is a term.Emulator.
 type Terminal struct {
-	mu    sync.Mutex
-	opts  Options
-	m     api.Module
-	mem   api.Memory
-	fns   map[string]api.Function
-	stack []uint64
-	t     uint32 // the shim's Term
+	mu   sync.Mutex
+	opts Options
+	m    machine
 
 	scan     term.MarkScanner
 	log      term.CommandLog
@@ -143,65 +70,13 @@ func New(cols, rows int, opts Options) (*Terminal, error) {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
-	rt, cm, err := compiled()
+	m, err := newMachine(opts.Backend, cols, rows, opts.Scrollback)
 	if err != nil {
 		return nil, fmt.Errorf("ghostty: %w", err)
 	}
-	m, err := rt.InstantiateModule(context.Background(), cm, wazero.NewModuleConfig().WithName(""))
-	if err != nil {
-		return nil, fmt.Errorf("ghostty: %w", err)
-	}
-	t := &Terminal{opts: opts, m: m, mem: m.Memory(), fns: map[string]api.Function{}, stack: make([]uint64, 8)}
+	t := &Terminal{opts: opts, m: m}
 	t.log.Max = opts.MaxCommands
-	t.t = t.call("oriel_new", uint64(cols), uint64(rows), uint64(opts.Scrollback))
-	if t.t == 0 {
-		m.Close(context.Background())
-		return nil, errors.New("ghostty: out of memory")
-	}
 	return t, nil
-}
-
-func (t *Terminal) call(name string, args ...uint64) uint32 {
-	f, ok := t.fns[name]
-	if !ok {
-		f = t.m.ExportedFunction(name)
-		if f == nil {
-			panic("ghostty: no " + name)
-		}
-		t.fns[name] = f
-	}
-	copy(t.stack, args)
-	if err := f.CallWithStack(context.Background(), t.stack); err != nil {
-		panic(fmt.Sprintf("ghostty: %s: %v", name, err))
-	}
-	return uint32(t.stack[0])
-}
-
-func (t *Terminal) u32(p uint32) uint32 {
-	v, ok := t.mem.ReadUint32Le(p)
-	if !ok {
-		panic("ghostty: read out of range")
-	}
-	return v
-}
-
-// out is the result of the shim's last call, n bytes long, valid until the next call.
-func (t *Terminal) out(n uint32) []byte {
-	b, ok := t.mem.Read(t.u32(t.t+offOut), n)
-	if !ok {
-		panic("ghostty: read out of range")
-	}
-	return b
-}
-
-// in copies p to the shim's input buffer.
-func (t *Terminal) in(p []byte) {
-	if uint32(len(p)) > t.u32(t.t+offInCap) && t.call("oriel_input", uint64(t.t), uint64(len(p))) == 0 {
-		panic("ghostty: out of memory")
-	}
-	if !t.mem.Write(t.u32(t.t+offIn), p) {
-		panic("ghostty: write out of range")
-	}
 }
 
 // Write feeds the program's output to the terminal.
@@ -225,18 +100,18 @@ func (t *Terminal) Write(p []byte) {
 func (t *Terminal) write(p []byte) {
 	for len(p) > 0 {
 		n := min(len(p), chunk)
-		t.in(p[:n])
-		t.call("oriel_write", uint64(t.t), uint64(n))
+		t.m.in(p[:n])
+		t.m.call("oriel_write", uint64(n))
 		p = p[n:]
 	}
 }
 
 // drain hands replies to Options.Reply and notes what changed.
 func (t *Terminal) drain() {
-	if t.u32(t.t+offReplyLen) == 0 && t.u32(t.t+offEvents) == 0 {
+	if t.m.replyLen() == 0 && t.m.events() == 0 {
 		return
 	}
-	b := t.out(t.call("oriel_take", uint64(t.t)))
+	b := t.m.out(t.m.call("oriel_take"))
 	ev := binary.LittleEndian.Uint32(b)
 	if reply := b[4:]; len(reply) > 0 && t.opts.Reply != nil {
 		t.opts.Reply(append([]byte(nil), reply...))
@@ -245,8 +120,7 @@ func (t *Terminal) drain() {
 	if ev&evHold != 0 {
 		t.heldAt = t.opts.Now()
 	}
-	held, _ := t.mem.ReadByte(t.t + offHeld)
-	t.held = held != 0
+	t.held = t.m.held()
 }
 
 func (t *Terminal) mark(m term.Mark) {
@@ -261,7 +135,7 @@ func (t *Terminal) mark(m term.Mark) {
 // anchor tracks p, or the cursor when p.Y < 0; nil if it can't.
 func (t *Terminal) anchor(p term.Point) term.Anchor {
 	y := uint64(uint32(int32(p.Y)))
-	ref := t.call("oriel_mark", uint64(t.t), uint64(p.X), y)
+	ref := t.m.call("oriel_mark", uint64(p.X), y)
 	if ref == 0 {
 		return nil
 	}
@@ -270,24 +144,24 @@ func (t *Terminal) anchor(p term.Point) term.Anchor {
 
 type anchor struct {
 	t   *Terminal
-	ref uint32
+	ref uint64
 }
 
 func (a *anchor) Point() (term.Point, bool) {
 	if a.t.closed {
 		return term.Point{}, false
 	}
-	n := a.t.call("oriel_mark_point", uint64(a.t.t), uint64(a.ref))
+	n := a.t.m.call("oriel_mark_point", a.ref)
 	if n == 0 {
 		return term.Point{}, false
 	}
-	b := a.t.out(n)
+	b := a.t.m.out(n)
 	return term.Point{X: int(binary.LittleEndian.Uint32(b)), Y: int(binary.LittleEndian.Uint32(b[4:]))}, true
 }
 
 func (a *anchor) Free() {
 	if !a.t.closed {
-		a.t.call("oriel_mark_free", uint64(a.ref))
+		a.t.m.call("oriel_mark_free", a.ref)
 	}
 }
 
@@ -296,7 +170,7 @@ type state struct {
 }
 
 func (t *Terminal) state() state {
-	b := t.out(t.call("oriel_state", uint64(t.t)))
+	b := t.m.out(t.m.call("oriel_state"))
 	v := func(i int) uint32 { return binary.LittleEndian.Uint32(b[i*4:]) }
 	return state{v(0), v(1), v(2), v(3), v(4), v(5), v(6), v(7), v(8), v(9), v(10)}
 }
@@ -307,7 +181,7 @@ func (t *Terminal) Resize(cols, rows int) {
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.call("oriel_resize", uint64(t.t), uint64(cols), uint64(rows))
+	t.m.call("oriel_resize", uint64(cols), uint64(rows))
 	t.lines = nil
 	t.drain()
 }
@@ -345,7 +219,7 @@ func (t *Terminal) Grid() term.Grid {
 		t.gridCols = cols
 	}
 	force := t.held && t.opts.Now().Sub(t.heldAt) >= t.opts.HoldTimeout
-	b := t.out(t.call("oriel_grid", uint64(t.t), b2u(all), b2u(force)))
+	b := t.m.out(t.m.call("oriel_grid", b2u(all), b2u(force)))
 	for i := range t.lines {
 		t.lines[i].Dirty = false
 	}
@@ -412,7 +286,7 @@ func (t *Terminal) CursorState() term.CursorState {
 		return term.CursorState{}
 	}
 	s := t.state()
-	b := t.out(t.call("oriel_cursor", uint64(t.t)))
+	b := t.m.out(t.m.call("oriel_cursor"))
 	v := func(i int) uint32 { return binary.LittleEndian.Uint32(b[i*4:]) }
 	return term.CursorState{
 		X: int(s.cx), Y: int(s.cy),
@@ -428,7 +302,7 @@ func (t *Terminal) Title() string {
 		return ""
 	}
 	if t.stale&evTitle != 0 {
-		t.title = string(t.out(t.call("oriel_title", uint64(t.t))))
+		t.title = string(t.m.out(t.m.call("oriel_title")))
 		t.stale &^= evTitle
 	}
 	return t.title
@@ -441,7 +315,7 @@ func (t *Terminal) Cwd() string {
 		return ""
 	}
 	if t.stale&evPwd != 0 {
-		t.cwd = term.CwdFromURL(string(t.out(t.call("oriel_pwd", uint64(t.t)))))
+		t.cwd = term.CwdFromURL(string(t.m.out(t.m.call("oriel_pwd"))))
 		t.stale &^= evPwd
 	}
 	return t.cwd
@@ -453,7 +327,7 @@ func (t *Terminal) Mode(m term.Mode) bool {
 	if t.closed {
 		return false
 	}
-	return int32(t.call("oriel_mode", uint64(t.t), uint64(m.N), b2u(m.ANSI))) == 1
+	return int32(uint32(t.m.call("oriel_mode", uint64(m.N), b2u(m.ANSI)))) == 1
 }
 
 func (t *Terminal) AltScreen() bool {
@@ -487,7 +361,7 @@ func (t *Terminal) Scroll(s term.Scroll) {
 	if s.To == term.ScrollRow {
 		v = s.Row
 	}
-	t.call("oriel_scroll", uint64(t.t), uint64(s.To), uint64(uint32(int32(v))))
+	t.m.call("oriel_scroll", uint64(s.To), uint64(uint32(int32(v))))
 }
 
 func (t *Terminal) Scrollbar() term.Scrollbar {
@@ -509,8 +383,8 @@ func (t *Terminal) Text(from, to term.Point) string {
 	if from.X < 0 || from.Y < 0 || to.X < 0 || to.Y < 0 {
 		return ""
 	}
-	n := t.call("oriel_text", uint64(t.t), uint64(from.X), uint64(from.Y), uint64(to.X), uint64(to.Y))
-	return string(t.out(n))
+	n := t.m.call("oriel_text", uint64(from.X), uint64(from.Y), uint64(to.X), uint64(to.Y))
+	return string(t.m.out(n))
 }
 
 func (t *Terminal) Commands() []term.Command {
@@ -528,9 +402,9 @@ func (t *Terminal) EncodeKey(ev term.KeyEvent) []byte {
 	if t.closed {
 		return nil
 	}
-	t.in([]byte(ev.Text))
-	n := t.call("oriel_key", uint64(t.t), uint64(ev.Key), uint64(ev.Mods), uint64(ev.Action), uint64(len(ev.Text)), uint64(ev.Unshifted))
-	return append([]byte(nil), t.out(n)...)
+	t.m.in([]byte(ev.Text))
+	n := t.m.call("oriel_key", uint64(ev.Key), uint64(ev.Mods), uint64(ev.Action), uint64(len(ev.Text)), uint64(ev.Unshifted))
+	return append([]byte(nil), t.m.out(n)...)
 }
 
 func (t *Terminal) Paste(text string) []byte {
@@ -539,9 +413,9 @@ func (t *Terminal) Paste(text string) []byte {
 	if t.closed {
 		return nil
 	}
-	t.in([]byte(text))
-	n := t.call("oriel_paste", uint64(t.t), uint64(len(text)))
-	return append([]byte(nil), t.out(n)...)
+	t.m.in([]byte(text))
+	n := t.m.call("oriel_paste", uint64(len(text)))
+	return append([]byte(nil), t.m.out(n)...)
 }
 
 const snapMagic = "ORIELVT\x01"
@@ -565,7 +439,7 @@ func (t *Terminal) Snapshot() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	n := t.call("oriel_snapshot", uint64(t.t))
+	n := t.m.call("oriel_snapshot")
 	if n == 0 {
 		return nil, errors.New("ghostty: snapshot failed")
 	}
@@ -573,7 +447,7 @@ func (t *Terminal) Snapshot() ([]byte, error) {
 	out = append(out, snapMagic...)
 	out = binary.LittleEndian.AppendUint32(out, uint32(len(own)))
 	out = append(out, own...)
-	return append(out, t.out(n)...), nil
+	return append(out, t.m.out(n)...), nil
 }
 
 // Restore replaces the terminal's state with a snapshot's.
@@ -596,8 +470,8 @@ func (t *Terminal) Restore(snap []byte) error {
 	if t.closed {
 		return errClosed
 	}
-	t.in(vt)
-	if t.call("oriel_restore", uint64(t.t), uint64(len(vt)), uint64(t.opts.Scrollback)) == 0 {
+	t.m.in(vt)
+	if t.m.call("oriel_restore", uint64(len(vt)), uint64(t.opts.Scrollback)) == 0 {
 		return errors.New("ghostty: bad snapshot")
 	}
 	t.scan = term.MarkScanner{}
@@ -616,7 +490,7 @@ func (t *Terminal) Close() error {
 		return nil
 	}
 	t.log.Reset()
-	t.call("oriel_free", uint64(t.t))
+	t.m.call("oriel_free")
 	t.closed = true
-	return t.m.Close(context.Background())
+	return t.m.close()
 }

@@ -42,55 +42,51 @@ func write(e *Terminal, p []byte, n int) {
 
 func BenchmarkParse(b *testing.B) {
 	p := mixedStream(8 << 20)
-	for _, chunk := range []int{4 << 10, 64 << 10} {
-		b.Run(fmt.Sprintf("chunk=%dK", chunk>>10), func(b *testing.B) {
-			e := mustNew(b, 120, 40, Options{})
-			write(e, p, chunk)
-			b.SetBytes(int64(len(p)))
-			b.ResetTimer()
-			for range b.N {
+	for _, be := range backends() {
+		for _, chunk := range []int{4 << 10, 64 << 10} {
+			b.Run(fmt.Sprintf("%s/chunk=%dK", be, chunk>>10), func(b *testing.B) {
+				e := mustNew(b, 120, 40, Options{Backend: be})
 				write(e, p, chunk)
-			}
-		})
+				b.SetBytes(int64(len(p)))
+				b.ResetTimer()
+				for range b.N {
+					write(e, p, chunk)
+				}
+			})
+		}
 	}
 }
 
-// budget is the parse throughput _design/ide.md asks for.
+// budget is the parse throughput _design/ide.md asks for. The native core, which the desktop app runs, must meet it.
 const budget = 200e6
 
-// deviation, while set, reports a throughput under budget instead of failing, down to floor, which catches a
-// regression. Measured on the stream below: libghostty-vt under wazero ~80 MB/s, the same library native ~285 MB/s.
-const (
-	deviation = "deviation: libghostty-vt under wazero parses about 80 MB/s of mixed output; FG-4 as-built note in _design/ide.md, pending review"
-	floor     = 40e6
-)
+// wasmFloor is what the wasm core (the worker's, and any build without cgo) must keep: under wazero it parses about
+// 80 MB/s of this stream, under budget, a deviation accepted in FG-4 for builds that can't link the native core.
+const wasmFloor = 40e6
 
 func TestParseThroughput(t *testing.T) {
 	if testing.Short() || raceEnabled {
 		t.Skip("throughput isn't measured with -short or -race")
 	}
 	p := mixedStream(32 << 20)
-	e := mustNew(t, 120, 40, Options{})
-	write(e, p[:4<<20], 64<<10)
-	best := 0.0
-	for range 3 {
-		start := time.Now()
-		write(e, p, 64<<10)
-		best = max(best, float64(len(p))/time.Since(start).Seconds())
+	for _, be := range backends() {
+		t.Run(be, func(t *testing.T) {
+			e := mustNew(t, 120, 40, Options{Backend: be})
+			write(e, p[:4<<20], 64<<10)
+			best := 0.0
+			for range 3 {
+				start := time.Now()
+				write(e, p, 64<<10)
+				best = max(best, float64(len(p))/time.Since(start).Seconds())
+			}
+			t.Logf("%s parse throughput %.0f MB/s (budget %.0f MB/s)", be, best/1e6, budget/1e6)
+			want := budget
+			if be == "wasm" {
+				want = wasmFloor
+			}
+			if best < want {
+				t.Fatalf("%s parse throughput %.0f MB/s, under %.0f MB/s", be, best/1e6, want/1e6)
+			}
+		})
 	}
-	t.Logf("parse throughput %.0f MB/s (budget %.0f MB/s)", best/1e6, budget/1e6)
-	switch {
-	case best >= budget:
-	case deviation != "" && best >= floor:
-		t.Skipf("%s: measured %.0f MB/s", deviation, best/1e6)
-	default:
-		t.Fatalf("parse throughput %.0f MB/s, under %.0f MB/s", best/1e6, max(floor, budget*boolf(deviation == ""))/1e6)
-	}
-}
-
-func boolf(b bool) float64 {
-	if b {
-		return 1
-	}
-	return 0
 }

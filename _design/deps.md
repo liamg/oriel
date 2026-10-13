@@ -28,7 +28,8 @@ Third-party code is a liability we choose deliberately, one dependency at a time
 - `govulncheck` and `go mod verify` run on every PR (`make vulncheck`, `make vendor-check`). Versions are pinned,
   never `latest`, and so are the CI actions (by commit).
 - WASM blobs (grammars, the Ghostty VT core) are **built in CI from pinned upstream commits**, with checksums
-  committed. We never download prebuilt `.wasm` from anywhere.
+  committed. We never download prebuilt `.wasm` from anywhere. Native libraries (the Ghostty VT core) are built the
+  same way, from the same pins, and not committed.
 - The `oriel build --with` native-plugin path shows a plugin's full module tree and asks before building it in.
 
 ## What the plan currently relies on
@@ -51,7 +52,7 @@ Each tier-C row is a **question for you**: approve, reject, or "write our own".
 | `github.com/tetratelabs/wazero` | WASM runtime: tree-sitter grammars, Ghostty VT, wasm plugins | Tetrate (company) → community | **C ✓ approved** | – |
 | tree-sitter core + per-language grammars (as wasm) | syntax highlighting, text objects | tree-sitter org; **grammars by many individuals** | **C ✓ approved**: grammars pinned per language and added one at a time, run sandboxed in wazero. So far (ED-6, ED-11): runtime v0.27.0; Go, TypeScript, TSX, JavaScript, Python, Rust, Lua, Markdown and inline Markdown, C, C++, Java, Ruby, Bash, JSON, YAML, TOML, HTML, CSS, SQL, Dockerfile, Make, Diff, Git commit and vimdoc, at nvim-treesitter's pins (`syntax/grammars/manifest.tsv`), built with wasi-sdk 34 and embedded gzipped | – |
 | nvim-treesitter highlight queries (`.scm` data) | highlight rules | neovim community, Apache-2.0 | **C ✓ approved** (data), vendored in `syntax/queries/` | – |
-| Ghostty VT core (`libghostty-vt`, as wasm) | terminal emulation | Ghostty, Mitchell Hashimoto (HashiCorp co-founder), non-profit | **C ✓ approved**. Pinned (FG-4): Ghostty commit `80456f05732a68b3fed99eb7396eddf8b7981080` (2026-09-29), built with zig 0.16.0 (that commit's `minimum_zig_version`) for wasm32-freestanding, ReleaseFast, with `term/ghostty/wasm/shim.c`, by `term/ghostty/wasm/build.sh`; embedded gzipped, checksum in `SHA256SUMS`. The build reads its own pinned zig packages (uucode, translate-c, arocc, ghostty-themes, zlib), each checked by hash in `build.zig.zon` | – |
+| Ghostty VT core (`libghostty-vt`, native via cgo and as wasm) | terminal emulation | Ghostty, Mitchell Hashimoto (HashiCorp co-founder), non-profit | **C ✓ approved**, native (cgo) and wasm. Pinned (FG-4): Ghostty commit `80456f05732a68b3fed99eb7396eddf8b7981080` (2026-09-29), built with zig 0.16.0 (that commit's `minimum_zig_version`), ReleaseFast. Wasm: wasm32-freestanding with `term/ghostty/wasm/shim.c`, by `term/ghostty/wasm/build.sh`; embedded gzipped, checksum in `SHA256SUMS`. Native: static libraries for macOS and Linux (amd64, arm64) by `term/ghostty/native/build.sh`, linked with `-tags ghostty_native`; not committed. The build reads its own pinned zig packages (uucode, translate-c, arocc, ghostty-themes, zlib; native also highway, and wuffs with its test pixels, which zig fetches though lib-vt doesn't link them; simdutf is in Ghostty's tree), each checked by hash in `build.zig.zon` | – |
 | `github.com/yuin/gopher-lua` | Lua VM | individual | **C ✓ approved**, behind `script.VM` | our own Lua VM later, if ever needed |
 | `github.com/creack/pty` | PTYs (from crit) | individual; used by Docker, Kubernetes, many others | **rejected: write our own** | `oriel/pty` over `x/sys/unix`, ~300 lines |
 | `github.com/alecthomas/chroma` | highlighting (crit today) | individual | C, **dropped**: tree-sitter replaces it | – |

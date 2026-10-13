@@ -59,7 +59,8 @@ jobs:
       - run: git diff --exit-code -- syntax/grammars/SHA256SUMS syntax/grammars/manifest.tsv
 
   ghostty:
-    # libghostty-vt is rebuilt from its pinned commit and must match what's committed (deps.md).
+    # libghostty-vt is rebuilt from its pinned commit: the wasm must match what's committed, and the native library
+    # (not committed) must pass the same suite (deps.md).
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,6 +72,11 @@ jobs:
           echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
       - run: term/ghostty/wasm/build.sh
       - run: git diff --exit-code -- term/ghostty/wasm/SHA256SUMS
+      - run: term/ghostty/native/build.sh linux_amd64
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+      - run: make test-vt
 
   vulncheck:
     runs-on: ubuntu-latest

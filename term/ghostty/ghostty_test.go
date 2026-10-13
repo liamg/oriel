@@ -15,8 +15,23 @@ import (
 	"github.com/liamg/oriel/term"
 )
 
+// testBackend is the core the tests use: $ORIEL_VT_BACKEND (native or wasm), else the build's default. CI runs them
+// with each; TestConformance and TestParseThroughput run every backend built in.
+var testBackend = os.Getenv("ORIEL_VT_BACKEND")
+
+// backends are the cores built in: wasm always, native with the ghostty_native tag.
+func backends() []string {
+	if Native() {
+		return []string{"wasm", "native"}
+	}
+	return []string{"wasm"}
+}
+
 func mustNew(t testing.TB, cols, rows int, opts Options) *Terminal {
 	t.Helper()
+	if opts.Backend == "" {
+		opts.Backend = testBackend
+	}
 	e, err := New(cols, rows, opts)
 	if err != nil {
 		t.Fatal(err)

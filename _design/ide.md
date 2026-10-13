@@ -265,10 +265,12 @@ flowchart LR
 
 **The VT core is Ghostty's** (decided). `libghostty-vt` parses escape codes into a cell grid, behind `term.Emulator`.
 
-- It's compiled to WASM and run under wazero: the same core crit already ships in the browser (ghostty-web), and no cgo.
+- Two builds of the same core, behind one interface: linked natively via cgo (the desktop app, `-tags ghostty_native`),
+  and compiled to WASM under wazero (a build without cgo or the tag, and the worker): the same core crit already ships
+  in the browser (ghostty-web).
 - That gets us the kitty keyboard and graphics protocols, grapheme clusters and synchronized output.
-- WASM costs ~1.5–2× native, which is still far above what a PTY produces.
-- The WASM is built in CI from a pinned Ghostty commit (`deps.md`). If wazero isn't approved, the same core links via cgo instead.
+- Both are built from a pinned Ghostty commit (`deps.md`); the wasm is committed, the native libraries are built
+  locally and in CI.
 
 **Drawing** is done by our own renderer, not the VT core:
 
@@ -318,19 +320,21 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 - Synchronized output: the frame is captured when the hold begins and `Grid` returns it until the hold ends or
   `Options.HoldTimeout` (1 s) passes.
 - Grapheme clustering (mode 2027) is on by default, as in Ghostty, so an emoji ZWJ sequence is one wide cell.
-- **Deviation, for review: parse throughput.** On a mixed stream (logs, test results, coloured `ls`, `git log`,
-  compiler errors; 14 escapes per KB) the wasm core parses about 80 MB/s (plain text about 190 MB/s). The same
-  library built natively parses that stream at about 285 MB/s, so wasm costs about 3.5×, not 1.5–2×: Ghostty's SIMD
-  paths are C++ (highway, simdutf) and off for freestanding wasm, and wazero checks bounds explicitly. 80 MB/s is
-  still far above what a PTY delivers, but under the 200 MB/s budget; `TestParseThroughput` reports the deviation
-  and fails only under 40 MB/s. Meeting the budget means the cgo build named above.
+- **Parse throughput.** On a mixed stream (logs, test results, coloured `ls`, `git log`, compiler errors; 14 escapes
+  per KB) the native core parses about 260 MB/s, within the 200 MB/s budget. Wasm parses about 80 MB/s, about 3.5×
+  slower: Ghostty's SIMD paths are C++ (highway, simdutf) and off for freestanding wasm, and wazero checks bounds
+  explicitly. That is still far above what a PTY delivers. `TestParseThroughput` holds native to the budget and
+  wasm to 40 MB/s.
+- `term/ghostty` hides the two behind a `machine` (the shim's calls and its in/out buffers): `cgo.go` calls the
+  shim compiled with the library (`shim_native.c`), `wazero.go` the wasm module. `Options.Backend` picks one; the
+  default is native when it's built. The conformance suite runs on both.
 
 ### Panes and modes
 
 - Panes are splittable, attach to session PTYs on the worker, and survive app restarts.
 - Any placement: docked at the bottom like other editors, a split or tab in the main area, floating,
   drop-down, or zoomed full-window. The same layout model applies to every pane (`ui.md` 01d).
-- Terminal-normal mode (`⌃\ ⌃N`) gives vim motions, search and yank over the scrollback.
+- Terminal-normal mode (`⌃Esc`, or vim's `⌃\ ⌃N`) gives vim motions, search and yank over the scrollback.
 - Claude's own PTY is just another terminal view. The agent console (`ui.md` 15) is the structured view of the same session.
 
 
@@ -342,15 +346,17 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 - Drawn in one paint per terminal from the VT's grid: runs of one style placed on the cell grid, backgrounds, cursor
   shapes, and box-drawing, block and shade characters drawn as shapes so they join at any size. Colours are the
   theme's `terminal.ansi.0`–`15`, `terminal.fg/bg`, 256-colour and truecolor.
-- Keys go through the VT's encoder (`EncodeKey`, `Paste`). `⌃\ ⌃N` enters terminal-normal mode: a vim engine over a
+- Keys go through the VT's encoder (`EncodeKey`, `Paste`). Every ⌃ key is the program's (the mode is
+  `registry.RawKeys`), so the window's ⌃ chords (`⌃W`, `⌃J`…) don't take them; ⌘ chords still work. `⌃Esc`, or
+  `⌃\ ⌃N`, keymaps in the `terminal` mode, enters terminal-normal mode: a vim engine over a
   read-only buffer of the screen and scrollback, so every motion, search and yank is the editor's; `i`/`a` go back.
   The mode shows in the status line through `registry.Moded`, which any view can implement.
 - FG-5: exit dots from the OSC 133 command log, `[[`/`]]` between prompts, copy/send/re-run the last command, the
   OSC 7 directory in the tab.
 - "Snapshot on reconnect": the screens are snapshotted when the app stops and restored into the same instances when it
   opens the directory again (the worker will keep the live PTYs).
-- Deviation, for review: parsing runs ~80 MB/s under wazero against the 200 MB/s budget (native Ghostty ~285 MB/s);
-  `TestParseThroughput` reports it and fails only under 40 MB/s until it's decided (keep wasm, or the cgo build).
+- The desktop app runs the native core (about 260 MB/s against the 200 MB/s budget); wasm (about 80 MB/s) is the
+  fallback without cgo.
 - Not yet: mouse reporting, selection with the pointer, OSC 8 links, images, ligatures, terminal search outside
   terminal-normal mode, and the Explorer following the terminal's directory.
 ## Explorer scopes

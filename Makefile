@@ -1,9 +1,13 @@
 MODULES := $(shell go list -m -f '{{.Path}}/...')
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
-.PHONY: test vet build oracle check fmt-check depcheck refcheck vendor-check vulncheck
+.PHONY: test test-vt vet build native oracle check fmt-check depcheck refcheck vendor-check vulncheck
 test:
 	go test $(MODULES)
+
+# test-vt runs the terminal emulator's suite on both backends; it needs native first.
+test-vt:
+	go test -tags ghostty_native ./term/...
 
 oracle:
 	ORIEL_ORACLE=1 go test ./vim/...
@@ -11,8 +15,13 @@ oracle:
 vet:
 	go vet $(MODULES)
 
+# build is the desktop app, on the native libghostty-vt; it needs native first. Without the tag (or cgo) the
+# emulator runs as wasm.
 build:
-	go build -o bin/oriel ./cmd/oriel
+	go build -tags ghostty_native -o bin/oriel ./cmd/oriel
+
+native:
+	term/ghostty/native/build.sh $(shell go env GOOS)_$(shell go env GOARCH)
 
 check: fmt-check vet depcheck refcheck vendor-check
 
