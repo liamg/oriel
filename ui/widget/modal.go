@@ -39,14 +39,14 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 		c.Focus(id)
 	}
 	c.Box(struct{ k any }{key}, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Fill: col(c, tScrim), Z: 1000, Interactive: true,
-		Help: o.Help, Float: &ui.Float{Point: &render.Point{}}}, nil)
+		Help: o.Help, Float: &ui.Float{Point: &render.Point{}}, Enter: fade, Exit: fade}, nil)
 	w := o.Width
 	if w == 0 {
 		w = 600
 	}
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}
 	c.Column(key, ui.Style{W: ui.Px(w), Fill: col(c, tModalBg), Stroke: col(c, tModalBorder), Border: 1, Radius: 10, Z: 1001, Clip: true,
-		Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Trap: true, Focusable: true, KeyMode: "modal", Help: o.Help,
+		Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Enter: riseIn, Exit: fade, Trap: true, Focusable: true, KeyMode: "modal", Help: o.Help,
 		Role: ui.RoleDialog, Label: title}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.PadXY(16, 0), Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("title", title, uiText(c, 13, typeset.SemiBold, col(c, tModalTitle)))
@@ -114,7 +114,7 @@ func ShowToasts(c *ui.Ctx, key any, t *Toasts) {
 				gone = append(gone, x.id)
 			}
 			c.Row(x.id, ui.Style{W: ui.Px(340), Fill: col(c, tToastBg), Stroke: col(c, tToastBorder), Border: 1, Radius: 8, Clip: true,
-				Focusable: true, KeyMode: "toast", Cursor: render.CursorPointer, Help: x.Help, Role: ui.RoleStatus}, func(c *ui.Ctx) {
+				Enter: slideIn, Exit: fade, Glide: true, Focusable: true, KeyMode: "toast", Cursor: render.CursorPointer, Help: x.Help, Role: ui.RoleStatus}, func(c *ui.Ctx) {
 				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: x.Tone}, nil)
 				c.Column("text", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 4}, func(c *ui.Ctx) {
 					c.Text("title", x.Title, uiText(c, 12.5, typeset.SemiBold, col(c, tToastFg)))

@@ -104,8 +104,15 @@ type Style struct {
 	ScrollY bool
 	Wheel   bool // takes the wheel itself: movement over it comes as Interaction.Scroll, for content it scrolls itself
 
-	Float *Float // out of the flow, placed against another node or a point
-	Z     int    // floats paint in Z order, after the flow
+	Float *Float  // out of the flow, placed against another node or a point
+	Z     int     // floats paint in Z order, after the flow; one below 0 paints behind its parent's content instead
+	Fade  float32 // how faded it's drawn, 0 (opaque) to 1
+
+	// Motion (FW-13), on the motion spring: how the node comes in and goes (an Exit keeps it drawn, without input,
+	// until it's out), whether a move glides there, and whether a fill change eases.
+	Enter, Exit *Transition
+	Glide       bool
+	EaseFill    bool
 
 	Interactive bool // takes hover and press
 	Focusable   bool // takes focus; implies Interactive

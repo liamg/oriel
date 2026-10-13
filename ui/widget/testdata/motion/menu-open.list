@@ -1,0 +1,24 @@
+== start
+backdrop #060606
+== mid
+backdrop #060606
+opacity 0.80419856
+  rect 40,39.216793 200x68 fill #121210 radius 6 stroke 1 #332f27
+  rect 40,43.216793 200x30.000004 fill #191815
+  text "Copy" @52,62.763912 #ece6d8 Inter 12.5
+  rect 212,50.616795 16x15.200001 fill #121210 radius 4 stroke 1 #332f27
+  text "y" @217,61.816795 #7c7566 JetBrains Mono 10
+  text "Help" @52,92.763916 #ece6d8 Inter 12.5
+  rect 212,80.6168 16x15.199997 fill #121210 radius 4 stroke 1 #332f27
+  text "K" @217,91.816795 #7c7566 JetBrains Mono 10
+pop
+== settled
+backdrop #060606
+rect 40,40 200x68 fill #121210 radius 6 stroke 1 #332f27
+rect 40,44 200x30 fill #191815
+text "Copy" @52,63.54712 #ece6d8 Inter 12.5
+rect 212,51.4 16x15.199997 fill #121210 radius 4 stroke 1 #332f27
+text "y" @217,62.600002 #7c7566 JetBrains Mono 10
+text "Help" @52,93.54712 #ece6d8 Inter 12.5
+rect 212,81.4 16x15.199997 fill #121210 radius 4 stroke 1 #332f27
+text "K" @217,92.6 #7c7566 JetBrains Mono 10

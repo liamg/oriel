@@ -81,7 +81,33 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 	if o.role != "" {
 		role, rowRole = o.role, o.rowRole
 	}
-	c.List(key, ui.Style{W: ui.Flex(1), H: h, Focusable: true, Help: o.Help, KeyMode: "list", Role: role, Label: o.Label}, n, rh, func(rc *ui.Ctx, i int) {
+	// The selection's highlight is drawn behind the rows and glides between them when it moves.
+	ls := ui.State[listState](c, ui.Child(id, "selection"))
+	if ls.to != selected || !ls.seen {
+		at := float32(selected)
+		if ls.seen {
+			at = ls.from + (float32(ls.to)-ls.from)*c.Motion(listKey{id}, 1)
+		}
+		ls.from, ls.to, ls.seen = at, selected, true
+		c.Motion(listKey{id}, 0)
+		c.ResetMotion(listKey{id}, 0)
+	}
+	p := c.Motion(listKey{id}, 1)
+	behind := func(lc *ui.Ctx, top float32) {
+		if n == 0 {
+			return
+		}
+		r, ok := c.Rect(id)
+		if !ok {
+			return
+		}
+		y := top + (ls.from+(float32(ls.to)-ls.from)*p)*rh
+		at := render.Point{X: r.Min.X, Y: y}
+		lc.Row("selection", ui.Style{W: ui.Px(r.Dx()), H: ui.Px(rh), Fill: col(c, tRowSelected), Z: -1, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: col(c, tRowEdge)}, nil)
+		})
+	}
+	c.ListBehind(key, ui.Style{W: ui.Flex(1), H: h, Focusable: true, Help: o.Help, KeyMode: "list", Role: role, Label: o.Label}, n, rh, behind, func(rc *ui.Ctx, i int) {
 		item := rc.Next("item")
 		ri := rc.Interaction(item)
 		if ri.Clicked {
@@ -90,29 +116,31 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 			rc.Focus(id)
 		}
 		fill := render.Color{}
-		switch {
-		case i == selected:
-			fill = col(c, tRowSelected)
-		case ri.Hovered:
+		if ri.Hovered && i != selected {
 			fill = col(c, tRowHover)
 		}
 		var expanded *bool
 		if o.expanded != nil {
 			expanded = o.expanded(i)
 		}
-		rc.Row("item", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: fill, Cross: ui.Center, Interactive: true, Cursor: render.CursorPointer,
-			Role: rowRole, Selected: i == selected, Expanded: expanded}, func(rc *ui.Ctx) {
-			edge := render.Color{}
-			if i == selected {
-				edge = col(c, tRowEdge)
-			}
-			rc.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
+		rc.Row("item", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: fill, EaseFill: true, Cross: ui.Center, Interactive: true,
+			Cursor: render.CursorPointer, Role: rowRole, Selected: i == selected, Expanded: expanded}, func(rc *ui.Ctx) {
+			rc.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1)}, nil)
 			row(rc, i, i == selected)
 		})
 	})
 	res.Changed = *sel != old
 	return res
 }
+
+// listState is where the selection's highlight glides from and to.
+type listState struct {
+	from float32
+	to   int
+	seen bool
+}
+
+type listKey struct{ id ui.ID }
 
 // TreeItem is one node of a tree. ID must be unique in the tree.
 type TreeItem struct {

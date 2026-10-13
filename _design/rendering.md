@@ -221,6 +221,17 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
   builds itself. A click is press and release on the same node. Disabled nodes take nothing and hide what's under
   them. The wheel scrolls the topmost scroller on its axis. `FocusNext(±1)` walks focusables in paint order, and a
   node focused from the keyboard gets a 2 px focus ring. A tooltip shows after the pointer rests 500 ms.
+- **Motion** (FW-13): one spring for everything that moves, `c.Motion(key, target)` on a 0..1 progress, critically
+  damped at ω = 45 (within 2% by 130 ms, settled by about 210 ms; nothing runs past 250 ms). The theme's `motion`
+  effect scales it (0 turns it off) and `ui.reduced_motion` makes it jump. On it, generally in `ui`: `Style.Enter`
+  and `Style.Exit` (a `Transition`: fade, and a shift to come from or go to; an exit keeps the node's last frame
+  drawn, taking no input, until it's out), `Style.Glide` (a move animates), `Style.EaseFill` (a fill change eases),
+  `Style.Fade`, and floats with `Z < 0`, which draw behind their parent's content (`Ctx.ListBehind` puts one behind a
+  list's rows). The widgets use them: menus and popovers fade in 4 px from their anchor and fade out; a modal's scrim
+  fades and its card rises 8 px; toasts slide in 24 px from the right, fade out, and the stack glides; the tab
+  underline and a list's selection glide; buttons, menu items and rows ease their fills; docks slide open and shut
+  with their content fading. Rendering has no scale transform, so menus move rather than scale (0.97 → 1). A key
+  acts at once whatever is moving. Six things animating take about 0.1 ms a frame.
 - **Springs**: `c.Anim(key, target)` is critically damped (within 2% at 200 ms, settled by 500 ms). The UI reports
   `NextFrame()` while anything moves or a tooltip is due, and the app redraws at 120 Hz until then. The option
   `ui.reduced_motion` makes every spring jump.

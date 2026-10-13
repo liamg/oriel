@@ -127,22 +127,39 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 
 type fk struct{ i int }
 
+// dock draws a dock, sliding open and shut from its edge on the motion spring (FW-13): its size grows from 0 and its
+// content fades in, and the reverse on closing. A drag resizes it at once.
 func dock(c *ui.Ctx, r *Root, st *viewState, e Edge, content Content) bool {
 	d := r.Docks[e]
-	if !d.Open || len(d.Leaf.Tabs) == 0 {
+	open := float32(0)
+	if d.Open && len(d.Leaf.Tabs) > 0 {
+		open = 1
+	}
+	p := c.Motion(dockKey{e}, open)
+	if p == 0 || len(d.Leaf.Tabs) == 0 {
 		return false
 	}
-	s := ui.Style{W: ui.Px(d.Size), H: ui.Flex(1), Fill: c.Theme().C(tDockBg)}
+	size := d.Size * p
+	s := ui.Style{W: ui.Px(size), H: ui.Flex(1), Fill: c.Theme().C(tDockBg), Clip: p < 1}
 	if e == Bottom {
-		s = ui.Style{W: ui.Flex(1), H: ui.Px(d.Size), Fill: c.Theme().C(tDockBg)}
+		s = ui.Style{W: ui.Flex(1), H: ui.Px(size), Fill: c.Theme().C(tDockBg), Clip: p < 1}
 	}
 	changed := false
 	s.Role, s.Label = ui.RoleRegion, dockNames[e]
 	st.docks[e] = c.Column("dock-"+string(e), s, func(c *ui.Ctx) {
-		changed = leaf(c, r, st, d.Leaf, content)
+		// The content keeps its open size while the dock slides, so it doesn't reflow; it fades with it.
+		inner := ui.Style{W: ui.Px(d.Size), H: ui.Flex(1), Fade: 1 - p}
+		if e == Bottom {
+			inner = ui.Style{W: ui.Flex(1), H: ui.Px(d.Size), Fade: 1 - p}
+		}
+		c.Column("content", inner, func(c *ui.Ctx) {
+			changed = leaf(c, r, st, d.Leaf, content)
+		})
 	})
 	return changed
 }
+
+type dockKey struct{ e Edge }
 
 func node(c *ui.Ctx, r *Root, st *viewState, n *Node, content Content) bool {
 	if n.leaf() {

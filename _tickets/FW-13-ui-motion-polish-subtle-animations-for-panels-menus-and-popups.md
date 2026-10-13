@@ -2,7 +2,7 @@
 id: FW-13
 title: "UI motion polish: subtle animations for panels, menus, popups and toasts"
 phase: P3
-status: todo
+status: review
 area: Framework
 module: ui, ui/widget, ui/layout
 depends_on: [FW-5, FW-6, FW-9]
@@ -44,6 +44,13 @@ Small, quick motion that says where something came from and where it went. Nothi
 - With `ui.reduced_motion` on, every one of those snapshots jumps straight to its settled frame.
 - Nothing animates for longer than 250 ms, and nothing delays input: a key pressed mid-animation acts at once.
 - The frame budgets in `rendering.md` still hold with several things animating (benchmark).
+
+## As built
+
+- See rendering.md, "Motion". Snapshots: `ui/testdata/motion`, `ui/widget/testdata/motion`,
+  `ui/layout/testdata/dock-motion*.list`; the budget test and `BenchmarkAnimatingFrame` in `ui/widget`.
+- Differs from the ticket: menus fade and move 4 px instead of scaling (no scale transform in `render`); there are no
+  submenus yet to animate; hover eases fills, not text colours.
 
 ## Rules
 

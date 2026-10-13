@@ -8,7 +8,7 @@ import (
 )
 
 // Effects with no value anywhere in the stack.
-var defaultEffects = map[string]float64{"glow": 1, "grid": 0, "scanline": 0, "brackets": 1, "blur": 0}
+var defaultEffects = map[string]float64{"glow": 1, "grid": 0, "scanline": 0, "brackets": 1, "blur": 0, "motion": 1}
 
 // Resolved is a theme flattened for one variant: every token's colour, read by id.
 type Resolved struct {

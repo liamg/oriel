@@ -33,6 +33,8 @@ func describe(ops []render.Op) string {
 			out = append(out, "text "+op.Run.Text+" @"+num(op.At.X)+","+num(op.At.Y))
 		case render.OpPushClip:
 			out = append(out, "clip "+fmtRect(op.Rect))
+		case render.OpPushOpacity:
+			out = append(out, "opacity "+num(op.Amount))
 		case render.OpPop:
 			out = append(out, "pop")
 		}

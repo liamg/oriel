@@ -23,7 +23,6 @@ pop
 rect 20,108 382x28 fill #f3f1ec
 text "AGENT · CLAUDE" @32,124.6 #717a86 JetBrains Mono 10
 text "TERMINAL" @146,124.6 #1b2129 JetBrains Mono 10
-rect 146,134 56x2 fill #0a84b8
 text "PROBLEMS 1" @218,124.6 #717a86 JetBrains Mono 10
 text "DEBUG" @304,124.6 #717a86 JetBrains Mono 10
 text "TESTS" @355,124.6 #717a86 JetBrains Mono 10
@@ -40,11 +39,11 @@ clip 20,152 250x200 r 0
 pop
 rect 286,152 250x200 fill #f3f1ec
 clip 286,152 250x200 r 0
+  rect 286,218 250x22 fill #e1e8e8
+  rect 286,218 2x22 fill #0a84b8
   text "Negative values round the wrong way" @298,167.54712 #424b57 Inter 12.5
   text "Negative values round the wrong way" @298,189.54712 #424b57 Inter 12.5
   text "Negative values round the wrong way" @298,211.54712 #424b57 Inter 12.5
-  rect 286,218 250x22 fill #e1e8e8
-  rect 286,218 2x22 fill #0a84b8
   text "Negative values round the wrong way" @298,233.54712 #424b57 Inter 12.5
   text "Negative values round the wrong way" @298,255.54712 #424b57 Inter 12.5
   text "Negative values round the wrong way" @298,277.54712 #424b57 Inter 12.5
@@ -63,6 +62,7 @@ rect 552,220 250x1 fill #dcd7cc
 text "Hide this tat" @564,244.54712 #a3a9b1 Inter 12.5
 text "Move to statusline…" @564,274.54712 #1b2129 Inter 12.5
 rect 20,368 120x24 fill #ebe8e1 radius 4
+rect 146,134 56x2 fill #0a84b8
 rect 564.5775,50 220x39.12451 fill #ebe8e1 radius 8 stroke 1 #c9c3b6
 text "A popover under its anchor." @576.5775,74.109375 #1b2129 Inter 12.5
 rect 80,380 250x107 fill #ebe8e1 radius 6 stroke 1 #c9c3b6

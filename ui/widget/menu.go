@@ -59,7 +59,7 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 		w = 250
 	}
 	c.Column(key, ui.Style{W: ui.Px(w), Pad: ui.PadXY(0, 4), Fill: col(c, tMenuBg), Stroke: col(c, tMenuBorder), Border: 1, Radius: 6,
-		Focusable: true, KeyMode: "menu", Help: o.Help, Role: ui.RoleMenu}, func(c *ui.Ctx) {
+		Enter: dropIn, Exit: fade, Focusable: true, KeyMode: "menu", Help: o.Help, Role: ui.RoleMenu}, func(c *ui.Ctx) {
 		for i, it := range items {
 			if it.Separator {
 				c.Box(i, ui.Style{W: ui.Flex(1), H: ui.Px(9), Pad: ui.PadXY(0, 4)}, func(c *ui.Ctx) {
@@ -82,7 +82,7 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 			if it.Disabled {
 				fg = col(c, tDisabledFg)
 			}
-			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: fill, Interactive: true,
+			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: fill, EaseFill: true, Interactive: true,
 				Disabled: it.Disabled, Cursor: render.CursorPointer, Help: it.Help, Role: ui.RoleMenuItem, Label: it.Label}, func(c *ui.Ctx) {
 				c.Text("label", it.Label, uiText(c, 12.5, typeset.Normal, fg))
 				if it.Shortcut != "" {
@@ -200,6 +200,7 @@ func Popover(c *ui.Ctx, key any, anchor ui.ID, open *bool, o PopoverOpts, body f
 		w = ui.Px(o.Width)
 	}
 	c.Column(key, ui.Style{W: w, Pad: ui.Pad(12), Gap: 8, Fill: col(c, tMenuBg), Stroke: col(c, tMenuBorder), Border: 1, Radius: 8, Z: 801,
+		Enter: dropIn, Exit: fade,
 		Float: &ui.Float{To: anchor, At: render.Point{Y: 1}, Offset: render.Point{Y: 4}}, Focusable: true, KeyMode: "popover", Help: o.Help,
 		Role: ui.RoleDialog, Label: o.Label}, body)
 }

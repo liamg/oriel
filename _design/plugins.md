@@ -275,6 +275,9 @@ type Host interface {
   `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").
 - `Registry.Themes()` returns a generation with the sources; the window watches a theme registered at any time.
   `theme.Readable(fg, on, ratio)` declares a pair a widget draws, for the theme lint, as `theme.Declare` does a token.
+- Motion is general (rendering.md, "Motion"): `Style.Enter`, `Style.Exit`, `Style.Glide`, `Style.EaseFill`, `Style.Fade`,
+  `Ctx.Motion` and `Ctx.ResetMotion`, underlay floats (`Z < 0`) and `Ctx.ListBehind`, for a plugin's views as for
+  the built-ins.
 - A box with `ui.Style.Wheel` takes the scroll wheel itself, as `Interaction.Scroll`, for content it scrolls on
   its own (an editor that draws only the lines in view).
 

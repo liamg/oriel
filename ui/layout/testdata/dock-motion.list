@@ -1,0 +1,196 @@
+== open=false start
+backdrop #060606
+rect 0,0 1200x800 fill #060606
+rect 0,0 250x800 fill #0c0c0b
+clip 0,0 250x800 r 0
+  rect 0,0 250x30 fill #0c0c0b
+  rect 0,0 75.03125x30 fill #121210
+  text "explorer" @14,20.365234 #ece6d8 Inter 12
+  rect 0,30 250x1 fill #24221d
+  clip 0,31 250x769 r 0
+    text "explorer" @0,42.625 #ece6d8 Inter 12
+  pop
+pop
+clip 250,0 950x600 r 0
+  rect 250,0 950x30 fill #0c0c0b
+  rect 250,0 119.75x30 fill #121210
+  rect 250,0 119.75x2 fill #ffd23f
+  text "editor#round.go" @264,20.365234 #ece6d8 Inter 12
+  text "editor#round_test.go" @383.75,20.365234 #7c7566 Inter 12
+  rect 250,30 950x1 fill #24221d
+  clip 250,31 950x569 r 0
+    text "editor#round.go" @250,42.625 #ece6d8 Inter 12
+  pop
+pop
+rect 250,600 950x200 fill #0c0c0b
+clip 250,600 950x200 r 0
+  rect 250,600 950x30 fill #0c0c0b
+  text "problems" @264,620.36523 #7c7566 Inter 12
+  rect 331.15625,600 86.0625x30 fill #121210
+  text "terminal#1" @345.15625,620.36523 #ece6d8 Inter 12
+  rect 250,630 950x1 fill #24221d
+  clip 250,631 950x169 r 0
+    text "terminal#1" @250,642.625 #ece6d8 Inter 12
+  pop
+pop
+== open=false mid
+backdrop #060606
+rect 0,0 1200x800 fill #060606
+rect 0,0 250x800 fill #0c0c0b
+clip 0,0 250x800 r 0
+  rect 0,0 250x30 fill #0c0c0b
+  rect 0,0 75.03125x30 fill #121210
+  text "explorer" @14,20.365234 #ece6d8 Inter 12
+  rect 0,30 250x1 fill #24221d
+  clip 0,31 250x769 r 0
+    text "explorer" @0,42.625 #ece6d8 Inter 12
+  pop
+pop
+clip 250,0 950x760.8397 r 0
+  rect 250,0 950x30 fill #0c0c0b
+  rect 250,0 119.75x30 fill #121210
+  rect 250,0 119.75x2 fill #ffd23f
+  text "editor#round.go" @264,20.365234 #ece6d8 Inter 12
+  text "editor#round_test.go" @383.75,20.365234 #7c7566 Inter 12
+  rect 250,30 950x1 fill #24221d
+  clip 250,31 950x729.8397 r 0
+    text "editor#round.go" @250,42.625 #ece6d8 Inter 12
+  pop
+pop
+rect 250,760.8397 950x39.16028 fill #0c0c0b
+clip 250,760.8397 950x39.16028 r 0
+  opacity 0.19580138
+    clip 250,760.8397 950x200 r 0
+      rect 250,760.8397 950x30 fill #0c0c0b
+      text "problems" @264,781.20496 #7c7566 Inter 12
+      rect 331.15625,760.8397 86.0625x30 fill #121210
+      text "terminal#1" @345.15625,781.20496 #ece6d8 Inter 12
+      rect 250,790.8397 950x1 fill #24221d
+      clip 250,791.8397 950x169 r 0
+        text "terminal#1" @250,803.4647 #ece6d8 Inter 12
+      pop
+    pop
+  pop
+pop
+== open=false settled
+backdrop #060606
+rect 0,0 1200x800 fill #060606
+rect 0,0 250x800 fill #0c0c0b
+clip 0,0 250x800 r 0
+  rect 0,0 250x30 fill #0c0c0b
+  rect 0,0 75.03125x30 fill #121210
+  text "explorer" @14,20.365234 #ece6d8 Inter 12
+  rect 0,30 250x1 fill #24221d
+  clip 0,31 250x769 r 0
+    text "explorer" @0,42.625 #ece6d8 Inter 12
+  pop
+pop
+clip 250,0 950x800 r 0
+  rect 250,0 950x30 fill #0c0c0b
+  rect 250,0 119.75x30 fill #121210
+  rect 250,0 119.75x2 fill #ffd23f
+  text "editor#round.go" @264,20.365234 #ece6d8 Inter 12
+  text "editor#round_test.go" @383.75,20.365234 #7c7566 Inter 12
+  rect 250,30 950x1 fill #24221d
+  clip 250,31 950x769 r 0
+    text "editor#round.go" @250,42.625 #ece6d8 Inter 12
+  pop
+pop
+== open=true start
+backdrop #060606
+rect 0,0 1200x800 fill #060606
+rect 0,0 250x800 fill #0c0c0b
+clip 0,0 250x800 r 0
+  rect 0,0 250x30 fill #0c0c0b
+  rect 0,0 75.03125x30 fill #121210
+  text "explorer" @14,20.365234 #ece6d8 Inter 12
+  rect 0,30 250x1 fill #24221d
+  clip 0,31 250x769 r 0
+    text "explorer" @0,42.625 #ece6d8 Inter 12
+  pop
+pop
+clip 250,0 950x800 r 0
+  rect 250,0 950x30 fill #0c0c0b
+  rect 250,0 119.75x30 fill #121210
+  rect 250,0 119.75x2 fill #ffd23f
+  text "editor#round.go" @264,20.365234 #ece6d8 Inter 12
+  text "editor#round_test.go" @383.75,20.365234 #7c7566 Inter 12
+  rect 250,30 950x1 fill #24221d
+  clip 250,31 950x769 r 0
+    text "editor#round.go" @250,42.625 #ece6d8 Inter 12
+  pop
+pop
+== open=true mid
+backdrop #060606
+rect 0,0 1200x800 fill #060606
+rect 0,0 250x800 fill #0c0c0b
+clip 0,0 250x800 r 0
+  rect 0,0 250x30 fill #0c0c0b
+  rect 0,0 75.03125x30 fill #121210
+  text "explorer" @14,20.365234 #ece6d8 Inter 12
+  rect 0,30 250x1 fill #24221d
+  clip 0,31 250x769 r 0
+    text "explorer" @0,42.625 #ece6d8 Inter 12
+  pop
+pop
+clip 250,0 950x639.1603 r 0
+  rect 250,0 950x30 fill #0c0c0b
+  rect 250,0 119.75x30 fill #121210
+  rect 250,0 119.75x2 fill #ffd23f
+  text "editor#round.go" @264,20.365234 #ece6d8 Inter 12
+  text "editor#round_test.go" @383.75,20.365234 #7c7566 Inter 12
+  rect 250,30 950x1 fill #24221d
+  clip 250,31 950x608.1603 r 0
+    text "editor#round.go" @250,42.625 #ece6d8 Inter 12
+  pop
+pop
+rect 250,639.1603 950x160.83972 fill #0c0c0b
+clip 250,639.1603 950x160.83972 r 0
+  opacity 0.80419856
+    clip 250,639.1603 950x200 r 0
+      rect 250,639.1603 950x30 fill #0c0c0b
+      text "problems" @264,659.5255 #7c7566 Inter 12
+      rect 331.15625,639.1603 86.0625x30 fill #121210
+      text "terminal#1" @345.15625,659.5255 #ece6d8 Inter 12
+      rect 250,669.1603 950x1 fill #24221d
+      clip 250,670.1603 950x169 r 0
+        text "terminal#1" @250,681.7853 #ece6d8 Inter 12
+      pop
+    pop
+  pop
+pop
+== open=true settled
+backdrop #060606
+rect 0,0 1200x800 fill #060606
+rect 0,0 250x800 fill #0c0c0b
+clip 0,0 250x800 r 0
+  rect 0,0 250x30 fill #0c0c0b
+  rect 0,0 75.03125x30 fill #121210
+  text "explorer" @14,20.365234 #ece6d8 Inter 12
+  rect 0,30 250x1 fill #24221d
+  clip 0,31 250x769 r 0
+    text "explorer" @0,42.625 #ece6d8 Inter 12
+  pop
+pop
+clip 250,0 950x600 r 0
+  rect 250,0 950x30 fill #0c0c0b
+  rect 250,0 119.75x30 fill #121210
+  rect 250,0 119.75x2 fill #ffd23f
+  text "editor#round.go" @264,20.365234 #ece6d8 Inter 12
+  text "editor#round_test.go" @383.75,20.365234 #7c7566 Inter 12
+  rect 250,30 950x1 fill #24221d
+  clip 250,31 950x569 r 0
+    text "editor#round.go" @250,42.625 #ece6d8 Inter 12
+  pop
+pop
+rect 250,600 950x200 fill #0c0c0b
+clip 250,600 950x200 r 0
+  rect 250,600 950x30 fill #0c0c0b
+  text "problems" @264,620.36523 #7c7566 Inter 12
+  rect 331.15625,600 86.0625x30 fill #121210
+  text "terminal#1" @345.15625,620.36523 #ece6d8 Inter 12
+  rect 250,630 950x1 fill #24221d
+  clip 250,631 950x169 r 0
+    text "terminal#1" @250,642.625 #ece6d8 Inter 12
+  pop
+pop

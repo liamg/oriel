@@ -84,6 +84,9 @@ func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errSce
 		t.Fatal(err)
 	}
 	s.ui.SetTheme(r)
+	o := s.ui.Options()
+	o.ReducedMotion = true // scenes are of the settled UI on a stopped clock
+	s.ui.SetOptions(o)
 	s.ui.SetClock(func() time.Time { return s.now })
 	s.sh.ui = s.ui
 	s.sh.theme = s.ui.Theme

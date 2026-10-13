@@ -34,7 +34,8 @@ type Options struct {
 	Tooltip       TextStyle
 	TooltipFill   render.Color
 	TooltipStroke render.Color
-	ReducedMotion bool // springs jump to their targets
+	ReducedMotion bool    // springs jump to their targets
+	MotionSpeed   float32 // the motion spring's speed (the theme's motion effect): 1 as designed, 0 off
 }
 
 func defaultOptions(text TextStyle) Options {
@@ -47,6 +48,7 @@ func defaultOptions(text TextStyle) Options {
 		Tooltip:       tip,
 		TooltipFill:   render.Color{R: 0x19, G: 0x18, B: 0x15, A: 0xff},
 		TooltipStroke: render.Color{R: 0x33, G: 0x2f, B: 0x27, A: 0xff},
+		MotionSpeed:   1,
 	}
 }
 

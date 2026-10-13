@@ -40,7 +40,7 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 	if o.Primary {
 		weight = typeset.SemiBold
 	}
-	c.Row(key, ui.Style{H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 6, Cross: ui.Center, Fill: bg, Stroke: border, Border: 1, Radius: 6,
+	c.Row(key, ui.Style{H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 6, Cross: ui.Center, Fill: bg, EaseFill: true, Stroke: border, Border: 1, Radius: 6,
 		Focusable: true, Disabled: o.Disabled, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button", Role: ui.RoleButton}, func(c *ui.Ctx) {
 		c.Text(nil, label, uiText(c, 12, weight, fg))
 	})

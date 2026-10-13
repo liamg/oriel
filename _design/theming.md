@@ -167,6 +167,7 @@ run = { lua = "init.lua" }                        # optional: dynamic themes
 - `ui.variant` is `system` by default: it follows the OS (the portal's or GNOME's `color-scheme` on Linux,
   `AppleInterfaceStyle` on macOS), read every 3 s, dark until the window says otherwise.
 - The fixture renders in every built-in theme and variant, against goldens (`render/scenes`).
+- Effects include `motion` (FW-13): the speed of every animation, 1 by default, 0 for none.
 - Not yet: new theme from…, import and export, `:hi`, effects and type in the editor, syntax groups that fall back
   too far, and the live UI inside the preview (pick mode reads the real window instead).
 

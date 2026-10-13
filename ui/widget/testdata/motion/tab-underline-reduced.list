@@ -1,0 +1,21 @@
+== start
+backdrop #060606
+rect 0,0 203x28 fill #0c0c0b
+text "AGENT" @12,16.6 #7c7566 JetBrains Mono 10
+text "TERMINAL" @63,16.6 #7c7566 JetBrains Mono 10
+text "PROBLEMS" @135,16.6 #ece6d8 JetBrains Mono 10
+rect 135,26 56x2 fill #ffd23f
+== mid
+backdrop #060606
+rect 0,0 203x28 fill #0c0c0b
+text "AGENT" @12,16.6 #7c7566 JetBrains Mono 10
+text "TERMINAL" @63,16.6 #7c7566 JetBrains Mono 10
+text "PROBLEMS" @135,16.6 #ece6d8 JetBrains Mono 10
+rect 135,26 56x2 fill #ffd23f
+== settled
+backdrop #060606
+rect 0,0 203x28 fill #0c0c0b
+text "AGENT" @12,16.6 #7c7566 JetBrains Mono 10
+text "TERMINAL" @63,16.6 #7c7566 JetBrains Mono 10
+text "PROBLEMS" @135,16.6 #ece6d8 JetBrains Mono 10
+rect 135,26 56x2 fill #ffd23f

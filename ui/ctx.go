@@ -124,9 +124,22 @@ func (c *Ctx) Node(n Node) {
 // List adds a vertically scrolling list of n rows, each rowH tall, and builds only the rows in view:
 // the rows that last frame's height and the scroll offset show, plus one.
 func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i int)) ID {
+	return c.ListBehind(key, st, n, rowH, nil, row)
+}
+
+// ListBehind is List with behind, if it's set, building what's drawn behind the rows (an underlay float, Z < 0, as a
+// selection highlight that glides): top is where row 0's top is in the window, scrolling included.
+func (c *Ctx) ListBehind(key any, st Style, n int, rowH float32, behind func(c *Ctx, top float32), row func(c *Ctx, i int)) ID {
 	st.Dir, st.ScrollY = Column, true
 	st.Gap = 0
 	return c.Box(key, st, func(lc *Ctx) {
+		if behind != nil {
+			top := float32(0)
+			if r, ok := lc.u.Rect(lc.e.id); ok {
+				top = r.Min.Y - lc.u.Scroll(lc.e.id).Y
+			}
+			behind(lc, top)
+		}
 		view := float32(64 * rowH)
 		if r, ok := lc.u.Rect(lc.e.id); ok && r.Dy() > 0 {
 			view = r.Dy()
