@@ -23,6 +23,11 @@ default_provider = "claude"
 commit_gate = "soft"
 ```
 
+### Plugins
+
+- `[plugins]` lists the installed plugins, `[plugin.<name>]` holds each plugin's options, and `[registry]` configures
+  the plugin registries. Editing `[plugins]` by hand installs and uninstalls, just as the GUI does (`catalog.md`).
+
 ### Precedence
 
 Later layers win:

@@ -153,3 +153,12 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 81. [SH-7](SH-7-mission-control-k-with-live-terminals-and-inline.md): Mission control (⌘⇧K) with live terminals and inline asks · after SH-2, AI-1
 82. [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and tats in slots · after FW-6, FW-2
 83. [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key) · after FW-6
+
+### Phase 8 · plugin registry
+
+84. [PL-13](PL-13-package-format-lua-entry-point-assets-plugin-pack.md): Package format: Lua entry point, process/wasm/asset APIs, oriel plugin pack · after PL-2, PL-3
+85. [PL-18](PL-18-rename-ext-to-plugin.md): Rename the ext package and Extension types to plugin · after PL-3
+86. [PL-14](PL-14-plugins-in-settings-toml-and-lockfile-consent.md): [plugins] in settings.toml, install from the file, oriel-lock.toml consent · after PL-13, SH-12, SH-9
+87. [PL-16](PL-16-the-oriel-plugins-registry-repo-and-ci.md): The liamg/oriel-plugins registry repo and its CI · after PL-13
+88. [PL-15](PL-15-registry-client-badges-and-the-plugins-page.md): Registry client, badges, trusted tags, yank and revoke, the Plugins page · after PL-14, PL-6
+89. [PL-17](PL-17-oriel-plugin-publish.md): oriel plugin publish · after PL-16, PL-15

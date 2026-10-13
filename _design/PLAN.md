@@ -83,6 +83,7 @@ flowchart LR
   P4 --> P6["6 · Review: diff, ledger, explain, PR"]
   P5 --> P6
   P6 --> P7["7 · The rest: DAP, HUD, integrations, plugins"]
+  P7 --> P8["8 · Plugin registry"]
 ```
 
 - **Order comes from per-ticket dependencies** (`features.md` → After). `_tickets/README.md` lists what's **ready now**
@@ -98,6 +99,8 @@ flowchart LR
 - **5. AI.** Worker and wire, the Claude and Codex providers, sessions, requests, plan and work.
 - **6. Review.** Diff views, review ledger, explain, AI review, PR and Ship pages, verify.
 - **7. The rest.** DAP, HUD and mission control, plugins and security, integrations, assistant, tours, self-update. Then cut-over: crit is archived.
+- **8. Plugin registry.** `[plugins]` in `settings.toml`, lockfile consent, the package format, the registry repo and
+  publishing (`catalog.md`).
 
 Usable as a daily editor after phase 4.
 
@@ -111,7 +114,7 @@ Usable as a daily editor after phase 4.
 
 ## Out of scope (for now)
 
-- A browser pane (options in `ide.md`, decision deferred). Windows. A marketplace. Collaborative multi-user editing. Running neovim Lua plugins.
+- A browser pane (options in `ide.md`, decision deferred). Windows. A marketplace (the curated plugin registry in `catalog.md` isn't one: no storefront, ratings or hosted service). Collaborative multi-user editing. Running neovim Lua plugins.
 - A built-in web or mobile client. Remote control, if wanted, is a plugin.
 
 ## Decided along the way
@@ -134,6 +137,11 @@ Usable as a daily editor after phase 4.
 - **Gio approved**, on condition the phase-0 spike reproduces the mockups' look with no blocking limits.
 - **go-text, wazero and gopher-lua approved** (`deps.md`).
 - Tree-sitter, its queries and the fonts approved. We write our own `pty`. agentbus runs as a separate `oriel-agentbus` helper process, keeping sqlite out of Oriel.
+
+- **Plugin registry** (`catalog.md`): plugins are listed in `settings.toml` and installed from the file or the GUI alike.
+  A plugin enters through Lua; WASM and binaries are started from it. The registry is `liamg/oriel-plugins`, a repo of
+  `plugins/<author>/<plugin>/plugin.toml`: each version is a reviewed PR, unless the author is trusted, in which case
+  Oriel follows their tags. A git URL installs as unverified, with a warning. "Plugin", never "extension".
 
 ## Open questions
 

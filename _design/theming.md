@@ -105,7 +105,7 @@ id = "graphite-warm"
 contributes.themes = ["themes/graphite-warm.toml", "themes/graphite-warm-light.toml"]
 contributes.fonts  = ["fonts/Berkeley Mono.ttf"]
 contributes.icons  = "icons/"                     # file and kind icon set
-run = { lua = "init.lua" }                        # optional: dynamic themes
+# an init.lua next to it, if present, makes the theme dynamic
 ```
 
 - Data-only themes need no permissions and run no code.

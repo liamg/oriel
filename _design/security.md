@@ -30,6 +30,8 @@ rather than pretending.
   The choices are **Install** or **Cancel**. There's no partial grant, so a plugin never runs half-working,
   and authors never have to code for capabilities that might be missing.
 - A plugin that only needs `ui` and `theme` installs with no prompt.
+- Consent is recorded in `oriel-lock.toml`. A plugin listed in `settings.toml` whose lock entry already covers its
+  capabilities (your dotfiles on a new machine) activates without asking again (`catalog.md`).
 - An **update that adds capabilities** is the same choice again: accept the update with its new list, or stay on the
   current version. Removing capabilities applies silently.
 - **Undeclared calls fail** with a clear error naming the missing capability: never a silent no-op, never a prompt mid-flow.
@@ -120,7 +122,8 @@ flowchart LR
 - **Audit log**: every capability use (which plugin, which grant, what target) — `:Plugins` shows recent use and counts.
 - **Kill switch**: disable a plugin instantly from `:Plugins`, the omnibox, or the inbox card that flagged it.
 - **Safe mode**: `oriel --safe` starts with no third-party plugins and no project config — for when something misbehaves.
-- **Supply chain**: plugins pinned by commit + hash in `oriel-lock.json`; updates show a source diff and a capability diff;
+- **Supply chain**: plugins pinned by commit + hash in `oriel-lock.toml`, with a badge (reviewed, trusted, unverified)
+  saying who looked at the code; the registry can yank or revoke a version (`catalog.md`); updates show a source diff and a capability diff;
   `deps.md` rules apply to native plugins' Go dependencies.
 
 ## Go interfaces

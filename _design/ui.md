@@ -332,11 +332,14 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Subagents box, permission card (and the rule "Always" would create), network approval.
 - Composer with `@file`, model and effort chips, queued messages.
 
-## 16 · Extensions
+## 16 · Plugins
 
 ![16-plugins](mockups/16-plugins.png)
 
-- Every extension shows what it contributes, the permissions it holds, how it runs (in-process, process or wasm) and live resource use.
+- The mockup still says "Extensions", `extensions.toml` and COMMUNITY. The page is **Plugins**, the file is
+  `settings.toml`, and badges are reviewed, trusted or unverified (`catalog.md`, PL-15).
+- The REGISTRY tab browses the plugin registries. Installing writes a line to `[plugins]`.
+- Every plugin shows what it contributes, the permissions it holds, how it runs (in-process, process or wasm) and live resource use.
 
 ## 17 · Light theme
 
