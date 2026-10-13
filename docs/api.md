@@ -24,6 +24,11 @@ Version 0.4.0.
 
 - `oriel.decor.provider(name, fn)`: Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text } (1-based lines).
 
+## oriel.diagnostics
+
+- `oriel.diagnostics.list()`: Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.
+- `oriel.diagnostics.set(owner, file, list)`: Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config.
+
 ## oriel.hud
 
 - `oriel.hud.tat(name, opts, fn)`: A HUD tat: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.

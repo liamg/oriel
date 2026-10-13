@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"image/color"
+	"path/filepath"
 	"slices"
 
 	"github.com/liamg/oriel/registry"
@@ -17,7 +18,11 @@ import (
 // order. A provider that panics is turned off, as any contribution is.
 func (x *editorExt) decorations(p vim.Pane, top, bottom int) map[int][]registry.Decoration {
 	snap := p.Buf()
-	ctx := registry.DecorationCtx{Name: p.Name(), Buffer: p.Buffer(), Snap: snap, Top: top, Bottom: bottom}
+	path := p.Name()
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(x.dir, path)
+	}
+	ctx := registry.DecorationCtx{Name: p.Name(), Path: path, Buffer: p.Buffer(), Snap: snap, Top: top, Bottom: bottom}
 	off := map[string]bool{}
 	for _, o := range x.h.TurnedOff() {
 		if o.Kind == registry.KindDecoration {

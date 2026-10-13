@@ -1,14 +1,16 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,50 +20,111 @@ import (
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/script"
 )
+
+// now is the clock notices are stamped with.
+var now = time.Now
 
 // FromEdit is an engine's notice as a core one. Source is the engine: "vim", "plain".
 func FromEdit(n edit.Notice, source string) core.Notice {
 	sev := map[edit.Severity]core.Severity{edit.Info: core.SevInfo, edit.Warning: core.SevWarning, edit.Error: core.SevError,
 		edit.Question: core.SevQuestion}[n.Severity]
-	return core.Notice{ID: n.ID, Severity: sev, Source: source, Text: n.Text, Time: time.Now(), Key: true}
+	return core.Notice{ID: n.ID, Severity: sev, Source: source, Text: n.Text, Time: now(), Key: true}
 }
 
 func redactNotice(n core.Notice, r *logs.Redactor) core.Notice {
 	n.Text, n.Detail = r.Redact(n.Text), r.Redact(n.Detail)
 	if n.Time.IsZero() {
-		n.Time = time.Now()
+		n.Time = now()
 	}
 	return n
 }
 
-// faultNotice is the error notice for a contribution turned off: its stack as the detail, and an action to
-// turn it back on.
-func faultNotice(f registry.Fault, l *Logs) core.Notice {
-	n := core.Notice{ID: "turned-off." + f.Kind + "." + f.ID, Severity: core.SevError, Source: f.Source,
-		Text:    fmt.Sprintf("%s %s is turned off: %v", f.Kind, f.ID, f.Err),
-		Actions: []core.Action{{Title: "Turn back on", Command: "contribution.turn_on", Args: map[string]any{"kind": f.Kind, "id": f.ID}}}}
-	if n.Source == "" {
-		n.Source = "core"
+// faultNotice is the error notice for a contribution turned off: its stack or trace as the detail, and an action
+// to turn it back on. One turned off for its errors in a row is the row its errors were, now saying so.
+func faultNotice(f registry.Fault, l *Logs, dir string) core.Notice {
+	n := core.Notice{ID: "turned-off." + f.Kind + "." + f.ID, Severity: core.SevError, Source: cmp.Or(f.Source, "core"),
+		Text: fmt.Sprintf("%s %s is turned off: %v", f.Kind, f.ID, f.Err)}
+	if f.Errors > 0 {
+		n.ID, n.Title = "failed."+f.Kind+"."+f.ID, contribTitle(f.Kind)
+		n.Text = fmt.Sprintf("%v · %s turned off after %d errors", f.Err, contribName(f.Kind, f.ID), f.Errors)
 	}
+	n.Actions = []core.Action{{Title: "Turn back on", Command: "contribution.turn_on", Args: map[string]any{"kind": f.Kind, "id": f.ID}}}
 	if p, ok := f.Err.(*registry.Panic); ok {
 		n.Detail = string(p.Stack)
-		if fr, ok := failingFrame(parseTrace(n.Detail)); ok {
+		if fr, ok := failingFrame(script.ParseTrace(n.Detail)); ok {
 			n.Location = fr.Loc()
 		}
 	}
-	return redactNotice(n, l.Redact)
+	return redactNotice(withTrace(n, f.Err, dir, "Open at line"), l.Redact)
+}
+
+// failureNotice is a contribution's error, or a warning about it, as a notice: one row for each contribution,
+// counting its errors.
+func failureNotice(f registry.Failure, l *Logs, dir string) core.Notice {
+	n := core.Notice{ID: "failed." + f.Kind + "." + f.ID, Severity: core.SevError, Source: cmp.Or(f.Source, "core"),
+		Title: contribTitle(f.Kind), Text: f.Err.Error()}
+	if f.Warn {
+		n.ID, n.Severity = "slow."+f.Kind+"."+f.ID, core.SevWarning
+	}
+	return redactNotice(withTrace(n, f.Err, dir, "Open at line"), l.Redact)
+}
+
+func contribTitle(kind string) string {
+	switch kind {
+	case registry.KindHook:
+		return "Hook error"
+	case registry.KindView:
+		return "View error"
+	case registry.KindDecoration:
+		return "Decoration error"
+	}
+	return "Error"
+}
+
+// contribName is a contribution as a sentence names it: "Permission hook", "app.statusline view".
+func contribName(kind, id string) string {
+	if kind == registry.KindHook {
+		event, _, _ := strings.Cut(id, "#")
+		return event + " hook"
+	}
+	return id + " " + kind
+}
+
+// traced is an error that knows where it happened and how it got there: a Lua error.
+type traced interface {
+	Where() string
+	Trace() string
+}
+
+// withTrace gives a notice for err its location and trace, and an action titled title that opens the line. A
+// relative location is a config file's.
+func withTrace(n core.Notice, err error, dir, title string) core.Notice {
+	var t traced
+	if !errors.As(err, &t) {
+		return n
+	}
+	n.Detail, n.Location = t.Trace(), t.Where()
+	if file, line := script.SplitLoc(n.Location); line > 0 {
+		if !filepath.IsAbs(file) {
+			file = filepath.Join(dir, file)
+		}
+		n.Actions = append([]core.Action{{Title: title, Command: "editor.open", Args: map[string]any{"path": file, "line": line}}}, n.Actions...)
+	}
+	return n
 }
 
 // commandNotice is the notice for a command that failed when its key was pressed.
-func commandNotice(r registry.Registry, id string, err error) core.Notice {
+func commandNotice(r registry.Registry, id string, err error, dir string) core.Notice {
 	src := "core"
 	for _, c := range r.Commands() {
 		if c.ID == id && c.Source != "" {
 			src = c.Source
 		}
 	}
-	return core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: time.Now(), Key: true}
+	n := core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: now(), Key: true}
+	return withTrace(n, err, dir, "Open at line")
 }
 
 // logNotice writes each notice to its log, Oriel's or its session's, as a record linked to its history row.
@@ -91,53 +154,8 @@ func logNotice(s core.Store, log *slog.Logger, ev core.Event) {
 	log.Log(context.Background(), lv, n.Text, args...)
 }
 
-// Frame is one line of a stack trace: a Go stack's or a Lua traceback's.
-type Frame struct {
-	Fn   string
-	File string
-	Line int
-	Go   bool // a Go frame, behind "show Go frames" in a Lua trace
-}
-
-func (f Frame) Loc() string {
-	if f.Line == 0 {
-		return f.File
-	}
-	return f.File + ":" + strconv.Itoa(f.Line)
-}
-
-// parseTrace reads the frames out of a Go stack (debug.Stack) or a Lua traceback.
-func parseTrace(s string) []Frame {
-	lines := strings.Split(s, "\n")
-	var out []Frame
-	for i := 0; i < len(lines); i++ {
-		ln := lines[i]
-		switch {
-		case strings.HasPrefix(ln, "goroutine ") || strings.TrimSpace(ln) == "" || strings.HasPrefix(ln, "stack traceback:"):
-		case strings.HasPrefix(ln, "\t") && i > 0 && !strings.HasPrefix(lines[i-1], "\t") && isGoFn(lines[i-1]):
-			// the file line under a Go function; read with it
-		case !strings.HasPrefix(ln, "\t") && i+1 < len(lines) && strings.HasPrefix(lines[i+1], "\t") && isGoFn(ln):
-			file, line := splitLoc(strings.Fields(strings.TrimSpace(lines[i+1]))[0])
-			out = append(out, Frame{Fn: ln, File: file, Line: line, Go: true})
-		case strings.HasPrefix(ln, "\t"):
-			loc, rest, _ := strings.Cut(strings.TrimSpace(ln), ": ")
-			file, line := splitLoc(loc)
-			out = append(out, Frame{Fn: rest, File: file, Line: line})
-		}
-	}
-	return out
-}
-
-func isGoFn(s string) bool { return strings.HasSuffix(s, ")") && !strings.HasPrefix(s, "\t") }
-
-func splitLoc(s string) (string, int) {
-	if i := strings.LastIndexByte(s, ':'); i > 0 {
-		if n, err := strconv.Atoi(s[i+1:]); err == nil {
-			return s[:i], n
-		}
-	}
-	return s, 0
-}
+// Frame is one line of a stack trace.
+type Frame = script.Frame
 
 // failingFrame is where a Go panic happened: the frame under panic(), past the runtime's own.
 func failingFrame(fs []Frame) (Frame, bool) {

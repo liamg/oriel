@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime/debug"
 	"slices"
 	"sort"
 	"strings"
@@ -51,11 +55,20 @@ type Stat struct {
 
 // VM is one Lua state, on the UI loop: calls into it are synchronous and never overlap.
 type VM struct {
-	mu     sync.Mutex
-	L      *lua.LState
-	stats  map[string]*stat
-	OnSlow func(source string, took time.Duration) // a call past WarnAfter
-	cancel context.CancelFunc
+	mu      sync.Mutex
+	L       *lua.LState
+	stats   map[string]*stat
+	OnSlow  func(source string, took time.Duration) // a call past WarnAfter
+	OnError func(err *Error)                        // a call's error: a hook's, a view's, a keymap's
+	cancel  context.CancelFunc
+	paths   []string
+	raised  raised // the API function that raised the error being unwound
+}
+
+// raised is an oriel API function's error: its name, and the Go stack it came from.
+type raised struct {
+	name  string
+	stack string
 }
 
 type stat struct {
@@ -65,11 +78,12 @@ type stat struct {
 	times []time.Duration
 }
 
-// New is a VM with Lua's standard libraries, and package.path searching paths (each a directory with ?.lua and
-// ?/init.lua under it) for require.
+// New is a VM with Lua's standard libraries, and require searching paths: each a directory with ?.lua and
+// ?/init.lua under it. A module's source name is its path from the directory holding the search path, as
+// "lua/my/tickets.lua".
 func New(paths ...string) *VM {
 	L := lua.NewState(lua.Options{IncludeGoStackTrace: false})
-	vm := &VM{L: L, stats: map[string]*stat{}}
+	vm := &VM{L: L, stats: map[string]*stat{}, paths: paths}
 	if len(paths) > 0 {
 		var ps []string
 		for _, p := range paths {
@@ -77,8 +91,47 @@ func New(paths ...string) *VM {
 		}
 		pkg := L.GetGlobal("package").(*lua.LTable)
 		pkg.RawSetString("path", lua.LString(strings.Join(ps, ";")+";"+lua.LVAsString(pkg.RawGetString("path"))))
+		if loaders, ok := pkg.RawGetString("loaders").(*lua.LTable); ok {
+			loaders.RawSetInt(2, L.NewFunction(vm.loader))
+		}
 	}
 	return vm
+}
+
+// loader is require's searcher for Lua files under the paths.
+func (vm *VM) loader(L *lua.LState) int {
+	name := strings.ReplaceAll(L.CheckString(1), ".", "/")
+	var tried []string
+	for _, p := range vm.paths {
+		for _, f := range []string{filepath.Join(p, name+".lua"), filepath.Join(p, name, "init.lua")} {
+			src, err := os.ReadFile(f)
+			if err != nil {
+				tried = append(tried, "\n\tno file '"+f+"'")
+				continue
+			}
+			chunk := filepath.ToSlash(f)
+			if rel, err := filepath.Rel(filepath.Dir(p), f); err == nil {
+				chunk = filepath.ToSlash(rel)
+			}
+			fn, err := L.Load(strings.NewReader(string(src)), chunk)
+			if err != nil {
+				L.RaiseError("%s", atEOF(err.Error(), chunk, src))
+			}
+			L.Push(fn)
+			return 1
+		}
+	}
+	L.Push(lua.LString(strings.Join(tried, "")))
+	return 1
+}
+
+// atEOF names the line of a syntax error at the end of a chunk, which the parser doesn't.
+func atEOF(msg, chunk string, src []byte) string {
+	if !strings.Contains(msg, chunk+" at EOF") {
+		return msg
+	}
+	n := strings.Count(strings.TrimRight(string(src), "\n"), "\n") + 1
+	return strings.Replace(msg, chunk+" at EOF", fmt.Sprintf("%s line:%d at EOF", chunk, n), 1)
 }
 
 // Close frees the state.
@@ -105,7 +158,7 @@ func (vm *VM) guard(budget time.Duration, fn func() error) error {
 	if err != nil && ctx.Err() != nil {
 		return &Error{Message: fmt.Sprintf("interrupted: it ran past %v", budget)}
 	}
-	return luaError(err)
+	return vm.luaError(err)
 }
 
 // Load runs a chunk: a config file, a line typed at :lua.
@@ -114,7 +167,7 @@ func (vm *VM) Load(c Chunk) error {
 	defer vm.mu.Unlock()
 	fn, err := vm.L.Load(strings.NewReader(string(c.Source)), c.Name)
 	if err != nil {
-		return luaError(err)
+		return &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source))}
 	}
 	return vm.guard(LoadBudget, func() error {
 		vm.L.Push(fn)
@@ -128,7 +181,7 @@ func (vm *VM) Eval(c Chunk) ([]any, error) {
 	defer vm.mu.Unlock()
 	fn, err := vm.L.Load(strings.NewReader(string(c.Source)), c.Name)
 	if err != nil {
-		return nil, luaError(err)
+		return nil, &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source))}
 	}
 	top := vm.L.GetTop()
 	err = vm.guard(InterruptAfter, func() error {
@@ -164,7 +217,7 @@ func (vm *VM) Call(fn *Fn, args ...any) ([]any, error) {
 	top := vm.L.GetTop()
 	var err error
 	if nested {
-		err = luaError(call())
+		err = vm.luaError(call())
 	} else {
 		err = vm.guard(InterruptAfter, call)
 	}
@@ -175,6 +228,12 @@ func (vm *VM) Call(fn *Fn, args ...any) ([]any, error) {
 	}
 	if err != nil {
 		vm.L.SetTop(top)
+		if e, ok := err.(*Error); ok && !nested && vm.OnError != nil {
+			if e.Where() == "" {
+				e.At = fn.Source
+			}
+			vm.OnError(e)
+		}
 		return nil, err
 	}
 	var out []any
@@ -297,8 +356,9 @@ func (vm *VM) wrap(ns, name string, fn GoFunc) lua.LGFunction {
 	}
 	return func(L *lua.LState) int {
 		a := &Args{vm: vm, L: L, name: full}
-		out, err := fn(a)
+		out, err, stack := callGo(fn, a)
 		if err != nil {
+			vm.raised = raised{name: full, stack: stack}
 			L.RaiseError("%s: %s", full, err.Error())
 			return 0
 		}
@@ -307,6 +367,20 @@ func (vm *VM) wrap(ns, name string, fn GoFunc) lua.LGFunction {
 		}
 		return len(out)
 	}
+}
+
+// callGo runs a Go function for Lua, a panic in it as an error; a failure comes with the Go stack.
+func callGo(fn GoFunc, a *Args) (out []any, err error, stack string) {
+	defer func() {
+		if v := recover(); v != nil {
+			out, err, stack = nil, fmt.Errorf("panic: %v", v), string(debug.Stack())
+		}
+	}()
+	out, err = fn(a)
+	if err != nil {
+		stack = string(debug.Stack())
+	}
+	return out, err, stack
 }
 
 // Args are a Go function's arguments from Lua, read by position (0 is the first).
@@ -521,17 +595,50 @@ func (vm *VM) Keys(path string) []string {
 	return out
 }
 
-// Error is a Lua error: its message, "init.lua:56: oriel.ledger.frac isn't available…", and the traceback that
-// PL-12's error views show apart from it.
+// Error is a Lua error: its message, "init.lua:56: oriel.ledger.frac isn't available…", and its traceback.
 type Error struct {
 	Message   string
-	Traceback string
+	Traceback string // Lua's: the oriel API function that raised it named, gopher-lua's own frames left out
+	GoStack   string // the Go stack under the API function that raised it
+	At        string // where it is, when neither the message nor the traceback says: "init.lua:12"
 }
 
 func (e *Error) Error() string { return e.Message }
 
+var (
+	syntaxAt  = regexp.MustCompile(`([\w./-]+\.lua) line:(\d+)`)
+	messageAt = regexp.MustCompile(`^([\w./-]+\.lua):(\d+):`)
+)
+
+// Where is the line the error is on: a syntax error's, the message's, or the innermost Lua frame's.
+func (e *Error) Where() string {
+	if m := syntaxAt.FindStringSubmatch(e.Message); m != nil {
+		return m[1] + ":" + m[2]
+	}
+	if m := messageAt.FindStringSubmatch(e.Message); m != nil {
+		return m[1] + ":" + m[2]
+	}
+	for _, f := range e.Frames() {
+		if !f.Go && f.Line > 0 {
+			return f.Loc()
+		}
+	}
+	return e.At
+}
+
+// Trace is the traceback and, after it, the Go stack.
+func (e *Error) Trace() string {
+	if e.GoStack == "" {
+		return e.Traceback
+	}
+	return e.Traceback + "\n" + e.GoStack
+}
+
+// Frames are the trace's frames, innermost first: Lua's and the API's, then Go's.
+func (e *Error) Frames() []Frame { return ParseTrace(e.Trace()) }
+
 // luaError makes gopher-lua's error an *Error, its message apart from its traceback.
-func luaError(err error) error {
+func (vm *VM) luaError(err error) error {
 	var ae *lua.ApiError
 	if !errors.As(err, &ae) {
 		return err
@@ -543,5 +650,22 @@ func luaError(err error) error {
 	if i := strings.Index(msg, "\nstack traceback:"); i >= 0 {
 		msg = msg[:i]
 	}
-	return &Error{Message: strings.TrimSpace(msg), Traceback: ae.StackTrace}
+	e := &Error{Message: strings.TrimSpace(msg)}
+	r := vm.raised
+	vm.raised = raised{}
+	var tb []string
+	for _, ln := range strings.Split(ae.StackTrace, "\n") {
+		if !strings.HasPrefix(ln, "\t[G]:") {
+			tb = append(tb, ln)
+			continue
+		}
+		short := r.name[strings.LastIndexByte(r.name, '.')+1:]
+		if r.name != "" && strings.TrimSpace(ln) == "[G]: in function '"+short+"'" {
+			tb = append(tb, "\t"+r.name+": in function '"+short+"'")
+			e.GoStack = r.stack
+			r = raised{}
+		}
+	}
+	e.Traceback = strings.TrimRight(strings.Join(tb, "\n"), "\n")
+	return e
 }

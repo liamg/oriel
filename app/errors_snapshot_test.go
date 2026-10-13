@@ -178,7 +178,7 @@ func (s *errScene) populate() {
 			Detail:   luaTrace,
 			Location: "init.lua:6",
 			Actions: []core.Action{
-				{Title: "Open at line", Command: "file.open", Args: map[string]any{"path": "init.lua", "line": 6}},
+				{Title: "Open at line", Command: "editor.open", Args: map[string]any{"path": "init.lua", "line": 6}},
 				{Title: "Turn hook back on", Command: "contribution.turn_on", Args: map[string]any{"kind": "hook", "id": "init.lua:5"}},
 			},
 			Time: at(14, 7, 1+i)})

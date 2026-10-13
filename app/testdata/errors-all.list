@@ -228,8 +228,8 @@ text "Open at line" @1158,104.92383 #ffd23f Inter 12
 rect 1158,108.81836 68.515625x1 fill #ffd23fb3
 rect 1236.5156,88.55859 127.265625x26 fill #191815 radius 6 stroke 1 #332f27
 text "Turn hook back on" @1246.5156,105.92383 #ece6d8 Inter 12
-rect 1373.7812,88.55859 59.125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Details" @1383.7812,105.92383 #ece6d8 Inter 12
+rect 1373.7812,88.55859 84.875x26 fill #191815 radius 6 stroke 1 #332f27
+text "Show trace" @1383.7812,105.92383 #ece6d8 Inter 12
 text "×3" @1558,104.9786 #7c7566 JetBrains Mono 9.5
 rect 1144,134.5586 440x60.66452 fill #121210 radius 8 stroke 1 #ff9b458c
 rect 1158,149.3286 7x7 fill #ff9b45 radius 3.5

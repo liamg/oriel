@@ -89,7 +89,6 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	events := newEventTail(500)
 	defer cfg.Store.Subscribe(core.Filter{}, events.add)()
 	defer cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })()
-	defer cfg.Registry.OnFault(func(f registry.Fault) { cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs)}) }).Dispose()
 	dirty := make(chan struct{}, 1)
 	poke := func() {
 		select {
@@ -300,6 +299,14 @@ func (h *host) Notify(n core.Notice) {
 	}
 }
 
+func (h *host) Dismiss(id string) {
+	for _, n := range h.store.State().Notifications {
+		if n.ID == id && !n.Dismissed {
+			h.store.Apply(core.NoticeDismissed{Seq: n.Seq})
+		}
+	}
+}
+
 type loop struct {
 	themeDirty atomic.Bool
 	theme      *theme.Resolved
@@ -446,7 +453,7 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 		}
 		if err := l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args); err != nil {
 			if _, ok := err.(*registry.Panic); !ok {
-				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err)})
+				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir)})
 			}
 		}
 	}

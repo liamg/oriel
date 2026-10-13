@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -46,6 +47,9 @@ type luaExt struct {
 	apis *api.APIs
 	sum  [32]byte
 	err  error
+	good bool // the config running loaded without an error
+
+	marks map[string][]registry.Diagnostic // the config's errors, by file
 
 	repl     []replLine
 	input    string
@@ -59,7 +63,7 @@ type luaExt struct {
 
 type replLine struct {
 	text string
-	kind int // 0 input, 1 output, 2 error
+	kind int // 0 input, 1 output, 2 error, 3 a frame of its trace
 }
 
 // Events features fire later, declared now so hooks on them show what they wait for (plugins.md, "Go interfaces").
@@ -159,63 +163,134 @@ func (x *luaExt) sources() [32]byte {
 
 func (x *luaExt) changed() bool { return x.sources() != x.sum }
 
-// luaLine finds where an error is: "init.lua:12" from a runtime error, "init.lua line:12(column:3)" from a syntax one.
-var luaLine = regexp.MustCompile(`([\w./-]+\.lua)(?::| line:)(\d+)`)
-
-// reload drops everything the config registered and loads it again in a new VM. A reload says so in a toast, and
-// what changed; an error says where.
+// reload loads the config again, in a new VM. One that loads replaces the config running, and a toast says what
+// changed. One that fails leaves the last good config running, and a notice and a diagnostic say where it failed;
+// with no good config to keep (at startup), what ran before the error stays.
 func (x *luaExt) reload(toast bool) {
-	before := 0
-	if x.apis != nil {
-		before = x.apis.Registered()
-		x.apis.Dispose()
-		x.vm.Close()
-	}
 	x.sum = x.sources()
-	x.vm = script.New(filepath.Join(x.dir, "lua"))
-	x.vm.OnSlow = func(src string, took time.Duration) {
+	vm := script.New(filepath.Join(x.dir, "lua"))
+	vm.OnSlow = func(src string, took time.Duration) {
 		x.h.Log().Warn("slow Lua", "function", src, "took", took)
 	}
-	x.apis = api.Install(x.vm, x.h)
+	vm.OnError = x.mark
+	apis := api.Install(vm, x.h)
+	x.clearMarks()
 	src, err := os.ReadFile(x.initLua())
 	if os.IsNotExist(err) {
-		x.err = nil
+		x.swap(vm, apis)
+		x.err, x.good = nil, true
+		x.h.Dismiss("lua.load")
 		return
 	}
 	start := time.Now()
 	if err == nil {
-		err = x.vm.Load(script.Chunk{Name: "init.lua", Source: src})
+		err = vm.Load(script.Chunk{Name: "init.lua", Source: src})
 	}
-	x.took, x.loadedAt, x.err = time.Since(start), time.Now(), err
-	x.apis.ApplyPending()
+	took := time.Since(start)
+	apis.ApplyPending()
+	x.err = err
 	if err != nil {
-		loc := ""
-		if m := luaLine.FindStringSubmatch(err.Error()); m != nil {
-			loc = m[1] + ":" + m[2]
-		} else if strings.Contains(err.Error(), "at EOF") {
-			loc = fmt.Sprintf("init.lua:%d", strings.Count(strings.TrimRight(string(src), "\n"), "\n")+1)
+		kept := x.apis != nil && x.good
+		if kept {
+			apis.Revert()
+			apis.Dispose()
+			vm.Close()
+		} else {
+			x.swap(vm, apis)
 		}
-		x.h.Notify(core.Notice{ID: "lua.load", Severity: core.SevError, Title: "Config error", Text: err.Error(), Location: loc})
+		x.loadError(err, kept)
 		return
 	}
+	before := 0
+	if x.apis != nil {
+		before = x.apis.Registered()
+	}
+	x.swap(vm, apis)
+	x.good, x.took, x.loadedAt = true, took, time.Now()
+	x.h.Dismiss("lua.load")
 	if toast {
-		after := x.apis.Registered()
 		x.h.Notify(core.Notice{ID: "lua.reload", Severity: core.SevInfo, Title: "Config",
-			Text: fmt.Sprintf("reloaded init.lua · %dms · %d registered (was %d)", x.took.Milliseconds(), after, before)})
+			Text: fmt.Sprintf("reloaded init.lua · %dms · %d registered (was %d)", took.Milliseconds(), apis.Registered(), before)})
 	}
 }
 
-// eval runs a line at the REPL: as an expression first, so `1 + 1` shows 2, then as a statement.
+// swap makes vm the config running, the one before it gone.
+func (x *luaExt) swap(vm *script.VM, apis *api.APIs) {
+	if x.apis != nil {
+		x.apis.Handover(apis)
+		x.apis.Dispose()
+		x.vm.Close()
+	}
+	x.vm, x.apis = vm, apis
+}
+
+// loadError is the notice for a config that didn't load, with a link to the line.
+func (x *luaExt) loadError(err error, kept bool) {
+	text := err.Error()
+	if kept {
+		text += " · the last good config is still running"
+	}
+	n := core.Notice{ID: "lua.load", Severity: core.SevError, Source: "init.lua", Title: "Config error", Text: text}
+	var e *script.Error
+	if errors.As(err, &e) {
+		file, _ := script.SplitLoc(e.Where())
+		n = withTrace(n, e, x.dir, "Edit "+filepath.Base(cmpOr(file, "init.lua")))
+		x.mark(e)
+	}
+	x.h.Notify(n)
+}
+
+// luaPrefix is what a Lua error's message starts with that a diagnostic on the line doesn't need.
+var luaPrefix = regexp.MustCompile(`^[\w./-]+\.lua(:\d+:| line:\d+\(column:\d+\))\s*`)
+
+// mark puts a Lua error on its line in the config, as a diagnostic, until the config next loads.
+func (x *luaExt) mark(e *script.Error) {
+	file, line := script.SplitLoc(e.Where())
+	if line == 0 || !strings.HasSuffix(file, ".lua") {
+		return
+	}
+	if !filepath.IsAbs(file) {
+		file = filepath.Join(x.dir, file)
+	}
+	msg := strings.Join(strings.Fields(luaPrefix.ReplaceAllString(firstLine(e.Message), "")), " ")
+	d := registry.Diagnostic{Line: line - 1, Severity: registry.SevError, Message: msg}
+	if slices.Contains(x.marks[file], d) {
+		return
+	}
+	if x.marks == nil {
+		x.marks = map[string][]registry.Diagnostic{}
+	}
+	x.marks[file] = append(x.marks[file], d)
+	x.h.SetDiagnostics("lua", file, x.marks[file])
+}
+
+func (x *luaExt) clearMarks() {
+	for file := range x.marks {
+		x.h.SetDiagnostics("lua", file, nil)
+	}
+	x.marks = nil
+}
+
+// eval runs a line at the REPL: as an expression first, so `1 + 1` shows 2, then as a statement. An error shows
+// with its trace; the expression is in a table, so a call in it keeps its frame rather than being a tail call.
 func (x *luaExt) eval(line string) {
 	x.repl = append(x.repl, replLine{text: line})
 	x.history = append(x.history, line)
 	x.hist = len(x.history)
-	out, err := x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("local L = oriel\nreturn " + line)})
-	if err != nil && strings.Contains(err.Error(), "syntax error") || err != nil && strings.Contains(err.Error(), "parse error") {
-		out, err = x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("local L = oriel\n" + line)})
+	out, err := x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("local L = oriel; return unpack({ " + line + "\n})")})
+	if err != nil && (strings.Contains(err.Error(), "syntax error") || strings.Contains(err.Error(), "parse error")) {
+		out, err = x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("local L = oriel; " + line)})
 	}
 	if err != nil {
 		x.repl = append(x.repl, replLine{text: err.Error(), kind: 2})
+		if e, ok := err.(*script.Error); ok {
+			for _, f := range e.Frames() {
+				if !f.Go {
+					x.repl = append(x.repl, replLine{text: "  " + f.Loc() + ": " + f.Fn, kind: 3})
+				}
+			}
+			x.mark(e)
+		}
 		return
 	}
 	for _, v := range out {
@@ -304,6 +379,8 @@ func (x *luaExt) replView(c *ui.Ctx) {
 					c.Text(i, "› "+l.text, mono(theme.Fg))
 				case 1:
 					c.Text(i, l.text, mono(tLuaOut))
+				case 3:
+					c.Text(i, l.text, mono(theme.FgFaint))
 				default:
 					c.Text(i, l.text, mono(tLuaErr))
 				}

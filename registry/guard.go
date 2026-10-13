@@ -42,6 +42,18 @@ type Fault struct {
 	ID     string
 	Source string // who registered it
 	Err    error  // a *Panic, or the last error
+	Errors int    // the errors in a row that turned it off; 0 for a panic
+}
+
+// FailLimit is how many errors in a row turn a hook, view or decoration provider off (errors.md).
+const FailLimit = 3
+
+// Failure is a contribution's error, or a warning about it: a hook over its time budget.
+type Failure struct {
+	Kind, ID, Source string
+	Err              error
+	InARow           int // its errors in a row, this one included; 0 for a warning
+	Warn             bool
 }
 
 // Off is a contribution that's turned off, and why.
@@ -54,9 +66,11 @@ type offKey struct{ kind, id string }
 
 // faults is what's turned off, and who hears about it.
 type faults struct {
-	mu   sync.Mutex
-	off  map[offKey]error
-	subs []entry[func(Fault)]
+	mu     sync.Mutex
+	off    map[offKey]error
+	inARow map[offKey]int
+	subs   []entry[func(Fault)]
+	fsubs  []entry[func(Failure)]
 }
 
 // fault turns a contribution off and tells every subscriber.
@@ -95,6 +109,62 @@ func (r *reg) OnFault(fn func(Fault)) Disposable {
 	})
 }
 
+// OnFailure calls fn with each contribution's error and warning. fn may run on any goroutine.
+func (r *reg) OnFailure(fn func(Failure)) Disposable {
+	r.faults.mu.Lock()
+	defer r.faults.mu.Unlock()
+	tok := tokens.Add(1)
+	r.faults.fsubs = append(r.faults.fsubs, entry[func(Failure)]{tok, fn})
+	return disposeOnce(func() {
+		r.faults.mu.Lock()
+		defer r.faults.mu.Unlock()
+		r.faults.fsubs = slices.DeleteFunc(r.faults.fsubs, func(e entry[func(Failure)]) bool { return e.token == tok })
+	})
+}
+
+// Report says how a contribution's call went: nil for a success, which starts its count again, or its error.
+// FailLimit errors in a row turn it off.
+func (r *reg) Report(kind, id string, err error) {
+	k := offKey{kind, id}
+	r.faults.mu.Lock()
+	if err == nil {
+		delete(r.faults.inARow, k)
+		r.faults.mu.Unlock()
+		return
+	}
+	if r.faults.inARow == nil {
+		r.faults.inARow = map[offKey]int{}
+	}
+	r.faults.inARow[k]++
+	n := r.faults.inARow[k]
+	if n >= FailLimit {
+		delete(r.faults.inARow, k)
+	}
+	r.faults.mu.Unlock()
+	src := r.sourceOf(kind, id)
+	r.failed(Failure{Kind: kind, ID: id, Source: src, Err: err, InARow: n})
+	if n >= FailLimit {
+		r.faults.fault(Fault{Kind: kind, ID: id, Source: src, Err: err, Errors: n})
+	}
+}
+
+// warn tells OnFailure's subscribers about a contribution that worked, but not as it should.
+func (r *reg) warn(kind, id string, err error) {
+	r.failed(Failure{Kind: kind, ID: id, Source: r.sourceOf(kind, id), Err: err, Warn: true})
+}
+
+func (r *reg) failed(f Failure) {
+	r.faults.mu.Lock()
+	var fns []func(Failure)
+	for _, e := range r.faults.fsubs {
+		fns = append(fns, e.value)
+	}
+	r.faults.mu.Unlock()
+	for _, fn := range fns {
+		fn(f)
+	}
+}
+
 func (r *reg) TurnOff(kind, id string, err error) {
 	r.faults.fault(Fault{Kind: kind, ID: id, Source: r.sourceOf(kind, id), Err: err})
 }
@@ -103,6 +173,7 @@ func (r *reg) TurnOn(kind, id string) {
 	r.faults.mu.Lock()
 	defer r.faults.mu.Unlock()
 	delete(r.faults.off, offKey{kind, id})
+	delete(r.faults.inARow, offKey{kind, id})
 }
 
 func (r *reg) TurnedOff() []Off {
@@ -122,13 +193,23 @@ func (r *reg) TurnedOff() []Off {
 }
 
 func (r *reg) sourceOf(kind, id string) string {
-	if kind != KindCommand {
-		return ""
+	switch kind {
+	case KindCommand:
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		c, _ := r.commands.top(id)
+		return c.Source
+	case KindView:
+		src, _ := r.ViewSource(id)
+		return src
+	case KindHook:
+		r.hooks.mu.Lock()
+		defer r.hooks.mu.Unlock()
+		if e := r.hooks.byID[id]; e != nil {
+			return e.h.Source
+		}
 	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	c, _ := r.commands.top(id)
-	return c.Source
+	return ""
 }
 
 // guardedView turns its view off when it panics, building or drawing; a view that's off draws a placeholder.

@@ -74,6 +74,8 @@ is in daily use.
 - A hook or view that errors 3 times in a row is turned off with a notice ("`tickets.lua:8` turned off after 3
   errors", action "Turn back on"). `:Hooks` shows it as off, with its last error.
 - A hook over its time budget is a warning, as mockup 19 shows ("4.1 ms on CommentSend · over the 2 ms budget").
+- As built: scripting.md, "As built (PL-12)". The counting is general (`Registry.Report`), so a Go plugin's hook or
+  view that keeps erroring is turned off the same way.
 
 ## Go errors and panics
 

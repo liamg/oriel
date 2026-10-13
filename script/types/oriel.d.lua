@@ -5,6 +5,7 @@
 ---@class oriel
 ---@field agent oriel.agent
 ---@field decor oriel.decor
+---@field diagnostics oriel.diagnostics
 ---@field hud oriel.hud
 ---@field keymap oriel.keymap
 ---@field language oriel.language
@@ -85,6 +86,19 @@ oriel.decor = {}
 ---@param name string
 ---@param fn function
 function oriel.decor.provider(name, fn) end
+
+---@class oriel.diagnostics
+oriel.diagnostics = {}
+
+--- Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.
+---@return table
+function oriel.diagnostics.list() end
+
+--- Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config.
+---@param owner string
+---@param file string
+---@param list any
+function oriel.diagnostics.set(owner, file, list) end
 
 ---@class oriel.hud
 oriel.hud = {}

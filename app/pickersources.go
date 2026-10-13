@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -220,7 +221,7 @@ func keymapsSource(h ext.Host, configDir string) registry.PickerSource {
 		},
 		Actions: []registry.PickerAction{{Key: "<C-e>", Title: "go to definition", Run: func(ctx registry.Ctx, items []registry.PickerItem) error {
 			k := items[0].Data.(registry.Keymap)
-			file, line := splitLoc(k.Source)
+			file, line := script.SplitLoc(k.Source)
 			if line == 0 {
 				return fmt.Errorf("%s isn't a place in a file", k.Source)
 			}

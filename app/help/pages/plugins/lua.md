@@ -11,10 +11,21 @@ Your config is `~/.config/oriel/init.lua`, with modules under `lua/` for `requir
 tools, prompt packs, session kinds, HUD tats and status rules. Saving it reloads it, with a toast; an error says
 where.
 
+## When it fails {#errors}
+
+An error says where, as `init.lua:14` or `lua/my/tickets.lua:8`, with the Lua traceback: frames in the `oriel` API
+show as the call (`oriel.agent.tool`), and the Go frames under it are behind **show**. It's a notice with a link to
+the line, a mark on the line, and a row in `:Problems`.
+
+- A config that fails to reload leaves the last good one running. At startup, what ran before the error is
+  running, and the toast's **Edit init.lua** opens the line. Saving a fix reloads it and clears the toast.
+- A hook, view or decoration that errors 3 times in a row is turned off, with **Turn back on**.
+
 ## The REPL {#repl}
 
 `:lua` opens it; `:lua <code>` runs one line. A line is tried as an expression first, so `L.api.version` shows its
-value. `⇥` completes names under `oriel` and `L`, `↑` brings back earlier lines.
+value. `⇥` completes names under `oriel` and `L`, `↑` brings back earlier lines. An error shows with its trace
+under the line.
 
 ## Options {#options}
 

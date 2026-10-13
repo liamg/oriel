@@ -30,7 +30,7 @@ clip 0,622.84 760x260 r 0
       text "› #L.ui.row{}.children" @24,747.60004 #ece6d8 JetBrains Mono 12
       text "0" @24,767.44006 #b3ab99 JetBrains Mono 12
       text "› L.ledger.unread('pricing')" @24,787.28 #ece6d8 JetBrains Mono 12
-      text "repl:2: oriel.ledger.unread isn't available until RV-2 (the review ledger)" @24,807.12006 #ff5f6d JetBrains Mono 12
+      text "repl:1: oriel.ledger.unread isn't available until RV-2 (the review ledger)" @24,807.12006 #ff5f6d JetBrains Mono 12
     pop
     text "›" @24,830.32 #ffd23f JetBrains Mono 12
     rect 39.203125,811 696.7969x30 fill #060606 radius 6 stroke 1 #332f27
@@ -95,4 +95,18 @@ clip 760,38 640x844.84 r 0
     pop
   pop
 pop
-text "view app.statusline is turned off: panic: init.lua:56: oriel.ledger.frac isn't available until RV-2 (the review ledger)" @0,896.10004 #ece6d8 JetBrains Mono 13
+text "app.statusline: init.lua:56: oriel.ledger.frac isn't available until RV-2 (the review ledger)" @0,896.10004 #ff5f6d JetBrains Mono 13
+rect 944,12 440x114.55859 fill #121210 radius 8 stroke 1 #ff5f6d8c
+rect 958,27.154785 7x7 fill #ff5f6d radius 3.5
+text "VIEW ERROR" @973,34.074783 #ff5f6d JetBrains Mono 9.5
+text "init.lua:50" @1054.3,34.074783 #7c7566 JetBrains Mono 9.5
+text "✕" @1361.4062,34.65625 #7c7566 Inter 11
+text "init.lua:56: oriel.ledger.frac isn't available until RV-2 (the review" @958,58.418945 #ece6d8 Inter 12.5
+text "ledger) · app.statusline view turned off after 3 errors" @958,76.54346 #ece6d8 Inter 12.5
+text "Open at line" @958,104.92383 #ffd23f Inter 12
+rect 958,108.81836 68.515625x1 fill #ffd23fb3
+rect 1036.5156,88.55859 95.640625x26 fill #191815 radius 6 stroke 1 #332f27
+text "Turn back on" @1046.5156,105.92383 #ece6d8 Inter 12
+rect 1142.1562,88.55859 84.875x26 fill #191815 radius 6 stroke 1 #332f27
+text "Show trace" @1152.1562,105.92383 #ece6d8 Inter 12
+text "×3" @1358,104.9786 #7c7566 JetBrains Mono 9.5

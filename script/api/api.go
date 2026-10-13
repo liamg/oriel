@@ -39,11 +39,12 @@ type APIs struct {
 	owned   []registry.Disposable
 	n       int
 	pending map[string]pendingOption // options set before anything registered them
+	touched map[optKey]optPrev       // options the config set, and what they held before
 }
 
 // Install puts the API in vm.
 func Install(vm *script.VM, h ext.Host) *APIs {
-	a := &APIs{Host: h, VM: vm, pending: map[string]pendingOption{}}
+	a := &APIs{Host: h, VM: vm, pending: map[string]pendingOption{}, touched: map[optKey]optPrev{}}
 	a.bind(vm)
 	a.options(vm)
 	vm.SetValue("api", "version", Version)

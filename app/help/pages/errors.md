@@ -1,6 +1,6 @@
 ---
 id: errors
-covers: [app.notifications, log, statusline.left.50-counts]
+covers: [app.notifications, log, problems, statusline.left.50-counts]
 related: [shell/help, editor/pane]
 ---
 
@@ -15,7 +15,8 @@ A toast is a notice while it's fresh. Info goes after 3 seconds, a warning after
 it), and an error stays until you dismiss it or open its details. An error from a session that isn't in front
 doesn't toast: it marks that session's tab instead.
 
-- Click an action to do it, or **Details** to open the log at that entry.
+- Click an action to do it, or **Details** (**Show trace** for an error with a trace) to open the log at that
+  entry.
 - The ✕ dismisses it; it stays in the log.
 
 ## The log {#log}
@@ -30,6 +31,12 @@ last, in three scopes: Oriel's, the session in front, and all of them together.
 
 {{keys "Log"}}
 {{keys "log.*"}}
+
+## Problems {#problems}
+
+`:Problems` lists every diagnostic, by file and line: errors in your Lua config, and later language servers'. The
+editor marks each on its line: a sign, the span underlined, the message after it, and an error's line tinted. Click
+a problem to open it.
 
 ## Crash reports {#crash}
 

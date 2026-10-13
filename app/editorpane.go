@@ -147,11 +147,11 @@ func (x *editorExt) click(p vim.Pane, r render.Rect, at render.Point, m paneMetr
 
 func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
 	th := c.Theme()
-	name := p.Name()
+	name := tildePath(p.Name())
 	if name == "" {
 		name = "[No Name]"
 	}
-	parts := strings.Split(filepath.ToSlash(name), "/")
+	parts := strings.Split(strings.TrimPrefix(filepath.ToSlash(name), "/"), "/")
 	style := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(tCrumbFg)}
 	c.Row("crumb", ui.Style{W: ui.Flex(1), H: ui.Px(crumbH), Pad: ui.PadXY(14, 0), Gap: 6, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
 		for i, part := range parts {

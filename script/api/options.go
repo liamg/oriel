@@ -17,6 +17,63 @@ type pendingOption struct {
 	where string
 }
 
+// optKey is an option's value at one layer and place.
+type optKey struct {
+	name  string
+	layer registry.Layer
+	at    registry.At
+}
+
+// optPrev is what was there before the config set it.
+type optPrev struct {
+	v      any
+	had    bool
+	source string
+}
+
+// touch keeps what an option held at l before the config first sets it. The caller holds a.mu.
+func (a *APIs) touch(o registry.Options, name string, l registry.Layer, at registry.At) {
+	k := optKey{name, l, at}
+	if _, ok := a.touched[k]; ok {
+		return
+	}
+	p := optPrev{}
+	p.v, p.had = o.Lookup(name, l, at)
+	if _, wl, _ := o.Get(name, at); p.had && wl == l {
+		p.source = o.Source(name, at)
+	}
+	a.touched[k] = p
+}
+
+// Revert puts back every option value the config set, for a config that failed to load.
+func (a *APIs) Revert() {
+	o := a.Host.Options()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for k, p := range a.touched {
+		if p.had {
+			o.SetFrom(k.name, k.layer, k.at, p.v, p.source)
+		} else {
+			o.Unset(k.name, k.layer, k.at)
+		}
+	}
+	a.touched = map[optKey]optPrev{}
+}
+
+// Handover unsets the option values a's config set and next's doesn't, as next replaces it.
+func (a *APIs) Handover(next *APIs) {
+	o := a.Host.Options()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	next.mu.Lock()
+	defer next.mu.Unlock()
+	for k := range a.touched {
+		if _, ok := next.touched[k]; !ok {
+			o.Unset(k.name, k.layer, k.at)
+		}
+	}
+}
+
 // options binds oriel.o (your settings, at the Lua layer), oriel.bo (the current buffer's) and oriel.so (the
 // session's), each by an option's name or vim alias.
 func (a *APIs) options(vm *script.VM) {
@@ -51,6 +108,9 @@ func (a *APIs) options(vm *script.VM) {
 				return nil
 			}
 			if v == nil {
+				a.mu.Lock()
+				a.touch(o, sp.Name, l, at)
+				a.mu.Unlock()
 				o.Unset(sp.Name, l, at)
 				return nil
 			}
@@ -58,6 +118,9 @@ func (a *APIs) options(vm *script.VM) {
 			if err != nil {
 				return err
 			}
+			a.mu.Lock()
+			a.touch(o, sp.Name, l, at)
+			a.mu.Unlock()
 			return o.SetFrom(sp.Name, l, at, cv, args.Where())
 		})
 	}
@@ -76,6 +139,7 @@ func (a *APIs) ApplyPending() int {
 		}
 		delete(a.pending, key)
 		if cv, err := optionValue(sp, p.value); err == nil {
+			a.touch(o, sp.Name, p.layer, p.at)
 			o.SetFrom(sp.Name, p.layer, p.at, cv, p.where)
 		}
 	}

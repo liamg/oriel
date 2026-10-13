@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -75,6 +76,15 @@ func (n *notices) Manifest() ext.Manifest { return ext.Manifest{ID: "notices"} }
 func (n *notices) Activate(_ context.Context, h ext.Host) error {
 	n.h, n.hovered = h, map[uint64]time.Time{}
 	n.panel = newLogPanel(n.sh, h)
+	cfg := n.sh.cfg
+	n.add(h.OnFault(func(f registry.Fault) {
+		cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir)})
+	}))
+	n.add(h.OnFailure(func(f registry.Failure) {
+		if f.InARow < registry.FailLimit { // the fault that turns it off says so, on the same row
+			cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir)})
+		}
+	}))
 	if n.sh.cfg.CrashDir != "" {
 		n.crashes = PendingCrashes(n.sh.cfg.CrashDir)
 		n.modal = len(n.crashes) > 0
@@ -224,6 +234,9 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 	if row.Severity == core.SevError {
 		details = len(o.Actions)
 		o.Actions = append(o.Actions, "Details")
+		if len(script.ParseTrace(row.Detail)) > 0 {
+			o.Actions[details] = "Show trace"
+		}
 	}
 	res := widget.NoticeCard(c, row.Seq, o)
 	if res.Hovered {

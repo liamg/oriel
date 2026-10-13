@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -45,8 +46,10 @@ func (v View) Override(id string, fn *script.Fn, where string) error {
 	v.a.own(v.a.Host.View(id, registry.SourcedView{Source: where, View: registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: id, Fn: func(c *ui.Ctx) {
 			out, err := v.a.VM.Call(fn, v.a.viewCtx(vc))
+			v.a.Host.Report(registry.KindView, id, err)
 			if err != nil {
-				panic(err) // the view's guard turns it off, with the error as a notice
+				c.Text("error", id+": "+err.Error(), ui.TextStyle{Color: c.Theme().C(theme.Error)})
+				return
 			}
 			if len(out) > 0 {
 				build(c, out[0], v.a)
@@ -75,8 +78,9 @@ type Decor struct{ a *APIs }
 func (d Decor) Provider(name string, fn *script.Fn) error {
 	d.a.own(d.a.Host.Decorations(name, registry.DecorationFunc(func(ctx registry.DecorationCtx) []registry.Decoration {
 		out, err := d.a.VM.Call(fn, ctx.Name, ctx.Top+1, ctx.Bottom+1)
+		d.a.Host.Report(registry.KindDecoration, name, err)
 		if err != nil {
-			panic(err)
+			return nil
 		}
 		if len(out) == 0 {
 			return nil

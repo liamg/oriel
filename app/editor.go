@@ -126,7 +126,7 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 				if err := x.open(ctx, str(a, "path"), str(a, "place")); err != nil {
 					return err
 				}
-				if n, ok := a["line"].(int); ok && n > 0 {
+				if n := argInt(a["line"]); n > 0 {
 					x.e.Run(fmt.Sprint(n))
 				}
 				return nil
@@ -295,6 +295,17 @@ func (d desktopClipboard) Write(_ bool, s string) {
 	}
 }
 
+// argInt is a command's numeric argument: an int from Go, a float64 from Lua or JSON.
+func argInt(v any) int {
+	switch n := v.(type) {
+	case int:
+		return n
+	case float64:
+		return int(n)
+	}
+	return 0
+}
+
 // editorHost is the IDE as the engine sees it: files from disk, and the IDE's own views for :ls, :copen and
 // :messages. An ex command the engine doesn't know runs the registry command of that name.
 type editorHost struct {
@@ -308,8 +319,7 @@ func (h *editorHost) ReadFile(name string) ([]byte, *edit.File, error) {
 		f.ReadOnly = h.x.conv.readOnly(f.Path)
 	}
 	if err == nil {
-		_, errs := h.x.h.Fire(context.Background(), "BufRead", name, &BufRead{Buf: name, File: f.Path})
-		h.x.hookErrors(errs)
+		h.x.h.Fire(context.Background(), "BufRead", name, &BufRead{Buf: name, File: f.Path})
 	}
 	return b, f, err
 }
@@ -324,18 +334,10 @@ type (
 	BufWritePost struct{ Buf, File string }
 )
 
-// hookErrors tells the user about hooks that failed.
-func (x *editorExt) hookErrors(errs []error) {
-	for _, err := range errs {
-		x.h.Notify(core.Notice{ID: "hook", Severity: core.SevError, Title: "Hook", Text: err.Error()})
-	}
-}
-
 func (h *editorHost) BeforeWrite(name string, buf *text.Buffer, f *edit.File) error {
 	h.x.conv.beforeWrite(name, buf, f)
 	ev := &BufWritePre{Buf: name, File: f.Path}
-	v, errs := h.x.h.Fire(context.Background(), "BufWritePre", name, ev)
-	h.x.hookErrors(errs)
+	v, _ := h.x.h.Fire(context.Background(), "BufWritePre", name, ev)
 	if v.Veto {
 		return fmt.Errorf("not written: %s", cmp.Or(v.Reason, "a BufWritePre hook vetoed it"))
 	}
@@ -345,8 +347,7 @@ func (h *editorHost) WriteFile(f *edit.File, t []byte, noLines bool) error {
 	if err := h.disk.WriteFile(f, t, noLines); err != nil {
 		return err
 	}
-	_, errs := h.x.h.Fire(context.Background(), "BufWritePost", f.Path, &BufWritePost{Buf: f.Path, File: f.Path})
-	h.x.hookErrors(errs)
+	h.x.h.Fire(context.Background(), "BufWritePost", f.Path, &BufWritePost{Buf: f.Path, File: f.Path})
 	return nil
 }
 func (h *editorHost) Exists(name string) bool { return h.disk.Exists(name) }

@@ -37,6 +37,7 @@ type Decoration struct {
 // DecorationCtx is the buffer a provider decorates and the lines in view, [Top, Bottom).
 type DecorationCtx struct {
 	Name        string // the buffer's file, as the editor names it
+	Path        string // the buffer's file, absolute
 	Buffer      *text.Buffer
 	Snap        text.Snapshot
 	Top, Bottom int

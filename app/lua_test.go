@@ -215,7 +215,8 @@ func TestInspect(t *testing.T) {
 
 func itoa(n int) string { return strconv.Itoa(n) }
 
-// 19-config and 20-inspect: :Hooks and the REPL over the sample config, and :Inspect over the editor.
+// 19-config and 20-inspect: :Hooks and the REPL over the sample config, and :Inspect over the editor. The sample's
+// status line calls into the ledger, which isn't built yet, so it's turned off.
 func TestLuaSnapshots(t *testing.T) {
 	s := luaScene(t, sample(t))
 	s.reg.Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "go test ./..."})
@@ -226,6 +227,7 @@ func TestLuaSnapshots(t *testing.T) {
 	x.eval("#L.ui.row{}.children")
 	x.eval("L.ledger.unread('pricing')")
 	x.input = "L.agent.to"
+	s.frame() // the status line's third error in a row turns it off
 	s.golden("lua-hooks")
 
 	e := editorScene(t)

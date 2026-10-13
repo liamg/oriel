@@ -34,6 +34,8 @@ type Host interface {
 	// Notify tells the user something, through the one path every notice takes (errors.md). Source defaults to
 	// the extension's id and Time to now; the text is redacted before it's kept.
 	Notify(n core.Notice)
+	// Dismiss takes down the toasts of the notices with id: a problem that's gone. Their rows stay in the history.
+	Dismiss(id string)
 	State() core.State // a copy: notification history, focus, sessions
 	// Here is where the user is, for reading options: the session in front, the project, and the focused editor's
 	// buffer and window.

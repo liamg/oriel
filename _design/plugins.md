@@ -166,8 +166,14 @@ type Registry interface {
     ViewByID(id string) (View, bool)              // the view under a guard: a panic turns it off (errors.md)
     Options() Options                             // values by layer: settings.md
 
+    SetDiagnostics(owner, file string, ds []Diagnostic) // replaces owner's for file; Problems and the editor show them
+    Diagnostics() ([]Diagnostic, int)                    // every one, by file and line, and a generation
+    DiagnosticsFor(file string) []Diagnostic
+
     OnFault(fn func(Fault)) Disposable            // a contribution turned off: it panicked, or kept failing
-    TurnOff(kind, id string, err error)           // kind: "command", "view", "hook"
+    OnFailure(fn func(Failure)) Disposable        // each contribution error, and warnings (a hook over budget)
+    Report(kind, id string, err error)            // how a call went, nil for a success: FailLimit (3) errors in a row turn it off
+    TurnOff(kind, id string, err error)           // kind: "command", "view", "hook", "decoration"
     TurnOn(kind, id string)                       // "Turn back on"
     TurnedOff() []Off                             // what :Hooks and friends show as off, with the error
 }
@@ -275,6 +281,15 @@ type Host interface {
   `registry.SourcedView` and `Registry.ViewSource` say who registered a view.
 - `Host.Here()` is where the user is, as an `At`: the session in front (or `oriel` with none), the project, and
   the focused editor's buffer and window; read options there. `core.Store.Focus()` is the session in front, cheaply.
+- Errors (PL-12): `Registry.Report(kind, id, err)` counts a contribution's errors in a row, and FailLimit (3) turn
+  it off (`Fault.Errors` says so); `Fire` reports each hook's, and a Lua view or decoration reports its own.
+  `Registry.OnFailure` hears each error and warning (a hook over the 2 ms budget), for the notices. An error that
+  knows its place (`Where()`, `Trace()`, as `script.Error` does) gets them on its notice, with **Open at line**
+  (`editor.open`). `Host.Dismiss(id)` takes down a notice's toasts when its problem is gone.
+- Diagnostics (PL-12): `Registry.SetDiagnostics(owner, file, ds)` publishes a file's `Diagnostic{Line, From, To,
+  Severity, Message}` as LSP does; the built-in `problems` extension marks them in the editor through a decoration
+  provider (`DecorationCtx.Path` is the buffer's absolute file) and lists them in `:Problems`. Lua's
+  `L.diagnostics.set` binds it; the Lua config publishes its errors as owner `lua`.
 - Plugins search text with `regex` (PCRE2's syntax), the same engine as project search; Lua's `L.regex` binds it.
 - `Options` keeps where each value came from: `SetFrom(name, layer, at, v, source)`, `Source(name, at)`,
   `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").

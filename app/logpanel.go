@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -390,7 +391,7 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 			}
 		}
 	}
-	frames := parseTrace(detail)
+	frames := script.ParseTrace(detail)
 	if loc == "" {
 		if f, ok := failingFrame(frames); ok {
 			loc = f.Loc()
@@ -438,7 +439,7 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 
 func hasFileRef(s string) bool {
 	for _, f := range strings.Fields(s) {
-		if file, line := splitLoc(strings.TrimRight(f, ":,")); line > 0 && strings.Contains(file, ".") {
+		if file, line := script.SplitLoc(strings.TrimRight(f, ":,")); line > 0 && strings.Contains(file, ".") {
 			return true
 		}
 	}
@@ -459,7 +460,7 @@ func (p *logPanel) frames(c *ui.Ctx, frames []Frame, failing string) {
 			}
 			id := c.Next(i)
 			if c.Interaction(id).Clicked && f.Line > 0 {
-				if err := p.h.Run(context.Background(), "file.open", registry.Args{"path": p.resolve(f.File), "line": f.Line}); err != nil {
+				if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": p.resolve(f.File), "line": f.Line}); err != nil {
 					p.h.Notify(core.Notice{ID: "log.open-frame", Severity: core.SevWarning, Source: "core", Key: true, Text: err.Error()})
 				}
 			}
@@ -525,7 +526,7 @@ type span struct {
 const sourceContext = 2
 
 func (p *logPanel) source(loc string) *sourceFile {
-	file, line := splitLoc(loc)
+	file, line := script.SplitLoc(loc)
 	if line == 0 {
 		return nil
 	}

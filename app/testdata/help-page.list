@@ -55,7 +55,7 @@ clip 360,118 880x800 r 10
     text "THIS PAGE" @1006,269.47903 #7c7566 JetBrains Mono 9.5
     text "help: errors#log" @1006,290.52905 #7c7566 JetBrains Mono 10
     text "from: builtin" @1006,311.72903 #7c7566 JetBrains Mono 10
-    text "covers: app.notifications, log, statusline.left.50-counts" @1006,332.92902 #7c7566 JetBrains Mono 10
+    text "covers: app.notifications, log, problems, statusline.left.50-counts" @1006,332.92902 #7c7566 JetBrains Mono 10
     text "^o back · ^i forward · esc close" @1006,899 #7c7566 JetBrains Mono 10
   pop
 pop

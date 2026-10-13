@@ -2,7 +2,7 @@
 id: PL-12
 title: "Lua errors: tracebacks, diagnostics in the file, turning off failing hooks"
 phase: P3
-status: todo
+status: review
 area: Platform
 module: script
 depends_on: [PL-1, SH-13]
@@ -60,3 +60,16 @@ The `:Hooks` budget warning ("4.1 ms on CommentSend · over the 2 ms budget").
 - Test-first, with verified spec references (`_design/testing.md`).
 - No new dependency without approval (`_design/deps.md`).
 - Update the design doc in the same PR if behaviour differs from it.
+
+## As built
+
+- `script.Error` gives `Where()`, `Frames()` and `Trace()`; `require` names chunks by their path from the config
+  directory; API frames are named and their Go stack follows. Tests: `script/error_test.go` and
+  `app/luaerrors_test.go` (the four fixtures, a broken reload, a broken startup, a hook and a view turned off, the
+  REPL, Problems, and the `lua-errors` snapshot of 37-errors).
+- General pieces added on the way: `Registry.Report` / `OnFailure` / `FailLimit` (3 in a row turn any hook, view
+  or decoration off), `Registry.SetDiagnostics` / `Diagnostics` / `DiagnosticsFor` with the built-in `problems`
+  extension (editor marks, `:Problems`), `DecorationCtx.Path`, `Host.Dismiss`, `L.diagnostics`. The log panel's
+  frame links now use `editor.open`, which nothing named `file.open` was registered for.
+- Hook errors are notified once, through `OnFailure`; the editor no longer notifies the errors `Fire` returns.
+- Not yet: runtime errors have no column (gopher-lua gives none), so the whole line is underlined.

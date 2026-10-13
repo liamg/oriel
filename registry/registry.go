@@ -57,8 +57,17 @@ type Registry interface {
 	Inputs() []string // engine ids, sorted
 	Options() Options
 
+	// SetDiagnostics replaces owner's diagnostics for file (an absolute path); nil clears them.
+	SetDiagnostics(owner, file string, ds []Diagnostic)
+	Diagnostics() ([]Diagnostic, int) // by file, then line; and a generation that moves when they change
+	DiagnosticsFor(file string) []Diagnostic
+
 	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
 	OnFault(fn func(Fault)) Disposable
+	// OnFailure hears about every contribution's error, and warnings: a hook over its time budget.
+	OnFailure(fn func(Failure)) Disposable
+	// Report says how a contribution's call went, nil for a success: FailLimit errors in a row turn it off.
+	Report(kind, id string, err error)
 	// TurnOff turns a contribution off with the error that caused it; TurnOn turns it back on.
 	TurnOff(kind, id string, err error)
 	TurnOn(kind, id string)
@@ -180,6 +189,8 @@ type reg struct {
 	langGen   int
 	options   *options
 	faults    faults
+	diags     map[diagKey][]Diagnostic
+	diagGen   int
 }
 
 func New() Registry {

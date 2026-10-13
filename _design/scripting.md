@@ -176,7 +176,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - `script.VM` is gopher-lua (approved in deps.md): one state on the UI loop, Lua's standard libraries, `require`
   from `~/.config/oriel/lua`. The watchdog logs a call past 50 ms as slow and interrupts one past 500 ms (a config
   load gets 2 s); per-function times feed `:Hooks`. Errors are `script.Error`: the message, with the traceback kept
-  apart for PL-12.
+  apart (see "As built (PL-12)").
 - The API is `script/api`: annotated Go (`//oriel:api name=…` on a namespace type, `//oriel:api doc=… optional=…
   returns=…` on its methods). `tools/cmd/apigen` (`go generate ./script/api`) writes the VM glue (`zz_bind.go`), the
   LuaLS types (`script/types/oriel.d.lua`) and the reference (`docs/api.md`); a test fails when they're stale. A
@@ -202,3 +202,26 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - Not yet: the LuaJIT swap, process and WASM bindings of the same declarations, a `vim` shim, `:Plugins`, jumping
   from a source to its line (`gd`), and a project's `.oriel/init.lua` (it needs the trust prompt security.md
   describes).
+
+## As built (PL-12)
+
+- `script.Error` has `Where()` (a syntax error's line, the message's, or the innermost Lua frame's), `Frames()` and
+  `Trace()`. `require` loads modules with their path from the config directory as the chunk name, so errors say
+  `lua/my/tickets.lua:8`. In the traceback the API function that raised the error is named (`oriel.agent.tool`) and
+  gopher-lua's own `[G]` frames are dropped; the Go stack under the API call (a panic in it is an error at its Lua
+  call) comes after, behind "show Go frames" in the log. A hook's trace ends with `oriel.on: dispatch · <event>`.
+- Lua drops a tail call's frame (`return f()`), as reference Lua does; the REPL evaluates `return unpack({ <line> })`
+  so a call in a line keeps its frame.
+- A reload loads the new config alongside the running one: if it fails, the new one's registrations and option
+  values are undone (`APIs.Revert`) and the last good config keeps running, which the notice says. If it loads, the
+  old one goes, and options it set that the new one doesn't are unset (`APIs.Handover`). At startup there's no good
+  config to keep, so what ran before the error stays.
+- Every Lua error with a line in the config is a diagnostic (owner `lua`) until the next load: load errors, and
+  errors from hooks, views, decorations, keymaps and the REPL (`VM.OnError`). The load error's notice has
+  **Edit init.lua** (the failing file's name); a successful load clears the diagnostics and the toast.
+- A Lua view or decoration that errors reports it (`Registry.Report`) instead of panicking: a view draws its error
+  in its place until the third in a row turns it off. Hooks are counted by `Fire`. The fault's notice is the row the
+  errors were, "… · Permission hook turned off after 3 errors", with **Open at line** and **Turn back on**.
+- `L.diagnostics.set(owner, file, list)` and `L.diagnostics.list()` bind the registry's diagnostics.
+- Not yet: a column for runtime errors (gopher-lua gives none, so the whole line is underlined), and the toast's
+  "saving reloads it" hint.

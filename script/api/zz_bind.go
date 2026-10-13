@@ -61,6 +61,17 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Diagnostics{a: a}
+		vm.Bind("diagnostics", map[string]script.GoFunc{
+			"list": func(c *script.Args) ([]any, error) {
+				return x.List(), nil
+			},
+			"set": func(c *script.Args) ([]any, error) {
+				return nil, x.Set(c.String(0), c.String(1), c.Any(2))
+			},
+		})
+	}
+	{
 		x := HUD{a: a}
 		vm.Bind("hud", map[string]script.GoFunc{
 			"tat": func(c *script.Args) ([]any, error) {
