@@ -1,6 +1,6 @@
 package registry
 
-// WithSource returns a view of r that stamps src on every command, keymap and option registered through it
+// WithSource returns a view of r that stamps src on every command, keymap, hook and option registered through it
 // without a source of its own. Each extension registers through one, so listings can say where things came from.
 func WithSource(r Registry, src string) Registry { return sourced{r, src} }
 
@@ -21,6 +21,13 @@ func (s sourced) Keymap(k Keymap) Disposable {
 		k.Source = s.src
 	}
 	return s.Registry.Keymap(k)
+}
+
+func (s sourced) Hook(h Hook) Disposable {
+	if h.Source == "" {
+		h.Source = s.src
+	}
+	return s.Registry.Hook(h)
 }
 
 func (s sourced) Picker(p PickerSource) Disposable {

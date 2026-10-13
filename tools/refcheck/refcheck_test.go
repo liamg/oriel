@@ -27,6 +27,7 @@ func fakeSpec(t *testing.T) string {
 	write(t, root, "spec/nvim/motion.txt", "*w*\nnvim words forward.\n")
 	write(t, root, "spec/vim/testdir/test_x.vim", "\" header\nfunc Test_one()\n  normal! dw\nendfunc\n\nfunc! Test_two()\n  normal! x\nendfunc\n")
 	write(t, root, "spec/lsp/spec.md", "# Spec\n\n## Text Documents\n\nPositions are zero-based.\n\n## Other\n\nElsewhere.\n")
+	write(t, root, "spec/lsp/hover.md", "#### <a href=\"#textDocument_hover\" name=\"textDocument_hover\" class=\"anchor\">Hover Request (:leftwards_arrow_with_hook:)</a>\n\nHover info.\n\n#### <a href=\"#next\" name=\"next\" class=\"anchor\">Next</a>\n\nElsewhere.\n")
 	write(t, root, "spec/css/Overview.bs", "<h2 id=\"mix\">Mixing</h2>\n<p>Mix &amp; <em>match</em>\n colours.\n<h3 id=\"sub\">Sub</h3>\nStill mixing.\n<h2 id='next'>Next</h2>\nElsewhere.\nset |x| to 1, giving&nbsp;''red'' or `blue`\n")
 	write(t, root, "spec/wcag/terms.html", "<dt><dfn id=\"dfn-ratio\">ratio</dfn></dt>\n<dd>\n  <p>(L1 + 0.05) /\n (L2 + 0.05)</p>\n</dd>\n<dt><dfn id=\"dfn-other\">other</dfn></dt>\n<dd>Elsewhere.</dd>\n")
 	write(t, root, "spec/wcag/sc.html", "<section id=\"min\" class=\"sc\">\n<h4>Minimum</h4>\n<p>at least 4.5:1</p>\n<section id=\"inner\">Inner.</section>\n</section>\nAfter.\n")
@@ -54,6 +55,10 @@ func TestCheck(t *testing.T) {
 		{"lsp/spec.md#text-documents", "", true},
 		{"lsp/spec.md#Text Documents", "Elsewhere.", false},
 		{"lsp/spec.md#Missing", "", false},
+		{"lsp/hover.md#textDocument_hover", "Hover info.", true},
+		{"lsp/hover.md#Hover Request (:leftwards_arrow_with_hook:)", "Hover info.", true},
+		{"lsp/hover.md#textDocument_hover", "Elsewhere.", false},
+		{"lsp/hover.md#anchor", "", false},
 		{"css/Overview.bs#mix", "Mix & match colours.", true},
 		{"css/Overview.bs#mix", "Still mixing.", true},
 		{"css/Overview.bs#mix", "Elsewhere.", false},

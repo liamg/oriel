@@ -190,8 +190,8 @@ L.on("CommentSend", function(ev) ev.body = ev.body:upper(); return ev end)
 		t.Fatal("the save went unseen")
 	}
 	x.reload(true)
-	if len(s.reg.Hooks()) != 0 {
-		t.Errorf("the old config's hooks are still there: %+v", s.reg.Hooks())
+	if hs := configHooks(s); len(hs) != 0 {
+		t.Errorf("the old config's hooks are still there: %+v", hs)
 	}
 	if n := noticesWith(s.store.State(), "lua.reload"); len(n) != 1 || !strings.Contains(n[0].Text, "reloaded init.lua") {
 		t.Errorf("no reload toast: %+v", n)
@@ -237,4 +237,15 @@ func TestLuaSnapshots(t *testing.T) {
 	e := editorScene(t)
 	e.run("Inspect", nil)
 	e.golden("inspect")
+}
+
+// configHooks are the hooks the config registered, not the built-ins'.
+func configHooks(s *errScene) []registry.HookInfo {
+	var out []registry.HookInfo
+	for _, h := range s.reg.Hooks() {
+		if !strings.HasPrefix(h.Source, "builtin:") {
+			out = append(out, h)
+		}
+	}
+	return out
 }

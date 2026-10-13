@@ -2,7 +2,7 @@
 id: LS-1
 title: "Completion, hover, signature help, diagnostics, code actions, inlay hints"
 phase: P4
-status: todo
+status: done
 area: LSP, tests, debugging
 module: lsp
 depends_on: [ED-7]

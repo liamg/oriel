@@ -614,3 +614,49 @@ func TestTreeSelectionFollowsItsItem(t *testing.T) {
 		t.Errorf("after b went, selected %q, want the row in its place", res.Selected)
 	}
 }
+
+// A menu's headings name its groups and can't be chosen; items can carry an icon and a detail at the right.
+func TestMenuHeadingsAndDetails(t *testing.T) {
+	chosen := -1
+	items := []MenuItem{
+		{Label: "Quick fix", Heading: true},
+		{Label: "Use %s", Icon: "●", Detail: "gopls"},
+		{Label: "Refactor", Heading: true},
+		{Label: "Extract to variable", Icon: "↗", Detail: "gopls"},
+	}
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("m")
+		if i, _ := Menu(c, "m", items, MenuOpts{Help: "test/menu"}); i >= 0 {
+			chosen = i
+		}
+	})
+	h.u.Focus(id)
+	h.frame()
+	for _, want := range []string{"QUICK FIX", "Use %s", "●", "gopls", "REFACTOR"} {
+		if !h.drew(want) {
+			t.Errorf("no %q in %q", want, h.texts())
+		}
+	}
+	h.keys("j", "CR")
+	if chosen != 3 {
+		t.Errorf("j from the first item skipped the heading to %d, want 3", chosen)
+	}
+}
+
+// An input that selects on focus has all its text selected when it gets focus, so typing replaces it.
+func TestInputSelectOnFocus(t *testing.T) {
+	text := "greeting"
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("in")
+		Input(c, "in", &text, InputOpts{Label: "New name", SelectOnFocus: true, Help: "test/input"})
+	})
+	h.u.Focus(id)
+	h.frame()
+	h.frame()
+	h.keys("s", "a", "l")
+	if text != "sal" {
+		t.Errorf("typing over the selected name gave %q", text)
+	}
+}

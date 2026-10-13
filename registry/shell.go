@@ -98,3 +98,29 @@ func OverviewPanels(r Registry) []OverviewPanel {
 	})
 	return out
 }
+
+// KeyLayer is a keymap mode laid over every other while Active says so: a popup's keys, as the completion menu's
+// <C-n> and <CR>. A key the layer doesn't map goes on as it would without it.
+type KeyLayer struct {
+	Name   string // unique among layers: "completion"
+	Mode   string // the keymap mode its keys are in
+	Active func() bool
+	Source string
+}
+
+func (KeyLayer) ContributionKind() string   { return "key.layer" }
+func (l KeyLayer) ContributionName() string { return l.Name }
+
+// ActiveKeyModes are the modes of the layers active now, by name.
+func ActiveKeyModes(r Registry) []string {
+	var out []string
+	for _, c := range r.Contributions("key.layer") {
+		l := c.(KeyLayer)
+		on := false
+		Call(func() error { on = l.Active != nil && l.Active(); return nil })
+		if on {
+			out = append(out, l.Mode)
+		}
+	}
+	return out
+}

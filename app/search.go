@@ -51,8 +51,15 @@ type projectSearch struct {
 	cancel  context.CancelFunc
 	busy    sync.WaitGroup
 
-	plan []search.FileEdit // the replace being previewed
-	pq   search.Query
+	plan *editPlan // the edits being previewed
+}
+
+// editPlan is a change to files shown as a diff before it's made: a replace, a rename.
+type editPlan struct {
+	title, detail string
+	edits         []search.FileEdit
+	dir           string // the edits' paths are relative to it, or absolute when it's ""
+	after         func() // after it's applied
 }
 
 // searchRun is what a search was run with, so a change in any of it runs it again.
@@ -103,6 +110,7 @@ func (p *projectSearch) Activate(_ context.Context, h ext.Host) error {
 	}
 	p.add(h.View(SearchView, searchView{p}))
 	p.add(h.View(ReplaceView, replaceView{p}))
+	p.sh.search = p
 	p.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-S-f>", Command: "search.open", Desc: "Search the project"}))
 	return nil
 }
@@ -386,20 +394,37 @@ func (p *projectSearch) preview(ctx registry.Ctx) error {
 	if len(plan) == 0 {
 		return fmt.Errorf("the replace changes nothing")
 	}
-	p.plan, p.pq = plan, q
-	return p.h.Run(ctx, "view.open", registry.Args{"id": ReplaceView, "place": "tab", "title": "Replace"})
+	count := 0
+	for _, f := range plan {
+		count += f.Count
+	}
+	return p.show(ctx, &editPlan{
+		title:  fmt.Sprintf("%d %s in %d %s", count, plural(count, "replacement", "replacements"), len(plan), plural(len(plan), "file", "files")),
+		detail: fmt.Sprintf("/%s/ → %s", q.Pattern, p.replace), edits: plan, dir: q.Dir,
+		after: func() {
+			p.mu.Lock()
+			p.ran = searchRun{} // search again: the matches moved
+			p.mu.Unlock()
+		}})
+}
+
+// show opens the diff of plan, which Apply makes.
+func (p *projectSearch) show(ctx registry.Ctx, plan *editPlan) error {
+	p.plan = plan
+	return p.h.Run(ctx, "view.open", registry.Args{"id": ReplaceView, "place": "tab", "title": "Preview"})
 }
 
 // apply makes the previewed replace: open buffers are changed in the buffer, as one undoable step each; other files
 // are written.
 func (p *projectSearch) apply(ctx registry.Ctx) error {
-	if len(p.plan) == 0 {
-		return fmt.Errorf("no replace to apply")
+	plan := p.plan
+	if plan == nil || len(plan.edits) == 0 {
+		return fmt.Errorf("nothing to apply")
 	}
 	n := 0
 	var errs []string
-	for _, f := range p.plan {
-		if buf, ok := p.sh.editor.openBuffer(filepath.Join(p.pq.Dir, f.Path)); ok {
+	for _, f := range plan.edits {
+		if buf, ok := p.sh.editor.openBuffer(filepath.Join(plan.dir, f.Path)); ok {
 			cur := buf.Bytes()
 			if string(cur) != string(f.Old) {
 				errs = append(errs, f.Path+" changed since the preview")
@@ -409,7 +434,7 @@ func (p *projectSearch) apply(ctx registry.Ctx) error {
 				errs = append(errs, f.Path+": "+err.Error())
 				continue
 			}
-		} else if err := f.Write(p.pq.Dir); err != nil {
+		} else if err := f.Write(plan.dir); err != nil {
 			errs = append(errs, err.Error())
 			continue
 		}
@@ -417,37 +442,37 @@ func (p *projectSearch) apply(ctx registry.Ctx) error {
 	}
 	p.plan = nil
 	p.h.Layout().Close(layoutRef(ReplaceView))
-	p.mu.Lock()
-	p.ran = searchRun{} // search again: the matches moved
-	p.mu.Unlock()
+	if plan.after != nil {
+		plan.after()
+	}
 	if len(errs) > 0 {
 		return fmt.Errorf("%s", strings.Join(errs, "; "))
 	}
-	p.h.Notify(core.Notice{ID: "search.replaced", Severity: core.SevInfo, Text: fmt.Sprintf("Replaced %d", n)})
+	p.h.Notify(core.Notice{ID: "edits.applied", Severity: core.SevInfo, Text: fmt.Sprintf("%s: done", plan.title)})
 	return nil
 }
 
 type replaceView struct{ p *projectSearch }
 
-func (v replaceView) Title(string) string { return "Replace" }
+func (v replaceView) Title(string) string { return "Preview" }
 func (v replaceView) Build(registry.ViewCtx) ui.Node {
 	return &ui.Func{Key: "replace", Fn: v.p.buildPreview}
 }
 
-// buildPreview is the replace's diff, file by file, with Apply and Cancel.
+// buildPreview is the plan's diff, file by file, with Apply and Cancel.
 func (p *projectSearch) buildPreview(c *ui.Ctx) {
 	th := c.Theme()
-	count := 0
-	for _, f := range p.plan {
-		count += f.Count
+	plan := p.plan
+	if plan == nil {
+		c.Text("none", "Nothing to preview.", monoTok(c, 11.5, theme.FgGhost))
+		return
 	}
 	c.Column("replace", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 12, Help: "files/search#replace"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", fmt.Sprintf("%d %s in %d %s", count, plural(count, "replacement", "replacements"), len(p.plan), plural(len(p.plan), "file", "files")),
-				ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-			c.Text("q", fmt.Sprintf("/%s/ → %s", p.pq.Pattern, p.replace), monoTok(c, 11, theme.FgFaint))
+			c.Text("t", plan.title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+			c.Text("q", plan.detail, monoTok(c, 11, theme.FgFaint))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			if widget.Button(c, "apply", "Apply", widget.ButtonOpts{Primary: true, Disabled: len(p.plan) == 0, Help: "files/search#replace"}) {
+			if widget.Button(c, "apply", "Apply", widget.ButtonOpts{Primary: true, Disabled: len(plan.edits) == 0, Help: "files/search#replace"}) {
 				if err := p.apply(context.Background()); err != nil {
 					p.h.Notify(core.Notice{ID: "search.replace", Severity: core.SevError, Key: true, Text: err.Error()})
 				}
@@ -458,7 +483,7 @@ func (p *projectSearch) buildPreview(c *ui.Ctx) {
 			}
 		})
 		c.Column("files", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 14, ScrollY: true}, func(c *ui.Ctx) {
-			for i, f := range p.plan {
+			for i, f := range plan.edits {
 				c.Column(i, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 					c.Row("name", ui.Style{Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 						c.Text("p", f.Path, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})

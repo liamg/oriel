@@ -226,25 +226,37 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 				x.foldRow(c, snap, line, foldEnd)
 				return
 			}
-			x.textRow(c, snap, line, hl, p.TabStop())
+			x.textRow(c, snap, line, hl, p.TabStop(), inlays(ds))
 			virtualText(c, th, ds)
 		})
 		spans(c, th, p, line, ds, rowID, gw+4, m)
-		x.overlay(c, p, rowID, line, folded, gw, m)
+		x.overlay(c, p, rowID, line, folded, gw, m, ds)
 		blocks(c, line, ds, gw+4)
 		line = p.NextRow(line)
 	}
 }
 
 // textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop.
-func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int) {
+func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int, inl []registry.Decoration) {
 	th := c.Theme()
 	b := snap.Line(line)
 	start := snap.LineStart(line)
 	pos := 0
 	vcol := 0
-	run := func(key int, s []byte, capture string) {
+	next := 0 // the next inlay to draw
+	var run func(key any, s []byte, capture string)
+	run = func(key any, s []byte, capture string) {
 		if len(s) == 0 {
+			return
+		}
+		if next < len(inl) && inl[next].From < pos+len(s) {
+			cut := max(inl[next].From-pos, 0)
+			if cut > 0 {
+				run(fmt.Sprint(key, "a"), s[:cut], capture)
+			}
+			inlayBox(c, fmt.Sprint("inlay", next), inl[next], x.pane)
+			next++
+			run(fmt.Sprint(key, "b"), s[cut:], capture)
 			return
 		}
 		var out strings.Builder
@@ -271,6 +283,7 @@ func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax
 			}
 		}
 		c.Text(key, out.String(), st)
+		pos += len(s)
 	}
 	k := 0
 	for _, h := range hl {
@@ -285,6 +298,9 @@ func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax
 		pos = e
 	}
 	run(k, b[pos:], "")
+	for ; next < len(inl); next++ {
+		inlayBox(c, fmt.Sprint("inlay", next), inl[next], x.pane)
+	}
 }
 
 func (x *editorExt) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
@@ -297,7 +313,7 @@ func (x *editorExt) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 }
 
 // overlay draws a row's selection and, on the cursor's row of the current window, the cursor, over its text.
-func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m paneMetrics) {
+func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m paneMetrics, ds []registry.Decoration) {
 	th := c.Theme()
 	from, to, eol, sel := p.Selected(line)
 	cur := p.Cursor()
@@ -320,7 +336,7 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 	x0 := gw + 4
 	c.Box(fmt.Sprint("over", line), ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH), Z: ui.LayerContent + 2, Float: &ui.Float{To: rowID}}, func(c *ui.Ctx) {
 		if sel {
-			a, z := p.VCol(line, from), p.VCol(line, to)
+			a, z := p.VCol(line, from)+inlayShift(ds, from, true), p.VCol(line, to)+inlayShift(ds, to, false)
 			if eol {
 				z++
 			}
@@ -331,7 +347,7 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 		if !showCursor {
 			return
 		}
-		vc := p.VCol(line, cur.Col)
+		vc := p.VCol(line, cur.Col) + inlayShift(ds, cur.Col, true)
 		r, size := utf8.DecodeRune(b[min(cur.Col, len(b)):])
 		w := float32(1)
 		if size > 0 && r != '\t' && wideRune(r) {
@@ -349,6 +365,9 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 			st.W, ch = ui.Px(2), ""
 		case vim.Underline:
 			st.H, st.Float.Offset.Y, ch = ui.Px(2), m.lineH-3, ""
+		}
+		if p.Current() {
+			x.caret = c.Next("cursor")
 		}
 		c.Row("cursor", st, func(c *ui.Ctx) {
 			if ch != "" {

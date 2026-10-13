@@ -164,7 +164,7 @@ clip 250,92 1100x660 r 10
     rect 909,261.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
     text "⌘3" @914,272.6 #b3ab99 JetBrains Mono 10
     text "COMMANDS" @268,301.42 #7c7566 JetBrains Mono 9.5
-    text "4 of 33" @889,301.42 #7c7566 JetBrains Mono 9.5
+    text "4 of 37" @889,301.42 #7c7566 JetBrains Mono 9.5
     text "›" @275.6953,331.36523 #7c7566 Inter 12
     text "Run job: " @296,331.729 #ece6d8 Inter 13
     text "pri" @349.70312,331.729 #ffd23f Inter 13
@@ -176,21 +176,23 @@ clip 250,92 1100x660 r 10
     text "ce…" @406.64062,363.729 #ece6d8 Inter 13
     text "plan.new" @442.875,362.78 #7c7566 JetBrains Mono 10.5
     text "›" @275.6953,395.36523 #7c7566 Inter 12
-    text "Go to the " @296,395.729 #ece6d8 Inter 13
-    text "pr" @356.03125,395.729 #ffd23f Inter 13
-    text "ev" @369.29688,395.729 #ece6d8 Inter 13
-    text "i" @384.1875,395.729 #ffd23f Inter 13
-    text "ous hunk" @387.59375,395.729 #ece6d8 Inter 13
-    text "git.hunk.prev" @453.79688,394.78 #7c7566 JetBrains Mono 10.5
-    rect 909,383.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
-    text "[c" @914,394.6 #b3ab99 JetBrains Mono 10
+    text "Highlight the " @296,395.729 #ece6d8 Inter 13
+    text "pr" @377.51562,395.729 #ffd23f Inter 13
+    text "ev" @390.78125,395.729 #ece6d8 Inter 13
+    text "i" @405.67188,395.729 #ffd23f Inter 13
+    text "ous completion" @409.07812,395.729 #ece6d8 Inter 13
+    text "completion.prev" @513.2656,394.78 #7c7566 JetBrains Mono 10.5
+    rect 891,383.4 40x15.200012 fill #121210 radius 4 stroke 1 #332f27
+    text "<C-p>" @896,394.6 #b3ab99 JetBrains Mono 10
     text "›" @275.6953,427.36523 #7c7566 Inter 12
-    text "Make the replace being " @296,427.729 #ece6d8 Inter 13
-    text "pr" @444.125,427.729 #ffd23f Inter 13
-    text "ev" @457.39062,427.729 #ece6d8 Inter 13
-    text "i" @472.28125,427.729 #ffd23f Inter 13
-    text "ewed" @475.6875,427.729 #ece6d8 Inter 13
-    text "search.replace.apply" @519.4375,426.78 #7c7566 JetBrains Mono 10.5
+    text "Go to the " @296,427.729 #ece6d8 Inter 13
+    text "pr" @356.03125,427.729 #ffd23f Inter 13
+    text "ev" @369.29688,427.729 #ece6d8 Inter 13
+    text "i" @384.1875,427.729 #ffd23f Inter 13
+    text "ous hunk" @387.59375,427.729 #ece6d8 Inter 13
+    text "git.hunk.prev" @453.79688,426.78 #7c7566 JetBrains Mono 10.5
+    rect 909,415.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
+    text "[c" @914,426.6 #b3ab99 JetBrains Mono 10
     text "FILES" @268,455.42 #7c7566 JetBrains Mono 9.5
     rect 274.5,477.5 7x7 fill #4cc9f0 radius 3.5
     text "internal/" @296,485.729 #ece6d8 Inter 13
@@ -204,9 +206,8 @@ clip 250,92 1100x660 r 10
     text "open" @907,516.6 #4f4a40 JetBrains Mono 10
     text "SYMBOLS" @268,545.42 #7c7566 JetBrains Mono 9.5
     text "ƒ" @275.66406,575.36523 #5cd2ff Inter 12
-    text "Pri" @296,575.729 #ffd23f Inter 13
-    text "ceForTier" @312.95312,575.729 #ece6d8 Inter 13
-    text "internal/pricing/tiers.go:4" @381.82812,574.78 #7c7566 JetBrains Mono 10.5
+    text "PriceForTier" @296,575.729 #ece6d8 Inter 13
+    text "internal/pricing/tiers.go:4" @381.21875,574.78 #7c7566 JetBrains Mono 10.5
     text "function" @883,574.60004 #4f4a40 JetBrains Mono 10
     text "ƒ" @275.66406,607.36523 #5cd2ff Inter 12
     text "roundHalfEven" @296,607.729 #ece6d8 Inter 13

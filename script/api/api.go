@@ -22,7 +22,6 @@ const Version = "0.4.0"
 // config written for them loads (PL-1).
 var futures = map[string]string{
 	"thread":   "AI-5 (requests and threads)",
-	"lsp":      "LS-1 (language servers)",
 	"ledger":   "RV-2 (the review ledger)",
 	"linear":   "PL-8 (Linear)",
 	"coverage": "TR-4 (coverage)",

@@ -278,7 +278,9 @@ func (p *picker) run(s registry.PickerSource, h hit) {
 func (p *picker) step(back bool) {
 	var ids []string
 	for _, s := range p.h.Pickers() {
-		ids = append(ids, s.ID)
+		if !s.Unlisted || s.ID == p.source {
+			ids = append(ids, s.ID)
+		}
 	}
 	if s, ok := p.src(); ok && s.Cancel != nil {
 		registry.Call(func() error { s.Cancel(); return nil })
@@ -301,6 +303,9 @@ func (p *picker) sourceStrip(c *ui.Ctx, cur registry.PickerSource) {
 		c.Text("pick", "PICK", label)
 		for _, s := range p.h.Pickers() {
 			on := s.ID == cur.ID
+			if s.Unlisted && !on {
+				continue
+			}
 			text := strings.ToUpper(s.Title)
 			if k := p.keyFor(s.ID); k != "" {
 				text += " " + k

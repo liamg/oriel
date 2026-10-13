@@ -306,7 +306,11 @@ func (h *host) Shot(th *theme.Resolved) *image.RGBA {
 
 func (h *host) Pending() ext.Pending {
 	if k := h.sh.keys; k != nil && len(k.Pending()) > 0 {
-		return ext.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
+		p := ext.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
+		if h.sh.engineHints != nil {
+			p.Hints = h.sh.engineHints(p.Keys) // keys no mapping takes go on to the engine
+		}
+		return p
 	}
 	if h.sh.enginePending != nil {
 		return h.sh.enginePending()
@@ -478,12 +482,17 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 	}
 }
 
-// modes are the keymap modes keys resolve in, most specific first: a focused widget's own mode (an input's
+// modes are the keymap modes keys resolve in, most specific first: the active key layers' (a popup's); then a
+// focused widget's own mode (an input's
 // "input", a list's "list"); or, with none, ViewKeyMode while a view in the layout has focus, or EmptyKeyMode while the
 // main area is empty, then the editor's "n"; then "global", for app chords that work everywhere.
 func (l *loop) modes() []string { return l.sh.keyModes() }
 
 func (sh *shell) keyModes() []string {
+	return append(registry.ActiveKeyModes(sh.cfg.Registry), sh.baseKeyModes()...)
+}
+
+func (sh *shell) baseKeyModes() []string {
 	if m := sh.ui.KeyMode(); m != "" {
 		return []string{m, "global"}
 	}

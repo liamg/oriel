@@ -96,6 +96,14 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := LSP{a: a}
+		vm.Bind("lsp", map[string]script.GoFunc{
+			"server": func(c *script.Args) ([]any, error) {
+				return nil, x.Server(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := Menu{a: a}
 		vm.Bind("menu", map[string]script.GoFunc{
 			"add": func(c *script.Args) ([]any, error) {

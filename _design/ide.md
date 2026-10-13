@@ -20,6 +20,89 @@ The "professional IDE" half. Everything here works without an agent.
   (`definition`, `references`, `diagnostics`, `hover`). Fewer grep-and-guess
   edits, more precise ones.
 
+### As built (LS-1/LS-2 core)
+
+The UI-free half: the module, its registry contribution and tests. The editor's half is "As built (LS-1/LS-2 UI)"
+below.
+
+- **No go-lsp.** owenrumney/go-lsp would be a tier-C dependency, so the module has its own: `lsp/jsonrpc` (JSON-RPC
+  2.0 with Content-Length framing; `$/cancelRequest` when a call's ctx ends; handlers run one at a time, in order,
+  off the read loop), `lsp/protocol` (the 3.17 messages used, as JSON-tagged structs; unions decode by shape) and
+  `lsp/snippet` (snippet syntax to plain text and tab stops, with variables and transforms).
+- **Oriel's positions.** Every `lsp` type uses `text.Pos` (0-based line, byte column) and `lsp.Range`; the client
+  offers `utf-8` then `utf-16`, takes what the server picks (`utf-32` too) and converts with `text.Snapshot`,
+  reading files that aren't open from disk (`Options.ReadFile`). Out-of-range positions clamp to the line or text.
+- **`lsp.Client`** is a struct, not the interface sketched under "Go interfaces": one running server for one root.
+  `Start(ctx, spec, root, Options)` launches and initializes it (`Options.Launch`, default `Exec`; a `Process` is
+  stdio plus `Wait` and `Kill`, so the worker or a sandbox can supply its own). Documents: `DidOpen`,
+  `DidChange(path, text.Change)` (incremental when the server takes it: one replace, or several in either order;
+  otherwise, or when a change doesn't follow the last one sent, the whole text; an older change is dropped),
+  `DidSave`, `DidClose`. Requests: `Complete`/`ResolveCompletion`, `Hover`, `SignatureHelp`, `Definition`,
+  `Declaration`, `TypeDefinition`, `Implementation`, `References`, `PullDiagnostics`, `CodeActions`/`ResolveAction`,
+  `ExecuteCommand`, `InlayHints`, `PrepareRename`/`Rename`, `DocumentSymbols`, `WorkspaceSymbols`,
+  `PrepareCallHierarchy`/`IncomingCalls`/`OutgoingCalls`, `Format`/`FormatRange`, `SemanticTokens` (decoded with
+  the legend into ranges and type names), `FoldingRanges`, `SelectionRanges`, `CodeLenses`/`ResolveCodeLens`. A
+  feature the server didn't advertise returns `ErrNotSupported` without asking it. `EditFor` turns a server's edits
+  into a `text.Edit`.
+- **Pushed state goes through callbacks**, not the `Diagnostics()` channel: `Options.OnDiagnostics(DiagnosticSet)`
+  (a file's whole set, byte columns, severity, source, code, tags, related places; empty clears),
+  `OnStatus(Status)` (`Starting`, `Ready`, `Busy` while `$/progress` work is open, with its title, message and
+  percent, `Stopped`, `Crashed` with `Err`), `OnApplyEdit` (`workspace/applyEdit`; refused when nil),
+  `OnMessage`, `OnLog` (default: the stderr writer) and `OnRefresh`. They run on the client's goroutine in the order
+  the server sent them. `Client.Diagnostics(path)` and `Client.Status()` read the latest. Server requests are
+  answered: `workspace/configuration` from the spec's `Settings` by dotted section (`null` where there's none),
+  registrations kept, progress tokens accepted, `window/showDocument` declined.
+- **Lifecycle.** `Done()` closes when the process exits; without `Shutdown` that's `Crashed`. The app gives each
+  server's stderr as an `io.Writer`, a `logs.Lines` whose logger has the source `lsp:<name>`.
+- **`lsp.Manager`** routes by language and root: `SpecFor` takes the lowest `Order` spec that serves the language
+  and is installed (`Installed` looks the command up on PATH), `ServerSpec.FindRoot` tries each root marker in turn
+  from the file upwards (so `go.work` beats a nearer `go.mod`) and falls back to the file's directory. One client per
+  (server, root); `Open` starts it (bounded by `StartTimeout`), and a crashed one is started again on the next
+  `Open` or `Restart`, with the documents that were open as they are now. `Change`, `Save`, `Close`, `Client(path)`,
+  `Clients`, `Statuses`, `Shutdown`.
+- **`ServerSpec`** gained `Name` (the diagnostics' owner and log source), `Settings`, `Order` and `Source`. It's
+  registered as `registry.LSPServer` (kind `lsp.server`, `registry.LSPServers(r)` by order then name), a copy of its
+  fields so either converts to the other: `lsp` can't import the registry, which imports `ui`. `lsp.Builtins()` are
+  the servers above; vtsls and basedpyright have order 1, so typescript-language-server and pyright win when both
+  are installed. gopls's built-in settings turn on semantic tokens and parameter, assignment and composite-literal
+  hints; typescript-language-server's turn on its inlay hints.
+- **Tests.** `spec/lsp` vendors the 3.17 pages the tests quote; `refcheck` matches LSP headings by their
+  `<a name="…">` anchor. `lsp/lsptest` records a session through a proxy (`Recorder.Launcher`; JSON lines, the root
+  written as `${root}`, log and telemetry left out) and replays it from a fake server (`Fake`) that answers in the
+  recorded order once the client has sent each recorded message (method and params, ids and `processId` aside).
+  `TestSession` runs one script (open, seeded diagnostic, typed completion and resolve, hover, signature help,
+  code actions, inlay hints, definition, references, prepare and rename, document and workspace symbols, call
+  hierarchy, formatting, folding, semantic tokens, shutdown) on Go, TypeScript and Python fixtures and checks what
+  the UI would show. Recorded with gopls v0.20.0, typescript-language-server 5.3.0 with TypeScript 6.0.3, and
+  pyright 1.1.413 (Node 22.12.0). `ORIEL_LSP_LIVE=1` runs it against the installed servers; `go test ./lsp -run
+  TestSession -record` re-records.
+- Not yet: the editor wiring and the status-line segment, the Lua binding for `lsp.server`, running servers on
+  the worker, type hierarchy, linked editing, document highlights, `workspace/didChangeWatchedFiles`, workspace
+  diagnostics and semantic token deltas.
+
+
+### As built (LS-1/LS-2 UI)
+
+- `app/lsp*.go`, a built-in like any plugin: it registers the built-in servers as `registry.LSPServer`s, runs an
+  `lsp.Manager` over whatever the registry holds, opens a buffer on its server the first time a pane draws it
+  (decorations are asked for every visible buffer), feeds it the buffer's changes and saves, puts diagnostics in the
+  registry (owner: the server), its stderr in the log as `lsp:<name>`, and its state in the status line.
+- `registry.LSPServer.Connect` (and `lsp.ServerSpec.Connect`) reaches a server some other way than running its
+  command: in process, over a socket. Tests plug a recorded transcript in this way, through `lsptest.Responder`, which
+  answers in any order, as an editor asks; `lsptest.Fake` still checks the exact session.
+- Popups (completion with the highlighted item's resolved docs, signature help, the `K` card, the code actions
+  menu, the rename prompt) are an overlay view at the cursor. Their keys are `registry.KeyLayer`s: a mode laid over
+  the others while active, so `⌃n` and `⏎` are the menu's only while it's open, and insert-mode maps still apply.
+- Inlay hints are a new decoration kind, `registry.Inlay`: text drawn inline before a column, the code after it shifted
+  on the grid (the cursor, selections and spans too).
+- Keys follow nvim 0.11's defaults: `K`, `grr`, `grn`, `gra`, `gri`, `gO`, plus `gd`, `gD`, `gy`, `␣ca`, `␣rn`, `␣ci`,
+  `␣co` and `⌃␣` in insert mode. Without a server, `K`, `gd` and `gD` are vim's.
+- `grr` peeks inline (a block under the line: the list by file, the highlighted reference's code); rename shows a
+  diff of every file before it changes anything, through the same preview as project search's replace.
+- The symbols pickers (`␣s`, `gO`, `␣S`, the omnibox's) ask the server, falling back to the tree-sitter outline;
+  `␣ci`/`␣co` list callers and callees in a picker.
+- Not yet: semantic tokens over tree-sitter, code lenses, formatting on save, lightbulbs, and LSP folding and selection
+  ranges in the editor; the agent group in code actions comes with the agent (TR-6).
 ## Debugging (`dap` module)
 
 - A DAP client and an adapter registry: delve (Go), debugpy (Python),

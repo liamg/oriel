@@ -47,6 +47,7 @@ type editorExt struct {
 	inputs map[vim.WindowID]paneInput
 
 	drawing      input.State // the engine of the pane being drawn
+	caret        ui.ID       // the current window's cursor, last frame: where popups at the cursor go
 	pendingSince time.Time   // when the current window's engine began waiting for more keys
 }
 
@@ -73,6 +74,17 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.inputs = map[vim.WindowID]paneInput{}
 	x.builtinInputs()
 	x.sh.enginePending = x.pending
+	x.sh.engineHints = func(keys []string) []ext.Hint {
+		f := x.h.Layout().Focus
+		if f == nil || f.ID != EditorView || !isVim(x.inputFor(x.current())) || x.e.Mode() != "normal" {
+			return nil
+		}
+		var out []ext.Hint
+		for _, h := range vim.HintsFor(keys) {
+			out = append(out, ext.Hint{Keys: h.Keys, Desc: h.Desc})
+		}
+		return out
+	}
 	x.ed = edit.New(text.New(nil, text.Author{}), text.Author{Kind: text.User})
 	x.ed.SetClipboard(desktopClipboard{x.sh})
 	x.ed.OnNotice(func(n edit.Notice) { h.Notify(FromEdit(n, "vim")) })

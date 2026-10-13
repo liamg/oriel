@@ -322,28 +322,28 @@ clip 20,109.44 816x516.12 r 8
   pop
   text "builtin:themes" @729.6875,447.16 #ffd23f JetBrains Mono 11
   clip 160,455.12 220x15.179993 r 0
-    text "<Space>h" @160,466.85 #ece6d8 JetBrains Mono 11.5
+    text "<Space>ca" @160,466.85 #ece6d8 JetBrains Mono 11.5
   pop
-  clip 392,455.12 338.875x15.179993 r 0
-    text "picker.open" @392,466.85 #b3ab99 JetBrains Mono 11.5
+  clip 392,455.12 345.46875x15.179993 r 0
+    text "lsp.code_actions" @392,466.85 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:help" @742.875,466.34 #ffd23f JetBrains Mono 11
+  text "builtin:lsp" @749.46875,466.34 #ffd23f JetBrains Mono 11
   clip 160,474.3 220x15.179993 r 0
-    text "<Space>hb" @160,486.03 #ece6d8 JetBrains Mono 11.5
+    text "<Space>ci" @160,486.03 #ece6d8 JetBrains Mono 11.5
   pop
-  clip 392,474.3 312.5x15.179993 r 0
-    text "git.blame.toggle" @392,486.03 #b3ab99 JetBrains Mono 11.5
+  clip 392,474.3 345.46875x15.179993 r 0
+    text "lsp.calls.incoming" @392,486.03 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:gitsigns" @716.5,485.52 #ffd23f JetBrains Mono 11
+  text "builtin:lsp" @749.46875,485.52 #ffd23f JetBrains Mono 11
   clip 160,493.47998 220x15.179993 r 0
-    text "<Space>hp" @160,505.21 #ece6d8 JetBrains Mono 11.5
+    text "<Space>co" @160,505.21 #ece6d8 JetBrains Mono 11.5
   pop
-  clip 392,493.47998 312.5x15.179993 r 0
-    text "git.hunk.preview" @392,505.21 #b3ab99 JetBrains Mono 11.5
+  clip 392,493.47998 345.46875x15.179993 r 0
+    text "lsp.calls.outgoing" @392,505.21 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:gitsigns" @716.5,504.69998 #ffd23f JetBrains Mono 11
+  text "builtin:lsp" @749.46875,504.69998 #ffd23f JetBrains Mono 11
   clip 160,512.66 220x15.179993 r 0
-    text "and 47 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
+    text "and 60 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
   pop
   clip 392,512.66 418x15.179993 r 0
     text ":Keys lists them" @392,524.38995 #4f4a40 JetBrains Mono 11.5

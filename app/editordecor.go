@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"path/filepath"
 	"slices"
+	"unicode/utf8"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -118,7 +119,7 @@ func spans(c *ui.Ctx, th *theme.Resolved, p vim.Pane, line int, ds []registry.De
 		if d.Kind != registry.Highlight && d.Kind != registry.Underline {
 			continue
 		}
-		a, z := p.VCol(line, d.From), p.VCol(line, d.To)
+		a, z := p.VCol(line, d.From)+inlayShift(ds, d.From, true), p.VCol(line, d.To)+inlayShift(ds, d.To, false)
 		if z <= a {
 			continue
 		}
@@ -157,4 +158,41 @@ func blocks(c *ui.Ctx, line int, ds []registry.Decoration, x0 float32) {
 			c.Node(d.Node)
 		})
 	}
+}
+
+var tInlay = theme.Declare("editor.inlay", "fg.ghost")
+var tInlayBg = theme.DeclareOn("editor.inlay.bg", "alpha(fg, 5%)", "bg.base")
+
+// inlays are a line's Inlay decorations, by column.
+func inlays(ds []registry.Decoration) []registry.Decoration {
+	var out []registry.Decoration
+	for _, d := range ds {
+		if d.Kind == registry.Inlay {
+			out = append(out, d)
+		}
+	}
+	slices.SortStableFunc(out, func(a, b registry.Decoration) int { return a.From - b.From })
+	return out
+}
+
+// inlayCells is how many character cells an inlay takes: its text's.
+func inlayCells(d registry.Decoration) int { return utf8.RuneCountInString(d.Text) }
+
+// inlayShift is how many cells the inlays before column col (and at it, with at) push it right.
+func inlayShift(ds []registry.Decoration, col int, at bool) int {
+	n := 0
+	for _, d := range ds {
+		if d.Kind == registry.Inlay && (d.From < col || at && d.From == col) {
+			n += inlayCells(d)
+		}
+	}
+	return n
+}
+
+// inlayBox draws an inlay hint inline, exactly as wide as its cells so the code after it stays on the grid.
+func inlayBox(c *ui.Ctx, key any, d registry.Decoration, m paneMetrics) {
+	th := c.Theme()
+	c.Box(key, ui.Style{W: ui.Px(float32(inlayCells(d)) * m.charW), Cross: ui.Center, Main: ui.Center, Fill: th.C(tInlayBg), Radius: 3}, func(c *ui.Ctx) {
+		c.Text("t", d.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: codeSize - 2}, Color: tokenColour(th, d.Style, th.C(tInlay))})
+	})
 }

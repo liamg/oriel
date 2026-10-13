@@ -72,6 +72,10 @@ flowchart TB
 - commands, picker/omnibox sources and actions, panels, docks, layouts. Which-key is a built-in plugin built only on the public API.
 - the `view` keymap mode: keys for a focused view with no key mode of its own (`q` and `⌃W c` close it; Escape closes
   one outside the main area, such as the log). A tab's ✕, shown while the pointer is on it, closes its view.
+- key layers (`registry.KeyLayer`): a keymap mode laid over every other while its `Active` says so, as the completion
+  menu's `⌃n` and `⏎`; keys it doesn't map go on as before.
+- picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.
+- inlay decorations (`registry.Inlay`): text drawn inline before a column, the code after it moved along the grid.
 - tab markers: a view implementing `registry.Marked` gives each instance a small marker after its tab title (the
   editor gives its file's git status letter), in a theme token's colour.
 - rail entries (`RailEntry`, `oriel.rail.add`) and start view actions (`StartEntry`, `oriel.start.add`). Both are
@@ -308,6 +312,10 @@ type Host interface {
   Severity, Message}` as LSP does; the built-in `problems` extension marks them in the editor through a decoration
   provider (`DecorationCtx.Path` is the buffer's absolute file) and lists them in `:Problems`. Lua's
   `L.diagnostics.set` binds it; the Lua config publishes its errors as owner `lua`.
+- Language servers (LS-1): `registry.LSPServer` contributions (kind `lsp.server`: `Name`, `Language`, `Cmd`,
+  `Roots`, `Init`, `Settings`, `Order`, `Source`), listed by `registry.LSPServers(r)`. A later one of a name shadows
+  the built-in (`lsp.Builtins()`); among the servers for a language the lowest `Order` that's installed runs. The
+  app's `lsp.Manager` reads them on every open (ide.md, "As built (LS-1/LS-2 core)").
 - Right-click menus (PL-13): `registry.MenuItem` contributions (kind `menu.item`) with a `When` (view, file glob,
   selection, help-id prefix); the window's one context menu gathers those that match what was clicked
   (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the

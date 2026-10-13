@@ -5,7 +5,7 @@
 //
 //	ref:    motion.txt *w*              vim help tag (spec/vim)
 //	ref:    nvim/motion.txt *w*         nvim help tag (spec/nvim)
-//	ref:    lsp/specification.md#Text Documents   markdown heading
+//	ref:    lsp/specification.md#Text Documents   markdown heading, by its text or its <a name="…"> anchor
 //	ref:    css-color-4/Overview.bs#hue-interpolation   HTML or Bikeshed section, by its heading's id
 //	ref:    css-color-4/conversions.js#OKLab_to_XYZ     a function in vendored sample code
 //	ref:    testdir/test_normal.vim#Test_normal_dw      a test function in vim's vendored tests (spec/vim)
@@ -190,7 +190,7 @@ func (c *Checker) checkMarkdown(r Ref, file, heading string) error {
 	}
 	for i, line := range lines {
 		level := len(line) - len(strings.TrimLeft(line, "#"))
-		if level == 0 || !strings.HasPrefix(line[level:], " ") || !sameHeading(line[level:], heading) {
+		if level == 0 || !strings.HasPrefix(line[level:], " ") || !markdownHeading(line[level:], heading) {
 			continue
 		}
 		end := i + 1
@@ -206,6 +206,16 @@ func (c *Checker) checkMarkdown(r Ref, file, heading string) error {
 		return fmt.Errorf("%s: quote not found under %q in spec/%s: %q", r, heading, file, r.Quote)
 	}
 	return fmt.Errorf("%s: no heading %q in spec/%s", r, heading, file)
+}
+
+var mdAnchor = regexp.MustCompile(`<a\b[^>]*\bname=["']([^"']+)["']`)
+
+// markdownHeading matches a heading by its text with any HTML tags dropped, or by the name of an anchor in it.
+func markdownHeading(line, want string) bool {
+	if m := mdAnchor.FindStringSubmatch(line); m != nil && m[1] == strings.TrimSpace(want) {
+		return true
+	}
+	return sameHeading(htmlTag.ReplaceAllString(line, ""), want)
 }
 
 // underline is a reStructuredText or AsciiDoc heading's underline: one punctuation character, repeated.

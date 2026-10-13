@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -154,5 +155,26 @@ func TestReplacePreviewThenApply(t *testing.T) {
 	}
 	if s.showing(ReplaceView) {
 		t.Error("the diff stayed open after Apply")
+	}
+}
+
+// A key layer's keys win while it's active; keys it doesn't map, and every key while it isn't, go on as before.
+func TestKeyLayers(t *testing.T) {
+	s, _ := searchScene(t)
+	ran := 0
+	on := false
+	s.reg.Command(registry.Command{ID: "test.layer.x", Run: func(registry.Ctx, registry.Args) error { ran++; return nil }})
+	s.reg.Keymap(registry.Keymap{Mode: "test.layer", Keys: "x", Command: "test.layer.x"})
+	s.reg.Contribute(registry.KeyLayer{Name: "test", Mode: "test.layer", Active: func() bool { return on }})
+	if modes := s.sh.keyModes(); slices.Contains(modes, "test.layer") {
+		t.Fatalf("an inactive layer is in %v", modes)
+	}
+	on = true
+	if modes := s.sh.keyModes(); len(modes) == 0 || modes[0] != "test.layer" {
+		t.Fatalf("the active layer isn't first in %v", modes)
+	}
+	s.keyCommand(t, "x")
+	if ran != 1 {
+		t.Errorf("x ran the layer's command %d times", ran)
 	}
 }
