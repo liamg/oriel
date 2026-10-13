@@ -8,6 +8,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/layout"
 )
 
@@ -38,6 +39,17 @@ type Host interface {
 	PaneRect(v layout.ViewRef) (render.Rect, bool) // where v's pane was drawn last frame
 	Redraw()                                       // asks for a frame; safe from any goroutine
 	Pending() Pending                              // keys typed towards a longer mapping or command, for which-key
+	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
+}
+
+// UIView is the window's widget tree as extensions may read it, last frame's.
+type UIView interface {
+	Focused() ui.ID
+	Help(id ui.ID) string
+	HelpNodes() []ui.HelpNode
+	ContextClick() (ui.ID, render.Point, bool)
+	HelpRequest() (string, bool)
+	Rect(id ui.ID) (render.Rect, bool)
 }
 
 // Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's

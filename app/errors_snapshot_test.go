@@ -85,6 +85,7 @@ func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errSce
 	}
 	s.ui.SetTheme(r)
 	s.ui.SetClock(func() time.Time { return s.now })
+	s.sh.ui = s.ui
 	return s
 }
 

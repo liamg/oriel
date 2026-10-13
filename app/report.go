@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/ui"
 )
 
 // IssueURL is where a report goes, by hand: Oriel never sends one itself.
@@ -25,6 +26,7 @@ type shell struct {
 	layout  *layoutExt
 	poke    func() // asks the loop for a frame
 	keys    *registry.Resolver
+	ui      *ui.UI
 	modes   func() []string
 	// enginePending is the focused editor's pending keys, when the editor is in front.
 	enginePending func() ext.Pending

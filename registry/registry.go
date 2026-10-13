@@ -26,6 +26,8 @@ type Registry interface {
 	Input(e input.Engine) Disposable // an input engine the editor's input option can pick
 	Decorations(id string, p DecorationProvider) Disposable
 	Picker(s PickerSource) Disposable
+	HelpPages(s HelpSource) Disposable
+	HelpLive(name string, fn func(c *ui.Ctx)) Disposable
 
 	Run(ctx Ctx, id string, args Args) error
 	Commands() []Command // the registration that wins for each id, sorted by id
@@ -39,7 +41,9 @@ type Registry interface {
 	InputByID(id string) (input.Engine, bool)
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
 	Pickers() []PickerSource              // the winning source for each id, by Order then id
-	Inputs() []string                     // engine ids, sorted
+	HelpSources() ([]HelpSource, int)
+	HelpLiveByName(name string) (func(c *ui.Ctx), bool)
+	Inputs() []string // engine ids, sorted
 	Options() Options
 
 	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
@@ -154,6 +158,9 @@ type reg struct {
 	inputs   stacks[string, input.Engine]
 	decor    stacks[string, DecorationProvider]
 	pickers  stacks[string, PickerSource]
+	help     []entry[HelpSource]
+	helpGen  int
+	live     stacks[string, func(c *ui.Ctx)]
 	themes   []entry[theme.Source]
 	options  *options
 	faults   faults
@@ -168,6 +175,7 @@ func New() Registry {
 		inputs:   stacks[string, input.Engine]{},
 		decor:    stacks[string, DecorationProvider]{},
 		pickers:  stacks[string, PickerSource]{},
+		live:     stacks[string, func(c *ui.Ctx)]{},
 		options:  newOptions(),
 	}
 	for _, o := range builtinOptions {

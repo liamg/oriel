@@ -49,8 +49,10 @@ Your plan allows a fixed amount of model use per rolling week…
 
 - **Generated sections can't drift**: key tables, option lists and API signatures come from the same
   registries the app runs on. Rename a command and its help updates with it.
-- Pages live in `docs/help/**.md`, embedded in the binary, and work offline.
-- Plugins ship their own pages (a `help` contribution point). Your own config can add pages under `~/.config/oriel/help/`.
+- Pages live in `app/help/pages/**.md`, embedded in the binary, and work offline.
+- Plugins ship their own pages (a `help` contribution point: `Registry.HelpPages(HelpSource{FS})`, and
+  `Registry.HelpLive(name, fn)` for a `{{live}}` block). Your own config can add pages under
+  `~/.config/oriel/help/`; a page with the same id as Oriel's replaces it.
 - **Prose is user-editable**: `:help edit` opens the page's markdown, and a local override sits beside it, like themes.
 
 ## Making sure it really is everywhere
@@ -61,6 +63,16 @@ Your plan allows a fixed amount of model use per rolling week…
   no help id or its id doesn't resolve to a page and anchor. The same applies to plugins in our repo.
 - **Doctests**: Lua and shell snippets in help pages run in CI. Key and option references are checked against the registries.
 - **Coverage report**: elements by help coverage, so gaps are visible.
+
+## Built so far (SH-10)
+
+- Right-click anything with help and no menu of its own: a menu with **Help** (widgets with menus add it last,
+  claiming the click). `F1` everywhere, and `K` in the widgets' own key modes (not in inputs, or the editor, where
+  `K` is vim's). `⌘?` toggles help mode. `:help topic` matches ids, anchors and titles; `␣h` is the picker.
+- `{{keys "glob"}}` lists the keymaps whose command matches, `{{options "prefix"}}` the options and their values,
+  `{{live "name"}}` a registered block. `{{api}}` waits for the generated Lua API (PL-1), and the **Ask** box for the
+  agents (P5). `:help dw` for vim's own entries needs the vendored `:help` files in a Go module to embed.
+- The lint (`TestHelpLint`) walks the omnibox, a picker, toasts and the log, a help page and help mode.
 
 ## Go interfaces
 

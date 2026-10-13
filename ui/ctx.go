@@ -181,6 +181,17 @@ func (c *Ctx) Scroll(id ID) render.Point { return c.u.Scroll(id) }
 // ScrollTo sets id's scroll offset; layout clamps it.
 func (c *Ctx) ScrollTo(id ID, p render.Point) { c.u.ScrollTo(id, p) }
 
+// ClaimContext says a widget answered id's right-click with a context menu of its own.
+func (c *Ctx) ClaimContext(id ID) {
+	if c.u.in.claimed == nil {
+		c.u.in.claimed = map[ID]bool{}
+	}
+	c.u.in.claimed[id] = true
+}
+
+// RequestHelp asks for help page id.
+func (c *Ctx) RequestHelp(id string) { c.u.RequestHelp(id) }
+
 // Help is the help id of id or its nearest ancestor with one.
 func (c *Ctx) Help(id ID) string { return c.u.Help(id) }
 

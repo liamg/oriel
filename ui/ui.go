@@ -118,7 +118,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.floats = u.floats[:0]
 	u.animating, u.wake = false, time.Time{}
 	build(&Ctx{u: u, e: u.root})
-	u.in.clicks, u.in.keys, u.in.context, u.in.wheel = nil, nil, nil, nil
+	u.in.clicks, u.in.keys, u.in.context, u.in.wheel, u.in.claimed = nil, nil, nil, nil, nil
 	u.tooltip()
 	for axis := range 2 {
 		u.fit(u.root, axis)

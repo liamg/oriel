@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"cmp"
 	"math"
+	"slices"
 	"time"
 
 	"github.com/liamg/oriel/render"
@@ -59,8 +61,10 @@ type input struct {
 	clicks  map[ID]bool
 	keys    map[ID][]render.KeyEvent
 	context map[ID]render.Point
+	claimed map[ID]bool
 	wheel   map[ID]render.Point
 	mods    render.Mods
+	help    string // a help page asked for since the last frame
 }
 
 // Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame.
@@ -208,6 +212,55 @@ func (u *UI) Help(id ID) string {
 		id = u.parents[id]
 	}
 	return ""
+}
+
+// HelpNode is a node with a help id of its own, and where it was drawn.
+type HelpNode struct {
+	ID   ID
+	Rect render.Rect
+	Help string
+}
+
+// HelpNodes are the nodes of the latest frame with a help id of their own, for help mode's markers.
+func (u *UI) HelpNodes() []HelpNode {
+	var out []HelpNode
+	for id, f := range u.flags {
+		if f.help == "" {
+			continue
+		}
+		if r, ok := u.Rect(id); ok && r.Dx() > 0 && r.Dy() > 0 {
+			out = append(out, HelpNode{id, r, f.help})
+		}
+	}
+	slices.SortFunc(out, func(a, b HelpNode) int {
+		return cmp.Or(cmp.Compare(a.Rect.Min.Y, b.Rect.Min.Y), cmp.Compare(a.Rect.Min.X, b.Rect.Min.X))
+	})
+	return out
+}
+
+// ContextClick is a right-click since the last frame on a node no widget showed a context menu for: its target and
+// where. Something else (help's own menu) can answer it.
+func (u *UI) ContextClick() (ID, render.Point, bool) {
+	var best ID
+	var at render.Point
+	for id, p := range u.in.context {
+		if u.in.claimed[id] {
+			continue
+		}
+		if best == 0 || u.within(id, best) {
+			best, at = id, p
+		}
+	}
+	return best, at, best != 0
+}
+
+// RequestHelp asks for help page id (a context menu's "Help" item does); HelpRequest takes the request.
+func (u *UI) RequestHelp(id string) { u.in.help = id }
+
+func (u *UI) HelpRequest() (string, bool) {
+	h := u.in.help
+	u.in.help = ""
+	return h, h != ""
 }
 
 // WithoutHelp lists interactive nodes in the latest frame that have no help id, themselves or above them:

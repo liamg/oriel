@@ -30,6 +30,13 @@ func (s sourced) Picker(p PickerSource) Disposable {
 	return s.Registry.Picker(p)
 }
 
+func (s sourced) HelpPages(h HelpSource) Disposable {
+	if h.Source == "" {
+		h.Source = s.src
+	}
+	return s.Registry.HelpPages(h)
+}
+
 func (s sourced) Option(o OptionSpec) Disposable {
 	if o.Source == "" {
 		o.Source = s.src

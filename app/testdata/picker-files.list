@@ -108,6 +108,7 @@ clip 180,108 1240x720 r 10
   text "SYMBOLS HERE ␣s" @750.55994,130.42 #7c7566 JetBrains Mono 9.5
   text "KEYMAPS ␣k" @879.6599,130.42 #7c7566 JetBrains Mono 9.5
   text "QUICKFIX" @973.05994,130.42 #7c7566 JetBrains Mono 9.5
+  text "HELP ␣h" @1052.1799,130.42 #7c7566 JetBrains Mono 9.5
   text "⇥ next source" @1313.1799,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #ffd23f Inter 16

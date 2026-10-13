@@ -135,7 +135,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 
 	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
 	l.ui.Title = "Oriel"
-	sh.keys, sh.modes = l.keys, l.modes
+	sh.keys, sh.modes, sh.ui = l.keys, l.modes, l.ui
 	l.themeDirty.Store(true)
 	retheme := func() { l.themeDirty.Store(true); poke() }
 	for _, src := range cfg.Registry.Themes() {
@@ -203,6 +203,13 @@ func (sh *shell) host(source string) *host {
 
 func (h *host) Layout() *layout.Root { return h.sh.layout.root }
 func (h *host) Redraw()              { h.sh.poke() }
+
+func (h *host) UI() ext.UIView {
+	if h.sh.ui == nil {
+		return nil
+	}
+	return h.sh.ui
+}
 
 func (h *host) Pending() ext.Pending {
 	if k := h.sh.keys; k != nil && len(k.Pending()) > 0 {

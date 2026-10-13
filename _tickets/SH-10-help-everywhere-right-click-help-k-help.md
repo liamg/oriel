@@ -2,7 +2,7 @@
 id: SH-10
 title: "Help everywhere (right-click → Help, K, ⌘?, :help)"
 phase: P3
-status: todo
+status: review
 area: Shell and navigation
 module: help
 depends_on: [FW-6]

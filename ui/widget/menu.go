@@ -132,6 +132,7 @@ func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResu
 	id := c.Next(key)
 	st := ui.State[contextState](c, id)
 	if p := c.Interaction(target).Context; p != nil {
+		c.ClaimContext(target)
 		st.open, st.at = true, *p
 		c.Focus(ui.Child(c.Next(key), "menu")) // the menu, built below
 	}
@@ -141,7 +142,10 @@ func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResu
 	help := c.Help(target)
 	all := items
 	if help != "" {
-		all = append(append(all[:len(all):len(all)], MenuItem{Separator: true}), MenuItem{Label: "? Help", Shortcut: "K", Help: help})
+		if len(all) > 0 {
+			all = append(all[:len(all):len(all)], MenuItem{Separator: true})
+		}
+		all = append(all, MenuItem{Label: "? Help", Shortcut: "K", Help: help})
 	}
 	if catcher(c, struct{ k any }{key}, 900, ContextMenuHelp) {
 		st.open = false
@@ -162,6 +166,7 @@ func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResu
 		st.open = false
 	case chosen >= 0 && help != "" && chosen == len(all)-1:
 		res.Help, st.open = help, false
+		c.RequestHelp(help)
 	case chosen >= 0:
 		res.Chosen, st.open = chosen, false
 	}
