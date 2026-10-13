@@ -268,6 +268,8 @@ type Host interface {
 - `Host.CurrentTheme()` is the theme the window is drawn in, and `Host.Shot(th)` the window built and drawn again on
   the CPU in another theme, without touching the live frame (`ui.UI.Fork`). Drawn in `theme.Probe(th)`, every token
   and syntax group in a colour of its own, it tells what painted each pixel: the theme editor's pick mode.
+- `Options` keeps where each value came from: `SetFrom(name, layer, at, v, source)`, `Source(name, at)`,
+  `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").
 - `Registry.Themes()` returns a generation with the sources; the window watches a theme registered at any time.
   `theme.Readable(fg, on, ratio)` declares a pair a widget draws, for the theme lint, as `theme.Declare` does a token.
 - A box with `ui.Style.Wheel` takes the scroll wheel itself, as `Interaction.Scroll`, for content it scrolls on

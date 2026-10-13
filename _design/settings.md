@@ -114,3 +114,23 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 - **Show as TOML / Lua** shows the line you would write by hand.
 - Options that need a restart say so, and the page offers one.
 - Every row has a help id (`help.md`).
+
+## As built (SH-12)
+
+- `~/.config/oriel/settings.toml` is the user layer and `<work dir>/.oriel/settings.toml` the project's, read at start
+  and every 250 ms after (by contents). A key is an option's name as tables: `[editor] tab_width = 4`, or a vim
+  alias. A value of the wrong type is a warning; a key no option has is kept, listed on the page, and read again
+  when more options register (a plugin's). A parse error keeps the last good values and gives its line and column.
+- `Options.SetFrom` records where a value came from (a file's path, `init.lua:12`), `Source` gives it back for the
+  value that wins, `Lookup` reads one layer and `Spec` finds an option by name or alias.
+- The page writes through `toml.Document`: a change replaces the value's bytes, a new key goes after its table's
+  last key, a reset deletes the line. Only the user and project files are written; the session scope never is.
+  It edits at the key the file already uses (an alias, a dotted key). A file that doesn't parse is never written.
+- A value set in Lua wins over both files, so the page shows it read-only with its source; `settings.set` refuses it.
+- **Project trust**: a project file applies only once trusted (`settings.trust`, offered by a notice), recorded by
+  its SHA-256 in `~/.config/oriel/trusted.toml`, so a change needs trusting again (security.md, direnv-style). An
+  edit from the page re-trusts it.
+- Controls: a toggle, choices (four or fewer inline, else a menu), and a field for numbers, durations and
+  strings, checked on Enter. "TOML" shows each row's line and its Lua. Undo is per change.
+- Not yet: colour, key, list and map types; `Restart`, `Resettable` and `Secret`; a jump to the Lua line (Lua comes
+  with the scripting ticket); undo for reset section and reset all as one step.

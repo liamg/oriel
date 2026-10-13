@@ -146,8 +146,13 @@ type Options interface {
 	// Get resolves name (or an alias) at a place: the value and the layer it came from.
 	Get(name string, at At) (any, Layer, error)
 	Set(name string, l Layer, at At, v any) error
+	// SetFrom sets a value with where it came from: "init.lua:12", a settings file's path.
+	SetFrom(name string, l Layer, at At, v any, source string) error
 	Unset(name string, l Layer, at At)
-	Specs() []OptionSpec // sorted by name
+	Source(name string, at At) string               // where the value Get returns was set; "" for a default
+	Lookup(name string, l Layer, at At) (any, bool) // the value set at exactly l, if any
+	Spec(name string) (OptionSpec, bool)            // by name or alias
+	Specs() []OptionSpec                            // sorted by name
 	Watch(name string, fn func()) (cancel func())
 }
 
@@ -157,17 +162,22 @@ type valueKey struct {
 	at    string
 }
 
+type value struct {
+	v      any
+	source string
+}
+
 type options struct {
 	mu      sync.Mutex
 	specs   stacks[string, OptionSpec]
 	aliases map[string]string
-	values  map[valueKey]any
+	values  map[valueKey]value
 	watches map[string]map[int]func()
 	next    int
 }
 
 func newOptions() *options {
-	return &options{specs: stacks[string, OptionSpec]{}, aliases: map[string]string{}, values: map[valueKey]any{}, watches: map[string]map[int]func(){}}
+	return &options{specs: stacks[string, OptionSpec]{}, aliases: map[string]string{}, values: map[valueKey]value{}, watches: map[string]map[int]func(){}}
 }
 
 func (o *options) spec(name string) (OptionSpec, bool) {
@@ -184,19 +194,57 @@ func (o *options) Get(name string, at At) (any, Layer, error) {
 	if !ok {
 		return nil, 0, fmt.Errorf("no option %q", name)
 	}
+	v, l := o.winner(s, at)
+	if l == LayerDefault {
+		return s.Default, l, nil
+	}
+	return v.v, l, nil
+}
+
+func (o *options) winner(s OptionSpec, at At) (value, Layer) {
 	for l := LayerWindow; l > LayerDefault; l-- {
 		k := at.key(l)
 		if l >= LayerProject && k == "" {
 			continue
 		}
 		if v, ok := o.values[valueKey{s.Name, l, k}]; ok {
-			return v, l, nil
+			return v, l
 		}
 	}
-	return s.Default, LayerDefault, nil
+	return value{}, LayerDefault
 }
 
-func (o *options) Set(name string, l Layer, at At, v any) error {
+func (o *options) Source(name string, at At) string {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	s, ok := o.spec(name)
+	if !ok {
+		return ""
+	}
+	v, _ := o.winner(s, at)
+	return v.source
+}
+
+func (o *options) Lookup(name string, l Layer, at At) (any, bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	s, ok := o.spec(name)
+	if !ok {
+		return nil, false
+	}
+	v, ok := o.values[valueKey{s.Name, l, at.key(l)}]
+	return v.v, ok
+}
+
+func (o *options) Spec(name string) (OptionSpec, bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.spec(name)
+}
+
+func (o *options) Set(name string, l Layer, at At, v any) error { return o.SetFrom(name, l, at, v, "") }
+
+func (o *options) SetFrom(name string, l Layer, at At, v any, source string) error {
 	o.mu.Lock()
 	s, ok := o.spec(name)
 	switch {
@@ -214,7 +262,7 @@ func (o *options) Set(name string, l Layer, at At, v any) error {
 		o.mu.Unlock()
 		return err
 	}
-	o.values[valueKey{s.Name, l, at.key(l)}] = v
+	o.values[valueKey{s.Name, l, at.key(l)}] = value{v, source}
 	fns := o.watchers(s.Name)
 	o.mu.Unlock()
 	for _, fn := range fns {

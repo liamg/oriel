@@ -473,7 +473,6 @@ func (e *themeEditor) buildPick(c *ui.Ctx) {
 
 // --- the editor ---
 
-
 func (e *themeEditor) build(c *ui.Ctx) {
 	if !e.open || c.Theme().IsProbe() {
 		return

@@ -70,6 +70,11 @@ func TestHelpLint(t *testing.T) {
 	s.frame()
 	s.frame()
 	s.lint("pick mode")
+	s.themeEditor().picking = false
+	s.run("settings.open", registry.Args{"section": "ui"})
+	s.frame()
+	s.frame()
+	s.lint("the settings page")
 }
 
 func TestHelpWays(t *testing.T) {

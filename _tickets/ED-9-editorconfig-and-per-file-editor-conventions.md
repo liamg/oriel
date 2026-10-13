@@ -44,6 +44,11 @@ depends_on: [ED-2, SH-12]
 the vendored EditorConfig core test suite passes; `.gitattributes` fixtures match `git check-attr`; a buffer opened under a fixture tree gets each property from the
 right section, visible with its source on the settings page; editing `.editorconfig` re-applies live
 
+## From SH-12
+
+- Settings files are layers applied with `Options.SetFrom(name, layer, at, v, source)`; `.editorconfig` can do the
+  same at `LayerBuffer`, with its path as the source, and the page shows it.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

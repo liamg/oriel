@@ -1,0 +1,97 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1469.0625x38 r 0
+pop
+rect 0,38 1600x936 fill #060606
+clip 0,38 1600x936 r 0
+  rect 0,38 1600x30 fill #0c0c0b
+  rect 0,68 1600x1 fill #24221d
+pop
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
+rect 0,38 1600x962 fill #060606
+clip 0,38 1600x962 r 0
+  text "SETTINGS" @16,67.96 #ffd23f JetBrains Mono 11
+  rect 95.07,49 420x30 fill #060606 radius 6 stroke 1 #332f27
+  clip 95.07,49 420x30 r 6
+    text "search · @modified · @project · @plugin:id" @105.07,68.54712 #7c7566 Inter 12.5
+  pop
+  text "EDITING" @1196.19,67.42 #7c7566 JetBrains Mono 9.5
+  rect 1261.5,52 185.09998x24 radius 5 stroke 1 #332f27
+  clip 1261.5,52 185.09998x24 r 5
+    rect 1261.5,52 47.80005x24 fill #1f1c0f
+    text "USER" @1271.5,67.42 #ffd23f JetBrains Mono 9.5
+    text "PROJECT" @1319.3,67.42 #7c7566 JetBrains Mono 9.5
+    text "SESSION" @1387.95,67.42 #7c7566 JetBrains Mono 9.5
+  pop
+  rect 1460.6,52 123.400024x24 radius 5 stroke 1 #332f27
+  clip 1460.6,52 123.400024x24 r 5
+    rect 1460.6,52 75.599976x24 fill #1f1c0f
+    text "CONTROLS" @1470.6,67.42 #ffd23f JetBrains Mono 9.5
+    text "TOML" @1546.2,67.42 #7c7566 JetBrains Mono 9.5
+  pop
+  rect 0,90 1600x1 fill #24221d
+  rect 0,91 240x879 fill #0c0c0b
+  clip 0,91 240x879 r 0
+    text "SECTIONS" @8,112.69 #7c7566 JetBrains Mono 9.5
+    text "editor" @18,144.26901 #b3ab99 Inter 13
+    text "keymap" @18,174.26901 #b3ab99 Inter 13
+    rect 8,185.54001 224x28 fill #1f1c0f radius 5
+    text "ui" @18,204.26901 #ece6d8 Inter 13
+    text "● 2" @204,203.14 #ffd23f JetBrains Mono 10
+    text "whichkey" @18,234.26901 #b3ab99 Inter 13
+    text "● 1" @204,233.14 #ffd23f JetBrains Mono 10
+  pop
+  rect 240,91 1x879 fill #24221d
+  clip 241,91 1359x879 r 0
+    text "ui" @269,131.54785 #ece6d8 Inter 18
+    rect 1474.3594,112 97.640625x26 radius 6 stroke 1 #332f27
+    text "Reset section" @1484.3594,129.36523 #ece6d8 Inter 12
+    rect 269,157 3x36 fill #ffd23f radius 2
+    text "ui.reduced_motion" @288,169.93774 #ece6d8 JetBrains Mono 12.5
+    text "Jump straight to the end of every animation." @288,189.79712 #7c7566 Inter 12.5
+    text "set in init.lua:12" @1129.8594,178.78001 #a98bff JetBrains Mono 10.5
+    rect 1492.5469,166 32x18 fill #ffd23f radius 9
+    rect 1508.5469,168 14x14 fill #ece6d8 radius 7
+    rect 1540.5469,162 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,179.36523 #4f4a40 Inter 12
+    rect 269,217 3x36 fill #ffd23f radius 2
+    text "ui.theme" @288,229.93774 #ece6d8 JetBrains Mono 12.5
+    text "The theme, by name: a built-in, or a file in your themes directory." @288,249.79712 #7c7566 Inter 12.5
+    text "user" @1222.1719,238.78001 #7c7566 JetBrains Mono 10.5
+    rect 1324.5469,220 200x30 fill #060606 radius 6 stroke 1 #332f27
+    clip 1324.5469,220 200x30 r 6
+      text "oriel" @1334.5469,239.54712 #ece6d8 Inter 12.5
+    pop
+    rect 1540.5469,222 31.453125x26 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,239.36523 #ece6d8 Inter 12
+    text "ui.variant" @288,289.93774 #ece6d8 JetBrains Mono 12.5
+    text "The theme's dark or light variant; system follows the OS." @288,309.79712 #7c7566 Inter 12.5
+    text "default" @1202.3906,298.78 #7c7566 JetBrains Mono 10.5
+    rect 1360.2969,283 164.25x24 radius 5 stroke 1 #332f27
+    clip 1360.2969,283 164.25x24 r 5
+      rect 1360.2969,283 61.69995x24 fill #1f1c0f
+      text "SYSTEM" @1370.2969,298.42 #ffd23f JetBrains Mono 9.5
+      text "DARK" @1431.9968,298.42 #7c7566 JetBrains Mono 9.5
+      text "LIGHT" @1479.7969,298.42 #7c7566 JetBrains Mono 9.5
+    pop
+    rect 1540.5469,282 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,299.36523 #4f4a40 Inter 12
+  pop
+  rect 0,970 1600x30 fill #0c0c0b stroke 1 #24221d
+  text "writing to ~/.config/oriel/settings.toml" @16,988.78 #7c7566 JetBrains Mono 10.5
+  rect 1381.375,972 50.78125x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Undo" @1391.375,989.36523 #4f4a40 Inter 12
+  rect 1444.1562,972 68.5x26 radius 6 stroke 1 #332f27
+  text "Reset all" @1454.1562,989.36523 #ece6d8 Inter 12
+  text "esc close" @1524.6562,988.78 #7c7566 JetBrains Mono 10.5
+pop

@@ -2,7 +2,7 @@
 id: SH-12
 title: "Settings page (:Settings, ⌘,) and settings.toml storage"
 phase: P3
-status: todo
+status: review
 area: Shell and navigation
 module: app, registry
 depends_on: [FW-3, FW-6, FW-11]
@@ -26,6 +26,12 @@ depends_on: [FW-3, FW-6, FW-11]
 ## Done when
 
 `settings.md` precedence tests; a GUI edit and a reset each change exactly one line of a hand-commented file; Lua-set options are read-only with their source
+
+## As built
+
+- settings.toml storage (user, and project behind a SHA-256 trust), live reload, the `:Settings`/`⌘,` page with
+  sections, search filters, scopes, typed controls, sources, reset and undo. See settings.md, "As built (SH-12)".
+- Lua isn't wired up yet; `Options.SetFrom(..., LayerLua, ..., "init.lua:12")` is what its `L.o` must call.
 
 ## Rules
 

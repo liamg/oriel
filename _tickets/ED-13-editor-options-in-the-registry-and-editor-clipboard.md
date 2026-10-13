@@ -48,6 +48,12 @@ depends_on: [ED-12, SH-12]
 - The clipboard is on for the editor today (unnamedplus, through `edit.Clipboard`); `editor.clipboard` makes it a
   setting. `"*` is the clipboard on Linux until there's a primary selection.
 
+## From SH-12
+
+- The settings page lists every registered option by section, with its source and controls; `:set` should write
+  `LayerSession`/`LayerBuffer`/`LayerWindow` through `Options`, and the page's session scope shows it.
+- `Options.Spec(alias)` already resolves vim aliases.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

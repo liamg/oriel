@@ -426,3 +426,21 @@ func TestAccessTree(t *testing.T) {
 	}
 	b.close(t)
 }
+
+// A hand edit applies while Oriel runs, as a GUI change does.
+func TestSettingsFileReloadsLive(t *testing.T) {
+	dir := t.TempDir()
+	b := bootIn(t, dir)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == render.Color{R: 6, G: 6, B: 6, A: 255} }); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte("[ui]\nvariant = \"light\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == render.Color{R: 0xfb, G: 0xfa, B: 0xf7, A: 255} }); err != nil {
+		t.Fatalf("background %v after the file said light", background(f))
+	}
+	b.close(t)
+}
