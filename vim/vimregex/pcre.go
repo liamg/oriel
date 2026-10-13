@@ -22,7 +22,7 @@ type PCREFlags struct {
 // like. It says which.
 type UnsupportedError struct{ Feature string }
 
-func (e *UnsupportedError) Error() string { return "PCRE2 " + e.Feature + " isn't supported" }
+func (e *UnsupportedError) Error() string { return "not supported in PCRE2 patterns here: " + e.Feature }
 
 // CompilePCRE compiles a PCRE2 pattern for the same matcher. The subject is lines without their newlines, the last
 // having none unless the text ends in one (an empty last line).

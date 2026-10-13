@@ -194,17 +194,19 @@ func Bind(pkg string, nss []Namespace) ([]byte, error) {
 				i++
 			}
 			call := fmt.Sprintf("x.%s(%s)", f.Go, strings.Join(args, ", "))
+			// A []any is several values when the returns say so ("string,integer", "string..."), else one list.
+			multi := strings.Contains(f.Returns, ",") || strings.HasSuffix(f.Returns, "...")
 			var body string
 			switch {
 			case len(f.Results) == 0:
 				body = call + "\n\t\t\t\treturn nil, nil"
 			case len(f.Results) == 1 && f.Results[0] == "error":
 				body = "return nil, " + call
-			case len(f.Results) == 1 && f.Results[0] == "[]any":
+			case len(f.Results) == 1 && f.Results[0] == "[]any" && multi:
 				body = "return " + call + ", nil"
 			case len(f.Results) == 1:
 				body = "return []any{" + call + "}, nil"
-			case len(f.Results) == 2 && f.Results[1] == "error" && f.Results[0] == "[]any":
+			case len(f.Results) == 2 && f.Results[1] == "error" && f.Results[0] == "[]any" && multi:
 				body = "return " + call
 			case len(f.Results) == 2 && f.Results[1] == "error":
 				body = "v, err := " + call + "\n\t\t\t\treturn []any{v}, err"

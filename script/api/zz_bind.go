@@ -64,7 +64,7 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Diagnostics{a: a}
 		vm.Bind("diagnostics", map[string]script.GoFunc{
 			"list": func(c *script.Args) ([]any, error) {
-				return x.List(), nil
+				return []any{x.List()}, nil
 			},
 			"set": func(c *script.Args) ([]any, error) {
 				return nil, x.Set(c.String(0), c.String(1), c.Any(2))
@@ -102,7 +102,8 @@ func (a *APIs) bind(vm *script.VM) {
 				return x.Find(c.String(0), c.String(1), c.String(2))
 			},
 			"find_all": func(c *script.Args) ([]any, error) {
-				return x.FindAll(c.String(0), c.String(1), c.String(2))
+				v, err := x.FindAll(c.String(0), c.String(1), c.String(2))
+				return []any{v}, err
 			},
 			"match": func(c *script.Args) ([]any, error) {
 				v, err := x.Match(c.String(0), c.String(1), c.String(2))
