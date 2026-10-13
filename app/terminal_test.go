@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -8,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui/layout"
 )
 
@@ -187,5 +190,34 @@ func TestTerminalKeepsControlKeys(t *testing.T) {
 		if m == nil || m.Command != "term.normal" {
 			t.Errorf("%s in a terminal is %+v", k, m)
 		}
+	}
+}
+
+// A click outside a terminal takes the keys from it, and one on it gives them back.
+func TestTerminalClickMovesKeys(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello\n"), 0o644)
+	s := newScene(t, "", dir, mockupSize)
+	s.frame()
+	s.run("editor.open", registry.Args{"path": "a.txt"})
+	s.frame()
+	s.run("term.open", registry.Args{"cmd": []string{"sh", "-c", "exec cat"}})
+	s.frame()
+	s.frame()
+	if m := s.sh.keyModes()[0]; m != TerminalKeyMode {
+		t.Fatalf("an opened terminal doesn't take the keys: %q", m)
+	}
+	s.click(render.Point{X: s.size.X / 2, Y: s.size.Y / 4})
+	s.frame()
+	if m := s.sh.keyModes()[0]; m == TerminalKeyMode {
+		t.Fatalf("after a click in the main area keys still go to %q", m)
+	}
+	if slices.Contains(s.sh.keyModesFor("<C-w>"), TerminalKeyMode) || !slices.Contains(s.sh.keyModesFor("<C-w>"), "global") {
+		t.Errorf("⌃W outside the terminal goes to %v", s.sh.keyModesFor("<C-w>"))
+	}
+	s.click(render.Point{X: s.size.X / 2, Y: s.size.Y - s.size.Y/8})
+	s.frame()
+	if m := s.sh.keyModes()[0]; m != TerminalKeyMode {
+		t.Errorf("after a click on the terminal keys go to %q", m)
 	}
 }

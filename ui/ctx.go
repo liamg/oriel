@@ -205,6 +205,9 @@ func (c *Ctx) Blur() { c.u.in.focus = 0 }
 // FocusNext moves keyboard focus to the next focusable node (back with -1), as last frame laid them out.
 func (c *Ctx) FocusNext(dir int) { c.u.FocusNext(dir) }
 
+// PressedWithin reports whether the primary button is down on id or on something inside it.
+func (c *Ctx) PressedWithin(id ID) bool { return c.u.in.active != 0 && c.u.within(c.u.in.active, id) }
+
 // FocusWithin reports whether id or something inside it has keyboard focus, as last frame laid them out.
 func (c *Ctx) FocusWithin(id ID) bool { return c.u.in.focus != 0 && c.u.within(c.u.in.focus, id) }
 

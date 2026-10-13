@@ -254,7 +254,7 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
 		if len(l.Tabs) > 0 {
 			v := l.Tabs[l.Active]
 			body := c.Next("content")
-			if in := c.Interaction(body); in.Pressed && (r.Focus == nil || *r.Focus != v) {
+			if c.PressedWithin(body) && (r.Focus == nil || *r.Focus != v) {
 				r.Focus = &v
 				changed = true
 			}

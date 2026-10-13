@@ -522,7 +522,6 @@ rect 611.5,38 1x936 fill #24221d
 clip 612.5,38 567.5x936 r 0
   rect 612.5,38 567.5x30 fill #0c0c0b
   rect 612.5,38 89.953125x30 fill #121210
-  rect 612.5,38 89.953125x2 fill #ffd23f
   text "Dashboard" @626.5,58.365234 #ece6d8 Inter 12
   rect 612.5,68 567.5x1 fill #24221d
   clip 612.5,69 567.5x905 r 0
@@ -541,6 +540,7 @@ rect 1180,38 420x936 fill #0c0c0b
 clip 1180,38 420x936 r 0
   rect 1180,38 420x30 fill #0c0c0b
   rect 1180,38 74.1875x30 fill #121210
+  rect 1180,38 74.1875x2 fill #ffd23f
   text "Deploys" @1194,58.365234 #ece6d8 Inter 12
   rect 1180,68 420x1 fill #24221d
   clip 1180,69 420x905 r 0

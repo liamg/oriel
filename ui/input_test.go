@@ -412,3 +412,31 @@ func TestInside(t *testing.T) {
 		}
 	}
 }
+
+// A press on a button inside a row is within the row, though the row isn't what's pressed.
+func TestPressedWithin(t *testing.T) {
+	h := newHarness()
+	within := func() (bar, other bool) {
+		paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) {
+			id := c.Next("bar")
+			bar = c.PressedWithin(id)
+			c.Row("bar", Style{Pad: Pad(10), Gap: 10}, func(c *Ctx) { button(c, "save", false) })
+			other = c.PressedWithin(c.Next("other"))
+			c.Box("other", Style{W: Px(10), H: Px(10)}, nil)
+		})
+		return
+	}
+	within()
+	if bar, _ := within(); bar {
+		t.Error("pressed within before a press")
+	}
+	h.pointer(render.PointerMove, 20, 20)
+	h.pointer(render.PointerPress, 20, 20)
+	if bar, other := within(); !bar || other {
+		t.Errorf("a press on save: within the bar %v, within another box %v", bar, other)
+	}
+	h.pointer(render.PointerRelease, 20, 20)
+	if bar, _ := within(); bar {
+		t.Error("still pressed within after the release")
+	}
+}

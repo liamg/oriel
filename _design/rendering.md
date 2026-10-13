@@ -229,6 +229,8 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
   builds itself. A click is press and release on the same node. Disabled nodes take nothing and hide what's under
   them. The wheel scrolls the topmost scroller on its axis. `FocusNext(±1)` walks focusables in paint order, and a
   node focused from the keyboard gets a 2 px focus ring. A tooltip shows after the pointer rests 500 ms.
+  `PressedWithin` and `FocusWithin` ask the same of a node's subtree: a press anywhere inside a pane focuses that
+  pane, so a view that holds the keys (a terminal) gives them up to a click elsewhere.
   Anything clickable (enabled, `Interactive` or `Focusable`, with the pointer cursor) gets a wash under the pointer and
   a stronger one pressed, the theme's `hover` and `pressed`; a widget that draws its own sets `NoHover`.
 - **Motion** (FW-13): one spring for everything that moves, `c.Motion(key, target)` on a 0..1 progress, critically
