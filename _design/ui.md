@@ -209,6 +209,11 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - It's driven by the input engine's `Pending()` and `Keymaps()` (see `editor.md`), so it works for vim, plain,
   emacs or any engine, and inside panels (Requests, Explorer, the picker itself) with their own keymaps.
 - It ships as a **built-in plugin** using only the public API. You can turn it off, restyle it, or replace it.
+- Built in SH-6: `Host.Pending()` gives it the keys waiting for more (a mapping's, or the focused editor engine's)
+  and the engine's own next keys, which the vim engine gives in Oriel's words for `g`, `z`, `[`, `]` and `⌃W`. A
+  keymap with no command names a group (`{Keys = "<leader>a", desc = "+agent"}`). `⌫` and `esc` act on a
+  mapping's keys, not an engine's half-typed command (which `esc` cancels in the engine). `?` to the keymaps
+  picker comes with Lua's keymap API (PL-1). `whichkey.enabled` turns it off.
 
 ## 03 · Mission control (`⌘⇧K`)
 

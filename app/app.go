@@ -133,8 +133,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	defer cancel()
 	cfg.Logs.Ring.OnWrite(poke)
 
-	l := &loop{debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
+	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
 	l.ui.Title = "Oriel"
+	sh.keys, sh.modes = l.keys, l.modes
 	l.themeDirty.Store(true)
 	retheme := func() { l.themeDirty.Store(true); poke() }
 	for _, src := range cfg.Registry.Themes() {
@@ -203,6 +204,16 @@ func (sh *shell) host(source string) *host {
 func (h *host) Layout() *layout.Root { return h.sh.layout.root }
 func (h *host) Redraw()              { h.sh.poke() }
 
+func (h *host) Pending() ext.Pending {
+	if k := h.sh.keys; k != nil && len(k.Pending()) > 0 {
+		return ext.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
+	}
+	if h.sh.enginePending != nil {
+		return h.sh.enginePending()
+	}
+	return ext.Pending{}
+}
+
 func (h *host) PaneRect(v layout.ViewRef) (render.Rect, bool) {
 	w := h.sh.layout.root.Find(v)
 	if w == nil {
@@ -230,6 +241,7 @@ type loop struct {
 	themeDirty atomic.Bool
 	theme      *theme.Resolved
 
+	sh        *shell
 	debug     bool
 	frameTime time.Duration // the last frame's build and record, for the debug overlay
 
@@ -296,7 +308,16 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 	case render.PointerEvent:
 		l.ui.Pointer(ev)
 	case render.KeyEvent:
-		l.run(ctx, l.keys.Feed(l.modes(), notation(ev), time.Now()))
+		k := notation(ev)
+		if len(l.keys.Pending()) > 0 && (k == "<BS>" || k == "<Esc>") {
+			if k == "<BS>" {
+				l.keys.BackUp(time.Now())
+			} else {
+				l.keys.Cancel()
+			}
+			return
+		}
+		l.run(ctx, l.keys.Feed(l.modes(), k, time.Now()))
 	}
 }
 

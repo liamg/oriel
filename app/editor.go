@@ -43,7 +43,8 @@ type editorExt struct {
 	maps   map[string]registry.Disposable // :map's keymaps, by mode and keys
 	inputs map[vim.WindowID]paneInput
 
-	drawing input.State // the engine of the pane being drawn
+	drawing      input.State // the engine of the pane being drawn
+	pendingSince time.Time   // when the current window's engine began waiting for more keys
 }
 
 // diskWatch is how the editor notices files changing under it.
@@ -68,6 +69,7 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.maps = map[string]registry.Disposable{}
 	x.inputs = map[vim.WindowID]paneInput{}
 	x.builtinInputs()
+	x.sh.enginePending = x.pending
 	x.ed = edit.New(text.New(nil, text.Author{}), text.Author{Kind: text.User})
 	x.ed.SetClipboard(desktopClipboard{x.sh})
 	x.ed.OnNotice(func(n edit.Notice) { h.Notify(FromEdit(n, "vim")) })
@@ -554,6 +556,28 @@ func (x *editorExt) highlights(p vim.Pane) *highlighter {
 	h.doc, h.lang = doc, lang.Name
 	h.cancel = b.Subscribe(doc.Change)
 	return h
+}
+
+// pending is the focused editor's engine waiting for more keys: vim's g, z or a count, emacs's C-x.
+func (x *editorExt) pending() ext.Pending {
+	f := x.h.Layout().Focus
+	if f == nil || f.ID != EditorView || x.pendingSince.IsZero() {
+		return ext.Pending{}
+	}
+	st := x.inputFor(x.current())
+	p := ext.Pending{Modes: []string{st.Mode().KeyMode, "global"}, Since: x.pendingSince}
+	if isVim(st) {
+		p.Keys = x.e.Pending()
+		for _, h := range x.e.NextKeys() {
+			p.Hints = append(p.Hints, ext.Hint{Keys: h.Keys, Desc: h.Desc})
+		}
+	} else if s := st.Pending(); s != "" {
+		p.Keys = []string{s}
+	}
+	if len(p.Keys) == 0 {
+		return ext.Pending{}
+	}
+	return p
 }
 
 // checkDisk reloads a buffer whose file changed on disk, or asks when the buffer has changes of its own.

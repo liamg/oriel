@@ -316,3 +316,29 @@ func TestClipboard(t *testing.T) {
 		t.Errorf(`"* wrote %q to the primary selection`, clip.primary)
 	}
 }
+
+// Every hint which-key shows after a prefix is a command the engine has.
+func TestNextKeysAreCommands(t *testing.T) {
+	for _, prefix := range []string{"g", "z", "[", "]", "<C-w>"} {
+		s := newSession(t, t.TempDir())
+		s.keys("ione<CR>two<Esc>")
+		s.keys(prefix)
+		hints := s.e.NextKeys()
+		if len(hints) == 0 {
+			t.Fatalf("%s: no hints", prefix)
+		}
+		if got := strings.Join(s.e.Pending(), ""); got != strings.Join(keymap.Parse(prefix), "") {
+			t.Fatalf("%s: pending %q", prefix, got)
+		}
+		for _, h := range hints {
+			s := newSession(t, t.TempDir())
+			s.keys("ione<CR>two<Esc>" + prefix + h.Keys)
+			if len(s.e.Pending()) != 0 && s.e.Mode() != "op-pending" {
+				s.keys("a") // a command that takes a character, as g' takes a mark
+			}
+			if p := s.e.Pending(); len(p) != 0 && s.e.Mode() != "op-pending" {
+				t.Errorf("%s%s (%s) left %q pending", prefix, h.Keys, h.Desc, p)
+			}
+		}
+	}
+}

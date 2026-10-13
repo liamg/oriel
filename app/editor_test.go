@@ -31,8 +31,9 @@ type running struct {
 
 // grabHost hands a test its host. It runs commands only through keymaps, on the app's loop.
 type grabHost struct {
-	h    ext.Host
-	keys []registry.Keymap
+	h     ext.Host
+	keys  []registry.Keymap
+	setup func(ext.Host)
 }
 
 func (g *grabHost) Manifest() ext.Manifest { return ext.Manifest{ID: "test.grab"} }
@@ -40,6 +41,9 @@ func (g *grabHost) Activate(_ context.Context, h ext.Host) error {
 	g.h = h
 	for _, k := range g.keys {
 		h.Keymap(k)
+	}
+	if g.setup != nil {
+		g.setup(h)
 	}
 	return nil
 }

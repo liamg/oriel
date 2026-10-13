@@ -14,6 +14,7 @@ type Resolver struct {
 	cand     *Keymap // the longest complete mapping in pending so far
 	candLen  int
 	deadline time.Time
+	since    time.Time // when the first pending key came
 }
 
 // Action is one thing to do: run Keymap, or pass Keys on unmapped.
@@ -46,8 +47,40 @@ func (r *Resolver) Deadline() time.Time { return r.deadline }
 // Pending is the keys typed so far towards a longer mapping.
 func (r *Resolver) Pending() []string { return slices.Clone(r.pending) }
 
+// Since is when the first pending key came.
+func (r *Resolver) Since() time.Time { return r.since }
+
+// Modes are the modes the pending keys are looked up in.
+func (r *Resolver) Modes() []string { return slices.Clone(r.modes) }
+
+// Cancel drops the pending keys, as Esc in a half-typed mapping does: nothing runs.
+func (r *Resolver) Cancel() {
+	r.pending, r.cand, r.candLen, r.deadline = nil, nil, 0, time.Time{}
+}
+
+// BackUp drops the last pending key, as ⌫ in which-key does, and starts the wait again.
+func (r *Resolver) BackUp(now time.Time) {
+	if len(r.pending) == 0 {
+		return
+	}
+	keys := r.pending[:len(r.pending)-1]
+	since := r.since
+	r.pending, r.cand, r.candLen = nil, nil, 0
+	for i := range keys {
+		if exact, _ := r.reg.Lookup(r.modes, keys[:i+1]); exact != nil {
+			r.cand, r.candLen = exact, i+1
+		}
+	}
+	r.pending = slices.Clone(keys)
+	r.since = since
+	r.arm(now)
+}
+
 func (r *Resolver) feed(out []Action, keys []string, now time.Time) []Action {
 	for len(keys) > 0 {
+		if len(r.pending) == 0 {
+			r.since = now
+		}
 		r.pending = append(r.pending, keys[0])
 		keys = keys[1:]
 		exact, more := r.reg.Lookup(r.modes, r.pending)
@@ -58,6 +91,12 @@ func (r *Resolver) feed(out []Action, keys []string, now time.Time) []Action {
 			out, keys = r.flush(out, keys)
 		}
 	}
+	r.arm(now)
+	return out
+}
+
+// arm sets the deadline for the keys pending, if they wait on one.
+func (r *Resolver) arm(now time.Time) {
 	r.deadline = time.Time{}
 	if len(r.pending) > 0 {
 		if on, _, _ := r.reg.Options().Get("keymap.timeout", At{}); on == true {
@@ -65,7 +104,6 @@ func (r *Resolver) feed(out []Action, keys []string, now time.Time) []Action {
 			r.deadline = now.Add(d.(time.Duration))
 		}
 	}
-	return out
 }
 
 // flush settles pending and returns the keys still to feed.

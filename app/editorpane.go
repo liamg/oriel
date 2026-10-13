@@ -6,6 +6,7 @@ import (
 	"math"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/core"
@@ -91,6 +92,13 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 		}
 		if !isVim(st) && len(in.Keys) > 0 {
 			x.e.Follow(p.Editor().Cursors()[0].Off)
+		}
+		waiting := isVim(st) && len(x.e.Pending()) > 0 || !isVim(st) && st.Pending() != ""
+		switch {
+		case !waiting:
+			x.pendingSince = time.Time{}
+		case x.pendingSince.IsZero():
+			x.pendingSince = c.Now()
 		}
 	}
 	if focused && !in.Focused {

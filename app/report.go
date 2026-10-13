@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -23,6 +24,10 @@ type shell struct {
 	desktop Desktop
 	layout  *layoutExt
 	poke    func() // asks the loop for a frame
+	keys    *registry.Resolver
+	modes   func() []string
+	// enginePending is the focused editor's pending keys, when the editor is in front.
+	enginePending func() ext.Pending
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

@@ -253,6 +253,8 @@ type Host interface {
   gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
   query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
   selection. Sessions, commands, files and symbols are built-in sources; tickets and PRs come from their plugins.
+- `Host.Pending()` is the keys typed towards a longer mapping or engine command, with the engine's next keys, for
+  which-key. A keymap with no command is a group's label, never run.
 - Views named `app.overlay.<name>` float over the window: the omnibox is `app.overlay.omnibox`.
 - The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
   in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.

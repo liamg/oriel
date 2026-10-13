@@ -3,6 +3,7 @@ package ext
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -36,4 +37,19 @@ type Host interface {
 	Layout() *layout.Root
 	PaneRect(v layout.ViewRef) (render.Rect, bool) // where v's pane was drawn last frame
 	Redraw()                                       // asks for a frame; safe from any goroutine
+	Pending() Pending                              // keys typed towards a longer mapping or command, for which-key
+}
+
+// Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's
+// own, with the keys that engine has next.
+type Pending struct {
+	Keys  []string // vim notation
+	Modes []string
+	Since time.Time
+	Hints []Hint
+}
+
+// Hint is a key that can come next, and what it does.
+type Hint struct {
+	Keys, Desc string
 }

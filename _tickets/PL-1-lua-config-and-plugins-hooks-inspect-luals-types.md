@@ -29,6 +29,10 @@ depends_on: [FW-3]
 
 the `scripting.md` sample `init.lua` runs as written
 
+## From SH-6
+
+- Which-key's `?` opens the keymaps picker filtered to the prefix: wire it when Lua's keymap API lands.
+
 ## From SH-13
 
 - Hooks run under `registry.Call`, and a panicking hook calls `TurnOff(registry.KindHook, …)` so it becomes an error

@@ -17,7 +17,7 @@ import (
 
 func builtins(sh *shell) []ext.Extension {
 	sh.layout = &layoutExt{}
-	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &notices{sh: sh},
+	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &notices{sh: sh},
 		&editorExt{sh: sh}}
 }
 

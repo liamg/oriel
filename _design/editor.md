@@ -276,7 +276,8 @@ func Wrap(inner Engine, id string, fn func(k string, next func(string) Result) R
 - The vim engine is one engine for all windows (its windows, buffers and registers are shared); its `State` per
   window is that engine with the window current. Another engine edits the window's `edit.Editor`, and the vim
   engine's window follows its cursor, so scrolling and `:w` work the same under any engine.
-- Keymaps for which-key come with SH-6, from the registry's keymaps in the engine's mode.
+- Which-key (SH-6) lists the registry's keymaps in the engine's mode and the engine's own next keys
+  (`vim.Engine.NextKeys`).
 
 ```go
 // input/vim — the built-in engine (sketch)

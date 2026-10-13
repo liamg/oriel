@@ -63,7 +63,8 @@ type Command struct {
 	Source string // who registered it: "builtin:git", "init.lua:14", a plugin's id
 }
 
-// Keymap binds keys, in vim notation, to a command in one mode.
+// Keymap binds keys, in vim notation, to a command in one mode. One with no command names a group of the
+// keymaps under its keys, for which-key: {Keys: "<Leader>a", Desc: "+agent"}; it's never run.
 type Keymap struct {
 	Mode    string // "n", "i", or a panel's own mode ("requests")
 	Keys    string // "x", "<C-w>", "<Leader>rr"; the registry rewrites it in canonical notation, <Leader> expanded
@@ -358,7 +359,7 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	var exact *Keymap
 	more := false
 	for _, m := range modes {
-		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && exact == nil {
+		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && exact == nil && km.Command != "" {
 			exact = &km
 		}
 		if r.prefixes[keymapKey{m, seq}] > 0 {
