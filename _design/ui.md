@@ -150,6 +150,10 @@ Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
 - One ranked list: sessions, commands, files, symbols, tickets and PRs.
 - Prefixes narrow the scope: `@` files, `#` symbols, `>` commands, `!` tickets.
 - Preview pane: the highlighted session's waiting question, tasks and last moves, so you can answer without switching.
+- Built from SH-4: `⌘K` opens it; `⇥` steps through the scopes; each source is a registry picker source, so its
+  preview is the source's own. Symbols come from the open buffers' outlines until LSP's workspace symbols (LS-2);
+  tickets and PRs from their plugins (PL-8, the GitHub integration). The session preview grows its question, tasks
+  and moves as the AI tickets add them.
 
 ## 02b · Pickers: files, grep, keymaps, and the rest
 

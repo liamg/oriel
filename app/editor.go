@@ -81,8 +81,14 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	for _, c := range []registry.Command{
-		{ID: "editor.open", Title: "Open a file in the editor", Run: func(ctx registry.Ctx, a registry.Args) error {
-			return x.open(ctx, str(a, "path"))
+		{ID: "editor.open", Title: "Open a file in the editor, at {line} if given", Run: func(ctx registry.Ctx, a registry.Args) error {
+			if err := x.open(ctx, str(a, "path")); err != nil {
+				return err
+			}
+			if n, ok := a["line"].(int); ok && n > 0 {
+				x.e.Run(fmt.Sprint(n))
+			}
+			return nil
 		}},
 		{ID: "editor.keys", Title: "Type keys into the editor, as a mapping's right-hand side", Run: func(_ registry.Ctx, a registry.Args) error {
 			noremap, _ := a["noremap"].(bool)
@@ -127,6 +133,8 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "c", Keys: "<Tab>", Command: "editor.complete", Desc: "Complete the command line"}))
 	x.add(h.View(EditorView, editorView{x}))
+	x.add(h.Picker(x.filesSource()))
+	x.add(h.Picker(x.symbolsSource()))
 	x.add(h.View("buffers", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "buffers", Fn: x.buffersView} })))
 	x.add(h.View("quickfix", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "quickfix", Fn: x.quickfixView} })))
 	x.add(h.View("statusline.left.00-mode", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "mode", Fn: x.modeSegment} })))

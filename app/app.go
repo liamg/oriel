@@ -32,6 +32,7 @@ const (
 	StatusLineView    = "app.statusline"    // along the bottom
 	NotificationsView = "app.notifications" // toasts, floating over everything
 	ModalView         = "app.modal"         // when Oriel can't go on without an answer
+	OverlayPrefix     = "app.overlay."      // views named so float over the window: the omnibox, which-key
 )
 
 type Config struct {
@@ -365,7 +366,13 @@ func buildWindow(c *ui.Ctx, reg registry.Registry, size render.Point) {
 			c.Box(StatusLineView, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
 		}
 	})
-	for _, id := range []string{NotificationsView, ModalView} {
+	ids := []string{NotificationsView, ModalView}
+	for _, id := range reg.Views() {
+		if strings.HasPrefix(id, OverlayPrefix) {
+			ids = append(ids, id)
+		}
+	}
+	for _, id := range ids {
 		if v, ok := reg.ViewByID(id); ok {
 			c.Box(id, ui.Style{W: ui.Px(0), H: ui.Px(0)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) }) // its content floats
 		}

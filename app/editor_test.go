@@ -278,3 +278,13 @@ func TestEditorInputEnginePerBuffer(t *testing.T) {
 	r.typeKeys("<F4>")
 	r.waitText("NORMAL")
 }
+
+// SH-4: ⌘K, a query and Enter open what it found.
+func TestOmniboxOpensAFile(t *testing.T) {
+	r := runEditor(t, map[string]string{"a.txt": "alpha\n", "deep/tiers.go": "package deep\n\nfunc PriceForTier() {}\n"}, []string{"a.txt"})
+	r.waitText("alpha")
+	r.typeKeys("<D-k>")
+	r.waitText("SESSIONS")
+	r.typeKeys("@tiers<CR>")
+	r.waitFrame("tiers.go open", func(s string) bool { return strings.Contains(s, "PriceForTier") && !strings.Contains(s, "FILES") })
+}

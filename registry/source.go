@@ -23,6 +23,13 @@ func (s sourced) Keymap(k Keymap) Disposable {
 	return s.Registry.Keymap(k)
 }
 
+func (s sourced) Picker(p PickerSource) Disposable {
+	if p.Source == "" {
+		p.Source = s.src
+	}
+	return s.Registry.Picker(p)
+}
+
 func (s sourced) Option(o OptionSpec) Disposable {
 	if o.Source == "" {
 		o.Source = s.src

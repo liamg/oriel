@@ -85,6 +85,7 @@ func (t *sessionTabs) Activate(_ context.Context, h ext.Host) error {
 		t.add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<D-%d>", n), Command: "session.focus", Args: registry.Args{"n": n},
 			Desc: fmt.Sprintf("Session %d", n)}))
 	}
+	t.add(h.Picker(sessionsSource(h)))
 	t.add(h.View(TitleBarView, registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "titlebar", Fn: func(c *ui.Ctx) { t.build(c, h, vc) }}
 	})))

@@ -25,6 +25,7 @@ type Registry interface {
 	Theme(s theme.Source) Disposable
 	Input(e input.Engine) Disposable // an input engine the editor's input option can pick
 	Decorations(id string, p DecorationProvider) Disposable
+	Picker(s PickerSource) Disposable
 
 	Run(ctx Ctx, id string, args Args) error
 	Commands() []Command // the registration that wins for each id, sorted by id
@@ -37,6 +38,7 @@ type Registry interface {
 	Themes() []theme.Source // in registration order; a later theme with the same name wins
 	InputByID(id string) (input.Engine, bool)
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
+	Pickers() []PickerSource              // the winning source for each id, by Order then id
 	Inputs() []string                     // engine ids, sorted
 	Options() Options
 
@@ -150,6 +152,7 @@ type reg struct {
 	views    stacks[string, View]
 	inputs   stacks[string, input.Engine]
 	decor    stacks[string, DecorationProvider]
+	pickers  stacks[string, PickerSource]
 	themes   []entry[theme.Source]
 	options  *options
 	faults   faults
@@ -163,6 +166,7 @@ func New() Registry {
 		views:    stacks[string, View]{},
 		inputs:   stacks[string, input.Engine]{},
 		decor:    stacks[string, DecorationProvider]{},
+		pickers:  stacks[string, PickerSource]{},
 		options:  newOptions(),
 	}
 	for _, o := range builtinOptions {

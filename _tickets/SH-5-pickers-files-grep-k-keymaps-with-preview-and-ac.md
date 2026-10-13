@@ -29,6 +29,11 @@ depends_on: [SH-4]
 
 each source returns, ranks and previews; `␣'` resumes; quickfix and attach actions work
 
+## From SH-4
+
+- The omnibox (SH-4) ranks registry picker sources with `app/fuzzy`; a picker is the same engine over one
+  source. Reuse `omnibox.results()` and its row and preview drawing rather than a second list.
+
 ## From ED-12
 
 - `:ls` runs `buffers.switch` and `:copen` runs `quickfix.open`; ED-12 registers stand-in views (`buffers`,

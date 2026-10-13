@@ -249,6 +249,11 @@ type Host interface {
 - The titlebar is `app.titlebar`: the logo, a tab per session (status dot, name, its status or kind, `⌘N`, and
   `✕N` while it has errors you haven't seen), and segments named `titlebar.right.<order>-<name>` at its right, for
   tats. `session.focus {n}` or `{id}` brings a session to the front; `⌘1`–`⌘9` run it.
+- Picker sources: `Registry.Picker(PickerSource{ID, Title, Prefix, Order, Items, Preview, Run})`. `Items(ctx, query)`
+  gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
+  query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
+  selection. Sessions, commands, files and symbols are built-in sources; tickets and PRs come from their plugins.
+- Views named `app.overlay.<name>` float over the window: the omnibox is `app.overlay.omnibox`.
 - The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
   in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.
 - A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`) and

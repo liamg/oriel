@@ -17,7 +17,7 @@ import (
 
 func builtins(sh *shell) []ext.Extension {
 	sh.layout = &layoutExt{}
-	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &introspect{}, &statusLine{}, &sessionTabs{sh: sh}, &notices{sh: sh},
+	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &introspect{}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &notices{sh: sh},
 		&editorExt{sh: sh}}
 }
 
@@ -241,6 +241,7 @@ func (i *introspect) Activate(_ context.Context, h ext.Host) error {
 			return h.Run(ctx, "view.open", registry.Args{"id": view})
 		}
 	}
+	i.add(h.Picker(commandsSource(h)))
 	i.add(h.Command(registry.Command{ID: "Keys", Title: "List keymaps", Run: open("keys")}))
 	i.add(h.Command(registry.Command{ID: "Commands", Title: "List commands", Run: open("commands")}))
 	i.add(h.View("keys", registry.ViewFunc(func(registry.ViewCtx) ui.Node {

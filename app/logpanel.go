@@ -513,6 +513,7 @@ type sourceFile struct {
 	first   int // the line number of lines[0]
 	spans   [][]span
 	modTime time.Time
+	mark    bool // the failing line, marked
 }
 
 type span struct {
@@ -539,16 +540,18 @@ func (p *logPanel) source(loc string) *sourceFile {
 	if err != nil {
 		return nil
 	}
-	f := highlightAround(path, src, line)
+	f := highlightAround(path, src, line, sourceContext, sourceContext)
+	f.mark = true
 	f.modTime = st.ModTime()
 	p.files[loc] = f
 	return f
 }
 
-func highlightAround(path string, src []byte, line int) *sourceFile {
+// highlightAround is the lines from before lines above line to after lines below it, highlighted.
+func highlightAround(path string, src []byte, line, before, after int) *sourceFile {
 	all := strings.Split(string(src), "\n")
-	first := max(1, line-sourceContext)
-	last := min(len(all), line+sourceContext)
+	first := max(1, line-before)
+	last := min(len(all), line+after)
 	f := &sourceFile{path: path, line: line, first: first}
 	if first > last {
 		return f
@@ -614,7 +617,7 @@ func (f *sourceFile) build(c *ui.Ctx, n *core.Notification) {
 		c.Column("lines", ui.Style{W: ui.Flex(1), Pad: ui.Insets{B: 6}}, func(c *ui.Ctx) {
 			for i, ln := range f.spans {
 				no := f.first + i
-				failing := no == f.line
+				failing := f.mark && no == f.line
 				fill := color.NRGBA{}
 				if failing {
 					fill = th.C(tLogFailLine)
@@ -634,7 +637,7 @@ func (f *sourceFile) build(c *ui.Ctx, n *core.Notification) {
 							if s.capture != "" {
 								col = th.Syntax("@" + s.capture).FG
 							}
-							c.Text(j, s.text, mono(11.5, typeset.Normal, col))
+							c.Text(j, expandTabs(s.text), mono(11.5, typeset.Normal, col))
 						}
 					})
 				})
