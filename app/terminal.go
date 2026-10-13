@@ -59,11 +59,10 @@ type terminal struct {
 	done bool
 	err  error
 
-	normal     bool
-	ed         *edit.Editor
-	vim        *vim.Engine
-	escPending bool   // ⌃\ typed, waiting for ⌃N
-	bracket    string // [ or ] typed in terminal-normal mode, waiting for its twin
+	normal  bool
+	ed      *edit.Editor
+	vim     *vim.Engine
+	bracket string // [ or ] typed in terminal-normal mode, waiting for its twin
 }
 
 func (x *terminals) Manifest() ext.Manifest { return ext.Manifest{ID: "terminal"} }
@@ -151,6 +150,9 @@ func (x *terminals) Activate(_ context.Context, h ext.Host) error {
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<C-'>", Command: "term.open", Desc: "Terminal"}))
 	x.add(h.Keymap(registry.Keymap{Mode: TerminalNormalKeyMode, Keys: "q", Command: "view.close", Desc: "Close"}))
+	x.add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: "<C-Esc>", Command: "term.normal", Desc: "Terminal-normal mode"}))
+	x.add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: `<C-\><C-n>`, Command: "term.normal", Desc: "Terminal-normal mode"}))
+	x.add(h.Contribute(registry.RawKeys{Mode: TerminalKeyMode}))
 	x.add(h.View(TerminalView, terminalView{x}))
 	return nil
 }

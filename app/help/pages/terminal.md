@@ -9,8 +9,10 @@ related: [layout/panes, editor/pane]
 `:term` opens a shell docked at the bottom; `:term!` opens one in the main area, `:vterm` and `:sterm` in a split.
 A terminal is a pane like any other: `⌃W M` moves it, `⌃W Z` zooms it, `` ⌃` `` drops it down from the top.
 
-Keys go to the program. `⌃\ ⌃N` switches to **terminal-normal** mode, where vim's motions, search, Visual mode and
-yank work over the screen and its scrollback; `i` or `a` goes back. The status line says which mode you're in.
+Keys go to the program, every ⌃ key included (`⌃W` deletes a word in the shell); ⌘ shortcuts still work. `⌃Esc`
+(or vim's `⌃\ ⌃N`) switches to **terminal-normal** mode, where vim's motions, search, Visual mode and yank work over
+the screen and its scrollback; `i` or `a` goes back. The status line says which mode you're in. To move to another
+pane from a terminal, `⌃Esc` then `⌃W h`/`j`/`k`/`l`.
 
 ## Shell integration {#shell}
 

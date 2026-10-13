@@ -90,6 +90,8 @@ flowchart TB
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - key layers (`registry.KeyLayer`): a keymap mode laid over every other while its `Active` says so, as the completion
   menu's `⌃n` and `⏎`; keys it doesn't map go on as before.
+- raw keys (`registry.RawKeys`): a keymap mode whose ⌃ keys skip the global maps, so a terminal's program gets `⌃W`;
+  ⌘ and ⌥ chords, and the mode's own maps, still apply.
 - picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.
 - inlay decorations (`registry.Inlay`): text drawn inline before a column, the code after it moved along the grid.
 - tab markers: a view implementing `registry.Marked` gives each instance a small marker after its tab title (the

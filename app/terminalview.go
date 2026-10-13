@@ -407,18 +407,6 @@ func (x *terminals) key(c *ui.Ctx, t *terminal, k render.KeyEvent) {
 		t.vim.Key(n)
 		return
 	}
-	if t.escPending {
-		t.escPending = false
-		if n == "<C-n>" {
-			x.enterNormal(t)
-			return
-		}
-		t.pty.Write([]byte{0x1c})
-	}
-	if n == "<C-Bslash>" {
-		t.escPending = true
-		return
-	}
 	if t.done {
 		return
 	}

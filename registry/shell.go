@@ -149,3 +149,23 @@ func CmdlineHints(r Registry, line string) []string {
 	}
 	return out
 }
+
+// RawKeys is a key mode whose widget takes control keys itself: while it has focus, global maps of ⌃ keys (without ⌘
+// or ⌥) don't apply, so a terminal's program gets ⌃W and ⌃J. Its own mode's maps still do.
+type RawKeys struct {
+	Mode   string
+	Source string
+}
+
+func (RawKeys) ContributionKind() string   { return "keys.raw" }
+func (r RawKeys) ContributionName() string { return r.Mode }
+
+// IsRawKeyMode reports whether mode takes control keys itself.
+func IsRawKeyMode(r Registry, mode string) bool {
+	for _, c := range r.Contributions("keys.raw") {
+		if c.(RawKeys).Mode == mode {
+			return true
+		}
+	}
+	return false
+}

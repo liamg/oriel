@@ -1,11 +1,13 @@
 package app
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/ui/layout"
 )
 
@@ -89,8 +91,7 @@ func TestTerminalPlacements(t *testing.T) {
 func TestTerminalNormalMode(t *testing.T) {
 	s := termScene(t, registry.Args{"cmd": []string{"sh", "-c", "printf 'first line\\nsecond line\\n'; exec cat"}})
 	s.waitTerm(t, "second line")
-	s.keyCommand(t, "<C-\\>")
-	s.keyCommand(t, "<C-n>")
+	s.keyCommand(t, `<C-\><C-n>`)
 	if m := s.sh.keyModes()[0]; m != TerminalNormalKeyMode {
 		t.Fatalf("after ⌃\\ ⌃N keys go to %q", m)
 	}
@@ -134,8 +135,7 @@ func TestShellIntegration(t *testing.T) {
 	if !strings.Contains(tm.title(), "proj") {
 		t.Errorf("the tab is %q, not the shell's directory", tm.title())
 	}
-	s.keyCommand(t, "<C-\\>")
-	s.keyCommand(t, "<C-n>")
+	s.keyCommand(t, "<C-Esc>")
 	s.typeTerm(t, "G") // the last prompt is the last line
 	for _, step := range []struct {
 		key  string
@@ -165,4 +165,27 @@ func TestTerminalSnapshotOnReopen(t *testing.T) {
 	s.frame()
 	s.frame()
 	s.waitTerm(t, "kept across restarts")
+}
+
+// In a terminal, ⌃ keys are the program's: the window's ⌃W and ⌃J chords don't take them, though ⌘ chords still
+// work; ⌃Esc and ⌃\ ⌃N, keymaps like any other, leave for terminal-normal mode.
+func TestTerminalKeepsControlKeys(t *testing.T) {
+	s := termScene(t, registry.Args{"cmd": []string{"sh", "-c", "stty raw -echo; dd bs=1 count=1 2>/dev/null | od -An -c; exec cat"}})
+	s.frame()
+	for _, k := range []string{"<C-w>", "<C-j>", "<C-a>"} {
+		if slices.Contains(s.sh.keyModesFor(k), "global") {
+			t.Errorf("%s reaches the global maps in a terminal: %v", k, s.sh.keyModesFor(k))
+		}
+	}
+	if !slices.Contains(s.sh.keyModesFor("<D-k>"), "global") {
+		t.Error("⌘K doesn't reach the global maps from a terminal")
+	}
+	s.keyCommand(t, "<C-w>")
+	s.waitTerm(t, "027") // od's octal for ⌃W, which reached the program
+	for _, k := range []string{"<C-Esc>", `<C-\><C-n>`} {
+		m, _ := s.reg.Lookup([]string{TerminalKeyMode}, keymap.Parse(k))
+		if m == nil || m.Command != "term.normal" {
+			t.Errorf("%s in a terminal is %+v", k, m)
+		}
+	}
 }

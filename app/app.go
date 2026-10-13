@@ -478,7 +478,7 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 			}
 			return
 		}
-		l.run(ctx, l.keys.Feed(l.modes(), k, time.Now()))
+		l.run(ctx, l.keys.Feed(l.sh.keyModesFor(k), k, time.Now()))
 	}
 }
 
@@ -490,6 +490,18 @@ func (l *loop) modes() []string { return l.sh.keyModes() }
 
 func (sh *shell) keyModes() []string {
 	return append(registry.ActiveKeyModes(sh.cfg.Registry), sh.baseKeyModes()...)
+}
+
+// keyModesFor are the modes key resolves in: keyModes, without the global maps when it's a ⌃ key and what has focus
+// takes those itself (registry.RawKeys), as a terminal does.
+func (sh *shell) keyModesFor(key string) []string {
+	modes := sh.keyModes()
+	base := sh.baseKeyModes()
+	if strings.HasPrefix(key, "<C-") && !strings.Contains(key, "D-") && !strings.Contains(key, "M-") &&
+		registry.IsRawKeyMode(sh.cfg.Registry, base[0]) {
+		return slices.DeleteFunc(modes, func(m string) bool { return m == "global" })
+	}
+	return modes
 }
 
 func (sh *shell) baseKeyModes() []string {
