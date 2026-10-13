@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
+	"github.com/liamg/oriel/edit/input/emacs"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
@@ -46,6 +47,11 @@ func (g *grabHost) Deactivate(context.Context) error { return nil }
 
 func runEditor(t *testing.T, files map[string]string, open []string, keys ...registry.Keymap) *running {
 	t.Helper()
+	return runEditorWith(t, files, open, nil, keys...)
+}
+
+func runEditorWith(t *testing.T, files map[string]string, open []string, exts []ext.Extension, keys ...registry.Keymap) *running {
+	t.Helper()
 	dir := t.TempDir()
 	for name, body := range files {
 		p := filepath.Join(dir, name)
@@ -59,7 +65,7 @@ func runEditor(t *testing.T, files map[string]string, open []string, keys ...reg
 	be := headless.New()
 	g := &grabHost{keys: keys}
 	r := &running{t: t, store: eventstore.New(), dir: dir, done: make(chan error, 1)}
-	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), WorkDir: dir, Files: open, Extensions: []ext.Extension{g}}
+	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), WorkDir: dir, Files: open, Extensions: append(exts, g)}
 	go func() { r.done <- Run(ctx, be, cfg) }()
 	select {
 	case r.win = <-be.Windows():
@@ -245,4 +251,30 @@ func (r *running) shown() []layout.ViewRef {
 		r.t.Fatal("the layout never answered")
 	}
 	return nil
+}
+
+// ED-5: "an engine swap at runtime per buffer; a sample emacs plugin passes its tests".
+func TestEditorInputEnginePerBuffer(t *testing.T) {
+	r := runEditorWith(t, map[string]string{"a.txt": "alpha\n", "b.txt": "bravo\n"}, []string{"a.txt", "b.txt"},
+		[]ext.Extension{&emacs.Plugin{}},
+		registry.Keymap{Mode: "global", Keys: "<F2>", Command: "editor.input", Args: registry.Args{"engine": "plain"}},
+		registry.Keymap{Mode: "global", Keys: "<F3>", Command: "editor.input", Args: registry.Args{"engine": "emacs"}},
+		registry.Keymap{Mode: "global", Keys: "<F4>", Command: "editor.input", Args: registry.Args{"engine": "vim"}},
+		registry.Keymap{Mode: "global", Keys: "<F5>", Command: "editor.open", Args: registry.Args{"path": "a.txt"}})
+	r.waitText("bravo")
+	r.typeKeys("<F2>")
+	r.waitText("EDIT")
+	r.typeKeys("<D-a>plain<D-s>")
+	r.waitFile("b.txt", "plain\n")
+	r.typeKeys("<F5>")
+	r.waitText("alpha")
+	r.waitText("NORMAL")
+	r.typeKeys("x:w<CR>")
+	r.waitFile("a.txt", "lpha\n")
+	r.typeKeys("<F3>")
+	r.waitText("EMACS")
+	r.typeKeys("<C-k>gone<C-x><C-s>")
+	r.waitFile("a.txt", "gone\n")
+	r.typeKeys("<F4>")
+	r.waitText("NORMAL")
 }

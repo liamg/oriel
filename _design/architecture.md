@@ -62,7 +62,7 @@ flowchart LR
 | Module | Owns | Depends on |
 |---|---|---|
 | `text` | rope, snapshots, anchors, authorship, undo tree | – |
-| `edit` | the editing primitives every input engine drives: cursors, edits with authorship and undo, registers, marks, messages | text |
+| `edit` | the editing primitives every input engine drives: cursors, edits with authorship and undo, registers, marks, messages, files, named motions; `edit/input` (the `input.Engine` interface), `edit/input/plain` (CUA keys) and `edit/input/emacs` (a sample plugin) | text |
 | `vim` | modal engine over `edit` | text, edit |
 | `syntax` | tree-sitter (wazero), highlight, folds, units, outline | text, wazero |
 | `lsp` | LSP client, server registry, capabilities | text |

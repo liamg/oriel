@@ -153,7 +153,7 @@ type Registry interface {
     Option(o OptionSpec) Disposable               // fields and the settings page: settings.md
     View(id string, v View) Disposable            // override = register the same id later; disposing it restores the one beneath
     Decorations(id string, p DecorationProvider) Disposable
-    Input(e input.Engine) Disposable
+    Input(e input.Engine) Disposable              // InputByID(id) and Inputs() find them; editor.input picks one
     Provider(p agent.Provider) Disposable
     AgentTool(t AgentTool) Disposable
     Theme(t theme.Source) Disposable

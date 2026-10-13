@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
+	"github.com/liamg/oriel/edit/input"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
@@ -28,16 +30,19 @@ const EditorView = "editor"
 // whose notices are the IDE's and whose "+ and "* are the system clipboard (editor.md, "Part of the IDE").
 type editorExt struct {
 	disposer
-	sh   *shell
-	h    ext.Host
-	ed   *edit.Editor
-	e    *vim.Engine
-	dir  string
-	docs map[*text.Buffer]*highlighter
-	rows map[vim.WindowID]int
-	pane paneMetrics
-	disk diskWatch
-	maps map[string]registry.Disposable // :map's keymaps, by mode and keys
+	sh     *shell
+	h      ext.Host
+	ed     *edit.Editor
+	e      *vim.Engine
+	dir    string
+	docs   map[*text.Buffer]*highlighter
+	rows   map[vim.WindowID]int
+	pane   paneMetrics
+	disk   diskWatch
+	maps   map[string]registry.Disposable // :map's keymaps, by mode and keys
+	inputs map[vim.WindowID]paneInput
+
+	drawing input.State // the engine of the pane being drawn
 }
 
 // diskWatch is how the editor notices files changing under it.
@@ -60,6 +65,8 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.docs, x.rows = map[*text.Buffer]*highlighter{}, map[vim.WindowID]int{}
 	x.disk.asked = map[int]time.Time{}
 	x.maps = map[string]registry.Disposable{}
+	x.inputs = map[vim.WindowID]paneInput{}
+	x.builtinInputs()
 	x.ed = edit.New(text.New(nil, text.Author{}), text.Author{Kind: text.User})
 	x.ed.SetClipboard(desktopClipboard{x.sh})
 	x.ed.OnNotice(func(n edit.Notice) { h.Notify(FromEdit(n, "vim")) })
@@ -91,6 +98,20 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 			return x.e.ReloadBuffer(n)
 		}},
 		{ID: "editor.keep", Title: "Keep a buffer's changes over its file's", Run: func(registry.Ctx, registry.Args) error { return nil }},
+		{ID: "editor.input", Title: "Change the input engine of the current buffer", Run: func(_ registry.Ctx, a registry.Args) error {
+			id := str(a, "engine")
+			if id == "" {
+				id = str(a, "args")
+			}
+			if _, ok := h.InputByID(id); !ok {
+				return fmt.Errorf("no input engine %q: %s", id, strings.Join(h.Inputs(), ", "))
+			}
+			return h.Options().Set(InputOption, registry.LayerBuffer, registry.At{Buffer: x.e.Name()}, id)
+		}},
+		{ID: "editor.save", Title: "Write the current buffer", Run: func(registry.Ctx, registry.Args) error {
+			x.e.Run("w")
+			return nil
+		}},
 		{ID: "editor.complete", Title: "Complete the command line", Run: func(registry.Ctx, registry.Args) error {
 			x.complete()
 			return nil

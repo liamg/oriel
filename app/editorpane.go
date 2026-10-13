@@ -9,6 +9,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/edit/input"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -79,9 +81,18 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	if focused && !p.Current() {
 		x.e.EnterWindow(id)
 	}
+	st := x.inputFor(p)
 	if p.Current() {
 		for _, k := range in.Keys {
-			x.e.Key(notation(k))
+			r := st.Key(notation(k))
+			if r.Command != "" {
+				if err := x.h.Run(context.Background(), r.Command, registry.Args(r.Args)); err != nil {
+					x.h.Notify(core.Notice{ID: "editor.command", Severity: core.SevError, Source: "editor", Key: true, Text: err.Error()})
+				}
+			}
+		}
+		if !isVim(st) && len(in.Keys) > 0 {
+			x.e.Follow(p.Editor().Cursors()[0].Off)
 		}
 	}
 	if focused && !in.Focused {
@@ -100,8 +111,9 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	p, _ = x.e.Pane(id) // what the keys left
 	c.Column("pane", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tEditorBg), Clip: true}, func(c *ui.Ctx) {
 		x.breadcrumb(c, p)
+		x.drawing = st
 		c.Column("code", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{T: codePadT}, Clip: true, Focusable: true,
-			KeyMode: keyMode(x.e.Mode()), Wheel: true, Cursor: render.CursorText, Help: "editor/pane", Role: ui.RoleTextBox,
+			KeyMode: st.Mode().KeyMode, Wheel: true, Cursor: render.CursorText, Help: "editor/pane", Role: ui.RoleTextBox,
 			Label: p.Name()}, func(c *ui.Ctx) {
 			x.lines(c, p, m)
 		})
@@ -269,6 +281,12 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 	from, to, eol, sel := p.Selected(line)
 	cur := p.Cursor()
 	showCursor := p.Current() && line == cur.Line && x.e.Mode() != "cmdline"
+	st := x.drawing
+	shape := x.e.CursorShape()
+	if st != nil && !isVim(st) {
+		from, to, eol, sel = engineSelection(p, line)
+		shape = map[input.Shape]vim.Shape{input.Block: vim.Block, input.Bar: vim.Bar, input.Underline: vim.Underline}[st.Mode().Shape]
+	}
 	if folded && p.Current() {
 		if end, _ := p.Fold(line); cur.Line >= line && cur.Line <= end {
 			showCursor, cur = true, vim.Pos{Line: line}
@@ -305,7 +323,7 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 		cx := x0 + float32(vc)*m.charW
 		st := ui.Style{W: ui.Px(w * m.charW), H: ui.Px(m.lineH - 2), Fill: th.C(tCursorBg), Float: &ui.Float{To: rowID, Offset: render.Point{X: cx, Y: 1}},
 			Role: ui.RoleText, Label: "cursor"}
-		switch x.e.CursorShape() {
+		switch shape {
 		case vim.Bar:
 			st.W, ch = ui.Px(2), ""
 		case vim.Underline:
@@ -317,6 +335,32 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 			}
 		})
 	})
+}
+
+// engineSelection is another engine's selection on line, from the window's editor's cursors.
+func engineSelection(p vim.Pane, line int) (from, to int, eol, ok bool) {
+	snap := p.Buf()
+	for _, c := range p.Editor().Cursors() {
+		r, sel := c.Selection()
+		if !sel {
+			continue
+		}
+		a, b := snap.PosAt(r.Start), snap.PosAt(r.End)
+		if line < a.Line || line > b.Line {
+			continue
+		}
+		from, to = 0, len(snap.Line(line))
+		if line == a.Line {
+			from = a.Col
+		}
+		if line == b.Line {
+			to = b.Col
+		} else {
+			eol = true
+		}
+		return from, to, eol, true
+	}
+	return 0, 0, false, false
 }
 
 func wideRune(r rune) bool {
@@ -353,20 +397,24 @@ func (x *editorExt) cmdline(c *ui.Ctx, line string) {
 	})
 }
 
-// modeSegment is the status line's mode chip, or the command line being typed.
+// modeSegment is the status line's mode chip: the current window's engine and its mode.
 func (x *editorExt) modeSegment(c *ui.Ctx) {
 	if !x.shown() {
 		return
 	}
 	th := c.Theme()
 	mode := x.e.Mode()
+	label := modeName(mode)
+	if st := x.inputFor(x.current()); !isVim(st) {
+		mode, label = "insert", st.Mode().Label
+	}
 	bg := map[string]theme.TokenID{"insert": tModeInsert, "replace": tModeInsert, "visual": tModeVisual, "visual-line": tModeVisual,
 		"visual-block": tModeVisual, "cmdline": tModeCommand}[mode]
 	if bg == 0 {
 		bg = tModeNormal
 	}
 	c.Row("mode", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: th.C(bg), Role: ui.RoleStatus, Label: "Mode"}, func(c *ui.Ctx) {
-		c.Text("m", modeName(mode), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Bold, Tracking: .12},
+		c.Text("m", label, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Bold, Tracking: .12},
 			Color: th.C(tModeFg)})
 	})
 }

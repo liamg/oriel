@@ -236,31 +236,44 @@ func (e *Editor) Undo() (text.Change, bool)       // also Redo, UndoTo, UndoSeq,
 func (e *Editor) Anchor(off int, b text.Bias) text.AnchorID
 func (e *Editor) Register(r rune) (Register, bool) // and SetRegister: {Text, Charwise | Linewise | Blockwise}
 func (e *Editor) Notify(n Notice)                 // and Notices(): {ID, Severity, Args, Text} for the IDE
-// Still to come, when a second engine needs them (ED-5): Motion, Object and Search by name, Exec,
-// Scroll and Prompt. Until then motions and text objects are the vim engine's own tables, which
-// plugins extend with vim.RegisterMotion and vim.RegisterObject.
+func Motion(s text.Snapshot, off int, name string, count, want int) (int, error) // "char-next", "word-prev",
+                                                  // "line-end", "buffer-start"…: what plain and emacs move by
+func (e *Editor) Replace(s string, g text.UndoGroup) error // over each cursor's selection, or at it
+// Cursor{Off, Anchor, Selecting}: a selection runs from Anchor to Off. The IDE draws it for any engine but vim,
+// whose Visual areas (blocks included) it reads from the engine.
+// Still to come, when an engine needs them: Object and Search by name, Exec, Scroll and Prompt. Until then
+// vim's text objects are its own tables, which plugins extend with vim.RegisterMotion and vim.RegisterObject.
 ```
 
 ```go
-// package input — a pluggable input engine.
+// package edit/input — a pluggable input engine. Keys are vim notation tokens, one per key press.
 type Engine interface {
     ID() string                                   // "vim", "emacs", "helix", "plain"
-    Attach(ed edit.Editor) State                  // per-window state
+    Attach(ed *edit.Editor) State                 // per-window state
 }
 
 type State interface {
-    Key(k Key) Result                             // the hot path, called once per key
-    Mode() ModeInfo                               // name, cursor shape, statusline label, colour token
+    Key(k string) Result                          // the hot path, called once per key
+    Mode() Mode                                   // {Label "NORMAL"/"EDIT"/"EMACS", cursor Shape, KeyMode}
     Pending() string                              // "d2" / "C-x" for the which-key popup
-    Keymaps() keymap.Table                        // so :Keys and which-key can list everything
 }
 
 type Result struct {
     Handled bool
-    Repaint bool
-    Recenter bool
+    Command string                                // a registry command for the IDE to run: editor.save
+    Args    map[string]any
 }
+
+func Wrap(inner Engine, id string, fn func(k string, next func(string) Result) Result) Engine
 ```
+
+- Engines register with `Registry.Input(e)`; the option `editor.input` picks one, for every buffer or for one
+  (`editor.input {engine}` sets it on the current buffer), and a window keeps its engine's state while the option
+  doesn't change. The pane's `KeyMode` is the engine's, so keymaps can be made for `plain` or `emacs`.
+- The vim engine is one engine for all windows (its windows, buffers and registers are shared); its `State` per
+  window is that engine with the window current. Another engine edits the window's `edit.Editor`, and the vim
+  engine's window follows its cursor, so scrolling and `:w` work the same under any engine.
+- Keymaps for which-key come with SH-6, from the registry's keymaps in the engine's mode.
 
 ```go
 // input/vim — the built-in engine (sketch)
@@ -310,9 +323,9 @@ func (s *emacsState) Key(k input.Key) input.Result {
 ```
 
 ```go
-// registering it
-func init() { input.Register(emacs.Engine{}) }    // built-in or `oriel build --with`
-// config: L.o.input = "emacs"     (global, or per buffer: L.bo.input = "plain")
+// registering it: edit/input/emacs is a sample, with a Plugin that does this
+func (p *Plugin) Activate(_ context.Context, h ext.Host) error { p.d = h.Input(emacs.Engine{}); return nil }
+// config: editor.input = "emacs"   (global, or per buffer)
 ```
 
 - **What ships**: two built-in native engines, `vim` (the default) and `plain` (CUA keys:

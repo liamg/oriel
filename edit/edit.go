@@ -25,9 +25,20 @@ type Register struct {
 	Kind RegKind
 }
 
-// Cursor is a cursor's offset in the buffer.
+// Cursor is a cursor's offset in the buffer and, when it's selecting, where the selection started: the text
+// between Anchor and Off is selected.
 type Cursor struct {
-	Off int
+	Off       int
+	Anchor    int
+	Selecting bool
+}
+
+// Selection is the selected range, in order, and whether there is one.
+func (c Cursor) Selection() (text.Range, bool) {
+	if !c.Selecting || c.Anchor == c.Off {
+		return text.Range{}, false
+	}
+	return text.Range{Start: min(c.Anchor, c.Off), End: max(c.Anchor, c.Off)}, true
 }
 
 // Editor is one window's view of a buffer: its cursors, plus the registers and notices it shares

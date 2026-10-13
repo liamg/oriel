@@ -4,6 +4,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/edit"
+
 	"github.com/liamg/oriel/text"
 )
 
@@ -283,3 +285,15 @@ func (e *Engine) Quickfix() (items []QfItem, title string, current int) {
 
 // TabStop is how many columns a tab takes, for drawing text as the engine counts columns.
 const TabStop = tabstop
+
+// Editor is the window's editor, for another input engine to edit through.
+func (p Pane) Editor() *edit.Editor { return p.w.ed }
+
+// Follow moves the current window's cursor to off, as another input engine left it: anywhere on a line, the end
+// included, and scrolls to show it.
+func (e *Engine) Follow(off int) {
+	v := e.view()
+	e.cur = v.pos(min(off, v.s.Len()))
+	e.setWant(v)
+	e.updateTop(v)
+}

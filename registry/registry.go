@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/edit/input"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -22,6 +23,7 @@ type Registry interface {
 	Option(o OptionSpec) Disposable // panics if the default doesn't fit the spec
 	View(id string, v View) Disposable
 	Theme(s theme.Source) Disposable
+	Input(e input.Engine) Disposable // an input engine the editor's input option can pick
 
 	Run(ctx Ctx, id string, args Args) error
 	Commands() []Command // the registration that wins for each id, sorted by id
@@ -32,6 +34,8 @@ type Registry interface {
 	ViewByID(id string) (View, bool)
 	Views() []string        // every registered view id, sorted
 	Themes() []theme.Source // in registration order; a later theme with the same name wins
+	InputByID(id string) (input.Engine, bool)
+	Inputs() []string // engine ids, sorted
 	Options() Options
 
 	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
@@ -142,6 +146,7 @@ type reg struct {
 	keymaps  stacks[keymapKey, Keymap]
 	prefixes map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
 	views    stacks[string, View]
+	inputs   stacks[string, input.Engine]
 	themes   []entry[theme.Source]
 	options  *options
 	faults   faults
@@ -153,6 +158,7 @@ func New() Registry {
 		keymaps:  stacks[keymapKey, Keymap]{},
 		prefixes: map[keymapKey]int{},
 		views:    stacks[string, View]{},
+		inputs:   stacks[string, input.Engine]{},
 		options:  newOptions(),
 	}
 	for _, o := range builtinOptions {
@@ -236,6 +242,34 @@ func (r *reg) View(id string, v View) Disposable {
 		defer r.mu.Unlock()
 		r.views.remove(id, tok)
 	})
+}
+
+func (r *reg) Input(e input.Engine) Disposable {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	tok := r.inputs.push(e.ID(), e)
+	return disposeOnce(func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		r.inputs.remove(e.ID(), tok)
+	})
+}
+
+func (r *reg) InputByID(id string) (input.Engine, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.inputs.top(id)
+}
+
+func (r *reg) Inputs() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]string, 0, len(r.inputs))
+	for id := range r.inputs {
+		out = append(out, id)
+	}
+	slices.Sort(out)
+	return out
 }
 
 func (r *reg) Theme(s theme.Source) Disposable {
