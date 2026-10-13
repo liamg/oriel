@@ -22,7 +22,7 @@ func coreSession(id string) core.SessionID { return core.SessionID(id) }
 //oriel:api name=ui
 type UI struct{ a *APIs }
 
-//oriel:api doc="A row of nodes; options beside them: gap, pad (px)." returns=table
+//oriel:api doc="A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths)." returns=table
 func (UI) Row(children any) script.Table { return container("row", children) }
 
 //oriel:api doc="A column of nodes; options beside them: gap, pad (px)." returns=table
@@ -138,6 +138,9 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			}
 		})
 	case script.Table:
+		if dnd(c, n, a) {
+			return
+		}
 		switch str(n, "type") {
 		case "row", "column":
 			st := ui.Style{Gap: 12, Cross: ui.Center, W: ui.Flex(1)}
@@ -223,6 +226,34 @@ func build(c *ui.Ctx, v any, a *APIs) {
 	default:
 		c.Text(nil, fmt.Sprint(v), ui.TextStyle{})
 	}
+}
+
+// dnd builds a node that's a drag source (drag = { kind, data, label }) or a drop target (accepts = { kinds },
+// on_drop = fn(kind, data)) inside a box that is one, and reports whether it did.
+func dnd(c *ui.Ctx, n script.Table, a *APIs) bool {
+	spec, _ := n["drag"].(script.Table)
+	accepts := strs(n["accepts"])
+	if spec == nil && len(accepts) == 0 {
+		return false
+	}
+	key := cmpOr(str(n, "id"), str(n, "label"), "dnd")
+	id := c.Next(key)
+	if d := c.Interaction(id).Dropped; d != nil {
+		a.callback(n, "on_drop", d.Kind, d.Data)
+	}
+	st := ui.Style{W: ui.Flex(1), Drop: accepts, Help: "plugins/lua#ui", Role: ui.RoleGroup, Label: cmpOr(str(n, "label"), key)}
+	if spec != nil {
+		st.Drag = &ui.DragData{Kind: str(spec, "kind"), Data: spec["data"], Label: cmpOr(str(spec, "label"), str(spec, "kind"))}
+		st.Label = st.Drag.Label
+	}
+	inner := script.Table{}
+	for k, v := range n {
+		if k != "drag" && k != "accepts" && k != "on_drop" {
+			inner[k] = v
+		}
+	}
+	c.Box(key, st, func(c *ui.Ctx) { build(c, inner, a) })
+	return true
 }
 
 // callback calls a node's function field with args, if it has one, and redraws: an error is a notice at its line,

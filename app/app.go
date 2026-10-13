@@ -413,6 +413,8 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 	case render.AppearanceEvent:
 		l.osLight = !ev.Dark
 		l.themeDirty.Store(true)
+	case render.DropEvent:
+		l.sh.dropped(ev)
 	case render.KeyEvent:
 		k := notation(ev)
 		if p := l.keys.Pending(); len(p) > 0 && (k == "<BS>" || k == "<Esc>" || k == "?") {

@@ -279,8 +279,28 @@ func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
 	} {
 		o.add(h.Command(c))
 	}
-	o.add(h.Keymap(registry.Keymap{Mode: "button", Keys: "<Tab>", Command: "ui.focus.next", Desc: "Next control"}))
-	o.add(h.Keymap(registry.Keymap{Mode: "button", Keys: "<S-Tab>", Command: "ui.focus.prev", Desc: "Previous control"}))
+	for _, c := range []registry.Command{
+		{ID: "ui.drag", Title: "Pick up what's focused to drag it, or drop what's held on it", Run: func(registry.Ctx, registry.Args) error {
+			if u := h.UI(); u != nil {
+				u.DragKey()
+			}
+			return nil
+		}},
+		{ID: "ui.drag.cancel", Title: "Put down what's being dragged", Run: func(registry.Ctx, registry.Args) error {
+			if u := h.UI(); u != nil {
+				u.CancelDrag()
+			}
+			return nil
+		}},
+	} {
+		o.add(h.Command(c))
+	}
+	for _, mode := range []string{"button", ui.DragKeyMode} {
+		o.add(h.Keymap(registry.Keymap{Mode: mode, Keys: "<Tab>", Command: "ui.focus.next", Desc: "Next control"}))
+		o.add(h.Keymap(registry.Keymap{Mode: mode, Keys: "<S-Tab>", Command: "ui.focus.prev", Desc: "Previous control"}))
+	}
+	o.add(h.Keymap(registry.Keymap{Mode: ui.DragKeyMode, Keys: "<Space>", Command: "ui.drag", Desc: "Pick up or drop"}))
+	o.add(h.Keymap(registry.Keymap{Mode: ui.DragKeyMode, Keys: "<Esc>", Command: "ui.drag.cancel", Desc: "Put down"}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.reduced_motion", Type: registry.Bool, Default: false,
 		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel", Choices: func() []string { return themeNames(h) },

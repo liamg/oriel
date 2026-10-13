@@ -63,6 +63,8 @@ type UIView interface {
 	HelpRequest() (string, bool)
 	Rect(id ui.ID) (render.Rect, bool)
 	FocusNext(dir int) // moves keyboard focus to the next focusable node (back with -1), wrapping
+	DragKey() bool     // picks up the focused node's drag, or drops the one held on it (ui/dnd.go)
+	CancelDrag()
 }
 
 // Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's

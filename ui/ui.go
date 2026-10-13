@@ -95,6 +95,8 @@ type flags struct {
 	trap                             bool
 	z                                int
 	parent                           ID
+	drag                             *DragData
+	drop                             []string
 }
 
 type hit struct {
@@ -151,8 +153,9 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.floats = u.floats[:0]
 	u.animating, u.wake = false, time.Time{}
 	build(&Ctx{u: u, e: u.root})
-	u.in.clicks, u.in.keys, u.in.context, u.in.wheel, u.in.claimed = nil, nil, nil, nil, nil
+	u.in.clicks, u.in.keys, u.in.context, u.in.wheel, u.in.claimed, u.in.dropped = nil, nil, nil, nil, nil, nil
 	u.tooltip()
+	u.dragShown()
 	for axis := range 2 {
 		u.fit(u.root, axis)
 		u.grow(u.root, axis)
@@ -175,6 +178,12 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	clear(u.flags)
 	for id, e := range u.byID {
 		s := e.style
+		if s.Drag != nil || len(s.Drop) > 0 {
+			s.Interactive, s.Focusable = true, true // a drag can start, and end, from the keyboard
+			if s.KeyMode == "" {
+				s.KeyMode = DragKeyMode
+			}
+		}
 		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" || s.Help != "" || s.Trap {
 			var parent ID
 			if e.parent != nil {
@@ -182,7 +191,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
 				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
-				trap: s.Trap, z: s.Z, parent: parent}
+				trap: s.Trap, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop}
 		}
 	}
 	u.parents = map[ID]ID{}

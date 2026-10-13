@@ -295,6 +295,12 @@ type Host interface {
   (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the
   layout (`Root.Visible`), and the file and selection from a view that implements `registry.Located` (the editor).
   The built-in entries (Copy path, Move pane…, Close) are menu items too. Lua: `oriel.menu.add`.
+- Drag and drop (PL-15): `ui.Style.Drag` (a `DragData`: kind, data, label) makes a node a drag source and
+  `Style.Drop` (kinds) a target; the UI tracks the drag, lights the target under it that takes the kind and draws a
+  ghost, and on release hands the payload to the target as `Interaction.Dropped` (`DragOver` while it's over). A
+  source or target is focusable, in the `dnd` key mode where Space picks up and drops (`ui.drag`), Esc puts down and
+  Tab moves on. Files dropped on the window are a `render.DropEvent`: the target under them that takes `"file"` gets
+  their paths, else they open in the editor. Lua nodes take `drag = {…}`, `accepts = {…}` and `on_drop`.
 - Picker sources can show an item live as it's highlighted (`PickerSource.Hover`) and undo that when the picker
   closes without picking (`Cancel`); `PickerItem.Current` is where the list opens. The themes picker is built on
   them. A String option can offer `OptionSpec.Choices`, worked out when asked; the settings page makes it a menu

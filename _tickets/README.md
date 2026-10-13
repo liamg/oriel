@@ -159,4 +159,4 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 83. [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key) · after FW-6
 84. [PL-13](PL-13-context-menu-contributions.md): Context menu entries from plugins: a contribution point for right-click menus · after PL-1, SH-10 (added and built in P3)
 85. [PL-14](PL-14-lua-form-widgets.md): Form widgets from Lua: inputs, toggles, selects and a view's own state · after PL-1 (added and built in P3)
-86. [PL-15](PL-15-plugin-drag-and-drop.md): Drag and drop for plugins: drag sources, drop targets, and files dropped on the window · after FW-9, PL-1 (added in P3, phase 4)
+86. [PL-15](PL-15-plugin-drag-and-drop.md): Drag and drop for plugins: drag sources, drop targets, and files dropped on the window · after FW-9, PL-1 (added and built in P3)

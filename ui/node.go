@@ -118,10 +118,12 @@ type Style struct {
 	Focusable   bool // takes focus; implies Interactive
 	Disabled    bool // takes neither, and hides what's under it from the pointer
 	Cursor      render.Cursor
-	Tooltip     string // shown after the pointer rests on it
-	Help        string // its help page and anchor, "hud/usage#weekly-window" (help.md)
-	KeyMode     string // when focused, keymaps in this mode come first and unmapped keys come to it
-	Trap        bool   // keeps keyboard focus inside while it's up, as a modal does
+	Tooltip     string    // shown after the pointer rests on it
+	Help        string    // its help page and anchor, "hud/usage#weekly-window" (help.md)
+	KeyMode     string    // when focused, keymaps in this mode come first and unmapped keys come to it
+	Trap        bool      // keeps keyboard focus inside while it's up, as a modal does
+	Drag        *DragData // dragging it carries this, to a node that takes its kind (dnd.go)
+	Drop        []string  // the kinds of drag it takes; one let go over it is its Interaction's Dropped
 
 	// Accessibility (a11y.go): a node with a Role is in the accessibility tree; one without is transparent.
 	Role     Role

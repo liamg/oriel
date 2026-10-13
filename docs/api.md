@@ -67,7 +67,7 @@ Version 0.4.0.
 - `oriel.ui.input(spec)`: A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
 - `oriel.ui.list(items, row)`: A list: each of items through row(item), which returns a node.
 - `oriel.ui.mode()`: The editor's mode, as the built-in status line shows it.
-- `oriel.ui.row(children)`: A row of nodes; options beside them: gap, pad (px).
+- `oriel.ui.row(children)`: A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).
 - `oriel.ui.select(spec)`: A menu of choices: { value, options = { … }, on_change = fn(value), id, label }.
 - `oriel.ui.spacer()`: Space that takes what's left.
 - `oriel.ui.state(key, initial?)`: A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance.

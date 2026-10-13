@@ -238,3 +238,5 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   new value and the view redraws. `oriel.ui.state(key, initial)` is a table the VM keeps by key (`VM.State`). A
   callback's error is a notice at its line. Tab moves focus: controls in the `button` key mode map Tab and ⇧Tab to
   `ui.focus.next`/`prev` (`UIView.FocusNext`), and a Lua input sets `InputOpts.TabMoves`.
+- Drag and drop (PL-15): any `oriel.ui` node can be dragged (`drag = { kind, data, label }`) or take drops
+  (`accepts = { kinds }`, `on_drop = function(kind, data)`); a `"file"` drop's data is its paths.

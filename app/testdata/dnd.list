@@ -1,0 +1,48 @@
+backdrop #060606
+rect 0,0 1400x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1269.0625x38 r 0
+pop
+rect 0,38 1400x836 fill #060606
+rect 0,38 400x836 fill #0c0c0b
+clip 0,38 400x836 r 0
+  rect 0,38 400x30 fill #0c0c0b
+  rect 0,38 69.359375x30 fill #121210
+  text "Tickets" @14,58.365234 #ece6d8 Inter 12
+  rect 0,68 400x1 fill #24221d
+  clip 0,69 400x805 r 0
+    text "TICKETS" @24,104.22 #ffd23f JetBrains Mono 11
+    text "INF-1 fix rounding" @24,126.740005 #ece6d8 JetBrains Mono 11
+    text "a note" @24,149.26001 #ece6d8 JetBrains Mono 11
+  pop
+pop
+clip 400,38 600x836 r 0
+  rect 400,38 600x30 fill #0c0c0b
+  rect 400,68 600x1 fill #24221d
+pop
+rect 1000,38 400x836 fill #0c0c0b
+clip 1000,38 400x836 r 0
+  rect 1000,38 400x30 fill #0c0c0b
+  rect 1000,38 61.65625x30 fill #121210
+  rect 1000,38 61.65625x2 fill #ffd23f
+  text "Board" @1014,58.365234 #ece6d8 Inter 12
+  rect 1000,68 400x1 fill #24221d
+  clip 1000,69 400x805 r 0
+    text "BOARD" @1024,104.22 #ffd23f JetBrains Mono 11
+    text "Doing ← drop here" @1024,126.740005 #ece6d8 JetBrains Mono 11
+    text "got nothing" @1024,149.26001 #ece6d8 JetBrains Mono 11
+  pop
+pop
+rect 0,874 1400x26 fill #0c0c0b
+text "✕" @16,890.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,890.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,890.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,890.95996 #b3ab99 JetBrains Mono 11
+rect 1021,112.520004 358x20.520004 fill #ffd23f24 radius 6 stroke 2 #ffd23f
+rect 1092.0469,133.13 45.734375x21.91455 fill #191815 radius 4 stroke 1 #ffd23f
+text "INF-1" @1100.0469,148.27063 #ece6d8 Inter 11.5

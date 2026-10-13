@@ -209,7 +209,7 @@ function oriel.ui.list(items, row) end
 ---@return table
 function oriel.ui.mode() end
 
---- A row of nodes; options beside them: gap, pad (px).
+--- A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).
 ---@param children any
 ---@return table
 function oriel.ui.row(children) end

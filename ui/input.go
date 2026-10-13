@@ -25,6 +25,8 @@ type Interaction struct {
 	Pointer      render.Point      // the pointer, wherever it is
 	Scroll       render.Point      // wheel movement over it since the last frame, for a box with Wheel
 	Mods         render.Mods       // the modifiers held at its last press
+	Dropped      *DragData         // a drag let go over it since the last frame, of a kind it takes (Style.Drop)
+	DragOver     bool              // a drag of a kind it takes is over it now
 }
 
 // Options are how the UI looks and behaves where widgets don't say.
@@ -67,6 +69,8 @@ type input struct {
 	wheel   map[ID]render.Point
 	mods    render.Mods
 	help    string // a help page asked for since the last frame
+	dnd     *dragging
+	dropped map[ID]DragData
 }
 
 // Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame.
@@ -84,6 +88,7 @@ func (u *UI) Pointer(ev render.PointerEvent) {
 	}
 	in.pos, in.inside = ev.Pos, true
 	u.setHot(u.topInteractive(ev.Pos))
+	u.dragPointer(ev)
 	switch ev.Kind {
 	case render.PointerPress:
 		if ev.Buttons&render.ButtonSecondary != 0 && in.hot != 0 {
@@ -107,6 +112,10 @@ func (u *UI) Pointer(ev render.PointerEvent) {
 		}
 	case render.PointerRelease:
 		if ev.Buttons&render.ButtonPrimary == 0 {
+			return
+		}
+		if u.dragRelease() {
+			in.active = 0
 			return
 		}
 		if in.active != 0 && in.active == in.hot {
@@ -184,6 +193,10 @@ func (u *UI) Interaction(id ID) Interaction {
 	if p, ok := in.context[id]; ok {
 		it.Context = &p
 	}
+	if d, ok := in.dropped[id]; ok {
+		it.Dropped = &d
+	}
+	it.DragOver = in.dnd != nil && in.dnd.moving && in.dnd.target == id
 	return it
 }
 

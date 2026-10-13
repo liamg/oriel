@@ -24,6 +24,12 @@ type ResizeEvent struct{ Size Point }
 // RedrawEvent asks for a new frame: something the last one drew has changed, such as a font landing.
 type RedrawEvent struct{}
 
+// DropEvent is files dropped on the window from outside it, at Pos.
+type DropEvent struct {
+	Pos   Point
+	Paths []string
+}
+
 // AppearanceEvent is the OS's light or dark preference, sent when a window opens and whenever it changes.
 type AppearanceEvent struct{ Dark bool }
 
@@ -74,3 +80,4 @@ func (PointerEvent) isEvent()    {}
 func (ResizeEvent) isEvent()     {}
 func (RedrawEvent) isEvent()     {}
 func (AppearanceEvent) isEvent() {}
+func (DropEvent) isEvent()       {}

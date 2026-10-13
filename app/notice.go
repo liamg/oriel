@@ -176,6 +176,18 @@ func failingFrame(fs []Frame) (Frame, bool) {
 	return Frame{}, false
 }
 
+// dropped is files dropped on the window: to the node under them that takes files, else opened in the editor.
+func (sh *shell) dropped(ev render.DropEvent) {
+	if sh.ui != nil && sh.ui.DropFiles(ev.Pos, ev.Paths) {
+		return
+	}
+	for _, p := range ev.Paths {
+		if err := sh.cfg.Registry.Run(context.Background(), "editor.open", registry.Args{"path": p}); err != nil {
+			sh.cfg.Store.Apply(core.Notified{Notice: core.Notice{ID: "drop.open", Severity: core.SevWarning, Source: "core", Text: err.Error(), Time: now()}})
+		}
+	}
+}
+
 // Desktop is what Oriel asks of the OS: the clipboard and the browser.
 type Desktop interface {
 	SetClipboard(text string)
