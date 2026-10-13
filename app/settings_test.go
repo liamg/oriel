@@ -180,8 +180,35 @@ func TestSettingsLuaIsReadOnly(t *testing.T) {
 	if n := s.access("whichkey.enabled"); !n.Disabled {
 		t.Error("the toggle isn't disabled")
 	}
-	if !strings.Contains(s.frameText(), "init.lua:12") {
-		t.Errorf("the row doesn't say where it's set:\n%s", s.frameText())
+	text := s.frameText()
+	for _, want := range []string{"init.lua:12", "init.lua wins over settings.toml", "Open init.lua:12"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the row lacks %q:\n%s", want, text)
+		}
+	}
+	if s.access("Open init.lua:12") == nil {
+		t.Error("no link to the line")
+	}
+}
+
+// settings.md, "Precedence": the project file and the session come after init.lua, so at those scopes a Lua-set
+// option is editable, and what's set there wins.
+func TestSettingsLuaIsOverriddenAboveIt(t *testing.T) {
+	s := newScene(t, "", t.TempDir(), mockupSize)
+	s.settings().loadAll()
+	s.reg.Options().SetFrom("editor.expand_tab", registry.LayerLua, registry.At{}, false, "init.lua:12")
+	if err := s.reg.Run(context.Background(), "settings.set", registry.Args{"name": "editor.expand_tab", "value": true, "scope": "session"}); err != nil {
+		t.Fatalf("setting it for the session: %v", err)
+	}
+	if v, l, _ := s.reg.Options().Get("editor.expand_tab", s.host.Here()); v != true || l != registry.LayerSession {
+		t.Errorf("editor.expand_tab = %v from %s", v, l)
+	}
+	s.run("settings.open", registry.Args{"section": "editor"})
+	s.settings().scope = 2
+	s.frame()
+	s.frame()
+	if n := s.access("editor.expand_tab"); n.Disabled {
+		t.Error("the toggle is disabled at session scope")
 	}
 }
 

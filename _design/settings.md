@@ -147,14 +147,16 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 - The page writes through `toml.Document`: a change replaces the value's bytes, a new key goes after its table's
   last key, a reset deletes the line. Only the user and project files are written; the session scope never is.
   It edits at the key the file already uses (an alias, a dotted key). A file that doesn't parse is never written.
-- A value set in Lua wins over both files, so the page shows it read-only with its source; `settings.set` refuses it.
+- A value set in Lua wins over the user file, so at the user scope the page shows it greyed out, read-only, with "init.lua
+  wins over settings.toml" and a link to the line; `settings.set` refuses it there. The project file and the session
+  come after init.lua, so at those scopes it's editable and what's set there wins. A row a later layer decides
+  (project, a buffer's `:set`) says "overridden here by …".
 - **Project trust**: a project file applies only once trusted (`settings.trust`, offered by a notice), recorded by
   its SHA-256 in `~/.config/oriel/trusted.toml`, so a change needs trusting again (security.md, direnv-style). An
   edit from the page re-trusts it.
 - Controls: a toggle, choices (four or fewer inline, else a menu), and a field for numbers, durations and
   strings, checked on Enter. "TOML" shows each row's line and its Lua. Undo is per change.
-- Not yet: colour, key, list and map types; `Restart`, `Resettable` and `Secret`; a jump to the Lua line (Lua comes
-  with the scripting ticket); undo for reset section and reset all as one step.
+- Not yet: colour, key, list and map types; `Restart`, `Resettable` and `Secret`; undo for reset section and reset all as one step.
 
 ## As built (ED-9)
 

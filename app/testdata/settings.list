@@ -57,36 +57,40 @@ clip 0,38 1600x962 r 0
     text "ui" @269,131.54785 #ece6d8 Inter 18
     rect 1474.3594,112 97.640625x26 radius 6 stroke 1 #332f27
     text "Reset section" @1484.3594,129.36523 #ece6d8 Inter 12
-    rect 269,157 3x36 fill #ffd23f radius 2
-    text "ui.reduced_motion" @288,169.93774 #ece6d8 JetBrains Mono 12.5
-    text "Jump straight to the end of every animation." @288,189.79712 #7c7566 Inter 12.5
-    text "set in init.lua:12" @1129.8594,178.78001 #a98bff JetBrains Mono 10.5
-    rect 1492.5469,166 32x18 fill #ffd23f radius 9
-    rect 1508.5469,168 14x14 fill #ece6d8 radius 7
-    rect 1540.5469,162 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,179.36523 #4f4a40 Inter 12
-    rect 269,217 3x36 fill #ffd23f radius 2
-    text "ui.theme" @288,229.93774 #ece6d8 JetBrains Mono 12.5
-    text "The theme, by name: a built-in, or a file in your themes directory." @288,249.79712 #7c7566 Inter 12.5
-    text "user" @1222.1719,238.78001 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,220 200x30 fill #060606 radius 6 stroke 1 #332f27
-    clip 1324.5469,220 200x30 r 6
-      text "oriel" @1334.5469,239.54712 #ece6d8 Inter 12.5
+    rect 269,165.74225 3x36 fill #ffd23f radius 2
+    text "ui.reduced_motion" @288,169.75 #ece6d8 JetBrains Mono 12.5
+    text "Jump straight to the end of every animation." @288,189.60938 #7c7566 Inter 12.5
+    text "init.lua wins over settings.toml" @288,207.33452 #a98bff JetBrains Mono 10.5
+    text "Open init.lua:12" @507,207.33452 #ffd23f JetBrains Mono 10.5
+    text "set in init.lua:12" @1129.8594,187.52226 #a98bff JetBrains Mono 10.5
+    opacity 0.45
+      rect 1492.5469,174.74225 32x18 fill #ffd23f radius 9
+      rect 1508.5469,176.74225 14x14 fill #ece6d8 radius 7
     pop
-    rect 1540.5469,222 31.453125x26 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,239.36523 #ece6d8 Inter 12
-    text "ui.variant" @288,289.93774 #ece6d8 JetBrains Mono 12.5
-    text "The theme's dark or light variant; system follows the OS." @288,309.79712 #7c7566 Inter 12.5
-    text "default" @1202.3906,298.78 #7c7566 JetBrains Mono 10.5
-    rect 1360.2969,283 164.25x24 radius 5 stroke 1 #332f27
-    clip 1360.2969,283 164.25x24 r 5
-      rect 1360.2969,283 61.69995x24 fill #1f1c0f
-      text "SYSTEM" @1370.2969,298.42 #ffd23f JetBrains Mono 9.5
-      text "DARK" @1431.9968,298.42 #7c7566 JetBrains Mono 9.5
-      text "LIGHT" @1479.7969,298.42 #7c7566 JetBrains Mono 9.5
+    rect 1540.5469,170.74225 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,188.10748 #4f4a40 Inter 12
+    rect 269,234.48451 3x35.999985 fill #ffd23f radius 2
+    text "ui.theme" @288,247.42226 #ece6d8 JetBrains Mono 12.5
+    text "The theme, by name: a built-in, or a file in your themes directory." @288,267.28162 #7c7566 Inter 12.5
+    text "user" @1222.1719,256.2645 #7c7566 JetBrains Mono 10.5
+    rect 1324.5469,237.48451 200x29.999985 fill #060606 radius 6 stroke 1 #332f27
+    clip 1324.5469,237.48451 200x29.999985 r 6
+      text "oriel" @1334.5469,257.03162 #ece6d8 Inter 12.5
     pop
-    rect 1540.5469,282 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,299.36523 #4f4a40 Inter 12
+    rect 1540.5469,239.48451 31.453125x25.999985 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,256.84973 #ece6d8 Inter 12
+    text "ui.variant" @288,307.42224 #ece6d8 JetBrains Mono 12.5
+    text "The theme's dark or light variant; system follows the OS." @288,327.28162 #7c7566 Inter 12.5
+    text "default" @1202.3906,316.2645 #7c7566 JetBrains Mono 10.5
+    rect 1360.2969,300.4845 164.25x24 radius 5 stroke 1 #332f27
+    clip 1360.2969,300.4845 164.25x24 r 5
+      rect 1360.2969,300.4845 61.69995x24 fill #1f1c0f
+      text "SYSTEM" @1370.2969,315.9045 #ffd23f JetBrains Mono 9.5
+      text "DARK" @1431.9968,315.9045 #7c7566 JetBrains Mono 9.5
+      text "LIGHT" @1479.7969,315.9045 #7c7566 JetBrains Mono 9.5
+    pop
+    rect 1540.5469,299.4845 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,316.84973 #4f4a40 Inter 12
   pop
   rect 0,970 1600x30 fill #0c0c0b stroke 1 #24221d
   text "writing to ~/.config/oriel/settings.toml" @16,988.78 #7c7566 JetBrains Mono 10.5

@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -377,10 +378,21 @@ func (s *settingsExt) sessionAt() registry.At {
 	return registry.At{Session: s.h.Here().Session}
 }
 
-// readOnly says why the page can't change name: a value set in Lua, which wins over the files.
-func (s *settingsExt) readOnly(name string, at registry.At) error {
-	if _, l, err := s.h.Options().Get(name, at); err == nil && l == registry.LayerLua {
-		return fmt.Errorf("%s is set in %s; change it there", name, s.h.Options().Source(name, at))
+// shadow is the layer above scope's that decides name here, and where it was set: a change at scope wouldn't show.
+func (s *settingsExt) shadow(name string, scope int) (registry.Layer, string, bool) {
+	at := s.atFor(scope)
+	_, l, err := s.h.Options().Get(name, at)
+	if err != nil || l <= s.layerFor(scope) {
+		return 0, "", false
+	}
+	return l, s.h.Options().Source(name, at), true
+}
+
+// readOnly says why the page can't change name at scope: init.lua sets it, and wins over the user file. The
+// project file and the session come after init.lua, so they can.
+func (s *settingsExt) readOnly(name string, scope int) error {
+	if l, src, ok := s.shadow(name, scope); ok && l == registry.LayerLua {
+		return fmt.Errorf("%s is set in %s, and init.lua wins over settings.toml; change it there, or set it for this project or session", name, src)
 	}
 	return nil
 }
@@ -391,7 +403,7 @@ func (s *settingsExt) set(name string, v any, scope int) error {
 	if !ok {
 		return fmt.Errorf("no option %q", name)
 	}
-	if err := s.readOnly(sp.Name, s.atFor(scope)); err != nil {
+	if err := s.readOnly(sp.Name, scope); err != nil {
 		return err
 	}
 	if f, ok := v.(float64); ok && sp.Type == registry.Int && f == float64(int(f)) {
@@ -750,7 +762,8 @@ func (s *settingsExt) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec,
 	_, setHere := o.Lookup(sp.Name, s.layerFor(s.scope), at)
 	lua := l == registry.LayerLua
 	canScope := sp.Scopes&[...]registry.Scope{registry.ScopeUser, registry.ScopeProject, registry.ScopeSession}[s.scope] != 0
-	disabled := lua || !canScope
+	disabled := s.readOnly(sp.Name, s.scope) != nil || !canScope
+	shadowL, shadowSrc, shadowed := s.shadow(sp.Name, s.scope)
 	c.Row(sp.Name, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(0, 10), Gap: 16, Cross: ui.Center, Help: "shell/settings#rows"}, func(c *ui.Ctx) {
 		mark := render.Color{}
 		if l != registry.LayerDefault {
@@ -771,16 +784,49 @@ func (s *settingsExt) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec,
 			} else if sp.Help != "" {
 				widget.Wrap(c, "h", sp.Help, 560, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(theme.FgFaint)})
 			}
+			if shadowed {
+				s.shadowNote(c, th, shadowL, shadowSrc)
+			}
 		})
 		srcTok := tSetSource
 		if lua {
 			srcTok = tSetLua
 		}
 		c.Text("src", s.sourceLabel(sp.Name, l, at), monoAt(th, 10.5, srcTok))
-		c.Box("ctl", ui.Style{W: ui.Px(260), Main: ui.End}, func(c *ui.Ctx) { s.control(c, th, sp, v, disabled) })
+		fade := float32(0)
+		if disabled {
+			fade = .55
+		}
+		c.Box("ctl", ui.Style{W: ui.Px(260), Main: ui.End, Fade: fade}, func(c *ui.Ctx) { s.control(c, th, sp, v, disabled) })
 		if widget.Button(c, "reset", "↺", widget.ButtonOpts{Ghost: true, Disabled: !setHere || disabled, Help: "shell/settings#reset"}) {
 			s.fail(s.reset(sp.Name, s.scope))
 		}
+	})
+}
+
+// shadowNote says what decides a row's value over the layer the page edits: init.lua, with a link to the line, or
+// a later layer.
+func (s *settingsExt) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer, src string) {
+	c.Row("shadow", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+		if l != registry.LayerLua {
+			c.Text("t", "overridden here by "+strings.TrimSuffix(s.sourceLabel("", l, registry.At{})+" · "+src, " · "), monoAt(th, 10.5, theme.FgFaint))
+			return
+		}
+		c.Text("t", "init.lua wins over settings.toml", monoAt(th, 10.5, tSetLua))
+		file, line := script.SplitLoc(src)
+		if line == 0 {
+			return
+		}
+		if !filepath.IsAbs(file) {
+			file = filepath.Join(s.sh.cfg.ConfigDir, file)
+		}
+		id := c.Next("open")
+		if c.Interaction(id).Clicked {
+			s.fail(s.h.Run(context.Background(), "editor.open", registry.Args{"path": file, "line": line}))
+		}
+		c.Row("open", ui.Style{Interactive: true, Cursor: render.CursorPointer, Role: ui.RoleButton, Label: "Open " + src, Help: "shell/settings#rows"}, func(c *ui.Ctx) {
+			c.Text("t", "Open "+src, monoAt(th, 10.5, theme.Accent))
+		})
 	})
 }
 
