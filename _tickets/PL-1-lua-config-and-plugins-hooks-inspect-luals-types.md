@@ -29,6 +29,11 @@ depends_on: [FW-3]
 
 the `scripting.md` sample `init.lua` runs as written
 
+## From SH-13
+
+- Hooks run under `registry.Call`, and a panicking hook calls `TurnOff(registry.KindHook, …)` so it becomes an error
+  notice with "Turn back on", as commands and views already do (`errors.md`). The SH-13 "done when" for hooks lands here.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

@@ -18,22 +18,31 @@ import (
 var version = "dev"
 
 func main() {
-	if len(os.Args) < 2 || os.Args[1] == "app" {
-		runApp()
+	args := os.Args[1:]
+	if len(args) > 0 && args[0] == "app" {
+		args = args[1:]
+	}
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		runApp(args)
 		return
 	}
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(run(args, os.Stdout, os.Stderr))
 }
 
 // runApp opens the app's window. Gio's event loop needs the main goroutine, so the app runs on another.
-func runApp() {
+func runApp(args []string) {
+	cfg, err := app.ConfigFromFlags(args, version, os.Stderr)
+	if err != nil {
+		os.Exit(2)
+	}
 	be, err := gio.New()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel:", err)
 		os.Exit(1)
 	}
 	go func() {
-		if err := app.Run(context.Background(), be, app.Config{}); err != nil {
+		defer cfg.Logs.Close()
+		if err := app.Run(context.Background(), be, cfg); err != nil {
 			fmt.Fprintln(os.Stderr, "oriel:", err)
 			os.Exit(1)
 		}

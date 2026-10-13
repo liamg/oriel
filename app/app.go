@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -25,15 +25,24 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// RootView is the view that fills the window. Override it to replace the whole screen.
-const RootView = "app.root"
+// The views the window is made of. Each is an ordinary view: override one to replace that part of the screen.
+const (
+	RootView          = "app.root"          // fills the window
+	StatusLineView    = "app.statusline"    // along the bottom
+	NotificationsView = "app.notifications" // toasts, floating over everything
+	ModalView         = "app.modal"         // when Oriel can't go on without an answer
+)
 
 type Config struct {
 	Store      core.Store        // the materialised state the worker feeds; in-memory if nil
 	Registry   registry.Registry // a fresh one if nil
 	Extensions []ext.Extension   // activated in order, after the built-ins
-	Log        *slog.Logger
-	ConfigDir  string // ~/.config/oriel unless set; user themes live in its themes/
+	Logs       *Logs             // where log records go; a ring in memory if nil
+	ConfigDir  string            // ~/.config/oriel unless set; user themes live in its themes/
+	CrashDir   string            // crash reports are written to and offered from here; none if ""
+	Version    string
+	Desktop    Desktop // the clipboard and the browser; the window's, or the OS's, if nil
+	Debug      bool    // oriel --debug: the frame-time overlay
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -55,12 +64,26 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	if cfg.Registry == nil {
 		cfg.Registry = registry.New()
 	}
-	if cfg.Log == nil {
-		cfg.Log = slog.New(slog.NewTextHandler(io.Discard, nil))
+	if cfg.Logs == nil {
+		cfg.Logs = NewLogs(LogOpts{})
 	}
 	if cfg.ConfigDir == "" {
 		cfg.ConfigDir = DefaultConfigDir()
 	}
+	if cfg.Version == "" {
+		cfg.Version = "dev"
+	}
+	log := cfg.Logs.Logger("core")
+	events := newEventTail(500)
+	defer cfg.Store.Subscribe(core.Filter{}, events.add)()
+	defer cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })()
+	defer cfg.Registry.OnFault(func(f registry.Fault) { cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs)}) }).Dispose()
+	sh := &shell{cfg: cfg, events: events}
+	defer func() {
+		if v := recover(); v != nil {
+			err = sh.crashed(v, debug.Stack())
+		}
+	}()
 	var active []ext.Extension
 	defer func() {
 		for _, e := range slices.Backward(active) {
@@ -68,14 +91,15 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		}
 	}()
 	activate := func(e ext.Extension, source string) error {
-		h := &host{Registry: registry.WithSource(cfg.Registry, source), store: cfg.Store, log: cfg.Log.With("ext", e.Manifest().ID)}
+		h := &host{Registry: registry.WithSource(cfg.Registry, source), store: cfg.Store, source: source, logs: cfg.Logs,
+			log: cfg.Logs.Logger(source)}
 		if err := e.Activate(ctx, h); err != nil {
 			return fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
 		}
 		active = append(active, e)
 		return nil
 	}
-	for _, e := range builtins(cfg) {
+	for _, e := range builtins(sh) {
 		if err := activate(e, "builtin:"+e.Manifest().ID); err != nil {
 			return err
 		}
@@ -91,6 +115,10 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		return err
 	}
 	defer w.Close()
+	sh.desktop = cfg.Desktop
+	if sh.desktop == nil {
+		sh.desktop = windowDesktop(w)
+	}
 
 	dirty := make(chan struct{}, 1)
 	poke := func() {
@@ -101,8 +129,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	cancel := cfg.Store.Subscribe(core.Filter{}, func(core.Event) { poke() })
 	defer cancel()
+	cfg.Logs.Ring.OnWrite(poke)
 
-	l := &loop{reg: cfg.Registry, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: cfg.Log}
+	l := &loop{debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
 	l.ui.Title = "Oriel"
 	l.themeDirty.Store(true)
 	retheme := func() { l.themeDirty.Store(true); poke() }
@@ -156,23 +185,39 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 
 type host struct {
 	registry.Registry
-	store core.Store
-	log   *slog.Logger
+	store  core.Store
+	source string
+	logs   *Logs
+	log    *slog.Logger
 }
 
 func (h *host) Session(id core.SessionID) (core.Session, bool) { return h.store.Session(id) }
 func (h *host) Sessions() []core.Session                       { return h.store.Sessions() }
 func (h *host) Log() *slog.Logger                              { return h.log }
+func (h *host) State() core.State                              { return h.store.State() }
+
+func (h *host) Notify(n core.Notice) {
+	if n.Source == "" {
+		n.Source = h.source
+	}
+	if err := h.store.Apply(core.Notified{Notice: redactNotice(n, h.logs.Redact)}); err != nil {
+		h.log.Error("notify", "id", n.ID, "err", err)
+	}
+}
 
 type loop struct {
 	themeDirty atomic.Bool
 	theme      *theme.Resolved
 
-	reg  registry.Registry
-	keys *registry.Resolver
-	win  render.Window
-	ui   *ui.UI
-	log  *slog.Logger
+	debug     bool
+	frameTime time.Duration // the last frame's build and record, for the debug overlay
+
+	reg   registry.Registry
+	store core.Store
+	keys  *registry.Resolver
+	win   render.Window
+	ui    *ui.UI
+	log   *slog.Logger
 }
 
 // loadTheme resolves the theme ui.theme names, in ui.variant. If it doesn't resolve, the theme already
@@ -254,7 +299,9 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 			continue
 		}
 		if err := l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args); err != nil {
-			l.log.Error("command failed", "command", a.Keymap.Command, "err", err)
+			if _, ok := err.(*registry.Panic); !ok {
+				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err)})
+			}
 		}
 	}
 }
@@ -272,15 +319,43 @@ func (l *loop) draw() error {
 	defer func() { l.win.SetCursor(l.ui.Cursor()) }()
 	return l.win.Frame(func(f render.Frame) {
 		f.Rect(render.Rect{Max: size}, render.Style{Fill: l.theme.C(theme.BgBase)})
+		start := time.Now()
 		l.ui.Frame(f, size, func(c *ui.Ctx) {
-			v, ok := l.reg.ViewByID(RootView)
-			if !ok {
-				return
+			buildWindow(c, l.reg, size)
+			if l.debug {
+				frameOverlay(c, l.frameTime)
 			}
-			c.Box(RootView, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(16)}, func(c *ui.Ctx) {
-				c.Node(v.Build(registry.ViewCtx{Width: size.X, Height: size.Y}))
-			})
 		})
+		l.frameTime = time.Since(start)
+	})
+}
+
+// buildWindow is the window: the root view with the status line under it, and the notifications and modal
+// over both.
+func buildWindow(c *ui.Ctx, reg registry.Registry, size render.Point) {
+	vc := registry.ViewCtx{Width: size.X, Height: size.Y}
+	c.Column("shell", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+		if v, ok := reg.ViewByID(RootView); ok {
+			c.Box(RootView, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(16)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
+		}
+		if v, ok := reg.ViewByID(StatusLineView); ok {
+			c.Box(StatusLineView, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
+		}
+	})
+	for _, id := range []string{NotificationsView, ModalView} {
+		if v, ok := reg.ViewByID(id); ok {
+			c.Box(id, ui.Style{W: ui.Px(0), H: ui.Px(0)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) }) // its content floats
+		}
+	}
+}
+
+// frameOverlay is --debug's frame time, at the bottom right.
+func frameOverlay(c *ui.Ctx, d time.Duration) {
+	at := render.Point{X: c.Size().X - 8, Y: c.Size().Y - 30}
+	c.Box("frametime", ui.Style{Pad: ui.PadXY(6, 2), Radius: 4, Fill: c.Theme().C(theme.BgOverlay), Z: 2000,
+		Float: &ui.Float{Point: &at, Self: render.Point{X: 1, Y: 1}}}, func(c *ui.Ctx) {
+		c.Text(nil, fmt.Sprintf("frame %.2f ms", float64(d.Microseconds())/1000), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10},
+			Color: c.Theme().C(theme.Brand)})
 	})
 }
 

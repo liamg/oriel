@@ -20,8 +20,12 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// counter is a plugin built only on the public API: a command, a keymap and a view.
-type counter struct{ n int }
+// counter is a plugin built only on the public API: a command, a keymap and a view. Its view fills the
+// window, or with tab set, opens as a tab in the layout.
+type counter struct {
+	n   int
+	tab bool
+}
 
 func (c *counter) Manifest() ext.Manifest { return ext.Manifest{ID: "test.counter"} }
 
@@ -40,13 +44,20 @@ func (c *counter) Activate(_ context.Context, h ext.Host) error {
 	if err := h.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 50*time.Millisecond); err != nil {
 		return err
 	}
-	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	view := app.RootView
+	if c.tab {
+		view = "counter"
+	}
+	h.View(view, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		rows := []ui.Node{ui.TextNode(fmt.Sprintf("count %d", c.n))}
 		for _, s := range h.Sessions() {
 			rows = append(rows, ui.TextNode(fmt.Sprintf("%s %s", s.ID(), s.Status())))
 		}
 		return ui.ColumnNode(rows...)
 	}))
+	if c.tab {
+		return h.Run(context.Background(), "view.open", registry.Args{"id": view})
+	}
 	return nil
 }
 

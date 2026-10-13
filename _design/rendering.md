@@ -270,7 +270,7 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool // dr
   window edge for a dock that's closed) with an accent fill and glow that glide between targets on springs.
 - `⌃W h/j/k/l` goes to the nearest pane in that direction by last frame's rects; a tie goes back to where focus came
   from, as vim's window moves feel.
-- The app's built-in `layout` extension owns the root and registers `view.open {id, place, edge, side}`,
+- The app's built-in `layout` extension owns the root and registers `view.open {id, place, edge, side, size}` (`size` is the height or width a closed dock opens at),
   `view.close`, `layout.move`, `layout.zoom`, `layout.focus {dir}`, `layout.dock {edge}`, `layout.equalize`,
   `layout.save/restore {name}` and `layout.menu`, with the ⌃W keys, `⌃J` and ``⌃` `` bound in `global`. Saved layouts
   are in memory until sessions persist them (SE-2).

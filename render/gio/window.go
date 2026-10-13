@@ -1,10 +1,13 @@
 package gio
 
 import (
+	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	"gioui.org/app"
+	"gioui.org/io/clipboard"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -88,6 +91,15 @@ type Window struct {
 	scale  atomic.Value // float32
 	size   atomic.Value // render.Point
 	cursor atomic.Uint32
+	clip   atomic.Pointer[string] // text waiting to go on the clipboard
+}
+
+var _ render.Clipboard = (*Window)(nil)
+
+// SetClipboard puts text on the system clipboard on the next frame.
+func (w *Window) SetClipboard(text string) {
+	w.clip.Store(&text)
+	w.win.Invalidate()
 }
 
 var cursors = map[render.Cursor]pointer.Cursor{
@@ -160,6 +172,9 @@ func (w *Window) loop() {
 			cursors[render.Cursor(w.cursor.Load())].Add(gtx.Ops)
 			area.Pop()
 			gtx.Execute(key.FocusCmd{Tag: tag})
+			if t := w.clip.Swap(nil); t != nil {
+				gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(*t))})
+			}
 			for {
 				ev, ok := gtx.Event(
 					key.FocusFilter{Target: tag},

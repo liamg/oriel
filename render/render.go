@@ -62,6 +62,11 @@ type Window interface {
 	Close()
 }
 
+// Clipboard is a window that can put text on the system clipboard.
+type Clipboard interface {
+	SetClipboard(text string)
+}
+
 // Frame is one frame's drawing. Rects and fills snap to device pixels; paths and lines don't,
 // so a 0.5 px hairline stays 0.5 px.
 type Frame interface {

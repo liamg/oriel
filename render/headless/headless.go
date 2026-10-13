@@ -80,9 +80,26 @@ type Window struct {
 
 	access  map[uint64]*render.AccessNode
 	actions chan render.AccessAction
+	clip    string
 }
 
-var _ render.Accessible = (*Window)(nil)
+var (
+	_ render.Accessible = (*Window)(nil)
+	_ render.Clipboard  = (*Window)(nil)
+)
+
+func (w *Window) SetClipboard(text string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.clip = text
+}
+
+// Clipboard is what was last put on the clipboard.
+func (w *Window) Clipboard() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.clip
+}
 
 // UpdateAccess applies an accessibility update, as a platform bridge would.
 func (w *Window) UpdateAccess(u render.AccessUpdate) {

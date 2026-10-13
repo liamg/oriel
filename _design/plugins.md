@@ -163,9 +163,17 @@ type Registry interface {
     Commands() []Command                          // what :Commands lists, with sources
     Keymaps() []Keymap                            // what :Keys lists, with sources
     Lookup(modes, keys []string) (exact *Keymap, more bool) // modes most specific first: a panel's, then "n"
-    ViewByID(id string) (View, bool)
+    ViewByID(id string) (View, bool)              // the view under a guard: a panic turns it off (errors.md)
     Options() Options                             // values by layer: settings.md
+
+    OnFault(fn func(Fault)) Disposable            // a contribution turned off: it panicked, or kept failing
+    TurnOff(kind, id string, err error)           // kind: "command", "view", "hook"
+    TurnOn(kind, id string)                       // "Turn back on"
+    TurnedOff() []Off                             // what :Hooks and friends show as off, with the error
 }
+
+// Every call into a contribution runs under registry.Call, which turns a panic into a *registry.Panic with its
+// Go stack. ui.Ctx.Guard does the same for a view's Func node while it builds.
 
 // Each extension registers through registry.WithSource(r, id), which stamps Source on what it registers:
 // "builtin:introspect", "init.lua:14", a plugin's id.
@@ -221,9 +229,18 @@ type Host interface {
     Editor() edit.Editor                          // focused window
     Secrets() Secrets                             // only what the manifest declares
     Net() *http.Client                            // egress filtered to declared hosts
-    Log() *slog.Logger
+    Log() *slog.Logger                            // redacted, with the extension as its source
+    Notify(n core.Notice)                         // the one path every notice takes (errors.md)
+    State() core.State                            // a copy: the notification history, focus, sessions
 }
+
+// core.Notice: ID ("lsp.crashed"), Severity (info, warning, error, question), Source (defaults to the
+// extension), Session ("" for Oriel's log), Title, Text, Detail (a trace, stderr), Location (file:line),
+// Actions (each a command with args), Time, and Key (answers a key just typed, so it goes sooner).
 ```
+
+- The window is made of views like any other, each replaceable by registering the same id: `app.root`,
+  `app.statusline`, `app.notifications` (toasts) and `app.modal`. The log panel is `log`, and `:Events` is `events`.
 
 - Keys resolve like vim's mappings (`registry.Resolver`): an ambiguous prefix waits up to `keymap.timeoutlen`
   (default 1 s, off with `keymap.timeout = false`), then the longest complete mapping runs, or the first key passes on

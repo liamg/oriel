@@ -28,6 +28,10 @@ depends_on: [PL-1]
 
 the capability guard rejects undeclared calls; Landlock/sandbox-exec profiles applied
 
+## From SH-13
+
+- Capture the child's stderr with `logs.Lines` (a `slog` source per server or plugin), so it shows in the log panel (`errors.md`).
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

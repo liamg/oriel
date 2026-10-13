@@ -14,8 +14,8 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-func builtins(cfg Config) []ext.Extension {
-	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, &layoutExt{}, &introspect{}}
+func builtins(sh *shell) []ext.Extension {
+	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, &layoutExt{}, &introspect{}, &notices{sh: sh}}
 }
 
 // disposer is the usual way for an extension to undo what it registered.
@@ -75,8 +75,12 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			if place == "" {
 				place = layout.Tab
 			}
+			size, _ := a["size"].(float64)
+			if n, ok := a["size"].(int); ok {
+				size = float64(n)
+			}
 			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title")}, place,
-				layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side"))})
+				layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size)})
 		}},
 		{ID: "view.close", Title: "Close the focused view", Run: func(registry.Ctx, registry.Args) error {
 			v, err := focused()

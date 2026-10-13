@@ -32,6 +32,13 @@ type Registry interface {
 	ViewByID(id string) (View, bool)
 	Themes() []theme.Source // in registration order; a later theme with the same name wins
 	Options() Options
+
+	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
+	OnFault(fn func(Fault)) Disposable
+	// TurnOff turns a contribution off with the error that caused it; TurnOn turns it back on.
+	TurnOff(kind, id string, err error)
+	TurnOn(kind, id string)
+	TurnedOff() []Off // sorted by kind, then id
 }
 
 type Disposable interface{ Dispose() }
@@ -122,6 +129,7 @@ type reg struct {
 	views    stacks[string, View]
 	themes   []entry[theme.Source]
 	options  *options
+	faults   faults
 }
 
 func New() Registry {
@@ -247,7 +255,14 @@ func (r *reg) Run(ctx Ctx, id string, args Args) error {
 	if c.Run == nil {
 		return fmt.Errorf("command %q has no Run", id)
 	}
-	return c.Run(ctx, args)
+	if err := r.faults.isOff(KindCommand, id); err != nil {
+		return fmt.Errorf("command %q is turned off: %w", id, err)
+	}
+	err := Call(func() error { return c.Run(ctx, args) })
+	if p, ok := err.(*Panic); ok {
+		r.faults.fault(Fault{Kind: KindCommand, ID: id, Source: c.Source, Err: p})
+	}
+	return err
 }
 
 func (r *reg) Commands() []Command {
@@ -296,10 +311,15 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	return exact, more
 }
 
+// ViewByID returns the view under a guard: a panic while it builds turns it off instead of escaping.
 func (r *reg) ViewByID(id string) (View, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.views.top(id)
+	v, ok := r.views.top(id)
+	if !ok {
+		return nil, false
+	}
+	return guardedView{r, id, v}, true
 }
 
 func (r *reg) Options() Options { return r.options }

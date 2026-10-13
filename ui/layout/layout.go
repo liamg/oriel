@@ -110,6 +110,7 @@ type Opts struct {
 	Side   Side        `json:"side,omitempty"`
 	Beside *ViewRef    `json:"beside,omitempty"`
 	Rect   render.Rect `json:"rect,omitzero"`
+	Size   float32     `json:"size,omitempty"` // a closed dock opens at this size
 }
 
 // Open puts v at p and focuses it. A view already open is moved instead.
@@ -126,6 +127,9 @@ func (r *Root) Open(v ViewRef, p Placement, o Opts) error {
 		d, ok := r.Docks[edge]
 		if !ok {
 			return fmt.Errorf("no dock on edge %q", edge)
+		}
+		if !d.Open && o.Size > 0 {
+			d.Size = o.Size
 		}
 		d.Leaf.add(v)
 		d.Open = true

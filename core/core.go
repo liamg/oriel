@@ -40,6 +40,7 @@ type Session interface {
 	ID() SessionID
 	Kind() Kind
 	Status() Status
+	Unseen() int // errors since it last had focus: its tab's error mark
 }
 
 // Event is something that happened. Scope is the session it belongs to, or "" for app-wide events.

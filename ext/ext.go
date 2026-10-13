@@ -25,4 +25,8 @@ type Host interface {
 	Session(id core.SessionID) (core.Session, bool)
 	Sessions() []core.Session
 	Log() *slog.Logger
+	// Notify tells the user something, through the one path every notice takes (errors.md). Source defaults to
+	// the extension's id and Time to now; the text is redacted before it's kept.
+	Notify(n core.Notice)
+	State() core.State // a copy: notification history, focus, sessions
 }

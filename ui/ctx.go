@@ -2,6 +2,7 @@ package ui
 
 import (
 	"math"
+	"runtime/debug"
 	"time"
 
 	"github.com/liamg/oriel/render"
@@ -44,6 +45,29 @@ func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID {
 		body(&Ctx{u: c.u, e: e})
 	}
 	return e.id
+}
+
+// Guard adds a box like Box, but a panic in body doesn't escape: what body built is dropped, and fallback
+// builds the box instead, given the panic's value and stack.
+func (c *Ctx) Guard(key any, st Style, body func(c *Ctx), fallback func(c *Ctx, v any, stack []byte)) ID {
+	e := c.u.add(c.e, key, kBox)
+	e.style = st
+	if v, stack := try(func() { body(&Ctx{u: c.u, e: e}) }); stack != nil {
+		e.kids, e.keys = nil, nil
+		fallback(&Ctx{u: c.u, e: e}, v, stack)
+	}
+	return e.id
+}
+
+// try runs fn, and returns what it panicked with and where; stack is nil when it didn't.
+func try(fn func()) (v any, stack []byte) {
+	defer func() {
+		if v = recover(); v != nil {
+			stack = debug.Stack()
+		}
+	}()
+	fn()
+	return nil, nil
 }
 
 func (c *Ctx) Row(key any, st Style, body func(c *Ctx)) ID {
