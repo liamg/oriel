@@ -120,4 +120,10 @@ func TestThemePickerSnapshot(t *testing.T) {
 	}
 	s.ui.SetTheme(r)
 	s.golden("theme-picker")
+	text := s.frameText()
+	for _, want := range []string{"sample.go", "PriceFor", "bad quantity", "accent", "error"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the preview lacks %q", want)
+		}
+	}
 }

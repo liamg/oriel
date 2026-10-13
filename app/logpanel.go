@@ -514,8 +514,9 @@ type sourceFile struct {
 	first   int // the line number of lines[0]
 	spans   [][]span
 	modTime time.Time
-	mark    bool   // the failing line, marked
-	title   string // the path its header shows; the file's own, home as ~, if ""
+	mark    bool            // the failing line, marked
+	title   string          // the path its header shows; the file's own, home as ~, if ""
+	theme   *theme.Resolved // drawn in this, not the window's: a theme's preview
 }
 
 type span struct {
@@ -607,6 +608,9 @@ func splitSpans(ln string, off int, hl []syntax.Span) []span {
 
 func (f *sourceFile) build(c *ui.Ctx, n *core.Notification) {
 	th := c.Theme()
+	if f.theme != nil {
+		th = f.theme
+	}
 	home, _ := os.UserHomeDir()
 	shown := f.path
 	if home != "" && strings.HasPrefix(shown, home+string(filepath.Separator)) {

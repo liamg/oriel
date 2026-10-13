@@ -317,26 +317,48 @@ func themeSwatches(h ext.Host, name string) ui.Node {
 	return &ui.Func{Key: "swatches", Fn: func(c *ui.Ctx) {
 		th := c.Theme()
 		mono := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgMuted)}
-		c.Column("swatches", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+		c.Column("swatches", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 			c.Text("name", strings.ToUpper(name)+" · "+string(variant), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.FgFaint)})
 			if err != nil {
 				c.Text("err", err.Error(), ui.TextStyle{Font: mono.Font, Color: th.C(theme.Error)})
 				return
 			}
-			for i, sw := range []struct {
+			sample := strings.TrimRight(themeSample, "\n")
+			code := highlightAround(h, "sample.go", []byte(sample), 1, 0, strings.Count(sample, "\n"))
+			code.title, code.theme = "sample.go", r
+			code.build(c, nil)
+			swatches := []struct {
 				tok  theme.TokenID
 				name string
 			}{{theme.BgBase, "bg.base"}, {theme.BgSurface, "bg.surface"}, {theme.BgRaised, "bg.raised"}, {theme.Fg, "fg"},
 				{theme.FgMuted, "fg.muted"}, {theme.Accent, "accent"}, {theme.Brand, "brand"}, {theme.OK, "ok"}, {theme.Warn, "warn"},
-				{theme.Error, "error"}} {
-				c.Row(i, ui.Style{Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Box("sw", ui.Style{W: ui.Px(44), H: ui.Px(18), Radius: 4, Fill: r.C(sw.tok), Stroke: th.C(theme.LineStrong), Border: 1}, nil)
-					c.Text("n", sw.name, mono)
-				})
-			}
+				{theme.Error, "error"}}
+			c.Row("grid", ui.Style{W: ui.Flex(1), Gap: 24}, func(c *ui.Ctx) {
+				for col := range 2 {
+					c.Column(col, ui.Style{Gap: 8}, func(c *ui.Ctx) {
+						for i, sw := range swatches[col*5 : col*5+5] {
+							c.Row(i, ui.Style{Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
+								c.Box("sw", ui.Style{W: ui.Px(44), H: ui.Px(18), Radius: 4, Fill: r.C(sw.tok), Stroke: th.C(theme.LineStrong), Border: 1}, nil)
+								c.Text("n", sw.name, mono)
+							})
+						}
+					})
+				}
+			})
 		})
 	}}
 }
+
+// themeSample is the code a theme's preview highlights: keywords, types, strings, numbers, comments and calls.
+const themeSample = `// PriceFor is a tier's price, in pence.
+func PriceFor(t Tier, qty int) (int, error) {
+	if qty <= 0 {
+		return 0, fmt.Errorf("bad quantity %d", qty)
+	}
+	total := t.Pence * qty
+	return total * 9 / 10, nil // 10% off
+}
+`
 
 // themeNames are the registered themes' names, sorted.
 func themeNames(h registry.Registry) []string {
