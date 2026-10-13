@@ -21,6 +21,13 @@ depends_on: [LS-1]
 
 ![09-lsp](../_design/mockups/09-lsp.png)
 
+## Notes
+
+- We might want to use [owenrumney/go-lsp](https://github.com/owenrumney/go-lsp) for the LSP 3.17 protocol types (its
+  `lsp` package, stdlib only). It is a server framework, and its JSON-RPC layer is `internal/` and server-side. A client
+  is being added upstream and may have landed by now: check before writing our own client transport. A new
+  dependency: ask first (`_design/deps.md`).
+
 ## Done when
 
 the same
