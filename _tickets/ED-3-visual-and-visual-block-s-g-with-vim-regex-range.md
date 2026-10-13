@@ -2,7 +2,7 @@
 id: ED-3
 title: "Visual and visual-block, :s/:g with vim regex, ranges"
 phase: P2
-status: review
+status: done
 area: Editor
 module: vim
 depends_on: [ED-2]

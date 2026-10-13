@@ -2,7 +2,7 @@
 id: ED-2
 title: "Vim engine: motions, operators, text objects, registers, marks, dot, counts"
 phase: P2
-status: review
+status: done
 area: Editor
 module: vim
 depends_on: [ED-1, P0-3]

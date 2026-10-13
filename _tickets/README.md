@@ -12,19 +12,24 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 
 ## Ready now (no unmet dependencies)
 
-- [ED-1](ED-1-rope-snapshots-anchors-authorship-undo-tree.md): Rope, snapshots, anchors, authorship, undo tree
+- [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
+- [SH-13](SH-13-errors-notifications-and-the-log-panel.md): Errors, notifications and the log panel: toasts, status line, :Log, slog, panics, crash reports
+- [ED-5](ED-5-plain-engine-and-the-input-engine-interface-emac.md): plain engine and the input.Engine interface (emacs as a plugin)
+- [ED-7](ED-7-decorations-between-lines-threads-explain-cards-.md): Decorations between lines: threads, explain cards, diffs, virtual text
+- [PL-1](PL-1-lua-config-and-plugins-hooks-inspect-luals-types.md): Lua config and plugins, :Hooks, :Inspect, LuaLS types
 - [SH-2](SH-2-session-tabs-with-status-dots-and-1-9.md): Session tabs with status dots and ⌘1–9
 - [SH-4](SH-4-k-omnibox-sessions-commands-files-symbols-ticket.md): ⌘K omnibox (sessions, commands, files, symbols, tickets, PRs) with prefixes
 - [SH-6](SH-6-which-key-popup.md): Which-key popup
-- [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and tats in slots
-- [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key)
 - [SH-10](SH-10-help-everywhere-right-click-help-k-help.md): Help everywhere (right-click → Help, K, ⌘?, :help)
 - [SH-11](SH-11-light-dark-and-theme-editor-theme-pick-mode.md): Light, dark and theme editor (:Theme, pick mode)
 - [SH-12](SH-12-settings-page-settings-sections-search-typed-co.md): Settings page (:Settings, ⌘,) and settings.toml storage
-- [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
-- [PL-1](PL-1-lua-config-and-plugins-hooks-inspect-luals-types.md): Lua config and plugins, :Hooks, :Inspect, LuaLS types
+- [ED-10](ED-10-pcre2-regex-outside-the-vim-engine.md): PCRE2 regex outside the vim engine
+- [ED-11](ED-11-languages-as-plugins-core-grammar-set-and-local-packs.md): Languages as plugins: a language contribution, a core grammar set, local grammar packs
+- [FG-1](FG-1-explorer-scopes-changed-uncommitted-all-with-mar.md): Explorer scopes: Changed, Uncommitted, All, with markers
 - [FG-4](FG-4-terminals-ghostty-vt-under-wazero-our-renderer-p.md): Terminals: Ghostty VT under wazero, our renderer, placements, terminal-normal mode
 - [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md): Worker, wire, sessions, workspaces with multi-repo worktrees
+- [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and tats in slots
+- [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key)
 
 ## Suggested order
 

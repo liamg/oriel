@@ -2,7 +2,7 @@
 id: ED-6
 title: "Tree-sitter highlighting, folds, outline, code units"
 phase: P2
-status: review
+status: done
 area: Editor
 module: syntax
 depends_on: [ED-1]
