@@ -10,6 +10,7 @@ import (
 // names are the registry's names for the engine's options.
 var names = map[string]string{
 	"shiftwidth": "editor.shift_width",
+	"tabstop":    "editor.tab_stop",
 	"expandtab":  "editor.expand_tab",
 	"ignorecase": "editor.ignore_case",
 	"smartcase":  "editor.smart_case",

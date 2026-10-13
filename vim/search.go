@@ -11,6 +11,7 @@ import (
 // Options are the engine's options that change how keys edit text (editor.md: options live at the layer they affect).
 type Options struct {
 	ShiftWidth int
+	TabStop    int
 	ExpandTab  bool
 	IgnoreCase bool
 	SmartCase  bool
@@ -24,7 +25,7 @@ type Options struct {
 
 // DefaultOptions are nvim's defaults.
 func DefaultOptions() Options {
-	return Options{ShiftWidth: 8, WrapScan: true, Magic: true, Report: 2, NrFormats: "bin,hex", Hidden: true, Clipboard: "system"}
+	return Options{ShiftWidth: 8, TabStop: 8, WrapScan: true, Magic: true, Report: 2, NrFormats: "bin,hex", Hidden: true, Clipboard: "system"}
 }
 
 // lastSearch is the last search pattern and offset, shared by /, ?, n, N, * and :s.

@@ -355,7 +355,7 @@ func (e *Engine) makeIndent(width int) string {
 	if e.opts.ExpandTab {
 		return strings.Repeat(" ", width)
 	}
-	return strings.Repeat("\t", width/tabstop) + strings.Repeat(" ", width%tabstop)
+	return strings.Repeat("\t", width/e.opts.TabStop) + strings.Repeat(" ", width%e.opts.TabStop)
 }
 
 func rot13(r rune) rune {
@@ -537,11 +537,11 @@ func (e *Engine) putIndented(v *view, c cmd) {
 		return
 	}
 	lines := strings.Split(strings.TrimSuffix(val.Text, "\n"), "\n")
-	firstInd := indentWidth(lines[0])
+	firstInd := indentWidth(lines[0], e.opts.TabStop)
 	target := v.vcol(e.cur.Line, v.indentEnd(e.cur.Line))
 	for i, l := range lines {
 		trimmed := strings.TrimLeft(l, " \t")
-		w := max(0, indentWidth(l)-firstInd+target)
+		w := max(0, indentWidth(l, e.opts.TabStop)-firstInd+target)
 		if trimmed == "" {
 			lines[i] = ""
 			continue
@@ -555,15 +555,15 @@ func (e *Engine) putIndented(v *view, c cmd) {
 	e.ed.SetRegister(unicode.ToLower(reg), saved)
 }
 
-// indentWidth is how many screen columns a line's leading white space takes.
-func indentWidth(l string) int {
+// indentWidth is how many screen columns a line's leading white space takes, with tabs every ts columns.
+func indentWidth(l string, ts int) int {
 	w := 0
 	for _, r := range l {
 		switch r {
 		case ' ':
 			w++
 		case '\t':
-			w += tabstop - w%tabstop
+			w += ts - w%ts
 		default:
 			return w
 		}

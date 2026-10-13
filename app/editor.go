@@ -36,6 +36,7 @@ type editorExt struct {
 	h      ext.Host
 	ed     *edit.Editor
 	e      *vim.Engine
+	conv   *conventions
 	dir    string
 	docs   map[*text.Buffer]*highlighter
 	rows   map[vim.WindowID]int
@@ -80,6 +81,18 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	for _, d := range vimreg.Register(h) {
 		x.add(d)
 	}
+	for _, s := range conventionOptions() {
+		x.add(h.Option(s))
+	}
+	x.conv = newConventions(h, x.dir, func() []string {
+		var out []string
+		for _, b := range x.e.BufferList() {
+			if b.File {
+				out = append(out, b.Name)
+			}
+		}
+		return out
+	})
 	x.sh.editorAt = func(at registry.At) registry.At {
 		at.Buffer, at.Window = x.e.Name(), strconv.Itoa(int(x.e.WindowID()))
 		return at
@@ -226,6 +239,7 @@ func (x *editorExt) open(ctx registry.Ctx, path, place string) error {
 		if p, ok := x.e.Pane(id); ok && p.Name() == name && root.Find(windowRef(id)) != nil && place != "split" && place != "vsplit" {
 			root.Show(windowRef(id))
 			x.e.EnterWindow(id)
+			x.conv.refresh()
 			return nil
 		}
 	}
@@ -239,6 +253,7 @@ func (x *editorExt) open(ctx registry.Ctx, path, place string) error {
 			return err
 		}
 	}
+	x.conv.refresh()
 	args := registry.Args{"id": EditorView, "instance": strconv.Itoa(int(id)), "place": "tab"}
 	switch place {
 	case "split":
@@ -276,7 +291,17 @@ type editorHost struct {
 	disk vim.Disk
 }
 
-func (h *editorHost) ReadFile(name string) ([]byte, *edit.File, error) { return h.disk.ReadFile(name) }
+func (h *editorHost) ReadFile(name string) ([]byte, *edit.File, error) {
+	b, f, err := h.disk.ReadFile(name)
+	if err == nil && f.ReadOnly == "" && !f.New {
+		f.ReadOnly = h.x.conv.readOnly(f.Path)
+	}
+	return b, f, err
+}
+
+func (h *editorHost) BeforeWrite(name string, buf *text.Buffer, f *edit.File) {
+	h.x.conv.beforeWrite(name, buf, f)
+}
 func (h *editorHost) WriteFile(f *edit.File, t []byte, noLines bool) error {
 	return h.disk.WriteFile(f, t, noLines)
 }

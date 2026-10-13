@@ -95,7 +95,8 @@ type grep struct {
 
 const maxGrep = 1000
 
-// grepSource searches the work dir's files as you type: the query is a regular expression (a literal when it
+// grepSource searches the work dir's files as you type, leaving out generated and vendored ones unless the query
+// starts "@all ": the query is a regular expression (a literal when it
 // isn't one), and the search runs off the UI's goroutine, its results showing when it's done.
 func (x *editorExt) grepSource() registry.PickerSource {
 	g := &grep{}
@@ -118,11 +119,15 @@ func (x *editorExt) grepSource() registry.PickerSource {
 			g.mu.Unlock()
 			return
 		}
-		re, err := regexp.Compile(q)
+		pat, all := strings.CutPrefix(q, "@all ")
+		re, err := regexp.Compile(pat)
 		if err != nil {
-			re = regexp.MustCompile(regexp.QuoteMeta(q))
+			re = regexp.MustCompile(regexp.QuoteMeta(pat))
 		}
 		list := append([]string(nil), files.list()...)
+		if !all {
+			list = x.conv.searchable(list)
+		}
 		go func() {
 			out := searchFiles(ctx, x.dir, list, re)
 			g.mu.Lock()

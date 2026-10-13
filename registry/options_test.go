@@ -33,6 +33,7 @@ func TestOptionScopePrecedence(t *testing.T) {
 		{registry.LayerLua, registry.At{}, "off"},
 		{registry.LayerProject, registry.At{Project: "/src/oriel"}, "absolute"},
 		{registry.LayerSession, registry.At{Session: "s1"}, "relative"},
+		{registry.LayerFile, registry.At{Buffer: "b1"}, "absolute"},
 		{registry.LayerBuffer, registry.At{Buffer: "b1"}, "off"},
 		{registry.LayerWindow, registry.At{Window: "w1"}, "absolute"},
 	}

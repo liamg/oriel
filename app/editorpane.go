@@ -67,6 +67,9 @@ func (x *editorExt) metrics(c *ui.Ctx) paneMetrics {
 // paneView draws window id: its breadcrumb, then its lines from the window's top, and the cursor in the
 // current window. Keys typed at it go to the engine after the keymap registry passes on them.
 func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
+	if x.conv.due() {
+		x.conv.refresh()
+	}
 	m := x.metrics(c)
 	p, ok := x.e.Pane(id)
 	if !ok {
@@ -139,7 +142,7 @@ func (x *editorExt) click(p vim.Pane, r render.Rect, at render.Point, m paneMetr
 	line = min(line, p.Buf().Lines()-1)
 	want := int((at.X - r.Min.X - m.textX + m.charW/2) / m.charW)
 	x.e.EnterWindow(p.ID())
-	x.e.SetCursor(vim.Pos{Line: line, Col: colAtVCol(p.Buf().Line(line), max(want, 0))})
+	x.e.SetCursor(vim.Pos{Line: line, Col: colAtVCol(p.Buf().Line(line), max(want, 0), p.TabStop())})
 }
 
 func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
@@ -223,7 +226,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 				x.foldRow(c, snap, line, foldEnd)
 				return
 			}
-			x.textRow(c, snap, line, hl)
+			x.textRow(c, snap, line, hl, p.TabStop())
 			virtualText(c, th, ds)
 		})
 		spans(c, th, p, line, ds, rowID, gw+4, m)
@@ -234,7 +237,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 }
 
 // textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop.
-func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span) {
+func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int) {
 	th := c.Theme()
 	b := snap.Line(line)
 	start := snap.LineStart(line)
@@ -247,7 +250,7 @@ func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax
 		var out strings.Builder
 		for _, r := range string(s) {
 			if r == '\t' {
-				n := vim.TabStop - vcol%vim.TabStop
+				n := ts - vcol%ts
 				out.WriteString(strings.Repeat(" ", n))
 				vcol += n
 				continue
@@ -388,12 +391,12 @@ func wideRune(r rune) bool {
 }
 
 // colAtVCol is the byte column of the character at screen column want, tabs expanded.
-func colAtVCol(b []byte, want int) int {
+func colAtVCol(b []byte, want, ts int) int {
 	vc := 0
 	for i, r := range string(b) {
 		w := 1
 		if r == '\t' {
-			w = vim.TabStop - vc%vim.TabStop
+			w = ts - vc%ts
 		} else if wideRune(r) {
 			w = 2
 		}

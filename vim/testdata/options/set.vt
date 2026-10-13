@@ -47,3 +47,12 @@ expect:
   a
   |FOO
 mode:   normal
+
+=== :set ts makes an indent of tabs at that width
+ref:    nvim/options.txt *'tabstop'*
+quote:  Number of spaces that a <Tab> in the file counts for.
+given:  |x
+keys:   :set ts=4 sw=8 noet<CR>>>
+expect:
+  |		x
+mode:   normal

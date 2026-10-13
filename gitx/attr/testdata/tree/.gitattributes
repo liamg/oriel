@@ -1,0 +1,16 @@
+# repository attributes
+[attr]generated linguist-generated -diff
+* text=auto
+*.sh eol=lf
+*.bat eol=crlf
+*.png binary
+*.txt text working-tree-encoding=UTF-16LE
+/docs/*.md eol=crlf
+docs/api/** linguist-documentation
+vendor/** linguist-vendored
+**/gen/*.go generated
+"quoted name.txt" -text
+src/ -text
+*.[ch] diff=cpp
+?.go eol=lf
+!negated eol=crlf

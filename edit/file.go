@@ -14,8 +14,9 @@ import (
 // Format is how a file's text is written: with a UTF-8 byte-order mark or not, and lines ending in CRLF or LF
 // ('bomb' and 'fileformat').
 type Format struct {
-	BOM  bool
-	CRLF bool
+	BOM   bool
+	CRLF  bool
+	NoEOL bool // the last line gets no newline ('nofixendofline', EditorConfig's insert_final_newline = false)
 }
 
 // File is a file as it was last read or written, to write it back the same way and to see when it changes on disk.
@@ -93,8 +94,8 @@ func Decode(b []byte) ([]byte, Format) {
 	return b, f
 }
 
-// Encode is text as a file in format f. The last line always gets its newline, as vim's 'fixendofline' does.
-// A buffer with no lines at all (not one empty line) writes none.
+// Encode is text as a file in format f. The last line gets its newline, as vim's 'fixendofline' does, unless f
+// says NoEOL. A buffer with no lines at all (not one empty line) writes none.
 func Encode(text []byte, f Format, noLines bool) []byte {
 	var out bytes.Buffer
 	if f.BOM {
@@ -108,7 +109,9 @@ func Encode(text []byte, f Format, noLines bool) []byte {
 		nl = []byte("\r\n")
 	}
 	out.Write(bytes.ReplaceAll(text, []byte("\n"), nl))
-	out.Write(nl)
+	if !f.NoEOL {
+		out.Write(nl)
+	}
 	return out.Bytes()
 }
 

@@ -755,7 +755,7 @@ func (e *Engine) blockCols(v *view) (int, int) {
 		if n == 0 {
 			return 1
 		}
-		return max(charWidth(r, vc), 1)
+		return max(charWidth(r, vc, v.ts), 1)
 	}
 	ea, ec := va+width(a, va), vc+width(c, vc)
 	return min(va, vc), max(ea, ec)
@@ -768,7 +768,7 @@ func lineSpan(v *view, line, left, right int) (int, int, bool) {
 	start, end := -1, -1
 	for i < len(l) {
 		r, n := utf8.DecodeRune(l[i:])
-		w := charWidth(r, vc)
+		w := charWidth(r, vc, v.ts)
 		if start < 0 && vc+w > left {
 			start = i
 		}
@@ -1002,9 +1002,10 @@ func (e *Engine) makeIndentFrom(start, width int) string {
 	var b strings.Builder
 	col := start
 	end := start + width
-	for (col/tabstop+1)*tabstop <= end {
+	ts := e.opts.TabStop
+	for (col/ts+1)*ts <= end {
 		b.WriteByte('\t')
-		col = (col/tabstop + 1) * tabstop
+		col = (col/ts + 1) * ts
 	}
 	b.WriteString(strings.Repeat(" ", end-col))
 	return b.String()
@@ -1176,7 +1177,7 @@ func (e *Engine) putBlock(v *view, val edit.Register, after, gp bool, count int)
 	col := v.vcol(e.cur.Line, e.cur.Col)
 	if after && v.lineLen(e.cur.Line) > 0 {
 		r, _ := v.char(e.cur)
-		col += charWidth(r, col)
+		col += charWidth(r, col, v.ts)
 	}
 	var rs []text.Replace
 	var tail strings.Builder

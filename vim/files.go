@@ -23,6 +23,12 @@ type Host interface {
 	Command(name, args string, bang bool) bool
 }
 
+// BeforeWriter is a Host that changes a buffer or its file's format just before the buffer is written: trims
+// trailing white space, sets the line endings (vim's BufWritePre).
+type BeforeWriter interface {
+	BeforeWrite(name string, buf *text.Buffer, f *edit.File)
+}
+
 // Disk is the Host for files on this machine, with names relative to Dir, and nothing to quit or show.
 type Disk struct{ Dir string }
 
@@ -176,6 +182,9 @@ func (e *Engine) write(b *buffer, name string, force bool, then func()) error {
 		return errReadOnlyFile.with(name, f.ReadOnly)
 	}
 	do := func() error {
+		if h, ok := e.host.(BeforeWriter); ok {
+			h.BeforeWrite(b.name, b.text, f)
+		}
 		data := b.text.Snapshot().Bytes()
 		isNew := f.New
 		if err := e.host.WriteFile(f, data, b.noLines); err != nil {

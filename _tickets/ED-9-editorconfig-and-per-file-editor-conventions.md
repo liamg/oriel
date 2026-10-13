@@ -2,7 +2,7 @@
 id: ED-9
 title: ".editorconfig and other per-file editor conventions"
 phase: P3
-status: todo
+status: review
 area: Editor
 module: registry, edit
 depends_on: [ED-2, SH-12]
@@ -43,6 +43,14 @@ depends_on: [ED-2, SH-12]
 
 the vendored EditorConfig core test suite passes; `.gitattributes` fixtures match `git check-attr`; a buffer opened under a fixture tree gets each property from the
 right section, visible with its source on the settings page; editing `.editorconfig` re-applies live
+
+## As built
+
+- See settings.md, "As built (ED-9)". Specs vendored: `spec/editorconfig`, `spec/editorconfig-core-test` (BSD) and
+  `spec/git` (gitattributes.txt and gitignore.txt at v2.39.5, GPL-2.0, as test data only).
+- Decided: no other files (`.vscode/settings.json`, formatter configs) for now.
+- Left for their tickets: generated files collapsed in diffs and the review ledger and marked in the explorer
+  (read `files.generated`); a `max_line_length` guide.
 
 ## From SH-12
 

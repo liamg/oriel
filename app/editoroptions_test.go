@@ -29,7 +29,7 @@ func TestSetIsPerBufferAndOnThePage(t *testing.T) {
 	if v, l, _ := s.reg.Options().Get("shiftwidth", s.host.Here()); v != 2 || l != registry.LayerBuffer {
 		t.Errorf("shiftwidth is %v from %v", v, l)
 	}
-	s.run("settings.open", registry.Args{"section": "editor"})
+	s.run("settings.open", registry.Args{"query": "shift_width"})
 	s.frame()
 	s.frame()
 	if text := s.frameText(); !strings.Contains(text, "editor.shift_width") || !strings.Contains(text, "buffer · :set") {

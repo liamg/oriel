@@ -736,7 +736,7 @@ func (s *settingsExt) sourceLabel(name string, l registry.Layer, at registry.At)
 		return "default"
 	case registry.LayerLua:
 		return "set in " + s.h.Options().Source(name, at)
-	case registry.LayerSession, registry.LayerBuffer, registry.LayerWindow:
+	case registry.LayerSession, registry.LayerFile, registry.LayerBuffer, registry.LayerWindow:
 		if src := s.h.Options().Source(name, at); src != "" {
 			return l.String() + " · " + src
 		}

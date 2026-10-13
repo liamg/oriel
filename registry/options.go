@@ -44,11 +44,12 @@ const (
 	LayerLua           // init.lua
 	LayerProject       // <repo>/.oriel/settings.toml
 	LayerSession
+	LayerFile // a file's own conventions: .editorconfig, .gitattributes, a modeline; keyed by buffer
 	LayerBuffer
 	LayerWindow
 )
 
-var layerNames = [...]string{"default", "user", "lua", "project", "session", "buffer", "window"}
+var layerNames = [...]string{"default", "user", "lua", "project", "session", "file", "buffer", "window"}
 
 func (l Layer) String() string { return layerNames[l] }
 
@@ -60,7 +61,7 @@ func (l Layer) scope() Scope {
 		return ScopeProject
 	case LayerSession:
 		return ScopeSession
-	case LayerBuffer:
+	case LayerFile, LayerBuffer:
 		return ScopeBuffer
 	case LayerWindow:
 		return ScopeWindow
@@ -82,7 +83,7 @@ func (a At) key(l Layer) string {
 		return a.Project
 	case LayerSession:
 		return a.Session
-	case LayerBuffer:
+	case LayerFile, LayerBuffer:
 		return a.Buffer
 	case LayerWindow:
 		return a.Window

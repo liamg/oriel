@@ -2,6 +2,7 @@ package vim
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/liamg/oriel/edit"
@@ -49,7 +50,21 @@ func (p Pane) Cursor() Pos {
 func (p Pane) view() *view {
 	v := newView(p.Buf())
 	v.folds = &p.w.fold
+	v.ts = p.TabStop()
 	return v
+}
+
+// TabStop is how many columns a tab takes in the pane's buffer.
+func (p Pane) TabStop() int {
+	if p.Current() || p.e.settings == nil {
+		return p.e.opts.TabStop
+	}
+	if v, ok := p.e.settings.Get("tabstop", p.w.buf.name, strconv.Itoa(p.w.id)); ok {
+		if n, ok := v.(int); ok && n > 0 {
+			return n
+		}
+	}
+	return p.e.opts.TabStop
 }
 
 // Fold is the closed fold starting at line: its last line, or false when line doesn't start one.
@@ -287,8 +302,8 @@ func (e *Engine) Quickfix() (items []QfItem, title string, current int) {
 	return items, l.title, l.idx
 }
 
-// TabStop is how many columns a tab takes, for drawing text as the engine counts columns.
-const TabStop = tabstop
+// TabStop is how many columns a tab takes in the current buffer, for drawing text as the engine counts columns.
+func (e *Engine) TabStop() int { return e.opts.TabStop }
 
 // Editor is the window's editor, for another input engine to edit through.
 func (p Pane) Editor() *edit.Editor { return p.w.ed }

@@ -104,6 +104,8 @@ func (c *Checker) Check(r Ref) error {
 			return c.checkFunc(r, file, heading)
 		case ".vim":
 			return c.checkVimFunc(r, file, heading)
+		case ".rst", ".txt":
+			return c.checkUnderlined(r, file, heading)
 		}
 	}
 	file, anchor, ok := strings.Cut(ref, " ")
@@ -199,6 +201,56 @@ func (c *Checker) checkMarkdown(r Ref, file, heading string) error {
 			}
 		}
 		if r.Quote == "" || containsQuote(strings.Join(lines[i:end], "\n"), r.Quote) {
+			return nil
+		}
+		return fmt.Errorf("%s: quote not found under %q in spec/%s: %q", r, heading, file, r.Quote)
+	}
+	return fmt.Errorf("%s: no heading %q in spec/%s", r, heading, file)
+}
+
+// underline is a reStructuredText or AsciiDoc heading's underline: one punctuation character, repeated.
+func underline(l string) (byte, bool) {
+	l = strings.TrimRight(l, " ")
+	if len(l) < 3 || !strings.ContainsRune("=-~^\"'*+#", rune(l[0])) {
+		return 0, false
+	}
+	return l[0], strings.Count(l, l[:1]) == len(l)
+}
+
+// checkUnderlined finds a heading underlined in reStructuredText or AsciiDoc and checks the quote in its section, up
+// to the next heading as high. A heading's level is the order its underline character first appears in.
+func (c *Checker) checkUnderlined(r Ref, file, heading string) error {
+	lines, err := c.lines(file)
+	if err != nil {
+		return fmt.Errorf("%s: %v", r, err)
+	}
+	levels := map[byte]int{}
+	level := func(i int) int {
+		if i+1 >= len(lines) || strings.TrimSpace(lines[i]) == "" {
+			return 0
+		}
+		ch, ok := underline(lines[i+1])
+		if !ok {
+			return 0
+		}
+		if _, seen := levels[ch]; !seen {
+			levels[ch] = len(levels) + 1
+		}
+		return levels[ch]
+	}
+	clean := func(s string) string { return strings.ReplaceAll(s, "`", "") }
+	for i := range lines {
+		lv := level(i)
+		if lv == 0 || !sameHeading(clean(lines[i]), heading) {
+			continue
+		}
+		end := i + 2
+		for ; end < len(lines); end++ {
+			if l := level(end); l > 0 && l <= lv {
+				break
+			}
+		}
+		if r.Quote == "" || containsQuote(clean(strings.Join(lines[i:end], "\n")), r.Quote) {
 			return nil
 		}
 		return fmt.Errorf("%s: quote not found under %q in spec/%s: %q", r, heading, file, r.Quote)

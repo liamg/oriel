@@ -208,6 +208,7 @@ func (e *Engine) LastNotice() edit.Notice { return e.notice }
 func (e *Engine) view() *view {
 	v := newView(e.ed.Buf())
 	v.folds = &e.window.fold
+	v.ts = e.opts.TabStop
 	return v
 }
 

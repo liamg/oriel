@@ -34,6 +34,9 @@ func OptionDefs() []OptionDef {
 		{Name: "shiftwidth", Short: "sw", Kind: "int", Default: d.ShiftWidth, Scope: BufferOption,
 			Help: "Columns an indent step (>>, <<, ⌃T) takes.",
 			get:  func(o *Options) any { return o.ShiftWidth }, set: func(o *Options, v any) { o.ShiftWidth = v.(int) }},
+		{Name: "tabstop", Short: "ts", Kind: "int", Default: d.TabStop, Scope: BufferOption,
+			Help: "Columns a tab takes.",
+			get:  func(o *Options) any { return o.TabStop }, set: func(o *Options, v any) { o.TabStop = v.(int) }},
 		{Name: "expandtab", Short: "et", Kind: "bool", Default: d.ExpandTab, Scope: BufferOption,
 			Help: "Indent with spaces, not tabs.",
 			get:  func(o *Options) any { return o.ExpandTab }, set: func(o *Options, v any) { o.ExpandTab = v.(bool) }},
@@ -131,6 +134,9 @@ func (e *Engine) setValue(d OptionDef, arg, val string, hasVal, on bool, op byte
 			n = cur - n
 		case '^':
 			n = cur * n
+		}
+		if d.Name == "tabstop" && n <= 0 {
+			return nil, fmt.Errorf("E487: Argument must be positive: %s", arg)
 		}
 		return n, nil
 	case "enum":
