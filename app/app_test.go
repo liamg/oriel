@@ -286,6 +286,26 @@ func TestThemeFileReloadsLive(t *testing.T) {
 	b.close(t)
 }
 
+// ui.variant "system", the default, follows the OS's preference as the window reports it; dark until it does.
+func TestVariantFollowsTheOS(t *testing.T) {
+	b := boot(t)
+	wait := func(want render.Color) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == want }); err != nil {
+			t.Fatalf("background %v, want %v", background(f), want)
+		}
+	}
+	dark, light := render.Color{R: 6, G: 6, B: 6, A: 255}, render.Color{R: 0xfb, G: 0xfa, B: 0xf7, A: 255}
+	wait(dark)
+	b.win.Send(render.AppearanceEvent{Dark: false})
+	wait(light)
+	b.win.Send(render.AppearanceEvent{Dark: true})
+	wait(dark)
+	b.close(t)
+}
+
 func TestBrokenThemeFallsBackToTheBuiltIn(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "themes"), 0o755)

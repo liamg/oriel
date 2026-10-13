@@ -61,6 +61,15 @@ func TestHelpLint(t *testing.T) {
 	s.frame()
 	s.frame()
 	s.lint("help mode")
+	s.help().mode = false
+	s.run("theme.edit", nil)
+	s.frame()
+	s.frame()
+	s.lint("the theme editor")
+	s.run("theme.pick", nil)
+	s.frame()
+	s.frame()
+	s.lint("pick mode")
 }
 
 func TestHelpWays(t *testing.T) {

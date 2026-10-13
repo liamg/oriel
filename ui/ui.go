@@ -8,6 +8,7 @@ package ui
 import (
 	"fmt"
 	"hash/fnv"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -99,6 +100,27 @@ type hit struct {
 func New(sh typeset.Shaper, text TextStyle) *UI {
 	return &UI{sh: sh, text: text, opts: defaultOptions(text), states: map[ID]*state{}, byID: map[ID]*elem{},
 		flags: map[ID]flags{}, springs: map[ID]*spring{}}
+}
+
+// Fork is a copy of u to build and paint a frame with apart, with another theme say, starting from u's state (scroll
+// offsets, widget state, focus) and leaving u as it was. A widget's own state (State[T]) is shared, not copied.
+func (u *UI) Fork() *UI {
+	f := *u
+	f.byID, f.floats, f.hits = map[ID]*elem{}, nil, nil
+	f.states = make(map[ID]*state, len(u.states))
+	for id, st := range u.states {
+		c := *st
+		f.states[id] = &c
+	}
+	f.springs = make(map[ID]*spring, len(u.springs))
+	for id, sp := range u.springs {
+		c := *sp
+		f.springs[id] = &c
+	}
+	f.flags = maps.Clone(u.flags)
+	f.parents = maps.Clone(u.parents)
+	f.in.clicks, f.in.keys, f.in.context, f.in.wheel, f.in.claimed, f.in.help = nil, nil, nil, nil, nil, ""
+	return &f
 }
 
 func (u *UI) Options() Options     { return u.opts }

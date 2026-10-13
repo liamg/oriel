@@ -74,12 +74,18 @@ func TestDisposedKeymapStopsWaiting(t *testing.T) {
 func TestThemes(t *testing.T) {
 	r := registry.New()
 	builtin := theme.Builtins()[0]
+	_, gen0 := r.Themes()
 	d := r.Theme(builtin)
-	if ts := r.Themes(); len(ts) != 1 || ts[0].Name() != builtin.Name() {
+	ts, gen1 := r.Themes()
+	if len(ts) != 1 || ts[0].Name() != builtin.Name() {
 		t.Errorf("themes %v", ts)
 	}
 	d.Dispose()
-	if ts := r.Themes(); len(ts) != 0 {
+	ts, gen2 := r.Themes()
+	if len(ts) != 0 {
 		t.Errorf("a disposed theme is still listed: %v", ts)
+	}
+	if gen0 == gen1 || gen1 == gen2 {
+		t.Errorf("the generation didn't move: %d, %d, %d", gen0, gen1, gen2)
 	}
 }

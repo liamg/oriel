@@ -2,12 +2,14 @@ package ext
 
 import (
 	"context"
+	"image"
 	"log/slog"
 	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/layout"
 )
@@ -40,6 +42,10 @@ type Host interface {
 	Redraw()                                       // asks for a frame; safe from any goroutine
 	Pending() Pending                              // keys typed towards a longer mapping or command, for which-key
 	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
+	CurrentTheme() *theme.Resolved                 // the theme the window is drawn in
+	// Shot is the window as it is now, built and drawn again on the CPU in th (its own theme when nil), in logical
+	// pixels. A probe theme (theme.Probe) makes it a map of which token painted each pixel. Call it on the loop.
+	Shot(th *theme.Resolved) *image.RGBA
 }
 
 // UIView is the window's widget tree as extensions may read it, last frame's.

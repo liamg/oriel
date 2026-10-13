@@ -27,7 +27,7 @@ like this" isn't a source.
 | DAP | the Debug Adapter Protocol spec + JSON schema | commit |
 | terminal | xterm `ctlseqs`, ECMA-48, kitty keyboard and graphics protocol docs, Ghostty's VT docs | commit |
 | text | Unicode UAX #29 (graphemes), #14 (line breaks), #11 (width), plus the UCD data files | Unicode version |
-| colour | CSS Color 4 (OKLCH), APCA | commit |
+| colour | CSS Color 4 (OKLCH), WCAG 2 (contrast ratio) | commit |
 | git | `git-*` man pages for porcelain output we parse | git version |
 
 - `spec/` is data: no code from it is linked. Updating a pin is a PR that re-runs every referencing test.
@@ -136,7 +136,7 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 | `dap` | recorded sessions with real dlv and debugpy, replayed; live runs in CI | DAP spec |
 | `term` | `vttest`/esctest-style scripts: bytes in, expected grid out; every case cites a `ctlseqs` entry | xterm ctlseqs, ECMA-48, kitty docs |
 | `render`, `ui` | the headless backend records display lists, compared as snapshots (`render/snapshot`); `render/raster` draws them on the CPU (sRGB blending, as CSS) into golden PNGs compared by deltaE OK; the fixture is also held against the mockups (FW-8) | the mockups (`ui.md`) as reference |
-| `theme` | token resolution tables; every built-in theme rendered on the fixture workspace; contrast lint | CSS Color 4, APCA |
+| `theme` | token resolution tables; every built-in theme rendered on the fixture workspace; contrast lint | CSS Color 4, WCAG 2 |
 | `agent/*` | the provider conformance suite (start, send, tool call, permission, interrupt, fork, resume) against a **fake `claude`/`codex` binary** that replays recorded hook and transcript traffic; plus a slow live suite run on demand | recorded sessions from real CLIs, re-recorded when versions bump |
 | `wire`, `worker` | in-process worker tests; chaos tests (drop the connection mid-stream, reconnect, compare state) | – |
 | `gitx` | fixture repos built by script; porcelain output parsing | git man pages |

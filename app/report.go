@@ -3,6 +3,8 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/liamg/oriel/theme"
+	"image"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -30,6 +32,8 @@ type shell struct {
 	modes   func() []string
 	// enginePending is the focused editor's pending keys, when the editor is in front.
 	enginePending func() ext.Pending
+	theme         func() *theme.Resolved
+	shot          func(th *theme.Resolved) *image.RGBA
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

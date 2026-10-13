@@ -286,7 +286,41 @@ func (c *Checker) checkHTML(r Ref, file, id string) error {
 		}
 		return fmt.Errorf("%s: quote not found in #%s in spec/%s: %q", r, id, file, r.Quote)
 	}
-	return fmt.Errorf("%s: no heading with id %q in spec/%s", r, id, file)
+	if text, ok := elementText(strings.Join(lines, "\n"), id); ok {
+		if r.Quote == "" || containsQuote(bikeshedText(text), r.Quote) {
+			return nil
+		}
+		return fmt.Errorf("%s: quote not found in #%s in spec/%s: %q", r, id, file, r.Quote)
+	}
+	return fmt.Errorf("%s: no heading or element with id %q in spec/%s", r, id, file)
+}
+
+// elementText is the element with id, to its closing tag; a <dfn>'s runs on through its definition, the <dd> after it.
+func elementText(src, id string) (string, bool) {
+	m := regexp.MustCompile(`<([a-zA-Z][a-zA-Z0-9]*)\b[^>]*\bid=["']` + regexp.QuoteMeta(id) + `["'][^>]*>`).FindStringSubmatchIndex(src)
+	if m == nil {
+		return "", false
+	}
+	tag := strings.ToLower(src[m[2]:m[3]])
+	if tag == "dfn" {
+		if end := strings.Index(src[m[0]:], "</dd>"); end >= 0 {
+			return src[m[0] : m[0]+end], true
+		}
+		return src[m[0]:], true
+	}
+	open := regexp.MustCompile(`(?i)<(/?)` + tag + `\b[^>]*>`)
+	depth := 0
+	for _, t := range open.FindAllStringSubmatchIndex(src[m[0]:], -1) {
+		if t[3] > t[2] {
+			depth--
+		} else {
+			depth++
+		}
+		if depth == 0 {
+			return src[m[0] : m[0]+t[0]], true
+		}
+	}
+	return src[m[0]:], true
 }
 
 var (

@@ -67,7 +67,7 @@ grid = 0
 - **Pick mode**: click anything in the live UI (or `:Inspect` it) to see its token chain:
   `thread.card.bg ← surface.raised ← mix(ink, cyan, 4%)`. Choose which link to override.
 - The colour picker works in OKLCH, with sliders for lightness, chroma and hue and a hex field.
-  - It shows **contrast** against what it sits on (APCA Lc and WCAG ratio), with a warning under the threshold.
+  - It shows **contrast** against what it sits on (the WCAG ratio; see SH-11 below on APCA), with a warning under the threshold.
 - **Edits are overrides**: the editor writes the smallest diff into your theme file. A strip at the
   bottom shows the TOML being written, so you learn the format as you click.
 - **New theme from…** a built-in, the current one, a single accent colour (generates a full palette),
@@ -123,7 +123,7 @@ run = { lua = "init.lua" }                        # optional: dynamic themes
 - Expressions: hex, `rgb()`, `oklch()`, a name, or `mix(a, b, p)` (CSS `color-mix` in OkLCh: shorter hue, premultiplied
   alpha), `lighten(c, p)`, `darken(c, p)` (OkLCh lightness), `alpha(c, p)` and `over(fg, bg)` (sRGB compositing). Out
   of gamut results are mapped as CSS Color 4 does (binary search with local MINDE). Tests cite the vendored spec
-  (`spec/css-color-4`). `contrast()` comes with the theme editor's lint (SH-11), with APCA vendored.
+  (`spec/css-color-4`). A `contrast()` function isn't built yet; the theme editor's lint measures contrast (SH-11).
 - A name in a token's expression is a token unless it's the token's own name (that's the palette colour of that
   name), and falls back to the palette. Cycles and unknown names are errors that name the chain.
 - **Tokens are declared** by whoever paints with them: `theme.Declare("tab.active.edge", "accent")`, in Go or by a
@@ -134,9 +134,41 @@ run = { lua = "init.lua" }                        # optional: dynamic themes
   `fg`. `Chain(name)` gives the editor's pick mode its links, each with the theme that set it.
 - The built-in theme is `oriel`, one file with `[dark]` (base.css) and `[light]` (17-light). Light turns glows off.
   The reference fixture (`render/scenes`) renders in both, each against its mockup within 8/255 and 6.5%.
-- The app takes `ui.theme` (a name) and `ui.variant` (dark or light; following the OS comes with SH-11). User themes
+- The app takes `ui.theme` (a name) and `ui.variant` (system, dark or light). User themes
   are `*.toml` in `~/.config/oriel/themes`, and any plugin can register a `theme.Source`. Files are polled every
   250 ms, so a save shows within that; a theme that fails to resolve leaves the last good one showing and logs why.
+
+## As built (SH-11)
+
+- `:Theme` (or `theme.edit`) opens the editor over the window: tokens on the left (palette, semantic, status,
+  component, syntax; a dot on your overrides; a filter), the fixture workspace in the middle (or split against the
+  theme yours extends), and the picked token on the right: its chain, its value, contrast and lint. The theme file
+  shows at the bottom as it's written, the line just written lit. `:Theme pick` (`p`) is pick mode; `:Theme {name}`
+  switches theme.
+- **Pick mode** hides the editor and reads the live window: `Host.Shot` draws it again in `theme.Probe`, where every
+  token and syntax group is an opaque colour of its own (a hash, so an antialiased blend of two is rarely a third),
+  and the pixel under the pointer names what painted it. It works for anything any plugin paints with a token,
+  editor text included (`@keyword`). Clicking the preview picks the same way from the fixture.
+- The chain follows an expression's first reference, so a derived token leads on: `bg.raised ← lighten(bg.base, 6%)
+  ← bg.base ← bg0`. Choose a link to edit; the panel says how many other tokens that one changes.
+- **Edits are overrides** (`theme.Override`, `theme.Reset`): a value changes in place, a new key goes after its
+  table's last key, and only a missing table is added. Keys are quoted (`"bg.raised"`), since a bare dotted key
+  can't sit beside a token that's its prefix. A theme with `[dark]`/`[light]` tables is edited under the variant
+  showing. A built-in (or a plugin's) theme isn't edited: the first edit writes `<name>-local.toml` in the themes
+  directory, extending it, and makes it the current theme. The editor's own writes repaint at once; undo is per
+  edit (a slider's drag is one).
+- Value: derive (an expression, checked before it's written) or fixed (OKLCH sliders and a hex field, written as
+  `oklch(L C H)`).
+- **Contrast is WCAG 2's ratio** (`spec/wcag`): 4.5:1 for text, 3:1 for large text and non-text marks. APCA isn't
+  used: its licence allows it only in tools for web content. Pairs are declared by whoever draws them
+  (`theme.Readable`); the lint lists pairs under their ratio, with the smallest lightness step that fixes them, and
+  status colours under ΔE OK 0.1 (five JNDs) apart. The built-in theme's light variant has several statuses under
+  3:1 on surfaces; the lint shows them.
+- `ui.variant` is `system` by default: it follows the OS (the portal's or GNOME's `color-scheme` on Linux,
+  `AppleInterfaceStyle` on macOS), read every 3 s, dark until the window says otherwise.
+- The fixture renders in every built-in theme and variant, against goldens (`render/scenes`).
+- Not yet: new theme from…, import and export, `:hi`, effects and type in the editor, syntax groups that fall back
+  too far, and the live UI inside the preview (pick mode reads the real window instead).
 
 ## Implementation notes
 

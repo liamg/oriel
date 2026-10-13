@@ -1,5 +1,5 @@
 // Package widget is the toolkit's widgets: buttons, chips, inputs, lists, trees, tabs, menus, context menus,
-// popovers, modals and toasts. They're built only on ui's public API, as a plugin's widgets would be, and
+// popovers, modals, toasts and sliders. They're built only on ui's public API, as a plugin's widgets would be, and
 // paint with theme tokens they declare (theming.md).
 package widget
 

@@ -36,8 +36,8 @@ type Registry interface {
 	// mapping that starts with keys.
 	Lookup(modes []string, keys []string) (exact *Keymap, more bool)
 	ViewByID(id string) (View, bool)
-	Views() []string        // every registered view id, sorted
-	Themes() []theme.Source // in registration order; a later theme with the same name wins
+	Views() []string               // every registered view id, sorted
+	Themes() ([]theme.Source, int) // in registration order, a later theme with the same name winning; and a generation that moves when they change
 	InputByID(id string) (input.Engine, bool)
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
 	Pickers() []PickerSource              // the winning source for each id, by Order then id
@@ -162,6 +162,7 @@ type reg struct {
 	helpGen  int
 	live     stacks[string, func(c *ui.Ctx)]
 	themes   []entry[theme.Source]
+	themeGen int
 	options  *options
 	faults   faults
 }
@@ -294,21 +295,23 @@ func (r *reg) Theme(s theme.Source) Disposable {
 	defer r.mu.Unlock()
 	tok := tokens.Add(1)
 	r.themes = append(r.themes, entry[theme.Source]{tok, s})
+	r.themeGen++
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.themes = slices.DeleteFunc(r.themes, func(e entry[theme.Source]) bool { return e.token == tok })
+		r.themeGen++
 	})
 }
 
-func (r *reg) Themes() []theme.Source {
+func (r *reg) Themes() ([]theme.Source, int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := make([]theme.Source, len(r.themes))
 	for i, e := range r.themes {
 		out[i] = e.value
 	}
-	return out
+	return out, r.themeGen
 }
 
 func (r *reg) Run(ctx Ctx, id string, args Args) error {

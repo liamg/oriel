@@ -24,6 +24,9 @@ type ResizeEvent struct{ Size Point }
 // RedrawEvent asks for a new frame: something the last one drew has changed, such as a font landing.
 type RedrawEvent struct{}
 
+// AppearanceEvent is the OS's light or dark preference, sent when a window opens and whenever it changes.
+type AppearanceEvent struct{ Dark bool }
+
 type PointerKind uint8
 
 const (
@@ -66,7 +69,8 @@ const (
 	CursorCrosshair
 )
 
-func (KeyEvent) isEvent()     {}
-func (PointerEvent) isEvent() {}
-func (ResizeEvent) isEvent()  {}
-func (RedrawEvent) isEvent()  {}
+func (KeyEvent) isEvent()        {}
+func (PointerEvent) isEvent()    {}
+func (ResizeEvent) isEvent()     {}
+func (RedrawEvent) isEvent()     {}
+func (AppearanceEvent) isEvent() {}

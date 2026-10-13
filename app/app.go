@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/liamg/oriel/render/raster"
+	"image"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -136,11 +138,12 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
 	l.ui.Title = "Oriel"
 	sh.keys, sh.modes, sh.ui = l.keys, l.modes, l.ui
+	sh.theme, sh.shot = func() *theme.Resolved { return l.theme }, l.shot
 	l.themeDirty.Store(true)
 	retheme := func() { l.themeDirty.Store(true); poke() }
-	for _, src := range cfg.Registry.Themes() {
-		defer src.Watch(retheme)()
-	}
+	l.retheme = retheme
+	l.themeGen = -1
+	defer l.unwatchThemes()
 	for _, opt := range []string{"ui.theme", "ui.variant"} {
 		defer cfg.Registry.Options().Watch(opt, retheme)()
 	}
@@ -211,6 +214,20 @@ func (h *host) UI() ext.UIView {
 	return h.sh.ui
 }
 
+func (h *host) CurrentTheme() *theme.Resolved {
+	if h.sh.theme == nil {
+		return nil
+	}
+	return h.sh.theme()
+}
+
+func (h *host) Shot(th *theme.Resolved) *image.RGBA {
+	if h.sh.shot == nil {
+		return nil
+	}
+	return h.sh.shot(th)
+}
+
 func (h *host) Pending() ext.Pending {
 	if k := h.sh.keys; k != nil && len(k.Pending()) > 0 {
 		return ext.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
@@ -247,6 +264,10 @@ func (h *host) Notify(n core.Notice) {
 type loop struct {
 	themeDirty atomic.Bool
 	theme      *theme.Resolved
+	osLight    bool // the OS prefers light, as the window last said
+	themeGen   int  // the registry's themes, as last watched
+	unwatch    []func()
+	retheme    func()
 
 	sh        *shell
 	debug     bool
@@ -260,6 +281,28 @@ type loop struct {
 	log   *slog.Logger
 }
 
+// watchThemes watches every registered theme source, again whenever they change: a plugin or the theme editor
+// can add one at any time.
+func (l *loop) watchThemes() {
+	srcs, gen := l.reg.Themes()
+	if gen == l.themeGen {
+		return
+	}
+	l.unwatchThemes()
+	for _, src := range srcs {
+		l.unwatch = append(l.unwatch, src.Watch(l.retheme))
+	}
+	l.themeGen = gen
+	l.themeDirty.Store(true)
+}
+
+func (l *loop) unwatchThemes() {
+	for _, stop := range l.unwatch {
+		stop()
+	}
+	l.unwatch = nil
+}
+
 // loadTheme resolves the theme ui.theme names, in ui.variant. If it doesn't resolve, the theme already
 // showing stays; with none showing, the built-in one does.
 func (l *loop) loadTheme() {
@@ -270,7 +313,14 @@ func (l *loop) loadTheme() {
 	if v, _, err := l.reg.Options().Get("ui.variant", registry.At{}); err == nil {
 		variant = theme.Variant(v.(string))
 	}
-	r, err := resolveTheme(l.reg.Themes(), name, variant)
+	if variant != theme.Dark && variant != theme.Light {
+		variant = theme.Dark
+		if l.osLight {
+			variant = theme.Light
+		}
+	}
+	srcs, _ := l.reg.Themes()
+	r, err := resolveTheme(srcs, name, variant)
 	if err != nil {
 		l.log.Error("theme", "name", name, "err", err)
 		if l.theme != nil {
@@ -314,6 +364,9 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 	switch ev := ev.(type) {
 	case render.PointerEvent:
 		l.ui.Pointer(ev)
+	case render.AppearanceEvent:
+		l.osLight = !ev.Dark
+		l.themeDirty.Store(true)
 	case render.KeyEvent:
 		k := notation(ev)
 		if len(l.keys.Pending()) > 0 && (k == "<BS>" || k == "<Esc>") {
@@ -362,6 +415,7 @@ func (l *loop) draw() error {
 		o.ReducedMotion = on == true
 		l.ui.SetOptions(o)
 	}
+	l.watchThemes()
 	if l.themeDirty.Swap(false) {
 		l.loadTheme()
 	}
@@ -377,6 +431,22 @@ func (l *loop) draw() error {
 		})
 		l.frameTime = time.Since(start)
 	})
+}
+
+func (l *loop) shot(th *theme.Resolved) *image.RGBA {
+	if th == nil {
+		th = l.theme
+	}
+	return shotOf(l.ui, l.reg, l.win.Size(), th)
+}
+
+// shotOf builds and paints the window again on a fork of u, in th, onto the CPU.
+func shotOf(u *ui.UI, reg registry.Registry, size render.Point, th *theme.Resolved) *image.RGBA {
+	f := u.Fork()
+	f.SetTheme(th)
+	var list render.List
+	f.Frame(list.Record(1), size, func(c *ui.Ctx) { buildWindow(c, reg, size) })
+	return raster.Render(&list, size, 1, th.C(theme.BgBase))
 }
 
 // buildWindow is the window: the root view with the status line under it, and the notifications and modal

@@ -33,6 +33,7 @@ const (
 	RoleMenuItem = render.RoleMenuItem
 	RoleDialog   = render.RoleDialog
 	RoleStatus   = render.RoleStatus
+	RoleSlider   = render.RoleSlider
 
 	ActionClick  = render.ActionClick
 	ActionFocus  = render.ActionFocus

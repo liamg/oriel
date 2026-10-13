@@ -344,3 +344,42 @@ func TestToasts(t *testing.T) {
 		t.Error("a click didn't dismiss the toast")
 	}
 }
+
+func TestSlider(t *testing.T) {
+	v := 0.5
+	var id ui.ID
+	changed := 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("hue")
+		if Slider(c, "hue", &v, SliderOpts{Min: 0, Max: 360, Step: 1, Width: ui.Px(200), Label: "Hue",
+			Track: func(t float64) render.Color { return theme.FromOKLCH(theme.OKLCH{L: .7, C: .15, H: t * 360, A: 1}) }}) {
+			changed++
+		}
+	})
+	if v != 0.5 {
+		t.Fatalf("building changed the value to %v", v)
+	}
+	track := h.rect(id)
+	_, y := mid(track)
+	h.click(track.Min.X+track.Dx()/4, y)
+	if v < 89 || v > 91 || changed == 0 {
+		t.Fatalf("a click a quarter along: %v (changed %d)", v, changed)
+	}
+	h.pointer(render.PointerPress, render.ButtonPrimary, track.Min.X+track.Dx()/4, y)
+	h.frame()
+	h.pointer(render.PointerMove, render.ButtonPrimary, track.Max.X+50, y)
+	h.frame()
+	h.pointer(render.PointerRelease, render.ButtonPrimary, track.Max.X+50, y)
+	h.frame()
+	if v != 360 {
+		t.Fatalf("dragged past the end: %v", v)
+	}
+	h.keys("h", "Left")
+	if v != 358 {
+		t.Errorf("two steps down: %v", v)
+	}
+	h.keys("+Right")
+	if v != 360 {
+		t.Errorf("shift-right is ten steps, clamped: %v", v)
+	}
+}

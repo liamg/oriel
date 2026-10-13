@@ -161,7 +161,22 @@ func (w *Window) forward() {
 
 func (w *Window) loop() {
 	go w.forward()
-	defer close(w.queue)
+	var mu sync.Mutex
+	closed := false
+	defer func() {
+		mu.Lock()
+		closed = true
+		close(w.queue)
+		mu.Unlock()
+	}()
+	stop := watchAppearance(func(dark bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		if !closed {
+			w.post(render.AppearanceEvent{Dark: dark})
+		}
+	})
+	defer stop()
 	var ops op.Ops
 	f := NewFrame()
 	tag := new(int)

@@ -14,11 +14,16 @@ import (
 
 func record(t *testing.T, v theme.Variant, s Scene, scale float32) *render.List {
 	t.Helper()
-	ts, err := typeset.NewBundled()
+	th, err := Builtin(v)
 	if err != nil {
 		t.Fatal(err)
 	}
-	th, err := Builtin(v)
+	return recordIn(t, th, s, scale)
+}
+
+func recordIn(t *testing.T, th *theme.Resolved, s Scene, scale float32) *render.List {
+	t.Helper()
+	ts, err := typeset.NewBundled()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,12 +68,23 @@ func TestFixtureAgainstTheMockups(t *testing.T) {
 }
 
 // Goldens of the fixture as drawn: any change to what it draws shows up here first, as a display-list diff,
-// then as pixels (anything past one JND on more than 0.1% of them).
+// then as pixels (anything past one JND on more than 0.1% of them), in every built-in theme and variant.
 func TestFixtureGoldens(t *testing.T) {
 	ide, _ := ByName("ide")
 	snapshot.Golden(t, "testdata/ide-dark.list", []byte(snapshot.List(record(t, theme.Dark, ide, 1))))
-	for _, v := range []theme.Variant{theme.Dark, theme.Light} {
-		snapshot.GoldenPNG(t, "testdata/ide-"+string(v)+".png", rasterise(t, v, "ide", 1), 0.02, 0.001)
+	for _, src := range theme.Builtins() {
+		st, err := theme.Stack(theme.Builtins(), src.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, v := range []theme.Variant{theme.Dark, theme.Light} {
+			th, err := theme.Resolve(st, v)
+			if err != nil {
+				t.Fatalf("%s %s: %v", src.Name(), v, err)
+			}
+			img := raster.Render(recordIn(t, th, ide, 1), render.Point{X: IDEWidth, Y: IDEHeight}, 1, th.C(theme.BgBase))
+			snapshot.GoldenPNG(t, "testdata/ide-"+src.Name()+"-"+string(v)+".png", img, 0.02, 0.001)
+		}
 	}
 	snapshot.GoldenPNG(t, "testdata/ide-dark@2x.png", rasterise(t, theme.Dark, "ide", 2), 0.02, 0.001)
 }

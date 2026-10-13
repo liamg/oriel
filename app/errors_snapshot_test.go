@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"image"
 	"os"
 	"path/filepath"
 	"strings"
@@ -86,6 +87,13 @@ func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errSce
 	s.ui.SetTheme(r)
 	s.ui.SetClock(func() time.Time { return s.now })
 	s.sh.ui = s.ui
+	s.sh.theme = s.ui.Theme
+	s.sh.shot = func(th *theme.Resolved) *image.RGBA {
+		if th == nil {
+			th = s.ui.Theme()
+		}
+		return shotOf(s.ui, s.reg, s.size, th)
+	}
 	return s
 }
 

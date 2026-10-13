@@ -189,3 +189,12 @@ func (e expr) String() string {
 	}
 	return e.fn + "(" + strings.Join(parts, ", ") + ")"
 }
+
+// CheckExpr reports whether s is a well-formed expression, before it's written to a theme file.
+func CheckExpr(s string) error {
+	e, err := parseExpr(s)
+	if err == nil && e.isNum {
+		err = fmt.Errorf("%q is a number, not a colour", s)
+	}
+	return err
+}
