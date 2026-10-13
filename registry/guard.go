@@ -12,9 +12,10 @@ import (
 
 // Kinds of contribution a fault can come from.
 const (
-	KindCommand = "command"
-	KindView    = "view"
-	KindHook    = "hook"
+	KindCommand    = "command"
+	KindView       = "view"
+	KindHook       = "hook"
+	KindDecoration = "decoration"
 )
 
 // Panic is a contribution's panic, as an error.

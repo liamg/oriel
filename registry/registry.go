@@ -24,6 +24,7 @@ type Registry interface {
 	View(id string, v View) Disposable
 	Theme(s theme.Source) Disposable
 	Input(e input.Engine) Disposable // an input engine the editor's input option can pick
+	Decorations(id string, p DecorationProvider) Disposable
 
 	Run(ctx Ctx, id string, args Args) error
 	Commands() []Command // the registration that wins for each id, sorted by id
@@ -35,7 +36,8 @@ type Registry interface {
 	Views() []string        // every registered view id, sorted
 	Themes() []theme.Source // in registration order; a later theme with the same name wins
 	InputByID(id string) (input.Engine, bool)
-	Inputs() []string // engine ids, sorted
+	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
+	Inputs() []string                     // engine ids, sorted
 	Options() Options
 
 	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
@@ -147,6 +149,7 @@ type reg struct {
 	prefixes map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
 	views    stacks[string, View]
 	inputs   stacks[string, input.Engine]
+	decor    stacks[string, DecorationProvider]
 	themes   []entry[theme.Source]
 	options  *options
 	faults   faults
@@ -159,6 +162,7 @@ func New() Registry {
 		prefixes: map[keymapKey]int{},
 		views:    stacks[string, View]{},
 		inputs:   stacks[string, input.Engine]{},
+		decor:    stacks[string, DecorationProvider]{},
 		options:  newOptions(),
 	}
 	for _, o := range builtinOptions {

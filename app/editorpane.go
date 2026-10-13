@@ -170,23 +170,23 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	if rows == 0 {
 		rows = 40
 	}
-	var hl []syntax.Span
-	h := x.highlights(p)
 	line := p.Top()
-	if h.doc != nil {
-		last := line
-		for range rows {
-			if last >= snap.Lines() {
-				break
-			}
-			last = p.NextRow(last)
+	last := line
+	for range rows {
+		if last >= snap.Lines() {
+			break
 		}
+		last = p.NextRow(last)
+	}
+	var hl []syntax.Span
+	if h := x.highlights(p); h.doc != nil {
 		end := snap.Len()
 		if last < snap.Lines() {
 			end = snap.LineStart(last)
 		}
 		hl, _ = h.doc.Highlights(snap.LineStart(min(line, snap.Lines()-1)), end)
 	}
+	decor := x.decorations(p, line, last)
 	cur := p.Cursor()
 	digits := max(len(fmt.Sprint(snap.Lines())), 3)
 	gw := max(float32(gutterW), float32(digits)*m.charW+34)
@@ -194,23 +194,35 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	for row := 0; row < rows && line < snap.Lines(); row++ {
 		rowID := c.Next(line)
 		foldEnd, folded := p.Fold(line)
-		c.Row(line, ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH), Cross: ui.Center}, func(c *ui.Ctx) {
+		ds := decor[line]
+		bg, edge := lineBg(th, ds)
+		c.Row(line, ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH), Cross: ui.Center, Fill: bg}, func(c *ui.Ctx) {
 			ns := numStyle
 			if line == cur.Line {
 				ns.Color = th.C(tGutterCur)
+			}
+			if edge.A > 0 {
+				ns.Color = theme.WithAlpha(edge, .75)
 			}
 			num := fmt.Sprint(line + 1)
 			c.Row("gutter", ui.Style{W: ui.Px(gw), Pad: ui.Insets{R: 16}, Main: ui.End}, func(c *ui.Ctx) {
 				c.Text("n", num, ns)
 			})
+			signs(c, th, ds)
+			if edge.A > 0 {
+				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.lineH), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
+			}
 			c.Box("gap", ui.Style{W: ui.Px(4)}, nil)
 			if folded {
 				x.foldRow(c, snap, line, foldEnd)
 				return
 			}
 			x.textRow(c, snap, line, hl)
+			virtualText(c, th, ds)
 		})
+		spans(c, th, p, line, ds, rowID, gw+4, m)
 		x.overlay(c, p, rowID, line, folded, gw, m)
+		blocks(c, line, ds, gw+4)
 		line = p.NextRow(line)
 	}
 }

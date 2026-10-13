@@ -210,8 +210,13 @@ type View interface {
 }
 
 type DecorationProvider interface {
-    Range(buf text.Snapshot, top, bottom int) []Decoration // only the visible lines
+    Decorations(ctx DecorationCtx) []Decoration   // ctx: the buffer's Name, Buffer, Snap, and lines [Top, Bottom) in view
 }
+
+// Decoration{Kind, Line or Anchor, From/To, Style, Edge, Text, Node, Priority}. Kinds: Sign (gutter), LineBg
+// (with a gutter Edge), Highlight and Underline (byte columns), VirtualText (after the line), Block (a ui.Node
+// between this line and the next). An Anchor the provider made on the Buffer moves with edits, so a block
+// stays with its text. Providers run under the guard; one that panics is turned off (KindDecoration).
 ```
 
 ```go

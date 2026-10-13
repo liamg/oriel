@@ -188,7 +188,10 @@ engine never feels like another binary running in a pane.
 ![09-lsp](mockups/09-lsp.png)
 
 Each is a `Decoration` provider (see `plugins.md`): plugins add their own the
-same way.
+same way. The editor asks every provider for the lines in view each frame and draws signs in the gutter, line
+backgrounds with their gutter edge, highlights and wavy underlines over columns, virtual text after the line, and
+blocks between lines, which push the lines below them down. Blocks at anchors stay with their text through edits.
+The engine's scrolling counts lines, not the rows blocks take, so a tall block can push the last lines out of view.
 
 ## Go interfaces
 
