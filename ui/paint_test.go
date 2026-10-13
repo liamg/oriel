@@ -153,8 +153,8 @@ func TestListBuildsOnlyVisibleRows(t *testing.T) {
 // A 10k-row list scrolled a row per frame must build, lay out and paint well inside the 4 ms frame
 // budget at 120 Hz (rendering.md).
 func TestListScrollBudget(t *testing.T) {
-	if raceEnabled || testing.Short() {
-		t.Skip("timing under -race or -short means nothing")
+	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
+		t.Skip("timing under -race, -short or -cover means nothing")
 	}
 	u := newUI()
 	size := render.Point{X: 1600, Y: 1000}

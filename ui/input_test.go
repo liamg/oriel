@@ -250,8 +250,8 @@ func TestSprings(t *testing.T) {
 
 // 200 hover targets under a moving pointer: a frame with input still fits the 4 ms budget at 120 Hz.
 func TestHoverTargetsBudget(t *testing.T) {
-	if raceEnabled || testing.Short() {
-		t.Skip("timing under -race or -short means nothing")
+	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
+		t.Skip("timing under -race, -short or -cover means nothing")
 	}
 	u := newUI()
 	build := func(c *Ctx) {

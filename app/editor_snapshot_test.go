@@ -196,8 +196,8 @@ func BenchmarkEditorTyping(b *testing.B) {
 
 // PLAN.md's budget: keypress to frame under 8 ms while typing in a 10,000-line Go file.
 func TestEditorTypingBudget(t *testing.T) {
-	if raceEnabled || testing.Short() {
-		t.Skip("timing needs a build without the race detector")
+	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
+		t.Skip("timing needs a build without the race detector or coverage")
 	}
 	s := typingScene(t)
 	const keys = 200

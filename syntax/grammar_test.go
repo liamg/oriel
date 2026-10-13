@@ -97,7 +97,7 @@ func TestCompiledFromCache(t *testing.T) {
 	cold := open()
 	warm := open()
 	t.Logf("first open %v, from the cache %v", cold, warm)
-	if warm > 20*time.Millisecond {
+	if warm > 20*time.Millisecond && !raceEnabled && testing.CoverMode() == "" {
 		t.Errorf("opening from the cache took %v", warm)
 	}
 }

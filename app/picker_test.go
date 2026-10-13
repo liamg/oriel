@@ -56,11 +56,16 @@ func TestPickerSources(t *testing.T) {
 		t.Run(tt.source, func(t *testing.T) {
 			tt.source, _, _ = strings.Cut(tt.source, " ")
 			s := pickerScene(t, tt.source, tt.query)
-			text := s.waitFor(tt.preview)
-			g, ok := rankSource(s.h(), mustSource(t, s, tt.source), tt.query, pickerMax)
+			src := mustSource(t, s, tt.source)
+			g, ok := rankSource(s.h(), src, tt.query, pickerMax)
+			for deadline := time.Now().Add(5 * time.Second); !ok && time.Now().Before(deadline); { // a live source answers off the UI's goroutine
+				time.Sleep(5 * time.Millisecond)
+				g, ok = rankSource(s.h(), src, tt.query, pickerMax)
+			}
 			if !ok {
 				t.Fatalf("no results")
 			}
+			text := s.waitFor(tt.preview)
 			first := g.hits[0].item
 			if !strings.Contains(first.Label+" "+first.Detail, tt.first) {
 				t.Errorf("first result %q (%s), want %q", first.Label, first.Detail, tt.first)
