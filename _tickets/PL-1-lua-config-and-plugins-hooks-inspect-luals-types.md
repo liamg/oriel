@@ -2,7 +2,7 @@
 id: PL-1
 title: "Lua config and plugins, :Hooks, :Inspect, LuaLS types"
 phase: P3
-status: todo
+status: done
 area: Platform
 module: script, registry
 depends_on: [FW-3]
@@ -28,6 +28,31 @@ depends_on: [FW-3]
 ## Done when
 
 the `scripting.md` sample `init.lua` runs as written
+
+## From SH-6
+
+- Which-key's `?` opens the keymaps picker filtered to the prefix: wire it when Lua's keymap API lands.
+
+## From SH-13
+
+- Hooks run under `registry.Call`, and a panicking hook calls `TurnOff(registry.KindHook, …)` so it becomes an error
+  notice with "Turn back on", as commands and views already do (`errors.md`). The SH-13 "done when" for hooks lands here.
+
+## From ED-10
+
+- Bind `regex` (PCRE2) as `L.regex`: compile with flags, find, find all, replace with `$n`/`${name}`. ED-10's
+  "the Lua API takes a PCRE2 pattern" is done when this is.
+
+## From ED-11
+
+- Bind `Registry.Language` (name, extensions, filenames, shebangs, grammar path, queries) as a Lua contribution.
+
+## As built
+
+- See scripting.md, "As built (PL-1)". The sample `init.lua` loads as written (a test reads it from scripting.md),
+  and everything it registers shows in `:Hooks`, `:Keys` and `:Commands` with its line. Its status line calls
+  `L.ledger.frac`, so it turns itself off with "isn't available until RV-2" until the ledger lands.
+- The SH-6, SH-13, ED-10 and ED-11 handoffs above are done.
 
 ## Rules
 

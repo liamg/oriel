@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -56,16 +57,9 @@ func snapshot(src []byte, spans []Span) string {
 // TestHighlightSnapshots checks highlighting of a fixture per built-in language against its golden snapshot.
 // Regenerate with -update and review the diff.
 func TestHighlightSnapshots(t *testing.T) {
-	files, _ := filepath.Glob("testdata/highlight/fixture.*")
-	if len(files) < 6 {
-		t.Fatalf("want a fixture for Go, TypeScript, Python, Rust, Lua and Markdown; found %v", files)
-	}
-	for _, f := range files {
-		if strings.HasSuffix(f, ".golden") {
-			continue
-		}
-		t.Run(filepath.Ext(f)[1:], func(t *testing.T) {
-			l, ok := ForPath(f)
+	for _, f := range fixtures() {
+		t.Run(filepath.Base(f), func(t *testing.T) {
+			l, ok := forFile(f)
 			if !ok {
 				t.Fatalf("no language for %s", f)
 			}
@@ -105,6 +99,47 @@ func TestHighlightSnapshots(t *testing.T) {
 	}
 }
 
+// fixtures are the highlight fixtures: fixture.<ext>, or <name>.fixture for a file known by its name (or a
+// language by its name, when no file is).
+func fixtures() []string {
+	a, _ := filepath.Glob("testdata/highlight/fixture.*")
+	b, _ := filepath.Glob("testdata/highlight/*.fixture")
+	var out []string
+	for _, f := range append(a, b...) {
+		if !strings.HasSuffix(f, ".golden") {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// forFile finds a fixture's language among the built-ins, by its name or first line.
+func forFile(path string) (*Language, bool) {
+	b, _ := os.ReadFile(path)
+	first, _, _ := bytes.Cut(b, []byte("\n"))
+	name := strings.TrimSuffix(path, ".fixture")
+	if l, ok := Builtin().ForFile(name, first); ok {
+		return l, true
+	}
+	return Builtin().Language(filepath.Base(name))
+}
+
+// ED-11: "Every core grammar has a highlight golden fixture that parses cleanly."
+func TestEveryGrammarHasAFixture(t *testing.T) {
+	covered := map[string]bool{}
+	for _, f := range fixtures() {
+		if l, ok := forFile(f); ok {
+			covered[l.Name] = true
+		}
+	}
+	for _, l := range Builtin().Languages() {
+		// markdown_inline is parsed through markdown's injections, in markdown's fixture.
+		if l.Grammar != nil && !covered[l.Name] && l.Name != "markdown_inline" {
+			t.Errorf("%s has no fixture", l.Name)
+		}
+	}
+}
+
 func firstDiff(want, got string) string {
 	w, g := strings.Split(want, "\n"), strings.Split(got, "\n")
 	for i := 0; i < max(len(w), len(g)); i++ {
@@ -125,14 +160,16 @@ func firstDiff(want, got string) string {
 // TestIncrementalMatchesFullParse edits fixtures at random and checks that the incrementally updated tree
 // highlights exactly as a fresh parse of the same text does.
 func TestIncrementalMatchesFullParse(t *testing.T) {
-	files, _ := filepath.Glob("testdata/highlight/fixture.*")
-	r := rand.New(rand.NewPCG(1, 2))
+	files := fixtures()
 	inserts := []string{"x", " ", "\n", "(", ")", "\"", "{", "}", "//", "é", "0"}
 	for _, f := range files {
 		if strings.HasSuffix(f, ".golden") {
 			continue
 		}
-		l, _ := ForPath(f)
+		h := fnv.New64a()
+		h.Write([]byte(filepath.Base(f)))
+		r := rand.New(rand.NewPCG(1, h.Sum64())) // each file's own edits, whatever other fixtures there are
+		l, _ := forFile(f)
 		src, _ := os.ReadFile(f)
 		inc, _ := NewParser(l)
 		full, _ := NewParser(l)
@@ -159,7 +196,9 @@ func TestIncrementalMatchesFullParse(t *testing.T) {
 			if err1 != nil || err2 != nil {
 				t.Fatal(err1, err2)
 			}
-			if fmt.Sprint(a) != fmt.Sprint(b) {
+			// With errors in the text, a reparse can recover differently from a fresh parse, so only error-free
+			// text must highlight the same.
+			if fmt.Sprint(a) != fmt.Sprint(b) && !full.HasError() {
 				t.Fatalf("%s step %d: incremental and full highlights differ", f, step)
 			}
 		}
@@ -203,7 +242,7 @@ func bigGo(t *testing.T, n int) (*Parser, *text.Buffer) {
 	for i := 0; strings.Count(big.String(), "\n") < n; i++ {
 		big.Write(bytes.ReplaceAll(body, []byte("Total"), []byte(fmt.Sprintf("Total%d", i))))
 	}
-	l, _ := Lookup("go")
+	l, _ := Builtin().Language("go")
 	p, err := NewParser(l)
 	if err != nil {
 		t.Fatal(err)
@@ -232,7 +271,7 @@ func typeInIdentifier(t *testing.T, buf *text.Buffer, line int) text.Change {
 func TestDocumentNeverBlocksTyping(t *testing.T) {
 	p, buf := bigGo(t, 2000)
 	p.Close()
-	l, _ := Lookup("go")
+	l, _ := Builtin().Language("go")
 	d, err := NewDocument(l, buf.Snapshot())
 	if err != nil {
 		t.Fatal(err)
@@ -275,5 +314,64 @@ func TestShiftSpans(t *testing.T) {
 	want := []Span{{text.Range{Start: 0, End: 3}, "a"}, {text.Range{Start: 4, End: 9}, "b"}, {text.Range{Start: 10, End: 13}, "c"}}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("shiftSpans = %v, want %v", got, want)
+	}
+}
+
+// Highlighting a file a chunk at a time gives what highlighting it whole does.
+func TestChunkedHighlightsMatchWhole(t *testing.T) {
+	for _, name := range []string{"go", "lua", "markdown", "python", "rust", "typescript"} {
+		l, ok := Builtin().Language(name)
+		if !ok {
+			continue
+		}
+		files, _ := filepath.Glob("testdata/highlight/*." + map[string]string{"go": "go", "lua": "lua", "markdown": "md", "python": "py", "rust": "rs", "typescript": "ts"}[name])
+		for _, f := range files {
+			src, _ := os.ReadFile(f)
+			src = bytes.Repeat(src, 1+2*highlightChunk/max(len(src), 1))
+			p, err := NewParser(l)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.Parse(src)
+			whole, err := p.Highlights(0, len(src))
+			if err != nil {
+				t.Fatal(err)
+			}
+			chunked, err := p.highlightsInChunks(len(src))
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.Close()
+			if a, b := spanRuns(src, whole), spanRuns(src, chunked); a != b {
+				t.Errorf("%s: chunked highlights differ from whole", f)
+			}
+		}
+	}
+}
+
+// spanRuns is the capture at every byte, so adjacent spans of one capture compare equal to one span.
+func spanRuns(src []byte, spans []Span) string {
+	caps := make([]string, len(src))
+	for _, s := range spans {
+		for i := s.Range.Start; i < s.Range.End && i < len(src); i++ {
+			caps[i] = s.Capture
+		}
+	}
+	return strings.Join(caps, "\x00")
+}
+
+// :Inspect's tree-sitter path: the named nodes from the root down to the one at the cursor.
+func TestNodePath(t *testing.T) {
+	l, _ := Builtin().Language("go")
+	p, err := NewParser(l)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	src := []byte("package x\n\nfunc f() { return }\n")
+	p.Parse(src)
+	got := strings.Join(p.NodePath(bytes.Index(src, []byte("return"))+1), " > ")
+	if got != "source_file > function_declaration > block > statement_list > return_statement" {
+		t.Errorf("path %q", got)
 	}
 }

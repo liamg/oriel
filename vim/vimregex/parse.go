@@ -69,6 +69,13 @@ const (
 	opLnum // num, cmp, cur
 	opCol  // num, cmp, cur
 	opVcol // num, cmp, cur
+	// PCRE2's assertions.
+	opPBOL       // ^ with (?m): a line's start, but not after a final newline
+	opSubjEnd    // $ and \Z: the end, or before a final newline
+	opSubjEndAbs // \z
+	opWordB      // \b
+	opNotWordB   // \B
+	opStartMatch // \G
 	opSkipComb
 	opZS
 	opZE
@@ -97,6 +104,7 @@ type node struct {
 	min     int
 	max     int
 	greedy  bool
+	fold    bool // match case-insensitively, whatever the pattern's case (PCRE2's (?i))
 	cmp     byte
 	cur     bool
 	subs    []*node

@@ -1,0 +1,68 @@
+   1 | #!/usr/bin/env bash
+     | ^^^^^^^^^^^^^^^^^^^ keyword.directive
+   2 | set -euo pipefail
+     | ^^^ function.builtin
+     |     ^^^^ variable.parameter
+     |          ^^^^^^^^ variable.parameter
+   3 | 
+   4 | name=${1:-world}
+     | ^^^^ variable
+     |     ^ operator
+     |      ^^ punctuation.special
+     |        ^ variable
+     |         ^^ punctuation.special
+     |           ^^^^^ none
+     |                ^ punctuation.special
+   5 | for i in 1 2 3; do
+     | ^^^ keyword.repeat
+     |     ^ variable
+     |       ^^ keyword.conditional
+     |          ^ number
+     |            ^ number
+     |              ^ number
+     |               ^ punctuation.delimiter
+     |                 ^^ keyword.repeat
+   6 | 	echo "hello $name ($i)"
+     |  ^^^^ function.builtin
+     |       ^^^^^^^ string
+     |              ^ punctuation.special
+     |               ^^^^ variable
+     |                   ^^ string
+     |                     ^ punctuation.special
+     |                      ^ variable
+     |                       ^^ string
+   7 | done
+     | ^^^^ keyword.repeat
+   8 | 
+   9 | if [[ -f "$HOME/.bashrc" ]]; then
+     | ^^ keyword.conditional
+     |    ^^ punctuation.bracket
+     |       ^^ operator
+     |          ^ string
+     |           ^ punctuation.special
+     |            ^^^^ variable.builtin
+     |                ^^^^^^^^^ string
+     |                          ^^ punctuation.bracket
+     |                            ^ punctuation.delimiter
+     |                              ^^^^ keyword.conditional
+  10 | 	count=$(wc -l <"$HOME/.bashrc")
+     |  ^^^^^ variable
+     |       ^ operator
+     |        ^^ punctuation.special
+     |          ^^ function.call
+     |             ^^ variable.parameter
+     |                ^ operator
+     |                 ^ string
+     |                  ^ punctuation.special
+     |                   ^^^^ variable.builtin
+     |                       ^^^^^^^^^ string
+     |                                ^ punctuation.special
+  11 | 	printf '%s lines\n' "$count"
+     |  ^^^^^^ function.builtin
+     |         ^^^^^^^^^^^^ string
+     |                      ^ string
+     |                       ^ punctuation.special
+     |                        ^^^^^ variable
+     |                             ^ string
+  12 | fi
+     | ^^ keyword.conditional

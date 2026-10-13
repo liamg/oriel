@@ -1,0 +1,492 @@
+# Scrolling the window (scroll.txt) and H, M and L (motion.txt). The buffer is the lines 1 to 60, and the
+# window is nvim's default: 22 rows. `top:` is the first line in the window, as line('w0'). Expected values
+# were checked against nvim v0.11.7 (the oracle).
+
+=== CTRL-E scrolls the window a line and the cursor stays
+ref:    scroll.txt *CTRL-E*
+quote:  "Scroll window [count] lines downwards in the buffer."
+given:
+  {1..9}
+  |10
+  {11..60}
+keys:   <C-e>
+expect:
+  {1..9}
+  |10
+  {11..60}
+top:    2
+
+=== CTRL-E with a count moves a cursor scrolled off the top onto the window
+ref:    scroll.txt *CTRL-E*
+quote:  "Scroll window [count] lines downwards in the buffer."
+given:
+  |1
+  {2..60}
+keys:   5<C-e>
+expect:
+  {1..5}
+  |6
+  {7..60}
+top:    6
+
+=== CTRL-Y at the top of the buffer does nothing
+ref:    scroll.txt *CTRL-Y*
+quote:  "Scroll window [count] lines upwards in the buffer."
+given:
+  {1..4}
+  |5
+  {6..60}
+keys:   <C-y>
+expect:
+  {1..4}
+  |5
+  {6..60}
+top:    1
+
+=== CTRL-Y moves a cursor scrolled off the bottom onto the window
+ref:    scroll.txt *CTRL-Y*
+quote:  "Scroll window [count] lines upwards in the buffer."
+given:
+  |1
+  {2..60}
+keys:   30G<C-y>
+expect:
+  {1..28}
+  |29
+  {30..60}
+top:    8
+
+=== j past the last row scrolls one line
+ref:    scroll.txt *CTRL-E*
+quote:  "Scroll window [count] lines downwards in the buffer."
+given:
+  {1..21}
+  |22
+  {23..60}
+keys:   j
+expect:
+  {1..22}
+  |23
+  {24..60}
+top:    2
+
+=== G far below the window centres the cursor
+ref:    scroll.txt *CTRL-E*
+quote:  "Scroll window [count] lines downwards in the buffer."
+given:
+  |1
+  {2..60}
+keys:   40G
+expect:
+  {1..39}
+  |40
+  {41..60}
+top:    29
+
+=== gg far above the window
+ref:    scroll.txt *CTRL-Y*
+quote:  "Scroll window [count] lines upwards in the buffer."
+given:
+  |1
+  {2..60}
+keys:   40Ggg
+expect:
+  |1
+  {2..60}
+top:    1
+
+=== CTRL-D scrolls half a window and moves the cursor as far
+ref:    scroll.txt *CTRL-D*
+quote:  "The cursor is moved the same number of\n\t\t\tlines down in the file"
+given:
+  |1
+  {2..60}
+keys:   <C-d>
+expect:
+  {1..11}
+  |12
+  {13..60}
+top:    12
+
+=== CTRL-D with a count sets how far it and the next CTRL-D go
+ref:    scroll.txt *CTRL-D*
+quote:  "If [count] given, first set 'scroll' option\n\t\t\tto [count]."
+given:
+  |1
+  {2..60}
+keys:   5<C-d><C-d>
+expect:
+  {1..10}
+  |11
+  {12..60}
+top:    11
+
+=== CTRL-D near the end moves the cursor without showing past the end
+ref:    scroll.txt *CTRL-D*
+quote:  "when hitting the end of the file there may be a\n\t\t\tdifference"
+given:
+  |1
+  {2..60}
+keys:   30G<C-d><C-d>
+expect:
+  {1..51}
+  |52
+  {53..60}
+top:    31
+
+=== CTRL-D on the last line does nothing
+ref:    scroll.txt *CTRL-D*
+quote:  "When the cursor is on the last line of\n\t\t\tthe buffer nothing happens and a beep is produced."
+given:
+  |1
+  {2..60}
+keys:   G<C-d>
+expect:
+  {1..59}
+  |60
+top:    39
+
+=== CTRL-U scrolls half a window up
+ref:    scroll.txt *CTRL-U*
+quote:  "The cursor is moved the same\n\t\t\tnumber of lines up in the file"
+given:
+  |1
+  {2..60}
+keys:   G<C-u>
+expect:
+  {1..48}
+  |49
+  {50..60}
+top:    28
+
+=== CTRL-U at the top moves the cursor up
+ref:    scroll.txt *CTRL-U*
+quote:  "The cursor is moved the same\n\t\t\tnumber of lines up in the file"
+given:
+  {1..14}
+  |15
+  {16..60}
+keys:   <C-u>
+expect:
+  {1..3}
+  |4
+  {5..60}
+top:    1
+
+=== CTRL-F scrolls a page with two lines of overlap
+ref:    scroll.txt *<S-Plus>*
+quote:  "Scroll window [count] pages Forwards (downwards) in\n\t\t\tthe buffer."
+given:
+  |1
+  {2..60}
+keys:   <C-f>
+expect:
+  {1..20}
+  |21
+  {22..60}
+top:    21
+
+=== CTRL-F with a count
+ref:    scroll.txt *<S-Plus>*
+quote:  "Scroll window [count] pages Forwards (downwards) in\n\t\t\tthe buffer."
+given:
+  |1
+  {2..60}
+keys:   2<C-f>
+expect:
+  {1..40}
+  |41
+  {42..60}
+top:    41
+
+=== CTRL-F at the end scrolls to the last line
+ref:    scroll.txt *<S-Plus>*
+quote:  "Scroll window [count] pages Forwards (downwards) in\n\t\t\tthe buffer."
+given:
+  |1
+  {2..60}
+keys:   <C-f><C-f><C-f>
+expect:
+  {1..59}
+  |60
+top:    60
+
+=== CTRL-B scrolls a page back and puts the cursor on the last row
+ref:    scroll.txt *SHIFT-MINUS*
+quote:  "Scroll window [count] pages Backwards (upwards) in the\n\t\t\tbuffer."
+given:
+  |1
+  {2..60}
+keys:   G<C-b>
+expect:
+  {1..39}
+  |40
+  {41..60}
+top:    19
+
+=== CTRL-B at the top does nothing
+ref:    scroll.txt *SHIFT-MINUS*
+quote:  "Scroll window [count] pages Backwards (upwards) in the\n\t\t\tbuffer."
+given:
+  {1..4}
+  |5
+  {6..60}
+keys:   <C-b>
+expect:
+  {1..4}
+  |5
+  {6..60}
+top:    1
+
+=== zt puts the cursor line at the top
+ref:    scroll.txt *zt*
+quote:  "Like \"z<CR>\", but leave the cursor in the same\n\t\t\tcolumn."
+given:
+  |1
+  {2..60}
+keys:   30Gzt
+expect:
+  {1..29}
+  |30
+  {31..60}
+top:    30
+
+=== zt with a count puts that line at the top
+ref:    scroll.txt *z<CR>*
+quote:  "Redraw, line [count] at top of window (default\n\t\t\tcursor line)."
+given:
+  |1
+  {2..60}
+keys:   45zt
+expect:
+  {1..44}
+  |45
+  {46..60}
+top:    45
+
+=== zz centres the cursor line
+ref:    scroll.txt *zz*
+quote:  "Like \"z.\", but leave the cursor in the same column."
+given:
+  |1
+  {2..60}
+keys:   30Gzt30Gzz
+expect:
+  {1..29}
+  |30
+  {31..60}
+top:    20
+
+=== zz near the end
+ref:    scroll.txt *z.*
+quote:  "Redraw, line [count] at center of window (default\n\t\t\tcursor line)."
+given:
+  |1
+  {2..60}
+keys:   58Gzz
+expect:
+  {1..57}
+  |58
+  {59..60}
+top:    48
+
+=== zz near the top
+ref:    scroll.txt *z.*
+quote:  "Redraw, line [count] at center of window (default\n\t\t\tcursor line)."
+given:
+  {1..4}
+  |5
+  {6..60}
+keys:   zz
+expect:
+  {1..4}
+  |5
+  {6..60}
+top:    1
+
+=== zb puts the cursor line at the bottom
+ref:    scroll.txt *zb*
+quote:  "Like \"z-\", but leave the cursor in the same column."
+given:
+  |1
+  {2..60}
+keys:   40Gzb
+expect:
+  {1..39}
+  |40
+  {41..60}
+top:    19
+
+=== z- with a count
+ref:    scroll.txt *z-*
+quote:  "Redraw, line [count] at bottom of window (default\n\t\t\tcursor line)."
+given:
+  |1
+  {2..60}
+keys:   30z-
+expect:
+  {1..29}
+  |30
+  {31..60}
+top:    9
+
+=== H goes to the first line of the window
+ref:    motion.txt *H*
+quote:  "To line [count] from top (Home) of window (default:\n\t\t\tfirst line on the window)"
+given:
+  |1
+  {2..60}
+keys:   40GH
+expect:
+  {1..28}
+  |29
+  {30..60}
+top:    29
+
+=== 3H goes to the third line of the window
+ref:    motion.txt *H*
+quote:  "To line [count] from top (Home) of window (default:\n\t\t\tfirst line on the window)"
+given:
+  |1
+  {2..60}
+keys:   40G3H
+expect:
+  {1..30}
+  |31
+  {32..60}
+top:    29
+
+=== L goes to the last line of the window
+ref:    motion.txt *L*
+quote:  "To line [count] from bottom of window (default: Last\n\t\t\tline on the window)"
+given:
+  |1
+  {2..60}
+keys:   <C-e>L
+expect:
+  {1..22}
+  |23
+  {24..60}
+top:    2
+
+=== 2L goes to the line above the last
+ref:    motion.txt *L*
+quote:  "To line [count] from bottom of window (default: Last\n\t\t\tline on the window)"
+given:
+  |1
+  {2..60}
+keys:   <C-e>2L
+expect:
+  {1..21}
+  |22
+  {23..60}
+top:    2
+
+=== M goes to the middle line of the window
+ref:    motion.txt *M*
+quote:  "To Middle line of window"
+given:
+  |1
+  {2..60}
+keys:   <C-e>M
+expect:
+  {1..11}
+  |12
+  {13..60}
+top:    2
+
+=== M with the end of the buffer in the window
+ref:    motion.txt *M*
+quote:  "To Middle line of window"
+given:
+  |1
+  {2..60}
+keys:   Gzt5<C-y>M
+expect:
+  {1..56}
+  |57
+  {58..60}
+top:    55
+
+=== CTRL-D in a split scrolls half of that window
+ref:    scroll.txt *CTRL-D*
+quote:  "The number of lines comes from the 'scroll' option (default: half a screen)."
+given:
+  |1
+  {2..60}
+keys:   :split<CR><C-d>
+expect:
+  {1..5}
+  |6
+  {7..60}
+top:    6
+win:    1/2
+
+=== H in a split goes to that window's first line
+ref:    motion.txt *H*
+quote:  "To line [count] from top (Home) of window"
+given:
+  |1
+  {2..60}
+keys:   :split<CR>30GH
+expect:
+  {1..24}
+  |25
+  {26..60}
+top:    25
+
+=== CTRL-E skips over a closed fold as one line
+ref:    fold.txt *fold-behavior*
+quote:  "When moving the cursor upwards or downwards and when scrolling, the cursor will move to the first line of a sequence of folded lines."
+given:
+  |1
+  {2..60}
+keys:   zf4j<C-e>
+expect:
+  {1..5}
+  |6
+  {7..60}
+top:    6
+
+=== dH deletes from the cursor up to the first line of the window
+ref:    motion.txt *H*
+quote:  "E.g. \"yH\" yanks from the first visible line until the cursor line (inclusive)."
+given:
+  |1
+  {2..60}
+keys:   <C-e><C-e>5GdH
+expect:
+  1
+  2
+  |6
+  {7..60}
+top:    3
+
+=== yL yanks from the cursor to the last line of the window
+ref:    motion.txt *L*
+quote:  "E.g. \"yL\" yanks from the cursor to the last visible line."
+given:
+  {1..19}
+  |20
+  {21..60}
+keys:   yL
+expect:
+  {1..19}
+  |20
+  {21..60}
+regs:   "" = "20\n21\n22\n"
+top:    1
+
+=== CTRL-D in Visual mode extends the selection
+ref:    scroll.txt *CTRL-D*
+quote:  "The cursor is moved the same number of lines down in the file"
+given:
+  |1
+  {2..60}
+keys:   V<C-d>
+expect:
+  {1..11}
+  |12
+  {13..60}
+mode:   visual-line
+top:    12

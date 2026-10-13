@@ -5,12 +5,12 @@ phase: P8
 status: todo
 area: Platform
 module: cmd
-depends_on: [PL-16, PL-15]
+depends_on: [PL-16, PL-21]
 ---
 
 # PL-17 · oriel plugin publish
 
-**Phase** 8 · plugin registry · **After** [PL-16](PL-16-the-oriel-plugins-registry-repo-and-ci.md), [PL-15](PL-15-registry-client-badges-and-the-plugins-page.md) · **Unblocks** nothing yet
+**Phase** 8 · plugin registry · **After** [PL-16](PL-16-the-oriel-plugins-registry-repo-and-ci.md), [PL-21](PL-21-registry-client-badges-and-the-plugins-page.md) · **Unblocks** nothing yet
 
 ## Design
 

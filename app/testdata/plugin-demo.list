@@ -1,0 +1,554 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1414.9062x38 r 0
+pop
+text "DEPLOY" @1531.8438,22.779999 #b3ab99 JetBrains Mono 10.5
+text "3" @1579.4062,22.779999 #ff9b45 JetBrains Mono 10.5
+rect 0,38 1600x936 fill #060606
+clip 0,38 589.5x936 r 0
+  rect 0,38 589.5x30 fill #0c0c0b
+  rect 0,38 79.265625x30 fill #121210
+  text "round.go" @14,58.365234 #ece6d8 Inter 12
+  rect 0,68 589.5x1 fill #24221d
+  clip 0,69 589.5x905 r 0
+    rect 0,69 589.5x905 fill #060606
+    clip 0,69 589.5x905 r 0
+      text "internal" @14,85.96 #7c7566 JetBrains Mono 11
+      text "›" @72.75,85.96 #7c7566 JetBrains Mono 11
+      text "pricing" @85.34375,85.96 #7c7566 JetBrains Mono 11
+      text "›" @137.5,85.96 #7c7566 JetBrains Mono 11
+      text "round.go" @150.09375,85.96 #b3ab99 JetBrains Mono 11
+      clip 0,95 589.5x879 r 0
+        text "1" @39.59375,116.36 #7c7566 JetBrains Mono 13.5
+        text "package" @68,116.36 #c792ff JetBrains Mono 13.5
+        text " " @126.84375,116.36 #ece6d8 JetBrains Mono 13.5
+        text "pricing" @135.25,116.36 #ece6d8 JetBrains Mono 13.5
+        text "2" @39.59375,137.36 #4f4a40 JetBrains Mono 13.5
+        text "3" @39.59375,158.36 #4f4a40 JetBrains Mono 13.5
+        text "import" @68,158.36 #c792ff JetBrains Mono 13.5
+        text " " @118.4375,158.36 #ece6d8 JetBrains Mono 13.5
+        text "(" @126.84375,158.36 #89ddff JetBrains Mono 13.5
+        text "owned by @pricing-team" @157.25,157.82 #ffd23f JetBrains Mono 12
+        text "4" @39.59375,179.36 #4f4a40 JetBrains Mono 13.5
+        text "        " @68,179.36 #ece6d8 JetBrains Mono 13.5
+        text "\"github.com/shopspring/decimal\"" @135.25,179.36 #a5e075 JetBrains Mono 13.5
+        text "5" @39.59375,200.36 #4f4a40 JetBrains Mono 13.5
+        text ")" @68,200.36 #89ddff JetBrains Mono 13.5
+        text "6" @39.59375,221.36 #4f4a40 JetBrains Mono 13.5
+        text "7" @39.59375,242.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,242.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,242.36 #ece6d8 JetBrains Mono 13.5
+        text "tier7" @101.625,242.36 #d6dde6 JetBrains Mono 13.5
+        text " " @143.65625,242.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @152.0625,242.36 #89ddff JetBrains Mono 13.5
+        text " " @160.46875,242.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @168.875,242.36 #d6dde6 JetBrains Mono 13.5
+        text "." @227.71875,242.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @236.125,242.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @320.1875,242.36 #89ddff JetBrains Mono 13.5
+        text "7" @328.59375,242.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @337,242.36 #89ddff JetBrains Mono 13.5
+        text "8" @39.59375,263.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,263.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,263.36 #ece6d8 JetBrains Mono 13.5
+        text "tier8" @101.625,263.36 #d6dde6 JetBrains Mono 13.5
+        text " " @143.65625,263.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @152.0625,263.36 #89ddff JetBrains Mono 13.5
+        text " " @160.46875,263.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @168.875,263.36 #d6dde6 JetBrains Mono 13.5
+        text "." @227.71875,263.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @236.125,263.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @320.1875,263.36 #89ddff JetBrains Mono 13.5
+        text "8" @328.59375,263.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @337,263.36 #89ddff JetBrains Mono 13.5
+        text "9" @39.59375,284.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,284.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,284.36 #ece6d8 JetBrains Mono 13.5
+        text "tier9" @101.625,284.36 #d6dde6 JetBrains Mono 13.5
+        text " " @143.65625,284.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @152.0625,284.36 #89ddff JetBrains Mono 13.5
+        text " " @160.46875,284.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @168.875,284.36 #d6dde6 JetBrains Mono 13.5
+        text "." @227.71875,284.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @236.125,284.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @320.1875,284.36 #89ddff JetBrains Mono 13.5
+        text "9" @328.59375,284.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @337,284.36 #89ddff JetBrains Mono 13.5
+        text "10" @31.1875,305.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,305.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,305.36 #ece6d8 JetBrains Mono 13.5
+        text "tier10" @101.625,305.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,305.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,305.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,305.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,305.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,305.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,305.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,305.36 #89ddff JetBrains Mono 13.5
+        text "10" @337,305.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,305.36 #89ddff JetBrains Mono 13.5
+        text "11" @31.1875,326.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,326.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,326.36 #ece6d8 JetBrains Mono 13.5
+        text "tier11" @101.625,326.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,326.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,326.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,326.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,326.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,326.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,326.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,326.36 #89ddff JetBrains Mono 13.5
+        text "11" @337,326.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,326.36 #89ddff JetBrains Mono 13.5
+        text "12" @31.1875,347.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,347.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,347.36 #ece6d8 JetBrains Mono 13.5
+        text "tier12" @101.625,347.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,347.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,347.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,347.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,347.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,347.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,347.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,347.36 #89ddff JetBrains Mono 13.5
+        text "12" @337,347.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,347.36 #89ddff JetBrains Mono 13.5
+        text "13" @31.1875,368.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,368.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,368.36 #ece6d8 JetBrains Mono 13.5
+        text "tier13" @101.625,368.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,368.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,368.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,368.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,368.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,368.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,368.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,368.36 #89ddff JetBrains Mono 13.5
+        text "13" @337,368.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,368.36 #89ddff JetBrains Mono 13.5
+        text "14" @31.1875,389.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,389.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,389.36 #ece6d8 JetBrains Mono 13.5
+        text "tier14" @101.625,389.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,389.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,389.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,389.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,389.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,389.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,389.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,389.36 #89ddff JetBrains Mono 13.5
+        text "14" @337,389.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,389.36 #89ddff JetBrains Mono 13.5
+        text "15" @31.1875,410.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,410.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,410.36 #ece6d8 JetBrains Mono 13.5
+        text "tier15" @101.625,410.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,410.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,410.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,410.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,410.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,410.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,410.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,410.36 #89ddff JetBrains Mono 13.5
+        text "15" @337,410.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,410.36 #89ddff JetBrains Mono 13.5
+        text "16" @31.1875,431.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,431.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,431.36 #ece6d8 JetBrains Mono 13.5
+        text "tier16" @101.625,431.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,431.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,431.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,431.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,431.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,431.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,431.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,431.36 #89ddff JetBrains Mono 13.5
+        text "16" @337,431.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,431.36 #89ddff JetBrains Mono 13.5
+        text "17" @31.1875,452.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,452.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,452.36 #ece6d8 JetBrains Mono 13.5
+        text "tier17" @101.625,452.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,452.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,452.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,452.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,452.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,452.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,452.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,452.36 #89ddff JetBrains Mono 13.5
+        text "17" @337,452.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,452.36 #89ddff JetBrains Mono 13.5
+        text "18" @31.1875,473.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,473.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,473.36 #ece6d8 JetBrains Mono 13.5
+        text "tier18" @101.625,473.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,473.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,473.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,473.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,473.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,473.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,473.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,473.36 #89ddff JetBrains Mono 13.5
+        text "18" @337,473.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,473.36 #89ddff JetBrains Mono 13.5
+        text "19" @31.1875,494.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,494.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,494.36 #ece6d8 JetBrains Mono 13.5
+        text "tier19" @101.625,494.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,494.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,494.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,494.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,494.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,494.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,494.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,494.36 #89ddff JetBrains Mono 13.5
+        text "19" @337,494.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,494.36 #89ddff JetBrains Mono 13.5
+        text "20" @31.1875,515.36 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,515.36 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,515.36 #ece6d8 JetBrains Mono 13.5
+        text "tier20" @101.625,515.36 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,515.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,515.36 #89ddff JetBrains Mono 13.5
+        text " " @168.875,515.36 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,515.36 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,515.36 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,515.36 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,515.36 #89ddff JetBrains Mono 13.5
+        text "20" @337,515.36 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,515.36 #89ddff JetBrains Mono 13.5
+        text "21" @31.1875,536.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,536.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,536.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier21" @101.625,536.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,536.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,536.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,536.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,536.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,536.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,536.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,536.36005 #89ddff JetBrains Mono 13.5
+        text "21" @337,536.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,536.36005 #89ddff JetBrains Mono 13.5
+        text "22" @31.1875,557.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,557.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,557.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier22" @101.625,557.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,557.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,557.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,557.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,557.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,557.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,557.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,557.36005 #89ddff JetBrains Mono 13.5
+        text "22" @337,557.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,557.36005 #89ddff JetBrains Mono 13.5
+        text "23" @31.1875,578.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,578.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,578.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier23" @101.625,578.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,578.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,578.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,578.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,578.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,578.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,578.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,578.36005 #89ddff JetBrains Mono 13.5
+        text "23" @337,578.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,578.36005 #89ddff JetBrains Mono 13.5
+        text "24" @31.1875,599.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,599.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,599.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier24" @101.625,599.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,599.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,599.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,599.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,599.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,599.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,599.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,599.36005 #89ddff JetBrains Mono 13.5
+        text "24" @337,599.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,599.36005 #89ddff JetBrains Mono 13.5
+        text "25" @31.1875,620.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,620.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,620.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier25" @101.625,620.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,620.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,620.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,620.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,620.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,620.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,620.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,620.36005 #89ddff JetBrains Mono 13.5
+        text "25" @337,620.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,620.36005 #89ddff JetBrains Mono 13.5
+        text "26" @31.1875,641.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,641.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,641.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier26" @101.625,641.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,641.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,641.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,641.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,641.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,641.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,641.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,641.36005 #89ddff JetBrains Mono 13.5
+        text "26" @337,641.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,641.36005 #89ddff JetBrains Mono 13.5
+        text "27" @31.1875,662.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,662.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,662.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier27" @101.625,662.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,662.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,662.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,662.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,662.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,662.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,662.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,662.36005 #89ddff JetBrains Mono 13.5
+        text "27" @337,662.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,662.36005 #89ddff JetBrains Mono 13.5
+        text "28" @31.1875,683.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,683.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,683.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier28" @101.625,683.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,683.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,683.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,683.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,683.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,683.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,683.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,683.36005 #89ddff JetBrains Mono 13.5
+        text "28" @337,683.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,683.36005 #89ddff JetBrains Mono 13.5
+        text "29" @31.1875,704.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,704.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,704.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier29" @101.625,704.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,704.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,704.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,704.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,704.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,704.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,704.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,704.36005 #89ddff JetBrains Mono 13.5
+        text "29" @337,704.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,704.36005 #89ddff JetBrains Mono 13.5
+        text "30" @31.1875,725.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,725.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,725.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier30" @101.625,725.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,725.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,725.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,725.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,725.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,725.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,725.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,725.36005 #89ddff JetBrains Mono 13.5
+        text "30" @337,725.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,725.36005 #89ddff JetBrains Mono 13.5
+        text "31" @31.1875,746.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,746.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,746.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier31" @101.625,746.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,746.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,746.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,746.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,746.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,746.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,746.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,746.36005 #89ddff JetBrains Mono 13.5
+        text "31" @337,746.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,746.36005 #89ddff JetBrains Mono 13.5
+        text "32" @31.1875,767.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,767.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,767.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier32" @101.625,767.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,767.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,767.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,767.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,767.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,767.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,767.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,767.36005 #89ddff JetBrains Mono 13.5
+        text "32" @337,767.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,767.36005 #89ddff JetBrains Mono 13.5
+        text "33" @31.1875,788.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,788.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,788.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier33" @101.625,788.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,788.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,788.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,788.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,788.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,788.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,788.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,788.36005 #89ddff JetBrains Mono 13.5
+        text "33" @337,788.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,788.36005 #89ddff JetBrains Mono 13.5
+        text "34" @31.1875,809.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,809.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,809.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier34" @101.625,809.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,809.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,809.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,809.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,809.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,809.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,809.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,809.36005 #89ddff JetBrains Mono 13.5
+        text "34" @337,809.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,809.36005 #89ddff JetBrains Mono 13.5
+        text "35" @31.1875,830.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,830.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,830.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier35" @101.625,830.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,830.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,830.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,830.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,830.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,830.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,830.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,830.36005 #89ddff JetBrains Mono 13.5
+        text "35" @337,830.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,830.36005 #89ddff JetBrains Mono 13.5
+        text "36" @31.1875,851.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,851.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,851.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier36" @101.625,851.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,851.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,851.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,851.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,851.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,851.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,851.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,851.36005 #89ddff JetBrains Mono 13.5
+        text "36" @337,851.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,851.36005 #89ddff JetBrains Mono 13.5
+        text "37" @31.1875,872.36005 #4f4a40 JetBrains Mono 13.5
+        text "var" @68,872.36005 #c792ff JetBrains Mono 13.5
+        text " " @93.21875,872.36005 #ece6d8 JetBrains Mono 13.5
+        text "tier37" @101.625,872.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,872.36005 #ece6d8 JetBrains Mono 13.5
+        text "=" @160.46875,872.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,872.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @177.28125,872.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @236.125,872.36005 #89ddff JetBrains Mono 13.5
+        text "NewFromInt" @244.53125,872.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @328.59375,872.36005 #89ddff JetBrains Mono 13.5
+        text "37" @337,872.36005 #ff9e64 JetBrains Mono 13.5
+        text ")" @353.8125,872.36005 #89ddff JetBrains Mono 13.5
+        text "38" @31.1875,893.36005 #4f4a40 JetBrains Mono 13.5
+        text "// roundHalfEven rounds v to p decimal places, ties to even." @68,893.36005 #5c6b7e JetBrains Mono 13.5
+        text "39" @31.1875,914.36005 #4f4a40 JetBrains Mono 13.5
+        text "func" @68,914.36005 #c792ff JetBrains Mono 13.5
+        text " " @101.625,914.36005 #ece6d8 JetBrains Mono 13.5
+        text "roundHalfEven" @110.03125,914.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @219.3125,914.36005 #89ddff JetBrains Mono 13.5
+        text "v" @227.71875,914.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @236.125,914.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @244.53125,914.36005 #ece6d8 JetBrains Mono 13.5
+        text "." @303.375,914.36005 #89ddff JetBrains Mono 13.5
+        text "Decimal" @311.78125,914.36005 #ffcf5c JetBrains Mono 13.5
+        text "," @370.625,914.36005 #89ddff JetBrains Mono 13.5
+        text " " @379.03125,914.36005 #ece6d8 JetBrains Mono 13.5
+        text "p" @387.4375,914.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @395.84375,914.36005 #ece6d8 JetBrains Mono 13.5
+        text "int32" @404.25,914.36005 #ffcf5c JetBrains Mono 13.5
+        text ")" @446.28125,914.36005 #89ddff JetBrains Mono 13.5
+        text " " @454.6875,914.36005 #ece6d8 JetBrains Mono 13.5
+        text "decimal" @463.09375,914.36005 #ece6d8 JetBrains Mono 13.5
+        text "." @521.9375,914.36005 #89ddff JetBrains Mono 13.5
+        text "Decimal" @530.34375,914.36005 #ffcf5c JetBrains Mono 13.5
+        text " " @589.1875,914.36005 #ece6d8 JetBrains Mono 13.5
+        text "{" @597.59375,914.36005 #89ddff JetBrains Mono 13.5
+        text "40" @31.1875,935.36005 #4f4a40 JetBrains Mono 13.5
+        text "    " @68,935.36005 #ece6d8 JetBrains Mono 13.5
+        text "scaled" @101.625,935.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @152.0625,935.36005 #ece6d8 JetBrains Mono 13.5
+        text ":=" @160.46875,935.36005 #89ddff JetBrains Mono 13.5
+        text " " @177.28125,935.36005 #ece6d8 JetBrains Mono 13.5
+        text "v" @185.6875,935.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @194.09375,935.36005 #89ddff JetBrains Mono 13.5
+        text "Shift" @202.5,935.36005 #5cd2ff JetBrains Mono 13.5
+        text "(" @244.53125,935.36005 #89ddff JetBrains Mono 13.5
+        text "p" @252.9375,935.36005 #d6dde6 JetBrains Mono 13.5
+        text ")" @261.34375,935.36005 #89ddff JetBrains Mono 13.5
+        text "41" @31.1875,956.36005 #4f4a40 JetBrains Mono 13.5
+        text "    " @68,956.36005 #ece6d8 JetBrains Mono 13.5
+        text "floor" @101.625,956.36005 #d6dde6 JetBrains Mono 13.5
+        text " " @143.65625,956.36005 #ece6d8 JetBrains Mono 13.5
+        text ":=" @152.0625,956.36005 #89ddff JetBrains Mono 13.5
+        text " " @168.875,956.36005 #ece6d8 JetBrains Mono 13.5
+        text "scaled" @177.28125,956.36005 #d6dde6 JetBrains Mono 13.5
+        text "." @227.71875,956.36005 #89ddff JetBrains Mono 13.5
+        text "Floor" @236.125,956.36005 #5cd2ff JetBrains Mono 13.5
+        text "()" @278.15625,956.36005 #89ddff JetBrains Mono 13.5
+      pop
+    pop
+  pop
+pop
+rect 589.5,38 1x936 fill #24221d
+clip 590.5,38 589.5x936 r 0
+  rect 590.5,38 589.5x30 fill #0c0c0b
+  rect 590.5,38 89.953125x30 fill #121210
+  rect 590.5,38 89.953125x2 fill #ffd23f
+  text "Dashboard" @604.5,58.365234 #ece6d8 Inter 12
+  rect 590.5,68 589.5x1 fill #24221d
+  clip 590.5,69 589.5x905 r 0
+    text "TEAM DASHBOARD" @614.5,104.22 #ffd23f JetBrains Mono 11
+    text "ERROR BUDGET" @614.5,128.23001 #b3ab99 JetBrains Mono 10.5
+    rect 701.625,122.450005 48x4 fill #23211c radius 2
+    rect 701.625,122.450005 39.359985x4 fill #ff9b45 radius 2
+    text "82%" @757.625,128.23001 #ece6d8 JetBrains Mono 10.5
+    text "P99" @614.5,152.09001 #b3ab99 JetBrains Mono 10.5
+    text "184ms" @642.28125,152.09001 #4fe0a0 JetBrains Mono 10.5
+    text "OPEN INCIDENTS" @614.5,175.95001 #b3ab99 JetBrains Mono 10.5
+    text "1" @714.8125,175.95001 #ff5f6d JetBrains Mono 10.5
+  pop
+pop
+rect 1180,38 420x936 fill #0c0c0b
+clip 1180,38 420x936 r 0
+  rect 1180,38 420x30 fill #0c0c0b
+  rect 1180,38 74.1875x30 fill #121210
+  text "Deploys" @1194,58.365234 #ece6d8 Inter 12
+  rect 1180,68 420x1 fill #24221d
+  clip 1180,69 420x905 r 0
+    text "DEPLOYS" @1204,104.22 #ffd23f JetBrains Mono 11
+    text "pricing" @1204,134.48 #4fe0a0 JetBrains Mono 11
+    text "prod · 4m" @1262.1562,134.48 #b3ab99 JetBrains Mono 11
+    rect 1489.375,117.520004 86.625x26 fill #23211c radius 6 stroke 1 #332f27
+    text "Rolled back" @1499.375,134.88524 #ece6d8 Inter 12
+    text "ledger" @1204,160.48001 #ff9b45 JetBrains Mono 11
+    text "prod · 12m" @1255.5625,160.48001 #b3ab99 JetBrains Mono 11
+    rect 1503.8438,143.52 72.15625x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Roll back" @1513.8438,160.88524 #ece6d8 Inter 12
+    text "gateway" @1204,186.48001 #ff5f6d JetBrains Mono 11
+    text "staging · 1h" @1262.1562,186.48001 #b3ab99 JetBrains Mono 11
+    rect 1503.8438,169.52 72.15625x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Roll back" @1513.8438,186.88524 #ece6d8 Inter 12
+    rect 1204,205.52 76.96875x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+    text "Deploy all" @1214,222.88524 #141006 Inter 12
+  pop
+pop
+rect 0,974 1600x26 fill #0c0c0b
+rect 0,974 71.1225x26 fill #ffd23f
+text "NORMAL" @12,990.78 #141006 JetBrains Mono 10.5
+text "✕" @87.1225,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @98.71625,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @119.31,990.95996 #ff9b45 JetBrains Mono 11
+text "1" @130.90375,990.95996 #b3ab99 JetBrains Mono 11
+text "CI" @1326.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "✓ main" @1351.375,990.95996 #4fe0a0 JetBrains Mono 11
+text "Go · utf-8 · LF" @1406.9375,984.71 #b3ab99 JetBrains Mono 10.5
+text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
+text "≡ 1%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
+text "◆" @45.796875,156.77 #ffd23f JetBrains Mono 13.5
+rect 68,102 8.40625x19 fill #ffd23f
+text "p" @68,115.770004 #141006 JetBrains Mono 13.5

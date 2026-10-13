@@ -33,6 +33,7 @@ func TestOptionScopePrecedence(t *testing.T) {
 		{registry.LayerLua, registry.At{}, "off"},
 		{registry.LayerProject, registry.At{Project: "/src/oriel"}, "absolute"},
 		{registry.LayerSession, registry.At{Session: "s1"}, "relative"},
+		{registry.LayerFile, registry.At{Buffer: "b1"}, "absolute"},
 		{registry.LayerBuffer, registry.At{Buffer: "b1"}, "off"},
 		{registry.LayerWindow, registry.At{Window: "w1"}, "absolute"},
 	}
@@ -119,5 +120,36 @@ func TestOptionWatchAndDispose(t *testing.T) {
 	d.Dispose()
 	if _, _, err := o.Get("ui.blink", registry.At{}); err == nil {
 		t.Error("a disposed option still resolves")
+	}
+}
+
+// Where a value came from goes with it: the settings page shows "set in init.lua:12" and won't edit it there.
+func TestOptionSources(t *testing.T) {
+	r := registry.New()
+	r.Option(lineNumbers())
+	o := r.Options()
+	if err := o.SetFrom("number", registry.LayerUser, registry.At{}, "relative", "~/.config/oriel/settings.toml"); err != nil {
+		t.Fatal(err)
+	}
+	o.SetFrom("editor.line_numbers", registry.LayerLua, registry.At{}, "off", "init.lua:12")
+	if src := o.Source("editor.line_numbers", registry.At{}); src != "init.lua:12" {
+		t.Errorf("source %q", src)
+	}
+	if v, ok := o.Lookup("editor.line_numbers", registry.LayerUser, registry.At{}); !ok || v != "relative" {
+		t.Errorf("the user layer holds %v, %v", v, ok)
+	}
+	if _, ok := o.Lookup("editor.line_numbers", registry.LayerProject, registry.At{Project: "/p"}); ok {
+		t.Error("the project layer has a value")
+	}
+	o.Unset("editor.line_numbers", registry.LayerLua, registry.At{})
+	if src := o.Source("number", registry.At{}); src != "~/.config/oriel/settings.toml" {
+		t.Errorf("after unsetting lua: %q", src)
+	}
+	o.Unset("editor.line_numbers", registry.LayerUser, registry.At{})
+	if src := o.Source("number", registry.At{}); src != "" {
+		t.Errorf("a default has source %q", src)
+	}
+	if s, ok := o.Spec("number"); !ok || s.Name != "editor.line_numbers" {
+		t.Errorf("spec by alias: %+v", s)
 	}
 }

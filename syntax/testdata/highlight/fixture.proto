@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package pricing.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// A tier's price, in pence.
+message Tier {
+  string name = 1;
+  int32 pence = 2;
+  repeated string features = 3;
+  google.protobuf.Timestamp updated = 4;
+}
+
+enum Interval {
+  INTERVAL_UNSPECIFIED = 0;
+  INTERVAL_MONTH = 1;
+}
+
+service Prices {
+  rpc GetTier(GetTierRequest) returns (Tier);
+}
+
+message GetTierRequest {
+  string name = 1;
+}

@@ -1,0 +1,125 @@
+   1 | #include <string>
+     | ^^^^^^^^ keyword.import
+     |          ^^^^^^^^ string
+   2 | #include <vector>
+     | ^^^^^^^^ keyword.import
+     |          ^^^^^^^^ string
+   3 | 
+   4 | namespace pricing {
+     | ^^^^^^^^^ keyword.type
+     |           ^^^^^^^ module
+     |                   ^ punctuation.bracket
+   5 | 
+   6 | template <typename T>
+     | ^^^^^^^^ keyword.type
+     |          ^ punctuation.bracket
+     |           ^^^^^^^^ keyword.type
+     |                    ^ type
+     |                     ^ punctuation.bracket
+   7 | class Tier {
+     | ^^^^^ keyword.type
+     |       ^^^^ type
+     |            ^ punctuation.bracket
+   8 | public:
+     | ^^^^^^ keyword.modifier
+     |       ^ punctuation.delimiter
+   9 | 	explicit Tier(std::string name) : name_(std::move(name)) {}
+     |  ^^^^^^^^ keyword
+     |           ^^^^ function
+     |               ^ punctuation.bracket
+     |                ^^^ module
+     |                   ^^ punctuation.delimiter
+     |                     ^^^^^^ type
+     |                            ^^^^ variable.parameter
+     |                                ^ punctuation.bracket
+     |                                  ^ punctuation.delimiter
+     |                                    ^^^^^ property
+     |                                         ^ punctuation.bracket
+     |                                          ^^^ module
+     |                                             ^^ punctuation.delimiter
+     |                                               ^^^^ function.call
+     |                                                   ^ punctuation.bracket
+     |                                                    ^^^^ variable
+     |                                                        ^^ punctuation.bracket
+     |                                                           ^^ punctuation.bracket
+  10 | 	T price(T base) const { return base * 2; }
+     |  ^ type
+     |    ^^^^^ function.method
+     |         ^ punctuation.bracket
+     |          ^ type
+     |            ^^^^ variable.parameter
+     |                ^ punctuation.bracket
+     |                  ^^^^^ keyword.modifier
+     |                        ^ punctuation.bracket
+     |                          ^^^^^^ keyword.return
+     |                                 ^^^^ variable
+     |                                      ^ operator
+     |                                        ^ number
+     |                                         ^ punctuation.delimiter
+     |                                           ^ punctuation.bracket
+  11 | 
+  12 | private:
+     | ^^^^^^^ keyword.modifier
+     |        ^ punctuation.delimiter
+  13 | 	std::string name_;
+     |  ^^^ module
+     |     ^^ punctuation.delimiter
+     |       ^^^^^^ type
+     |              ^^^^^ variable.member
+     |                   ^ punctuation.delimiter
+  14 | };
+     | ^ punctuation.bracket
+     |  ^ punctuation.delimiter
+  15 | 
+  16 | }  // namespace pricing
+     | ^ punctuation.bracket
+     |    ^^^^^^^^^^^^^^^^^^^^ comment
+  17 | 
+  18 | int main() {
+     | ^^^ type.builtin
+     |     ^^^^ function
+     |         ^^ punctuation.bracket
+     |            ^ punctuation.bracket
+  19 | 	auto tiers = std::vector<pricing::Tier<int>>{pricing::Tier<int>("gold")};
+     |  ^^^^ type.builtin
+     |       ^^^^^ variable
+     |             ^ operator
+     |               ^^^ module
+     |                  ^^ punctuation.delimiter
+     |                    ^^^^^^ type
+     |                          ^ punctuation.bracket
+     |                           ^^^^^^^ module
+     |                                  ^^ punctuation.delimiter
+     |                                    ^^^^ type
+     |                                        ^ punctuation.bracket
+     |                                         ^^^ type.builtin
+     |                                            ^^^ punctuation.bracket
+     |                                               ^^^^^^^ module
+     |                                                      ^^ punctuation.delimiter
+     |                                                        ^^^^ function.call
+     |                                                            ^ punctuation.bracket
+     |                                                             ^^^ type.builtin
+     |                                                                ^^ punctuation.bracket
+     |                                                                  ^^^^^^ string
+     |                                                                        ^^ punctuation.bracket
+     |                                                                          ^ punctuation.delimiter
+  20 | 	return tiers.front().price(21) == 42 ? 0 : 1;
+     |  ^^^^^^ keyword.return
+     |         ^^^^^ variable
+     |              ^ punctuation.delimiter
+     |               ^^^^^ function.method.call
+     |                    ^^ punctuation.bracket
+     |                      ^ punctuation.delimiter
+     |                       ^^^^^ function.method.call
+     |                            ^ punctuation.bracket
+     |                             ^^ number
+     |                               ^ punctuation.bracket
+     |                                 ^^ operator
+     |                                    ^^ number
+     |                                       ^ keyword.conditional.ternary
+     |                                         ^ number
+     |                                           ^ keyword.conditional.ternary
+     |                                             ^ number
+     |                                              ^ punctuation.delimiter
+  21 | }
+     | ^ punctuation.bracket

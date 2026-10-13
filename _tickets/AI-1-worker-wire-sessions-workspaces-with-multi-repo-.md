@@ -24,6 +24,11 @@ depends_on: [FW-2]
 
 crit's workspace layout is read in place
 
+## From SH-13
+
+- Session logs live behind `logs.SessionLogs`; the app keeps them on disk for now (`logs.Dirs`). Move them onto the
+  worker, stream its records to the app's `logs.Router`, and show that a session's log survives a worker restart.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

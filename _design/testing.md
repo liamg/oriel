@@ -23,14 +23,20 @@ like this" isn't a source.
 |---|---|---|
 | vim behaviour | Vim `runtime/doc/*.txt` (`:help`), plus Neovim's where it deliberately differs | a tag, e.g. vim `v9.1.xxxx`, nvim `v0.11.x` |
 | vim regex | `pattern.txt` | same |
+| PCRE2 | PCRE2's own test suite (`testdata/testinput*`, `testoutput*`) | release tag |
 | LSP | the LSP 3.17 specification (markdown source) | commit |
 | DAP | the Debug Adapter Protocol spec + JSON schema | commit |
 | terminal | xterm `ctlseqs`, ECMA-48, kitty keyboard and graphics protocol docs, Ghostty's VT docs | commit |
 | text | Unicode UAX #29 (graphemes), #14 (line breaks), #11 (width), plus the UCD data files | Unicode version |
-| colour | CSS Color 4 (OKLCH), APCA | commit |
-| git | `git-*` man pages for porcelain output we parse | git version |
+| colour | CSS Color 4 (OKLCH), WCAG 2 (contrast ratio) | commit |
+| git | the `git` binary as the oracle (`git check-attr`, porcelain output); docs linked, not vendored | git version |
+| editor conventions | the EditorConfig specification and its core-test suite | commit |
 
 - `spec/` is data: no code from it is linked. Updating a pin is a PR that re-runs every referencing test.
+- Only what a test reads is vendored: the files a `ref` quotes, a suite a test runs (PCRE2's, toml-test,
+  editorconfig-core-test) or that tests are mined from, and the licence they need. The rest of a spec is linked
+  from its `SOURCE`. Where a tool is the oracle (`git check-attr`, headless nvim), the test cites `ref: oracle …`
+  and the doc's URL instead of a copy.
 - `refcheck` understands each format: vim `*tags*`, markdown headings, RFC section numbers, man page sections.
 
 ## The vim engine: keystroke tests
@@ -136,7 +142,7 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 | `dap` | recorded sessions with real dlv and debugpy, replayed; live runs in CI | DAP spec |
 | `term` | `vttest`/esctest-style scripts: bytes in, expected grid out; every case cites a `ctlseqs` entry | xterm ctlseqs, ECMA-48, kitty docs |
 | `render`, `ui` | the headless backend records display lists, compared as snapshots (`render/snapshot`); `render/raster` draws them on the CPU (sRGB blending, as CSS) into golden PNGs compared by deltaE OK; the fixture is also held against the mockups (FW-8) | the mockups (`ui.md`) as reference |
-| `theme` | token resolution tables; every built-in theme rendered on the fixture workspace; contrast lint | CSS Color 4, APCA |
+| `theme` | token resolution tables; every built-in theme rendered on the fixture workspace; contrast lint | CSS Color 4, WCAG 2 |
 | `agent/*` | the provider conformance suite (start, send, tool call, permission, interrupt, fork, resume) against a **fake `claude`/`codex` binary** that replays recorded hook and transcript traffic; plus a slow live suite run on demand | recorded sessions from real CLIs, re-recorded when versions bump |
 | `wire`, `worker` | in-process worker tests; chaos tests (drop the connection mid-stream, reconnect, compare state) | – |
 | `gitx` | fixture repos built by script; porcelain output parsing | git man pages |

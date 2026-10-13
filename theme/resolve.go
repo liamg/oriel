@@ -2,12 +2,13 @@ package theme
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
 
 // Effects with no value anywhere in the stack.
-var defaultEffects = map[string]float64{"glow": 1, "grid": 0, "scanline": 0, "brackets": 1, "blur": 0}
+var defaultEffects = map[string]float64{"glow": 1, "grid": 0, "scanline": 0, "brackets": 1, "blur": 0, "motion": 1}
 
 // Resolved is a theme flattened for one variant: every token's colour, read by id.
 type Resolved struct {
@@ -19,6 +20,7 @@ type Resolved struct {
 	syntax  map[string]Syntax
 	effects map[string]float64
 	links   map[string]Link
+	probes  map[Color]string // a probe theme's colours, back to their names
 }
 
 // Syntax is a resolved highlight group.
@@ -68,8 +70,8 @@ func (r *Resolved) Syntax(capture string) Syntax {
 
 func (r *Resolved) Effect(name string) float64 { return r.effects[name] }
 
-// Chain is how name got its value: the token, then each name its expression is just a reference to,
-// down to the palette colour or literal at the end.
+// Chain is how name got its value: the token, then the name its expression refers to (or derives from, by its
+// first reference), down to the palette colour or literal at the end.
 func (r *Resolved) Chain(name string) []Link {
 	var out []Link
 	seen := map[string]bool{}
@@ -81,10 +83,11 @@ func (r *Resolved) Chain(name string) []Link {
 		}
 		out = append(out, l)
 		e, err := parseExpr(l.Expr)
-		if err != nil || e.name == "" {
+		refs := e.refs()
+		if err != nil || len(refs) == 0 {
 			break
 		}
-		next := e.name
+		next := refs[0]
 		if _, isToken := r.byName[next]; !isToken || next == name {
 			next = "palette:" + next
 		}
@@ -269,3 +272,27 @@ func (ev *evaluator) evalIn(src, self string, stack []string) (Color, error) {
 		return ev.paletteColor(ref, nil)
 	})
 }
+
+// Palette is the palette's colour names, sorted.
+func (r *Resolved) Palette() []string { return slices.Sorted(maps.Keys(r.palette)) }
+
+// PaletteColor is a palette colour, which a token of the same name doesn't hide.
+func (r *Resolved) PaletteColor(name string) (Color, bool) {
+	c, ok := r.palette[name]
+	return c, ok
+}
+
+// SyntaxGroups is every group the theme sets, sorted.
+func (r *Resolved) SyntaxGroups() []string { return slices.Sorted(maps.Keys(r.syntax)) }
+
+// Effects is every effect's name, sorted.
+func (r *Resolved) Effects() []string { return slices.Sorted(maps.Keys(r.effects)) }
+
+// Link is where name's value comes from: a token, or "palette:x".
+func (r *Resolved) Link(name string) (Link, bool) {
+	l, ok := r.links[name]
+	return l, ok
+}
+
+// IsProbe reports whether r came from Probe.
+func (r *Resolved) IsProbe() bool { return r.probes != nil }

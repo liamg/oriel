@@ -126,6 +126,21 @@ func (e *Engine) runMapping(mp mapping) {
 	e.mapDepth--
 }
 
+// Mapper is a Host that keeps :map's mappings in its own keymap, so they show where the IDE lists keys. Modes
+// are vim's letters: n, v, o, i and c.
+type Mapper interface {
+	Map(mode byte, lhs, rhs []string, noremap bool)
+	Unmap(mode byte, lhs []string) bool
+	MapClear(mode byte)
+}
+
+// TypeMapped types keys as a mapping's right-hand side: remapped unless noremap, and undone as one change.
+func (e *Engine) TypeMapped(keys []string, noremap bool) {
+	e.runMapping(mapping{rhs: keys, noremap: noremap})
+	e.updateTop(e.view())
+	e.sync()
+}
+
 // exMap runs :map and its family: name is the command, which says the modes and whether it remaps.
 func (e *Engine) exMap(name, args string, bang bool) error {
 	unmap := strings.Contains(name, "unmap") || strings.HasSuffix(name, "unm") || name == "unm"
@@ -155,8 +170,12 @@ func (e *Engine) exMap(name, args string, bang bool) error {
 	if strings.HasPrefix(name, "nun") || strings.HasPrefix(name, "nm") || strings.HasPrefix(name, "nn") {
 		modes = "n"
 	}
+	mapper, hosted := e.host.(Mapper)
 	if clear {
 		for _, m := range []byte(modes) {
+			if hosted {
+				mapper.MapClear(m)
+			}
 			delete(e.maps, m)
 		}
 		return nil
@@ -176,6 +195,29 @@ func (e *Engine) exMap(name, args string, bang bool) error {
 		return nil
 	}
 	lhs := mapKey(keymap.Parse(lhsText))
+	if hosted {
+		if unmap {
+			found := false
+			for _, m := range []byte(modes) {
+				found = mapper.Unmap(m, keymap.Parse(lhsText)) || found
+			}
+			if !found {
+				return errNoMapping.with()
+			}
+			return nil
+		}
+		if rhsText == "" {
+			return nil
+		}
+		rhs := keymap.Parse(rhsText)
+		if strings.EqualFold(rhsText, "<Nop>") {
+			rhs = nil
+		}
+		for _, m := range []byte(modes) {
+			mapper.Map(m, keymap.Parse(lhsText), rhs, noremap)
+		}
+		return nil
+	}
 	if unmap {
 		found := false
 		for _, m := range []byte(modes) {

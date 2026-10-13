@@ -54,11 +54,11 @@ func TestBuiltinTokens(t *testing.T) {
 			"bg.base": "#060606", "bg.surface": "#0c0c0b", "bg.raised": "#121210", "line": "#24221d", "line.strong": "#332f27",
 			"fg": "#ece6d8", "fg.muted": "#b3ab99", "fg.faint": "#7c7566", "fg.ghost": "#4f4a40",
 			"accent": "#ffd23f", "brand": "#ff8a1f", "status.working": "#4cc9f0", "status.needs_you": "#ff5f6d",
-			"status.quiet": "#4fe0a0", "status.reviewer": "#ff6fae", "status.permission": "#a98bff", "status.ci": "#5c8dff",
+			"status.quiet": "#4fe0a0", "status.reviewer": "#ff7ad6", "status.permission": "#b98aff", "status.ci": "#5c8dff",
 			"accent.bg": "#1f1c0f", // 8% accent over bg.surface, opaque
 		}},
 		{Light, map[string]string{
-			"bg.base": "#fbfaf7", "fg": "#1b2129", "accent": "#0a84b8", "status.working": "#d9661a", "line": "#dcd7cc",
+			"bg.base": "#fbfaf7", "fg": "#1b2129", "accent": "#0a78a8", "status.working": "#d9661a", "line": "#dcd7cc",
 		}},
 	} {
 		r := resolve(t, tt.v, oriel(t))

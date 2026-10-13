@@ -15,6 +15,7 @@ type Pos struct {
 // view reads one snapshot line by line, as vim's motions do, caching the lines it has read.
 type view struct {
 	s     text.Snapshot
+	ts    int // 'tabstop'
 	cache map[int][]byte
 	folds *foldState // the window's folds, for motions that treat a closed fold as one line
 }
@@ -27,7 +28,7 @@ func (v *view) folded(line int) (int, int, bool) {
 	return v.folds.closedAt(line)
 }
 
-func newView(s text.Snapshot) *view { return &view{s: s, cache: map[int][]byte{}} }
+func newView(s text.Snapshot) *view { return &view{s: s, ts: 8, cache: map[int][]byte{}} }
 
 func (v *view) lines() int { return v.s.Lines() }
 
@@ -176,13 +177,11 @@ func (v *view) lineWhite(line int) bool { return v.indentEnd(line) == v.lineLen(
 // inindent reports whether p.Col+extra is at or before the first non-blank.
 func (v *view) inindent(p Pos, extra int) bool { return v.indentEnd(p.Line) >= p.Col+extra }
 
-const tabstop = 8
-
-// charWidth is how many screen cells r takes at virtual column vcol.
-func charWidth(r rune, vcol int) int {
+// charWidth is how many screen cells r takes at virtual column vcol, with tabs every ts columns.
+func charWidth(r rune, vcol, ts int) int {
 	switch {
 	case r == '\t':
-		return tabstop - vcol%tabstop
+		return ts - vcol%ts
 	case composing(r):
 		return 0
 	case r < 0x20 || r == 0x7f:
@@ -214,7 +213,7 @@ func (v *view) vcol(line, col int) int {
 	vc := 0
 	for i := 0; i < col && i < len(l); {
 		r, n := utf8.DecodeRune(l[i:])
-		vc += charWidth(r, vc)
+		vc += charWidth(r, vc, v.ts)
 		i += n
 	}
 	return vc
@@ -227,7 +226,7 @@ func (v *view) colAt(line, want int, past bool) int {
 	vc, i := 0, 0
 	for i < len(l) {
 		r, n := utf8.DecodeRune(l[i:])
-		w := charWidth(r, vc)
+		w := charWidth(r, vc, v.ts)
 		if vc+w > want {
 			return i
 		}

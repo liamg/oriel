@@ -28,6 +28,16 @@ func RegisterEvent[E Event](name string) {
 	eventNames[t] = name
 }
 
+// EventName is ev's registered name, or its Go type when it has none.
+func EventName(ev Event) string {
+	eventsMu.RLock()
+	defer eventsMu.RUnlock()
+	if n, ok := eventNames[reflect.TypeOf(ev)]; ok {
+		return n
+	}
+	return fmt.Sprintf("%T", ev)
+}
+
 // record is one line of an event log.
 type record struct {
 	Seq   uint64          `json:"seq"`

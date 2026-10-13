@@ -1,0 +1,105 @@
+== pri
+  84  [p][r][i]cing api usage
+  84  [p][r][i]cing-rounding
+  84  [p][r][i]ce-feed backfill
+  84  New plan from [p][r][i]ce…
+  84  Run job: [p][r][i]cing test sweep
+  84  internal/[p][r][i]cing/round.go
+  84  internal/[p][r][i]cing/tiers.go
+  84  [P][r][i]ceForTier
+  84  INF-2240 [P][r][i]ce cache invalidation on plan change
+  84  #4412 fix: [p][r][i]ce lookup for spot instances
+== pr
+  59  [p][r]icing api usage
+  59  [p][r]icing-rounding
+  59  [p][r]ice-feed backfill
+  59  New plan from [p][r]ice…
+  59  Review [P][R] by URL…
+  59  Run job: [p][r]icing test sweep
+  59  internal/[p][r]icing/round.go
+  59  internal/[p][r]icing/tiers.go
+  59  [P][r]iceForTier
+  59  INF-2240 [P][r]ice cache invalidation on plan change
+  59  #4412 fix: [p][r]ice lookup for spot instances
+  24  ap[p]/edito[r].go
+  24  ap[p]/edito[r]pane.go
+== round
+ 134  internal/pricing/[r][o][u][n][d].go
+ 128  pricing-[r][o][u][n][d]ing
+== rg
+  51  internal/pricing/[r]ound.[g]o
+  40  pricing-[r]oundin[g]
+  37  app/edito[r].[g]o
+  36  internal/pricing/tie[r]s.[g]o
+  34  [R]un job: pricin[g] test sweep
+  34  vim/sc[r]oll.[g]o
+  34  [r]ender/typeset/typeset.[g]o
+  33  app/edito[r]pane.[g]o
+  29  cmd/o[r]iel/main.[g]o
+  26  p[r]icin[g] api usage
+  -5  INF-2240 P[r]ice cache invalidation on plan chan[g]e
+== edp
+  69  app/[e][d]itor[p]ane.go
+  67  [e][d]itor.o[p]en
+  38  r[e]n[d]er/ty[p]eset/typeset.go
+  37  INF-2240 Price cach[e] invali[d]ation on [p]lan change
+== app/ed
+ 159  [a][p][p][/][e][d]itor.go
+ 159  [a][p][p][/][e][d]itorpane.go
+== ap ed
+ 118  [a][p]p/[e][d]itor.go
+ 118  [a][p]p/[e][d]itorpane.go
+  54  INF-2240 Price cach[e] invali[d][a]tion on [p]lan change
+  50  int[e]rn[a]l/[p]ricing/roun[d].go
+== 'price
+ 143  [p][r][i][c][e]-feed backfill
+ 143  New plan from [p][r][i][c][e]…
+ 143  [P][r][i][c][e]ForTier
+ 143  INF-2240 [P][r][i][c][e] cache invalidation on plan change
+ 143  #4412 fix: [p][r][i][c][e] lookup for spot instances
+== ^app
+  93  [a][p][p]/editor.go
+  93  [a][p][p]/editorpane.go
+  93  [a][p][p]/notifications.go
+  93  [a][p][p]/logpanel.go
+== .go$
+  88  internal/pricing/round[.][g][o]
+  88  internal/pricing/tiers[.][g][o]
+  88  cmd/oriel/main[.][g][o]
+  88  app/editor[.][g][o]
+  88  app/editorpane[.][g][o]
+  88  app/notifications[.][g][o]
+  88  vim/scroll[.][g][o]
+  88  render/typeset/typeset[.][g][o]
+  88  ui/widget/notice[.][g][o]
+  88  app/logpanel[.][g][o]
+== !app .go$
+  88  internal/pricing/round[.][g][o]
+  88  internal/pricing/tiers[.][g][o]
+  88  cmd/oriel/main[.][g][o]
+  88  vim/scroll[.][g][o]
+  88  render/typeset/typeset[.][g][o]
+  88  ui/widget/notice[.][g][o]
+== PFT
+  70  [P]rice[F]or[T]ier
+== pft
+  70  [P]rice[F]or[T]ier
+  53  #4412 fix: [p]rice lookup [f]or spo[t] instances
+  36  ap[p]/noti[f]ica[t]ions.go
+== layout
+ 159  [l][a][y][o][u][t].move
+ 159  [l][a][y][o][u][t].zoom
+== lmv
+  63  [l]ayout.[m]o[v]e
+== open
+ 104  editor.[o][p][e][n]
+ 104  view.[o][p][e][n]
+== notif
+ 134  app/[n][o][t][i][f]ications.go
+== msg
+  59  [m]e[s]sa[g]es
+  54  vi[m]/[s]croll.[g]o
+== tsg
+  66  internal/pricing/[t]ier[s].[g]o
+  64  render/typeset/[t]ype[s]et.[g]o
+  48  app/notifica[t]ion[s].[g]o

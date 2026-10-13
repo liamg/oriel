@@ -2,7 +2,7 @@
 id: ED-7
 title: "Decorations between lines: threads, explain cards, diffs, virtual text"
 phase: P3
-status: todo
+status: done
 area: Editor
 module: ui, editor
 depends_on: [ED-1, FW-6]

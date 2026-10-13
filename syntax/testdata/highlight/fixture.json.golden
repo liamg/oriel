@@ -1,0 +1,37 @@
+   1 | {
+     | ^ punctuation.bracket
+   2 |   "name": "oriel",
+     |   ^^^^^^ property
+     |         ^ punctuation.delimiter
+     |           ^^^^^^^ string
+     |                  ^ punctuation.delimiter
+   3 |   "version": 3,
+     |   ^^^^^^^^^ property
+     |            ^ punctuation.delimiter
+     |              ^ number
+     |               ^ punctuation.delimiter
+   4 |   "private": true,
+     |   ^^^^^^^^^ property
+     |            ^ punctuation.delimiter
+     |              ^^^^ boolean
+     |                  ^ punctuation.delimiter
+   5 |   "tags": ["editor", "agents"],
+     |   ^^^^^^ property
+     |         ^ punctuation.delimiter
+     |           ^ punctuation.bracket
+     |            ^^^^^^^^ string
+     |                    ^ punctuation.delimiter
+     |                      ^^^^^^^^ string
+     |                              ^ punctuation.bracket
+     |                               ^ punctuation.delimiter
+   6 |   "owner": null,
+     |   ^^^^^^^ property
+     |          ^ punctuation.delimiter
+     |            ^^^^ constant.builtin
+     |                ^ punctuation.delimiter
+   7 |   "ratio": 1.5
+     |   ^^^^^^^ property
+     |          ^ punctuation.delimiter
+     |            ^^^ number
+   8 | }
+     | ^ punctuation.bracket

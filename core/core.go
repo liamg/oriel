@@ -24,6 +24,7 @@ const (
 	StatusCI         Status = "ci"
 	StatusReviewer   Status = "reviewer"
 	StatusQuiet      Status = "quiet"
+	StatusOff        Status = "off"
 )
 
 // Store is session state, the thing every surface reads.
@@ -32,14 +33,17 @@ type Store interface {
 	Session(id SessionID) (Session, bool)
 	Apply(ev Event) error // the only mutation path; events come from the worker
 	Subscribe(filter Filter, fn func(Event)) (cancel func())
-	State() State // a copy; the store keeps changing
+	State() State     // a copy; the store keeps changing
+	Focus() SessionID // the session in front, without copying the state
 }
 
 // Session is a read-only view of one session.
 type Session interface {
 	ID() SessionID
+	Name() string // what its tab says: its name, or its id
 	Kind() Kind
 	Status() Status
+	Unseen() int // errors since it last had focus: its tab's error mark
 }
 
 // Event is something that happened. Scope is the session it belongs to, or "" for app-wide events.

@@ -33,11 +33,11 @@ func (s *charSet) hasExact(r rune) bool {
 	return false
 }
 
-func (s *charSet) has(r rune, m *matcher) bool {
+func (s *charSet) has(r rune, m *matcher, ic bool) bool {
 	if s.hasExact(r) {
 		return true
 	}
-	if m.ic {
+	if ic {
 		for f := unicode.SimpleFold(r); f != r; f = unicode.SimpleFold(f) {
 			if s.hasExact(f) {
 				return true

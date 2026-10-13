@@ -2,7 +2,7 @@
 id: SH-10
 title: "Help everywhere (right-click → Help, K, ⌘?, :help)"
 phase: P3
-status: todo
+status: done
 area: Shell and navigation
 module: help
 depends_on: [FW-6]
@@ -25,6 +25,10 @@ depends_on: [FW-6]
 ## Done when
 
 CI lint: every interactive element resolves to a help page and anchor
+
+## From SH-5
+
+- Add help as a picker source (`␣h`): `Registry.Picker` with `PickerOnly` and a preview of the page.
 
 ## Rules
 

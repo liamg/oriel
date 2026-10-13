@@ -2,7 +2,7 @@
 id: ED-12
 title: "Editor pane and files: open, edit, save — the first usable editor"
 phase: P3
-status: todo
+status: done
 area: Editor
 module: editor
 depends_on: [ED-4, ED-6, FW-6, FW-9, SH-13]
@@ -74,6 +74,15 @@ Threads, the minimap, the agent dock and the side panels are other tickets.
 - A change on disk reloads an unchanged buffer and prompts for a changed one.
 - `:split` and `CTRL-W` commands and a drag in FW-9's layout change the same tree.
 - Keypress to frame stays under 8 ms (`PLAN.md`) for typing in a 10,000-line Go file, measured in a benchmark.
+
+## Where things landed
+
+- `:ls` and `:copen` run `buffers.switch` and `quickfix.open`, with plain stand-in views until SH-5's switcher and a
+  results panel replace them (same ids).
+- `:abbreviate` stays engine-local; `:map` and its forms are in the registry keymap (`editor.md`).
+- `"*` is the clipboard on Linux too: Gio has no primary selection.
+- Keypress to frame on the 10,000-line file: 0.74 ms mean, 1.6 ms p95 (`TestEditorTypingBudget`,
+  `BenchmarkEditorTyping`). Rare stalls of up to ~25 ms remain while the background parser re-highlights; ED-14.
 
 ## Rules
 

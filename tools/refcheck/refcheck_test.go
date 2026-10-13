@@ -28,6 +28,10 @@ func fakeSpec(t *testing.T) string {
 	write(t, root, "spec/vim/testdir/test_x.vim", "\" header\nfunc Test_one()\n  normal! dw\nendfunc\n\nfunc! Test_two()\n  normal! x\nendfunc\n")
 	write(t, root, "spec/lsp/spec.md", "# Spec\n\n## Text Documents\n\nPositions are zero-based.\n\n## Other\n\nElsewhere.\n")
 	write(t, root, "spec/css/Overview.bs", "<h2 id=\"mix\">Mixing</h2>\n<p>Mix &amp; <em>match</em>\n colours.\n<h3 id=\"sub\">Sub</h3>\nStill mixing.\n<h2 id='next'>Next</h2>\nElsewhere.\nset |x| to 1, giving&nbsp;''red'' or `blue`\n")
+	write(t, root, "spec/wcag/terms.html", "<dt><dfn id=\"dfn-ratio\">ratio</dfn></dt>\n<dd>\n  <p>(L1 + 0.05) /\n (L2 + 0.05)</p>\n</dd>\n<dt><dfn id=\"dfn-other\">other</dfn></dt>\n<dd>Elsewhere.</dd>\n")
+	write(t, root, "spec/wcag/sc.html", "<section id=\"min\" class=\"sc\">\n<h4>Minimum</h4>\n<p>at least 4.5:1</p>\n<section id=\"inner\">Inner.</section>\n</section>\nAfter.\n")
+	write(t, root, "spec/ec/index.rst", "Title\n^^^^^\n\nFile Format\n===========\n\nRead ``one`` line\nat a time.\n\nSub\n---\n\nStill format.\n\nGlobs\n=====\n\nElsewhere.\n")
+	write(t, root, "spec/git/attrs.txt", "gitattributes(5)\n================\n\nEffects\n-------\n\n`text`\n^^^^^^\n\nThis attribute marks the path as a text file.\n\nOther\n-----\n\nElsewhere.\n")
 	write(t, root, "spec/css/code.js", "// header\nfunction lin(RGB) {\n\treturn val / 12.92;\n}\n\nfunction gam(RGB) {\n\treturn 1.055;\n}\n")
 	return root
 }
@@ -57,6 +61,20 @@ func TestCheck(t *testing.T) {
 		{"css/Overview.bs#sub", "Still mixing.", true},
 		{"css/Overview.bs#next", "", true},
 		{"css/Overview.bs#gone", "", false},
+		{"wcag/terms.html#dfn-ratio", "(L1 + 0.05) / (L2 + 0.05)", true},
+		{"wcag/terms.html#dfn-ratio", "Elsewhere.", false},
+		{"wcag/terms.html#dfn-other", "Elsewhere.", true},
+		{"wcag/sc.html#min", "at least 4.5:1", true},
+		{"wcag/sc.html#min", "Inner.", true},
+		{"wcag/sc.html#min", "After.", false},
+		{"ec/index.rst#File Format", "Read one line at a time.", true},
+		{"ec/index.rst#File Format", "Still format.", true},
+		{"ec/index.rst#File Format", "Elsewhere.", false},
+		{"ec/index.rst#Globs", "Elsewhere.", true},
+		{"ec/index.rst#Missing", "", false},
+		{"git/attrs.txt#text", "This attribute marks the path as a text file.", true},
+		{"git/attrs.txt#Effects", "This attribute marks the path", true},
+		{"git/attrs.txt#text", "Elsewhere.", false},
 		{"css/code.js#lin", "return val / 12.92;", true},
 		{"css/code.js#lin", "return 1.055;", false},
 		{"css/code.js#gam", "", true},

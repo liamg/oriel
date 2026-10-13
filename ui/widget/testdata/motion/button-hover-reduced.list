@@ -1,0 +1,12 @@
+== start
+backdrop #060606
+rect 0,0 48.5x26 fill #23211c radius 6 stroke 1 #332f27
+text "Save" @10,17.365234 #ece6d8 Inter 12
+== mid
+backdrop #060606
+rect 0,0 48.5x26 fill #23211c radius 6 stroke 1 #332f27
+text "Save" @10,17.365234 #ece6d8 Inter 12
+== settled
+backdrop #060606
+rect 0,0 48.5x26 fill #23211c radius 6 stroke 1 #332f27
+text "Save" @10,17.365234 #ece6d8 Inter 12

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"math"
+	"runtime/debug"
 	"time"
 
 	"github.com/liamg/oriel/render"
@@ -44,6 +45,29 @@ func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID {
 		body(&Ctx{u: c.u, e: e})
 	}
 	return e.id
+}
+
+// Guard adds a box like Box, but a panic in body doesn't escape: what body built is dropped, and fallback
+// builds the box instead, given the panic's value and stack.
+func (c *Ctx) Guard(key any, st Style, body func(c *Ctx), fallback func(c *Ctx, v any, stack []byte)) ID {
+	e := c.u.add(c.e, key, kBox)
+	e.style = st
+	if v, stack := try(func() { body(&Ctx{u: c.u, e: e}) }); stack != nil {
+		e.kids, e.keys = nil, nil
+		fallback(&Ctx{u: c.u, e: e}, v, stack)
+	}
+	return e.id
+}
+
+// try runs fn, and returns what it panicked with and where; stack is nil when it didn't.
+func try(fn func()) (v any, stack []byte) {
+	defer func() {
+		if v = recover(); v != nil {
+			stack = debug.Stack()
+		}
+	}()
+	fn()
+	return nil, nil
 }
 
 func (c *Ctx) Row(key any, st Style, body func(c *Ctx)) ID {
@@ -100,9 +124,22 @@ func (c *Ctx) Node(n Node) {
 // List adds a vertically scrolling list of n rows, each rowH tall, and builds only the rows in view:
 // the rows that last frame's height and the scroll offset show, plus one.
 func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i int)) ID {
+	return c.ListBehind(key, st, n, rowH, nil, row)
+}
+
+// ListBehind is List with behind, if it's set, building what's drawn behind the rows (an underlay float, Z < 0, as a
+// selection highlight that glides): top is where row 0's top is in the window, scrolling included.
+func (c *Ctx) ListBehind(key any, st Style, n int, rowH float32, behind func(c *Ctx, top float32), row func(c *Ctx, i int)) ID {
 	st.Dir, st.ScrollY = Column, true
 	st.Gap = 0
 	return c.Box(key, st, func(lc *Ctx) {
+		if behind != nil {
+			top := float32(0)
+			if r, ok := lc.u.Rect(lc.e.id); ok {
+				top = r.Min.Y - lc.u.Scroll(lc.e.id).Y
+			}
+			behind(lc, top)
+		}
 		view := float32(64 * rowH)
 		if r, ok := lc.u.Rect(lc.e.id); ok && r.Dy() > 0 {
 			view = r.Dy()
@@ -136,6 +173,9 @@ func (c *Ctx) Focus(id ID) { c.u.in.focus, c.u.in.visible = id, false }
 // Blur drops keyboard focus.
 func (c *Ctx) Blur() { c.u.in.focus = 0 }
 
+// FocusNext moves keyboard focus to the next focusable node (back with -1), as last frame laid them out.
+func (c *Ctx) FocusNext(dir int) { c.u.FocusNext(dir) }
+
 // Now is the UI's clock.
 func (c *Ctx) Now() time.Time { return c.u.now() }
 
@@ -156,6 +196,17 @@ func (c *Ctx) Scroll(id ID) render.Point { return c.u.Scroll(id) }
 
 // ScrollTo sets id's scroll offset; layout clamps it.
 func (c *Ctx) ScrollTo(id ID, p render.Point) { c.u.ScrollTo(id, p) }
+
+// ClaimContext says a widget answered id's right-click with a context menu of its own.
+func (c *Ctx) ClaimContext(id ID) {
+	if c.u.in.claimed == nil {
+		c.u.in.claimed = map[ID]bool{}
+	}
+	c.u.in.claimed[id] = true
+}
+
+// RequestHelp asks for help page id.
+func (c *Ctx) RequestHelp(id string) { c.u.RequestHelp(id) }
 
 // Help is the help id of id or its nearest ancestor with one.
 func (c *Ctx) Help(id ID) string { return c.u.Help(id) }

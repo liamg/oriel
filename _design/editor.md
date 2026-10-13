@@ -70,12 +70,29 @@ engine never feels like another binary running in a pane.
 - **Prompts** ("the range is backwards, swap it?") are `Question` notices, shown as the IDE's confirm; the answer is
   the next key, as in vim.
 - In ED-12, where the editor first appears in the UI:
-  - windows are the layout's panes, and buffers are the IDE's open files and tabs (`:ls` opens the switcher)
-  - the `:` line is an IDE input with completion, that also runs palette commands
-  - quickfix and location lists show in the IDE's results panel
-  - `y`, `d` and `p` use the system clipboard (`"+`; `"*` is the primary selection on Linux), through the IDE's
-    clipboard service
-  - `:map` and `:abbreviate` write to the registry keymap, so they show in the keybinding UI
+  - windows are the layout's panes: each window is a view `editor#<id>`, and the engine asks the layout (through
+    `vim.Layout`) for the window order, the neighbour in a direction and each window's rows. `:split` opens a
+    split in the layout, `:close` closes the pane, a dragged pane is where `CTRL-W` finds it, and closing a tab
+    closes the window. Without an IDE the engine lays its windows out over nvim's 80×23 screen, as tests need.
+  - a tab is a window, titled with its buffer: `:e`, `:b` and `CTRL-^` change what that tab shows, `:bd` closes the
+    tabs showing the buffer, and opening a file from the IDE opens a new tab (or shows the one that has it).
+    `:q` on the last window closes the editor's panes, not Oriel.
+  - `:ls` runs `buffers.switch` and `:copen` runs `quickfix.open`. Until the pickers (SH-5) and the results panel
+    exist, plain built-in views stand in for them; those tickets replace them by registering the same ids.
+  - the `:` line is an IDE input along the bottom of the pane; `<Tab>` (mapped in mode `c` to `editor.complete`)
+    completes ex commands, registry commands, buffers and files, and a command the engine doesn't know runs the
+    registry command of that name
+  - `y`, `d`, `c`, `x` and `p` use the system clipboard, as nvim with `clipboard=unnamedplus`, through the clipboard
+    service in `edit`. Gio has no primary selection, so `"*` is the clipboard on Linux too for now.
+  - `:map` and its mode forms write to the registry keymap (mode `n`, `x`, `o`, `i` or `c`), each running
+    `editor.keys` with the right-hand side, so they show in `:Keys`. `:abbreviate` stays the engine's: the keymap
+    has no place for insert-mode text expansions yet.
+  - lines are drawn without wrapping, so the engine's scrolling counts one row per line (a closed fold is one
+    row); `'wrap'` comes with the display options.
+  - files: UTF-8 with or without a BOM and LF or CRLF are kept as found; a file that isn't UTF-8, or holds a NUL,
+    opens read-only. A buffer with no lines at all writes nothing, and one empty line writes its newline, as
+    vim's `ML_EMPTY`. `modified` follows the undo state. A file changed on disk reloads when its buffer is
+    unchanged, and asks (Reload, Keep mine) when it isn't; `:w` over a changed file asks first.
 - In ED-13: the engine's options are registry options, so `:set` and the settings page change the same value, and
   the clipboard behaviour becomes `editor.clipboard`.
 
@@ -125,6 +142,22 @@ engine never feels like another binary running in a pane.
   backreferences, no editor-state atoms like `\%V` and `\%#`). It runs over the buffer line by line, with a step budget
   and a recursion limit in place of RE2's linear-time guarantee.
 
+### As built (ED-10)
+
+- `vimregex.CompilePCRE` is the second parser; `regex` is its API over text (`Compile`, `FindIndex`,
+  `FindAllIndex`, `ReplaceAll` with `$n`, `${name}` and `$$`, `Names`). The matcher gained what PCRE2 needs and vim
+  doesn't: any number of groups and named ones, case folding per atom (`(?i)` in part of a pattern), `\b`, `\A`,
+  `\Z`, `\z`, `\G`, `$` before a final newline, code points rather than clusters, no end-of-line after the last
+  line, unset back references failing, and bounded look-behind of any length (farthest start first).
+- Supported: `(?:)`, named and numbered groups, `(?>)`, look-around, lazy and possessive quantifiers, `\K`, back
+  references (`\1`, `\g{-1}`, `\k<name>`, `(?P=name)`), `(?imnsx-imnsx)` and `(?^)`, `\Q…\E`, `(?#)`, the escapes,
+  `\d \w \s \h \v \R \N`, POSIX classes, `\p{…}` (Unicode categories and scripts), `[[:<:]]`/`[[:>:]]`.
+- Not supported, an `UnsupportedError` naming the feature: recursion and subroutine calls, conditionals, branch
+  reset, backtracking verbs, callouts, `\X`, non-atomic assertions and duplicate names. PCRE2's own tests
+  (`spec/pcre2`, 10.44's testoutput1 and testoutput2) run in `vimregex`: every case that uses supported features
+  passes (1826 patterns), and the rest are listed with why in `vimregex/testdata/pcre2-unsupported.txt`.
+- Grep (and so project search) takes PCRE2. Lua binds `regex` when scripting lands (PL-1).
+
 ## Syntax
 
 - **Tree-sitter** for highlighting, folds, text objects and outline.
@@ -150,6 +183,30 @@ engine never feels like another binary running in a pane.
   edits made since. Plugins add a
   language with `syntax.Register(Language{Name, Wasm, Extensions, Queries})`, the same call the built-ins use.
 
+### Languages as plugins (ED-11)
+
+- A language is a registry contribution, `Registry.Language(registry.Language{Name, Extensions, Filenames, Shebangs,
+  Grammar, Queries, Source})`: a later one of a name shadows the earlier until disposed. `syntax` has no table of its
+  own; the app makes the registry's languages a `syntax.Set` (again when they change) and finds a file's language
+  by whole name, then extension, then the interpreter its `#!` line runs. A language with no grammar is queries
+  for others to inherit (`ecma`, `jsx`, `html_tags`), and inheriting and injecting look names up in the same set.
+- `builtin:languages` registers the core set: Go, TypeScript, TSX, JavaScript, Python, Rust, Lua, Markdown, C, C++,
+  Java, Ruby, Bash, JSON, YAML, TOML, HTML, CSS, SQL, Dockerfile, Make, Diff, Git commit and vimdoc, then HCL,
+  Terraform (`.tf`, `.tfvars`; OpenTofu's `.tofu`, `.tofuvars`), Kotlin, C#, PHP, Zig, Nix, Protobuf, GraphQL, XML
+  INI, Elixir, Scala, gitignore, Vue and Svelte (41 grammars, 9.0 MB gzipped, under a 12 MB budget, raised from 8 MB
+  in P3; each decompressed on first use, and compiled modules kept by checksum). Their queries are nvim-treesitter's at
+  the pinned commit. Every module carries its own copy of the tree-sitter runtime (about 115 KB gzipped); if the set
+  outgrows the budget, the runtime can move into a module of its own that the grammars link against. Swift's
+  repository has no generated parser, so it waits for a pack.
+- Highlight queries (ED-14) run inside a window of the top-level nodes the range touches, so their cost follows
+  the range, not the file; patterns on the root node are rewritten as sibling groups with `#has-parent?`, or run
+  apart. The parser queries 1 KB at a time, each call under 2 ms, as wasm can't be preempted. An edit re-highlights
+  the lines it touched and the ranges tree-sitter reports changed.
+- wazero compiles into `<user cache>/oriel` (`Config.CacheDir`), so a grammar compiles once per version: opening a
+  file from the cache takes about 12 ms, against 100 ms cold.
+- A local pack is `~/.config/oriel/languages/<name>/`: `language.toml` (`name`, `extensions`, `filenames`,
+  `shebangs`), `grammar.wasm` and `queries/*.scm`. It registers after the core set, so it can shadow one.
+
 ## Code units
 
 - A **unit** is a syntax node worth talking about: function, method, type, block, `if`/`switch`/`case`, loop, closure.
@@ -171,7 +228,23 @@ engine never feels like another binary running in a pane.
 ![09-lsp](mockups/09-lsp.png)
 
 Each is a `Decoration` provider (see `plugins.md`): plugins add their own the
-same way.
+same way. The editor asks every provider for the lines in view each frame and draws signs in the gutter, line
+backgrounds with their gutter edge, highlights and wavy underlines over columns, virtual text after the line, and
+blocks between lines, which push the lines below them down. Blocks at anchors stay with their text through edits.
+The engine's scrolling counts lines, not the rows blocks take, so a tall block can push the last lines out of view.
+
+## Options (ED-13)
+
+- The engine's options are `vim.OptionDefs()`: vim's name and short name, kind, nvim's default, and whether it lives
+  per buffer, per window or globally. `vim/vimreg` registers them as `editor.*` options with vim's names as
+  aliases, and is the engine's `vim.Settings`: the engine reads its options from the registry before each key and
+  Ex command, at the buffer and window (`Host.Here()`).
+- `:set` writes through the same settings: a buffer option at the buffer, a window option at the window, a global
+  one for the session in front, each with `:set` as its source. `+=`, `-=` and `^=` work on numbers.
+- `editor.clipboard` is `system` (the clipboard is the default register, as `unnamedplus`) or `registers`;
+  `:set clipboard=unnamedplus` and `:set clipboard=` mean those.
+- Folding options (`foldmethod`, `foldlevel`, `foldenable`) stay window state in the engine: setting them acts on
+  the window's folds at once.
 
 ## Go interfaces
 
@@ -219,31 +292,45 @@ func (e *Editor) Undo() (text.Change, bool)       // also Redo, UndoTo, UndoSeq,
 func (e *Editor) Anchor(off int, b text.Bias) text.AnchorID
 func (e *Editor) Register(r rune) (Register, bool) // and SetRegister: {Text, Charwise | Linewise | Blockwise}
 func (e *Editor) Notify(n Notice)                 // and Notices(): {ID, Severity, Args, Text} for the IDE
-// Still to come, when a second engine needs them (ED-5): Motion, Object and Search by name, Exec,
-// Scroll and Prompt. Until then motions and text objects are the vim engine's own tables, which
-// plugins extend with vim.RegisterMotion and vim.RegisterObject.
+func Motion(s text.Snapshot, off int, name string, count, want int) (int, error) // "char-next", "word-prev",
+                                                  // "line-end", "buffer-start"…: what plain and emacs move by
+func (e *Editor) Replace(s string, g text.UndoGroup) error // over each cursor's selection, or at it
+// Cursor{Off, Anchor, Selecting}: a selection runs from Anchor to Off. The IDE draws it for any engine but vim,
+// whose Visual areas (blocks included) it reads from the engine.
+// Still to come, when an engine needs them: Object and Search by name, Exec, Scroll and Prompt. Until then
+// vim's text objects are its own tables, which plugins extend with vim.RegisterMotion and vim.RegisterObject.
 ```
 
 ```go
-// package input — a pluggable input engine.
+// package edit/input — a pluggable input engine. Keys are vim notation tokens, one per key press.
 type Engine interface {
     ID() string                                   // "vim", "emacs", "helix", "plain"
-    Attach(ed edit.Editor) State                  // per-window state
+    Attach(ed *edit.Editor) State                 // per-window state
 }
 
 type State interface {
-    Key(k Key) Result                             // the hot path, called once per key
-    Mode() ModeInfo                               // name, cursor shape, statusline label, colour token
+    Key(k string) Result                          // the hot path, called once per key
+    Mode() Mode                                   // {Label "NORMAL"/"EDIT"/"EMACS", cursor Shape, KeyMode}
     Pending() string                              // "d2" / "C-x" for the which-key popup
-    Keymaps() keymap.Table                        // so :Keys and which-key can list everything
 }
 
 type Result struct {
     Handled bool
-    Repaint bool
-    Recenter bool
+    Command string                                // a registry command for the IDE to run: editor.save
+    Args    map[string]any
 }
+
+func Wrap(inner Engine, id string, fn func(k string, next func(string) Result) Result) Engine
 ```
+
+- Engines register with `Registry.Input(e)`; the option `editor.input` picks one, for every buffer or for one
+  (`editor.input {engine}` sets it on the current buffer), and a window keeps its engine's state while the option
+  doesn't change. The pane's `KeyMode` is the engine's, so keymaps can be made for `plain` or `emacs`.
+- The vim engine is one engine for all windows (its windows, buffers and registers are shared); its `State` per
+  window is that engine with the window current. Another engine edits the window's `edit.Editor`, and the vim
+  engine's window follows its cursor, so scrolling and `:w` work the same under any engine.
+- Which-key (SH-6) lists the registry's keymaps in the engine's mode and the engine's own next keys
+  (`vim.Engine.NextKeys`).
 
 ```go
 // input/vim — the built-in engine (sketch)
@@ -293,9 +380,9 @@ func (s *emacsState) Key(k input.Key) input.Result {
 ```
 
 ```go
-// registering it
-func init() { input.Register(emacs.Engine{}) }    // built-in or `oriel build --with`
-// config: L.o.input = "emacs"     (global, or per buffer: L.bo.input = "plain")
+// registering it: edit/input/emacs is a sample, with a Plugin that does this
+func (p *Plugin) Activate(_ context.Context, h ext.Host) error { p.d = h.Input(emacs.Engine{}); return nil }
+// config: editor.input = "emacs"   (global, or per buffer)
 ```
 
 - **What ships**: two built-in native engines, `vim` (the default) and `plain` (CUA keys:

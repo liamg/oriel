@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Pricing tiers. -->
+<tiers xmlns="https://example.com/pricing" currency="GBP">
+  <tier name="basic">
+    <pence>100</pence>
+    <feature>email</feature>
+  </tier>
+  <tier name="pro">
+    <pence>450</pence>
+    <feature><![CDATA[priority & phone]]></feature>
+  </tier>
+</tiers>

@@ -29,6 +29,10 @@ depends_on: [AI-2, ED-7]
 
 a comment reaches the agent within 1 s; replies render as markdown with activity blocks
 
+## From SH-5
+
+- The pickers' `⌃a` runs `request.attach {items: [{path, line, text}]}`: register it. Threads are a picker source too (`␣t`).
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

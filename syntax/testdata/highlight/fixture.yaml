@@ -1,0 +1,13 @@
+# CI
+name: test
+on:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: go test ./...
+        env:
+          CGO_ENABLED: "0"

@@ -1,0 +1,28 @@
+   1 | feat(regex): PCRE2 outside the vim engine
+     | ^^^^ keyword
+     |     ^ punctuation.delimiter
+     |      ^^^^^ variable.parameter
+     |           ^^ punctuation.delimiter
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ markup.heading
+   2 | 
+   3 | The vim engine keeps its own dialect.
+   4 | 
+   5 | # Please enter the commit message for your changes. Lines starting
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   6 | # with '#' will be ignored, and an empty message aborts the commit.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   7 | #
+     | ^ comment
+   8 | # On branch master
+     | ^^^^^^^^^^^^ comment
+     |             ^^^^^^ markup.link
+   9 | # Changes to be committed:
+     | ^^ comment
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^ markup.heading
+  10 | #	modified:   regex/regex.go
+     | ^^ comment
+     |   ^^^^^^^^^ keyword
+     |            ^^^ comment
+     |               ^^^^^^^^^^^^^^ string.special.path
+  11 | #
+     | ^ comment

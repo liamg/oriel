@@ -20,8 +20,12 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// counter is a plugin built only on the public API: a command, a keymap and a view.
-type counter struct{ n int }
+// counter is a plugin built only on the public API: a command, a keymap and a view. Its view fills the
+// window, or with tab set, opens as a tab in the layout.
+type counter struct {
+	n   int
+	tab bool
+}
 
 func (c *counter) Manifest() ext.Manifest { return ext.Manifest{ID: "test.counter"} }
 
@@ -40,13 +44,20 @@ func (c *counter) Activate(_ context.Context, h ext.Host) error {
 	if err := h.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 50*time.Millisecond); err != nil {
 		return err
 	}
-	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	view := app.RootView
+	if c.tab {
+		view = "counter"
+	}
+	h.View(view, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		rows := []ui.Node{ui.TextNode(fmt.Sprintf("count %d", c.n))}
 		for _, s := range h.Sessions() {
 			rows = append(rows, ui.TextNode(fmt.Sprintf("%s %s", s.ID(), s.Status())))
 		}
 		return ui.ColumnNode(rows...)
 	}))
+	if c.tab {
+		return h.Run(context.Background(), "view.open", registry.Args{"id": view})
+	}
 	return nil
 }
 
@@ -215,8 +226,8 @@ func TestPointerSetsTheCursor(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
-	// The root view sits inside the app's 16px padding.
-	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 30, Y: 25}})
+	// The root view sits under the 38px titlebar.
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 30, Y: 48}})
 	for b.win.Cursor() != render.CursorPointer {
 		if ctx.Err() != nil {
 			t.Fatalf("cursor is %v over the link", b.win.Cursor())
@@ -275,6 +286,26 @@ func TestThemeFileReloadsLive(t *testing.T) {
 	b.close(t)
 }
 
+// ui.variant "system", the default, follows the OS's preference as the window reports it; dark until it does.
+func TestVariantFollowsTheOS(t *testing.T) {
+	b := boot(t)
+	wait := func(want render.Color) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == want }); err != nil {
+			t.Fatalf("background %v, want %v", background(f), want)
+		}
+	}
+	dark, light := render.Color{R: 6, G: 6, B: 6, A: 255}, render.Color{R: 0xfb, G: 0xfa, B: 0xf7, A: 255}
+	wait(dark)
+	b.win.Send(render.AppearanceEvent{Dark: false})
+	wait(light)
+	b.win.Send(render.AppearanceEvent{Dark: true})
+	wait(dark)
+	b.close(t)
+}
+
 func TestBrokenThemeFallsBackToTheBuiltIn(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "themes"), 0o755)
@@ -313,9 +344,9 @@ func (*form) Deactivate(context.Context) error { return nil }
 func TestWidgetsTakeKeysInTheirOwnMode(t *testing.T) {
 	b := boot(t, &form{})
 	b.waitText(t, "typed:")
-	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 40, Y: 30}})
-	b.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 40, Y: 30}, Buttons: render.ButtonPrimary})
-	b.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 40, Y: 30}, Buttons: render.ButtonPrimary})
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 40, Y: 50}})
+	b.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 40, Y: 50}, Buttons: render.ButtonPrimary})
+	b.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 40, Y: 50}, Buttons: render.ButtonPrimary})
 	b.waitText(t, "typed:")
 	for _, k := range []string{"h", "i"} {
 		b.win.Send(render.KeyEvent{Key: k})
@@ -392,6 +423,24 @@ func TestAccessTree(t *testing.T) {
 		if !strings.Contains(dump, want) {
 			t.Errorf("no %s in the tree:\n%s", want, dump)
 		}
+	}
+	b.close(t)
+}
+
+// A hand edit applies while Oriel runs, as a GUI change does.
+func TestSettingsFileReloadsLive(t *testing.T) {
+	dir := t.TempDir()
+	b := bootIn(t, dir)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == render.Color{R: 6, G: 6, B: 6, A: 255} }); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "settings.toml"), []byte("[ui]\nvariant = \"light\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if f, err := b.win.WaitFrame(ctx, func(f headless.Frame) bool { return background(f) == render.Color{R: 0xfb, G: 0xfa, B: 0xf7, A: 255} }); err != nil {
+		t.Fatalf("background %v after the file said light", background(f))
 	}
 	b.close(t)
 }

@@ -2,7 +2,7 @@
 id: SH-4
 title: "⌘K omnibox (sessions, commands, files, symbols, tickets, PRs) with prefixes"
 phase: P3
-status: todo
+status: done
 area: Shell and navigation
 module: app, picker
 depends_on: [FW-6, FW-3]

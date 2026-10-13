@@ -1,14 +1,18 @@
 package gio
 
 import (
+	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	"gioui.org/app"
+	"gioui.org/io/clipboard"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/io/system"
+	"gioui.org/io/transfer"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/unit"
@@ -88,6 +92,25 @@ type Window struct {
 	scale  atomic.Value // float32
 	size   atomic.Value // render.Point
 	cursor atomic.Uint32
+	clip   atomic.Pointer[string] // text waiting to go on the clipboard
+	read   atomic.Pointer[string] // what the clipboard held when last read
+	ask    atomic.Bool            // read the clipboard on the next frame
+}
+
+func (w *Window) ReadClipboard() (string, bool) {
+	if s := w.read.Load(); s != nil {
+		return *s, *s != ""
+	}
+	return "", false
+}
+
+var _ render.Clipboard = (*Window)(nil)
+
+// SetClipboard puts text on the system clipboard on the next frame.
+func (w *Window) SetClipboard(text string) {
+	w.clip.Store(&text)
+	w.read.Store(&text)
+	w.win.Invalidate()
 }
 
 var cursors = map[render.Cursor]pointer.Cursor{
@@ -138,7 +161,22 @@ func (w *Window) forward() {
 
 func (w *Window) loop() {
 	go w.forward()
-	defer close(w.queue)
+	var mu sync.Mutex
+	closed := false
+	defer func() {
+		mu.Lock()
+		closed = true
+		close(w.queue)
+		mu.Unlock()
+	}()
+	stop := watchAppearance(func(dark bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		if !closed {
+			w.post(render.AppearanceEvent{Dark: dark})
+		}
+	})
+	defer stop()
 	var ops op.Ops
 	f := NewFrame()
 	tag := new(int)
@@ -160,8 +198,15 @@ func (w *Window) loop() {
 			cursors[render.Cursor(w.cursor.Load())].Add(gtx.Ops)
 			area.Pop()
 			gtx.Execute(key.FocusCmd{Tag: tag})
+			if t := w.clip.Swap(nil); t != nil {
+				gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(*t))})
+			}
+			if w.ask.Swap(false) {
+				gtx.Execute(clipboard.ReadCmd{Tag: tag})
+			}
 			for {
 				ev, ok := gtx.Event(
+					transfer.TargetFilter{Target: tag, Type: "application/text"},
 					key.FocusFilter{Target: tag},
 					key.Filter{Focus: tag, Optional: key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand},
 					pointer.Filter{Target: tag, Kinds: pointer.Move | pointer.Drag | pointer.Press | pointer.Release | pointer.Scroll | pointer.Leave,
@@ -169,6 +214,19 @@ func (w *Window) loop() {
 				)
 				if !ok {
 					break
+				}
+				switch ev := ev.(type) {
+				case transfer.DataEvent:
+					if r := ev.Open(); r != nil {
+						if b, err := io.ReadAll(io.LimitReader(r, 16<<20)); err == nil {
+							s := string(b)
+							w.read.Store(&s)
+						}
+						r.Close()
+					}
+					continue
+				case key.Event, key.FocusEvent:
+					w.ask.Store(true)
 				}
 				for _, k := range translate(ev, scale) {
 					w.post(k)

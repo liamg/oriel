@@ -2,7 +2,7 @@
 id: SH-13
 title: "Errors, notifications and the log panel: toasts, status line, :Log, slog, panics, crash reports"
 phase: P3
-status: todo
+status: done
 area: Shell and navigation
 module: core, app, ui
 depends_on: [FW-2, FW-6, FW-9, ED-6]
@@ -55,6 +55,13 @@ Also the "reloaded init.lua" toast in `19-config.png` and the status line's ✕/
 - A forced panic outside a contribution writes a crash report, and the next launch offers it.
 - Records with a secret from the secrets store or a token in a URL are redacted in the panel, the file and the report.
 - Replaying an event log reproduces the notification history.
+
+## Where things landed
+
+- Hooks don't exist until PL-1, so the guard is in place for commands and views and PL-1 wires hooks into it.
+- Session logs sit behind `logs.SessionLogs`, kept by the app on disk until AI-1 puts them on the worker.
+- Tabs come in SH-2; the mark is `Session.Unseen()` in core, and the toasts already honour focus.
+- LSP, DAP and process-plugin stderr: `logs.Lines` is ready; LS-1, DB-1 and PL-2 attach it.
 
 ## Rules
 

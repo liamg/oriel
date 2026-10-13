@@ -3,7 +3,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/render/typeset"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
@@ -14,8 +17,10 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-func builtins(cfg Config) []ext.Extension {
-	return []ext.Extension{&uiOptions{}, &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, &layoutExt{}, &introspect{}}
+func builtins(sh *shell) []ext.Extension {
+	sh.layout = &layoutExt{}
+	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
+		&editorExt{sh: sh}, &settingsExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
 }
 
 // disposer is the usual way for an extension to undo what it registered.
@@ -58,6 +63,14 @@ var movePlacements = []struct {
 
 func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 	l.root, l.saved = layout.New(), map[string]layout.Snapshot{}
+	l.panes.Title = func(v layout.ViewRef) string {
+		if view, ok := h.ViewByID(v.ID); ok {
+			if t, ok := view.(registry.Titled); ok {
+				return t.Title(v.Instance)
+			}
+		}
+		return ""
+	}
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	focused := func() (layout.ViewRef, error) {
 		if l.root.Focus == nil {
@@ -75,10 +88,22 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			if place == "" {
 				place = layout.Tab
 			}
-			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title")}, place,
-				layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side"))})
+			size, _ := a["size"].(float64)
+			if n, ok := a["size"].(int); ok {
+				size = float64(n)
+			}
+			o := layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size)}
+			if b := str(a, "beside"); b != "" {
+				id, inst, _ := strings.Cut(b, "#")
+				o.Beside = &layout.ViewRef{ID: id, Instance: inst}
+			}
+			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title")}, place, o)
 		}},
-		{ID: "view.close", Title: "Close the focused view", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance}", Run: func(_ registry.Ctx, a registry.Args) error {
+			if id := str(a, "id"); id != "" {
+				l.root.Close(layout.ViewRef{ID: id, Instance: str(a, "instance")})
+				return nil
+			}
 			v, err := focused()
 			if err == nil {
 				l.root.Close(v)
@@ -161,7 +186,13 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 					c.Text("missing", "no view "+v.ID, ui.TextStyle{})
 					return
 				}
-				c.Column("view", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(10)}, func(c *ui.Ctx) {
+				pad := ui.Pad(10)
+				if _, edge := registry.As[registry.EdgeToEdge](view); edge {
+					pad = ui.Insets{}
+				}
+				vc := vc
+				vc.Instance, vc.Focused = v.Instance, focused
+				c.Column("view", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: pad}, func(c *ui.Ctx) {
 					c.Node(view.Build(vc))
 				})
 			})
@@ -202,7 +233,10 @@ func (l *layoutExt) moveMenu(c *ui.Ctx, h ext.Host) {
 }
 
 // introspect is :Keys and :Commands: every keymap and command, with where it came from.
-type introspect struct{ disposer }
+type introspect struct {
+	disposer
+	configDir string
+}
 
 func (i *introspect) Manifest() ext.Manifest { return ext.Manifest{ID: "introspect"} }
 
@@ -212,6 +246,8 @@ func (i *introspect) Activate(_ context.Context, h ext.Host) error {
 			return h.Run(ctx, "view.open", registry.Args{"id": view})
 		}
 	}
+	i.add(h.Picker(commandsSource(h)))
+	i.add(h.Picker(keymapsSource(h, i.configDir)))
 	i.add(h.Command(registry.Command{ID: "Keys", Title: "List keymaps", Run: open("keys")}))
 	i.add(h.Command(registry.Command{ID: "Commands", Title: "List commands", Run: open("commands")}))
 	i.add(h.View("keys", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
@@ -237,12 +273,47 @@ type uiOptions struct{ disposer }
 func (o *uiOptions) Manifest() ext.Manifest { return ext.Manifest{ID: "ui"} }
 
 func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
+	for _, c := range []registry.Command{
+		{ID: "ui.focus.next", Title: "Move keyboard focus to the next control", Run: func(registry.Ctx, registry.Args) error { return o.focus(h, 1) }},
+		{ID: "ui.focus.prev", Title: "Move keyboard focus to the previous control", Run: func(registry.Ctx, registry.Args) error { return o.focus(h, -1) }},
+	} {
+		o.add(h.Command(c))
+	}
+	for _, c := range []registry.Command{
+		{ID: "ui.drag", Title: "Pick up what's focused to drag it, or drop what's held on it", Run: func(registry.Ctx, registry.Args) error {
+			if u := h.UI(); u != nil {
+				u.DragKey()
+			}
+			return nil
+		}},
+		{ID: "ui.drag.cancel", Title: "Put down what's being dragged", Run: func(registry.Ctx, registry.Args) error {
+			if u := h.UI(); u != nil {
+				u.CancelDrag()
+			}
+			return nil
+		}},
+	} {
+		o.add(h.Command(c))
+	}
+	for _, mode := range []string{"button", ui.DragKeyMode} {
+		o.add(h.Keymap(registry.Keymap{Mode: mode, Keys: "<Tab>", Command: "ui.focus.next", Desc: "Next control"}))
+		o.add(h.Keymap(registry.Keymap{Mode: mode, Keys: "<S-Tab>", Command: "ui.focus.prev", Desc: "Previous control"}))
+	}
+	o.add(h.Keymap(registry.Keymap{Mode: ui.DragKeyMode, Keys: "<Space>", Command: "ui.drag", Desc: "Pick up or drop"}))
+	o.add(h.Keymap(registry.Keymap{Mode: ui.DragKeyMode, Keys: "<Esc>", Command: "ui.drag.cancel", Desc: "Put down"}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.reduced_motion", Type: registry.Bool, Default: false,
 		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
-	o.add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel",
-		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme, by name: a built-in, or a file in your themes directory."}))
-	o.add(h.Option(registry.OptionSpec{Name: "ui.variant", Type: registry.Enum, Values: []string{"dark", "light"}, Default: "dark",
-		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme's dark or light variant."}))
+	o.add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel", Choices: func() []string { return themeNames(h) },
+		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme, by name: a built-in, or a file in your themes directory. :Themes previews them."}))
+	o.add(h.Option(registry.OptionSpec{Name: "ui.variant", Type: registry.Enum, Values: []string{"system", "dark", "light"}, Default: "system",
+		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme's dark or light variant; system follows the OS."}))
+	return nil
+}
+
+func (o *uiOptions) focus(h ext.Host, dir int) error {
+	if u := h.UI(); u != nil {
+		u.FocusNext(dir)
+	}
 	return nil
 }
 
@@ -262,5 +333,160 @@ func (t *themes) Activate(_ context.Context, h ext.Host) error {
 	for _, f := range files {
 		t.add(h.Theme(theme.File{Path: f}))
 	}
+	t.add(h.Picker(themePicker(h)))
+	t.add(h.Command(registry.Command{ID: "Themes", Title: "Pick a theme, each shown as it's highlighted", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		return h.Run(ctx, "picker.open", registry.Args{"source": "themes"})
+	}}))
+	t.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>T", Command: "picker.open", Args: registry.Args{"source": "themes"}, Desc: "Themes"}))
 	return nil
+}
+
+// themeSwatches are a theme's main colours, in the variant in use, for the picker's preview.
+func themeSwatches(h ext.Host, name string) ui.Node {
+	variant := theme.Dark
+	if cur := h.CurrentTheme(); cur != nil {
+		variant = cur.Variant
+	}
+	srcs, _ := h.Themes()
+	r, err := resolveTheme(srcs, name, variant)
+	return &ui.Func{Key: "swatches", Fn: func(c *ui.Ctx) {
+		th := c.Theme()
+		mono := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgMuted)}
+		c.Column("swatches", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+			c.Text("name", strings.ToUpper(name)+" · "+string(variant), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.FgFaint)})
+			if err != nil {
+				c.Text("err", err.Error(), ui.TextStyle{Font: mono.Font, Color: th.C(theme.Error)})
+				return
+			}
+			sample := strings.TrimRight(themeSample, "\n")
+			code := highlightAround(h, "sample.go", []byte(sample), 1, 0, strings.Count(sample, "\n"))
+			code.title, code.theme, code.size, code.fill = "sample.go", r, 13.5, true
+			code.build(c, nil)
+			swatches := []struct {
+				tok  theme.TokenID
+				name string
+			}{{theme.BgBase, "bg.base"}, {theme.BgSurface, "bg.surface"}, {theme.BgRaised, "bg.raised"}, {theme.Fg, "fg"},
+				{theme.FgMuted, "fg.muted"}, {theme.Accent, "accent"}, {theme.Brand, "brand"}, {theme.OK, "ok"}, {theme.Warn, "warn"},
+				{theme.Error, "error"}}
+			c.Row("grid", ui.Style{W: ui.Flex(1), Gap: 24}, func(c *ui.Ctx) {
+				for col := range 2 {
+					c.Column(col, ui.Style{Gap: 8}, func(c *ui.Ctx) {
+						for i, sw := range swatches[col*5 : col*5+5] {
+							c.Row(i, ui.Style{Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
+								c.Box("sw", ui.Style{W: ui.Px(44), H: ui.Px(18), Radius: 4, Fill: r.C(sw.tok), Stroke: th.C(theme.LineStrong), Border: 1}, nil)
+								c.Text("n", sw.name, mono)
+							})
+						}
+					})
+				}
+			})
+		})
+	}}
+}
+
+// themeSample is the code a theme's preview highlights: keywords, types, strings, numbers, comments and calls.
+const themeSample = `package pricing
+
+import (
+	"errors"
+	"fmt"
+	"time"
+)
+
+// ErrNoTier is returned for a tier nobody has heard of.
+var ErrNoTier = errors.New("pricing: no such tier")
+
+// Tier is a plan's price, in pence, and when it changed.
+type Tier struct {
+	Name    string
+	Pence   int
+	Changed time.Time
+}
+
+// PriceFor is a tier's price for qty seats, with 10% off from 100.
+func PriceFor(t *Tier, qty int) (int, error) {
+	if t == nil {
+		return 0, ErrNoTier
+	}
+	if qty <= 0 {
+		return 0, fmt.Errorf("bad quantity %d", qty)
+	}
+	total := t.Pence * qty
+	if qty >= 100 {
+		total = total * 9 / 10 // volume discount
+	}
+	return total, nil
+}
+`
+
+// themeNames are the registered themes' names, sorted.
+func themeNames(h registry.Registry) []string {
+	srcs, _ := h.Themes()
+	var out []string
+	for _, src := range srcs {
+		if !slices.Contains(out, src.Name()) {
+			out = append(out, src.Name())
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// themePicker is :Themes: each theme shows as it's highlighted, Enter keeps it in your settings, and Esc goes back
+// to the one before.
+func themePicker(h ext.Host) registry.PickerSource {
+	type prev struct {
+		v      any // the user layer's
+		had    bool
+		source string
+		cur    any // what was in use
+	}
+	var before *prev // the user layer's ui.theme before the first preview
+	o := h.Options()
+	restore := func() {
+		if before == nil {
+			return
+		}
+		if before.had {
+			o.SetFrom("ui.theme", registry.LayerUser, registry.At{}, before.v, before.source)
+		} else {
+			o.Unset("ui.theme", registry.LayerUser, registry.At{})
+		}
+		before = nil
+	}
+	return registry.PickerSource{ID: "themes", Title: "Themes", Order: 80, PickerOnly: true, Source: "builtin:themes",
+		Items: func(registry.Ctx, string) []registry.PickerItem {
+			cur, _, _ := o.Get("ui.theme", registry.At{})
+			if before != nil {
+				cur = before.cur
+			}
+			var out []registry.PickerItem
+			for _, n := range themeNames(h) {
+				it := registry.PickerItem{ID: n, Label: n, Current: n == cur}
+				if it.Current {
+					it.Note = "current"
+				}
+				out = append(out, it)
+			}
+			return out
+		},
+		Hover: func(it registry.PickerItem) {
+			if before == nil {
+				v, had := o.Lookup("ui.theme", registry.LayerUser, registry.At{})
+				cur, l, _ := o.Get("ui.theme", registry.At{})
+				src := ""
+				if l == registry.LayerUser {
+					src = o.Source("ui.theme", registry.At{})
+				}
+				before = &prev{v, had, src, cur}
+			}
+			o.Set("ui.theme", registry.LayerUser, registry.At{}, it.ID)
+		},
+		Cancel:  restore,
+		Preview: func(it registry.PickerItem) ui.Node { return themeSwatches(h, it.ID) },
+		Run: func(ctx registry.Ctx, it registry.PickerItem) error {
+			restore()
+			return h.Run(ctx, "settings.set", registry.Args{"name": "ui.theme", "value": it.ID, "scope": "user"})
+		},
+	}
 }

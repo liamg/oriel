@@ -1,5 +1,5 @@
 // Package widget is the toolkit's widgets: buttons, chips, inputs, lists, trees, tabs, menus, context menus,
-// popovers, modals and toasts. They're built only on ui's public API, as a plugin's widgets would be, and
+// popovers, modals, toasts and sliders. They're built only on ui's public API, as a plugin's widgets would be, and
 // paint with theme tokens they declare (theming.md).
 package widget
 
@@ -58,6 +58,14 @@ var (
 )
 
 func col(c *ui.Ctx, id theme.TokenID) color.NRGBA { return c.Theme().C(id) }
+
+// The widgets' motion (FW-13): what fades, and where from.
+var (
+	fade    = &ui.Transition{Fade: true}
+	dropIn  = &ui.Transition{Fade: true, Shift: render.Point{Y: -4}} // a menu or popover, from its anchor above
+	riseIn  = &ui.Transition{Fade: true, Shift: render.Point{Y: 8}}  // a modal's card, rising a little
+	slideIn = &ui.Transition{Fade: true, Shift: render.Point{X: 24}} // a toast, from the right edge
+)
 
 func uiText(c *ui.Ctx, size float32, w typeset.Weight, fg color.NRGBA) ui.TextStyle {
 	return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Weight: w, Size: size}, Color: fg}

@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/edit/input"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -22,6 +23,15 @@ type Registry interface {
 	Option(o OptionSpec) Disposable // panics if the default doesn't fit the spec
 	View(id string, v View) Disposable
 	Theme(s theme.Source) Disposable
+	Language(l Language) Disposable
+	Hook(h Hook) Disposable
+	DeclareEvent(e EventInfo) Disposable
+	Contribute(c Contribution) Disposable
+	Input(e input.Engine) Disposable // an input engine the editor's input option can pick
+	Decorations(id string, p DecorationProvider) Disposable
+	Picker(s PickerSource) Disposable
+	HelpPages(s HelpSource) Disposable
+	HelpLive(name string, fn func(c *ui.Ctx)) Disposable
 
 	Run(ctx Ctx, id string, args Args) error
 	Commands() []Command // the registration that wins for each id, sorted by id
@@ -30,8 +40,38 @@ type Registry interface {
 	// mapping that starts with keys.
 	Lookup(modes []string, keys []string) (exact *Keymap, more bool)
 	ViewByID(id string) (View, bool)
-	Themes() []theme.Source // in registration order; a later theme with the same name wins
+	Views() []string                     // every registered view id, sorted
+	ViewSource(id string) (string, bool) // who registered the view that wins id
+	Themes() ([]theme.Source, int)       // in registration order, a later theme with the same name winning; and a generation that moves when they change
+	Languages() ([]Language, int)        // the language that wins each name, in the order they were registered, and a generation
+	Hooks() []HookInfo                   // by event, then priority
+	Events() []EventInfo                 // declared events, by name
+	// Fire runs event's hooks (registry/hook.go): a veto or decision, and the hooks' errors.
+	Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error)
+	Contributions(kind string) []Contribution // by name
+	InputByID(id string) (input.Engine, bool)
+	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
+	Pickers() []PickerSource              // the winning source for each id, by Order then id
+	HelpSources() ([]HelpSource, int)
+	HelpLiveByName(name string) (func(c *ui.Ctx), bool)
+	Inputs() []string // engine ids, sorted
 	Options() Options
+
+	// SetDiagnostics replaces owner's diagnostics for file (an absolute path); nil clears them.
+	SetDiagnostics(owner, file string, ds []Diagnostic)
+	Diagnostics() ([]Diagnostic, int) // by file, then line; and a generation that moves when they change
+	DiagnosticsFor(file string) []Diagnostic
+
+	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
+	OnFault(fn func(Fault)) Disposable
+	// OnFailure hears about every contribution's error, and warnings: a hook over its time budget.
+	OnFailure(fn func(Failure)) Disposable
+	// Report says how a contribution's call went, nil for a success: FailLimit errors in a row turn it off.
+	Report(kind, id string, err error)
+	// TurnOff turns a contribution off with the error that caused it; TurnOn turns it back on.
+	TurnOff(kind, id string, err error)
+	TurnOn(kind, id string)
+	TurnedOff() []Off // sorted by kind, then id
 }
 
 type Disposable interface{ Dispose() }
@@ -47,7 +87,8 @@ type Command struct {
 	Source string // who registered it: "builtin:git", "init.lua:14", a plugin's id
 }
 
-// Keymap binds keys, in vim notation, to a command in one mode.
+// Keymap binds keys, in vim notation, to a command in one mode. One with no command names a group of the
+// keymaps under its keys, for which-key: {Keys: "<Leader>a", Desc: "+agent"}; it's never run.
 type Keymap struct {
 	Mode    string // "n", "i", or a panel's own mode ("requests")
 	Keys    string // "x", "<C-w>", "<Leader>rr"; the registry rewrites it in canonical notation, <Leader> expanded
@@ -61,8 +102,22 @@ type View interface {
 	Build(ctx ViewCtx) ui.Node // pure: state in, tree out
 }
 
+// ViewCtx is what a view is built with: the window's size and, for a view open in the layout, which instance
+// of it this is and whether it has focus.
 type ViewCtx struct {
 	Width, Height float32
+	Instance      string
+	Focused       bool
+}
+
+// EdgeToEdge is a view drawn right to its pane's edges, with no padding around it: an editor, a terminal.
+type EdgeToEdge interface {
+	EdgeToEdge()
+}
+
+// Titled is a view whose instances name themselves, for their tabs: an editor names its buffer.
+type Titled interface {
+	Title(instance string) string
 }
 
 type ViewFunc func(ViewCtx) ui.Node
@@ -115,22 +170,42 @@ const sep = "\x00"
 type keymapKey struct{ mode, seq string }
 
 type reg struct {
-	mu       sync.Mutex
-	commands stacks[string, Command]
-	keymaps  stacks[keymapKey, Keymap]
-	prefixes map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
-	views    stacks[string, View]
-	themes   []entry[theme.Source]
-	options  *options
+	mu        sync.Mutex
+	commands  stacks[string, Command]
+	keymaps   stacks[keymapKey, Keymap]
+	prefixes  map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
+	views     stacks[string, View]
+	inputs    stacks[string, input.Engine]
+	decor     stacks[string, DecorationProvider]
+	pickers   stacks[string, PickerSource]
+	help      []entry[HelpSource]
+	helpGen   int
+	live      stacks[string, func(c *ui.Ctx)]
+	themes    []entry[theme.Source]
+	themeGen  int
+	languages stacks[string, Language]
+	hooks     hooks
+	contribs  stacks[string, Contribution]
+	langGen   int
+	options   *options
+	faults    faults
+	diags     map[diagKey][]Diagnostic
+	diagGen   int
 }
 
 func New() Registry {
 	r := &reg{
-		commands: stacks[string, Command]{},
-		keymaps:  stacks[keymapKey, Keymap]{},
-		prefixes: map[keymapKey]int{},
-		views:    stacks[string, View]{},
-		options:  newOptions(),
+		commands:  stacks[string, Command]{},
+		keymaps:   stacks[keymapKey, Keymap]{},
+		prefixes:  map[keymapKey]int{},
+		views:     stacks[string, View]{},
+		inputs:    stacks[string, input.Engine]{},
+		decor:     stacks[string, DecorationProvider]{},
+		pickers:   stacks[string, PickerSource]{},
+		languages: stacks[string, Language]{},
+		contribs:  stacks[string, Contribution]{},
+		live:      stacks[string, func(c *ui.Ctx)]{},
+		options:   newOptions(),
 	}
 	for _, o := range builtinOptions {
 		r.Option(o)
@@ -215,26 +290,56 @@ func (r *reg) View(id string, v View) Disposable {
 	})
 }
 
+func (r *reg) Input(e input.Engine) Disposable {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	tok := r.inputs.push(e.ID(), e)
+	return disposeOnce(func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		r.inputs.remove(e.ID(), tok)
+	})
+}
+
+func (r *reg) InputByID(id string) (input.Engine, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.inputs.top(id)
+}
+
+func (r *reg) Inputs() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]string, 0, len(r.inputs))
+	for id := range r.inputs {
+		out = append(out, id)
+	}
+	slices.Sort(out)
+	return out
+}
+
 func (r *reg) Theme(s theme.Source) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	tok := tokens.Add(1)
 	r.themes = append(r.themes, entry[theme.Source]{tok, s})
+	r.themeGen++
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.themes = slices.DeleteFunc(r.themes, func(e entry[theme.Source]) bool { return e.token == tok })
+		r.themeGen++
 	})
 }
 
-func (r *reg) Themes() []theme.Source {
+func (r *reg) Themes() ([]theme.Source, int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := make([]theme.Source, len(r.themes))
 	for i, e := range r.themes {
 		out[i] = e.value
 	}
-	return out
+	return out, r.themeGen
 }
 
 func (r *reg) Run(ctx Ctx, id string, args Args) error {
@@ -247,7 +352,14 @@ func (r *reg) Run(ctx Ctx, id string, args Args) error {
 	if c.Run == nil {
 		return fmt.Errorf("command %q has no Run", id)
 	}
-	return c.Run(ctx, args)
+	if err := r.faults.isOff(KindCommand, id); err != nil {
+		return fmt.Errorf("command %q is turned off: %w", id, err)
+	}
+	err := Call(func() error { return c.Run(ctx, args) })
+	if p, ok := err.(*Panic); ok {
+		r.faults.fault(Fault{Kind: KindCommand, ID: id, Source: c.Source, Err: p})
+	}
+	return err
 }
 
 func (r *reg) Commands() []Command {
@@ -286,7 +398,7 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	var exact *Keymap
 	more := false
 	for _, m := range modes {
-		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && exact == nil {
+		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && exact == nil && km.Command != "" {
 			exact = &km
 		}
 		if r.prefixes[keymapKey{m, seq}] > 0 {
@@ -296,10 +408,39 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	return exact, more
 }
 
+// ViewByID returns the view under a guard: a panic while it builds turns it off instead of escaping.
 func (r *reg) ViewByID(id string) (View, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.views.top(id)
+	v, ok := r.views.top(id)
+	if !ok {
+		return nil, false
+	}
+	return guardedView{r, id, v}, true
 }
 
 func (r *reg) Options() Options { return r.options }
+
+func (r *reg) Views() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]string, 0, len(r.views))
+	for id := range r.views {
+		out = append(out, id)
+	}
+	slices.Sort(out)
+	return out
+}
+
+func (r *reg) ViewSource(id string) (string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	v, ok := r.views.top(id)
+	if !ok {
+		return "", false
+	}
+	if sv, ok := v.(interface{ ViewSource() string }); ok {
+		return sv.ViewSource(), true
+	}
+	return "", true
+}

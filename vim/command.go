@@ -16,6 +16,9 @@ func (e *Engine) command(v *view, c cmd) {
 		c2.op, c2.key = op, key
 		e.operator(v, c2)
 	}
+	if e.scrollCmd(v, c.key, c.count) {
+		return
+	}
 	if strings.HasPrefix(c.key, "z") && e.foldCmd(v, c.key, c.count) {
 		e.rec = nil
 		return
@@ -96,6 +99,10 @@ func (e *Engine) command(v *view, c cmd) {
 		e.startRecording(c.arg)
 	case "@":
 		e.playRegister(c.arg, c.count1())
+	case "ZZ":
+		e.ex(v, "x")
+	case "ZQ":
+		e.ex(v, "q!")
 	case "Q":
 		if e.lastRecorded == 0 {
 			e.failed = true

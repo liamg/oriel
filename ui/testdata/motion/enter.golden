@@ -1,0 +1,10 @@
+== start
+
+== mid
+opacity 0.80
+rect 0,1.57 40x20 fill #c8c8c8
+text hi @0,12.57
+pop
+== settled
+rect 0,0 40x20 fill #c8c8c8
+text hi @0,11

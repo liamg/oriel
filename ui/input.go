@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"cmp"
 	"math"
+	"slices"
 	"time"
 
 	"github.com/liamg/oriel/render"
@@ -21,7 +23,10 @@ type Interaction struct {
 	Keys         []render.KeyEvent // keys typed at it since the last frame, while focused
 	Context      *render.Point     // where it was right-clicked since the last frame
 	Pointer      render.Point      // the pointer, wherever it is
+	Scroll       render.Point      // wheel movement over it since the last frame, for a box with Wheel
 	Mods         render.Mods       // the modifiers held at its last press
+	Dropped      *DragData         // a drag let go over it since the last frame, of a kind it takes (Style.Drop)
+	DragOver     bool              // a drag of a kind it takes is over it now
 }
 
 // Options are how the UI looks and behaves where widgets don't say.
@@ -31,7 +36,8 @@ type Options struct {
 	Tooltip       TextStyle
 	TooltipFill   render.Color
 	TooltipStroke render.Color
-	ReducedMotion bool // springs jump to their targets
+	ReducedMotion bool    // springs jump to their targets
+	MotionSpeed   float32 // the motion spring's speed (the theme's motion effect): 1 as designed, 0 off
 }
 
 func defaultOptions(text TextStyle) Options {
@@ -44,6 +50,7 @@ func defaultOptions(text TextStyle) Options {
 		Tooltip:       tip,
 		TooltipFill:   render.Color{R: 0x19, G: 0x18, B: 0x15, A: 0xff},
 		TooltipStroke: render.Color{R: 0x33, G: 0x2f, B: 0x27, A: 0xff},
+		MotionSpeed:   1,
 	}
 }
 
@@ -58,7 +65,12 @@ type input struct {
 	clicks  map[ID]bool
 	keys    map[ID][]render.KeyEvent
 	context map[ID]render.Point
+	claimed map[ID]bool
+	wheel   map[ID]render.Point
 	mods    render.Mods
+	help    string // a help page asked for since the last frame
+	dnd     *dragging
+	dropped map[ID]DragData
 }
 
 // Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame.
@@ -76,6 +88,7 @@ func (u *UI) Pointer(ev render.PointerEvent) {
 	}
 	in.pos, in.inside = ev.Pos, true
 	u.setHot(u.topInteractive(ev.Pos))
+	u.dragPointer(ev)
 	switch ev.Kind {
 	case render.PointerPress:
 		if ev.Buttons&render.ButtonSecondary != 0 && in.hot != 0 {
@@ -99,6 +112,10 @@ func (u *UI) Pointer(ev render.PointerEvent) {
 		}
 	case render.PointerRelease:
 		if ev.Buttons&render.ButtonPrimary == 0 {
+			return
+		}
+		if u.dragRelease() {
+			in.active = 0
 			return
 		}
 		if in.active != 0 && in.active == in.hot {
@@ -133,6 +150,14 @@ func (u *UI) topInteractive(p render.Point) ID {
 func (u *UI) scrollAt(p render.Point, d render.Point) {
 	for _, id := range u.Hit(p) {
 		f := u.flags[id]
+		if f.wheel {
+			if u.in.wheel == nil {
+				u.in.wheel = map[ID]render.Point{}
+			}
+			w := u.in.wheel[id]
+			u.in.wheel[id] = render.Point{X: w.X + d.X, Y: w.Y + d.Y}
+			return
+		}
 		if (f.scrollX && d.X != 0) || (f.scrollY && d.Y != 0) {
 			if !f.scrollX {
 				d.X = 0
@@ -162,11 +187,16 @@ func (u *UI) Interaction(id ID) Interaction {
 		FocusVisible: in.focus == id && in.visible && id != 0,
 		Keys:         in.keys[id],
 		Pointer:      in.pos,
+		Scroll:       in.wheel[id],
 		Mods:         in.mods,
 	}
 	if p, ok := in.context[id]; ok {
 		it.Context = &p
 	}
+	if d, ok := in.dropped[id]; ok {
+		it.Dropped = &d
+	}
+	it.DragOver = in.dnd != nil && in.dnd.moving && in.dnd.target == id
 	return it
 }
 
@@ -197,6 +227,55 @@ func (u *UI) Help(id ID) string {
 		id = u.parents[id]
 	}
 	return ""
+}
+
+// HelpNode is a node with a help id of its own, and where it was drawn.
+type HelpNode struct {
+	ID   ID
+	Rect render.Rect
+	Help string
+}
+
+// HelpNodes are the nodes of the latest frame with a help id of their own, for help mode's markers.
+func (u *UI) HelpNodes() []HelpNode {
+	var out []HelpNode
+	for id, f := range u.flags {
+		if f.help == "" {
+			continue
+		}
+		if r, ok := u.Rect(id); ok && r.Dx() > 0 && r.Dy() > 0 {
+			out = append(out, HelpNode{id, r, f.help})
+		}
+	}
+	slices.SortFunc(out, func(a, b HelpNode) int {
+		return cmp.Or(cmp.Compare(a.Rect.Min.Y, b.Rect.Min.Y), cmp.Compare(a.Rect.Min.X, b.Rect.Min.X))
+	})
+	return out
+}
+
+// ContextClick is a right-click since the last frame on a node no widget showed a context menu for: its target and
+// where. Something else (help's own menu) can answer it.
+func (u *UI) ContextClick() (ID, render.Point, bool) {
+	var best ID
+	var at render.Point
+	for id, p := range u.in.context {
+		if u.in.claimed[id] {
+			continue
+		}
+		if best == 0 || u.within(id, best) {
+			best, at = id, p
+		}
+	}
+	return best, at, best != 0
+}
+
+// RequestHelp asks for help page id (a context menu's "Help" item does); HelpRequest takes the request.
+func (u *UI) RequestHelp(id string) { u.in.help = id }
+
+func (u *UI) HelpRequest() (string, bool) {
+	h := u.in.help
+	u.in.help = ""
+	return h, h != ""
 }
 
 // WithoutHelp lists interactive nodes in the latest frame that have no help id, themselves or above them:

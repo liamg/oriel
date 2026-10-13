@@ -104,6 +104,8 @@ func (c *Checker) Check(r Ref) error {
 			return c.checkFunc(r, file, heading)
 		case ".vim":
 			return c.checkVimFunc(r, file, heading)
+		case ".rst", ".txt":
+			return c.checkUnderlined(r, file, heading)
 		}
 	}
 	file, anchor, ok := strings.Cut(ref, " ")
@@ -206,6 +208,56 @@ func (c *Checker) checkMarkdown(r Ref, file, heading string) error {
 	return fmt.Errorf("%s: no heading %q in spec/%s", r, heading, file)
 }
 
+// underline is a reStructuredText or AsciiDoc heading's underline: one punctuation character, repeated.
+func underline(l string) (byte, bool) {
+	l = strings.TrimRight(l, " ")
+	if len(l) < 3 || !strings.ContainsRune("=-~^\"'*+#", rune(l[0])) {
+		return 0, false
+	}
+	return l[0], strings.Count(l, l[:1]) == len(l)
+}
+
+// checkUnderlined finds a heading underlined in reStructuredText or AsciiDoc and checks the quote in its section, up
+// to the next heading as high. A heading's level is the order its underline character first appears in.
+func (c *Checker) checkUnderlined(r Ref, file, heading string) error {
+	lines, err := c.lines(file)
+	if err != nil {
+		return fmt.Errorf("%s: %v", r, err)
+	}
+	levels := map[byte]int{}
+	level := func(i int) int {
+		if i+1 >= len(lines) || strings.TrimSpace(lines[i]) == "" {
+			return 0
+		}
+		ch, ok := underline(lines[i+1])
+		if !ok {
+			return 0
+		}
+		if _, seen := levels[ch]; !seen {
+			levels[ch] = len(levels) + 1
+		}
+		return levels[ch]
+	}
+	clean := func(s string) string { return strings.ReplaceAll(s, "`", "") }
+	for i := range lines {
+		lv := level(i)
+		if lv == 0 || !sameHeading(clean(lines[i]), heading) {
+			continue
+		}
+		end := i + 2
+		for ; end < len(lines); end++ {
+			if l := level(end); l > 0 && l <= lv {
+				break
+			}
+		}
+		if r.Quote == "" || containsQuote(clean(strings.Join(lines[i:end], "\n")), r.Quote) {
+			return nil
+		}
+		return fmt.Errorf("%s: quote not found under %q in spec/%s: %q", r, heading, file, r.Quote)
+	}
+	return fmt.Errorf("%s: no heading %q in spec/%s", r, heading, file)
+}
+
 func sameHeading(text, want string) bool {
 	return strings.EqualFold(strings.TrimSpace(text), strings.TrimSpace(want)) || slug(text) == slug(want)
 }
@@ -286,7 +338,41 @@ func (c *Checker) checkHTML(r Ref, file, id string) error {
 		}
 		return fmt.Errorf("%s: quote not found in #%s in spec/%s: %q", r, id, file, r.Quote)
 	}
-	return fmt.Errorf("%s: no heading with id %q in spec/%s", r, id, file)
+	if text, ok := elementText(strings.Join(lines, "\n"), id); ok {
+		if r.Quote == "" || containsQuote(bikeshedText(text), r.Quote) {
+			return nil
+		}
+		return fmt.Errorf("%s: quote not found in #%s in spec/%s: %q", r, id, file, r.Quote)
+	}
+	return fmt.Errorf("%s: no heading or element with id %q in spec/%s", r, id, file)
+}
+
+// elementText is the element with id, to its closing tag; a <dfn>'s runs on through its definition, the <dd> after it.
+func elementText(src, id string) (string, bool) {
+	m := regexp.MustCompile(`<([a-zA-Z][a-zA-Z0-9]*)\b[^>]*\bid=["']` + regexp.QuoteMeta(id) + `["'][^>]*>`).FindStringSubmatchIndex(src)
+	if m == nil {
+		return "", false
+	}
+	tag := strings.ToLower(src[m[2]:m[3]])
+	if tag == "dfn" {
+		if end := strings.Index(src[m[0]:], "</dd>"); end >= 0 {
+			return src[m[0] : m[0]+end], true
+		}
+		return src[m[0]:], true
+	}
+	open := regexp.MustCompile(`(?i)<(/?)` + tag + `\b[^>]*>`)
+	depth := 0
+	for _, t := range open.FindAllStringSubmatchIndex(src[m[0]:], -1) {
+		if t[3] > t[2] {
+			depth--
+		} else {
+			depth++
+		}
+		if depth == 0 {
+			return src[m[0] : m[0]+t[0]], true
+		}
+	}
+	return src[m[0]:], true
 }
 
 var (

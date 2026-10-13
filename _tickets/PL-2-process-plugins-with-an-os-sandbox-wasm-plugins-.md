@@ -10,7 +10,7 @@ depends_on: [PL-1]
 
 # PL-2 · Process plugins with an OS sandbox; WASM plugins; oriel build --with
 
-**Phase** 7 · the rest · **After** [PL-1](PL-1-lua-config-and-plugins-hooks-inspect-luals-types.md) · **Unblocks** [PL-10](PL-10-calendar-next-meeting-tat-ical-url-or-macos-even.md), [PL-3](PL-3-all-or-nothing-install-consent-update-capability.md), [PL-8](PL-8-linear-assigned-tickets-start-work-from-a-ticket.md), [PL-9](PL-9-slack-ptal-via-webhook.md), [PL-13](PL-13-package-format-lua-entry-point-assets-plugin-pack.md)
+**Phase** 7 · the rest · **After** [PL-1](PL-1-lua-config-and-plugins-hooks-inspect-luals-types.md) · **Unblocks** [PL-10](PL-10-calendar-next-meeting-tat-ical-url-or-macos-even.md), [PL-3](PL-3-all-or-nothing-install-consent-update-capability.md), [PL-8](PL-8-linear-assigned-tickets-start-work-from-a-ticket.md), [PL-9](PL-9-slack-ptal-via-webhook.md), [PL-19](PL-19-package-format-lua-entry-point-assets-plugin-pack.md)
 
 ## Design
 
@@ -26,12 +26,16 @@ depends_on: [PL-1]
 
 ## Note
 
-- Installed plugins enter through Lua and start their WASM and processes from it (`_design/catalog.md`, PL-13).
+- Installed plugins enter through Lua and start their WASM and processes from it (`_design/catalog.md`, PL-19).
   Build the process and WASM hosts so that `oriel.process.spawn` and `oriel.wasm.load` can drive them.
 
 ## Done when
 
 the capability guard rejects undeclared calls; Landlock/sandbox-exec profiles applied
+
+## From SH-13
+
+- Capture the child's stderr with `logs.Lines` (a `slog` source per server or plugin), so it shows in the log panel (`errors.md`).
 
 ## Rules
 

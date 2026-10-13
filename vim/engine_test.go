@@ -4,9 +4,11 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/edit"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/vim"
+	"github.com/liamg/oriel/vim/vimreg"
 	"github.com/liamg/oriel/vim/vimtest"
 	"github.com/liamg/oriel/vim/vimtest/nvimtext"
 )
@@ -23,6 +25,10 @@ func (t *testEngine) Load(b vimtest.Buffer) error {
 	buf := text.New([]byte(strings.Join(b.Lines, "\n")), text.Author{})
 	t.ed = edit.New(buf, text.Author{Kind: text.User})
 	t.e = vim.New(t.ed)
+	// The engine's options come from the registry, as they do in the IDE (ED-13).
+	r := registry.New()
+	vimreg.Register(r)
+	t.e.SetSettings(vimreg.Settings{Options: r.Options()})
 	if b.Visual != nil {
 		t.e.SetCursor(vim.Pos{Line: b.Visual.Anchor.Line, Col: b.Visual.Anchor.Col})
 		t.e.SetVisual(t.e.Cursor())
@@ -82,6 +88,9 @@ func (t *testEngine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 	}
 	if q.Win {
 		r.Win = vimtest.Win{Cur: t.e.Window(), Count: t.e.Windows()}
+	}
+	if q.Top {
+		r.Top = t.e.Top() + 1
 	}
 	if q.Bufs {
 		r.Bufs = t.e.Buffers()

@@ -10,8 +10,9 @@ trace) and `38-crash.png` (the crash report on the next launch).
   error, a failed LSP server, a Go error from a command. Each becomes a core event, `Notified`, so it lands in the
   event log (`architecture.md`) and in `core.State`'s notification history.
 - A notice has an ID (`vim.unsaved`, `lua.error`, `lsp.crashed`), a severity (info, warning, error, question), a
-  source (`core`, `vim`, `plugin:linear`, `lsp:gopls`, `init.lua`), its text, an optional detail (a stack trace, the
-  command's stderr), a location (`file:line`) and actions ("Open init.lua:14", "Disable plugin", "Restart gopls").
+  source (`core`, `vim`, `plugin:linear`, `lsp:gopls`, `init.lua`), an optional title ("Config error"), its text, an
+  optional detail (a stack trace, the command's stderr), a location (`file:line`), actions ("Open init.lua:14",
+  "Disable plugin", "Restart gopls"), and whether it answers a key just typed (which decides how long it toasts).
 - The same ID repeating collapses into one entry with a count, so a hook failing on every keystroke is one row.
 - Plugins send notices and read the history through the same API (`plugins.md`).
 
@@ -20,10 +21,13 @@ trace) and `38-crash.png` (the crash report on the next launch).
 - **The Oriel log** is the app's: config and plugin errors, rendering, the GUI, update checks, Oriel's own panics.
 - **A session log** belongs to one session (`sessions.md`): its agent, worktree, LSP servers, test runs, terminals and
   gateway. It lives with the session on its worker, survives a restart, and is archived with the session.
+  Session logs sit behind `logs.SessionLogs`. Until the worker exists (AI-1), the app keeps them itself, one file
+  per session under its state dir; AI-1 moves them onto the worker and streams their records to the app.
 - A notice goes to exactly one of them, by its source. The log panel switches between **Oriel**, **Session · {name}**
   (the focused one) and **All**, which interleaves them with the session's name on each row.
 - Errors from a session you're not looking at don't toast: they put an error mark on that session's tab and wait in
-  its log. The status line's ✕/⚠ counts are the focused session's plus Oriel's.
+  its log. Its warnings and info still toast, with the session's name on them (mockup 37's gopls restart). The
+  status line's ✕/⚠ counts are the focused session's plus Oriel's.
 
 ## How they look
 
@@ -70,12 +74,16 @@ is in daily use.
 - A hook or view that errors 3 times in a row is turned off with a notice ("`tickets.lua:8` turned off after 3
   errors", action "Turn back on"). `:Hooks` shows it as off, with its last error.
 - A hook over its time budget is a warning, as mockup 19 shows ("4.1 ms on CommentSend · over the 2 ms budget").
+- As built: scripting.md, "As built (PL-12)". The counting is general (`Registry.Report`), so a Go plugin's hook or
+  view that keeps erroring is turned off the same way.
 
 ## Go errors and panics
 
 - Every call into a plugin, hook, view, provider or command runs under `recover`. A panic becomes an error notice
-  with the Go stack as its detail, the offending contribution is turned off as above, and the app keeps running.
-- A panic outside those (Oriel's own bug) writes a crash report and exits. The next launch offers it in a modal
+  with the Go stack as its detail, the offending contribution is turned off at once (it doesn't wait for 3, as an
+  error does), with "Turn back on", and the app keeps running. A command that returns an error is an error notice
+  and stays on.
+- A panic outside those (Oriel's own bug) writes a crash report (in the state dir's `crashes/`) and exits. The next launch offers it in a modal
   (`38-crash.png`): the report, **Copy report**, a link to open a GitHub issue
   (`github.com/liamg/oriel/issues/new`), and delete. It stays on the machine: nothing is sent anywhere.
 

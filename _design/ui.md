@@ -150,6 +150,10 @@ Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
 - One ranked list: sessions, commands, files, symbols, tickets and PRs.
 - Prefixes narrow the scope: `@` files, `#` symbols, `>` commands, `!` tickets.
 - Preview pane: the highlighted session's waiting question, tasks and last moves, so you can answer without switching.
+- Built from SH-4: `⌘K` opens it; `⇥` steps through the scopes; each source is a registry picker source, so its
+  preview is the source's own. Symbols come from the open buffers' outlines until LSP's workspace symbols (LS-2);
+  tickets and PRs from their plugins (PL-8, the GitHub integration). The session preview grows its question, tasks
+  and moves as the AI tickets add them.
 
 ## 02b · Pickers: files, grep, keymaps, and the rest
 
@@ -184,7 +188,16 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - **The matcher is our own**, a Go implementation of fzf-style scoring (per `deps.md`), and runs on the app for
   file and buffer lists. Grep and workspace symbols stream from the worker.
 - **Pickers are a plugin API**: `oriel.picker.source{ name, items = fn, preview = fn, actions = {…} }`.
-  Tickets, PRs, sessions and themes are all sources.
+  Tickets, PRs, sessions and themes are all sources. The themes picker (`␣T`, `:Themes`) shows each theme in the
+  whole window as it's highlighted; `↵` keeps it in settings.toml, `esc` puts the old one back (a source's `Hover`
+  and `Cancel`).
+- Built in SH-5: `⇥` steps to the next source keeping the query, and `⌃␣` multi-selects (the mockup gives `⇥`
+  both; the source strip keeps it). An item with a place (a path and line) gets open, `⌃v`, `⌃s`, `⌃t`, `⌃q` and
+  `⌃a` from the picker; `⌃a` runs `request.attach`, which the requests (AI-5) provide. Sources today: files,
+  grep (Go's regexp in the app, off the UI's goroutine, until the worker runs ripgrep), buffers (`:ls`), symbols
+  here and in the open buffers, keymaps (`⌃e` to the definition), commands, sessions and quickfix (`:copen`).
+  Ranking is the fuzzy score, then open buffers and shallower paths; "changed on this branch" and "recently
+  opened" join with FG-1 and the session's history. Threads, git log and status, and help come with their tickets.
 
 ## 02c · Which-key: the next keys, as you type
 
@@ -198,6 +211,11 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - It's driven by the input engine's `Pending()` and `Keymaps()` (see `editor.md`), so it works for vim, plain,
   emacs or any engine, and inside panels (Requests, Explorer, the picker itself) with their own keymaps.
 - It ships as a **built-in plugin** using only the public API. You can turn it off, restyle it, or replace it.
+- Built in SH-6: `Host.Pending()` gives it the keys waiting for more (a mapping's, or the focused editor engine's)
+  and the engine's own next keys, which the vim engine gives in Oriel's words for `g`, `z`, `[`, `]` and `⌃W`. A
+  keymap with no command names a group (`{Keys = "<leader>a", desc = "+agent"}`). `⌫` and `esc` act on a
+  mapping's keys, not an engine's half-typed command (which `esc` cancels in the engine). `?` to the keymaps
+  picker comes with Lua's keymap API (PL-1). `whichkey.enabled` turns it off.
 
 ## 03 · Mission control (`⌘⇧K`)
 
@@ -337,7 +355,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 ![16-plugins](mockups/16-plugins.png)
 
 - The mockup still says "Extensions", `extensions.toml` and COMMUNITY. The page is **Plugins**, the file is
-  `settings.toml`, and badges are reviewed, trusted or unverified (`catalog.md`, PL-15).
+  `settings.toml`, and badges are reviewed, trusted or unverified (`catalog.md`, PL-21).
 - The REGISTRY tab browses the plugin registries. Installing writes a line to `[plugins]`.
 - Every plugin shows what it contributes, the permissions it holds, how it runs (in-process, process or wasm) and live resource use.
 

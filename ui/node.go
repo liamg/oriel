@@ -102,18 +102,28 @@ type Style struct {
 	Clip    bool
 	ScrollX bool // scroll offsets persist by id; scrolling clips
 	ScrollY bool
+	Wheel   bool // takes the wheel itself: movement over it comes as Interaction.Scroll, for content it scrolls itself
 
-	Float *Float // out of the flow, placed against another node or a point
-	Z     int    // floats paint in Z order, after the flow
+	Float *Float  // out of the flow, placed against another node or a point
+	Z     int     // floats paint in Z order, after the flow; one below 0 paints behind its parent's content instead
+	Fade  float32 // how faded it's drawn, 0 (opaque) to 1
+
+	// Motion (FW-13), on the motion spring: how the node comes in and goes (an Exit keeps it drawn, without input,
+	// until it's out), whether a move glides there, and whether a fill change eases.
+	Enter, Exit *Transition
+	Glide       bool
+	EaseFill    bool
 
 	Interactive bool // takes hover and press
 	Focusable   bool // takes focus; implies Interactive
 	Disabled    bool // takes neither, and hides what's under it from the pointer
 	Cursor      render.Cursor
-	Tooltip     string // shown after the pointer rests on it
-	Help        string // its help page and anchor, "hud/usage#weekly-window" (help.md)
-	KeyMode     string // when focused, keymaps in this mode come first and unmapped keys come to it
-	Trap        bool   // keeps keyboard focus inside while it's up, as a modal does
+	Tooltip     string    // shown after the pointer rests on it
+	Help        string    // its help page and anchor, "hud/usage#weekly-window" (help.md)
+	KeyMode     string    // when focused, keymaps in this mode come first and unmapped keys come to it
+	Trap        bool      // keeps keyboard focus inside while it's up, as a modal does
+	Drag        *DragData // dragging it carries this, to a node that takes its kind (dnd.go)
+	Drop        []string  // the kinds of drag it takes; one let go over it is its Interaction's Dropped
 
 	// Accessibility (a11y.go): a node with a Role is in the accessibility tree; one without is transparent.
 	Role     Role

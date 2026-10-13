@@ -8,6 +8,7 @@ package ui
 import (
 	"fmt"
 	"hash/fnv"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -45,6 +46,7 @@ type elem struct {
 	pos, size [2]float32
 	content   [2]float32 // children's extent, for scrolling
 	keys      map[string]int
+	fx        fx
 }
 
 type state struct {
@@ -76,18 +78,25 @@ type UI struct {
 
 	in        input
 	springs   map[ID]*spring
+	glides    map[ID]*glideState
+	fills     map[ID]*fillState
+	exitable  map[ID]*elem // this frame's nodes with an Exit
+	exiting   map[ID]*exiting
+	noHits    bool
 	animating bool
 	wake      time.Time
 }
 
 type flags struct {
 	interactive, focusable, disabled bool
-	scrollX, scrollY                 bool
+	scrollX, scrollY, wheel          bool
 	cursor                           render.Cursor
 	tooltip, help, keyMode           string
 	trap                             bool
 	z                                int
 	parent                           ID
+	drag                             *DragData
+	drop                             []string
 }
 
 type hit struct {
@@ -101,6 +110,28 @@ func New(sh typeset.Shaper, text TextStyle) *UI {
 		flags: map[ID]flags{}, springs: map[ID]*spring{}}
 }
 
+// Fork is a copy of u to build and paint a frame with apart, with another theme say, starting from u's state (scroll
+// offsets, widget state, focus) and leaving u as it was. A widget's own state (State[T]) is shared, not copied.
+func (u *UI) Fork() *UI {
+	f := *u
+	f.byID, f.floats, f.hits = map[ID]*elem{}, nil, nil
+	f.states = make(map[ID]*state, len(u.states))
+	for id, st := range u.states {
+		c := *st
+		f.states[id] = &c
+	}
+	f.springs = make(map[ID]*spring, len(u.springs))
+	for id, sp := range u.springs {
+		c := *sp
+		f.springs[id] = &c
+	}
+	f.flags = maps.Clone(u.flags)
+	f.glides, f.fills, f.exitable, f.exiting = maps.Clone(u.glides), maps.Clone(u.fills), maps.Clone(u.exitable), maps.Clone(u.exiting)
+	f.parents = maps.Clone(u.parents)
+	f.in.clicks, f.in.keys, f.in.context, f.in.wheel, f.in.claimed, f.in.help = nil, nil, nil, nil, nil, ""
+	return &f
+}
+
 func (u *UI) Options() Options     { return u.opts }
 func (u *UI) SetOptions(o Options) { u.opts = o }
 
@@ -112,14 +143,19 @@ func (u *UI) Frame(f render.Frame, size render.Point, build func(c *Ctx)) {
 
 // Layout builds and lays out a frame without painting it.
 func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
+	prev := make(map[ID]bool, len(u.byID))
+	for id := range u.byID {
+		prev[id] = true
+	}
 	u.frame++
 	u.root = &elem{name: "root", style: Style{Dir: Column, W: Px(size.X), H: Px(size.Y)}}
 	u.byID = map[ID]*elem{0: u.root}
 	u.floats = u.floats[:0]
 	u.animating, u.wake = false, time.Time{}
 	build(&Ctx{u: u, e: u.root})
-	u.in.clicks, u.in.keys, u.in.context = nil, nil, nil
+	u.in.clicks, u.in.keys, u.in.context, u.in.wheel, u.in.claimed, u.in.dropped = nil, nil, nil, nil, nil, nil
 	u.tooltip()
+	u.dragShown()
 	for axis := range 2 {
 		u.fit(u.root, axis)
 		u.grow(u.root, axis)
@@ -128,6 +164,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	for i := 0; i < len(u.floats); i++ {
 		u.placeFloat(u.floats[i])
 	}
+	u.animate(prev)
 	for id, st := range u.states {
 		if st.seen != u.frame {
 			delete(u.states, id)
@@ -141,14 +178,20 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	clear(u.flags)
 	for id, e := range u.byID {
 		s := e.style
+		if s.Drag != nil || len(s.Drop) > 0 {
+			s.Interactive, s.Focusable = true, true // a drag can start, and end, from the keyboard
+			if s.KeyMode == "" {
+				s.KeyMode = DragKeyMode
+			}
+		}
 		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" || s.Help != "" || s.Trap {
 			var parent ID
 			if e.parent != nil {
 				parent = e.parent.id
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
-				scrollX: s.ScrollX, scrollY: s.ScrollY, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
-				trap: s.Trap, z: s.Z, parent: parent}
+				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
+				trap: s.Trap, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop}
 		}
 	}
 	u.parents = map[ID]ID{}
@@ -560,8 +603,26 @@ func (u *UI) Paint(f render.Frame) {
 	floats := slices.Clone(u.floats)
 	slices.SortStableFunc(floats, func(a, b *elem) int { return a.style.Z - b.style.Z })
 	for _, e := range floats {
+		if e.style.Z >= 0 {
+			u.paint(f, e, full)
+		}
+	}
+	// What's on its way out is drawn last, in Z order, and takes no input.
+	var gone []*elem
+	for _, x := range u.exiting {
+		gone = append(gone, x.e)
+	}
+	slices.SortStableFunc(gone, func(a, b *elem) int {
+		if a.style.Z != b.style.Z {
+			return a.style.Z - b.style.Z
+		}
+		return int(a.id - b.id)
+	})
+	u.noHits = true
+	for _, e := range gone {
 		u.paint(f, e, full)
 	}
+	u.noHits = false
 }
 
 func (e *elem) rect() render.Rect { return render.XYWH(e.pos[0], e.pos[1], e.size[0], e.size[1]) }
@@ -579,8 +640,18 @@ func intersect(a, b render.Rect) render.Rect {
 
 func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	r := e.rect()
-	if vis := intersect(r, clip); vis.Dx() > 0 && vis.Dy() > 0 && e != u.root {
+	if vis := intersect(r, clip); vis.Dx() > 0 && vis.Dy() > 0 && e != u.root && !u.noHits {
 		u.hits = append(u.hits, hit{e.id, vis})
+	}
+	if op := e.fx.opacity * (1 - e.style.Fade); op < 1 {
+		if op <= 0 {
+			return
+		}
+		f.PushOpacity(op)
+		defer f.Pop()
+	}
+	if e.fx.shift != (render.Point{}) {
+		f = render.Offset(f, e.fx.shift)
 	}
 	switch e.kind {
 	case kText:
@@ -593,6 +664,9 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 		return
 	}
 	s := e.style
+	if e.fx.fill != nil {
+		s.Fill = *e.fx.fill
+	}
 	if s.Fill.A > 0 || (s.Border > 0 && s.Stroke.A > 0) {
 		f.Rect(r, render.Style{Fill: s.Fill, Radius: s.Radius, Stroke: s.Stroke, Width: s.Border})
 	}
@@ -600,6 +674,11 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	if clips {
 		f.PushClip(r, s.Radius)
 		clip = intersect(clip, r)
+	}
+	for _, c := range e.kids {
+		if c.style.Float != nil && c.style.Z < 0 {
+			u.paint(f, c, clip) // an underlay, behind the content
+		}
 	}
 	for _, c := range e.kids {
 		if c.style.Float != nil {
@@ -659,6 +738,7 @@ func num(v float32) string {
 
 // SetTheme takes the UI's own colours (text, focus ring, tooltips) from r, and paints over its base background.
 func (u *UI) SetTheme(r *theme.Resolved) {
+	u.opts.MotionSpeed = float32(r.Effect("motion"))
 	u.theme = r
 	u.text.Color = r.C(theme.Fg)
 	u.opts.FocusRing = r.C(theme.FocusRing)

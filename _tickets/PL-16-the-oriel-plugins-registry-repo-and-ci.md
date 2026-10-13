@@ -5,12 +5,12 @@ phase: P8
 status: todo
 area: Platform
 module: tools (repo)
-depends_on: [PL-13]
+depends_on: [PL-19]
 ---
 
 # PL-16 · The liamg/oriel-plugins registry repo and its CI
 
-**Phase** 8 · plugin registry · **After** [PL-13](PL-13-package-format-lua-entry-point-assets-plugin-pack.md) · **Unblocks** [PL-17](PL-17-oriel-plugin-publish.md)
+**Phase** 8 · plugin registry · **After** [PL-19](PL-19-package-format-lua-entry-point-assets-plugin-pack.md) · **Unblocks** [PL-17](PL-17-oriel-plugin-publish.md)
 
 ## Design
 
@@ -32,7 +32,7 @@ depends_on: [PL-13]
 
 - A fixture PR for a new version gets the comment with the right capability diff.
 - A PR for `acme/*` from someone outside acme fails the owner check.
-- After a merge, the client from PL-15 verifies the published index.
+- After a merge, the client from PL-21 verifies the published index.
 
 ## Rules
 

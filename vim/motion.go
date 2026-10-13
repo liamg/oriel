@@ -1050,21 +1050,6 @@ func markChar(e *Engine, v *view, m motionCtx) (target, bool) {
 	return target{pos: p, jump: m.key[0] != 'g'}, true
 }
 
-// screenLine is H, M and L. The window is taken to show the whole buffer.
-func screenLine(e *Engine, v *view, m motionCtx) (target, bool) {
-	n := v.lines()
-	line := 0
-	switch m.key {
-	case "H":
-		line = min(m.count1()-1, n-1)
-	case "L":
-		line = max(n-m.count1(), 0)
-	case "M":
-		line = (n+1)/2 - 1
-	}
-	return target{pos: Pos{line, 0}, kind: linewise, jump: true, keepCol: true}, true
-}
-
 // nextMark is ]` and friends: the next or previous lowercase mark.
 func nextMark(e *Engine, v *view, m motionCtx) (target, bool) {
 	fwd := m.key[0] == ']'

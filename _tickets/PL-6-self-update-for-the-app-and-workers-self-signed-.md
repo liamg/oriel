@@ -10,7 +10,7 @@ depends_on: [AI-1]
 
 # PL-6 · Self-update for the app and workers (self-signed, ed25519)
 
-**Phase** 7 · the rest · **After** [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md) · **Unblocks** [PL-15](PL-15-registry-client-badges-and-the-plugins-page.md)
+**Phase** 7 · the rest · **After** [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md) · **Unblocks** [PL-21](PL-21-registry-client-badges-and-the-plugins-page.md)
 
 ## Design
 

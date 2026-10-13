@@ -1,0 +1,24 @@
+   1 | diff --git a/round.go b/round.go
+     | ^^^^ function
+     |      ^^^^^ variable.parameter
+     |            ^^^^^^^^^^^^^^^^^^^^^ string.special.path
+   2 | index 3b18e51..a9c2f04 100644
+     | ^^^^^ keyword
+     |       ^^^^^^^ constant
+     |              ^^ punctuation.special
+     |                ^^^^^^^ constant
+     |                        ^^^^^^ number
+   3 | --- a/round.go
+     | ^^^^ diff.minus
+     |     ^^^^^^^^^^ string.special.path
+   4 | +++ b/round.go
+     | ^^^^ diff.plus
+     |     ^^^^^^^^^^ string.special.path
+   5 | @@ -1,4 +1,4 @@
+     | ^^^^^^^^^^^^^^^ attribute
+   6 |  package pricing
+   7 |  
+   8 | -func Round(x float64) float64 { return x }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ diff.minus
+   9 | +func Round(x float64) float64 { return math.Round(x) }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ diff.plus

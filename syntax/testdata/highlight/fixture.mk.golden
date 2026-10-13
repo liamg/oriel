@@ -1,0 +1,38 @@
+   1 | # Build and test.
+     | ^^^^^^^^^^^^^^^^^ comment
+   2 | GO ?= go
+     | ^^ string.special.symbol
+     |    ^^ operator
+   3 | PKGS := ./...
+     | ^^^^ string.special.symbol
+     |      ^^ operator
+   4 | 
+   5 | .PHONY: test build
+     | ^^^^^^ function.builtin
+     |       ^ operator
+     |         ^^^^ function
+     |              ^^^^^ function
+   6 | 
+   7 | test: build
+     | ^^^^ function
+     |     ^ operator
+   8 | 	$(GO) test $(PKGS)
+     |  ^^ punctuation.special
+     |    ^^ function.call
+     |      ^ punctuation.special
+     |        ^^^^ variable.parameter
+     |             ^^ punctuation.special
+     |               ^^^^ function.call
+     |                   ^ punctuation.special
+   9 | 
+  10 | build:
+     | ^^^^^ function
+     |      ^ operator
+  11 | 	$(GO) build -o bin/oriel ./cmd/oriel
+     |  ^^ punctuation.special
+     |    ^^ function.call
+     |      ^ punctuation.special
+     |        ^^^^^ variable.parameter
+     |              ^^ variable.parameter
+     |                 ^^^^^^^^^ variable.parameter
+     |                           ^^^^^^^^^^^ variable.parameter

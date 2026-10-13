@@ -176,3 +176,73 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - One source of truth, so Lua, process RPC, WASM, the docs and the LuaLS types can't drift apart.
 - A Lua-defined input engine goes through a small adapter that implements `input.Engine` and calls
   the VM per key. That's the path an emacs mode written in Lua would take (see `editor.md`).
+
+## As built (PL-1)
+
+- `script.VM` is gopher-lua (approved in deps.md): one state on the UI loop, Lua's standard libraries, `require`
+  from `~/.config/oriel/lua`. The watchdog logs a call past 50 ms as slow and interrupts one past 500 ms (a config
+  load gets 2 s); per-function times feed `:Hooks`. Errors are `script.Error`: the message, with the traceback kept
+  apart (see "As built (PL-12)").
+- The API is `script/api`: annotated Go (`//oriel:api name=…` on a namespace type, `//oriel:api doc=… optional=…
+  returns=…` on its methods). `tools/cmd/apigen` (`go generate ./script/api`) writes the VM glue (`zz_bind.go`), the
+  LuaLS types (`script/types/oriel.d.lua`) and the reference (`docs/api.md`); a test fails when they're stale. A
+  parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
+- Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
+  `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `ui`, `regex` (PCRE2),
+  `language`, and `o`, `bo`, `so` over the registry's options (`oriel.o` sets the Lua layer). There's one global, `oriel`; a config that wants a short name writes
+  `local L = oriel`, as the sample does.
+- Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
+  general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
+  `thread`, `lsp`, `coverage`, `http` and `async` load, and calling into one says which ticket brings it. An option
+  set before anything registers it waits, and `:Hooks` lists it.
+- Hooks are the registry's (`Registry.Hook`, `Fire`, `DeclareEvent`): in priority order, a veto or decision stops
+  them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead`,
+  `BufWritePre` (a veto stops the write) and `BufWritePost`; `Commit`, `CommentSend`, `Permission`, `AgentTurnEnd`,
+  `PrRaise` and `ModeChanged` are declared for the features that fire them.
+- Saving `init.lua` or anything under `lua/` reloads the config within 500 ms: everything it registered goes, it
+  loads again, and a toast says how long and how many things it registered; an error is a notice with its line.
+- `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`, history) and
+  `:Inspect` (20-inspect) are built. `:Inspect`'s parts are contributions (`registry.InspectSection`): the editor
+  gives the tree-sitter path (a new `node_path` in the grammar shim), the highlight and decorations; the Lua extension
+  gives the keymaps that apply and the window's views, with what replaced them (`Registry.ViewSource`).
+- Which-key's `?` opens the keymaps picker on the prefix.
+- Not yet: the LuaJIT swap, process and WASM bindings of the same declarations, a `vim` shim, `:Plugins`, jumping
+  from a source to its line (`gd`), and a project's `.oriel/init.lua` (it needs the trust prompt security.md
+  describes).
+
+## As built (PL-12)
+
+- `script.Error` has `Where()` (a syntax error's line, the message's, or the innermost Lua frame's), `Frames()` and
+  `Trace()`. `require` loads modules with their path from the config directory as the chunk name, so errors say
+  `lua/my/tickets.lua:8`. In the traceback the API function that raised the error is named (`oriel.agent.tool`) and
+  gopher-lua's own `[G]` frames are dropped; the Go stack under the API call (a panic in it is an error at its Lua
+  call) comes after, behind "show Go frames" in the log. A hook's trace ends with `oriel.on: dispatch · <event>`.
+- Lua drops a tail call's frame (`return f()`), as reference Lua does; the REPL evaluates `return unpack({ <line> })`
+  so a call in a line keeps its frame.
+- A reload loads the new config alongside the running one: if it fails, the new one's registrations and option
+  values are undone (`APIs.Revert`) and the last good config keeps running, which the notice says. If it loads, the
+  old one goes, and options it set that the new one doesn't are unset (`APIs.Handover`). At startup there's no good
+  config to keep, so what ran before the error stays.
+- Every Lua error with a line in the config is a diagnostic (owner `lua`) until the next load: load errors, and
+  errors from hooks, views, decorations, keymaps and the REPL (`VM.OnError`). The load error's notice has
+  **Edit init.lua** (the failing file's name); a successful load clears the diagnostics and the toast.
+- A Lua view or decoration that errors reports it (`Registry.Report`) instead of panicking: a view draws its error
+  in its place until the third in a row turns it off. Hooks are counted by `Fire`. The fault's notice is the row the
+  errors were, "… · Permission hook turned off after 3 errors", with **Open at line** and **Turn back on**.
+- `L.diagnostics.set(owner, file, list)` and `L.diagnostics.list()` bind the registry's diagnostics.
+- Not yet: a column for runtime errors (gopher-lua gives none, so the whole line is underlined), and the toast's
+  "saving reloads it" hint.
+- UI from Lua: `L.ui.button{ label, on_click, primary, id }` runs Lua when clicked; `row` and `column` take `gap` and
+  `pad` beside their children. A view whose top node is a single line (a row, text, a tat, a button) is centred in
+  the height it's given, so it sits right in a bar; a column runs from the top, as a panel does. A demo plugin
+  (`app/plugindemo_test.go`) adds a dock panel with buttons, a tab, title-bar and status-line segments and editor
+  marks, using only this API.
+- `oriel.menu.add{ label, run, when, group, order, key }` adds a right-click entry (PL-13); `run` is a function, given
+  what was clicked (`view`, `instance`, `file`, `selection`, `help`), or a command id.
+- Form widgets (PL-14): `oriel.ui.input`, `toggle` and `select` on the same widgets the built-ins use
+  (`widget.Input`, `widget.Toggle`, `widget.Select`; the settings page draws with the last two); `on_change` gets the
+  new value and the view redraws. `oriel.ui.state(key, initial)` is a table the VM keeps by key (`VM.State`). A
+  callback's error is a notice at its line. Tab moves focus: controls in the `button` key mode map Tab and ⇧Tab to
+  `ui.focus.next`/`prev` (`UIView.FocusNext`), and a Lua input sets `InputOpts.TabMoves`.
+- Drag and drop (PL-15): any `oriel.ui` node can be dragged (`drag = { kind, data, label }`) or take drops
+  (`accepts = { kinds }`, `on_drop = function(kind, data)`); a `"file"` drop's data is its paths.

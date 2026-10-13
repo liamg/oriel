@@ -1,0 +1,4 @@
+source: https://github.com/PCRE2Project/pcre2
+ref: pcre2-10.44
+path: testdata/testinput1, testdata/testoutput1, testdata/testinput2, testdata/testoutput2, LICENCE
+license: BSD-3-Clause (see LICENCE)

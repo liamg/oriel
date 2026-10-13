@@ -43,6 +43,13 @@ type SyntaxDef struct {
 	Italic, Bold, Underline *bool
 }
 
+// HasVariants reports whether s has [dark] or [light] tables, so an edit belongs under one.
+func (s *Spec) HasVariants() bool { return !s.Dark.empty() || !s.Light.empty() }
+
+func (l *Layer) empty() bool {
+	return len(l.Palette) == 0 && len(l.Tokens) == 0 && len(l.Syntax) == 0 && len(l.Effects) == 0
+}
+
 func (s *Spec) variant(v Variant) *Layer {
 	if v == Light {
 		return &s.Light

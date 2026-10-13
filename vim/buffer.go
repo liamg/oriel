@@ -9,7 +9,13 @@ import (
 )
 
 // SetModified sets whether the current buffer has changes not written, as 'modified'.
-func (e *Engine) SetModified(on bool) { e.buffer.modified = on }
+func (e *Engine) SetModified(on bool) {
+	if on {
+		e.buffer.savedSeq, e.buffer.modified = -1, true
+	} else {
+		e.buffer.markSaved()
+	}
+}
 
 // emptyBuffer makes a new buffer with no text and no name.
 func (e *Engine) emptyBuffer() *buffer { return e.newBuffer(text.New(nil, text.Author{})) }
@@ -50,14 +56,20 @@ func (e *Engine) shownElsewhere(b *buffer) bool {
 
 // unload drops a buffer's text: with no file to read it back from, it is empty when next edited.
 func (e *Engine) unload(b *buffer) {
-	t := text.New(nil, text.Author{})
+	e.setText(b, text.New(nil, text.Author{}))
+	b.file = nil
+}
+
+// setText gives b new text, with no history: its marks and undo state start again.
+func (e *Engine) setText(b *buffer, t *text.Buffer) {
 	b.text = t
-	b.modified = false
+	b.markSaved()
+	b.noLines = t.Snapshot().Len() == 0
 	b.marks, b.undoCur, b.undoMarks, b.uLine = map[rune]Pos{}, map[int]Pos{}, map[int]map[rune]Pos{}, -1
 	b.last = Pos{}
 	b.lastVisual = nil
 	t.Subscribe(func(ch text.Change) {
-		b.modified = true
+		b.changed()
 		e.adjustMarks(b, ch)
 	})
 }
@@ -195,18 +207,14 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 			return e.switchBuffer(e.window.alt, bang)
 		case "":
 			if bang {
-				e.unloadCurrent()
+				return e.reload()
 			}
 			return nil
 		}
-		for _, b := range e.buffers {
-			if b.name == args {
-				b.unlisted = false
-				return e.switchBuffer(b, bang)
-			}
+		b, err := e.openFile(args, true)
+		if err != nil {
+			return err
 		}
-		b := e.emptyBuffer()
-		b.name = args
 		return e.switchBuffer(b, bang)
 	case "ls", "buffers", "files":
 		for _, b := range listed {
@@ -244,7 +252,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 func (e *Engine) unloadCurrent() {
 	v := e.view()
 	e.do(e.newGroup(), text.Replace{Range: text.Range{Start: 0, End: v.s.Len()}})
-	e.buffer.modified = false
+	e.buffer.markSaved()
 	e.cur = Pos{}
 }
 

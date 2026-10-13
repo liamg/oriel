@@ -4,6 +4,7 @@ package edit
 
 import (
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/liamg/oriel/text"
@@ -24,9 +25,20 @@ type Register struct {
 	Kind RegKind
 }
 
-// Cursor is a cursor's offset in the buffer.
+// Cursor is a cursor's offset in the buffer and, when it's selecting, where the selection started: the text
+// between Anchor and Off is selected.
 type Cursor struct {
-	Off int
+	Off       int
+	Anchor    int
+	Selecting bool
+}
+
+// Selection is the selected range, in order, and whether there is one.
+func (c Cursor) Selection() (text.Range, bool) {
+	if !c.Selecting || c.Anchor == c.Off {
+		return text.Range{}, false
+	}
+	return text.Range{Start: min(c.Anchor, c.Off), End: max(c.Anchor, c.Off)}, true
 }
 
 // Editor is one window's view of a buffer: its cursors, plus the registers and notices it shares
@@ -40,11 +52,20 @@ type Editor struct {
 	cursors []Cursor
 }
 
-// shared is what every editor opened from the same one shares: registers and notices.
+// shared is what every editor opened from the same one shares: registers, the clipboard and notices.
 type shared struct {
 	mu      sync.Mutex
 	regs    map[rune]Register
 	notices []Notice
+	clip    Clipboard
+	notify  func(Notice)
+}
+
+// Clipboard is the system clipboard, as the IDE provides it. Primary is X11's primary selection, which
+// platforms without one treat as the clipboard.
+type Clipboard interface {
+	Read(primary bool) (string, bool)
+	Write(primary bool, text string)
 }
 
 // New returns an editor over buf whose edits are by author.
@@ -92,10 +113,38 @@ func (e *Editor) Resolve(id text.AnchorID) (int, bool)           { return e.buf.
 func (e *Editor) Release(id text.AnchorID)                       { e.buf.Release(id) }
 func (e *Editor) Subscribe(fn func(text.Change)) (cancel func()) { return e.buf.Subscribe(fn) }
 
-// Register returns register r's contents.
+// SetClipboard makes "+ and "* the system clipboard (and the primary selection); nil makes them ordinary registers.
+func (e *Editor) SetClipboard(c Clipboard) {
+	e.shared.mu.Lock()
+	defer e.shared.mu.Unlock()
+	e.shared.clip = c
+}
+
+// HasClipboard reports whether "+ and "* are the system's.
+func (e *Editor) HasClipboard() bool {
+	e.shared.mu.Lock()
+	defer e.shared.mu.Unlock()
+	return e.shared.clip != nil
+}
+
+// Register returns register r's contents. With a clipboard, "+ and "* read it: text that's still what was last
+// written keeps the kind it was written with, and other text is linewise when it ends in a newline.
 func (e *Editor) Register(r rune) (Register, bool) {
 	e.shared.mu.Lock()
 	defer e.shared.mu.Unlock()
+	if c := e.shared.clip; c != nil && (r == '+' || r == '*') {
+		text, ok := c.Read(r == '*')
+		if !ok {
+			return Register{}, false
+		}
+		if last, ok := e.shared.regs[r]; ok && last.Text == text {
+			return last, true
+		}
+		if strings.HasSuffix(text, "\n") {
+			return Register{Text: text, Kind: Linewise}, true
+		}
+		return Register{Text: text}, true
+	}
 	v, ok := e.shared.regs[r]
 	return v, ok
 }
@@ -104,13 +153,27 @@ func (e *Editor) SetRegister(r rune, v Register) {
 	e.shared.mu.Lock()
 	defer e.shared.mu.Unlock()
 	e.shared.regs[r] = v
+	if c := e.shared.clip; c != nil && (r == '+' || r == '*') {
+		c.Write(r == '*', v.Text)
+	}
 }
 
 // Notify gives the IDE a notice to show.
 func (e *Editor) Notify(n Notice) {
 	e.shared.mu.Lock()
-	defer e.shared.mu.Unlock()
 	e.shared.notices = append(e.shared.notices, n)
+	fn := e.shared.notify
+	e.shared.mu.Unlock()
+	if fn != nil {
+		fn(n)
+	}
+}
+
+// OnNotice calls fn with every notice from now on, on the goroutine that gave it.
+func (e *Editor) OnNotice(fn func(Notice)) {
+	e.shared.mu.Lock()
+	defer e.shared.mu.Unlock()
+	e.shared.notify = fn
 }
 
 // Notices returns every notice so far, oldest first.

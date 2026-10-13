@@ -158,7 +158,7 @@ type Registry interface {
     Option(o OptionSpec) Disposable               // fields and the settings page: settings.md
     View(id string, v View) Disposable            // override = register the same id later; disposing it restores the one beneath
     Decorations(id string, p DecorationProvider) Disposable
-    Input(e input.Engine) Disposable
+    Input(e input.Engine) Disposable              // InputByID(id) and Inputs() find them; editor.input picks one
     Provider(p agent.Provider) Disposable
     AgentTool(t AgentTool) Disposable
     Theme(t theme.Source) Disposable
@@ -168,9 +168,23 @@ type Registry interface {
     Commands() []Command                          // what :Commands lists, with sources
     Keymaps() []Keymap                            // what :Keys lists, with sources
     Lookup(modes, keys []string) (exact *Keymap, more bool) // modes most specific first: a panel's, then "n"
-    ViewByID(id string) (View, bool)
+    ViewByID(id string) (View, bool)              // the view under a guard: a panic turns it off (errors.md)
     Options() Options                             // values by layer: settings.md
+
+    SetDiagnostics(owner, file string, ds []Diagnostic) // replaces owner's for file; Problems and the editor show them
+    Diagnostics() ([]Diagnostic, int)                    // every one, by file and line, and a generation
+    DiagnosticsFor(file string) []Diagnostic
+
+    OnFault(fn func(Fault)) Disposable            // a contribution turned off: it panicked, or kept failing
+    OnFailure(fn func(Failure)) Disposable        // each contribution error, and warnings (a hook over budget)
+    Report(kind, id string, err error)            // how a call went, nil for a success: FailLimit (3) errors in a row turn it off
+    TurnOff(kind, id string, err error)           // kind: "command", "view", "hook", "decoration"
+    TurnOn(kind, id string)                       // "Turn back on"
+    TurnedOff() []Off                             // what :Hooks and friends show as off, with the error
 }
+
+// Every call into a contribution runs under registry.Call, which turns a panic into a *registry.Panic with its
+// Go stack. ui.Ctx.Guard does the same for a view's Func node while it builds.
 
 // Each extension registers through registry.WithSource(r, id), which stamps Source on what it registers:
 // "builtin:introspect", "init.lua:14", a plugin's id.
@@ -207,8 +221,13 @@ type View interface {
 }
 
 type DecorationProvider interface {
-    Range(buf text.Snapshot, top, bottom int) []Decoration // only the visible lines
+    Decorations(ctx DecorationCtx) []Decoration   // ctx: the buffer's Name, Buffer, Snap, and lines [Top, Bottom) in view
 }
+
+// Decoration{Kind, Line or Anchor, From/To, Style, Edge, Text, Node, Priority}. Kinds: Sign (gutter), LineBg
+// (with a gutter Edge), Highlight and Underline (byte columns), VirtualText (after the line), Block (a ui.Node
+// between this line and the next). An Anchor the provider made on the Buffer moves with edits, so a block
+// stays with its text. Providers run under the guard; one that panics is turned off (KindDecoration).
 ```
 
 ```go
@@ -226,9 +245,81 @@ type Host interface {
     Editor() edit.Editor                          // focused window
     Secrets() Secrets                             // only what the manifest declares
     Net() *http.Client                            // egress filtered to declared hosts
-    Log() *slog.Logger
+    Log() *slog.Logger                            // redacted, with the extension as its source
+    Notify(n core.Notice)                         // the one path every notice takes (errors.md)
+    State() core.State                            // a copy: the notification history, focus, sessions
 }
+
+// core.Notice: ID ("lsp.crashed"), Severity (info, warning, error, question), Source (defaults to the
+// extension), Session ("" for Oriel's log), Title, Text, Detail (a trace, stderr), Location (file:line),
+// Actions (each a command with args), Time, and Key (answers a key just typed, so it goes sooner).
 ```
+
+- The window is made of views like any other, each replaceable by registering the same id: `app.root`,
+  `app.statusline`, `app.notifications` (toasts) and `app.modal`. The log panel is `log`, and `:Events` is `events`.
+- The titlebar is `app.titlebar`: the logo, a tab per session (status dot, name, its status or kind, `⌘N`, and
+  `✕N` while it has errors you haven't seen), and segments named `titlebar.right.<order>-<name>` at its right, for
+  tats. `session.focus {n}` or `{id}` brings a session to the front; `⌘1`–`⌘9` run it.
+- Picker sources: `Registry.Picker(PickerSource{ID, Title, Prefix, Order, Items, Preview, Run})`. `Items(ctx, query)`
+  gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
+  query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
+  selection. Sessions, commands, files and symbols are built-in sources; tickets and PRs come from their plugins.
+- `Host.Pending()` is the keys typed towards a longer mapping or engine command, with the engine's next keys, for
+  which-key. A keymap with no command is a group's label, never run.
+- Views named `app.overlay.<name>` float over the window: the omnibox is `app.overlay.omnibox`.
+- The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
+  in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.
+- A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`) and
+  `ViewCtx.Focused`. A view can implement `registry.Titled` to name each instance's tab, and
+  `registry.EdgeToEdge` to be drawn without the pane's padding; `registry.As[T](view)` sees through the guard.
+  `Registry.Views()` lists every view id.
+- `Host.Layout()` is the layout tree, to change from commands and views (`Open`, `Close`, `Show`, `Swap`, `Row`,
+  `Shown`, `OnClose`), `Host.PaneRect(v)` where a view's pane was drawn, and `Host.Redraw()` asks for a frame from
+  any goroutine. `view.open` takes `beside` (`"editor#3"`) and `size`, and `view.close` an `id` and `instance`.
+- `Host.CurrentTheme()` is the theme the window is drawn in, and `Host.Shot(th)` the window built and drawn again on
+  the CPU in another theme, without touching the live frame (`ui.UI.Fork`). Drawn in `theme.Probe(th)`, every token
+  and syntax group in a colour of its own, it tells what painted each pixel: the theme editor's pick mode.
+- Hooks (PL-1): `Registry.Hook(Hook{Event, Pattern, Priority, Kind, Label, Fn, Source})`, `Fire(ctx, event, subject,
+  ev)`, `DeclareEvent` and `Hooks()`, with `registry.On[E]` for a typed Go hook. `Registry.Contribute` and
+  `Contributions(kind)` are the general contribution point for later features (agent tools, prompt packs, session
+  kinds, HUD tats, status rules, `:Inspect` sections). `Host.Do(fn)` runs fn on the loop from any goroutine.
+  `registry.SourcedView` and `Registry.ViewSource` say who registered a view.
+- `Host.Here()` is where the user is, as an `At`: the session in front (or `oriel` with none), the project, and
+  the focused editor's buffer and window; read options there. `core.Store.Focus()` is the session in front, cheaply.
+- Errors (PL-12): `Registry.Report(kind, id, err)` counts a contribution's errors in a row, and FailLimit (3) turn
+  it off (`Fault.Errors` says so); `Fire` reports each hook's, and a Lua view or decoration reports its own.
+  `Registry.OnFailure` hears each error and warning (a hook over the 2 ms budget), for the notices. An error that
+  knows its place (`Where()`, `Trace()`, as `script.Error` does) gets them on its notice, with **Open at line**
+  (`editor.open`). `Host.Dismiss(id)` takes down a notice's toasts when its problem is gone.
+- Diagnostics (PL-12): `Registry.SetDiagnostics(owner, file, ds)` publishes a file's `Diagnostic{Line, From, To,
+  Severity, Message}` as LSP does; the built-in `problems` extension marks them in the editor through a decoration
+  provider (`DecorationCtx.Path` is the buffer's absolute file) and lists them in `:Problems`. Lua's
+  `L.diagnostics.set` binds it; the Lua config publishes its errors as owner `lua`.
+- Right-click menus (PL-13): `registry.MenuItem` contributions (kind `menu.item`) with a `When` (view, file glob,
+  selection, help-id prefix); the window's one context menu gathers those that match what was clicked
+  (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the
+  layout (`Root.Visible`), and the file and selection from a view that implements `registry.Located` (the editor).
+  The built-in entries (Copy path, Move pane…, Close) are menu items too. Lua: `oriel.menu.add`.
+- Drag and drop (PL-15): `ui.Style.Drag` (a `DragData`: kind, data, label) makes a node a drag source and
+  `Style.Drop` (kinds) a target; the UI tracks the drag, lights the target under it that takes the kind and draws a
+  ghost, and on release hands the payload to the target as `Interaction.Dropped` (`DragOver` while it's over). A
+  source or target is focusable, in the `dnd` key mode where Space picks up and drops (`ui.drag`), Esc puts down and
+  Tab moves on. Files dropped on the window are a `render.DropEvent`: the target under them that takes `"file"` gets
+  their paths, else they open in the editor. Lua nodes take `drag = {…}`, `accepts = {…}` and `on_drop`.
+- Picker sources can show an item live as it's highlighted (`PickerSource.Hover`) and undo that when the picker
+  closes without picking (`Cancel`); `PickerItem.Current` is where the list opens. The themes picker is built on
+  them. A String option can offer `OptionSpec.Choices`, worked out when asked; the settings page makes it a menu
+  (`ui.theme` lists the registered themes).
+- Plugins search text with `regex` (PCRE2's syntax), the same engine as project search; Lua's `L.regex` binds it.
+- `Options` keeps where each value came from: `SetFrom(name, layer, at, v, source)`, `Source(name, at)`,
+  `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").
+- `Registry.Themes()` returns a generation with the sources; the window watches a theme registered at any time.
+  `theme.Readable(fg, on, ratio)` declares a pair a widget draws, for the theme lint, as `theme.Declare` does a token.
+- Motion is general (rendering.md, "Motion"): `Style.Enter`, `Style.Exit`, `Style.Glide`, `Style.EaseFill`, `Style.Fade`,
+  `Ctx.Motion` and `Ctx.ResetMotion`, underlay floats (`Z < 0`) and `Ctx.ListBehind`, for a plugin's views as for
+  the built-ins.
+- A box with `ui.Style.Wheel` takes the scroll wheel itself, as `Interaction.Scroll`, for content it scrolls on
+  its own (an editor that draws only the lines in view).
 
 - Keys resolve like vim's mappings (`registry.Resolver`): an ambiguous prefix waits up to `keymap.timeoutlen`
   (default 1 s, off with `keymap.timeout = false`), then the longest complete mapping runs, or the first key passes on

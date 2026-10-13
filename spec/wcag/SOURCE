@@ -1,0 +1,4 @@
+source: https://github.com/w3c/wcag
+commit: 23bad5904949904275a08f1c6e395b78a02aa6f3
+path: guidelines/terms/20/contrast-ratio.html, guidelines/terms/20/relative-luminance.html, guidelines/sc/20/contrast-minimum.html, guidelines/sc/21/non-text-contrast.html, LICENSE.md
+license: W3C Document License (see LICENSE.md)

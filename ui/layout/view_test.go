@@ -197,3 +197,39 @@ func TestDragShot(t *testing.T) {
 	bg := h.u.Theme().C(theme.BgBase)
 	snapshot.GoldenPNG(t, "testdata/drag-right.png", raster.Render(h.list, screen, 1, bg), 0.02, 0.001)
 }
+
+// FW-13: a dock slides shut and open from its edge, its content fading, on the motion spring: the start, a midpoint
+// and the settled frame; with reduced motion it jumps.
+func TestDockMotion(t *testing.T) {
+	for _, reduced := range []bool{false, true} {
+		h := newHarness(t)
+		o := h.u.Options()
+		o.ReducedMotion = reduced
+		h.u.SetOptions(o)
+		var b strings.Builder
+		step := func(name string, d time.Duration) {
+			for el := time.Duration(0); el < d; el += time.Second / 120 {
+				h.now = h.now.Add(time.Second / 120)
+				h.frame()
+			}
+			if d == 0 {
+				h.frame()
+			}
+			fmt.Fprintf(&b, "== %s\n%s", name, snapshot.List(h.list))
+		}
+		for _, open := range []bool{false, true} {
+			h.r.Docks[Bottom].Open = open
+			step(fmt.Sprintf("open=%v start", open), 0)
+			step(fmt.Sprintf("open=%v mid", open), 60*time.Millisecond)
+			step(fmt.Sprintf("open=%v settled", open), 250*time.Millisecond)
+		}
+		name := "testdata/dock-motion.list"
+		if reduced {
+			name = "testdata/dock-motion-reduced.list"
+		}
+		snapshot.Golden(t, name, []byte(b.String()))
+		if !h.u.NextFrame().IsZero() && h.u.NextFrame().Equal(h.now) {
+			t.Error("the dock is still moving after 310 ms")
+		}
+	}
+}

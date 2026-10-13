@@ -2,7 +2,7 @@
 id: ED-5
 title: "plain engine and the input.Engine interface (emacs as a plugin)"
 phase: P3
-status: todo
+status: done
 area: Editor
 module: input
 depends_on: [ED-2, FW-3]
@@ -21,6 +21,11 @@ depends_on: [ED-2, FW-3]
 ## Done when
 
 an engine swap at runtime per buffer; a sample emacs plugin passes its tests
+
+## Where things landed
+
+- `edit/input` (not a module of its own), with `plain` built in and `emacs` as a sample plugin in `edit/input/emacs`.
+- Which-key's listing (`Keymaps()` in the sketch) comes from the registry in SH-6.
 
 ## Rules
 

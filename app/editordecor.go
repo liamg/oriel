@@ -1,0 +1,160 @@
+package app
+
+import (
+	"fmt"
+	"image/color"
+	"path/filepath"
+	"slices"
+
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/vim"
+)
+
+// decorations are the decorations of the lines [top, bottom) of a pane's buffer, by line, each line's in priority
+// order. A provider that panics is turned off, as any contribution is.
+func (x *editorExt) decorations(p vim.Pane, top, bottom int) map[int][]registry.Decoration {
+	snap := p.Buf()
+	path := p.Name()
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(x.dir, path)
+	}
+	ctx := registry.DecorationCtx{Name: p.Name(), Path: path, Buffer: p.Buffer(), Snap: snap, Top: top, Bottom: bottom}
+	off := map[string]bool{}
+	for _, o := range x.h.TurnedOff() {
+		if o.Kind == registry.KindDecoration {
+			off[o.ID] = true
+		}
+	}
+	out := map[int][]registry.Decoration{}
+	for _, prov := range x.h.DecorationProviders() {
+		if off[prov.ID] {
+			continue
+		}
+		var ds []registry.Decoration
+		if err := registry.Call(func() error { ds = prov.Decorations(ctx); return nil }); err != nil {
+			x.h.TurnOff(registry.KindDecoration, prov.ID, err)
+			continue
+		}
+		for _, d := range ds {
+			if d.Anchor != 0 {
+				o, ok := p.Buffer().Resolve(d.Anchor)
+				if !ok {
+					continue
+				}
+				d.Line = snap.PosAt(min(o, snap.Len())).Line
+			}
+			if d.Line >= top && d.Line < bottom {
+				out[d.Line] = append(out[d.Line], d)
+			}
+		}
+	}
+	for _, ds := range out {
+		slices.SortStableFunc(ds, func(a, b registry.Decoration) int { return a.Priority - b.Priority })
+	}
+	return out
+}
+
+// tokenColour is a decoration's Style as a colour: a theme token or palette colour, or a syntax group.
+func tokenColour(th *theme.Resolved, name string, fallback color.NRGBA) color.NRGBA {
+	if name == "" {
+		return fallback
+	}
+	if name[0] == '@' {
+		return th.Syntax(name).FG
+	}
+	if c, ok := th.Color(name); ok {
+		return c
+	}
+	return fallback
+}
+
+// lineBg is the background a line's LineBg decoration gives it, and its gutter edge.
+func lineBg(th *theme.Resolved, ds []registry.Decoration) (bg, edge color.NRGBA) {
+	for _, d := range ds {
+		if d.Kind == registry.LineBg {
+			bg = tokenColour(th, d.Style, bg)
+			edge = tokenColour(th, d.Edge, edge)
+		}
+	}
+	return bg, edge
+}
+
+// signs draws a line's gutter signs, left of its number.
+func signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration) {
+	c.Row("signs", ui.Style{W: ui.Px(16), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Float: &ui.Float{Offset: render.Point{X: 42}}}, func(c *ui.Ctx) {
+		for i, d := range ds {
+			if d.Kind != registry.Sign {
+				continue
+			}
+			col := tokenColour(th, d.Style, th.C(theme.FgMuted))
+			if d.Text == "" {
+				c.Box(i, ui.Style{W: ui.Px(12), H: ui.Px(12), Radius: 3, Fill: col}, nil)
+				continue
+			}
+			c.Text(i, d.Text, ui.TextStyle{Font: codeFont, Color: col})
+		}
+	})
+}
+
+// virtualText draws a line's virtual text after its end.
+func virtualText(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration) {
+	for i, d := range ds {
+		if d.Kind != registry.VirtualText {
+			continue
+		}
+		c.Box(fmt.Sprint("vgap", i), ui.Style{W: ui.Px(22)}, nil)
+		c.Text(fmt.Sprint("vt", i), d.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Italic: true},
+			Color: tokenColour(th, d.Style, th.C(theme.FgGhost))})
+	}
+}
+
+// spans draws a line's Highlight and Underline decorations over its text, x0 being where the text starts.
+func spans(c *ui.Ctx, th *theme.Resolved, p vim.Pane, line int, ds []registry.Decoration, rowID ui.ID, x0 float32, m paneMetrics) {
+	for i, d := range ds {
+		if d.Kind != registry.Highlight && d.Kind != registry.Underline {
+			continue
+		}
+		a, z := p.VCol(line, d.From), p.VCol(line, d.To)
+		if z <= a {
+			continue
+		}
+		col := tokenColour(th, d.Style, th.C(theme.Accent))
+		x, w := x0+float32(a)*m.charW, float32(z-a)*m.charW
+		if d.Kind == registry.Highlight {
+			c.Box(fmt.Sprint("hl", i), ui.Style{W: ui.Px(w), H: ui.Px(m.lineH), Fill: theme.WithAlpha(col, .22), Z: 1,
+				Float: &ui.Float{To: rowID, Offset: render.Point{X: x}}}, nil)
+			continue
+		}
+		c.Box(fmt.Sprint("ul", i), ui.Style{W: ui.Px(w), H: ui.Px(4), Z: 1, Float: &ui.Float{To: rowID,
+			Offset: render.Point{X: x, Y: m.lineH - 5}}}, func(c *ui.Ctx) {
+			c.Paint("wave", ui.Px(w), ui.Px(4), func(f render.Frame, r render.Rect) {
+				var path render.Path
+				path.MoveTo(render.Point{X: r.Min.X, Y: r.Min.Y + 3})
+				for px, up := r.Min.X, true; px < r.Max.X; px, up = px+2, !up {
+					y := r.Min.Y + 3
+					if up {
+						y = r.Min.Y + 1
+					}
+					path.LineTo(render.Point{X: min(px+2, r.Max.X), Y: y})
+				}
+				f.Path(&path, render.Style{Stroke: col, Width: 1})
+			})
+		})
+	}
+}
+
+// blocks draws a line's Block decorations under it, from where its text starts.
+func blocks(c *ui.Ctx, line int, ds []registry.Decoration, x0 float32) {
+	for i, d := range ds {
+		if d.Kind != registry.Block || d.Node == nil {
+			continue
+		}
+		c.Row(fmt.Sprint("block", line, ".", i), ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: x0, T: 4, B: 6, R: 20}}, func(c *ui.Ctx) {
+			c.Node(d.Node)
+		})
+	}
+}

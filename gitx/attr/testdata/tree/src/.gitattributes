@@ -1,0 +1,4 @@
+*.go eol=crlf
+gen/** !text
+[attr]ignored foo
+legacy.c -diff

@@ -25,6 +25,10 @@ depends_on: [ED-7, FW-9]
 
 dlv and debugpy recorded sessions plus live CI runs
 
+## From SH-13
+
+- Capture the child's stderr with `logs.Lines` (a `slog` source per server or plugin), so it shows in the log panel (`errors.md`).
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

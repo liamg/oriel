@@ -10,7 +10,7 @@ depends_on: [PL-2, ED-11]
 
 # PL-3 · All-or-nothing install consent, update capability diff
 
-**Phase** 7 · the rest · **After** [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md), [ED-11](ED-11-languages-as-plugins-core-grammar-set-and-local-packs.md) · **Unblocks** [PL-13](PL-13-package-format-lua-entry-point-assets-plugin-pack.md), [PL-18](PL-18-rename-ext-to-plugin.md)
+**Phase** 7 · the rest · **After** [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md), [ED-11](ED-11-languages-as-plugins-core-grammar-set-and-local-packs.md) · **Unblocks** [PL-19](PL-19-package-format-lua-entry-point-assets-plugin-pack.md), [PL-18](PL-18-rename-ext-to-plugin.md)
 
 ## Design
 
@@ -32,6 +32,11 @@ depends_on: [PL-2, ED-11]
 ## Done when
 
 Acceptance tests derived from the design docs above, written first, all passing in CI on macOS and Linux.
+
+## From ED-11
+
+- A grammar pack installs into `~/.config/oriel/languages/<name>/` (`language.toml`, `grammar.wasm`, `queries/`);
+  `builtin:languages` registers what's there at startup. Grammars have no host imports, so they need no capabilities.
 
 ## Rules
 

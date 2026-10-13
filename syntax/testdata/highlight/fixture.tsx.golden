@@ -1,0 +1,92 @@
+   1 | import { useState } from "react";
+     | ^^^^^^ keyword.import
+     |        ^ punctuation.bracket
+     |          ^^^^^^^^ variable
+     |                   ^ punctuation.bracket
+     |                     ^^^^ keyword.import
+     |                          ^^^^^^^ string
+     |                                 ^ punctuation.delimiter
+   2 | 
+   3 | type Props = { label: string; count?: number };
+     | ^^^^ keyword
+     |      ^^^^^ type
+     |            ^ operator
+     |              ^ punctuation.bracket
+     |                ^^^^^ variable.member
+     |                     ^ punctuation.delimiter
+     |                       ^^^^^^ type.builtin
+     |                             ^ punctuation.delimiter
+     |                               ^^^^^ variable.member
+     |                                    ^ punctuation.special
+     |                                     ^ punctuation.delimiter
+     |                                       ^^^^^^ type.builtin
+     |                                              ^ punctuation.bracket
+     |                                               ^ punctuation.delimiter
+   4 | 
+   5 | export function Counter({ label, count = 0 }: Props) {
+     | ^^^^^^ keyword.import
+     |        ^^^^^^^^ keyword.function
+     |                 ^^^^^^^ function
+     |                        ^^ punctuation.bracket
+     |                           ^^^^^ variable.parameter
+     |                                ^ punctuation.delimiter
+     |                                  ^^^^^ variable.parameter
+     |                                        ^ operator
+     |                                          ^ number
+     |                                            ^ punctuation.bracket
+     |                                             ^ punctuation.delimiter
+     |                                               ^^^^^ type
+     |                                                    ^ punctuation.bracket
+     |                                                      ^ punctuation.bracket
+   6 |   const [n, setN] = useState<number>(count);
+     |   ^^^^^ keyword
+     |         ^ punctuation.bracket
+     |          ^ variable
+     |           ^ punctuation.delimiter
+     |             ^^^^ variable
+     |                 ^ punctuation.bracket
+     |                   ^ operator
+     |                     ^^^^^^^^ function.call
+     |                             ^ punctuation.bracket
+     |                              ^^^^^^ type.builtin
+     |                                    ^^ punctuation.bracket
+     |                                      ^^^^^ variable
+     |                                           ^ punctuation.bracket
+     |                                            ^ punctuation.delimiter
+   7 |   return (
+     |   ^^^^^^ keyword.return
+     |          ^ punctuation.bracket
+   8 |     <button className="counter" onClick={() => setN(n + 1)}>
+     |     ^ tag.delimiter
+     |      ^^^^^^ tag.builtin
+     |             ^^^^^^^^^ tag.attribute
+     |                      ^ operator
+     |                       ^^^^^^^^^ string
+     |                                 ^^^^^^^ tag.attribute
+     |                                        ^ operator
+     |                                         ^^^ punctuation.bracket
+     |                                             ^^ operator
+     |                                                ^^^^ function.call
+     |                                                    ^ punctuation.bracket
+     |                                                     ^ variable
+     |                                                       ^ operator
+     |                                                         ^ number
+     |                                                          ^^ punctuation.bracket
+     |                                                            ^ tag.delimiter
+   9 |       {label}: {n}
+     |       ^ punctuation.bracket
+     |        ^^^^^ variable
+     |             ^ punctuation.bracket
+     |              ^^ none
+     |                ^ punctuation.bracket
+     |                 ^ variable
+     |                  ^ punctuation.bracket
+  10 |     </button>
+     |     ^^ tag.delimiter
+     |       ^^^^^^ tag.builtin
+     |             ^ tag.delimiter
+  11 |   );
+     |   ^ punctuation.bracket
+     |    ^ punctuation.delimiter
+  12 | }
+     | ^ punctuation.bracket

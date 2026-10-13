@@ -1,0 +1,14 @@
+/* theme */
+:root {
+  --accent: #ffd23f;
+}
+
+.tab.active > .edge,
+a:hover {
+  color: var(--accent);
+  margin: 0 4px;
+}
+
+@media (max-width: 600px) {
+  body { font-size: 14px; }
+}

@@ -2,7 +2,7 @@
 id: SH-6
 title: "Which-key popup"
 phase: P3
-status: todo
+status: done
 area: Shell and navigation
 module: plugin (built-in)
 depends_on: [FW-3, FW-6]

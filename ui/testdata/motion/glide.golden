@@ -1,0 +1,6 @@
+== start
+rect 10,10 40x20 fill #787878
+== mid
+rect 90.42,10 40.00x20 fill #787878
+== settled
+rect 110,10 40x20 fill #787878

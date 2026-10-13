@@ -2,7 +2,7 @@
 id: SH-11
 title: "Light, dark and theme editor (:Theme, pick mode)"
 phase: P3
-status: todo
+status: done
 area: Shell and navigation
 module: theme
 depends_on: [FW-7]
@@ -26,6 +26,20 @@ depends_on: [FW-7]
 ## Done when
 
 token resolution tests; the fixture renders in all built-in themes; pick-to-override writes the smallest TOML diff
+
+## As built (P3)
+
+- `:Theme` editor, pick mode over the live window (`Host.Shot` + `theme.Probe`), the chain, derive and OKLCH values,
+  WCAG contrast and lint, the TOML strip, undo and reset; `ui.variant = system` follows the OS. See theming.md,
+  "As built (SH-11)".
+- Contrast is WCAG 2's ratio only: APCA's licence allows it only for web content (asked in the review thread).
+
+## Left for P7
+
+- New theme from… (a built-in, the current one, one accent colour, an import), Import and Export.
+- `:hi` overrides and `:Theme save`; `L.theme.set` and `L.theme.use` in Lua (`theme.set` is the command to bind).
+- Editing effects and type; the lint's "syntax groups that fall back too far".
+- The live UI inside the preview, beside the fixture (pick mode reads the real window today).
 
 ## Rules
 

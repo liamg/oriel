@@ -213,7 +213,7 @@ trusted_hold = "24h"          # how long a trusted plugin's new tag waits before
 | unverified | a `git` or `path` source | **warning**: "Not in any registry. Nobody has reviewed this code." |
 
 - Capability consent is the same for every badge. A badge says who looked at the code, not what the code may do.
-- Mockups 16 and 29 show a COMMUNITY badge. It becomes one of these (PL-15).
+- Mockups 16 and 29 show a COMMUNITY badge. It becomes one of these (PL-21).
 
 ## Publishing
 
@@ -269,7 +269,7 @@ sequenceDiagram
 - **Trusted means the author's GitHub account is the root of trust.** A hijacked account ships to everyone on the next
   update. Mitigations: the capability diff, `trusted_hold`, and revocation.
 - **Binaries on macOS** that Oriel downloads aren't quarantined, but they're only ad-hoc signed. They should run fine
-  under sandbox-exec: PL-13 checks.
+  under sandbox-exec: PL-19 checks.
 - **Review load**: every version of an untrusted plugin is a PR. Trust is the relief valve.
 - **Abuse at scale**: if the registry ever goes public with many authors, PR review won't scale. That's when to
   consider a hosted service. The client reads only `index.json`, so that change stays server-side.
@@ -280,9 +280,9 @@ sequenceDiagram
 
 ## Tickets
 
-- PL-13 package format, `oriel.process` / `oriel.wasm` / `oriel.asset`, `oriel plugin pack`
-- PL-14 `[plugins]` in `settings.toml`, install from the file, `oriel-lock.toml` consent
-- PL-15 registry client, badges, the Registry tab, "Extensions" → "Plugins" in the UI
+- PL-19 package format, `oriel.process` / `oriel.wasm` / `oriel.asset`, `oriel plugin pack`
+- PL-20 `[plugins]` in `settings.toml`, install from the file, `oriel-lock.toml` consent
+- PL-21 registry client, badges, the Registry tab, "Extensions" → "Plugins" in the UI
 - PL-16 the `liamg/oriel-plugins` repo and its CI
 - PL-17 `oriel plugin publish`
 - PL-18 rename the `ext` package to `plugin`

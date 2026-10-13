@@ -1,0 +1,61 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1469.0625x38 r 0
+pop
+rect 0,38 1600x936 fill #060606
+clip 0,38 1600x936 r 0
+  rect 0,38 1600x30 fill #0c0c0b
+  rect 0,68 1600x1 fill #24221d
+pop
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
+rect 0,0 1600x1000 fill #03050899
+rect 360,118 880x800 fill #0c0c0b radius 10 stroke 1 #332f27
+clip 360,118 880x800 r 10
+  text "HELP" @376,141.42 #ffd23f JetBrains Mono 9.5
+  text "errors" @413.32,141.96 #b3ab99 JetBrains Mono 11
+  text "›" @460.8825,141.96 #4f4a40 JetBrains Mono 11
+  text "log" @475.47626,141.96 #b3ab99 JetBrains Mono 11
+  rect 1062.31,129.73 125.68994x16.539993 fill #7c756612 radius 10 stroke 1 #7c756659
+  text "BUILTIN/ERRORS.MD" @1069.31,141.42 #7c7566 JetBrains Mono 9.5
+  rect 1196,130.4 28x15.199997 fill #121210 radius 4 stroke 1 #332f27
+  text "esc" @1201,141.59999 #b3ab99 JetBrains Mono 10
+  rect 360,158 880x1 fill #24221d
+  clip 360,159 629x759 r 0
+    text "The log" @388,206.68 #ece6d8 Space Grotesk 20
+    text ":Log (or :messages) opens the log at the bottom. It lists every notice and Oriel's own" @388,237.59813 #ece6d8 Inter 13.5
+    text "log records, newest last, in three scopes: Oriel's, the session in front, and all of them" @388,256.93262 #ece6d8 Inter 13.5
+    text "together." @388,276.2671 #ece6d8 Inter 13.5
+    text "·" @388,304.60156 #ece6d8 Inter 13.5
+    text "The chips filter by severity; the box filters by text, or source:init.lua." @400.03125,304.60156 #ece6d8 Inter 13.5
+    text "·" @388,326.93604 #ece6d8 Inter 13.5
+    text "Click an entry to open its stack trace and the source around the failing line." @400.03125,326.93604 #ece6d8 Inter 13.5
+    text "·" @388,349.2705 #ece6d8 Inter 13.5
+    text "Copy copies the open entry, or everything shown; Copy report copies a report for" @400.03125,349.2705 #ece6d8 Inter 13.5
+    text "a bug." @400.03125,368.60498 #ece6d8 Inter 13.5
+    text "·" @388,390.93945 #ece6d8 Inter 13.5
+    text ":Log level debug shows debug records from now on." @400.03125,390.93945 #ece6d8 Inter 13.5
+  pop
+  rect 989,159 1x759 fill #24221d
+  clip 990,159 250x759 r 0
+    text "RELATED" @1006,184.69 #7c7566 JetBrains Mono 9.5
+    text "Help" @1006,207.64937 #ffd23f Inter 12.5
+    text "shell/help" @1040.3438,206.52225 #4f4a40 JetBrains Mono 9.5
+    text "The editor" @1006,230.7739 #ffd23f Inter 12.5
+    text "editor/pane" @1074.9375,229.64677 #4f4a40 JetBrains Mono 9.5
+    text "THIS PAGE" @1006,269.47903 #7c7566 JetBrains Mono 9.5
+    text "help: errors#log" @1006,290.52905 #7c7566 JetBrains Mono 10
+    text "from: builtin" @1006,311.72903 #7c7566 JetBrains Mono 10
+    text "covers: app.notifications, log, problems, statusline.left.50-counts" @1006,332.92902 #7c7566 JetBrains Mono 10
+    text "^o back · ^i forward · esc close" @1006,899 #7c7566 JetBrains Mono 10
+  pop
+pop

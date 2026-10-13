@@ -1,0 +1,9 @@
+diff --git a/round.go b/round.go
+index 3b18e51..a9c2f04 100644
+--- a/round.go
++++ b/round.go
+@@ -1,4 +1,4 @@
+ package pricing
+ 
+-func Round(x float64) float64 { return x }
++func Round(x float64) float64 { return math.Round(x) }

@@ -23,8 +23,8 @@ text "INF-2231 usage api" @313.04688,22.865234 #b3ab99 Inter 12
 text "needs you" @429.67188,22.1 #7c7566 JetBrains Mono 10
 text "⌘2" @490.67188,21.92 #4f4a40 JetBrains Mono 9.5
 rect 514.6719,0 1x37 fill #24221d
-effect glow-disc 527.6719,15 7x7 blur 8 #a98bffe6
-path 6 segments fill #a98bff
+effect glow-disc 527.6719,15 7x7 blur 8 #b98affe6
+path 6 segments fill #b98aff
 text "review #4410" @541.6719,22.865234 #b3ab99 Inter 12
 text "permission" @625.3594,22.1 #7c7566 JetBrains Mono 10
 text "⌘3" @692.3594,21.92 #4f4a40 JetBrains Mono 9.5
@@ -35,8 +35,8 @@ text "flaky e2e sweep" @743.3594,22.865234 #b3ab99 Inter 12
 text "ci" @843.34375,22.1 #7c7566 JetBrains Mono 10
 text "⌘4" @862.34375,21.92 #4f4a40 JetBrains Mono 9.5
 rect 886.34375,0 1x37 fill #24221d
-effect glow-disc 899.34375,15 7x7 blur 8 #ff6faee6
-path 6 segments fill #ff6fae
+effect glow-disc 899.34375,15 7x7 blur 8 #ff7ad6e6
+path 6 segments fill #ff7ad6
 text "dash-filters" @913.34375,22.865234 #b3ab99 Inter 12
 text "in review" @985.375,22.1 #7c7566 JetBrains Mono 10
 text "⌘5" @1046.375,21.92 #4f4a40 JetBrains Mono 9.5
@@ -133,7 +133,7 @@ text "defaultPrecision" @69.203125,963.14 #b3ab99 JetBrains Mono 11.5
 rect 294,38 926x32 fill #0c0c0b
 rect 294,69 926x1 fill #24221d
 rect 294,38 114.234375x32 fill #060606
-rect 294,38 114.234375x2 fill #a98bff
+rect 294,38 114.234375x2 fill #b98aff
 rect 308,49 10x10 fill #4fc1e9d9 radius 2
 text "round.go" @325,58.365234 #ece6d8 Inter 12
 text "●" @383.26562,58.365234 #7c7566 Inter 12

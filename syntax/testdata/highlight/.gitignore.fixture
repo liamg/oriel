@@ -1,0 +1,5 @@
+# build output
+/bin/
+*.test
+!keep.test
+docs/**/*.pdf

@@ -1,0 +1,9 @@
+# settings
+[editor]
+line_numbers = "relative"
+tab_width = 4
+wrap = false
+
+[[plugins]]
+id = "linear"
+pinned = 2026-10-13

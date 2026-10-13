@@ -1,0 +1,24 @@
+   1 | # syntax=docker/dockerfile:1
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   2 | FROM golang:1.26 AS build
+     | ^^^^ keyword
+     |            ^ operator
+     |                  ^^ keyword
+   3 | WORKDIR /src
+     | ^^^^^^^ keyword
+   4 | COPY . .
+     | ^^^^ keyword
+   5 | RUN go build -o /oriel ./cmd/oriel
+     | ^^^ keyword
+     |     ^^ function.call
+     |        ^^^^^ variable.parameter
+     |              ^^ variable.parameter
+     |                 ^^^^^^ variable.parameter
+     |                        ^^^^^^^^^^^ variable.parameter
+   6 | 
+   7 | FROM gcr.io/distroless/base
+     | ^^^^ keyword
+   8 | COPY --from=build /oriel /oriel
+     | ^^^^ keyword
+   9 | ENTRYPOINT ["/oriel"]
+     | ^^^^^^^^^^ keyword

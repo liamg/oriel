@@ -1,0 +1,55 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1469.0625x38 r 0
+pop
+rect 0,38 1600x936 fill #060606
+clip 0,38 1600x936 r 0
+  rect 0,38 1600x30 fill #0c0c0b
+  rect 0,68 1600x1 fill #24221d
+pop
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
+rect 0,0 1600x1000 fill #030508b8
+rect 440,286.9455 720x426.109 fill #0c0c0b radius 10 stroke 1 #332f27
+clip 440,286.9455 720x426.109 r 10
+  text "Oriel quit unexpectedly last time" @456,311.6745 #ece6d8 Inter 13
+  rect 1116,299.3455 28x15.200012 fill #121210 radius 4 stroke 1 #332f27
+  text "esc" @1121,310.5455 #7c7566 JetBrains Mono 10
+  rect 440,326.9455 720x1 fill #24221d
+  text "2026-10-13 18:42 · v0.4.2" @456,354.6555 #7c7566 JetBrains Mono 10.5
+  text "The crash report below stays on this machine; nothing has been sent. If you'd like it fixed, copy it into a new" @456,379.91486 #b3ab99 Inter 12.5
+  text "issue. Secrets and tokens are already redacted." @456,398.03937 #b3ab99 Inter 12.5
+  rect 456,411.0545 688x250 fill #060606 radius 6 stroke 1 #24221d
+  clip 456,411.0545 688x250 r 6
+    text "oriel v0.4.2 · darwin/arm64" @468,434.2745 #b3ab99 JetBrains Mono 11
+    text "plugins linear, glowcursor" @468,451.7945 #b3ab99 JetBrains Mono 11
+    text "settings editor.clipboard=registers, ui.theme=graphite" @468,469.3145 #b3ab99 JetBrains Mono 11
+    text "" @468,486.8345 #b3ab99 JetBrains Mono 11
+    text "panic: runtime error: index out of range [12] with length 12" @468,504.35452 #ff5f6d JetBrains Mono 11
+    text "" @468,521.8745 #b3ab99 JetBrains Mono 11
+    text "goroutine 1 [running]:" @468,539.3945 #b3ab99 JetBrains Mono 11
+    text "github.com/liamg/oriel/ui/widget.(*VirtualList).Layout" @468,556.9145 #ffd23f JetBrains Mono 11
+    text "    ui/widget/list.go:214" @468,574.4345 #b3ab99 JetBrains Mono 11
+    text "github.com/liamg/oriel/app.(*Explorer).Layout" @468,591.95447 #ffd23f JetBrains Mono 11
+    text "    app/explorer.go:88" @468,609.4745 #b3ab99 JetBrains Mono 11
+    text "… 14 more frames" @468,626.9945 #b3ab99 JetBrains Mono 11
+  pop
+  rect 456,671.0545 89.390625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+  text "Copy report" @466,688.41974 #141006 Inter 12
+  text "Open a GitHub issue ↗" @555.3906,687.41974 #ffd23f Inter 12
+  rect 555.3906,691.3143 129.73438x1 fill #ffd23fb3
+  text "github.com/liamg/oriel/issues/new" @695.125,687.65454 #7c7566 JetBrains Mono 10
+  rect 986.21875,671.0545 95.1875x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Delete report" @996.21875,688.41974 #ece6d8 Inter 12
+  rect 1091.4062,671.0545 52.59375x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Close" @1101.4062,688.41974 #ece6d8 Inter 12
+pop

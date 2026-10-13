@@ -14,6 +14,7 @@ func init() {
 // SessionOpened adds a session to the store.
 type SessionOpened struct {
 	ID     SessionID `json:"id"`
+	Name   string    `json:"name,omitempty"`
 	Kind   Kind      `json:"kind"`
 	Status Status    `json:"status"`
 }
@@ -24,7 +25,7 @@ func (e SessionOpened) Apply(s *State) error {
 	if s.session(e.ID) != nil {
 		return fmt.Errorf("session %s is already open", e.ID)
 	}
-	s.Sessions = append(s.Sessions, SessionState{ID: e.ID, Kind: e.Kind, Status: e.Status})
+	s.Sessions = append(s.Sessions, SessionState{ID: e.ID, Name: e.Name, Kind: e.Kind, Status: e.Status})
 	return nil
 }
 

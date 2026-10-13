@@ -250,8 +250,8 @@ func TestSprings(t *testing.T) {
 
 // 200 hover targets under a moving pointer: a frame with input still fits the 4 ms budget at 120 Hz.
 func TestHoverTargetsBudget(t *testing.T) {
-	if raceEnabled || testing.Short() {
-		t.Skip("timing under -race or -short means nothing")
+	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
+		t.Skip("timing under -race, -short or -cover means nothing")
 	}
 	u := newUI()
 	build := func(c *Ctx) {
@@ -288,5 +288,45 @@ func TestHoverTargetsBudget(t *testing.T) {
 	t.Logf("200 hover targets: p50 %v, p99 %v per frame", p50, p99)
 	if p99 > 4*time.Millisecond {
 		t.Errorf("p99 %v, budget 4ms", p99)
+	}
+}
+
+// A fork builds and paints the same tree with another theme (or anything else) and leaves the original as it was:
+// its scroll offsets carry over, its rects and state don't change.
+func TestFork(t *testing.T) {
+	u := newUI()
+	var outer ID
+	build := func(wide bool) func(c *Ctx) {
+		return func(c *Ctx) {
+			outer = c.Column("outer", Style{W: Px(200), H: Px(100), ScrollY: true}, func(c *Ctx) {
+				w := float32(10)
+				if wide {
+					w = 150
+				}
+				c.Box("tall", Style{W: Px(w), H: Px(400)}, nil)
+			})
+		}
+	}
+	paintOps(u, render.Point{X: 300, Y: 300}, build(false))
+	u.ScrollBy(outer, 0, 30)
+	paintOps(u, render.Point{X: 300, Y: 300}, build(false))
+	before, _ := u.Rect(u.Hit(render.Point{X: 5, Y: 5})[0])
+	f := u.Fork()
+	paintOps(f, render.Point{X: 300, Y: 300}, build(true))
+	if got := f.Scroll(outer); got != (render.Point{Y: 30}) {
+		t.Errorf("the fork scrolled to %v", got)
+	}
+	if ids := f.Hit(render.Point{X: 100, Y: 5}); len(ids) == 0 {
+		t.Error("the fork's own layout isn't hit")
+	}
+	f.ScrollBy(outer, 0, 50)
+	if got := u.Scroll(outer); got != (render.Point{Y: 30}) {
+		t.Errorf("scrolling the fork moved the original to %v", got)
+	}
+	if after, _ := u.Rect(u.Hit(render.Point{X: 5, Y: 5})[0]); after != before {
+		t.Errorf("the original's rect went from %v to %v", before, after)
+	}
+	if ids := u.Hit(render.Point{X: 100, Y: 5}); len(ids) != 1 {
+		t.Errorf("the original hits %v at x=100; only outer is there", ids)
 	}
 }

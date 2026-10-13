@@ -2,7 +2,7 @@
 id: SH-2
 title: "Session tabs with status dots and ⌘1–9"
 phase: P3
-status: todo
+status: done
 area: Shell and navigation
 module: app
 depends_on: [FW-6, FW-2]
@@ -28,6 +28,11 @@ depends_on: [FW-6, FW-2]
 ## Done when
 
 7 statuses render correctly from a fixture `core.State`; keys switch in under one frame
+
+## From SH-13
+
+- A tab's error mark is `Session.Unseen()`; switching tabs applies `core.SessionFocused`, which clears it and decides
+  which session's errors toast (`errors.md`).
 
 ## Rules
 

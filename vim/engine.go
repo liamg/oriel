@@ -28,7 +28,7 @@ type Engine struct {
 	*buffer
 	windows []*window
 	buffers []*buffer
-	layout  *frame
+	layout  Layout
 	prevWin *window
 	nextBuf int
 	nextWin int
@@ -55,6 +55,7 @@ type Engine struct {
 	lastSubFlags string
 	cmdline      *cmdline
 	opts         Options
+	settings     Settings
 	gstack       []*lineMarks // lines :g and :normal still have to visit, innermost last
 	inGlobal     bool
 	silent       bool
@@ -79,6 +80,7 @@ type Engine struct {
 	abbrs        map[byte]map[string]abbrev
 	noAbbr       int
 	lastExReg    rune
+	host         Host
 	group        text.UndoGroup // the undo step the current change goes into
 	changeCursor Pos            // the cursor when the current command started
 }
@@ -95,10 +97,10 @@ type dotCmd struct {
 
 // New returns an engine editing through ed, in normal mode.
 func New(ed *edit.Editor) *Engine {
-	e := &Engine{aiPending: -1, opts: DefaultOptions()}
+	e := &Engine{aiPending: -1, opts: DefaultOptions(), host: Disk{}}
 	b := e.newBuffer(ed.Buffer())
 	w := e.newWindow(ed, b)
-	e.layout = &frame{win: w}
+	e.layout = newFrames(WindowID(w.id))
 	e.window, e.buffer = w, b
 	e.sync()
 	return e
@@ -119,8 +121,11 @@ type buffer struct {
 	last       Pos  // where the cursor was when the buffer was last left, the '" mark
 	unlisted   bool // deleted with :bdelete
 	modified   bool
-	notEdited  bool     // named with :file rather than read from its file
-	qf         *qfStack // the list a quickfix or location-list window's buffer shows
+	savedSeq   int        // the undo step the file holds
+	noLines    bool       // no lines at all, as vim's ML_EMPTY, rather than one empty line: written as nothing
+	file       *edit.File // the file it was read from or written to; nil until then
+	notEdited  bool       // named with :file rather than read from its file
+	qf         *qfStack   // the list a quickfix or location-list window's buffer shows
 }
 
 // window is what the engine keeps per window: its editor (cursor) on a buffer, and its jumplist.
@@ -138,14 +143,18 @@ type window struct {
 	fold       foldState
 	loc        *qfStack // the location list
 	locOwner   *window  // for a location-list window, the window whose list it shows
+	top        int      // the first line shown
+	height     int      // rows shown; 0 for the window's share of the default screen
+	scroll     int      // 'scroll', set by a count to CTRL-D or CTRL-U; 0 for half the window
 }
 
 func (e *Engine) newBuffer(t *text.Buffer) *buffer {
 	e.nextBuf++
-	b := &buffer{text: t, num: e.nextBuf, marks: map[rune]Pos{}, undoCur: map[int]Pos{}, undoMarks: map[int]map[rune]Pos{}, uLine: -1}
+	b := &buffer{text: t, num: e.nextBuf, marks: map[rune]Pos{}, undoCur: map[int]Pos{}, undoMarks: map[int]map[rune]Pos{}, uLine: -1,
+		noLines: t.Snapshot().Len() == 0}
 	e.buffers = append(e.buffers, b)
 	t.Subscribe(func(ch text.Change) {
-		b.modified = true
+		b.changed()
 		e.adjustMarks(b, ch)
 	})
 	return b
@@ -199,6 +208,7 @@ func (e *Engine) LastNotice() edit.Notice { return e.notice }
 func (e *Engine) view() *view {
 	v := newView(e.ed.Buf())
 	v.folds = &e.window.fold
+	v.ts = e.opts.TabStop
 	return v
 }
 
@@ -207,8 +217,12 @@ func (e *Engine) notify(n edit.Notice) {
 	e.ed.Notify(n)
 }
 
-// fail shows an error as a notice.
-func (e *Engine) fail(err error) { e.notify(asNotice(err)) }
+// fail shows an error as a notice; nil shows nothing.
+func (e *Engine) fail(err error) {
+	if err != nil {
+		e.notify(asNotice(err))
+	}
+}
 
 // sync tells the editor where the cursor is.
 func (e *Engine) sync() {
@@ -236,7 +250,12 @@ func (e *Engine) Key(k string) {
 	if e.recReg != 0 && e.feeding == 0 && e.confirm == nil {
 		e.recKeys = append(e.recKeys, k)
 	}
+	e.loadOptions()
+	e.updateTop(e.view())
 	e.input(k)
+	if e.mode == Normal || e.mode == Insert || e.mode == Replace {
+		e.updateTop(e.view())
+	}
 	e.sync()
 }
 
@@ -292,12 +311,23 @@ func (e *Engine) normalKey(k string) {
 		return
 	}
 	e.pend = nil
+	if c.reg == 0 && e.ed.HasClipboard() && e.opts.Clipboard == "system" && (c.op != "" || registerCmds[c.key] || e.visual != nil && visualRegisterCmds[c.key]) {
+		c.reg = '+' // 'clipboard' unnamedplus: the system clipboard is the default register
+	}
 	if e.visual != nil {
 		e.execVisual(c)
 		return
 	}
 	e.exec(c)
 }
+
+// registerCmds are the normal-mode commands that read or write the default register.
+var registerCmds = map[string]bool{"x": true, "X": true, "D": true, "C": true, "s": true, "S": true, "Y": true,
+	"<Del>": true, "p": true, "P": true, "gp": true, "gP": true, "]p": true, "[p": true, "]P": true, "[P": true}
+
+// visualRegisterCmds are the Visual-mode commands that do.
+var visualRegisterCmds = map[string]bool{"d": true, "x": true, "X": true, "D": true, "y": true, "Y": true, "c": true,
+	"C": true, "s": true, "S": true, "R": true, "p": true, "P": true, "<Del>": true}
 
 type status int
 
@@ -328,7 +358,7 @@ var operators = map[string]string{"zf": "zf", "d": "d", "c": "c", "y": "y", "<":
 // takesArg lists the keys whose next key is a character argument.
 var takesArg = map[string]bool{"q": true, "@": true, "f": true, "F": true, "t": true, "T": true, "r": true, "m": true, "'": true, "`": true, "g'": true, "g`": true}
 
-var prefixes = map[string]bool{"g": true, "z": true, "[": true, "]": true, "<C-w>": true}
+var prefixes = map[string]bool{"g": true, "z": true, "[": true, "]": true, "<C-w>": true, "Z": true}
 
 func onlyCount(keys []string) bool {
 	for _, k := range keys {
@@ -504,7 +534,9 @@ var commands = map[string]bool{
 	"zF": true, "zd": true, "zD": true, "zE": true, "zo": true, "zO": true, "zc": true, "zC": true, "za": true,
 	"zA": true, "zv": true, "zx": true, "zX": true, "zm": true, "zM": true, "zr": true, "zR": true, "zn": true,
 	"zN": true, "zi": true,
-	"Q": true, "<C-g>": true, "<C-a>": true, "<C-x>": true, "<C-^>": true, "<C-6>": true,
+	"<C-e>": true, "<C-y>": true, "<C-d>": true, "<C-u>": true, "<C-f>": true, "<C-b>": true, "<PageDown>": true,
+	"<PageUp>": true, "<S-Down>": true, "<S-Up>": true, "zt": true, "z<CR>": true, "zz": true, "z.": true, "zb": true, "z-": true,
+	"ZZ": true, "ZQ": true, "Q": true, "<C-g>": true, "<C-a>": true, "<C-x>": true, "<C-^>": true, "<C-6>": true,
 }
 
 func init() {

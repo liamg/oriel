@@ -40,6 +40,9 @@ func newHarness(t *testing.T, v theme.Variant, size render.Point, build func(c *
 	}
 	u := ui.New(ts, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}})
 	u.SetTheme(resolved(t, v))
+	o := u.Options()
+	o.ReducedMotion = true // snapshots and behaviour are of the settled UI; motion has its own tests
+	u.SetOptions(o)
 	h := &harness{t: t, u: u, now: time.Unix(1000, 0), size: size, build: build}
 	u.SetClock(func() time.Time { return h.now })
 	h.frame()

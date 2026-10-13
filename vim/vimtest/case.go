@@ -36,6 +36,7 @@ type Case struct {
 	Dot     *Buffer          // the buffer after the keys and then `.`
 	Msg     *string          // the last message
 	Win     *Win             // the current window's number and the window count
+	Top     *int             // the window's first line, 1-based, as line('w0')
 	Bufs    *string          // the listed buffers, as `1# 2%`
 	RawKeys string
 }
@@ -173,7 +174,7 @@ func (c *Case) fill(f map[string]string) error {
 		if !ok {
 			return nil, nil
 		}
-		b, err := ParseBuffer(v)
+		b, err := ParseBuffer(expandRanges(v))
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", k, err)
 		}
@@ -233,6 +234,13 @@ func (c *Case) fill(f map[string]string) error {
 			return fmt.Errorf("win: want current/count, got %q", w)
 		}
 		c.Win = &Win{n, m}
+	}
+	if t, ok := take("top"); ok {
+		n, err := strconv.Atoi(t)
+		if err != nil || n < 1 {
+			return fmt.Errorf("top: want a line number, got %q", t)
+		}
+		c.Top = &n
 	}
 	if b, ok := take("bufs"); ok {
 		if c.Bufs, err = parseBufs(b); err != nil {
@@ -351,4 +359,22 @@ func parsePos(s string) (Pos, error) {
 		return Pos{}, fmt.Errorf("want line:col, got %q", s)
 	}
 	return Pos{line - 1, col}, nil
+}
+
+// expandRanges replaces each line of a buffer value that is just {a..b} with the lines a to b, each holding
+// its own number, so a case can have a long buffer without spelling it out.
+func expandRanges(v string) string {
+	lines := strings.Split(v, "\n")
+	var out []string
+	for _, l := range lines {
+		var a, b int
+		if n, err := fmt.Sscanf(l, "{%d..%d}", &a, &b); err == nil && n == 2 && l == fmt.Sprintf("{%d..%d}", a, b) && a <= b {
+			for i := a; i <= b; i++ {
+				out = append(out, strconv.Itoa(i))
+			}
+			continue
+		}
+		out = append(out, l)
+	}
+	return strings.Join(out, "\n")
 }

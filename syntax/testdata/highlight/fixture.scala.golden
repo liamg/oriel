@@ -1,0 +1,128 @@
+   1 | package pricing
+     | ^^^^^^^ keyword.import
+   2 | 
+   3 | // A tier's price, in pence.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   4 | final case class Tier(name: String, pence: Int)
+     | ^^^^^ keyword.modifier
+     |       ^^^^ keyword
+     |            ^^^^^ keyword.type
+     |                  ^^^^ type
+     |                      ^ punctuation.bracket
+     |                       ^^^^ variable.parameter
+     |                           ^ punctuation.delimiter
+     |                             ^^^^^^ type
+     |                                   ^ punctuation.delimiter
+     |                                     ^^^^^ variable.parameter
+     |                                          ^ punctuation.delimiter
+     |                                            ^^^ type
+     |                                               ^ punctuation.bracket
+   5 | 
+   6 | object Prices {
+     | ^^^^^^ keyword
+     |        ^^^^^^ type
+     |               ^ punctuation.bracket
+   7 |   def priceFor(tier: Tier, qty: Int = 1): Either[String, Int] =
+     |   ^^^ keyword.function
+     |       ^^^^^^^^ function
+     |               ^ punctuation.bracket
+     |                ^^^^ variable.parameter
+     |                    ^ punctuation.delimiter
+     |                      ^^^^ type
+     |                          ^ punctuation.delimiter
+     |                            ^^^ variable.parameter
+     |                               ^ punctuation.delimiter
+     |                                 ^^^ type
+     |                                     ^ operator
+     |                                       ^ number
+     |                                        ^ punctuation.bracket
+     |                                         ^ punctuation.delimiter
+     |                                           ^^^^^^ type
+     |                                                 ^ punctuation.bracket
+     |                                                  ^^^^^^ type
+     |                                                        ^ punctuation.delimiter
+     |                                                          ^^^ type
+     |                                                             ^ punctuation.bracket
+     |                                                               ^ operator
+   8 |     if (qty <= 0) Left(s"bad quantity $qty")
+     |     ^^ keyword.conditional
+     |        ^ punctuation.bracket
+     |             ^^ operator
+     |                ^ number
+     |                 ^ punctuation.bracket
+     |                   ^^^^ type
+     |                       ^ punctuation.bracket
+     |                        ^^^^^^^^^^^^^^^ string
+     |                                       ^ punctuation.special
+     |                                        ^^^^ string
+     |                                            ^ punctuation.bracket
+   9 |     else if (qty >= 100) Right((tier.pence * qty * 0.9).toInt)
+     |     ^^^^ keyword.conditional
+     |          ^^ keyword.conditional
+     |             ^ punctuation.bracket
+     |                  ^^ operator
+     |                     ^^^ number
+     |                        ^ punctuation.bracket
+     |                          ^^^^^ type
+     |                               ^^ punctuation.bracket
+     |                                     ^ punctuation.delimiter
+     |                                      ^^^^^ variable.member
+     |                                            ^ operator
+     |                                                  ^ operator
+     |                                                    ^^^ number.float
+     |                                                       ^ punctuation.bracket
+     |                                                        ^ punctuation.delimiter
+     |                                                         ^^^^^ variable.member
+     |                                                              ^ punctuation.bracket
+  10 |     else Right(tier.pence * qty)
+     |     ^^^^ keyword.conditional
+     |          ^^^^^ type
+     |               ^ punctuation.bracket
+     |                    ^ punctuation.delimiter
+     |                     ^^^^^ variable.member
+     |                           ^ operator
+     |                                ^ punctuation.bracket
+  11 | 
+  12 |   def main(args: Array[String]): Unit =
+     |   ^^^ keyword.function
+     |       ^^^^ function
+     |           ^ punctuation.bracket
+     |            ^^^^ variable.parameter
+     |                ^ punctuation.delimiter
+     |                  ^^^^^ type
+     |                       ^ punctuation.bracket
+     |                        ^^^^^^ type
+     |                              ^^ punctuation.bracket
+     |                                ^ punctuation.delimiter
+     |                                  ^^^^ type
+     |                                       ^ operator
+  13 |     List(Tier("basic", 100), Tier("pro", 450)).foreach(t => println(priceFor(t, 120)))
+     |     ^^^^ type
+     |         ^ punctuation.bracket
+     |          ^^^^ type
+     |              ^ punctuation.bracket
+     |               ^^^^^^^ string
+     |                      ^ punctuation.delimiter
+     |                        ^^^ number
+     |                           ^ punctuation.bracket
+     |                            ^ punctuation.delimiter
+     |                              ^^^^ type
+     |                                  ^ punctuation.bracket
+     |                                   ^^^^^ string
+     |                                        ^ punctuation.delimiter
+     |                                          ^^^ number
+     |                                             ^^ punctuation.bracket
+     |                                               ^ punctuation.delimiter
+     |                                                ^^^^^^^ variable.member
+     |                                                       ^ punctuation.bracket
+     |                                                        ^ variable.parameter
+     |                                                          ^^ operator
+     |                                                             ^^^^^^^ function.call
+     |                                                                    ^ punctuation.bracket
+     |                                                                     ^^^^^^^^ function.call
+     |                                                                             ^ punctuation.bracket
+     |                                                                               ^ punctuation.delimiter
+     |                                                                                 ^^^ number
+     |                                                                                    ^^^ punctuation.bracket
+  14 | }
+     | ^ punctuation.bracket
