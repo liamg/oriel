@@ -5,7 +5,7 @@ definition of done. This is the contract for "the app the screenshots imply". A 
 acceptance check passes in CI (or, where noted, in a scripted manual check recorded in the PR).
 
 Phases are from `PLAN.md`: **P0** spike · **P1** framework · **P2** editor core · **P3** shell · **P4** IDE · **P5** AI ·
-**P6** review · **P7** the rest. **After** lists the tickets that must be done first; the order in `_tickets/README.md` is generated from it.
+**P6** review · **P7** the rest · **P8** plugin registry. **After** lists the tickets that must be done first; the order in `_tickets/README.md` is generated from it.
 
 ## Framework (first, after the spike)
 
@@ -137,6 +137,12 @@ How everything hangs together, built and tested before features land on it.
 | PL-10 | Calendar: next meeting tat (iCal URL or macOS EventKit) | 10 | integ/ical (plugin) | P7 | PL-2 | – |
 | PL-11 | Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation | – | prompts, voice | P7 | AI-2 | `crit-reference.md` → Prompts and Voice |
 | PL-6 | Self-update for the app and workers (self-signed, ed25519) | – | update | P7 | AI-1 | an update round-trips on macOS and Linux with rollback on a failed health check |
+| PL-13 | Package format: Lua entry point, `oriel.process` / `oriel.wasm` / `oriel.asset`, `[contributes]` assets, `oriel plugin pack` | – | ext, script | P8 | PL-2, PL-3 | a data-only theme plugin, a Lua plugin and a Lua + process plugin each load from a directory; `pack` rejects an undeclared capability and an oversize plugin |
+| PL-14 | `[plugins]` in `settings.toml`: install, update and uninstall from the file; `[plugin.<name>]` options; `oriel-lock.toml` consent | 16, 29 | catalog | P8 | PL-13, SH-12, SH-9 | adding a line installs and removing it uninstalls; a locked plugin activates silently on a fresh config dir; one asking for more stays inactive behind the consent card |
+| PL-15 | Registry client: signed `index.json`, several registries, badges, trusted tags and hold, yank and revoke; the Plugins page and its Registry tab | 16, 29 | catalog, app | P8 | PL-14, PL-6 | against a fixture index: a bad signature is refused, a revoked version is disabled with a card, a trusted tag waits out `trusted_hold`; the page installs by writing `[plugins]` |
+| PL-16 | The `liamg/oriel-plugins` repo and its CI: owner check, `pack`, reproducible Go archives, deps check, capability-diff comment, signed index release | – | tools (repo) | P8 | PL-13 | a fixture PR for a new version gets the comment; a merge publishes a verifiable `index.json` |
+| PL-17 | `oriel plugin publish` opens the registry PR | – | cmd | P8 | PL-16, PL-15 | against a fake GitHub, publish forks, branches and opens a PR with the right `plugin.toml` change; on a trusted plugin it does nothing |
+| PL-18 | Rename the `ext` package and `Extension` types to `plugin` | – | ext | P8 | PL-3 | no `Extension` identifier or "extension" UI string left outside file-extension code |
 
 ## What "Start work" does
 

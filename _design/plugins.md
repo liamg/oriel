@@ -1,8 +1,8 @@
-# Extensions: vim-level customisation
+# Plugins: vim-level customisation
 
 The bar: anything you can see, press or trigger, you can rebind, hook,
 replace or script, from your config, live, without a rebuild.
-The scripting API itself is in `scripting.md`.
+The scripting API itself is in `scripting.md`. Installing, packaging and publishing plugins is in `catalog.md`.
 
 ![19-config](mockups/19-config.png)
 
@@ -35,6 +35,8 @@ The scripting API itself is in `scripting.md`.
 | **Process extensions** | child process, JSON-RPC (stdio) | ~0.2 ms | heavy or long-running work, other languages, integrations, providers | OS process + Landlock / sandbox-exec |
 | **WASM modules** | wazero, in-process | ~µs | tree-sitter grammars, pure transforms, untrusted snippets | memory-safe, capability-only host calls |
 
+- An installed plugin always **enters through Lua** (`init.lua`). Its WASM modules and process binaries are started from
+  that Lua with `oriel.wasm.load` and `oriel.process.spawn` (`catalog.md`).
 - **Native Go** is a fifth tier: the same contribution API, compiled in. That covers the built-ins and
   third-party plugins linked in with `oriel build --with …` (see "Performance and native plugins").
 - All tiers register through the same **contribution registry**, so a Lua
@@ -105,14 +107,16 @@ flowchart TB
   `oriel.view.override("requests", my_requests_view)`.
 - Views get the theme tokens. Hardcoded colours work, but lint warns.
 
-## Manifest (`oriel.toml`, for plugins that aren't just a Lua file)
+## Manifest (`oriel.toml`)
 
 ```toml
-id = "linear"
-run = { process = "oriel-linear" }        # or { lua = "init.lua" } / { wasm = "x.wasm" }
+id = "acme/linear"
+version = "1.2.1"
 permissions = { net = ["api.linear.app"], secrets = ["LINEAR_TOKEN"] }
 lazy = { commands = ["Linear*"], events = ["SessionStart"], omnibox = ["tickets"] }
 ```
+
+- The entry point is always `init.lua`. Every field is in `catalog.md`.
 
 ## Permissions
 
@@ -121,11 +125,12 @@ session sandbox. All of this is in `security.md`.
 
 ## Plugin manager (built-in)
 
-- `oriel.plugins{ { "user/surround" }, { "user/pickers", lazy = { keys = "<leader>f" } } }`.
-- Git URLs, pinned by commit, with a lockfile (`oriel-lock.json`).
+- Plugins are data, so they're listed in `settings.toml` under `[plugins]`, not in Lua. The GUI writes the same table.
+- They come from a plugin registry (reviewed or trusted), or from a git URL or a local path (unverified).
+  Each is pinned by commit in `oriel-lock.toml`, which also records what you consented to.
 - Lazy load on command, key, event, filetype or omnibox source.
 - `:Plugins` shows load time, hooks and memory per plugin.
-- No marketplace until it's open-sourced.
+- All of it is in `catalog.md`.
 
 ## Runtime path
 

@@ -12,7 +12,8 @@ The design of Oriel, carried over from the planning session. **Start with `PLAN.
 | `editor.md` | text/rope, the vim engine, input engines, syntax, code units |
 | `architecture.md` | processes, Go modules, interfaces |
 | `agents.md` | providers (Claude via PTY and hooks, Codex), permissions, guardrails, commit gate |
-| `plugins.md`, `scripting.md` | extension tiers, contribution points, hooks, Lua API, native plugins |
+| `plugins.md`, `scripting.md` | plugin tiers, contribution points, hooks, Lua API, native plugins |
+| `catalog.md` | the plugin registry: `[plugins]` in TOML, lockfile consent, the package format, publishing by PR, trusted authors |
 | `security.md` | capabilities, all-or-nothing consent, sandboxing plugins |
 | `settings.md` | settings storage (TOML), precedence, `OptionSpec`, the settings page |
 | `theming.md` | tokens, the theme editor, themes as plugins |

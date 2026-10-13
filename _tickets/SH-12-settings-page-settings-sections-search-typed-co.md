@@ -10,7 +10,7 @@ depends_on: [FW-3, FW-6, FW-11]
 
 # SH-12 · Settings page (:Settings, ⌘,) and settings.toml storage
 
-**Phase** 3 · shell · **After** [FW-3](FW-3-registries-commands-keymaps-modes-chords-panel-l.md), [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md), [FW-11](FW-11-toml-module-toml-1-0-parser-and-round-tripping.md) · **Unblocks** [ED-9](ED-9-editorconfig-and-per-file-editor-conventions.md)
+**Phase** 3 · shell · **After** [FW-3](FW-3-registries-commands-keymaps-modes-chords-panel-l.md), [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md), [FW-11](FW-11-toml-module-toml-1-0-parser-and-round-tripping.md) · **Unblocks** [ED-9](ED-9-editorconfig-and-per-file-editor-conventions.md), [PL-14](PL-14-plugins-in-settings-toml-and-lockfile-consent.md)
 
 ## Design
 

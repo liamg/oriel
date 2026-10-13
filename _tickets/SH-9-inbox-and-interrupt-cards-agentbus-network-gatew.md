@@ -10,7 +10,7 @@ depends_on: [FW-6]
 
 # SH-9 · Inbox and interrupt cards (agentbus, network, gateway, security key)
 
-**Phase** 7 · the rest · **After** [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md) · **Unblocks** nothing yet
+**Phase** 7 · the rest · **After** [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md) · **Unblocks** [PL-14](PL-14-plugins-in-settings-toml-and-lockfile-consent.md)
 
 ## Design
 
