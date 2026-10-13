@@ -96,6 +96,14 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Menu{a: a}
+		vm.Bind("menu", map[string]script.GoFunc{
+			"add": func(c *script.Args) ([]any, error) {
+				return nil, x.Add(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := Regex{a: a}
 		vm.Bind("regex", map[string]script.GoFunc{
 			"find": func(c *script.Args) ([]any, error) {

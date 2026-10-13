@@ -231,3 +231,5 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   the height it's given, so it sits right in a bar; a column runs from the top, as a panel does. A demo plugin
   (`app/plugindemo_test.go`) adds a dock panel with buttons, a tab, title-bar and status-line segments and editor
   marks, using only this API.
+- `oriel.menu.add{ label, run, when, group, order, key }` adds a right-click entry (PL-13); `run` is a function, given
+  what was clicked (`view`, `instance`, `file`, `selection`, `help`), or a command id.

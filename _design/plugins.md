@@ -290,6 +290,11 @@ type Host interface {
   Severity, Message}` as LSP does; the built-in `problems` extension marks them in the editor through a decoration
   provider (`DecorationCtx.Path` is the buffer's absolute file) and lists them in `:Problems`. Lua's
   `L.diagnostics.set` binds it; the Lua config publishes its errors as owner `lua`.
+- Right-click menus (PL-13): `registry.MenuItem` contributions (kind `menu.item`) with a `When` (view, file glob,
+  selection, help-id prefix); the window's one context menu gathers those that match what was clicked
+  (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the
+  layout (`Root.Visible`), and the file and selection from a view that implements `registry.Located` (the editor).
+  The built-in entries (Copy path, Move pane…, Close) are menu items too. Lua: `oriel.menu.add`.
 - Picker sources can show an item live as it's highlighted (`PickerSource.Hover`) and undo that when the picker
   closes without picking (`Cancel`); `PickerItem.Current` is where the list opens. The themes picker is built on
   them. A String option can offer `OptionSpec.Choices`, worked out when asked; the settings page makes it a menu

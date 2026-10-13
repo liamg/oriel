@@ -118,6 +118,7 @@ const ContextMenuHelp = "ui/context-menu"
 type ContextResult struct {
 	Chosen int    // the item chosen this frame, or -1
 	Help   string // set when "Help" was chosen: the target's help id
+	Open   bool   // the menu is showing after this frame
 }
 
 type contextState struct {
@@ -170,6 +171,7 @@ func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResu
 	case chosen >= 0:
 		res.Chosen, st.open = chosen, false
 	}
+	res.Open = st.open
 	return res
 }
 

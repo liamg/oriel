@@ -1,8 +1,8 @@
 ---
 id: PL-13
 title: "Context menu entries from plugins: a contribution point for right-click menus"
-phase: P4
-status: todo
+phase: P3
+status: review
 area: Platform
 module: app, registry, script/api
 depends_on: [PL-1, SH-10]
@@ -10,7 +10,7 @@ depends_on: [PL-1, SH-10]
 
 # PL-13 · Context menu entries from plugins: a contribution point for right-click menus
 
-**Phase** 4 · **After** PL-1, SH-10 · **Unblocks** nothing yet
+**Phase** 3 · **After** PL-1, SH-10 · **Unblocks** nothing yet
 
 Asked for in P3, after the plugin UI demo (`app/plugindemo_test.go`) showed what plugins can and can't do yet.
 
@@ -45,3 +45,10 @@ entries to the menu of any surface, the same way the built-ins do.
 - Test-first, with verified spec references (`_design/testing.md`).
 - No new dependency without approval (`_design/deps.md`).
 - Update the design doc in the same PR if behaviour differs from it.
+
+## As built
+
+- `registry.MenuItem` / `MenuWhen` / `MenuCtx` / `MenuItems` and `registry.Located`; `layout.Root.Visible`. The
+  window's context menu is the built-in `menus` extension (it replaced the help view's Help-only menu); its own
+  entries are contributions. `widget.ContextResult.Open` says whether a menu is still showing.
+- Lua: `oriel.menu.add`. Tests: `app/menu_test.go`.

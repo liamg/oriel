@@ -583,6 +583,23 @@ func (v editorView) Build(vc registry.ViewCtx) ui.Node {
 	}}
 }
 
+// Location is the file in a window, and whether the window has a Visual selection, for the right-click menu.
+func (v editorView) Location(instance string) (string, bool) {
+	n, err := strconv.Atoi(instance)
+	if err != nil {
+		return "", false
+	}
+	p, ok := v.x.e.Pane(vim.WindowID(n))
+	if !ok || p.Name() == "" {
+		return "", false
+	}
+	path := p.Name()
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(v.x.dir, path)
+	}
+	return path, p.Current() && strings.HasPrefix(v.x.e.Mode(), "visual")
+}
+
 func (v editorView) Title(instance string) string {
 	n, err := strconv.Atoi(instance)
 	if err != nil {

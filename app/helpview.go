@@ -30,16 +30,15 @@ var (
 // (⌘?), :help and the ␣h picker.
 type helpView struct {
 	disposer
-	sh     *shell
-	h      ext.Host
-	ix     *help.Index
-	gen    int
-	open   bool
-	cur    string   // the help id shown
-	back   []string // the pages before it, for ⌃o
-	fwd    []string // and after, for ⌃i
-	mode   bool     // help mode: a ? on everything with help
-	target ui.ID    // the node a right-click asked about
+	sh   *shell
+	h    ext.Host
+	ix   *help.Index
+	gen  int
+	open bool
+	cur  string   // the help id shown
+	back []string // the pages before it, for ⌃o
+	fwd  []string // and after, for ⌃i
+	mode bool     // help mode: a ? on everything with help
 }
 
 func (v *helpView) Manifest() ext.Manifest { return ext.Manifest{ID: "help"} }
@@ -202,15 +201,6 @@ func (v *helpView) build(c *ui.Ctx, vc registry.ViewCtx) {
 	if u := v.h.UI(); u != nil {
 		if id, ok := u.HelpRequest(); ok {
 			v.show(id)
-		}
-		if t, _, ok := u.ContextClick(); ok && u.Help(t) != "" {
-			v.target = t
-		}
-	}
-	if v.target != 0 {
-		res := widget.ContextMenu(c, "help-ctx", v.target, nil)
-		if res.Help != "" || res.Chosen >= 0 {
-			v.target = 0
 		}
 	}
 	if v.mode {

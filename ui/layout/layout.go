@@ -101,6 +101,29 @@ func (r *Root) Shown() []ViewRef {
 	return out
 }
 
+// Visible is every view on screen: main's (as Shown), then the open docks', the drop-down's when open, and the
+// floats'.
+func (r *Root) Visible() []ViewRef {
+	out := r.Shown()
+	leaf := func(n *Node) {
+		if n != nil && len(n.Tabs) > 0 {
+			out = append(out, n.Tabs[n.Active])
+		}
+	}
+	for _, e := range []Edge{Left, Right, Bottom} {
+		if d := r.Docks[e]; d != nil && d.Open {
+			leaf(d.Leaf)
+		}
+	}
+	if r.DropDown != nil && r.DropDown.Open {
+		leaf(r.DropDown.Leaf)
+	}
+	for _, f := range r.Floats {
+		leaf(f.Leaf)
+	}
+	return out
+}
+
 // Row is the views shown side by side (or stacked) with v in the split holding v's leaf, in order, and v's place
 // among them. A place that's a split itself holds the zero ViewRef. ok is false when v's leaf isn't in a split.
 func (r *Root) Row(v ViewRef) (row []ViewRef, at int, ok bool) {

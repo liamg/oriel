@@ -9,6 +9,7 @@
 ---@field hud oriel.hud
 ---@field keymap oriel.keymap
 ---@field language oriel.language
+---@field menu oriel.menu
 ---@field regex oriel.regex
 ---@field session oriel.session
 ---@field status oriel.status
@@ -125,6 +126,13 @@ oriel.language = {}
 --- Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.
 ---@param spec table
 function oriel.language.add(spec) end
+
+---@class oriel.menu
+oriel.menu = {}
+
+--- Add a right-click menu entry: { label, run = fn(at) or a command id, when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help.
+---@param spec table
+function oriel.menu.add(spec) end
 
 ---@class oriel.regex
 oriel.regex = {}

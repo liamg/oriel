@@ -41,6 +41,10 @@ Version 0.4.0.
 
 - `oriel.language.add(spec)`: Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.
 
+## oriel.menu
+
+- `oriel.menu.add(spec)`: Add a right-click menu entry: { label, run = fn(at) or a command id, when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help.
+
 ## oriel.regex
 
 - `oriel.regex.find(pat, s, flags?)`: The first PCRE2 match of pat in s: its start and end (1-based, inclusive, as string.find), then its groups; nil if none. flags: imsxn.

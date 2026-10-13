@@ -284,7 +284,6 @@ func (vm *VM) Bind(ns string, fns map[string]GoFunc) {
 	}
 }
 
-
 // SetValue puts a plain value in a namespace: oriel.api.version.
 func (vm *VM) SetValue(ns, name string, v any) { vm.namespace(ns).RawSetString(name, vm.toLua(v)) }
 
