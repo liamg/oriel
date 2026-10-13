@@ -233,3 +233,8 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   marks, using only this API.
 - `oriel.menu.add{ label, run, when, group, order, key }` adds a right-click entry (PL-13); `run` is a function, given
   what was clicked (`view`, `instance`, `file`, `selection`, `help`), or a command id.
+- Form widgets (PL-14): `oriel.ui.input`, `toggle` and `select` on the same widgets the built-ins use
+  (`widget.Input`, `widget.Toggle`, `widget.Select`; the settings page draws with the last two); `on_change` gets the
+  new value and the view redraws. `oriel.ui.state(key, initial)` is a table the VM keeps by key (`VM.State`). A
+  callback's error is a notice at its line. Tab moves focus: controls in the `button` key mode map Tab and ⇧Tab to
+  `ui.focus.next`/`prev` (`UIView.FocusNext`), and a Lua input sets `InputOpts.TabMoves`.

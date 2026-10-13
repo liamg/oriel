@@ -15,6 +15,7 @@ type InputOpts struct {
 	Width       ui.Size // grows to fill by default
 	Disabled    bool
 	Help        string
+	TabMoves    bool // Tab and ⇧Tab move focus on, rather than going to whoever reads the input's keys
 }
 
 type InputResult struct {
@@ -80,6 +81,12 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			case k.Key == "Esc":
 				res.Cancelled = true
 				c.Blur()
+			case k.Key == "Tab" && o.TabMoves:
+				if k.Mods&render.ModShift != 0 {
+					c.FocusNext(-1)
+				} else {
+					c.FocusNext(1)
+				}
 			case k.Key == "Left":
 				move(st.cursor - 1)
 			case k.Key == "Right":

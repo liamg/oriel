@@ -62,7 +62,8 @@ type VM struct {
 	OnError func(err *Error)                        // a call's error: a hook's, a view's, a keymap's
 	cancel  context.CancelFunc
 	paths   []string
-	raised  raised // the API function that raised the error being unwound
+	raised  raised                // the API function that raised the error being unwound
+	kept    map[string]lua.LValue // State's tables, by key
 }
 
 // raised is an oriel API function's error: its name, and the Go stack it came from.
@@ -564,6 +565,23 @@ func fnSource(f *lua.LFunction) string {
 		return "go"
 	}
 	return fmt.Sprintf("%s:%d", strings.TrimPrefix(f.Proto.SourceName, "@"), f.Proto.LineDefined)
+}
+
+// State is a table kept by key for as long as the VM lives: the same table each call, made from initial (a table,
+// or empty) the first time. A view keeps what it shows across redraws in one.
+func (vm *VM) State(key string, initial any) any {
+	if v, ok := vm.kept[key]; ok {
+		return v
+	}
+	t, ok := vm.toLua(initial).(*lua.LTable)
+	if !ok {
+		t = vm.L.NewTable()
+	}
+	if vm.kept == nil {
+		vm.kept = map[string]lua.LValue{}
+	}
+	vm.kept[key] = t
+	return t
 }
 
 // Keys are the names in oriel.<ns>, for the REPL's completion.

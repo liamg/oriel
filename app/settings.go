@@ -35,7 +35,6 @@ var (
 	tSetModified = theme.Declare("settings.modified", "accent")
 	tSetSource   = theme.Declare("settings.source", "fg.faint")
 	tSetLua      = theme.Declare("settings.source.lua", "status.permission")
-	tSetToggleOn = theme.Declare("settings.toggle.on", "accent")
 )
 
 // settingsFile is one settings.toml layer: the user's, or a project's, which applies only once trusted.
@@ -73,7 +72,6 @@ type settingsExt struct {
 	scope   int // the layer the page edits: user, project, session
 	asTOML  bool
 	undo    []settingsUndo
-	menu    string // the option whose values are dropped down
 }
 
 type settingsUndo struct {
@@ -835,19 +833,9 @@ func (s *settingsExt) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionS
 	switch sp.Type {
 	case registry.Bool:
 		on, _ := v.(bool)
-		id := c.Next("toggle")
-		if c.Interaction(id).Clicked && !disabled {
+		if widget.Toggle(c, "toggle", on, widget.ToggleOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}) {
 			s.fail(s.set(sp.Name, !on, s.scope))
 		}
-		track, side := th.C(theme.BgStrong), ui.Start
-		if on {
-			track, side = th.C(tSetToggleOn), ui.End
-		}
-		c.Row("toggle", ui.Style{W: ui.Px(32), H: ui.Px(18), Pad: ui.Pad(2), Main: side, Radius: 9, Fill: track, Interactive: true, Focusable: true,
-			Disabled: disabled, Cursor: render.CursorPointer, KeyMode: "button", Help: "shell/settings#rows", Role: ui.RoleButton, Label: sp.Name,
-			Selected: on}, func(c *ui.Ctx) {
-			c.Box("knob", ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 7, Fill: th.C(theme.Fg)}, nil)
-		})
 	case registry.Enum:
 		cur, _ := v.(string)
 		if len(sp.Values) <= 4 {
@@ -870,27 +858,10 @@ func (s *settingsExt) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionS
 	}
 }
 
-// dropdown is a button showing the value, opening a menu of values.
+// dropdown is a menu of values for a row.
 func (s *settingsExt) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, values []string, disabled bool) {
-	id := c.Next("drop")
-	if widget.Button(c, "drop", cur+" ▾", widget.ButtonOpts{Disabled: disabled, Help: "shell/settings#rows"}) {
-		s.menu = sp.Name
-	}
-	open := s.menu == sp.Name
-	widget.Popover(c, "menu", id, &open, widget.PopoverOpts{Label: sp.Name, Width: 220, Help: "shell/settings#rows"}, func(c *ui.Ctx) {
-		items := make([]widget.MenuItem, len(values))
-		for i, val := range values {
-			items[i] = widget.MenuItem{Label: val, Help: "shell/settings#rows"}
-		}
-		if i, closed := widget.Menu(c, "m", items, widget.MenuOpts{Width: 220, Help: "shell/settings#rows"}); i >= 0 {
-			s.fail(s.set(sp.Name, values[i], s.scope))
-			open = false
-		} else if closed {
-			open = false
-		}
-	})
-	if !open && s.menu == sp.Name {
-		s.menu = ""
+	if v, ok := widget.Select(c, "drop", cur, values, widget.SelectOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}); ok {
+		s.fail(s.set(sp.Name, v, s.scope))
 	}
 }
 

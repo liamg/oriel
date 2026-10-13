@@ -147,6 +147,9 @@ func (a *APIs) bind(vm *script.VM) {
 			"column": func(c *script.Args) ([]any, error) {
 				return []any{x.Column(c.Any(0))}, nil
 			},
+			"input": func(c *script.Args) ([]any, error) {
+				return []any{x.Input(c.Table(0))}, nil
+			},
 			"list": func(c *script.Args) ([]any, error) {
 				return []any{x.List(c.Any(0), c.Fn(1))}, nil
 			},
@@ -156,14 +159,23 @@ func (a *APIs) bind(vm *script.VM) {
 			"row": func(c *script.Args) ([]any, error) {
 				return []any{x.Row(c.Any(0))}, nil
 			},
+			"select": func(c *script.Args) ([]any, error) {
+				return []any{x.Select(c.Table(0))}, nil
+			},
 			"spacer": func(c *script.Args) ([]any, error) {
 				return []any{x.Spacer()}, nil
+			},
+			"state": func(c *script.Args) ([]any, error) {
+				return []any{x.State(c.String(0), c.Any(1))}, nil
 			},
 			"tat": func(c *script.Args) ([]any, error) {
 				return []any{x.Tat(c.Table(0))}, nil
 			},
 			"text": func(c *script.Args) ([]any, error) {
 				return []any{x.Text(c.Any(0), c.String(1))}, nil
+			},
+			"toggle": func(c *script.Args) ([]any, error) {
+				return []any{x.Toggle(c.Table(0))}, nil
 			},
 		})
 	}

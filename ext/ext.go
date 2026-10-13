@@ -62,6 +62,7 @@ type UIView interface {
 	ContextClick() (ui.ID, render.Point, bool)
 	HelpRequest() (string, bool)
 	Rect(id ui.ID) (render.Rect, bool)
+	FocusNext(dir int) // moves keyboard focus to the next focusable node (back with -1), wrapping
 }
 
 // Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's

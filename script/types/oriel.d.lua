@@ -194,6 +194,11 @@ function oriel.ui.button(spec) end
 ---@return table
 function oriel.ui.column(children) end
 
+--- A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
+---@param spec table
+---@return table
+function oriel.ui.input(spec) end
+
 --- A list: each of items through row(item), which returns a node.
 ---@param items any
 ---@param row function
@@ -209,9 +214,20 @@ function oriel.ui.mode() end
 ---@return table
 function oriel.ui.row(children) end
 
+--- A menu of choices: { value, options = { … }, on_change = fn(value), id, label }.
+---@param spec table
+---@return table
+function oriel.ui.select(spec) end
+
 --- Space that takes what's left.
 ---@return table
 function oriel.ui.spacer() end
+
+--- A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance.
+---@param key string
+---@param initial? any
+---@return table
+function oriel.ui.state(key, initial) end
 
 --- A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
 ---@param spec table
@@ -223,6 +239,11 @@ function oriel.ui.tat(spec) end
 ---@param style? string
 ---@return table
 function oriel.ui.text(s, style) end
+
+--- An on/off switch: { on, on_change = fn(on), id, label }.
+---@param spec table
+---@return table
+function oriel.ui.toggle(spec) end
 
 ---@class oriel.view
 oriel.view = {}

@@ -117,7 +117,7 @@ func TestMoreLanguagesByFile(t *testing.T) {
 		"api.proto":      "proto",
 		"schema.graphql": "graphql", "q.gql": "graphql",
 		"pom.xml": "xml", "icon.svg": "xml",
-		"setup.ini": "ini",
+		"setup.ini":  "ini",
 		"lib/app.ex": "elixir", "mix.exs": "elixir", "Main.scala": "scala", "build.sbt": "scala",
 		".gitignore": "gitignore", ".dockerignore": "gitignore", "App.vue": "vue", "Page.svelte": "svelte",
 	} {

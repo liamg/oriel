@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 )
 
@@ -92,9 +93,7 @@ func TestThemeOptionIsAMenu(t *testing.T) {
 	if !strings.Contains(s.frameText(), "oriel ▾") {
 		t.Errorf("no menu for ui.theme:\n%s", s.frameText())
 	}
-	s.settings().menu = "ui.theme"
-	s.frame()
-	s.frame()
+	s.clickText(t, "oriel ▾")
 	if !strings.Contains(s.frameText(), "dusk") {
 		t.Errorf("the menu lacks dusk:\n%s", s.frameText())
 	}
@@ -126,4 +125,17 @@ func TestThemePickerSnapshot(t *testing.T) {
 			t.Errorf("the preview lacks %q", want)
 		}
 	}
+}
+
+// clickText clicks the middle of the first run of text in the frame that reads text.
+func (s *errScene) clickText(t *testing.T, text string) {
+	t.Helper()
+	for _, op := range s.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == text {
+			s.click(render.Point{X: op.At.X + op.Run.Advance/2, Y: op.At.Y - op.Run.Ascent/2})
+			s.frame()
+			return
+		}
+	}
+	t.Fatalf("no %q in the frame", text)
 }

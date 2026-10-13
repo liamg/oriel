@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"fmt"
 
 	"github.com/liamg/oriel/registry"
@@ -46,9 +47,5 @@ type disposeFunc func()
 
 func (f disposeFunc) Dispose() { f() }
 
-func cmpOr(s, d string) string {
-	if s == "" {
-		return d
-	}
-	return s
-}
+// cmpOr is the first of ss that isn't empty.
+func cmpOr(ss ...string) string { return cmp.Or(ss...) }

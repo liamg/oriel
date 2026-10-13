@@ -64,12 +64,16 @@ Version 0.4.0.
 
 - `oriel.ui.button(spec)`: A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
 - `oriel.ui.column(children)`: A column of nodes; options beside them: gap, pad (px).
+- `oriel.ui.input(spec)`: A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
 - `oriel.ui.list(items, row)`: A list: each of items through row(item), which returns a node.
 - `oriel.ui.mode()`: The editor's mode, as the built-in status line shows it.
 - `oriel.ui.row(children)`: A row of nodes; options beside them: gap, pad (px).
+- `oriel.ui.select(spec)`: A menu of choices: { value, options = { … }, on_change = fn(value), id, label }.
 - `oriel.ui.spacer()`: Space that takes what's left.
+- `oriel.ui.state(key, initial?)`: A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance.
 - `oriel.ui.tat(spec)`: A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
 - `oriel.ui.text(s, style?)`: Text, in a style: dim, faint, accent, warn, error or ok.
+- `oriel.ui.toggle(spec)`: An on/off switch: { on, on_change = fn(on), id, label }.
 
 ## oriel.view
 

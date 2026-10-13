@@ -86,6 +86,26 @@ func (UI) Button(spec script.Table) script.Table {
 	return t
 }
 
+//oriel:api doc="A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value." returns=table
+func (UI) Input(spec script.Table) script.Table { return node("input", spec) }
+
+//oriel:api doc="An on/off switch: { on, on_change = fn(on), id, label }." returns=table
+func (UI) Toggle(spec script.Table) script.Table { return node("toggle", spec) }
+
+//oriel:api doc="A menu of choices: { value, options = { … }, on_change = fn(value), id, label }." returns=table
+func (UI) Select(spec script.Table) script.Table { return node("select", spec) }
+
+//oriel:api doc="A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance." optional=initial returns=table
+func (u UI) State(key string, initial any) any { return u.a.VM.State(key, initial) }
+
+func node(kind string, spec script.Table) script.Table {
+	t := script.Table{"type": kind}
+	for k, v := range spec {
+		t[k] = v
+	}
+	return t
+}
+
 //oriel:api doc="A list: each of items through row(item), which returns a node." returns=table
 func (UI) List(items any, row *script.Fn) script.Table {
 	return script.Table{"type": "list", "items": items, "row": row}
@@ -153,13 +173,33 @@ func build(c *ui.Ctx, v any, a *APIs) {
 		case "button":
 			key := cmpOr(str(n, "id"), str(n, "label"))
 			primary, _ := n["primary"].(bool)
-			if widget.Button(c, key, str(n, "label"), widget.ButtonOpts{Primary: primary, Help: "plugins/lua"}) {
-				if fn, ok := n["on_click"].(*script.Fn); ok {
-					if _, err := a.VM.Call(fn); err != nil {
-						a.Host.Notify(core.Notice{ID: "lua.button", Severity: core.SevError, Title: "Lua", Text: err.Error()})
-					}
-					a.Host.Redraw()
+			if widget.Button(c, key, str(n, "label"), widget.ButtonOpts{Primary: primary, Help: "plugins/lua#ui"}) {
+				a.callback(n, "on_click")
+			}
+		case "input":
+			key := cmpOr(str(n, "id"), str(n, "label"), "input")
+			text := str(n, "value")
+			c.Box(key, ui.Style{W: ui.Px(220)}, func(c *ui.Ctx) {
+				res := widget.Input(c, "in", &text, widget.InputOpts{Label: cmpOr(str(n, "label"), key), Placeholder: str(n, "placeholder"),
+					Help: "plugins/lua#ui", TabMoves: true})
+				if res.Changed {
+					a.callback(n, "on_change", text)
 				}
+				if res.Submitted {
+					a.callback(n, "on_submit", text)
+				}
+			})
+		case "toggle":
+			key := cmpOr(str(n, "id"), str(n, "label"), "toggle")
+			on, _ := n["on"].(bool)
+			if widget.Toggle(c, key, on, widget.ToggleOpts{Label: cmpOr(str(n, "label"), key), Help: "plugins/lua#ui"}) {
+				a.callback(n, "on_change", !on)
+			}
+		case "select":
+			key := cmpOr(str(n, "id"), str(n, "label"), "select")
+			if v, ok := widget.Select(c, key, str(n, "value"), strs(n["options"]), widget.SelectOpts{Label: cmpOr(str(n, "label"), key),
+				Help: "plugins/lua#ui"}); ok {
+				a.callback(n, "on_change", v)
 			}
 		case "list":
 			row, _ := n["row"].(*script.Fn)
@@ -183,6 +223,23 @@ func build(c *ui.Ctx, v any, a *APIs) {
 	default:
 		c.Text(nil, fmt.Sprint(v), ui.TextStyle{})
 	}
+}
+
+// callback calls a node's function field with args, if it has one, and redraws: an error is a notice at its line,
+// as PL-12's are.
+func (a *APIs) callback(n script.Table, field string, args ...any) {
+	fn, ok := n[field].(*script.Fn)
+	if !ok {
+		return
+	}
+	if _, err := a.VM.Call(fn, args...); err != nil {
+		nt := core.Notice{ID: "lua.callback." + fn.Source, Severity: core.SevError, Source: fn.Source, Title: "Lua", Text: err.Error()}
+		if e, ok := err.(*script.Error); ok {
+			nt.Location, nt.Detail = e.Where(), e.Trace()
+		}
+		a.Host.Notify(nt)
+	}
+	a.Host.Redraw()
 }
 
 // tat is a label, a bar and a value, as the HUD and status line draw them.

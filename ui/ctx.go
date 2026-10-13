@@ -173,6 +173,9 @@ func (c *Ctx) Focus(id ID) { c.u.in.focus, c.u.in.visible = id, false }
 // Blur drops keyboard focus.
 func (c *Ctx) Blur() { c.u.in.focus = 0 }
 
+// FocusNext moves keyboard focus to the next focusable node (back with -1), as last frame laid them out.
+func (c *Ctx) FocusNext(dir int) { c.u.FocusNext(dir) }
+
 // Now is the UI's clock.
 func (c *Ctx) Now() time.Time { return c.u.now() }
 

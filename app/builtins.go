@@ -273,12 +273,27 @@ type uiOptions struct{ disposer }
 func (o *uiOptions) Manifest() ext.Manifest { return ext.Manifest{ID: "ui"} }
 
 func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
+	for _, c := range []registry.Command{
+		{ID: "ui.focus.next", Title: "Move keyboard focus to the next control", Run: func(registry.Ctx, registry.Args) error { return o.focus(h, 1) }},
+		{ID: "ui.focus.prev", Title: "Move keyboard focus to the previous control", Run: func(registry.Ctx, registry.Args) error { return o.focus(h, -1) }},
+	} {
+		o.add(h.Command(c))
+	}
+	o.add(h.Keymap(registry.Keymap{Mode: "button", Keys: "<Tab>", Command: "ui.focus.next", Desc: "Next control"}))
+	o.add(h.Keymap(registry.Keymap{Mode: "button", Keys: "<S-Tab>", Command: "ui.focus.prev", Desc: "Previous control"}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.reduced_motion", Type: registry.Bool, Default: false,
 		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel", Choices: func() []string { return themeNames(h) },
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme, by name: a built-in, or a file in your themes directory. :Themes previews them."}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.variant", Type: registry.Enum, Values: []string{"system", "dark", "light"}, Default: "system",
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme's dark or light variant; system follows the OS."}))
+	return nil
+}
+
+func (o *uiOptions) focus(h ext.Host, dir int) error {
+	if u := h.UI(); u != nil {
+		u.FocusNext(dir)
+	}
 	return nil
 }
 

@@ -1,8 +1,8 @@
 ---
 id: PL-14
 title: "Form widgets from Lua: inputs, toggles, selects and a view's own state"
-phase: P4
-status: todo
+phase: P3
+status: review
 area: Platform
 module: script/api, app
 depends_on: [PL-1]
@@ -10,7 +10,7 @@ depends_on: [PL-1]
 
 # PL-14 · Form widgets from Lua: inputs, toggles, selects and a view's own state
 
-**Phase** 4 · **After** PL-1 · **Unblocks** nothing yet
+**Phase** 3 · **After** PL-1 · **Unblocks** nothing yet
 
 Asked for in P3, after the plugin UI demo (`app/plugindemo_test.go`) showed what plugins can and can't do yet.
 
@@ -43,3 +43,9 @@ needs, on the same widgets the built-ins use, so they look and behave the same (
 - Test-first, with verified spec references (`_design/testing.md`).
 - No new dependency without approval (`_design/deps.md`).
 - Update the design doc in the same PR if behaviour differs from it.
+
+## As built
+
+- `widget.Toggle` and `widget.Select` (the settings page moved onto them), `InputOpts.TabMoves`, `Ctx.FocusNext`,
+  `UIView.FocusNext`, the `ui.focus.next`/`prev` commands with Tab/⇧Tab in the `button` key mode, `VM.State`.
+- Lua: `oriel.ui.input`, `toggle`, `select`, `state`. Test: `app/luaform_test.go`.
