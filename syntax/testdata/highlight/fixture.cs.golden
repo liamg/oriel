@@ -1,0 +1,159 @@
+   1 | using System;
+     | ^^^^^ keyword.import
+     |       ^^^^^^ type
+     |             ^ punctuation.delimiter
+   2 | using System.Collections.Generic;
+     | ^^^^^ keyword.import
+     |       ^^^^^^ module
+     |             ^ punctuation.delimiter
+     |              ^^^^^^^^^^^ module
+     |                         ^ punctuation.delimiter
+     |                          ^^^^^^^ module
+     |                                 ^ punctuation.delimiter
+   3 | 
+   4 | namespace Pricing
+     | ^^^^^^^^^ keyword.type
+     |           ^^^^^^^ module
+   5 | {
+     | ^ punctuation.bracket
+   6 |     // A tier's price, in pence.
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   7 |     public record Tier(string Name, int Pence);
+     |     ^^^^^^ keyword.modifier
+     |            ^^^^^^ keyword.type
+     |                   ^^^^ type
+     |                       ^ punctuation.bracket
+     |                        ^^^^^^ type.builtin
+     |                               ^^^^ variable.parameter
+     |                                   ^ punctuation.delimiter
+     |                                     ^^^ type.builtin
+     |                                         ^^^^^ variable.parameter
+     |                                              ^ punctuation.bracket
+     |                                               ^ punctuation.delimiter
+   8 | 
+   9 |     public static class Prices
+     |     ^^^^^^ keyword.modifier
+     |            ^^^^^^ keyword.modifier
+     |                   ^^^^^ keyword.type
+     |                         ^^^^^^ type
+  10 |     {
+     |     ^ punctuation.bracket
+  11 |         public static int For(Tier tier, int qty = 1)
+     |         ^^^^^^ keyword.modifier
+     |                ^^^^^^ keyword.modifier
+     |                       ^^^ type.builtin
+     |                           ^^^ function.method
+     |                              ^ punctuation.bracket
+     |                               ^^^^ type
+     |                                    ^^^^ variable.parameter
+     |                                        ^ punctuation.delimiter
+     |                                          ^^^ type.builtin
+     |                                              ^^^ variable.parameter
+     |                                                  ^ operator
+     |                                                    ^ number
+     |                                                     ^ punctuation.bracket
+  12 |         {
+     |         ^ punctuation.bracket
+  13 |             var total = tier.Pence * qty;
+     |             ^^^ keyword
+     |                 ^^^^^ variable
+     |                       ^ operator
+     |                         ^^^^ variable
+     |                             ^ punctuation.delimiter
+     |                              ^^^^^ variable.member
+     |                                    ^ operator
+     |                                      ^^^ variable
+     |                                         ^ punctuation.delimiter
+  14 |             return qty >= 100 ? (int)(total * 0.9) : total;
+     |             ^^^^^^ keyword.return
+     |                    ^^^ variable
+     |                        ^^ operator
+     |                           ^^^ number
+     |                               ^ keyword.conditional.ternary
+     |                                 ^ punctuation.bracket
+     |                                  ^^^ type.builtin
+     |                                     ^^ punctuation.bracket
+     |                                       ^^^^^ variable
+     |                                             ^ operator
+     |                                               ^^^ number.float
+     |                                                  ^ punctuation.bracket
+     |                                                    ^ keyword.conditional.ternary
+     |                                                      ^^^^^ variable
+     |                                                           ^ punctuation.delimiter
+  15 |         }
+     |         ^ punctuation.bracket
+  16 | 
+  17 |         public static void Main()
+     |         ^^^^^^ keyword.modifier
+     |                ^^^^^^ keyword.modifier
+     |                       ^^^^ type.builtin
+     |                            ^^^^ function.method
+     |                                ^^ punctuation.bracket
+  18 |         {
+     |         ^ punctuation.bracket
+  19 |             var tiers = new List<Tier> { new("basic", 100), new("pro", 450) };
+     |             ^^^ keyword
+     |                 ^^^^^ variable
+     |                       ^ operator
+     |                         ^^^ keyword.operator
+     |                             ^^^^ type
+     |                                 ^ punctuation.bracket
+     |                                  ^^^^ type
+     |                                      ^ punctuation.bracket
+     |                                        ^ punctuation.bracket
+     |                                          ^^^ keyword.operator
+     |                                             ^ punctuation.bracket
+     |                                              ^^^^^^^ string
+     |                                                     ^ punctuation.delimiter
+     |                                                       ^^^ number
+     |                                                          ^ punctuation.bracket
+     |                                                           ^ punctuation.delimiter
+     |                                                             ^^^ keyword.operator
+     |                                                                ^ punctuation.bracket
+     |                                                                 ^^^^^ string
+     |                                                                      ^ punctuation.delimiter
+     |                                                                        ^^^ number
+     |                                                                           ^ punctuation.bracket
+     |                                                                             ^ punctuation.bracket
+     |                                                                              ^ punctuation.delimiter
+  20 |             foreach (var t in tiers)
+     |             ^^^^^^^ keyword.repeat
+     |                     ^ punctuation.bracket
+     |                      ^^^ keyword
+     |                          ^ variable
+     |                            ^^ keyword.operator
+     |                               ^^^^^ variable
+     |                                    ^ punctuation.bracket
+  21 |             {
+     |             ^ punctuation.bracket
+  22 |                 Console.WriteLine($"{t.Name}: {For(t, 120)}");
+     |                 ^^^^^^^ variable
+     |                        ^ punctuation.delimiter
+     |                         ^^^^^^^^^ function.method.call
+     |                                  ^ punctuation.bracket
+     |                                   ^^ string
+     |                                     ^ punctuation.special
+     |                                      ^ string
+     |                                       ^ punctuation.delimiter
+     |                                        ^^^^ string
+     |                                            ^ punctuation.special
+     |                                             ^^ string
+     |                                               ^ punctuation.special
+     |                                                ^^^ string
+     |                                                   ^ punctuation.bracket
+     |                                                    ^ string
+     |                                                     ^ punctuation.delimiter
+     |                                                      ^^^^ string
+     |                                                          ^ punctuation.bracket
+     |                                                           ^ punctuation.special
+     |                                                            ^ string
+     |                                                             ^ punctuation.bracket
+     |                                                              ^ punctuation.delimiter
+  23 |             }
+     |             ^ punctuation.bracket
+  24 |         }
+     |         ^ punctuation.bracket
+  25 |     }
+     |     ^ punctuation.bracket
+  26 | }
+     | ^ punctuation.bracket

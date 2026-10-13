@@ -1,0 +1,83 @@
+   1 | # A tier's price, in pence.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   2 | type Tier {
+     | ^^^^ keyword.type
+     |      ^^^^ type
+     |           ^ punctuation.bracket
+   3 |   name: String!
+     |   ^^^^ property
+     |       ^ punctuation.delimiter
+     |         ^^^^^^ type
+     |               ^ punctuation.special
+   4 |   pence: Int!
+     |   ^^^^^ property
+     |        ^ punctuation.delimiter
+     |          ^^^ type
+     |             ^ punctuation.special
+   5 |   features: [String!]
+     |   ^^^^^^^^ property
+     |           ^ punctuation.delimiter
+     |             ^ punctuation.bracket
+     |              ^^^^^^ type
+     |                    ^ punctuation.special
+     |                     ^ punctuation.bracket
+   6 | }
+     | ^ punctuation.bracket
+   7 | 
+   8 | type Query {
+     | ^^^^ keyword.type
+     |      ^^^^^ type
+     |            ^ punctuation.bracket
+   9 |   tier(name: String!): Tier
+     |   ^^^^ property
+     |       ^ punctuation.bracket
+     |        ^^^^ variable.parameter
+     |            ^ punctuation.delimiter
+     |              ^^^^^^ type
+     |                    ^ punctuation.special
+     |                     ^ punctuation.bracket
+     |                      ^ punctuation.delimiter
+     |                        ^^^^ type
+  10 |   tiers(first: Int = 10): [Tier!]!
+     |   ^^^^^ property
+     |        ^ punctuation.bracket
+     |         ^^^^^ variable.parameter
+     |              ^ punctuation.delimiter
+     |                ^^^ type
+     |                    ^ operator
+     |                      ^^ number
+     |                        ^ punctuation.bracket
+     |                         ^ punctuation.delimiter
+     |                           ^ punctuation.bracket
+     |                            ^^^^ type
+     |                                ^ punctuation.special
+     |                                 ^ punctuation.bracket
+     |                                  ^ punctuation.special
+  11 | }
+     | ^ punctuation.bracket
+  12 | 
+  13 | query PricedTiers($first: Int) {
+     | ^^^^^ keyword
+     |       ^^^^^^^^^^^ variable
+     |                  ^ punctuation.bracket
+     |                   ^^^^^^ variable.parameter
+     |                         ^ punctuation.delimiter
+     |                           ^^^ type
+     |                              ^ punctuation.bracket
+     |                                ^ punctuation.bracket
+  14 |   tiers(first: $first) {
+     |   ^^^^^ property
+     |        ^ punctuation.bracket
+     |         ^^^^^ variable.parameter
+     |              ^ punctuation.delimiter
+     |                ^^^^^^ variable
+     |                      ^ punctuation.bracket
+     |                        ^ punctuation.bracket
+  15 |     name
+     |     ^^^^ property
+  16 |     pence
+     |     ^^^^^ property
+  17 |   }
+     |   ^ punctuation.bracket
+  18 | }
+     | ^ punctuation.bracket

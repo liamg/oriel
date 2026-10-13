@@ -101,3 +101,29 @@ func TestCompiledFromCache(t *testing.T) {
 		t.Errorf("opening from the cache took %v", warm)
 	}
 }
+
+// The languages added after ED-11, by the files nvim-treesitter's filetypes give them: Terraform and OpenTofu are
+// the HCL grammar's terraform dialect.
+func TestMoreLanguagesByFile(t *testing.T) {
+	for file, want := range map[string]string{
+		"main.tf": "terraform", "prod.tfvars": "terraform", "main.tofu": "terraform", "versions.tofuvars": "terraform",
+		"job.hcl": "hcl", ".terraformrc": "hcl",
+		"App.kt": "kotlin", "build.gradle.kts": "kotlin",
+		"Program.cs": "c_sharp",
+		"index.php": "php",
+		"main.zig": "zig", "build.zig.zon": "zig",
+		"flake.nix": "nix",
+		"api.proto": "proto",
+		"schema.graphql": "graphql", "q.gql": "graphql",
+		"pom.xml": "xml", "icon.svg": "xml",
+		"setup.ini": "ini",
+	} {
+		l, ok := Builtin().ForFile(file, nil)
+		if !ok || l.Name != want {
+			t.Errorf("%s: %v, want %s", file, l, want)
+		}
+	}
+	if l, ok := Builtin().ForFile("script", []byte("#!/usr/bin/env php")); !ok || l.Name != "php" {
+		t.Errorf("a php #! line: %v", l)
+	}
+}

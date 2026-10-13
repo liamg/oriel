@@ -1,0 +1,73 @@
+   1 | # A dev shell for the pricing service.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   2 | { pkgs ? import <nixpkgs> { } }:
+     | ^ punctuation.bracket
+     |   ^^^^ variable.parameter
+     |        ^ operator
+     |          ^^^^^^ keyword.import
+     |                 ^^^^^^^^^ string.special.path
+     |                           ^ punctuation.bracket
+     |                             ^ punctuation.bracket
+     |                               ^ punctuation.bracket
+     |                                ^ punctuation.delimiter
+   3 | 
+   4 | let
+     | ^^^ keyword
+   5 |   version = "1.2.0";
+     |           ^ operator
+     |             ^^^^^^^ string
+     |                    ^ punctuation.delimiter
+   6 |   tools = with pkgs; [ go gopls golangci-lint ];
+     |         ^ operator
+     |           ^^^^ keyword
+     |                ^^^^ variable
+     |                    ^ punctuation.delimiter
+     |                      ^ punctuation.bracket
+     |                        ^^ variable
+     |                           ^^^^^ variable
+     |                                 ^^^^^^^^^^^^^ variable
+     |                                               ^ punctuation.bracket
+     |                                                ^ punctuation.delimiter
+   7 | in
+     | ^^ keyword
+   8 | pkgs.mkShell {
+     | ^^^^ variable
+     |     ^ punctuation.delimiter
+     |      ^^^^^^^ function.call
+     |              ^ punctuation.bracket
+   9 |   name = "pricing-${version}";
+     |   ^^^^ variable.member
+     |        ^ operator
+     |          ^^^^^^^^^ string
+     |                   ^^ punctuation.special
+     |                     ^^^^^^^ none
+     |                            ^ punctuation.special
+     |                             ^ string
+     |                              ^ punctuation.delimiter
+  10 |   buildInputs = tools ++ [ pkgs.postgresql_16 ];
+     |   ^^^^^^^^^^^ variable.member
+     |               ^ operator
+     |                 ^^^^^ variable
+     |                       ^^ operator
+     |                          ^ punctuation.bracket
+     |                            ^^^^ variable
+     |                                ^ punctuation.delimiter
+     |                                 ^^^^^^^^^^^^^ variable.member
+     |                                               ^ punctuation.bracket
+     |                                                ^ punctuation.delimiter
+  11 |   shellHook = ''
+     |   ^^^^^^^^^ variable.member
+     |             ^ operator
+     |               ^^ string
+  12 |     export PGDATA=$PWD/.pg
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^ string
+  13 |   '';
+     | ^^^^ string
+     |     ^ punctuation.delimiter
+  14 |   enableTests = true;
+     |   ^^^^^^^^^^^ variable.member
+     |               ^ operator
+     |                 ^^^^ boolean
+     |                     ^ punctuation.delimiter
+  15 | }
+     | ^ punctuation.bracket

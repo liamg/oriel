@@ -1,0 +1,111 @@
+   1 | terraform {
+     | ^^^^^^^^^ keyword
+     |           ^ punctuation.bracket
+   2 |   required_providers {
+     |   ^^^^^^^^^^^^^^^^^^ type
+     |                      ^ punctuation.bracket
+   3 |     aws = {
+     |     ^^^ variable.member
+     |         ^ none
+     |           ^ punctuation.bracket
+   4 |       source  = "hashicorp/aws"
+     |       ^^^^^^ variable.member
+     |               ^ none
+     |                 ^^^^^^^^^^^^^^^ string
+   5 |       version = "~> 5.0"
+     |       ^^^^^^^ variable.member
+     |               ^ none
+     |                 ^^^^^^^^ string
+   6 |     }
+     |     ^ punctuation.bracket
+   7 |   }
+     |   ^ punctuation.bracket
+   8 | }
+     | ^ punctuation.bracket
+   9 | 
+  10 | variable "region" {
+     | ^^^^^^^^ keyword
+     |          ^^^^^^^^ string
+     |                   ^ punctuation.bracket
+  11 |   type    = string
+     |   ^^^^ variable.member
+     |           ^ none
+     |             ^^^^^^ type.builtin
+  12 |   default = "eu-west-2"
+     |   ^^^^^^^ variable.member
+     |           ^ none
+     |             ^^^^^^^^^^^ string
+  13 | }
+     | ^ punctuation.bracket
+  14 | 
+  15 | # One bucket per environment.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+  16 | resource "aws_s3_bucket" "logs" {
+     | ^^^^^^^^ keyword
+     |          ^^^^^^^^^^^^^^^ string
+     |                          ^^^^^^ string
+     |                                 ^ punctuation.bracket
+  17 |   for_each = toset(["dev", "prod"])
+     |   ^^^^^^^^ variable.member
+     |            ^ none
+     |              ^^^^^ function
+     |                   ^^ punctuation.bracket
+     |                     ^^^^^ string
+     |                          ^ punctuation.delimiter
+     |                            ^^^^^^ string
+     |                                  ^^ punctuation.bracket
+  18 |   bucket   = "logs-${each.key}-${var.region}"
+     |   ^^^^^^ variable.member
+     |            ^ none
+     |              ^^^^^^ string
+     |                    ^^ punctuation.special
+     |                      ^^^^ variable.builtin
+     |                          ^ punctuation.delimiter
+     |                           ^^^ variable.member
+     |                              ^ punctuation.special
+     |                               ^ string
+     |                                ^^ punctuation.special
+     |                                  ^^^ variable.builtin
+     |                                     ^ punctuation.delimiter
+     |                                      ^^^^^^ variable.member
+     |                                            ^ punctuation.special
+     |                                             ^ string
+  19 |   tags = {
+     |   ^^^^ variable.member
+     |        ^ none
+     |          ^ punctuation.bracket
+  20 |     Name = upper(each.key)
+     |     ^^^^ variable.member
+     |          ^ none
+     |            ^^^^^ function
+     |                 ^ punctuation.bracket
+     |                  ^^^^ variable.builtin
+     |                      ^ punctuation.delimiter
+     |                       ^^^ variable.member
+     |                          ^ punctuation.bracket
+  21 |   }
+     |   ^ punctuation.bracket
+  22 | }
+     | ^ punctuation.bracket
+  23 | 
+  24 | output "bucket_ids" {
+     | ^^^^^^ keyword
+     |        ^^^^^^^^^^^^ string
+     |                     ^ punctuation.bracket
+  25 |   value = [for b in aws_s3_bucket.logs : b.id]
+     |   ^^^^^ variable.member
+     |         ^ none
+     |           ^ punctuation.bracket
+     |            ^^^ keyword.repeat
+     |                ^ variable
+     |                  ^^ keyword.repeat
+     |                     ^^^^^^^^^^^^^ variable.builtin
+     |                                  ^ punctuation.delimiter
+     |                                   ^^^^ variable.member
+     |                                        ^ none
+     |                                          ^ variable.builtin
+     |                                           ^ punctuation.delimiter
+     |                                            ^^ variable.member
+     |                                              ^ punctuation.bracket
+  26 | }
+     | ^ punctuation.bracket

@@ -1,0 +1,27 @@
+   1 | ; Pricing service settings.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   2 | [server]
+     | ^ punctuation.bracket
+     |  ^^^^^^ markup.heading
+     |        ^ punctuation.bracket
+   3 | host = 0.0.0.0
+     | ^^^^ property
+     |      ^ operator
+     |       ^^^^^^^^ string
+   4 | port = 8080
+     | ^^^^ property
+     |      ^ operator
+     |       ^^^^^ string
+   5 | 
+   6 | [database]
+     | ^ punctuation.bracket
+     |  ^^^^^^^^ markup.heading
+     |          ^ punctuation.bracket
+   7 | url = postgres://localhost/pricing
+     | ^^^ property
+     |     ^ operator
+     |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ string
+   8 | pool = 10
+     | ^^^^ property
+     |      ^ operator
+     |       ^^^ string

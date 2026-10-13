@@ -191,9 +191,13 @@ engine never feels like another binary running in a pane.
   by whole name, then extension, then the interpreter its `#!` line runs. A language with no grammar is queries
   for others to inherit (`ecma`, `jsx`, `html_tags`), and inheriting and injecting look names up in the same set.
 - `builtin:languages` registers the core set: Go, TypeScript, TSX, JavaScript, Python, Rust, Lua, Markdown, C, C++,
-  Java, Ruby, Bash, JSON, YAML, TOML, HTML, CSS, SQL, Dockerfile, Make, Diff, Git commit and vimdoc (25 grammars,
-  5.4 MB gzipped; each decompressed on first use, and compiled modules kept by checksum). Their queries are
-  nvim-treesitter's at the pinned commit.
+  Java, Ruby, Bash, JSON, YAML, TOML, HTML, CSS, SQL, Dockerfile, Make, Diff, Git commit and vimdoc, then HCL,
+  Terraform (`.tf`, `.tfvars`; OpenTofu's `.tofu`, `.tofuvars`), Kotlin, C#, PHP, Zig, Nix, Protobuf, GraphQL, XML
+  and INI (36 grammars, 7.6 MB gzipped, under the 8 MB budget; each decompressed on first use, and compiled modules
+  kept by checksum). Their queries are nvim-treesitter's at the pinned commit. Every module carries its own copy of
+  the tree-sitter runtime (about 115 KB gzipped), so the budget fits about three more; past that, languages are
+  packs (PL-3), or the runtime moves into a module of its own that the grammars link against. Swift's repository
+  has no generated parser, so it waits for a pack.
 - wazero compiles into `<user cache>/oriel` (`Config.CacheDir`), so a grammar compiles once per version: opening a
   file from the cache takes about 12 ms, against 100 ms cold.
 - A local pack is `~/.config/oriel/languages/<name>/`: `language.toml` (`name`, `extensions`, `filenames`,

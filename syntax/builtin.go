@@ -51,6 +51,18 @@ var core = []struct {
 	{name: "diff", exts: []string{".diff", ".patch"}},
 	{name: "gitcommit", filenames: []string{"COMMIT_EDITMSG"}},
 	{name: "vimdoc"},
+	{name: "hcl", exts: []string{".hcl", ".nomad"}, filenames: []string{".terraformrc", "terraform.rc"}},
+	{name: "terraform", exts: []string{".tf", ".tfvars", ".tofu", ".tofuvars"}},
+	{name: "kotlin", exts: []string{".kt", ".kts"}},
+	{name: "c_sharp", exts: []string{".cs", ".csx"}},
+	{name: "php_only", queriesOnly: true},
+	{name: "php", exts: []string{".php", ".phtml"}, bangs: []string{"php"}},
+	{name: "zig", exts: []string{".zig", ".zon"}},
+	{name: "nix", exts: []string{".nix"}},
+	{name: "proto", exts: []string{".proto"}},
+	{name: "graphql", exts: []string{".graphql", ".graphqls", ".gql"}},
+	{name: "xml", exts: []string{".xml", ".xsd", ".xsl", ".xslt", ".svg", ".plist"}},
+	{name: "ini", exts: []string{".ini"}},
 }
 
 var builtin struct {
