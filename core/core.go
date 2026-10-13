@@ -24,6 +24,7 @@ const (
 	StatusCI         Status = "ci"
 	StatusReviewer   Status = "reviewer"
 	StatusQuiet      Status = "quiet"
+	StatusOff        Status = "off"
 )
 
 // Store is session state, the thing every surface reads.
@@ -38,6 +39,7 @@ type Store interface {
 // Session is a read-only view of one session.
 type Session interface {
 	ID() SessionID
+	Name() string // what its tab says: its name, or its id
 	Kind() Kind
 	Status() Status
 	Unseen() int // errors since it last had focus: its tab's error mark

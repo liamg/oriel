@@ -226,7 +226,8 @@ func TestPointerSetsTheCursor(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
-	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 30, Y: 10}})
+	// The root view sits under the 38px titlebar.
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 30, Y: 48}})
 	for b.win.Cursor() != render.CursorPointer {
 		if ctx.Err() != nil {
 			t.Fatalf("cursor is %v over the link", b.win.Cursor())
@@ -323,9 +324,9 @@ func (*form) Deactivate(context.Context) error { return nil }
 func TestWidgetsTakeKeysInTheirOwnMode(t *testing.T) {
 	b := boot(t, &form{})
 	b.waitText(t, "typed:")
-	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 40, Y: 12}})
-	b.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 40, Y: 12}, Buttons: render.ButtonPrimary})
-	b.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 40, Y: 12}, Buttons: render.ButtonPrimary})
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 40, Y: 50}})
+	b.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 40, Y: 50}, Buttons: render.ButtonPrimary})
+	b.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 40, Y: 50}, Buttons: render.ButtonPrimary})
 	b.waitText(t, "typed:")
 	for _, k := range []string{"h", "i"} {
 		b.win.Send(render.KeyEvent{Key: k})

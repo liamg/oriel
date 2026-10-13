@@ -1,8 +1,17 @@
 backdrop #060606
-rect 0,0 1600x974 fill #060606
-clip 0,0 1600x974 r 0
-  rect 0,0 1600x30 fill #0c0c0b
-  rect 0,30 1600x1 fill #24221d
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1469.0625x38 r 0
+pop
+rect 0,38 1600x936 fill #060606
+clip 0,38 1600x936 r 0
+  rect 0,38 1600x30 fill #0c0c0b
+  rect 0,68 1600x1 fill #24221d
 pop
 rect 0,974 1600x26 fill #0c0c0b
 text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11

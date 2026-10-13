@@ -246,6 +246,9 @@ type Host interface {
 
 - The window is made of views like any other, each replaceable by registering the same id: `app.root`,
   `app.statusline`, `app.notifications` (toasts) and `app.modal`. The log panel is `log`, and `:Events` is `events`.
+- The titlebar is `app.titlebar`: the logo, a tab per session (status dot, name, its status or kind, `⌘N`, and
+  `✕N` while it has errors you haven't seen), and segments named `titlebar.right.<order>-<name>` at its right, for
+  tats. `session.focus {n}` or `{id}` brings a session to the front; `⌘1`–`⌘9` run it.
 - The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
   in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.
 - A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`) and

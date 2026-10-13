@@ -13,6 +13,7 @@ type State struct {
 
 type SessionState struct {
 	ID     SessionID `json:"id"`
+	Name   string    `json:"name,omitempty"`
 	Kind   Kind      `json:"kind"`
 	Status Status    `json:"status"`
 	Unseen int       `json:"unseen,omitempty"` // errors since the session last had focus
@@ -57,7 +58,15 @@ func (s State) SessionList() []Session {
 
 type sessionView struct{ s SessionState }
 
-func (v sessionView) ID() SessionID  { return v.s.ID }
+func (v sessionView) ID() SessionID { return v.s.ID }
+
+func (v sessionView) Name() string {
+	if v.s.Name != "" {
+		return v.s.Name
+	}
+	return string(v.s.ID)
+}
+
 func (v sessionView) Kind() Kind     { return v.s.Kind }
 func (v sessionView) Status() Status { return v.s.Status }
 func (v sessionView) Unseen() int    { return v.s.Unseen }

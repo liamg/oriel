@@ -2,7 +2,7 @@
 id: SH-2
 title: "Session tabs with status dots and ⌘1–9"
 phase: P3
-status: todo
+status: review
 area: Shell and navigation
 module: app
 depends_on: [FW-6, FW-2]

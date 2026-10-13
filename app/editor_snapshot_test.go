@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
 )
 
 // roundGo is the fixture 01-ide shows: internal/pricing/round.go, with lines 38 to 51 as the mockup has them.
@@ -64,6 +65,7 @@ func editorScene(t *testing.T) *errScene {
 	os.WriteFile(p, []byte(roundGo()), 0o644)
 	size := render.Point{X: float32(editorColumn.Dx()), Y: float32(editorColumn.Dy())}
 	s := newScene(t, "", dir, size)
+	s.reg.View(TitleBarView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() })) // the column starts under it
 	s.run("editor.open", registry.Args{"path": "internal/pricing/round.go"})
 	s.frame()
 	s.frame()
