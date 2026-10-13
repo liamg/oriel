@@ -383,3 +383,101 @@ func TestSlider(t *testing.T) {
 		t.Errorf("shift-right is ten steps, clamped: %v", v)
 	}
 }
+
+func TestClickable(t *testing.T) {
+	var id ui.ID
+	var in, off ui.Interaction
+	clicks := 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Row("bar", ui.Style{Pad: ui.Pad(10), Gap: 10}, func(c *ui.Ctx) {
+			id = c.Next("row")
+			in = Clickable(c, "row", ui.Style{W: ui.Px(80), H: ui.Px(24), Focusable: true, Help: "test/clickable"}, nil)
+			if in.Clicked {
+				clicks++
+			}
+			off = Clickable(c, "off", ui.Style{W: ui.Px(80), H: ui.Px(24), Disabled: true, Help: "test/clickable"}, nil)
+		})
+	})
+	x, y := mid(h.rect(id))
+	h.pointer(render.PointerMove, 0, x, y)
+	h.frame()
+	h.frame()
+	if !in.Hovered || h.u.Cursor() != render.CursorPointer {
+		t.Errorf("under the pointer: hovered %v, cursor %v", in.Hovered, h.u.Cursor())
+	}
+	h.click(x, y)
+	if clicks != 1 {
+		t.Fatalf("a click clicked %d times", clicks)
+	}
+	h.u.Focus(id)
+	h.frame()
+	h.keys("CR")
+	if clicks != 2 {
+		t.Errorf("Enter on the focused row: %d clicks, want 2", clicks)
+	}
+	h.click(x+90, y)
+	if off.Clicked {
+		t.Error("a disabled one clicked")
+	}
+	if n := h.access(id); n == nil || n.Role != render.RoleButton {
+		t.Errorf("its role: %+v", n)
+	}
+}
+
+func TestSegmented(t *testing.T) {
+	active, changes := 0, 0
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("seg")
+		if Segmented(c, "seg", []string{"DARK", "LIGHT"}, &active, SegmentedOpts{Help: "test/segmented"}) {
+			changes++
+		}
+	})
+	second, _ := h.u.Rect(ui.Child(id, 1))
+	x, y := mid(second)
+	h.click(x, y)
+	h.click(x, y)
+	if active != 1 || changes != 1 {
+		t.Errorf("two clicks on the second: active %d, %d changes; want 1 and 1", active, changes)
+	}
+}
+
+// An icon button in a row shows while the pointer's in the row, stays while it moves onto the button, and clicks.
+func TestIconButtonInARow(t *testing.T) {
+	var row ui.ID
+	shown, clicks := false, 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		row = c.Next("row")
+		Clickable(c, "row", ui.Style{Dir: ui.Row, W: ui.Px(200), H: ui.Px(30), Cross: ui.Center, Help: "test/row"}, func(c *ui.Ctx) {
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			shown = PointerIn(c)
+			if shown && IconButton(c, "x", "✕", IconButtonOpts{Label: "Forget", Help: "test/row"}) {
+				clicks++
+			}
+		})
+	})
+	r := h.rect(row)
+	h.pointer(render.PointerMove, 0, r.Min.X+20, r.Min.Y+15)
+	h.frame()
+	h.frame()
+	if !shown {
+		t.Fatal("the button isn't shown with the pointer in the row")
+	}
+	x, y := r.Max.X-10, r.Min.Y+15
+	h.pointer(render.PointerMove, 0, x, y)
+	h.frame()
+	h.frame()
+	if !shown {
+		t.Fatal("the button went when the pointer moved onto it")
+	}
+	h.click(x, y)
+	if clicks != 1 {
+		t.Errorf("%d clicks", clicks)
+	}
+	h.pointer(render.PointerMove, 0, r.Max.X+50, y)
+	h.frame()
+	h.frame()
+	if shown {
+		t.Error("the button stays with the pointer gone")
+	}
+}

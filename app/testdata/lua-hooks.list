@@ -8,36 +8,56 @@ text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1269.0625x38 r 0
 pop
-rect 0,38 1400x844.84 fill #060606
-clip 0,38 760x584.84 r 0
-  rect 0,38 760x30 fill #0c0c0b
-  rect 0,68 760x1 fill #24221d
-pop
-rect 0,622.84 760x260 fill #0c0c0b
-clip 0,622.84 760x260 r 0
-  rect 0,622.84 760x30 fill #0c0c0b
-  rect 0,622.84 48.609375x30 fill #121210
-  rect 0,622.84 48.609375x2 fill #ffd23f
-  text "Lua" @14,643.20526 #ece6d8 Inter 12
-  rect 0,652.84 760x1 fill #24221d
-  clip 0,653.84 760x229 r 0
-    text ":LUA" @24,684.04004 #ffd23f JetBrains Mono 10
-    text "REPL · oriel api 0.4.0" @58,686.08 #7c7566 JetBrains Mono 12
+rect 0,38 44x844.84 fill #0c0c0b
+path 7 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #7c7566
+path 5 segments stroke 1.4545455 #7c7566
+path 4 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+rect 43,38 1x844.84 fill #24221d
+rect 44,38 1356x844.84 fill #060606
+rect 44,622.84 716x260 fill #0c0c0b
+clip 44,622.84 716x260 r 0
+  rect 44,622.84 716x30 fill #0c0c0b
+  rect 44,622.84 48.609375x30 fill #121210
+  rect 44,622.84 48.609375x2 fill #ffd23f
+  text "Lua" @58,643.20526 #ece6d8 Inter 12
+  rect 44,652.84 716x1 fill #24221d
+  clip 44,653.84 716x229 r 0
+    text ":LUA" @68,684.04004 #ffd23f JetBrains Mono 10
+    text "REPL · oriel api 0.4.0" @102,686.08 #7c7566 JetBrains Mono 12
     text "⇥ complete · ↵ eval · ↑ history" @507.95312,686.08 #4f4a40 JetBrains Mono 12
-    clip 24,695.68005 712x109.32001 r 0
-      text "› oriel.api.version" @24,707.92004 #ece6d8 JetBrains Mono 12
-      text "\"0.4.0\"" @24,727.7601 #b3ab99 JetBrains Mono 12
-      text "› #oriel.ui.row{}.children" @24,747.60004 #ece6d8 JetBrains Mono 12
-      text "0" @24,767.44006 #b3ab99 JetBrains Mono 12
-      text "› oriel.ledger.unread('pricing')" @24,787.28 #ece6d8 JetBrains Mono 12
-      text "repl:1: oriel.ledger.unread isn't available until RV-2 (the review ledger)" @24,807.12006 #ff5f6d JetBrains Mono 12
+    clip 68,695.68005 668x109.32001 r 0
+      text "› oriel.api.version" @68,707.92004 #ece6d8 JetBrains Mono 12
+      text "\"0.4.0\"" @68,727.7601 #b3ab99 JetBrains Mono 12
+      text "› #oriel.ui.row{}.children" @68,747.60004 #ece6d8 JetBrains Mono 12
+      text "0" @68,767.44006 #b3ab99 JetBrains Mono 12
+      text "› oriel.ledger.unread('pricing')" @68,787.28 #ece6d8 JetBrains Mono 12
+      text "repl:1: oriel.ledger.unread isn't available until RV-2 (the review ledger)" @68,807.12006 #ff5f6d JetBrains Mono 12
     pop
-    text "›" @24,830.32 #ffd23f JetBrains Mono 12
-    rect 39.203125,811 696.7969x30 fill #060606 radius 6 stroke 1 #332f27
-    clip 39.203125,811 696.7969x30 r 6
-      text "oriel.agent.to" @49.203125,830.5471 #ece6d8 Inter 12.5
+    text "›" @68,830.32 #ffd23f JetBrains Mono 12
+    rect 83.203125,811 652.7969x30 fill #060606 radius 6 stroke 1 #332f27
+    clip 83.203125,811 652.7969x30 r 6
+      text "oriel.agent.to" @93.203125,830.5471 #ece6d8 Inter 12.5
     pop
-    text "tool" @24,859.24 #7c7566 JetBrains Mono 12
+    text "tool" @68,859.24 #7c7566 JetBrains Mono 12
   pop
 pop
 rect 760,38 640x844.84 fill #0c0c0b

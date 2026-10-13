@@ -8,6 +8,9 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 - **Workflow**: start a session in this repo and name the ticket ("do PL-8"). The agent reads the ticket, then its
   design docs and mockups, checks its dependencies are done, writes the acceptance tests first, implements, and sets `status`.
 - **Every ticket is built on the public APIs** a plugin would use; if one is missing, extending it generally is part of the ticket.
+- **Every ticket reuses before it builds.** It starts by finding the widgets, helpers and harnesses it can use, and
+  anything general it needs that doesn't exist (a widget, a query, a test harness) is built as a reusable piece, not
+  inline in the feature. A ticket that copies an existing component instead of extracting it isn't done.
 - New work gets a new ticket here (with `depends_on`), and a row in `_design/features.md` if it's user-facing.
 
 ## Ready now (no unmet dependencies)

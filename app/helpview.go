@@ -236,15 +236,13 @@ func (v *helpView) markers(c *ui.Ctx) {
 		}
 		seen[n.Help] = true
 		at := render.Point{X: n.Rect.Max.X - 6, Y: n.Rect.Min.Y - 4}
-		id := c.Next(fmt.Sprint("m", i))
-		if c.Interaction(id).Clicked {
+		if widget.Clickable(c, fmt.Sprint("m", i), ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 7, Fill: th.C(tHelpMarkerBg), Stroke: th.C(tHelpMarker),
+			Border: 1, Main: ui.Center, Cross: ui.Center, Z: 1100, Float: &ui.Float{Point: &at}, Tooltip: v.title(n.Help), Help: "shell/help",
+			Label: "Help: " + v.title(n.Help)}, func(c *ui.Ctx) {
+			c.Text("q", "?", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold}, Color: th.C(tHelpMarker)})
+		}).Clicked {
 			v.show(n.Help)
 		}
-		c.Box(fmt.Sprint("m", i), ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 7, Fill: th.C(tHelpMarkerBg), Stroke: th.C(tHelpMarker), Border: 1,
-			Main: ui.Center, Cross: ui.Center, Z: 1100, Float: &ui.Float{Point: &at}, Interactive: true, Cursor: render.CursorPointer,
-			Tooltip: v.title(n.Help), Help: "shell/help", Role: ui.RoleButton, Label: "Help: " + v.title(n.Help)}, func(c *ui.Ctx) {
-			c.Text("q", "?", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold}, Color: th.C(tHelpMarker)})
-		})
 	}
 }
 
@@ -299,15 +297,13 @@ func (v *helpView) page(c *ui.Ctx) {
 				c.Column("side", ui.Style{W: ui.Px(250), H: ui.Flex(1), Pad: ui.Pad(16), Gap: 8, Clip: true}, func(c *ui.Ctx) {
 					c.Text("related", "RELATED", label)
 					for i, r := range p.Related {
-						id := c.Next(fmt.Sprint("rel", i))
-						if c.Interaction(id).Clicked {
+						if widget.Clickable(c, fmt.Sprint("rel", i), ui.Style{Dir: ui.Row, Gap: 6, Cross: ui.Center, Help: "shell/help", Label: v.title(r)},
+							func(c *ui.Ctx) {
+								c.Text("t", v.title(r), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(tHelpLink)})
+								c.Text("id", r, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5}, Color: th.C(theme.FgGhost)})
+							}).Clicked {
 							v.show(r)
 						}
-						c.Row(fmt.Sprint("rel", i), ui.Style{Gap: 6, Cross: ui.Center, Interactive: true, Cursor: render.CursorPointer, Help: "shell/help",
-							Role: ui.RoleButton, Label: v.title(r)}, func(c *ui.Ctx) {
-							c.Text("t", v.title(r), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(tHelpLink)})
-							c.Text("id", r, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5}, Color: th.C(theme.FgGhost)})
-						})
 					}
 					c.Box("gap1", ui.Style{H: ui.Px(10)}, nil)
 					c.Text("this", "THIS PAGE", label)

@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // StartView is what the main area shows with nothing open: no directory and no session (ui.md 01e).
@@ -38,12 +39,21 @@ type start struct {
 	disposer
 	sh  *shell
 	sel int
+	// hovered is the row under the pointer last frame, or -1; the pointer moving onto a row selects it.
+	hovered, hovering int
+	w                 float32 // the view's width last frame
 }
+
+// The start view's widths: both columns at full size, as 39-start, down to startNarrow, where they become tabs.
+const (
+	startWide   = 1070
+	startNarrow = 760
+)
 
 func (s *start) Manifest() ext.Manifest { return ext.Manifest{ID: "start"} }
 
 func (s *start) Activate(_ context.Context, h ext.Host) error {
-	s.sel = -1 // the first action that's available
+	s.sel, s.hovered = -1, -1 // the first action that's available
 	for _, e := range []registry.StartEntry{
 		{Name: "session.new", Icon: "plus", Title: "New Session", Desc: "A new session on a repository, with its own branch and worktree",
 			Command: "session.new", Order: 10},
@@ -165,16 +175,48 @@ func (s *start) rows(h ext.Host) (actions, recent []startRow) {
 }
 
 func (s *start) build(c *ui.Ctx, h ext.Host) {
-	th := c.Theme()
 	actions, recent := s.rows(h)
 	if s.sel < 0 {
 		s.sel = slices.IndexFunc(actions, func(r startRow) bool { return r.ok })
 	}
 	s.sel = min(max(s.sel, 0), max(len(actions)+len(recent)-1, 0))
-	c.Column("start", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Clip: true, Help: "shell/start", Role: ui.RoleRegion,
-		Label: "Start"}, func(c *ui.Ctx) {
+	id := c.Next("start")
+	w, main := c.Size().X-railW, ui.Center
+	if r, ok := c.Rect(id); ok {
+		w = r.Dx()
+		if in, ok := c.Rect(ui.Child(id, "content")); ok && in.Dy() > r.Dy() {
+			main = ui.Start // too tall for the window: it scrolls from the top
+		}
+	}
+	if w != s.w {
+		s.w = w
+		c.WakeAt(c.Now()) // laid out at the new width next frame
+	}
+	narrow := w < startNarrow
+	pad, gap := float32(32), float32(90)
+	if w < startWide+2*pad {
+		gap = 48
+	}
+	if narrow {
+		pad = 16
+	}
+	s.hovering = -1
+	c.Column("start", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: main, Cross: ui.Center, Pad: ui.PadXY(pad, 0), ScrollY: true, Help: "shell/start",
+		Role: ui.RoleRegion, Label: "Start"}, func(c *ui.Ctx) {
+		s.content(c, h, actions, recent, narrow, gap)
+	})
+	s.hovered = s.hovering
+}
+
+func (s *start) content(c *ui.Ctx, h ext.Host, actions, recent []startRow, narrow bool, gap float32) {
+	th := c.Theme()
+	c.Column("content", ui.Style{W: ui.Flex(1), Cross: ui.Center, Pad: ui.Insets{T: 24, B: 24}}, func(c *ui.Ctx) {
+		width := ui.Flex(1).Clamp(0, startWide)
+		if narrow {
+			width = ui.Flex(1).Clamp(0, 520)
+		}
 		if len(recent) > 0 {
-			c.Row("hello", ui.Style{W: ui.Px(1070), Cross: ui.Center, Gap: 16, Pad: ui.Insets{B: 26}}, func(c *ui.Ctx) {
+			c.Row("hello", ui.Style{W: width, Cross: ui.Center, Gap: 16, Pad: ui.Insets{B: 26}}, func(c *ui.Ctx) {
 				c.Paint("logo", ui.Px(44), ui.Px(44), func(f render.Frame, r render.Rect) { logo(f, r, th) })
 				c.Text("word", "ORIEL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Weight: typeset.Bold, Size: 26, Tracking: .32},
 					Color: th.C(tWordmark)})
@@ -182,44 +224,88 @@ func (s *start) build(c *ui.Ctx, h ext.Host) {
 				c.Text("version", s.sh.cfg.Version, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgFaint)})
 			})
 		}
-		c.Row("cols", ui.Style{Gap: 90}, func(c *ui.Ctx) {
-			c.Column("actions", ui.Style{W: ui.Px(520), Gap: 10}, func(c *ui.Ctx) {
-				caption(c, "cap", "Start")
+		actionsCol := func(c *ui.Ctx, st ui.Style) {
+			c.Column("actions", st, func(c *ui.Ctx) {
+				if !narrow {
+					caption(c, "cap", "Start")
+				}
 				for i, r := range actions {
-					if s.action(c, h, i, r, i == s.sel) && r.ok {
+					if s.action(c, h, i, r) && r.ok {
 						s.sel = i
 						r.run()
 					}
 				}
 			})
-			c.Column("recent", ui.Style{W: ui.Px(460), Gap: 2}, func(c *ui.Ctx) {
-				if len(recent) == 0 {
-					c.Column("empty", ui.Style{W: ui.Flex(1), H: ui.Px(330), Main: ui.Center, Cross: ui.Center, Gap: 20}, func(c *ui.Ctx) {
-						c.Paint("logo", ui.Px(300), ui.Px(300), func(f render.Frame, r render.Rect) { logo(f, r, th) })
-						c.Text("none", "nothing recent yet", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgGhost)})
+		}
+		recentCol := func(c *ui.Ctx, st ui.Style) {
+			c.Column("recent", st, func(c *ui.Ctx) {
+				if !narrow {
+					c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{B: 10}}, func(c *ui.Ctx) {
+						caption(c, "cap", "Recent")
+						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+						c.Text("keys", "↵ open · ⌫ forget", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgFaint)})
 					})
-					return
 				}
-				c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{B: 10}}, func(c *ui.Ctx) {
-					caption(c, "cap", "Recent")
-					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-					c.Text("keys", "↵ open · ⌫ forget", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgFaint)})
-				})
 				c.Box("group", ui.Style{Pad: ui.Insets{L: 12, T: 6, B: 6}}, func(c *ui.Ctx) { caption(c, "cap", "Directories") })
 				for i, r := range recent {
 					n := len(actions) + i
-					if s.recent(c, i, r, n == s.sel) {
+					if s.recent(c, n, r) {
 						s.sel = n
 						r.run()
 					}
 				}
 			})
-		})
+		}
+		switch {
+		case narrow && len(recent) > 0:
+			c.Column("tabbed", ui.Style{W: width, Gap: 14}, func(c *ui.Ctx) {
+				tab := 0
+				if s.sel >= len(actions) {
+					tab = 1
+				}
+				if widget.Tabs(c, "tabs", []string{"START", "RECENT"}, &tab, widget.TabsOpts{Help: "shell/start"}) {
+					s.sel = len(actions)
+					if tab == 0 {
+						s.sel = max(slices.IndexFunc(actions, func(r startRow) bool { return r.ok }), 0)
+					}
+				}
+				if tab == 0 {
+					actionsCol(c, ui.Style{W: ui.Flex(1), Gap: 10})
+				} else {
+					recentCol(c, ui.Style{W: ui.Flex(1), Gap: 2})
+				}
+			})
+		case narrow:
+			actionsCol(c, ui.Style{W: width, Gap: 10})
+		default:
+			c.Row("cols", ui.Style{W: width, Gap: gap}, func(c *ui.Ctx) {
+				actionsCol(c, ui.Style{W: ui.Flex(52).Clamp(300, 520), Gap: 10})
+				if len(recent) > 0 {
+					recentCol(c, ui.Style{W: ui.Flex(46).Clamp(260, 460), Gap: 2})
+					return
+				}
+				c.Column("recent", ui.Style{W: ui.Flex(46).Clamp(260, 460), H: ui.Px(330), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
+					c.Paint("logo", ui.Px(300), ui.Px(300), func(f render.Frame, r render.Rect) { logo(f, r, th) })
+				})
+			})
+		}
 		c.Row("foot", ui.Style{Pad: ui.Insets{T: 60}, Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			hint := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgGhost)}
 			c.Text("k", "⌘K search everything · ⌘? help · : command", hint)
 		})
 	})
+}
+
+// hover notes that row n is under the pointer, and selects it when the pointer has just moved onto it.
+func (s *start) hover(c *ui.Ctx, n int, in ui.Interaction) {
+	if !in.Hovered {
+		return
+	}
+	s.hovering = n
+	if n != s.hovered && n != s.sel {
+		s.sel = n
+		c.WakeAt(c.Now()) // rows already built this frame still show the old selection
+	}
 }
 
 func (s *start) all(h ext.Host) []startRow {
@@ -233,11 +319,10 @@ func caption(c *ui.Ctx, key any, s string) {
 }
 
 // action is one action's card; it says whether it was clicked.
-func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow, on bool) bool {
+func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow) bool {
 	th := c.Theme()
 	e := r.entry
-	id := c.Next(e.Name)
-	clicked := c.Interaction(id).Clicked
+	on := i == s.sel
 	fill, line := th.C(tStartCard), th.C(tStartCardLine)
 	if on && r.ok {
 		fill, line = th.C(tStartCardOn), th.C(tStartLineOn)
@@ -246,9 +331,8 @@ func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow, on bool) bool {
 	if !r.ok {
 		fade = .58
 	}
-	c.Row(e.Name, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 16, Cross: ui.Center, Fill: fill, Stroke: line, Border: 1, Radius: 10,
-		Interactive: r.ok, Disabled: !r.ok, Cursor: render.CursorPointer, Fade: fade, Role: ui.RoleButton, Label: e.Title, Selected: on,
-		Help: "shell/start"}, func(c *ui.Ctx) {
+	in := widget.Clickable(c, e.Name, ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 16, Cross: ui.Center, Fill: fill, Stroke: line,
+		Border: 1, Radius: 10, Disabled: !r.ok, NoHover: true, Fade: fade, Label: e.Title, Selected: on, Help: "shell/start"}, func(c *ui.Ctx) {
 		col := th.C(theme.Accent)
 		if !r.ok {
 			col = th.C(theme.FgFaint)
@@ -256,7 +340,7 @@ func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow, on bool) bool {
 		c.Box("icon", ui.Style{W: ui.Px(38), H: ui.Px(38), Radius: 9, Fill: th.C(tStartIconBg), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 			icon(c, "glyph", e.Icon, 18, col)
 		})
-		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 3}, func(c *ui.Ctx) {
+		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 3, Clip: true}, func(c *ui.Ctx) {
 			c.Row("title", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("t", e.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 				if !r.ok {
@@ -272,7 +356,8 @@ func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow, on bool) bool {
 			keycap(c, "key", k)
 		}
 	})
-	return clicked
+	s.hover(c, i, in)
+	return in.Clicked
 }
 
 // keycap is a key drawn as a small key.
@@ -283,11 +368,10 @@ func keycap(c *ui.Ctx, key any, k string) {
 	})
 }
 
-// recent is one recent directory's row; it says whether it was clicked.
-func (s *start) recent(c *ui.Ctx, i int, r startRow, on bool) bool {
+// recent is one recent directory's row, row n of the view; it says whether it was clicked.
+func (s *start) recent(c *ui.Ctx, n int, r startRow) bool {
 	th := c.Theme()
-	id := c.Next(fmt.Sprint("dir", i))
-	clicked := c.Interaction(id).Clicked
+	on := n == s.sel
 	fill := render.Color{}
 	if on {
 		fill = th.C(tStartRecentOn)
@@ -298,8 +382,8 @@ func (s *start) recent(c *ui.Ctx, i int, r startRow, on bool) bool {
 			at = ago(time.Now(), d.At)
 		}
 	}
-	c.Row(fmt.Sprint("dir", i), ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12, Cross: ui.Center, Fill: fill, Radius: 8, Interactive: true,
-		Cursor: render.CursorPointer, Role: ui.RoleButton, Label: filepath.Base(r.dir), Selected: on, Help: "shell/start"}, func(c *ui.Ctx) {
+	in := widget.Clickable(c, fmt.Sprint("dir", n), ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12, Cross: ui.Center, Fill: fill,
+		Radius: 8, NoHover: true, Label: filepath.Base(r.dir), Selected: on, Help: "shell/start"}, func(c *ui.Ctx) {
 		git := isRepo(r.dir)
 		bg, col := th.C(tStartIconBg), th.C(theme.Accent)
 		if !git {
@@ -308,7 +392,7 @@ func (s *start) recent(c *ui.Ctx, i int, r startRow, on bool) bool {
 		c.Box("icon", ui.Style{W: ui.Px(26), H: ui.Px(26), Radius: 6, Fill: bg, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 			icon(c, "glyph", "folder", 14, col)
 		})
-		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
+		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 2, Clip: true}, func(c *ui.Ctx) {
 			c.Text("name", filepath.Base(r.dir), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.Medium}, Color: th.C(theme.Fg)})
 			sub := tildePath(r.dir)
 			if b := branchOf(r.dir); b != "" {
@@ -318,9 +402,14 @@ func (s *start) recent(c *ui.Ctx, i int, r startRow, on bool) bool {
 			}
 			c.Text("path", sub, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgFaint)})
 		})
-		c.Text("at", at, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgGhost)})
+		if !widget.PointerIn(c) {
+			c.Text("at", at, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgGhost)})
+		} else if widget.IconButton(c, "forget", "✕", widget.IconButtonOpts{Label: "Forget " + filepath.Base(r.dir), Help: "shell/start"}) {
+			r.forget()
+		}
 	})
-	return clicked
+	s.hover(c, n, in)
+	return in.Clicked
 }
 
 // branchOf is the branch checked out in the repo at dir, from its HEAD, or "".

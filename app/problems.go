@@ -9,10 +9,10 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 var (
@@ -107,15 +107,9 @@ func (p *problems) view(c *ui.Ctx) {
 			c.Text("none", "No problems.", mono(11.5, theme.FgGhost))
 		}
 		for i, d := range ds {
-			id := c.Next(i)
-			if c.Interaction(id).Clicked {
-				if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": d.File, "line": d.Line + 1}); err != nil {
-					p.h.Notify(core.Notice{ID: "problems.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
-				}
-			}
 			glyph := map[string]string{registry.SevError: "✕", registry.SevWarning: "⚠"}[d.Severity]
-			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 10, Cross: ui.Center, Interactive: true, Cursor: render.CursorPointer,
-				Role: ui.RoleButton, Label: d.Message, Help: "errors#problems"}, func(c *ui.Ctx) {
+			in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(22), Gap: 10, Cross: ui.Center, Label: d.Message,
+				Help: "errors#problems"}, func(c *ui.Ctx) {
 				c.Box("sev", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", cmpOr(glyph, "ℹ"), mono(11, diagToken(d.Severity))) })
 				c.Box("loc", ui.Style{W: ui.Px(220), Clip: true}, func(c *ui.Ctx) {
 					c.Text("t", fmt.Sprintf("%s:%d", p.short(d.File), d.Line+1), mono(11.5, tLogSource))
@@ -123,6 +117,11 @@ func (p *problems) view(c *ui.Ctx) {
 				c.Box("msg", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", firstLine(d.Message), mono(11.5, theme.Fg)) })
 				c.Text("owner", d.Owner, mono(10.5, theme.FgFaint))
 			})
+			if in.Clicked {
+				if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": d.File, "line": d.Line + 1}); err != nil {
+					p.h.Notify(core.Notice{ID: "problems.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
+				}
+			}
 		}
 	})
 }

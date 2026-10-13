@@ -324,3 +324,25 @@ func TestEventsView(t *testing.T) {
 		t.Errorf("filtered :Events:\n%s", text)
 	}
 }
+
+// Clicking a row in the log expands it, and clicking it again folds it.
+func TestLogRowClickExpands(t *testing.T) {
+	s := newErrScene(t, "")
+	s.populate()
+	s.run("log.open", nil)
+	panel(s).open = ""
+	s.frame()
+	s.frame()
+	row := s.access(s.store.State().Notifications[1].Text)
+	s.click(centre(row.Bounds))
+	if panel(s).open == "" {
+		t.Fatal("a click on the row didn't expand it")
+	}
+	if !strings.Contains(s.frameText(), "TRACEBACK") {
+		t.Errorf("the expanded row shows no trace:\n%s", s.frameText())
+	}
+	s.click(centre(row.Bounds))
+	if panel(s).open != "" {
+		t.Error("a second click didn't fold it")
+	}
+}

@@ -123,7 +123,7 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 		if o.expanded != nil {
 			expanded = o.expanded(i)
 		}
-		rc.Row("item", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: fill, EaseFill: true, Cross: ui.Center, Interactive: true,
+		rc.Row("item", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: fill, EaseFill: true, Cross: ui.Center, Interactive: true, NoHover: true,
 			Cursor: render.CursorPointer, Role: rowRole, Selected: i == selected, Expanded: expanded}, func(rc *ui.Ctx) {
 			rc.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1)}, nil)
 			row(rc, i, i == selected)

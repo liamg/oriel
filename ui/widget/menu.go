@@ -82,7 +82,7 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 			if it.Disabled {
 				fg = col(c, tDisabledFg)
 			}
-			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: fill, EaseFill: true, Interactive: true,
+			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: fill, EaseFill: true, Interactive: true, NoHover: true,
 				Disabled: it.Disabled, Cursor: render.CursorPointer, Help: it.Help, Role: ui.RoleMenuItem, Label: it.Label}, func(c *ui.Ctx) {
 				c.Text("label", it.Label, uiText(c, 12.5, typeset.Normal, fg))
 				if it.Shortcut != "" {

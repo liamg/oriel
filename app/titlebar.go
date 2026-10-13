@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // TitleBarView is the bar across the top: the logo, the session tabs, and segments named titlebar.right.* (the
@@ -121,17 +122,13 @@ func (t *sessionTabs) build(c *ui.Ctx, h ext.Host, vc registry.ViewCtx) {
 
 func (t *sessionTabs) tab(c *ui.Ctx, h ext.Host, i int, s core.Session, on bool) {
 	th := c.Theme()
-	id := c.Next(s.ID())
-	if c.Interaction(id).Clicked {
-		h.Run(context.Background(), "session.focus", registry.Args{"id": string(s.ID())})
-	}
 	fill, name := color.NRGBA{}, th.C(tTabName)
 	if on {
 		fill, name = th.C(tTabOn), th.C(tTabNameOn)
 	}
 	dot := th.C(statusTokens[s.Status()])
-	c.Row(s.ID(), ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer,
-		Help: "shell/tabs", Role: ui.RoleTab, Selected: on, Label: s.Name()}, func(c *ui.Ctx) {
+	in := widget.Clickable(c, s.ID(), ui.Style{Dir: ui.Row, H: ui.Flex(1), Fill: fill, Help: "shell/tabs", Role: ui.RoleTab, Selected: on,
+		Label: s.Name()}, func(c *ui.Ctx) {
 		c.Column("in", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
 			edge := color.NRGBA{}
 			if on {
@@ -155,6 +152,9 @@ func (t *sessionTabs) tab(c *ui.Ctx, h ext.Host, i int, s core.Session, on bool)
 			})
 		})
 	})
+	if in.Clicked {
+		h.Run(context.Background(), "session.focus", registry.Args{"id": string(s.ID())})
+	}
 }
 
 // logo is the o▌ mark: a ring in the accent and a tall cursor in the brand orange, each with a faint glow.

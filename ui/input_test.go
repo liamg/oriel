@@ -37,7 +37,7 @@ func button(c *Ctx, key string, disabled bool) Interaction {
 	case in.Hovered:
 		fill = hovered
 	}
-	c.Row(key, Style{W: Px(80), H: Px(24), Pad: PadXY(8, 5), Fill: fill, Radius: 4, Focusable: true, Disabled: disabled,
+	c.Row(key, Style{W: Px(80), H: Px(24), Pad: PadXY(8, 5), Fill: fill, Radius: 4, Focusable: true, Disabled: disabled, NoHover: true,
 		Cursor: render.CursorPointer, Tooltip: "Save the file"}, func(c *Ctx) {
 		c.Text(nil, key, TextStyle{})
 	})
@@ -328,5 +328,87 @@ func TestFork(t *testing.T) {
 	}
 	if ids := u.Hit(render.Point{X: 100, Y: 5}); len(ids) != 1 {
 		t.Errorf("the original hits %v at x=100; only outer is there", ids)
+	}
+}
+
+// A clickable box with no hover of its own gets the toolkit's: a wash under the pointer, a stronger one pressed.
+func TestHoverWash(t *testing.T) {
+	u := newUI()
+	o := u.Options()
+	o.Hover, o.Pressed = render.Color{R: 1, A: 10}, render.Color{R: 2, A: 20}
+	u.SetOptions(o)
+	boxes := []Style{
+		{Interactive: true, Cursor: render.CursorPointer},
+		{Focusable: true, Cursor: render.CursorPointer},
+		{Interactive: true, Cursor: render.CursorPointer, NoHover: true},
+		{Interactive: true, Cursor: render.CursorText},
+		{Interactive: true, Cursor: render.CursorPointer, Disabled: true},
+		{},
+	}
+	frame := func() []render.Op {
+		return paintOps(u, render.Point{X: 600, Y: 40}, func(c *Ctx) {
+			c.Row("row", Style{}, func(c *Ctx) {
+				for i, st := range boxes {
+					st.W, st.H, st.Fill = Px(100), Px(40), render.Color{B: 9, A: 255}
+					c.Box(i, st, nil)
+				}
+			})
+		})
+	}
+	washes := func(ops []render.Op) []render.Color {
+		var out []render.Color
+		for _, op := range ops {
+			if op.Kind == render.OpRect && (op.Style.Fill == o.Hover || op.Style.Fill == o.Pressed) {
+				out = append(out, op.Style.Fill)
+			}
+		}
+		return out
+	}
+	frame()
+	for i, want := range []bool{true, true, false, false, false, false} {
+		p := render.Point{X: float32(i)*100 + 50, Y: 20}
+		u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+		if got := washes(frame()); (len(got) == 1 && got[0] == o.Hover) != want || len(got) > 1 {
+			t.Errorf("box %d hovered: washes %v, want one: %v", i, got, want)
+		}
+		u.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonPrimary})
+		if got := washes(frame()); (len(got) == 1 && got[0] == o.Pressed) != want || len(got) > 1 {
+			t.Errorf("box %d pressed: washes %v, want the pressed one: %v", i, got, want)
+		}
+		u.Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonPrimary})
+	}
+	u.Pointer(render.PointerEvent{Kind: render.PointerLeave})
+	if got := washes(frame()); len(got) != 0 {
+		t.Errorf("with the pointer gone: washes %v", got)
+	}
+}
+
+// Inside holds while the pointer's on a box or on something interactive inside it, as a button in a row.
+func TestInside(t *testing.T) {
+	u := newUI()
+	var row, btn Interaction
+	frame := func() {
+		paintOps(u, render.Point{X: 300, Y: 40}, func(c *Ctx) {
+			row = c.Interaction(c.Next("row"))
+			c.Row("row", Style{W: Px(200), H: Px(30), Interactive: true}, func(c *Ctx) {
+				btn = c.Interaction(c.Next("x"))
+				c.Box("gap", Style{W: Px(170)}, nil)
+				c.Box("x", Style{W: Px(20), H: Px(20), Interactive: true}, nil)
+			})
+		})
+	}
+	frame()
+	for _, tt := range []struct {
+		x               float32
+		inRow, rowHover bool
+	}{{50, true, true}, {180, true, false}, {250, false, false}} {
+		u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: tt.x, Y: 15}})
+		frame()
+		if row.Inside != tt.inRow || row.Hovered != tt.rowHover {
+			t.Errorf("at x=%v: row inside %v hovered %v, want %v %v", tt.x, row.Inside, row.Hovered, tt.inRow, tt.rowHover)
+		}
+		if tt.x == 180 && (!btn.Hovered || !btn.Inside) {
+			t.Errorf("on the button: %+v", btn)
+		}
 	}
 }

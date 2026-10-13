@@ -51,6 +51,15 @@ type Backend interface {
 type WindowOpts struct {
 	Title         string
 	Width, Height float32
+	// Frame is where the window was when it last closed, from Placed, or zero. A backend that can place windows
+	// puts it there, fitted to the screens as they are now (PlaceWindow); one that can't takes its size.
+	Frame Rect
+}
+
+// Placed is a window that knows where it is: its frame in logical pixels, from the main screen's top left. ok is
+// false until it knows.
+type Placed interface {
+	Placement() (r Rect, ok bool)
 }
 
 type Window interface {

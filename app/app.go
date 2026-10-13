@@ -146,11 +146,17 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		return err
 	}
 
-	w, err := be.NewWindow(render.WindowOpts{Title: "Oriel"})
+	place := windowPlace{path: filepath.Join(cfg.StateDir, "window.json")}
+	w, err := be.NewWindow(render.WindowOpts{Title: "Oriel", Width: 1280, Height: 800, Frame: place.load()})
 	if err != nil {
 		return err
 	}
 	defer w.Close()
+	defer func() {
+		if err := place.save(w); err != nil {
+			log.Error("window place", "err", err)
+		}
+	}()
 	sh.desktop = cfg.Desktop
 	if sh.desktop == nil {
 		sh.desktop = windowDesktop(w)
@@ -490,12 +496,32 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 			}
 			continue
 		}
+		if k := a.Keymap; !l.ready(k) {
+			if k.Desc != "" {
+				l.store.Apply(core.Notified{Notice: core.Notice{ID: "command.unavailable." + k.Command, Severity: core.SevInfo, Source: "core",
+					Text: k.Desc + " isn't available yet", Time: now()}})
+			}
+			continue
+		}
 		if err := l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args); err != nil {
 			if _, ok := err.(*registry.Panic); !ok {
 				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir)})
 			}
 		}
 	}
+}
+
+// ready is false when k's command says it isn't available yet, as a rail entry's view before it's built; a command
+// that's missing or turned off is ready, so running it says why it can't.
+func (l *loop) ready(k *registry.Keymap) bool {
+	for _, c := range l.reg.Commands() {
+		if c.ID == k.Command && c.Available != nil {
+			ok := true
+			registry.Call(func() error { ok = c.Available(k.Args); return nil })
+			return ok
+		}
+	}
+	return true
 }
 
 func (l *loop) draw() error {

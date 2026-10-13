@@ -57,10 +57,12 @@ func (b *Backend) invalidate() {
 }
 
 func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
-	w := &Window{win: new(app.Window), events: make(chan render.Event), queue: make(chan render.Event, 1024)}
+	w := &Window{win: new(app.Window), events: make(chan render.Event), queue: make(chan render.Event, 1024), opts: o, pl: newPlacer()}
 	w.scale.Store(float32(1))
 	opts := []app.Option{app.Title(o.Title)}
-	if o.Width > 0 && o.Height > 0 {
+	if f := o.Frame; f.Dx() > 0 && f.Dy() > 0 {
+		opts = append(opts, app.Size(unit.Dp(f.Dx()), unit.Dp(f.Dy())))
+	} else if o.Width > 0 && o.Height > 0 {
 		opts = append(opts, app.Size(unit.Dp(o.Width), unit.Dp(o.Height)))
 	}
 	w.win.Option(opts...)
@@ -84,6 +86,8 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 // Window is a Gio window. The app records frames on its own goroutine; the window's event loop
 // replays the latest one whenever Gio asks for a frame.
 type Window struct {
+	opts   render.WindowOpts
+	pl     placer
 	win    *app.Window
 	events chan render.Event // to the app, in order
 	queue  chan render.Event // from the event loop, which never blocks on the app
@@ -126,6 +130,17 @@ func (w *Window) SetCursor(c render.Cursor) {
 }
 
 func (w *Window) Scale() float32 { return w.scale.Load().(float32) }
+
+var _ render.Placed = (*Window)(nil)
+
+// Placement is where the window is; where the windowing system won't say, as Wayland's won't, it's only its size.
+func (w *Window) Placement() (render.Rect, bool) {
+	if r, ok := w.pl.frame(w.Scale()); ok {
+		return r, true
+	}
+	s := w.Size()
+	return render.Rect{Max: s}, s.X > 0 && s.Y > 0
+}
 
 func (w *Window) Size() render.Point {
 	s, _ := w.size.Load().(render.Point)
@@ -180,6 +195,9 @@ func (w *Window) loop() {
 	var ops op.Ops
 	f := NewFrame()
 	tag := new(int)
+	var held pointer.Buttons
+	viewed, placed := false, false
+	defer w.pl.close()
 	for {
 		switch e := w.win.Event().(type) {
 		case app.DestroyEvent:
@@ -187,6 +205,10 @@ func (w *Window) loop() {
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
 			scale := gtx.Metric.PxPerDp
+			if viewed && !placed {
+				w.pl.place(w.opts.Frame, render.Point{X: w.opts.Width, Y: w.opts.Height}, scale)
+				placed = true
+			}
 			size := render.Point{X: float32(e.Size.X) / scale, Y: float32(e.Size.Y) / scale}
 			if scale != w.Scale() || size != w.Size() {
 				w.scale.Store(scale)
@@ -228,7 +250,7 @@ func (w *Window) loop() {
 				case key.Event, key.FocusEvent:
 					w.ask.Store(true)
 				}
-				for _, k := range translate(ev, scale) {
+				for _, k := range translate(ev, scale, &held) {
 					w.post(k)
 				}
 			}
@@ -241,6 +263,10 @@ func (w *Window) loop() {
 			}
 			f.End()
 			e.Frame(gtx.Ops)
+		default:
+			if w.pl.view(e) {
+				viewed = true
+			}
 		}
 	}
 }

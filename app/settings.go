@@ -659,27 +659,21 @@ func (s *settingsExt) build(c *ui.Ctx) {
 				c.Text("t", "SECTIONS", capLabel(th))
 				c.Box("g", ui.Style{H: ui.Px(6)}, nil)
 				for _, name := range names {
-					id := c.Next(name)
-					hit := c.Interaction(id)
-					if hit.Clicked {
-						s.section, s.query = name, ""
-					}
 					on := s.query == "" && name == s.section
 					fill, fg := render.Color{}, theme.FgMuted
-					switch {
-					case on:
+					if on {
 						fill, fg = th.C(theme.AccentBg), theme.Fg
-					case hit.Hovered:
-						fill = th.C(theme.BgRaised)
 					}
-					c.Row(name, ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(10, 0), Gap: 8, Cross: ui.Center, Fill: fill, Radius: 5,
-						Interactive: true, Cursor: render.CursorPointer, Help: "shell/settings#sections", Role: ui.RoleListItem, Label: name, Selected: on}, func(c *ui.Ctx) {
+					if widget.Clickable(c, name, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(10, 0), Gap: 8, Cross: ui.Center, Fill: fill,
+						Radius: 5, Help: "shell/settings#sections", Role: ui.RoleListItem, Label: name, Selected: on}, func(c *ui.Ctx) {
 						c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13}, Color: th.C(fg)})
 						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 						if n := sections[name]; n > 0 {
 							c.Text("m", fmt.Sprintf("● %d", n), monoAt(th, 10, tSetModified))
 						}
-					})
+					}).Clicked {
+						s.section, s.query = name, ""
+					}
 				}
 			})
 			c.Box("d", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
@@ -723,7 +717,7 @@ func (s *settingsExt) header(c *ui.Ctx, th *theme.Resolved) {
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		c.Text("scope", "EDITING", capLabel(th))
 		scope := s.scope
-		if segmented(c, "scopes", scopeNames, &scope, "shell/settings#scope") {
+		if widget.Segmented(c, "scopes", scopeNames, &scope, widget.SegmentedOpts{Help: "shell/settings#scope"}) {
 			if _, err := s.fileFor(scope); err != nil {
 				s.fail(err)
 			} else {
@@ -734,7 +728,7 @@ func (s *settingsExt) header(c *ui.Ctx, th *theme.Resolved) {
 		if s.asTOML {
 			toml = 1
 		}
-		if segmented(c, "as", []string{"CONTROLS", "TOML"}, &toml, "shell/settings#toml") {
+		if widget.Segmented(c, "as", []string{"CONTROLS", "TOML"}, &toml, widget.SegmentedOpts{Help: "shell/settings#toml"}) {
 			s.asTOML = toml == 1
 		}
 	})
@@ -818,13 +812,11 @@ func (s *settingsExt) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer
 		if !filepath.IsAbs(file) {
 			file = filepath.Join(s.sh.cfg.ConfigDir, file)
 		}
-		id := c.Next("open")
-		if c.Interaction(id).Clicked {
+		if widget.Clickable(c, "open", ui.Style{Dir: ui.Row, Label: "Open " + src, Help: "shell/settings#rows"}, func(c *ui.Ctx) {
+			c.Text("t", "Open "+src, monoAt(th, 10.5, theme.Accent))
+		}).Clicked {
 			s.fail(s.h.Run(context.Background(), "editor.open", registry.Args{"path": file, "line": line}))
 		}
-		c.Row("open", ui.Style{Interactive: true, Cursor: render.CursorPointer, Role: ui.RoleButton, Label: "Open " + src, Help: "shell/settings#rows"}, func(c *ui.Ctx) {
-			c.Text("t", "Open "+src, monoAt(th, 10.5, theme.Accent))
-		})
 	})
 }
 
@@ -840,7 +832,7 @@ func (s *settingsExt) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionS
 		cur, _ := v.(string)
 		if len(sp.Values) <= 4 {
 			i := slices.Index(sp.Values, cur)
-			if segmented(c, "choices", upper(sp.Values), &i, "shell/settings#rows") && !disabled {
+			if widget.Segmented(c, "choices", upper(sp.Values), &i, widget.SegmentedOpts{Help: "shell/settings#rows"}) && !disabled {
 				s.fail(s.set(sp.Name, sp.Values[i], s.scope))
 			}
 			return

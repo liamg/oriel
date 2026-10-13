@@ -276,23 +276,7 @@ func (p *logPanel) scopes(c *ui.Ctx, st core.State) {
 	if st.Focus != "" {
 		labels[1] = "Session · " + string(st.Focus)
 	}
-	th := c.Theme()
-	c.Row("scope", ui.Style{Stroke: th.C(theme.LineStrong), Border: 1, Radius: 5, Clip: true, Role: ui.RoleTabList, Label: "Log scope"}, func(c *ui.Ctx) {
-		for i, l := range labels {
-			id := c.Next(i)
-			if c.Interaction(id).Clicked {
-				p.scope = i
-			}
-			fill, fg := color.NRGBA{}, th.C(theme.FgMuted)
-			if p.scope == i {
-				fill, fg = th.C(theme.AccentBg), th.C(theme.Accent)
-			}
-			c.Box(i, ui.Style{Pad: ui.PadXY(10, 4), Fill: fill, Interactive: true, Help: "errors#log", Cursor: render.CursorPointer, Role: ui.RoleTab, Selected: p.scope == i,
-				Label: l}, func(c *ui.Ctx) {
-				c.Text(nil, l, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: fg})
-			})
-		}
-	})
+	widget.Segmented(c, "scope", upper(labels), &p.scope, widget.SegmentedOpts{Help: "errors#log", Label: "Log scope"})
 }
 
 func (p *logPanel) levelChip(c *ui.Ctx, lv slog.Level, n int) {
@@ -305,26 +289,16 @@ func (p *logPanel) levelChip(c *ui.Ctx, lv slog.Level, n int) {
 	if !p.show[lv] {
 		col = c.Theme().C(theme.FgGhost)
 	}
-	id := c.Next(lv)
-	if c.Interaction(id).Clicked {
+	if widget.Clickable(c, lv, ui.Style{Help: "errors#log", Label: "Show " + levelName(lv), Selected: p.show[lv]}, func(c *ui.Ctx) {
+		widget.Chip(c, "chip", label, col, "errors#log")
+	}).Clicked {
 		p.show[lv] = !p.show[lv]
 	}
-	c.Box(lv, ui.Style{Interactive: true, Help: "errors#log", Cursor: render.CursorPointer, Role: ui.RoleButton, Label: "Show " + levelName(lv), Selected: p.show[lv]}, func(c *ui.Ctx) {
-		widget.Chip(c, "chip", label, col, "errors#log")
-	})
 }
 
 func (p *logPanel) row(c *ui.Ctx, r logRow) {
 	th := c.Theme()
 	open := p.open == r.key
-	id := c.Next(r.key)
-	if c.Interaction(id).Clicked {
-		if open {
-			p.open = ""
-		} else {
-			p.open = r.key
-		}
-	}
 	isErr := bucket(r.level) == slog.LevelError
 	fill := color.NRGBA{}
 	if isErr {
@@ -332,8 +306,8 @@ func (p *logPanel) row(c *ui.Ctx, r logRow) {
 	}
 	levelCol := map[slog.Level]theme.TokenID{slog.LevelError: theme.Error, slog.LevelWarn: theme.Warn, slog.LevelInfo: theme.FgFaint, slog.LevelDebug: theme.FgGhost}[bucket(r.level)]
 	c.Column(r.key, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-		c.Row("line", ui.Style{W: ui.Flex(1), H: ui.Px(23), Pad: ui.Insets{R: 12}, Gap: 12, Cross: ui.Center, Fill: fill, Interactive: true, Help: "errors#log",
-			Cursor: render.CursorPointer, Role: ui.RoleButton, Expanded: &open, Label: r.text}, func(c *ui.Ctx) {
+		in := widget.Clickable(c, "line", ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(23), Pad: ui.Insets{R: 12}, Gap: 12, Cross: ui.Center, Fill: fill,
+			Help: "errors#log", Expanded: &open, Label: r.text}, func(c *ui.Ctx) {
 			edge := color.NRGBA{}
 			if isErr {
 				edge = th.C(theme.Error)
@@ -363,6 +337,13 @@ func (p *logPanel) row(c *ui.Ctx, r logRow) {
 				})
 			}
 		})
+		if in.Clicked {
+			if open = !open; open {
+				p.open = r.key
+			} else {
+				p.open = ""
+			}
+		}
 		if open {
 			p.detail(c, r)
 		}
@@ -458,18 +439,12 @@ func (p *logPanel) frames(c *ui.Ctx, frames []Frame, failing string) {
 				hidden++
 				continue
 			}
-			id := c.Next(i)
-			if c.Interaction(id).Clicked && f.Line > 0 {
-				if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": p.resolve(f.File), "line": f.Line}); err != nil {
-					p.h.Notify(core.Notice{ID: "log.open-frame", Severity: core.SevWarning, Source: "core", Key: true, Text: err.Error()})
-				}
-			}
 			fill := color.NRGBA{}
 			if f.Loc() == failing {
 				fill = th.C(theme.BgRaised)
 			}
-			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(19), Pad: ui.PadXY(6, 0), Gap: 12, Cross: ui.Center, Fill: fill, Radius: 3, Interactive: true, Help: "errors#log",
-				Cursor: render.CursorPointer, Role: ui.RoleButton, Label: f.Loc()}, func(c *ui.Ctx) {
+			in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(19), Pad: ui.PadXY(6, 0), Gap: 12, Cross: ui.Center, Fill: fill,
+				Radius: 3, Help: "errors#log", Label: f.Loc()}, func(c *ui.Ctx) {
 				c.Box("loc", ui.Style{W: ui.Px(180), Clip: true}, func(c *ui.Ctx) {
 					c.Text(nil, shortLoc(f), mono(11, typeset.Normal, th.C(tLogSource)))
 				})
@@ -477,16 +452,19 @@ func (p *logPanel) frames(c *ui.Ctx, frames []Frame, failing string) {
 					c.Text(nil, f.Fn, mono(11, typeset.Normal, th.C(theme.FgMuted)))
 				})
 			})
+			if in.Clicked && f.Line > 0 {
+				if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": p.resolve(f.File), "line": f.Line}); err != nil {
+					p.h.Notify(core.Notice{ID: "log.open-frame", Severity: core.SevWarning, Source: "core", Key: true, Text: err.Error()})
+				}
+			}
 		}
 		if hidden > 0 {
-			id := c.Next("gofr")
-			if c.Interaction(id).Clicked {
-				p.goFrames = true
-			}
-			c.Row("gofr", ui.Style{Pad: ui.PadXY(6, 2), Gap: 12, Interactive: true, Help: "errors#log", Cursor: render.CursorPointer, Role: ui.RoleButton, Label: "Show Go frames"}, func(c *ui.Ctx) {
+			if widget.Clickable(c, "gofr", ui.Style{Dir: ui.Row, Pad: ui.PadXY(6, 2), Gap: 12, Help: "errors#log", Label: "Show Go frames"}, func(c *ui.Ctx) {
 				c.Text("n", fmt.Sprintf("+%d Go frames", hidden), mono(11, typeset.Normal, th.C(theme.FgGhost)))
 				c.Text("show", "show", mono(11, typeset.Normal, th.C(theme.FgFaint)))
-			})
+			}).Clicked {
+				p.goFrames = true
+			}
 		}
 	})
 }

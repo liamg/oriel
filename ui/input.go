@@ -14,6 +14,7 @@ import (
 // can't be hit yet, so hover and press resolve against the previous frame's.
 type Interaction struct {
 	Hovered      bool // the pointer is over it, and it's the topmost interactive node there
+	Inside       bool // the pointer is over it or over something interactive inside it: a row with a button in it
 	Pressed      bool // the primary button went down on it and hasn't come up, and the pointer's still on it
 	Held         bool // the primary button went down on it and hasn't come up, wherever the pointer is: a drag
 	Clicked      bool // pressed and released on it since the last frame
@@ -32,6 +33,8 @@ type Interaction struct {
 // Options are how the UI looks and behaves where widgets don't say.
 type Options struct {
 	FocusRing     render.Color
+	Hover         render.Color // washed over a clickable box under the pointer, unless it has NoHover
+	Pressed       render.Color // and while it's pressed
 	TooltipDelay  time.Duration
 	Tooltip       TextStyle
 	TooltipFill   render.Color
@@ -46,6 +49,8 @@ func defaultOptions(text TextStyle) Options {
 	tip.Font.Family = typeset.UI
 	return Options{
 		FocusRing:     render.Color{R: 0xff, G: 0xd2, B: 0x3f, A: 0xff},
+		Hover:         render.Color{R: 0xff, G: 0xff, B: 0xff, A: 0x0a},
+		Pressed:       render.Color{R: 0xff, G: 0xff, B: 0xff, A: 0x16},
 		TooltipDelay:  500 * time.Millisecond,
 		Tooltip:       tip,
 		TooltipFill:   render.Color{R: 0x19, G: 0x18, B: 0x15, A: 0xff},
@@ -180,6 +185,7 @@ func (u *UI) Interaction(id ID) Interaction {
 	in := &u.in
 	it := Interaction{
 		Hovered:      in.hot == id && id != 0,
+		Inside:       id != 0 && u.within(in.hot, id),
 		Pressed:      in.active == id && in.hot == id && id != 0,
 		Held:         in.active == id && id != 0,
 		Clicked:      in.clicks[id],

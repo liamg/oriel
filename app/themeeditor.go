@@ -616,21 +616,13 @@ func (e *themeEditor) tokens(c *ui.Ctx, th *theme.Resolved) {
 				})
 				return
 			}
-			id := c.Next(i)
-			hit := c.Interaction(id)
-			if hit.Clicked {
-				e.choose(row.name)
-			}
 			fill := render.Color{}
 			fg := theme.FgMuted
-			switch {
-			case row.name == e.picked:
+			if row.name == e.picked {
 				fill, fg = th.C(theme.AccentBg), theme.Fg
-			case hit.Hovered:
-				fill = th.C(theme.BgRaised)
 			}
-			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 8, Cross: ui.Center, Fill: fill, Interactive: true,
-				Cursor: render.CursorPointer, Help: "shell/theme#tokens", Role: ui.RoleListItem, Label: row.label, Selected: row.name == e.picked}, func(c *ui.Ctx) {
+			in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 8, Cross: ui.Center, Fill: fill,
+				Help: "shell/theme#tokens", Role: ui.RoleListItem, Label: row.label, Selected: row.name == e.picked}, func(c *ui.Ctx) {
 				dot := render.Color{}
 				if row.mine {
 					dot = th.C(tThemeMine)
@@ -641,6 +633,9 @@ func (e *themeEditor) tokens(c *ui.Ctx, th *theme.Resolved) {
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("x", short(row.expr, 22), monoAt(th, 10, theme.FgGhost))
 			})
+			if in.Clicked {
+				e.choose(row.name)
+			}
 		})
 	})
 }
@@ -662,52 +657,27 @@ func (e *themeEditor) base() string {
 	return st[len(st)-2].Name
 }
 
-// segmented is a strip of mono buttons, one lit.
-func segmented(c *ui.Ctx, key any, labels []string, active *int, help string) bool {
-	th := c.Theme()
-	changed := false
-	c.Row(key, ui.Style{H: ui.Px(24), Stroke: th.C(theme.LineStrong), Border: 1, Radius: 5, Clip: true, Role: ui.RoleTabList}, func(c *ui.Ctx) {
-		for i, l := range labels {
-			id := c.Next(i)
-			if c.Interaction(id).Clicked && *active != i {
-				*active, changed = i, true
-			}
-			fill, fg := render.Color{}, th.C(theme.FgFaint)
-			if i == *active {
-				fill, fg = th.C(theme.AccentBg), th.C(theme.Accent)
-			}
-			c.Row(i, ui.Style{H: ui.Flex(1), Pad: ui.PadXY(10, 0), Cross: ui.Center, Fill: fill, Interactive: true, Cursor: render.CursorPointer,
-				Help: help, Role: ui.RoleTab, Label: l, Selected: i == *active}, func(c *ui.Ctx) {
-				c.Text("l", l, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .1}, Color: fg})
-			})
-		}
-	})
-	return changed
-}
-
 func (e *themeEditor) toolbar(c *ui.Ctx, th *theme.Resolved) {
 	c.Row("bar", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.PadXY(14, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		vs := "SPLIT VS BASE"
 		if b := e.base(); b != "" {
 			vs = "SPLIT VS " + strings.ToUpper(b)
 		}
-		segmented(c, "tab", []string{"FIXTURE", vs}, &e.tab, "shell/theme#preview")
+		widget.Segmented(c, "tab", []string{"FIXTURE", vs}, &e.tab, widget.SegmentedOpts{Help: "shell/theme#preview"})
 		variant := 0
 		if th.Variant == theme.Light {
 			variant = 1
 		}
-		if segmented(c, "variant", []string{"DARK", "LIGHT"}, &variant, "shell/theme#preview") {
+		if widget.Segmented(c, "variant", []string{"DARK", "LIGHT"}, &variant, widget.SegmentedOpts{Help: "shell/theme#preview"}) {
 			e.fail(e.h.Options().Set("ui.variant", registry.LayerUser, registry.At{}, []string{"dark", "light"}[variant]))
 		}
 		pink := th.C(tThemePick)
-		id := c.Next("pick")
-		if c.Interaction(id).Clicked {
+		if widget.Clickable(c, "pick", ui.Style{Dir: ui.Row, H: ui.Px(24), Pad: ui.PadXY(10, 0), Cross: ui.Center, Stroke: pink, Border: 1, Radius: 12,
+			Help: "shell/theme#pick", Label: "Pick mode"}, func(c *ui.Ctx) {
+			c.Text("l", "PICK MODE · CLICK ANYTHING", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .1}, Color: pink})
+		}).Clicked {
 			e.fail(e.startPick())
 		}
-		c.Row("pick", ui.Style{H: ui.Px(24), Pad: ui.PadXY(10, 0), Cross: ui.Center, Stroke: pink, Border: 1, Radius: 12, Interactive: true,
-			Cursor: render.CursorPointer, Help: "shell/theme#pick", Role: ui.RoleButton, Label: "Pick mode"}, func(c *ui.Ctx) {
-			c.Text("l", "PICK MODE · CLICK ANYTHING", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .1}, Color: pink})
-		})
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		c.Text("ms", fmt.Sprintf("repainted in %.1fms", float64(e.paintDur.Microseconds())/1000), monoAt(th, 11, theme.FgFaint))
 	})
@@ -929,20 +899,14 @@ func (e *themeEditor) chain(c *ui.Ctx, th *theme.Resolved) {
 			c.Text("n", e.picked, monoAt(th, 10, tThemePick))
 		})
 		for i, l := range links {
-			id := c.Next(i)
-			hit := c.Interaction(id)
-			if hit.Clicked {
-				e.sel = l.Name
-			}
 			on := l.Name == e.sel
 			stroke := th.C(theme.Line)
 			if on {
 				stroke = th.C(theme.Accent)
 			}
 			label := strings.TrimPrefix(l.Name, "palette:")
-			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(10, 0), Gap: 10, Cross: ui.Center, Stroke: stroke, Border: 1, Radius: 5,
-				Fill: th.C(theme.BgBase), Interactive: true, Cursor: render.CursorPointer, Help: "shell/theme#chain", Role: ui.RoleListItem,
-				Label: label, Selected: on}, func(c *ui.Ctx) {
+			in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(10, 0), Gap: 10, Cross: ui.Center, Stroke: stroke,
+				Border: 1, Radius: 5, Fill: th.C(theme.BgBase), Help: "shell/theme#chain", Role: ui.RoleListItem, Label: label, Selected: on}, func(c *ui.Ctx) {
 				c.Box("sw", ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 3, Fill: colorOf(th, l.Name), Stroke: th.C(theme.LineStrong), Border: 1}, nil)
 				c.Text("n", label, monoAt(th, 11.5, theme.Fg))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -952,6 +916,9 @@ func (e *themeEditor) chain(c *ui.Ctx, th *theme.Resolved) {
 				}
 				c.Text("k", kind, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Tracking: .1}, Color: th.C(theme.FgGhost)})
 			})
+			if in.Clicked {
+				e.sel = l.Name
+			}
 		}
 		if n := e.dependants(th, e.sel); n > 0 && e.sel != e.picked {
 			widget.Wrap(c, "note", fmt.Sprintf("Editing %s also changes %d other tokens. Pick the top link to change only %s.",
@@ -979,7 +946,7 @@ func (e *themeEditor) value(c *ui.Ctx, th *theme.Resolved) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", "VALUE", capLabel(th))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			segmented(c, "mode", []string{"DERIVE", "FIXED"}, &e.mode, "shell/theme#value")
+			widget.Segmented(c, "mode", []string{"DERIVE", "FIXED"}, &e.mode, widget.SegmentedOpts{Help: "shell/theme#value"})
 		})
 		col := colorOf(th, e.sel)
 		if e.mode == 0 {

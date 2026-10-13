@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // RailView is the icon strip down the window's left edge (ui.md 01f): the rail entries, built-in or a plugin's.
@@ -89,12 +90,6 @@ func (r *rail) entry(c *ui.Ctx, h ext.Host, e registry.RailEntry) {
 	th := c.Theme()
 	ok := h.Available(e.Command, e.Args)
 	on := ok && e.Active != nil && e.Active()
-	id := c.Next(e.Name)
-	if ok && c.Interaction(id).Clicked {
-		if err := h.Run(context.Background(), e.Command, e.Args); err != nil {
-			h.Log().Error("rail", "entry", e.Name, "err", err)
-		}
-	}
 	col, fill := th.C(tRailIcon), render.Color{}
 	switch {
 	case on:
@@ -109,8 +104,8 @@ func (r *rail) entry(c *ui.Ctx, h ext.Host, e registry.RailEntry) {
 	if !ok {
 		tip += " (not available yet)"
 	}
-	c.Box(e.Name, ui.Style{W: ui.Px(32), H: ui.Px(32), Radius: 7, Fill: fill, Main: ui.Center, Cross: ui.Center, Interactive: ok, Disabled: !ok,
-		Cursor: render.CursorPointer, Tooltip: tip, Role: ui.RoleButton, Label: e.Title, Selected: on, Help: "shell/rail"}, func(c *ui.Ctx) {
+	in := widget.Clickable(c, e.Name, ui.Style{W: ui.Px(32), H: ui.Px(32), Radius: 7, Fill: fill, Main: ui.Center, Cross: ui.Center, Disabled: !ok,
+		Tooltip: tip, Label: e.Title, Selected: on, Help: "shell/rail"}, func(c *ui.Ctx) {
 		icon(c, "icon", e.Icon, 16, col)
 		if n := badge(e); n > 0 {
 			c.Box("badge", ui.Style{H: ui.Px(13), Pad: ui.PadXY(3, 0), Radius: 6.5, Fill: th.C(tRailBadge), Cross: ui.Center,
@@ -119,6 +114,11 @@ func (r *rail) entry(c *ui.Ctx, h ext.Host, e registry.RailEntry) {
 			})
 		}
 	})
+	if in.Clicked {
+		if err := h.Run(context.Background(), e.Command, e.Args); err != nil {
+			h.Log().Error("rail", "entry", e.Name, "err", err)
+		}
+	}
 }
 
 func badge(e registry.RailEntry) int {

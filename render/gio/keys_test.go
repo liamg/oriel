@@ -32,8 +32,28 @@ func TestTranslate(t *testing.T) {
 		{pointer.Event{Kind: pointer.Drag, Position: f32.Pt(4, 4), Buttons: pointer.ButtonPrimary}, []render.Event{render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 2, Y: 2}, Buttons: render.ButtonPrimary}}},
 		{pointer.Event{Kind: pointer.Scroll, Scroll: f32.Pt(0, 30)}, []render.Event{render.PointerEvent{Kind: render.PointerScroll, Scroll: render.Point{Y: 15}}}},
 	} {
-		if got := translate(tt.in, 2); !reflect.DeepEqual(got, tt.want) {
+		if got := translate(tt.in, 2, new(pointer.Buttons)); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("translate(%+v) = %+v, want %+v", tt.in, got, tt.want)
+		}
+	}
+}
+
+// Gio's release carries the buttons still held, as macOS and X11 report them; ours carries the one released.
+func TestTranslateClick(t *testing.T) {
+	var held pointer.Buttons
+	for _, tt := range []struct {
+		in   pointer.Event
+		want render.Buttons
+	}{
+		{pointer.Event{Kind: pointer.Press, Buttons: pointer.ButtonPrimary}, render.ButtonPrimary},
+		{pointer.Event{Kind: pointer.Press, Buttons: pointer.ButtonPrimary | pointer.ButtonSecondary}, render.ButtonSecondary},
+		{pointer.Event{Kind: pointer.Drag, Buttons: pointer.ButtonPrimary | pointer.ButtonSecondary}, render.ButtonPrimary | render.ButtonSecondary},
+		{pointer.Event{Kind: pointer.Release, Buttons: pointer.ButtonPrimary}, render.ButtonSecondary},
+		{pointer.Event{Kind: pointer.Release}, render.ButtonPrimary},
+	} {
+		got := translate(tt.in, 1, &held)
+		if len(got) != 1 || got[0].(render.PointerEvent).Buttons != tt.want {
+			t.Errorf("translate(%v %v) = %+v, want buttons %v", tt.in.Kind, tt.in.Buttons, got, tt.want)
 		}
 	}
 }

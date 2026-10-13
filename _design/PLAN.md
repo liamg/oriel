@@ -12,6 +12,9 @@ none of the room.
 
 - **Extensible by construction.** Everything is built on proper, general APIs that plugins can use too. Built-in
   features are themselves plugins, and nothing is hacked in for one use case (`plugins.md`, `AGENTS.md`).
+- **Reuse before you build.** One component per job, used everywhere: a widget, a registry helper, a git query, a
+  test harness. A second copy of something is the cue to extract it, and a fix goes where every user gets it (the
+  toolkit, the shared package), not into one screen or one caller.
 - An IDE you'd use with no agent at all: real vim, LSP, debugger, terminals, git.
 - An AI harness where the agent's work is **planned, visible, reviewed and owned**:
   plan → work → review → verify → PR, with threads on any line.
