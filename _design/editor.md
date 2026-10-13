@@ -142,6 +142,22 @@ engine never feels like another binary running in a pane.
   backreferences, no editor-state atoms like `\%V` and `\%#`). It runs over the buffer line by line, with a step budget
   and a recursion limit in place of RE2's linear-time guarantee.
 
+### As built (ED-10)
+
+- `vimregex.CompilePCRE` is the second parser; `regex` is its API over text (`Compile`, `FindIndex`,
+  `FindAllIndex`, `ReplaceAll` with `$n`, `${name}` and `$$`, `Names`). The matcher gained what PCRE2 needs and vim
+  doesn't: any number of groups and named ones, case folding per atom (`(?i)` in part of a pattern), `\b`, `\A`,
+  `\Z`, `\z`, `\G`, `$` before a final newline, code points rather than clusters, no end-of-line after the last
+  line, unset back references failing, and bounded look-behind of any length (farthest start first).
+- Supported: `(?:)`, named and numbered groups, `(?>)`, look-around, lazy and possessive quantifiers, `\K`, back
+  references (`\1`, `\g{-1}`, `\k<name>`, `(?P=name)`), `(?imnsx-imnsx)` and `(?^)`, `\Q…\E`, `(?#)`, the escapes,
+  `\d \w \s \h \v \R \N`, POSIX classes, `\p{…}` (Unicode categories and scripts), `[[:<:]]`/`[[:>:]]`.
+- Not supported, an `UnsupportedError` naming the feature: recursion and subroutine calls, conditionals, branch
+  reset, backtracking verbs, callouts, `\X`, non-atomic assertions and duplicate names. PCRE2's own tests
+  (`spec/pcre2`, 10.44's testoutput1 and testoutput2) run in `vimregex`: every case that uses supported features
+  passes (1826 patterns), and the rest are listed with why in `vimregex/testdata/pcre2-unsupported.txt`.
+- Grep (and so project search) takes PCRE2. Lua binds `regex` when scripting lands (PL-1).
+
 ## Syntax
 
 - **Tree-sitter** for highlighting, folds, text objects and outline.

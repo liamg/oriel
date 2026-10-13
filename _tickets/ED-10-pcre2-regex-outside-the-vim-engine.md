@@ -2,7 +2,7 @@
 id: ED-10
 title: "PCRE2 regex outside the vim engine"
 phase: P3
-status: todo
+status: review
 area: Editor
 module: regex
 depends_on: [ED-3]
@@ -30,6 +30,12 @@ depends_on: [ED-3]
 
 the cases from PCRE2's own test suite (`testdata/testinput*`/`testoutput*`, vendored under `spec/pcre2/`) that use
 supported features pass, with the unsupported ones listed; the Lua API takes a PCRE2 pattern
+
+## As built
+
+- See editor.md, "As built (ED-10)". `spec/pcre2` holds PCRE2 10.44's testoutput1 and testoutput2 (BSD); 1826
+  patterns pass, and the unsupported ones are listed in `vim/vimregex/testdata/pcre2-unsupported.txt`.
+- The Lua half of "done when" waits for Lua (PL-1): `regex.Compile` is what `L.regex` binds.
 
 ## Rules
 

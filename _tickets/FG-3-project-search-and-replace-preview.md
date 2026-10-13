@@ -39,6 +39,11 @@ ripgrep on the worker streams results; replace shows a diff before applying
 - Grep already leaves out files `.gitattributes` marks generated or vendored (`conventions.searchable`) unless the
   query starts `@all `; keep that in project search and replace.
 
+## From ED-10
+
+- Use `regex` for the search and `Regex.ReplaceAll` (PCRE2's `$n`, `${name}`, `$$`) for the replace preview; grep
+  already takes PCRE2.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

@@ -38,6 +38,11 @@ the `scripting.md` sample `init.lua` runs as written
 - Hooks run under `registry.Call`, and a panicking hook calls `TurnOff(registry.KindHook, …)` so it becomes an error
   notice with "Turn back on", as commands and views already do (`errors.md`). The SH-13 "done when" for hooks lands here.
 
+## From ED-10
+
+- Bind `regex` (PCRE2) as `L.regex`: compile with flags, find, find all, replace with `$n`/`${name}`. ED-10's
+  "the Lua API takes a PCRE2 pattern" is done when this is.
+
 ## Rules
 
 - Start only when everything in **After** is `done`.

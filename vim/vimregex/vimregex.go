@@ -55,7 +55,7 @@ type Options struct {
 // be there too, which :s and searches skip, as vim does.
 type Match struct {
 	Start, End Pos
-	Groups     [10]Group // \0 is the whole match; \1..\9 the submatches
+	Groups     []Group // \0 is the whole match, then each group: at least \1..\9
 }
 
 // Group is one submatch. Set is false for a group that took no part in the match.
@@ -78,7 +78,10 @@ type Regex struct {
 	prog     *node
 	ic       bool
 	icombine bool
-	first    byte // an ASCII character every match starts with, or 0
+	first    byte           // an ASCII character every match starts with, or 0
+	ncap     int            // capture groups, with \0
+	names    map[string]int // named groups' numbers
+	pcre     bool           // PCRE2's dialect: code points not clusters, no newline after the last line
 }
 
 // Compile compiles a vim pattern. Errors are *Error.
@@ -105,7 +108,7 @@ func Compile(pattern string, o Options) (*Regex, error) {
 	} else if p.noicase {
 		ic = false
 	}
-	re := &Regex{prog: prog, ic: ic, icombine: p.icombine}
+	re := &Regex{prog: prog, ic: ic, icombine: p.icombine, ncap: p.npar}
 	if r := firstRune(prog); !ic && r > 0 && r < 0x80 {
 		re.first = byte(r)
 	}
@@ -156,7 +159,7 @@ func zeroWidth(n *node) bool {
 	case opEmpty, opZS, opZE, opAhead, opNotAhead, opBehind, opNotBehind:
 		return true
 	}
-	return n.op >= opBOL && n.op <= opVcol
+	return n.op >= opBOL && n.op <= opStartMatch
 }
 
 // Multiline reports whether the pattern can match an end-of-line with \n or a \_x class, which is
@@ -186,6 +189,29 @@ func (r *Regex) Exec(in Input, line, col int, st *State) (Match, bool) {
 // ExecErr is Exec that also reports ErrTooComplex.
 func (r *Regex) ExecErr(in Input, line, col int, st *State) (Match, bool, error) {
 	m := r.newMatcher(in, st)
+	m.start = Pos{line, col}
+	return r.exec(m, line, col)
+}
+
+// Find is the first match at or after at, trying each line from at's on; \G is at. With notEmpty, a match that
+// starts at at may not be empty: how a global search goes on after an empty match (PCRE2's NOTEMPTY_ATSTART).
+func (r *Regex) Find(in Input, at Pos, notEmpty bool) (Match, bool, error) {
+	m := r.newMatcher(in, nil)
+	m.start, m.notEmptyAt, m.notEmpty = at, at, notEmpty
+	for line := at.Line; line < m.n; line++ {
+		col := 0
+		if line == at.Line {
+			col = at.Col
+		}
+		res, ok, err := r.exec(m, line, col)
+		if ok || err != nil {
+			return res, ok, err
+		}
+	}
+	return Match{}, false, nil
+}
+
+func (r *Regex) exec(m *matcher, line, col int) (Match, bool, error) {
 	if line < 0 || line >= m.n || col < 0 {
 		return Match{}, false, nil
 	}
@@ -210,8 +236,17 @@ func (r *Regex) ExecErr(in Input, line, col int, st *State) (Match, bool, error)
 		if col >= len(text) {
 			return Match{}, false, nil
 		}
-		col = clusterEnd(text, col)
+		col = r.next(text, col)
 	}
+}
+
+// next is the column after the character at col: the next code point in PCRE2, the next cluster in vim.
+func (r *Regex) next(b []byte, col int) int {
+	if r.pcre {
+		_, n := decode(b, col)
+		return col + n
+	}
+	return clusterEnd(b, col)
 }
 
 // MatchAt reports whether a match starts exactly at (line, col).
@@ -223,6 +258,7 @@ func (r *Regex) MatchAt(in Input, line, col int, st *State) (Match, bool) {
 // MatchAtErr is MatchAt that also reports ErrTooComplex.
 func (r *Regex) MatchAtErr(in Input, line, col int, st *State) (Match, bool, error) {
 	m := r.newMatcher(in, st)
+	m.start = Pos{line, col}
 	if line < 0 || line >= m.n || col < 0 || col > len(m.line(line)) {
 		return Match{}, false, nil
 	}

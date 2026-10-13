@@ -23,6 +23,7 @@ like this" isn't a source.
 |---|---|---|
 | vim behaviour | Vim `runtime/doc/*.txt` (`:help`), plus Neovim's where it deliberately differs | a tag, e.g. vim `v9.1.xxxx`, nvim `v0.11.x` |
 | vim regex | `pattern.txt` | same |
+| PCRE2 | PCRE2's own test suite (`testdata/testinput*`, `testoutput*`) | release tag |
 | LSP | the LSP 3.17 specification (markdown source) | commit |
 | DAP | the Debug Adapter Protocol spec + JSON schema | commit |
 | terminal | xterm `ctlseqs`, ECMA-48, kitty keyboard and graphics protocol docs, Ghostty's VT docs | commit |

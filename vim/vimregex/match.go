@@ -1,6 +1,9 @@
 package vimregex
 
-import "math"
+import (
+	"math"
+	"slices"
+)
 
 type pos = Pos
 
@@ -13,7 +16,7 @@ type span struct {
 
 // saved is the state a failed path must restore.
 type saved struct {
-	caps         [10]span
+	caps         []span
 	zs, ze       pos
 	zsSet, zeSet bool
 }
@@ -24,11 +27,16 @@ type matcher struct {
 	st    *State
 	n     int
 	ic    bool
-	saved // the current captures and \zs \ze
-	steps int
-	depth int
-	err   error
-	cache [4]struct {
+	ncap  int
+	start pos // where the search started, for \G
+
+	notEmpty   bool
+	notEmptyAt pos // a match starting here may not be empty
+	saved          // the current captures and \zs \ze
+	steps      int
+	depth      int
+	err        error
+	cache      [4]struct {
 		n int
 		b []byte
 	}
@@ -41,7 +49,7 @@ func (r *Regex) newMatcher(in Input, st *State) *matcher {
 	if st == nil {
 		st = &noState
 	}
-	m := &matcher{re: r, in: in, st: st, n: in.Lines(), ic: r.ic}
+	m := &matcher{re: r, in: in, st: st, n: in.Lines(), ic: r.ic, ncap: max(10, r.ncap)}
 	for i := range m.cache {
 		m.cache[i].n = -1
 	}
@@ -67,10 +75,23 @@ func (m *matcher) line(l int) []byte {
 	return b
 }
 
+// save is a copy of the captures and \zs \ze, to restore after a failed look-around.
+func (m *matcher) save() saved {
+	s := m.saved
+	s.caps = slices.Clone(m.caps)
+	return s
+}
+
 func (m *matcher) try(p pos) (Match, bool) {
-	m.saved = saved{}
+	m.saved = saved{caps: make([]span, m.ncap)}
 	var end pos
-	if !m.match(m.re.prog, p, func(q pos) bool { end = q; return true }) {
+	if !m.match(m.re.prog, p, func(q pos) bool {
+		if m.notEmpty && p == m.notEmptyAt && q == p {
+			return false
+		}
+		end = q
+		return true
+	}) {
 		return Match{}, false
 	}
 	start := p
@@ -80,9 +101,9 @@ func (m *matcher) try(p pos) (Match, bool) {
 	if m.zeSet {
 		end = m.ze
 	}
-	res := Match{Start: start, End: end}
+	res := Match{Start: start, End: end, Groups: make([]Group, m.ncap)}
 	res.Groups[0] = Group{Start: res.Start, End: res.End, Set: true}
-	for i := 1; i < 10; i++ {
+	for i := 1; i < m.ncap; i++ {
 		if c := m.caps[i]; c.sSet && c.eSet {
 			res.Groups[i] = Group{Start: c.s, End: c.e, Set: true}
 		}
@@ -128,7 +149,8 @@ func (m *matcher) match1(n *node, p pos, k cont) bool {
 	case opChar, opCombOnly, opAny, opClass, opSet, opNL:
 		q, ok := m.one(n, p)
 		return ok && k(q)
-	case opBOL, opEOL, opBOW, opEOW, opBOF, opEOF, opCursor, opVisual, opMark, opLnum, opCol, opVcol:
+	case opBOL, opEOL, opBOW, opEOW, opBOF, opEOF, opCursor, opVisual, opMark, opLnum, opCol, opVcol,
+		opPBOL, opSubjEnd, opSubjEndAbs, opWordB, opNotWordB, opStartMatch:
 		return m.assert(n, p) && k(p)
 	case opSkipComb:
 		line := m.line(p.Line)
@@ -158,11 +180,23 @@ func (m *matcher) match1(n *node, p pos, k cont) bool {
 		m.ze, m.zeSet = old, oldSet
 		return false
 	case opBackref:
-		q, ok := m.backref(n.num, p)
+		q, ok := m.backref(n.num, p, n.fold)
 		return ok && k(q)
 	case opCapture:
 		i := n.num
 		old := m.caps[i]
+		if m.re.pcre {
+			// PCRE2: inside the group, a reference to it is still its last complete capture.
+			return m.match(n.subs[0], p, func(q pos) bool {
+				inner := m.caps[i]
+				m.caps[i] = span{s: p, e: q, sSet: true, eSet: true}
+				if k(q) {
+					return true
+				}
+				m.caps[i] = inner
+				return false
+			}) || func() bool { m.caps[i] = old; return false }()
+		}
 		m.caps[i].s, m.caps[i].sSet = p, true
 		if m.match(n.subs[0], p, func(q pos) bool {
 			inner := m.caps[i]
@@ -195,7 +229,7 @@ func (m *matcher) match1(n *node, p pos, k cont) bool {
 		}
 		return m.repeat(n, p, 0, k)
 	case opAhead:
-		sv := m.saved
+		sv := m.save()
 		if !m.match(n.subs[0], p, accept) {
 			m.saved = sv
 			return false
@@ -207,25 +241,27 @@ func (m *matcher) match1(n *node, p pos, k cont) bool {
 		m.saved = sv
 		return false
 	case opNotAhead:
-		sv := m.saved
+		sv := m.save()
 		ok := m.match(n.subs[0], p, accept)
 		m.saved = sv
 		return !ok && m.err == nil && k(p)
 	case opAtomic:
-		sv := m.saved
+		sv := m.save()
 		var end pos
 		if !m.match(n.subs[0], p, func(q pos) bool { end = q; return true }) {
 			m.saved = sv
 			return false
 		}
-		m.dropZ(sv)
+		if !m.re.pcre {
+			m.dropZ(sv)
+		}
 		if k(end) {
 			return true
 		}
 		m.saved = sv
 		return false
 	case opBehind, opNotBehind:
-		sv := m.saved
+		sv := m.save()
 		ok := m.behind(n, p)
 		if n.op == opNotBehind {
 			m.saved = sv
@@ -282,7 +318,8 @@ func (m *matcher) seq(ns []*node, i int, p pos, k cont) bool {
 // ends the repetition, once the minimum is reached.
 func (m *matcher) repeat(n *node, p pos, count int, k cont) bool {
 	next := func(q pos) bool {
-		if q == p && count+1 >= n.min {
+		// An iteration that matched nothing ends the loop: in vim always, in PCRE2 only an unbounded one.
+		if q == p && count+1 >= n.min && (!m.re.pcre || n.max == infinite) {
 			return k(q)
 		}
 		return m.repeat(n, q, count+1, k)
@@ -356,12 +393,46 @@ func (m *matcher) back(p pos) pos {
 		}
 		return pos{p.Line - 1, len(m.line(p.Line - 1))}
 	}
+	if m.re.pcre {
+		return pos{p.Line, prevRuneStart(m.line(p.Line), p.Col)}
+	}
 	return pos{p.Line, clusterStart(m.line(p.Line), p.Col)}
+}
+
+// lines is how many lines end in an end-of-line to match: every one in vim; in PCRE2 all but the last, as the
+// subject's final newline is an empty last line.
+func (m *matcher) lines() int {
+	if m.re.pcre {
+		return m.n - 1
+	}
+	return m.n
+}
+
+// pcreBehind tries the atom at starts from n.num characters back from p up to p, the farthest first, for one that
+// ends at p.
+func (m *matcher) pcreBehind(n *node, p pos) bool {
+	starts := []pos{p}
+	for s := p; len(starts) <= n.num && s != (pos{}); {
+		s = m.back(s)
+		starts = append(starts, s)
+	}
+	for i := len(starts) - 1; i >= 0; i-- {
+		if m.match(n.subs[0], starts[i], func(q pos) bool { return q == p }) {
+			return true
+		}
+		if m.err != nil {
+			return false
+		}
+	}
+	return false
 }
 
 // behind tries the atom at starts going back from p, nearest first, until one ends exactly at p. It
 // looks back over the line p is on and the one before, or `limit` bytes when that is set.
 func (m *matcher) behind(n *node, p pos) bool {
+	if m.re.pcre {
+		return m.pcreBehind(n, p)
+	}
 	limit := n.num
 	s := p
 	for {
@@ -396,7 +467,7 @@ func (m *matcher) one(n *node, p pos) (pos, bool) {
 	}
 	line := m.line(p.Line)
 	if p.Col >= len(line) {
-		if (n.nl || n.op == opNL || n.op == opSet && n.set.nl) && p.Line < m.n {
+		if (n.nl || n.op == opNL || n.op == opSet && n.set.nl) && p.Line < m.lines() {
 			return pos{p.Line + 1, 0}, true
 		}
 		return p, false
@@ -406,6 +477,9 @@ func (m *matcher) one(n *node, p pos) (pos, bool) {
 	}
 	r, l := decode(line, p.Col)
 	end := clusterEnd(line, p.Col)
+	if m.re.pcre {
+		end = p.Col + l
+	}
 	switch n.op {
 	case opAny:
 	case opClass:
@@ -413,14 +487,14 @@ func (m *matcher) one(n *node, p pos) (pos, bool) {
 			return p, false
 		}
 	case opSet:
-		if n.set.has(r, m) == n.neg {
+		if n.set.has(r, m, m.ic || n.fold) == n.neg {
 			return p, false
 		}
 	case opChar:
-		if r != n.r && !(m.ic && foldEq(r, n.r)) {
+		if r != n.r && !((m.ic || n.fold) && foldEq(r, n.r)) {
 			return p, false
 		}
-		if m.re.icombine || n.anyComb {
+		if m.re.icombine || n.anyComb || m.re.pcre {
 			break
 		}
 		if end == p.Col+l {
@@ -438,6 +512,15 @@ func (m *matcher) one(n *node, p pos) (pos, bool) {
 		}
 	}
 	return pos{p.Line, end}, true
+}
+
+func pcreWord(r rune) bool {
+	return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_'
+}
+
+func prevRune(b []byte, col int) rune {
+	r, _ := decode(b, prevRuneStart(b, col))
+	return r
 }
 
 func hasAll(b []byte, want []rune) bool {
@@ -458,9 +541,12 @@ func hasAll(b []byte, want []rune) bool {
 	return true
 }
 
-func (m *matcher) backref(i int, p pos) (pos, bool) {
+func (m *matcher) backref(i int, p pos, fold bool) (pos, bool) {
 	g := m.caps[i]
-	if !g.sSet || !g.eSet || !g.s.before(g.e) {
+	if !g.sSet || !g.eSet {
+		return p, !m.re.pcre // PCRE2: a reference to an unset group fails
+	}
+	if !g.s.before(g.e) {
 		return p, true
 	}
 	s, q := g.s, p
@@ -470,7 +556,7 @@ func (m *matcher) backref(i int, p pos) (pos, bool) {
 		}
 		sl := m.line(s.Line)
 		if s.Col >= len(sl) {
-			if ql := m.line(q.Line); q.Col < len(ql) || q.Line >= m.n {
+			if ql := m.line(q.Line); q.Col < len(ql) || q.Line >= m.lines() {
 				return p, false
 			}
 			s, q = pos{s.Line + 1, 0}, pos{q.Line + 1, 0}
@@ -482,7 +568,7 @@ func (m *matcher) backref(i int, p pos) (pos, bool) {
 		}
 		a, al := decode(sl, s.Col)
 		b, bl := decode(ql, q.Col)
-		if a != b && !(m.ic && foldEq(a, b)) {
+		if a != b && !((m.ic || fold) && foldEq(a, b)) {
 			return p, false
 		}
 		s.Col += al
@@ -544,6 +630,25 @@ func (m *matcher) assert(n *node, p pos) bool {
 		return this != prev && prev > 1
 	case opBOF:
 		return p.Line == 0 && p.Col == 0
+	case opPBOL:
+		return p.Col == 0 && !(p.Line > 0 && p.Line == m.n-1 && len(line) == 0)
+	case opSubjEndAbs:
+		return p.Line == m.n-1 && p.Col >= len(line)
+	case opSubjEnd:
+		if p.Line == m.n-1 && p.Col >= len(line) {
+			return true
+		}
+		return p.Line == m.n-2 && p.Col >= len(line) && len(m.line(m.n-1)) == 0
+	case opWordB, opNotWordB:
+		before := p.Col > 0 && pcreWord(prevRune(line, p.Col))
+		after := false
+		if p.Col < len(line) {
+			r, _ := decode(line, p.Col)
+			after = pcreWord(r)
+		}
+		return (before != after) == (n.op == opWordB)
+	case opStartMatch:
+		return p == m.start
 	case opEOF:
 		return p.Line == m.n-1 && p.Col >= len(line)
 	case opCursor:

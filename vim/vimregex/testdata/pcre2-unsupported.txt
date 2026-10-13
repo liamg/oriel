@@ -1,0 +1,1256 @@
+testoutput1:2263 pattern information output
+testoutput1:2806 pattern information output
+testoutput1:3195 conditional groups
+testoutput1:3207 conditional groups
+testoutput1:3222 conditional groups
+testoutput1:3233 conditional groups
+testoutput1:3244 conditional groups
+testoutput1:3257 conditional groups
+testoutput1:3270 conditional groups
+testoutput1:3281 conditional groups
+testoutput1:3292 conditional groups
+testoutput1:3493 conditional groups
+testoutput1:4989 conditional groups
+testoutput1:5329 conditional groups
+testoutput1:5336 conditional groups
+testoutput1:5340 conditional groups
+testoutput1:5344 conditional groups
+testoutput1:5346 conditional groups
+testoutput1:5351 conditional groups
+testoutput1:5366 conditional groups
+testoutput1:5379 conditional groups
+testoutput1:5381 conditional groups
+testoutput1:5385 conditional groups
+testoutput1:5392 conditional groups
+testoutput1:5524 conditional groups
+testoutput1:5639 conditional groups
+testoutput1:5658 conditional groups
+testoutput1:5677 conditional groups
+testoutput1:5892 conditional groups
+testoutput1:5977 pattern information output
+testoutput1:6026 conditional groups
+testoutput1:6031 conditional groups
+testoutput1:6039 conditional groups
+testoutput1:6218 conditional groups
+testoutput1:6231 pattern information output
+testoutput1:6239 pattern information output
+testoutput1:6246 pattern information output
+testoutput1:6253 pattern information output
+testoutput1:6258 pattern information output
+testoutput1:6265 pattern information output
+testoutput1:6272 pattern information output
+testoutput1:6284 conditional groups
+testoutput1:6290 conditional groups
+testoutput1:6296 conditional groups
+testoutput1:6324 pattern information output
+testoutput1:6330 pattern information output
+testoutput1:6337 pattern information output
+testoutput1:6343 pattern information output
+testoutput1:6349 conditional groups
+testoutput1:6353 conditional groups
+testoutput1:6357 conditional groups
+testoutput1:6377 pattern information output
+testoutput1:6382 pattern information output
+testoutput1:6545 conditional groups
+testoutput1:6550 conditional groups
+testoutput1:6616 recursion and subroutine calls
+testoutput1:6706 conditional groups
+testoutput1:6710 conditional groups
+testoutput1:6849 branch reset groups
+testoutput1:6862 branch reset groups
+testoutput1:6873 recursion and subroutine calls
+testoutput1:6882 recursion and subroutine calls
+testoutput1:6893 recursion and subroutine calls
+testoutput1:6930 conditional groups
+testoutput1:6947 conditional groups
+testoutput1:6951 recursion and subroutine calls
+testoutput1:6958 recursion and subroutine calls
+testoutput1:6969 recursion and subroutine calls
+testoutput1:6980 recursion and subroutine calls
+testoutput1:6990 conditional groups
+testoutput1:7009 recursion and subroutine calls
+testoutput1:7072 recursion and subroutine calls
+testoutput1:7086 pattern information output
+testoutput1:7097 recursion and subroutine calls
+testoutput1:7124 recursion and subroutine calls
+testoutput1:7139 recursion and subroutine calls
+testoutput1:7154 conditional groups
+testoutput1:7183 backtracking control verbs
+testoutput1:7188 backtracking control verbs
+testoutput1:7193 backtracking control verbs
+testoutput1:7198 backtracking control verbs
+testoutput1:7203 backtracking control verbs
+testoutput1:7208 backtracking control verbs
+testoutput1:7224 backtracking control verbs
+testoutput1:7247 backtracking control verbs
+testoutput1:7252 backtracking control verbs
+testoutput1:7275 recursion and subroutine calls
+testoutput1:7302 recursion and subroutine calls
+testoutput1:7332 recursion and subroutine calls
+testoutput1:7340 recursion and subroutine calls
+testoutput1:7348 recursion and subroutine calls
+testoutput1:7353 branch reset groups
+testoutput1:7366 branch reset groups
+testoutput1:7379 modifier dupnames
+testoutput1:7397 recursion and subroutine calls
+testoutput1:7408 recursion and subroutine calls
+testoutput1:7423 recursion and subroutine calls
+testoutput1:7445 conditional groups
+testoutput1:7449 conditional groups
+testoutput1:7453 recursion and subroutine calls
+testoutput1:7459 backtracking control verbs
+testoutput1:7464 backtracking control verbs
+testoutput1:7471 backtracking control verbs
+testoutput1:7497 recursion and subroutine calls
+testoutput1:7501 recursion and subroutine calls
+testoutput1:7509 recursion and subroutine calls
+testoutput1:7522 recursion and subroutine calls
+testoutput1:7540 backtracking control verbs
+testoutput1:7547 modifier mark
+testoutput1:7554 modifier mark
+testoutput1:7563 modifier mark
+testoutput1:7568 modifier mark
+testoutput1:7573 modifier mark
+testoutput1:7583 modifier mark
+testoutput1:7589 modifier mark
+testoutput1:7595 modifier mark
+testoutput1:7599 modifier mark
+testoutput1:7606 modifier mark
+testoutput1:7610 modifier mark
+testoutput1:7618 backtracking control verbs
+testoutput1:7630 backtracking control verbs
+testoutput1:7635 backtracking control verbs
+testoutput1:7642 recursion and subroutine calls
+testoutput1:7648 pattern information output
+testoutput1:7653 pattern information output
+testoutput1:7658 backtracking control verbs
+testoutput1:7664 backtracking control verbs
+testoutput1:7669 backtracking control verbs
+testoutput1:7679 recursion and subroutine calls
+testoutput1:7696 recursion and subroutine calls
+testoutput1:7703 recursion and subroutine calls
+testoutput1:7793 recursion and subroutine calls
+testoutput1:7804 recursion and subroutine calls
+testoutput1:7811 recursion and subroutine calls
+testoutput1:7818 recursion and subroutine calls
+testoutput1:7822 recursion and subroutine calls
+testoutput1:7829 backtracking control verbs
+testoutput1:7858 conditional groups
+testoutput1:7863 recursion and subroutine calls
+testoutput1:7868 recursion and subroutine calls
+testoutput1:7873 modifier mark
+testoutput1:7878 modifier mark
+testoutput1:7882 conditional groups
+testoutput1:7890 \N{U+…} outside UTF mode
+testoutput1:7894 conditional groups
+testoutput1:7898 conditional groups
+testoutput1:7903 conditional groups
+testoutput1:7908 conditional groups
+testoutput1:7913 conditional groups
+testoutput1:7918 conditional groups
+testoutput1:7923 modifier mark
+testoutput1:7929 recursion and subroutine calls
+testoutput1:7941 backtracking control verbs
+testoutput1:7946 backtracking control verbs
+testoutput1:7951 backtracking control verbs
+testoutput1:7957 backtracking control verbs
+testoutput1:7964 backtracking control verbs
+testoutput1:7969 backtracking control verbs
+testoutput1:7973 backtracking control verbs
+testoutput1:7977 backtracking control verbs
+testoutput1:7984 backtracking control verbs
+testoutput1:7989 backtracking control verbs
+testoutput1:7993 backtracking control verbs
+testoutput1:7997 backtracking control verbs
+testoutput1:8004 backtracking control verbs
+testoutput1:8009 backtracking control verbs
+testoutput1:8014 backtracking control verbs
+testoutput1:8020 backtracking control verbs
+testoutput1:8027 backtracking control verbs
+testoutput1:8032 backtracking control verbs
+testoutput1:8036 backtracking control verbs
+testoutput1:8040 backtracking control verbs
+testoutput1:8047 conditional groups
+testoutput1:8053 conditional groups
+testoutput1:8058 conditional groups
+testoutput1:8062 conditional groups
+testoutput1:8069 backtracking control verbs
+testoutput1:8075 modifier mark
+testoutput1:8080 modifier mark
+testoutput1:8086 backtracking control verbs
+testoutput1:8090 backtracking control verbs
+testoutput1:8095 backtracking control verbs
+testoutput1:8103 backtracking control verbs
+testoutput1:8109 modifier mark
+testoutput1:8114 backtracking control verbs
+testoutput1:8118 backtracking control verbs
+testoutput1:8122 backtracking control verbs
+testoutput1:8126 recursion and subroutine calls
+testoutput1:8132 modifier mark
+testoutput1:8141 modifier mark
+testoutput1:8150 modifier mark
+testoutput1:8159 modifier mark
+testoutput1:8168 modifier mark
+testoutput1:8179 modifier mark
+testoutput1:8186 modifier mark
+testoutput1:8191 modifier mark
+testoutput1:8198 modifier mark
+testoutput1:8208 modifier mark
+testoutput1:8225 modifier mark
+testoutput1:8240 modifier mark
+testoutput1:8258 modifier mark
+testoutput1:8269 modifier mark
+testoutput1:8276 modifier mark
+testoutput1:8284 modifier mark
+testoutput1:8292 modifier mark
+testoutput1:8301 modifier mark
+testoutput1:8305 modifier mark
+testoutput1:8313 modifier mark
+testoutput1:8321 modifier mark
+testoutput1:8329 modifier mark
+testoutput1:8337 modifier mark
+testoutput1:8345 modifier mark
+testoutput1:8364 backtracking control verbs
+testoutput1:8426 backtracking control verbs
+testoutput1:8430 backtracking control verbs
+testoutput1:8434 backtracking control verbs
+testoutput1:8439 modifier mark
+testoutput1:8443 modifier mark
+testoutput1:8448 modifier mark
+testoutput1:8452 modifier mark
+testoutput1:8464 backtracking control verbs
+testoutput1:8471 backtracking control verbs
+testoutput1:8475 backtracking control verbs
+testoutput1:8479 backtracking control verbs
+testoutput1:8485 backtracking control verbs
+testoutput1:8493 backtracking control verbs
+testoutput1:8500 backtracking control verbs
+testoutput1:8506 backtracking control verbs
+testoutput1:8512 backtracking control verbs
+testoutput1:8518 backtracking control verbs
+testoutput1:8524 backtracking control verbs
+testoutput1:8533 backtracking control verbs
+testoutput1:8539 backtracking control verbs
+testoutput1:8545 backtracking control verbs
+testoutput1:8551 backtracking control verbs
+testoutput1:8557 backtracking control verbs
+testoutput1:8561 backtracking control verbs
+testoutput1:8565 backtracking control verbs
+testoutput1:8569 backtracking control verbs
+testoutput1:8573 backtracking control verbs
+testoutput1:8577 backtracking control verbs
+testoutput1:8581 backtracking control verbs
+testoutput1:8585 backtracking control verbs
+testoutput1:8589 modifier mark
+testoutput1:8593 backtracking control verbs
+testoutput1:8598 backtracking control verbs
+testoutput1:8606 backtracking control verbs
+testoutput1:8612 backtracking control verbs
+testoutput1:8618 backtracking control verbs
+testoutput1:8631 backtracking control verbs
+testoutput1:8640 backtracking control verbs
+testoutput1:8644 backtracking control verbs
+testoutput1:8649 backtracking control verbs
+testoutput1:8658 conditional groups
+testoutput1:8663 modifier mark
+testoutput1:8668 backtracking control verbs
+testoutput1:8676 backtracking control verbs
+testoutput1:8681 backtracking control verbs
+testoutput1:8686 backtracking control verbs
+testoutput1:8691 backtracking control verbs
+testoutput1:8696 backtracking control verbs
+testoutput1:8701 backtracking control verbs
+testoutput1:8706 backtracking control verbs
+testoutput1:8711 backtracking control verbs
+testoutput1:8716 backtracking control verbs
+testoutput1:8721 backtracking control verbs
+testoutput1:8726 backtracking control verbs
+testoutput1:8731 backtracking control verbs
+testoutput1:8736 backtracking control verbs
+testoutput1:8741 backtracking control verbs
+testoutput1:8746 backtracking control verbs
+testoutput1:8753 conditional groups
+testoutput1:8757 backtracking control verbs
+testoutput1:8761 conditional groups
+testoutput1:8765 backtracking control verbs
+testoutput1:8769 conditional groups
+testoutput1:8773 backtracking control verbs
+testoutput1:8777 pattern information output
+testoutput1:8781 backtracking control verbs
+testoutput1:8786 backtracking control verbs
+testoutput1:8790 backtracking control verbs
+testoutput1:8794 backtracking control verbs
+testoutput1:8798 backtracking control verbs
+testoutput1:8802 conditional groups
+testoutput1:8806 backtracking control verbs
+testoutput1:8810 backtracking control verbs
+testoutput1:8814 backtracking control verbs
+testoutput1:8822 backtracking control verbs
+testoutput1:8827 modifier mark
+testoutput1:8832 modifier mark
+testoutput1:8837 modifier mark
+testoutput1:8841 modifier mark
+testoutput1:8881 modifier dupnames
+testoutput1:8890 modifier dupnames
+testoutput1:8913 modifier dupnames
+testoutput1:9009 modifier dupnames
+testoutput1:9018 modifier dupnames
+testoutput1:9024 modifier dupnames
+testoutput1:9033 modifier dupnames
+testoutput1:9038 conditional groups
+testoutput1:9094 pattern information output
+testoutput1:9101 backtracking control verbs
+testoutput1:9120 recursion and subroutine calls
+testoutput1:9145 recursion and subroutine calls
+testoutput1:9156 branch reset groups
+testoutput1:9161 branch reset groups
+testoutput1:9169 branch reset groups
+testoutput1:9180 branch reset groups
+testoutput1:9188 branch reset groups
+testoutput1:9196 modifier dupnames
+testoutput1:9208 modifier mark
+testoutput1:9218 conditional groups
+testoutput1:9260 recursion and subroutine calls
+testoutput1:9277 conditional groups
+testoutput1:9288 conditional groups
+testoutput1:9302 conditional groups
+testoutput1:9320 conditional groups
+testoutput1:9326 conditional groups
+testoutput1:9332 conditional groups
+testoutput1:9350 recursion and subroutine calls
+testoutput1:9371 recursion and subroutine calls
+testoutput1:9404 recursion and subroutine calls
+testoutput1:9410 recursion and subroutine calls
+testoutput1:9416 conditional groups
+testoutput1:9421 conditional groups
+testoutput1:9426 conditional groups
+testoutput1:9431 conditional groups
+testoutput1:9436 recursion and subroutine calls
+testoutput1:9455 conditional groups
+testoutput1:9517 modifier subject_literal
+testoutput1:9729 backtracking control verbs
+testoutput1:9734 backtracking control verbs
+testoutput1:9740 backtracking control verbs
+testoutput1:9746 conditional groups
+testoutput1:9752 recursion and subroutine calls
+testoutput1:9766 recursion and subroutine calls
+testoutput1:9780 recursion and subroutine calls
+testoutput1:9829 backtracking control verbs
+testoutput1:9834 backtracking control verbs
+testoutput1:9839 backtracking control verbs
+testoutput1:9846 directive #pattern no_start_optimize
+testoutput1:9850 directive #pattern no_start_optimize
+testoutput1:9856 directive #subject mark
+testoutput1:9861 directive #subject mark
+testoutput1:9866 directive #subject mark
+testoutput1:9871 directive #subject mark
+testoutput1:9875 directive #subject mark
+testoutput1:9879 directive #subject mark
+testoutput1:9884 directive #subject mark
+testoutput1:9889 directive #subject mark
+testoutput1:9893 directive #subject mark
+testoutput1:9897 directive #subject mark
+testoutput1:9904 backtracking control verbs
+testoutput1:9906 backtracking control verbs
+testoutput1:9908 backtracking control verbs
+testoutput1:9919 backtracking control verbs
+testoutput1:9926 backtracking control verbs
+testoutput1:9930 conditional groups
+testoutput1:9936 conditional groups
+testoutput1:9942 backtracking control verbs
+testoutput1:9949 backtracking control verbs
+testoutput1:9956 conditional groups
+testoutput1:9966 conditional groups
+testoutput1:9976 backtracking control verbs
+testoutput1:9983 backtracking control verbs
+testoutput1:9990 conditional groups
+testoutput1:9999 conditional groups
+testoutput1:10008 backtracking control verbs
+testoutput1:10020 conditional groups
+testoutput1:10024 conditional groups
+testoutput1:10030 recursion and subroutine calls
+testoutput1:10034 recursion and subroutine calls
+testoutput1:10039 modifier mark
+testoutput1:10046 modifier mark
+testoutput1:10067 conditional groups
+testoutput1:10079 backtracking control verbs
+testoutput1:10083 backtracking control verbs
+testoutput1:10096 conditional groups
+testoutput1:10134 conditional groups
+testoutput1:10139 conditional groups
+testoutput1:10143 conditional groups
+testoutput1:10147 conditional groups
+testoutput1:10151 conditional groups
+testoutput1:10167 recursion and subroutine calls
+testoutput1:10171 recursion and subroutine calls
+testoutput1:10221 conditional groups
+testoutput1:10238 pattern information output
+testoutput1:10243 pattern information output
+testoutput1:10247 pattern information output
+testoutput1:10322 recursion and subroutine calls
+testoutput1:10334 recursion and subroutine calls
+testoutput1:10384 recursion and subroutine calls
+testoutput1:10498 backtracking control verbs
+testoutput2:17 modifier hex
+testoutput2:28 modifier hex
+testoutput2:39 modifier hex
+testoutput2:314 modifier dollar_endonly
+testoutput2:341 modifier anchored
+testoutput2:420 modifier ungreedy
+testoutput2:429 (?U)
+testoutput2:437 modifier ungreedy
+testoutput2:446 modifier ungreedy
+testoutput2:455 (?U)
+testoutput2:543 conditional groups
+testoutput2:546 conditional groups
+testoutput2:549 conditional groups
+testoutput2:552 conditional groups
+testoutput2:555 conditional groups
+testoutput2:558 conditional groups
+testoutput2:561 conditional groups
+testoutput2:640 (?U)
+testoutput2:838 backtracking control verbs
+testoutput2:874 backtracking control verbs
+testoutput2:910 conditional groups
+testoutput2:922 modifier \
+testoutput2:925 modifier \i
+testoutput2:1156 modifier altglobal
+testoutput2:1167 modifier altglobal
+testoutput2:1204 modifier altglobal
+testoutput2:1297 modifier newline=any
+testoutput2:1500 conditional groups
+testoutput2:1506 conditional groups
+testoutput2:1513 conditional groups
+testoutput2:1519 conditional groups
+testoutput2:1526 conditional groups
+testoutput2:1576 recursion and subroutine calls
+testoutput2:1611 recursion and subroutine calls
+testoutput2:1626 recursion and subroutine calls
+testoutput2:1644 recursion and subroutine calls
+testoutput2:1655 recursion and subroutine calls
+testoutput2:1665 recursion and subroutine calls
+testoutput2:1676 recursion and subroutine calls
+testoutput2:1693 recursion and subroutine calls
+testoutput2:1710 recursion and subroutine calls
+testoutput2:1730 recursion and subroutine calls
+testoutput2:1741 recursion and subroutine calls
+testoutput2:2223 conditional groups
+testoutput2:3114 (?U)
+testoutput2:3117 modifier ungreedy
+testoutput2:3120 (?U)
+testoutput2:3136 (?U)
+testoutput2:3152 (?U)
+testoutput2:3179 (?U)
+testoutput2:3196 (?U)
+testoutput2:3233 \N{U+…} outside UTF mode
+testoutput2:3242 \N{U+…} outside UTF mode
+testoutput2:3246 \N{U+…} outside UTF mode
+testoutput2:3249 \N{U+…} outside UTF mode
+testoutput2:3252 modifier ungreedy
+testoutput2:3298 conditional groups
+testoutput2:3445 conditional groups
+testoutput2:3451 conditional groups
+testoutput2:3458 conditional groups
+testoutput2:3463 conditional groups
+testoutput2:3553 callouts
+testoutput2:3574 callouts
+testoutput2:3585 callouts
+testoutput2:3602 callouts
+testoutput2:3619 callouts
+testoutput2:3625 callouts
+testoutput2:3628 callouts
+testoutput2:3631 callouts
+testoutput2:3634 callouts
+testoutput2:3644 callouts
+testoutput2:3676 callouts
+testoutput2:3704 callouts
+testoutput2:3739 callouts
+testoutput2:3755 callouts
+testoutput2:3775 callouts
+testoutput2:3788 callouts
+testoutput2:3803 callouts
+testoutput2:3817 callouts
+testoutput2:3829 callouts
+testoutput2:3855 callouts
+testoutput2:3861 callouts
+testoutput2:3868 callouts
+testoutput2:3873 callouts
+testoutput2:3883 recursion and subroutine calls
+testoutput2:3913 recursion and subroutine calls
+testoutput2:3932 recursion and subroutine calls
+testoutput2:3949 recursion and subroutine calls
+testoutput2:3965 recursion and subroutine calls
+testoutput2:3983 recursion and subroutine calls
+testoutput2:4003 recursion and subroutine calls
+testoutput2:4023 conditional groups
+testoutput2:4057 recursion and subroutine calls
+testoutput2:4060 recursion and subroutine calls
+testoutput2:4063 recursion and subroutine calls
+testoutput2:4073 recursion and subroutine calls
+testoutput2:4089 recursion and subroutine calls
+testoutput2:4167 recursion and subroutine calls
+testoutput2:4191 recursion and subroutine calls
+testoutput2:4229 conditional groups
+testoutput2:4319 modifier no_auto_capture
+testoutput2:4339 modifier no_auto_capture
+testoutput2:4362 modifier no_auto_capture
+testoutput2:4382 callouts
+testoutput2:4494 duplicate group names
+testoutput2:4497 duplicate group names
+testoutput2:4531 recursion and subroutine calls
+testoutput2:4550 recursion and subroutine calls
+testoutput2:4569 recursion and subroutine calls
+testoutput2:4607 recursion and subroutine calls
+testoutput2:4617 recursion and subroutine calls
+testoutput2:4676 callouts
+testoutput2:4692 modifier auto_callout
+testoutput2:4733 modifier auto_callout
+testoutput2:4776 modifier auto_callout
+testoutput2:4819 modifier auto_callout
+testoutput2:4860 modifier auto_callout
+testoutput2:4934 modifier auto_callout
+testoutput2:5008 modifier auto_callout
+testoutput2:5072 modifier auto_callout
+testoutput2:5120 modifier auto_callout
+testoutput2:5168 modifier auto_callout
+testoutput2:5471 modifier firstline
+testoutput2:5484 modifier firstline
+testoutput2:5730 recursion and subroutine calls
+testoutput2:5741 recursion and subroutine calls
+testoutput2:5750 recursion and subroutine calls
+testoutput2:5759 recursion and subroutine calls
+testoutput2:5770 recursion and subroutine calls
+testoutput2:5788 duplicate group names
+testoutput2:5791 modifier dupnames
+testoutput2:5819 modifier dupnames
+testoutput2:5829 modifier dupnames
+testoutput2:5844 modifier dupnames
+testoutput2:5861 modifier dupnames
+testoutput2:5879 modifier dupnames
+testoutput2:5907 modifier dupnames
+testoutput2:5922 modifier dupnames
+testoutput2:5939 modifier dupnames
+testoutput2:5957 (?J)
+testoutput2:5979 (?J)
+testoutput2:5986 (?J)
+testoutput2:6008 conditional groups
+testoutput2:6025 conditional groups
+testoutput2:6036 conditional groups
+testoutput2:6039 conditional groups
+testoutput2:6042 conditional groups
+testoutput2:6053 conditional groups
+testoutput2:6067 conditional groups
+testoutput2:6080 conditional groups
+testoutput2:6109 modifier newline=lf
+testoutput2:6132 modifier newline=crlf
+testoutput2:6147 modifier newline=cr
+testoutput2:6162 modifier newline=bad
+testoutput2:6165 modifier newline=lf
+testoutput2:6178 modifier newline=cr
+testoutput2:6191 modifier newline=crlf
+testoutput2:6222 recursion and subroutine calls
+testoutput2:7164 conditional groups
+testoutput2:7177 recursion and subroutine calls
+testoutput2:7180 recursion and subroutine calls
+testoutput2:7194 recursion and subroutine calls
+testoutput2:7208 conditional groups
+testoutput2:7241 recursion and subroutine calls
+testoutput2:7281 recursion and subroutine calls
+testoutput2:7293 conditional groups
+testoutput2:7315 recursion and subroutine calls
+testoutput2:7327 recursion and subroutine calls
+testoutput2:7339 recursion and subroutine calls
+testoutput2:7351 recursion and subroutine calls
+testoutput2:7413 modifier dupnames
+testoutput2:7424 modifier dupnames
+testoutput2:7437 conditional groups
+testoutput2:7440 conditional groups
+testoutput2:7443 conditional groups
+testoutput2:7446 conditional groups
+testoutput2:7452 conditional groups
+testoutput2:7458 conditional groups
+testoutput2:7461 conditional groups
+testoutput2:7464 conditional groups
+testoutput2:7471 pattern information output
+testoutput2:7479 modifier newline=lf
+testoutput2:7486 modifier newline=cr
+testoutput2:7493 modifier newline=anycrlf
+testoutput2:7500 modifier newline=any
+testoutput2:7509 modifier newline=any
+testoutput2:7519 modifier newline=any
+testoutput2:7529 modifier bsr=unicode
+testoutput2:7546 modifier bsr=unicode
+testoutput2:7566 modifier bsr=unicode
+testoutput2:7587 modifier bsr=unicode
+testoutput2:7608 recursion and subroutine calls
+testoutput2:7618 recursion and subroutine calls
+testoutput2:7628 recursion and subroutine calls
+testoutput2:7636 recursion and subroutine calls
+testoutput2:7641 recursion and subroutine calls
+testoutput2:7646 recursion and subroutine calls
+testoutput2:7651 recursion and subroutine calls
+testoutput2:7659 recursion and subroutine calls
+testoutput2:7682 modifier newline=lf
+testoutput2:7698 modifier newline=crlf
+testoutput2:7707 modifier newline=any
+testoutput2:7724 modifier newline=any
+testoutput2:7733 modifier newline=any
+testoutput2:7738 modifier newline=any
+testoutput2:7745 modifier newline=any
+testoutput2:7754 modifier newline=anycrlf
+testoutput2:7768 recursion and subroutine calls
+testoutput2:7784 recursion and subroutine calls
+testoutput2:7802 recursion and subroutine calls
+testoutput2:7805 recursion and subroutine calls
+testoutput2:7808 recursion and subroutine calls
+testoutput2:7811 recursion and subroutine calls
+testoutput2:7814 conditional groups
+testoutput2:7840 conditional groups
+testoutput2:7870 conditional groups
+testoutput2:7873 conditional groups
+testoutput2:7886 conditional groups
+testoutput2:7889 conditional groups
+testoutput2:7923 branch reset groups
+testoutput2:7945 branch reset groups
+testoutput2:7977 branch reset groups
+testoutput2:8203 pattern information output
+testoutput2:8225 backtracking control verbs
+testoutput2:8249 modifier auto_callout
+testoutput2:8263 modifier auto_callout
+testoutput2:8287 modifier auto_callout
+testoutput2:8314 modifier auto_callout
+testoutput2:8327 modifier auto_callout
+testoutput2:8347 modifier auto_callout
+testoutput2:8374 backtracking control verbs
+testoutput2:8388 recursion and subroutine calls
+testoutput2:8391 modifier newline=crlf
+testoutput2:8396 modifier newline=crlf
+testoutput2:8400 modifier newline=crlf
+testoutput2:8404 modifier newline=crlf
+testoutput2:8409 backtracking control verbs
+testoutput2:8412 backtracking control verbs
+testoutput2:8419 modifier newline=lf
+testoutput2:8426 modifier newline=CRLF
+testoutput2:8433 backtracking control verbs
+testoutput2:8442 modifier newline=CR
+testoutput2:8451 modifier newline=cr
+testoutput2:8462 backtracking control verbs
+testoutput2:8469 backtracking control verbs
+testoutput2:8476 backtracking control verbs
+testoutput2:8483 backtracking control verbs
+testoutput2:8487 backtracking control verbs
+testoutput2:8491 modifier newline=NUL
+testoutput2:8495 modifier newline=nul
+testoutput2:8499 backtracking control verbs
+testoutput2:8508 modifier bsr=anycrlf
+testoutput2:8526 modifier bsr=unicode
+testoutput2:8543 modifier bsr=anycrlf
+testoutput2:8561 modifier bsr=unicode
+testoutput2:8578 modifier bsr=anycrlf
+testoutput2:8596 modifier bsr=unicode
+testoutput2:8616 backtracking control verbs
+testoutput2:8627 backtracking control verbs
+testoutput2:8636 backtracking control verbs
+testoutput2:8648 backtracking control verbs
+testoutput2:8658 backtracking control verbs
+testoutput2:8666 recursion and subroutine calls
+testoutput2:8669 recursion and subroutine calls
+testoutput2:8672 recursion and subroutine calls
+testoutput2:8675 recursion and subroutine calls
+testoutput2:8681 conditional groups
+testoutput2:8684 conditional groups
+testoutput2:8687 conditional groups
+testoutput2:8690 conditional groups
+testoutput2:8692 conditional groups
+testoutput2:8712 recursion and subroutine calls
+testoutput2:8742 subroutine calls
+testoutput2:8745 recursion and subroutine calls
+testoutput2:8759 modifier allow_empty_class
+testoutput2:8770 modifier allow_empty_class
+testoutput2:8774 recursion and subroutine calls
+testoutput2:8778 recursion and subroutine calls
+testoutput2:8782 recursion and subroutine calls
+testoutput2:8790 recursion and subroutine calls
+testoutput2:8798 recursion and subroutine calls
+testoutput2:8804 pattern information output
+testoutput2:8808 pattern information output
+testoutput2:8818 modifier allow_empty_class
+testoutput2:8823 modifier allow_empty_class
+testoutput2:8828 modifier allow_empty_class
+testoutput2:8833 modifier allow_empty_class
+testoutput2:8842 modifier allow_empty_class
+testoutput2:8874 backtracking control verbs
+testoutput2:8882 modifier auto_callout
+testoutput2:8922 conditional groups
+testoutput2:8926 conditional groups
+testoutput2:8930 modifier auto_callout
+testoutput2:8951 modifier auto_callout
+testoutput2:8985 modifier auto_callout
+testoutput2:8997 backtracking control verbs
+testoutput2:9006 modifier auto_callout
+testoutput2:9018 modifier auto_callout
+testoutput2:9048 conditional groups
+testoutput2:9053 recursion and subroutine calls
+testoutput2:9057 recursion and subroutine calls
+testoutput2:9282 modifier startchar
+testoutput2:9291 backtracking control verbs
+testoutput2:9335 pattern information output
+testoutput2:9341 modifier startchar
+testoutput2:9366 recursion and subroutine calls
+testoutput2:9388 recursion and subroutine calls
+testoutput2:9410 backtracking control verbs
+testoutput2:9434 modifier startchar
+testoutput2:9453 modifier startchar
+testoutput2:9502 subroutine calls
+testoutput2:9516 subroutine calls
+testoutput2:9530 subroutine calls
+testoutput2:9544 subroutine calls
+testoutput2:9558 subroutine calls
+testoutput2:9572 subroutine calls
+testoutput2:9590 subroutine calls
+testoutput2:9598 subroutine calls
+testoutput2:9606 subroutine calls
+testoutput2:9614 subroutine calls
+testoutput2:9616 pattern information output
+testoutput2:9624 recursion and subroutine calls
+testoutput2:9635 recursion and subroutine calls
+testoutput2:9645 recursion and subroutine calls
+testoutput2:9648 recursion and subroutine calls
+testoutput2:9651 recursion and subroutine calls
+testoutput2:9654 recursion and subroutine calls
+testoutput2:9657 recursion and subroutine calls
+testoutput2:9672 recursion and subroutine calls
+testoutput2:9721 conditional groups
+testoutput2:9739 conditional groups
+testoutput2:9751 conditional groups
+testoutput2:9767 branch reset groups
+testoutput2:9782 branch reset groups
+testoutput2:9785 modifier dupnames
+testoutput2:9819 modifier dupnames
+testoutput2:9874 modifier dupnames
+testoutput2:9952 modifier allow_empty_class
+testoutput2:9959 modifier allow_empty_class
+testoutput2:9980 conditional groups
+testoutput2:9989 conditional groups
+testoutput2:10072 recursion and subroutine calls
+testoutput2:10091 recursion and subroutine calls
+testoutput2:10118 recursion and subroutine calls
+testoutput2:10128 backtracking control verbs
+testoutput2:10131 backtracking control verbs
+testoutput2:10134 backtracking control verbs
+testoutput2:10146 modifier mark
+testoutput2:10154 modifier mark
+testoutput2:10158 modifier mark
+testoutput2:10166 modifier mark
+testoutput2:10175 backtracking control verbs
+testoutput2:10179 backtracking control verbs
+testoutput2:10184 backtracking control verbs
+testoutput2:10189 backtracking control verbs
+testoutput2:10194 backtracking control verbs
+testoutput2:10201 backtracking control verbs
+testoutput2:10205 backtracking control verbs
+testoutput2:10210 backtracking control verbs
+testoutput2:10215 backtracking control verbs
+testoutput2:10256 modifier newline=crlf
+testoutput2:10758 recursion and subroutine calls
+testoutput2:10762 recursion and subroutine calls
+testoutput2:10769 recursion and subroutine calls
+testoutput2:10775 conditional groups
+testoutput2:10780 conditional groups
+testoutput2:10784 conditional groups
+testoutput2:10789 conditional groups
+testoutput2:10794 backtracking control verbs
+testoutput2:10799 recursion and subroutine calls
+testoutput2:10803 backtracking control verbs
+testoutput2:10808 backtracking control verbs
+testoutput2:10816 modifier mark
+testoutput2:10825 modifier mark
+testoutput2:10838 recursion and subroutine calls
+testoutput2:10844 backtracking control verbs
+testoutput2:10851 modifier allaftertext
+testoutput2:10858 modifier allaftertext
+testoutput2:10863 modifier allaftertext
+testoutput2:10893 conditional groups
+testoutput2:10898 recursion and subroutine calls
+testoutput2:10903 recursion and subroutine calls
+testoutput2:10908 recursion and subroutine calls
+testoutput2:10914 modifier allcaptures
+testoutput2:11045 recursion and subroutine calls
+testoutput2:11061 conditional groups
+testoutput2:11076 recursion and subroutine calls
+testoutput2:11130 modifier auto_callout
+testoutput2:11188 backtracking control verbs
+testoutput2:11206 backtracking control verbs
+testoutput2:11214 backtracking control verbs
+testoutput2:11232 backtracking control verbs
+testoutput2:11240 backtracking control verbs
+testoutput2:11271 recursion and subroutine calls
+testoutput2:11277 recursion and subroutine calls
+testoutput2:11282 conditional groups
+testoutput2:11310 modifier alt_bsux
+testoutput2:11317 modifier alt_bsux
+testoutput2:11321 modifier alt_bsux
+testoutput2:11325 modifier alt_bsux
+testoutput2:11332 modifier alt_bsux
+testoutput2:11336 modifier alt_bsux
+testoutput2:11343 modifier alt_bsux
+testoutput2:11350 modifier alt_bsux
+testoutput2:11357 modifier extra_alt_bsux
+testoutput2:11361 modifier extra_alt_bsux
+testoutput2:11365 modifier extra_alt_bsux
+testoutput2:11369 modifier extra_alt_bsux
+testoutput2:11373 modifier extra_alt_bsux
+testoutput2:11377 conditional groups
+testoutput2:11395 conditional groups
+testoutput2:11424 recursion and subroutine calls
+testoutput2:11426 conditional groups
+testoutput2:11432 modifier mark
+testoutput2:11459 modifier mark
+testoutput2:11467 modifier mark
+testoutput2:11477 modifier mark
+testoutput2:11483 modifier mark
+testoutput2:11490 modifier mark
+testoutput2:11497 modifier mark
+testoutput2:11503 modifier mark
+testoutput2:11509 modifier mark
+testoutput2:11515 modifier mark
+testoutput2:11698 modifier newline=crlf
+testoutput2:11704 modifier newline=crlf
+testoutput2:11710 modifier newline=crlf
+testoutput2:11717 modifier newline=crlf
+testoutput2:11724 modifier newline=crlf
+testoutput2:11730 modifier newline=crlf
+testoutput2:11744 modifier newline=crlf
+testoutput2:11779 backtracking control verbs
+testoutput2:11784 backtracking control verbs
+testoutput2:11790 backtracking control verbs
+testoutput2:11797 backtracking control verbs
+testoutput2:11862 callouts
+testoutput2:11877 callouts
+testoutput2:11888 callouts
+testoutput2:11899 recursion and subroutine calls
+testoutput2:11912 recursion and subroutine calls
+testoutput2:11924 callouts
+testoutput2:11958 modifier mark
+testoutput2:11964 modifier startchar
+testoutput2:11970 modifier auto_callout
+testoutput2:11983 callouts
+testoutput2:11998 backtracking control verbs
+testoutput2:12005 backtracking control verbs
+testoutput2:12011 backtracking control verbs
+testoutput2:12018 backtracking control verbs
+testoutput2:12022 backtracking control verbs
+testoutput2:12026 backtracking control verbs
+testoutput2:12030 backtracking control verbs
+testoutput2:12034 backtracking control verbs
+testoutput2:12038 backtracking control verbs
+testoutput2:12043 backtracking control verbs
+testoutput2:12048 backtracking control verbs
+testoutput2:12052 conditional groups
+testoutput2:12056 backtracking control verbs
+testoutput2:12062 recursion and subroutine calls
+testoutput2:12066 modifier dupnames
+testoutput2:12074 modifier dupnames
+testoutput2:13266 recursion and subroutine calls
+testoutput2:13293 recursion and subroutine calls
+testoutput2:13296 recursion and subroutine calls
+testoutput2:13299 subroutine calls
+testoutput2:13302 subroutine calls
+testoutput2:13305 conditional groups
+testoutput2:13308 conditional groups
+testoutput2:13311 conditional groups
+testoutput2:13314 conditional groups
+testoutput2:13317 subroutine calls
+testoutput2:13374 modifier allow_lookaround_bsk
+testoutput2:13380 modifier newline=lf
+testoutput2:13387 modifier stackguard=1
+testoutput2:13390 modifier stackguard=2
+testoutput2:13393 modifier stackguard=3
+testoutput2:13441 conditional groups
+testoutput2:13455 conditional groups
+testoutput2:13468 conditional groups
+testoutput2:13478 backtracking control verbs
+testoutput2:13486 backtracking control verbs
+testoutput2:13494 conditional groups
+testoutput2:13500 conditional groups
+testoutput2:13504 conditional groups
+testoutput2:13521 conditional groups
+testoutput2:13530 conditional groups
+testoutput2:13548 conditional groups
+testoutput2:13551 conditional groups
+testoutput2:13554 conditional groups
+testoutput2:13557 conditional groups
+testoutput2:13590 modifier match_unset_backref
+testoutput2:13596 modifier parens_nest_limit=2
+testoutput2:13667 modifier replace=[10]XYZ
+testoutput2:13671 modifier replace=[9]XYZ
+testoutput2:13709 backtracking control verbs
+testoutput2:13717 backtracking control verbs
+testoutput2:13721 backtracking control verbs
+testoutput2:13729 backtracking control verbs
+testoutput2:13733 backtracking control verbs
+testoutput2:13737 backtracking control verbs
+testoutput2:13741 backtracking control verbs
+testoutput2:13745 modifier replace=[22]${*MARK}
+testoutput2:13751 modifier replace=[23]${*MARK}
+testoutput2:13802 modifier allow_lookaround_bsk
+testoutput2:13816 modifier dupnames
+testoutput2:13858 modifier auto_callout
+testoutput2:13873 modifier auto_callout
+testoutput2:13894 modifier dotall
+testoutput2:13900 modifier dotall
+testoutput2:13905 backtracking control verbs
+testoutput2:13953 (?J)
+testoutput2:13955 (?J)
+testoutput2:13960 conditional groups
+testoutput2:13963 conditional groups
+testoutput2:13967 conditional groups
+testoutput2:13997 recursion and subroutine calls
+testoutput2:14012 callouts
+testoutput2:14015 callouts
+testoutput2:14018 callouts
+testoutput2:14021 callouts
+testoutput2:14024 callouts
+testoutput2:14033 callouts
+testoutput2:14053 callouts
+testoutput2:14060 callouts
+testoutput2:14068 callouts
+testoutput2:14077 callouts
+testoutput2:14099 modifier callout_info
+testoutput2:14122 callouts
+testoutput2:14141 modifier callout_info
+testoutput2:14167 conditional groups
+testoutput2:14194 callouts
+testoutput2:14204 callouts
+testoutput2:14219 modifier hex
+testoutput2:14227 conditional groups
+testoutput2:14229 conditional groups
+testoutput2:14289 recursion and subroutine calls
+testoutput2:14292 recursion and subroutine calls
+testoutput2:14300 modifier allow_lookaround_bsk
+testoutput2:14313 modifier altglobal
+testoutput2:14326 recursion and subroutine calls
+testoutput2:14347 modifier alt_circumflex
+testoutput2:14397 modifier dupnames
+testoutput2:14420 recursion and subroutine calls
+testoutput2:14438 recursion and subroutine calls
+testoutput2:14459 recursion and subroutine calls
+testoutput2:14462 recursion and subroutine calls
+testoutput2:14465 modifier dupnames
+testoutput2:14467 modifier dupnames
+testoutput2:14469 conditional groups
+testoutput2:14481 recursion and subroutine calls
+testoutput2:14484 conditional groups
+testoutput2:14505 backtracking control verbs
+testoutput2:14508 callouts
+testoutput2:14511 callouts
+testoutput2:14514 conditional groups
+testoutput2:14552 conditional groups
+testoutput2:14568 recursion and subroutine calls
+testoutput2:14571 recursion and subroutine calls
+testoutput2:14574 conditional groups
+testoutput2:14577 conditional groups
+testoutput2:14584 recursion and subroutine calls
+testoutput2:14594 branch reset groups
+testoutput2:14600 branch reset groups
+testoutput2:14605 branch reset groups
+testoutput2:14610 branch reset groups
+testoutput2:14618 modifier dupnames
+testoutput2:14655 backtracking control verbs
+testoutput2:14659 backtracking control verbs
+testoutput2:14663 backtracking control verbs
+testoutput2:14668 backtracking control verbs
+testoutput2:14672 conditional groups
+testoutput2:14675 conditional groups
+testoutput2:14678 recursion and subroutine calls
+testoutput2:14683 conditional groups
+testoutput2:14686 backtracking control verbs
+testoutput2:14689 backtracking control verbs
+testoutput2:14701 backtracking control verbs
+testoutput2:14706 modifier alt_verbnames
+testoutput2:14709 backtracking control verbs
+testoutput2:14712 modifier alt_verbnames
+testoutput2:14717 modifier alt_verbnames
+testoutput2:14722 modifier alt_verbnames
+testoutput2:14727 modifier alt_verbnames
+testoutput2:14733 modifier alt_verbnames
+testoutput2:14739 modifier mark
+testoutput2:14745 modifier mark
+testoutput2:14751 modifier alt_verbnames
+testoutput2:14757 modifier alt_verbnames
+testoutput2:14760 modifier use_offset_limit
+testoutput2:14775 modifier use_offset_limit
+testoutput2:14782 modifier use_offset_limit
+testoutput2:14791 modifier use_offset_limit
+testoutput2:14797 modifier null_context
+testoutput2:14806 modifier substitute_extended
+testoutput2:14810 modifier substitute_extended
+testoutput2:14814 modifier substitute_literal
+testoutput2:14818 modifier substitute_extended
+testoutput2:14822 modifier substitute_extended
+testoutput2:14826 modifier substitute_extended
+testoutput2:14838 modifier substitute_extended
+testoutput2:14844 modifier substitute_extended
+testoutput2:14848 modifier substitute_extended
+testoutput2:14854 modifier substitute_extended
+testoutput2:14858 modifier substitute_extended
+testoutput2:14866 modifier substitute_extended
+testoutput2:14870 modifier substitute_extended
+testoutput2:14874 (?J)
+testoutput2:14888 modifier substitute_extended
+testoutput2:14892 modifier substitute_matched
+testoutput2:14914 modifier no_auto_capture
+testoutput2:14930 modifier allow_lookaround_bsk
+testoutput2:14934 modifier allow_lookaround_bsk
+testoutput2:14944 modifier max_pattern_length=3
+testoutput2:14947 modifier max_pattern_length=3
+testoutput2:14950 modifier hex
+testoutput2:14953 modifier hex
+testoutput2:14956 modifier max_pattern_compiled_length=100
+testoutput2:15001 modifier expand
+testoutput2:15018 branch reset groups
+testoutput2:15036 branch reset groups
+testoutput2:15054 branch reset groups
+testoutput2:15072 branch reset groups
+testoutput2:15092 modifier newline=anycrlf
+testoutput2:15096 modifier newline=crlf
+testoutput2:15100 modifier newline=any
+testoutput2:15108 modifier bincode
+testoutput2:15117 modifier bincode
+testoutput2:15142 modifier auto_callout
+testoutput2:15152 modifier auto_callout
+testoutput2:15162 modifier auto_callout
+testoutput2:15176 modifier auto_callout
+testoutput2:15199 modifier alt_verbnames
+testoutput2:15221 modifier hex
+testoutput2:15230 modifier hex
+testoutput2:15239 modifier hex
+testoutput2:15250 modifier hex
+testoutput2:15261 modifier hex
+testoutput2:15272 modifier hex
+testoutput2:15282 modifier extended
+testoutput2:15284 modifier extended
+testoutput2:15286 modifier hex
+testoutput2:15288 modifier extended
+testoutput2:15291 modifier alt_bsux
+testoutput2:15294 modifier substitute_unset_empty
+testoutput2:15308 modifier substitute_extended
+testoutput2:15316 modifier substitute_unset_empty
+testoutput2:15322 modifier substitute_unset_empty
+testoutput2:15330 modifier substitute_unset_empty
+testoutput2:15338 modifier use_offset_limit
+testoutput2:15354 modifier mark
+testoutput2:15359 modifier mark
+testoutput2:15364 modifier mark
+testoutput2:15369 modifier mark
+testoutput2:15374 modifier hex
+testoutput2:15377 modifier hex
+testoutput2:15380 modifier hex
+testoutput2:15383 (?J)
+testoutput2:15386 callouts
+testoutput2:15401 pattern information output
+testoutput2:15407 modifier expand
+testoutput2:15413 modifier hex
+testoutput2:15416 modifier hex
+testoutput2:15419 modifier hex
+testoutput2:15422 modifier hex
+testoutput2:15438 branch reset groups
+testoutput2:15461 modifier dupnames
+testoutput2:15473 modifier auto_callout
+testoutput2:15482 modifier hex
+testoutput2:15505 conditional groups
+testoutput2:15519 conditional groups
+testoutput2:15538 recursion and subroutine calls
+testoutput2:15545 modifier use_length
+testoutput2:15547 modifier use_length
+testoutput2:15550 subroutine calls
+testoutput2:15553 modifier auto_callout
+testoutput2:15555 pattern information output
+testoutput2:15564 conditional groups
+testoutput2:15567 modifier anchored
+testoutput2:15569 backtracking control verbs
+testoutput2:15574 modifier newline=crlf
+testoutput2:15578 modifier substitute_extended
+testoutput2:15625 modifier expand
+testoutput2:15630 conditional groups
+testoutput2:15637 conditional groups
+testoutput2:15640 conditional groups
+testoutput2:15642 modifier auto_callout
+testoutput2:15669 modifier dupnames
+testoutput2:15689 recursion and subroutine calls
+testoutput2:15730 backtracking control verbs
+testoutput2:15758 modifier expand
+testoutput2:15762 modifier never_backslash_c
+testoutput2:15767 pattern information output
+testoutput2:15786 conditional groups
+testoutput2:15793 modifier mark
+testoutput2:15798 modifier endanchored
+testoutput2:15818 modifier endanchored
+testoutput2:15825 modifier endanchored
+testoutput2:15832 modifier endanchored
+testoutput2:15839 conditional groups
+testoutput2:15856 conditional groups
+testoutput2:15864 conditional groups
+testoutput2:15869 backtracking control verbs
+testoutput2:15876 modifier callout_info
+testoutput2:15994 backtracking control verbs
+testoutput2:16012 backtracking control verbs
+testoutput2:16114 backtracking control verbs
+testoutput2:16121 callouts
+testoutput2:16125 callouts
+testoutput2:16131 conditional groups
+testoutput2:16163 modifier extended_more
+testoutput2:16171 modifier extended_more
+testoutput2:16232 modifier \bad_escape_is_literal
+testoutput2:16235 modifier bad_escape_is_literal
+testoutput2:16248 modifier bad_escape_is_literal
+testoutput2:16256 modifier bad_escape_is_literal
+testoutput2:16259 modifier bad_escape_is_literal
+testoutput2:16262 modifier bad_escape_is_literal
+testoutput2:16268 modifier bad_escape_is_literal
+testoutput2:16274 modifier bad_escape_is_literal
+testoutput2:16279 modifier literal
+testoutput2:16283 modifier literal
+testoutput2:16289 modifier literal
+testoutput2:16296 modifier literal
+testoutput2:16303 modifier literal
+testoutput2:16314 modifier literal
+testoutput2:16317 modifier literal
+testoutput2:16332 modifier literal
+testoutput2:16343 modifier literal
+testoutput2:16347 modifier match_word
+testoutput2:16363 modifier match_line
+testoutput2:16382 modifier match_line
+testoutput2:16459 modifier auto_callout
+testoutput2:16494 backtracking control verbs
+testoutput2:16513 modifier firstline
+testoutput2:16517 modifier firstline
+testoutput2:16521 modifier firstline
+testoutput2:16526 modifier firstline
+testoutput2:16534 conditional groups
+testoutput2:16551 conditional groups
+testoutput2:16569 recursion and subroutine calls
+testoutput2:16583 recursion and subroutine calls
+testoutput2:16597 recursion and subroutine calls
+testoutput2:16667 modifier mark
+testoutput2:16672 modifier mark
+testoutput2:16686 conditional groups
+testoutput2:16693 conditional groups
+testoutput2:16700 conditional groups
+testoutput2:16712 conditional groups
+testoutput2:16720 conditional groups
+testoutput2:16726 conditional groups
+testoutput2:16735 conditional groups
+testoutput2:16749 conditional groups
+testoutput2:16764 conditional groups
+testoutput2:16773 conditional groups
+testoutput2:16788 conditional groups
+testoutput2:16803 conditional groups
+testoutput2:16818 modifier allvector
+testoutput2:16838 modifier allvector
+testoutput2:16850 modifier substitute_callout
+testoutput2:16903 modifier escaped_cr_is_lf
+testoutput2:16910 conditional groups
+testoutput2:16913 conditional groups
+testoutput2:16916 conditional groups
+testoutput2:16930 backtracking control verbs
+testoutput2:16937 backtracking control verbs
+testoutput2:16944 backtracking control verbs
+testoutput2:16953 modifier substitute_callout
+testoutput2:16961 modifier expand
+testoutput2:16964 modifier expand
+testoutput2:16967 backtracking control verbs
+testoutput2:16973 backtracking control verbs
+testoutput2:16979 modifier mark
+testoutput2:16986 backtracking control verbs
+testoutput2:16989 modifier alt_verbnames
+testoutput2:16999 branch reset groups
+testoutput2:17006 branch reset groups
+testoutput2:17013 branch reset groups
+testoutput2:17020 modifier dupnames
+testoutput2:17032 modifier dupnames
+testoutput2:17055 backtracking control verbs
+testoutput2:17060 backtracking control verbs
+testoutput2:17125 conditional groups
+testoutput2:17128 backtracking control verbs
+testoutput2:17132 backtracking control verbs
+testoutput2:17137 non-atomic assertions
+testoutput2:17142 backtracking control verbs
+testoutput2:17151 backtracking control verbs
+testoutput2:17163 non-atomic assertions
+testoutput2:17175 backtracking control verbs
+testoutput2:17185 backtracking control verbs
+testoutput2:17196 backtracking control verbs
+testoutput2:17207 backtracking control verbs
+testoutput2:17218 backtracking control verbs
+testoutput2:17220 backtracking control verbs
+testoutput2:17222 backtracking control verbs
+testoutput2:17230 backtracking control verbs
+testoutput2:17236 backtracking control verbs
+testoutput2:17241 backtracking control verbs
+testoutput2:17246 backtracking control verbs
+testoutput2:17254 backtracking control verbs
+testoutput2:17262 backtracking control verbs
+testoutput2:17300 pattern information output
+testoutput2:17306 pattern information output
+testoutput2:17351 conditional groups
+testoutput2:17372 conditional groups
+testoutput2:17390 conditional groups
+testoutput2:17408 conditional groups
+testoutput2:17426 conditional groups
+testoutput2:17490 branch reset groups
+testoutput2:17496 branch reset groups
+testoutput2:17503 callouts
+testoutput2:17529 modifier substitute_replacement_only
+testoutput2:17533 modifier substitute_replacement_only
+testoutput2:17537 modifier substitute_callout
+testoutput2:17562 modifier substitute_matched
+testoutput2:17571 modifier substitute_matched
+testoutput2:17582 modifier substitute_matched
+testoutput2:17589 modifier substitute_matched
+testoutput2:17601 modifier caseless
+testoutput2:17607 modifier replace=[4]
+testoutput2:17613 modifier caseless
+testoutput2:17626 modifier tables=1
+testoutput2:17631 modifier tables=2
+testoutput2:17635 modifier tables=2
+testoutput2:17639 modifier tables=3
+testoutput2:17645 modifier tables=3
+testoutput2:17649 modifier hex
+testoutput2:17659 modifier hex
+testoutput2:17667 conditional groups
+testoutput2:17676 modifier allow_lookaround_bsk
+testoutput2:17683 modifier allow_lookaround_bsk
+testoutput2:17690 modifier allow_lookaround_bsk
+testoutput2:17697 modifier allow_lookaround_bsk
+testoutput2:17712 modifier replace=[20]
+testoutput2:17725 modifier replace=[20]
+testoutput2:17786 recursion and subroutine calls
+testoutput2:17791 recursion and subroutine calls
+testoutput2:17798 modifier null_pattern
+testoutput2:17802 modifier null_pattern
+testoutput2:17805 modifier null_pattern
+testoutput2:17808 modifier null_pattern
+testoutput2:17815 modifier max_varlookbehind=256
+testoutput2:17820 modifier max_varlookbehind=0
+testoutput2:17823 modifier max_varlookbehind=0
+testoutput2:17828 conditional groups
+testoutput2:17833 conditional groups
+testoutput2:17842 modifier auto_callout
+testoutput2:17860 conditional groups
+testoutput2:17907 modifier dupnames
+testoutput2:17918 modifier anchored
+testoutput2:17923 modifier anchored
+testoutput2:17928 modifier firstline
+testoutput2:17939 modifier extended
+testoutput2:17941 modifier auto_callout
+testoutput2:17972 modifier endanchored
+testoutput2:17976 modifier endanchored
+testoutput2:17980 recursion and subroutine calls
+testoutput2:17984 backtracking control verbs
+testoutput2:17992 backtracking control verbs
+testoutput2:17999 backtracking control verbs
+testoutput2:18005 backtracking control verbs
+testoutput2:18011 modifier auto_callout
+testoutput2:18036 recursion and subroutine calls
+testoutput2:18040 recursion and subroutine calls

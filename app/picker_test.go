@@ -46,6 +46,7 @@ func TestPickerSources(t *testing.T) {
 	for _, tt := range []struct{ source, query, first, preview string }{
 		{"files", "tiers", "internal/pricing/tiers.go", "return t * 100"},
 		{"grep", "t \\* 100", "return t * 100", "func PriceForTier"},
+		{"grep (PCRE2)", "(?<=return )t\\h\\*(?=\\s100)", "return t * 100", "func PriceForTier"},
 		{"buffers", "round", "internal/pricing/round.go", "decimal.NewFromInt(7)"},
 		{"symbols", "PFT", "PriceForTier", "func PriceForTier"},
 		{"symbols.file", "", "PriceForTier", "func PriceForTier"},
@@ -53,6 +54,7 @@ func TestPickerSources(t *testing.T) {
 		{"commands", "omnibox", "Search everything", "omnibox.open"},
 	} {
 		t.Run(tt.source, func(t *testing.T) {
+			tt.source, _, _ = strings.Cut(tt.source, " ")
 			s := pickerScene(t, tt.source, tt.query)
 			text := s.waitFor(tt.preview)
 			g, ok := rankSource(s.h(), mustSource(t, s, tt.source), tt.query, pickerMax)

@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 )
@@ -96,7 +96,7 @@ type grep struct {
 const maxGrep = 1000
 
 // grepSource searches the work dir's files as you type, leaving out generated and vendored ones unless the query
-// starts "@all ": the query is a regular expression (a literal when it
+// starts "@all ": the query is a PCRE2 pattern (a literal when it
 // isn't one), and the search runs off the UI's goroutine, its results showing when it's done.
 func (x *editorExt) grepSource() registry.PickerSource {
 	g := &grep{}
@@ -120,9 +120,9 @@ func (x *editorExt) grepSource() registry.PickerSource {
 			return
 		}
 		pat, all := strings.CutPrefix(q, "@all ")
-		re, err := regexp.Compile(pat)
+		re, err := regex.Compile(pat, regex.Flags{})
 		if err != nil {
-			re = regexp.MustCompile(regexp.QuoteMeta(pat))
+			re = regex.MustCompile(`\Q`+pat+`\E`, regex.Flags{})
 		}
 		list := append([]string(nil), files.list()...)
 		if !all {
@@ -150,7 +150,7 @@ func (x *editorExt) grepSource() registry.PickerSource {
 }
 
 // searchFiles is every line of files that re matches, as picker items, up to maxGrep.
-func searchFiles(ctx context.Context, dir string, files []string, re *regexp.Regexp) []registry.PickerItem {
+func searchFiles(ctx context.Context, dir string, files []string, re *regex.Regex) []registry.PickerItem {
 	var out []registry.PickerItem
 	for _, f := range files {
 		if ctx.Err() != nil || len(out) >= maxGrep {
@@ -167,8 +167,8 @@ func searchFiles(ctx context.Context, dir string, files []string, re *regexp.Reg
 			if n == 1 && strings.ContainsRune(string(b[:min(len(b), 512)]), 0) {
 				break // binary
 			}
-			loc := re.FindIndex(b)
-			if loc == nil {
+			loc, err := re.FindIndex(string(b), 0)
+			if loc == nil || err != nil {
 				continue
 			}
 			text := strings.TrimSpace(string(b))
