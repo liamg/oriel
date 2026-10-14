@@ -34,37 +34,33 @@ func (e *Engine) enter(w *window) {
 	e.layout.Focus(WindowID(w.id))
 }
 
-// split opens a new window on the current buffer, above (or left of, for vertical) the current one,
-// and makes it current, as :split and :vsplit do with 'splitbelow' and 'splitright' off.
+// split opens a new window on the current buffer, above (or left of, for vertical) the current one, with a copy
+// of its cursor, jumplist and folds, and makes it current, as :split and :vsplit do with 'splitbelow' and
+// 'splitright' off. With b, the new window then shows b, as CTRL-W ^ does: not a jump.
 func (e *Engine) split(vertical bool, b *buffer) {
-	if b == nil {
-		b = e.buffer
-	}
 	old := e.window
-	w := e.newWindow(e.ed.Open(b.text), b)
-	if b == e.buffer {
-		w.cur, w.want = old.cur, old.want
-		w.jumps = slices.Clone(old.jumps)
-		w.jumpIdx = old.jumpIdx
-		if old.pcmark != nil {
-			p := *old.pcmark
-			w.pcmark = &p
-		}
+	w := e.newWindow(e.ed.Open(old.buf.text), old.buf)
+	w.cur, w.want = old.cur, old.want
+	w.jumps = slices.Clone(old.jumps)
+	w.jumpIdx = old.jumpIdx
+	if old.pcmark != nil {
+		p := *old.pcmark
+		w.pcmark = &p
 	}
 	w.alt = old.alt
 	if old.loc != nil {
 		w.loc = old.loc.clone()
 	}
-	if b == old.buf {
-		w.fold = old.fold
-		w.fold.folds = cloneFolds(old.fold.folds)
-	}
-	if b != old.buf {
-		w.alt = old.buf
-	}
+	w.fold = old.fold
+	w.fold.folds = cloneFolds(old.fold.folds)
 	w.top, w.scroll = old.top, old.scroll
 	e.layout.Split(WindowID(old.id), WindowID(w.id), vertical)
 	e.enter(w)
+	if b != nil && b != old.buf {
+		w.fold = foldState{method: "manual", enable: true}
+		e.showBuffer(b, true)
+		e.resetPcmark()
+	}
 }
 
 // closeWindow closes w; the window after it in its row or column, else the one before, gets the space and,
@@ -174,9 +170,6 @@ func (e *Engine) windowCmd(k string, count int) {
 			return
 		}
 		e.split(false, alt)
-		e.cur = alt.last
-		e.clamp(e.view())
-		e.setWant(e.view())
 	case "r", "<C-r>", "R":
 		e.rotate(k == "R", max(count, 1))
 	}
@@ -199,9 +192,8 @@ func (e *Engine) rotate(back bool, count int) {
 
 // newBufferWindow is :new and :vnew: a split with a new, empty buffer.
 func (e *Engine) newBufferWindow(vertical bool) {
-	b := e.newBuffer(text.New(nil, text.Author{}))
-	e.split(vertical, b)
-	e.cur, e.want = Pos{}, 0
+	e.split(vertical, nil)
+	e.editBuffer(e.newBuffer(text.New(nil, text.Author{})), true)
 }
 
 // Window is the current window's number, counting from 1 in CTRL-W w order, as winnr().

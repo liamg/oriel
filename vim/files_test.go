@@ -363,3 +363,36 @@ func TestPaneFileBytes(t *testing.T) {
 		}
 	}
 }
+
+// motion.txt *jump-motions*: "\"L\", \"M\", \"H\" and the commands that start editing a new file." JumpTo is a tag
+// jump: to another file in the same window, or within the file, and CTRL-O comes back.
+func TestJumpTo(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"), "one\ntwo\nthree\n")
+	writeFile(t, filepath.Join(dir, "b.txt"), "alpha\nbeta\n")
+	s := newSession(t, dir)
+	s.keys(":e a.txt<CR>jl")
+	at := func(what, name string, line, col int) {
+		t.Helper()
+		if c := s.e.Cursor(); s.e.Name() != name || c != (vim.Pos{Line: line, Col: col}) {
+			t.Errorf("%s: at %s %+v, want %s %d:%d", what, s.e.Name(), c, name, line, col)
+		}
+	}
+	if err := s.e.JumpTo("b.txt", vim.Pos{Line: 1, Col: 2}); err != nil {
+		t.Fatal(err)
+	}
+	at("JumpTo b.txt", "b.txt", 1, 2)
+	if s.e.Windows() != 1 {
+		t.Errorf("JumpTo opened a window: %d", s.e.Windows())
+	}
+	s.keys("<C-o>")
+	at("CTRL-O", "a.txt", 1, 1)
+	s.keys("<C-i>")
+	at("CTRL-I", "b.txt", 1, 2)
+	if err := s.e.JumpTo("b.txt", vim.Pos{Line: 0, Col: 3}); err != nil {
+		t.Fatal(err)
+	}
+	at("JumpTo in the same file", "b.txt", 0, 3)
+	s.keys("<C-o>")
+	at("CTRL-O in the same file", "b.txt", 1, 2)
+}

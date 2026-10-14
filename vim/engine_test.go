@@ -81,9 +81,14 @@ func (t *testEngine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 		}
 	}
 	if q.Jumps {
-		r.Jumps = []vimtest.Pos{}
-		for _, p := range t.e.Jumps() {
-			r.Jumps = append(r.Jumps, vimtest.Pos{Line: p.Line, Col: p.Col})
+		r.Jumps = []vimtest.Jump{}
+		cur := t.e.BufferNum()
+		for _, j := range t.e.Jumps() {
+			b := j.Buf
+			if b == cur {
+				b = 0
+			}
+			r.Jumps = append(r.Jumps, vimtest.Jump{Pos: vimtest.Pos{Line: j.Line, Col: j.Col}, Buf: b})
 		}
 	}
 	if q.Win {

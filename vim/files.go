@@ -86,6 +86,30 @@ func (e *Engine) Edit(name string) {
 	e.sync()
 }
 
+// JumpTo goes to p in the file name, as a tag jump does: a jump in the current window, which edits name when it
+// isn't the current buffer's. CTRL-O comes back.
+func (e *Engine) JumpTo(name string, p Pos) error {
+	if name != e.buffer.name {
+		b, err := e.openFile(name, true)
+		if err == nil {
+			err = e.editBuffer(b, false)
+		}
+		if err != nil {
+			return err
+		}
+	} else {
+		e.setPcmark()
+	}
+	v := e.view()
+	e.cur = p
+	e.clamp(v)
+	e.setWant(v)
+	e.openCursorFold()
+	e.updateTop(v)
+	e.sync()
+	return nil
+}
+
 // openFile finds the buffer named name, or reads its file into a new one. With reuse, a current buffer that's
 // empty, unnamed and unchanged takes the file instead, as vim's buflist_new reuses it.
 func (e *Engine) openFile(name string, reuse bool) (*buffer, error) {

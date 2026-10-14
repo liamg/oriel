@@ -236,14 +236,24 @@ func (e *engine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 		if err != nil {
 			return r, err
 		}
-		r.Jumps = []vimtest.Pos{}
+		v2, err := e.c.call("nvim_eval", "bufnr('%')")
+		if err != nil {
+			return r, err
+		}
+		cur, _ := v2.(int64)
+		r.Jumps = []vimtest.Jump{}
 		if l, ok := v.([]any); ok && len(l) > 0 {
 			entries, _ := l[0].([]any)
 			for _, en := range entries {
 				m, _ := en.(map[string]any)
 				line, _ := m["lnum"].(int64)
 				col, _ := m["col"].(int64)
-				r.Jumps = append(r.Jumps, vimtest.Pos{Line: int(line) - 1, Col: int(col)})
+				buf, _ := m["bufnr"].(int64)
+				j := vimtest.Jump{Pos: vimtest.Pos{Line: int(line) - 1, Col: int(col)}}
+				if buf != cur {
+					j.Buf = int(buf)
+				}
+				r.Jumps = append(r.Jumps, j)
 			}
 		}
 	}

@@ -2,9 +2,16 @@ package vim
 
 import (
 	"bytes"
+	"slices"
 
 	"github.com/liamg/oriel/text"
 )
+
+// jump is a jumplist entry: a position in a buffer.
+type jump struct {
+	Pos
+	buf *buffer
+}
 
 // setPcmark remembers the cursor as the previous context mark and adds it to the jumplist.
 func (e *Engine) setPcmark() {
@@ -14,8 +21,13 @@ func (e *Engine) setPcmark() {
 	}
 	p := e.cur
 	e.pcmark = &p
-	e.jumps = append(e.jumps, p)
+	e.jumps = append(e.jumps, jump{p, e.buffer})
 	e.jumpIdx = len(e.jumps)
+}
+
+// resetPcmark starts the previous context mark at the first line, as editing another buffer does.
+func (e *Engine) resetPcmark() {
+	e.pcmark, e.prevPcmark = &Pos{}, nil
 }
 
 func (e *Engine) markPos(r rune) (Pos, bool) {
@@ -53,34 +65,44 @@ func (e *Engine) Mark(r rune) (Pos, bool) {
 	return e.markPos(r)
 }
 
+// Jump is a jumplist entry: a position in a buffer.
+type Jump struct {
+	Pos
+	Buf int // the buffer's number
+}
+
 // Jumps returns the jumplist, oldest first, without duplicate lines, as :jumps shows it.
-func (e *Engine) Jumps() []Pos {
+func (e *Engine) Jumps() []Jump {
 	e.cleanJumps()
-	out := append([]Pos(nil), e.jumps...)
+	var out []Jump
+	for _, j := range e.jumps {
+		out = append(out, Jump{j.Pos, j.buf.num})
+	}
 	// nvim hides the newest entry when it is on the cursor's line.
-	if n := len(out); n > 0 && e.jumpIdx == n && out[n-1].Line == e.cur.Line {
+	if n := len(e.jumps); n > 0 && e.jumpIdx == n && e.jumps[n-1].buf == e.buffer && e.jumps[n-1].Line == e.cur.Line {
 		out = out[:n-1]
 	}
 	return out
 }
 
-// cleanJumps drops entries whose line appears again later in the list.
+// cleanJumps drops entries whose line appears again later in the list, and those in buffers that were
+// unloaded or wiped out, as nvim's 'jumpoptions' "clean" does.
 func (e *Engine) cleanJumps() {
-	var out []Pos
+	var out []jump
 	idx := e.jumpIdx
-	for i, p := range e.jumps {
+	for i, j := range e.jumps {
 		if i == e.jumpIdx {
 			idx = len(out)
 		}
-		dup := false
-		for _, q := range e.jumps[i+1:] {
-			if q.Line == p.Line {
-				dup = true
+		drop := j.buf.unloaded || !slices.Contains(e.buffers, j.buf)
+		for _, k := range e.jumps[i+1:] {
+			if k.buf == j.buf && k.Line == j.Line {
+				drop = true
 				break
 			}
 		}
-		if !dup {
-			out = append(out, p)
+		if !drop {
+			out = append(out, j)
 		}
 	}
 	if e.jumpIdx >= len(e.jumps) {
@@ -89,7 +111,7 @@ func (e *Engine) cleanJumps() {
 	e.jumps, e.jumpIdx = out, idx
 }
 
-// jump is CTRL-O (n < 0) and CTRL-I (n > 0).
+// jump is CTRL-O (n < 0) and CTRL-I (n > 0). An entry in another buffer edits that buffer.
 func (e *Engine) jump(v *view, n int) {
 	e.cleanJumps()
 	if len(e.jumps) == 0 {
@@ -107,16 +129,23 @@ func (e *Engine) jump(v *view, n int) {
 		}
 	}
 	e.jumpIdx += n
-	p := e.jumps[e.jumpIdx]
-	e.cur = Pos{min(p.Line, v.lines()-1), p.Col}
+	j := e.jumps[e.jumpIdx]
+	if j.buf != e.buffer {
+		if err := e.showBuffer(j.buf, false); err != nil {
+			e.fail(err)
+			return
+		}
+		e.resetPcmark()
+		v = e.view()
+	}
+	e.cur = Pos{min(j.Line, v.lines()-1), j.Col}
 	e.clamp(v)
 	e.setWant(v)
 }
 
-// adjustMarks moves marks and jumps through a change the way vim's mark_adjust does: by whole lines.
-// A mark on a line that is deleted is deleted.
-// adjustMarks moves a buffer's marks, and the jumplists and cursors of the windows showing it, through a
-// change to it. The current window's cursor is left to the command that made the change.
+// adjustMarks moves a buffer's marks, the jumplist entries in it and the cursors of the windows showing it
+// through a change to it, the way vim's mark_adjust does: by whole lines. A mark on a line that is deleted
+// is deleted. The current window's cursor is left to the command that made the change.
 func (e *Engine) adjustMarks(buf *buffer, ch text.Change) {
 	before := ch.Before
 	for i, r := range ch.Replaces {
@@ -163,6 +192,11 @@ func (e *Engine) adjustMarks(buf *buffer, ch text.Change) {
 			}
 		}
 		for _, w := range e.windows {
+			for i, j := range w.jumps {
+				if np, ok := move(j.Pos); ok && j.buf == buf {
+					w.jumps[i].Pos = np
+				}
+			}
 			if w.buf != buf {
 				continue
 			}
@@ -171,11 +205,6 @@ func (e *Engine) adjustMarks(buf *buffer, ch text.Change) {
 				w.fold.adjustFolds(first, n, max(delta+n, 0))
 			} else {
 				w.fold.adjustFolds(first, 0, added)
-			}
-			for i, p := range w.jumps {
-				if np, ok := move(p); ok {
-					w.jumps[i] = np
-				}
 			}
 			if w.pcmark != nil {
 				if np, ok := move(*w.pcmark); ok {

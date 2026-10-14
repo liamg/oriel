@@ -321,12 +321,13 @@ func (e *Engine) qfJump(loc bool, idx int) error {
 				return err
 			}
 		}
-		e.setPcmark()
 		if b != e.buffer {
 			b.unlisted = false
-			if err := e.switchBuffer(b, false); err != nil {
+			if err := e.editBuffer(b, false); err != nil {
 				return err
 			}
+		} else {
+			e.setPcmark()
 		}
 		v := e.view()
 		line := min(max(en.line-1, 0), v.lines()-1)
