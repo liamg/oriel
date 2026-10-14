@@ -95,6 +95,10 @@ func entries(h ext.Host, p ext.Pending) (title string, out []entry) {
 			order = append(order, hint.Keys)
 		}
 	}
+	if p.Runs != "" {
+		byKey["<CR>"] = &entry{key: "<CR>", desc: p.Runs}
+		order = append(order, "<CR>")
+	}
 	for _, k := range order {
 		e := byKey[k]
 		if e.group && e.desc == "" {
@@ -177,8 +181,11 @@ func (w *whichKey) build(c *ui.Ctx) {
 
 // keyCap is a key as which-key shows it: the space bar as ␣.
 func keyCap(k string) string {
-	if k == " " || k == "<Space>" {
+	switch k {
+	case " ", "<Space>":
 		return "␣"
+	case "<CR>":
+		return "⏎"
 	}
 	return k
 }

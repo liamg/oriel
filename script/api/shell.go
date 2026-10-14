@@ -11,7 +11,7 @@ import (
 //oriel:api name=rail
 type Rail struct{ a *APIs }
 
-//oriel:api doc="Add an icon to the rail down the window's left edge: { name, icon, title, command, args, order (50 by default), bottom }. icon is a built-in icon's name (files, search, git, requests, debug, tests, settings) or a glyph. It's dimmed while the command isn't available."
+//oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available."
 func (r Rail) Add(spec script.Table, where string) error {
 	e := registry.RailEntry{Name: str(spec, "name"), Icon: str(spec, "icon"), Title: str(spec, "title"), Command: str(spec, "command"),
 		Order: 50, Source: where}
@@ -25,6 +25,21 @@ func (r Rail) Add(spec script.Table, where string) error {
 		e.Order = int(o)
 	}
 	e.Bottom, _ = spec["bottom"].(bool)
+	switch sc := str(spec, "scope"); sc {
+	case "", registry.ScopeSessionEntry, registry.ScopeProjectEntry, registry.ScopeGlobalEntry:
+		e.Scope = sc
+	default:
+		return fmt.Errorf("a rail entry's scope is project, session or global, not %q", sc)
+	}
+	if fn, ok := spec["note"].(*script.Fn); ok {
+		e.Note = func(project string) string {
+			out, err := r.a.VM.Call(fn, project)
+			if err != nil || len(out) == 0 || out[0] == nil {
+				return ""
+			}
+			return fmt.Sprint(out[0])
+		}
+	}
 	r.a.own(r.a.Host.Contribute(e))
 	return nil
 }
@@ -32,7 +47,7 @@ func (r Rail) Add(spec script.Table, where string) error {
 //oriel:api name=start
 type Start struct{ a *APIs }
 
-//oriel:api doc="Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default) }. It's dimmed while the command isn't available."
+//oriel:api doc="Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure."
 func (s Start) Add(spec script.Table, where string) error {
 	e := registry.StartEntry{Name: str(spec, "name"), Icon: str(spec, "icon"), Title: str(spec, "title"), Desc: str(spec, "desc"),
 		Command: str(spec, "command"), Order: 50, Source: where}
@@ -44,6 +59,16 @@ func (s Start) Add(spec script.Table, where string) error {
 	}
 	if o, ok := spec["order"].(float64); ok {
 		e.Order = int(o)
+	}
+	e.Link, _ = spec["link"].(bool)
+	if fn, ok := spec["note"].(*script.Fn); ok {
+		e.Note = func() string {
+			out, err := s.a.VM.Call(fn)
+			if err != nil || len(out) == 0 || out[0] == nil {
+				return ""
+			}
+			return fmt.Sprint(out[0])
+		}
 	}
 	s.a.own(s.a.Host.Contribute(e))
 	return nil

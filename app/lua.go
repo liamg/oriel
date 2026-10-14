@@ -69,9 +69,6 @@ type replLine struct {
 // Events features fire later, declared now so hooks on them show what they wait for (plugins.md, "Go interfaces").
 var laterEvents = []registry.EventInfo{
 	{Name: "Commit", Doc: "A commit about to be made (FG-6); a veto stops it. { project, message, unread }"},
-	{Name: "CommentSend", Doc: "A comment about to go to an agent (AI-5); a rewrite changes it. { thread, body, urgent }"},
-	{Name: "Permission", Doc: "An agent asking to run a tool (AI-7); a decision answers it. { session, tool, input }"},
-	{Name: "AgentTurnEnd", Doc: "An agent's turn ending (AI-2). { session }"},
 	{Name: "PrRaise", Doc: "A pull request about to be raised (FG-6); a veto stops it. { project, title }"},
 	{Name: "ModeChanged", Doc: "The editor's mode changing (a later ticket). { old, new }"},
 }
@@ -438,7 +435,7 @@ func (x *luaExt) hooksView(c *ui.Ctx) {
 	for _, h := range hooks {
 		events[h.Event] = true
 	}
-	c.Column("hooks", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 6, ScrollY: true, Help: "plugins/hooks"}, func(c *ui.Ctx) {
+	c.Column("hooks", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 6, ScrollX: true, ScrollY: true, Help: "plugins/hooks"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 			c.Text("t", ":HOOKS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.Accent)})
 			c.Text("n", fmt.Sprintf("%d hooks · %d events", len(hooks), len(events)), mono(10.5, theme.FgFaint))
@@ -505,9 +502,10 @@ func cmpOr(s, d string) string {
 	return s
 }
 
+// fmtDur is a hook's p99 as :Hooks shows it: what matters is the 2 ms budget, so under a millisecond is just that.
 func fmtDur(d time.Duration) string {
 	if d < time.Millisecond {
-		return fmt.Sprintf("%dµs", d.Microseconds())
+		return "<1ms"
 	}
 	return fmt.Sprintf("%.1fms", float64(d.Microseconds())/1000)
 }

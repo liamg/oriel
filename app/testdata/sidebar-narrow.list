@@ -1,0 +1,123 @@
+backdrop #060606
+rect 0,0 760x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 629.0625x38 r 0
+  rect 102.9375,0 214x38 fill #121210
+  rect 102.9375,0 214x2 fill #ffd23f
+  rect 114.9375,16 8x8 fill #4cc9f0 radius 4
+  text "INF-2310 admin filters" @129.9375,24.365234 #ece6d8 Inter 12
+  text "work" @261.9375,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘1" @292.9375,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 316.9375,0 1x38 fill #24221d
+pop
+rect 0,38 44x356 fill #0c0c0b
+clip 0,38 43x356 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  rect 6.5,70 30x24 fill #191917 radius 6
+  text "AD" @15.5,85.6 #4cc9f0 JetBrains Mono 10
+  rect 6.5,98 30x24 fill #191917 radius 6 stroke 1 #b98aff
+  text "AP" @15.5,113.6 #b98aff JetBrains Mono 10
+  path 7 segments stroke 1.4545455 #7c7566
+  rect -0.5,166 2x18 fill #ffd23f radius 1
+  rect 5.5,159 32x32 fill #1f1c0f radius 7
+  path 6 segments stroke 1.4545455 #ffd23f
+  path 2 segments stroke 1.4545455 #ffd23f
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #7c7566
+  rect 6.5,296 30x24 fill #191917 radius 6
+  text "WE" @15.5,311.6 #4fe0a0 JetBrains Mono 10
+  rect 9.5,326 24x1 fill #332f27
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
+rect 43,38 1x356 fill #24221d
+rect 44,38 716x356 fill #060606
+rect 44,38 380x356 fill #0c0c0b
+clip 44,38 380x356 r 0
+  rect 44,38 380x30 fill #0c0c0b
+  rect 44,38 380x2 fill #ffd23f
+  rect 58,50.5 7x7 fill #b98aff radius 1
+  text "api" @73,58.14 #ece6d8 JetBrains Mono 11.5
+  text "SEARCH" @102.609375,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @404.70312,57.96 #7c7566 JetBrains Mono 11
+  rect 44,68 380x1 fill #24221d
+  clip 44,69 380x325 r 0
+    rect 44,69 380x325 fill #0c0c0b
+    text "SEARCH" @56,89.53 #ffd23f JetBrains Mono 10
+    text "" @412,89.71 #7c7566 JetBrains Mono 10.5
+    rect 56,98.86 326x30 fill #060606 radius 6
+    clip 56,98.86 326x30 r 6
+      text "Find (PCRE2; @all for generated files)" @66,118.40712 #7c7566 Inter 12.5
+    pop
+    rect 56,98.86 326x30 radius 6 stroke 1 #332f27
+    rect 388,104.86 24x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+    text "Aa" @394,117.46 #ffd23f JetBrains Mono 10
+    rect 56,134.86 32x18 fill #23211c radius 9
+    rect 58,136.86 14x14 fill #ece6d8 radius 7
+    text "All projects" @95,147.86147 #7c7566 Inter 11
+    rect 56,158.86 356x30 fill #060606 radius 6
+    clip 56,158.86 356x30 r 6
+      text "Replace ($1, ${name})" @66,178.40712 #7c7566 Inter 12.5
+    pop
+    rect 56,158.86 356x30 radius 6 stroke 1 #332f27
+    rect 56,194.86 356x30 fill #060606 radius 6
+    clip 56,194.86 356x30 r 6
+      text "files: *.go, *.ts" @66,214.40712 #7c7566 Inter 12.5
+    pop
+    rect 56,194.86 356x30 radius 6 stroke 1 #332f27
+    clip 44,232.86 380x119.14 r 0
+    pop
+    rect 56,360 93.0625x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Replace all…" @66,377.36523 #4f4a40 Inter 12
+    rect 157.0625,360 80.21875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "→ quickfix" @167.0625,377.36523 #4f4a40 Inter 12
+  pop
+pop
+rect 0,394 760x26 fill #0c0c0b
+text "✕" @16,410.96 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,410.96 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,410.96 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,410.96 #b3ab99 JetBrains Mono 11
+rect 32,95.5 7x7 fill #ff5f6d radius 3.5
+rect 24.09375,335 11.40625x13 fill #ff9b45 radius 6.5
+text "3" @27.09375,344.56003 #141006 JetBrains Mono 8.5

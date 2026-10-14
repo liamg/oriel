@@ -1,6 +1,6 @@
 ---
 id: SH-8
-title: "HUD drawer (hold ⌥) and tats in slots"
+title: "HUD drawer (hold ⌥) and indicators in slots"
 phase: P7
 status: todo
 area: Shell and navigation
@@ -8,7 +8,7 @@ module: app, hud
 depends_on: [FW-6, FW-2]
 ---
 
-# SH-8 · HUD drawer (hold ⌥) and tats in slots
+# SH-8 · HUD drawer (hold ⌥) and indicators in slots
 
 **Phase** 7 · the rest · **After** [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md), [FW-2](FW-2-event-store-typed-events-materialised-core-state.md) · **Unblocks** nothing yet
 
@@ -28,7 +28,7 @@ depends_on: [FW-6, FW-2]
 
 ## Done when
 
-every panel bound to live events; tats updatable from Lua
+every panel bound to live events; indicators updatable from Lua
 
 ## Rules
 

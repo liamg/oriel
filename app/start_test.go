@@ -46,12 +46,21 @@ func TestConfigFromFlagsDirectory(t *testing.T) {
 // startApp runs the app with nothing open, its state in state, and a grab host.
 func startApp(t *testing.T, state, workDir string, setup func(h ext.Host)) *running {
 	t.Helper()
+	return startAppWith(t, state, workDir, setup, nil)
+}
+
+// startAppWith is startApp with its config changed first: workers to connect, say.
+func startAppWith(t *testing.T, state, workDir string, setup func(h ext.Host), change func(*Config)) *running {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	t.Cleanup(cancel)
 	be := headless.New()
 	g := &grabHost{setup: setup}
 	r := &running{t: t, store: eventstore.New(), dir: workDir, done: make(chan error, 1)}
 	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), StateDir: state, WorkDir: workDir, Extensions: []ext.Extension{g}}
+	if change != nil {
+		change(&cfg)
+	}
 	go func() { r.done <- Run(ctx, be, cfg) }()
 	select {
 	case r.win = <-be.Windows():
@@ -88,7 +97,7 @@ func TestStartViewEntries(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Enter didn't run the selected entry")
 	}
-	r.typeKeys("j<CR>") // New Session: nothing registers it yet
+	r.typeKeys("j<CR>") // New Session: no worker, so it does nothing
 	r.typeKeys("jjj<CR>")
 	r.waitText("SETTINGS") // the settings page's heading
 }
@@ -223,7 +232,7 @@ func (s *errScene) startCard(label string) *render.AccessNode {
 	var found *render.AccessNode
 	var find func(n *render.AccessNode)
 	find = func(n *render.AccessNode) {
-		if n.Name == label && n.Role == render.RoleButton && n.Bounds.Min.X > railW {
+		if n.Name == label && n.Role == render.RoleButton && n.Bounds.Min.X >= 0 {
 			found = n
 		}
 		for _, k := range n.Children {
@@ -250,7 +259,7 @@ func TestStartViewFits(t *testing.T) {
 		s.frame()
 		s.frame()
 		for _, l := range []string{"Open Directory", "Settings"} {
-			if b := s.startCard(l).Bounds; b.Min.X < railW || b.Max.X > tt.width {
+			if b := s.startCard(l).Bounds; b.Min.X < 0 || b.Max.X > tt.width {
 				t.Errorf("at %v wide, %s is at %v", tt.width, l, b)
 			}
 		}

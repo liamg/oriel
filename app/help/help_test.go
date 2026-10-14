@@ -8,8 +8,8 @@ import (
 func TestParse(t *testing.T) {
 	p, err := Parse(`---
 id: hud/usage
-covers: [hud.tat.usage.*, hud.panel.usage]
-related: [hud/usage#five-hour, session/tally]
+covers: [hud.indicator.usage.*, hud.panel.usage]
+related: [hud/usage#five-hour, session/stats]
 ---
 
 # Usage windows

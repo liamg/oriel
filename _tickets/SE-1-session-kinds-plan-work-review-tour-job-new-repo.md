@@ -2,7 +2,7 @@
 id: SE-1
 title: "Session kinds plan, work, review, tour, job, new repo, direct and scratch (sessions.md)"
 phase: P5
-status: todo
+status: review
 area: Sessions and AI
 module: core, worker
 depends_on: [AI-1]

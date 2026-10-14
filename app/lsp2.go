@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
@@ -32,11 +33,12 @@ var tPeekBg = theme.Declare("lsp.peek.bg", "bg.surface")
 
 // refPeek is grr's inline peek at the references of the symbol on a line.
 type refPeek struct {
-	path string
-	line int
-	name string
-	refs []lsp.Location
-	sel  int
+	path  string
+	line  int
+	name  string
+	refs  []lsp.Location
+	sel   int
+	shown int // the selection the list last scrolled to
 }
 
 // renamePrompt is grn's prompt for the new name.
@@ -49,10 +51,29 @@ type renamePrompt struct {
 }
 
 // navigation registers LS-2: go to definition and its kin, the references peek, rename, symbols and calls.
+// slowAnswer is how long a request the user waits on goes before they're told it's waiting.
+const slowAnswer = 400 * time.Millisecond
+
 func (x *lspExt) navigation(h ext.Host) {
 	goTo := func(what string, find func(c *lsp.Client, ctx context.Context, at lsp.Loc) ([]lsp.Location, error), vimKeys string) func(registry.Ctx, registry.Args) error {
-		return func(ctx registry.Ctx, _ registry.Args) error {
+		var run func(ctx registry.Ctx, _ registry.Args) error
+		run = func(ctx registry.Ctx, args registry.Args) error {
 			p, path, d := x.current()
+			if d != nil && d.opening {
+				id := "lsp.starting"
+				h.Notify(core.Notice{ID: id, Severity: core.SevInfo, Key: true, Text: "Starting the " + d.lang + " language server…"})
+				d.ready = append(d.ready, func() {
+					h.Dismiss(id)
+					if d.client == nil {
+						h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: "The " + d.lang + " language server didn't start: :LspInfo says why"})
+						return
+					}
+					if err := run(ctx, args); err != nil {
+						h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: err.Error()})
+					}
+				})
+				return nil
+			}
 			if d == nil || d.client == nil {
 				if vimKeys != "" {
 					return h.Run(ctx, "editor.keys", registry.Args{"keys": vimKeys, "noremap": true})
@@ -60,7 +81,13 @@ func (x *lspExt) navigation(h ext.Host) {
 				return fmt.Errorf("no language server for this file")
 			}
 			at, c := lsp.Loc{Path: path, Pos: text.Pos(p.Cursor())}, d.client
+			slow := time.AfterFunc(slowAnswer, func() {
+				h.Notify(core.Notice{ID: "lsp.waiting", Severity: core.SevInfo, Key: true, Text: "Waiting for " + c.Status().Server + " (" + c.Status().State.String() + ")…"})
+			})
 			async(x, func(ctx context.Context) ([]lsp.Location, error) { return find(c, ctx, at) }, func(ls []lsp.Location, err error) {
+				if !slow.Stop() {
+					h.Dismiss("lsp.waiting")
+				}
 				switch {
 				case err != nil:
 					h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: err.Error()})
@@ -74,6 +101,7 @@ func (x *lspExt) navigation(h ext.Host) {
 			})
 			return nil
 		}
+		return run
 	}
 	for _, c := range []registry.Command{
 		{ID: "lsp.definition", Title: "Go to the definition", Run: goTo("definition", (*lsp.Client).Definition, "gd")},
@@ -113,7 +141,6 @@ func (x *lspExt) navigation(h ext.Host) {
 		{Mode: "n", Keys: "gri", Command: "lsp.implementation", Desc: "Implementations"},
 		{Mode: "n", Keys: "grr", Command: "lsp.references", Desc: "References"},
 		{Mode: "n", Keys: "grn", Command: "lsp.rename", Desc: "Rename"},
-		{Mode: "n", Keys: "<Leader>rn", Command: "lsp.rename", Desc: "Rename"},
 		{Mode: "n", Keys: "gra", Command: "lsp.code_actions", Desc: "Code actions"},
 		{Mode: "n", Keys: "gO", Command: "picker.open", Args: registry.Args{"source": "symbols.file"}, Desc: "Symbols here"},
 		{Mode: "n", Keys: "<Leader>ci", Command: "lsp.calls.incoming", Desc: "Incoming calls"},
@@ -133,17 +160,22 @@ func (x *lspExt) navigation(h ext.Host) {
 	x.substituteHints(h)
 }
 
-// jump opens a location's file at its start.
+// jump goes to a location as a vim jump in the current window, so ⌃O comes back.
 func (x *lspExt) jump(l lsp.Location) {
 	r := l.Range
 	if l.Target != nil {
 		r = *l.Target
 	}
-	if err := x.h.Run(context.Background(), "editor.open", registry.Args{"path": l.Path, "line": r.Start.Line + 1}); err != nil {
+	ed := x.sh.editor
+	name := l.Path
+	if rel, err := filepath.Rel(ed.dir, l.Path); err == nil && filepath.IsAbs(l.Path) && !strings.HasPrefix(rel, "..") {
+		name = rel
+	}
+	if err := ed.e.JumpTo(name, vim.Pos{Line: r.Start.Line, Col: r.Start.Col}); err != nil {
 		x.h.Notify(core.Notice{ID: "lsp.jump", Severity: core.SevWarning, Key: true, Text: err.Error()})
 		return
 	}
-	x.sh.editor.e.SetCursor(vim.Pos{Line: r.Start.Line, Col: r.Start.Col})
+	ed.conv.refresh()
 }
 
 // toQuickfix lists locations in the quickfix list, and shows it.
@@ -202,7 +234,7 @@ func (x *lspExt) references() error {
 			}
 			return a.Range.Start.Line - b.Range.Start.Line
 		})
-		x.peek = &refPeek{path: path, line: pos.Line, name: name, refs: ls}
+		x.peek = &refPeek{path: path, line: pos.Line, name: name, refs: ls, shown: -1}
 	})
 	return nil
 }
@@ -220,7 +252,8 @@ func (x *lspExt) peekDecoration(ctx registry.DecorationCtx) []registry.Decoratio
 	if pk == nil || pk.path != ctx.Path || pk.line < ctx.Top || pk.line >= ctx.Bottom {
 		return nil
 	}
-	return []registry.Decoration{{Kind: registry.Block, Line: pk.line, Node: &ui.Func{Key: "peek", Fn: func(c *ui.Ctx) { x.peekView(c, pk) }}, Priority: 20}}
+	return []registry.Decoration{{Kind: registry.Block, Line: pk.line, Node: &ui.Func{Key: "peek", Fn: func(c *ui.Ctx) { x.peekView(c, pk) }},
+		Priority: 20, Reveal: true}}
 }
 
 // peekView is the highlighted reference's code beside every reference, by file (09-lsp).
@@ -250,7 +283,7 @@ func (x *lspExt) peekView(c *ui.Ctx, pk *refPeek) {
 			f.build(c, nil)
 		})
 		c.Box("edge", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
-		c.Column("list", ui.Style{W: ui.Px(300), H: ui.Flex(1), Pad: ui.PadXY(0, 8), ScrollY: true}, func(c *ui.Ctx) {
+		listID := c.Column("list", ui.Style{W: ui.Px(300), H: ui.Flex(1), Pad: ui.PadXY(0, 8), ScrollY: true}, func(c *ui.Ctx) {
 			c.Row("count", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 2)}, func(c *ui.Ctx) {
 				c.Text("t", fmt.Sprintf("%d references to %s", len(pk.refs), pk.name), monoTok(c, 10, theme.FgFaint))
 			})
@@ -283,6 +316,10 @@ func (x *lspExt) peekView(c *ui.Ctx, pk *refPeek) {
 				}
 			}
 		})
+		if pk.shown != pk.sel {
+			c.ScrollIntoView(listID, ui.Child(listID, pk.sel))
+			pk.shown = pk.sel
+		}
 	})
 }
 

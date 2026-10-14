@@ -2,7 +2,7 @@
 id: SE-3
 title: "Files outside the session open read-only; app opens on mission control"
 phase: P5
-status: todo
+status: review
 area: Sessions and AI
 module: app
 depends_on: [SE-1]

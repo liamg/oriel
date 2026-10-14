@@ -42,6 +42,9 @@ type elem struct {
 	paint  func(f render.Frame, r render.Rect)
 	kids   []*elem
 	parent *elem
+	scale  float32 // what it and its subtree are drawn at (Style.Scale, times its parent's); 0 is 1
+
+	controls bool // it or something in it can be clicked or focused, or keeps its width (Style.Keep)
 
 	pos, size [2]float32
 	content   [2]float32 // children's extent, for scrolling
@@ -50,10 +53,12 @@ type elem struct {
 }
 
 type state struct {
-	rect   render.Rect
-	scroll [2]float32
-	seen   int
-	data   any // a widget's own state: State[T]
+	rect       render.Rect
+	scroll     [2]float32
+	ext, view  [2]float32 // a scrolling box's content and what of it shows, along each axis
+	scrolledAt time.Time
+	seen       int
+	data       any // a widget's own state: State[T]
 }
 
 // UI holds what lasts between frames.
@@ -69,6 +74,8 @@ type UI struct {
 	root    *elem
 	byID    map[ID]*elem
 	floats  []*elem
+	layered map[int]bool // the float layers (Style.Z) last frame drew
+	asked   map[int]bool // the layers Layered was asked about this frame
 	states  map[ID]*state
 	hits    []hit
 	flags   map[ID]flags // from the latest frame, which input resolves against
@@ -91,6 +98,7 @@ type UI struct {
 type flags struct {
 	interactive, focusable, disabled bool
 	scrollX, scrollY, wheel          bool
+	bars                             Bars
 	cursor                           render.Cursor
 	tooltip, help, keyMode           string
 	trap                             bool
@@ -170,9 +178,17 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 		u.grow(u.root, axis)
 	}
 	u.place(u.root, 0, 0)
+	layered := map[int]bool{}
 	for i := 0; i < len(u.floats); i++ {
 		u.placeFloat(u.floats[i])
+		layered[u.floats[i].style.Z] = true
 	}
+	for z := range u.asked {
+		if layered[z] != u.layered[z] {
+			u.wakeAt(u.now()) // what was built asked about this layer (Layered), and it came or went
+		}
+	}
+	u.layered, u.asked = layered, nil
 	u.animate(prev)
 	for id, st := range u.states {
 		if st.seen != u.frame {
@@ -199,7 +215,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 				parent = e.parent.id
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
-				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
+				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
 				trap: s.Trap, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop}
 		}
 	}
@@ -217,6 +233,16 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	}
 }
 
+// Layered reports whether last frame drew a float on layer z (a page at LayerPage, say): what's built beside one can
+// depend on it.
+func (u *UI) Layered(z int) bool {
+	if u.asked == nil {
+		u.asked = map[int]bool{}
+	}
+	u.asked[z] = true
+	return u.layered[z]
+}
+
 // tooltip shows the hovered node's tooltip once the pointer has rested on it for the delay.
 func (u *UI) tooltip() {
 	in := &u.in
@@ -232,7 +258,7 @@ func (u *UI) tooltip() {
 	at := in.pos
 	c := &Ctx{u: u, e: u.root}
 	c.Box(tooltipKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: u.opts.TooltipStroke, Border: 1, Radius: 4,
-		Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}}, func(c *Ctx) {
+		Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}, Scale: u.opts.TooltipScale}, func(c *Ctx) {
 		c.Text(nil, tip, u.opts.Tooltip)
 	})
 }
@@ -267,6 +293,7 @@ func (u *UI) Scroll(id ID) render.Point {
 func (u *UI) ScrollBy(id ID, dx, dy float32) {
 	st := u.state(id)
 	st.seen = u.frame
+	st.scrolledAt = u.now()
 	st.scroll[0] += dx
 	st.scroll[1] += dy
 }
@@ -336,7 +363,7 @@ func (u *UI) add(e *elem, key any, k kind) *elem {
 		e.keys = map[string]int{}
 	}
 	e.keys[keyName(base)]++
-	c := &elem{id: childID(e.id, key), name: name, kind: k, parent: e}
+	c := &elem{id: childID(e.id, key), name: name, kind: k, parent: e, scale: e.scale}
 	e.kids = append(e.kids, c)
 	u.byID[c.id] = c
 	st := u.state(c.id)
@@ -392,6 +419,10 @@ func (u *UI) fit(e *elem, axis int) {
 	for _, c := range e.kids {
 		u.fit(c, axis)
 	}
+	e.controls = e.style.Interactive || e.style.Focusable || e.style.Keep
+	for _, c := range e.kids {
+		e.controls = e.controls || c.controls
+	}
 	var content float32
 	switch e.kind {
 	case kText:
@@ -444,10 +475,65 @@ func (u *UI) grow(e *elem, axis int) {
 				}
 			}
 		}
+		if axis == 0 {
+			squeeze(e, kids, inner)
+		}
+	}
+	if e.kind == kText && e.size[0] < e.run.Advance-slack {
+		e.run = u.sh.Shape(Elide(u.sh, e.text, e.ts.Font, e.size[0]), e.ts.Font)
 	}
 	for _, c := range e.kids {
 		u.grow(c, axis)
 	}
+}
+
+// slack is how far, in pixels, content may pass its box unseen: sums of widths differ by rounding.
+const slack = .5
+
+// squeeze narrows e's content-sized children to fit its inner width so no text runs out of its box, last first (a
+// row's start is what says most): content, then what holds a control (a tab, a button); a text narrowed this way is cut with "…". Fixed sizes keep theirs; a box
+// that scrolls sideways keeps its content.
+func squeeze(e *elem, kids []*elem, inner float32) {
+	var content, controls []*elem
+	for _, c := range kids {
+		switch {
+		case c.sz(0).Kind != Fit:
+		case c.controls:
+			controls = append(controls, c)
+		default:
+			content = append(content, c)
+		}
+	}
+	if !e.main(0) {
+		for _, c := range append(content, controls...) {
+			if c.size[0] > inner+slack {
+				c.size[0] = max(inner, c.sz(0).Min)
+			}
+		}
+		return
+	}
+	used := e.style.Gap * float32(max(len(kids)-1, 0))
+	for _, c := range kids {
+		used += c.size[0]
+	}
+	over := used - inner
+	for _, soft := range [][]*elem{content, controls} {
+		if over > slack {
+			over -= trim(soft, over)
+		}
+	}
+}
+
+// trim takes over off soft's widths, last first, as far as their Min allows, and says how much it took.
+func trim(soft []*elem, over float32) float32 {
+	var took float32
+	for i := len(soft) - 1; i >= 0 && over-took > 0; i-- {
+		c := soft[i]
+		cut := min(over-took, max(c.size[0]-c.sz(0).Min, 0))
+		c.size[0] -= cut
+		took += cut
+	}
+	return took
 }
 
 // share splits what's left along the main axis between grow children by weight, honouring Min and Max.
@@ -461,6 +547,18 @@ func (u *UI) share(e *elem, kids []*elem, axis int, inner float32) {
 			left -= c.size[axis]
 		}
 	}
+	// With room for each one's content, none gets less: its content is its Min. A box that scrolls needs none.
+	need := map[*elem]float32{}
+	var total float32
+	for _, c := range growing {
+		if !c.scrolls(axis) {
+			need[c] = c.size[axis]
+			total += c.size[axis]
+		}
+	}
+	if total > left {
+		clear(need)
+	}
 	for len(growing) > 0 {
 		var weight float32
 		for _, c := range growing {
@@ -473,6 +571,7 @@ func (u *UI) share(e *elem, kids []*elem, axis int, inner float32) {
 		for i := 0; i < len(growing); i++ {
 			c := growing[i]
 			s := c.sz(axis)
+			s.Min = max(s.Min, need[c])
 			want := max(left, 0) * s.Value / weight
 			if got := s.clamp(want); got != want {
 				c.size[axis] = got
@@ -522,6 +621,7 @@ func (u *UI) place(e *elem, x, y float32) {
 				}
 			}
 			st.scroll[axis] = max(0, min(st.scroll[axis], ext-inner[axis]))
+			st.ext[axis], st.view[axis] = ext, inner[axis]
 			origin[axis] -= st.scroll[axis]
 		} else {
 			st.scroll[axis] = 0
@@ -709,6 +809,9 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	if clips {
 		f.Pop()
 	}
+	if s.ScrollX || s.ScrollY {
+		u.paintBars(f, e.id, r)
+	}
 	if edgeOver {
 		f.Rect(r, render.Style{Radius: s.Radius, Stroke: s.Stroke, Width: s.Border})
 	}
@@ -774,6 +877,7 @@ func (u *UI) SetTheme(r *theme.Resolved) {
 	u.theme = r
 	u.text.Color = r.C(theme.Fg)
 	u.opts.FocusRing = r.C(theme.FocusRing)
+	u.opts.ScrollThumb, u.opts.ScrollThumbHot = r.C(theme.ScrollThumb), r.C(theme.ScrollThumbHot)
 	u.opts.Hover, u.opts.Pressed = r.C(theme.Hover), r.C(theme.Pressed)
 	u.opts.Tooltip.Color = r.C(theme.Fg)
 	u.opts.TooltipFill = r.C(theme.BgOverlay)
@@ -782,3 +886,26 @@ func (u *UI) SetTheme(r *theme.Resolved) {
 
 // Theme is the theme set last, or nil.
 func (u *UI) Theme() *theme.Resolved { return u.theme }
+
+// Overflowing lists the latest frame's texts drawn past the inner edge of a box they're in, up to one that scrolls:
+// a lint, as nothing the toolkit lays out should.
+func (u *UI) Overflowing() []string {
+	var out []string
+	for _, e := range u.byID {
+		if e.kind != kText {
+			continue
+		}
+		l, r := e.pos[0], e.pos[0]+e.run.Advance
+		for a := e.parent; a != nil && !a.style.ScrollX; a = a.parent {
+			if l < a.pos[0]+a.style.Pad.L-slack || r > a.pos[0]+a.size[0]-a.style.Pad.R+slack {
+				out = append(out, fmt.Sprintf("%q (%s–%s) past %s (%s)", e.text, num(l), num(r), a.name, fmtRect(a.rect())))
+				break
+			}
+			if a.style.Float != nil {
+				break
+			}
+		}
+	}
+	slices.Sort(out)
+	return out
+}

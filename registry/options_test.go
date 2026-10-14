@@ -1,6 +1,8 @@
 package registry_test
 
 import (
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -151,5 +153,72 @@ func TestOptionSources(t *testing.T) {
 	}
 	if s, ok := o.Spec("number"); !ok || s.Name != "editor.line_numbers" {
 		t.Errorf("spec by alias: %+v", s)
+	}
+}
+
+// settings.md, "Options": a list holds strings, and an option's own Validate refuses what its type can't say is wrong.
+func TestOptionListAndValidate(t *testing.T) {
+	r := registry.New()
+	r.Option(registry.OptionSpec{Name: "sandbox.egress", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
+		Validate: func(v any) error {
+			for _, s := range v.([]string) {
+				if s == "" {
+					return errors.New("an empty rule")
+				}
+			}
+			return nil
+		}})
+	o := r.Options()
+	if err := o.Set("sandbox.egress", registry.LayerUser, registry.At{}, []string{"allow api.example.com"}); err != nil {
+		t.Fatal(err)
+	}
+	if v, _, _ := o.Get("sandbox.egress", registry.At{}); len(v.([]string)) != 1 {
+		t.Errorf("sandbox.egress = %v", v)
+	}
+	if err := o.Set("sandbox.egress", registry.LayerUser, registry.At{}, "allow api.example.com"); err == nil {
+		t.Error("a string set a list")
+	}
+	if err := o.Set("sandbox.egress", registry.LayerUser, registry.At{}, []string{""}); err == nil || !strings.Contains(err.Error(), "an empty rule") {
+		t.Errorf("Validate wasn't asked: %v", err)
+	}
+}
+
+// settings.md, "Options": a map holds strings by name, with labels for its two sides; ListOf and MapOf validate each
+// item or entry, so an editor can ask about one at a time.
+func TestOptionMapAndItemValidation(t *testing.T) {
+	r := registry.New()
+	noSpace := func(s string) error {
+		if strings.Contains(s, " ") {
+			return errors.New("no spaces")
+		}
+		return nil
+	}
+	r.Option(registry.OptionSpec{Name: "sandbox.servers", Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser,
+		KeyLabel: "name", ValueLabel: "server", Validate: registry.MapOf(func(k, v string) error {
+			if k == "" {
+				return errors.New("a server needs a name")
+			}
+			return nil
+		})})
+	r.Option(registry.OptionSpec{Name: "sandbox.hidden_servers", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
+		Choices: func() []string { return []string{"github", "linear"} }, Validate: registry.ListOf(noSpace)})
+	o := r.Options()
+	if err := o.Set("sandbox.servers", registry.LayerUser, registry.At{}, map[string]string{"github": "https://api.githubcopilot.com/mcp/"}); err != nil {
+		t.Fatal(err)
+	}
+	if v, _, _ := o.Get("sandbox.servers", registry.At{}); v.(map[string]string)["github"] == "" {
+		t.Errorf("sandbox.servers = %v", v)
+	}
+	if err := o.Set("sandbox.servers", registry.LayerUser, registry.At{}, []string{"github"}); err == nil {
+		t.Error("a list set a map")
+	}
+	if err := o.Set("sandbox.servers", registry.LayerUser, registry.At{}, map[string]string{"": "x"}); err == nil || !strings.Contains(err.Error(), "needs a name") {
+		t.Errorf("MapOf wasn't asked: %v", err)
+	}
+	if err := o.Set("sandbox.hidden_servers", registry.LayerUser, registry.At{}, []string{"github", "not offered"}); err == nil {
+		t.Error("ListOf let an item with a space through")
+	}
+	if err := o.Set("sandbox.hidden_servers", registry.LayerUser, registry.At{}, []string{"elsewhere"}); err != nil {
+		t.Errorf("a list's choices are suggestions, but %v", err)
 	}
 }

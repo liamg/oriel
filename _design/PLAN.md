@@ -19,7 +19,7 @@ none of the room.
 - An AI harness where the agent's work is **planned, visible, reviewed and owned**:
   plan → work → review → verify → PR, with threads on any line.
 - Every session's state visible at a glance, and switching between them takes one keystroke.
-- crit's control-room telemetry folded into the IDE as small, live "tats".
+- crit's control-room telemetry folded into the IDE as small, live "indicators".
 - Fast: under 8 ms from keypress to screen, and beautiful text.
 - Go throughout, in modules you can swap.
 - Claude and Codex from day one, with more providers behind one interface.
@@ -44,7 +44,7 @@ none of the room.
 | `testing.md` | **Test-first.** Every behaviour test cites a vendored spec (`:help` tag, LSP/DAP spec, xterm ctlseqs, Unicode) with a verbatim quote that CI checks. Vim expectations are also checked against headless nvim, plus differential fuzzing and mined vim tests. |
 | `deps.md` | Dependency policy: stdlib and `x/` are free, large accountable companies are allowed, **everything else needs approval first**. CI allowlist, vendored source, and WASM built from pinned source. Audits every dependency the plan names. |
 | `ide.md` | Full LSP and DAP clients; the agent gets LSP and debugger tools too. |
-| `ui.md` | Session tabs with status, ⌘K omnibox, mission control, HUD tats, and every screen mocked up. |
+| `ui.md` | Session tabs with status, ⌘K omnibox, mission control, HUD indicators, and every screen mocked up. |
 | `crit-reference.md` | What crit does today, with source paths. Tickets that say "port from crit" mean this. |
 | `migration.md` | New repo, crit frozen then retired; what we port, rewrite and drop. |
 
@@ -61,7 +61,7 @@ none of the room.
 - Sandbox, gateway MCP, egress approvals, ssh-agent grants.
 - agentbus (questions, review requests, auto-answer), Linear, Slack PTAL, calendar.
 - The assistant: it moves from the room into a drawer.
-- Usage windows, session tally, stats, worker CPU/mem, logs, agentbus log.
+- Usage windows, session stats, stats, worker CPU/mem, logs, agentbus log.
 - Editable prompts page and coding style. Voice dictation.
 
 **Rewrite**

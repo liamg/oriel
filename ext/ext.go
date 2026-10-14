@@ -37,6 +37,9 @@ type Host interface {
 	// Dismiss takes down the toasts of the notices with id: a problem that's gone. Their rows stay in the history.
 	Dismiss(id string)
 	State() core.State // a copy: notification history, focus, sessions
+	// Subscribe calls fn with every event the filter matches, from whichever goroutine applied it; Do gets back
+	// to the loop. cancel stops it.
+	Subscribe(f core.Filter, fn func(core.Event)) (cancel func())
 	// Here is where the user is, for reading options: the session in front, the project, and the focused editor's
 	// buffer and window.
 	Here() registry.At
@@ -58,6 +61,7 @@ type Host interface {
 // UIView is the window's widget tree as extensions may read it, last frame's.
 type UIView interface {
 	Focused() ui.ID
+	Layered(z int) bool // last frame drew a float on layer z (ui.LayerPage: a full-window page is up)
 	Help(id ui.ID) string
 	HelpNodes() []ui.HelpNode
 	ContextClick() (ui.ID, render.Point, bool)
@@ -75,6 +79,7 @@ type Pending struct {
 	Modes []string
 	Since time.Time
 	Hints []Hint
+	Runs  string // what ⏎ runs now, when the keys are a mapping of their own as well as the start of longer ones
 }
 
 // Hint is a key that can come next, and what it does.

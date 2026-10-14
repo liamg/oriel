@@ -2,6 +2,7 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -231,5 +232,166 @@ func TestDockMotion(t *testing.T) {
 		if !h.u.NextFrame().IsZero() && h.u.NextFrame().Equal(h.now) {
 			t.Error("the dock is still moving after 310 ms")
 		}
+	}
+}
+
+// A dock's inner edge is a handle: the resize cursor over it, and a drag changes the dock's size.
+func TestDockEdgeDrag(t *testing.T) {
+	h := newHarness(t)
+	left, ok := h.dockRect(Left)
+	bottom, ok2 := h.dockRect(Bottom)
+	if !ok || !ok2 {
+		t.Fatal("no left or bottom dock")
+	}
+	for _, d := range []struct {
+		e      Edge
+		at     render.Point
+		by     render.Point
+		cursor render.Cursor
+		grows  float32
+	}{
+		{Left, render.Point{X: left.Max.X, Y: 300}, render.Point{X: 80}, render.CursorResizeCol, 80},
+		{Bottom, render.Point{X: 600, Y: bottom.Min.Y}, render.Point{Y: -50}, render.CursorResizeRow, 50},
+	} {
+		before := h.r.Docks[d.e].Size
+		h.ptr(render.PointerMove, d.at)
+		if c := h.u.Cursor(); c != d.cursor {
+			t.Errorf("%s edge: cursor %v, want %v", d.e, c, d.cursor)
+		}
+		h.held = true
+		h.ptr(render.PointerPress, d.at)
+		h.ptr(render.PointerMove, render.Point{X: d.at.X + d.by.X, Y: d.at.Y + d.by.Y})
+		h.held = false
+		h.ptr(render.PointerRelease, render.Point{X: d.at.X + d.by.X, Y: d.at.Y + d.by.Y})
+		if got := h.r.Docks[d.e].Size - before; got != d.grows {
+			t.Errorf("%s edge dragged: grew %v, want %v", d.e, got, d.grows)
+		}
+	}
+}
+
+// dockRect is where e's dock was drawn, found by its accessible name.
+func (h *harness) dockRect(e Edge) (render.Rect, bool) {
+	var find func(n *render.AccessNode) (render.Rect, bool)
+	find = func(n *render.AccessNode) (render.Rect, bool) {
+		if n.Name == dockNames[e] {
+			return n.Bounds, true
+		}
+		for _, k := range n.Children {
+			if r, ok := find(k); ok {
+				return r, true
+			}
+		}
+		return render.Rect{}, false
+	}
+	return find(h.u.AccessTree())
+}
+
+// SH-17: a view opened for a project names it on its tab ("api · tree"), and a tab Lead gives a colour leads with that
+// colour's square and the tooltip Tip gives.
+func TestTabProjectAndLead(t *testing.T) {
+	h := newHarness(t)
+	scoped := ViewRef{ID: "tree", Project: "api"}
+	if err := h.r.Open(scoped, Docked, Opts{Edge: Left}); err != nil {
+		t.Fatal(err)
+	}
+	square := render.Color{R: 0xa7, G: 0x8b, B: 0xfa, A: 0xff}
+	h.panes.Lead = func(v ViewRef) (render.Color, bool) { return square, v == code }
+	h.panes.Tip = func(v ViewRef) string {
+		if v == code {
+			return "api · proto/usage.proto"
+		}
+		return ""
+	}
+	h.frame()
+	labelled, led := false, false
+	var at render.Point
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "api · tree" {
+			labelled = true
+		}
+		if op.Kind == render.OpGlyphs && op.Run.Text == code.String() && h.isTab(op) && at == (render.Point{}) {
+			at = render.Point{X: op.At.X + 10, Y: op.At.Y - 4}
+		}
+		if op.Kind == render.OpRect && op.Style.Fill == square {
+			led = true
+		}
+	}
+	if !labelled {
+		t.Error("the scoped view's tab doesn't name its project")
+	}
+	if !led {
+		t.Error("no lead square on the code tab")
+	}
+	h.ptr(render.PointerMove, at)
+	h.now = h.now.Add(time.Second)
+	h.frame()
+	h.frame()
+	tipped := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && strings.Contains(op.Run.Text, "proto/usage.proto") {
+			tipped = true
+		}
+	}
+	if !tipped {
+		t.Errorf("hovering the tab at %v doesn't show its tooltip", at)
+	}
+}
+
+// A dock holding one view shows it under a header (its project and title, and a close), not a strip of one tab;
+// a second view there brings the tabs back. Main's leaves keep their tabs.
+func TestDockedViewAloneHasAHeader(t *testing.T) {
+	h := newHarness(t)
+	scoped := ViewRef{ID: "tree", Project: "api"}
+	h.r.Close(tree)
+	if err := h.r.Open(scoped, Docked, Opts{Edge: Left}); err != nil {
+		t.Fatal(err)
+	}
+	h.frame()
+	tabs := func() (lists, tabs int, names []string) {
+		var walk func(n *ui.AccessNode)
+		walk = func(n *ui.AccessNode) {
+			switch n.Role {
+			case ui.RoleTabList:
+				lists++
+			case ui.RoleTab:
+				tabs++
+				names = append(names, n.Name)
+			}
+			for _, k := range n.Children {
+				walk(k)
+			}
+		}
+		walk(h.u.AccessTree())
+		return
+	}
+	// main's two files and the bottom dock's two views are tabs; the left dock's one view isn't.
+	if lists, n, names := tabs(); lists != 2 || n != 4 || slices.ContainsFunc(names, func(s string) bool { return strings.Contains(s, "tree") }) {
+		t.Errorf("with one view in the left dock: %d tab lists, %d tabs %q; want 2 and 4, none for tree", lists, n, names)
+	}
+	header := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "TREE" {
+			header = true
+		}
+	}
+	if !header {
+		t.Error("no header naming the docked view")
+	}
+	h.r.Open(ViewRef{ID: "outline"}, Docked, Opts{Edge: Left})
+	h.frame()
+	if lists, _, _ := tabs(); lists != 3 {
+		t.Errorf("with two views in the left dock: %d tab lists, want 3", lists)
+	}
+}
+
+// Alone puts a view in its dock by itself: what was there closes.
+func TestOpenAlone(t *testing.T) {
+	r := start(t)
+	other := ViewRef{ID: "outline"}
+	if err := r.Open(other, Docked, Opts{Edge: Left, Alone: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.Docks[Left].Leaf.Tabs; len(got) != 1 || got[0] != other {
+		t.Errorf("left dock = %v, want only %v", got, other)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -22,10 +23,10 @@ import (
 	"github.com/liamg/oriel/vim"
 )
 
-// The editor column of 01-ide: a 26 px breadcrumb, then 21 px lines of 13.5 px mono, with a 64 px gutter.
+// The editor column of 01-ide: a 26 px breadcrumb, then lines of editor.font_size mono (13.5 px, 21 px apart by
+// default), with a 64 px gutter.
 const (
 	crumbH   = 26
-	codeLH   = 21
 	codeSize = 13.5
 	codePadT = 6
 	gutterW  = 64
@@ -51,16 +52,29 @@ var (
 	tStatusStrong = theme.Declare("statusline.fg.strong", "fg")
 )
 
+// codeFont is code at the default size, for code shown outside the editor (help, search).
 var codeFont = typeset.FontSpec{Family: typeset.Mono, Size: codeSize}
 
 // paneMetrics are where things are in a pane, for the layout's neighbour finding and the pointer.
 type paneMetrics struct {
 	charW, lineH, codeTop, textX float32
+	font                         typeset.FontSpec // the code's, from editor.font_size
 }
 
+// metrics are the panes' for editor.font_size and editor.line_height now.
 func (x *editorExt) metrics(c *ui.Ctx) paneMetrics {
-	if x.pane.charW == 0 {
-		x.pane = paneMetrics{charW: c.Shaper().Shape("M", codeFont).Advance, lineH: codeLH, codeTop: crumbH + codePadT, textX: gutterW + 4}
+	size, lh := float32(codeSize), float32(1.55)
+	o := x.h.Options()
+	if v, _, err := o.Get("editor.font_size", registry.At{}); err == nil {
+		size = float32(v.(float64))
+	}
+	if v, _, err := o.Get("editor.line_height", registry.At{}); err == nil {
+		lh = float32(v.(float64))
+	}
+	if x.pane.charW == 0 || x.pane.font.Size != size || x.pane.lineH != float32(math.Round(float64(size*lh))) {
+		font := typeset.FontSpec{Family: typeset.Mono, Size: size}
+		x.pane = paneMetrics{charW: c.Shaper().Shape("M", font).Advance, lineH: float32(math.Round(float64(size * lh))),
+			codeTop: crumbH + codePadT, textX: gutterW + 4, font: font}
 	}
 	return x.pane
 }
@@ -79,6 +93,8 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	}
 	th := c.Theme()
 	x.checkDisk(c)
+	x.now = c.Now()
+	wp, pr, presented := x.presenting(p)
 	codeID := ui.Child(c.Next("pane"), "code")
 	in := c.Interaction(codeID)
 	if focused && !p.Current() {
@@ -105,11 +121,13 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 			x.pendingSince = c.Now()
 		}
 	}
-	if focused && !in.Focused {
-		c.Focus(codeID)
+	if focused && !presented && !c.FocusWithin(codeID) {
+		c.Focus(codeID) // unless a block between its lines has it: a thread's reply
 	}
-	if r, ok := c.Rect(codeID); ok {
-		x.rows[id] = max(int((r.Dy()-codePadT)/m.lineH), 1)
+	if r, ok := c.Rect(codeID); ok && !presented {
+		// The rows the window has for text: what blocks between its lines took last frame doesn't show text, so the
+		// engine keeps the cursor clear of them.
+		x.rows[id] = max(int((r.Dy()-codePadT-x.blockPx[id])/m.lineH), 1)
 		x.e.SetRows(id, x.rows[id])
 		if in.Clicked {
 			x.click(p, r, in.Pointer, m)
@@ -120,7 +138,11 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	}
 	p, _ = x.e.Pane(id) // what the keys left
 	c.Column("pane", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tEditorBg), Clip: true}, func(c *ui.Ctx) {
-		x.breadcrumb(c, p)
+		x.breadcrumb(c, p, wp)
+		if presented {
+			x.presentPane(c, p, wp, pr, focused, 0)
+			return
+		}
 		x.drawing = st
 		c.Column("code", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{T: codePadT}, Clip: true, Focusable: true,
 			KeyMode: st.Mode().KeyMode, Wheel: true, Cursor: render.CursorText, Help: "editor/pane", Role: ui.RoleTextBox,
@@ -146,13 +168,26 @@ func (x *editorExt) click(p vim.Pane, r render.Rect, at render.Point, m paneMetr
 	x.e.SetCursor(vim.Pos{Line: line, Col: colAtVCol(p.Buf().Line(line), max(want, 0), p.TabStop())})
 }
 
-func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
+func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
 	th := c.Theme()
 	name := tildePath(p.Name())
 	if name == "" {
 		name = "[No Name]"
 	}
 	parts := strings.Split(strings.TrimPrefix(filepath.ToSlash(name), "/"), "/")
+	// With several projects the breadcrumb starts with the file's project.
+	if file := p.Name(); file != "" {
+		if !filepath.IsAbs(file) {
+			file = filepath.Join(x.dir, file)
+		}
+		if w := projectsHere(x.h); w.many() {
+			if pr, ok := w.of(file); ok {
+				if rel, err := filepath.Rel(pr.Dir, file); err == nil {
+					parts = append([]string{pr.Name}, strings.Split(filepath.ToSlash(rel), "/")...)
+				}
+			}
+		}
+	}
 	style := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(tCrumbFg)}
 	c.Row("crumb", ui.Style{W: ui.Flex(1), H: ui.Px(crumbH), Pad: ui.PadXY(14, 0), Gap: 6, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
 		for i, part := range parts {
@@ -168,35 +203,56 @@ func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
 		if ro := p.ReadOnly(); ro != "" {
 			c.Text("ro", "read-only · "+ro, ui.TextStyle{Font: style.Font, Color: th.C(theme.Warn)})
 		}
-		path := p.Name()
-		if path != "" && !filepath.IsAbs(path) {
-			path = filepath.Join(x.dir, path)
-		}
+		path := x.path(p)
 		if acts := registry.EditorActions(x.h, path); len(acts) > 0 {
+			w := registry.EditorWindow{ID: strconv.Itoa(int(p.ID())), Path: path}
+			if wp != nil {
+				w.Presenter = wp.name
+			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			for _, a := range acts {
-				on := false
-				if a.On != nil {
-					registry.Call(func() error { on = a.On(); return nil })
-				}
-				label := a.Label
-				if a.Icon != "" {
-					label = a.Icon + " " + label
-				}
-				if widget.ToggleChip(c, "act-"+a.Name, label, on, widget.ToggleChipOpts{Help: cmpOr(a.Help, "editor/pane")}) != on {
-					if err := x.h.Run(context.Background(), a.Command, a.Args); err != nil {
-						x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, Key: true, Text: err.Error()})
-					}
-				}
+				x.action(c, a, w)
 			}
 		}
 	})
+}
+
+// action is an editor action's chip: its icon (drawn, when it's a built-in one), label and note, lit while it's on.
+// A click runs its command in the window.
+func (x *editorExt) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWindow) {
+	on, ic, label := a.Shown(w)
+	note := ""
+	if a.Note != nil {
+		registry.Call(func() error { note = a.Note(w); return nil })
+	}
+	o := widget.ToggleChipOpts{Help: cmpOr(a.Help, "editor/pane")}
+	switch {
+	case icons[ic] != nil:
+		o.Lead = func(c *ui.Ctx, fg render.Color) { icon(c, "icon", ic, 11, fg) }
+	case ic != "":
+		label = strings.TrimSpace(ic + " " + label)
+	}
+	o.Label = strings.TrimSpace(cmpOr(label, a.Name) + " " + note)
+	label = strings.TrimSpace(label + " " + note)
+	if widget.ToggleChip(c, "act-"+a.Name, label, on, o) == on {
+		return
+	}
+	args := registry.Args{"window": w.ID}
+	for k, v := range a.Args {
+		args[k] = v
+	}
+	if err := x.h.Run(context.Background(), a.Command, args); err != nil {
+		x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, Key: true, Text: err.Error()})
+	}
 }
 
 // lines draws the rows the window shows: the gutter, the text in its highlights, a closed fold as one row,
 // the Visual selection and the cursor.
 func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	th := c.Theme()
+	code, haveCode := c.Rect(c.ID())
+	var blockPx float32
+	revealTo := -1 // the top line that would show a block that wants revealing whole
 	snap := p.Buf()
 	rows := x.rows[p.ID()]
 	if rows == 0 {
@@ -222,7 +278,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	cur := p.Cursor()
 	digits := max(len(fmt.Sprint(snap.Lines())), 3)
 	gw := max(float32(gutterW), float32(digits)*m.charW+34)
-	numStyle := ui.TextStyle{Font: codeFont, Color: th.C(tGutterFg)}
+	numStyle := ui.TextStyle{Font: x.pane.font, Color: th.C(tGutterFg)}
 	for row := 0; row < rows && line < snap.Lines(); row++ {
 		rowID := c.Next(line)
 		foldEnd, folded := p.Fold(line)
@@ -240,7 +296,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 			c.Row("gutter", ui.Style{W: ui.Px(gw), Pad: ui.Insets{R: 16}, Main: ui.End}, func(c *ui.Ctx) {
 				c.Text("n", num, ns)
 			})
-			x.signs(c, th, ds, gw, m)
+			x.signs(c, ds, gw, m)
 			if edge.A > 0 {
 				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.lineH), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
 			}
@@ -257,8 +313,24 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 		})
 		spans(c, th, p, line, ds, rowID, gw+4, m)
 		x.overlay(c, p, rowID, line, folded, gw, m, ds)
-		blocks(c, line, ds, gw+4)
+		ids, reveal := blocks(c, line, ds, gw+4)
+		for i, id := range ids {
+			r, ok := c.Rect(id)
+			if !ok {
+				continue
+			}
+			blockPx += r.Dy()
+			if reveal[i] && haveCode && r.Max.Y > code.Max.Y {
+				over := int(math.Ceil(float64((r.Max.Y - code.Max.Y) / m.lineH)))
+				revealTo = max(revealTo, min(p.Top()+over, line))
+			}
+		}
 		line = p.NextRow(line)
+	}
+	x.blockPx[p.ID()] = blockPx
+	if revealTo > p.Top() {
+		x.e.ScrollTo(p.ID(), revealTo)
+		x.h.Redraw()
 	}
 }
 
@@ -297,7 +369,7 @@ func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax
 			vcol++
 		}
 		col := th.C(tCodeFg)
-		st := ui.TextStyle{Font: codeFont, Color: col}
+		st := ui.TextStyle{Font: x.pane.font, Color: col}
 		if capture != "" {
 			s := th.Syntax("@" + capture)
 			st.Color = s.FG
@@ -333,8 +405,8 @@ func (x *editorExt) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 	th := c.Theme()
 	first := strings.TrimSpace(strings.ReplaceAll(string(snap.Line(line)), "\t", " "))
 	c.Row("fold", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tFoldBg), Cross: ui.Center, Gap: 10}, func(c *ui.Ctx) {
-		c.Text("text", "▸ "+first, ui.TextStyle{Font: codeFont, Color: th.C(tFoldFg)})
-		c.Text("n", fmt.Sprintf("· %d lines", end-line+1), ui.TextStyle{Font: codeFont, Color: th.C(tGutterFg)})
+		c.Text("text", "▸ "+first, ui.TextStyle{Font: x.pane.font, Color: th.C(tFoldFg)})
+		c.Text("n", fmt.Sprintf("· %d lines", end-line+1), ui.TextStyle{Font: x.pane.font, Color: th.C(tGutterFg)})
 	})
 }
 
@@ -420,7 +492,7 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 		}
 		c.Row("cursor", st, func(c *ui.Ctx) {
 			if ch != "" {
-				c.Text("ch", ch, ui.TextStyle{Font: codeFont, Color: th.C(tCursorFg)})
+				c.Text("ch", ch, ui.TextStyle{Font: x.pane.font, Color: th.C(tCursorFg)})
 			}
 		})
 	})
@@ -481,7 +553,7 @@ func (x *editorExt) cmdline(c *ui.Ctx, line string) {
 	th := c.Theme()
 	c.Row("cmdline", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Gap: 0, Cross: ui.Center, Fill: th.C(tCmdlineBg),
 		Stroke: th.C(theme.LineStrong), Role: ui.RoleTextBox, Label: "Command line", Value: line}, func(c *ui.Ctx) {
-		c.Text("text", line, ui.TextStyle{Font: codeFont, Color: th.C(tCodeFg)})
+		c.Text("text", line, ui.TextStyle{Font: x.pane.font, Color: th.C(tCodeFg)})
 		c.Box("caret", ui.Style{W: ui.Px(2), H: ui.Px(16), Fill: th.C(tCursorBg)}, nil)
 		if hints := registry.CmdlineHints(x.h, line); len(hints) > 0 {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -513,6 +585,9 @@ func (x *editorExt) modeSegment(c *ui.Ctx) {
 	label := modeName(mode)
 	if st := x.inputFor(x.current()); !isVim(st) {
 		mode, label = "insert", st.Mode().Label
+	}
+	if _, pr, ok := x.presenting(x.current()); ok {
+		mode, label = "", strings.ToUpper(cmpOr(pr.Label, pr.Name))
 	}
 	bg := map[string]theme.TokenID{"insert": tModeInsert, "replace": tModeInsert, "visual": tModeVisual, "visual-line": tModeVisual,
 		"visual-block": tModeVisual, "cmdline": tModeCommand}[mode]

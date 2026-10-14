@@ -179,6 +179,26 @@ contributes.icons  = "icons/"                     # file and kind icon set
 - Not yet: new theme from…, import and export, `:hi`, effects and type in the editor, syntax groups that fall back
   too far, and the live UI inside the preview (pick mode reads the real window instead).
 
+## Sizes: UI zoom and the code size
+
+One mechanism scales the whole UI, so no view handles font size itself and nothing clips when text grows.
+
+- **`ui.font_size`** (default 13, 8–32) is the UI's base text size, and it sets the window's **zoom**:
+  `ui.font_size / 13`. The zoom multiplies the backend's device scale (`render.Zoomer`), so every logical pixel grows
+  together: text, paddings, row heights, icons, dock and pane sizes. Layout runs at the zoomed size, so panels hold
+  their larger text the way they do on a smaller window, and scroll where they overflow. A view keeps writing its
+  sizes in the mockups' pixels; there is nothing to apply in each view.
+- `⌘=` / `⌘-` / `⌘0` (`ui.zoom.in`, `ui.zoom.out`, `ui.zoom.reset`) step `ui.font_size` by 1 and back to its
+  default, at the user layer, as browsers and editors do.
+- **`editor.font_size`** (default 13.5) and **`editor.line_height`** (default 1.55, a multiple of the size) are the
+  code's own, inside the zoom: the editor's rows, gutter and character cells are measured from them, so the code can be
+  larger or smaller than the UI around it. Code shown outside the editor (help, search) stays at the default size.
+- **Parts with their own size**: `ui.statusline.font_size`, `ui.hover.font_size` (hovers and signature help),
+  `ui.completion.font_size` and `ui.tooltip.font_size`, each 0 to follow `ui.font_size`. A part is drawn at its
+  size over the UI's with `ui.Style.Scale`, which scales a box's whole subtree (sizes, padding, gaps, radii, text) as
+  the zoom does the window, so a bigger part holds its text too. Another part is one option and one `Scale`.
+- The 1.5× goldens (`ide-zoom`) check the main screen holds at a large size.
+
 ## Implementation notes
 
 - The `ui` module resolves tokens at theme-load time into a flat table of IDs. Widgets read by ID, so lookups are free per frame.

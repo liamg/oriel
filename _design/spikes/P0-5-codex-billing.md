@@ -41,7 +41,7 @@ Checked on 2026-10-12 against `openai/codex` at `ddb33e34b278ca1b7d16d1e68f8ad36
 
 - The Codex provider runs `codex app-server` (JSON-RPC, JSONL over stdio) and **requires `account/read` →
   `account.type == "chatgpt"`** before it starts a turn. With `apiKey`, it says that use is per-token and asks first.
-- Usage tats read `account/rateLimits/read` and `account/rateLimits/updated`.
+- Usage indicators read `account/rateLimits/read` and `account/rateLimits/updated`.
 - The protocol is now **v2**: `thread/start`, `turn/start`, `turn/interrupt`, `thread/fork`, and server requests
   `item/commandExecution/requestApproval` / `item/fileChange/requestApproval`. `agents.md` is updated to match.
   The v1 names (`newConversation`, `sendUserMessage`, `execCommandApproval`) only appear in compatibility tests.
@@ -56,7 +56,7 @@ Checked on 2026-10-12 against `openai/codex` at `ddb33e34b278ca1b7d16d1e68f8ad36
   Oriel is a private, local, single-user app, which is the permitted case. If Oriel ever ships to other people,
   revisit [Sign in with ChatGPT](https://developers.openai.com/siwc) (in preview, by client ID) or have each user bring their own login.
 - **Credits beyond the plan.** Plus/Pro can "Flexibly extend usage with ChatGPT credits", and Business plans have
-  workspace credits. Past the limits, usage may draw on credits the account holds. The usage tat shows
+  workspace credits. Past the limits, usage may draw on credits the account holds. The usage indicator shows
   `credits` and `rateLimitReachedType`, so this stays visible.
 - **Not run live.** There is no ChatGPT login in the sandbox. The confirm script below closes this on Liam's account.
 

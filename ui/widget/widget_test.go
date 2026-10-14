@@ -2,10 +2,12 @@ package widget
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
@@ -190,7 +192,7 @@ func TestTabs(t *testing.T) {
 
 var items = []MenuItem{
 	{Label: "Open usage details"}, {Label: "Copy value", Shortcut: "y"}, {Separator: true},
-	{Label: "Hide this tat", Disabled: true}, {Label: "Move to statusline…"},
+	{Label: "Hide this indicator", Disabled: true}, {Label: "Move to statusline…"},
 }
 
 func TestMenu(t *testing.T) {
@@ -226,7 +228,7 @@ func TestContextMenu(t *testing.T) {
 	var target ui.ID
 	var res ContextResult
 	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
-		target = c.Box("tat", ui.Style{W: ui.Px(80), H: ui.Px(20), Interactive: true, Help: "hud/usage#weekly-window"}, nil)
+		target = c.Box("indicator", ui.Style{W: ui.Px(80), H: ui.Px(20), Interactive: true, Help: "hud/usage#weekly-window"}, nil)
 		res = ContextMenu(c, "ctx", target, items)
 	})
 	x, y := mid(h.rect(target))
@@ -439,6 +441,20 @@ func TestSegmented(t *testing.T) {
 	h.click(x, y)
 	if active != 1 || changes != 1 {
 		t.Errorf("two clicks on the second: active %d, %d changes; want 1 and 1", active, changes)
+	}
+}
+
+// AI-14: a segment can carry a badge after its label, a chip of its own: the account switcher's plan tier. A segment
+// with none draws none, and the accessible name says the badge.
+func TestSegmentedBadges(t *testing.T) {
+	active := 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		Segmented(c, "seg", []string{"WORK · CLAUDE MAX", "HOME · CLAUDE"}, &active, SegmentedOpts{Badges: []string{"Max 20×", ""},
+			Help: "test/segmented"})
+	})
+	h.frame()
+	if !h.drew("MAX 20×") || h.find("WORK · CLAUDE MAX, Max 20×") == nil || h.find("HOME · CLAUDE") == nil {
+		t.Errorf("drew %q", h.texts())
 	}
 }
 
@@ -673,5 +689,348 @@ func TestSpark(t *testing.T) {
 	a, b, z := h.rect(ui.Child(id, 0)), h.rect(ui.Child(id, 1)), h.rect(ui.Child(id, 2))
 	if a.Dy() != 12 || b.Dy() != 6 || z.Dy() != 2 || a.Max.Y != b.Max.Y || b.Max.Y != z.Max.Y {
 		t.Errorf("bars %v %v %v", a, b, z)
+	}
+}
+
+// The wheel scrolls a list away from its selection; the list only brings the selection back into view when it
+// moves.
+func TestListWheelScrollsAwayFromTheSelection(t *testing.T) {
+	sel := 0
+	var id ui.ID
+	var built []int
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		built = built[:0]
+		id = c.Next("list")
+		List(c, "list", 1000, &sel, ListOpts{Height: ui.Px(220), Help: "test/list"}, func(c *ui.Ctx, i int, selected bool) {
+			built = append(built, i)
+			c.Text("t", "row", ui.TextStyle{})
+		})
+	})
+	h.frame()
+	r := h.rect(id)
+	h.click(r.Min.X+20, r.Min.Y+5) // row 0: selected and focused
+	x, y := mid(r)
+	h.pointer(render.PointerMove, 0, x, y)
+	h.frame()
+	h.u.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: render.Point{X: x, Y: y}, Scroll: render.Point{Y: 44 * 22}})
+	h.frame()
+	h.frame()
+	if slices.Contains(built, 0) || !slices.Contains(built, 44) {
+		t.Fatalf("after scrolling 44 rows the list builds %v", built)
+	}
+	h.keys("j")
+	h.frame()
+	if sel != 1 || !slices.Contains(built, 1) {
+		t.Errorf("j moved the selection to %d but it isn't in view: %v", sel, built)
+	}
+}
+
+// A toolbar fits its width: chips that don't fit go behind "…", whose menu toggles them the same.
+func TestToolbarOverflows(t *testing.T) {
+	a, b, cc, d := true, false, true, false
+	width := float32(400)
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Row("box", ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) {
+			Toolbar(c, "bar", []ToolItem{{Key: "a", Label: "status", On: &a}, {Key: "b", Label: "± lines", On: &b},
+				{Key: "c", Label: "diag", On: &cc}, {Key: "d", Label: "⌥C changed-only", On: &d}}, ToolbarOpts{Help: "test/toolbar", Label: "Columns"})
+		})
+	})
+	h.frame()
+	text := func() string { return strings.Join(h.texts(), "\n") }
+	if got := text(); !strings.Contains(got, "changed-only") || strings.Contains(got, "…") {
+		t.Fatalf("at 400 wide everything fits:\n%s", got)
+	}
+	width = 150
+	h.frame()
+	h.frame()
+	got := text()
+	if strings.Contains(got, "changed-only") || !strings.Contains(got, "…") || !strings.Contains(got, "status") {
+		t.Fatalf("at 150 wide the last chips go behind …:\n%s", got)
+	}
+	more := h.find("More")
+	if more == nil {
+		t.Fatal("no More button")
+	}
+	h.click(mid(more.Bounds))
+	if got := text(); !strings.Contains(got, "changed-only") {
+		t.Fatalf("the menu doesn't list what's hidden:\n%s", got)
+	}
+	item := h.find("  ⌥C changed-only")
+	if item == nil {
+		t.Fatalf("no menu item for changed-only:\n%s", text())
+	}
+	h.click(mid(item.Bounds))
+	if !d {
+		t.Error("choosing changed-only in the menu didn't toggle it")
+	}
+}
+
+// find is the accessible node named name, or nil.
+func (h *harness) find(name string) *render.AccessNode {
+	var walk func(n *render.AccessNode) *render.AccessNode
+	walk = func(n *render.AccessNode) *render.AccessNode {
+		if n == nil || n.Name == name {
+			return n
+		}
+		for _, k := range n.Children {
+			if f := walk(k); f != nil {
+				return f
+			}
+		}
+		return nil
+	}
+	return walk(h.u.AccessTree())
+}
+
+// Choices: a click picks a card and says so once; with the strip focused, l and h move; each card is a tab with its
+// title as its name, its description wrapped under it.
+func TestChoices(t *testing.T) {
+	items := []Choice{{Title: "Plan", Desc: "docs first, Start work later"}, {Title: "Work", Desc: "straight to the worktree"}, {Title: "Tour"}}
+	active, changes := 0, 0
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("modes")
+		if Choices(c, "modes", items, &active, ChoicesOpts{Help: "test/choices", Label: "Mode"}) {
+			changes++
+		}
+	})
+	x, y := mid(h.rect(ui.Child(id, 1)))
+	h.click(x, y)
+	h.click(x, y)
+	if active != 1 || changes != 1 {
+		t.Errorf("two clicks on the second: active %d, %d changes; want 1 and 1", active, changes)
+	}
+	h.keys("l", "l", "h")
+	if active != 1 {
+		t.Errorf("l l h from 1: %d, want 1 (l stops at the end)", active)
+	}
+	if n := h.access(ui.Child(id, 1)); n == nil || n.Name != "Work" || !n.Selected {
+		t.Errorf("the second card's node = %+v", n)
+	}
+	if !h.drew("straight to the worktree") {
+		t.Errorf("no description: %q", h.texts())
+	}
+}
+
+// Rich text wraps across its spans at word boundaries, never wider than its width; a code span is one piece in
+// mono on its own tint, and bold text is its own run.
+func TestRichWraps(t *testing.T) {
+	var id ui.ID
+	var lines int
+	spans := []Span{{Text: "Ties go to even, but what about negative values? "}, {Text: "-2.5", Code: true},
+		{Text: " should give "}, {Text: "-2", Code: true}, {Text: ", and "}, {Text: "Floor", Bold: true}, {Text: " goes the wrong way."}}
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("rich")
+		lines = Rich(c, "rich", spans, 220, uiText(c, 12.5, typeset.Normal, col(c, tInputFg)), RichOpts{})
+	})
+	h.frame()
+	if lines < 2 {
+		t.Fatalf("%d lines at 220px", lines)
+	}
+	if r := h.rect(id); r.Dx() > 220 {
+		t.Errorf("rich text is %v wide, over its 220", r.Dx())
+	}
+	for _, want := range []string{"-2.5", "-2", "Floor"} {
+		if !h.drew(want) {
+			t.Errorf("%q isn't a run of its own: %q", want, h.texts())
+		}
+	}
+	mono := 0
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && (op.Run.Text == "-2.5" || op.Run.Text == "-2") && op.Run.Font.Family == typeset.Mono {
+			mono++
+		}
+	}
+	if mono != 2 {
+		t.Errorf("%d code spans in mono, want 2", mono)
+	}
+	for _, txt := range h.texts() {
+		if strings.HasPrefix(txt, " ") || strings.HasSuffix(txt, " ") && txt != " " {
+			continue
+		}
+		if strings.Contains(txt, "valu") && !strings.Contains(txt, "values?") {
+			t.Errorf("a word was split: %q", txt)
+		}
+	}
+}
+
+// A struck span is its own run, in the strike colour, with a line through its middle as wide as it is: what an
+// edit took out of a paragraph.
+func TestRichStrikesThrough(t *testing.T) {
+	spans := []Span{{Text: "Currency precision comes from "}, {Text: "a hard-coded table", Strike: true}, {Text: " currency.go"}}
+	var strike render.Color
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		strike = col(c, tStrikeFg)
+		Rich(c, "rich", spans, 500, uiText(c, 13, typeset.Normal, col(c, tInputFg)), RichOpts{})
+	})
+	h.frame()
+	var run render.Op
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "a hard-coded table" {
+			run = op
+		}
+	}
+	if run.Kind != render.OpGlyphs {
+		t.Fatalf("the struck words aren't a run of their own: %q", h.texts())
+	}
+	if run.Color != strike {
+		t.Errorf("struck text is %v, want %v", run.Color, strike)
+	}
+	found := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpRect && op.Rect.Dy() <= 1.5 && op.Style.Fill == strike && op.Rect.Dx() >= run.Run.Advance-1 &&
+			op.Rect.Min.Y < run.At.Y && op.Rect.Min.Y > run.At.Y-run.Run.Ascent {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("no line through the struck run")
+	}
+}
+
+// A code span with a tone is in that colour on a tint of it: a repo named in a prompt, in its project colour.
+func TestRichTonedCode(t *testing.T) {
+	tone := render.Color{R: 0x9b, G: 0x7b, B: 0xff, A: 0xff}
+	spans := []Span{{Text: "In "}, {Text: "api", Code: true, Tone: tone}, {Text: " and "}, {Text: "web", Code: true}}
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		Rich(c, "rich", spans, 500, uiText(c, 13, typeset.Normal, col(c, tInputFg)), RichOpts{})
+	})
+	h.frame()
+	var api, web render.Op
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "api" {
+			api = op
+		}
+		if op.Kind == render.OpGlyphs && op.Run.Text == "web" {
+			web = op
+		}
+	}
+	if api.Color != tone || web.Color == tone {
+		t.Errorf("api is %v, web %v; want api in %v", api.Color, web.Color, tone)
+	}
+	tinted := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpRect && op.Style.Fill == alpha(tone, .14) && op.Rect.Min.X <= api.At.X && op.Rect.Max.X >= api.At.X+api.Run.Advance {
+			tinted = true
+		}
+	}
+	if !tinted {
+		t.Error("no tint of its tone behind the toned span")
+	}
+}
+
+// ED-15: a hover card shows while the pointer is on its anchor, stays while the pointer moves into it to read it, and
+// goes when the pointer leaves both; it never takes focus, so keys still go where they went.
+func TestHoverCardFollowsThePointer(t *testing.T) {
+	var anchor, field ui.ID
+	text := ""
+	var shown bool
+	h := newHarness(t, theme.Dark, render.Point{X: 600, Y: 400}, func(c *ui.Ctx) {
+		c.Column("page", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(20), Gap: 20}, func(c *ui.Ctx) {
+			field = c.Next("field")
+			Input(c, "field", &text, InputOpts{Label: "Field", Help: "test/hover"})
+			anchor = c.Next("sign")
+			Clickable(c, "sign", ui.Style{W: ui.Px(16), H: ui.Px(16), Label: "2 threads", Help: "test/hover"}, nil)
+			shown = HoverCard(c, "card", anchor, HoverCardOpts{Label: "Thread", Help: "test/hover", Width: 240}, func(c *ui.Ctx) {
+				c.Text("t", "the card's text", ui.TextStyle{})
+			})
+		})
+	})
+	h.u.Focus(field)
+	h.frame()
+	if shown || h.drew("the card's text") {
+		t.Fatal("the card shows before the pointer is on its anchor")
+	}
+	ax, ay := mid(h.rect(anchor))
+	h.pointer(render.PointerMove, 0, ax, ay)
+	h.frame()
+	h.frame()
+	if !shown || !h.drew("the card's text") {
+		t.Fatal("no card with the pointer on its anchor")
+	}
+	card := h.find("Thread")
+	if card == nil {
+		t.Fatal("the card has no accessible name")
+	}
+	a := h.rect(anchor)
+	for _, p := range []render.Point{{X: (a.Max.X + card.Bounds.Min.X) / 2, Y: (a.Min.Y + a.Max.Y) / 2}, {X: card.Bounds.Min.X + 30, Y: card.Bounds.Min.Y + 12},
+		{X: card.Bounds.Max.X - 10, Y: card.Bounds.Max.Y - 4}} {
+		h.pointer(render.PointerMove, 0, p.X, p.Y)
+		h.frame()
+		h.frame()
+		if !shown {
+			t.Fatalf("the card went with the pointer at %v, on the way into it or in it", p)
+		}
+	}
+	if h.u.Focused() != field {
+		t.Error("the card took focus")
+	}
+	h.keys("x")
+	if text != "x" {
+		t.Errorf("a key with the card up went elsewhere: the field has %q", text)
+	}
+	h.pointer(render.PointerMove, 0, 580, 380)
+	h.frame()
+	h.frame()
+	if shown || h.drew("the card's text") {
+		t.Error("the card stays with the pointer gone")
+	}
+}
+
+// SE-5: "widget.Input gains Lines: wraps, grows to a max height then scrolls, ⏎ a new line, ⌘⏎ submits".
+func TestInputLines(t *testing.T) {
+	text := ""
+	var id ui.ID
+	var res InputResult
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Column("col", ui.Style{Pad: ui.Pad(10), W: ui.Px(300)}, func(c *ui.Ctx) {
+			id = c.Next("p")
+			res = Input(c, "p", &text, InputOpts{Label: "Prompt", Lines: 4, Help: "test/input"})
+		})
+	})
+	one := h.rect(id).Dy()
+	h.click(mid(h.rect(id)))
+	if h.u.Focused() != id {
+		t.Fatal("a click didn't focus the input")
+	}
+	h.keys("a", "b", "c", "CR")
+	if res.Submitted || text != "abc\n" {
+		t.Fatalf("⏎ in a multi-line input: text %q, submitted %v; want a new line", text, res.Submitted)
+	}
+	h.keys("a", "b", "c")
+	two := h.rect(id).Dy()
+	if two <= one {
+		t.Errorf("two lines are %v high, one %v: it should grow", two, one)
+	}
+	h.keys("Up", "X")
+	if text != "abcX\nabc" {
+		t.Errorf("Up from the end of the second line, then X: %q", text)
+	}
+	h.keys("Down", "Y")
+	if text != "abcX\nabcY" {
+		t.Errorf("Down, then Y: %q", text)
+	}
+	if !h.u.Key(render.KeyEvent{Key: "CR", Mods: platform.primary}) {
+		t.Fatal("nothing takes ⌘⏎")
+	}
+	h.frame()
+	if !res.Submitted || text != "abcX\nabcY" {
+		t.Errorf("⌘⏎: submitted %v, text %q", res.Submitted, text)
+	}
+	for range 6 {
+		h.keys("CR", "z")
+	}
+	if most := h.rect(id).Dy(); most <= two || most > one+3*(two-one)+1 {
+		t.Errorf("eight lines are %v high: it stops growing at four lines (one %v, two %v)", most, one, two)
+	}
+	if n := h.access(id); n == nil || n.Value != text {
+		t.Errorf("its accessible value isn't the text: %+v", n)
+	}
+	// A long line wraps at the field's width rather than running on.
+	text = strings.Repeat("word ", 30)
+	h.frame()
+	h.frame()
+	if got := h.rect(id).Dy(); got <= two {
+		t.Errorf("a line of 150 characters in a 280px field is %v high: it should wrap", got)
 	}
 }

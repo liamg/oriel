@@ -2,7 +2,7 @@
 id: AI-1
 title: "Worker, wire, sessions, workspaces with multi-repo worktrees"
 phase: P5
-status: todo
+status: review
 area: Sessions and AI
 module: worker, core
 depends_on: [FW-2]

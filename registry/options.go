@@ -18,11 +18,14 @@ const (
 	String
 	Enum
 	Duration
-	Key // keys in vim notation
+	Key  // keys in vim notation
+	List // a list of strings
+	Map  // strings by name
 )
 
-// Values are held as bool, int, float64, string (String, Enum and Key) or time.Duration.
-var goTypes = map[OptionType]string{Bool: "bool", Int: "int", Float: "float64", String: "string", Enum: "string", Duration: "time.Duration", Key: "string"}
+// Values are held as bool, int, float64, string (String, Enum and Key), time.Duration, []string or map[string]string.
+var goTypes = map[OptionType]string{Bool: "bool", Int: "int", Float: "float64", String: "string", Enum: "string", Duration: "time.Duration", Key: "string",
+	List: "[]string", Map: "map[string]string"}
 
 // Scope is where an option may be set, as a set of bits.
 type Scope uint8
@@ -96,15 +99,20 @@ type OptionSpec struct {
 	Section string // the settings page's section, when it differs from the prefix
 	Type    OptionType
 	Values  []string // an Enum's values
-	// Choices are the values a String suggests, worked out when asked (the themes there are now); other
-	// values are still allowed, as a theme file can come later.
+	// Choices are the values a String or a List's items suggest, worked out when asked (the themes there are
+	// now); other values are still allowed, as a theme file can come later.
 	Choices  func() []string
 	Min, Max float64 // an Int's or Float's range, when Max > Min
 	Default  any
-	Help     string
-	Scopes   Scope
-	Aliases  []string // vim names
-	Source   string
+	// Validate refuses a value of the right type that's still wrong: a malformed rule in a list. ListOf and MapOf
+	// make one that an editor can also ask about a single item or entry.
+	Validate func(v any) error
+	// KeyLabel and ValueLabel name a Map's two sides: "name" and "server".
+	KeyLabel, ValueLabel string
+	Help                 string
+	Scopes               Scope
+	Aliases              []string // vim names
+	Source               string
 }
 
 // Check says why v isn't a value s can hold: the wrong type, out of range, or not one of an Enum's values.
@@ -132,11 +140,50 @@ func (s OptionSpec) Check(v any) error {
 		}
 	case Duration:
 		_, ok = v.(time.Duration)
+	case List:
+		_, ok = v.([]string)
+	case Map:
+		_, ok = v.(map[string]string)
 	}
 	if !ok {
 		return fmt.Errorf("%s is a %s, not %T", s.Name, goTypes[s.Type], v)
 	}
+	if s.Validate != nil {
+		if err := s.Validate(v); err != nil {
+			return fmt.Errorf("%s: %w", s.Name, err)
+		}
+	}
 	return nil
+}
+
+// ListOf is a List's Validate that checks each item with check.
+func ListOf(check func(item string) error) func(any) error {
+	return func(v any) error {
+		for _, s := range v.([]string) {
+			if err := check(s); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+// MapOf is a Map's Validate that checks each entry with check, in key order.
+func MapOf(check func(key, value string) error) func(any) error {
+	return func(v any) error {
+		m := v.(map[string]string)
+		keys := make([]string, 0, len(m))
+		for k := range m {
+			keys = append(keys, k)
+		}
+		slices.Sort(keys)
+		for _, k := range keys {
+			if err := check(k, m[k]); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }
 
 func (s OptionSpec) inRange(f float64) error {

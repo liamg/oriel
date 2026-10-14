@@ -1,0 +1,164 @@
+package ui
+
+import (
+	"testing"
+	"time"
+
+	"github.com/liamg/oriel/render"
+)
+
+// scroller is a 200×100 scrolling column of n 20-pixel rows.
+type scroller struct {
+	u     *UI
+	clk   *clock
+	id    ID
+	n     int
+	ops   []render.Op
+	build func(c *Ctx)
+}
+
+func newScroller(n int, bars Bars) *scroller {
+	s := &scroller{u: newUI(), clk: &clock{t: time.Unix(0, 0)}, n: n}
+	s.u.SetClock(s.clk.now)
+	s.u.opts.ScrollThumb = render.Color{R: 1, G: 2, B: 3, A: 0x80}
+	s.u.opts.ScrollThumbHot = render.Color{R: 4, G: 5, B: 6, A: 0xff}
+	build := func(c *Ctx) {
+		s.id = c.Column("list", Style{W: Px(200), H: Px(100), ScrollY: true, Bars: bars}, func(c *Ctx) {
+			for i := range s.n {
+				c.Box(i, Style{W: Flex(1), H: Px(20)}, nil)
+			}
+		})
+	}
+	s.build = build
+	s.frame()
+	s.frame()
+	return s
+}
+
+func (s *scroller) frame() {
+	var l render.List
+	s.u.Frame(l.Record(1), render.Point{X: 400, Y: 300}, s.build)
+	s.ops = l.Ops
+}
+
+// thumb is the scrollbar thumb drawn in the latest frame, if one was.
+func (s *scroller) thumb() (render.Rect, render.Color, bool) {
+	for _, op := range s.ops {
+		if op.Kind == render.OpRect && op.Rect.Min.X >= 200-barInset-barWidthHot && op.Rect.Max.X <= 200 && op.Style.Fill.A > 0 {
+			return op.Rect, op.Style.Fill, true
+		}
+	}
+	return render.Rect{}, render.Color{}, false
+}
+
+func (s *scroller) move(x, y float32) {
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: x, Y: y}})
+	s.frame()
+}
+
+func TestScrollbarShowsWhileHoveredOrScrolled(t *testing.T) {
+	s := newScroller(20, BarsAuto)
+	if _, _, ok := s.thumb(); ok {
+		t.Fatal("a bar shows with the pointer elsewhere and no scroll")
+	}
+	s.move(50, 50)
+	r, _, ok := s.thumb()
+	if !ok {
+		t.Fatal("no bar while the pointer is over the list")
+	}
+	// 100 of 400 shows: the thumb is a quarter of the track.
+	if h := r.Dy(); h < 23 || h > 25 {
+		t.Errorf("thumb is %v tall, want a quarter of the 96px track", h)
+	}
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerLeave})
+	s.frame()
+	if _, _, ok := s.thumb(); ok {
+		t.Error("the bar stayed after the pointer left")
+	}
+	s.u.ScrollBy(s.id, 0, 100)
+	s.frame()
+	r, _, ok = s.thumb()
+	if !ok || r.Min.Y < 25 {
+		t.Fatalf("no bar, or not moved down, just after a scroll: %v %v", ok, r)
+	}
+	s.clk.advance(barLinger + barFade + time.Millisecond)
+	s.frame()
+	if _, _, ok := s.thumb(); ok {
+		t.Error("the bar didn't fade after the scroll")
+	}
+}
+
+func TestScrollbarOnlyWhenItOverflows(t *testing.T) {
+	s := newScroller(4, BarsAlways)
+	s.move(50, 50)
+	if _, _, ok := s.thumb(); ok {
+		t.Error("a bar shows on content that fits")
+	}
+}
+
+func TestScrollbarModes(t *testing.T) {
+	if _, _, ok := newScroller(20, BarsAlways).thumb(); !ok {
+		t.Error("BarsAlways: no bar without the pointer")
+	}
+	h := newScroller(20, BarsHidden)
+	h.move(50, 50)
+	if _, _, ok := h.thumb(); ok {
+		t.Error("BarsHidden: a bar shows")
+	}
+	a := newScroller(20, BarsAuto)
+	a.u.opts.Bars = BarsAlways
+	a.frame()
+	if _, _, ok := a.thumb(); !ok {
+		t.Error("the UI's BarsAlways doesn't apply to a BarsAuto box")
+	}
+}
+
+func TestScrollbarDragAndPage(t *testing.T) {
+	s := newScroller(20, BarsAuto)
+	s.move(195, 10)
+	r, col, ok := s.thumb()
+	if !ok || col != s.u.opts.ScrollThumbHot {
+		t.Fatalf("hovering the bar: %v, colour %v", ok, col)
+	}
+	// Drag the thumb down by half the track's free run: half way.
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerPress, Buttons: render.ButtonPrimary, Pos: render.Point{X: 195, Y: r.Min.Y + 5}})
+	s.frame()
+	room := 96 - r.Dy()
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Buttons: render.ButtonPrimary, Pos: render.Point{X: 150, Y: r.Min.Y + 5 + room/2}})
+	s.frame()
+	if y := s.u.Scroll(s.id).Y; y < 145 || y > 155 {
+		t.Errorf("dragged half way, scrolled %v, want 150 of 300", y)
+	}
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerRelease, Buttons: render.ButtonPrimary, Pos: render.Point{X: 150, Y: 60}})
+	s.frame()
+	// A press on the track below the thumb pages down.
+	before := s.u.Scroll(s.id).Y
+	s.move(195, 97)
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerPress, Buttons: render.ButtonPrimary, Pos: render.Point{X: 195, Y: 97}})
+	s.frame()
+	if y := s.u.Scroll(s.id).Y; y != min(before+100, 300) {
+		t.Errorf("a press below the thumb scrolled from %v to %v, want a page", before, y)
+	}
+}
+
+func TestScrollIntoView(t *testing.T) {
+	s := newScroller(20, BarsAuto)
+	want := 15
+	b := s.build
+	s.build = func(c *Ctx) {
+		b(c)
+		c.ScrollIntoView(s.id, Child(s.id, want))
+	}
+	s.frame()
+	s.frame()
+	// Row 15 spans 300–320 of the content; a 100-tall view shows it when scrolled to 220.
+	if y := s.u.Scroll(s.id).Y; y != 220 {
+		t.Errorf("scrolled to %v, want 220 (row 15 at the bottom)", y)
+	}
+	want = 2
+	s.frame()
+	s.frame()
+	if y := s.u.Scroll(s.id).Y; y != 40 {
+		t.Errorf("scrolled to %v, want 40 (row 2 at the top)", y)
+	}
+}

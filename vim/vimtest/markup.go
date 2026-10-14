@@ -12,6 +12,19 @@ type Pos struct {
 
 func (p Pos) String() string { return fmt.Sprintf("%d:%d", p.Line+1, p.Col) }
 
+// Jump is a jumplist entry: a position, and its buffer's number when that isn't the current buffer (0 when it is).
+type Jump struct {
+	Pos
+	Buf int
+}
+
+func (j Jump) String() string {
+	if j.Buf == 0 {
+		return j.Pos.String()
+	}
+	return fmt.Sprintf("%s@%d", j.Pos, j.Buf)
+}
+
 func (p Pos) less(q Pos) bool {
 	return p.Line < q.Line || p.Line == q.Line && p.Col < q.Col
 }

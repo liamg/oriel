@@ -31,7 +31,7 @@ type Case struct {
 	Mode    string           // a Mode* constant
 	Regs    map[rune]*string // nil value: unset
 	Marks   map[rune]*Pos    // nil value: unset
-	Jumps   []Pos            // nil: not checked
+	Jumps   []Jump           // nil: not checked
 	Undo    *Buffer          // the buffer after the keys and then `u`
 	Dot     *Buffer          // the buffer after the keys and then `.`
 	Msg     *string          // the last message
@@ -258,13 +258,13 @@ func (c *Case) fill(f map[string]string) error {
 		}
 	}
 	if j, ok := take("jumps"); ok {
-		c.Jumps = []Pos{}
+		c.Jumps = []Jump{}
 		for _, s := range strings.Fields(j) {
-			p, err := parsePos(s)
+			jp, err := parseJump(s)
 			if err != nil {
 				return fmt.Errorf("jumps: %w", err)
 			}
-			c.Jumps = append(c.Jumps, p)
+			c.Jumps = append(c.Jumps, jp)
 		}
 	}
 	for k := range f {
@@ -351,6 +351,23 @@ func parseBufs(s string) (*string, error) {
 }
 
 // parsePos reads `line:col`: 1-based line, 0-based byte column, as in :marks.
+// parseJump reads `line:col`, or `line:col@N` for an entry in buffer N when that isn't the current one.
+func parseJump(s string) (Jump, error) {
+	at, buf, ok := strings.Cut(s, "@")
+	p, err := parsePos(at)
+	if err != nil {
+		return Jump{}, err
+	}
+	if !ok {
+		return Jump{Pos: p}, nil
+	}
+	n, err := strconv.Atoi(buf)
+	if err != nil || n < 1 {
+		return Jump{}, fmt.Errorf("want line:col@buffer, got %q", s)
+	}
+	return Jump{p, n}, nil
+}
+
 func parsePos(s string) (Pos, error) {
 	l, c, ok := strings.Cut(s, ":")
 	line, err1 := strconv.Atoi(l)

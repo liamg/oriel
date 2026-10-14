@@ -9,14 +9,11 @@ import (
 )
 
 // inspectSections are the editor's parts of :Inspect (20-inspect): the syntax tree and highlight under the cursor,
-// and the decorations on its line.
+// and the decorations on its line. The language server's section is lsp's.
 func (x *editorExt) inspectSections() []registry.InspectSection {
 	return []registry.InspectSection{
 		{Name: "TREE-SITTER", Order: 10, Rows: x.inspectTree, Source: "builtin:editor"},
 		{Name: "HIGHLIGHT", Order: 20, Rows: x.inspectHighlight, Source: "builtin:editor"},
-		{Name: "LSP TOKEN", Order: 30, Source: "builtin:editor", Rows: func() []registry.InspectRow {
-			return []registry.InspectRow{{Key: "—", Value: "language servers come with LS-1", Faded: true}}
-		}},
 		{Name: "DECORATIONS", Order: 40, Rows: x.inspectDecorations, Source: "builtin:editor"},
 	}
 }

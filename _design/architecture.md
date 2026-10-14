@@ -71,9 +71,9 @@ flowchart LR
 | `term` | the terminal model behind `term.Emulator`: grid, scrollback, modes, keys, snapshots, OSC 133 commands and OSC 7 cwd; `term/ghostty` (libghostty-vt as wasm under wazero), `term/pty` (pseudo-terminals over `x/sys/unix`), `term/vttest` (esctest-style case runner) | wazero, x/sys |
 | `wire` | yamux protocol, typed RPC + event streams | – |
 | `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | wire |
-| `agent` | `Provider` interface + shared turn/transcript types | core |
+| `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/jsonrpc` | core, term (PTYs) |
 | `agent/claude`, `agent/codex` | provider impls | agent |
-| `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep) | core, agent, lsp, dap, gitx, regex |
+| `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep); `worker/sysload` (CPU and memory) | core, agent, gitx, testrun (test runs as evidence), wire, sandbox, registry/settingsfile and toml (its repos' own project settings) |
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear, slack, ical; agentbus via the `oriel-agentbus` helper process (keeps its sqlite dependency out of Oriel) | core |
@@ -81,7 +81,7 @@ flowchart LR
 | `render/gio` | the Gio backend: windows, input, offscreen rendering, the glyph atlas and baked shapes | render, gioui.org |
 | `ui` | widgets, layout, theme, animation, input routing | render |
 | `app` | the desktop app: screens, panels, HUD; wires it all together | everything |
-| `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`) |
+| `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`); `registry/settingsfile` (settings files and their trust, shared with the worker) needs only toml |
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
@@ -169,4 +169,10 @@ type Worker interface {
 
 - The worker is behind `wire`, so the app sees `lsp.Client`, `dap.Session` and friends as plain interfaces.
   A local in-process worker (no network) is just another implementation, which helps tests and single-machine use.
+- As built (AI-1): `wire.Conn` adds `HandleStream`, `Close` and `Done`; either end calls and handles (the worker asks
+  the app for plugins' agent tools and for the Permission hooks). `wire.Pipe` is an in-process pair; `wire.Client` /
+  `wire.Server` serve a unix socket with no handshake (this machine's worker, owner-only); `wire.Dial` / `wire.Accept`
+  are crit's pinned-TLS handshake for workers elsewhere. `worker.Client` is the worker's methods over a `wire.Conn`;
+  its `Events` stream sends each session whole (`SessionSynced`) and then every event, which the app applies to its
+  store. LSP and DAP still run in the app for now.
 

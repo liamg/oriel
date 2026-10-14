@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/script/api"
 	"os"
 	"path"
 	"path/filepath"
@@ -103,7 +104,7 @@ func (v *helpView) Activate(_ context.Context, h ext.Host) error {
 		v.add(h.Keymap(k))
 	}
 	// K is help on what has focus, in the widgets' own modes: not in an input, or the editor, where K is vim's.
-	for _, mode := range []string{"button", "list", "tree", "tabs", "menu", "toast"} {
+	for _, mode := range []string{"button", "list", "tree", "tabs", "menu", "toast", "datepicker"} {
 		v.add(h.Keymap(registry.Keymap{Mode: mode, Keys: "K", Command: "help.focused", Desc: "Help on this"}))
 	}
 	v.add(h.Picker(v.source()))
@@ -367,7 +368,7 @@ func (v *helpView) body(c *ui.Ctx, id string, width float32) {
 					})
 				}
 			case "api":
-				c.Text(i, "oriel."+b.Text+": the Lua API's reference arrives with PL-1", ui.TextStyle{Font: codeFont, Color: th.C(theme.FgFaint)})
+				v.api(c, i, b.Text)
 			}
 		}
 	})
@@ -427,6 +428,25 @@ func (v *helpView) options(c *ui.Ctx, key any, prefix string) {
 				c.Text("n", s.Name, ui.TextStyle{Font: codeFont, Color: th.C(theme.Fg)})
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("v", fmt.Sprint(val), ui.TextStyle{Font: codeFont, Color: th.C(theme.FgMuted)})
+			})
+		}
+	})
+}
+
+// api is a namespace's reference from the generated API (docs/api.md), each call and what it does.
+func (v *helpView) api(c *ui.Ctx, key any, ns string) {
+	th := c.Theme()
+	name := strings.TrimPrefix(strings.TrimPrefix(ns, "oriel"), ".")
+	fns := api.Reference[name]
+	c.Column(key, ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
+		if len(fns) == 0 {
+			c.Text("none", "No functions in oriel."+name+".", ui.TextStyle{Font: codeFont, Color: th.C(theme.FgFaint)})
+			return
+		}
+		for i, f := range fns {
+			c.Column(i, ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
+				c.Text("call", f.Call, ui.TextStyle{Font: codeFont, Color: th.C(theme.Accent)})
+				c.Text("doc", f.Doc, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13}, Color: th.C(theme.FgMuted)})
 			})
 		}
 	})

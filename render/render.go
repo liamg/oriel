@@ -71,6 +71,12 @@ type Window interface {
 	Close()
 }
 
+// Zoomer is a window that can zoom: z multiplies its device scale, so everything drawn in logical pixels grows
+// together and the window's logical size shrinks to match (theming.md, "Sizes").
+type Zoomer interface {
+	SetZoom(z float32)
+}
+
 // Clipboard is a window's access to the system clipboard. ReadClipboard is what it held when the window last
 // looked, which it does whenever it takes a key or gets focus.
 type Clipboard interface {

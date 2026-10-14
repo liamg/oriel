@@ -2,9 +2,12 @@ backdrop #060606
 rect 0,0 856x709 fill #060606
 clip 0,0 856x354 r 0
   rect 0,0 856x30 fill #0c0c0b
-  rect 0,0 79.265625x30 fill #121210
-  rect 0,0 79.265625x2 fill #ffd23f
-  text "round.go" @14,20.365234 #ece6d8 Inter 12
+  clip 0,0 856x30 r 0
+    rect 0,0 98.265625x30 fill #121210
+    rect 0,0 98.265625x2 fill #ffd23f
+    text "round.go" @14,20.365234 #ece6d8 Inter 12
+    text "✕" @78.96875,19.96 #7c7566 JetBrains Mono 11
+  pop
   rect 0,30 856x1 fill #24221d
   clip 0,31 856x323 r 0
     rect 0,31 856x323 fill #060606
@@ -178,8 +181,11 @@ pop
 rect 0,354 856x1 fill #24221d
 clip 0,355 856x354 r 0
   rect 0,355 856x30 fill #0c0c0b
-  rect 0,355 79.265625x30 fill #121210
-  text "round.go" @14,375.36523 #ece6d8 Inter 12
+  clip 0,355 856x30 r 0
+    rect 0,355 98.265625x30 fill #121210
+    text "round.go" @14,375.36523 #ece6d8 Inter 12
+    text "✕" @78.96875,374.96 #7c7566 JetBrains Mono 11
+  pop
   rect 0,385 856x1 fill #24221d
   clip 0,386 856x323 r 0
     rect 0,386 856x323 fill #060606

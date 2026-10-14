@@ -93,6 +93,9 @@ var (
 
 	Selection = DeclareOn("selection", "alpha(accent, 20%)", "bg.base")
 	FocusRing = Declare("focus.ring", "accent")
-	Hover     = Declare("hover", "alpha(fg, 4%)")   // washed over what's clickable under the pointer
-	Pressed   = Declare("pressed", "alpha(fg, 8%)") // and while it's pressed
+	// Scrollbars, drawn over a scrolling box's content.
+	ScrollThumb    = Declare("scrollbar.thumb", "alpha(fg, 22%)")
+	ScrollThumbHot = Declare("scrollbar.thumb.hot", "alpha(fg, 42%)")
+	Hover          = Declare("hover", "alpha(fg, 4%)")   // washed over what's clickable under the pointer
+	Pressed        = Declare("pressed", "alpha(fg, 8%)") // and while it's pressed
 )

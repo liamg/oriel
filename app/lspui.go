@@ -80,13 +80,16 @@ func (x *lspExt) overlay(c *ui.Ctx) {
 	above := render.Point{X: r.Min.X, Y: r.Min.Y - 4}
 	if x.sig != nil {
 		at := above
-		c.Box("sig", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at, Self: render.Point{Y: 1}}}, func(c *ui.Ctx) { x.signatureCard(c) })
+		c.Box("sig", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at, Self: render.Point{Y: 1}}, Scale: partScale(x.h.Options(), "ui.hover.font_size")},
+			func(c *ui.Ctx) { x.signatureCard(c) })
 	}
 	if x.comp.open {
-		c.Box("comp", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &below}}, func(c *ui.Ctx) { x.completionMenu(c) })
+		c.Box("comp", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &below}, Scale: partScale(x.h.Options(), "ui.completion.font_size")},
+			func(c *ui.Ctx) { x.completionMenu(c) })
 	}
 	if x.hover != nil {
-		c.Box("hover", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &below}}, func(c *ui.Ctx) { x.hoverView(c) })
+		c.Box("hover", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &below}, Scale: partScale(x.h.Options(), "ui.hover.font_size")},
+			func(c *ui.Ctx) { x.hoverView(c) })
 	}
 	if x.actions != nil {
 		x.actionsMenu(c, below)
@@ -305,56 +308,20 @@ func truncate(s string, n int) string {
 func markdown(c *ui.Ctx, key any, m lsp.Markup, width float32) {
 	th := c.Theme()
 	body := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: docFontSize}, Color: th.C(theme.FgMuted)}
-	code := ui.TextStyle{Font: codeMono, Color: th.C(theme.Fg)}
-	c.Column(key, ui.Style{W: ui.Px(width), Gap: 6}, func(c *ui.Ctx) {
-		if m.Kind != "markdown" {
+	if m.Kind != "markdown" {
+		c.Column(key, ui.Style{W: ui.Px(width), Gap: 6}, func(c *ui.Ctx) {
 			for i, p := range strings.Split(strings.TrimSpace(m.Text), "\n\n") {
 				widget.Wrap(c, i, p, width, body)
 			}
-			return
-		}
-		lines := strings.Split(strings.TrimSpace(m.Text), "\n")
-		var para []string
-		k := 0
-		flushPara := func() {
-			if len(para) > 0 {
-				widget.Wrap(c, fmt.Sprint("p", k), plainMarkdown(strings.Join(para, " ")), width, body)
-				k++
-				para = nil
-			}
-		}
-		for i := 0; i < len(lines); i++ {
-			l := lines[i]
-			switch {
-			case strings.HasPrefix(l, "```"):
-				flushPara()
-				var block []string
-				for i++; i < len(lines) && !strings.HasPrefix(lines[i], "```"); i++ {
-					block = append(block, lines[i])
-				}
-				c.Column(fmt.Sprint("code", k), ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 6), Radius: 4, Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
-					for j, b := range block {
-						c.Text(j, b, code)
-					}
-				})
-				k++
-			case strings.TrimSpace(l) == "---" || strings.TrimSpace(l) == "***":
-				flushPara()
-				c.Box(fmt.Sprint("hr", k), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-				k++
-			case strings.TrimSpace(l) == "":
-				flushPara()
-			default:
-				para = append(para, strings.TrimSpace(l))
-			}
-		}
-		flushPara()
-	})
+		})
+		return
+	}
+	markdownText(c, key, m.Text, width, body)
 }
 
 // plainMarkdown takes inline markup out of a paragraph: `code`, **bold**, *em* and [links](url).
 func plainMarkdown(s string) string {
-	r := strings.NewReplacer("`", "", "**", "", "__", "")
+	r := strings.NewReplacer("`", "", "**", "", "__", "", "~~", "")
 	s = r.Replace(s)
 	for {
 		i := strings.Index(s, "](")

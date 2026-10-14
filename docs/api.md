@@ -20,6 +20,11 @@ Version 0.4.0.
 - `oriel.agent.pack(name, spec)`: A prompt pack: { prompt, tools }, for sessions to start with.
 - `oriel.agent.tool(spec)`: Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }.
 
+## oriel.coverage
+
+- `oriel.coverage.lines(file, first, last)`: A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner.
+- `oriel.coverage.set(owner, file, hits)`: Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.
+
 ## oriel.decor
 
 - `oriel.decor.provider(name, fn)`: Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text } (1-based lines).
@@ -29,9 +34,15 @@ Version 0.4.0.
 - `oriel.diagnostics.list()`: Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.
 - `oriel.diagnostics.set(owner, file, list)`: Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config.
 
+## oriel.editor
+
+- `oriel.editor.action(spec)`: Add a button at the right of an editor's breadcrumb, for the files when(path) takes: { name, label, label_on, icon, icon_on, command, args, run = fn(window), when = fn(path), on = fn(window), note = fn(window), order (50 by default), help }. window is { id, path, presenter }. on lights it, and label_on and icon_on show while it's on; note is dim text after the label (a count). icon is a built-in icon's name or a glyph. command runs with args.window set to the window it was clicked in; run is a function in its place.
+- `oriel.editor.present(name)`: Show the focused editor window with the presenter name, or as text again when it shows it already.
+- `oriel.editor.presenter(spec)`: Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text.
+
 ## oriel.hud
 
-- `oriel.hud.tat(name, opts, fn)`: A HUD tat: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
+- `oriel.hud.indicator(name, opts, fn)`: A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
 
 ## oriel.keymap
 
@@ -55,7 +66,7 @@ Version 0.4.0.
 
 ## oriel.rail
 
-- `oriel.rail.add(spec)`: Add an icon to the rail down the window's left edge: { name, icon, title, command, args, order (50 by default), bottom }. icon is a built-in icon's name (files, search, git, requests, debug, tests, settings) or a glyph. It's dimmed while the command isn't available.
+- `oriel.rail.add(spec)`: Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available.
 
 ## oriel.regex
 
@@ -70,24 +81,34 @@ Version 0.4.0.
 
 ## oriel.start
 
-- `oriel.start.add(spec)`: Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default) }. It's dimmed while the command isn't available.
+- `oriel.start.add(spec)`: Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure.
 
 ## oriel.status
 
 - `oriel.status.rule(fn)`: A status rule: fn(session) returns a status colour name, or nil to leave it.
 
+## oriel.thread
+
+- `oriel.thread.list()`: The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent) }.
+- `oriel.thread.new(opts?)`: Open a request: with opts.body, send it now ({ body, file, line, urgent, btw }; no file is about the whole change); without, open a thread on the editor's line at the cursor to write it.
+- `oriel.thread.open(id)`: Show a request by id in the Requests view.
+- `oriel.thread.reply(id, body, opts?)`: Reply to a request by id: opts { urgent (interrupts the agent's turn), btw (a side question, answered by a fork) }.
+- `oriel.thread.resolve(id, status?)`: Resolve a request by id, or set its status: open, resolved, deferred or dismissed.
+
 ## oriel.ui
 
 - `oriel.ui.button(spec)`: A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
+- `oriel.ui.chart(spec)`: A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1.
 - `oriel.ui.column(children)`: A column of nodes; options beside them: gap, pad (px).
-- `oriel.ui.input(spec)`: A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
+- `oriel.ui.date_picker(spec)`: A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30.
+- `oriel.ui.indicator(spec)`: A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
+- `oriel.ui.input(spec)`: A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value.
 - `oriel.ui.list(items, row)`: A list: each of items through row(item), which returns a node.
 - `oriel.ui.mode()`: The editor's mode, as the built-in status line shows it.
 - `oriel.ui.row(children)`: A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).
 - `oriel.ui.select(spec)`: A menu of choices: { value, options = { … }, on_change = fn(value), id, label }.
 - `oriel.ui.spacer()`: Space that takes what's left.
 - `oriel.ui.state(key, initial?)`: A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance.
-- `oriel.ui.tat(spec)`: A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
 - `oriel.ui.text(s, style?)`: Text, in a style: dim, faint, accent, warn, error or ok.
 - `oriel.ui.toggle(spec)`: An on/off switch: { on, on_change = fn(on), id, label }.
 

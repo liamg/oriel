@@ -64,7 +64,30 @@ flowchart TB
   `vim.RegisterObject` in Go today; their Lua bindings come with PL-1).
 - ex commands with ranges, bang, counts and completion.
 - decorations: highlights, signs, virtual text, virtual lines, inline blocks, conceal. A provider gets the buffer, the
-  lines in view and `FileBytes` (the buffer as it would be written), for diffing against a file's other versions.
+  lines in view and `FileBytes` (the buffer as it would be written), for diffing against a file's other versions, and
+  where it's drawn: `Window` (the editor window's id), `Presenter` (the presenter drawing the buffer, "" for its text)
+  and `Now` (the frame's time). A `Sign` can be a built-in icon (`Icon`, its `Text` small beside it: a count) and have a
+  `Hover` card, shown while the pointer is on the sign or the card and never taking focus (`widget.HoverCard`). A
+  `LineBg` on a changed line can say what the line read before (`Was`), for a presenter that shows the change. The
+  agent's latest edit to a file is a built-in provider (`agent.edits`): its lines lit green for ten minutes, a one-line
+  change's old text in `Was`, and "agent edited 4s ago" after the first.
+- buffer presenters (`registry.BufferPresenter{Name, Label, When(path), Comments, Build(ctx)}`, ED-15): a way to draw a
+  buffer other than as its text, per window. `editor.present {name, window}` shows a window (the focused one by
+  default) with it, and again shows the text; the buffer stays open and editable, and the presentation is built again
+  each frame from its text, so two windows on one file can be in Edit and a presentation at once. `Build` maps each
+  block it makes to the source lines it came from: `ctx.Block(from, to, body)` (0-based, inclusive; `Space` above it,
+  `Label` its accessible name), whose body is drawn with `PresentDraw{Width, Decorations, Kicker}`. From that map the
+  host (`app/present.go`) gives every presenter the same: the decorations of the file (every provider's, all its lines)
+  on the block holding their line (a line no block maps belongs to the nearest block before it): `Block`s are cards
+  in a margin level with their block (the file's threads), `Sign`s sit beside the block, a `LineBg` fills it and
+  colours its edge, a `VirtualText` is a label at its top right, an underline colours its edge; the block's line
+  number shows where a card is; with `Comments`, a click on a block, or `j`/`k` then `c`/`⏎`, runs
+  `thread.new {file, line, end_line}` on its lines, a real code anchor that shows in Edit too; `o` goes to its source
+  (`present.next`, `present.prev`, `present.comment`, `present.source`, key mode `present`); and scrolling a
+  presentation keeps the window's top line with the block at its top, so Edit comes back where the presentation was
+  (and a presentation opens where Edit was). A window's presenter is kept across restarts with its file. The built-in
+  `markdown` plugin (`app/mdpreview.go`) is one, with comments on, drawing with the shared markdown renderer's blocks
+  (`mdParse`), its **Preview / Edit** action and `:MarkdownPreview`; plan mode's doc is the same presenter.
 - filetypes and ftplugins, grammars, queries, formatters, linters, LSP and DAP specs. A query kind is any name:
   `syntax.Parser.Query(kind)` and `syntax.Document.Query(kind)` run a language's `<kind>.scm` and return its matches
   with named captures and `#set!` properties. Built-in kinds: `highlights`, `folds`, `injections`, `units`, and
@@ -84,6 +107,9 @@ flowchart TB
 - command-line hints (`registry.CmdlineHint`): text at the right of the `:` line while it applies, as the LSP's
   "⇥ use LSP rename" on a `:s` of a whole word.
 - editor actions (`registry.EditorAction`): buttons at the right of an editor's breadcrumb for the files they apply to,
+  their command run with `window` (the window clicked in) added to their args. `On(window)` lights one for the window
+  it's in (`registry.EditorWindow{ID, Path, Presenter}`), and `LabelOn`/`IconOn` show while it's on (Preview ↔ Edit);
+  `Note(window)` is dim text after the label (a count); an `Icon` naming a built-in icon is drawn.
   lit while `On` says so (the tests' file, failed, watch and coverage).
 - explainers (`registry.Explainer`): answer an `ExplainRequest` (a failure, a diagnostic, a selection) in markdown,
   with no way to change anything; every "ask to explain" uses the first. The agent's comes with AI.
@@ -95,22 +121,110 @@ flowchart TB
 - raw keys (`registry.RawKeys`): a keymap mode whose ⌃ keys skip the global maps, so a terminal's program gets `⌃W`;
   ⌘ and ⌥ chords, and the mode's own maps, still apply.
 - picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.
+- requests (AI-5): `request.comment {thread | file, line, text; body, title, urgent, btw}` is how anything comments to
+  the agent (it fires `CommentSend` first: a rewrite changes the comment, a veto stops it); `request.resolve`,
+  `request.reopen`, `request.new {text, context, file, line}`, `request.open {thread}` and `request.attach {items |
+  text, title}` (the pickers' `⌃a`) drive the Requests views, and `thread.new` opens a thread on the cursor's line, or on `{file}`'s `{line}` through `{end_line}`.
+- threads shown or hidden (ED-15): each window shows its file's threads between the lines or hides them; `threads.toggle
+  {window}` (`␣R`, and the **💬 n** editor action, n the file's open threads) switches the focused window, and
+  `editor.threads = "shown" | "hidden"` is how a window shows a file it hasn't been switched on. Hidden, each line with
+  threads has a speech-bubble sign in the colour of its first thread's state, with their count when there are several;
+  hovering it shows a card of them (title, state, the last two messages as markdown) that goes when the pointer leaves
+  the sign and the card and never takes focus or keys; a click, or `⏎` on the line (the `threads.hidden` key layer),
+  runs `threads.show {window, thread}`: the threads again, scrolled to that one with its reply field focused. In a
+  presentation the same bubbles sit beside the blocks; shown, its margin also keeps closed threads, folded to a line
+  with **reopen**, and a planning session's cards have **defer**.
+  The `threads` picker source lists the session in front's requests. A test run is shown by `test.run.show {id,
+  session}` (the `test.run` view), which evidence chips run.
+- plan (AI-8): `plan.open {doc}` shows a planning session's docs (the `plan` and `plan.docs` views), and its doc
+  is the `markdown` presenter's, so a presentation's keys (`present.*`) move through it and comment on a block, and
+  `session.start-work {clear, fresh, branches, sandbox, network, model, effort}` is available while the session in
+  front is planning; `plan.start-work` opens its dialog, and `plan.start-work.run` (⌘↵ in the `startwork` key
+  mode) runs what the dialog holds. A comment on a file at the workspace root,
+  outside every project, is anchored to the project `core.DocsProject` (`"__docs__"`) with the path relative to the
+  workspace; `request.comment {file}` does that for an absolute path, and an agent's `comment` tool takes
+  `project: "__docs__"`.
+- a Block decoration's controls take and keep focus (a reply field between the lines): the editor doesn't take focus
+  back from something inside its code column.
 - inlay decorations (`registry.Inlay`): text drawn inline before a column, the code after it moved along the grid.
+- instances that outlive the app: a view implementing `registry.Persisted` (`Persist(instance) (state, ok)`,
+  `Revive(state) (instance, error)`) keeps its instances across restarts. The layout is saved per directory as it
+  changes (`layout-<hash>.json` in the state dir) with each instance's state, and when the app starts again there,
+  each view revives its instances into the places they had; one that can't is left out. The editor keeps each window's
+  file and cursor, the terminal its command (its screen is its own state file).
 - tab markers: a view implementing `registry.Marked` gives each instance a small marker after its tab title (the
   editor gives its file's git status letter), in a theme token's colour.
-- rail entries (`RailEntry`, `oriel.rail.add`) and start view actions (`StartEntry`, `oriel.start.add`). Both are
+- project sidebar entries (`RailEntry`, `oriel.rail.add`; ui.md 01h) and start view actions (`StartEntry`,
+  `oriel.start.add`). A start entry with `Link` is a small link under the actions with its `Note()` figure (Stats,
+  Usage; AI-12). A rail entry has a `Scope`: `project` (`registry.ScopeProjectEntry`) is one of each project's
+  panels, listed under the open project and run with `project` added to its args (`RailEntry.ArgsFor`); `session`
+  (the default) is listed below the projects; `global` (`registry.ScopeGlobalEntry`, AI-12) is a page every session
+  shares (Stats, Usage, Jobs, Settings), listed last below a second divider and at the foot of the narrow form, and in
+  the omnibox's **Pages** with its note and key (`registry.GlobalEntries`). `Note(project)` is dim text at its right ("4", "48 ✓"), `Badge()` a
+  pill, `Active(project)` lights it (for an entry with neither, a `view.*` command's `id` showing for the project
+  does), and `Shown(project)` leaves it out (Pull request without a remote). `registry.ProjectEntries` and
+  `SessionEntries` list them. `ProjectState` contributions add to each project's header line after its branch and
+  changes (`StatePart{Text, Style, Dot}`: a PR's number, a CI result with its dot); FG-6 adds the PR and CI. Both
+  kinds of entry are
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
-- icons: the built-in set (`files`, `search`, `git`, `requests`, `debug`, `tests`, `settings`, `plus`, `resume`,
-  `folder`) is drawn, not a font's; any other name is drawn as a glyph.
-- statusline, tabline (session tabs), titlebar and HUD tats, notification cards.
+- icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
+  `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
+- statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
+  `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats extension's since AI-12: one button to Usage with a
+  hover card).
+- agent console side sections: views named `agent.console.side.<order>-<name>` are drawn at the top of the console's
+  right column, in name order, built with the session's ID as `ViewCtx.Instance`; one that has nothing to say for a
+  session draws nothing. Jobs adds `agent.console.side.10-job` (SE-4).
+- rich text: a `widget.Span` with `Code` and a `Tone` is in that colour on a tint of it: a repo named in a job's
+  prompt, in its project colour.
+- pages over the main area: `widget.Page` with `PageOpts.Over` (the node it covers, as laid out last frame) draws a
+  page beside the sidebar rather than over the whole window, at `ui.LayerPage`; Stats and Usage are overlay views
+  (`overlay.stats`, `overlay.usage`) drawn that way, and any plugin's page can be.
+- charts: `widget.Chart(c, key, series, ChartOpts)` (AI-12) draws stacked bars, stacked areas, lines (dashed, from a
+  point: a projection), a sparkline or a 100% strip, with a y axis of round values, labels, a legend, marks (a
+  dashed or solid line with a label: now, a reset, a compaction), bands (a hatched stretch: idle), a strip of ticks
+  (turns) and a hover card of the point's values; `ChartResult` says the series and point under the pointer and a
+  click; `Table` draws the same data as a table. Lua: `oriel.ui.chart`. The stats pages are built only on it.
+- dates (AI-14): `widget.DatePicker(c, key, &DateRange, DatePickerOpts)` picks a range of days on a month's calendar
+  (arrows move, ⏎ picks one end then the other, PageUp/PageDown a month, ‹ › page, a typed `2026-09-01..2026-09-30`
+  with ⏎, Esc cancels; key mode `datepicker`); `DatePopover` shows it under an anchor, and `DateSelect` is a button
+  showing the range that opens it. `ParseDateRange` reads the typed form. Theme tokens `datepicker.*`. Lua:
+  `oriel.ui.date_picker`. Stats' custom range is built on it.
+- segmented strips take `SegmentedOpts.Badges`, a small chip after each label: the Usage switcher's plan tiers.
+- stats: a provider that keeps its own log of a session implements `agent.Logged` (`Logs(cwd, session) []agent.Log`:
+  Claude's transcript and its subagents'); the worker records the events of one that doesn't (Codex). The worker reads
+  them into `worker/stats` and answers `stats.query` (`stats.Query{Group, From, To, Step, Offset, Filters, Split}` →
+  `stats.Report`), `stats.session` (`worker.StatsSessionReq` → `stats.Detail`), `usage.history` and `usage.read`
+  (`worker.Client.StatsQuery`, `SessionStats`, `UsageHistory`, `ReadUsage`); `stats.Merge` adds workers' answers up.
+  Commands: `stats.open`, `stats.session`, `stats.group`, `stats.range`, `stats.custom`, `stats.move`, `stats.drill`,
+  `stats.back`, `stats.copy`, `stats.split`, `usage.open`, `usage.refresh`, `:Stats`, `:Usage`. Plans are per account
+  (`core.ProviderUsage.Account`, `Same`, `Uses`; `stats.ByAccount` and the `account` filter); `usage.accounts` names them.
+  A provider's reading carries its plan's tier (`ProviderUsage.Tier`), and a session the accounts it ran on
+  (`core.AgentState.Accounts`, `RanOn`; `stats.Session.Accounts`).
+- jobs (SE-4): a worker answers `jobs.list`, `jobs.save`, `jobs.delete` and `jobs.run` (`worker.Job`,
+  `worker.Schedule`; `Client.Jobs`, `SaveJob`, `DeleteJob`, `RunJob`) and `session.delete` (`Client.Delete`); a run's
+  row is `worker.RunOf(session)`. Commands: `jobs.open`, `:Jobs`, `jobs.new`, `jobs.edit`, `jobs.duplicate`,
+  `jobs.save`, `jobs.run`, `jobs.delete`, `session.delete`, `jobs.form.save`; key modes `jobs` and `jobs.form`; theme
+  tokens `jobs.run.running`, `jobs.run.done`, `jobs.run.blocked`, `jobs.run.stopped`. A kind's `PromptFile` writes its
+  prompt into the workspace as the session starts (the job kind's `JOB.md`).
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**
-- agent providers (`agent.Provider`).
+- agent providers (`agent.Provider`). A provider whose login stops working says so with `agent.AuthExpired{Provider,
+  Account, Detail, Terminal, Shell}` (an event, or `Start`'s error), and a login it sees succeed with
+  `agent.AuthRestored`; the worker flags the login (`core.WorkerState.SignedOut`, a `core.AskLogin` card with its
+  `core.Login` on each session waiting on it) and checks it with `Detect` (AI-13). `agent.login {id | provider, worker}`
+  opens a local agent's terminal with the provider's `Terminal` login typed.
 - **agent tools**: an MCP tool defined in Lua or Go and offered to the session's agent.
-- prompt packs, session kinds (plan, work, review, tour and job are built-ins).
+- prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
+  registered on the worker (`worker.Kinds().Register(worker.KindSpec{…})`: its title, a few words (`Desc`), what
+  starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees);
+  the launcher lists the worker's kinds (`kinds.list`), so a registered one is a mode there with no more code.
+  `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the worker yet.
+  `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
+  (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a built-in part) overrides one.
 - thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"),
   review-ledger rules, commit and PR gates, slop rules, and status-colour rules.
 
@@ -123,7 +237,7 @@ flowchart TB
 |---|---|---|
 | observe | `fn(ev)` | log every agent tool call to a file |
 | veto | `fn(ev) -> false, reason` | block commits while the review ledger is under 100% |
-| rewrite | `fn(ev) -> ev'` | expand `@ticket` in a comment before it reaches the agent |
+| rewrite | `fn(ev) -> ev'` | expand `@ticket` in a comment before it reaches the agent; set `BufRead`'s `read_only` to open a file read-only |
 | decide | `fn(ev) -> decision` | auto-allow `Bash(go test …)` permission prompts in this repo |
 | provide | `fn(ctx) -> items` | add PRs-awaiting-me to the omnibox |
 
@@ -134,7 +248,7 @@ flowchart TB
 
 - Views are functions returning a tree of `ui.Node`s: `Box` (rows and columns, with sizes, padding, gaps, alignment,
   clipping, scrolling and floats), `Text`, `Paint`, and `Func` (Go views that build with widgets) today. `Code`, `Markdown`, `Button`, `Input`, `List`, `Table`,
-  `Bar`, `Spark`, `Chart`, `Badge`, `Term`, `Editor` (an embedded buffer) and `Canvas` (draw ops) join them as their
+  `Bar`, `Spark`, `Chart` (`widget.Chart`, AI-12; `oriel.ui.chart`), `Badge`, `Term`, `Editor` (an embedded buffer) and `Canvas` (draw ops) join them as their
   widgets land. Built-in widgets lay out through the same nodes, so a plugin's view and a built-in one behave alike.
 - Lua and Go build them directly. Process extensions send the same tree as
   JSON, with id-keyed patches.
@@ -209,6 +323,9 @@ type Registry interface {
     SetDiagnostics(owner, file string, ds []Diagnostic) // replaces owner's for file; Problems and the editor show them
     Diagnostics() ([]Diagnostic, int)                    // every one, by file and line, and a generation
     DiagnosticsFor(file string) []Diagnostic
+    SetCoverage(owner, file string, hits map[int]int) // line coverage by 0-based line; the tests gutter shows it
+    ClearCoverage(owner string)
+    CoverageFor(file string) map[int]int // every owner's, a line keeping its largest count
 
     OnFault(fn func(Fault)) Disposable            // a contribution turned off: it panicked, or kept failing
     OnFailure(fn func(Failure)) Disposable        // each contribution error, and warnings (a hook over budget)
@@ -238,7 +355,7 @@ type Hook[E any] func(ctx Ctx, ev *E) Verdict      // Continue | Veto(reason) | 
 func On[E any](r Registry, h Hook[E], opts ...HookOpt) Disposable
 
 // events are plain structs — one per thing that happens
-type CommentSend struct{ Thread ThreadID; Body string; Urgent bool }
+type CommentSend struct{ Session, Thread, File string; Line int; Body string; Urgent, Btw bool } // app.CommentSend
 type Permission  struct{ Session SessionID; Tool string; Input json.RawMessage; Decision *Decision }
 type Commit      struct{ Project string; Message string; Unread int }
 
@@ -294,7 +411,7 @@ type Host interface {
   `app.statusline`, `app.notifications` (toasts) and `app.modal`. The log panel is `log`, and `:Events` is `events`.
 - The titlebar is `app.titlebar`: the logo, a tab per session (status dot, name, its status or kind, `⌘N`, and
   `✕N` while it has errors you haven't seen), and segments named `titlebar.right.<order>-<name>` at its right, for
-  tats. `session.focus {n}` or `{id}` brings a session to the front; `⌘1`–`⌘9` run it.
+  indicators. `session.focus {n}` or `{id}` brings a session to the front; `⌘1`–`⌘9` run it.
 - Picker sources: `Registry.Picker(PickerSource{ID, Title, Prefix, Order, Items, Preview, Run})`. `Items(ctx, query)`
   gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
   query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
@@ -306,20 +423,28 @@ type Host interface {
 - Views named `app.overlay.<name>` float over the window: the omnibox is `app.overlay.omnibox`.
 - The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
   in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.
-- A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`) and
-  `ViewCtx.Focused`. A view can implement `registry.Titled` to name each instance's tab, and
+- A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`),
+  `ViewCtx.Focused`, and `ViewCtx.Project`: the project it was opened for (`view.open {project}`, a project entry's
+  panel), "" for a session's view or a window with one project. The project is part of the instance
+  (`layout.ViewRef.Project`), so each project has its own Explorer; the layout keeps it across restarts, and the tab
+  reads "admin-ui · Explorer". With 2+ projects a tab leads with its project's colour square and its tooltip names
+  the project: the one it was opened for, or for a `registry.Located` view (the editor) the one its file is in. A view can implement `registry.Titled` to name each instance's tab, and
   `registry.EdgeToEdge` to be drawn without the pane's padding; `registry.As[T](view)` sees through the guard.
   `Registry.Views()` lists every view id.
 - `Host.Layout()` is the layout tree, to change from commands and views (`Open`, `Close`, `Show`, `Swap`, `Row`,
   `Shown`, `OnClose`), `Host.PaneRect(v)` where a view's pane was drawn, and `Host.Redraw()` asks for a frame from
-  any goroutine. `view.open` takes `beside` (`"editor#3"`) and `size`, and `view.close` an `id` and `instance`.
+  any goroutine. `view.open` takes `beside` (`"editor#3"`), `size`, `project` and `alone` (in a dock, by itself: what was there closes), and `view.toggle` and `view.close` an `id`,
+  `instance` and `project`. `project.open {project | index}` opens a project of the session (`core.ProjectOpened`;
+  the open project, each project's last panel (`ProjectPanelOpened`) and colour (`ProjectColoured`) are
+  `SessionState.ProjectUI`), `project.panel {name, project}` runs a project entry for the open project, `project.add`
+  opens the picker of repos to add, and `sidebar.form {form}` makes the window's sidebar wide or narrow.
 - `Host.CurrentTheme()` is the theme the window is drawn in, and `Host.Shot(th)` the window built and drawn again on
   the CPU in another theme, without touching the live frame (`ui.UI.Fork`). Drawn in `theme.Probe(th)`, every token
   and syntax group in a colour of its own, it tells what painted each pixel: the theme editor's pick mode.
 - Hooks (PL-1): `Registry.Hook(Hook{Event, Pattern, Priority, Kind, Label, Fn, Source})`, `Fire(ctx, event, subject,
   ev)`, `DeclareEvent` and `Hooks()`, with `registry.On[E]` for a typed Go hook. `Registry.Contribute` and
   `Contributions(kind)` are the general contribution point for later features (agent tools, prompt packs, session
-  kinds, HUD tats, status rules, `:Inspect` sections). `Host.Do(fn)` runs fn on the loop from any goroutine.
+  kinds, HUD indicators, status rules, `:Inspect` sections). `Host.Do(fn)` runs fn on the loop from any goroutine.
   `registry.SourcedView` and `Registry.ViewSource` say who registered a view.
 - `Host.Here()` is where the user is, as an `At`: the session in front (or `oriel` with none), the project, and
   the focused editor's buffer and window; read options there. `core.Store.Focus()` is the session in front, cheaply.
@@ -332,6 +457,9 @@ type Host interface {
   Severity, Message}` as LSP does; the built-in `problems` extension marks them in the editor through a decoration
   provider (`DecorationCtx.Path` is the buffer's absolute file) and lists them in `:Problems`. Lua's
   `L.diagnostics.set` binds it; the Lua config publishes its errors as owner `lua`.
+- Coverage (TR-4): `Registry.SetCoverage(owner, file, hits)` publishes a file's line hits the same way. A coverage run
+  publishes as owner `tests`, and the tests gutter shows every owner's, so another tool's report (jest, pytest) shows
+  there too. Lua's `L.coverage.set(owner, file, { [line] = hits })` and `L.coverage.lines(file, first, last)` bind it.
 - Language servers (LS-1): `registry.LSPServer` contributions (kind `lsp.server`: `Name`, `Language`, `Cmd`,
   `Roots`, `Init`, `Settings`, `Order`, `Source`), listed by `registry.LSPServers(r)`. A later one of a name shadows
   the built-in (`lsp.Builtins()`); among the servers for a language the lowest `Order` that's installed runs. The
@@ -352,6 +480,11 @@ type Host interface {
   them. A String option can offer `OptionSpec.Choices`, worked out when asked; the settings page makes it a menu
   (`ui.theme` lists the registered themes).
 - Plugins search text with `regex` (PCRE2's syntax), the same engine as project search; Lua's `L.regex` binds it.
+- An option may be a list of strings (`registry.List`, `[]string`) or strings by name (`registry.Map`,
+  `map[string]string`, with `KeyLabel` and `ValueLabel` for its two sides), and `OptionSpec.Validate` refuses a value
+  of the right type that's still wrong; `Check` asks it, so every way of setting the option does. `registry.ListOf`
+  and `MapOf` build a Validate from a check of one item or entry, which the settings page's editors also ask as you
+  type. A list's `Choices` make it a multi-select on the page (settings.md).
 - `Options` keeps where each value came from: `SetFrom(name, layer, at, v, source)`, `Source(name, at)`,
   `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").
 - `Registry.Themes()` returns a generation with the sources; the window watches a theme registered at any time.
@@ -385,7 +518,7 @@ What the budgets mean:
 
 - **Per key** (8 ms budget): Lua is fine. Neovim runs whole plugin ecosystems on per-key
   Lua, and gopher-lua is slower than LuaJIT but still about 100× under budget.
-- **Per frame** (4 ms at 120 Hz): Lua is fine for a statusline, a HUD tat or a decoration provider,
+- **Per frame** (4 ms at 120 Hz): Lua is fine for a statusline, a HUD indicator or a decoration provider,
   as long as they work on the visible lines only, which is how the APIs are shaped.
   It's not fine for drawing the editor itself.
 - **Per byte of a large file** (search, diff, parse): Lua is too slow. That belongs in Go, or in WASM if it has to be a plugin.

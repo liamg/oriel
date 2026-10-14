@@ -301,28 +301,34 @@ func (p *picker) sourceStrip(c *ui.Ctx, cur registry.PickerSource) {
 	label := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium, Tracking: .12}, Color: th.C(theme.FgFaint)}
 	c.Row("strip", ui.Style{W: ui.Flex(1), H: ui.Px(38), Pad: ui.PadXY(14, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("pick", "PICK", label)
-		for _, s := range p.h.Pickers() {
-			on := s.ID == cur.ID
-			if s.Unlisted && !on {
-				continue
-			}
-			text := strings.ToUpper(s.Title)
-			if k := p.keyFor(s.ID); k != "" {
-				text += " " + k
-			}
-			if widget.Clickable(c, "src-"+s.ID, ui.Style{Help: "shell/pickers", Role: ui.RoleTab, Selected: on, Label: s.Title}, func(c *ui.Ctx) {
-				if on {
-					widget.Chip(c, "on", text, th.C(theme.Accent), "shell/pickers")
-					return
-				}
-				c.Row("off", ui.Style{Pad: ui.PadXY(7, 2)}, func(c *ui.Ctx) { c.Text(nil, text, label) })
-			}).Clicked {
-				p.source, p.sel = s.ID, 0
-			}
-		}
-		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		// More sources than fit scroll sideways, the current one kept in view.
+		srcs := c.Row("sources", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, ScrollX: true}, func(c *ui.Ctx) { p.sources(c, cur, label) })
+		c.ScrollIntoView(srcs, ui.Child(srcs, "src-"+cur.ID))
 		c.Text("next", "⇥ next source", label)
 	})
+}
+
+func (p *picker) sources(c *ui.Ctx, cur registry.PickerSource, label ui.TextStyle) {
+	th := c.Theme()
+	for _, s := range p.h.Pickers() {
+		on := s.ID == cur.ID
+		if s.Unlisted && !on {
+			continue
+		}
+		text := strings.ToUpper(s.Title)
+		if k := p.keyFor(s.ID); k != "" {
+			text += " " + k
+		}
+		if widget.Clickable(c, "src-"+s.ID, ui.Style{Help: "shell/pickers", Role: ui.RoleTab, Selected: on, Label: s.Title}, func(c *ui.Ctx) {
+			if on {
+				widget.Chip(c, "on", text, th.C(theme.Accent), "shell/pickers")
+				return
+			}
+			c.Row("off", ui.Style{Pad: ui.PadXY(7, 2)}, func(c *ui.Ctx) { c.Text(nil, text, label) })
+		}).Clicked {
+			p.source, p.sel = s.ID, 0
+		}
+	}
 }
 
 // keyFor is the key that opens a source's picker, as its keymap writes it, with the leader as ␣.

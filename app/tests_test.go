@@ -230,7 +230,7 @@ func TestFailureBlock(t *testing.T) {
 	s.sh.runTodo()
 	s.frame()
 	s.frame()
-	s.wantText(t, "the explain card", "RoundHalfEven rounds -3.5 toward zero.")
+	s.wantText(t, "the explain card", "RoundHalfEven", "rounds -3.5 toward zero.") // the bold its own run
 	if !strings.Contains(asked, "TestRoundHalfEven/-3.5") || !strings.Contains(asked, "want -4") {
 		t.Errorf("explain was asked about %q", asked)
 	}
@@ -359,5 +359,10 @@ func TestCoverageGutter(t *testing.T) {
 	s.run("test.coverage.toggle", nil)
 	if edge(9) != "" {
 		t.Error("toggling coverage off left the gutter marked")
+	}
+	s.run("test.coverage.toggle", nil)
+	s.reg.SetCoverage("other", filepath.Join(dir, "round.go"), map[int]int{1: 0}) // line 2
+	if got := edge(2); got != "tests.coverage.uncovered" {
+		t.Errorf("another tool's coverage isn't in the gutter: %q", got)
 	}
 }

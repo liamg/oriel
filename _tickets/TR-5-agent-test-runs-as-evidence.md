@@ -2,7 +2,7 @@
 id: TR-5
 title: "Agent test runs as evidence"
 phase: P5
-status: todo
+status: review
 area: LSP, tests, debugging
 module: testrun, agent
 depends_on: [TR-1, AI-2]

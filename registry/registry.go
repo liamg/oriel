@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -64,6 +65,10 @@ type Registry interface {
 	SetDiagnostics(owner, file string, ds []Diagnostic)
 	Diagnostics() ([]Diagnostic, int) // by file, then line; and a generation that moves when they change
 	DiagnosticsFor(file string) []Diagnostic
+	// SetCoverage replaces owner's line coverage for file: hits by 0-based line, 0 for a line never run. nil clears it.
+	SetCoverage(owner, file string, hits map[int]int)
+	ClearCoverage(owner string)
+	CoverageFor(file string) map[int]int // every owner's, a line keeping its largest count
 
 	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
 	OnFault(fn func(Fault)) Disposable
@@ -126,11 +131,12 @@ type View interface {
 }
 
 // ViewCtx is what a view is built with: the window's size and, for a view open in the layout, which instance
-// of it this is and whether it has focus.
+// of it this is, the project it's for, and whether it has focus.
 type ViewCtx struct {
 	Width, Height float32
 	Instance      string
 	Focused       bool
+	Project       string // the project the instance was opened for (view.open's project); "" for a session's view
 }
 
 // EdgeToEdge is a view drawn right to its pane's edges, with no padding around it: an editor, a terminal.
@@ -153,6 +159,13 @@ type Moded interface {
 // is a theme token.
 type Marked interface {
 	Mark(instance string) (text, style string)
+}
+
+// Persisted is a view whose instances come back when the app starts again on the same directory: the layout keeps
+// each one's state, and Revive makes a new instance from it, which takes the old one's place.
+type Persisted interface {
+	Persist(instance string) (state json.RawMessage, ok bool)
+	Revive(state json.RawMessage) (instance string, err error)
 }
 
 type ViewFunc func(ViewCtx) ui.Node
@@ -226,6 +239,7 @@ type reg struct {
 	faults    faults
 	diags     map[diagKey][]Diagnostic
 	diagGen   int
+	cover     map[diagKey]map[int]int
 }
 
 func New() Registry {

@@ -95,8 +95,10 @@ below.
   the others while active, so `⌃n` and `⏎` are the menu's only while it's open, and insert-mode maps still apply.
 - Inlay hints are a new decoration kind, `registry.Inlay`: text drawn inline before a column, the code after it shifted
   on the grid (the cursor, selections and spans too).
-- Keys follow nvim 0.11's defaults: `K`, `grr`, `grn`, `gra`, `gri`, `gO`, plus `gd`, `gD`, `gy`, `␣ca`, `␣rn`, `␣ci`,
+- Keys follow nvim 0.11's defaults: `K`, `grr`, `grn`, `gra`, `gri`, `gO`, plus `gd`, `gD`, `gy`, `␣ca`, `␣ci`,
   `␣co` and `⌃␣` in insert mode. Without a server, `K`, `gd` and `gD` are vim's.
+- A go-to with one result (`gd`, `gD`, `gy`, `gri`, the peek's `⏎`) is a vim jump in the current window, to
+  another file or within one, so `⌃o` comes back and `⌃i` goes there again.
 - `grr` peeks inline (a block under the line: the list by file, the highlighted reference's code); rename shows a
   diff of every file before it changes anything, through the same preview as project search's replace.
 - The symbols pickers (`␣s`, `gO`, `␣S`, the omnibox's) ask the server, falling back to the tree-sitter outline;
@@ -143,7 +145,7 @@ below.
 - **Coverage**: `⌥▶` runs with coverage, and covered or uncovered lines show in the gutter (Go `-coverprofile`, pytest-cov,
   vitest/istanbul, cargo llvm-cov when installed).
 - **The agent's runs land in the same panel**, marked as the agent's, and they're the **evidence** that "tests pass" claims link to
-  (`agents.md`). The HUD tat shows `TESTS 13 ✓ 1 ✕` for the session.
+  (`agents.md`). The HUD indicator shows `TESTS 13 ✓ 1 ✕` for the session.
 - **Runs happen on the worker, in the session sandbox**, with the project's mise toolchain, so they behave exactly like CI.
 
 | Language | Discovery | Runner and result stream |
@@ -244,10 +246,22 @@ results, failure block and tests panel are still to build on it.
   times), so flaky detection needs no git. History (20 runs) persists per work dir in the state directory.
 - The Tests panel is the `tests` view (the rail's Tests lights up): a tree by package and test (subtests and rows
   under their test), all / failed / slowest, sparklines of recent runs, flaky marks, and output (case, run, raw JSON).
-  The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.tat` for the HUD (SH-8).
+  The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.indicator` for the HUD (SH-8).
 - Watch (TR-4) is a `BufWritePost` hook running `Set.Affected`; coverage (`␣tc`) marks covered and uncovered lines with
   gutter edges until toggled off.
-- Not yet: running in the worker's sandbox (AI-1), the agent's runs as evidence (TR-5), debug (DB-2).
+- Not yet: running in the worker's sandbox (AI-1), debug (DB-2).
+
+### As built (TR-5)
+
+- The worker records the agent's runs (`test_run`, and shell commands that ran tests, parsed from their output) as
+  `core.TestRun`s in the session, each with the transcript item that ran it (`TestRun.Item`), and links a reply's
+  claims to them (`Comment.Evidence`), flagging a "tests pass" with no passing run behind it (`agents.md`).
+- An evidence chip (✓ or ✕, the counts, `run <id>`) links to the run: in a reply and its activity block (the Requests
+  view and threads between the lines), on the console's block for the call that ran it, and in the Tests panel's head
+  (the latest agent run, beside the last run). A click runs `test.run.show {id, session}`: the `test.run` view, a main
+  tab with the command, who ran it and for which thread, the counts, what failed, and what it printed.
+- Not yet: the agent's runs as rows in the Tests panel's tree (they're `core.TestRun` summaries, not `testrun.Run`s
+  with per-test results), and recent runs in the panel's side column.
 ## Terminals
 
 ### How a terminal is rendered
@@ -343,6 +357,8 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 - `app/terminal*.go`, a built-in: `term.open {cmd, env, place, instance}` and the ex commands `:term` (`:term!` in the
   main area), `:vterm` and `:sterm`; terminals are `terminal#<n>` views, so every placement, move and zoom is the
   layout's. Each runs its program on our PTY with Ghostty's VT (the worker's copy comes with AI-1), resized to its pane.
+  `term.open {source, title}` shows any `TermSource` (read, write, resize, close) instead of starting a program: the
+  agent console's Raw terminal streams the agent's PTY from its worker this way (AI-6).
 - Drawn in one paint per terminal from the VT's grid: runs of one style placed on the cell grid, backgrounds, cursor
   shapes, and box-drawing, block and shade characters drawn as shapes so they join at any size. Colours are the
   theme's `terminal.ansi.0`–`15`, `terminal.fg/bg`, 256-colour and truecolor.

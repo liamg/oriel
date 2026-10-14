@@ -38,7 +38,7 @@ func (rspec) Parse(r io.Reader, emit func(Event)) error { return nil }
 
 type otherContribution struct{}
 
-func (otherContribution) ContributionKind() string { return "hud.tat" }
+func (otherContribution) ContributionKind() string { return "hud.indicator" }
 func (otherContribution) ContributionName() string { return "x" }
 
 func TestSetPluginAdapters(t *testing.T) {

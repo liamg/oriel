@@ -1,6 +1,8 @@
 package widget
 
 import (
+	"strings"
+
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/ui"
@@ -36,22 +38,58 @@ func Clickable(c *ui.Ctx, key any, st ui.Style, body func(c *ui.Ctx)) ui.Interac
 type SegmentedOpts struct {
 	Help  string
 	Label string // the strip's accessible name
+	// Short are shorter labels, one for each: with them the strip fills the width it's given and uses them when the
+	// full labels don't fit.
+	Short []string
+	// Badges are small chips after the labels, one for each ("" for none): a plan's tier.
+	Badges []string
 }
+
+const segPad = 10
 
 // Segmented is a strip of mono buttons, *active lit; a click picks one. It reports a change.
 func Segmented(c *ui.Ctx, key any, labels []string, active *int, o SegmentedOpts) bool {
 	changed := false
-	c.Row(key, ui.Style{H: ui.Px(24), Stroke: col(c, tSegBorder), Border: 1, Radius: 5, Clip: true, Role: ui.RoleTabList, Label: o.Label},
+	style := monoText(9.5, typeset.SemiBold, col(c, tSegFg), .1)
+	strip := ui.Style{H: ui.Px(24), Stroke: col(c, tSegBorder), Border: 1, Radius: 5, Clip: true, Role: ui.RoleTabList, Label: o.Label}
+	seg := ui.Size{}
+	shown := labels
+	if len(o.Short) == len(labels) {
+		strip.W, seg = ui.Flex(1), ui.Flex(1)
+		var natural float32
+		for _, l := range labels {
+			natural += c.Shaper().Shape(l, style.Font).Advance + 2*segPad
+		}
+		if r, ok := c.Rect(c.Next(key)); ok && r.Dx() < natural {
+			shown = o.Short
+		}
+	}
+	c.Row(key, strip,
 		func(c *ui.Ctx) {
-			for i, l := range labels {
+			for i, l := range shown {
 				on := i == *active
 				fill, fg := render.Color{}, col(c, tSegFg)
 				if on {
 					fill, fg = col(c, tSegOnBg), col(c, tSegOnFg)
 				}
-				in := Clickable(c, i, ui.Style{Dir: ui.Row, H: ui.Flex(1), Pad: ui.PadXY(10, 0), Cross: ui.Center, Fill: fill, Help: o.Help,
-					Role: ui.RoleTab, Label: l, Selected: on}, func(c *ui.Ctx) {
-					c.Text("l", l, monoText(9.5, typeset.SemiBold, fg, .1))
+				badge := ""
+				if i < len(o.Badges) {
+					badge = o.Badges[i]
+				}
+				name := labels[i]
+				if badge != "" {
+					name += ", " + badge
+				}
+				in := Clickable(c, i, ui.Style{Dir: ui.Row, W: seg, H: ui.Flex(1), Pad: ui.PadXY(segPad, 0), Gap: 6, Main: ui.Center, Cross: ui.Center,
+					Fill: fill, Help: o.Help, Role: ui.RoleTab, Label: name, Selected: on}, func(c *ui.Ctx) {
+					st := style
+					st.Color = fg
+					c.Text("l", l, st)
+					if badge != "" {
+						c.Row("badge", ui.Style{H: ui.Px(14), Pad: ui.PadXY(4, 0), Cross: ui.Center, Radius: 3, Stroke: alpha(fg, .45), Border: 1}, func(c *ui.Ctx) {
+							c.Text("t", strings.ToUpper(badge), monoText(8.5, typeset.SemiBold, fg, .06))
+						})
+					}
 				})
 				if in.Clicked && !on {
 					*active, changed = i, true

@@ -51,7 +51,7 @@ clip 20,152 250x200 r 0
   text "●" @32,210.23999 #ff9b45 JetBrains Mono 9
   clip 43.40625,199.43774 125.625x15.124512 r 0
     text "money.go" @43.40625,211.54712 #b3ab99 Inter 12.5
-    text "← amount.go" @110.6875,210.78001 #7c7566 JetBrains Mono 10.5
+    text "← amoun…" @110.6875,210.78001 #7c7566 JetBrains Mono 10.5
   pop
   text "+31" @175.03125,210.78001 #4fe0a0 JetBrains Mono 10.5
   text "-9" @200.8125,210.78001 #ff5f6d JetBrains Mono 10.5
@@ -77,16 +77,16 @@ rect 286,152 250x200 fill #0c0c0b
 clip 286,152 250x200 r 0
   rect 286,218 250x22 fill #1f1c0f
   rect 286,218 2x22 fill #ffd23f
-  text "Negative values round the wrong way" @298,167.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,189.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,211.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,233.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,255.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,277.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,299.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,321.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,343.54712 #b3ab99 Inter 12.5
-  text "Negative values round the wrong way" @298,365.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,167.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,189.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,211.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,233.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,255.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,277.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,299.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,321.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,343.54712 #b3ab99 Inter 12.5
+  text "Negative values round the wrong …" @298,365.54712 #b3ab99 Inter 12.5
 pop
 rect 552,152 250x137 fill #121210 radius 6 stroke 1 #332f27
 rect 552,156 250x30 fill #191815
@@ -95,7 +95,7 @@ text "Copy value" @564,205.54712 #ece6d8 Inter 12.5
 rect 774,193.4 16x15.199997 fill #121210 radius 4 stroke 1 #332f27
 text "y" @779,204.59999 #7c7566 JetBrains Mono 10
 rect 552,220 250x1 fill #24221d
-text "Hide this tat" @564,244.54712 #4f4a40 Inter 12.5
+text "Hide this indicator" @564,244.54712 #4f4a40 Inter 12.5
 text "Move to statusline…" @564,274.54712 #ece6d8 Inter 12.5
 rect 20,368 120x24 fill #121210 radius 4
 rect 146,134 56x2 fill #ffd23f

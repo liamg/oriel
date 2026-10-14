@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/core"
 	"os"
 	"path/filepath"
 	"slices"
@@ -134,6 +135,16 @@ func (sh *shell) openDir(dir string) error {
 	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
 		return fmt.Errorf("%s isn't a directory", tildePath(dir))
 	}
+	return sh.reopenOn(reopenTo{dir: dir})
+}
+
+// reopenTo is a directory for the window to start again on, and the session it belongs to ("" for none).
+type reopenTo struct {
+	dir     string
+	session core.SessionID
+}
+
+func (sh *shell) reopenOn(to reopenTo) error {
 	if sh.reopen == nil {
 		return fmt.Errorf("can't open a directory here")
 	}
@@ -141,27 +152,41 @@ func (sh *shell) openDir(dir string) error {
 	case <-sh.reopen:
 	default:
 	}
-	sh.reopen <- dir
+	sh.reopen <- to
 	sh.poke()
 	return nil
 }
 
 // startRow is one selectable row: an action, or a recent session or directory.
 type startRow struct {
-	entry  *registry.StartEntry
-	dir    string
-	ok     bool
-	run    func()
-	forget func()
+	entry   *registry.StartEntry
+	session *core.SessionState
+	dir     string
+	ok      bool
+	run     func()
+	forget  func()
 }
 
 func (s *start) rows(h ext.Host) (actions, recent []startRow) {
 	for _, e := range registry.StartEntries(h) {
 		e := e
+		if e.Link {
+			continue
+		}
 		ok := h.Available(e.Command, e.Args)
 		actions = append(actions, startRow{entry: &e, ok: ok, run: func() {
 			if err := h.Run(context.Background(), e.Command, e.Args); err != nil {
 				h.Log().Error("start", "entry", e.Name, "err", err)
+			}
+		}})
+	}
+	sessions := slices.Clone(h.State().Sessions)
+	sessions = slices.DeleteFunc(sessions, func(se core.SessionState) bool { return se.Archived })
+	slices.SortStableFunc(sessions, func(a, b core.SessionState) int { return b.Created.Compare(a.Created) })
+	for _, se := range sessions {
+		recent = append(recent, startRow{session: &se, ok: true, run: func() {
+			if err := h.Run(context.Background(), "session.open", registry.Args{"id": string(se.ID)}); err != nil {
+				h.Log().Error("start", "session", se.ID, "err", err)
 			}
 		}})
 	}
@@ -235,6 +260,7 @@ func (s *start) content(c *ui.Ctx, h ext.Host, actions, recent []startRow, narro
 						r.run()
 					}
 				}
+				startLinks(c, h)
 			})
 		}
 		recentCol := func(c *ui.Ctx, st ui.Style) {
@@ -246,9 +272,24 @@ func (s *start) content(c *ui.Ctx, h ext.Host, actions, recent []startRow, narro
 						c.Text("keys", "↵ open · ⌫ forget", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgFaint)})
 					})
 				}
-				c.Box("group", ui.Style{Pad: ui.Insets{L: 12, T: 6, B: 6}}, func(c *ui.Ctx) { caption(c, "cap", "Directories") })
+				group := ""
 				for i, r := range recent {
 					n := len(actions) + i
+					g := "Directories"
+					if r.session != nil {
+						g = "Sessions"
+					}
+					if g != group {
+						group = g
+						c.Box("group"+g, ui.Style{Pad: ui.Insets{L: 12, T: 6, B: 6}}, func(c *ui.Ctx) { caption(c, "cap", g) })
+					}
+					if r.session != nil {
+						if s.recentSession(c, n, r) {
+							s.sel = n
+							r.run()
+						}
+						continue
+					}
 					if s.recent(c, n, r) {
 						s.sel = n
 						r.run()
@@ -360,6 +401,40 @@ func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow) bool {
 	return in.Clicked
 }
 
+// startLinks are the link entries under the actions, each a page with its figure (ui.md 01e).
+func startLinks(c *ui.Ctx, h ext.Host) {
+	th := c.Theme()
+	var links []registry.StartEntry
+	for _, e := range registry.StartEntries(h) {
+		if e.Link && h.Available(e.Command, e.Args) {
+			links = append(links, e)
+		}
+	}
+	if len(links) == 0 {
+		return
+	}
+	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{T: 2}}, func(c *ui.Ctx) {
+		for _, e := range links {
+			note := ""
+			if e.Note != nil {
+				registry.Call(func() error { note = e.Note(); return nil })
+			}
+			if widget.Clickable(c, e.Name, ui.Style{Dir: ui.Row, H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 7, Cross: ui.Center, Radius: 13,
+				Fill: th.C(tStartCard), Stroke: th.C(tStartCardLine), Border: 1, Label: e.Title, Tooltip: e.Desc, Help: "shell/start#links"}, func(c *ui.Ctx) {
+				icon(c, "icon", e.Icon, 12, th.C(theme.Accent))
+				c.Text("t", e.Title, uiFont(12, th.C(theme.Fg)))
+				if note != "" {
+					c.Text("n", note, monoFont(10, th.C(theme.FgFaint)))
+				}
+			}).Clicked {
+				if err := h.Run(context.Background(), e.Command, e.Args); err != nil {
+					h.Log().Error("start", "link", e.Name, "err", err)
+				}
+			}
+		}
+	})
+}
+
 // keycap is a key drawn as a small key.
 func keycap(c *ui.Ctx, key any, k string) {
 	th := c.Theme()
@@ -410,6 +485,58 @@ func (s *start) recent(c *ui.Ctx, n int, r startRow) bool {
 	})
 	s.hover(c, n, in)
 	return in.Clicked
+}
+
+// recentSession is one session's row, row n of the view; it says whether it was clicked.
+func (s *start) recentSession(c *ui.Ctx, n int, r startRow) bool {
+	th := c.Theme()
+	se := r.session
+	fill := render.Color{}
+	if n == s.sel {
+		fill = th.C(tStartRecentOn)
+	}
+	name := cmpOr(se.Name, string(se.ID))
+	in := widget.Clickable(c, "session."+string(se.ID), ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12, Cross: ui.Center,
+		Fill: fill, Radius: 8, NoHover: true, Label: name, Selected: n == s.sel, Help: "shell/start#sessions"}, func(c *ui.Ctx) {
+		tone := th.C(statusTokens[se.Status])
+		c.Box("icon", ui.Style{W: ui.Px(26), H: ui.Px(26), Radius: 6, Fill: th.C(theme.BgOverlay), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Paint("diamond", ui.Px(12), ui.Px(12), func(f render.Frame, r render.Rect) {
+				cx, cy, h := (r.Min.X+r.Max.X)/2, (r.Min.Y+r.Max.Y)/2, r.Dx()/2
+				p := render.Path{}
+				p.MoveTo(render.Point{X: cx, Y: cy - h})
+				p.LineTo(render.Point{X: cx + h, Y: cy})
+				p.LineTo(render.Point{X: cx, Y: cy + h})
+				p.LineTo(render.Point{X: cx - h, Y: cy})
+				p.Close()
+				f.Path(&p, render.Style{Fill: tone})
+			})
+		})
+		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 2, Clip: true}, func(c *ui.Ctx) {
+			c.Text("name", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.Medium}, Color: th.C(theme.Fg)})
+			c.Text("path", sessionMeta(*se), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgFaint)})
+		})
+		if !se.Created.IsZero() {
+			c.Text("at", ago(c.Now(), se.Created), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgGhost)})
+		}
+	})
+	s.hover(c, n, in)
+	return in.Clicked
+}
+
+// sessionMeta is a session's kind, projects and branch: "plan · pricing · rethink/rounding".
+func sessionMeta(se core.SessionState) string {
+	parts := []string{string(se.Kind)}
+	var names []string
+	for _, p := range se.Projects {
+		names = append(names, p.Name)
+	}
+	if len(names) > 0 {
+		parts = append(parts, strings.Join(names, ", "))
+	}
+	if se.Branch != "" {
+		parts = append(parts, se.Branch)
+	}
+	return strings.Join(parts, " · ")
 }
 
 // branchOf is the branch checked out in the repo at dir, from its HEAD, or "".

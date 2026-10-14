@@ -44,7 +44,7 @@ type Result struct {
 	Mode   string
 	Regs   map[rune]*string
 	Marks  map[rune]*Pos
-	Jumps  []Pos
+	Jumps  []Jump
 	Msg    string
 	Win    Win
 	Top    int    // 1-based

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/liamg/oriel/core"
@@ -68,9 +69,9 @@ func (UI) Spacer() script.Table { return script.Table{"type": "spacer"} }
 //oriel:api doc="The editor's mode, as the built-in status line shows it." returns=table
 func (UI) Mode() script.Table { return script.Table{"type": "view", "id": "statusline.left.00-mode"} }
 
-//oriel:api doc="A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }." returns=table
-func (UI) Tat(spec script.Table) script.Table {
-	t := script.Table{"type": "tat"}
+//oriel:api doc="A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }." returns=table
+func (UI) Indicator(spec script.Table) script.Table {
+	t := script.Table{"type": "indicator"}
 	for k, v := range spec {
 		t[k] = v
 	}
@@ -86,7 +87,7 @@ func (UI) Button(spec script.Table) script.Table {
 	return t
 }
 
-//oriel:api doc="A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value." returns=table
+//oriel:api doc="A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value." returns=table
 func (UI) Input(spec script.Table) script.Table { return node("input", spec) }
 
 //oriel:api doc="An on/off switch: { on, on_change = fn(on), id, label }." returns=table
@@ -94,6 +95,9 @@ func (UI) Toggle(spec script.Table) script.Table { return node("toggle", spec) }
 
 //oriel:api doc="A menu of choices: { value, options = { … }, on_change = fn(value), id, label }." returns=table
 func (UI) Select(spec script.Table) script.Table { return node("select", spec) }
+
+//oriel:api doc="A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30." returns=table
+func (UI) DatePicker(spec script.Table) script.Table { return node("date_picker", spec) }
 
 //oriel:api doc="A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance." optional=initial returns=table
 func (u UI) State(key string, initial any) any { return u.a.VM.State(key, initial) }
@@ -106,6 +110,9 @@ func node(kind string, spec script.Table) script.Table {
 	return t
 }
 
+//oriel:api doc="A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1." returns=table
+func (UI) Chart(spec script.Table) script.Table { return node("chart", spec) }
+
 //oriel:api doc="A list: each of items through row(item), which returns a node." returns=table
 func (UI) List(items any, row *script.Fn) script.Table {
 	return script.Table{"type": "list", "items": items, "row": row}
@@ -114,7 +121,7 @@ func (UI) List(items any, row *script.Fn) script.Table {
 var styles = map[string]theme.TokenID{"dim": theme.FgMuted, "faint": theme.FgFaint, "accent": theme.Accent, "warn": theme.Warn,
 	"error": theme.Error, "ok": theme.OK}
 
-// buildView adds a view's nodes to c: a single line of them (a row, text, a tat, a button) is centred in the height
+// buildView adds a view's nodes to c: a single line of them (a row, text, a indicator, a button) is centred in the height
 // the view is given, as a bar's segment is; a column runs from the top, as a panel does.
 func buildView(c *ui.Ctx, v any, a *APIs) {
 	if t, ok := v.(script.Table); ok && str(t, "type") == "column" {
@@ -171,8 +178,8 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			if view, ok := a.Host.ViewByID(str(n, "id")); ok {
 				c.Node(view.Build(registry.ViewCtx{}))
 			}
-		case "tat":
-			tat(c, n, th)
+		case "indicator":
+			indicator(c, n, th)
 		case "button":
 			key := cmpOr(str(n, "id"), str(n, "label"))
 			primary, _ := n["primary"].(bool)
@@ -183,8 +190,9 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			key := cmpOr(str(n, "id"), str(n, "label"), "input")
 			text := str(n, "value")
 			c.Box(key, ui.Style{W: ui.Px(220)}, func(c *ui.Ctx) {
+				lines, _ := n["lines"].(float64)
 				res := widget.Input(c, "in", &text, widget.InputOpts{Label: cmpOr(str(n, "label"), key), Placeholder: str(n, "placeholder"),
-					Help: "plugins/lua#ui", TabMoves: true})
+					Help: "plugins/lua#ui", TabMoves: true, Lines: int(lines)})
 				if res.Changed {
 					a.callback(n, "on_change", text)
 				}
@@ -203,6 +211,18 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			if v, ok := widget.Select(c, key, str(n, "value"), strs(n["options"]), widget.SelectOpts{Label: cmpOr(str(n, "label"), key),
 				Help: "plugins/lua#ui"}); ok {
 				a.callback(n, "on_change", v)
+			}
+		case "chart":
+			chart(c, n, a)
+		case "date_picker":
+			key := cmpOr(str(n, "id"), str(n, "label"), "date_picker")
+			var r widget.DateRange
+			if v, err := widget.ParseDateRange(str(n, "from")+".."+str(n, "to"), time.Local); err == nil {
+				r = v
+			}
+			if v, ok := widget.DateSelect(c, key, r, widget.DateSelectOpts{Label: cmpOr(str(n, "label"), key),
+				Placeholder: cmpOr(str(n, "placeholder"), "pick dates"), Help: "plugins/lua#ui"}); ok {
+				a.callback(n, "on_change", v.From.Format(time.DateOnly), v.To.Format(time.DateOnly))
 			}
 		case "list":
 			row, _ := n["row"].(*script.Fn)
@@ -273,8 +293,8 @@ func (a *APIs) callback(n script.Table, field string, args ...any) {
 	a.Host.Redraw()
 }
 
-// tat is a label, a bar and a value, as the HUD and status line draw them.
-func tat(c *ui.Ctx, n script.Table, th *theme.Resolved) {
+// indicator is a label, a bar and a value, as the HUD and status line draw them.
+func indicator(c *ui.Ctx, n script.Table, th *theme.Resolved) {
 	mono := func(tok theme.TokenID) ui.TextStyle {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(tok)}
 	}
@@ -378,4 +398,93 @@ func snake(s string) string {
 		b.WriteRune(r)
 	}
 	return b.String()
+}
+
+// items are a Lua list: a table's 1, 2, 3… or a Go slice.
+func items(v any) []any {
+	switch v := v.(type) {
+	case []any:
+		return v
+	case script.Table:
+		var out []any
+		for i := 1; ; i++ {
+			x, ok := v[strconv.Itoa(i)]
+			if !ok {
+				return out
+			}
+			out = append(out, x)
+		}
+	}
+	return nil
+}
+
+func num(v any) float64 {
+	f, _ := v.(float64)
+	return f
+}
+
+var chartKinds = map[string]widget.ChartKind{"bars": widget.ChartBars, "area": widget.ChartArea, "line": widget.ChartLine,
+	"spark": widget.ChartSpark, "strip": widget.ChartStrip}
+
+var chartFormats = map[string]func(float64) string{
+	"money":   func(v float64) string { return fmt.Sprintf("$%.2f", v) },
+	"percent": func(v float64) string { return fmt.Sprintf("%.0f%%", v) },
+	"count":   func(v float64) string { return fmt.Sprintf("%.0f", v) },
+}
+
+// tone is a colour from Lua: a theme token's name, or #rrggbb.
+func tone(th *theme.Resolved, v string, fallback render.Color) render.Color {
+	if v == "" {
+		return fallback
+	}
+	if c, ok := th.Color(v); ok {
+		return c
+	}
+	if c, err := theme.ParseColor(v); err == nil {
+		return c
+	}
+	return fallback
+}
+
+// chart builds an oriel.ui.chart node with widget.Chart, as the built-in pages draw theirs.
+func chart(c *ui.Ctx, n script.Table, a *APIs) {
+	th := c.Theme()
+	palette := []theme.TokenID{theme.Accent, theme.OK, theme.Warn, theme.Error, theme.StatusCI, theme.StatusReviewer}
+	var series []widget.ChartSeries
+	for i, x := range items(n["series"]) {
+		t, ok := x.(script.Table)
+		if !ok {
+			continue
+		}
+		s := widget.ChartSeries{Name: str(t, "name"), Tone: tone(th, str(t, "color"), th.C(palette[i%len(palette)])), Kind: chartKinds[str(t, "kind")]}
+		for _, v := range items(t["values"]) {
+			s.Values = append(s.Values, num(v))
+		}
+		s.Dashed, _ = t["dashed"].(bool)
+		if f := int(num(t["from"])); f > 0 {
+			s.From = f - 1
+		}
+		series = append(series, s)
+	}
+	o := widget.ChartOpts{Kind: chartKinds[str(n, "kind")], Height: float32(num(n["height"])), Max: num(n["max"]), YTicks: int(num(n["y_ticks"])),
+		Format: chartFormats[str(n, "format")], Highlight: -1, Label: cmpOr(str(n, "label"), "chart"), Help: "plugins/lua#ui"}
+	o.YFormat = o.Format
+	o.Legend, _ = n["legend"].(bool)
+	o.Hover, _ = n["hover"].(bool)
+	o.Labels = strs(n["labels"])
+	for _, x := range items(n["marks"]) {
+		if t, ok := x.(script.Table); ok {
+			d, _ := t["dashed"].(bool)
+			o.Marks = append(o.Marks, widget.ChartMark{At: num(t["at"]) - 1, Label: str(t, "label"), Tone: tone(th, str(t, "color"), render.Color{}), Dashed: d})
+		}
+	}
+	for _, x := range items(n["bands"]) {
+		if t, ok := x.(script.Table); ok {
+			o.Bands = append(o.Bands, widget.ChartBand{From: num(t["from"]) - 1, To: num(t["to"]) - 1, Label: str(t, "label")})
+		}
+	}
+	key := cmpOr(str(n, "id"), str(n, "label"), "chart")
+	if res := widget.Chart(c, key, series, o); res.Clicked {
+		a.callback(n, "on_click", float64(res.Series+1), float64(res.Point+1))
+	}
 }

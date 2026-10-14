@@ -1,0 +1,4 @@
+{
+  "description": "In an Oriel session: every decision goes to Oriel through `oriel hook`",
+  "modules": ["./register.ts"]
+}

@@ -12,18 +12,24 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-// ViewRef is one open view: a registered view id and the instance of it ("terminal", "2").
+// ViewRef is one open view: a registered view id and the instance of it ("terminal", "2"), and the project it was
+// opened for, if it's a project's.
 type ViewRef struct {
 	ID       string `json:"id"`
 	Instance string `json:"instance,omitempty"`
 	Title    string `json:"title,omitempty"`
+	Project  string `json:"project,omitempty"`
 }
 
 func (v ViewRef) String() string {
-	if v.Instance == "" {
-		return v.ID
+	s := v.ID
+	if v.Instance != "" {
+		s += "#" + v.Instance
 	}
-	return v.ID + "#" + v.Instance
+	if v.Project != "" {
+		s += "@" + v.Project
+	}
+	return s
 }
 
 type Axis string
@@ -124,6 +130,59 @@ func (r *Root) Visible() []ViewRef {
 	return out
 }
 
+// All is every view in the layout: main's tabs, then the docks', the drop-down's and the floats'.
+func (r *Root) All() []ViewRef {
+	var out []ViewRef
+	for _, n := range r.leaves() {
+		out = append(out, n.Tabs...)
+	}
+	return out
+}
+
+// leaves are the layout's leaves, in All's order.
+func (r *Root) leaves() []*Node {
+	var out []*Node
+	var walk func(n *Node)
+	walk = func(n *Node) {
+		if n.leaf() {
+			out = append(out, n)
+			return
+		}
+		for _, k := range n.Kids {
+			walk(k)
+		}
+	}
+	walk(r.Main)
+	for _, e := range []Edge{Left, Right, Bottom} {
+		if d := r.Docks[e]; d != nil && d.Leaf != nil {
+			out = append(out, d.Leaf)
+		}
+	}
+	if r.DropDown != nil && r.DropDown.Leaf != nil {
+		out = append(out, r.DropDown.Leaf)
+	}
+	for _, f := range r.Floats {
+		out = append(out, f.Leaf)
+	}
+	return out
+}
+
+// Rename makes every reference to from one to to: its tab, the focus and the zoom.
+func (r *Root) Rename(from, to ViewRef) {
+	for _, n := range r.leaves() {
+		for i, v := range n.Tabs {
+			if v == from {
+				n.Tabs[i] = to
+			}
+		}
+	}
+	for _, p := range []*ViewRef{r.Focus, r.Zoomed, r.prev} {
+		if p != nil && *p == from {
+			*p = to
+		}
+	}
+}
+
 // Row is the views shown side by side (or stacked) with v in the split holding v's leaf, in order, and v's place
 // among them. A place that's a split itself holds the zero ViewRef. ok is false when v's leaf isn't in a split.
 func (r *Root) Row(v ViewRef) (row []ViewRef, at int, ok bool) {
@@ -201,11 +260,19 @@ type Opts struct {
 	Side   Side        `json:"side,omitempty"`
 	Beside *ViewRef    `json:"beside,omitempty"`
 	Rect   render.Rect `json:"rect,omitzero"`
-	Size   float32     `json:"size,omitempty"` // a closed dock opens at this size
+	Size   float32     `json:"size,omitempty"`  // a closed dock opens at this size
+	Alone  bool        `json:"alone,omitempty"` // in a dock, by itself: what was there closes
 }
 
 // Open puts v at p and focuses it. A view already open is moved instead.
 func (r *Root) Open(v ViewRef, p Placement, o Opts) error {
+	if d, ok := r.Docks[o.Edge]; ok && p == Docked && o.Alone {
+		for _, other := range slices.Clone(d.Leaf.Tabs) {
+			if other != v {
+				r.Close(other)
+			}
+		}
+	}
 	if r.Find(v) != nil {
 		return r.Move(v, p, o)
 	}
@@ -523,6 +590,17 @@ func Restore(s Snapshot) (*Root, error) {
 		return nil, err
 	}
 	return r, nil
+}
+
+// Load replaces the layout with a saved one in place, keeping whoever listens for closes.
+func (r *Root) Load(s Snapshot) error {
+	n, err := Restore(s)
+	if err != nil {
+		return err
+	}
+	n.onClose = r.onClose
+	*r = *n
+	return nil
 }
 
 // Dump writes the layout as an indented tree, for golden tests.

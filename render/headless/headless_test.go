@@ -35,3 +35,30 @@ func TestShotDrawsTheRecordedFrame(t *testing.T) {
 		t.Error("no text in the shot")
 	}
 }
+
+// theming.md, "Sizes": a zoom multiplies the device scale, so the app lays out at the window's size over it.
+func TestZoomScalesTheWindow(t *testing.T) {
+	be := New()
+	w, _ := be.NewWindow(render.WindowOpts{Width: 1500, Height: 900})
+	hw := w.(*Window)
+	hw.SetZoom(1.5)
+	if hw.Scale() != 1.5 || hw.Size() != (render.Point{X: 1000, Y: 600}) {
+		t.Fatalf("at 1.5×: scale %v, size %v", hw.Scale(), hw.Size())
+	}
+	select {
+	case ev := <-hw.Events():
+		if rs, ok := ev.(render.ResizeEvent); !ok || rs.Size != (render.Point{X: 1000, Y: 600}) {
+			t.Errorf("event %#v, want a resize to the zoomed size", ev)
+		}
+	default:
+		t.Error("no resize for the app")
+	}
+	hw.Frame(func(f render.Frame) {
+		if f.Scale() != 1.5 {
+			t.Errorf("the frame records at %v", f.Scale())
+		}
+	})
+	if img := hw.Shot(hw.Frames()[0], render.Color{A: 255}); img.Bounds().Dx() != 1500 {
+		t.Errorf("the shot is %v wide, want the window's 1500 device pixels", img.Bounds().Dx())
+	}
+}

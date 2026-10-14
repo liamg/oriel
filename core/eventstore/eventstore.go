@@ -96,3 +96,11 @@ func (s *Store) Subscribe(filter core.Filter, fn func(core.Event)) (cancel func(
 		delete(s.subs, id)
 	}
 }
+
+// SubscribeState subscribes fn and returns the state as it was at that moment, with nothing between the two:
+// fn sees every event after the state it's given, and none before.
+func (s *Store) SubscribeState(filter core.Filter, fn func(core.Event)) (core.State, func()) {
+	s.apply.Lock()
+	defer s.apply.Unlock()
+	return s.State(), s.Subscribe(filter, fn)
+}

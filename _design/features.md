@@ -38,7 +38,7 @@ How everything hangs together, built and tested before features land on it.
 | SH-5 | Pickers (`␣␣` files, `␣/` grep, `␣k` keymaps…) with preview and actions | 26 | picker | P3–P4 | SH-4 | each source returns, ranks and previews; `␣'` resumes; quickfix and attach actions work |
 | SH-6 | Which-key popup | 27 | plugin (built-in) | P3 | FW-3, FW-6 | appears after 300 ms for any prefix, lists `desc`, `⌫` backs up |
 | SH-7 | Mission control (`⌘⇧K`) with live terminals and inline asks | 03 | app | P7 | SH-2, AI-1 | grouped by worker; working cards stream output; Allow/Deny works from the card |
-| SH-8 | HUD drawer (hold ⌥) and tats in slots | 10, 01 | app, hud | P7 | FW-6, FW-2 | every panel bound to live events; tats updatable from Lua |
+| SH-8 | HUD drawer (hold ⌥) and indicators in slots | 10, 01 | app, hud | P7 | FW-6, FW-2 | every panel bound to live events; indicators updatable from Lua |
 | SH-9 | Inbox and interrupt cards (agentbus, network, gateway, security key) | 12 | app | P7 | FW-6 | each card type acts and dismisses; badge counts on tabs |
 | SH-10 | Help everywhere (right-click → Help, `K`, `⌘?`, `:help`) | 28 | help | P3→ | FW-6 | CI lint: every interactive element resolves to a help page and anchor |
 | SH-11 | Light, dark and theme editor (`:Theme`, pick mode) | 17, 23 | theme | P3, P7 | FW-7 | token resolution tests; the fixture renders in all built-in themes; pick-to-override writes the smallest TOML diff |
@@ -47,6 +47,7 @@ How everything hangs together, built and tested before features land on it.
 | SH-14 | Closing views (`⌃W c`, `q` on read-only views) and `:Keys`/`:Commands` as pickers | – | app | P3 | FW-9, SH-5 | every built-in view closes from the keyboard; `:Commands` filters and runs |
 | SH-15 | Start view: what the window shows with nothing open | – | app | P3 | SH-14, ED-12, SH-4, SH-12 | shown at launch and when the last view closes; every entry runs its command; plugins add entries |
 | SH-16 | The rail: main views down the left edge, as a contribution point | 01 | app | P3 | FW-9, SH-14 | snapshot against 01's strip; plugin entries appear, badge and toggle their view |
+| SH-17 | Project sidebar: per-project panels, the session's entries, one tab strip across projects, adding a project | 42 | app, registry, core | P5 | SH-16, FG-1, FG-3, TR-3, AI-1, SE-1 | snapshots of 42's panels 1–5; ⌃n and headers switch projects and reopen their panels; Search per project with All projects; a Lua project entry under every project; tabs and breadcrumbs name the project; + adds a repo to the session |
 
 ## Editor
 
@@ -111,9 +112,13 @@ How everything hangs together, built and tested before features land on it.
 | AI-6 | Agent console: structured transcript, subagents, composer | 15 | app | P5 | AI-2 | – |
 | AI-7 | Permissions, three layers; network and gateway approvals | 15, 12 | agent, sandbox | P5 | AI-2, AI-11 | each layer holds or denies as `agents.md` describes |
 | AI-8 | Plan mode: rendered docs, margin threads, readiness, Start work | 05 | app, plan | P5 | AI-5 | the crit plan flow works end to end |
-| AI-9 | Tasks rail, session tally, usage windows | 01 | core | P5 | AI-2 | – |
+| AI-9 | Tasks rail, session stats, usage windows | 01 | core | P5 | AI-2 | – |
 | AI-10 | Commit and PR drafts when the agent goes idle | 18 | agent | P6 | AI-2, FG-6 | – |
 | AI-11 | Sandbox, gateway MCP, egress proxy (ported) | – | sandbox | P5 | AI-1 | crit's tests ported and passing |
+| AI-12 | Stats and Usage: session stats tab, global Stats grouped by repo, Usage page, their entry points; `widget.Chart` | 43 | worker, app, ui | P5 | AI-1, AI-2, AI-3, AI-9, SH-17 | a worker answers `stats.query` by repo with the split rule and by session, rescanning only what was appended; the pages match 43; each entry point opens its page |
+| AI-13 | A lost agent login: detected in the provider (Claude's log and screen, Codex's errors), flagged on its worker's sessions, fixed from Oriel | 12 | agent, worker, app | P5 | AI-2, AI-3, AI-12 | a fake session whose log or screen shows the recorded signed-out error raises `AuthExpired`; its worker's sessions turn needs-you with the card; the notice, the indicator and the launcher show it; Log in opens the raw terminal with `/login`, and a login clears every flag |
+| AI-14 | Stats and Usage follow-ups: a custom range with `widget.DatePicker`, tools counted per range, plan tier chips, the active span, a session's account at the time | 43 | worker, app, ui | P5 | AI-12 | a custom range picked with the date picker (mouse and keys) re-queries, and its tools match the fixture calls inside it; Usage shows the tier from a fixture account file, none when unknown; the Active tile reads "of Nh"; a session started before a login change stays with its first account |
+| SE-4 | Jobs: saved prompts on the worker, runs as job sessions, the Jobs page, schedules | 44 | worker, app | P5 | SE-1, AI-12 | a job saved from the page or the launcher runs as a job session against a fake provider and its row shows status, repos, summary, cost by repo and duration; Open, Resume and Delete work; a blocked run shows in Requests; a schedule fires on a fake clock and skips while one runs; the page matches 44 |
 
 ## Review and explain
 
@@ -143,7 +148,7 @@ How everything hangs together, built and tested before features land on it.
 | PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | integ/agentbus | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus |
 | PL-8 | Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source | 04, 02 | integ/linear (plugin) | P7 | PL-2, SE-1 | `crit-reference.md` → Linear, against a recorded Linear API |
 | PL-9 | Slack PTAL via webhook | 18 | integ/slack (plugin) | P7 | PL-2 | – |
-| PL-10 | Calendar: next meeting tat (iCal URL or macOS EventKit) | 10 | integ/ical (plugin) | P7 | PL-2 | – |
+| PL-10 | Calendar: next meeting indicator (iCal URL or macOS EventKit) | 10 | integ/ical (plugin) | P7 | PL-2 | – |
 | PL-11 | Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation | – | prompts, voice | P7 | AI-2 | `crit-reference.md` → Prompts and Voice |
 | PL-6 | Self-update for the app and workers (self-signed, ed25519) | – | update | P7 | AI-1 | an update round-trips on macOS and Linux with rollback on a failed health check |
 | PL-19 | Package format: Lua entry point, `oriel.process` / `oriel.wasm` / `oriel.asset`, `[contributes]` assets, `oriel plugin pack` | – | ext, script | P8 | PL-2, PL-3 | a data-only theme plugin, a Lua plugin and a Lua + process plugin each load from a directory; `pack` rejects an undeclared capability and an oversize plugin |

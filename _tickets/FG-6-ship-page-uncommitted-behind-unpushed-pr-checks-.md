@@ -37,3 +37,10 @@ flows tested against fixture repos and a fake GitHub
 ## From SH-16
 
 - The rail already has an entry for this view, greyed until the view is registered; registering it lights the entry up.
+
+## From SH-17
+
+- The project sidebar has each project's **Pull request** entry and the session-wide **Ship** entry, greyed until
+  this registers them. Pull request in the dock is the compact checklist (committed → up to date → pushed → PR →
+  checks); **Raise PR** / **Edit PR** opens a full-width main tab (title and body, reviewers, cross-linked PRs, the
+  "before this ships" gates); Ship is 18's full page. See `ui.md` 01h and `42-project-sidebar.png` panel 6.

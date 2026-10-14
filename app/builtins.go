@@ -19,14 +19,19 @@ import (
 
 func builtins(sh *shell) []ext.Extension {
 	sh.layout = &layoutExt{sh: sh}
-	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
-		&editorExt{sh: sh}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspExt{sh: sh}, &testsExt{sh: sh}, &terminals{sh: sh}, &settingsExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
+	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
+		&editorExt{sh: sh}, &markdownExt{}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspExt{sh: sh}, &testsExt{sh: sh}, &terminals{sh: sh}, &settingsExt{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, &statsExt{sh: sh}, &jobsExt{sh: sh}, &launcher{sh: sh}, &requests{sh: sh}, &planExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
 }
 
 // disposer is the usual way for an extension to undo what it registered.
 type disposer []registry.Disposable
 
 func (d *disposer) add(x registry.Disposable) { *d = append(*d, x) }
+
+// onDispose is a func as a Disposable: a subscription's cancel.
+type onDispose func()
+
+func (f onDispose) Dispose() { f() }
 
 func (d *disposer) Deactivate(context.Context) error {
 	for _, x := range *d {
@@ -46,6 +51,10 @@ type layoutExt struct {
 	rects map[*layout.Node]render.Rect
 	saved map[string]layout.Snapshot
 	menu  bool
+
+	restored bool
+	kept     []byte
+	writer   stateWriter
 }
 
 func (l *layoutExt) Manifest() ext.Manifest { return ext.Manifest{ID: "layout"} }
@@ -64,6 +73,15 @@ var movePlacements = []struct {
 
 func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 	l.root, l.saved = layout.New(), map[string]layout.Snapshot{}
+	h.Do(func() { // once every extension has registered its views
+		l.restore(h)
+		l.restored = true
+		if l.sh != nil && l.sh.afterOpen != nil && l.sh.afterOpen.session == h.State().Focus {
+			calls := l.sh.afterOpen.calls
+			l.sh.afterOpen = nil
+			runCalls(h, calls)
+		}
+	})
 	l.panes.Empty = func(c *ui.Ctx) {
 		id := StartView
 		if l.sh != nil && l.sh.cfg.WorkDir != "" {
@@ -96,6 +114,27 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 		}
 		return text, tokenColour(h.CurrentTheme(), style, h.CurrentTheme().C(theme.FgFaint))
 	}
+	l.panes.Lead = func(v layout.ViewRef) (render.Color, bool) {
+		w := projectsHere(h)
+		p, ok := viewProject(h, w, v)
+		if !ok || !w.many() || h.CurrentTheme() == nil {
+			return render.Color{}, false
+		}
+		return w.colour(h.CurrentTheme(), p.Name), true
+	}
+	l.panes.Tip = func(v layout.ViewRef) string {
+		w := projectsHere(h)
+		p, ok := viewProject(h, w, v)
+		if !ok || !w.many() {
+			return ""
+		}
+		if file := viewFile(h, v); file != "" {
+			if rel, err := filepath.Rel(p.Dir, file); err == nil {
+				return p.Name + " · " + filepath.ToSlash(rel)
+			}
+		}
+		return p.Name
+	}
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	focused := func() (layout.ViewRef, error) {
 		if l.root.Focus == nil {
@@ -112,7 +151,7 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 		return ok
 	}
 	cmds := []registry.Command{
-		{ID: "view.open", Title: "Open a view", Available: viewRegistered, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "view.open", Title: "Open a view: {id, instance, place, edge, side, size, beside, title, project}; alone, in a dock, closes what was there", Available: viewRegistered, Run: func(_ registry.Ctx, a registry.Args) error {
 			id := str(a, "id")
 			if _, ok := h.ViewByID(id); !ok {
 				return fmt.Errorf("no view %q", id)
@@ -125,26 +164,26 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			if n, ok := a["size"].(int); ok {
 				size = float64(n)
 			}
-			o := layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size)}
+			o := layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size), Alone: a["alone"] == true}
 			if b := str(a, "beside"); b != "" {
 				id, inst, _ := strings.Cut(b, "#")
 				o.Beside = &layout.ViewRef{ID: id, Instance: inst}
 			}
-			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title")}, place, o)
+			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title"), Project: str(a, "project")}, place, o)
 		}},
-		{ID: "view.toggle", Title: "Show a view {id}, or close it if it's showing", Available: viewRegistered, Run: func(ctx registry.Ctx, a registry.Args) error {
-			v := layout.ViewRef{ID: str(a, "id"), Instance: str(a, "instance")}
-			for _, s := range l.root.Visible() {
-				if s.ID == v.ID && (v.Instance == "" || s.Instance == v.Instance) {
+		{ID: "view.toggle", Title: "Show a view {id} (for a {project}), or close it if it's showing", Available: viewRegistered,
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				if s, ok := l.matching(a, l.root.Visible()); ok {
 					l.root.Close(s)
 					return nil
 				}
-			}
-			return h.Run(ctx, "view.open", a)
-		}},
-		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance}; with {docked}, only one outside the main area", Run: func(_ registry.Ctx, a registry.Args) error {
+				return h.Run(ctx, "view.open", a)
+			}},
+		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance, project}; with {docked}, only one outside the main area", Run: func(_ registry.Ctx, a registry.Args) error {
 			if id := str(a, "id"); id != "" {
-				l.root.Close(layout.ViewRef{ID: id, Instance: str(a, "instance")})
+				if v, ok := l.matching(a, l.root.All()); ok {
+					l.root.Close(v)
+				}
 				return nil
 			}
 			v, err := focused()
@@ -192,11 +231,7 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			if !ok {
 				return fmt.Errorf("no layout %q", str(a, "name"))
 			}
-			r, err := layout.Restore(s)
-			if err == nil {
-				l.root = r
-			}
-			return err
+			return l.root.Load(s)
 		}},
 		{ID: "layout.menu", Title: "Move the focused view…", Run: func(registry.Ctx, registry.Args) error {
 			l.menu = !l.menu
@@ -247,7 +282,7 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 					pad = ui.Insets{}
 				}
 				vc := vc
-				vc.Instance, vc.Focused = v.Instance, focused
+				vc.Instance, vc.Focused, vc.Project = v.Instance, focused, v.Project
 				c.Column("view", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: pad}, func(c *ui.Ctx) {
 					c.Node(view.Build(vc))
 				})
@@ -255,9 +290,20 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			if l.menu {
 				l.moveMenu(c, h)
 			}
+			l.keep(h) // after the views, which take their keys as they're built
 		}}
 	})))
 	return nil
+}
+
+// matching is the first of vs that's view {id}, of {instance} and {project} when they're given.
+func (l *layoutExt) matching(a registry.Args, vs []layout.ViewRef) (layout.ViewRef, bool) {
+	for _, v := range vs {
+		if v.ID == a.String("id") && (a.String("instance") == "" || v.Instance == a.String("instance")) && v.Project == a.String("project") {
+			return v, true
+		}
+	}
+	return layout.ViewRef{}, false
 }
 
 // moveMenu is ⌃W M: the placements, with their keys (24-layout).
@@ -312,6 +358,37 @@ func (i *introspect) Activate(_ context.Context, h ext.Host) error {
 // uiOptions registers the toolkit's own options.
 type uiOptions struct{ disposer }
 
+// uiFontSize is ui.font_size's default: the size the mockups are drawn at, zoom 1.
+const uiFontSize = 13.0
+
+// partSizes are the parts with their own text size: each option scales its part over ui.font_size.
+var partSizes = []struct{ name, help string }{
+	{"ui.statusline.font_size", "The status line's text size; 0 follows ui.font_size."},
+	{"ui.hover.font_size", "The text size of hovers and signature help; 0 follows ui.font_size."},
+	{"ui.completion.font_size", "The completion menu's text size; 0 follows ui.font_size."},
+	{"ui.tooltip.font_size", "Tooltips' text size; 0 follows ui.font_size."},
+}
+
+// partScale is what a part with its own size option is drawn at over the UI; 0 when it follows the UI.
+func partScale(o registry.Options, name string) float32 {
+	v, _, err := o.Get(name, registry.At{})
+	if err != nil || v.(float64) <= 0 {
+		return 0
+	}
+	if ui, _, err := o.Get("ui.font_size", registry.At{}); err == nil && ui.(float64) > 0 {
+		return float32(v.(float64) / ui.(float64))
+	}
+	return float32(v.(float64) / uiFontSize)
+}
+
+// zoomOf is the window's zoom for ui.font_size (theming.md, "Sizes").
+func zoomOf(o registry.Options) float32 {
+	if v, _, err := o.Get("ui.font_size", registry.At{}); err == nil {
+		return float32(v.(float64) / uiFontSize)
+	}
+	return 1
+}
+
 func (o *uiOptions) Manifest() ext.Manifest { return ext.Manifest{ID: "ui"} }
 
 func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
@@ -343,8 +420,39 @@ func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
 	}
 	o.add(h.Keymap(registry.Keymap{Mode: ui.DragKeyMode, Keys: "<Space>", Command: "ui.drag", Desc: "Pick up or drop"}))
 	o.add(h.Keymap(registry.Keymap{Mode: ui.DragKeyMode, Keys: "<Esc>", Command: "ui.drag.cancel", Desc: "Put down"}))
+	o.add(h.Option(registry.OptionSpec{Name: "ui.font_size", Type: registry.Float, Default: uiFontSize, Min: 8, Max: 32,
+		Scopes: registry.ScopeUser, Help: "The UI's text size. It zooms the whole window, so panels grow with their text; ⌘= and ⌘- step it, ⌘0 resets it."}))
+	for _, p := range partSizes {
+		o.add(h.Option(registry.OptionSpec{Name: p.name, Type: registry.Float, Default: 0.0, Min: 0, Max: 32, Scopes: registry.ScopeUser, Help: p.help}))
+	}
+	step := func(by float64) func(registry.Ctx, registry.Args) error {
+		return func(registry.Ctx, registry.Args) error {
+			opts := h.Options()
+			if by == 0 {
+				opts.Unset("ui.font_size", registry.LayerUser, registry.At{})
+				return nil
+			}
+			v, _, err := opts.Get("ui.font_size", registry.At{})
+			if err != nil {
+				return err
+			}
+			return opts.Set("ui.font_size", registry.LayerUser, registry.At{}, min(32, max(8, v.(float64)+by)))
+		}
+	}
+	for _, c := range []registry.Command{
+		{ID: "ui.zoom.in", Title: "Make the UI bigger", Run: step(1)},
+		{ID: "ui.zoom.out", Title: "Make the UI smaller", Run: step(-1)},
+		{ID: "ui.zoom.reset", Title: "Put the UI back to its size", Run: step(0)},
+	} {
+		o.add(h.Command(c))
+	}
+	for keys, cmd := range map[string]string{"<D-=>": "ui.zoom.in", "<D-->": "ui.zoom.out", "<D-0>": "ui.zoom.reset"} {
+		o.add(h.Keymap(registry.Keymap{Mode: "global", Keys: keys, Command: cmd}))
+	}
 	o.add(h.Option(registry.OptionSpec{Name: "ui.reduced_motion", Type: registry.Bool, Default: false,
 		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
+	o.add(h.Option(registry.OptionSpec{Name: "ui.scrollbars", Type: registry.Enum, Values: []string{"auto", "always"}, Default: "auto",
+		Scopes: registry.ScopeUser, Help: "When scrollbars show: auto, while the pointer is over what scrolls and for a moment after it scrolls; or always, whenever there's more than fits."}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel", Choices: func() []string { return themeNames(h) },
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme, by name: a built-in, or a file in your themes directory. :Themes previews them."}))
 	o.add(h.Option(registry.OptionSpec{Name: "ui.variant", Type: registry.Enum, Values: []string{"system", "dark", "light"}, Default: "system",

@@ -53,6 +53,17 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Coverage{a: a}
+		vm.Bind("coverage", map[string]script.GoFunc{
+			"lines": func(c *script.Args) ([]any, error) {
+				return []any{x.Lines(c.String(0), c.Int(1), c.Int(2))}, nil
+			},
+			"set": func(c *script.Args) ([]any, error) {
+				return nil, x.Set(c.String(0), c.String(1), c.Any(2))
+			},
+		})
+	}
+	{
 		x := Decor{a: a}
 		vm.Bind("decor", map[string]script.GoFunc{
 			"provider": func(c *script.Args) ([]any, error) {
@@ -72,10 +83,24 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Editor{a: a}
+		vm.Bind("editor", map[string]script.GoFunc{
+			"action": func(c *script.Args) ([]any, error) {
+				return nil, x.Action(c.Table(0), c.Where())
+			},
+			"present": func(c *script.Args) ([]any, error) {
+				return nil, x.Present(c.String(0))
+			},
+			"presenter": func(c *script.Args) ([]any, error) {
+				return nil, x.Presenter(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := HUD{a: a}
 		vm.Bind("hud", map[string]script.GoFunc{
-			"tat": func(c *script.Args) ([]any, error) {
-				return nil, x.Tat(c.String(0), c.Table(1), c.Fn(2), c.Where())
+			"indicator": func(c *script.Args) ([]any, error) {
+				return nil, x.Indicator(c.String(0), c.Table(1), c.Fn(2), c.Where())
 			},
 		})
 	}
@@ -171,13 +196,42 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Thread{a: a}
+		vm.Bind("thread", map[string]script.GoFunc{
+			"list": func(c *script.Args) ([]any, error) {
+				return []any{x.List()}, nil
+			},
+			"new": func(c *script.Args) ([]any, error) {
+				return nil, x.New(c.Table(0))
+			},
+			"open": func(c *script.Args) ([]any, error) {
+				return nil, x.Open(c.String(0))
+			},
+			"reply": func(c *script.Args) ([]any, error) {
+				return nil, x.Reply(c.String(0), c.String(1), c.Table(2))
+			},
+			"resolve": func(c *script.Args) ([]any, error) {
+				return nil, x.Resolve(c.String(0), c.String(1))
+			},
+		})
+	}
+	{
 		x := UI{a: a}
 		vm.Bind("ui", map[string]script.GoFunc{
 			"button": func(c *script.Args) ([]any, error) {
 				return []any{x.Button(c.Table(0))}, nil
 			},
+			"chart": func(c *script.Args) ([]any, error) {
+				return []any{x.Chart(c.Table(0))}, nil
+			},
 			"column": func(c *script.Args) ([]any, error) {
 				return []any{x.Column(c.Any(0))}, nil
+			},
+			"date_picker": func(c *script.Args) ([]any, error) {
+				return []any{x.DatePicker(c.Table(0))}, nil
+			},
+			"indicator": func(c *script.Args) ([]any, error) {
+				return []any{x.Indicator(c.Table(0))}, nil
 			},
 			"input": func(c *script.Args) ([]any, error) {
 				return []any{x.Input(c.Table(0))}, nil
@@ -199,9 +253,6 @@ func (a *APIs) bind(vm *script.VM) {
 			},
 			"state": func(c *script.Args) ([]any, error) {
 				return []any{x.State(c.String(0), c.Any(1))}, nil
-			},
-			"tat": func(c *script.Args) ([]any, error) {
-				return []any{x.Tat(c.Table(0))}, nil
 			},
 			"text": func(c *script.Args) ([]any, error) {
 				return []any{x.Text(c.Any(0), c.String(1))}, nil

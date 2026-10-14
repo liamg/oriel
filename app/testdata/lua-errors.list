@@ -9,34 +9,51 @@ rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1269.0625x38 r 0
 pop
 rect 0,38 44x836 fill #0c0c0b
-path 7 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #4f4a40
-path 6 segments stroke 1.4545455 #4f4a40
-path 6 segments stroke 1.4545455 #4f4a40
-path 2 segments stroke 1.4545455 #4f4a40
-path 2 segments stroke 1.4545455 #4f4a40
-path 5 segments stroke 1.4545455 #4f4a40
-path 5 segments stroke 1.4545455 #4f4a40
-path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
+clip 0,38 43x836 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  path 7 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #7c7566
+  rect 9.5,208 24x1 fill #332f27
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
 rect 43,38 1x836 fill #24221d
 rect 44,38 1356x836 fill #060606
 clip 44,38 1356x476 r 0
   rect 44,38 1356x30 fill #0c0c0b
-  rect 44,38 65.015625x30 fill #121210
-  text "init.lua" @58,58.365234 #ece6d8 Inter 12
+  clip 44,38 1356x30 r 0
+    rect 44,38 84.015625x30 fill #121210
+    text "init.lua" @58,58.365234 #ece6d8 Inter 12
+    text "✕" @108.71875,57.96 #7c7566 JetBrains Mono 11
+  pop
   rect 44,68 1356x1 fill #24221d
   clip 44,69 1356x445 r 0
     rect 44,69 1356x445 fill #060606
@@ -165,9 +182,9 @@ pop
 rect 44,514 1356x360 fill #0c0c0b
 clip 44,514 1356x360 r 0
   rect 44,514 1356x30 fill #0c0c0b
-  rect 44,514 49.34375x30 fill #121210
-  rect 44,514 49.34375x2 fill #ffd23f
-  text "Log" @58,534.36523 #ece6d8 Inter 12
+  rect 44,514 1356x2 fill #ffd23f
+  text "LOG" @58,533.60004 #7c7566 JetBrains Mono 10
+  text "✕" @1380.7031,533.95996 #7c7566 JetBrains Mono 11
   rect 44,544 1356x1 fill #24221d
   clip 44,545 1356x329 r 0
     clip 54,558 164.25x24 r 5

@@ -17,7 +17,7 @@ import (
 )
 
 // TitleBarView is the bar across the top: the logo, the session tabs, and segments named titlebar.right.* (the
-// usage and bus tats) at its right.
+// usage and bus indicators) at its right.
 const (
 	TitleBarView = "app.titlebar"
 	TitleRight   = "titlebar.right."
@@ -103,12 +103,16 @@ func (t *sessionTabs) build(c *ui.Ctx, h ext.Host, vc registry.ViewCtx) {
 				Color: th.C(tWordmark)})
 		})
 		c.Box("sep", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
-		c.Row("tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), Clip: true, Role: ui.RoleTabList, Label: "Sessions"}, func(c *ui.Ctx) {
+		// More sessions than fit scroll sideways, the one in front kept in view.
+		tabs := c.Row("tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), ScrollX: true, Role: ui.RoleTabList, Label: "Sessions"}, func(c *ui.Ctx) {
 			for i, s := range h.Sessions() {
 				t.tab(c, h, i, s, s.ID() == st.Focus)
 				c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 			}
 		})
+		if st.Focus != "" {
+			c.ScrollIntoView(tabs, ui.Child(tabs, st.Focus))
+		}
 		ids := h.Views()
 		c.Row("right", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 			for _, id := range ids {
@@ -140,6 +144,12 @@ func (t *sessionTabs) tab(c *ui.Ctx, h ext.Host, i int, s core.Session, on bool)
 				c.Text("name", s.Name(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: name})
 				if w := statusWord(s); w != "" {
 					c.Text("mini", w, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.Medium}, Color: th.C(tTabMini)})
+				}
+				if n := len(s.Snapshot().Asks); n > 0 {
+					c.Box("asks", ui.Style{H: ui.Px(15), Pad: ui.PadXY(5, 0), Radius: 7.5, Fill: th.C(theme.StatusPermission), Cross: ui.Center, Role: ui.RoleText,
+						Label: fmt.Sprintf("%d waiting on you", n)}, func(c *ui.Ctx) {
+						c.Text("n", fmt.Sprint(n), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold}, Color: th.C(theme.AccentInk)})
+					})
 				}
 				if n := s.Unseen(); n > 0 {
 					c.Text("errs", fmt.Sprintf("✕%d", n), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold},

@@ -51,7 +51,7 @@ L.session_option.agent = "claude"                  -- session-local
 -- keymaps, any mode, including panels' own modes
 L.keymap.set("n", "<leader>rr", "agent.review")             -- a command
 L.keymap.set({ "n", "x" }, "ga", function() L.thread.new() end)
-L.keymap.set("requests", "x", "thread.resolve")             -- keys inside the Requests panel
+L.keymap.set("requests", "x", "request.resolve")            -- keys inside the Requests panel
 
 -- commands
 L.command("Ship", function(args)
@@ -89,20 +89,20 @@ L.agent.tool{
 L.agent.pack("hotfix", { prompt = L.read("~/.config/oriel/agents/hotfix.md"), tools = { "staging_logs" } })
 L.session.kind("hotfix", { pack = "hotfix", gates = { "tests", "ledger" }, status = "red-until-merged" })
 
--- views: statusline, HUD tats, panels, all replaceable
+-- views: statusline, HUD indicators, panels, all replaceable
 L.statusline(function(w)
   return L.ui.row{
     L.ui.mode(),
     L.ui.text(w.session.branch, "dim"),
     L.ui.spacer(),
-    L.ui.tat{ label = "CTX", bar = w.session.ctx_frac },
-    L.ui.tat{ label = "LEDGER", bar = L.ledger.frac(), warn = 0.8 },
+    L.ui.indicator{ label = "CTX", bar = w.session.ctx_frac },
+    L.ui.indicator{ label = "LEDGER", bar = L.ledger.frac(), warn = 0.8 },
   }
 end)
 
-L.hud.tat("deploys", { slot = "titlebar.right", every = "30s" }, function()
+L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
   local n = L.json(L.http.get("https://deploy.internal/api/pending")).count
-  return L.ui.tat{ label = "DEPLOY", value = n, tone = n > 0 and "warn" or "ok" }
+  return L.ui.indicator{ label = "DEPLOY", value = n, tone = n > 0 and "warn" or "ok" }
 end)
 
 L.view.override("requests", function(s)            -- replace a built-in panel
@@ -192,18 +192,21 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   LuaLS types (`script/types/oriel.d.lua`) and the reference (`docs/api.md`); a test fails when they're stale. A
   parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
 - Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
-  `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `ui`, `regex` (PCRE2),
+  `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (indicator), `status` (rule), `thread`, `ui`, `regex` (PCRE2),
   `language`, and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
-  `local o = oriel.option` if you want it short). There's one global, `oriel`; a config that wants a short name writes
-  `local L = oriel`, as the sample does.
-- Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
+  `local o = oriel.option` if you want it short). A list option takes a table of strings and a map option a table of
+  strings by name (`oriel.option["sandbox.servers"] = { docs = "https://docs.example.com/mcp" }`); reading one gives
+  the same. There's one global, `oriel`; a config that wants a short name writes `local L = oriel`, as the sample does.
+- Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.indicator`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
-  `thread`, `coverage`, `http` and `async` load, and calling into one says which ticket brings it. An option
+  `http` and `async` load, and calling into one says which ticket brings it. An option
   set before anything registers it waits, and `:Hooks` lists it.
 - Hooks are the registry's (`Registry.Hook`, `Fire`, `DeclareEvent`): in priority order, a veto or decision stops
-  them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead`,
-  `BufWritePre` (a veto stops the write) and `BufWritePost`; `Commit`, `CommentSend`, `Permission`, `AgentTurnEnd`,
-  `PrRaise` and `ModeChanged` are declared for the features that fire them.
+  them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead` (a rewrite
+  that sets `read_only`, saying why, opens the file read-only: how files outside the session do),
+  `BufWritePre` (a veto stops the write) and `BufWritePost`; the sessions fire `CommentSend` (a rewrite changes the
+  comment, a veto stops it), `Permission` and `AgentTurnEnd`; `Commit`, `PrRaise` and `ModeChanged` are declared for
+  the features that fire them.
 - Saving `init.lua` or anything under `lua/` reloads the config within 500 ms: everything it registered goes, it
   loads again, and a toast says how long and how many things it registered; an error is a notice with its line.
 - `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`, history) and
@@ -238,7 +241,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - Not yet: a column for runtime errors (gopher-lua gives none, so the whole line is underlined), and the toast's
   "saving reloads it" hint.
 - UI from Lua: `L.ui.button{ label, on_click, primary, id }` runs Lua when clicked; `row` and `column` take `gap` and
-  `pad` beside their children. A view whose top node is a single line (a row, text, a tat, a button) is centred in
+  `pad` beside their children. A view whose top node is a single line (a row, text, a indicator, a button) is centred in
   the height it's given, so it sits right in a bar; a column runs from the top, as a panel does. A demo plugin
   (`app/plugindemo_test.go`) adds a dock panel with buttons, a tab, title-bar and status-line segments and editor
   marks, using only this API.
@@ -248,7 +251,8 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   (`widget.Input`, `widget.Toggle`, `widget.Select`; the settings page draws with the last two); `on_change` gets the
   new value and the view redraws. `oriel.ui.state(key, initial)` is a table the VM keeps by key (`VM.State`). A
   callback's error is a notice at its line. Tab moves focus: controls in the `button` key mode map Tab and ⇧Tab to
-  `ui.focus.next`/`prev` (`UIView.FocusNext`), and a Lua input sets `InputOpts.TabMoves`.
+  `ui.focus.next`/`prev` (`UIView.FocusNext`), and a Lua input sets `InputOpts.TabMoves`. `lines = n` makes an input
+  take several lines (`InputOpts.Lines`, SE-5): ⏎ a new line, ⌘⏎ submits.
 - Drag and drop (PL-15): any `oriel.ui` node can be dragged (`drag = { kind, data, label }`) or take drops
   (`accepts = { kinds }`, `on_drop = function(kind, data)`); a `"file"` drop's data is its paths.
 
@@ -256,3 +260,78 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 
 - `oriel.lsp.server{ name, languages, cmd, roots, settings, init, order }` registers a language server (a
   `registry.LSPServer`); one with a built-in's name replaces it.
+
+## As built (AI-5)
+
+- `oriel.thread`: `list()` (the session in front's requests: `{ id, title, status, file, line, busy, urgent, btw,
+  comments, last, author }`), `new(opts)` (with `body`, sends a request about `file`:`line` or the whole change; without,
+  opens a thread on the cursor's line), `reply(id, body, opts)` (`urgent`, `btw`), `resolve(id, status)` and
+  `open(id)`. They run the `request.*` commands, so a keymap or a plugin does the same with `oriel.cmd`.
+
+## As built (SH-17)
+
+- `oriel.rail.add{ name, icon, title, command, args, scope, order, bottom }` adds an entry to the project sidebar
+  (ui.md 01h). `scope = "project"` makes it one of each project's panels: it's listed under the open project and its
+  command runs with `args.project` set to that project, so `command = "view.toggle", args = { id = "tickets" }` opens
+  the `tickets` view for that project. `scope = "session"` (the default) lists it below the projects. A reload that
+  drops the call removes the entry.
+- A Lua view's `ctx.project` is the project its instance was opened for, "" for a session's view.
+
+## As built (ED-15)
+
+- `oriel.editor.action{ name, label, label_on, icon, icon_on, command, args, run, when, on, note, order, help }` adds a
+  button at the right of an editor's breadcrumb (a `registry.EditorAction`): `when(path)` picks the files, `on(window)`
+  lights it (`window` is `{ id, path, presenter }`), `label_on`/`icon_on` show while it's on, `note(window)` is dim text
+  after its label; `command` runs with `args.window` set to the window it was clicked in, or `run` is a function.
+- `oriel.editor.presenter{ name, label, when, comments, order, build = fn(ctx) }` adds a buffer presenter (a
+  `registry.BufferPresenter`). `ctx` has `path`, `name`, `lines` and `width`; `ctx.block(from_line, to_line, fn)` adds
+  a block made from those source lines (1-based), drawn by `fn(width)`, which returns `oriel.ui` nodes (or the nodes in
+  place of `fn`). The file's threads sit in the margin beside the block holding their line, and with `comments` a click
+  on a block opens a thread on its lines. `oriel.editor.present(name)` shows the focused window with it, and again
+  shows its text (`editor.present`).
+
+```lua
+oriel.editor.presenter{ name = "csv", label = "Table", comments = true,
+  when = function(path) return path:match("%.csv$") ~= nil end,
+  build = function(ctx)
+    for i, line in ipairs(ctx.lines) do
+      ctx.block(i, i, function() return oriel.ui.text((line:gsub(",", "  │  "))) end)
+    end
+  end }
+oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", command = "editor.present", args = { name = "csv" },
+  when = function(path) return path:match("%.csv$") ~= nil end,
+  on = function(window) return window.presenter == "csv" end }
+```
+
+## As built (AI-12)
+
+- `oriel.ui.chart{ kind, series, labels, height, max, y_ticks, format, legend, hover, marks, bands, on_click, id, label }`
+  draws a `widget.Chart`: `kind` is `bars` (stacked, the default), `area`, `line`, `spark` or `strip`; each series is
+  `{ name, values, color, kind, dashed, from }`, `color` a theme token or `#rrggbb`; `format` (`money`, `percent`,
+  `count`) formats the axis and the hover card; `on_click(series, point)` gets them counted from 1.
+- `oriel.rail.add` takes `scope = "global"` (a page every session shares, below a second divider) and
+  `note = fn(project)`, a live figure at the entry's right; `oriel.start.add` takes `link = true` (a small link under
+  the actions) and `note = fn()`, its figure.
+- The pages are commands, so `oriel.cmd("stats.open", { group = "session", repo = "api", range = "7d" })`,
+  `oriel.cmd("stats.session", { id = … })` and `oriel.cmd("usage.open")` reach them; `oriel.option["stats.split_sessions"]`
+  is the split.
+
+
+## As built (AI-14)
+
+- `oriel.ui.date_picker{ from, to, on_change, placeholder, id, label }` draws a `widget.DateSelect`: a button showing
+  the range that opens a `widget.DatePicker` under it. `from` and `to` are days as `YYYY-MM-DD`, and
+  `on_change(from, to)` gets them so.
+- `oriel.cmd("stats.custom", { range = "2026-09-01..2026-09-30" })` sets the Stats page's custom range; with no
+  range it opens the date picker.
+
+
+## As built (SE-4)
+
+- Jobs are commands too: `oriel.cmd("jobs.open", { job = "sweep-stale-deps" })`, `oriel.cmd("jobs.run", { name = … })`,
+  and `oriel.cmd("jobs.save", { title = "Weekly changelog draft", prompt = "…", sandbox = "sandbox", provider =
+  "claude", model = "…", effort = "high", schedule = "weekly mon 07:00", worker = "devbox", run = false })` saves one
+  without the dialog: given a `name`, it changes only what's given. `schedule` is `"manual"`, `"weekdays 07:00"`,
+  `"weekly mon 07:00"`, `"mon,thu 07:00"`, or a table `{ every = "days", days = { "Mon", "Thu" }, at = "07:00" }`.
+  `jobs.new` opens the dialog with any of them filled in; `jobs.delete { name }` forgets one; `session.delete { id }`
+  throws a run (or any session of Oriel's) away.

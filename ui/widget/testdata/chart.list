@@ -1,0 +1,62 @@
+backdrop #060606
+rect 0,0 640x520 fill #060606
+rect 20,22.93 8x8 fill #4cc9f0 radius 2
+text "pricing" @33,30.71 #b3ab99 JetBrains Mono 10.5
+rect 91.15625,22.93 8x8 fill #ff6eb4 radius 2
+text "billing-ui" @104.15625,30.71 #b3ab99 JetBrains Mono 10.5
+rect 281.6,39.86 112.80002x140 fill #131311
+clip 281.6,39.86 112.80002x140 r 0
+  path 86 segments stroke 1 #1c1b19
+pop
+text "idle" @327.1875,52.04 #4f4a40 JetBrains Mono 9
+rect 56,179.86 564x0.5 fill #24221d
+text "$0.00" @22.96875,177.86 #4f4a40 JetBrains Mono 9
+rect 56,109.86 564x0.5 fill #24221d
+text "$10.00" @17.5625,113.45 #4f4a40 JetBrains Mono 9
+rect 56,39.86 564x0.5 fill #24221d
+text "$20.00" @17.5625,43.45 #4f4a40 JetBrains Mono 9
+rect 71.792,151.86 81.215996x28 fill #4cc9f0
+rect 184.59201,137.86 81.216x42 fill #4cc9f0
+rect 410.19202,123.86 81.216x56 fill #4cc9f0
+rect 522.992,158.86 81.216x21 fill #4cc9f0
+rect 71.792,137.86 81.215996x14 fill #ff6eb4
+rect 184.59201,130.86 81.216x7 fill #ff6eb4
+rect 410.19202,81.86 81.216x42 fill #ff6eb4
+rect 522.992,144.86 81.216x14 fill #ff6eb4
+path 48 segments stroke 1 #ff9f43
+text "compacted" @453.80002,50.04 #ff9f43 JetBrains Mono 9
+text "turns" @20,189.04 #4f4a40 JetBrains Mono 9
+rect 111.9,181.86 1x6 fill #4f4a40
+rect 168.3,181.86 1x6 fill #4f4a40
+rect 224.70001,181.86 1x6 fill #4f4a40
+rect 450.30002,181.86 1x6 fill #4f4a40
+rect 563.1,181.86 1x6 fill #4f4a40
+text "Mon" @104.29063,201.04 #4f4a40 JetBrains Mono 9
+text "Tue" @217.09064,201.04 #4f4a40 JetBrains Mono 9
+text "Wed" @329.89062,201.04 #4f4a40 JetBrains Mono 9
+text "Thu" @442.69064,201.04 #4f4a40 JetBrains Mono 9
+text "Fri" @555.4906,201.04 #4f4a40 JetBrains Mono 9
+rect 56,319.86 564x0.5 fill #24221d
+text "0%" @39.1875,317.86 #4f4a40 JetBrains Mono 9
+rect 56,269.86 564x0.5 fill #24221d
+text "50%" @33.78125,273.44998 #4f4a40 JetBrains Mono 9
+rect 56,219.86 564x0.5 fill #24221d
+text "100%" @28.375,223.45 #4f4a40 JetBrains Mono 9
+rect 71.792,299.86 81.215996x20 fill #e0b03078
+rect 184.59201,279.86 81.216x40 fill #e0b03078
+rect 410.19202,289.86 81.216x30 fill #e0b03078
+rect 522.992,284.86 81.216x35 fill #e0b03078
+path 4 segments stroke 1.5 #ff9f43
+path 34 segments stroke 1.5 #ff9f43
+rect 450.30002,219.86 1x99.999985 fill #7c7566
+text "now" @453.80002,230.04 #7c7566 JetBrains Mono 9
+rect 20,397.36 600x0.5 fill #24221d
+path 9 segments fill #4cc9f01b
+path 4 segments stroke 1.5 #4cc9f04d
+path 9 segments fill #ff9f4359
+path 4 segments stroke 1.5 #ff9f43
+path 7 segments stroke 1.5 #ff6eb4
+clip 160,416.86 460x14 r 3
+  rect 160,416.86 311.44x14 fill #4cc9f0
+  rect 473.44,416.86 146.56x14 fill #ff6eb4
+pop

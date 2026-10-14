@@ -3,6 +3,7 @@ package registry
 import (
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/ui"
@@ -32,17 +33,29 @@ type Decoration struct {
 	Edge     string // a LineBg's gutter edge, a theme token
 	Text     string
 	Node     ui.Node // a Block's content
+	Reveal   bool    // a Block: the editor scrolls so all of it shows, as a references peek or a new thread wants
 	Priority int     // higher draws over lower
 	// Command, for a Sign, runs with Args when the sign is clicked: a test's ▶, a breakpoint.
 	Command string
 	Args    Args
 	Tooltip string
+	// Icon draws a Sign as a built-in icon ("comment"), Text beside it small: a count.
+	Icon string
+	// Hover, for a Sign, is a card shown while the pointer is on the sign or the card; it never takes focus.
+	Hover ui.Node
+	// Was, for a LineBg on a changed line, is what the line read before, for a presenter that shows the change.
+	Was string
 }
 
-// DecorationCtx is the buffer a provider decorates and the lines in view, [Top, Bottom).
+// DecorationCtx is the buffer a provider decorates and the lines in view, [Top, Bottom), and where it's drawn: the
+// editor window (its id), and the presenter drawing it, "" for the text. Blocks in a presentation are drawn in its
+// margin, beside the block holding their line.
 type DecorationCtx struct {
-	Name        string // the buffer's file, as the editor names it
-	Path        string // the buffer's file, absolute
+	Window      string
+	Presenter   string
+	Now         time.Time // the frame's
+	Name        string    // the buffer's file, as the editor names it
+	Path        string    // the buffer's file, absolute
 	Buffer      *text.Buffer
 	Snap        text.Snapshot
 	Top, Bottom int

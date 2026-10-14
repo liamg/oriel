@@ -59,9 +59,9 @@ func (v View) Override(id string, fn *script.Fn, where string) error {
 	return nil
 }
 
-// viewCtx is what a Lua view gets: the window's size, and the session in front.
+// viewCtx is what a Lua view gets: the window's size, the instance and the project it was opened for, and the session in front.
 func (a *APIs) viewCtx(vc registry.ViewCtx) script.Table {
-	t := script.Table{"width": vc.Width, "height": vc.Height, "instance": vc.Instance}
+	t := script.Table{"width": vc.Width, "height": vc.Height, "instance": vc.Instance, "project": vc.Project}
 	sess := script.Table{}
 	here := a.Host.Here()
 	if s, ok := a.Host.Session(coreSession(here.Session)); ok {
@@ -150,10 +150,10 @@ func (s Session) Kind(name string, spec script.Table, where string) error {
 //oriel:api name=hud
 type HUD struct{ a *APIs }
 
-//oriel:api doc="A HUD tat: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."
-func (h HUD) Tat(name string, opts script.Table, fn *script.Fn, where string) error {
+//oriel:api doc="A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."
+func (h HUD) Indicator(name string, opts script.Table, fn *script.Fn, where string) error {
 	every, _ := time.ParseDuration(str(opts, "every"))
-	h.a.own(h.a.Host.Contribute(registry.Tat{Name: name, Slot: str(opts, "slot"), Every: every, Source: where,
+	h.a.own(h.a.Host.Contribute(registry.Indicator{Name: name, Slot: str(opts, "slot"), Every: every, Source: where,
 		Build: func(registry.Ctx) (ui.Node, error) {
 			out, err := h.a.VM.Call(fn)
 			if err != nil {

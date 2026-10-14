@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 )
 
 const formPlugin = `local s = oriel.ui.state("deploy-form", { name = "", notify = false, env = "staging" })
@@ -91,5 +92,80 @@ func TestLuaFormWidgets(t *testing.T) {
 	n, _ := lastNotice(s.store.State(), "lua.callback.")
 	if n.Location != "init.lua:12" || !strings.Contains(n.Text, "boom") {
 		t.Errorf("the failing callback's notice: %+v", n)
+	}
+}
+
+const chartPlugin = `local s = oriel.ui.state("chart-demo", { clicked = "none" })
+oriel.view.override("chart-demo", function(ctx)
+  return oriel.ui.column{ pad = 14, gap = 10,
+    oriel.ui.chart{ id = "c", label = "Deploys per day", kind = "bars", height = 120, labels = { "Mon", "Tue", "Wed" },
+      y_ticks = 2, format = "count", legend = true, hover = true,
+      series = { { name = "api", values = { 2, 4, 1 }, color = "cyan" }, { name = "web", values = { 1, 2, 3 }, color = "#ff7ad6" } },
+      marks = { { at = 2, label = "release" } },
+      on_click = function(series, point) s.clicked = series .. "@" .. point end },
+    oriel.ui.text("clicked=" .. s.clicked),
+  }
+end)
+`
+
+// AI-12: a Lua view draws a widget.Chart through oriel.ui.chart, and a click on a bar reaches its on_click with the
+// series and point, counted from 1.
+func TestLuaChart(t *testing.T) {
+	s := luaScene(t, chartPlugin)
+	s.run("view.open", registry.Args{"id": "chart-demo", "place": "tab", "title": "Chart"})
+	s.frame()
+	s.frame()
+	s.wantFrame(t, "api", "web", "Mon", "Wed", "release")
+	// Tuesday's bar, just above its label: api's 4 is the bottom of the stack.
+	tue := s.textPoint(t, "Tue")
+	s.click(render.Point{X: tue.X, Y: tue.Y - 20})
+	s.frame()
+	s.wantFrame(t, "clicked=1@2")
+}
+
+const datePlugin = `local s = oriel.ui.state("dates-demo", { from = "", to = "" })
+oriel.view.override("dates-demo", function(ctx)
+  return oriel.ui.column{ pad = 14, gap = 10,
+    oriel.ui.date_picker{ id = "range", label = "Deploy window", placeholder = "pick dates", from = s.from, to = s.to,
+      on_change = function(from, to) s.from, s.to = from, to end },
+    oriel.ui.text("range=" .. s.from .. ".." .. s.to),
+  }
+end)
+`
+
+// AI-14: a Lua view picks a range of days through oriel.ui.date_picker (widget.DatePicker): its button opens the
+// picker, a typed range is picked with ⏎, and on_change gets its days as YYYY-MM-DD.
+func TestLuaDatePicker(t *testing.T) {
+	s := luaScene(t, datePlugin)
+	s.run("view.open", registry.Args{"id": "dates-demo", "place": "tab", "title": "Dates"})
+	s.frame()
+	s.frame()
+	s.click(centre(s.access("pick dates").Bounds))
+	s.frame()
+	s.typeInto(t, "Deploy window, typed", "2026-09-01..2026-09-30")
+	s.keyCommand(t, "<CR>")
+	s.frame()
+	s.wantFrame(t, "range=2026-09-01..2026-09-30", "Sep 1 – Sep 30")
+}
+
+// SE-5: the multi-line input "in Lua": `lines` makes oriel.ui.input take several lines, ⏎ a new line.
+func TestLuaMultiLineInput(t *testing.T) {
+	s := luaScene(t, `local s = oriel.ui.state("notes-form", { notes = "" })
+oriel.view.override("notes-form", function(ctx)
+  return oriel.ui.column{ pad = 14, gap = 10,
+    oriel.ui.input{ id = "notes", label = "Notes", value = s.notes, lines = 4, on_change = function(t) s.notes = t end,
+      on_submit = function(t) oriel.notify("sent " .. #t) end },
+    oriel.ui.text("notes=" .. s.notes:gsub("\n", "|")),
+  }
+end)
+`)
+	s.run("view.open", registry.Args{"id": "notes-form", "place": "dock", "edge": "right", "title": "Jot", "size": 420})
+	s.frame()
+	s.frame()
+	s.click(centre(s.access("Notes").Bounds))
+	s.typeKeys("a", "CR", "b")
+	s.frame()
+	if !strings.Contains(s.frameText(), "notes=a|b") {
+		t.Fatalf("⏎ in a Lua input with lines didn't make a new line:\n%s", s.frameText())
 	}
 }

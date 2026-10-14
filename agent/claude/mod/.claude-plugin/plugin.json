@@ -1,0 +1,6 @@
+{
+  "name": "oriel",
+  "version": "0.1.0",
+  "description": "Oriel's bridge: submits the prompts Oriel sends, reports turns and subagents, serves Oriel's tools as mcp__oriel__*, and hands permission prompts, questions and guard rails to Oriel.",
+  "author": { "name": "Oriel" }
+}

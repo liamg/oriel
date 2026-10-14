@@ -19,7 +19,7 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 - [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md): Worker, wire, sessions, workspaces with multi-repo worktrees
 - [DB-1](DB-1-dap-breakpoints-conditional-logpoints-stepping-s.md): DAP: breakpoints (conditional, logpoints), stepping, stack, variables, watch, REPL
 - [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md): Process plugins with an OS sandbox; WASM plugins; oriel build --with
-- [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and tats in slots
+- [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and indicators in slots
 - [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key)
 - [FG-6](FG-6-ship-page-uncommitted-behind-unpushed-pr-checks-.md): Ship page: uncommitted → behind → unpushed → PR → checks, multi-project
 - [RV-1](RV-1-split-and-unified-diff-intraline-per-hunk-review.md): Split and unified diff, intraline, per-hunk reviewed
@@ -122,6 +122,13 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 55. [SE-2](SE-2-session-lifecycle-worktrees-from-a-fetched-base-.md): Session lifecycle: worktrees from a fetched base, Start next PR, archive, resume after restart · after SE-1
 56. [SE-3](SE-3-files-outside-the-session-open-read-only-app-ope.md): Files outside the session open read-only; app opens on mission control · after SE-1
 57. [TR-5](TR-5-agent-test-runs-as-evidence.md): Agent test runs as evidence · after TR-1, AI-2
+58. [SH-17](SH-17-project-sidebar-per-project-panels-and-shared-tabs.md): Project sidebar: per-project panels, the session's entries, one tab strip across projects · after SH-16, FG-1, FG-3, TR-3, AI-1, SE-1 (P5 follow-up)
+59. [ED-15](ED-15-buffer-presenters-markdown-preview-and-thread-visibility.md): Buffer presenters with a source map, a built-in markdown preview, and showing or hiding a file's threads · after ED-7, AI-5, AI-8, SH-17 (P5 follow-up)
+60. [AI-12](AI-12-stats-and-usage-pages-grouped-by-repo.md): Stats and Usage: session stats, global stats grouped by repo, plan usage, and how you reach them · after AI-1, AI-2, AI-3, AI-9, SH-17 (P5 follow-up)
+61. [SE-4](SE-4-jobs-page-saved-prompts-runs-and-schedules.md): Jobs: saved prompts, runs as sessions, a Jobs page, and schedules · after SE-1, AI-12 (P5 follow-up)
+62. [AI-13](AI-13-detect-an-expired-agent-login.md): Detect an expired agent login, flag it on its worker, and fix it from Oriel · after AI-2, AI-3, AI-12 (P5 follow-up)
+63. [AI-14](AI-14-stats-and-usage-follow-ups.md): Stats and Usage follow-ups: custom ranges, exact per-range tools, plan tiers, active span, accounts at the time · after AI-12 (P5 follow-up)
+64. [SE-5](SE-5-jobs-and-login-follow-ups.md): Jobs and login follow-ups: multi-line prompts, pages that replace each other, run tabs, schedules, remote log in · after SE-4, AI-13 (P5 follow-up)
 
 ### Phase 6 · review
 
@@ -148,11 +155,11 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 75. [PL-6](PL-6-self-update-for-the-app-and-workers-self-signed-.md): Self-update for the app and workers (self-signed, ed25519) · after AI-1
 76. [PL-8](PL-8-linear-assigned-tickets-start-work-from-a-ticket.md): Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source · after PL-2, SE-1
 77. [PL-9](PL-9-slack-ptal-via-webhook.md): Slack PTAL via webhook · after PL-2
-78. [PL-10](PL-10-calendar-next-meeting-tat-ical-url-or-macos-even.md): Calendar: next meeting tat (iCal URL or macOS EventKit) · after PL-2
+78. [PL-10](PL-10-calendar-next-meeting-tat-ical-url-or-macos-even.md): Calendar: next meeting indicator (iCal URL or macOS EventKit) · after PL-2
 79. [PL-11](PL-11-prompts-page-editable-prompt-packs-coding-style-.md): Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation · after AI-2
 80. [RV-8](RV-8-tours-reader-7-kinds-export.md): Tours: reader, 7 kinds, export · after RV-5
 81. [SH-7](SH-7-mission-control-k-with-live-terminals-and-inline.md): Mission control (⌘⇧K) with live terminals and inline asks · after SH-2, AI-1
-82. [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and tats in slots · after FW-6, FW-2
+82. [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and indicators in slots · after FW-6, FW-2
 83. [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key) · after FW-6
 84. [PL-13](PL-13-context-menu-contributions.md): Context menu entries from plugins: a contribution point for right-click menus · after PL-1, SH-10 (added and built in P3)
 85. [PL-14](PL-14-lua-form-widgets.md): Form widgets from Lua: inputs, toggles, selects and a view's own state · after PL-1 (added and built in P3)

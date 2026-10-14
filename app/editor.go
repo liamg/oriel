@@ -3,6 +3,7 @@ package app
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -33,19 +35,24 @@ const EditorView = "editor"
 // whose notices are the IDE's and whose "+ and "* are the system clipboard (editor.md, "Part of the IDE").
 type editorExt struct {
 	disposer
-	sh     *shell
-	h      ext.Host
-	ed     *edit.Editor
-	e      *vim.Engine
-	conv   *conventions
-	dir    string
-	docs   map[*text.Buffer]*highlighter
-	rows   map[vim.WindowID]int
-	pane   paneMetrics
-	disk   diskWatch
-	maps   map[string]registry.Disposable // :map's keymaps, by mode and keys
-	inputs map[vim.WindowID]paneInput
+	sh   *shell
+	h    ext.Host
+	ed   *edit.Editor
+	e    *vim.Engine
+	conv *conventions
+	dir  string
+	docs map[*text.Buffer]*highlighter
+	busy sync.WaitGroup // parsers being made, off the loop
+	rows map[vim.WindowID]int
+	// blockPx is how tall the blocks between a window's lines were last frame: rows it doesn't have for text.
+	blockPx map[vim.WindowID]float32
+	pane    paneMetrics
+	disk    diskWatch
+	maps    map[string]registry.Disposable // :map's keymaps, by mode and keys
+	inputs  map[vim.WindowID]paneInput
+	present map[vim.WindowID]*windowPresent // the windows a presenter draws
 
+	now          time.Time   // the frame's, for decorations
 	drawing      input.State // the engine of the pane being drawn
 	caret        ui.ID       // the current window's cursor, last frame: where popups at the cursor go
 	pendingSince time.Time   // when the current window's engine began waiting for more keys
@@ -68,10 +75,11 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	if x.dir == "" {
 		x.dir, _ = os.Getwd()
 	}
-	x.docs, x.rows = map[*text.Buffer]*highlighter{}, map[vim.WindowID]int{}
+	x.docs, x.rows, x.blockPx = map[*text.Buffer]*highlighter{}, map[vim.WindowID]int{}, map[vim.WindowID]float32{}
 	x.disk.asked = map[int]time.Time{}
 	x.maps = map[string]registry.Disposable{}
 	x.inputs = map[vim.WindowID]paneInput{}
+	x.present = map[vim.WindowID]*windowPresent{}
 	x.builtinInputs()
 	x.sh.enginePending = x.pending
 	x.sh.engineHints = func(keys []string) []ext.Hint {
@@ -97,11 +105,15 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	for _, s := range conventionOptions() {
 		x.add(h.Option(s))
 	}
+	x.add(h.Option(registry.OptionSpec{Name: "editor.font_size", Type: registry.Float, Default: float64(codeSize), Min: 6, Max: 48,
+		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The code's text size, inside the UI's zoom (ui.font_size)."}))
+	x.add(h.Option(registry.OptionSpec{Name: "editor.line_height", Type: registry.Float, Default: 1.55, Min: 1, Max: 3,
+		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The space between lines of code, as a multiple of editor.font_size."}))
 	for _, s := range x.inspectSections() {
 		x.add(h.Contribute(s))
 	}
 	for _, e := range []registry.EventInfo{
-		{Name: "BufRead", Doc: "A file read into a buffer; the subject is its name.", Payload: BufRead{}, Fired: true},
+		{Name: "BufRead", Doc: "A file read into a buffer; the subject is its name. A rewrite setting read_only opens it read-only.", Payload: BufRead{}, Fired: true},
 		{Name: "BufWritePre", Doc: "A buffer about to be written; a veto stops the write.", Payload: BufWritePre{}, Fired: true},
 		{Name: "BufWritePost", Doc: "A buffer just written.", Payload: BufWritePost{}, Fired: true},
 	} {
@@ -128,6 +140,7 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.add(disposeFn(h.Layout().OnClose(func(v layout.ViewRef) {
 		if id, ok := windowOf(v); ok {
 			x.e.WindowClosed(id)
+			delete(x.present, id)
 		}
 	})))
 
@@ -206,6 +219,8 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 			x.e.MultiVertical(-1)
 			return nil
 		}},
+		{ID: "editor.present", Title: "Show a {window} (the focused one by default) with the presenter {name}, or as text again when it shows it already",
+			Run: func(_ registry.Ctx, a registry.Args) error { return x.presentIn(str(a, "window"), str(a, "name")) }},
 		{ID: "editor.grep-word", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
 		}},
@@ -213,6 +228,12 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 		x.add(h.Command(c))
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "c", Keys: "<Tab>", Command: "editor.complete", Desc: "Complete the command line"}))
+	for _, c := range presentCommands(x.sh, h) {
+		x.add(h.Command(c))
+	}
+	for _, k := range presentKeys() {
+		x.add(h.Keymap(k))
+	}
 	x.add(h.View(EditorView, editorView{x}))
 	x.add(h.Picker(x.filesSource()))
 	syms := x.symbolsSource()
@@ -272,10 +293,7 @@ func windowOf(v layout.ViewRef) (vim.WindowID, bool) {
 // open opens path in a new editor tab beside the focused editor, or shows the tab that has it. place "split" or
 // "vsplit" opens a new window on it beside the focused editor instead.
 func (x *editorExt) open(ctx registry.Ctx, path, place string) error {
-	name := path
-	if rel, err := filepath.Rel(x.dir, path); err == nil && filepath.IsAbs(path) && !strings.HasPrefix(rel, "..") {
-		name = rel
-	}
+	name := x.relName(path)
 	root := x.h.Layout()
 	for _, id := range x.e.WindowIDs() {
 		if p, ok := x.e.Pane(id); ok && p.Name() == name && root.Find(windowRef(id)) != nil && place != "split" && place != "vsplit" {
@@ -285,15 +303,9 @@ func (x *editorExt) open(ctx registry.Ctx, path, place string) error {
 			return nil
 		}
 	}
-	var id vim.WindowID
-	if ids := x.e.WindowIDs(); len(ids) == 1 && root.Find(windowRef(ids[0])) == nil {
-		x.e.Edit(name) // the engine's first window, not yet on screen
-		id = ids[0]
-	} else {
-		var err error
-		if id, err = x.e.NewWindow(name); err != nil {
-			return err
-		}
+	id, err := x.window(name)
+	if err != nil {
+		return err
 	}
 	x.conv.refresh()
 	args := registry.Args{"id": EditorView, "instance": strconv.Itoa(int(id)), "place": "tab"}
@@ -307,6 +319,23 @@ func (x *editorExt) open(ctx registry.Ctx, path, place string) error {
 		args["beside"] = f.ID + "#" + f.Instance
 	}
 	return x.h.Run(ctx, "view.open", args)
+}
+
+// window is a new window on name: the engine's first window while it isn't on screen yet, or another.
+func (x *editorExt) window(name string) (vim.WindowID, error) {
+	if ids := x.e.WindowIDs(); len(ids) == 1 && x.h.Layout().Find(windowRef(ids[0])) == nil {
+		x.e.Edit(name)
+		return ids[0], nil
+	}
+	return x.e.NewWindow(name)
+}
+
+// relName is how the editor names path: relative to its directory when inside it.
+func (x *editorExt) relName(path string) string {
+	if rel, err := filepath.Rel(x.dir, path); err == nil && filepath.IsAbs(path) && !strings.HasPrefix(rel, "..") {
+		return rel
+	}
+	return path
 }
 
 // desktopClipboard is the system clipboard as the editor's registers see it. Platforms without a primary
@@ -350,15 +379,19 @@ func (h *editorHost) ReadFile(name string) ([]byte, *edit.File, error) {
 		f.ReadOnly = h.x.conv.readOnly(f.Path)
 	}
 	if err == nil {
-		h.x.h.Fire(context.Background(), "BufRead", name, &BufRead{Buf: name, File: f.Path})
+		ev := &BufRead{Buf: name, File: f.Path}
+		h.x.h.Fire(context.Background(), "BufRead", name, ev)
+		if f.ReadOnly == "" {
+			f.ReadOnly = ev.ReadOnly
+		}
 	}
 	return b, f, err
 }
 
 // The editor's events, which hooks (and Lua's oriel.on) can be on.
 type (
-	// BufRead is a file read into a buffer.
-	BufRead struct{ Buf, File string }
+	// BufRead is a file read into a buffer. A rewrite that sets ReadOnly, saying why, opens it read-only.
+	BufRead struct{ Buf, File, ReadOnly string }
 	// BufWritePre is a buffer about to be written: a hook can veto it.
 	BufWritePre struct{ Buf, File string }
 	// BufWritePost is a buffer just written.
@@ -631,6 +664,56 @@ func (v editorView) Location(instance string) (string, bool) {
 	return path, p.Current() && strings.HasPrefix(v.x.e.Mode(), "visual")
 }
 
+// editorState is an editor window as the layout keeps it across restarts: its file and cursor.
+type editorState struct {
+	Path    string `json:"path"`
+	Line    int    `json:"line"`
+	Col     int    `json:"col"`
+	Present string `json:"present,omitempty"` // the presenter drawing it
+}
+
+func (v editorView) Persist(instance string) (json.RawMessage, bool) {
+	path, _ := v.Location(instance)
+	n, err := strconv.Atoi(instance)
+	if path == "" || err != nil {
+		return nil, false
+	}
+	p, ok := v.x.e.Pane(vim.WindowID(n))
+	if !ok {
+		return nil, false
+	}
+	c := p.Cursor()
+	es := editorState{Path: path, Line: c.Line, Col: c.Col}
+	if wp := v.x.present[p.ID()]; wp != nil {
+		es.Present = wp.name
+	}
+	b, _ := json.Marshal(es)
+	return b, true
+}
+
+// Revive opens the file again in a new window, at its cursor.
+func (v editorView) Revive(state json.RawMessage) (string, error) {
+	var s editorState
+	if err := json.Unmarshal(state, &s); err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(s.Path); err != nil {
+		return "", err
+	}
+	id, err := v.x.window(v.x.relName(s.Path))
+	if err != nil {
+		return "", err
+	}
+	v.x.e.EnterWindow(id)
+	v.x.e.SetCursor(vim.Pos{Line: s.Line, Col: s.Col})
+	v.x.conv.refresh()
+	if s.Present != "" {
+		v.x.present[id] = &windowPresent{name: s.Present, st: newPresentState()}
+		v.x.present[id].st.top = s.Line
+	}
+	return strconv.Itoa(int(id)), nil
+}
+
 // Mark is the window's file's git status letter, for its tab.
 func (v editorView) Mark(instance string) (string, string) {
 	path, _ := v.Location(instance)
@@ -666,12 +749,15 @@ func (v editorView) Title(instance string) string {
 
 // highlighter keeps a buffer's syntax highlights up to date, for the panes showing it.
 type highlighter struct {
-	doc    *syntax.Document
-	lang   string
-	cancel func()
+	doc     *syntax.Document
+	lang    string
+	cancel  func()
+	pending []text.Change // edits made while its document was being made, for it once it's ready
+	closed  bool
 }
 
 func (h *highlighter) close() {
+	h.closed = true
 	if h.cancel != nil {
 		h.cancel()
 	}
@@ -692,14 +778,39 @@ func (x *editorExt) highlights(p vim.Pane) *highlighter {
 	if !ok {
 		return h
 	}
-	doc, err := syntax.NewDocument(lang, b.Snapshot())
-	if err != nil {
-		x.h.Log().Warn("syntax", "file", p.Name(), "err", err)
-		return h
-	}
-	doc.OnUpdate = x.h.Redraw
-	h.doc, h.lang = doc, lang.Name
-	h.cancel = b.Subscribe(doc.Change)
+	// Making a parser instantiates the grammar's wasm (tens of milliseconds, a first compile longer), so it's made
+	// off the loop: the file shows plain for a frame or two, and edits made meanwhile wait for it.
+	h.lang = lang.Name
+	snap := b.Snapshot()
+	h.cancel = b.Subscribe(func(ch text.Change) {
+		if h.doc != nil {
+			h.doc.Change(ch)
+		} else {
+			h.pending = append(h.pending, ch)
+		}
+	})
+	name := p.Name()
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		doc, err := syntax.NewDocument(lang, snap)
+		x.h.Do(func() {
+			if err != nil {
+				x.h.Log().Warn("syntax", "file", name, "err", err)
+				return
+			}
+			if h.closed {
+				doc.Close()
+				return
+			}
+			doc.OnUpdate = x.h.Redraw
+			for _, ch := range h.pending {
+				doc.Change(ch)
+			}
+			h.pending, h.doc = nil, doc
+			x.h.Redraw()
+		})
+	}()
 	return h
 }
 
@@ -897,9 +1008,13 @@ func (x *editorExt) openBuffer(path string) (vim.FileState, bool) {
 	return vim.FileState{}, false
 }
 
-// openFileBytes is an open buffer's text as it would be written, by its path relative to the work dir.
+// openFileBytes is an open buffer's text as it would be written, by its path: absolute, or relative to the work dir.
 func (x *editorExt) openFileBytes(rel string) ([]byte, bool) {
-	f, ok := x.openBuffer(filepath.Join(x.dir, rel))
+	path := rel
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(x.dir, rel)
+	}
+	f, ok := x.openBuffer(path)
 	if !ok {
 		return nil, false
 	}

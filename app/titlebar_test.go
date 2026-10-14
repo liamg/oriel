@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"image"
 	"image/draw"
 	"os"
@@ -11,11 +12,13 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
 )
 
 // The 01-ide sessions, and one of each other status.
@@ -99,20 +102,28 @@ func TestSessionKeysSwitchInOneFrame(t *testing.T) {
 	go func() { done <- Run(ctx, be, Config{Store: store, ConfigDir: t.TempDir(), WorkDir: t.TempDir()}) }()
 	win := <-be.Windows()
 	defer func() { win.Close(); <-done }()
-	if _, err := win.WaitFrame(ctx, func(f headless.Frame) bool { return strings.Contains(f.Text(), "review #4410") }); err != nil {
-		t.Fatal(err)
-	}
-	before := len(win.Frames())
-	win.Send(render.KeyEvent{Key: "3", Mods: render.ModSuper})
-	n := 0
-	f, err := win.WaitFrame(ctx, func(headless.Frame) bool { n++; return n > before })
+	first, err := win.WaitFrame(ctx, func(f headless.Frame) bool { return strings.Contains(f.Text(), "review #4410") })
 	if err != nil {
 		t.Fatal(err)
 	}
-	on, _ := glyphColour(&f.List, "review #4410")
-	off, _ := glyphColour(&f.List, "pricing-rounding")
-	if on == off {
-		t.Errorf("the first frame after ⌘3 still shows the old tab in front")
+	front, _ := glyphColour(&first.List, "pricing-rounding")
+	before := len(win.Frames())
+	win.Send(render.KeyEvent{Key: "3", Mods: render.ModSuper})
+	// A frame already being drawn when the key arrives can't show it; the one after it must.
+	n := 0
+	f, err := win.WaitFrame(ctx, func(f headless.Frame) bool {
+		n++
+		on, _ := glyphColour(&f.List, "review #4410")
+		return n > before && on == front
+	})
+	if err != nil {
+		t.Fatalf("no frame shows the third tab in front: %v", err)
+	}
+	if late := n - before; late > 2 {
+		t.Errorf("the third tab came to the front %d frames after ⌘3; the one after the frame in flight should show it", late)
+	}
+	if off, _ := glyphColour(&f.List, "pricing-rounding"); off == front {
+		t.Errorf("the first tab is still drawn in front")
 	}
 	if store.State().Focus != "s3" {
 		t.Errorf("focus = %s", store.State().Focus)
@@ -144,5 +155,37 @@ func TestSessionTabsAgainstTheMockup(t *testing.T) {
 	if d.Mean > 0.042 || d.Off > 0.125 {
 		os.WriteFile("testdata/session-tabs-mockup.failed.png", encodePNG(side), 0o644)
 		t.Errorf("the titlebar is %s off the mockup (testdata/session-tabs-mockup.failed.png)", d)
+	}
+}
+
+// More sessions than fit: the strip scrolls sideways, keeps the one in front in view, and leaves the title bar's
+// right side where it is.
+func TestSessionTabsOverflow(t *testing.T) {
+	s := newScene(t, "", "", render.Point{X: 900, Y: 120})
+	for i := range 12 {
+		id := core.SessionID(fmt.Sprintf("s%02d", i))
+		if err := s.store.Apply(core.SessionOpened{ID: id, Name: fmt.Sprintf("job: sweep stale deps %d", i), Kind: core.KindJob, Status: core.StatusQuiet}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.store.Apply(core.SessionFocused{ID: "s11"})
+	s.reg.View(TitleRight+".99-probe", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("RIGHT-SIDE") }))
+	s.frame()
+	s.frame()
+	s.frame()
+	var last, right render.Op
+	for _, op := range s.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "job: sweep stale deps 11" {
+			last = op
+		}
+		if op.Kind == render.OpGlyphs && op.Run.Text == "RIGHT-SIDE" {
+			right = op
+		}
+	}
+	if right.Run == nil || right.At.X+right.Run.Advance > s.size.X {
+		t.Fatalf("the title bar's right side is pushed off: %+v", right.At)
+	}
+	if last.Run == nil || last.At.X+last.Run.Advance > right.At.X {
+		t.Errorf("the session in front isn't in view: at %v, the right side at %v", last.At, right.At)
 	}
 }

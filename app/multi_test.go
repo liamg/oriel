@@ -14,7 +14,7 @@ import (
 func TestMultiCursorInTheEditor(t *testing.T) {
 	s, root := searchScene(t)
 	s.run("editor.open", registry.Args{"path": root + "/internal/pricing/round.go"})
-	s.frame()
+	s.waitHighlights()
 	s.keys("3G6|")
 	for range 2 {
 		s.keyCommand(t, "<C-n>")

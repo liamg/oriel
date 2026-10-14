@@ -15,7 +15,7 @@ expect: x|y bar
 mode:   normal
 regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 marks:  a=1:0 'b=(unset)
-jumps:  1:0 2:3
+jumps:  1:0 2:3@4
 msg:    "E21: x"
 win:    2/3
 bufs:   1#  2%   4
@@ -64,7 +64,7 @@ func TestParse(t *testing.T) {
 	if posString(c.Marks['a']) != "1:0" || c.Marks['b'] != nil || len(c.Marks) != 2 {
 		t.Errorf("marks: %v", c.Marks)
 	}
-	if len(c.Jumps) != 2 || c.Jumps[1] != (Pos{1, 3}) {
+	if len(c.Jumps) != 2 || c.Jumps[1] != (Jump{Pos{1, 3}, 4}) {
 		t.Errorf("jumps: %v", c.Jumps)
 	}
 	if c.Msg == nil || *c.Msg != "E21: x" {
@@ -168,7 +168,7 @@ func TestDiff(t *testing.T) {
 		Buffer: c.Expect, Mode: ModeNormal,
 		Regs:  map[rune]*string{'"': &foo, '1': nil, '-': &foo},
 		Marks: map[rune]*Pos{'a': {0, 0}},
-		Jumps: []Pos{{0, 0}, {1, 3}},
+		Jumps: []Jump{{Pos{0, 0}, 0}, {Pos{1, 3}, 4}},
 		Msg:   "E21: x",
 		Win:   Win{2, 3},
 		Bufs:  "1# 2% 4",

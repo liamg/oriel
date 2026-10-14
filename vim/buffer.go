@@ -17,20 +17,59 @@ func (e *Engine) SetModified(on bool) {
 	}
 }
 
+// BufferNum is the current buffer's number, as bufnr().
+func (e *Engine) BufferNum() int { return e.buffer.num }
+
 // emptyBuffer makes a new buffer with no text and no name.
 func (e *Engine) emptyBuffer() *buffer { return e.newBuffer(text.New(nil, text.Author{})) }
 
-// switchBuffer shows b in the current window, remembering where the cursor was in the buffer it leaves.
-// Without 'hidden', a changed buffer isn't left unless force is set, which unloads it.
+// switchBuffer is :buffer: a jump to b, shown in the current window.
 func (e *Engine) switchBuffer(b *buffer, force bool) error {
+	return e.gotoBuffer(b, force, false)
+}
+
+// editBuffer is :edit: a jump to b, whose previous context mark then starts at the first line.
+func (e *Engine) editBuffer(b *buffer, force bool) error {
+	return e.gotoBuffer(b, force, true)
+}
+
+func (e *Engine) gotoBuffer(b *buffer, force, edit bool) error {
 	if b == e.buffer {
 		return nil
 	}
+	if err := e.canLeave(force); err != nil {
+		return err
+	}
+	e.setPcmark()
+	if err := e.showBuffer(b, force); err != nil {
+		return err
+	}
+	if edit {
+		e.resetPcmark()
+	}
+	return nil
+}
+
+// canLeave reports why the current buffer can't be abandoned: without 'hidden', a changed buffer
+// isn't left unless force is set.
+func (e *Engine) canLeave(force bool) error {
+	if !force && !e.opts.Hidden && e.buffer.modified && !e.shownElsewhere(e.buffer) {
+		return errUnsaved.with()
+	}
+	return nil
+}
+
+// showBuffer shows b in the current window, remembering where the cursor was in the buffer it leaves.
+// Without 'hidden', a changed buffer isn't left unless force is set, which unloads it.
+func (e *Engine) showBuffer(b *buffer, force bool) error {
+	if b == e.buffer {
+		return nil
+	}
+	if err := e.canLeave(force); err != nil {
+		return err
+	}
 	old := e.buffer
 	if !e.opts.Hidden && old.modified && !e.shownElsewhere(old) {
-		if !force {
-			return errUnsaved.with()
-		}
 		defer e.unload(old)
 	}
 	old.last = e.cur
@@ -38,6 +77,7 @@ func (e *Engine) switchBuffer(b *buffer, force bool) error {
 	e.window.ed = e.ed.Open(b.text)
 	e.window.buf = b
 	e.buffer = b
+	b.unloaded = false
 	e.cur = b.last
 	v := e.view()
 	e.clamp(v)
@@ -58,6 +98,7 @@ func (e *Engine) shownElsewhere(b *buffer) bool {
 func (e *Engine) unload(b *buffer) {
 	e.setText(b, text.New(nil, text.Author{}))
 	b.file = nil
+	b.unloaded = true
 }
 
 // setText gives b new text, with no history: its marks and undo state start again.
@@ -108,7 +149,7 @@ func (e *Engine) alternate(count int) {
 		return
 	}
 	b.unlisted = false
-	if err := e.switchBuffer(b, false); err != nil {
+	if err := e.editBuffer(b, false); err != nil {
 		e.fail(err)
 	}
 }
@@ -147,7 +188,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 		if !e.opts.Hidden && b.modified && !bang && !e.shownElsewhere(b) {
 			return errUnsaved.with()
 		}
-		return e.switchBuffer(e.emptyBuffer(), bang)
+		return e.editBuffer(e.emptyBuffer(), bang)
 	case "bnext":
 		return step(count)
 	case "bprevious", "bNext":
@@ -204,7 +245,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 			if e.window.alt.name == "" {
 				return errNoFileName.with()
 			}
-			return e.switchBuffer(e.window.alt, bang)
+			return e.editBuffer(e.window.alt, bang)
 		case "":
 			if bang {
 				return e.reload()
@@ -215,7 +256,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 		if err != nil {
 			return err
 		}
-		return e.switchBuffer(b, bang)
+		return e.editBuffer(b, bang)
 	case "ls", "buffers", "files":
 		for _, b := range listed {
 			flags := " h"

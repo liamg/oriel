@@ -22,6 +22,7 @@ var (
 	tPaneBg     = theme.Declare("pane.bg", "bg.base")
 	tDockBg     = theme.Declare("dock.bg", "bg.surface")
 	tDivider    = theme.Declare("pane.divider", "line")
+	tEdgeHot    = theme.Declare("pane.edge.hot", "accent")
 	tDrop       = theme.DeclareOn("drop.target.bg", "alpha(accent, 12%)", "bg.base")
 	tDropEdge   = theme.Declare("drop.target.edge", "accent")
 	tFloatEdge  = theme.Declare("float.border", "line.strong")
@@ -61,8 +62,18 @@ type viewState struct {
 	leaves map[*Node]ui.ID // this frame's leaves, for drop targets and ⌃W h/j/k/l
 	docks  map[Edge]ui.ID
 	resize *resize
+	edge   *dockResize
 	title  func(ViewRef) string
 	mark   func(ViewRef) (string, render.Color)
+	lead   func(ViewRef) (render.Color, bool)
+	tip    func(ViewRef) string
+}
+
+// dockResize is a dock's edge being dragged.
+type dockResize struct {
+	e     Edge
+	from  render.Point
+	size0 float32
 }
 
 type resize struct {
@@ -80,10 +91,10 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 	id := c.Next(key)
 	st := ui.State[viewState](c, id)
 	st.leaves, st.docks = map[*Node]ui.ID{}, map[Edge]ui.ID{}
-	st.title, st.mark = nil, nil
+	st.title, st.mark, st.lead, st.tip = nil, nil, nil, nil
 	if panes != nil {
 		panes.leaves = st.leaves
-		st.title, st.mark = panes.Title, panes.Mark
+		st.title, st.mark, st.lead, st.tip = panes.Title, panes.Mark, panes.Lead, panes.Tip
 	}
 	changed := false
 	th := c.Theme()
@@ -114,14 +125,14 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 		for i, f := range r.Floats {
 			c.Column(fk{i}, ui.Style{W: ui.Px(f.Rect.Dx()), H: ui.Px(f.Rect.Dy()), Z: ui.LayerPane + i, Fill: th.C(tDockBg), Stroke: th.C(tFloatEdge),
 				Border: 1, Radius: 8, Clip: true, Float: &ui.Float{Point: &f.Rect.Min}, Role: ui.RoleRegion, Label: "Floating pane"}, func(c *ui.Ctx) {
-				changed = leaf(c, r, st, f.Leaf, content) || changed
+				changed = leaf(c, r, st, f.Leaf, content, false) || changed
 			})
 		}
 		if r.DropDown.Open && len(r.DropDown.Leaf.Tabs) > 0 {
 			size := c.Size()
 			c.Column("dropdown", ui.Style{W: ui.Px(size.X), H: ui.Px(r.DropDown.Size), Z: ui.LayerPane + 50, Fill: th.C(tDropDownBg),
 				Stroke: th.C(tFloatEdge), Border: 1, Float: &ui.Float{Point: &render.Point{}}, Role: ui.RoleRegion, Label: "Drop-down"}, func(c *ui.Ctx) {
-				changed = leaf(c, r, st, r.DropDown.Leaf, content) || changed
+				changed = leaf(c, r, st, r.DropDown.Leaf, content, false) || changed
 			})
 		}
 		if st.drag != nil && st.drag.moving && st.drag.ok {
@@ -159,17 +170,78 @@ func dock(c *ui.Ctx, r *Root, st *viewState, e Edge, content Content) bool {
 			inner = ui.Style{W: ui.Flex(1), H: ui.Px(d.Size), Fade: 1 - p}
 		}
 		c.Column("content", inner, func(c *ui.Ctx) {
-			changed = leaf(c, r, st, d.Leaf, content)
+			changed = leaf(c, r, st, d.Leaf, content, true)
 		})
+	})
+	if p == 1 {
+		changed = dockEdge(c, st, e, d) || changed
+	}
+	return changed
+}
+
+// dockMin is the narrowest a dock is dragged to.
+const dockMin = 120
+
+// dockEdge is the grab area along a dock's inner edge, dragged to resize it, lit while it's under the pointer.
+func dockEdge(c *ui.Ctx, st *viewState, e Edge, d *Dock) bool {
+	r, ok := c.Rect(st.docks[e])
+	if !ok {
+		return false
+	}
+	const grab = 6
+	at, w, h, cur := render.Point{X: r.Max.X - grab/2, Y: r.Min.Y}, float32(grab), r.Dy(), render.CursorResizeCol
+	switch e {
+	case Right:
+		at.X = r.Min.X - grab/2
+	case Bottom:
+		at, w, h, cur = render.Point{X: r.Min.X, Y: r.Min.Y - grab/2}, r.Dx(), grab, render.CursorResizeRow
+	}
+	key := dockEdgeKey{e}
+	in := c.Interaction(c.Next(key))
+	changed := false
+	if in.Held {
+		if st.edge == nil || st.edge.e != e {
+			st.edge = &dockResize{e: e, from: in.Pointer, size0: d.Size}
+		}
+		delta := in.Pointer.X - st.edge.from.X
+		switch e {
+		case Right:
+			delta = -delta
+		case Bottom:
+			delta = st.edge.from.Y - in.Pointer.Y
+		}
+		limit := c.Size().X * 0.8
+		if e == Bottom {
+			limit = c.Size().Y * 0.8
+		}
+		if size := max(dockMin, min(limit, st.edge.size0+delta)); size != d.Size {
+			d.Size, changed = size, true
+		}
+	} else if st.edge != nil && st.edge.e == e {
+		st.edge = nil
+	}
+	line := render.Color{}
+	if in.Hovered || in.Held {
+		line = c.Theme().C(tEdgeHot)
+	}
+	c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Interactive: true, NoHover: true, Cursor: cur, Help: HelpSplitter,
+		Z: ui.LayerContent + 1, Float: &ui.Float{Point: &at}, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
+		if e == Bottom {
+			c.Box("line", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: line}, nil)
+		} else {
+			c.Box("line", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: line}, nil)
+		}
 	})
 	return changed
 }
+
+type dockEdgeKey struct{ e Edge }
 
 type dockKey struct{ e Edge }
 
 func node(c *ui.Ctx, r *Root, st *viewState, n *Node, content Content) bool {
 	if n.leaf() {
-		return leaf(c, r, st, n, content)
+		return leaf(c, r, st, n, content, false)
 	}
 	changed := false
 	box := c.Column
@@ -238,18 +310,28 @@ func splitter(c *ui.Ctx, st *viewState, n *Node, i int, s ui.Style) bool {
 	return changed
 }
 
-func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
+func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content, docked bool) bool {
 	changed := false
 	th := c.Theme()
 	focused := r.Focus != nil && l.Active < len(l.Tabs) && l.Tabs[l.Active] == *r.Focus
 	st.leaves[l] = c.Column(l, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: ui.RoleTabList}, func(c *ui.Ctx) {
+		// A dock showing one view heads it instead: there are no tabs to choose between.
+		head := docked && len(l.Tabs) == 1
+		role := ui.RoleTabList
+		if head {
+			role = ui.RoleNone
+		}
+		// More tabs than fit scroll sideways, the active one kept in view.
+		tabs := c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: role, ScrollX: !head}, func(c *ui.Ctx) {
 			for i, v := range l.Tabs {
-				if tab(c, r, st, l, i, v) {
+				if tab(c, r, st, l, i, v, head) {
 					changed = true
 				}
 			}
 		})
+		if !head && l.Active < len(l.Tabs) {
+			c.ScrollIntoView(tabs, ui.Child(tabs, l.Tabs[l.Active]))
+		}
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tDivider)}, nil)
 		if len(l.Tabs) > 0 {
 			v := l.Tabs[l.Active]
@@ -267,9 +349,13 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
 	return changed
 }
 
+// closeSide is a tab's ✕ button: big enough to see and to hit.
+const closeSide = 20
+
 // tab is one tab: a click activates it, dragging it past a few pixels starts a move, and its ✕, shown while the
-// pointer is on it, closes it.
-func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
+// pointer is on it, closes it. head draws it as its dock's header instead: the width of the dock, its project and
+// its title in capitals, the ✕ at the end.
+func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool) bool {
 	th := c.Theme()
 	id := c.Next(v)
 	in := c.Interaction(id)
@@ -315,7 +401,20 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 		}
 	}
 	if title == "" {
-		title = v.String()
+		title = ViewRef{ID: v.ID, Instance: v.Instance}.String()
+	}
+	name := title
+	if v.Project != "" {
+		title = v.Project + " · " + title
+	}
+	var lead render.Color
+	led := false
+	if st.lead != nil {
+		lead, led = st.lead(v)
+	}
+	tip := ""
+	if st.tip != nil {
+		tip = st.tip(v)
 	}
 	var mark string
 	var markTone render.Color
@@ -323,19 +422,44 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 		mark, markTone = st.mark(v)
 	}
 	closed := false
-	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on}, func(c *ui.Ctx) {
+	tabStyle := ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on,
+		Tooltip: tip}
+	if head {
+		tabStyle.W, tabStyle.Fill, tabStyle.Role, tabStyle.Selected = ui.Flex(1), render.Color{}, ui.RoleNone, false
+	}
+	c.Column(v, tabStyle, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
-		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
+		if head {
+			c.Row("label", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 14, R: 6}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+				if led {
+					c.Box("lead", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 1, Fill: lead}, nil)
+				}
+				if v.Project != "" {
+					c.Text("p", v.Project, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11.5, Weight: typeset.SemiBold}, Color: th.C(tTabFgOn)})
+				}
+				c.Text("t", strings.ToUpper(name), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold, Tracking: .12},
+					Color: th.C(tTabFg)})
+				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+				closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: closeSide})
+			})
+			return
+		}
+		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.Insets{L: 14, R: 6}, Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
+			if led {
+				c.Box("lead", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 1, Fill: lead}, nil)
+			}
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: fg})
 			if mark != "" {
 				c.Text("mark", mark, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold}, Color: markTone})
 			}
+			// The ✕ has its own room, so it never covers the title and the tab doesn't change width when it shows:
+			// always on the tab in front, under the pointer on the rest.
+			if (on || in.Inside) && st.drag == nil {
+				closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: closeSide})
+			} else {
+				c.Box("x", ui.Style{W: ui.Px(closeSide), H: ui.Px(closeSide)}, nil)
+			}
 		})
-		if in.Inside && st.drag == nil {
-			c.Box("close", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: .5}, Self: render.Point{X: 1, Y: .5}, Offset: render.Point{X: -1, Y: 1}}}, func(c *ui.Ctx) {
-				closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: 13})
-			})
-		}
 	})
 	if closed {
 		r.Close(v)
@@ -517,7 +641,11 @@ type Panes struct {
 	leaves map[*Node]ui.ID
 	Title  func(v ViewRef) string
 	// Mark, when set, is a small marker after a view's tab title, in its colour: a file's git status letter.
-	Mark  func(v ViewRef) (string, render.Color)
+	Mark func(v ViewRef) (string, render.Color)
+	// Lead, when set and ok, is the colour of a small square leading a view's tab: its project's.
+	Lead func(v ViewRef) (render.Color, bool)
+	// Tip, when set, is a tab's tooltip; "" for none.
+	Tip   func(v ViewRef) string
 	Empty func(c *ui.Ctx) // draws the main area while it holds no views, unless a pane is being dragged there
 }
 
@@ -546,8 +674,12 @@ func (p *Panes) RectsIn(c *ui.Ctx) map[*Node]render.Rect {
 var dockNames = map[Edge]string{Left: "Left dock", Right: "Right dock", Bottom: "Bottom dock"}
 
 func title(v ViewRef) string {
-	if v.Title != "" {
-		return v.Title
+	t := v.Title
+	if t == "" {
+		t = ViewRef{ID: v.ID, Instance: v.Instance}.String()
 	}
-	return v.String()
+	if v.Project != "" {
+		t = v.Project + " · " + t
+	}
+	return t
 }

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"image/color"
 	"strconv"
 	"strings"
@@ -44,6 +45,30 @@ var termFont = typeset.FontSpec{Family: typeset.Mono, Size: termFontSize}
 type terminalView struct{ x *terminals }
 
 func (v terminalView) EdgeToEdge() {}
+
+// termState is a terminal as the layout keeps it across restarts: what it ran; its screen is the terminals' own.
+type termState struct {
+	ID  string   `json:"id"`
+	Cmd []string `json:"cmd"`
+}
+
+func (v terminalView) Persist(instance string) (json.RawMessage, bool) {
+	t := v.x.get(instance)
+	if t == nil || !t.own {
+		return nil, false
+	}
+	b, _ := json.Marshal(termState{ID: instance, Cmd: t.cmd})
+	return b, true
+}
+
+// Revive starts the program again, under its screen from before.
+func (v terminalView) Revive(state json.RawMessage) (string, error) {
+	var s termState
+	if err := json.Unmarshal(state, &s); err != nil {
+		return "", err
+	}
+	return v.x.start(registry.Args{"cmd": s.Cmd, "instance": s.ID})
+}
 
 func (v terminalView) Title(instance string) string {
 	if t := v.x.get(instance); t != nil {
@@ -121,7 +146,7 @@ func (x *terminals) draw(c *ui.Ctx, t *terminal, focused bool) {
 		if cols != t.cols || rows != t.rows {
 			t.cols, t.rows = cols, rows
 			t.emu.Resize(cols, rows)
-			t.pty.Resize(cols, rows)
+			t.src.Resize(cols, rows)
 		}
 	}
 	if focused && !in.Focused {
@@ -414,13 +439,13 @@ func (x *terminals) key(c *ui.Ctx, t *terminal, k render.KeyEvent) {
 	}
 	if n == "<D-v>" || n == "<C-S-v>" {
 		if s, ok := c.Clipboard().ReadClipboard(); ok {
-			t.pty.Write(t.emu.Paste(s))
+			t.src.Write(t.emu.Paste(s))
 		}
 		return
 	}
 	if b := t.emu.EncodeKey(termKey(k)); len(b) > 0 {
 		t.emu.Scroll(term.Scroll{To: term.ScrollBottom})
-		t.pty.Write(b)
+		t.src.Write(b)
 	}
 }
 

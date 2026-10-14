@@ -17,7 +17,7 @@ They are design sketches, not the implementation: the app draws natively (see `s
   No 3D, no skeuomorphism, no motion that isn't telling you something.
 - **Type**: JetBrains Mono for code and readouts, Inter for UI and prose,
   Space Grotesk for display headings.
-- **Tats**: tiny live readouts (label, bar or value, sparkline) placed in fixed
+- **Indicators**: tiny live readouts (label, bar or value, sparkline) placed in fixed
   slots: titlebar right, statusline, session footer, mission-control strip.
   Hold `⌥` to pull the full HUD down over anything.
 - **Annotation house style** (explain, tours, `:Inspect`): numbered diamond,
@@ -74,10 +74,23 @@ They are design sketches, not the implementation: the app draws natively (see `s
 - Session tabs across the top, each with a status dot, kind and `⌘N`. The status reads at a glance.
 - Threads open **between the lines** they belong to, with the agent's live state in the header.
 - Agent-written lines carry a gutter mark and an "agent · 2m" ghost until you've read them.
-- Right: a **summary** of requests (threads), the task rail, and the session tally (context, cache, cost, review ledger, tests).
+- Right: a **summary** of requests (threads), the task rail, and the session stats (context, cache, cost, review ledger, tests).
   The full conversation view is 01b.
+- Built in AI-5/AI-9: the summary is the `requests.summary` view (`requests.summary` toggles it in the right dock):
+  the requests with their counts, the tasks rail (`Session.Tasks`: ✓ done, ◐ in progress, ○ to do, drawn, not
+  glyphs) and the session stats at its foot (CTX meter, CACHE, $, TASKS, the latest run's TESTS). The agent console's side has
+  the same tasks rail. The title bar's usage windows (`titlebar.right.40-usage`) are the plan of the session in front's
+  provider (`State.Usage`): `5H` and `WK` meters with their share; since AI-12 one button that opens Usage, with a
+  hover card (43). Not yet: REVIEWED (the ledger, RV-2), and opening
+  the summary by default with a session.
 - Bottom: the agent pane, terminal, problems, debug and tests. The orange tab dot means something's running.
-- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem tats.
+- Built in ED-15: a window can show its buffer through a presenter instead of as text (`editor.present`): a markdown
+  file's **Preview** button (it reads **Edit** while previewing; `:MarkdownPreview`) draws it as plan mode draws a doc,
+  its threads in a margin beside their blocks, a click or `c` commenting on a block's lines; `o` goes to a block's
+  source. The status line's mode reads the presenter's label (PREVIEW). Each window has its own: one window can preview
+  a file while another edits it, the preview following the edits. The window's top line follows the preview's scroll,
+  so Edit comes back where you were reading, and the presenter comes back after a restart.
+- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem indicators.
 
 ## 01b · Requests: the main conversation view
 
@@ -94,6 +107,34 @@ They are design sketches, not the implementation: the app draws natively (see `s
 - Right: what this request changed (with its own read/unread ledger), what it spawned (tasks, new requests), and related requests.
 - Keyboard: `j`/`k` between requests, `⏎` to the composer, `o` jumps to the anchor in the editor, `R` resolves.
 - Inline threads in the editor (01) and this view are two views of the same thread: reply in either.
+- Built in AI-5 (`app/requests*.go`, `app/threadsinline.go`): the `requests` view is the list (the rail's Requests,
+  `⌘⇧R`, left dock), with filter chips, search and **New request**; selecting one opens the `request` view (a main tab)
+  for the selected request: the anchored code read from the open buffer or the file, re-found by its text when the line
+  moved; each comment with its markdown (paragraphs, lists, headings, inline code and bold, fenced code: `widget.Rich`),
+  pasted images by name, the agent's model chip, its **activity** block (`Comment.Activity`: edits with their diff stat
+  and **view**, lookups, runs) and **evidence** chips (`Comment.Evidence`; a click runs `test.run.show`, TR-5), and an
+  unbacked claim flagged ⚠. The composer is one line for now (`widget.Input`, key mode `request.composer`): attachments
+  as chips, **@ FILE** and **# SYMBOL** open the files and symbols pickers (whose `⌃a` attaches), URGENT and BTW
+  toggle, `⏎` sends, `⌘⏎` sends urgent. Right: this request, what it changed (`Thread.Touched`), spawned (tasks whose
+  `Thread` it is, threads whose `Origin` it is) and related (the same file). Keys in mode `requests` (list and
+  conversation): `j`/`k`, `⏎` the composer, `o` the anchor, `R` resolve, `⌘N` new request. Commands: `request.comment`
+  (fires `CommentSend`, then `worker.Client.Comment`), `request.resolve`, `request.reopen`, `request.new {text, context,
+  file, line}` (the tests' "ask agent to fix"), `request.open {thread}`, `request.attach {items | text, title}` (the
+  pickers' `⌃a`, the terminal's "send last output"), `request.send`, `request.next`/`prev`/`compose`/`anchor`.
+- Threads between the editor's lines are a decoration provider (`threads`): each open thread anchored in the buffer's
+  file is a Block under its line (a buffer anchor keeps it with its text as you edit) with a sign in the gutter that
+  opens it, the agent's state in its header and a reply field. **Ask about this…** in the editor's right-click menu, or
+  `thread.new`, opens a composer under the cursor's line. A block's controls keep focus: the editor no longer takes
+  focus back from something inside its code column, and blocks are keyed by their place among the line's blocks.
+- Built in ED-15: a window shows or hides its file's threads (`threads.toggle`, `␣R`, or the **💬 n** button in the
+  breadcrumb, lit while they show; `editor.threads = "hidden"` opens files that way). Hidden, a line with threads has
+  a speech bubble in the gutter in its first thread's colour (with a count for several); hovering it shows a popover of
+  them (title, state, the last messages as markdown) that stays while the pointer moves into it and goes when it leaves
+  both, never taking focus or keys; a click, or `⏎` on the line, shows the threads again at that one, its reply field
+  focused. A presentation has the same bubbles beside its blocks. The toggle is `␣R` beside the picker's `␣r`, as `␣T`
+  is beside `␣t`, so `␣r` stays a key of its own.
+- Not yet: the multi-line composer, `@file`/`#symbol` completion as you type, image paste and dictation (the chips
+  aren't there), `g r` (vim's `gr`), the request's own read/unread ledger (RV-2), and turn cost per request.
 
 ## 01e · Start view: nothing open
 
@@ -106,7 +147,9 @@ What the window shows with no directory and no session open: at launch (plain `o
 - Two columns. **Start**: New Session (`⌘N`), Resume a Session (`⌘O`), Open Directory (`⌘⇧O`), Settings (`⌘,`), each
   with a description and the key bound now. **Recent**: sessions, then directories, newest first; with none, the big `o▌`.
 - Entries are a contribution point. An entry whose command isn't available is dimmed with a `soon` tag; New Session and
-  Resume a Session stay that way until sessions exist (AI-4, SE-1).
+  Resume a Session are, while no worker is connected.
+- Recent lists the sessions first (not archived, newest first: kind, projects, branch, a diamond in the status
+  colour), and opening one runs `session.open`. Until mission control (SH-7), this is what the app opens on.
 - `j`/`k` or arrows move, `⏎` runs, `⌫` (or the `✕` on a recent under the pointer) forgets a recent, until it's opened again. The same actions are commands, so they're in the omnibox too.
 - The pointer moving onto a row selects it, as `j`/`k` do.
 - It fits the window: the columns shrink to fit, and below 760 wide Start and Recent become tabs. Taller than the window, it
@@ -118,10 +161,13 @@ What the window shows with no directory and no session open: at launch (plain `o
 
 ## 01f · The rail
 
+Superseded by the project sidebar (01h, SH-17): the rail is the sidebar's narrow form. What follows still holds for it.
+
 The icon strip on the far left of 01: Explorer `⌘⇧E`, Search `⌘⇧F`, Git `⌘⇧G`, Requests `⌘⇧R`, Debug `⌘⇧D`, Tests `⌘⇧T`,
 with Settings pinned at the bottom.
 
-- A contribution point: icon, title, badge, and the command it runs. Plugins add entries the same way.
+- A contribution point: icon, title, badge, and the command it runs. Plugins add entries the same way, as a project's
+  panel or the session's (01h).
 - An entry whose command isn't available yet is dimmed. Clicking the active entry hides its dock.
 - An available entry lights under the pointer.
 
@@ -134,6 +180,84 @@ What an open directory or session shows with no buffer open: right after opening
 - One card per repo: name, path, branch and ahead/behind; then panels for languages, commit activity over the last
   year, and contributors (or largest files). A plain directory gets languages, size and largest files only.
 - Panels are contributions. The view shows at once; panels fill in from the background and are cached per repo by HEAD.
+
+## 01h · Project context: the project sidebar
+
+![42-project-sidebar](mockups/42-project-sidebar.png)
+
+**Decided: D, the project sidebar** (the user's choice). A session can hold several projects, but you work in one at a
+time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail (01f), and the multi-project notes in
+01c and `sessions.md` → In the editor.
+
+- **Sidebar.** One accordion per project, in the session's order. Under the open project sit its panels: Explorer,
+  Search, Git, Pull request, Tests. One project is open at a time. Clicking a header opens that project and folds the
+  one that was open.
+- **Headers show state.** Each header has the project's colour square, its name and `⌃n`, and under them its branch,
+  ahead/behind, changed files, PR number and a CI dot ("rate-limits · #790 ● CI failing"). Folded projects keep their
+  header, so a failing project is visible while you work in another.
+- **Switching.** `⌃1–9` open the nth project (`⌥1–3` stay Explorer scopes). In the focused sidebar, `j`/`k` move over
+  headers and entries and `⏎` opens a header or an entry.
+- **Panels belong to a project.** An entry opens that project's panel in the dock, and the dock header names both
+  ("admin-ui · Explorer"). Each project remembers the last panel it had open and reopens it when you switch back.
+  `⌘⇧E`, `⌘⇧F`, `⌘⇧G` and `⌘⇧T` open Explorer, Search, Git and Tests for the open project. Clicking the open entry
+  hides the dock.
+- **Search is per project.** It searches the open project. An **All projects** toggle in the panel widens it to the
+  session, with results grouped by project. `⌘⇧F` opens the open project's Search. `⌘K` (the omnibox) stays global.
+- **Session-wide entries,** below a divider: Requests (with its count, `⌘⇧R`), Ship. Below a second divider, the
+  pages every session shares (AI-12, 43): Stats, Usage, Jobs and Settings, each with a live figure. Past ~8 projects the
+  list scrolls and these stay pinned.
+- **Adding a project.** A `+` in the PROJECTS header (in the narrow form, under the project initials) opens a picker
+  of the worker's registered repos the session hasn't got, and the checkout path typed. Choosing one adds it to the
+  session (`session.add-repo`), and it opens. There's no `+` for a directory (a direct session), or while no worker is
+  connected.
+- **Wide and narrow.** `«`/`»` at the top switch forms, remembered per window. Wide is ~225px. Narrow is an icon
+  strip at the rail's width: each project is a two-letter initial in its colour with a status dot, the open project's
+  panel icons sit under it, and the session's entries follow. Hovering an initial shows its header line.
+- **One project, or a directory.** There is no project header. The sidebar is a labelled list under the project's
+  name or the directory's path, with the same entries. Pull request appears only with a remote. Ship appears whenever
+  any of the session's projects has a remote, one project included: then it's 18 with one column (that project's
+  checklist, "before this ships", the ticket and Push + raise PR). A plain directory without a remote has no Ship.
+- **One tab strip for the session.** Tabs aren't split by project: a proto file from api can sit beside code in
+  admin-ui.
+  - With 2+ projects, each editor tab leads with a small square in its project's colour (the header's colour), and
+    its tooltip names the project and path. With one project, tabs keep their file icon.
+  - The breadcrumb starts with the project's name: `api › proto › usage.proto`.
+  - Opening a file from another project doesn't change the sidebar's open project.
+- **Pull request** in the dock is a compact checklist: committed → up to date → pushed → PR → checks, with the PR's
+  title and the failing check's log line. **Raise PR** (or **Edit PR** once it exists) opens a full-width **main tab**,
+  `Raise PR · admin-ui`, in 18's style. It has the title, the body editor (template-filled, drafted by the agent),
+  reviewers, cross-linked PRs with their merge order, and on the right the "before this ships" gates and the ticket.
+  It closes like any tab.
+- **Ship** (session-wide) is 18's full page: every project's checklist side by side, cross-linked PRs, the merge
+  order, and "push + raise all".
+- Built in SH-17 (`app/rail.go`, `app/projects.go`): the sidebar is the `app.rail` view over the rail entries
+  (`registry.RailEntry` with a `Scope`, plugins.md), drawn with `widget.Rows` (rows of their own heights, `j`/`k`/`⏎`,
+  key mode `sidebar`). Explorer, Search, Git, Pull request and Tests are project entries; Requests, Debug, Ship and
+  Settings session entries; Pull request and Ship are dimmed until FG-6 registers the `pull-request` and `ship` views.
+  `⌃1–9` run `project.open {index}`; `⌘⇧E/F/G/T` run `project.panel {name}` for the open project; `⌘⇧R` and `⌘⇧D` stay
+  `view.toggle`. Opening a project closes the docked panels of the others and reopens its last panel
+  (`SessionState.ProjectUI`), or the one that was showing. A header's line is the branch, ahead/behind and changed files
+  from its own work tree, then what `ProjectState` contributions add (FG-6: the PR and CI). The form is the window's,
+  kept in its state file beside the layout (`sidebar-<hash>.json`); until it's set, the `sidebar.form` option decides,
+  `auto` being wide with 2+ projects and narrow otherwise (so a directory keeps the old rail's strip). Wide is 224px
+  with projects, 150px for one. Views carry their project (`layout.ViewRef.Project`), which their dock tab names
+  ("admin-ui · Explorer"). Search searches its project's directory, or with **All projects** each project's, grouped
+  under a heading per project. With 2+ projects tabs lead with their project's square (`layout.Panes.Lead`), their
+  tooltip names it (`Panes.Tip`), and the breadcrumb starts with it.
+- Not yet: the session entries pinned while the projects scroll (the whole sidebar scrolls), hovering an initial
+  shows its header line as a tooltip rather than 42's card, the Tests panel runs in the window's directory whatever
+  its project, and with one project or a directory the breadcrumb doesn't start with its name (42's panels 4 and 5 do).
+
+Superseded alternatives (41-project-context.png):
+
+![41-project-context](mockups/41-project-context.png)
+
+- **A · Switcher chip on the rail.** The rail picks the panel and a chip picks the project. Dropped because the
+  project becomes a hidden mode. D keeps A's model and puts the projects in view.
+- **B · Project sections in the dock.** One collapsible section per project, each with its own tabs. Dropped as the
+  biggest change, with no home for what spans projects.
+- **C · Project tabs above the panel.** A row of project tabs over whichever panel is open. Dropped because it costs a
+  row and scrolls with many projects.
 
 ## 01c · Explorer scopes: Changed · Uncommitted · All
 
@@ -153,7 +277,8 @@ What an open directory or session shows with no buffer open: right after opening
   - **threads**: the open-thread count, coloured by status. **diag**: error and warning counts.
   - Folders roll up (a dot plus the count of changed files beneath). Ignored files are dimmed; clean files show nothing.
   - `⌥C` toggles "changed only", which filters All down to Changed without leaving the tree.
-- Multi-project workspaces show each project as a root with its branch and ahead/behind.
+- Multi-project sessions: each project has its own Explorer, opened from the project sidebar (01h) with the project's
+  branch and ahead/behind on its root; there's no Explorer of every project at once.
 - The same markers appear on editor tabs and in the omnibox file results.
 - Built in FG-1: the `explorer` view (the rail's Explorer lights up), `explorer.scope {scope}` on `⌥1–3`,
   `explorer.changed-only` on `⌥C`, and in its own key mode `explorer` the keys `s` (stage, or unstage a staged file),
@@ -162,7 +287,8 @@ What an open directory or session shows with no buffer open: right after opening
   content, sections, items open by default) with `widget.DiffStat` and `widget.ToggleChip`. Changed opens a file
   with `diff.open` when something registers it (RV-1), the file until then. Tabs carry the letter through the
   `registry.Marked` view interface; the files picker ranks changed files up and notes their letter. Not yet: the
-  agent and threads columns (P5), the read bar and "by review" (the ledger, P6), and more than one project.
+  agent and threads columns (P5), and the read bar and "by review" (the ledger, P6). SH-17: the Explorer reads its
+  project from its view instance (`ViewCtx.Project`), each project's work tree read on its own (`gitExt.tree`).
 
 ## 01d · Layout: any pane, anywhere
 
@@ -172,7 +298,9 @@ One layout model for every view. The terminal isn't special, and neither are
 Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
 
 - **Five placements** for any view:
-  - **Docked**: bottom, left or right edges, each with its own tabs. `⌃J` toggles the bottom dock.
+  - **Docked**: bottom, left or right edges, each with its own tabs. `⌃J` toggles the bottom dock. A dock showing
+    one view heads it instead of a strip of one tab: its project, its title in capitals and a ✕; a second view
+    there brings the tabs back. The sidebar's panels open alone (`view.open {alone}`), so its dock is never a tab group.
   - **Split in main**: a window in the vim window tree, next to your code.
   - **Tab in main**: a full main view among your file tabs.
   - **Float**: a movable overlay window.
@@ -222,7 +350,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   | `␣s` / `␣S` | symbols in this file / workspace (LSP) |
   | `␣k` | **keymaps**: every mapping with its mode, description and source; `⏎` runs it, `⌃e` jumps to where it's defined |
   | `␣:` | commands |
-  | `␣t` | threads/requests |
+  | `␣r` | threads/requests |
   | `␣gl` / `␣gs` | git log / git status |
   | `␣h` | help (Oriel's docs and `:help`) |
   | `␣'` | resume the last picker exactly where you left it |
@@ -246,6 +374,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   here and in the open buffers, keymaps (`⌃e` to the definition), commands, sessions and quickfix (`:copen`).
   Ranking is the fuzzy score, then open buffers and shallower paths; "changed on this branch" and "recently
   opened" join with FG-1 and the session's history. Threads, git log and status, and help come with their tickets.
+- Threads came with AI-5: the `threads` source lists the session in front's requests (`␣r`), and `⏎` opens one.
+  `␣t` is the tests' group (`␣tt`, `␣tf`…, TR-1); rename is vim's `grn`.
 
 ## 02c · Which-key: the next keys, as you type
 
@@ -264,6 +394,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   keymap with no command names a group (`{Keys = "<leader>a", desc = "+agent"}`). `⌫` and `esc` act on a
   mapping's keys, not an engine's half-typed command (which `esc` cancels in the engine). `?` to the keymaps
   picker comes with Lua's keymap API (PL-1). `whichkey.enabled` turns it off.
+- Keys that are a mapping of their own as well as the start of longer ones (a plugin's `␣x` beside its `␣xx`) wait while which-key
+  shows them; it lists `⏎` with that mapping's description, and `⏎` runs it (`Resolver.Complete`/`Accept`,
+  `ext.Pending.Runs`), unless a mapping goes on with `⏎`.
 
 ## 03 · Mission control (`⌘⇧K`)
 
@@ -285,6 +418,17 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Mode: Plan · Work · Review PR · Tour · Job · **New repo** (`sessions.md`). Provider: Claude or Codex, with model, effort and remaining usage.
 - Repos on one shared branch, a worker, sandbox and network policy.
 - Pre-flight: what will be fetched and built, and which LSPs will start.
+- As built (AI-4): `⌘N` or `session.new` (whose args fill it in: kind, prompt, ticket, pr, dir, repos, provider,
+  worker) opens it over a scrim; `⌘↵` or **Start** runs `session.start`, `esc`, the close button or a click outside
+  closes it. The modes are the worker's kinds (`widget.Choices`), so Direct and Scratch are there too, and a plugin's
+  kind joins them. A mode asks for what its kind starts from: a PR URL, a new repo's name, template and parent, or a
+  directory. The right column is recent prompts (choosing one fills it in again) and the pre-flight: when worktrees
+  are made, repos to fetch (and to clone), the agent and its prompt pack, where it runs and its network. The Sandbox
+  toggle starts from `sandbox.default`, on unless it says `host`. A repo the chosen worker lacks says "not on
+  <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). **Save as job** (SE-4) hands the
+  prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. The prompt takes several
+  lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Not yet: a ticket expanding into a card (PL-8),
+  templates, toolchains and LSPs in the pre-flight.
 
 ## 05 · Plan mode
 
@@ -293,6 +437,27 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Plan docs render as documents, with threads in the margin anchored to lines.
 - The agent's live edits show as an inline diff block ("agent edited 4s ago").
 - **Readiness**: Start work unlocks when every thread is resolved or deferred.
+- As built (AI-8): the `plan` view (main area) and `plan.docs` (docked left) open by themselves when the window is on
+  a session that's planning, and with `plan.open {doc}`. Since ED-15 the doc is the built-in `markdown` presenter's
+  drawing (`registry.BufferPresenter`), and its margin, line numbers, edges and the agent's edit come from the
+  presentation host every presenter gets, from the threads' and the agent edits' decorations. The docs are the `*.md`
+  files at the workspace root, PLAN.md
+  first, each with its threads that need you, are worked on or are open; below them the ticket and prompt, the repos
+  and their branch, and readiness (open threads, a bar, and what unlocks Start work). The doc is drawn from the shared
+  markdown renderer's blocks (`mdParse`, which keeps each block's source lines), with a line number and a coloured edge
+  where a thread is; a click, or `j`/`k` then `c`/`⏎`, opens a thread on a block's lines. Threads sit in the margin
+  level with their block (or under the card before), as the same card that sits between the editor's lines, with
+  **defer** while planning; a closed one folds to a line with **reopen**. The agent's latest edit to the doc shows for
+  ten minutes as green blocks labelled "agent edited 4s ago", a one-line change as its old words struck through
+  (`widget.Span.Strike`) and its new ones. The header has the doc's title, the agent and "drafting rev N" (its edits to
+  the doc), "agent editing PLAN.md" during a turn that edits a doc, **Preview diff** (lit when something registers
+  `diff.open`) and **Start work**, which opens the Start work dialog (`plan.start-work`, a `widget.Scrim` on the
+  dialog layer): clear the plan's threads (resolved go, open and deferred carried into the prompt), restart the
+  agent with a fresh context on the work pack, a branch per project, the sandbox and network toggles and the model and
+  effort menus shared with the launcher (`sandboxToggles`, `modelSelects`), and **Start work** (⌘↵) and Cancel (Esc),
+  which run `session.start-work` with them (sessions.md, Plan → Start work). The status line's mode chip says PLAN
+  while the doc has focus. Not yet: a mermaid fence is drawn as code, not a diagram; the inline diff is word-level for one-line blocks
+  only.
 
 ## 06 · Review, and the review ledger
 
@@ -375,6 +540,18 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   requests, network and gateway approvals, security-key touch.
 - Tabs carry badge counts. The Inbox panel shows the full history.
 - Approvals show the review state ("0 unreviewed lines ✓") right where you approve a push.
+- Built in AI-7 (the UI half): each `core.Ask` is a `widget.ActionCard` (a general card: kicker, title, code box,
+  detail, body, actions with their keys, a note; its actions wrap to the card's width), drawn by `app/askcards.go`.
+  Cards stack at the window's bottom right (`app.overlay.asks`, up to four, then "+N more waiting") for every session,
+  with its name as the kicker; the session in front's move into its console while that shows. Permission: Allow once
+  `y`, Always in this workspace `a` (the rule it makes at the right), Deny `n`, Deny with note… `⇧n` (an input; the
+  note goes to the agent). Network: Allow host, Allow \*.domain (as `scope`), Once, Deny. Gateway: Allow, Always (when
+  it has a rule), Deny. Question: options as buttons (one click answers a single question; several, or multi-select,
+  are picked then answered), and a typed answer. Login (AI-13): "Claude on devbox needs you to log in", Log in `l` on
+  this machine (`agent.login`: the agent's terminal with `/login` typed) or what to run on the worker, and Check again
+  `c` (`decision: recheck`). All answer through `ask.answer {id, ask, decision, note, scope,
+  answers}`; `ask.deny-note` opens the note. Session tabs count their asks. Not yet: the Inbox panel and its history
+  (SH-9, P7), the countdown ring, review requests and the security-key card.
 
 ## 13 · Verify & raise
 
@@ -397,6 +574,19 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Structured transcript: tool calls as blocks, edits as mini-diffs, shell output folded.
 - Subagents box, permission card (and the rule "Always" would create), network approval.
 - Composer with `@file`, model and effort chips, queued messages.
+- Built in AI-6: the `agent.console` view (bottom dock by default, any placement; `⌘⇧A`, command `agent.console`,
+  and a rail entry `❯` while a worker is connected, badged with the asks waiting). Header: provider, model, effort, a
+  status chip, ticket · session · branch, Fork (a btw side question to a tool-less fork; its answer shows as a block),
+  Interrupt (`session.interrupt`), Raw terminal (the agent's PTY from its worker, through `term.open {source}`).
+  Transcript from `SessionState.Transcript`, with the busy thread's anchor and your comment pinned above it: prose as
+  markdown, prompts (long ones folded), thinking dimmed and folded, tool calls with a status dot, title and summary
+  (lines, hits, duration), edits as mini-diffs with "view in diff" (`diff.open`, else the file), shell output folded,
+  errors red, the SUBAGENTS box, and asks' cards where they arose. Keys in mode `agent`: `j`/`k` between blocks, `⏎`
+  folds, `i` the composer, `y`/`a`/`n`/`⇧n` answer the selected or first ask, `Esc` interrupts (closes when idle).
+  Composer (mode `composer`): `⏎` sends with `agent.send` (queued as QUEUED while the agent works), `⌘⏎` sends now
+  (urgent). Right: session stats from `AgentState.Stats` (its cost opens the session stats tab, 43), plan usage from `State.Usage` (this provider first), this turn's
+  touched files, rules in force (the gate, the sandbox's, and `SessionState.Rules`). Not yet: `@file` completion (an
+  `@path` goes to the agent as written), a multi-line composer, and the model/effort chips as pickers.
 
 ## 16 · Plugins
 
@@ -449,3 +639,103 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 ![38-crash](mockups/38-crash.png)
 
 - After a crash, the next launch shows the report with **Copy report** and a link to a new GitHub issue. Nothing is sent.
+
+## 43 · Stats and Usage
+
+![43-stats](mockups/43-stats.png)
+
+Built in AI-12 (`app/stats*.go`, `app/usage.go`, `worker/stats`). Every cost is **est.**: tokens × the price table
+(`agent/price`). Repos, not working directories, are the unit; a repo keeps its project colour from the session in
+front (42), and the other repos take the palette's colours it leaves, by name.
+
+- **Session stats** is a main tab (`stats.session {id}`, view `stats.session`, its instance the session; `:Stats
+  session`, or the session stats box's cost, in the agent console and the summary, whose hover card says so): the
+  tiles (cost and per active hour, tokens and cache hit, requests per turn, turns and subagents, tool calls and errors,
+  active of span, peak context of the window and compactions); cost (or tokens, `$ COST`/`TOKENS`) over the session per
+  five minutes by token kind, with idle stretches of 20 minutes or more hatched, compactions marked and a strip of
+  turns; cost per repo with **count whole session in each**; models; tools (calls, errors, a strip of timings
+  `.1s 1s 10s 1m 1m+`, p50); hours of the day; effort. The header names its account (a session runs on one). A long session's steps widen to keep 150 at most.
+- **Stats** (`:Stats`, `⌘⇧S`, `stats.open {group, range, repo, worker, provider, session, kind, model}`) is a page over
+  the main area beside the sidebar (`widget.Page` with `Over`), key mode `stats`: 7/30/90 days or custom (AI-14:
+  CUSTOM, `c` or `stats.custom` opens a `widget.DatePicker` under the range, which opens on the range shown; once
+  custom, a ▾ beside it opens it again; `:Stats 2026-09-01..2026-09-30` and `stats.custom {range}` set one); group by
+  repo (default), session, kind, model, provider, account or day (`g` then `r s k m p a d`); filter chips (repo, worker,
+  provider, account with menus, all accounts by default since cost adds up; session, kind, model through **+ filter**; `✕` takes one off); the split toggle; tiles
+  against the period before; cost per group per day stacked (the top 6, the rest as other); the group table with
+  share bars, last active and a 30-day sparkline (grouped by session: its repos and days, chart and table side by
+  side, "N more", "n of m span several repos"); tokens by kind, models, tools by error rate (≥ 100 calls; only the
+  calls made in the range, AI-14), hours. The Active tile reads "of Nh": the wall-clock of the range's sessions, on
+  each day a session worked its first record to its last, added up (a session's nights aren't in it, so it never
+  passes 24h per session-day).
+  Hovering a row or a bar picks its series out; `j`/`k`, `⏎` or a click drills in (the row's filter chip, regrouped:
+  repo → session → model; a day becomes the range), `⌫` backs out, `[`/`]` step the range, **Copy as CSV**. The
+  header says when it was scanned and names an offline worker whose last answer it shows.
+- **Plan usage is per account** (the user's decision after 43): a plan belongs to an account (provider and login:
+  Claude's account and organisation, Codex's email), not to a provider or a worker. A work laptop on a company Claude
+  subscription and a personal one on Claude Max are separate limits and are never added up; two workers on one account
+  are one plan (`State.Usage` keys by provider and account, `ProviderUsage.Workers` the workers reporting it). Accounts
+  are named in `usage.accounts`, else shown by email or organisation.
+- **Usage** (`:Usage`, `⌘⇧U`, `usage.open`, key mode `usage`, `r` or **Refresh** runs `usage.refresh`): an
+  **account switcher** at the top ("Work · Claude Max · mbp-work", "ada@example.com · ChatGPT Pro · mbp"; no "all"),
+  each with its plan's tier as a badge, starting on the session in front's account, else the local worker's; the
+  account's header names its plan with the tier as a chip after it ("Claude Max MAX 20×"; AI-14,
+  `ProviderUsage.Tier`), and an account whose tier isn't known shows none; then that account's windows, each as a card (share used, when it opened, the reset, a meter hatched on to where the burn takes it, the burn
+  over the last 30 minutes for a 5-hour window or 24 hours for a weekly one, and the verdict: "≈ 71% at the reset ·
+  won't run out", tight past 90%, or "at this rate the weekly window runs out Thu 14:38 · 18h 21m before the reset" in
+  red); the account's week hour by hour (the 5-hour window's peak per window as bars, the weekly ones as lines dashed on at
+  their burn, the opening and "full" marked, 5-hour resets as ticks); and what burned a window by repo (sessions,
+  points, est. cost; outside Oriel as its own row), all of them the account's own. Points: each rise between two readings goes to the repos by
+  their tokens in the hours it happened; a rise with no Oriel tokens behind it is outside Oriel.
+- **Entry points.** The sidebar's global group (Stats with today's cost, Usage with the weekly window, Jobs with its
+  runs going (SE-4), Settings), below a second divider, at the foot in the narrow form, the figure in the tooltip there; the
+  title bar's indicators as one button opening Usage, showing the account the session in front runs on (the
+  local worker's with no session), with a hover card of every account's windows, resets, burn and
+  a red line for one that runs out; the session stats cost; the start view's links (Stats with this week's cost,
+  Usage); the omnibox's **Pages** (every global sidebar entry, with its figure and key).
+- A session's history stays with the account it ran on at the time (AI-14): a later login on its worker moves only
+  what comes after, in Stats' account group and filter and in Usage's "what burned the window".
+
+
+## 44 · Jobs
+
+![44-jobs](mockups/44-jobs.png)
+
+Built in SE-4 (`worker/jobs.go`, `app/jobs.go`, `app/jobspage.go`, `app/jobform.go`). A job is a saved prompt with
+pins; each run is a session of kind job (`sessions.md` → Jobs).
+
+- **The Jobs page** (`:Jobs {job}`, `⌘⇧J`, `jobs.open {job}`, the sidebar's Jobs with "1 running", the start view's
+  link with the job count, the omnibox's Pages) is a page over the main area (`widget.Page` with `Over`), key mode
+  `jobs`. The header counts jobs, runs going and runs, and names the workers; **+ New job** (`n`), **Stats**
+  (`kind=job`: `stats.open {kind = "job"}`) and **Close** (`esc`).
+- **The list** (`widget.Rows`, `j`/`k`): every connected worker's jobs, the one that ran last first and the never-run
+  ones last, each with its last run's status chip and when ("started 4m ago", "today 07:14", "Oct 11 · 3d ago",
+  "never run · saved Oct 12"), its pin (sandbox, host or default) and its schedule; a filter over title and prompt;
+  the foot says where they live.
+- **The selected job**: its title and slug, **Edit** (`e`), **Duplicate**, **Delete** (asks "Sure?" once; its runs
+  stay), **▶ Run** (`⌘↵`); a meta line (pin, agent, worker, runs by status, total cost, average time of the done ones);
+  the prompt (`JOB.md for each run`) with the worker's registered repos it names picked out in their colours
+  (`widget.Span.Tone`) and listed at the card's right; the schedule as a strip (MANUAL, EVERY WEEKDAY 07:00, WEEKLY MON
+  07:00, CUSTOM… which opens the dialog) that saves at once; the runs card.
+- **Runs**: newest first, filtered ALL, RUNNING, DONE, BLOCKED, STOPPED; status chips in `jobs.run.running` (the
+  working colour), `jobs.run.done`, `jobs.run.blocked` and `jobs.run.stopped`; started, repos in their colours, the
+  agent's summary (its progress note while it runs; "Stopped after 3m"), cost est. over a strip of its split by repo
+  (a click opens its session stats, the pointer shows the split), how long it took; **Open** (agent live) or
+  **Resume** (`session.open`, which resumes), **Delete** (`session.delete`, asks once, not while it runs). Past six,
+  "N more · since Aug 26 · 5 done, 1 blocked · $13.60". `⏎` or a click on a row opens it.
+- **New job** (`jobs.new`, `n`; Edit and Duplicate open it on a job): title (the prompt's first line when empty),
+  prompt, runs in (Sandbox, Host, Default), worker, agent (the worker's providers as `widget.Choices`, model and
+  effort), schedule (manual, weekdays, weekly on a day, custom days by `widget.MultiSelect`, at a time checked as
+  HH:MM), the file it'll be; **Cancel**, **Save**, **Save and run** (`⌘↵`). It goes through `jobs.save`.
+- **A run's console** (panel 3) has the job beside it: a `agent.console.side.10-job` section with the job and **Jobs ›**,
+  the run's status, start and time, the last run's outcome; the repos touched with their cost so far and the ones the
+  prompt names but the agent hasn't added ("not yet"); and what happens when it ends.
+- **SE-5:** the page is one of the pages that replace each other (`widget.Page`: Jobs, Stats, Usage, Settings, one
+  up at a time). The dialog's prompt takes several lines (⏎ a new line, ⌘↵ saves and runs). A click on a run row
+  selects it (`widget.Rows` with `ClickSelects`); **Open** or **Resume** opens it, as `⏎` does: `session.open` with
+  `then` (sessions.md) opens the console as the main tab and makes the sidebar narrow (`sidebar.form`, kept for that
+  run's directory), panel 3. Run tabs read "job: sweep stale deps" (`SessionSpec.Title`, the job's first three words).
+  A stopped run says who stopped it: "Stopped by you after 3m", "by the agent", "as the worker shut down"
+  (`AgentState.StoppedBy`). A scheduled run that was skipped is a row of its own, status `skipped` (`jobs.run.skipped`,
+  dimmed, nothing to open): "skipped (last run still going)". The dialog's worker can be changed on a saved job:
+  Save moves it there (`jobs.save {to}`: saved on the new worker, then deleted from the old; its runs stay where they
+  ran).

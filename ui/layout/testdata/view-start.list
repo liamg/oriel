@@ -3,8 +3,8 @@ rect 0,0 1200x800 fill #060606
 rect 0,0 250x800 fill #0c0c0b
 clip 0,0 250x800 r 0
   rect 0,0 250x30 fill #0c0c0b
-  rect 0,0 75.03125x30 fill #121210
-  text "explorer" @14,20.365234 #ece6d8 Inter 12
+  text "EXPLORER" @14,19.599998 #7c7566 JetBrains Mono 10
+  text "✕" @230.70312,19.96 #7c7566 JetBrains Mono 11
   rect 0,30 250x1 fill #24221d
   clip 0,31 250x769 r 0
     text "explorer" @0,42.625 #ece6d8 Inter 12
@@ -12,10 +12,13 @@ clip 0,0 250x800 r 0
 pop
 clip 250,0 950x600 r 0
   rect 250,0 950x30 fill #0c0c0b
-  rect 250,0 119.75x30 fill #121210
-  rect 250,0 119.75x2 fill #ffd23f
-  text "editor#round.go" @264,20.365234 #ece6d8 Inter 12
-  text "editor#round_test.go" @383.75,20.365234 #7c7566 Inter 12
+  clip 250,0 950x30 r 0
+    rect 250,0 138.75x30 fill #121210
+    rect 250,0 138.75x2 fill #ffd23f
+    text "editor#round.go" @264,20.365234 #ece6d8 Inter 12
+    text "✕" @369.45312,19.96 #7c7566 JetBrains Mono 11
+    text "editor#round_test.go" @402.75,20.365234 #7c7566 Inter 12
+  pop
   rect 250,30 950x1 fill #24221d
   clip 250,31 950x569 r 0
     text "editor#round.go" @250,42.625 #ece6d8 Inter 12
@@ -24,9 +27,12 @@ pop
 rect 250,600 950x200 fill #0c0c0b
 clip 250,600 950x200 r 0
   rect 250,600 950x30 fill #0c0c0b
-  text "problems" @264,620.36523 #7c7566 Inter 12
-  rect 331.15625,600 86.0625x30 fill #121210
-  text "terminal#1" @345.15625,620.36523 #ece6d8 Inter 12
+  clip 250,600 950x30 r 0
+    text "problems" @264,620.36523 #7c7566 Inter 12
+    rect 350.15625,600 105.0625x30 fill #121210
+    text "terminal#1" @364.15625,620.36523 #ece6d8 Inter 12
+    text "✕" @435.92188,619.95996 #7c7566 JetBrains Mono 11
+  pop
   rect 250,630 950x1 fill #24221d
   clip 250,631 950x169 r 0
     text "terminal#1" @250,642.625 #ece6d8 Inter 12

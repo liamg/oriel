@@ -8,7 +8,7 @@ rather than pretending.
 
 | Capability | Lets a plugin… | Risk | Shown at install |
 |---|---|---|---|
-| `ui` | add panels, tats, decorations, pickers, commands, keymaps | low | no: always allowed |
+| `ui` | add panels, indicators, decorations, pickers, commands, keymaps | low | no: always allowed |
 | `theme` | provide themes, fonts, icons | low | no: always allowed |
 | `editor.read` | read open buffers and the worktree files the session can see | medium — your code | yes |
 | `editor.write` | edit buffers (authored as `plugin:<id>`, visible in blame and the review ledger) | medium | yes |

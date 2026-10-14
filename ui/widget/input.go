@@ -21,6 +21,11 @@ type InputOpts struct {
 	Invalid     bool              // the text isn't valid yet: an error border
 	// SelectOnFocus selects all the text each time the input gets focus, so typing replaces it: a rename's name.
 	SelectOnFocus bool
+	KeyMode       string // its keymap mode, for keys of its own (a composer's ⌘⏎); "input" by default
+	// Lines makes it a multi-line field showing up to this many lines: its text wraps, it grows with it and then
+	// scrolls; ⏎ is a new line and ⌘⏎ (Ctrl⏎ elsewhere) submits. 0 and 1 are one line.
+	Lines    int
+	MinLines int // the lines a multi-line field shows at least
 }
 
 // Digits accepts what a whole number is typed with.
@@ -31,25 +36,87 @@ func Decimal(r rune) bool { return Digits(r) || r == '.' || r == 'e' || r == 'E'
 
 type InputResult struct {
 	Changed   bool // the text changed this frame
-	Submitted bool // Enter
+	Submitted bool // Enter; ⌘⏎ in a multi-line field
 	Cancelled bool // Escape, which also drops focus
 }
 
 type inputState struct {
 	cursor, anchor int // in runes; a selection runs between them
 	scroll         float32
+	goal           float32 // a multi-line field's x that Up and Down keep to, while hasGoal
+	hasGoal        bool
+	width          float32 // the width a multi-line field wrapped at, last frame
 	dragging       bool
 	focused        bool // last frame
 }
 
-// Input is a one-line text field (base.css .input) editing *text, with the platform's editing keys (editKey): typing
+// A multi-line field's line height and its padding above and below.
+const lineH, linesPadY = 18, 6
+
+// span is a line of a multi-line field as it wraps: the runes [from, to), to before any newline.
+type span struct{ from, to int }
+
+// wrapSpans breaks runes into lines that fit width at spaces (a word wider than that anywhere), keeping its
+// newlines; width 0 doesn't wrap.
+func wrapSpans(runes []rune, width float32, adv func(from, to int) float32) []span {
+	var out []span
+	from := 0
+	for i := 0; i <= len(runes); i++ {
+		if i < len(runes) && runes[i] != '\n' {
+			continue
+		}
+		for {
+			end := from
+			for j := from; j < i; {
+				k := j
+				for k < i && runes[k] != ' ' {
+					k++
+				}
+				if width > 0 && adv(from, k) > width {
+					break
+				}
+				for k < i && runes[k] == ' ' {
+					k++
+				}
+				end, j = k, k
+			}
+			if end == from && from < i {
+				end = from + 1
+				for end < i && adv(from, end+1) <= width {
+					end++
+				}
+			}
+			out = append(out, span{from, end})
+			if from = end; from >= i {
+				break
+			}
+		}
+		from = i + 1
+	}
+	return out
+}
+
+// lineOf is the line the rune offset i is on.
+func lineOf(spans []span, i int) int {
+	k := 0
+	for n, sp := range spans {
+		if sp.from <= i {
+			k = n
+		}
+	}
+	return k
+}
+
+// Input is a text field (base.css .input) editing *text, with the platform's editing keys (editKey): typing
 // inserts, moving by character, word and line (Shift selects), select all, cut, copy and paste, deleting back and
-// forward by character, word or line. Enter submits, Escape cancels. A click puts the cursor where it lands.
+// forward by character, word or line. Enter submits, Escape cancels. A click puts the cursor where it lands. With
+// Lines it takes several lines (InputOpts.Lines).
 func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	id := c.Next(key)
 	in := c.Interaction(id)
 	st := ui.State[inputState](c, id)
 	font := typeset.FontSpec{Family: typeset.UI, Size: 12.5}
+	multi := o.Lines > 1
 	runes := []rune(*text)
 	st.cursor, st.anchor = clampInt(st.cursor, 0, len(runes)), clampInt(st.anchor, 0, len(runes))
 	var res InputResult
@@ -58,24 +125,45 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	}
 	st.focused = in.Focused
 
-	prefix := func(n int) float32 { return c.Shaper().Shape(string(runes[:n]), font).Advance }
+	advance := func(from, to int) float32 { return c.Shaper().Shape(string(runes[from:to]), font).Advance }
+	prefix := func(n int) float32 { return advance(0, n) }
+	spans := func() []span {
+		if !multi {
+			return []span{{0, len(runes)}}
+		}
+		return wrapSpans(runes, st.width, advance)
+	}
+	// nearest is the offset on line sp nearest x from the line's start.
+	nearest := func(sp span, x float32) int {
+		best, bestD := sp.from, float32(math.MaxFloat32)
+		for i := sp.from; i <= sp.to; i++ {
+			if d := abs32(advance(sp.from, i) - x); d < bestD {
+				best, bestD = i, d
+			}
+		}
+		return best
+	}
 	if in.Clicked || in.Pressed {
 		if r, ok := c.Rect(id); ok {
-			x := in.Pointer.X - r.Min.X - 10 + st.scroll
-			best, bestD := 0, float32(math.MaxFloat32)
-			for i := 0; i <= len(runes); i++ {
-				if d := abs32(prefix(i) - x); d < bestD {
-					best, bestD = i, d
+			at := st.cursor
+			if multi {
+				if tr, ok := c.Rect(ui.Child(id, "text")); ok {
+					ls := spans()
+					k := clampInt(int((in.Pointer.Y-tr.Min.Y)/lineH), 0, len(ls)-1)
+					at = nearest(ls[k], in.Pointer.X-tr.Min.X)
 				}
+			} else {
+				at = nearest(span{0, len(runes)}, in.Pointer.X-r.Min.X-10+st.scroll)
 			}
-			st.cursor = best
+			st.cursor, st.hasGoal = at, false
 			// The press anchors a selection (Shift keeps the old anchor); dragging extends it.
 			if !st.dragging && in.Mods&render.ModShift == 0 {
-				st.anchor = best
+				st.anchor = at
 			}
 		}
 	}
 	st.dragging = in.Pressed
+	moved := in.Clicked || in.Pressed
 	if !o.Disabled {
 		for _, k := range in.Keys {
 			shift, mods := k.Mods&render.ModShift != 0, k.Mods&^render.ModShift
@@ -94,7 +182,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			insert := func(s string) {
 				var add []rune
 				for _, r := range s {
-					if r >= ' ' && (o.Accept == nil || o.Accept(r)) {
+					if (r >= ' ' || multi && r == '\n') && (o.Accept == nil || o.Accept(r)) {
 						add = append(add, r)
 					}
 				}
@@ -105,16 +193,50 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 				runes = append(runes[:lo:lo], append(add, runes[lo:]...)...)
 				st.cursor, st.anchor = lo+len(add), lo+len(add)
 			}
+			line := func() span {
+				ls := spans()
+				return ls[lineOf(ls, st.cursor)]
+			}
 			key := editKey(k.Key, mods)
+			if multi {
+				switch {
+				case key == "submit":
+					key = "newline"
+				case k.Key == "CR" && mods == platform.primary:
+					key = "submit"
+				}
+			}
+			if key != "up" && key != "down" {
+				st.hasGoal = false
+			}
+			moved = true
 			switch key {
 			case "submit":
 				res.Submitted = true
+			case "newline":
+				insert("\n")
 			case "cancel":
 				res.Cancelled = true
 				c.Blur()
 			case "tab":
 				if o.TabMoves {
 					c.FocusNext(map[bool]int{false: 1, true: -1}[shift])
+				}
+			case "up", "down":
+				ls := spans()
+				n := lineOf(ls, st.cursor)
+				if !st.hasGoal {
+					st.goal, st.hasGoal = advance(ls[n].from, st.cursor), true
+				}
+				switch {
+				case key == "up" && n == 0:
+					move(0)
+				case key == "down" && n == len(ls)-1:
+					move(len(runes))
+				case key == "up":
+					move(nearest(ls[n-1], st.goal))
+				default:
+					move(nearest(ls[n+1], st.goal))
 				}
 			case "left":
 				if lo != hi && !shift {
@@ -133,8 +255,12 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			case "word-right":
 				move(wordRight(runes, st.cursor))
 			case "line-start":
-				move(0)
+				move(line().from)
 			case "line-end":
+				move(line().to)
+			case "text-start":
+				move(0)
+			case "text-end":
 				move(len(runes))
 			case "select-all":
 				st.anchor, st.cursor = 0, len(runes)
@@ -151,7 +277,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 				}
 			case "delete-back", "delete-word-back", "delete-line-back":
 				if lo == hi {
-					lo = map[string]int{"delete-back": max(lo-1, 0), "delete-word-back": wordLeft(runes, lo), "delete-line-back": 0}[key]
+					lo = map[string]int{"delete-back": max(lo-1, 0), "delete-word-back": wordLeft(runes, lo), "delete-line-back": line().from}[key]
 				}
 				cut()
 			case "delete", "delete-word":
@@ -185,6 +311,62 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	if o.Disabled {
 		fg = col(c, tDisabledFg)
 	}
+	mode := o.KeyMode
+	if mode == "" {
+		mode = "input"
+	}
+	lo, hi := min(st.cursor, st.anchor), max(st.cursor, st.anchor)
+	focused := in.Focused
+	style := ui.Style{W: width, Fill: col(c, tInputBg), Stroke: border, Border: 1, Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled,
+		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Role: ui.RoleTextBox, Label: o.Label, Value: string(runes)}
+	if multi {
+		if r, ok := c.Rect(id); ok {
+			st.width = r.Dx() - 20
+		}
+		ls := spans()
+		rows := clampInt(len(ls), max(o.MinLines, 1), o.Lines)
+		if moved {
+			// Keep the caret's line in view.
+			top, view := float32(lineOf(ls, st.cursor))*lineH, float32(rows)*lineH
+			sc := c.Scroll(id)
+			if top < sc.Y {
+				sc.Y = top
+			}
+			if top+lineH > sc.Y+view {
+				sc.Y = top + lineH - view
+			}
+			c.ScrollTo(id, sc)
+		}
+		style.Dir, style.H, style.Pad, style.ScrollY = ui.Column, ui.Px(float32(rows)*lineH+2*linesPadY), ui.PadXY(10, linesPadY), true
+		c.Box(key, style, func(rc *ui.Ctx) {
+			rc.Paint("text", ui.Flex(1), ui.Px(float32(len(ls))*lineH), func(f render.Frame, r render.Rect) {
+				if len(runes) == 0 && o.Placeholder != "" {
+					run := c.Shaper().Shape(o.Placeholder, font)
+					f.Glyphs(run, render.Point{X: r.Min.X, Y: r.Min.Y + lineH/2 + (run.Ascent-run.Descent)/2}, col(c, tInputHint))
+				}
+				for k, sp := range ls {
+					y := r.Min.Y + float32(k)*lineH
+					if a, b := max(lo, sp.from), min(hi, sp.to); focused && hi > lo && a <= b && lo <= sp.to && hi >= sp.from {
+						x0, x1 := advance(sp.from, a), advance(sp.from, b)
+						if hi > sp.to && sp.to < len(runes) {
+							x1 += 4 // the newline, or the wrap, is selected too
+						}
+						f.Rect(render.XYWH(r.Min.X+x0, y+1, x1-x0, 16), render.Style{Fill: c.Theme().C(tRowSelected)})
+					}
+					if sp.to > sp.from {
+						run := c.Shaper().Shape(string(runes[sp.from:sp.to]), font)
+						f.Glyphs(run, render.Point{X: r.Min.X, Y: y + lineH/2 + (run.Ascent-run.Descent)/2}, fg)
+					}
+				}
+				if focused {
+					k := lineOf(ls, st.cursor)
+					x := advance(ls[k].from, st.cursor)
+					f.Rect(render.XYWH(r.Min.X+x, r.Min.Y+float32(k)*lineH+1, 1, 16), render.Style{Fill: col(c, tInputCaret)})
+				}
+			})
+		})
+		return res
+	}
 	// Keep the caret in view.
 	if r, ok := c.Rect(id); ok {
 		view := r.Dx() - 20
@@ -196,12 +378,10 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			st.scroll = cx
 		}
 	}
-	lo, hi := min(st.cursor, st.anchor), max(st.cursor, st.anchor)
 	selFrom, selTo, caret := prefix(lo), prefix(hi), prefix(st.cursor)
-	focused, scroll := in.Focused, st.scroll
-	c.Row(key, ui.Style{W: width, H: ui.Px(30), Pad: ui.PadXY(10, 0), Cross: ui.Center, Fill: col(c, tInputBg), Stroke: border, Border: 1,
-		Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled, Cursor: render.CursorText, Help: o.Help, KeyMode: "input",
-		Role: ui.RoleTextBox, Label: o.Label, Value: string(runes)}, func(rc *ui.Ctx) {
+	scroll := st.scroll
+	style.H, style.Pad, style.Cross = ui.Px(30), ui.PadXY(10, 0), ui.Center
+	c.Row(key, style, func(rc *ui.Ctx) {
 		rc.Paint("text", ui.Flex(1), ui.Px(30), func(f render.Frame, r render.Rect) {
 			if focused && hi > lo {
 				sel := c.Theme().C(tRowSelected)
@@ -242,6 +422,10 @@ func editKey(key string, mods render.Mods) string {
 		return "left"
 	case km{"Right", 0}:
 		return "right"
+	case km{"Up", 0}:
+		return "up"
+	case km{"Down", 0}:
+		return "down"
 	case km{"Home", 0}:
 		return "line-start"
 	case km{"End", 0}:
@@ -274,10 +458,14 @@ func editKey(key string, mods render.Mods) string {
 	}
 	if platform.line != 0 {
 		switch k {
-		case km{"Left", platform.line}, km{"Up", platform.line}:
+		case km{"Left", platform.line}:
 			return "line-start"
-		case km{"Right", platform.line}, km{"Down", platform.line}:
+		case km{"Right", platform.line}:
 			return "line-end"
+		case km{"Up", platform.line}:
+			return "text-start"
+		case km{"Down", platform.line}:
+			return "text-end"
 		case km{"BS", platform.line}:
 			return "delete-line-back"
 		}

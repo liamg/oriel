@@ -65,7 +65,16 @@ type Size struct {
 	Min, Max float32
 }
 
-func Px(v float32) Size   { return Size{Kind: Fixed, Value: v} }
+func Px(v float32) Size { return Size{Kind: Fixed, Value: v} }
+
+// times is s drawn k times bigger: its pixels scale; a share or a percentage doesn't.
+func (s Size) times(k float32) Size {
+	if s.Kind == Fixed {
+		s.Value *= k
+	}
+	s.Min, s.Max = s.Min*k, s.Max*k
+	return s
+}
 func Flex(w float32) Size { return Size{Kind: Grow, Value: w} }
 func Pct(f float32) Size  { return Size{Kind: Percent, Value: f} }
 func (s Size) Clamp(min, max float32) Size {
@@ -99,10 +108,16 @@ type Style struct {
 	Border float32 // stroke width, inside the box
 	Radius float32
 
+	// Scale draws the box and everything in it this many times bigger (its sizes, padding, gaps, radii and text), as a
+	// part with its own text size does (theming.md, "Sizes"); 0 is 1. It multiplies a scaled parent's.
+	Scale float32
+
 	Clip    bool
+	Keep    bool // keeps its width while its row is too narrow, as a control does; the text beside it is cut first
 	ScrollX bool // scroll offsets persist by id; scrolling clips
 	ScrollY bool
 	Wheel   bool // takes the wheel itself: movement over it comes as Interaction.Scroll, for content it scrolls itself
+	Bars    Bars // when a scrolling box shows its scrollbars
 
 	Float *Float  // out of the flow, placed against another node or a point
 	Z     int     // a float's layer (LayerPage…); one inside another float is at least that one's. Below 0 paints behind its parent's content

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -41,6 +42,8 @@ type projectSearch struct {
 
 	query, replace, globs string
 	ignoreCase            bool
+	allProjects           bool   // the session's every project, not only the panel's
+	project               string // the project of the panel last drawn; "" for the window's own
 	sel                   int
 
 	mu      sync.Mutex
@@ -66,13 +69,13 @@ type editPlan struct {
 type searchRun struct {
 	pattern, globs string
 	all, icase     bool
+	roots          string // the directories searched, joined by NULs
 }
 
 func (p *projectSearch) Manifest() ext.Manifest { return ext.Manifest{ID: "search"} }
 
 func (p *projectSearch) Activate(_ context.Context, h ext.Host) error {
 	p.h = h
-	open := registry.Args{"id": SearchView, "place": "dock", "edge": "left", "title": "Search", "size": 380}
 	for _, c := range []registry.Command{
 		{ID: "search.open", Title: "Search the project for a PCRE2 {query}; \"@all \" first takes in generated files", Run: func(ctx registry.Ctx, a registry.Args) error {
 			if q, ok := a["query"].(string); ok {
@@ -83,7 +86,7 @@ func (p *projectSearch) Activate(_ context.Context, h ext.Host) error {
 					return nil
 				}
 			}
-			return h.Run(ctx, "view.open", open)
+			return h.Run(ctx, "project.panel", registry.Args{"name": "search"})
 		}},
 		{ID: "search.replace.preview", Title: "Show the diff the replace would make", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return p.preview(ctx)
@@ -111,7 +114,7 @@ func (p *projectSearch) Activate(_ context.Context, h ext.Host) error {
 	p.add(h.View(SearchView, searchView{p}))
 	p.add(h.View(ReplaceView, replaceView{p}))
 	p.sh.search = p
-	p.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-S-f>", Command: "search.open", Desc: "Search the project"}))
+	p.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-S-f>", Command: "project.panel", Args: registry.Args{"name": "search"}, Desc: "Search the project"}))
 	return nil
 }
 
@@ -129,10 +132,17 @@ func (p *projectSearch) wait() { p.busy.Wait() }
 
 func (p *projectSearch) dir() string { return p.sh.editor.dir }
 
-// shownPath is path as the preview names it: relative to the work dir when it's in it.
+// shownPath is path as the preview names it: relative to its project, led by the project's name when there are
+// several; relative to the work dir when it's in it.
 func (p *projectSearch) shownPath(path string) string {
 	if !filepath.IsAbs(path) {
 		return path
+	}
+	w := projectsHere(p.h)
+	if pr, ok := w.of(path); ok && w.many() {
+		if r, err := filepath.Rel(pr.Dir, path); err == nil {
+			return pr.Name + "/" + filepath.ToSlash(r)
+		}
 	}
 	if r, err := filepath.Rel(p.dir(), path); err == nil && filepath.IsLocal(r) {
 		return r
@@ -140,13 +150,27 @@ func (p *projectSearch) shownPath(path string) string {
 	return path
 }
 
-// queryFor is the engine's query for what's typed: "@all " first searches generated and vendored files too.
-func (p *projectSearch) queryFor(r searchRun) search.Query {
-	q := search.Query{Pattern: r.pattern, Dir: p.dir(), IgnoreCase: r.icase}
+// roots are the directories a search covers: the panel's project, or with All projects, every project's.
+func (p *projectSearch) roots() []string {
+	w := projectsHere(p.h)
+	if p.allProjects && w.many() {
+		return dirsOf(w.projects)
+	}
+	if p.project != "" {
+		if d := w.dir(p.project); d != "" {
+			return []string{d}
+		}
+	}
+	return []string{p.dir()}
+}
+
+// queryFor is the engine's query for what's typed in root: "@all " first searches generated and vendored files too.
+func (p *projectSearch) queryFor(r searchRun, root string) search.Query {
+	q := search.Query{Pattern: r.pattern, Dir: root, IgnoreCase: r.icase}
 	if r.globs != "" {
 		q.Globs = strings.Fields(strings.ReplaceAll(r.globs, ",", " "))
 	}
-	if !r.all {
+	if !r.all && filepath.Clean(root) == filepath.Clean(p.dir()) {
 		q.Exclude = p.sh.editor.unsearchable()
 	}
 	return q
@@ -155,7 +179,8 @@ func (p *projectSearch) queryFor(r searchRun) search.Query {
 // run starts the search for what's typed, unless it's the one already running or run.
 func (p *projectSearch) run() {
 	pat, all := strings.CutPrefix(p.query, "@all ")
-	r := searchRun{pattern: pat, globs: p.globs, all: all, icase: p.ignoreCase}
+	roots := p.roots()
+	r := searchRun{pattern: pat, globs: p.globs, all: all, icase: p.ignoreCase, roots: strings.Join(roots, "\x00")}
 	p.mu.Lock()
 	if r == p.ran {
 		p.mu.Unlock()
@@ -171,19 +196,25 @@ func (p *projectSearch) run() {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
-	q := p.queryFor(r)
 	p.busy.Add(1)
 	p.mu.Unlock()
 	go func() {
 		defer p.busy.Done()
-		err := search.Run(ctx, q, func(ms []search.Match) {
-			p.mu.Lock()
-			if p.ran == r {
-				p.matches = append(p.matches, ms...)
-			}
-			p.mu.Unlock()
-			p.h.Redraw()
-		})
+		var err error
+		for _, root := range roots {
+			// Matches keep absolute paths, so those of every root sit together.
+			err = errors.Join(err, search.Run(ctx, p.queryFor(r, root), func(ms []search.Match) {
+				for i := range ms {
+					ms[i].Path = filepath.Join(root, filepath.FromSlash(ms[i].Path))
+				}
+				p.mu.Lock()
+				if p.ran == r {
+					p.matches = append(p.matches, ms...)
+				}
+				p.mu.Unlock()
+				p.h.Redraw()
+			}))
+		}
 		p.mu.Lock()
 		if p.ran == r {
 			p.done, p.err = true, err
@@ -207,22 +238,29 @@ func (p *projectSearch) results() []search.Match {
 	return ms
 }
 
-// searchRow is a row of the results: a file's header, or a match in it.
+// searchRow is a row of the results: a project's heading, a file's header, or a match in it.
 type searchRow struct {
-	file  string
-	count int
-	match *search.Match
+	project string
+	file    string
+	count   int
+	match   *search.Match
 }
 
-func rowsOf(ms []search.Match) []searchRow {
+// rowsOf are the matches' rows by file, under a heading per project when projectOf names them.
+func rowsOf(ms []search.Match, projectOf func(path string) string) []searchRow {
 	var rows []searchRow
+	project := ""
 	for i := range ms {
 		m := &ms[i]
-		if len(rows) == 0 || rows[len(rows)-1].file != m.Path && (rows[len(rows)-1].match == nil || rows[len(rows)-1].match.Path != m.Path) {
+		if pr := projectOf(m.Path); pr != "" && pr != project {
+			project = pr
+			rows = append(rows, searchRow{project: pr})
+		}
+		if last := rows; len(last) == 0 || last[len(last)-1].file != m.Path && (last[len(last)-1].match == nil || last[len(last)-1].match.Path != m.Path) {
 			rows = append(rows, searchRow{file: m.Path})
 		}
 		for j := len(rows) - 1; j >= 0; j-- {
-			if rows[j].match == nil {
+			if rows[j].match == nil && rows[j].project == "" {
 				rows[j].count += len(m.Spans)
 				break
 			}
@@ -236,21 +274,31 @@ type searchView struct{ p *projectSearch }
 
 func (v searchView) Title(string) string { return "Search" }
 func (v searchView) EdgeToEdge()         {}
-func (v searchView) Build(registry.ViewCtx) ui.Node {
-	return &ui.Func{Key: "search", Fn: v.p.build}
+func (v searchView) Build(vc registry.ViewCtx) ui.Node {
+	return &ui.Func{Key: "search", Fn: func(c *ui.Ctx) {
+		v.p.project = vc.Project
+		v.p.build(c)
+	}}
 }
 
 func (p *projectSearch) build(c *ui.Ctx) {
 	th := c.Theme()
 	p.run()
 	ms := p.results()
-	rows := rowsOf(ms)
+	w := projectsHere(p.h)
+	grouped := p.allProjects && w.many()
+	rows := rowsOf(ms, func(path string) string {
+		if pr, ok := w.of(path); ok && grouped {
+			return pr.Name
+		}
+		return ""
+	})
 	p.mu.Lock()
 	done, err := p.done, p.err
 	p.mu.Unlock()
 	n, files := 0, 0
 	for _, r := range rows {
-		if r.match == nil {
+		if r.match == nil && r.project == "" {
 			files++
 			n += r.count
 		}
@@ -286,6 +334,18 @@ func (p *projectSearch) build(c *ui.Ctx) {
 				matchCase := widget.ToggleChip(c, "icase", "Aa", !p.ignoreCase, widget.ToggleChipOpts{Help: "files/search", Tooltip: "Match case"})
 				p.ignoreCase = !matchCase
 			})
+			if w.many() {
+				c.Row("all", ui.Style{W: ui.Flex(1), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
+					if widget.Toggle(c, "all", p.allProjects, widget.ToggleOpts{Label: "All projects", Help: "files/search#projects"}) {
+						p.allProjects = !p.allProjects
+					}
+					c.Text("t", "All projects", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11}, Color: th.C(theme.FgFaint)})
+					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+					if !p.allProjects && p.project != "" && done && p.ran.pattern != "" {
+						c.Text("n", fmt.Sprintf("%d in %s", n, p.project), monoTok(c, 10, theme.FgGhost))
+					}
+				})
+			}
 			widget.Input(c, "r", &p.replace, widget.InputOpts{Label: "Replace", Placeholder: "Replace ($1, ${name})", Help: "files/search#replace"})
 			widget.Input(c, "g", &p.globs, widget.InputOpts{Label: "Files", Placeholder: "files: *.go, *.ts", Help: "files/search"})
 		})
@@ -320,10 +380,17 @@ func plural(n int, one, many string) string {
 func (p *projectSearch) row(c *ui.Ctx, r searchRow) {
 	th := c.Theme()
 	code := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11.5}, Color: th.C(theme.FgMuted)}
+	if r.project != "" {
+		c.Row("project", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 0), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Box("sq", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 2, Fill: projectsHere(p.h).colour(th, r.project)}, nil)
+			c.Text("p", r.project, monoTok(c, 11, theme.FgMuted))
+		})
+		return
+	}
 	if r.match == nil {
 		c.Row("file", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("sw", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: th.C(theme.StatusWorking)}, nil)
-			c.Text("p", r.file, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(theme.Fg)})
+			c.Text("p", p.rowPath(r.file), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(theme.Fg)})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", fmt.Sprint(r.count), monoTok(c, 10.5, theme.FgFaint))
 		})
@@ -346,9 +413,19 @@ func (p *projectSearch) row(c *ui.Ctx, r searchRow) {
 	})
 }
 
+// rowPath is a file as its header names it: relative to its project, or to the work dir.
+func (p *projectSearch) rowPath(path string) string {
+	if pr, ok := projectsHere(p.h).of(path); ok {
+		if r, err := filepath.Rel(pr.Dir, path); err == nil {
+			return filepath.ToSlash(r)
+		}
+	}
+	return p.shownPath(path)
+}
+
 // replaced is a match's line with the replace made.
 func (p *projectSearch) replaced(m *search.Match) (string, error) {
-	plan, err := search.Plan(p.queryFor(p.ran), p.replace, []search.Match{{Path: m.Path, Line: 1, Text: m.Text, Spans: m.Spans}},
+	plan, err := search.Plan(p.queryFor(p.ran, ""), p.replace, []search.Match{{Path: m.Path, Line: 1, Text: m.Text, Spans: m.Spans}},
 		func(string) ([]byte, bool) { return []byte(m.Text + "\n"), true })
 	if err != nil || len(plan) == 0 {
 		return m.Text, err
@@ -387,17 +464,20 @@ func segments(c *ui.Ctx, s string, spans [][2]int, ts ui.TextStyle, mark func(c 
 // open opens a match's file at its line, or a file at its first match.
 func (p *projectSearch) open(r searchRow) {
 	path, line := r.file, 1
+	if r.project != "" {
+		return
+	}
 	if r.match != nil {
 		path, line = r.match.Path, r.match.Line
 	}
-	if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": filepath.Join(p.dir(), path), "line": line}); err != nil {
+	if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": path, "line": line}); err != nil {
 		p.h.Notify(core.Notice{ID: "search.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
 	}
 }
 
 // preview plans the replace over the matches, from open buffers' text where a file is open, and shows its diff.
 func (p *projectSearch) preview(ctx registry.Ctx) error {
-	q := p.queryFor(p.ran)
+	q := p.queryFor(p.ran, "")
 	plan, err := search.Plan(q, p.replace, p.results(), p.sh.editor.openFileBytes)
 	if err != nil {
 		return err

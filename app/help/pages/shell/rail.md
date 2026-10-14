@@ -11,6 +11,8 @@ with Settings at the bottom. Click the lit one again, or press its key again, to
 
 - A dimmed icon is a view that isn't available yet: nothing has registered it.
 - A number on an icon is how many things there want you.
+- Below a second divider are the pages every session shares, each with a live figure: Stats (today's cost), Usage
+  (the weekly window), Jobs and Settings. In the narrow sidebar their icons sit at the foot.
 - Plugins add their own icons with `oriel.rail.add`.
 
 {{keys "view.toggle"}}

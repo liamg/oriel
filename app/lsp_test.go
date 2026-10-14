@@ -1,9 +1,11 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -220,5 +222,86 @@ func TestLSPTranscriptsReplayToTheUI(t *testing.T) {
 			}
 			s.wantText(t, "completion", "greeting")
 		})
+	}
+}
+
+// :Inspect's language server section names the server and the semantic token under the cursor, as the server says.
+func TestLSPInspect(t *testing.T) {
+	s, root := lspScene(t, "go", "gopls", "main.go")
+	s.cursorAt(5, 6) // Welcome
+	toks, err := s.lsp().m.Clients()[0].SemanticTokens(context.Background(), filepath.Join(root, "main.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := ""
+	for _, tk := range toks {
+		if tk.Range.Start.Line == 5 && tk.Range.Start.Col <= 6 && 6 < tk.Range.End.Col {
+			want = strings.TrimSpace(tk.Type + " " + strings.Join(tk.Modifiers, " "))
+		}
+	}
+	if want == "" {
+		t.Fatal("the recording has no token on Welcome")
+	}
+	s.run("Inspect", nil)
+	s.lspSettle()
+	text := strings.ReplaceAll(s.frameText(), "\n", " ")
+	for _, w := range []string{"LANGUAGE SERVER", "gopls", want} {
+		if !strings.Contains(text, w) {
+			t.Errorf(":Inspect lacks %q:\n%s", w, text)
+		}
+	}
+	if strings.Contains(text, "LS-1") {
+		t.Error(":Inspect still says the language servers are to come")
+	}
+}
+
+// With lsp.start "project" (the default), a project's language servers start when it opens, before any of its files
+// does, so the first gd doesn't wait for one; "file" waits for a file.
+func TestLSPStartsWithTheProject(t *testing.T) {
+	for _, mode := range []string{"project", "file"} {
+		root := t.TempDir()
+		os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/greet\n\ngo 1.22\n"), 0o644)
+		tr, err := lsptest.Load(filepath.Join("..", "lsp", "testdata", "transcripts", "go.jsonl"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := newScene(t, "", root, mockupSize)
+		s.reg.Options().Set("lsp.start", registry.LayerUser, registry.At{}, mode)
+		resp := lsptest.NewResponder(tr)
+		for _, spec := range lsp.Builtins() {
+			if spec.Name == "gopls" {
+				spec.Connect = resp.Launcher()
+				spec.Source = "test"
+				s.reg.Contribute(registry.LSPServer(spec))
+			}
+		}
+		s.lspSettle()
+		started := slices.Contains(resp.Asked(), "initialize")
+		if started != (mode == "project") {
+			t.Errorf("lsp.start %q: started before a file opened = %v (asked %v)", mode, started, resp.Asked())
+		}
+	}
+}
+
+// Text stays inside the hover card and the references peek, however long the lines in them.
+func TestLSPCardsKeepTheirText(t *testing.T) {
+	s, _ := lspScene(t, "go", "gopls", "main.go")
+	s.cursorAt(8, 11)
+	s.keyCommand(t, "K")
+	s.lspSettle()
+	s.lsp().hover.md.Text += "\n\n```go\nfunc greeting(name string, salutation string, punctuation string, locale string, formal bool) (string, error)\n```\n" +
+		"A_paragraph_word_far_wider_than_the_card_that_has_nowhere_to_wrap_and_would_run_out_of_the_card_on_the_right"
+	s.frame()
+	s.frame()
+	if o := s.ui.Overflowing(); len(o) > 0 {
+		t.Errorf("the hover card's text runs out of its box:\n%s", strings.Join(o, "\n"))
+	}
+	s.keyCommand(t, "<Esc>")
+	s.size.X = 760 // the code beside the list has less room than its lines
+	s.keyCommand(t, "grr")
+	s.lspSettle()
+	s.wantText(t, "the peek", "3 references")
+	if o := s.ui.Overflowing(); len(o) > 0 {
+		t.Errorf("the peek's text runs out of its box:\n%s", strings.Join(o, "\n"))
 	}
 }

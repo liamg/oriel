@@ -28,6 +28,24 @@ func TestSelectInAPage(t *testing.T) {
 	}
 }
 
+// A page over a node covers that node's rect, leaving what's beside it.
+func TestPageOverANode(t *testing.T) {
+	open := true
+	var main, page ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Row("shell", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+			c.Box("side", ui.Style{W: ui.Px(100), H: ui.Flex(1)}, nil)
+			main = c.Box("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, nil)
+		})
+		page = c.Next("page")
+		Page(c, "page", &open, PageOpts{Over: main, Help: "test/page"}, func(c *ui.Ctx) {})
+	})
+	h.frame()
+	if p, m := h.rect(page), h.rect(main); p != m || p.Min.X != 100 {
+		t.Errorf("page %v, want the main box's %v", p, m)
+	}
+}
+
 func TestInputShowsNextFrame(t *testing.T) {
 	on := false
 	var id ui.ID
@@ -129,5 +147,46 @@ func TestScrim(t *testing.T) {
 	h.click(20, 20)
 	if open {
 		t.Error("a click on the scrim didn't close the dialog")
+	}
+}
+
+// SE-5: "opening Jobs, Stats, Usage or Settings closes whichever is up, through widget.Page (one page at a time, a
+// general rule)".
+func TestOnePageAtATime(t *testing.T) {
+	var a, b bool
+	built := 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		if b { // a page whose owner skips it while it's closed
+			Page(c, "b", &b, PageOpts{Help: "test/page"}, func(c *ui.Ctx) { built++ })
+		}
+		Page(c, "a", &a, PageOpts{Help: "test/page"}, func(c *ui.Ctx) {})
+	})
+	a = true
+	h.frame()
+	b = true
+	h.frame()
+	h.frame()
+	if a || !b {
+		t.Fatalf("opening b over a: a %v, b %v; want only b", a, b)
+	}
+	a = true
+	h.frame()
+	h.frame()
+	if !a || b {
+		t.Fatalf("opening a over b: a %v, b %v; want only a", a, b)
+	}
+	b = true
+	h.frame()
+	h.frame()
+	if a || !b {
+		t.Errorf("opening b again: a %v, b %v; want only b", a, b)
+	}
+	b, built = false, 0
+	h.frame()
+	b = true
+	h.frame()
+	h.frame()
+	if !b || built == 0 {
+		t.Errorf("b closed and opened again with nothing else up: open %v, built %d", b, built)
 	}
 }

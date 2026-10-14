@@ -1,0 +1,238 @@
+backdrop #060606
+rect 0,0 1066.6666x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 935.7291x38 r 0
+pop
+rect 0,38 44x602.6667 fill #0c0c0b
+clip 0,38 43x602.6667 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  rect -0.5,76 2x18 fill #ffd23f radius 1
+  rect 5.5,69 32x32 fill #1f1c0f radius 7
+  path 7 segments stroke 1.4545455 #ffd23f
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #7c7566
+  rect 9.5,208 24x1 fill #332f27
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
+rect 43,38 1x602.6667 fill #24221d
+rect 44,38 1022.6666x602.6667 fill #060606
+rect 44,38 250x602.6667 fill #0c0c0b
+clip 44,38 250x602.6667 r 0
+  rect 44,38 250x30 fill #0c0c0b
+  text "EXPLORER" @58,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @274.70312,57.96 #7c7566 JetBrains Mono 11
+  rect 44,68 250x1 fill #24221d
+  clip 44,69 250x571.6667 r 0
+    rect 44,69 250x571.6667 fill #0c0c0b
+    clip 54,79 230x24 r 5
+      text "CHG 5" @74.95833,94.420006 #7c7566 JetBrains Mono 9.5
+      text "UNC 3" @151.62498,94.420006 #7c7566 JetBrains Mono 9.5
+      rect 207.33333,79 76.66667x24 fill #1f1c0f
+      text "ALL 8" @228.29166,94.420006 #ffd23f JetBrains Mono 9.5
+    pop
+    rect 54,79 230x24 radius 5 stroke 1 #332f27
+    clip 56,113 226x18 r 0
+      rect 56,113 48x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "status" @62,125.6 #ffd23f JetBrains Mono 10
+      rect 110,113 54x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "± lines" @116,125.6 #ffd23f JetBrains Mono 10
+      rect 170,113 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "diag" @176,125.6 #ffd23f JetBrains Mono 10
+      rect 212,113 70x18 radius 4 stroke 1 #332f27
+      text "⌥C chang…" @218,125.6 #7c7566 JetBrains Mono 10
+    pop
+    clip 44,135 250x477.6667 r 0
+      rect 44,135 250x22 fill #1f1c0f
+      rect 44,135 2x22 fill #ffd23f
+      text "▾" @56,150.54712 #ece6d8 Inter 12.5
+      rect 70,141 10x10 fill #ffd23fd9 radius 2
+      clip 86,138.43774 192x15.124512 r 0
+        text "001" @86,150.54712 #ece6d8 Inter 12.5
+        text "rethink/rounding" @113.6875,149.78001 #7c7566 JetBrains Mono 10.5
+      pop
+      text "▾" @70,172.54712 #b3ab99 Inter 12.5
+      clip 84,160.43774 175.20312x15.124512 r 0
+        text "internal" @84,172.54712 #b3ab99 Inter 12.5
+      pop
+      text "●" @265.20312,170.87999 #ff9b45 JetBrains Mono 8
+      text "5" @278,171.59999 #7c7566 JetBrains Mono 10
+      text "▾" @84,194.54712 #b3ab99 Inter 12.5
+      clip 98,182.43774 161.20312x15.124512 r 0
+        text "billing" @98,194.54712 #b3ab99 Inter 12.5
+      pop
+      text "●" @265.20312,192.87999 #ff9b45 JetBrains Mono 8
+      text "1" @278,193.59999 #7c7566 JetBrains Mono 10
+      clip 98,204.43774 174x15.124512 r 0
+        text "money.go" @98,216.54712 #b98aff Inter 12.5
+        text "← amount.go" @165.28125,215.78001 #7c7566 JetBrains Mono 10.5
+      pop
+      text "R" @278,215.59999 #b98aff JetBrains Mono 10
+      text "▾" @84,238.54712 #b3ab99 Inter 12.5
+      clip 98,226.43774 161.20312x15.124512 r 0
+        text "pricing" @98,238.54712 #b3ab99 Inter 12.5
+      pop
+      text "●" @265.20312,236.87999 #ff9b45 JetBrains Mono 8
+      text "4" @278,237.59999 #7c7566 JetBrains Mono 10
+      clip 98,248.43774 118.8125x15.124512 r 0
+        text "currency.go" @98,260.54712 #4fe0a0 Inter 12.5
+      pop
+      text "+3" @222.8125,259.78 #4fe0a0 JetBrains Mono 10.5
+      rect 242,254 28x4 fill #332f2780 radius 2
+      clip 242,254 28x4 r 2
+        rect 242,254 4.199997x4 fill #4fe0a0
+        rect 246.2,254 0x4 fill #ff5f6d
+      pop
+      text "A" @278,259.6 #4fe0a0 JetBrains Mono 10
+      clip 98,270.43774 118.8125x15.124512 r 0
+        text "legacy_round.go" @98,282.54712 #ff5f6d Inter 12.5
+      pop
+      text "-4" @222.8125,281.78 #ff5f6d JetBrains Mono 10.5
+      rect 242,276 28x4 fill #332f2780 radius 2
+      clip 242,276 28x4 r 2
+        rect 242,276 4.199997x4 fill #ff5f6d
+      pop
+      text "D" @278,281.6 #ff5f6d JetBrains Mono 10
+      clip 98,292.43774 118.8125x15.124512 r 0
+        text "round.go" @98,304.54712 #ffd23f Inter 12.5
+      pop
+      text "+4" @222.8125,303.78 #4fe0a0 JetBrains Mono 10.5
+      rect 242,298 28x4 fill #332f2780 radius 2
+      clip 242,298 28x4 r 2
+        rect 242,298 4.199997x4 fill #4fe0a0
+        rect 246.2,298 0x4 fill #ff5f6d
+      pop
+      text "M" @278,303.6 #ff9b45 JetBrains Mono 10
+      clip 98,314.43774 118.8125x15.124512 r 0
+        text "round_test.go" @98,326.54712 #4fe0a0 Inter 12.5
+      pop
+      text "+3" @222.8125,325.78 #4fe0a0 JetBrains Mono 10.5
+      rect 242,320 28x4 fill #332f2780 radius 2
+      clip 242,320 28x4 r 2
+        rect 242,320 4.199997x4 fill #4fe0a0
+        rect 246.2,320 0x4 fill #ff5f6d
+      pop
+      text "A" @278,325.6 #4fe0a0 JetBrains Mono 10
+      clip 70,336.43774 208x15.124512 r 0
+        text ".gitignore" @70,348.54712 #b3ab99 Inter 12.5
+      pop
+      clip 70,358.43774 208x15.124512 r 0
+        text "go.mod" @70,370.54712 #b3ab99 Inter 12.5
+      pop
+      clip 70,380.43774 146.8125x15.124512 r 0
+        text "scratch.sql" @70,392.54712 #7c7566 Inter 12.5
+      pop
+      text "+1" @222.8125,391.78 #4fe0a0 JetBrains Mono 10.5
+      rect 242,386 28x4 fill #332f2780 radius 2
+      clip 242,386 28x4 r 2
+        rect 242,386 4.199997x4 fill #4fe0a0
+        rect 246.2,386 0x4 fill #ff5f6d
+      pop
+      text "?" @278,391.6 #7c7566 JetBrains Mono 10
+      clip 70,402.43774 208x15.124512 r 0
+        text "vendor" @70,414.54712 #4f4a40 Inter 12.5
+        text "ignored" @119.21875,413.78 #7c7566 JetBrains Mono 10.5
+      pop
+    pop
+    text "⌥1 changed · ⌥2 uncommitted · ⌥3 all" @56,630.2667 #7c7566 JetBrains Mono 10
+  pop
+pop
+clip 294,38 772.6666x602.6667 r 0
+  rect 294,38 772.6666x30 fill #0c0c0b
+  clip 294,38 772.6666x30 r 0
+    rect 294,38 111.265625x30 fill #121210
+    rect 294,38 111.265625x2 fill #ffd23f
+    text "round.go" @308,58.365234 #ece6d8 Inter 12
+    text "M" @366.26562,57.42 #ff9b45 JetBrains Mono 9.5
+    text "✕" @385.96875,57.96 #7c7566 JetBrains Mono 11
+  pop
+  rect 294,68 772.6666x1 fill #24221d
+  clip 294,69 772.6666x571.6667 r 0
+    rect 294,69 772.6666x571.6667 fill #060606
+    clip 294,69 772.6666x571.6667 r 0
+      text "internal" @308,85.96 #7c7566 JetBrains Mono 11
+      text "›" @366.75,85.96 #7c7566 JetBrains Mono 11
+      text "pricing" @379.34375,85.96 #7c7566 JetBrains Mono 11
+      text "›" @431.5,85.96 #7c7566 JetBrains Mono 11
+      text "round.go" @444.09375,85.96 #b3ab99 JetBrains Mono 11
+      clip 294,95 772.6666x545.6667 r 0
+        text "1" @333.59375,116.36 #7c7566 JetBrains Mono 13.5
+        text "package" @362,116.36 #c792ff JetBrains Mono 13.5
+        text " " @420.84375,116.36 #ece6d8 JetBrains Mono 13.5
+        text "pricing" @429.25,116.36 #ece6d8 JetBrains Mono 13.5
+        text "Ada · 1w ago · base" @510.09375,115.82 #4f4a40 JetBrains Mono 12
+        text "2" @333.59375,137.36 #4f4a40 JetBrains Mono 13.5
+        text "3" @333.59375,158.36 #4f4a40 JetBrains Mono 13.5
+        text "func" @362,158.36 #c792ff JetBrains Mono 13.5
+        text " " @395.625,158.36 #ece6d8 JetBrains Mono 13.5
+        text "Round" @404.03125,158.36 #5cd2ff JetBrains Mono 13.5
+        text "()" @446.0625,158.36 #89ddff JetBrains Mono 13.5
+        text " " @462.875,158.36 #ece6d8 JetBrains Mono 13.5
+        text "{}" @471.28125,158.36 #89ddff JetBrains Mono 13.5
+        text "4" @333.59375,179.36 #4f4a40 JetBrains Mono 13.5
+        text "5" @333.59375,200.36 #4f4a40 JetBrains Mono 13.5
+        text "func" @362,200.36 #c792ff JetBrains Mono 13.5
+        text " " @395.625,200.36 #ece6d8 JetBrains Mono 13.5
+        text "RoundHalfEven" @404.03125,200.36 #5cd2ff JetBrains Mono 13.5
+        text "()" @513.3125,200.36 #89ddff JetBrains Mono 13.5
+        text " " @530.125,200.36 #ece6d8 JetBrains Mono 13.5
+        text "{}" @538.53125,200.36 #89ddff JetBrains Mono 13.5
+        text "6" @333.59375,221.36 #4f4a40 JetBrains Mono 13.5
+        text "7" @333.59375,242.36 #4f4a40 JetBrains Mono 13.5
+        text "func" @362,242.36 #c792ff JetBrains Mono 13.5
+        text " " @395.625,242.36 #ece6d8 JetBrains Mono 13.5
+        text "RoundMinor" @404.03125,242.36 #5cd2ff JetBrains Mono 13.5
+        text "()" @488.09375,242.36 #89ddff JetBrains Mono 13.5
+        text " " @504.90625,242.36 #ece6d8 JetBrains Mono 13.5
+        text "{}" @513.3125,242.36 #89ddff JetBrains Mono 13.5
+      pop
+    pop
+  pop
+pop
+rect 0,640.6667 1066.6666x26 fill #0c0c0b
+rect 0,640.6667 71.1225x26 fill #ffd23f
+text "NORMAL" @12,657.4467 #141006 JetBrains Mono 10.5
+text "✕" @87.1225,657.62665 #b3ab99 JetBrains Mono 11
+text "0" @98.71625,657.62665 #b3ab99 JetBrains Mono 11
+text "⚠" @119.31,657.62665 #b3ab99 JetBrains Mono 11
+text "0" @130.90375,657.62665 #b3ab99 JetBrains Mono 11
+text "Go · utf-8 · LF" @867.0104,651.3767 #b3ab99 JetBrains Mono 10.5
+text "1:1" @981.9166,651.3767 #b3ab99 JetBrains Mono 10.5
+text "≡ 14%" @1017.6979,651.3767 #b3ab99 JetBrains Mono 10.5
+rect 98,278 102.1875x1 fill #ff5f6d
+rect 344.79688,206 2.1015625x21 fill #4fe0a0
+rect 344.79688,227 2.1015625x21 fill #4fe0a0
+rect 362,102 8.40625x19 fill #ffd23f
+text "p" @362,115.770004 #141006 JetBrains Mono 13.5

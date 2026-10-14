@@ -127,6 +127,7 @@ type buffer struct {
 	file       *edit.File // the file it was read from or written to; nil until then
 	notEdited  bool       // named with :file rather than read from its file
 	qf         *qfStack   // the list a quickfix or location-list window's buffer shows
+	unloaded   bool       // its text was dropped (:bdelete, :bunload); its jumps are forgotten
 }
 
 // window is what the engine keeps per window: its editor (cursor) on a buffer, and its jumplist.
@@ -138,7 +139,7 @@ type window struct {
 	want       int // curswant: the screen column vertical moves aim for
 	pcmark     *Pos
 	prevPcmark *Pos
-	jumps      []Pos
+	jumps      []jump
 	jumpIdx    int
 	alt        *buffer // the alternate buffer, for CTRL-^
 	fold       foldState

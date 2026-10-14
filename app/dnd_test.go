@@ -145,8 +145,8 @@ func TestFilesDroppedOnTheWindow(t *testing.T) {
 	os.WriteFile(a, []byte("package a\n"), 0o644)
 	os.WriteFile(b, []byte("package b\n"), 0o644)
 	s.dropFiles(s.textAt(t, "Doing ← drop here"), a, b)
-	if !strings.Contains(s.frameText(), "got file:"+a+","+b) {
-		t.Errorf("the plugin didn't get the files:\n%s", s.frameText())
+	if !strings.Contains(s.fullText(), "got file:"+a+","+b) {
+		t.Errorf("the plugin didn't get the files:\n%s", s.fullText())
 	}
 	s.dropFiles(render.Point{X: 700, Y: 400}, a) // the middle of the window, where nothing takes files
 	s.frame()

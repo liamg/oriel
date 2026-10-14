@@ -4,8 +4,10 @@
 
 ---@class oriel
 ---@field agent oriel.agent
+---@field coverage oriel.coverage
 ---@field decor oriel.decor
 ---@field diagnostics oriel.diagnostics
+---@field editor oriel.editor
 ---@field hud oriel.hud
 ---@field keymap oriel.keymap
 ---@field language oriel.language
@@ -17,6 +19,7 @@
 ---@field session oriel.session
 ---@field start oriel.start
 ---@field status oriel.status
+---@field thread oriel.thread
 ---@field ui oriel.ui
 ---@field view oriel.view
 ---@field option table<string, any> Your settings, by name or vim alias, as init.lua sets them
@@ -84,6 +87,22 @@ function oriel.agent.pack(name, spec) end
 ---@param spec table
 function oriel.agent.tool(spec) end
 
+---@class oriel.coverage
+oriel.coverage = {}
+
+--- A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner.
+---@param file string
+---@param first integer
+---@param last integer
+---@return table
+function oriel.coverage.lines(file, first, last) end
+
+--- Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.
+---@param owner string
+---@param file string
+---@param hits any
+function oriel.coverage.set(owner, file, hits) end
+
 ---@class oriel.decor
 oriel.decor = {}
 
@@ -105,14 +124,29 @@ function oriel.diagnostics.list() end
 ---@param list any
 function oriel.diagnostics.set(owner, file, list) end
 
+---@class oriel.editor
+oriel.editor = {}
+
+--- Add a button at the right of an editor's breadcrumb, for the files when(path) takes: { name, label, label_on, icon, icon_on, command, args, run = fn(window), when = fn(path), on = fn(window), note = fn(window), order (50 by default), help }. window is { id, path, presenter }. on lights it, and label_on and icon_on show while it's on; note is dim text after the label (a count). icon is a built-in icon's name or a glyph. command runs with args.window set to the window it was clicked in; run is a function in its place.
+---@param spec table
+function oriel.editor.action(spec) end
+
+--- Show the focused editor window with the presenter name, or as text again when it shows it already.
+---@param name string
+function oriel.editor.present(name) end
+
+--- Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text.
+---@param spec table
+function oriel.editor.presenter(spec) end
+
 ---@class oriel.hud
 oriel.hud = {}
 
---- A HUD tat: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
+--- A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
 ---@param name string
 ---@param opts table
 ---@param fn function
-function oriel.hud.tat(name, opts, fn) end
+function oriel.hud.indicator(name, opts, fn) end
 
 ---@class oriel.keymap
 oriel.keymap = {}
@@ -155,7 +189,7 @@ function oriel.overview.add(spec) end
 ---@class oriel.rail
 oriel.rail = {}
 
---- Add an icon to the rail down the window's left edge: { name, icon, title, command, args, order (50 by default), bottom }. icon is a built-in icon's name (files, search, git, requests, debug, tests, settings) or a glyph. It's dimmed while the command isn't available.
+--- Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available.
 ---@param spec table
 function oriel.rail.add(spec) end
 
@@ -202,7 +236,7 @@ function oriel.session.kind(name, spec) end
 ---@class oriel.start
 oriel.start = {}
 
---- Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default) }. It's dimmed while the command isn't available.
+--- Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure.
 ---@param spec table
 function oriel.start.add(spec) end
 
@@ -213,6 +247,32 @@ oriel.status = {}
 ---@param fn function
 function oriel.status.rule(fn) end
 
+---@class oriel.thread
+oriel.thread = {}
+
+--- The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent) }.
+---@return table
+function oriel.thread.list() end
+
+--- Open a request: with opts.body, send it now ({ body, file, line, urgent, btw }; no file is about the whole change); without, open a thread on the editor's line at the cursor to write it.
+---@param opts? table
+function oriel.thread.new(opts) end
+
+--- Show a request by id in the Requests view.
+---@param id string
+function oriel.thread.open(id) end
+
+--- Reply to a request by id: opts { urgent (interrupts the agent's turn), btw (a side question, answered by a fork) }.
+---@param id string
+---@param body string
+---@param opts? table
+function oriel.thread.reply(id, body, opts) end
+
+--- Resolve a request by id, or set its status: open, resolved, deferred or dismissed.
+---@param id string
+---@param status? string
+function oriel.thread.resolve(id, status) end
+
 ---@class oriel.ui
 oriel.ui = {}
 
@@ -221,12 +281,27 @@ oriel.ui = {}
 ---@return table
 function oriel.ui.button(spec) end
 
+--- A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1.
+---@param spec table
+---@return table
+function oriel.ui.chart(spec) end
+
 --- A column of nodes; options beside them: gap, pad (px).
 ---@param children any
 ---@return table
 function oriel.ui.column(children) end
 
---- A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
+--- A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30.
+---@param spec table
+---@return table
+function oriel.ui.date_picker(spec) end
+
+--- A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
+---@param spec table
+---@return table
+function oriel.ui.indicator(spec) end
+
+--- A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value.
 ---@param spec table
 ---@return table
 function oriel.ui.input(spec) end
@@ -260,11 +335,6 @@ function oriel.ui.spacer() end
 ---@param initial? any
 ---@return table
 function oriel.ui.state(key, initial) end
-
---- A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
----@param spec table
----@return table
-function oriel.ui.tat(spec) end
 
 --- Text, in a style: dim, faint, accent, warn, error or ok.
 ---@param s any

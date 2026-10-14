@@ -22,7 +22,7 @@ Asked for in P3, after the plugin UI demo (`app/plugindemo_test.go`) showed what
 
 ## What
 
-Lua views can show text, rows, tats, lists and buttons, but can't take input. Add the controls a small panel
+Lua views can show text, rows, indicators, lists and buttons, but can't take input. Add the controls a small panel
 needs, on the same widgets the built-ins use, so they look and behave the same (focus, keys, help ids).
 
 - `oriel.ui.input{ value, placeholder, on_change, on_submit }`, `oriel.ui.toggle{ on, on_change }`,

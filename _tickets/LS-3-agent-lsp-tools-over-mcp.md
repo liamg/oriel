@@ -2,7 +2,7 @@
 id: LS-3
 title: "Agent LSP tools over MCP"
 phase: P5
-status: todo
+status: review
 area: LSP, tests, debugging
 module: lsp, agent
 depends_on: [LS-1, AI-2]

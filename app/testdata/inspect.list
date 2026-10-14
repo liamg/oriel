@@ -2,9 +2,12 @@ backdrop #060606
 rect 0,0 856x709 fill #060606
 clip 0,0 856x709 r 0
   rect 0,0 856x30 fill #0c0c0b
-  rect 0,0 79.265625x30 fill #121210
-  rect 0,0 79.265625x2 fill #ffd23f
-  text "round.go" @14,20.365234 #ece6d8 Inter 12
+  clip 0,0 856x30 r 0
+    rect 0,0 98.265625x30 fill #121210
+    rect 0,0 98.265625x2 fill #ffd23f
+    text "round.go" @14,20.365234 #ece6d8 Inter 12
+    text "✕" @78.96875,19.96 #7c7566 JetBrains Mono 11
+  pop
   rect 0,30 856x1 fill #24221d
   clip 0,31 856x678 r 0
     rect 0,31 856x678 fill #060606
@@ -229,10 +232,10 @@ clip 20,109.44 816x516.12 r 8
   rect 20,145.44 816x1 fill #24221d
   text "TREE-SITTER" @34,164.13 #7c7566 JetBrains Mono 9.5
   clip 160,154.44 220x15.179993 r 0
-    text "internal/pricing/round.go 46:11" @160,166.17 #ece6d8 JetBrains Mono 11.5
+    text "internal/pricing/round.go 46:…" @160,166.17 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,154.44 404.8125x15.179993 r 0
-    text "source_file › function_declaration › block › statement_list › expression_switch_statement › expression_case" @392,166.17 #b3ab99 JetBrains Mono 11.5
+    text "source_file › function_declaration › block › statement_…" @392,166.17 #b3ab99 JetBrains Mono 11.5
   pop
   text "go" @808.8125,165.66 #ffd23f JetBrains Mono 11
   rect 20,177.62 816x1 fill #24221d
@@ -245,12 +248,12 @@ clip 20,109.44 816x516.12 r 8
   pop
   text "theme oriel" @749.46875,197.84 #ffd23f JetBrains Mono 11
   rect 20,209.8 816x1 fill #24221d
-  text "LSP TOKEN" @34,228.49 #7c7566 JetBrains Mono 9.5
+  text "LANGUAGE SERVER" @34,228.49 #7c7566 JetBrains Mono 9.5
   clip 160,218.8 220x15.180008 r 0
     text "—" @160,230.53 #4f4a40 JetBrains Mono 11.5
   pop
   clip 392,218.8 418x15.180008 r 0
-    text "language servers come with LS-1" @392,230.53 #4f4a40 JetBrains Mono 11.5
+    text "no language server for round.go" @392,230.53 #4f4a40 JetBrains Mono 11.5
   pop
   text "" @822,230.02 #4f4a40 JetBrains Mono 11
   rect 20,241.98001 816x1 fill #24221d
@@ -329,21 +332,21 @@ clip 20,109.44 816x516.12 r 8
   pop
   text "builtin:editor" @729.6875,466.34 #ffd23f JetBrains Mono 11
   clip 160,474.3 220x15.179993 r 0
-    text "<Space>S" @160,486.03 #ece6d8 JetBrains Mono 11.5
+    text "<Space>R" @160,486.03 #ece6d8 JetBrains Mono 11.5
   pop
-  clip 392,474.3 325.6875x15.179993 r 0
-    text "picker.open" @392,486.03 #b3ab99 JetBrains Mono 11.5
+  clip 392,474.3 312.5x15.179993 r 0
+    text "threads.toggle" @392,486.03 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:editor" @729.6875,485.52 #ffd23f JetBrains Mono 11
+  text "builtin:requests" @716.5,485.52 #ffd23f JetBrains Mono 11
   clip 160,493.47998 220x15.179993 r 0
-    text "<Space>T" @160,505.21 #ece6d8 JetBrains Mono 11.5
+    text "<Space>S" @160,505.21 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,493.47998 325.6875x15.179993 r 0
     text "picker.open" @392,505.21 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:themes" @729.6875,504.69998 #ffd23f JetBrains Mono 11
+  text "builtin:editor" @729.6875,504.69998 #ffd23f JetBrains Mono 11
   clip 160,512.66 220x15.179993 r 0
-    text "and 76 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
+    text "and 93 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
   pop
   clip 392,512.66 418x15.179993 r 0
     text ":Keys lists them" @392,524.38995 #4f4a40 JetBrains Mono 11.5

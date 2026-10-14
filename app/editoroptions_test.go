@@ -32,7 +32,7 @@ func TestSetIsPerBufferAndOnThePage(t *testing.T) {
 	s.run("settings.open", registry.Args{"query": "shift_width"})
 	s.frame()
 	s.frame()
-	if text := s.frameText(); !strings.Contains(text, "editor.shift_width") || !strings.Contains(text, "buffer · :set") {
+	if text := s.fullText(); !strings.Contains(text, "editor.shift_width") || !strings.Contains(text, "buffer · :set") {
 		t.Errorf("the page doesn't show :set:\n%s", text)
 	}
 	s.settings().open = false

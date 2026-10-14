@@ -1,6 +1,6 @@
 # Help: everywhere, invisible until you ask
 
-Every element in Oriel can explain itself: tabs, tats, gutter marks, badges, menu items, panels,
+Every element in Oriel can explain itself: tabs, indicators, gutter marks, badges, menu items, panels,
 statusline segments, status colours. You never see help until you ask for it, and then it's one gesture away.
 
 ![28-help](mockups/28-help.png)
@@ -17,7 +17,7 @@ statusline segments, status colours. You never see help until you ask for it, an
 ## What a help page shows
 
 - **What it is** and **what it means**, written for someone seeing it for the first time.
-- **Right now**: the element's live value and what it implies. A usage tat shows its burn-rate projection.
+- **Right now**: the element's live value and what it implies. A usage indicator shows its burn-rate projection.
   A red session dot says *why* it's red ("replied 4m ago, awaiting you"). A gutter diamond says how many agent lines are unread.
 - **Keys** that act on it, **settings** that change it (editable in place), and **how to script it** (`oriel.*`).
 - **Related** pages, and the element's own id and source (which plugin drew it), with `:Inspect` one step away.
@@ -32,7 +32,7 @@ Help pages are plain markdown in the repo, rendered with the same renderer as pl
 ```markdown
 ---
 id: hud/usage
-covers: [hud.tat.usage.*, hud.panel.usage]   # element ids this page explains
+covers: [hud.indicator.usage.*, hud.panel.usage]   # element ids this page explains
 ---
 
 # Usage windows

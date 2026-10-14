@@ -38,12 +38,12 @@ func TestLogPanelCloses(t *testing.T) {
 	if !s.showing("log") {
 		t.Fatal(":Log didn't open the log")
 	}
-	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.textPoint(t, "Log")})
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.textPoint(t, "LOG")})
 	s.frame()
 	s.frame()
 	s.click(centre(s.access("Close Log").Bounds))
 	if s.showing("log") {
-		t.Error("the tab's ✕ didn't close the log")
+		t.Error("the header's ✕ didn't close the log")
 	}
 
 	s.run("Log", nil)
