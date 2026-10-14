@@ -1,0 +1,44 @@
+# Wide characters (UAX #11) and grapheme clusters (UAX #29): a cell holds a whole cluster, and a wide one takes two
+# cells, the second a spacer.
+
+=== East Asian Wide characters take two cells
+ref:    unicode/tr11.html#ED4
+quote:  "ED4. East Asian Wide (W): All other characters that are always wide."
+size:   6x1
+input:  "漢字a"
+screen:
+  |漢字a |
+cell:   0,0 text="漢" width=wide
+cell:   1,0 width=tail
+cell:   2,0 text="字" width=wide
+cell:   3,0 width=tail
+cell:   4,0 text="a" width=narrow
+cursor: 5,0
+
+=== a combining mark joins the character before it
+ref:    unicode/tr29.html#GB9
+quote:  "GB9 × (Extend | ZWJ)"
+size:   6x1
+input:  "éx"
+cell:   0,0 text="é" width=narrow
+cell:   1,0 text="x"
+cursor: 2,0
+
+=== an emoji ZWJ sequence is one wide cluster
+ref:    unicode/tr29.html#GB11
+quote:  "GB11 \\p{Extended_Pictographic} Extend* ZWJ × \\p{Extended_Pictographic}"
+ref:    unicode/tr11.html#ED4
+quote:  "along with characters that have the [UTS51] property Emoji_Presentation"
+size:   6x1
+input:  "👨‍👩‍👧x"
+cell:   0,0 text="👨‍👩‍👧" width=wide
+cell:   1,0 width=tail
+cell:   2,0 text="x"
+cursor: 3,0
+
+=== a pair of regional indicators is one cluster
+ref:    unicode/tr29.html#GB12
+quote:  "GB12 sot (RI RI)* RI × RI"
+size:   6x1
+input:  "🇬🇧"
+cell:   0,0 text="🇬🇧"

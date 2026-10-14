@@ -9,7 +9,7 @@ rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1469.0625x38 r 0
 pop
 rect 0,38 44x936 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40
@@ -20,7 +20,7 @@ path 2 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
@@ -39,7 +39,7 @@ text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
 rect 0,0 1600x1000 fill #03050899
-rect 360,118 880x800 fill #0c0c0b radius 10 stroke 1 #332f27
+rect 360,118 880x800 fill #0c0c0b radius 10
 clip 360,118 880x800 r 10
   text "HELP" @376,141.42 #ffd23f JetBrains Mono 9.5
   text "errors" @413.32,141.96 #b3ab99 JetBrains Mono 11
@@ -79,3 +79,4 @@ clip 360,118 880x800 r 10
     text "^o back · ^i forward · esc close" @1006,899 #7c7566 JetBrains Mono 10
   pop
 pop
+rect 360,118 880x800 radius 10 stroke 1 #332f27

@@ -1,0 +1,40 @@
+{"kind":"started","package":"example.com/watch/a","time":"2026-10-13T20:24:22.621006058Z"}
+{"kind":"started","package":"example.com/watch/a","test":"TestDouble","time":"2026-10-13T20:24:22.622577702Z"}
+{"kind":"output","package":"example.com/watch/a","test":"TestDouble","time":"2026-10-13T20:24:22.622586103Z","line":"=== RUN   TestDouble"}
+{"kind":"output","package":"example.com/watch/a","test":"TestDouble","time":"2026-10-13T20:24:22.622609879Z","line":"--- PASS: TestDouble (0.00s)"}
+{"kind":"passed","package":"example.com/watch/a","test":"TestDouble","time":"2026-10-13T20:24:22.622614164Z"}
+{"kind":"started","package":"example.com/watch/a","test":"TestSign","time":"2026-10-13T20:24:22.622618299Z"}
+{"kind":"output","package":"example.com/watch/a","test":"TestSign","time":"2026-10-13T20:24:22.622620592Z","line":"=== RUN   TestSign"}
+{"kind":"output","package":"example.com/watch/a","test":"TestSign","time":"2026-10-13T20:24:22.622625495Z","line":"--- PASS: TestSign (0.00s)"}
+{"kind":"passed","package":"example.com/watch/a","test":"TestSign","time":"2026-10-13T20:24:22.622628578Z"}
+{"kind":"output","package":"example.com/watch/a","time":"2026-10-13T20:24:22.622631225Z","line":"PASS"}
+{"kind":"output","package":"example.com/watch/a","time":"2026-10-13T20:24:22.622850462Z","line":"coverage: 50.0% of statements"}
+{"kind":"output","package":"example.com/watch/a","time":"2026-10-13T20:24:22.623242512Z","line":"ok  \texample.com/watch/a\t0.002s\tcoverage: 50.0% of statements"}
+{"kind":"passed","package":"example.com/watch/a","time":"2026-10-13T20:24:22.623250945Z","elapsed":2000000}
+{"kind":"started","package":"example.com/watch/b","time":"2026-10-13T20:24:22.628330319Z"}
+{"kind":"started","package":"example.com/watch/c","time":"2026-10-13T20:24:22.628420098Z"}
+{"kind":"started","package":"example.com/watch/d","time":"2026-10-13T20:24:22.628460051Z"}
+{"kind":"started","package":"example.com/watch/c","test":"TestSixteen","time":"2026-10-13T20:24:22.629508494Z"}
+{"kind":"output","package":"example.com/watch/c","test":"TestSixteen","time":"2026-10-13T20:24:22.629526065Z","line":"=== RUN   TestSixteen"}
+{"kind":"output","package":"example.com/watch/c","test":"TestSixteen","time":"2026-10-13T20:24:22.629550331Z","line":"--- PASS: TestSixteen (0.00s)"}
+{"kind":"passed","package":"example.com/watch/c","test":"TestSixteen","time":"2026-10-13T20:24:22.629553202Z"}
+{"kind":"output","package":"example.com/watch/c","time":"2026-10-13T20:24:22.629555834Z","line":"PASS"}
+{"kind":"started","package":"example.com/watch/d","test":"TestHello","time":"2026-10-13T20:24:22.629564601Z"}
+{"kind":"output","package":"example.com/watch/d","test":"TestHello","time":"2026-10-13T20:24:22.629566711Z","line":"=== RUN   TestHello"}
+{"kind":"output","package":"example.com/watch/d","test":"TestHello","time":"2026-10-13T20:24:22.629577683Z","line":"--- PASS: TestHello (0.00s)"}
+{"kind":"passed","package":"example.com/watch/d","test":"TestHello","time":"2026-10-13T20:24:22.629581327Z"}
+{"kind":"output","package":"example.com/watch/d","time":"2026-10-13T20:24:22.629584281Z","line":"PASS"}
+{"kind":"started","package":"example.com/watch/b","test":"TestQuadruple","time":"2026-10-13T20:24:22.629597249Z"}
+{"kind":"output","package":"example.com/watch/b","test":"TestQuadruple","time":"2026-10-13T20:24:22.629601099Z","line":"=== RUN   TestQuadruple"}
+{"kind":"output","package":"example.com/watch/b","test":"TestQuadruple","time":"2026-10-13T20:24:22.629613203Z","line":"--- PASS: TestQuadruple (0.00s)"}
+{"kind":"passed","package":"example.com/watch/b","test":"TestQuadruple","time":"2026-10-13T20:24:22.629615116Z"}
+{"kind":"output","package":"example.com/watch/b","time":"2026-10-13T20:24:22.629616858Z","line":"PASS"}
+{"kind":"output","package":"example.com/watch/c","time":"2026-10-13T20:24:22.62981709Z","line":"coverage: 100.0% of statements"}
+{"kind":"output","package":"example.com/watch/d","time":"2026-10-13T20:24:22.629840481Z","line":"coverage: 100.0% of statements"}
+{"kind":"output","package":"example.com/watch/b","time":"2026-10-13T20:24:22.629907792Z","line":"coverage: 100.0% of statements"}
+{"kind":"output","package":"example.com/watch/c","time":"2026-10-13T20:24:22.63011807Z","line":"ok  \texample.com/watch/c\t0.002s\tcoverage: 100.0% of statements"}
+{"kind":"passed","package":"example.com/watch/c","time":"2026-10-13T20:24:22.630127475Z","elapsed":2000000}
+{"kind":"output","package":"example.com/watch/b","time":"2026-10-13T20:24:22.630149257Z","line":"ok  \texample.com/watch/b\t0.002s\tcoverage: 100.0% of statements"}
+{"kind":"passed","package":"example.com/watch/b","time":"2026-10-13T20:24:22.63016208Z","elapsed":2000000}
+{"kind":"output","package":"example.com/watch/d","time":"2026-10-13T20:24:22.630178217Z","line":"ok  \texample.com/watch/d\t0.002s\tcoverage: 100.0% of statements"}
+{"kind":"passed","package":"example.com/watch/d","time":"2026-10-13T20:24:22.630186608Z","elapsed":2000000}

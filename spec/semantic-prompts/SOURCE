@@ -1,0 +1,4 @@
+source: https://gitlab.freedesktop.org/Per_Bothner/specifications
+commit: 4d2e1d75d4861a1d924895e106f8f016880e12a7
+path: proposals/semantic-prompts.md (OSC 133), LICENSE
+license: CC0 1.0 (see LICENSE)

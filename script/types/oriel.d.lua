@@ -9,6 +9,7 @@
 ---@field hud oriel.hud
 ---@field keymap oriel.keymap
 ---@field language oriel.language
+---@field lsp oriel.lsp
 ---@field menu oriel.menu
 ---@field overview oriel.overview
 ---@field rail oriel.rail
@@ -129,6 +130,13 @@ oriel.language = {}
 --- Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.
 ---@param spec table
 function oriel.language.add(spec) end
+
+---@class oriel.lsp
+oriel.lsp = {}
+
+--- Register a language server: { name, languages = { \
+---@param spec table
+function oriel.lsp.server(spec) end
 
 ---@class oriel.menu
 oriel.menu = {}

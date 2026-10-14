@@ -2,7 +2,7 @@
 id: TR-3
 title: "Tests panel: tree, filters, flaky detection, run history"
 phase: P4
-status: todo
+status: done
 area: LSP, tests, debugging
 module: testrun, app
 depends_on: [TR-1, FW-6]

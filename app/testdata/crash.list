@@ -9,7 +9,7 @@ rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1469.0625x38 r 0
 pop
 rect 0,38 44x936 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40
@@ -20,7 +20,7 @@ path 2 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
@@ -105,7 +105,7 @@ text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
 rect 0,0 1600x1000 fill #030508b8
-rect 440,286.9455 720x426.109 fill #0c0c0b radius 10 stroke 1 #332f27
+rect 440,286.9455 720x426.109 fill #0c0c0b radius 10
 clip 440,286.9455 720x426.109 r 10
   text "Oriel quit unexpectedly last time" @456,311.6745 #ece6d8 Inter 13
   rect 1116,299.3455 28x15.200012 fill #121210 radius 4 stroke 1 #332f27
@@ -114,7 +114,7 @@ clip 440,286.9455 720x426.109 r 10
   text "2026-10-13 18:42 · v0.4.2" @456,354.6555 #7c7566 JetBrains Mono 10.5
   text "The crash report below stays on this machine; nothing has been sent. If you'd like it fixed, copy it into a new" @456,379.91486 #b3ab99 Inter 12.5
   text "issue. Secrets and tokens are already redacted." @456,398.03937 #b3ab99 Inter 12.5
-  rect 456,411.0545 688x250 fill #060606 radius 6 stroke 1 #24221d
+  rect 456,411.0545 688x250 fill #060606 radius 6
   clip 456,411.0545 688x250 r 6
     text "oriel v0.4.2 · darwin/arm64" @468,434.2745 #b3ab99 JetBrains Mono 11
     text "plugins linear, glowcursor" @468,451.7945 #b3ab99 JetBrains Mono 11
@@ -129,6 +129,7 @@ clip 440,286.9455 720x426.109 r 10
     text "    app/explorer.go:88" @468,609.4745 #b3ab99 JetBrains Mono 11
     text "… 14 more frames" @468,626.9945 #b3ab99 JetBrains Mono 11
   pop
+  rect 456,411.0545 688x250 radius 6 stroke 1 #24221d
   rect 456,671.0545 89.390625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
   text "Copy report" @466,688.41974 #141006 Inter 12
   text "Open a GitHub issue ↗" @555.3906,687.41974 #ffd23f Inter 12
@@ -139,3 +140,4 @@ clip 440,286.9455 720x426.109 r 10
   rect 1091.4062,671.0545 52.59375x26 fill #191815 radius 6 stroke 1 #332f27
   text "Close" @1101.4062,688.41974 #ece6d8 Inter 12
 pop
+rect 440,286.9455 720x426.109 radius 10 stroke 1 #332f27

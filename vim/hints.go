@@ -61,6 +61,11 @@ func (e *Engine) NextKeys() []KeyHint {
 		}
 		keys = keys[1:]
 	}
+	return HintsFor(keys)
+}
+
+// HintsFor are the engine's own commands that can follow keys typed in normal mode: g's, z's, ⌃W's.
+func HintsFor(keys []string) []KeyHint {
 	if len(keys) != 1 {
 		return nil
 	}

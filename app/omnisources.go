@@ -170,13 +170,20 @@ func (x *editorExt) filesSource() registry.PickerSource {
 			for _, b := range x.e.BufferList() {
 				open[b.Name] = true
 			}
+			st := x.sh.git.state()
 			var out []registry.PickerItem
 			for _, f := range files.list() {
 				it := registry.PickerItem{ID: f, Label: f, IconStyle: "status.working", Boost: -strings.Count(f, "/"), Path: f}
+				var notes []string
+				if fs, ok := st.File(x.sh.git.rel(f)); ok && fs.Code != 0 {
+					it.Boost += 5
+					notes = append(notes, string(fs.Code))
+				}
 				if open[f] {
 					it.Boost += 10
-					it.Note = "open"
+					notes = append(notes, "open")
 				}
+				it.Note = strings.Join(notes, " ")
 				out = append(out, it)
 			}
 			return out

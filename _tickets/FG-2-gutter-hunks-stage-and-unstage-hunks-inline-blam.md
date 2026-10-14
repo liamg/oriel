@@ -2,7 +2,7 @@
 id: FG-2
 title: "Gutter hunks, stage and unstage hunks, inline blame by author kind"
 phase: P4
-status: todo
+status: done
 area: Files, git, terminals
 module: gitx
 depends_on: [ED-7]

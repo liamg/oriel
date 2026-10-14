@@ -1,0 +1,42 @@
+{"kind":"started","package":"test/integration"}
+{"kind":"started","package":"test/integration","test":"adds"}
+{"kind":"started","package":"test/integration","test":"fails_too"}
+{"kind":"passed","package":"test/integration","test":"adds","elapsed":2820157}
+{"kind":"output","package":"test/integration","test":"fails_too","line":"thread 'fails_too' panicked at tests/integration.rs:8:5:"}
+{"kind":"output","package":"test/integration","test":"fails_too","line":"assertion failed: basic::sign(1) < 0"}
+{"kind":"output","package":"test/integration","test":"fails_too","line":"note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"}
+{"kind":"failed","package":"test/integration","test":"fails_too","elapsed":2884889,"failure":{"reason":"assert","message":"assertion failed: basic::sign(1) < 0","loc":{"file":"tests/integration.rs","line":7}}}
+{"kind":"failed","package":"test/integration","elapsed":5705046,"failure":{"reason":"assert"}}
+{"kind":"started","package":"lib"}
+{"kind":"started","package":"lib","test":"tests::inner::deep"}
+{"kind":"started","package":"lib","test":"tests::ignored"}
+{"kind":"started","package":"lib","test":"tests::fails"}
+{"kind":"started","package":"lib","test":"shapes::tests::square"}
+{"kind":"started","package":"lib","test":"tests::passes"}
+{"kind":"started","package":"lib","test":"tests::panics"}
+{"kind":"started","package":"lib","test":"tests::should_panic"}
+{"kind":"skipped","package":"lib","test":"tests::ignored"}
+{"kind":"passed","package":"lib","test":"tests::should_panic","elapsed":2381712}
+{"kind":"passed","package":"lib","test":"tests::passes","elapsed":2421962}
+{"kind":"output","package":"lib","test":"tests::fails","line":"about to add"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"thread 'tests::fails' panicked at src/lib.rs:26:9:"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"assertion `left == right` failed"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"  left: 4"}
+{"kind":"output","package":"lib","test":"tests::fails","line":" right: 5"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"}
+{"kind":"failed","package":"lib","test":"tests::fails","elapsed":2450809,"failure":{"reason":"assert","message":"assertion `left == right` failed\n  left: 4\n right: 5","want":"5","got":"4","loc":{"file":"src/lib.rs","line":25}}}
+{"kind":"output","package":"lib","test":"tests::panics","line":"thread 'tests::panics' panicked at src/lib.rs:32:18:"}
+{"kind":"output","package":"lib","test":"tests::panics","line":"index out of bounds: the len is 0 but the index is 3"}
+{"kind":"output","package":"lib","test":"tests::panics","line":"note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"}
+{"kind":"failed","package":"lib","test":"tests::panics","elapsed":2465764,"failure":{"reason":"panic","message":"index out of bounds: the len is 0 but the index is 3","loc":{"file":"src/lib.rs","line":31}}}
+{"kind":"passed","package":"lib","test":"shapes::tests::square","elapsed":3177639}
+{"kind":"failed","package":"lib","elapsed":12897886,"failure":{"reason":"assert"}}
+{"kind":"started","package":"test/slow"}
+{"kind":"started","package":"test/slow","test":"quick"}
+{"kind":"started","package":"test/slow","test":"slow"}
+{"kind":"passed","package":"test/slow","test":"quick","elapsed":3175541}
+{"kind":"failed","package":"test/slow","test":"slow","elapsed":4002960089,"failure":{"reason":"timeout","message":"time limit exceeded"}}
+{"kind":"failed","package":"test/slow","elapsed":4006135630,"failure":{"reason":"assert"}}
+{"kind":"started","package":"lib"}
+{"kind":"passed","package":"lib","test":"tests::inner::deep","elapsed":3218463}
+{"kind":"passed","package":"lib","elapsed":3218463}

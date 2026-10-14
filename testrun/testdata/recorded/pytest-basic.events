@@ -1,0 +1,80 @@
+{"kind":"output","line":"============================= test session starts =============================="}
+{"kind":"output","line":"platform linux -- Python 3.11.2, pytest-8.3.4, pluggy-1.6.0"}
+{"kind":"output","line":"rootdir: $ROOT"}
+{"kind":"output","line":"configfile: pytest.ini"}
+{"kind":"output","line":"plugins: cov-6.0.0"}
+{"kind":"output","line":"collected 25 items"}
+{"kind":"output","line":"tests/test_calc.py "}
+{"kind":"started","package":"tests/test_calc.py","test":"test_pass","time":"2026-10-13T20:31:01.833972736Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_pass","time":"2026-10-13T20:31:01.834459136Z","elapsed":268890}
+{"kind":"started","package":"tests/test_calc.py","test":"test_fail","time":"2026-10-13T20:31:01.834597632Z"}
+{"kind":"output","line":"F"}
+{"kind":"output","package":"tests/test_calc.py","test":"test_fail","time":"2026-10-13T20:31:01.845166336Z","line":"about to add"}
+{"kind":"failed","package":"tests/test_calc.py","test":"test_fail","time":"2026-10-13T20:31:01.845166336Z","elapsed":394799,"failure":{"reason":"assert","message":"assert 4 == 5\n +  where 4 = add(2, 2)","want":"5","got":"4","loc":{"file":"$ROOT/tests/test_calc.py","line":11}}}
+{"kind":"started","package":"tests/test_calc.py","test":"test_raises","time":"2026-10-13T20:31:01.845318656Z"}
+{"kind":"output","line":"F"}
+{"kind":"failed","package":"tests/test_calc.py","test":"test_raises","time":"2026-10-13T20:31:01.847337216Z","elapsed":259486,"failure":{"reason":"panic","message":"ZeroDivisionError: b is zero","loc":{"file":"$ROOT/calc.py","line":6}}}
+{"kind":"started","package":"tests/test_calc.py","test":"test_skip","time":"2026-10-13T20:31:01.8474816Z"}
+{"kind":"output","line":"s"}
+{"kind":"skipped","package":"tests/test_calc.py","test":"test_skip","time":"2026-10-13T20:31:01.847835136Z","elapsed":152272,"message":"not today"}
+{"kind":"started","package":"tests/test_calc.py","test":"test_skip_inside","time":"2026-10-13T20:31:01.84796672Z"}
+{"kind":"output","line":"s"}
+{"kind":"skipped","package":"tests/test_calc.py","test":"test_skip_inside","time":"2026-10-13T20:31:01.848413184Z","elapsed":239851,"message":"skipped inside"}
+{"kind":"started","package":"tests/test_calc.py","test":"test_xfail","time":"2026-10-13T20:31:01.848539648Z"}
+{"kind":"output","line":"x"}
+{"kind":"skipped","package":"tests/test_calc.py","test":"test_xfail","time":"2026-10-13T20:31:01.850222592Z","elapsed":308996,"message":"xfail: known bug"}
+{"kind":"started","package":"tests/test_calc.py","test":"test_setup_error","time":"2026-10-13T20:31:01.850428416Z"}
+{"kind":"output","line":"E"}
+{"kind":"failed","package":"tests/test_calc.py","test":"test_setup_error","time":"2026-10-13T20:31:01.852368128Z","elapsed":299752,"failure":{"reason":"error","message":"RuntimeError: fixture broke","loc":{"file":"$ROOT/tests/test_calc.py","line":34}}}
+{"kind":"started","package":"tests/test_calc.py","test":"TestNested::test_inner","time":"2026-10-13T20:31:01.852508416Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"TestNested::test_inner","time":"2026-10-13T20:31:01.852882176Z","elapsed":215450}
+{"kind":"started","package":"tests/test_calc.py","test":"TestNested::TestDeeper::test_deep","time":"2026-10-13T20:31:01.853003008Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"TestNested::TestDeeper::test_deep","time":"2026-10-13T20:31:01.853365248Z","elapsed":206491}
+{"kind":"started","package":"tests/test_calc.py","test":"test_add_table[1-1-2]","time":"2026-10-13T20:31:01.853481984Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_add_table[1-1-2]","time":"2026-10-13T20:31:01.853945088Z","elapsed":314856}
+{"kind":"started","package":"tests/test_calc.py","test":"test_add_table[2-2-5]","time":"2026-10-13T20:31:01.854061056Z"}
+{"kind":"output","line":"F"}
+{"kind":"failed","package":"tests/test_calc.py","test":"test_add_table[2-2-5]","time":"2026-10-13T20:31:01.85590144Z","elapsed":421439,"failure":{"reason":"assert","message":"assert 4 == 5\n +  where 4 = add(2, 2)","want":"5","got":"4","loc":{"file":"$ROOT/tests/test_calc.py","line":63}}}
+{"kind":"started","package":"tests/test_calc.py","test":"test_add_table[-1-1-0]","time":"2026-10-13T20:31:01.856027136Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_add_table[-1-1-0]","time":"2026-10-13T20:31:01.856563712Z","elapsed":322239}
+{"kind":"started","package":"tests/test_calc.py","test":"test_words[hi]","time":"2026-10-13T20:31:01.856681984Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_words[hi]","time":"2026-10-13T20:31:01.857076224Z","elapsed":234538}
+{"kind":"started","package":"tests/test_calc.py","test":"test_words[two words]","time":"2026-10-13T20:31:01.857193728Z"}
+{"kind":"output","line":"F"}
+{"kind":"failed","package":"tests/test_calc.py","test":"test_words[two words]","time":"2026-10-13T20:31:01.858913792Z","elapsed":314915,"failure":{"reason":"assert","message":"AssertionError: assert 'two words' != 'two words'","loc":{"file":"$ROOT/tests/test_calc.py","line":79}}}
+{"kind":"started","package":"tests/test_calc.py","test":"test_words[custom-id]","time":"2026-10-13T20:31:01.859040512Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_words[custom-id]","time":"2026-10-13T20:31:01.859431168Z","elapsed":240529}
+{"kind":"started","package":"tests/test_calc.py","test":"test_words[3.5]","time":"2026-10-13T20:31:01.859549184Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_words[3.5]","time":"2026-10-13T20:31:01.859933184Z","elapsed":235953}
+{"kind":"started","package":"tests/test_calc.py","test":"test_words[True]","time":"2026-10-13T20:31:01.8600512Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_words[True]","time":"2026-10-13T20:31:01.860434944Z","elapsed":236577}
+{"kind":"started","package":"tests/test_calc.py","test":"test_words[None]","time":"2026-10-13T20:31:01.860551936Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_words[None]","time":"2026-10-13T20:31:01.860927488Z","elapsed":229427}
+{"kind":"started","package":"tests/test_calc.py","test":"test_words[word6]","time":"2026-10-13T20:31:01.86104576Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_words[word6]","time":"2026-10-13T20:31:01.861431552Z","elapsed":235906}
+{"kind":"started","package":"tests/test_calc.py","test":"test_stacked[2-zero]","time":"2026-10-13T20:31:01.861547008Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_stacked[2-zero]","time":"2026-10-13T20:31:01.86194944Z","elapsed":255777}
+{"kind":"started","package":"tests/test_calc.py","test":"test_stacked[2-one]","time":"2026-10-13T20:31:01.862064896Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_stacked[2-one]","time":"2026-10-13T20:31:01.862475264Z","elapsed":257365}
+{"kind":"started","package":"tests/test_calc.py","test":"test_stacked[3-zero]","time":"2026-10-13T20:31:01.862591488Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_stacked[3-zero]","time":"2026-10-13T20:31:01.86299648Z","elapsed":258450}
+{"kind":"started","package":"tests/test_calc.py","test":"test_stacked[3-one]","time":"2026-10-13T20:31:01.863111936Z"}
+{"kind":"output","line":"."}
+{"kind":"passed","package":"tests/test_calc.py","test":"test_stacked[3-one]","time":"2026-10-13T20:31:01.863524608Z","elapsed":263236}
+{"kind":"output","line":"                               [ 92%]"}
+{"kind":"output","line":"tests/test_zslow.py "}
+{"kind":"started","package":"tests/test_zslow.py","test":"test_slow","time":"2026-10-13T20:31:01.86374656Z"}

@@ -221,3 +221,9 @@ func BenchmarkResolve(b *testing.B) {
 		Resolve(st, Dark)
 	}
 }
+
+func TestTokenName(t *testing.T) {
+	if Accent.Name() != "accent" || TokenID(-1).Name() != "" {
+		t.Errorf("%q", Accent.Name())
+	}
+}

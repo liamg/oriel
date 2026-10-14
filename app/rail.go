@@ -60,9 +60,10 @@ func (r *rail) Activate(_ context.Context, h ext.Host) error {
 			Order: order[v.name], Active: shown(v.view)}))
 		r.add(h.Keymap(registry.Keymap{Mode: "global", Keys: v.keys, Command: "view.toggle", Args: args, Desc: v.title}))
 	}
-	search := registry.Args{"source": "grep"}
-	r.add(h.Contribute(registry.RailEntry{Name: "search", Icon: "search", Title: "Search", Command: "picker.open", Args: search, Order: order["search"]}))
-	r.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-F>", Command: "picker.open", Args: search, Desc: "Search"}))
+	search := registry.Args{"id": "search", "place": "dock", "edge": "left", "title": "Search", "size": 380}
+	r.add(h.Contribute(registry.RailEntry{Name: "search", Icon: "search", Title: "Search", Command: "view.toggle", Args: search, Order: order["search"],
+		Active: shown("search")}))
+	r.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-F>", Command: "view.toggle", Args: search, Desc: "Search"}))
 	r.add(h.Contribute(registry.RailEntry{Name: "settings", Icon: "settings", Title: "Settings", Command: "settings.open", Order: 10, Bottom: true}))
 	r.add(h.View(RailView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "rail", Fn: func(c *ui.Ctx) { r.build(c, h) }}

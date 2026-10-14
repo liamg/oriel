@@ -16,17 +16,15 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 ## Ready now (no unmet dependencies)
 
 - [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
-- [FG-1](FG-1-explorer-scopes-changed-uncommitted-all-with-mar.md): Explorer scopes: Changed, Uncommitted, All, with markers
-- [FG-2](FG-2-gutter-hunks-stage-and-unstage-hunks-inline-blam.md): Gutter hunks, stage and unstage hunks, inline blame by author kind
-- [FG-3](FG-3-project-search-and-replace-preview.md): Project search and replace preview
-- [FG-4](FG-4-terminals-ghostty-vt-under-wazero-our-renderer-p.md): Terminals: Ghostty VT under wazero, our renderer, placements, terminal-normal mode
-- [LS-1](LS-1-completion-hover-signature-help-diagnostics-code.md): Completion, hover, signature help, diagnostics, code actions, inlay hints
-- [TR-1](TR-1-gutter-run-for-tests-subtests-and-table-rows-inl.md): ▶ gutter run for tests, subtests and table rows; ✓/✕ inline
 - [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md): Worker, wire, sessions, workspaces with multi-repo worktrees
 - [DB-1](DB-1-dap-breakpoints-conditional-logpoints-stepping-s.md): DAP: breakpoints (conditional, logpoints), stepping, stack, variables, watch, REPL
 - [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md): Process plugins with an OS sandbox; WASM plugins; oriel build --with
 - [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and tats in slots
 - [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key)
+- [FG-6](FG-6-ship-page-uncommitted-behind-unpushed-pr-checks-.md): Ship page: uncommitted → behind → unpushed → PR → checks, multi-project
+- [RV-1](RV-1-split-and-unified-diff-intraline-per-hunk-review.md): Split and unified diff, intraline, per-hunk reviewed
+
+P4 is done.
 
 ## Suggested order
 

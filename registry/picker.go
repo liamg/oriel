@@ -50,6 +50,7 @@ type PickerSource struct {
 	// Live sources match the query themselves, as grep does: their items are the results, not candidates.
 	Live       bool
 	PickerOnly bool // in the pickers, not the omnibox's merged list
+	Unlisted   bool // opened by its command only, not in the pickers' strip or ⇥: a result list, such as callers
 	Source     string
 }
 

@@ -1,0 +1,4 @@
+source: https://github.com/jestjs/jest
+ref: v29.7.0
+path: docs/CLI.md, docs/GlobalAPI.md
+license: MIT (see LICENSE)

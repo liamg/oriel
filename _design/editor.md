@@ -207,6 +207,22 @@ engine never feels like another binary running in a pane.
 - A local pack is `~/.config/oriel/languages/<name>/`: `language.toml` (`name`, `extensions`, `filenames`,
   `shebangs`), `grammar.wasm` and `queries/*.scm`. It registers after the core set, so it can shadow one.
 
+## Multiple cursors (ED-8)
+
+- After vim-visual-multi (chosen over insert-only cursors and Helix-style selections): `⌃n` selects the word under
+  the cursor, then each next whole-word match; `⌃↓`/`⌃↑` add a cursor below or above at the same column. In extend
+  mode (regions) `c`/`s`, `d`/`x`, `I`, `A`, `o`, `q` (skip the match) and `Q` (drop it); `⇥` switches to cursors.
+  With cursors, a normal-mode command runs at the primary cursor and, once it's whole, at each other one (replayed,
+  so every motion, operator and text object works); insert mode types, `⌫` and `⏎` at all of them. A command and the
+  typing after it are one undo step (the engine's `outerGroup`, as a register's keys are). `u` and `:` go back to
+  one cursor first; `esc` in normal mode ends it.
+- In the engine (`vim.Engine.MultiNext`, `MultiVertical`, `Multi`), with the cursors as buffer anchors, so edits at
+  one move the others. nvim has no multi-cursor, so these have no oracle: `vim/multi_test.go` are Go tests of
+  Oriel's own behaviour. The IDE maps `⌃n`, `⌃↓` and `⌃↑` in mode `n` (the engine alone keeps vim's `⌃n`), draws
+  every cursor and region, and shows "N CURSORS" beside the mode.
+- LSP rename preview: a `:s` of one whole word shows its match count and "⇥ use LSP rename" (a `registry.CmdlineHint`)
+  and `⇥` (a key layer while it applies) renames with the server instead, through the same diff preview as `grn`.
+
 ## Code units
 
 - A **unit** is a syntax node worth talking about: function, method, type, block, `if`/`switch`/`case`, loop, closure.

@@ -33,13 +33,18 @@ type shell struct {
 	modes   func() []string
 	// enginePending is the focused editor's pending keys, when the editor is in front.
 	enginePending func() ext.Pending
-	theme         func() *theme.Resolved
-	todoMu        sync.Mutex
-	todo          []func()                         // Host.Do's, for the loop
-	editorAt      func(at registry.At) registry.At // the focused editor's buffer and window, added to at
-	shot          func(th *theme.Resolved) *image.RGBA
-	reopen        chan string // Open Directory's directory, for the loop to start again on
-	recents       *recents
+	// engineHints are the focused editor engine's own commands after keys a mapping is waiting on.
+	engineHints func(keys []string) []ext.Hint
+	theme       func() *theme.Resolved
+	todoMu      sync.Mutex
+	todo        []func()                         // Host.Do's, for the loop
+	editorAt    func(at registry.At) registry.At // the focused editor's buffer and window, added to at
+	shot        func(th *theme.Resolved) *image.RGBA
+	reopen      chan string // Open Directory's directory, for the loop to start again on
+	recents     *recents
+	git         *gitExt // the work tree's git status
+	editor      *editorExt
+	search      *projectSearch
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

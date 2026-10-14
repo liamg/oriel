@@ -107,3 +107,10 @@ func TestLanguages(t *testing.T) {
 		t.Errorf("after disposing the pack: %+v", ls)
 	}
 }
+
+func TestArgs(t *testing.T) {
+	a := registry.Args{"s": "x", "i": 3, "f": 4.0, "b": true}
+	if a.String("s") != "x" || a.String("i") != "" || a.Int("i") != 3 || a.Int("f") != 4 || a.Int("s") != 0 || !a.Bool("b") || a.Bool("s") {
+		t.Errorf("%v", a)
+	}
+}

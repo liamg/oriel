@@ -336,6 +336,19 @@ type FileState struct {
 	Name     string
 	File     *edit.File
 	Modified bool
+	Text     *text.Buffer
+	noLines  bool
+}
+
+// Bytes is the buffer as writing it would put it on disk.
+func (f FileState) Bytes() []byte { return fileBytes(f.Text, f.File, f.noLines) }
+
+func fileBytes(t *text.Buffer, f *edit.File, noLines bool) []byte {
+	var format edit.Format
+	if f != nil {
+		format = f.Format
+	}
+	return edit.Encode(t.Snapshot().Bytes(), format, noLines)
 }
 
 // Files is every listed buffer with a file.
@@ -343,7 +356,7 @@ func (e *Engine) Files() []FileState {
 	var out []FileState
 	for _, b := range e.buffers {
 		if b.file != nil && !b.unlisted {
-			out = append(out, FileState{Num: b.num, Name: b.name, File: b.file, Modified: b.modified})
+			out = append(out, FileState{Num: b.num, Name: b.name, File: b.file, Modified: b.modified, Text: b.text, noLines: b.noLines})
 		}
 	}
 	return out

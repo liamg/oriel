@@ -31,7 +31,7 @@ clip 102.9375,0 1469.0625x38 r 0
   rect 877.2969,0 1x38 fill #24221d
 pop
 rect 0,38 44x936 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40
@@ -42,7 +42,7 @@ path 2 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
@@ -119,14 +119,15 @@ text "≡ 16%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
 rect 112,102 8.40625x19 fill #ffd23f
 text "p" @112,115.770004 #141006 JetBrains Mono 13.5
 rect 0,0 1600x1000 fill #03050899
-rect 250,92 1100x660 fill #0c0c0b radius 10 stroke 1 #332f27
+rect 250,92 1100x660 fill #0c0c0b radius 10
 clip 250,92 1100x660 r 10
   text "⌘" @268,127.54785 #ffd23f Inter 18
-  rect 296.01562,106 672.89435x30 fill #060606 radius 6 stroke 1 #ffd23f
+  rect 296.01562,106 672.89435x30 fill #060606 radius 6
   clip 296.01562,106 672.89435x30 r 6
     text "pri" @306.01562,125.54712 #ece6d8 Inter 12.5
     rect 306.01562,113 1x16 fill #ffd23f
   pop
+  rect 296.01562,106 672.89435x30 radius 6 stroke 1 #ffd23f
   rect 978.91,112.729996 33.710022x16.539993 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
   text "ALL" @985.91,124.42 #ffd23f JetBrains Mono 9.5
   rect 1022.62,112.729996 66.55994x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
@@ -164,7 +165,7 @@ clip 250,92 1100x660 r 10
     rect 909,261.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
     text "⌘3" @914,272.6 #b3ab99 JetBrains Mono 10
     text "COMMANDS" @268,301.42 #7c7566 JetBrains Mono 9.5
-    text "4 of 24" @889,301.42 #7c7566 JetBrains Mono 9.5
+    text "4 of 43" @889,301.42 #7c7566 JetBrains Mono 9.5
     text "›" @275.6953,331.36523 #7c7566 Inter 12
     text "Run job: " @296,331.729 #ece6d8 Inter 13
     text "pri" @349.70312,331.729 #ffd23f Inter 13
@@ -176,21 +177,23 @@ clip 250,92 1100x660 r 10
     text "ce…" @406.64062,363.729 #ece6d8 Inter 13
     text "plan.new" @442.875,362.78 #7c7566 JetBrains Mono 10.5
     text "›" @275.6953,395.36523 #7c7566 Inter 12
-    text "Move keyboard focus to the " @296,395.729 #ece6d8 Inter 13
-    text "pr" @472.78125,395.729 #ffd23f Inter 13
-    text "ev" @486.04688,395.729 #ece6d8 Inter 13
-    text "i" @500.9375,395.729 #ffd23f Inter 13
-    text "ous control" @504.34375,395.729 #ece6d8 Inter 13
-    text "ui.focus.prev" @583.34375,394.78 #7c7566 JetBrains Mono 10.5
-    rect 879,383.4 52x15.200012 fill #121210 radius 4 stroke 1 #332f27
-    text "<S-Tab>" @884,394.6 #b3ab99 JetBrains Mono 10
+    text "Highlight the " @296,395.729 #ece6d8 Inter 13
+    text "pr" @377.51562,395.729 #ffd23f Inter 13
+    text "ev" @390.78125,395.729 #ece6d8 Inter 13
+    text "i" @405.67188,395.729 #ffd23f Inter 13
+    text "ous completion" @409.07812,395.729 #ece6d8 Inter 13
+    text "completion.prev" @513.2656,394.78 #7c7566 JetBrains Mono 10.5
+    rect 891,383.4 40x15.200012 fill #121210 radius 4 stroke 1 #332f27
+    text "<C-p>" @896,394.6 #b3ab99 JetBrains Mono 10
     text "›" @275.6953,427.36523 #7c7566 Inter 12
-    text "Trust a " @296,427.729 #ece6d8 Inter 13
-    text "pr" @342.6875,427.729 #ffd23f Inter 13
-    text "oject's sett" @355.95312,427.729 #ece6d8 Inter 13
-    text "i" @423.5,427.729 #ffd23f Inter 13
-    text "ngs file, as it is now: {path}" @426.90625,427.729 #ece6d8 Inter 13
-    text "settings.trust" @603.5469,426.78 #7c7566 JetBrains Mono 10.5
+    text "Go to the " @296,427.729 #ece6d8 Inter 13
+    text "pr" @356.03125,427.729 #ffd23f Inter 13
+    text "ev" @369.29688,427.729 #ece6d8 Inter 13
+    text "i" @384.1875,427.729 #ffd23f Inter 13
+    text "ous hunk" @387.59375,427.729 #ece6d8 Inter 13
+    text "git.hunk.prev" @453.79688,426.78 #7c7566 JetBrains Mono 10.5
+    rect 909,415.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
+    text "[c" @914,426.6 #b3ab99 JetBrains Mono 10
     text "FILES" @268,455.42 #7c7566 JetBrains Mono 9.5
     rect 274.5,477.5 7x7 fill #4cc9f0 radius 3.5
     text "internal/" @296,485.729 #ece6d8 Inter 13
@@ -204,9 +207,8 @@ clip 250,92 1100x660 r 10
     text "open" @907,516.6 #4f4a40 JetBrains Mono 10
     text "SYMBOLS" @268,545.42 #7c7566 JetBrains Mono 9.5
     text "ƒ" @275.66406,575.36523 #5cd2ff Inter 12
-    text "Pri" @296,575.729 #ffd23f Inter 13
-    text "ceForTier" @312.95312,575.729 #ece6d8 Inter 13
-    text "internal/pricing/tiers.go:4" @381.82812,574.78 #7c7566 JetBrains Mono 10.5
+    text "PriceForTier" @296,575.729 #ece6d8 Inter 13
+    text "internal/pricing/tiers.go:4" @381.21875,574.78 #7c7566 JetBrains Mono 10.5
     text "function" @883,574.60004 #4f4a40 JetBrains Mono 10
     text "ƒ" @275.66406,607.36523 #5cd2ff Inter 12
     text "roundHalfEven" @296,607.729 #ece6d8 Inter 13
@@ -235,3 +237,4 @@ clip 250,92 1100x660 r 10
   text "close" @435.95312,738.60004 #7c7566 JetBrains Mono 10
   text "fuzzy · ranked by match, then recency and what needs you" @996,738.60004 #7c7566 JetBrains Mono 10
 pop
+rect 250,92 1100x660 radius 10 stroke 1 #332f27

@@ -2,7 +2,7 @@
 id: FG-3
 title: "Project search and replace preview"
 phase: P4
-status: todo
+status: done
 area: Files, git, terminals
 module: search
 depends_on: [SH-5, ED-10]

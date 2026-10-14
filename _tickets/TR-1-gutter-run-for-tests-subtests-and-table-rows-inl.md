@@ -2,7 +2,7 @@
 id: TR-1
 title: "▶ gutter run for tests, subtests and table rows; ✓/✕ inline"
 phase: P4
-status: todo
+status: done
 area: LSP, tests, debugging
 module: testrun
 depends_on: [ED-6, ED-7]

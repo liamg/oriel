@@ -221,7 +221,7 @@ text "46:11" @758.0625,719.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 57%" @807.03125,719.71 #b3ab99 JetBrains Mono 10.5
 rect 152.0625,232 8.40625x19 fill #ffd23f
 text ":" @152.0625,245.77 #141006 JetBrains Mono 13.5
-rect 20,109.44 816x516.12 fill #0c0c0b radius 8 stroke 1 #332f27
+rect 20,109.44 816x516.12 fill #0c0c0b radius 8
 clip 20,109.44 816x516.12 r 8
   text ":INSPECT" @34,131.04001 #ffd23f JetBrains Mono 10
   rect 794,119.840004 28x15.200005 fill #121210 radius 4 stroke 1 #332f27
@@ -266,84 +266,84 @@ clip 20,109.44 816x516.12 r 8
   pop
   text "init.lua:2" @756.0625,293.72 #ffd23f JetBrains Mono 11
   clip 160,301.68 220x15.179993 r 0
-    text "<Space>'" @160,313.41 #ece6d8 JetBrains Mono 11.5
+    text "<C-Down>" @160,313.41 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,301.68 325.6875x15.179993 r 0
-    text "picker.resume" @392,313.41 #b3ab99 JetBrains Mono 11.5
+    text "editor.multi.down" @392,313.41 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,312.9 #ffd23f JetBrains Mono 11
   clip 160,320.86 220x15.179993 r 0
-    text "<Space>*" @160,332.59 #ece6d8 JetBrains Mono 11.5
+    text "<C-Up>" @160,332.59 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,320.86 325.6875x15.179993 r 0
-    text "editor.grep-word" @392,332.59 #b3ab99 JetBrains Mono 11.5
+    text "editor.multi.up" @392,332.59 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,332.08 #ffd23f JetBrains Mono 11
   clip 160,340.04 220x15.179993 r 0
-    text "<Space>," @160,351.77002 #ece6d8 JetBrains Mono 11.5
+    text "<C-n>" @160,351.77002 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,340.04 325.6875x15.179993 r 0
-    text "picker.open" @392,351.77002 #b3ab99 JetBrains Mono 11.5
+    text "editor.multi.next" @392,351.77002 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,351.26 #ffd23f JetBrains Mono 11
   clip 160,359.22 220x15.179993 r 0
-    text "<Space>/" @160,370.95 #ece6d8 JetBrains Mono 11.5
+    text "<Space>'" @160,370.95 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,359.22 325.6875x15.179993 r 0
-    text "picker.open" @392,370.95 #b3ab99 JetBrains Mono 11.5
+    text "picker.resume" @392,370.95 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,370.44 #ffd23f JetBrains Mono 11
   clip 160,378.4 220x15.179993 r 0
-    text "<Space>:" @160,390.13 #ece6d8 JetBrains Mono 11.5
+    text "<Space>*" @160,390.13 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,378.4 325.6875x15.179993 r 0
-    text "picker.open" @392,390.13 #b3ab99 JetBrains Mono 11.5
+    text "editor.grep-word" @392,390.13 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,389.62 #ffd23f JetBrains Mono 11
   clip 160,397.58002 220x15.179993 r 0
-    text "<Space><Space>" @160,409.31003 #ece6d8 JetBrains Mono 11.5
+    text "<Space>," @160,409.31003 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,397.58002 325.6875x15.179993 r 0
     text "picker.open" @392,409.31003 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,408.80002 #ffd23f JetBrains Mono 11
   clip 160,416.76 220x15.179993 r 0
-    text "<Space>S" @160,428.49002 #ece6d8 JetBrains Mono 11.5
+    text "<Space>/" @160,428.49002 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,416.76 325.6875x15.179993 r 0
     text "picker.open" @392,428.49002 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,427.98 #ffd23f JetBrains Mono 11
   clip 160,435.94 220x15.179993 r 0
-    text "<Space>T" @160,447.67 #ece6d8 JetBrains Mono 11.5
+    text "<Space>:" @160,447.67 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,435.94 325.6875x15.179993 r 0
     text "picker.open" @392,447.67 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:themes" @729.6875,447.16 #ffd23f JetBrains Mono 11
+  text "builtin:editor" @729.6875,447.16 #ffd23f JetBrains Mono 11
   clip 160,455.12 220x15.179993 r 0
-    text "<Space>h" @160,466.85 #ece6d8 JetBrains Mono 11.5
+    text "<Space><Space>" @160,466.85 #ece6d8 JetBrains Mono 11.5
   pop
-  clip 392,455.12 338.875x15.179993 r 0
+  clip 392,455.12 325.6875x15.179993 r 0
     text "picker.open" @392,466.85 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:help" @742.875,466.34 #ffd23f JetBrains Mono 11
+  text "builtin:editor" @729.6875,466.34 #ffd23f JetBrains Mono 11
   clip 160,474.3 220x15.179993 r 0
-    text "<Space>k" @160,486.03 #ece6d8 JetBrains Mono 11.5
+    text "<Space>S" @160,486.03 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,474.3 325.6875x15.179993 r 0
     text "picker.open" @392,486.03 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,485.52 #ffd23f JetBrains Mono 11
   clip 160,493.47998 220x15.179993 r 0
-    text "<Space>s" @160,505.21 #ece6d8 JetBrains Mono 11.5
+    text "<Space>T" @160,505.21 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,493.47998 325.6875x15.179993 r 0
     text "picker.open" @392,505.21 #b3ab99 JetBrains Mono 11.5
   pop
-  text "builtin:editor" @729.6875,504.69998 #ffd23f JetBrains Mono 11
+  text "builtin:themes" @729.6875,504.69998 #ffd23f JetBrains Mono 11
   clip 160,512.66 220x15.179993 r 0
-    text "and 35 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
+    text "and 76 more" @160,524.38995 #4f4a40 JetBrains Mono 11.5
   pop
   clip 392,512.66 418x15.179993 r 0
     text ":Keys lists them" @392,524.38995 #4f4a40 JetBrains Mono 11.5
@@ -376,3 +376,4 @@ clip 20,109.44 816x516.12 r 8
   pop
   text "builtin:editor" @729.6875,613.5999 #ffd23f JetBrains Mono 11
 pop
+rect 20,109.44 816x516.12 radius 8 stroke 1 #332f27

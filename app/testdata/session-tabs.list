@@ -46,7 +46,7 @@ clip 102.9375,0 1469.0625x38 r 0
   rect 1370.5312,0 1x38 fill #24221d
 pop
 rect 0,38 44x56 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40
@@ -57,7 +57,7 @@ path 2 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566

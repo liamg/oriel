@@ -221,7 +221,7 @@ text "46:11" @758.0625,719.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 57%" @807.03125,719.71 #b3ab99 JetBrains Mono 10.5
 rect 152.0625,232 8.40625x19 fill #ffd23f
 text ":" @152.0625,245.77 #141006 JetBrains Mono 13.5
-rect 16,578 824x117 fill #0c0c0b radius 10 stroke 1 #332f27
+rect 16,578 824x117 fill #0c0c0b radius 10
 clip 16,578 824x117 r 10
   rect 32,592.4 16x15.200012 fill #121210 radius 4 stroke 1 #332f27
   text "␣" @37,603.60004 #b3ab99 JetBrains Mono 10
@@ -253,3 +253,4 @@ clip 16,578 824x117 r 10
     text "2" @816,676.60004 #4f4a40 JetBrains Mono 10
   pop
 pop
+rect 16,578 824x117 radius 10 stroke 1 #332f27

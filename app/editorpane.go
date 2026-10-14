@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -167,6 +168,28 @@ func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
 		if ro := p.ReadOnly(); ro != "" {
 			c.Text("ro", "read-only · "+ro, ui.TextStyle{Font: style.Font, Color: th.C(theme.Warn)})
 		}
+		path := p.Name()
+		if path != "" && !filepath.IsAbs(path) {
+			path = filepath.Join(x.dir, path)
+		}
+		if acts := registry.EditorActions(x.h, path); len(acts) > 0 {
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			for _, a := range acts {
+				on := false
+				if a.On != nil {
+					registry.Call(func() error { on = a.On(); return nil })
+				}
+				label := a.Label
+				if a.Icon != "" {
+					label = a.Icon + " " + label
+				}
+				if widget.ToggleChip(c, "act-"+a.Name, label, on, widget.ToggleChipOpts{Help: cmpOr(a.Help, "editor/pane")}) != on {
+					if err := x.h.Run(context.Background(), a.Command, a.Args); err != nil {
+						x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, Key: true, Text: err.Error()})
+					}
+				}
+			}
+		}
 	})
 }
 
@@ -217,34 +240,49 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 			c.Row("gutter", ui.Style{W: ui.Px(gw), Pad: ui.Insets{R: 16}, Main: ui.End}, func(c *ui.Ctx) {
 				c.Text("n", num, ns)
 			})
-			signs(c, th, ds)
+			x.signs(c, th, ds, gw, m)
 			if edge.A > 0 {
 				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.lineH), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
 			}
 			c.Box("gap", ui.Style{W: ui.Px(4)}, nil)
+			if !folded {
+				x.selections(c, p, line, gw+4, m, ds)
+			}
 			if folded {
 				x.foldRow(c, snap, line, foldEnd)
 				return
 			}
-			x.textRow(c, snap, line, hl, p.TabStop())
+			x.textRow(c, snap, line, hl, p.TabStop(), inlays(ds))
 			virtualText(c, th, ds)
 		})
 		spans(c, th, p, line, ds, rowID, gw+4, m)
-		x.overlay(c, p, rowID, line, folded, gw, m)
+		x.overlay(c, p, rowID, line, folded, gw, m, ds)
 		blocks(c, line, ds, gw+4)
 		line = p.NextRow(line)
 	}
 }
 
 // textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop.
-func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int) {
+func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int, inl []registry.Decoration) {
 	th := c.Theme()
 	b := snap.Line(line)
 	start := snap.LineStart(line)
 	pos := 0
 	vcol := 0
-	run := func(key int, s []byte, capture string) {
+	next := 0 // the next inlay to draw
+	var run func(key any, s []byte, capture string)
+	run = func(key any, s []byte, capture string) {
 		if len(s) == 0 {
+			return
+		}
+		if next < len(inl) && inl[next].From < pos+len(s) {
+			cut := max(inl[next].From-pos, 0)
+			if cut > 0 {
+				run(fmt.Sprint(key, "a"), s[:cut], capture)
+			}
+			inlayBox(c, fmt.Sprint("inlay", next), inl[next], x.pane)
+			next++
+			run(fmt.Sprint(key, "b"), s[cut:], capture)
 			return
 		}
 		var out strings.Builder
@@ -271,6 +309,7 @@ func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax
 			}
 		}
 		c.Text(key, out.String(), st)
+		pos += len(s)
 	}
 	k := 0
 	for _, h := range hl {
@@ -285,6 +324,9 @@ func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax
 		pos = e
 	}
 	run(k, b[pos:], "")
+	for ; next < len(inl); next++ {
+		inlayBox(c, fmt.Sprint("inlay", next), inl[next], x.pane)
+	}
 }
 
 func (x *editorExt) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
@@ -296,16 +338,40 @@ func (x *editorExt) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 	})
 }
 
-// overlay draws a row's selection and, on the cursor's row of the current window, the cursor, over its text.
-func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m paneMetrics) {
-	th := c.Theme()
+// selections draws a row's selection, and each multi-cursor region on it, under its text.
+func (x *editorExt) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m paneMetrics, ds []registry.Decoration) {
+	fill := c.Theme().C(theme.Selection)
+	box := func(key any, from, to, extra int) {
+		a, z := p.VCol(line, from)+inlayShift(ds, from, true), p.VCol(line, to)+inlayShift(ds, to, false)+extra
+		c.Box(key, ui.Style{W: ui.Px(max(float32(z-a), 0) * m.charW), H: ui.Px(m.lineH), Fill: fill, Z: ui.LayerUnder,
+			Float: &ui.Float{Offset: render.Point{X: x0 + float32(a)*m.charW}}}, nil)
+	}
 	from, to, eol, sel := p.Selected(line)
+	if st := x.drawing; st != nil && !isVim(st) {
+		from, to, eol, sel = engineSelection(p, line)
+	}
+	if sel {
+		extra := 0
+		if eol {
+			extra = 1
+		}
+		box("sel", from, to, extra)
+	}
+	for i, r := range x.otherCursors(p, line) {
+		if r.selFrom >= 0 {
+			box(fmt.Sprint("msel", i), r.selFrom, r.selTo, 0)
+		}
+	}
+}
+
+// overlay draws, on the cursor's row of the current window, the cursor over its text, and the other cursors.
+func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m paneMetrics, ds []registry.Decoration) {
+	th := c.Theme()
 	cur := p.Cursor()
 	showCursor := p.Current() && line == cur.Line && x.e.Mode() != "cmdline"
 	st := x.drawing
 	shape := x.e.CursorShape()
 	if st != nil && !isVim(st) {
-		from, to, eol, sel = engineSelection(p, line)
 		shape = map[input.Shape]vim.Shape{input.Block: vim.Block, input.Bar: vim.Bar, input.Underline: vim.Underline}[st.Mode().Shape]
 	}
 	if folded && p.Current() {
@@ -313,25 +379,24 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 			showCursor, cur = true, vim.Pos{Line: line}
 		}
 	}
-	if !sel && !showCursor {
+	others := x.otherCursors(p, line)
+	if !showCursor && len(others) == 0 {
 		return
 	}
 	b := p.Buf().Line(line)
 	x0 := gw + 4
 	c.Box(fmt.Sprint("over", line), ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH), Z: ui.LayerContent + 2, Float: &ui.Float{To: rowID}}, func(c *ui.Ctx) {
-		if sel {
-			a, z := p.VCol(line, from), p.VCol(line, to)
-			if eol {
-				z++
+		for i, r := range others {
+			if r.head >= 0 && !(showCursor && r.head == cur.Col) {
+				vc := p.VCol(line, r.head) + inlayShift(ds, r.head, true)
+				c.Box(fmt.Sprint("mcur", i), ui.Style{W: ui.Px(m.charW), H: ui.Px(m.lineH - 2), Fill: theme.WithAlpha(th.C(tCursorBg), .55),
+					Float: &ui.Float{To: rowID, Offset: render.Point{X: x0 + float32(vc)*m.charW, Y: 1}}, Role: ui.RoleText, Label: "cursor"}, nil)
 			}
-			sx := x0 + float32(a)*m.charW
-			c.Box("sel", ui.Style{W: ui.Px(max(float32(z-a), 0) * m.charW), H: ui.Px(m.lineH), Fill: th.C(theme.Selection),
-				Float: &ui.Float{To: rowID, Offset: render.Point{X: sx}}}, nil)
 		}
 		if !showCursor {
 			return
 		}
-		vc := p.VCol(line, cur.Col)
+		vc := p.VCol(line, cur.Col) + inlayShift(ds, cur.Col, true)
 		r, size := utf8.DecodeRune(b[min(cur.Col, len(b)):])
 		w := float32(1)
 		if size > 0 && r != '\t' && wideRune(r) {
@@ -349,6 +414,9 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 			st.W, ch = ui.Px(2), ""
 		case vim.Underline:
 			st.H, st.Float.Offset.Y, ch = ui.Px(2), m.lineH-3, ""
+		}
+		if p.Current() {
+			x.caret = c.Next("cursor")
 		}
 		c.Row("cursor", st, func(c *ui.Ctx) {
 			if ch != "" {
@@ -415,15 +483,32 @@ func (x *editorExt) cmdline(c *ui.Ctx, line string) {
 		Stroke: th.C(theme.LineStrong), Role: ui.RoleTextBox, Label: "Command line", Value: line}, func(c *ui.Ctx) {
 		c.Text("text", line, ui.TextStyle{Font: codeFont, Color: th.C(tCodeFg)})
 		c.Box("caret", ui.Style{W: ui.Px(2), H: ui.Px(16), Fill: th.C(tCursorBg)}, nil)
+		if hints := registry.CmdlineHints(x.h, line); len(hints) > 0 {
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			c.Text("hints", strings.Join(hints, " · "), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgFaint)})
+		}
 	})
 }
 
 // modeSegment is the status line's mode chip: the current window's engine and its mode.
 func (x *editorExt) modeSegment(c *ui.Ctx) {
+	th := c.Theme()
+	if f := x.h.Layout().Focus; f != nil && f.ID != EditorView {
+		if v, ok := x.h.ViewByID(f.ID); ok {
+			if m, ok := registry.As[registry.Moded](v); ok {
+				label, style := m.ModeLabel(f.Instance)
+				c.Row("mode", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: tokenColour(th, style, th.C(tModeNormal)),
+					Role: ui.RoleStatus, Label: "Mode"}, func(c *ui.Ctx) {
+					c.Text("m", label, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Bold, Tracking: .12},
+						Color: th.C(tModeFg)})
+				})
+				return
+			}
+		}
+	}
 	if !x.shown() {
 		return
 	}
-	th := c.Theme()
 	mode := x.e.Mode()
 	label := modeName(mode)
 	if st := x.inputFor(x.current()); !isVim(st) {
@@ -434,9 +519,18 @@ func (x *editorExt) modeSegment(c *ui.Ctx) {
 	if bg == 0 {
 		bg = tModeNormal
 	}
-	c.Row("mode", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: th.C(bg), Role: ui.RoleStatus, Label: "Mode"}, func(c *ui.Ctx) {
-		c.Text("m", label, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Bold, Tracking: .12},
-			Color: th.C(tModeFg)})
+	c.Row("modes", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
+		c.Row("mode", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: th.C(bg), Role: ui.RoleStatus, Label: "Mode"}, func(c *ui.Ctx) {
+			c.Text("m", label, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Bold, Tracking: .12},
+				Color: th.C(tModeFg)})
+		})
+		if m, ok := x.e.Multi(); ok {
+			c.Row("multi", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(10, 0), Cross: ui.Center, Fill: th.C(tModeVisual), Role: ui.RoleStatus, Label: "Cursors"},
+				func(c *ui.Ctx) {
+					c.Text("n", fmt.Sprintf("%d CURSORS", len(m.Regions)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5,
+						Weight: typeset.Bold, Tracking: .12}, Color: th.C(tModeFg)})
+				})
+		}
 	})
 }
 
@@ -494,4 +588,46 @@ func (x *editorExt) positionSegment(c *ui.Ctx) {
 
 func statusText(c *ui.Ctx, tok theme.TokenID) ui.TextStyle {
 	return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Medium}, Color: c.Theme().C(tok)}
+}
+
+// lineCursor is one of the multi-cursors on a line: its head's column (-1 if it isn't on the line), and the part of
+// its region the line holds (-1 for none).
+type lineCursor struct{ head, selFrom, selTo int }
+
+// otherCursors are the cursors of a multi-cursor edit on line, in the current window.
+func (x *editorExt) otherCursors(p vim.Pane, line int) []lineCursor {
+	if !p.Current() {
+		return nil
+	}
+	m, ok := x.e.Multi()
+	if !ok {
+		return nil
+	}
+	var out []lineCursor
+	n := len(p.Buf().Line(line))
+	for _, r := range m.Regions {
+		lc := lineCursor{head: -1, selFrom: -1, selTo: -1}
+		if r.Head.Line == line {
+			lc.head = r.Head.Col
+		}
+		if m.Extend {
+			a, b := r.Anchor, r.Head
+			if b.Line < a.Line || b.Line == a.Line && b.Col < a.Col {
+				a, b = b, a
+			}
+			if line >= a.Line && line <= b.Line {
+				lc.selFrom, lc.selTo = 0, n
+				if line == a.Line {
+					lc.selFrom = a.Col
+				}
+				if line == b.Line {
+					lc.selTo = min(b.Col+1, n)
+				}
+			}
+		}
+		if lc.head >= 0 || lc.selFrom >= 0 {
+			out = append(out, lc)
+		}
+	}
+	return out
 }

@@ -1,0 +1,123 @@
+# Printing, autowrap and the C0 controls. Cases from Ghostty's VT docs translate their printf scripts as a tty
+# delivers them: "\n" arrives as "\r\n" (onlcr), "_" is a blank and "c" the cursor.
+
+=== printing places text at the cursor and moves it right
+ref:    ghostty/concepts/cursor.mdx#Cursor
+quote:  "The cursor most commonly is associated with where the next printed character will be placed."
+size:   10x2
+input:  "abc"
+screen:
+  |abc       |
+  |          |
+cursor: 3,0
+
+=== printing in the rightmost column sets pending wrap: the cursor stays
+ref:    ghostty/concepts/cursor.mdx#Pending Wrap State
+quote:  "The pending wrap state is a boolean value that is set when a character is printed in the rightmost column of the screen to indicate that the next printed character should wrap to the next line."
+size:   5x2
+input:  "abcde"
+screen:
+  |abcde|
+  |     |
+cursor: 4,0
+
+=== the next character wraps to the next line
+ref:    ghostty/concepts/cursor.mdx#Pending Wrap State
+quote:  "If the pending wrap state is set, the next printed character will move the cursor to the leftmost column of the next line, unset the pending wrap state, and then print the character"
+size:   5x2
+input:  "abcdef"
+screen:
+  |abcde|
+  |f    |
+cursor: 1,1
+
+=== backspace after printing in the rightmost column lands left of that character
+ref:    ghostty/concepts/cursor.mdx#Pending Wrap State
+quote:  "But if you print a character in the rightmost column and then send a [backspace](/docs/vt/control/bs) control character, the cursor will move to the left of the character most recently printed."
+size:   5x1
+input:  "abcde\bX"
+screen:
+  |abcXe|
+cursor: 4,0
+
+=== backspace elsewhere lands on the character just printed
+ref:    ghostty/concepts/cursor.mdx#Pending Wrap State
+quote:  "If you print a character in any column other than the rightmost column and then send a [backspace](/docs/vt/control/bs) control character, the cursor will move back on top of the most recently printed character."
+size:   5x1
+input:  "abc\bX"
+screen:
+  |abX  |
+cursor: 3,0
+
+=== BS is CUB 1 and stops at the left edge
+ref:    ghostty/control/bs.mdx#Backspace (BS)
+quote:  "This sequence performs [cursor backward (CUB)](/docs/vt/csi/cub) with `Pn = 1`."
+size:   5x1
+input:  "\b\bX"
+screen:
+  |X    |
+cursor: 1,0
+
+=== CR unsets pending wrap
+ref:    ghostty/control/cr.mdx#CR V-1: Pending Wrap is Unset
+quote:  "|X________A| |c_________|"
+size:   10x2
+input:  "\x1b[10GA\rX\r\n"
+screen:
+  |X        A|
+  |          |
+cursor: 0,1
+
+=== LF is an index: down a row, same column
+ref:    ghostty/control/lf.mdx#Linefeed (LF)
+quote:  "This is an alias for [index (IND)](/docs/vt/esc/ind)."
+ref:    ghostty/esc/ind.mdx#IND V-1: No Scroll Region, Top of Screen
+quote:  "|A_________| |_Xc_______|"
+size:   10x2
+input:  "A\nX"
+screen:
+  |A         |
+  | X        |
+cursor: 2,1
+
+=== LF at the bottom scrolls the screen into the scrollback
+ref:    ghostty/esc/ind.mdx#Index (IND)
+quote:  "If the scroll region is the full terminal screen and the terminal is on the [primary screen](#TODO), this may create scrollback."
+size:   5x2
+input:  "one\r\ntwo\r\nthree\r\nfour"
+screen:
+  |three|
+  |four |
+history:
+  one
+  two
+cursor: 4,1
+
+=== HT moves to the next tab stop
+ref:    ghostty/control/tab.mdx#Tab (TAB)
+quote:  "This is an alias for [cursor horizontal tabulation (CHT)](/docs/vt/csi/cht) with `n = 1`."
+ref:    ghostty/csi/cht.mdx#CHT V-2: Right From Before a Tabstop
+quote:  "|_A______X_|"
+size:   10x1
+input:  "\x1b[?5W\x1b[1;2HA\tX"
+screen:
+  | A      X |
+cursor: 9,0
+
+=== HT stops at the last column
+ref:    ghostty/csi/cht.mdx#CHT V-1: Right Beyond Last Column
+quote:  "|_________A|"
+size:   10x1
+input:  "\x1b[?5W\x1b[100IA"
+screen:
+  |         A|
+cursor: 9,0
+
+=== tab stops default to every 8 columns
+ref:    xterm/ctlseqs.txt CSI ? 5 W
+quote:  "Reset tab stops to start with column 9, every 8 columns (DECST8C), VT510."
+size:   20x1
+input:  "a\tb\tc"
+screen:
+  |a       b       c   |
+cursor: 17,0

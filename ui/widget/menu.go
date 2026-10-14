@@ -1,6 +1,8 @@
 package widget
 
 import (
+	"strings"
+
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/ui"
@@ -9,9 +11,13 @@ import (
 type MenuItem struct {
 	Label     string
 	Shortcut  string
+	Detail    string // dim, at the right: where it comes from ("gopls")
+	Icon      string // a glyph before the label, in IconTone
+	IconTone  render.Color
 	Help      string
 	Disabled  bool
 	Separator bool // a line, not an item
+	Heading   bool // a group's name, in small capitals; not an item
 }
 
 type MenuOpts struct {
@@ -29,7 +35,9 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 	in := c.Interaction(id)
 	st := ui.State[menuState](c, id)
 	chosen = -1
-	usable := func(i int) bool { return i >= 0 && i < len(items) && !items[i].Separator && !items[i].Disabled }
+	usable := func(i int) bool {
+		return i >= 0 && i < len(items) && !items[i].Separator && !items[i].Heading && !items[i].Disabled
+	}
 	step := func(d int) {
 		for i, n := st.hi+d, 0; n < len(items); i, n = i+d, n+1 {
 			i = (i + len(items)) % len(items)
@@ -67,6 +75,12 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 				})
 				continue
 			}
+			if it.Heading {
+				c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(24), Pad: ui.Insets{L: 12, R: 12, T: 6}, Cross: ui.Center}, func(c *ui.Ctx) {
+					c.Text("h", strings.ToUpper(it.Label), monoText(9, typeset.SemiBold, col(c, tMenuShortcut), .14))
+				})
+				continue
+			}
 			ii := c.Interaction(c.Next(i))
 			if ii.Hovered && usable(i) {
 				st.hi = i
@@ -83,10 +97,22 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 				fg = col(c, tDisabledFg)
 			}
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: fill, EaseFill: true, Interactive: true, NoHover: true,
-				Disabled: it.Disabled, Cursor: render.CursorPointer, Help: it.Help, Role: ui.RoleMenuItem, Label: it.Label}, func(c *ui.Ctx) {
+				Disabled: it.Disabled, Cursor: render.CursorPointer, Help: it.Help, Role: ui.RoleMenuItem, Label: it.Label, Gap: 8}, func(c *ui.Ctx) {
+				if it.Icon != "" {
+					tone := it.IconTone
+					if tone.A == 0 {
+						tone = col(c, tMenuShortcut)
+					}
+					c.Text("icon", it.Icon, uiText(c, 11, typeset.Normal, tone))
+				}
 				c.Text("label", it.Label, uiText(c, 12.5, typeset.Normal, fg))
-				if it.Shortcut != "" {
+				if it.Shortcut != "" || it.Detail != "" {
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+				}
+				if it.Detail != "" {
+					c.Text("detail", it.Detail, monoText(10, typeset.Normal, col(c, tMenuShortcut), 0))
+				}
+				if it.Shortcut != "" {
 					kbd(c, it.Shortcut)
 				}
 			})

@@ -9,7 +9,7 @@ rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1469.0625x38 r 0
 pop
 rect 0,38 44x936 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40
@@ -20,7 +20,7 @@ path 2 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
@@ -41,36 +41,39 @@ text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
 rect 0,38 1600x962 fill #060606
 clip 0,38 1600x962 r 0
   text "SETTINGS" @16,67.96 #ffd23f JetBrains Mono 11
-  rect 95.07,49 420x30 fill #060606 radius 6 stroke 1 #332f27
+  rect 95.07,49 420x30 fill #060606 radius 6
   clip 95.07,49 420x30 r 6
     text "search · @modified · @project · @plugin:id" @105.07,68.54712 #7c7566 Inter 12.5
   pop
+  rect 95.07,49 420x30 radius 6 stroke 1 #332f27
   text "EDITING" @1196.19,67.42 #7c7566 JetBrains Mono 9.5
-  rect 1261.5,52 185.09998x24 radius 5 stroke 1 #332f27
   clip 1261.5,52 185.09998x24 r 5
     rect 1261.5,52 47.80005x24 fill #1f1c0f
     text "USER" @1271.5,67.42 #ffd23f JetBrains Mono 9.5
     text "PROJECT" @1319.3,67.42 #7c7566 JetBrains Mono 9.5
     text "SESSION" @1387.95,67.42 #7c7566 JetBrains Mono 9.5
   pop
-  rect 1460.6,52 123.400024x24 radius 5 stroke 1 #332f27
+  rect 1261.5,52 185.09998x24 radius 5 stroke 1 #332f27
   clip 1460.6,52 123.400024x24 r 5
     rect 1460.6,52 75.599976x24 fill #1f1c0f
     text "CONTROLS" @1470.6,67.42 #ffd23f JetBrains Mono 9.5
     text "TOML" @1546.2,67.42 #7c7566 JetBrains Mono 9.5
   pop
+  rect 1460.6,52 123.400024x24 radius 5 stroke 1 #332f27
   rect 0,90 1600x1 fill #24221d
   rect 0,91 240x879 fill #0c0c0b
   clip 0,91 240x879 r 0
     text "SECTIONS" @8,112.69 #7c7566 JetBrains Mono 9.5
     text "editor" @18,144.26901 #b3ab99 Inter 13
     text "files" @18,174.26901 #b3ab99 Inter 13
-    text "keymap" @18,204.26901 #b3ab99 Inter 13
-    rect 8,215.54001 224x28 fill #1f1c0f radius 5
-    text "ui" @18,234.26901 #ece6d8 Inter 13
-    text "● 2" @204,233.14 #ffd23f JetBrains Mono 10
-    text "whichkey" @18,264.269 #b3ab99 Inter 13
-    text "● 1" @204,263.14 #ffd23f JetBrains Mono 10
+    text "git" @18,204.26901 #b3ab99 Inter 13
+    text "keymap" @18,234.26901 #b3ab99 Inter 13
+    text "terminal" @18,264.269 #b3ab99 Inter 13
+    rect 8,275.54 224x28 fill #1f1c0f radius 5
+    text "ui" @18,294.269 #ece6d8 Inter 13
+    text "● 2" @204,293.14 #ffd23f JetBrains Mono 10
+    text "whichkey" @18,324.269 #b3ab99 Inter 13
+    text "● 1" @204,323.14 #ffd23f JetBrains Mono 10
   pop
   rect 240,91 1x879 fill #24221d
   clip 241,91 1359x879 r 0
@@ -100,13 +103,13 @@ clip 0,38 1600x962 r 0
     text "ui.variant" @288,307.42224 #ece6d8 JetBrains Mono 12.5
     text "The theme's dark or light variant; system follows the OS." @288,327.28162 #7c7566 Inter 12.5
     text "default" @1202.3906,316.2645 #7c7566 JetBrains Mono 10.5
-    rect 1360.2969,300.4845 164.25x24 radius 5 stroke 1 #332f27
     clip 1360.2969,300.4845 164.25x24 r 5
       rect 1360.2969,300.4845 61.69995x24 fill #1f1c0f
       text "SYSTEM" @1370.2969,315.9045 #ffd23f JetBrains Mono 9.5
       text "DARK" @1431.9968,315.9045 #7c7566 JetBrains Mono 9.5
       text "LIGHT" @1479.7969,315.9045 #7c7566 JetBrains Mono 9.5
     pop
+    rect 1360.2969,300.4845 164.25x24 radius 5 stroke 1 #332f27
     rect 1540.5469,299.4845 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,316.84973 #4f4a40 Inter 12
   pop

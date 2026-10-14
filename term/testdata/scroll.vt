@@ -1,0 +1,147 @@
+# DECSTBM with IND and RI, and SD (CSI T) inside margins. Ghostty's validation scripts, delivered through a tty
+# ("\n" as "\r\n"); "_" is a blank and "c" the cursor. Their screens show the top rows; the rest are blank.
+
+=== DECSTBM with no parameters is the full screen
+ref:    xterm/ctlseqs.txt CSI Ps ; Ps r
+quote:  "Set Scrolling Region [top;bottom] (default = full size of window) (DECSTBM), VT100."
+ref:    ghostty/csi/decstbm.mdx#DECSTBM V-1: Full Screen
+quote:  "|c_______| |ABC_____| |DEF_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[r\x1b[T"
+screen:
+  |        |
+  |ABC     |
+  |DEF     |
+  |GHI     |
+cursor: 0,0
+
+=== DECSTBM with only a top margin runs to the bottom
+ref:    ghostty/csi/decstbm.mdx#DECSTBM V-2: Top Only
+quote:  "|ABC_____| |________| |DEF_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[2r\x1b[T"
+screen:
+  |ABC     |
+  |        |
+  |DEF     |
+  |GHI     |
+
+=== DECSTBM top and bottom bound scrolling
+ref:    ghostty/csi/decstbm.mdx#DECSTBM V-3: Top and Bottom
+quote:  "|________| |ABC_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[1;2r\x1b[T"
+screen:
+  |        |
+  |ABC     |
+  |GHI     |
+  |        |
+
+=== DECSTBM with top equal to bottom is ignored
+ref:    ghostty/csi/decstbm.mdx#DECSTBM V-4: Top Equal to Bottom
+quote:  "|________| |ABC_____| |DEF_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[2;2r\x1b[T"
+screen:
+  |        |
+  |ABC     |
+  |DEF     |
+  |GHI     |
+
+=== IND moves down
+ref:    xterm/ctlseqs.txt ESC D
+quote:  "Index (IND  is 0x84)."
+ref:    ghostty/esc/ind.mdx#IND V-1: No Scroll Region, Top of Screen
+quote:  "|A_________| |_Xc_______|"
+size:   10x3
+input:  "\x1b[1;1H\x1b[0JA\x1bDX"
+screen:
+  |A         |
+  | X        |
+  |          |
+cursor: 2,1
+
+=== IND at the bottom of the screen scrolls up
+ref:    ghostty/esc/ind.mdx#IND V-2: Bottom of Primary Screen
+quote:  "|A_________| |_Xc_______|"
+size:   10x2
+input:  "\x1b[1;1H\x1b[0J\x1b[2;1HA\x1bDX"
+screen:
+  |A         |
+  | X        |
+cursor: 2,1
+
+=== IND at the bottom margin scrolls only the region
+ref:    ghostty/esc/ind.mdx#IND V-4: Bottom of Scroll Region
+quote:  "|__________| |A_________| |_Xc_______| |B_________|"
+size:   10x4
+input:  "\x1b[1;1H\x1b[0J\x1b[1;3r\x1b[4;1HB\x1b[3;1HA\x1bDX"
+screen:
+  |          |
+  |A         |
+  | X        |
+  |B         |
+cursor: 2,2
+
+=== IND below the region at the bottom of the screen doesn't move
+ref:    ghostty/esc/ind.mdx#IND V-5: Bottom of Primary Screen with Scroll Region
+quote:  "|__________| |__________| |A_________| |__________| |Xc________|"
+size:   10x5
+input:  "\x1b[1;1H\x1b[0J\x1b[1;3r\x1b[3;1HA\x1b[5;1H\x1bDX"
+screen:
+  |          |
+  |          |
+  |A         |
+  |          |
+  |X         |
+cursor: 1,4
+
+=== RI at the top scrolls down
+ref:    xterm/ctlseqs.txt ESC M
+quote:  "Reverse Index (RI  is 0x8d)."
+ref:    ghostty/esc/ri.mdx#RI V-1: No Scroll Region, Top of Screen
+quote:  "|Xc________| |A_________| |B_________| |C_________|"
+size:   10x4
+input:  "\x1b[1;1H\x1b[0JA\r\nB\r\nC\r\n\x1b[1;1H\x1bMX"
+screen:
+  |X         |
+  |A         |
+  |B         |
+  |C         |
+cursor: 1,0
+
+=== RI below the top moves up
+ref:    ghostty/esc/ri.mdx#RI V-2: No Scroll Region, Not Top of Screen
+quote:  "|Xc________| |B_________| |C_________|"
+size:   10x4
+input:  "\x1b[1;1H\x1b[0JA\r\nB\r\nC\r\n\x1b[2;1H\x1bMX"
+screen:
+  |X         |
+  |B         |
+  |C         |
+  |          |
+cursor: 1,0
+
+=== RI at the top margin scrolls the region down
+ref:    ghostty/esc/ri.mdx#RI V-3: Top/Bottom Scroll Region
+quote:  "|A_________| |c_________| |B_________|"
+size:   10x4
+input:  "\x1b[1;1H\x1b[0JA\r\nB\r\nC\r\n\x1b[2;3r\x1b[2;1H\x1bM"
+screen:
+  |A         |
+  |          |
+  |B         |
+  |          |
+cursor: 0,1
+
+=== RI above the region at the top of the screen does nothing
+ref:    ghostty/esc/ri.mdx#RI V-4: Outside of Top/Bottom Scroll Region
+quote:  "|A_________| |B_________| |C_________|"
+size:   10x4
+input:  "\x1b[1;1H\x1b[0JA\r\nB\r\nC\r\n\x1b[2;3r\x1b[1;1H\x1bM"
+screen:
+  |A         |
+  |B         |
+  |C         |
+  |          |
+cursor: 0,0

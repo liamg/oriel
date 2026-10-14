@@ -18,6 +18,7 @@ const (
 	Underline                         // a wavy underline under [From, To): Style
 	VirtualText                       // Text after the end of the line, in Style
 	Block                             // Node, drawn between this line and the next, as wide as the text
+	Inlay                             // Text drawn inline before byte column From, in Style: an inlay hint
 )
 
 // Decoration is something drawn on, beside or between a buffer's lines. It's on Line, or at Anchor when that's
@@ -26,12 +27,16 @@ type Decoration struct {
 	Kind     DecorationKind
 	Line     int
 	Anchor   text.AnchorID
-	From, To int    // byte columns, for Highlight and Underline
+	From, To int    // byte columns, for Highlight and Underline; From for Inlay
 	Style    string // a theme token: "diff.add", "error", or a syntax group "@comment"
 	Edge     string // a LineBg's gutter edge, a theme token
 	Text     string
 	Node     ui.Node // a Block's content
 	Priority int     // higher draws over lower
+	// Command, for a Sign, runs with Args when the sign is clicked: a test's ▶, a breakpoint.
+	Command string
+	Args    Args
+	Tooltip string
 }
 
 // DecorationCtx is the buffer a provider decorates and the lines in view, [Top, Bottom).
@@ -41,6 +46,9 @@ type DecorationCtx struct {
 	Buffer      *text.Buffer
 	Snap        text.Snapshot
 	Top, Bottom int
+	// FileBytes is the buffer as writing it would put it on disk (line endings, BOM, the last newline), for
+	// comparing with a file's other versions.
+	FileBytes func() []byte
 }
 
 // DecorationProvider gives the decorations of the lines in view; it's called each frame they're drawn.

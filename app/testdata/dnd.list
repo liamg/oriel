@@ -9,7 +9,7 @@ rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1269.0625x38 r 0
 pop
 rect 0,38 44x836 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40
@@ -20,7 +20,7 @@ path 2 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
@@ -37,6 +37,7 @@ rect 44,38 400x836 fill #0c0c0b
 clip 44,38 400x836 r 0
   rect 44,38 400x30 fill #0c0c0b
   rect 44,38 69.359375x30 fill #121210
+  rect 44,38 69.359375x2 fill #ffd23f
   text "Tickets" @58,58.365234 #ece6d8 Inter 12
   rect 44,68 400x1 fill #24221d
   clip 44,69 400x805 r 0
@@ -49,7 +50,6 @@ rect 1000,38 400x836 fill #0c0c0b
 clip 1000,38 400x836 r 0
   rect 1000,38 400x30 fill #0c0c0b
   rect 1000,38 61.65625x30 fill #121210
-  rect 1000,38 61.65625x2 fill #ffd23f
   text "Board" @1014,58.365234 #ece6d8 Inter 12
   rect 1000,68 400x1 fill #24221d
   clip 1000,69 400x805 r 0

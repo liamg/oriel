@@ -676,13 +676,18 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	if e.fx.fill != nil {
 		s.Fill = *e.fx.fill
 	}
-	if s.Fill.A > 0 || (s.Border > 0 && s.Stroke.A > 0) {
+	clips := s.Clip || s.ScrollX || s.ScrollY
+	edge := s.Border > 0 && s.Stroke.A > 0
+	edgeOver := edge && clips && len(e.kids) > 0 // a clipping box's edge goes over what's in it
+	switch {
+	case edgeOver && s.Fill.A > 0:
+		f.Rect(r, render.Style{Fill: s.Fill, Radius: s.Radius})
+	case !edgeOver && (s.Fill.A > 0 || edge):
 		f.Rect(r, render.Style{Fill: s.Fill, Radius: s.Radius, Stroke: s.Stroke, Width: s.Border})
 	}
 	if w := u.wash(e); w.A > 0 {
 		f.Rect(r, render.Style{Fill: w, Radius: s.Radius})
 	}
-	clips := s.Clip || s.ScrollX || s.ScrollY
 	if clips {
 		f.PushClip(r, s.Radius)
 		clip = intersect(clip, r)
@@ -703,6 +708,9 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	}
 	if clips {
 		f.Pop()
+	}
+	if edgeOver {
+		f.Rect(r, render.Style{Radius: s.Radius, Stroke: s.Stroke, Width: s.Border})
 	}
 	if e.id == u.in.focus && u.in.visible && e.id != 0 {
 		const w, gap = 2, 2

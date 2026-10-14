@@ -11,7 +11,7 @@ pop
 text "DEPLOY" @1531.8438,22.779999 #b3ab99 JetBrains Mono 10.5
 text "3" @1579.4062,22.779999 #ff9b45 JetBrains Mono 10.5
 rect 0,38 44x936 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40
@@ -22,7 +22,7 @@ path 2 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
@@ -522,7 +522,6 @@ rect 611.5,38 1x936 fill #24221d
 clip 612.5,38 567.5x936 r 0
   rect 612.5,38 567.5x30 fill #0c0c0b
   rect 612.5,38 89.953125x30 fill #121210
-  rect 612.5,38 89.953125x2 fill #ffd23f
   text "Dashboard" @626.5,58.365234 #ece6d8 Inter 12
   rect 612.5,68 567.5x1 fill #24221d
   clip 612.5,69 567.5x905 r 0
@@ -541,6 +540,7 @@ rect 1180,38 420x936 fill #0c0c0b
 clip 1180,38 420x936 r 0
   rect 1180,38 420x30 fill #0c0c0b
   rect 1180,38 74.1875x30 fill #121210
+  rect 1180,38 74.1875x2 fill #ffd23f
   text "Deploys" @1194,58.365234 #ece6d8 Inter 12
   rect 1180,68 420x1 fill #24221d
   clip 1180,69 420x905 r 0
@@ -573,6 +573,6 @@ text "✓ main" @1351.375,990.95996 #4fe0a0 JetBrains Mono 11
 text "Go · utf-8 · LF" @1406.9375,984.71 #b3ab99 JetBrains Mono 10.5
 text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 1%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
-text "◆" @89.796875,156.77 #ffd23f JetBrains Mono 13.5
+text "◆" @94.796875,156.77 #ffd23f JetBrains Mono 13.5
 rect 112,102 8.40625x19 fill #ffd23f
 text "p" @112,115.770004 #141006 JetBrains Mono 13.5

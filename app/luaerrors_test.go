@@ -210,7 +210,7 @@ func TestFailingHookTurnedOff(t *testing.T) {
 	for range 3 {
 		fire()
 	}
-	h := s.reg.Hooks()[0]
+	h := configHooks(s)[0]
 	if h.Off == nil {
 		t.Fatalf("on after 3 errors: %+v", h)
 	}
@@ -229,12 +229,12 @@ func TestFailingHookTurnedOff(t *testing.T) {
 		t.Errorf(":Hooks doesn't show it off:\n%s", text)
 	}
 	s.run(turnOn.Command, registry.Args(turnOn.Args))
-	if s.reg.Hooks()[0].Off != nil {
+	if configHooks(s)[0].Off != nil {
 		t.Fatal("still off")
 	}
 	fire()
-	if s.reg.Hooks()[0].Calls != 4 {
-		t.Errorf("it didn't run again: %+v", s.reg.Hooks()[0])
+	if configHooks(s)[0].Calls != 4 {
+		t.Errorf("it didn't run again: %+v", configHooks(s)[0])
 	}
 }
 

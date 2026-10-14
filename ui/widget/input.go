@@ -19,6 +19,8 @@ type InputOpts struct {
 	TabMoves    bool              // Tab and ⇧Tab move focus on, rather than going to whoever reads the input's keys
 	Accept      func(r rune) bool // what can be typed, when not anything: Digits for a number
 	Invalid     bool              // the text isn't valid yet: an error border
+	// SelectOnFocus selects all the text each time the input gets focus, so typing replaces it: a rename's name.
+	SelectOnFocus bool
 }
 
 // Digits accepts what a whole number is typed with.
@@ -37,6 +39,7 @@ type inputState struct {
 	cursor, anchor int // in runes; a selection runs between them
 	scroll         float32
 	dragging       bool
+	focused        bool // last frame
 }
 
 // Input is a one-line text field (base.css .input) editing *text, with the platform's editing keys (editKey): typing
@@ -50,6 +53,10 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	runes := []rune(*text)
 	st.cursor, st.anchor = clampInt(st.cursor, 0, len(runes)), clampInt(st.anchor, 0, len(runes))
 	var res InputResult
+	if o.SelectOnFocus && in.Focused && !st.focused && !in.Clicked && !in.Pressed {
+		st.anchor, st.cursor = 0, len(runes)
+	}
+	st.focused = in.Focused
 
 	prefix := func(n int) float32 { return c.Shaper().Shape(string(runes[:n]), font).Advance }
 	if in.Clicked || in.Pressed {

@@ -83,6 +83,7 @@ type Engine struct {
 	host         Host
 	group        text.UndoGroup // the undo step the current change goes into
 	changeCursor Pos            // the cursor when the current command started
+	multi        *multi         // the cursors, while there are several (multi.go)
 }
 
 // dotCmd is a change as "." repeats it: the keys after any count and register, the count, and
@@ -247,6 +248,9 @@ func (e *Engine) setWant(v *view) { e.want = v.vcol(e.cur.Line, e.cur.Col) }
 
 // Key handles one key press.
 func (e *Engine) Key(k string) {
+	if e.multi != nil && e.feeding == 0 && e.multiKey(k) {
+		return
+	}
 	if e.recReg != 0 && e.feeding == 0 && e.confirm == nil {
 		e.recKeys = append(e.recKeys, k)
 	}

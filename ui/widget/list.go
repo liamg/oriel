@@ -13,6 +13,7 @@ type ListOpts struct {
 	Height    ui.Size // grows to fill by default
 	Help      string
 	Label     string // its accessible name
+	KeyMode   string // the keymap mode it takes keys in; "list" by default
 
 	role, rowRole ui.Role           // a tree is a list with tree roles
 	expanded      func(i int) *bool // a tree row's expanded state
@@ -103,11 +104,15 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 		}
 		y := top + (ls.from+(float32(ls.to)-ls.from)*p)*rh
 		at := render.Point{X: r.Min.X, Y: y}
-		lc.Row("selection", ui.Style{W: ui.Px(r.Dx()), H: ui.Px(rh), Fill: col(c, tRowSelected), Z: -1, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+		lc.Row("selection", ui.Style{W: ui.Px(r.Dx()), H: ui.Px(rh), Fill: col(c, tRowSelected), Z: ui.LayerUnder, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: col(c, tRowEdge)}, nil)
 		})
 	}
-	c.ListBehind(key, ui.Style{W: ui.Flex(1), H: h, Focusable: true, Help: o.Help, KeyMode: "list", Role: role, Label: o.Label}, n, rh, behind, func(rc *ui.Ctx, i int) {
+	mode := o.KeyMode
+	if mode == "" {
+		mode = "list"
+	}
+	c.ListBehind(key, ui.Style{W: ui.Flex(1), H: h, Focusable: true, Help: o.Help, KeyMode: mode, Role: role, Label: o.Label}, n, rh, behind, func(rc *ui.Ctx, i int) {
 		item := rc.Next("item")
 		ri := rc.Interaction(item)
 		if ri.Clicked {
@@ -144,13 +149,20 @@ type listKey struct{ id ui.ID }
 
 // TreeItem is one node of a tree. ID must be unique in the tree.
 type TreeItem struct {
-	ID       string
-	Label    string
-	Swatch   render.Color // a small square before the label, as the explorer's file icons
-	Mark     string       // right-aligned, as the explorer's M/A/D
-	MarkTone render.Color
-	Children []TreeItem
-	Help     string
+	ID        string
+	Label     string
+	Note      string       // dim, after the label: "← amount.go", "main · ↑2"
+	Tone      render.Color // the label's colour, if not the list's
+	Strike    bool         // the label struck through, as a deleted file
+	Glyph     string       // a small mark before the label, in GlyphTone: the explorer's ● ○
+	GlyphTone render.Color
+	Swatch    render.Color // a small square before the label, as the explorer's file icons
+	Mark      string       // right-aligned, as the explorer's M/A/D
+	MarkTone  render.Color
+	Section   bool // a heading: small capitals, as STAGED
+	Open      bool // expanded until the user collapses it
+	Children  []TreeItem
+	Help      string
 }
 
 type TreeOpts struct {
@@ -158,6 +170,9 @@ type TreeOpts struct {
 	Height    ui.Size
 	Help      string
 	Label     string
+	KeyMode   string // the keymap mode it takes keys in, for keys its owner maps; "list" by default
+	// Trailing draws at the right of each row, before Mark: counts, bars, badges.
+	Trailing func(c *ui.Ctx, it TreeItem, selected bool)
 }
 
 type TreeResult struct {
@@ -167,8 +182,16 @@ type TreeResult struct {
 }
 
 type treeState struct {
-	open map[string]bool
-	sel  int
+	open  map[string]bool // only what the user toggled; the rest follow their item's Open
+	sel   int
+	selID string // the selected item, which the selection follows when rows move
+}
+
+func (st *treeState) isOpen(it *TreeItem) bool {
+	if o, ok := st.open[it.ID]; ok {
+		return o
+	}
+	return it.Open
 }
 
 type flatItem struct {
@@ -191,16 +214,24 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 	walk = func(items []TreeItem, depth, parent int) {
 		for i := range items {
 			flat = append(flat, flatItem{&items[i], depth, parent})
-			if st.open[items[i].ID] {
+			if st.isOpen(&items[i]) {
 				walk(items[i].Children, depth+1, len(flat)-1)
 			}
 		}
 	}
 	walk(roots, 0, -1)
+	if st.selID != "" && (st.sel >= len(flat) || flat[st.sel].item.ID != st.selID) {
+		for i, f := range flat {
+			if f.item.ID == st.selID {
+				st.sel = i
+				break
+			}
+		}
+	}
 	var res TreeResult
 	toggle := func(i int) {
 		it := flat[i].item
-		st.open[it.ID] = !st.open[it.ID]
+		st.open[it.ID] = !st.isOpen(it)
 		res.Toggled = it.ID
 	}
 	// The tree takes l/h/Enter; the list under it, reading the same node's keys, moves the selection.
@@ -213,14 +244,14 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 		switch {
 		case hasKey([]render.KeyEvent{k}, "l", "Right"):
 			if len(cur.item.Children) > 0 {
-				if !st.open[cur.item.ID] {
+				if !st.isOpen(cur.item) {
 					toggle(st.sel)
 				} else {
 					st.sel++
 				}
 			}
 		case hasKey([]render.KeyEvent{k}, "h", "Left"):
-			if len(cur.item.Children) > 0 && st.open[cur.item.ID] {
+			if len(cur.item.Children) > 0 && st.isOpen(cur.item) {
 				toggle(st.sel)
 			} else if cur.parent >= 0 {
 				st.sel = cur.parent
@@ -247,30 +278,57 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 		if len(flat[i].item.Children) == 0 {
 			return nil
 		}
-		open := st.open[flat[i].item.ID]
+		open := st.isOpen(flat[i].item)
 		return &open
 	}
-	lo := ListOpts{RowHeight: rh, Height: o.Height, Help: o.Help, Label: o.Label, role: ui.RoleTree, rowRole: ui.RoleTreeItem, expanded: expanded}
+	lo := ListOpts{RowHeight: rh, Height: o.Height, Help: o.Help, Label: o.Label, KeyMode: o.KeyMode, role: ui.RoleTree, rowRole: ui.RoleTreeItem,
+		expanded: expanded}
 	lr := List(c, key, len(flat), &st.sel, lo, func(rc *ui.Ctx, i int, selected bool) {
 		it := flat[i].item
 		t := label
-		if selected {
+		if it.Tone.A > 0 {
+			t.Color = it.Tone
+		}
+		if selected && it.Tone.A == 0 {
 			t.Color = col(c, tRowSelectedFg)
 		}
+		if it.Section {
+			t = monoText(9.5, typeset.SemiBold, col(c, tLabel), .12)
+		}
 		rc.Row("row", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 10 + float32(flat[i].depth)*14, R: 10}, Gap: 6, Cross: ui.Center, Help: it.Help}, func(rc *ui.Ctx) {
-			if len(it.Children) > 0 {
+			if len(it.Children) > 0 && !it.Section {
 				caret := "▸"
-				if st.open[it.ID] {
+				if st.isOpen(it) {
 					caret = "▾"
 				}
 				rc.Box("caret", ui.Style{Role: ui.RoleNone}, func(rc *ui.Ctx) { rc.Paint("glyph", ui.Px(8), ui.Px(14), caretPainter(c, caret, t)) })
 			}
+			if it.Glyph != "" {
+				rc.Text("glyph", it.Glyph, monoText(9, typeset.Normal, it.GlyphTone, 0))
+			}
 			if it.Swatch.A > 0 {
 				rc.Box("swatch", ui.Style{W: ui.Px(10), H: ui.Px(10), Fill: alpha(it.Swatch, .85), Radius: 2}, nil)
 			}
-			rc.Text("label", it.Label, t)
+			label := it.Label
+			if it.Section {
+				label = strings.ToUpper(label)
+			}
+			rc.Row("name", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center, Clip: true}, func(rc *ui.Ctx) {
+				rc.Box("label", ui.Style{}, func(rc *ui.Ctx) {
+					rc.Text("t", label, t)
+					if it.Strike {
+						w := rc.Shaper().Shape(label, t.Font).Advance
+						rc.Box("strike", ui.Style{W: ui.Px(w), H: ui.Px(1), Fill: t.Color, Float: &ui.Float{At: render.Point{Y: .5}}}, nil)
+					}
+				})
+				if it.Note != "" {
+					rc.Text("note", it.Note, monoText(10.5, typeset.Normal, col(c, tLabel), 0))
+				}
+			})
+			if o.Trailing != nil {
+				rc.Row("trailing", ui.Style{Gap: 8, Cross: ui.Center}, func(rc *ui.Ctx) { o.Trailing(rc, *it, selected) })
+			}
 			if it.Mark != "" {
-				rc.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				rc.Text("mark", strings.ToUpper(it.Mark), monoText(10, typeset.SemiBold, it.MarkTone, 0))
 			}
 		})
@@ -285,8 +343,12 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 			res.Activated = it.ID
 		}
 	}
+	if st.sel >= len(flat) {
+		st.sel = max(len(flat)-1, 0)
+	}
 	if st.sel < len(flat) {
 		res.Selected = flat[st.sel].item.ID
+		st.selID = res.Selected
 	}
 	return res
 }

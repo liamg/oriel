@@ -220,7 +220,7 @@ rect 62,147 2x21 fill #4fe0a0
 rect 62,168 2x21 fill #4fe0a0
 rect 62,189 2x21 fill #4fe0a0
 rect 62,210 2x21 fill #4fe0a0
-rect 44,231 12x12 fill #4cc9f0 radius 3
+rect 49,231 12x12 fill #4cc9f0 radius 3
 rect 62,231 2x21 fill #4fe0a0
 rect 62,438 2x21 fill #4fe0a0
 rect 62,459 2x21 fill #4fe0a0

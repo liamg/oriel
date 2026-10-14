@@ -2,7 +2,7 @@
 id: TR-4
 title: "Watch mode (affected tests) and coverage gutter"
 phase: P4
-status: todo
+status: done
 area: LSP, tests, debugging
 module: testrun
 depends_on: [TR-1]

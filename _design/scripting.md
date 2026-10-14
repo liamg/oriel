@@ -198,7 +198,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   `local L = oriel`, as the sample does.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
-  `thread`, `lsp`, `coverage`, `http` and `async` load, and calling into one says which ticket brings it. An option
+  `thread`, `coverage`, `http` and `async` load, and calling into one says which ticket brings it. An option
   set before anything registers it waits, and `:Hooks` lists it.
 - Hooks are the registry's (`Registry.Hook`, `Fire`, `DeclareEvent`): in priority order, a veto or decision stops
   them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead`,
@@ -251,3 +251,8 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   `ui.focus.next`/`prev` (`UIView.FocusNext`), and a Lua input sets `InputOpts.TabMoves`.
 - Drag and drop (PL-15): any `oriel.ui` node can be dragged (`drag = { kind, data, label }`) or take drops
   (`accepts = { kinds }`, `on_drop = function(kind, data)`); a `"file"` drop's data is its paths.
+
+## As built (LS-1)
+
+- `oriel.lsp.server{ name, languages, cmd, roots, settings, init, order }` registers a language server (a
+  `registry.LSPServer`); one with a built-in's name replaces it.

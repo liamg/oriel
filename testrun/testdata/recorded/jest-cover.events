@@ -1,0 +1,40 @@
+{"kind":"started","package":"$ROOT/math.test.js","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"started","package":"$ROOT/math.test.js","test":"passes","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"passes","time":"2026-10-13T20:35:59.784Z","elapsed":2000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"fails","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"failed","package":"$ROOT/math.test.js","test":"fails","time":"2026-10-13T20:35:59.784Z","elapsed":12000000,"failure":{"reason":"assert","message":"Error: expect(received).toBe(expected) // Object.is equality","want":"5","got":"4","loc":{"file":"$ROOT/math.test.js","line":8}}}
+{"kind":"started","package":"$ROOT/math.test.js","test":"equals an object","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"failed","package":"$ROOT/math.test.js","test":"equals an object","time":"2026-10-13T20:35:59.784Z","elapsed":2000000,"failure":{"reason":"assert","message":"Error: expect(received).toEqual(expected) // deep equality","loc":{"file":"$ROOT/math.test.js","line":12}}}
+{"kind":"started","package":"$ROOT/math.test.js","test":"throws","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"failed","package":"$ROOT/math.test.js","test":"throws","time":"2026-10-13T20:35:59.784Z","failure":{"reason":"panic","message":"Error: boom","loc":{"file":"$ROOT/math.test.js","line":16}}}
+{"kind":"started","package":"$ROOT/math.test.js","test":"times out","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"failed","package":"$ROOT/math.test.js","test":"times out","time":"2026-10-13T20:35:59.784Z","elapsed":101000000,"failure":{"reason":"timeout","message":"Error: thrown: \"Exceeded timeout of 100 ms for a test.","loc":{"file":"$ROOT/math.test.js","line":19}}}
+{"kind":"started","package":"$ROOT/math.test.js","test":"skipped","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"skipped","package":"$ROOT/math.test.js","test":"skipped","time":"2026-10-13T20:35:59.784Z","message":"pending"}
+{"kind":"started","package":"$ROOT/math.test.js","test":"later","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"skipped","package":"$ROOT/math.test.js","test":"later","time":"2026-10-13T20:35:59.784Z","message":"todo"}
+{"kind":"started","package":"$ROOT/math.test.js","test":"outer > inner > nested pass","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"outer > inner > nested pass","time":"2026-10-13T20:35:59.784Z","elapsed":2000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"outer > inner > nested fail","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"failed","package":"$ROOT/math.test.js","test":"outer > inner > nested fail","time":"2026-10-13T20:35:59.784Z","elapsed":2000000,"failure":{"reason":"assert","message":"Error: expect(received).toBe(expected) // Object.is equality","want":"3","got":"2","loc":{"file":"$ROOT/math.test.js","line":33}}}
+{"kind":"started","package":"$ROOT/math.test.js","test":"parallel > a","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"parallel > a","time":"2026-10-13T20:35:59.784Z","elapsed":1000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"parallel > b","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"parallel > b","time":"2026-10-13T20:35:59.784Z","elapsed":1000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"add(1, 1) -> 2","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"add(1, 1) -> 2","time":"2026-10-13T20:35:59.784Z","elapsed":1000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"add(2, 2) -> 5","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"failed","package":"$ROOT/math.test.js","test":"add(2, 2) -> 5","time":"2026-10-13T20:35:59.784Z","elapsed":2000000,"failure":{"reason":"assert","message":"Error: expect(received).toBe(expected) // Object.is equality","want":"5","got":"4","loc":{"file":"$ROOT/math.test.js","line":47}}}
+{"kind":"started","package":"$ROOT/math.test.js","test":"object 1 + 2","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"object 1 + 2","time":"2026-10-13T20:35:59.784Z","elapsed":1000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"object 0 + 0","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"failed","package":"$ROOT/math.test.js","test":"object 0 + 0","time":"2026-10-13T20:35:59.784Z","elapsed":2000000,"failure":{"reason":"assert","message":"Error: expect(received).toBe(expected) // Object.is equality","want":"1","got":"0","loc":{"file":"$ROOT/math.test.js","line":54}}}
+{"kind":"started","package":"$ROOT/math.test.js","test":"suite x > works","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"suite x > works","time":"2026-10-13T20:35:59.784Z","elapsed":1000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"suite y > works","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"suite y > works","time":"2026-10-13T20:35:59.784Z","elapsed":1000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"word hi","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"passed","package":"$ROOT/math.test.js","test":"word hi","time":"2026-10-13T20:35:59.784Z","elapsed":1000000}
+{"kind":"started","package":"$ROOT/math.test.js","test":"word two words","time":"2026-10-13T20:35:59.784Z"}
+{"kind":"failed","package":"$ROOT/math.test.js","test":"word two words","time":"2026-10-13T20:35:59.784Z","failure":{"reason":"assert","message":"Error: expect(received).not.toBe(expected) // Object.is equality","loc":{"file":"$ROOT/math.test.js","line":64}}}
+{"kind":"failed","package":"$ROOT/math.test.js","time":"2026-10-13T20:35:59.784Z","failure":{"reason":"assert"}}

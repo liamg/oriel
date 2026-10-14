@@ -51,7 +51,13 @@ func (g *gallery) build(c *ui.Ctx) {
 						{ID: "tiers.go", Label: "tiers.go", Swatch: render.Color{R: 0x4f, G: 0xc1, B: 0xe9, A: 255}},
 					}},
 					{ID: "PLAN.md", Label: "PLAN.md", Swatch: render.Color{R: 0xff, G: 0xcf, B: 0x5c, A: 255}, Mark: "A", MarkTone: th.C(theme.OK)},
-				}, TreeOpts{Help: "gallery/tree"})
+					{ID: "money.go", Label: "money.go", Note: "← amount.go", Glyph: "●", GlyphTone: th.C(theme.Warn), Mark: "R", MarkTone: th.C(theme.StatusPermission)},
+					{ID: "legacy.go", Label: "legacy.go", Tone: th.C(theme.Error), Strike: true, Mark: "D", MarkTone: th.C(theme.Error)},
+				}, TreeOpts{Help: "gallery/tree", Trailing: func(c *ui.Ctx, it TreeItem, _ bool) {
+					if it.Mark != "" {
+						DiffStat(c, "ds", 31, 9, DiffStatOpts{Bar: true})
+					}
+				}})
 			})
 			c.Column("list", ui.Style{W: ui.Px(250), H: ui.Flex(1), Fill: th.C(theme.BgSurface)}, func(c *ui.Ctx) {
 				g.list = c.Next("list")

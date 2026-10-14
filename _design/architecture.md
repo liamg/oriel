@@ -68,11 +68,12 @@ flowchart LR
 | `lsp` | LSP client, server registry, capabilities | text |
 | `dap` | DAP client, adapter registry | – |
 | `testrun` | test discovery, runner adapters (go, pytest, vitest/jest, cargo), result streams, watch, coverage | text, syntax |
+| `term` | the terminal model behind `term.Emulator`: grid, scrollback, modes, keys, snapshots, OSC 133 commands and OSC 7 cwd; `term/ghostty` (libghostty-vt as wasm under wazero), `term/pty` (pseudo-terminals over `x/sys/unix`), `term/vttest` (esctest-style case runner) | wazero, x/sys |
 | `wire` | yamux protocol, typed RPC + event streams | – |
 | `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | wire |
 | `agent` | `Provider` interface + shared turn/transcript types | core |
 | `agent/claude`, `agent/codex` | provider impls | agent |
-| `worker` | session host, pty, worktrees, launches providers | core, agent, lsp, dap |
+| `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep) | core, agent, lsp, dap, gitx, regex |
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear, slack, ical; agentbus via the `oriel-agentbus` helper process (keeps its sqlite dependency out of Oriel) | core |
@@ -92,7 +93,7 @@ flowchart LR
 
 Rules:
 
-- `text`, `edit`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` never import `ui` or `render`. `tools/layout` reads this line and fails on any such import, tests included.
+- `text`, `edit`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent`, `term` never import `ui` or `render`. `tools/layout` reads this line and fails on any such import, tests included.
 - Every "swap me" seam is an interface in the consumer package, with impls in subpackages.
 - Each module has its own tests; `vim` has the nvim conformance suite.
 - Every module is listed in `go.work`, and `tools/layout` fails if a module in this table has no directory or a `go.mod` is missing from `go.work`.

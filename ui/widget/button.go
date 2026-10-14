@@ -23,7 +23,7 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 	in := c.Interaction(id)
 	passOn(c, id, in.Keys, activates)
 	bg, hover, pressed, fg, border := col(c, tButtonBg), col(c, tButtonHover), col(c, tButtonPressed), col(c, tButtonFg), col(c, tButtonBorder)
-	if o.Primary {
+	if o.Primary && !o.Disabled {
 		bg, hover, pressed, fg = col(c, tPrimaryBg), col(c, tPrimaryHover), col(c, tPrimaryPressed), col(c, tPrimaryFg)
 		border = bg
 	}
@@ -54,4 +54,31 @@ func Chip(c *ui.Ctx, key any, label string, tone color.NRGBA, help string) ui.ID
 		Role: ui.RoleText, Label: label}, func(c *ui.Ctx) {
 		c.Text(nil, strings.ToUpper(label), monoText(9.5, typeset.SemiBold, tone, .06))
 	})
+}
+
+type ToggleChipOpts struct {
+	Help    string
+	Tooltip string
+	Label   string // its accessible name, when the label alone doesn't say it ("✕ 1"); the label by default
+}
+
+// ToggleChip is a small mono button that's lit while on, for a column or filter that toggles. It returns the value
+// after this frame's clicks.
+func ToggleChip(c *ui.Ctx, key any, label string, on bool, o ToggleChipOpts) bool {
+	fg, border, fill := col(c, tSegFg), col(c, tSegBorder), color.NRGBA{}
+	if on {
+		fg, border, fill = col(c, tSegOnFg), alpha(col(c, tSegOnFg), .45), col(c, tSegOnBg)
+	}
+	name := o.Label
+	if name == "" {
+		name = label
+	}
+	in := Clickable(c, key, ui.Style{Dir: ui.Row, H: ui.Px(18), Pad: ui.PadXY(6, 0), Cross: ui.Center, Radius: 4, Stroke: border, Border: 1,
+		Fill: fill, Focusable: true, Selected: on, Label: name, Tooltip: o.Tooltip, Help: o.Help}, func(c *ui.Ctx) {
+		c.Text("l", label, monoText(10, typeset.Medium, fg, 0))
+	})
+	if in.Clicked {
+		return !on
+	}
+	return on
 }

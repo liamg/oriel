@@ -1,0 +1,16 @@
+{"kind":"started","package":"example.com/basic/calc","time":"2026-10-13T20:24:35.254000758Z"}
+{"kind":"started","package":"example.com/basic/calc","test":"TestNested","time":"2026-10-13T20:24:35.25521373Z"}
+{"kind":"output","package":"example.com/basic/calc","test":"TestNested","time":"2026-10-13T20:24:35.255224213Z","line":"=== RUN   TestNested"}
+{"kind":"started","package":"example.com/basic/calc","test":"TestNested/outer","time":"2026-10-13T20:24:35.255280596Z"}
+{"kind":"output","package":"example.com/basic/calc","test":"TestNested/outer","time":"2026-10-13T20:24:35.255282651Z","line":"=== RUN   TestNested/outer"}
+{"kind":"started","package":"example.com/basic/calc","test":"TestNested/outer/inner_pass","time":"2026-10-13T20:24:35.255285787Z"}
+{"kind":"output","package":"example.com/basic/calc","test":"TestNested/outer/inner_pass","time":"2026-10-13T20:24:35.255287442Z","line":"=== RUN   TestNested/outer/inner_pass"}
+{"kind":"output","package":"example.com/basic/calc","test":"TestNested/outer/inner_pass","time":"2026-10-13T20:24:35.255291984Z","line":"--- PASS: TestNested/outer/inner_pass (0.00s)"}
+{"kind":"passed","package":"example.com/basic/calc","test":"TestNested/outer/inner_pass","time":"2026-10-13T20:24:35.255294034Z"}
+{"kind":"output","package":"example.com/basic/calc","test":"TestNested/outer","time":"2026-10-13T20:24:35.255393982Z","line":"--- PASS: TestNested/outer (0.00s)"}
+{"kind":"passed","package":"example.com/basic/calc","test":"TestNested/outer","time":"2026-10-13T20:24:35.255400376Z"}
+{"kind":"output","package":"example.com/basic/calc","test":"TestNested","time":"2026-10-13T20:24:35.25540303Z","line":"--- PASS: TestNested (0.00s)"}
+{"kind":"passed","package":"example.com/basic/calc","test":"TestNested","time":"2026-10-13T20:24:35.255404905Z"}
+{"kind":"output","package":"example.com/basic/calc","time":"2026-10-13T20:24:35.255406495Z","line":"PASS"}
+{"kind":"output","package":"example.com/basic/calc","time":"2026-10-13T20:24:35.255637195Z","line":"ok  \texample.com/basic/calc\t0.002s"}
+{"kind":"passed","package":"example.com/basic/calc","time":"2026-10-13T20:24:35.255648078Z","elapsed":2000000}

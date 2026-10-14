@@ -2,7 +2,7 @@
 id: LS-2
 title: "Definition, references peek, rename, symbols, call hierarchy"
 phase: P4
-status: todo
+status: done
 area: LSP, tests, debugging
 module: lsp
 depends_on: [LS-1]

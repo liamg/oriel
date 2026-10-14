@@ -47,6 +47,7 @@ type editorExt struct {
 	inputs map[vim.WindowID]paneInput
 
 	drawing      input.State // the engine of the pane being drawn
+	caret        ui.ID       // the current window's cursor, last frame: where popups at the cursor go
 	pendingSince time.Time   // when the current window's engine began waiting for more keys
 }
 
@@ -62,7 +63,7 @@ const diskInterval = time.Second
 func (x *editorExt) Manifest() ext.Manifest { return ext.Manifest{ID: "editor"} }
 
 func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
-	x.h = h
+	x.h, x.sh.editor = h, x
 	x.dir = x.sh.cfg.WorkDir
 	if x.dir == "" {
 		x.dir, _ = os.Getwd()
@@ -73,6 +74,17 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.inputs = map[vim.WindowID]paneInput{}
 	x.builtinInputs()
 	x.sh.enginePending = x.pending
+	x.sh.engineHints = func(keys []string) []ext.Hint {
+		f := x.h.Layout().Focus
+		if f == nil || f.ID != EditorView || !isVim(x.inputFor(x.current())) || x.e.Mode() != "normal" {
+			return nil
+		}
+		var out []ext.Hint
+		for _, h := range vim.HintsFor(keys) {
+			out = append(out, ext.Hint{Keys: h.Keys, Desc: h.Desc})
+		}
+		return out
+	}
 	x.ed = edit.New(text.New(nil, text.Author{}), text.Author{Kind: text.User})
 	x.ed.SetClipboard(desktopClipboard{x.sh})
 	x.ed.OnNotice(func(n edit.Notice) { h.Notify(FromEdit(n, "vim")) })
@@ -182,6 +194,18 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 			x.e.SetQuickfix(str(a, "title"), items)
 			return nil
 		}},
+		{ID: "editor.multi.next", Title: "Add a cursor at the next match of the word under the cursor", Run: func(registry.Ctx, registry.Args) error {
+			x.e.MultiNext()
+			return nil
+		}},
+		{ID: "editor.multi.down", Title: "Add a cursor on the line below", Run: func(registry.Ctx, registry.Args) error {
+			x.e.MultiVertical(1)
+			return nil
+		}},
+		{ID: "editor.multi.up", Title: "Add a cursor on the line above", Run: func(registry.Ctx, registry.Args) error {
+			x.e.MultiVertical(-1)
+			return nil
+		}},
 		{ID: "editor.grep-word", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
 		}},
@@ -201,6 +225,13 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 		x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: k.keys, Command: "picker.open", Args: registry.Args{"source": k.source}, Desc: k.desc}))
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>*", Command: "editor.grep-word", Desc: "Grep the word under the cursor"}))
+	for _, k := range []registry.Keymap{
+		{Mode: "n", Keys: "<C-n>", Command: "editor.multi.next", Desc: "Cursor at the next match"},
+		{Mode: "n", Keys: "<C-Down>", Command: "editor.multi.down", Desc: "Cursor below"},
+		{Mode: "n", Keys: "<C-Up>", Command: "editor.multi.up", Desc: "Cursor above"},
+	} {
+		x.add(h.Keymap(k))
+	}
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>'", Command: "picker.resume", Desc: "Resume the last picker"}))
 	x.add(h.View("statusline.left.00-mode", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "mode", Fn: x.modeSegment} })))
 	x.add(h.View("statusline.right.80-file", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "file", Fn: x.fileSegment} })))
@@ -600,6 +631,20 @@ func (v editorView) Location(instance string) (string, bool) {
 	return path, p.Current() && strings.HasPrefix(v.x.e.Mode(), "visual")
 }
 
+// Mark is the window's file's git status letter, for its tab.
+func (v editorView) Mark(instance string) (string, string) {
+	path, _ := v.Location(instance)
+	if path == "" {
+		return "", ""
+	}
+	f, ok := v.x.sh.git.state().File(v.x.sh.git.rel(path))
+	if !ok || f.Code == 0 {
+		return "", ""
+	}
+	letter, _ := gitCodeTokens(f.Code)
+	return string(f.Code), letter.Name()
+}
+
 func (v editorView) Title(instance string) string {
 	n, err := strconv.Atoi(instance)
 	if err != nil {
@@ -825,3 +870,40 @@ func keyMode(m string) string {
 	}
 	return "n"
 }
+
+// unsearchable are the work dir's files .gitattributes marks generated or vendored, which search leaves out.
+func (x *editorExt) unsearchable() []string {
+	all := (&fileList{dir: x.dir}).list()
+	keep := map[string]bool{}
+	for _, f := range x.conv.searchable(all) {
+		keep[f] = true
+	}
+	var out []string
+	for _, f := range all {
+		if !keep[f] {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// openBuffer is the listed buffer holding the file at path, if one does.
+func (x *editorExt) openBuffer(path string) (vim.FileState, bool) {
+	for _, f := range x.e.Files() {
+		if f.File != nil && filepath.Clean(f.File.Path) == filepath.Clean(path) {
+			return f, true
+		}
+	}
+	return vim.FileState{}, false
+}
+
+// openFileBytes is an open buffer's text as it would be written, by its path relative to the work dir.
+func (x *editorExt) openFileBytes(rel string) ([]byte, bool) {
+	f, ok := x.openBuffer(filepath.Join(x.dir, rel))
+	if !ok {
+		return nil, false
+	}
+	return f.Bytes(), true
+}
+
+func layoutRef(id string) layout.ViewRef { return layout.ViewRef{ID: id} }

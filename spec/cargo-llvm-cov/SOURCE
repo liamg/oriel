@@ -1,0 +1,4 @@
+source: https://github.com/taiki-e/cargo-llvm-cov
+ref: v0.6.15
+path: README.md
+license: MIT or Apache-2.0 (see LICENSE-MIT, LICENSE-APACHE)

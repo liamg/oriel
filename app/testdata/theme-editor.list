@@ -9,7 +9,7 @@ rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1469.0625x38 r 0
 pop
 rect 0,38 44x936 fill #0c0c0b
-path 7 segments stroke 1.4545455 #4f4a40
+path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #4f4a40
@@ -20,7 +20,7 @@ path 2 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 5 segments stroke 1.4545455 #4f4a40
 path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
 path 2 segments stroke 1.4545455 #7c7566
@@ -44,10 +44,11 @@ clip 0,38 1600x962 r 0
   text "THEME" @10,55.42 #7c7566 JetBrains Mono 9.5
   text "oriel" @54.65,56.14 #ece6d8 JetBrains Mono 11.5
   rect 0,66 300x1 fill #24221d
-  rect 10,75 188x30 fill #060606 radius 6 stroke 1 #332f27
+  rect 10,75 188x30 fill #060606 radius 6
   clip 10,75 188x30 r 6
     text "filter tokens…" @20,94.54712 #7c7566 Inter 12.5
   pop
+  rect 10,75 188x30 radius 6 stroke 1 #332f27
   text "● 0 overridden" @206,93.6 #7c7566 JetBrains Mono 10
   clip 0,113 300x861 r 0
     text "PALETTE" @12,136.15 #7c7566 JetBrains Mono 9.5
@@ -150,23 +151,22 @@ clip 0,38 1600x962 r 0
     text "alpha(accent, 8%)" @188,987.60004 #4f4a40 JetBrains Mono 10
   pop
   rect 300,38 1x936 fill #24221d
-  rect 315,46 179x24 radius 5 stroke 1 #332f27
   clip 315,46 179x24 r 5
     rect 315,46 68.650024x24 fill #1f1c0f
     text "FIXTURE" @325,61.42 #ffd23f JetBrains Mono 9.5
     text "SPLIT VS BASE" @393.65002,61.42 #7c7566 JetBrains Mono 9.5
   pop
-  rect 504,46 102.54999x24 radius 5 stroke 1 #332f27
+  rect 315,46 179x24 radius 5 stroke 1 #332f27
   clip 504,46 102.54999x24 r 5
     rect 504,46 47.799988x24 fill #1f1c0f
     text "DARK" @514,61.42 #ffd23f JetBrains Mono 9.5
     text "LIGHT" @561.8,61.42 #7c7566 JetBrains Mono 9.5
   pop
+  rect 504,46 102.54999x24 radius 5 stroke 1 #332f27
   rect 616.55,46 200.69995x24 radius 12 stroke 1 #ff7ad6
   text "PICK MODE · CLICK ANYTHING" @626.55,61.42 #ff7ad6 JetBrains Mono 9.5
   text "repainted in 0.0ms" @1126.3125,61.96 #7c7566 JetBrains Mono 11
   rect 301,78 958x763 fill #060606
-  rect 317,94 926x731 radius 6 stroke 1 #332f27
   clip 317,94 926x731 r 6
     clip 317,94 926x731 r 6
       rect 317,94 1600x1000 fill #060606
@@ -681,6 +681,7 @@ clip 0,38 1600x962 r 0
       text "≡ 48%" @1872.0312,1085.28 #7c7566 JetBrains Mono 10.5
     pop
   pop
+  rect 317,94 926x731 radius 6 stroke 1 #332f27
   rect 301,841 958x1 fill #24221d
   rect 301,842 958x132 fill #0c0c0b
   text "WRITING TO" @315,863.69 #7c7566 JetBrains Mono 9.5
@@ -707,16 +708,17 @@ clip 0,38 1600x962 r 0
     text "PALETTE" @1531.8562,135.43999 #4f4a40 JetBrains Mono 9
     rect 1260,163.2 340x1 fill #24221d
     text "VALUE" @1274,193.62 #7c7566 JetBrains Mono 9.5
-    rect 1469.55,178.2 116.44995x24 radius 5 stroke 1 #332f27
     clip 1469.55,178.2 116.44995x24 r 5
       rect 1469.55,178.2 61.69995x24 fill #1f1c0f
       text "DERIVE" @1479.55,193.62 #ffd23f JetBrains Mono 9.5
       text "FIXED" @1541.25,193.62 #7c7566 JetBrains Mono 9.5
     pop
-    rect 1274,212.2 244.65625x30 fill #060606 radius 6 stroke 1 #332f27
+    rect 1469.55,178.2 116.44995x24 radius 5 stroke 1 #332f27
+    rect 1274,212.2 244.65625x30 fill #060606 radius 6
     clip 1274,212.2 244.65625x30 r 6
       text "bg2" @1284,231.74712 #ece6d8 Inter 12.5
     pop
+    rect 1274,212.2 244.65625x30 radius 6 stroke 1 #332f27
     text "= #121210" @1526.6562,231.16 #7c7566 JetBrains Mono 11
     rect 1260,256.2 340x1 fill #24221d
     text "CONTRAST" @1274,280.89 #7c7566 JetBrains Mono 9.5
