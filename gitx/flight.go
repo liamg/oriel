@@ -130,21 +130,23 @@ func (r Repo) conflicts(ctx context.Context, onto string) []string {
 
 // Commit commits paths (every change when there are none) with message, as the user's git identity has it.
 func (r Repo) Commit(ctx context.Context, message string, paths ...string) error {
-	if strings.TrimSpace(message) == "" {
-		return errors.New("a commit needs a message")
-	}
-	if len(paths) == 0 {
-		if _, err := r.git(ctx, "add", "-A"); err != nil {
-			return err
-		}
-		_, err := r.git(ctx, "commit", "-q", "-m", message)
-		return err
-	}
-	if _, err := r.git(ctx, append([]string{"add", "-A", "--"}, paths...)...); err != nil {
-		return err
-	}
-	_, err := r.git(ctx, append([]string{"commit", "-q", "-m", message, "--"}, paths...)...)
+	_, err := r.CommitWith(ctx, message, nil, paths...)
 	return err
+}
+
+// CommitWith is Commit with trailers ("Unreviewed-Agent-Lines: 21"), and returns the new commit's hash.
+func (r Repo) CommitWith(ctx context.Context, message string, trailers []string, paths ...string) (string, error) {
+	if strings.TrimSpace(message) == "" {
+		return "", errors.New("a commit needs a message")
+	}
+	add := []string{"add", "-A"}
+	if len(paths) > 0 {
+		add = append(append(add, "--"), paths...)
+	}
+	if _, err := r.git(ctx, add...); err != nil {
+		return "", err
+	}
+	return r.commit(ctx, message, trailers, paths)
 }
 
 // Push pushes HEAD to origin's branch, and tracks it.

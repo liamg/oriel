@@ -191,7 +191,8 @@ clip 224,38 1376x936 r 0
         text "Commit" @310,464.44522 #141006 Inter 12
         rect 373.15625,447.08 62.328125x26 fill #191815 radius 6 stroke 1 #332f27
         text "Redraft" @383.15625,464.44522 #ece6d8 Inter 12
-        clip 443.48438,460.08 295.01562x0 r 0
+        clip 443.48438,453.47998 295.01562x13.200012 r 0
+          text "review gate on" @654.5,463.68 #4f4a40 JetBrains Mono 10
         pop
       pop
       rect 288,180 462.5x303.08 radius 6 stroke 1 #8f5829

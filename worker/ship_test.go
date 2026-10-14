@@ -101,7 +101,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if fs := s["api"].Files; len(fs) != 2 || fs[0].Path != "limiter.go" || fs[0].Add != 1 || fs[0].Del != 1 || fs[1].Code != "?" {
 		t.Fatalf("uncommitted %+v", fs)
 	}
-	if err := r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: "api", Message: "feat(api): back off on 429", Files: []string{"limiter.go"}}); err != nil {
+	if _, err := r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: "api", Message: "feat(api): back off on 429", Files: []string{"limiter.go"}}); err != nil {
 		t.Fatal(err)
 	}
 	s = r.ship(id, false)

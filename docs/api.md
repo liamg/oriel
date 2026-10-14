@@ -53,6 +53,11 @@ Version 0.4.0.
 
 - `oriel.language.add(spec)`: Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.
 
+## oriel.ledger
+
+- `oriel.ledger.frac(project?)`: The share of a project's agent-written lines read, 0 to 1 (1 with none to read); project as for unread.
+- `oriel.ledger.unread(project?)`: How many agent-written lines of a project's change aren't read yet (unread, or only skimmed): project is the session's name for it or a path in it, the project in front if none.
+
 ## oriel.lsp
 
 - `oriel.lsp.server(spec)`: Register a language server: { name, languages = { \

@@ -188,24 +188,45 @@ func keyLabel(k string) string {
 }
 
 type MeterOpts struct {
-	Tone  color.NRGBA
-	Width ui.Size // fills by default
-	Label string  // its accessible name
+	Tone   color.NRGBA
+	Width  ui.Size // fills by default
+	Height float32 // 4 by default
+	Label  string  // its accessible name
+	// Then are more parts after frac's, each in its own tone: the review ledger's skimmed after its read.
+	Then []MeterPart
 }
 
-// Meter is a thin bar filled to frac (0–1): a context window, a plan's usage.
+// MeterPart is a stretch of a meter: its share (0–1) and its tone.
+type MeterPart struct {
+	Frac float64
+	Tone color.NRGBA
+}
+
+// Meter is a thin bar filled to frac (0–1): a context window, a plan's usage; with Then, a stacked bar of parts.
 func Meter(c *ui.Ctx, key any, frac float64, o MeterOpts) {
 	frac = min(max(frac, 0), 1)
 	w := o.Width
 	if w == (ui.Size{}) {
 		w = ui.Flex(1)
 	}
-	track, tone := alpha(col(c, tMeterTrack), 1), o.Tone
+	h := o.Height
+	if h == 0 {
+		h = 4
+	}
+	track := alpha(col(c, tMeterTrack), 1)
+	parts := append([]MeterPart{{Frac: frac, Tone: o.Tone}}, o.Then...)
 	c.Box(key, ui.Style{W: w, Role: ui.RoleStatus, Label: fmt.Sprintf("%s %d%%", o.Label, int(frac*100+.5))}, func(c *ui.Ctx) {
-		c.Paint("bar", ui.Flex(1), ui.Px(4), func(f render.Frame, r render.Rect) {
-			f.Rect(r, render.Style{Fill: track, Radius: 2})
-			if frac > 0 {
-				f.Rect(render.Rect{Min: r.Min, Max: render.Point{X: r.Min.X + r.Dx()*float32(frac), Y: r.Max.Y}}, render.Style{Fill: tone, Radius: 2})
+		c.Paint("bar", ui.Flex(1), ui.Px(h), func(f render.Frame, r render.Rect) {
+			f.Rect(r, render.Style{Fill: track, Radius: min(h/2, 2)})
+			at := float64(0)
+			for _, p := range parts {
+				from := min(max(at, 0), 1)
+				at += p.Frac
+				to := min(max(at, 0), 1)
+				if to > from {
+					x0, x1 := r.Min.X+r.Dx()*float32(from), r.Min.X+r.Dx()*float32(to)
+					f.Rect(render.Rect{Min: render.Point{X: x0, Y: r.Min.Y}, Max: render.Point{X: x1, Y: r.Max.Y}}, render.Style{Fill: p.Tone, Radius: min(h/2, 2)})
+				}
 			}
 		})
 	})

@@ -20,6 +20,8 @@ flowchart LR
 - **Session**: a workspace plus a **kind**, an agent (or none), a branch, and everything that accrues: threads, tasks, ledger,
   test runs, transcript and layout. Sessions are what mission control and the omnibox list; a tab is a session
   open in the window: started, resumed or brought to the front, never just for being on the start view.
+  Built in RV-2: the ledger's state is the session's `Reviews` (hunks marked, lines read and skimmed), its kind's
+  commit gate is `CommitGate` (from `KindSpec.Gate`), and commits made past the gate are `Overrides`.
 
 ## Kinds
 

@@ -45,6 +45,10 @@ var Reference = map[string][]RefFunc{
 	"language": {
 		{Call: "oriel.language.add(spec)", Doc: "Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }."},
 	},
+	"ledger": {
+		{Call: "oriel.ledger.frac(project?)", Doc: "The share of a project's agent-written lines read, 0 to 1 (1 with none to read); project as for unread."},
+		{Call: "oriel.ledger.unread(project?)", Doc: "How many agent-written lines of a project's change aren't read yet (unread, or only skimmed): project is the session's name for it or a path in it, the project in front if none."},
+	},
 	"lsp": {
 		{Call: "oriel.lsp.server(spec)", Doc: "Register a language server: { name, languages = { \\"},
 	},

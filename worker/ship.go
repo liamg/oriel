@@ -102,10 +102,11 @@ type ShipRef struct {
 
 // ShipCommitReq commits files of a project (every change when none) with a message.
 type ShipCommitReq struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-	Message string         `json:"message"`
-	Files   []string       `json:"files,omitempty"`
+	Session  core.SessionID `json:"session"`
+	Project  string         `json:"project"`
+	Message  string         `json:"message"`
+	Files    []string       `json:"files,omitempty"`
+	Trailers []string       `json:"trailers,omitempty"` // a commit gate's, when committed past it
 }
 
 // PRReq raises a project's pull request, or edits the open one: its title and body, as a draft, the reviewers asked.
@@ -304,20 +305,22 @@ func (w *Worker) forget(id core.SessionID, project string) {
 	}
 }
 
-// ShipCommit commits a project's files with the user's git identity, and drops the commit draft it used.
-func (w *Worker) ShipCommit(ctx context.Context, r ShipCommitReq) error {
+// ShipCommit commits a project's files with the user's git identity, drops the commit draft it used, and returns the
+// commit's hash.
+func (w *Worker) ShipCommit(ctx context.Context, r ShipCommitReq) (string, error) {
 	_, p, repo, err := w.projectRepo(r.Session, r.Project)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if p.ReadOnly || p.Detached {
-		return fmt.Errorf("%s is read-only here", p.Name)
+		return "", fmt.Errorf("%s is read-only here", p.Name)
 	}
-	if err := repo.Commit(ctx, r.Message, r.Files...); err != nil {
-		return err
+	hash, err := repo.CommitWith(ctx, r.Message, r.Trailers, r.Files...)
+	if err != nil {
+		return "", err
 	}
 	w.dropDraft(r.Session, p.Name, "commit")
-	return nil
+	return hash, nil
 }
 
 // ShipPush pushes a project's branch to origin: the session's own branch only.
@@ -587,7 +590,7 @@ func ownBranch(p core.Project) (string, error) {
 
 func (w *Worker) serveShip(fn func(string, wire.Handler)) {
 	fn(MethodShipRead, wire.Func(func(ctx context.Context, r ShipReq) ([]Ship, error) { return w.ShipRead(ctx, r) }))
-	fn(MethodShipCommit, wire.Func(func(ctx context.Context, r ShipCommitReq) (any, error) { return nil, w.ShipCommit(ctx, r) }))
+	fn(MethodShipCommit, wire.Func(func(ctx context.Context, r ShipCommitReq) (any, error) { return w.ShipCommit(ctx, r) }))
 	fn(MethodShipPush, wire.Func(func(ctx context.Context, r ShipRef) (any, error) { return nil, w.ShipPush(ctx, r) }))
 	fn(MethodShipSync, wire.Func(func(ctx context.Context, r ShipRef) (any, error) { return nil, w.ShipSync(ctx, r) }))
 	fn(MethodShipPR, wire.Func(func(ctx context.Context, r PRReq) (*gh.PR, error) { return w.ShipPR(ctx, r) }))
@@ -601,8 +604,9 @@ func (c Client) ShipRead(ctx context.Context, r ShipReq) ([]Ship, error) {
 	return out, c.Conn.Call(ctx, MethodShipRead, r, &out)
 }
 
-func (c Client) ShipCommit(ctx context.Context, r ShipCommitReq) error {
-	return c.Conn.Call(ctx, MethodShipCommit, r, nil)
+func (c Client) ShipCommit(ctx context.Context, r ShipCommitReq) (string, error) {
+	var hash string
+	return hash, c.Conn.Call(ctx, MethodShipCommit, r, &hash)
 }
 
 func (c Client) ShipPush(ctx context.Context, r ShipRef) error {

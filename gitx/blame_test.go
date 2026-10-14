@@ -39,3 +39,37 @@ func TestBlameKinds(t *testing.T) {
 		t.Errorf("first %+v, last %+v", bl[0], bl[4])
 	}
 }
+
+// RV-2: agents.md, "it's recorded in a commit trailer (Unreviewed-Agent-Lines: 38)": CommitStaged commits what's
+// staged and adds the trailer as git commit --trailer does; git reads it back as a trailer.
+// ref: oracle git
+func TestCommitStagedWithTrailer(t *testing.T) {
+	r := gittest.New(t)
+	r.Git("config", "user.name", "Ada")
+	r.Git("config", "user.email", "ada@example.com")
+	r.Write(map[string]string{"a.go": "package a\n", "b.go": "package a\n"})
+	r.Commit("Ada", "base")
+	r.Write(map[string]string{"a.go": "package a\n\nvar x = 1\n", "b.go": "package a\n\nvar y = 2\n"})
+	r.Git("add", "a.go")
+	repo := Repo{Dir: r.Dir}
+	staged, err := repo.StagedFiles(context.Background())
+	if err != nil || len(staged) != 1 || staged[0] != "a.go" {
+		t.Fatalf("staged: %v %v", staged, err)
+	}
+	hash, err := repo.CommitStaged(context.Background(), "feat: x\n\nAdds x.", "Unreviewed-Agent-Lines: 38")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(r.Git("rev-parse", "HEAD")); got != hash {
+		t.Errorf("returned %s, HEAD is %s", hash, got)
+	}
+	if got := strings.TrimSpace(r.Git("log", "-1", "--format=%(trailers:key=Unreviewed-Agent-Lines,valueonly)")); got != "38" {
+		t.Errorf("the trailer reads %q", got)
+	}
+	if got := strings.TrimSpace(r.Git("show", "--name-only", "--format=", "HEAD")); got != "a.go" {
+		t.Errorf("committed %q, want only what was staged", got)
+	}
+	if _, err := repo.CommitStaged(context.Background(), "  "); err == nil {
+		t.Error("committed with no message")
+	}
+}

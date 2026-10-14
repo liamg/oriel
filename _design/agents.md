@@ -544,6 +544,23 @@ All on by default, all configurable, none a nag:
   - **jobs: soft.** One confirmation, logged.
   - **tours and scratch sessions: off.**
   - Repos can override it in `.oriel/`, and the ledger shows in the HUD, on the Ship page and in the PR description.
+  - Built in RV-2: the ledger counts the agent-written lines of a repo's branch change (against the merge-base,
+    uncommitted work included): an added line is the agent's when blame says so (an agent author or Co-Authored-By),
+    when the open buffer's authors say so, or, not committed yet and with no author known, when the session's
+    transcript has an edit of the agent's adding that text to that file. Blank lines don't count. A line is **read**
+    when its change is marked reviewed (`core.HunksReviewed`) or it stayed wholly on screen in the diff for 1 s plus
+    150 ms per unread agent line showing with it (at most 8 s); **skimmed** when it stayed 400 ms or more but less;
+    a line flicked past in under 400 ms counts for nothing. Lines seen are the session event `core.LinesSeen`
+    (`Review.Read`, `Review.Skimmed`, keyed `core.LineKey(change, n)`), sent through the worker's `review.seen`;
+    outside a session they last as long as the window. The gate is `ledger.gate` (`auto` by default: the session's
+    `CommitGate`, set by the worker from its kind's `KindSpec.Gate`, else `core.DefaultGate`; off outside a session),
+    settable per repo in `.oriel/settings.toml` and per session. It counts the not-yet-committed agent lines of the
+    files the commit takes (staged, or everything with `all`), skimmed ones as not read. Hard: `git.commit` opens
+    the COMMIT GATED dialog (Review `r`, Commit anyway `a`, Cancel `esc`); anyway commits with
+    `Unreviewed-Agent-Lines: N` (git's `--trailer`), a warning notice in the session's log, and
+    `core.CommitGateOverridden` in `SessionState.Overrides` (worker `review.override`). Soft: one confirmation (`⏎`),
+    logged the same way without a trailer. Not yet: the gateway's `commit` (an agent's, approved on its card) isn't
+    gated, though its card shows the ledger; the PR gate (FG-6) and the PR description's ledger.
 - **Evidence.** The agent attaches proof to claims ("tests pass" links to the
   test run in the session log), and replies without evidence get flagged.
 ![06-review](mockups/06-review.png)

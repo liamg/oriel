@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
@@ -43,20 +44,18 @@ type diffFile struct {
 type diffHunk struct {
 	gitx.DiffHunk
 	ids   []string
-	fn    string     // the function it's in
-	spans [][]span   // each line's text, by highlight
-	marks [][][2]int // each line's changed words
+	fn    string      // the function it's in
+	spans [][]span    // each line's text, by highlight
+	marks [][][2]int  // each line's changed words
+	adds  []addedLine // each line's change and author, for those it adds
 }
 
-// added is how many lines it adds.
-func (h diffHunk) added() int {
-	n := 0
-	for _, l := range h.Lines {
-		if l.Op == '+' {
-			n++
-		}
-	}
-	return n
+// addedLine is a line a change adds: its change's ID, its key in the ledger (core.LineKey), and who wrote it, as
+// the authorship box names them.
+type addedLine struct {
+	change, key string
+	who         string
+	committed   bool
 }
 
 // loadDiff makes a file's diff: the base revision's version against newText (the buffer's), or the file on disk
@@ -89,6 +88,7 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 	for _, h := range hs {
 		dh := diffHunk{DiffHunk: h, ids: h.IDs(), spans: make([][]span, len(h.Lines)), marks: make([][][2]int, len(h.Lines))}
 		dh.fn = hunkFunc(h, units, newText, newLines, oldLines)
+		dh.adds = make([]addedLine, len(h.Lines))
 		k := 0
 		for _, c := range h.Changes {
 			om, nm := c.Intraline()
@@ -99,8 +99,10 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 				dh.marks[k+i] = om[i]
 			}
 			k += len(om)
+			id := c.ID()
 			for i := range nm {
 				dh.marks[k+i] = nm[i]
+				dh.adds[k+i] = addedLine{change: id, key: core.LineKey(id, i)}
 			}
 			k += len(nm)
 		}
@@ -117,7 +119,7 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 		}
 		f.hunks = append(f.hunks, dh)
 	}
-	f.authors = authorship(ctx, repo, in.path, newText, hs, snap)
+	f.authors = authorship(ctx, repo, in.path, newText, f.hunks, snap)
 	return f
 }
 
@@ -225,18 +227,20 @@ func hunkFunc(h gitx.DiffHunk, units []text.Unit, src []byte, lines, oldLines []
 	return truncate(gitx.FuncLine(oldLines, h.OldStart), 80)
 }
 
-// authorship is who wrote the lines a diff adds: blame for those committed (an agent, you, someone else), and for
-// those not yet, the open buffer's authors (snap), else "uncommitted".
-func authorship(ctx context.Context, repo gitx.Repo, path string, src []byte, hs []gitx.DiffHunk, snap *text.Snapshot) map[string]int {
+// authorship is who wrote the lines a diff adds, set on each hunk's added lines and counted: blame for those
+// committed (an agent, you, someone else), and for those not yet, the open buffer's authors (snap), else
+// "uncommitted".
+func authorship(ctx context.Context, repo gitx.Repo, path string, src []byte, hs []diffHunk, snap *text.Snapshot) map[string]int {
 	out := map[string]int{}
 	blame, _ := repo.Blame(ctx, path, src)
 	for _, h := range hs {
-		for _, l := range h.Lines {
+		for k, l := range h.Lines {
 			if l.Op != '+' {
 				continue
 			}
-			who := "uncommitted"
+			who, committed := "uncommitted", false
 			if i := l.New - 1; i < len(blame) {
+				committed = blame[i].Kind != gitx.NotCommitted
 				switch blame[i].Kind {
 				case gitx.ByAgent:
 					who = "agent"
@@ -249,6 +253,7 @@ func authorship(ctx context.Context, repo gitx.Repo, path string, src []byte, hs
 			if who == "uncommitted" && snap != nil && l.New-1 < snap.Lines() {
 				who = cmpOr(lineAuthor(*snap, l.New-1), who)
 			}
+			h.adds[k].who, h.adds[k].committed = who, committed
 			out[who]++
 		}
 	}

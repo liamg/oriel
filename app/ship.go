@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -88,7 +89,8 @@ type commitForm struct {
 	message string
 	edited  bool            // typed into, so the draft no longer fills it
 	skip    map[string]bool // files left out
-	veto    string          // why a ShipCommit hook stopped the last try
+	veto    string          // why a commit gate or a ShipCommit hook stopped the last try
+	held    []registry.GateCheck
 }
 
 // prForm is a project's Raise PR tab.
@@ -677,18 +679,108 @@ func (x *shipExt) commit(ctx registry.Ctx, se core.SessionState, p string, a reg
 	if strings.TrimSpace(ev.Message) == "" {
 		return fmt.Errorf("%s's commit needs a message", p)
 	}
+	dir := sessionProjectDir(se, p)
+	files := ev.Files
+	if len(files) == 0 {
+		for _, fl := range s.Files {
+			files = append(files, fl.Path)
+		}
+	}
+	var held []registry.GateCheck
+	var trailers []string
+	if dir != "" {
+		for _, g := range registry.CheckCommit(x.h, registry.CommitCheck{Root: dir, Files: files, Message: ev.Message}) {
+			if g.Pending {
+				return x.commitLater(se, p, a)
+			}
+			if g.Blocks() || g.Asks() {
+				held = append(held, g)
+				if g.Blocks() && g.Trailer != "" {
+					trailers = append(trailers, g.Trailer)
+				}
+			}
+		}
+	}
+	f.held = held
+	if len(held) > 0 && !ev.Force {
+		var why []string
+		for _, g := range held {
+			why = append(why, g.Reason)
+		}
+		f.veto = strings.Join(why, "; ")
+		return fmt.Errorf("%w: %s", errStopped, f.veto)
+	}
 	if v, _ := x.h.Fire(ctx, "ShipCommit", p, ev); v.Veto {
 		f.veto = v.Reason
 		return fmt.Errorf("%w: %s", errStopped, v.Reason)
 	}
 	f.veto = ""
 	return x.step(se.ID, p, "Committing…", func(cx context.Context, c worker.Client) error {
-		if err := c.ShipCommit(cx, worker.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files}); err != nil {
+		hash, err := c.ShipCommit(cx, worker.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files, Trailers: trailers})
+		if err != nil {
 			return err
 		}
-		x.h.Do(func() { *f = commitForm{skip: map[string]bool{}} })
+		x.h.Do(func() {
+			*f = commitForm{skip: map[string]bool{}}
+			if len(held) > 0 && x.sh.git != nil {
+				x.sh.git.recordOverrides(se, p, true, hash, ev.Message, held)
+			}
+		})
 		return nil
 	})
+}
+
+// commitLater runs ship.commit again shortly, while the commit gates are still counting, until commitWait has gone.
+func (x *shipExt) commitLater(se core.SessionState, p string, a registry.Args) error {
+	started, _ := a["started"].(time.Time)
+	if started.IsZero() {
+		started = time.Now()
+	}
+	if time.Since(started) > commitWait {
+		return fmt.Errorf("%s's commit gates didn't finish counting; try again", p)
+	}
+	more := maps.Clone(a)
+	more["project"], more["started"] = p, started
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		time.Sleep(commitPoll)
+		x.h.Do(func() { x.run("ship.commit", more) })
+	}()
+	return nil
+}
+
+// sessionProjectDir is a session's project's work tree, "" if it hasn't got it.
+func sessionProjectDir(se core.SessionState, name string) string {
+	for _, p := range se.Projects {
+		if p.Name == name {
+			return p.Dir
+		}
+	}
+	return ""
+}
+
+// ledger is a project's review ledger, if one is kept.
+func (x *shipExt) ledger(se core.SessionState, p string) (registry.Ledger, bool) {
+	dir := sessionProjectDir(se, p)
+	if dir == "" {
+		return registry.Ledger{}, false
+	}
+	return registry.LedgerOf(x.h, dir)
+}
+
+// gated says a commit gate is hard or soft for a project's commits.
+func (x *shipExt) gated(se core.SessionState, p string) bool {
+	dir := sessionProjectDir(se, p)
+	if dir == "" {
+		return false
+	}
+	for _, g := range registry.CheckCommit(x.h, registry.CommitCheck{Root: dir}) {
+		if g.Mode == registry.GateHard || g.Mode == registry.GateSoft {
+			return true
+		}
+	}
+	return false
 }
 
 // paths reads a list of strings from an arg.

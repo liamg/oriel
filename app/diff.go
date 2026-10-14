@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
@@ -56,7 +56,8 @@ type diffExt struct {
 	mu      sync.Mutex
 	files   map[diffKey]*diffFile
 	loading map[diffKey]bool
-	local   map[diffKey]map[string]bool // marks made outside a session, which last as long as the window
+	local   core.State            // reviews made outside a session, as session "local" with each repo's root its project; they last as long as the window
+	texts   map[string]agentTexts // by session and root
 	busy    sync.WaitGroup
 	limit   chan struct{} // diffs made at once
 }
@@ -79,6 +80,9 @@ type diffState struct {
 	drawn  map[string]*diffFile       // each file's diff as last drawn
 	files  []gitx.FileState           // the files listed, as last drawn
 	marks  map[string]map[string]bool // each file's marks as last drawn
+	ledger registry.Ledger            // as last drawn
+	seen   map[string]time.Time       // agent-written lines on screen, by file and key, since when
+	sent   map[string]core.LineState  // what's been recorded of them
 }
 
 // diffSel is a place in the diff: a file, a hunk of it, a line of the hunk (-1 for the hunk as a whole).
@@ -91,7 +95,8 @@ func (x *diffExt) Manifest() ext.Manifest { return ext.Manifest{ID: "diff"} }
 
 func (x *diffExt) Activate(_ context.Context, h ext.Host) error {
 	x.h = h
-	x.by, x.files, x.loading, x.local = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}, map[diffKey]map[string]bool{}
+	x.by, x.files, x.loading = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}
+	x.local = core.State{Sessions: []core.SessionState{{ID: localReviews}}}
 	x.limit = make(chan struct{}, 4)
 	x.add(h.Option(registry.OptionSpec{Name: "diff.layout", Section: "git", Type: registry.Enum, Values: []string{"split", "unified"}, Default: "split",
 		Scopes: registry.ScopeUser, Help: "How the diff shows a change: old and new side by side, or one above the other."}))
@@ -161,6 +166,7 @@ func (x *diffExt) Activate(_ context.Context, h ext.Host) error {
 		x.add(h.Keymap(k))
 	}
 	x.add(h.View(DiffView, diffView{x}))
+	x.activateLedger()
 	x.add(h.View(DiffSide+"50-authorship", registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "authorship", Fn: func(c *ui.Ctx) { x.authorshipView(c, vc.Instance) }}
 	})))
@@ -202,14 +208,20 @@ func (x *diffExt) state(root string) *diffState {
 // target is the repo a path is in and the file it names there ("" for the whole change): a file or directory in a
 // work tree, or a session's workspace (its primary project).
 func (x *diffExt) target(path string) (root, rel string, err error) {
+	return repoTarget(x.sh, x.h, path)
+}
+
+// repoTarget is the repo a path is in and the file it names there ("" for the whole repo): a file or directory in
+// a work tree, or a session's workspace (its primary project); the work dir's with no path.
+func repoTarget(sh *shell, h ext.Host, path string) (root, rel string, err error) {
 	if path == "" {
-		path = x.sh.cfg.WorkDir
+		path = sh.cfg.WorkDir
 	}
 	if path == "" {
 		return "", "", errors.New("no directory is open")
 	}
 	path = filepath.Clean(path)
-	for _, s := range x.h.State().Sessions {
+	for _, s := range h.State().Sessions {
 		if filepath.Clean(s.Dir) == path && !gitx.IsRepo(path) {
 			if p, ok := s.Primary(); ok {
 				path = p.Dir
@@ -226,7 +238,7 @@ func (x *diffExt) target(path string) (root, rel string, err error) {
 		}
 		dir = filepath.Dir(dir)
 	}
-	if t := x.sh.git.holding(path); t.root() != "" && within(path, t.root()) {
+	if t := sh.git.holding(path); t.root() != "" && within(path, t.root()) {
 		root = t.root()
 	} else if r, ok := gitx.Root(context.Background(), dir); ok {
 		root = r
@@ -258,9 +270,18 @@ func (x *diffExt) open(ctx context.Context, path string) error {
 	return x.h.Run(ctx, "view.open", registry.Args{"id": DiffView, "instance": root, "place": "tab"})
 }
 
+// localReviews is the session x.local keeps reviews made outside one in.
+const localReviews = "local"
+
 // session is the session and project whose work tree root is, for marks that last; ok is false outside one.
 func (x *diffExt) session(root string) (core.SessionState, string, bool) {
-	st := x.h.State()
+	return projectSession(x.h, root)
+}
+
+// projectSession is the session and project whose work tree is root, the session in front first; ok is false
+// outside one.
+func projectSession(h ext.Host, root string) (core.SessionState, string, bool) {
+	st := h.State()
 	var out []core.SessionState
 	if se, ok := st.Session(st.Focus); ok {
 		out = append(out, se.Snapshot())
@@ -276,38 +297,35 @@ func (x *diffExt) session(root string) (core.SessionState, string, bool) {
 	return core.SessionState{}, "", false
 }
 
-// marks are the changes of a file marked reviewed.
-func (x *diffExt) marks(root, file string) map[string]bool {
+// review is what of a file's change has been reviewed: in its session, or for the window outside one.
+func (x *diffExt) review(root, file string) core.Review {
 	if se, project, ok := x.session(root); ok {
-		return se.ReviewedHunks(project, file)
+		return se.ReviewOf(project, file)
 	}
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	return maps.Clone(x.local[diffKey{root, file}])
+	return x.local.Sessions[0].ReviewOf(root, file)
 }
 
-// setMarks marks changes of a file reviewed or not: as a session event through its worker, so they last, or for
-// as long as the window outside a session.
-func (x *diffExt) setMarks(root, file string, ids []string, on bool) error {
-	if len(ids) == 0 {
-		return nil
+// marks are the changes of a file marked reviewed.
+func (x *diffExt) marks(root, file string) map[string]bool {
+	out := map[string]bool{}
+	for _, h := range x.review(root, file).Hunks {
+		out[h] = true
 	}
+	return out
+}
+
+// record applies a review event: through the session's worker, so it lasts, or for as long as the window outside a
+// session. ev's session, and its project outside one, are filled in.
+func (x *diffExt) record(root string, ev core.Event, send func(c worker.Client, sid core.SessionID, project string) error) error {
 	se, project, ok := x.session(root)
 	if !ok {
 		x.mu.Lock()
-		k := diffKey{root, file}
-		if x.local[k] == nil {
-			x.local[k] = map[string]bool{}
-		}
-		for _, id := range ids {
-			if on {
-				x.local[k][id] = true
-			} else {
-				delete(x.local[k], id)
-			}
-		}
+		err := ev.Apply(&x.local)
 		x.mu.Unlock()
-		return nil
+		x.h.Redraw()
+		return err
 	}
 	var c worker.Client
 	var err error
@@ -319,15 +337,40 @@ func (x *diffExt) setMarks(root, file string, ids []string, on bool) error {
 	if err != nil {
 		return err
 	}
-	ev := core.HunksReviewed{Session: se.ID, Project: project, File: file, Hunks: slices.Clone(ids), Reviewed: on}
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		if err := c.SetReviewed(context.Background(), ev); err != nil {
+		if err := send(c, se.ID, project); err != nil {
 			x.h.Notify(core.Notice{ID: "diff.review", Severity: core.SevError, Key: true, Text: err.Error()})
 		}
 	}()
 	return nil
+}
+
+// setMarks marks changes of a file reviewed or not.
+func (x *diffExt) setMarks(root, file string, ids []string, on bool) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	local := core.HunksReviewed{Session: localReviews, Project: root, File: file, Hunks: slices.Clone(ids), Reviewed: on}
+	return x.record(root, local, func(c worker.Client, sid core.SessionID, project string) error {
+		ev := local
+		ev.Session, ev.Project = sid, project
+		return c.SetReviewed(context.Background(), ev)
+	})
+}
+
+// setSeen records lines of a file seen in the diff, read or skimmed.
+func (x *diffExt) setSeen(root, file string, read, skimmed []string) error {
+	if len(read)+len(skimmed) == 0 {
+		return nil
+	}
+	local := core.LinesSeen{Session: localReviews, Project: root, File: file, Read: read, Skimmed: skimmed}
+	return x.record(root, local, func(c worker.Client, sid core.SessionID, project string) error {
+		ev := local
+		ev.Session, ev.Project = sid, project
+		return c.SetSeen(context.Background(), ev)
+	})
 }
 
 // hunkAt is the hunk a place names, as last drawn.

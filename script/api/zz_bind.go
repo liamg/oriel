@@ -124,6 +124,17 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Ledger{a: a}
+		vm.Bind("ledger", map[string]script.GoFunc{
+			"frac": func(c *script.Args) ([]any, error) {
+				return []any{x.Frac(c.String(0))}, nil
+			},
+			"unread": func(c *script.Args) ([]any, error) {
+				return []any{x.Unread(c.String(0))}, nil
+			},
+		})
+	}
+	{
 		x := LSP{a: a}
 		vm.Bind("lsp", map[string]script.GoFunc{
 			"server": func(c *script.Args) ([]any, error) {

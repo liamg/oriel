@@ -189,6 +189,21 @@ flowchart TB
   `ReviewedHunks`), sent through the worker's `review.set` (`worker.Client.SetReviewed`), each hunk named by
   `gitx.Hunk.ID`; `gitx.Unified`, `gitx.Intraline` and `Repo.FileAt` are the diff's pieces for others to reuse.
   `widget.Check` is a checkbox with on, off and mixed states.
+- the review ledger and commit gates (RV-2): `registry.ReviewLedger{Name, Order, Get(root) Ledger}` (kind
+  `review.ledger`) answers `registry.LedgerOf(r, root)`: a repo's agent-written lines as `LedgerCount{Read, Skimmed,
+  Unread}`, for the whole change (`All`), those not committed yet (`Uncommitted`) and per file (`Files`, `File`,
+  `Of`); `Ready` is false while diffs are still being read. The built-in one (`diff`, Order 100) counts from the diff;
+  a lower Order shadows it. `registry.CommitGate{Name, Label, Order, Check(CommitCheck) GateResult}` (kind
+  `commit.gate`) is asked by `registry.CheckCommit(r, CommitCheck{Root, Files, Message})` before every commit: a
+  `GateResult` says its `Mode` (hard, soft, off), `Pass`, `Pending`, progress `Done`/`Total`, `Reason`, the
+  `Trailer` a commit past it carries, `Unread`, and a `Review` command with its label. The built-in gate is `ledger`.
+  `git.commit {path, message, all, anyway, confirm}` is every commit path's command (the Explorer, the diff's
+  ledger bar, the Ship page, scripts): no message opens a dialog; a hard gate holds the commit in the COMMIT GATED
+  dialog (key mode `commit`: `a` `git.commit.anyway`, `r` `git.commit.review`, `⏎` `git.commit.confirm`, `esc`
+  `git.commit.cancel`) until anyway; a soft one until confirm; then it fires the `Commit` hook (`CommitEvent{project,
+  root, message, files, unread}`; a veto stops it) and commits with `gitx.Repo.CommitStaged(message, trailers...)`.
+  Lines seen in the diff are `core.LinesSeen` (worker `review.seen`), a commit past a gate `core.CommitGateOverridden`
+  (worker `review.override`). `widget.MeterOpts.Then` stacks more parts on a meter.
 - a Block decoration's controls take and keep focus (a reply field between the lines): the editor doesn't take focus
   back from something inside its code column.
 - inlay decorations (`registry.Inlay`): text drawn inline before a column, the code after it moved along the grid.

@@ -44,7 +44,9 @@ const (
 	MethodLogAppend = "log.append"
 	MethodLogRead   = "log.read"
 	MethodRunTests  = "tests.record"
-	MethodReview    = "review.set" // marks a file's changes reviewed in the diff, or not
+	MethodReview    = "review.set"      // marks a file's changes reviewed in the diff, or not
+	MethodSeen      = "review.seen"     // records lines of a change seen in the diff: read or skimmed
+	MethodOverride  = "review.override" // records a commit made past the commit gate
 	MethodSessions  = "sessions.list"
 	MethodFork      = "agent.fork"
 	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
@@ -404,6 +406,16 @@ func (c Client) RecordRun(ctx context.Context, id core.SessionID, run core.TestR
 // SetReviewed marks a file's changes reviewed, or takes the marks off.
 func (c Client) SetReviewed(ctx context.Context, r core.HunksReviewed) error {
 	return c.Conn.Call(ctx, MethodReview, r, nil)
+}
+
+// SetSeen records lines of a file's change seen in the diff.
+func (c Client) SetSeen(ctx context.Context, r core.LinesSeen) error {
+	return c.Conn.Call(ctx, MethodSeen, r, nil)
+}
+
+// RecordOverride records a commit made past the commit gate, in the session's state and log.
+func (c Client) RecordOverride(ctx context.Context, r core.CommitGateOverridden) error {
+	return c.Conn.Call(ctx, MethodOverride, r, nil)
 }
 
 // Events streams every session the worker has, as SessionSynced, then every event after, into apply. It

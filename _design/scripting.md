@@ -202,15 +202,18 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   strings by name (`oriel.option["sandbox.servers"] = { docs = "https://docs.example.com/mcp" }`); reading one gives
   the same. There's one global, `oriel`; a config that wants a short name writes `local L = oriel`, as the sample does.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.indicator`, `status.rule`) are
-  general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
-  `http` and `async` load, and calling into one says which ticket brings it. An option
+  general registry contributions now (`Registry.Contribute`); their tickets consume them. `linear`, `http` and
+  `async` load, and calling into one says which ticket brings it. RV-2 built `oriel.ledger`: `unread(project)` (the
+  agent-written lines not read, unread or only skimmed) and `frac(project)` (the share read, 1 with none), project
+  being the session's name for it or a path, the project in front when omitted. An option
   set before anything registers it waits, and `:Hooks` lists it.
 - Hooks are the registry's (`Registry.Hook`, `Fire`, `DeclareEvent`): in priority order, a veto or decision stops
   them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead` (a rewrite
   that sets `read_only`, saying why, opens the file read-only: how files outside the session do),
   `BufWritePre` (a veto stops the write) and `BufWritePost`; the sessions fire `CommentSend` (a rewrite changes the
-  comment, a veto stops it), `Permission` and `AgentTurnEnd`; `Commit`, `PrRaise` and `ModeChanged` are declared for
-  the features that fire them.
+  comment, a veto stops it), `Permission` and `AgentTurnEnd`; `git.commit` fires `Commit` (RV-2: `{ project, root, message, files,
+  unread }`, after the commit gates, a veto stops it); `PrRaise` and `ModeChanged` are declared for the features
+  that fire them.
 - Saving `init.lua` or anything under `lua/` reloads the config within 500 ms: everything it registered goes, it
   loads again, and a toast says how long and how many things it registered; an error is a notice with its line.
 - `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`, history) and

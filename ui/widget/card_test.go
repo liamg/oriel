@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"image/color"
 	"testing"
 
 	"github.com/liamg/oriel/render"
@@ -62,5 +63,35 @@ func TestMeter(t *testing.T) {
 	}
 	if r := h.rect(id); r.Dx() != 200 || r.Dy() != 4 {
 		t.Errorf("rect %v", r)
+	}
+}
+
+// A stacked meter draws its parts one after another, each its share of the width: the review ledger's read, then
+// skimmed.
+func TestMeterParts(t *testing.T) {
+	var id ui.ID
+	var read, skim color.NRGBA
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Column("col", ui.Style{W: ui.Px(200)}, func(c *ui.Ctx) {
+			id = c.Next("m")
+			read, skim = col(c, tCardFg), col(c, tMeterTrack)
+			skim.R ^= 1
+			Meter(c, "m", .5, MeterOpts{Tone: read, Height: 6, Label: "read", Then: []MeterPart{{Frac: .25, Tone: skim}}})
+		})
+	})
+	widths := map[color.NRGBA]float32{}
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpRect && (op.Style.Fill == read || op.Style.Fill == skim) {
+			widths[op.Style.Fill] = op.Rect.Dx()
+		}
+	}
+	if widths[read] != 100 || widths[skim] != 50 {
+		t.Errorf("parts drawn %v wide, want 100 and 50", widths)
+	}
+	if r := h.rect(id); r.Dy() != 6 {
+		t.Errorf("rect %v", r)
+	}
+	if n := h.access(id); n == nil || n.Name != "read 50%" {
+		t.Errorf("its accessible node: %+v", n)
 	}
 }

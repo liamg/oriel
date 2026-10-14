@@ -291,3 +291,47 @@ func TestShipRaiseHookStopsARaise(t *testing.T) {
 	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
 	s.until(t, "Edit PR", func() bool { return strings.Contains(s.frameText(), "EDIT PR #") })
 }
+
+// RV-2 on the Ship page (ui.md 18): the commit box goes through the commit gates. A hard gate holds the commit with
+// its reason and "Review N lines"; "Commit anyway…" commits with the gate's trailer and records the override in the
+// session.
+// ref: oracle git
+func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
+	s, _, _, se, _ := shipScene(t)
+	x := s.ship()
+	apiDir := shipDir(se, "usage-api")
+	reviewed := false
+	s.reg.Command(registry.Command{ID: "test.review", Title: "Review", Run: func(registry.Ctx, registry.Args) error { reviewed = true; return nil }})
+	s.reg.Contribute(registry.CommitGate{Name: "fake", Label: "Agent lines reviewed", Check: func(c registry.CommitCheck) registry.GateResult {
+		return registry.GateResult{Mode: registry.GateHard, Done: 1, Total: 6, Unread: 5, Reason: "5 agent-written lines unread",
+			Trailer: "Unreviewed-Agent-Lines: 5", Review: "test.review", ReviewLabel: "Review 5 lines"}
+	}})
+	s.run("ship.open", nil)
+	writeFiles(t, apiDir, map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the file", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return len(sh.Files) == 1 })
+	s.typeInto(t, "Commit message", "feat(api): routes")
+	s.click(centre(s.access("Commit").Bounds))
+	s.shipSettle(t, "the gate", func() bool { return strings.Contains(s.frameText(), "Commit anyway…") })
+	s.wantFrame(t, "5 agent-written lines unread", "Review 5 lines")
+	if sh, _ := x.ship(se.ID, "usage-api"); len(sh.Files) != 1 {
+		t.Fatal("the gate didn't hold the commit")
+	}
+	s.click(centre(s.access("Review 5 lines").Bounds))
+	if !reviewed {
+		t.Error("Review 5 lines didn't run the gate's review")
+	}
+	s.click(centre(s.access("Commit anyway…").Bounds))
+	s.shipSettle(t, "the commit", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return len(sh.Files) == 0 })
+	if got := git(t, apiDir, "log", "-1", "--format=%B"); !strings.Contains(got, "feat(api): routes") || !strings.Contains(got, "Unreviewed-Agent-Lines: 5") {
+		t.Errorf("the commit's message: %q", got)
+	}
+	waitState(t, s.store, "the override in the session", func(st core.State) bool {
+		sess, ok := st.Session(se.ID)
+		if !ok {
+			return false
+		}
+		o := sess.Snapshot().Overrides
+		return len(o) == 1 && o[0].Gate == "fake" && o[0].Trailer == "Unreviewed-Agent-Lines: 5" && o[0].Project == "usage-api"
+	})
+}

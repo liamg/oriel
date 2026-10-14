@@ -20,7 +20,9 @@ tab_width = 4               # Go uses tabs anyway
 
 [agent]
 default_provider = "claude"
-commit_gate = "soft"
+
+[ledger]
+gate = "soft"
 ```
 
 ### Plugins
@@ -126,6 +128,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `files.generated` | false | app | | ED-9 |
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | | FG-2 |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | | RV-1 |
+| `ledger.gate` | `auto`: the commit gate by the session's kind (hard for work, plan and a new repo, soft for jobs, off for the rest); `hard`, `soft` or `off`; a project's `.oriel/settings.toml` overrides it for its repo | app | | RV-2 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
 | `lsp.start` | `project`: a project's servers start when it opens; `file`: when one of their files does | app | | – |

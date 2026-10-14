@@ -81,8 +81,8 @@ They are design sketches, not the implementation: the app draws natively (see `s
   glyphs) and the session stats at its foot (CTX meter, CACHE, $, TASKS, the latest run's TESTS). The agent console's side has
   the same tasks rail. The title bar's usage windows (`titlebar.right.40-usage`) are the plan of the session in front's
   provider (`State.Usage`): `5H` and `WK` meters with their share; since AI-12 one button that opens Usage, with a
-  hover card (43). Not yet: REVIEWED (the ledger, RV-2), and opening
-  the summary by default with a session.
+  hover card (43). Since RV-2 the stats show REVIEWED (read / agent-written lines of the session's
+  projects, from `registry.LedgerOf`) once there are any. Not yet: opening the summary by default with a session.
 - Bottom: the agent pane, terminal, problems, debug and tests. The orange tab dot means something's running.
 - Built in ED-15: a window can show its buffer through a presenter instead of as text (`editor.present`): a markdown
   file's **Preview** button (it reads **Edit** while previewing; `:MarkdownPreview`) draws it as plan mode draws a doc,
@@ -134,7 +134,8 @@ They are design sketches, not the implementation: the app draws natively (see `s
   focused. A presentation has the same bubbles beside its blocks. The toggle is `␣R` beside the picker's `␣r`, as `␣T`
   is beside `␣t`, so `␣r` stays a key of its own.
 - Not yet: the multi-line composer, `@file`/`#symbol` completion as you type, image paste and dictation (the chips
-  aren't there), `g r` (vim's `gr`), the request's own read/unread ledger (RV-2), and turn cost per request.
+  aren't there), `g r` (vim's `gr`), and turn cost per request. Since RV-2 each file the request changed shows its
+  read bar and read/total, the file's whole ledger rather than only the lines that request wrote.
 
 ## 01e · Start view: nothing open
 
@@ -296,7 +297,10 @@ Superseded alternatives (41-project-context.png):
   content, sections, items open by default) with `widget.DiffStat` and `widget.ToggleChip`. Changed opens a file
   with `diff.open` (RV-1, 06), the file if it isn't registered. Tabs carry the letter through the
   `registry.Marked` view interface; the files picker ranks changed files up and notes their letter. Not yet: the
-  agent and threads columns (P5), and the read bar and "by review" (the ledger, P6). SH-17: the Explorer reads its
+  threads column (P5). Built in RV-2: Changed's files have a read bar (read, then skimmed, of their agent-written
+  lines) and a third layout, **by review** (flat, the most lines not read first); All has the **agent** column (◆
+  lines to read, ◇ all read); Uncommitted has **Commit…**, `c` (what's staged) and `C` (everything), through
+  `git.commit`. SH-17: the Explorer reads its
   project from its view instance (`ViewCtx.Project`), each project's work tree read on its own (`gitExt.tree`).
 
 ## 01d · Layout: any pane, anywhere
@@ -499,8 +503,13 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   the line in the editor, `⏎` shows or folds the file, `q` closes. A mark is per change (`gitx.Hunk.ID`, a hash of
   what it removes and adds), so it survives edits to other hunks; a hunk is reviewed when all its changes are. In a
   session they're `core.HunksReviewed` events the worker keeps (`review.set`, `SessionState.Reviews`); outside one
-  they last as long as the window. Not yet: the ledger, commit gate, AI review and GitHub threads (RV-2–RV-4), more
-  context between hunks, scrolled-past counting as read, and per-line marks inside a hunk.
+  they last as long as the window. Not yet: AI review and GitHub threads (RV-3, RV-4), more context between hunks,
+  and per-line marks inside a hunk.
+- Built in RV-2 (`app/ledger.go`, `app/commit.go`): the REVIEW LEDGER bar is the `diff.header.10-ledger` view: "You
+  have read 142 / 310 agent-written lines", a stacked `widget.Meter` (read, then skimmed; `MeterOpts.Then`), "28
+  skimmed", the gate's chip (⏻ COMMIT GATED UNTIL 100% for hard, COMMIT ASKS FIRST for soft, ✓ ALL READ) and
+  **Commit**. A folded file shows UNREAD · n LINES. Lines on screen count as skimmed, then read (agents.md,
+  "Guardrails"). Not yet: the status line's read/skimmed/unread counts in REVIEW mode.
 
 ## 07 · Explain this change
 
@@ -625,7 +634,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   this machine (`agent.login`: the agent's terminal with `/login` typed) or what to run on the worker, and Check again
   `c` (`decision: recheck`). All answer through `ask.answer {id, ask, decision, note, scope,
   answers}`; `ask.deny-note` opens the note. Session tabs count their asks. Not yet: the Inbox panel and its history
-  (SH-9, P7), the countdown ring, review requests and the security-key card.
+  (SH-9, P7), the countdown ring, review requests and the security-key card. Since RV-2 a gateway card for
+  `commit`, `push` or `pr_create` notes the project's ledger: "21 agent lines unread" or "0 unreviewed lines ✓".
 
 ## 13 · Verify & raise
 
@@ -705,8 +715,14 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Decided in FG-6: the merge order is the session's project order; a cross-linked PR's description gets a block
   between `<!-- oriel:linked-prs -->` markers listing every PR of the session in that order, rewritten as each is
   raised or edited. The file checkboxes pick what's committed (18 draws them as the ledger's; RV-2 adds its column).
-- Not yet: the review ledger's column, "N lines unreviewed" and "review gate on" (RV-2 registers a `ShipCommit` veto
-  and its gate), Verify quiz and AI review gates (RV-7, RV-3), the ticket's state moving (Linear), the status bar's
+- With RV-2: the commit box runs the commit gates (`registry.CheckCommit`, the same as `git.commit`) before the
+  `ShipCommit` hook. A hard gate holds the commit with its reason and its review button ("Review 21 lines", the gate's
+  `ReviewLabel`); **Commit anyway…** commits with the gates' trailers (`ShipCommitReq.Trailers`) and records the
+  override in the session (`core.CommitGateOverridden`), as `git.commit` does. Each file shows its uncommitted
+  agent-written lines read ("0 / 18", "reviewed ✓"), the step "21 LINES UNREVIEWED" (`registry.LedgerOf`), and
+  "review gate on" while a gate is hard or soft. "Agent lines reviewed 38 / 59" is the ledger's `ShipGate`, its `All`
+  over the session's projects.
+- Not yet: Verify quiz and AI review gates (RV-7, RV-3), the ticket's state moving (Linear), the status bar's
   CI chip, merging, and a project's Git panel (still dim: it needs the flow without a worker, for a plain directory).
 
 ## 19 · Your config, live

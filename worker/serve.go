@@ -68,6 +68,8 @@ func (w *Worker) Serve(conn wire.Conn) {
 		return r.Run.ID, w.emit(r)
 	}))
 	fn(MethodReview, wire.Func(func(_ context.Context, r core.HunksReviewed) (any, error) { return nil, w.emit(r) }))
+	fn(MethodSeen, wire.Func(func(_ context.Context, r core.LinesSeen) (any, error) { return nil, w.emit(r) }))
+	fn(MethodOverride, wire.Func(func(_ context.Context, r core.CommitGateOverridden) (any, error) { return nil, w.emit(r) }))
 	fn(MethodSandboxConfig, wire.Func(func(_ context.Context, cfg sandbox.Config) (any, error) { return nil, w.SetSandboxConfig(cfg) }))
 	fn(MethodStatsQuery, wire.Func(func(_ context.Context, q stats.Query) (stats.Report, error) { return w.StatsQuery(q), nil }))
 	fn(MethodStatsSession, wire.Func(func(_ context.Context, r StatsSessionReq) (stats.Detail, error) { return w.SessionStats(r) }))

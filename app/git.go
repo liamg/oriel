@@ -30,6 +30,8 @@ type gitExt struct {
 
 	mu     sync.Mutex
 	others map[string]*gitTree // by the directory asked for
+
+	ask *commitAsk // the commit dialog, while it's open
 }
 
 // gitTree is one work tree's status, and its remote; status is nil outside a repo, or until it's found.
@@ -118,6 +120,7 @@ func (g *gitExt) Activate(ctx context.Context, h ext.Host) error {
 	} {
 		g.add(h.Command(c))
 	}
+	g.activateCommit(h)
 	if g.status == nil {
 		ctx, g.cancel = context.WithCancel(context.WithoutCancel(ctx))
 		go g.poll(ctx)

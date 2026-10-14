@@ -21,7 +21,6 @@ const Version = "0.4.0"
 // futures are namespaces for features that aren't built yet: calling into one says which ticket brings it, so a
 // config written for them loads (PL-1).
 var futures = map[string]string{
-	"ledger": "RV-2 (the review ledger)",
 	"linear": "PL-8 (Linear)",
 	"http":   "AI-7 (network approvals)",
 	"async":  "a later ticket (timers, processes and RPC from Lua)",

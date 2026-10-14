@@ -36,15 +36,15 @@ const (
 func (ShipGate) ContributionKind() string   { return "ship.gate" }
 func (g ShipGate) ContributionName() string { return g.Name }
 
-// GateResult is a gate with its state for a session.
-type GateResult struct {
+// ShipGateState is a gate with its state for a session.
+type ShipGateState struct {
 	ShipGate
 	Gate
 }
 
 // ShipGates are the gates for a session of kind, by Order, each with its state; one that panics or answers no state
 // is left out. A session kind that names its Gates (SessionKind) gets only those.
-func ShipGates(r Registry, session, kind string) []GateResult {
+func ShipGates(r Registry, session, kind string) []ShipGateState {
 	var only []string
 	for _, c := range r.Contributions("session.kind") {
 		if k := c.(SessionKind); k.Name == kind && len(k.Gates) > 0 {
@@ -59,12 +59,12 @@ func ShipGates(r Registry, session, kind string) []GateResult {
 		}
 	}
 	slices.SortFunc(gs, func(a, b ShipGate) int { return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name)) })
-	var out []GateResult
+	var out []ShipGateState
 	for _, g := range gs {
 		var st Gate
 		Call(func() error { st = g.Check(session); return nil })
 		if st.State != "" {
-			out = append(out, GateResult{ShipGate: g, Gate: st})
+			out = append(out, ShipGateState{ShipGate: g, Gate: st})
 		}
 	}
 	return out

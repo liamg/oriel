@@ -2,7 +2,7 @@
 id: RV-2
 title: "Review ledger and commit gate (hard, soft, off by session kind)"
 phase: P6
-status: todo
+status: review
 area: Review and explain
 module: core
 depends_on: [RV-1]

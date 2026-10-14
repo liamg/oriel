@@ -125,7 +125,7 @@ How everything hangs together, built and tested before features land on it.
 | ID | Feature | Mockup | Module | Phase | After | Done when |
 |---|---|---|---|---|---|---|
 | RV-1 | Split and unified diff, intraline, per-hunk reviewed | 06 | app, diff | P6 | ED-7, FG-2 | – |
-| RV-2 | Review ledger and commit gate (hard, soft, off by session kind) | 06, 18 | core | P6 | RV-1 | the gate blocks; "commit anyway" writes the trailer |
+| RV-2 | Review ledger and commit gate (hard, soft, off by session kind) | 06, 18 | core | P6 | RV-1 | the gate blocks; "commit anyway" writes the trailer. Built: `registry.LedgerOf`, `CommitGate`/`CheckCommit`, `ledger.gate`, `git.commit` and its dialog, `core.LinesSeen`/`CommitGateOverridden`, `oriel.ledger`; not yet: the gateway's commit gated, the PR gate |
 | RV-3 | Cross-model AI review findings | 06 | agent | P6 | RV-1, AI-3 | – |
 | RV-4 | GitHub review mirroring and Forward to GitHub | 06 | gh | P6 | RV-1, FG-6 | the agent never posts; the user's forward does |
 | RV-5 | Explain by code unit, `[`/`]` widen and narrow, Explain this on a selection | 25 | explain, syntax | P6 | ED-6, AI-2 | units are correct for fixtures in 4 languages; cache invalidated only by edits inside the unit |

@@ -20,36 +20,38 @@ type State struct {
 }
 
 type SessionState struct {
-	ID         SessionID  `json:"id"`
-	Name       string     `json:"name,omitempty"`
-	Kind       Kind       `json:"kind"`
-	Status     Status     `json:"status"`
-	Unseen     int        `json:"unseen,omitempty"` // errors since the session last had focus
-	Worker     WorkerID   `json:"worker,omitempty"`
-	Dir        string     `json:"dir,omitempty"` // the workspace on the worker; the directory itself when direct
-	Branch     string     `json:"branch,omitempty"`
-	Projects   []Project  `json:"projects,omitempty"`
-	Prompt     string     `json:"prompt,omitempty"`
-	Ticket     string     `json:"ticket,omitempty"`
-	PR         string     `json:"pr,omitempty"`
-	Source     string     `json:"source,omitempty"` // "crit" for a crit workspace, which the worker drops
-	Job        string     `json:"job,omitempty"`    // the saved job this session is a run of
-	Created    time.Time  `json:"created,omitzero"`
-	Archived   bool       `json:"archived,omitempty"`
-	Unplanned  bool       `json:"unplanned,omitempty"` // work started with no plan or ticket
-	StartWork  bool       `json:"startWork,omitempty"` // its worktrees come at Start work: a plan
-	Started    bool       `json:"started,omitempty"`   // a plan session whose work has started
-	Past       []PastPR   `json:"past,omitempty"`
-	Agent      AgentState `json:"agent,omitzero"`
-	Threads    []Thread   `json:"threads,omitempty"`
-	Tasks      []Task     `json:"tasks,omitempty"`
-	Subagents  []Subagent `json:"subagents,omitempty"`
-	Asks       []Ask      `json:"asks,omitempty"`
-	Transcript []Item     `json:"transcript,omitempty"`
-	Runs       []TestRun  `json:"runs,omitempty"`
-	Rules      []string   `json:"rules,omitempty"`   // "Always in this workspace": Bash(go test:*), net(*.golang.org:443)
-	Reviews    []Review   `json:"reviews,omitempty"` // what's been marked reviewed in the diff, per file
-	ProjectUI  ProjectUI  `json:"projectUI,omitzero"`
+	ID         SessionID      `json:"id"`
+	Name       string         `json:"name,omitempty"`
+	Kind       Kind           `json:"kind"`
+	Status     Status         `json:"status"`
+	Unseen     int            `json:"unseen,omitempty"` // errors since the session last had focus
+	Worker     WorkerID       `json:"worker,omitempty"`
+	Dir        string         `json:"dir,omitempty"` // the workspace on the worker; the directory itself when direct
+	Branch     string         `json:"branch,omitempty"`
+	Projects   []Project      `json:"projects,omitempty"`
+	Prompt     string         `json:"prompt,omitempty"`
+	Ticket     string         `json:"ticket,omitempty"`
+	PR         string         `json:"pr,omitempty"`
+	Source     string         `json:"source,omitempty"` // "crit" for a crit workspace, which the worker drops
+	Job        string         `json:"job,omitempty"`    // the saved job this session is a run of
+	Created    time.Time      `json:"created,omitzero"`
+	Archived   bool           `json:"archived,omitempty"`
+	Unplanned  bool           `json:"unplanned,omitempty"` // work started with no plan or ticket
+	StartWork  bool           `json:"startWork,omitempty"` // its worktrees come at Start work: a plan
+	Started    bool           `json:"started,omitempty"`   // a plan session whose work has started
+	Past       []PastPR       `json:"past,omitempty"`
+	Agent      AgentState     `json:"agent,omitzero"`
+	Threads    []Thread       `json:"threads,omitempty"`
+	Tasks      []Task         `json:"tasks,omitempty"`
+	Subagents  []Subagent     `json:"subagents,omitempty"`
+	Asks       []Ask          `json:"asks,omitempty"`
+	Transcript []Item         `json:"transcript,omitempty"`
+	Runs       []TestRun      `json:"runs,omitempty"`
+	Rules      []string       `json:"rules,omitempty"`      // "Always in this workspace": Bash(go test:*), net(*.golang.org:443)
+	Reviews    []Review       `json:"reviews,omitempty"`    // what's been marked reviewed in the diff, per file
+	CommitGate string         `json:"commitGate,omitempty"` // its kind's commit gate: hard, soft or off; "" for DefaultGate
+	Overrides  []GateOverride `json:"overrides,omitempty"`  // commits made past the gate
+	ProjectUI  ProjectUI      `json:"projectUI,omitzero"`
 }
 
 // WorkerState is a worker as the app sees it.

@@ -1,7 +1,7 @@
 ---
 id: files/diff
 covers: [diff]
-related: [files/explorer, agent/requests]
+related: [files/explorer, files/commit, agent/requests]
 ---
 
 # Diff
@@ -38,6 +38,21 @@ choice is remembered (`diff.layout`).
 
 **Mark reviewed** at a hunk's right, or `r`, marks it reviewed. A mark belongs to the change itself, not to its
 place, so it stays when other parts of the file are edited, and it's kept with the session.
+
+## Review ledger {#ledger}
+
+Above the files, the **review ledger** counts the lines an agent wrote in this change: read, skimmed and unread.
+A line is the agent's when blame says its commit is an agent's (by name, or a Co-Authored-By trailer), when the
+open buffer says the agent typed it, or, not committed yet, when the agent's edits in the session added it. Blank
+lines don't count.
+
+A line is **read** when its hunk is marked reviewed, or when it stays on screen in the diff long enough to read:
+about a second, and longer the more agent lines show at once. Scrolled past more briefly than that, but not in a
+blur, it's **skimmed**. Both are kept with the session. A folded file shows how many of its lines are unread.
+
+The chip at the right is the commit gate (`ledger.gate`): **commit gated until 100%** when a commit is blocked
+until every agent-written line it takes is read, **commit asks first** when it only asks. **Commit** opens the
+commit dialog.
 
 ## Explain {#explain}
 

@@ -144,10 +144,12 @@ clip 224,38 300x356 r 0
       text "status" @242,125.6 #ffd23f JetBrains Mono 10
       rect 290,113 54x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
       text "± lines" @296,125.6 #ffd23f JetBrains Mono 10
-      rect 350,113 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "diag" @356,125.6 #ffd23f JetBrains Mono 10
-      rect 392,113 102x18 radius 4 stroke 1 #332f27
-      text "⌥C changed-only" @398,125.6 #7c7566 JetBrains Mono 10
+      rect 350,113 42x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "agent" @356,125.6 #ffd23f JetBrains Mono 10
+      rect 398,113 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "diag" @404,125.6 #ffd23f JetBrains Mono 10
+      rect 440,113 72x18 radius 4 stroke 1 #332f27
+      text "⌥C change…" @446,125.6 #7c7566 JetBrains Mono 10
     pop
     clip 224,135 300x231 r 0
       rect 224,113 300x22 fill #1f1c0f

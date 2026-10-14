@@ -11,6 +11,7 @@
 ---@field hud oriel.hud
 ---@field keymap oriel.keymap
 ---@field language oriel.language
+---@field ledger oriel.ledger
 ---@field lsp oriel.lsp
 ---@field menu oriel.menu
 ---@field overview oriel.overview
@@ -169,6 +170,19 @@ oriel.language = {}
 --- Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.
 ---@param spec table
 function oriel.language.add(spec) end
+
+---@class oriel.ledger
+oriel.ledger = {}
+
+--- The share of a project's agent-written lines read, 0 to 1 (1 with none to read); project as for unread.
+---@param project? string
+---@return number
+function oriel.ledger.frac(project) end
+
+--- How many agent-written lines of a project's change aren't read yet (unread, or only skimmed): project is the session's name for it or a path in it, the project in front if none.
+---@param project? string
+---@return integer
+function oriel.ledger.unread(project) end
 
 ---@class oriel.lsp
 oriel.lsp = {}

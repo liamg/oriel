@@ -71,6 +71,7 @@ func (x *diffExt) view(c *ui.Ctx, vc registry.ViewCtx) {
 			}
 			st.marks[f.Path] = x.marks(st.root, f.Path)
 		}
+		st.ledger, _ = registry.LedgerOf(x.h, st.root)
 		if st.sel.file == "" && len(files) > 0 {
 			st.sel.file = files[0].Path
 			st.open[files[0].Path] = true
@@ -261,6 +262,7 @@ func (x *diffExt) body(c *ui.Ctx, vc registry.ViewCtx, st *diffState, gs *gitx.S
 	for _, id := range reveal {
 		c.ScrollIntoView(bodyID, id)
 	}
+	x.track(c, st, bodyID)
 }
 
 // fileSection is a file's header (its path, size and how much is reviewed; a click shows or folds it) and, open,
@@ -284,6 +286,10 @@ func (x *diffExt) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout
 					widget.Chip(c, "rv", "reviewed", th.C(tDiffReviewed), "files/diff#review")
 				} else if d != nil && len(d.hunks) > 0 {
 					c.Text("rv", fmt.Sprintf("%d/%d hunks reviewed", n, len(d.hunks)), monoFont(10, th.C(theme.FgGhost)))
+				}
+				if !open {
+					lf, _ := st.ledger.File(f.Path)
+					unreadChip(c, lf.All.NotRead())
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if !open {

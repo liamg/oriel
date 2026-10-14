@@ -140,7 +140,8 @@ func TestSampleInitLua(t *testing.T) {
 	}
 }
 
-// The sample's hooks, fired: a decision answers, and a later feature's call says which ticket brings it.
+// The sample's hooks, fired: a decision answers, and the Commit hook vetoes while the review ledger has unread
+// agent-written lines (RV-2).
 func TestSampleHooksFire(t *testing.T) {
 	s := luaScene(t, sample(t))
 	v, errs := s.reg.Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "go test ./..."})
@@ -150,9 +151,16 @@ func TestSampleHooksFire(t *testing.T) {
 	if v, _ := s.reg.Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "rm -rf /"}); v.Decided {
 		t.Errorf("Permission for rm: %+v", v)
 	}
-	_, errs = s.reg.Fire(context.Background(), "Commit", "", map[string]any{"project": "oriel"})
-	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "oriel.ledger.unread isn't available until RV-2") {
-		t.Errorf("Commit: %v", errs)
+	unread := 0
+	s.reg.Contribute(registry.ReviewLedger{Name: "test", Get: func(root string) registry.Ledger {
+		return registry.Ledger{Root: root, Ready: true, All: registry.LedgerCount{Read: 3, Unread: unread}}
+	}})
+	if v, errs := s.reg.Fire(context.Background(), "Commit", "", map[string]any{"project": "oriel"}); v.Veto || len(errs) > 0 {
+		t.Errorf("Commit with every line read: %+v %v", v, errs)
+	}
+	unread = 2
+	if v, errs := s.reg.Fire(context.Background(), "Commit", "", map[string]any{"project": "oriel"}); !v.Veto || v.Reason != "unread agent lines" || len(errs) > 0 {
+		t.Errorf("Commit with lines unread: %+v %v", v, errs)
 	}
 }
 
@@ -223,7 +231,7 @@ func TestInspect(t *testing.T) {
 func itoa(n int) string { return strconv.Itoa(n) }
 
 // 19-config and 20-inspect: :Hooks and the REPL over the sample config, and :Inspect over the editor. The sample's
-// status line calls into the ledger, which isn't built yet, so it's turned off.
+// status line shows the review ledger's LEDGER bar.
 func TestLuaSnapshots(t *testing.T) {
 	s := luaScene(t, sample(t))
 	s.reg.Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "go test ./..."})
@@ -234,7 +242,7 @@ func TestLuaSnapshots(t *testing.T) {
 	x.eval("#oriel.ui.row{}.children")
 	x.eval("oriel.ledger.unread('pricing')")
 	x.input = "oriel.agent.to"
-	s.frame() // the status line's third error in a row turns it off
+	s.frame()
 	s.golden("lua-hooks")
 
 	e := editorScene(t)
