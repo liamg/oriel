@@ -147,3 +147,25 @@ func TestLuaDatePicker(t *testing.T) {
 	s.frame()
 	s.wantFrame(t, "range=2026-09-01..2026-09-30", "Sep 1 – Sep 30")
 }
+
+// SE-5: the multi-line input "in Lua": `lines` makes oriel.ui.input take several lines, ⏎ a new line.
+func TestLuaMultiLineInput(t *testing.T) {
+	s := luaScene(t, `local s = oriel.ui.state("notes-form", { notes = "" })
+oriel.view.override("notes-form", function(ctx)
+  return oriel.ui.column{ pad = 14, gap = 10,
+    oriel.ui.input{ id = "notes", label = "Notes", value = s.notes, lines = 4, on_change = function(t) s.notes = t end,
+      on_submit = function(t) oriel.notify("sent " .. #t) end },
+    oriel.ui.text("notes=" .. s.notes:gsub("\n", "|")),
+  }
+end)
+`)
+	s.run("view.open", registry.Args{"id": "notes-form", "place": "dock", "edge": "right", "title": "Jot", "size": 420})
+	s.frame()
+	s.frame()
+	s.click(centre(s.access("Notes").Bounds))
+	s.typeKeys("a", "CR", "b")
+	s.frame()
+	if !strings.Contains(s.frameText(), "notes=a|b") {
+		t.Fatalf("⏎ in a Lua input with lines didn't make a new line:\n%s", s.frameText())
+	}
+}

@@ -351,8 +351,8 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 	}
 }
 
-// AI-13: on a worker elsewhere the card says what to run there, and Check again asks the worker to look.
-func TestALostLoginElsewhereSaysWhatToRun(t *testing.T) {
+// SE-5 done when: "Log in on a fake remote worker opens its terminal with /login"; Check again asks the worker to look.
+func TestALostLoginElsewhereLogsInFromItsTerminal(t *testing.T) {
 	lw := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox"})
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
@@ -365,12 +365,28 @@ func TestALostLoginElsewhereSaysWhatToRun(t *testing.T) {
 	a := lw.fake.WaitStarted(t)
 	a.LoseLogin("Not logged in · Run /login")
 	r.waitFrame("the card", func(s string) bool {
-		return containsAll(s, "Fake on devbox needs you to log in", "On devbox, run fake, then /login", "Check again") &&
-			!strings.Contains(s, "Log in")
+		return containsAll(s, "Fake on devbox needs you to log in", "opens its terminal with /login", "Log in", "Check again")
 	})
 	r.typeKeys("<Esc>") // the notice's toast
+	askID := func() string {
+		if se, ok := r.store.State().Session("w"); ok && len(se.Snapshot().Asks) > 0 {
+			return se.Snapshot().Asks[0].ID
+		}
+		return ""
+	}
+	first := askID()
 	r.clickText("Check again")
-	r.waitText("Fake on devbox needs you to log in")
-	a.Term().Write([]byte("/login\r"))
+	waitState(t, r.store, "the card again", func(core.State) bool { id := askID(); return id != "" && id != first })
+	// The pointer leaves, as a hand does between clicks: the old card's buttons fade out under it.
+	r.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 5, Y: 5}})
+	r.latest("the old card gone", func(headless.Frame) bool { return true })
+	r.clickText("Log in")
+	deadline := time.Now().Add(5 * time.Second)
+	for !strings.Contains(a.Term().Shown(), "/login\r") {
+		if time.Now().After(deadline) {
+			t.Fatalf("devbox's agent terminal shows %q", a.Term().Shown())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	r.waitGone("needs you to log in")
 }

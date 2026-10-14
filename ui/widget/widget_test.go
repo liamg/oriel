@@ -976,3 +976,61 @@ func TestHoverCardFollowsThePointer(t *testing.T) {
 		t.Error("the card stays with the pointer gone")
 	}
 }
+
+// SE-5: "widget.Input gains Lines: wraps, grows to a max height then scrolls, ⏎ a new line, ⌘⏎ submits".
+func TestInputLines(t *testing.T) {
+	text := ""
+	var id ui.ID
+	var res InputResult
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Column("col", ui.Style{Pad: ui.Pad(10), W: ui.Px(300)}, func(c *ui.Ctx) {
+			id = c.Next("p")
+			res = Input(c, "p", &text, InputOpts{Label: "Prompt", Lines: 4, Help: "test/input"})
+		})
+	})
+	one := h.rect(id).Dy()
+	h.click(mid(h.rect(id)))
+	if h.u.Focused() != id {
+		t.Fatal("a click didn't focus the input")
+	}
+	h.keys("a", "b", "c", "CR")
+	if res.Submitted || text != "abc\n" {
+		t.Fatalf("⏎ in a multi-line input: text %q, submitted %v; want a new line", text, res.Submitted)
+	}
+	h.keys("a", "b", "c")
+	two := h.rect(id).Dy()
+	if two <= one {
+		t.Errorf("two lines are %v high, one %v: it should grow", two, one)
+	}
+	h.keys("Up", "X")
+	if text != "abcX\nabc" {
+		t.Errorf("Up from the end of the second line, then X: %q", text)
+	}
+	h.keys("Down", "Y")
+	if text != "abcX\nabcY" {
+		t.Errorf("Down, then Y: %q", text)
+	}
+	if !h.u.Key(render.KeyEvent{Key: "CR", Mods: platform.primary}) {
+		t.Fatal("nothing takes ⌘⏎")
+	}
+	h.frame()
+	if !res.Submitted || text != "abcX\nabcY" {
+		t.Errorf("⌘⏎: submitted %v, text %q", res.Submitted, text)
+	}
+	for range 6 {
+		h.keys("CR", "z")
+	}
+	if most := h.rect(id).Dy(); most <= two || most > one+3*(two-one)+1 {
+		t.Errorf("eight lines are %v high: it stops growing at four lines (one %v, two %v)", most, one, two)
+	}
+	if n := h.access(id); n == nil || n.Value != text {
+		t.Errorf("its accessible value isn't the text: %+v", n)
+	}
+	// A long line wraps at the field's width rather than running on.
+	text = strings.Repeat("word ", 30)
+	h.frame()
+	h.frame()
+	if got := h.rect(id).Dy(); got <= two {
+		t.Errorf("a line of 150 characters in a 280px field is %v high: it should wrap", got)
+	}
+}

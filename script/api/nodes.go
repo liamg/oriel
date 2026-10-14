@@ -87,7 +87,7 @@ func (UI) Button(spec script.Table) script.Table {
 	return t
 }
 
-//oriel:api doc="A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value." returns=table
+//oriel:api doc="A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value." returns=table
 func (UI) Input(spec script.Table) script.Table { return node("input", spec) }
 
 //oriel:api doc="An on/off switch: { on, on_change = fn(on), id, label }." returns=table
@@ -190,8 +190,9 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			key := cmpOr(str(n, "id"), str(n, "label"), "input")
 			text := str(n, "value")
 			c.Box(key, ui.Style{W: ui.Px(220)}, func(c *ui.Ctx) {
+				lines, _ := n["lines"].(float64)
 				res := widget.Input(c, "in", &text, widget.InputOpts{Label: cmpOr(str(n, "label"), key), Placeholder: str(n, "placeholder"),
-					Help: "plugins/lua#ui", TabMoves: true})
+					Help: "plugins/lua#ui", TabMoves: true, Lines: int(lines)})
 				if res.Changed {
 					a.callback(n, "on_change", text)
 				}

@@ -29,9 +29,14 @@ type Job struct {
 	Worker    core.WorkerID `json:"worker,omitempty"` // filled in as it's listed
 	CreatedAt time.Time     `json:"createdAt"`
 	UpdatedAt time.Time     `json:"updatedAt"`
-	// Skipped is the last time it was due while its last run was still going.
-	Skipped time.Time `json:"skipped,omitzero"`
+	// Due is the occurrence of its schedule it last ran, or skipped.
+	Due time.Time `json:"due,omitzero"`
+	// Skips are the occurrences skipped while its last run was still going, the latest maxSkips, oldest first.
+	Skips []time.Time `json:"skips,omitempty"`
 }
+
+// maxSkips is how many skipped occurrences a job keeps.
+const maxSkips = 50
 
 // How often a schedule runs a job.
 const (
@@ -97,6 +102,15 @@ func (s Schedule) Next(t time.Time) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// Last is when the schedule last fired after from and by now, in from's zone; zero if it didn't.
+func (s Schedule) Last(from, now time.Time) time.Time {
+	var last time.Time
+	for at := s.Next(from); !at.IsZero() && !at.After(now); at = s.Next(at) {
+		last = at
+	}
+	return last
 }
 
 // String is how the schedule reads: "manual", "every weekday 07:00", "weekly Mon 07:00", "Mon, Thu 07:00".
@@ -205,7 +219,7 @@ func (w *Worker) SaveJob(j Job) (Job, error) {
 		if !ok {
 			return Job{}, fmt.Errorf("no job %q", name)
 		}
-		j.Name, j.CreatedAt, j.Skipped = name, old.CreatedAt, old.Skipped
+		j.Name, j.CreatedAt, j.Due, j.Skips = name, old.CreatedAt, old.Due, old.Skips
 	} else {
 		base := trimWords(Sanitise(j.Title), 6)
 		if base == "" {
@@ -270,32 +284,38 @@ func (w *Worker) runJob(ctx context.Context, j Job) (core.SessionID, error) {
 		sandboxed = w.opts.Sandbox != nil && w.sandboxCfg.Default != "host"
 		w.mu.Unlock()
 	}
-	spec := core.SessionSpec{Kind: core.KindJob, Name: trimWords(j.Name, 3), Prompt: j.Prompt, Provider: provider, Model: j.Model, Effort: j.Effort,
-		Sandbox: core.SandboxPolicy{Container: sandboxed}, Job: j.Name}
+	name := trimWords(j.Name, 3)
+	spec := core.SessionSpec{Kind: core.KindJob, Name: name, Title: "job: " + strings.ReplaceAll(name, "-", " "), Prompt: j.Prompt,
+		Provider: provider, Model: j.Model, Effort: j.Effort, Sandbox: core.SandboxPolicy{Container: sandboxed}, Job: j.Name}
 	return w.Start(ctx, spec)
 }
 
-// RunDue starts every scheduled job due since it last looked, skipping one whose last run is still going.
+// RunDue starts every scheduled job due since its last occurrence (or since it was saved), once however many it
+// missed while the worker was off, skipping one whose last run is still going.
 func (w *Worker) RunDue(ctx context.Context) {
 	w.jobsMu.Lock()
 	now := w.opts.Now()
-	last := w.lastDue
-	w.lastDue = now
 	var due []Job
 	for _, j := range w.jobs() {
-		at := j.Schedule.Next(last.In(now.Location()))
-		if at.IsZero() || at.After(now) {
+		from := j.UpdatedAt
+		if j.Due.After(from) {
+			from = j.Due
+		}
+		at := j.Schedule.Last(from.In(now.Location()), now)
+		if at.IsZero() {
 			continue
 		}
+		j.Due = at.UTC()
 		if w.running(j.Name) {
-			j.Skipped = at.UTC()
-			if err := w.writeJob(j); err != nil {
-				w.log.Warn("job", "job", j.Name, "err", err)
-			}
+			j.Skips = append(j.Skips, j.Due)
+			j.Skips = j.Skips[max(0, len(j.Skips)-maxSkips):]
 			w.log.Info("scheduled run skipped: the last is still going", "job", j.Name)
-			continue
+		} else {
+			due = append(due, j)
 		}
-		due = append(due, j)
+		if err := w.writeJob(j); err != nil {
+			w.log.Warn("job", "job", j.Name, "err", err)
+		}
 	}
 	w.jobsMu.Unlock()
 	for _, j := range due {
@@ -334,15 +354,17 @@ const (
 	RunDone    = "done"
 	RunBlocked = "blocked"
 	RunStopped = "stopped"
+	RunSkipped = "skipped" // a scheduled run that didn't start: the last was still going (Job.Skips)
 )
 
 // Run is a job session as its row shows it.
 type Run struct {
-	Status  string
-	Summary string // the agent's last word on the request: its answer, or how it's getting on
-	Repos   []string
-	Started time.Time
-	Ended   time.Time // the agent's last word; zero while it runs
+	Status    string
+	Summary   string // the agent's last word on the request: its answer, or how it's getting on
+	Repos     []string
+	Started   time.Time
+	Ended     time.Time // the agent's last word, or when it was stopped; zero while it runs
+	StoppedBy string    // a stopped run's: core.StoppedByYou…, "" when not known
 }
 
 // Took is how long it ran: to its last answer, or zero while it runs.
@@ -387,7 +409,10 @@ func RunOf(se core.SessionState) Run {
 	case se.Agent.Running && !se.Archived:
 		r.Status, r.Ended = RunRunning, time.Time{}
 	default:
-		r.Status = RunStopped
+		r.Status, r.StoppedBy = RunStopped, se.Agent.StoppedBy
+		if !se.Agent.StoppedAt.IsZero() {
+			r.Ended = se.Agent.StoppedAt
+		}
 	}
 	return r
 }

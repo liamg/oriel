@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/ui/layout"
 	"github.com/liamg/oriel/wire"
 	"github.com/liamg/oriel/worker"
 )
@@ -243,6 +244,7 @@ func TestJobsEntryPoints(t *testing.T) {
 	}
 	s.frame()
 	s.click(centre(s.within("Jobs page", "Stats").Bounds))
+	s.frame()
 	st := s.sh.stats
 	if x.open || !st.open || len(st.q.filters["kind"]) != 1 || st.q.filters["kind"][0] != "job" {
 		t.Errorf("Stats kind=job: jobs %v, stats %v %v", x.open, st.open, st.q.filters)
@@ -517,7 +519,7 @@ func TestJobsPageSnapshots(t *testing.T) {
 	s.lint("the jobs page")
 	s.golden("jobs-page")
 	s.wantFrame(t, "JOBS", "6 jobs · 1 running · 12 runs · on mbp", "Sweep stale deps, keep major versions", "Morning CI triage on my open PRs",
-		"never run", "PROMPT", "SCHEDULE", "EVERY WEEKDAY 07:00", "RUNS", "react-router 6.28 breaks loaders", "Stopped after 3m", "2 more",
+		"never run", "PROMPT", "SCHEDULE", "EVERY WEEKDAY 07:00", "RUNS", "react-router 6.28 breaks loaders", "Stopped by you after 3m", "2 more",
 		"since Aug 26", "Oct 7 run", "session stats ›", "22m", "4m")
 	if r := s.within("Runs", "running run"); !strings.Contains(r.Name, "today 12:13") {
 		t.Errorf("the running row: %q", r.Name)
@@ -544,16 +546,201 @@ func TestJobsPageSnapshots(t *testing.T) {
 	s.golden("jobs-new")
 	s.wantFrame(t, "New job", "TITLE", "PROMPT", "RUNS IN", "WORKER", "AGENT", "SCHEDULE", "Save and run", "weekly-changelog-draft.json")
 
-	// Open on the running row brings up its session; its console has the job beside it (panel 3).
-	s.click(centre(s.within("New job", "Cancel").Bounds))
+}
+
+// SE-5 done when: "⌘⇧J over Stats leaves only Jobs; the same for each pair of pages."
+func TestPagesReplaceEachOther(t *testing.T) {
+	lw := newLocalWorker(t)
+	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
+	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	x, st, set := s.jobs(), s.sh.stats, s.settings()
+	pages := []struct {
+		name string
+		open func()
+		up   func() bool
+	}{
+		{"Jobs", func() { s.keyCommand(t, "<D-J>") }, func() bool { return x.open }},
+		{"Stats", func() { s.run("stats.open", nil) }, func() bool { return st.open }},
+		{"Usage", func() { s.run("usage.open", nil) }, func() bool { return st.usageOpen }},
+		{"Settings", func() { s.run("settings.open", nil) }, func() bool { return set.open }},
+	}
+	for _, a := range pages {
+		for _, b := range pages {
+			if a.name == b.name {
+				continue
+			}
+			a.open()
+			s.frame()
+			b.open()
+			s.frame()
+			s.frame()
+			for _, p := range pages {
+				if p.up() != (p.name == b.name) {
+					t.Errorf("%s over %s: %s is up %v", b.name, a.name, p.name, p.up())
+				}
+			}
+		}
+	}
+}
+
+// SE-5 done when: "Open on a run shows panel 3's layout; a stopped run says who stopped it; a click on a row selects
+// it." Panel 3: the run's session tab ("job: <title>"), its console as the main tab, the narrow sidebar, the job beside
+// the console.
+func TestARunOpensInItsSessionTab(t *testing.T) {
+	s, _, x := jobsScene(t)
+	s.keyCommand(t, "<D-J>")
+	s.settleJobs(t, x)
+	s.wantFrame(t, "Stopped by you after 3m")
+
+	focus := s.store.State().Focus
+	done := s.within("Runs", "done run, Oct 7")
+	s.click(render.Point{X: done.Bounds.Min.X + 300, Y: centre(done.Bounds).Y})
 	s.frame()
+	if !x.open || s.store.State().Focus != focus {
+		t.Fatalf("a click on a row opened it: page open %v, focus %s", x.open, s.store.State().Focus)
+	}
+	if sel := s.within("Runs", "done run, Oct 7"); !sel.Selected {
+		t.Errorf("a click didn't select the row: %+v", sel)
+	}
+
 	running := s.within("Runs", "running run")
 	s.click(centre(s.within(running.Name, "Open").Bounds))
-	s.until(t, "the page closed", func() bool { return !x.open })
-	s.run("agent.console", nil)
+	s.until(t, "the window asked to open on the run", func() bool { return len(s.sh.reopen) > 0 })
+	s.reopen()
+	x = s.jobs()
+	x.now, x.loc = func() time.Time { return s.now }, time.UTC
+	s.sh.stats.now, s.sh.stats.loc = x.now, time.UTC
+	s.until(t, "the run in front, its console the main tab", func() bool {
+		for _, v := range s.sh.layout.root.Visible() {
+			if w := s.sh.layout.root.Find(v); v.ID == AgentConsoleView && w.Placement == layout.Tab {
+				return true
+			}
+		}
+		return false
+	})
+	var r *rail
+	for _, e := range s.exts {
+		if v, ok := e.(*rail); ok {
+			r = v
+		}
+	}
+	if f := r.formNow(projectsHere(s.host)); f != "narrow" {
+		t.Errorf("the sidebar is %s, want narrow", f)
+	}
 	s.settleJobs(t, x)
 	s.lint("a run's console")
 	s.golden("jobs-run")
-	s.wantFrame(t, "JOB", "Sweep stale deps, keep major", "Jobs ›", "RUNNING", "12:13 · 4m", "done · 22m", "REPOS TOUCHED", "not yet",
-		"total est.", "WHEN IT ENDS")
+	s.wantFrame(t, "job: sweep stale deps", "JOB", "Sweep stale deps, keep major", "Jobs ›", "RUNNING", "12:13 · 4m", "done · 22m",
+		"REPOS TOUCHED", "not yet", "total est.", "WHEN IT ENDS")
+}
+
+// SE-5 done when: "A run skipped while one is going shows in the list".
+func TestASkippedRunShowsInTheList(t *testing.T) {
+	r := newJobsRig(t)
+	j := r.save(day44(10, 13, 6, 0), worker.Job{Title: "Morning CI triage", Prompt: "Say what CI failed on my open PRs in api.",
+		Schedule: worker.Schedule{Every: worker.EveryWeekday, At: "07:00"}})
+	r.clock.set(day44(10, 13, 7, 0).Add(30 * time.Second))
+	r.w.RunDue(context.Background())
+	r.claude.WaitStarted(t)
+	r.clock.set(day44(10, 14, 7, 0).Add(30 * time.Second))
+	r.w.RunDue(context.Background())
+	r.clock.set(statsNow)
+	s := newSceneWith(t, "", "", mockupSize, r.connect(t))
+	s.now = statsNow
+	x := s.jobs()
+	x.now, x.loc = func() time.Time { return s.now }, time.UTC
+	waitState(t, s.store, "the run", func(st core.State) bool { _, ok := jobRun(st, j.Name); return ok })
+	s.run("jobs.open", nil)
+	s.settleJobs(t, x)
+	s.run("jobs.open", registry.Args{"job": j.Name})
+	s.wantFrame(t, "SKIPPED", "skipped (last run still going)", "RUNNING")
+	if row := s.within("Runs", "skipped run"); !strings.Contains(row.Name, "today 07:00") {
+		t.Errorf("the skipped row: %q", row.Name)
+	}
+}
+
+// SE-5 done when: "a job's worker can be changed": Edit, another worker, Save moves it there.
+func TestAJobMovesToAnotherWorker(t *testing.T) {
+	here := newLocalWorker(t)
+	there := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox"})
+	both := func(cfg *Config) { here.connect(t)(cfg); there.connect(t)(cfg) }
+	s := newSceneWith(t, "", "", mockupSize, both)
+	x := s.jobs()
+	waitState(t, s.store, "the workers", func(st core.State) bool { return len(st.Workers) == 2 })
+	j, err := here.w.SaveJob(worker.Job{Title: "Sweep stale deps", Prompt: "Bump what's behind in pricing."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.run("jobs.open", nil)
+	s.settleJobs(t, x)
+	s.run("jobs.edit", registry.Args{"name": j.Name, "worker": string(core.LocalWorker)})
+	s.until(t, "the agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
+	s.click(centre(s.within("Edit sweep-stale-deps", s.store.State().WorkerName(core.LocalWorker)+" ▾").Bounds))
+	s.frame()
+	s.clickText(t, "devbox")
+	if x.form == nil || x.form.worker != "devbox" {
+		t.Fatalf("picking devbox: %+v", x.form)
+	}
+	s.until(t, "devbox's agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
+	s.click(centre(s.within("Edit sweep-stale-deps", "Save").Bounds))
+	s.until(t, "the dialog closed", func() bool { return x.form == nil })
+	if js := here.w.Jobs(); len(js) != 0 {
+		t.Errorf("still on this machine: %+v", js)
+	}
+	if js := there.w.Jobs(); len(js) != 1 || js[0].Title != "Sweep stale deps" || js[0].Prompt != j.Prompt {
+		t.Errorf("devbox's jobs: %+v", js)
+	}
+}
+
+// SE-5 done when: "The job form's and launcher's prompts take several lines; ⌘⏎ submits."
+func TestTheJobPromptTakesLines(t *testing.T) {
+	lw := newLocalWorker(t)
+	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
+	x := s.jobs()
+	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	s.run("jobs.new", nil)
+	s.until(t, "the agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
+	s.typeInto(t, "Prompt", "Sweep stale deps.")
+	s.typeKeys("CR")
+	for _, r := range "Keep majors." {
+		s.typeKeys(string(r))
+	}
+	if x.form == nil || x.form.prompt != "Sweep stale deps.\nKeep majors." {
+		t.Fatalf("⏎ in the prompt: %+v", x.form)
+	}
+	s.keyCommand(t, "<D-CR>")
+	s.until(t, "the run", func() bool { _, ok := jobRun(s.store.State(), "sweep-stale-deps"); return ok })
+	if js := lw.w.Jobs(); len(js) != 1 || js[0].Prompt != "Sweep stale deps.\nKeep majors." {
+		t.Errorf("the job: %+v", js)
+	}
+}
+
+// SE-5: the launcher's prompt takes several lines too; ⌘⏎ starts.
+func TestTheLauncherPromptTakesLines(t *testing.T) {
+	lw := newLocalWorker(t)
+	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
+	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	if err := s.host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil { // no sandbox here
+		t.Fatal(err)
+	}
+	s.run("session.new", registry.Args{"kind": "scratch"})
+	var l *launcher
+	for _, e := range s.exts {
+		if v, ok := e.(*launcher); ok {
+			l = v
+		}
+	}
+	s.until(t, "the launcher's agents", func() bool { return l.provider != "" })
+	s.typeInto(t, "Prompt", "notes")
+	s.typeKeys("CR", "x")
+	if l.prompt != "notes\nx" || !l.open {
+		t.Fatalf("⏎ in the launcher's prompt: %q, open %v", l.prompt, l.open)
+	}
+	s.keyCommand(t, "<D-CR>")
+	if a := lw.fake.WaitStarted(t); a == nil {
+		t.Fatal("⌘⏎ didn't start it")
+	}
+	waitState(t, s.store, "the session", func(st core.State) bool {
+		return len(st.Sessions) == 1 && st.Sessions[0].Prompt == "notes\nx"
+	})
 }

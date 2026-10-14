@@ -84,7 +84,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.ui.column(children)", Doc: "A column of nodes; options beside them: gap, pad (px)."},
 		{Call: "oriel.ui.date_picker(spec)", Doc: "A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30."},
 		{Call: "oriel.ui.indicator(spec)", Doc: "A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }."},
-		{Call: "oriel.ui.input(spec)", Doc: "A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value."},
+		{Call: "oriel.ui.input(spec)", Doc: "A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value."},
 		{Call: "oriel.ui.list(items, row)", Doc: "A list: each of items through row(item), which returns a node."},
 		{Call: "oriel.ui.mode()", Doc: "The editor's mode, as the built-in status line shows it."},
 		{Call: "oriel.ui.row(children)", Doc: "A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths)."},

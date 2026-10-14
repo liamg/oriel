@@ -24,7 +24,8 @@ type SandboxPolicy struct {
 // SessionSpec is what a new session starts from (sessions.md).
 type SessionSpec struct {
 	Kind     Kind          `json:"kind"`
-	Name     string        `json:"name,omitempty"` // derived from the prompt if empty
+	Name     string        `json:"name,omitempty"`  // derived from the prompt if empty
+	Title    string        `json:"title,omitempty"` // the name it shows, when not its id: a job's run, "job: sweep stale deps"
 	Prompt   string        `json:"prompt,omitempty"`
 	Ticket   string        `json:"ticket,omitempty"`
 	PR       string        `json:"pr,omitempty"`    // review kind: the PR's URL

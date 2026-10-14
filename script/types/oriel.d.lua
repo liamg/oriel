@@ -301,7 +301,7 @@ function oriel.ui.date_picker(spec) end
 ---@return table
 function oriel.ui.indicator(spec) end
 
---- A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
+--- A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value.
 ---@param spec table
 ---@return table
 function oriel.ui.input(spec) end

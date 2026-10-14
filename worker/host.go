@@ -114,7 +114,7 @@ func (h *host) start() error {
 	acct, name := h.w.accountOf(h.snapshot().Agent.Provider)
 	now := h.w.opts.Now().UTC()
 	h.setAgent(func(a *core.AgentState) {
-		a.Running, a.Error = true, ""
+		a.Running, a.Error, a.StoppedBy, a.StoppedAt = true, "", "", time.Time{}
 		a.RanOn(now, acct, name)
 	})
 	go h.loop(sess)
@@ -213,7 +213,8 @@ func (w *Worker) protected(se core.SessionState) []string {
 }
 
 // stop ends the agent. Its threads wait for it to come back.
-func (h *host) stop(why string) {
+// stop stops the agent; by is who did (core.StoppedByYou…), "" for a stop that isn't one: a restart, a delete.
+func (h *host) stop(why, by string) {
 	h.mu.Lock()
 	sess, box, cancel := h.sess, h.box, h.cancel
 	h.sess, h.box, h.cancel, h.working = nil, nil, nil, false
@@ -233,7 +234,7 @@ func (h *host) stop(why string) {
 	if cancel != nil {
 		cancel()
 	}
-	h.setAgent(func(a *core.AgentState) { a.Running, a.Working = false, false })
+	h.setAgent(func(a *core.AgentState) { a.Stopped(by, h.w.opts.Now()) })
 	h.w.log.Info("agent stopped", "session", h.id, "why", why)
 }
 
@@ -428,7 +429,7 @@ func (h *host) loop(sess agent.Session) {
 		if box != nil {
 			_ = box.Close()
 		}
-		h.setAgent(func(a *core.AgentState) { a.Running, a.Working = false, false })
+		h.setAgent(func(a *core.AgentState) { a.Stopped(core.StoppedByAgent, h.w.opts.Now()) })
 	}
 }
 
@@ -499,7 +500,7 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 		w.loginLost(h.id, ev)
 	case agent.AuthRestored:
 		if w.signedOut(ev.Provider) {
-			go w.checkLogin(ev.Provider)
+			go w.checkLogin(ev.Provider, true)
 		}
 	case agent.Exited:
 		if ev.Err != "" {

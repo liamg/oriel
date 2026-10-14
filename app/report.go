@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/theme"
 	"image"
@@ -50,6 +51,12 @@ type shell struct {
 	sessions    *sessions     // the workers' sessions; nil while it isn't active
 	stats       *statsExt     // what the workers' sessions cost
 	present     *presentFocus // the presentation with focus, for its keys
+	afterOpen   *afterOpen    // what session.open runs once the window has opened again on the session
+}
+
+type afterOpen struct {
+	session core.SessionID
+	calls   []call
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

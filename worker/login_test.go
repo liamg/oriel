@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
@@ -98,8 +99,16 @@ func TestCheckingAgainKeepsTheCardUntilSignedIn(t *testing.T) {
 		t.Fatal(err)
 	}
 	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
-	if ws := r.w.workerState(); len(ws.SignedOut) != 0 {
-		t.Errorf("signed in, the worker still says %+v", ws.SignedOut)
+	r.signedIn()
+}
+
+// signedIn waits for the worker to say every login is back: the card goes as it's answered, a moment before.
+func (r *rig) signedIn() {
+	r.t.Helper()
+	for deadline := time.Now().Add(5 * time.Second); len(r.w.workerState().SignedOut) > 0; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			r.t.Fatalf("signed in, the worker still says %+v", r.w.workerState().SignedOut)
+		}
 	}
 }
 
@@ -126,4 +135,40 @@ func TestAnAgentRefusedForItsLoginStartsOnceSignedIn(t *testing.T) {
 		t.Errorf("once signed in, the agent got %q", got.Text)
 	}
 	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok && se.Agent.Running })
+}
+
+// SE-5 done when: "Check again with a revoked token on disk stays signed out against a fake provider". The provider's
+// files still hold the login the API refused, so it stays signed out until there's a new one, or one is seen to work.
+func TestARevokedLoginStaysSignedOutUntilANewOne(t *testing.T) {
+	r := newRig(t)
+	r.fake.Account = "u1"
+	id, a := r.workSession("x")
+	a.WaitSent(t)
+	a.RevokeLogin("OAuth token revoked · Please run /login")
+	card, _ := loginCard(r.eventually(id, "the login's card", flagged))
+	if in, _ := r.fake.Detect(context.Background()); !in.LoggedIn {
+		t.Fatal("the fake's files should still say signed in")
+	}
+	if err := r.w.Answer(AnswerReq{Session: id, Ask: card.ID, Decision: "recheck"}); err != nil {
+		t.Fatal(err)
+	}
+	again, _ := loginCard(r.eventually(id, "a card again: the same login is still refused", func(se core.SessionState) bool {
+		a, ok := loginCard(se)
+		return ok && a.ID != card.ID
+	}))
+	if p := r.w.ProviderInfo(context.Background()); p[0].Install.LoggedIn {
+		t.Errorf("rechecked, the launcher's provider = %+v", p[0].Install)
+	}
+	r.fake.SignIn(true) // signed in again outside Oriel: a new login on disk
+	if err := r.w.Answer(AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
+		t.Fatal(err)
+	}
+	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
+	r.signedIn()
+
+	// A login seen to work clears it whatever is on disk.
+	a.RevokeLogin("OAuth token revoked · Please run /login")
+	r.eventually(id, "the login's card", flagged)
+	a.Emit(agent.AuthRestored{Provider: "fake", Account: "u1"})
+	r.eventually(id, "the card to go once a login worked", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
 }

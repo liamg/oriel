@@ -80,6 +80,10 @@ func TestAJobRunsAsAJobSession(t *testing.T) {
 	if got := RunOf(r.session(id)); got.Status != RunRunning {
 		t.Errorf("status = %q, want running", got.Status)
 	}
+	// SE-5: "run tabs read "job: <title>"".
+	if se.Name != "job: sweep stale deps" {
+		t.Errorf("the run's name = %q", se.Name)
+	}
 	if _, err := r.w.RunJob(context.Background(), "nope"); err == nil {
 		t.Error("ran a job that isn't there")
 	}
@@ -135,8 +139,93 @@ func TestRunStatuses(t *testing.T) {
 	if err := r.w.Stop(ctx, id); err != nil {
 		t.Fatal(err)
 	}
-	if got := RunOf(r.eventually(id, "stopped", func(se core.SessionState) bool { return !se.Agent.Running })); got.Status != RunStopped {
+	if got := RunOf(r.eventually(id, "stopped", func(se core.SessionState) bool { return !se.Agent.Running })); got.Status != RunStopped ||
+		got.StoppedBy != core.StoppedByYou {
 		t.Errorf("stopped run = %+v", got)
+	}
+}
+
+// SE-5: "a stop records who (you, the agent, the worker on shutdown), so the row says "Stopped by you"".
+func TestAStopSaysWho(t *testing.T) {
+	r := newRig(t)
+	j, _ := r.w.SaveJob(Job{Prompt: "Sweep stale deps"})
+	ctx := context.Background()
+	quits, _ := r.w.RunJob(ctx, j.Name)
+	r.agent().Close() // the agent's process ends by itself
+	if got := RunOf(r.eventually(quits, "stopped", func(se core.SessionState) bool { return !se.Agent.Running })); got.StoppedBy != core.StoppedByAgent {
+		t.Errorf("an agent that quit: %+v", got)
+	}
+	shut, _ := r.w.RunJob(ctx, j.Name)
+	r.agent()
+	r.restart()
+	if got := RunOf(r.session(shut)); got.Status != RunStopped || got.StoppedBy != core.StoppedByWorker {
+		t.Errorf("a run the worker stopped as it shut down: %+v", got)
+	}
+	if err := r.w.Resume(ctx, shut); err != nil {
+		t.Fatal(err)
+	}
+	r.agent()
+	if se := r.eventually(shut, "running", func(se core.SessionState) bool { return se.Agent.Running }); se.Agent.StoppedBy != "" {
+		t.Errorf("resumed, it still says stopped by %q", se.Agent.StoppedBy)
+	}
+}
+
+// SE-5: "occurrences missed while the worker was off are run once when it starts (one per job, not a backlog)".
+func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
+	r := newRig(t)
+	r.now = time.Date(2026, 10, 12, 6, 0, 0, 0, time.UTC) // Monday
+	r.restart()
+	j, err := r.w.SaveJob(Job{Prompt: "Triage CI on my open PRs", Schedule: Schedule{Every: EveryWeekday, At: "07:00"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, _ := r.w.SaveJob(Job{Prompt: "Weekly changelog", Schedule: Schedule{Every: EveryWeek, Days: []time.Weekday{time.Sunday}, At: "09:00"}})
+	runs := func(name string) int {
+		n := 0
+		for _, se := range r.w.store.State().Sessions {
+			if se.Job == name {
+				n++
+			}
+		}
+		return n
+	}
+	r.w.Close()
+	r.now = time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC) // Wednesday: Monday's, Tuesday's and Wednesday's 07:00 missed
+	r.open()
+	r.w.RunDue(context.Background())
+	if n := runs(j.Name); n != 1 {
+		t.Fatalf("after three missed occurrences, %d runs; want one", n)
+	}
+	if n := runs(other.Name); n != 0 {
+		t.Errorf("a job with nothing missed ran %d times", n)
+	}
+	r.now = r.now.Add(time.Minute)
+	r.w.RunDue(context.Background())
+	if n := runs(j.Name); n != 1 {
+		t.Errorf("the next look ran it again: %d runs", n)
+	}
+}
+
+// SE-5: "a skipped run is kept in the run list as "skipped (last run still going)"": the job keeps each one.
+func TestSkippedRunsAreKept(t *testing.T) {
+	r := newRig(t)
+	r.now = time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC)
+	r.restart()
+	j, _ := r.w.SaveJob(Job{Prompt: "Triage CI", Schedule: Schedule{Every: EveryWeekday, At: "07:00"}})
+	r.now = time.Date(2026, 10, 14, 7, 0, 30, 0, time.UTC)
+	r.w.RunDue(context.Background())
+	r.agent()
+	for _, day := range []int{15, 16} {
+		r.now = time.Date(2026, 10, day, 7, 0, 30, 0, time.UTC)
+		r.w.RunDue(context.Background())
+	}
+	got := r.w.Jobs()[0].Skips
+	if len(got) != 2 || got[0].Day() != 15 || got[1].Day() != 16 {
+		t.Errorf("skips = %v", got)
+	}
+	j.Prompt = "Triage CI, quickly"
+	if saved, _ := r.w.SaveJob(j); len(saved.Skips) != 2 {
+		t.Errorf("an edit forgot the skips: %v", saved.Skips)
 	}
 }
 
@@ -248,8 +337,8 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 	if n := len(runs()); n != 1 {
 		t.Fatalf("a run started while the last was still going: %d", n)
 	}
-	if got := r.w.Jobs()[0].Skipped; !got.Equal(time.Date(2026, 10, 15, 7, 0, 0, 0, time.UTC)) {
-		t.Errorf("skipped = %v", got)
+	if got := r.w.Jobs()[0].Skips; len(got) != 1 || !got[0].Equal(time.Date(2026, 10, 15, 7, 0, 0, 0, time.UTC)) {
+		t.Errorf("skips = %v", got)
 	}
 	tid := string(runs()[0].Threads[0].ID)
 	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Nothing failing.", "resolve": true})

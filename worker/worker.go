@@ -65,8 +65,7 @@ type Worker struct {
 	statsMu   sync.Mutex // the stats store, and the events records it reads
 	usageMu   sync.Mutex
 
-	jobsMu  sync.Mutex // the jobs' files, and when the schedules last ran
-	lastDue time.Time
+	jobsMu sync.Mutex // the jobs' files, and when the schedules last ran
 
 	mu       sync.Mutex
 	recs     map[core.SessionID]*sessionLog
@@ -134,7 +133,7 @@ func New(opts Options) (*Worker, error) {
 	w := &Worker{opts: opts, store: eventstore.New(), log: opts.Log, kinds: builtinKinds(),
 		recs: map[core.SessionID]*sessionLog{}, hosts: map[core.SessionID]*host{}, open: map[core.SessionID]logs.SessionLog{},
 		repos: &repoList{path: filepath.Join(opts.Home, "repos.json")}, sessLogs: logs.Dirs{Root: filepath.Join(opts.Home, "sessions")},
-		closed: make(chan struct{}), lastDue: opts.Now()}
+		closed: make(chan struct{})}
 	if err := w.repos.load(); err != nil {
 		return nil, err
 	}
@@ -197,7 +196,7 @@ func (w *Worker) settle() {
 	for _, se := range w.store.State().Sessions {
 		if se.Agent.Running || se.Agent.Working || len(se.Asks) > 0 {
 			a := se.Agent
-			a.Running, a.Working = false, false
+			a.Stopped(core.StoppedByWorker, w.opts.Now())
 			_ = w.store.Apply(core.AgentChanged{ID: se.ID, Agent: a})
 			for _, ask := range se.Asks {
 				_ = w.store.Apply(core.AskClosed{Session: se.ID, ID: ask.ID, Decision: "gone"})
@@ -327,7 +326,7 @@ func (w *Worker) Close() error {
 	}
 	w.mu.Unlock()
 	for _, h := range hosts {
-		h.stop("the worker stopped")
+		h.stop("the worker stopped", core.StoppedByWorker)
 	}
 	w.mu.Lock()
 	defer w.mu.Unlock()

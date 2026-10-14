@@ -23,6 +23,8 @@ type tailer struct {
 	subs   map[string]*transcript.Reader
 	skip   map[string]int64 // where to start the logs already on disk: a resumed session's history isn't news
 	said   string           // the main loop's latest prose this turn
+	// answered is told of each answer the API gave: a request that worked.
+	answered func(emit func(agent.Event))
 }
 
 func newTailer(config, cwd, id string, resume bool) *tailer {
@@ -110,6 +112,9 @@ func (t *tailer) emit(entries []transcript.Entry, emit func(agent.Event)) {
 		}
 		if ev := fromEntry(e); ev != nil {
 			emit(ev)
+		}
+		if e.Kind == transcript.Text && e.Role == "assistant" && e.APIError == "" && t.answered != nil {
+			t.answered(emit)
 		}
 	}
 }

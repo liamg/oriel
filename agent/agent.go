@@ -41,8 +41,10 @@ type Install struct {
 	Bin      string `json:"bin"`
 	Version  string `json:"version"`
 	LoggedIn bool   `json:"loggedIn"`
-	Account  string `json:"account,omitempty"` // "chatgpt", "apiKey", the plan's name
-	Note     string `json:"note,omitempty"`    // why it can't run, or what to know first
+	// Login marks the sign-in found, changing when it's renewed (a hash of its token); "" when it can't be told.
+	Login   string `json:"-"`
+	Account string `json:"account,omitempty"` // "chatgpt", "apiKey", the plan's name
+	Note    string `json:"note,omitempty"`    // why it can't run, or what to know first
 }
 
 // Model is a model the provider offers, with its efforts.

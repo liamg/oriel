@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -24,6 +25,7 @@ type Fake struct {
 	mu        sync.Mutex
 	resumed   []string
 	signedOut bool
+	logins    int // how many times it has signed in: its login's mark
 	refuse    error
 }
 
@@ -37,18 +39,23 @@ func (f *Fake) ID() string {
 }
 
 func (f *Fake) Detect(context.Context) (agent.Install, error) {
-	in := agent.Install{Bin: "fake", Version: "1", LoggedIn: true}
-	if f.SignedOut() {
-		in.LoggedIn, in.Note = false, "Not signed in: run fake and /login."
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	in := agent.Install{Bin: "fake", Version: "1", LoggedIn: true, Login: fmt.Sprintf("login-%d", f.logins)}
+	if f.signedOut {
+		in.LoggedIn, in.Login, in.Note = false, "", "Not signed in: run fake and /login."
 	}
 	return in, nil
 }
 
-// SignIn signs the fake in or out, as Detect reports it.
+// SignIn signs the fake in, afresh, or out, as Detect reports it.
 func (f *Fake) SignIn(in bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.signedOut = !in
+	if in {
+		f.logins++
+	}
 }
 
 func (f *Fake) SignedOut() bool {
@@ -192,6 +199,12 @@ func (s *FakeSession) Term() *FakeTerminal { return s.term }
 // LoseLogin signs the fake out and says so, as a provider does when its login stops working.
 func (s *FakeSession) LoseLogin(detail string) {
 	s.fake.SignIn(false)
+	s.Emit(agent.AuthExpired{Provider: s.fake.ID(), Account: s.fake.Account, Detail: detail, Terminal: "/login", Shell: "fake, then /login"})
+}
+
+// RevokeLogin says the login stopped working while its files still hold it, as a provider does when its token is
+// revoked: Detect still reports it signed in, with the same login.
+func (s *FakeSession) RevokeLogin(detail string) {
 	s.Emit(agent.AuthExpired{Provider: s.fake.ID(), Account: s.fake.Account, Detail: detail, Terminal: "/login", Shell: "fake, then /login"})
 }
 

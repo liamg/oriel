@@ -303,8 +303,18 @@ func TestDetect(t *testing.T) {
 		t.Fatal(err)
 	}
 	in, _ = Provider{Bin: bin}.Detect(context.Background())
-	if !in.LoggedIn || in.Account != "Claude Max" || in.Note != "" {
+	if !in.LoggedIn || in.Account != "Claude Max" || in.Note != "" || in.Login == "" || strings.Contains(in.Login, "tok") {
 		t.Fatalf("signed in: %+v", in)
+	}
+	// SE-5: a new token on disk is a new login.
+	if err := os.WriteFile(filepath.Join(cfg, ".credentials.json"), []byte(strings.Replace(creds, "tok", "tok2", 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := (Provider{Bin: bin}).Detect(context.Background()); !again.LoggedIn || again.Login == in.Login {
+		t.Errorf("a new token: %+v, was %+v", again, in)
+	}
+	if err := os.WriteFile(filepath.Join(cfg, ".credentials.json"), []byte(creds), 0o600); err != nil {
+		t.Fatal(err)
 	}
 	if err := os.WriteFile(bin, []byte("#!/bin/sh\necho '2.0.1 (Claude Code)'\n"), 0o755); err != nil {
 		t.Fatal(err)
@@ -323,7 +333,7 @@ func TestLoginFromTheAccountWhenTheTokenIsInTheKeychain(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(cfg, ".claude.json"), []byte(`{"oauthAccount":{"organizationType":"claude_pro"}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if ok, account := login(env); !ok || account != "Claude Pro" {
+	if ok, account, _ := login(env); !ok || account != "Claude Pro" {
 		t.Errorf("login = %v, %q", ok, account)
 	}
 }

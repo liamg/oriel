@@ -103,3 +103,34 @@ func TestAuthExpiredFromTheHook(t *testing.T) {
 		t.Errorf("then %+v, want AuthExpired", a)
 	}
 }
+
+// SE-5: a login is back once a request after it went succeeds: the agent's next answer in the log raises
+// AuthRestored, once; answers while signed in don't.
+func TestAnAnswerAfterALostLoginRestoresIt(t *testing.T) {
+	s := agenttest.Start(t, fakeHarness(t))
+	s.Send("say hi")
+	s.Reply()
+	s.Send("lose the login")
+	s.Wait("AuthExpired", func(ev agent.Event) bool { _, ok := ev.(agent.AuthExpired); return ok })
+	s.Reply()
+	s.Send("say hello")
+	s.Wait("AuthRestored", func(ev agent.Event) bool { r, ok := ev.(agent.AuthRestored); return ok && r.Provider == "claude" })
+	s.Reply()
+	s.Send("say bye")
+	s.Reply()
+	n, lost := 0, false
+	for _, ev := range s.Events {
+		switch ev.(type) {
+		case agent.AuthExpired:
+			lost = true
+		case agent.AuthRestored:
+			if !lost {
+				t.Error("AuthRestored before the login was lost")
+			}
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("AuthRestored raised %d times, want once", n)
+	}
+}

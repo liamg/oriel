@@ -403,7 +403,7 @@ func (b *box) restartWhenIdle(why string) {
 		if h == nil {
 			return
 		}
-		h.stop(why)
+		h.stop(why, "")
 		_ = h.start()
 	}()
 }

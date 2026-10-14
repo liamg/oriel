@@ -170,14 +170,14 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 		if !kicker {
 			o.Kicker = "login"
 		}
-		if canLogIn(se, l) {
+		if canLogIn(l) {
 			o.Note = "opens its terminal with " + l.Terminal
 			o.Actions = append(o.Actions, widget.CardAction{Label: "Log in", Key: "l", Primary: true})
 			acts = append(acts, act{cmd: "agent.login"})
 		} else if l.Shell != "" {
 			o.Note = "On " + where + ", run " + l.Shell
 		}
-		add("Check again", "c", !canLogIn(se, l), registry.Args{"decision": "recheck"})
+		add("Check again", "c", !canLogIn(l), registry.Args{"decision": "recheck"})
 	case core.AskQuestion:
 		o.Title = prov + " asks"
 		body = func(c *ui.Ctx) { x.questions(c, se, a, st) }
@@ -210,10 +210,8 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 	x.run(context.Background(), cmpOr(acts[res.Action].cmd, "ask.answer"), args)
 }
 
-// canLogIn is a login the app signs in again itself: the agent's own terminal on this machine.
-func canLogIn(se core.SessionState, l core.Login) bool {
-	return (se.Worker == "" || se.Worker == core.LocalWorker) && l.Terminal != ""
-}
+// canLogIn is a login the app signs in again itself: the agent's own terminal, from whichever worker runs it.
+func canLogIn(l core.Login) bool { return l.Terminal != "" }
 
 // loginWaiting is the session waiting on a login, and its ask: session {id}, else the one in front, else any
 // waiting on {provider}'s login on {worker}.
@@ -247,14 +245,14 @@ func (x *agentConsole) loginWaiting(a registry.Args) (core.SessionState, core.Lo
 	return core.SessionState{}, core.Login{}, false
 }
 
-// logIn signs an agent in again: its own terminal, opened with the provider's login typed, on this machine; on
-// another, it says what to run there.
+// logIn signs an agent in again: its own terminal, opened from its worker with the provider's login typed; for an
+// agent with no terminal to type it in, it says what to run there.
 func (x *agentConsole) logIn(ctx registry.Ctx, a registry.Args) error {
 	se, l, ok := x.loginWaiting(a)
 	if !ok {
 		return errors.New("no agent is waiting on a login")
 	}
-	if !canLogIn(se, l) {
+	if !canLogIn(l) {
 		return fmt.Errorf("on %s, run %s", x.h.State().WorkerName(se.Worker), cmpOr(l.Shell, "the agent's login"))
 	}
 	return x.rawTerminal(ctx, se.ID, l.Terminal+"\r")

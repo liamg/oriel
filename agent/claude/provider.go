@@ -3,6 +3,8 @@ package claude
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,7 +71,7 @@ func (p Provider) Detect(ctx context.Context) (agent.Install, error) {
 		in.Note = fmt.Sprintf("Could not read a version from claude --version: %q.", strings.TrimSpace(string(out)))
 		return in, nil
 	}
-	in.LoggedIn, in.Account = login(nil)
+	in.LoggedIn, in.Account, in.Login = login(nil)
 	switch {
 	case versionLess(in.Version, minVersion):
 		in.Note = fmt.Sprintf("Claude Code %s is too old for Oriel, which needs %s or newer: run claude update.", in.Version, minVersion)
@@ -93,21 +95,22 @@ func versionLess(a, b string) bool {
 	return false
 }
 
-// login reads the sign-in from Claude's files, without asking the network (subscription), else an API key.
-func login(env []string) (bool, string) {
-	if kind, _, ok := subscription(env); ok {
-		return true, plan(kind)
+// login reads the sign-in from Claude's files, without asking the network (subscription), else an API key. mark
+// tells one token in the file from the next (agent.Install.Login).
+func login(env []string) (ok bool, account, mark string) {
+	if kind, _, mark, ok := subscription(env); ok {
+		return true, plan(kind), mark
 	}
 	if os.Getenv("ANTHROPIC_API_KEY") != "" {
-		return true, "apiKey"
+		return true, "apiKey", ""
 	}
-	return false, ""
+	return false, "", ""
 }
 
 // subscription is the plan Claude's files record and whether they record a sign-in: the credentials file's
-// subscriptionType and rateLimitTier (Linux), else oauthAccount's organizationType and organizationRateLimitTier in
-// the state file (macOS keeps the token in the Keychain).
-func subscription(env []string) (kind, limit string, ok bool) {
+// subscriptionType and rateLimitTier (Linux), with a mark of its token, else oauthAccount's organizationType and
+// organizationRateLimitTier in the state file (macOS keeps the token in the Keychain, so there's no mark).
+func subscription(env []string) (kind, limit, mark string, ok bool) {
 	var cred struct {
 		OAuth struct {
 			Token        string `json:"accessToken"`
@@ -117,7 +120,8 @@ func subscription(env []string) (kind, limit string, ok bool) {
 	}
 	if b, err := os.ReadFile(filepath.Join(transcript.ConfigDir(env), ".credentials.json")); err == nil &&
 		json.Unmarshal(b, &cred) == nil && cred.OAuth.Token != "" {
-		return cred.OAuth.Subscription, cred.OAuth.Tier, true
+		sum := sha256.Sum256([]byte(cred.OAuth.Token))
+		return cred.OAuth.Subscription, cred.OAuth.Tier, hex.EncodeToString(sum[:8]), true
 	}
 	var state struct {
 		Account *struct {
@@ -126,15 +130,15 @@ func subscription(env []string) (kind, limit string, ok bool) {
 		} `json:"oauthAccount"`
 	}
 	if b, err := os.ReadFile(statePath(env)); err == nil && json.Unmarshal(b, &state) == nil && state.Account != nil {
-		return strings.TrimPrefix(state.Account.OrgType, "claude_"), state.Account.Tier, true
+		return strings.TrimPrefix(state.Account.OrgType, "claude_"), state.Account.Tier, "", true
 	}
-	return "", "", false
+	return "", "", "", false
 }
 
 // planOf is the plan Claude is signed in to ("Claude Max") and its tier, for its chip ("Max 20×"); "" for what
 // isn't known.
 func planOf(env []string) (name, tier string) {
-	kind, limit, _ := subscription(env)
+	kind, limit, _, _ := subscription(env)
 	return plan(kind), tierOf(kind, limit)
 }
 
@@ -470,6 +474,7 @@ func (p Provider) start(ctx context.Context, spec agent.StartSpec, resume string
 		s.cmds = append(s.cmds, waitOut{Kind: "submit", Text: strings.TrimSpace(spec.Prompt)})
 	}
 	s.term.watch = s.watchScreen
+	s.tail.answered = s.answered
 	go s.term.drain()
 	go s.serve()
 	go s.tail.follow(s.done, s.push)

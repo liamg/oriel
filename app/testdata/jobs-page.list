@@ -8,41 +8,41 @@ text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1469.0625x38 r 0
   rect 114.9375,16 8x8 fill #4fe0a0 radius 4
-  text "sweep-stale-deps" @129.9375,24.365234 #b3ab99 Inter 12
-  text "⌘1" @240.375,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 264.375,0 1x38 fill #24221d
-  rect 277.375,16 8x8 fill #4fe0a0 radius 4
-  text "sweep-stale-deps-2" @292.375,24.365234 #b3ab99 Inter 12
-  text "⌘2" @415.25,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 439.25,0 1x38 fill #24221d
-  rect 452.25,16 8x8 fill #4fe0a0 radius 4
-  text "sweep-stale-deps-3" @467.25,24.365234 #b3ab99 Inter 12
-  text "⌘3" @590.4844,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 614.4844,0 1x38 fill #24221d
-  rect 627.4844,16 8x8 fill #4cc9f0 radius 4
-  text "sweep-stale-deps-4" @642.4844,24.365234 #b3ab99 Inter 12
-  text "job" @766.1875,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘4" @791.1875,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 815.1875,0 1x38 fill #24221d
-  rect 828.1875,16 8x8 fill #4fe0a0 radius 4
-  text "sweep-stale-deps-5" @843.1875,24.365234 #b3ab99 Inter 12
-  text "⌘5" @966.2656,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 990.2656,0 1x38 fill #24221d
-  rect 1003.2656,16 8x8 fill #ff5f6d radius 4
-  text "sweep-stale-deps-6" @1018.2656,24.365234 #b3ab99 Inter 12
-  text "needs you" @1141.6562,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘6" @1202.6562,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1226.6562,0 1x38 fill #24221d
-  rect 1239.6562,16 8x8 fill #4fe0a0 radius 4
-  text "sweep-stale-deps-7" @1254.6562,24.365234 #b3ab99 Inter 12
-  text "⌘7" @1377.1406,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1401.1406,0 1x38 fill #24221d
-  rect 1402.1406,0 199.375x38 fill #121210
-  rect 1402.1406,0 199.375x2 fill #ffd23f
-  rect 1414.1406,16 8x8 fill #4cc9f0 radius 4
-  text "sweep-stale-deps-8" @1429.1406,24.365234 #ece6d8 Inter 12
-  text "job" @1552.5156,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘8" @1577.5156,23.42 #4f4a40 JetBrains Mono 9.5
+  text "job: sweep stale deps" @129.9375,24.365234 #b3ab99 Inter 12
+  text "⌘1" @260.375,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 284.375,0 1x38 fill #24221d
+  rect 297.375,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @312.375,24.365234 #b3ab99 Inter 12
+  text "⌘2" @442.8125,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 466.8125,0 1x38 fill #24221d
+  rect 479.8125,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @494.8125,24.365234 #b3ab99 Inter 12
+  text "⌘3" @625.25,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 649.25,0 1x38 fill #24221d
+  rect 662.25,16 8x8 fill #4cc9f0 radius 4
+  text "job: sweep stale deps" @677.25,24.365234 #b3ab99 Inter 12
+  text "job" @807.6875,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘4" @832.6875,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 856.6875,0 1x38 fill #24221d
+  rect 869.6875,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @884.6875,24.365234 #b3ab99 Inter 12
+  text "⌘5" @1015.125,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 1039.125,0 1x38 fill #24221d
+  rect 1052.125,16 8x8 fill #ff5f6d radius 4
+  text "job: sweep stale deps" @1067.125,24.365234 #b3ab99 Inter 12
+  text "needs you" @1197.5625,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘6" @1258.5625,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 1282.5625,0 1x38 fill #24221d
+  rect 1295.5625,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @1310.5625,24.365234 #b3ab99 Inter 12
+  text "⌘7" @1441,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 1465,0 1x38 fill #24221d
+  rect 1466,0 206.4375x38 fill #121210
+  rect 1466,0 206.4375x2 fill #ffd23f
+  rect 1478,16 8x8 fill #4cc9f0 radius 4
+  text "job: sweep stale deps" @1493,24.365234 #ece6d8 Inter 12
+  text "job" @1623.4375,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘8" @1648.4375,23.42 #4f4a40 JetBrains Mono 9.5
 pop
 rect 0,38 224x936 fill #0c0c0b
 clip 0,38 223x936 r 0
@@ -211,84 +211,84 @@ clip 224,38 1376x936 r 0
   rect 999,221.86783 26x26 fill #191815 radius 6
   path 5 segments fill #4cc9f0
   clip 1037,219.07309 372.8125x31.589493 r 0
-    text "sweep-stale-deps-8" @1037,231.66684 #ece6d8 Inter 13
+    text "job: sweep stale deps" @1037,231.66684 #ece6d8 Inter 13
     text "job · api, web · tester/sweep-stale-deps-8" @1037,247.51259 #7c7566 JetBrains Mono 10.5
   pop
   text "4m" @1421.8125,238.64784 #4f4a40 JetBrains Mono 10.5
   rect 999,275.45734 26x26 fill #191815 radius 6
   path 5 segments fill #4fe0a0
   clip 1037,272.6626 372.8125x31.589478 r 0
-    text "morning-ci-triage" @1037,285.25635 #ece6d8 Inter 13
+    text "job: morning ci triage" @1037,285.25635 #ece6d8 Inter 13
     text "job · api, web · tester/morning-ci-triage" @1037,301.10208 #7c7566 JetBrains Mono 10.5
   pop
   text "5h" @1421.8125,292.23734 #4f4a40 JetBrains Mono 10.5
   rect 999,329.0468 26x26 fill #191815 radius 6
   path 5 segments fill #ff5f6d
   clip 1037,326.25208 366.21875x31.589478 r 0
-    text "triage-flaky-e2e" @1037,338.84583 #ece6d8 Inter 13
+    text "job: triage flaky e2e" @1037,338.84583 #ece6d8 Inter 13
     text "job · web · tester/triage-flaky-e2e" @1037,354.69156 #7c7566 JetBrains Mono 10.5
   pop
   text "19h" @1415.2188,345.8268 #4f4a40 JetBrains Mono 10.5
   rect 999,382.6363 26x26 fill #191815 radius 6
   path 5 segments fill #4fe0a0
   clip 1037,379.84155 372.8125x31.589478 r 0
-    text "price-feed-backfill" @1037,392.4353 #ece6d8 Inter 13
+    text "job: price feed backfill" @1037,392.4353 #ece6d8 Inter 13
     text "job · pricing · tester/price-feed-backfill" @1037,408.28104 #7c7566 JetBrains Mono 10.5
   pop
   text "1d" @1421.8125,399.4163 #4f4a40 JetBrains Mono 10.5
   rect 999,436.2258 26x26 fill #191815 radius 6
   path 5 segments fill #4cc9f0
   clip 1037,433.43106 372.8125x31.589508 r 0
-    text "pricing-test-sweep" @1037,446.0248 #ece6d8 Inter 13
+    text "job: pricing test sweep" @1037,446.0248 #ece6d8 Inter 13
     text "job · pricing · tester/pricing-test-sweep" @1037,461.87054 #7c7566 JetBrains Mono 10.5
   pop
   text "3d" @1421.8125,453.0058 #4f4a40 JetBrains Mono 10.5
   rect 999,489.81528 26x26.00003 fill #191815 radius 6
   path 5 segments fill #4fe0a0
   clip 1037,487.02054 372.8125x31.589508 r 0
-    text "sweep-stale-deps-7" @1037,499.6143 #ece6d8 Inter 13
+    text "job: sweep stale deps" @1037,499.6143 #ece6d8 Inter 13
     text "job · api, web, pricing · tester/sweep-stale-deps-7" @1037,515.46 #7c7566 JetBrains Mono 10.5
   pop
   text "1w" @1421.8125,506.59528 #4f4a40 JetBrains Mono 10.5
   rect 999,543.4047 26x26 fill #191815 radius 6
   path 5 segments fill #ff5f6d
   clip 1037,540.61 372.8125x31.589478 r 0
-    text "sweep-stale-deps-6" @1037,553.20374 #ece6d8 Inter 13
+    text "job: sweep stale deps" @1037,553.20374 #ece6d8 Inter 13
     text "job · web · tester/sweep-stale-deps-6" @1037,569.0495 #7c7566 JetBrains Mono 10.5
   pop
   text "2w" @1421.8125,560.18475 #4f4a40 JetBrains Mono 10.5
   rect 999,596.9942 26x26 fill #191815 radius 6
   path 5 segments fill #4fe0a0
   clip 1037,594.19946 372.8125x31.589478 r 0
-    text "sweep-stale-deps-5" @1037,606.7932 #ece6d8 Inter 13
+    text "job: sweep stale deps" @1037,606.7932 #ece6d8 Inter 13
     text "job · api, pricing · tester/sweep-stale-deps-5" @1037,622.639 #7c7566 JetBrains Mono 10.5
   pop
   text "3w" @1421.8125,613.77423 #4f4a40 JetBrains Mono 10.5
   rect 999,650.5837 26x26 fill #191815 radius 6
   path 5 segments fill #4cc9f0
   clip 1037,647.78894 372.8125x31.589478 r 0
-    text "sweep-stale-deps-4" @1037,660.3827 #ece6d8 Inter 13
+    text "job: sweep stale deps" @1037,660.3827 #ece6d8 Inter 13
     text "job · api · tester/sweep-stale-deps-4" @1037,676.22845 #7c7566 JetBrains Mono 10.5
   pop
   text "4w" @1421.8125,667.3637 #4f4a40 JetBrains Mono 10.5
   rect 999,704.17316 26x26 fill #191815 radius 6
   path 5 segments fill #4fe0a0
   clip 1037,701.3784 372.8125x31.589478 r 0
-    text "sweep-stale-deps-3" @1037,713.97217 #ece6d8 Inter 13
+    text "job: sweep stale deps" @1037,713.97217 #ece6d8 Inter 13
     text "job · api, web, pricing · tester/sweep-stale-deps-3" @1037,729.81793 #7c7566 JetBrains Mono 10.5
   pop
   text "5w" @1421.8125,720.9532 #4f4a40 JetBrains Mono 10.5
   rect 999,757.76263 26x26 fill #191815 radius 6
   path 5 segments fill #4fe0a0
   clip 1037,754.9679 372.8125x31.589478 r 0
-    text "sweep-stale-deps-2" @1037,767.56165 #ece6d8 Inter 13
+    text "job: sweep stale deps" @1037,767.56165 #ece6d8 Inter 13
     text "job · api, web, pricing · tester/sweep-stale-deps-2" @1037,783.4074 #7c7566 JetBrains Mono 10.5
   pop
   text "6w" @1421.8125,774.54266 #4f4a40 JetBrains Mono 10.5
   rect 999,811.3521 26x26 fill #191815 radius 6
   path 5 segments fill #4fe0a0
   clip 1037,808.5574 372.8125x31.589478 r 0
-    text "sweep-stale-deps" @1037,821.1511 #ece6d8 Inter 13
+    text "job: sweep stale deps" @1037,821.1511 #ece6d8 Inter 13
     text "job · api, web, pricing · tester/sweep-stale-deps" @1037,836.9969 #7c7566 JetBrains Mono 10.5
   pop
   text "7w" @1421.8125,828.13214 #4f4a40 JetBrains Mono 10.5
@@ -623,7 +623,7 @@ clip 224,38 1376x936 r 0
       text "api" @819,569.68665 #b3ab99 JetBrains Mono 11
     pop
     clip 1001,558.4669 283x14.519531 r 0
-      text "Stopped after 3m" @1007,570.0919 #b3ab99 Inter 12
+      text "Stopped by you after 3m" @1007,570.0919 #b3ab99 Inter 12
     pop
     clip 1284,555.13666 78x21.179993 r 0
       text "$0.69" @1319.9844,566.86664 #ece6d8 JetBrains Mono 11.5

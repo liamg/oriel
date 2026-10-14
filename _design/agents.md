@@ -72,7 +72,8 @@ written against what the CLIs recorded (`agent/claude/testdata`, Claude Code 2.1
   The error under a prompt ("· Please run /login") is left to the log, so a resumed conversation's old errors on the
   screen don't count. "Login successful. Press Enter to continue" (the /login dialog, from Claude Code's source) is
   `AuthRestored`.
-- **Codex**: a `TurnError` whose `codexErrorInfo` is `unauthorized` (app-server-protocol v2; not recorded), and
+- **Codex**: a `TurnError` whose `codexErrorInfo` is `unauthorized` (app-server-protocol v2; not recorded: SE-5
+  looked for a `codex` to record it from and `account/updated` with, and there was none to run), and
   `Start` refuses a thread with no account (`account/read` → `account: null`) with `AuthExpired` as its error.
 
 The worker (`worker/login.go`) keeps the logins gone by provider and account. Every running session there with that
@@ -80,8 +81,22 @@ provider, and one whose agent couldn't start for it, gets a `core.AskLogin` card
 the worker), so its status is needs you; nothing more is sent to those agents while it's flagged. The worker's state
 lists them (`WorkerState.SignedOut`), and `ProviderInfo` says the provider is signed out, with its detail. A card's
 answer (Check again) or an `AuthRestored` makes the worker ask the provider's `Detect`; signed in, every flag clears,
-a turn the login stopped is told to carry on, held comments go, and an agent that couldn't start starts. Claude's
-`Detect` reads files, so a revoked token still on disk reads as signed in; the next request raises it again.
+a turn the login stopped is told to carry on, held comments go, and an agent that couldn't start starts.
+
+**A real login check (SE-5).** Claude Code offers no way to ask the provider whether a login works without a request
+that spends tokens. Checked against Claude Code 2.1.296's CLI (`claude --help`) and its bundled source:
+`claude auth status [--json|--text]` exists, but its `loggedIn` is worked out from what's stored (the credentials
+file or Keychain token, an API key, a helper), never from the network: with a made-up token in a fresh
+`CLAUDE_CONFIG_DIR` it says `"loggedIn": true` and exits 0. `claude doctor` checks the install, not the login.
+Internally it has a zero-token `POST /api/oauth/validate`, but only for an organisation pin
+(`forceLoginOrgUUID`) and the Chrome bridge, not at start and not behind a command; Oriel doesn't call Anthropic's
+API with Claude's token itself. So the check stays files-based, and the worker remembers a refusal: as a login is
+lost it records the login the provider's files hold then (`agent.Install.Login`, for Claude a hash of the
+credentials file's token; "" when it can't tell, as with the macOS Keychain). Check again then reads signed in only
+with a different login on disk (one made outside Oriel); with the same one, or one it can't tell apart, it stays
+signed out until a login is seen to work: `AuthRestored`, from the /login dialog's "Login successful", or from the
+next request that succeeds (Claude's next answer in its log while signed out). A login the files say is gone needs
+only the files to come back, as before.
 
 ### Stats and plan readings (AI-12)
 

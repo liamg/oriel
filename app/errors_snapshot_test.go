@@ -5,6 +5,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -111,6 +112,34 @@ func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, cha
 		return shotOf(s.ui, s.reg, s.size, th)
 	}
 	return s
+}
+
+// reopen does what the app's loop does when the window is asked to open again on a directory (a session's): every
+// extension starts again on it. It says whether it was asked.
+func (s *errScene) reopen() bool {
+	s.t.Helper()
+	var to reopenTo
+	select {
+	case to = <-s.sh.reopen:
+	default:
+		return false
+	}
+	for _, e := range slices.Backward(s.exts) {
+		if err := e.Deactivate(context.Background()); err != nil {
+			s.t.Fatal(err)
+		}
+	}
+	s.sh.cfg.WorkDir, s.sh.cfg.Files = to.dir, nil
+	s.exts = builtins(s.sh)
+	for _, e := range s.exts {
+		h := s.sh.host("builtin:" + e.Manifest().ID)
+		if err := e.Activate(context.Background(), h); err != nil {
+			s.t.Fatal(err)
+		}
+		s.host = h
+	}
+	s.overviewOff = s.reg.View(OverviewView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() }))
+	return true
 }
 
 func (s *errScene) frame() {

@@ -78,7 +78,6 @@ func (x *jobsExt) header(c *ui.Ctx, rows []jobRow) {
 			x.run("jobs.new", nil)
 		}
 		if widget.Button(c, "stats", "Stats", widget.ButtonOpts{Key: "kind=job", Help: "agent/jobs#page"}) {
-			x.open = false
 			x.run("stats.open", registry.Args{"kind": string(core.KindJob)})
 		}
 		if widget.Button(c, "close", "Close", widget.ButtonOpts{Key: "esc", Help: "agent/jobs#page"}) {
@@ -473,11 +472,7 @@ func (x *jobsExt) schedule(c *ui.Ctx, j worker.Job) {
 			}
 			x.do("jobs.save", args)
 		}
-		where := "runs on " + x.workerName(j.Worker) + " when it's awake · skips while the last run is going"
-		if !j.Skipped.IsZero() {
-			where += " · skipped " + x.when(j.Skipped)
-		}
-		c.Text("n", where, monoFont(10, th.C(theme.FgGhost)))
+		c.Text("n", "runs on "+x.workerName(j.Worker)+" when it's awake · skips while the last run is going", monoFont(10, th.C(theme.FgGhost)))
 	})
 }
 
@@ -496,7 +491,9 @@ var runCols = []statsCol{{"STATUS", 96}, {"STARTED", 120}, {"REPOS", 200}, {"SUM
 func (x *jobsExt) runs(c *ui.Ctx, r jobRow) {
 	th := c.Theme()
 	want := runFilters[x.runFilter]
-	shown := slices.DeleteFunc(slices.Clone(r.runs), func(rr runRow) bool { return want != "" && rr.run.Status != want })
+	all := append(slices.Clone(r.runs), skipRows(r.job)...)
+	slices.SortStableFunc(all, func(a, b runRow) int { return b.start().Compare(a.start()) })
+	shown := slices.DeleteFunc(all, func(rr runRow) bool { return want != "" && rr.run.Status != want })
 	labels := []string{"ALL", "RUNNING", "DONE", "BLOCKED", "STOPPED"}
 	statsCard(c, "runs", ui.Flex(1), "RUNS", fmt.Sprintf("%d · newest first · each a session of kind job", len(r.runs)), func(c *ui.Ctx) {
 		widget.Segmented(c, "filter", labels, &x.runFilter, widget.SegmentedOpts{Label: "Show runs", Help: "agent/jobs#runs"})
@@ -519,10 +516,12 @@ func (x *jobsExt) runs(c *ui.Ctx, r jobRow) {
 			n++
 		}
 		res := widget.Rows(c, "list", n, &x.runSel, widget.RowsOpts{Label: "Runs", KeyMode: JobsKeyMode, Help: "agent/jobs#runs",
-			Static: func(i int) bool { return i >= len(shown) },
+			ClickSelects: true,
+			Static:       func(i int) bool { return i >= len(shown) },
+			Disabled:     func(i int) bool { return i < len(shown) && shown[i].skipped() },
 			RowLabel: func(i int) string {
 				rr := shown[i]
-				return fmt.Sprintf("%s run, %s, %s", rr.run.Status, x.started(rr.se.Created), x.summary(rr))
+				return fmt.Sprintf("%s run, %s, %s", rr.run.Status, x.started(rr.start()), x.summary(rr))
 			}}, func(c *ui.Ctx, i int, _ bool) {
 			if i >= len(shown) {
 				x.more(c, rest)
@@ -536,20 +535,28 @@ func (x *jobsExt) runs(c *ui.Ctx, r jobRow) {
 	})
 }
 
+// stoppedBy is who a run's stop names.
+var stoppedBy = map[string]string{core.StoppedByYou: " by you", core.StoppedByAgent: " by the agent", core.StoppedByWorker: " as the worker shut down"}
+
 // summary is what a run's row says it did.
 func (x *jobsExt) summary(r runRow) string {
 	if r.run.Status == worker.RunStopped {
+		s := "Stopped" + stoppedBy[r.run.StoppedBy]
 		if t := r.run.Took(); t > 0 {
-			return "Stopped after " + hm(t)
+			s += " after " + hm(t)
 		}
-		return "Stopped"
+		return s
 	}
 	return r.run.Summary
 }
 
+// openRun brings a run's session up as 44's panel 3 draws it: its console the main tab, the sidebar narrow.
 func (x *jobsExt) openRun(id core.SessionID) {
 	x.open = false
-	x.do("session.open", registry.Args{"id": string(id)})
+	x.do("session.open", registry.Args{"id": string(id), "then": []any{
+		registry.Args{"command": "view.open", "args": registry.Args{"id": AgentConsoleView, "place": "tab", "title": "Agent"}},
+		registry.Args{"command": "sidebar.form", "args": registry.Args{"form": "narrow"}},
+	}})
 }
 
 func (x *jobsExt) runRowView(c *ui.Ctx, i int, r runRow) {
@@ -559,7 +566,13 @@ func (x *jobsExt) runRowView(c *ui.Ctx, i int, r runRow) {
 		cell(c, 0, runCols[0].w, true, func(c *ui.Ctx) {
 			widget.Chip(c, "st", r.run.Status, th.C(runTone(r.run.Status)), "agent/jobs#runs")
 		})
-		cell(c, 1, runCols[1].w, true, func(c *ui.Ctx) { c.Text("t", x.started(r.se.Created), monoFont(11, th.C(theme.Fg))) })
+		cell(c, 1, runCols[1].w, true, func(c *ui.Ctx) { c.Text("t", x.started(r.start()), monoFont(11, th.C(theme.Fg))) })
+		if r.skipped() {
+			c.Column(3, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: runCols[2].w + 6, R: 6}}, func(c *ui.Ctx) {
+				c.Text("t", r.run.Summary, uiFont(12, th.C(theme.FgFaint)))
+			})
+			return
+		}
 		cell(c, 2, runCols[2].w, true, func(c *ui.Ctx) {
 			for j, p := range r.run.Repos {
 				c.Row(j, ui.Style{Gap: 4, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -636,7 +649,6 @@ func (x *jobsExt) costCell(c *ui.Ctx, r runRow) {
 			widget.Chart(c, "split", strip, widget.ChartOpts{Kind: widget.ChartStrip, Height: 3, Highlight: -1, Label: "Cost by repo", Help: "agent/jobs#cost"})
 		}
 	}).Clicked {
-		x.open = false
 		x.run("stats.session", registry.Args{"id": string(r.se.ID)})
 	}
 	widget.HoverCard(c, "split", anchor, widget.HoverCardOpts{Label: "Cost by repo", Help: "agent/jobs#cost", Width: 190}, func(c *ui.Ctx) {
@@ -667,7 +679,7 @@ func (x *jobsExt) more(c *ui.Ctx, rest []runRow) {
 	faint := th.C(theme.FgFaint)
 	c.Row("more", ui.Style{W: ui.Flex(1), H: ui.Px(30), Cross: ui.Center}, func(c *ui.Ctx) {
 		textCellLeft(c, 0, runCols[0].w, fmt.Sprintf("%d more", len(rest)), faint)
-		textCellLeft(c, 1, runCols[1].w, "since "+rest[len(rest)-1].se.Created.In(x.loc).Format("Jan 2"), th.C(theme.FgGhost))
+		textCellLeft(c, 1, runCols[1].w, "since "+rest[len(rest)-1].start().In(x.loc).Format("Jan 2"), th.C(theme.FgGhost))
 		textCellLeft(c, 2, runCols[2].w, "", faint)
 		cell(c, 3, 0, true, func(c *ui.Ctx) { c.Text("t", strings.Join(parts, ", "), uiFont(12, th.C(theme.FgGhost))) })
 		textCell(c, 4, runCols[4].w, money(total), th.C(theme.FgMuted))

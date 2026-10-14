@@ -216,8 +216,12 @@ text "SWEEP-DEPS · LOGIN" @1158,874.4855 #ff5f6d JetBrains Mono 9.5
 rect 1158,898.1677 7x7 fill #ff5f6d radius 3.5
 text "Claude on devbox needs you to log in" @1173,898.4448 #ece6d8 Inter 12.5
 text "OAuth token revoked · Please run /login" @1173,914.14996 #7c7566 JetBrains Mono 9.5
-rect 1158,926 111.890625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-text "Check again" @1168,943.36523 #141006 Inter 12
-rect 1245.8906,931.5 14x15 radius 3 stroke 1 #14100666
-text "c" @1249.8906,942.42 #141006cc JetBrains Mono 9.5
-text "On devbox, run claude, then /login" @1366,942.42 #7c7566 JetBrains Mono 9.5
+rect 1158,926 75.109375x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+text "Log in" @1168,943.36523 #141006 Inter 12
+rect 1209.1094,931.5 14x15 radius 3 stroke 1 #14100666
+text "l" @1213.1094,942.42 #141006cc JetBrains Mono 9.5
+rect 1241.1094,926 111.203125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Check again" @1251.1094,943.36523 #ece6d8 Inter 12
+rect 1328.3125,931.5 14x15 radius 3 stroke 1 #ece6d866
+text "c" @1332.3125,942.42 #ece6d8cc JetBrains Mono 9.5
+text "opens its terminal with /login" @1390,942.42 #7c7566 JetBrains Mono 9.5

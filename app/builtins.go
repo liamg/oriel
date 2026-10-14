@@ -76,6 +76,11 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 	h.Do(func() { // once every extension has registered its views
 		l.restore(h)
 		l.restored = true
+		if l.sh != nil && l.sh.afterOpen != nil && l.sh.afterOpen.session == h.State().Focus {
+			calls := l.sh.afterOpen.calls
+			l.sh.afterOpen = nil
+			runCalls(h, calls)
+		}
 	})
 	l.panes.Empty = func(c *ui.Ctx) {
 		id := StartView

@@ -426,9 +426,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   are made, repos to fetch (and to clone), the agent and its prompt pack, where it runs and its network. The Sandbox
   toggle starts from `sandbox.default`, on unless it says `host`. A repo the chosen worker lacks says "not on
   <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). **Save as job** (SE-4) hands the
-  prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. Not yet: the multi-line
-  prompt (the field is one line), a ticket expanding into a card (PL-8), templates, toolchains and LSPs in the
-  pre-flight.
+  prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. The prompt takes several
+  lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Not yet: a ticket expanding into a card (PL-8),
+  templates, toolchains and LSPs in the pre-flight.
 
 ## 05 · Plan mode
 
@@ -729,5 +729,13 @@ pins; each run is a session of kind job (`sessions.md` → Jobs).
 - **A run's console** (panel 3) has the job beside it: a `agent.console.side.10-job` section with the job and **Jobs ›**,
   the run's status, start and time, the last run's outcome; the repos touched with their cost so far and the ones the
   prompt names but the agent hasn't added ("not yet"); and what happens when it ends.
-- Not yet: the multi-line prompt (the dialog's prompt is one line, like the launcher's; the page shows it by its
-  lines), and opening the console as the main tab with the narrow sidebar as panel 3 draws it (it opens docked).
+- **SE-5:** the page is one of the pages that replace each other (`widget.Page`: Jobs, Stats, Usage, Settings, one
+  up at a time). The dialog's prompt takes several lines (⏎ a new line, ⌘↵ saves and runs). A click on a run row
+  selects it (`widget.Rows` with `ClickSelects`); **Open** or **Resume** opens it, as `⏎` does: `session.open` with
+  `then` (sessions.md) opens the console as the main tab and makes the sidebar narrow (`sidebar.form`, kept for that
+  run's directory), panel 3. Run tabs read "job: sweep stale deps" (`SessionSpec.Title`, the job's first three words).
+  A stopped run says who stopped it: "Stopped by you after 3m", "by the agent", "as the worker shut down"
+  (`AgentState.StoppedBy`). A scheduled run that was skipped is a row of its own, status `skipped` (`jobs.run.skipped`,
+  dimmed, nothing to open): "skipped (last run still going)". The dialog's worker can be changed on a saved job:
+  Save moves it there (`jobs.save {to}`: saved on the new worker, then deleted from the old; its runs stay where they
+  ran).

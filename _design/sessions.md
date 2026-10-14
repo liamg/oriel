@@ -209,7 +209,9 @@ type Sessions interface {
   working"), every session on that worker using it turns **needs you** with a card, "Claude on devbox needs you to log
   in", and what the provider said. On this machine the card's **Log in** (`agent.login`) opens the agent's own
   terminal (`agent.terminal`, the raw PTY) with `/login` typed; on a worker elsewhere it says what to run there
-  ("On devbox, run claude, then /login"). **Check again** asks the worker to look. Once it's signed in, every card
+  ("On devbox, run claude, then /login"); since SE-5 Log in works on any worker, opening the agent's terminal from
+  that worker over the wire (`agent.terminal`, as Raw terminal does) with `/login` typed, and the card says what to
+  run there only for an agent with no terminal (Codex). **Check again** asks the worker to look. Once it's signed in, every card
   goes and the sessions carry on: held comments go, and a turn the login stopped is told to carry on.
 
 ## Jobs (SE-4)
@@ -236,4 +238,13 @@ type Sessions interface {
   `days`, a set of days at a time (the page's custom), in the worker's local time. `RunSchedules` checks them every
   30 seconds while the worker runs (`oriel worker` starts it), and `RunDue` starts each job due since it last looked,
   on the worker's clock (`Options.Now`), so an occurrence slept through runs when the worker wakes, once. One due while
-  the job's last run is still going is skipped, and the job keeps when (`Job.Skipped`).
+  the job's last run is still going is skipped, and the job keeps when (`Job.Skips`, the latest 50, listed among its
+  runs). Since SE-5 the job keeps the occurrence it last ran or skipped (`Job.Due`), so occurrences missed while the
+  worker was off (or restarting) run once when it starts: one run per job, not one per occurrence missed. An occurrence
+  counts from the job's last save, so editing a schedule doesn't run what it would have run before.
+- **Who stopped it** (SE-5): an agent that stops records who (`AgentState.StoppedBy`, `StoppedAt`): `you` (Stop,
+  Archive), `agent` (its process ended by itself), `worker` (the worker shut down, or wasn't shut down cleanly and
+  settles on restart). Starting again clears it. A run's `Run.StoppedBy` and its time run to `StoppedAt`.
+- **Opening a session somewhere** (SE-5): `session.open {id, then}` takes a list of `{command, args}` and runs them
+  once the window is on the session: after the window opens again on the session's directory (the layout restored
+  first), or at once when it doesn't move. The Jobs page uses it for a run's layout.

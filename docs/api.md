@@ -102,7 +102,7 @@ Version 0.4.0.
 - `oriel.ui.column(children)`: A column of nodes; options beside them: gap, pad (px).
 - `oriel.ui.date_picker(spec)`: A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30.
 - `oriel.ui.indicator(spec)`: A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
-- `oriel.ui.input(spec)`: A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
+- `oriel.ui.input(spec)`: A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value.
 - `oriel.ui.list(items, row)`: A list: each of items through row(item), which returns a node.
 - `oriel.ui.mode()`: The editor's mode, as the built-in status line shows it.
 - `oriel.ui.row(children)`: A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).

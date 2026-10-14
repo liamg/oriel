@@ -25,7 +25,8 @@ var (
 )
 
 type jobForm struct {
-	name    string // the job edited; "" for a new one
+	name    string        // the job edited; "" for a new one
+	from    core.WorkerID // the worker the job edited is on
 	worker  core.WorkerID
 	title   string
 	prompt  string
@@ -65,7 +66,7 @@ func (f *jobForm) job() worker.Job {
 
 // formFor is a dialog holding j.
 func formFor(j worker.Job) *jobForm {
-	f := &jobForm{name: j.Name, worker: j.Worker, title: j.Title, prompt: j.Prompt, runsIn: max(slices.Index(pinOf, j.Sandbox), 0),
+	f := &jobForm{name: j.Name, from: j.Worker, worker: j.Worker, title: j.Title, prompt: j.Prompt, runsIn: max(slices.Index(pinOf, j.Sandbox), 0),
 		agent: j.Provider, model: j.Model, effort: j.Effort, every: max(slices.Index(everyOf, j.Schedule.Every), 0), at: cmpOr(j.Schedule.At, "07:00"),
 		focus: true}
 	for _, d := range j.Schedule.Days {
@@ -166,7 +167,10 @@ func (x *jobsExt) submit(run bool) {
 	a := registry.Args{"title": j.Title, "prompt": j.Prompt, "sandbox": j.Sandbox, "provider": j.Provider, "model": j.Model, "effort": j.Effort,
 		"worker": string(j.Worker), "schedule": j.Schedule, "run": run}
 	if j.Name != "" {
-		a["name"] = j.Name
+		a["name"], a["worker"] = j.Name, string(f.from)
+		if j.Worker != f.from {
+			a["to"] = string(j.Worker)
+		}
 	}
 	f.busy, f.err = true, ""
 	go func() {
@@ -223,7 +227,8 @@ func (x *jobsExt) formBody(c *ui.Ctx, f *jobForm) {
 	})
 	c.Column("prompt", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		heading(c, "h", "Prompt", "markdown · name the repos it needs")
-		x.field(c, "prompt", &f.prompt, "Prompt", "What should each run do? Name the repos; the agent adds them.", false, widget.InputOpts{})
+		x.field(c, "prompt", &f.prompt, "Prompt", "What should each run do? Name the repos; the agent adds them.", false,
+			widget.InputOpts{Lines: 8, MinLines: 5})
 		note(c, "n", "no repo or branch here: the agent adds what the prompt names, fresh each run")
 	})
 	c.Row("where", ui.Style{W: ui.Flex(1), Gap: 16}, func(c *ui.Ctx) {
@@ -328,7 +333,7 @@ func trimSlug(s string) string {
 	return strings.Join(parts[:min(len(parts), 6)], "-")
 }
 
-// workerSelect picks the worker the job lives on.
+// workerSelect picks the worker the job lives on; another for a saved job moves it there.
 func (x *jobsExt) workerSelect(c *ui.Ctx, f *jobForm) {
 	var labels []string
 	var ids []core.WorkerID
@@ -345,8 +350,7 @@ func (x *jobsExt) workerSelect(c *ui.Ctx, f *jobForm) {
 	if current == "" && len(labels) > 0 {
 		current = labels[0]
 	}
-	disabled := f.name != ""
-	if v, ok := widget.Select(c, "worker", current, labels, widget.SelectOpts{Label: "Worker", Help: "agent/jobs#new", Width: 260, Disabled: disabled}); ok {
+	if v, ok := widget.Select(c, "worker", current, labels, widget.SelectOpts{Label: "Worker", Help: "agent/jobs#new", Width: 260}); ok {
 		if i := slices.Index(labels, v); i >= 0 && ids[i] != f.worker {
 			f.worker, f.agents, f.agent, f.model, f.effort = ids[i], nil, "", "", ""
 			f.gen++

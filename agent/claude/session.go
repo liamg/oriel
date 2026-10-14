@@ -219,6 +219,16 @@ func (s *session) accountEnv() []string {
 	return s.spec.Env
 }
 
+// answered is a request that worked: a login that had gone is back.
+func (s *session) answered(emit func(agent.Event)) {
+	s.mu.Lock()
+	out := s.out
+	s.mu.Unlock()
+	if out {
+		emit(agent.AuthRestored{Provider: "claude"})
+	}
+}
+
 // loginLost is the event for a login claude says is gone.
 func loginLost(detail string) agent.AuthExpired {
 	return agent.AuthExpired{Provider: "claude", Detail: detail, Terminal: "/login", Shell: "claude, then /login"}

@@ -15,10 +15,12 @@ type RowsOpts struct {
 	Disabled func(i int) bool   // rows shown dimmed that don't open
 	RowLabel func(i int) string // a row's accessible name
 	Tooltip  func(i int) string // a row's tooltip, or ""
+	// ClickSelects makes a click only select a row, for rows whose own buttons open them; Enter still opens.
+	ClickSelects bool
 }
 
 // Rows is a short list of rows of their own heights, all built, with a selection in *sel: j/k or Down/Up move it
-// over the rows that aren't static, Enter opens it, and a click selects and opens a row. The selection shows while
+// over the rows that aren't static, Enter opens it, and a click selects and opens a row (selects, with ClickSelects). The selection shows while
 // the rows have focus; a row draws whatever else marks it (the one that's open).
 func Rows(c *ui.Ctx, key any, n int, sel *int, o RowsOpts, row func(c *ui.Ctx, i int, selected bool)) ListResult {
 	res := ListResult{Activated: -1}
@@ -78,7 +80,10 @@ func Rows(c *ui.Ctx, key any, n int, sel *int, o RowsOpts, row func(c *ui.Ctx, i
 			item := c.Next(i)
 			ri := c.Interaction(item)
 			if ri.Clicked {
-				*sel, res.Activated = i, i
+				*sel = i
+				if !o.ClickSelects {
+					res.Activated = i
+				}
 				c.Focus(id)
 			}
 			on := i == *sel && focused

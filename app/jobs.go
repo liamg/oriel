@@ -30,6 +30,7 @@ var (
 	tRunDone    = theme.Declare("jobs.run.done", "status.quiet")
 	tRunBlocked = theme.Declare("jobs.run.blocked", "status.needs_you")
 	tRunStopped = theme.Declare("jobs.run.stopped", "fg.faint")
+	tRunSkipped = theme.Declare("jobs.run.skipped", "fg.ghost")
 )
 
 func runTone(status string) theme.TokenID {
@@ -40,6 +41,8 @@ func runTone(status string) theme.TokenID {
 		return tRunDone
 	case worker.RunBlocked:
 		return tRunBlocked
+	case worker.RunSkipped:
+		return tRunSkipped
 	}
 	return tRunStopped
 }
@@ -77,9 +80,29 @@ type jobRow struct {
 	runs []runRow
 }
 
+// runRow is a run, or a scheduled one that was skipped (no session).
 type runRow struct {
 	se  core.SessionState
 	run worker.Run
+}
+
+func (r runRow) skipped() bool { return r.run.Status == worker.RunSkipped }
+
+// start is when it started, or was due.
+func (r runRow) start() time.Time {
+	if r.skipped() {
+		return r.run.Started
+	}
+	return r.se.Created
+}
+
+// skipRows are a job's skipped occurrences as rows.
+func skipRows(j worker.Job) []runRow {
+	var out []runRow
+	for _, at := range j.Skips {
+		out = append(out, runRow{run: worker.Run{Status: worker.RunSkipped, Started: at, Summary: "skipped (last run still going)"}})
+	}
+	return out
 }
 
 func jobKey(j worker.Job) string { return string(j.Worker) + "/" + j.Name }
@@ -118,7 +141,7 @@ func (x *jobsExt) Activate(_ context.Context, h ext.Host) error {
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, false) }},
 		{ID: "jobs.duplicate", Title: "Duplicate a job in the New job dialog: {name} on {worker}, the selected one by default", Available: workers,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, true) }},
-		{ID: "jobs.save", Title: "Save a job on {worker}: a new one, or {name}'s with what's given changed: {title}, {prompt}, {sandbox} (sandbox, host or \"\"), {provider}, {model}, {effort}, {schedule}; {run} runs it after",
+		{ID: "jobs.save", Title: "Save a job on {worker}: a new one, or {name}'s with what's given changed: {title}, {prompt}, {sandbox} (sandbox, host or \"\"), {provider}, {model}, {effort}, {schedule}; {to} moves it to another worker; {run} runs it after",
 			Available: workers, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.save(ctx, a); return err }},
 		{ID: "jobs.run", Title: "Run a job now: {name} on {worker}, the selected one by default", Available: workers,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.runJob(ctx, a) }},
@@ -362,6 +385,12 @@ func (x *jobsExt) save(ctx context.Context, a registry.Args) (worker.Job, error)
 		}
 		j.Schedule = s
 	}
+	from := j
+	to := core.WorkerID(a.String("to"))
+	moved := from.Name != "" && to != "" && to != from.Worker
+	if moved {
+		j.Worker, j.Name = to, ""
+	}
 	c, err := x.client(j.Worker)
 	if err != nil {
 		return worker.Job{}, err
@@ -369,6 +398,15 @@ func (x *jobsExt) save(ctx context.Context, a registry.Args) (worker.Job, error)
 	saved, err := c.SaveJob(ctx, j)
 	if err != nil {
 		return worker.Job{}, err
+	}
+	if moved {
+		old, err := x.client(from.Worker)
+		if err == nil {
+			err = old.DeleteJob(ctx, from.Name)
+		}
+		if err != nil {
+			return saved, fmt.Errorf("saved on %s, but it's still on %s: %w", saved.Worker, from.Worker, err)
+		}
 	}
 	x.h.Do(func() { x.selKey = jobKey(saved) })
 	x.refresh()

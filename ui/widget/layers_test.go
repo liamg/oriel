@@ -149,3 +149,44 @@ func TestScrim(t *testing.T) {
 		t.Error("a click on the scrim didn't close the dialog")
 	}
 }
+
+// SE-5: "opening Jobs, Stats, Usage or Settings closes whichever is up, through widget.Page (one page at a time, a
+// general rule)".
+func TestOnePageAtATime(t *testing.T) {
+	var a, b bool
+	built := 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		if b { // a page whose owner skips it while it's closed
+			Page(c, "b", &b, PageOpts{Help: "test/page"}, func(c *ui.Ctx) { built++ })
+		}
+		Page(c, "a", &a, PageOpts{Help: "test/page"}, func(c *ui.Ctx) {})
+	})
+	a = true
+	h.frame()
+	b = true
+	h.frame()
+	h.frame()
+	if a || !b {
+		t.Fatalf("opening b over a: a %v, b %v; want only b", a, b)
+	}
+	a = true
+	h.frame()
+	h.frame()
+	if !a || b {
+		t.Fatalf("opening a over b: a %v, b %v; want only a", a, b)
+	}
+	b = true
+	h.frame()
+	h.frame()
+	if a || !b {
+		t.Errorf("opening b again: a %v, b %v; want only b", a, b)
+	}
+	b, built = false, 0
+	h.frame()
+	b = true
+	h.frame()
+	h.frame()
+	if !b || built == 0 {
+		t.Errorf("b closed and opened again with nothing else up: open %v, built %d", b, built)
+	}
+}

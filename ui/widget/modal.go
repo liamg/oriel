@@ -66,16 +66,29 @@ type PageOpts struct {
 	Help    string
 }
 
+// pagesKey keys the window's record of the page opened last.
+type pagesKey struct{}
+
+type pagesState struct{ front ui.ID }
+
+// pageShown marks a page that was up last frame.
+type pageShown struct{ shown bool }
+
 // Page is a full-window page (settings, the theme editor) from Top down while *open, or over the node Over. It holds
 // keyboard focus, taking it back whenever nothing on it has it, and Escape, on the page or passed up from a control
-// on it, closes it.
+// on it, closes it. One page is up at a time: opening one closes whichever was.
 func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 	id := c.Next(key)
+	pages := ui.State[pagesState](c, ui.Child(0, pagesKey{}))
 	if !*open {
 		return
 	}
-	if hasKey(c.Interaction(id).Keys, "Esc") {
-		*open = false
+	shown := ui.State[pageShown](c, ui.Child(id, pagesKey{}))
+	if !shown.shown {
+		shown.shown, pages.front = true, id
+	}
+	if pages.front != id || hasKey(c.Interaction(id).Keys, "Esc") {
+		*open, shown.shown = false, false
 		return
 	}
 	size := c.Size()

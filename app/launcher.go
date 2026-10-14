@@ -422,15 +422,15 @@ func heading(c *ui.Ctx, key any, title, note string) {
 	})
 }
 
-// field is a text field of the launcher's: Tab moves on, Escape closes, ⌘↵ starts.
-func (x *launcher) field(c *ui.Ctx, key any, text *string, label, placeholder string, first bool, w ui.Size) {
+// field is a text field of the launcher's: Tab moves on, Escape closes, ⌘↵ starts; lines > 1 takes several lines.
+func (x *launcher) field(c *ui.Ctx, key any, text *string, label, placeholder string, first bool, w ui.Size, lines int) {
 	id := c.Next(key)
 	if first && x.focusField {
 		c.Focus(id)
 		x.focusField = false
 	}
 	r := widget.Input(c, key, text, widget.InputOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true,
-		KeyMode: LauncherKeyMode, Width: w})
+		KeyMode: LauncherKeyMode, Width: w, Lines: lines, MinLines: 2})
 	switch {
 	case r.Cancelled:
 		x.close()
@@ -454,23 +454,23 @@ func (x *launcher) form(c *ui.Ctx) {
 		heading(c, "head", "Prompt", "⌘↵ starts · esc closes")
 		switch f {
 		case worker.FromPR:
-			x.field(c, "pr", &x.pr, "Pull request", prPlaceholder, true, ui.Flex(1))
+			x.field(c, "pr", &x.pr, "Pull request", prPlaceholder, true, ui.Flex(1), 1)
 		case worker.FromName:
 			c.Row("repo", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				x.field(c, "name", &x.name, "Name", namePlaceholder, true, ui.Flex(1))
+				x.field(c, "name", &x.name, "Name", namePlaceholder, true, ui.Flex(1), 1)
 				if t, ok := widget.Select(c, "template", "template: "+x.template, worker.Templates,
 					widget.SelectOpts{Label: "Template", Help: "agent/launcher#prompt"}); ok {
 					x.template = t
 				}
-				x.field(c, "parent", &x.parent, "Where it goes", parentPlaceholder, false, ui.Flex(1))
+				x.field(c, "parent", &x.parent, "Where it goes", parentPlaceholder, false, ui.Flex(1), 1)
 			})
 		case worker.FromDir:
-			x.field(c, "dir", &x.dir, "Directory", dirPlaceholder, true, ui.Flex(1))
+			x.field(c, "dir", &x.dir, "Directory", dirPlaceholder, true, ui.Flex(1), 1)
 		}
-		x.field(c, "text", &x.prompt, "Prompt", promptPlaceholder, f == worker.FromPrompt || f == worker.FromNothing, ui.Flex(1))
+		x.field(c, "text", &x.prompt, "Prompt", promptPlaceholder, f == worker.FromPrompt || f == worker.FromNothing, ui.Flex(1), 8)
 		if f == worker.FromPrompt {
 			c.Row("extra", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				x.field(c, "ticket", &x.ticket, "Ticket", "ticket: INF-2231", false, ui.Px(220))
+				x.field(c, "ticket", &x.ticket, "Ticket", "ticket: INF-2231", false, ui.Px(220), 1)
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("note", "the ticket names the branch and goes to the agent", monoFont(10, th.C(theme.FgFaint)))
 			})
@@ -678,11 +678,11 @@ func (x *launcher) reposSection(c *ui.Ctx, k worker.KindSpec) {
 			}
 		}
 	})
-	x.field(c, "repo-path", &x.repoPath, "Add a repo by its path", "or a checkout's path, ⏎ adds it", false, ui.Flex(1))
+	x.field(c, "repo-path", &x.repoPath, "Add a repo by its path", "or a checkout's path, ⏎ adds it", false, ui.Flex(1), 1)
 	if k.Worktrees == worker.WorktreesNow || k.Worktrees == worker.WorktreesStartWork {
 		c.Row("branch", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("l", "Branch", uiFont(12.5, th.C(theme.FgMuted)))
-			x.field(c, "branch", &x.branch, "Branch", "named from the ticket and prompt", false, ui.Flex(1))
+			x.field(c, "branch", &x.branch, "Branch", "named from the ticket and prompt", false, ui.Flex(1), 1)
 		})
 	}
 }

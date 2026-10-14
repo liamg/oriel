@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -74,7 +75,7 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	}
 	name := w.freshName(spec)
 	id := core.SessionID(name)
-	se := core.SessionState{ID: id, Name: name, Kind: spec.Kind, Worker: w.opts.ID, Prompt: spec.Prompt, Ticket: spec.Ticket,
+	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Worker: w.opts.ID, Prompt: spec.Prompt, Ticket: spec.Ticket,
 		PR: spec.PR, Job: spec.Job, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
 		StartWork: k.Worktrees == WorktreesStartWork || k.Worktrees == WorktreesInit,
 		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: gate(spec),
@@ -315,7 +316,7 @@ func (w *Worker) Stop(_ context.Context, id core.SessionID) error {
 		return err
 	}
 	if h, _ := w.hostFor(id, false); h != nil {
-		h.stop("stopped")
+		h.stop("stopped", core.StoppedByYou)
 	}
 	return nil
 }
@@ -335,7 +336,7 @@ func (w *Worker) Archive(ctx context.Context, id core.SessionID) error {
 		}
 	}
 	if h, _ := w.hostFor(id, false); h != nil {
-		h.stop("archived")
+		h.stop("archived", core.StoppedByYou)
 	}
 	if se.Source != "crit" && se.Kind != core.KindDirect {
 		for _, p := range se.Projects {
@@ -548,7 +549,7 @@ func (w *Worker) workAgent(id core.SessionID, r StartWorkReq) error {
 		return nil
 	}
 	if h, _ := w.hostFor(id, false); h != nil {
-		h.stop("start work")
+		h.stop("start work", "")
 	}
 	w.edit.Lock()
 	defer w.edit.Unlock()
@@ -674,7 +675,7 @@ func (w *Worker) Delete(ctx context.Context, id core.SessionID) error {
 		return fmt.Errorf("%s isn't Oriel's to delete: archive it instead", id)
 	}
 	if h, _ := w.hostFor(id, false); h != nil {
-		h.stop("deleted")
+		h.stop("deleted", "")
 	}
 	for _, p := range se.Projects {
 		if p.Repo == "" || p.Dir == p.Repo {

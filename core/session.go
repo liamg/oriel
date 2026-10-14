@@ -57,6 +57,9 @@ type AgentState struct {
 	Pack        string    `json:"pack,omitempty"`    // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
 	Queue       []string  `json:"queue,omitempty"`   // messages waiting for the turn to end
 	Stats       Stats     `json:"stats,omitzero"`
+	// StoppedBy is who stopped it, while it's stopped: StoppedByYou, StoppedByAgent or StoppedByWorker.
+	StoppedBy string    `json:"stoppedBy,omitempty"`
+	StoppedAt time.Time `json:"stoppedAt,omitzero"`
 	// Accounts are the provider's accounts it ran on, oldest first: recorded when it starts and on a login change.
 	Accounts []AccountAt `json:"accounts,omitempty"`
 }
@@ -79,6 +82,21 @@ func (a *AgentState) RanOn(at time.Time, account, name string) {
 	}
 	a.Accounts = append(slices.Clone(a.Accounts), AccountAt{At: at, Account: account, Name: name})
 }
+
+// Stopped is the agent stopped at t by by; one that wasn't running keeps who stopped it.
+func (a *AgentState) Stopped(by string, t time.Time) {
+	if a.Running && by != "" {
+		a.StoppedBy, a.StoppedAt = by, t.UTC()
+	}
+	a.Running, a.Working = false, false
+}
+
+// Who stopped an agent.
+const (
+	StoppedByYou    = "you"
+	StoppedByAgent  = "agent"  // its process ended by itself
+	StoppedByWorker = "worker" // the worker shut down
+)
 
 // Stats are what a session's agent has used so far.
 type Stats struct {

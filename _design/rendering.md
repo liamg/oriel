@@ -251,8 +251,11 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
 - `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer.
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
   selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,
-  Escape closes it), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with
-  an `input.border.invalid` border. It edits with the platform's keys: on macOS ⌘←/→ (line), ⌥←/→ (word), ⌘⌫, ⌥⌫,
+  Escape closes it; one is up at a time, so opening one closes whichever was, SE-5), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with
+  an `input.border.invalid` border. With `Lines` (SE-5) it takes several lines: the text wraps at the field's width, the
+  field grows from `MinLines` to `Lines` and then scrolls, ⏎ is a new line and ⌘⏎ (Ctrl⏎ elsewhere) submits; ↑/↓ move
+  by line, keeping the column, and ⌘↑/⌘↓ go to the start and end of the text. `Rows` takes `ClickSelects` for rows
+  whose own buttons open them: a click only selects, ⏎ still opens. It edits with the platform's keys: on macOS ⌘←/→ (line), ⌥←/→ (word), ⌘⌫, ⌥⌫,
   ⌘A/C/X/V; elsewhere Home/End, Ctrl+←/→, Ctrl+⌫/Del, Ctrl+A/C/X/V. The clipboard is the UI's (`UI.SetClipboard`,
   `Ctx.Clipboard`). Each paints with component tokens
   it declares (`button.bg`, `input.border.focus`, `list.row.selected`, `menu.item.hover`, `modal.scrim`…), takes a

@@ -18,6 +18,10 @@ const carryOn = "You're signed in again: carry on with what you were doing."
 type lostLogin struct {
 	login core.Login
 	asks  map[core.SessionID]*loginAsk
+	// refused is the login the provider's files held as it went (Install.Login): it was refused, not signed out,
+	// so it doesn't count as signed in again. "" when they held none; marked closes once it's read.
+	refused string
+	marked  chan struct{}
 }
 
 type loginAsk struct{ cancel context.CancelFunc }
@@ -58,7 +62,9 @@ func (w *Worker) loginLost(from core.SessionID, ev agent.AuthExpired) {
 	old := w.lost[key]
 	changed := old == nil || old.login != l
 	if old == nil {
-		w.lost[key] = &lostLogin{login: l, asks: map[core.SessionID]*loginAsk{}}
+		nl := &lostLogin{login: l, asks: map[core.SessionID]*loginAsk{}, marked: make(chan struct{})}
+		w.lost[key] = nl
+		go w.markRefused(nl)
 	} else {
 		old.login = l
 	}
@@ -120,28 +126,74 @@ func (h *host) askLogin(key string) {
 			if _, ok := h.askUser(ctx, core.Ask{Kind: core.AskLogin, Summary: login.Detail, Login: &login}); !ok {
 				return
 			}
-			if w.checkLogin(login.Provider) {
+			if w.checkLogin(login.Provider, false) {
 				return
 			}
 		}
 	}()
 }
 
-// checkLogin asks the provider whether it's signed in, and clears its flags if it is.
-func (w *Worker) checkLogin(provider string) bool {
+// detect asks the provider what's installed and who's signed in.
+func (w *Worker) detect(provider string) (agent.Install, bool) {
 	p, ok := w.opts.Providers.Get(provider)
 	if !ok {
-		return false
+		return agent.Install{}, false
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	in, err := p.Detect(ctx)
-	if err != nil || !in.LoggedIn {
+	return in, err == nil
+}
+
+// markRefused records the login the provider's files hold as it's lost.
+func (w *Worker) markRefused(l *lostLogin) {
+	in, ok := w.detect(l.login.Provider)
+	w.loginMu.Lock()
+	if ok && in.LoggedIn {
+		l.refused = in.Login
+		if l.refused == "" {
+			l.refused = "?" // one it can't tell from the next
+		}
+	}
+	w.loginMu.Unlock()
+	close(l.marked)
+}
+
+// checkLogin asks the provider whether it's signed in, and clears its flags if it is: with a login other than the
+// one refused, unless seen says a login has just worked.
+func (w *Worker) checkLogin(provider string, seen bool) bool {
+	in, ok := w.detect(provider)
+	if !ok || !in.LoggedIn {
 		w.log.Info("agent login checked: still signed out", "provider", provider, "note", in.Note)
 		return false
 	}
+	if !seen {
+		for _, l := range w.lostOf(provider) {
+			<-l.marked
+			w.loginMu.Lock()
+			refused := l.refused
+			w.loginMu.Unlock()
+			if refused != "" && (in.Login == "" || in.Login == refused) {
+				w.log.Info("agent login checked: the login on disk is the one refused", "provider", provider)
+				return false
+			}
+		}
+	}
 	w.loginBack(provider)
 	return true
+}
+
+// lostOf are provider's lost logins.
+func (w *Worker) lostOf(provider string) []*lostLogin {
+	w.loginMu.Lock()
+	defer w.loginMu.Unlock()
+	var out []*lostLogin
+	for _, l := range w.lost {
+		if l.login.Provider == provider {
+			out = append(out, l)
+		}
+	}
+	return out
 }
 
 // loginBack clears a provider's flags: the cards go, and its sessions go on.

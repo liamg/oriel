@@ -130,8 +130,14 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 				_, err = c.CloneRepo(ctx, worker.CloneReq{URL: a.String("url"), Name: a.String("name")})
 				return err
 			}},
-		{ID: "session.open", Title: "Bring a session to the front: {id}, resuming it if it's stopped or archived", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.open(ctx, core.SessionID(a.String("id"))) }},
+		{ID: "session.open", Title: "Bring a session to the front: {id}, resuming it if it's stopped or archived; {then} is a list of {command, args} run once the window is on it",
+			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
+				then, err := callsOf(a["then"])
+				if err != nil {
+					return err
+				}
+				return x.open(ctx, core.SessionID(a.String("id")), then)
+			}},
 		{ID: "session.resume", Title: "Resume a session: pick one", Available: has,
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "sessions"})
@@ -246,9 +252,8 @@ func (x *sessions) loginNotices(w core.WorkerState, was []core.Login) {
 		}
 		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source, Title: "Signed out", Time: time.Now(),
 			Text: providerName(l.Provider) + " on " + where + " needs you to log in: " + l.Detail + "."}
-		local := w.ID == core.LocalWorker
 		switch {
-		case local && l.Terminal != "":
+		case l.Terminal != "":
 			n.Text += " Log in opens its terminal with " + l.Terminal + " typed."
 			n.Actions = []core.Action{{Title: "Log in", Command: "agent.login", Args: map[string]any{"provider": l.Provider, "worker": string(w.ID)}}}
 		case l.Shell != "":
@@ -535,7 +540,55 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 }
 
 // open brings a session to the front, resuming an archived one.
-func (x *sessions) open(ctx context.Context, id core.SessionID) error {
+// call is a command to run, with its args.
+type call struct {
+	command string
+	args    registry.Args
+}
+
+// callsOf reads a list of {command, args}.
+func callsOf(v any) ([]call, error) {
+	if v == nil {
+		return nil, nil
+	}
+	list, ok := v.([]any)
+	if !ok {
+		return nil, fmt.Errorf("then is a list of {command, args}, not %T", v)
+	}
+	var out []call
+	for _, it := range list {
+		m, ok := asArgs(it)
+		if !ok || m.String("command") == "" {
+			return nil, fmt.Errorf("then's %v isn't a {command, args}", it)
+		}
+		args, _ := asArgs(m["args"])
+		out = append(out, call{command: m.String("command"), args: args})
+	}
+	return out, nil
+}
+
+func asArgs(v any) (registry.Args, bool) {
+	switch v := v.(type) {
+	case registry.Args:
+		return v, true
+	case map[string]any:
+		return registry.Args(v), true
+	}
+	return nil, false
+}
+
+// runCalls runs calls in order, logging what fails.
+func runCalls(h ext.Host, calls []call) {
+	for _, c := range calls {
+		if err := h.Run(context.Background(), c.command, c.args); err != nil {
+			h.Log().Warn("session.open then", "command", c.command, "err", err)
+		}
+	}
+}
+
+// open brings a session to the front, resuming it if it's stopped, and runs then once the window is on it: after it
+// opens again on the session's directory, if it does.
+func (x *sessions) open(ctx context.Context, id core.SessionID, then []call) error {
 	se, ok := x.sh.cfg.Store.Session(id)
 	if !ok {
 		return fmt.Errorf("no session %q", id)
@@ -549,6 +602,13 @@ func (x *sessions) open(ctx context.Context, id core.SessionID) error {
 			return err
 		}
 	}
+	if len(then) > 0 {
+		if x.moves(id) {
+			x.sh.afterOpen = &afterOpen{session: id, calls: then}
+		} else {
+			x.h.Do(func() { runCalls(x.h, then) })
+		}
+	}
 	return x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
 }
 
@@ -560,18 +620,25 @@ func sessionDir(se core.SessionState) string {
 	return se.Dir
 }
 
-// follow reopens the window on the session now in front, when its directory is on this machine.
-func (x *sessions) follow(id core.SessionID) {
+// moves says whether the window opens again on session id's directory as it comes to the front: one on this machine
+// in another directory.
+func (x *sessions) moves(id core.SessionID) bool {
 	se, ok := x.sh.cfg.Store.Session(id)
-	if !ok {
-		return
+	if !ok || x.sh.reopen == nil {
+		return false
 	}
 	st := se.Snapshot()
 	dir := sessionDir(st)
-	if dir == "" || filepath.Clean(dir) == filepath.Clean(x.sh.cfg.WorkDir) || (st.Worker != "" && st.Worker != core.LocalWorker) {
+	return dir != "" && filepath.Clean(dir) != filepath.Clean(x.sh.cfg.WorkDir) && (st.Worker == "" || st.Worker == core.LocalWorker)
+}
+
+// follow reopens the window on the session now in front, when its directory is on this machine.
+func (x *sessions) follow(id core.SessionID) {
+	if !x.moves(id) {
 		return
 	}
-	_ = x.sh.reopenOn(reopenTo{dir: dir, session: id})
+	se, _ := x.sh.cfg.Store.Session(id)
+	_ = x.sh.reopenOn(reopenTo{dir: sessionDir(se.Snapshot()), session: id})
 }
 
 // readOnly says why a file opens read-only in the session the window is on: it's outside the session's
