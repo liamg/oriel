@@ -221,6 +221,7 @@ type reg struct {
 	mu        sync.Mutex
 	commands  stacks[string, Command]
 	keymaps   stacks[keymapKey, Keymap]
+	sorted    []Keymap          // Keymaps, until one is added or removed
 	prefixes  map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
 	views     stacks[string, View]
 	inputs    stacks[string, input.Engine]
@@ -301,10 +302,12 @@ func (r *reg) Keymap(k Keymap) Disposable {
 		r.addPrefixes(k.Mode, seq, 1)
 	}
 	tok := r.keymaps.push(key, k)
+	r.sorted = nil
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.keymaps.remove(key, tok)
+		r.sorted = nil
 		if _, ok := r.keymaps.top(key); !ok {
 			r.addPrefixes(k.Mode, seq, -1)
 		}
@@ -441,18 +444,20 @@ func (r *reg) Commands() []Command {
 func (r *reg) Keymaps() []Keymap {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	out := make([]Keymap, 0, len(r.keymaps))
-	for k := range r.keymaps {
-		km, _ := r.keymaps.top(k)
-		out = append(out, km)
-	}
-	slices.SortFunc(out, func(a, b Keymap) int {
-		if c := strings.Compare(a.Mode, b.Mode); c != 0 {
-			return c
+	if r.sorted == nil {
+		r.sorted = make([]Keymap, 0, len(r.keymaps))
+		for k := range r.keymaps {
+			km, _ := r.keymaps.top(k)
+			r.sorted = append(r.sorted, km)
 		}
-		return strings.Compare(a.Keys, b.Keys)
-	})
-	return out
+		slices.SortFunc(r.sorted, func(a, b Keymap) int {
+			if c := strings.Compare(a.Mode, b.Mode); c != 0 {
+				return c
+			}
+			return strings.Compare(a.Keys, b.Keys)
+		})
+	}
+	return slices.Clone(r.sorted)
 }
 
 func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {

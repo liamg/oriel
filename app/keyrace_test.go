@@ -9,6 +9,7 @@ import (
 
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 )
 
@@ -69,4 +70,24 @@ func TestSlowLoopIsLogged(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("no log of the slow command: %v", logs.Ring.Tail(10))
+}
+
+// A run of waiting pointer moves is handled as its last, and what follows it isn't lost.
+func TestLastMove(t *testing.T) {
+	move := func(x float32) render.PointerEvent {
+		return render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: x}}
+	}
+	press := render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 3}, Buttons: render.ButtonPrimary}
+	events := make(chan render.Event, 4)
+	events <- move(1)
+	events <- move(2)
+	events <- press
+	events <- move(4)
+	ev, held := lastMove(move(0), events)
+	if ev != render.Event(move(2)) || held != render.Event(press) {
+		t.Fatalf("lastMove = %v, %v; want the move to 2, then the press", ev, held)
+	}
+	if ev, held := lastMove(press, events); ev != render.Event(press) || held != nil || len(events) != 1 {
+		t.Errorf("a press read on: %v, %v, %d left", ev, held, len(events))
+	}
 }
