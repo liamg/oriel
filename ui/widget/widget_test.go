@@ -1034,3 +1034,32 @@ func TestInputLines(t *testing.T) {
 		t.Errorf("a line of 150 characters in a 280px field is %v high: it should wrap", got)
 	}
 }
+
+// FG-6: a plain checkbox ticks and unticks on a click on it or its text, and with Space while focused.
+func TestCheckPlain(t *testing.T) {
+	on := true
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("cb")
+		st := CheckOff
+		if on {
+			st = CheckOn
+		}
+		if Check(c, "cb", st, CheckOpts{Text: "handler.go", Plain: true, Help: "test/checkbox"}) {
+			on = !on
+		}
+	})
+	r := h.rect(id)
+	h.click(r.Max.X-4, (r.Min.Y+r.Max.Y)/2)
+	if on {
+		t.Fatal("a click on the text didn't untick it")
+	}
+	h.frame()
+	if n := h.access(id); n == nil || n.Name != "handler.go" || n.Selected {
+		t.Errorf("its node: %+v", n)
+	}
+	h.keys(" ")
+	if !on {
+		t.Error("Space didn't tick it")
+	}
+}

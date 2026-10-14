@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"github.com/liamg/oriel/gh"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,8 +16,8 @@ import (
 )
 
 var (
-	askFix     = regexp.MustCompile(`(?i)^ask .*\bfix\b`)
-	askExplain = regexp.MustCompile(`(?i)^ask .*\bexplain\b`)
+	askFix     = regexp.MustCompile(`(?i)^ask .*\bfix\b|^fix .*\bwith agent$`)
+	askExplain = regexp.MustCompile(`(?i)^ask .*\bexplain\b|^explain .*\bwith agent$`)
 )
 
 // fixTwins are the frame's "ask … fix" controls, each with the "ask … explain" control beside it (nil if none).
@@ -76,6 +77,29 @@ var fixEntries = []fixEntry{
 			t.Fatal("no terminal pane")
 		}
 		s.rightClick(centre(r))
+		return s
+	}},
+	{"failing CI on the Ship page", "ci-failure", func(t *testing.T) *errScene {
+		s, _, hub, se, _ := shipScene(t)
+		hub.AddPR("acme/web-dashboard", gh.PR{Title: "feat(web): show the wait", Head: se.Branch, Base: "main"})
+		hub.SetChecks("acme/web-dashboard", se.Branch, gh.Check{ID: 22, Name: "unit", Status: "completed", Conclusion: "failure", Actions: true})
+		hub.SetLog(22, "--- FAIL: TestUsageBackoff (0.02s)\n")
+		s.run("ship.open", nil)
+		s.run("ship.refresh", nil)
+		s.shipSettle(t, "the checks", func() bool { return strings.Contains(s.frameText(), "Fix CI with agent") })
+		return s
+	}},
+	{"conflicts on the Ship page", "conflict", func(t *testing.T) *errScene {
+		s, _, _, se, ups := shipScene(t)
+		writeFiles(t, ups["usage-api"], map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
+		git(t, ups["usage-api"], "commit", "-q", "-am", "routes")
+		git(t, ups["usage-api"], "push", "-q", "origin", "main")
+		dir := shipDir(se, "usage-api")
+		writeFiles(t, dir, map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 3\n"})
+		git(t, dir, "commit", "-q", "-am", "ours")
+		s.run("ship.open", nil)
+		s.run("ship.refresh", nil)
+		s.shipSettle(t, "the conflicts", func() bool { return strings.Contains(s.frameText(), "Fix conflicts with agent") })
 		return s
 	}},
 	{"a plugin's menu entry", "build", func(t *testing.T) *errScene {

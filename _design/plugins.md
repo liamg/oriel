@@ -196,11 +196,28 @@ flowchart TB
   pill, `Active(project)` lights it (for an entry with neither, a `view.*` command's `id` showing for the project
   does), and `Shown(project)` leaves it out (Pull request without a remote). `registry.ProjectEntries` and
   `SessionEntries` list them. `ProjectState` contributions add to each project's header line after its branch and
-  changes (`StatePart{Text, Style, Dot}`: a PR's number, a CI result with its dot); FG-6 adds the PR and CI. Both
+  changes (`StatePart{Text, Style, Dot}`: a PR's number, a CI result with its dot); FG-6's `ship` adds the PR and CI. Both
   kinds of entry are
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
+- ship (FG-6; ui.md 18): "before this ships" gates are `registry.ShipGate{Name, Title, Order, Check(session) Gate}`
+  (`Gate{State, Note}`, State pass, warn, fail, pending or optional, "" to leave it out; `oriel.ship.gate`), listed by
+  `registry.ShipGates(r, session, kind)`, a session kind's `Gates` naming the ones it gets. Built in: plan, threads,
+  tests; the review ledger, the verify quiz and AI review add theirs. A gate informs; what stops a step is a hook:
+  `ShipCommit {session, project, message, files, force}` before a commit (a veto shows its reason in the commit box and
+  offers **Commit anyway…**, which fires it again with `force`; a rewrite adds a trailer) and `ShipRaise {session,
+  project, title, body, draft, reviewers, edit}` before a raise or edit (a veto shows on the Raise PR tab: the verify
+  quiz runs first). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
+  `ship.commit-all`, `ship.sync {project}`, `ship.sync-all`, `ship.push {project}`, `ship.raise {project, title,
+  body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.pr.open`, `ship.fix-ci`, `ship.redraft {project,
+  kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `pr` (instance = project). A worker answers
+  `ship.read` (`worker.ShipReq` → `[]worker.Ship`: files, behind and predicted conflicts, unpushed commits, the PR,
+  checks and a failing job's log line, the drafts and who wrote them, the PR template, CODEOWNERS), `ship.commit`,
+  `ship.push`, `ship.sync`, `ship.pr` (raise or edit, ask reviewers, cross-link the session's PRs), `ship.ready` and
+  `ship.draft` (`worker.Client.Ship*`); its GitHub client is `worker.Options.GitHub` (the user's gh by default).
+  `gh.Client` is GitHub as Oriel uses it, `gh.API` over a `gh.Transport` (`gh.CLI`, `gh.HTTP`), and `gh/ghtest` a
+  fake GitHub for tests.
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
   `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named

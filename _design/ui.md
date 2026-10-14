@@ -244,6 +244,15 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   ("admin-ui · Explorer"). Search searches its project's directory, or with **All projects** each project's, grouped
   under a heading per project. With 2+ projects tabs lead with their project's square (`layout.Panes.Lead`), their
   tooltip names it (`Panes.Tip`), and the breadcrumb starts with it.
+- Built in FG-6: Pull request and Ship are lit. A header's line gets the PR's number and a CI dot (`ProjectState`
+  "ship": "#790 ● CI failing", "CI running", "CI passing", "merged", or "no PR" with commits and none raised), and the
+  Pull request entry's note says "#790", "drafting" or "not raised". The `pull-request` view is the dock's checklist
+  (its PR's title or "Not raised", `branch → base · n commits`, then Committed, Up to date, Pushed, PR, Checks with the
+  failing line; Raise PR and Ship ⇉, or Edit PR and Fix CI with agent). Raise PR / Edit PR is the `pr` view, a main
+  tab per project (`ship.pr.open {project}`): title, body (Write or Preview; the agent's `pr_draft`, else the open
+  PR's, else the repo's template with the first commit's subject as the title), REVIEWERS (CODEOWNERS', added ones,
+  each removable), CROSS-LINKED PRS, and at the right the gates and the ticket; Save draft, Raise as draft and Push +
+  raise PR, or Update PR once it's open. A `ShipRaise` veto shows its reason there.
 - Not yet: the session entries pinned while the projects scroll (the whole sidebar scrolls), hovering an initial
   shows its header line as a tooltip rather than 42's card, the Tests panel runs in the window's directory whatever
   its project, and with one project or a directory the breadcrumb doesn't start with its name (42's panels 4 and 5 do).
@@ -656,6 +665,30 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - A flight checklist per project: uncommitted → behind base → unpushed → PR → checks → merge.
 - Multiple projects side by side, with cross-linked PRs and a merge order.
 - "Before this ships" lists the gates: plan, threads, ledger, tests, verify, AI review.
+- Built in FG-6 (`app/ship.go`, `app/shipview.go`, `app/prtab.go`; `worker/ship.go`, `gitx/flight.go`, `gh`): the
+  `ship` view is the page (the sidebar's Ship, `ship.open`), one column per project in the session's order: its colour,
+  name, `branch ← base` and a chip (needs you, CI running, CI failing, ready, merged); then four numbered steps on a
+  rail, the first not done open and amber, done ones ticked and folded to a line. **Uncommitted**: each file with a
+  checkbox (ticked files go in the commit; `widget.Check` with `Plain`) and its ±, then the commit box, filled with the agent's
+  `commit_draft` and marked "drafted by <provider>" until you type; Commit, Redraft (asks the agent to draft again),
+  and after a `ShipCommit` veto its reason and **Commit anyway…**. **Behind main**: the count from origin's base, and
+  conflicts predicted with `git merge-tree`; Rebase (`ship.sync`: fetch, rebase `--autostash`, undone on a conflict
+  that names the files); "Up to date with main · rebased 6m ago" after. **Unpushed**: each commit's hash and subject;
+  Push (the session's branch only). **Pull request**: not raised, its reviewers (CODEOWNERS of the branch's change)
+  and how it links to the others, Raise PR…; raised, `#n · title` with its state, the checks (`CHECKS · 5 OF 7`, each
+  with its time, running or queued), the first failing Actions job's failing log line, reviewers, links, Ready for
+  review, Fix CI with agent (`agent.fix` with the failing checks and the line attached; its twin Explain with agent,
+  TR-6), Edit PR, Open on GitHub ↗. At the right: "before
+  this ships" (`registry.ShipGates`), MERGE ORDER (the session's project order, with each PR's number) and the
+  ticket. The header has Sync all, Commit all and Push + raise both PRs (`ship.raise-all`: push and raise each in
+  merge order). The session is read from its worker (`ship.read`) when it comes to the front, every 10 s while it's
+  there, and fresh (fetching, and asking GitHub again) after each step and on `ship.refresh`.
+- Decided in FG-6: the merge order is the session's project order; a cross-linked PR's description gets a block
+  between `<!-- oriel:linked-prs -->` markers listing every PR of the session in that order, rewritten as each is
+  raised or edited. The file checkboxes pick what's committed (18 draws them as the ledger's; RV-2 adds its column).
+- Not yet: the review ledger's column, "N lines unreviewed" and "review gate on" (RV-2 registers a `ShipCommit` veto
+  and its gate), Verify quiz and AI review gates (RV-7, RV-3), the ticket's state moving (Linear), the status bar's
+  CI chip, merging, and a project's Git panel (still dim: it needs the flow without a worker, for a plain directory).
 
 ## 19 · Your config, live
 

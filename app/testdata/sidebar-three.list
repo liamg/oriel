@@ -50,13 +50,13 @@ clip 0,38 223x356 r 0
   path 2 segments stroke 1.25 #4f4a40
   text "Git" @54,172.58524 #4f4a40 Inter 12
   text "4" @207,171.81999 #7c7566 JetBrains Mono 10
-  path 6 segments stroke 1.25 #4f4a40
-  path 6 segments stroke 1.25 #4f4a40
-  path 6 segments stroke 1.25 #4f4a40
-  path 2 segments stroke 1.25 #4f4a40
-  path 3 segments stroke 1.25 #4f4a40
-  path 3 segments stroke 1.25 #4f4a40
-  text "Pull request" @54,195.58524 #4f4a40 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  text "Pull request" @54,195.58524 #b3ab99 Inter 12
   path 3 segments stroke 1.25 #7c7566
   text "Tests" @54,218.58524 #b3ab99 Inter 12
   text "▸" @10,241.94 #7c7566 JetBrains Mono 11
@@ -89,11 +89,11 @@ clip 0,38 223x356 r 0
   text "3" @203.59375,330.9 #141006 JetBrains Mono 9
   path 4 segments stroke 1.25 #4f4a40
   text "Debug" @33,355.02524 #4f4a40 Inter 12
-  path 2 segments stroke 1.25 #4f4a40
-  path 2 segments stroke 1.25 #4f4a40
-  path 3 segments stroke 1.25 #4f4a40
-  path 3 segments stroke 1.25 #4f4a40
-  text "Ship" @33,378.02524 #4f4a40 Inter 12
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  text "Ship" @33,378.02524 #b3ab99 Inter 12
   rect 10,390.16 203x1 fill #332f27
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566

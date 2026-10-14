@@ -384,20 +384,10 @@ func (h *host) toolDraft(kind string) func(context.Context, json.RawMessage) (st
 				project = p.Name
 			}
 		}
-		dir := filepath.Join(h.w.sessionDir(h.id), "drafts")
-		if err := os.MkdirAll(dir, 0o700); err != nil {
-			return "", err
-		}
-		var body string
 		if kind == "commit" {
-			body = a.str("message")
-		} else {
-			body = "# " + a.str("title") + "\n\n" + a.str("body")
+			return "saved", h.w.writeDraft(h.id, project, kind, "", a.str("message"), se.Agent.Provider)
 		}
-		if strings.TrimSpace(body) == "" {
-			return "", errors.New("the draft is empty")
-		}
-		return "saved", os.WriteFile(filepath.Join(dir, Sanitise(project)+"."+kind+".md"), []byte(body), 0o600)
+		return "saved", h.w.writeDraft(h.id, project, kind, a.str("title"), a.str("body"), se.Agent.Provider)
 	}
 }
 

@@ -13,8 +13,12 @@ import (
 	"time"
 )
 
-// Repo is a git work tree, read by running git in it.
-type Repo struct{ Dir string }
+// Repo is a git work tree, read by running git in it. Env is added to git's environment: a sandboxed workspace's
+// guard (sandbox.GitEnv).
+type Repo struct {
+	Dir string
+	Env []string
+}
 
 // IsRepo reports whether dir is the top of a work tree.
 func IsRepo(dir string) bool {
@@ -24,7 +28,7 @@ func IsRepo(dir string) bool {
 
 func (r Repo) git(ctx context.Context, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", r.Dir, "--no-pager"}, args...)...)
-	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C")
+	cmd.Env = append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()

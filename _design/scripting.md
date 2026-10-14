@@ -196,7 +196,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
 - Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
   `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (indicator), `status` (rule), `thread`, `ui`, `regex` (PCRE2),
-  `language`, and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
+  `language`, `ship` (gate: a "before this ships" gate, FG-6), and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
   `local o = oriel.option` if you want it short). A list option takes a table of strings and a map option a table of
   strings by name (`oriel.option["sandbox.servers"] = { docs = "https://docs.example.com/mcp" }`); reading one gives
   the same. There's one global, `oriel`; a config that wants a short name writes `local L = oriel`, as the sample does.

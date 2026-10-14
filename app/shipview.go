@@ -1,0 +1,832 @@
+package app
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/worker"
+)
+
+var (
+	tShipHead     = theme.Declare("ship.header.bg", "bg.surface")
+	tShipCard     = theme.Declare("ship.card.border", "line.strong")
+	tShipCardOpen = theme.DeclareOn("ship.card.open.border", "alpha(amber, 55%)", "bg.base")
+	tShipCardBg   = theme.Declare("ship.card.bg", "bg.base")
+	tShipDone     = theme.Declare("ship.step.done", "ok")
+	tShipTodo     = theme.Declare("ship.step.todo", "amber")
+	tShipRail     = theme.Declare("ship.rail", "line.strong")
+	tShipHash     = theme.Declare("ship.commit.hash", "brand")
+	tShipLink     = theme.Declare("ship.link", "violet")
+	tShipCI       = theme.Declare("ship.ci.running", "status.ci")
+	tShipSide     = theme.Declare("ship.side.bg", "bg.surface")
+	tShipCapFg    = theme.Declare("ship.caption", "fg.faint")
+)
+
+func (x *shipExt) views() {
+	x.add(x.h.View(ShipView, registry.ViewFunc(func(v registry.ViewCtx) ui.Node {
+		return &ui.Func{Key: "ship", Fn: func(c *ui.Ctx) { x.page(c) }}
+	})))
+	x.add(x.h.View(PullRequestView, registry.ViewFunc(func(v registry.ViewCtx) ui.Node {
+		return &ui.Func{Key: "pull-request", Fn: func(c *ui.Ctx) { x.checklist(c, v.Project) }}
+	})))
+	x.add(x.h.View(PRView, registry.ViewFunc(func(v registry.ViewCtx) ui.Node {
+		return &ui.Func{Key: "pr", Fn: func(c *ui.Ctx) { x.prTab(c, v.Instance) }}
+	})))
+}
+
+func (x *shipExt) run(id string, a registry.Args) {
+	if err := x.h.Run(context.Background(), id, a); err != nil {
+		if errors.Is(err, errStopped) {
+			return
+		}
+		x.h.Log().Error("ship", "command", id, "err", err)
+		x.h.Notify(core.Notice{ID: "ship.error", Severity: core.SevError, Key: true, Text: err.Error()})
+	}
+}
+
+// here is the session in front and a docked view's project ("" is the open one's).
+func (x *shipExt) here(project string) (core.SessionState, string, bool) {
+	w := projectsHere(x.h)
+	if w.session == nil {
+		return core.SessionState{}, "", false
+	}
+	if project == "" {
+		project = w.open
+	}
+	return *w.session, project, true
+}
+
+// shipCap is a section's caption: "CHECKS · 5 OF 7".
+func shipCap(c *ui.Ctx, s string) { c.Text(s, s, capText(c.Theme().C(tShipCapFg))) }
+
+// empty says why there's nothing to show.
+func shipEmpty(c *ui.Ctx, msg string) {
+	c.Column("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14)}, func(c *ui.Ctx) {
+		widget.Wrap(c, "t", msg, 280, uiFont(12, c.Theme().C(theme.FgFaint)))
+	})
+}
+
+// --- the Ship page (18) ---
+
+func (x *shipExt) page(c *ui.Ctx) {
+	th := c.Theme()
+	se, _, ok := x.here("")
+	c.Column("page", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
+		if !ok {
+			shipEmpty(c, "Ship is a session's page: open a session with a repo that has a remote.")
+			return
+		}
+		ships, rep := x.sessionShips(se)
+		x.pageHeader(c, se, ships)
+		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+			c.Column("cols", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 24, R: 24, T: 16, B: 24}, Gap: 10}, func(c *ui.Ctx) {
+				if rep.err != "" {
+					c.Text("err", rep.err, monoFont(11, th.C(theme.Error)))
+				}
+				c.Row("row", ui.Style{W: ui.Flex(1), Gap: 22}, func(c *ui.Ctx) {
+					for _, s := range ships {
+						c.Column(s.Project, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+							x.columnHeader(c, se, s)
+							x.column(c, se, s)
+						})
+					}
+				})
+			})
+			c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			c.Column("side", ui.Style{W: ui.Px(300), H: ui.Flex(1), Fill: th.C(tShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
+				x.gatesList(c, se)
+				x.mergeOrder(c, se, ships)
+				x.ticket(c, se)
+				c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
+				widget.Wrap(c, "note", "Commits, pushes and PRs run on the session's worker with your git and gh. The agent can draft, never send.", 266,
+					uiFont(11, th.C(theme.FgFaint)))
+			})
+		})
+	})
+}
+
+func (x *shipExt) pageHeader(c *ui.Ctx, se core.SessionState, ships []worker.Ship) {
+	th := c.Theme()
+	raisable := 0
+	for _, s := range ships {
+		if !s.ReadOnly && s.GitHub != "" && (s.Commits > 0 || len(s.Files) > 0 || s.PR != nil) {
+			raisable++
+		}
+	}
+	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(22, 0), Gap: 14, Cross: ui.Center, Fill: th.C(tShipHead)}, func(c *ui.Ctx) {
+		c.Text("h", "SHIP", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06},
+			Color: th.C(theme.Fg)})
+		var meta []string
+		if se.Ticket != "" {
+			meta = append(meta, se.Ticket)
+		}
+		meta = append(meta, cmpOr(se.Name, string(se.ID)), counted(len(se.Projects), "project"))
+		if se.Branch != "" {
+			meta = append(meta, "branch "+se.Branch)
+		}
+		c.Row("meta", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+			c.Text("m", strings.Join(meta, " · "), monoFont(11, th.C(theme.FgFaint)))
+		})
+		if widget.Button(c, "sync", "Sync all", widget.ButtonOpts{Help: "git/ship#sync"}) {
+			x.run("ship.sync-all", nil)
+		}
+		if widget.Button(c, "commit", "Commit all", widget.ButtonOpts{Help: "git/ship#commit"}) {
+			x.run("ship.commit-all", nil)
+		}
+		label := "Push + raise PR"
+		switch {
+		case raisable == 2:
+			label = "Push + raise both PRs"
+		case raisable > 2:
+			label = fmt.Sprintf("Push + raise all %d PRs", raisable)
+		}
+		if widget.Button(c, "raise", label, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: raisable == 0}) {
+			x.run("ship.raise-all", nil)
+		}
+	})
+	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+}
+
+// columnHeader is a project's name, colour, branch and base, and a chip for where it stands.
+func (x *shipExt) columnHeader(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+	th := c.Theme()
+	c.Row("ph", ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+		c.Box("sq", ui.Style{W: ui.Px(11), H: ui.Px(11), Radius: 2, Fill: tokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
+		c.Text("n", s.Project, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+		c.Row("br", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+			if s.Branch != "" {
+				c.Text("b", s.Branch+" ← "+cmpOr(s.Base, "?"), monoFont(11, th.C(theme.FgFaint)))
+			}
+		})
+		if label, tone := statusChip(th, s); label != "" {
+			widget.Chip(c, "chip", label, tone, "git/ship#page")
+		}
+	})
+}
+
+// statusChip is where a project stands, as its column's chip.
+func statusChip(th *theme.Resolved, s worker.Ship) (string, render.Color) {
+	switch {
+	case s.ReadOnly:
+		return "read-only", th.C(theme.FgFaint)
+	case s.PR != nil && s.PR.Merged:
+		return "merged", th.C(theme.StatusPermission)
+	case len(s.Conflicts) > 0, len(s.Files) > 0:
+		return "needs you", th.C(theme.Error)
+	}
+	switch ciOf(s.Checks) {
+	case gh.CheckFail:
+		return "ci failing", th.C(theme.Error)
+	case gh.CheckPending:
+		return "ci running", th.C(tShipCI)
+	case gh.CheckPass:
+		return "ready", th.C(theme.OK)
+	}
+	return "", render.Color{}
+}
+
+// column is a project's checklist: uncommitted → behind → unpushed → PR and its checks.
+func (x *shipExt) column(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+	th := c.Theme()
+	if s.ReadOnly {
+		shipEmpty(c, "This worktree is pinned or read-only: nothing to ship from it.")
+		return
+	}
+	if s.GitError != "" {
+		c.Text("gerr", s.GitError, monoFont(11, th.C(theme.Error)))
+	}
+	if d := x.doing(se.ID, s.Project); d != "" {
+		c.Text("doing", d, monoFont(11, th.C(tShipTodo)))
+	} else if f := x.failed(se.ID, s.Project); f != "" {
+		widget.Wrap(c, "failed", f, 420, monoFont(11, th.C(theme.Error)))
+	}
+	cur := currentStep(s)
+	x.stepRow(c, "s1", 1, cur, len(s.Files) == 0, func(c *ui.Ctx) { x.uncommitted(c, se, s, cur == 1) })
+	x.stepRow(c, "s2", 2, cur, s.Behind == 0, func(c *ui.Ctx) { x.behind(c, s) })
+	x.stepRow(c, "s3", 3, cur, len(s.Unpushed) == 0 && s.Pushed, func(c *ui.Ctx) { x.unpushed(c, s) })
+	x.stepRow(c, "s4", 4, cur, s.PR.Open() && ciOf(s.Checks) == gh.CheckPass || s.PR != nil && s.PR.Merged, func(c *ui.Ctx) { x.prStep(c, se, s) })
+}
+
+// currentStep is the first step not done: the one to do next.
+func currentStep(s worker.Ship) int {
+	switch {
+	case len(s.Files) > 0:
+		return 1
+	case s.Behind > 0:
+		return 2
+	case len(s.Unpushed) > 0 || !s.Pushed && s.Commits > 0:
+		return 3
+	}
+	return 4
+}
+
+// stepRow is a step's marker on the column's rail, and its card.
+func (x *shipExt) stepRow(c *ui.Ctx, key string, n, cur int, done bool, card func(c *ui.Ctx)) {
+	th := c.Theme()
+	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+		c.Column("mark", ui.Style{W: ui.Px(20), H: ui.Flex(1), Cross: ui.Center, Pad: ui.Insets{T: 9}}, func(c *ui.Ctx) {
+			tone, label := th.C(tShipRail), fmt.Sprint(n)
+			switch {
+			case done:
+				tone, label = th.C(tShipDone), "✓"
+			case n == cur:
+				tone = th.C(tShipTodo)
+			}
+			c.Box("dot", ui.Style{W: ui.Px(18), H: ui.Px(18), Radius: 9, Stroke: tone, Border: 1, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
+				c.Text("n", label, mono(9.5, typeset.SemiBold, tone))
+			})
+			c.Box("line", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tShipRail)}, nil)
+		})
+		c.Column("card", ui.Style{W: ui.Flex(1), Pad: ui.Insets{B: 2}}, card)
+	})
+}
+
+// card is a step's box: its header line, and a body when it's open.
+func shipCard(c *ui.Ctx, open bool, head func(c *ui.Ctx), body func(c *ui.Ctx)) {
+	th := c.Theme()
+	edge := th.C(tShipCard)
+	if open {
+		edge = th.C(tShipCardOpen)
+	}
+	c.Column("box", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: edge, Border: 1, Fill: th.C(tShipCardBg), Clip: true}, func(c *ui.Ctx) {
+		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(36), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, head)
+		if body != nil {
+			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 8}, body)
+		}
+	})
+}
+
+// stepTitle is a step's name and the dim note after it.
+func stepTitle(c *ui.Ctx, title, note string) {
+	th := c.Theme()
+	c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+	c.Row("note", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+		if note != "" {
+			c.Text("n", note, monoFont(10.5, th.C(theme.FgFaint)))
+		}
+	})
+}
+
+func (x *shipExt) uncommitted(c *ui.Ctx, se core.SessionState, s worker.Ship, open bool) {
+	th := c.Theme()
+	if len(s.Files) == 0 {
+		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, "Uncommitted", "clean") }, nil)
+		return
+	}
+	add, del := 0, 0
+	for _, f := range s.Files {
+		add, del = add+f.Add, del+f.Del
+	}
+	f := x.commitForm(se.ID, s.Project)
+	shipCard(c, open, func(c *ui.Ctx) {
+		stepTitle(c, "Uncommitted", fmt.Sprintf("%s · +%d -%d", counted(len(s.Files), "file"), add, del))
+	}, func(c *ui.Ctx) {
+		for _, fl := range s.Files {
+			c.Row(fl.Path, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+				c.Row("cb", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+					st := widget.CheckOn
+					if f.skip[fl.Path] {
+						st = widget.CheckOff
+					}
+					if widget.Check(c, "cb", st, widget.CheckOpts{Text: fl.Path, Plain: true, Help: "git/ship#commit",
+						Tooltip: "Ticked files go in the commit"}) {
+						f.skip[fl.Path] = !f.skip[fl.Path]
+					}
+				})
+				if fl.Code == "?" {
+					c.Text("new", "new", monoFont(10, th.C(theme.FgFaint)))
+				}
+				widget.DiffStat(c, "ds", fl.Add, fl.Del, widget.DiffStatOpts{})
+			})
+		}
+		x.commitBox(c, se, s, f)
+	})
+}
+
+// commitBox is the commit message, filled with the agent's draft until you type, and its buttons.
+func (x *shipExt) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f *commitForm) {
+	th := c.Theme()
+	if !f.edited {
+		f.message = s.CommitDraft.Body
+	}
+	c.Column("msg", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
+		if !f.edited && s.CommitDraft.By != "" && s.CommitDraft.By != "you" {
+			c.Row("by", ui.Style{W: ui.Flex(1), Main: ui.End}, func(c *ui.Ctx) {
+				widget.Chip(c, "drafted", "drafted by "+s.CommitDraft.By, th.C(tShipTodo), "git/ship#drafts")
+			})
+		}
+		if r := widget.Input(c, "message", &f.message, widget.InputOpts{Label: "Commit message", Placeholder: "The commit message (the agent drafts one when it's idle)",
+			Lines: 10, MinLines: 4, Help: "git/ship#commit"}); r.Changed {
+			f.edited = true
+		} else if r.Submitted {
+			x.run("ship.commit", registry.Args{"project": s.Project})
+		}
+	})
+	c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+		busy := x.doing(se.ID, s.Project) != ""
+		if f.veto == "" {
+			if widget.Button(c, "commit", "Commit", widget.ButtonOpts{Primary: true, Help: "git/ship#commit", Disabled: busy}) {
+				x.run("ship.commit", registry.Args{"project": s.Project})
+			}
+		} else if widget.Button(c, "anyway", "Commit anyway…", widget.ButtonOpts{Help: "git/ship#gates", Disabled: busy}) {
+			x.run("ship.commit", registry.Args{"project": s.Project, "force": true})
+		}
+		if widget.Button(c, "redraft", "Redraft", widget.ButtonOpts{Help: "git/ship#drafts", Disabled: !x.h.Available("ship.redraft", nil)}) {
+			x.run("ship.redraft", registry.Args{"project": s.Project, "kind": "commit"})
+		}
+		c.Row("veto", ui.Style{W: ui.Flex(1), Clip: true, Main: ui.End}, func(c *ui.Ctx) {
+			if f.veto != "" {
+				c.Text("v", f.veto, monoFont(10.5, th.C(theme.Warn)))
+			}
+		})
+	})
+}
+
+func (x *shipExt) behind(c *ui.Ctx, s worker.Ship) {
+	th := c.Theme()
+	base := cmpOr(s.Base, "base")
+	if s.Behind == 0 {
+		note := ""
+		if !s.Synced.IsZero() {
+			note = "rebased " + agoText(c.Now(), s.Synced)
+		}
+		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, "Up to date with "+base, note) }, nil)
+		return
+	}
+	shipCard(c, false, func(c *ui.Ctx) {
+		note := counted(s.Behind, "commit") + " · no conflicts predicted"
+		if len(s.Conflicts) > 0 {
+			note = counted(s.Behind, "commit")
+		}
+		stepTitle(c, "Behind "+base, note)
+		if widget.Button(c, "rebase", "Rebase", widget.ButtonOpts{Help: "git/ship#sync"}) {
+			x.run("ship.sync", registry.Args{"project": s.Project})
+		}
+	}, func() func(c *ui.Ctx) {
+		if len(s.Conflicts) == 0 {
+			return nil
+		}
+		return func(c *ui.Ctx) {
+			widget.Wrap(c, "conf", "conflicts predicted in "+strings.Join(s.Conflicts, ", ")+": a rebase stops and is undone", 420,
+				monoFont(10.5, th.C(theme.Warn)))
+			if t, ok := conflictTrouble(s); ok {
+				c.Row("twins", ui.Style{Gap: 8}, func(c *ui.Ctx) {
+					askTwinsLabelled(c, x.h, "ship.conflict."+s.Project, t, "git/ship#sync", "Explain with agent", "Fix conflicts with agent")
+				})
+				explainKept(c, x.sh, "ship.conflict."+s.Project, "git/ship#sync")
+			}
+		}
+	}())
+}
+
+func (x *shipExt) unpushed(c *ui.Ctx, s worker.Ship) {
+	th := c.Theme()
+	if len(s.Unpushed) == 0 {
+		note := "nothing committed yet"
+		title := "Unpushed"
+		if s.Pushed {
+			title, note = "Pushed", counted(s.Commits, "commit")
+		}
+		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, title, note) }, nil)
+		return
+	}
+	shipCard(c, false, func(c *ui.Ctx) {
+		stepTitle(c, "Unpushed", counted(len(s.Unpushed), "commit"))
+		if s.Remote && widget.Button(c, "push", "Push", widget.ButtonOpts{Help: "git/ship#push"}) {
+			x.run("ship.push", registry.Args{"project": s.Project})
+		}
+	}, func(c *ui.Ctx) {
+		for i, cm := range s.Unpushed {
+			c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Clip: true}, func(c *ui.Ctx) {
+				c.Text("h", cm.Hash, monoFont(11, th.C(tShipHash)))
+				c.Text("s", cm.Subject, monoFont(11, th.C(theme.FgMuted)))
+			})
+		}
+	})
+}
+
+// prStep is the PR: not raised, with its draft and reviewers; or raised, with its checks.
+func (x *shipExt) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+	th := c.Theme()
+	if s.GitHub == "" {
+		note := "no remote"
+		if s.Remote {
+			note = "origin isn't on GitHub"
+		}
+		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, "Pull request", note) }, nil)
+		return
+	}
+	if s.PR == nil {
+		f := x.prForm(se.ID, s)
+		note := "not raised"
+		if !s.PRDraft.Empty() || f.edited {
+			note += " · draft ready"
+		}
+		shipCard(c, false, func(c *ui.Ctx) {
+			stepTitle(c, "Pull request", note)
+			if s.Template != "" {
+				widget.Chip(c, "tmpl", "template filled", th.C(tShipTodo), "git/ship#raise")
+			}
+		}, func(c *ui.Ctx) {
+			x.reviewersLine(c, s, f.reviewersOf(s), s.Owners)
+			x.links(c, se, s)
+			c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
+				if widget.Button(c, "raise", "Raise PR…", widget.ButtonOpts{Help: "git/ship#raise"}) {
+					x.run("ship.pr.open", registry.Args{"project": s.Project})
+				}
+			})
+			if s.GitHubError != "" {
+				widget.Wrap(c, "gherr", s.GitHubError, 420, monoFont(10.5, th.C(theme.Error)))
+			}
+		})
+		return
+	}
+	shipCard(c, s.PR.Open() && ciOf(s.Checks) != gh.CheckPass, func(c *ui.Ctx) {
+		c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+			c.Text("t", fmt.Sprintf("#%d · %s", s.PR.Number, s.PR.Title),
+				ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+		})
+		label, tone := "open", th.C(theme.OK)
+		switch {
+		case s.PR.Merged:
+			label, tone = "merged", th.C(theme.StatusPermission)
+		case s.PR.State == "closed":
+			label, tone = "closed", th.C(theme.FgFaint)
+		case s.PR.Draft:
+			label, tone = "draft", th.C(theme.FgMuted)
+		}
+		widget.Chip(c, "state", label, tone, "git/ship#pr")
+	}, func(c *ui.Ctx) {
+		x.checks(c, s)
+		x.reviewersLine(c, s, s.PR.Reviewers, s.Owners)
+		x.links(c, se, s)
+		c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
+			if s.PR.Open() && s.PR.Draft && widget.Button(c, "ready", "Ready for review", widget.ButtonOpts{Help: "git/ship#pr"}) {
+				x.run("ship.ready", registry.Args{"project": s.Project})
+			}
+			if t, ok := ciTrouble(s); ok {
+				askTwinsLabelled(c, x.h, "ship.ci."+s.Project, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
+			}
+			if s.PR.Open() && widget.Button(c, "edit", "Edit PR", widget.ButtonOpts{Help: "git/ship#raise"}) {
+				x.run("ship.pr.open", registry.Args{"project": s.Project})
+			}
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			if widget.Button(c, "github", "Open on GitHub ↗", widget.ButtonOpts{Help: "git/ship#pr"}) {
+				x.run("ship.github", registry.Args{"project": s.Project})
+			}
+		})
+		explainKept(c, x.sh, "ship.ci."+s.Project, "git/ship#checks")
+	})
+}
+
+// checks lists a PR's checks, with what the first failing one's log says.
+func (x *shipExt) checks(c *ui.Ctx, s worker.Ship) {
+	th := c.Theme()
+	pass := 0
+	for _, ch := range s.Checks {
+		if ch.State() == gh.CheckPass || ch.State() == gh.CheckSkipped {
+			pass++
+		}
+	}
+	if len(s.Checks) == 0 {
+		shipCap(c, "CHECKS · NONE YET")
+		return
+	}
+	shipCap(c, fmt.Sprintf("CHECKS · %d OF %d", pass, len(s.Checks)))
+	now := c.Now()
+	for i, ch := range s.Checks {
+		c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+			glyph, tone, note := "✓", th.C(theme.OK), dur(ch.Took(now))
+			switch ch.State() {
+			case gh.CheckFail:
+				glyph, tone = "✗", th.C(theme.Error)
+			case gh.CheckSkipped:
+				glyph, tone = "–", th.C(theme.FgFaint)
+			case gh.CheckPending:
+				glyph, tone = "◌", th.C(tShipCI)
+				note = "queued"
+				if ch.Status == "in_progress" {
+					note = "running " + dur(ch.Took(now))
+				}
+			}
+			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, uiFont(12, tone)) })
+			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", ch.Name, uiFont(12, th.C(theme.FgMuted))) })
+			c.Text("d", note, monoFont(10.5, th.C(theme.FgFaint)))
+		})
+	}
+	if s.FailLine != "" {
+		c.Row("fail", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Clip: true}, func(c *ui.Ctx) {
+			c.Text("f", s.FailLine, monoFont(10.5, th.C(theme.Error)))
+		})
+	}
+}
+
+// dur is a check's time: "38s", "1m 42s".
+func dur(d time.Duration) string {
+	d = d.Round(time.Second)
+	if d <= 0 {
+		return ""
+	}
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	return fmt.Sprintf("%dm %02ds", int(d.Minutes()), int(d.Seconds())%60)
+}
+
+// reviewersLine is who reviews: each with their initials, CODEOWNERS' marked.
+func (x *shipExt) reviewersLine(c *ui.Ctx, s worker.Ship, reviewers, owners []string) {
+	th := c.Theme()
+	c.Row("reviewers", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
+		shipCap(c, "REVIEWERS")
+		if len(reviewers) == 0 {
+			c.Text("none", "none yet", uiFont(12, th.C(theme.FgFaint)))
+			return
+		}
+		for _, r := range reviewers {
+			c.Row(r, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
+				reviewerAvatar(c, r)
+				c.Text("n", shortName(r), uiFont(12, th.C(theme.FgMuted)))
+			})
+		}
+		if len(owners) > 0 && len(slices.DeleteFunc(slices.Clone(reviewers), func(r string) bool { return !slices.Contains(owners, r) })) > 0 {
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			c.Text("co", "CODEOWNERS", monoFont(10, th.C(theme.FgFaint)))
+		}
+	})
+}
+
+// shortName is a reviewer as shown: a team without its org.
+func shortName(r string) string {
+	if _, t, ok := strings.Cut(r, "/"); ok {
+		return t
+	}
+	return r
+}
+
+// reviewerAvatar is a reviewer's initials on a tint.
+func reviewerAvatar(c *ui.Ctx, who string) {
+	th := c.Theme()
+	tone := th.C(tShipLink)
+	if !strings.Contains(who, "/") {
+		tone = th.C(tShipTodo)
+	}
+	c.Box("av", ui.Style{W: ui.Px(17), H: ui.Px(17), Radius: 4, Fill: tone, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
+		c.Text("i", projectInitials(shortName(who)), mono(8, typeset.Bold, th.C(theme.AccentInk)))
+	})
+}
+
+// links is how the project's PR relates to the session's others: what it depends on, or pairs with, and the order.
+func (x *shipExt) links(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+	if len(se.Projects) < 2 {
+		return
+	}
+	th := c.Theme()
+	ships, _ := x.sessionShips(se)
+	var order, before, after []string
+	seen := false
+	for _, o := range ships {
+		if o.ReadOnly || o.GitHub == "" {
+			continue
+		}
+		order = append(order, o.Project)
+		switch {
+		case o.Project == s.Project:
+			seen = true
+		case !seen:
+			before = append(before, prRef(o))
+		default:
+			after = append(after, o.Project)
+		}
+	}
+	if len(order) < 2 {
+		return
+	}
+	var text string
+	switch {
+	case len(before) > 0:
+		text = "depends on " + strings.Join(before, ", ")
+	case s.PR == nil:
+		text = "pairs with " + strings.Join(after, ", ") + " → will cross-link both descriptions"
+	default:
+		text = "merges before " + strings.Join(after, ", ")
+	}
+	c.Row("links", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 7), Gap: 8, Radius: 5, Stroke: th.C(tShipCard), Border: 1, Cross: ui.Center, Clip: true},
+		func(c *ui.Ctx) {
+			c.Text("i", "⟷", uiFont(12, th.C(tShipLink)))
+			c.Text("t", text+" · merge order: "+strings.Join(order, " → "), monoFont(10.5, th.C(theme.FgMuted)))
+		})
+}
+
+// prRef is a project's PR as another names it: "api #790", or "api PR (not raised)".
+func prRef(s worker.Ship) string {
+	if s.PR == nil {
+		return s.Project + " PR (not raised)"
+	}
+	ref := fmt.Sprintf("%s #%d", s.Project, s.PR.Number)
+	if ciOf(s.Checks) == gh.CheckFail {
+		ref += " · CI failing"
+	}
+	return ref
+}
+
+// gatesList is "before this ships": every gate's state for the session.
+func (x *shipExt) gatesList(c *ui.Ctx, se core.SessionState) {
+	th := c.Theme()
+	shipCap(c, "BEFORE THIS SHIPS")
+	gs := registry.ShipGates(x.h, string(se.ID), string(se.Kind))
+	if len(gs) == 0 {
+		c.Text("none", "No gates for this session.", uiFont(12, th.C(theme.FgFaint)))
+	}
+	for _, g := range gs {
+		c.Row(g.Name, ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center, Role: ui.RoleText, Label: g.Title + " " + g.State},
+			func(c *ui.Ctx) {
+				glyph, tone := "✓", th.C(theme.OK)
+				switch g.State {
+				case registry.GateWarn:
+					glyph, tone = "!", th.C(theme.Warn)
+				case registry.GateFail:
+					glyph, tone = "✗", th.C(theme.Error)
+				case registry.GatePending, registry.GateOptional:
+					glyph, tone = "○", th.C(theme.FgFaint)
+				}
+				c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, uiFont(13, tone)) })
+				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", g.Title, uiFont(12.5, th.C(theme.FgMuted))) })
+				noteTone := th.C(theme.FgFaint)
+				if g.State == registry.GateWarn {
+					noteTone = th.C(theme.Warn)
+				}
+				c.Text("n", g.Note, monoFont(10.5, noteTone))
+			})
+	}
+	c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
+	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
+}
+
+// mergeOrder is the session's PRs in the order they merge: its projects' order.
+func (x *shipExt) mergeOrder(c *ui.Ctx, se core.SessionState, ships []worker.Ship) {
+	th := c.Theme()
+	var rows []worker.Ship
+	for _, s := range ships {
+		if !s.ReadOnly && s.GitHub != "" {
+			rows = append(rows, s)
+		}
+	}
+	if len(rows) < 2 {
+		return
+	}
+	shipCap(c, "MERGE ORDER")
+	for i, s := range rows {
+		c.Row(s.Project, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
+			pr := "#—"
+			if s.PR != nil {
+				pr = fmt.Sprintf("#%d", s.PR.Number)
+			}
+			c.Text("t", fmt.Sprintf("%d · %s → %s", i+1, s.Project, pr), monoFont(11, th.C(theme.FgMuted)))
+		})
+	}
+	c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
+	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
+}
+
+func (x *shipExt) ticket(c *ui.Ctx, se core.SessionState) {
+	if se.Ticket == "" {
+		return
+	}
+	th := c.Theme()
+	shipCap(c, "TICKET")
+	c.Text("t", se.Ticket, monoFont(11.5, th.C(tShipLink)))
+}
+
+// --- the dock: Pull request (01h) and Git ---
+
+// checklist is a project's Pull request panel: committed → up to date → pushed → PR → checks, in a line each.
+func (x *shipExt) checklist(c *ui.Ctx, project string) {
+	th := c.Theme()
+	se, p, ok := x.here(project)
+	c.Column("pr", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 4, ScrollY: true}, func(c *ui.Ctx) {
+		if !ok {
+			shipEmpty(c, "Pull request is a session's project's: open a session.")
+			return
+		}
+		s, read := x.ship(se.ID, p)
+		if !read {
+			shipEmpty(c, "Reading "+p+"…")
+			return
+		}
+		title := "Not raised"
+		if s.PR != nil {
+			title = s.PR.Title
+		}
+		c.Row("title", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+		})
+		c.Row("sub", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+			c.Text("s", fmt.Sprintf("%s → %s · %s", s.Branch, cmpOr(s.Base, "?"), counted(s.Commits, "commit")), monoFont(10.5, th.C(theme.FgFaint)))
+		})
+		c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
+		line := func(key, state, label, note string) {
+			c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: label + " " + state}, func(c *ui.Ctx) {
+				glyph, tone := "✓", th.C(theme.OK)
+				switch state {
+				case "warn":
+					glyph, tone = "!", th.C(theme.Warn)
+				case "fail":
+					glyph, tone = "✗", th.C(theme.Error)
+				case "doing":
+					glyph, tone = "●", th.C(tShipTodo)
+				case "todo":
+					glyph, tone = "○", th.C(theme.FgFaint)
+				}
+				c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, uiFont(12.5, tone)) })
+				c.Row("l", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("l", label, uiFont(12.5, th.C(theme.FgMuted))) })
+				c.Text("n", note, monoFont(10, th.C(theme.FgFaint)))
+			})
+		}
+		if len(s.Files) > 0 {
+			line("committed", "warn", "Committed", counted(len(s.Files), "file")+" left")
+		} else {
+			line("committed", "ok", "Committed", "")
+		}
+		if s.Behind > 0 {
+			line("uptodate", "warn", "Up to date with "+s.Base, fmt.Sprintf("%d behind", s.Behind))
+		} else {
+			line("uptodate", "ok", "Up to date with "+cmpOr(s.Base, "base"), "")
+		}
+		switch {
+		case len(s.Unpushed) > 0:
+			line("pushed", "warn", "Pushed", fmt.Sprintf("%d to push", len(s.Unpushed)))
+		case s.Pushed:
+			line("pushed", "ok", "Pushed", "")
+		default:
+			line("pushed", "todo", "Pushed", "")
+		}
+		switch {
+		case s.PR != nil:
+			line("pr", "ok", "PR open", fmt.Sprintf("#%d", s.PR.Number))
+		case !s.PRDraft.Empty() || x.prForm(se.ID, s).edited:
+			line("pr", "doing", "PR", "drafting")
+		default:
+			line("pr", "todo", "PR", "not raised")
+		}
+		failing := 0
+		for _, ch := range s.Checks {
+			if ch.State() == gh.CheckFail {
+				failing++
+			}
+		}
+		switch ci := ciOf(s.Checks); {
+		case ci == gh.CheckFail:
+			line("checks", "fail", "Checks", fmt.Sprintf("%d of %d failing", failing, len(s.Checks)))
+			if s.FailLine != "" {
+				c.Row("fail", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Clip: true}, func(c *ui.Ctx) {
+					c.Text("f", s.FailLine, monoFont(10, th.C(theme.Error)))
+				})
+			}
+		case ci == gh.CheckPending:
+			line("checks", "doing", "Checks", "running")
+		case ci == gh.CheckPass:
+			line("checks", "ok", "Checks", fmt.Sprintf("%d passed", len(s.Checks)))
+		default:
+			line("checks", "todo", "Checks", "")
+		}
+		c.Box("sp2", ui.Style{H: ui.Px(8)}, nil)
+		c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
+			if s.PR.Open() {
+				if widget.Button(c, "edit", "Edit PR", widget.ButtonOpts{Help: "git/ship#raise"}) {
+					x.run("ship.pr.open", registry.Args{"project": p})
+				}
+				if t, ok := ciTrouble(s); ok {
+					askTwinsLabelled(c, x.h, "ship.ci."+p, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
+				}
+				return
+			}
+			if s.GitHub != "" && s.PR == nil && widget.Button(c, "raise", "Raise PR", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"}) {
+				x.run("ship.pr.open", registry.Args{"project": p})
+			}
+			if widget.Button(c, "ship", "Ship ⇉", widget.ButtonOpts{Help: "git/ship#page"}) {
+				x.run("ship.open", nil)
+			}
+		})
+		explainKept(c, x.sh, "ship.ci."+p, "git/ship#checks")
+		note := "opens the Raise PR tab →"
+		if s.PR.Open() {
+			note = "Edit PR opens as a main tab"
+		}
+		c.Text("note", note, monoFont(10, th.C(theme.FgGhost)))
+	})
+}

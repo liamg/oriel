@@ -151,8 +151,10 @@ below.
   output and exit status; the answer in a notice, as there's no place between a terminal's lines). A plugin's menu
   item running `agent.fix` gets its twin by itself. `TestEveryFixHasAnExplainTwin` drives each entry point and checks
   every "ask … fix" control has an "ask … explain" beside it, which asks the explainer, not the agent.
-  Not yet: CI failures ("Fix CI with agent") and merge conflicts on the Ship page (FG-6): a button there is one
-  `askTwins` call, a menu entry one `MenuItem` running `agent.fix`; the Problems panel has no fix of its own yet;
+  The Ship page (FG-6) has them too: a failing PR's **Explain with agent** beside **Fix CI with agent** (the failing
+  checks and the log's failing line, `ci-failure`), and predicted conflicts' **Explain with agent** beside **Fix
+  conflicts with agent** (the files a rebase would stop on, `conflict`); their answers sit under the buttons.
+  Not yet: the Problems panel has no fix of its own yet;
   the twin's label says "the agent" rather than the provider's name ("Claude").
 - **Tests panel**: a tree by package, file, test and case; filters (failed, slowest); recent-pass history sparklines and
   **flaky detection** (fails sometimes, passes on re-run); output per case, per run, or raw JSON.
@@ -430,6 +432,13 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   staged and unstaged hunks, and `s` stages or unstages one.
 - crit's Git and PR flow carried over: uncommitted → behind base → unpushed →
   PR → checks → merge, per project, cross-linked across projects.
+- As built (FG-6): `gitx.Repo.Flight(base)` reads a branch's way to a PR in one go (uncommitted files with ± against
+  HEAD, commits behind origin's base and the files a rebase would conflict in from `git merge-tree --write-tree`,
+  the branch's commits and those origin lacks); `Commit`, `Push` (HEAD to origin's branch, tracked), `Fetch` and
+  `Rebase` (`--autostash`, undone on conflict, `gitx.ErrConflict`) make the steps. `gitx.Repo.Env` carries the
+  sandbox's git guard, and `RemoteURL` is origin's configured URL. They run on the session's worker (`worker/ship.go`),
+  where the checkout and your credentials are, with GitHub through `gh` (`gh api`, your login). The Ship page and
+  panels are `ui.md` 18 and 01h.
 - Conflict resolution as a 3-way merge view, with "ask the agent" on a conflict block.
 
 ## Go interfaces

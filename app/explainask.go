@@ -69,6 +69,11 @@ func (x *explainExt) keptAnswer(key string) (answer, bool) {
 // askTwins are "ask agent to explain" and "ask agent to fix" about t, side by side (ide.md, "Explain sits next to
 // fix everywhere"). Explain answers under key, which explainKept draws where it was asked; fix writes a request.
 func askTwins(c *ui.Ctx, h ext.Host, key string, t registry.Trouble, help string) {
+	askTwinsLabelled(c, h, key, t, help, "ask agent to explain", "ask agent to fix")
+}
+
+// askTwinsLabelled is askTwins with its buttons' own words ("Explain with agent", "Fix CI with agent").
+func askTwinsLabelled(c *ui.Ctx, h ext.Host, key string, t registry.Trouble, help, explainLabel, fixLabel string) {
 	fix := t.Args()
 	explain := maps.Clone(fix)
 	explain["key"] = key
@@ -77,10 +82,10 @@ func askTwins(c *ui.Ctx, h ext.Host, key string, t registry.Trouble, help string
 			h.Notify(core.Notice{ID: cmd, Severity: core.SevWarning, Source: "explain", Key: true, Text: err.Error()})
 		}
 	}
-	if widget.Button(c, "explain", "ask agent to explain", widget.ButtonOpts{Disabled: !h.Available(registry.ExplainCommand, explain), Help: help}) {
+	if widget.Button(c, "explain", explainLabel, widget.ButtonOpts{Disabled: !h.Available(registry.ExplainCommand, explain), Help: help}) {
 		run(registry.ExplainCommand, explain)
 	}
-	if widget.Button(c, "fix", "ask agent to fix", widget.ButtonOpts{Primary: true, Disabled: !h.Available(registry.FixCommand, fix), Help: help}) {
+	if widget.Button(c, "fix", fixLabel, widget.ButtonOpts{Primary: true, Disabled: !h.Available(registry.FixCommand, fix), Help: help}) {
 		run(registry.FixCommand, fix)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -73,23 +72,6 @@ func (g gatewayHost) project(name string) (core.Project, error) {
 	return core.Project{}, fmt.Errorf("%w %q", gateway.ErrNoProject, name)
 }
 
-// ownBranch refuses a push, pull or PR unless the worktree is on the session's branch for it: the sandbox can
-// switch branches, and "push this workspace" must not push anything else.
-func (g gatewayHost) ownBranch(p core.Project) (string, error) {
-	if p.Branch == "" || p.Detached || p.ReadOnly {
-		return "", fmt.Errorf("%s has no branch of this session's to push", p.Name)
-	}
-	out, err := sandbox.Git(p.Dir, "rev-parse", "--abbrev-ref", "HEAD")
-	if err != nil {
-		return "", err
-	}
-	if got := strings.TrimSpace(out); got != p.Branch {
-		return "", fmt.Errorf("%s is on %q, not this session's branch %q: Oriel only pushes and raises PRs from %q. Switch back first",
-			p.Name, got, p.Branch, p.Branch)
-	}
-	return p.Branch, nil
-}
-
 func (g gatewayHost) Commit(_ context.Context, project, message string, files []string) (int, error) {
 	p, err := g.project(project)
 	if err != nil {
@@ -124,7 +106,7 @@ func (g gatewayHost) Push(_ context.Context, project string) error {
 	if err != nil {
 		return err
 	}
-	branch, err := g.ownBranch(p)
+	branch, err := ownBranch(p)
 	if err != nil {
 		return err
 	}
@@ -137,7 +119,7 @@ func (g gatewayHost) Pull(_ context.Context, project string) error {
 	if err != nil {
 		return err
 	}
-	branch, err := g.ownBranch(p)
+	branch, err := ownBranch(p)
 	if err != nil {
 		return err
 	}
@@ -159,7 +141,7 @@ func (g gatewayHost) CreatePR(ctx context.Context, project, title, body string) 
 	if err != nil {
 		return "", err
 	}
-	branch, err := g.ownBranch(p)
+	branch, err := ownBranch(p)
 	if err != nil {
 		return "", err
 	}
@@ -177,14 +159,10 @@ func (g gatewayHost) CreatePR(ctx context.Context, project, title, body string) 
 	return strings.TrimSpace(lines[len(lines)-1]), nil
 }
 
-// prDraft is the draft the agent saved with pr_draft: "# title\n\nbody".
+// prDraft is the draft the agent saved with pr_draft.
 func (g gatewayHost) prDraft(project string) (title, body string) {
-	data, err := os.ReadFile(filepath.Join(g.b.w.sessionDir(g.b.id), "drafts", Sanitise(project)+".pr.md"))
-	if err != nil {
-		return "", ""
-	}
-	first, rest, _ := strings.Cut(string(data), "\n")
-	return strings.TrimSpace(strings.TrimPrefix(first, "#")), strings.TrimSpace(rest)
+	d := g.b.w.readDraft(g.b.id, project, "pr")
+	return d.Title, d.Body
 }
 
 func (g gatewayHost) GH(ctx context.Context, project string, args ...string) (string, error) {

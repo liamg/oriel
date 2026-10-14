@@ -183,6 +183,14 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Ship{a: a}
+		vm.Bind("ship", map[string]script.GoFunc{
+			"gate": func(c *script.Args) ([]any, error) {
+				return nil, x.Gate(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := Start{a: a}
 		vm.Bind("start", map[string]script.GoFunc{
 			"add": func(c *script.Args) ([]any, error) {

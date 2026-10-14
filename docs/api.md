@@ -80,6 +80,10 @@ Version 0.4.0.
 
 - `oriel.session.kind(name, spec)`: A kind of session: { pack, gates, status }.
 
+## oriel.ship
+
+- `oriel.ship.gate(spec)`: Add a \
+
 ## oriel.start
 
 - `oriel.start.add(spec)`: Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure.

@@ -22,6 +22,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/wire"
@@ -48,6 +49,8 @@ type Options struct {
 	ReposDir string
 	// TrustPath is the trusted.toml project settings files are trusted in, the app's on this machine; Home's if "".
 	TrustPath string
+	// GitHub is the GitHub client for a checkout, with the git guard's env; the user's gh (gh.CLI) if nil.
+	GitHub func(dir string, env []string) gh.Client
 }
 
 // Worker hosts sessions.
@@ -67,6 +70,9 @@ type Worker struct {
 	usageMu   sync.Mutex
 
 	jobsMu sync.Mutex // the jobs' files, and when the schedules last ran
+
+	shipOnce sync.Once
+	ship     *shipState
 
 	mu       sync.Mutex
 	recs     map[core.SessionID]*sessionLog

@@ -363,7 +363,8 @@ func TestSidebarTabsAcrossProjects(t *testing.T) {
 }
 
 // SH-17: clicking the open entry hides the dock; the form is the window's and comes back after a restart; a
-// directory without a remote has no Pull request; Pull request and Ship are dimmed until their views are registered.
+// directory without a remote has no Pull request; an entry is dimmed until its view is registered (Debug), and FG-6's
+// Pull request and Ship are lit.
 func TestSidebarFormDockAndAvailability(t *testing.T) {
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	state := t.TempDir()
@@ -393,14 +394,16 @@ func TestSidebarFormDockAndAvailability(t *testing.T) {
 
 	ps := sidebarFixture(t)
 	s := sessionScene(t, core.KindWork, ps, sidebarSize)
-	if !s.access("Pull request").Disabled || !s.access("Ship").Disabled {
-		t.Error("Pull request and Ship aren't dimmed with nothing to open")
-	}
-	s.reg.View("pull-request", ui0())
-	s.reg.View("ship", ui0())
-	s.frame()
 	if s.access("Pull request").Disabled || s.access("Ship").Disabled {
-		t.Error("Pull request and Ship stay dimmed once their views are registered")
+		t.Error("Pull request and Ship are dimmed, though FG-6 registers their views")
+	}
+	if !s.access("Debug").Disabled {
+		t.Error("Debug isn't dimmed with nothing to open")
+	}
+	s.reg.View("debug", ui0())
+	s.frame()
+	if s.access("Debug").Disabled {
+		t.Error("Debug stays dimmed once its view is registered")
 	}
 }
 

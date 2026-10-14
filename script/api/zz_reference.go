@@ -66,6 +66,9 @@ var Reference = map[string][]RefFunc{
 	"session": {
 		{Call: "oriel.session.kind(name, spec)", Doc: "A kind of session: { pack, gates, status }."},
 	},
+	"ship": {
+		{Call: "oriel.ship.gate(spec)", Doc: "Add a \\"},
+	},
 	"start": {
 		{Call: "oriel.start.add(spec)", Doc: "Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure."},
 	},

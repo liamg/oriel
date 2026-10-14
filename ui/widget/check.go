@@ -13,6 +13,7 @@ var (
 	tCheckOn     = theme.Declare("check.on", "ok")
 	tCheckMixed  = theme.Declare("check.mixed", "amber")
 	tCheckFg     = theme.Declare("check.fg", "fg.faint")
+	tCheckText   = theme.Declare("check.text", "fg")
 )
 
 // CheckState is what a checkbox shows: off, on, or mixed (some of what it stands for is on).
@@ -25,7 +26,8 @@ const (
 )
 
 type CheckOpts struct {
-	Text     string // shown beside the box, in small mono capitals; none if ""
+	Text     string // shown beside the box, in small mono capitals (as written when Plain); none if ""
+	Plain    bool   // Text as written, in the body's colour: a file name, a choice
 	Label    string // its accessible name; Text if ""
 	Disabled bool
 	Help     string
@@ -62,7 +64,15 @@ func Check(c *ui.Ctx, key any, st CheckState, o CheckOpts) bool {
 				c.Box("half", ui.Style{W: ui.Px(5.5), H: ui.Flex(1), Fill: alpha(mixed, .3)}, nil)
 			}
 		})
-		if o.Text != "" {
+		switch {
+		case o.Text == "":
+		case o.Plain:
+			fg := col(c, tCheckText)
+			if o.Disabled {
+				fg = col(c, tDisabledFg)
+			}
+			c.Text("l", o.Text, monoText(11.5, typeset.Normal, fg, 0))
+		default:
 			c.Text("l", strings.ToUpper(o.Text), monoText(10, typeset.SemiBold, fg, .06))
 		}
 	})

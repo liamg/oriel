@@ -17,6 +17,7 @@
 ---@field rail oriel.rail
 ---@field regex oriel.regex
 ---@field session oriel.session
+---@field ship oriel.ship
 ---@field start oriel.start
 ---@field status oriel.status
 ---@field thread oriel.thread
@@ -236,6 +237,13 @@ oriel.session = {}
 ---@param name string
 ---@param spec table
 function oriel.session.kind(name, spec) end
+
+---@class oriel.ship
+oriel.ship = {}
+
+--- Add a \
+---@param spec table
+function oriel.ship.gate(spec) end
 
 ---@class oriel.start
 oriel.start = {}
