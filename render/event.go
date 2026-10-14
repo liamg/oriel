@@ -33,6 +33,10 @@ type DropEvent struct {
 // AppearanceEvent is the OS's light or dark preference, sent when a window opens and whenever it changes.
 type AppearanceEvent struct{ Dark bool }
 
+// CloseRequestEvent is a held window asked to close (its close button, Quit): it stays open until the app calls
+// Close.
+type CloseRequestEvent struct{}
+
 type PointerKind uint8
 
 const (
@@ -75,9 +79,10 @@ const (
 	CursorCrosshair
 )
 
-func (KeyEvent) isEvent()        {}
-func (PointerEvent) isEvent()    {}
-func (ResizeEvent) isEvent()     {}
-func (RedrawEvent) isEvent()     {}
-func (AppearanceEvent) isEvent() {}
-func (DropEvent) isEvent()       {}
+func (KeyEvent) isEvent()          {}
+func (PointerEvent) isEvent()      {}
+func (ResizeEvent) isEvent()       {}
+func (RedrawEvent) isEvent()       {}
+func (AppearanceEvent) isEvent()   {}
+func (DropEvent) isEvent()         {}
+func (CloseRequestEvent) isEvent() {}

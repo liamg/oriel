@@ -5,6 +5,7 @@ package worker
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,6 +39,7 @@ type Options struct {
 	Log       *slog.Logger
 	Now       func() time.Time
 	Version   string
+	Build     string // which binary this is, so an app from another can replace it; Build() if ""
 	// Sandbox makes the container, gateway and egress proxy for a session that asks for one; nil refuses.
 	Sandbox SandboxFactory
 	// Packs finds a kind's prompt pack (agent/packs.Get, with plugins' and the user's overrides).
@@ -110,6 +112,9 @@ func New(opts Options) (*Worker, error) {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
+	if opts.Build == "" {
+		opts.Build = Build()
+	}
 	if opts.OrielBin == "" {
 		opts.OrielBin, _ = os.Executable()
 	}
@@ -140,7 +145,35 @@ func New(opts Options) (*Worker, error) {
 	w.restoreUsage()
 	w.store.Subscribe(core.Filter{}, w.record)
 	w.settle()
+	w.resumeHandedOver()
 	return w, nil
+}
+
+// HandOver stops every agent for the next worker to resume, then the worker: one from another build takes over.
+func (w *Worker) HandOver() {
+	w.mu.Lock()
+	hosts := make([]*host, 0, len(w.hosts))
+	for _, h := range w.hosts {
+		hosts = append(hosts, h)
+	}
+	w.mu.Unlock()
+	for _, h := range hosts {
+		h.stop("handed over to another worker", core.StoppedByHandOver)
+	}
+	w.Close()
+}
+
+// resumeHandedOver starts again the agents the last worker handed over.
+func (w *Worker) resumeHandedOver() {
+	for _, se := range w.store.State().Sessions {
+		if !se.Agent.Running && se.Agent.StoppedBy == core.StoppedByHandOver {
+			go func() {
+				if err := w.Resume(context.Background(), se.ID); err != nil {
+					w.log.Warn("resume after a hand-over", "session", se.ID, "err", err)
+				}
+			}()
+		}
+	}
 }
 
 // Store is the worker's state.
@@ -312,7 +345,7 @@ func (w *Worker) Close() error {
 func (w *Worker) Info() Info {
 	host, _ := os.Hostname()
 	home, _ := os.UserHomeDir()
-	return Info{ID: w.opts.ID, Name: w.opts.Name, Host: host, OS: runtime.GOOS, Home: home, Version: w.opts.Version, StateDir: w.opts.Home}
+	return Info{ID: w.opts.ID, Name: w.opts.Name, Host: host, OS: runtime.GOOS, Home: home, Version: w.opts.Version, Build: w.opts.Build, StateDir: w.opts.Home}
 }
 
 // Search finds text in sessions' threads and transcripts: archived ones keep theirs, so they stay searchable.

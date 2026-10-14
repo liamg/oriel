@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/cmd/oriel/dev"
 	"github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/worker"
 )
 
 var version = "dev"
@@ -38,6 +39,7 @@ func runApp(args []string) {
 	if err != nil {
 		os.Exit(2)
 	}
+	cfg.LocalWorker = func(ctx context.Context) (worker.Client, error) { return worker.DialLocal(ctx, orielHome(), "") }
 	if c, err := localWorker(); err != nil {
 		fmt.Fprintln(os.Stderr, "oriel: no worker, so no sessions:", err)
 	} else {

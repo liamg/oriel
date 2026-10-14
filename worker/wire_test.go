@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
@@ -142,5 +143,85 @@ func TestKindsReachTheLauncher(t *testing.T) {
 	want := []string{"plan:prompt", "work:prompt", "review:pr", "tour:prompt", "job:prompt", "newrepo:name", "direct:dir", "scratch:nothing", "incident:"}
 	if strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Errorf("kinds = %v, want %v", got, want)
+	}
+}
+
+// listenOn serves w on a fresh socket directory and waits until it answers.
+func listenOn(t *testing.T, ctx context.Context, w *Worker) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "ow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	go w.Listen(ctx, SocketPath(dir))
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if c, err := dial(SocketPath(dir)); err == nil {
+			c.Conn.Close()
+			return dir
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the worker never listened")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// sessions.md → As built: an app reaching a worker from another build hands its sessions over to one of its own,
+// which resumes the agents the old one had running.
+func TestTheAppReplacesAWorkerFromAnotherBuild(t *testing.T) {
+	r := newRig(t)
+	r.w.opts.Build = "old"
+	id, _ := r.workSession("start")
+	r.eventually(id, "running", func(se core.SessionState) bool { return se.Agent.Running })
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	old := r.w
+	dir := listenOn(t, ctx, old)
+	c, err := dialLocal(ctx, dir, Build(), func() error {
+		r.open()
+		go r.w.Listen(ctx, SocketPath(dir))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Conn.Close()
+	if info, err := c.Info(ctx); err != nil || info.Build != Build() {
+		t.Fatalf("info = %+v, %v; want this build's worker", info, err)
+	}
+	select {
+	case <-old.closed:
+	default:
+		t.Error("the old worker is still running")
+	}
+	r.agent()
+	if se := r.eventually(id, "resumed", func(se core.SessionState) bool { return se.Agent.Running }); len(r.fake.Resumed()) != 1 {
+		t.Errorf("resumed %v; agent %+v", r.fake.Resumed(), se.Agent)
+	}
+}
+
+// A worker from another build with an agent mid-turn stays: the app waits for the turn (app/workerrestart.go).
+func TestDialKeepsAnotherBuildsWorkerMidTurn(t *testing.T) {
+	r := newRig(t)
+	r.w.opts.Build = "old"
+	id, a := r.workSession("start")
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	dir := listenOn(t, ctx, r.w)
+	c, err := dialLocal(ctx, dir, "new", func() error {
+		t.Error("started another worker")
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Conn.Close()
+	if info, err := c.Info(ctx); err != nil || info.Build != "old" {
+		t.Fatalf("info = %+v, %v; want the worker mid-turn", info, err)
 	}
 }

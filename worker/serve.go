@@ -25,6 +25,10 @@ func (w *Worker) Serve(conn wire.Conn) {
 	}()
 	fn := func(method string, h wire.Handler) { conn.Handle(method, h) }
 	fn(MethodInfo, wire.Func(func(context.Context, struct{}) (Info, error) { return w.Info(), nil }))
+	fn(MethodHandOver, wire.Func(func(context.Context, struct{}) (any, error) {
+		go w.HandOver()
+		return nil, nil
+	}))
 	fn(MethodSessions, wire.Func(func(context.Context, struct{}) ([]core.SessionState, error) { return w.store.State().Sessions, nil }))
 	fn(MethodStart, wire.Func(func(ctx context.Context, s core.SessionSpec) (core.SessionID, error) { return w.Start(ctx, s) }))
 	fn(MethodResume, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.Resume(ctx, r.Session) }))
