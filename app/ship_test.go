@@ -62,6 +62,8 @@ func shipScene(t *testing.T) (s *errScene, lw *localWorker, hub *ghtest.Server, 
 	sess, _ := st.Session(st.Focus)
 	se = sess.Snapshot()
 	s.reopen()
+	// The verify quiz has its own tests (verify_test.go); here a raise goes straight through.
+	s.reg.Options().Set(verifyOption, registry.LayerUser, registry.At{}, "off")
 	return s, lw, hub, se, map[string]string{"usage-api": apiUp, "web-dashboard": webUp}
 }
 

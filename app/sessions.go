@@ -72,6 +72,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
 	if len(x.sh.cfg.Workers) > 0 {
 		x.add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain, Label: x.explainer, Byline: x.explainerByline}))
+		x.add(h.Contribute(registry.Forker{Name: "agent", Order: 10, Fork: x.fork, Label: x.forker}))
 	}
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "AgentTurnEnd", Fired: true, Payload: AgentTurnEnd{},
 		Doc: "A session's agent finished a turn."}))
@@ -850,6 +851,24 @@ func (x *sessions) explainerByline() string {
 		return "written by the agent"
 	}
 	return "written by " + cmpOr(se.Snapshot().Agent.Provider, "the agent") + " from the session's own context"
+}
+
+// fork answers a side question from a tool-less fork of the session's agent.
+func (x *sessions) fork(ctx context.Context, r registry.ForkRequest) (string, error) {
+	c, err := x.client(core.SessionID(r.Session))
+	if err != nil {
+		return "", err
+	}
+	return c.Fork(ctx, core.SessionID(r.Session), r.Prompt)
+}
+
+// forker is who answers a session's side questions: "claude · fork, no tools".
+func (x *sessions) forker(id string) string {
+	se, ok := x.sh.cfg.Store.Session(core.SessionID(id))
+	if !ok {
+		return ""
+	}
+	return cmpOr(se.Snapshot().Agent.Provider, "the agent") + " · fork, no tools"
 }
 
 // mainInput is what a hook matches a tool's input on: a shell's command, an edit's path, else the JSON.

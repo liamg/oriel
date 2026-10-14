@@ -84,6 +84,10 @@ oriel.agent = {}
 ---@param spec table
 function oriel.agent.explainer(spec) end
 
+--- A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools.
+---@param spec table
+function oriel.agent.forker(spec) end
+
 --- A prompt pack: { prompt, tools }, for sessions to start with.
 ---@param name string
 ---@param spec table

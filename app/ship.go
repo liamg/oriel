@@ -55,6 +55,7 @@ type ShipRaise struct {
 	Draft     bool     `json:"draft,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
 	Edit      bool     `json:"edit,omitempty"` // the PR is open already
+	All       bool     `json:"all,omitempty"`  // one of ship.raise-all's, raised with the others in merge order
 }
 
 type shipExt struct {
@@ -162,7 +163,7 @@ func (x *shipExt) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "ShipCommit", Fired: true, Payload: ShipCommit{},
 		Doc: "A commit about to be made from the Ship page; a veto stops it (its reason shows in the commit box) unless force, a rewrite changes it. { session, project, message, files, force }"}))
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
-		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit }"}))
+		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
 	x.add(h.Contribute(registry.ProjectState{Name: "ship", Order: 10, State: x.projectState}))
 	x.gates()
 	x.shadowEntries()
@@ -871,14 +872,14 @@ func (x *shipExt) sync(se core.SessionState, p string) error {
 }
 
 // raiseReq is the PR a project's raise sends: the args', else the tab's, else its defaults, through ShipRaise.
-func (x *shipExt) raiseReq(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) (worker.PRReq, error) {
+func (x *shipExt) raiseReq(ctx registry.Ctx, se core.SessionState, p string, a registry.Args, all bool) (worker.PRReq, error) {
 	s, ok := x.ship(se.ID, p)
 	if !ok {
 		return worker.PRReq{}, fmt.Errorf("%s hasn't been read yet", p)
 	}
 	f := x.prForm(se.ID, s)
 	ev := &ShipRaise{Session: string(se.ID), Project: p, Title: cmpOr(a.String("title"), f.title), Body: cmpOr(a.String("body"), f.body),
-		Draft: a.Bool("draft"), Reviewers: f.reviewersOf(s), Edit: s.PR.Open()}
+		Draft: a.Bool("draft"), Reviewers: f.reviewersOf(s), Edit: s.PR.Open(), All: all}
 	if rs := paths(a["reviewers"]); len(rs) > 0 {
 		ev.Reviewers = rs
 	}
@@ -895,7 +896,7 @@ func (x *shipExt) raiseReq(ctx registry.Ctx, se core.SessionState, p string, a r
 
 // raise pushes what's unpushed, then raises the PR or edits it.
 func (x *shipExt) raise(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
-	req, err := x.raiseReq(ctx, se, p, a)
+	req, err := x.raiseReq(ctx, se, p, a, false)
 	if err != nil {
 		return err
 	}
@@ -922,7 +923,7 @@ func (x *shipExt) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 		if s.ReadOnly || s.GitHub == "" || s.Commits == 0 && s.PR == nil {
 			continue
 		}
-		req, err := x.raiseReq(ctx, se, s.Project, registry.Args{})
+		req, err := x.raiseReq(ctx, se, s.Project, registry.Args{}, true)
 		if err != nil {
 			return err
 		}

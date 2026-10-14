@@ -122,6 +122,11 @@ flowchart TB
   instructions on length and form (the walkthrough's JSON steps). `Explainer.Byline` says who wrote a long answer
   ("written by claude from the session's own context"); `Explainer.WrittenBy()` falls back to "written by" and the
   label. Lua: `oriel.agent.explainer{…, byline}`, and `req.format`.
+- forkers (`registry.Forker`, RV-7): answer a side question for a session (`ForkRequest{Session, Prompt}`) from its
+  agent's context, with no tools and outside its conversation (agents.md: btw, explain, the verify quiz);
+  `registry.Fork` asks the first by `Order` and `registry.ForkLabel(session)` says who ("claude · fork, no tools").
+  The sessions extension registers the agent's (order 10, the wire's `agent.fork`); Lua adds one with
+  `oriel.agent.forker { name, order, label, run = fn({ session, prompt }) }`.
 - fix and explain twins (TR-6): something gone wrong is a `registry.Trouble` (kind, subject, context, file and lines,
   the fix request's text). Every "ask the agent to fix" runs `agent.fix` (`registry.FixCommand`) with
   `Trouble.Args()`, which writes a request with it attached; its twin runs `explain.ask` (`registry.ExplainCommand`)
@@ -253,8 +258,8 @@ flowchart TB
   tests; the review ledger, the verify quiz and AI review add theirs. A gate informs; what stops a step is a hook:
   `ShipCommit {session, project, message, files, force}` before a commit (a veto shows its reason in the commit box and
   offers **Commit anyway…**, which fires it again with `force`; a rewrite adds a trailer) and `ShipRaise {session,
-  project, title, body, draft, reviewers, edit}` before a raise or edit (a veto shows on the Raise PR tab: the verify
-  quiz runs first). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
+  project, title, body, draft, reviewers, edit, all}` before a raise or edit (a veto shows on the Raise PR tab: the verify
+  quiz runs first; `all` is one of `ship.raise-all`'s). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
   `ship.commit-all`, `ship.sync {project}`, `ship.sync-all`, `ship.push {project}`, `ship.raise {project, title,
   body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.pr.open`, `ship.fix-ci`, `ship.redraft {project,
   kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `pr` (instance = project). A worker answers
@@ -266,6 +271,13 @@ flowchart TB
   PR tab's as the user's); its GitHub client is `worker.Options.GitHub` (the user's gh by default).
   `gh.Client` is GitHub as Oriel uses it, `gh.API` over a `gh.Transport` (`gh.CLI`, `gh.HTTP`), and `gh/ghtest` a
   fake GitHub for tests.
+- verify (RV-7; ui.md 13): the quiz is the `verify` extension, built only on the above: a `ShipRaise` veto hook ("verify
+  quiz"), questions and grades through `registry.Fork`, the `verify` ShipGate, and the `core.Verified` session event
+  (`Verification{Result, Projects, By, Questions}`, `SessionState.Verifications`, sent to the worker as
+  `verify.record`). Option `review.verify_before_pr` (`work`, `on`, `off`; user, project or session). Commands
+  `verify.open {id}`, `verify.send {text}`, `verify.skip`, `verify.again`, `verify.continue`, `verify.open-file`,
+  `verify.close`; keymap mode `verify` (`⌘↵`, `⌥O`, Escape); view `app.overlay.verify` and the status segment
+  `statusline.right.30-verify`.
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
   `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named

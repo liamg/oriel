@@ -53,7 +53,9 @@ type SessionState struct {
 	Overrides  []GateOverride `json:"overrides,omitempty"`  // commits made past the gate
 	AIReviews  []AIReview     `json:"aiReviews,omitempty"`
 	Findings   []Finding      `json:"findings,omitempty"` // the AI reviews' findings
-	ProjectUI  ProjectUI      `json:"projectUI,omitzero"`
+	// Verifications are the verify quizzes taken before raising its PRs, the last one standing.
+	Verifications []Verification `json:"verifications,omitempty"`
+	ProjectUI     ProjectUI      `json:"projectUI,omitzero"`
 }
 
 // WorkerState is a worker as the app sees it.

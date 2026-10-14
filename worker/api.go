@@ -47,6 +47,7 @@ const (
 	MethodReview    = "review.set"      // marks a file's changes reviewed in the diff, or not
 	MethodSeen      = "review.seen"     // records lines of a change seen in the diff: read or skimmed
 	MethodOverride  = "review.override" // records a commit made past the commit gate
+	MethodVerified  = "verify.record"   // a verify quiz's result, kept in the session
 	MethodSessions  = "sessions.list"
 	MethodFork      = "agent.fork"
 	// MethodAIReview starts an AI review of a session's change; MethodFindings changes its findings (dismissed or not).
@@ -443,6 +444,11 @@ func (c Client) SetSeen(ctx context.Context, r core.LinesSeen) error {
 // RecordOverride records a commit made past the commit gate, in the session's state and log.
 func (c Client) RecordOverride(ctx context.Context, r core.CommitGateOverridden) error {
 	return c.Conn.Call(ctx, MethodOverride, r, nil)
+}
+
+// RecordVerified keeps a verify quiz's result in the session and its log.
+func (c Client) RecordVerified(ctx context.Context, v core.Verified) error {
+	return c.Conn.Call(ctx, MethodVerified, v, nil)
 }
 
 // Events streams every session the worker has, as SessionSynced, then every event after, into apply. It

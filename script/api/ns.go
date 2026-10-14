@@ -163,6 +163,31 @@ func (g Agent) Explainer(spec script.Table, where string) error {
 	return nil
 }
 
+//oriel:api doc="A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools."
+func (g Agent) Forker(spec script.Table, where string) error {
+	run, _ := spec["run"].(*script.Fn)
+	if str(spec, "name") == "" || run == nil {
+		return fmt.Errorf("a forker needs a name and a run function")
+	}
+	f := registry.Forker{Name: str(spec, "name"), Source: where,
+		Fork: func(_ context.Context, r registry.ForkRequest) (string, error) {
+			out, err := g.a.VM.Call(run, script.Table{"session": r.Session, "prompt": r.Prompt})
+			if err != nil || len(out) == 0 {
+				return "", err
+			}
+			s, _ := out[0].(string)
+			return s, nil
+		}}
+	if o, ok := spec["order"].(float64); ok {
+		f.Order = int(o)
+	}
+	if l := str(spec, "label"); l != "" {
+		f.Label = func(string) string { return l }
+	}
+	g.a.own(g.a.Host.Contribute(f))
+	return nil
+}
+
 //oriel:api doc="A prompt pack: { prompt, tools }, for sessions to start with."
 func (g Agent) Pack(name string, spec script.Table, where string) error {
 	g.a.own(g.a.Host.Contribute(registry.PromptPack{Name: name, Prompt: str(spec, "prompt"), Tools: strs(spec["tools"]), Source: where}))

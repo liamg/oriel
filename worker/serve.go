@@ -72,6 +72,7 @@ func (w *Worker) Serve(conn wire.Conn) {
 	fn(MethodOverride, wire.Func(func(_ context.Context, r core.CommitGateOverridden) (any, error) { return nil, w.emit(r) }))
 	fn(MethodAIReview, wire.Func(func(ctx context.Context, r AIReviewReq) (string, error) { return w.AIReview(ctx, r) }))
 	fn(MethodFindings, wire.Func(func(_ context.Context, r core.FindingsRecorded) (any, error) { return nil, w.SetFindings(r) }))
+	fn(MethodVerified, wire.Func(func(_ context.Context, r core.Verified) (any, error) { return nil, w.emit(r) }))
 	fn(MethodSandboxConfig, wire.Func(func(_ context.Context, cfg sandbox.Config) (any, error) { return nil, w.SetSandboxConfig(cfg) }))
 	fn(MethodStatsQuery, wire.Func(func(_ context.Context, q stats.Query) (stats.Report, error) { return w.StatsQuery(q), nil }))
 	fn(MethodStatsSession, wire.Func(func(_ context.Context, r StatsSessionReq) (stats.Detail, error) { return w.SessionStats(r) }))

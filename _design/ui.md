@@ -658,6 +658,26 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - The quiz before the PR, as a chat. Each answer gets a verdict, and a partial one points at the file to read.
 - A skip is allowed, and logged.
+- Built in RV-7 (`app/verify.go`, `app/verifyview.go`): **Push + raise PR** (and **Push + raise all**) fire `ShipRaise`,
+  whose "verify quiz" veto opens VERIFY BEFORE RAISING over the tab (`widget.Scrim` on the dialog layer; Escape, ✕ or
+  a click outside closes it and the quiz waits where it was). The header has who asks ("claude · fork, no tools"),
+  "Can you explain this change?", a progress mark per question in its verdict's colour (right green, partly amber,
+  wrong red, the one being asked yellow) and "2/4". The fork is asked once for four questions as JSON
+  (`{"questions": [{question, file, line}]}`) and once per answer for a grade (`{verdict, note, file, line}`); a
+  reply that isn't JSON is read as a numbered list or questions, and a grade from its first word or glyph (unread:
+  partly, its text the note); a file named in the note is pointed at. Questions and verdicts show as a chat with
+  inline code, a typing indicator while the fork thinks. The composer is `widget.Input` (⌘↵ or Send); ⌥O
+  (`verify.open-file`) or the verdict's file link opens the file it's asking about, closing the quiz until the
+  raise is tried again. At the end: "Verified · 3 right · 1 partly" with **Add the answers to the PR as reviewer
+  notes** (on by default; a block between `<!-- oriel:verify -->` markers) and **Raise PR**, which runs the raise
+  that was held; with a wrong answer, **Ask again**. **Skip verification (logged)** records a skip (`core.Verified`,
+  a warning in the session's log) and lets the raise through. The status line says "verify-before-PR: on for this
+  repo" (or for work sessions) while it's open.
+- Decided in RV-7: on by default for work and plan sessions, as the commit gate is hard there; a passed or skipped
+  quiz stands for the session's later raises; editing an open PR never asks; partly right passes.
+- Not yet: asking again when the change moves on after a pass, the PR page's button reading "Verify & raise PR",
+  the VERIFY mode chip in the status line, italics in the fork's prose, and the diff itself in the question prompt
+  (the fork already knows the session).
 
 ## 14 · Tours
 
@@ -742,7 +762,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   agent-written lines read ("0 / 18", "reviewed ✓"), the step "21 LINES UNREVIEWED" (`registry.LedgerOf`), and
   "review gate on" while a gate is hard or soft. "Agent lines reviewed 38 / 59" is the ledger's `ShipGate`, its `All`
   over the session's projects.
-- Not yet: Verify quiz and AI review gates (RV-7, RV-3), the ticket's state moving (Linear), the status bar's
+- Built in RV-7: the "Verify quiz" gate (order 50): "before raise" until it's taken, "2/4" while it's going, "3/4
+  right" passed, "1 wrong" failed, "skipped" (warn), "off for this repo" (optional) where a repo turned it off.
+- Not yet: the ticket's state moving (Linear), the status bar's
   CI chip, merging, and a project's Git panel (still dim: it needs the flow without a worker, for a plain directory).
 
 ## 19 · Your config, live

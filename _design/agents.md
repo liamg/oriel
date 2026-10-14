@@ -270,6 +270,9 @@ type Session interface {
 - Built in RV-6: a request with a `Format` (the walkthrough's JSON steps) is forked with the format at the end of the
   prompt instead of the depth's "in markdown" instruction; the agent explainer's byline is "written by <provider>
   from the session's own context".
+- Built in RV-7: side questions in general are `registry.Forker`s (`registry.Fork`); the sessions extension registers
+  the agent's, which forks the session named in the request (not just the one in front) over `agent.fork`. The verify
+  quiz asks through it.
 
 ### The session host as built (`worker`)
 
@@ -588,6 +591,9 @@ All on by default, all configurable, none a nag:
 
 - **Verify & raise.** crit's quiz carries over: the agent asks you about the
   change before the PR goes out.
+  Built in RV-7 (`app/verify.go`, ui.md 13): on by default for work and plan sessions (`review.verify_before_pr`,
+  per repo in `.oriel/settings.toml`). Four questions from a tool-less fork, each answer graded right, partly or
+  wrong; it passes with no wrong answers. The result, or a skip, is a session event and a session log line.
 - **Cross-model review.** AI review runs on a different provider from the
   author by default (Codex reviews Claude's work, and the other way round).
   Built in RV-3 (`worker/aireview.go`): the reviewer is a short-lived session the worker starts on the reviewer's

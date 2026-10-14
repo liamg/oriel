@@ -18,6 +18,7 @@ Version 0.4.0.
 ## oriel.agent
 
 - `oriel.agent.explainer(spec)`: An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing.
+- `oriel.agent.forker(spec)`: A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools.
 - `oriel.agent.pack(name, spec)`: A prompt pack: { prompt, tools }, for sessions to start with.
 - `oriel.agent.tool(spec)`: Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }.
 

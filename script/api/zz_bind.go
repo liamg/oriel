@@ -47,6 +47,9 @@ func (a *APIs) bind(vm *script.VM) {
 			"explainer": func(c *script.Args) ([]any, error) {
 				return nil, x.Explainer(c.Table(0), c.Where())
 			},
+			"forker": func(c *script.Args) ([]any, error) {
+				return nil, x.Forker(c.Table(0), c.Where())
+			},
 			"pack": func(c *script.Args) ([]any, error) {
 				return nil, x.Pack(c.String(0), c.Table(1), c.Where())
 			},
