@@ -59,6 +59,23 @@ func TestKeymapsArePerMode(t *testing.T) {
 	}
 }
 
+func TestKeymapsFollowAddAndDispose(t *testing.T) {
+	r := registry.New()
+	r.Keymap(registry.Keymap{Mode: "n", Keys: "b", Command: "b"})
+	if got := r.Keymaps(); len(got) != 1 {
+		t.Fatalf("Keymaps = %v", got)
+	}
+	d := r.Keymap(registry.Keymap{Mode: "n", Keys: "a", Command: "a"})
+	if got := r.Keymaps(); len(got) != 2 || got[0].Command != "a" {
+		t.Fatalf("after adding a: %v", got)
+	}
+	d.Dispose()
+	r.Keymaps()[0].Command = "changed"
+	if got := r.Keymaps(); len(got) != 1 || got[0].Command != "b" {
+		t.Errorf("after disposing a, and changing a copy: %v", got)
+	}
+}
+
 func TestDisposedKeymapStopsWaiting(t *testing.T) {
 	r := registry.New()
 	d := r.Keymap(registry.Keymap{Mode: "n", Keys: "qq", Command: "twice"})

@@ -190,6 +190,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		acts = accessible.AccessActions()
 	}
 	var tree *render.AccessNode
+	var held render.Event // read past a run of pointer moves; handled on the next turn
 	for {
 		l.timed(func() string { return "work queued for the loop (Host.Do)" }, sh.runTodo)
 		var derr error
@@ -213,6 +214,12 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			timer.Reset(time.Until(d))
 		} else {
 			timer.Stop()
+		}
+		if held != nil {
+			ev := held
+			held = nil
+			l.timed(func() string { return describeEvent(ev) }, func() { l.handle(ctx, ev) })
+			continue
 		}
 		select {
 		case a := <-acts:
@@ -240,7 +247,32 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			if !ok {
 				return nil
 			}
+			ev, held = lastMove(ev, w.Events())
 			l.timed(func() string { return describeEvent(ev) }, func() { l.handle(ctx, ev) })
+		}
+	}
+}
+
+// lastMove is the last of a run of pointer moves already waiting from ev, so a frame isn't built for each, and the
+// event read after the run, if any.
+func lastMove(ev render.Event, events <-chan render.Event) (render.Event, render.Event) {
+	m, ok := ev.(render.PointerEvent)
+	if !ok || m.Kind != render.PointerMove {
+		return ev, nil
+	}
+	for {
+		select {
+		case next, ok := <-events:
+			if !ok {
+				return m, nil
+			}
+			if p, ok := next.(render.PointerEvent); ok && p.Kind == render.PointerMove && p.Buttons == m.Buttons && p.Mods == m.Mods {
+				m = p
+				continue
+			}
+			return m, next
+		default:
+			return m, nil
 		}
 	}
 }

@@ -76,6 +76,70 @@ type explorer struct {
 	selected    string // the selected row's id: a repo path, a directory "dir/", or a section
 	hunks       explorerHunks
 	work        *gitTree // the work tree of the project last drawn
+	index       *explorerIndex
+	rows        struct {
+		key   explorerRowsKey
+		items []widget.TreeItem
+	}
+}
+
+// explorerRowsKey is what a scope's rows are built from, so they're built again only when it changes.
+type explorerRowsKey struct {
+	st                           *gitx.State
+	sc                           gitx.Scope
+	th                           *theme.Resolved
+	root                         string
+	changedOnly, flat, statusCol bool
+}
+
+// explorerIndex is what rows look up in a git state, built once per state.
+type explorerIndex struct {
+	st          *gitx.State
+	uncommitted int
+	scopes      [3]*scopeIndex
+}
+
+// scopeIndex is a scope's files by row id, and how many changed files each directory ("dir/") holds.
+type scopeIndex struct {
+	count   int
+	byID    map[string]gitx.FileState
+	changed map[string]int
+	areas   map[string]int // files per Uncommitted section id
+}
+
+// indexFor is st's index, built on first use.
+func (e *explorer) indexFor(st *gitx.State) *explorerIndex {
+	if e.index == nil || e.index.st != st {
+		e.index = &explorerIndex{st: st, uncommitted: uncommittedCount(st)}
+	}
+	return e.index
+}
+
+func (x *explorerIndex) scope(sc gitx.Scope) *scopeIndex {
+	if s := x.scopes[sc]; s != nil {
+		return s
+	}
+	s := &scopeIndex{count: x.st.Count(sc), byID: map[string]gitx.FileState{}, changed: map[string]int{}, areas: map[string]int{}}
+	for _, f := range x.st.Files(sc) {
+		id := "\x00" + f.Path
+		if sc == gitx.Uncommitted {
+			id = f.Area.String() + id
+		}
+		if _, ok := s.byID[id]; !ok {
+			s.byID[id] = f
+		}
+		s.areas["\x01"+f.Area.String()]++
+		if f.Code == 0 {
+			continue
+		}
+		for i := range len(f.Path) {
+			if f.Path[i] == '/' {
+				s.changed[f.Path[:i+1]]++
+			}
+		}
+	}
+	x.scopes[sc] = s
+	return s
 }
 
 // git is the work tree the Explorer shows: its project's.
@@ -310,6 +374,10 @@ func (e *explorer) build(c *ui.Ctx) {
 	th := c.Theme()
 	st := e.git().state()
 	sc := e.scope()
+	var x *explorerIndex
+	if st != nil {
+		x = e.indexFor(st)
+	}
 	c.Column("explorer", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tExplorerBg), Help: "files/explorer", Role: ui.RoleRegion, Label: "Explorer"}, func(c *ui.Ctx) {
 		if e.git().ready && e.git().root() == "" {
 			c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12), Gap: 6}, func(c *ui.Ctx) {
@@ -325,10 +393,10 @@ func (e *explorer) build(c *ui.Ctx) {
 			return
 		}
 		c.Row("scopes", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 10, T: 10, B: 6}}, func(c *ui.Ctx) {
-			labels := []string{fmt.Sprintf("CHANGED %d", st.Count(gitx.Changed)), fmt.Sprintf("UNCOMMITTED %d", uncommittedCount(st)),
-				fmt.Sprintf("ALL %d", st.Count(gitx.All))}
+			chg, unc, all := x.scope(gitx.Changed).count, x.uncommitted, x.scope(gitx.All).count
+			labels := []string{fmt.Sprintf("CHANGED %d", chg), fmt.Sprintf("UNCOMMITTED %d", unc), fmt.Sprintf("ALL %d", all)}
 			i := int(sc)
-			short := []string{fmt.Sprintf("CHG %d", st.Count(gitx.Changed)), fmt.Sprintf("UNC %d", uncommittedCount(st)), fmt.Sprintf("ALL %d", st.Count(gitx.All))}
+			short := []string{fmt.Sprintf("CHG %d", chg), fmt.Sprintf("UNC %d", unc), fmt.Sprintf("ALL %d", all)}
 			if widget.Segmented(c, "seg", labels, &i, widget.SegmentedOpts{Help: "files/explorer#scopes", Label: "Explorer scope", Short: short}) {
 				e.scopes[e.session()] = gitx.Scope(i)
 				sc = gitx.Scope(i)
@@ -337,7 +405,7 @@ func (e *explorer) build(c *ui.Ctx) {
 		e.subheader(c, st, sc)
 		items := e.items(c, st, sc)
 		res := widget.Tree(c, fmt.Sprint("tree.", sc), items, widget.TreeOpts{Help: "files/explorer", Label: "Files", KeyMode: ExplorerKeyMode,
-			Trailing: func(c *ui.Ctx, it widget.TreeItem, _ bool) { e.trailing(c, st, sc, it) }})
+			Trailing: func(c *ui.Ctx, it widget.TreeItem, _ bool) { e.trailing(c, x.scope(sc), sc, it) }})
 		e.selected = res.Selected
 		if res.Activated != "" {
 			e.activate(res.Activated, sc)
@@ -425,7 +493,17 @@ func (e *explorer) activate(id string, sc gitx.Scope) {
 // items are a scope's rows: Uncommitted's in sections, Changed's flat or as a tree, All's as a tree under the
 // project's root.
 func (e *explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.TreeItem {
-	th := c.Theme()
+	if sc == gitx.Uncommitted {
+		return e.buildItems(c.Theme(), st, sc)
+	}
+	key := explorerRowsKey{st: st, sc: sc, th: c.Theme(), root: e.git().root(), changedOnly: e.changedOnly, flat: e.flat, statusCol: e.cols.status}
+	if e.rows.key != key || e.rows.items == nil {
+		e.rows.key, e.rows.items = key, e.buildItems(c.Theme(), st, sc)
+	}
+	return e.rows.items
+}
+
+func (e *explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope) []widget.TreeItem {
 	files := st.Files(sc)
 	switch sc {
 	case gitx.Uncommitted:
@@ -507,6 +585,14 @@ func (e *explorer) hunkSection(th *theme.Resolved, path string) (widget.TreeItem
 
 // tree nests files by directory, directories first.
 func (e *explorer) tree(th *theme.Resolved, files []gitx.FileState, sc gitx.Scope) []widget.TreeItem {
+	changed := map[string]bool{}
+	for _, f := range files {
+		for i := range len(f.Path) {
+			if f.Code != 0 && f.Path[i] == '/' {
+				changed[f.Path[:i+1]] = true
+			}
+		}
+	}
 	type dir struct {
 		dirs  map[string]*dir
 		order []string
@@ -544,22 +630,12 @@ func (e *explorer) tree(th *theme.Resolved, files []gitx.FileState, sc gitx.Scop
 				p += sub.order[0] + "/"
 				sub = sub.dirs[sub.order[0]]
 			}
-			out = append(out, widget.TreeItem{ID: "\x00" + p, Label: label, Children: build(sub, p), Open: sc == gitx.Changed || changedUnder(files, p),
+			out = append(out, widget.TreeItem{ID: "\x00" + p, Label: label, Children: build(sub, p), Open: sc == gitx.Changed || changed[p],
 				Help: "files/explorer"})
 		}
 		return append(out, d.files...)
 	}
 	return build(top, "")
-}
-
-// changedUnder reports whether a file under dir has changes, so its folder starts open.
-func changedUnder(files []gitx.FileState, dir string) bool {
-	for _, f := range files {
-		if f.Code != 0 && strings.HasPrefix(f.Path, dir) {
-			return true
-		}
-	}
-	return false
 }
 
 // fileItem is a file's row: its name tinted by its status, a renamed file's old name after it, a deleted one struck
@@ -594,16 +670,10 @@ func (e *explorer) fileItem(th *theme.Resolved, f gitx.FileState, label string, 
 
 // trailing is a row's markers at the right: a directory's changed-file count, a file's diagnostics, ± lines and
 // status letter, as the columns say.
-func (e *explorer) trailing(c *ui.Ctx, st *gitx.State, sc gitx.Scope, it widget.TreeItem) {
+func (e *explorer) trailing(c *ui.Ctx, x *scopeIndex, sc gitx.Scope, it widget.TreeItem) {
 	th := c.Theme()
 	if it.Section {
-		n := 0
-		for _, f := range st.Files(sc) {
-			if "\x01"+f.Area.String() == it.ID {
-				n++
-			}
-		}
-		c.Text("n", fmt.Sprint(n), monoTok(c, 10, theme.FgFaint))
+		c.Text("n", fmt.Sprint(x.areas[it.ID]), monoTok(c, 10, theme.FgFaint))
 		return
 	}
 	if strings.HasPrefix(it.ID, "hunk\x00") {
@@ -619,31 +689,18 @@ func (e *explorer) trailing(c *ui.Ctx, st *gitx.State, sc gitx.Scope, it widget.
 		}
 		return
 	}
-	area, p, isFile := strings.Cut(it.ID, "\x00")
+	_, p, isFile := strings.Cut(it.ID, "\x00")
 	if !isFile || p == "" {
 		return
 	}
 	if len(it.Children) > 0 {
-		n := 0
-		for _, f := range st.Files(sc) {
-			if strings.HasPrefix(f.Path, p) && f.Code != 0 {
-				n++
-			}
-		}
-		if n > 0 {
+		if n := x.changed[p]; n > 0 {
 			c.Text("dot", "●", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 8}, Color: th.C(tGitDot)})
 			c.Text("n", fmt.Sprint(n), monoTok(c, 10, theme.FgFaint))
 		}
 		return
 	}
-	var f gitx.FileState
-	found := false
-	for _, x := range st.Files(sc) {
-		if x.Path == p && (area == "" || x.Area.String() == area) {
-			f, found = x, true
-			break
-		}
-	}
+	f, found := x.byID[it.ID]
 	if !found {
 		return
 	}
