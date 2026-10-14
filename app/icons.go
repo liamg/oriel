@@ -43,6 +43,20 @@ var icons = map[string]func(p *iconPen){
 			p.line(8+4.6*cos(a), 8+4.6*sin(a), 8+6.6*cos(a), 8+6.6*sin(a))
 		}
 	},
+	"pullrequest": func(p *iconPen) {
+		p.circle(4, 3.5, 1.8)
+		p.circle(4, 12.5, 1.8)
+		p.circle(12, 12.5, 1.8)
+		p.line(4, 5.3, 4, 10.7)
+		p.poly(false, 12, 10.7, 12, 5.5, 8, 5.5)
+		p.poly(false, 9.8, 3.7, 8, 5.5, 9.8, 7.3)
+	},
+	"ship": func(p *iconPen) {
+		p.line(2, 5.5, 12, 5.5)
+		p.line(2, 10.5, 12, 10.5)
+		p.poly(false, 10, 3, 13.5, 5.5, 10, 8)
+		p.poly(false, 10, 8, 13.5, 10.5, 10, 13)
+	},
 	"plus": func(p *iconPen) {
 		p.line(8, 3, 8, 13)
 		p.line(3, 8, 13, 8)

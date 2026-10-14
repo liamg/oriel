@@ -54,9 +54,9 @@ func (e SessionSynced) Apply(s *State) error {
 		return fmt.Errorf("session has no id")
 	}
 	if se := s.session(e.Session.ID); se != nil {
-		unseen := se.Unseen
+		unseen, pui := se.Unseen, se.ProjectUI
 		*se = e.Session
-		se.Unseen = unseen
+		se.Unseen, se.ProjectUI = unseen, pui
 		return nil
 	}
 	s.Sessions = append(s.Sessions, e.Session)

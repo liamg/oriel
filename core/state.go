@@ -46,6 +46,7 @@ type SessionState struct {
 	Transcript []Item     `json:"transcript,omitempty"`
 	Runs       []TestRun  `json:"runs,omitempty"`
 	Rules      []string   `json:"rules,omitempty"` // "Always in this workspace": Bash(go test:*), net(*.golang.org:443)
+	ProjectUI  ProjectUI  `json:"projectUI,omitzero"`
 }
 
 // WorkerState is a worker as the app sees it.

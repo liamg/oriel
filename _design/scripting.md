@@ -265,3 +265,12 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   comments, last, author }`), `new(opts)` (with `body`, sends a request about `file`:`line` or the whole change; without,
   opens a thread on the cursor's line), `reply(id, body, opts)` (`urgent`, `btw`), `resolve(id, status)` and
   `open(id)`. They run the `request.*` commands, so a keymap or a plugin does the same with `oriel.cmd`.
+
+## As built (SH-17)
+
+- `oriel.rail.add{ name, icon, title, command, args, scope, order, bottom }` adds an entry to the project sidebar
+  (ui.md 01h). `scope = "project"` makes it one of each project's panels: it's listed under the open project and its
+  command runs with `args.project` set to that project, so `command = "view.toggle", args = { id = "tickets" }` opens
+  the `tickets` view for that project. `scope = "session"` (the default) lists it below the projects. A reload that
+  drops the call removes the entry.
+- A Lua view's `ctx.project` is the project its instance was opened for, "" for a session's view.

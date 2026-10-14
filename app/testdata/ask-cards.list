@@ -33,28 +33,32 @@ rect 1514.2188,17 44x4 fill #24221d radius 2
 rect 1514.2188,17 21.119995x4 fill #ff9b45 radius 2
 text "48%" @1566.2188,22.779999 #ece6d8 JetBrains Mono 10.5
 rect 0,38 44x936 fill #0c0c0b
-path 7 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #4f4a40
-path 6 segments stroke 1.4545455 #4f4a40
-path 6 segments stroke 1.4545455 #4f4a40
-path 2 segments stroke 1.4545455 #4f4a40
-path 2 segments stroke 1.4545455 #4f4a40
-path 5 segments stroke 1.4545455 #7c7566
-path 5 segments stroke 1.4545455 #7c7566
-path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
+clip 0,38 43x936 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  path 7 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #7c7566
+  rect 9.5,208 24x1 fill #332f27
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
 rect 43,38 1x936 fill #24221d
 rect 44,38 1556x936 fill #060606
 clip 44,38 1556x936 r 0
@@ -146,6 +150,8 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
+rect 24.09375,217 11.40625x13 fill #ff9b45 radius 6.5
+text "1" @27.09375,226.56 #141006 JetBrains Mono 8.5
 rect 1144,252.43292 440x169.50452 fill #0c0c0b radius 8 stroke 1 #b98aff8c
 text "INF-2231 USAGE API · PERMISSION" @1158,274.12292 #b98aff JetBrains Mono 9.5
 text "sandbox · network ask" @1444,274.12292 #7c7566 JetBrains Mono 9.5

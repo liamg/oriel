@@ -19,7 +19,7 @@ import (
 
 func builtins(sh *shell) []ext.Extension {
 	sh.layout = &layoutExt{sh: sh}
-	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
+	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
 		&editorExt{sh: sh}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspExt{sh: sh}, &testsExt{sh: sh}, &terminals{sh: sh}, &settingsExt{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, &launcher{sh: sh}, &requests{sh: sh}, &planExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
 }
 
@@ -109,6 +109,27 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 		}
 		return text, tokenColour(h.CurrentTheme(), style, h.CurrentTheme().C(theme.FgFaint))
 	}
+	l.panes.Lead = func(v layout.ViewRef) (render.Color, bool) {
+		w := projectsHere(h)
+		p, ok := viewProject(h, w, v)
+		if !ok || !w.many() || h.CurrentTheme() == nil {
+			return render.Color{}, false
+		}
+		return w.colour(h.CurrentTheme(), p.Name), true
+	}
+	l.panes.Tip = func(v layout.ViewRef) string {
+		w := projectsHere(h)
+		p, ok := viewProject(h, w, v)
+		if !ok || !w.many() {
+			return ""
+		}
+		if file := viewFile(h, v); file != "" {
+			if rel, err := filepath.Rel(p.Dir, file); err == nil {
+				return p.Name + " · " + filepath.ToSlash(rel)
+			}
+		}
+		return p.Name
+	}
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	focused := func() (layout.ViewRef, error) {
 		if l.root.Focus == nil {
@@ -143,21 +164,21 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 				id, inst, _ := strings.Cut(b, "#")
 				o.Beside = &layout.ViewRef{ID: id, Instance: inst}
 			}
-			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title")}, place, o)
+			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title"), Project: str(a, "project")}, place, o)
 		}},
-		{ID: "view.toggle", Title: "Show a view {id}, or close it if it's showing", Available: viewRegistered, Run: func(ctx registry.Ctx, a registry.Args) error {
-			v := layout.ViewRef{ID: str(a, "id"), Instance: str(a, "instance")}
-			for _, s := range l.root.Visible() {
-				if s.ID == v.ID && (v.Instance == "" || s.Instance == v.Instance) {
+		{ID: "view.toggle", Title: "Show a view {id} (for a {project}), or close it if it's showing", Available: viewRegistered,
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				if s, ok := l.matching(a, l.root.Visible()); ok {
 					l.root.Close(s)
 					return nil
 				}
-			}
-			return h.Run(ctx, "view.open", a)
-		}},
-		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance}; with {docked}, only one outside the main area", Run: func(_ registry.Ctx, a registry.Args) error {
+				return h.Run(ctx, "view.open", a)
+			}},
+		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance, project}; with {docked}, only one outside the main area", Run: func(_ registry.Ctx, a registry.Args) error {
 			if id := str(a, "id"); id != "" {
-				l.root.Close(layout.ViewRef{ID: id, Instance: str(a, "instance")})
+				if v, ok := l.matching(a, l.root.All()); ok {
+					l.root.Close(v)
+				}
 				return nil
 			}
 			v, err := focused()
@@ -256,7 +277,7 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 					pad = ui.Insets{}
 				}
 				vc := vc
-				vc.Instance, vc.Focused = v.Instance, focused
+				vc.Instance, vc.Focused, vc.Project = v.Instance, focused, v.Project
 				c.Column("view", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: pad}, func(c *ui.Ctx) {
 					c.Node(view.Build(vc))
 				})
@@ -268,6 +289,16 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 		}}
 	})))
 	return nil
+}
+
+// matching is the first of vs that's view {id}, of {instance} and {project} when they're given.
+func (l *layoutExt) matching(a registry.Args, vs []layout.ViewRef) (layout.ViewRef, bool) {
+	for _, v := range vs {
+		if v.ID == a.String("id") && (a.String("instance") == "" || v.Instance == a.String("instance")) && v.Project == a.String("project") {
+			return v, true
+		}
+	}
+	return layout.ViewRef{}, false
 }
 
 // moveMenu is ⌃W M: the placements, with their keys (24-layout).

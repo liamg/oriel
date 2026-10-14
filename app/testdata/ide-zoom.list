@@ -9,29 +9,34 @@ rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 935.7291x38 r 0
 pop
 rect 0,38 44x602.6667 fill #0c0c0b
-rect 5.5,46 32x32 fill #1f1c0f radius 7
-path 7 segments stroke 1.4545455 #ffd23f
-path 6 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #4f4a40
-path 6 segments stroke 1.4545455 #4f4a40
-path 6 segments stroke 1.4545455 #4f4a40
-path 2 segments stroke 1.4545455 #4f4a40
-path 2 segments stroke 1.4545455 #4f4a40
-path 5 segments stroke 1.4545455 #7c7566
-path 5 segments stroke 1.4545455 #7c7566
-path 4 segments stroke 1.4545455 #4f4a40
-path 3 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #7c7566
-path 6 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
-path 2 segments stroke 1.4545455 #7c7566
+clip 0,38 43x602.6667 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  rect -0.5,76 2x18 fill #ffd23f radius 1
+  rect 5.5,69 32x32 fill #1f1c0f radius 7
+  path 7 segments stroke 1.4545455 #ffd23f
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #7c7566
+  rect 9.5,208 24x1 fill #332f27
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
 rect 43,38 1x602.6667 fill #24221d
 rect 44,38 1022.6666x602.6667 fill #060606
 rect 44,38 250x602.6667 fill #0c0c0b

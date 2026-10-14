@@ -60,3 +60,44 @@ func names(es []registry.RailEntry) string {
 	}
 	return s
 }
+
+// SH-17: rail entries are a project's panels or the session's; a project entry runs its command with the project.
+func TestRailEntryScopes(t *testing.T) {
+	r := registry.New()
+	r.Contribute(registry.RailEntry{Name: "explorer", Scope: registry.ScopeProjectEntry, Order: 10, Command: "view.toggle", Args: registry.Args{"id": "explorer"}})
+	r.Contribute(registry.RailEntry{Name: "requests", Order: 40})
+	r.Contribute(registry.RailEntry{Name: "tests", Scope: registry.ScopeProjectEntry, Order: 60})
+	r.Contribute(registry.RailEntry{Name: "settings", Order: 10, Bottom: true})
+	if got, want := names(registry.ProjectEntries(r)), "explorer tests"; got != want {
+		t.Errorf("project entries %q, want %q", got, want)
+	}
+	if got, want := names(registry.SessionEntries(r)), "requests settings"; got != want {
+		t.Errorf("session entries %q, want %q", got, want)
+	}
+	e := registry.ProjectEntries(r)[0]
+	if a := e.ArgsFor("api"); a.String("project") != "api" || a.String("id") != "explorer" {
+		t.Errorf("args for api: %v", a)
+	}
+	if e.Args["project"] != nil {
+		t.Error("ArgsFor changed the entry's own args")
+	}
+	if a := registry.SessionEntries(r)[0].ArgsFor("api"); a["project"] != nil {
+		t.Errorf("a session entry's args name a project: %v", a)
+	}
+}
+
+// SH-17: what plugins add to a project's header line, by order.
+func TestProjectStateParts(t *testing.T) {
+	r := registry.New()
+	r.Contribute(registry.ProjectState{Name: "ci", Order: 20, State: func(p, dir string) []registry.StatePart {
+		return []registry.StatePart{{Text: "CI failing", Style: "error", Dot: true}}
+	}})
+	r.Contribute(registry.ProjectState{Name: "pr", Order: 10, State: func(p, dir string) []registry.StatePart {
+		return []registry.StatePart{{Text: "#790 " + p}}
+	}})
+	r.Contribute(registry.ProjectState{Name: "boom", Order: 30, State: func(string, string) []registry.StatePart { panic("boom") }})
+	got := registry.ProjectStateParts(r, "api", "/w/api")
+	if len(got) != 2 || got[0].Text != "#790 api" || got[1].Text != "CI failing" || !got[1].Dot {
+		t.Errorf("parts %+v", got)
+	}
+}

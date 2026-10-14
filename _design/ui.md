@@ -147,10 +147,13 @@ What the window shows with no directory and no session open: at launch (plain `o
 
 ## 01f · The rail
 
+Superseded by the project sidebar (01h, SH-17): the rail is the sidebar's narrow form. What follows still holds for it.
+
 The icon strip on the far left of 01: Explorer `⌘⇧E`, Search `⌘⇧F`, Git `⌘⇧G`, Requests `⌘⇧R`, Debug `⌘⇧D`, Tests `⌘⇧T`,
 with Settings pinned at the bottom.
 
-- A contribution point: icon, title, badge, and the command it runs. Plugins add entries the same way.
+- A contribution point: icon, title, badge, and the command it runs. Plugins add entries the same way, as a project's
+  panel or the session's (01h).
 - An entry whose command isn't available yet is dimmed. Clicking the active entry hides its dock.
 - An available entry lights under the pointer.
 
@@ -188,12 +191,17 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   session, with results grouped by project. `⌘⇧F` opens the open project's Search. `⌘K` (the omnibox) stays global.
 - **Session-wide entries,** below a divider: Requests (with its count, `⌘⇧R`), Ship, Settings. Past ~8 projects the
   list scrolls and these stay pinned.
+- **Adding a project.** A `+` in the PROJECTS header (in the narrow form, under the project initials) opens a picker
+  of the worker's registered repos the session hasn't got, and the checkout path typed. Choosing one adds it to the
+  session (`session.add-repo`), and it opens. There's no `+` for a directory (a direct session), or while no worker is
+  connected.
 - **Wide and narrow.** `«`/`»` at the top switch forms, remembered per window. Wide is ~225px. Narrow is an icon
   strip at the rail's width: each project is a two-letter initial in its colour with a status dot, the open project's
   panel icons sit under it, and the session's entries follow. Hovering an initial shows its header line.
 - **One project, or a directory.** There is no project header. The sidebar is a labelled list under the project's
-  name or the directory's path, with the same entries. Pull request appears only with a remote, and Ship only with 2+
-  projects.
+  name or the directory's path, with the same entries. Pull request appears only with a remote. Ship appears whenever
+  any of the session's projects has a remote, one project included: then it's 18 with one column (that project's
+  checklist, "before this ships", the ticket and Push + raise PR). A plain directory without a remote has no Ship.
 - **One tab strip for the session.** Tabs aren't split by project: a proto file from api can sit beside code in
   admin-ui.
   - With 2+ projects, each editor tab leads with a small square in its project's colour (the header's colour), and
@@ -207,6 +215,23 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   It closes like any tab.
 - **Ship** (session-wide) is 18's full page: every project's checklist side by side, cross-linked PRs, the merge
   order, and "push + raise all".
+- Built in SH-17 (`app/rail.go`, `app/projects.go`): the sidebar is the `app.rail` view over the rail entries
+  (`registry.RailEntry` with a `Scope`, plugins.md), drawn with `widget.Rows` (rows of their own heights, `j`/`k`/`⏎`,
+  key mode `sidebar`). Explorer, Search, Git, Pull request and Tests are project entries; Requests, Debug, Ship and
+  Settings session entries; Pull request and Ship are dimmed until FG-6 registers the `pull-request` and `ship` views.
+  `⌃1–9` run `project.open {index}`; `⌘⇧E/F/G/T` run `project.panel {name}` for the open project; `⌘⇧R` and `⌘⇧D` stay
+  `view.toggle`. Opening a project closes the docked panels of the others and reopens its last panel
+  (`SessionState.ProjectUI`), or the one that was showing. A header's line is the branch, ahead/behind and changed files
+  from its own work tree, then what `ProjectState` contributions add (FG-6: the PR and CI). The form is the window's,
+  kept in its state file beside the layout (`sidebar-<hash>.json`); until it's set, the `sidebar.form` option decides,
+  `auto` being wide with 2+ projects and narrow otherwise (so a directory keeps the old rail's strip). Wide is 224px
+  with projects, 150px for one. Views carry their project (`layout.ViewRef.Project`), which their dock tab names
+  ("admin-ui · Explorer"). Search searches its project's directory, or with **All projects** each project's, grouped
+  under a heading per project. With 2+ projects tabs lead with their project's square (`layout.Panes.Lead`), their
+  tooltip names it (`Panes.Tip`), and the breadcrumb starts with it.
+- Not yet: the session entries pinned while the projects scroll (the whole sidebar scrolls), hovering an initial
+  shows its header line as a tooltip rather than 42's card, the Tests panel runs in the window's directory whatever
+  its project, and with one project or a directory the breadcrumb doesn't start with its name (42's panels 4 and 5 do).
 
 Superseded alternatives (41-project-context.png):
 
@@ -237,7 +262,8 @@ Superseded alternatives (41-project-context.png):
   - **threads**: the open-thread count, coloured by status. **diag**: error and warning counts.
   - Folders roll up (a dot plus the count of changed files beneath). Ignored files are dimmed; clean files show nothing.
   - `⌥C` toggles "changed only", which filters All down to Changed without leaving the tree.
-- Multi-project workspaces show each project as a root with its branch and ahead/behind.
+- Multi-project sessions: each project has its own Explorer, opened from the project sidebar (01h) with the project's
+  branch and ahead/behind on its root; there's no Explorer of every project at once.
 - The same markers appear on editor tabs and in the omnibox file results.
 - Built in FG-1: the `explorer` view (the rail's Explorer lights up), `explorer.scope {scope}` on `⌥1–3`,
   `explorer.changed-only` on `⌥C`, and in its own key mode `explorer` the keys `s` (stage, or unstage a staged file),
@@ -246,7 +272,8 @@ Superseded alternatives (41-project-context.png):
   content, sections, items open by default) with `widget.DiffStat` and `widget.ToggleChip`. Changed opens a file
   with `diff.open` when something registers it (RV-1), the file until then. Tabs carry the letter through the
   `registry.Marked` view interface; the files picker ranks changed files up and notes their letter. Not yet: the
-  agent and threads columns (P5), the read bar and "by review" (the ledger, P6), and more than one project.
+  agent and threads columns (P5), and the read bar and "by review" (the ledger, P6). SH-17: the Explorer reads its
+  project from its view instance (`ViewCtx.Project`), each project's work tree read on its own (`gitExt.tree`).
 
 ## 01d · Layout: any pane, anywhere
 

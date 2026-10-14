@@ -60,7 +60,7 @@ Version 0.4.0.
 
 ## oriel.rail
 
-- `oriel.rail.add(spec)`: Add an icon to the rail down the window's left edge: { name, icon, title, command, args, order (50 by default), bottom }. icon is a built-in icon's name (files, search, git, requests, debug, tests, settings) or a glyph. It's dimmed while the command isn't available.
+- `oriel.rail.add(spec)`: Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project) or session (below the projects; the default). icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings) or a glyph. It's dimmed while the command isn't available.
 
 ## oriel.regex
 

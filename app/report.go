@@ -46,6 +46,7 @@ type shell struct {
 	git         *gitExt // the work tree's git status
 	editor      *editorExt
 	search      *projectSearch
+	tests       *testsExt
 	sessions    *sessions // the workers' sessions; nil while it isn't active
 }
 

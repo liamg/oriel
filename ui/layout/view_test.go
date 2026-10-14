@@ -284,3 +284,54 @@ func (h *harness) dockRect(e Edge) (render.Rect, bool) {
 	}
 	return find(h.u.AccessTree())
 }
+
+// SH-17: a view opened for a project names it on its tab ("api · tree"), and a tab Lead gives a colour leads with that
+// colour's square and the tooltip Tip gives.
+func TestTabProjectAndLead(t *testing.T) {
+	h := newHarness(t)
+	scoped := ViewRef{ID: "tree", Project: "api"}
+	if err := h.r.Open(scoped, Docked, Opts{Edge: Left}); err != nil {
+		t.Fatal(err)
+	}
+	square := render.Color{R: 0xa7, G: 0x8b, B: 0xfa, A: 0xff}
+	h.panes.Lead = func(v ViewRef) (render.Color, bool) { return square, v == code }
+	h.panes.Tip = func(v ViewRef) string {
+		if v == code {
+			return "api · proto/usage.proto"
+		}
+		return ""
+	}
+	h.frame()
+	labelled, led := false, false
+	var at render.Point
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "api · tree" {
+			labelled = true
+		}
+		if op.Kind == render.OpGlyphs && op.Run.Text == code.String() && h.isTab(op) && at == (render.Point{}) {
+			at = render.Point{X: op.At.X + 10, Y: op.At.Y - 4}
+		}
+		if op.Kind == render.OpRect && op.Style.Fill == square {
+			led = true
+		}
+	}
+	if !labelled {
+		t.Error("the scoped view's tab doesn't name its project")
+	}
+	if !led {
+		t.Error("no lead square on the code tab")
+	}
+	h.ptr(render.PointerMove, at)
+	h.now = h.now.Add(time.Second)
+	h.frame()
+	h.frame()
+	tipped := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && strings.Contains(op.Run.Text, "proto/usage.proto") {
+			tipped = true
+		}
+	}
+	if !tipped {
+		t.Errorf("hovering the tab at %v doesn't show its tooltip", at)
+	}
+}

@@ -73,6 +73,7 @@ func (x *testsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "tests"} }
 
 func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
 	x.h = h
+	x.sh.tests = x
 	x.set = testrun.Builtin()
 	x.add(disposeFn(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.history = testrun.NewHistory(20)
@@ -578,6 +579,22 @@ func (x *testsExt) nextFailure() error {
 	}
 	ctx := context.Background()
 	return x.h.Run(ctx, "editor.open", registry.Args{"path": next.File, "line": next.Line + 1})
+}
+
+// tally is the last run's counts as the sidebar's Tests entry notes them: "48 ✓", "2 ✕"; "" before a run.
+func (x *testsExt) tally() string {
+	if x == nil {
+		return ""
+	}
+	runs := x.history.Runs()
+	if len(runs) == 0 {
+		return ""
+	}
+	passed, failed, _ := runs[len(runs)-1].Counts()
+	if failed > 0 {
+		return fmt.Sprintf("%d ✕", failed)
+	}
+	return fmt.Sprintf("%d ✓", passed)
 }
 
 // statusSegment is TESTS with the last run's counts, or the one running.

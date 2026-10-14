@@ -8,19 +8,97 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// RailEntry is an icon on the rail down the window's left edge (ui.md 01f). It runs Command with Args, and is
-// dimmed while Available says that wouldn't run.
+// RailEntry is an entry in the project sidebar down the window's left edge (ui.md 01h): one of each project's panels,
+// listed under the open project, or one of the session's, below them. It runs Command with Args, a project entry
+// with the project too ("project" in its args), and is dimmed while the command wouldn't run.
 type RailEntry struct {
 	Name    string // unique among rail entries: "explorer"
-	Icon    string // a glyph
-	Title   string // the tooltip, with the key bound to Command and Args
+	Icon    string // a built-in icon's name or a glyph
+	Title   string // its label, and its tooltip with the key bound to Command and Args
 	Command string
 	Args    Args
-	Badge   func() int // a count shown on the icon; nil or 0 for none
-	Active  func() bool
-	Order   int  // top to bottom
-	Bottom  bool // pinned to the bottom, as Settings is
-	Source  string
+	Scope   string     // ScopeProjectEntry or ScopeSessionEntry; "" is the session's
+	Badge   func() int // a count shown as a pill; nil or 0 for none
+	// Note is dim text at the entry's right, for a project ("" for a session entry): "4", "48 ✓", "not raised".
+	Note func(project string) string
+	// Active says the entry's panel is showing, for a project ("" for a session entry).
+	Active func(project string) bool
+	// Shown says whether the entry is listed at all, for a project ("" for a session entry); nil always is.
+	Shown  func(project string) bool
+	Order  int  // top to bottom
+	Bottom bool // last, as Settings is
+	Source string
+}
+
+// Rail entry scopes.
+const (
+	ScopeProjectEntry = "project"
+	ScopeSessionEntry = "session"
+)
+
+// ArgsFor is the args the entry runs its command with for project: a project entry's name it, unless project is ""
+// (the window's only one).
+func (e RailEntry) ArgsFor(project string) Args {
+	if e.Scope != ScopeProjectEntry || project == "" {
+		return e.Args
+	}
+	a := Args{}
+	for k, v := range e.Args {
+		a[k] = v
+	}
+	a["project"] = project
+	return a
+}
+
+// Is says whether the entry is listed for project, asking its Shown.
+func (e RailEntry) Is(project string) bool {
+	if e.Shown == nil {
+		return true
+	}
+	ok := false
+	Call(func() error { ok = e.Shown(project); return nil })
+	return ok
+}
+
+// ProjectState adds to a project's line on its sidebar header, after its branch and changes (ui.md 01h): a PR, a CI
+// result. State runs on the app's loop as the sidebar is drawn, so it answers from what it has.
+type ProjectState struct {
+	Name   string
+	Order  int
+	State  func(project, dir string) []StatePart
+	Source string
+}
+
+// StatePart is one piece of a project's state: its text in Style (a theme token, "" for the line's own), and a dot
+// before it in the same colour, as a CI result has. The worst part's dot marks the project in the narrow sidebar.
+type StatePart struct {
+	Text  string
+	Style string
+	Dot   bool
+}
+
+func (ProjectState) ContributionKind() string   { return "project.state" }
+func (p ProjectState) ContributionName() string { return p.Name }
+
+// ProjectStateParts are every ProjectState's parts for a project, by Order; one that panics gives none.
+func ProjectStateParts(r Registry, project, dir string) []StatePart {
+	var ss []ProjectState
+	for _, c := range r.Contributions("project.state") {
+		ss = append(ss, c.(ProjectState))
+	}
+	slices.SortFunc(ss, func(a, b ProjectState) int {
+		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
+	})
+	var out []StatePart
+	for _, s := range ss {
+		if s.State == nil {
+			continue
+		}
+		var ps []StatePart
+		Call(func() error { ps = s.State(project, dir); return nil })
+		out = append(out, ps...)
+	}
+	return out
 }
 
 // StartEntry is an action on the start view (ui.md 01e), dimmed while its command isn't available.
@@ -56,6 +134,16 @@ func RailEntries(r Registry) []RailEntry {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})
 	return out
+}
+
+// ProjectEntries are the entries listed under each project, by Order.
+func ProjectEntries(r Registry) []RailEntry {
+	return slices.DeleteFunc(RailEntries(r), func(e RailEntry) bool { return e.Scope != ScopeProjectEntry })
+}
+
+// SessionEntries are the session's entries, below the projects: top ones, then the bottom ones, each by Order.
+func SessionEntries(r Registry) []RailEntry {
+	return slices.DeleteFunc(RailEntries(r), func(e RailEntry) bool { return e.Scope == ScopeProjectEntry })
 }
 
 // StartEntries are the start view's actions by Order.

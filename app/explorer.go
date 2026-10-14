@@ -75,6 +75,15 @@ type explorer struct {
 	flat        bool
 	selected    string // the selected row's id: a repo path, a directory "dir/", or a section
 	hunks       explorerHunks
+	work        *gitTree // the work tree of the project last drawn
+}
+
+// git is the work tree the Explorer shows: its project's.
+func (e *explorer) git() *gitTree {
+	if e.work != nil {
+		return e.work
+	}
+	return &e.sh.git.gitTree
 }
 
 // explorerHunks are the staged and unstaged hunks of the file last selected in Uncommitted.
@@ -94,14 +103,13 @@ func (e *explorer) Activate(_ context.Context, h ext.Host) error {
 	e.h = h
 	e.scopes = map[core.SessionID]gitx.Scope{}
 	e.cols.status, e.cols.lines, e.cols.diag = true, true, true
-	open := registry.Args{"id": ExplorerView, "place": "dock", "edge": "left", "title": "Explorer", "size": 300}
 	show := func(ctx registry.Ctx) error {
 		for _, v := range h.Layout().Visible() {
 			if v.ID == ExplorerView {
 				return nil
 			}
 		}
-		return h.Run(ctx, "view.open", open)
+		return h.Run(ctx, "project.panel", registry.Args{"name": "explorer"})
 	}
 	cmds := []registry.Command{
 		{ID: "explorer.scope", Title: "Show the Explorer in a {scope}: changed, uncommitted or all", Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -120,11 +128,11 @@ func (e *explorer) Activate(_ context.Context, h ext.Host) error {
 			if h, staged, ok := e.selectedHunk(); ok {
 				path := e.hunks.path
 				e.sh.git.async(func(ctx context.Context) error {
-					repo := e.sh.git.status.Repo()
+					repo := e.git().status.Repo()
 					if staged {
 						return repo.UnstageHunk(ctx, path, h)
 					}
-					work, err := os.ReadFile(e.sh.git.abs(path))
+					work, err := os.ReadFile(e.git().abs(path))
 					if err != nil {
 						return err
 					}
@@ -137,19 +145,19 @@ func (e *explorer) Activate(_ context.Context, h ext.Host) error {
 				return nil
 			}
 			if f.Area == gitx.Staged {
-				return h.Run(ctx, "git.unstage", registry.Args{"path": f.Path})
+				return h.Run(ctx, "git.unstage", registry.Args{"path": e.git().abs(f.Path)})
 			}
-			return h.Run(ctx, "git.stage", registry.Args{"path": f.Path})
+			return h.Run(ctx, "git.stage", registry.Args{"path": e.git().abs(f.Path)})
 		}},
 		{ID: "explorer.unstage", Title: "Unstage the selected file", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {
-				return h.Run(ctx, "git.unstage", registry.Args{"path": f.Path})
+				return h.Run(ctx, "git.unstage", registry.Args{"path": e.git().abs(f.Path)})
 			}
 			return nil
 		}},
 		{ID: "explorer.discard", Title: "Discard the selected file's unstaged changes", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok && f.Area != gitx.Staged {
-				return h.Run(ctx, "git.discard", registry.Args{"path": f.Path})
+				return h.Run(ctx, "git.discard", registry.Args{"path": e.git().abs(f.Path)})
 			}
 			return nil
 		}},
@@ -210,9 +218,10 @@ func (e *explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 		x.busy.Add(1)
 		go func() {
 			defer x.busy.Done()
-			ctx, repo := context.Background(), e.sh.git.status.Repo()
+			t := e.git()
+			ctx, repo := context.Background(), t.status.Repo()
 			st, _ := repo.StagedHunks(ctx, path)
-			work, _ := os.ReadFile(e.sh.git.abs(path))
+			work, _ := os.ReadFile(t.abs(path))
 			un, _ := repo.UnstagedHunks(ctx, path, work)
 			x.mu.Lock()
 			if x.path == path {
@@ -262,7 +271,7 @@ func (e *explorer) scope() gitx.Scope {
 // selectedFile is the selected row's file, in the scope showing.
 func (e *explorer) selectedFile() (gitx.FileState, bool) {
 	area, p, _ := strings.Cut(e.selected, "\x00")
-	for _, f := range e.sh.git.state().Files(e.scope()) {
+	for _, f := range e.git().state().Files(e.scope()) {
 		if f.Path == p && (area == "" || area == f.Area.String()) {
 			return f, true
 		}
@@ -272,7 +281,7 @@ func (e *explorer) selectedFile() (gitx.FileState, bool) {
 
 // openDiff opens a file's branch diff, from a view that registers diff.open; until one does, the file.
 func (e *explorer) openDiff(ctx registry.Ctx, p string) error {
-	a := registry.Args{"path": e.sh.git.abs(p)}
+	a := registry.Args{"path": e.git().abs(p)}
 	if e.h.Available("diff.open", a) {
 		return e.h.Run(ctx, "diff.open", a)
 	}
@@ -283,8 +292,14 @@ type explorerView struct{ e *explorer }
 
 func (v explorerView) Title(string) string { return "Explorer" }
 func (v explorerView) EdgeToEdge()         {}
-func (v explorerView) Build(registry.ViewCtx) ui.Node {
-	return &ui.Func{Key: "explorer", Fn: v.e.build}
+func (v explorerView) Build(vc registry.ViewCtx) ui.Node {
+	return &ui.Func{Key: "explorer", Fn: func(c *ui.Ctx) {
+		v.e.work = nil
+		if vc.Project != "" {
+			v.e.work = v.e.sh.git.tree(projectsHere(v.e.h).dir(vc.Project))
+		}
+		v.e.build(c)
+	}}
 }
 
 func monoTok(c *ui.Ctx, size float32, tok theme.TokenID) ui.TextStyle {
@@ -293,10 +308,10 @@ func monoTok(c *ui.Ctx, size float32, tok theme.TokenID) ui.TextStyle {
 
 func (e *explorer) build(c *ui.Ctx) {
 	th := c.Theme()
-	st := e.sh.git.state()
+	st := e.git().state()
 	sc := e.scope()
 	c.Column("explorer", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tExplorerBg), Help: "files/explorer", Role: ui.RoleRegion, Label: "Explorer"}, func(c *ui.Ctx) {
-		if e.sh.git.root() == "" {
+		if e.git().ready && e.git().root() == "" {
 			c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12), Gap: 6}, func(c *ui.Ctx) {
 				c.Text("t", "Not a git repository", monoTok(c, 11.5, theme.FgMuted))
 				c.Text("d", "Open a directory inside a work tree to see its changes.", monoTok(c, 10.5, theme.FgFaint))
@@ -400,7 +415,7 @@ func (e *explorer) activate(id string, sc gitx.Scope) {
 	if sc == gitx.Changed {
 		err = e.openDiff(ctx, p)
 	} else {
-		err = e.h.Run(ctx, "editor.open", registry.Args{"path": e.sh.git.abs(p)})
+		err = e.h.Run(ctx, "editor.open", registry.Args{"path": e.git().abs(p)})
 	}
 	if err != nil {
 		e.h.Notify(core.Notice{ID: "explorer.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
@@ -448,7 +463,7 @@ func (e *explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.Tree
 	if e.changedOnly {
 		files = slices.DeleteFunc(slices.Clone(files), func(f gitx.FileState) bool { return f.Code == 0 })
 	}
-	root := filepath.Base(e.sh.git.root())
+	root := filepath.Base(e.git().root())
 	note := st.Branch
 	if st.Ahead > 0 {
 		note += fmt.Sprintf(" · ↑%d", st.Ahead)
@@ -633,7 +648,7 @@ func (e *explorer) trailing(c *ui.Ctx, st *gitx.State, sc gitx.Scope, it widget.
 		return
 	}
 	if e.cols.diag || sc != gitx.All {
-		e.diagCounts(c, e.sh.git.abs(p))
+		e.diagCounts(c, e.git().abs(p))
 	}
 	if (e.cols.lines || sc != gitx.All) && (f.Add > 0 || f.Del > 0) {
 		widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Bar: sc != gitx.Uncommitted, Scale: 80})

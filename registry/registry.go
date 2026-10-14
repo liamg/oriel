@@ -131,11 +131,12 @@ type View interface {
 }
 
 // ViewCtx is what a view is built with: the window's size and, for a view open in the layout, which instance
-// of it this is and whether it has focus.
+// of it this is, the project it's for, and whether it has focus.
 type ViewCtx struct {
 	Width, Height float32
 	Instance      string
 	Focused       bool
+	Project       string // the project the instance was opened for (view.open's project); "" for a session's view
 }
 
 // EdgeToEdge is a view drawn right to its pane's edges, with no padding around it: an editor, a terminal.

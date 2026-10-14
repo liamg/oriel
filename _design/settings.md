@@ -132,6 +132,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `ui.hover.font_size` | 0: follows `ui.font_size`; hovers and signature help | app | | – |
 | `ui.completion.font_size` | 0: follows `ui.font_size` | app | | – |
 | `ui.tooltip.font_size` | 0: follows `ui.font_size` | app | | – |
+| `sidebar.form` | auto: how a window's project sidebar starts, `wide`, `narrow`, or wide with 2+ projects; `«`/`»` set a window's own, kept with its layout (ui.md 01h) | app | | – |
 | `ui.reduced_motion` | false | app | | FW-5 |
 | `ui.scrollbars` | auto | app | | – |
 | `ui.theme` | `oriel` | app | | FW-7 |

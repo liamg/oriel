@@ -11,7 +11,7 @@ import (
 //oriel:api name=rail
 type Rail struct{ a *APIs }
 
-//oriel:api doc="Add an icon to the rail down the window's left edge: { name, icon, title, command, args, order (50 by default), bottom }. icon is a built-in icon's name (files, search, git, requests, debug, tests, settings) or a glyph. It's dimmed while the command isn't available."
+//oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project) or session (below the projects; the default). icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings) or a glyph. It's dimmed while the command isn't available."
 func (r Rail) Add(spec script.Table, where string) error {
 	e := registry.RailEntry{Name: str(spec, "name"), Icon: str(spec, "icon"), Title: str(spec, "title"), Command: str(spec, "command"),
 		Order: 50, Source: where}
@@ -25,6 +25,12 @@ func (r Rail) Add(spec script.Table, where string) error {
 		e.Order = int(o)
 	}
 	e.Bottom, _ = spec["bottom"].(bool)
+	switch sc := str(spec, "scope"); sc {
+	case "", registry.ScopeSessionEntry, registry.ScopeProjectEntry:
+		e.Scope = sc
+	default:
+		return fmt.Errorf("a rail entry's scope is project or session, not %q", sc)
+	}
 	r.a.own(r.a.Host.Contribute(e))
 	return nil
 }

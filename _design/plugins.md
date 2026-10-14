@@ -117,12 +117,20 @@ flowchart TB
   file and cursor, the terminal its command (its screen is its own state file).
 - tab markers: a view implementing `registry.Marked` gives each instance a small marker after its tab title (the
   editor gives its file's git status letter), in a theme token's colour.
-- rail entries (`RailEntry`, `oriel.rail.add`) and start view actions (`StartEntry`, `oriel.start.add`). Both are
+- project sidebar entries (`RailEntry`, `oriel.rail.add`; ui.md 01h) and start view actions (`StartEntry`,
+  `oriel.start.add`). A rail entry has a `Scope`: `project` (`registry.ScopeProjectEntry`) is one of each project's
+  panels, listed under the open project and run with `project` added to its args (`RailEntry.ArgsFor`); `session`
+  (the default) is listed below the projects. `Note(project)` is dim text at its right ("4", "48 ✓"), `Badge()` a
+  pill, `Active(project)` lights it (for an entry with neither, a `view.*` command's `id` showing for the project
+  does), and `Shown(project)` leaves it out (Pull request without a remote). `registry.ProjectEntries` and
+  `SessionEntries` list them. `ProjectState` contributions add to each project's header line after its branch and
+  changes (`StatePart{Text, Style, Dot}`: a PR's number, a CI result with its dot); FG-6 adds the PR and CI. Both
+  kinds of entry are
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
-- icons: the built-in set (`files`, `search`, `git`, `requests`, `debug`, `tests`, `settings`, `plus`, `resume`,
-  `folder`) is drawn, not a font's; any other name is drawn as a glyph.
+- icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `ship`, `debug`, `tests`, `settings`,
+  `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD tats, notification cards. Title-bar segments are views named
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage`.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
@@ -335,13 +343,21 @@ type Host interface {
 - Views named `app.overlay.<name>` float over the window: the omnibox is `app.overlay.omnibox`.
 - The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
   in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.
-- A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`) and
-  `ViewCtx.Focused`. A view can implement `registry.Titled` to name each instance's tab, and
+- A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`),
+  `ViewCtx.Focused`, and `ViewCtx.Project`: the project it was opened for (`view.open {project}`, a project entry's
+  panel), "" for a session's view or a window with one project. The project is part of the instance
+  (`layout.ViewRef.Project`), so each project has its own Explorer; the layout keeps it across restarts, and the tab
+  reads "admin-ui · Explorer". With 2+ projects a tab leads with its project's colour square and its tooltip names
+  the project: the one it was opened for, or for a `registry.Located` view (the editor) the one its file is in. A view can implement `registry.Titled` to name each instance's tab, and
   `registry.EdgeToEdge` to be drawn without the pane's padding; `registry.As[T](view)` sees through the guard.
   `Registry.Views()` lists every view id.
 - `Host.Layout()` is the layout tree, to change from commands and views (`Open`, `Close`, `Show`, `Swap`, `Row`,
   `Shown`, `OnClose`), `Host.PaneRect(v)` where a view's pane was drawn, and `Host.Redraw()` asks for a frame from
-  any goroutine. `view.open` takes `beside` (`"editor#3"`) and `size`, and `view.close` an `id` and `instance`.
+  any goroutine. `view.open` takes `beside` (`"editor#3"`), `size` and `project`, and `view.toggle` and `view.close` an `id`,
+  `instance` and `project`. `project.open {project | index}` opens a project of the session (`core.ProjectOpened`;
+  the open project, each project's last panel (`ProjectPanelOpened`) and colour (`ProjectColoured`) are
+  `SessionState.ProjectUI`), `project.panel {name, project}` runs a project entry for the open project, `project.add`
+  opens the picker of repos to add, and `sidebar.form {form}` makes the window's sidebar wide or narrow.
 - `Host.CurrentTheme()` is the theme the window is drawn in, and `Host.Shot(th)` the window built and drawn again on
   the CPU in another theme, without touching the live frame (`ui.UI.Fork`). Drawn in `theme.Probe(th)`, every token
   and syntax group in a colour of its own, it tells what painted each pixel: the theme editor's pick mode.

@@ -12,18 +12,24 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-// ViewRef is one open view: a registered view id and the instance of it ("terminal", "2").
+// ViewRef is one open view: a registered view id and the instance of it ("terminal", "2"), and the project it was
+// opened for, if it's a project's.
 type ViewRef struct {
 	ID       string `json:"id"`
 	Instance string `json:"instance,omitempty"`
 	Title    string `json:"title,omitempty"`
+	Project  string `json:"project,omitempty"`
 }
 
 func (v ViewRef) String() string {
-	if v.Instance == "" {
-		return v.ID
+	s := v.ID
+	if v.Instance != "" {
+		s += "#" + v.Instance
 	}
-	return v.ID + "#" + v.Instance
+	if v.Project != "" {
+		s += "@" + v.Project
+	}
+	return s
 }
 
 type Axis string

@@ -987,9 +987,13 @@ func (x *editorExt) openBuffer(path string) (vim.FileState, bool) {
 	return vim.FileState{}, false
 }
 
-// openFileBytes is an open buffer's text as it would be written, by its path relative to the work dir.
+// openFileBytes is an open buffer's text as it would be written, by its path: absolute, or relative to the work dir.
 func (x *editorExt) openFileBytes(rel string) ([]byte, bool) {
-	f, ok := x.openBuffer(filepath.Join(x.dir, rel))
+	path := rel
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(x.dir, rel)
+	}
+	f, ok := x.openBuffer(path)
 	if !ok {
 		return nil, false
 	}

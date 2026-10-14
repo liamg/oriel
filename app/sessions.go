@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -29,6 +30,7 @@ type sessions struct {
 
 	mu      sync.Mutex
 	workers map[core.WorkerID]worker.Client
+	repos   []core.Repo // the session in front's worker's registered repos, for adding one
 }
 
 // AgentTurnEnd is the AgentTurnEnd hook's event.
@@ -102,6 +104,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 		se, ok := x.sh.cfg.Store.Session(x.focused())
 		return ok && has(nil) && se.Snapshot().Planning()
 	}
+	x.add(h.Picker(x.addSource(h)))
 	for _, c := range []registry.Command{
 		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.start(ctx, a); return err }},
@@ -132,6 +135,15 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 				return x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error {
 					return c.AddRepo(ctx, id, a.String("repo"))
 				})(ctx, a)
+			}},
+		{ID: "project.add", Title: "Add a project to the session in front: pick a registered repo, or type a checkout's path",
+			Available: func(registry.Args) bool {
+				se, ok := x.sh.cfg.Store.Session(x.focused())
+				return focused(nil) && ok && se.Kind() != core.KindDirect
+			},
+			Run: func(ctx registry.Ctx, _ registry.Args) error {
+				x.loadRepos()
+				return h.Run(ctx, "picker.open", registry.Args{"source": "projects.add"})
 			}},
 	} {
 		x.add(h.Command(c))
@@ -310,6 +322,86 @@ func (x *sessions) anchor(id core.SessionID, file string, line, end int, text st
 		an.Project, an.File = core.DocsProject, filepath.ToSlash(rel)
 	}
 	return an
+}
+
+// loadRepos reads the session in front's worker's registered repos, off the loop.
+func (x *sessions) loadRepos() {
+	c, err := x.client(x.focused())
+	if err != nil {
+		return
+	}
+	go func() {
+		repos, err := c.Repos(context.Background())
+		if err != nil {
+			x.h.Log().Warn("repos", "err", err)
+			return
+		}
+		x.mu.Lock()
+		x.repos = repos
+		x.mu.Unlock()
+		x.h.Redraw()
+	}()
+}
+
+// addSource is the picker + in the sidebar opens (ui.md 01h): the worker's repos the session hasn't got, and the
+// path typed. Choosing one adds it with session.add-repo, then opens it.
+func (x *sessions) addSource(h ext.Host) registry.PickerSource {
+	return registry.PickerSource{ID: "projects.add", Title: "Add a project", PickerOnly: true, Unlisted: true, Live: true, Source: "builtin:sessions",
+		Items: func(_ registry.Ctx, query string) []registry.PickerItem {
+			se, ok := x.sh.cfg.Store.Session(x.focused())
+			if !ok {
+				return nil
+			}
+			var out []registry.PickerItem
+			if q := strings.TrimSpace(query); q != "" && (strings.ContainsRune(q, filepath.Separator) || strings.HasPrefix(q, "~")) {
+				out = append(out, registry.PickerItem{ID: q, Label: "Add " + q, Detail: "a checkout's path", Icon: "+"})
+			}
+			has := func(r core.Repo) bool {
+				return slices.ContainsFunc(se.Projects(), func(p core.Project) bool {
+					return p.Repo == r.Path || p.Dir == r.Path || p.Name == string(r.ID)
+				})
+			}
+			x.mu.Lock()
+			repos := slices.Clone(x.repos)
+			x.mu.Unlock()
+			for _, r := range repos {
+				if has(r) || !strings.Contains(strings.ToLower(string(r.ID)+" "+r.Path), strings.ToLower(strings.TrimSpace(query))) {
+					continue
+				}
+				out = append(out, registry.PickerItem{ID: string(r.ID), Label: string(r.ID), Detail: tildePath(r.Path)})
+			}
+			return out
+		},
+		Run: func(ctx registry.Ctx, it registry.PickerItem) error {
+			id := x.focused()
+			se, ok := x.sh.cfg.Store.Session(id)
+			if !ok {
+				return errors.New("no session is in front")
+			}
+			before := se.Projects()
+			repo := it.ID
+			if strings.HasPrefix(repo, "~") {
+				if home, err := os.UserHomeDir(); err == nil {
+					repo = filepath.Join(home, repo[1:])
+				}
+			}
+			if err := h.Run(ctx, "session.add-repo", registry.Args{"repo": repo}); err != nil {
+				return err
+			}
+			// The worker's events bring the project; open it once it's here.
+			deadline := time.Now().Add(5 * time.Second)
+			for time.Now().Before(deadline) {
+				if se, ok := x.sh.cfg.Store.Session(id); ok {
+					for _, p := range se.Projects() {
+						if !slices.ContainsFunc(before, func(b core.Project) bool { return b.Name == p.Name }) {
+							return h.Run(ctx, "project.open", registry.Args{"project": p.Name})
+						}
+					}
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			return nil
+		}}
 }
 
 // spec is a session spec from a command's args.

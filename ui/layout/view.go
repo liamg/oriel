@@ -65,6 +65,8 @@ type viewState struct {
 	edge   *dockResize
 	title  func(ViewRef) string
 	mark   func(ViewRef) (string, render.Color)
+	lead   func(ViewRef) (render.Color, bool)
+	tip    func(ViewRef) string
 }
 
 // dockResize is a dock's edge being dragged.
@@ -89,10 +91,10 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 	id := c.Next(key)
 	st := ui.State[viewState](c, id)
 	st.leaves, st.docks = map[*Node]ui.ID{}, map[Edge]ui.ID{}
-	st.title, st.mark = nil, nil
+	st.title, st.mark, st.lead, st.tip = nil, nil, nil, nil
 	if panes != nil {
 		panes.leaves = st.leaves
-		st.title, st.mark = panes.Title, panes.Mark
+		st.title, st.mark, st.lead, st.tip = panes.Title, panes.Mark, panes.Lead, panes.Tip
 	}
 	changed := false
 	th := c.Theme()
@@ -388,7 +390,19 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 		}
 	}
 	if title == "" {
-		title = v.String()
+		title = ViewRef{ID: v.ID, Instance: v.Instance}.String()
+	}
+	if v.Project != "" {
+		title = v.Project + " · " + title
+	}
+	var lead render.Color
+	led := false
+	if st.lead != nil {
+		lead, led = st.lead(v)
+	}
+	tip := ""
+	if st.tip != nil {
+		tip = st.tip(v)
 	}
 	var mark string
 	var markTone render.Color
@@ -396,9 +410,13 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 		mark, markTone = st.mark(v)
 	}
 	closed := false
-	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on}, func(c *ui.Ctx) {
+	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on,
+		Tooltip: tip}, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
 		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.Insets{L: 14, R: 6}, Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
+			if led {
+				c.Box("lead", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 1, Fill: lead}, nil)
+			}
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: fg})
 			if mark != "" {
 				c.Text("mark", mark, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold}, Color: markTone})
@@ -592,7 +610,11 @@ type Panes struct {
 	leaves map[*Node]ui.ID
 	Title  func(v ViewRef) string
 	// Mark, when set, is a small marker after a view's tab title, in its colour: a file's git status letter.
-	Mark  func(v ViewRef) (string, render.Color)
+	Mark func(v ViewRef) (string, render.Color)
+	// Lead, when set and ok, is the colour of a small square leading a view's tab: its project's.
+	Lead func(v ViewRef) (render.Color, bool)
+	// Tip, when set, is a tab's tooltip; "" for none.
+	Tip   func(v ViewRef) string
 	Empty func(c *ui.Ctx) // draws the main area while it holds no views, unless a pane is being dragged there
 }
 
@@ -621,8 +643,12 @@ func (p *Panes) RectsIn(c *ui.Ctx) map[*Node]render.Rect {
 var dockNames = map[Edge]string{Left: "Left dock", Right: "Right dock", Bottom: "Bottom dock"}
 
 func title(v ViewRef) string {
-	if v.Title != "" {
-		return v.Title
+	t := v.Title
+	if t == "" {
+		t = ViewRef{ID: v.ID, Instance: v.Instance}.String()
 	}
-	return v.String()
+	if v.Project != "" {
+		t = v.Project + " · " + t
+	}
+	return t
 }

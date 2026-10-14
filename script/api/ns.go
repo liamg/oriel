@@ -59,9 +59,9 @@ func (v View) Override(id string, fn *script.Fn, where string) error {
 	return nil
 }
 
-// viewCtx is what a Lua view gets: the window's size, and the session in front.
+// viewCtx is what a Lua view gets: the window's size, the instance and the project it was opened for, and the session in front.
 func (a *APIs) viewCtx(vc registry.ViewCtx) script.Table {
-	t := script.Table{"width": vc.Width, "height": vc.Height, "instance": vc.Instance}
+	t := script.Table{"width": vc.Width, "height": vc.Height, "instance": vc.Instance, "project": vc.Project}
 	sess := script.Table{}
 	here := a.Host.Here()
 	if s, ok := a.Host.Session(coreSession(here.Session)); ok {

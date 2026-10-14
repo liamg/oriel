@@ -2,7 +2,7 @@
 id: SH-17
 title: "Project sidebar: per-project panels, the session's entries, one tab strip across projects"
 phase: P5
-status: todo
+status: review
 area: Shell and navigation
 module: app, registry, core
 depends_on: [SH-16, FG-1, FG-3, TR-3, AI-1, SE-1]
@@ -34,13 +34,17 @@ picked.
 
 - The rail becomes the **project sidebar**: one accordion per project, with a header showing branch, ahead/behind,
   changed files, PR and a CI dot. The open project's entries are Explorer, Search, Git, Pull request and Tests.
-  Below a divider are the session's entries: Requests (count), Ship (with 2+ projects), Settings.
+  Below a divider are the session's entries: Requests (count), Ship (when any project has a remote), Settings.
 - Clicking a header or pressing `⌃1–9` opens that project and reopens its last panel. In the sidebar, `j`/`k`/`⏎`
   move and open. `⌘⇧E/F/G/T` open the open project's panel, `⌘⇧R` stays session-wide, and clicking the open entry
   hides the dock.
 - Search is per project, with an **All projects** toggle. `⌘K` stays global.
 - `«`/`»` switch between wide and narrow (the icon strip), remembered per window. One project or a directory has no
-  header, and Pull request appears only with a remote.
+  header, and Pull request appears only with a remote. Ship appears whenever any project has a remote, one project
+  included (18 with one column); a plain directory without a remote has none.
+- A `+` in the PROJECTS header (narrow: under the initials) adds a project: a picker of the worker's registered repos
+  not in the session, and a typed checkout path. Choosing one runs `session.add-repo`, and the new project opens.
+  There's no `+` for a direct session, or while no worker is connected.
 - One tab strip for the session. Tabs lead with their project's colour square and their tooltip names the project.
   The breadcrumb starts with the project. Opening another project's file doesn't change the open project.
 - Pull request and Ship are greyed until FG-6 makes them available, as SH-16 did. FG-6 builds the dock's compact
@@ -79,7 +83,10 @@ picked.
   a tooltip naming api, and the breadcrumb `api › proto › usage.proto`. The sidebar stays on admin-ui.
 - Wide/narrow survives a restart for that window. Clicking the open entry hides the dock. A directory session shows no
   Pull request entry without a remote.
-- Pull request and Ship are greyed until something registers their views.
+- Pull request and Ship are greyed until something registers their views. A one-project session with a remote lists
+  Ship; a directory without one doesn't.
+- Clicking `+` in the sidebar and picking a repo (or typing its path) adds it to the session: it appears as a project
+  and opens.
 
 ## Rules
 

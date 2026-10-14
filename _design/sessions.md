@@ -78,8 +78,11 @@ stateDiagram-v2
 
 ## In the editor
 
-- The **Explorer's root is the session's projects**, not a folder you picked. Explorer scopes (Changed, Uncommitted, All) work per
-  project (`ui.md` 01c).
+- The **project sidebar** (`ui.md` 01h) lists the session's projects; you work in one at a time, and its panels
+  (Explorer, Search, Git, Pull request, Tests) are that project's. Explorer scopes (Changed, Uncommitted, All) work per
+  project (`ui.md` 01c). The `+` in the sidebar adds a repo to the session (`session.add-repo`), as the agent can.
+- One tab strip holds every project's files; with 2+ projects each tab leads with its project's colour and the
+  breadcrumb starts with the project's name. Opening another project's file doesn't change the open project.
 - Files **outside** the session's worktrees (the stdlib, dependencies, another repo) open **read-only**, with go-to-definition
   and peek. Editing them means adding that repo to the session.
 - Tabs, `⌘1–9` and mission control are all sessions. Within a session, buffers and splits are the usual vim tabs and windows.

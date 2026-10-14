@@ -47,6 +47,7 @@ How everything hangs together, built and tested before features land on it.
 | SH-14 | Closing views (`⌃W c`, `q` on read-only views) and `:Keys`/`:Commands` as pickers | – | app | P3 | FW-9, SH-5 | every built-in view closes from the keyboard; `:Commands` filters and runs |
 | SH-15 | Start view: what the window shows with nothing open | – | app | P3 | SH-14, ED-12, SH-4, SH-12 | shown at launch and when the last view closes; every entry runs its command; plugins add entries |
 | SH-16 | The rail: main views down the left edge, as a contribution point | 01 | app | P3 | FW-9, SH-14 | snapshot against 01's strip; plugin entries appear, badge and toggle their view |
+| SH-17 | Project sidebar: per-project panels, the session's entries, one tab strip across projects, adding a project | 42 | app, registry, core | P5 | SH-16, FG-1, FG-3, TR-3, AI-1, SE-1 | snapshots of 42's panels 1–5; ⌃n and headers switch projects and reopen their panels; Search per project with All projects; a Lua project entry under every project; tabs and breadcrumbs name the project; + adds a repo to the session |
 
 ## Editor
 

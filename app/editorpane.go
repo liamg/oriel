@@ -168,6 +168,19 @@ func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
 		name = "[No Name]"
 	}
 	parts := strings.Split(strings.TrimPrefix(filepath.ToSlash(name), "/"), "/")
+	// With several projects the breadcrumb starts with the file's project.
+	if file := p.Name(); file != "" {
+		if !filepath.IsAbs(file) {
+			file = filepath.Join(x.dir, file)
+		}
+		if w := projectsHere(x.h); w.many() {
+			if pr, ok := w.of(file); ok {
+				if rel, err := filepath.Rel(pr.Dir, file); err == nil {
+					parts = append([]string{pr.Name}, strings.Split(filepath.ToSlash(rel), "/")...)
+				}
+			}
+		}
+	}
 	style := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(tCrumbFg)}
 	c.Row("crumb", ui.Style{W: ui.Flex(1), H: ui.Px(crumbH), Pad: ui.PadXY(14, 0), Gap: 6, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
 		for i, part := range parts {

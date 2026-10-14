@@ -208,7 +208,7 @@ func (x *agentConsole) Activate(_ context.Context, h ext.Host) error {
 	if len(x.sh.cfg.Workers) > 0 {
 		// The rail offers the console where there are agents: with a worker connected.
 		x.add(h.Contribute(registry.RailEntry{Name: "agent", Icon: "agent", Title: "Agent console", Command: "agent.console", Order: 70,
-			Active: func() bool { return x.shown() }, Badge: func() int {
+			Active: func(string) bool { return x.shown() }, Badge: func() int {
 				se, _ := x.front()
 				return len(se.Asks)
 			}}))
