@@ -122,6 +122,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 55. [SE-2](SE-2-session-lifecycle-worktrees-from-a-fetched-base-.md): Session lifecycle: worktrees from a fetched base, Start next PR, archive, resume after restart · after SE-1
 56. [SE-3](SE-3-files-outside-the-session-open-read-only-app-ope.md): Files outside the session open read-only; app opens on mission control · after SE-1
 57. [TR-5](TR-5-agent-test-runs-as-evidence.md): Agent test runs as evidence · after TR-1, AI-2
+58. [SH-17](SH-17-project-sidebar-per-project-panels-and-shared-tabs.md): Project sidebar: per-project panels, the session's entries, one tab strip across projects · after SH-16, FG-1, FG-3, TR-3, AI-1, SE-1 (P5 follow-up)
 
 ### Phase 6 · review
 

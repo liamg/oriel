@@ -164,41 +164,60 @@ What an open directory or session shows with no buffer open: right after opening
   year, and contributors (or largest files). A plain directory gets languages, size and largest files only.
 - Panels are contributions. The view shows at once; panels fill in from the background and are cached per repo by HEAD.
 
-## 01h · Project context (proposals)
+## 01h · Project context: the project sidebar
+
+![42-project-sidebar](mockups/42-project-sidebar.png)
+
+**Decided: D, the project sidebar** (the user's choice). A session can hold several projects, but you work in one at a
+time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail (01f), and the multi-project notes in
+01c and `sessions.md` → In the editor.
+
+- **Sidebar.** One accordion per project, in the session's order. Under the open project sit its panels: Explorer,
+  Search, Git, Pull request, Tests. One project is open at a time. Clicking a header opens that project and folds the
+  one that was open.
+- **Headers show state.** Each header has the project's colour square, its name and `⌃n`, and under them its branch,
+  ahead/behind, changed files, PR number and a CI dot ("rate-limits · #790 ● CI failing"). Folded projects keep their
+  header, so a failing project is visible while you work in another.
+- **Switching.** `⌃1–9` open the nth project (`⌥1–3` stay Explorer scopes). In the focused sidebar, `j`/`k` move over
+  headers and entries and `⏎` opens a header or an entry.
+- **Panels belong to a project.** An entry opens that project's panel in the dock, and the dock header names both
+  ("admin-ui · Explorer"). Each project remembers the last panel it had open and reopens it when you switch back.
+  `⌘⇧E`, `⌘⇧F`, `⌘⇧G` and `⌘⇧T` open Explorer, Search, Git and Tests for the open project. Clicking the open entry
+  hides the dock.
+- **Search is per project.** It searches the open project. An **All projects** toggle in the panel widens it to the
+  session, with results grouped by project. `⌘⇧F` opens the open project's Search. `⌘K` (the omnibox) stays global.
+- **Session-wide entries,** below a divider: Requests (with its count, `⌘⇧R`), Ship, Settings. Past ~8 projects the
+  list scrolls and these stay pinned.
+- **Wide and narrow.** `«`/`»` at the top switch forms, remembered per window. Wide is ~225px. Narrow is an icon
+  strip at the rail's width: each project is a two-letter initial in its colour with a status dot, the open project's
+  panel icons sit under it, and the session's entries follow. Hovering an initial shows its header line.
+- **One project, or a directory.** There is no project header. The sidebar is a labelled list under the project's
+  name or the directory's path, with the same entries. Pull request appears only with a remote, and Ship only with 2+
+  projects.
+- **One tab strip for the session.** Tabs aren't split by project: a proto file from api can sit beside code in
+  admin-ui.
+  - With 2+ projects, each editor tab leads with a small square in its project's colour (the header's colour), and
+    its tooltip names the project and path. With one project, tabs keep their file icon.
+  - The breadcrumb starts with the project's name: `api › proto › usage.proto`.
+  - Opening a file from another project doesn't change the sidebar's open project.
+- **Pull request** in the dock is a compact checklist: committed → up to date → pushed → PR → checks, with the PR's
+  title and the failing check's log line. **Raise PR** (or **Edit PR** once it exists) opens a full-width **main tab**,
+  `Raise PR · admin-ui`, in 18's style. It has the title, the body editor (template-filled, drafted by the agent),
+  reviewers, cross-linked PRs with their merge order, and on the right the "before this ships" gates and the ticket.
+  It closes like any tab.
+- **Ship** (session-wide) is 18's full page: every project's checklist side by side, cross-linked PRs, the merge
+  order, and "push + raise all".
+
+Superseded alternatives (41-project-context.png):
 
 ![41-project-context](mockups/41-project-context.png)
 
-**Direction: D, pending the user's approval of its mockup.** A session can hold several projects, but you work in one at a time (admin-ui:
-its files, changes, PR and tests), which the rail and 01c's one-root-per-project Explorer don't express. Three options (A–C),
-each shown for two projects, one project, and a directory opened directly; D answers the user's reply to them. Whichever is picked replaces the
-multi-project notes in 01c and `sessions.md` → In the editor. `⌥1–3` are already Explorer scopes, so projects take `⌃1–9`.
-
-- **A · Project switcher at the head of the rail.** The rail keeps its panels; a chip at its top picks the project
-  (`⌃1–9`, `⌃P`), and every panel but Requests shows only that project, with its name in the dock header. The other
-  projects' state shows as a dot on the chip. Least change, but the project is a mode that's easy to lose track of, and
-  Ship's merge order across projects (18) needs an "all projects" entry. One project or a directory: no chip, today's rail.
-- **B · Project as the unit.** The left dock is one collapsible section per project, each with its own tabs (Files ·
-  Changes · PR · Tests); others fold to one line with branch, changes, PR and status. The rail keeps only the session's
-  own views (Projects, Requests, Search, Settings). Closest to how the user describes working, and the biggest change:
-  Git, Ship and Tests leave the rail, and the merge order across projects needs a session-level home. One project or a
-  directory: one section with no header, a tabbed dock.
-- **C · Project tabs above the panel.** Today's rail model plus a row of project tabs over whichever panel is open: the
-  rail picks what, the tabs pick which, one choice per session shared by every panel. Always visible, with each
-  project's state on its tab; costs a row and scrolls with many projects; an **all** tab can hold what spans projects
-  (Ship's merge order, Search). One project or a directory: no row, today's dock.
-- **D · Project sidebar** (the user's direction: A, with a quicker way to see and switch projects).
-
-  ![42-project-sidebar](mockups/42-project-sidebar.png)
-
-  The rail becomes a menu sidebar, one accordion per project. A header shows the project's state (branch, ahead,
-  changes, PR and a CI dot); under the open one sit its panels (Explorer, Git, Pull request, Tests). Clicking a header
-  expands it and folds the open one, and the project reopens its last panel; clicking an entry opens that project's
-  panel in the dock, whose header names both ("admin-ui · Explorer"). Below a divider sit the session's own entries:
-  Requests with its count, Ship (18's merge order across projects, with 2+ PRs), Search, Settings. `⌃1–9` jump to a
-  project; `j`/`k`/`⏎` work in the sidebar. A toggle narrows it to an icon strip that replaces today's rail: each
-  project a two-letter coloured initial with a status dot, the open project's panel icons under it. Costs ~225px in the
-  wide form, and two lines per folded project. One project or a directory: no header, a labelled rail (Pull request
-  only with a remote).
+- **A · Switcher chip on the rail.** The rail picks the panel and a chip picks the project. Dropped because the
+  project becomes a hidden mode. D keeps A's model and puts the projects in view.
+- **B · Project sections in the dock.** One collapsible section per project, each with its own tabs. Dropped as the
+  biggest change, with no home for what spans projects.
+- **C · Project tabs above the panel.** A row of project tabs over whichever panel is open. Dropped because it costs a
+  row and scrolls with many projects.
 
 ## 01c · Explorer scopes: Changed · Uncommitted · All
 
@@ -287,7 +306,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   | `␣s` / `␣S` | symbols in this file / workspace (LSP) |
   | `␣k` | **keymaps**: every mapping with its mode, description and source; `⏎` runs it, `⌃e` jumps to where it's defined |
   | `␣:` | commands |
-  | `␣t` | threads/requests |
+  | `␣r` | threads/requests |
   | `␣gl` / `␣gs` | git log / git status |
   | `␣h` | help (Oriel's docs and `:help`) |
   | `␣'` | resume the last picker exactly where you left it |
@@ -311,9 +330,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   here and in the open buffers, keymaps (`⌃e` to the definition), commands, sessions and quickfix (`:copen`).
   Ranking is the fuzzy score, then open buffers and shallower paths; "changed on this branch" and "recently
   opened" join with FG-1 and the session's history. Threads, git log and status, and help come with their tickets.
-- Threads came with AI-5: the `threads` source lists the session in front's requests, and `⏎` opens one. `␣t` is also
-  the start of the tests' `␣tt`, `␣tf`… (TR-1), so it doesn't run on a timeout while which-key shows: which-key offers
-  `⏎` for ␣t's own mapping (below).
+- Threads came with AI-5: the `threads` source lists the session in front's requests (`␣r`), and `⏎` opens one.
+  `␣t` is the tests' group (`␣tt`, `␣tf`…, TR-1); rename is vim's `grn`.
 
 ## 02c · Which-key: the next keys, as you type
 
@@ -332,7 +350,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   keymap with no command names a group (`{Keys = "<leader>a", desc = "+agent"}`). `⌫` and `esc` act on a
   mapping's keys, not an engine's half-typed command (which `esc` cancels in the engine). `?` to the keymaps
   picker comes with Lua's keymap API (PL-1). `whichkey.enabled` turns it off.
-- Keys that are a mapping of their own as well as the start of longer ones (`␣t` and `␣tt`) wait while which-key
+- Keys that are a mapping of their own as well as the start of longer ones (a plugin's `␣x` beside its `␣xx`) wait while which-key
   shows them; it lists `⏎` with that mapping's description, and `⏎` runs it (`Resolver.Complete`/`Accept`,
   `ext.Pending.Runs`), unless a mapping goes on with `⏎`.
 
