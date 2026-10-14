@@ -103,7 +103,9 @@ flowchart TB
   session}` (the `test.run` view), which evidence chips run.
 - plan (AI-8): `plan.open {doc}` shows a planning session's docs (the `plan` and `plan.docs` views), `plan.next`,
   `plan.prev` and `plan.comment` move through a doc and open a thread on a block (the `plan` key mode), and
-  `session.start-work` is available while the session in front is planning. A comment on a file at the workspace root,
+  `session.start-work {clear, fresh, branches, sandbox, network, model, effort}` is available while the session in
+  front is planning; `plan.start-work` opens its dialog, and `plan.start-work.run` (⌘↵ in the `startwork` key
+  mode) runs what the dialog holds. A comment on a file at the workspace root,
   outside every project, is anchored to the project `core.DocsProject` (`"__docs__"`) with the path relative to the
   workspace; `request.comment {file}` does that for an absolute path, and an agent's `comment` tool takes
   `project: "__docs__"`.
@@ -400,6 +402,8 @@ type Host interface {
   them. A String option can offer `OptionSpec.Choices`, worked out when asked; the settings page makes it a menu
   (`ui.theme` lists the registered themes).
 - Plugins search text with `regex` (PCRE2's syntax), the same engine as project search; Lua's `L.regex` binds it.
+- An option may be a list of strings (`registry.List`, `[]string`), and `OptionSpec.Validate` refuses a value of
+  the right type that's still wrong; `Check` asks it, so every way of setting the option does (settings.md).
 - `Options` keeps where each value came from: `SetFrom(name, layer, at, v, source)`, `Source(name, at)`,
   `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").
 - `Registry.Themes()` returns a generation with the sources; the window watches a theme registered at any time.

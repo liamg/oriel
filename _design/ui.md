@@ -428,8 +428,12 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   ten minutes as green blocks labelled "agent edited 4s ago", a one-line change as its old words struck through
   (`widget.Span.Strike`) and its new ones. The header has the doc's title, the agent and "drafting rev N" (its edits to
   the doc), "agent editing PLAN.md" during a turn that edits a doc, **Preview diff** (lit when something registers
-  `diff.open`) and **Start work** (`session.start-work`). The status line's mode chip says PLAN while the doc has
-  focus. Not yet: a mermaid fence is drawn as code, not a diagram; the inline diff is word-level for one-line blocks
+  `diff.open`) and **Start work**, which opens the Start work dialog (`plan.start-work`, a `widget.Scrim` on the
+  dialog layer): clear the plan's threads (resolved go, open and deferred carried into the prompt), restart the
+  agent with a fresh context on the work pack, a branch per project, the sandbox and network toggles and the model and
+  effort menus shared with the launcher (`sandboxToggles`, `modelSelects`), and **Start work** (⌘↵) and Cancel (Esc),
+  which run `session.start-work` with them (sessions.md, Plan → Start work). The status line's mode chip says PLAN
+  while the doc has focus. Not yet: a mermaid fence is drawn as code, not a diagram; the inline diff is word-level for one-line blocks
   only.
 
 ## 06 · Review, and the review ledger

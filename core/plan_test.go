@@ -39,3 +39,14 @@ func TestWhatHoldsUpStartWork(t *testing.T) {
 		t.Error("a work session is planning")
 	}
 }
+
+// Start work clears a plan's threads (sessions.md, Plan → Start work): ThreadsRemoved takes them out of the state.
+func TestThreadsRemoved(t *testing.T) {
+	s := &State{Sessions: []SessionState{{ID: "s", Threads: []Thread{{ID: "a"}, {ID: "b"}, {ID: "c"}}}}}
+	if err := (ThreadsRemoved{Session: "s", Threads: []ThreadID{"a", "c"}}).Apply(s); err != nil {
+		t.Fatal(err)
+	}
+	if th := s.Sessions[0].Threads; len(th) != 1 || th[0].ID != "b" {
+		t.Errorf("threads = %+v", th)
+	}
+}

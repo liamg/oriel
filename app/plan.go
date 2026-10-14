@@ -46,6 +46,9 @@ type planExt struct {
 	sh *shell
 	h  ext.Host
 	by map[core.SessionID]*planState
+
+	dialog   *startWork // the Start work dialog, while it's open
+	startGen int        // which opening of it the worker's answers are for
 }
 
 // planState is one session's plan views: the doc in front, the selected block, what's being written.
@@ -96,6 +99,11 @@ func (x *planExt) Activate(_ context.Context, h ext.Host) error {
 		{ID: "plan.prev", Title: "Plan: the block before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
 		{ID: "plan.comment", Title: "Plan: open a thread on the selected block of the doc", Available: hasPlan,
 			Run: func(registry.Ctx, registry.Args) error { x.comment(); return nil }},
+		{ID: "plan.start-work", Title: "Start work on the plan in front: a dialog of how, which runs session.start-work",
+			Available: func(registry.Args) bool { se, ok := x.front(); return ok && se.Planning() },
+			Run:       func(registry.Ctx, registry.Args) error { return x.openStartWork() }},
+		{ID: "plan.start-work.run", Title: "Start work as the Start work dialog says", Available: func(registry.Args) bool { return x.dialog != nil },
+			Run: func(registry.Ctx, registry.Args) error { return x.runStartWork() }},
 	} {
 		x.add(h.Command(c))
 	}
@@ -110,6 +118,10 @@ func (x *planExt) Activate(_ context.Context, h ext.Host) error {
 		k.Mode = PlanKeyMode
 		x.add(h.Keymap(k))
 	}
+	x.add(h.Keymap(registry.Keymap{Mode: StartWorkKeyMode, Keys: "<D-CR>", Command: "plan.start-work.run", Desc: "Start work"}))
+	x.add(h.View(OverlayPrefix+"plan.start-work", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+		return &ui.Func{Key: "startwork", Fn: x.startWorkView}
+	})))
 	x.add(h.View(PlanView, planView{x}))
 	x.add(h.View(PlanDocsView, planDocsView{x}))
 	x.add(onDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
@@ -653,7 +665,7 @@ func (x *planExt) header(c *ui.Ctx, se core.SessionState, d planDoc, has bool) {
 		open, _ := readiness(se)
 		if widget.Button(c, "start", "Start work", widget.ButtonOpts{Primary: true, Disabled: open > 0 || !x.h.Available("session.start-work", nil),
 			Help: "agent/plan#start-work"}) {
-			x.run("session.start-work", nil)
+			x.run("plan.start-work", nil)
 		}
 	})
 }

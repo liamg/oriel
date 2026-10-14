@@ -153,6 +153,13 @@ func (s *FakeSession) Close() error {
 	return nil
 }
 
+// Closed reports whether whoever started it has closed it.
+func (s *FakeSession) Closed() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.closed
+}
+
 // Emit says ev, as the agent would.
 func (s *FakeSession) Emit(ev agent.Event) {
 	s.mu.Lock()

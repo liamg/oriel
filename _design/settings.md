@@ -83,7 +83,8 @@ help and validation are all generated from the spec.
 |---|---|
 | `Name` | `editor.line_numbers`. The section is the prefix. |
 | `Section` | title and order on the page, when it differs from the prefix |
-| `Type` | bool, enum (with values), int or float (with range), string, colour, duration, key, list, map |
+| `Type` | bool, enum (with values), int or float (with range), string, colour, duration, key, list (of strings), map |
+| `Validate` | refuses a value of the right type that's still wrong: a malformed rule in a list |
 | `Default` | the built-in value |
 | `Help` | one line; the long form links to `:help` |
 | `Scopes` | which of user, project, session, buffer and window it can be set at |
@@ -138,6 +139,18 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `ui.theme` | `oriel` | app | | FW-7 |
 | `ui.variant` | `system`: follows the OS; or `dark`, `light` | app | | FW-7, SH-11 |
 | `whichkey.enabled` | true | app | | SH-6 |
+| `sandbox.default` | `host`: a new session's agent runs on the worker; or `sandbox`, in a container | app | | AI-11 |
+| `sandbox.image` | empty: Oriel's base image; a project's applies to its repo | app | | AI-11 |
+| `sandbox.claude_version` | empty: the host's Claude Code | app | | AI-11 |
+| `sandbox.env` | empty: the default host variables a sandbox inherits | app | | AI-11 |
+| `sandbox.egress` | empty: network rules, `allow\|deny host[:port] [private]`; a project's add to it | app | | AI-11 |
+| `sandbox.rules` | empty: gateway rules, `allow\|ask\|deny tool`; a project's add to it | app | | AI-11 |
+| `sandbox.approval_timeout` | 0: ten minutes | app | | AI-11 |
+| `sandbox.auto_allow_read_only` | false | app | | AI-11 |
+| `sandbox.hidden_servers` | empty | app | | AI-11 |
+| `sandbox.egress_proxy` | true: off gives containers plain internet | app | | AI-11 |
+| `sandbox.memory` | empty: 8g; `none` for no cap | app | | AI-11 |
+| `sandbox.pids_limit` | 0: 4096; -1 for no cap | app | | AI-11 |
 
 ## The settings page (`:Settings`, ⌘,)
 
@@ -175,7 +188,41 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
   the registered themes; `editor.input`: the registered input engines), and a field for numbers, durations and other
   strings. A number's field takes only what a number is typed with; a field is checked as it's typed (its type, then
   `OptionSpec.Check`'s range), says why under it while it's wrong, sets on Enter, and Escape puts it back. "TOML" shows each row's line and its Lua. Undo is per change.
-- Not yet: colour, key, list and map types; `Restart`, `Resettable` and `Secret`; undo for reset section and reset all as one step.
+- A list (`registry.List`, held as `[]string`) is a TOML array of strings, a Lua table, and on the page a field of
+  its items separated by commas. `OptionSpec.Validate` refuses what the type allows but the option doesn't (a rule
+  that doesn't parse); `Check` asks it, so the page, `:set`, Lua and the files all do.
+- Project files are read for the window's project and for every repo a session on this machine's worker works in
+  (its `Project.Repo`), each trusted on its own, so a session's repo brings its project values even when the window
+  is elsewhere. Only the window's project is edited from the page.
+- Not yet: colour, key and map types, and a list editor beyond the comma-separated field; `Restart`, `Resettable`
+  and `Secret`; undo for reset section and reset all as one step.
+
+## Sandbox settings (`sandbox.*`)
+
+The sandbox's settings (`sandbox.Config`, agents.md "Permissions: three layers") are ordinary options in a
+`[sandbox]` table, on the page's sandbox section:
+
+```toml
+[sandbox]
+default = "sandbox"
+memory = "16g"
+egress = ["allow *.golang.org:443", "deny tracker.example.com"]
+rules = ["deny oriel__push"]
+approval_timeout = "5m"
+```
+
+- A network rule is `allow|deny host[:port] [private]` (`private` lets an allow reach private and tailnet
+  addresses), a gateway rule `allow|ask|deny tool` with the tool a name or a glob. They're strings in a list
+  rather than tables because an option holds one typed value and the list type is general; `sandbox.ParseEgressRule`
+  and `ParsePolicyRule` read them, and a value that doesn't parse is refused where it's set.
+- The project layer is only for what a repo may decide about itself: `sandbox.egress`, `sandbox.rules` and
+  `sandbox.image` in its `.oriel/settings.toml` add its own hosts and gateway rules, and its image, for sessions on
+  that repo. The rest (memory, env, the proxy, hidden servers) are yours alone.
+- `sandbox.default` is where the launcher's Sandbox toggle starts.
+- The worker is another process, so the app sends it the resolved `sandbox.Config` (`sandbox.config`, agents.md
+  "Sandbox settings"): when it connects, and whenever a `sandbox.*` option changes at any layer.
+- Not yet: `sandbox.servers` (extra MCP servers in Claude's `mcpServers` form) needs a map type; the gateway still
+  finds the servers Claude Code has installed.
 
 ## As built (ED-9)
 

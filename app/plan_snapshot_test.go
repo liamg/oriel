@@ -158,3 +158,31 @@ func (s *errScene) runStarting(prefix string) (render.Point, bool) {
 	}
 	return render.Point{}, false
 }
+
+// sessions.md, Plan → Start work: the dialog over the plan, with the plan's threads to clear, a fresh agent on the
+// plan's model, a branch per project, and the session's sandbox and network.
+func TestStartWorkDialogSnapshot(t *testing.T) {
+	s := planScene(t)
+	se, _ := s.store.Session("pricing-rounding")
+	for _, th := range se.Snapshot().Threads {
+		if th.Status == core.ThreadOpen && th.Anchor != nil {
+			th.Status = core.ThreadDeferred
+			s.store.Apply(core.ThreadUpdated{Session: "pricing-rounding", Thread: th})
+		}
+	}
+	s.run("plan.open", nil)
+	s.run("plan.start-work", nil)
+	for range 3 {
+		s.frame()
+	}
+	s.lint("the Start work dialog")
+	s.golden("plan-start-work")
+	text := s.frameText()
+	for _, want := range []string{"START WORK", "pricing-rounding", "THREADS", "1 goes · 3 carried", "Clear the plan's threads",
+		"Restart the agent with a fresh context", "from the plan docs and the work pack", "opus", "BRANCHES", "pricing", "billing-ui",
+		"rethink/rounding", "RUN ON", "Sandbox", "Open network", "Cancel", "Start work"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the dialog lacks %q", want)
+		}
+	}
+}

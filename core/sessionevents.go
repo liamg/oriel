@@ -12,6 +12,7 @@ func init() {
 	RegisterEvent[ProjectsChanged]("ProjectsChanged")
 	RegisterEvent[AgentChanged]("AgentChanged")
 	RegisterEvent[ThreadUpdated]("ThreadUpdated")
+	RegisterEvent[ThreadsRemoved]("ThreadsRemoved")
 	RegisterEvent[TaskChanged]("TaskChanged")
 	RegisterEvent[SubagentChanged]("SubagentChanged")
 	RegisterEvent[AskOpened]("AskOpened")
@@ -154,6 +155,23 @@ func (e ThreadUpdated) Apply(s *State) error {
 		return err
 	}
 	se.Threads = upsert(se.Threads, e.Thread, func(t Thread) bool { return t.ID == e.Thread.ID })
+	return nil
+}
+
+// ThreadsRemoved takes threads out of a session: a plan's, cleared at Start work. The log keeps them.
+type ThreadsRemoved struct {
+	Session SessionID  `json:"session"`
+	Threads []ThreadID `json:"threads"`
+}
+
+func (e ThreadsRemoved) Scope() SessionID { return e.Session }
+
+func (e ThreadsRemoved) Apply(s *State) error {
+	se, err := s.mustSession(e.Session)
+	if err != nil {
+		return err
+	}
+	se.Threads = slices.DeleteFunc(slices.Clone(se.Threads), func(t Thread) bool { return slices.Contains(e.Threads, t.ID) })
 	return nil
 }
 

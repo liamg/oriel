@@ -175,6 +175,19 @@ func optionValue(sp registry.OptionSpec, v any) (any, error) {
 		case float64:
 			return time.Duration(d * float64(time.Millisecond)), nil
 		}
+	case registry.List:
+		if l, ok := v.([]any); ok {
+			out := make([]string, 0, len(l))
+			for _, x := range l {
+				s, ok := x.(string)
+				if !ok {
+					return nil, fmt.Errorf("%s takes a list of strings, not %v", sp.Name, v)
+				}
+				out = append(out, s)
+			}
+			return out, nil
+		}
+		return nil, fmt.Errorf("%s takes a list of strings, not %v", sp.Name, v)
 	default:
 		return v, nil
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/wire"
 )
 
@@ -41,6 +42,8 @@ const (
 	MethodRunTests  = "tests.record"
 	MethodSessions  = "sessions.list"
 	MethodFork      = "agent.fork"
+	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
+	MethodSandboxConfig = "sandbox.config"
 )
 
 // What a worker calls on the app: tools the app offers agents (LSP lookups), and the policy hooks (layer 2).
@@ -68,6 +71,21 @@ type SessionRef struct {
 type RenameReq struct {
 	Session core.SessionID `json:"session"`
 	Name    string         `json:"name"`
+}
+
+// StartWorkReq is Start work on a plan, and how; its zero value is the Start work dialog's defaults.
+type StartWorkReq struct {
+	Session core.SessionID `json:"session"`
+	// KeepThreads leaves the plan's threads as they are; otherwise every one but the plan's own goes, the open and
+	// deferred ones carried into the work prompt as a note.
+	KeepThreads bool `json:"keepThreads,omitempty"`
+	// KeepConversation keeps the plan's agent and its context; otherwise a fresh one starts on the work pack.
+	KeepConversation bool              `json:"keepConversation,omitempty"`
+	Branches         map[string]string `json:"branches,omitempty"` // a project's branch, by its name; its planned one if absent
+	Sandbox          *bool             `json:"sandbox,omitempty"`  // nil keeps the session's
+	Network          string            `json:"network,omitempty"`  // ask or open; "" keeps the session's
+	Model            string            `json:"model,omitempty"`    // a new model runs at Effort, or its default
+	Effort           string            `json:"effort,omitempty"`
 }
 
 type AddRepoReq struct {
@@ -212,8 +230,13 @@ func (c Client) NextPR(ctx context.Context, id core.SessionID) error {
 	return c.Conn.Call(ctx, MethodNextPR, SessionRef{id}, nil)
 }
 
-func (c Client) StartWork(ctx context.Context, id core.SessionID) error {
-	return c.Conn.Call(ctx, MethodStartWork, SessionRef{id}, nil)
+func (c Client) StartWork(ctx context.Context, r StartWorkReq) error {
+	return c.Conn.Call(ctx, MethodStartWork, r, nil)
+}
+
+// SetSandboxConfig hands the worker the sandbox settings its sandboxes run on.
+func (c Client) SetSandboxConfig(ctx context.Context, cfg sandbox.Config) error {
+	return c.Conn.Call(ctx, MethodSandboxConfig, cfg, nil)
 }
 
 func (c Client) AddRepo(ctx context.Context, id core.SessionID, repo string) error {

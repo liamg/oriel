@@ -62,6 +62,8 @@ type settingsExt struct {
 	h  ext.Host
 
 	user, project *settingsFile
+	othersMu      sync.Mutex
+	others        map[string]*settingsFile // other projects' files, by root: the repos of this machine's sessions
 	trustPath     string
 	loadMu        sync.Mutex
 	specs         int // how many options there were at the last read
@@ -90,8 +92,7 @@ func (s *settingsExt) Activate(_ context.Context, h ext.Host) error {
 	s.user = &settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser}
 	s.trustPath = filepath.Join(conf, "trusted.toml")
 	if root := s.sh.cfg.WorkDir; root != "" {
-		s.project = &settingsFile{path: filepath.Join(root, ".oriel", "settings.toml"), layer: registry.LayerProject,
-			at: registry.At{Project: root}, trust: true}
+		s.project = projectFile(root)
 	}
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return strings.TrimSpace(v) }
 	for _, c := range []registry.Command{
@@ -150,16 +151,43 @@ func (s *settingsExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 func (s *settingsExt) files() []*settingsFile {
-	if s.project == nil {
-		return []*settingsFile{s.user}
+	out := []*settingsFile{s.user}
+	if s.project != nil {
+		out = append(out, s.project)
 	}
-	return []*settingsFile{s.user, s.project}
+	s.othersMu.Lock()
+	defer s.othersMu.Unlock()
+	for _, root := range slices.Sorted(maps.Keys(s.others)) {
+		out = append(out, s.others[root])
+	}
+	return out
+}
+
+// projectFile is a project's settings file, for the roots of this machine's sessions besides the window's own.
+func projectFile(root string) *settingsFile {
+	return &settingsFile{path: filepath.Join(root, ".oriel", "settings.toml"), layer: registry.LayerProject, at: registry.At{Project: root}, trust: true}
+}
+
+// addOthers reads the project files of repos sessions here work in, so their project values apply to them.
+func (s *settingsExt) addOthers() {
+	s.othersMu.Lock()
+	defer s.othersMu.Unlock()
+	for _, root := range projectRoots(s.sh.cfg.WorkDir, s.h.State()) {
+		if root == s.sh.cfg.WorkDir || s.others[root] != nil {
+			continue
+		}
+		if s.others == nil {
+			s.others = map[string]*settingsFile{}
+		}
+		s.others[root] = projectFile(root)
+	}
 }
 
 // loadAll reads each file that changed since it was last read, and reports whether any did.
 func (s *settingsExt) loadAll() bool {
 	s.loadMu.Lock()
 	defer s.loadMu.Unlock()
+	s.addOthers()
 	// Options registered since (a plugin's) may now take keys that were unknown: read the files again.
 	if n := len(s.h.Options().Specs()); n != s.specs {
 		s.specs = n
@@ -214,7 +242,11 @@ func (s *settingsExt) load(f *settingsFile) bool {
 	if f.trust && len(src) > 0 && !s.trusted(f.path, h) {
 		f.untrusted = true
 		s.apply(f, nil)
-		s.h.Notify(core.Notice{ID: "settings.untrusted", Severity: core.SevWarning, Title: "Project settings",
+		id := "settings.untrusted"
+		if f != s.project {
+			id += ":" + f.path
+		}
+		s.h.Notify(core.Notice{ID: id, Severity: core.SevWarning, Title: "Project settings",
 			Text:    f.path + " isn't trusted yet, so it isn't applied. Trust it if you know what it does.",
 			Actions: []core.Action{{Title: "Trust", Command: "settings.trust", Args: map[string]any{"path": f.path}}}})
 		return true
@@ -290,6 +322,10 @@ func fromTOML(sp registry.OptionSpec, v any) (any, error) {
 		if d, ok := v.(string); ok {
 			return time.ParseDuration(d)
 		}
+	case registry.List:
+		if l, ok := stringList(v); ok {
+			return l, nil
+		}
 	default:
 		return v, nil
 	}
@@ -304,7 +340,26 @@ func toTOML(sp registry.OptionSpec, v any) any {
 }
 
 func typeName(sp registry.OptionSpec) string {
-	return [...]string{"bool", "int", "float", "string", "enum", "duration", "key"}[sp.Type]
+	return [...]string{"bool", "int", "float", "string", "enum", "duration", "key", "list of strings"}[sp.Type]
+}
+
+// stringList is a list of strings from a file or Lua ([]any), or one already.
+func stringList(v any) ([]string, bool) {
+	switch v := v.(type) {
+	case []string:
+		return v, true
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, x := range v {
+			s, ok := x.(string)
+			if !ok {
+				return nil, false
+			}
+			out = append(out, s)
+		}
+		return out, true
+	}
+	return nil, false
 }
 
 // --- trust ---
@@ -323,9 +378,14 @@ func (s *settingsExt) trusted(path string, h [32]byte) bool {
 }
 
 func (s *settingsExt) trustFile(path string) error {
-	f := s.project
-	if f == nil || path != f.path {
-		return fmt.Errorf("%s isn't this project's settings file", path)
+	var f *settingsFile
+	for _, x := range s.files() {
+		if x.trust && x.path == path {
+			f = x
+		}
+	}
+	if f == nil {
+		return fmt.Errorf("%s isn't the settings file of a project here", path)
 	}
 	src, err := os.ReadFile(path)
 	if err != nil {
@@ -406,6 +466,9 @@ func (s *settingsExt) set(name string, v any, scope int) error {
 	}
 	if f, ok := v.(float64); ok && sp.Type == registry.Int && f == float64(int(f)) {
 		v = int(f)
+	}
+	if l, ok := stringList(v); ok && sp.Type == registry.List {
+		v = l
 	}
 	f, err := s.fileFor(scope)
 	if err != nil {
@@ -580,6 +643,12 @@ func formatValue(v any) string {
 		return strconv.Quote(v)
 	case time.Duration:
 		return strconv.Quote(v.String())
+	case []string:
+		q := make([]string, len(v))
+		for i, s := range v {
+			q[i] = strconv.Quote(s)
+		}
+		return "[" + strings.Join(q, ", ") + "]"
 	}
 	return fmt.Sprint(v)
 }
@@ -758,7 +827,11 @@ func (s *settingsExt) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec,
 			if s.asTOML {
 				sec, key, _ := strings.Cut(sp.Name, ".")
 				c.Text("toml", fmt.Sprintf("[%s] %s = %s", sec, key, formatValue(toTOML(sp, v))), monoAt(th, 11, tThemeTOMLVal))
-				c.Text("lua", fmt.Sprintf("oriel.option[%q] = %s", sp.Name, formatValue(toTOML(sp, v))), monoAt(th, 11, theme.FgFaint))
+				luaVal := formatValue(toTOML(sp, v))
+				if sp.Type == registry.List {
+					luaVal = "{" + strings.TrimSuffix(strings.TrimPrefix(luaVal, "["), "]") + "}"
+				}
+				c.Text("lua", fmt.Sprintf("oriel.option[%q] = %s", sp.Name, luaVal), monoAt(th, 11, theme.FgFaint))
 			} else if sp.Help != "" {
 				widget.Wrap(c, "h", sp.Help, 560, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(theme.FgFaint)})
 			}
@@ -862,7 +935,11 @@ func (s *settingsExt) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled b
 	if bad == nil {
 		bad = sp.Check(val)
 	}
-	c.Column("field", ui.Style{W: ui.Px(200), Gap: 4}, func(c *ui.Ctx) {
+	w := float32(200)
+	if sp.Type == registry.List {
+		w = 260
+	}
+	c.Column("field", ui.Style{W: ui.Px(w), Gap: 4}, func(c *ui.Ctx) {
 		res := widget.Input(c, "in", &st.text, widget.InputOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows", Accept: accept,
 			Invalid: bad != nil})
 		switch {
@@ -875,7 +952,7 @@ func (s *settingsExt) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled b
 			s.fail(bad)
 		}
 		if bad != nil && st.text != text {
-			widget.Wrap(c, "bad", bad.Error(), 200, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11}, Color: c.Theme().C(theme.Error)})
+			widget.Wrap(c, "bad", bad.Error(), w, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11}, Color: c.Theme().C(theme.Error)})
 		}
 	})
 }
@@ -891,9 +968,13 @@ func upper(ss []string) []string {
 	return out
 }
 
+// fieldText is a value as its field shows it: a list's items separated by commas.
 func fieldText(v any) string {
-	if s, ok := v.(string); ok {
-		return s
+	switch v := v.(type) {
+	case string:
+		return v
+	case []string:
+		return strings.Join(v, ", ")
 	}
 	return fmt.Sprint(v)
 }
@@ -915,6 +996,14 @@ func parseField(sp registry.OptionSpec, s string) (any, error) {
 		return f, nil
 	case registry.Duration:
 		return time.ParseDuration(strings.TrimSpace(s))
+	case registry.List:
+		out := []string{}
+		for _, x := range strings.Split(s, ",") {
+			if x = strings.TrimSpace(x); x != "" {
+				out = append(out, x)
+			}
+		}
+		return out, nil
 	}
 	return s, nil
 }

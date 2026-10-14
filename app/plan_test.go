@@ -12,6 +12,8 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/worker"
 )
 
 const planMarkdown = `# Round invoice lines half-to-even
@@ -125,9 +127,12 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 	r.clickText("defer")
 	r.waitText("Ready: every")
 
-	// Start work: the worktree, the agent told where, and the window on the worktree.
+	// Start work: the dialog, then the worktree, a fresh agent told where, and the window on the worktree.
 	r.clickText("Start work")
-	in = a.WaitSent(t)
+	r.waitText("START WORK")
+	r.typeKeys("<D-CR>")
+	fresh := lw.fake.WaitStarted(t)
+	in = fresh.WaitSent(t)
 	st := waitState(t, r.store, "work started", func(st core.State) bool {
 		s, _ := st.Session("rounding")
 		return s != nil && s.Snapshot().Started
@@ -176,5 +181,124 @@ func TestMarkdownBlocksKeepTheirLines(t *testing.T) {
 			g.Line != w.Line || g.End != w.End {
 			t.Errorf("block %d = %+v, want %+v", i, g, w)
 		}
+	}
+}
+
+// clickAccess clicks the control named label, found in the window's accessibility tree where it's settled: in the
+// same place two frames running.
+func (r *running) clickAccess(label string) {
+	r.t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	var last *render.AccessNode
+	for {
+		var found *render.AccessNode
+		var find func(n *render.AccessNode)
+		find = func(n *render.AccessNode) {
+			if n.Name == label {
+				found = n
+			}
+			for _, k := range n.Children {
+				find(k)
+			}
+		}
+		if tr := r.win.Access(); tr != nil {
+			find(tr)
+		}
+		settled := found != nil && last != nil && found.Bounds == last.Bounds
+		last = found
+		if settled {
+			at := render.Point{X: (found.Bounds.Min.X + found.Bounds.Max.X) / 2, Y: (found.Bounds.Min.Y + found.Bounds.Max.Y) / 2}
+			r.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: at})
+			r.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: at, Buttons: render.ButtonPrimary})
+			r.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: at, Buttons: render.ButtonPrimary})
+			return
+		}
+		if time.Now().After(deadline) {
+			r.t.Fatalf("nothing named %q to click", label)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// sessions.md, Plan → Start work: Start work opens a dialog over the plan, which Escape, its esc and Cancel close.
+// ⌘↵ starts work as it says: here with the plan's agent kept (its toggle clicked off), a branch renamed, and the
+// plan's threads cleared, the deferred one carried into what the agent is told.
+func TestStartWorkDialog(t *testing.T) {
+	r, a, lw := planSession(t)
+	se := planNow(t, r)
+	if err := os.WriteFile(filepath.Join(se.Dir, "PLAN.md"), []byte(planMarkdown), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	for _, th := range []struct {
+		body   string
+		status core.ThreadStatus
+	}{{"Is half-even what finance wants?", core.ThreadDeferred}, {"Which currencies?", core.ThreadResolved}} {
+		tid, err := lw.w.Comment(ctx, worker.CommentReq{Session: "rounding", Body: th.body,
+			Anchor: &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: 10}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := lw.w.SetThread(worker.ThreadReq{Session: "rounding", Thread: tid, Status: th.status}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{})
+	r.waitText("Ready: every")
+
+	for _, close := range []func(){
+		func() { r.typeKeys("<Esc>") },
+		func() { r.clickTop("esc") },
+		func() { r.clickTop("Cancel") },
+	} {
+		r.clickText("Start work")
+		r.waitFrame("the Start work dialog", func(s string) bool {
+			return containsAll(s, "START WORK", "Clear the plan's threads", "Restart the agent with a fresh context", "1 goes · 1 carried")
+		})
+		close()
+		r.waitGone("START WORK")
+	}
+	if !planNow(t, r).Planning() {
+		t.Fatal("closing the dialog started work")
+	}
+
+	r.clickText("Start work")
+	r.waitText("START WORK")
+	r.clickAccess("Restart the agent with a fresh context")
+	r.waitText("keeps the plan's conversation")
+	branch := planNow(t, r).Projects[0].Branch
+	r.clickAccess("Branch for pricing")
+	r.typeKeys(strings.Repeat("<BS>", len(branch)))
+	r.typeText("tester/rounding-half-even")
+	r.waitText("tester/rounding-half-even")
+	r.typeKeys("<D-CR>")
+	r.waitGone("START WORK")
+	in := a.WaitSent(t)
+	for _, want := range []string{"Start work", "(deferred): Is half-even what finance wants?"} {
+		if !strings.Contains(in.Text, want) {
+			t.Errorf("the plan's agent was told, without %q:\n%s", want, in.Text)
+		}
+	}
+	if strings.Contains(in.Text, "Which currencies?") {
+		t.Errorf("a resolved thread was carried:\n%s", in.Text)
+	}
+	se = planNow(t, r)
+	if p, _ := se.Primary(); !se.Started || p.Branch != "tester/rounding-half-even" || len(se.Threads) != 1 || a.Closed() {
+		t.Errorf("after Start work: started %v, branch %q, %d threads, agent closed %v", se.Started, p.Branch, len(se.Threads), a.Closed())
+	}
+}
+
+// session.start-work from Lua or the CLI, without the dialog: {clear} and {fresh} are on unless false, {branches} is
+// a table by project, and what's absent is the session's own.
+func TestStartWorkArgs(t *testing.T) {
+	r := startWorkReq("s", registry.Args{"clear": false, "branches": map[string]any{"pricing": "liam/x"}, "sandbox": true, "network": "open",
+		"model": "opus"})
+	if !r.KeepThreads || r.KeepConversation || r.Branches["pricing"] != "liam/x" || r.Sandbox == nil || !*r.Sandbox || r.Network != "open" ||
+		r.Model != "opus" || r.Effort != "" {
+		t.Errorf("%+v", r)
+	}
+	if r := startWorkReq("s", nil); r.KeepThreads || r.KeepConversation || r.Sandbox != nil || r.Branches != nil {
+		t.Errorf("no args: %+v", r)
 	}
 }

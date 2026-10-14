@@ -2,13 +2,15 @@ package sandbox
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
-// Config is the sandbox's settings. The worker reads them from Oriel's
-// settings and hands them over; nothing here loads them itself.
+// Config is the sandbox's settings: the app resolves its sandbox.* options
+// into one and sends it to the worker; nothing here loads them itself.
 type Config struct {
 	// Default is how new sessions run: "sandbox" (the default) or "host".
 	Default string `json:"default,omitempty"`
@@ -94,3 +96,70 @@ func ClaudeSettings() map[string]any {
 	}
 	return m
 }
+
+// ParseEgressRule reads a network rule written "allow|deny host[:port] [private]": "allow *.golang.org:443".
+func ParseEgressRule(s string) (EgressRule, error) {
+	f := strings.Fields(s)
+	if len(f) < 2 || len(f) > 3 {
+		return EgressRule{}, fmt.Errorf("%q isn't a network rule: allow|deny host[:port] [private]", s)
+	}
+	var r EgressRule
+	switch f[0] {
+	case "allow":
+		r.Allow = true
+	case "deny":
+	default:
+		return EgressRule{}, fmt.Errorf("%q: a network rule starts allow or deny, not %q", s, f[0])
+	}
+	r.Host = f[1]
+	if h, p, ok := strings.Cut(f[1], ":"); ok {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 1 || n > 65535 {
+			return EgressRule{}, fmt.Errorf("%q: %q isn't a port", s, p)
+		}
+		r.Host, r.Port = h, n
+	}
+	if r.Host == "" {
+		return EgressRule{}, fmt.Errorf("%q has no host", s)
+	}
+	if len(f) == 3 {
+		if f[2] != "private" || !r.Allow {
+			return EgressRule{}, fmt.Errorf("%q: only an allow ends with private", s)
+		}
+		r.Private = true
+	}
+	return r, nil
+}
+
+// String is the rule as ParseEgressRule reads it.
+func (r EgressRule) String() string {
+	s := "deny "
+	if r.Allow {
+		s = "allow "
+	}
+	s += r.Host
+	if r.Port > 0 {
+		s += ":" + strconv.Itoa(r.Port)
+	}
+	if r.Private {
+		s += " private"
+	}
+	return s
+}
+
+// ParsePolicyRule reads a gateway rule written "allow|ask|deny tool", the tool a name or a glob: "deny oriel__push".
+func ParsePolicyRule(s string) (PolicyRule, error) {
+	f := strings.Fields(s)
+	if len(f) != 2 {
+		return PolicyRule{}, fmt.Errorf("%q isn't a gateway rule: allow|ask|deny tool", s)
+	}
+	switch f[0] {
+	case "allow", "ask", "deny":
+	default:
+		return PolicyRule{}, fmt.Errorf("%q: a gateway rule starts allow, ask or deny, not %q", s, f[0])
+	}
+	return PolicyRule{Tool: f[1], Action: f[0]}, nil
+}
+
+// String is the rule as ParsePolicyRule reads it.
+func (r PolicyRule) String() string { return r.Action + " " + r.Tool }

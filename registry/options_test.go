@@ -1,6 +1,8 @@
 package registry_test
 
 import (
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -151,5 +153,32 @@ func TestOptionSources(t *testing.T) {
 	}
 	if s, ok := o.Spec("number"); !ok || s.Name != "editor.line_numbers" {
 		t.Errorf("spec by alias: %+v", s)
+	}
+}
+
+// settings.md, "Options": a list holds strings, and an option's own Validate refuses what its type can't say is wrong.
+func TestOptionListAndValidate(t *testing.T) {
+	r := registry.New()
+	r.Option(registry.OptionSpec{Name: "sandbox.egress", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
+		Validate: func(v any) error {
+			for _, s := range v.([]string) {
+				if s == "" {
+					return errors.New("an empty rule")
+				}
+			}
+			return nil
+		}})
+	o := r.Options()
+	if err := o.Set("sandbox.egress", registry.LayerUser, registry.At{}, []string{"allow api.example.com"}); err != nil {
+		t.Fatal(err)
+	}
+	if v, _, _ := o.Get("sandbox.egress", registry.At{}); len(v.([]string)) != 1 {
+		t.Errorf("sandbox.egress = %v", v)
+	}
+	if err := o.Set("sandbox.egress", registry.LayerUser, registry.At{}, "allow api.example.com"); err == nil {
+		t.Error("a string set a list")
+	}
+	if err := o.Set("sandbox.egress", registry.LayerUser, registry.At{}, []string{""}); err == nil || !strings.Contains(err.Error(), "an empty rule") {
+		t.Errorf("Validate wasn't asked: %v", err)
 	}
 }

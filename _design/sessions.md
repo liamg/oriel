@@ -147,6 +147,26 @@ type Sessions interface {
   then follows the session to its worktree (it follows the session in front whenever its projects move). The plan's
   thread reaches the agent as `where="plan"`, and a comment on a doc at the workspace root is anchored to the
   `core.DocsProject` project with its path relative to the workspace (`where="PLAN.md:14"`).
+- **Plan → Start work** opens a dialog over the plan (`plan.start-work`; ⌘↵ starts, Esc, its esc and Cancel close,
+  as does a click outside) with how the plan becomes work. Each choice is an arg of `session.start-work` and a field
+  of the worker's `StartWorkReq`, so Lua and the CLI start work the same way without the dialog; what an arg leaves
+  out is the default or the session's own.
+  - **Clear the plan's threads** (`clear`, on): every thread but the plan's own goes (`core.ThreadsRemoved`; the log
+    keeps them). Resolved ones just go; open and deferred ones are carried into the Start work prompt as a note of
+    where each was, its status, its first comment and its last reply. Open threads still hold Start work up
+    (readiness), so in practice it's the deferred ones. Off, the threads stay as they are.
+  - **Restart the agent with a fresh context** (`fresh`, on): the plan's agent stops, and a new one (not a resume)
+    starts on the `work` pack (`AgentState.Pack`, which overrides the kind's) and gets the Start work prompt, which
+    points it at the plan docs, as crit restarts its agent for the work. Off, the plan's agent carries on and is told
+    on the plan's thread.
+  - **Branch per project** (`branches`, by project name): pre-filled with the branch the plan was given, named from
+    the ticket and prompt (`BranchName`); git must take a name (`gitx.ValidBranch`), and one taken already gets
+    `-2` (`FreshBranch`). A bad name refuses before any worktree is made.
+  - **Sandbox** and **Open network** (`sandbox`, `network`), the session's own to start with.
+  - **Model and effort** (`model`, `effort`), the plan's to start with, from the provider's models (the launcher's
+    menus); a new model runs at its default effort unless one is picked. The dialog sends only what was changed.
+  - A change of sandbox, network, model or effort with the conversation kept restarts the agent by its own id
+    (`Resume`), so it carries on in the new place.
 - **Direct** never makes a worktree or a workspace: the directory itself, git repo or not. **Scratch** gets a
   directory for notes and no repo. **New repo** makes the repo from a template (`empty`, `go-module`, `go-cli`, or a
   git URL), commits it, registers it, and carries on as a plan for it. **Review** fetches `pull/<n>/head` from the

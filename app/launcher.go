@@ -97,6 +97,10 @@ func (x *launcher) openWith(a registry.Args) {
 	if x.template == "" {
 		x.template = worker.Templates[0]
 	}
+	if _, given := a["sandbox"]; !given {
+		v, _, _ := x.h.Options().Get("sandbox.default", registry.At{})
+		x.sandbox = v == "sandbox"
+	}
 	x.load(a.String("provider") != "")
 }
 
@@ -467,40 +471,49 @@ func (x *launcher) providerCard(c *ui.Ctx, p worker.ProviderInfo) {
 			}
 		})
 		if len(p.Models) > 0 {
-			c.Row("model", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				model := x.model
-				if !on || model == "" {
-					model = defaultModel(p)
-				}
-				var ids []string
-				var efforts []string
-				for _, m := range p.Models {
-					ids = append(ids, m.ID)
-					if m.ID == model {
-						efforts = m.Efforts
-					}
-				}
-				if v, ok := widget.Select(c, "m", model, ids, widget.SelectOpts{Label: name + " model", Help: "agent/launcher#agent"}); ok {
-					x.pickProvider(p.ID)
-					x.model, x.effort = v, ""
-				}
-				if len(efforts) > 0 {
-					effort := "default effort"
-					if on && x.effort != "" {
-						effort = x.effort
-					}
-					if v, ok := widget.Select(c, "e", effort, efforts, widget.SelectOpts{Label: name + " effort", Help: "agent/launcher#agent"}); ok {
-						x.pickProvider(p.ID)
-						x.effort = v
-					}
-				}
-			})
+			model, effort := x.model, ""
+			if !on || model == "" {
+				model = defaultModel(p)
+			}
+			if on {
+				effort = x.effort
+			}
+			if m, e, ok := modelSelects(c, p, model, effort, "agent/launcher#agent"); ok {
+				x.pickProvider(p.ID)
+				x.model, x.effort = m, e
+			}
 		}
 		c.Text("usage", providerNote(p, x.h.State().Usage), monoFont(10, th.C(theme.FgFaint)))
 	})
 	if in.Clicked {
 		x.pickProvider(p.ID)
 	}
+}
+
+// modelSelects are a provider's model and effort menus, at model and effort ("" is the default effort). It reports
+// a pick, with what's picked: a new model's effort is its default.
+func modelSelects(c *ui.Ctx, p worker.ProviderInfo, model, effort, help string) (string, string, bool) {
+	name := providerName(p.ID)
+	picked := false
+	c.Row("model", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+		var ids, efforts []string
+		for _, m := range p.Models {
+			ids = append(ids, m.ID)
+			if m.ID == model {
+				efforts = m.Efforts
+			}
+		}
+		if v, ok := widget.Select(c, "m", model, ids, widget.SelectOpts{Label: name + " model", Help: help}); ok {
+			model, effort, picked = v, "", true
+		}
+		if len(efforts) > 0 {
+			label := cmpOr(effort, "default effort")
+			if v, ok := widget.Select(c, "e", label, efforts, widget.SelectOpts{Label: name + " effort", Help: help}); ok {
+				effort, picked = v, true
+			}
+		}
+	})
+	return model, effort, picked
 }
 
 // defaultModel is a provider's default model, else its first.
@@ -616,7 +629,6 @@ func (x *launcher) repoName(r core.RepoID) string {
 
 // runOn is where the session runs: the worker, the sandbox and its network.
 func (x *launcher) runOn(c *ui.Ctx) {
-	th := c.Theme()
 	heading(c, "head", "Run on", "")
 	var labels []string
 	var ids []core.WorkerID
@@ -644,22 +656,30 @@ func (x *launcher) runOn(c *ui.Ctx) {
 			x.load(false)
 		}
 	}
-	toggle := func(key, label, note string, on *bool, disabled bool) {
-		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			if widget.Toggle(c, "t", *on, widget.ToggleOpts{Label: label, Disabled: disabled, Help: "agent/launcher#run-on"}) {
-				*on = !*on
-			}
-			fg := th.C(theme.Fg)
-			if disabled {
-				fg = th.C(theme.FgFaint)
-			}
-			c.Text("l", label, uiFont(12.5, fg))
-			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", note, monoFont(10, th.C(theme.FgFaint)))
-		})
-	}
-	toggle("sandbox", "Sandbox", "container · gateway for git & gh", &x.sandbox, false)
-	toggle("network", "Open network", "ask per new host when off", &x.openNet, !x.sandbox)
+	sandboxToggles(c, &x.sandbox, &x.openNet, "agent/launcher#run-on")
+}
+
+// toggleRow is a toggle with its label, and a note at the right.
+func toggleRow(c *ui.Ctx, key any, label, note string, on *bool, disabled bool, help string) {
+	th := c.Theme()
+	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+		if widget.Toggle(c, "t", *on, widget.ToggleOpts{Label: label, Disabled: disabled, Help: help}) {
+			*on = !*on
+		}
+		fg := th.C(theme.Fg)
+		if disabled {
+			fg = th.C(theme.FgFaint)
+		}
+		c.Text("l", label, uiFont(12.5, fg))
+		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		c.Text("n", note, monoFont(10, th.C(theme.FgFaint)))
+	})
+}
+
+// sandboxToggles are where an agent runs: in a sandbox, and with an open network there.
+func sandboxToggles(c *ui.Ctx, sandbox, openNet *bool, help string) {
+	toggleRow(c, "sandbox", "Sandbox", "container · gateway for git & gh", sandbox, false, help)
+	toggleRow(c, "network", "Open network", "ask per new host when off", openNet, !*sandbox, help)
 }
 
 // side is the recent prompts, and what starting will do.

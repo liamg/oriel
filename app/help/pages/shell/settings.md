@@ -29,7 +29,7 @@ win: defaults, your file, `init.lua`, the project's file, the session.
 
 Each row shows its value and where it was set: default, user, project, session, or `set in init.lua:12`. A
 value set in Lua can't be changed here; change it in Lua. A bar on the left marks a value that isn't the
-default.
+default. A list's field takes its items separated by commas.
 
 ## Reset {#reset}
 
@@ -43,4 +43,11 @@ Shows the line you'd write by hand for each option, and the Lua.
 ## Project settings {#trust}
 
 A project's settings file applies only once you trust it, and again each time it changes: Oriel asks with a
-notice. Your own edits to it from this page are trusted.
+notice. Your own edits to it from this page are trusted. The repos your sessions work in bring their own project
+files too, each trusted the same way.
+
+## Sandbox {#sandbox}
+
+The `sandbox` section is how sandboxed agents run: their image, memory and processes, the host variables they
+get, network rules (`allow *.golang.org:443`) and gateway rules (`deny oriel__push`). A project's file can add its
+own rules and image. Changes reach the worker at once and apply to the sandboxes it opens next.

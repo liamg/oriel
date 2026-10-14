@@ -18,11 +18,13 @@ const (
 	String
 	Enum
 	Duration
-	Key // keys in vim notation
+	Key  // keys in vim notation
+	List // a list of strings
 )
 
-// Values are held as bool, int, float64, string (String, Enum and Key) or time.Duration.
-var goTypes = map[OptionType]string{Bool: "bool", Int: "int", Float: "float64", String: "string", Enum: "string", Duration: "time.Duration", Key: "string"}
+// Values are held as bool, int, float64, string (String, Enum and Key), time.Duration or []string.
+var goTypes = map[OptionType]string{Bool: "bool", Int: "int", Float: "float64", String: "string", Enum: "string", Duration: "time.Duration", Key: "string",
+	List: "[]string"}
 
 // Scope is where an option may be set, as a set of bits.
 type Scope uint8
@@ -101,6 +103,8 @@ type OptionSpec struct {
 	Choices  func() []string
 	Min, Max float64 // an Int's or Float's range, when Max > Min
 	Default  any
+	// Validate refuses a value of the right type that's still wrong: a malformed rule in a list.
+	Validate func(v any) error
 	Help     string
 	Scopes   Scope
 	Aliases  []string // vim names
@@ -132,9 +136,16 @@ func (s OptionSpec) Check(v any) error {
 		}
 	case Duration:
 		_, ok = v.(time.Duration)
+	case List:
+		_, ok = v.([]string)
 	}
 	if !ok {
 		return fmt.Errorf("%s is a %s, not %T", s.Name, goTypes[s.Type], v)
+	}
+	if s.Validate != nil {
+		if err := s.Validate(v); err != nil {
+			return fmt.Errorf("%s: %w", s.Name, err)
+		}
 	}
 	return nil
 }

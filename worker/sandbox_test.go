@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/egress"
+	"github.com/liamg/oriel/sandbox/gateway"
 	"github.com/liamg/oriel/sandbox/mcp"
 	"github.com/liamg/oriel/sandbox/runner"
 )
@@ -452,5 +454,47 @@ func TestReposListsWhatCouldJoin(t *testing.T) {
 	r := gatewayCall(t, b.root, "oriel__repos", map[string]any{})
 	if r.IsError || !strings.Contains(r.Text(), other) || strings.Contains(r.Text(), s.repo.Dir+"\n") {
 		t.Errorf("repos = %q", r.Text())
+	}
+}
+
+// agents.md, "Sandbox settings": the app sends the sandbox.* options as a sandbox.Config; the worker keeps it across
+// a restart, and a session's sandbox runs on it, with its repos' own rules.
+func TestSandboxRunsOnTheConfigTheAppSent(t *testing.T) {
+	s := newSandboxRig(t)
+	c, _ := s.app()
+	cfg := sandbox.Config{Memory: "2g", PidsLimit: 512, ApprovalSecs: 90, Env: []string{"GOFLAGS"},
+		Egress:   []sandbox.EgressRule{{Host: "proxy.golang.org", Allow: true}},
+		Rules:    []sandbox.PolicyRule{{Tool: "oriel__push", Action: "deny"}},
+		Projects: map[string]sandbox.ProjectConfig{s.repo.Dir: {Egress: []sandbox.EgressRule{{Host: "registry.npmjs.org", Port: 443, Allow: true}}}}}
+	if err := c.SetSandboxConfig(context.Background(), cfg); err != nil {
+		t.Fatal(err)
+	}
+	s.restart()
+	s.f.Attach(s.w)
+	s.w.opts.Sandbox = s.f
+	_, spec, b := s.sandboxed()
+	if b.cfg.Memory != "2g" || b.cfg.PidsLimit != 512 || b.gateway.Timeout != 90*time.Second || len(b.cfg.Env) != 1 {
+		t.Errorf("the sandbox runs on %+v", b.cfg)
+	}
+	p, err := spec.Exec.Start(context.Background(), exec.Command("claude"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	io.ReadAll(p.Stdout())
+	p.Wait()
+	if o := <-s.opts; o.Config.Memory != "2g" || o.Config.PidsLimit != 512 {
+		t.Errorf("the container launches with %+v", o.Config)
+	}
+	var hosts []string
+	for _, layer := range b.egressSettings() {
+		for _, r := range layer {
+			hosts = append(hosts, r.Host)
+		}
+	}
+	if !slices.Contains(hosts, "proxy.golang.org") || !slices.Contains(hosts, "registry.npmjs.org") {
+		t.Errorf("the egress rules are %v", hosts)
+	}
+	if l := b.gatewayLevels(); !slices.ContainsFunc(l.Global, func(r gateway.Rule) bool { return r.Tool == "oriel__push" && r.Action == "deny" }) {
+		t.Errorf("the gateway's global rules are %+v", l.Global)
 	}
 }

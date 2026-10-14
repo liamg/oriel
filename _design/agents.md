@@ -353,8 +353,15 @@ sequenceDiagram
 - The provider's hook socket (`agent.HookSocketEnv`, `ORIEL_HOOK_SOCK`) is carried into the container: `Exec`
   points it at `/run/oriel/hook.sock`, which the box serves in the run dir (mounted on Linux) and the agent socket
   serves at `agentsock.HookPath` for the sidecar's relay elsewhere; both reach the provider's socket on the host.
-- Open: sandbox settings (memory, egress rules, gateway servers) are the defaults until `settings.md` says where
-  they live and the worker reads them.
+- **Sandbox settings** are the `sandbox.*` options (settings.md, "Sandbox settings"). The worker can't read the
+  app's options (init.lua, trust and the project layer live in the app), so the app resolves them into a
+  `sandbox.Config` and sends it with `sandbox.config` (`Client.SetSandboxConfig`) when a worker connects and whenever
+  one changes: your values at the user and Lua layers, and for each repo of a session on this machine (and the
+  window's project) its trusted project file's `egress`, `rules` and `image` as `Config.Projects[repo]`. The worker
+  keeps the last one in `~/.oriel/sandbox.json`, so sessions that start while no window is open run on it too, and
+  `Sandboxes` with no `Config` func reads it at each `Open`; the session's open network still turns the proxy off.
+- Not yet: a remote worker's repos are paths on its machine, which the app can't read project files from, so they
+  get only your values; `Dismissed` and approved `Dockerfile` hashes aren't settings and aren't sent.
 
 ## Comments to agent, without `crit wait`
 

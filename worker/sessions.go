@@ -390,8 +390,11 @@ func (w *Worker) NextPR(ctx context.Context, id core.SessionID) error {
 	return nil
 }
 
-// StartWork makes a plan's worktrees and tells its agent to implement the plan (05-plan).
-func (w *Worker) StartWork(ctx context.Context, id core.SessionID) error {
+// StartWork makes a plan's worktrees and tells its agent to implement the plan (05-plan), as r asks: on the branches
+// it names, clearing the plan's threads into a note unless they're kept, and with the agent restarted fresh on the
+// work pack unless its conversation is kept, on the sandbox, network, model and effort given.
+func (w *Worker) StartWork(ctx context.Context, r StartWorkReq) error {
+	id := r.Session
 	se, err := w.session(id)
 	if err != nil {
 		return err
@@ -405,6 +408,17 @@ func (w *Worker) StartWork(ctx context.Context, id core.SessionID) error {
 	if held := se.Holding(); len(held) > 0 {
 		return fmt.Errorf("%q is still open: resolve or defer it first", held[0].Heading())
 	}
+	for name, b := range r.Branches {
+		if !slices.ContainsFunc(se.Projects, func(p core.Project) bool { return p.Name == name && p.ReadOnly && p.Repo != "" }) {
+			return fmt.Errorf("no project %q waits on Start work for its worktree", name)
+		}
+		if err := gitx.ValidBranch(ctx, b); err != nil {
+			return fmt.Errorf("%s: %w", name, err)
+		}
+	}
+	if r.Sandbox != nil && *r.Sandbox && w.opts.Sandbox == nil {
+		return errors.New("this worker can't run a sandbox")
+	}
 	m, _, ok := LoadManifest(se.Dir)
 	if !ok {
 		m = Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
@@ -416,7 +430,11 @@ func (w *Worker) StartWork(ctx context.Context, id core.SessionID) error {
 			projects = append(projects, p)
 			continue
 		}
-		e, err := addProject(ctx, se.Dir, &m, p.Repo, p.Branch, "", false)
+		branch := p.Branch
+		if b := r.Branches[p.Name]; b != "" {
+			branch = b
+		}
+		e, err := addProject(ctx, se.Dir, &m, p.Repo, branch, "", false)
 		if err != nil {
 			return err
 		}
@@ -433,8 +451,109 @@ func (w *Worker) StartWork(ctx context.Context, id core.SessionID) error {
 	if err := w.emit(core.ProjectsChanged{ID: id, Branch: branch, Projects: projects, Past: se.Past, Started: true}); err != nil {
 		return err
 	}
-	_, err = w.Comment(ctx, CommentReq{Session: id, Thread: se.PlanThread(), Title: "Start work", Body: startWorkPrompt(projects)})
+	prompt := startWorkPrompt(projects)
+	if !r.KeepThreads {
+		note, err := w.clearPlanThreads(se)
+		if err != nil {
+			return err
+		}
+		prompt += note
+	}
+	if err := w.workAgent(id, r); err != nil {
+		return err
+	}
+	_, err = w.Comment(ctx, CommentReq{Session: id, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
 	return err
+}
+
+// clearPlanThreads takes away every thread but the plan's own, and returns the open and deferred ones as a note for
+// the work prompt.
+func (w *Worker) clearPlanThreads(se core.SessionState) (string, error) {
+	plan := se.PlanThread()
+	var gone []core.ThreadID
+	var b strings.Builder
+	for _, t := range se.Threads {
+		if t.ID == plan {
+			continue
+		}
+		gone = append(gone, t.ID)
+		if t.Btw || (!t.Open() && t.Status != core.ThreadDeferred) || len(t.Comments) == 0 {
+			continue
+		}
+		if b.Len() == 0 {
+			b.WriteString("\n\nThese threads from planning weren't settled, so they come with the work:\n\n")
+		}
+		status := string(t.Status)
+		if t.Open() {
+			status = string(core.ThreadOpen)
+		}
+		fmt.Fprintf(&b, "- %s(%s): %s", threadPlace(t), status, oneLine(t.Comments[0].Body))
+		if last, _ := t.Last(); len(t.Comments) > 1 && !last.Progress {
+			fmt.Fprintf(&b, " Last: %s", oneLine(last.Body))
+		}
+		b.WriteString("\n")
+	}
+	if len(gone) == 0 {
+		return "", nil
+	}
+	return b.String(), w.emit(core.ThreadsRemoved{Session: se.ID, Threads: gone})
+}
+
+// threadPlace is where a thread is, as the work prompt names it: `PLAN.md:14` , or nothing for the whole change.
+func threadPlace(t core.Thread) string {
+	if t.Anchor == nil || t.Anchor.File == "" {
+		return ""
+	}
+	return fmt.Sprintf("`%s:%d` ", t.Anchor.File, t.Anchor.Line)
+}
+
+func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
+
+// workAgent readies the session's agent for the work: on the model, effort, sandbox and network r gives, restarted
+// fresh on the work pack unless its conversation is kept, and restarted by its own id when only those changed.
+func (w *Worker) workAgent(id core.SessionID, r StartWorkReq) error {
+	se, err := w.session(id)
+	if err != nil {
+		return err
+	}
+	a := se.Agent
+	if a.Provider == "" {
+		return nil
+	}
+	if r.Model != "" && r.Model != a.Model {
+		a.Model, a.Effort = r.Model, ""
+	}
+	if r.Effort != "" {
+		a.Effort = r.Effort
+	}
+	if r.Sandbox != nil && *r.Sandbox != a.Sandboxed {
+		was := core.SessionSpec{Sandbox: core.SandboxPolicy{Container: a.Sandboxed}}
+		if a.Policy == gate(was) {
+			a.Policy = gate(core.SessionSpec{Sandbox: core.SandboxPolicy{Container: *r.Sandbox}})
+		}
+		a.Sandboxed = *r.Sandbox
+	}
+	if r.Network != "" {
+		a.Network = r.Network
+	}
+	if !r.KeepConversation {
+		a.Session, a.Pack = "", "work"
+	}
+	if a.Model == se.Agent.Model && a.Effort == se.Agent.Effort && a.Sandboxed == se.Agent.Sandboxed && a.Network == se.Agent.Network &&
+		a.Session == se.Agent.Session && a.Pack == se.Agent.Pack {
+		return nil
+	}
+	if h, _ := w.hostFor(id, false); h != nil {
+		h.stop("start work")
+	}
+	w.edit.Lock()
+	defer w.edit.Unlock()
+	se, err = w.session(id)
+	if err != nil {
+		return err
+	}
+	a.Running, a.Working, a.TurnStarted, a.Queue = se.Agent.Running, se.Agent.Working, se.Agent.TurnStarted, se.Agent.Queue
+	return w.emit(core.AgentChanged{ID: id, Agent: a})
 }
 
 // startWorkPrompt tells the agent the plan is approved, and where to implement it (crit's plan.startwork).

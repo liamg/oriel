@@ -141,13 +141,13 @@ func TestPlanWorktreesComeAtStartWork(t *testing.T) {
 	}
 	// The plan's own thread doesn't hold up Start work; another open one does.
 	tid, _ := r.w.Comment(context.Background(), CommentReq{Session: id, Anchor: &core.Anchor{File: "PLAN.md", Line: 3}, Body: "half-up?"})
-	if err := r.w.StartWork(context.Background(), id); err == nil {
+	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err == nil {
 		t.Fatal("Start work with a thread open")
 	}
 	if err := r.w.SetThread(ThreadReq{Session: id, Thread: tid, Status: core.ThreadDeferred}); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.StartWork(context.Background(), id); err != nil {
+	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	se = r.session(id)

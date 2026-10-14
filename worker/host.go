@@ -131,7 +131,11 @@ func (h *host) launch() (agent.Session, Sandbox, error) {
 		Tools: w.tools(h), Protect: w.protected(se), Exec: w.opts.Exec, StateDir: filepath.Join(w.sessionDir(h.id), "agent"),
 		Env: []string{"ORIEL_SESSION=" + string(h.id)}}
 	if k, ok := w.kinds.Get(se.Kind); ok && w.opts.Packs != nil {
-		if pack, ok := w.opts.Packs(k.Pack); ok {
+		name := k.Pack
+		if se.Agent.Pack != "" {
+			name = se.Agent.Pack
+		}
+		if pack, ok := w.opts.Packs(name); ok {
 			spec.Pack = pack
 		}
 	}

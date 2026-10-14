@@ -197,3 +197,14 @@ func (r Repo) Dirty(ctx context.Context) bool {
 	out, err := r.git(ctx, "status", "--porcelain")
 	return err == nil && strings.TrimSpace(string(out)) != ""
 }
+
+// ValidBranch says why git wouldn't take name for a new branch, or nil.
+func ValidBranch(ctx context.Context, name string) error {
+	if strings.TrimSpace(name) == "" || strings.HasPrefix(name, "-") {
+		return fmt.Errorf("%q isn't a branch name", name)
+	}
+	if _, err := (Repo{Dir: os.TempDir()}).git(ctx, "check-ref-format", "--branch", name); err != nil {
+		return fmt.Errorf("%q isn't a branch name git takes", name)
+	}
+	return nil
+}

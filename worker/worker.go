@@ -21,6 +21,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/wire"
 )
@@ -61,8 +62,10 @@ type Worker struct {
 	repos    *repoList
 	sessLogs logs.Dirs
 	open     map[core.SessionID]logs.SessionLog
-	closed   chan struct{}
-	stopOnce sync.Once
+	// sandboxCfg is the sandbox settings the app last sent.
+	sandboxCfg sandbox.Config
+	closed     chan struct{}
+	stopOnce   sync.Once
 }
 
 type sessionLog struct {
@@ -110,6 +113,9 @@ func New(opts Options) (*Worker, error) {
 		repos: &repoList{path: filepath.Join(opts.Home, "repos.json")}, sessLogs: logs.Dirs{Root: filepath.Join(opts.Home, "sessions")},
 		closed: make(chan struct{})}
 	if err := w.repos.load(); err != nil {
+		return nil, err
+	}
+	if err := w.loadSandboxConfig(); err != nil {
 		return nil, err
 	}
 	if err := w.restore(); err != nil {

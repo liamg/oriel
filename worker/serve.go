@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/wire"
 )
 
@@ -29,7 +30,7 @@ func (w *Worker) Serve(conn wire.Conn) {
 	fn(MethodStop, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.Stop(ctx, r.Session) }))
 	fn(MethodArchive, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.Archive(ctx, r.Session) }))
 	fn(MethodNextPR, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.NextPR(ctx, r.Session) }))
-	fn(MethodStartWork, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.StartWork(ctx, r.Session) }))
+	fn(MethodStartWork, wire.Func(func(ctx context.Context, r StartWorkReq) (any, error) { return nil, w.StartWork(ctx, r) }))
 	fn(MethodAddRepo, wire.Func(func(ctx context.Context, r AddRepoReq) (any, error) {
 		return nil, w.AddRepo(ctx, r.Session, core.RepoID(r.Repo))
 	}))
@@ -54,6 +55,7 @@ func (w *Worker) Serve(conn wire.Conn) {
 		}
 		return r.Run.ID, w.emit(r)
 	}))
+	fn(MethodSandboxConfig, wire.Func(func(_ context.Context, cfg sandbox.Config) (any, error) { return nil, w.SetSandboxConfig(cfg) }))
 	fn(MethodTermInput, wire.Func(func(_ context.Context, r TermReq) (any, error) { return nil, w.termInput(r) }))
 	conn.HandleStream(MethodEvents, wire.StreamFunc(w.serveEvents))
 	conn.HandleStream(MethodTerminal, wire.StreamFunc(w.serveTerminal))

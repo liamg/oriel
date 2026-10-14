@@ -40,5 +40,16 @@ plan's own thread, where the prompt was, and side questions don't count.
 
 ## Start work
 
-Makes a worktree of each repo on the session's branch, tells the agent the plan is approved and where to implement
+Opens a dialog of how the plan becomes work; `⌘↵` starts, `esc` or Cancel closes it.
+
+- **Clear the plan's threads**: resolved threads go, and open or deferred ones go into what the agent is told, so
+  nothing asked is lost. Off, they stay.
+- **Restart the agent with a fresh context**: a new agent starts from the plan docs and the work prompt. Off, the
+  plan's agent carries on with what it knows.
+- **Branches**: each repo's branch, named from the ticket and prompt; change it here.
+- **Sandbox**, **Open network**, and the **model** and **effort** for the work.
+
+Start work makes a worktree of each repo on its branch, tells the agent the plan is approved and where to implement
 it, and moves the window to the worktree. From then on it's a work session: comments arrive on the code.
+`session.start-work` does the same from Lua, with `clear`, `fresh`, `branches`, `sandbox`, `network`, `model` and
+`effort`.

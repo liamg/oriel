@@ -31,6 +31,8 @@ type sessions struct {
 	mu      sync.Mutex
 	workers map[core.WorkerID]worker.Client
 	repos   []core.Repo // the session in front's worker's registered repos, for adding one
+
+	sandboxKick chan struct{} // the sandbox settings are to go to the workers
 }
 
 // AgentTurnEnd is the AgentTurnEnd hook's event.
@@ -57,6 +59,8 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	x.cancel = cancel
 	x.workers = map[core.WorkerID]worker.Client{}
+	x.sandboxKick = make(chan struct{}, 1)
+	x.sandboxSettings(ctx)
 	for _, c := range x.sh.cfg.Workers {
 		x.serve(ctx, h, c)
 	}
@@ -120,8 +124,13 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.Archive(ctx, id) })},
 		{ID: "session.next-pr", Title: "Start the next PR in this session, on a fresh branch from the updated base", Available: focused,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.NextPR(ctx, id) })},
-		{ID: "session.start-work", Title: "Start work on this plan: worktrees, then the agent implements it", Available: planning,
-			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.StartWork(ctx, id) })},
+		{ID: "session.start-work", Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
+			Available: planning,
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				return x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error {
+					return c.StartWork(ctx, startWorkReq(id, a))
+				})(ctx, a)
+			}},
 		{ID: "session.interrupt", Title: "Interrupt the agent's turn", Available: focused,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.Interrupt(ctx, id) })},
 		{ID: "session.rename", Title: "Rename the session in front: {name}", Available: focused,
@@ -187,6 +196,7 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
 		x.mu.Lock()
 		x.workers[info.ID] = c
 		x.mu.Unlock()
+		x.sendSandbox()
 		h.Redraw()
 		err = c.Events(ctx, x.sh.cfg.Store.Apply)
 		if ctx.Err() == nil {
@@ -666,4 +676,26 @@ func mainInput(raw string) string {
 		}
 	}
 	return raw
+}
+
+// startWorkReq is session.start-work's args as the worker's request: {clear} and {fresh} (both on unless false),
+// {branches} by project name, {sandbox}, {network}, {model} and {effort}, each the session's own when absent.
+func startWorkReq(id core.SessionID, a registry.Args) worker.StartWorkReq {
+	r := worker.StartWorkReq{Session: id, KeepThreads: a["clear"] == false, KeepConversation: a["fresh"] == false,
+		Network: a.String("network"), Model: a.String("model"), Effort: a.String("effort")}
+	if v, ok := a["sandbox"].(bool); ok {
+		r.Sandbox = &v
+	}
+	switch b := a["branches"].(type) {
+	case map[string]string:
+		r.Branches = b
+	case map[string]any:
+		r.Branches = map[string]string{}
+		for k, v := range b {
+			if s, ok := v.(string); ok {
+				r.Branches[k] = s
+			}
+		}
+	}
+	return r
 }

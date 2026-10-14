@@ -54,6 +54,7 @@ type AgentState struct {
 	Policy      string    `json:"policy,omitempty"` // the agent's own gate: ask, light or bypass
 	Sandboxed   bool      `json:"sandboxed,omitempty"`
 	Network     string    `json:"network,omitempty"` // in a sandbox: ask or open
+	Pack        string    `json:"pack,omitempty"`    // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
 	Queue       []string  `json:"queue,omitempty"`   // messages waiting for the turn to end
 	Tally       Tally     `json:"tally,omitzero"`
 }
