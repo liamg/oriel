@@ -9,7 +9,7 @@ import (
 )
 
 // cacheVersion changes with the shape of a scan: a stats file from another is dropped and the logs read again.
-const cacheVersion = 2
+const cacheVersion = 3
 
 // Log is a file a session's agent writes, in a format Read knows.
 type Log struct {

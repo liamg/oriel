@@ -321,7 +321,7 @@ func newJobsRig(t *testing.T) *jobsRig {
 	}
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
-	w, err := worker.New(worker.Options{Home: t.TempDir(), CritHome: "-", Name: "mbp", Providers: providers, Exec: nopExec{}, Now: r.clock.now,
+	w, err := worker.New(worker.Options{Home: t.TempDir(), Name: "mbp", Providers: providers, Exec: nopExec{}, Now: r.clock.now,
 		Sandbox: fakeSandboxes{}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)

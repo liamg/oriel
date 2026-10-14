@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -41,8 +42,11 @@ type statsGroup struct{ key, label, short string }
 
 var statsGroups = []statsGroup{
 	{stats.ByRepo, "REPO", "r"}, {stats.BySession, "SESSION", "s"}, {stats.ByKind, "KIND", "k"}, {stats.ByModel, "MODEL", "m"},
-	{stats.ByProvider, "PROVIDER", "p"}, {stats.ByAccount, "ACCOUNT", "a"}, {stats.ByDay, "DAY", "d"},
+	{stats.ByProvider, "PROVIDER", "p"}, {stats.ByAccount, "ACCOUNT", "a"}, {stats.ByOrigin, "ORIGIN", "o"}, {stats.ByDay, "DAY", "d"},
 }
+
+// statsOrigins are the origin filter's choices: every session, Oriel's, or those outside it.
+var statsOrigins = []struct{ label, value string }{{"ALL", ""}, {"ORIEL", stats.OriginOriel}, {"OUTSIDE", stats.OriginOutside}}
 
 // refetchAfter is how old an answer gets before it's asked for again while it's shown.
 const refetchAfter = time.Minute
@@ -129,13 +133,16 @@ func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
 		{ID: "Stats", Title: "The Stats page; :Stats {repo=api 7d session group=model}", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.ex(ctx, a.String("args"))
 		}},
-		{ID: "stats.open", Title: "Open the Stats page: {group} by, a {range} (7d, 30d, 90d), filtered by {repo}, {worker}, {provider}, {account}, {session}, {kind}, {model}",
+		{ID: "stats.open", Title: "Open the Stats page: {group} by, a {range} (7d, 30d, 90d), filtered by {repo}, {worker}, {provider}, {account}, {session}, {kind}, {model}, {origin} (oriel, outside)",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.openPage(a) }},
-		{ID: "stats.session", Title: "Open a session's stats as a main tab: {id}, the one in front by default", Available: workers,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.openSession(ctx, core.SessionID(a.String("id")))
+		{ID: "stats.session", Title: "Open a session's stats as a main tab: {id}, the one in front by default; one outside Oriel on its {worker}",
+			Available: workers, Run: func(ctx registry.Ctx, a registry.Args) error {
+				return x.openSession(ctx, core.SessionID(a.String("id")), core.WorkerID(a.String("worker")))
 			}},
-		{ID: "stats.group", Title: "Group the Stats page {by} repo, session, kind, model, provider or day", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "stats.origin", Title: "Show the Stats page's sessions from {origin}: oriel, outside, or \"\" for every one", Run: func(_ registry.Ctx, a registry.Args) error {
+			return x.setOrigin(a.String("origin"))
+		}},
+		{ID: "stats.group", Title: "Group the Stats page {by} repo, session, kind, model, provider, account, origin or day", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.regroup(a.String("by"))
 		}},
 		{ID: "stats.range", Title: "Step the Stats page's range {step} -1 shorter or 1 longer", Run: func(_ registry.Ctx, a registry.Args) error {
@@ -253,7 +260,7 @@ func (x *statsExt) ex(ctx registry.Ctx, args string) error {
 	for _, w := range strings.Fields(args) {
 		switch k, v, ok := strings.Cut(w, "="); {
 		case w == "session" || w == "session=":
-			return x.openSession(ctx, "")
+			return x.openSession(ctx, "", "")
 		case ok && (k == "group" || k == "by"):
 			a["group"] = v
 		case ok:
@@ -280,9 +287,9 @@ func (x *statsExt) openPage(a registry.Args) error {
 		}
 	}
 	if !slices.ContainsFunc(statsGroups, func(g statsGroup) bool { return g.key == q.group }) {
-		return fmt.Errorf("no grouping %q: repo, session, kind, model, provider, account or day", q.group)
+		return fmt.Errorf("no grouping %q: repo, session, kind, model, provider, account, origin or day", q.group)
 	}
-	for _, k := range []string{"repo", "worker", "provider", "account", "session", "kind", "model"} {
+	for _, k := range []string{"repo", "worker", "provider", "account", "session", "kind", "model", "origin"} {
 		switch v := a[k].(type) {
 		case string:
 			if v != "" {
@@ -313,15 +320,30 @@ func (x *statsExt) openUsage() error {
 
 func (x *statsExt) regroup(by string) error {
 	if !slices.ContainsFunc(statsGroups, func(g statsGroup) bool { return g.key == by }) {
-		return fmt.Errorf("no grouping %q: repo, session, kind, model, provider, account or day", by)
+		return fmt.Errorf("no grouping %q: repo, session, kind, model, provider, account, origin or day", by)
 	}
 	x.q.group, x.sel = by, 0
 	return nil
 }
 
+// setOrigin keeps the page to one origin's sessions, or every one's with "".
+func (x *statsExt) setOrigin(origin string) error {
+	switch origin {
+	case "":
+		delete(x.q.filters, "origin")
+	case stats.OriginOriel, stats.OriginOutside:
+		x.q.filters["origin"] = []string{origin}
+	default:
+		return fmt.Errorf("no origin %q: oriel or outside", origin)
+	}
+	x.sel = 0
+	return nil
+}
+
 // drillOrder is what a group's rows regroup by when drilled into.
 var drillOrder = map[string]string{stats.ByRepo: stats.BySession, stats.BySession: stats.ByModel, stats.ByKind: stats.BySession,
-	stats.ByModel: stats.BySession, stats.ByProvider: stats.ByModel, stats.ByAccount: stats.BySession, stats.ByDay: stats.BySession}
+	stats.ByModel: stats.BySession, stats.ByProvider: stats.ByModel, stats.ByAccount: stats.BySession, stats.ByOrigin: stats.BySession,
+	stats.ByDay: stats.BySession}
 
 // drill narrows the page to a group's row: its filter chip, regrouped. A day becomes the range.
 func (x *statsExt) drill(g stats.Group) {
@@ -474,20 +496,18 @@ func (x *statsExt) fetch(key string, clients map[core.WorkerID]worker.Client, as
 	}()
 }
 
-// detail is a session's stats from its worker, asked for again when old.
-func (x *statsExt) detail(id core.SessionID) (stats.Detail, bool) {
+// detail is a session's stats from its worker, asked for again when old: an Oriel session's ID, or an outside one's
+// tab instance (target).
+func (x *statsExt) detail(instance core.SessionID) (stats.Detail, bool) {
+	id, wid := x.target(string(instance))
 	split := x.split()
-	key := fmt.Sprintf("%s|%v", id, split)
+	key := fmt.Sprintf("%s|%s|%v", id, wid, split)
 	x.mu.Lock()
 	f, ok := x.details[key]
 	busy := x.inflight[key]
 	x.mu.Unlock()
 	if (!ok || x.now().Sub(f.at) > refetchAfter) && !busy && x.sh.sessions != nil {
-		if c, err := x.sh.sessions.client(id); err == nil {
-			wid := core.LocalWorker
-			if se, ok := x.h.Session(id); ok && se.Snapshot().Worker != "" {
-				wid = se.Snapshot().Worker
-			}
+		if c, err := x.sh.sessions.worker(wid); err == nil {
 			req := worker.StatsSessionReq{Session: id, Split: split, Offset: x.offset()}
 			x.fetch(key, map[core.WorkerID]worker.Client{wid: c}, func(ctx context.Context, c worker.Client) (any, error) {
 				return c.SessionStats(ctx, req)
@@ -632,17 +652,52 @@ func (x *statsExt) accountTitle(u core.ProviderUsage) string {
 	return strings.Join(parts, " · ")
 }
 
-// openSession opens a session's stats as a main tab.
-func (x *statsExt) openSession(ctx registry.Ctx, id core.SessionID) error {
+// openSession opens a session's stats as a main tab: an Oriel session's, or one outside Oriel on wid, the worker the
+// Stats page found it on when "".
+func (x *statsExt) openSession(ctx registry.Ctx, id core.SessionID, wid core.WorkerID) error {
 	if id == "" {
 		id = x.h.State().Focus
 	}
-	se, ok := x.h.Session(id)
-	if !ok {
-		return fmt.Errorf("no session %q", id)
+	instance, title := string(id), ""
+	if se, ok := x.h.Session(id); ok {
+		title = se.Name()
+	} else {
+		g, found := x.found(id)
+		if wid == "" && !found {
+			return fmt.Errorf("no session %q", id)
+		}
+		wid = cmp.Or(wid, core.WorkerID(g.Worker), core.LocalWorker)
+		instance, title = string(id)+"@"+string(wid), cmpOr(g.Label, string(id))
 	}
 	x.open, x.usageOpen = false, false
-	return x.h.Run(ctx, "view.open", registry.Args{"id": StatsSessionView, "instance": string(id), "place": "tab", "title": "Stats · " + se.Name()})
+	return x.h.Run(ctx, "view.open", registry.Args{"id": StatsSessionView, "instance": instance, "place": "tab", "title": "Stats · " + title})
+}
+
+// target is the session a stats tab's instance shows, and its worker: an Oriel session's ID, else id@worker.
+func (x *statsExt) target(instance string) (core.SessionID, core.WorkerID) {
+	if se, ok := x.h.Session(core.SessionID(instance)); ok {
+		return core.SessionID(instance), cmp.Or(se.Snapshot().Worker, core.LocalWorker)
+	}
+	if i := strings.LastIndexByte(instance, '@'); i > 0 {
+		return core.SessionID(instance[:i]), core.WorkerID(instance[i+1:])
+	}
+	return core.SessionID(instance), core.LocalWorker
+}
+
+// found is a session's row in any answer the Stats page has had grouped by session.
+func (x *statsExt) found(id core.SessionID) (stats.Group, bool) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	for _, byWorker := range x.reports {
+		for _, f := range byWorker {
+			for _, g := range f.v.Groups {
+				if g.Key == string(id) && g.Origin != "" {
+					return g, true
+				}
+			}
+		}
+	}
+	return stats.Group{}, false
 }
 
 // csv is the page's table.

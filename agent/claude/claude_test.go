@@ -567,9 +567,8 @@ func TestPlanTier(t *testing.T) {
 
 // AI-14: Usage carries the plan and its tier, from the fixture account.
 func TestUsageCarriesTheTier(t *testing.T) {
-	env := fixtureConfig(t, nil)
-	t.Setenv("CLAUDE_CONFIG_DIR", strings.TrimPrefix(env[0], "CLAUDE_CONFIG_DIR="))
-	u, _ := Provider{}.Usage(context.Background())
+	p, _ := usageProbe(t)
+	u, _ := p.Usage(context.Background())
 	if u.Plan != "Claude Max" || u.Tier != "Max 20×" || u.AccountName != "ada@acme.example" {
 		t.Errorf("usage = %+v", u)
 	}

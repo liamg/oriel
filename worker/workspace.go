@@ -20,9 +20,8 @@ import (
 // The workspace layout is crit's, unchanged (sessions.md): a directory holding the manifest, its own git repo
 // for plan docs, and one worktree per project under repos/.
 const (
-	ManifestFile     = ".oriel-workspace.json"
-	CritManifestFile = ".crit-workspace.json"
-	ReposDir         = "repos"
+	ManifestFile = ".oriel-workspace.json"
+	ReposDir     = "repos"
 )
 
 // Manifest is a workspace's record of itself. Its fields are crit's, so a crit workspace reads as one.
@@ -68,18 +67,16 @@ type ManifestPR struct {
 	ClosedAt time.Time `json:"closedAt"`
 }
 
-// LoadManifest reads root's manifest, Oriel's or crit's; ok is false when root isn't a workspace.
-func LoadManifest(root string) (m Manifest, source string, ok bool) {
-	for _, f := range []struct{ name, source string }{{ManifestFile, "oriel"}, {CritManifestFile, "crit"}} {
-		b, err := os.ReadFile(filepath.Join(root, f.name))
-		if err != nil {
-			continue
-		}
-		if json.Unmarshal(b, &m) == nil {
-			return m, f.source, true
-		}
+// LoadManifest reads root's manifest; ok is false when root isn't a workspace.
+func LoadManifest(root string) (m Manifest, ok bool) {
+	b, err := os.ReadFile(filepath.Join(root, ManifestFile))
+	if err != nil {
+		return Manifest{}, false
 	}
-	return Manifest{}, "", false
+	if json.Unmarshal(b, &m) != nil {
+		return Manifest{}, false
+	}
+	return m, true
 }
 
 func saveManifest(root string, m Manifest) error {
@@ -108,28 +105,6 @@ func (m Manifest) past() []core.PastPR {
 		}
 	}
 	return out
-}
-
-// sessionFromManifest is a workspace read in place as a session.
-func sessionFromManifest(id core.SessionID, root string, m Manifest, source string, worker core.WorkerID) core.SessionState {
-	kind := core.Kind(m.Kind)
-	if kind == "" {
-		kind = core.KindPlan
-	}
-	se := core.SessionState{ID: id, Name: m.Label, Kind: kind, Worker: worker, Dir: root, Projects: m.projects(root),
-		Ticket: m.Ticket, Created: m.CreatedAt, Source: source, Past: m.past(), Started: !m.WorkStartedAt.IsZero()}
-	if se.Name == "" {
-		se.Name = m.Name
-	}
-	if m.Tour != nil {
-		se.Prompt = m.Tour.Title
-	}
-	if p, ok := se.Primary(); ok {
-		se.Branch = p.Branch
-	}
-	se.Agent.Model = m.Model
-	se.Status = core.DeriveStatus(se)
-	return se
 }
 
 // Sanitise reduces a string to a name safe for a directory and a git branch.

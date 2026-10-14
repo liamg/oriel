@@ -144,10 +144,11 @@ func (s *session) turnDone(t turnInfo) {
 	s.turn = ""
 	s.history = true
 	failed := s.failed
+	cached := s.total.CachedInputTokens - s.base.CachedInputTokens
 	u := agent.Usage{
-		Input:      s.total.InputTokens - s.base.InputTokens,
+		Input:      max(s.total.InputTokens-s.base.InputTokens-cached, 0), // Codex's input includes the cached part
 		Output:     s.total.OutputTokens - s.base.OutputTokens,
-		CacheRead:  s.total.CachedInputTokens - s.base.CachedInputTokens,
+		CacheRead:  cached,
 		CacheWrite: s.total.CacheWriteInputTokens - s.base.CacheWriteInputTokens,
 		Context:    int(s.last.TotalTokens),
 		ContextMax: int(s.window),

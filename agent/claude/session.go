@@ -439,13 +439,9 @@ func (s *session) event(in eventIn) {
 		base := s.base
 		s.mu.Unlock()
 		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage())})
-		if len(in.RateLimits) > 0 {
-			u := usageOf(in.RateLimits)
-			u.Account, u.AccountName = account(s.accountEnv())
-			u.Plan, u.Tier = planOf(s.accountEnv())
-			remember(u)
-			s.push(agent.UsageUpdate{Usage: u})
-		}
+		s.planUsage(in.RateLimits)
+	case "usage":
+		s.planUsage(in.RateLimits)
 	case "subagent-start":
 		s.push(agent.Subagent{ID: in.ID, Description: in.Description, Type: in.Type, Prompt: in.Prompt})
 	case "subagent-run":
@@ -463,6 +459,18 @@ func (s *session) event(in eventIn) {
 			s.push(loginLost(in.Text))
 		}
 	}
+}
+
+// planUsage reports the plan's windows the mod read, when it read any.
+func (s *session) planUsage(rls []rateLimit) {
+	if len(rls) == 0 {
+		return
+	}
+	u := usageOf(rls)
+	u.Account, u.AccountName = account(s.accountEnv())
+	u.Plan, u.Tier = planOf(s.accountEnv())
+	remember(u)
+	s.push(agent.UsageUpdate{Usage: u})
 }
 
 // retryable is an API failure that may pass if the turn is tried again.

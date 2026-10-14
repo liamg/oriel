@@ -59,3 +59,29 @@ func TestLive(t *testing.T) {
 		}
 	})
 }
+
+// TestLiveUsage reads the plan's windows through a hidden real claude's /usage. ORIEL_LIVE=1 runs it.
+func TestLiveUsage(t *testing.T) {
+	if os.Getenv("ORIEL_LIVE") != "1" {
+		t.Skip("ORIEL_LIVE=1 runs the real claude")
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := Provider{OrielBin: exe, ProbeDir: t.TempDir()}.probe(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%+v", u)
+	weekly := false
+	for _, w := range u.Windows {
+		weekly = weekly || w.Name == "Current week (all models)"
+		if w.Resets.IsZero() || w.Length == 0 {
+			t.Errorf("window = %+v", w)
+		}
+	}
+	if !weekly {
+		t.Errorf("no weekly window: %+v", u.Windows)
+	}
+}

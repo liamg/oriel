@@ -1,6 +1,6 @@
 ---
 id: agent/stats
-covers: [stats.open, stats.session]
+covers: [stats.open, stats.session, stats.origin]
 related: [agent/usage, agent/console]
 ---
 
@@ -13,6 +13,17 @@ tokens × the price table, so a price change re-costs history.
 
 `:Stats` or `⌘⇧S`, or **Stats** in the sidebar: every session on every worker, grouped by repo. An offline worker's
 last answer is still counted, marked stale in the header.
+
+## Oriel and outside it {#origin}
+
+Each worker also reads every transcript Claude Code and Codex keep on its machine (`~/.claude/projects`, or
+`$CLAUDE_CONFIG_DIR`'s, and `~/.codex/sessions`, or `$CODEX_HOME`'s), so what you run in a terminal or another tool
+counts too. A transcript an Oriel session owns is that session's; any other is a session **outside Oriel**, named by
+its first prompt and its repo taken from where it ran. Nothing is counted twice.
+
+**ALL**, **ORIEL** and **OUTSIDE** in the toolbar (`:Stats origin=outside`) keep the page to one side; grouping by
+origin (`g` `o`) stacks the two day by day. The Tokens tile says how much of the range was outside Oriel, and in the
+sessions table an outside one is marked **outside**.
 
 ## Range {#range}
 
@@ -30,7 +41,8 @@ its first record to its last, added up.
 
 ## Group by {#group-by}
 
-Repo (the default), session, kind, model, provider, account or day: `g` then `r`, `s`, `k`, `m`, `p`, `a` or `d`.
+Repo (the default), session, kind, model, provider, account, origin or day: `g` then `r`, `s`, `k`, `m`, `p`, `a`, `o`
+or `d`.
 Cost adds up across accounts, so every account is counted unless a chip says otherwise. A session counts for the
 account it ran on at the time: signing in to another later moves only what comes after.
 
@@ -57,6 +69,7 @@ The groups with their share and the last 30 days. `j`/`k` move, `⏎` or a click
 
 ## Session stats {#session}
 
-`:Stats session`, or the cost in the session stats box: one session as a main tab. Its cost over its life by token
+`:Stats session`, the cost in the session stats box, or **Session stats** on the page filtered to one session (a
+session outside Oriel too): one session as a main tab. Its cost over its life by token
 kind with idle gaps, turns and compactions marked, its cost per repo, models, tools with errors and timings, hours
 and effort.

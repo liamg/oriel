@@ -21,9 +21,10 @@ type rig struct {
 	fake *agenttest.Fake
 	repo *gittest.Repo
 	now  time.Time
+	more []agent.Provider // beside the fake
 }
 
-func newRig(t *testing.T) *rig {
+func newRig(t *testing.T, more ...agent.Provider) *rig {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
@@ -32,7 +33,8 @@ func newRig(t *testing.T) *rig {
 	t.Setenv("GIT_COMMITTER_NAME", "Fixture")
 	t.Setenv("GIT_COMMITTER_EMAIL", "fixture@example.com")
 	t.Setenv("USER", "tester")
-	r := &rig{t: t, home: t.TempDir(), fake: agenttest.NewFake(), now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)}
+	r := &rig{t: t, home: t.TempDir(), fake: agenttest.NewFake(), now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC),
+		more: more}
 	r.repo = gittest.New(t)
 	r.repo.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
 	r.repo.Commit("Ada", "first")
@@ -44,7 +46,10 @@ func (r *rig) open() {
 	r.t.Helper()
 	providers := &agent.Providers{}
 	providers.Register(r.fake)
-	w, err := New(Options{Home: r.home, CritHome: "-", Providers: providers, Exec: nopExec{}, Now: func() time.Time { return r.now },
+	for _, p := range r.more {
+		providers.Register(p)
+	}
+	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Now: func() time.Time { return r.now },
 		Packs: func(name string) (agent.Pack, bool) {
 			return agent.Pack{Name: name, Skill: name, Text: "pack " + name}, true
 		}})

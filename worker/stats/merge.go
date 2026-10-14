@@ -18,6 +18,7 @@ func Merge(rs ...Report) Report {
 	models := map[string]*Model{}
 	efforts := map[string]*Effort{}
 	tools := map[string]*ToolRow{}
+	origins := map[string]*Origin{}
 	for _, r := range rs {
 		if out.Scanned.IsZero() || r.Scanned.Before(out.Scanned) {
 			out.Scanned = r.Scanned
@@ -32,7 +33,8 @@ func Merge(rs ...Report) Report {
 		for _, g := range r.Groups {
 			m := groups[g.Key]
 			if m == nil {
-				m = &Group{Key: g.Key, Label: g.Label, Series: make([]float64, len(out.Points)), Used: make([]int64, len(out.Points))}
+				m = &Group{Key: g.Key, Label: g.Label, Origin: g.Origin, Worker: g.Worker, Series: make([]float64, len(out.Points)),
+					Used: make([]int64, len(out.Points))}
 				groups[g.Key] = m
 				order = append(order, g.Key)
 			}
@@ -54,6 +56,17 @@ func Merge(rs ...Report) Report {
 			for i := range min(len(g.Used), len(m.Used)) {
 				m.Used[i] += g.Used[i]
 			}
+		}
+		for _, x := range r.Origins {
+			o := origins[x.Name]
+			if o == nil {
+				o = &Origin{Name: x.Name}
+				origins[x.Name] = o
+			}
+			o.Sessions += x.Sessions
+			o.Requests += x.Requests
+			o.Tokens = o.Tokens.Add(x.Tokens, 1)
+			o.Cost += x.Cost
 		}
 		for _, x := range r.Models {
 			m := models[x.Name]
@@ -95,6 +108,11 @@ func Merge(rs ...Report) Report {
 		out.Groups = append(out.Groups, *groups[k])
 	}
 	slices.SortStableFunc(out.Groups, func(a, b Group) int { return cmp.Compare(b.Cost, a.Cost) })
+	for _, name := range []string{OriginOriel, OriginOutside} {
+		if o := origins[name]; o != nil {
+			out.Origins = append(out.Origins, *o)
+		}
+	}
 	for _, m := range models {
 		out.Models = append(out.Models, *m)
 	}

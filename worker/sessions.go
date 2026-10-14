@@ -212,7 +212,7 @@ func (w *Worker) startWorkspace(ctx context.Context, se *core.SessionState, spec
 
 // undo takes away a workspace that failed half-made.
 func (w *Worker) undo(root string, err error) error {
-	if m, _, ok := LoadManifest(root); ok {
+	if m, ok := LoadManifest(root); ok {
 		for _, p := range m.Projects {
 			if !filepath.IsAbs(p.Dir) {
 				_ = gitx.Repo{Dir: p.Repo}.RemoveWorktree(context.Background(), filepath.Join(root, p.Dir), true)
@@ -328,7 +328,7 @@ func (w *Worker) Archive(ctx context.Context, id core.SessionID) error {
 	if err != nil {
 		return err
 	}
-	if se.Source != "crit" && se.Kind != core.KindDirect {
+	if se.Kind != core.KindDirect {
 		for _, p := range se.Projects {
 			if p.Repo != "" && p.Dir != p.Repo && (gitx.Repo{Dir: p.Dir}).Dirty(ctx) {
 				return fmt.Errorf("%s has uncommitted work: commit or discard it first", p.Name)
@@ -338,7 +338,7 @@ func (w *Worker) Archive(ctx context.Context, id core.SessionID) error {
 	if h, _ := w.hostFor(id, false); h != nil {
 		h.stop("archived", core.StoppedByYou)
 	}
-	if se.Source != "crit" && se.Kind != core.KindDirect {
+	if se.Kind != core.KindDirect {
 		for _, p := range se.Projects {
 			if p.Repo == "" || p.Dir == p.Repo {
 				continue
@@ -424,7 +424,7 @@ func (w *Worker) StartWork(ctx context.Context, r StartWorkReq) error {
 	if r.Sandbox != nil && *r.Sandbox && w.opts.Sandbox == nil {
 		return errors.New("this worker can't run a sandbox")
 	}
-	m, _, ok := LoadManifest(se.Dir)
+	m, ok := LoadManifest(se.Dir)
 	if !ok {
 		m = Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
 	}
@@ -596,7 +596,7 @@ func (w *Worker) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID
 		return fmt.Errorf("%s is already in this session", r.ID)
 	}
 	k, _ := w.kinds.Get(se.Kind)
-	m, _, ok := LoadManifest(se.Dir)
+	m, ok := LoadManifest(se.Dir)
 	if !ok {
 		m = Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
 	}
@@ -635,10 +635,10 @@ func (w *Worker) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID
 // saveProjects writes a workspace's projects back to its manifest.
 func (w *Worker) saveProjects(id core.SessionID) {
 	se, err := w.session(id)
-	if err != nil || se.Source == "crit" {
+	if err != nil {
 		return
 	}
-	m, _, ok := LoadManifest(se.Dir)
+	m, ok := LoadManifest(se.Dir)
 	if !ok {
 		return
 	}
@@ -664,14 +664,14 @@ func (w *Worker) Rename(id core.SessionID, name string) error {
 }
 
 // Delete throws a session away: its agent stops, its worktrees go with whatever is in them, then its workspace and
-// its log. The repos themselves are never touched. A direct session's directory and a crit workspace aren't Oriel's
-// to remove, so they're refused.
+// its log. The repos themselves are never touched. A direct session's directory isn't Oriel's to remove, so it's
+// refused.
 func (w *Worker) Delete(ctx context.Context, id core.SessionID) error {
 	se, err := w.session(id)
 	if err != nil {
 		return err
 	}
-	if se.Source == "crit" || se.Kind == core.KindDirect {
+	if se.Kind == core.KindDirect {
 		return fmt.Errorf("%s isn't Oriel's to delete: archive it instead", id)
 	}
 	if h, _ := w.hostFor(id, false); h != nil {

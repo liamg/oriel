@@ -313,7 +313,7 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `note = fn(project)`, a live figure at the entry's right; `oriel.start.add` takes `link = true` (a small link under
   the actions) and `note = fn()`, its figure.
 - The pages are commands, so `oriel.cmd("stats.open", { group = "session", repo = "api", range = "7d" })`,
-  `oriel.cmd("stats.session", { id = … })` and `oriel.cmd("usage.open")` reach them; `oriel.option["stats.split_sessions"]`
+  `oriel.cmd("stats.origin", { origin = "outside" })`, `oriel.cmd("stats.session", { id = … })` and `oriel.cmd("usage.open")` reach them; `oriel.option["stats.split_sessions"]`
   is the split.
 
 

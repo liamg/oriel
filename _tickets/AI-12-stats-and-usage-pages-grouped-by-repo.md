@@ -66,6 +66,11 @@ session names), plus a Usage page for the plan windows. Mockup 43 was signed off
 - Stats groups and filters by **account** too; cost adds up, so all accounts stays the default.
 - Session stats names its account in the header.
 
+- **Everything they can find** (after review): the stats read every transcript the providers keep on the machine,
+  not only Oriel's sessions' (`agent.Discovered`: Claude's config directory, Codex's rollouts), each classified by
+  origin: an Oriel session's own stays that session, any other is a session outside Oriel. The page filters
+  ALL / ORIEL / OUTSIDE and groups by origin; Usage's outside row counts them (`_design/agents.md`, `_design/ui.md` 43).
+
 ## Done when
 
 - A worker with fixture transcripts for two multi-repo sessions answers `stats.query` grouped by repo with the

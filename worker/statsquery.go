@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/liamg/oriel/agent"
@@ -62,19 +63,25 @@ func (w *Worker) logsOf(se core.SessionState) []stats.Log {
 	return []stats.Log{{Path: w.eventsLog(se.ID), Format: stats.FormatEvents}}
 }
 
-// statsSessions are the worker's sessions as the stats see them, their logs read up to now.
-func (w *Worker) statsSessions(only core.SessionID) []stats.Session {
+// statsSessions are the worker's sessions as the stats see them, their logs read up to now, then the providers' logs
+// no Oriel session owns: only's alone when it's set, else those changed since since.
+func (w *Worker) statsSessions(only core.SessionID, since time.Time) []stats.Session {
 	var out []stats.Session
+	own := owned{}
 	for _, se := range w.store.State().Sessions {
-		if only != "" && se.ID != only {
-			continue
-		}
 		logs := w.logsOf(se)
-		if len(logs) == 0 {
+		if se.Agent.Session != "" {
+			own[ownKey(se.Agent.Provider, se.Agent.Session)] = true
+		}
+		for _, l := range logs {
+			own[filepath.Clean(l.Path)] = true
+		}
+		if only != "" && se.ID != only || len(logs) == 0 {
 			continue
 		}
 		s := stats.Session{ID: string(se.ID), Name: se.Name, Kind: string(se.Kind), Provider: se.Agent.Provider, Model: se.Agent.Model,
-			Effort: se.Agent.Effort, Worker: string(w.opts.ID), Live: se.Agent.Running, Scans: w.statsStore().Scan(string(se.ID), logs)}
+			Effort: se.Agent.Effort, Worker: string(w.opts.ID), Live: se.Agent.Running, Scans: w.statsStore().Scan(string(se.ID), logs),
+			Origin: stats.OriginOriel}
 		for _, a := range se.Agent.Accounts {
 			s.Accounts = append(s.Accounts, stats.Account{At: a.At, ID: a.Account, Name: a.Name})
 		}
@@ -91,6 +98,9 @@ func (w *Worker) statsSessions(only core.SessionID) []stats.Session {
 			s.Repos = append(s.Repos, stats.Repo{Name: p.Name, Dir: p.Dir})
 		}
 		out = append(out, s)
+	}
+	if only == "" || len(out) == 0 {
+		out = append(out, w.outsideSessions(only, since, own)...)
 	}
 	return out
 }
@@ -110,7 +120,8 @@ func (w *Worker) accountOf(provider string) (string, string) {
 func (w *Worker) StatsQuery(q stats.Query) stats.Report {
 	w.statsMu.Lock()
 	defer w.statsMu.Unlock()
-	r := stats.Run(q, w.statsSessions(""))
+	// A log last written before the period the query compares with has nothing in it.
+	r := stats.Run(q, w.statsSessions("", q.From.Add(-q.To.Sub(q.From))))
 	r.Worker, r.Scanned = string(w.opts.ID), w.opts.Now().UTC()
 	return r
 }
@@ -119,7 +130,7 @@ func (w *Worker) StatsQuery(q stats.Query) stats.Report {
 func (w *Worker) SessionStats(r StatsSessionReq) (stats.Detail, error) {
 	w.statsMu.Lock()
 	defer w.statsMu.Unlock()
-	ss := w.statsSessions(r.Session)
+	ss := w.statsSessions(r.Session, time.Time{})
 	if len(ss) == 0 {
 		if _, err := w.session(r.Session); err != nil {
 			return stats.Detail{}, err
@@ -211,6 +222,17 @@ func (w *Worker) readUsage(path, provider string, since time.Time) []core.Provid
 	return out
 }
 
+// restoreUsage puts back each account's latest kept reading, for a provider that has no way to read it again on its own.
+func (w *Worker) restoreUsage() {
+	for _, u := range w.readUsage(filepath.Join(w.opts.Home, "usage.jsonl"), "", w.opts.Now().Add(-usageKeep)) {
+		if cur := w.store.State().Usage; slices.ContainsFunc(cur, func(o core.ProviderUsage) bool { return o.Same(u) && o.Sampled.After(u.Sampled) }) {
+			continue
+		}
+		u.Workers = []core.WorkerID{w.opts.ID}
+		_ = w.emit(core.UsageSampled{Usage: u})
+	}
+}
+
 // UsageHistory is the plan readings the worker has kept, oldest first.
 func (w *Worker) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
 	w.usageMu.Lock()
@@ -218,11 +240,11 @@ func (w *Worker) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
 	return w.readUsage(filepath.Join(w.opts.Home, "usage.jsonl"), r.Provider, r.Since)
 }
 
-// ReadUsage asks every provider for its plan's windows now, and reports each.
+// ReadUsage asks every provider for its plan's windows now, and reports each that's newer than the one held.
 func (w *Worker) ReadUsage(ctx context.Context) error {
 	var errs []error
 	for _, p := range w.opts.Providers.List() {
-		cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		cctx, cancel := context.WithTimeout(ctx, time.Minute)
 		u, err := p.Usage(cctx)
 		cancel()
 		if err != nil {
@@ -234,6 +256,11 @@ func (w *Worker) ReadUsage(ctx context.Context) error {
 		}
 		if u.Provider == "" {
 			u.Provider = p.ID()
+		}
+		if !u.Sampled.IsZero() && slices.ContainsFunc(w.store.State().Usage, func(o core.ProviderUsage) bool {
+			return o.Same(u) && !o.Sampled.Before(u.Sampled)
+		}) {
+			continue
 		}
 		w.usageSampled(u)
 	}

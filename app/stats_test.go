@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -27,11 +28,18 @@ import (
 var statsNow = time.Date(2026, 10, 14, 12, 17, 0, 0, time.UTC)
 
 // loggedFake is a fake provider keeping its own log of each session, as Claude does: the fixture transcripts,
-// by the directory the session's agent runs in.
+// by the directory the session's agent runs in, and those it finds on the machine.
 type loggedFake struct {
 	*agenttest.Fake
-	mu   sync.Mutex
-	logs map[string]string
+	mu    sync.Mutex
+	logs  map[string]string
+	found []agent.Transcript
+}
+
+func (f *loggedFake) Discover() []agent.Transcript {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.found)
 }
 
 func (f *loggedFake) Logs(cwd, _ string) []agent.Log {
@@ -76,7 +84,7 @@ func newStatsRig(t *testing.T) *statsRig {
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
 	providers.Register(r.codex)
-	w, err := worker.New(worker.Options{Home: r.home, CritHome: "-", Name: "mbp", Providers: providers, Exec: nopExec{},
+	w, err := worker.New(worker.Options{Home: r.home, Name: "mbp", Providers: providers, Exec: nopExec{},
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)

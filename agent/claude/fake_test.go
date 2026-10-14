@@ -45,6 +45,7 @@ type fake struct {
 	mu      sync.Mutex
 	prompts []string // what the user said, oldest first
 	replied bool     // the main loop has answered something: there's something to fork
+	usage   bool     // /usage has been typed: the plan's windows are known
 	cancel  context.CancelFunc
 	seq     int
 }
@@ -158,6 +159,15 @@ func (f *fake) poll(turns chan<- string) {
 			turns <- w.Text
 		case "abort":
 			f.abort()
+		case "usage":
+			f.mu.Lock()
+			read := f.usage
+			f.mu.Unlock()
+			rls := []any{}
+			if read {
+				rls = fakeRateLimits
+			}
+			go func() { _ = f.hook("event", map[string]any{"kind": "usage", "rateLimits": rls}, nil) }()
 		case "fork":
 			go func() {
 				f.mu.Lock()
@@ -173,12 +183,34 @@ func (f *fake) poll(turns chan<- string) {
 	}
 }
 
-// terminal answers what's typed into it: /login signs in, as claude's does once you're through its steps.
+// terminal answers what's typed into it: /login signs in, as claude's does once you're through its steps; /usage
+// reads the plan's windows; /exit quits. ORIEL_FAKE_RUNS gets a line as it starts and as it quits.
 func (f *fake) terminal() {
+	note("run")
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
-		if strings.TrimSpace(sc.Text()) == "/login" {
+		switch strings.Trim(sc.Text(), " \x1b") {
+		case "/login":
 			os.Stdout.WriteString("\x1b[38;2;78;186;101mLogin successful. Press \x1b[1mEnter\x1b[22m to continue…\x1b[39m\r\n")
+		case "/usage":
+			f.mu.Lock()
+			f.usage = true
+			f.mu.Unlock()
+		case "/exit":
+			note("quit")
+			os.Exit(0)
+		}
+	}
+}
+
+// fakeRateLimits are the plan's windows as the fake's $.session.usage() has them.
+var fakeRateLimits = []any{map[string]any{"kind": "five_hour", "percentUsed": 12.5, "resetsAt": "2026-10-14T18:00:00Z"}}
+
+func note(what string) {
+	if path := os.Getenv("ORIEL_FAKE_RUNS"); path != "" {
+		if f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+			fmt.Fprintln(f, what)
+			f.Close()
 		}
 	}
 }
@@ -329,7 +361,7 @@ func (f *fake) turn(text string) {
 		"durationMs": time.Since(start).Milliseconds(),
 		"usage":      map[string]any{"input_tokens": 10, "output_tokens": 5, "cache_read_input_tokens": 100, "cache_creation_input_tokens": 20, "model": "claude-opus-5"},
 		"context":    map[string]any{"tokens": 130, "window": 200000},
-		"rateLimits": []any{map[string]any{"kind": "five_hour", "percentUsed": 12.5, "resetsAt": "2026-10-14T18:00:00Z"}},
+		"rateLimits": fakeRateLimits,
 	}, nil)
 }
 

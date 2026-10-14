@@ -52,7 +52,7 @@ func newWorkerWith(t *testing.T, o worker.Options, fakes ...*agenttest.Fake) *lo
 	for _, f := range fakes {
 		providers.Register(f)
 	}
-	o.Home, o.CritHome, o.Providers, o.Exec = t.TempDir(), "-", providers, nopExec{}
+	o.Home, o.Providers, o.Exec = t.TempDir(), providers, nopExec{}
 	o.Packs = func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }
 	w, err := worker.New(o)
 	if err != nil {

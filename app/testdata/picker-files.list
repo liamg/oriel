@@ -14,21 +14,6 @@ clip 102.9375,0 1469.0625x38 r 0
   text "plan" @232.04688,23.599998 #7c7566 JetBrains Mono 10
   text "⌘1" @263.04688,23.42 #4f4a40 JetBrains Mono 9.5
   rect 287.04688,0 1x38 fill #24221d
-  rect 300.04688,16 8x8 fill #ff5f6d radius 4
-  text "pricing api usage" @315.04688,24.365234 #b3ab99 Inter 12
-  text "needs you" @419.28125,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘2" @480.28125,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 504.28125,0 1x38 fill #24221d
-  rect 517.28125,16 8x8 fill #4f4a40 radius 4
-  text "price-feed backfill" @532.28125,24.365234 #b3ab99 Inter 12
-  text "off" @643.2656,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘3" @668.2656,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 692.2656,0 1x38 fill #24221d
-  rect 705.2656,16 8x8 fill #ff7ad6 radius 4
-  text "dash-filters" @720.2656,24.365234 #b3ab99 Inter 12
-  text "in review" @792.2969,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘4" @853.2969,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 877.2969,0 1x38 fill #24221d
 pop
 rect 0,38 44x936 fill #0c0c0b
 clip 0,38 43x936 r 0

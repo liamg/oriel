@@ -7,18 +7,6 @@ path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1259.125x38 r 0
-  rect 114.9375,16 8x8 fill #4fe0a0 radius 4
-  text "pricing-rounding" @129.9375,24.365234 #b3ab99 Inter 12
-  text "⌘1" @232.04688,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 256.04688,0 1x38 fill #24221d
-  rect 269.04688,16 8x8 fill #4fe0a0 radius 4
-  text "sweep-deps" @284.04688,24.365234 #b3ab99 Inter 12
-  text "⌘2" @362.07812,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 386.07812,0 1x38 fill #24221d
-  rect 399.07812,16 8x8 fill #4fe0a0 radius 4
-  text "auth-tour" @414.07812,24.365234 #b3ab99 Inter 12
-  text "⌘3" @474.17188,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 498.17188,0 1x38 fill #24221d
 pop
 rect 1376.0625,0 209.9375x24 radius 5 stroke 1 #332f27
 text "5H" @1384.0625,15.780001 #7c7566 JetBrains Mono 10.5

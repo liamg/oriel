@@ -18,7 +18,8 @@ flowchart LR
 - **Workspace**: a directory under `~/.oriel/workspaces/<name>` holding the plan docs and **one git worktree per repo**,
   all on the session's branch. This is crit's model, carried over unchanged.
 - **Session**: a workspace plus a **kind**, an agent (or none), a branch, and everything that accrues: threads, tasks, ledger,
-  test runs, transcript and layout. Sessions are what the tabs, mission control and the omnibox list.
+  test runs, transcript and layout. Sessions are what mission control and the omnibox list; a tab is a session
+  open in the window: started, resumed or brought to the front, never just for being on the start view.
 
 ## Kinds
 
@@ -105,7 +106,7 @@ stateDiagram-v2
   breadcrumb starts with the project's name. Opening another project's file doesn't change the open project.
 - Files **outside** the session's worktrees (the stdlib, dependencies, another repo) open **read-only**, with go-to-definition
   and peek. Editing them means adding that repo to the session.
-- Tabs, `⌘1–9` and mission control are all sessions. Within a session, buffers and splits are the usual vim tabs and windows.
+- Tabs, `⌘1–9` and mission control are all sessions (the tabs and `⌘1–9` only those open in the window). Within a session, buffers and splits are the usual vim tabs and windows.
 
 ## Go interfaces
 
@@ -156,8 +157,8 @@ type Sessions interface {
   field for field); each session's event log, logs and drafts in `~/.oriel/sessions/<id>/`; registered repos in
   `~/.oriel/repos.json`. A session's id is its name, from the prompt (`inf-2231-fix-stale-usage-prices`), unique on
   its worker.
-- **crit's workspaces are read in place**: every `~/.crit/{work,tours,runs}/<name>` with a `.crit-workspace.json` is a
-  session `crit-<name>` on crit's own directories. Oriel adds threads and an agent to it, and never writes into it.
+- **Only Oriel's own sessions are listed.** crit's workspaces aren't read: listed with Oriel's, they buried them, and
+  each made a tab. A session the worker once took from crit (`Source: "crit"`) is dropped, with its log, on restore.
 - **Plan**: the repos are listed from the start and the agent reads the user's checkouts (protected from edits);
   Start work makes the worktrees, on the session's branch, once every thread is resolved or deferred (the plan's own
   thread, where the prompt is, and btw threads don't count: `SessionState.Holding`). A session whose kind makes its
@@ -233,7 +234,7 @@ type Sessions interface {
   its repos are its projects. Its cost and the split by repo are its session stats (AI-12).
 - **Delete** (`session.delete`, `Client.Delete`) throws a session away: its agent stops, its worktrees go with
   whatever is in them, then its workspace and its log, and it's gone from every app. The repos are never touched.
-  A direct session and a crit workspace are refused (archive those). Deleting a job keeps its runs.
+  A direct session is refused (archive it). Deleting a job keeps its runs.
 - **Schedules** (`worker.Schedule`): manual (the zero one), `weekdays` at a time, `weekly` on a day at a time, or
   `days`, a set of days at a time (the page's custom), in the worker's local time. `RunSchedules` checks them every
   30 seconds while the worker runs (`oriel worker` starts it), and `RunDue` starts each job due since it last looked,

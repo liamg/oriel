@@ -1,7 +1,7 @@
 // Package stats turns agents' session logs into numbers worth charting: tokens and cost by kind, model and effort,
 // tool calls with their errors and timings, when the work happened, and which files it touched. It's crit's
-// internal/stats, read per session: Claude Code's own log (FormatClaude) or the record the worker keeps of a
-// provider's events (FormatEvents).
+// internal/stats, read per session: Claude Code's own log (FormatClaude), Codex's rollout (FormatCodex), or the record
+// the worker keeps of a provider's events (FormatEvents).
 //
 // Reading is incremental: a log is append-only, so a scan resumes at the byte the last one stopped at.
 package stats
@@ -24,6 +24,7 @@ import (
 const (
 	FormatClaude = "claude" // <config>/projects/<slug>/<id>.jsonl and its subagents'
 	FormatEvents = "events" // the worker's record of a provider's events (Event)
+	FormatCodex  = "codex"  // $CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl
 )
 
 // idleGap is the silence that ends a working stretch: anything longer isn't counted as active time.
@@ -158,6 +159,7 @@ type Scan struct {
 	Offset int64  `json:"offset"`
 	Size   int64  `json:"size"`
 	Cwd    string `json:"cwd,omitempty"`
+	Title  string `json:"title,omitempty"` // its first prompt
 	Stats
 
 	// What a read in progress carries to the next: calls awaiting their results, and the message whose usage was
@@ -165,6 +167,7 @@ type Scan struct {
 	Pending map[string]Pending `json:"pending,omitempty"`
 	LastMsg string             `json:"lastMsg,omitempty"`
 	LastReq *request           `json:"lastReq,omitempty"`
+	Codex   *codexState        `json:"codex,omitempty"`
 }
 
 // Pending is a tool call waiting for its result.
@@ -248,10 +251,17 @@ func (s *Scan) Read() bool {
 		if len(line) == 0 {
 			continue
 		}
-		if s.Format == FormatEvents {
+		switch s.Format {
+		case FormatEvents:
 			var ev Event
 			if json.Unmarshal(line, &ev) == nil {
 				s.event(ev)
+			}
+			continue
+		case FormatCodex:
+			var r rolloutLine
+			if json.Unmarshal(line, &r) == nil {
+				s.codex(&r)
 			}
 			continue
 		}
@@ -330,12 +340,12 @@ func (s *Scan) claude(r *record) {
 	if json.Unmarshal(r.Message.Content, &blocks) != nil {
 		var text string
 		if r.Type == "user" && !r.IsMeta && agent == "" && json.Unmarshal(r.Message.Content, &text) == nil && prompt(text) {
-			s.turn(r.Timestamp)
+			s.prompted(r.Timestamp, text)
 		}
 		return
 	}
 	if r.Type == "user" && !r.IsMeta && agent == "" && len(blocks) > 0 && blocks[0].Type == "text" && prompt(blocks[0].Text) {
-		s.turn(r.Timestamp)
+		s.prompted(r.Timestamp, blocks[0].Text)
 	}
 	if r.Type == "assistant" && r.Message.Usage != nil {
 		g := r.Message.Usage
@@ -351,6 +361,23 @@ func (s *Scan) claude(r *record) {
 			s.result(b.ToolUseID, b.IsError, r.Timestamp)
 		}
 	}
+}
+
+// prompted is a turn the user started with text: the first is the log's title.
+func (s *Scan) prompted(at time.Time, text string) {
+	s.turn(at)
+	if s.Title == "" {
+		s.Title = titleOf(text)
+	}
+}
+
+// titleOf is a prompt's first line, cut to a title's length.
+func titleOf(text string) string {
+	t, _, _ := strings.Cut(strings.TrimSpace(text), "\n")
+	if r := []rune(t); len(r) > 80 {
+		t = string(r[:79]) + "…"
+	}
+	return strings.TrimSpace(t)
 }
 
 // prompt says whether a user message's text is something the user said, not what the system wrapped in tags.

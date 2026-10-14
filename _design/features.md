@@ -101,7 +101,7 @@ How everything hangs together, built and tested before features land on it.
 
 | ID | Feature | Mockup | Module | Phase | After | Done when |
 |---|---|---|---|---|---|---|
-| AI-1 | Worker, wire, sessions, workspaces with multi-repo worktrees | – | worker, core | P5 | FW-2 | crit's workspace layout is read in place |
+| AI-1 | Worker, wire, sessions, workspaces with multi-repo worktrees | – | worker, core | P5 | FW-2 | sessions live in workspaces of crit's layout, Oriel's own only |
 | SE-1 | Session kinds plan, work, review, tour, job, new repo, direct and scratch (`sessions.md`) | 04 | core, worker | P5 | AI-1 | each kind starts from the launcher and the CLI; direct never creates a worktree; new repo inits and registers |
 | SE-2 | Session lifecycle: worktrees from a fetched base, Start next PR, archive, resume after restart | 03, 18 | core, worker | P5 | SE-1 | archived sessions keep threads and transcripts searchable; restart restores the layout |
 | SE-3 | Files outside the session open read-only; app opens on mission control | 01 | app | P5 | SE-1 | – |

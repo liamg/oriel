@@ -40,7 +40,7 @@ func orielHome() string {
 // newWorker is this machine's worker with the built-in providers and prompt packs.
 func newWorker(home string, log *slog.Logger) (*worker.Worker, error) {
 	providers := &agent.Providers{}
-	providers.Register(claude.Provider{})
+	providers.Register(claude.Provider{ProbeDir: filepath.Join(home, "probe")})
 	providers.Register(&codex.Provider{})
 	if _, err := packs.LoadDir(filepath.Join(app.DefaultConfigDir(), "agents")); err != nil {
 		log.Warn("prompt packs", "err", err)
@@ -76,6 +76,11 @@ func runWorker(args []string, stderr io.Writer) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go w.SampleLoad(ctx, 5*time.Second)
+	go func() {
+		if err := w.ReadUsage(ctx); err != nil {
+			log.Warn("usage", "err", err)
+		}
+	}()
 	go w.RunSchedules(ctx, 30*time.Second)
 	if *connect == "" {
 		log.Info("worker listening", "socket", worker.SocketPath(*home))

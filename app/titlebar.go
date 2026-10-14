@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"image/color"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/core"
@@ -61,7 +62,7 @@ func statusWord(s core.Session) string {
 	return ""
 }
 
-// sessionTabs is the titlebar with a tab per session, in the order they opened; ⌘1–9 focus them.
+// sessionTabs is the titlebar with a tab per session open in the window, in the order they opened; ⌘1–9 focus them.
 type sessionTabs struct {
 	disposer
 	sh *shell
@@ -76,12 +77,15 @@ func (t *sessionTabs) Activate(_ context.Context, h ext.Host) error {
 			return focus(core.SessionID(id))
 		}
 		n, _ := a["n"].(int)
-		ss := h.Sessions()
+		ss := openTabs(h.State())
 		if n < 1 || n > len(ss) {
 			return fmt.Errorf("no session %d", n)
 		}
 		return focus(ss[n-1].ID())
 	}}))
+	t.add(h.Command(registry.Command{ID: "session.close-tab", Title: "Close the tab of {id}, or of the session in front; the session stays",
+		Available: func(a registry.Args) bool { return len(h.State().Tabs) > 0 },
+		Run:       func(_ registry.Ctx, a registry.Args) error { return t.close(h, core.SessionID(a.String("id"))) }}))
 	for n := 1; n <= 9; n++ {
 		t.add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<D-%d>", n), Command: "session.focus", Args: registry.Args{"n": n},
 			Desc: fmt.Sprintf("Session %d", n)}))
@@ -105,7 +109,7 @@ func (t *sessionTabs) build(c *ui.Ctx, h ext.Host, vc registry.ViewCtx) {
 		c.Box("sep", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 		// More sessions than fit scroll sideways, the one in front kept in view.
 		tabs := c.Row("tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), ScrollX: true, Role: ui.RoleTabList, Label: "Sessions"}, func(c *ui.Ctx) {
-			for i, s := range h.Sessions() {
+			for i, s := range openTabs(st) {
 				t.tab(c, h, i, s, s.ID() == st.Focus)
 				c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 			}
@@ -133,6 +137,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h ext.Host, i int, s core.Session, on bool)
 	dot := th.C(statusTokens[s.Status()])
 	in := widget.Clickable(c, s.ID(), ui.Style{Dir: ui.Row, H: ui.Flex(1), Fill: fill, Help: "shell/tabs", Role: ui.RoleTab, Selected: on,
 		Label: s.Name()}, func(c *ui.Ctx) {
+		hover := widget.PointerIn(c)
 		c.Column("in", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
 			edge := color.NRGBA{}
 			if on {
@@ -155,7 +160,11 @@ func (t *sessionTabs) tab(c *ui.Ctx, h ext.Host, i int, s core.Session, on bool)
 					c.Text("errs", fmt.Sprintf("✕%d", n), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold},
 						Color: th.C(theme.Error)})
 				}
-				if i < 9 {
+				if hover {
+					if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close " + s.Name(), Help: "shell/tabs", Size: 16}) {
+						h.Run(context.Background(), "session.close-tab", registry.Args{"id": string(s.ID())})
+					}
+				} else if i < 9 {
 					c.Text("key", fmt.Sprintf("⌘%d", i+1), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium},
 						Color: th.C(tTabKey)})
 				}
@@ -165,6 +174,40 @@ func (t *sessionTabs) tab(c *ui.Ctx, h ext.Host, i int, s core.Session, on bool)
 	if in.Clicked {
 		h.Run(context.Background(), "session.focus", registry.Args{"id": string(s.ID())})
 	}
+}
+
+// openTabs is the sessions with a tab, in the order they opened.
+func openTabs(st core.State) []core.Session {
+	var out []core.Session
+	for _, id := range st.Tabs {
+		if s, ok := st.Session(id); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// close closes id's tab, or the front one's. The one in front hands the front to its neighbour, or to the start view.
+func (t *sessionTabs) close(h ext.Host, id core.SessionID) error {
+	st := h.State()
+	if id == "" {
+		id = st.Focus
+	}
+	i := slices.Index(st.Tabs, id)
+	if i < 0 {
+		return fmt.Errorf("no tab for %q", id)
+	}
+	if err := t.sh.cfg.Store.Apply(core.TabClosed{ID: id}); err != nil {
+		return err
+	}
+	if id != st.Focus {
+		return nil
+	}
+	rest := slices.Delete(slices.Clone(st.Tabs), i, i+1)
+	if len(rest) == 0 {
+		return t.sh.reopenOn(reopenTo{})
+	}
+	return h.Run(context.Background(), "session.focus", registry.Args{"id": string(rest[min(i, len(rest)-1)])})
 }
 
 // logo is the o▌ mark: a ring in the accent and a tall cursor in the brand orange, each with a faint glow.

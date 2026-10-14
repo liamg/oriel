@@ -45,10 +45,14 @@ func sessionsSource(h ext.Host) registry.PickerSource {
 	return registry.PickerSource{ID: "sessions", Title: "Sessions", Order: 10,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem
-			for i, s := range h.Sessions() {
+			tabs := map[core.SessionID]int{}
+			for i, s := range openTabs(h.State()) {
+				tabs[s.ID()] = i
+			}
+			for _, s := range h.Sessions() {
 				it := registry.PickerItem{ID: string(s.ID()), Label: s.Name(), Detail: string(s.Kind()), Note: statusWord(s),
 					IconStyle: "status." + string(s.Status()), Boost: boost[s.Status()], Data: s}
-				if i < 9 {
+				if i, ok := tabs[s.ID()]; ok && i < 9 {
 					it.Key = fmt.Sprintf("⌘%d", i+1)
 				}
 				out = append(out, it)

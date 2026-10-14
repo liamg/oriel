@@ -73,7 +73,10 @@ If the design is silent or ambiguous on something that matters, ask rather than 
 - **Dependencies.** Stdlib, `golang.org/x/*` and `github.com/liamg/*` are free to use. Anything else must be listed and
   approved in `_design/deps.md` first. Ask; don't add.
 - **Claude is driven through its interactive CLI in a PTY with hooks, never `claude -p`** (that path is billed per token)
-  (`_design/agents.md`).
+  (`_design/agents.md`). The one probe allowed is the hidden `/usage` read when a worker starts: an interactive
+  `claude` with Oriel's mod, typed `/usage`, whose mod reports `$.session.usage()`. A slash command runs inside Claude
+  Code and sends nothing to the model, so it bills nothing; `claude -p "/usage"` gives no percentages. The windows are
+  read as data from the mod, never off the screen; otherwise they come from live sessions.
 - **Platforms.** macOS (primary) and Linux, from the start. No platform-specific code without the other platform's equivalent or a build tag.
 - **Interfaces at seams.** Follow the module layout and interfaces in `_design/architecture.md`. `text`, `vim`, `core`
   and `agent` never import `ui` or `render`.

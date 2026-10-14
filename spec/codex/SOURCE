@@ -1,0 +1,7 @@
+source: https://github.com/openai/codex (the Codex CLI's Rust source)
+ref: 81aee8c86ba2549e53f82ea56f163c3e450fb55a (main, 2026-10-14)
+path: codex-rs/rollout/src/{lib,list,rollout_file_name}.rs (where rollouts live and their names),
+  codex-rs/history/src/rollout_payload.rs (a rollout line: {timestamp, type, payload}),
+  codex-rs/protocol/src/protocol.rs (SessionMeta, TurnContextItem, EventMsg, TokenUsage); the rest is linked, not
+  vendored: codex-rs/protocol/src/models.rs (ResponseItem: function_call, custom_tool_call and their outputs)
+license: Apache-2.0 (see LICENSE)

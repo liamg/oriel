@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/draw"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +33,82 @@ var tabFixture = []core.SessionOpened{
 	{ID: "s7", Name: "old spike", Kind: core.KindWork, Status: core.StatusOff},
 }
 
+// openTabFixture adds the sessions and opens a tab for each, in order, with the first in front.
+func openTabFixture(t *testing.T, store core.Store, evs []core.SessionOpened) {
+	t.Helper()
+	for _, ev := range evs {
+		if err := store.Apply(ev); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Apply(core.SessionFocused{ID: ev.ID}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store.Apply(core.SessionFocused{ID: evs[0].ID})
+}
+
+// A session has a tab once it's started or resumed, not for being on the start view's list.
+func TestSessionTabsAreTheOpenSessions(t *testing.T) {
+	s := newScene(t, "", "", render.Point{X: 1600, Y: 120})
+	for _, ev := range tabFixture {
+		s.store.Apply(ev)
+	}
+	s.frame()
+	for _, ev := range tabFixture {
+		if strings.Contains(s.frameText(), ev.Name) {
+			t.Errorf("%s has a tab before it was opened", ev.Name)
+		}
+	}
+	s.store.Apply(core.SessionFocused{ID: "s3"})
+	s.store.Apply(core.SessionFocused{ID: "s1"})
+	s.frame()
+	text := s.frameText()
+	if !strings.Contains(text, "review #4410") || !strings.Contains(text, "pricing-rounding") || strings.Contains(text, "INF-2231 usage api") {
+		t.Errorf("the tabs aren't the two opened: %q", text)
+	}
+	if err := s.host.Run(context.Background(), "session.focus", registry.Args{"n": 2}); err != nil {
+		t.Fatal(err)
+	}
+	if f := s.store.State().Focus; f != "s1" {
+		t.Errorf("⌘2 focused %s, want the second tab opened, s1", f)
+	}
+}
+
+// A tab's ✕ closes the tab, not the session, and the front passes to its neighbour; the last one leaves the start view.
+func TestSessionTabCloses(t *testing.T) {
+	s := newScene(t, "", "", render.Point{X: 1600, Y: 120})
+	openTabFixture(t, s.store, tabFixture[:3])
+	s.frame()
+	tab := s.within("Sessions", "pricing-rounding")
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: centre(tab.Bounds)})
+	s.frame()
+	s.click(centre(s.within(tab.Name, "Close pricing-rounding").Bounds))
+	s.frame()
+	st := s.store.State()
+	if _, ok := st.Session("s1"); !ok {
+		t.Fatal("closing the tab threw the session away")
+	}
+	if slices.Contains(st.Tabs, "s1") || st.Focus != "s2" {
+		t.Errorf("tabs %v, focus %s; want s1's tab gone and s2 in front", st.Tabs, st.Focus)
+	}
+	for _, id := range []string{"s2", "s3"} {
+		if err := s.host.Run(context.Background(), "session.close-tab", registry.Args{"id": id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if st := s.store.State(); len(st.Tabs) != 0 || st.Focus != "" {
+		t.Errorf("tabs %v, focus %s after closing them all", st.Tabs, st.Focus)
+	}
+	select {
+	case to := <-s.sh.reopen:
+		if to.dir != "" {
+			t.Errorf("the last tab closed opened %q, not the start view", to.dir)
+		}
+	default:
+		t.Error("the last tab closed didn't go back to the start view")
+	}
+}
+
 // glyphColour is the colour the frame draws text s in.
 func glyphColour(l *render.List, s string) (render.Color, bool) {
 	for _, op := range l.Ops {
@@ -45,12 +122,7 @@ func glyphColour(l *render.List, s string) (render.Color, bool) {
 // SH-2: "7 statuses render correctly from a fixture core.State".
 func TestSessionTabsSnapshot(t *testing.T) {
 	s := newScene(t, "", "", render.Point{X: 1600, Y: 120})
-	for _, ev := range tabFixture {
-		if err := s.store.Apply(ev); err != nil {
-			t.Fatal(err)
-		}
-	}
-	s.store.Apply(core.SessionFocused{ID: "s1"})
+	openTabFixture(t, s.store, tabFixture)
 	s.store.Apply(core.Notified{Notice: core.Notice{ID: "lsp.crashed", Severity: core.SevError, Session: "s4", Text: "gopls crashed"}})
 	s.golden("session-tabs")
 	text := s.frameText()
@@ -94,10 +166,7 @@ func TestSessionKeysSwitchInOneFrame(t *testing.T) {
 	defer cancel()
 	be := headless.New()
 	store := eventstore.New()
-	for _, ev := range tabFixture {
-		store.Apply(ev)
-	}
-	store.Apply(core.SessionFocused{ID: "s1"})
+	openTabFixture(t, store, tabFixture)
 	done := make(chan error, 1)
 	go func() { done <- Run(ctx, be, Config{Store: store, ConfigDir: t.TempDir(), WorkDir: t.TempDir()}) }()
 	win := <-be.Windows()
@@ -135,10 +204,7 @@ func TestSessionKeysSwitchInOneFrame(t *testing.T) {
 // magnifies. The bound is just over today's 0.040 and 12.1%.
 func TestSessionTabsAgainstTheMockup(t *testing.T) {
 	s := newScene(t, "", "", render.Point{X: 1600, Y: 120})
-	for _, ev := range tabFixture[:6] {
-		s.store.Apply(ev)
-	}
-	s.store.Apply(core.SessionFocused{ID: "s1"})
+	openTabFixture(t, s.store, tabFixture[:6])
 	s.frame()
 	s.frame()
 	img := raster.Render(s.list, s.size, 1, s.ui.Theme().C(theme.BgBase))
@@ -167,8 +233,8 @@ func TestSessionTabsOverflow(t *testing.T) {
 		if err := s.store.Apply(core.SessionOpened{ID: id, Name: fmt.Sprintf("job: sweep stale deps %d", i), Kind: core.KindJob, Status: core.StatusQuiet}); err != nil {
 			t.Fatal(err)
 		}
+		s.store.Apply(core.SessionFocused{ID: id})
 	}
-	s.store.Apply(core.SessionFocused{ID: "s11"})
 	s.reg.View(TitleRight+".99-probe", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("RIGHT-SIDE") }))
 	s.frame()
 	s.frame()

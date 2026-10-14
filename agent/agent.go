@@ -30,6 +30,19 @@ type Logged interface {
 	Logs(cwd, session string) []Log
 }
 
+// Discovered is a provider that can find every session log it keeps on this machine, whoever started the session (a
+// terminal, an IDE, Oriel): the worker's stats count those no Oriel session owns as outside Oriel.
+type Discovered interface {
+	Discover() []Transcript
+}
+
+// Transcript is one session's logs as its provider keeps them.
+type Transcript struct {
+	Session  string    // the provider's own id for it
+	Logs     []Log     // its own log first, then its subagents'
+	Modified time.Time // the latest change to any of them
+}
+
 // Log is a file a provider writes a session's log to, and its format: "claude" for Claude Code's.
 type Log struct {
 	Path   string

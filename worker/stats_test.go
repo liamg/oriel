@@ -79,7 +79,7 @@ func statsWorker(t *testing.T) (*Worker, *loggedFake) {
 	f := &loggedFake{Fake: agenttest.NewFake(), logs: map[string]string{}}
 	providers := &agent.Providers{}
 	providers.Register(f)
-	w, err := New(Options{Home: t.TempDir(), CritHome: "-", Providers: providers, Exec: nopExec{},
+	w, err := New(Options{Home: t.TempDir(), Providers: providers, Exec: nopExec{},
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name}, true }})
 	if err != nil {
 		t.Fatal(err)
@@ -198,6 +198,36 @@ func TestUsageHistory(t *testing.T) {
 	}
 }
 
+// A provider whose windows come only from its sessions (Claude's mod) keeps its latest reading per account across a
+// worker restart, from the readings kept in usage.jsonl.
+func TestUsageSurvivesRestart(t *testing.T) {
+	r := newRig(t)
+	work := core.ProviderUsage{Provider: "claude", Account: "u1/o-work", Sampled: r.now, Windows: []core.UsageWindow{{Name: "weekly", Used: .1}}}
+	r.w.usageSampled(work)
+	work.Sampled, work.Windows = r.now.Add(time.Hour), []core.UsageWindow{{Name: "weekly", Used: .3}}
+	r.w.usageSampled(work)
+	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-home", Sampled: r.now, Windows: []core.UsageWindow{{Name: "weekly", Used: .7}}})
+	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-old", Sampled: r.now.Add(-usageKeep - time.Hour),
+		Windows: []core.UsageWindow{{Name: "weekly", Used: .9}}})
+	r.now = r.now.Add(2 * time.Hour)
+	r.restart()
+
+	got := map[string]float64{}
+	for _, u := range r.w.store.State().Usage {
+		got[u.Provider+" "+u.Account] = u.Windows[0].Used
+		if len(u.Workers) != 1 || u.Workers[0] != r.w.opts.ID {
+			t.Errorf("%s workers = %v", u.Account, u.Workers)
+		}
+	}
+	want := map[string]float64{"claude u1/o-work": .3, "claude u1/o-home": .7}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("usage after restart = %v, want %v", got, want)
+	}
+	if h := r.w.UsageHistory(UsageHistoryReq{Provider: "claude", Since: r.now.Add(-usageKeep)}); len(h) != 3 {
+		t.Errorf("restoring wrote the readings again: %d kept", len(h))
+	}
+}
+
 // AI-14: a session records the account it ran on when it starts, and on a login change it sees: a later login on the
 // worker doesn't move its history to the new account, and a session started after it is the new account's.
 func TestSessionKeepsTheAccountItRanOn(t *testing.T) {
@@ -218,7 +248,7 @@ func TestSessionKeepsTheAccountItRanOn(t *testing.T) {
 	if a := r.session(first).Agent.Accounts; len(a) != 1 || a[0].Account != "u1/o-work" || !a[0].At.Equal(r.now.Add(-2*time.Hour)) {
 		t.Errorf("the first session's accounts = %+v, want only the work account, from its start", a)
 	}
-	ss := r.w.statsSessions(first)
+	ss := r.w.statsSessions(first, time.Time{})
 	if len(ss) != 1 || len(ss[0].Accounts) != 1 || ss[0].Accounts[0].ID != "u1/o-work" || ss[0].Accounts[0].Name != "ada@work.example" {
 		t.Fatalf("stats session = %+v", ss)
 	}

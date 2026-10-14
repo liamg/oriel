@@ -7,42 +7,13 @@ path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1259.125x38 r 0
-  rect 114.9375,16 8x8 fill #4fe0a0 radius 4
-  text "usage-api" @129.9375,24.365234 #b3ab99 Inter 12
-  text "⌘1" @193.95312,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 217.95312,0 1x38 fill #24221d
-  rect 230.95312,16 8x8 fill #4fe0a0 radius 4
-  text "admin-filters" @245.95312,24.365234 #b3ab99 Inter 12
-  text "⌘2" @325.07812,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 349.07812,0 1x38 fill #24221d
-  rect 362.07812,16 8x8 fill #4cc9f0 radius 4
-  text "flaky-e2e-sweep" @377.07812,24.365234 #b3ab99 Inter 12
-  text "work" @481.34375,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘3" @512.34375,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 536.34375,0 1x38 fill #24221d
-  rect 549.34375,16 8x8 fill #4fe0a0 radius 4
-  text "invoice-pdf" @564.34375,24.365234 #b3ab99 Inter 12
-  text "⌘4" @636.7031,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 660.7031,0 1x38 fill #24221d
-  rect 673.7031,16 8x8 fill #4fe0a0 radius 4
-  text "pricing-tiers" @688.7031,24.365234 #b3ab99 Inter 12
-  text "⌘5" @764.875,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 788.875,0 1x38 fill #24221d
-  rect 801.875,16 8x8 fill #4fe0a0 radius 4
-  text "infra-certs" @816.875,24.365234 #b3ab99 Inter 12
-  text "⌘6" @883.7031,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 907.7031,0 1x38 fill #24221d
-  rect 920.7031,16 8x8 fill #4fe0a0 radius 4
-  text "web-nav" @935.7031,24.365234 #b3ab99 Inter 12
-  text "⌘7" @992.96875,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1016.96875,0 1x38 fill #24221d
-  rect 1017.96875,0 184.10938x38 fill #121210
-  rect 1017.96875,0 184.10938x2 fill #ffd23f
-  rect 1029.9688,16 8x8 fill #4cc9f0 radius 4
-  text "pricing-rounding" @1044.9688,24.365234 #ece6d8 Inter 12
-  text "work" @1147.0781,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘8" @1178.0781,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1202.0781,0 1x38 fill #24221d
+  rect 102.9375,0 184.10938x38 fill #121210
+  rect 102.9375,0 184.10938x2 fill #ffd23f
+  rect 114.9375,16 8x8 fill #4cc9f0 radius 4
+  text "pricing-rounding" @129.9375,24.365234 #ece6d8 Inter 12
+  text "work" @232.04688,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘1" @263.04688,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 287.04688,0 1x38 fill #24221d
 pop
 rect 1376.0625,0 209.9375x24 radius 5 stroke 1 #332f27
 text "5H" @1384.0625,15.780001 #7c7566 JetBrains Mono 10.5
@@ -145,6 +116,13 @@ clip 224,38 1376x936 r 0
   rect 224,38 1376x42 fill #0c0c0b
   text "STATS" @242,63.844 #ece6d8 Space Grotesk 14
   text "all sessions · 1 worker · 8 sessions · Sep 15 – Oct 14" @296.70624,62.96 #7c7566 JetBrains Mono 11
+  clip 1096.5312,47 164.25x24 r 5
+    rect 1096.5312,47 40.849976x24 fill #1f1c0f
+    text "ALL" @1106.5312,62.42 #ffd23f JetBrains Mono 9.5
+    text "ORIEL" @1147.3812,62.42 #7c7566 JetBrains Mono 9.5
+    text "OUTSIDE" @1202.1312,62.42 #7c7566 JetBrains Mono 9.5
+  pop
+  rect 1096.5312,47 164.25x24 radius 5 stroke 1 #332f27
   text "scanned just now" @1272.7812,62.96 #7c7566 JetBrains Mono 11
   rect 1390.2812,46 95.125x26 fill #191815 radius 6 stroke 1 #332f27
   text "Copy as CSV" @1400.2812,63.365234 #ece6d8 Inter 12

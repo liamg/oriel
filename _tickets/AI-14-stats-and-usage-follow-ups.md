@@ -32,6 +32,9 @@ The gaps AI-12 left against mockup 43, filled.
 - **Verified sources:** the Claude account fields and the gpt-5 prices AI-12 wrote from memory are checked against
   the real `~/.claude.json` shape and OpenAI's pricing, with fixtures from them.
 
+- **Outside Oriel:** the stats also read the transcripts of sessions run outside Oriel (a terminal, another tool),
+  marked as such, so Oriel's tokens and the rest can be told apart (see AI-12, "Everything they can find").
+
 ## Done when
 
 - Picking a custom range with the date picker (mouse and keys) re-queries; tools on the Stats page match the calls in

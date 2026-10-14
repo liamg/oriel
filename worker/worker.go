@@ -32,7 +32,6 @@ type Options struct {
 	ID        core.WorkerID // LocalWorker if ""
 	Name      string        // the machine's name if ""
 	Home      string        // ~/.oriel: sessions/, workspaces/, repos.json
-	CritHome  string        // ~/.crit, whose workspaces are read in place; none if "-"
 	Providers *agent.Providers
 	Exec      agent.Exec // how agents' processes start; required to start one
 	OrielBin  string     // the oriel binary the agents' hooks run; os.Executable() if ""
@@ -87,7 +86,7 @@ type sessionLog struct {
 	rec *core.Recorder
 }
 
-// New starts a worker: it reads back every session it had, and the crit workspaces beside them.
+// New starts a worker: it reads back every session it had.
 func New(opts Options) (*Worker, error) {
 	if opts.ID == "" {
 		opts.ID = core.LocalWorker
@@ -101,11 +100,6 @@ func New(opts Options) (*Worker, error) {
 			return nil, err
 		}
 		opts.Home = filepath.Join(home, ".oriel")
-	}
-	if opts.CritHome == "" {
-		if home, err := os.UserHomeDir(); err == nil {
-			opts.CritHome = filepath.Join(home, ".crit")
-		}
 	}
 	if opts.Providers == nil {
 		opts.Providers = &agent.Providers{}
@@ -143,9 +137,9 @@ func New(opts Options) (*Worker, error) {
 	if err := w.restore(); err != nil {
 		return nil, err
 	}
+	w.restoreUsage()
 	w.store.Subscribe(core.Filter{}, w.record)
 	w.settle()
-	w.readCrit()
 	return w, nil
 }
 
@@ -159,7 +153,8 @@ func (w *Worker) sessionDir(id core.SessionID) string {
 	return filepath.Join(w.opts.Home, "sessions", string(id))
 }
 
-// restore replays each session's log. A log that stops early (a torn last line) keeps what it had.
+// restore replays each session's log, dropping crit's workspaces. A log that stops early (a torn last line) keeps
+// what it had.
 func (w *Worker) restore() error {
 	entries, err := os.ReadDir(filepath.Join(w.opts.Home, "sessions"))
 	if err != nil {
@@ -177,6 +172,11 @@ func (w *Worker) restore() error {
 		}
 		n, err := core.ReplayCount(bufio.NewReader(f), w.store)
 		f.Close()
+		if se, ok := w.store.State().Session(id); ok && se.Snapshot().Source == "crit" {
+			_ = w.store.Apply(core.SessionClosed{ID: id})
+			_ = os.RemoveAll(w.sessionDir(id))
+			continue
+		}
 		if err != nil {
 			w.log.Warn("session log stops early", "session", id, "after", n, "err", err)
 			if err := w.compact(id); err != nil {
@@ -281,38 +281,6 @@ func (w *Worker) restatus(id core.SessionID) {
 	}
 	if s := core.DeriveStatus(se); s != se.Status {
 		_ = w.emit(core.SessionStatusChanged{ID: id, Status: s})
-	}
-}
-
-// readCrit reads crit's workspaces in place: each is a session, on crit's own directories (AI-1).
-func (w *Worker) readCrit() {
-	if w.opts.CritHome == "-" || w.opts.CritHome == "" {
-		return
-	}
-	for _, sub := range []string{"work", "tours", "runs"} {
-		entries, err := os.ReadDir(filepath.Join(w.opts.CritHome, sub))
-		if err != nil {
-			continue
-		}
-		for _, e := range entries {
-			if !e.IsDir() {
-				continue
-			}
-			root := filepath.Join(w.opts.CritHome, sub, e.Name())
-			m, source, ok := LoadManifest(root)
-			if !ok || source != "crit" {
-				continue
-			}
-			id := core.SessionID("crit-" + Sanitise(e.Name()))
-			se := sessionFromManifest(id, root, m, "crit", w.opts.ID)
-			if old, ok := w.store.State().Session(id); ok {
-				// What Oriel added (threads, the agent) stays; the layout is crit's.
-				prev := old.Snapshot()
-				prev.Projects, prev.Branch, prev.Past, prev.Dir = se.Projects, se.Branch, se.Past, se.Dir
-				se = prev
-			}
-			_ = w.emit(core.SessionSynced{Session: se})
-		}
 	}
 }
 
