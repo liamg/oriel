@@ -16,3 +16,9 @@ github.com/godbus/dbus/v5 v5
 
 # WASM runtime (syntax, term)
 github.com/tetratelabs/wazero v1
+
+# app ↔ worker multiplexing (wire), tier B
+github.com/hashicorp/yamux v0
+
+# Lua VM (script), approved in deps.md
+github.com/yuin/gopher-lua v1
