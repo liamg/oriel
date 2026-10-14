@@ -71,6 +71,13 @@ flowchart TB
 - Layout: flex rows and columns plus absolute overlays and anchors. An
   "anchor" widget can pin to a buffer position, which is how callouts and
   explain notes follow code.
+  - **Text never runs out of its box.** A row too narrow for its children narrows its content-sized ones, last
+    first, and a text narrowed this way is cut with "…" (its accessible name stays whole). Content gives way before
+    what holds a control (anything clickable or focusable) or is marked `Keep` (a status chip); `Fixed` sizes keep
+    theirs. A column clamps a child wider than itself. A box that scrolls sideways keeps its content whole: a tab
+    strip or a table wider than its panel scrolls rather than cuts. A stretchy child (`Flex`) gets at least its
+    content's width while there's room for every one's.
+  - `UI.Overflowing` lists any text drawn past a box it's in; every app snapshot test fails on one.
 - **Theme** is data (TOML), with layered tokens, overrides only and a live editor. See `theming.md`.
 - **Motion**: a spring-based animator per id. Used sparingly: status pulses,
   panel slides, number roll-ups.

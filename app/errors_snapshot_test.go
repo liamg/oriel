@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -173,6 +174,9 @@ func (s *errScene) golden(name string) {
 	s.t.Helper()
 	s.frame()
 	s.frame()
+	if o := s.ui.Overflowing(); len(o) > 0 {
+		s.t.Errorf("%s: text drawn past its box:\n%s", name, strings.Join(o, "\n"))
+	}
 	snapshot.Golden(s.t, "testdata/"+name+".list", []byte(snapshot.List(s.list)))
 	img := raster.Render(s.list, s.size, s.zoomed(), s.ui.Theme().C(theme.BgBase))
 	snapshot.GoldenPNG(s.t, "testdata/"+name+".png", img, 0.02, 0.001)
@@ -305,6 +309,21 @@ func (s *errScene) frameText() string {
 	for _, op := range s.list.Ops {
 		if op.Kind == render.OpGlyphs {
 			lines = append(lines, op.Run.Text)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// fullText is the frame's texts one a line, whole where the frame cut them to fit with "…".
+func (s *errScene) fullText() string {
+	var lines []string
+	for _, l := range strings.Split(s.ui.Dump(), "\n") {
+		l = strings.TrimSpace(l)
+		if i := strings.Index(l, " \""); strings.HasPrefix(l, "text ") && i > 0 {
+			if q, err := strconv.QuotedPrefix(l[i+1:]); err == nil {
+				t, _ := strconv.Unquote(q)
+				lines = append(lines, t)
+			}
 		}
 	}
 	return strings.Join(lines, "\n")

@@ -44,6 +44,8 @@ type elem struct {
 	parent *elem
 	scale  float32 // what it and its subtree are drawn at (Style.Scale, times its parent's); 0 is 1
 
+	controls bool // it or something in it can be clicked or focused, or keeps its width (Style.Keep)
+
 	pos, size [2]float32
 	content   [2]float32 // children's extent, for scrolling
 	keys      map[string]int
@@ -417,6 +419,10 @@ func (u *UI) fit(e *elem, axis int) {
 	for _, c := range e.kids {
 		u.fit(c, axis)
 	}
+	e.controls = e.style.Interactive || e.style.Focusable || e.style.Keep
+	for _, c := range e.kids {
+		e.controls = e.controls || c.controls
+	}
 	var content float32
 	switch e.kind {
 	case kText:
@@ -469,10 +475,65 @@ func (u *UI) grow(e *elem, axis int) {
 				}
 			}
 		}
+		if axis == 0 {
+			squeeze(e, kids, inner)
+		}
+	}
+	if e.kind == kText && e.size[0] < e.run.Advance-slack {
+		e.run = u.sh.Shape(Elide(u.sh, e.text, e.ts.Font, e.size[0]), e.ts.Font)
 	}
 	for _, c := range e.kids {
 		u.grow(c, axis)
 	}
+}
+
+// slack is how far, in pixels, content may pass its box unseen: sums of widths differ by rounding.
+const slack = .5
+
+// squeeze narrows e's content-sized children to fit its inner width so no text runs out of its box, last first (a
+// row's start is what says most): content, then what holds a control (a tab, a button); a text narrowed this way is cut with "…". Fixed sizes keep theirs; a box
+// that scrolls sideways keeps its content.
+func squeeze(e *elem, kids []*elem, inner float32) {
+	var content, controls []*elem
+	for _, c := range kids {
+		switch {
+		case c.sz(0).Kind != Fit:
+		case c.controls:
+			controls = append(controls, c)
+		default:
+			content = append(content, c)
+		}
+	}
+	if !e.main(0) {
+		for _, c := range append(content, controls...) {
+			if c.size[0] > inner+slack {
+				c.size[0] = max(inner, c.sz(0).Min)
+			}
+		}
+		return
+	}
+	used := e.style.Gap * float32(max(len(kids)-1, 0))
+	for _, c := range kids {
+		used += c.size[0]
+	}
+	over := used - inner
+	for _, soft := range [][]*elem{content, controls} {
+		if over > slack {
+			over -= trim(soft, over)
+		}
+	}
+}
+
+// trim takes over off soft's widths, last first, as far as their Min allows, and says how much it took.
+func trim(soft []*elem, over float32) float32 {
+	var took float32
+	for i := len(soft) - 1; i >= 0 && over-took > 0; i-- {
+		c := soft[i]
+		cut := min(over-took, max(c.size[0]-c.sz(0).Min, 0))
+		c.size[0] -= cut
+		took += cut
+	}
+	return took
 }
 
 // share splits what's left along the main axis between grow children by weight, honouring Min and Max.
@@ -486,6 +547,18 @@ func (u *UI) share(e *elem, kids []*elem, axis int, inner float32) {
 			left -= c.size[axis]
 		}
 	}
+	// With room for each one's content, none gets less: its content is its Min. A box that scrolls needs none.
+	need := map[*elem]float32{}
+	var total float32
+	for _, c := range growing {
+		if !c.scrolls(axis) {
+			need[c] = c.size[axis]
+			total += c.size[axis]
+		}
+	}
+	if total > left {
+		clear(need)
+	}
 	for len(growing) > 0 {
 		var weight float32
 		for _, c := range growing {
@@ -498,6 +571,7 @@ func (u *UI) share(e *elem, kids []*elem, axis int, inner float32) {
 		for i := 0; i < len(growing); i++ {
 			c := growing[i]
 			s := c.sz(axis)
+			s.Min = max(s.Min, need[c])
 			want := max(left, 0) * s.Value / weight
 			if got := s.clamp(want); got != want {
 				c.size[axis] = got
@@ -812,3 +886,26 @@ func (u *UI) SetTheme(r *theme.Resolved) {
 
 // Theme is the theme set last, or nil.
 func (u *UI) Theme() *theme.Resolved { return u.theme }
+
+// Overflowing lists the latest frame's texts drawn past the inner edge of a box they're in, up to one that scrolls:
+// a lint, as nothing the toolkit lays out should.
+func (u *UI) Overflowing() []string {
+	var out []string
+	for _, e := range u.byID {
+		if e.kind != kText {
+			continue
+		}
+		l, r := e.pos[0], e.pos[0]+e.run.Advance
+		for a := e.parent; a != nil && !a.style.ScrollX; a = a.parent {
+			if l < a.pos[0]+a.style.Pad.L-slack || r > a.pos[0]+a.size[0]-a.style.Pad.R+slack {
+				out = append(out, fmt.Sprintf("%q (%s–%s) past %s (%s)", e.text, num(l), num(r), a.name, fmtRect(a.rect())))
+				break
+			}
+			if a.style.Float != nil {
+				break
+			}
+		}
+	}
+	slices.Sort(out)
+	return out
+}

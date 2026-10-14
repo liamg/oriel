@@ -1,4 +1,4 @@
-package widget
+package ui
 
 import "github.com/liamg/oriel/render/typeset"
 

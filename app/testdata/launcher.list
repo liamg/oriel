@@ -279,7 +279,7 @@ clip 170,105 1260x790 r 10
   text "RECENT PROMPTS" @1116,183.69 #7c7566 JetBrains Mono 9.5
   rect 1116,204.54 298x52.32451 fill #0c0c0b radius 8
   clip 1116,204.54 298x52.32451 r 8
-    text "Round minor units half-even, per currency, and keep the totals stable" @1128,226.64937 #ece6d8 Inter 12.5
+    text "Round minor units half-even, per currency…" @1128,226.64937 #ece6d8 Inter 12.5
     text "plan · pricing · 2h" @1128,243.8645 #7c7566 JetBrains Mono 10
   pop
   rect 1116,204.54 298x52.32451 radius 8 stroke 1 #24221d

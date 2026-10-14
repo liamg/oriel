@@ -55,7 +55,7 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 // Chip is the uppercase status pill (base.css .chip): tone sets its text, border and tint.
 func Chip(c *ui.Ctx, key any, label string, tone color.NRGBA, help string) ui.ID {
 	return c.Row(key, ui.Style{Pad: ui.PadXY(7, 2), Cross: ui.Center, Fill: alpha(tone, .07), Stroke: alpha(tone, .35), Border: 1, Radius: 10, Help: help,
-		Role: ui.RoleText, Label: label}, func(c *ui.Ctx) {
+		Role: ui.RoleText, Label: label, Keep: true}, func(c *ui.Ctx) {
 		c.Text(nil, strings.ToUpper(label), monoText(9.5, typeset.SemiBold, tone, .06))
 	})
 }

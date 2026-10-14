@@ -794,7 +794,7 @@ func (s *settingsExt) build(c *ui.Ctx) {
 func (s *settingsExt) header(c *ui.Ctx, th *theme.Resolved) {
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(16, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", "SETTINGS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11, Weight: typeset.SemiBold, Tracking: .14}, Color: th.C(theme.Accent)})
-		c.Box("q", ui.Style{W: ui.Px(420)}, func(c *ui.Ctx) {
+		c.Box("q", ui.Style{W: ui.Size{Kind: ui.Grow, Value: 1, Max: 420}}, func(c *ui.Ctx) {
 			widget.Input(c, "in", &s.query, widget.InputOpts{Label: "Search settings", Placeholder: "search · @modified · @project · @plugin:id",
 				Help: "shell/settings#search"})
 		})

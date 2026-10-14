@@ -148,10 +148,12 @@ clip 224,38 260x936 r 0
 pop
 clip 484,38 1116x936 r 0
   rect 484,38 1116x30 fill #0c0c0b
-  rect 484,38 100.09375x30 fill #121210
-  rect 484,38 100.09375x2 fill #ffd23f
-  text "PLAN.md" @498,58.365234 #ece6d8 Inter 12
-  text "✕" @564.7969,57.96 #7c7566 JetBrains Mono 11
+  clip 484,38 1116x30 r 0
+    rect 484,38 100.09375x30 fill #121210
+    rect 484,38 100.09375x2 fill #ffd23f
+    text "PLAN.md" @498,58.365234 #ece6d8 Inter 12
+    text "✕" @564.7969,57.96 #7c7566 JetBrains Mono 11
+  pop
   rect 484,68 1116x1 fill #24221d
   clip 484,69 1116x905 r 0
     rect 484,69 1116x905 fill #060606
@@ -272,7 +274,7 @@ clip 484,38 1116x936 r 0
         rect 1422.1494,752.1014 30.703125x1 fill #ffd23fb3
         text "resolve" @1460.8525,748.20685 #ffd23f Inter 12
         rect 1460.8525,752.1014 42.375x1 fill #ffd23fb3
-        text "t:3c4d" @1511.2275,748.44165 #4f4a40 JetBrains Mono 10
+        text "t…" @1511.2275,748.44165 #4f4a40 JetBrains Mono 10
         rect 1152.92,761.8416 384.07996x1 fill #332f27
         rect 1164.92,772.8416 28x28 fill #ff9b45 radius 6
         text "LG" @1171.5901,790.2616 #141006 JetBrains Mono 9.5

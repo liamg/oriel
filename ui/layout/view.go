@@ -321,13 +321,17 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content, docked bo
 		if head {
 			role = ui.RoleNone
 		}
-		c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: role}, func(c *ui.Ctx) {
+		// More tabs than fit scroll sideways, the active one kept in view.
+		tabs := c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: role, ScrollX: !head}, func(c *ui.Ctx) {
 			for i, v := range l.Tabs {
 				if tab(c, r, st, l, i, v, head) {
 					changed = true
 				}
 			}
 		})
+		if !head && l.Active < len(l.Tabs) {
+			c.ScrollIntoView(tabs, ui.Child(tabs, l.Tabs[l.Active]))
+		}
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tDivider)}, nil)
 		if len(l.Tabs) > 0 {
 			v := l.Tabs[l.Active]

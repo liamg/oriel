@@ -56,6 +56,9 @@ If the design is silent or ambiguous on something that matters, ask rather than 
     - A frame that reads input asks for the next; don't add a `WakeAt(now)` to show what a click changed.
     - Text fields edit with the platform's keys (`widget.Input`); a number field takes `Accept: widget.Digits`
       and shows `Invalid` while it's wrong.
+    - Text never runs out of its box: a row too narrow cuts its text with "…" (`_design/rendering.md`), so don't
+      measure or cut labels by hand. A strip of tabs or a table that may not fit scrolls sideways (`ScrollX`); a
+      status chip that must stay whole is `Keep`.
   - **Code**: shared logic lives in the module that owns it (`gitx` for git, `registry` for contributions, `core`
     for state), not copied into each caller; tests share harnesses (`errScene`, `startApp`, `vimtest`) rather than
     growing new ones.

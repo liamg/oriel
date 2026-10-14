@@ -49,9 +49,11 @@ rect 43,38 1x836 fill #24221d
 rect 44,38 1356x836 fill #060606
 clip 44,38 1356x476 r 0
   rect 44,38 1356x30 fill #0c0c0b
-  rect 44,38 84.015625x30 fill #121210
-  text "init.lua" @58,58.365234 #ece6d8 Inter 12
-  text "✕" @108.71875,57.96 #7c7566 JetBrains Mono 11
+  clip 44,38 1356x30 r 0
+    rect 44,38 84.015625x30 fill #121210
+    text "init.lua" @58,58.365234 #ece6d8 Inter 12
+    text "✕" @108.71875,57.96 #7c7566 JetBrains Mono 11
+  pop
   rect 44,68 1356x1 fill #24221d
   clip 44,69 1356x445 r 0
     rect 44,69 1356x445 fill #060606

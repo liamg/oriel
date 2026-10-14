@@ -92,7 +92,7 @@ clip 760,38 640x844.84 r 0
       text "P99" @1406,118.55 #7c7566 JetBrains Mono 9.5
       text "BufRead" @784,143.54 #ece6d8 JetBrains Mono 11.5
       clip 932,131.81 170x15.179993 r 0
-        text "files outside the session open read-only" @932,143.54 #b3ab99 JetBrains Mono 11.5
+        text "files outside the sess…" @932,143.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "REWRITE" @1110,142.82 #b98aff JetBrains Mono 9.5
       clip 1198,132.14 200x14.520004 r 0
@@ -101,7 +101,7 @@ clip 760,38 640x844.84 r 0
       text "—" @1406,143.36 #4f4a40 JetBrains Mono 11
       text "BufWritePost" @784,173.54 #ece6d8 JetBrains Mono 11.5
       clip 932,161.81 170x15.179993 r 0
-        text "tell the language server" @932,173.54 #b3ab99 JetBrains Mono 11.5
+        text "tell the language serv…" @932,173.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "—" @1110,172.81999 #b98aff JetBrains Mono 9.5
       clip 1198,162.14 200x14.520004 r 0
@@ -110,7 +110,7 @@ clip 760,38 640x844.84 r 0
       text "—" @1406,173.36 #4f4a40 JetBrains Mono 11
       text "BufWritePost" @784,203.54 #ece6d8 JetBrains Mono 11.5
       clip 932,191.81 170x15.179993 r 0
-        text "re-run the tests the save affects" @932,203.54 #b3ab99 JetBrains Mono 11.5
+        text "re-run the tests the s…" @932,203.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "—" @1110,202.81999 #b98aff JetBrains Mono 9.5
       clip 1198,192.14 200x14.520004 r 0

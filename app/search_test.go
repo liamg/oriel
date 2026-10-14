@@ -77,9 +77,10 @@ func TestProjectSearch(t *testing.T) {
 	}
 	s.typeInto(t, "Find", `(?<=return )Round\(`)
 	text := s.waitSearch(t, "2 in 2 files")
+	full := s.fullText() // a line longer than the panel is cut to fit
 	for _, want := range []string{"internal/pricing/round.go", "internal/pricing/tiers.go", "5", "func RoundMinor(v int) int { return ", "Round(", "v) / 100 }"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("results lack %q:\n%s", want, text)
+		if !strings.Contains(full, want) {
+			t.Errorf("results lack %q:\n%s", want, full)
 		}
 	}
 	if strings.Contains(text, "gen/api.go") {

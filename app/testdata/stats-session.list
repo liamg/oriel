@@ -137,10 +137,12 @@ rect 223,38 1x936 fill #24221d
 rect 224,38 1376x936 fill #060606
 clip 224,38 1376x936 r 0
   rect 224,38 1376x30 fill #0c0c0b
-  rect 224,38 180.92188x30 fill #121210
-  rect 224,38 180.92188x2 fill #ffd23f
-  text "Stats · pricing-rounding" @238,58.365234 #ece6d8 Inter 12
-  text "✕" @385.625,57.96 #7c7566 JetBrains Mono 11
+  clip 224,38 1376x30 r 0
+    rect 224,38 180.92188x30 fill #121210
+    rect 224,38 180.92188x2 fill #ffd23f
+    text "Stats · pricing-rounding" @238,58.365234 #ece6d8 Inter 12
+    text "✕" @385.625,57.96 #7c7566 JetBrains Mono 11
+  pop
   rect 224,68 1376x1 fill #24221d
   clip 224,69 1376x905 r 0
     rect 224,69 1376x905 fill #060606

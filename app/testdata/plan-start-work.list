@@ -144,10 +144,12 @@ clip 224,38 260x936 r 0
 pop
 clip 484,38 1116x936 r 0
   rect 484,38 1116x30 fill #0c0c0b
-  rect 484,38 100.09375x30 fill #121210
-  rect 484,38 100.09375x2 fill #ffd23f
-  text "PLAN.md" @498,58.365234 #ece6d8 Inter 12
-  text "✕" @564.7969,57.96 #7c7566 JetBrains Mono 11
+  clip 484,38 1116x30 r 0
+    rect 484,38 100.09375x30 fill #121210
+    rect 484,38 100.09375x2 fill #ffd23f
+    text "PLAN.md" @498,58.365234 #ece6d8 Inter 12
+    text "✕" @564.7969,57.96 #7c7566 JetBrains Mono 11
+  pop
   rect 484,68 1116x1 fill #24221d
   clip 484,69 1116x905 r 0
     rect 484,69 1116x905 fill #060606

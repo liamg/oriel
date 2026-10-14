@@ -113,6 +113,7 @@ type Style struct {
 	Scale float32
 
 	Clip    bool
+	Keep    bool // keeps its width while its row is too narrow, as a control does; the text beside it is cut first
 	ScrollX bool // scroll offsets persist by id; scrolling clips
 	ScrollY bool
 	Wheel   bool // takes the wheel itself: movement over it comes as Interaction.Scroll, for content it scrolls itself

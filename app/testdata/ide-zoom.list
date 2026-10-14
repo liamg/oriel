@@ -64,14 +64,15 @@ clip 44,38 250x602.6667 r 0
       text "ALL 8" @228.29166,94.420006 #ffd23f JetBrains Mono 9.5
     pop
     rect 54,79 230x24 radius 5 stroke 1 #332f27
-    clip 56,111 226x22 r 0
+    clip 56,113 226x18 r 0
       rect 56,113 48x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
       text "status" @62,125.6 #ffd23f JetBrains Mono 10
       rect 110,113 54x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
       text "± lines" @116,125.6 #ffd23f JetBrains Mono 10
       rect 170,113 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
       text "diag" @176,125.6 #ffd23f JetBrains Mono 10
-      text "…" @267.10156,126.356 #7c7566 JetBrains Mono 12.1
+      rect 212,113 70x18 radius 4 stroke 1 #332f27
+      text "⌥C chang…" @218,125.6 #7c7566 JetBrains Mono 10
     pop
     clip 44,135 250x477.6667 r 0
       rect 44,135 250x22 fill #1f1c0f
@@ -170,11 +171,13 @@ clip 44,38 250x602.6667 r 0
 pop
 clip 294,38 772.6666x602.6667 r 0
   rect 294,38 772.6666x30 fill #0c0c0b
-  rect 294,38 111.265625x30 fill #121210
-  rect 294,38 111.265625x2 fill #ffd23f
-  text "round.go" @308,58.365234 #ece6d8 Inter 12
-  text "M" @366.26562,57.42 #ff9b45 JetBrains Mono 9.5
-  text "✕" @385.96875,57.96 #7c7566 JetBrains Mono 11
+  clip 294,38 772.6666x30 r 0
+    rect 294,38 111.265625x30 fill #121210
+    rect 294,38 111.265625x2 fill #ffd23f
+    text "round.go" @308,58.365234 #ece6d8 Inter 12
+    text "M" @366.26562,57.42 #ff9b45 JetBrains Mono 9.5
+    text "✕" @385.96875,57.96 #7c7566 JetBrains Mono 11
+  pop
   rect 294,68 772.6666x1 fill #24221d
   clip 294,69 772.6666x571.6667 r 0
     rect 294,69 772.6666x571.6667 fill #060606

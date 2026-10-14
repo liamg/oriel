@@ -538,10 +538,10 @@ func (x *agentConsole) threadCard(c *ui.Ctx, se core.SessionState, width float32
 			// Both fit the card: the kicker takes at most 45% of it, the request the rest.
 			inner := width - 28 - 10
 			kf, bf := kickerFont(th.C(tThreadKicker)), uiFont(12.5, th.C(theme.Fg))
-			kicker := widget.Elide(c.Shaper(), strings.ToUpper("thread · "+where), kf.Font, inner*0.45)
+			kicker := ui.Elide(c.Shaper(), strings.ToUpper("thread · "+where), kf.Font, inner*0.45)
 			c.Text("k", kicker, kf)
 			left := inner - c.Shaper().Shape(kicker, kf.Font).Advance
-			c.Text("b", widget.Elide(c.Shaper(), firstLine(strings.TrimSpace(plainMarkdown(body))), bf.Font, left), bf)
+			c.Text("b", ui.Elide(c.Shaper(), firstLine(strings.TrimSpace(plainMarkdown(body))), bf.Font, left), bf)
 		})
 	})
 }

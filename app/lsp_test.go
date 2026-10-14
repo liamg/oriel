@@ -282,3 +282,26 @@ func TestLSPStartsWithTheProject(t *testing.T) {
 		}
 	}
 }
+
+// Text stays inside the hover card and the references peek, however long the lines in them.
+func TestLSPCardsKeepTheirText(t *testing.T) {
+	s, _ := lspScene(t, "go", "gopls", "main.go")
+	s.cursorAt(8, 11)
+	s.keyCommand(t, "K")
+	s.lspSettle()
+	s.lsp().hover.md.Text += "\n\n```go\nfunc greeting(name string, salutation string, punctuation string, locale string, formal bool) (string, error)\n```\n" +
+		"A_paragraph_word_far_wider_than_the_card_that_has_nowhere_to_wrap_and_would_run_out_of_the_card_on_the_right"
+	s.frame()
+	s.frame()
+	if o := s.ui.Overflowing(); len(o) > 0 {
+		t.Errorf("the hover card's text runs out of its box:\n%s", strings.Join(o, "\n"))
+	}
+	s.keyCommand(t, "<Esc>")
+	s.size.X = 760 // the code beside the list has less room than its lines
+	s.keyCommand(t, "grr")
+	s.lspSettle()
+	s.wantText(t, "the peek", "3 references")
+	if o := s.ui.Overflowing(); len(o) > 0 {
+		t.Errorf("the peek's text runs out of its box:\n%s", strings.Join(o, "\n"))
+	}
+}

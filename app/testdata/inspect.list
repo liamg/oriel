@@ -2,10 +2,12 @@ backdrop #060606
 rect 0,0 856x709 fill #060606
 clip 0,0 856x709 r 0
   rect 0,0 856x30 fill #0c0c0b
-  rect 0,0 98.265625x30 fill #121210
-  rect 0,0 98.265625x2 fill #ffd23f
-  text "round.go" @14,20.365234 #ece6d8 Inter 12
-  text "✕" @78.96875,19.96 #7c7566 JetBrains Mono 11
+  clip 0,0 856x30 r 0
+    rect 0,0 98.265625x30 fill #121210
+    rect 0,0 98.265625x2 fill #ffd23f
+    text "round.go" @14,20.365234 #ece6d8 Inter 12
+    text "✕" @78.96875,19.96 #7c7566 JetBrains Mono 11
+  pop
   rect 0,30 856x1 fill #24221d
   clip 0,31 856x678 r 0
     rect 0,31 856x678 fill #060606
@@ -230,10 +232,10 @@ clip 20,109.44 816x516.12 r 8
   rect 20,145.44 816x1 fill #24221d
   text "TREE-SITTER" @34,164.13 #7c7566 JetBrains Mono 9.5
   clip 160,154.44 220x15.179993 r 0
-    text "internal/pricing/round.go 46:11" @160,166.17 #ece6d8 JetBrains Mono 11.5
+    text "internal/pricing/round.go 46:…" @160,166.17 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,154.44 404.8125x15.179993 r 0
-    text "source_file › function_declaration › block › statement_list › expression_switch_statement › expression_case" @392,166.17 #b3ab99 JetBrains Mono 11.5
+    text "source_file › function_declaration › block › statement_…" @392,166.17 #b3ab99 JetBrains Mono 11.5
   pop
   text "go" @808.8125,165.66 #ffd23f JetBrains Mono 11
   rect 20,177.62 816x1 fill #24221d

@@ -100,7 +100,7 @@ clip 44,38 320x936 r 0
       rect 44,228.08 2x70.109024 fill #ffd23f
       rect 60,241.44475 7x7 fill #4cc9f0 radius 3.5
       text "Negative values round the wrong way" @76,249.67375 #ece6d8 Inter 13
-      text "Claude: Right — Floor rounds toward -∞, so -2.5 f…" @76,268.4345 #7c7566 Inter 12
+      text "Claude: Right — Floor rounds toward -∞, so -…" @76,268.4345 #7c7566 Inter 12
       text "round.go:46 · 2 msgs · 1m" @76,286.03903 #4f4a40 JetBrains Mono 10.5
       text "NEEDS YOU" @60,319.87903 #ff5f6d JetBrains Mono 9.5
       rect 60,342.09378 7x7 fill #ff5f6d radius 3.5
@@ -114,7 +114,7 @@ clip 44,38 320x936 r 0
       text "whole change · 1 msg · 2m" @76,487.33707 #4f4a40 JetBrains Mono 10.5
       rect 60,512.8518 7x7 fill #7c7566 radius 3.5
       text "btw — why decimal and not big.Rat?" @76,521.0808 #ece6d8 Inter 13
-      text "Claude: decimal keeps the scale, so money prints …" @76,539.84155 #7c7566 Inter 12
+      text "Claude: decimal keeps the scale, so money pr…" @76,539.84155 #7c7566 Inter 12
       text "btw · 9m" @76,557.4461 #4f4a40 JetBrains Mono 10.5
       text "RESOLVED" @60,591.6161 #4fe0a0 JetBrains Mono 9.5
       text "2" @342,591.7961 #7c7566 JetBrains Mono 10
@@ -133,10 +133,12 @@ clip 44,38 320x936 r 0
 pop
 clip 364,38 1236x936 r 0
   rect 364,38 1236x30 fill #0c0c0b
-  rect 364,38 261.98438x30 fill #121210
-  rect 364,38 261.98438x2 fill #ffd23f
-  text "Negative values round the wrong way" @378,58.365234 #ece6d8 Inter 12
-  text "✕" @606.6875,57.96 #7c7566 JetBrains Mono 11
+  clip 364,38 1236x30 r 0
+    rect 364,38 261.98438x30 fill #121210
+    rect 364,38 261.98438x2 fill #ffd23f
+    text "Negative values round the wrong way" @378,58.365234 #ece6d8 Inter 12
+    text "✕" @606.6875,57.96 #7c7566 JetBrains Mono 11
+  pop
   rect 364,68 1236x1 fill #24221d
   clip 364,69 1236x905 r 0
     rect 364,69 1236x905 fill #060606
