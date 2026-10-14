@@ -4,6 +4,7 @@ package hostexec
 import (
 	"context"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -59,15 +60,20 @@ func (Exec) Start(ctx context.Context, cmd *exec.Cmd) (agent.Process, error) {
 	if err != nil {
 		return nil, err
 	}
-	out, err := cmd.StdoutPipe()
+	// The read end is ours, not cmd's: Wait closes a StdoutPipe, which would lose what a quick process wrote.
+	out, w, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
+	cmd.Stdout = w
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 	cmd.SysProcAttr.Setpgid = true
-	if err := cmd.Start(); err != nil {
+	err = cmd.Start()
+	w.Close()
+	if err != nil {
+		out.Close()
 		return nil, err
 	}
 	p := &proc{cmd: cmd, in: in, out: out, done: make(chan struct{})}
