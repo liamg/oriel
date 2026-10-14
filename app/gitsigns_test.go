@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -84,6 +85,25 @@ func TestGutterHunks(t *testing.T) {
 	s.settle()
 	if got, want := s.signsAt(), "added@1 modified@4 added@12 added@13 deleted@22"; got != want {
 		t.Errorf("after an unsaved line at the top, signs %q, want %q", got, want)
+	}
+}
+
+// FG-2: a hunk's bar fills each of its lines, so a run of changed lines is one unbroken bar.
+func TestGutterBarsJoin(t *testing.T) {
+	s, _ := signsScene(t)
+	s.frame()
+	added := s.ui.Theme().C(tGitAdded)
+	var bars []render.Rect
+	for _, op := range s.list.Ops {
+		if op.Kind == render.OpRect && op.Style.Fill == added && op.Rect.Dx() < 8 {
+			bars = append(bars, op.Rect)
+		}
+	}
+	if len(bars) != 2 {
+		t.Fatalf("%d added bars, want 2 (lines 11 and 12): %v", len(bars), bars)
+	}
+	if lh := s.editor().pane.lineH; bars[0].Dy() != lh || bars[1].Min.Y != bars[0].Max.Y {
+		t.Errorf("the added bars %v don't join up (a line is %v high)", bars, lh)
 	}
 }
 

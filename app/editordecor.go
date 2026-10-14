@@ -88,7 +88,7 @@ func lineBg(th *theme.Resolved, ds []registry.Decoration) (bg, edge color.NRGBA)
 }
 
 // signs draws a line's gutter signs, between its number and its text; one with a command runs it when clicked.
-func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration, gw float32) {
+func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration, gw float32, m paneMetrics) {
 	c.Row("signs", ui.Style{W: ui.Px(14), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
 		for i, d := range ds {
 			if d.Kind != registry.Sign {
@@ -98,6 +98,13 @@ func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoratio
 			draw := func(c *ui.Ctx) {
 				if d.Text == "" {
 					c.Box("box", ui.Style{W: ui.Px(12), H: ui.Px(12), Radius: 3, Fill: col}, nil)
+					return
+				}
+				if w, h, ok := blockPart(d.Text); ok {
+					c.Box("cell", ui.Style{W: ui.Px(m.charW), H: ui.Px(m.lineH)}, func(c *ui.Ctx) {
+						c.Box("part", ui.Style{W: ui.Px(w * m.charW), H: ui.Px(h * m.lineH), Fill: col,
+							Float: &ui.Float{Offset: render.Point{Y: (1 - h) * m.lineH}}}, nil)
+					})
 					return
 				}
 				c.Text("t", d.Text, ui.TextStyle{Font: codeFont, Color: col})
@@ -117,6 +124,21 @@ func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoratio
 			}
 		}
 	})
+}
+
+// blockPart is the part of a line's cell a lower (▁…█) or left (▉…▏) block element fills, so a run of them on
+// consecutive lines joins up, whatever the font's line height.
+func blockPart(s string) (w, h float32, ok bool) {
+	r, n := utf8.DecodeRuneInString(s)
+	switch {
+	case n != len(s):
+		return 0, 0, false
+	case r >= 0x2581 && r <= 0x2588:
+		return 1, float32(r-0x2580) / 8, true
+	case r >= 0x2589 && r <= 0x258f:
+		return float32(0x2590-r) / 8, 1, true
+	}
+	return 0, 0, false
 }
 
 // virtualText draws a line's virtual text after its end.

@@ -88,6 +88,8 @@ flowchart TB
 - explainers (`registry.Explainer`): answer an `ExplainRequest` (a failure, a diagnostic, a selection) in markdown,
   with no way to change anything; every "ask to explain" uses the first. The agent's comes with AI.
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
+- block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
+  so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
 - key layers (`registry.KeyLayer`): a keymap mode laid over every other while its `Active` says so, as the completion
   menu's `⌃n` and `⏎`; keys it doesn't map go on as before.
 - raw keys (`registry.RawKeys`): a keymap mode whose ⌃ keys skip the global maps, so a terminal's program gets `⌃W`;

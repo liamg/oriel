@@ -240,7 +240,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 			c.Row("gutter", ui.Style{W: ui.Px(gw), Pad: ui.Insets{R: 16}, Main: ui.End}, func(c *ui.Ctx) {
 				c.Text("n", num, ns)
 			})
-			x.signs(c, th, ds, gw)
+			x.signs(c, th, ds, gw, m)
 			if edge.A > 0 {
 				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.lineH), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
 			}
