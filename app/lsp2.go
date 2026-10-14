@@ -141,7 +141,6 @@ func (x *lspExt) navigation(h ext.Host) {
 		{Mode: "n", Keys: "gri", Command: "lsp.implementation", Desc: "Implementations"},
 		{Mode: "n", Keys: "grr", Command: "lsp.references", Desc: "References"},
 		{Mode: "n", Keys: "grn", Command: "lsp.rename", Desc: "Rename"},
-		{Mode: "n", Keys: "<Leader>rn", Command: "lsp.rename", Desc: "Rename"},
 		{Mode: "n", Keys: "gra", Command: "lsp.code_actions", Desc: "Code actions"},
 		{Mode: "n", Keys: "gO", Command: "picker.open", Args: registry.Args{"source": "symbols.file"}, Desc: "Symbols here"},
 		{Mode: "n", Keys: "<Leader>ci", Command: "lsp.calls.incoming", Desc: "Incoming calls"},

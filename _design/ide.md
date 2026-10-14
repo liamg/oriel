@@ -95,7 +95,7 @@ below.
   the others while active, so `⌃n` and `⏎` are the menu's only while it's open, and insert-mode maps still apply.
 - Inlay hints are a new decoration kind, `registry.Inlay`: text drawn inline before a column, the code after it shifted
   on the grid (the cursor, selections and spans too).
-- Keys follow nvim 0.11's defaults: `K`, `grr`, `grn`, `gra`, `gri`, `gO`, plus `gd`, `gD`, `gy`, `␣ca`, `␣rn`, `␣ci`,
+- Keys follow nvim 0.11's defaults: `K`, `grr`, `grn`, `gra`, `gri`, `gO`, plus `gd`, `gD`, `gy`, `␣ca`, `␣ci`,
   `␣co` and `⌃␣` in insert mode. Without a server, `K`, `gd` and `gD` are vim's.
 - A go-to with one result (`gd`, `gD`, `gy`, `gri`, the peek's `⏎`) is a vim jump in the current window, to
   another file or within one, so `⌃o` comes back and `⌃i` goes there again.

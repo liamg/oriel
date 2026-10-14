@@ -213,7 +213,7 @@ func (x *requests) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.Contribute(registry.MenuItem{Name: "requests.ask", Label: "Ask about this…", Group: "agent", Order: 10, When: registry.MenuWhen{View: EditorView},
 		Command: "thread.new"}))
 	x.add(h.Picker(x.threadsSource()))
-	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>t", Command: "picker.open", Args: registry.Args{"source": "threads"}, Desc: "Threads"}))
+	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>r", Command: "picker.open", Args: registry.Args{"source": "threads"}, Desc: "Threads"}))
 	x.add(h.Decorations("threads", registry.DecorationFunc(x.decorations)))
 	x.add(h.View(RequestsView, requestsList{x}))
 	x.add(h.View(RequestView, requestView{x}))

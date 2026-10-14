@@ -130,7 +130,7 @@ clip 180,108 1240x720 r 10
   text "FILES ␣␣" @517.76,130.42 #ffd23f JetBrains Mono 9.5
   text "GREP ␣/" @592.31995,130.42 #7c7566 JetBrains Mono 9.5
   text "BUFFERS ␣," @664.3,130.42 #7c7566 JetBrains Mono 9.5
-  text "THREADS ␣t" @757.69995,130.42 #7c7566 JetBrains Mono 9.5
+  text "THREADS ␣r" @757.69995,130.42 #7c7566 JetBrains Mono 9.5
   text "SYMBOLS ␣S" @851.1,130.42 #7c7566 JetBrains Mono 9.5
   text "SYMBOLS HERE ␣s" @944.5,130.42 #7c7566 JetBrains Mono 9.5
   text "KEYMAPS ␣k" @1073.6,130.42 #7c7566 JetBrains Mono 9.5

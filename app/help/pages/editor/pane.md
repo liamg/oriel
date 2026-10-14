@@ -60,7 +60,7 @@ the workspace's, and `␣ci`/`␣co` list a function's callers and callees.
 
 ## Rename {#rename}
 
-`grn` (or `␣rn`) asks for a new name, then shows the rename as a diff of every file it changes. Apply makes it: open
+`grn` asks for a new name, then shows the rename as a diff of every file it changes. Apply makes it: open
 files change in their buffers, others are written.
 
 {{keys "lsp.*"}}

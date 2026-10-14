@@ -194,8 +194,7 @@ func TestInlineThreadsInTheEditor(t *testing.T) {
 	}
 }
 
-// SH-5 meets AI-5: ⌃a in a picker attaches the item to the request being written, and ␣t picks a thread: the tests'
-// ␣t… start with it too, so which-key offers ⏎ for ␣t itself.
+// SH-5 meets AI-5: ⌃a in a picker attaches the item to the request being written, and ␣r picks a thread.
 func TestPickersAttachAndPickThreads(t *testing.T) {
 	r, a, _ := requestsSession(t)
 	os.WriteFile(filepath.Join(projectDir(t, r), "invoice.go"), []byte("package billing\n"), 0o644)
@@ -218,10 +217,8 @@ func TestPickersAttachAndPickThreads(t *testing.T) {
 		return r.host.Run(context.Background(), "editor.open", registry.Args{"path": filepath.Join(projectDir(t, r), "invoice.go")})
 	})
 	r.waitText("package billing")
-	r.typeKeys("<Space>t")
-	r.waitFrame("which-key offering ⏎ for ␣t's own mapping", func(s string) bool { return containsAll(s, "⏎", "Threads", "Run nearest") })
-	r.typeKeys("<CR>")
-	r.waitFrame("the threads picker", func(s string) bool { return containsAll(s, "Threads", "don't touch stored invoices") })
+	r.typeKeys("<Space>r")
+	r.waitFrame("the threads picker", func(s string) bool { return containsAll(s, "THREADS ␣R", "1 / 1", "don't touch stored invoices") })
 }
 
 // AI-5: oriel.thread lists, replies to and resolves the session's threads from Lua.
