@@ -124,6 +124,8 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 57. [TR-5](TR-5-agent-test-runs-as-evidence.md): Agent test runs as evidence · after TR-1, AI-2
 58. [SH-17](SH-17-project-sidebar-per-project-panels-and-shared-tabs.md): Project sidebar: per-project panels, the session's entries, one tab strip across projects · after SH-16, FG-1, FG-3, TR-3, AI-1, SE-1 (P5 follow-up)
 59. [ED-15](ED-15-buffer-presenters-markdown-preview-and-thread-visibility.md): Buffer presenters with a source map, a built-in markdown preview, and showing or hiding a file's threads · after ED-7, AI-5, AI-8, SH-17 (P5 follow-up)
+60. [AI-12](AI-12-stats-and-usage-pages-grouped-by-repo.md): Stats and Usage: session stats, global stats grouped by repo, plan usage, and how you reach them · after AI-1, AI-2, AI-3, AI-9, SH-17 (P5 follow-up)
+61. [SE-4](SE-4-jobs-page-saved-prompts-runs-and-schedules.md): Jobs: saved prompts, runs as sessions, a Jobs page, and schedules · after SE-1, AI-12 (P5 follow-up)
 
 ### Phase 6 · review
 
