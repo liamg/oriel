@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -64,6 +65,10 @@ type Registry interface {
 	SetDiagnostics(owner, file string, ds []Diagnostic)
 	Diagnostics() ([]Diagnostic, int) // by file, then line; and a generation that moves when they change
 	DiagnosticsFor(file string) []Diagnostic
+	// SetCoverage replaces owner's line coverage for file: hits by 0-based line, 0 for a line never run. nil clears it.
+	SetCoverage(owner, file string, hits map[int]int)
+	ClearCoverage(owner string)
+	CoverageFor(file string) map[int]int // every owner's, a line keeping its largest count
 
 	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
 	OnFault(fn func(Fault)) Disposable
@@ -155,6 +160,13 @@ type Marked interface {
 	Mark(instance string) (text, style string)
 }
 
+// Persisted is a view whose instances come back when the app starts again on the same directory: the layout keeps
+// each one's state, and Revive makes a new instance from it, which takes the old one's place.
+type Persisted interface {
+	Persist(instance string) (state json.RawMessage, ok bool)
+	Revive(state json.RawMessage) (instance string, err error)
+}
+
 type ViewFunc func(ViewCtx) ui.Node
 
 func (f ViewFunc) Build(ctx ViewCtx) ui.Node { return f(ctx) }
@@ -226,6 +238,7 @@ type reg struct {
 	faults    faults
 	diags     map[diagKey][]Diagnostic
 	diagGen   int
+	cover     map[diagKey]map[int]int
 }
 
 func New() Registry {

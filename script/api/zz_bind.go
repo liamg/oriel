@@ -53,6 +53,17 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Coverage{a: a}
+		vm.Bind("coverage", map[string]script.GoFunc{
+			"lines": func(c *script.Args) ([]any, error) {
+				return []any{x.Lines(c.String(0), c.Int(1), c.Int(2))}, nil
+			},
+			"set": func(c *script.Args) ([]any, error) {
+				return nil, x.Set(c.String(0), c.String(1), c.Any(2))
+			},
+		})
+	}
+	{
 		x := Decor{a: a}
 		vm.Bind("decor", map[string]script.GoFunc{
 			"provider": func(c *script.Args) ([]any, error) {
@@ -167,6 +178,26 @@ func (a *APIs) bind(vm *script.VM) {
 		vm.Bind("status", map[string]script.GoFunc{
 			"rule": func(c *script.Args) ([]any, error) {
 				return nil, x.Rule(c.Fn(0), c.Where())
+			},
+		})
+	}
+	{
+		x := Thread{a: a}
+		vm.Bind("thread", map[string]script.GoFunc{
+			"list": func(c *script.Args) ([]any, error) {
+				return []any{x.List()}, nil
+			},
+			"new": func(c *script.Args) ([]any, error) {
+				return nil, x.New(c.Table(0))
+			},
+			"open": func(c *script.Args) ([]any, error) {
+				return nil, x.Open(c.String(0))
+			},
+			"reply": func(c *script.Args) ([]any, error) {
+				return nil, x.Reply(c.String(0), c.String(1), c.Table(2))
+			},
+			"resolve": func(c *script.Args) ([]any, error) {
+				return nil, x.Resolve(c.String(0), c.String(1))
 			},
 		})
 	}

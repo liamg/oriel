@@ -32,6 +32,7 @@ type Decoration struct {
 	Edge     string // a LineBg's gutter edge, a theme token
 	Text     string
 	Node     ui.Node // a Block's content
+	Reveal   bool    // a Block: the editor scrolls so all of it shows, as a references peek or a new thread wants
 	Priority int     // higher draws over lower
 	// Command, for a Sign, runs with Args when the sign is clicked: a test's ▶, a breakpoint.
 	Command string

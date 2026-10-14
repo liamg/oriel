@@ -111,3 +111,22 @@ func TestDiagnostics(t *testing.T) {
 		t.Errorf("for a.go: %+v", got)
 	}
 }
+
+// Coverage is published by owner and file; a line two owners measured keeps the larger count.
+func TestCoverage(t *testing.T) {
+	r := registry.New()
+	r.SetCoverage("tests", "/p/a.go", map[int]int{3: 2, 4: 0})
+	r.SetCoverage("jest", "/p/a.go", map[int]int{4: 1, 9: 0})
+	got := r.CoverageFor("/p/a.go")
+	if len(got) != 3 || got[3] != 2 || got[4] != 1 || got[9] != 0 {
+		t.Fatalf("coverage %v", got)
+	}
+	r.SetCoverage("jest", "/p/a.go", nil)
+	if got := r.CoverageFor("/p/a.go"); len(got) != 2 || got[4] != 0 {
+		t.Errorf("after clearing jest's: %v", got)
+	}
+	r.ClearCoverage("tests")
+	if got := r.CoverageFor("/p/a.go"); len(got) != 0 {
+		t.Errorf("after clearing tests': %v", got)
+	}
+}

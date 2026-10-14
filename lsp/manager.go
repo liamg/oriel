@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -96,6 +97,16 @@ func (m *Manager) Open(ctx context.Context, path, language string, s text.Snapsh
 	m.docs[path] = &openDoc{key: key, language: language, snap: s}
 	m.mu.Unlock()
 	return c, c.DidOpen(path, language, s)
+}
+
+// Warm starts the server for a language's files under root ahead of any of them opening, so the first request
+// doesn't wait for it. It blocks while the server starts.
+func (m *Manager) Warm(ctx context.Context, language, root string) (*Client, error) {
+	spec, ok := m.SpecFor(language)
+	if !ok {
+		return nil, ErrNoServer
+	}
+	return m.client(ctx, spec, clientKey{spec.Name, spec.FindRoot(filepath.Join(root, "_"))})
 }
 
 // client returns the running client for key, starting one if there's none or it has exited.

@@ -3,6 +3,9 @@ package api
 import (
 	"cmp"
 	"fmt"
+	"maps"
+	"slices"
+	"strconv"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -49,3 +52,44 @@ func (f disposeFunc) Dispose() { f() }
 
 // cmpOr is the first of ss that isn't empty.
 func cmpOr(ss ...string) string { return cmp.Or(ss...) }
+
+//oriel:api name=coverage
+type Coverage struct{ a *APIs }
+
+//oriel:api doc="Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config."
+func (c Coverage) Set(owner, file string, hits any) error {
+	file = expand(file)
+	t, _ := hits.(script.Table)
+	if list, ok := hits.([]any); ok {
+		t = script.Table{}
+		for i, v := range list {
+			if v != nil {
+				t[strconv.Itoa(i+1)] = v
+			}
+		}
+	}
+	m := map[int]int{}
+	for k, v := range t {
+		line, err := strconv.Atoi(k)
+		n, ok := v.(float64)
+		if err != nil || !ok || line < 1 {
+			return fmt.Errorf("coverage is { [line] = hits }, not %s = %v", k, v)
+		}
+		m[line-1] = int(n)
+	}
+	c.a.Host.SetCoverage(owner, file, m)
+	c.a.own(disposeFunc(func() { c.a.Host.SetCoverage(owner, file, nil) }))
+	return nil
+}
+
+//oriel:api doc="A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner." returns=table
+func (c Coverage) Lines(file string, first, last int) []any {
+	hits := c.a.Host.CoverageFor(expand(file))
+	var out []any
+	for _, l := range slices.Sorted(maps.Keys(hits)) {
+		if l+1 >= first && l+1 <= last {
+			out = append(out, script.Table{"n": l + 1, "hits": hits[l], "hit": hits[l] > 0})
+		}
+	}
+	return out
+}

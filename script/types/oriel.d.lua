@@ -4,6 +4,7 @@
 
 ---@class oriel
 ---@field agent oriel.agent
+---@field coverage oriel.coverage
 ---@field decor oriel.decor
 ---@field diagnostics oriel.diagnostics
 ---@field hud oriel.hud
@@ -17,6 +18,7 @@
 ---@field session oriel.session
 ---@field start oriel.start
 ---@field status oriel.status
+---@field thread oriel.thread
 ---@field ui oriel.ui
 ---@field view oriel.view
 ---@field option table<string, any> Your settings, by name or vim alias, as init.lua sets them
@@ -83,6 +85,22 @@ function oriel.agent.pack(name, spec) end
 --- Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }.
 ---@param spec table
 function oriel.agent.tool(spec) end
+
+---@class oriel.coverage
+oriel.coverage = {}
+
+--- A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner.
+---@param file string
+---@param first integer
+---@param last integer
+---@return table
+function oriel.coverage.lines(file, first, last) end
+
+--- Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.
+---@param owner string
+---@param file string
+---@param hits any
+function oriel.coverage.set(owner, file, hits) end
 
 ---@class oriel.decor
 oriel.decor = {}
@@ -212,6 +230,32 @@ oriel.status = {}
 --- A status rule: fn(session) returns a status colour name, or nil to leave it.
 ---@param fn function
 function oriel.status.rule(fn) end
+
+---@class oriel.thread
+oriel.thread = {}
+
+--- The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent) }.
+---@return table
+function oriel.thread.list() end
+
+--- Open a request: with opts.body, send it now ({ body, file, line, urgent, btw }; no file is about the whole change); without, open a thread on the editor's line at the cursor to write it.
+---@param opts? table
+function oriel.thread.new(opts) end
+
+--- Show a request by id in the Requests view.
+---@param id string
+function oriel.thread.open(id) end
+
+--- Reply to a request by id: opts { urgent (interrupts the agent's turn), btw (a side question, answered by a fork) }.
+---@param id string
+---@param body string
+---@param opts? table
+function oriel.thread.reply(id, body, opts) end
+
+--- Resolve a request by id, or set its status: open, resolved, deferred or dismissed.
+---@param id string
+---@param status? string
+function oriel.thread.resolve(id, status) end
 
 ---@class oriel.ui
 oriel.ui = {}

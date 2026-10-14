@@ -179,3 +179,73 @@ func TestKeymapsAndCommandsListSources(t *testing.T) {
 		t.Errorf("keymaps:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+// A key that starts a command of the target's own (an editor's g) makes the keys after it its argument: they reach it
+// unmapped, as vim reads them, once it has taken the first. Keys behind it wait for Pump (a frame).
+func TestResolveCommandArgumentsAreNotMapped(t *testing.T) {
+	// ref:   nvim/map.txt *map-error*
+	// quote: "Note that the second character (argument) of the commands @zZtTfF[]rm'`\"v and CTRL-X is not mapped."
+	r := registry.New()
+	bind(r, "n", "gd", "definition")
+	bind(r, "n", "grr", "references")
+	res := registry.NewResolver(r)
+	engine := "" // what the target holds of a command so far
+	waiting := map[string]bool{"g": true}
+	res.Raw = func() bool { return engine != "" }
+	t0 := time.Unix(0, 0)
+	take := func(acts []registry.Action) (got []string) {
+		for _, a := range acts {
+			if a.Keymap != nil {
+				got = append(got, "run:"+a.Keymap.Command)
+			}
+			for _, k := range a.Keys {
+				got = append(got, "key:"+k)
+				if engine += k; !waiting[engine] {
+					engine = ""
+				}
+			}
+		}
+		return got
+	}
+	var got []string
+	got = append(got, take(res.Feed([]string{"n"}, "g", t0))...)
+	got = append(got, take(res.Feed([]string{"n"}, "g", t0))...)
+	if strings.Join(got, " ") != "key:g" || !res.Queued() {
+		t.Fatalf("gg typed together: %v, queued %v", got, res.Queued())
+	}
+	// A frame: the target has taken the first g and waits for its argument.
+	got = take(res.Pump([]string{"n"}, t0))
+	if strings.Join(got, " ") != "key:g" || res.Queued() || len(res.Pending()) != 0 {
+		t.Errorf("after the frame: %v, pending %v", got, res.Pending())
+	}
+	// The next frame: gg is done, and gd still runs its mapping.
+	take(res.Pump([]string{"n"}, t0))
+	if got := trace(res, []string{"n"}, t0, "g", "d"); got != "run:definition" {
+		t.Errorf("gd = %q", got)
+	}
+}
+
+// A mapping that is also the start of longer ones runs at once on Accept (which-key's ⏎), while held; keys that
+// aren't a mapping of their own accept nothing.
+func TestResolveAccept(t *testing.T) {
+	r := registry.New()
+	bind(r, "n", "gt", "threads")
+	bind(r, "n", "gtt", "nearest")
+	res := registry.NewResolver(r)
+	t0 := time.Unix(0, 0)
+	if got := trace(res, []string{"n"}, t0, "g", "t"); got != "wait" {
+		t.Fatalf("gt: %q", got)
+	}
+	res.Hold()
+	if k := res.Complete(); k == nil || k.Command != "threads" {
+		t.Fatalf("complete = %+v", k)
+	}
+	acts := res.Accept(t0)
+	if len(acts) != 1 || acts[0].Keymap == nil || acts[0].Keymap.Command != "threads" || len(res.Pending()) != 0 {
+		t.Errorf("accept ran %+v, left %v", acts, res.Pending())
+	}
+	res.Feed([]string{"n"}, "g", t0)
+	if res.Complete() != nil || res.Accept(t0) != nil || len(res.Pending()) != 1 {
+		t.Errorf("g alone accepted something")
+	}
+}

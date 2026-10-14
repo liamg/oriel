@@ -41,10 +41,12 @@ func (r *reg) Contributions(kind string) []Contribution {
 	return out
 }
 
-// AgentTool is a tool offered to a session's agent over MCP (agents.md); AI-1 and AI-7 offer them.
+// AgentTool is a tool offered to every session's agent beside Oriel's own (agents.md): an LSP lookup, a plugin's
+// query. The agent sees it as mcp__oriel__<Name>. Run runs in the app; SessionOf(ctx) is the session that asked.
 type AgentTool struct {
 	Name, Desc string
 	Params     map[string]string // name → type: "string", "number?"
+	ReadOnly   bool              // changes nothing: allowed without asking
 	Run        func(ctx Ctx, params map[string]any) (any, error)
 	Source     string
 }

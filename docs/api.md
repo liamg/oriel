@@ -20,6 +20,11 @@ Version 0.4.0.
 - `oriel.agent.pack(name, spec)`: A prompt pack: { prompt, tools }, for sessions to start with.
 - `oriel.agent.tool(spec)`: Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }.
 
+## oriel.coverage
+
+- `oriel.coverage.lines(file, first, last)`: A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner.
+- `oriel.coverage.set(owner, file, hits)`: Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.
+
 ## oriel.decor
 
 - `oriel.decor.provider(name, fn)`: Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text } (1-based lines).
@@ -75,6 +80,14 @@ Version 0.4.0.
 ## oriel.status
 
 - `oriel.status.rule(fn)`: A status rule: fn(session) returns a status colour name, or nil to leave it.
+
+## oriel.thread
+
+- `oriel.thread.list()`: The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent) }.
+- `oriel.thread.new(opts?)`: Open a request: with opts.body, send it now ({ body, file, line, urgent, btw }; no file is about the whole change); without, open a thread on the editor's line at the cursor to write it.
+- `oriel.thread.open(id)`: Show a request by id in the Requests view.
+- `oriel.thread.reply(id, body, opts?)`: Reply to a request by id: opts { urgent (interrupts the agent's turn), btw (a side question, answered by a fork) }.
+- `oriel.thread.resolve(id, status?)`: Resolve a request by id, or set its status: open, resolved, deferred or dismissed.
 
 ## oriel.ui
 
