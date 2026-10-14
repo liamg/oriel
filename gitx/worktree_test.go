@@ -106,3 +106,27 @@ func TestValidBranch(t *testing.T) {
 		}
 	}
 }
+
+// ref: oracle git — git-clone(1). Clone makes a checkout of a URL, here a bare repo; a failure says what git said,
+// and never waits on a prompt for credentials.
+func TestClone(t *testing.T) {
+	ctx := context.Background()
+	origin, _ := upstream(t)
+	bare := filepath.Join(t.TempDir(), "origin.git")
+	origin.Git("clone", "-q", "--bare", origin.Dir, bare)
+	dir := filepath.Join(t.TempDir(), "src", "pricing")
+	if err := gitx.Clone(ctx, bare, dir); err != nil {
+		t.Fatal(err)
+	}
+	r := gitx.Repo{Dir: dir}
+	if got := r.RemoteURL(ctx); got != bare {
+		t.Errorf("the clone's origin is %q, want %q", got, bare)
+	}
+	if !gitx.IsRepo(dir) {
+		t.Error("no work tree")
+	}
+	err := gitx.Clone(ctx, filepath.Join(t.TempDir(), "nowhere.git"), filepath.Join(t.TempDir(), "x"))
+	if err == nil || !strings.Contains(err.Error(), "nowhere.git") || !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("cloning what isn't there: %v", err)
+	}
+}

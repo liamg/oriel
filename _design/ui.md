@@ -421,7 +421,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   closes it. The modes are the worker's kinds (`widget.Choices`), so Direct and Scratch are there too, and a plugin's
   kind joins them. A mode asks for what its kind starts from: a PR URL, a new repo's name, template and parent, or a
   directory. The right column is recent prompts (choosing one fills it in again) and the pre-flight: when worktrees
-  are made, repos to fetch, the agent and its prompt pack, where it runs and its network. Not yet: the multi-line
+  are made, repos to fetch (and to clone), the agent and its prompt pack, where it runs and its network. The Sandbox
+  toggle starts from `sandbox.default`, on unless it says `host`. A repo the chosen worker lacks says "not on
+  <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). Not yet: the multi-line
   prompt (the field is one line), a ticket expanding into a card (PL-8), templates and Save as job, toolchains and
   LSPs in the pre-flight.
 

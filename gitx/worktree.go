@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -121,6 +122,25 @@ func (r Repo) HasRemote(ctx context.Context, name string) bool {
 		}
 	}
 	return false
+}
+
+// Clone clones url into dir, making its parents. Git doesn't prompt for a password here: a clone that needs one
+// fails, saying what git said.
+func Clone(ctx context.Context, url, dir string) error {
+	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+		return err
+	}
+	cmd := exec.CommandContext(ctx, "git", "clone", "--quiet", "--", url, dir)
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg == "" {
+			msg = err.Error()
+		}
+		return fmt.Errorf("cloning %s: %s", url, msg)
+	}
+	return nil
 }
 
 // RemoteURL is the URL of origin, or "".

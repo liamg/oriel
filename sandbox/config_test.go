@@ -51,3 +51,37 @@ func TestRulesReadFromTheirStringForm(t *testing.T) {
 		}
 	}
 }
+
+// settings.md, "sandbox.servers": a server is an https URL (the HTTP transport) or a command line (stdio), read into
+// Claude's mcpServers form.
+func TestServersReadFromTheirStringForm(t *testing.T) {
+	for in, want := range map[string]string{
+		"https://api.githubcopilot.com/mcp/":           `{"type":"http","url":"https://api.githubcopilot.com/mcp/"}`,
+		"npx -y @foo/mcp --flag":                       `{"command":"npx","args":["-y","@foo/mcp","--flag"]}`,
+		`LINEAR_KEY=abc uvx "linear mcp" --name 'a b'`: `{"command":"uvx","args":["linear mcp","--name","a b"],"env":{"LINEAR_KEY":"abc"}}`,
+		"/usr/local/bin/srv":                           `{"command":"/usr/local/bin/srv"}`,
+	} {
+		got, err := ParseServer(in)
+		if err != nil || string(got) != want {
+			t.Errorf("ParseServer(%q) = %s, %v; want %s", in, got, err, want)
+		}
+	}
+	for _, bad := range []string{"", "   ", `npx "unclosed`, "FOO=bar", "ftp://example.com"} {
+		if _, err := ParseServer(bad); err == nil {
+			t.Errorf("ParseServer(%q) took it", bad)
+		}
+	}
+}
+
+// A project's sandbox settings, from their string forms; rules that don't parse are left out.
+func TestProjectSettings(t *testing.T) {
+	p, ok := NewProjectConfig([]string{"allow a.example.com:443", "bad"}, []string{"deny oriel__push"}, "img:dev")
+	want := ProjectConfig{Egress: []EgressRule{{Host: "a.example.com", Port: 443, Allow: true}}, Rules: []PolicyRule{{Tool: "oriel__push", Action: "deny"}},
+		Image: "img:dev"}
+	if !ok || !reflect.DeepEqual(p, want) {
+		t.Errorf("NewProjectConfig = %+v, %v", p, ok)
+	}
+	if _, ok := NewProjectConfig(nil, nil, ""); ok {
+		t.Error("an empty project's settings are something")
+	}
+}

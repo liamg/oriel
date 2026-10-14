@@ -263,8 +263,7 @@ func (w *Worker) addPRProject(ctx context.Context, root string, m *Manifest, r c
 func (w *Worker) startNewRepo(ctx context.Context, se *core.SessionState, spec core.SessionSpec, branch string) error {
 	parent := spec.Dir
 	if parent == "" {
-		home, _ := os.UserHomeDir()
-		parent = filepath.Join(home, "src")
+		parent = w.opts.ReposDir
 	}
 	dir := filepath.Join(parent, string(se.ID))
 	if spec.Name != "" {

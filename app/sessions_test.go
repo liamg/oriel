@@ -29,6 +29,12 @@ type localWorker struct {
 // newLocalWorker is a worker with the fake provider, or the fakes given (named as the providers they stand for).
 func newLocalWorker(t *testing.T, fakes ...*agenttest.Fake) *localWorker {
 	t.Helper()
+	return newWorkerWith(t, worker.Options{}, fakes...)
+}
+
+// newWorkerWith is newLocalWorker with options of its own: another machine's ID and name, its repos directory.
+func newWorkerWith(t *testing.T, o worker.Options, fakes ...*agenttest.Fake) *localWorker {
+	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
 	t.Setenv("USER", "tester")
@@ -46,8 +52,9 @@ func newLocalWorker(t *testing.T, fakes ...*agenttest.Fake) *localWorker {
 	for _, f := range fakes {
 		providers.Register(f)
 	}
-	w, err := worker.New(worker.Options{Home: t.TempDir(), CritHome: "-", Providers: providers, Exec: nopExec{},
-		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
+	o.Home, o.CritHome, o.Providers, o.Exec = t.TempDir(), "-", providers, nopExec{}
+	o.Packs = func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }
+	w, err := worker.New(o)
 	if err != nil {
 		t.Fatal(err)
 	}

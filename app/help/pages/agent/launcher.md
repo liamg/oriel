@@ -33,10 +33,15 @@ in a **Direct** session edits your real files.
 The repos the session works on: each gets a worktree, all on one branch. Pick a registered repo with **+ add**, or
 type a checkout's path. The branch is named from the ticket and prompt unless you name it.
 
+A repo the chosen worker hasn't got says **not on** that worker, with **Clone**: give it the URL (filled from your
+checkout's remote) and it's cloned onto the worker, with that machine's own git and credentials, before the session
+starts.
+
 ## Run on
 
-The worker the session runs on, whether its agent runs in a sandbox (a container, with the gateway for git and gh),
-and whether the sandbox's network is open or asks per new host.
+The worker the session runs on, whether its agent runs in a sandbox (a container, with the gateway for git and gh;
+on unless the `sandbox.default` setting says `host`), and whether the sandbox's network is open or asks per new
+host.
 
 ## Recent prompts
 

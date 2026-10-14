@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,6 +17,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/worker"
 )
 
@@ -110,8 +112,17 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	}
 	x.add(h.Picker(x.addSource(h)))
 	for _, c := range []registry.Command{
-		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…",
+		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…; {clone} the repos the worker lacks first, a URL by repo",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.start(ctx, a); return err }},
+		{ID: "repos.clone", Title: "Clone {url} onto {worker} (this machine's if none) as {name}, and register it", Available: has,
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				c, err := x.worker(core.WorkerID(a.String("worker")))
+				if err != nil {
+					return err
+				}
+				_, err = c.CloneRepo(ctx, worker.CloneReq{URL: a.String("url"), Name: a.String("name")})
+				return err
+			}},
 		{ID: "session.open", Title: "Bring a session to the front: {id}, resuming it if it's stopped or archived", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.open(ctx, core.SessionID(a.String("id"))) }},
 		{ID: "session.resume", Title: "Resume a session: pick one", Available: has,
@@ -217,6 +228,13 @@ func (x *sessions) clients() []worker.Client {
 		out = append(out, c)
 	}
 	return out
+}
+
+// byWorker is the connected workers by ID.
+func (x *sessions) byWorker() map[core.WorkerID]worker.Client {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return maps.Clone(x.workers)
 }
 
 // client is the worker a session lives on.
@@ -450,6 +468,18 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 	c, err := x.worker(spec.Worker)
 	if err != nil {
 		return "", err
+	}
+	clones, _ := settingsfile.StringMap(a["clone"])
+	for i, r := range spec.Repos {
+		url, ok := clones[string(r)]
+		if !ok {
+			continue
+		}
+		repo, err := c.CloneRepo(ctx, worker.CloneReq{URL: url, Name: filepath.Base(string(r))})
+		if err != nil {
+			return "", err
+		}
+		spec.Repos[i] = repo.ID
 	}
 	id, err := c.Start(ctx, spec)
 	if err != nil {

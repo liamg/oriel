@@ -360,8 +360,17 @@ sequenceDiagram
   window's project) its trusted project file's `egress`, `rules` and `image` as `Config.Projects[repo]`. The worker
   keeps the last one in `~/.oriel/sandbox.json`, so sessions that start while no window is open run on it too, and
   `Sandboxes` with no `Config` func reads it at each `Open`; the session's open network still turns the proxy off.
-- Not yet: a remote worker's repos are paths on its machine, which the app can't read project files from, so they
-  get only your values; `Dismissed` and approved `Dockerfile` hashes aren't settings and aren't sent.
+- A worker on another machine has its repos at paths there, which the app can't read, so the app sends it your values
+  with `ReadProjects` set and no `Projects`. At each `Open` that worker reads the trusted `.oriel/settings.toml` of
+  every repo of the session that the app sent nothing for (`Worker.sandboxConfigFor`), with the app's trust rule
+  shared through `registry/settingsfile` (the file's SHA-256 in `Options.TrustPath`, that machine's
+  `~/.config/oriel/trusted.toml`), and adds its `egress`, `rules` and `image` as `Projects[repo]`. An untrusted file
+  is left out and the session gets a notice offering Trust: `settings.trust {path, worker}` in the app, which calls
+  the worker's `settings.trust` (`Client.TrustSettings`; only a registered repo's file). What the app sent is kept as
+  it was; the merge is per sandbox.
+- `sandbox.servers` reach the gateway as `Config.Servers`: `Discover` lists them after Claude Code's own (user scope,
+  then plugins), and `sandbox.hidden_servers` hides any of them.
+- Not yet: `Dismissed` and approved `Dockerfile` hashes aren't settings and aren't sent.
 
 ## Comments to agent, without `crit wait`
 

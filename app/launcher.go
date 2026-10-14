@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -64,6 +65,10 @@ type launcher struct {
 	template, repoPath                            string
 	provider, model, effort                       string
 	chosen                                        []core.RepoID
+	clones                                        map[core.RepoID]string // a URL to clone onto the worker, by a chosen repo it lacks
+	cloning                                       core.RepoID            // the repo whose Clone popover is open
+	cloneURL                                      string
+	cloneFocus                                    bool
 	sandbox, openNet                              bool
 	busy                                          bool
 	err                                           string
@@ -197,6 +202,8 @@ func (x *launcher) missing() string {
 		return "waiting for the worker"
 	case k.NeedsRepo && len(x.chosen) == 0:
 		return "pick a repo"
+	case takesRepos(k) && x.uncloned() != "":
+		return fmt.Sprintf("clone %s onto %s, or remove it", x.uncloned(), x.workerName())
 	case startsFrom(k) == worker.FromPR && strings.TrimSpace(x.pr) == "":
 		return "paste the pull request's URL"
 	case startsFrom(k) == worker.FromName && strings.TrimSpace(x.name) == "":
@@ -245,8 +252,54 @@ func (x *launcher) args() registry.Args {
 			repos = append(repos, string(r))
 		}
 		a["repos"] = repos
+		if clone := x.toClone(); len(clone) > 0 {
+			a["clone"] = clone
+		}
 	}
 	return a
+}
+
+// toClone is session.start's {clone}: the URL each chosen repo the worker lacks is cloned from.
+func (x *launcher) toClone() map[string]any {
+	out := map[string]any{}
+	for _, r := range x.chosen {
+		if url := x.clones[r]; url != "" && x.lacks(r) {
+			out[string(r)] = url
+		}
+	}
+	return out
+}
+
+// local says whether the session runs on this machine's worker.
+func (x *launcher) local() bool { return x.worker == "" || x.worker == core.LocalWorker }
+
+// lacks says whether the worker hasn't got a chosen repo, once it has said which it has: one it hasn't registered,
+// unless it's a path this machine's worker registers as the session starts.
+func (x *launcher) lacks(r core.RepoID) bool {
+	if len(x.kinds) == 0 || x.loadErr != "" || x.local() && filepath.IsAbs(string(r)) {
+		return false
+	}
+	return !slices.ContainsFunc(x.repos, func(c core.Repo) bool { return c.ID == r || c.Path == string(r) })
+}
+
+// uncloned is the first chosen repo the worker lacks that isn't to be cloned, by name; "" if none.
+func (x *launcher) uncloned() string {
+	for _, r := range x.chosen {
+		if x.lacks(r) && x.clones[r] == "" {
+			return x.repoName(r)
+		}
+	}
+	return ""
+}
+
+// openClone opens r's Clone popover, its URL the local checkout's remote when r is one.
+func (x *launcher) openClone(r core.RepoID) {
+	x.cloning, x.cloneURL, x.cloneFocus = r, x.clones[r], true
+	if x.cloneURL == "" && filepath.IsAbs(string(r)) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		x.cloneURL = gitx.Repo{Dir: string(r)}.RemoteURL(ctx)
+	}
 }
 
 // start runs session.start with what the launcher holds; the launcher closes once the session is in front.
@@ -587,10 +640,17 @@ func (x *launcher) reposSection(c *ui.Ctx, k worker.KindSpec) {
 	c.Row("chips", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		for _, r := range slices.Clone(x.chosen) {
 			name := x.repoName(r)
-			c.Row("repo."+string(r), ui.Style{Pad: ui.Insets{L: 10, R: 4, T: 3, B: 3}, Gap: 6, Cross: ui.Center, Radius: 12, Stroke: th.C(tLaunchRepo),
+			tone := th.C(tLaunchRepo)
+			if x.lacks(r) {
+				tone = th.C(theme.Warn)
+			}
+			c.Row("repo."+string(r), ui.Style{Pad: ui.Insets{L: 10, R: 4, T: 3, B: 3}, Gap: 6, Cross: ui.Center, Radius: 12, Stroke: tone,
 				Border: 1, Role: ui.RoleGroup, Label: name}, func(c *ui.Ctx) {
-				c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(tLaunchRepo)}, nil)
+				c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: tone}, nil)
 				c.Text("name", name, monoFont(11.5, th.C(theme.Fg)))
+				if x.lacks(r) {
+					x.cloneChip(c, r, name)
+				}
 				if widget.IconButton(c, "remove", "✕", widget.IconButtonOpts{Label: "Remove " + name, Help: "agent/launcher#repositories", Size: 18}) {
 					x.chosen = slices.DeleteFunc(x.chosen, func(id core.RepoID) bool { return id == r })
 				}
@@ -614,6 +674,49 @@ func (x *launcher) reposSection(c *ui.Ctx, k worker.KindSpec) {
 			c.Text("l", "Branch", uiFont(12.5, th.C(theme.FgMuted)))
 			x.field(c, "branch", &x.branch, "Branch", "named from the ticket and prompt", false, ui.Flex(1))
 		})
+	}
+}
+
+// cloneChip is a chip's "not on <worker>: Clone", whose popover takes the URL to clone it from as the session starts.
+func (x *launcher) cloneChip(c *ui.Ctx, r core.RepoID, name string) {
+	const help = "agent/launcher#repositories"
+	th := c.Theme()
+	note := "not on " + x.workerName() + ":"
+	if x.clones[r] != "" {
+		note = "clones onto " + x.workerName() + " at start:"
+	}
+	c.Text("missing", note, monoFont(10.5, th.C(theme.Warn)))
+	anchor := c.Next("clone")
+	label := "Clone"
+	if x.clones[r] != "" {
+		label = "Change"
+	}
+	if widget.Button(c, "clone", label, widget.ButtonOpts{Ghost: true, Help: help}) {
+		x.openClone(r)
+	}
+	open := x.cloning == r
+	widget.Popover(c, "clonepop", anchor, &open, widget.PopoverOpts{Label: "Clone " + name, Width: 460, Help: help}, func(c *ui.Ctx) {
+		c.Text("t", "Clone "+name+" onto "+x.workerName()+" from", uiFont(12.5, th.C(theme.Fg)))
+		if x.cloneFocus {
+			c.Focus(c.Next("url"))
+			x.cloneFocus = false
+		}
+		res := widget.Input(c, "url", &x.cloneURL, widget.InputOpts{Label: "Clone from", Placeholder: "a git URL: git@github.com:acme/pricing.git",
+			Help: help, KeyMode: LauncherKeyMode})
+		c.Text("n", "with the worker's own git and credentials, before the session starts", monoFont(10, th.C(theme.FgFaint)))
+		ok := strings.TrimSpace(x.cloneURL) != ""
+		if (widget.Button(c, "ok", "Clone at start", widget.ButtonOpts{Primary: true, Disabled: !ok, Help: help}) || res.Submitted) && ok {
+			if x.clones == nil {
+				x.clones = map[core.RepoID]string{}
+			}
+			x.clones[r], open = strings.TrimSpace(x.cloneURL), false
+		}
+		if res.Cancelled {
+			open = false
+		}
+	})
+	if !open && x.cloning == r {
+		x.cloning = ""
 	}
 }
 
@@ -751,6 +854,9 @@ func (x *launcher) preflight() [][2]string {
 	rows := [][2]string{{"worktrees", worktrees}}
 	if takesRepos(k) && k.Worktrees != worker.WorktreesStartWork {
 		rows = append(rows, [2]string{"repos to fetch", fmt.Sprint(len(x.chosen))})
+	}
+	if n := len(x.toClone()); takesRepos(k) && n > 0 {
+		rows = append(rows, [2]string{"repos to clone", fmt.Sprint(n)})
 	}
 	agent := "none"
 	if x.provider != "" {

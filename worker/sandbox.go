@@ -32,7 +32,8 @@ const GatewayServer = "oriel-gw"
 // Sandboxes is the SandboxFactory backed by the real sandbox: a container per agent run (runner), the egress
 // proxy's host side, the gateway and the session socket. Attach the worker before a session opens one.
 type Sandboxes struct {
-	// Config is the sandbox's settings; nil means the attached worker's, as the app last sent them.
+	// Config is the sandbox's settings; nil means the attached worker's, as the app last sent them, with its repos'
+	// own project settings when the app asks.
 	Config func() sandbox.Config
 	// Launch readies the container and returns the command to run in the agent's place; runner.Launch.
 	Launch func(ctx context.Context, root, cwd string, argv []string, o runner.Options) ([]string, error)
@@ -63,12 +64,12 @@ func (s *Sandboxes) worker() *Worker {
 	return s.w
 }
 
-func (s *Sandboxes) config() sandbox.Config {
+func (s *Sandboxes) config(se core.SessionState) sandbox.Config {
 	if s.Config != nil {
 		return s.Config()
 	}
 	if w := s.worker(); w != nil {
-		return w.SandboxConfig()
+		return w.sandboxConfigFor(se)
 	}
 	return sandbox.Config{}
 }
@@ -112,7 +113,7 @@ func (s *Sandboxes) Open(ctx context.Context, se core.SessionState, approve Appr
 	if err := sandbox.SaveManifest(root, manifestOf(root, se)); err != nil {
 		return nil, err
 	}
-	cfg := s.config()
+	cfg := s.config(se)
 	if se.Agent.Network == "open" {
 		cfg.NoEgressProxy = true
 	}

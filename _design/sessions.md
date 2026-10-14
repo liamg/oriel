@@ -49,6 +49,26 @@ flowchart LR
 - **CLI**: `oriel new "fix stale usage prices" --repo pricing --ticket INF-2231`, `oriel review <pr-url>`, `oriel open <session>`,
   `oriel init <name> --template go-cli`, `oriel ~/src/foo` (direct).
 
+### Repos on a worker
+
+- A worker only works on repos it has. Naming one it hasn't registered fails with how to get it there: `oriel repos
+  add <path>` for a checkout on that machine, or `oriel repos clone <url> [name]`.
+- `repos.clone {url, name}` (`Client.CloneRepo`) clones into the worker's repos directory (`Options.ReposDir`,
+  `~/src` by default, where new repos go too) as `name` (the URL's last part if none) with `gitx.Clone`, and
+  registers it. A checkout of the same URL already there is registered as it is; anything else there is an error. Git
+  never prompts: a clone that needs credentials fails with git's own message and says the worker clones with its
+  machine's credentials. The app's `repos.clone {url, name, worker}` command runs it.
+- `session.start {clone = {[repo] = url}}` clones each of those repos onto the worker first and starts on the clones.
+- In the launcher, a repo chip the chosen worker lacks (one it hasn't registered; on this machine's worker a path
+  still registers as the session starts) is outlined in warning and says "not on <worker>: **Clone**". Clone opens
+  a popover with the URL, filled from the local checkout's remote (`gitx.Repo.RemoteURL`) or typed, and "Clone at
+  start" queues it: the chip then says it clones at start, and the pre-flight counts the repos to clone. Start waits
+  until every such chip is queued or removed, then passes them as `clone`.
+- Not yet: credentials for a private repo on a worker elsewhere. The clone runs with that machine's git, ssh keys and
+  credential helpers, so they must be set up there; the app doesn't lend its ssh-agent or tokens to a worker's
+  git (a sandboxed agent's ssh-agent forwarding is per session and isn't used for this). The CLI has no `--worker`,
+  so it only offers the commands above for this machine's worker.
+
 ## Lifecycle
 
 ```mermaid

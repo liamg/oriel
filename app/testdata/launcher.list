@@ -247,13 +247,13 @@ clip 170,105 1260x790 r 10
     text "RUN ON" @646.5,579.1795 #7c7566 JetBrains Mono 9.5
     rect 646.5,600.0295 192.90625x26 fill #191815 radius 6 stroke 1 #332f27
     text "devbox · 32 cores · cpu 61% ▾" @656.5,617.3947 #ece6d8 Inter 12
-    rect 646.5,636.0295 32x18 fill #23211c radius 9
-    rect 648.5,638.0295 14x14 fill #ece6d8 radius 7
+    rect 646.5,636.0295 32x18 fill #ffd23f radius 9
+    rect 662.5,638.0295 14x14 fill #ece6d8 radius 7
     text "Sandbox" @688.5,649.5766 #ece6d8 Inter 12.5
     text "container · gateway for git & gh" @883,648.6295 #7c7566 JetBrains Mono 10
     rect 646.5,664.0295 32x18 fill #23211c radius 9
     rect 648.5,666.0295 14x14 fill #ece6d8 radius 7
-    text "Open network" @688.5,677.5766 #7c7566 Inter 12.5
+    text "Open network" @688.5,677.5766 #ece6d8 Inter 12.5
     text "ask per new host when off" @925,676.6295 #7c7566 JetBrains Mono 10
   pop
   rect 1099,158 1x676 fill #24221d
@@ -284,9 +284,9 @@ clip 170,105 1260x790 r 10
   text "prompt pack" @1128,765.13007 #7c7566 JetBrains Mono 10.5
   text "plan" @1375.625,765.13007 #ece6d8 JetBrains Mono 10.5
   text "agent runs" @1128,784.99005 #7c7566 JetBrains Mono 10.5
-  text "on the worker" @1316.2812,784.99005 #ece6d8 JetBrains Mono 10.5
+  text "in a container" @1309.6875,784.99005 #ece6d8 JetBrains Mono 10.5
   text "network" @1128,804.85004 #7c7566 JetBrains Mono 10.5
-  text "the worker's" @1322.875,804.85004 #ece6d8 JetBrains Mono 10.5
+  text "ask per new host" @1296.5,804.85004 #ece6d8 JetBrains Mono 10.5
   rect 170,834 1260x1 fill #24221d
   clip 194,857.74 1093.9688x14.52002 r 0
     text "The agent drafts the plan in PLAN.md, you annotate it, and Start work implements it in these worktrees." @194,868.95996 #b3ab99 JetBrains Mono 11

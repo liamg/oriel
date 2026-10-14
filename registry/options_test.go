@@ -182,3 +182,43 @@ func TestOptionListAndValidate(t *testing.T) {
 		t.Errorf("Validate wasn't asked: %v", err)
 	}
 }
+
+// settings.md, "Options": a map holds strings by name, with labels for its two sides; ListOf and MapOf validate each
+// item or entry, so an editor can ask about one at a time.
+func TestOptionMapAndItemValidation(t *testing.T) {
+	r := registry.New()
+	noSpace := func(s string) error {
+		if strings.Contains(s, " ") {
+			return errors.New("no spaces")
+		}
+		return nil
+	}
+	r.Option(registry.OptionSpec{Name: "sandbox.servers", Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser,
+		KeyLabel: "name", ValueLabel: "server", Validate: registry.MapOf(func(k, v string) error {
+			if k == "" {
+				return errors.New("a server needs a name")
+			}
+			return nil
+		})})
+	r.Option(registry.OptionSpec{Name: "sandbox.hidden_servers", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
+		Choices: func() []string { return []string{"github", "linear"} }, Validate: registry.ListOf(noSpace)})
+	o := r.Options()
+	if err := o.Set("sandbox.servers", registry.LayerUser, registry.At{}, map[string]string{"github": "https://api.githubcopilot.com/mcp/"}); err != nil {
+		t.Fatal(err)
+	}
+	if v, _, _ := o.Get("sandbox.servers", registry.At{}); v.(map[string]string)["github"] == "" {
+		t.Errorf("sandbox.servers = %v", v)
+	}
+	if err := o.Set("sandbox.servers", registry.LayerUser, registry.At{}, []string{"github"}); err == nil {
+		t.Error("a list set a map")
+	}
+	if err := o.Set("sandbox.servers", registry.LayerUser, registry.At{}, map[string]string{"": "x"}); err == nil || !strings.Contains(err.Error(), "needs a name") {
+		t.Errorf("MapOf wasn't asked: %v", err)
+	}
+	if err := o.Set("sandbox.hidden_servers", registry.LayerUser, registry.At{}, []string{"github", "not offered"}); err == nil {
+		t.Error("ListOf let an item with a space through")
+	}
+	if err := o.Set("sandbox.hidden_servers", registry.LayerUser, registry.At{}, []string{"elsewhere"}); err != nil {
+		t.Errorf("a list's choices are suggestions, but %v", err)
+	}
+}

@@ -42,6 +42,10 @@ type Options struct {
 	Sandbox SandboxFactory
 	// Packs finds a kind's prompt pack (agent/packs.Get, with plugins' and the user's overrides).
 	Packs func(name string) (agent.Pack, bool)
+	// ReposDir is where repos.clone and new repos go; ~/src if "".
+	ReposDir string
+	// TrustPath is the trusted.toml project settings files are trusted in, the app's on this machine; Home's if "".
+	TrustPath string
 }
 
 // Worker hosts sessions.
@@ -104,6 +108,14 @@ func New(opts Options) (*Worker, error) {
 	}
 	if opts.OrielBin == "" {
 		opts.OrielBin, _ = os.Executable()
+	}
+	if opts.ReposDir == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			opts.ReposDir = filepath.Join(home, "src")
+		}
+	}
+	if opts.TrustPath == "" {
+		opts.TrustPath = filepath.Join(opts.Home, "trusted.toml")
 	}
 	if err := os.MkdirAll(filepath.Join(opts.Home, "sessions"), 0o700); err != nil {
 		return nil, err

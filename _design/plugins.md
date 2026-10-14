@@ -437,8 +437,11 @@ type Host interface {
   them. A String option can offer `OptionSpec.Choices`, worked out when asked; the settings page makes it a menu
   (`ui.theme` lists the registered themes).
 - Plugins search text with `regex` (PCRE2's syntax), the same engine as project search; Lua's `L.regex` binds it.
-- An option may be a list of strings (`registry.List`, `[]string`), and `OptionSpec.Validate` refuses a value of
-  the right type that's still wrong; `Check` asks it, so every way of setting the option does (settings.md).
+- An option may be a list of strings (`registry.List`, `[]string`) or strings by name (`registry.Map`,
+  `map[string]string`, with `KeyLabel` and `ValueLabel` for its two sides), and `OptionSpec.Validate` refuses a value
+  of the right type that's still wrong; `Check` asks it, so every way of setting the option does. `registry.ListOf`
+  and `MapOf` build a Validate from a check of one item or entry, which the settings page's editors also ask as you
+  type. A list's `Choices` make it a multi-select on the page (settings.md).
 - `Options` keeps where each value came from: `SetFrom(name, layer, at, v, source)`, `Source(name, at)`,
   `Lookup(name, layer, at)` and `Spec(name)` (settings.md, "As built").
 - `Registry.Themes()` returns a generation with the sources; the window watches a theme registered at any time.

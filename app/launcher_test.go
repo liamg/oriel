@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -69,6 +70,10 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
 	r.waitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
+	// The test worker has no sandbox factory.
+	r.do(func() error {
+		return r.host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host")
+	})
 
 	prompt := func(text string) {
 		r.clickTop(promptPlaceholder)
@@ -284,4 +289,77 @@ func TestLauncherCloses(t *testing.T) {
 		close()
 		r.waitGone("NEW SESSION")
 	}
+}
+
+// sessions.md, "Repos on a worker": a repo the chosen worker hasn't got says so on its chip, with Clone, which
+// takes the local checkout's remote (or a URL typed there) and clones it onto the worker before the session starts.
+func TestLauncherClonesAMissingRepo(t *testing.T) {
+	src := filepath.Join(t.TempDir(), "src")
+	devbox := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox", ReposDir: src})
+	checkout := filepath.Join(t.TempDir(), "pricing")
+	bare := filepath.Join(t.TempDir(), "pricing.git")
+	git(t, filepath.Dir(bare), "clone", "-q", "--bare", devbox.repo, bare)
+	git(t, filepath.Dir(checkout), "clone", "-q", bare, checkout)
+	r := startAppWith(t, t.TempDir(), "", nil, devbox.connect(t))
+	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	r.waitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
+	r.do(func() error {
+		return r.host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host")
+	})
+	r.do(func() error {
+		return r.host.Run(context.Background(), "session.new", registry.Args{"kind": "work", "worker": "devbox", "repos": []string{checkout},
+			"prompt": "Round half even"})
+	})
+	r.waitText("not on devbox:")
+	r.clickTop("Start Work")
+	r.waitText("To start: clone pricing onto devbox, or remove it.")
+	r.clickTop("Clone")
+	r.waitText(bare)
+	r.clickTop("Clone at start")
+	r.waitText("clones onto devbox at start:")
+	r.clickTop("Start Work")
+	devbox.fake.WaitStarted(t)
+	want := filepath.Join(src, "pricing")
+	waitState(t, r.store, "the session on the clone", func(st core.State) bool {
+		return len(st.Sessions) == 1 && len(st.Sessions[0].Projects) == 1 && st.Sessions[0].Projects[0].Repo == want
+	})
+	repos, _ := devbox.client(t).Repos(context.Background())
+	if !slices.ContainsFunc(repos, func(x core.Repo) bool { return x.Path == want && x.Remote == bare }) {
+		t.Errorf("the clone isn't registered: %+v", repos)
+	}
+}
+
+// The chip of a repo the worker lacks, with its Clone popover open, against a golden.
+func TestLauncherCloneSnapshot(t *testing.T) {
+	devbox := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox", ReposDir: filepath.Join(t.TempDir(), "src")})
+	checkout := filepath.Join(t.TempDir(), "pricing")
+	git(t, filepath.Dir(checkout), "clone", "-q", devbox.repo, checkout)
+	git(t, checkout, "remote", "set-url", "origin", "git@github.com:acme/pricing.git")
+	s := newSceneWith(t, "", "", mockupSize, devbox.connect(t))
+	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	if err := s.store.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Connected: true, Cores: 32, CPU: .61}}); err != nil {
+		t.Fatal(err)
+	}
+	s.run("session.new", registry.Args{"kind": "work", "worker": "devbox", "repos": []string{checkout}, "prompt": "Round half even"})
+	var l *launcher
+	for _, e := range s.exts {
+		if x, ok := e.(*launcher); ok {
+			l = x
+		}
+	}
+	for deadline := time.Now().Add(10 * time.Second); len(l.kinds) == 0; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("the launcher never heard from the worker: %s", l.loadErr)
+		}
+		s.frame()
+		s.sh.runTodo()
+	}
+	s.frame()
+	s.frame()
+	s.click(centre(s.access("Clone").Bounds))
+	s.golden("launcher-clone")
+	if n := s.access("Clone from"); n.Value != "git@github.com:acme/pricing.git" {
+		t.Errorf("the URL is %q, not the checkout's remote", n.Value)
+	}
+	s.lint("the launcher's Clone popover")
 }

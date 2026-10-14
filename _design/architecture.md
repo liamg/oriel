@@ -73,7 +73,7 @@ flowchart LR
 | `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | wire |
 | `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/jsonrpc` | core, term (PTYs) |
 | `agent/claude`, `agent/codex` | provider impls | agent |
-| `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep); `worker/sysload` (CPU and memory) | core, agent, gitx, testrun (test runs as evidence), wire, sandbox |
+| `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep); `worker/sysload` (CPU and memory) | core, agent, gitx, testrun (test runs as evidence), wire, sandbox, registry/settingsfile and toml (its repos' own project settings) |
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear, slack, ical; agentbus via the `oriel-agentbus` helper process (keeps its sqlite dependency out of Oriel) | core |
@@ -81,7 +81,7 @@ flowchart LR
 | `render/gio` | the Gio backend: windows, input, offscreen rendering, the glyph atlas and baked shapes | render, gioui.org |
 | `ui` | widgets, layout, theme, animation, input routing | render |
 | `app` | the desktop app: screens, panels, HUD; wires it all together | everything |
-| `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`) |
+| `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`); `registry/settingsfile` (settings files and their trust, shared with the worker) needs only toml |
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |

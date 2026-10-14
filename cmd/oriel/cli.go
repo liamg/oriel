@@ -46,7 +46,8 @@ func newWorker(home string, log *slog.Logger) (*worker.Worker, error) {
 		log.Warn("prompt packs", "err", err)
 	}
 	sandboxes := worker.NewSandboxFactory(nil)
-	w, err := worker.New(worker.Options{Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: packs.Get, Log: log, Version: version})
+	w, err := worker.New(worker.Options{Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: packs.Get, Log: log, Version: version,
+		TrustPath: filepath.Join(app.DefaultConfigDir(), "trusted.toml")})
 	if err != nil {
 		return nil, err
 	}
@@ -211,6 +212,18 @@ func runSessionCLI(cmd string, args []string, stdout, stderr io.Writer) error {
 	case "repos":
 		if len(rest) == 2 && rest[0] == "add" {
 			r, err := c.AddRepoPath(ctx, rest[1])
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(stdout, "%s\t%s\n", r.ID, r.Path)
+			return nil
+		}
+		if len(rest) >= 2 && len(rest) <= 3 && rest[0] == "clone" {
+			req := worker.CloneReq{URL: rest[1]}
+			if len(rest) == 3 {
+				req.Name = rest[2]
+			}
+			r, err := c.CloneRepo(ctx, req)
 			if err != nil {
 				return err
 			}

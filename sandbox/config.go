@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -43,6 +44,9 @@ type Config struct {
 	Servers map[string]json.RawMessage `json:"servers,omitempty"`
 	// Dismissed are recommended servers the user said no to.
 	Dismissed []string `json:"dismissed,omitempty"`
+	// ReadProjects has the worker read its repos' own .oriel/settings.toml for Projects it lacks: the app can't
+	// see a remote worker's files.
+	ReadProjects bool `json:"readProjects,omitempty"`
 }
 
 // ProjectConfig overrides the sandbox settings for one repository.
@@ -163,3 +167,119 @@ func ParsePolicyRule(s string) (PolicyRule, error) {
 
 // String is the rule as ParsePolicyRule reads it.
 func (r PolicyRule) String() string { return r.Action + " " + r.Tool }
+
+// NewProjectConfig is a repository's sandbox settings from their string forms (its sandbox.egress, sandbox.rules
+// and sandbox.image), and whether it sets anything. Rules that don't parse are left out.
+func NewProjectConfig(egress, rules []string, image string) (ProjectConfig, bool) {
+	p := ProjectConfig{Egress: EgressRules(egress), Rules: PolicyRules(rules), Image: image}
+	return p, p.Egress != nil || p.Rules != nil || p.Image != ""
+}
+
+// EgressRules reads each network rule that parses.
+func EgressRules(ss []string) []EgressRule {
+	var out []EgressRule
+	for _, s := range ss {
+		if r, err := ParseEgressRule(s); err == nil {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// PolicyRules reads each gateway rule that parses.
+func PolicyRules(ss []string) []PolicyRule {
+	var out []PolicyRule
+	for _, s := range ss {
+		if r, err := ParsePolicyRule(s); err == nil {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// mcpServer is a server in Claude's mcpServers form.
+type mcpServer struct {
+	Type    string            `json:"type,omitempty"`
+	Command string            `json:"command,omitempty"`
+	Args    []string          `json:"args,omitempty"`
+	Env     map[string]string `json:"env,omitempty"`
+	URL     string            `json:"url,omitempty"`
+}
+
+var envAssign = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=`)
+
+// ParseServer reads an MCP server written as an http(s) URL (the HTTP transport) or a command line (stdio):
+// "npx -y @foo/mcp", with NAME=value words before the command for its environment.
+func ParseServer(s string) (json.RawMessage, error) {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "https://") || strings.HasPrefix(s, "http://") {
+		if strings.ContainsAny(s, " \t") {
+			return nil, fmt.Errorf("%q: a URL has no spaces", s)
+		}
+		return json.Marshal(mcpServer{Type: "http", URL: s})
+	}
+	if strings.Contains(s, "://") {
+		return nil, fmt.Errorf("%q: a server is an http(s) URL or a command line", s)
+	}
+	words, err := splitWords(s)
+	if err != nil {
+		return nil, fmt.Errorf("%q: %w", s, err)
+	}
+	var srv mcpServer
+	for len(words) > 0 && envAssign.MatchString(words[0]) {
+		k, v, _ := strings.Cut(words[0], "=")
+		if srv.Env == nil {
+			srv.Env = map[string]string{}
+		}
+		srv.Env[k] = v
+		words = words[1:]
+	}
+	if len(words) == 0 {
+		return nil, fmt.Errorf("%q: a server is an http(s) URL or a command line", s)
+	}
+	srv.Command, srv.Args = words[0], words[1:]
+	if len(srv.Args) == 0 {
+		srv.Args = nil
+	}
+	return json.Marshal(srv)
+}
+
+// splitWords splits a command line as a shell would, with its quotes and backslashes, without expanding anything.
+func splitWords(s string) ([]string, error) {
+	var out []string
+	var w strings.Builder
+	in, quote, escaped := false, rune(0), false
+	for _, r := range s {
+		switch {
+		case escaped:
+			w.WriteRune(r)
+			escaped = false
+		case r == '\\' && quote != '\'':
+			escaped, in = true, true
+		case quote != 0:
+			if r == quote {
+				quote = 0
+			} else {
+				w.WriteRune(r)
+			}
+		case r == '"' || r == '\'':
+			quote, in = r, true
+		case r == ' ' || r == '\t':
+			if in {
+				out = append(out, w.String())
+				w.Reset()
+				in = false
+			}
+		default:
+			w.WriteRune(r)
+			in = true
+		}
+	}
+	if quote != 0 || escaped {
+		return nil, fmt.Errorf("an unfinished quote")
+	}
+	if in {
+		out = append(out, w.String())
+	}
+	return out, nil
+}

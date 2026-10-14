@@ -194,8 +194,9 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
   `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `thread`, `ui`, `regex` (PCRE2),
   `language`, and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
-  `local o = oriel.option` if you want it short). There's one global, `oriel`; a config that wants a short name writes
-  `local L = oriel`, as the sample does.
+  `local o = oriel.option` if you want it short). A list option takes a table of strings and a map option a table of
+  strings by name (`oriel.option["sandbox.servers"] = { docs = "https://docs.example.com/mcp" }`); reading one gives
+  the same. There's one global, `oriel`; a config that wants a short name writes `local L = oriel`, as the sample does.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
   `http` and `async` load, and calling into one says which ticket brings it. An option

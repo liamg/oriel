@@ -35,6 +35,7 @@ const (
 	MethodTask      = "task.set"
 	MethodRepos     = "repos.list"
 	MethodRepoAdd   = "repos.add"
+	MethodRepoClone = "repos.clone"
 	MethodProviders = "providers.list"
 	MethodKinds     = "kinds.list"
 	MethodLogAppend = "log.append"
@@ -44,6 +45,8 @@ const (
 	MethodFork      = "agent.fork"
 	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
 	MethodSandboxConfig = "sandbox.config"
+	// MethodTrustSettings trusts a repo's .oriel/settings.toml on the worker's machine, as it is now.
+	MethodTrustSettings = "settings.trust"
 )
 
 // What a worker calls on the app: tools the app offers agents (LSP lookups), and the policy hooks (layer 2).
@@ -287,6 +290,17 @@ func (c Client) Repos(ctx context.Context) ([]core.Repo, error) {
 func (c Client) AddRepoPath(ctx context.Context, path string) (core.Repo, error) {
 	var out core.Repo
 	return out, c.Conn.Call(ctx, MethodRepoAdd, path, &out)
+}
+
+// CloneRepo clones a repo onto the worker and registers it.
+func (c Client) CloneRepo(ctx context.Context, r CloneReq) (core.Repo, error) {
+	var out core.Repo
+	return out, c.Conn.Call(ctx, MethodRepoClone, r, &out)
+}
+
+// TrustSettings trusts a registered repo's .oriel/settings.toml on the worker, as it is now.
+func (c Client) TrustSettings(ctx context.Context, path string) error {
+	return c.Conn.Call(ctx, MethodTrustSettings, path, nil)
 }
 
 func (c Client) Providers(ctx context.Context) ([]ProviderInfo, error) {

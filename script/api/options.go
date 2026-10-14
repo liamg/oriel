@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/script"
 )
 
@@ -176,18 +177,15 @@ func optionValue(sp registry.OptionSpec, v any) (any, error) {
 			return time.Duration(d * float64(time.Millisecond)), nil
 		}
 	case registry.List:
-		if l, ok := v.([]any); ok {
-			out := make([]string, 0, len(l))
-			for _, x := range l {
-				s, ok := x.(string)
-				if !ok {
-					return nil, fmt.Errorf("%s takes a list of strings, not %v", sp.Name, v)
-				}
-				out = append(out, s)
-			}
-			return out, nil
+		if l, ok := settingsfile.Strings(v); ok {
+			return l, nil
 		}
 		return nil, fmt.Errorf("%s takes a list of strings, not %v", sp.Name, v)
+	case registry.Map:
+		if m, ok := settingsfile.StringMap(v); ok {
+			return m, nil
+		}
+		return nil, fmt.Errorf("%s takes a table of strings by name, not %v", sp.Name, v)
 	default:
 		return v, nil
 	}

@@ -3,13 +3,13 @@ package app
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/script"
@@ -120,9 +121,13 @@ func (s *settingsExt) Activate(_ context.Context, h ext.Host) error {
 			return s.resetWhere(func(registry.OptionSpec) bool { return true }, s.scope)
 		}},
 		{ID: "settings.undo", Title: "Undo the last settings change", Run: func(registry.Ctx, registry.Args) error { return s.undoLast() }},
-		{ID: "settings.trust", Title: "Trust a project's settings file, as it is now: {path}", Run: func(_ registry.Ctx, a registry.Args) error {
-			return s.trustFile(str(a, "path"))
-		}},
+		{ID: "settings.trust", Title: "Trust a project's settings file, as it is now: {path}, on {worker} when it's another machine's",
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				if w := core.WorkerID(str(a, "worker")); w != "" && w != core.LocalWorker {
+					return s.trustOn(ctx, w, str(a, "path"))
+				}
+				return s.trustFile(str(a, "path"))
+			}},
 	} {
 		s.add(h.Command(c))
 	}
@@ -206,24 +211,12 @@ func (s *settingsExt) loadAll() bool {
 	return changed
 }
 
-// fileKey is a key of a settings file: the option name it spells (dotted, from its tables) and where it is.
-type fileKey struct {
-	name string
-	path []string
-	v    any
-}
-
-func fileKeys(m map[string]any, prefix []string) []fileKey {
-	var out []fileKey
-	for _, k := range slices.Sorted(maps.Keys(m)) {
-		p := append(slices.Clone(prefix), k)
-		if sub, ok := m[k].(map[string]any); ok {
-			out = append(out, fileKeys(sub, p)...)
-			continue
-		}
-		out = append(out, fileKey{name: strings.Join(p, "."), path: p, v: m[k]})
-	}
-	return out
+// fileKeys are a file's keys as option names; a map option's table is its value.
+func fileKeys(o registry.Options, m map[string]any) []settingsfile.Key {
+	return settingsfile.Keys(m, func(name string) bool {
+		sp, ok := o.Spec(name)
+		return ok && sp.Type == registry.Map
+	})
 }
 
 func (s *settingsExt) load(f *settingsFile) bool {
@@ -239,7 +232,7 @@ func (s *settingsExt) load(f *settingsFile) bool {
 	}
 	f.loaded, f.hash = true, h
 	o := s.h.Options()
-	if f.trust && len(src) > 0 && !s.trusted(f.path, h) {
+	if f.trust && len(src) > 0 && !s.trust().Trusted(f.path, src) {
 		f.untrusted = true
 		s.apply(f, nil)
 		id := "settings.untrusted"
@@ -263,13 +256,13 @@ func (s *settingsExt) load(f *settingsFile) bool {
 	var bad []string
 	vals := map[string]any{}
 	f.unknown = nil
-	for _, e := range fileKeys(doc.Value(), nil) {
-		sp, ok := o.Spec(e.name)
+	for _, e := range fileKeys(o, doc.Value()) {
+		sp, ok := o.Spec(e.Name)
 		if !ok {
-			f.unknown = append(f.unknown, e.name)
+			f.unknown = append(f.unknown, e.Name)
 			continue
 		}
-		v, err := fromTOML(sp, e.v)
+		v, err := fromTOML(sp, e.Value)
 		if err != nil {
 			bad = append(bad, err.Error())
 			continue
@@ -323,8 +316,12 @@ func fromTOML(sp registry.OptionSpec, v any) (any, error) {
 			return time.ParseDuration(d)
 		}
 	case registry.List:
-		if l, ok := stringList(v); ok {
+		if l, ok := settingsfile.Strings(v); ok {
 			return l, nil
+		}
+	case registry.Map:
+		if m, ok := settingsfile.StringMap(v); ok {
+			return m, nil
 		}
 	default:
 		return v, nil
@@ -340,42 +337,12 @@ func toTOML(sp registry.OptionSpec, v any) any {
 }
 
 func typeName(sp registry.OptionSpec) string {
-	return [...]string{"bool", "int", "float", "string", "enum", "duration", "key", "list of strings"}[sp.Type]
-}
-
-// stringList is a list of strings from a file or Lua ([]any), or one already.
-func stringList(v any) ([]string, bool) {
-	switch v := v.(type) {
-	case []string:
-		return v, true
-	case []any:
-		out := make([]string, 0, len(v))
-		for _, x := range v {
-			s, ok := x.(string)
-			if !ok {
-				return nil, false
-			}
-			out = append(out, s)
-		}
-		return out, true
-	}
-	return nil, false
+	return [...]string{"bool", "int", "float", "string", "enum", "duration", "key", "list of strings", "map of strings"}[sp.Type]
 }
 
 // --- trust ---
 
-func (s *settingsExt) trusted(path string, h [32]byte) bool {
-	src, err := os.ReadFile(s.trustPath)
-	if err != nil {
-		return false
-	}
-	doc, err := toml.Parse(src)
-	if err != nil {
-		return false
-	}
-	v, _ := doc.Get("projects", path)
-	return v == hex.EncodeToString(h[:])
-}
+func (s *settingsExt) trust() settingsfile.Trust { return settingsfile.Trust{Path: s.trustPath} }
 
 func (s *settingsExt) trustFile(path string) error {
 	var f *settingsFile
@@ -391,10 +358,7 @@ func (s *settingsExt) trustFile(path string) error {
 	if err != nil {
 		return err
 	}
-	h := sha256.Sum256(src)
-	if err := s.edit(s.trustPath, false, func(doc *toml.Document) error {
-		return doc.Set([]string{"projects", path}, hex.EncodeToString(h[:]))
-	}); err != nil {
+	if err := s.trust().Add(path, src); err != nil {
 		return err
 	}
 	f.mu.Lock()
@@ -402,6 +366,18 @@ func (s *settingsExt) trustFile(path string) error {
 	f.mu.Unlock()
 	s.load(f)
 	return nil
+}
+
+// trustOn trusts a settings file on another machine's worker, which reads its repos' files itself.
+func (s *settingsExt) trustOn(ctx context.Context, w core.WorkerID, path string) error {
+	if s.sh.sessions == nil {
+		return errors.New("no worker is connected")
+	}
+	c, err := s.sh.sessions.worker(w)
+	if err != nil {
+		return err
+	}
+	return c.TrustSettings(ctx, path)
 }
 
 // --- writing ---
@@ -467,8 +443,11 @@ func (s *settingsExt) set(name string, v any, scope int) error {
 	if f, ok := v.(float64); ok && sp.Type == registry.Int && f == float64(int(f)) {
 		v = int(f)
 	}
-	if l, ok := stringList(v); ok && sp.Type == registry.List {
+	if l, ok := settingsfile.Strings(v); ok && sp.Type == registry.List {
 		v = l
+	}
+	if m, ok := settingsfile.StringMap(v); ok && sp.Type == registry.Map {
+		v = m
 	}
 	f, err := s.fileFor(scope)
 	if err != nil {
@@ -480,7 +459,16 @@ func (s *settingsExt) set(name string, v any, scope int) error {
 	if err := checkValue(o, sp, f, v); err != nil {
 		return err
 	}
-	return s.write(f, sp, func(doc *toml.Document, p []string) error { return doc.Set(p, toTOML(sp, v)) })
+	return s.write(f, sp, func(doc *toml.Document, p []string) error {
+		if err := doc.Set(p, toTOML(sp, v)); err == nil || sp.Type != registry.Map {
+			return err
+		}
+		// A map written by hand as its own [table] is replaced by the inline one.
+		if err := doc.Delete(p...); err != nil {
+			return err
+		}
+		return doc.Set(p, toTOML(sp, v))
+	})
 }
 
 // checkValue validates v for sp at f's layer without leaving it set.
@@ -531,9 +519,9 @@ func (s *settingsExt) write(f *settingsFile, sp registry.OptionSpec, fn func(doc
 	o := s.h.Options()
 	err := s.edit(f.path, true, func(doc *toml.Document) error {
 		p := strings.Split(sp.Name, ".")
-		for _, e := range fileKeys(doc.Value(), nil) {
-			if other, ok := o.Spec(e.name); ok && other.Name == sp.Name {
-				p = e.path
+		for _, e := range fileKeys(o, doc.Value()) {
+			if other, ok := o.Spec(e.Name); ok && other.Name == sp.Name {
+				p = e.Path
 				break
 			}
 		}
@@ -649,8 +637,49 @@ func formatValue(v any) string {
 			q[i] = strconv.Quote(s)
 		}
 		return "[" + strings.Join(q, ", ") + "]"
+	case map[string]string:
+		return "{ " + strings.Join(mapEntries(v, tomlKey), ", ") + " }"
 	}
 	return fmt.Sprint(v)
+}
+
+// luaValue is a value as init.lua writes it.
+func luaValue(v any) string {
+	switch v := v.(type) {
+	case []string:
+		return "{" + strings.TrimSuffix(strings.TrimPrefix(formatValue(v), "["), "]") + "}"
+	case map[string]string:
+		return "{ " + strings.Join(mapEntries(v, luaKey), ", ") + " }"
+	}
+	return formatValue(v)
+}
+
+// mapEntries are a map's "key = value"s in key order, each key written by key.
+func mapEntries(m map[string]string, key func(string) string) []string {
+	var out []string
+	for _, k := range slices.Sorted(maps.Keys(m)) {
+		out = append(out, key(k)+" = "+strconv.Quote(m[k]))
+	}
+	return out
+}
+
+var (
+	bareTOMLKey = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+	luaName     = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+)
+
+func tomlKey(k string) string {
+	if bareTOMLKey.MatchString(k) {
+		return k
+	}
+	return strconv.Quote(k)
+}
+
+func luaKey(k string) string {
+	if luaName.MatchString(k) {
+		return k
+	}
+	return "[" + strconv.Quote(k) + "]"
 }
 
 // matches is the page's search: words of the name, help, aliases or value; @modified, @project and @plugin:id filter.
@@ -827,11 +856,7 @@ func (s *settingsExt) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec,
 			if s.asTOML {
 				sec, key, _ := strings.Cut(sp.Name, ".")
 				c.Text("toml", fmt.Sprintf("[%s] %s = %s", sec, key, formatValue(toTOML(sp, v))), monoAt(th, 11, tThemeTOMLVal))
-				luaVal := formatValue(toTOML(sp, v))
-				if sp.Type == registry.List {
-					luaVal = "{" + strings.TrimSuffix(strings.TrimPrefix(luaVal, "["), "]") + "}"
-				}
-				c.Text("lua", fmt.Sprintf("oriel.option[%q] = %s", sp.Name, luaVal), monoAt(th, 11, theme.FgFaint))
+				c.Text("lua", fmt.Sprintf("oriel.option[%q] = %s", sp.Name, luaValue(toTOML(sp, v))), monoAt(th, 11, theme.FgFaint))
 			} else if sp.Help != "" {
 				widget.Wrap(c, "h", sp.Help, 560, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(theme.FgFaint)})
 			}
@@ -848,7 +873,11 @@ func (s *settingsExt) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec,
 		if disabled {
 			fade = .55
 		}
-		c.Box("ctl", ui.Style{W: ui.Px(260), Main: ui.End, Fade: fade}, func(c *ui.Ctx) { s.control(c, th, sp, v, disabled) })
+		ctlW := float32(260)
+		if sp.Type == registry.List && sp.Choices == nil {
+			ctlW = 340
+		}
+		c.Box("ctl", ui.Style{W: ui.Px(ctlW), Main: ui.End, Fade: fade}, func(c *ui.Ctx) { s.control(c, th, sp, v, disabled) })
 		if widget.Button(c, "reset", "↺", widget.ButtonOpts{Ghost: true, Disabled: !setHere || disabled, Help: "shell/settings#reset"}) {
 			s.fail(s.reset(sp.Name, s.scope))
 		}
@@ -879,9 +908,30 @@ func (s *settingsExt) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer
 	})
 }
 
-// control is a row's typed control: a toggle, choices, or a field that's checked when entered.
+// control is a row's typed control: a toggle, choices, a list or map editor, or a field that's checked when entered.
 func (s *settingsExt) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, v any, disabled bool) {
+	const help = "shell/settings#rows"
 	switch sp.Type {
+	case registry.List:
+		items, _ := v.([]string)
+		if sp.Choices != nil {
+			if l, ok := widget.MultiSelect(c, "multi", items, sp.Choices, widget.MultiSelectOpts{Label: sp.Name, Disabled: disabled, Help: help}); ok {
+				s.fail(s.set(sp.Name, l, s.scope))
+			}
+			return
+		}
+		if l, ok := widget.ListEditor(c, "list", items, widget.ListEditorOpts{Label: sp.Name, Disabled: disabled, Help: help, Width: 340,
+			Placeholder: "add one, ⏎", Validate: itemCheck(sp)}); ok {
+			s.fail(s.set(sp.Name, l, s.scope))
+		}
+		return
+	case registry.Map:
+		m, _ := v.(map[string]string)
+		if nm, ok := widget.MapField(c, "map", m, widget.MapEditorOpts{Title: sp.Name, KeyLabel: sp.KeyLabel, ValueLabel: sp.ValueLabel,
+			Disabled: disabled, Help: help, Validate: entryCheck(sp)}); ok {
+			s.fail(s.set(sp.Name, nm, s.scope))
+		}
+		return
 	case registry.Bool:
 		on, _ := v.(bool)
 		if widget.Toggle(c, "toggle", on, widget.ToggleOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}) {
@@ -907,6 +957,22 @@ func (s *settingsExt) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionS
 	default:
 		s.field(c, sp, v, disabled)
 	}
+}
+
+// itemCheck is a list option's Validate asked about one item.
+func itemCheck(sp registry.OptionSpec) func(string) error {
+	if sp.Validate == nil {
+		return nil
+	}
+	return func(item string) error { return sp.Validate([]string{item}) }
+}
+
+// entryCheck is a map option's Validate asked about one entry.
+func entryCheck(sp registry.OptionSpec) func(k, v string) error {
+	if sp.Validate == nil {
+		return nil
+	}
+	return func(k, v string) error { return sp.Validate(map[string]string{k: v}) }
 }
 
 // dropdown is a menu of values for a row.
@@ -935,10 +1001,7 @@ func (s *settingsExt) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled b
 	if bad == nil {
 		bad = sp.Check(val)
 	}
-	w := float32(200)
-	if sp.Type == registry.List {
-		w = 260
-	}
+	const w = 200
 	c.Column("field", ui.Style{W: ui.Px(w), Gap: 4}, func(c *ui.Ctx) {
 		res := widget.Input(c, "in", &st.text, widget.InputOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows", Accept: accept,
 			Invalid: bad != nil})
@@ -968,13 +1031,10 @@ func upper(ss []string) []string {
 	return out
 }
 
-// fieldText is a value as its field shows it: a list's items separated by commas.
+// fieldText is a value as its field shows it.
 func fieldText(v any) string {
-	switch v := v.(type) {
-	case string:
-		return v
-	case []string:
-		return strings.Join(v, ", ")
+	if s, ok := v.(string); ok {
+		return s
 	}
 	return fmt.Sprint(v)
 }
@@ -996,14 +1056,6 @@ func parseField(sp registry.OptionSpec, s string) (any, error) {
 		return f, nil
 	case registry.Duration:
 		return time.ParseDuration(strings.TrimSpace(s))
-	case registry.List:
-		out := []string{}
-		for _, x := range strings.Split(s, ",") {
-			if x = strings.TrimSpace(x); x != "" {
-				out = append(out, x)
-			}
-		}
-		return out, nil
 	}
 	return s, nil
 }

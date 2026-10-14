@@ -18,11 +18,14 @@ type MenuItem struct {
 	Disabled  bool
 	Separator bool // a line, not an item
 	Heading   bool // a group's name, in small capitals; not an item
+	Checkable bool // a box before the label, ticked when Checked
+	Checked   bool
 }
 
 type MenuOpts struct {
-	Width float32 // 250 by default
-	Help  string
+	Width     float32 // 250 by default
+	MaxHeight float32 // past it, the items scroll; no limit if 0
+	Help      string
 }
 
 type menuState struct{ hi int }
@@ -66,7 +69,24 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 	if w == 0 {
 		w = 250
 	}
-	c.Column(key, ui.Style{W: ui.Px(w), Pad: ui.PadXY(0, 4), Fill: col(c, tMenuBg), Stroke: col(c, tMenuBorder), Border: 1, Radius: 6,
+	h, scroll := ui.Size{}, false
+	if o.MaxHeight > 0 {
+		total := float32(8)
+		for _, it := range items {
+			switch {
+			case it.Separator:
+				total += 9
+			case it.Heading:
+				total += 24
+			default:
+				total += 30
+			}
+		}
+		if total > o.MaxHeight {
+			h, scroll = ui.Px(o.MaxHeight), true
+		}
+	}
+	c.Column(key, ui.Style{W: ui.Px(w), H: h, ScrollY: scroll, Pad: ui.PadXY(0, 4), Fill: col(c, tMenuBg), Stroke: col(c, tMenuBorder), Border: 1, Radius: 6,
 		Enter: dropIn, Exit: fade, Focusable: true, KeyMode: "menu", Help: o.Help, Role: ui.RoleMenu}, func(c *ui.Ctx) {
 		for i, it := range items {
 			if it.Separator {
@@ -97,25 +117,38 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 				fg = col(c, tDisabledFg)
 			}
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: fill, EaseFill: true, Interactive: true, NoHover: true,
-				Disabled: it.Disabled, Cursor: render.CursorPointer, Help: it.Help, Role: ui.RoleMenuItem, Label: it.Label, Gap: 8}, func(c *ui.Ctx) {
-				if it.Icon != "" {
-					tone := it.IconTone
-					if tone.A == 0 {
-						tone = col(c, tMenuShortcut)
+				Disabled: it.Disabled, Cursor: render.CursorPointer, Help: it.Help, Role: ui.RoleMenuItem, Label: it.Label, Selected: it.Checked, Gap: 8},
+				func(c *ui.Ctx) {
+					if it.Checkable {
+						box, tick := render.Color{}, col(c, tMenuBorder)
+						if it.Checked {
+							box, tick = col(c, tToggleOn), col(c, tPrimaryFg)
+						}
+						c.Box("check", ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 3, Fill: box, Stroke: col(c, tMenuBorder), Border: 1, Main: ui.Center,
+							Cross: ui.Center}, func(c *ui.Ctx) {
+							if it.Checked {
+								c.Text("tick", "✓", uiText(c, 10, typeset.SemiBold, tick))
+							}
+						})
 					}
-					c.Text("icon", it.Icon, uiText(c, 11, typeset.Normal, tone))
-				}
-				c.Text("label", it.Label, uiText(c, 12.5, typeset.Normal, fg))
-				if it.Shortcut != "" || it.Detail != "" {
-					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				}
-				if it.Detail != "" {
-					c.Text("detail", it.Detail, monoText(10, typeset.Normal, col(c, tMenuShortcut), 0))
-				}
-				if it.Shortcut != "" {
-					kbd(c, it.Shortcut)
-				}
-			})
+					if it.Icon != "" {
+						tone := it.IconTone
+						if tone.A == 0 {
+							tone = col(c, tMenuShortcut)
+						}
+						c.Text("icon", it.Icon, uiText(c, 11, typeset.Normal, tone))
+					}
+					c.Text("label", it.Label, uiText(c, 12.5, typeset.Normal, fg))
+					if it.Shortcut != "" || it.Detail != "" {
+						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+					}
+					if it.Detail != "" {
+						c.Text("detail", it.Detail, monoText(10, typeset.Normal, col(c, tMenuShortcut), 0))
+					}
+					if it.Shortcut != "" {
+						kbd(c, it.Shortcut)
+					}
+				})
 		}
 	})
 	return chosen, closed

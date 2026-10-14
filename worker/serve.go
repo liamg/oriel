@@ -45,6 +45,8 @@ func (w *Worker) Serve(conn wire.Conn) {
 	fn(MethodTask, wire.Func(func(_ context.Context, r TaskReq) (any, error) { return nil, w.SetTask(r.Session, r.Task) }))
 	fn(MethodRepos, wire.Func(func(context.Context, struct{}) ([]core.Repo, error) { return w.repos.all(), nil }))
 	fn(MethodRepoAdd, wire.Func(func(ctx context.Context, path string) (core.Repo, error) { return w.repos.add(ctx, w.opts.ID, path) }))
+	fn(MethodRepoClone, wire.Func(func(ctx context.Context, r CloneReq) (core.Repo, error) { return w.CloneRepo(ctx, r) }))
+	fn(MethodTrustSettings, wire.Func(func(_ context.Context, path string) (any, error) { return nil, w.TrustSettings(path) }))
 	fn(MethodProviders, wire.Func(func(ctx context.Context, _ struct{}) ([]ProviderInfo, error) { return w.ProviderInfo(ctx), nil }))
 	fn(MethodKinds, wire.Func(func(context.Context, struct{}) ([]KindSpec, error) { return w.kinds.All(), nil }))
 	fn(MethodLogAppend, wire.Func(func(_ context.Context, r LogAppendReq) (any, error) { return nil, w.appendLog(r) }))
