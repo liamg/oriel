@@ -395,6 +395,9 @@ func statsScene(t *testing.T) (*errScene, *statsRig, *statsExt) {
 	if err := s.store.Apply(core.SessionFocused{ID: r.ids["pricing-rounding"]}); err != nil {
 		t.Fatal(err)
 	}
+	if se, ok := s.store.Session(r.ids["pricing-rounding"]); ok {
+		s.sh.cfg.WorkDir = sessionDir(se.Snapshot()) // the window a session in front opens on
+	}
 	if err := s.reg.Options().Set(AccountsOption, registry.LayerUser, registry.At{}, map[string]string{workAccount: "Work"}); err != nil {
 		t.Fatal(err)
 	}

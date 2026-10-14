@@ -396,9 +396,15 @@ func (r *rail) rows(w here, wide bool) []sideRow {
 	return rows
 }
 
+func (r *rail) layered(z int) bool {
+	u := r.h.UI()
+	return u != nil && u.Layered(z)
+}
+
 func (r *rail) build(c *ui.Ctx) {
-	// The sidebar shows a project's or a session's: with neither open (the start view) it has nothing to offer.
-	if at := r.h.Here(); at.Project == "" && (at.Session == "" || at.Session == noSession) {
+	// While the start view is what the window shows (no project, nothing open, no page over it), the sidebar has
+	// nothing to offer.
+	if r.h.Here().Project == "" && len(r.h.Layout().Shown()) == 0 && !r.layered(ui.LayerPage) {
 		return
 	}
 	w := projectsHere(r.h)

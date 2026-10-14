@@ -31,6 +31,13 @@ func TestRailHiddenWithNothingOpen(t *testing.T) {
 	if find(s.ui.AccessTree()) {
 		t.Error("the rail shows on the start view")
 	}
+	// A session in front changes nothing while the start view is what the window shows.
+	s.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork}})
+	s.store.Apply(core.SessionFocused{ID: "w"})
+	s.frame()
+	if find(s.ui.AccessTree()) {
+		t.Error("the rail shows on the start view with a session in front")
+	}
 }
 
 // SH-16: the rail against 01-ide's strip: the mockup's entries, those not registered yet dimmed.

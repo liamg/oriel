@@ -72,6 +72,8 @@ type UI struct {
 	root    *elem
 	byID    map[ID]*elem
 	floats  []*elem
+	layered map[int]bool // the float layers (Style.Z) last frame drew
+	asked   map[int]bool // the layers Layered was asked about this frame
 	states  map[ID]*state
 	hits    []hit
 	flags   map[ID]flags // from the latest frame, which input resolves against
@@ -174,9 +176,17 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 		u.grow(u.root, axis)
 	}
 	u.place(u.root, 0, 0)
+	layered := map[int]bool{}
 	for i := 0; i < len(u.floats); i++ {
 		u.placeFloat(u.floats[i])
+		layered[u.floats[i].style.Z] = true
 	}
+	for z := range u.asked {
+		if layered[z] != u.layered[z] {
+			u.wakeAt(u.now()) // what was built asked about this layer (Layered), and it came or went
+		}
+	}
+	u.layered, u.asked = layered, nil
 	u.animate(prev)
 	for id, st := range u.states {
 		if st.seen != u.frame {
@@ -219,6 +229,16 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	if _, ok := u.byID[u.in.hot]; !ok {
 		u.in.hot = 0
 	}
+}
+
+// Layered reports whether last frame drew a float on layer z (a page at LayerPage, say): what's built beside one can
+// depend on it.
+func (u *UI) Layered(z int) bool {
+	if u.asked == nil {
+		u.asked = map[int]bool{}
+	}
+	u.asked[z] = true
+	return u.layered[z]
 }
 
 // tooltip shows the hovered node's tooltip once the pointer has rested on it for the delay.

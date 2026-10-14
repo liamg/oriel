@@ -61,6 +61,7 @@ type Host interface {
 // UIView is the window's widget tree as extensions may read it, last frame's.
 type UIView interface {
 	Focused() ui.ID
+	Layered(z int) bool // last frame drew a float on layer z (ui.LayerPage: a full-window page is up)
 	Help(id ui.ID) string
 	HelpNodes() []ui.HelpNode
 	ContextClick() (ui.ID, render.Point, bool)
