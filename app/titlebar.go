@@ -103,12 +103,16 @@ func (t *sessionTabs) build(c *ui.Ctx, h ext.Host, vc registry.ViewCtx) {
 				Color: th.C(tWordmark)})
 		})
 		c.Box("sep", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
-		c.Row("tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), Clip: true, Role: ui.RoleTabList, Label: "Sessions"}, func(c *ui.Ctx) {
+		// More sessions than fit scroll sideways, the one in front kept in view.
+		tabs := c.Row("tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), ScrollX: true, Role: ui.RoleTabList, Label: "Sessions"}, func(c *ui.Ctx) {
 			for i, s := range h.Sessions() {
 				t.tab(c, h, i, s, s.ID() == st.Focus)
 				c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 			}
 		})
+		if st.Focus != "" {
+			c.ScrollIntoView(tabs, ui.Child(tabs, st.Focus))
+		}
 		ids := h.Views()
 		c.Row("right", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 			for _, id := range ids {

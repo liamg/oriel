@@ -7,42 +7,42 @@ path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1469.0625x38 r 0
-  rect 114.9375,16 8x8 fill #4fe0a0 radius 4
-  text "job: sweep stale deps" @129.9375,24.365234 #b3ab99 Inter 12
-  text "⌘1" @260.375,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 284.375,0 1x38 fill #24221d
-  rect 297.375,16 8x8 fill #4fe0a0 radius 4
-  text "job: sweep stale deps" @312.375,24.365234 #b3ab99 Inter 12
-  text "⌘2" @442.8125,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 466.8125,0 1x38 fill #24221d
-  rect 479.8125,16 8x8 fill #4fe0a0 radius 4
-  text "job: sweep stale deps" @494.8125,24.365234 #b3ab99 Inter 12
-  text "⌘3" @625.25,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 649.25,0 1x38 fill #24221d
-  rect 662.25,16 8x8 fill #4cc9f0 radius 4
-  text "job: sweep stale deps" @677.25,24.365234 #b3ab99 Inter 12
-  text "job" @807.6875,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘4" @832.6875,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 856.6875,0 1x38 fill #24221d
-  rect 869.6875,16 8x8 fill #4fe0a0 radius 4
-  text "job: sweep stale deps" @884.6875,24.365234 #b3ab99 Inter 12
-  text "⌘5" @1015.125,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1039.125,0 1x38 fill #24221d
-  rect 1052.125,16 8x8 fill #ff5f6d radius 4
-  text "job: sweep stale deps" @1067.125,24.365234 #b3ab99 Inter 12
-  text "needs you" @1197.5625,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘6" @1258.5625,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1282.5625,0 1x38 fill #24221d
-  rect 1295.5625,16 8x8 fill #4fe0a0 radius 4
-  text "job: sweep stale deps" @1310.5625,24.365234 #b3ab99 Inter 12
-  text "⌘7" @1441,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1465,0 1x38 fill #24221d
-  rect 1466,0 206.4375x38 fill #121210
-  rect 1466,0 206.4375x2 fill #ffd23f
-  rect 1478,16 8x8 fill #4cc9f0 radius 4
-  text "job: sweep stale deps" @1493,24.365234 #ece6d8 Inter 12
-  text "job" @1623.4375,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘8" @1648.4375,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 14.5,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @29.5,24.365234 #b3ab99 Inter 12
+  text "⌘1" @159.9375,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 183.9375,0 1x38 fill #24221d
+  rect 196.9375,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @211.9375,24.365234 #b3ab99 Inter 12
+  text "⌘2" @342.375,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 366.375,0 1x38 fill #24221d
+  rect 379.375,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @394.375,24.365234 #b3ab99 Inter 12
+  text "⌘3" @524.8125,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 548.8125,0 1x38 fill #24221d
+  rect 561.8125,16 8x8 fill #4cc9f0 radius 4
+  text "job: sweep stale deps" @576.8125,24.365234 #b3ab99 Inter 12
+  text "job" @707.25,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘4" @732.25,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 756.25,0 1x38 fill #24221d
+  rect 769.25,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @784.25,24.365234 #b3ab99 Inter 12
+  text "⌘5" @914.6875,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 938.6875,0 1x38 fill #24221d
+  rect 951.6875,16 8x8 fill #ff5f6d radius 4
+  text "job: sweep stale deps" @966.6875,24.365234 #b3ab99 Inter 12
+  text "needs you" @1097.125,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘6" @1158.125,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 1182.125,0 1x38 fill #24221d
+  rect 1195.125,16 8x8 fill #4fe0a0 radius 4
+  text "job: sweep stale deps" @1210.125,24.365234 #b3ab99 Inter 12
+  text "⌘7" @1340.5625,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 1364.5625,0 1x38 fill #24221d
+  rect 1365.5625,0 206.4375x38 fill #121210
+  rect 1365.5625,0 206.4375x2 fill #ffd23f
+  rect 1377.5625,16 8x8 fill #4cc9f0 radius 4
+  text "job: sweep stale deps" @1392.5625,24.365234 #ece6d8 Inter 12
+  text "job" @1523,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘8" @1548,23.42 #4f4a40 JetBrains Mono 9.5
 pop
 rect 0,38 44x936 fill #0c0c0b
 clip 0,38 43x936 r 0

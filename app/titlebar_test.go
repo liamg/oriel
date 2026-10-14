@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"image"
 	"image/draw"
 	"os"
@@ -11,11 +12,13 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
 )
 
 // The 01-ide sessions, and one of each other status.
@@ -152,5 +155,37 @@ func TestSessionTabsAgainstTheMockup(t *testing.T) {
 	if d.Mean > 0.042 || d.Off > 0.125 {
 		os.WriteFile("testdata/session-tabs-mockup.failed.png", encodePNG(side), 0o644)
 		t.Errorf("the titlebar is %s off the mockup (testdata/session-tabs-mockup.failed.png)", d)
+	}
+}
+
+// More sessions than fit: the strip scrolls sideways, keeps the one in front in view, and leaves the title bar's
+// right side where it is.
+func TestSessionTabsOverflow(t *testing.T) {
+	s := newScene(t, "", "", render.Point{X: 900, Y: 120})
+	for i := range 12 {
+		id := core.SessionID(fmt.Sprintf("s%02d", i))
+		if err := s.store.Apply(core.SessionOpened{ID: id, Name: fmt.Sprintf("job: sweep stale deps %d", i), Kind: core.KindJob, Status: core.StatusQuiet}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.store.Apply(core.SessionFocused{ID: "s11"})
+	s.reg.View(TitleRight+".99-probe", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("RIGHT-SIDE") }))
+	s.frame()
+	s.frame()
+	s.frame()
+	var last, right render.Op
+	for _, op := range s.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "job: sweep stale deps 11" {
+			last = op
+		}
+		if op.Kind == render.OpGlyphs && op.Run.Text == "RIGHT-SIDE" {
+			right = op
+		}
+	}
+	if right.Run == nil || right.At.X+right.Run.Advance > s.size.X {
+		t.Fatalf("the title bar's right side is pushed off: %+v", right.At)
+	}
+	if last.Run == nil || last.At.X+last.Run.Advance > right.At.X {
+		t.Errorf("the session in front isn't in view: at %v, the right side at %v", last.At, right.At)
 	}
 }
