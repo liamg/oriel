@@ -33,7 +33,7 @@ func TestLayoutComesBackAfterARestart(t *testing.T) {
 	r.stop()
 
 	r2 := startApp(t, state, dir, nil)
-	r2.waitFrame("the layout back", func(s string) bool { return containsAll(s, "Explorer", "a.go", "b.go", "3:6", "restored-term") })
+	r2.waitFrame("the layout back", func(s string) bool { return containsAll(s, "EXPLORER", "a.go", "b.go", "3:6", "restored-term") })
 	var all []layout.ViewRef
 	var left bool
 	r2.do(func() error {

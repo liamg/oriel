@@ -135,10 +135,9 @@ pop
 rect 44,614 1556x360 fill #0c0c0b
 clip 44,614 1556x360 r 0
   rect 44,614 1556x30 fill #0c0c0b
-  rect 44,614 68.34375x30 fill #121210
-  rect 44,614 68.34375x2 fill #ffd23f
-  text "Log" @58,634.36523 #ece6d8 Inter 12
-  text "✕" @93.046875,633.95996 #7c7566 JetBrains Mono 11
+  rect 44,614 1556x2 fill #ffd23f
+  text "LOG" @58,633.60004 #7c7566 JetBrains Mono 10
+  text "✕" @1580.7031,633.95996 #7c7566 JetBrains Mono 11
   rect 44,644 1556x1 fill #24221d
   clip 44,645 1556x329 r 0
     clip 54,658 226.79999x24 r 5

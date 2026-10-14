@@ -545,10 +545,9 @@ pop
 rect 1180,38 420x936 fill #0c0c0b
 clip 1180,38 420x936 r 0
   rect 1180,38 420x30 fill #0c0c0b
-  rect 1180,38 93.1875x30 fill #121210
-  rect 1180,38 93.1875x2 fill #ffd23f
-  text "Deploys" @1194,58.365234 #ece6d8 Inter 12
-  text "✕" @1253.8906,57.96 #7c7566 JetBrains Mono 11
+  rect 1180,38 420x2 fill #ffd23f
+  text "DEPLOYS" @1194,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @1580.7031,57.96 #7c7566 JetBrains Mono 11
   rect 1180,68 420x1 fill #24221d
   clip 1180,69 420x905 r 0
     text "DEPLOYS" @1204,104.22 #ffd23f JetBrains Mono 11

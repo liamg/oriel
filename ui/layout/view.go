@@ -125,14 +125,14 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 		for i, f := range r.Floats {
 			c.Column(fk{i}, ui.Style{W: ui.Px(f.Rect.Dx()), H: ui.Px(f.Rect.Dy()), Z: ui.LayerPane + i, Fill: th.C(tDockBg), Stroke: th.C(tFloatEdge),
 				Border: 1, Radius: 8, Clip: true, Float: &ui.Float{Point: &f.Rect.Min}, Role: ui.RoleRegion, Label: "Floating pane"}, func(c *ui.Ctx) {
-				changed = leaf(c, r, st, f.Leaf, content) || changed
+				changed = leaf(c, r, st, f.Leaf, content, false) || changed
 			})
 		}
 		if r.DropDown.Open && len(r.DropDown.Leaf.Tabs) > 0 {
 			size := c.Size()
 			c.Column("dropdown", ui.Style{W: ui.Px(size.X), H: ui.Px(r.DropDown.Size), Z: ui.LayerPane + 50, Fill: th.C(tDropDownBg),
 				Stroke: th.C(tFloatEdge), Border: 1, Float: &ui.Float{Point: &render.Point{}}, Role: ui.RoleRegion, Label: "Drop-down"}, func(c *ui.Ctx) {
-				changed = leaf(c, r, st, r.DropDown.Leaf, content) || changed
+				changed = leaf(c, r, st, r.DropDown.Leaf, content, false) || changed
 			})
 		}
 		if st.drag != nil && st.drag.moving && st.drag.ok {
@@ -170,7 +170,7 @@ func dock(c *ui.Ctx, r *Root, st *viewState, e Edge, content Content) bool {
 			inner = ui.Style{W: ui.Flex(1), H: ui.Px(d.Size), Fade: 1 - p}
 		}
 		c.Column("content", inner, func(c *ui.Ctx) {
-			changed = leaf(c, r, st, d.Leaf, content)
+			changed = leaf(c, r, st, d.Leaf, content, true)
 		})
 	})
 	if p == 1 {
@@ -241,7 +241,7 @@ type dockKey struct{ e Edge }
 
 func node(c *ui.Ctx, r *Root, st *viewState, n *Node, content Content) bool {
 	if n.leaf() {
-		return leaf(c, r, st, n, content)
+		return leaf(c, r, st, n, content, false)
 	}
 	changed := false
 	box := c.Column
@@ -310,14 +310,20 @@ func splitter(c *ui.Ctx, st *viewState, n *Node, i int, s ui.Style) bool {
 	return changed
 }
 
-func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
+func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content, docked bool) bool {
 	changed := false
 	th := c.Theme()
 	focused := r.Focus != nil && l.Active < len(l.Tabs) && l.Tabs[l.Active] == *r.Focus
 	st.leaves[l] = c.Column(l, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: ui.RoleTabList}, func(c *ui.Ctx) {
+		// A dock showing one view heads it instead: there are no tabs to choose between.
+		head := docked && len(l.Tabs) == 1
+		role := ui.RoleTabList
+		if head {
+			role = ui.RoleNone
+		}
+		c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: role}, func(c *ui.Ctx) {
 			for i, v := range l.Tabs {
-				if tab(c, r, st, l, i, v) {
+				if tab(c, r, st, l, i, v, head) {
 					changed = true
 				}
 			}
@@ -343,8 +349,9 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
 const closeSide = 20
 
 // tab is one tab: a click activates it, dragging it past a few pixels starts a move, and its ✕, shown while the
-// pointer is on it, closes it.
-func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
+// pointer is on it, closes it. head draws it as its dock's header instead: the width of the dock, its project and
+// its title in capitals, the ✕ at the end.
+func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool) bool {
 	th := c.Theme()
 	id := c.Next(v)
 	in := c.Interaction(id)
@@ -392,6 +399,7 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 	if title == "" {
 		title = ViewRef{ID: v.ID, Instance: v.Instance}.String()
 	}
+	name := title
 	if v.Project != "" {
 		title = v.Project + " · " + title
 	}
@@ -410,9 +418,28 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 		mark, markTone = st.mark(v)
 	}
 	closed := false
-	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on,
-		Tooltip: tip}, func(c *ui.Ctx) {
+	tabStyle := ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on,
+		Tooltip: tip}
+	if head {
+		tabStyle.W, tabStyle.Fill, tabStyle.Role, tabStyle.Selected = ui.Flex(1), render.Color{}, ui.RoleNone, false
+	}
+	c.Column(v, tabStyle, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
+		if head {
+			c.Row("label", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 14, R: 6}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+				if led {
+					c.Box("lead", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 1, Fill: lead}, nil)
+				}
+				if v.Project != "" {
+					c.Text("p", v.Project, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11.5, Weight: typeset.SemiBold}, Color: th.C(tTabFgOn)})
+				}
+				c.Text("t", strings.ToUpper(name), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold, Tracking: .12},
+					Color: th.C(tTabFg)})
+				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+				closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: closeSide})
+			})
+			return
+		}
 		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.Insets{L: 14, R: 6}, Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 			if led {
 				c.Box("lead", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 1, Fill: lead}, nil)

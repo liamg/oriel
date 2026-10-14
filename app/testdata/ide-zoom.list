@@ -42,9 +42,8 @@ rect 44,38 1022.6666x602.6667 fill #060606
 rect 44,38 250x602.6667 fill #0c0c0b
 clip 44,38 250x602.6667 r 0
   rect 44,38 250x30 fill #0c0c0b
-  rect 44,38 94.25x30 fill #121210
-  text "Explorer" @58,58.365234 #ece6d8 Inter 12
-  text "✕" @118.953125,57.96 #7c7566 JetBrains Mono 11
+  text "EXPLORER" @58,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @274.70312,57.96 #7c7566 JetBrains Mono 11
   rect 44,68 250x1 fill #24221d
   clip 44,69 250x571.6667 r 0
     rect 44,69 250x571.6667 fill #0c0c0b

@@ -355,7 +355,7 @@ type Host interface {
   `Registry.Views()` lists every view id.
 - `Host.Layout()` is the layout tree, to change from commands and views (`Open`, `Close`, `Show`, `Swap`, `Row`,
   `Shown`, `OnClose`), `Host.PaneRect(v)` where a view's pane was drawn, and `Host.Redraw()` asks for a frame from
-  any goroutine. `view.open` takes `beside` (`"editor#3"`), `size` and `project`, and `view.toggle` and `view.close` an `id`,
+  any goroutine. `view.open` takes `beside` (`"editor#3"`), `size`, `project` and `alone` (in a dock, by itself: what was there closes), and `view.toggle` and `view.close` an `id`,
   `instance` and `project`. `project.open {project | index}` opens a project of the session (`core.ProjectOpened`;
   the open project, each project's last panel (`ProjectPanelOpened`) and colour (`ProjectColoured`) are
   `SessionState.ProjectUI`), `project.panel {name, project}` runs a project entry for the open project, `project.add`

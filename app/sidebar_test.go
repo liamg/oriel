@@ -154,7 +154,7 @@ func TestSidebarSnapshots(t *testing.T) {
 		text := s.frameText()
 		for _, want := range []string{"PROJECTS", "admin-ui", "inf-2310", "↑2", "4 changed", "no PR", "api", "rate-limits", "#790",
 			"CI failing", "web", "clean", "Explorer", "Search", "Git", "Pull request", "Tests", "Requests", "3", "Ship", "Settings",
-			"admin-ui · Explorer", "⌃1", "⌃2", "⌃3"} {
+			"admin-ui\nEXPLORER", "⌃1", "⌃2", "⌃3"} {
 			if !strings.Contains("\n"+text+"\n", "\n"+want+"\n") && !strings.Contains(text, want) {
 				t.Errorf("no %q in the sidebar:\n%s", want, text)
 			}
@@ -168,7 +168,7 @@ func TestSidebarSnapshots(t *testing.T) {
 		s.run("project.panel", registry.Args{"name": "search"})
 		s.golden("sidebar-narrow")
 		text := s.frameText()
-		for _, want := range []string{"AD", "AP", "WE", "»", "api · Search"} {
+		for _, want := range []string{"AD", "AP", "WE", "»", "api\nSEARCH"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("no %q in the narrow sidebar:\n%s", want, text)
 			}
@@ -232,12 +232,12 @@ func TestSidebarSwitchesProjects(t *testing.T) {
 	if got := s.openProject(); got != "admin-ui" {
 		t.Fatalf("⌃1 opened %q", got)
 	}
-	if !strings.Contains(s.frameText(), "admin-ui · Explorer") {
-		t.Errorf("admin-ui's Explorer didn't come back:\n%s", s.frameText())
+	if !strings.Contains(s.frameText(), "admin-ui\nEXPLORER") {
+		t.Errorf("admin-ui's Explorer didn't come back under its header:\n%s", s.frameText())
 	}
 	s.keyCommand(t, "<C-2>")
-	if !strings.Contains(s.frameText(), "api · Search") {
-		t.Errorf("api's Search didn't come back:\n%s", s.frameText())
+	if !strings.Contains(s.frameText(), "api\nSEARCH") {
+		t.Errorf("api's Search didn't come back under its header:\n%s", s.frameText())
 	}
 	// From the keyboard: the focused sidebar's j/k move over headers and entries, ⏎ opens.
 	s.click(centre(s.access("admin-ui").Bounds))
@@ -249,6 +249,21 @@ func TestSidebarSwitchesProjects(t *testing.T) {
 	s.frame()
 	if got := s.openProject(); got != "api" {
 		t.Errorf("j ×6 ⏎ from admin-ui, over its five entries to api, opened %q", got)
+	}
+}
+
+// The sidebar is the dock's chooser: a project's panel opens in the dock by itself, under a header, never as one tab
+// among others.
+func TestSidebarPanelsReplaceEachOther(t *testing.T) {
+	ps := sidebarFixture(t)
+	s := sessionScene(t, core.KindWork, ps, sidebarSize)
+	s.click(centre(s.access("Explorer").Bounds))
+	s.click(centre(s.access("Search").Bounds))
+	if got := s.sh.layout.root.Docks[layout.Left].Leaf.Tabs; len(got) != 1 || got[0].ID != SearchView {
+		t.Fatalf("left dock after Explorer then Search: %v, want Search alone", got)
+	}
+	if strings.Contains(s.frameText(), "admin-ui · Search") || !strings.Contains(s.frameText(), "admin-ui\nSEARCH") {
+		t.Errorf("the panel isn't under a header:\n%s", s.frameText())
 	}
 }
 
@@ -267,7 +282,7 @@ func TestSidebarSearchIsPerProject(t *testing.T) {
 	}
 	s.click(centre(s.access("All projects").Bounds))
 	text = s.waitSearch(t, "usage.proto")
-	_, panel, _ := strings.Cut(text, "admin-ui · Search")
+	_, panel, _ := strings.Cut(text, "admin-ui\nSEARCH")
 	i, j := strings.Index(panel, "\nadmin-ui\n"), strings.Index(panel, "\napi\n")
 	if i < 0 || j < i || !strings.Contains(panel[i:j], "src/api.ts") || !strings.Contains(panel[j:], "proto/usage.proto") {
 		t.Errorf("all projects' matches aren't grouped by project:\n%s", text)

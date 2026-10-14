@@ -2,6 +2,7 @@ package layout
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -333,5 +334,64 @@ func TestTabProjectAndLead(t *testing.T) {
 	}
 	if !tipped {
 		t.Errorf("hovering the tab at %v doesn't show its tooltip", at)
+	}
+}
+
+// A dock holding one view shows it under a header (its project and title, and a close), not a strip of one tab;
+// a second view there brings the tabs back. Main's leaves keep their tabs.
+func TestDockedViewAloneHasAHeader(t *testing.T) {
+	h := newHarness(t)
+	scoped := ViewRef{ID: "tree", Project: "api"}
+	h.r.Close(tree)
+	if err := h.r.Open(scoped, Docked, Opts{Edge: Left}); err != nil {
+		t.Fatal(err)
+	}
+	h.frame()
+	tabs := func() (lists, tabs int, names []string) {
+		var walk func(n *ui.AccessNode)
+		walk = func(n *ui.AccessNode) {
+			switch n.Role {
+			case ui.RoleTabList:
+				lists++
+			case ui.RoleTab:
+				tabs++
+				names = append(names, n.Name)
+			}
+			for _, k := range n.Children {
+				walk(k)
+			}
+		}
+		walk(h.u.AccessTree())
+		return
+	}
+	// main's two files and the bottom dock's two views are tabs; the left dock's one view isn't.
+	if lists, n, names := tabs(); lists != 2 || n != 4 || slices.ContainsFunc(names, func(s string) bool { return strings.Contains(s, "tree") }) {
+		t.Errorf("with one view in the left dock: %d tab lists, %d tabs %q; want 2 and 4, none for tree", lists, n, names)
+	}
+	header := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "TREE" {
+			header = true
+		}
+	}
+	if !header {
+		t.Error("no header naming the docked view")
+	}
+	h.r.Open(ViewRef{ID: "outline"}, Docked, Opts{Edge: Left})
+	h.frame()
+	if lists, _, _ := tabs(); lists != 3 {
+		t.Errorf("with two views in the left dock: %d tab lists, want 3", lists)
+	}
+}
+
+// Alone puts a view in its dock by itself: what was there closes.
+func TestOpenAlone(t *testing.T) {
+	r := start(t)
+	other := ViewRef{ID: "outline"}
+	if err := r.Open(other, Docked, Opts{Edge: Left, Alone: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.Docks[Left].Leaf.Tabs; len(got) != 1 || got[0] != other {
+		t.Errorf("left dock = %v, want only %v", got, other)
 	}
 }

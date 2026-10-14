@@ -83,9 +83,8 @@ rect 224,38 1376x936 fill #060606
 rect 224,38 260x936 fill #0c0c0b
 clip 224,38 260x936 r 0
   rect 224,38 260x30 fill #0c0c0b
-  rect 224,38 102.515625x30 fill #121210
-  text "Plan docs" @238,58.365234 #ece6d8 Inter 12
-  text "✕" @307.21875,57.96 #7c7566 JetBrains Mono 11
+  text "PLAN DOCS" @238,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @464.70312,57.96 #7c7566 JetBrains Mono 11
   rect 224,68 260x1 fill #24221d
   clip 224,69 260x905 r 0
     rect 224,69 260x905 fill #0c0c0b

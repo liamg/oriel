@@ -146,7 +146,7 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 		return ok
 	}
 	cmds := []registry.Command{
-		{ID: "view.open", Title: "Open a view", Available: viewRegistered, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "view.open", Title: "Open a view: {id, instance, place, edge, side, size, beside, title, project}; alone, in a dock, closes what was there", Available: viewRegistered, Run: func(_ registry.Ctx, a registry.Args) error {
 			id := str(a, "id")
 			if _, ok := h.ViewByID(id); !ok {
 				return fmt.Errorf("no view %q", id)
@@ -159,7 +159,7 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 			if n, ok := a["size"].(int); ok {
 				size = float64(n)
 			}
-			o := layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size)}
+			o := layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size), Alone: a["alone"] == true}
 			if b := str(a, "beside"); b != "" {
 				id, inst, _ := strings.Cut(b, "#")
 				o.Beside = &layout.ViewRef{ID: id, Instance: inst}

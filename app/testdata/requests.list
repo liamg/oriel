@@ -57,9 +57,8 @@ rect 44,38 1556x936 fill #060606
 rect 44,38 320x936 fill #0c0c0b
 clip 44,38 320x936 r 0
   rect 44,38 320x30 fill #0c0c0b
-  rect 44,38 99.734375x30 fill #121210
-  text "Requests" @58,58.365234 #ece6d8 Inter 12
-  text "✕" @124.4375,57.96 #7c7566 JetBrains Mono 11
+  text "REQUESTS" @58,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @344.70312,57.96 #7c7566 JetBrains Mono 11
   rect 44,68 320x1 fill #24221d
   clip 44,69 320x905 r 0
     rect 44,69 320x905 fill #0c0c0b

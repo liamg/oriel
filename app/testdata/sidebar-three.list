@@ -111,10 +111,10 @@ rect 224,38 536x356 fill #060606
 rect 224,38 300x356 fill #0c0c0b
 clip 224,38 300x356 r 0
   rect 224,38 300x30 fill #0c0c0b
-  rect 224,38 168.5625x30 fill #121210
   rect 238,50.5 7x7 fill #4cc9f0 radius 1
-  text "admin-ui · Explorer" @252,58.365234 #ece6d8 Inter 12
-  text "✕" @373.26562,57.96 #7c7566 JetBrains Mono 11
+  text "admin-ui" @253,58.14 #ece6d8 JetBrains Mono 11.5
+  text "EXPLORER" @318.625,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @504.70312,57.96 #7c7566 JetBrains Mono 11
   rect 224,68 300x1 fill #24221d
   clip 224,69 300x325 r 0
     rect 224,69 300x325 fill #0c0c0b

@@ -125,7 +125,7 @@ func showing(h ext.Host, id, project string) bool {
 
 // viewArgs are view.toggle's args for a project's panel in the left dock.
 func viewArgs(id, title string, size int) registry.Args {
-	a := registry.Args{"id": id, "place": "dock", "edge": "left", "title": title}
+	a := registry.Args{"id": id, "place": "dock", "edge": "left", "title": title, "alone": true}
 	if size > 0 {
 		a["size"] = size
 	}

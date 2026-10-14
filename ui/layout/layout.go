@@ -260,11 +260,19 @@ type Opts struct {
 	Side   Side        `json:"side,omitempty"`
 	Beside *ViewRef    `json:"beside,omitempty"`
 	Rect   render.Rect `json:"rect,omitzero"`
-	Size   float32     `json:"size,omitempty"` // a closed dock opens at this size
+	Size   float32     `json:"size,omitempty"`  // a closed dock opens at this size
+	Alone  bool        `json:"alone,omitempty"` // in a dock, by itself: what was there closes
 }
 
 // Open puts v at p and focuses it. A view already open is moved instead.
 func (r *Root) Open(v ViewRef, p Placement, o Opts) error {
+	if d, ok := r.Docks[o.Edge]; ok && p == Docked && o.Alone {
+		for _, other := range slices.Clone(d.Leaf.Tabs) {
+			if other != v {
+				r.Close(other)
+			}
+		}
+	}
 	if r.Find(v) != nil {
 		return r.Move(v, p, o)
 	}

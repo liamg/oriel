@@ -283,7 +283,9 @@ One layout model for every view. The terminal isn't special, and neither are
 Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
 
 - **Five placements** for any view:
-  - **Docked**: bottom, left or right edges, each with its own tabs. `⌃J` toggles the bottom dock.
+  - **Docked**: bottom, left or right edges, each with its own tabs. `⌃J` toggles the bottom dock. A dock showing
+    one view heads it instead of a strip of one tab: its project, its title in capitals and a ✕; a second view
+    there brings the tabs back. The sidebar's panels open alone (`view.open {alone}`), so its dock is never a tab group.
   - **Split in main**: a window in the vim window tree, next to your code.
   - **Tab in main**: a full main view among your file tabs.
   - **Float**: a movable overlay window.

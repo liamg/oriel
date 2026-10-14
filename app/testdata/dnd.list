@@ -40,10 +40,9 @@ rect 44,38 1356x836 fill #060606
 rect 44,38 400x836 fill #0c0c0b
 clip 44,38 400x836 r 0
   rect 44,38 400x30 fill #0c0c0b
-  rect 44,38 88.359375x30 fill #121210
-  rect 44,38 88.359375x2 fill #ffd23f
-  text "Tickets" @58,58.365234 #ece6d8 Inter 12
-  text "✕" @113.0625,57.96 #7c7566 JetBrains Mono 11
+  rect 44,38 400x2 fill #ffd23f
+  text "TICKETS" @58,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @424.70312,57.96 #7c7566 JetBrains Mono 11
   rect 44,68 400x1 fill #24221d
   clip 44,69 400x805 r 0
     text "TICKETS" @68,104.22 #ffd23f JetBrains Mono 11
@@ -54,9 +53,8 @@ pop
 rect 1000,38 400x836 fill #0c0c0b
 clip 1000,38 400x836 r 0
   rect 1000,38 400x30 fill #0c0c0b
-  rect 1000,38 80.65625x30 fill #121210
-  text "Board" @1014,58.365234 #ece6d8 Inter 12
-  text "✕" @1061.3594,57.96 #7c7566 JetBrains Mono 11
+  text "BOARD" @1014,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @1380.7031,57.96 #7c7566 JetBrains Mono 11
   rect 1000,68 400x1 fill #24221d
   clip 1000,69 400x805 r 0
     text "BOARD" @1024,104.22 #ffd23f JetBrains Mono 11
