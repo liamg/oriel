@@ -77,7 +77,8 @@ type Window struct {
 	mu     sync.Mutex
 	cond   *sync.Cond
 	frames []Frame
-	size   render.Point
+	size   render.Point // in device pixels: what the OS would say
+	zoom   float32
 	events chan render.Event
 	done   chan struct{}
 	once   sync.Once
@@ -196,7 +197,7 @@ func (w *Window) Cursor() render.Cursor {
 
 func (w *Window) Frame(fn func(render.Frame)) error {
 	var l render.List
-	fn(l.Record(1))
+	fn(l.Record(w.Scale()))
 	w.mu.Lock()
 	w.frames = append(w.frames, Frame{l})
 	w.mu.Unlock()
@@ -205,21 +206,50 @@ func (w *Window) Frame(fn func(render.Frame)) error {
 }
 
 func (w *Window) Events() <-chan render.Event { return w.events }
-func (w *Window) Scale() float32              { return 1 }
+func (w *Window) Scale() float32 {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.scale()
+}
+
+func (w *Window) scale() float32 {
+	if w.zoom <= 0 {
+		return 1
+	}
+	return w.zoom
+}
 
 func (w *Window) Size() render.Point {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return w.size
+	return render.Point{X: w.size.X / w.scale(), Y: w.size.Y / w.scale()}
+}
+
+var _ render.Zoomer = (*Window)(nil)
+
+// SetZoom scales the window as a display at that density would, and tells the app its new size.
+func (w *Window) SetZoom(z float32) {
+	w.mu.Lock()
+	if z == w.scale() {
+		w.mu.Unlock()
+		return
+	}
+	w.zoom = z
+	w.mu.Unlock()
+	w.deliver(render.ResizeEvent{Size: w.Size()})
 }
 
 // Send delivers an event to the app, as the OS would. It does nothing once the window is closed.
 func (w *Window) Send(ev render.Event) {
 	if rs, ok := ev.(render.ResizeEvent); ok {
 		w.mu.Lock()
-		w.size = rs.Size
+		w.size = render.Point{X: rs.Size.X * w.scale(), Y: rs.Size.Y * w.scale()}
 		w.mu.Unlock()
 	}
+	w.deliver(ev)
+}
+
+func (w *Window) deliver(ev render.Event) {
 	w.sendMu.RLock()
 	defer w.sendMu.RUnlock()
 	if w.closed {

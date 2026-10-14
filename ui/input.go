@@ -32,15 +32,19 @@ type Interaction struct {
 
 // Options are how the UI looks and behaves where widgets don't say.
 type Options struct {
-	FocusRing     render.Color
-	Hover         render.Color // washed over a clickable box under the pointer, unless it has NoHover
-	Pressed       render.Color // and while it's pressed
-	TooltipDelay  time.Duration
-	Tooltip       TextStyle
-	TooltipFill   render.Color
-	TooltipStroke render.Color
-	ReducedMotion bool    // springs jump to their targets
-	MotionSpeed   float32 // the motion spring's speed (the theme's motion effect): 1 as designed, 0 off
+	FocusRing      render.Color
+	Hover          render.Color // washed over a clickable box under the pointer, unless it has NoHover
+	Pressed        render.Color // and while it's pressed
+	TooltipDelay   time.Duration
+	Tooltip        TextStyle
+	TooltipFill    render.Color
+	TooltipStroke  render.Color
+	TooltipScale   float32      // tooltips' size over the UI's (Style.Scale); 0 is 1
+	Bars           Bars         // when BarsAuto boxes show their scrollbars: BarsAuto (while hovered or scrolling) or BarsAlways
+	ScrollThumb    render.Color // a scrollbar's thumb
+	ScrollThumbHot render.Color // under the pointer, or dragged
+	ReducedMotion  bool         // springs jump to their targets
+	MotionSpeed    float32      // the motion spring's speed (the theme's motion effect): 1 as designed, 0 off
 }
 
 func defaultOptions(text TextStyle) Options {
@@ -48,14 +52,16 @@ func defaultOptions(text TextStyle) Options {
 	tip.Font.Size = 11.5
 	tip.Font.Family = typeset.UI
 	return Options{
-		FocusRing:     render.Color{R: 0xff, G: 0xd2, B: 0x3f, A: 0xff},
-		Hover:         render.Color{R: 0xff, G: 0xff, B: 0xff, A: 0x0a},
-		Pressed:       render.Color{R: 0xff, G: 0xff, B: 0xff, A: 0x16},
-		TooltipDelay:  500 * time.Millisecond,
-		Tooltip:       tip,
-		TooltipFill:   render.Color{R: 0x19, G: 0x18, B: 0x15, A: 0xff},
-		TooltipStroke: render.Color{R: 0x33, G: 0x2f, B: 0x27, A: 0xff},
-		MotionSpeed:   1,
+		FocusRing:      render.Color{R: 0xff, G: 0xd2, B: 0x3f, A: 0xff},
+		Hover:          render.Color{R: 0xff, G: 0xff, B: 0xff, A: 0x0a},
+		Pressed:        render.Color{R: 0xff, G: 0xff, B: 0xff, A: 0x16},
+		TooltipDelay:   500 * time.Millisecond,
+		Tooltip:        tip,
+		TooltipFill:    render.Color{R: 0x19, G: 0x18, B: 0x15, A: 0xff},
+		TooltipStroke:  render.Color{R: 0x33, G: 0x2f, B: 0x27, A: 0xff},
+		MotionSpeed:    1,
+		ScrollThumb:    render.Color{R: 0xff, G: 0xff, B: 0xff, A: 0x38},
+		ScrollThumbHot: render.Color{R: 0xff, G: 0xff, B: 0xff, A: 0x6b},
 	}
 }
 
@@ -78,6 +84,7 @@ type input struct {
 	dropped map[ID]DragData
 	passed  map[ID][]render.KeyEvent // keys a node was given and didn't take, by that node
 	ask     focusAsk                 // Ctx.Focus's, this frame
+	bar     *barDrag                 // a scrollbar thumb being dragged
 }
 
 type focusAsk struct {
@@ -121,6 +128,17 @@ func (u *UI) Pointer(ev render.PointerEvent) {
 		return
 	}
 	in.pos, in.inside = ev.Pos, true
+	if in.bar != nil {
+		if ev.Kind == render.PointerRelease {
+			in.bar = nil
+		} else {
+			u.barMove(ev.Pos)
+		}
+		return
+	}
+	if ev.Kind == render.PointerPress && ev.Buttons&render.ButtonPrimary != 0 && u.barPress(ev.Pos) {
+		return
+	}
 	u.setHot(u.topInteractive(ev.Pos))
 	u.dragPointer(ev)
 	switch ev.Kind {

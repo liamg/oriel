@@ -128,3 +128,29 @@ func TestLayoutGolden(t *testing.T) {
 		})
 	}
 }
+
+// theming.md, "Sizes": a box's Scale draws its subtree that much bigger, sizes, padding, gaps, radii and text
+// alike, so a part with its own text size holds it; it multiplies a scaled parent's.
+func TestScaledSubtree(t *testing.T) {
+	u := newUI()
+	var inner, text, nested ID
+	u.Frame(new(render.List).Record(1), render.Point{X: 400, Y: 300}, func(c *Ctx) {
+		c.Row("bar", Style{Scale: 1.5, Pad: Pad(4), Gap: 2}, func(c *Ctx) {
+			inner = c.Box("icon", Style{W: Px(10), H: Px(10)}, nil)
+			text = c.Text("t", "abc", TextStyle{})
+			c.Box("more", Style{Scale: 2}, func(c *Ctx) {
+				nested = c.Box("n", Style{W: Px(10), H: Px(10)}, nil)
+			})
+		})
+	})
+	r := func(id ID) render.Rect { x, _ := u.Rect(id); return x }
+	if got := r(inner); got != render.XYWH(6, 6, 15, 15) {
+		t.Errorf("a 10px box with 4px padding at 1.5× is %v, want 15px at 6,6", got)
+	}
+	if got := r(text); got.Min.X != 6+15+3 || got.Dx() != 3*6*1.5 {
+		t.Errorf("the text after a 2px gap at 1.5× is %v, want at x 24 and 27 wide (three 9px characters)", got)
+	}
+	if got := r(nested); got.Dx() != 30 {
+		t.Errorf("a 10px box at 2× inside 1.5× is %v wide, want 30", got.Dx())
+	}
+}

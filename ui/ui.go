@@ -42,6 +42,7 @@ type elem struct {
 	paint  func(f render.Frame, r render.Rect)
 	kids   []*elem
 	parent *elem
+	scale  float32 // what it and its subtree are drawn at (Style.Scale, times its parent's); 0 is 1
 
 	pos, size [2]float32
 	content   [2]float32 // children's extent, for scrolling
@@ -50,10 +51,12 @@ type elem struct {
 }
 
 type state struct {
-	rect   render.Rect
-	scroll [2]float32
-	seen   int
-	data   any // a widget's own state: State[T]
+	rect       render.Rect
+	scroll     [2]float32
+	ext, view  [2]float32 // a scrolling box's content and what of it shows, along each axis
+	scrolledAt time.Time
+	seen       int
+	data       any // a widget's own state: State[T]
 }
 
 // UI holds what lasts between frames.
@@ -91,6 +94,7 @@ type UI struct {
 type flags struct {
 	interactive, focusable, disabled bool
 	scrollX, scrollY, wheel          bool
+	bars                             Bars
 	cursor                           render.Cursor
 	tooltip, help, keyMode           string
 	trap                             bool
@@ -199,7 +203,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 				parent = e.parent.id
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
-				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
+				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
 				trap: s.Trap, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop}
 		}
 	}
@@ -232,7 +236,7 @@ func (u *UI) tooltip() {
 	at := in.pos
 	c := &Ctx{u: u, e: u.root}
 	c.Box(tooltipKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: u.opts.TooltipStroke, Border: 1, Radius: 4,
-		Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}}, func(c *Ctx) {
+		Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}, Scale: u.opts.TooltipScale}, func(c *Ctx) {
 		c.Text(nil, tip, u.opts.Tooltip)
 	})
 }
@@ -267,6 +271,7 @@ func (u *UI) Scroll(id ID) render.Point {
 func (u *UI) ScrollBy(id ID, dx, dy float32) {
 	st := u.state(id)
 	st.seen = u.frame
+	st.scrolledAt = u.now()
 	st.scroll[0] += dx
 	st.scroll[1] += dy
 }
@@ -336,7 +341,7 @@ func (u *UI) add(e *elem, key any, k kind) *elem {
 		e.keys = map[string]int{}
 	}
 	e.keys[keyName(base)]++
-	c := &elem{id: childID(e.id, key), name: name, kind: k, parent: e}
+	c := &elem{id: childID(e.id, key), name: name, kind: k, parent: e, scale: e.scale}
 	e.kids = append(e.kids, c)
 	u.byID[c.id] = c
 	st := u.state(c.id)
@@ -522,6 +527,7 @@ func (u *UI) place(e *elem, x, y float32) {
 				}
 			}
 			st.scroll[axis] = max(0, min(st.scroll[axis], ext-inner[axis]))
+			st.ext[axis], st.view[axis] = ext, inner[axis]
 			origin[axis] -= st.scroll[axis]
 		} else {
 			st.scroll[axis] = 0
@@ -709,6 +715,9 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	if clips {
 		f.Pop()
 	}
+	if s.ScrollX || s.ScrollY {
+		u.paintBars(f, e.id, r)
+	}
 	if edgeOver {
 		f.Rect(r, render.Style{Radius: s.Radius, Stroke: s.Stroke, Width: s.Border})
 	}
@@ -774,6 +783,7 @@ func (u *UI) SetTheme(r *theme.Resolved) {
 	u.theme = r
 	u.text.Color = r.C(theme.Fg)
 	u.opts.FocusRing = r.C(theme.FocusRing)
+	u.opts.ScrollThumb, u.opts.ScrollThumbHot = r.C(theme.ScrollThumb), r.C(theme.ScrollThumbHot)
 	u.opts.Hover, u.opts.Pressed = r.C(theme.Hover), r.C(theme.Pressed)
 	u.opts.Tooltip.Color = r.C(theme.Fg)
 	u.opts.TooltipFill = r.C(theme.BgOverlay)

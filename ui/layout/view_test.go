@@ -233,3 +233,54 @@ func TestDockMotion(t *testing.T) {
 		}
 	}
 }
+
+// A dock's inner edge is a handle: the resize cursor over it, and a drag changes the dock's size.
+func TestDockEdgeDrag(t *testing.T) {
+	h := newHarness(t)
+	left, ok := h.dockRect(Left)
+	bottom, ok2 := h.dockRect(Bottom)
+	if !ok || !ok2 {
+		t.Fatal("no left or bottom dock")
+	}
+	for _, d := range []struct {
+		e      Edge
+		at     render.Point
+		by     render.Point
+		cursor render.Cursor
+		grows  float32
+	}{
+		{Left, render.Point{X: left.Max.X, Y: 300}, render.Point{X: 80}, render.CursorResizeCol, 80},
+		{Bottom, render.Point{X: 600, Y: bottom.Min.Y}, render.Point{Y: -50}, render.CursorResizeRow, 50},
+	} {
+		before := h.r.Docks[d.e].Size
+		h.ptr(render.PointerMove, d.at)
+		if c := h.u.Cursor(); c != d.cursor {
+			t.Errorf("%s edge: cursor %v, want %v", d.e, c, d.cursor)
+		}
+		h.held = true
+		h.ptr(render.PointerPress, d.at)
+		h.ptr(render.PointerMove, render.Point{X: d.at.X + d.by.X, Y: d.at.Y + d.by.Y})
+		h.held = false
+		h.ptr(render.PointerRelease, render.Point{X: d.at.X + d.by.X, Y: d.at.Y + d.by.Y})
+		if got := h.r.Docks[d.e].Size - before; got != d.grows {
+			t.Errorf("%s edge dragged: grew %v, want %v", d.e, got, d.grows)
+		}
+	}
+}
+
+// dockRect is where e's dock was drawn, found by its accessible name.
+func (h *harness) dockRect(e Edge) (render.Rect, bool) {
+	var find func(n *render.AccessNode) (render.Rect, bool)
+	find = func(n *render.AccessNode) (render.Rect, bool) {
+		if n.Name == dockNames[e] {
+			return n.Bounds, true
+		}
+		for _, k := range n.Children {
+			if r, ok := find(k); ok {
+				return r, true
+			}
+		}
+		return render.Rect{}, false
+	}
+	return find(h.u.AccessTree())
+}

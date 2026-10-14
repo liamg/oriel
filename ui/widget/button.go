@@ -14,6 +14,7 @@ type ButtonOpts struct {
 	Ghost    bool // no fill until hovered
 	Disabled bool
 	Help     string
+	Key      string // a key cap after the label: the key that does the same, "y"
 }
 
 // Button is a 26px push button (base.css .btn). It returns true on the frame it's clicked, or pressed with
@@ -44,6 +45,9 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 	c.Row(key, ui.Style{H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 6, Cross: ui.Center, Fill: bg, EaseFill: true, Stroke: border, Border: 1, Radius: 6,
 		Focusable: true, Disabled: o.Disabled, NoHover: true, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button", Role: ui.RoleButton}, func(c *ui.Ctx) {
 		c.Text(nil, label, uiText(c, 12, weight, fg))
+		if o.Key != "" {
+			keyCap(c, o.Key, fg)
+		}
 	})
 	return !o.Disabled && (in.Clicked || pressedKey(in.Keys))
 }
@@ -81,4 +85,11 @@ func ToggleChip(c *ui.Ctx, key any, label string, on bool, o ToggleChipOpts) boo
 		return !on
 	}
 	return on
+}
+
+// keyCap is a small key cap in tone, inside a button.
+func keyCap(c *ui.Ctx, label string, tone color.NRGBA) {
+	c.Row("key", ui.Style{Pad: ui.PadXY(4, 0), H: ui.Px(15), Cross: ui.Center, Stroke: alpha(tone, .4), Border: 1, Radius: 3}, func(c *ui.Ctx) {
+		c.Text(nil, label, monoText(9.5, typeset.Medium, alpha(tone, .8), 0))
+	})
 }

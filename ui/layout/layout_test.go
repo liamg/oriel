@@ -145,3 +145,21 @@ func TestMoveErrors(t *testing.T) {
 		t.Error("docked on a missing edge")
 	}
 }
+
+// All lists every view wherever it is; Rename moves one's place, focus and zoom to another reference.
+func TestAllAndRename(t *testing.T) {
+	r := start(t)
+	r.Move(probs, Floating, Opts{Rect: render.XYWH(1, 2, 3, 4)})
+	r.ToggleZoom(code)
+	focus := code
+	r.Focus = &focus
+	if got := fmt.Sprint(r.All()); got != fmt.Sprint([]ViewRef{code, test, tree, term, probs}) {
+		t.Errorf("all = %s", got)
+	}
+	revived := ViewRef{ID: "editor", Instance: "7"}
+	before := strings.ReplaceAll(r.Dump(), code.String(), revived.String())
+	r.Rename(code, revived)
+	if r.Dump() != before || *r.Focus != revived || *r.Zoomed != revived {
+		t.Errorf("after the rename:\n%s\nfocus %v zoomed %v", r.Dump(), r.Focus, r.Zoomed)
+	}
+}

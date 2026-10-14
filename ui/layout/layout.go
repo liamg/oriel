@@ -124,6 +124,59 @@ func (r *Root) Visible() []ViewRef {
 	return out
 }
 
+// All is every view in the layout: main's tabs, then the docks', the drop-down's and the floats'.
+func (r *Root) All() []ViewRef {
+	var out []ViewRef
+	for _, n := range r.leaves() {
+		out = append(out, n.Tabs...)
+	}
+	return out
+}
+
+// leaves are the layout's leaves, in All's order.
+func (r *Root) leaves() []*Node {
+	var out []*Node
+	var walk func(n *Node)
+	walk = func(n *Node) {
+		if n.leaf() {
+			out = append(out, n)
+			return
+		}
+		for _, k := range n.Kids {
+			walk(k)
+		}
+	}
+	walk(r.Main)
+	for _, e := range []Edge{Left, Right, Bottom} {
+		if d := r.Docks[e]; d != nil && d.Leaf != nil {
+			out = append(out, d.Leaf)
+		}
+	}
+	if r.DropDown != nil && r.DropDown.Leaf != nil {
+		out = append(out, r.DropDown.Leaf)
+	}
+	for _, f := range r.Floats {
+		out = append(out, f.Leaf)
+	}
+	return out
+}
+
+// Rename makes every reference to from one to to: its tab, the focus and the zoom.
+func (r *Root) Rename(from, to ViewRef) {
+	for _, n := range r.leaves() {
+		for i, v := range n.Tabs {
+			if v == from {
+				n.Tabs[i] = to
+			}
+		}
+	}
+	for _, p := range []*ViewRef{r.Focus, r.Zoomed, r.prev} {
+		if p != nil && *p == from {
+			*p = to
+		}
+	}
+}
+
 // Row is the views shown side by side (or stacked) with v in the split holding v's leaf, in order, and v's place
 // among them. A place that's a split itself holds the zero ViewRef. ok is false when v's leaf isn't in a split.
 func (r *Root) Row(v ViewRef) (row []ViewRef, at int, ok bool) {
@@ -523,6 +576,17 @@ func Restore(s Snapshot) (*Root, error) {
 		return nil, err
 	}
 	return r, nil
+}
+
+// Load replaces the layout with a saved one in place, keeping whoever listens for closes.
+func (r *Root) Load(s Snapshot) error {
+	n, err := Restore(s)
+	if err != nil {
+		return err
+	}
+	n.onClose = r.onClose
+	*r = *n
+	return nil
 }
 
 // Dump writes the layout as an indented tree, for golden tests.

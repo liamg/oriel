@@ -21,6 +21,7 @@ type InputOpts struct {
 	Invalid     bool              // the text isn't valid yet: an error border
 	// SelectOnFocus selects all the text each time the input gets focus, so typing replaces it: a rename's name.
 	SelectOnFocus bool
+	KeyMode       string // its keymap mode, for keys of its own (a composer's ⌘⏎); "input" by default
 }
 
 // Digits accepts what a whole number is typed with.
@@ -199,8 +200,12 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	lo, hi := min(st.cursor, st.anchor), max(st.cursor, st.anchor)
 	selFrom, selTo, caret := prefix(lo), prefix(hi), prefix(st.cursor)
 	focused, scroll := in.Focused, st.scroll
+	mode := o.KeyMode
+	if mode == "" {
+		mode = "input"
+	}
 	c.Row(key, ui.Style{W: width, H: ui.Px(30), Pad: ui.PadXY(10, 0), Cross: ui.Center, Fill: col(c, tInputBg), Stroke: border, Border: 1,
-		Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled, Cursor: render.CursorText, Help: o.Help, KeyMode: "input",
+		Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled, Cursor: render.CursorText, Help: o.Help, KeyMode: mode,
 		Role: ui.RoleTextBox, Label: o.Label, Value: string(runes)}, func(rc *ui.Ctx) {
 		rc.Paint("text", ui.Flex(1), ui.Px(30), func(f render.Frame, r render.Rect) {
 			if focused && hi > lo {

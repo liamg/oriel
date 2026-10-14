@@ -19,6 +19,12 @@ type ListOpts struct {
 	expanded      func(i int) *bool // a tree row's expanded state
 }
 
+// listLast is the selection the list last showed, so it follows it only when it moves.
+type listLast struct {
+	sel, n int
+	seen   bool
+}
+
 type ListResult struct {
 	Changed   bool // the selection moved
 	Activated int  // the row clicked or opened with Enter, or -1
@@ -62,8 +68,11 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 	if n == 0 {
 		*sel = 0
 	}
-	// Keep the selection in view.
-	if r, ok := c.Rect(id); ok && n > 0 {
+	// Bring the selection into view when it moves, by key or by the caller; the wheel scrolls away from it freely.
+	last := ui.State[listLast](c, ui.Child(id, "last"))
+	moved := !last.seen || last.sel != *sel || last.n != n
+	last.sel, last.n, last.seen = *sel, n, true
+	if r, ok := c.Rect(id); ok && n > 0 && moved {
 		top, bottom := float32(*sel)*rh, float32(*sel+1)*rh
 		scroll := c.Scroll(id).Y
 		switch {

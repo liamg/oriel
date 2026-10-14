@@ -22,6 +22,7 @@ var (
 	tPaneBg     = theme.Declare("pane.bg", "bg.base")
 	tDockBg     = theme.Declare("dock.bg", "bg.surface")
 	tDivider    = theme.Declare("pane.divider", "line")
+	tEdgeHot    = theme.Declare("pane.edge.hot", "accent")
 	tDrop       = theme.DeclareOn("drop.target.bg", "alpha(accent, 12%)", "bg.base")
 	tDropEdge   = theme.Declare("drop.target.edge", "accent")
 	tFloatEdge  = theme.Declare("float.border", "line.strong")
@@ -61,8 +62,16 @@ type viewState struct {
 	leaves map[*Node]ui.ID // this frame's leaves, for drop targets and ⌃W h/j/k/l
 	docks  map[Edge]ui.ID
 	resize *resize
+	edge   *dockResize
 	title  func(ViewRef) string
 	mark   func(ViewRef) (string, render.Color)
+}
+
+// dockResize is a dock's edge being dragged.
+type dockResize struct {
+	e     Edge
+	from  render.Point
+	size0 float32
 }
 
 type resize struct {
@@ -162,8 +171,69 @@ func dock(c *ui.Ctx, r *Root, st *viewState, e Edge, content Content) bool {
 			changed = leaf(c, r, st, d.Leaf, content)
 		})
 	})
+	if p == 1 {
+		changed = dockEdge(c, st, e, d) || changed
+	}
 	return changed
 }
+
+// dockMin is the narrowest a dock is dragged to.
+const dockMin = 120
+
+// dockEdge is the grab area along a dock's inner edge, dragged to resize it, lit while it's under the pointer.
+func dockEdge(c *ui.Ctx, st *viewState, e Edge, d *Dock) bool {
+	r, ok := c.Rect(st.docks[e])
+	if !ok {
+		return false
+	}
+	const grab = 6
+	at, w, h, cur := render.Point{X: r.Max.X - grab/2, Y: r.Min.Y}, float32(grab), r.Dy(), render.CursorResizeCol
+	switch e {
+	case Right:
+		at.X = r.Min.X - grab/2
+	case Bottom:
+		at, w, h, cur = render.Point{X: r.Min.X, Y: r.Min.Y - grab/2}, r.Dx(), grab, render.CursorResizeRow
+	}
+	key := dockEdgeKey{e}
+	in := c.Interaction(c.Next(key))
+	changed := false
+	if in.Held {
+		if st.edge == nil || st.edge.e != e {
+			st.edge = &dockResize{e: e, from: in.Pointer, size0: d.Size}
+		}
+		delta := in.Pointer.X - st.edge.from.X
+		switch e {
+		case Right:
+			delta = -delta
+		case Bottom:
+			delta = st.edge.from.Y - in.Pointer.Y
+		}
+		limit := c.Size().X * 0.8
+		if e == Bottom {
+			limit = c.Size().Y * 0.8
+		}
+		if size := max(dockMin, min(limit, st.edge.size0+delta)); size != d.Size {
+			d.Size, changed = size, true
+		}
+	} else if st.edge != nil && st.edge.e == e {
+		st.edge = nil
+	}
+	line := render.Color{}
+	if in.Hovered || in.Held {
+		line = c.Theme().C(tEdgeHot)
+	}
+	c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Interactive: true, NoHover: true, Cursor: cur, Help: HelpSplitter,
+		Z: ui.LayerContent + 1, Float: &ui.Float{Point: &at}, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
+		if e == Bottom {
+			c.Box("line", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: line}, nil)
+		} else {
+			c.Box("line", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: line}, nil)
+		}
+	})
+	return changed
+}
+
+type dockEdgeKey struct{ e Edge }
 
 type dockKey struct{ e Edge }
 
@@ -267,6 +337,9 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content) bool {
 	return changed
 }
 
+// closeSide is a tab's ✕ button: big enough to see and to hit.
+const closeSide = 20
+
 // tab is one tab: a click activates it, dragging it past a few pixels starts a move, and its ✕, shown while the
 // pointer is on it, closes it.
 func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
@@ -325,17 +398,19 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef) bool {
 	closed := false
 	c.Column(v, ui.Style{H: ui.Flex(1), Fill: fill, Interactive: true, Cursor: render.CursorPointer, Help: HelpTab, Role: ui.RoleTab, Selected: on}, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
-		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
+		c.Row("label", ui.Style{H: ui.Flex(1), Pad: ui.Insets{L: 14, R: 6}, Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: fg})
 			if mark != "" {
 				c.Text("mark", mark, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold}, Color: markTone})
 			}
+			// The ✕ has its own room, so it never covers the title and the tab doesn't change width when it shows:
+			// always on the tab in front, under the pointer on the rest.
+			if (on || in.Inside) && st.drag == nil {
+				closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: closeSide})
+			} else {
+				c.Box("x", ui.Style{W: ui.Px(closeSide), H: ui.Px(closeSide)}, nil)
+			}
 		})
-		if in.Inside && st.drag == nil {
-			c.Box("close", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: .5}, Self: render.Point{X: 1, Y: .5}, Offset: render.Point{X: -1, Y: 1}}}, func(c *ui.Ctx) {
-				closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: 13})
-			})
-		}
 	})
 	if closed {
 		r.Close(v)

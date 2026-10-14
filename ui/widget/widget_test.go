@@ -2,10 +2,12 @@ package widget
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
@@ -673,5 +675,201 @@ func TestSpark(t *testing.T) {
 	a, b, z := h.rect(ui.Child(id, 0)), h.rect(ui.Child(id, 1)), h.rect(ui.Child(id, 2))
 	if a.Dy() != 12 || b.Dy() != 6 || z.Dy() != 2 || a.Max.Y != b.Max.Y || b.Max.Y != z.Max.Y {
 		t.Errorf("bars %v %v %v", a, b, z)
+	}
+}
+
+// The wheel scrolls a list away from its selection; the list only brings the selection back into view when it
+// moves.
+func TestListWheelScrollsAwayFromTheSelection(t *testing.T) {
+	sel := 0
+	var id ui.ID
+	var built []int
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		built = built[:0]
+		id = c.Next("list")
+		List(c, "list", 1000, &sel, ListOpts{Height: ui.Px(220), Help: "test/list"}, func(c *ui.Ctx, i int, selected bool) {
+			built = append(built, i)
+			c.Text("t", "row", ui.TextStyle{})
+		})
+	})
+	h.frame()
+	r := h.rect(id)
+	h.click(r.Min.X+20, r.Min.Y+5) // row 0: selected and focused
+	x, y := mid(r)
+	h.pointer(render.PointerMove, 0, x, y)
+	h.frame()
+	h.u.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: render.Point{X: x, Y: y}, Scroll: render.Point{Y: 44 * 22}})
+	h.frame()
+	h.frame()
+	if slices.Contains(built, 0) || !slices.Contains(built, 44) {
+		t.Fatalf("after scrolling 44 rows the list builds %v", built)
+	}
+	h.keys("j")
+	h.frame()
+	if sel != 1 || !slices.Contains(built, 1) {
+		t.Errorf("j moved the selection to %d but it isn't in view: %v", sel, built)
+	}
+}
+
+// A toolbar fits its width: chips that don't fit go behind "…", whose menu toggles them the same.
+func TestToolbarOverflows(t *testing.T) {
+	a, b, cc, d := true, false, true, false
+	width := float32(400)
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Row("box", ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) {
+			Toolbar(c, "bar", []ToolItem{{Key: "a", Label: "status", On: &a}, {Key: "b", Label: "± lines", On: &b},
+				{Key: "c", Label: "diag", On: &cc}, {Key: "d", Label: "⌥C changed-only", On: &d}}, ToolbarOpts{Help: "test/toolbar", Label: "Columns"})
+		})
+	})
+	h.frame()
+	text := func() string { return strings.Join(h.texts(), "\n") }
+	if got := text(); !strings.Contains(got, "changed-only") || strings.Contains(got, "…") {
+		t.Fatalf("at 400 wide everything fits:\n%s", got)
+	}
+	width = 150
+	h.frame()
+	h.frame()
+	got := text()
+	if strings.Contains(got, "changed-only") || !strings.Contains(got, "…") || !strings.Contains(got, "status") {
+		t.Fatalf("at 150 wide the last chips go behind …:\n%s", got)
+	}
+	more := h.find("More")
+	if more == nil {
+		t.Fatal("no More button")
+	}
+	h.click(mid(more.Bounds))
+	if got := text(); !strings.Contains(got, "changed-only") {
+		t.Fatalf("the menu doesn't list what's hidden:\n%s", got)
+	}
+	item := h.find("  ⌥C changed-only")
+	if item == nil {
+		t.Fatalf("no menu item for changed-only:\n%s", text())
+	}
+	h.click(mid(item.Bounds))
+	if !d {
+		t.Error("choosing changed-only in the menu didn't toggle it")
+	}
+}
+
+// find is the accessible node named name, or nil.
+func (h *harness) find(name string) *render.AccessNode {
+	var walk func(n *render.AccessNode) *render.AccessNode
+	walk = func(n *render.AccessNode) *render.AccessNode {
+		if n == nil || n.Name == name {
+			return n
+		}
+		for _, k := range n.Children {
+			if f := walk(k); f != nil {
+				return f
+			}
+		}
+		return nil
+	}
+	return walk(h.u.AccessTree())
+}
+
+// Choices: a click picks a card and says so once; with the strip focused, l and h move; each card is a tab with its
+// title as its name, its description wrapped under it.
+func TestChoices(t *testing.T) {
+	items := []Choice{{Title: "Plan", Desc: "docs first, Start work later"}, {Title: "Work", Desc: "straight to the worktree"}, {Title: "Tour"}}
+	active, changes := 0, 0
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("modes")
+		if Choices(c, "modes", items, &active, ChoicesOpts{Help: "test/choices", Label: "Mode"}) {
+			changes++
+		}
+	})
+	x, y := mid(h.rect(ui.Child(id, 1)))
+	h.click(x, y)
+	h.click(x, y)
+	if active != 1 || changes != 1 {
+		t.Errorf("two clicks on the second: active %d, %d changes; want 1 and 1", active, changes)
+	}
+	h.keys("l", "l", "h")
+	if active != 1 {
+		t.Errorf("l l h from 1: %d, want 1 (l stops at the end)", active)
+	}
+	if n := h.access(ui.Child(id, 1)); n == nil || n.Name != "Work" || !n.Selected {
+		t.Errorf("the second card's node = %+v", n)
+	}
+	if !h.drew("straight to the worktree") {
+		t.Errorf("no description: %q", h.texts())
+	}
+}
+
+// Rich text wraps across its spans at word boundaries, never wider than its width; a code span is one piece in
+// mono on its own tint, and bold text is its own run.
+func TestRichWraps(t *testing.T) {
+	var id ui.ID
+	var lines int
+	spans := []Span{{Text: "Ties go to even, but what about negative values? "}, {Text: "-2.5", Code: true},
+		{Text: " should give "}, {Text: "-2", Code: true}, {Text: ", and "}, {Text: "Floor", Bold: true}, {Text: " goes the wrong way."}}
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("rich")
+		lines = Rich(c, "rich", spans, 220, uiText(c, 12.5, typeset.Normal, col(c, tInputFg)), RichOpts{})
+	})
+	h.frame()
+	if lines < 2 {
+		t.Fatalf("%d lines at 220px", lines)
+	}
+	if r := h.rect(id); r.Dx() > 220 {
+		t.Errorf("rich text is %v wide, over its 220", r.Dx())
+	}
+	for _, want := range []string{"-2.5", "-2", "Floor"} {
+		if !h.drew(want) {
+			t.Errorf("%q isn't a run of its own: %q", want, h.texts())
+		}
+	}
+	mono := 0
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && (op.Run.Text == "-2.5" || op.Run.Text == "-2") && op.Run.Font.Family == typeset.Mono {
+			mono++
+		}
+	}
+	if mono != 2 {
+		t.Errorf("%d code spans in mono, want 2", mono)
+	}
+	for _, txt := range h.texts() {
+		if strings.HasPrefix(txt, " ") || strings.HasSuffix(txt, " ") && txt != " " {
+			continue
+		}
+		if strings.Contains(txt, "valu") && !strings.Contains(txt, "values?") {
+			t.Errorf("a word was split: %q", txt)
+		}
+	}
+}
+
+// A struck span is its own run, in the strike colour, with a line through its middle as wide as it is: what an
+// edit took out of a paragraph.
+func TestRichStrikesThrough(t *testing.T) {
+	spans := []Span{{Text: "Currency precision comes from "}, {Text: "a hard-coded table", Strike: true}, {Text: " currency.go"}}
+	var strike render.Color
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		strike = col(c, tStrikeFg)
+		Rich(c, "rich", spans, 500, uiText(c, 13, typeset.Normal, col(c, tInputFg)), RichOpts{})
+	})
+	h.frame()
+	var run render.Op
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "a hard-coded table" {
+			run = op
+		}
+	}
+	if run.Kind != render.OpGlyphs {
+		t.Fatalf("the struck words aren't a run of their own: %q", h.texts())
+	}
+	if run.Color != strike {
+		t.Errorf("struck text is %v, want %v", run.Color, strike)
+	}
+	found := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpRect && op.Rect.Dy() <= 1.5 && op.Style.Fill == strike && op.Rect.Dx() >= run.Run.Advance-1 &&
+			op.Rect.Min.Y < run.At.Y && op.Rect.Min.Y > run.At.Y-run.Run.Ascent {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("no line through the struck run")
 	}
 }

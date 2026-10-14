@@ -59,6 +59,8 @@ func (b *Backend) invalidate() {
 func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 	w := &Window{win: new(app.Window), events: make(chan render.Event), queue: make(chan render.Event, 1024), opts: o, pl: newPlacer()}
 	w.scale.Store(float32(1))
+	w.dpi.Store(float32(1))
+	w.zoom.Store(float32(1))
 	opts := []app.Option{app.Title(o.Title)}
 	if f := o.Frame; f.Dx() > 0 && f.Dy() > 0 {
 		opts = append(opts, app.Size(unit.Dp(f.Dx()), unit.Dp(f.Dy())))
@@ -93,7 +95,9 @@ type Window struct {
 	queue  chan render.Event // from the event loop, which never blocks on the app
 	latest atomic.Pointer[render.List]
 	redraw atomic.Bool
-	scale  atomic.Value // float32
+	scale  atomic.Value // float32: the display's density times the zoom
+	dpi    atomic.Value // float32: the display's density
+	zoom   atomic.Value // float32
 	size   atomic.Value // render.Point
 	cursor atomic.Uint32
 	clip   atomic.Pointer[string] // text waiting to go on the clipboard
@@ -131,11 +135,20 @@ func (w *Window) SetCursor(c render.Cursor) {
 
 func (w *Window) Scale() float32 { return w.scale.Load().(float32) }
 
+var _ render.Zoomer = (*Window)(nil)
+
+// SetZoom multiplies the display's density by z from the next frame, which tells the app its new size.
+func (w *Window) SetZoom(z float32) {
+	if z > 0 && w.zoom.Swap(z).(float32) != z {
+		w.win.Invalidate()
+	}
+}
+
 var _ render.Placed = (*Window)(nil)
 
 // Placement is where the window is; where the windowing system won't say, as Wayland's won't, it's only its size.
 func (w *Window) Placement() (render.Rect, bool) {
-	if r, ok := w.pl.frame(w.Scale()); ok {
+	if r, ok := w.pl.frame(w.dpi.Load().(float32)); ok {
 		return r, true
 	}
 	s := w.Size()
@@ -204,11 +217,13 @@ func (w *Window) loop() {
 			return
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
-			scale := gtx.Metric.PxPerDp
+			dpi := gtx.Metric.PxPerDp
 			if viewed && !placed {
-				w.pl.place(w.opts.Frame, render.Point{X: w.opts.Width, Y: w.opts.Height}, scale)
+				w.pl.place(w.opts.Frame, render.Point{X: w.opts.Width, Y: w.opts.Height}, dpi)
 				placed = true
 			}
+			w.dpi.Store(dpi)
+			scale := dpi * w.zoom.Load().(float32)
 			size := render.Point{X: float32(e.Size.X) / scale, Y: float32(e.Size.Y) / scale}
 			if scale != w.Scale() || size != w.Size() {
 				w.scale.Store(scale)

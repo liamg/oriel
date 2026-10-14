@@ -16,6 +16,35 @@ type Ctx struct {
 	e *elem
 }
 
+// Scale is what what's built here is drawn at (Style.Scale), for a widget that measures in pixels itself.
+func (c *Ctx) Scale() float32 {
+	if c.e.scale == 0 {
+		return 1
+	}
+	return c.e.scale
+}
+
+// scaled is st drawn at its own Scale times the parent's k, which it sets *at to.
+func scaled(st Style, at *float32, k float32) Style {
+	if st.Scale > 0 {
+		k *= st.Scale
+		*at = k
+	}
+	if k == 1 {
+		return st
+	}
+	st.W, st.H = st.W.times(k), st.H.times(k)
+	st.Pad = Insets{st.Pad.L * k, st.Pad.T * k, st.Pad.R * k, st.Pad.B * k}
+	st.Gap *= k
+	st.Radius *= k
+	if st.Float != nil {
+		f := *st.Float
+		f.Offset = render.Point{X: f.Offset.X * k, Y: f.Offset.Y * k}
+		st.Float = &f
+	}
+	return st
+}
+
 // ID is the id of the node this Ctx builds into.
 func (c *Ctx) ID() ID { return c.e.id }
 
@@ -40,7 +69,7 @@ func (c *Ctx) Rect(id ID) (render.Rect, bool) { return c.u.Rect(id) }
 // Box adds a box and builds its children with body, which may be nil.
 func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID {
 	e := c.u.add(c.e, key, kBox)
-	e.style = st
+	e.style = scaled(st, &e.scale, c.Scale())
 	stackFloat(e)
 	if body != nil {
 		body(&Ctx{u: c.u, e: e})
@@ -60,7 +89,7 @@ func stackFloat(e *elem) {
 // builds the box instead, given the panic's value and stack.
 func (c *Ctx) Guard(key any, st Style, body func(c *Ctx), fallback func(c *Ctx, v any, stack []byte)) ID {
 	e := c.u.add(c.e, key, kBox)
-	e.style = st
+	e.style = scaled(st, &e.scale, c.Scale())
 	if v, stack := try(func() { body(&Ctx{u: c.u, e: e}) }); stack != nil {
 		e.kids, e.keys = nil, nil
 		fallback(&Ctx{u: c.u, e: e}, v, stack)
@@ -99,6 +128,9 @@ func (c *Ctx) Text(key any, s string, ts TextStyle) ID {
 			ts.Color = col
 		}
 	}
+	if k := c.Scale(); k != 1 {
+		ts.Font.Size *= k
+	}
 	e.text, e.ts = s, ts
 	e.run = c.u.sh.Shape(s, ts.Font)
 	return e.id
@@ -107,7 +139,8 @@ func (c *Ctx) Text(key any, s string, ts TextStyle) ID {
 // Paint adds a node drawn by fn into its rect.
 func (c *Ctx) Paint(key any, w, h Size, fn func(f render.Frame, r render.Rect)) ID {
 	e := c.u.add(c.e, key, kPaint)
-	e.style.W, e.style.H = w, h
+	k := c.Scale()
+	e.style.W, e.style.H = w.times(k), h.times(k)
 	e.paint = fn
 	return e.id
 }
@@ -244,6 +277,31 @@ func (c *Ctx) Scroll(id ID) render.Point { return c.u.Scroll(id) }
 
 // ScrollTo sets id's scroll offset; layout clamps it.
 func (c *Ctx) ScrollTo(id ID, p render.Point) { c.u.ScrollTo(id, p) }
+
+// ScrollIntoView scrolls box the least it takes to show target, a node inside it, as both were laid out last frame.
+func (c *Ctx) ScrollIntoView(box, target ID) {
+	br, ok := c.u.Rect(box)
+	tr, ok2 := c.u.Rect(target)
+	if !ok || !ok2 {
+		return
+	}
+	s := c.u.Scroll(box)
+	switch {
+	case tr.Min.Y < br.Min.Y:
+		s.Y -= br.Min.Y - tr.Min.Y
+	case tr.Max.Y > br.Max.Y:
+		s.Y += min(tr.Max.Y-br.Max.Y, tr.Min.Y-br.Min.Y)
+	}
+	switch {
+	case tr.Min.X < br.Min.X:
+		s.X -= br.Min.X - tr.Min.X
+	case tr.Max.X > br.Max.X:
+		s.X += min(tr.Max.X-br.Max.X, tr.Min.X-br.Min.X)
+	}
+	if s != c.u.Scroll(box) {
+		c.u.ScrollTo(box, s)
+	}
+}
 
 // ClaimContext says a widget answered id's right-click with a context menu of its own.
 func (c *Ctx) ClaimContext(id ID) {
