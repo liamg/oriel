@@ -444,6 +444,20 @@ func TestSegmented(t *testing.T) {
 	}
 }
 
+// AI-14: a segment can carry a badge after its label, a chip of its own: the account switcher's plan tier. A segment
+// with none draws none, and the accessible name says the badge.
+func TestSegmentedBadges(t *testing.T) {
+	active := 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		Segmented(c, "seg", []string{"WORK · CLAUDE MAX", "HOME · CLAUDE"}, &active, SegmentedOpts{Badges: []string{"Max 20×", ""},
+			Help: "test/segmented"})
+	})
+	h.frame()
+	if !h.drew("MAX 20×") || h.find("WORK · CLAUDE MAX, Max 20×") == nil || h.find("HOME · CLAUDE") == nil {
+		t.Errorf("drew %q", h.texts())
+	}
+}
+
 // An icon button in a row shows while the pointer's in the row, stays while it moves onto the button, and clicks.
 func TestIconButtonInARow(t *testing.T) {
 	var row ui.ID

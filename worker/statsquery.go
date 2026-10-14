@@ -73,10 +73,17 @@ func (w *Worker) statsSessions(only core.SessionID) []stats.Session {
 		if len(logs) == 0 {
 			continue
 		}
-		acct, name := w.accountOf(se.Agent.Provider)
 		s := stats.Session{ID: string(se.ID), Name: se.Name, Kind: string(se.Kind), Provider: se.Agent.Provider, Model: se.Agent.Model,
-			Account: acct, AccountName: name,
 			Effort: se.Agent.Effort, Worker: string(w.opts.ID), Live: se.Agent.Running, Scans: w.statsStore().Scan(string(se.ID), logs)}
+		for _, a := range se.Agent.Accounts {
+			s.Accounts = append(s.Accounts, stats.Account{At: a.At, ID: a.Account, Name: a.Name})
+		}
+		if len(s.Accounts) == 0 {
+			// One that never recorded its account: the provider's on this worker now.
+			if acct, name := w.accountOf(se.Agent.Provider); acct != "" {
+				s.Accounts = []stats.Account{{ID: acct, Name: name}}
+			}
+		}
 		if s.Name == "" {
 			s.Name = string(se.ID)
 		}

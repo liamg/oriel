@@ -15,6 +15,7 @@ var prices = []struct {
 	{family: "opus", in: 5, out: 25, fastIn: 10, fastOut: 50},
 	{family: "sonnet", in: 3, out: 15},
 	{family: "haiku", in: 1, out: 5},
+	// OpenAI's: unverified list prices, not yet checked against OpenAI's pricing page.
 	{family: "gpt-5-nano", in: 0.05, out: 0.4},
 	{family: "gpt-5-mini", in: 0.25, out: 2},
 	{family: "gpt-5", in: 1.25, out: 10},

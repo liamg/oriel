@@ -119,6 +119,7 @@ func sum(t *Totals, o Totals) {
 	t.ToolCalls += o.ToolCalls
 	t.ToolErrors += o.ToolErrors
 	t.ActiveS += o.ActiveS
+	t.SpanS += o.SpanS
 	t.Tokens = t.Tokens.Add(o.Tokens, 1)
 	t.Cost += o.Cost
 }

@@ -362,8 +362,8 @@ func TestMergeAddsUpWorkers(t *testing.T) {
 // AI-12: cost adds up across accounts, so a query counts them all; grouped or filtered by account, each is its own.
 func TestGroupByAccount(t *testing.T) {
 	a, b := fixture(t, "a", "/ws/a"), fixture(t, "b", "/ws/b")
-	a.Account, a.AccountName = "u1/o-work", "ada@work.example"
-	b.Account, b.AccountName = "u1/o-home", "ada@home.example"
+	a.Accounts = []Account{{ID: "u1/o-work", Name: "ada@work.example"}}
+	b.Accounts = []Account{{ID: "u1/o-home", Name: "ada@home.example"}}
 	if r := Run(october, []Session{a, b}); !near(r.Totals.Cost, 16) {
 		t.Errorf("every account: %v, want $16", r.Totals.Cost)
 	}
@@ -376,5 +376,105 @@ func TestGroupByAccount(t *testing.T) {
 	q.Filters = map[string][]string{"account": {"u1/o-work"}}
 	if r := Run(q, []Session{a, b}); len(r.Groups) != 1 || r.Groups[0].Key != "u1/o-work" || !near(r.Totals.Cost, 8) {
 		t.Errorf("the work account = %+v", r.Groups)
+	}
+}
+
+// toolCall is an assistant record calling one tool, and result its answer.
+func toolCall(at, id, name string) string {
+	return asst(at, "claude-opus-5", "high", fmt.Sprintf(`{"type":"tool_use","id":%q,"name":%q,"input":{}}`, id, name), 0, 1, 0, 0, 0)
+}
+
+func result(at, id string, isErr bool) string {
+	return user(at, fmt.Sprintf(`{"type":"tool_result","tool_use_id":%q,"is_error":%v}`, id, isErr))
+}
+
+// AI-14: the tools on the Stats page count only the calls inside the range, not the whole sessions they're in: a call
+// is in the hour it was made, and its error and timing go with it, even when the result comes after the range ends.
+func TestToolsCountOnlyCallsInTheRange(t *testing.T) {
+	p := write(t,
+		toolCall("2026-09-30T23:59:00Z", "before", "Bash"), result("2026-09-30T23:59:30Z", "before", true),
+		toolCall("2026-10-01T00:00:10Z", "first", "Bash"), result("2026-10-01T00:00:10.050Z", "first", false),
+		toolCall("2026-10-03T12:00:00Z", "mid", "Read"), result("2026-10-03T12:00:02Z", "mid", true),
+		toolCall("2026-10-07T23:59:50Z", "last", "Bash"), result("2026-10-08T00:00:20Z", "last", true),
+		toolCall("2026-10-08T00:00:30Z", "after", "Read"), result("2026-10-08T00:00:31Z", "after", false),
+	)
+	r := Run(october, []Session{{ID: "s", Scans: []*Scan{readNew(p)}}})
+	got := map[string]ToolRow{}
+	for _, tr := range r.Tools {
+		got[tr.Name] = tr
+	}
+	if b := got["Bash"]; b.Calls != 2 || b.Errors != 1 || b.Buckets[0] != 1 || b.Buckets[3] != 1 {
+		t.Errorf("Bash = %+v, want 2 calls in the range, 1 errored, one under 100ms and one of 30s", b)
+	}
+	if rd := got["Read"]; rd.Calls != 1 || rd.Errors != 1 || rd.Buckets[2] != 1 {
+		t.Errorf("Read = %+v, want the one call inside", rd)
+	}
+	if r.Totals.ToolCalls != 3 || r.Totals.ToolErrors != 2 {
+		t.Errorf("totals: %d calls, %d errors; want 3 and 2", r.Totals.ToolCalls, r.Totals.ToolErrors)
+	}
+	q := october
+	q.Filters = map[string][]string{"model": {"claude-sonnet-5"}}
+	if r := Run(q, []Session{{ID: "s", Scans: []*Scan{readNew(p)}}}); len(r.Tools) != 0 {
+		t.Errorf("another model's tools = %+v, want none", r.Tools)
+	}
+}
+
+// AI-14: the Active tile's "of Nh" is the wall-clock span of the range's sessions: on each day a session worked, its
+// first record to its last, added up. A night between two days isn't in it, nor what falls outside the range.
+func TestActiveSpanOfTheRange(t *testing.T) {
+	a := write(t,
+		asst("2026-09-30T20:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"before"}`, 0, 1, 0, 0, 0),
+		asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1, 0, 0, 0),
+		asst("2026-10-01T09:04:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 0, 1, 0, 0, 0),
+		asst("2026-10-01T12:30:00Z", "claude-opus-5", "high", `{"type":"text","text":"c"}`, 0, 1, 0, 0, 0),
+		asst("2026-10-02T10:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"d"}`, 0, 1, 0, 0, 0),
+		asst("2026-10-02T10:30:00Z", "claude-opus-5", "high", `{"type":"text","text":"e"}`, 0, 1, 0, 0, 0),
+	)
+	b := write(t,
+		asst("2026-10-05T10:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1, 0, 0, 0),
+		asst("2026-10-05T11:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 0, 1, 0, 0, 0),
+	)
+	r := Run(october, []Session{{ID: "a", Scans: []*Scan{readNew(a)}}, {ID: "b", Scans: []*Scan{readNew(b)}}})
+	if want := int64((3*time.Hour + 30*time.Minute + 30*time.Minute + time.Hour) / time.Second); r.Totals.SpanS != want {
+		t.Errorf("span = %ds, want %ds: a's 09:00–12:30 and 10:00–10:30 the next day, b's 10:00–11:00", r.Totals.SpanS, want)
+	}
+	q := october
+	q.Offset = -11 * 3600
+	// Eleven hours west of UTC the days are the zone's: 09:00–09:04 UTC is the evening of Sep 30, and 12:30 Oct 1 to
+	// 10:30 Oct 2 UTC is Oct 1, 01:30–23:30.
+	if r := Run(q, []Session{{ID: "a", Scans: []*Scan{readNew(a)}}}); r.Totals.SpanS != int64((22*time.Hour+4*time.Minute)/time.Second) {
+		t.Errorf("at UTC-11: span %ds, want 22h04m", r.Totals.SpanS)
+	}
+	if r.Totals.ActiveS != 240 {
+		t.Errorf("active = %ds, want the 4 minutes between a and b", r.Totals.ActiveS)
+	}
+	if m := Merge(r, r); m.Totals.SpanS != 2*r.Totals.SpanS {
+		t.Errorf("merged span = %d", m.Totals.SpanS)
+	}
+}
+
+// AI-14: a session's history stays with the account it ran on at the time: a later login moves only what comes after.
+func TestAccountAtTheTime(t *testing.T) {
+	a, b := fixture(t, "a", "/ws/a"), fixture(t, "b", "/ws/b")
+	oct2 := time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC)
+	a.Accounts = []Account{{At: time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC), ID: "u1/o-work", Name: "ada@work.example"},
+		{At: oct2, ID: "u1/o-home", Name: "ada@home.example"}}
+	b.Accounts = []Account{{At: time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC), ID: "u1/o-work", Name: "ada@work.example"}}
+	q := october
+	q.Group = ByAccount
+	r := Run(q, []Session{a, b})
+	cost := map[string]float64{}
+	for _, g := range r.Groups {
+		cost[g.Label] = g.Cost
+	}
+	if len(cost) != 2 || !near(cost["ada@work.example"], 5+8) || !near(cost["ada@home.example"], 3) {
+		t.Errorf("by account = %v, want work $13 (a's Oct 1 and all of b), home $3 (a's Oct 2)", cost)
+	}
+	q.Group, q.Filters = ByRepo, map[string][]string{"account": {"u1/o-work"}}
+	if r := Run(q, []Session{a, b}); !near(r.Totals.Cost, 13) || r.Totals.Sessions != 2 {
+		t.Errorf("the work account: $%v over %d sessions, want $13 over 2", r.Totals.Cost, r.Totals.Sessions)
+	}
+	if d := Detailed(a, true, 0); d.Account != "u1/o-home" {
+		t.Errorf("the session's account now = %q", d.Account)
 	}
 }

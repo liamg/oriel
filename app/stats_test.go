@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -52,6 +53,7 @@ type statsRig struct {
 	codex  *agenttest.Fake
 	repos  map[string]string
 	ids    map[string]core.SessionID
+	logs   []string // every fixture log written
 }
 
 func newStatsRig(t *testing.T) *statsRig {
@@ -155,10 +157,12 @@ func (r *statsRig) build() {
 			p := filepath.Join(r.home, "sessions", string(id), "agent", "events.jsonl")
 			os.MkdirAll(filepath.Dir(p), 0o755)
 			os.WriteFile(p, body, 0o644)
+			r.logs = append(r.logs, p)
 			continue
 		}
 		p := filepath.Join(t.TempDir(), string(id)+".jsonl")
 		os.WriteFile(p, body, 0o644)
+		r.logs = append(r.logs, p)
 		r.claude.mu.Lock()
 		r.claude.logs[se.Dir] = p
 		r.claude.mu.Unlock()
@@ -337,7 +341,7 @@ func (r *statsRig) readings(t *testing.T) {
 			fiveReset, five = time.Date(2026, 10, 14, 14, 40, 0, 0, time.UTC), .31
 		}
 		claude.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "claude", Account: workAccount, AccountName: "ada@acme.example",
-			Plan: "Claude Max", Sampled: at, Source: "/usage, through the Oriel mod",
+			Plan: "Claude Max", Tier: "Max 20×", Sampled: at, Source: "/usage, through the Oriel mod",
 			Windows: []core.UsageWindow{
 				{Name: "Current session", Used: five, Resets: fiveReset, Length: 5 * time.Hour},
 				{Name: "Current week (all models)", Used: min(weekly, 1), Resets: reset, Length: week},
@@ -355,14 +359,14 @@ func (r *statsRig) readings(t *testing.T) {
 	last := func(u core.ProviderUsage) {
 		claude.Emit(agent.UsageUpdate{Usage: u})
 	}
-	last(core.ProviderUsage{Provider: "claude", Account: workAccount, AccountName: "ada@acme.example", Plan: "Claude Max",
+	last(core.ProviderUsage{Provider: "claude", Account: workAccount, AccountName: "ada@acme.example", Plan: "Claude Max", Tier: "Max 20×",
 		Sampled: statsNow.Add(-30 * time.Minute), Source: "/usage, through the Oriel mod",
 		Windows: []core.UsageWindow{
 			{Name: "Current session", Used: .31, Resets: time.Date(2026, 10, 14, 14, 40, 0, 0, time.UTC), Length: 5 * time.Hour},
 			{Name: "Current week (all models)", Used: .705, Resets: weekReset, Length: week},
 			{Name: "Current week (Opus)", Used: .575, Resets: weekReset, Length: week},
 		}})
-	last(core.ProviderUsage{Provider: "claude", Account: workAccount, AccountName: "ada@acme.example", Plan: "Claude Max",
+	last(core.ProviderUsage{Provider: "claude", Account: workAccount, AccountName: "ada@acme.example", Plan: "Claude Max", Tier: "Max 20×",
 		Sampled: statsNow.Add(-40 * time.Second), Source: "/usage, through the Oriel mod",
 		Windows: []core.UsageWindow{
 			{Name: "Current session", Used: .38, Resets: time.Date(2026, 10, 14, 14, 40, 0, 0, time.UTC), Length: 5 * time.Hour},
@@ -722,5 +726,244 @@ func TestUsageIsPerAccount(t *testing.T) {
 	s.wantFrame(t, "22%")
 	if u, _ := x.usageAccount(); u.Account != "u1/o-personal" {
 		t.Errorf("the switcher picked %s", u.Account)
+	}
+}
+
+// logRecord is the part of a fixture log line the oracles below read: Claude's records and the worker's events.
+type logRecord struct {
+	Type      string    `json:"type"`
+	Timestamp time.Time `json:"timestamp"`
+	At        time.Time `json:"at"`
+	Kind      string    `json:"kind"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Error     bool      `json:"error"`
+	Message   struct {
+		Usage   json.RawMessage `json:"usage"`
+		Content json.RawMessage `json:"content"`
+	} `json:"message"`
+}
+
+// fixtureCalls counts the tool calls the rig's logs make in [from, to), and the ones of them that errored, by tool:
+// read from the logs themselves, not through the stats.
+func (r *statsRig) fixtureCalls(t *testing.T, from, to time.Time) map[string][2]int64 {
+	t.Helper()
+	out := map[string][2]int64{}
+	for _, p := range r.logs {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// A session's logs reuse a call's id from day to day: a call waits for its result by id until it comes.
+		type call struct {
+			name    string
+			in, bad bool
+		}
+		var calls []*call
+		pending := map[string]*call{}
+		use := func(id, name string, in bool) {
+			c := &call{name: name, in: in}
+			calls = append(calls, c)
+			pending[id] = c
+		}
+		answer := func(id string, bad bool) {
+			if c := pending[id]; c != nil {
+				c.bad = bad
+				delete(pending, id)
+			}
+		}
+		for line := range strings.SplitSeq(strings.TrimSpace(string(b)), "\n") {
+			var rec logRecord
+			if err := json.Unmarshal([]byte(line), &rec); err != nil {
+				t.Fatal(err)
+			}
+			at := rec.Timestamp
+			if at.IsZero() {
+				at = rec.At
+			}
+			in := !at.Before(from) && at.Before(to)
+			switch rec.Kind {
+			case "tool":
+				use(rec.ID, rec.Name, in)
+			case "result":
+				answer(rec.ID, rec.Error)
+			}
+			var blocks []struct {
+				Type    string `json:"type"`
+				ID      string `json:"id"`
+				Name    string `json:"name"`
+				UseID   string `json:"tool_use_id"`
+				IsError bool   `json:"is_error"`
+			}
+			json.Unmarshal(rec.Message.Content, &blocks)
+			for _, bl := range blocks {
+				switch bl.Type {
+				case "tool_use":
+					use(bl.ID, bl.Name, in)
+				case "tool_result":
+					answer(bl.UseID, bl.IsError)
+				}
+			}
+		}
+		for _, c := range calls {
+			if c.in {
+				v := out[c.name]
+				v[0]++
+				if c.bad {
+					v[1]++
+				}
+				out[c.name] = v
+			}
+		}
+	}
+	return out
+}
+
+// fixtureSpan is the wall-clock of the rig's sessions in [from, to), from their logs: for each one with a request in
+// it, its first record to its last on each (UTC) day, added up, in whole seconds as the logs' times are kept.
+func (r *statsRig) fixtureSpan(t *testing.T, from, to time.Time) time.Duration {
+	t.Helper()
+	var sum time.Duration
+	for _, p := range r.logs {
+		b, _ := os.ReadFile(p)
+		days := map[string][2]time.Time{}
+		requests := false
+		for line := range strings.SplitSeq(strings.TrimSpace(string(b)), "\n") {
+			var rec logRecord
+			json.Unmarshal([]byte(line), &rec)
+			at := rec.Timestamp
+			if at.IsZero() {
+				at = rec.At
+			}
+			if at.Before(from) || !at.Before(to) {
+				continue
+			}
+			d := at.UTC().Format(time.DateOnly)
+			v, ok := days[d]
+			if !ok || at.Before(v[0]) {
+				v[0] = at
+			}
+			if at.After(v[1]) {
+				v[1] = at
+			}
+			days[d] = v
+			if rec.Kind == "request" || len(rec.Message.Usage) > 0 {
+				requests = true
+			}
+		}
+		if requests {
+			for _, v := range days {
+				sum += time.Duration(v[1].Unix()-v[0].Unix()) * time.Second
+			}
+		}
+	}
+	return sum
+}
+
+// wantTools checks the Stats page's tools against the calls the fixture logs make in its range.
+func (r *statsRig) wantTools(t *testing.T, x *statsExt) {
+	t.Helper()
+	q := x.query()
+	want := r.fixtureCalls(t, q.From, q.To)
+	rep, _ := x.report(q)
+	got := map[string][2]int64{}
+	for _, tr := range rep.Tools {
+		got[tr.Name] = [2]int64{tr.Calls, tr.Errors}
+	}
+	if len(got) != len(want) {
+		t.Errorf("tools %v, want %v", got, want)
+	}
+	for name, w := range want {
+		if got[name] != w {
+			t.Errorf("%s in %s – %s: %d calls, %d errored; the logs have %d and %d", name, q.From.Format(time.DateOnly), q.To.Format(time.DateOnly),
+				got[name][0], got[name][1], w[0], w[1])
+		}
+	}
+	whole := r.fixtureCalls(t, time.Time{}, statsNow.Add(time.Hour))
+	if whole["Read"] == want["Read"] {
+		t.Errorf("the range doesn't cut through the fixture sessions: Read %v either way", want["Read"])
+	}
+}
+
+// AI-14: CUSTOM opens the date picker; a range picked with the keys, then with the mouse, re-queries, and the page's
+// tools are the calls inside that range, though the fixture sessions run over its edges. The Active tile reads
+// "of Nh", the sessions' wall-clock in the range.
+func TestStatsCustomRange(t *testing.T) {
+	s, r, x := statsScene(t)
+	s.keyCommand(t, "<D-S>")
+	s.settleStats(x)
+	s.click(centre(s.access("CUSTOM").Bounds))
+	s.frame()
+	if s.countAccess("Custom range, calendar") == 0 {
+		t.Fatal("CUSTOM didn't open the date picker")
+	}
+	s.lint("the stats page's date picker")
+	s.golden("stats-custom")
+	// It opens on the range shown, 30 days to today, the cursor on Oct 14: a week back, ⏎, two more back, ⏎.
+	for _, k := range []string{"<Up>", "<CR>", "<Up>", "<Up>", "<CR>"} {
+		s.keyCommand(t, k)
+	}
+	s.settleStats(x)
+	q := x.query()
+	if !q.From.Equal(time.Date(2026, 9, 23, 0, 0, 0, 0, time.UTC)) || !q.To.Equal(time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)) ||
+		statsRanges[x.q.rng].days != 0 {
+		t.Fatalf("picked with the keys: %v – %v, range %d", q.From, q.To, x.q.rng)
+	}
+	if s.countAccess("Custom range, calendar") != 0 {
+		t.Error("the picker stays open after a pick")
+	}
+	if !x.open {
+		t.Fatal("picking closed the Stats page")
+	}
+	r.wantTools(t, x)
+	span := r.fixtureSpan(t, q.From, q.To)
+	rep, _ := x.report(q)
+	if time.Duration(rep.Totals.SpanS)*time.Second != span {
+		t.Errorf("span = %v, the logs say %v", time.Duration(rep.Totals.SpanS)*time.Second, span)
+	}
+	s.wantFrame(t, "ACTIVE", "of "+hours(int64(span/time.Second)), "Sep 23 – Oct 7")
+
+	s.click(centre(s.access("Change the custom range").Bounds))
+	s.frame()
+	s.click(centre(s.access("2026-10-10").Bounds))
+	s.click(centre(s.access("2026-10-01").Bounds))
+	s.settleStats(x)
+	if q := x.query(); !q.From.Equal(time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)) || !q.To.Equal(time.Date(2026, 10, 11, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("picked with the mouse: %v – %v", q.From, q.To)
+	}
+	r.wantTools(t, x)
+
+	// Escape on the picker closes it, not the page.
+	s.click(centre(s.access("Change the custom range").Bounds))
+	s.frame()
+	s.keyCommand(t, "<Esc>")
+	s.frame()
+	if !x.open || s.countAccess("Custom range, calendar") != 0 {
+		t.Errorf("Escape: page open %v, picker open %v", x.open, s.countAccess("Custom range, calendar") != 0)
+	}
+	s.run("Stats", registry.Args{"args": "2026-09-01..2026-09-30"})
+	if q := x.query(); !q.From.Equal(time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)) || !q.To.Equal(time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf(":Stats 2026-09-01..2026-09-30 = %v – %v", q.From, q.To)
+	}
+}
+
+// AI-14: the Usage page's account header shows the plan's tier as a chip, and so does its switcher; an account whose
+// tier isn't known (the fixture's Codex readings carry none) shows none.
+func TestUsageTierChip(t *testing.T) {
+	s, _, x := statsScene(t)
+	s.keyCommand(t, "<D-U>")
+	s.settleStats(x)
+	s.wantFrame(t, "Claude Max", "MAX 20×")
+	if s.countAccess("Max 20×") != 1 || s.countAccess("WORK · CLAUDE MAX · MBP, Max 20×") != 1 {
+		t.Error("the header or the switcher lacks the tier")
+	}
+	s.click(s.textPoint(t, "ADA@EXAMPLE.COM · CHATGPT PRO · MBP"))
+	s.settleStats(x)
+	s.wantFrame(t, "ChatGPT Pro")
+	if s.countAccess("Max 20×") != 0 {
+		t.Error("Codex's header shows a tier")
+	}
+	if s.countAccess("ADA@EXAMPLE.COM · CHATGPT PRO · MBP") != 1 {
+		t.Error("the switcher gave Codex's account a badge")
 	}
 }

@@ -19,10 +19,20 @@ last answer is still counted, marked stale in the header.
 7, 30 or 90 days, or a custom range. `[` and `]` step to the shorter or longer one. The tiles compare the range with
 the period of the same length before it.
 
+**CUSTOM** (or `c`) opens a calendar on the range shown: the arrows move the day (a week with ↑ ↓, a month with
+PageUp/PageDown), `⏎` picks one end and then the other, and `Esc` closes it. A click picks a day the same way, and a
+range can be typed as `2026-09-01..2026-09-30`, as can `:Stats 2026-09-01..2026-09-30`. Once it's custom, the ▾
+beside it opens the calendar again.
+
+Everything counts only what happened in the range: a session that runs over its edges brings just its part, tool
+calls included. **Active** is the time spent working, "of" the sessions' wall-clock: on each day a session worked,
+its first record to its last, added up.
+
 ## Group by {#group-by}
 
 Repo (the default), session, kind, model, provider, account or day: `g` then `r`, `s`, `k`, `m`, `p`, `a` or `d`.
-Cost adds up across accounts, so every account is counted unless a chip says otherwise.
+Cost adds up across accounts, so every account is counted unless a chip says otherwise. A session counts for the
+account it ran on at the time: signing in to another later moves only what comes after.
 
 ## Filters {#filters}
 

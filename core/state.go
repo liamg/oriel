@@ -91,6 +91,7 @@ type ProviderUsage struct {
 	AccountName string        `json:"accountName,omitempty"`
 	Workers     []WorkerID    `json:"workers,omitempty"` // the workers that report it
 	Plan        string        `json:"plan,omitempty"`    // "Claude Max", "ChatGPT Pro"
+	Tier        string        `json:"tier,omitempty"`    // the plan's tier, as its chip reads: "Max 20×", "Team", "Pro"; "" when not known
 	Windows     []UsageWindow `json:"windows,omitempty"`
 	Credits     string        `json:"credits,omitempty"`
 	Sampled     time.Time     `json:"sampled,omitzero"`

@@ -72,6 +72,20 @@ type Slot struct {
 	ToolErrors int64  `json:"toolErrors,omitempty"`
 	Turns      int64  `json:"turns,omitempty"`
 	ActiveS    int64  `json:"activeS,omitempty"`
+	// First and Last are the hour's first and last record, in unix seconds: kept on the slot with no model.
+	First int64 `json:"first,omitempty"`
+	Last  int64 `json:"last,omitempty"`
+}
+
+// ToolSlot is an hour's calls of one tool on one model, with the errors and timings of their results: what a range's
+// tool rows sum.
+type ToolSlot struct {
+	Hour    int64          `json:"hour"`
+	Model   string         `json:"model,omitempty"`
+	Name    string         `json:"name"`
+	Calls   int64          `json:"calls"`
+	Errors  int64          `json:"errors,omitempty"`
+	Buckets [Buckets]int64 `json:"buckets"`
 }
 
 // Bucket is five minutes of a session, for its chart.
@@ -122,11 +136,12 @@ type Stats struct {
 	ActiveS int64     `json:"activeS"`
 	Agents  []string  `json:"agents,omitempty"` // subagents that made requests
 
-	Slots       map[string]*Slot  `json:"slots,omitempty"` // by slotKey
-	Buckets     map[int64]*Bucket `json:"buckets,omitempty"`
-	Tools       map[string]*Tool  `json:"tools,omitempty"`
-	Paths       map[string]int64  `json:"paths,omitempty"` // file tool calls by absolute path
-	Compactions []Compaction      `json:"compactions,omitempty"`
+	Slots       map[string]*Slot     `json:"slots,omitempty"`     // by slotKey
+	ToolSlots   map[string]*ToolSlot `json:"toolSlots,omitempty"` // by slotKey(hour, model, tool)
+	Buckets     map[int64]*Bucket    `json:"buckets,omitempty"`
+	Tools       map[string]*Tool     `json:"tools,omitempty"`
+	Paths       map[string]int64     `json:"paths,omitempty"` // file tool calls by absolute path
+	Compactions []Compaction         `json:"compactions,omitempty"`
 }
 
 // Cost is the dollars spent, at list price.
@@ -157,7 +172,8 @@ type Pending struct {
 	Name  string    `json:"name"`
 	At    time.Time `json:"at"`
 	Model string    `json:"model,omitempty"`
-	Key   string    `json:"key"` // its slot
+	Key   string    `json:"key"`            // its slot
+	Tool  string    `json:"tool,omitempty"` // its tool slot
 }
 
 // request is one request as it was counted, so a later record of the same message can take it back.
@@ -181,6 +197,9 @@ func (s *Scan) ensure() {
 	}
 	if s.Buckets == nil {
 		s.Buckets = map[int64]*Bucket{}
+	}
+	if s.ToolSlots == nil {
+		s.ToolSlots = map[string]*ToolSlot{}
 	}
 	if s.Tools == nil {
 		s.Tools = map[string]*Tool{}
@@ -382,7 +401,7 @@ func (s *Scan) event(ev Event) {
 	}
 }
 
-// clock moves the log's time on: its span, and the active time (gaps up to idleGap) of the hour a gap ends in.
+// clock moves the log's time on: its span and each hour's, and the active time (gaps up to idleGap) of the hour a gap ends in.
 func (s *Scan) clock(at time.Time) {
 	if at.IsZero() {
 		return
@@ -390,6 +409,11 @@ func (s *Scan) clock(at time.Time) {
 	if s.First.IsZero() || at.Before(s.First) {
 		s.First = at
 	}
+	sl := s.slot(hourOf(at), "", "")
+	if u := at.Unix(); sl.First == 0 || u < sl.First {
+		sl.First = u
+	}
+	sl.Last = max(sl.Last, at.Unix())
 	if !at.After(s.Last) {
 		return // a record from before the latest: a tool's result written late
 	}
@@ -397,7 +421,7 @@ func (s *Scan) clock(at time.Time) {
 		if gap := at.Sub(s.Last); gap <= idleGap {
 			secs := int64(gap / time.Second)
 			s.ActiveS += secs
-			s.slot(hourOf(at), "", "").ActiveS += secs
+			sl.ActiveS += secs
 		}
 	}
 	s.Last = at
@@ -498,14 +522,21 @@ func (s *Scan) call(id, name string, input json.RawMessage, at time.Time, model,
 	s.ToolCalls++
 	t := s.tool(name)
 	t.Calls++
-	key := ""
+	key, tkey := "", ""
 	if !at.IsZero() {
 		sl := s.slot(hourOf(at), model, effort)
 		sl.ToolCalls++
 		key = slotKey(sl.Hour, model, effort)
+		tkey = slotKey(sl.Hour, model, name)
+		ts := s.ToolSlots[tkey]
+		if ts == nil {
+			ts = &ToolSlot{Hour: sl.Hour, Model: model, Name: name}
+			s.ToolSlots[tkey] = ts
+		}
+		ts.Calls++
 	}
 	if id != "" {
-		s.Pending[id] = Pending{Name: name, At: at, Model: model, Key: key}
+		s.Pending[id] = Pending{Name: name, At: at, Model: model, Key: key, Tool: tkey}
 	}
 	if FileTools[name] {
 		for _, p := range paths(input, s.Cwd) {
@@ -521,11 +552,15 @@ func (s *Scan) result(id string, isErr bool, at time.Time) {
 	}
 	delete(s.Pending, id)
 	t := s.tool(call.Name)
+	ts := s.ToolSlots[call.Tool]
 	if isErr {
 		t.Errors++
 		s.ToolErrors++
 		if sl := s.Slots[call.Key]; sl != nil {
 			sl.ToolErrors++
+		}
+		if ts != nil {
+			ts.Errors++
 		}
 	}
 	if call.At.IsZero() || at.IsZero() {
@@ -536,6 +571,9 @@ func (s *Scan) result(id string, isErr bool, at time.Time) {
 		t.Millis += ms
 		t.Timed++
 		t.Buckets[bucketOf(ms)]++
+		if ts != nil {
+			ts.Buckets[bucketOf(ms)]++
+		}
 		t.sample(ms)
 	}
 }

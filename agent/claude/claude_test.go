@@ -468,3 +468,99 @@ func TestAccount(t *testing.T) {
 		t.Errorf("account = %q %q", id, name)
 	}
 }
+
+// fixtureConfig copies testdata/account (Claude Code's .claude.json and .credentials.json: the real files' keys,
+// invented values) into a config directory, with edit applied to each file's JSON first.
+func fixtureConfig(t *testing.T, edit func(file string, v map[string]any)) []string {
+	t.Helper()
+	cfg := t.TempDir()
+	for _, f := range []string{".claude.json", ".credentials.json"} {
+		b, err := os.ReadFile(filepath.Join("testdata", "account", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var v map[string]any
+		if err := json.Unmarshal(b, &v); err != nil {
+			t.Fatal(err)
+		}
+		if edit != nil {
+			edit(f, v)
+		}
+		if v == nil {
+			continue
+		}
+		b, _ = json.Marshal(v)
+		if err := os.WriteFile(filepath.Join(cfg, f), b, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return []string{"CLAUDE_CONFIG_DIR=" + cfg}
+}
+
+// AI-14: the account is read from the state file's oauthAccount by the keys Claude Code writes.
+func TestAccountFromTheFixture(t *testing.T) {
+	env := fixtureConfig(t, nil)
+	if id, name := account(env); id != "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222" || name != "ada@acme.example" {
+		t.Errorf("account = %q %q", id, name)
+	}
+}
+
+// AI-14: the plan's tier, for its chip, from the provider's own account data: the credentials' subscriptionType and
+// rateLimitTier, else (the token in the Keychain) oauthAccount's organizationType and organizationRateLimitTier. A
+// plan Claude Code doesn't name has no tier, rather than a guess.
+func TestPlanTier(t *testing.T) {
+	set := func(file string, kv map[string]any) func(string, map[string]any) {
+		return func(f string, v map[string]any) {
+			if f != file {
+				return
+			}
+			o := v["claudeAiOauth"]
+			if file == ".claude.json" {
+				o = v["oauthAccount"]
+			}
+			for k, x := range kv {
+				o.(map[string]any)[k] = x
+			}
+		}
+	}
+	keychain := func(kv map[string]any) func(string, map[string]any) {
+		return func(f string, v map[string]any) {
+			if f == ".credentials.json" {
+				clear(v)
+				return
+			}
+			set(".claude.json", kv)(f, v)
+		}
+	}
+	for _, c := range []struct {
+		name       string
+		edit       func(string, map[string]any)
+		plan, tier string
+	}{
+		{"max 20x", nil, "Claude Max", "Max 20×"},
+		{"max 5x", set(".credentials.json", map[string]any{"rateLimitTier": "default_claude_max_5x"}), "Claude Max", "Max 5×"},
+		{"max, no tier", set(".credentials.json", map[string]any{"rateLimitTier": nil}), "Claude Max", "Max"},
+		{"pro", set(".credentials.json", map[string]any{"subscriptionType": "pro", "rateLimitTier": nil}), "Claude Pro", "Pro"},
+		{"team", set(".credentials.json", map[string]any{"subscriptionType": "team", "rateLimitTier": "default_claude_max_5x"}), "Claude Team", "Team"},
+		{"enterprise", set(".credentials.json", map[string]any{"subscriptionType": "enterprise"}), "Claude Enterprise", "Enterprise"},
+		{"unknown", set(".credentials.json", map[string]any{"subscriptionType": "galaxy"}), "Claude Galaxy", ""},
+		{"keychain, max", keychain(nil), "Claude Max", "Max 20×"},
+		{"keychain, team", keychain(map[string]any{"organizationType": "claude_team", "organizationRateLimitTier": nil}), "Claude Team", "Team"},
+		{"keychain, unknown", keychain(map[string]any{"organizationType": nil, "organizationRateLimitTier": nil}), "", ""},
+	} {
+		plan, tier := planOf(fixtureConfig(t, c.edit))
+		if plan != c.plan || tier != c.tier {
+			t.Errorf("%s: plan %q, tier %q; want %q, %q", c.name, plan, tier, c.plan, c.tier)
+		}
+	}
+}
+
+// AI-14: Usage carries the plan and its tier, from the fixture account.
+func TestUsageCarriesTheTier(t *testing.T) {
+	env := fixtureConfig(t, nil)
+	t.Setenv("CLAUDE_CONFIG_DIR", strings.TrimPrefix(env[0], "CLAUDE_CONFIG_DIR="))
+	u, _ := Provider{}.Usage(context.Background())
+	if u.Plan != "Claude Max" || u.Tier != "Max 20×" || u.AccountName != "ada@acme.example" {
+		t.Errorf("usage = %+v", u)
+	}
+}

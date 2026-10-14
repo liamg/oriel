@@ -291,6 +291,11 @@ function oriel.ui.chart(spec) end
 ---@return table
 function oriel.ui.column(children) end
 
+--- A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30.
+---@param spec table
+---@return table
+function oriel.ui.date_picker(spec) end
+
 --- A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
 ---@param spec table
 ---@return table

@@ -122,3 +122,28 @@ func TestLuaChart(t *testing.T) {
 	s.frame()
 	s.wantFrame(t, "clicked=1@2")
 }
+
+const datePlugin = `local s = oriel.ui.state("dates-demo", { from = "", to = "" })
+oriel.view.override("dates-demo", function(ctx)
+  return oriel.ui.column{ pad = 14, gap = 10,
+    oriel.ui.date_picker{ id = "range", label = "Deploy window", placeholder = "pick dates", from = s.from, to = s.to,
+      on_change = function(from, to) s.from, s.to = from, to end },
+    oriel.ui.text("range=" .. s.from .. ".." .. s.to),
+  }
+end)
+`
+
+// AI-14: a Lua view picks a range of days through oriel.ui.date_picker (widget.DatePicker): its button opens the
+// picker, a typed range is picked with ⏎, and on_change gets its days as YYYY-MM-DD.
+func TestLuaDatePicker(t *testing.T) {
+	s := luaScene(t, datePlugin)
+	s.run("view.open", registry.Args{"id": "dates-demo", "place": "tab", "title": "Dates"})
+	s.frame()
+	s.frame()
+	s.click(centre(s.access("pick dates").Bounds))
+	s.frame()
+	s.typeInto(t, "Deploy window, typed", "2026-09-01..2026-09-30")
+	s.keyCommand(t, "<CR>")
+	s.frame()
+	s.wantFrame(t, "range=2026-09-01..2026-09-30", "Sep 1 – Sep 30")
+}

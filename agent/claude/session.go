@@ -432,6 +432,7 @@ func (s *session) event(in eventIn) {
 		if len(in.RateLimits) > 0 {
 			u := usageOf(in.RateLimits)
 			u.Account, u.AccountName = account(s.accountEnv())
+			u.Plan, u.Tier = planOf(s.accountEnv())
 			remember(u)
 			s.push(agent.UsageUpdate{Usage: u})
 		}

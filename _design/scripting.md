@@ -316,6 +316,15 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   is the split.
 
 
+## As built (AI-14)
+
+- `oriel.ui.date_picker{ from, to, on_change, placeholder, id, label }` draws a `widget.DateSelect`: a button showing
+  the range that opens a `widget.DatePicker` under it. `from` and `to` are days as `YYYY-MM-DD`, and
+  `on_change(from, to)` gets them so.
+- `oriel.cmd("stats.custom", { range = "2026-09-01..2026-09-30" })` sets the Stats page's custom range; with no
+  range it opens the date picker.
+
+
 ## As built (SE-4)
 
 - Jobs are commands too: `oriel.cmd("jobs.open", { job = "sweep-stale-deps" })`, `oriel.cmd("jobs.run", { name = … })`,

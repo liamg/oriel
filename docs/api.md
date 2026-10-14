@@ -100,6 +100,7 @@ Version 0.4.0.
 - `oriel.ui.button(spec)`: A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
 - `oriel.ui.chart(spec)`: A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1.
 - `oriel.ui.column(children)`: A column of nodes; options beside them: gap, pad (px).
+- `oriel.ui.date_picker(spec)`: A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30.
 - `oriel.ui.indicator(spec)`: A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
 - `oriel.ui.input(spec)`: A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
 - `oriel.ui.list(items, row)`: A list: each of items through row(item), which returns a node.

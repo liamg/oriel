@@ -145,11 +145,23 @@ func (x *statsExt) toolbar(c *ui.Ctx) {
 			labels = append(labels, r.label)
 		}
 		rng := x.q.rng
+		anchor := c.Next("range")
 		if widget.Segmented(c, "range", labels, &rng, widget.SegmentedOpts{Label: "Range", Help: "agent/stats#range"}) {
 			if statsRanges[rng].days == 0 {
-				x.q.from, x.q.to = x.span(x.q)
+				x.picking = true
+			} else {
+				x.q.rng = rng
 			}
-			x.q.rng = rng
+		}
+		if statsRanges[x.q.rng].days == 0 && widget.IconButton(c, "custom", "▾", widget.IconButtonOpts{Label: "Change the custom range",
+			Help: "agent/stats#range"}) {
+			x.picking = true
+		}
+		from, to := x.span(x.q)
+		pick := widget.DateRange{From: from, To: to.AddDate(0, 0, -1)}
+		if widget.DatePopover(c, "pick", anchor, &x.picking, &pick, widget.DatePickerOpts{Label: "Custom range", Help: "agent/stats#range",
+			Today: x.now(), Location: x.loc}) {
+			x.custom(pick)
 		}
 		c.Text("by", "GROUP BY", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.SemiBold, Tracking: .12},
 			Color: th.C(theme.FgGhost)})
@@ -340,7 +352,11 @@ func (x *statsExt) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 			}
 			dim(c, "s", fmt.Sprintf("%.1f%% errored", rate*100))
 		})
-		statsTile(c, "active", "ACTIVE", hours(t.ActiveS), "", func(c *ui.Ctx) {
+		span := ""
+		if t.SpanS > 0 {
+			span = "of " + hours(t.SpanS)
+		}
+		statsTile(c, "active", "ACTIVE", hours(t.ActiveS), span, func(c *ui.Ctx) {
 			delta(c, "d", float64(t.ActiveS), float64(p.ActiveS))
 			if t.ActiveS > 0 {
 				dim(c, "s", money(t.Cost/(float64(t.ActiveS)/3600))+" / active hour")

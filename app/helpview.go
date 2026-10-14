@@ -104,7 +104,7 @@ func (v *helpView) Activate(_ context.Context, h ext.Host) error {
 		v.add(h.Keymap(k))
 	}
 	// K is help on what has focus, in the widgets' own modes: not in an input, or the editor, where K is vim's.
-	for _, mode := range []string{"button", "list", "tree", "tabs", "menu", "toast"} {
+	for _, mode := range []string{"button", "list", "tree", "tabs", "menu", "toast", "datepicker"} {
 		v.add(h.Keymap(registry.Keymap{Mode: mode, Keys: "K", Command: "help.focused", Desc: "Help on this"}))
 	}
 	v.add(h.Picker(v.source()))

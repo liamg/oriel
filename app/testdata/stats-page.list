@@ -229,6 +229,7 @@ clip 224,38 1376x936 r 0
     clip 1367,136 215x78.784 r 8
       text "ACTIVE" @1378,153.69 #7c7566 JetBrains Mono 9.5
       text "13h" @1378,181.236 #ece6d8 Space Grotesk 19
+      text "of 92h" @1413.4688,183.484 #7c7566 JetBrains Mono 11
       text "$17.02 / active hour" @1378,202.88399 #7c7566 JetBrains Mono 10
     pop
     rect 1367,136 215x78.784 radius 8 stroke 1 #24221d

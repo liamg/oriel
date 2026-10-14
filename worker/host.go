@@ -111,7 +111,12 @@ func (h *host) start() error {
 	}
 	h.sess, h.box = sess, box
 	h.mu.Unlock()
-	h.setAgent(func(a *core.AgentState) { a.Running, a.Error = true, "" })
+	acct, name := h.w.accountOf(h.snapshot().Agent.Provider)
+	now := h.w.opts.Now().UTC()
+	h.setAgent(func(a *core.AgentState) {
+		a.Running, a.Error = true, ""
+		a.RanOn(now, acct, name)
+	})
 	go h.loop(sess)
 	h.askLogins(h.snapshot().Agent.Provider)
 	h.kick()
@@ -483,6 +488,9 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 		h.setAgent(func(a *core.AgentState) { a.Error = ev.Err })
 	case agent.UsageUpdate:
 		w.usageSampled(ev.Usage)
+		if acc := h.snapshot().Agent.Accounts; ev.Usage.Account != "" && (len(acc) == 0 || acc[len(acc)-1].Account != ev.Usage.Account) {
+			h.setAgent(func(a *core.AgentState) { a.RanOn(now, ev.Usage.Account, ev.Usage.AccountName) })
+		}
 	case agent.AuthExpired:
 		h.mu.Lock()
 		h.relogin = h.relogin || h.working

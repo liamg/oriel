@@ -197,3 +197,43 @@ func TestUsageHistory(t *testing.T) {
 		t.Errorf("state usage = %+v", r.w.store.State().Usage)
 	}
 }
+
+// AI-14: a session records the account it ran on when it starts, and on a login change it sees: a later login on the
+// worker doesn't move its history to the new account, and a session started after it is the new account's.
+func TestSessionKeepsTheAccountItRanOn(t *testing.T) {
+	r := newRig(t)
+	r.w.usageSampled(core.ProviderUsage{Provider: "fake", Account: "u1/o-work", AccountName: "ada@work.example", Sampled: r.now,
+		Windows: []core.UsageWindow{{Name: "weekly", Used: .1}}})
+	first, fs := r.workSession("Round invoice lines")
+	r.eventually(first, "its account", func(se core.SessionState) bool { return len(se.Agent.Accounts) == 1 })
+	p, _ := r.session(first).Primary()
+	fs.Emit(agent.ToolCall{ID: "e1", Tool: "Edit", Input: json.RawMessage(fmt.Sprintf(`{"file_path":%q}`, filepath.Join(p.Dir, "round.go")))})
+	fs.Emit(agent.TurnEnd{Usage: agent.Usage{Input: 10, Output: 20}})
+	r.eventually(first, "the turn", func(se core.SessionState) bool { return se.Agent.Stats.ToolCalls == 1 })
+
+	// Signed in to another account on this worker: a reading of it, not from the session.
+	r.now = r.now.Add(2 * time.Hour)
+	r.w.usageSampled(core.ProviderUsage{Provider: "fake", Account: "u1/o-home", AccountName: "ada@home.example", Sampled: r.now,
+		Windows: []core.UsageWindow{{Name: "weekly", Used: .2}}})
+	if a := r.session(first).Agent.Accounts; len(a) != 1 || a[0].Account != "u1/o-work" || !a[0].At.Equal(r.now.Add(-2*time.Hour)) {
+		t.Errorf("the first session's accounts = %+v, want only the work account, from its start", a)
+	}
+	ss := r.w.statsSessions(first)
+	if len(ss) != 1 || len(ss[0].Accounts) != 1 || ss[0].Accounts[0].ID != "u1/o-work" || ss[0].Accounts[0].Name != "ada@work.example" {
+		t.Fatalf("stats session = %+v", ss)
+	}
+
+	// A login change the session's own agent reports is recorded from then on.
+	fs.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "fake", Account: "u1/o-home", AccountName: "ada@home.example",
+		Windows: []core.UsageWindow{{Name: "weekly", Used: .2}}}})
+	got := r.eventually(first, "the login change", func(se core.SessionState) bool { return len(se.Agent.Accounts) == 2 })
+	if a := got.Agent.Accounts[1]; a.Account != "u1/o-home" || !a.At.Equal(r.now) {
+		t.Errorf("after the login change: %+v", got.Agent.Accounts)
+	}
+	fs.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "fake", Account: "u1/o-home", Windows: []core.UsageWindow{{Name: "weekly", Used: .3}}}})
+	fs.Emit(agent.TurnStart{})
+	r.eventually(first, "the next turn", func(se core.SessionState) bool { return se.Agent.Working })
+	if n := len(r.session(first).Agent.Accounts); n != 2 {
+		t.Errorf("a reading of the same account recorded it again: %d", n)
+	}
+}

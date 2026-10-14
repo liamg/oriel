@@ -394,6 +394,9 @@ func (x *statsExt) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Tim
 			providerMark(c, u.Provider)
 			c.Text("n", cmpOr(u.Plan, providerName(u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 15, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
+			if u.Tier != "" {
+				widget.Chip(c, "tier", u.Tier, th.C(tUsageWeek), "agent/usage#accounts")
+			}
 			c.Text("acct", x.accountLabel(u.Account, u.AccountName), mono(10.5, typeset.SemiBold, th.C(theme.FgMuted)))
 			c.Text("m", x.providerLine(u), monoFont(10.5, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -798,17 +801,18 @@ func (x *statsExt) accountSwitch(c *ui.Ctx, cur core.ProviderUsage) {
 		return
 	}
 	slices.SortStableFunc(us, func(a, b core.ProviderUsage) int { return strings.Compare(a.Provider, b.Provider) })
-	var labels []string
+	var labels, tiers []string
 	at := 0
 	for i, u := range us {
 		labels = append(labels, strings.ToUpper(x.accountTitle(u)))
+		tiers = append(tiers, u.Tier)
 		if u.Same(cur) {
 			at = i
 		}
 	}
 	c.Row("accounts", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("k", "ACCOUNT", capText(c.Theme().C(theme.FgGhost)))
-		if widget.Segmented(c, "acct", labels, &at, widget.SegmentedOpts{Label: "Account", Help: "agent/usage#accounts"}) {
+		if widget.Segmented(c, "acct", labels, &at, widget.SegmentedOpts{Label: "Account", Badges: tiers, Help: "agent/usage#accounts"}) {
 			x.acct = accountKey(us[at])
 		}
 	})

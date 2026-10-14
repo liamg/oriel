@@ -187,14 +187,22 @@ flowchart TB
   dashed or solid line with a label: now, a reset, a compaction), bands (a hatched stretch: idle), a strip of ticks
   (turns) and a hover card of the point's values; `ChartResult` says the series and point under the pointer and a
   click; `Table` draws the same data as a table. Lua: `oriel.ui.chart`. The stats pages are built only on it.
+- dates (AI-14): `widget.DatePicker(c, key, &DateRange, DatePickerOpts)` picks a range of days on a month's calendar
+  (arrows move, ⏎ picks one end then the other, PageUp/PageDown a month, ‹ › page, a typed `2026-09-01..2026-09-30`
+  with ⏎, Esc cancels; key mode `datepicker`); `DatePopover` shows it under an anchor, and `DateSelect` is a button
+  showing the range that opens it. `ParseDateRange` reads the typed form. Theme tokens `datepicker.*`. Lua:
+  `oriel.ui.date_picker`. Stats' custom range is built on it.
+- segmented strips take `SegmentedOpts.Badges`, a small chip after each label: the Usage switcher's plan tiers.
 - stats: a provider that keeps its own log of a session implements `agent.Logged` (`Logs(cwd, session) []agent.Log`:
   Claude's transcript and its subagents'); the worker records the events of one that doesn't (Codex). The worker reads
   them into `worker/stats` and answers `stats.query` (`stats.Query{Group, From, To, Step, Offset, Filters, Split}` →
   `stats.Report`), `stats.session` (`worker.StatsSessionReq` → `stats.Detail`), `usage.history` and `usage.read`
   (`worker.Client.StatsQuery`, `SessionStats`, `UsageHistory`, `ReadUsage`); `stats.Merge` adds workers' answers up.
-  Commands: `stats.open`, `stats.session`, `stats.group`, `stats.range`, `stats.move`, `stats.drill`, `stats.back`,
-  `stats.copy`, `stats.split`, `usage.open`, `usage.refresh`, `:Stats`, `:Usage`. Plans are per account
+  Commands: `stats.open`, `stats.session`, `stats.group`, `stats.range`, `stats.custom`, `stats.move`, `stats.drill`,
+  `stats.back`, `stats.copy`, `stats.split`, `usage.open`, `usage.refresh`, `:Stats`, `:Usage`. Plans are per account
   (`core.ProviderUsage.Account`, `Same`, `Uses`; `stats.ByAccount` and the `account` filter); `usage.accounts` names them.
+  A provider's reading carries its plan's tier (`ProviderUsage.Tier`), and a session the accounts it ran on
+  (`core.AgentState.Accounts`, `RanOn`; `stats.Session.Accounts`).
 - jobs (SE-4): a worker answers `jobs.list`, `jobs.save`, `jobs.delete` and `jobs.run` (`worker.Job`,
   `worker.Schedule`; `Client.Jobs`, `SaveJob`, `DeleteJob`, `RunJob`) and `session.delete` (`Client.Delete`); a run's
   row is `worker.RunOf(session)`. Commands: `jobs.open`, `:Jobs`, `jobs.new`, `jobs.edit`, `jobs.duplicate`,

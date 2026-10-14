@@ -1,6 +1,8 @@
 package widget
 
 import (
+	"strings"
+
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/ui"
@@ -39,6 +41,8 @@ type SegmentedOpts struct {
 	// Short are shorter labels, one for each: with them the strip fills the width it's given and uses them when the
 	// full labels don't fit.
 	Short []string
+	// Badges are small chips after the labels, one for each ("" for none): a plan's tier.
+	Badges []string
 }
 
 const segPad = 10
@@ -68,11 +72,24 @@ func Segmented(c *ui.Ctx, key any, labels []string, active *int, o SegmentedOpts
 				if on {
 					fill, fg = col(c, tSegOnBg), col(c, tSegOnFg)
 				}
-				in := Clickable(c, i, ui.Style{Dir: ui.Row, W: seg, H: ui.Flex(1), Pad: ui.PadXY(segPad, 0), Main: ui.Center, Cross: ui.Center,
-					Fill: fill, Help: o.Help, Role: ui.RoleTab, Label: labels[i], Selected: on}, func(c *ui.Ctx) {
+				badge := ""
+				if i < len(o.Badges) {
+					badge = o.Badges[i]
+				}
+				name := labels[i]
+				if badge != "" {
+					name += ", " + badge
+				}
+				in := Clickable(c, i, ui.Style{Dir: ui.Row, W: seg, H: ui.Flex(1), Pad: ui.PadXY(segPad, 0), Gap: 6, Main: ui.Center, Cross: ui.Center,
+					Fill: fill, Help: o.Help, Role: ui.RoleTab, Label: name, Selected: on}, func(c *ui.Ctx) {
 					st := style
 					st.Color = fg
 					c.Text("l", l, st)
+					if badge != "" {
+						c.Row("badge", ui.Style{H: ui.Px(14), Pad: ui.PadXY(4, 0), Cross: ui.Center, Radius: 3, Stroke: alpha(fg, .45), Border: 1}, func(c *ui.Ctx) {
+							c.Text("t", strings.ToUpper(badge), monoText(8.5, typeset.SemiBold, fg, .06))
+						})
+					}
 				})
 				if in.Clicked && !on {
 					*active, changed = i, true

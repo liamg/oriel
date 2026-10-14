@@ -208,7 +208,7 @@ func TestDetectModelsUsage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.Plan != "ChatGPT Pro" || len(u.Windows) != 2 || u.Windows[0].Name != "5h" || u.Windows[0].Used != 0.12 ||
+	if u.Plan != "ChatGPT Pro" || u.Tier != "Pro" || len(u.Windows) != 2 || u.Windows[0].Name != "5h" || u.Windows[0].Used != 0.12 ||
 		u.Windows[1].Name != "weekly" || !u.Windows[1].Resets.Equal(time.Unix(1700500000, 0)) {
 		t.Errorf("usage = %+v", u)
 	}
@@ -221,7 +221,7 @@ func TestRateLimits(t *testing.T) {
 		"credits":{"hasCredits":true,"unlimited":false,"balance":"12.50"},"planType":"pro_lite"}`), &r)
 	now := time.Unix(50, 0)
 	u := r.usage(now)
-	want := core.ProviderUsage{Provider: "codex", Plan: "ChatGPT Pro Lite", Credits: "12.50", Sampled: now, Source: "Codex's account/rateLimits/read", Windows: []core.UsageWindow{
+	want := core.ProviderUsage{Provider: "codex", Plan: "ChatGPT Pro Lite", Tier: "Pro Lite", Credits: "12.50", Sampled: now, Source: "Codex's account/rateLimits/read", Windows: []core.UsageWindow{
 		{Name: "5h", Used: 0.5, Resets: time.Unix(100, 0), Length: 5 * time.Hour},
 		{Name: "weekly", Used: 0.05, Resets: time.Unix(200, 0), Length: 7 * 24 * time.Hour},
 	}}
@@ -238,7 +238,7 @@ func TestRateLimits(t *testing.T) {
 	// Without lengths, the first window is the 5-hour one.
 	var bare rateLimits
 	json.Unmarshal([]byte(`{"primary":{"usedPercent":1},"secondary":{"usedPercent":2},"credits":{"hasCredits":false,"unlimited":true}}`), &bare)
-	if b := bare.usage(now); b.Windows[0].Name != "5h" || b.Windows[1].Name != "weekly" || b.Credits != "unlimited" || b.Plan != "" {
+	if b := bare.usage(now); b.Windows[0].Name != "5h" || b.Windows[1].Name != "weekly" || b.Credits != "unlimited" || b.Plan != "" || b.Tier != "" {
 		t.Errorf("bare = %+v", b)
 	}
 	if n := windowName(new(int64(1440)), 0); n != "1d" {

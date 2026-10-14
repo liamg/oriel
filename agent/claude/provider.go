@@ -93,31 +93,66 @@ func versionLess(a, b string) bool {
 	return false
 }
 
-// login reads the sign-in from Claude's files, without asking the network: the credentials file (Linux), else the
-// account Claude records beside the trusted folders (macOS keeps the token in the Keychain), else an API key.
+// login reads the sign-in from Claude's files, without asking the network (subscription), else an API key.
 func login(env []string) (bool, string) {
-	var cred struct {
-		OAuth struct {
-			Token        string `json:"accessToken"`
-			Subscription string `json:"subscriptionType"`
-		} `json:"claudeAiOauth"`
-	}
-	if b, err := os.ReadFile(filepath.Join(transcript.ConfigDir(env), ".credentials.json")); err == nil &&
-		json.Unmarshal(b, &cred) == nil && cred.OAuth.Token != "" {
-		return true, plan(cred.OAuth.Subscription)
-	}
-	var state struct {
-		Account *struct {
-			OrgType string `json:"organizationType"`
-		} `json:"oauthAccount"`
-	}
-	if b, err := os.ReadFile(statePath(env)); err == nil && json.Unmarshal(b, &state) == nil && state.Account != nil {
-		return true, plan(strings.TrimPrefix(state.Account.OrgType, "claude_"))
+	if kind, _, ok := subscription(env); ok {
+		return true, plan(kind)
 	}
 	if os.Getenv("ANTHROPIC_API_KEY") != "" {
 		return true, "apiKey"
 	}
 	return false, ""
+}
+
+// subscription is the plan Claude's files record and whether they record a sign-in: the credentials file's
+// subscriptionType and rateLimitTier (Linux), else oauthAccount's organizationType and organizationRateLimitTier in
+// the state file (macOS keeps the token in the Keychain).
+func subscription(env []string) (kind, limit string, ok bool) {
+	var cred struct {
+		OAuth struct {
+			Token        string `json:"accessToken"`
+			Subscription string `json:"subscriptionType"`
+			Tier         string `json:"rateLimitTier"`
+		} `json:"claudeAiOauth"`
+	}
+	if b, err := os.ReadFile(filepath.Join(transcript.ConfigDir(env), ".credentials.json")); err == nil &&
+		json.Unmarshal(b, &cred) == nil && cred.OAuth.Token != "" {
+		return cred.OAuth.Subscription, cred.OAuth.Tier, true
+	}
+	var state struct {
+		Account *struct {
+			OrgType string `json:"organizationType"`
+			Tier    string `json:"organizationRateLimitTier"`
+		} `json:"oauthAccount"`
+	}
+	if b, err := os.ReadFile(statePath(env)); err == nil && json.Unmarshal(b, &state) == nil && state.Account != nil {
+		return strings.TrimPrefix(state.Account.OrgType, "claude_"), state.Account.Tier, true
+	}
+	return "", "", false
+}
+
+// planOf is the plan Claude is signed in to ("Claude Max") and its tier, for its chip ("Max 20×"); "" for what
+// isn't known.
+func planOf(env []string) (name, tier string) {
+	kind, limit, _ := subscription(env)
+	return plan(kind), tierOf(kind, limit)
+}
+
+// tiers are the subscriptions Claude Code names, as a chip reads them.
+var tiers = map[string]string{"max": "Max", "pro": "Pro", "team": "Team", "enterprise": "Enterprise"}
+
+// maxTier is a Max plan's rate limit tier: default_claude_max_20x is twenty times Pro's.
+var maxTier = regexp.MustCompile(`^default_claude_max_(\d+)x$`)
+
+func tierOf(kind, limit string) string {
+	name, ok := tiers[kind]
+	if !ok {
+		return ""
+	}
+	if m := maxTier.FindStringSubmatch(limit); kind == "max" && m != nil {
+		return name + " " + m[1] + "×"
+	}
+	return name
 }
 
 // account is who Claude is signed in as, from its state file's oauthAccount: an identity that tells a company
@@ -189,9 +224,7 @@ func (Provider) Usage(context.Context) (core.ProviderUsage, error) {
 	defer lastMu.Unlock()
 	u := lastUsage
 	u.Provider = "claude"
-	if _, plan := login(nil); plan != "" && plan != "apiKey" {
-		u.Plan = plan
-	}
+	u.Plan, u.Tier = planOf(nil)
 	u.Account, u.AccountName = account(nil)
 	return u, nil
 }

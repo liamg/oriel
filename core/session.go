@@ -57,6 +57,27 @@ type AgentState struct {
 	Pack        string    `json:"pack,omitempty"`    // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
 	Queue       []string  `json:"queue,omitempty"`   // messages waiting for the turn to end
 	Stats       Stats     `json:"stats,omitzero"`
+	// Accounts are the provider's accounts it ran on, oldest first: recorded when it starts and on a login change.
+	Accounts []AccountAt `json:"accounts,omitempty"`
+}
+
+// AccountAt is a provider's account (ProviderUsage.Account, and AccountName) a session ran on from At.
+type AccountAt struct {
+	At      time.Time `json:"at"`
+	Account string    `json:"account"`
+	Name    string    `json:"name,omitempty"`
+}
+
+// RanOn adds the account a session runs on from at, unless it's the one it was on already. An unknown account adds
+// nothing.
+func (a *AgentState) RanOn(at time.Time, account, name string) {
+	if account == "" {
+		return
+	}
+	if n := len(a.Accounts); n > 0 && a.Accounts[n-1].Account == account {
+		return
+	}
+	a.Accounts = append(slices.Clone(a.Accounts), AccountAt{At: at, Account: account, Name: name})
 }
 
 // Stats are what a session's agent has used so far.

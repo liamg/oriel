@@ -17,12 +17,34 @@ type Session struct {
 	Model    string
 	Effort   string
 	Worker   string
-	// Account is the provider's account the session ran on (its plan), and AccountName how it reads.
-	Account     string
-	AccountName string
-	Live        bool // its agent is running
-	Repos       []Repo
-	Scans       []*Scan
+	// Accounts are the provider's accounts the session ran on (their plans), oldest first: each from when it was
+	// recorded until the next.
+	Accounts []Account
+	Live     bool // its agent is running
+	Repos    []Repo
+	Scans    []*Scan
+}
+
+// Account is a provider's account a session ran on from At: its identity, and how it reads.
+type Account struct {
+	At   time.Time
+	ID   string
+	Name string
+}
+
+// accountAt is the account the session ran on in hour (unix hours): the latest recorded by its end, else the first.
+func (s Session) accountAt(hour int64) Account {
+	if len(s.Accounts) == 0 {
+		return Account{}
+	}
+	a := s.Accounts[0]
+	end := (hour + 1) * 3600
+	for _, x := range s.Accounts[1:] {
+		if x.At.Unix() < end {
+			a = x
+		}
+	}
+	return a
 }
 
 // Repo is one of a session's projects: its name, and the directory it's checked out in for the session.
@@ -106,16 +128,18 @@ type Query struct {
 
 // Totals are a range's headline numbers.
 type Totals struct {
-	Sessions   int     `json:"sessions"`
-	MultiRepo  int     `json:"multiRepo,omitempty"` // sessions with more than one repo
-	Pairs      int     `json:"pairs,omitempty"`     // repo-sessions: each session once for each of its repos
-	Requests   int64   `json:"requests"`
-	Turns      int64   `json:"turns"`
-	ToolCalls  int64   `json:"toolCalls"`
-	ToolErrors int64   `json:"toolErrors"`
-	ActiveS    int64   `json:"activeS"`
-	Tokens     Tokens  `json:"tokens"`
-	Cost       float64 `json:"cost"`
+	Sessions   int   `json:"sessions"`
+	MultiRepo  int   `json:"multiRepo,omitempty"` // sessions with more than one repo
+	Pairs      int   `json:"pairs,omitempty"`     // repo-sessions: each session once for each of its repos
+	Requests   int64 `json:"requests"`
+	Turns      int64 `json:"turns"`
+	ToolCalls  int64 `json:"toolCalls"`
+	ToolErrors int64 `json:"toolErrors"`
+	ActiveS    int64 `json:"activeS"`
+	// SpanS is the wall-clock of the sessions: on each day each one worked, its first record to its last, added up.
+	SpanS  int64   `json:"spanS,omitempty"`
+	Tokens Tokens  `json:"tokens"`
+	Cost   float64 `json:"cost"`
 }
 
 // Group is one row of a grouping, with its series.
@@ -220,10 +244,9 @@ func (q Query) has(key string, vals ...string) bool {
 }
 
 // weight is how much of session s a query counts: 0 when a filter leaves it out; with a repo filter, the share of
-// the repos it keeps (or all of it, unsplit).
+// the repos it keeps (or all of it, unsplit). The account filter is the hour's (keeps).
 func (q Query) weight(s Session, shares []Share) float64 {
-	if !q.has("session", s.ID) || !q.has("kind", s.Kind) || !q.has("provider", s.Provider) || !q.has("worker", s.Worker) ||
-		!q.has("account", s.Account) {
+	if !q.has("session", s.ID) || !q.has("kind", s.Kind) || !q.has("provider", s.Provider) || !q.has("worker", s.Worker) {
 		return 0
 	}
 	if len(q.Filters["repo"]) == 0 {
@@ -300,8 +323,9 @@ func Run(q Query, sessions []Session) Report {
 		case ByProvider:
 			parts = func(string, int64) []part { return []part{{key: s.Provider, label: cmpOr(s.Provider, "none"), w: w}} }
 		case ByAccount:
-			parts = func(string, int64) []part {
-				return []part{{key: s.Account, label: cmpOr(s.AccountName, s.Account, "unknown account"), w: w}}
+			parts = func(_ string, hour int64) []part {
+				a := s.accountAt(hour)
+				return []part{{key: a.ID, label: cmpOr(a.Name, a.ID, "unknown account"), w: w}}
 			}
 		case ByModel:
 			parts = func(model string, _ int64) []part {
@@ -317,20 +341,26 @@ func Run(q Query, sessions []Session) Report {
 			}
 		}
 		counted, prev := false, false
+		span, pspan := spans{}, spans{}
 		for _, sc := range s.Scans {
 			for _, sl := range sc.Slots {
-				if sl.Hour >= pfrom && sl.Hour < pto && (sl.Model == "" || q.has("model", sl.Model)) {
+				if !q.keeps(s, sl.Hour, sl.Model) {
+					continue
+				}
+				if sl.Hour >= pfrom && sl.Hour < pto {
 					if sl.Requests > 0 {
 						prev = true
 					}
 					add(&r.Prev, sl, w)
+					pspan.add(q, sl)
 				}
-				if sl.Hour < from || sl.Hour >= to || sl.Model != "" && !q.has("model", sl.Model) {
+				if sl.Hour < from || sl.Hour >= to {
 					continue
 				}
 				if sl.Requests > 0 {
 					counted = true
 				}
+				span.add(q, sl)
 				end := time.Unix((sl.Hour+1)*3600, 0)
 				if sc.Last.Before(end) {
 					end = sc.Last
@@ -386,28 +416,39 @@ func Run(q Query, sessions []Session) Report {
 		}
 		if prev {
 			r.Prev.Sessions++
+			r.Prev.SpanS += round(float64(pspan.secs()) * w)
 		}
 		if !counted {
 			continue
 		}
 		r.Totals.Sessions++
+		r.Totals.SpanS += round(float64(span.secs()) * w)
 		if len(s.Repos) > 1 {
 			r.Totals.MultiRepo++
 		}
 		r.Totals.Pairs += max(1, len(s.Repos))
 		for _, sc := range s.Scans {
-			for name, t := range sc.Tools {
-				row := tools[name]
-				if row == nil {
-					row = &ToolRow{Name: name}
-					tools[name] = row
+			used := map[string]bool{}
+			for _, ts := range sc.ToolSlots {
+				if ts.Hour < from || ts.Hour >= to || !q.keeps(s, ts.Hour, ts.Model) {
+					continue
 				}
-				row.Calls += round(float64(t.Calls) * w)
-				row.Errors += round(float64(t.Errors) * w)
-				for i, b := range t.Buckets {
+				row := tools[ts.Name]
+				if row == nil {
+					row = &ToolRow{Name: ts.Name}
+					tools[ts.Name] = row
+				}
+				row.Calls += round(float64(ts.Calls) * w)
+				row.Errors += round(float64(ts.Errors) * w)
+				for i, b := range ts.Buckets {
 					row.Buckets[i] += round(float64(b) * w)
 				}
-				samples[name] = append(samples[name], t.Samples...)
+				used[ts.Name] = true
+			}
+			for name := range used {
+				if t := sc.Tools[name]; t != nil {
+					samples[name] = append(samples[name], t.Samples...)
+				}
 			}
 		}
 	}
@@ -434,11 +475,44 @@ func Run(q Query, sessions []Session) Report {
 	}
 	SortEfforts(r.Efforts)
 	for name, t := range tools {
+		if t.Calls == 0 {
+			continue
+		}
 		t.P50 = median(samples[name])
 		r.Tools = append(r.Tools, *t)
 	}
 	slices.SortFunc(r.Tools, func(a, b ToolRow) int { return cmp.Or(cmp.Compare(b.Calls, a.Calls), strings.Compare(a.Name, b.Name)) })
 	return r
+}
+
+// keeps says whether q counts session s's hour on model ("" for what isn't a model's: turns, active time): the
+// model filter, and the account the session ran on then.
+func (q Query) keeps(s Session, hour int64, model string) bool {
+	return (model == "" || q.has("model", model)) && q.has("account", s.accountAt(hour).ID)
+}
+
+// spans are a session's first and last record on each day of the query's zone, over the hours added to them.
+type spans map[int64][2]int64
+
+func (p spans) add(q Query, sl *Slot) {
+	if sl.Model != "" || sl.Last == 0 {
+		return
+	}
+	day := Query{Offset: q.Offset}.index(sl.Hour * 3600)
+	v, ok := p[day]
+	if !ok || sl.First < v[0] {
+		v[0] = sl.First
+	}
+	v[1] = max(v[1], sl.Last)
+	p[day] = v
+}
+
+func (p spans) secs() int64 {
+	var n int64
+	for _, v := range p {
+		n += v[1] - v[0]
+	}
+	return n
 }
 
 func add(t *Totals, sl *Slot, w float64) {
@@ -504,7 +578,7 @@ type Detail struct {
 	Model    string `json:"model,omitempty"`
 	Effort   string `json:"effort,omitempty"`
 	Worker   string `json:"worker,omitempty"`
-	Account  string `json:"account,omitempty"`
+	Account  string `json:"account,omitempty"` // the latest it ran on
 	// AccountName is how the account reads: an email or an organisation.
 	AccountName string    `json:"accountName,omitempty"`
 	Live        bool      `json:"live,omitempty"`
@@ -529,8 +603,12 @@ type Detail struct {
 // otherwise each is charged the whole session.
 func Detailed(s Session, split bool, offset int) Detail {
 	sum := Run(Query{Group: ByModel, From: earliest(s), To: latest(s).Add(time.Hour), Offset: offset}, []Session{s})
+	var acct Account
+	if n := len(s.Accounts); n > 0 {
+		acct = s.Accounts[n-1]
+	}
 	d := Detail{Session: s.ID, Name: s.Name, Provider: s.Provider, Model: s.Model, Effort: s.Effort, Worker: s.Worker, Live: s.Live,
-		Account: s.Account, AccountName: s.AccountName,
+		Account: acct.ID, AccountName: acct.Name,
 		Totals: sum.Totals, Models: sum.Models, Tools: sum.Tools, Hours: sum.Hours, Efforts: sum.Efforts, Costs: sum.Costs}
 	buckets := map[int64]*Bucket{}
 	for _, sc := range s.Scans {

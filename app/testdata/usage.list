@@ -159,17 +159,21 @@ clip 224,38 1376x936 r 0
   rect 224,80 1376x1 fill #24221d
   clip 224,81 1376x893 r 0
     text "ACCOUNT" @242,110.420006 #4f4a40 JetBrains Mono 9.5
-    clip 303.31,95 443.0999x24 r 5
-      rect 303.31,95 179.84998x24 fill #1f1c0f
+    clip 303.31,95 498.5136x24 r 5
+      rect 303.31,95 235.26373x24 fill #1f1c0f
       text "WORK · CLAUDE MAX · MBP" @313.31,110.420006 #ffd23f JetBrains Mono 9.5
-      text "ADA@EXAMPLE.COM · CHATGPT PRO · MBP" @493.15997,110.420006 #7c7566 JetBrains Mono 9.5
+      rect 479.15997,100 49.413757x14 radius 3 stroke 1 #ffd23f73
+      text "MAX 20×" @483.15997,110.06 #ffd23f JetBrains Mono 8.5
+      text "ADA@EXAMPLE.COM · CHATGPT PRO · MBP" @548.5737,110.420006 #7c7566 JetBrains Mono 9.5
     pop
-    rect 303.31,95 443.0999x24 radius 5 stroke 1 #332f27
+    rect 303.31,95 498.5136x24 radius 5 stroke 1 #332f27
     rect 242,133.57 18x18 fill #ff9b45d9 radius 4
     text "C" @248.29688,145.63 #060606 JetBrains Mono 8.5
     text "Claude Max" @270,147.76 #ece6d8 Space Grotesk 15
-    text "Work" @364.01562,146.35 #b3ab99 JetBrains Mono 10.5
-    text "claude-opus-4-1 · claude-sonnet-4-5 · 7 sessions on mbp" @400.39062,146.35 #7c7566 JetBrains Mono 10.5
+    rect 364.01562,134.3 59.98999x16.539993 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
+    text "MAX 20×" @371.01562,145.99 #ff9b45 JetBrains Mono 9.5
+    text "Work" @434.0056,146.35 #b3ab99 JetBrains Mono 10.5
+    text "claude-opus-4-1 · claude-sonnet-4-5 · 7 sessions on mbp" @470.3806,146.35 #7c7566 JetBrains Mono 10.5
     text "windows from /usage, through the Oriel mod · just now" @1264,146.17 #4f4a40 JetBrains Mono 10
     rect 242,162.14 438.66663x173.16798 fill #0c0c0b radius 8 stroke 1 #24221d
     text "5-HOUR WINDOW" @256,182.49 #b3ab99 JetBrains Mono 9.5

@@ -227,6 +227,9 @@ func (a *APIs) bind(vm *script.VM) {
 			"column": func(c *script.Args) ([]any, error) {
 				return []any{x.Column(c.Any(0))}, nil
 			},
+			"date_picker": func(c *script.Args) ([]any, error) {
+				return []any{x.DatePicker(c.Table(0))}, nil
+			},
 			"indicator": func(c *script.Args) ([]any, error) {
 				return []any{x.Indicator(c.Table(0))}, nil
 			},

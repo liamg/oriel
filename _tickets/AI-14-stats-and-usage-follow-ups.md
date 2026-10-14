@@ -2,7 +2,7 @@
 id: AI-14
 title: "Stats and Usage follow-ups: custom ranges, exact per-range tools, plan tiers, active span, accounts at the time"
 phase: P5
-status: todo
+status: review
 area: Sessions and AI
 module: worker, app, ui
 depends_on: [AI-12]

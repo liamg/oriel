@@ -86,7 +86,8 @@ a turn the login stopped is told to carry on, held comments go, and an agent tha
 ### Stats and plan readings (AI-12)
 
 - Prices are `agent/price`: one table (Claude's families, and OpenAI's `gpt-5`, `gpt-5-mini` and `gpt-5-nano` at their
-  list prices, cached input at a tenth), shared by the transcript reader and the stats.
+  list prices, cached input at a tenth), shared by the transcript reader and the stats. The OpenAI rows are marked
+  unverified: they haven't been checked against OpenAI's pricing page.
 - The worker's stats (`worker/stats`, crit's `internal/stats` per session) read each session's logs incrementally, from
   the offset the last read stopped at, kept in `<Home>/stats.json`: Claude's transcript and subagents' logs (the
   provider's `agent.Logged`), or for a provider without a log (Codex) the worker's record of its events,
@@ -95,12 +96,27 @@ a turn the login stopped is told to carry on, held comments go, and an agent tha
   the hour and five minutes it's in; per tool call: name, error, duration, and the files it names, which decide a
   multi-repo session's split (`stats.Session.Shares`). A compaction is the main loop's context falling to under half
   from over 40k.
+- Tool calls are kept by the hour they were made, per tool and model (`stats.ToolSlot`: calls, errors, timing
+  buckets), the result's error and timing going to the call's hour, so a range's tool rows count only its calls
+  (AI-14); a tool's p50 is still from its sessions' samples. Each hour also keeps its first and last record, for the
+  range's wall-clock (`Totals.SpanS`: per session, per day of the query's zone, first to last, added up). A stats
+  file from before (`cacheVersion` 1) is dropped and the logs read again.
 - Plan usage is per **account**: `ProviderUsage.Account` is the login (Claude: `oauthAccount`'s account and
   organisation in `.claude.json`, so a company subscription and a personal one differ; Codex: `account/read`'s email),
   `AccountName` its email or organisation, and the worker stamps `Workers` with itself. `UsageSampled` keeps one entry per
   provider and account, uniting the workers that report it: two workers on one account are one plan, two accounts never
-  merge. A session's account is its provider's on its worker (`stats.Session.Account`), for Stats' account group and
-  filter and the Usage page's "what burned the window".
+  merge. A session's account is the one it ran on at the time (AI-14): `AgentState.Accounts` records the account when
+  its agent starts (the worker's latest reading for the provider) and whenever a reading from its own agent names
+  another (a login change), and `stats.Session.Accounts` charges each hour to the account in effect by its end. A
+  session that never recorded one takes its provider's account on the worker now. This drives Stats' account group
+  and filter and the Usage page's "what burned the window".
+- The plan's tier (`ProviderUsage.Tier`, its chip: "Max 20×", "Team", "Pro"; "" when not known). Claude: the
+  credentials file's `claudeAiOauth.subscriptionType` (`max`, `pro`, `team`, `enterprise`) and `rateLimitTier`
+  (`default_claude_max_20x`, `default_claude_max_5x`), else `.claude.json`'s `oauthAccount.organizationType`
+  (`claude_max`…) and `organizationRateLimitTier`; a Max plan's multiplier comes from the rate limit tier, and a
+  subscription Claude Code doesn't name has no tier. The key names are checked against a real Claude Code 2.x config
+  (`agent/claude/testdata/account`, invented values) and the values against the ones Claude Code's own bundle
+  compares with. Codex: `planType` (`pro_lite` is "Pro Lite").
 - Every plan reading (`UsageSampled`, from a provider's `UsageUpdate` or `usage.read`, which asks each provider's
   `Usage`) is kept in `<Home>/usage.jsonl` for a week (`usage.history`). `UsageWindow.Length` is a window's length and
   `ProviderUsage.Source` says where its windows come from; both providers set them.

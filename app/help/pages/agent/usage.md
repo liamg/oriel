@@ -17,6 +17,9 @@ one. The switcher at the top picks the account; it starts on the one the session
 machine's. Name accounts in `usage.accounts` ("Work", "Personal"); unnamed, an account shows its email or
 organisation.
 
+Each account's plan tier (MAX 20×, TEAM, PRO) is a chip beside its plan and on the switcher, from the provider's own
+account data. When the provider doesn't say, there's no chip.
+
 ## Indicators {#indicators}
 
 The title bar's meters are the plan of the account the session in front runs on (this machine's with no session).

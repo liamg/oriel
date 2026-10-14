@@ -320,7 +320,7 @@ func (r rateLimits) merge(u rateLimits) rateLimits {
 }
 
 func (r rateLimits) usage(now time.Time) core.ProviderUsage {
-	u := core.ProviderUsage{Provider: "codex", Plan: planName(r.PlanType), Sampled: now, Source: "Codex's account/rateLimits/read"}
+	u := core.ProviderUsage{Provider: "codex", Plan: planName(r.PlanType), Tier: tierName(r.PlanType), Sampled: now, Source: "Codex's account/rateLimits/read"}
 	for i, w := range []*rateLimit{r.Primary, r.Secondary} {
 		if w == nil {
 			continue
@@ -367,14 +367,19 @@ func windowName(mins *int64, i int) string {
 }
 
 func planName(p string) string {
-	if p == "" {
-		return ""
+	if t := tierName(p); t != "" {
+		return "ChatGPT " + t
 	}
+	return ""
+}
+
+// tierName is a planType as its chip reads: pro_lite is "Pro Lite".
+func tierName(p string) string {
 	words := strings.FieldsFunc(p, func(r rune) bool { return r == '_' })
 	for i, w := range words {
 		words[i] = strings.ToUpper(w[:1]) + w[1:]
 	}
-	return "ChatGPT " + strings.Join(words, " ")
+	return strings.Join(words, " ")
 }
 
 // tail keeps the last few KB a process wrote, for its error.

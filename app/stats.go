@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/worker"
 	"github.com/liamg/oriel/worker/stats"
 )
@@ -81,11 +82,12 @@ type statsExt struct {
 	now func() time.Time
 	loc *time.Location
 
-	open  bool       // the Stats page
-	q     statsQuery // what it shows
-	back  []statsQuery
-	sel   int // the table's selected row
-	hover int // the row or series under the pointer last frame, -1
+	open    bool       // the Stats page
+	picking bool       // its custom range's date picker is open
+	q       statsQuery // what it shows
+	back    []statsQuery
+	sel     int // the table's selected row
+	hover   int // the row or series under the pointer last frame, -1
 	// hovering is the one under it this frame.
 	hovering int
 
@@ -140,6 +142,20 @@ func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
 			x.q.rng = min(max(x.q.rng+a.Int("step"), 0), len(statsRanges)-2)
 			return nil
 		}},
+		{ID: "stats.custom", Title: "Set the Stats page's custom range {range} (2026-09-01..2026-09-30), or pick it in the date picker",
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				if a.String("range") == "" {
+					x.open, x.usageOpen, x.picking = true, false, true
+					return nil
+				}
+				r, err := widget.ParseDateRange(a.String("range"), x.loc)
+				if err != nil {
+					return err
+				}
+				x.open, x.usageOpen = true, false
+				x.custom(r)
+				return nil
+			}},
 		{ID: "stats.move", Title: "Move the Stats page's selection {by} rows", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.sel = max(x.sel+a.Int("by"), 0)
 			return nil
@@ -179,6 +195,7 @@ func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
 			Desc: "Group by " + g.key}))
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: StatsKeyMode, Keys: "g", Desc: "+group by"}))
+	x.add(h.Keymap(registry.Keymap{Mode: StatsKeyMode, Keys: "c", Command: "stats.custom", Desc: "Custom range"}))
 	for _, k := range []registry.Keymap{
 		{Keys: "[", Command: "stats.range", Args: registry.Args{"step": -1}, Desc: "Shorter range"},
 		{Keys: "]", Command: "stats.range", Args: registry.Args{"step": 1}, Desc: "Longer range"},
@@ -252,10 +269,15 @@ func (x *statsExt) openPage(a registry.Args) error {
 	q := statsQuery{rng: x.q.rng, group: cmpOr(a.String("group"), stats.ByRepo), filters: map[string][]string{}}
 	if r := strings.ToUpper(a.String("range")); r != "" {
 		i := slices.IndexFunc(statsRanges, func(s statsRange) bool { return s.label == r })
-		if i < 0 {
-			return fmt.Errorf("a range is 7d, 30d or 90d, not %q", a.String("range"))
+		days, err := widget.ParseDateRange(r, x.loc)
+		switch {
+		case i >= 0:
+			q.rng = i
+		case err == nil:
+			q.rng, q.from, q.to = len(statsRanges)-1, days.From, days.To.AddDate(0, 0, 1)
+		default:
+			return fmt.Errorf("a range is 7d, 30d, 90d or 2026-09-01..2026-09-30, not %q", a.String("range"))
 		}
-		q.rng = i
 	}
 	if !slices.ContainsFunc(statsGroups, func(g statsGroup) bool { return g.key == q.group }) {
 		return fmt.Errorf("no grouping %q: repo, session, kind, model, provider, account or day", q.group)
@@ -277,6 +299,11 @@ func (x *statsExt) openPage(a registry.Args) error {
 	x.q, x.back, x.sel, x.hover = q, nil, 0, -1
 	x.open, x.usageOpen = true, false
 	return nil
+}
+
+// custom makes the page's range r's days.
+func (x *statsExt) custom(r widget.DateRange) {
+	x.q.rng, x.q.from, x.q.to, x.sel = len(statsRanges)-1, r.From, r.To.AddDate(0, 0, 1), 0
 }
 
 func (x *statsExt) openUsage() error {

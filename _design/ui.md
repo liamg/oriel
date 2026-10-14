@@ -656,12 +656,17 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   turns; cost per repo with **count whole session in each**; models; tools (calls, errors, a strip of timings
   `.1s 1s 10s 1m 1m+`, p50); hours of the day; effort. The header names its account (a session runs on one). A long session's steps widen to keep 150 at most.
 - **Stats** (`:Stats`, `⌘⇧S`, `stats.open {group, range, repo, worker, provider, session, kind, model}`) is a page over
-  the main area beside the sidebar (`widget.Page` with `Over`), key mode `stats`: 7/30/90 days or custom; group by
+  the main area beside the sidebar (`widget.Page` with `Over`), key mode `stats`: 7/30/90 days or custom (AI-14:
+  CUSTOM, `c` or `stats.custom` opens a `widget.DatePicker` under the range, which opens on the range shown; once
+  custom, a ▾ beside it opens it again; `:Stats 2026-09-01..2026-09-30` and `stats.custom {range}` set one); group by
   repo (default), session, kind, model, provider, account or day (`g` then `r s k m p a d`); filter chips (repo, worker,
   provider, account with menus, all accounts by default since cost adds up; session, kind, model through **+ filter**; `✕` takes one off); the split toggle; tiles
   against the period before; cost per group per day stacked (the top 6, the rest as other); the group table with
   share bars, last active and a 30-day sparkline (grouped by session: its repos and days, chart and table side by
-  side, "N more", "n of m span several repos"); tokens by kind, models, tools by error rate (≥ 100 calls), hours.
+  side, "N more", "n of m span several repos"); tokens by kind, models, tools by error rate (≥ 100 calls; only the
+  calls made in the range, AI-14), hours. The Active tile reads "of Nh": the wall-clock of the range's sessions, on
+  each day a session worked its first record to its last, added up (a session's nights aren't in it, so it never
+  passes 24h per session-day).
   Hovering a row or a bar picks its series out; `j`/`k`, `⏎` or a click drills in (the row's filter chip, regrouped:
   repo → session → model; a day becomes the range), `⌫` backs out, `[`/`]` step the range, **Copy as CSV**. The
   header says when it was scanned and names an offline worker whose last answer it shows.
@@ -672,7 +677,9 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   are named in `usage.accounts`, else shown by email or organisation.
 - **Usage** (`:Usage`, `⌘⇧U`, `usage.open`, key mode `usage`, `r` or **Refresh** runs `usage.refresh`): an
   **account switcher** at the top ("Work · Claude Max · mbp-work", "ada@example.com · ChatGPT Pro · mbp"; no "all"),
-  starting on the session in front's account, else the local worker's; then that account's windows, each as a card (share used, when it opened, the reset, a meter hatched on to where the burn takes it, the burn
+  each with its plan's tier as a badge, starting on the session in front's account, else the local worker's; the
+  account's header names its plan with the tier as a chip after it ("Claude Max MAX 20×"; AI-14,
+  `ProviderUsage.Tier`), and an account whose tier isn't known shows none; then that account's windows, each as a card (share used, when it opened, the reset, a meter hatched on to where the burn takes it, the burn
   over the last 30 minutes for a 5-hour window or 24 hours for a weekly one, and the verdict: "≈ 71% at the reset ·
   won't run out", tight past 90%, or "at this rate the weekly window runs out Thu 14:38 · 18h 21m before the reset" in
   red); the account's week hour by hour (the 5-hour window's peak per window as bars, the weekly ones as lines dashed on at
@@ -685,8 +692,8 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   local worker's with no session), with a hover card of every account's windows, resets, burn and
   a red line for one that runs out; the session stats cost; the start view's links (Stats with this week's cost,
   Usage); the omnibox's **Pages** (every global sidebar entry, with its figure and key).
-- Not yet: a date picker for CUSTOM (it keeps the range showing; drilling into a day sets one), the plan's tier chip
-  (MAX 20×), and range-exact tool rows on the Stats page (they're the sessions' with requests in the range).
+- A session's history stays with the account it ran on at the time (AI-14): a later login on its worker moves only
+  what comes after, in Stats' account group and filter and in Usage's "what burned the window".
 
 
 ## 44 · Jobs

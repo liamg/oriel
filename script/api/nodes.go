@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/liamg/oriel/core"
@@ -94,6 +95,9 @@ func (UI) Toggle(spec script.Table) script.Table { return node("toggle", spec) }
 
 //oriel:api doc="A menu of choices: { value, options = { … }, on_change = fn(value), id, label }." returns=table
 func (UI) Select(spec script.Table) script.Table { return node("select", spec) }
+
+//oriel:api doc="A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30." returns=table
+func (UI) DatePicker(spec script.Table) script.Table { return node("date_picker", spec) }
 
 //oriel:api doc="A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance." optional=initial returns=table
 func (u UI) State(key string, initial any) any { return u.a.VM.State(key, initial) }
@@ -209,6 +213,16 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			}
 		case "chart":
 			chart(c, n, a)
+		case "date_picker":
+			key := cmpOr(str(n, "id"), str(n, "label"), "date_picker")
+			var r widget.DateRange
+			if v, err := widget.ParseDateRange(str(n, "from")+".."+str(n, "to"), time.Local); err == nil {
+				r = v
+			}
+			if v, ok := widget.DateSelect(c, key, r, widget.DateSelectOpts{Label: cmpOr(str(n, "label"), key),
+				Placeholder: cmpOr(str(n, "placeholder"), "pick dates"), Help: "plugins/lua#ui"}); ok {
+				a.callback(n, "on_change", v.From.Format(time.DateOnly), v.To.Format(time.DateOnly))
+			}
 		case "list":
 			row, _ := n["row"].(*script.Fn)
 			items, _ := n["items"].([]any)
