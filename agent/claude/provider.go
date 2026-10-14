@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/liamg/oriel/agent"
@@ -28,6 +27,7 @@ import (
 type Provider struct {
 	Bin      string // claude; "" is claude on PATH
 	OrielBin string // the binary the mod runs as `<OrielBin> hook <op>`; "" is this executable
+	ProbeDir string // a folder of Oriel's that the /usage probe runs claude in; "" is one in the temp dir
 }
 
 var _ agent.Provider = Provider{}
@@ -210,27 +210,17 @@ func (Provider) Models(context.Context) ([]agent.Model, error) {
 	}, nil
 }
 
-var (
-	lastMu    sync.Mutex
-	lastUsage core.ProviderUsage
-)
-
-// remember keeps the plan's windows a session last reported, for Usage.
-func remember(u core.ProviderUsage) {
-	lastMu.Lock()
-	defer lastMu.Unlock()
-	lastUsage = u
-}
-
-// Usage is the plan's windows as a session's mod last reported them ($.session.usage()); nothing until one has.
-func (Provider) Usage(context.Context) (core.ProviderUsage, error) {
-	lastMu.Lock()
-	defer lastMu.Unlock()
-	u := lastUsage
+// Usage reads the plan's windows with the /usage probe, and answers with the newest reading: the probe's, or a
+// session's mod's ($.session.usage()) if that's newer.
+func (p Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
+	err := p.readUsage(ctx)
+	usage.mu.Lock()
+	u := usage.last
+	usage.mu.Unlock()
 	u.Provider = "claude"
 	u.Plan, u.Tier = planOf(nil)
 	u.Account, u.AccountName = account(nil)
-	return u, nil
+	return u, err
 }
 
 // Logs are a session's log and its subagents' logs, where the host keeps them (a sandbox writes through a mount).

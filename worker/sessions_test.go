@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,45 +21,21 @@ func branchOf(t *testing.T, dir string) string {
 	return b
 }
 
-// AI-1 done when: crit's workspace layout is read in place.
-func TestCritWorkspacesAreReadInPlace(t *testing.T) {
+// Oriel lists its own sessions: a crit workspace's log is dropped on restore.
+func TestCritSessionsAreDroppedOnRestore(t *testing.T) {
 	r := newRig(t)
-	crit := t.TempDir()
-	root := filepath.Join(crit, "work", "p5")
-	wt := filepath.Join(root, "repos", "pricing")
-	ctx := context.Background()
-	if err := (gitx.Repo{Dir: r.repo.Dir}).AddWorktree(ctx, wt, "p5", "main"); err != nil {
-		t.Fatal(err)
-	}
-	m := map[string]any{"name": "p5", "createdAt": "2026-10-14T07:26:37Z", "kind": "work",
-		"projects": []map[string]any{{"name": "pricing", "repo": r.repo.Dir, "dir": "repos/pricing", "branch": "p5", "primary": true}}}
-	b, _ := json.Marshal(m)
-	if err := os.WriteFile(filepath.Join(root, CritManifestFile), b, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	r.w.opts.CritHome = crit
-	r.w.readCrit()
-	se := r.session("crit-p5")
-	if se.Source != "crit" || se.Kind != core.KindWork || se.Dir != root || se.Branch != "p5" {
-		t.Fatalf("session = %+v", se)
-	}
-	if len(se.Projects) != 1 || se.Projects[0].Dir != wt || se.Projects[0].Repo != r.repo.Dir || !se.Projects[0].Primary {
-		t.Fatalf("projects = %+v", se.Projects)
-	}
-	// In place: nothing was copied or written into crit's workspace.
-	if _, err := os.Stat(filepath.Join(root, ManifestFile)); err == nil {
-		t.Error("Oriel wrote its own manifest into crit's workspace")
-	}
-	// Oriel's additions survive a restart, with the layout still crit's.
-	if _, err := r.w.Comment(ctx, CommentReq{Session: "crit-p5", Body: "hello from oriel"}); err != nil {
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale usage prices", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	if err := r.w.emit(core.SessionSynced{Session: core.SessionState{ID: "crit-p5", Name: "p5", Kind: core.KindWork, Source: "crit"}}); err != nil {
 		t.Fatal(err)
 	}
 	r.restart()
-	r.w.opts.CritHome = crit
-	r.w.readCrit()
-	if se := r.session("crit-p5"); len(se.Threads) != 1 || se.Projects[0].Dir != wt {
-		t.Fatalf("after a restart: %+v", se)
+	if _, err := r.w.session("crit-p5"); err == nil {
+		t.Error("the crit session came back")
 	}
+	if _, err := os.Stat(r.w.sessionDir("crit-p5")); !os.IsNotExist(err) {
+		t.Errorf("its log is still there: %v", err)
+	}
+	r.session(id)
 }
 
 // SE-1: each kind starts as sessions.md says.
@@ -84,8 +59,8 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	if !gitx.IsRepo(se.Dir) {
 		t.Error("the workspace isn't a git repo of its own, for plan docs")
 	}
-	if m, src, ok := LoadManifest(se.Dir); !ok || src != "oriel" || len(m.Projects) != 1 {
-		t.Errorf("manifest = %+v %q %v", m, src, ok)
+	if m, ok := LoadManifest(se.Dir); !ok || len(m.Projects) != 1 {
+		t.Errorf("manifest = %+v %v", m, ok)
 	}
 	// The prompt opened the first request.
 	if len(se.Threads) != 1 || se.Threads[0].Title != "Fix stale usage prices" || se.Threads[0].Anchor != nil {
@@ -171,7 +146,7 @@ func TestTourIsPinnedAndReadOnly(t *testing.T) {
 	if !p.Detached || !p.ReadOnly || p.Commit == "" || branchOf(t, p.Dir) != "HEAD" {
 		t.Fatalf("tour project = %+v", p)
 	}
-	m, _, _ := LoadManifest(r.session(id).Dir)
+	m, _ := LoadManifest(r.session(id).Dir)
 	if m.Tour == nil || m.Tour.Kind != "walkthrough" {
 		t.Errorf("manifest tour = %+v", m.Tour)
 	}
@@ -304,7 +279,7 @@ func TestNextPRCutsAFreshBranchAndKeepsThePast(t *testing.T) {
 	if len(se.Past) != 1 || se.Past[0].Branch != first {
 		t.Errorf("past = %+v", se.Past)
 	}
-	m, _, _ := LoadManifest(se.Dir)
+	m, _ := LoadManifest(se.Dir)
 	if len(m.Projects[0].Past) != 1 || m.Projects[0].Branch != se.Branch {
 		t.Errorf("manifest = %+v", m.Projects[0])
 	}

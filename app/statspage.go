@@ -82,7 +82,7 @@ func (x *statsExt) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportM
 		scope := "all sessions"
 		if len(q.Filters) > 0 {
 			var parts []string
-			for _, k := range []string{"repo", "session", "kind", "model", "provider", "account"} {
+			for _, k := range []string{"repo", "session", "kind", "model", "provider", "account", "origin"} {
 				if v := q.Filters[k]; len(v) > 0 {
 					parts = append(parts, k+" "+strings.Join(v, ", "))
 				}
@@ -98,6 +98,17 @@ func (x *statsExt) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportM
 		meta2 = append(meta2, counted(r.Totals.Sessions, "session"), q.From.Format("Jan 2")+" – "+q.To.AddDate(0, 0, -1).Format("Jan 2"))
 		c.Text("m", strings.Join(meta2, " · "), monoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		var origins []string
+		o := 0
+		for i, v := range statsOrigins {
+			origins = append(origins, v.label)
+			if f := x.q.filters["origin"]; len(f) == 1 && f[0] == v.value {
+				o = i
+			}
+		}
+		if widget.Segmented(c, "origin", origins, &o, widget.SegmentedOpts{Label: "Origin", Help: "agent/stats#origin"}) {
+			x.run("stats.origin", registry.Args{"origin": statsOrigins[o].value})
+		}
 		switch {
 		case !meta.at.IsZero():
 			read := "scanned " + ago(x.now(), meta.at) + " ago"
@@ -116,6 +127,9 @@ func (x *statsExt) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportM
 			c.Text("scanned", "scanning…", monoFont(11, th.C(theme.FgFaint)))
 		case len(x.clients()) == 0:
 			c.Text("scanned", "no worker connected", monoFont(11, th.C(theme.FgFaint)))
+		}
+		if one := q.Filters["session"]; len(one) == 1 && widget.Button(c, "tab", "Session stats", widget.ButtonOpts{Help: "agent/stats#session"}) {
+			x.run("stats.session", registry.Args{"id": one[0]})
 		}
 		if widget.Button(c, "csv", "Copy as CSV", widget.ButtonOpts{Help: "agent/stats#table"}) {
 			x.run("stats.copy", nil)
@@ -165,16 +179,21 @@ func (x *statsExt) toolbar(c *ui.Ctx) {
 		}
 		c.Text("by", "GROUP BY", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.SemiBold, Tracking: .12},
 			Color: th.C(theme.FgGhost)})
+		// Origin is a grouping by key (g o) and shown only while it's the one: the bar has no room for it otherwise.
 		var groups []string
+		var keys []string
 		g := 0
-		for i, s := range statsGroups {
-			groups = append(groups, s.label)
-			if s.key == x.q.group {
-				g = i
+		for _, s := range statsGroups {
+			if s.key == stats.ByOrigin && x.q.group != stats.ByOrigin {
+				continue
 			}
+			if s.key == x.q.group {
+				g = len(groups)
+			}
+			groups, keys = append(groups, s.label), append(keys, s.key)
 		}
 		if widget.Segmented(c, "group", groups, &g, widget.SegmentedOpts{Label: "Group by", Help: "agent/stats#group-by"}) {
-			x.q.group, x.sel = statsGroups[g].key, 0
+			x.q.group, x.sel = keys[g], 0
 		}
 		for _, k := range []string{"repo", "worker", "provider", "account", "session", "kind", "model"} {
 			x.filterChips(c, k)
@@ -331,6 +350,9 @@ func (x *statsExt) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 		statsTile(c, "tokens", "TOKENS", count(all), "", func(c *ui.Ctx) {
 			delta(c, "d", float64(all), float64(p.Tokens.Total()))
 			dim(c, "s", fmt.Sprintf("cache hit %d%%", pct(cacheHit(t.Tokens))))
+			if out := outsideTokens(r); out > 0 && out < all {
+				c.Text("o", fmt.Sprintf("%d%% outside", pct(float64(out)/float64(all))), monoFont(10, c.Theme().C(theme.FgMuted)))
+			}
 		})
 		statsTile(c, "requests", "REQUESTS", count(t.Requests), "", func(c *ui.Ctx) {
 			delta(c, "d", float64(t.Requests), float64(p.Requests))
@@ -365,6 +387,16 @@ func (x *statsExt) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 	})
 }
 
+// outsideTokens are the tokens of a report's sessions outside Oriel.
+func outsideTokens(r stats.Report) int64 {
+	for _, o := range r.Origins {
+		if o.Name == stats.OriginOutside {
+			return o.Tokens.Total()
+		}
+	}
+	return 0
+}
+
 func errRate(t stats.Totals) float64 {
 	if t.ToolCalls == 0 {
 		return 0
@@ -384,6 +416,15 @@ func (x *statsExt) groupTones(c *ui.Ctx, r stats.Report) []render.Color {
 	th := c.Theme()
 	st := x.h.State()
 	out := make([]render.Color, len(r.Groups))
+	if x.q.group == stats.ByOrigin {
+		for i, g := range r.Groups {
+			out[i] = th.C(theme.Accent)
+			if g.Key == stats.OriginOutside {
+				out[i] = th.C(tStatsOther)
+			}
+		}
+		return out
+	}
 	if x.q.group != stats.ByRepo {
 		for i := range r.Groups {
 			out[i] = paletteTone(th, i)
@@ -422,7 +463,7 @@ func (x *statsExt) series(c *ui.Ctx, r stats.Report, tones []render.Color) []wid
 func (x *statsExt) chart(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.Color, w ui.Size) {
 	series := x.series(c, r, tones)
 	what := map[string]string{stats.ByRepo: "REPO", stats.BySession: "SESSION", stats.ByKind: "KIND", stats.ByModel: "MODEL",
-		stats.ByProvider: "PROVIDER", stats.ByAccount: "ACCOUNT", stats.ByDay: "DAY"}[q.Group]
+		stats.ByProvider: "PROVIDER", stats.ByAccount: "ACCOUNT", stats.ByOrigin: "ORIGIN", stats.ByDay: "DAY"}[q.Group]
 	sub := "stacked · split sessions"
 	if !q.Split {
 		sub = "stacked · whole sessions"
@@ -488,7 +529,7 @@ func (x *statsExt) legend(c *ui.Ctx, series []widget.ChartSeries, perLine int) {
 func (x *statsExt) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.Color, w ui.Size) {
 	th := c.Theme()
 	what := map[string]string{stats.ByRepo: "repo", stats.BySession: "session", stats.ByKind: "kind", stats.ByModel: "model",
-		stats.ByProvider: "provider", stats.ByAccount: "account", stats.ByDay: "day"}[q.Group]
+		stats.ByProvider: "provider", stats.ByAccount: "account", stats.ByOrigin: "origin", stats.ByDay: "day"}[q.Group]
 	right := func(c *ui.Ctx) {
 		if x.sel < len(r.Groups) {
 			c.Row("hint", ui.Style{Gap: 5, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -586,6 +627,9 @@ func (x *statsExt) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []s
 		cell(c, 0, cols[0].w, true, func(c *ui.Ctx) {
 			swatch(c, "sw", tone)
 			c.Text("t", g.Label, mono(11.5, typeset.Medium, fg))
+			if g.Origin == stats.OriginOutside {
+				c.Text("o", "outside", monoFont(10, th.C(theme.FgGhost)))
+			}
 		})
 		if bySession {
 			cell(c, 1, cols[1].w, true, func(c *ui.Ctx) {

@@ -23,7 +23,25 @@ type Session struct {
 	Live     bool // its agent is running
 	Repos    []Repo
 	Scans    []*Scan
+	Origin   string // OriginOriel or OriginOutside
 }
+
+// Origins: a session Oriel ran, or one the worker found in a provider's logs that no Oriel session owns.
+const (
+	OriginOriel   = "oriel"
+	OriginOutside = "outside"
+)
+
+// originLabel is how an origin reads.
+func originLabel(o string) string {
+	if o == OriginOutside {
+		return "outside Oriel"
+	}
+	return "Oriel"
+}
+
+// originOf is a session's origin: Oriel's unless it says otherwise.
+func originOf(s Session) string { return cmpOr(s.Origin, OriginOriel) }
 
 // Account is a provider's account a session ran on from At: its identity, and how it reads.
 type Account struct {
@@ -110,6 +128,7 @@ const (
 	ByProvider = "provider"
 	ByAccount  = "account"
 	ByDay      = "day"
+	ByOrigin   = "origin"
 )
 
 // Query asks for the stats of a range, grouped one way and filtered.
@@ -120,7 +139,7 @@ type Query struct {
 	Step  string    `json:"step,omitempty"` // "day" (the default) or "hour": the series' resolution
 	// Offset is the zone the days and hours of the day are in, in seconds east of UTC.
 	Offset int `json:"offset,omitempty"`
-	// Filters keep what matches any of a key's values: repo, session, kind, model, provider, account, worker.
+	// Filters keep what matches any of a key's values: repo, session, kind, model, provider, account, worker, origin.
 	Filters map[string][]string `json:"filters,omitempty"`
 	// Split charges a multi-repo session to each repo by its share (Shares); otherwise each repo is charged the whole.
 	Split bool `json:"split,omitempty"`
@@ -152,9 +171,20 @@ type Group struct {
 	Tokens   int64     `json:"tokens"`
 	Cost     float64   `json:"cost"`
 	Last     time.Time `json:"last,omitzero"`
-	Series   []float64 `json:"series"` // cost at each of the report's points
-	Used     []int64   `json:"used"`   // tokens at each point
+	Origin   string    `json:"origin,omitempty"` // a session's
+	Worker   string    `json:"worker,omitempty"` // a session's
+	Series   []float64 `json:"series"`           // cost at each of the report's points
+	Used     []int64   `json:"used"`             // tokens at each point
 	sessions map[string]bool
+}
+
+// Origin is an origin's part of a range: Oriel's sessions, or those outside it.
+type Origin struct {
+	Name     string  `json:"name"`
+	Sessions int     `json:"sessions"`
+	Requests int64   `json:"requests"`
+	Tokens   Tokens  `json:"tokens"`
+	Cost     float64 `json:"cost"`
 }
 
 // Model is a model's part of a range.
@@ -196,6 +226,7 @@ type Report struct {
 	Tools   []ToolRow   `json:"tools"`
 	Hours   [24]float64 `json:"hours"` // cost by hour of the day
 	Efforts []Effort    `json:"efforts"`
+	Origins []Origin    `json:"origins,omitempty"` // Oriel's, then outside's: those with any requests
 }
 
 // step is the query's resolution in seconds.
@@ -246,7 +277,8 @@ func (q Query) has(key string, vals ...string) bool {
 // weight is how much of session s a query counts: 0 when a filter leaves it out; with a repo filter, the share of
 // the repos it keeps (or all of it, unsplit). The account filter is the hour's (keeps).
 func (q Query) weight(s Session, shares []Share) float64 {
-	if !q.has("session", s.ID) || !q.has("kind", s.Kind) || !q.has("provider", s.Provider) || !q.has("worker", s.Worker) {
+	if !q.has("session", s.ID) || !q.has("kind", s.Kind) || !q.has("provider", s.Provider) || !q.has("worker", s.Worker) ||
+		!q.has("origin", originOf(s)) {
 		return 0
 	}
 	if len(q.Filters["repo"]) == 0 {
@@ -265,9 +297,10 @@ func (q Query) weight(s Session, shares []Share) float64 {
 }
 
 type part struct {
-	key, label string
-	repos      []string
-	w          float64
+	key, label     string
+	repos          []string
+	origin, worker string
+	w              float64
 }
 
 // Run answers q from sessions.
@@ -280,6 +313,7 @@ func Run(q Query, sessions []Session) Report {
 	models := map[string]*Model{}
 	efforts := map[string]*Effort{}
 	tools := map[string]*ToolRow{}
+	origins := map[string]*Origin{}
 	var samples = map[string][]int64{}
 	zone := time.FixedZone("", q.Offset)
 	n := int64(len(r.Points))
@@ -317,7 +351,11 @@ func Run(q Query, sessions []Session) Report {
 			for _, rp := range s.Repos {
 				repos = append(repos, rp.Name)
 			}
-			parts = func(string, int64) []part { return []part{{key: s.ID, label: cmpOr(s.Name, s.ID), repos: repos, w: w}} }
+			parts = func(string, int64) []part {
+				return []part{{key: s.ID, label: cmpOr(s.Name, s.ID), repos: repos, origin: originOf(s), worker: s.Worker, w: w}}
+			}
+		case ByOrigin:
+			parts = func(string, int64) []part { return []part{{key: originOf(s), label: originLabel(originOf(s)), w: w}} }
 		case ByKind:
 			parts = func(string, int64) []part { return []part{{key: s.Kind, label: cmpOr(s.Kind, "none"), w: w}} }
 		case ByProvider:
@@ -339,6 +377,11 @@ func Run(q Query, sessions []Session) Report {
 				d := time.Unix(hour*3600, 0).In(zone).Format("2006-01-02")
 				return []part{{key: d, label: d, w: w}}
 			}
+		}
+		o := origins[originOf(s)]
+		if o == nil {
+			o = &Origin{Name: originOf(s)}
+			origins[o.Name] = o
 		}
 		counted, prev := false, false
 		span, pspan := spans{}, spans{}
@@ -366,6 +409,9 @@ func Run(q Query, sessions []Session) Report {
 					end = sc.Last
 				}
 				add(&r.Totals, sl, w)
+				o.Requests += round(float64(sl.Requests) * w)
+				o.Tokens = o.Tokens.Add(scale(sl.Tokens, w), 1)
+				o.Cost += sl.Costs.Total() * w
 				cost := sl.Costs.Total()
 				if sl.Model != "" {
 					r.Tokens = r.Tokens.Add(scale(sl.Tokens, w), 1)
@@ -394,8 +440,8 @@ func Run(q Query, sessions []Session) Report {
 				for _, p := range parts(sl.Model, sl.Hour) {
 					g := groups[p.key]
 					if g == nil {
-						g = &Group{Key: p.key, Label: p.label, Repos: p.repos, Series: make([]float64, n), Used: make([]int64, n),
-							sessions: map[string]bool{}}
+						g = &Group{Key: p.key, Label: p.label, Repos: p.repos, Origin: p.origin, Worker: p.worker, Series: make([]float64, n),
+							Used: make([]int64, n), sessions: map[string]bool{}}
 						groups[p.key] = g
 					}
 					g.Requests += round(float64(sl.Requests) * p.w)
@@ -422,6 +468,7 @@ func Run(q Query, sessions []Session) Report {
 			continue
 		}
 		r.Totals.Sessions++
+		o.Sessions++
 		r.Totals.SpanS += round(float64(span.secs()) * w)
 		if len(s.Repos) > 1 {
 			r.Totals.MultiRepo++
@@ -464,6 +511,11 @@ func Run(q Query, sessions []Session) Report {
 		}
 		return cmp.Or(cmp.Compare(b.Cost, a.Cost), strings.Compare(a.Key, b.Key))
 	})
+	for _, name := range []string{OriginOriel, OriginOutside} {
+		if o := origins[name]; o != nil && o.Requests > 0 {
+			r.Origins = append(r.Origins, *o)
+		}
+	}
 	for _, m := range models {
 		if m.Requests > 0 {
 			r.Models = append(r.Models, *m)
@@ -582,6 +634,7 @@ type Detail struct {
 	// AccountName is how the account reads: an email or an organisation.
 	AccountName string    `json:"accountName,omitempty"`
 	Live        bool      `json:"live,omitempty"`
+	Origin      string    `json:"origin,omitempty"`
 	First       time.Time `json:"first,omitzero"`
 	Last        time.Time `json:"last,omitzero"`
 	Totals      Totals    `json:"totals"`
@@ -607,7 +660,7 @@ func Detailed(s Session, split bool, offset int) Detail {
 	if n := len(s.Accounts); n > 0 {
 		acct = s.Accounts[n-1]
 	}
-	d := Detail{Session: s.ID, Name: s.Name, Provider: s.Provider, Model: s.Model, Effort: s.Effort, Worker: s.Worker, Live: s.Live,
+	d := Detail{Session: s.ID, Name: s.Name, Provider: s.Provider, Model: s.Model, Effort: s.Effort, Worker: s.Worker, Live: s.Live, Origin: originOf(s),
 		Account: acct.ID, AccountName: acct.Name,
 		Totals: sum.Totals, Models: sum.Models, Tools: sum.Tools, Hours: sum.Hours, Efforts: sum.Efforts, Costs: sum.Costs}
 	buckets := map[int64]*Bucket{}

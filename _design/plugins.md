@@ -194,12 +194,17 @@ flowchart TB
   `oriel.ui.date_picker`. Stats' custom range is built on it.
 - segmented strips take `SegmentedOpts.Badges`, a small chip after each label: the Usage switcher's plan tiers.
 - stats: a provider that keeps its own log of a session implements `agent.Logged` (`Logs(cwd, session) []agent.Log`:
-  Claude's transcript and its subagents'); the worker records the events of one that doesn't (Codex). The worker reads
+  Claude's transcript and its subagents'); the worker records the events of one that doesn't (Codex). A provider that
+  can find every log it keeps on the machine implements `agent.Discovered` (`Discover() []agent.Transcript`: the
+  provider's session id, its logs, when they last changed; Claude's config directory, Codex's rollouts); the worker
+  counts those no Oriel session owns as outside Oriel (`stats.Session.Origin`, `stats.ByOrigin`, the `origin` filter,
+  `stats.Report.Origins`, `stats.Group.Origin`/`Worker`). The worker reads
   them into `worker/stats` and answers `stats.query` (`stats.Query{Group, From, To, Step, Offset, Filters, Split}` →
   `stats.Report`), `stats.session` (`worker.StatsSessionReq` → `stats.Detail`), `usage.history` and `usage.read`
   (`worker.Client.StatsQuery`, `SessionStats`, `UsageHistory`, `ReadUsage`); `stats.Merge` adds workers' answers up.
-  Commands: `stats.open`, `stats.session`, `stats.group`, `stats.range`, `stats.custom`, `stats.move`, `stats.drill`,
-  `stats.back`, `stats.copy`, `stats.split`, `usage.open`, `usage.refresh`, `:Stats`, `:Usage`. Plans are per account
+  Commands: `stats.open`, `stats.session` (`{id}`, and `{worker}` for a session outside Oriel), `stats.group`,
+  `stats.origin`, `stats.range`, `stats.custom`, `stats.move`, `stats.drill`, `stats.back`, `stats.copy`,
+  `stats.split`, `usage.open`, `usage.refresh`, `:Stats`, `:Usage`. Plans are per account
   (`core.ProviderUsage.Account`, `Same`, `Uses`; `stats.ByAccount` and the `account` filter); `usage.accounts` names them.
   A provider's reading carries its plan's tier (`ProviderUsage.Tier`), and a session the accounts it ran on
   (`core.AgentState.Accounts`, `RanOn`; `stats.Session.Accounts`).
@@ -409,9 +414,11 @@ type Host interface {
 
 - The window is made of views like any other, each replaceable by registering the same id: `app.root`,
   `app.statusline`, `app.notifications` (toasts) and `app.modal`. The log panel is `log`, and `:Events` is `events`.
-- The titlebar is `app.titlebar`: the logo, a tab per session (status dot, name, its status or kind, `⌘N`, and
-  `✕N` while it has errors you haven't seen), and segments named `titlebar.right.<order>-<name>` at its right, for
-  indicators. `session.focus {n}` or `{id}` brings a session to the front; `⌘1`–`⌘9` run it.
+- The titlebar is `app.titlebar`: the logo, a tab per session open in the window (`State.Tabs`: status dot, name,
+  its status or kind, `⌘N`, a ✕ under the pointer, and `✕N` while it has errors you haven't seen), and segments named
+  `titlebar.right.<order>-<name>` at its right, for indicators. `session.focus {n}` or `{id}` brings a session to the
+  front, opening its tab (`SessionFocused`); `⌘1`–`⌘9` run it, counting the tabs. `session.close-tab {id}` closes one
+  (`TabClosed`) and leaves the session; the front passes to its neighbour, or to the start view.
 - Picker sources: `Registry.Picker(PickerSource{ID, Title, Prefix, Order, Items, Preview, Run})`. `Items(ctx, query)`
   gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
   query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the

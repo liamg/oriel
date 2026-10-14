@@ -371,7 +371,7 @@ func (x *statsExt) usagePage(c *ui.Ctx) {
 			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
 				if len(st.Usage) == 0 {
-					note(c, "none", "No plan windows read yet: they come with a session's first turn, or Refresh.")
+					note(c, "none", "No plan windows read yet: they're read at start and with each session's turns, or Refresh.")
 				}
 				if u, ok := x.usageAccount(); ok {
 					x.accountSwitch(c, u)
@@ -737,9 +737,20 @@ func (x *statsExt) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provi
 		from = now.Add(-7 * 24 * time.Hour)
 	}
 	q := stats.Query{From: from.Truncate(time.Hour), To: now.Truncate(time.Hour).Add(time.Hour), Step: "hour", Offset: x.offset(),
-		Filters: map[string][]string{"provider": {u.Provider}, "account": {u.Account}}, Split: x.split()}
+		Filters: map[string][]string{"provider": {u.Provider}, "account": {u.Account}, "origin": {stats.OriginOriel}}, Split: x.split()}
 	r, _ := x.report(q)
+	// Sessions outside Oriel are one row with the use no transcript explains.
+	qo := q
+	qo.Group, qo.Filters = stats.ByOrigin, map[string][]string{"provider": {u.Provider}, "account": {u.Account}, "origin": {stats.OriginOutside}}
+	ro, _ := x.report(qo)
+	r.Groups = append(slices.Clone(r.Groups), ro.Groups...)
 	rows, outside := burned(r, w, samples(w, hist))
+	out := burnRow{key: stats.OriginOutside}
+	if n := len(rows) - len(ro.Groups); len(ro.Groups) > 0 && n >= 0 {
+		out = rows[n]
+		rows = rows[:n]
+	}
+	outside += out.points
 	title := "BURNED THE " + strings.ToUpper(windowKind(w)) + " WINDOW"
 	right := func(c *ui.Ctx) {
 		if len(u.Windows) < 2 {
@@ -771,7 +782,11 @@ func (x *statsExt) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provi
 				fmt.Sprintf("%.0fpt", row.points), money(row.cost))
 		}
 		if outside > 0 {
-			kv(c, "out", th.C(tStatsOther), "outside Oriel", "", "", fmt.Sprintf("%.0fpt", outside), "–")
+			sess, cost := "", "–"
+			if out.sessions > 0 {
+				sess, cost = fmt.Sprintf("%d sess", out.sessions), money(out.cost)
+			}
+			kv(c, "out", th.C(tStatsOther), "outside Oriel", "", sess, fmt.Sprintf("%.0fpt", outside), cost)
 		}
 		kv(c, "total", render.Color{}, "total", "", "", fmt.Sprintf("%.0fpt", total), "")
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {

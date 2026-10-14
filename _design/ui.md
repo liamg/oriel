@@ -655,7 +655,7 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   five minutes by token kind, with idle stretches of 20 minutes or more hatched, compactions marked and a strip of
   turns; cost per repo with **count whole session in each**; models; tools (calls, errors, a strip of timings
   `.1s 1s 10s 1m 1m+`, p50); hours of the day; effort. The header names its account (a session runs on one). A long session's steps widen to keep 150 at most.
-- **Stats** (`:Stats`, `⌘⇧S`, `stats.open {group, range, repo, worker, provider, session, kind, model}`) is a page over
+- **Stats** (`:Stats`, `⌘⇧S`, `stats.open {group, range, repo, worker, provider, session, kind, model, origin}`) is a page over
   the main area beside the sidebar (`widget.Page` with `Over`), key mode `stats`: 7/30/90 days or custom (AI-14:
   CUSTOM, `c` or `stats.custom` opens a `widget.DatePicker` under the range, which opens on the range shown; once
   custom, a ▾ beside it opens it again; `:Stats 2026-09-01..2026-09-30` and `stats.custom {range}` set one); group by
@@ -670,6 +670,15 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   Hovering a row or a bar picks its series out; `j`/`k`, `⏎` or a click drills in (the row's filter chip, regrouped:
   repo → session → model; a day becomes the range), `⌫` backs out, `[`/`]` step the range, **Copy as CSV**. The
   header says when it was scanned and names an offline worker whose last answer it shows.
+- **Oriel and outside it.** The stats count every transcript the providers keep on each worker's machine, so Claude
+  Code or Codex run in a terminal or another tool count too (`agents.md`, Stats). The header's **ALL / ORIEL /
+  OUTSIDE** strip (`stats.origin`, `:Stats origin=outside`) keeps the page to one side, beside the scan time: the
+  toolbar has no room left. `g o` (`stats.group {by=origin}`) stacks Oriel against outside day by day, Oriel in the
+  accent and outside in the "other" grey; ORIGIN shows in the group strip only while it's the grouping, for the same
+  reason. The Tokens tile adds "N% outside" when there is any. Grouped by session, an outside session reads by its
+  first prompt and is marked **outside**. With the page filtered to one session, **Session stats** in the header opens
+  its tab, an outside one's too (instance `id@worker`; the header says "outside Oriel" and names its provider and
+  worker from the stats). The start view's and the sidebar's figures count everything.
 - **Plan usage is per account** (the user's decision after 43): a plan belongs to an account (provider and login:
   Claude's account and organisation, Codex's email), not to a provider or a worker. A work laptop on a company Claude
   subscription and a personal one on Claude Max are separate limits and are never added up; two workers on one account
@@ -685,7 +694,8 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   red); the account's week hour by hour (the 5-hour window's peak per window as bars, the weekly ones as lines dashed on at
   their burn, the opening and "full" marked, 5-hour resets as ticks); and what burned a window by repo (sessions,
   points, est. cost; outside Oriel as its own row), all of them the account's own. Points: each rise between two readings goes to the repos by
-  their tokens in the hours it happened; a rise with no Oriel tokens behind it is outside Oriel.
+  their tokens in the hours it happened, Oriel's sessions by repo and the sessions outside Oriel as one row; a rise with
+  no tokens behind it (claude.ai, another machine) goes to that row too.
 - **Entry points.** The sidebar's global group (Stats with today's cost, Usage with the weekly window, Jobs with its
   runs going (SE-4), Settings), below a second divider, at the foot in the narrow form, the figure in the tooltip there; the
   title bar's indicators as one button opening Usage, showing the account the session in front runs on (the

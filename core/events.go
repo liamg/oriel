@@ -58,5 +58,6 @@ func (e SessionClosed) Apply(s *State) error {
 		return fmt.Errorf("no session %s", e.ID)
 	}
 	s.Sessions = slices.DeleteFunc(s.Sessions, func(se SessionState) bool { return se.ID == e.ID })
+	s.Tabs = slices.DeleteFunc(slices.Clone(s.Tabs), func(id SessionID) bool { return id == e.ID })
 	return nil
 }

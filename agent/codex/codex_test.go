@@ -90,7 +90,11 @@ func TestTurnEvents(t *testing.T) {
 	if !ready || !partial || !thinking || !user {
 		t.Errorf("ready %v, partial %v, thinking %v, user %v", ready, partial, thinking, user)
 	}
-	if end.Usage.Input != 20 || end.Usage.Output != 10 || end.Usage.ContextMax != 272000 || end.Usage.Duration != 12*time.Millisecond {
+	// Codex's input tokens include the cached ones: the turn's 20 are 15 fresh and 5 read from the cache.
+	// ref:   codex/codex-rs/protocol/src/protocol.rs
+	// quote: "pub fn non_cached_input(&self) -> i64 { (self.input_tokens - self.cached_input()).max(0) }"
+	if end.Usage.Input != 15 || end.Usage.CacheRead != 5 || end.Usage.Output != 10 || end.Usage.ContextMax != 272000 ||
+		end.Usage.Duration != 12*time.Millisecond {
 		t.Errorf("usage = %+v", end.Usage)
 	}
 	if usage == nil || usage.Usage.Provider != "codex" || len(usage.Usage.Windows) != 1 || usage.Usage.Windows[0].Name != "5h" {

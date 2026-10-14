@@ -10,6 +10,7 @@ func init() {
 	RegisterEvent[Notified]("Notified")
 	RegisterEvent[NoticeDismissed]("NoticeDismissed")
 	RegisterEvent[SessionFocused]("SessionFocused")
+	RegisterEvent[TabClosed]("TabClosed")
 }
 
 // Severity is how much a notice matters (errors.md).
@@ -109,7 +110,8 @@ func (e NoticeDismissed) Apply(s *State) error {
 	return nil
 }
 
-// SessionFocused is the session now in front, or "" for none. Focusing a session clears its unseen errors.
+// SessionFocused is the session now in front, or "" for none. Focusing a session clears its unseen errors, and
+// opens a tab for it if it has none.
 type SessionFocused struct {
 	ID SessionID `json:"id"`
 }
@@ -123,8 +125,29 @@ func (e SessionFocused) Apply(s *State) error {
 			return fmt.Errorf("no session %s", e.ID)
 		}
 		se.Unseen = 0
+		if !slices.Contains(s.Tabs, e.ID) {
+			s.Tabs = append(slices.Clip(s.Tabs), e.ID)
+		}
 	}
 	s.Focus = e.ID
+	return nil
+}
+
+// TabClosed closes a session's tab; the session stays. Closing the one in front leaves nothing in front.
+type TabClosed struct {
+	ID SessionID `json:"id"`
+}
+
+func (e TabClosed) Scope() SessionID { return "" }
+
+func (e TabClosed) Apply(s *State) error {
+	if !slices.Contains(s.Tabs, e.ID) {
+		return fmt.Errorf("no tab for %s", e.ID)
+	}
+	s.Tabs = slices.DeleteFunc(slices.Clone(s.Tabs), func(id SessionID) bool { return id == e.ID })
+	if s.Focus == e.ID {
+		s.Focus = ""
+	}
 	return nil
 }
 

@@ -23,7 +23,7 @@ Each provider is driven the way its **subscription** allows.
 | Side questions (btw, explain, verify quiz) | `$.model.fork`: tool-less, outside the main conversation | `thread/fork` |
 | Turn and subagent lifecycle | hook events (turn start/complete, subagent spawn/end, StopFailure) | notifications |
 | Messages and tool calls | tail `~/.claude/projects/*.jsonl` (crit's `transcript` package) | notifications + rollout files |
-| Usage / quota | `$.session.usage()`, reported by the mod | `account/rateLimits/read` + `account/rateLimits/updated` |
+| Usage / quota | `$.session.usage()`, reported by the mod; at worker start, a hidden `/usage` session's | `account/rateLimits/read` + `account/rateLimits/updated` |
 | Guard rails | `tool.check`: deny edits outside the worktree, deny raw network git/gh | sandbox policy + approvals |
 
 - **Terminal view comes free** for Claude: it *is* a PTY session, so "Show terminal" attaches to it.
@@ -44,13 +44,34 @@ Each provider is driven the way its **subscription** allows.
   On the host the folder is pre-trusted in `.claude.json` and crit's agent defaults are merged into `settings.json`.
 - The mod (`agent/claude/mod`, embedded) runs `$ORIEL_BIN hook <op>` with JSON on stdin for every decision; `oriel
   hook` (`claude.HookMain`) carries it over the unix socket. Ops: `hello` (→ tools to register), `wait` (a ≤45 s long
-  poll → `submit` | `abort` | `fork` | `timeout`), `event` (`turn-start`, `turn-complete` with usage and rate limits,
+  poll → `submit` | `abort` | `fork` | `usage` | `timeout`), `event` (`turn-start`, `turn-complete` with usage and rate limits, `usage` with rate limits,
   `subagent-start/run/end`, `api-error`, `end`), `check` (tool.check: the guard rails), `permission`, `question`,
   `tool`, `fork-answer`. Prompts are submitted `asUser`, so the agent reads them as the user's.
 - Messages, tool calls and results (with `core.FileDiff` from the edit's `structuredPatch`, else its input) come
   from tailing `<config>/projects/<slug(cwd)>/<id>.jsonl` and `<id>/subagents/agent-*.jsonl`. A turn's end waits
   briefly for the log to hold the turn's answer, so its messages always come before `TurnEnd`.
-- `Usage` is the windows a session's mod last reported through `$.session.usage()`; there is no probe.
+- `Usage` is the newest reading of the plan's windows: a session's mod's, through `$.session.usage()` at each turn's
+  end, or the `/usage` probe's (below), which `Usage` runs unless one is running already or Claude's files record no
+  subscription login.
+
+### The `/usage` probe (`agent/claude/usage.go`)
+
+The one probe Oriel runs, once as a worker starts (and on the Usage page's Refresh): a hidden interactive `claude`
+that only types a slash command, which Claude Code runs itself, so nothing reaches the model and nothing is billed.
+`claude -p "/usage"` won't do: in print mode it gives only the "what's contributing" text, with no percentages.
+
+- It's a session started the way any other is (`start`: the same binary, config dir, environment and mod, the
+  folder trusted in `.claude.json` first), in Oriel's own folder, `Provider.ProbeDir` (the worker's `<Home>/probe`),
+  with a temporary state directory.
+- Nothing is read off the screen. At the mod's `hello` (`Ready`) the probe types `/usage` and Enter into the PTY; then
+  every 500 ms it answers the mod's `wait` with `usage`, and the mod reports `$.session.usage()` as an `event` of kind
+  `usage` with its `rateLimits`, mapped by `usageOf` as a turn's are. The first report with windows ends it: Escape,
+  `/exit`, and `Close` kills it if it hasn't gone in 3 s. A turn starting, a lost login, the process exiting, or 40 s
+  passing fails it.
+- What it reads is what a session's mod reads: the 5-hour and weekly (all models) windows; Claude Code's per-model
+  weeks ("Current week (Fable)") aren't in `$.session.usage()`, so they aren't shown.
+- Checked against Claude Code 2.1.299: `$.session.usage()` has its windows about 1.5 s after `/usage` is typed, no
+  turn starts, and `/exit` quits it.
 
 ### A login that stops working (AI-13)
 
@@ -106,7 +127,23 @@ only the files to come back, as before.
 - The worker's stats (`worker/stats`, crit's `internal/stats` per session) read each session's logs incrementally, from
   the offset the last read stopped at, kept in `<Home>/stats.json`: Claude's transcript and subagents' logs (the
   provider's `agent.Logged`), or for a provider without a log (Codex) the worker's record of its events,
-  `sessions/<id>/agent/events.jsonl` (turns, tool calls and results, and each turn's usage as a request). A message
+  `sessions/<id>/agent/events.jsonl` (turns, tool calls and results, and each turn's usage as a request).
+- The stats read **everything they can find**, not only Oriel's sessions, classified by origin: each provider that
+  implements `agent.Discovered` lists every log it keeps on the machine (Claude: `<config>/projects/*/<id>.jsonl` with
+  its subagents', `$CLAUDE_CONFIG_DIR` honoured; Codex: `$CODEX_HOME/sessions/**/rollout-*.jsonl` and
+  `archived_sessions`, `~/.codex` by default; a compressed `.jsonl.zst` rollout isn't read), and on each scan the
+  worker counts every one that no Oriel session owns (by path, or by the provider and its session id) as a session
+  **outside Oriel** (`stats.Session.Origin` `outside`, ID `<provider>:<session>`), so nothing is counted twice: an
+  Oriel Codex session's rollout is skipped, its events already counted. An outside session is named by its first
+  prompt (`Scan.Title`), else its cwd's folder, else the file; its repo is the work tree holding the cwd its log
+  records; its account is its provider's on the worker now. A query skips a log last written before the period it
+  compares with (`From − (To − From)`), so a long history costs a stat per file; `stats.session` reads one outside
+  session whatever its age. Codex's rollout (`stats.FormatCodex`, checked against `spec/codex`): each
+  `token_count` is a request, its tokens the rise in the thread's total (cached input a cache read), a repeated total
+  none; `turn_context` gives the model and effort, `user_message` the turns, `function_call`/`custom_tool_call` and
+  their outputs the tools (a rollout doesn't say whether a call failed). Queries filter and group by origin
+  (`origin` filter, `stats.ByOrigin`), each report carries `Origins` (sessions, requests, tokens and cost of each),
+  and a session's group carries its `Origin` and `Worker`; `stats.Merge` keeps them. A message
   Claude writes over several records counts once. Per request: tokens by kind and their cost, model, effort, and
   the hour and five minutes it's in; per tool call: name, error, duration, and the files it names, which decide a
   multi-repo session's split (`stats.Session.Shares`). A compaction is the main loop's context falling to under half
@@ -115,7 +152,7 @@ only the files to come back, as before.
   buckets), the result's error and timing going to the call's hour, so a range's tool rows count only its calls
   (AI-14); a tool's p50 is still from its sessions' samples. Each hour also keeps its first and last record, for the
   range's wall-clock (`Totals.SpanS`: per session, per day of the query's zone, first to last, added up). A stats
-  file from before (`cacheVersion` 1) is dropped and the logs read again.
+  file from before (`cacheVersion` below 3) is dropped and the logs read again.
 - Plan usage is per **account**: `ProviderUsage.Account` is the login (Claude: `oauthAccount`'s account and
   organisation in `.claude.json`, so a company subscription and a personal one differ; Codex: `account/read`'s email),
   `AccountName` its email or organisation, and the worker stamps `Workers` with itself. `UsageSampled` keeps one entry per
@@ -132,9 +169,12 @@ only the files to come back, as before.
   subscription Claude Code doesn't name has no tier. The key names are checked against a real Claude Code 2.x config
   (`agent/claude/testdata/account`, invented values) and the values against the ones Claude Code's own bundle
   compares with. Codex: `planType` (`pro_lite` is "Pro Lite").
+- The worker reads every provider's `Usage` once as it starts (`oriel worker`), and on `usage.read` (the Usage page's
+  Refresh); a reading no newer than the one it holds for the account is dropped, so a session's newer one stays.
 - Every plan reading (`UsageSampled`, from a provider's `UsageUpdate` or `usage.read`, which asks each provider's
-  `Usage`) is kept in `<Home>/usage.jsonl` for a week (`usage.history`). `UsageWindow.Length` is a window's length and
-  `ProviderUsage.Source` says where its windows come from; both providers set them.
+  `Usage`) is kept in `<Home>/usage.jsonl` for a week (`usage.history`). A worker starting puts back each account's
+  latest kept reading, so Claude's windows survive a restart before they're read again. `UsageWindow.Length`
+  is a window's length and `ProviderUsage.Source` says where its windows come from; both providers set them.
 
 ### The Codex provider as built (`agent/codex`)
 
@@ -182,7 +222,8 @@ In Oriel each of those uses the subscription instead:
 - **Outside a session** (the assistant, an auto-answer with no matching session): a **resident utility
   session**. That's a hidden interactive `claude` in a PTY with the Oriel mod, a small model, read-only tools,
   and a fresh context per task. It's started on demand and kept warm.
-- There is no `/usage` probe either: Claude's plan windows come from the mod's `$.session.usage()`.
+- Claude's plan windows come from the mod's `$.session.usage()`: in live sessions, and in the hidden `/usage` session
+  a worker starts once (above), which is interactive, so not `claude -p`.
 
 ![15-agent](mockups/15-agent.png)
 

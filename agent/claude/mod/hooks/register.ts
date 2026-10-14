@@ -71,8 +71,17 @@ async function poll($: EngineInterface, st: State) {
       case 'fork':
         void fork($, st, String(out.id), String(out.prompt ?? ''))
         break
+      case 'usage':
+        void reportUsage($, st)
+        break
     }
   }
+}
+
+// The plan's windows as Claude Code holds them now: none until a request or /usage has read them.
+async function reportUsage($: EngineInterface, st: State) {
+  const u = await $.session.usage().catch(() => undefined)
+  await event($, st, { kind: 'usage', rateLimits: u?.rateLimits ?? [] })
 }
 
 async function reportTurnEnd($: EngineInterface, st: State, e: Args) {

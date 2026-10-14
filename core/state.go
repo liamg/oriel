@@ -13,6 +13,7 @@ type State struct {
 	Seq           uint64          `json:"seq"` // events applied
 	Sessions      []SessionState  `json:"sessions"`
 	Focus         SessionID       `json:"focus,omitempty"` // the session in front
+	Tabs          []SessionID     `json:"tabs,omitempty"`  // the sessions open in the window, in the order they opened
 	Notifications []Notification  `json:"notifications"`   // oldest first
 	Workers       []WorkerState   `json:"workers,omitempty"`
 	Usage         []ProviderUsage `json:"usage,omitempty"` // each provider's plan windows
@@ -31,7 +32,7 @@ type SessionState struct {
 	Prompt     string     `json:"prompt,omitempty"`
 	Ticket     string     `json:"ticket,omitempty"`
 	PR         string     `json:"pr,omitempty"`
-	Source     string     `json:"source,omitempty"` // "crit" for a crit workspace read in place
+	Source     string     `json:"source,omitempty"` // "crit" for a crit workspace, which the worker drops
 	Job        string     `json:"job,omitempty"`    // the saved job this session is a run of
 	Created    time.Time  `json:"created,omitzero"`
 	Archived   bool       `json:"archived,omitempty"`

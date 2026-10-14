@@ -15,8 +15,8 @@
 2. Port the packages that don't need rethinking: `sandbox`, `egress`,
    `gateway`, `mcp`, `gh`, `git`, `wire`, `agentbus`, `linear`, `slop`, `prompts`, `quota`.
 3. Build phases 0–4 (see `PLAN.md`). crit stays your daily driver for AI work.
-4. Phases 5–6: the new worker can **read crit's on-disk state**
-   (`~/.crit/workspaces`, threads, tasks), so in-flight sessions open in Oriel.
+4. Phases 5–6: the new worker keeps the workspace layout and manifest fields crit uses,
+   but lists only its own sessions; crit's stay in crit.
 5. Once phases 5–6 are done: crit stops getting features. Fixes only.
 6. After phase 7 has had two weeks of daily use: archive crit, and its README points at Oriel.
 

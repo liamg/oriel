@@ -233,7 +233,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 				log.Error("reopen", "dir", to.dir, "err", err)
 			}
 			sh.cfg.WorkDir, sh.cfg.Files = to.dir, nil
-			if to.session == "" {
+			if to.session == "" && to.dir != "" {
 				sh.recents.add(to.dir, time.Now())
 			}
 			if err := activate(); err != nil {

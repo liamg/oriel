@@ -22,7 +22,7 @@ depends_on: [FW-2]
 
 ## Done when
 
-crit's workspace layout is read in place
+sessions live in workspaces of crit's layout, Oriel's own only
 
 ## From SH-13
 

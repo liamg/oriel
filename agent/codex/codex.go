@@ -158,13 +158,9 @@ var userFiles = []string{"AGENTS.md", "prompts", "skills"}
 // SandboxCredentials are the host's Codex files a container needs, read-only, under $CODEX_HOME in the
 // container. The sign-in (auth.json) is the sandbox's to hand over.
 func (p *Provider) SandboxCredentials() []agent.Mount {
-	dir := os.Getenv("CODEX_HOME")
+	dir := home()
 	if dir == "" {
-		h, err := os.UserHomeDir()
-		if err != nil {
-			return nil
-		}
-		dir = filepath.Join(h, ".codex")
+		return nil
 	}
 	var out []agent.Mount
 	for _, f := range userFiles {

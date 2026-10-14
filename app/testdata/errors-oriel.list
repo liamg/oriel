@@ -13,11 +13,6 @@ clip 102.9375,0 1469.0625x38 r 0
   text "config" @129.9375,24.365234 #ece6d8 Inter 12
   text "⌘1" @172.79688,23.42 #4f4a40 JetBrains Mono 9.5
   rect 196.79688,0 1x38 fill #24221d
-  rect 209.79688,16 8x8 fill #4cc9f0 radius 4
-  text "pricing-rounding" @224.79688,24.365234 #b3ab99 Inter 12
-  text "work" @326.90625,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘2" @357.90625,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 381.90625,0 1x38 fill #24221d
 pop
 rect 0,38 1600x936 fill #060606
 clip 0,38 1600x576 r 0

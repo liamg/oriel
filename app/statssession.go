@@ -17,7 +17,8 @@ import (
 	"github.com/liamg/oriel/worker/stats"
 )
 
-// The session stats tab (43's panel 1): one session's stats as a main tab, its instance the session's ID.
+// The session stats tab (43's panel 1): one session's stats as a main tab, its instance the session's ID; for one
+// outside Oriel, id@worker.
 
 type sessionStatsView struct{ x *statsExt }
 
@@ -25,7 +26,11 @@ func (v sessionStatsView) Title(instance string) string {
 	if se, ok := v.x.h.Session(core.SessionID(instance)); ok {
 		return "Stats · " + se.Name()
 	}
-	return "Stats · " + instance
+	id, _ := v.x.target(instance)
+	if g, ok := v.x.found(id); ok {
+		return "Stats · " + g.Label
+	}
+	return "Stats · " + string(id)
 }
 
 func (v sessionStatsView) EdgeToEdge() {}
@@ -90,9 +95,9 @@ func (x *statsExt) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabS
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "STATS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
 			Color: th.C(theme.Fg)})
-		name := string(d.Session)
-		var a core.AgentState
-		var wid core.WorkerID
+		name := cmpOr(d.Name, d.Session)
+		a := core.AgentState{Provider: d.Provider, Model: d.Model, Effort: d.Effort}
+		wid := core.WorkerID(d.Worker)
 		if se != nil {
 			name, a, wid = se.Name(), se.Agent(), se.Snapshot().Worker
 		}
@@ -100,6 +105,9 @@ func (x *statsExt) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabS
 		var meta []string
 		if a.Provider != "" {
 			meta = append(meta, strings.ToLower(providerName(a.Provider)))
+		}
+		if d.Origin == stats.OriginOutside {
+			meta = append(meta, "outside Oriel")
 		}
 		if d.Account != "" || d.AccountName != "" {
 			meta = append(meta, x.accountLabel(d.Account, d.AccountName))
