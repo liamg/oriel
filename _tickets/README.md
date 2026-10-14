@@ -128,6 +128,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 61. [SE-4](SE-4-jobs-page-saved-prompts-runs-and-schedules.md): Jobs: saved prompts, runs as sessions, a Jobs page, and schedules · after SE-1, AI-12 (P5 follow-up)
 62. [AI-13](AI-13-detect-an-expired-agent-login.md): Detect an expired agent login, flag it on its worker, and fix it from Oriel · after AI-2, AI-3, AI-12 (P5 follow-up)
 63. [AI-14](AI-14-stats-and-usage-follow-ups.md): Stats and Usage follow-ups: custom ranges, exact per-range tools, plan tiers, active span, accounts at the time · after AI-12 (P5 follow-up)
+64. [SE-5](SE-5-jobs-and-login-follow-ups.md): Jobs and login follow-ups: multi-line prompts, pages that replace each other, run tabs, schedules, remote log in · after SE-4, AI-13 (P5 follow-up)
 
 ### Phase 6 · review
 
