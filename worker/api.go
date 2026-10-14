@@ -126,6 +126,9 @@ type CommentReq struct {
 	Images  []string       `json:"images,omitempty"`
 	Urgent  bool           `json:"urgent,omitempty"` // interrupts the turn
 	Btw     bool           `json:"btw,omitempty"`    // a side question, answered by a fork
+	// Status opens a new thread in this status rather than open; one that isn't open stays with the user, as a
+	// note pinned to its anchor.
+	Status core.ThreadStatus `json:"status,omitempty"`
 }
 
 // ThreadReq changes a thread's status: resolve, reopen, defer, dismiss.

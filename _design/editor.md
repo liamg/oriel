@@ -233,6 +233,10 @@ engine never feels like another binary running in a pane.
   LSP `documentSymbol` adds names and kinds where available.
 - `text.Unit{Kind, Name, Range, Parent}` is a shared model. It's used by explain (`ui.md` 07b), the
   outline, the `af`/`if`/`ic` text objects, the review checklist, sticky scroll headers and agent anchors.
+- Built in RV-5: `text.Innermost` (the smallest unit holding a range), `text.UnitPath` (a breadcrumb),
+  `text.Owners` (the units owning a set of changed ranges), `Unit.Label` ("func roundHalfEven", "case 0") and
+  `text.FilterUnits(us, text.Explainable)` (every kind but a plain block). `syntax/testdata/units` has fixtures in Go,
+  Python, TypeScript and Rust (`TestUnitFixtures`).
 
 ## What the editor surface can show between lines
 

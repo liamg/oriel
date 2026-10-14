@@ -86,7 +86,7 @@ func (p *Parser) Units() ([]text.Unit, error) {
 		}
 		return b.Range.End - a.Range.End
 	})
-	nest(out)
+	text.Nest(out)
 	return out, nil
 }
 
@@ -102,19 +102,6 @@ func (p *Parser) Outline() ([]text.Unit, error) {
 			out = append(out, u)
 		}
 	}
-	nest(out)
+	text.Nest(out)
 	return out, nil
-}
-
-// nest sets each unit's Parent to the smallest unit around it in a list sorted by start.
-func nest(us []text.Unit) {
-	for i := range us {
-		us[i].Parent = -1
-		for j := i - 1; j >= 0; j-- {
-			if us[j].Range.Start <= us[i].Range.Start && us[i].Range.End <= us[j].Range.End {
-				us[i].Parent = j
-				break
-			}
-		}
-	}
 }

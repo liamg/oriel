@@ -71,7 +71,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
 	if len(x.sh.cfg.Workers) > 0 {
-		x.add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain}))
+		x.add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain, Label: x.explainer}))
 	}
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "AgentTurnEnd", Fired: true, Payload: AgentTurnEnd{},
 		Doc: "A session's agent finished a turn."}))
@@ -379,7 +379,8 @@ func (x *sessions) comment(ctx registry.Ctx, a registry.Args) error {
 		if strings.TrimSpace(ev.Body) == "" {
 			return errors.New("the comment is empty")
 		}
-		req := worker.CommentReq{Session: id, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw}
+		req := worker.CommentReq{Session: id, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
+			Status: core.ThreadStatus(a.String("status"))}
 		if ev.Thread == "" && ev.File != "" {
 			req.Anchor = x.anchor(id, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
 		}
@@ -811,13 +812,27 @@ func (x *sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 	if err != nil {
 		return "", err
 	}
+	how := map[string]string{registry.ExplainDetailed: "in detail: what it does, step by step, and the cases it handles",
+		registry.ExplainWhy: "and why it is the way it is, from its history below and what you know of this session"}[r.Depth]
+	if how == "" {
+		how = "briefly, in a short paragraph"
+	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "Explain this %s briefly, in markdown. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
-		r.Kind, r.Subject, r.Context)
+	fmt.Fprintf(&b, "Explain this %s %s, in markdown. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
+		r.Kind, how, r.Subject, r.Context)
 	if len(r.Files) > 0 {
 		fmt.Fprintf(&b, "\n\nFiles: %s", strings.Join(r.Files, ", "))
 	}
 	return c.Fork(ctx, id, b.String())
+}
+
+// explainer is who answers explain: the session in front's agent, forked.
+func (x *sessions) explainer() string {
+	se, ok := x.sh.cfg.Store.Session(x.focused())
+	if !ok {
+		return "no session in front"
+	}
+	return "fork of " + cmpOr(se.Snapshot().Agent.Provider, "the agent") + " · knows this session"
 }
 
 // mainInput is what a hook matches a tool's input on: a shell's command, an edit's path, else the JSON.

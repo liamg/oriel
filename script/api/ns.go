@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +18,7 @@ import (
 //oriel:api name=keymap
 type Keymap struct{ a *APIs }
 
-//oriel:api doc="Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args." optional=opts
+//oriel:api doc="Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping)." optional=opts
 func (k Keymap) Set(modes []string, lhs string, rhs any, opts script.Table, where string) error {
 	cmd := ""
 	switch v := rhs.(type) {
@@ -29,8 +30,10 @@ func (k Keymap) Set(modes []string, lhs string, rhs any, opts script.Table, wher
 		return fmt.Errorf("%s: the right-hand side is a command id or a function, not %T", lhs, rhs)
 	}
 	args, _ := opts["args"].(script.Table)
+	nowait, _ := opts["nowait"].(bool)
 	for _, m := range modes {
-		k.a.own(k.a.Host.Keymap(registry.Keymap{Mode: m, Keys: lhs, Command: cmd, Args: registry.Args(args), Desc: str(opts, "desc"), Source: where}))
+		k.a.own(k.a.Host.Keymap(registry.Keymap{Mode: m, Keys: lhs, Command: cmd, Args: registry.Args(args), Desc: str(opts, "desc"), Source: where,
+			Nowait: nowait}))
 	}
 	return nil
 }
@@ -128,6 +131,32 @@ func (g Agent) Tool(spec script.Table, where string) error {
 			}
 			return out[0], nil
 		}}))
+	return nil
+}
+
+//oriel:api doc="An explainer: { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning markdown }. req has kind, subject, context, files and depth. It only answers: explaining changes nothing."
+func (g Agent) Explainer(spec script.Table, where string) error {
+	run, _ := spec["run"].(*script.Fn)
+	if str(spec, "name") == "" || run == nil {
+		return fmt.Errorf("an explainer needs a name and a run function")
+	}
+	e := registry.Explainer{Name: str(spec, "name"), Source: where,
+		Explain: func(_ context.Context, r registry.ExplainRequest) (string, error) {
+			out, err := g.a.VM.Call(run, script.Table{"kind": r.Kind, "subject": r.Subject, "context": r.Context, "files": r.Files,
+				"depth": cmpOr(r.Depth, registry.ExplainBrief)})
+			if err != nil || len(out) == 0 {
+				return "", err
+			}
+			s, _ := out[0].(string)
+			return s, nil
+		}}
+	if o, ok := spec["order"].(float64); ok {
+		e.Order = int(o)
+	}
+	if l := str(spec, "label"); l != "" {
+		e.Label = func() string { return l }
+	}
+	g.a.own(g.a.Host.Contribute(e))
 	return nil
 }
 

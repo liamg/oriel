@@ -499,6 +499,25 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - *Pin as note* turns an explanation into a resolved thread on that range. *Ask a follow-up* turns it into a request.
 - The **Changed units** panel lists every unit the branch touched, with its explain status. Explaining
   by unit doubles as a review checklist that follows the code's structure rather than the diff's.
+- Built in RV-5 (`app/explain*.go`, the `explain` built-in; `text.Unit` helpers `Innermost`, `UnitPath`, `Owners`,
+  `Label`): units are the tree-sitter `units.scm` captures except a plain `block` (the body of the unit around it),
+  with fixtures in Go, Python, TypeScript and Rust. A change is the buffer (as it would be written) against the branch's
+  merge-base, else HEAD (`gitx.State.BaseHash`, `Repo.FileAt`); each changed line belongs to the smallest unit holding
+  it, and a deletion to the end of the line before it. The `?` marks, the unit's lines and the card are decorations
+  (`explain` provider), so they show wherever the buffer is drawn. `␣e` (`explain.unit`; again widens), `␣e` in Visual
+  mode (`explain.selection`), a `?` click and the Changed units panel open the card; crumbs are toggle chips, and `[`
+  / `]` / Escape are the `explain` key layer (`Nowait`), active while the editor is in normal mode with the cursor in
+  the outermost crumb. Narrowing past the innermost crumb goes into the child unit holding the cursor. Answers are
+  cached by `(kind, text)` hash and depth; an explained unit is tracked by an anchor at its start, so an edit inside
+  it shows "changed since it was explained" and **refresh**, even after closing and reopening. Why · history adds
+  the blame's commits of those lines, the session's PR and the session's threads on them. Pin as note is
+  `request.comment {status: resolved}`; Ask a follow-up is `request.new {context}`; Review this, Write tests for this
+  and Refactor this… are `request.this` menu items next to Explain this and Ask about this…. The panel
+  (`explain.units`, also the **explain by unit · n changed units · n hunks** editor action) is the `explain.units`
+  view: a tree per changed file of the owning units and the units around them.
+  Not yet: LSP `documentSymbol`/`selectionRange` (tree-sitter only); outside a session nothing answers (the resident
+  utility session is PL-4); Explain this on terminal output and debugger frames; LSP code actions in the menu; the
+  status line's explain hints; the mockup's leader lines into the margin.
 
 ## 08 · Debugging
 

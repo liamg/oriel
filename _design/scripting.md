@@ -52,6 +52,7 @@ L.session_option.agent = "claude"                  -- session-local
 L.keymap.set("n", "<leader>rr", "agent.review")             -- a command
 L.keymap.set({ "n", "x" }, "ga", function() L.thread.new() end)
 L.keymap.set("requests", "x", "request.resolve")            -- keys inside the Requests panel
+L.keymap.set("n", ",", "my.thing", { nowait = true })       -- don't wait for ",x" mappings (vim's <nowait>)
 
 -- commands
 L.command("Ship", function(args)
@@ -86,6 +87,8 @@ L.agent.tool{
 }
 
 -- prompt packs and session kinds
+L.agent.explainer{ name = "local", order = 5, label = "a local model",   -- answers every "explain this" first
+  run = function(req) return my_model(req.subject .. "\n" .. req.context, req.depth) end }
 L.agent.pack("hotfix", { prompt = L.read("~/.config/oriel/agents/hotfix.md"), tools = { "staging_logs" } })
 L.session.kind("hotfix", { pack = "hotfix", gates = { "tests", "ledger" }, status = "red-until-merged" })
 

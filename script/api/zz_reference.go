@@ -16,6 +16,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.statusline(fn)", Doc: "Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."},
 	},
 	"agent": {
+		{Call: "oriel.agent.explainer(spec)", Doc: "An explainer: { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning markdown }. req has kind, subject, context, files and depth. It only answers: explaining changes nothing."},
 		{Call: "oriel.agent.pack(name, spec)", Doc: "A prompt pack: { prompt, tools }, for sessions to start with."},
 		{Call: "oriel.agent.tool(spec)", Doc: "Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }."},
 	},
@@ -39,7 +40,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.hud.indicator(name, opts, fn)", Doc: "A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."},
 	},
 	"keymap": {
-		{Call: "oriel.keymap.set(modes, lhs, rhs, opts?)", Doc: "Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args."},
+		{Call: "oriel.keymap.set(modes, lhs, rhs, opts?)", Doc: "Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping)."},
 	},
 	"language": {
 		{Call: "oriel.language.add(spec)", Doc: "Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }."},

@@ -94,6 +94,30 @@ tests marked, and the output of the one picked, of the whole run, or the raw JSO
 
 {{keys "test.*"}}
 
+## Explain by code unit {#explain}
+
+A `?` in the gutter marks each code unit the branch changed: the smallest function, method, type, `case`, `if`, loop
+or closure that owns a change against the branch's base (tree-sitter finds them, in every language with a units
+query). Click it, or put the cursor in a unit and press `␣e`, to explain it in a card under the unit. The card's
+breadcrumb (`func roundHalfEven › switch diff › case 0`) shows where you are; click a crumb, or press `[` and `]`
+while the cursor is in the unit, to widen and narrow along the syntax tree, and `␣e` again widens. In Visual mode
+`␣e` explains the selection. **Brief**, **detailed** and **why · history** (which adds git blame, the commits, the
+session's PR and the threads on those lines) ask again at another depth.
+
+Answers come from the first explainer: the session's agent, forked without tools, so nothing changes. They're
+cached by the unit's text: an edit inside the unit marks the card **changed since it was explained**, with
+**refresh**; edits elsewhere keep it. **Ask a follow-up** writes a request with the explanation attached, and **Pin
+as note** keeps it as a resolved thread on those lines. The right-click menu has **Explain this**, and **Review
+this**, **Write tests for this** and **Refactor this…**, which start a request about the selection or the unit.
+
+{{keys "explain.*"}}
+
+## Changed units {#changed-units}
+
+The Changed units panel (`explain.units`, or **explain by unit** above the editor) lists every unit the branch
+touched, by file and nested as the code is, with whether it's been explained, is open, has changed since, or not
+(`–`). Opening one goes to it and explains it, so explaining by unit doubles as a review checklist.
+
 ## Presentations {#present}
 
 A file can be shown as something other than its text: a markdown file as a document (its **Preview** button, or

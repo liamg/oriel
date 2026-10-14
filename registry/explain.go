@@ -3,6 +3,7 @@ package registry
 import (
 	"cmp"
 	"context"
+	"errors"
 	"slices"
 	"strings"
 )
@@ -10,19 +11,40 @@ import (
 // ExplainRequest is something to explain (ide.md, "Explain sits next to fix everywhere"): what kind of thing it is,
 // a line naming it, and everything an explainer needs to know about it.
 type ExplainRequest struct {
-	Kind    string // "test-failure", "diagnostic", "selection"
+	Kind    string // "test-failure", "diagnostic", "selection", "unit"
 	Subject string // "TestRoundHalfEven/-3.5 failed"
 	Context string // the failure, the test's code, the code under test…
 	Files   []string
+	Depth   string // ExplainBrief (""), ExplainDetailed or ExplainWhy
 }
+
+// How deep an explanation goes (ui.md 07b): brief by default, detailed on demand, and why · history, whose Context
+// carries the blame, the commits, the PR and the threads that touched it.
+const (
+	ExplainBrief    = "brief"
+	ExplainDetailed = "detailed"
+	ExplainWhy      = "why"
+)
 
 // Explainer explains things without changing anything: it only answers, in markdown. The agent's (a tool-less fork
 // of the session's, AI) registers one; until something does, "ask to explain" is unavailable.
 type Explainer struct {
 	Name    string
 	Explain func(ctx context.Context, r ExplainRequest) (markdown string, err error)
-	Order   int // the first by Order answers
+	Order   int           // the first by Order answers
+	Label   func() string // who answers, under each answer: "fork of claude · knows this session"
 	Source  string
+}
+
+// Explain asks the first explainer about r, and says which answered.
+func Explain(ctx context.Context, reg Registry, r ExplainRequest) (string, Explainer, error) {
+	es := Explainers(reg)
+	if len(es) == 0 {
+		return "", Explainer{}, errors.New("nothing can explain yet: it needs an agent")
+	}
+	var md string
+	err := Call(func() (err error) { md, err = es[0].Explain(ctx, r); return err })
+	return md, es[0], err
 }
 
 func (Explainer) ContributionKind() string   { return "explainer" }

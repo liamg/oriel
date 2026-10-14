@@ -124,6 +124,9 @@ type Keymap struct {
 	Args    Args
 	Desc    string
 	Source  string
+	// Nowait runs it as soon as it matches, without waiting for a longer mapping in a mode after its own to be typed
+	// (vim's <nowait>): a key layer's "[" over the editor's "[c".
+	Nowait bool
 }
 
 type View interface {
@@ -469,6 +472,9 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	for _, m := range modes {
 		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && exact == nil && km.Command != "" {
 			exact = &km
+			if km.Nowait && !more && r.prefixes[keymapKey{m, seq}] == 0 {
+				return exact, false
+			}
 		}
 		if r.prefixes[keymapKey{m, seq}] > 0 {
 			more = true

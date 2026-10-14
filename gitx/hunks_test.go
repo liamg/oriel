@@ -206,3 +206,18 @@ func TestDiffLinesProperty(t *testing.T) {
 		}
 	}
 }
+
+// FileAt reads a file as a revision has it, as git show rev:path does.
+// ref: oracle git
+func TestFileAt(t *testing.T) {
+	r, _ := hunkFixture(t)
+	repo := Repo{Dir: r.Dir}
+	base := strings.TrimSpace(r.Git("rev-parse", "HEAD"))
+	got, ok := repo.FileAt(context.Background(), base, "f.txt")
+	if want := r.Git("show", base+":f.txt"); !ok || string(got) != want {
+		t.Errorf("FileAt = %q, %v; want git show's", got, ok)
+	}
+	if _, ok := repo.FileAt(context.Background(), base, "nope.txt"); ok {
+		t.Error("a file the revision hasn't got was found")
+	}
+}

@@ -263,6 +263,10 @@ type Session interface {
   (`AuthExpired`).
 - `Fork` returns the answer rather than a session: every side question so far (btw, explain, the quiz) wants one
   answer, and both providers produce it in one turn.
+- Built in RV-5: explain asks through the `agent` explainer (`app/sessions.go`), which forks the session in front's
+  agent with the request's depth (brief, detailed, why · history) over the wire's `agent.fork`; its label is "fork
+  of <provider> · knows this session". With no session in front it says so: the resident utility session isn't
+  built yet (PL-4).
 
 ### The session host as built (`worker`)
 

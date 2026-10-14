@@ -17,6 +17,7 @@ Version 0.4.0.
 
 ## oriel.agent
 
+- `oriel.agent.explainer(spec)`: An explainer: { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning markdown }. req has kind, subject, context, files and depth. It only answers: explaining changes nothing.
 - `oriel.agent.pack(name, spec)`: A prompt pack: { prompt, tools }, for sessions to start with.
 - `oriel.agent.tool(spec)`: Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }.
 
@@ -46,7 +47,7 @@ Version 0.4.0.
 
 ## oriel.keymap
 
-- `oriel.keymap.set(modes, lhs, rhs, opts?)`: Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args.
+- `oriel.keymap.set(modes, lhs, rhs, opts?)`: Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).
 
 ## oriel.language
 

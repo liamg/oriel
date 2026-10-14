@@ -78,6 +78,10 @@ function oriel.statusline(fn) end
 ---@class oriel.agent
 oriel.agent = {}
 
+--- An explainer: { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning markdown }. req has kind, subject, context, files and depth. It only answers: explaining changes nothing.
+---@param spec table
+function oriel.agent.explainer(spec) end
+
 --- A prompt pack: { prompt, tools }, for sessions to start with.
 ---@param name string
 ---@param spec table
@@ -151,7 +155,7 @@ function oriel.hud.indicator(name, opts, fn) end
 ---@class oriel.keymap
 oriel.keymap = {}
 
---- Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args.
+--- Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).
 ---@param modes string|string[]
 ---@param lhs string
 ---@param rhs any

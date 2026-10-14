@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -77,7 +78,7 @@ func (w *Worker) Comment(ctx context.Context, r CommentReq) (core.ThreadID, erro
 	c := core.Comment{ID: newID(6), Author: core.AuthorYou, Name: whoAmI(ctx), Body: r.Body, Time: now, Images: r.Images, Btw: r.Btw}
 	var t core.Thread
 	if r.Thread == "" {
-		t = core.Thread{ID: core.ThreadID(newID(8)), Anchor: r.Anchor, Title: r.Title, Status: core.ThreadOpen, Urgent: r.Urgent,
+		t = core.Thread{ID: core.ThreadID(newID(8)), Anchor: r.Anchor, Title: r.Title, Status: cmp.Or(r.Status, core.ThreadOpen), Urgent: r.Urgent,
 			Btw: r.Btw, Comments: []core.Comment{c}, Created: now, Updated: now}
 		if err := w.emit(core.ThreadUpdated{Session: r.Session, Thread: t}); err != nil {
 			return "", err
@@ -103,7 +104,7 @@ func (w *Worker) Comment(ctx context.Context, r CommentReq) (core.ThreadID, erro
 		go w.answerBtw(r.Session, t.ID)
 		return t.ID, nil
 	}
-	if se.Agent.Provider == "" || se.Archived {
+	if se.Agent.Provider == "" || se.Archived || !t.Open() {
 		return t.ID, nil
 	}
 	h, err := w.hostFor(r.Session, true)

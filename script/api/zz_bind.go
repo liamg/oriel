@@ -44,6 +44,9 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := Agent{a: a}
 		vm.Bind("agent", map[string]script.GoFunc{
+			"explainer": func(c *script.Args) ([]any, error) {
+				return nil, x.Explainer(c.Table(0), c.Where())
+			},
 			"pack": func(c *script.Args) ([]any, error) {
 				return nil, x.Pack(c.String(0), c.Table(1), c.Where())
 			},

@@ -111,20 +111,29 @@ flowchart TB
   it's in (`registry.EditorWindow{ID, Path, Presenter}`), and `LabelOn`/`IconOn` show while it's on (Preview ↔ Edit);
   `Note(window)` is dim text after the label (a count); an `Icon` naming a built-in icon is drawn.
   lit while `On` says so (the tests' file, failed, watch and coverage).
-- explainers (`registry.Explainer`): answer an `ExplainRequest` (a failure, a diagnostic, a selection) in markdown,
-  with no way to change anything; every "ask to explain" uses the first. The agent's comes with AI.
+- explainers (`registry.Explainer`): answer an `ExplainRequest` (a failure, a diagnostic, a selection, a code unit;
+  `Depth` brief, detailed or why) in markdown, with no way to change anything; every "ask to explain" uses the first
+  (`registry.Explain`), and its `Label` (“fork of claude · knows this session”) shows under the answer. The agent's
+  comes with AI; Lua adds one with `oriel.agent.explainer`. `explain.ask {file, line, end_line | text; subject, kind,
+  context, depth}` (RV-5) is how a feature asks: about a file's lines, a card between them; about text, a notice. RV-6's
+  walkthrough and TR-6's "ask to explain" twins are meant to go through it.
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
   so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
+- a keymap with `Nowait` (vim's `<nowait>`) runs as soon as it matches, not waiting for a longer mapping in a mode
+  after its own: the explain card's `[` over the editor's `[c`.
 - key layers (`registry.KeyLayer`): a keymap mode laid over every other while its `Active` says so, as the completion
   menu's `⌃n` and `⏎`; keys it doesn't map go on as before.
 - raw keys (`registry.RawKeys`): a keymap mode whose ⌃ keys skip the global maps, so a terminal's program gets `⌃W`;
   ⌘ and ⌥ chords, and the mode's own maps, still apply.
 - picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.
-- requests (AI-5): `request.comment {thread | file, line, text; body, title, urgent, btw}` is how anything comments to
+- requests (AI-5): `request.comment {thread | file, line, text; body, title, urgent, btw, status}` is how anything comments to
   the agent (it fires `CommentSend` first: a rewrite changes the comment, a veto stops it); `request.resolve`,
   `request.reopen`, `request.new {text, context, file, line}`, `request.open {thread}` and `request.attach {items |
   text, title}` (the pickers' `⌃a`) drive the Requests views, and `thread.new` opens a thread on the cursor's line, or on `{file}`'s `{line}` through `{end_line}`.
+  A new thread with `{status: "resolved"}` is a note: it's kept on its lines but never handed to the agent (explain's
+  Pin as note). `request.this {what: review | tests | refactor}` writes a request about the selection or the unit at
+  the cursor (RV-5's right-click entries).
 - threads shown or hidden (ED-15): each window shows its file's threads between the lines or hides them; `threads.toggle
   {window}` (`␣R`, and the **💬 n** editor action, n the file's open threads) switches the focused window, and
   `editor.threads = "shown" | "hidden"` is how a window shows a file it hasn't been switched on. Hidden, each line with

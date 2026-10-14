@@ -271,6 +271,22 @@ func TestBtwIsAnsweredByAFork(t *testing.T) {
 	a.NoneSent(t)
 }
 
+// RV-5: Pin as note is a thread opened resolved; it stays with the user and never reaches the agent.
+func TestAThreadOpenedResolvedIsANote(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Work")
+	a.WaitSent(t)
+	tid, err := r.w.Comment(context.Background(), CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3},
+		Title: "Explain: func Round", Body: "Rounds half to even.", Status: core.ThreadResolved})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if th, _ := r.session(id).Thread(tid); th.Status != core.ThreadResolved || th.Busy {
+		t.Errorf("the note = %+v", th)
+	}
+	a.NoneSent(t)
+}
+
 func TestConsoleMessagesQueueUntilTheTurnEnds(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Work")
