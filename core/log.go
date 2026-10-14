@@ -56,6 +56,9 @@ type Recorder struct {
 
 func NewRecorder(w io.Writer) *Recorder { return &Recorder{w: w} }
 
+// ResumeRecorder carries on a log that already holds seq events, so it still replays.
+func ResumeRecorder(w io.Writer, seq uint64) *Recorder { return &Recorder{w: w, seq: seq} }
+
 func (r *Recorder) Record(ev Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -95,31 +98,70 @@ func (r *Recorder) Err() error {
 // Replay applies every event in a recorded log to s, in order. It stops at the first event that
 // can't be read, is out of sequence or doesn't apply.
 func Replay(r io.Reader, s Store) error {
+	_, err := ReplayCount(r, s)
+	return err
+}
+
+// ReplayCount is Replay, and how many events it applied.
+func ReplayCount(r io.Reader, s Store) (uint64, error) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64<<10), 16<<20)
 	var seq uint64
 	for sc.Scan() {
 		var rec record
 		if err := json.Unmarshal(sc.Bytes(), &rec); err != nil {
-			return fmt.Errorf("event %d: %w", seq+1, err)
+			return seq, fmt.Errorf("event %d: %w", seq+1, err)
 		}
 		if rec.Seq != seq+1 {
-			return fmt.Errorf("event %d: seq is %d", seq+1, rec.Seq)
+			return seq, fmt.Errorf("event %d: seq is %d", seq+1, rec.Seq)
 		}
 		seq = rec.Seq
 		eventsMu.RLock()
 		t, ok := eventTypes[rec.Type]
 		eventsMu.RUnlock()
 		if !ok {
-			return fmt.Errorf("event %d: unknown type %q", seq, rec.Type)
+			return seq, fmt.Errorf("event %d: unknown type %q", seq, rec.Type)
 		}
 		p := reflect.New(t)
 		if err := json.Unmarshal(rec.Event, p.Interface()); err != nil {
-			return fmt.Errorf("event %d (%s): %w", seq, rec.Type, err)
+			return seq, fmt.Errorf("event %d (%s): %w", seq, rec.Type, err)
 		}
 		if err := s.Apply(p.Elem().Interface().(Event)); err != nil {
-			return fmt.Errorf("event %d (%s): %w", seq, rec.Type, err)
+			return seq, fmt.Errorf("event %d (%s): %w", seq, rec.Type, err)
 		}
 	}
-	return sc.Err()
+	return seq, sc.Err()
+}
+
+// Envelope is an event with its registered name, as it goes over the wire.
+type Envelope struct {
+	Type  string          `json:"type"`
+	Event json.RawMessage `json:"event"`
+}
+
+// EncodeEvent wraps ev for the wire. Its type must be registered.
+func EncodeEvent(ev Event) (Envelope, error) {
+	eventsMu.RLock()
+	name, ok := eventNames[reflect.TypeOf(ev)]
+	eventsMu.RUnlock()
+	if !ok {
+		return Envelope{}, fmt.Errorf("core: event type %T is not registered", ev)
+	}
+	b, err := json.Marshal(ev)
+	return Envelope{Type: name, Event: b}, err
+}
+
+// DecodeEvent unwraps an event from the wire.
+func DecodeEvent(e Envelope) (Event, error) {
+	eventsMu.RLock()
+	t, ok := eventTypes[e.Type]
+	eventsMu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("core: unknown event type %q", e.Type)
+	}
+	p := reflect.New(t)
+	if err := json.Unmarshal(e.Event, p.Interface()); err != nil {
+		return nil, fmt.Errorf("core: %s: %w", e.Type, err)
+	}
+	return p.Elem().Interface().(Event), nil
 }

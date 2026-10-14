@@ -44,6 +44,11 @@ type Session interface {
 	Kind() Kind
 	Status() Status
 	Unseen() int // errors since it last had focus: its tab's error mark
+	Projects() []Project
+	Threads() []Thread
+	Tasks() []Task
+	Agent() AgentState
+	Snapshot() SessionState // all of it, as a copy
 }
 
 // Event is something that happened. Scope is the session it belongs to, or "" for app-wide events.
