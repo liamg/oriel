@@ -315,3 +315,13 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `oriel.cmd("stats.session", { id = … })` and `oriel.cmd("usage.open")` reach them; `oriel.option["stats.split_sessions"]`
   is the split.
 
+
+## As built (SE-4)
+
+- Jobs are commands too: `oriel.cmd("jobs.open", { job = "sweep-stale-deps" })`, `oriel.cmd("jobs.run", { name = … })`,
+  and `oriel.cmd("jobs.save", { title = "Weekly changelog draft", prompt = "…", sandbox = "sandbox", provider =
+  "claude", model = "…", effort = "high", schedule = "weekly mon 07:00", worker = "devbox", run = false })` saves one
+  without the dialog: given a `name`, it changes only what's given. `schedule` is `"manual"`, `"weekdays 07:00"`,
+  `"weekly mon 07:00"`, `"mon,thu 07:00"`, or a table `{ every = "days", days = { "Mon", "Thu" }, at = "07:00" }`.
+  `jobs.new` opens the dialog with any of them filled in; `jobs.delete { name }` forgets one; `session.delete { id }`
+  throws a run (or any session of Oriel's) away.

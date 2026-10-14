@@ -2,7 +2,7 @@
 id: SE-4
 title: "Jobs: saved prompts, runs as sessions, a Jobs page, and schedules"
 phase: P5
-status: todo
+status: review
 area: Sessions and AI
 module: worker, app
 depends_on: [SE-1, AI-12]

@@ -73,6 +73,12 @@ clip 0,38 1600x936 r 0
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   text "Usage" @466.60938,637.37524 #ece6d8 Inter 12
+  rect 520.96875,620.01 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 3 segments stroke 1.25 #ffd23f
+  text "Jobs" @549.96875,637.37524 #ece6d8 Inter 12
   effect glow 1159,390.46997 39x150 blur 4 #ff8a1f4d
   path 6 segments stroke 24 #ffd23f
   path 5 segments fill #ff8a1f
@@ -226,9 +232,11 @@ clip 170,105 1260x790 r 10
   text "network" @1128,804.85004 #7c7566 JetBrains Mono 10.5
   text "ask per new host" @1296.5,804.85004 #ece6d8 JetBrains Mono 10.5
   rect 170,834 1260x1 fill #24221d
-  clip 194,857.74 1087.9375x14.52002 r 0
+  clip 194,857.74 990.0469x14.52002 r 0
     text "Each repo gets a worktree on the session's branch, from a freshly fetched base, and the agent starts at once." @194,868.95996 #b3ab99 JetBrains Mono 11
   pop
+  rect 1196.0469,852 85.890625x26 radius 6 stroke 1 #332f27
+  text "Save as job" @1206.0469,869.36523 #ece6d8 Inter 12
   rect 1293.9375,852 112.0625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
   text "Start Work" @1303.9375,869.36523 #141006 Inter 12
   rect 1372.0469,857.5 23.953125x15 radius 3 stroke 1 #14100666

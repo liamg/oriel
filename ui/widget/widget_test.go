@@ -874,6 +874,37 @@ func TestRichStrikesThrough(t *testing.T) {
 	}
 }
 
+// A code span with a tone is in that colour on a tint of it: a repo named in a prompt, in its project colour.
+func TestRichTonedCode(t *testing.T) {
+	tone := render.Color{R: 0x9b, G: 0x7b, B: 0xff, A: 0xff}
+	spans := []Span{{Text: "In "}, {Text: "api", Code: true, Tone: tone}, {Text: " and "}, {Text: "web", Code: true}}
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		Rich(c, "rich", spans, 500, uiText(c, 13, typeset.Normal, col(c, tInputFg)), RichOpts{})
+	})
+	h.frame()
+	var api, web render.Op
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == "api" {
+			api = op
+		}
+		if op.Kind == render.OpGlyphs && op.Run.Text == "web" {
+			web = op
+		}
+	}
+	if api.Color != tone || web.Color == tone {
+		t.Errorf("api is %v, web %v; want api in %v", api.Color, web.Color, tone)
+	}
+	tinted := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpRect && op.Style.Fill == alpha(tone, .14) && op.Rect.Min.X <= api.At.X && op.Rect.Max.X >= api.At.X+api.Run.Advance {
+			tinted = true
+		}
+	}
+	if !tinted {
+		t.Error("no tint of its tone behind the toned span")
+	}
+}
+
 // ED-15: a hover card shows while the pointer is on its anchor, stays while the pointer moves into it to read it, and
 // goes when the pointer leaves both; it never takes focus, so keys still go where they went.
 func TestHoverCardFollowsThePointer(t *testing.T) {

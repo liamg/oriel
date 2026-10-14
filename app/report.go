@@ -48,6 +48,7 @@ type shell struct {
 	search      *projectSearch
 	tests       *testsExt
 	sessions    *sessions     // the workers' sessions; nil while it isn't active
+	stats       *statsExt     // what the workers' sessions cost
 	present     *presentFocus // the presentation with focus, for its keys
 }
 

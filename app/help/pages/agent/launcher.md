@@ -52,3 +52,9 @@ The prompts recent sessions started with. Choosing one fills in its prompt, mode
 
 What starting will do: when worktrees are made, how many repos are fetched, the agent and its prompt pack, and where
 it runs.
+
+## Save as job
+
+**Save as job** keeps the prompt to run again: it opens the New job dialog with the prompt, the agent and where it
+runs filled in, and the launcher closes. A job names no repo or branch, so the repos you picked aren't kept: name
+them in the prompt. See Jobs (`:help jobs`).

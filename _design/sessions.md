@@ -211,3 +211,29 @@ type Sessions interface {
   terminal (`agent.terminal`, the raw PTY) with `/login` typed; on a worker elsewhere it says what to run there
   ("On devbox, run claude, then /login"). **Check again** asks the worker to look. Once it's signed in, every card
   goes and the sessions carry on: held comments go, and a turn the login stopped is told to carry on.
+
+## Jobs (SE-4)
+
+- **A job** is a saved prompt with a title and pins: where it runs (`sandbox`, `host`, or "" for the worker's
+  `sandbox.default`), the provider, model and effort, and a schedule. It names no repo or branch: the prompt names the
+  repos, and the agent adds them (`projects` pack part). Each is one JSON file, `~/.oriel/jobs/<slug>.json` on its
+  worker (`worker.Job`), the slug from the title's first six words (from the prompt's first line when there's no
+  title), a new one stepping aside to `-2` from a name in use, as crit's `internal/job` does. The worker answers
+  `jobs.list`, `jobs.save` (a job without a name is new; with one, that job rewritten), `jobs.delete` and
+  `jobs.run` (`Client.Jobs`, `SaveJob`, `DeleteJob`, `RunJob`).
+- **A run** is a session of kind job (`SessionSpec.Job` and `SessionState.Job` name its job), named from the job's
+  first three words, in a fresh workspace with no projects. The prompt is its first request and is written to the
+  workspace as `JOB.md` (`KindSpec.PromptFile`, the job kind's). It runs on its own (the `job` pack) to done or
+  blocked. `worker.RunOf` reads its row from the request thread: **done** once it's resolved, **blocked** while the
+  agent's answer (the pack's `**Blocked:**` reply) or a question waits on you (its session is needs-you, so the
+  request is in Requests under Needs you with the question), **running** while the agent has it, **stopped** when it
+  was stopped before either; the summary is the agent's last word on the request, how long it took runs to that, and
+  its repos are its projects. Its cost and the split by repo are its session stats (AI-12).
+- **Delete** (`session.delete`, `Client.Delete`) throws a session away: its agent stops, its worktrees go with
+  whatever is in them, then its workspace and its log, and it's gone from every app. The repos are never touched.
+  A direct session and a crit workspace are refused (archive those). Deleting a job keeps its runs.
+- **Schedules** (`worker.Schedule`): manual (the zero one), `weekdays` at a time, `weekly` on a day at a time, or
+  `days`, a set of days at a time (the page's custom), in the worker's local time. `RunSchedules` checks them every
+  30 seconds while the worker runs (`oriel worker` starts it), and `RunDue` starts each job due since it last looked,
+  on the worker's clock (`Options.Now`), so an occurrence slept through runs when the worker wakes, once. One due while
+  the job's last run is still going is skipped, and the job keeps when (`Job.Skipped`).

@@ -425,9 +425,10 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   directory. The right column is recent prompts (choosing one fills it in again) and the pre-flight: when worktrees
   are made, repos to fetch (and to clone), the agent and its prompt pack, where it runs and its network. The Sandbox
   toggle starts from `sandbox.default`, on unless it says `host`. A repo the chosen worker lacks says "not on
-  <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). Not yet: the multi-line
-  prompt (the field is one line), a ticket expanding into a card (PL-8), templates and Save as job, toolchains and
-  LSPs in the pre-flight.
+  <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). **Save as job** (SE-4) hands the
+  prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. Not yet: the multi-line
+  prompt (the field is one line), a ticket expanding into a card (PL-8), templates, toolchains and LSPs in the
+  pre-flight.
 
 ## 05 · Plan mode
 
@@ -678,8 +679,8 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   their burn, the opening and "full" marked, 5-hour resets as ticks); and what burned a window by repo (sessions,
   points, est. cost; outside Oriel as its own row), all of them the account's own. Points: each rise between two readings goes to the repos by
   their tokens in the hours it happened; a rise with no Oriel tokens behind it is outside Oriel.
-- **Entry points.** The sidebar's global group (Stats with today's cost, Usage with the weekly window, Jobs dimmed
-  until SE-4, Settings), below a second divider, at the foot in the narrow form, the figure in the tooltip there; the
+- **Entry points.** The sidebar's global group (Stats with today's cost, Usage with the weekly window, Jobs with its
+  runs going (SE-4), Settings), below a second divider, at the foot in the narrow form, the figure in the tooltip there; the
   title bar's indicators as one button opening Usage, showing the account the session in front runs on (the
   local worker's with no session), with a hover card of every account's windows, resets, burn and
   a red line for one that runs out; the session stats cost; the start view's links (Stats with this week's cost,
@@ -687,3 +688,39 @@ front (42), and the other repos take the palette's colours it leaves, by name.
 - Not yet: a date picker for CUSTOM (it keeps the range showing; drilling into a day sets one), the plan's tier chip
   (MAX 20×), and range-exact tool rows on the Stats page (they're the sessions' with requests in the range).
 
+
+## 44 · Jobs
+
+![44-jobs](mockups/44-jobs.png)
+
+Built in SE-4 (`worker/jobs.go`, `app/jobs.go`, `app/jobspage.go`, `app/jobform.go`). A job is a saved prompt with
+pins; each run is a session of kind job (`sessions.md` → Jobs).
+
+- **The Jobs page** (`:Jobs {job}`, `⌘⇧J`, `jobs.open {job}`, the sidebar's Jobs with "1 running", the start view's
+  link with the job count, the omnibox's Pages) is a page over the main area (`widget.Page` with `Over`), key mode
+  `jobs`. The header counts jobs, runs going and runs, and names the workers; **+ New job** (`n`), **Stats**
+  (`kind=job`: `stats.open {kind = "job"}`) and **Close** (`esc`).
+- **The list** (`widget.Rows`, `j`/`k`): every connected worker's jobs, the one that ran last first and the never-run
+  ones last, each with its last run's status chip and when ("started 4m ago", "today 07:14", "Oct 11 · 3d ago",
+  "never run · saved Oct 12"), its pin (sandbox, host or default) and its schedule; a filter over title and prompt;
+  the foot says where they live.
+- **The selected job**: its title and slug, **Edit** (`e`), **Duplicate**, **Delete** (asks "Sure?" once; its runs
+  stay), **▶ Run** (`⌘↵`); a meta line (pin, agent, worker, runs by status, total cost, average time of the done ones);
+  the prompt (`JOB.md for each run`) with the worker's registered repos it names picked out in their colours
+  (`widget.Span.Tone`) and listed at the card's right; the schedule as a strip (MANUAL, EVERY WEEKDAY 07:00, WEEKLY MON
+  07:00, CUSTOM… which opens the dialog) that saves at once; the runs card.
+- **Runs**: newest first, filtered ALL, RUNNING, DONE, BLOCKED, STOPPED; status chips in `jobs.run.running` (the
+  working colour), `jobs.run.done`, `jobs.run.blocked` and `jobs.run.stopped`; started, repos in their colours, the
+  agent's summary (its progress note while it runs; "Stopped after 3m"), cost est. over a strip of its split by repo
+  (a click opens its session stats, the pointer shows the split), how long it took; **Open** (agent live) or
+  **Resume** (`session.open`, which resumes), **Delete** (`session.delete`, asks once, not while it runs). Past six,
+  "N more · since Aug 26 · 5 done, 1 blocked · $13.60". `⏎` or a click on a row opens it.
+- **New job** (`jobs.new`, `n`; Edit and Duplicate open it on a job): title (the prompt's first line when empty),
+  prompt, runs in (Sandbox, Host, Default), worker, agent (the worker's providers as `widget.Choices`, model and
+  effort), schedule (manual, weekdays, weekly on a day, custom days by `widget.MultiSelect`, at a time checked as
+  HH:MM), the file it'll be; **Cancel**, **Save**, **Save and run** (`⌘↵`). It goes through `jobs.save`.
+- **A run's console** (panel 3) has the job beside it: a `agent.console.side.10-job` section with the job and **Jobs ›**,
+  the run's status, start and time, the last run's outcome; the repos touched with their cost so far and the ones the
+  prompt names but the agent hasn't added ("not yet"); and what happens when it ends.
+- Not yet: the multi-line prompt (the dialog's prompt is one line, like the launcher's; the page shows it by its
+  lines), and opening the console as the main tab with the narrow sidebar as panel 3 draws it (it opens docked).

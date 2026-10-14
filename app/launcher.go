@@ -332,6 +332,16 @@ func (x *launcher) start() error {
 	return nil
 }
 
+// saveAsJob hands what the launcher holds to the New job dialog: the prompt, the agent, where it runs.
+func (x *launcher) saveAsJob() {
+	a := registry.Args{"prompt": strings.TrimSpace(x.prompt), "provider": x.provider, "model": x.model, "effort": x.effort,
+		"worker": string(x.worker), "sandbox": x.sandbox}
+	x.close()
+	if err := x.h.Run(context.Background(), "jobs.new", a); err != nil {
+		x.h.Log().Error("launcher", "err", err)
+	}
+}
+
 func (x *launcher) close() { x.open, x.gen = false, x.gen+1 }
 
 func (x *launcher) build(c *ui.Ctx) {
@@ -884,6 +894,10 @@ func (x *launcher) footer(c *ui.Ctx) {
 			}
 			c.Text("t", k.About, monoFont(11, th.C(theme.FgMuted)))
 		})
+		if widget.Button(c, "savejob", "Save as job", widget.ButtonOpts{Ghost: true, Disabled: !x.h.Available("jobs.new", nil),
+			Help: "agent/launcher#save-as-job"}) {
+			x.saveAsJob()
+		}
 		label := "Start"
 		if k.Title != "" {
 			label = "Start " + k.Title

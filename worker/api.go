@@ -21,6 +21,7 @@ const (
 	MethodResume    = "session.resume"
 	MethodStop      = "session.stop"
 	MethodArchive   = "session.archive"
+	MethodDelete    = "session.delete"
 	MethodNextPR    = "session.nextpr"
 	MethodAddRepo   = "session.addrepo"
 	MethodRename    = "session.rename"
@@ -52,6 +53,11 @@ const (
 	// MethodUsageHistory is the plan readings the worker has kept; MethodUsageRead reads every provider's now.
 	MethodUsageHistory = "usage.history"
 	MethodUsageRead    = "usage.read"
+	// The worker's jobs (sessions.md → Jobs): saved prompts, each run as a session of kind job.
+	MethodJobs      = "jobs.list"
+	MethodJobSave   = "jobs.save"
+	MethodJobDelete = "jobs.delete"
+	MethodJobRun    = "jobs.run"
 	// MethodTrustSettings trusts a repo's .oriel/settings.toml on the worker's machine, as it is now.
 	MethodTrustSettings = "settings.trust"
 )
@@ -76,6 +82,11 @@ type Info struct {
 
 type SessionRef struct {
 	Session core.SessionID `json:"session"`
+}
+
+// JobRef names a job.
+type JobRef struct {
+	Name string `json:"name"`
 }
 
 type RenameReq struct {
@@ -234,6 +245,33 @@ func (c Client) Stop(ctx context.Context, id core.SessionID) error {
 
 func (c Client) Archive(ctx context.Context, id core.SessionID) error {
 	return c.Conn.Call(ctx, MethodArchive, SessionRef{id}, nil)
+}
+
+// Delete throws a session away: its worktrees, workspace and log.
+func (c Client) Delete(ctx context.Context, id core.SessionID) error {
+	return c.Conn.Call(ctx, MethodDelete, SessionRef{id}, nil)
+}
+
+// Jobs is the worker's jobs, the most recently changed first.
+func (c Client) Jobs(ctx context.Context) ([]Job, error) {
+	var out []Job
+	return out, c.Conn.Call(ctx, MethodJobs, nil, &out)
+}
+
+// SaveJob writes a job, a new one when it has no name, and returns it as saved.
+func (c Client) SaveJob(ctx context.Context, j Job) (Job, error) {
+	var out Job
+	return out, c.Conn.Call(ctx, MethodJobSave, j, &out)
+}
+
+func (c Client) DeleteJob(ctx context.Context, name string) error {
+	return c.Conn.Call(ctx, MethodJobDelete, JobRef{name}, nil)
+}
+
+// RunJob starts a run of a job, and returns its session.
+func (c Client) RunJob(ctx context.Context, name string) (core.SessionID, error) {
+	var out core.SessionID
+	return out, c.Conn.Call(ctx, MethodJobRun, JobRef{name}, &out)
 }
 
 func (c Client) NextPR(ctx context.Context, id core.SessionID) error {

@@ -86,6 +86,12 @@ clip 0,38 1600x936 r 0
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   text "Usage" @369.60938,672.37524 #ece6d8 Inter 12
+  rect 423.96875,655.01 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 3 segments stroke 1.25 #ffd23f
+  text "Jobs" @452.96875,672.37524 #ece6d8 Inter 12
   text "RECENT" @875,336.16 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1229.0469,336.67 #7c7566 JetBrains Mono 10
   text "DIRECTORIES" @887,367.36002 #7c7566 JetBrains Mono 9.5

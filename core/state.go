@@ -32,6 +32,7 @@ type SessionState struct {
 	Ticket     string     `json:"ticket,omitempty"`
 	PR         string     `json:"pr,omitempty"`
 	Source     string     `json:"source,omitempty"` // "crit" for a crit workspace read in place
+	Job        string     `json:"job,omitempty"`    // the saved job this session is a run of
 	Created    time.Time  `json:"created,omitzero"`
 	Archived   bool       `json:"archived,omitempty"`
 	Unplanned  bool       `json:"unplanned,omitempty"` // work started with no plan or ticket

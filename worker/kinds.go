@@ -42,6 +42,8 @@ type KindSpec struct {
 	Worktrees Worktrees `json:"worktrees"`
 	Gate      string    `json:"gate,omitempty"` // the commit gate: hard, soft or off (agents.md)
 	NeedsRepo bool      `json:"needsRepo,omitempty"`
+	// PromptFile is a file at the workspace root the prompt is written to as the session starts: a job's JOB.md.
+	PromptFile string `json:"promptFile,omitempty"`
 }
 
 // Kinds is the set of session kinds, a later one shadowing an earlier with the same Kind.
@@ -61,7 +63,7 @@ func builtinKinds() *Kinds {
 		{Kind: core.KindTour, Title: "Tour", Desc: "explain how it works", From: FromPrompt, Pack: "tour", Worktrees: WorktreesPinned, Gate: "off",
 			About: "The agent answers with a guided tour through the code, in a pinned, read-only worktree."},
 		{Kind: core.KindJob, Title: "Job", Desc: "runs to done on its own", From: FromPrompt, Pack: "job", Worktrees: WorktreesNow, Gate: "soft",
-			About: "The agent runs the prompt until it's done or blocked, and makes worktrees as it needs them."},
+			PromptFile: "JOB.md", About: "The agent runs the prompt until it's done or blocked, and makes worktrees as it needs them."},
 		{Kind: core.KindNewRepo, Title: "New repo", Desc: "start from nothing", From: FromName, Pack: "newrepo", Worktrees: WorktreesInit, Gate: "hard",
 			About: "Oriel makes the repo from the template, commits and registers it, and carries on as a plan for it."},
 		{Kind: core.KindDirect, Title: "Direct", Desc: "a directory as it is", From: FromDir, Pack: "direct", Worktrees: WorktreesNone, Gate: "off",

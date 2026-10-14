@@ -75,7 +75,7 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	name := w.freshName(spec)
 	id := core.SessionID(name)
 	se := core.SessionState{ID: id, Name: name, Kind: spec.Kind, Worker: w.opts.ID, Prompt: spec.Prompt, Ticket: spec.Ticket,
-		PR: spec.PR, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
+		PR: spec.PR, Job: spec.Job, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
 		StartWork: k.Worktrees == WorktreesStartWork || k.Worktrees == WorktreesInit,
 		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: gate(spec),
 			Sandboxed: spec.Sandbox.Container, Network: spec.Sandbox.Network}}
@@ -94,6 +94,11 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	}
 	if err != nil {
 		return "", err
+	}
+	if p := strings.TrimSpace(spec.Prompt); k.PromptFile != "" && se.Dir != "" && p != "" {
+		if err := os.WriteFile(filepath.Join(se.Dir, k.PromptFile), []byte(p+"\n"), 0o644); err != nil {
+			return "", err
+		}
 	}
 	se.Status = core.DeriveStatus(se)
 	if err := w.emit(core.SessionSynced{Session: se}); err != nil {
@@ -655,4 +660,56 @@ func (w *Worker) saveProjects(id core.SessionID) {
 // Rename names a session.
 func (w *Worker) Rename(id core.SessionID, name string) error {
 	return w.emit(core.SessionRenamed{ID: id, Name: strings.TrimSpace(name)})
+}
+
+// Delete throws a session away: its agent stops, its worktrees go with whatever is in them, then its workspace and
+// its log. The repos themselves are never touched. A direct session's directory and a crit workspace aren't Oriel's
+// to remove, so they're refused.
+func (w *Worker) Delete(ctx context.Context, id core.SessionID) error {
+	se, err := w.session(id)
+	if err != nil {
+		return err
+	}
+	if se.Source == "crit" || se.Kind == core.KindDirect {
+		return fmt.Errorf("%s isn't Oriel's to delete: archive it instead", id)
+	}
+	if h, _ := w.hostFor(id, false); h != nil {
+		h.stop("deleted")
+	}
+	for _, p := range se.Projects {
+		if p.Repo == "" || p.Dir == p.Repo {
+			continue
+		}
+		if err := (gitx.Repo{Dir: p.Repo}).RemoveWorktree(ctx, p.Dir, true); err != nil {
+			if _, serr := os.Stat(p.Dir); serr == nil {
+				return fmt.Errorf("%s: %w", p.Name, err)
+			}
+		}
+	}
+	if se.Dir != "" && within(se.Dir, w.workspacesDir()) {
+		if err := os.RemoveAll(se.Dir); err != nil {
+			return err
+		}
+	}
+	if err := w.emit(core.SessionClosed{ID: id}); err != nil {
+		return err
+	}
+	w.mu.Lock()
+	if l := w.recs[id]; l != nil {
+		_ = l.f.Close()
+		delete(w.recs, id)
+	}
+	if l := w.open[id]; l != nil {
+		_ = l.Close()
+		delete(w.open, id)
+	}
+	delete(w.hosts, id)
+	w.mu.Unlock()
+	return os.RemoveAll(w.sessionDir(id))
+}
+
+// within says whether path is under dir.
+func within(path, dir string) bool {
+	rel, err := filepath.Rel(dir, path)
+	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }

@@ -18,12 +18,24 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// side is the console's right column: the session's stats, the plans' usage, what this turn touched, and the rules
-// in force.
+// ConsoleSide prefixes the views a plugin adds to the console's right column, above its own sections, in the order
+// of their names: agent.console.side.<order>-<name>. Each is built for the session in the console, its ID the
+// instance.
+const ConsoleSide = "agent.console.side."
+
+// side is the console's right column: what plugins add, the session's stats, the plans' usage, what this turn
+// touched, and the rules in force.
 func (x *agentConsole) side(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#stats"}, ui.Style{},
 		func(c *ui.Ctx, _ func(string) ui.ID) {
+			for _, id := range x.h.Views() {
+				if v, ok := x.h.ViewByID(id); ok && strings.HasPrefix(id, ConsoleSide) {
+					c.Column(id, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+						c.Node(v.Build(registry.ViewCtx{Width: 330, Instance: string(se.ID)}))
+					})
+				}
+			}
 			x.sessionStats(c, se)
 			x.tasks(c, se)
 			x.usage(c, se)

@@ -30,6 +30,11 @@ func (w *Worker) Serve(conn wire.Conn) {
 	fn(MethodResume, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.Resume(ctx, r.Session) }))
 	fn(MethodStop, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.Stop(ctx, r.Session) }))
 	fn(MethodArchive, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.Archive(ctx, r.Session) }))
+	fn(MethodDelete, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.Delete(ctx, r.Session) }))
+	fn(MethodJobs, wire.Func(func(context.Context, struct{}) ([]Job, error) { return w.Jobs(), nil }))
+	fn(MethodJobSave, wire.Func(func(_ context.Context, j Job) (Job, error) { return w.SaveJob(j) }))
+	fn(MethodJobDelete, wire.Func(func(_ context.Context, r JobRef) (any, error) { return nil, w.DeleteJob(r.Name) }))
+	fn(MethodJobRun, wire.Func(func(ctx context.Context, r JobRef) (core.SessionID, error) { return w.RunJob(ctx, r.Name) }))
 	fn(MethodNextPR, wire.Func(func(ctx context.Context, r SessionRef) (any, error) { return nil, w.NextPR(ctx, r.Session) }))
 	fn(MethodStartWork, wire.Func(func(ctx context.Context, r StartWorkReq) (any, error) { return nil, w.StartWork(ctx, r) }))
 	fn(MethodAddRepo, wire.Func(func(ctx context.Context, r AddRepoReq) (any, error) {

@@ -59,10 +59,10 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 3 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -153,6 +153,12 @@ clip 44,38 1556x936 r 0
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   text "Usage" @391.60938,672.37524 #ece6d8 Inter 12
+  rect 445.96875,655.01 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 3 segments stroke 1.25 #ffd23f
+  text "Jobs" @474.96875,672.37524 #ece6d8 Inter 12
   text "RECENT" @897,336.16 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1251.0469,336.67 #7c7566 JetBrains Mono 10
   text "SESSIONS" @909,367.36002 #7c7566 JetBrains Mono 9.5

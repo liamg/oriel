@@ -76,6 +76,7 @@ func runWorker(args []string, stderr io.Writer) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go w.SampleLoad(ctx, 5*time.Second)
+	go w.RunSchedules(ctx, 30*time.Second)
 	if *connect == "" {
 		log.Info("worker listening", "socket", worker.SocketPath(*home))
 		return w.Listen(ctx, worker.SocketPath(*home))

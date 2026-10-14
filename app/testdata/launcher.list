@@ -100,6 +100,12 @@ clip 0,38 1600x936 r 0
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   text "Usage" @466.60938,672.37524 #ece6d8 Inter 12
+  rect 520.96875,655.01 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 3 segments stroke 1.25 #ffd23f
+  text "Jobs" @549.96875,672.37524 #ece6d8 Inter 12
   text "RECENT" @875,336.16 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1229.0469,336.67 #7c7566 JetBrains Mono 10
   text "SESSIONS" @887,367.36002 #7c7566 JetBrains Mono 9.5
@@ -300,9 +306,11 @@ clip 170,105 1260x790 r 10
   text "network" @1128,804.85004 #7c7566 JetBrains Mono 10.5
   text "ask per new host" @1296.5,804.85004 #ece6d8 JetBrains Mono 10.5
   rect 170,834 1260x1 fill #24221d
-  clip 194,857.74 1093.9688x14.52002 r 0
+  clip 194,857.74 996.0781x14.52002 r 0
     text "The agent drafts the plan in PLAN.md, you annotate it, and Start work implements it in these worktrees." @194,868.95996 #b3ab99 JetBrains Mono 11
   pop
+  rect 1202.0781,852 85.890625x26 radius 6 stroke 1 #332f27
+  text "Save as job" @1212.0781,869.36523 #ece6d8 Inter 12
   rect 1299.9688,852 106.03125x26 fill #ffd23f radius 6 stroke 1 #ffd23f
   text "Start Plan" @1309.9688,869.36523 #141006 Inter 12
   rect 1372.0469,857.5 23.953125x15 radius 3 stroke 1 #14100666

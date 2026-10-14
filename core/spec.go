@@ -39,6 +39,7 @@ type SessionSpec struct {
 	Sandbox  SandboxPolicy `json:"sandbox,omitzero"`
 	Template string        `json:"template,omitempty"` // new repo kind
 	TourKind string        `json:"tourKind,omitempty"` // tour kind: walkthrough, onboarding…
+	Job      string        `json:"job,omitempty"`      // the saved job this is a run of
 }
 
 // Sessions starts and moves sessions; the worker implements it, and the app reaches it over the wire.

@@ -174,6 +174,11 @@ flowchart TB
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats extension's since AI-12: one button to Usage with a
   hover card).
+- agent console side sections: views named `agent.console.side.<order>-<name>` are drawn at the top of the console's
+  right column, in name order, built with the session's ID as `ViewCtx.Instance`; one that has nothing to say for a
+  session draws nothing. Jobs adds `agent.console.side.10-job` (SE-4).
+- rich text: a `widget.Span` with `Code` and a `Tone` is in that colour on a tint of it: a repo named in a job's
+  prompt, in its project colour.
 - pages over the main area: `widget.Page` with `PageOpts.Over` (the node it covers, as laid out last frame) draws a
   page beside the sidebar rather than over the whole window, at `ui.LayerPage`; Stats and Usage are overlay views
   (`overlay.stats`, `overlay.usage`) drawn that way, and any plugin's page can be.
@@ -190,6 +195,12 @@ flowchart TB
   Commands: `stats.open`, `stats.session`, `stats.group`, `stats.range`, `stats.move`, `stats.drill`, `stats.back`,
   `stats.copy`, `stats.split`, `usage.open`, `usage.refresh`, `:Stats`, `:Usage`. Plans are per account
   (`core.ProviderUsage.Account`, `Same`, `Uses`; `stats.ByAccount` and the `account` filter); `usage.accounts` names them.
+- jobs (SE-4): a worker answers `jobs.list`, `jobs.save`, `jobs.delete` and `jobs.run` (`worker.Job`,
+  `worker.Schedule`; `Client.Jobs`, `SaveJob`, `DeleteJob`, `RunJob`) and `session.delete` (`Client.Delete`); a run's
+  row is `worker.RunOf(session)`. Commands: `jobs.open`, `:Jobs`, `jobs.new`, `jobs.edit`, `jobs.duplicate`,
+  `jobs.save`, `jobs.run`, `jobs.delete`, `session.delete`, `jobs.form.save`; key modes `jobs` and `jobs.form`; theme
+  tokens `jobs.run.running`, `jobs.run.done`, `jobs.run.blocked`, `jobs.run.stopped`. A kind's `PromptFile` writes its
+  prompt into the workspace as the session starts (the job kind's `JOB.md`).
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**

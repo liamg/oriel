@@ -103,7 +103,7 @@ type statsExt struct {
 func (x *statsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "stats"} }
 
 func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
-	x.h = h
+	x.h, x.sh.stats = h, x
 	if x.now == nil {
 		x.now = time.Now
 	}
@@ -196,7 +196,6 @@ func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
 			Note: func(string) string { return x.figure("today") }},
 		{Name: "usage", Icon: "usage", Title: "Usage", Command: "usage.open", Scope: registry.ScopeGlobalEntry, Order: 20,
 			Note: func(string) string { return x.usageFigure() }},
-		{Name: "jobs", Icon: "jobs", Title: "Jobs", Command: "jobs.open", Scope: registry.ScopeGlobalEntry, Order: 30},
 	} {
 		x.add(h.Contribute(e))
 	}
@@ -205,7 +204,6 @@ func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
 			Note: func() string { return x.figure("week") }},
 		{Name: "usage", Icon: "usage", Title: "Usage", Desc: "Each provider's plan windows", Command: "usage.open", Order: 70, Link: true,
 			Note: x.usageFigure},
-		{Name: "jobs", Icon: "jobs", Title: "Jobs", Desc: "Saved prompts, their runs and schedules", Command: "jobs.open", Order: 80, Link: true},
 	} {
 		x.add(h.Contribute(e))
 	}

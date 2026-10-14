@@ -21,6 +21,7 @@ type Span struct {
 	Code   bool
 	Bold   bool
 	Strike bool
+	Tone   render.Color // a code span's colour, on a tint of it: a name in its own colour
 }
 
 type RichOpts struct {
@@ -136,8 +137,12 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 						}
 						cur = p.span
 						if p.span.Code {
-							c.Row(n, ui.Style{Pad: ui.PadXY(4, 1), Radius: 3, Fill: col(c, tCodeSpanBg), Cross: ui.Center}, func(c *ui.Ctx) {
-								c.Text("t", p.text, code)
+							fg, bg := code, col(c, tCodeSpanBg)
+							if p.span.Tone.A > 0 {
+								fg.Color, bg = p.span.Tone, alpha(p.span.Tone, .14)
+							}
+							c.Row(n, ui.Style{Pad: ui.PadXY(4, 1), Radius: 3, Fill: bg, Cross: ui.Center}, func(c *ui.Ctx) {
+								c.Text("t", p.text, fg)
 							})
 							n++
 							cur = Span{}

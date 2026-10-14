@@ -65,6 +65,9 @@ type Worker struct {
 	statsMu   sync.Mutex // the stats store, and the events records it reads
 	usageMu   sync.Mutex
 
+	jobsMu  sync.Mutex // the jobs' files, and when the schedules last ran
+	lastDue time.Time
+
 	mu       sync.Mutex
 	recs     map[core.SessionID]*sessionLog
 	hosts    map[core.SessionID]*host
@@ -131,7 +134,7 @@ func New(opts Options) (*Worker, error) {
 	w := &Worker{opts: opts, store: eventstore.New(), log: opts.Log, kinds: builtinKinds(),
 		recs: map[core.SessionID]*sessionLog{}, hosts: map[core.SessionID]*host{}, open: map[core.SessionID]logs.SessionLog{},
 		repos: &repoList{path: filepath.Join(opts.Home, "repos.json")}, sessLogs: logs.Dirs{Root: filepath.Join(opts.Home, "sessions")},
-		closed: make(chan struct{})}
+		closed: make(chan struct{}), lastDue: opts.Now()}
 	if err := w.repos.load(); err != nil {
 		return nil, err
 	}
