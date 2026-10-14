@@ -125,6 +125,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.threads` | `shown`: files open with their threads between the lines; `hidden`, behind gutter bubbles | app | | ED-15 |
 | `files.generated` | false | app | | ED-9 |
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | | FG-2 |
+| `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | | RV-1 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
 | `lsp.start` | `project`: a project's servers start when it opens; `file`: when one of their files does | app | | – |

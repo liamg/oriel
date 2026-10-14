@@ -285,7 +285,7 @@ Superseded alternatives (41-project-context.png):
   `u`, `x` (asks first; an untracked file is deleted) and `=`. They run the general `git.stage`, `git.unstage` and
   `git.discard {path}`. Rows are `widget.Tree` rows (a note, a tint, a strike-through, a leading glyph, trailing
   content, sections, items open by default) with `widget.DiffStat` and `widget.ToggleChip`. Changed opens a file
-  with `diff.open` when something registers it (RV-1), the file until then. Tabs carry the letter through the
+  with `diff.open` (RV-1, 06), the file if it isn't registered. Tabs carry the letter through the
   `registry.Marked` view interface; the files picker ranks changed files up and notes their letter. Not yet: the
   agent and threads columns (P5), and the read bar and "by review" (the ledger, P6). SH-17: the Explorer reads its
   project from its view instance (`ViewCtx.Project`), each project's work tree read on its own (`gitExt.tree`).
@@ -468,6 +468,30 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Authorship breakdown: Claude, you, gofmt.
 - **Cross-model AI review**: Codex reviews Claude's work (or the other way round), with findings sorted by severity.
 - GitHub threads mirrored inline. The agent drafts a reply, and **you** forward it.
+- Built in RV-1 (`app/diff*.go`, `gitx/diff.go`): `diff.open {path}` opens the `diff` view, a main tab per repo
+  (its root is the instance), for a file (opened, selected and scrolled to) or a repo's whole change (a session's
+  workspace means its primary project); the Explorer's Changed, the agent console's "view in diff", plan's
+  **Preview diff** and the request's **View diff** reach it. It's the branch against the merge-base with its base
+  (`gitx.State.BaseHash`), uncommitted work and unsaved buffers included, in git's `-U3` hunks (`gitx.Unified`, held
+  to `git diff`). Left: **CHANGES**, each file with a reviewed box (`widget.Check`: ticked when every hunk is
+  marked, half when some are; a click marks or unmarks the file) and its size; then the `diff.side.*` views
+  (Authorship is the built-in `diff.side.50-authorship`: added lines by blame, an agent's, yours, others', and lines
+  not committed by the open buffer's authors, else "uncommitted"); then the keys. Middle: the `diff.header.*` views
+  (RV-2's ledger goes here), then each file's header (path, size, "n/m hunks reviewed" or **reviewed**, **⌄ expand**
+  to open it, SPLIT / UNIFIED while open) and its hunks: a `?` (explain), the `@@` line with the smallest function,
+  method or type around the change from tree-sitter (`func roundHalfEven`; git's default funcname line without a
+  grammar), and **MARK REVIEWED** / **✓ REVIEWED**; lines highlighted by the editor's grammars, changed words marked
+  (`gitx.Intraline`: a word diff that matches git's `--word-diff`, none for lines with under a third in common).
+  Every decoration provider's Blocks sit under the new line they're on (`DecorationCtx.Presenter` is `diff`), so
+  threads open and show between the diff's lines. Right: a column of the `diff.right.*` views when any is
+  registered (RV-3's findings). `diff.layout` (`split`, `unified`) remembers the toggle. Keys (mode `diff`): `]h`
+  `[h` hunks, `j` `k` lines, `r` marks the hunk reviewed, `gc` opens a thread on the line or the hunk's changed lines
+  (`thread.new`), `?` runs `explain.unit {path, line}` (RV-5's; the `?` is dimmed until it's registered), `o` opens
+  the line in the editor, `⏎` shows or folds the file, `q` closes. A mark is per change (`gitx.Hunk.ID`, a hash of
+  what it removes and adds), so it survives edits to other hunks; a hunk is reviewed when all its changes are. In a
+  session they're `core.HunksReviewed` events the worker keeps (`review.set`, `SessionState.Reviews`); outside one
+  they last as long as the window. Not yet: the ledger, commit gate, AI review and GitHub threads (RV-2–RV-4), more
+  context between hunks, scrolled-past counting as read, and per-line marks inside a hunk.
 
 ## 07 · Explain this change
 

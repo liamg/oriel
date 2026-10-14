@@ -47,7 +47,8 @@ type SessionState struct {
 	Asks       []Ask      `json:"asks,omitempty"`
 	Transcript []Item     `json:"transcript,omitempty"`
 	Runs       []TestRun  `json:"runs,omitempty"`
-	Rules      []string   `json:"rules,omitempty"` // "Always in this workspace": Bash(go test:*), net(*.golang.org:443)
+	Rules      []string   `json:"rules,omitempty"`   // "Always in this workspace": Bash(go test:*), net(*.golang.org:443)
+	Reviews    []Review   `json:"reviews,omitempty"` // what's been marked reviewed in the diff, per file
 	ProjectUI  ProjectUI  `json:"projectUI,omitzero"`
 }
 

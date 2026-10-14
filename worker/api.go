@@ -44,6 +44,7 @@ const (
 	MethodLogAppend = "log.append"
 	MethodLogRead   = "log.read"
 	MethodRunTests  = "tests.record"
+	MethodReview    = "review.set" // marks a file's changes reviewed in the diff, or not
 	MethodSessions  = "sessions.list"
 	MethodFork      = "agent.fork"
 	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
@@ -398,6 +399,11 @@ func (c Client) Search(ctx context.Context, r SearchReq) ([]Hit, error) {
 
 func (c Client) RecordRun(ctx context.Context, id core.SessionID, run core.TestRun) error {
 	return c.Conn.Call(ctx, MethodRunTests, core.TestRunRecorded{Session: id, Run: run}, nil)
+}
+
+// SetReviewed marks a file's changes reviewed, or takes the marks off.
+func (c Client) SetReviewed(ctx context.Context, r core.HunksReviewed) error {
+	return c.Conn.Call(ctx, MethodReview, r, nil)
 }
 
 // Events streams every session the worker has, as SessionSynced, then every event after, into apply. It

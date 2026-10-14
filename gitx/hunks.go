@@ -261,6 +261,9 @@ func (r Repo) HeadFile(ctx context.Context, path string) ([]byte, bool) {
 
 // FileAt is a file as a revision has it ("HEAD", a merge-base's hash), and whether it's there.
 func (r Repo) FileAt(ctx context.Context, rev, path string) ([]byte, bool) {
+	if rev == "" {
+		return nil, false
+	}
 	return r.blob(ctx, rev+":"+path)
 }
 

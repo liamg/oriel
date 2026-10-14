@@ -149,7 +149,7 @@ clip 364,38 1236x936 r 0
     rect 1305.6406,82 113.546875x26 fill #191815 radius 6 stroke 1 #332f27
     text "Open in editor ↗" @1315.6406,99.365234 #ece6d8 Inter 12
     rect 1429.1875,82 71.296875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "View diff" @1439.1875,99.365234 #4f4a40 Inter 12
+    text "View diff" @1439.1875,99.365234 #ece6d8 Inter 12
     rect 1510.4844,82 65.515625x26 fill #191815 radius 6 stroke 1 #332f27
     text "Resolve" @1520.4844,99.365234 #ece6d8 Inter 12
     rect 364,121 1236x1 fill #24221d

@@ -533,6 +533,8 @@ All on by default, all configurable, none a nag:
 - **Review ledger.** Every agent-written line is unread until you've seen it in
   the diff (scrolled past it, or marked its hunk reviewed). The ledger is
   visible in the session HUD.
+  Built in RV-1: marking a hunk reviewed in the diff is a session event (`core.HunksReviewed`) keyed by the change's
+  content, which the ledger (RV-2) counts from.
 - **Commit gate** (`ledger.gate`), set per session kind:
   - **work and plan: hard.** Commit and PR are blocked until every agent-written line is read. "Commit anyway" is one keypress,
     and it's recorded in a commit trailer (`Unreviewed-Agent-Lines: 38`) and in the session log.

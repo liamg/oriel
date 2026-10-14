@@ -154,6 +154,19 @@ flowchart TB
   outside every project, is anchored to the project `core.DocsProject` (`"__docs__"`) with the path relative to the
   workspace; `request.comment {file}` does that for an absolute path, and an agent's `comment` tool takes
   `project: "__docs__"`.
+- the review diff (RV-1): `diff.open {path}` opens a file's or a repo's branch diff (the `diff` view, one per repo
+  root); `diff.layout {layout}`, `diff.hunk.next`/`prev`, `diff.line.next`/`prev`, `diff.review {path, hunk}`,
+  `diff.review.file {path, reviewed}`, `diff.comment`, `diff.explain`, `diff.source`, `diff.expand {path}` drive it
+  (key mode `diff`). Its slots are views drawn in name order, built with the repo's root as `ViewCtx.Instance`:
+  `diff.header.<order>-<name>` above the files (the review ledger), `diff.side.<order>-<name>` in the left column
+  under the changed files (the built-in `diff.side.50-authorship`), and `diff.right.<order>-<name>` in a column at
+  the right (an AI review's findings). Between its lines it draws every decoration provider's Blocks on the new side,
+  asked with `DecorationCtx.Presenter = "diff"`, so a provider can tell it's in the diff (an explain card, a review
+  finding, a mirrored GitHub thread). `?` runs `explain.unit {path, line}`, which RV-5 registers. Reviewed marks are
+  the session event `core.HunksReviewed {session, project, file, hunks, reviewed}` (`SessionState.Reviews`,
+  `ReviewedHunks`), sent through the worker's `review.set` (`worker.Client.SetReviewed`), each hunk named by
+  `gitx.Hunk.ID`; `gitx.Unified`, `gitx.Intraline` and `Repo.FileAt` are the diff's pieces for others to reuse.
+  `widget.Check` is a checkbox with on, off and mixed states.
 - a Block decoration's controls take and keep focus (a reply field between the lines): the editor doesn't take focus
   back from something inside its code column.
 - inlay decorations (`registry.Inlay`): text drawn inline before a column, the code after it moved along the grid.

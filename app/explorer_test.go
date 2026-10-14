@@ -222,7 +222,8 @@ func TestExplorerStagesFiles(t *testing.T) {
 	}
 }
 
-// ⏎ on a file opens it in the editor; in Changed, where no diff view is registered yet, too.
+// A click on a file opens it in the editor; in Changed, its branch diff (ui.md 01c, "Opening a file here opens its
+// branch diff, not the plain file").
 func TestExplorerOpensFiles(t *testing.T) {
 	s, r := explorerScene(t)
 	s.run("explorer.scope", registry.Args{"scope": "changed"})
@@ -230,9 +231,17 @@ func TestExplorerOpensFiles(t *testing.T) {
 	s.frame()
 	s.click(s.textPoint(t, "currency.go"))
 	s.frame()
+	if st := s.diff().by[r.Dir]; !s.showing(DiffView) || st == nil || st.sel.file != "internal/pricing/currency.go" {
+		t.Fatalf("a click on currency.go in Changed didn't open its diff")
+	}
+	s.run("explorer.scope", registry.Args{"scope": "all"})
+	s.frame()
+	s.frame()
+	s.click(s.textPoint(t, "go.mod"))
+	s.frame()
 	p, ok := s.editor().e.Pane(s.editor().e.WindowID())
-	if !ok || filepath.Join(r.Dir, p.Name()) != filepath.Join(r.Dir, "internal/pricing/currency.go") {
-		t.Fatalf("a click on currency.go opened %+v", p.Name())
+	if !ok || filepath.Join(r.Dir, p.Name()) != filepath.Join(r.Dir, "go.mod") {
+		t.Fatalf("a click on go.mod opened %+v", p.Name())
 	}
 }
 
