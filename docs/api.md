@@ -59,7 +59,7 @@ Version 0.4.0.
 
 ## oriel.menu
 
-- `oriel.menu.add(spec)`: Add a right-click menu entry: { label, run = fn(at) or a command id, when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help.
+- `oriel.menu.add(spec)`: Add a right-click menu entry: { label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help. An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.
 
 ## oriel.overview
 

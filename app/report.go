@@ -49,6 +49,7 @@ type shell struct {
 	editor      *editorExt
 	search      *projectSearch
 	tests       *testsExt
+	explain     *explainExt
 	sessions    *sessions                   // the workers' sessions; nil while it isn't active
 	stats       *statsExt                   // what the workers' sessions cost
 	present     *presentFocus               // the presentation with focus, for its keys

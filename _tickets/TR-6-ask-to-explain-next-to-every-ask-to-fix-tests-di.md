@@ -2,7 +2,7 @@
 id: TR-6
 title: ""Ask to explain" next to every "ask to fix" (tests, diagnostics, CI, conflicts, failed terminal commands)"
 phase: P6
-status: todo
+status: review
 area: LSP, tests, debugging
 module: explain
 depends_on: [TR-2, RV-5]

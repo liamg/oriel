@@ -115,8 +115,17 @@ flowchart TB
   `Depth` brief, detailed or why) in markdown, with no way to change anything; every "ask to explain" uses the first
   (`registry.Explain`), and its `Label` (“fork of claude · knows this session”) shows under the answer. The agent's
   comes with AI; Lua adds one with `oriel.agent.explainer`. `explain.ask {file, line, end_line | text; subject, kind,
-  context, depth}` (RV-5) is how a feature asks: about a file's lines, a card between them; about text, a notice. RV-6's
-  walkthrough and TR-6's "ask to explain" twins are meant to go through it.
+  context, depth; key}` (RV-5) is how a feature asks: about a file's lines, a card between them; about text (or just a
+  `context`), a notice; with a `key`, the answer is kept for the place that asked to draw (the failure block's card).
+  It's unavailable until an explainer is registered. RV-6's walkthrough goes through it.
+- fix and explain twins (TR-6): something gone wrong is a `registry.Trouble` (kind, subject, context, file and lines,
+  the fix request's text). Every "ask the agent to fix" runs `agent.fix` (`registry.FixCommand`) with
+  `Trouble.Args()`, which writes a request with it attached; its twin runs `explain.ask` (`registry.ExplainCommand`)
+  with the same args. A `MenuItem` whose command is `agent.fix` gets its twin right after it, labelled "Ask the agent
+  to explain", wherever menu items are listed (`registry.MenuItems`, `registry.WithTwins` for a menu of one's own such
+  as the code actions'); a plugin's too. `MenuItem.Trouble(at)` computes the trouble where the menu opened, and hides
+  the pair when there's none (the terminal's failed command). Buttons use `askTwins` (explain then fix, the answer
+  under them by `key`). A fix that runs `request.new` itself is a test failure (`TestFixesGoThroughAgentFix`).
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
   so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
@@ -498,7 +507,8 @@ type Host interface {
   selection, help-id prefix); the window's one context menu gathers those that match what was clicked
   (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the
   layout (`Root.Visible`), and the file and selection from a view that implements `registry.Located` (the editor).
-  The built-in entries (Copy path, Move pane…, Close) are menu items too. Lua: `oriel.menu.add`.
+  The built-in entries (Copy path, Move pane…, Close) are menu items too. Lua: `oriel.menu.add`. An item running
+  `agent.fix` comes with its explain twin (TR-6).
 - Drag and drop (PL-15): `ui.Style.Drag` (a `DragData`: kind, data, label) makes a node a drag source and
   `Style.Drop` (kinds) a target; the UI tracks the drag, lights the target under it that takes the kind and draws a
   ghost, and on release hands the payload to the target as `Interaction.Dropped` (`DragOver` while it's over). A

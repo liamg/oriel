@@ -556,6 +556,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - Completion with docs, signature help, hover, inlay hints, diagnostics.
 - Code actions include an **Agent** group ("ask Claude to fix in a thread").
+  Built in TR-6: "Ask the agent to fix in a thread" and, beside it, "Ask the agent to explain" (the explain card
+  between the diagnostic's lines), on any line with diagnostics; every other "ask to fix" has the same twin
+  (`ide.md`, "Explain sits next to fix everywhere").
 - References peek inline, as an embedded editor.
 - Vim `:s` with live match highlights, offering "use LSP rename" instead.
 

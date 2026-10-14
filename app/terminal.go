@@ -151,7 +151,7 @@ func (x *terminals) Activate(_ context.Context, h ext.Host) error {
 				return fmt.Errorf("no command yet")
 			}
 			c := cmds[len(cmds)-1]
-			line := strings.TrimSpace(t.emu.Text(c.Input, term.Point{X: 1 << 16, Y: c.Input.Y}))
+			line := commandLine(t.emu, c)
 			if line == "" {
 				return fmt.Errorf("the last command is empty")
 			}
@@ -165,6 +165,8 @@ func (x *terminals) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: "<C-Esc>", Command: "term.normal", Desc: "Terminal-normal mode"}))
 	x.add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: `<C-\><C-n>`, Command: "term.normal", Desc: "Terminal-normal mode"}))
 	x.add(h.Contribute(registry.RawKeys{Mode: TerminalKeyMode}))
+	x.add(h.Contribute(registry.MenuItem{Name: "term.fix", Label: "Ask the agent to fix the failed command", Group: "agent", Order: 10,
+		When: registry.MenuWhen{View: TerminalView}, Command: registry.FixCommand, Trouble: x.failedCommand, Source: "builtin:terminal"}))
 	x.add(h.View(TerminalView, terminalView{x}))
 	return nil
 }
@@ -481,6 +483,43 @@ func (t *terminal) jumpPrompt(dir int) {
 	if best >= 0 {
 		t.vim.SetCursor(vim.Pos{Line: best})
 	}
+}
+
+// commandLine is what was typed at a command's prompt.
+func commandLine(emu term.Emulator, c term.Command) string {
+	cols, _ := emu.Size()
+	return strings.TrimSpace(emu.Text(c.Input, term.Point{X: cols - 1, Y: c.Input.Y}))
+}
+
+// failedCommand is the terminal's last command, if it failed: what was typed, what it printed, and how it exited.
+func (x *terminals) failedCommand(at registry.MenuCtx) (registry.Trouble, bool) {
+	t := x.get(at.Instance)
+	if t == nil {
+		return registry.Trouble{}, false
+	}
+	cmds := t.emu.Commands()
+	for i := len(cmds) - 1; i >= 0; i-- {
+		c := cmds[i]
+		if !c.Finished {
+			continue
+		}
+		if c.ExitCode == 0 || c.Input.Y < 0 {
+			return registry.Trouble{}, false
+		}
+		line := commandLine(t.emu, c)
+		var b strings.Builder
+		if cwd := t.emu.Cwd(); cwd != "" {
+			fmt.Fprintf(&b, "In %s:\n", cwd)
+		}
+		fmt.Fprintf(&b, "$ %s\n", line)
+		if c.Output.Y >= 0 && c.End.Y >= 0 {
+			b.WriteString(strings.TrimRight(term.OutputText(t.emu, c), "\n") + "\n")
+		}
+		fmt.Fprintf(&b, "(exit status %d)", c.ExitCode)
+		return registry.Trouble{Kind: "command", Subject: fmt.Sprintf("`%s` exited %d", line, c.ExitCode), Context: b.String(),
+			Fix: fmt.Sprintf("Fix the failing command `%s`: it exited %d.", line, c.ExitCode)}, true
+	}
+	return registry.Trouble{}, false
 }
 
 // exitDots are how each command ended, by the row of its prompt: "ok", "failed", or "running".

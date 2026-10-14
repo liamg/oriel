@@ -6,9 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/testrun"
@@ -138,34 +136,11 @@ func (x *testsExt) failureView(c *ui.Ctx, f failure) {
 			if widget.Button(c, "debug", "debug this case", widget.ButtonOpts{Disabled: !x.h.Available("debug.test", nil), Help: "editor/pane#tests"}) {
 				x.h.Run(ctx, "debug.test", registry.Args{"key": key, "file": fl.Loc.File, "line": fl.Loc.Line + 1})
 			}
-			if widget.Button(c, "explain", "ask agent to explain", widget.ButtonOpts{Disabled: len(registry.Explainers(x.h)) == 0,
-				Help: "editor/pane#tests"}) {
-				x.explain(key)
-			}
-			fix := registry.Args{"text": fmt.Sprintf("Fix the failing test %s.", res.Test), "context": x.failureContext(res)}
-			if widget.Button(c, "fix", "ask agent to fix", widget.ButtonOpts{Primary: true, Disabled: !x.h.Available("request.new", fix),
-				Help: "editor/pane#tests"}) {
-				x.h.Run(ctx, "request.new", fix)
-			}
+			askTwins(c, x.h, failureKey(key), x.failureTrouble(res), "editor/pane#tests")
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("since", x.failingSince(key), mono(10.5, theme.FgFaint))
 		})
-		x.mu.Lock()
-		ex := x.explains[key]
-		x.mu.Unlock()
-		if ex != nil {
-			popup(c, "explain", ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Gap: 6, Help: "editor/pane#tests"}, func(c *ui.Ctx) {
-				label(c, "EXPLAIN · CHANGES NOTHING")
-				switch {
-				case ex.loading:
-					c.Text("wait", "Asking…", mono(11, theme.FgFaint))
-				case ex.err != nil:
-					c.Text("err", ex.err.Error(), mono(11, tTestFailed))
-				default:
-					markdown(c, "md", lspMarkdown(ex.text), 760)
-				}
-			})
-		}
+		explainKept(c, x.sh, failureKey(key), "editor/pane#tests")
 	})
 }
 
@@ -234,39 +209,15 @@ func (x *testsExt) failureContext(res *testrun.Result) string {
 	return b.String()
 }
 
-// explain asks the first explainer about a failure; its answer shows under the failure.
-func (x *testsExt) explain(key string) error {
-	es := registry.Explainers(x.h)
-	if len(es) == 0 {
-		return fmt.Errorf("nothing can explain yet: it needs an agent")
+// failureTrouble is a failure as something to fix or explain.
+func (x *testsExt) failureTrouble(res *testrun.Result) registry.Trouble {
+	t := registry.Trouble{Kind: "test-failure", Subject: res.Test + " failed", Context: x.failureContext(res),
+		Fix: fmt.Sprintf("Fix the failing test %s.", res.Test)}
+	if l := res.Failure.Loc; l != nil {
+		t.File, t.Line, t.EndLine = l.File, l.Line+1, l.Line+1
 	}
-	res, _ := x.result(key)
-	if res == nil || res.Failure == nil {
-		return fmt.Errorf("no failure to explain")
-	}
-	ex := &explanation{loading: true}
-	x.mu.Lock()
-	x.explains[key] = ex
-	x.mu.Unlock()
-	req := registry.ExplainRequest{Kind: "test-failure", Subject: res.Test + " failed", Context: x.failureContext(res)}
-	if res.Failure.Loc != nil {
-		req.Files = []string{res.Failure.Loc.File}
-	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		defer cancel()
-		var text string
-		err := registry.Call(func() (err error) { text, err = es[0].Explain(ctx, req); return err })
-		x.h.Do(func() {
-			x.mu.Lock()
-			ex.loading, ex.text, ex.err = false, text, err
-			x.mu.Unlock()
-			if err != nil {
-				x.h.Notify(core.Notice{ID: "tests.explain", Severity: core.SevWarning, Key: true, Text: err.Error()})
-			}
-		})
-	}()
-	return nil
+	return t
 }
+
+// failureKey is where a failure's explanation is kept.
+func failureKey(key string) string { return "test:" + key }

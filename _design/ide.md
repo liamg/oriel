@@ -104,7 +104,9 @@ below.
 - The symbols pickers (`␣s`, `gO`, `␣S`, the omnibox's) ask the server, falling back to the tree-sitter outline;
   `␣ci`/`␣co` list callers and callees in a picker.
 - Not yet: semantic tokens over tree-sitter, code lenses, formatting on save, lightbulbs, and LSP folding and selection
-  ranges in the editor; the agent group in code actions comes with the agent (TR-6).
+  ranges in the editor.
+- The code actions menu's **Agent** group (TR-6): on a line with diagnostics (any owner's, so it shows without a
+  server too), "Ask the agent to fix in a thread" and its twin "Ask the agent to explain".
 ## Debugging (`dap` module)
 
 - A DAP client and an adapter registry: delve (Go), debugpy (Python),
@@ -140,6 +142,18 @@ below.
 - **Explain sits next to fix everywhere.** Wherever Oriel offers "ask the agent to fix" (test failures, diagnostics and
   code actions, CI failures on the Ship page, merge conflicts, a red terminal command), it also offers **ask to explain**,
   so understanding is always one click away and never requires handing over the keyboard.
+- Built in TR-6 (`registry/trouble.go`, `app/explainask.go`; the API is in `plugins.md`, "fix and explain twins"):
+  a fix is `agent.fix` with a `registry.Trouble`, and its twin is `explain.ask` with the same args, answered by the
+  first explainer (the session agent's tool-less fork), so explaining sends nothing to the agent and changes no file.
+  The entry points: the failure block (`askTwins`: the answer under the failure), the code actions' Agent group on a
+  diagnostic (the answer is the explain card between the diagnostic's lines, asked as a `diagnostic` with the
+  messages and the code around them), and right-click on a terminal whose last command failed (the command, its
+  output and exit status; the answer in a notice, as there's no place between a terminal's lines). A plugin's menu
+  item running `agent.fix` gets its twin by itself. `TestEveryFixHasAnExplainTwin` drives each entry point and checks
+  every "ask … fix" control has an "ask … explain" beside it, which asks the explainer, not the agent.
+  Not yet: CI failures ("Fix CI with agent") and merge conflicts on the Ship page (FG-6): a button there is one
+  `askTwins` call, a menu entry one `MenuItem` running `agent.fix`; the Problems panel has no fix of its own yet;
+  the twin's label says "the agent" rather than the provider's name ("Claude").
 - **Tests panel**: a tree by package, file, test and case; filters (failed, slowest); recent-pass history sparklines and
   **flaky detection** (fails sometimes, passes on re-run); output per case, per run, or raw JSON.
 - **Coverage**: `⌥▶` runs with coverage, and covered or uncovered lines show in the gutter (Go `-coverprofile`, pytest-cov,
@@ -239,7 +253,7 @@ results, failure block and tests panel are still to build on it.
   discovered item and the latest result after it; a failure is a block at its assertion's line (TR-2) with want/got
   (the differing middle marked), output and four actions.
 - Explain and fix go through extension points so they work the moment the agent exists: explain asks the first
-  `registry.Explainer` (it answers text only, so explaining can't change a file), fix runs `request.new`, debug runs
+  `registry.Explainer` (it answers text only, so explaining can't change a file), fix runs `agent.fix` (TR-6), debug runs
   `debug.test` (DB-2); each is dimmed while nothing provides it.
 - Run scopes: `␣tt` nearest, `␣tf` file, `␣tp` package, `␣ta` all, `␣tF` failed, `␣tl` last, `]t` next failure; the
   file buttons over the editor are `registry.EditorAction`s. A run's `Change` is `testrun.Fingerprint` (paths, sizes,

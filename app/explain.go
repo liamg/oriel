@@ -55,6 +55,7 @@ type explainExt struct {
 	computing map[*text.Buffer]bool
 	bases     map[string]*explainBase // by repo path
 	answers   map[answerKey]*answer   // the cache: by a unit's content hash and the depth
+	kept      map[string]*answer      // explain.ask's with a {key}, shown where they were asked
 	marks     []*explainMark
 	panel     panelState
 
@@ -127,7 +128,8 @@ func (x *explainExt) Manifest() ext.Manifest { return ext.Manifest{ID: "explain"
 func (x *explainExt) Activate(_ context.Context, h ext.Host) error {
 	x.h = h
 	x.parsers, x.bufs, x.computing = map[string]*syntax.Parser{}, map[*text.Buffer]*fileUnits{}, map[*text.Buffer]bool{}
-	x.bases, x.answers = map[string]*explainBase{}, map[answerKey]*answer{}
+	x.bases, x.answers, x.kept = map[string]*explainBase{}, map[answerKey]*answer{}, map[string]*answer{}
+	x.sh.explain = x
 	if g := x.sh.git; g != nil && g.status != nil {
 		x.add(disposeFn(g.status.Watch(func([]string) {
 			x.mu.Lock()
@@ -150,8 +152,12 @@ func (x *explainExt) Activate(_ context.Context, h ext.Host) error {
 				}
 				return x.explainUnit(registry.Args{})
 			}},
-		{ID: "explain.ask", Title: "Explain something: {file}'s {line} through {end_line} (a card between its lines), or {text}; with {subject}, {kind}, {context} and {depth} (brief, detailed, why)",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.ask(a) }},
+		{ID: registry.ExplainCommand, Title: "Explain something: {file}'s {line} through {end_line} (a card between its lines), or {text} or {context}; with {subject}, {kind} and {depth} (brief, detailed, why); with a {key}, the answer is kept for where it was asked",
+			Available: func(registry.Args) bool { return len(registry.Explainers(h)) > 0 },
+			Run:       func(_ registry.Ctx, a registry.Args) error { return x.ask(a) }},
+		{ID: registry.FixCommand, Title: "Ask the agent to fix something: a request with its {subject} and {context} attached, about {file}:{line}; {fix} is what it says",
+			Available: func(registry.Args) bool { return h.Available("request.new", nil) },
+			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.fix(ctx, a) }},
 		{ID: "explain.widen", Title: "Explain the unit around the one explained", Available: cardOpen,
 			Run: func(registry.Ctx, registry.Args) error { x.step(-1); return nil }},
 		{ID: "explain.narrow", Title: "Explain the unit inside the one explained", Available: cardOpen,
@@ -210,6 +216,9 @@ func (x *explainExt) Activate(_ context.Context, h ext.Host) error {
 
 func (x *explainExt) Deactivate(ctx context.Context) error {
 	x.busy.Wait()
+	if x.sh.explain == x {
+		x.sh.explain = nil
+	}
 	if x.card != nil {
 		x.card.release()
 		x.card = nil
@@ -347,11 +356,11 @@ func (x *explainExt) explainSelection() error {
 		return errors.New("nothing is selected")
 	}
 	ed.e.Key("<Esc>")
-	return x.explainRange(ed.path(p), p.Buffer(), r, "", "")
+	return x.explainRange(ed.path(p), p.Buffer(), r, "", "", "")
 }
 
-// explainRange opens a card on a range of a buffer, under the units around it.
-func (x *explainExt) explainRange(path string, buf *text.Buffer, r text.Range, subject, more string) error {
+// explainRange opens a card on a range of a buffer, under the units around it; kind is what it is, a selection if "".
+func (x *explainExt) explainRange(path string, buf *text.Buffer, r text.Range, kind, subject, more string) error {
 	units := x.unitsNow(path, buf)
 	var around []int
 	if i := text.Innermost(units, r); i >= 0 {
@@ -364,7 +373,8 @@ func (x *explainExt) explainRange(path string, buf *text.Buffer, r text.Range, s
 		subject = fmt.Sprintf("selection · %d %s", n, plural(n, "line", "lines"))
 	}
 	x.openCard(path, buf, units, around, &r, subject)
-	x.card.crumbs[len(x.card.crumbs)-1].context = more
+	last := &x.card.crumbs[len(x.card.crumbs)-1]
+	last.context, last.kind = more, cmpOr(kind, "selection")
 	x.ensure()
 	return nil
 }
@@ -575,7 +585,7 @@ func (x *explainExt) request(cd *explainCard, i int) {
 	req := registry.ExplainRequest{Kind: "unit", Depth: depth, Files: []string{cd.path},
 		Subject: fmt.Sprintf("%s (%s)", strings.Join(crumbLabels(cd.crumbs[:i+1]), " › "), lines)}
 	if cr.selection {
-		req.Kind = "selection"
+		req.Kind = cr.kind
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "The code, %s:\n```\n%s```\n", lines, codeOf(snap, r))
@@ -698,13 +708,15 @@ func (x *explainExt) threadsOn(path string, a, z int) string {
 	return b.String()
 }
 
-// ask is explain.ask: a card on {file}'s lines, or {text} answered in a notice.
+// ask is explain.ask: kept under {key} for where it was asked, a card on {file}'s lines, or {text} answered in a
+// notice.
 func (x *explainExt) ask(a registry.Args) error {
 	depth := cmpOr(a.String("depth"), registry.ExplainBrief)
 	if !slices.Contains(explainDepths, depth) {
 		return fmt.Errorf("no depth %q: brief, detailed or why", depth)
 	}
-	if f := a.String("file"); f != "" {
+	f, key := a.String("file"), a.String("key")
+	if f != "" && key == "" {
 		line := max(a.Int("line"), 1)
 		fs, ok := x.sh.editor.openBuffer(f)
 		if !ok {
@@ -722,19 +734,25 @@ func (x *explainExt) ask(a registry.Args) error {
 		if k := a.String("kind"); k != "" {
 			more = strings.TrimSpace("It's a " + k + ".\n" + more)
 		}
-		if err := x.explainRange(f, fs.Text, text.Range{Start: snap.LineStart(from), End: snap.LineEnd(to)}, a.String("subject"), more); err != nil {
+		if err := x.explainRange(f, fs.Text, text.Range{Start: snap.LineStart(from), End: snap.LineEnd(to)}, a.String("kind"), a.String("subject"), more); err != nil {
 			return err
 		}
 		x.card.depth = slices.Index(explainDepths, depth)
 		x.ensure()
 		return nil
 	}
-	body := a.String("text")
-	if strings.TrimSpace(body) == "" {
+	req := registry.ExplainRequest{Kind: cmpOr(a.String("kind"), "selection"), Subject: cmpOr(a.String("subject"), "this text"), Depth: depth,
+		Context: strings.TrimSpace(a.String("text") + "\n\n" + a.String("context"))}
+	if req.Context == "" && f == "" {
 		return errors.New("explain.ask needs a file and line, or text")
 	}
-	req := registry.ExplainRequest{Kind: cmpOr(a.String("kind"), "selection"), Subject: cmpOr(a.String("subject"), "this text"), Depth: depth,
-		Context: strings.TrimSpace(body + "\n\n" + a.String("context"))}
+	if f != "" {
+		req.Files = []string{f}
+	}
+	if key != "" {
+		x.keep(key, req)
+		return nil
+	}
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()

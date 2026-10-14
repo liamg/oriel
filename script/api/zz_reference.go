@@ -49,7 +49,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.lsp.server(spec)", Doc: "Register a language server: { name, languages = { \\"},
 	},
 	"menu": {
-		{Call: "oriel.menu.add(spec)", Doc: "Add a right-click menu entry: { label, run = fn(at) or a command id, when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help."},
+		{Call: "oriel.menu.add(spec)", Doc: "Add a right-click menu entry: { label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help. An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args."},
 	},
 	"overview": {
 		{Call: "oriel.overview.add(spec)", Doc: "Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick."},

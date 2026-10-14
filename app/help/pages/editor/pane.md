@@ -50,6 +50,9 @@ Without a server, `K` is vim's.
 ## Code actions {#code-actions}
 
 `␣ca` (or `gra`) lists the server's fixes and refactors for the cursor's line, by kind. Taking one makes its edit.
+On a line with diagnostics the **Agent** group has **Ask the agent to fix in a thread** (a request with the
+diagnostics and the code around them attached) and, beside it, **Ask the agent to explain** (a card under the line;
+nothing is changed). Without a language server, a line with diagnostics still shows the Agent group.
 
 ## References {#references}
 
