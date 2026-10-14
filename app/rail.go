@@ -159,7 +159,8 @@ func (r *rail) Activate(_ context.Context, h ext.Host) error {
 			r.add(h.Keymap(registry.Keymap{Mode: "global", Keys: s.keys, Command: "view.toggle", Args: args, Desc: s.title}))
 		}
 	}
-	r.add(h.Contribute(registry.RailEntry{Name: "settings", Icon: "settings", Title: "Settings", Command: "settings.open", Order: 10, Bottom: true}))
+	r.add(h.Contribute(registry.RailEntry{Name: "settings", Icon: "settings", Title: "Settings", Command: "settings.open", Scope: registry.ScopeGlobalEntry,
+		Order: 90, Bottom: true}))
 	for n := 1; n <= 9; n++ {
 		r.add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<C-%d>", n), Command: "project.open", Args: registry.Args{"index": n},
 			Desc: fmt.Sprintf("Project %d", n)}))
@@ -378,6 +379,20 @@ func (r *rail) rows(w here, wide bool) []sideRow {
 		bottom = bottom || e.Bottom
 		rows = append(rows, sideRow{kind: rowSession, entry: e})
 	}
+	// Every session's pages, below a second divider; in the narrow form, pinned to the foot.
+	var global []sideRow
+	for _, e := range registry.GlobalEntries(r.h) {
+		if e.Is("") {
+			global = append(global, sideRow{kind: rowSession, entry: e})
+		}
+	}
+	if len(global) > 0 {
+		sep := rowDivider
+		if !wide {
+			sep = rowGap
+		}
+		rows = append(append(rows, sideRow{kind: sep}), global...)
+	}
 	return rows
 }
 
@@ -463,9 +478,24 @@ func (r *rail) tooltip(w here, row sideRow, wide bool) string {
 		if r.unavailable(row) {
 			tip += " (not available yet)"
 		}
+		if row.entry.Scope == registry.ScopeGlobalEntry && !wide {
+			n := noteOf(row)
+			if n != "" {
+				tip += " · " + n
+			}
+		}
 		return tip
 	}
 	return ""
+}
+
+// noteOf is an entry's note for the row's project: a live figure.
+func noteOf(row sideRow) string {
+	note := ""
+	if row.entry.Note != nil {
+		registry.Call(func() error { note = row.entry.Note(row.scope); return nil })
+	}
+	return note
 }
 
 func (r *rail) activate(w here, row sideRow) {
@@ -631,12 +661,8 @@ func (r *rail) entryNote(c *ui.Ctx, row sideRow, size float32) {
 		})
 		return
 	}
-	if row.entry.Note != nil {
-		note := ""
-		registry.Call(func() error { note = row.entry.Note(row.scope); return nil })
-		if note != "" {
-			c.Text("note", note, mono(10, typeset.Normal, th.C(tSideNote)))
-		}
+	if note := noteOf(row); note != "" {
+		c.Text("note", note, mono(10, typeset.Normal, th.C(tSideNote)))
 	}
 }
 

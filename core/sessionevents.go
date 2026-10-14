@@ -312,7 +312,17 @@ func (e UsageSampled) Apply(s *State) error {
 	if e.Usage.Provider == "" {
 		return fmt.Errorf("usage has no provider")
 	}
-	s.Usage = upsert(s.Usage, e.Usage, func(u ProviderUsage) bool { return u.Provider == e.Usage.Provider })
+	u := e.Usage
+	for _, old := range s.Usage {
+		if old.Same(u) {
+			for _, w := range old.Workers {
+				if !slices.Contains(u.Workers, w) {
+					u.Workers = append(slices.Clone(u.Workers), w)
+				}
+			}
+		}
+	}
+	s.Usage = upsert(s.Usage, u, func(o ProviderUsage) bool { return o.Same(u) })
 	return nil
 }
 

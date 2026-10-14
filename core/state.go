@@ -65,19 +65,43 @@ type WorkerState struct {
 
 // UsageWindow is one of a plan's limits: the 5-hour window, the weekly one.
 type UsageWindow struct {
-	Name   string    `json:"name"`
-	Used   float64   `json:"used"` // 0–1
-	Resets time.Time `json:"resets,omitzero"`
+	Name   string        `json:"name"`
+	Used   float64       `json:"used"` // 0–1
+	Resets time.Time     `json:"resets,omitzero"`
+	Length time.Duration `json:"length,omitempty"` // how long the window is: 5h, a week
 }
 
-// ProviderUsage is how much of a provider's plan is used.
-type ProviderUsage struct {
-	Provider string        `json:"provider"`
-	Plan     string        `json:"plan,omitempty"` // "Claude Max", "ChatGPT Pro"
-	Windows  []UsageWindow `json:"windows,omitempty"`
-	Credits  string        `json:"credits,omitempty"`
-	Sampled  time.Time     `json:"sampled,omitzero"`
+// Opened is when the window began: Length before it resets; zero when either is unknown.
+func (w UsageWindow) Opened() time.Time {
+	if w.Resets.IsZero() || w.Length == 0 {
+		return time.Time{}
+	}
+	return w.Resets.Add(-w.Length)
 }
+
+// ProviderUsage is how much of an account's plan with a provider is used. Plans belong to accounts: two workers
+// signed in to one account report one plan, and two accounts' windows are separate limits, never added up.
+type ProviderUsage struct {
+	Provider string `json:"provider"`
+	// Account identifies the login (Claude's account and organisation, Codex's email); AccountName is how it reads
+	// with no label of the user's: an email or an organisation.
+	Account     string        `json:"account,omitempty"`
+	AccountName string        `json:"accountName,omitempty"`
+	Workers     []WorkerID    `json:"workers,omitempty"` // the workers that report it
+	Plan        string        `json:"plan,omitempty"`    // "Claude Max", "ChatGPT Pro"
+	Windows     []UsageWindow `json:"windows,omitempty"`
+	Credits     string        `json:"credits,omitempty"`
+	Sampled     time.Time     `json:"sampled,omitzero"`
+	Source      string        `json:"source,omitempty"` // where the windows are read from: "Codex's account/rateLimits/read"
+}
+
+// Same says whether u and o are the same account's plan.
+func (u ProviderUsage) Same(o ProviderUsage) bool {
+	return u.Provider == o.Provider && u.Account == o.Account
+}
+
+// Uses says whether worker reports u: it's signed in to its account.
+func (u ProviderUsage) Uses(worker WorkerID) bool { return slices.Contains(u.Workers, worker) }
 
 func (s *State) session(id SessionID) *SessionState {
 	if i := slices.IndexFunc(s.Sessions, func(se SessionState) bool { return se.ID == id }); i >= 0 {

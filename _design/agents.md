@@ -52,6 +52,28 @@ Each provider is driven the way its **subscription** allows.
   briefly for the log to hold the turn's answer, so its messages always come before `TurnEnd`.
 - `Usage` is the windows a session's mod last reported through `$.session.usage()`; there is no probe.
 
+### Stats and plan readings (AI-12)
+
+- Prices are `agent/price`: one table (Claude's families, and OpenAI's `gpt-5`, `gpt-5-mini` and `gpt-5-nano` at their
+  list prices, cached input at a tenth), shared by the transcript reader and the stats.
+- The worker's stats (`worker/stats`, crit's `internal/stats` per session) read each session's logs incrementally, from
+  the offset the last read stopped at, kept in `<Home>/stats.json`: Claude's transcript and subagents' logs (the
+  provider's `agent.Logged`), or for a provider without a log (Codex) the worker's record of its events,
+  `sessions/<id>/agent/events.jsonl` (turns, tool calls and results, and each turn's usage as a request). A message
+  Claude writes over several records counts once. Per request: tokens by kind and their cost, model, effort, and
+  the hour and five minutes it's in; per tool call: name, error, duration, and the files it names, which decide a
+  multi-repo session's split (`stats.Session.Shares`). A compaction is the main loop's context falling to under half
+  from over 40k.
+- Plan usage is per **account**: `ProviderUsage.Account` is the login (Claude: `oauthAccount`'s account and
+  organisation in `.claude.json`, so a company subscription and a personal one differ; Codex: `account/read`'s email),
+  `AccountName` its email or organisation, and the worker stamps `Workers` with itself. `UsageSampled` keeps one entry per
+  provider and account, uniting the workers that report it: two workers on one account are one plan, two accounts never
+  merge. A session's account is its provider's on its worker (`stats.Session.Account`), for Stats' account group and
+  filter and the Usage page's "what burned the window".
+- Every plan reading (`UsageSampled`, from a provider's `UsageUpdate` or `usage.read`, which asks each provider's
+  `Usage`) is kept in `<Home>/usage.jsonl` for a week (`usage.history`). `UsageWindow.Length` is a window's length and
+  `ProviderUsage.Source` says where its windows come from; both providers set them.
+
 ### The Codex provider as built (`agent/codex`)
 
 Shapes are from `codex-rs/app-server-protocol` v2 at the P0-5 commit (`ddb33e34`); `agent/jsonrpc` is the JSONL

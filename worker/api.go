@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/wire"
+	"github.com/liamg/oriel/worker/stats"
 )
 
 // What the app calls on a worker.
@@ -45,6 +46,12 @@ const (
 	MethodFork      = "agent.fork"
 	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
 	MethodSandboxConfig = "sandbox.config"
+	// MethodStatsQuery answers a stats.Query over the worker's sessions; MethodStatsSession is one session's stats.
+	MethodStatsQuery   = "stats.query"
+	MethodStatsSession = "stats.session"
+	// MethodUsageHistory is the plan readings the worker has kept; MethodUsageRead reads every provider's now.
+	MethodUsageHistory = "usage.history"
+	MethodUsageRead    = "usage.read"
 	// MethodTrustSettings trusts a repo's .oriel/settings.toml on the worker's machine, as it is now.
 	MethodTrustSettings = "settings.trust"
 )
@@ -312,6 +319,29 @@ func (c Client) Providers(ctx context.Context) ([]ProviderInfo, error) {
 func (c Client) Kinds(ctx context.Context) ([]KindSpec, error) {
 	var out []KindSpec
 	return out, c.Conn.Call(ctx, MethodKinds, nil, &out)
+}
+
+// StatsQuery answers q over the worker's sessions (stats.query).
+func (c Client) StatsQuery(ctx context.Context, q stats.Query) (stats.Report, error) {
+	var out stats.Report
+	return out, c.Conn.Call(ctx, MethodStatsQuery, q, &out)
+}
+
+// SessionStats is one session's stats (stats.session).
+func (c Client) SessionStats(ctx context.Context, r StatsSessionReq) (stats.Detail, error) {
+	var out stats.Detail
+	return out, c.Conn.Call(ctx, MethodStatsSession, r, &out)
+}
+
+// UsageHistory is the plan readings the worker has kept, oldest first.
+func (c Client) UsageHistory(ctx context.Context, r UsageHistoryReq) ([]core.ProviderUsage, error) {
+	var out []core.ProviderUsage
+	return out, c.Conn.Call(ctx, MethodUsageHistory, r, &out)
+}
+
+// ReadUsage has the worker read every provider's plan windows now; they arrive as UsageSampled.
+func (c Client) ReadUsage(ctx context.Context) error {
+	return c.Conn.Call(ctx, MethodUsageRead, nil, nil)
 }
 
 func (c Client) Search(ctx context.Context, r SearchReq) ([]Hit, error) {

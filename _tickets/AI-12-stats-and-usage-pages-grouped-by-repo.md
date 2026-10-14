@@ -2,7 +2,7 @@
 id: AI-12
 title: "Stats and Usage: session stats, global stats grouped by repo, plan usage, and how you reach them"
 phase: P5
-status: todo
+status: review
 area: Sessions and AI
 module: worker, app, ui
 depends_on: [AI-1, AI-2, AI-3, AI-9, SH-17]
@@ -52,6 +52,20 @@ session names), plus a Usage page for the plan windows. Mockup 43 was signed off
 - **Charts** are a general `widget.Chart` (stacked bars, area, line, sparkline, strip; hover, legend, a table view),
   usable by any plugin and from Lua.
 
+## Decided after the mockup
+
+- **Plan usage belongs to an account**, not a provider or a worker: (provider, account identity), Claude's login
+  account and organisation, Codex's account. Each worker reports its account with its readings; two workers on one
+  account are one plan, deduplicated by identity; different accounts are separate limits, never merged.
+- `usage.accounts` (a map setting: identity → "Work", "Personal") names them; unnamed, the email or organisation shows.
+- Usage has an account switcher ("Work · Claude Team · mbp-work" | "Personal · Claude Max · mbp-home" | Codex …),
+  starting on the session in front's account, else the local worker's; each account's meters, projections, history
+  and what burned its window are its own. There's no "all accounts" for windows.
+- The title bar's meters show the session in front's account (the local worker's with none); the hover card lists every
+  account's windows.
+- Stats groups and filters by **account** too; cost adds up, so all accounts stays the default.
+- Session stats names its account in the header.
+
 ## Done when
 
 - A worker with fixture transcripts for two multi-repo sessions answers `stats.query` grouped by repo with the
@@ -60,6 +74,7 @@ session names), plus a Usage page for the plan windows. Mockup 43 was signed off
   its chip and regroups by session.
 - Session stats matches panel 1; the split toggle and the setting agree.
 - Usage shows a window's projection ("runs out … before the reset") from fixture readings.
+- Two fake workers on different accounts (and one sharing an account) show separate plans, the shared one deduplicated.
 - Each entry point opens its page: sidebar entries, the title bar meters, the session stats cost, the start view
   links, `:Stats`/`:Usage`, `⌘⇧S`/`⌘⇧U`.
 

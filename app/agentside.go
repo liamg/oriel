@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -8,7 +9,10 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -96,7 +100,11 @@ func (x *agentConsole) sessionStats(c *ui.Ctx, se core.SessionState) {
 		stat(c, "cache", "cache hit", fmt.Sprintf("%d%%", int(t.CacheHit()*100+.5)), fg)
 		stat(c, "turns", "turns · tool calls", fmt.Sprintf("%d · %d", t.Turns, t.ToolCalls), fg)
 		stat(c, "tokens", "tokens in / out", tokens(t.Input+t.CacheRead+t.CacheWrite)+" / "+tokens(t.Output), fg)
-		stat(c, "cost", "cost (est.)", fmt.Sprintf("$%.2f", t.Cost), fg)
+		c.Row("cost", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Text("n", "cost (est.)", monoFont(11.5, th.C(theme.FgMuted)))
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			statsLink(c, x.h, se.ID, fmt.Sprintf("$%.2f ›", t.Cost), 11.5)
+		})
 		run := time.Duration(t.Running) * time.Second
 		if se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 			run += c.Now().Sub(se.Agent.TurnStarted)
@@ -318,7 +326,7 @@ func latestRun(se core.SessionState) (core.TestRun, bool) {
 }
 
 // sessionStats is 01's session stats at the foot of the summary: context, cache and cost, then the latest tests.
-func sessionStats(c *ui.Ctx, se core.SessionState, now time.Time) {
+func sessionStats(c *ui.Ctx, h ext.Host, se core.SessionState, now time.Time) {
 	th := c.Theme()
 	t := se.Agent.Stats
 	label := func(c *ui.Ctx, k, s string) { c.Text(k, s, monoFont(10.5, th.C(theme.FgFaint))) }
@@ -345,7 +353,7 @@ func sessionStats(c *ui.Ctx, se core.SessionState, now time.Time) {
 				value(c, "cachev", fmt.Sprintf("%d%%", int(t.CacheHit()*100+.5)), fg)
 				c.Box("g2", ui.Style{W: ui.Px(6)}, nil)
 				label(c, "cost", "$")
-				value(c, "costv", fmt.Sprintf("%.2f", t.Cost), fg)
+				statsLink(c, h, se.ID, fmt.Sprintf("%.2f", t.Cost), 11)
 			})
 			c.Row("b", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				done, all := taskCount(se.Tasks)
@@ -370,47 +378,22 @@ func sessionStats(c *ui.Ctx, se core.SessionState, now time.Time) {
 		})
 }
 
-// usageShort is a usage window's name as the title bar says it: 5H, WK.
-func usageShort(name string) string {
-	n := strings.ToLower(name)
-	switch {
-	case strings.HasPrefix(n, "5h"), strings.HasPrefix(n, "5 h"), strings.HasPrefix(n, "session"):
-		return "5H"
-	case strings.HasPrefix(n, "week"):
-		return "WK"
-	}
-	return strings.ToUpper(firstLine(name))
-}
-
-// usageTat is the title bar's usage windows (01): the plan of the session in front's provider, or the first one
-// sampled, each window a meter and its share.
-func (x *agentConsole) usageTat(c *ui.Ctx) {
-	us := x.h.State().Usage
-	if len(us) == 0 {
-		return
-	}
-	u := us[0]
-	if se, ok := x.front(); ok {
-		for _, v := range us {
-			if v.Provider == se.Agent.Provider {
-				u = v
-			}
-		}
-	}
+// statsLink is a session's cost as a link to its stats (a main tab), with a card saying so under the pointer.
+func statsLink(c *ui.Ctx, h ext.Host, id core.SessionID, text string, size float32) {
 	th := c.Theme()
-	c.Row("usage", ui.Style{H: ui.Flex(1), Gap: 8, Cross: ui.Center, Role: ui.RoleStatus, Label: cmpOr(u.Plan, providerName(u.Provider)) + " usage",
-		Help: "agent/console#stats"}, func(c *ui.Ctx) {
-		for i, w := range u.Windows {
-			tone := th.C(tMeterContext)
-			if w.Used >= .9 {
-				tone = th.C(theme.Error)
-			}
-			if i > 0 {
-				c.Box(fmt.Sprint("gap", i), ui.Style{W: ui.Px(6)}, nil)
-			}
-			c.Text(fmt.Sprint("n", i), usageShort(w.Name), monoFont(10.5, th.C(theme.FgFaint)))
-			widget.Meter(c, fmt.Sprint("m", i), w.Used, widget.MeterOpts{Tone: tone, Width: ui.Px(44), Label: w.Name})
-			c.Text(fmt.Sprint("v", i), fmt.Sprintf("%d%%", int(w.Used*100+.5)), monoFont(10.5, th.C(theme.Fg)))
+	anchor := c.Next("statslink")
+	if widget.Clickable(c, "statslink", ui.Style{Label: "Open the session's stats", Help: "agent/stats#session", NoHover: true}, func(c *ui.Ctx) {
+		c.Text("t", text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size, Weight: typeset.Medium}, Color: th.C(theme.Accent)})
+	}).Clicked {
+		if err := h.Run(context.Background(), "stats.session", registry.Args{"id": string(id)}); err != nil {
+			h.Log().Error("stats", "session", id, "err", err)
 		}
+	}
+	widget.HoverCard(c, "statscard", anchor, widget.HoverCardOpts{Label: "Session stats", Help: "agent/stats#session"}, func(c *ui.Ctx) {
+		c.Row("h", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Text("t", "Session stats", uiFont(12, th.C(theme.Fg)))
+			keycap(c, "k", ":Stats session")
+		})
+		c.Text("d", "opens as a main tab", monoFont(10, th.C(theme.FgFaint)))
 	})
 }

@@ -206,9 +206,9 @@ func TestRateLimits(t *testing.T) {
 		"credits":{"hasCredits":true,"unlimited":false,"balance":"12.50"},"planType":"pro_lite"}`), &r)
 	now := time.Unix(50, 0)
 	u := r.usage(now)
-	want := core.ProviderUsage{Provider: "codex", Plan: "ChatGPT Pro Lite", Credits: "12.50", Sampled: now, Windows: []core.UsageWindow{
-		{Name: "5h", Used: 0.5, Resets: time.Unix(100, 0)},
-		{Name: "weekly", Used: 0.05, Resets: time.Unix(200, 0)},
+	want := core.ProviderUsage{Provider: "codex", Plan: "ChatGPT Pro Lite", Credits: "12.50", Sampled: now, Source: "Codex's account/rateLimits/read", Windows: []core.UsageWindow{
+		{Name: "5h", Used: 0.5, Resets: time.Unix(100, 0), Length: 5 * time.Hour},
+		{Name: "weekly", Used: 0.05, Resets: time.Unix(200, 0), Length: 7 * 24 * time.Hour},
 	}}
 	if b, w := jsonOf(u), jsonOf(want); string(b) != string(w) {
 		t.Errorf("usage = %s\nwant    %s", b, w)

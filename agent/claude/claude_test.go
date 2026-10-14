@@ -454,3 +454,17 @@ func fakeHarness(t *testing.T) agenttest.Harness {
 		Timeout: 20 * time.Second,
 	}
 }
+
+// AI-12: a plan belongs to an account: who Claude is signed in as tells a company subscription from a personal one.
+func TestAccount(t *testing.T) {
+	cfg := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
+	if id, _ := account(nil); id != "" {
+		t.Errorf("signed out: %q", id)
+	}
+	os.WriteFile(filepath.Join(cfg, ".claude.json"), []byte(`{"oauthAccount":{"accountUuid":"u1","emailAddress":"ada@work.example",
+		"organizationUuid":"o1","organizationName":"Work Co"}}`), 0o600)
+	if id, name := account(nil); id != "u1/o1" || name != "ada@work.example" {
+		t.Errorf("account = %q %q", id, name)
+	}
+}

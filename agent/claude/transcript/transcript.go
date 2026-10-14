@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/core"
 )
 
@@ -349,13 +350,13 @@ func (r *Reader) add(g usage, sign int64) {
 	u.CacheHour += sign * g.CacheCreation.Hour
 	u.CacheRead += sign * g.CacheRead
 	u.Output += sign * g.Output
-	u.Cost += float64(sign) * Tokens{
+	u.Cost += float64(sign) * price.Tokens{
 		Input:        g.Input,
 		CacheWrite5m: g.CacheCreate - g.CacheCreation.Hour,
 		CacheWrite1h: g.CacheCreation.Hour,
 		CacheRead:    g.CacheRead,
 		Output:       g.Output,
-	}.Cost(RateFor(u.Model, g.Speed == "fast"))
+	}.Cost(price.RateFor(u.Model, g.Speed == "fast"))
 }
 
 // entries turns one record into its blocks.

@@ -120,6 +120,38 @@ func login(env []string) (bool, string) {
 	return false, ""
 }
 
+// account is who Claude is signed in as, from its state file's oauthAccount: an identity that tells a company
+// subscription from a personal one (the organisation, then the account), and the email or organisation to show.
+func account(env []string) (id, name string) {
+	var state struct {
+		Account *struct {
+			Email   string `json:"emailAddress"`
+			UUID    string `json:"accountUuid"`
+			OrgUUID string `json:"organizationUuid"`
+			OrgName string `json:"organizationName"`
+		} `json:"oauthAccount"`
+	}
+	b, err := os.ReadFile(statePath(env))
+	if err != nil || json.Unmarshal(b, &state) != nil || state.Account == nil {
+		return "", ""
+	}
+	a := state.Account
+	switch {
+	case a.OrgUUID != "" || a.UUID != "":
+		id = strings.Trim(a.UUID+"/"+a.OrgUUID, "/")
+	default:
+		id = a.Email
+	}
+	return id, cmpOr(a.Email, a.OrgName)
+}
+
+func cmpOr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
 func plan(kind string) string {
 	if kind == "" {
 		return ""
@@ -157,10 +189,24 @@ func (Provider) Usage(context.Context) (core.ProviderUsage, error) {
 	defer lastMu.Unlock()
 	u := lastUsage
 	u.Provider = "claude"
-	if _, account := login(nil); account != "" && account != "apiKey" {
-		u.Plan = account
+	if _, plan := login(nil); plan != "" && plan != "apiKey" {
+		u.Plan = plan
 	}
+	u.Account, u.AccountName = account(nil)
 	return u, nil
+}
+
+// Logs are a session's log and its subagents' logs, where the host keeps them (a sandbox writes through a mount).
+func (Provider) Logs(cwd, session string) []agent.Log {
+	if session == "" {
+		return nil
+	}
+	main := transcript.Path(transcript.ConfigDir(nil), cwd, session)
+	out := []agent.Log{{Path: main, Format: "claude"}}
+	for _, p := range transcript.Subagents(main) {
+		out = append(out, agent.Log{Path: p, Format: "claude"})
+	}
+	return out
 }
 
 // windowNames are what the windows $.session.usage() reports by kind are called.
@@ -171,14 +217,25 @@ var windowNames = map[string]string{
 	"seven_day_sonnet": "Current week (Sonnet)",
 }
 
+// windowLength is how long a window of a kind is: five_hour, and seven_day with its per-model variants.
+func windowLength(kind string) time.Duration {
+	switch {
+	case strings.HasPrefix(kind, "five_hour"):
+		return 5 * time.Hour
+	case strings.HasPrefix(kind, "seven_day"):
+		return 7 * 24 * time.Hour
+	}
+	return 0
+}
+
 func usageOf(rls []rateLimit) core.ProviderUsage {
-	u := core.ProviderUsage{Provider: "claude", Sampled: time.Now()}
+	u := core.ProviderUsage{Provider: "claude", Sampled: time.Now(), Source: "/usage, through the Oriel mod ($.session.usage())"}
 	for _, rl := range rls {
 		name := windowNames[rl.Kind]
 		if name == "" {
 			name = strings.ReplaceAll(rl.Kind, "_", " ")
 		}
-		w := core.UsageWindow{Name: name, Used: rl.PercentUsed / 100}
+		w := core.UsageWindow{Name: name, Used: rl.PercentUsed / 100, Length: windowLength(rl.Kind)}
 		if t, err := time.Parse(time.RFC3339, rl.ResetsAt); err == nil {
 			w.Resets = t
 		}

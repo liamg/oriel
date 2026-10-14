@@ -155,9 +155,12 @@ flowchart TB
 - tab markers: a view implementing `registry.Marked` gives each instance a small marker after its tab title (the
   editor gives its file's git status letter), in a theme token's colour.
 - project sidebar entries (`RailEntry`, `oriel.rail.add`; ui.md 01h) and start view actions (`StartEntry`,
-  `oriel.start.add`). A rail entry has a `Scope`: `project` (`registry.ScopeProjectEntry`) is one of each project's
+  `oriel.start.add`). A start entry with `Link` is a small link under the actions with its `Note()` figure (Stats,
+  Usage; AI-12). A rail entry has a `Scope`: `project` (`registry.ScopeProjectEntry`) is one of each project's
   panels, listed under the open project and run with `project` added to its args (`RailEntry.ArgsFor`); `session`
-  (the default) is listed below the projects. `Note(project)` is dim text at its right ("4", "48 ✓"), `Badge()` a
+  (the default) is listed below the projects; `global` (`registry.ScopeGlobalEntry`, AI-12) is a page every session
+  shares (Stats, Usage, Jobs, Settings), listed last below a second divider and at the foot of the narrow form, and in
+  the omnibox's **Pages** with its note and key (`registry.GlobalEntries`). `Note(project)` is dim text at its right ("4", "48 ✓"), `Badge()` a
   pill, `Active(project)` lights it (for an entry with neither, a `view.*` command's `id` showing for the project
   does), and `Shown(project)` leaves it out (Pull request without a remote). `registry.ProjectEntries` and
   `SessionEntries` list them. `ProjectState` contributions add to each project's header line after its branch and
@@ -169,7 +172,24 @@ flowchart TB
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
   `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
-  `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage`.
+  `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats extension's since AI-12: one button to Usage with a
+  hover card).
+- pages over the main area: `widget.Page` with `PageOpts.Over` (the node it covers, as laid out last frame) draws a
+  page beside the sidebar rather than over the whole window, at `ui.LayerPage`; Stats and Usage are overlay views
+  (`overlay.stats`, `overlay.usage`) drawn that way, and any plugin's page can be.
+- charts: `widget.Chart(c, key, series, ChartOpts)` (AI-12) draws stacked bars, stacked areas, lines (dashed, from a
+  point: a projection), a sparkline or a 100% strip, with a y axis of round values, labels, a legend, marks (a
+  dashed or solid line with a label: now, a reset, a compaction), bands (a hatched stretch: idle), a strip of ticks
+  (turns) and a hover card of the point's values; `ChartResult` says the series and point under the pointer and a
+  click; `Table` draws the same data as a table. Lua: `oriel.ui.chart`. The stats pages are built only on it.
+- stats: a provider that keeps its own log of a session implements `agent.Logged` (`Logs(cwd, session) []agent.Log`:
+  Claude's transcript and its subagents'); the worker records the events of one that doesn't (Codex). The worker reads
+  them into `worker/stats` and answers `stats.query` (`stats.Query{Group, From, To, Step, Offset, Filters, Split}` →
+  `stats.Report`), `stats.session` (`worker.StatsSessionReq` → `stats.Detail`), `usage.history` and `usage.read`
+  (`worker.Client.StatsQuery`, `SessionStats`, `UsageHistory`, `ReadUsage`); `stats.Merge` adds workers' answers up.
+  Commands: `stats.open`, `stats.session`, `stats.group`, `stats.range`, `stats.move`, `stats.drill`, `stats.back`,
+  `stats.copy`, `stats.split`, `usage.open`, `usage.refresh`, `:Stats`, `:Usage`. Plans are per account
+  (`core.ProviderUsage.Account`, `Same`, `Uses`; `stats.ByAccount` and the `account` filter); `usage.accounts` names them.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**
@@ -205,7 +225,7 @@ flowchart TB
 
 - Views are functions returning a tree of `ui.Node`s: `Box` (rows and columns, with sizes, padding, gaps, alignment,
   clipping, scrolling and floats), `Text`, `Paint`, and `Func` (Go views that build with widgets) today. `Code`, `Markdown`, `Button`, `Input`, `List`, `Table`,
-  `Bar`, `Spark`, `Chart`, `Badge`, `Term`, `Editor` (an embedded buffer) and `Canvas` (draw ops) join them as their
+  `Bar`, `Spark`, `Chart` (`widget.Chart`, AI-12; `oriel.ui.chart`), `Badge`, `Term`, `Editor` (an embedded buffer) and `Canvas` (draw ops) join them as their
   widgets land. Built-in widgets lay out through the same nodes, so a plugin's view and a built-in one behave alike.
 - Lua and Go build them directly. Process extensions send the same tree as
   JSON, with id-keyed patches.

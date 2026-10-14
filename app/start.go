@@ -170,6 +170,9 @@ type startRow struct {
 func (s *start) rows(h ext.Host) (actions, recent []startRow) {
 	for _, e := range registry.StartEntries(h) {
 		e := e
+		if e.Link {
+			continue
+		}
 		ok := h.Available(e.Command, e.Args)
 		actions = append(actions, startRow{entry: &e, ok: ok, run: func() {
 			if err := h.Run(context.Background(), e.Command, e.Args); err != nil {
@@ -257,6 +260,7 @@ func (s *start) content(c *ui.Ctx, h ext.Host, actions, recent []startRow, narro
 						r.run()
 					}
 				}
+				startLinks(c, h)
 			})
 		}
 		recentCol := func(c *ui.Ctx, st ui.Style) {
@@ -395,6 +399,40 @@ func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow) bool {
 	})
 	s.hover(c, i, in)
 	return in.Clicked
+}
+
+// startLinks are the link entries under the actions, each a page with its figure (ui.md 01e).
+func startLinks(c *ui.Ctx, h ext.Host) {
+	th := c.Theme()
+	var links []registry.StartEntry
+	for _, e := range registry.StartEntries(h) {
+		if e.Link && h.Available(e.Command, e.Args) {
+			links = append(links, e)
+		}
+	}
+	if len(links) == 0 {
+		return
+	}
+	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{T: 2}}, func(c *ui.Ctx) {
+		for _, e := range links {
+			note := ""
+			if e.Note != nil {
+				registry.Call(func() error { note = e.Note(); return nil })
+			}
+			if widget.Clickable(c, e.Name, ui.Style{Dir: ui.Row, H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 7, Cross: ui.Center, Radius: 13,
+				Fill: th.C(tStartCard), Stroke: th.C(tStartCardLine), Border: 1, Label: e.Title, Tooltip: e.Desc, Help: "shell/start#links"}, func(c *ui.Ctx) {
+				icon(c, "icon", e.Icon, 12, th.C(theme.Accent))
+				c.Text("t", e.Title, uiFont(12, th.C(theme.Fg)))
+				if note != "" {
+					c.Text("n", note, monoFont(10, th.C(theme.FgFaint)))
+				}
+			}).Clicked {
+				if err := h.Run(context.Background(), e.Command, e.Args); err != nil {
+					h.Log().Error("start", "link", e.Name, "err", err)
+				}
+			}
+		}
+	})
 }
 
 // keycap is a key drawn as a small key.

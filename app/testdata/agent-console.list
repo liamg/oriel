@@ -6,7 +6,7 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1261.125x38 r 0
+clip 102.9375,0 1259.125x38 r 0
   rect 102.9375,0 257.03125x38 fill #121210
   rect 102.9375,0 257.03125x2 fill #ffd23f
   rect 114.9375,16 8x8 fill #b98aff radius 4
@@ -17,14 +17,15 @@ clip 102.9375,0 1261.125x38 r 0
   text "⌘1" @335.96875,23.42 #4f4a40 JetBrains Mono 9.5
   rect 359.96875,0 1x38 fill #24221d
 pop
-text "5H" @1378.0625,22.779999 #7c7566 JetBrains Mono 10.5
-rect 1399.25,17 44x4 fill #24221d radius 2
-rect 1399.25,17 9.680054x4 fill #ff9b45 radius 2
-text "22%" @1451.25,22.779999 #ece6d8 JetBrains Mono 10.5
-text "WK" @1493.0312,22.779999 #7c7566 JetBrains Mono 10.5
-rect 1514.2188,17 44x4 fill #24221d radius 2
-rect 1514.2188,17 21.119995x4 fill #ff9b45 radius 2
-text "48%" @1566.2188,22.779999 #ece6d8 JetBrains Mono 10.5
+rect 1376.0625,0 209.9375x24 radius 5 stroke 1 #332f27
+text "5H" @1384.0625,15.780001 #7c7566 JetBrains Mono 10.5
+rect 1405.25,10 44x4 fill #24221d radius 2
+rect 1405.25,10 9.680054x4 fill #ff9b45 radius 2
+text "22%" @1457.25,15.780001 #ece6d8 JetBrains Mono 10.5
+text "WK" @1485.0312,15.780001 #7c7566 JetBrains Mono 10.5
+rect 1506.2188,10 44x4 fill #24221d radius 2
+rect 1506.2188,10 21.119995x4 fill #ff9b45 radius 2
+text "48%" @1558.2188,15.780001 #ece6d8 JetBrains Mono 10.5
 rect 0,38 44x936 fill #0c0c0b
 clip 0,38 43x936 r 0
   text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
@@ -41,6 +42,16 @@ clip 0,38 43x936 r 0
   path 5 segments stroke 1.4545455 #7c7566
   path 5 segments stroke 1.4545455 #7c7566
   path 4 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 3 segments stroke 1.4545455 #4f4a40
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -261,7 +272,7 @@ clip 44,38 1556x936 r 0
       text "tokens in / out" @1286,246.81 #b3ab99 JetBrains Mono 11.5
       text "1.42M / 38k" @1504.7656,246.81 #ece6d8 JetBrains Mono 11.5
       text "cost (est.)" @1286,270.99002 #b3ab99 JetBrains Mono 11.5
-      text "$3.10" @1547.9844,270.99002 #ece6d8 JetBrains Mono 11.5
+      text "$3.10 ›" @1533.5781,270.99002 #ffd23f JetBrains Mono 11.5
       text "running" @1286,295.17 #b3ab99 JetBrains Mono 11.5
       text "1h 12m" @1540.7812,295.17 #ece6d8 JetBrains Mono 11.5
       rect 1270,312.62 330x1 fill #24221d

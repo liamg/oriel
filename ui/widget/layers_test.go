@@ -28,6 +28,24 @@ func TestSelectInAPage(t *testing.T) {
 	}
 }
 
+// A page over a node covers that node's rect, leaving what's beside it.
+func TestPageOverANode(t *testing.T) {
+	open := true
+	var main, page ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Row("shell", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+			c.Box("side", ui.Style{W: ui.Px(100), H: ui.Flex(1)}, nil)
+			main = c.Box("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, nil)
+		})
+		page = c.Next("page")
+		Page(c, "page", &open, PageOpts{Over: main, Help: "test/page"}, func(c *ui.Ctx) {})
+	})
+	h.frame()
+	if p, m := h.rect(page), h.rect(main); p != m || p.Min.X != 100 {
+		t.Errorf("page %v, want the main box's %v", p, m)
+	}
+}
+
 func TestInputShowsNextFrame(t *testing.T) {
 	on := false
 	var id ui.ID

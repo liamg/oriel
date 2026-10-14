@@ -54,7 +54,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.overview.add(spec)", Doc: "Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick."},
 	},
 	"rail": {
-		{Call: "oriel.rail.add(spec)", Doc: "Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project) or session (below the projects; the default). icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings) or a glyph. It's dimmed while the command isn't available."},
+		{Call: "oriel.rail.add(spec)", Doc: "Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available."},
 	},
 	"regex": {
 		{Call: "oriel.regex.find(pat, s, flags?)", Doc: "The first PCRE2 match of pat in s: its start and end (1-based, inclusive, as string.find), then its groups; nil if none. flags: imsxn."},
@@ -66,7 +66,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.session.kind(name, spec)", Doc: "A kind of session: { pack, gates, status }."},
 	},
 	"start": {
-		{Call: "oriel.start.add(spec)", Doc: "Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default) }. It's dimmed while the command isn't available."},
+		{Call: "oriel.start.add(spec)", Doc: "Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure."},
 	},
 	"status": {
 		{Call: "oriel.status.rule(fn)", Doc: "A status rule: fn(session) returns a status colour name, or nil to leave it."},
@@ -80,6 +80,7 @@ var Reference = map[string][]RefFunc{
 	},
 	"ui": {
 		{Call: "oriel.ui.button(spec)", Doc: "A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change."},
+		{Call: "oriel.ui.chart(spec)", Doc: "A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1."},
 		{Call: "oriel.ui.column(children)", Doc: "A column of nodes; options beside them: gap, pad (px)."},
 		{Call: "oriel.ui.indicator(spec)", Doc: "A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }."},
 		{Call: "oriel.ui.input(spec)", Doc: "A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value."},

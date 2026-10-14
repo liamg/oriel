@@ -221,6 +221,9 @@ func (a *APIs) bind(vm *script.VM) {
 			"button": func(c *script.Args) ([]any, error) {
 				return []any{x.Button(c.Table(0))}, nil
 			},
+			"chart": func(c *script.Args) ([]any, error) {
+				return []any{x.Chart(c.Table(0))}, nil
+			},
 			"column": func(c *script.Args) ([]any, error) {
 				return []any{x.Column(c.Any(0))}, nil
 			},

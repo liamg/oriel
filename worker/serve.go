@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/wire"
+	"github.com/liamg/oriel/worker/stats"
 )
 
 // Serve answers an app on conn until it goes away.
@@ -58,6 +59,12 @@ func (w *Worker) Serve(conn wire.Conn) {
 		return r.Run.ID, w.emit(r)
 	}))
 	fn(MethodSandboxConfig, wire.Func(func(_ context.Context, cfg sandbox.Config) (any, error) { return nil, w.SetSandboxConfig(cfg) }))
+	fn(MethodStatsQuery, wire.Func(func(_ context.Context, q stats.Query) (stats.Report, error) { return w.StatsQuery(q), nil }))
+	fn(MethodStatsSession, wire.Func(func(_ context.Context, r StatsSessionReq) (stats.Detail, error) { return w.SessionStats(r) }))
+	fn(MethodUsageHistory, wire.Func(func(_ context.Context, r UsageHistoryReq) ([]core.ProviderUsage, error) {
+		return w.UsageHistory(r), nil
+	}))
+	fn(MethodUsageRead, wire.Func(func(ctx context.Context, _ struct{}) (any, error) { return nil, w.ReadUsage(ctx) }))
 	fn(MethodTermInput, wire.Func(func(_ context.Context, r TermReq) (any, error) { return nil, w.termInput(r) }))
 	conn.HandleStream(MethodEvents, wire.StreamFunc(w.serveEvents))
 	conn.HandleStream(MethodTerminal, wire.StreamFunc(w.serveTerminal))

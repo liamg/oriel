@@ -16,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/claude/transcript"
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/core"
 )
 
@@ -381,6 +382,11 @@ func (s *session) event(in eventIn) {
 		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage())})
 		if len(in.RateLimits) > 0 {
 			u := usageOf(in.RateLimits)
+			env := s.spec.Env
+			if s.spec.Sandbox != nil {
+				env = nil // the sandbox signs in as the host does
+			}
+			u.Account, u.AccountName = account(env)
 			remember(u)
 			s.push(agent.UsageUpdate{Usage: u})
 		}
@@ -427,8 +433,8 @@ func turnUsageOf(in eventIn, base, now transcript.Usage) agent.Usage {
 		if model == "" {
 			model = now.Model
 		}
-		u.Cost = transcript.Tokens{Input: t.Input, CacheWrite5m: t.CacheCreate, CacheRead: t.CacheRead, Output: t.Output}.
-			Cost(transcript.RateFor(model, false))
+		u.Cost = price.Tokens{Input: t.Input, CacheWrite5m: t.CacheCreate, CacheRead: t.CacheRead, Output: t.Output}.
+			Cost(price.RateFor(model, false))
 	}
 	if c := in.Context; c != nil && c.Window > 0 {
 		u.Context, u.ContextMax = int(c.Tokens), int(c.Window)

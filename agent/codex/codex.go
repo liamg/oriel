@@ -145,7 +145,12 @@ func (p *Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
 	if err := c.rpc.Call(ctx, "account/rateLimits/read", nil, &r); err != nil {
 		return core.ProviderUsage{}, err
 	}
-	return r.RateLimits.usage(time.Now()), nil
+	u := r.RateLimits.usage(time.Now())
+	if acct, err := readAccount(ctx, c.rpc); err == nil {
+		u.Account = acct.identity()
+		u.AccountName = u.Account
+	}
+	return u, nil
 }
 
 // userFiles are the parts of the host's Codex home a sandboxed agent reads.
@@ -228,6 +233,14 @@ type account struct {
 	RequiresOpenaiAuth bool `json:"requiresOpenaiAuth"`
 }
 
+// identity is who's signed in, by email: the account the plan's windows belong to.
+func (a account) identity() string {
+	if a.Account == nil {
+		return ""
+	}
+	return a.Account.Email
+}
+
 func readAccount(ctx context.Context, rpc *jsonrpc.Conn) (account, error) {
 	var a account
 	if err := rpc.Call(ctx, "account/read", map[string]any{"refreshToken": false}, &a); err != nil {
@@ -308,12 +321,15 @@ func (r rateLimits) merge(u rateLimits) rateLimits {
 }
 
 func (r rateLimits) usage(now time.Time) core.ProviderUsage {
-	u := core.ProviderUsage{Provider: "codex", Plan: planName(r.PlanType), Sampled: now}
+	u := core.ProviderUsage{Provider: "codex", Plan: planName(r.PlanType), Sampled: now, Source: "Codex's account/rateLimits/read"}
 	for i, w := range []*rateLimit{r.Primary, r.Secondary} {
 		if w == nil {
 			continue
 		}
 		uw := core.UsageWindow{Name: windowName(w.WindowDurationMins, i), Used: w.UsedPercent / 100}
+		if w.WindowDurationMins != nil {
+			uw.Length = time.Duration(*w.WindowDurationMins) * time.Minute
+		}
 		if w.ResetsAt != nil {
 			uw.Resets = time.Unix(*w.ResetsAt, 0)
 		}

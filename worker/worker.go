@@ -24,6 +24,7 @@ import (
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/wire"
+	"github.com/liamg/oriel/worker/stats"
 )
 
 // Options configure a worker.
@@ -58,6 +59,11 @@ type Worker struct {
 	edit      sync.Mutex // one read-modify-write of a session's state at a time
 	testsOnce sync.Once
 	testSet   *testrun.Set
+
+	statsOnce sync.Once
+	statsData *stats.Store
+	statsMu   sync.Mutex // the stats store, and the events records it reads
+	usageMu   sync.Mutex
 
 	mu       sync.Mutex
 	recs     map[core.SessionID]*sessionLog

@@ -60,13 +60,15 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 
 type PageOpts struct {
 	Top     float32 // where it starts, under a title bar
+	Over    ui.ID   // the node it covers instead, as laid out last frame: the main area beside a sidebar
 	KeyMode string  // its keymap mode
 	Label   string  // its accessible name
 	Help    string
 }
 
-// Page is a full-window page (settings, the theme editor) from Top down while *open. It holds keyboard focus, taking
-// it back whenever nothing on it has it, and Escape, on the page or passed up from a control on it, closes it.
+// Page is a full-window page (settings, the theme editor) from Top down while *open, or over the node Over. It holds
+// keyboard focus, taking it back whenever nothing on it has it, and Escape, on the page or passed up from a control
+// on it, closes it.
 func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 	id := c.Next(key)
 	if !*open {
@@ -78,7 +80,11 @@ func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 	}
 	size := c.Size()
 	at := render.Point{Y: o.Top}
-	c.Column(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y - o.Top), Z: ui.LayerPage, Fill: col(c, tPageBg), Clip: true, Trap: true,
+	w, h := size.X, size.Y-o.Top
+	if r, ok := c.Rect(o.Over); o.Over != 0 && ok {
+		at, w, h = r.Min, r.Dx(), r.Dy()
+	}
+	c.Column(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerPage, Fill: col(c, tPageBg), Clip: true, Trap: true,
 		Focusable: true, KeyMode: o.KeyMode, Float: &ui.Float{Point: &at}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, func(c *ui.Ctx) {
 		if !c.FocusWithin(id) {
 			c.Focus(id)

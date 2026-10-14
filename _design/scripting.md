@@ -301,3 +301,17 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   when = function(path) return path:match("%.csv$") ~= nil end,
   on = function(window) return window.presenter == "csv" end }
 ```
+
+## As built (AI-12)
+
+- `oriel.ui.chart{ kind, series, labels, height, max, y_ticks, format, legend, hover, marks, bands, on_click, id, label }`
+  draws a `widget.Chart`: `kind` is `bars` (stacked, the default), `area`, `line`, `spark` or `strip`; each series is
+  `{ name, values, color, kind, dashed, from }`, `color` a theme token or `#rrggbb`; `format` (`money`, `percent`,
+  `count`) formats the axis and the hover card; `on_click(series, point)` gets them counted from 1.
+- `oriel.rail.add` takes `scope = "global"` (a page every session shares, below a second divider) and
+  `note = fn(project)`, a live figure at the entry's right; `oriel.start.add` takes `link = true` (a small link under
+  the actions) and `note = fn()`, its figure.
+- The pages are commands, so `oriel.cmd("stats.open", { group = "session", repo = "api", range = "7d" })`,
+  `oriel.cmd("stats.session", { id = … })` and `oriel.cmd("usage.open")` reach them; `oriel.option["stats.split_sessions"]`
+  is the split.
+

@@ -22,4 +22,9 @@ directories you've opened lately.
 Every session that isn't archived, newest first, with its kind, projects and branch; the diamond is its status
 colour. Opening one brings it to the front, resuming its agent if it was stopped.
 
+## Links
+
+Under the actions, small links to the pages every session shares, each with its headline figure: **Stats** (this
+week's cost), **Usage** (the weekly window). A plugin adds one with `oriel.start.add{ link = true, note = fn }`.
+
 {{keys "directory.open"}}

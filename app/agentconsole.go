@@ -214,7 +214,6 @@ func (x *agentConsole) Activate(_ context.Context, h ext.Host) error {
 			}}))
 	}
 	x.add(h.View(AgentConsoleView, consoleView{x}))
-	x.add(h.View(TitleRight+"40-usage", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "usage", Fn: x.usageTat} })))
 	x.add(h.View(OverlayPrefix+"asks", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "asks", Fn: x.interrupts}
 	})))

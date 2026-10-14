@@ -337,15 +337,3 @@ func TestQuestions(t *testing.T) {
 		t.Errorf("question = %+v", q)
 	}
 }
-
-func TestRateFor(t *testing.T) {
-	if r := RateFor("claude-opus-5-5", false); r != (Rate{In: 5, Out: 25}) {
-		t.Errorf("opus = %+v", r)
-	}
-	if r := RateFor("claude-opus-5-5", true); r != (Rate{In: 10, Out: 50}) {
-		t.Errorf("opus fast = %+v", r)
-	}
-	if r := RateFor("gpt-9", false); r != (Rate{}) {
-		t.Errorf("unknown = %+v", r)
-	}
-}

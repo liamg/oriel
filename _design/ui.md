@@ -74,13 +74,14 @@ They are design sketches, not the implementation: the app draws natively (see `s
 - Session tabs across the top, each with a status dot, kind and `⌘N`. The status reads at a glance.
 - Threads open **between the lines** they belong to, with the agent's live state in the header.
 - Agent-written lines carry a gutter mark and an "agent · 2m" ghost until you've read them.
-- Right: a **summary** of requests (threads), the task rail, and the session tally (context, cache, cost, review ledger, tests).
+- Right: a **summary** of requests (threads), the task rail, and the session stats (context, cache, cost, review ledger, tests).
   The full conversation view is 01b.
 - Built in AI-5/AI-9: the summary is the `requests.summary` view (`requests.summary` toggles it in the right dock):
   the requests with their counts, the tasks rail (`Session.Tasks`: ✓ done, ◐ in progress, ○ to do, drawn, not
-  glyphs) and the tally at its foot (CTX meter, CACHE, $, TASKS, the latest run's TESTS). The agent console's side has
+  glyphs) and the session stats at its foot (CTX meter, CACHE, $, TASKS, the latest run's TESTS). The agent console's side has
   the same tasks rail. The title bar's usage windows (`titlebar.right.40-usage`) are the plan of the session in front's
-  provider (`State.Usage`): `5H` and `WK` meters with their share. Not yet: REVIEWED (the ledger, RV-2), and opening
+  provider (`State.Usage`): `5H` and `WK` meters with their share; since AI-12 one button that opens Usage, with a
+  hover card (43). Not yet: REVIEWED (the ledger, RV-2), and opening
   the summary by default with a session.
 - Bottom: the agent pane, terminal, problems, debug and tests. The orange tab dot means something's running.
 - Built in ED-15: a window can show its buffer through a presenter instead of as text (`editor.present`): a markdown
@@ -202,7 +203,8 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   hides the dock.
 - **Search is per project.** It searches the open project. An **All projects** toggle in the panel widens it to the
   session, with results grouped by project. `⌘⇧F` opens the open project's Search. `⌘K` (the omnibox) stays global.
-- **Session-wide entries,** below a divider: Requests (with its count, `⌘⇧R`), Ship, Settings. Past ~8 projects the
+- **Session-wide entries,** below a divider: Requests (with its count, `⌘⇧R`), Ship. Below a second divider, the
+  pages every session shares (AI-12, 43): Stats, Usage, Jobs and Settings, each with a live figure. Past ~8 projects the
   list scrolls and these stay pinned.
 - **Adding a project.** A `+` in the PROJECTS header (in the narrow form, under the project initials) opens a picker
   of the worker's registered repos the session hasn't got, and the checkout path typed. Choosing one adds it to the
@@ -579,7 +581,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   errors red, the SUBAGENTS box, and asks' cards where they arose. Keys in mode `agent`: `j`/`k` between blocks, `⏎`
   folds, `i` the composer, `y`/`a`/`n`/`⇧n` answer the selected or first ask, `Esc` interrupts (closes when idle).
   Composer (mode `composer`): `⏎` sends with `agent.send` (queued as QUEUED while the agent works), `⌘⏎` sends now
-  (urgent). Right: session tally from `Agent.Tally`, plan usage from `State.Usage` (this provider first), this turn's
+  (urgent). Right: session stats from `AgentState.Stats` (its cost opens the session stats tab, 43), plan usage from `State.Usage` (this provider first), this turn's
   touched files, rules in force (the gate, the sandbox's, and `SessionState.Rules`). Not yet: `@file` completion (an
   `@path` goes to the agent as written), a multi-line composer, and the model/effort chips as pickers.
 
@@ -634,3 +636,52 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 ![38-crash](mockups/38-crash.png)
 
 - After a crash, the next launch shows the report with **Copy report** and a link to a new GitHub issue. Nothing is sent.
+
+## 43 · Stats and Usage
+
+![43-stats](mockups/43-stats.png)
+
+Built in AI-12 (`app/stats*.go`, `app/usage.go`, `worker/stats`). Every cost is **est.**: tokens × the price table
+(`agent/price`). Repos, not working directories, are the unit; a repo keeps its project colour from the session in
+front (42), and the other repos take the palette's colours it leaves, by name.
+
+- **Session stats** is a main tab (`stats.session {id}`, view `stats.session`, its instance the session; `:Stats
+  session`, or the session stats box's cost, in the agent console and the summary, whose hover card says so): the
+  tiles (cost and per active hour, tokens and cache hit, requests per turn, turns and subagents, tool calls and errors,
+  active of span, peak context of the window and compactions); cost (or tokens, `$ COST`/`TOKENS`) over the session per
+  five minutes by token kind, with idle stretches of 20 minutes or more hatched, compactions marked and a strip of
+  turns; cost per repo with **count whole session in each**; models; tools (calls, errors, a strip of timings
+  `.1s 1s 10s 1m 1m+`, p50); hours of the day; effort. The header names its account (a session runs on one). A long session's steps widen to keep 150 at most.
+- **Stats** (`:Stats`, `⌘⇧S`, `stats.open {group, range, repo, worker, provider, session, kind, model}`) is a page over
+  the main area beside the sidebar (`widget.Page` with `Over`), key mode `stats`: 7/30/90 days or custom; group by
+  repo (default), session, kind, model, provider, account or day (`g` then `r s k m p a d`); filter chips (repo, worker,
+  provider, account with menus, all accounts by default since cost adds up; session, kind, model through **+ filter**; `✕` takes one off); the split toggle; tiles
+  against the period before; cost per group per day stacked (the top 6, the rest as other); the group table with
+  share bars, last active and a 30-day sparkline (grouped by session: its repos and days, chart and table side by
+  side, "N more", "n of m span several repos"); tokens by kind, models, tools by error rate (≥ 100 calls), hours.
+  Hovering a row or a bar picks its series out; `j`/`k`, `⏎` or a click drills in (the row's filter chip, regrouped:
+  repo → session → model; a day becomes the range), `⌫` backs out, `[`/`]` step the range, **Copy as CSV**. The
+  header says when it was scanned and names an offline worker whose last answer it shows.
+- **Plan usage is per account** (the user's decision after 43): a plan belongs to an account (provider and login:
+  Claude's account and organisation, Codex's email), not to a provider or a worker. A work laptop on a company Claude
+  subscription and a personal one on Claude Max are separate limits and are never added up; two workers on one account
+  are one plan (`State.Usage` keys by provider and account, `ProviderUsage.Workers` the workers reporting it). Accounts
+  are named in `usage.accounts`, else shown by email or organisation.
+- **Usage** (`:Usage`, `⌘⇧U`, `usage.open`, key mode `usage`, `r` or **Refresh** runs `usage.refresh`): an
+  **account switcher** at the top ("Work · Claude Max · mbp-work", "ada@example.com · ChatGPT Pro · mbp"; no "all"),
+  starting on the session in front's account, else the local worker's; then that account's windows, each as a card (share used, when it opened, the reset, a meter hatched on to where the burn takes it, the burn
+  over the last 30 minutes for a 5-hour window or 24 hours for a weekly one, and the verdict: "≈ 71% at the reset ·
+  won't run out", tight past 90%, or "at this rate the weekly window runs out Thu 14:38 · 18h 21m before the reset" in
+  red); the account's week hour by hour (the 5-hour window's peak per window as bars, the weekly ones as lines dashed on at
+  their burn, the opening and "full" marked, 5-hour resets as ticks); and what burned a window by repo (sessions,
+  points, est. cost; outside Oriel as its own row), all of them the account's own. Points: each rise between two readings goes to the repos by
+  their tokens in the hours it happened; a rise with no Oriel tokens behind it is outside Oriel.
+- **Entry points.** The sidebar's global group (Stats with today's cost, Usage with the weekly window, Jobs dimmed
+  until SE-4, Settings), below a second divider, at the foot in the narrow form, the figure in the tooltip there; the
+  title bar's indicators as one button opening Usage, showing the account the session in front runs on (the
+  local worker's with no session), with a hover card of every account's windows, resets, burn and
+  a red line for one that runs out; the session stats cost; the start view's links (Stats with this week's cost,
+  Usage); the omnibox's **Pages** (every global sidebar entry, with its figure and key).
+- Not yet: a date picker for CUSTOM (it keeps the range showing; drilling into a day sets one), the plan's tier chip
+  (MAX 20×), and range-exact tool rows on the Stats page (they're the sessions' with requests in the range).
+

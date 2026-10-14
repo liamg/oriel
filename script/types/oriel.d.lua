@@ -189,7 +189,7 @@ function oriel.overview.add(spec) end
 ---@class oriel.rail
 oriel.rail = {}
 
---- Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project) or session (below the projects; the default). icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings) or a glyph. It's dimmed while the command isn't available.
+--- Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available.
 ---@param spec table
 function oriel.rail.add(spec) end
 
@@ -236,7 +236,7 @@ function oriel.session.kind(name, spec) end
 ---@class oriel.start
 oriel.start = {}
 
---- Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default) }. It's dimmed while the command isn't available.
+--- Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure.
 ---@param spec table
 function oriel.start.add(spec) end
 
@@ -280,6 +280,11 @@ oriel.ui = {}
 ---@param spec table
 ---@return table
 function oriel.ui.button(spec) end
+
+--- A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1.
+---@param spec table
+---@return table
+function oriel.ui.chart(spec) end
 
 --- A column of nodes; options beside them: gap, pad (px).
 ---@param children any

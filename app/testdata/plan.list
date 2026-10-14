@@ -6,7 +6,7 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1261.125x38 r 0
+clip 102.9375,0 1259.125x38 r 0
   rect 102.9375,0 214.10938x38 fill #121210
   rect 102.9375,0 214.10938x2 fill #ffd23f
   rect 114.9375,16 8x8 fill #ff5f6d radius 4
@@ -15,14 +15,15 @@ clip 102.9375,0 1261.125x38 r 0
   text "⌘1" @293.04688,23.42 #4f4a40 JetBrains Mono 9.5
   rect 317.04688,0 1x38 fill #24221d
 pop
-text "5H" @1378.0625,22.779999 #7c7566 JetBrains Mono 10.5
-rect 1399.25,17 44x4 fill #24221d radius 2
-rect 1399.25,17 16.71997x4 fill #ff9b45 radius 2
-text "38%" @1451.25,22.779999 #ece6d8 JetBrains Mono 10.5
-text "WK" @1493.0312,22.779999 #7c7566 JetBrains Mono 10.5
-rect 1514.2188,17 44x4 fill #24221d radius 2
-rect 1514.2188,17 31.23999x4 fill #ff9b45 radius 2
-text "71%" @1566.2188,22.779999 #ece6d8 JetBrains Mono 10.5
+rect 1376.0625,0 209.9375x24 radius 5 stroke 1 #332f27
+text "5H" @1384.0625,15.780001 #7c7566 JetBrains Mono 10.5
+rect 1405.25,10 44x4 fill #24221d radius 2
+rect 1405.25,10 16.71997x4 fill #ff9b45 radius 2
+text "38%" @1457.25,15.780001 #ece6d8 JetBrains Mono 10.5
+text "WK" @1485.0312,15.780001 #7c7566 JetBrains Mono 10.5
+rect 1506.2188,10 44x4 fill #24221d radius 2
+rect 1506.2188,10 31.23999x4 fill #ff9b45 radius 2
+text "71%" @1558.2188,15.780001 #ece6d8 JetBrains Mono 10.5
 rect 0,38 224x936 fill #0c0c0b
 clip 0,38 223x936 r 0
   clip 12,45.73 181x12.539997 r 0
@@ -68,6 +69,21 @@ clip 0,38 223x936 r 0
   text "3" @203.59375,268.18 #141006 JetBrains Mono 9
   path 4 segments stroke 1.25 #4f4a40
   text "Debug" @33,292.30524 #4f4a40 Inter 12
+  rect 10,304.44 203x1 fill #332f27
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Stats" @33,326.30524 #b3ab99 Inter 12
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Usage" @33,349.30524 #b3ab99 Inter 12
+  text "wk 71%" @177,348.54 #7c7566 JetBrains Mono 10
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 3 segments stroke 1.25 #4f4a40
+  text "Jobs" @33,372.30524 #4f4a40 Inter 12
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -78,7 +94,7 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Settings" @33,315.30524 #b3ab99 Inter 12
+  text "Settings" @33,395.30524 #b3ab99 Inter 12
 pop
 rect 223,38 1x936 fill #24221d
 rect 224,38 1376x936 fill #060606

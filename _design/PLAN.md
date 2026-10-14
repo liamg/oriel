@@ -61,7 +61,7 @@ none of the room.
 - Sandbox, gateway MCP, egress approvals, ssh-agent grants.
 - agentbus (questions, review requests, auto-answer), Linear, Slack PTAL, calendar.
 - The assistant: it moves from the room into a drawer.
-- Usage windows, session tally, stats, worker CPU/mem, logs, agentbus log.
+- Usage windows, session stats, stats, worker CPU/mem, logs, agentbus log.
 - Editable prompts page and coding style. Voice dictation.
 
 **Rewrite**

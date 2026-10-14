@@ -106,6 +106,9 @@ func node(kind string, spec script.Table) script.Table {
 	return t
 }
 
+//oriel:api doc="A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1." returns=table
+func (UI) Chart(spec script.Table) script.Table { return node("chart", spec) }
+
 //oriel:api doc="A list: each of items through row(item), which returns a node." returns=table
 func (UI) List(items any, row *script.Fn) script.Table {
 	return script.Table{"type": "list", "items": items, "row": row}
@@ -204,6 +207,8 @@ func build(c *ui.Ctx, v any, a *APIs) {
 				Help: "plugins/lua#ui"}); ok {
 				a.callback(n, "on_change", v)
 			}
+		case "chart":
+			chart(c, n, a)
 		case "list":
 			row, _ := n["row"].(*script.Fn)
 			items, _ := n["items"].([]any)
@@ -378,4 +383,93 @@ func snake(s string) string {
 		b.WriteRune(r)
 	}
 	return b.String()
+}
+
+// items are a Lua list: a table's 1, 2, 3… or a Go slice.
+func items(v any) []any {
+	switch v := v.(type) {
+	case []any:
+		return v
+	case script.Table:
+		var out []any
+		for i := 1; ; i++ {
+			x, ok := v[strconv.Itoa(i)]
+			if !ok {
+				return out
+			}
+			out = append(out, x)
+		}
+	}
+	return nil
+}
+
+func num(v any) float64 {
+	f, _ := v.(float64)
+	return f
+}
+
+var chartKinds = map[string]widget.ChartKind{"bars": widget.ChartBars, "area": widget.ChartArea, "line": widget.ChartLine,
+	"spark": widget.ChartSpark, "strip": widget.ChartStrip}
+
+var chartFormats = map[string]func(float64) string{
+	"money":   func(v float64) string { return fmt.Sprintf("$%.2f", v) },
+	"percent": func(v float64) string { return fmt.Sprintf("%.0f%%", v) },
+	"count":   func(v float64) string { return fmt.Sprintf("%.0f", v) },
+}
+
+// tone is a colour from Lua: a theme token's name, or #rrggbb.
+func tone(th *theme.Resolved, v string, fallback render.Color) render.Color {
+	if v == "" {
+		return fallback
+	}
+	if c, ok := th.Color(v); ok {
+		return c
+	}
+	if c, err := theme.ParseColor(v); err == nil {
+		return c
+	}
+	return fallback
+}
+
+// chart builds an oriel.ui.chart node with widget.Chart, as the built-in pages draw theirs.
+func chart(c *ui.Ctx, n script.Table, a *APIs) {
+	th := c.Theme()
+	palette := []theme.TokenID{theme.Accent, theme.OK, theme.Warn, theme.Error, theme.StatusCI, theme.StatusReviewer}
+	var series []widget.ChartSeries
+	for i, x := range items(n["series"]) {
+		t, ok := x.(script.Table)
+		if !ok {
+			continue
+		}
+		s := widget.ChartSeries{Name: str(t, "name"), Tone: tone(th, str(t, "color"), th.C(palette[i%len(palette)])), Kind: chartKinds[str(t, "kind")]}
+		for _, v := range items(t["values"]) {
+			s.Values = append(s.Values, num(v))
+		}
+		s.Dashed, _ = t["dashed"].(bool)
+		if f := int(num(t["from"])); f > 0 {
+			s.From = f - 1
+		}
+		series = append(series, s)
+	}
+	o := widget.ChartOpts{Kind: chartKinds[str(n, "kind")], Height: float32(num(n["height"])), Max: num(n["max"]), YTicks: int(num(n["y_ticks"])),
+		Format: chartFormats[str(n, "format")], Highlight: -1, Label: cmpOr(str(n, "label"), "chart"), Help: "plugins/lua#ui"}
+	o.YFormat = o.Format
+	o.Legend, _ = n["legend"].(bool)
+	o.Hover, _ = n["hover"].(bool)
+	o.Labels = strs(n["labels"])
+	for _, x := range items(n["marks"]) {
+		if t, ok := x.(script.Table); ok {
+			d, _ := t["dashed"].(bool)
+			o.Marks = append(o.Marks, widget.ChartMark{At: num(t["at"]) - 1, Label: str(t, "label"), Tone: tone(th, str(t, "color"), render.Color{}), Dashed: d})
+		}
+	}
+	for _, x := range items(n["bands"]) {
+		if t, ok := x.(script.Table); ok {
+			o.Bands = append(o.Bands, widget.ChartBand{From: num(t["from"]) - 1, To: num(t["to"]) - 1, Label: str(t, "label")})
+		}
+	}
+	key := cmpOr(str(n, "id"), str(n, "label"), "chart")
+	if res := widget.Chart(c, key, series, o); res.Clicked {
+		a.callback(n, "on_click", float64(res.Series+1), float64(res.Point+1))
+	}
 }

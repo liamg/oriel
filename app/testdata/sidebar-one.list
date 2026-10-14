@@ -58,6 +58,20 @@ clip 0,38 149x356 r 0
   path 3 segments stroke 1.25 #4f4a40
   path 3 segments stroke 1.25 #4f4a40
   text "Ship" @33,258.86523 #4f4a40 Inter 12
+  rect 10,271 129x1 fill #332f27
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Stats" @33,292.86523 #b3ab99 Inter 12
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Usage" @33,315.86523 #b3ab99 Inter 12
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 3 segments stroke 1.25 #4f4a40
+  text "Jobs" @33,338.86523 #4f4a40 Inter 12
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -68,7 +82,7 @@ clip 0,38 149x356 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Settings" @33,281.86523 #b3ab99 Inter 12
+  text "Settings" @33,361.86523 #b3ab99 Inter 12
 pop
 rect 149,38 1x356 fill #24221d
 rect 150,38 610x356 fill #060606

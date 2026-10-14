@@ -728,7 +728,7 @@ func (x *requests) summary(c *ui.Ctx) {
 			})
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-		sessionStats(c, se, now)
+		sessionStats(c, x.h, se, now)
 	})
 }
 

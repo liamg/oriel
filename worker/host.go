@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/worker/stats"
 )
 
 // SandboxFactory makes the container, gateway and egress proxy a sandboxed session runs in (AI-11). Layer-3
@@ -429,6 +430,7 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 	case agent.Ready:
 		h.setAgent(func(a *core.AgentState) { a.Session = ev.ID })
 	case agent.TurnStart:
+		h.record(h.snapshot(), stats.Event{At: now, Kind: "turn"})
 		h.mu.Lock()
 		h.working, h.turnAt = true, now
 		h.mu.Unlock()
@@ -444,6 +446,9 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 		}
 		h.appendItem(core.Item{ID: id, Kind: kind, Text: ev.Text, Partial: ev.Partial, Agent: ev.Agent, Time: now})
 	case agent.ToolCall:
+		se := h.snapshot()
+		h.record(se, stats.Event{At: now, Kind: "tool", ID: ev.ID, Name: ev.Tool, Input: ev.Input, Agent: ev.Agent, Model: se.Agent.Model,
+			Effort: se.Agent.Effort, Cwd: agentDir(se)})
 		h.mu.Lock()
 		h.calls[ev.ID] = ev
 		h.mu.Unlock()
@@ -455,6 +460,7 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 			h.subagentTool(ev.Agent)
 		}
 	case agent.ToolResult:
+		h.record(h.snapshot(), stats.Event{At: now, Kind: "result", ID: ev.ID, Error: ev.IsError})
 		h.toolResult(ev, now)
 	case agent.Permission:
 		go h.permission(sess, ev)
@@ -463,17 +469,27 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 	case agent.Subagent:
 		h.subagent(ev, now)
 	case agent.TurnEnd:
+		se := h.snapshot()
+		u := ev.Usage
+		h.record(se, stats.Event{At: now, Kind: "request", Model: se.Agent.Model, Effort: se.Agent.Effort, Window: int64(u.ContextMax),
+			Tokens: stats.Tokens{Input: u.Input, Output: u.Output, CacheRead: u.CacheRead, CacheWrite5m: u.CacheWrite}})
 		h.turnEnd(ev, now)
 	case agent.Failure:
 		h.appendItem(core.Item{ID: newID(6), Kind: core.ItemError, Text: ev.Err, Time: now})
 		h.setAgent(func(a *core.AgentState) { a.Error = ev.Err })
 	case agent.UsageUpdate:
-		_ = w.emit(core.UsageSampled{Usage: ev.Usage})
+		w.usageSampled(ev.Usage)
 	case agent.Exited:
 		if ev.Err != "" {
 			h.appendItem(core.Item{ID: newID(6), Kind: core.ItemSystem, Text: "The agent exited: " + ev.Err, Time: now})
 		}
 	}
+}
+
+// snapshot is the session's state now, or its zero value once it's gone.
+func (h *host) snapshot() core.SessionState {
+	se, _ := h.w.session(h.id)
+	return se
 }
 
 func (h *host) appendItem(it core.Item) {

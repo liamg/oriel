@@ -87,6 +87,8 @@ func (s *session) onNotify(method string, params json.RawMessage) {
 		s.mu.Lock()
 		s.limits = s.limits.merge(*n.RateLimits)
 		u := s.limits.usage(time.Now())
+		u.Account = s.acct.identity()
+		u.AccountName = u.Account
 		s.mu.Unlock()
 		s.emit(agent.UsageUpdate{Usage: u})
 		return

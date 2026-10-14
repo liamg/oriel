@@ -254,19 +254,20 @@ clip 180,108 1240x720 r 10
   text "PICK" @194,130.42 #7c7566 JetBrains Mono 9.5
   text "SESSIONS" @237.56,130.42 #7c7566 JetBrains Mono 9.5
   text "DIRECTORIES" @316.68,130.42 #7c7566 JetBrains Mono 9.5
-  text "COMMANDS ␣:" @417.21997,130.42 #7c7566 JetBrains Mono 9.5
-  text "FILES ␣␣" @517.76,130.42 #7c7566 JetBrains Mono 9.5
-  text "GREP ␣/" @596.88,130.42 #7c7566 JetBrains Mono 9.5
-  text "BUFFERS ␣," @668.86,130.42 #7c7566 JetBrains Mono 9.5
-  text "THREADS ␣r" @762.26,130.42 #7c7566 JetBrains Mono 9.5
-  text "SYMBOLS ␣S" @855.66003,130.42 #7c7566 JetBrains Mono 9.5
-  text "SYMBOLS HERE ␣s" @949.06006,130.42 #7c7566 JetBrains Mono 9.5
-  text "KEYMAPS ␣k" @1078.16,130.42 #7c7566 JetBrains Mono 9.5
-  text "QUICKFIX" @1171.56,130.42 #7c7566 JetBrains Mono 9.5
-  text "HELP ␣h" @1250.68,130.42 #7c7566 JetBrains Mono 9.5
-  rect 1315.66,118.73 73.130005x16.54 fill #5cc8ff12 radius 10 stroke 1 #5cc8ff59
-  text "THEMES ␣T" @1322.66,130.42 #5cc8ff JetBrains Mono 9.5
-  text "⇥ next source" @1404.79,130.42 #7c7566 JetBrains Mono 9.5
+  text "PAGES" @417.21997,130.42 #7c7566 JetBrains Mono 9.5
+  text "COMMANDS ␣:" @474.91998,130.42 #7c7566 JetBrains Mono 9.5
+  text "FILES ␣␣" @575.45996,130.42 #7c7566 JetBrains Mono 9.5
+  text "GREP ␣/" @654.57996,130.42 #7c7566 JetBrains Mono 9.5
+  text "BUFFERS ␣," @726.55994,130.42 #7c7566 JetBrains Mono 9.5
+  text "THREADS ␣r" @819.95996,130.42 #7c7566 JetBrains Mono 9.5
+  text "SYMBOLS ␣S" @913.36,130.42 #7c7566 JetBrains Mono 9.5
+  text "SYMBOLS HERE ␣s" @1006.76,130.42 #7c7566 JetBrains Mono 9.5
+  text "KEYMAPS ␣k" @1135.86,130.42 #7c7566 JetBrains Mono 9.5
+  text "QUICKFIX" @1229.26,130.42 #7c7566 JetBrains Mono 9.5
+  text "HELP ␣h" @1308.38,130.42 #7c7566 JetBrains Mono 9.5
+  rect 1373.36,118.73 73.130005x16.54 fill #5cc8ff12 radius 10 stroke 1 #5cc8ff59
+  text "THEMES ␣T" @1380.36,130.42 #5cc8ff JetBrains Mono 9.5
+  text "⇥ next source" @1462.49,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #5cc8ff Inter 16
   rect 211.59375,155 420.6875x30 fill #071018 radius 6

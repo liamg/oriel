@@ -74,6 +74,22 @@ var icons = map[string]func(p *iconPen){
 	"agent": func(p *iconPen) {
 		p.poly(false, 5, 3, 10.5, 8, 5, 13)
 	},
+	"stats": func(p *iconPen) {
+		p.line(3.5, 13.5, 3.5, 9)
+		p.line(8, 13.5, 8, 3)
+		p.line(12.5, 13.5, 12.5, 6.5)
+	},
+	"usage": func(p *iconPen) {
+		p.curve(2.5, 12, 2.5, 6.5, 5.5, 4, 8, 4)
+		p.curve(8, 4, 10.5, 4, 13.5, 6.5, 13.5, 12)
+		p.line(8, 11.5, 11, 7)
+	},
+	"jobs": func(p *iconPen) {
+		p.line(2.5, 4, 10, 4)
+		p.line(2.5, 8, 8, 8)
+		p.line(2.5, 12, 10, 12)
+		p.poly(false, 11, 6, 13.5, 8, 11, 10)
+	},
 	"folder": func(p *iconPen) {
 		p.poly(true, 2, 3.5, 6.5, 3.5, 8, 5, 14, 5, 14, 13, 2, 13)
 		p.line(2, 7, 14, 7)

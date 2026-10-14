@@ -61,18 +61,23 @@ func names(es []registry.RailEntry) string {
 	return s
 }
 
-// SH-17: rail entries are a project's panels or the session's; a project entry runs its command with the project.
+// SH-17: rail entries are a project's panels, the session's or every session's; a project entry runs its command with the project.
 func TestRailEntryScopes(t *testing.T) {
 	r := registry.New()
 	r.Contribute(registry.RailEntry{Name: "explorer", Scope: registry.ScopeProjectEntry, Order: 10, Command: "view.toggle", Args: registry.Args{"id": "explorer"}})
 	r.Contribute(registry.RailEntry{Name: "requests", Order: 40})
 	r.Contribute(registry.RailEntry{Name: "tests", Scope: registry.ScopeProjectEntry, Order: 60})
-	r.Contribute(registry.RailEntry{Name: "settings", Order: 10, Bottom: true})
+	r.Contribute(registry.RailEntry{Name: "settings", Scope: registry.ScopeGlobalEntry, Order: 10, Bottom: true})
+	r.Contribute(registry.RailEntry{Name: "stats", Scope: registry.ScopeGlobalEntry, Order: 10})
 	if got, want := names(registry.ProjectEntries(r)), "explorer tests"; got != want {
 		t.Errorf("project entries %q, want %q", got, want)
 	}
-	if got, want := names(registry.SessionEntries(r)), "requests settings"; got != want {
+	if got, want := names(registry.SessionEntries(r)), "requests"; got != want {
 		t.Errorf("session entries %q, want %q", got, want)
+	}
+	// AI-12: global entries (Stats, Usage, Settings) are listed last, Settings at the bottom.
+	if got, want := names(registry.GlobalEntries(r)), "stats settings"; got != want {
+		t.Errorf("global entries %q, want %q", got, want)
 	}
 	e := registry.ProjectEntries(r)[0]
 	if a := e.ArgsFor("api"); a.String("project") != "api" || a.String("id") != "explorer" {

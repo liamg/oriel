@@ -112,9 +112,10 @@ How everything hangs together, built and tested before features land on it.
 | AI-6 | Agent console: structured transcript, subagents, composer | 15 | app | P5 | AI-2 | – |
 | AI-7 | Permissions, three layers; network and gateway approvals | 15, 12 | agent, sandbox | P5 | AI-2, AI-11 | each layer holds or denies as `agents.md` describes |
 | AI-8 | Plan mode: rendered docs, margin threads, readiness, Start work | 05 | app, plan | P5 | AI-5 | the crit plan flow works end to end |
-| AI-9 | Tasks rail, session tally, usage windows | 01 | core | P5 | AI-2 | – |
+| AI-9 | Tasks rail, session stats, usage windows | 01 | core | P5 | AI-2 | – |
 | AI-10 | Commit and PR drafts when the agent goes idle | 18 | agent | P6 | AI-2, FG-6 | – |
 | AI-11 | Sandbox, gateway MCP, egress proxy (ported) | – | sandbox | P5 | AI-1 | crit's tests ported and passing |
+| AI-12 | Stats and Usage: session stats tab, global Stats grouped by repo, Usage page, their entry points; `widget.Chart` | 43 | worker, app, ui | P5 | AI-1, AI-2, AI-3, AI-9, SH-17 | a worker answers `stats.query` by repo with the split rule and by session, rescanning only what was appended; the pages match 43; each entry point opens its page |
 
 ## Review and explain
 

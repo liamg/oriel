@@ -24,6 +24,18 @@ type Provider interface {
 	SandboxCredentials() []Mount
 }
 
+// Logged is a provider that keeps its own log of a session, which the worker's stats read (worker/stats). The
+// worker keeps a record of the events of a provider that doesn't.
+type Logged interface {
+	Logs(cwd, session string) []Log
+}
+
+// Log is a file a provider writes a session's log to, and its format: "claude" for Claude Code's.
+type Log struct {
+	Path   string
+	Format string
+}
+
 // Install is what Detect found.
 type Install struct {
 	Bin      string `json:"bin"`

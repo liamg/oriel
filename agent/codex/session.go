@@ -76,6 +76,7 @@ type session struct {
 	pending  map[string]func(agent.Decision) error
 	forks    map[string]*forkTurn
 	limits   rateLimits
+	acct     account // who's signed in: the account the plan's windows belong to
 	nextAsk  int
 }
 
@@ -142,6 +143,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	if err := requireChatGPT(acct, spec.Env); err != nil {
 		return fail(err)
 	}
+	s.acct = acct
 	cfg, err := s.config()
 	if err != nil {
 		return fail(err)

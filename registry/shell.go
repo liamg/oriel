@@ -17,9 +17,9 @@ type RailEntry struct {
 	Title   string // its label, and its tooltip with the key bound to Command and Args
 	Command string
 	Args    Args
-	Scope   string     // ScopeProjectEntry or ScopeSessionEntry; "" is the session's
+	Scope   string     // ScopeProjectEntry, ScopeSessionEntry or ScopeGlobalEntry; "" is the session's
 	Badge   func() int // a count shown as a pill; nil or 0 for none
-	// Note is dim text at the entry's right, for a project ("" for a session entry): "4", "48 ✓", "not raised".
+	// Note is dim text at the entry's right, for a project ("" for a session or global entry): "4", "48 ✓", "$18.40 today".
 	Note func(project string) string
 	// Active says the entry's panel is showing, for a project ("" for a session entry).
 	Active func(project string) bool
@@ -34,6 +34,7 @@ type RailEntry struct {
 const (
 	ScopeProjectEntry = "project"
 	ScopeSessionEntry = "session"
+	ScopeGlobalEntry  = "global" // pages of every session's, below a second divider: Stats, Usage, Settings
 )
 
 // ArgsFor is the args the entry runs its command with for project: a project entry's name it, unless project is ""
@@ -101,7 +102,8 @@ func ProjectStateParts(r Registry, project, dir string) []StatePart {
 	return out
 }
 
-// StartEntry is an action on the start view (ui.md 01e), dimmed while its command isn't available.
+// StartEntry is an action on the start view (ui.md 01e), dimmed while its command isn't available. A Link is a small
+// link under the actions instead of a card, with its Note: a page and its headline figure.
 type StartEntry struct {
 	Name    string // unique among start entries: "session.new"
 	Icon    string
@@ -110,6 +112,8 @@ type StartEntry struct {
 	Command string
 	Args    Args
 	Order   int
+	Link    bool
+	Note    func() string // a link's figure: "$96.40 this week"
 	Source  string
 }
 
@@ -143,7 +147,12 @@ func ProjectEntries(r Registry) []RailEntry {
 
 // SessionEntries are the session's entries, below the projects: top ones, then the bottom ones, each by Order.
 func SessionEntries(r Registry) []RailEntry {
-	return slices.DeleteFunc(RailEntries(r), func(e RailEntry) bool { return e.Scope == ScopeProjectEntry })
+	return slices.DeleteFunc(RailEntries(r), func(e RailEntry) bool { return e.Scope == ScopeProjectEntry || e.Scope == ScopeGlobalEntry })
+}
+
+// GlobalEntries are the entries for every session, listed last: top ones, then the bottom ones, each by Order.
+func GlobalEntries(r Registry) []RailEntry {
+	return slices.DeleteFunc(RailEntries(r), func(e RailEntry) bool { return e.Scope != ScopeGlobalEntry })
 }
 
 // StartEntries are the start view's actions by Order.

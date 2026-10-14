@@ -155,6 +155,8 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `sandbox.egress_proxy` | true: off gives containers plain internet | app | | AI-11 |
 | `sandbox.memory` | empty: 8g; `none` for no cap | app | | AI-11 |
 | `sandbox.pids_limit` | 0: 4096; -1 for no cap | app | | AI-11 |
+| `usage.accounts` | empty: names for the accounts plans belong to, account identity → label ("Work", "Personal"); unnamed, an account shows its email or organisation | app | | AI-12 |
+| `stats.split_sessions` | true: a multi-repo session's cost splits over its repos by their share of its file work; off, each repo is charged the whole session. The Stats page's toggle and the session tab's "count whole session in each" both set it | app | | AI-12 |
 
 ## The settings page (`:Settings`, ⌘,)
 
