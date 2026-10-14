@@ -162,8 +162,11 @@ func (x *agentConsole) Activate(_ context.Context, h ext.Host) error {
 				return x.fork(session(a), prompt)
 			}},
 		{ID: "agent.terminal", Title: "Show the raw terminal of {id}'s agent, or the session in front's", Available: inFront,
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.rawTerminal(ctx, session(a)) }},
-		{ID: "ask.answer", Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny or answer, {note}, {scope}, {answers}",
+			Run: func(ctx registry.Ctx, a registry.Args) error { return x.rawTerminal(ctx, session(a), "") }},
+		{ID: "agent.login", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login on {worker}: its own terminal with the login typed",
+			Available: func(a registry.Args) bool { _, _, ok := x.loginWaiting(a); return ok },
+			Run:       x.logIn},
+		{ID: "ask.answer", Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope}, {answers}",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := session(a)
 				ask, ok := x.ask(id, a.String("ask"))
@@ -366,8 +369,8 @@ func (x *agentConsole) fork(id core.SessionID, prompt string) error {
 	return nil
 }
 
-// rawTerminal shows the agent's own terminal, streamed from its worker, in a terminal view.
-func (x *agentConsole) rawTerminal(ctx registry.Ctx, id core.SessionID) error {
+// rawTerminal shows the agent's own terminal, streamed from its worker, in a terminal view, and types into it.
+func (x *agentConsole) rawTerminal(ctx registry.Ctx, id core.SessionID, typed string) error {
 	c, err := x.client(id)
 	if err != nil {
 		return err
@@ -376,7 +379,13 @@ func (x *agentConsole) rawTerminal(ctx registry.Ctx, id core.SessionID) error {
 	if err != nil {
 		return err
 	}
-	return x.h.Run(ctx, "term.open", registry.Args{"source": src, "title": "agent · " + string(id), "place": "tab", "instance": "agent-" + string(id)})
+	if err := x.h.Run(ctx, "term.open", registry.Args{"source": src, "title": "agent · " + string(id), "place": "tab", "instance": "agent-" + string(id)}); err != nil {
+		return err
+	}
+	if typed != "" {
+		_, err = src.Write([]byte(typed))
+	}
+	return err
 }
 
 // build draws the console for the session in front.

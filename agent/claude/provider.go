@@ -436,6 +436,7 @@ func (p Provider) start(ctx context.Context, spec agent.StartSpec, resume string
 	if resume != "" && strings.TrimSpace(spec.Prompt) != "" {
 		s.cmds = append(s.cmds, waitOut{Kind: "submit", Text: strings.TrimSpace(spec.Prompt)})
 	}
+	s.term.watch = s.watchScreen
 	go s.term.drain()
 	go s.serve()
 	go s.tail.follow(s.done, s.push)

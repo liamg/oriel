@@ -24,6 +24,12 @@ func (w *Worker) ProviderInfo(ctx context.Context) []ProviderInfo {
 		if err != nil {
 			info.Error = err.Error()
 		}
+		for _, l := range w.lostLogins() {
+			if l.Provider == p.ID() {
+				info.Install.LoggedIn = false
+				info.Install.Note = "Signed out: " + l.Detail
+			}
+		}
 		if ms, err := p.Models(ctx); err == nil {
 			info.Models = ms
 		}
@@ -42,7 +48,7 @@ func (w *Worker) workerState() core.WorkerState {
 	host, _ := os.Hostname()
 	r := sysload.Read()
 	return core.WorkerState{ID: w.opts.ID, Name: w.opts.Name, Host: host, OS: runtime.GOOS, Connected: true,
-		Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal, Sampled: w.opts.Now().UTC()}
+		Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal, Sampled: w.opts.Now().UTC(), SignedOut: w.lostLogins()}
 }
 
 // SampleLoad reports the worker's load every interval until ctx ends.

@@ -52,6 +52,37 @@ Each provider is driven the way its **subscription** allows.
   briefly for the log to hold the turn's answer, so its messages always come before `TurnEnd`.
 - `Usage` is the windows a session's mod last reported through `$.session.usage()`; there is no probe.
 
+### A login that stops working (AI-13)
+
+`Detect` reads the login from files only when a session starts, so a login that expires or is revoked later is
+found where it shows, by the provider, as `agent.AuthExpired{Provider, Account, Detail, Terminal, Shell}`: `Terminal`
+is what signs in again typed into the session's own terminal (`/login`; "" when it can't), `Shell` what to run on the
+agent's machine (`claude, then /login`; `codex login`). A login seen to succeed is `agent.AuthRestored`. Detection is
+written against what the CLIs recorded (`agent/claude/testdata`, Claude Code 2.1.296):
+
+- **Claude's log.** An API error is a record Claude Code writes in the agent's place, `isApiErrorMessage: true`, with
+  its type in `error` (`authentication_failed`, HTTP 401 in `apiErrorStatus`) and its text as the message: "OAuth
+  token revoked · Please run /login", "Not logged in · Please run /login". `transcript.Entry.APIError` carries the
+  type; one whose text says "Please run /login" is `AuthExpired` (with the text as `Detail`) instead of the agent's
+  words. The type alone isn't enough: Claude Code also calls failures `authentication_failed` that a login won't fix
+  (a cloud provider's credentials, a gateway's 403).
+- **The mod's api-error** (`classic.StopFailure`), when it fires: the same text test, beside the `Failure`.
+- **Claude's screen**, for a login gone while nothing runs: its foot says "Not logged in · Run /login" (any words, then
+  "· Run /login"), read from the PTY's output with styles dropped and cursor moves as breaks, once while it stays.
+  The error under a prompt ("· Please run /login") is left to the log, so a resumed conversation's old errors on the
+  screen don't count. "Login successful. Press Enter to continue" (the /login dialog, from Claude Code's source) is
+  `AuthRestored`.
+- **Codex**: a `TurnError` whose `codexErrorInfo` is `unauthorized` (app-server-protocol v2; not recorded), and
+  `Start` refuses a thread with no account (`account/read` → `account: null`) with `AuthExpired` as its error.
+
+The worker (`worker/login.go`) keeps the logins gone by provider and account. Every running session there with that
+provider, and one whose agent couldn't start for it, gets a `core.AskLogin` card (`Ask.Login`, a `core.Login` with
+the worker), so its status is needs you; nothing more is sent to those agents while it's flagged. The worker's state
+lists them (`WorkerState.SignedOut`), and `ProviderInfo` says the provider is signed out, with its detail. A card's
+answer (Check again) or an `AuthRestored` makes the worker ask the provider's `Detect`; signed in, every flag clears,
+a turn the login stopped is told to carry on, held comments go, and an agent that couldn't start starts. Claude's
+`Detect` reads files, so a revoked token still on disk reads as signed in; the next request raises it again.
+
 ### Stats and plan readings (AI-12)
 
 - Prices are `agent/price`: one table (Claude's families, and OpenAI's `gpt-5`, `gpt-5-mini` and `gpt-5-nano` at their
@@ -142,7 +173,7 @@ type Session interface {
     Send(ctx, Input) error            // user turn: text, images; Urgent goes in front of the running turn
     Interrupt(ctx) error              // abort the current turn
     Fork(ctx, ForkSpec) (string, error) // a tool-less side question, answered outside the conversation
-    Events() <-chan Event             // Ready, Turn*, Message, ToolCall, ToolResult, Permission, Question, Subagent, Failure, UsageUpdate, Exited
+    Events() <-chan Event             // Ready, Turn*, Message, ToolCall, ToolResult, Permission, Question, Subagent, Failure, UsageUpdate, AuthExpired, AuthRestored, Exited
     Answer(ctx, id string, Decision) error // layer-1 approvals and questions; see "Permissions: three layers"
     Terminal() Terminal               // the raw terminal any number of views attach to; nil for Codex
     Close() error
@@ -156,7 +187,8 @@ type Session interface {
   package, or an out-of-process extension speaking the same interface over RPC
   (see `plugins.md`).
 - A conformance test suite (`agent/agenttest`) runs every provider against a fake of its CLI:
-  start, send, tool call, permission (allowed and denied), question, interrupt, fork, resume.
+  start, send, tool call, permission (allowed and denied), question, interrupt, fork, resume, and a lost login
+  (`AuthExpired`).
 - `Fork` returns the answer rather than a session: every side question so far (btw, explain, the quiz) wants one
   answer, and both providers produce it in one turn.
 
@@ -172,6 +204,8 @@ type Session interface {
 - The app's side (`app/sessions.go`, `app/requests.go`): `request.comment` fires the `CommentSend` hook (a rewrite
   changes the comment, a veto stops it), then `Client.Comment`; a new thread from the editor carries its anchor (the
   project, the path relative to it, the line and its text). `request.resolve` is `Client.SetThread`.
+- A lost login (`AuthExpired`) flags every session on the worker with that provider: see "A login that stops
+  working" above.
 - Every agent event becomes core state (`TranscriptAppended`, `AgentChanged`, `SubagentChanged`, `AskOpened`, …),
   each session's in a log that survives a restart; status is `core.DeriveStatus` (crit's rules).
 - A reply carries what the agent did since its last one (`Comment.Activity`) and the test runs behind it

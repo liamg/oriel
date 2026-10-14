@@ -4,6 +4,7 @@ package transcript
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"io"
 	"os"
@@ -121,6 +122,9 @@ type Entry struct {
 	Diff    *core.FileDiff  // what an edit's result did to its file
 	Agent   string          // the subagent it belongs to; "" for the main loop
 	At      time.Time
+	// APIError is the type of an API error Claude Code wrote in the agent's place ("authentication_failed"),
+	// "unknown" when it gave none; "" for anything else.
+	APIError string
 }
 
 // record is the part of a log line read here.
@@ -132,6 +136,9 @@ type record struct {
 	AgentID     string    `json:"agentId"`
 	Timestamp   time.Time `json:"timestamp"`
 	Effort      string    `json:"effort"`
+	// IsAPIError marks a message Claude Code wrote when the API failed; Error is its type.
+	IsAPIError bool   `json:"isApiErrorMessage"`
+	Error      string `json:"error"`
 	// Origin says who raised a user message: a plugin's prompt, not the user.
 	Origin struct {
 		Kind   string `json:"kind"`
@@ -392,7 +399,11 @@ func (r *Reader) entries(rec record) []Entry {
 			if t == "" || (rec.Type == "user" && strings.HasPrefix(t, "<")) {
 				continue
 			}
-			out = append(out, Entry{Kind: Text, Role: rec.Type, ID: ref(rec.UUID, i), Text: t, Agent: agent, At: at})
+			e := Entry{Kind: Text, Role: rec.Type, ID: ref(rec.UUID, i), Text: t, Agent: agent, At: at}
+			if rec.IsAPIError {
+				e.APIError = cmp.Or(rec.Error, "unknown")
+			}
+			out = append(out, e)
 		case "thinking":
 			if t := strings.TrimSpace(b.Thinking); t != "" {
 				out = append(out, Entry{Kind: Thinking, Role: "assistant", ID: ref(rec.UUID, i), Text: t, Agent: agent, At: at})

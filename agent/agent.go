@@ -229,6 +229,17 @@ type (
 	}
 	// UsageUpdate is the plan's windows as the provider last said.
 	UsageUpdate struct{ Usage core.ProviderUsage }
+	// AuthExpired is the provider's login on this machine no longer working: every session on it waits for a new
+	// one. Start returns it as an error when a session can't start for it.
+	AuthExpired struct {
+		Provider string
+		Account  string // ProviderUsage.Account, when known
+		Detail   string // what the provider said: "OAuth token revoked · Please run /login"
+		Terminal string // typed into the session's terminal, signs in again: "/login"; "" when that can't
+		Shell    string // run in a shell on the agent's machine, signs in again: "claude, then /login"
+	}
+	// AuthRestored is a login seen to succeed, so whoever waits on one checks again.
+	AuthRestored struct{ Provider, Account string }
 	// Exited is the provider process gone.
 	Exited struct{ Err string }
 )
@@ -241,18 +252,27 @@ type Usage struct {
 	Duration                             time.Duration
 }
 
-func (Ready) isEvent()       {}
-func (TurnStart) isEvent()   {}
-func (Message) isEvent()     {}
-func (ToolCall) isEvent()    {}
-func (ToolResult) isEvent()  {}
-func (Permission) isEvent()  {}
-func (Question) isEvent()    {}
-func (Subagent) isEvent()    {}
-func (TurnEnd) isEvent()     {}
-func (Failure) isEvent()     {}
-func (UsageUpdate) isEvent() {}
-func (Exited) isEvent()      {}
+func (Ready) isEvent()        {}
+func (TurnStart) isEvent()    {}
+func (Message) isEvent()      {}
+func (ToolCall) isEvent()     {}
+func (ToolResult) isEvent()   {}
+func (Permission) isEvent()   {}
+func (Question) isEvent()     {}
+func (Subagent) isEvent()     {}
+func (TurnEnd) isEvent()      {}
+func (Failure) isEvent()      {}
+func (UsageUpdate) isEvent()  {}
+func (Exited) isEvent()       {}
+func (AuthExpired) isEvent()  {}
+func (AuthRestored) isEvent() {}
+
+func (e AuthExpired) Error() string {
+	if e.Detail != "" {
+		return e.Detail
+	}
+	return e.Provider + " is signed out"
+}
 
 // ErrNoFork is returned by Fork when there is nothing to fork from yet.
 var ErrNoFork = errors.New("the agent has said nothing yet: there is no context to answer from")

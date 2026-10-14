@@ -34,4 +34,12 @@ The sandbox's gateway holds a call that leaves it, such as a push or opening a P
 The agent asks something with options: click one to answer. Where it takes several, pick them and press
 **Answer**; or type your own answer and press `⏎`.
 
+## Login
+
+The agent's login on its worker stopped working: an expired or revoked login, or none. Every session on that worker
+with that provider waits on this card, and a notice says which worker and what to do. On this machine **Log in**
+(`l`) opens the agent's own terminal with its login command typed (`/login` for Claude); finish signing in there.
+On a worker elsewhere the card says what to run on it. Once you're signed in the cards go by themselves, and the
+sessions carry on; **Check again** (`c`) asks the worker to look now.
+
 {{keys "ask.*"}}

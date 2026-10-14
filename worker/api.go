@@ -127,7 +127,7 @@ type ThreadReq struct {
 type AnswerReq struct {
 	Session  core.SessionID    `json:"session"`
 	Ask      string            `json:"ask"`
-	Decision string            `json:"decision"` // allow, always, deny, answer
+	Decision string            `json:"decision"` // allow, always, deny, answer; recheck for a login
 	Note     string            `json:"note,omitempty"`
 	Answers  map[string]string `json:"answers,omitempty"`
 	Scope    string            `json:"scope,omitempty"` // a network rule's host pattern

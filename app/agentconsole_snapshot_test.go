@@ -111,3 +111,30 @@ func TestAskCardsSnapshot(t *testing.T) {
 	s.lint("the ask cards")
 	s.golden("ask-cards")
 }
+
+// AI-13: a lost login's cards, over the window: on this machine Log in opens the agent's terminal; on a worker
+// elsewhere the card says what to run there. The title bar's indicator for the account is marked signed out.
+func TestLoginCardsSnapshot(t *testing.T) {
+	s := consoleScene(t)
+	here := core.Login{Provider: "claude", Account: "u1/o1", Worker: core.LocalWorker, Detail: "OAuth token revoked · Please run /login",
+		Terminal: "/login", Shell: "claude, then /login"}
+	there := here
+	there.Worker = "devbox"
+	for _, ev := range []core.Event{
+		core.WorkerChanged{Worker: core.WorkerState{ID: core.LocalWorker, Name: "mbp", Connected: true, SignedOut: []core.Login{here}}},
+		core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Connected: true, SignedOut: []core.Login{there}}},
+		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "u1/o1", Plan: "Claude Max", Workers: []core.WorkerID{core.LocalWorker, "devbox"},
+			Windows: []core.UsageWindow{{Name: "Current session", Used: .38, Length: 5 * time.Hour}}}},
+		core.SessionSynced{Session: core.SessionState{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusNeedsYou,
+			Agent: core.AgentState{Provider: "claude", Running: true}, Asks: []core.Ask{{ID: "l1", Kind: core.AskLogin, Summary: here.Detail, Login: &here}}}},
+		core.SessionSynced{Session: core.SessionState{ID: "sweep-deps", Name: "sweep-deps", Kind: core.KindJob, Status: core.StatusNeedsYou, Worker: "devbox",
+			Agent: core.AgentState{Provider: "claude", Running: true}, Asks: []core.Ask{{ID: "l2", Kind: core.AskLogin, Summary: there.Detail, Login: &there}}}},
+	} {
+		if err := s.store.Apply(ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.frame()
+	s.lint("the login cards")
+	s.golden("login-cards")
+}

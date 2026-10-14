@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -266,7 +265,7 @@ func (a account) describe() (name, note string) {
 // requireChatGPT refuses any login but ChatGPT unless env opts in to per-token billing.
 func requireChatGPT(a account, env []string) error {
 	if a.Account == nil {
-		return errors.New("codex isn't signed in: run `codex login` and choose ChatGPT")
+		return signedOut("", "codex isn't signed in: run `codex login` and choose ChatGPT")
 	}
 	if a.Account.Type == "chatgpt" {
 		return nil

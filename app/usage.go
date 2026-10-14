@@ -212,9 +212,17 @@ func (x *statsExt) indicators(c *ui.Ctx) {
 	}
 	th := c.Theme()
 	anchor := c.Next("usage")
+	out := len(x.h.State().SignedOut(u)) > 0
+	stroke, label := th.C(theme.LineStrong), cmpOr(u.Plan, providerName(u.Provider))+" usage"
+	if out {
+		stroke, label = th.C(theme.Error), label+", signed out"
+	}
 	if widget.Clickable(c, "usage", ui.Style{Dir: ui.Row, H: ui.Px(24), Pad: ui.PadXY(8, 0), Gap: 8, Cross: ui.Center, Radius: 5,
-		Stroke: th.C(theme.LineStrong), Border: 1, Role: ui.RoleButton, Label: cmpOr(u.Plan, providerName(u.Provider)) + " usage",
+		Stroke: stroke, Border: 1, Role: ui.RoleButton, Label: label,
 		Help: "agent/usage#indicators"}, func(c *ui.Ctx) {
+		if out {
+			c.Text("out", "signed out", monoFont(10.5, th.C(theme.Error)))
+		}
 		for i, w := range u.Windows {
 			if qualifier(w) != "" {
 				continue
@@ -262,6 +270,13 @@ func (x *statsExt) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 			sub := x.accountLabel(u.Account, u.AccountName)
 			if u.Same(front) {
 				sub += " · this session's account"
+			}
+			if out := x.h.State().SignedOut(u); len(out) > 0 {
+				var where []string
+				for _, l := range out {
+					where = append(where, x.workerName(l.Worker))
+				}
+				sub += " · signed out on " + strings.Join(where, ", ")
 			}
 			c.Text("s", sub, monoFont(10, th.C(theme.FgFaint)))
 		})

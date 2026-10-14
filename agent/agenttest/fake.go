@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -17,10 +18,13 @@ import (
 // sessions say only what the test tells them to.
 type Fake struct {
 	Name    string            // its ID; "fake" if ""
+	Account string            // who it's signed in as
 	Started chan *FakeSession // each session as it starts
 
-	mu      sync.Mutex
-	resumed []string
+	mu        sync.Mutex
+	resumed   []string
+	signedOut bool
+	refuse    error
 }
 
 func NewFake() *Fake { return &Fake{Started: make(chan *FakeSession, 16)} }
@@ -33,7 +37,24 @@ func (f *Fake) ID() string {
 }
 
 func (f *Fake) Detect(context.Context) (agent.Install, error) {
-	return agent.Install{Bin: "fake", Version: "1", LoggedIn: true}, nil
+	in := agent.Install{Bin: "fake", Version: "1", LoggedIn: true}
+	if f.SignedOut() {
+		in.LoggedIn, in.Note = false, "Not signed in: run fake and /login."
+	}
+	return in, nil
+}
+
+// SignIn signs the fake in or out, as Detect reports it.
+func (f *Fake) SignIn(in bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.signedOut = !in
+}
+
+func (f *Fake) SignedOut() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.signedOut
 }
 
 func (f *Fake) Models(context.Context) ([]agent.Model, error) {
@@ -41,16 +62,35 @@ func (f *Fake) Models(context.Context) ([]agent.Model, error) {
 }
 
 func (f *Fake) Usage(context.Context) (core.ProviderUsage, error) {
-	return core.ProviderUsage{Provider: f.ID()}, nil
+	return core.ProviderUsage{Provider: f.ID(), Account: f.Account}, nil
 }
 
 func (f *Fake) SandboxCredentials() []agent.Mount { return nil }
 
+// Refuse makes Start and Resume fail with err while it isn't nil.
+func (f *Fake) Refuse(err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.refuse = err
+}
+
+func (f *Fake) refused() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.refuse
+}
+
 func (f *Fake) Start(_ context.Context, s agent.StartSpec) (agent.Session, error) {
+	if err := f.refused(); err != nil {
+		return nil, err
+	}
 	return f.open(s, ""), nil
 }
 
 func (f *Fake) Resume(_ context.Context, id string, s agent.StartSpec) (agent.Session, error) {
+	if err := f.refused(); err != nil {
+		return nil, err
+	}
 	f.mu.Lock()
 	f.resumed = append(f.resumed, id)
 	f.mu.Unlock()
@@ -77,7 +117,8 @@ func (f *Fake) open(s agent.StartSpec, id string) *FakeSession {
 		fakeSeq.Unlock()
 	}
 	fs := &FakeSession{id: id, Spec: s, ev: make(chan agent.Event, 256), Sent: make(chan agent.Input, 64),
-		answers: map[string]chan agent.Decision{}}
+		answers: map[string]chan agent.Decision{}, fake: f}
+	fs.term = &FakeTerminal{s: fs, shown: []byte("fake " + id + "\r\n")}
 	fs.ev <- agent.Ready{ID: id}
 	f.Started <- fs
 	return fs
@@ -89,6 +130,8 @@ type FakeSession struct {
 	Sent chan agent.Input // what it was given, in order
 
 	id          string
+	fake        *Fake
+	term        *FakeTerminal
 	ev          chan agent.Event
 	mu          sync.Mutex
 	interrupted int
@@ -141,7 +184,71 @@ func (s *FakeSession) Answer(_ context.Context, id string, d agent.Decision) err
 	return nil
 }
 
-func (s *FakeSession) Terminal() agent.Terminal { return nil }
+func (s *FakeSession) Terminal() agent.Terminal { return s.term }
+
+// Term is its terminal, as a test reads it.
+func (s *FakeSession) Term() *FakeTerminal { return s.term }
+
+// LoseLogin signs the fake out and says so, as a provider does when its login stops working.
+func (s *FakeSession) LoseLogin(detail string) {
+	s.fake.SignIn(false)
+	s.Emit(agent.AuthExpired{Provider: s.fake.ID(), Account: s.fake.Account, Detail: detail, Terminal: "/login", Shell: "fake, then /login"})
+}
+
+// FakeTerminal is a fake session's terminal: it shows what's typed, and /login and Enter sign the fake back in.
+type FakeTerminal struct {
+	s *FakeSession
+
+	mu      sync.Mutex
+	shown   []byte
+	typed   []byte
+	viewers []chan []byte
+}
+
+func (t *FakeTerminal) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	t.typed = append(t.typed, p...)
+	t.shown = append(t.shown, p...)
+	login := strings.Contains(string(t.typed), "/login\r")
+	if login {
+		t.typed = nil
+	}
+	for _, ch := range t.viewers {
+		select {
+		case ch <- append([]byte(nil), p...):
+		default:
+		}
+	}
+	t.mu.Unlock()
+	if login {
+		t.s.fake.SignIn(true)
+		t.s.Emit(agent.AuthRestored{Provider: t.s.fake.ID(), Account: t.s.fake.Account})
+	}
+	return len(p), nil
+}
+
+func (t *FakeTerminal) Resize(int, int) error { return nil }
+
+func (t *FakeTerminal) Attach() ([]byte, <-chan []byte, func()) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	ch := make(chan []byte, 64)
+	t.viewers = append(t.viewers, ch)
+	return append([]byte(nil), t.shown...), ch, func() {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+		if i := slices.Index(t.viewers, ch); i >= 0 {
+			t.viewers = slices.Delete(t.viewers, i, i+1)
+		}
+	}
+}
+
+// Shown is everything it has shown.
+func (t *FakeTerminal) Shown() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return string(t.shown)
+}
 
 func (s *FakeSession) Close() error {
 	s.mu.Lock()

@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
+	"github.com/liamg/oriel/worker"
 )
 
 // latest waits for the frame on screen, settled (no other drawn for a moment, so nothing's still moving), to satisfy
@@ -82,7 +83,12 @@ func consoleSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorke
 // agentSession starts a session with the fake agent and waits for the window to reopen on it.
 func agentSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorker) {
 	t.Helper()
-	lw := newLocalWorker(t)
+	return agentSessionOn(t, newLocalWorker(t))
+}
+
+// agentSessionOn is agentSession on the worker given.
+func agentSessionOn(t *testing.T, lw *localWorker) (*running, *agenttest.FakeSession, *localWorker) {
+	t.Helper()
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
 	err := r.do(func() error {
@@ -301,4 +307,70 @@ func TestTerminalShowsASource(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("what was typed never reached the source")
 	}
+}
+
+// AI-13 done when: a lost login turns its sessions needs-you with the card, the notice and the title bar's indicator
+// show it, and the launcher says signed out; on a local worker the card's Log in opens the agent's terminal with
+// /login typed, and a login there clears every flag and the session goes on.
+func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
+	lw := newWorkerWith(t, worker.Options{Name: "devbox"})
+	lw.fake.Account = "u1"
+	r, a, _ := agentSessionOn(t, lw)
+	a.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "fake", Account: "u1", Plan: "Fake Pro",
+		Windows: []core.UsageWindow{{Name: "Current session", Used: .3}}}})
+	r.waitText("30%")
+	a.Emit(agent.TurnStart{})
+	a.LoseLogin("OAuth token revoked · Please run /login")
+	a.Emit(agent.TurnEnd{})
+	r.waitFrame("the card, the notice and the indicator", func(s string) bool {
+		return containsAll(s, "Fake on devbox needs you to log in", "OAuth token revoked · Please run /login", "Log in", "Check again",
+			"signed out", "needs you")
+	})
+	st := r.store.State()
+	if n := st.Notifications; len(n) == 0 || n[len(n)-1].ID != "agent.login" || n[len(n)-1].Session != "" ||
+		!strings.Contains(n[len(n)-1].Text, "devbox") || !strings.Contains(n[len(n)-1].Text, "/login") {
+		t.Errorf("notices = %+v", n)
+	}
+	r.do(func() error { return r.host.Run(context.Background(), "session.new", nil) })
+	r.waitText("Signed out: OAuth token revoked · Please run /login")
+	r.typeKeys("<Esc>")
+	r.waitGone("Signed out: OAuth token revoked")
+
+	r.clickText("Log in")
+	deadline := time.Now().Add(5 * time.Second)
+	for !strings.Contains(a.Term().Shown(), "/login\r") {
+		if time.Now().After(deadline) {
+			t.Fatalf("the agent's terminal shows %q", a.Term().Shown())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	r.waitGone("needs you to log in")
+	r.waitGone("signed out")
+	if got := a.WaitSent(t); !strings.Contains(got.Text, "signed in again") {
+		t.Errorf("the agent was told %q", got.Text)
+	}
+}
+
+// AI-13: on a worker elsewhere the card says what to run there, and Check again asks the worker to look.
+func TestALostLoginElsewhereSaysWhatToRun(t *testing.T) {
+	lw := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox"})
+	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
+	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	err := r.do(func() error {
+		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := lw.fake.WaitStarted(t)
+	a.LoseLogin("Not logged in · Run /login")
+	r.waitFrame("the card", func(s string) bool {
+		return containsAll(s, "Fake on devbox needs you to log in", "On devbox, run fake, then /login", "Check again") &&
+			!strings.Contains(s, "Log in")
+	})
+	r.typeKeys("<Esc>") // the notice's toast
+	r.clickText("Check again")
+	r.waitText("Fake on devbox needs you to log in")
+	a.Term().Write([]byte("/login\r"))
+	r.waitGone("needs you to log in")
 }

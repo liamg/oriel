@@ -1,8 +1,10 @@
 package claude
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -28,6 +30,13 @@ func TestMain(m *testing.M) {
 	}
 	os.Exit(m.Run())
 }
+
+var (
+	//go:embed testdata/oauth-revoked.jsonl
+	recordedRevoked []byte
+	//go:embed testdata/signed-out-start.pty
+	recordedSignedOut []byte
+)
 
 type fake struct {
 	id      string
@@ -110,6 +119,7 @@ func fakeClaude(args []string) int {
 		turns <- first
 	}
 	go f.poll(turns)
+	go f.terminal()
 	for text := range turns {
 		f.turn(text)
 	}
@@ -159,6 +169,16 @@ func (f *fake) poll(turns chan<- string) {
 				}
 				_ = f.hook("fork-answer", a, nil)
 			}()
+		}
+	}
+}
+
+// terminal answers what's typed into it: /login signs in, as claude's does once you're through its steps.
+func (f *fake) terminal() {
+	sc := bufio.NewScanner(os.Stdin)
+	for sc.Scan() {
+		if strings.TrimSpace(sc.Text()) == "/login" {
+			os.Stdout.WriteString("\x1b[38;2;78;186;101mLogin successful. Press \x1b[1mEnter\x1b[22m to continue…\x1b[39m\r\n")
 		}
 	}
 }
@@ -281,6 +301,13 @@ func (f *fake) turn(text string) {
 		}
 		f.result("toolu_ask", "User has answered: "+q.Answers["Which colour?"], false)
 		answer = f.say("you chose " + q.Answers["Which colour?"])
+	case "lose the login":
+		var rec map[string]any
+		_ = json.Unmarshal(recordedRevoked, &rec)
+		f.write(rec)
+	case "show the login prompt":
+		os.Stdout.Write(recordedSignedOut)
+		answer = f.say("shown")
 	case "work slowly":
 		<-ctx.Done()
 		reason = "aborted"

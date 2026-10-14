@@ -45,6 +45,11 @@ is in daily use.
 | Oriel can't go on (quit with unsaved buffers, crash recovery on launch) | a modal | until answered |
 
 - No modal for anything that can wait. No sound.
+- A worker's lost agent login (AI-13) is one error notice per login, `agent.login`, from `worker:<id>`, Oriel's not a
+  session's: it names the worker and the fix ("Claude on devbox needs you to log in: OAuth token revoked · Please run
+  /login. Log in opens its terminal with /login typed.", with **Log in**; elsewhere "On devbox, run claude, then
+  /login."). It's taken back when the login works again. The title bar's usage indicator for that account says
+  **signed out**, in the error colour.
 - Clicking the ✕/⚠ counts, or "Details" on a toast, opens the log at that entry.
 
 ## The log panel (`:messages`, `:Log`)

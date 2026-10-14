@@ -20,7 +20,8 @@ organisation.
 ## Indicators {#indicators}
 
 The title bar's meters are the plan of the account the session in front runs on (this machine's with no session).
-Hovering shows every account's windows with their resets and burn; a click opens this page.
+Hovering shows every account's windows with their resets and burn; a click opens this page. An account whose login
+has stopped working on a worker is marked **signed out** until you log in again.
 
 ## Windows {#windows}
 

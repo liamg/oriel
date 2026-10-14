@@ -122,7 +122,18 @@ const (
 	AskQuestion   AskKind = "question"   // the agent asked something
 	AskNetwork    AskKind = "network"    // layer 3: the egress proxy holds a connection
 	AskGateway    AskKind = "gateway"    // layer 3: the gateway holds a call
+	AskLogin      AskKind = "login"      // the agent's login on its worker is gone
 )
+
+// Login is a provider's sign-in on a worker that has stopped working, and how to sign in again.
+type Login struct {
+	Provider string   `json:"provider"`
+	Account  string   `json:"account,omitempty"` // ProviderUsage.Account; "" when not known
+	Worker   WorkerID `json:"worker,omitempty"`
+	Detail   string   `json:"detail,omitempty"`   // what the provider said: "OAuth token revoked · Please run /login"
+	Terminal string   `json:"terminal,omitempty"` // typed into the agent's own terminal, signs in: "/login"
+	Shell    string   `json:"shell,omitempty"`    // run in a shell on the worker, signs in: "claude, then /login"
+}
 
 // Ask is something waiting on the user: a permission, a question, a held connection or gateway call.
 type Ask struct {
@@ -135,6 +146,7 @@ type Ask struct {
 	Host      string     `json:"host,omitempty"`   // network: host:port
 	Detail    string     `json:"detail,omitempty"` // where it came from: "go mod download · first request"
 	Questions []Question `json:"questions,omitempty"`
+	Login     *Login     `json:"login,omitempty"` // a login ask's
 	Created   time.Time  `json:"created,omitzero"`
 }
 

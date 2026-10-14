@@ -546,7 +546,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   `y`, Always in this workspace `a` (the rule it makes at the right), Deny `n`, Deny with note… `⇧n` (an input; the
   note goes to the agent). Network: Allow host, Allow \*.domain (as `scope`), Once, Deny. Gateway: Allow, Always (when
   it has a rule), Deny. Question: options as buttons (one click answers a single question; several, or multi-select,
-  are picked then answered), and a typed answer. All answer through `ask.answer {id, ask, decision, note, scope,
+  are picked then answered), and a typed answer. Login (AI-13): "Claude on devbox needs you to log in", Log in `l` on
+  this machine (`agent.login`: the agent's terminal with `/login` typed) or what to run on the worker, and Check again
+  `c` (`decision: recheck`). All answer through `ask.answer {id, ask, decision, note, scope,
   answers}`; `ask.deny-note` opens the note. Session tabs count their asks. Not yet: the Inbox panel and its history
   (SH-9, P7), the countdown ring, review requests and the security-key card.
 

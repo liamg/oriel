@@ -346,6 +346,12 @@ func (f *fake) run(t *fakeThread, turn, text string) {
 		} else {
 			say(fmt.Sprintf("no answer: %v", err))
 		}
+	case strings.HasSuffix(text, "lose the login"):
+		// The shape is app-server-protocol v2's TurnError; the message is the fake's own: no signed-out error has
+		// been recorded from codex.
+		e := map[string]any{"message": "unexpected status 401 Unauthorized", "codexErrorInfo": "unauthorized"}
+		note("error", map[string]any{"error": e, "willRetry": false})
+		status = "failed"
 	case strings.HasSuffix(text, "work slowly"):
 		t.mu.Lock()
 		stop := t.interrupt

@@ -61,6 +61,7 @@ type WorkerState struct {
 	Mem       uint64    `json:"mem,omitempty"` // bytes in use
 	MemTotal  uint64    `json:"memTotal,omitempty"`
 	Sampled   time.Time `json:"sampled,omitzero"`
+	SignedOut []Login   `json:"signedOut,omitempty"` // providers' logins here that have stopped working
 }
 
 // UsageWindow is one of a plan's limits: the 5-hour window, the weekly one.
@@ -98,6 +99,36 @@ type ProviderUsage struct {
 // Same says whether u and o are the same account's plan.
 func (u ProviderUsage) Same(o ProviderUsage) bool {
 	return u.Provider == o.Provider && u.Account == o.Account
+}
+
+// WorkerName is how a worker reads: its name, else its ID. "" is this machine's.
+func (s State) WorkerName(id WorkerID) string {
+	if id == "" {
+		id = LocalWorker
+	}
+	for _, w := range s.Workers {
+		if w.ID == id {
+			if w.Name != "" {
+				return w.Name
+			}
+			break
+		}
+	}
+	return string(id)
+}
+
+// SignedOut are the logins to u's account, on any worker, that have stopped working. A login gone before its
+// account was known counts for each of its provider's.
+func (s State) SignedOut(u ProviderUsage) []Login {
+	var out []Login
+	for _, w := range s.Workers {
+		for _, l := range w.SignedOut {
+			if l.Provider == u.Provider && (l.Account == u.Account || l.Account == "") {
+				out = append(out, l)
+			}
+		}
+	}
+	return out
 }
 
 // Uses says whether worker reports u: it's signed in to its account.

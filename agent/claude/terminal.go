@@ -11,7 +11,8 @@ const backlogSize = 256 << 10
 
 // terminal is a session's PTY as views watch it. It's drained all the time, so claude never blocks on output.
 type terminal struct {
-	pty agent.PTY
+	pty   agent.PTY
+	watch func([]byte) // sees all it shows, before any view
 
 	mu      sync.Mutex
 	buf     []byte
@@ -29,6 +30,9 @@ func (t *terminal) drain() {
 	for {
 		n, err := t.pty.Read(b)
 		if n > 0 {
+			if t.watch != nil {
+				t.watch(b[:n])
+			}
 			t.feed(b[:n])
 		}
 		if err != nil {

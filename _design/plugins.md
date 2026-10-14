@@ -193,7 +193,11 @@ flowchart TB
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**
-- agent providers (`agent.Provider`).
+- agent providers (`agent.Provider`). A provider whose login stops working says so with `agent.AuthExpired{Provider,
+  Account, Detail, Terminal, Shell}` (an event, or `Start`'s error), and a login it sees succeed with
+  `agent.AuthRestored`; the worker flags the login (`core.WorkerState.SignedOut`, a `core.AskLogin` card with its
+  `core.Login` on each session waiting on it) and checks it with `Detect` (AI-13). `agent.login {id | provider, worker}`
+  opens a local agent's terminal with the provider's `Terminal` login typed.
 - **agent tools**: an MCP tool defined in Lua or Go and offered to the session's agent.
 - prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
   registered on the worker (`worker.Kinds().Register(worker.KindSpec{…})`: its title, a few words (`Desc`), what

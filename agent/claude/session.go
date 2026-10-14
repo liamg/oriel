@@ -47,6 +47,8 @@ type session struct {
 	forks   map[string]chan forkAnswerIn
 	seq     int
 	base    transcript.Usage // the tally when the running turn started
+	screen  screen
+	out     bool // its login has been said to be gone, and not seen back
 	once    sync.Once
 }
 
@@ -190,7 +192,54 @@ func (s *session) run() {
 	s.events.close()
 }
 
-func (s *session) push(ev agent.Event) { s.events.push(ev) }
+// push says ev, with the account a login event is about.
+func (s *session) push(ev agent.Event) {
+	switch e := ev.(type) {
+	case agent.AuthExpired:
+		e.Account, _ = account(s.accountEnv())
+		s.mu.Lock()
+		s.out = true
+		s.mu.Unlock()
+		ev = e
+	case agent.AuthRestored:
+		e.Account, _ = account(s.accountEnv())
+		s.mu.Lock()
+		s.out = false
+		s.mu.Unlock()
+		ev = e
+	}
+	s.events.push(ev)
+}
+
+// accountEnv is the environment claude signs in from: the host's for a sandbox, which signs in as the host does.
+func (s *session) accountEnv() []string {
+	if s.spec.Sandbox != nil {
+		return nil
+	}
+	return s.spec.Env
+}
+
+// loginLost is the event for a login claude says is gone.
+func loginLost(detail string) agent.AuthExpired {
+	return agent.AuthExpired{Provider: "claude", Detail: detail, Terminal: "/login", Shell: "claude, then /login"}
+}
+
+// watchScreen reads the terminal for the login going, once while it stays gone, and coming back.
+func (s *session) watchScreen(p []byte) {
+	says, ok := s.screen.read(p)
+	if !ok {
+		return
+	}
+	s.mu.Lock()
+	out := s.out
+	s.mu.Unlock()
+	if says.signedOut != "" && !out {
+		s.push(loginLost(says.signedOut))
+	}
+	if says.signedIn {
+		s.push(agent.AuthRestored{Provider: "claude"})
+	}
+}
 
 // serve answers the mod's hook calls.
 func (s *session) serve() {
@@ -382,11 +431,7 @@ func (s *session) event(in eventIn) {
 		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage())})
 		if len(in.RateLimits) > 0 {
 			u := usageOf(in.RateLimits)
-			env := s.spec.Env
-			if s.spec.Sandbox != nil {
-				env = nil // the sandbox signs in as the host does
-			}
-			u.Account, u.AccountName = account(env)
+			u.Account, u.AccountName = account(s.accountEnv())
 			remember(u)
 			s.push(agent.UsageUpdate{Usage: u})
 		}
@@ -403,6 +448,9 @@ func (s *session) event(in eventIn) {
 			msg += ": " + in.Text
 		}
 		s.push(agent.Failure{Err: msg, Retryable: retryable(in.Error)})
+		if needsLogin(in.Text) {
+			s.push(loginLost(in.Text))
+		}
 	}
 }
 
@@ -625,6 +673,9 @@ func (q *queue) pump() {
 func fromEntry(e transcript.Entry) agent.Event {
 	switch e.Kind {
 	case transcript.Text:
+		if e.APIError != "" && needsLogin(e.Text) {
+			return loginLost(e.Text)
+		}
 		role := core.ItemAssistant
 		if e.Role == "user" {
 			role = core.ItemUser

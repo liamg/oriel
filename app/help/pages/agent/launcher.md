@@ -26,7 +26,8 @@ here too. `h` and `l` move along the strip.
 ## Agent
 
 Claude, Codex or another provider, with its model, effort and what's left of its plan; or no agent at all. An agent
-in a **Direct** session edits your real files.
+in a **Direct** session edits your real files. A provider that isn't signed in on the worker, or whose login has
+stopped working there, says so instead of its plan.
 
 ## Repositories
 

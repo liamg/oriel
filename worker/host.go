@@ -54,6 +54,8 @@ type host struct {
 	starting     bool
 	working      bool // a turn is running, or one was just asked for
 	interrupting bool
+	relogin      bool // a turn stopped for a lost login: told to carry on once it's back
+	refused      bool // the agent couldn't start for a lost login: started once it's back
 	notes        []string
 	delivered    []core.ThreadID // the threads the turn now running was given
 	activity     []core.Activity // what the agent did since it last replied
@@ -104,12 +106,14 @@ func (h *host) start() error {
 	if err != nil {
 		h.mu.Unlock()
 		h.setAgent(func(a *core.AgentState) { a.Running, a.Working, a.Error = false, false, err.Error() })
+		h.refusedForLogin(err)
 		return err
 	}
 	h.sess, h.box = sess, box
 	h.mu.Unlock()
 	h.setAgent(func(a *core.AgentState) { a.Running, a.Error = true, "" })
 	go h.loop(sess)
+	h.askLogins(h.snapshot().Agent.Provider)
 	h.kick()
 	return nil
 }
@@ -275,7 +279,7 @@ func (h *host) kick() {
 	sess := h.sess
 	h.w.edit.Lock()
 	se, err := h.w.session(h.id)
-	if err != nil {
+	if err != nil || h.w.signedOut(se.Agent.Provider) {
 		h.w.edit.Unlock()
 		h.mu.Unlock()
 		return
@@ -479,6 +483,16 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 		h.setAgent(func(a *core.AgentState) { a.Error = ev.Err })
 	case agent.UsageUpdate:
 		w.usageSampled(ev.Usage)
+	case agent.AuthExpired:
+		h.mu.Lock()
+		h.relogin = h.relogin || h.working
+		h.mu.Unlock()
+		h.appendItem(core.Item{ID: newID(6), Kind: core.ItemError, Text: "Signed out: " + ev.Detail, Time: now})
+		w.loginLost(h.id, ev)
+	case agent.AuthRestored:
+		if w.signedOut(ev.Provider) {
+			go w.checkLogin(ev.Provider)
+		}
 	case agent.Exited:
 		if ev.Err != "" {
 			h.appendItem(core.Item{ID: newID(6), Kind: core.ItemSystem, Text: "The agent exited: " + ev.Err, Time: now})

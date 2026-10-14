@@ -126,11 +126,10 @@ func (s *session) onNotify(method string, params json.RawMessage) {
 		if n.WillRetry {
 			return
 		}
-		msg, retry := turnError(n.Error)
 		s.mu.Lock()
 		s.failed = true
 		s.mu.Unlock()
-		s.emit(agent.Failure{Err: msg, Retryable: retry})
+		s.failure(n.Error)
 	}
 }
 
@@ -161,12 +160,11 @@ func (s *session) turnDone(t turnInfo) {
 		u.Duration = time.Duration(*t.DurationMs) * time.Millisecond
 	}
 	if t.Status == "failed" && !failed {
-		f := agent.Failure{Err: "the turn failed"}
 		if t.Error != nil {
-			f.Err = t.Error.Message
-			_, f.Retryable = turnError(jsonOf(t.Error))
+			s.failure(jsonOf(t.Error))
+		} else {
+			s.emit(agent.Failure{Err: "the turn failed"})
 		}
-		s.emit(f)
 	}
 	s.emit(agent.TurnEnd{Usage: u})
 }
@@ -177,8 +175,25 @@ var retryable = map[string]bool{
 	"responseStreamConnectionFailed": true, "responseStreamDisconnected": true, "rateLimitExceeded": true,
 }
 
-// turnError reads a TurnError: its message, and whether trying again could help.
-func turnError(raw json.RawMessage) (string, bool) {
+// failure says a TurnError, and a 401's login gone with it.
+func (s *session) failure(raw json.RawMessage) {
+	msg, name := turnError(raw)
+	s.emit(agent.Failure{Err: msg, Retryable: retryable[name]})
+	if name == "unauthorized" {
+		s.mu.Lock()
+		acct := s.acct.identity()
+		s.mu.Unlock()
+		s.emit(signedOut(acct, msg))
+	}
+}
+
+// signedOut is codex's login gone: it signs in again from a shell, as it has no terminal of its own here.
+func signedOut(account, detail string) agent.AuthExpired {
+	return agent.AuthExpired{Provider: "codex", Account: account, Detail: detail, Shell: "codex login"}
+}
+
+// turnError reads a TurnError: its message, and its codexErrorInfo's name.
+func turnError(raw json.RawMessage) (string, string) {
 	var e struct {
 		Message        string          `json:"message"`
 		CodexErrorInfo json.RawMessage `json:"codexErrorInfo"`
@@ -195,7 +210,7 @@ func turnError(raw json.RawMessage) (string, bool) {
 	if e.Message == "" {
 		e.Message = "codex: the turn failed"
 	}
-	return e.Message, retryable[name]
+	return e.Message, name
 }
 
 // stream passes on a message so far, whole each time.

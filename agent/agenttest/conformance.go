@@ -10,6 +10,7 @@
 //	"ask me"               asks one question, "Which colour?" with options red and blue, and replies with the answer
 //	"work slowly"          starts a turn that only ends when interrupted
 //	"what did I say"       replies with the prompt before this one: after a resume, that proves the history came back
+//	"lose the login"       fails the turn with the provider's own signed-out error
 //
 // A fork replies "fork: " and its prompt.
 package agenttest
@@ -49,6 +50,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("interrupt", func(t *testing.T) { interrupt(t, h) })
 	t.Run("fork", func(t *testing.T) { fork(t, h) })
 	t.Run("resume", func(t *testing.T) { resume(t, h) })
+	t.Run("login expired", func(t *testing.T) { loginExpired(t, h) })
 }
 
 // Echo is the tool every session is offered.
@@ -257,6 +259,20 @@ func resume(t *testing.T, h Harness) {
 	if got := r.Reply(); !strings.Contains(got, "say hello") {
 		t.Errorf("resumed, the reply is %q; the history didn't come back", got)
 	}
+}
+
+// loginExpired: a signed-out error raises AuthExpired, naming the provider and how to sign in again (AI-13).
+func loginExpired(t *testing.T, h Harness) {
+	s := Start(t, h)
+	s.Send("lose the login")
+	ev := s.Wait("AuthExpired", func(ev agent.Event) bool { _, ok := ev.(agent.AuthExpired); return ok }).(agent.AuthExpired)
+	if ev.Provider != h.Provider.ID() || ev.Detail == "" {
+		t.Errorf("AuthExpired = %+v, want the provider and what it said", ev)
+	}
+	if ev.Terminal == "" && ev.Shell == "" {
+		t.Errorf("AuthExpired = %+v says no way to sign in again", ev)
+	}
+	s.Wait("the turn to end", func(ev agent.Event) bool { _, ok := ev.(agent.TurnEnd); return ok })
 }
 
 func describe(evs []agent.Event) string {

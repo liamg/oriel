@@ -337,3 +337,25 @@ func TestQuestions(t *testing.T) {
 		t.Errorf("question = %+v", q)
 	}
 }
+
+// AI-13: an API error Claude Code writes in the agent's place is marked with its type. The records are Claude Code
+// 2.1.296's own (../testdata): a revoked login on a crit sandbox, and a send with no login at all.
+func TestAPIErrors(t *testing.T) {
+	for file, text := range map[string]string{
+		"oauth-revoked.jsonl": "OAuth token revoked · Please run /login",
+		"not-logged-in.jsonl": "Not logged in · Please run /login",
+	} {
+		b, err := os.ReadFile(filepath.Join("..", "testdata", file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, es := read(t, string(b))
+		if len(es) != 1 || es[0].Kind != Text || es[0].Text != text || es[0].APIError != "authentication_failed" {
+			t.Errorf("%s: entries = %+v", file, es)
+		}
+	}
+	_, es := read(t, logLine("/w", "Please run /login"))
+	if len(es) != 1 || es[0].APIError != "" {
+		t.Errorf("the agent's own words: %+v", es)
+	}
+}

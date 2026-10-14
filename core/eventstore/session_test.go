@@ -107,6 +107,7 @@ func TestDeriveStatus(t *testing.T) {
 	}{
 		{"question beats permission", core.SessionState{Agent: agent, Asks: []core.Ask{{Kind: core.AskPermission}, {Kind: core.AskQuestion}}}, core.StatusNeedsYou},
 		{"permission", core.SessionState{Agent: agent, Asks: []core.Ask{{Kind: core.AskNetwork}}}, core.StatusPermission},
+		{"login gone beats permission", core.SessionState{Agent: agent, Asks: []core.Ask{{Kind: core.AskNetwork}, {Kind: core.AskLogin}}}, core.StatusNeedsYou},
 		{"turn running", core.SessionState{Agent: core.AgentState{Provider: "claude", Running: true, Working: true}, Threads: open(answer)}, core.StatusWorking},
 		{"subagent running", core.SessionState{Agent: agent, Subagents: []core.Subagent{{Running: true}}}, core.StatusWorking},
 		{"agent answered", core.SessionState{Agent: agent, Threads: open(you, answer)}, core.StatusNeedsYou},
@@ -122,6 +123,23 @@ func TestDeriveStatus(t *testing.T) {
 		if got := core.DeriveStatus(c.se); got != c.want {
 			t.Errorf("%s: %s, want %s", c.name, got, c.want)
 		}
+	}
+}
+
+// AI-13: a worker's signed-out logins are the ones of an account's plan, by provider and account, on any worker.
+func TestSignedOut(t *testing.T) {
+	st := core.State{Workers: []core.WorkerState{
+		{ID: "local", SignedOut: []core.Login{{Provider: "claude", Account: "u1/o1", Worker: "local"}}},
+		{ID: "devbox", Name: "devbox", SignedOut: []core.Login{{Provider: "claude", Account: "u1/o1", Worker: "devbox"}, {Provider: "codex", Worker: "devbox"}}},
+	}}
+	if got := st.SignedOut(core.ProviderUsage{Provider: "claude", Account: "u1/o1"}); len(got) != 2 || got[1].Worker != "devbox" {
+		t.Errorf("claude u1/o1: %+v", got)
+	}
+	if got := st.SignedOut(core.ProviderUsage{Provider: "claude", Account: "u2"}); len(got) != 0 {
+		t.Errorf("another account: %+v", got)
+	}
+	if got := st.SignedOut(core.ProviderUsage{Provider: "codex", Account: "a@b"}); len(got) != 1 {
+		t.Errorf("a login gone before its account was known counts for the provider's: %+v", got)
 	}
 }
 

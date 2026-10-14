@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -146,6 +147,20 @@ func TestRefusesAPIKey(t *testing.T) {
 				t.Errorf("err = %v, want %q", err, tc.want)
 			}
 		})
+	}
+}
+
+// AI-13: a session that can't start for want of a login says so as AuthExpired, with the command that signs in.
+func TestStartSignedOutIsAuthExpired(t *testing.T) {
+	p := fakeProvider(t)
+	dir := t.TempDir()
+	spec := fakeSpec(t, dir)
+	spec.Cwd = dir
+	spec.Env = append(spec.Env, "FAKE_CODEX_ACCOUNT=none")
+	_, err := p.Start(context.Background(), spec)
+	var ae agent.AuthExpired
+	if !errors.As(err, &ae) || ae.Provider != "codex" || ae.Shell != "codex login" || ae.Terminal != "" {
+		t.Errorf("err = %#v, want AuthExpired", err)
 	}
 }
 

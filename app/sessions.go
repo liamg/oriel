@@ -84,8 +84,15 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "CommentSend", Fired: true, Payload: CommentSend{},
 		Doc: "A comment about to go to an agent; a rewrite changes it, a veto stops it. { session, thread, file, line, body, urgent, btw }"}))
 	working := map[core.SessionID]bool{}
+	signedOut := map[core.WorkerID][]core.Login{}
 	x.add(onDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
+		case core.WorkerChanged:
+			was := signedOut[ev.Worker.ID]
+			signedOut[ev.Worker.ID] = ev.Worker.SignedOut
+			if !slices.Equal(was, ev.Worker.SignedOut) {
+				h.Do(func() { x.loginNotices(ev.Worker, was) })
+			}
 		case core.SessionFocused:
 			if ev.ID != "" {
 				h.Do(func() { x.follow(ev.ID) })
@@ -218,6 +225,37 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
 			x.mu.Unlock()
 		}
 	}()
+}
+
+// loginNotices tell of a worker's logins that have stopped working, naming the worker and the fix, and take back
+// the notices of those that work again.
+func (x *sessions) loginNotices(w core.WorkerState, was []core.Login) {
+	source := "worker:" + string(w.ID)
+	where := cmpOr(w.Name, string(w.ID))
+	if len(w.SignedOut) == 0 {
+		for _, n := range x.h.State().Notifications {
+			if n.ID == "agent.login" && n.Source == source && !n.Dismissed {
+				_ = x.sh.cfg.Store.Apply(core.NoticeDismissed{Seq: n.Seq})
+			}
+		}
+		return
+	}
+	for _, l := range w.SignedOut {
+		if slices.Contains(was, l) {
+			continue
+		}
+		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source, Title: "Signed out", Time: time.Now(),
+			Text: providerName(l.Provider) + " on " + where + " needs you to log in: " + l.Detail + "."}
+		local := w.ID == core.LocalWorker
+		switch {
+		case local && l.Terminal != "":
+			n.Text += " Log in opens its terminal with " + l.Terminal + " typed."
+			n.Actions = []core.Action{{Title: "Log in", Command: "agent.login", Args: map[string]any{"provider": l.Provider, "worker": string(w.ID)}}}
+		case l.Shell != "":
+			n.Text += " On " + where + ", run " + l.Shell + "."
+		}
+		x.h.Notify(n)
+	}
 }
 
 func (x *sessions) clients() []worker.Client {

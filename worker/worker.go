@@ -72,6 +72,8 @@ type Worker struct {
 	repos    *repoList
 	sessLogs logs.Dirs
 	open     map[core.SessionID]logs.SessionLog
+	loginMu  sync.Mutex
+	lost     map[string]*lostLogin // logins gone, by provider and account
 	// sandboxCfg is the sandbox settings the app last sent.
 	sandboxCfg sandbox.Config
 	closed     chan struct{}

@@ -72,14 +72,7 @@ func (x *statsExt) page(c *ui.Ctx) {
 		})
 }
 
-func (x *statsExt) workerName(id core.WorkerID) string {
-	for _, w := range x.h.State().Workers {
-		if w.ID == id {
-			return cmpOr(w.Name, string(id))
-		}
-	}
-	return string(id)
-}
+func (x *statsExt) workerName(id core.WorkerID) string { return x.h.State().WorkerName(id) }
 
 func (x *statsExt) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMeta) {
 	th := c.Theme()

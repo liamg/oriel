@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"strings"
 	"sync"
 
@@ -63,7 +65,7 @@ func askTone(k core.AskKind) theme.TokenID {
 		return tAskNetwork
 	case core.AskGateway:
 		return tAskGateway
-	case core.AskQuestion:
+	case core.AskQuestion, core.AskLogin:
 		return tAskQuestion
 	}
 	return tAskPermission
@@ -94,6 +96,7 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 		o.Kicker = cmpOr(se.Name, string(se.ID)) + " · " + string(a.Kind)
 	}
 	type act struct {
+		cmd  string // ask.answer if ""
 		args registry.Args
 		note bool
 	}
@@ -156,6 +159,25 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 			add("Always", "a", false, registry.Args{"decision": "always"})
 		}
 		add("Deny", "n", false, registry.Args{"decision": "deny"})
+	case core.AskLogin:
+		l := core.Login{Provider: se.Agent.Provider}
+		if a.Login != nil {
+			l = *a.Login
+		}
+		where := x.h.State().WorkerName(se.Worker)
+		o.Title = providerName(l.Provider) + " on " + where + " needs you to log in"
+		o.Detail = l.Detail
+		if !kicker {
+			o.Kicker = "login"
+		}
+		if canLogIn(se, l) {
+			o.Note = "opens its terminal with " + l.Terminal
+			o.Actions = append(o.Actions, widget.CardAction{Label: "Log in", Key: "l", Primary: true})
+			acts = append(acts, act{cmd: "agent.login"})
+		} else if l.Shell != "" {
+			o.Note = "On " + where + ", run " + l.Shell
+		}
+		add("Check again", "c", !canLogIn(se, l), registry.Args{"decision": "recheck"})
 	case core.AskQuestion:
 		o.Title = prov + " asks"
 		body = func(c *ui.Ctx) { x.questions(c, se, a, st) }
@@ -185,7 +207,57 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 	for k, v := range acts[res.Action].args {
 		args[k] = v
 	}
-	x.run(context.Background(), "ask.answer", args)
+	x.run(context.Background(), cmpOr(acts[res.Action].cmd, "ask.answer"), args)
+}
+
+// canLogIn is a login the app signs in again itself: the agent's own terminal on this machine.
+func canLogIn(se core.SessionState, l core.Login) bool {
+	return (se.Worker == "" || se.Worker == core.LocalWorker) && l.Terminal != ""
+}
+
+// loginWaiting is the session waiting on a login, and its ask: session {id}, else the one in front, else any
+// waiting on {provider}'s login on {worker}.
+func (x *agentConsole) loginWaiting(a registry.Args) (core.SessionState, core.Login, bool) {
+	st := x.h.State()
+	id, provider, wid := core.SessionID(a.String("id")), a.String("provider"), core.WorkerID(a.String("worker"))
+	ss := slices.Clone(st.Sessions)
+	slices.SortStableFunc(ss, func(p, q core.SessionState) int {
+		switch {
+		case p.ID == st.Focus:
+			return -1
+		case q.ID == st.Focus:
+			return 1
+		}
+		return 0
+	})
+	for _, se := range ss {
+		if id != "" && se.ID != id {
+			continue
+		}
+		for _, ask := range se.Asks {
+			if ask.Kind != core.AskLogin || ask.Login == nil {
+				continue
+			}
+			l := *ask.Login
+			if (provider == "" || l.Provider == provider) && (wid == "" || l.Worker == wid) {
+				return se, l, true
+			}
+		}
+	}
+	return core.SessionState{}, core.Login{}, false
+}
+
+// logIn signs an agent in again: its own terminal, opened with the provider's login typed, on this machine; on
+// another, it says what to run there.
+func (x *agentConsole) logIn(ctx registry.Ctx, a registry.Args) error {
+	se, l, ok := x.loginWaiting(a)
+	if !ok {
+		return errors.New("no agent is waiting on a login")
+	}
+	if !canLogIn(se, l) {
+		return fmt.Errorf("on %s, run %s", x.h.State().WorkerName(se.Worker), cmpOr(l.Shell, "the agent's login"))
+	}
+	return x.rawTerminal(ctx, se.ID, l.Terminal+"\r")
 }
 
 // noteInput is a denial's note, which goes back to the agent with it.

@@ -205,3 +205,9 @@ type Sessions interface {
   threads, transcript and test runs (`oriel` searches them: `session.search` over the whole log, not only what the
   state keeps). **Restart**: the worker replays every session's log; nothing runs until it's resumed, which resumes
   the agent by its own id.
+- **A lost login** (AI-13): when an agent's login on its worker stops working (`agents.md`, "A login that stops
+  working"), every session on that worker using it turns **needs you** with a card, "Claude on devbox needs you to log
+  in", and what the provider said. On this machine the card's **Log in** (`agent.login`) opens the agent's own
+  terminal (`agent.terminal`, the raw PTY) with `/login` typed; on a worker elsewhere it says what to run there
+  ("On devbox, run claude, then /login"). **Check again** asks the worker to look. Once it's signed in, every card
+  goes and the sessions carry on: held comments go, and a turn the login stopped is told to carry on.
