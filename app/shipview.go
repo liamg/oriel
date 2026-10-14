@@ -519,9 +519,6 @@ func (x *shipExt) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 			if s.PR.Open() && s.PR.Draft && widget.Button(c, "ready", "Ready for review", widget.ButtonOpts{Help: "git/ship#pr"}) {
 				x.run("ship.ready", registry.Args{"project": s.Project})
 			}
-			if t, ok := ciTrouble(s); ok {
-				askTwinsLabelled(c, x.h, "ship.ci."+s.Project, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
-			}
 			if s.PR.Open() && widget.Button(c, "edit", "Edit PR", widget.ButtonOpts{Help: "git/ship#raise"}) {
 				x.run("ship.pr.open", registry.Args{"project": s.Project})
 			}
@@ -530,6 +527,11 @@ func (x *shipExt) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 				x.run("ship.github", registry.Args{"project": s.Project})
 			}
 		})
+		if t, ok := ciTrouble(s); ok {
+			c.Row("ci", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
+				askTwinsLabelled(c, x.h, "ship.ci."+s.Project, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
+			})
+		}
 		explainKept(c, x.sh, "ship.ci."+s.Project, "git/ship#checks")
 	})
 }
@@ -852,9 +854,6 @@ func (x *shipExt) checklist(c *ui.Ctx, project string) {
 				if widget.Button(c, "edit", "Edit PR", widget.ButtonOpts{Help: "git/ship#raise"}) {
 					x.run("ship.pr.open", registry.Args{"project": p})
 				}
-				if t, ok := ciTrouble(s); ok {
-					askTwinsLabelled(c, x.h, "ship.ci."+p, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
-				}
 				return
 			}
 			if s.GitHub != "" && s.PR == nil && widget.Button(c, "raise", "Raise PR", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"}) {
@@ -864,6 +863,11 @@ func (x *shipExt) checklist(c *ui.Ctx, project string) {
 				x.run("ship.open", nil)
 			}
 		})
+		if t, ok := ciTrouble(s); ok && s.PR.Open() {
+			c.Column("ci", ui.Style{Gap: 6}, func(c *ui.Ctx) {
+				askTwinsLabelled(c, x.h, "ship.ci."+p, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
+			})
+		}
 		explainKept(c, x.sh, "ship.ci."+p, "git/ship#checks")
 		note := "opens the Raise PR tab →"
 		if s.PR.Open() {

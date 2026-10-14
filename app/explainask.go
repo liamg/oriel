@@ -103,6 +103,10 @@ func explainKept(c *ui.Ctx, sh *shell, key, help string) {
 	mono := func(size float32, tok theme.TokenID) ui.TextStyle {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size}, Color: th.C(tok)}
 	}
+	width := float32(760)
+	if r, ok := c.Rect(c.Next("explain")); ok && r.Dx() > 20 {
+		width = r.Dx() - 20
+	}
 	popup(c, "explain", ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Gap: 6, Help: help}, func(c *ui.Ctx) {
 		c.Text("label", "EXPLAIN · CHANGES NOTHING", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold,
 			Tracking: .14}, Color: th.C(theme.FgFaint)})
@@ -112,7 +116,7 @@ func explainKept(c *ui.Ctx, sh *shell, key, help string) {
 		case a.err != nil:
 			c.Text("err", a.err.Error(), mono(11, theme.Error))
 		default:
-			markdown(c, "md", lspMarkdown(a.text), 760)
+			markdown(c, "md", lspMarkdown(a.text), width)
 			if a.by != "" {
 				c.Text("by", a.by, mono(10, theme.FgFaint))
 			}

@@ -21,10 +21,8 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 - [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md): Process plugins with an OS sandbox; WASM plugins; oriel build --with
 - [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and indicators in slots
 - [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key)
-- [FG-6](FG-6-ship-page-uncommitted-behind-unpushed-pr-checks-.md): Ship page: uncommitted → behind → unpushed → PR → checks, multi-project
-- [RV-1](RV-1-split-and-unified-diff-intraline-per-hunk-review.md): Split and unified diff, intraline, per-hunk reviewed
 
-P4 is done.
+P4 is done. P6 (FG-6, AI-10, RV-1–RV-7, TR-6) is in review.
 
 ## Suggested order
 
