@@ -370,7 +370,7 @@ func (h *host) send(sess agent.Session, in agent.Input, threads []core.ThreadID)
 			_, _ = h.w.mutateThread(h.id, tid, func(t *core.Thread) error {
 				t.Busy = false
 				for i := range t.Comments {
-					t.Comments[i].Delivered = t.Comments[i].Delivered && t.Comments[i].Author != core.AuthorYou
+					t.Comments[i].Delivered = t.Comments[i].Delivered && t.Comments[i].Author == core.AuthorAgent
 				}
 				return nil
 			})
@@ -733,6 +733,11 @@ func (h *host) permission(sess agent.Session, p agent.Permission) {
 	ask := core.Ask{ID: p.ID, Kind: core.AskPermission, Tool: p.Tool, Summary: p.Summary, Input: string(p.Input), Rule: p.Rule}
 	if ask.Rule == "" {
 		ask.Rule = RuleFor(p.Tool, p.Input)
+	}
+	if postsReview(p.Tool, p.Input) {
+		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Note: NoPosting})
+		h.appendItem(core.Item{ID: newID(6), Kind: core.ItemSystem, Time: h.w.opts.Now().UTC(), Text: p.Tool + " denied: agents never post to GitHub reviews"})
+		return
 	}
 	if v, ok := h.w.policy(h.id, ask); ok {
 		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Allow: v.Decision == "allow", Note: v.Note})

@@ -82,6 +82,7 @@ func (w *Worker) Serve(conn wire.Conn) {
 	fn(MethodUsageRead, wire.Func(func(ctx context.Context, _ struct{}) (any, error) { return nil, w.ReadUsage(ctx) }))
 	fn(MethodTermInput, wire.Func(func(_ context.Context, r TermReq) (any, error) { return nil, w.termInput(r) }))
 	w.serveShip(fn)
+	w.serveGitHub(fn)
 	conn.HandleStream(MethodEvents, wire.StreamFunc(w.serveEvents))
 	conn.HandleStream(MethodTerminal, wire.StreamFunc(w.serveTerminal))
 }

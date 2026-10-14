@@ -278,6 +278,16 @@ flowchart TB
   `verify.open {id}`, `verify.send {text}`, `verify.skip`, `verify.again`, `verify.continue`, `verify.open-file`,
   `verify.close`; keymap mode `verify` (`⌘↵`, `⌥O`, Escape); view `app.overlay.verify` and the status segment
   `statusline.right.30-verify`.
+- GitHub review mirroring (RV-4; ui.md 06): a worker answers `github.sync` (`worker.MirrorReq{Session, Fresh, Trust}`
+  → `worker.Mirror`: the PRs and each reviewer's state), `github.forward` (`worker.ForwardReq` → the sent comment) and
+  `github.draft` (`worker.DraftEditReq`) (`worker.Client.SyncGitHub`, `ForwardGitHub`, `EditDraft`). `gh.Client`
+  reads `ReviewComments`, `Reviews`, `IssueComments`, `ResolvedThreads` (GraphQL) and `OrgMember`, and posts
+  `ReplyReview` and `Comment`; `gh.ReviewStates` is where each reviewer stands; `gh/ghtest` fakes them all
+  (`AddReviewComment`, `AddReview`, `AddIssueComment`, `EditComment`, `Resolve`, `AddMember`, `SetLogin`).
+  Commands `github.sync`, `github.forward {thread, comment}`, `github.edit`, `github.draft.save {thread, comment,
+  body}`; options `github.trusted_orgs`, `github.trusted_users`; the status segment `statusline.left.70-github`;
+  theme tokens `github.accent`, `github.changes`, `github.approved`, `requests.avatar.github`, `requests.draft.bg`,
+  `requests.draft.border`.
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
   `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
@@ -339,7 +349,12 @@ flowchart TB
   `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the worker yet.
   `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
   (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a built-in part) overrides one.
-- thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"),
+- thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"). Built in RV-4:
+  `registry.ThreadSource{Origin, Title, Head, Comment}` (`registry.ThreadSourceFor`) draws threads of an origin in
+  every thread card (between the editor's and the diff's lines, and in a request): its title, its head after the
+  status dot, and what goes under a comment; the built-in `github` source's Comment is a draft's Forward and Edit.
+  A `core.Comment.Draft` is a reply not sent where the thread came from. `widget.ButtonOpts.Tone` fills a primary
+  button with a colour of its own. No Lua binding yet.
   review-ledger rules, commit and PR gates, slop rules, and status-colour rules.
 
 **Workspace**

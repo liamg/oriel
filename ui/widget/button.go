@@ -6,6 +6,7 @@ import (
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -15,6 +16,8 @@ type ButtonOpts struct {
 	Disabled bool
 	Help     string
 	Key      string // a key cap after the label: the key that does the same, "y"
+	// Tone is a primary button's colour in place of the accent: a GitHub action's violet.
+	Tone color.NRGBA
 }
 
 // Button is a 26px push button (base.css .btn). It returns true on the frame it's clicked, or pressed with
@@ -26,6 +29,9 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 	bg, hover, pressed, fg, border := col(c, tButtonBg), col(c, tButtonHover), col(c, tButtonPressed), col(c, tButtonFg), col(c, tButtonBorder)
 	if o.Primary && !o.Disabled {
 		bg, hover, pressed, fg = col(c, tPrimaryBg), col(c, tPrimaryHover), col(c, tPrimaryPressed), col(c, tPrimaryFg)
+		if o.Tone.A != 0 {
+			bg, hover, pressed = o.Tone, theme.Lighten(o.Tone, .04), theme.Lighten(o.Tone, -.06)
+		}
 		border = bg
 	}
 	switch {

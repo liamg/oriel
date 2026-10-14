@@ -14,19 +14,26 @@ import (
 
 // A fake upstream: the test binary re-executed as a stdio MCP server.
 func TestMain(m *testing.M) {
-	if os.Getenv("GATEWAY_FAKE_MCP") == "1" {
-		srv := &mcp.Server{Name: "fake", Handler: fakeHandler{}}
+	if v := os.Getenv("GATEWAY_FAKE_MCP"); v != "" {
+		srv := &mcp.Server{Name: "fake", Handler: fakeHandler{github: v == "github"}}
 		_ = srv.Serve(context.Background(), os.Stdin, os.Stdout)
 		os.Exit(0)
 	}
 	os.Exit(m.Run())
 }
 
-type fakeHandler struct{}
+type fakeHandler struct{ github bool }
 
-func (fakeHandler) Tools(context.Context) ([]mcp.Tool, error) {
+func (f fakeHandler) Tools(context.Context) ([]mcp.Tool, error) {
 	yes := true
 	schema := json.RawMessage(`{"type":"object"}`)
+	if f.github {
+		return []mcp.Tool{
+			{Name: "pull_request_read", InputSchema: schema, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: &yes}},
+			{Name: "add_reply_to_pull_request_comment", InputSchema: schema},
+			{Name: "pull_request_review_write", InputSchema: schema},
+		}, nil
+	}
 	return []mcp.Tool{
 		{Name: "list_buckets", InputSchema: schema, Annotations: &mcp.ToolAnnotations{ReadOnlyHint: &yes}},
 		{Name: "delete_bucket", InputSchema: schema},
@@ -182,6 +189,35 @@ func TestSettingsDenyBeatsSessionGrant(t *testing.T) {
 	for _, tl := range tools {
 		if tl.Name == "aws__delete_bucket" {
 			t.Error("a denied tool is still listed")
+		}
+	}
+}
+
+// RV-4: "the agent never posts": a tool that posts to a GitHub review isn't offered, and a call to it is refused
+// even when the user's rules allow every tool, without asking.
+func TestReviewPostingToolsAreNeverOffered(t *testing.T) {
+	h := newHarness(t)
+	gh := fakeServer(t, "github")
+	gh.Env["GATEWAY_FAKE_MCP"] = "github"
+	h.g.Up = &Upstreams{Servers: []Server{gh}}
+	t.Cleanup(h.g.Up.Close)
+	h.session = []Rule{{Tool: "*", Action: Allow}}
+	h.global = []Rule{{Tool: "github__*", Action: Allow}}
+	tools, _ := h.g.Tools(context.Background())
+	var names []string
+	for _, tl := range tools {
+		names = append(names, tl.Name)
+	}
+	if strings.Contains(strings.Join(names, " "), "add_reply_to_pull_request_comment") || strings.Contains(strings.Join(names, " "), "pull_request_review_write") ||
+		!strings.Contains(strings.Join(names, " "), "github__pull_request_read") {
+		t.Errorf("offered %q", names)
+	}
+	if out, ok := h.call(t, "github__add_reply_to_pull_request_comment"); ok || h.asks() != 0 {
+		t.Errorf("a review reply ran: %q, asked %d", out, h.asks())
+	}
+	for _, p := range h.g.Policy(context.Background()) {
+		if p.Name == "github__pull_request_review_write" && (p.Action != Deny || p.From != FromOriel) {
+			t.Errorf("policy shows %+v", p)
 		}
 	}
 }

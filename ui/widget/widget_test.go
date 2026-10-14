@@ -460,6 +460,30 @@ func TestSegmentedBadges(t *testing.T) {
 }
 
 // An icon button in a row shows while the pointer's in the row, stays while it moves onto the button, and clicks.
+// A primary button with a Tone is filled with it rather than the accent.
+func TestButtonTone(t *testing.T) {
+	violet := color.NRGBA{R: 0xb9, G: 0x8a, B: 0xff, A: 0xff}
+	clicks := 0
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("fwd")
+		if Button(c, "fwd", "Forward", ButtonOpts{Primary: true, Tone: violet, Help: "test/button"}) {
+			clicks++
+		}
+	})
+	filled := false
+	for _, op := range h.list.Ops {
+		filled = filled || op.Kind == render.OpRect && op.Style.Fill == violet
+	}
+	if !filled {
+		t.Error("no rect was filled with the tone")
+	}
+	h.click(mid(h.rect(id)))
+	if clicks != 1 {
+		t.Errorf("%d clicks", clicks)
+	}
+}
+
 func TestIconButtonInARow(t *testing.T) {
 	var row ui.ID
 	shown, clicks := false, 0

@@ -35,7 +35,8 @@ const (
 // tools are what the agent is offered as mcp__oriel__*: the worker's own, then the app's (LSP lookups, say).
 func (w *Worker) tools(h *host) []agent.Tool {
 	own := []agent.Tool{
-		{Name: "reply", Description: "Reply in an Oriel thread. working: a progress note that keeps the thread marked in progress. resolve: resolve the thread after replying.",
+		{Name: "reply", Description: "Reply in an Oriel thread. working: a progress note that keeps the thread marked in progress. resolve: resolve the thread after replying. " +
+			"On a thread with origin=\"github\" your reply is a draft: the user reads it and forwards it to GitHub themselves. You never post to GitHub.",
 			Schema: schema(`"thread":`+str+`,"body":`+str+`,"working":`+bl+`,"resolve":`+bl, "thread", "body"), Call: h.toolReply},
 		{Name: "thread", Description: "Read one Oriel thread in full: every comment, with nothing clipped.", ReadOnly: true,
 			Schema: schema(`"thread":`+str, "thread"), Call: h.toolThread},
@@ -145,7 +146,7 @@ func (h *host) toolReply(_ context.Context, raw json.RawMessage) (string, error)
 	}
 	h.mu.Unlock()
 	c := core.Comment{ID: newID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body, Time: h.w.opts.Now().UTC(),
-		Progress: working, Model: modelLabel(se.Agent)}
+		Progress: working, Model: modelLabel(se.Agent), Draft: t.Origin == core.OriginGitHub && !working}
 	if !working {
 		c.Activity = activity
 		c.Evidence, c.Unbacked = evidence(se, body, runs)
@@ -165,10 +166,14 @@ func (h *host) toolReply(_ context.Context, raw json.RawMessage) (string, error)
 		h.w.completeTasks(h.id, t.ID)
 	}
 	h.w.restatus(h.id)
-	if c.Unbacked != "" {
-		return "replied; note: " + c.Unbacked + ". Run the tests with test_run and cite the run.", nil
+	said := "replied"
+	if c.Draft {
+		said = "drafted: the user reads your reply and forwards it to GitHub; nothing was posted"
 	}
-	return "replied", nil
+	if c.Unbacked != "" {
+		return said + "; note: " + c.Unbacked + ". Run the tests with test_run and cite the run.", nil
+	}
+	return said, nil
 }
 
 var (

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/gh"
 )
 
 // The guard rails Oriel answers tool.check with, before the mode or its dialog have a say.
@@ -21,6 +22,10 @@ var (
 	quoted     = regexp.MustCompile(`'[^']*'|"(?:[^"\\]|\\.)*"`)
 )
 
+// NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
+const NoPosting = "Oriel: agents never post to GitHub reviews. Answer the thread with mcp__oriel__reply: on a GitHub " +
+	"thread your reply is a draft, and the user forwards it."
+
 var editTools = []string{"Edit", "Write", "MultiEdit", "NotebookEdit"}
 
 // check decides a tool call for the guard rails: allow, deny with a reason, or "" to leave it to the mode.
@@ -34,6 +39,9 @@ func check(spec agent.StartSpec, tool string, input json.RawMessage) checkOut {
 		Notebook string `json:"notebook_path"`
 	}
 	_ = json.Unmarshal(input, &in)
+	if gh.ReviewTool(tool) || tool == "Bash" && gh.PostsReview(in.Command) {
+		return checkOut{Decision: "deny", Reason: NoPosting}
+	}
 	if spec.Sandbox != nil && tool == "Bash" {
 		cmd := quoted.ReplaceAllString(in.Command, `""`)
 		switch {

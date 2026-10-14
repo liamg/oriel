@@ -99,6 +99,14 @@ func renderComment(b *strings.Builder, c core.Comment, isNew, full bool) {
 	if c.Author == core.AuthorGitHub {
 		attrs = append(attrs, [2]string{"origin", "github"})
 	}
+	if c.Draft {
+		attrs = append(attrs, [2]string{"draft", "true"})
+	} else if c.Author == core.AuthorAgent && !c.Sent.IsZero() {
+		attrs = append(attrs, [2]string{"forwarded", "true"})
+	}
+	if c.Edited {
+		attrs = append(attrs, [2]string{"edited", "true"})
+	}
 	if isNew {
 		attrs = append(attrs, [2]string{"new", "true"})
 	}
@@ -106,6 +114,10 @@ func renderComment(b *strings.Builder, c core.Comment, isNew, full bool) {
 		attrs = append(attrs, [2]string{"progress", "true"})
 	}
 	body := strings.TrimSpace(c.Body)
+	if c.Redacted {
+		attrs = append(attrs, [2]string{"redacted", "true"})
+		body = Redacted(c.Name)
+	}
 	if !full && c.Author == core.AuthorAgent {
 		body = clip(body)
 	}
@@ -121,6 +133,13 @@ func renderComment(b *strings.Builder, c core.Comment, isNew, full bool) {
 		fmt.Fprintf(b, "<image path=%s/>\n", attr(img))
 	}
 	b.WriteString("</comment>\n")
+}
+
+// Redacted stands in for the text of a GitHub comment whose author isn't trusted (crit's trusted orgs): the agent
+// never reads it, so it can't be steered by it.
+func Redacted(author string) string {
+	return "[redacted: " + author + " isn't in the trusted GitHub orgs or users, so Oriel doesn't show you their text. " +
+		"The user can read it in Oriel; ask them in your draft reply what they want done.]"
 }
 
 func clip(body string) string {

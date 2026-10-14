@@ -116,6 +116,9 @@ flowchart LR
   as plugin-provided in the transcript, and plugins can't inject text into the system prompt or prompt packs unless granted
   `agent.prompt`.
 - `gate` grants are listed in the HUD while active ("2 plugins can answer permission prompts") — never invisible.
+- No agent posts to a GitHub review or a PR's conversation, whatever a rule or a grant says: the gateway never offers a
+  tool that does, and the agent's shell and permission asks are refused (RV-4; agents.md). Strangers' review text
+  is withheld from the agent (trusted orgs).
 
 ## Operations
 

@@ -41,6 +41,12 @@ func TestGuardRails(t *testing.T) {
 		{"git push on the host", spec, "Bash", `{"command":"git push"}`, "", ""},
 		{"a quoted git push is an argument", sandboxed, "Bash", `{"command":"echo 'git push'"}`, "", ""},
 		{"git status in a sandbox", sandboxed, "Bash", `{"command":"git status"}`, "", ""},
+		// RV-4: the agent never posts to a review, on the host or in a sandbox, by gh or by MCP.
+		{"a review reply by gh api on the host", spec, "Bash", `{"command":"gh api repos/acme/api/pulls/7/comments/9/replies -f body=Agreed"}`, "deny", "never post"},
+		{"a review by gh in a sandbox", sandboxed, "Bash", `{"command":"gh pr review 7 --approve"}`, "deny", "never post"},
+		{"a GitHub MCP review reply", spec, "mcp__github__add_reply_to_pull_request_comment", `{}`, "deny", "never post"},
+		{"the gateway's GitHub comment tool", sandboxed, "mcp__oriel-gw__github__add_issue_comment", `{}`, "deny", "never post"},
+		{"reading the review on the host", spec, "Bash", `{"command":"gh api repos/acme/api/pulls/7/comments"}`, "", ""},
 	}
 	for _, c := range cases {
 		got := check(c.spec, c.tool, json.RawMessage(c.input))

@@ -503,8 +503,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   the line in the editor, `⏎` shows or folds the file, `q` closes. A mark is per change (`gitx.Hunk.ID`, a hash of
   what it removes and adds), so it survives edits to other hunks; a hunk is reviewed when all its changes are. In a
   session they're `core.HunksReviewed` events the worker keeps (`review.set`, `SessionState.Reviews`); outside one
-  they last as long as the window. Not yet: GitHub threads (RV-4), more context between hunks, and per-line marks
-  inside a hunk.
+  they last as long as the window. Not yet: more context between hunks, and per-line marks inside a hunk.
 - Built in RV-2 (`app/ledger.go`, `app/commit.go`): the REVIEW LEDGER bar is the `diff.header.10-ledger` view: "You
   have read 142 / 310 agent-written lines", a stacked `widget.Meter` (read, then skimmed; `MeterOpts.Then`), "28
   skimmed", the gate's chip (⏻ COMMIT GATED UNTIL 100% for hard, COMMIT ASKS FIRST for soft, ✓ ALL READ) and
@@ -525,6 +524,24 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   review runs the column says so and the button waits. Not yet: the status line's GH and review counts; findings as
   decorations between the diff's lines (they're in the column only). The "before this ships" row "AI review" is the
   `ai-review` ship gate, from `SessionState.AIReviewGate`.
+- Built in RV-4 (`gh/review.go`, `gh/guard.go`, `worker/github.go`, `app/github.go`): the session's worker mirrors each
+  project's PR (`github.sync`, every 30 s for the session in front and on demand) into threads with `Origin: github`
+  and `Thread.GitHub` (repo, PR, the review thread's first comment, the reviewer and where their review stands,
+  resolved on GitHub, outdated): one per review comment thread, anchored to its file and line (the old side for a
+  LEFT comment), and one for the PR's conversation (its comments and reviews' summaries). Their comments are
+  `AuthorGitHub` with the login and `GitHubID`; they reach the agent like yours. The card between the diff's (and the
+  editor's) lines and the request show them through the `github` `registry.ThreadSource`: **GitHub review · L80 ·
+  @reviewer · changes requested · synced 30s ago**, avatars of the login's initials, the agent's reply as a
+  `Comment.Draft` in a violet box ("draft · not sent") with **↗ Forward to GitHub** (`github.forward`, posted from
+  the worker with the user's gh, once; then "sent to github") and **Edit** (`github.edit`, then **Save draft** or
+  ⌘⏎: `github.draft.save`), and "<agent> never posts to GitHub. You do." Echoes are matched by GitHub ID; an edit on
+  GitHub changes the comment (marked edited, given to the agent again), a deleted one goes, a resolution on GitHub
+  resolves the thread and an unresolve reopens it; a review thread whose first comment is gone is dismissed. The status
+  line's `statusline.left.70-github` says "GH 1 changes requested" (and approvals). Text by authors outside
+  `github.trusted_orgs` (the repo's owner when empty) and `github.trusted_users` is withheld from the agent
+  (`Comment.Redacted`, "hidden from the agent"). Not yet: the PR's body isn't mirrored (so isn't redacted); the
+  worker syncs only while a window asks; review comments past GitHub's first 100 aren't read; a draft's border is
+  solid, not dashed.
 
 ## 07 · Explain this change
 

@@ -41,6 +41,9 @@ var (
 	tReqUnbacked  = theme.Declare("requests.unbacked", "warn")
 	tReqThreadBg  = theme.Declare("requests.inline.bg", "bg.surface")
 	tReqThreadBd  = theme.Declare("requests.inline.border", "line.strong")
+	tReqAvatarGH  = theme.Declare("requests.avatar.github", "violet")
+	tReqDraftBg   = theme.Declare("requests.draft.bg", "alpha(violet, 4%)")
+	tReqDraftBd   = theme.Declare("requests.draft.border", "alpha(violet, 35%)")
 )
 
 // reqGroup is where a request sits in the list: what it waits on.
@@ -595,8 +598,11 @@ func msgs(n int) string { return fmt.Sprintf("%d %s", n, plural(n, "msg", "msgs"
 func avatar(c *ui.Ctx, key any, cm core.Comment) {
 	th := c.Theme()
 	tone, label := th.C(tReqAvatarYou), cmpOr(initials(cm.Name), "U")
-	if cm.Author == core.AuthorAgent {
+	switch cm.Author {
+	case core.AuthorAgent:
 		tone, label = th.C(tReqAvatarAI), strings.ToUpper(providerName(cm.Name)[:1])
+	case core.AuthorGitHub:
+		tone, label = th.C(tReqAvatarGH), cmpOr(initials(strings.NewReplacer("-", " ", "_", " ", ".", " ").Replace(cm.Name)), "GH")
 	}
 	c.Box(key, ui.Style{W: ui.Px(28), H: ui.Px(28), Radius: 6, Fill: tone, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", label, ui.TextStyle{Font: kickerFont(render.Color{}).Font, Color: th.C(theme.AccentInk)})

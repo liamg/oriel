@@ -110,8 +110,8 @@ type NewPR struct {
 	Draft                   bool
 }
 
-// Client is what Oriel asks of GitHub (ui.md 18): the PR for a branch, opening and editing one, its reviewers,
-// and the checks on a ref.
+// Client is what Oriel asks of GitHub (ui.md 18, 06): the PR for a branch, opening and editing one, its reviewers,
+// the checks on a ref, and its review: read, and answered as the user.
 type Client interface {
 	// PRForBranch is the branch's pull request: its open one, else the newest; nil when it has none.
 	PRForBranch(ctx context.Context, repo Repo, branch string) (*PR, error)
@@ -126,6 +126,21 @@ type Client interface {
 	Checks(ctx context.Context, repo Repo, ref string) ([]Check, error)
 	// Log is an Actions check's log.
 	Log(ctx context.Context, repo Repo, c Check) (string, error)
+
+	// ReviewComments are the comments on a PR's diff and their replies, oldest first.
+	ReviewComments(ctx context.Context, repo Repo, number int) ([]ReviewComment, error)
+	// Reviews are a PR's submitted reviews, oldest first.
+	Reviews(ctx context.Context, repo Repo, number int) ([]Review, error)
+	// IssueComments are a PR's conversation, oldest first.
+	IssueComments(ctx context.Context, repo Repo, number int) ([]IssueComment, error)
+	// ResolvedThreads says which review threads are resolved, by their first comment's ID.
+	ResolvedThreads(ctx context.Context, repo Repo, number int) (map[int64]bool, error)
+	// ReplyReview replies in the review thread of comment to.
+	ReplyReview(ctx context.Context, repo Repo, number int, to int64, body string) (ReviewComment, error)
+	// Comment adds a comment to a PR's conversation.
+	Comment(ctx context.Context, repo Repo, number int, body string) (IssueComment, error)
+	// OrgMember says whether login is a member of org, as far as the caller can see.
+	OrgMember(ctx context.Context, org, login string) (bool, error)
 }
 
 // Error is GitHub saying no: its HTTP status and message.

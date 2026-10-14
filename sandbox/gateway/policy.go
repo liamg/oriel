@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -49,6 +50,8 @@ const (
 	FromGlobal   = "global"
 	FromReadOnly = "read-only"
 	FromDefault  = "default"
+	// FromOriel is a refusal no rule can lift: an agent posting to a GitHub review (gh.ReviewTool).
+	FromOriel = "oriel"
 )
 
 // Why is a decision and what made it: the level, and the rule's pattern.
@@ -61,13 +64,18 @@ type Why struct {
 // Decide picks the action for tool. Within a level the most specific rule
 // wins, and the first level with a match decides — except that settings
 // always keep a deny, and keep an ask more specific than the session's grant:
-// "allow all of aws" for a session still asks about aws__delete_*.
+// "allow all of aws" for a session still asks about aws__delete_*. A tool that
+// posts to a GitHub review is denied whatever the rules say: the agent drafts,
+// the user forwards.
 func Decide(tool string, readOnlyHint bool, l Levels) string {
 	return Explain(tool, readOnlyHint, l).Action
 }
 
 // Explain is Decide, with the rule that decided.
 func Explain(tool string, readOnlyHint bool, l Levels) Why {
+	if gh.ReviewTool(tool) {
+		return Why{Action: Deny, From: FromOriel}
+	}
 	var settings Why
 	var pattern string
 	found := false

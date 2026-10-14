@@ -617,5 +617,15 @@ All on by default, all configurable, none a nag:
   refused); a running review can't be stopped from the app; Codex's own `review/start` isn't used.
 - **Slop gate.** crit's phrase filter runs on everything the agent posts.
 - **Trusted authors.** crit's trusted-orgs redaction carries over unchanged.
+  Built in RV-4: a mirrored GitHub comment whose author isn't a member of `github.trusted_orgs` (the repository's
+  owner when none is set: its OWNER and MEMBER association, else `orgs/{org}/members`) or in `github.trusted_users`
+  reaches the agent as `[redacted: …]` (`worker.Redacted`), in its batches and the `thread` tool alike.
+- **The agent never posts to GitHub reviews.** On a thread with `origin: github` the agent's `reply` is a draft; the
+  user forwards it (ui.md 06). Built in RV-4, the guards refuse every way an agent could post itself, whatever the
+  user's rules say: Claude's `tool.check` denies a Bash `gh pr review|comment`, `gh issue comment`, `--comment` on
+  close/reopen/merge and a `gh api` write to a PR's comments, reviews or replies (or a review GraphQL mutation)
+  (`gh.PostsReview`), and an MCP review tool on any server (`gh.ReviewTool`), on the host and in a sandbox; the worker
+  refuses such a permission ask from any provider before rules or the user see it; the gateway never offers or runs
+  one (`gateway.FromOriel`). Not yet: Codex running with no approvals isn't checked command by command.
 - **Authorship.** Blame shows who wrote each line (you, the agent, a
   formatter), so "the AI wrote it" never gets lost after a commit.

@@ -28,12 +28,20 @@ type Server struct {
 	logs   map[int64]string      // Actions jobs' logs
 	fail   map[string]*gh.Error  // "METHOD path-prefix" → the error it answers
 	calls  []string              // "POST /repos/acme/api/pulls"
+
+	login    string                         // who the fake's client is: what it posts is by them
+	review   map[string][]*gh.ReviewComment // by owner/name#number
+	reviews  map[string][]gh.Review
+	issue    map[string][]*gh.IssueComment
+	resolved map[int64]bool      // review threads resolved, by their first comment
+	members  map[string][]string // org → logins
 }
 
 // New starts a fake GitHub that closes with the test.
 func New(t testing.TB) *Server {
 	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{},
-		logs: map[int64]string{}, fail: map[string]*gh.Error{}}
+		logs: map[int64]string{}, fail: map[string]*gh.Error{}, login: "you", review: map[string][]*gh.ReviewComment{}, reviews: map[string][]gh.Review{},
+		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls", s.listPRs)
 	mux.HandleFunc("POST /repos/{owner}/{name}/pulls", s.createPR)
@@ -43,6 +51,12 @@ func New(t testing.TB) *Server {
 	mux.HandleFunc("GET /repos/{owner}/{name}/commits/{ref}/status", s.status)
 	mux.HandleFunc("GET /repos/{owner}/{name}/actions/jobs/{id}/logs", s.log)
 	mux.HandleFunc("POST /graphql", s.graphql)
+	mux.HandleFunc("GET /repos/{owner}/{name}/pulls/{num}/comments", s.listReviewComments)
+	mux.HandleFunc("POST /repos/{owner}/{name}/pulls/{num}/comments/{id}/replies", s.reply)
+	mux.HandleFunc("GET /repos/{owner}/{name}/pulls/{num}/reviews", s.listReviews)
+	mux.HandleFunc("GET /repos/{owner}/{name}/issues/{num}/comments", s.listIssueComments)
+	mux.HandleFunc("POST /repos/{owner}/{name}/issues/{num}/comments", s.addIssueComment)
+	mux.HandleFunc("GET /orgs/{org}/members/{user}", s.member)
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		s.calls = append(s.calls, r.Method+" "+r.URL.Path)
@@ -330,8 +344,12 @@ func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
 		Variables map[string]any `json:"variables"`
 	}
 	json.NewDecoder(r.Body).Decode(&in)
+	if strings.Contains(in.Query, "reviewThreads") {
+		s.reviewThreads(w, in.Variables)
+		return
+	}
 	if !strings.Contains(in.Query, "markPullRequestReadyForReview") {
-		reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "the fake knows only markPullRequestReadyForReview"}}})
+		reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "the fake knows only markPullRequestReadyForReview and reviewThreads"}}})
 		return
 	}
 	s.mu.Lock()
