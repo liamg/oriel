@@ -535,8 +535,13 @@ func (x *agentConsole) threadCard(c *ui.Ctx, se core.SessionState, width float32
 	c.Row("threadwrap", ui.Style{W: ui.Flex(1), Pad: ui.Insets{T: 12}, Main: ui.Center}, func(c *ui.Ctx) {
 		c.Row("thread", ui.Style{W: ui.Px(width), Pad: ui.PadXY(14, 10), Gap: 10, Cross: ui.Center, Fill: th.C(tBlockBg), Stroke: th.C(tBlockLine), Border: 1,
 			Radius: 6, Role: ui.RoleGroup, Label: "Thread " + where}, func(c *ui.Ctx) {
-			c.Text("k", strings.ToUpper("thread · "+where), kickerFont(th.C(tThreadKicker)))
-			c.Text("b", firstLine(strings.TrimSpace(plainMarkdown(body))), uiFont(12.5, th.C(theme.Fg)))
+			// Both fit the card: the kicker takes at most 45% of it, the request the rest.
+			inner := width - 28 - 10
+			kf, bf := kickerFont(th.C(tThreadKicker)), uiFont(12.5, th.C(theme.Fg))
+			kicker := widget.Elide(c.Shaper(), strings.ToUpper("thread · "+where), kf.Font, inner*0.45)
+			c.Text("k", kicker, kf)
+			left := inner - c.Shaper().Shape(kicker, kf.Font).Advance
+			c.Text("b", widget.Elide(c.Shaper(), firstLine(strings.TrimSpace(plainMarkdown(body))), bf.Font, left), bf)
 		})
 	})
 }

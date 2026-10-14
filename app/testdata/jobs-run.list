@@ -118,8 +118,8 @@ clip 44,38 1556x936 r 0
     text "Raw terminal" @1499.7344,95.365234 #ece6d8 Inter 12
     rect 44,113 1556x1 fill #24221d
     rect 206.5,126 900x35.12451 fill #0c0c0b radius 6 stroke 1 #24221d
-    text "THREAD · IN API, WEB AND PRICING, BUMP EVERY DEPENDENCY THAT'S BEHIND ON A MINOR OR PATCH VERSION. KEEP MAJOR VERSIONS WHERE THEY ARE." @220.5,146.98225 #ff9b45 JetBrains Mono 9.5
-    text "In api, web and pricing, bump every dependency that's behind on a minor or patch version. Keep major versions where they are." @1212.7207,148.10938 #ece6d8 Inter 12.5
+    text "THREAD · IN API, WEB AND PRICING, BUMP EVERY DEPEND…" @220.5,146.98225 #ff9b45 JetBrains Mono 9.5
+    text "In api, web and pricing, bump every dependency that's behind on a minor or…" @611.6598,148.10938 #ece6d8 Inter 12.5
     clip 44,161.12451 1225x737.3355 r 0
       text "Nothing yet: the agent's turns show here as they happen." @480.41406,185.23389 #4f4a40 Inter 12.5
     pop
