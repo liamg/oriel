@@ -54,6 +54,9 @@ var icons = map[string]func(p *iconPen){
 		p.curve(8, 3, 10, 3, 11.5, 4, 12.3, 5.5)
 		p.poly(false, 12.6, 2.5, 12.6, 5.8, 9.4, 5.8)
 	},
+	"agent": func(p *iconPen) {
+		p.poly(false, 5, 3, 10.5, 8, 5, 13)
+	},
 	"folder": func(p *iconPen) {
 		p.poly(true, 2, 3.5, 6.5, 3.5, 8, 5, 14, 5, 14, 13, 2, 13)
 		p.line(2, 7, 14, 7)

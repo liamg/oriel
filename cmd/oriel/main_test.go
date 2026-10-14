@@ -12,7 +12,8 @@ func TestRun(t *testing.T) {
 		out  string
 	}{
 		{[]string{"version"}, 0, "oriel dev\n"},
-		{[]string{"worker"}, 1, ""},
+		{[]string{"worker", "--nope"}, 1, ""},
+		{[]string{"hook"}, 2, ""},
 		{[]string{"dev"}, 1, ""},
 		{[]string{"dev", "nope"}, 1, ""},
 		{[]string{"nope"}, 2, ""},

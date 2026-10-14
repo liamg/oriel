@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+	"github.com/liamg/oriel/render"
 	"os"
 	"path/filepath"
 	"strings"
@@ -304,5 +306,44 @@ func TestExplorerStagesHunks(t *testing.T) {
 	want := strings.Replace(gittest.Lines(30), "line 3\n", "three\n", 1)
 	if got := r.Git("show", ":f.txt"); got != want {
 		t.Errorf("after s on the first hunk the index is:\n%s", got)
+	}
+}
+
+// The explorer drawn before the repo's status has loaded (a resumed session's first frames) says so, and isn't
+// turned off for a panic.
+func TestExplorerBeforeTheStatusLoads(t *testing.T) {
+	s, r := explorerScene(t)
+	s.sh.git.status = gitx.NewStatus(gitx.Repo{Dir: r.Dir})
+	s.keyCommand(t, "<M-3>")
+	s.frame()
+	if off := s.reg.TurnedOff(); len(off) > 0 {
+		t.Fatalf("turned off: %+v", off)
+	}
+	if text := s.frameText(); !strings.Contains(text, "Reading the work tree") {
+		t.Errorf("no loading note:\n%s", text)
+	}
+}
+
+// The explorer scrolls: the wheel over a long tree shows what's below, and the selection doesn't pull it back.
+func TestExplorerScrolls(t *testing.T) {
+	r := gittest.New(t)
+	files := map[string]string{}
+	for i := range 300 {
+		files[fmt.Sprintf("f%03d.go", i)] = "package p\n"
+	}
+	r.Write(files)
+	r.Commit("Ada", "x")
+	s := newScene(t, "", r.Dir, mockupSize)
+	s.sh.git.wait()
+	s.keyCommand(t, "<M-3>")
+	s.frame()
+	at := render.Point{X: 150, Y: 500}
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: at})
+	s.frame()
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: at, Scroll: render.Point{Y: 400}})
+	s.frame()
+	s.frame()
+	if text := s.frameText(); strings.Contains(text, "f000.go") || !strings.Contains(text, "f040.go") {
+		t.Errorf("the wheel didn't scroll the tree:\n%s", text)
 	}
 }

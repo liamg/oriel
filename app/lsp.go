@@ -62,11 +62,16 @@ type lspDoc struct {
 	opening    bool
 	failed     bool
 	queue      []text.Change // edits made while the server was starting
+	ready      []func()      // requests made while it was starting, run once it has
 	cancel     func()
 
 	hints        []lsp.InlayHint
 	hintsVersion uint64
 	hintsLoading bool
+
+	tokens        []lsp.SemanticToken
+	tokensVersion uint64 // the snapshot's version + 1 they're for
+	tokensLoading bool
 }
 
 func (x *lspExt) Manifest() ext.Manifest { return ext.Manifest{ID: "lsp"} }
@@ -152,6 +157,12 @@ func (x *lspExt) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.Contribute(registry.KeyLayer{Name: "lsp.hover", Mode: HoverKeyMode, Active: func() bool { return x.hover != nil }}))
 	x.lspCommands(h)
 	x.navigation(h)
+	x.agentTools(h)
+	x.add(h.Option(registry.OptionSpec{Name: "lsp.start", Type: registry.Enum, Values: []string{"project", "file"}, Default: "project",
+		Scopes: registry.ScopeUser | registry.ScopeProject,
+		Help:   "When language servers start: project, as soon as a project with their root files (go.mod, Cargo.toml…) opens, so the first request doesn't wait; or file, when one of their files first opens."}))
+	h.Do(x.warm) // once every extension has contributed its servers
+	x.add(h.Contribute(registry.InspectSection{Name: "LANGUAGE SERVER", Order: 30, Rows: x.inspectRows, Source: "builtin:lsp"}))
 	x.add(h.Picker(x.callsSource()))
 	x.add(h.View(OverlayPrefix+"lsp", lspOverlay{x}))
 	x.add(h.View("statusline.left.60-lsp", lspStatus{x}))
@@ -174,6 +185,59 @@ func (x *lspExt) Deactivate(ctx context.Context) error {
 }
 
 func (x *lspExt) wait() { x.busy.Wait() }
+
+// warm starts the servers for the project the app is open on, and for the projects directly in it (a session's
+// worktrees), when lsp.start says to: each server whose own root files are there, its generic ones (.git) aside.
+func (x *lspExt) warm() {
+	if v, _, err := x.h.Options().Get("lsp.start", registry.At{}); err != nil || v != "project" || x.sh.cfg.WorkDir == "" {
+		return
+	}
+	roots := []string{x.sh.cfg.WorkDir}
+	if ents, err := os.ReadDir(x.sh.cfg.WorkDir); err == nil {
+		for _, e := range ents {
+			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") && len(roots) < 32 {
+				roots = append(roots, filepath.Join(x.sh.cfg.WorkDir, e.Name()))
+			}
+		}
+	}
+	seen := map[string]bool{}
+	for _, s := range registry.LSPServers(x.h) {
+		for _, root := range roots {
+			if !hasOwnRoot(s.Roots, root) {
+				continue
+			}
+			for _, lang := range s.Language {
+				spec, ok := x.m.SpecFor(lang)
+				if !ok || seen[spec.Name+"\x00"+root] {
+					continue
+				}
+				seen[spec.Name+"\x00"+root] = true
+				x.busy.Add(1)
+				go func() {
+					defer x.busy.Done()
+					ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+					defer cancel()
+					if _, err := x.m.Warm(ctx, lang, root); err != nil && !errors.Is(err, lsp.ErrNoServer) {
+						x.h.Log().Info("lsp warm", "server", spec.Name, "root", root, "err", err)
+					}
+				}()
+			}
+		}
+	}
+}
+
+// hasOwnRoot reports whether dir has one of a server's root files other than .git, which every repo has.
+func hasOwnRoot(markers []string, dir string) bool {
+	for _, m := range markers {
+		if m == ".git" {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(dir, m)); err == nil {
+			return true
+		}
+	}
+	return false
+}
 
 // async runs fn off the loop, and done with its result back on it.
 func async[T any](x *lspExt, fn func(ctx context.Context) (T, error), done func(T, error)) {
@@ -210,6 +274,9 @@ func (x *lspExt) doc(path string, buf *text.Buffer) *lspDoc {
 	d, ok := x.docs[path]
 	x.mu.Unlock()
 	if ok && d.buf == buf {
+		if d.lang == "" {
+			return nil
+		}
 		return d
 	}
 	lang, ok := languageFor(x.h, path, buf.Snapshot().Bytes())
@@ -239,6 +306,13 @@ func (x *lspExt) doc(path string, buf *text.Buffer) *lspDoc {
 		c, err := x.m.Open(ctx, path, d.lang, snap)
 		x.h.Do(func() {
 			d.opening = false
+			ready := d.ready
+			d.ready = nil
+			defer func() {
+				for _, fn := range ready {
+					fn()
+				}
+			}()
 			if err != nil {
 				d.failed = true
 				if !errors.Is(err, lsp.ErrNoServer) {

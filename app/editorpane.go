@@ -22,10 +22,10 @@ import (
 	"github.com/liamg/oriel/vim"
 )
 
-// The editor column of 01-ide: a 26 px breadcrumb, then 21 px lines of 13.5 px mono, with a 64 px gutter.
+// The editor column of 01-ide: a 26 px breadcrumb, then lines of editor.font_size mono (13.5 px, 21 px apart by
+// default), with a 64 px gutter.
 const (
 	crumbH   = 26
-	codeLH   = 21
 	codeSize = 13.5
 	codePadT = 6
 	gutterW  = 64
@@ -51,16 +51,29 @@ var (
 	tStatusStrong = theme.Declare("statusline.fg.strong", "fg")
 )
 
+// codeFont is code at the default size, for code shown outside the editor (help, search).
 var codeFont = typeset.FontSpec{Family: typeset.Mono, Size: codeSize}
 
 // paneMetrics are where things are in a pane, for the layout's neighbour finding and the pointer.
 type paneMetrics struct {
 	charW, lineH, codeTop, textX float32
+	font                         typeset.FontSpec // the code's, from editor.font_size
 }
 
+// metrics are the panes' for editor.font_size and editor.line_height now.
 func (x *editorExt) metrics(c *ui.Ctx) paneMetrics {
-	if x.pane.charW == 0 {
-		x.pane = paneMetrics{charW: c.Shaper().Shape("M", codeFont).Advance, lineH: codeLH, codeTop: crumbH + codePadT, textX: gutterW + 4}
+	size, lh := float32(codeSize), float32(1.55)
+	o := x.h.Options()
+	if v, _, err := o.Get("editor.font_size", registry.At{}); err == nil {
+		size = float32(v.(float64))
+	}
+	if v, _, err := o.Get("editor.line_height", registry.At{}); err == nil {
+		lh = float32(v.(float64))
+	}
+	if x.pane.charW == 0 || x.pane.font.Size != size || x.pane.lineH != float32(math.Round(float64(size*lh))) {
+		font := typeset.FontSpec{Family: typeset.Mono, Size: size}
+		x.pane = paneMetrics{charW: c.Shaper().Shape("M", font).Advance, lineH: float32(math.Round(float64(size * lh))),
+			codeTop: crumbH + codePadT, textX: gutterW + 4, font: font}
 	}
 	return x.pane
 }
@@ -105,11 +118,13 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 			x.pendingSince = c.Now()
 		}
 	}
-	if focused && !in.Focused {
-		c.Focus(codeID)
+	if focused && !c.FocusWithin(codeID) {
+		c.Focus(codeID) // unless a block between its lines has it: a thread's reply
 	}
 	if r, ok := c.Rect(codeID); ok {
-		x.rows[id] = max(int((r.Dy()-codePadT)/m.lineH), 1)
+		// The rows the window has for text: what blocks between its lines took last frame doesn't show text, so the
+		// engine keeps the cursor clear of them.
+		x.rows[id] = max(int((r.Dy()-codePadT-x.blockPx[id])/m.lineH), 1)
 		x.e.SetRows(id, x.rows[id])
 		if in.Clicked {
 			x.click(p, r, in.Pointer, m)
@@ -197,6 +212,9 @@ func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
 // the Visual selection and the cursor.
 func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	th := c.Theme()
+	code, haveCode := c.Rect(c.ID())
+	var blockPx float32
+	revealTo := -1 // the top line that would show a block that wants revealing whole
 	snap := p.Buf()
 	rows := x.rows[p.ID()]
 	if rows == 0 {
@@ -222,7 +240,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	cur := p.Cursor()
 	digits := max(len(fmt.Sprint(snap.Lines())), 3)
 	gw := max(float32(gutterW), float32(digits)*m.charW+34)
-	numStyle := ui.TextStyle{Font: codeFont, Color: th.C(tGutterFg)}
+	numStyle := ui.TextStyle{Font: x.pane.font, Color: th.C(tGutterFg)}
 	for row := 0; row < rows && line < snap.Lines(); row++ {
 		rowID := c.Next(line)
 		foldEnd, folded := p.Fold(line)
@@ -257,8 +275,24 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 		})
 		spans(c, th, p, line, ds, rowID, gw+4, m)
 		x.overlay(c, p, rowID, line, folded, gw, m, ds)
-		blocks(c, line, ds, gw+4)
+		ids, reveal := blocks(c, line, ds, gw+4)
+		for i, id := range ids {
+			r, ok := c.Rect(id)
+			if !ok {
+				continue
+			}
+			blockPx += r.Dy()
+			if reveal[i] && haveCode && r.Max.Y > code.Max.Y {
+				over := int(math.Ceil(float64((r.Max.Y - code.Max.Y) / m.lineH)))
+				revealTo = max(revealTo, min(p.Top()+over, line))
+			}
+		}
 		line = p.NextRow(line)
+	}
+	x.blockPx[p.ID()] = blockPx
+	if revealTo > p.Top() {
+		x.e.ScrollTo(p.ID(), revealTo)
+		x.h.Redraw()
 	}
 }
 
@@ -297,7 +331,7 @@ func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax
 			vcol++
 		}
 		col := th.C(tCodeFg)
-		st := ui.TextStyle{Font: codeFont, Color: col}
+		st := ui.TextStyle{Font: x.pane.font, Color: col}
 		if capture != "" {
 			s := th.Syntax("@" + capture)
 			st.Color = s.FG
@@ -333,8 +367,8 @@ func (x *editorExt) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 	th := c.Theme()
 	first := strings.TrimSpace(strings.ReplaceAll(string(snap.Line(line)), "\t", " "))
 	c.Row("fold", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tFoldBg), Cross: ui.Center, Gap: 10}, func(c *ui.Ctx) {
-		c.Text("text", "▸ "+first, ui.TextStyle{Font: codeFont, Color: th.C(tFoldFg)})
-		c.Text("n", fmt.Sprintf("· %d lines", end-line+1), ui.TextStyle{Font: codeFont, Color: th.C(tGutterFg)})
+		c.Text("text", "▸ "+first, ui.TextStyle{Font: x.pane.font, Color: th.C(tFoldFg)})
+		c.Text("n", fmt.Sprintf("· %d lines", end-line+1), ui.TextStyle{Font: x.pane.font, Color: th.C(tGutterFg)})
 	})
 }
 
@@ -420,7 +454,7 @@ func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded
 		}
 		c.Row("cursor", st, func(c *ui.Ctx) {
 			if ch != "" {
-				c.Text("ch", ch, ui.TextStyle{Font: codeFont, Color: th.C(tCursorFg)})
+				c.Text("ch", ch, ui.TextStyle{Font: x.pane.font, Color: th.C(tCursorFg)})
 			}
 		})
 	})
@@ -481,7 +515,7 @@ func (x *editorExt) cmdline(c *ui.Ctx, line string) {
 	th := c.Theme()
 	c.Row("cmdline", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Gap: 0, Cross: ui.Center, Fill: th.C(tCmdlineBg),
 		Stroke: th.C(theme.LineStrong), Role: ui.RoleTextBox, Label: "Command line", Value: line}, func(c *ui.Ctx) {
-		c.Text("text", line, ui.TextStyle{Font: codeFont, Color: th.C(tCodeFg)})
+		c.Text("text", line, ui.TextStyle{Font: x.pane.font, Color: th.C(tCodeFg)})
 		c.Box("caret", ui.Style{W: ui.Px(2), H: ui.Px(16), Fill: th.C(tCursorBg)}, nil)
 		if hints := registry.CmdlineHints(x.h, line); len(hints) > 0 {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)

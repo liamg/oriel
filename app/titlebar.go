@@ -141,6 +141,12 @@ func (t *sessionTabs) tab(c *ui.Ctx, h ext.Host, i int, s core.Session, on bool)
 				if w := statusWord(s); w != "" {
 					c.Text("mini", w, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.Medium}, Color: th.C(tTabMini)})
 				}
+				if n := len(s.Snapshot().Asks); n > 0 {
+					c.Box("asks", ui.Style{H: ui.Px(15), Pad: ui.PadXY(5, 0), Radius: 7.5, Fill: th.C(theme.StatusPermission), Cross: ui.Center, Role: ui.RoleText,
+						Label: fmt.Sprintf("%d waiting on you", n)}, func(c *ui.Ctx) {
+						c.Text("n", fmt.Sprint(n), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold}, Color: th.C(theme.AccentInk)})
+					})
+				}
 				if n := s.Unseen(); n > 0 {
 					c.Text("errs", fmt.Sprintf("✕%d", n), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold},
 						Color: th.C(theme.Error)})

@@ -39,8 +39,8 @@ path 6 segments stroke 1.4545455 #4f4a40
 path 6 segments stroke 1.4545455 #4f4a40
 path 2 segments stroke 1.4545455 #4f4a40
 path 2 segments stroke 1.4545455 #4f4a40
-path 5 segments stroke 1.4545455 #4f4a40
-path 5 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #7c7566
+path 5 segments stroke 1.4545455 #7c7566
 path 4 segments stroke 1.4545455 #4f4a40
 path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
@@ -58,9 +58,10 @@ rect 44,38 1556x936 fill #060606
 clip 44,38 1556x936 r 0
   rect 44,38 1556x30 fill #0c0c0b
   text "round.go" @58,58.365234 #7c7566 Inter 12
-  rect 123.265625,38 70.6875x30 fill #121210
-  rect 123.265625,38 70.6875x2 fill #ffd23f
-  text "tiers.go" @137.26562,58.365234 #ece6d8 Inter 12
+  rect 142.26562,38 89.6875x30 fill #121210
+  rect 142.26562,38 89.6875x2 fill #ffd23f
+  text "tiers.go" @156.26562,58.365234 #ece6d8 Inter 12
+  text "✕" @212.65625,57.96 #7c7566 JetBrains Mono 11
   rect 44,68 1556x1 fill #24221d
   clip 44,69 1556x905 r 0
     rect 44,69 1556x905 fill #060606
@@ -129,13 +130,14 @@ clip 180,108 1240x720 r 10
   text "FILES ␣␣" @517.76,130.42 #ffd23f JetBrains Mono 9.5
   text "GREP ␣/" @592.31995,130.42 #7c7566 JetBrains Mono 9.5
   text "BUFFERS ␣," @664.3,130.42 #7c7566 JetBrains Mono 9.5
-  text "SYMBOLS ␣S" @757.69995,130.42 #7c7566 JetBrains Mono 9.5
-  text "SYMBOLS HERE ␣s" @851.1,130.42 #7c7566 JetBrains Mono 9.5
-  text "KEYMAPS ␣k" @980.19995,130.42 #7c7566 JetBrains Mono 9.5
-  text "QUICKFIX" @1073.6,130.42 #7c7566 JetBrains Mono 9.5
-  text "HELP ␣h" @1152.72,130.42 #7c7566 JetBrains Mono 9.5
-  text "THEMES ␣T" @1224.7,130.42 #7c7566 JetBrains Mono 9.5
-  text "⇥ next source" @1313.18,130.42 #7c7566 JetBrains Mono 9.5
+  text "THREADS ␣t" @757.69995,130.42 #7c7566 JetBrains Mono 9.5
+  text "SYMBOLS ␣S" @851.1,130.42 #7c7566 JetBrains Mono 9.5
+  text "SYMBOLS HERE ␣s" @944.5,130.42 #7c7566 JetBrains Mono 9.5
+  text "KEYMAPS ␣k" @1073.6,130.42 #7c7566 JetBrains Mono 9.5
+  text "QUICKFIX" @1167,130.42 #7c7566 JetBrains Mono 9.5
+  text "HELP ␣h" @1246.12,130.42 #7c7566 JetBrains Mono 9.5
+  text "THEMES ␣T" @1318.1,130.42 #7c7566 JetBrains Mono 9.5
+  text "⇥ next source" @1405.36,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #ffd23f Inter 16
   rect 211.59375,155 420.6875x30 fill #060606 radius 6

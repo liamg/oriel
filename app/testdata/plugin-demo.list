@@ -6,10 +6,10 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1414.9062x38 r 0
+clip 102.9375,0 1400.9062x38 r 0
 pop
-text "DEPLOY" @1531.8438,22.779999 #b3ab99 JetBrains Mono 10.5
-text "3" @1579.4062,22.779999 #ff9b45 JetBrains Mono 10.5
+text "DEPLOY" @1517.8438,22.779999 #b3ab99 JetBrains Mono 10.5
+text "3" @1565.4062,22.779999 #ff9b45 JetBrains Mono 10.5
 rect 0,38 44x936 fill #0c0c0b
 path 7 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
@@ -19,8 +19,8 @@ path 6 segments stroke 1.4545455 #4f4a40
 path 6 segments stroke 1.4545455 #4f4a40
 path 2 segments stroke 1.4545455 #4f4a40
 path 2 segments stroke 1.4545455 #4f4a40
-path 5 segments stroke 1.4545455 #4f4a40
-path 5 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #7c7566
+path 5 segments stroke 1.4545455 #7c7566
 path 4 segments stroke 1.4545455 #4f4a40
 path 3 segments stroke 1.4545455 #7c7566
 path 6 segments stroke 1.4545455 #7c7566
@@ -37,8 +37,9 @@ rect 43,38 1x936 fill #24221d
 rect 44,38 1556x936 fill #060606
 clip 44,38 567.5x936 r 0
   rect 44,38 567.5x30 fill #0c0c0b
-  rect 44,38 79.265625x30 fill #121210
+  rect 44,38 98.265625x30 fill #121210
   text "round.go" @58,58.365234 #ece6d8 Inter 12
+  text "✕" @122.96875,57.96 #7c7566 JetBrains Mono 11
   rect 44,68 567.5x1 fill #24221d
   clip 44,69 567.5x905 r 0
     rect 44,69 567.5x905 fill #060606
@@ -521,8 +522,9 @@ pop
 rect 611.5,38 1x936 fill #24221d
 clip 612.5,38 567.5x936 r 0
   rect 612.5,38 567.5x30 fill #0c0c0b
-  rect 612.5,38 89.953125x30 fill #121210
+  rect 612.5,38 108.953125x30 fill #121210
   text "Dashboard" @626.5,58.365234 #ece6d8 Inter 12
+  text "✕" @702.15625,57.96 #7c7566 JetBrains Mono 11
   rect 612.5,68 567.5x1 fill #24221d
   clip 612.5,69 567.5x905 r 0
     text "TEAM DASHBOARD" @636.5,104.22 #ffd23f JetBrains Mono 11
@@ -539,9 +541,10 @@ pop
 rect 1180,38 420x936 fill #0c0c0b
 clip 1180,38 420x936 r 0
   rect 1180,38 420x30 fill #0c0c0b
-  rect 1180,38 74.1875x30 fill #121210
-  rect 1180,38 74.1875x2 fill #ffd23f
+  rect 1180,38 93.1875x30 fill #121210
+  rect 1180,38 93.1875x2 fill #ffd23f
   text "Deploys" @1194,58.365234 #ece6d8 Inter 12
+  text "✕" @1253.8906,57.96 #7c7566 JetBrains Mono 11
   rect 1180,68 420x1 fill #24221d
   clip 1180,69 420x905 r 0
     text "DEPLOYS" @1204,104.22 #ffd23f JetBrains Mono 11

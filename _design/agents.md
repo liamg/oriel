@@ -15,7 +15,7 @@ Each provider is driven the way its **subscription** allows.
 | | Claude | Codex |
 |---|---|---|
 | Process | interactive `claude --plugin-dir <oriel-mod>` in a PTY (subscription) | `codex app-server`, JSON-RPC (JSONL) over stdio, ChatGPT login (subscription) |
-| Control channel | the mod's function hooks ↔ the session host over a unix socket | JSON-RPC requests |
+| Control channel | the mod's function hooks run `oriel hook <op>`, which talks to the session host over a unix socket | JSON-RPC requests |
 | Send a prompt | `$.prompt.submit` (the mod receives it from the host) | `turn/start` |
 | Interrupt | `$.turn.abort` | `turn/interrupt` |
 | Our tools | `$.tool.register` (`mcp__oriel__*`), backed by the host | MCP server `oriel` |
@@ -23,7 +23,7 @@ Each provider is driven the way its **subscription** allows.
 | Side questions (btw, explain, verify quiz) | `$.model.fork`: tool-less, outside the main conversation | `thread/fork` |
 | Turn and subagent lifecycle | hook events (turn start/complete, subagent spawn/end, StopFailure) | notifications |
 | Messages and tool calls | tail `~/.claude/projects/*.jsonl` (crit's `transcript` package) | notifications + rollout files |
-| Usage / quota | `$.session.usage()` + the `/usage` probe (client-side, costs no tokens) | `account/rateLimits/read` + `account/rateLimits/updated` |
+| Usage / quota | `$.session.usage()`, reported by the mod | `account/rateLimits/read` + `account/rateLimits/updated` |
 | Guard rails | `tool.check`: deny edits outside the worktree, deny raw network git/gh | sandbox policy + approvals |
 
 - **Terminal view comes free** for Claude: it *is* a PTY session, so "Show terminal" attaches to it.
@@ -31,7 +31,62 @@ Each provider is driven the way its **subscription** allows.
 - The skills (`plan`, `diff`, `new`, `tour`, `job`) become **prompt packs**: markdown plus tool lists.
   The Claude mod loads them as skills; Codex gets them as the first user message plus `AGENTS.md`.
 - The mod is the one Claude-specific piece of TypeScript. It stays small (crit's is about 575 lines),
-  and everything it decides is delegated to the host over the socket.
+  and everything it decides is delegated to the host. Like crit's, it reaches the host by running a command (`oriel
+  hook`, as crit's runs `crit wait` and `crit agent-event`); the function-hook API has no sockets of its own.
+
+### The Claude provider as built (`agent/claude`)
+
+- Launch: `claude --plugin-dir <StateDir>/claude-mod --permission-mode <mode> [--model M] [--effort E]
+  [--mcp-config <GatewayMCP> --strict-mcp-config] (--session-id <uuid> [/oriel:<skill> <prompt>] | --resume <id>)`
+  in a 200×50 PTY, env `ORIEL_SPAWNED=1`, `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`, `ORIEL_HOOK_SOCK`, `ORIEL_BIN`, then
+  `StartSpec.Env`. Oriel picks the session id itself (`--session-id`), so `ID()` is known before claude is up.
+  Policy → mode: ask → `default`, light → `acceptEdits`, bypass → `bypassPermissions` (refused without a sandbox).
+  On the host the folder is pre-trusted in `.claude.json` and crit's agent defaults are merged into `settings.json`.
+- The mod (`agent/claude/mod`, embedded) runs `$ORIEL_BIN hook <op>` with JSON on stdin for every decision; `oriel
+  hook` (`claude.HookMain`) carries it over the unix socket. Ops: `hello` (→ tools to register), `wait` (a ≤45 s long
+  poll → `submit` | `abort` | `fork` | `timeout`), `event` (`turn-start`, `turn-complete` with usage and rate limits,
+  `subagent-start/run/end`, `api-error`, `end`), `check` (tool.check: the guard rails), `permission`, `question`,
+  `tool`, `fork-answer`. Prompts are submitted `asUser`, so the agent reads them as the user's.
+- Messages, tool calls and results (with `core.FileDiff` from the edit's `structuredPatch`, else its input) come
+  from tailing `<config>/projects/<slug(cwd)>/<id>.jsonl` and `<id>/subagents/agent-*.jsonl`. A turn's end waits
+  briefly for the log to hold the turn's answer, so its messages always come before `TurnEnd`.
+- `Usage` is the windows a session's mod last reported through `$.session.usage()`; there is no probe.
+
+### The Codex provider as built (`agent/codex`)
+
+Shapes are from `codex-rs/app-server-protocol` v2 at the P0-5 commit (`ddb33e34`); `agent/jsonrpc` is the JSONL
+JSON-RPC under it (Codex's messages carry no `"jsonrpc"` field; MCP's do).
+
+- Launch: `codex app-server` through `StartSpec.Exec`, cwd `StartSpec.Cwd`, env `StartSpec.Env` over the host's.
+  `initialize` (`clientInfo`, `capabilities.experimentalApi: true` for the user-input request), `initialized`, then
+  `account/read`: only `chatgpt` runs; `apiKey`, Bedrock or none refuse with a per-token billing error unless
+  `StartSpec.Env` has `ORIEL_CODEX_ALLOW_API_KEY=1`. Then `thread/start` (or `thread/resume {threadId}`) with
+  `cwd`, `model`, `approvalPolicy`, `sandbox` and `config`; `ID()` is the thread id.
+- Policy: ask → `untrusted` + `workspace-write`; light → `on-request` + `workspace-write` (edits in the workspace go
+  ahead, shell runs in Codex's sandbox and asks to leave it); bypass → `never` + `danger-full-access`, refused
+  without a sandbox.
+- Oriel's tools: `config["mcp_servers.oriel"] = {command: ORIEL_BIN, args: [hook, mcp], env: {ORIEL_HOOK_SOCK},
+  default_tools_approval_mode: approve}`. `oriel hook mcp` (`codex.MCPMain`) is an MCP stdio server that answers
+  `initialize` and passes `tools/list` / `tools/call` over the session's unix socket to `StartSpec.Tools`. A sandbox's
+  `GatewayMCP` file (`{"mcpServers": …}`) becomes more `mcp_servers.<name>` entries.
+- Turns: `turn/start {threadId, input: [text, localImage…], effort}`; the pack's text is said once, before the first
+  prompt. `Input.Urgent` mid-turn is `turn/steer`. `turn/interrupt {threadId, turnId}`.
+- Events: `turn/started` → `TurnStart`; `item/agentMessage/delta` and reasoning deltas → partial `Message` (the text
+  so far, by item id); `item/completed` agentMessage / reasoning / userMessage → `Message`; commandExecution,
+  fileChange, mcpToolCall, dynamicToolCall, webSearch → `ToolCall` (`Bash`, `Edit`, `mcp__<server>__<tool>`, the
+  tool, `WebSearch`) on start and `ToolResult` (fileChange with `core.FileDiff` from its diff) on completion;
+  `thread/tokenUsage/updated` → the turn's `Usage` (its share of the thread total); `turn/completed` → `TurnEnd`,
+  after a `Failure` if it failed; a non-retrying `error` → `Failure`; `account/rateLimits/updated` (sparse, merged)
+  → `UsageUpdate` with windows `5h` / `weekly` by length, the plan and credits.
+- Asks: `item/commandExecution/requestApproval` and `item/fileChange/requestApproval` → `Permission` (Summary: the
+  command, or the files from the item); answered `accept`, `acceptForSession` (Always) or `decline`. The decision
+  carries no reason, so a denial's note follows as `turn/steer` ("Denied by the user: …"), or with the next prompt
+  if the turn has ended. `item/tool/requestUserInput` → `Question`; `mcpServer/elicitation/request` from `oriel`
+  is accepted, from others → `Permission`.
+- `Fork`: `thread/fork {ephemeral: true, approvalPolicy: never, sandbox: read-only, developerInstructions}`, one
+  turn on the fork, its agent messages joined; nothing is saved to the main thread.
+- `Detect`, `Models` (`model/list`, else a static list) and `Usage` (`account/rateLimits/read`) each run a short-lived
+  app-server bounded by the context. `Terminal()` is nil: "Open in terminal" (`codex resume`) isn't built.
 
 ### Nothing else may call `claude -p` either
 
@@ -43,7 +98,7 @@ In Oriel each of those uses the subscription instead:
 - **Outside a session** (the assistant, an auto-answer with no matching session): a **resident utility
   session**. That's a hidden interactive `claude` in a PTY with the Oriel mod, a small model, read-only tools,
   and a fresh context per task. It's started on demand and kept warm.
-- The `/usage` probe stays: it's client-side and spends no tokens.
+- There is no `/usage` probe either: Claude's plan windows come from the mod's `$.session.usage()`.
 
 ![15-agent](mockups/15-agent.png)
 
@@ -56,17 +111,18 @@ type Provider interface {
     Models(ctx) ([]Model, error)      // name, efforts, context window
     Start(ctx, StartSpec) (Session, error)
     Resume(ctx, id string, StartSpec) (Session, error)
-    Usage(ctx) (Usage, error)         // plan windows, resets
+    Usage(ctx) (core.ProviderUsage, error) // plan windows, resets
     SandboxCredentials() []Mount      // what to copy into a container
 }
 
 type Session interface {
     ID() string
-    Send(ctx, Input) error            // user turn: text, images, file refs
+    Send(ctx, Input) error            // user turn: text, images; Urgent goes in front of the running turn
     Interrupt(ctx) error              // abort the current turn
-    Fork(ctx, ForkSpec) (Session, error) // tool-less side conversation
-    Events() <-chan Event             // Turn*, Message, ToolCall, ToolResult, Permission, Usage, Subagent*, Error
-    Answer(ctx, PermissionID, Decision) error // layer-1 approvals; see "Permissions: three layers"
+    Fork(ctx, ForkSpec) (string, error) // a tool-less side question, answered outside the conversation
+    Events() <-chan Event             // Ready, Turn*, Message, ToolCall, ToolResult, Permission, Question, Subagent, Failure, UsageUpdate, Exited
+    Answer(ctx, id string, Decision) error // layer-1 approvals and questions; see "Permissions: three layers"
+    Terminal() Terminal               // the raw terminal any number of views attach to; nil for Codex
     Close() error
 }
 ```
@@ -77,8 +133,29 @@ type Session interface {
 - Adding a provider (Gemini, Aider, OpenCode, a local model) means one Go
   package, or an out-of-process extension speaking the same interface over RPC
   (see `plugins.md`).
-- A conformance test suite runs every provider against a fake repo:
-  start, send, tool call, permission, interrupt, fork, resume.
+- A conformance test suite (`agent/agenttest`) runs every provider against a fake of its CLI:
+  start, send, tool call, permission (allowed and denied), question, interrupt, fork, resume.
+- `Fork` returns the answer rather than a session: every side question so far (btw, explain, the quiz) wants one
+  answer, and both providers produce it in one turn.
+
+### The session host as built (`worker`)
+
+- The worker owns sessions (`worker/host.go`). It starts a session's provider with the kind's prompt pack
+  (`agent/packs`), Oriel's tools (`reply`, `thread`, `resolve`, `comment`, `task_add`, `task_update`, `tasks`,
+  `projects`, `commit_draft`, `pr_draft`, `test_run`) and any the app's plugins offer (`registry.AgentTool`, reached
+  back over the wire: LS-3's `lsp_*`), and the user's checkouts as `Protect`.
+- Comments go to the agent as a batch in crit's tagged format (`worker/prompt.go`): at once when it's idle; after
+  `Interrupt` when one is urgent; at the turn's end otherwise. A delivered thread is `Busy` until the agent replies.
+  btw is a `Fork`, its answer a `Btw` comment. The console's messages queue (`Agent.Queue`) the same way.
+- The app's side (`app/sessions.go`, `app/requests.go`): `request.comment` fires the `CommentSend` hook (a rewrite
+  changes the comment, a veto stops it), then `Client.Comment`; a new thread from the editor carries its anchor (the
+  project, the path relative to it, the line and its text). `request.resolve` is `Client.SetThread`.
+- Every agent event becomes core state (`TranscriptAppended`, `AgentChanged`, `SubagentChanged`, `AskOpened`, …),
+  each session's in a log that survives a restart; status is `core.DeriveStatus` (crit's rules).
+- A reply carries what the agent did since its last one (`Comment.Activity`) and the test runs behind it
+  (`Comment.Evidence`): runs of its `test_run` tool, and shell commands that ran tests (`go test`, `pytest`, …,
+  parsed from their output). A reply that says tests pass with no passing run behind it is flagged
+  (`Comment.Unbacked`), and the agent is told so in the tool's answer.
 
 ### Claude and Codex, side by side
 
@@ -251,6 +328,33 @@ sequenceDiagram
 - **Policy option per session**: run the agent's own gate fully (`ask`), lightly (`edits auto, shell asks`),
   or off (`bypass`) inside a sandbox, leaving layer 3 as the only gate. The default is a light gate inside a sandbox.
 - The sandbox, gateway and egress code is ported from crit unchanged (`architecture.md`).
+
+**Built in AI-7/AI-11** (`worker/sandbox.go`, `worker/sandbox_host.go`; `oriel worker` passes the factory):
+
+- A sandboxed session's `Open` records the workspace (`sandbox.Create`, its manifest), serves the session socket
+  (gateway, egress decide/log/dial, ssh-agent) and writes the gateway's MCP config into the sandbox's Claude dir.
+  `Exec` turns the provider's command into `runner.Launch`'s docker command: the env the provider added goes in,
+  `ORIEL_BIN` becomes the container's `oriel`.
+- Both layer-3 cards go through the host's `approve`, so layer 2 (rules, `MethodAppDecide` hooks) answers them
+  first. Network: `AskNetwork`, rule `net(host:port)`; "always" also records the host machine-wide (egress
+  always), and a scope (`*.golang.org`) records that pattern instead. Gateway: `AskGateway`, rule = the tool;
+  "always" also grants it for the workspace. `request_host` and `ask_user_to_run` ask the same way: allow on
+  `ask_user_to_run` runs the command on the host; a refused `request_host` holds for the session.
+- Host tools: git through `sandbox.Git` (the guard), push/pull only from the session's branch, `gh` through
+  `gateway.RunGH`, PRs from the `pr_draft` file, `repos` from the worker's registered repos, `add_project` via
+  `AddRepo` and a restart once the turn ends.
+- Tested without Docker: held connections and calls, allow/deny/always/scope, the hooks, push to a bare remote.
+  Needs Docker to verify (`go test -tags docker -run TestSandboxRunsInDocker ./worker/`): the container, the
+  egress sidecar, and the mounts.
+- A refusal says who refused and what they said: `Approve` returns an `Approval` (`By`: "the user", "rule …", a
+  hook's source; `Note`). The gateway answers "oriel: init.lua denied oriel__push. They said: …"; the egress proxy's
+  403 reads "oriel: host is not allowed for this session: denied by the user, who said: …", in the container too
+  (the agent socket's decide answer carries `why`, and the sidecar's decider keeps it per destination).
+- The provider's hook socket (`agent.HookSocketEnv`, `ORIEL_HOOK_SOCK`) is carried into the container: `Exec`
+  points it at `/run/oriel/hook.sock`, which the box serves in the run dir (mounted on Linux) and the agent socket
+  serves at `agentsock.HookPath` for the sidecar's relay elsewhere; both reach the provider's socket on the host.
+- Open: sandbox settings (memory, egress rules, gateway servers) are the defaults until `settings.md` says where
+  they live and the worker reads them.
 
 ## Comments to agent, without `crit wait`
 

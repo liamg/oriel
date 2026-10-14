@@ -107,7 +107,7 @@ func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoratio
 					})
 					return
 				}
-				c.Text("t", d.Text, ui.TextStyle{Font: codeFont, Color: col})
+				c.Text("t", d.Text, ui.TextStyle{Font: m.font, Color: col})
 			}
 			if d.Command == "" {
 				c.Box(i, ui.Style{}, draw)
@@ -188,16 +188,21 @@ func spans(c *ui.Ctx, th *theme.Resolved, p vim.Pane, line int, ds []registry.De
 	}
 }
 
-// blocks draws a line's Block decorations under it, from where its text starts.
-func blocks(c *ui.Ctx, line int, ds []registry.Decoration, x0 float32) {
-	for i, d := range ds {
+// blocks draws a line's Block decorations under it, from where its text starts, and returns their ids and whether
+// each wants revealing.
+func blocks(c *ui.Ctx, line int, ds []registry.Decoration, x0 float32) (ids []ui.ID, reveal []bool) {
+	for _, d := range ds {
 		if d.Kind != registry.Block || d.Node == nil {
 			continue
 		}
-		c.Row(fmt.Sprint("block", line, ".", i), ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: x0, T: 4, B: 6, R: 20}}, func(c *ui.Ctx) {
+		// Keyed by its place among the line's blocks, not among all its decorations, so what has focus in it keeps it
+		// as signs and highlights come and go.
+		ids = append(ids, c.Row(fmt.Sprint("block", line, ".", len(ids)), ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: x0, T: 4, B: 6, R: 20}}, func(c *ui.Ctx) {
 			c.Node(d.Node)
-		})
+		}))
+		reveal = append(reveal, d.Reveal)
 	}
+	return ids, reveal
 }
 
 var tInlay = theme.Declare("editor.inlay", "fg.ghost")
@@ -233,6 +238,6 @@ func inlayShift(ds []registry.Decoration, col int, at bool) int {
 func inlayBox(c *ui.Ctx, key any, d registry.Decoration, m paneMetrics) {
 	th := c.Theme()
 	c.Box(key, ui.Style{W: ui.Px(float32(inlayCells(d)) * m.charW), Cross: ui.Center, Main: ui.Center, Fill: th.C(tInlayBg), Radius: 3}, func(c *ui.Ctx) {
-		c.Text("t", d.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: codeSize - 2}, Color: tokenColour(th, d.Style, th.C(tInlay))})
+		c.Text("t", d.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: m.font.Size - 2}, Color: tokenColour(th, d.Style, th.C(tInlay))})
 	})
 }

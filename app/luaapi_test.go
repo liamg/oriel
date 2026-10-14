@@ -275,3 +275,24 @@ func mustPane(t *testing.T, s *errScene) vim.Pane {
 	}
 	return p
 }
+
+// L.coverage reads and publishes the registry's line coverage, gone when the config reloads.
+func TestLuaCoverage(t *testing.T) {
+	s := luaScene(t, `local L = oriel
+L.coverage.set("jest", "/p/a.ts", { [3] = 2, [5] = 0 })
+`)
+	if got := s.reg.CoverageFor("/p/a.ts"); len(got) != 2 || got[2] != 2 || got[4] != 0 {
+		t.Fatalf("coverage %v", got)
+	}
+	if got := show(s.eval(t, `#L.coverage.lines("/p/a.ts", 1, 4)`)[0]); got != "1" {
+		t.Errorf("lines 1–4: %s", got)
+	}
+	if got := show(s.eval(t, `L.coverage.lines("/p/a.ts", 1, 9)[2].hit`)[0]); got != "false" {
+		t.Errorf("line 5's hit: %s", got)
+	}
+	s.writeConfig(t, map[string]string{"init.lua": ""})
+	s.lua().reload(false)
+	if got := s.reg.CoverageFor("/p/a.ts"); len(got) != 0 {
+		t.Errorf("after a reload: %v", got)
+	}
+}

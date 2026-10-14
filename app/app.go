@@ -27,6 +27,7 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/layout"
+	"github.com/liamg/oriel/worker"
 )
 
 // The views the window is made of. Each is an ordinary view: override one to replace that part of the screen.
@@ -53,12 +54,13 @@ type Config struct {
 	ConfigDir  string            // ~/.config/oriel unless set; user themes live in its themes/
 	CrashDir   string            // crash reports are written to and offered from here; none if ""
 	Version    string
-	Desktop    Desktop  // the clipboard and the browser; the window's, or the OS's, if nil
-	Debug      bool     // oriel --debug: the frame-time overlay
-	Files      []string // open in the editor at start
-	WorkDir    string   // the directory open in the window, where relative paths are; none if "" (the start view shows)
-	StateDir   string   // state that isn't config, such as the recent directories; logs.StateDir() if ""
-	CacheDir   string   // compiled grammars and the like; the user's cache directory's oriel/ if ""
+	Desktop    Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
+	Debug      bool            // oriel --debug: the frame-time overlay
+	Files      []string        // open in the editor at start
+	WorkDir    string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
+	StateDir   string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
+	CacheDir   string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
+	Workers    []worker.Client // the workers whose sessions the window shows: this machine's, and any others
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -108,7 +110,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	if cfg.StateDir == "" {
 		cfg.StateDir = logs.StateDir()
 	}
-	sh := &shell{cfg: cfg, events: events, poke: poke, reopen: make(chan string, 1)}
+	sh := &shell{cfg: cfg, events: events, poke: poke, reopen: make(chan reopenTo, 1)}
 	sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
 	if cfg.WorkDir != "" {
 		sh.recents.add(cfg.WorkDir, time.Now())
@@ -170,6 +172,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	l.ui.SetClipboard(sh.desktop)
 	l.ui.Title = "Oriel"
 	sh.keys, sh.modes, sh.ui = l.keys, l.modes, l.ui
+	l.keys.Raw = func() bool { return sh.enginePending != nil && len(sh.enginePending().Keys) > 0 }
 	sh.theme, sh.shot = func() *theme.Resolved { return l.theme }, l.shot
 	l.themeDirty.Store(true)
 	retheme := func() { l.themeDirty.Store(true); poke() }
@@ -188,9 +191,16 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	var tree *render.AccessNode
 	for {
-		sh.runTodo()
-		if err := l.draw(); err != nil {
-			return err
+		l.timed(func() string { return "work queued for the loop (Host.Do)" }, sh.runTodo)
+		var derr error
+		l.timed(func() string { return "building a frame" }, func() { derr = l.draw() })
+		if derr != nil {
+			return derr
+		}
+		// Keys typed behind ones the editor has now taken: looked up, or passed on raw while it's mid-command.
+		if acts := l.keys.Pump(l.sh.keyModes(), time.Now()); len(acts) > 0 || l.keys.Queued() {
+			l.run(ctx, acts)
+			poke()
 		}
 		if accessible != nil {
 			next := l.ui.AccessTree()
@@ -210,13 +220,15 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-dirty:
-		case dir := <-sh.reopen:
-			// Open Directory: every extension starts again on dir, in the same window.
+		case to := <-sh.reopen:
+			// Open Directory, or another session in front: every extension starts again on its directory.
 			if err := deactivate(); err != nil {
-				log.Error("reopen", "dir", dir, "err", err)
+				log.Error("reopen", "dir", to.dir, "err", err)
 			}
-			sh.cfg.WorkDir, sh.cfg.Files = dir, nil
-			sh.recents.add(dir, time.Now())
+			sh.cfg.WorkDir, sh.cfg.Files = to.dir, nil
+			if to.session == "" {
+				sh.recents.add(to.dir, time.Now())
+			}
 			if err := activate(); err != nil {
 				return err
 			}
@@ -228,7 +240,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			if !ok {
 				return nil
 			}
-			l.handle(ctx, ev)
+			l.timed(func() string { return describeEvent(ev) }, func() { l.handle(ctx, ev) })
 		}
 	}
 }
@@ -249,7 +261,9 @@ func (sh *shell) host(source string) *host {
 }
 
 func (h *host) Layout() *layout.Root { return h.sh.layout.root }
-func (h *host) Redraw()              { h.sh.poke() }
+
+func (h *host) Subscribe(f core.Filter, fn func(core.Event)) func() { return h.store.Subscribe(f, fn) }
+func (h *host) Redraw()                                             { h.sh.poke() }
 
 func (h *host) Do(fn func()) {
 	h.sh.todoMu.Lock()
@@ -307,6 +321,9 @@ func (h *host) Shot(th *theme.Resolved) *image.RGBA {
 func (h *host) Pending() ext.Pending {
 	if k := h.sh.keys; k != nil && len(k.Pending()) > 0 {
 		p := ext.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
+		if m := k.Complete(); m != nil && acceptKey(h.sh.cfg.Registry, p.Modes, p.Keys) {
+			p.Runs = cmpOr(m.Desc, m.Command)
+		}
 		if h.sh.engineHints != nil {
 			p.Hints = h.sh.engineHints(p.Keys) // keys no mapping takes go on to the engine
 		}
@@ -373,6 +390,21 @@ type loop struct {
 	win   render.Window
 	ui    *ui.UI
 	log   *slog.Logger
+
+	slowLogged time.Time // the last slow loop logged, so a slow stretch logs once a second
+}
+
+// slowLoop is how long one turn of the loop may take before it's logged: keys typed meanwhile wait behind it.
+const slowLoop = 50 * time.Millisecond
+
+// timed runs fn, and logs it when it holds the loop up past slowLoop, naming what it was.
+func (l *loop) timed(what func() string, fn func()) {
+	start := time.Now()
+	fn()
+	if d := time.Since(start); d > slowLoop && time.Since(l.slowLogged) > time.Second {
+		l.slowLogged = time.Now()
+		l.log.Warn("the window was held up", "by", what(), "took", d.Round(time.Millisecond))
+	}
 }
 
 // watchThemes watches every registered theme source, again whenever they change: a plugin or the theme editor
@@ -465,6 +497,10 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 		l.sh.dropped(ev)
 	case render.KeyEvent:
 		k := notation(ev)
+		if p := l.keys.Pending(); len(p) > 0 && k == "<CR>" && l.keys.Complete() != nil && acceptKey(l.sh.cfg.Registry, l.keys.Modes(), p) {
+			l.run(ctx, l.keys.Accept(time.Now()))
+			return
+		}
 		if p := l.keys.Pending(); len(p) > 0 && (k == "<BS>" || k == "<Esc>" || k == "?") {
 			switch k {
 			case "<BS>":
@@ -480,6 +516,13 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 		}
 		l.run(ctx, l.keys.Feed(l.sh.keyModesFor(k), k, time.Now()))
 	}
+}
+
+// acceptKey reports whether ⏎ after the pending keys runs their own mapping (which-key's ⏎), rather than going on
+// to a mapping of its own.
+func acceptKey(r registry.Registry, modes, pending []string) bool {
+	exact, more := r.Lookup(modes, append(slices.Clone(pending), "<CR>"))
+	return exact == nil && !more
 }
 
 // modes are the keymap modes keys resolve in, most specific first: the active key layers' (a popup's); then a
@@ -518,6 +561,17 @@ func (sh *shell) baseKeyModes() []string {
 }
 
 // run runs mapped commands, and gives unmapped keys to the focused widget.
+// describeEvent names an input event for the log.
+func describeEvent(ev render.Event) string {
+	switch ev := ev.(type) {
+	case render.KeyEvent:
+		return "the key " + notation(ev)
+	case render.PointerEvent:
+		return "a pointer event"
+	}
+	return fmt.Sprintf("%T", ev)
+}
+
 func (l *loop) run(ctx context.Context, acts []registry.Action) {
 	for _, a := range acts {
 		if a.Keymap == nil {
@@ -533,7 +587,9 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 			}
 			continue
 		}
-		if err := l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args); err != nil {
+		var err error
+		l.timed(func() string { return "the command " + a.Keymap.Command }, func() { err = l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args) })
+		if err != nil {
 			if _, ok := err.(*registry.Panic); !ok {
 				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir)})
 			}
@@ -555,12 +611,20 @@ func (l *loop) ready(k *registry.Keymap) bool {
 }
 
 func (l *loop) draw() error {
-	size := l.win.Size()
-	if on, _, err := l.reg.Options().Get("ui.reduced_motion", registry.At{}); err == nil {
-		o := l.ui.Options()
-		o.ReducedMotion = on == true
-		l.ui.SetOptions(o)
+	if z, ok := l.win.(render.Zoomer); ok {
+		z.SetZoom(zoomOf(l.reg.Options()))
 	}
+	size := l.win.Size()
+	o := l.ui.Options()
+	if on, _, err := l.reg.Options().Get("ui.reduced_motion", registry.At{}); err == nil {
+		o.ReducedMotion = on == true
+	}
+	o.Bars = ui.BarsAuto
+	if v, _, err := l.reg.Options().Get("ui.scrollbars", registry.At{}); err == nil && v == "always" {
+		o.Bars = ui.BarsAlways
+	}
+	o.TooltipScale = partScale(l.reg.Options(), "ui.tooltip.font_size")
+	l.ui.SetOptions(o)
 	l.watchThemes()
 	if l.themeDirty.Swap(false) {
 		l.loadTheme()

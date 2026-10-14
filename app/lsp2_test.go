@@ -3,11 +3,14 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/vim"
 )
 
 // LS-2: gd goes to the definition, in the file it's in.
@@ -20,6 +23,43 @@ func TestLSPDefinition(t *testing.T) {
 	if filepath.Join(root, "lib.go") != filepath.Join(root, p.Name()) || p.Cursor().Line != 5 || p.Cursor().Col != 5 {
 		t.Errorf("gd went to %s %+v, want lib.go 6:6", p.Name(), p.Cursor())
 	}
+}
+
+// LS-2 and motion.txt *jump-motions* ("the commands that start editing a new file"): gd is a vim jump in the
+// window it's typed in, to another file or within one: ⌃O comes back, ⌃I goes there again.
+func TestLSPDefinitionIsAJump(t *testing.T) {
+	s, root := lspScene(t, "go", "gopls", "main.go")
+	win := s.editor().e.WindowID()
+	at := func(what, file string, line, col int) {
+		t.Helper()
+		p := s.editor().current()
+		if filepath.Join(root, p.Name()) != filepath.Join(root, file) || p.Cursor().Line != line || col >= 0 && p.Cursor().Col != col {
+			t.Errorf("%s: at %s %+v, want %s %d:%d", what, p.Name(), p.Cursor(), file, line+1, col+1)
+		}
+		if s.editor().e.WindowID() != win || s.editor().e.Windows() != 1 {
+			t.Errorf("%s: in window %d of %d, want the window gd was typed in", what, s.editor().e.WindowID(), s.editor().e.Windows())
+		}
+	}
+	s.cursorAt(8, 11)
+	s.keyCommand(t, "gd")
+	s.lspSettle()
+	at("gd", "lib.go", 5, 5)
+	s.keyCommand(t, "<C-o>")
+	s.lspSettle()
+	at("⌃O", "main.go", 8, 11)
+	s.keyCommand(t, "<C-i>")
+	s.lspSettle()
+	at("⌃I", "lib.go", 5, 5)
+
+	s.keyCommand(t, "grr")
+	s.lspSettle()
+	s.keyCommand(t, "j")
+	s.keyCommand(t, "<CR>")
+	s.lspSettle()
+	at("⏎ on a reference in the same file", "lib.go", 11, -1)
+	s.keyCommand(t, "<C-o>")
+	s.lspSettle()
+	at("⌃O in the same file", "lib.go", 5, 5)
 }
 
 // LS-2: grr peeks at the references inline: a list by file beside the code of the one highlighted; j moves, ⏎ goes
@@ -153,4 +193,24 @@ func TestLSPServerFromLua(t *testing.T) {
 		}
 	}
 	t.Error("no gopls")
+}
+
+// gd typed while the file's server is still starting waits for it, saying so, rather than falling back to vim's gd.
+func TestLSPDefinitionWaitsForTheServer(t *testing.T) {
+	s, root := lspScene(t, "go", "gopls", "main.go")
+	x := s.lsp()
+	x.mu.Lock()
+	clear(x.docs)
+	x.mu.Unlock()
+	s.editor().e.SetCursor(vim.Pos{Line: 8, Col: 11})
+	s.keyCommand(t, "gd")
+	ns := s.store.State().Notifications
+	if !slices.ContainsFunc(ns, func(n core.Notification) bool { return strings.Contains(n.Text, "Starting the go language server") }) {
+		t.Errorf("no word that the server is starting: %+v", ns)
+	}
+	s.lspSettle()
+	p := s.editor().current()
+	if filepath.Join(root, "lib.go") != filepath.Join(root, p.Name()) || p.Cursor().Line != 5 || p.Cursor().Col != 5 {
+		t.Errorf("gd went to %s %+v, want lib.go 6:6", p.Name(), p.Cursor())
+	}
 }

@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/theme"
 	"image"
 	"os"
@@ -40,11 +41,12 @@ type shell struct {
 	todo        []func()                         // Host.Do's, for the loop
 	editorAt    func(at registry.At) registry.At // the focused editor's buffer and window, added to at
 	shot        func(th *theme.Resolved) *image.RGBA
-	reopen      chan string // Open Directory's directory, for the loop to start again on
+	reopen      chan reopenTo // the directory for the loop to start again on: Open Directory's, or a session's
 	recents     *recents
 	git         *gitExt // the work tree's git status
 	editor      *editorExt
 	search      *projectSearch
+	sessions    *sessions // the workers' sessions; nil while it isn't active
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the
@@ -64,14 +66,53 @@ func (sh *shell) report(head string) string {
 	}
 	b.WriteString("\n-- log --\n")
 	for _, r := range sh.cfg.Logs.Ring.Tail(500) {
-		b.WriteString(r.Text())
-		b.WriteByte('\n')
+		writeRecord(&b, r)
 	}
 	b.WriteString("\n-- events --\n")
 	for _, ev := range sh.events.list() {
-		fmt.Fprintf(&b, "%d %s %s\n", ev.Seq, ev.Type, ev.JSON)
+		fmt.Fprintf(&b, "%d %s %s\n", ev.Seq, ev.Type, withoutDetail(ev.JSON))
 	}
 	return sh.cfg.Logs.Redact.Redact(b.String())
+}
+
+// writeRecord is a log record as a line, with any attribute that has lines of its own (a stack) under it,
+// indented, as it reads in a terminal.
+func writeRecord(b *strings.Builder, r logs.Record) {
+	var blocks []logs.Attr
+	one := r
+	one.Attrs = nil
+	for _, a := range r.Attrs {
+		if strings.Contains(a.Value, "\n") {
+			blocks = append(blocks, a)
+			continue
+		}
+		one.Attrs = append(one.Attrs, a)
+	}
+	b.WriteString(one.Text())
+	b.WriteByte('\n')
+	for _, a := range blocks {
+		fmt.Fprintf(b, "  %s:\n", a.Key)
+		for line := range strings.SplitSeq(strings.TrimRight(a.Value, "\n"), "\n") {
+			b.WriteString("    " + strings.ReplaceAll(line, "\t", "    ") + "\n")
+		}
+	}
+}
+
+// withoutDetail is an event's JSON without the stacks the log above already has as lines.
+func withoutDetail(raw string) string {
+	var m map[string]any
+	if json.Unmarshal([]byte(raw), &m) != nil {
+		return raw
+	}
+	if _, ok := m["detail"]; !ok {
+		return raw
+	}
+	delete(m, "detail")
+	b, err := json.Marshal(m)
+	if err != nil {
+		return raw
+	}
+	return string(b)
 }
 
 func orNone(s string) string {

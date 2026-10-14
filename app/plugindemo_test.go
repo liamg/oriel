@@ -111,5 +111,6 @@ func TestPluginDemo(t *testing.T) {
 	for _, n := range s.store.State().Notifications {
 		s.store.Apply(core.NoticeDismissed{Seq: n.Seq})
 	}
+	s.waitHighlights()
 	s.golden("plugin-demo")
 }

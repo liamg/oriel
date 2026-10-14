@@ -1,7 +1,7 @@
 ---
 id: plugins/lua
 covers: [lua]
-related: [plugins/hooks, plugins/inspect, shell/settings]
+related: [plugins/api, plugins/hooks, plugins/inspect, shell/settings]
 ---
 
 # Lua

@@ -95,7 +95,26 @@ flowchart TB
 - raw keys (`registry.RawKeys`): a keymap mode whose ⌃ keys skip the global maps, so a terminal's program gets `⌃W`;
   ⌘ and ⌥ chords, and the mode's own maps, still apply.
 - picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.
+- requests (AI-5): `request.comment {thread | file, line, text; body, title, urgent, btw}` is how anything comments to
+  the agent (it fires `CommentSend` first: a rewrite changes the comment, a veto stops it); `request.resolve`,
+  `request.reopen`, `request.new {text, context, file, line}`, `request.open {thread}` and `request.attach {items |
+  text, title}` (the pickers' `⌃a`) drive the Requests views, and `thread.new` opens a thread on the cursor's line.
+  The `threads` picker source lists the session in front's requests. A test run is shown by `test.run.show {id,
+  session}` (the `test.run` view), which evidence chips run.
+- plan (AI-8): `plan.open {doc}` shows a planning session's docs (the `plan` and `plan.docs` views), `plan.next`,
+  `plan.prev` and `plan.comment` move through a doc and open a thread on a block (the `plan` key mode), and
+  `session.start-work` is available while the session in front is planning. A comment on a file at the workspace root,
+  outside every project, is anchored to the project `core.DocsProject` (`"__docs__"`) with the path relative to the
+  workspace; `request.comment {file}` does that for an absolute path, and an agent's `comment` tool takes
+  `project: "__docs__"`.
+- a Block decoration's controls take and keep focus (a reply field between the lines): the editor doesn't take focus
+  back from something inside its code column.
 - inlay decorations (`registry.Inlay`): text drawn inline before a column, the code after it moved along the grid.
+- instances that outlive the app: a view implementing `registry.Persisted` (`Persist(instance) (state, ok)`,
+  `Revive(state) (instance, error)`) keeps its instances across restarts. The layout is saved per directory as it
+  changes (`layout-<hash>.json` in the state dir) with each instance's state, and when the app starts again there,
+  each view revives its instances into the places they had; one that can't is left out. The editor keeps each window's
+  file and cursor, the terminal its command (its screen is its own state file).
 - tab markers: a view implementing `registry.Marked` gives each instance a small marker after its tab title (the
   editor gives its file's git status letter), in a theme token's colour.
 - rail entries (`RailEntry`, `oriel.rail.add`) and start view actions (`StartEntry`, `oriel.start.add`). Both are
@@ -104,13 +123,20 @@ flowchart TB
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
 - icons: the built-in set (`files`, `search`, `git`, `requests`, `debug`, `tests`, `settings`, `plus`, `resume`,
   `folder`) is drawn, not a font's; any other name is drawn as a glyph.
-- statusline, tabline (session tabs), titlebar and HUD tats, notification cards.
+- statusline, tabline (session tabs), titlebar and HUD tats, notification cards. Title-bar segments are views named
+  `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage`.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**
 - agent providers (`agent.Provider`).
 - **agent tools**: an MCP tool defined in Lua or Go and offered to the session's agent.
-- prompt packs, session kinds (plan, work, review, tour and job are built-ins).
+- prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
+  registered on the worker (`worker.Kinds().Register(worker.KindSpec{…})`: its title, a few words (`Desc`), what
+  starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees);
+  the launcher lists the worker's kinds (`kinds.list`), so a registered one is a mode there with no more code.
+  `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the worker yet.
+  `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
+  (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a built-in part) overrides one.
 - thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"),
   review-ledger rules, commit and PR gates, slop rules, and status-colour rules.
 
@@ -123,7 +149,7 @@ flowchart TB
 |---|---|---|
 | observe | `fn(ev)` | log every agent tool call to a file |
 | veto | `fn(ev) -> false, reason` | block commits while the review ledger is under 100% |
-| rewrite | `fn(ev) -> ev'` | expand `@ticket` in a comment before it reaches the agent |
+| rewrite | `fn(ev) -> ev'` | expand `@ticket` in a comment before it reaches the agent; set `BufRead`'s `read_only` to open a file read-only |
 | decide | `fn(ev) -> decision` | auto-allow `Bash(go test …)` permission prompts in this repo |
 | provide | `fn(ctx) -> items` | add PRs-awaiting-me to the omnibox |
 
@@ -209,6 +235,9 @@ type Registry interface {
     SetDiagnostics(owner, file string, ds []Diagnostic) // replaces owner's for file; Problems and the editor show them
     Diagnostics() ([]Diagnostic, int)                    // every one, by file and line, and a generation
     DiagnosticsFor(file string) []Diagnostic
+    SetCoverage(owner, file string, hits map[int]int) // line coverage by 0-based line; the tests gutter shows it
+    ClearCoverage(owner string)
+    CoverageFor(file string) map[int]int // every owner's, a line keeping its largest count
 
     OnFault(fn func(Fault)) Disposable            // a contribution turned off: it panicked, or kept failing
     OnFailure(fn func(Failure)) Disposable        // each contribution error, and warnings (a hook over budget)
@@ -238,7 +267,7 @@ type Hook[E any] func(ctx Ctx, ev *E) Verdict      // Continue | Veto(reason) | 
 func On[E any](r Registry, h Hook[E], opts ...HookOpt) Disposable
 
 // events are plain structs — one per thing that happens
-type CommentSend struct{ Thread ThreadID; Body string; Urgent bool }
+type CommentSend struct{ Session, Thread, File string; Line int; Body string; Urgent, Btw bool } // app.CommentSend
 type Permission  struct{ Session SessionID; Tool string; Input json.RawMessage; Decision *Decision }
 type Commit      struct{ Project string; Message string; Unread int }
 
@@ -332,6 +361,9 @@ type Host interface {
   Severity, Message}` as LSP does; the built-in `problems` extension marks them in the editor through a decoration
   provider (`DecorationCtx.Path` is the buffer's absolute file) and lists them in `:Problems`. Lua's
   `L.diagnostics.set` binds it; the Lua config publishes its errors as owner `lua`.
+- Coverage (TR-4): `Registry.SetCoverage(owner, file, hits)` publishes a file's line hits the same way. A coverage run
+  publishes as owner `tests`, and the tests gutter shows every owner's, so another tool's report (jest, pytest) shows
+  there too. Lua's `L.coverage.set(owner, file, { [line] = hits })` and `L.coverage.lines(file, first, last)` bind it.
 - Language servers (LS-1): `registry.LSPServer` contributions (kind `lsp.server`: `Name`, `Language`, `Cmd`,
   `Roots`, `Init`, `Settings`, `Order`, `Source`), listed by `registry.LSPServers(r)`. A later one of a name shadows
   the built-in (`lsp.Builtins()`); among the servers for a language the lowest `Order` that's installed runs. The

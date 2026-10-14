@@ -49,12 +49,22 @@ type terminals struct {
 	busy  sync.WaitGroup
 }
 
+// TermSource is what a terminal shows and types into: a program in a PTY, or a stream from elsewhere, such as an
+// agent's terminal on a worker. term.open takes one as {source}.
+type TermSource interface {
+	Read(p []byte) (int, error)
+	Write(p []byte) (int, error)
+	Resize(cols, rows int) error
+	Close() error
+}
+
 // terminal is one: its program, its VT, and the vim engine terminal-normal mode reads the scrollback with.
 type terminal struct {
 	id   string
 	cmd  []string
+	own  bool // a program it started, rather than a source it was given: it can start again
 	emu  term.Emulator
-	pty  *pty.PTY
+	src  TermSource
 	cols int
 	rows int
 	done bool
@@ -97,7 +107,7 @@ func (x *terminals) Activate(_ context.Context, h ext.Host) error {
 		}
 	}
 	for _, c := range []registry.Command{
-		{ID: "term.open", Title: "Open a terminal: {cmd}, {env}, {place}; with {bang}, in the main area", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "term.open", Title: "Open a terminal: {cmd}, {env}, {place}, {title}, or a {source} to show; with {bang}, in the main area", Run: func(ctx registry.Ctx, a registry.Args) error {
 			place := cmpOr(a.String("place"), "dock")
 			return open(place, a.String("side"))(ctx, a)
 		}},
@@ -170,9 +180,9 @@ func (x *terminals) Deactivate(ctx context.Context) error {
 		if snap, err := t.emu.Snapshot(); err == nil {
 			x.saved[id] = snap
 		}
-		t.pty.Close()
-		if p := t.pty.Cmd().Process; p != nil {
-			p.Kill()
+		t.src.Close()
+		if p, ok := t.src.(*pty.PTY); ok && p.Cmd().Process != nil {
+			p.Cmd().Process.Kill()
 		}
 		t.emu.Close()
 	}
@@ -181,16 +191,7 @@ func (x *terminals) Deactivate(ctx context.Context) error {
 	return x.disposer.Deactivate(ctx)
 }
 
-func (x *terminals) savedPath() string {
-	if x.sh.cfg.StateDir == "" || x.sh.cfg.WorkDir == "" {
-		return ""
-	}
-	sum := 0
-	for _, r := range x.sh.cfg.WorkDir {
-		sum = sum*31 + int(r)
-	}
-	return filepath.Join(x.sh.cfg.StateDir, fmt.Sprintf("terminals-%x.json", uint32(sum)))
-}
+func (x *terminals) savedPath() string { return x.sh.dirState("terminals") }
 
 func (x *terminals) loadSaved() {
 	if p := x.savedPath(); p != "" {
@@ -270,9 +271,34 @@ func strList(v any) []string {
 
 // open starts a terminal and shows it.
 func (x *terminals) open(ctx registry.Ctx, a registry.Args, place, side string) error {
+	id, err := x.start(a)
+	if err != nil {
+		return err
+	}
+	args := registry.Args{"id": TerminalView, "instance": id, "place": place}
+	switch place {
+	case "dock":
+		args["edge"], args["size"] = "bottom", 260
+	case "split":
+		args["side"] = cmpOr(side, "right")
+	}
+	if err := x.h.Run(ctx, "view.open", args); err != nil {
+		return err
+	}
+	x.h.Layout().Show(layout.ViewRef{ID: TerminalView, Instance: id})
+	return nil
+}
+
+// start starts a terminal, with its screen from before the app last stopped when a["instance"] had one, and
+// returns its instance.
+func (x *terminals) start(a registry.Args) (string, error) {
+	src, _ := a["source"].(TermSource)
 	cmdline := strList(a["cmd"])
 	if len(cmdline) == 0 {
 		cmdline = strList(a["args"])
+	}
+	if title := a.String("title"); src != nil && title != "" {
+		cmdline = []string{title}
 	}
 	if len(cmdline) == 0 {
 		cmdline = x.shell()
@@ -290,14 +316,14 @@ func (x *terminals) open(ctx registry.Ctx, a registry.Args, place, side string) 
 	saved := x.saved[id]
 	delete(x.saved, id)
 	x.mu.Unlock()
-	t := &terminal{id: id, cmd: cmdline, cols: 100, rows: 24}
+	t := &terminal{id: id, cmd: cmdline, cols: 100, rows: 24, own: src == nil}
 	emu, err := ghostty.New(t.cols, t.rows, ghostty.Options{Reply: func(p []byte) {
-		if t.pty != nil {
-			t.pty.Write(p)
+		if t.src != nil {
+			t.src.Write(p)
 		}
 	}})
 	if err != nil {
-		return err
+		return "", err
 	}
 	if saved != nil {
 		if err := emu.Restore(saved); err != nil {
@@ -305,33 +331,27 @@ func (x *terminals) open(ctx registry.Ctx, a registry.Args, place, side string) 
 		}
 	}
 	t.emu = emu
-	cmd := exec.Command(cmdline[0], cmdline[1:]...)
-	cmd.Dir = x.sh.cfg.WorkDir
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=oriel")
-	cmd.Env = append(cmd.Env, strList(a["env"])...)
-	p, err := pty.Start(cmd, t.cols, t.rows)
-	if err != nil {
-		emu.Close()
-		return fmt.Errorf("terminal: %w", err)
+	if src == nil {
+		cmd := exec.Command(cmdline[0], cmdline[1:]...)
+		cmd.Dir = x.sh.cfg.WorkDir
+		cmd.Env = append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=oriel")
+		cmd.Env = append(cmd.Env, strList(a["env"])...)
+		p, err := pty.Start(cmd, t.cols, t.rows)
+		if err != nil {
+			emu.Close()
+			return "", fmt.Errorf("terminal: %w", err)
+		}
+		src = p
+	} else {
+		src.Resize(t.cols, t.rows)
 	}
-	t.pty = p
+	t.src = src
 	x.mu.Lock()
 	x.terms[id] = t
 	x.mu.Unlock()
 	x.busy.Add(1)
 	go x.read(t)
-	args := registry.Args{"id": TerminalView, "instance": id, "place": place}
-	switch place {
-	case "dock":
-		args["edge"], args["size"] = "bottom", 260
-	case "split":
-		args["side"] = cmpOr(side, "right")
-	}
-	if err := x.h.Run(ctx, "view.open", args); err != nil {
-		return err
-	}
-	x.h.Layout().Show(layout.ViewRef{ID: TerminalView, Instance: id})
-	return nil
+	return id, nil
 }
 
 // read feeds the program's output to the VT until it exits.
@@ -340,7 +360,7 @@ func (x *terminals) read(t *terminal) {
 	buf := make([]byte, 64<<10)
 	var last time.Time
 	for {
-		n, err := t.pty.Read(buf)
+		n, err := t.src.Read(buf)
 		if n > 0 {
 			t.emu.Write(buf[:n])
 			if now := time.Now(); now.Sub(last) > 4*time.Millisecond {
@@ -349,12 +369,15 @@ func (x *terminals) read(t *terminal) {
 			}
 		}
 		if err != nil {
-			if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrClosed) {
-				t.err = err
+			if p, ok := t.src.(*pty.PTY); ok {
+				p.Cmd().Wait()
 			}
-			t.done = true
-			t.pty.Cmd().Wait()
-			x.h.Redraw()
+			x.h.Do(func() {
+				if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrClosed) && !errors.Is(err, io.ErrClosedPipe) {
+					t.err = err
+				}
+				t.done = true
+			})
 			return
 		}
 	}

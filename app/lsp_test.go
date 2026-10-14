@@ -1,9 +1,11 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -220,5 +222,63 @@ func TestLSPTranscriptsReplayToTheUI(t *testing.T) {
 			}
 			s.wantText(t, "completion", "greeting")
 		})
+	}
+}
+
+// :Inspect's language server section names the server and the semantic token under the cursor, as the server says.
+func TestLSPInspect(t *testing.T) {
+	s, root := lspScene(t, "go", "gopls", "main.go")
+	s.cursorAt(5, 6) // Welcome
+	toks, err := s.lsp().m.Clients()[0].SemanticTokens(context.Background(), filepath.Join(root, "main.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := ""
+	for _, tk := range toks {
+		if tk.Range.Start.Line == 5 && tk.Range.Start.Col <= 6 && 6 < tk.Range.End.Col {
+			want = strings.TrimSpace(tk.Type + " " + strings.Join(tk.Modifiers, " "))
+		}
+	}
+	if want == "" {
+		t.Fatal("the recording has no token on Welcome")
+	}
+	s.run("Inspect", nil)
+	s.lspSettle()
+	text := strings.ReplaceAll(s.frameText(), "\n", " ")
+	for _, w := range []string{"LANGUAGE SERVER", "gopls", want} {
+		if !strings.Contains(text, w) {
+			t.Errorf(":Inspect lacks %q:\n%s", w, text)
+		}
+	}
+	if strings.Contains(text, "LS-1") {
+		t.Error(":Inspect still says the language servers are to come")
+	}
+}
+
+// With lsp.start "project" (the default), a project's language servers start when it opens, before any of its files
+// does, so the first gd doesn't wait for one; "file" waits for a file.
+func TestLSPStartsWithTheProject(t *testing.T) {
+	for _, mode := range []string{"project", "file"} {
+		root := t.TempDir()
+		os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/greet\n\ngo 1.22\n"), 0o644)
+		tr, err := lsptest.Load(filepath.Join("..", "lsp", "testdata", "transcripts", "go.jsonl"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := newScene(t, "", root, mockupSize)
+		s.reg.Options().Set("lsp.start", registry.LayerUser, registry.At{}, mode)
+		resp := lsptest.NewResponder(tr)
+		for _, spec := range lsp.Builtins() {
+			if spec.Name == "gopls" {
+				spec.Connect = resp.Launcher()
+				spec.Source = "test"
+				s.reg.Contribute(registry.LSPServer(spec))
+			}
+		}
+		s.lspSettle()
+		started := slices.Contains(resp.Asked(), "initialize")
+		if started != (mode == "project") {
+			t.Errorf("lsp.start %q: started before a file opened = %v (asked %v)", mode, started, resp.Asked())
+		}
 	}
 }

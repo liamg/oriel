@@ -110,6 +110,8 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.report` | 2 | input | `report` | ED-13 |
 | `editor.number_formats` | `bin,hex` | input | `nrformats`, `nf` | ED-13 |
 | `editor.hidden` | true | input | `hidden`, `hid` | ED-13 |
+| `editor.font_size` | 13.5 | app | | – |
+| `editor.line_height` | 1.55: a multiple of the font size | app | | – |
 | `editor.end_of_line` | `keep`: the file's own; or `lf`, `crlf` | app | | ED-9 |
 | `editor.charset` | `keep`; or `utf-8`, `utf-8-bom` | app | | ED-9 |
 | `editor.trim_trailing_whitespace` | false | app | | ED-9 |
@@ -121,10 +123,17 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | | FG-2 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
+| `lsp.start` | `project`: a project's servers start when it opens; `file`: when one of their files does | app | | – |
 | `keymap.leader` | Space | app | | FW-3 |
 | `keymap.timeout` | true | app | `timeout`, `to` | FW-3 |
 | `keymap.timeoutlen` | 1s | app | `timeoutlen`, `tm` | FW-3 |
+| `ui.font_size` | 13: the UI's text size, which zooms the window (theming.md, "Sizes") | app | | – |
+| `ui.statusline.font_size` | 0: follows `ui.font_size` | app | | – |
+| `ui.hover.font_size` | 0: follows `ui.font_size`; hovers and signature help | app | | – |
+| `ui.completion.font_size` | 0: follows `ui.font_size` | app | | – |
+| `ui.tooltip.font_size` | 0: follows `ui.font_size` | app | | – |
 | `ui.reduced_motion` | false | app | | FW-5 |
+| `ui.scrollbars` | auto | app | | – |
 | `ui.theme` | `oriel` | app | | FW-7 |
 | `ui.variant` | `system`: follows the OS; or `dark`, `light` | app | | FW-7, SH-11 |
 | `whichkey.enabled` | true | app | | SH-6 |

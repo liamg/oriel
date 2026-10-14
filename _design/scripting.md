@@ -51,7 +51,7 @@ L.session_option.agent = "claude"                  -- session-local
 -- keymaps, any mode, including panels' own modes
 L.keymap.set("n", "<leader>rr", "agent.review")             -- a command
 L.keymap.set({ "n", "x" }, "ga", function() L.thread.new() end)
-L.keymap.set("requests", "x", "thread.resolve")             -- keys inside the Requests panel
+L.keymap.set("requests", "x", "request.resolve")            -- keys inside the Requests panel
 
 -- commands
 L.command("Ship", function(args)
@@ -192,18 +192,20 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   LuaLS types (`script/types/oriel.d.lua`) and the reference (`docs/api.md`); a test fails when they're stale. A
   parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
 - Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
-  `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `ui`, `regex` (PCRE2),
+  `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `thread`, `ui`, `regex` (PCRE2),
   `language`, and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
   `local o = oriel.option` if you want it short). There's one global, `oriel`; a config that wants a short name writes
   `local L = oriel`, as the sample does.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
-  `thread`, `coverage`, `http` and `async` load, and calling into one says which ticket brings it. An option
+  `http` and `async` load, and calling into one says which ticket brings it. An option
   set before anything registers it waits, and `:Hooks` lists it.
 - Hooks are the registry's (`Registry.Hook`, `Fire`, `DeclareEvent`): in priority order, a veto or decision stops
-  them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead`,
-  `BufWritePre` (a veto stops the write) and `BufWritePost`; `Commit`, `CommentSend`, `Permission`, `AgentTurnEnd`,
-  `PrRaise` and `ModeChanged` are declared for the features that fire them.
+  them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead` (a rewrite
+  that sets `read_only`, saying why, opens the file read-only: how files outside the session do),
+  `BufWritePre` (a veto stops the write) and `BufWritePost`; the sessions fire `CommentSend` (a rewrite changes the
+  comment, a veto stops it), `Permission` and `AgentTurnEnd`; `Commit`, `PrRaise` and `ModeChanged` are declared for
+  the features that fire them.
 - Saving `init.lua` or anything under `lua/` reloads the config within 500 ms: everything it registered goes, it
   loads again, and a toast says how long and how many things it registered; an error is a notice with its line.
 - `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`, history) and
@@ -256,3 +258,10 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 
 - `oriel.lsp.server{ name, languages, cmd, roots, settings, init, order }` registers a language server (a
   `registry.LSPServer`); one with a built-in's name replaces it.
+
+## As built (AI-5)
+
+- `oriel.thread`: `list()` (the session in front's requests: `{ id, title, status, file, line, busy, urgent, btw,
+  comments, last, author }`), `new(opts)` (with `body`, sends a request about `file`:`line` or the whole change; without,
+  opens a thread on the cursor's line), `reply(id, body, opts)` (`urgent`, `btw`), `resolve(id, status)` and
+  `open(id)`. They run the `request.*` commands, so a keymap or a plugin does the same with `oriel.cmd`.

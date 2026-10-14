@@ -1,0 +1,259 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1261.125x38 r 0
+  rect 102.9375,0 214.10938x38 fill #121210
+  rect 102.9375,0 214.10938x2 fill #ffd23f
+  rect 114.9375,16 8x8 fill #ff5f6d radius 4
+  text "pricing-rounding" @129.9375,24.365234 #ece6d8 Inter 12
+  text "needs you" @232.04688,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘1" @293.04688,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 317.04688,0 1x38 fill #24221d
+pop
+text "5H" @1378.0625,22.779999 #7c7566 JetBrains Mono 10.5
+rect 1399.25,17 44x4 fill #24221d radius 2
+rect 1399.25,17 16.71997x4 fill #ff9b45 radius 2
+text "38%" @1451.25,22.779999 #ece6d8 JetBrains Mono 10.5
+text "WK" @1493.0312,22.779999 #7c7566 JetBrains Mono 10.5
+rect 1514.2188,17 44x4 fill #24221d radius 2
+rect 1514.2188,17 31.23999x4 fill #ff9b45 radius 2
+text "71%" @1566.2188,22.779999 #ece6d8 JetBrains Mono 10.5
+rect 0,38 44x936 fill #0c0c0b
+path 7 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 6 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 2 segments stroke 1.4545455 #4f4a40
+path 5 segments stroke 1.4545455 #7c7566
+path 5 segments stroke 1.4545455 #7c7566
+path 4 segments stroke 1.4545455 #4f4a40
+path 3 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #7c7566
+path 6 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+path 2 segments stroke 1.4545455 #7c7566
+rect 43,38 1x936 fill #24221d
+rect 44,38 1556x936 fill #060606
+rect 44,38 260x936 fill #0c0c0b
+clip 44,38 260x936 r 0
+  rect 44,38 260x30 fill #0c0c0b
+  rect 44,38 102.515625x30 fill #121210
+  text "Plan docs" @58,58.365234 #ece6d8 Inter 12
+  text "✕" @127.21875,57.96 #7c7566 JetBrains Mono 11
+  rect 44,68 260x1 fill #24221d
+  clip 44,69 260x905 r 0
+    rect 44,69 260x905 fill #0c0c0b
+    text "PLAN DOCS" @60,91.020004 #7c7566 JetBrains Mono 9.5
+    text "3 files" @246,91.2 #7c7566 JetBrains Mono 10
+    rect 44,104.2 260x1 fill #24221d
+    clip 44,105.2 260x108 r 0
+      rect 44,105.2 260x36 fill #1f1c0f
+      rect 44,105.2 2x36 fill #ffd23f
+      rect 60,119.2 8x8 fill #ff9b45 radius 2
+      text "PLAN.md" @78,127.929 #ece6d8 Inter 13
+      rect 269.43,114.93 20.570007x16.54 fill #ff5f6d12 radius 10 stroke 1 #ff5f6d59
+      text "1" @276.43,126.62 #ff5f6d JetBrains Mono 9.5
+      rect 60,155.2 8x8 fill #ff9b45 radius 2
+      text "api.md" @78,163.929 #b3ab99 Inter 13
+      rect 269.43,150.93 20.570007x16.539993 fill #7c756612 radius 10 stroke 1 #7c756659
+      text "1" @276.43,162.62 #7c7566 JetBrains Mono 9.5
+      rect 60,191.2 8x8 fill #ff9b45 radius 2
+      text "ui.md" @78,199.929 #b3ab99 Inter 13
+      text "–" @283.40625,199.16 #4f4a40 JetBrains Mono 11
+    pop
+    rect 44,213.2 260x1 fill #24221d
+    text "SOURCE" @60,237.89 #7c7566 JetBrains Mono 9.5
+    rect 60,249.73999 66.56x16.540009 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
+    text "INF-2231" @67,261.43 #ffd23f JetBrains Mono 9.5
+    text "Rounding on invoices drifts by 1¢ for" @60,286.905 #7c7566 Inter 12
+    text "tiered usage plans." @60,304.42453 #7c7566 Inter 12
+    text "PROJECTS" @60,335.00906 #7c7566 JetBrains Mono 9.5
+    rect 60,350.44907 6x6 fill #7c7566 radius 3
+    text "pricing" @74,357.58908 #ece6d8 JetBrains Mono 11.5
+    text "rethink/rounding" @182.5,357.22906 #7c7566 JetBrains Mono 10.5
+    rect 60,373.62906 6x6 fill #7c7566 radius 3
+    text "billing-ui" @74,380.76907 #ece6d8 JetBrains Mono 11.5
+    text "rethink/rounding" @182.5,380.40906 #7c7566 JetBrains Mono 10.5
+    rect 44,878.31085 260x1 fill #24221d
+    text "READINESS" @60,903.6608 #7c7566 JetBrains Mono 9.5
+    text "3 open" @248.4375,904.0209 #b3ab99 JetBrains Mono 10.5
+    rect 60,916.17084 228x4 fill #24221d radius 2
+    rect 60,916.17084 57x4 fill #ff9b45 radius 2
+    text "Start work unlocks when every thread" @60,940.31146 #7c7566 Inter 11.5
+    text "is resolved or deferred." @60,957.226 #7c7566 Inter 11.5
+  pop
+pop
+clip 304,38 1296x936 r 0
+  rect 304,38 1296x30 fill #0c0c0b
+  rect 304,38 100.09375x30 fill #121210
+  rect 304,38 100.09375x2 fill #ffd23f
+  text "PLAN.md" @318,58.365234 #ece6d8 Inter 12
+  text "✕" @384.79688,57.96 #7c7566 JetBrains Mono 11
+  rect 304,68 1296x1 fill #24221d
+  clip 304,69 1296x905 r 0
+    rect 304,69 1296x905 fill #060606
+    rect 324,84.73 40.28x16.54 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
+    text "PLAN" @331,96.420006 #ff9b45 JetBrains Mono 9.5
+    text "Round invoice lines half-to-even" @376.28,98.09277 #ece6d8 Inter 14
+    text "claude opus · drafting rev 4" @608.9675,96.78 #7c7566 JetBrains Mono 10.5
+    rect 1234.5156,89.5 7x7 fill #4cc9f0 radius 3.5
+    text "agent editing PLAN.md" @1248.5156,96.78 #b3ab99 JetBrains Mono 10.5
+    rect 1398.9844,80 89.0625x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Preview diff" @1408.9844,97.365234 #4f4a40 Inter 12
+    rect 1500.0469,80 79.953125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Start work" @1510.0469,97.365234 #4f4a40 Inter 12
+    rect 304,117 1296x1 fill #24221d
+    clip 304,118 1296x856 r 0
+      text "PLAN.MD · REV 4" @374,163.69 #ff9b45 JetBrains Mono 9.5
+      text "Round invoice lines half-to-even" @374,204.092 #ece6d8 Space Grotesk 28
+      text "Goal · Approach · Pieces · Risks" @374,232.97801 #7c7566 JetBrains Mono 10.5
+      rect 374,279.41266 14x2 fill #ff9b45
+      text "Goal" @400,286.59674 #ece6d8 Inter 17
+      text "Invoice totals must equal the sum of their rounded lines. Today they drift by up to one minor unit" @374,314.7442 #ece6d8 Inter 14.5
+      text "on tiered plans." @374,335.28864 #ece6d8 Inter 14.5
+      rect 374,374.07086 14x2 fill #ff9b45
+      text "Approach" @400,381.25494 #ece6d8 Inter 17
+      text "•" @374,409.4024 #7c7566 Inter 14.5
+      text "Add a" @392.4375,410.5402 #ece6d8 Inter 14.5
+      rect 438.01562,395.35553 108.875x19.820007 fill #161615 radius 3
+      text "RoundingMode" @442.01562,410.12552 #ece6d8 JetBrains Mono 13.5
+      text "type in" @551.1094,410.5402 #ece6d8 Inter 14.5
+      rect 603.3281,395.35553 142.5x19.820007 fill #161615 radius 3
+      text "internal/pricing" @607.3281,410.12552 #ece6d8 JetBrains Mono 13.5
+      text "." @745.8281,410.5402 #ece6d8 Inter 14.5
+      text "14" @336.8125,437.88553 #4f4a40 JetBrains Mono 10.5
+      rect 360,423.17554 2x21.544434 fill #ff5f6d
+      text "•" @374,439.2224 #7c7566 Inter 14.5
+      text "Round each line in minor units, ties to even." @392.4375,439.2224 #ece6d8 Inter 14.5
+      text "•" @374,466.76685 #7c7566 Inter 14.5
+      text "Totals sum the rounded lines; never re-round a total." @392.4375,466.76685 #ece6d8 Inter 14.5
+      rect 320,478.2644 743.52x62.36444 fill #0b1511
+      text "22" @336.8125,492.9744 #4f4a40 JetBrains Mono 10.5
+      rect 360,478.2644 2x62.36444 fill #4fe0a0
+      text "Currency precision comes from" @374,507.44907 #ece6d8 Inter 14.5
+      text "a hard-coded table in round.go," @602.5,507.44907 #d27049 Inter 14.5
+      rect 831.5625,492.2644 100.46875x19.820007 fill #161615 radius 3
+      text "currency.go" @835.5625,507.0344 #ece6d8 JetBrains Mono 13.5
+      text "," @932.03125,507.44907 #ece6d8 Inter 14.5
+      text "keyed by ISO" @940.5781,507.44907 #ece6d8 Inter 14.5
+      text "4217 code, so JPY (0) and BHD (3) are handled." @374,529.1313 #ece6d8 Inter 14.5
+      rect 374,573.9135 14x2 fill #ff9b45
+      text "Pieces" @400,581.0976 #ece6d8 Inter 17
+      rect 374,595.1982 683.52x78.22003 fill #0c0c0b radius 6 stroke 1 #332f27
+      text "MERMAID" @388,618.8882 #7c7566 JetBrains Mono 9.5
+      text "flowchart LR" @388,636.97815 #b3ab99 JetBrains Mono 12
+      text "  usage.Meter --> pricing.Round --> billing.Invoice" @388,655.8182 #b3ab99 JetBrains Mono 12
+      rect 374,708.7029 14x2 fill #ff9b45
+      text "Risks" @400,715.88696 #ece6d8 Inter 17
+      text "31" @336.8125,742.6976 #4f4a40 JetBrains Mono 10.5
+      rect 360,727.98755 2x21.544434 fill #4cc9f0
+      text "•" @374,744.0344 #7c7566 Inter 14.5
+      text "Historical invoices must not change: only new invoices round this way." @392.4375,744.0344 #ece6d8 Inter 14.5
+      text "•" @374,771.57886 #7c7566 Inter 14.5
+      text "Partners reconcile against our CSV export; flag the change in the changelog." @392.4375,771.57886 #ece6d8 Inter 14.5
+      rect 1063.52,118 1x845.93616 fill #24221d
+      rect 1084.52,423 452.47998x214.59259 fill #0c0c0b radius 6
+      clip 1084.52,423 452.47998x214.59259 r 6
+        rect 1096.52,436.5 7x7 fill #ff5f6d radius 3.5
+        text "Thread" @1111.52,444.54712 #ece6d8 Inter 12.5
+        text "· L14 ·" @1164.4731,443.78 #7c7566 JetBrains Mono 10.5
+        rect 1218.6294,431.73 73.130005x16.540009 fill #ff5f6d12 radius 10 stroke 1 #ff5f6d59
+        text "NEEDS YOU" @1225.6294,443.42 #ff5f6d JetBrains Mono 9.5
+        text "defer" @1399.9219,443.36523 #ffd23f Inter 12
+        rect 1399.9219,447.25977 30.703125x1 fill #ffd23fb3
+        text "resolve" @1438.625,443.36523 #ffd23f Inter 12
+        rect 1438.625,447.25977 42.375x1 fill #ffd23fb3
+        text "t:a91c" @1489,443.6 #4f4a40 JetBrains Mono 10
+        rect 1084.52,457 452.47998x1 fill #332f27
+        rect 1096.52,468 28x28 fill #ff9b45 radius 6
+        text "LG" @1103.1901,485.42 #141006 JetBrains Mono 9.5
+        text "Liam Galvin" @1134.52,479.625 #ece6d8 Inter 12
+        text "6m" @1209.7231,478.67978 #4f4a40 JetBrains Mono 9.5
+        text "Is half-even what finance actually wants? I'd assumed half-up." @1134.52,498.6289 #b3ab99 Inter 12.5
+        rect 1096.52,513.64404 28x28 fill #ff8a1f radius 6
+        text "C" @1106.855,531.064 #141006 JetBrains Mono 9.5
+        text "Claude" @1134.52,525.26904 #ece6d8 Inter 12
+        text "5m" @1183.3169,524.3238 #4f4a40 JetBrains Mono 9.5
+        text "The Stripe invoices you reconcile against use half-even (" @1134.52,544.27295 #b3ab99 Inter 12.5
+        rect 1134.52,550.2881 137.65625x17.179993 fill #161615 radius 3
+        text "docs/billing.md:40" @1138.52,563.01807 #ece6d8 JetBrains Mono 11.5
+        text "). Half-up would keep the 1¢ drift." @1272.1763,563.42523 #b3ab99 Inter 12.5
+        text "Confirm and I'll note it under Risks?" @1134.52,582.57745 #b3ab99 Inter 12.5
+        rect 1096.52,597.5926 428.47998x30 fill #060606 radius 6
+        clip 1096.52,597.5926 428.47998x30 r 6
+          text "Reply…" @1106.52,617.1397 #7c7566 Inter 12.5
+        pop
+        rect 1096.52,597.5926 428.47998x30 radius 6 stroke 1 #332f27
+      pop
+      rect 1084.52,423 452.47998x214.59259 radius 6 stroke 1 #332f27
+      rect 1084.52,647.5926 452.47998x32 radius 6 stroke 1 #332f27
+      rect 1096.52,660.0926 7x7 fill #4fe0a0 radius 3.5
+      text "L22" @1111.52,667.55255 #b3ab99 JetBrains Mono 11
+      rect 1139.3013,655.3226 66.56006x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
+      text "RESOLVED" @1146.3013,667.0126 #4fe0a0 JetBrains Mono 9.5
+      clip 1213.8613,656.6353 262.51367x13.914551 r 0
+        text "“Where does precision come from?” → Move…" @1213.8613,667.77594 #7c7566 Inter 11.5
+      pop
+      text "reopen" @1484.375,666.9578 #ffd23f Inter 12
+      rect 1484.375,670.85236 40.625x1 fill #ffd23fb3
+      rect 1084.52,727.5926 452.47998x178.34357 fill #0c0c0b radius 6
+      clip 1084.52,727.5926 452.47998x178.34357 r 6
+        rect 1096.52,741.0926 7x7 fill #4cc9f0 radius 3.5
+        text "Thread" @1111.52,749.1397 #ece6d8 Inter 12.5
+        text "· L31 ·" @1164.4731,748.3726 #7c7566 JetBrains Mono 10.5
+        rect 1218.6294,736.3226 119.119995x16.539978 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
+        text "CLAUDE · WORKING" @1225.6294,748.0126 #4cc9f0 JetBrains Mono 9.5
+        text "defer" @1399.9219,747.9578 #ffd23f Inter 12
+        rect 1399.9219,751.85236 30.703125x1 fill #ffd23fb3
+        text "resolve" @1438.625,747.9578 #ffd23f Inter 12
+        rect 1438.625,751.85236 42.375x1 fill #ffd23fb3
+        text "t:3c4d" @1489,748.1926 #4f4a40 JetBrains Mono 10
+        rect 1084.52,761.5926 452.47998x1 fill #332f27
+        rect 1096.52,772.5926 28x28 fill #ff9b45 radius 6
+        text "LG" @1103.1901,790.0126 #141006 JetBrains Mono 9.5
+        text "Liam Galvin" @1134.52,784.2176 #ece6d8 Inter 12
+        text "1m" @1209.7231,783.27234 #4f4a40 JetBrains Mono 9.5
+        text "How do we guarantee this? A flag on the invoice?" @1134.52,803.2215 #b3ab99 Inter 12.5
+        rect 1096.52,818.23663 28x28 fill #ff8a1f radius 6
+        text "C" @1106.855,835.6566 #141006 JetBrains Mono 9.5
+        text "Claude" @1134.52,829.86163 #ece6d8 Inter 12
+        text "now" @1183.3169,828.9164 #4f4a40 JetBrains Mono 9.5
+        text "reading billing/invoice.go… checking for a" @1134.52,849.8933 #b3ab99 Inter 12.5
+        rect 1395.9731,836.75616 58.421875x17.179993 fill #161615 radius 3
+        text "version" @1399.9731,849.48615 #ece6d8 JetBrains Mono 11.5
+        text "column" @1458.0513,849.8933 #b3ab99 Inter 12.5
+        rect 1096.52,865.93616 428.47998x30 fill #060606 radius 6
+        clip 1096.52,865.93616 428.47998x30 r 6
+          text "Reply…" @1106.52,885.4833 #7c7566 Inter 12.5
+        pop
+        rect 1096.52,865.93616 428.47998x30 radius 6 stroke 1 #332f27
+      pop
+      rect 1084.52,727.5926 452.47998x178.34357 radius 6 stroke 1 #332f27
+    pop
+  pop
+pop
+rect 0,974 1600x26 fill #0c0c0b
+rect 0,974 55.415x26 fill #ff9b45
+text "PLAN" @12,990.78 #141006 JetBrains Mono 10.5
+text "✕" @71.415,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @83.00875,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @103.6025,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @115.19625,990.95996 #b3ab99 JetBrains Mono 11
+rect 602.5,503.05164 224.84375x1 fill #d27049
+rect 888.25,468.99442 167.27002x18.540009 fill #060606 radius 10 stroke 1 #4fe0a080
+rect 896.25,475.2644 6x6 fill #4fe0a0 radius 3
+text "AGENT EDITED 4S AGO" @908.25,481.68442 #4fe0a0 JetBrains Mono 9.5

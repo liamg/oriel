@@ -3,6 +3,7 @@ package app
 import (
 	"image"
 	"image/draw"
+	"slices"
 	"strings"
 	"testing"
 
@@ -19,9 +20,22 @@ import (
 // railAt is the middle of the rail's nth entry from the top.
 func railAt(n int) render.Point { return render.Point{X: 22, Y: titleH + 8 + 16 + float32(n)*36} }
 
+// The rail is a project's: with nothing open (the start view) it isn't there.
+func TestRailHiddenWithNothingOpen(t *testing.T) {
+	s := newErrScene(t, "")
+	s.frame()
+	var find func(n *render.AccessNode) bool
+	find = func(n *render.AccessNode) bool {
+		return n != nil && (n.Name == "Views" || slices.ContainsFunc(n.Children, find))
+	}
+	if find(s.ui.AccessTree()) {
+		t.Error("the rail shows on the start view")
+	}
+}
+
 // SH-16: the rail against 01-ide's strip: the mockup's entries, those not registered yet dimmed.
 func TestRailSnapshot(t *testing.T) {
-	s := newErrScene(t, "")
+	s := newScene(t, "", t.TempDir(), mockupSize)
 	s.frame()
 	s.frame()
 	s.golden("rail")
@@ -43,7 +57,7 @@ func TestRailSnapshot(t *testing.T) {
 
 // SH-16: an entry lights once its view is registered, and toggles the view in the left dock.
 func TestRailTogglesAView(t *testing.T) {
-	s := newErrScene(t, "")
+	s := newScene(t, "", t.TempDir(), mockupSize)
 	s.frame()
 	git := railAt(2)
 	s.click(git)
@@ -67,7 +81,7 @@ func TestRailTogglesAView(t *testing.T) {
 
 // SH-16: a plugin's entry, from Go or Lua, appears in order, badges, and goes when disposed.
 func TestRailPluginEntries(t *testing.T) {
-	s := newErrScene(t, "")
+	s := newScene(t, "", t.TempDir(), mockupSize)
 	s.writeConfig(t, map[string]string{"init.lua": `oriel.rail.add{ name = "tickets", icon = "◆", title = "Tickets", command = "Settings", order = 70 }`})
 	s.lua().reload(false)
 	d := s.host.Contribute(registry.RailEntry{Name: "inbox", Icon: "requests", Title: "Inbox", Command: "Settings", Order: 80,

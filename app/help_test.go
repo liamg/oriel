@@ -138,3 +138,20 @@ func TestHelpSnapshot(t *testing.T) {
 	s.run("help.open", registry.Args{"id": "errors#log"})
 	s.golden("help-page")
 }
+
+// :help api shows the Lua API's reference, generated from the API itself.
+func TestHelpShowsTheLuaAPI(t *testing.T) {
+	s := editorScene(t)
+	s.editor().e.Run("help Lua API")
+	s.frame()
+	s.frame()
+	text := strings.ReplaceAll(s.frameText(), "\n", " ")
+	for _, want := range []string{"oriel.agent.tool(spec)", "Offer a tool to the session's agent", "oriel.keymap"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the API page lacks %q:\n%s", want, s.frameText())
+		}
+	}
+	if strings.Contains(text, "arrives with") {
+		t.Error("the page still says the reference is to come")
+	}
+}

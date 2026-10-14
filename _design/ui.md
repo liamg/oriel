@@ -76,6 +76,12 @@ They are design sketches, not the implementation: the app draws natively (see `s
 - Agent-written lines carry a gutter mark and an "agent · 2m" ghost until you've read them.
 - Right: a **summary** of requests (threads), the task rail, and the session tally (context, cache, cost, review ledger, tests).
   The full conversation view is 01b.
+- Built in AI-5/AI-9: the summary is the `requests.summary` view (`requests.summary` toggles it in the right dock):
+  the requests with their counts, the tasks rail (`Session.Tasks`: ✓ done, ◐ in progress, ○ to do, drawn, not
+  glyphs) and the tally at its foot (CTX meter, CACHE, $, TASKS, the latest run's TESTS). The agent console's side has
+  the same tasks rail. The title bar's usage windows (`titlebar.right.40-usage`) are the plan of the session in front's
+  provider (`State.Usage`): `5H` and `WK` meters with their share. Not yet: REVIEWED (the ledger, RV-2), and opening
+  the summary by default with a session.
 - Bottom: the agent pane, terminal, problems, debug and tests. The orange tab dot means something's running.
 - Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem tats.
 
@@ -94,6 +100,27 @@ They are design sketches, not the implementation: the app draws natively (see `s
 - Right: what this request changed (with its own read/unread ledger), what it spawned (tasks, new requests), and related requests.
 - Keyboard: `j`/`k` between requests, `⏎` to the composer, `o` jumps to the anchor in the editor, `R` resolves.
 - Inline threads in the editor (01) and this view are two views of the same thread: reply in either.
+- Built in AI-5 (`app/requests*.go`, `app/threadsinline.go`): the `requests` view is the list (the rail's Requests,
+  `⌘⇧R`, left dock), with filter chips, search and **New request**; selecting one opens the `request` view (a main tab)
+  for the selected request: the anchored code read from the open buffer or the file, re-found by its text when the line
+  moved; each comment with its markdown (paragraphs, lists, headings, inline code and bold, fenced code: `widget.Rich`),
+  pasted images by name, the agent's model chip, its **activity** block (`Comment.Activity`: edits with their diff stat
+  and **view**, lookups, runs) and **evidence** chips (`Comment.Evidence`; a click runs `test.run.show`, TR-5), and an
+  unbacked claim flagged ⚠. The composer is one line for now (`widget.Input`, key mode `request.composer`): attachments
+  as chips, **@ FILE** and **# SYMBOL** open the files and symbols pickers (whose `⌃a` attaches), URGENT and BTW
+  toggle, `⏎` sends, `⌘⏎` sends urgent. Right: this request, what it changed (`Thread.Touched`), spawned (tasks whose
+  `Thread` it is, threads whose `Origin` it is) and related (the same file). Keys in mode `requests` (list and
+  conversation): `j`/`k`, `⏎` the composer, `o` the anchor, `R` resolve, `⌘N` new request. Commands: `request.comment`
+  (fires `CommentSend`, then `worker.Client.Comment`), `request.resolve`, `request.reopen`, `request.new {text, context,
+  file, line}` (the tests' "ask agent to fix"), `request.open {thread}`, `request.attach {items | text, title}` (the
+  pickers' `⌃a`, the terminal's "send last output"), `request.send`, `request.next`/`prev`/`compose`/`anchor`.
+- Threads between the editor's lines are a decoration provider (`threads`): each open thread anchored in the buffer's
+  file is a Block under its line (a buffer anchor keeps it with its text as you edit) with a sign in the gutter that
+  opens it, the agent's state in its header and a reply field. **Ask about this…** in the editor's right-click menu, or
+  `thread.new`, opens a composer under the cursor's line. A block's controls keep focus: the editor no longer takes
+  focus back from something inside its code column, and blocks are keyed by their place among the line's blocks.
+- Not yet: the multi-line composer, `@file`/`#symbol` completion as you type, image paste and dictation (the chips
+  aren't there), `g r` (vim's `gr`), the request's own read/unread ledger (RV-2), and turn cost per request.
 
 ## 01e · Start view: nothing open
 
@@ -106,7 +133,9 @@ What the window shows with no directory and no session open: at launch (plain `o
 - Two columns. **Start**: New Session (`⌘N`), Resume a Session (`⌘O`), Open Directory (`⌘⇧O`), Settings (`⌘,`), each
   with a description and the key bound now. **Recent**: sessions, then directories, newest first; with none, the big `o▌`.
 - Entries are a contribution point. An entry whose command isn't available is dimmed with a `soon` tag; New Session and
-  Resume a Session stay that way until sessions exist (AI-4, SE-1).
+  Resume a Session are, while no worker is connected.
+- Recent lists the sessions first (not archived, newest first: kind, projects, branch, a diamond in the status
+  colour), and opening one runs `session.open`. Until mission control (SH-7), this is what the app opens on.
 - `j`/`k` or arrows move, `⏎` runs, `⌫` (or the `✕` on a recent under the pointer) forgets a recent, until it's opened again. The same actions are commands, so they're in the omnibox too.
 - The pointer moving onto a row selects it, as `j`/`k` do.
 - It fits the window: the columns shrink to fit, and below 760 wide Start and Recent become tabs. Taller than the window, it
@@ -134,6 +163,42 @@ What an open directory or session shows with no buffer open: right after opening
 - One card per repo: name, path, branch and ahead/behind; then panels for languages, commit activity over the last
   year, and contributors (or largest files). A plain directory gets languages, size and largest files only.
 - Panels are contributions. The view shows at once; panels fill in from the background and are cached per repo by HEAD.
+
+## 01h · Project context (proposals)
+
+![41-project-context](mockups/41-project-context.png)
+
+**Direction: D, pending the user's approval of its mockup.** A session can hold several projects, but you work in one at a time (admin-ui:
+its files, changes, PR and tests), which the rail and 01c's one-root-per-project Explorer don't express. Three options (A–C),
+each shown for two projects, one project, and a directory opened directly; D answers the user's reply to them. Whichever is picked replaces the
+multi-project notes in 01c and `sessions.md` → In the editor. `⌥1–3` are already Explorer scopes, so projects take `⌃1–9`.
+
+- **A · Project switcher at the head of the rail.** The rail keeps its panels; a chip at its top picks the project
+  (`⌃1–9`, `⌃P`), and every panel but Requests shows only that project, with its name in the dock header. The other
+  projects' state shows as a dot on the chip. Least change, but the project is a mode that's easy to lose track of, and
+  Ship's merge order across projects (18) needs an "all projects" entry. One project or a directory: no chip, today's rail.
+- **B · Project as the unit.** The left dock is one collapsible section per project, each with its own tabs (Files ·
+  Changes · PR · Tests); others fold to one line with branch, changes, PR and status. The rail keeps only the session's
+  own views (Projects, Requests, Search, Settings). Closest to how the user describes working, and the biggest change:
+  Git, Ship and Tests leave the rail, and the merge order across projects needs a session-level home. One project or a
+  directory: one section with no header, a tabbed dock.
+- **C · Project tabs above the panel.** Today's rail model plus a row of project tabs over whichever panel is open: the
+  rail picks what, the tabs pick which, one choice per session shared by every panel. Always visible, with each
+  project's state on its tab; costs a row and scrolls with many projects; an **all** tab can hold what spans projects
+  (Ship's merge order, Search). One project or a directory: no row, today's dock.
+- **D · Project sidebar** (the user's direction: A, with a quicker way to see and switch projects).
+
+  ![42-project-sidebar](mockups/42-project-sidebar.png)
+
+  The rail becomes a menu sidebar, one accordion per project. A header shows the project's state (branch, ahead,
+  changes, PR and a CI dot); under the open one sit its panels (Explorer, Git, Pull request, Tests). Clicking a header
+  expands it and folds the open one, and the project reopens its last panel; clicking an entry opens that project's
+  panel in the dock, whose header names both ("admin-ui · Explorer"). Below a divider sit the session's own entries:
+  Requests with its count, Ship (18's merge order across projects, with 2+ PRs), Search, Settings. `⌃1–9` jump to a
+  project; `j`/`k`/`⏎` work in the sidebar. A toggle narrows it to an icon strip that replaces today's rail: each
+  project a two-letter coloured initial with a status dot, the open project's panel icons under it. Costs ~225px in the
+  wide form, and two lines per folded project. One project or a directory: no header, a labelled rail (Pull request
+  only with a remote).
 
 ## 01c · Explorer scopes: Changed · Uncommitted · All
 
@@ -246,6 +311,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   here and in the open buffers, keymaps (`⌃e` to the definition), commands, sessions and quickfix (`:copen`).
   Ranking is the fuzzy score, then open buffers and shallower paths; "changed on this branch" and "recently
   opened" join with FG-1 and the session's history. Threads, git log and status, and help come with their tickets.
+- Threads came with AI-5: the `threads` source lists the session in front's requests, and `⏎` opens one. `␣t` is also
+  the start of the tests' `␣tt`, `␣tf`… (TR-1), so it doesn't run on a timeout while which-key shows: which-key offers
+  `⏎` for ␣t's own mapping (below).
 
 ## 02c · Which-key: the next keys, as you type
 
@@ -264,6 +332,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   keymap with no command names a group (`{Keys = "<leader>a", desc = "+agent"}`). `⌫` and `esc` act on a
   mapping's keys, not an engine's half-typed command (which `esc` cancels in the engine). `?` to the keymaps
   picker comes with Lua's keymap API (PL-1). `whichkey.enabled` turns it off.
+- Keys that are a mapping of their own as well as the start of longer ones (`␣t` and `␣tt`) wait while which-key
+  shows them; it lists `⏎` with that mapping's description, and `⏎` runs it (`Resolver.Complete`/`Accept`,
+  `ext.Pending.Runs`), unless a mapping goes on with `⏎`.
 
 ## 03 · Mission control (`⌘⇧K`)
 
@@ -285,6 +356,14 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Mode: Plan · Work · Review PR · Tour · Job · **New repo** (`sessions.md`). Provider: Claude or Codex, with model, effort and remaining usage.
 - Repos on one shared branch, a worker, sandbox and network policy.
 - Pre-flight: what will be fetched and built, and which LSPs will start.
+- As built (AI-4): `⌘N` or `session.new` (whose args fill it in: kind, prompt, ticket, pr, dir, repos, provider,
+  worker) opens it over a scrim; `⌘↵` or **Start** runs `session.start`, `esc`, the close button or a click outside
+  closes it. The modes are the worker's kinds (`widget.Choices`), so Direct and Scratch are there too, and a plugin's
+  kind joins them. A mode asks for what its kind starts from: a PR URL, a new repo's name, template and parent, or a
+  directory. The right column is recent prompts (choosing one fills it in again) and the pre-flight: when worktrees
+  are made, repos to fetch, the agent and its prompt pack, where it runs and its network. Not yet: the multi-line
+  prompt (the field is one line), a ticket expanding into a card (PL-8), templates and Save as job, toolchains and
+  LSPs in the pre-flight.
 
 ## 05 · Plan mode
 
@@ -293,6 +372,20 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Plan docs render as documents, with threads in the margin anchored to lines.
 - The agent's live edits show as an inline diff block ("agent edited 4s ago").
 - **Readiness**: Start work unlocks when every thread is resolved or deferred.
+- As built (AI-8): the `plan` view (main area) and `plan.docs` (docked left) open by themselves when the window is on
+  a session that's planning, and with `plan.open {doc}`. The docs are the `*.md` files at the workspace root, PLAN.md
+  first, each with its threads that need you, are worked on or are open; below them the ticket and prompt, the repos
+  and their branch, and readiness (open threads, a bar, and what unlocks Start work). The doc is drawn from the shared
+  markdown renderer's blocks (`mdParse`, which keeps each block's source lines), with a line number and a coloured edge
+  where a thread is; a click, or `j`/`k` then `c`/`⏎`, opens a thread on a block's first line. Threads sit in the margin
+  level with their block (or under the card before), as the same card that sits between the editor's lines, with
+  **defer** while planning; a closed one folds to a line with **reopen**. The agent's latest edit to the doc shows for
+  ten minutes as green blocks labelled "agent edited 4s ago", a one-line change as its old words struck through
+  (`widget.Span.Strike`) and its new ones. The header has the doc's title, the agent and "drafting rev N" (its edits to
+  the doc), "agent editing PLAN.md" during a turn that edits a doc, **Preview diff** (lit when something registers
+  `diff.open`) and **Start work** (`session.start-work`). The status line's mode chip says PLAN while the doc has
+  focus. Not yet: a mermaid fence is drawn as code, not a diagram; the inline diff is word-level for one-line blocks
+  only.
 
 ## 06 · Review, and the review ledger
 
@@ -375,6 +468,16 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   requests, network and gateway approvals, security-key touch.
 - Tabs carry badge counts. The Inbox panel shows the full history.
 - Approvals show the review state ("0 unreviewed lines ✓") right where you approve a push.
+- Built in AI-7 (the UI half): each `core.Ask` is a `widget.ActionCard` (a general card: kicker, title, code box,
+  detail, body, actions with their keys, a note; its actions wrap to the card's width), drawn by `app/askcards.go`.
+  Cards stack at the window's bottom right (`app.overlay.asks`, up to four, then "+N more waiting") for every session,
+  with its name as the kicker; the session in front's move into its console while that shows. Permission: Allow once
+  `y`, Always in this workspace `a` (the rule it makes at the right), Deny `n`, Deny with note… `⇧n` (an input; the
+  note goes to the agent). Network: Allow host, Allow \*.domain (as `scope`), Once, Deny. Gateway: Allow, Always (when
+  it has a rule), Deny. Question: options as buttons (one click answers a single question; several, or multi-select,
+  are picked then answered), and a typed answer. All answer through `ask.answer {id, ask, decision, note, scope,
+  answers}`; `ask.deny-note` opens the note. Session tabs count their asks. Not yet: the Inbox panel and its history
+  (SH-9, P7), the countdown ring, review requests and the security-key card.
 
 ## 13 · Verify & raise
 
@@ -397,6 +500,19 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Structured transcript: tool calls as blocks, edits as mini-diffs, shell output folded.
 - Subagents box, permission card (and the rule "Always" would create), network approval.
 - Composer with `@file`, model and effort chips, queued messages.
+- Built in AI-6: the `agent.console` view (bottom dock by default, any placement; `⌘⇧A`, command `agent.console`,
+  and a rail entry `❯` while a worker is connected, badged with the asks waiting). Header: provider, model, effort, a
+  status chip, ticket · session · branch, Fork (a btw side question to a tool-less fork; its answer shows as a block),
+  Interrupt (`session.interrupt`), Raw terminal (the agent's PTY from its worker, through `term.open {source}`).
+  Transcript from `SessionState.Transcript`, with the busy thread's anchor and your comment pinned above it: prose as
+  markdown, prompts (long ones folded), thinking dimmed and folded, tool calls with a status dot, title and summary
+  (lines, hits, duration), edits as mini-diffs with "view in diff" (`diff.open`, else the file), shell output folded,
+  errors red, the SUBAGENTS box, and asks' cards where they arose. Keys in mode `agent`: `j`/`k` between blocks, `⏎`
+  folds, `i` the composer, `y`/`a`/`n`/`⇧n` answer the selected or first ask, `Esc` interrupts (closes when idle).
+  Composer (mode `composer`): `⏎` sends with `agent.send` (queued as QUEUED while the agent works), `⌘⏎` sends now
+  (urgent). Right: session tally from `Agent.Tally`, plan usage from `State.Usage` (this provider first), this turn's
+  touched files, rules in force (the gate, the sandbox's, and `SessionState.Rules`). Not yet: `@file` completion (an
+  `@path` goes to the agent as written), a multi-line composer, and the model/effort chips as pickers.
 
 ## 16 · Plugins
 

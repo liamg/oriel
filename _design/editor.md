@@ -102,6 +102,9 @@ engine never feels like another binary running in a pane.
   buffer (text, marks, undo cursors, name, modified). Window commands keep a layout tree of rows and columns
   as vim's, so `CTRL-W h/j/k/l`, `:close` and `:only` mean what they mean in vim; the UI's layout tree (FW-9)
   shows it.
+- Each jumplist entry is in a buffer, as vim's: editing another buffer (`:e`, `:b`, `CTRL-^`, a quickfix entry,
+  `Engine.JumpTo`, which is a tag jump for the IDE's go-tos) is a jump, and `CTRL-O`/`CTRL-I` go back to the
+  buffer an entry is in. Entries in unloaded or wiped-out buffers are dropped, as nvim's `'jumpoptions'` "clean".
 - Buffers have no files yet: `:file` names one, and `:e` reaches only buffers already open. `'hidden'` is on, as nvim.
 - Folds follow vim's model: each fold is open, closed, or follows `'foldlevel'`, and the methods are manual,
   indent and marker. Tree-sitter folds come through the same structure later.

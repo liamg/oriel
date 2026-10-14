@@ -303,11 +303,18 @@ func (e *explorer) build(c *ui.Ctx) {
 			})
 			return
 		}
+		if st == nil {
+			c.Column("loading", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12)}, func(c *ui.Ctx) {
+				c.Text("t", "Reading the work tree…", monoTok(c, 11.5, theme.FgFaint))
+			})
+			return
+		}
 		c.Row("scopes", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 10, T: 10, B: 6}}, func(c *ui.Ctx) {
 			labels := []string{fmt.Sprintf("CHANGED %d", st.Count(gitx.Changed)), fmt.Sprintf("UNCOMMITTED %d", uncommittedCount(st)),
 				fmt.Sprintf("ALL %d", st.Count(gitx.All))}
 			i := int(sc)
-			if widget.Segmented(c, "seg", labels, &i, widget.SegmentedOpts{Help: "files/explorer#scopes", Label: "Explorer scope"}) {
+			short := []string{fmt.Sprintf("CHG %d", st.Count(gitx.Changed)), fmt.Sprintf("UNC %d", uncommittedCount(st)), fmt.Sprintf("ALL %d", st.Count(gitx.All))}
+			if widget.Segmented(c, "seg", labels, &i, widget.SegmentedOpts{Help: "files/explorer#scopes", Label: "Explorer scope", Short: short}) {
 				e.scopes[e.session()] = gitx.Scope(i)
 				sc = gitx.Scope(i)
 			}
@@ -337,11 +344,10 @@ func (e *explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 	c.Row("sub", ui.Style{W: ui.Flex(1), H: ui.Px(26), Pad: ui.PadXY(12, 0), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 		switch sc {
 		case gitx.All:
-			e.cols.status = widget.ToggleChip(c, "status", "status", e.cols.status, widget.ToggleChipOpts{Help: "files/explorer#columns"})
-			e.cols.lines = widget.ToggleChip(c, "lines", "± lines", e.cols.lines, widget.ToggleChipOpts{Help: "files/explorer#columns"})
-			e.cols.diag = widget.ToggleChip(c, "diag", "diag", e.cols.diag, widget.ToggleChipOpts{Help: "files/explorer#columns"})
-			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			e.changedOnly = widget.ToggleChip(c, "only", "⌥C changed-only", e.changedOnly, widget.ToggleChipOpts{Help: "files/explorer#columns"})
+			const help = "files/explorer#columns"
+			widget.Toolbar(c, "cols", []widget.ToolItem{{Key: "status", Label: "status", On: &e.cols.status, Help: help},
+				{Key: "lines", Label: "± lines", On: &e.cols.lines, Help: help}, {Key: "diag", Label: "diag", On: &e.cols.diag, Help: help},
+				{Key: "only", Label: "⌥C changed-only", On: &e.changedOnly, Help: help}}, widget.ToolbarOpts{Help: help, Label: "Columns"})
 		case gitx.Changed:
 			base := st.Base
 			if base == "" {

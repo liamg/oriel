@@ -69,9 +69,6 @@ type replLine struct {
 // Events features fire later, declared now so hooks on them show what they wait for (plugins.md, "Go interfaces").
 var laterEvents = []registry.EventInfo{
 	{Name: "Commit", Doc: "A commit about to be made (FG-6); a veto stops it. { project, message, unread }"},
-	{Name: "CommentSend", Doc: "A comment about to go to an agent (AI-5); a rewrite changes it. { thread, body, urgent }"},
-	{Name: "Permission", Doc: "An agent asking to run a tool (AI-7); a decision answers it. { session, tool, input }"},
-	{Name: "AgentTurnEnd", Doc: "An agent's turn ending (AI-2). { session }"},
 	{Name: "PrRaise", Doc: "A pull request about to be raised (FG-6); a veto stops it. { project, title }"},
 	{Name: "ModeChanged", Doc: "The editor's mode changing (a later ticket). { old, new }"},
 }
@@ -505,9 +502,10 @@ func cmpOr(s, d string) string {
 	return s
 }
 
+// fmtDur is a hook's p99 as :Hooks shows it: what matters is the 2 ms budget, so under a millisecond is just that.
 func fmtDur(d time.Duration) string {
 	if d < time.Millisecond {
-		return fmt.Sprintf("%dµs", d.Microseconds())
+		return "<1ms"
 	}
 	return fmt.Sprintf("%.1fms", float64(d.Microseconds())/1000)
 }

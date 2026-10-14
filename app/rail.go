@@ -72,6 +72,10 @@ func (r *rail) Activate(_ context.Context, h ext.Host) error {
 }
 
 func (r *rail) build(c *ui.Ctx, h ext.Host) {
+	// The rail's views are a project's or a session's: with neither open (the start view) it has nothing to offer.
+	if at := h.Here(); at.Project == "" && (at.Session == "" || at.Session == noSession) {
+		return
+	}
 	th := c.Theme()
 	es := registry.RailEntries(h)
 	c.Row("rail", ui.Style{W: ui.Px(railW), H: ui.Flex(1), Fill: th.C(tRailBg), Role: ui.RoleToolbar, Label: "Views"}, func(c *ui.Ctx) {

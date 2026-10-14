@@ -2,7 +2,7 @@
 id: AI-9
 title: "Tasks rail, session tally, usage windows"
 phase: P5
-status: todo
+status: review
 area: Sessions and AI
 module: core
 depends_on: [AI-2]

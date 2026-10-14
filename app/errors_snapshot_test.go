@@ -44,6 +44,7 @@ type errScene struct {
 	clip  *clipboard
 	exts  []ext.Extension
 	size  render.Point
+	scale float32 // the zoom it's drawn at; 1 when 0
 	// overviewOff hides the project overview, whose temporary paths would change every run; overview tests dispose it.
 	overviewOff registry.Disposable
 }
@@ -55,6 +56,12 @@ func newErrScene(t *testing.T, crashDir string) *errScene {
 // newScene is the built-ins drawn at size, with files relative to workDir.
 func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errScene {
 	t.Helper()
+	return newSceneWith(t, crashDir, workDir, size, nil)
+}
+
+// newSceneWith is newScene with its config changed first: workers to connect, say.
+func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, change func(*Config)) *errScene {
+	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	conf := filepath.Join(home, ".config", "oriel")
@@ -64,7 +71,10 @@ func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errSce
 	s := &errScene{t: t, store: eventstore.New(), reg: registry.New(), clip: &clipboard{}, size: size}
 	cfg := Config{Store: s.store, Registry: s.reg, Logs: NewLogs(LogOpts{}), ConfigDir: conf, CrashDir: crashDir, Version: "v0.4.2",
 		WorkDir: workDir}
-	s.sh = &shell{cfg: cfg, events: newEventTail(500), desktop: s.clip, poke: func() {}}
+	if change != nil {
+		change(&cfg)
+	}
+	s.sh = &shell{cfg: cfg, events: newEventTail(500), desktop: s.clip, poke: func() {}, reopen: make(chan reopenTo, 1)}
 	s.store.Subscribe(core.Filter{}, s.sh.events.add)
 	s.store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(s.store, cfg.Logs.Logger("core"), ev) })
 	s.exts = builtins(s.sh)
@@ -105,7 +115,22 @@ func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errSce
 
 func (s *errScene) frame() {
 	s.list = new(render.List)
-	s.ui.Frame(s.list.Record(1), s.size, func(c *ui.Ctx) { buildWindow(c, s.reg, s.size) })
+	s.ui.Frame(s.list.Record(s.zoomed()), s.size, func(c *ui.Ctx) { buildWindow(c, s.reg, s.size) })
+}
+
+func (s *errScene) zoomed() float32 {
+	if s.scale == 0 {
+		return 1
+	}
+	return s.scale
+}
+
+// zoom draws the scene at z, the same window laid out at its size over z, as ui.font_size does.
+func (s *errScene) zoom(z float32) {
+	s.size = render.Point{X: s.size.X * s.zoomed() / z, Y: s.size.Y * s.zoomed() / z}
+	s.scale = z
+	s.frame()
+	s.frame()
 }
 
 func (s *errScene) run(id string, args registry.Args) {
@@ -120,7 +145,7 @@ func (s *errScene) golden(name string) {
 	s.frame()
 	s.frame()
 	snapshot.Golden(s.t, "testdata/"+name+".list", []byte(snapshot.List(s.list)))
-	img := raster.Render(s.list, s.size, 1, s.ui.Theme().C(theme.BgBase))
+	img := raster.Render(s.list, s.size, s.zoomed(), s.ui.Theme().C(theme.BgBase))
 	snapshot.GoldenPNG(s.t, "testdata/"+name+".png", img, 0.02, 0.001)
 }
 

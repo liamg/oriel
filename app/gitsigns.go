@@ -269,9 +269,10 @@ func (g *gitSigns) blameLine(ctx registry.DecorationCtx, f gitFile) (registry.De
 				lines, err := g.sh.git.status.Repo().Blame(context.Background(), f.rel, contents)
 				g.h.Do(func() {
 					g.mu.Lock()
-					b.loading = false
-					if err == nil {
-						b.version, b.lines, b.loaded = version, lines, true
+					// A file blame can't read (untracked, say) waits for an edit or a git change to try again, not the next frame.
+					b.loading, b.version, b.lines, b.loaded = false, version, lines, true
+					if err != nil {
+						b.lines = nil
 					}
 					g.mu.Unlock()
 					g.h.Redraw()

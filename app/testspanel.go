@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
@@ -88,6 +89,7 @@ func (x *testsExt) panelView(c *ui.Ctx) {
 					}
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+				x.agentRun(c)
 				x.lastRunLine(c)
 				var names []string
 				for _, a := range x.set.Detect(x.workspace()) {
@@ -134,6 +136,26 @@ func (x *testsExt) panelView(c *ui.Ctx) {
 				})
 			})
 		})
+}
+
+// agentRun is the latest run the session in front's agent made, as the evidence its claims link to (TR-5).
+func (x *testsExt) agentRun(c *ui.Ctx) {
+	st := x.h.State()
+	se, ok := st.Session(st.Focus)
+	if !ok {
+		return
+	}
+	var last core.TestRun
+	for _, r := range se.Snapshot().Runs {
+		if r.By == "agent" && !r.Ended.Before(last.Ended) {
+			last = r
+		}
+	}
+	if last.ID == "" {
+		return
+	}
+	c.Text("agent", "AGENT", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: c.Theme().C(theme.FgFaint)})
+	evidenceChip(c, "agentrun", x.h, se.ID(), last.ID, runLabel(last), last.OK)
 }
 
 // lastRunLine is the last run: its number, trigger, scope, counts and who started it.

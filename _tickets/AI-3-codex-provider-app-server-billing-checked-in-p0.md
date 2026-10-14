@@ -2,7 +2,7 @@
 id: AI-3
 title: "Codex provider: app-server (billing checked in P0)"
 phase: P5
-status: todo
+status: review
 area: Sessions and AI
 module: agent/codex
 depends_on: [AI-1]

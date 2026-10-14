@@ -48,7 +48,6 @@ type testsExt struct {
 	exec     *testrun.Exec
 	last     *testrun.Request
 	watch    bool
-	coverage *testrun.Coverage
 	showCov  bool
 	found    map[*text.Buffer]*discovery
 	explains map[string]*explanation
@@ -112,7 +111,7 @@ func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
 			return x.runScope("file", testrun.ModeCoverage)
 		}},
 		{ID: "test.coverage.toggle", Title: "Show or hide the coverage gutter", Run: func(registry.Ctx, registry.Args) error {
-			x.showCov = !x.showCov && x.coverage != nil
+			x.showCov = !x.showCov
 			return nil
 		}},
 		{ID: "test.watch", Title: "Re-run the tests a save affects (toggle)", Run: func(registry.Ctx, registry.Args) error {
@@ -176,12 +175,15 @@ func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
 		{Name: "tests.watch", Icon: "●", Label: "watch", Command: "test.watch", When: isTest, On: func() bool { return x.watch }, Order: 30,
 			Help: "editor/pane#tests"},
 		{Name: "tests.coverage", Label: "coverage", Command: "test.coverage", On: func() bool { return x.showCov }, Order: 40,
-			When: func(path string) bool { return isTest(path) || x.coverage != nil && x.coverage.Files[path] != nil },
+			When: func(path string) bool { return isTest(path) || len(x.h.CoverageFor(path)) > 0 },
 			Help: "editor/pane#tests"},
 	} {
 		x.add(h.Contribute(a))
 	}
 	x.add(h.View(TestsView, testsView{x}))
+	for _, d := range x.evidence() {
+		x.add(d)
+	}
 	x.add(h.View("statusline.left.65-tests", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "tests", Fn: x.statusSegment} })))
 	return nil
 }
@@ -204,13 +206,7 @@ func (x *testsExt) running() bool {
 	return x.exec != nil
 }
 
-func (x *testsExt) historyPath() string {
-	sum := 0
-	for _, r := range x.sh.cfg.WorkDir {
-		sum = sum*31 + int(r)
-	}
-	return filepath.Join(x.sh.cfg.StateDir, fmt.Sprintf("tests-%x.json", uint32(sum)))
-}
+func (x *testsExt) historyPath() string { return x.sh.dirState("tests") }
 
 func (x *testsExt) workspace() testrun.Workspace { return testrun.Workspace{Root: x.sh.editor.dir} }
 
@@ -330,18 +326,16 @@ func (x *testsExt) decorations(ctx registry.DecorationCtx) []registry.Decoration
 		}
 	}
 	out = append(out, x.failureBlocks(ctx, d)...)
-	if x.showCov && x.coverage != nil {
-		if lines, ok := x.coverage.Files[ctx.Path]; ok {
-			for l, hits := range lines {
-				if l < ctx.Top || l >= ctx.Bottom {
-					continue
-				}
-				edge := "tests.coverage.covered"
-				if hits == 0 {
-					edge = "tests.coverage.uncovered"
-				}
-				out = append(out, registry.Decoration{Kind: registry.LineBg, Line: l, Edge: edge, Priority: -5})
+	if x.showCov {
+		for l, hits := range x.h.CoverageFor(ctx.Path) {
+			if l < ctx.Top || l >= ctx.Bottom {
+				continue
 			}
+			edge := "tests.coverage.covered"
+			if hits == 0 {
+				edge = "tests.coverage.uncovered"
+			}
+			out = append(out, registry.Decoration{Kind: registry.LineBg, Line: l, Edge: edge, Priority: -5})
 		}
 	}
 	return out
@@ -532,7 +526,11 @@ func (x *testsExt) start(req testrun.Request) error {
 			}
 			x.history.Add(run)
 			if req.Mode == testrun.ModeCoverage && run.Coverage != nil {
-				x.coverage, x.showCov = run.Coverage, true
+				x.h.ClearCoverage("tests")
+				for file, hits := range run.Coverage.Files {
+					x.h.SetCoverage("tests", file, hits)
+				}
+				x.showCov = true
 			}
 			x.saveHistory()
 			x.h.Redraw()

@@ -29,7 +29,8 @@ func (s *statusLine) Activate(_ context.Context, h ext.Host) error {
 		return &ui.Func{Key: "statusline", Fn: func(c *ui.Ctx) {
 			th := c.Theme()
 			c.Row("statusline", ui.Style{W: ui.Flex(1), H: ui.Px(statusH), Gap: 16, Cross: ui.Center, Fill: th.C(tStatusBg), Stroke: th.C(theme.Line),
-				Role: ui.RoleStatus, Label: "Status line"}, func(c *ui.Ctx) {
+				Scale: partScale(h.Options(), "ui.statusline.font_size"),
+				Role:  ui.RoleStatus, Label: "Status line"}, func(c *ui.Ctx) {
 				ids := h.Views()
 				segment := func(id string) {
 					if v, ok := h.ViewByID(id); ok {

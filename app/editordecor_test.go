@@ -132,3 +132,41 @@ func TestDecoratedEditorAgainstTheMockup(t *testing.T) {
 		t.Errorf("the decorated editor column is %s off the mockup (testdata/editor-decorated-mockup.failed.png)", d)
 	}
 }
+
+// tallBlock is a 200px block on a line, revealed or not.
+type tallBlock struct {
+	line   int
+	reveal bool
+}
+
+func (b *tallBlock) Decorations(ctx registry.DecorationCtx) []registry.Decoration {
+	return []registry.Decoration{{Kind: registry.Block, Line: b.line, Reveal: b.reveal,
+		Node: &ui.Func{Key: "tall", Fn: func(c *ui.Ctx) { c.Box("b", ui.Style{W: ui.Flex(1), H: ui.Px(200)}, nil) }}}}
+}
+
+// A block that wants revealing scrolls the editor until all of it shows (a references peek near the bottom of the
+// view), and blocks in view take rows from the text, so the cursor stays clear of them.
+func TestRevealedBlockScrollsIntoView(t *testing.T) {
+	s := editorScene(t)
+	p := s.editor().current()
+	top := p.Top()
+	bottom := top + s.editor().rows[p.ID()] - 2
+	b := &tallBlock{line: bottom}
+	s.reg.Decorations("test.peek", b)
+	s.frame()
+	s.frame()
+	if got := s.editor().current().Top(); got != top {
+		t.Fatalf("a block that doesn't ask moved the view from %d to %d", top, got)
+	}
+	b.reveal = true
+	for range 4 {
+		s.frame()
+	}
+	p = s.editor().current()
+	if p.Top() <= top || p.Top() > bottom {
+		t.Fatalf("the view's top went from %d to %d; want it down, but not past the block's line %d", top, p.Top(), bottom)
+	}
+	if s.editor().blockPx[p.ID()] < 199 {
+		t.Errorf("blocks took %vpx, want the block's 200", s.editor().blockPx[p.ID()])
+	}
+}

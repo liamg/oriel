@@ -72,6 +72,8 @@ stateDiagram-v2
 - **Archiving** (after merge, or by hand) removes the worktrees but keeps the threads, transcript, tours and test history, so
   past sessions stay searchable in the omnibox.
 - **Sessions survive restarts**: the agent resumes by session id, and the layout, open buffers and cursor positions come back.
+  Built (SE-2): the layout is kept per directory as it changes, and views revive their instances through
+  `registry.Persisted` (plugins.md); switching to a session reopens its directory, so its layout comes back too.
 - **Housekeeping**: stale worktrees and branches are listed per repo, and cleaned with a confirmation.
 
 ## In the editor
@@ -119,3 +121,44 @@ type Sessions interface {
 ```
 
 - Session kinds are a contribution point (`plugins.md`), so a plugin can add, say, an "incident" kind with its own prompt pack.
+
+## As built (P5)
+
+- **The worker** (`oriel worker`) is a process of its own on each machine, so sessions and their agents outlive the
+  window. The app and the CLI reach this machine's on `~/.oriel/worker.sock` (owner only), starting it if it isn't
+  running; a worker elsewhere dials the app over pinned TLS (`oriel worker --connect host:port --fingerprint …`).
+  Remote workers run sessions and agents, but editing a remote session's files from the app needs the buffer replica
+  (`architecture.md` → Where buffers live), which isn't built: the window only follows sessions on this machine.
+- **Where things are**: workspaces in `~/.oriel/workspaces/<id>` with `.oriel-workspace.json` (crit's manifest,
+  field for field); each session's event log, logs and drafts in `~/.oriel/sessions/<id>/`; registered repos in
+  `~/.oriel/repos.json`. A session's id is its name, from the prompt (`inf-2231-fix-stale-usage-prices`), unique on
+  its worker.
+- **crit's workspaces are read in place**: every `~/.crit/{work,tours,runs}/<name>` with a `.crit-workspace.json` is a
+  session `crit-<name>` on crit's own directories. Oriel adds threads and an agent to it, and never writes into it.
+- **Plan**: the repos are listed from the start and the agent reads the user's checkouts (protected from edits);
+  Start work makes the worktrees, on the session's branch, once every thread is resolved or deferred (the plan's own
+  thread, where the prompt is, and btw threads don't count: `SessionState.Holding`). A session whose kind makes its
+  worktrees at Start work (plan, and new repo, which carries on as a plan) has `StartWork` set, and is `Planning()`
+  until then. Start work tells the agent on the plan's thread, as crit does, that the plan is approved, that the docs
+  at the workspace root are the whole plan, and which worktree of which checkout on which branch to edit; the window
+  then follows the session to its worktree (it follows the session in front whenever its projects move). The plan's
+  thread reaches the agent as `where="plan"`, and a comment on a doc at the workspace root is anchored to the
+  `core.DocsProject` project with its path relative to the workspace (`where="PLAN.md:14"`).
+- **Direct** never makes a worktree or a workspace: the directory itself, git repo or not. **Scratch** gets a
+  directory for notes and no repo. **New repo** makes the repo from a template (`empty`, `go-module`, `go-cli`, or a
+  git URL), commits it, registers it, and carries on as a plan for it. **Review** fetches `pull/<n>/head` from the
+  registered repo whose remote matches the PR's URL, and pins a read-only worktree there.
+- **The launcher** (`ui.md` 04) lists the worker's kinds (`kinds.list`, `worker.KindSpec`: title, `Desc`, `About`,
+  `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
+  The CLI takes its flags after the prompt too (`oriel new "fix stale usage prices" --repo pricing`), and every
+  kind starts from it: `new --kind plan|work|tour|job|direct|scratch`, `review <pr-url>`, `init <name>`.
+- **The app opens on the start view**, not mission control: mission control is SH-7 (P7). Until then the start
+  view's Recent lists the sessions first, and opening one brings it to the front.
+- **Files outside the session** open read-only: the sessions extension's `BufRead` rewrite hook marks a file outside
+  every project and the session's own directory "outside the session", and one in a project the session only reads
+  (a plan's checkouts before Start work, a tour, a review) "the session only reads it". It applies while the window
+  is on the session in front. Go-to-definition and peek reach them as any file.
+- **Archive** refuses while a worktree has uncommitted work, then removes the worktrees and keeps the session's
+  threads, transcript and test runs (`oriel` searches them: `session.search` over the whole log, not only what the
+  state keeps). **Restart**: the worker replays every session's log; nothing runs until it's resumed, which resumes
+  the agent by its own id.

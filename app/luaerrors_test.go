@@ -306,5 +306,6 @@ func TestLuaErrorsSnapshot(t *testing.T) {
 	a, _ := action(n, "Open at line")
 	s.run(a.Command, registry.Args(a.Args))
 	s.run("log.open", registry.Args{"seq": n.Seq})
+	s.waitHighlights()
 	s.golden("lua-errors")
 }

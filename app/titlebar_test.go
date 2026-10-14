@@ -99,20 +99,28 @@ func TestSessionKeysSwitchInOneFrame(t *testing.T) {
 	go func() { done <- Run(ctx, be, Config{Store: store, ConfigDir: t.TempDir(), WorkDir: t.TempDir()}) }()
 	win := <-be.Windows()
 	defer func() { win.Close(); <-done }()
-	if _, err := win.WaitFrame(ctx, func(f headless.Frame) bool { return strings.Contains(f.Text(), "review #4410") }); err != nil {
-		t.Fatal(err)
-	}
-	before := len(win.Frames())
-	win.Send(render.KeyEvent{Key: "3", Mods: render.ModSuper})
-	n := 0
-	f, err := win.WaitFrame(ctx, func(headless.Frame) bool { n++; return n > before })
+	first, err := win.WaitFrame(ctx, func(f headless.Frame) bool { return strings.Contains(f.Text(), "review #4410") })
 	if err != nil {
 		t.Fatal(err)
 	}
-	on, _ := glyphColour(&f.List, "review #4410")
-	off, _ := glyphColour(&f.List, "pricing-rounding")
-	if on == off {
-		t.Errorf("the first frame after ⌘3 still shows the old tab in front")
+	front, _ := glyphColour(&first.List, "pricing-rounding")
+	before := len(win.Frames())
+	win.Send(render.KeyEvent{Key: "3", Mods: render.ModSuper})
+	// A frame already being drawn when the key arrives can't show it; the one after it must.
+	n := 0
+	f, err := win.WaitFrame(ctx, func(f headless.Frame) bool {
+		n++
+		on, _ := glyphColour(&f.List, "review #4410")
+		return n > before && on == front
+	})
+	if err != nil {
+		t.Fatalf("no frame shows the third tab in front: %v", err)
+	}
+	if late := n - before; late > 2 {
+		t.Errorf("the third tab came to the front %d frames after ⌘3; the one after the frame in flight should show it", late)
+	}
+	if off, _ := glyphColour(&f.List, "pricing-rounding"); off == front {
+		t.Errorf("the first tab is still drawn in front")
 	}
 	if store.State().Focus != "s3" {
 		t.Errorf("focus = %s", store.State().Focus)
