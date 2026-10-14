@@ -261,7 +261,9 @@ flowchart TB
   `ship.read` (`worker.ShipReq` → `[]worker.Ship`: files, behind and predicted conflicts, unpushed commits, the PR,
   checks and a failing job's log line, the drafts and who wrote them, the PR template, CODEOWNERS), `ship.commit`,
   `ship.push`, `ship.sync`, `ship.pr` (raise or edit, ask reviewers, cross-link the session's PRs), `ship.ready` and
-  `ship.draft` (`worker.Client.Ship*`); its GitHub client is `worker.Options.GitHub` (the user's gh by default).
+  `ship.draft` (`worker.Client.Ship*`; AI-10: a `DraftReq` with `Drop` clears the user's draft, and a `Draft` read
+  says `Stale` once the code moved on; `ship.draft.save {project, kind, title, body}` saves the commit box's or the
+  PR tab's as the user's); its GitHub client is `worker.Options.GitHub` (the user's gh by default).
   `gh.Client` is GitHub as Oriel uses it, `gh.API` over a `gh.Transport` (`gh.CLI`, `gh.HTTP`), and `gh/ghtest` a
   fake GitHub for tests.
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,

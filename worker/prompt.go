@@ -20,11 +20,18 @@ const (
 // BatchLead opens every batch of comments the agent is given.
 const BatchLead = "New Oriel comments. Handle them as your skill says, answering with the mcp__oriel__* tools, then end your turn."
 
+// NoticeLead opens a batch of Oriel's notices alone, with no comments: nothing the user wrote.
+const NoticeLead = "A notice from Oriel. Act on it as your skill says, then end your turn."
+
 // renderBatch is the prompt for threads with comments the agent hasn't had: the new ones marked, the rest of
 // each thread for context.
 func renderBatch(se core.SessionState, threads []core.Thread, fresh map[string]bool, notes []string) string {
 	var b strings.Builder
-	b.WriteString(BatchLead + "\n\n")
+	if len(threads) == 0 {
+		b.WriteString(NoticeLead + "\n\n")
+	} else {
+		b.WriteString(BatchLead + "\n\n")
+	}
 	for _, t := range threads {
 		renderThread(&b, se, t, fresh, false)
 		b.WriteString("\n")

@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/worker"
 )
 
@@ -64,6 +65,7 @@ type shipExt struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	busy   sync.WaitGroup // reads and steps
+	saving sync.WaitGroup // drafts the user typed, on their way to the worker
 	poller sync.WaitGroup
 
 	mu      sync.Mutex
@@ -91,17 +93,60 @@ type commitForm struct {
 	skip    map[string]bool // files left out
 	veto    string          // why a commit gate or a ShipCommit hook stopped the last try
 	held    []registry.GateCheck
+	save    autosave
 }
 
 // prForm is a project's Raise PR tab.
 type prForm struct {
 	title, body string
 	edited      bool
+	save        autosave
 	tab         int // write or preview
 	reviewers   []string
 	removed     []string // owners taken off
 	adding      string
 	veto        string
+}
+
+// draftSaveAfter is how long typing in a draft box rests before what's typed is kept on the worker.
+const draftSaveAfter = time.Second
+
+// autosave keeps what's typed into a draft box on the worker as the user's draft: at once on the first key, so the
+// agent is neither asked for it nor overwrites it, then each time the typing rests.
+type autosave struct {
+	pending bool
+	at      time.Time
+}
+
+// keepTyped is called each frame a draft box is drawn: changed says it was typed into, first that it hadn't been.
+func (x *shipExt) keepTyped(c *ui.Ctx, a *autosave, changed, first bool, req worker.DraftReq) {
+	now := c.Now()
+	if changed {
+		a.pending, a.at = true, now
+	}
+	if !a.pending {
+		return
+	}
+	if !first && now.Sub(a.at) < draftSaveAfter {
+		c.WakeAt(a.at.Add(draftSaveAfter))
+		return
+	}
+	a.pending = false
+	cl, err := x.client(req.Session)
+	if err != nil {
+		return
+	}
+	x.saving.Add(1)
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		defer x.saving.Done()
+		ctx, cancel := context.WithTimeout(x.ctx, 30*time.Second)
+		defer cancel()
+		if err := cl.ShipDraft(ctx, req); err != nil {
+			x.h.Log().Debug("ship", "draft", req.Project, "err", err)
+		}
+	}()
 }
 
 func (x *shipExt) Manifest() ext.Manifest { return ext.Manifest{ID: "ship"} }
@@ -635,20 +680,34 @@ func (x *shipExt) commands() {
 					return err
 				}
 				if kind == "commit" {
-					x.commitForm(se.ID, p).edited = false
+					f := x.commitForm(se.ID, p)
+					f.edited, f.save = false, autosave{}
 				} else if s, ok := x.ship(se.ID, p); ok {
-					x.prForm(se.ID, s).edited = false
+					f := x.prForm(se.ID, s)
+					f.edited, f.save = false, autosave{}
+				}
+				x.saving.Wait()
+				if err := c.ShipDraft(ctx, worker.DraftReq{Session: se.ID, Project: p, Kind: kind, Drop: true}); err != nil {
+					return err
 				}
 				return c.Send(ctx, worker.SendReq{Session: se.ID, Text: text})
 			})},
-		{ID: "ship.draft.save", Title: "Save a project's PR as written on its Raise PR tab: {project}", Available: inFront,
+		{ID: "ship.draft.save", Title: "Save a project's draft as yours, which the agent leaves: {project}, {kind} pr (the Raise PR tab's, by default) or commit (the commit box's), {title}, {body}",
+			Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, a registry.Args) error {
+				kind := cmpOr(a.String("kind"), "pr")
 				s, _ := x.ship(se.ID, p)
-				f := x.prForm(se.ID, s)
-				title, body := cmpOr(a.String("title"), f.title), cmpOr(a.String("body"), f.body)
-				return x.step(se.ID, p, "Saving…", func(ctx context.Context, c worker.Client) error {
-					return c.ShipDraft(ctx, worker.DraftReq{Session: se.ID, Project: p, Kind: "pr", Title: title, Body: body})
-				})
+				req := worker.DraftReq{Session: se.ID, Project: p, Kind: kind}
+				switch kind {
+				case "pr":
+					f := x.prForm(se.ID, s)
+					req.Title, req.Body = cmpOr(a.String("title"), f.title), cmpOr(a.String("body"), f.body)
+				case "commit":
+					req.Body = cmpOr(a.String("body"), x.commitForm(se.ID, p).messageFor(s))
+				default:
+					return fmt.Errorf("a draft is a commit or a pr, not %q", kind)
+				}
+				return x.step(se.ID, p, "Saving…", func(ctx context.Context, c worker.Client) error { return c.ShipDraft(ctx, req) })
 			})},
 		{ID: "ship.github", Title: "Open a project's PR on GitHub: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
@@ -716,6 +775,7 @@ func (x *shipExt) commit(ctx registry.Ctx, se core.SessionState, p string, a reg
 	}
 	f.veto = ""
 	return x.step(se.ID, p, "Committing…", func(cx context.Context, c worker.Client) error {
+		x.saving.Wait()
 		hash, err := c.ShipCommit(cx, worker.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files, Trailers: trailers})
 		if err != nil {
 			return err

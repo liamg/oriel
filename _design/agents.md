@@ -292,6 +292,27 @@ type Session interface {
   parsed from their output). A reply that says tests pass with no passing run behind it is flagged
   (`Comment.Unbacked`), and the agent is told so in the tool's answer.
 
+### Drafts when the agent goes idle (AI-10)
+
+- Two halves. The prompt packs that offer `commit_draft` (work, plan, job, new repo; `parts/drafts.md`) tell the agent
+  to fill each project's drafts before it ends a turn with nothing left to do, as crit's skill does. Behind that, the
+  host (`worker/drafts.go`) checks when a turn ends with nothing queued: for each writable project, a commit message is
+  due for uncommitted work, a PR draft for a branch with commits of its own or uncommitted work and no open PR (as the
+  last GitHub reading has it; no network call). One is due when it's missing or its fingerprint isn't the code's now;
+  never when the user wrote it.
+- The fingerprint (`gitx.Repo.Fingerprint`) hashes each path that differs from HEAD (a commit message) or from the
+  merge base with the base (a PR draft), tracked or not, with what it holds now; so committing doesn't stale a PR
+  draft. `commit_draft` and `pr_draft` store it beside the draft (`drafts/<project>.<kind>.code`), and `ship.read`
+  marks a draft `Stale` when it no longer matches.
+- The ask is a `<notice>` in a batch led by `NoticeLead`, not a thread. The host remembers the code it last asked
+  about per project and kind, so it asks at most once per change, and again only after the code moves; a turn that
+  ends without drafting isn't asked twice.
+- A draft by "you" (`worker.DraftByYou`) is the user's: `commit_draft`/`pr_draft` answer "Not saved: the user wrote …"
+  and leave it. `ship.draft` with `Drop` clears it (Redraft).
+- Decided in AI-10: a session whose pack doesn't offer `commit_draft` (direct, review, tour, scratch) is never asked.
+- Not yet: an option to turn the nudge off, and remembering what was asked across a worker restart (one repeat ask
+  after a restart).
+
 ### Claude and Codex, side by side
 
 Both providers implement the same two interfaces. Claude is a PTY plus hooks, and Codex is JSON-RPC.

@@ -727,6 +727,11 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   ticket. The header has Sync all, Commit all and Push + raise both PRs (`ship.raise-all`: push and raise each in
   merge order). The session is read from its worker (`ship.read`) when it comes to the front, every 10 s while it's
   there, and fresh (fetching, and asking GitHub again) after each step and on `ship.refresh`.
+- Built in AI-10: drafts appear without asking (agents.md, "Drafts when the agent goes idle"). The commit box's and the
+  Raise PR tab's chip says who wrote the draft and whether the code moved on since: "drafted by codex", "drafted by
+  codex · stale" (warn), "written by you"; the PR step's note says "draft stale". Typing into either keeps the text on
+  the worker as the user's draft (`ship.draft.save`'s `DraftReq`, By "you"): at once on the first key, then a second
+  after the typing rests. Redraft drops the user's draft (`DraftReq.Drop`) before asking the agent.
 - Decided in FG-6: the merge order is the session's project order; a cross-linked PR's description gets a block
   between `<!-- oriel:linked-prs -->` markers listing every PR of the session in that order, rewritten as each is
   raised or edited. The file checkboxes pick what's committed (18 draws them as the ledger's; RV-2 adds its column).

@@ -26,8 +26,11 @@ each project with its message.
 
 ## Drafts {#drafts}
 
-The agent saves a commit message (`commit_draft`) and a PR (`pr_draft`) for each project; they show here marked with
-who drafted them. **Redraft** asks the agent for a new one.
+The agent saves a commit message (`commit_draft`) and a PR (`pr_draft`) for each project with changes when its work
+goes quiet, without being asked; they show here marked with who drafted them, and **stale** once the code has moved on
+since. When a turn ends with a draft missing or stale, Oriel asks the agent once for that code. What you type into the
+commit box or the Raise PR tab is kept as yours ("written by you"): the agent isn't asked for it and can't overwrite
+it. **Redraft** hands it back and asks the agent for a new one.
 
 ## Gates {#gates}
 

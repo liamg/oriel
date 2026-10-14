@@ -329,6 +329,19 @@ func (x *shipExt) uncommitted(c *ui.Ctx, se core.SessionState, s worker.Ship, op
 	})
 }
 
+// draftChip says who wrote a draft, and whether the code has moved on since: "drafted by codex · stale".
+func draftChip(c *ui.Ctx, d worker.Draft) {
+	th := c.Theme()
+	text, tone := "drafted by "+d.By, th.C(tShipTodo)
+	if d.By == worker.DraftByYou {
+		text, tone = "written by you", th.C(theme.FgMuted)
+	}
+	if d.Stale {
+		text, tone = text+" · stale", th.C(theme.Warn)
+	}
+	widget.Chip(c, "drafted", text, tone, "git/ship#drafts")
+}
+
 // commitBox is the commit message, filled with the agent's draft until you type, and its buttons.
 func (x *shipExt) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f *commitForm) {
 	th := c.Theme()
@@ -336,17 +349,18 @@ func (x *shipExt) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f *c
 		f.message = s.CommitDraft.Body
 	}
 	c.Column("msg", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		if !f.edited && s.CommitDraft.By != "" && s.CommitDraft.By != "you" {
-			c.Row("by", ui.Style{W: ui.Flex(1), Main: ui.End}, func(c *ui.Ctx) {
-				widget.Chip(c, "drafted", "drafted by "+s.CommitDraft.By, th.C(tShipTodo), "git/ship#drafts")
-			})
+		if !f.edited && s.CommitDraft.By != "" {
+			c.Row("by", ui.Style{W: ui.Flex(1), Main: ui.End}, func(c *ui.Ctx) { draftChip(c, s.CommitDraft) })
 		}
-		if r := widget.Input(c, "message", &f.message, widget.InputOpts{Label: "Commit message", Placeholder: "The commit message (the agent drafts one when it's idle)",
-			Lines: 10, MinLines: 4, Help: "git/ship#commit"}); r.Changed {
+		r := widget.Input(c, "message", &f.message, widget.InputOpts{Label: "Commit message", Placeholder: "The commit message (the agent drafts one when it's idle)",
+			Lines: 10, MinLines: 4, Help: "git/ship#commit"})
+		first := r.Changed && !f.edited
+		if r.Changed {
 			f.edited = true
 		} else if r.Submitted {
 			x.run("ship.commit", registry.Args{"project": s.Project})
 		}
+		x.keepTyped(c, &f.save, r.Changed, first, worker.DraftReq{Session: se.ID, Project: s.Project, Kind: "commit", Body: f.message})
 	})
 	c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		busy := x.doing(se.ID, s.Project) != ""
@@ -455,7 +469,12 @@ func (x *shipExt) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 	if s.PR == nil {
 		f := x.prForm(se.ID, s)
 		note := "not raised"
-		if !s.PRDraft.Empty() || f.edited {
+		switch {
+		case f.edited:
+			note += " · draft ready"
+		case !s.PRDraft.Empty() && s.PRDraft.Stale:
+			note += " · draft stale"
+		case !s.PRDraft.Empty():
 			note += " · draft ready"
 		}
 		shipCard(c, false, func(c *ui.Ctx) {

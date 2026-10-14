@@ -370,9 +370,10 @@ func (h *host) toolProjects(ctx context.Context, _ json.RawMessage) (string, err
 	return string(b), err
 }
 
-// toolDraft keeps a commit message or PR draft for the Ship page, per project.
+// toolDraft keeps a commit message or PR draft for the Ship page, per project, with the code it was drafted
+// against. One the user wrote stays.
 func (h *host) toolDraft(kind string) func(context.Context, json.RawMessage) (string, error) {
-	return func(_ context.Context, raw json.RawMessage) (string, error) {
+	return func(ctx context.Context, raw json.RawMessage) (string, error) {
 		a := parse(raw)
 		se, err := h.w.session(h.id)
 		if err != nil {
@@ -384,10 +385,18 @@ func (h *host) toolDraft(kind string) func(context.Context, json.RawMessage) (st
 				project = p.Name
 			}
 		}
-		if kind == "commit" {
-			return "saved", h.w.writeDraft(h.id, project, kind, "", a.str("message"), se.Agent.Provider)
+		_, p, repo, err := h.w.projectRepo(h.id, project)
+		if err != nil {
+			return "", err
 		}
-		return "saved", h.w.writeDraft(h.id, project, kind, a.str("title"), a.str("body"), se.Agent.Provider)
+		if h.w.readDraft(h.id, p.Name, kind).By == DraftByYou {
+			return fmt.Sprintf("Not saved: the user wrote %s's %s themselves. Leave it.", p.Name, draftNoun[kind]), nil
+		}
+		code := draftCode(ctx, repo, repo.FlightBase(ctx, p.Base), kind)
+		if kind == "commit" {
+			return "saved", h.w.writeDraft(h.id, p.Name, kind, "", a.str("message"), se.Agent.Provider, code)
+		}
+		return "saved", h.w.writeDraft(h.id, p.Name, kind, a.str("title"), a.str("body"), se.Agent.Provider, code)
 	}
 }
 

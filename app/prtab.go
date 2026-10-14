@@ -98,15 +98,17 @@ func (x *shipExt) prFields(c *ui.Ctx, se core.SessionState, s worker.Ship, f *pr
 		widget.Wrap(c, "failed", e, 600, monoFont(11, th.C(theme.Error)))
 	}
 	shipCap(c, "TITLE")
+	first := !f.edited
+	typed := false
 	if r := widget.Input(c, "title", &f.title, widget.InputOpts{Label: "Title", Placeholder: "feat(api): what it does", Help: "git/ship#raise"}); r.Changed {
-		f.edited = true
+		f.edited, typed = true, true
 	}
 	c.Box("sp", ui.Style{H: ui.Px(4)}, nil)
 	c.Row("bodyhead", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		shipCap(c, "BODY")
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		if !f.edited && !s.PR.Open() && !s.PRDraft.Empty() && s.PRDraft.By != "" && s.PRDraft.By != "you" {
-			widget.Chip(c, "drafted", "drafted by "+s.PRDraft.By, th.C(tShipTodo), "git/ship#drafts")
+		if !f.edited && !s.PR.Open() && !s.PRDraft.Empty() && s.PRDraft.By != "" {
+			draftChip(c, s.PRDraft)
 		}
 		if s.Template != "" {
 			widget.Chip(c, "tmpl", "template filled", th.C(theme.FgMuted), "git/ship#raise")
@@ -131,10 +133,13 @@ func (x *shipExt) prFields(c *ui.Ctx, se core.SessionState, s worker.Ship, f *pr
 			}
 			if r := widget.Input(c, "body", &f.body, widget.InputOpts{Label: "Body", Placeholder: "What and why", Lines: 18, MinLines: 10,
 				Help: "git/ship#raise"}); r.Changed {
-				f.edited = true
+				f.edited, typed = true, true
 			}
 		})
 	})
+	if !s.PR.Open() {
+		x.keepTyped(c, &f.save, typed, typed && first, worker.DraftReq{Session: se.ID, Project: s.Project, Kind: "pr", Title: f.title, Body: f.body})
+	}
 	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
 	c.Row("boxes", ui.Style{W: ui.Flex(1), Gap: 14}, func(c *ui.Ctx) {
 		c.Column("reviewers", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(tShipCard), Border: 1, Pad: ui.PadXY(12, 10), Gap: 6}, func(c *ui.Ctx) {

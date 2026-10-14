@@ -66,13 +66,19 @@ type ShipCommit struct {
 	Author  string `json:"author,omitempty"`
 }
 
-// Draft is a commit message or PR drafted for a project: by the agent (its provider's name) or "you".
+// Draft is a commit message or PR drafted for a project: by the agent (its provider's name) or "you". Stale says
+// the code has moved on since it was written.
 type Draft struct {
 	Title string    `json:"title,omitempty"`
 	Body  string    `json:"body,omitempty"`
 	By    string    `json:"by,omitempty"`
 	Saved time.Time `json:"saved,omitzero"`
+	Stale bool      `json:"stale,omitempty"`
+	code  string    // the code's fingerprint when it was written (draftCode)
 }
+
+// DraftByYou marks a draft the user wrote: the agent never overwrites it.
+const DraftByYou = "you"
 
 // Empty says nothing was drafted.
 func (d Draft) Empty() bool { return strings.TrimSpace(d.Title+d.Body) == "" }
@@ -119,13 +125,15 @@ type PRReq struct {
 	Reviewers []string       `json:"reviewers,omitempty"`
 }
 
-// DraftReq saves a project's commit message (Kind "commit": Body) or PR draft (Kind "pr") as the user wrote it.
+// DraftReq saves a project's commit message (Kind "commit": Body) or PR draft (Kind "pr") as the user wrote it, or
+// with Drop clears it, so the agent drafts it again.
 type DraftReq struct {
 	Session core.SessionID `json:"session"`
 	Project string         `json:"project"`
 	Kind    string         `json:"kind"`
 	Title   string         `json:"title,omitempty"`
 	Body    string         `json:"body"`
+	Drop    bool           `json:"drop,omitempty"`
 }
 
 // shipTTL is how long a project's GitHub reading answers before it's asked again.
@@ -237,6 +245,11 @@ func (w *Worker) shipProject(ctx context.Context, se core.SessionState, p core.P
 	if f.Base != "" {
 		if out, err := repo.Run(ctx, "diff", "--name-only", f.Base); err == nil {
 			s.Owners = gh.Owners(p.Dir, strings.Fields(out))
+		}
+	}
+	for kind, d := range map[string]*Draft{"commit": &s.CommitDraft, "pr": &s.PRDraft} {
+		if d.code != "" {
+			d.Stale = d.code != draftCode(ctx, repo, f.Base, kind)
 		}
 	}
 	st := w.shipMu()
@@ -528,11 +541,14 @@ func (w *Worker) readDraft(id core.SessionID, project, kind string) Draft {
 	if by, err := os.ReadFile(strings.TrimSuffix(path, ".md") + ".by"); err == nil {
 		d.By = strings.TrimSpace(string(by))
 	}
+	if code, err := os.ReadFile(strings.TrimSuffix(path, ".md") + ".code"); err == nil {
+		d.code = strings.TrimSpace(string(code))
+	}
 	return d
 }
 
-// writeDraft keeps a project's draft, as by wrote it.
-func (w *Worker) writeDraft(id core.SessionID, project, kind, title, body, by string) error {
+// writeDraft keeps a project's draft, as by wrote it against the code fingerprinted code.
+func (w *Worker) writeDraft(id core.SessionID, project, kind, title, body, by, code string) error {
 	path := w.draftPath(id, project, kind)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
@@ -547,6 +563,9 @@ func (w *Worker) writeDraft(id core.SessionID, project, kind, title, body, by st
 	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
 		return err
 	}
+	if err := os.WriteFile(strings.TrimSuffix(path, ".md")+".code", []byte(code), 0o600); err != nil {
+		return err
+	}
 	return os.WriteFile(strings.TrimSuffix(path, ".md")+".by", []byte(by), 0o600)
 }
 
@@ -554,21 +573,24 @@ func (w *Worker) dropDraft(id core.SessionID, project, kind string) {
 	path := w.draftPath(id, project, kind)
 	_ = os.Remove(path)
 	_ = os.Remove(strings.TrimSuffix(path, ".md") + ".by")
+	_ = os.Remove(strings.TrimSuffix(path, ".md") + ".code")
 }
 
-// ShipDraft saves a draft the user wrote.
-func (w *Worker) ShipDraft(r DraftReq) error {
-	se, err := w.session(r.Session)
+// ShipDraft saves a draft the user wrote, or drops it.
+func (w *Worker) ShipDraft(ctx context.Context, r DraftReq) error {
+	_, p, repo, err := w.projectRepo(r.Session, r.Project)
 	if err != nil {
 		return err
-	}
-	if !slices.ContainsFunc(se.Projects, func(p core.Project) bool { return p.Name == r.Project }) {
-		return fmt.Errorf("session %s has no project %q", r.Session, r.Project)
 	}
 	if r.Kind != "commit" && r.Kind != "pr" {
 		return fmt.Errorf("a draft is a commit or a pr, not %q", r.Kind)
 	}
-	return w.writeDraft(r.Session, r.Project, r.Kind, r.Title, r.Body, "you")
+	if r.Drop {
+		w.dropDraft(r.Session, p.Name, r.Kind)
+		return nil
+	}
+	code := draftCode(ctx, repo, repo.FlightBase(ctx, p.Base), r.Kind)
+	return w.writeDraft(r.Session, p.Name, r.Kind, r.Title, r.Body, DraftByYou, code)
 }
 
 // ownBranch refuses a push, pull or PR unless the worktree is on the session's branch for it: the sandbox can
@@ -595,7 +617,7 @@ func (w *Worker) serveShip(fn func(string, wire.Handler)) {
 	fn(MethodShipSync, wire.Func(func(ctx context.Context, r ShipRef) (any, error) { return nil, w.ShipSync(ctx, r) }))
 	fn(MethodShipPR, wire.Func(func(ctx context.Context, r PRReq) (*gh.PR, error) { return w.ShipPR(ctx, r) }))
 	fn(MethodShipReady, wire.Func(func(ctx context.Context, r ShipRef) (any, error) { return nil, w.ShipReady(ctx, r) }))
-	fn(MethodShipDraft, wire.Func(func(_ context.Context, r DraftReq) (any, error) { return nil, w.ShipDraft(r) }))
+	fn(MethodShipDraft, wire.Func(func(ctx context.Context, r DraftReq) (any, error) { return nil, w.ShipDraft(ctx, r) }))
 }
 
 // ShipRead is a session's projects on their way to a PR (ship.read).

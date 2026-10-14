@@ -1,6 +1,7 @@
 package app
 
 import (
+	agentpkg "github.com/liamg/oriel/agent"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -334,4 +335,72 @@ func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
 		o := sess.Snapshot().Overrides
 		return len(o) == 1 && o[0].Gate == "fake" && o[0].Trailer == "Unreviewed-Agent-Lines: 5" && o[0].Project == "usage-api"
 	})
+}
+
+// AI-10: the commit box says who drafted it and whether the code has moved on since ("drafted by fake · stale"); what
+// the user types is kept on the worker as theirs, which the agent's tool leaves, and Redraft hands it back.
+func TestShipDraftsFreshnessAndYours(t *testing.T) {
+	s, lw, _, se, _ := shipScene(t)
+	x := s.ship()
+	apiDir := shipDir(se, "usage-api")
+	agent := lw.fake.WaitStarted(t)
+	s.run("ship.open", nil)
+	writeFiles(t, apiDir, map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
+	agent.Call(t, "commit_draft", map[string]any{"project": "usage-api", "message": "feat(api): two routes"})
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the draft", func() bool { return strings.Contains(s.frameText(), "DRAFTED BY FAKE") })
+	if strings.Contains(s.frameText(), "STALE") {
+		t.Fatal("a fresh draft is marked stale")
+	}
+
+	writeFiles(t, apiDir, map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 3\n"})
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the stale draft", func() bool { return strings.Contains(s.frameText(), "DRAFTED BY FAKE · STALE") })
+
+	// Typing claims the draft at once, and keeps the whole message once the typing rests.
+	s.typeInto(t, "Commit message", " (3)")
+	onWorker := func() worker.Draft {
+		ss, _ := lw.w.ShipRead(t.Context(), worker.ShipReq{Session: se.ID})
+		for _, sh := range ss {
+			if sh.Project == "usage-api" {
+				return sh.CommitDraft
+			}
+		}
+		return worker.Draft{}
+	}
+	s.shipSettle(t, "the claim", func() bool { return onWorker().By == worker.DraftByYou })
+	if d := onWorker(); d.Body == "feat(api): two routes (3)" {
+		t.Errorf("kept before the typing rested: %+v", d)
+	}
+	s.now = s.now.Add(draftSaveAfter)
+	s.frame()
+	s.shipSettle(t, "the whole message kept", func() bool { return onWorker().Body == "feat(api): two routes (3)" })
+	if out := agent.Call(t, "commit_draft", map[string]any{"project": "usage-api", "message": "feat(api): three routes"}); !strings.Contains(out, "the user wrote") {
+		t.Errorf("the agent's tool overwrote the user's draft: %q", out)
+	}
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the read", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return sh.CommitDraft.By == worker.DraftByYou })
+	if v := s.access("Commit message").Value; v != "feat(api): two routes (3)" {
+		t.Errorf("the box has %q", v)
+	}
+
+	// Redraft gives the box back to the agent.
+	agent.WaitSent(t) // the session's prompt
+	agent.Emit(agentpkg.TurnStart{})
+	agent.Emit(agentpkg.TurnEnd{})
+	waitState(t, s.store, "the agent idle", func(st core.State) bool {
+		sess, _ := st.Session(se.ID)
+		a := sess.Snapshot().Agent
+		return a.Stats.Turns == 1 && !a.Working
+	})
+	s.click(centre(s.access("Redraft").Bounds))
+	if got := agent.WaitSent(t); !strings.Contains(got.Text, "commit_draft") {
+		t.Errorf("Redraft sent %q", got.Text)
+	}
+	if out := agent.Call(t, "commit_draft", map[string]any{"project": "usage-api", "message": "feat(api): three routes"}); out != "saved" {
+		t.Errorf("after Redraft the tool said %q", out)
+	}
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the redraft", func() bool { return strings.Contains(s.frameText(), "feat(api): three routes") })
+	s.wantFrame(t, "DRAFTED BY FAKE")
 }

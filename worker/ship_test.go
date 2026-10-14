@@ -210,7 +210,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	}
 
 	// A draft the user writes is theirs.
-	if err := r.w.ShipDraft(DraftReq{Session: id, Project: "web", Kind: "commit", Body: "fix(web): mine"}); err != nil {
+	if err := r.w.ShipDraft(ctx, DraftReq{Session: id, Project: "web", Kind: "commit", Body: "fix(web): mine"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := r.ship(id, false)["web"].CommitDraft; d.Body != "fix(web): mine" || d.By != "you" {

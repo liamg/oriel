@@ -140,3 +140,45 @@ func TestRebaseCarriesWorkOver(t *testing.T) {
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+// AI-10: a draft is stale once the code moved on. The fingerprint follows the work tree's code, untracked files
+// included, and one taken from the merge base holds still when that work is committed.
+func TestFingerprintFollowsTheCode(t *testing.T) {
+	ctx := context.Background()
+	work, _ := flightFixture(t)
+	r := gitx.Repo{Dir: work.Dir}
+	fp := func(since string) string {
+		t.Helper()
+		s, err := r.Fingerprint(ctx, since)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	clean := fp("HEAD")
+	work.Write(map[string]string{"limiter.go": "package limiter\n\nfunc Allow() bool {\n\treturn false\n}\n"})
+	edited := fp("HEAD")
+	if edited == clean || fp("HEAD") != edited {
+		t.Fatalf("an edit: %s → %s (and again %s)", clean, edited, fp("HEAD"))
+	}
+	work.Write(map[string]string{"new.go": "package limiter\n"})
+	untracked := fp("HEAD")
+	work.Write(map[string]string{"new.go": "package limiter\n\nvar x = 1\n"})
+	if untracked == edited || fp("HEAD") == untracked {
+		t.Fatal("an untracked file's content doesn't count")
+	}
+	base := r.MergeBase(ctx, "origin/main")
+	if base == "" {
+		t.Fatal("no merge base with origin/main")
+	}
+	before := fp(base)
+	if err := r.Commit(ctx, "feat: x"); err != nil {
+		t.Fatal(err)
+	}
+	if after := fp(base); after != before {
+		t.Errorf("committing moved the branch's fingerprint: %s → %s", before, after)
+	}
+	if fp("HEAD") != clean {
+		t.Errorf("a clean tree after the commit fingerprints %s, want %s", fp("HEAD"), clean)
+	}
+}

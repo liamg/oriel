@@ -2,10 +2,14 @@ package gitx
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -181,4 +185,35 @@ func (r Repo) Rebase(ctx context.Context, onto string) error {
 		return err
 	}
 	return nil
+}
+
+// Fingerprint names the code in the work tree as a change from since (HEAD, or where the branch left its base): each
+// path that differs from it, tracked or not, and what it holds now. It moves when the code does; committing doesn't
+// move one taken from a merge base.
+func (r Repo) Fingerprint(ctx context.Context, since string) (string, error) {
+	changed, err := r.git(ctx, "diff", "--name-only", "--no-renames", "-z", since)
+	if err != nil {
+		return "", err
+	}
+	untracked, err := r.git(ctx, "ls-files", "-o", "--exclude-standard", "-z")
+	if err != nil {
+		return "", err
+	}
+	paths := strings.Split(string(changed)+string(untracked), "\x00")
+	slices.Sort(paths)
+	h := sha256.New()
+	for _, p := range slices.Compact(paths) {
+		if p == "" {
+			continue
+		}
+		fmt.Fprintf(h, "\x00%s\x00", p)
+		f, err := os.Open(filepath.Join(r.Dir, p))
+		if err != nil {
+			h.Write([]byte("\x00gone"))
+			continue
+		}
+		_, _ = io.Copy(h, f)
+		f.Close()
+	}
+	return hex.EncodeToString(h.Sum(nil))[:16], nil
 }
