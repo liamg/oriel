@@ -683,7 +683,7 @@ func (v summaryView) Build(registry.ViewCtx) ui.Node {
 	return &ui.Func{Key: "summary", Fn: v.x.summary}
 }
 
-// summary is 01's right column: the requests in brief, the tasks rail, and the session's tally at the foot.
+// summary is 01's right column: the requests in brief, the tasks rail, and the session's stats at the foot.
 func (x *requests) summary(c *ui.Ctx) {
 	th := c.Theme()
 	se, ok := x.front()
@@ -728,7 +728,7 @@ func (x *requests) summary(c *ui.Ctx) {
 			})
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-		sessionTally(c, se, now)
+		sessionStats(c, se, now)
 	})
 }
 

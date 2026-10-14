@@ -168,7 +168,7 @@ flowchart TB
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
   `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
-- statusline, tabline (session tabs), titlebar and HUD tats, notification cards. Title-bar segments are views named
+- statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage`.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
@@ -368,7 +368,7 @@ type Host interface {
   `app.statusline`, `app.notifications` (toasts) and `app.modal`. The log panel is `log`, and `:Events` is `events`.
 - The titlebar is `app.titlebar`: the logo, a tab per session (status dot, name, its status or kind, `⌘N`, and
   `✕N` while it has errors you haven't seen), and segments named `titlebar.right.<order>-<name>` at its right, for
-  tats. `session.focus {n}` or `{id}` brings a session to the front; `⌘1`–`⌘9` run it.
+  indicators. `session.focus {n}` or `{id}` brings a session to the front; `⌘1`–`⌘9` run it.
 - Picker sources: `Registry.Picker(PickerSource{ID, Title, Prefix, Order, Items, Preview, Run})`. `Items(ctx, query)`
   gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
   query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
@@ -401,7 +401,7 @@ type Host interface {
 - Hooks (PL-1): `Registry.Hook(Hook{Event, Pattern, Priority, Kind, Label, Fn, Source})`, `Fire(ctx, event, subject,
   ev)`, `DeclareEvent` and `Hooks()`, with `registry.On[E]` for a typed Go hook. `Registry.Contribute` and
   `Contributions(kind)` are the general contribution point for later features (agent tools, prompt packs, session
-  kinds, HUD tats, status rules, `:Inspect` sections). `Host.Do(fn)` runs fn on the loop from any goroutine.
+  kinds, HUD indicators, status rules, `:Inspect` sections). `Host.Do(fn)` runs fn on the loop from any goroutine.
   `registry.SourcedView` and `Registry.ViewSource` say who registered a view.
 - `Host.Here()` is where the user is, as an `At`: the session in front (or `oriel` with none), the project, and
   the focused editor's buffer and window; read options there. `core.Store.Focus()` is the session in front, cheaply.
@@ -475,7 +475,7 @@ What the budgets mean:
 
 - **Per key** (8 ms budget): Lua is fine. Neovim runs whole plugin ecosystems on per-key
   Lua, and gopher-lua is slower than LuaJIT but still about 100× under budget.
-- **Per frame** (4 ms at 120 Hz): Lua is fine for a statusline, a HUD tat or a decoration provider,
+- **Per frame** (4 ms at 120 Hz): Lua is fine for a statusline, a HUD indicator or a decoration provider,
   as long as they work on the visible lines only, which is how the APIs are shaped.
   It's not fine for drawing the editor itself.
 - **Per byte of a large file** (search, diff, parse): Lua is too slow. That belongs in Go, or in WASM if it has to be a plugin.

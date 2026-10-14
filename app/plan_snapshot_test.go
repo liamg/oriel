@@ -60,7 +60,7 @@ func planScene(t *testing.T) *errScene {
 		Projects: []core.Project{{Name: "pricing", Repo: pricing, Dir: pricing, Branch: "rethink/rounding", Primary: true, ReadOnly: true},
 			{Name: "billing-ui", Repo: billing, Dir: billing, Branch: "rethink/rounding", ReadOnly: true}},
 		Agent: core.AgentState{Provider: "claude", Model: "opus", Running: true, Working: true, TurnStarted: ago(30 * time.Second),
-			Tally: core.Tally{Context: 36_000, ContextMax: 200_000, Cost: 0.62}},
+			Stats: core.Stats{Context: 36_000, ContextMax: 200_000, Cost: 0.62}},
 		Transcript: transcript,
 		Threads: []core.Thread{
 			{ID: "0b1d2e3f", Status: core.ThreadResolved, Created: ago(20 * time.Minute), Updated: ago(15 * time.Minute),

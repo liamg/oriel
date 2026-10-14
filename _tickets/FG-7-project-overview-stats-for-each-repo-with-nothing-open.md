@@ -37,7 +37,7 @@ depends_on: [SH-15, ED-11]
 - **Fast, and never blocks**: the view shows at once and panels fill in as they finish, in the background,
   with a time budget (5 s a panel; lines are counted for 3 s, then estimated from bytes); results are kept per repo
   until HEAD moves. Git is read through `gitx` (`ls-files`, `log`, `shortlog`, `rev-list`).
-- Looks like the mockups: theme tokens only, the HUD's tats style for numbers.
+- Looks like the mockups: theme tokens only, the HUD's indicators style for numbers.
 
 ## Done when
 

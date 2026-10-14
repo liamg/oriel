@@ -56,11 +56,11 @@ type AgentState struct {
 	Network     string    `json:"network,omitempty"` // in a sandbox: ask or open
 	Pack        string    `json:"pack,omitempty"`    // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
 	Queue       []string  `json:"queue,omitempty"`   // messages waiting for the turn to end
-	Tally       Tally     `json:"tally,omitzero"`
+	Stats       Stats     `json:"stats,omitzero"`
 }
 
-// Tally is what a session's agent has used so far.
-type Tally struct {
+// Stats are what a session's agent has used so far.
+type Stats struct {
 	Context    int     `json:"context,omitempty"` // tokens in the window now
 	ContextMax int     `json:"contextMax,omitempty"`
 	Input      int64   `json:"input,omitempty"`
@@ -74,7 +74,7 @@ type Tally struct {
 }
 
 // CacheHit is the share of input read from the cache, 0–1.
-func (t Tally) CacheHit() float64 {
+func (t Stats) CacheHit() float64 {
 	in := t.Input + t.CacheRead + t.CacheWrite
 	if in == 0 {
 		return 0

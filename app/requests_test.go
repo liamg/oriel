@@ -127,7 +127,7 @@ func TestRepliesRenderAsMarkdownWithActivity(t *testing.T) {
 	})
 
 	r.typeKeys("<D-A>")
-	r.waitText("SESSION TALLY")
+	r.waitText("SESSION STATS")
 	r.waitFrame("the console's evidence on the test run", func(s string) bool { return containsAll(s, "go test ./internal/pricing/", "2 passed") })
 
 	r.do(func() error { return r.host.Run(context.Background(), "tests.open", nil) })
@@ -247,9 +247,9 @@ func TestLuaThreads(t *testing.T) {
 	})
 }
 
-// AI-9: the summary's tasks rail follows the agent's task tools, its tally the turn, and the title bar shows the
+// AI-9: the summary's tasks rail follows the agent's task tools, its stats the turn, and the title bar shows the
 // plan's usage windows as the provider reports them.
-func TestTasksRailTallyAndUsage(t *testing.T) {
+func TestTasksRailStatsAndUsage(t *testing.T) {
 	r, a, _ := agentSession(t)
 	r.do(func() error { return r.host.Run(context.Background(), "requests.summary", nil) })
 	r.waitText("No tasks yet")

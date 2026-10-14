@@ -102,12 +102,12 @@ func (c *Canvas) titlebar() {
 		x += w + 1
 	}
 
-	tat := mono(10.5, font.Medium, fg2)
+	indicator := mono(10.5, font.Medium, fg2)
 	b := mono(10.5, font.Medium, fg)
 	right := []item{
-		c.txt("5H", tat), gap(6), c.bar(.38, accent), gap(6), c.txt("38%", b), gap(14),
-		c.txt("WK", tat), gap(6), c.bar(.71, warn), gap(6), c.txt("71%", b), gap(14),
-		c.dot(green, 5), gap(6), c.txt("BUS 4", tat), gap(14), c.kbd("⌘K"),
+		c.txt("5H", indicator), gap(6), c.bar(.38, accent), gap(6), c.txt("38%", b), gap(14),
+		c.txt("WK", indicator), gap(6), c.bar(.71, warn), gap(6), c.txt("71%", b), gap(14),
+		c.dot(green, 5), gap(6), c.txt("BUS 4", indicator), gap(14), c.kbd("⌘K"),
 	}
 	start := rowEnd(IDEWidth-14, cy, 0, right...)
 	c.Fill(Rect{start - 14 - 1, 0, 1, titleH - 1}, line)
@@ -575,12 +575,12 @@ func (c *Canvas) rightRail(x, top, bot float32) {
 	y = ft + 1 + 10
 	row(x+12, y+6, 0, c.txt("SESSION", capStyle))
 	rowEnd(x+w-12, y+6, 0, c.txt("claude opus · high", mono(10, font.Normal, fg3)))
-	tat := mono(10.5, font.Medium, fg2)
+	indicator := mono(10.5, font.Medium, fg2)
 	b := mono(10.5, font.Medium, fg)
 	y += 13 + 8
-	row(x+12, y+7.5, 6, c.txt("CTX", tat), c.bar(.22, accent), c.txt("44k", b), gap(12), c.txt("CACHE", tat), c.txt("91%", b), gap(12), c.txt("$", tat), c.txt("1.84", b))
+	row(x+12, y+7.5, 6, c.txt("CTX", indicator), c.bar(.22, accent), c.txt("44k", b), gap(12), c.txt("CACHE", indicator), c.txt("91%", b), gap(12), c.txt("$", indicator), c.txt("1.84", b))
 	y += 15 + 8
-	row(x+12, y+7.5, 6, c.txt("REVIEWED", tat), c.bar(.6, green), c.txt("12/20", b), gap(12), c.txt("TESTS", tat), c.txt("1 fail", mono(10.5, font.Medium, red)))
+	row(x+12, y+7.5, 6, c.txt("REVIEWED", indicator), c.bar(.6, green), c.txt("12/20", b), gap(12), c.txt("TESTS", indicator), c.txt("1 fail", mono(10.5, font.Medium, red)))
 }
 
 func (c *Canvas) statusline(top float32) {

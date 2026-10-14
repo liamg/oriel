@@ -8,7 +8,7 @@ related: [plugins/api, plugins/hooks, plugins/inspect, shell/settings]
 
 Your config is `~/.config/oriel/init.lua`, with modules under `lua/` for `require`. It runs in one Lua VM with the
 `oriel` API (write `local L = oriel` for a short name): options, keymaps, commands, hooks, views, decorations, and registrations for agent
-tools, prompt packs, session kinds, HUD tats and status rules. Saving it reloads it, with a toast; an error says
+tools, prompt packs, session kinds, HUD indicators and status rules. Saving it reloads it, with a toast; an error says
 where.
 
 ## When it fails {#errors}
@@ -32,7 +32,7 @@ under the line.
 `L.view.override(id, fn)` registers a view: a new one (a panel, opened with `view.open` in a dock, a split or a
 tab), a segment of the title bar or status line (`titlebar.right.*`, `statusline.left.*`, `statusline.right.*`),
 or a built-in it replaces. `fn` returns `L.ui` nodes: `row` and `column` (with `gap` and `pad`), `text`, `spacer`,
-`tat`, `list`, `button` (`on_click` runs Lua), `input`, `toggle` and `select` (their `on_change` gets the new value),
+`indicator`, `list`, `button` (`on_click` runs Lua), `input`, `toggle` and `select` (their `on_change` gets the new value),
 and `mode`. `oriel.ui.state(key, initial)` is a table kept across redraws, for what a view shows. Tab moves between
 controls. Any node can be dragged (`drag = { kind, data, label }`) or take drops (`accepts`, `on_drop`), by pointer
 or keyboard (Space picks up and drops). `oriel.decor.provider` marks lines in the editor, and `oriel.menu.add` adds a

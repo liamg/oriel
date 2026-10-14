@@ -115,7 +115,7 @@ func (r *rail) Activate(_ context.Context, h ext.Host) error {
 				return ""
 			}
 		case "tests":
-			e.Note = func(string) string { return r.sh.tests.tally() }
+			e.Note = func(string) string { return r.sh.tests.counts() }
 		}
 		r.add(h.Contribute(e))
 		if p.keys != "" {

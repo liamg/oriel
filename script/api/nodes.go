@@ -68,9 +68,9 @@ func (UI) Spacer() script.Table { return script.Table{"type": "spacer"} }
 //oriel:api doc="The editor's mode, as the built-in status line shows it." returns=table
 func (UI) Mode() script.Table { return script.Table{"type": "view", "id": "statusline.left.00-mode"} }
 
-//oriel:api doc="A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }." returns=table
-func (UI) Tat(spec script.Table) script.Table {
-	t := script.Table{"type": "tat"}
+//oriel:api doc="A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }." returns=table
+func (UI) Indicator(spec script.Table) script.Table {
+	t := script.Table{"type": "indicator"}
 	for k, v := range spec {
 		t[k] = v
 	}
@@ -114,7 +114,7 @@ func (UI) List(items any, row *script.Fn) script.Table {
 var styles = map[string]theme.TokenID{"dim": theme.FgMuted, "faint": theme.FgFaint, "accent": theme.Accent, "warn": theme.Warn,
 	"error": theme.Error, "ok": theme.OK}
 
-// buildView adds a view's nodes to c: a single line of them (a row, text, a tat, a button) is centred in the height
+// buildView adds a view's nodes to c: a single line of them (a row, text, a indicator, a button) is centred in the height
 // the view is given, as a bar's segment is; a column runs from the top, as a panel does.
 func buildView(c *ui.Ctx, v any, a *APIs) {
 	if t, ok := v.(script.Table); ok && str(t, "type") == "column" {
@@ -171,8 +171,8 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			if view, ok := a.Host.ViewByID(str(n, "id")); ok {
 				c.Node(view.Build(registry.ViewCtx{}))
 			}
-		case "tat":
-			tat(c, n, th)
+		case "indicator":
+			indicator(c, n, th)
 		case "button":
 			key := cmpOr(str(n, "id"), str(n, "label"))
 			primary, _ := n["primary"].(bool)
@@ -273,8 +273,8 @@ func (a *APIs) callback(n script.Table, field string, args ...any) {
 	a.Host.Redraw()
 }
 
-// tat is a label, a bar and a value, as the HUD and status line draw them.
-func tat(c *ui.Ctx, n script.Table, th *theme.Resolved) {
+// indicator is a label, a bar and a value, as the HUD and status line draw them.
+func indicator(c *ui.Ctx, n script.Table, th *theme.Resolved) {
 	mono := func(tok theme.TokenID) ui.TextStyle {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(tok)}
 	}

@@ -213,7 +213,7 @@ func (u *UI) Rect(id ID) (render.Rect, bool)      // last frame's layout
 func (u *UI) Hit(p render.Point) []ID              // topmost first, as clipped when painted
 func (u *UI) ScrollBy(id ID, dx, dy float32)
 
-func Tat(c *ui.Ctx, label string, frac float32, tone theme.Token) // a HUD readout
+func Indicator(c *ui.Ctx, label string, frac float32, tone theme.Token) // a HUD readout
 func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
 ```
 

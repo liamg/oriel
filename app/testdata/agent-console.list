@@ -248,7 +248,7 @@ clip 44,38 1556x936 r 0
     rect 1269,114 1x860 fill #24221d
     rect 1270,114 330x860 fill #0c0c0b
     clip 1270,114 330x860 r 0
-      text "SESSION TALLY" @1286,137.69 #7c7566 JetBrains Mono 9.5
+      text "SESSION STATS" @1286,137.69 #7c7566 JetBrains Mono 9.5
       text "codex" @1554,137.69 #4f4a40 JetBrains Mono 9.5
       text "context" @1286,161.26999 #b3ab99 JetBrains Mono 11.5
       text "118k / 400k" @1504.7656,161.26999 #ece6d8 JetBrains Mono 11.5

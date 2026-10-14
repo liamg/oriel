@@ -1,6 +1,6 @@
 ---
 id: PL-10
-title: "Calendar: next meeting tat (iCal URL or macOS EventKit)"
+title: "Calendar: next meeting indicator (iCal URL or macOS EventKit)"
 phase: P7
 status: todo
 area: Platform
@@ -8,7 +8,7 @@ module: integ/ical (plugin)
 depends_on: [PL-2]
 ---
 
-# PL-10 · Calendar: next meeting tat (iCal URL or macOS EventKit)
+# PL-10 · Calendar: next meeting indicator (iCal URL or macOS EventKit)
 
 **Phase** 7 · the rest · **After** [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md) · **Unblocks** nothing yet
 

@@ -37,7 +37,7 @@ window
   menu help=gallery/menu
     menuitem "Open usage details"
     menuitem "Copy value"
-    menuitem "Hide this tat" disabled
+    menuitem "Hide this indicator" disabled
     menuitem "Move to statusline…"
   dialog "A popover under its anchor." help=gallery/popover
   menu help=ui/context-menu

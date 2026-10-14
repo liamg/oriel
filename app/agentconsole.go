@@ -21,7 +21,7 @@ import (
 )
 
 // AgentConsoleView is the agent console (ui.md 15): the session in front's structured transcript, its subagents and
-// asks, a composer, and the session's tally.
+// asks, a composer, and the session's stats.
 const AgentConsoleView = "agent.console"
 
 // The console's key modes: its transcript, and its composer.

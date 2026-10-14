@@ -9,7 +9,7 @@ import (
 )
 
 // Contribution is anything a feature registers for another to use, by kind and name: an agent tool, a prompt pack,
-// a session kind, a HUD tat, a status rule. A later one of a kind and name shadows the earlier until disposed.
+// a session kind, a HUD indicator, a status rule. A later one of a kind and name shadows the earlier until disposed.
 type Contribution interface {
 	ContributionKind() string
 	ContributionName() string
@@ -65,8 +65,8 @@ type SessionKind struct {
 	Source             string
 }
 
-// Tat is a HUD tat: a small view in a slot, built again every Every (SH-8).
-type Tat struct {
+// Indicator is a HUD indicator: a small view in a slot, built again every Every (SH-8).
+type Indicator struct {
 	Name, Slot string
 	Every      time.Duration
 	Build      func(ctx Ctx) (ui.Node, error)
@@ -86,8 +86,8 @@ func (PromptPack) ContributionKind() string    { return "agent.pack" }
 func (p PromptPack) ContributionName() string  { return p.Name }
 func (SessionKind) ContributionKind() string   { return "session.kind" }
 func (k SessionKind) ContributionName() string { return k.Name }
-func (Tat) ContributionKind() string           { return "hud.tat" }
-func (t Tat) ContributionName() string         { return t.Name }
+func (Indicator) ContributionKind() string     { return "hud.indicator" }
+func (t Indicator) ContributionName() string   { return t.Name }
 func (StatusRule) ContributionKind() string    { return "status.rule" }
 func (s StatusRule) ContributionName() string  { return s.Name }
 

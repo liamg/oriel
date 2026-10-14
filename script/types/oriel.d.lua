@@ -142,11 +142,11 @@ function oriel.editor.presenter(spec) end
 ---@class oriel.hud
 oriel.hud = {}
 
---- A HUD tat: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
+--- A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
 ---@param name string
 ---@param opts table
 ---@param fn function
-function oriel.hud.tat(name, opts, fn) end
+function oriel.hud.indicator(name, opts, fn) end
 
 ---@class oriel.keymap
 oriel.keymap = {}
@@ -286,6 +286,11 @@ function oriel.ui.button(spec) end
 ---@return table
 function oriel.ui.column(children) end
 
+--- A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
+---@param spec table
+---@return table
+function oriel.ui.indicator(spec) end
+
 --- A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value.
 ---@param spec table
 ---@return table
@@ -320,11 +325,6 @@ function oriel.ui.spacer() end
 ---@param initial? any
 ---@return table
 function oriel.ui.state(key, initial) end
-
---- A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
----@param spec table
----@return table
-function oriel.ui.tat(spec) end
 
 --- Text, in a style: dim, faint, accent, warn, error or ok.
 ---@param s any

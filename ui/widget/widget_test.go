@@ -192,7 +192,7 @@ func TestTabs(t *testing.T) {
 
 var items = []MenuItem{
 	{Label: "Open usage details"}, {Label: "Copy value", Shortcut: "y"}, {Separator: true},
-	{Label: "Hide this tat", Disabled: true}, {Label: "Move to statusline…"},
+	{Label: "Hide this indicator", Disabled: true}, {Label: "Move to statusline…"},
 }
 
 func TestMenu(t *testing.T) {
@@ -228,7 +228,7 @@ func TestContextMenu(t *testing.T) {
 	var target ui.ID
 	var res ContextResult
 	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
-		target = c.Box("tat", ui.Style{W: ui.Px(80), H: ui.Px(20), Interactive: true, Help: "hud/usage#weekly-window"}, nil)
+		target = c.Box("indicator", ui.Style{W: ui.Px(80), H: ui.Px(20), Interactive: true, Help: "hud/usage#weekly-window"}, nil)
 		res = ContextMenu(c, "ctx", target, items)
 	})
 	x, y := mid(h.rect(target))

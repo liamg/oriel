@@ -106,7 +106,7 @@ func TestSampleInitLua(t *testing.T) {
 	if cmds["Ship"] != line(`L.command("Ship"`) {
 		t.Errorf("Ship's source is %q", cmds["Ship"])
 	}
-	for kind, name := range map[string]string{"agent.tool": "staging_logs", "agent.pack": "hotfix", "session.kind": "hotfix", "hud.tat": "deploys"} {
+	for kind, name := range map[string]string{"agent.tool": "staging_logs", "agent.pack": "hotfix", "session.kind": "hotfix", "hud.indicator": "deploys"} {
 		cs := slices.DeleteFunc(s.reg.Contributions(kind), func(c registry.Contribution) bool {
 			t, ok := c.(registry.AgentTool)
 			return ok && strings.HasPrefix(t.Source, "builtin:")

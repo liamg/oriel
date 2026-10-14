@@ -38,7 +38,7 @@ How everything hangs together, built and tested before features land on it.
 | SH-5 | Pickers (`␣␣` files, `␣/` grep, `␣k` keymaps…) with preview and actions | 26 | picker | P3–P4 | SH-4 | each source returns, ranks and previews; `␣'` resumes; quickfix and attach actions work |
 | SH-6 | Which-key popup | 27 | plugin (built-in) | P3 | FW-3, FW-6 | appears after 300 ms for any prefix, lists `desc`, `⌫` backs up |
 | SH-7 | Mission control (`⌘⇧K`) with live terminals and inline asks | 03 | app | P7 | SH-2, AI-1 | grouped by worker; working cards stream output; Allow/Deny works from the card |
-| SH-8 | HUD drawer (hold ⌥) and tats in slots | 10, 01 | app, hud | P7 | FW-6, FW-2 | every panel bound to live events; tats updatable from Lua |
+| SH-8 | HUD drawer (hold ⌥) and indicators in slots | 10, 01 | app, hud | P7 | FW-6, FW-2 | every panel bound to live events; indicators updatable from Lua |
 | SH-9 | Inbox and interrupt cards (agentbus, network, gateway, security key) | 12 | app | P7 | FW-6 | each card type acts and dismisses; badge counts on tabs |
 | SH-10 | Help everywhere (right-click → Help, `K`, `⌘?`, `:help`) | 28 | help | P3→ | FW-6 | CI lint: every interactive element resolves to a help page and anchor |
 | SH-11 | Light, dark and theme editor (`:Theme`, pick mode) | 17, 23 | theme | P3, P7 | FW-7 | token resolution tests; the fixture renders in all built-in themes; pick-to-override writes the smallest TOML diff |
@@ -144,7 +144,7 @@ How everything hangs together, built and tested before features land on it.
 | PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | integ/agentbus | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus |
 | PL-8 | Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source | 04, 02 | integ/linear (plugin) | P7 | PL-2, SE-1 | `crit-reference.md` → Linear, against a recorded Linear API |
 | PL-9 | Slack PTAL via webhook | 18 | integ/slack (plugin) | P7 | PL-2 | – |
-| PL-10 | Calendar: next meeting tat (iCal URL or macOS EventKit) | 10 | integ/ical (plugin) | P7 | PL-2 | – |
+| PL-10 | Calendar: next meeting indicator (iCal URL or macOS EventKit) | 10 | integ/ical (plugin) | P7 | PL-2 | – |
 | PL-11 | Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation | – | prompts, voice | P7 | AI-2 | `crit-reference.md` → Prompts and Voice |
 | PL-6 | Self-update for the app and workers (self-signed, ed25519) | – | update | P7 | AI-1 | an update round-trips on macOS and Linux with rollback on a failed health check |
 | PL-19 | Package format: Lua entry point, `oriel.process` / `oriel.wasm` / `oriel.asset`, `[contributes]` assets, `oriel plugin pack` | – | ext, script | P8 | PL-2, PL-3 | a data-only theme plugin, a Lua plugin and a Lua + process plugin each load from a directory; `pack` rejects an undeclared capability and an oversize plugin |

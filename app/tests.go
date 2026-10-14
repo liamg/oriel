@@ -581,8 +581,8 @@ func (x *testsExt) nextFailure() error {
 	return x.h.Run(ctx, "editor.open", registry.Args{"path": next.File, "line": next.Line + 1})
 }
 
-// tally is the last run's counts as the sidebar's Tests entry notes them: "48 ✓", "2 ✕"; "" before a run.
-func (x *testsExt) tally() string {
+// counts is the last run's counts as the sidebar's Tests entry notes them: "48 ✓", "2 ✕"; "" before a run.
+func (x *testsExt) counts() string {
 	if x == nil {
 		return ""
 	}

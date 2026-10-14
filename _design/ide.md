@@ -145,7 +145,7 @@ below.
 - **Coverage**: `⌥▶` runs with coverage, and covered or uncovered lines show in the gutter (Go `-coverprofile`, pytest-cov,
   vitest/istanbul, cargo llvm-cov when installed).
 - **The agent's runs land in the same panel**, marked as the agent's, and they're the **evidence** that "tests pass" claims link to
-  (`agents.md`). The HUD tat shows `TESTS 13 ✓ 1 ✕` for the session.
+  (`agents.md`). The HUD indicator shows `TESTS 13 ✓ 1 ✕` for the session.
 - **Runs happen on the worker, in the session sandbox**, with the project's mise toolchain, so they behave exactly like CI.
 
 | Language | Discovery | Runner and result stream |
@@ -246,7 +246,7 @@ results, failure block and tests panel are still to build on it.
   times), so flaky detection needs no git. History (20 runs) persists per work dir in the state directory.
 - The Tests panel is the `tests` view (the rail's Tests lights up): a tree by package and test (subtests and rows
   under their test), all / failed / slowest, sparklines of recent runs, flaky marks, and output (case, run, raw JSON).
-  The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.tat` for the HUD (SH-8).
+  The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.indicator` for the HUD (SH-8).
 - Watch (TR-4) is a `BufWritePost` hook running `Set.Affected`; coverage (`␣tc`) marks covered and uncovered lines with
   gutter edges until toggled off.
 - Not yet: running in the worker's sandbox (AI-1), debug (DB-2).

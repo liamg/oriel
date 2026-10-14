@@ -67,6 +67,6 @@ it, `Esc` drops it. Open threads show under their line with the agent's state, a
 ## Summary
 
 The session at a glance, at the window's right (`requests.summary`): its requests, the tasks rail (✓ done, ◐ in
-progress, ○ to do) and the tally: context, cache, cost, tasks and the latest tests.
+progress, ○ to do) and the stats: context, cache, cost, tasks and the latest tests.
 
 {{keys "request*"}}

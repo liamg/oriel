@@ -63,7 +63,7 @@ func requestsScene(t *testing.T) *errScene {
 	se := core.SessionState{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusWorking,
 		Projects: []core.Project{{Name: "pricing", Dir: dir, Branch: "rethink/rounding", Primary: true}},
 		Agent: core.AgentState{Provider: "claude", Model: "opus", Effort: "high", Running: true, Working: true, TurnStarted: s.now.Add(-41 * time.Second),
-			Tally: core.Tally{Context: 44_000, ContextMax: 200_000, Input: 20_000, CacheRead: 210_000, Output: 9_000, Turns: 6, ToolCalls: 31, Cost: 1.84}},
+			Stats: core.Stats{Context: 44_000, ContextMax: 200_000, Input: 20_000, CacheRead: 210_000, Output: 9_000, Turns: 6, ToolCalls: 31, Cost: 1.84}},
 		Threads: threads,
 		Tasks: []core.Task{
 			{ID: "1", Subject: "Add RoundingMode type", Status: core.TaskCompleted},
@@ -112,7 +112,7 @@ func TestRequestsSnapshot(t *testing.T) {
 }
 
 // AI-5, AI-9 (01-ide): the thread open between round.go's lines 46 and 47 with Claude's live state, and the summary
-// at the right: requests, the tasks rail, the session's tally; the plan's usage windows in the title bar.
+// at the right: requests, the tasks rail, the session's stats; the plan's usage windows in the title bar.
 func TestIDEThreadSnapshot(t *testing.T) {
 	s := requestsScene(t)
 	s.run("editor.open", registry.Args{"path": "internal/pricing/round.go"})

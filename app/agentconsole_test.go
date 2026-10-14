@@ -75,7 +75,7 @@ func consoleSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorke
 	t.Helper()
 	r, a, lw := agentSession(t)
 	r.typeKeys("<D-A>")
-	r.waitText("SESSION TALLY")
+	r.waitText("SESSION STATS")
 	return r, a, lw
 }
 
@@ -195,7 +195,7 @@ func TestPermissionCardsAnswerTheAgent(t *testing.T) {
 func TestAskCardsInterruptAnyView(t *testing.T) {
 	r, a, _ := consoleSession(t)
 	r.typeKeys("<D-A>")
-	r.waitGone("SESSION TALLY")
+	r.waitGone("SESSION STATS")
 	deny := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: toolInput(map[string]string{"command": "curl example.com"})})
 	r.waitFrame("the interrupt card", func(s string) bool { return containsAll(s, "W · PERMISSION", "$ curl example.com") })
 	r.clickText("Deny")

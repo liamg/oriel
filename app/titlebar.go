@@ -17,7 +17,7 @@ import (
 )
 
 // TitleBarView is the bar across the top: the logo, the session tabs, and segments named titlebar.right.* (the
-// usage and bus tats) at its right.
+// usage and bus indicators) at its right.
 const (
 	TitleBarView = "app.titlebar"
 	TitleRight   = "titlebar.right."

@@ -150,10 +150,10 @@ func (s Session) Kind(name string, spec script.Table, where string) error {
 //oriel:api name=hud
 type HUD struct{ a *APIs }
 
-//oriel:api doc="A HUD tat: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."
-func (h HUD) Tat(name string, opts script.Table, fn *script.Fn, where string) error {
+//oriel:api doc="A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."
+func (h HUD) Indicator(name string, opts script.Table, fn *script.Fn, where string) error {
 	every, _ := time.ParseDuration(str(opts, "every"))
-	h.a.own(h.a.Host.Contribute(registry.Tat{Name: name, Slot: str(opts, "slot"), Every: every, Source: where,
+	h.a.own(h.a.Host.Contribute(registry.Indicator{Name: name, Slot: str(opts, "slot"), Every: every, Source: where,
 		Build: func(registry.Ctx) (ui.Node, error) {
 			out, err := h.a.VM.Call(fn)
 			if err != nil {

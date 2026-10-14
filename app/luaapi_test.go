@@ -174,7 +174,7 @@ L.option["ui.variant"] = nil
 	}
 }
 
-// oriel.ui nodes build: rows, columns, text in each style, spacers, tats with bars, lists through a row function,
+// oriel.ui nodes build: rows, columns, text in each style, spacers, indicators with bars, lists through a row function,
 // and a built-in view by id.
 func TestLuaUINodes(t *testing.T) {
 	s := luaScene(t, `local L = oriel
@@ -183,8 +183,8 @@ L.statusline(function(w)
     L.ui.mode(),
     L.ui.column{ L.ui.text("dim one", "dim"), L.ui.text(42, "warn") },
     L.ui.spacer(),
-    L.ui.tat{ label = "CTX", bar = 0.9, warn = 0.8 },
-    L.ui.tat{ label = "DEPLOY", value = 2, tone = "error" },
+    L.ui.indicator{ label = "CTX", bar = 0.9, warn = 0.8 },
+    L.ui.indicator{ label = "DEPLOY", value = 2, tone = "error" },
     L.ui.list({ "a", "b" }, function(x) return L.ui.text("item " .. x, "accent") end),
     "plain",
     { L.ui.text("nested", "ok") },
@@ -228,19 +228,19 @@ end)
 	}
 }
 
-// HUD tats and status rules are contributions their features will draw and ask; calling them gives what Lua made.
+// HUD indicators and status rules are contributions their features will draw and ask; calling them gives what Lua made.
 func TestLuaTatAndStatusRule(t *testing.T) {
 	s := luaScene(t, `local L = oriel
-L.hud.tat("deploys", { slot = "titlebar.right", every = "30s" }, function()
-  return L.ui.tat{ label = "DEPLOY", value = 3 }
+L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
+  return L.ui.indicator{ label = "DEPLOY", value = 3 }
 end)
 L.status.rule(function(sess) if sess.red then return "error" end end)
 `)
-	tat := s.reg.Contributions("hud.tat")[0].(registry.Tat)
-	if tat.Slot != "titlebar.right" || tat.Every.Seconds() != 30 {
-		t.Errorf("tat %+v", tat)
+	indicator := s.reg.Contributions("hud.indicator")[0].(registry.Indicator)
+	if indicator.Slot != "titlebar.right" || indicator.Every.Seconds() != 30 {
+		t.Errorf("indicator %+v", indicator)
 	}
-	if n, err := tat.Build(nil); err != nil || n == nil {
+	if n, err := indicator.Build(nil); err != nil || n == nil {
 		t.Errorf("building it: %v", err)
 	}
 	rule := s.reg.Contributions("status.rule")[0].(registry.StatusRule)

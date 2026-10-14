@@ -95,7 +95,7 @@ text "Copy value" @564,205.54712 #ece6d8 Inter 12.5
 rect 774,193.4 16x15.199997 fill #121210 radius 4 stroke 1 #332f27
 text "y" @779,204.59999 #7c7566 JetBrains Mono 10
 rect 552,220 250x1 fill #24221d
-text "Hide this tat" @564,244.54712 #4f4a40 Inter 12.5
+text "Hide this indicator" @564,244.54712 #4f4a40 Inter 12.5
 text "Move to statusline…" @564,274.54712 #ece6d8 Inter 12.5
 rect 20,368 120x24 fill #121210 radius 4
 rect 146,134 56x2 fill #ffd23f

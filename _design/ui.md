@@ -17,7 +17,7 @@ They are design sketches, not the implementation: the app draws natively (see `s
   No 3D, no skeuomorphism, no motion that isn't telling you something.
 - **Type**: JetBrains Mono for code and readouts, Inter for UI and prose,
   Space Grotesk for display headings.
-- **Tats**: tiny live readouts (label, bar or value, sparkline) placed in fixed
+- **Indicators**: tiny live readouts (label, bar or value, sparkline) placed in fixed
   slots: titlebar right, statusline, session footer, mission-control strip.
   Hold `⌥` to pull the full HUD down over anything.
 - **Annotation house style** (explain, tours, `:Inspect`): numbered diamond,
@@ -89,7 +89,7 @@ They are design sketches, not the implementation: the app draws natively (see `s
   source. The status line's mode reads the presenter's label (PREVIEW). Each window has its own: one window can preview
   a file while another edits it, the preview following the edits. The window's top line follows the preview's scroll,
   so Edit comes back where you were reading, and the presenter comes back after a restart.
-- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem tats.
+- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem indicators.
 
 ## 01b · Requests: the main conversation view
 

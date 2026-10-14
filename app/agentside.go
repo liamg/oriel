@@ -14,13 +14,13 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// side is the console's right column: the session's tally, the plans' usage, what this turn touched, and the rules
+// side is the console's right column: the session's stats, the plans' usage, what this turn touched, and the rules
 // in force.
 func (x *agentConsole) side(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
-	scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#tally"}, ui.Style{},
+	scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#stats"}, ui.Style{},
 		func(c *ui.Ctx, _ func(string) ui.ID) {
-			x.tally(c, se)
+			x.sessionStats(c, se)
 			x.tasks(c, se)
 			x.usage(c, se)
 			x.touched(c, se)
@@ -54,7 +54,7 @@ func stat(c *ui.Ctx, key, name, value string, tone render.Color) {
 	})
 }
 
-// tokens is a count as the tally shows it: 950, 38k, 1.42M.
+// tokens is a count as the session stats show it: 950, 38k, 1.42M.
 func tokens(n int64) string {
 	switch {
 	case n >= 1_000_000:
@@ -80,11 +80,11 @@ func hm(d time.Duration) string {
 	return fmt.Sprintf("%ds", int(d.Seconds()))
 }
 
-func (x *agentConsole) tally(c *ui.Ctx, se core.SessionState) {
+func (x *agentConsole) sessionStats(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
-	t := se.Agent.Tally
+	t := se.Agent.Stats
 	fg := th.C(theme.Fg)
-	section(c, "tally", "Session tally", se.Agent.Provider, func(c *ui.Ctx) {
+	section(c, "stats", "Session stats", se.Agent.Provider, func(c *ui.Ctx) {
 		ctxv := tokens(int64(t.Context))
 		if t.ContextMax > 0 {
 			ctxv += " / " + tokens(int64(t.ContextMax))
@@ -317,14 +317,14 @@ func latestRun(se core.SessionState) (core.TestRun, bool) {
 	return last, true
 }
 
-// sessionTally is 01's tally at the foot of the summary: context, cache and cost, then the latest tests.
-func sessionTally(c *ui.Ctx, se core.SessionState, now time.Time) {
+// sessionStats is 01's session stats at the foot of the summary: context, cache and cost, then the latest tests.
+func sessionStats(c *ui.Ctx, se core.SessionState, now time.Time) {
 	th := c.Theme()
-	t := se.Agent.Tally
+	t := se.Agent.Stats
 	label := func(c *ui.Ctx, k, s string) { c.Text(k, s, monoFont(10.5, th.C(theme.FgFaint))) }
 	value := func(c *ui.Ctx, k, s string, tone render.Color) { c.Text(k, s, monoFont(11, tone)) }
 	fg := th.C(theme.Fg)
-	c.Column("tally", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 12), Gap: 10, Role: ui.RoleGroup, Label: "Session tally", Help: "agent/console#tally"},
+	c.Column("stats", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 12), Gap: 10, Role: ui.RoleGroup, Label: "Session stats", Help: "agent/console#stats"},
 		func(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("k", "SESSION", kickerFont(th.C(theme.FgFaint)))
@@ -399,7 +399,7 @@ func (x *agentConsole) usageTat(c *ui.Ctx) {
 	}
 	th := c.Theme()
 	c.Row("usage", ui.Style{H: ui.Flex(1), Gap: 8, Cross: ui.Center, Role: ui.RoleStatus, Label: cmpOr(u.Plan, providerName(u.Provider)) + " usage",
-		Help: "agent/console#tally"}, func(c *ui.Ctx) {
+		Help: "agent/console#stats"}, func(c *ui.Ctx) {
 		for i, w := range u.Windows {
 			tone := th.C(tMeterContext)
 			if w.Used >= .9 {

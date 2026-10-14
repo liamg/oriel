@@ -100,7 +100,7 @@ is in daily use.
 ## Debugging Oriel itself
 
 - `:Log` (above), `:Events` (the live core event stream with filters, from the event log), `:Inspect`, `:Hooks` with
-  timings, and the HUD's worker tats.
+  timings, and the HUD's worker indicators.
 - `oriel --debug` turns on debug logging and the frame-time overlay.
 - "Copy report": version, OS, the settings that differ from defaults, enabled plugins, the last 500 log records and
   the event-log tail, redacted, as one block of text.

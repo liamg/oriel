@@ -199,7 +199,7 @@ func (x *requests) Activate(_ context.Context, h ext.Host) error {
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
 		{ID: "threads.show", Title: "Show the threads of the file in a {window}, at {thread} (the cursor line's by default) with its reply field ready",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.showThreads(a) }},
-		{ID: "requests.summary", Title: "Show the session's summary at the right: its requests, tasks and tally, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "requests.summary", Title: "Show the session's summary at the right: its requests, tasks and stats, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", registry.Args{"id": SummaryView, "place": "dock", "edge": "right", "size": 380, "title": "Session"})
 		}},
 	}

@@ -89,20 +89,20 @@ L.agent.tool{
 L.agent.pack("hotfix", { prompt = L.read("~/.config/oriel/agents/hotfix.md"), tools = { "staging_logs" } })
 L.session.kind("hotfix", { pack = "hotfix", gates = { "tests", "ledger" }, status = "red-until-merged" })
 
--- views: statusline, HUD tats, panels, all replaceable
+-- views: statusline, HUD indicators, panels, all replaceable
 L.statusline(function(w)
   return L.ui.row{
     L.ui.mode(),
     L.ui.text(w.session.branch, "dim"),
     L.ui.spacer(),
-    L.ui.tat{ label = "CTX", bar = w.session.ctx_frac },
-    L.ui.tat{ label = "LEDGER", bar = L.ledger.frac(), warn = 0.8 },
+    L.ui.indicator{ label = "CTX", bar = w.session.ctx_frac },
+    L.ui.indicator{ label = "LEDGER", bar = L.ledger.frac(), warn = 0.8 },
   }
 end)
 
-L.hud.tat("deploys", { slot = "titlebar.right", every = "30s" }, function()
+L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
   local n = L.json(L.http.get("https://deploy.internal/api/pending")).count
-  return L.ui.tat{ label = "DEPLOY", value = n, tone = n > 0 and "warn" or "ok" }
+  return L.ui.indicator{ label = "DEPLOY", value = n, tone = n > 0 and "warn" or "ok" }
 end)
 
 L.view.override("requests", function(s)            -- replace a built-in panel
@@ -192,12 +192,12 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   LuaLS types (`script/types/oriel.d.lua`) and the reference (`docs/api.md`); a test fails when they're stale. A
   parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
 - Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
-  `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (tat), `status` (rule), `thread`, `ui`, `regex` (PCRE2),
+  `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (indicator), `status` (rule), `thread`, `ui`, `regex` (PCRE2),
   `language`, and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
   `local o = oriel.option` if you want it short). A list option takes a table of strings and a map option a table of
   strings by name (`oriel.option["sandbox.servers"] = { docs = "https://docs.example.com/mcp" }`); reading one gives
   the same. There's one global, `oriel`; a config that wants a short name writes `local L = oriel`, as the sample does.
-- Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.tat`, `status.rule`) are
+- Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.indicator`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
   `http` and `async` load, and calling into one says which ticket brings it. An option
   set before anything registers it waits, and `:Hooks` lists it.
@@ -241,7 +241,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - Not yet: a column for runtime errors (gopher-lua gives none, so the whole line is underlined), and the toast's
   "saving reloads it" hint.
 - UI from Lua: `L.ui.button{ label, on_click, primary, id }` runs Lua when clicked; `row` and `column` take `gap` and
-  `pad` beside their children. A view whose top node is a single line (a row, text, a tat, a button) is centred in
+  `pad` beside their children. A view whose top node is a single line (a row, text, a indicator, a button) is centred in
   the height it's given, so it sits right in a bar; a column runs from the top, as a panel does. A demo plugin
   (`app/plugindemo_test.go`) adds a dock panel with buttons, a tab, title-bar and status-line segments and editor
   marks, using only this API.

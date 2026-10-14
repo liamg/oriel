@@ -99,8 +99,8 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := HUD{a: a}
 		vm.Bind("hud", map[string]script.GoFunc{
-			"tat": func(c *script.Args) ([]any, error) {
-				return nil, x.Tat(c.String(0), c.Table(1), c.Fn(2), c.Where())
+			"indicator": func(c *script.Args) ([]any, error) {
+				return nil, x.Indicator(c.String(0), c.Table(1), c.Fn(2), c.Where())
 			},
 		})
 	}
@@ -224,6 +224,9 @@ func (a *APIs) bind(vm *script.VM) {
 			"column": func(c *script.Args) ([]any, error) {
 				return []any{x.Column(c.Any(0))}, nil
 			},
+			"indicator": func(c *script.Args) ([]any, error) {
+				return []any{x.Indicator(c.Table(0))}, nil
+			},
 			"input": func(c *script.Args) ([]any, error) {
 				return []any{x.Input(c.Table(0))}, nil
 			},
@@ -244,9 +247,6 @@ func (a *APIs) bind(vm *script.VM) {
 			},
 			"state": func(c *script.Args) ([]any, error) {
 				return []any{x.State(c.String(0), c.Any(1))}, nil
-			},
-			"tat": func(c *script.Args) ([]any, error) {
-				return []any{x.Tat(c.Table(0))}, nil
 			},
 			"text": func(c *script.Args) ([]any, error) {
 				return []any{x.Text(c.Any(0), c.String(1))}, nil

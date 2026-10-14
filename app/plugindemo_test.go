@@ -43,15 +43,15 @@ end)
 L.view.override("dashboard", function()
   return L.ui.column{ pad = 14, gap = 10,
     L.ui.text("TEAM DASHBOARD", "accent"),
-    L.ui.tat{ label = "ERROR BUDGET", bar = 0.82, warn = 0.8 },
-    L.ui.tat{ label = "P99", value = "184ms", tone = "ok" },
-    L.ui.tat{ label = "OPEN INCIDENTS", value = 1, tone = "error" },
+    L.ui.indicator{ label = "ERROR BUDGET", bar = 0.82, warn = 0.8 },
+    L.ui.indicator{ label = "P99", value = "184ms", tone = "ok" },
+    L.ui.indicator{ label = "OPEN INCIDENTS", value = 1, tone = "error" },
   }
 end)
 
 -- a segment in the title bar, and one in the status line
 L.view.override("titlebar.right.40-deploys", function()
-  return L.ui.tat{ label = "DEPLOY", value = #deploys, tone = "warn" }
+  return L.ui.indicator{ label = "DEPLOY", value = #deploys, tone = "warn" }
 end)
 L.view.override("statusline.right.50-ci", function()
   return L.ui.row{ L.ui.text("CI", "dim"), L.ui.text("✓ main", "ok") }

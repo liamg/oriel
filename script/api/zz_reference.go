@@ -36,7 +36,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.editor.presenter(spec)", Doc: "Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text."},
 	},
 	"hud": {
-		{Call: "oriel.hud.tat(name, opts, fn)", Doc: "A HUD tat: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."},
+		{Call: "oriel.hud.indicator(name, opts, fn)", Doc: "A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."},
 	},
 	"keymap": {
 		{Call: "oriel.keymap.set(modes, lhs, rhs, opts?)", Doc: "Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args."},
@@ -81,6 +81,7 @@ var Reference = map[string][]RefFunc{
 	"ui": {
 		{Call: "oriel.ui.button(spec)", Doc: "A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change."},
 		{Call: "oriel.ui.column(children)", Doc: "A column of nodes; options beside them: gap, pad (px)."},
+		{Call: "oriel.ui.indicator(spec)", Doc: "A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }."},
 		{Call: "oriel.ui.input(spec)", Doc: "A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label }. Keep the text in oriel.ui.state and give it back as value."},
 		{Call: "oriel.ui.list(items, row)", Doc: "A list: each of items through row(item), which returns a node."},
 		{Call: "oriel.ui.mode()", Doc: "The editor's mode, as the built-in status line shows it."},
@@ -88,7 +89,6 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.ui.select(spec)", Doc: "A menu of choices: { value, options = { … }, on_change = fn(value), id, label }."},
 		{Call: "oriel.ui.spacer()", Doc: "Space that takes what's left."},
 		{Call: "oriel.ui.state(key, initial?)", Doc: "A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance."},
-		{Call: "oriel.ui.tat(spec)", Doc: "A tat: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }."},
 		{Call: "oriel.ui.text(s, style?)", Doc: "Text, in a style: dim, faint, accent, warn, error or ok."},
 		{Call: "oriel.ui.toggle(spec)", Doc: "An on/off switch: { on, on_change = fn(on), id, label }."},
 	},

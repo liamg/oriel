@@ -450,7 +450,7 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 		it := core.Item{ID: ev.ID, Kind: core.ItemTool, Tool: ev.Tool, Input: string(ev.Input), Title: toolTitle(ev.Tool, ev.Input),
 			Agent: ev.Agent, Time: now}
 		h.appendItem(it)
-		h.setAgent(func(a *core.AgentState) { a.Tally.ToolCalls++ })
+		h.setAgent(func(a *core.AgentState) { a.Stats.ToolCalls++ })
 		if ev.Agent != "" {
 			h.subagentTool(ev.Agent)
 		}
@@ -621,21 +621,21 @@ func (h *host) turnEnd(ev agent.TurnEnd, now time.Time) {
 	}
 	h.setAgent(func(a *core.AgentState) {
 		a.Working = false
-		a.Tally.Turns++
+		a.Stats.Turns++
 		u := ev.Usage
-		a.Tally.Input += u.Input
-		a.Tally.Output += u.Output
-		a.Tally.CacheRead += u.CacheRead
-		a.Tally.CacheWrite += u.CacheWrite
-		a.Tally.Cost += u.Cost
+		a.Stats.Input += u.Input
+		a.Stats.Output += u.Output
+		a.Stats.CacheRead += u.CacheRead
+		a.Stats.CacheWrite += u.CacheWrite
+		a.Stats.Cost += u.Cost
 		if u.Context > 0 {
-			a.Tally.Context = u.Context
+			a.Stats.Context = u.Context
 		}
 		if u.ContextMax > 0 {
-			a.Tally.ContextMax = u.ContextMax
+			a.Stats.ContextMax = u.ContextMax
 		}
 		if !started.IsZero() {
-			a.Tally.Running += int64(now.Sub(started).Seconds())
+			a.Stats.Running += int64(now.Sub(started).Seconds())
 		}
 	})
 	h.kick()

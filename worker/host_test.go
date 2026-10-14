@@ -30,7 +30,7 @@ func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
 	}
 	a.Emit(agent.TurnStart{})
 	a.Emit(agent.TurnEnd{})
-	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return !se.Agent.Working && se.Agent.Tally.Turns == 1 })
+	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return !se.Agent.Working && se.Agent.Stats.Turns == 1 })
 	start := time.Now()
 	tid, err := r.w.Comment(context.Background(), CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3, Text: "func Round() {}"},
 		Body: "what about -2.5?"})

@@ -35,7 +35,7 @@ func (c *Canvas) chip(s string, col color.NRGBA) item {
 	}}
 }
 
-// bar is the tat meter: 46×4, radius 2.
+// bar is the indicator meter: 46×4, radius 2.
 func (c *Canvas) bar(frac float32, col color.NRGBA) item {
 	return item{46, func(x, cy float32) {
 		c.RRect(Rect{x, cy - 2, 46, 4}, 2, c.p.bg4)
