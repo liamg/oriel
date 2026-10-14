@@ -127,6 +127,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 60. [AI-12](AI-12-stats-and-usage-pages-grouped-by-repo.md): Stats and Usage: session stats, global stats grouped by repo, plan usage, and how you reach them · after AI-1, AI-2, AI-3, AI-9, SH-17 (P5 follow-up)
 61. [SE-4](SE-4-jobs-page-saved-prompts-runs-and-schedules.md): Jobs: saved prompts, runs as sessions, a Jobs page, and schedules · after SE-1, AI-12 (P5 follow-up)
 62. [AI-13](AI-13-detect-an-expired-agent-login.md): Detect an expired agent login, flag it on its worker, and fix it from Oriel · after AI-2, AI-3, AI-12 (P5 follow-up)
+63. [AI-14](AI-14-stats-and-usage-follow-ups.md): Stats and Usage follow-ups: custom ranges, exact per-range tools, plan tiers, active span, accounts at the time · after AI-12 (P5 follow-up)
 
 ### Phase 6 · review
 
