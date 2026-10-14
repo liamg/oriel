@@ -76,12 +76,29 @@ func (w *Worker) Comment(ctx context.Context, r CommentReq) (core.ThreadID, erro
 	}
 	now := w.opts.Now().UTC()
 	c := core.Comment{ID: newID(6), Author: core.AuthorYou, Name: whoAmI(ctx), Body: r.Body, Time: now, Images: r.Images, Btw: r.Btw}
+	var f core.Finding
+	if r.Finding != "" {
+		var ok bool
+		if f, ok = se.Finding(r.Finding); !ok {
+			return "", fmt.Errorf("no finding %s", r.Finding)
+		}
+	}
 	var t core.Thread
 	if r.Thread == "" {
+		c.Severity = r.Severity
 		t = core.Thread{ID: core.ThreadID(newID(8)), Anchor: r.Anchor, Title: r.Title, Status: cmp.Or(r.Status, core.ThreadOpen), Urgent: r.Urgent,
 			Btw: r.Btw, Comments: []core.Comment{c}, Created: now, Updated: now}
+		if r.Finding != "" {
+			t.Origin = core.OriginAIReview
+		}
 		if err := w.emit(core.ThreadUpdated{Session: r.Session, Thread: t}); err != nil {
 			return "", err
+		}
+		if r.Finding != "" {
+			f.Thread = t.ID
+			if err := w.emit(core.FindingsRecorded{Session: r.Session, Findings: []core.Finding{f}}); err != nil {
+				return "", err
+			}
 		}
 	} else {
 		if _, err := findThread(se, string(r.Thread)); err != nil {

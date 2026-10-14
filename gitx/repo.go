@@ -28,8 +28,13 @@ func IsRepo(dir string) bool {
 }
 
 func (r Repo) git(ctx context.Context, args ...string) ([]byte, error) {
+	return r.gitEnv(ctx, nil, args...)
+}
+
+// gitEnv is git with more environment.
+func (r Repo) gitEnv(ctx context.Context, env []string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", r.Dir, "--no-pager"}, args...)...)
-	cmd.Env = append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...)
+	cmd.Env = append(append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...), env...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()

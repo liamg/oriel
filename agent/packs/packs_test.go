@@ -17,6 +17,9 @@ var kinds = []core.Kind{
 	core.KindJob, core.KindNewRepo, core.KindDirect, core.KindScratch,
 }
 
+// builtins is how many packs are built in: a kind's each, and ai-review, which the AI review's reviewer runs on (RV-3).
+var builtins = len(kinds) + 1
+
 func TestEveryKindHasAPack(t *testing.T) {
 	for _, k := range kinds {
 		p, ok := Get(string(k))
@@ -31,8 +34,8 @@ func TestEveryKindHasAPack(t *testing.T) {
 			t.Errorf("%q: empty text or tools", k)
 		}
 	}
-	if got := len(All()); got != len(kinds) {
-		t.Errorf("All() has %d packs, want %d", got, len(kinds))
+	if got := len(All()); got != builtins {
+		t.Errorf("All() has %d packs, want %d", got, builtins)
 	}
 }
 
@@ -127,7 +130,7 @@ func TestRegisterShadows(t *testing.T) {
 	}
 
 	un := Register(agent.Pack{Name: "incident", Skill: "incident", Text: "x"})
-	if _, ok := Get("incident"); !ok || len(All()) != len(kinds)+1 {
+	if _, ok := Get("incident"); !ok || len(All()) != builtins+1 {
 		t.Fatal("a plugin's new kind isn't listed")
 	}
 	un()

@@ -21,7 +21,7 @@ import (
 var Tools = []string{
 	"reply", "thread", "resolve", "comment",
 	"task_add", "task_update", "tasks", "projects",
-	"commit_draft", "pr_draft", "test_run",
+	"commit_draft", "pr_draft", "test_run", "finding",
 	"lsp_definition", "lsp_references", "lsp_diagnostics",
 }
 
@@ -180,6 +180,10 @@ func Parse(src string) (Meta, string, error) {
 	}
 	return m, body, nil
 }
+
+// FromText is a pack from its markdown, read as LoadDir reads a file: include lines expanded, its tools from the
+// frontmatter or the Oriel tools the text names.
+func FromText(src, name string) (agent.Pack, error) { return build(src, name) }
 
 var include = regexp.MustCompile(`(?m)^<!-- include: ([a-z0-9_-]+) -->$`)
 

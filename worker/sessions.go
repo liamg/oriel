@@ -105,6 +105,11 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	if err := w.emit(core.SessionSynced{Session: se}); err != nil {
 		return "", err
 	}
+	if k.AutoReview {
+		if _, err := w.AIReview(context.WithoutCancel(ctx), AIReviewReq{Session: id}); err != nil {
+			w.log.Warn("AI review", "session", id, "err", err)
+		}
+	}
 	if p := strings.TrimSpace(spec.Prompt); p != "" {
 		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: firstLine(p), Body: p}); err != nil {
 			return id, err

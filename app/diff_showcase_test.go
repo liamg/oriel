@@ -25,3 +25,8 @@ func TestShowcaseDiff(t *testing.T) {
 	s.run("diff.layout", registry.Args{"layout": "unified"})
 	s.shot(t, "06-diff-unified")
 }
+
+func TestShowcaseAIReview(t *testing.T) {
+	s := aiReviewScene(t)
+	s.shot(t, "06-ai-review")
+}

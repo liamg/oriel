@@ -260,11 +260,16 @@ clip 474,38 1126x936 r 0
         text "Tests ran this …" @1370,256.08713 #b3ab99 Inter 12.5
       pop
       text "go test 2m ago" @1481.6875,255.32002 #7c7566 JetBrains Mono 10.5
-      rect 1346,288.54 228x1 fill #24221d
-      text "TICKET" @1346,321.23 #7c7566 JetBrains Mono 9.5
-      text "INF-2231" @1346,343.81003 #b98aff JetBrains Mono 11.5
-      text "Across projects, the merge order and" @1346,373.91626 #7c7566 Inter 11
-      text "\"raise all\" live in Ship." @1346,390.22583 #7c7566 Inter 11
+      text "○" @1346,294.269 #7c7566 Inter 13
+      clip 1370,281.97775 141.25x15.124512 r 0
+        text "AI review" @1370,294.08713 #b3ab99 Inter 12.5
+      pop
+      text "optional" @1521.25,293.32 #7c7566 JetBrains Mono 10.5
+      rect 1346,326.54 228x1 fill #24221d
+      text "TICKET" @1346,359.23 #7c7566 JetBrains Mono 9.5
+      text "INF-2231" @1346,381.81003 #b98aff JetBrains Mono 11.5
+      text "Across projects, the merge order and" @1346,411.91626 #7c7566 Inter 11
+      text "\"raise all\" live in Ship." @1346,428.22583 #7c7566 Inter 11
     pop
   pop
 pop

@@ -65,13 +65,19 @@ type ToggleChipOpts struct {
 	Tooltip string
 	Label   string                           // its accessible name, when the label alone doesn't say it ("✕ 1"); the label by default
 	Lead    func(c *ui.Ctx, fg render.Color) // drawn before the label, in its colour: an icon
+	Tone    color.NRGBA                      // a status colour for its text and edge, as a Chip's: a severity filter
 }
 
 // ToggleChip is a small mono button that's lit while on, for a column or filter that toggles. It returns the value
 // after this frame's clicks.
 func ToggleChip(c *ui.Ctx, key any, label string, on bool, o ToggleChipOpts) bool {
 	fg, border, fill := col(c, tSegFg), col(c, tSegBorder), color.NRGBA{}
-	if on {
+	switch {
+	case o.Tone != (color.NRGBA{}) && on:
+		fg, border, fill = o.Tone, o.Tone, alpha(o.Tone, .2)
+	case o.Tone != (color.NRGBA{}):
+		fg, border, fill = o.Tone, alpha(o.Tone, .35), alpha(o.Tone, .07)
+	case on:
 		fg, border, fill = col(c, tSegOnFg), alpha(col(c, tSegOnFg), .45), col(c, tSegOnBg)
 	}
 	name := o.Label

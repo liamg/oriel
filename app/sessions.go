@@ -380,7 +380,7 @@ func (x *sessions) comment(ctx registry.Ctx, a registry.Args) error {
 			return errors.New("the comment is empty")
 		}
 		req := worker.CommentReq{Session: id, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
-			Status: core.ThreadStatus(a.String("status"))}
+			Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding")}
 		if ev.Thread == "" && ev.File != "" {
 			req.Anchor = x.anchor(id, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
 		}

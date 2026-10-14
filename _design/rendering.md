@@ -218,7 +218,8 @@ type Style struct {
     Main, Cross Align                             // Start, Center, End; SpaceBetween on the main axis
     Fill, Stroke render.Color; Border, Radius float32
     Clip, ScrollX, ScrollY bool                   // scroll offsets persist by id
-    Float *Float                                  // out of the flow, against another id's rect, a point, or the parent
+    Float *Float                                  // out of the flow, against another id's rect, a point, or the parent;
+                                                  // a Fill one against its parent sized Flex fills it that way (a card's edge)
     Z     int                                     // floats paint after the flow, in Z order, outside their parent's clip
 }
 

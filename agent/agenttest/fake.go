@@ -20,6 +20,7 @@ import (
 type Fake struct {
 	Name    string            // its ID; "fake" if ""
 	Account string            // who it's signed in as
+	Offers  []agent.Model     // the models it offers; one, "m1", if nil
 	Started chan *FakeSession // each session as it starts
 
 	mu        sync.Mutex
@@ -65,6 +66,9 @@ func (f *Fake) SignedOut() bool {
 }
 
 func (f *Fake) Models(context.Context) ([]agent.Model, error) {
+	if f.Offers != nil {
+		return slices.Clone(f.Offers), nil
+	}
 	return []agent.Model{{ID: "m1", Name: "Model One", Efforts: []string{"low", "high"}, Default: true}}, nil
 }
 

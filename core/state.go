@@ -51,6 +51,8 @@ type SessionState struct {
 	Reviews    []Review       `json:"reviews,omitempty"`    // what's been marked reviewed in the diff, per file
 	CommitGate string         `json:"commitGate,omitempty"` // its kind's commit gate: hard, soft or off; "" for DefaultGate
 	Overrides  []GateOverride `json:"overrides,omitempty"`  // commits made past the gate
+	AIReviews  []AIReview     `json:"aiReviews,omitempty"`
+	Findings   []Finding      `json:"findings,omitempty"` // the AI reviews' findings
 	ProjectUI  ProjectUI      `json:"projectUI,omitzero"`
 }
 

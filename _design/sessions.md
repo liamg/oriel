@@ -208,7 +208,8 @@ type Sessions interface {
 - **Direct** never makes a worktree or a workspace: the directory itself, git repo or not. **Scratch** gets a
   directory for notes and no repo. **New repo** makes the repo from a template (`empty`, `go-module`, `go-cli`, or a
   git URL), commits it, registers it, and carries on as a plan for it. **Review** fetches `pull/<n>/head` from the
-  registered repo whose remote matches the PR's URL, and pins a read-only worktree there.
+  registered repo whose remote matches the PR's URL, and pins a read-only worktree there. Since RV-3 it's AI-reviewed
+  as it starts, by a model other than its agent's (`KindSpec.AutoReview`; `agents.md`, Guardrails).
 - **The launcher** (`ui.md` 04) lists the worker's kinds (`kinds.list`, `worker.KindSpec`: title, `Desc`, `About`,
   `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
   The CLI takes its flags after the prompt too (`oriel new "fix stale usage prices" --repo pricing`), and every

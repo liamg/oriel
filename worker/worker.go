@@ -242,6 +242,12 @@ func (w *Worker) settle() {
 			}
 			w.restatus(se.ID)
 		}
+		for _, rv := range se.AIReviews {
+			if rv.Running {
+				rv.Running, rv.Ended, rv.Error = false, w.opts.Now().UTC(), "the worker restarted during the review"
+				_ = w.store.Apply(core.AIReviewChanged{Session: se.ID, Review: rv})
+			}
+		}
 	}
 }
 

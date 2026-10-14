@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"image/color"
 	"slices"
 	"strings"
 	"testing"
@@ -602,6 +603,38 @@ func TestToggleChip(t *testing.T) {
 	h.keys(" ")
 	if on {
 		t.Error("Space didn't turn it off")
+	}
+}
+
+// A toned toggle chip (a severity filter) draws its label in its tone, tinted more strongly while on.
+func TestToggleChipTone(t *testing.T) {
+	red := color.NRGBA{R: 0xff, G: 0x5f, B: 0x6d, A: 0xff}
+	var id ui.ID
+	on := false
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("chip")
+		on = ToggleChip(c, "chip", "1 high", on, ToggleChipOpts{Help: "test/chip", Tone: red})
+	})
+	fill := func() render.Color {
+		for _, op := range h.list.Ops {
+			if op.Kind == render.OpRect && op.Rect == h.rect(id) {
+				return op.Style.Fill
+			}
+		}
+		return render.Color{}
+	}
+	label := false
+	for _, op := range h.list.Ops {
+		label = label || op.Kind == render.OpGlyphs && op.Run.Text == "1 high" && op.Color == red
+	}
+	if !label {
+		t.Error("the label isn't drawn in the chip's tone")
+	}
+	off := fill()
+	h.click(mid(h.rect(id)))
+	h.frame()
+	if !on || fill().A <= off.A {
+		t.Errorf("on: %v, fill %v, off %v", on, fill(), off)
 	}
 }
 

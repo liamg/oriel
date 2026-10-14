@@ -569,6 +569,25 @@ All on by default, all configurable, none a nag:
   change before the PR goes out.
 - **Cross-model review.** AI review runs on a different provider from the
   author by default (Codex reviews Claude's work, and the other way round).
+  Built in RV-3 (`worker/aireview.go`): the reviewer is a short-lived session the worker starts on the reviewer's
+  provider (`Provider.Start`, so Claude is its interactive CLI, never `claude -p`) with the `ai-review` pack, the
+  `ask` policy and every permission it raises refused, so it only reads (Claude's Read and Grep, Codex's safe
+  commands), and two tools: `finding` (severity on the threads' scale, category, title, file and line, body, project,
+  and `repo` for a repository the session hasn't got) and `projects`. It isn't a session of its own: its findings and
+  its run are the reviewed session's events. Not a `Fork`: a fork is the author's own model and tool-less, and the
+  point is another model that reads the code. The provider is `review.ai.provider` if set, else the first installed and
+  signed-in provider other than the session agent's at its default model, else the author's provider on another of its
+  models (the default first), else the same model, which the column says ("same model as the author"). The prompt is
+  who wrote it, the session's prompt, each project's change as `git diff` writes it (cut at 120 kB: read the files for
+  the rest), and the earlier findings with what became of them. The first review reads from the merge-base with the
+  project's base (`gitx.Repo.MergeBase`; a pinned project's from origin's default branch); each review keeps the work
+  tree it read as a git tree (`Snapshot`), so **Re-review changes** reads only what changed since, committed or not.
+  Findings come as the tool is called; a reviewer that writes them as a JSON block instead has them read from its
+  answer (`ParseFindings`, lenient about severities, `file:line` and string lines). Its turn's end ends it; a
+  failure, a lost login, 20 minutes or the worker stopping end it with an error. A review session reviews its pull
+  request this way as it starts (`KindSpec.AutoReview`), beside its own agent's review.
+  Not yet: the reviewer runs on the worker's host even for a sandboxed session (read-only, with every permission
+  refused); a running review can't be stopped from the app; Codex's own `review/start` isn't used.
 - **Slop gate.** crit's phrase filter runs on everything the agent posts.
 - **Trusted authors.** crit's trusted-orgs redaction carries over unchanged.
 - **Authorship.** Blame shows who wrote each line (you, the agent, a

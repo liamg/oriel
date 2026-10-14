@@ -42,6 +42,8 @@ type KindSpec struct {
 	Worktrees Worktrees `json:"worktrees"`
 	Gate      string    `json:"gate,omitempty"` // the commit gate: hard, soft or off (agents.md)
 	NeedsRepo bool      `json:"needsRepo,omitempty"`
+	// AutoReview runs an AI review of the change as the session starts (AIReview): a review of a pull request.
+	AutoReview bool `json:"autoReview,omitempty"`
 	// PromptFile is a file at the workspace root the prompt is written to as the session starts: a job's JOB.md.
 	PromptFile string `json:"promptFile,omitempty"`
 }
@@ -59,7 +61,7 @@ func builtinKinds() *Kinds {
 		{Kind: core.KindWork, Title: "Work", Desc: "straight to the worktree", From: FromPrompt, Pack: "work", Worktrees: WorktreesNow, Gate: "hard",
 			NeedsRepo: true, About: "Each repo gets a worktree on the session's branch, from a freshly fetched base, and the agent starts at once."},
 		{Kind: core.KindReview, Title: "Review PR", Desc: "someone else's change", From: FromPR, Pack: "review", Worktrees: WorktreesPR, Gate: "off",
-			About: "The PR's head is checked out read-only from the repo whose remote it's on, and the agent reviews it."},
+			AutoReview: true, About: "The PR's head is checked out read-only from the repo whose remote it's on, and the agent reviews it."},
 		{Kind: core.KindTour, Title: "Tour", Desc: "explain how it works", From: FromPrompt, Pack: "tour", Worktrees: WorktreesPinned, Gate: "off",
 			About: "The agent answers with a guided tour through the code, in a pinned, read-only worktree."},
 		{Kind: core.KindJob, Title: "Job", Desc: "runs to done on its own", From: FromPrompt, Pack: "job", Worktrees: WorktreesNow, Gate: "soft",

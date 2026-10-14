@@ -151,7 +151,7 @@ func (x *requests) Activate(_ context.Context, h ext.Host) error {
 		return out
 	}
 	cmds := []registry.Command{
-		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get)",
+		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.sh.sessions.comment(ctx, a) }},
 		{ID: "request.resolve", Title: "Resolve a request: {thread} of {id}, the one selected by default; or set its {status}: open, resolved, deferred, dismissed",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {

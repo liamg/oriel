@@ -49,6 +49,9 @@ const (
 	MethodOverride  = "review.override" // records a commit made past the commit gate
 	MethodSessions  = "sessions.list"
 	MethodFork      = "agent.fork"
+	// MethodAIReview starts an AI review of a session's change; MethodFindings changes its findings (dismissed or not).
+	MethodAIReview = "review.ai.run"
+	MethodFindings = "review.ai.findings"
 	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
 	MethodSandboxConfig = "sandbox.config"
 	// MethodStatsQuery answers a stats.Query over the worker's sessions; MethodStatsSession is one session's stats.
@@ -131,7 +134,20 @@ type CommentReq struct {
 	Btw     bool           `json:"btw,omitempty"`    // a side question, answered by a fork
 	// Status opens a new thread in this status rather than open; one that isn't open stays with the user, as a
 	// note pinned to its anchor.
-	Status core.ThreadStatus `json:"status,omitempty"`
+	Status   core.ThreadStatus `json:"status,omitempty"`
+	Severity string            `json:"severity,omitempty"` // a new thread's rating, as a review finding's (core.Severities)
+	Finding  string            `json:"finding,omitempty"`  // the AI review finding a new thread is opened from
+}
+
+// AIReviewReq asks for an AI review of a session's change (agents.md, Guardrails: cross-model review).
+type AIReviewReq struct {
+	Session  core.SessionID `json:"session"`
+	Provider string         `json:"provider,omitempty"` // the reviewer's; "" for one other than the author's
+	Model    string         `json:"model,omitempty"`    // "" for the provider's default
+	// Full reviews the whole change since the base; otherwise a session reviewed before has what changed since.
+	Full bool `json:"full,omitempty"`
+	// Pack is the reviewer's prompt, when it isn't the worker's ai-review pack: the user's own.
+	Pack string `json:"pack,omitempty"`
 }
 
 // ThreadReq changes a thread's status: resolve, reopen, defer, dismiss.
@@ -401,6 +417,17 @@ func (c Client) Search(ctx context.Context, r SearchReq) ([]Hit, error) {
 
 func (c Client) RecordRun(ctx context.Context, id core.SessionID, run core.TestRun) error {
 	return c.Conn.Call(ctx, MethodRunTests, core.TestRunRecorded{Session: id, Run: run}, nil)
+}
+
+// AIReview starts an AI review of a session's change and returns its ID; its findings come as events.
+func (c Client) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
+	var out string
+	return out, c.Conn.Call(ctx, MethodAIReview, r, &out)
+}
+
+// SetFindings records findings as they now are: dismissed, or not.
+func (c Client) SetFindings(ctx context.Context, r core.FindingsRecorded) error {
+	return c.Conn.Call(ctx, MethodFindings, r, nil)
 }
 
 // SetReviewed marks a file's changes reviewed, or takes the marks off.

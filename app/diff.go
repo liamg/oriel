@@ -71,6 +71,7 @@ type diffState struct {
 	sel    diffSel
 	reveal bool
 	focus  bool
+	goLine int // a line of the selected file's new side to select once it's drawn
 	scroll scrollState
 	order  []diffSel                  // every hunk drawn, in order
 	lines  map[diffSel]int            // lines each hunk has, as drawn
@@ -113,8 +114,8 @@ func (x *diffExt) Activate(_ context.Context, h ext.Host) error {
 		return on(func(st *diffState, _ registry.Args) error { fn(st, d); return nil })
 	}
 	for _, c := range []registry.Command{
-		{ID: "diff.open", Title: "Open the branch diff of {path}: a file's, or a repo's whole change (the work dir's if none), against the merge-base with its base branch",
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.open(ctx, a.String("path")) }},
+		{ID: "diff.open", Title: "Open the branch diff of {path}: a file's, or a repo's whole change (the work dir's if none), against the merge-base with its base branch; at the file's {line}",
+			Run: func(ctx registry.Ctx, a registry.Args) error { return x.open(ctx, a.String("path"), a.Int("line")) }},
 		{ID: "diff.layout", Title: "Show the diff split or unified: {layout}, or the other one", Run: func(_ registry.Ctx, a registry.Args) error {
 			l := a.String("layout")
 			if l == "" {
@@ -253,8 +254,8 @@ func repoTarget(sh *shell, h ext.Host, path string) (root, rel string, err error
 	return root, rel, nil
 }
 
-// open shows the diff of path's repo, with path's file open in it and selected.
-func (x *diffExt) open(ctx context.Context, path string) error {
+// open shows the diff of path's repo, with path's file open in it and selected, at its line when line isn't 0.
+func (x *diffExt) open(ctx context.Context, path string, line int) error {
 	root, rel, err := x.target(path)
 	if err != nil {
 		return err
@@ -263,7 +264,7 @@ func (x *diffExt) open(ctx context.Context, path string) error {
 	if rel != "" {
 		st.open[rel] = true
 		st.sel = diffSel{file: rel, hunk: -1, line: -1}
-		st.reveal = true
+		st.reveal, st.goLine = true, line
 	}
 	st.focus = true
 	x.sh.git.tree(root)
@@ -281,7 +282,11 @@ func (x *diffExt) session(root string) (core.SessionState, string, bool) {
 // projectSession is the session and project whose work tree is root, the session in front first; ok is false
 // outside one.
 func projectSession(h ext.Host, root string) (core.SessionState, string, bool) {
-	st := h.State()
+	return sessionAt(h.State(), root)
+}
+
+// sessionAt is the session and project whose work tree root is, the session in front first.
+func sessionAt(st core.State, root string) (core.SessionState, string, bool) {
 	var out []core.SessionState
 	if se, ok := st.Session(st.Focus); ok {
 		out = append(out, se.Snapshot())

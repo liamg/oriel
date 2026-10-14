@@ -76,39 +76,80 @@ func (x *diffExt) view(c *ui.Ctx, vc registry.ViewCtx) {
 			st.sel.file = files[0].Path
 			st.open[files[0].Path] = true
 		}
+		right := x.slotIDs(DiffRight, st.root)
 		x.changes(c, st, files)
 		c.Column("center", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			x.slots(c, DiffHeader, st.root, vc.Width)
 			x.body(c, vc, st, gs, root)
 		})
-		if ids := x.slotIDs(DiffRight); len(ids) > 0 {
-			c.Column("right", ui.Style{W: ui.Px(360), H: ui.Flex(1), Fill: th.C(tDiffFiles), ScrollY: true}, func(c *ui.Ctx) {
+		if len(right) > 0 {
+			c.Column("right", ui.Style{W: ui.Px(360), H: ui.Flex(1), Fill: th.C(tDiffFiles)}, func(c *ui.Ctx) {
 				x.slots(c, DiffRight, st.root, 360)
 			})
 		}
 	})
+	if st.seekLine() {
+		c.WakeAt(c.Now())
+	}
 	if c.FocusWithin(root) || x.focus == nil {
 		x.focus = st
 	}
 }
 
-// slotIDs are the views registered under a prefix, by name.
-func (x *diffExt) slotIDs(prefix string) []string {
+// seekLine selects the line diff.open asked for once its file's hunks are drawn: the new side's line, else the
+// file. It reports whether the selection moved.
+func (st *diffState) seekLine() bool {
+	if st.goLine <= 0 || st.sel.file == "" {
+		return false
+	}
+	hs, ok := st.hunks[st.sel.file]
+	if !ok {
+		if d := st.drawn[st.sel.file]; d != nil && (d.err != nil || d.binary || len(d.hunks) == 0) {
+			st.goLine = 0
+		}
+		return false
+	}
+	for i, h := range hs {
+		for k, l := range h.Lines {
+			if l.New == st.goLine {
+				st.sel = diffSel{file: st.sel.file, hunk: i, line: k}
+				st.goLine, st.reveal = 0, true
+				return true
+			}
+		}
+	}
+	st.goLine = 0
+	return false
+}
+
+// slotIDs are the views registered under a prefix, by name, but those with nothing for root (registry.Shown).
+func (x *diffExt) slotIDs(prefix, root string) []string {
 	var out []string
 	for _, id := range x.h.Views() {
-		if strings.HasPrefix(id, prefix) {
-			out = append(out, id)
+		if !strings.HasPrefix(id, prefix) {
+			continue
 		}
+		if v, ok := x.h.ViewByID(id); ok {
+			if s, ok := registry.As[registry.Shown](v); ok && !s.Shown(root) {
+				continue
+			}
+		}
+		out = append(out, id)
 	}
 	slices.Sort(out)
 	return out
 }
 
-// slots draws the views registered under a prefix, each built for the diff's repo.
+// slots draws the views registered under a prefix, each built for the diff's repo. DiffRight's share the column's
+// height, each scrolling what it holds.
 func (x *diffExt) slots(c *ui.Ctx, prefix, root string, width float32) {
-	for _, id := range x.slotIDs(prefix) {
+	h := ui.Size{}
+	if prefix == DiffRight {
+		h = ui.Flex(1)
+	}
+	for _, id := range x.slotIDs(prefix, root) {
 		if v, ok := x.h.ViewByID(id); ok {
-			c.Column(id, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+			c.Column(id, ui.Style{W: ui.Flex(1), H: h}, func(c *ui.Ctx) {
 				c.Node(v.Build(registry.ViewCtx{Width: width, Instance: root}))
 			})
 		}

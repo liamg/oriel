@@ -188,7 +188,7 @@ flowchart TB
   the session event `core.HunksReviewed {session, project, file, hunks, reviewed}` (`SessionState.Reviews`,
   `ReviewedHunks`), sent through the worker's `review.set` (`worker.Client.SetReviewed`), each hunk named by
   `gitx.Hunk.ID`; `gitx.Unified`, `gitx.Intraline` and `Repo.FileAt` are the diff's pieces for others to reuse.
-  `widget.Check` is a checkbox with on, off and mixed states.
+  `widget.Check` is a checkbox with on, off and mixed states. `diff.open {path, line}` selects the new side's line.
 - the review ledger and commit gates (RV-2): `registry.ReviewLedger{Name, Order, Get(root) Ledger}` (kind
   `review.ledger`) answers `registry.LedgerOf(r, root)`: a repo's agent-written lines as `LedgerCount{Read, Skimmed,
   Unread}`, for the whole change (`All`), those not committed yet (`Uncommitted`) and per file (`Files`, `File`,
@@ -204,6 +204,24 @@ flowchart TB
   root, message, files, unread}`; a veto stops it) and commits with `gitx.Repo.CommitStaged(message, trailers...)`.
   Lines seen in the diff are `core.LinesSeen` (worker `review.seen`), a commit past a gate `core.CommitGateOverridden`
   (worker `review.override`). `widget.MeterOpts.Then` stacks more parts on a meter.
+- the AI review (RV-3): the built-in `ai-review` extension draws `diff.right.50-ai-review`. `review.ai.run {id, full}`
+  asks the session's worker for a review (`worker.Client.AIReview`, `review.ai.run`, `AIReviewReq{session, provider,
+  model, full, pack}`), `review.ai.thread` / `review.ai.fix` / `review.ai.dismiss {dismissed}` /
+  `review.ai.add-project` / `review.ai.open` take `{id, finding}`, `review.ai.filter {severity}`,
+  `review.ai.dismissed` and `review.ai.prompt` drive the column. Reviews and findings are session events,
+  `core.AIReviewChanged {session, review}` and `core.FindingsRecorded {session, findings}` (replaced by ID;
+  `SessionState.AIReviews`, `Findings`, `SortedFindings`, `FindingOpen`; `core.Severities` is the threads' scale), and
+  the app changes a finding through `review.ai.findings` (`Client.SetFindings`: dismissed or not). **The ship gate's
+  "AI review" row** reads `SessionState.AIReviewGate() (ok, label)`: not run, running, "n high or critical open", or
+  clear; the built-in `ai-review` ship gate shows it. `request.comment` takes `{severity, finding}` for a new thread
+  (`CommentReq.Severity`, `Finding`: the thread's `Origin` is `core.OriginAIReview` and the finding records it). A
+  session kind's `KindSpec.AutoReview` reviews its change as it starts (the review kind's does). The reviewer runs
+  on the `ai-review` prompt pack, overridden by the user's `agents/ai-review.md` (sent with each request, since the
+  worker may be elsewhere; `packs.FromText` reads it). `gitx.Repo.MergeBase`, `Snapshot` (the work tree as a git tree,
+  the index untouched) and `Diff` are its git pieces. `widget.ToggleChipOpts.Tone` makes a toned filter chip.
+  A slot view that implements `registry.Shown` (`Shown(instance) bool`) is left out of the diff's columns while it
+  has nothing for that repo, so the room goes to the rest: the AI review outside a session. `DiffRight` views share
+  the column's height, each scrolling its own content.
 - a Block decoration's controls take and keep focus (a reply field between the lines): the editor doesn't take focus
   back from something inside its code column.
 - inlay decorations (`registry.Inlay`): text drawn inline before a column, the code after it moved along the grid.

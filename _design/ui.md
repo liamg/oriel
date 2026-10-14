@@ -503,13 +503,28 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   the line in the editor, `⏎` shows or folds the file, `q` closes. A mark is per change (`gitx.Hunk.ID`, a hash of
   what it removes and adds), so it survives edits to other hunks; a hunk is reviewed when all its changes are. In a
   session they're `core.HunksReviewed` events the worker keeps (`review.set`, `SessionState.Reviews`); outside one
-  they last as long as the window. Not yet: AI review and GitHub threads (RV-3, RV-4), more context between hunks,
-  and per-line marks inside a hunk.
+  they last as long as the window. Not yet: GitHub threads (RV-4), more context between hunks, and per-line marks
+  inside a hunk.
 - Built in RV-2 (`app/ledger.go`, `app/commit.go`): the REVIEW LEDGER bar is the `diff.header.10-ledger` view: "You
   have read 142 / 310 agent-written lines", a stacked `widget.Meter` (read, then skimmed; `MeterOpts.Then`), "28
   skimmed", the gate's chip (⏻ COMMIT GATED UNTIL 100% for hard, COMMIT ASKS FIRST for soft, ✓ ALL READ) and
   **Commit**. A folded file shows UNREAD · n LINES. Lines on screen count as skimmed, then read (agents.md,
   "Guardrails"). Not yet: the status line's read/skimmed/unread counts in REVIEW mode.
+- Built in RV-3 (`app/aireview.go`, `worker/aireview.go`, `core/aireview.go`): the right column is the AI review
+  (`diff.right.50-ai-review`, the session whose project the diff's repo is). Its header names the reviewer
+  (provider · model) and the commit the change was read from ("since a3f9e1"); a toned chip per severity counts the
+  findings not dismissed (critical, high, med, low, nit), and a click shows only those; "n dismissed" shows the
+  dismissed ones too, with **Restore**. Cards sit worst first, then by file and line: a coloured edge, severity and
+  category chips, the title, `file:line` (a click selects that line in the diff, `diff.open {path, line}`) and the
+  body. **→ Thread** and **Fix** open a thread on the finding's line for the session's agent, rated as the finding
+  (asking whether it's right, or to fix it), and the card then shows **Thread · open** (or its status), which opens
+  it; a finding about a repo the session hasn't got offers **Add project** (`session.add-repo`) instead; **Dismiss**.
+  The REVIEWER foot says "different model from the author" (or "same model as the author" when it fell back that
+  far), **Review changes** / **Re-review changes** (`review.ai.run`; what changed since the last review) and
+  **Prompt…**, which opens the user's `agents/ai-review.md`, made from the built-in pack the first time. While a
+  review runs the column says so and the button waits. Not yet: the status line's GH and review counts; findings as
+  decorations between the diff's lines (they're in the column only). The "before this ships" row "AI review" is the
+  `ai-review` ship gate, from `SessionState.AIReviewGate`.
 
 ## 07 · Explain this change
 

@@ -164,6 +164,12 @@ type Marked interface {
 	Mark(instance string) (text, style string)
 }
 
+// Shown is a view that a slot drawing it (the diff's columns) leaves out while it has nothing for an instance, so
+// the slot can give the room to the rest: the AI review outside a session.
+type Shown interface {
+	Shown(instance string) bool
+}
+
 // Persisted is a view whose instances come back when the app starts again on the same directory: the layout keeps
 // each one's state, and Revive makes a new instance from it, which takes the old one's place.
 type Persisted interface {

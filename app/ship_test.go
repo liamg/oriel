@@ -108,7 +108,7 @@ func TestShipFlow(t *testing.T) {
 		f := s.frameText()
 		return strings.Contains(f, "SHIP") && strings.Contains(f, "usage-api") && strings.Contains(f, "web-dashboard") && strings.Contains(f, "BEFORE THIS SHIPS")
 	})
-	s.wantFrame(t, "INF-2231", "Plan approved", "All threads resolved", "1 open", "Tests ran this session", "MERGE ORDER", "TICKET")
+	s.wantFrame(t, "INF-2231", "Plan approved", "All threads resolved", "1 open", "Tests ran this session", "AI review", "optional", "MERGE ORDER", "TICKET")
 
 	// Uncommitted: the agent's draft fills the commit box; a file left out stays uncommitted.
 	writeFiles(t, apiDir, map[string]string{
