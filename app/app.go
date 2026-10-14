@@ -61,6 +61,8 @@ type Config struct {
 	StateDir   string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
 	CacheDir   string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
 	Workers    []worker.Client // the workers whose sessions the window shows: this machine's, and any others
+	// LocalWorker reaches this machine's worker, starting one: after one from another build hands over to this build's.
+	LocalWorker func(context.Context) (worker.Client, error)
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -159,6 +161,10 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			log.Error("window place", "err", err)
 		}
 	}()
+	sh.closeWin = w.Close
+	if ch, ok := w.(render.CloseHolder); ok && cfg.LocalWorker != nil {
+		ch.HoldClose(true) // quitting drains this machine's worker first
+	}
 	sh.desktop = cfg.Desktop
 	if sh.desktop == nil {
 		sh.desktop = windowDesktop(w)
@@ -527,6 +533,8 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 		l.themeDirty.Store(true)
 	case render.DropEvent:
 		l.sh.dropped(ev)
+	case render.CloseRequestEvent:
+		l.sh.requestQuit()
 	case render.KeyEvent:
 		k := notation(ev)
 		if p := l.keys.Pending(); len(p) > 0 && k == "<CR>" && l.keys.Complete() != nil && acceptKey(l.sh.cfg.Registry, l.keys.Modes(), p) {

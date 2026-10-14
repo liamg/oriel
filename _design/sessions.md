@@ -148,11 +148,26 @@ type Sessions interface {
 
 ## As built (P5)
 
-- **The worker** (`oriel worker`) is a process of its own on each machine, so sessions and their agents outlive the
-  window. The app and the CLI reach this machine's on `~/.oriel/worker.sock` (owner only), starting it if it isn't
-  running; a worker elsewhere dials the app over pinned TLS (`oriel worker --connect host:port --fingerprint …`).
-  Remote workers run sessions and agents, but editing a remote session's files from the app needs the buffer replica
-  (`architecture.md` → Where buffers live), which isn't built: the window only follows sessions on this machine.
+- **The worker** (`oriel worker`) is a process of its own on each machine. The app and the CLI reach this machine's
+  on `~/.oriel/worker.sock` (owner only), starting it if it isn't running; a worker elsewhere dials the app over
+  pinned TLS (`oriel worker --connect host:port --fingerprint …`). Remote workers run sessions and agents, but
+  editing a remote session's files from the app needs the buffer replica (`architecture.md` → Where buffers live),
+  which isn't built: the window only follows sessions on this machine.
+- **This machine's worker hands over** (`worker.handover`): it stops its agents as `StoppedByHandOver` and quits, and
+  the next worker to start resumes them. The app drains it first: with an agent mid-turn it waits for the turns to
+  end, at most 60s, with a dialog naming the sessions and counting down; ⌘↵ (`worker.hand-over-now`, in the
+  `workerdrain` key mode) doesn't wait. A turn still going at 60s is cut short, and its agent comes back idle. It
+  drains for two reasons:
+  - **Quitting Oriel stops it**, so sessions' agents don't outlive the window: they come back when Oriel opens again.
+    The window holds its close (`render.CloseHolder`; on macOS Quit too) and the app gets a `CloseRequestEvent`.
+    With nothing mid-turn and no scheduled job it quits at once. The dialog (**Quit now**, **Cancel**/Escape) also
+    lists the scheduled jobs, which don't run while Oriel is closed; with only those, it waits for **Quit**. Asking
+    to quit again while it waits quits now. Cancel leaves the worker as it was. Workers on other machines carry on;
+    if Oriel crashes, the worker keeps running and the next Oriel connects to it.
+  - **A rebuilt Oriel restarts it.** A worker from another build (`Info.Build`, a hash of its binary) is drained and
+    the app starts this build's (`Config.LocalWorker`). With no agent mid-turn that happens as the app connects.
+    The dialog's **Hide**/Escape hides it and the restart still happens; quitting meanwhile turns it into the quit,
+    and Cancel takes it back to the restart. Sessions the new worker doesn't have leave the window.
 - **Where things are**: workspaces in `~/.oriel/workspaces/<id>` with `.oriel-workspace.json` (crit's manifest,
   field for field); each session's event log, logs and drafts in `~/.oriel/sessions/<id>/`; registered repos in
   `~/.oriel/repos.json`. A session's id is its name, from the prompt (`inf-2231-fix-stale-usage-prices`), unique on
@@ -237,7 +252,7 @@ type Sessions interface {
   A direct session is refused (archive it). Deleting a job keeps its runs.
 - **Schedules** (`worker.Schedule`): manual (the zero one), `weekdays` at a time, `weekly` on a day at a time, or
   `days`, a set of days at a time (the page's custom), in the worker's local time. `RunSchedules` checks them every
-  30 seconds while the worker runs (`oriel worker` starts it), and `RunDue` starts each job due since it last looked,
+  30 seconds while the worker runs, which is while Oriel is open (`oriel worker` starts it), and `RunDue` starts each job due since it last looked,
   on the worker's clock (`Options.Now`), so an occurrence slept through runs when the worker wakes, once. One due while
   the job's last run is still going is skipped, and the job keeps when (`Job.Skips`, the latest 50, listed among its
   runs). Since SE-5 the job keeps the occurrence it last ran or skipped (`Job.Due`), so occurrences missed while the

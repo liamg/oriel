@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/settingsfile"
+	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/worker"
 )
 
@@ -28,6 +29,7 @@ type sessions struct {
 	disposer
 	sh     *shell
 	h      ext.Host
+	ctx    context.Context
 	cancel context.CancelFunc
 
 	mu      sync.Mutex
@@ -59,7 +61,7 @@ func (x *sessions) Manifest() ext.Manifest { return ext.Manifest{ID: "sessions"}
 func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	x.sh.sessions, x.h = x, h
 	ctx, cancel := context.WithCancel(context.Background())
-	x.cancel = cancel
+	x.ctx, x.cancel = ctx, cancel
 	x.workers = map[core.WorkerID]worker.Client{}
 	x.sandboxKick = make(chan struct{}, 1)
 	x.sandboxSettings(ctx)
@@ -118,6 +120,10 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 		return ok && has(nil) && se.Snapshot().Planning()
 	}
 	x.add(h.Picker(x.addSource(h)))
+	x.add(h.Keymap(registry.Keymap{Mode: WorkerDrainKeyMode, Keys: "<D-CR>", Command: "worker.hand-over-now", Desc: "Don't wait for the turns"}))
+	x.add(h.View(OverlayPrefix+"worker.drain", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+		return &ui.Func{Key: "workerdrain", Fn: x.drainView}
+	})))
 	for _, c := range []registry.Command{
 		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…; {clone} the repos the worker lacks first, a URL by repo",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.start(ctx, a); return err }},
@@ -137,6 +143,14 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 					return err
 				}
 				return x.open(ctx, core.SessionID(a.String("id")), then)
+			}},
+		{ID: "worker.hand-over-now", Title: "Hand this machine's worker over now, for a restart or a quit, not waiting for its agents' turns",
+			Available: func(registry.Args) bool { return x.sh.draining.Load() != nil },
+			Run: func(registry.Ctx, registry.Args) error {
+				if r := x.sh.draining.Load(); r != nil {
+					r.goNow()
+				}
+				return nil
 			}},
 		{ID: "session.resume", Title: "Resume a session: pick one", Available: has,
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
@@ -222,7 +236,14 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
 		x.mu.Unlock()
 		x.sendSandbox()
 		h.Redraw()
+		if x.sh.cfg.LocalWorker != nil && info.ID == core.LocalWorker && info.Build != worker.Build() {
+			x.sh.restartWorker(c, info.ID)
+		}
 		err = c.Events(ctx, x.sh.cfg.Store.Apply)
+		if r := x.sh.draining.Load(); r != nil && r.old.Conn == c.Conn {
+			r.lost()
+			return
+		}
 		if ctx.Err() == nil {
 			h.Log().Warn("lost the worker", "worker", info.ID, "err", err)
 			_ = x.sh.cfg.Store.Apply(core.WorkerGone{ID: info.ID})

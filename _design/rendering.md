@@ -125,6 +125,13 @@ type Window interface {
     Close()
 }
 
+// A window whose close the app can hold, to ask first: held, its close button (and on macOS the app menu's Quit,
+// pointed at the window's close) sends a CloseRequestEvent instead, and the window stays open until Close. Gio aborts
+// its ClosingEvent; headless has RequestClose for tests.
+type CloseHolder interface {
+    HoldClose(hold bool)
+}
+
 // A window that knows where it is. The app keeps its frame in the state directory (window.json) when it closes, and
 // passes it back as WindowOpts.Frame; the backend fits it to the screens as they are then (PlaceWindow: kept on the
 // screen it's mostly on, shrunk and moved inside its work area; on no screen, centred on the main one). Gio places

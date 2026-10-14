@@ -96,6 +96,8 @@ const (
 	StoppedByYou    = "you"
 	StoppedByAgent  = "agent"  // its process ended by itself
 	StoppedByWorker = "worker" // the worker shut down
+	// StoppedByHandOver is a worker that handed over to one from another build, which resumes the agent.
+	StoppedByHandOver = "handover"
 )
 
 // Stats are what a session's agent has used so far.

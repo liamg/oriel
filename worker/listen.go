@@ -8,9 +8,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"syscall"
 	"time"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/wire"
 )
 
@@ -60,33 +62,57 @@ func (w *Worker) Listen(ctx context.Context, path string) error {
 	}
 }
 
-// DialLocal reaches this machine's worker, starting one (oriel worker, detached) if none is listening.
+// DialLocal reaches this machine's worker, starting one (oriel worker, detached) if none is listening. A worker
+// from another build hands over to a new one, unless an agent is mid-turn: then the app waits for the turn.
 func DialLocal(ctx context.Context, home, orielBin string) (Client, error) {
-	path := SocketPath(home)
-	if c, err := dial(path); err == nil {
-		return c, nil
-	}
 	if orielBin == "" {
 		var err error
 		if orielBin, err = os.Executable(); err != nil {
 			return Client{}, err
 		}
 	}
-	if err := os.MkdirAll(home, 0o700); err != nil {
+	return dialLocal(ctx, home, Build(), func() error {
+		if err := os.MkdirAll(home, 0o700); err != nil {
+			return err
+		}
+		logf, err := os.OpenFile(filepath.Join(home, "worker.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+		if err != nil {
+			return err
+		}
+		defer logf.Close()
+		cmd := exec.Command(orielBin, "worker", "--home", home)
+		cmd.Stdout, cmd.Stderr = logf, logf
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("starting the worker: %w", err)
+		}
+		go cmd.Wait()
+		return nil
+	})
+}
+
+func dialLocal(ctx context.Context, home, build string, spawn func() error) (Client, error) {
+	path := SocketPath(home)
+	if c, err := dial(path); err == nil {
+		if !replace(ctx, c, build) {
+			return c, nil
+		}
+		for {
+			c, err := dial(path)
+			if err != nil {
+				break
+			}
+			c.Conn.Close()
+			select {
+			case <-ctx.Done():
+				return Client{}, fmt.Errorf("the worker from another build didn't stop")
+			case <-time.After(50 * time.Millisecond):
+			}
+		}
+	}
+	if err := spawn(); err != nil {
 		return Client{}, err
 	}
-	logf, err := os.OpenFile(filepath.Join(home, "worker.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
-	if err != nil {
-		return Client{}, err
-	}
-	defer logf.Close()
-	cmd := exec.Command(orielBin, "worker", "--home", home)
-	cmd.Stdout, cmd.Stderr = logf, logf
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if err := cmd.Start(); err != nil {
-		return Client{}, fmt.Errorf("starting the worker: %w", err)
-	}
-	go cmd.Wait()
 	for {
 		if c, err := dial(path); err == nil {
 			return c, nil
@@ -98,6 +124,27 @@ func DialLocal(ctx context.Context, home, orielBin string) (Client, error) {
 		}
 	}
 }
+
+// replace hands c's worker over, closing c, when it's from another build than this and no agent is mid-turn.
+func replace(ctx context.Context, c Client, build string) bool {
+	info, err := c.Info(ctx)
+	if err != nil || info.Build == build {
+		return false
+	}
+	sessions, err := c.Sessions(ctx)
+	if err != nil || slices.ContainsFunc(sessions, Busy) {
+		return false
+	}
+	if err := c.HandOver(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "oriel: the worker is from another build and can't hand over: %v\n", err)
+		return false
+	}
+	c.Conn.Close()
+	return true
+}
+
+// Busy says whether se's agent is mid-turn, which a hand-over would cut short.
+func Busy(se core.SessionState) bool { return se.Agent.Working }
 
 func dial(path string) (Client, error) {
 	raw, err := net.DialTimeout("unix", path, time.Second)

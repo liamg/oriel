@@ -16,7 +16,8 @@ import (
 // What the app calls on a worker.
 const (
 	MethodInfo      = "worker.info"
-	MethodEvents    = "events" // a stream: every session as it is, then each event as it happens
+	MethodHandOver  = "worker.handover" // stop every agent and stop listening, for a worker of another build to resume them
+	MethodEvents    = "events"          // a stream: every session as it is, then each event as it happens
 	MethodStart     = "session.start"
 	MethodResume    = "session.resume"
 	MethodStop      = "session.stop"
@@ -77,6 +78,7 @@ type Info struct {
 	OS       string        `json:"os"`
 	Home     string        `json:"home"`
 	Version  string        `json:"version,omitempty"`
+	Build    string        `json:"build,omitempty"` // a hash of the binary
 	StateDir string        `json:"stateDir"`
 }
 
@@ -223,6 +225,10 @@ type Client struct{ Conn wire.Conn }
 func (c Client) Info(ctx context.Context) (Info, error) {
 	var out Info
 	return out, c.Conn.Call(ctx, MethodInfo, nil, &out)
+}
+
+func (c Client) HandOver(ctx context.Context) error {
+	return c.Conn.Call(ctx, MethodHandOver, nil, nil)
 }
 
 func (c Client) Sessions(ctx context.Context) ([]core.SessionState, error) {

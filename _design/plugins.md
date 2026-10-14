@@ -140,7 +140,8 @@ flowchart TB
   is the `markdown` presenter's, so a presentation's keys (`present.*`) move through it and comment on a block, and
   `session.start-work {clear, fresh, branches, sandbox, network, model, effort}` is available while the session in
   front is planning; `plan.start-work` opens its dialog, and `plan.start-work.run` (⌘↵ in the `startwork` key
-  mode) runs what the dialog holds. A comment on a file at the workspace root,
+  mode) runs what the dialog holds. `worker.hand-over-now` drains this machine's worker without waiting for its agents'
+  turns, for a restart or a quit (⌘↵ in the `workerdrain` key mode; `sessions.md` → As built). A comment on a file at the workspace root,
   outside every project, is anchored to the project `core.DocsProject` (`"__docs__"`) with the path relative to the
   workspace; `request.comment {file}` does that for an absolute path, and an agent's `comment` tool takes
   `project: "__docs__"`.

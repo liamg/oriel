@@ -103,6 +103,7 @@ type Window struct {
 	clip   atomic.Pointer[string] // text waiting to go on the clipboard
 	read   atomic.Pointer[string] // what the clipboard held when last read
 	ask    atomic.Bool            // read the clipboard on the next frame
+	held   atomic.Bool            // a request to close goes to the app
 }
 
 func (w *Window) ReadClipboard() (string, bool) {
@@ -162,7 +163,18 @@ func (w *Window) Size() render.Point {
 
 func (w *Window) Events() <-chan render.Event { return w.events }
 
-func (w *Window) Close() { w.win.Perform(system.ActionClose) }
+var _ render.CloseHolder = (*Window)(nil)
+
+func (w *Window) HoldClose(hold bool) {
+	w.held.Store(hold)
+	holdQuit(hold)
+}
+
+func (w *Window) Close() {
+	w.held.Store(false)
+	holdQuit(false)
+	w.win.Perform(system.ActionClose)
+}
 
 func (w *Window) Frame(fn func(render.Frame)) error {
 	l := new(render.List)
@@ -215,6 +227,11 @@ func (w *Window) loop() {
 		switch e := w.win.Event().(type) {
 		case app.DestroyEvent:
 			return
+		case *app.ClosingEvent:
+			if w.held.Load() {
+				e.Abort()
+				w.post(render.CloseRequestEvent{})
+			}
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
 			dpi := gtx.Metric.PxPerDp

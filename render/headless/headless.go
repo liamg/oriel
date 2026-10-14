@@ -84,6 +84,7 @@ type Window struct {
 	once   sync.Once
 	sendMu sync.RWMutex
 	closed bool
+	held   bool // asking it to close tells the app instead
 	cursor render.Cursor
 
 	access  map[uint64]*render.AccessNode
@@ -258,6 +259,36 @@ func (w *Window) deliver(ev render.Event) {
 	select {
 	case <-w.done:
 	case w.events <- ev:
+	}
+}
+
+var _ render.CloseHolder = (*Window)(nil)
+
+func (w *Window) HoldClose(hold bool) {
+	w.mu.Lock()
+	w.held = hold
+	w.mu.Unlock()
+}
+
+// RequestClose asks the window to close, as its close button would: a held window tells the app instead.
+func (w *Window) RequestClose() {
+	w.mu.Lock()
+	held := w.held
+	w.mu.Unlock()
+	if held {
+		w.deliver(render.CloseRequestEvent{})
+		return
+	}
+	w.Close()
+}
+
+// Closed says whether the window has closed.
+func (w *Window) Closed() bool {
+	select {
+	case <-w.done:
+		return true
+	default:
+		return false
 	}
 }
 

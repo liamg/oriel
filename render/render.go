@@ -71,6 +71,12 @@ type Window interface {
 	Close()
 }
 
+// CloseHolder is a window whose close the app can hold: while held, asking it to close sends a CloseRequestEvent
+// instead, so the app can ask first. Close always closes it.
+type CloseHolder interface {
+	HoldClose(hold bool)
+}
+
 // Zoomer is a window that can zoom: z multiplies its device scale, so everything drawn in logical pixels grows
 // together and the window's logical size shrinks to match (theming.md, "Sizes").
 type Zoomer interface {
