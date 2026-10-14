@@ -83,6 +83,12 @@ They are design sketches, not the implementation: the app draws natively (see `s
   provider (`State.Usage`): `5H` and `WK` meters with their share. Not yet: REVIEWED (the ledger, RV-2), and opening
   the summary by default with a session.
 - Bottom: the agent pane, terminal, problems, debug and tests. The orange tab dot means something's running.
+- Built in ED-15: a window can show its buffer through a presenter instead of as text (`editor.present`): a markdown
+  file's **Preview** button (it reads **Edit** while previewing; `:MarkdownPreview`) draws it as plan mode draws a doc,
+  its threads in a margin beside their blocks, a click or `c` commenting on a block's lines; `o` goes to a block's
+  source. The status line's mode reads the presenter's label (PREVIEW). Each window has its own: one window can preview
+  a file while another edits it, the preview following the edits. The window's top line follows the preview's scroll,
+  so Edit comes back where you were reading, and the presenter comes back after a restart.
 - Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem tats.
 
 ## 01b · Requests: the main conversation view
@@ -119,6 +125,13 @@ They are design sketches, not the implementation: the app draws natively (see `s
   opens it, the agent's state in its header and a reply field. **Ask about this…** in the editor's right-click menu, or
   `thread.new`, opens a composer under the cursor's line. A block's controls keep focus: the editor no longer takes
   focus back from something inside its code column, and blocks are keyed by their place among the line's blocks.
+- Built in ED-15: a window shows or hides its file's threads (`threads.toggle`, `␣R`, or the **💬 n** button in the
+  breadcrumb, lit while they show; `editor.threads = "hidden"` opens files that way). Hidden, a line with threads has
+  a speech bubble in the gutter in its first thread's colour (with a count for several); hovering it shows a popover of
+  them (title, state, the last messages as markdown) that stays while the pointer moves into it and goes when it leaves
+  both, never taking focus or keys; a click, or `⏎` on the line, shows the threads again at that one, its reply field
+  focused. A presentation has the same bubbles beside its blocks. The toggle is `␣R` beside the picker's `␣r`, as `␣T`
+  is beside `␣t`, so `␣r` stays a key of its own.
 - Not yet: the multi-line composer, `@file`/`#symbol` completion as you type, image paste and dictation (the chips
   aren't there), `g r` (vim's `gr`), the request's own read/unread ledger (RV-2), and turn cost per request.
 
@@ -420,11 +433,14 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - The agent's live edits show as an inline diff block ("agent edited 4s ago").
 - **Readiness**: Start work unlocks when every thread is resolved or deferred.
 - As built (AI-8): the `plan` view (main area) and `plan.docs` (docked left) open by themselves when the window is on
-  a session that's planning, and with `plan.open {doc}`. The docs are the `*.md` files at the workspace root, PLAN.md
+  a session that's planning, and with `plan.open {doc}`. Since ED-15 the doc is the built-in `markdown` presenter's
+  drawing (`registry.BufferPresenter`), and its margin, line numbers, edges and the agent's edit come from the
+  presentation host every presenter gets, from the threads' and the agent edits' decorations. The docs are the `*.md`
+  files at the workspace root, PLAN.md
   first, each with its threads that need you, are worked on or are open; below them the ticket and prompt, the repos
   and their branch, and readiness (open threads, a bar, and what unlocks Start work). The doc is drawn from the shared
   markdown renderer's blocks (`mdParse`, which keeps each block's source lines), with a line number and a coloured edge
-  where a thread is; a click, or `j`/`k` then `c`/`⏎`, opens a thread on a block's first line. Threads sit in the margin
+  where a thread is; a click, or `j`/`k` then `c`/`⏎`, opens a thread on a block's lines. Threads sit in the margin
   level with their block (or under the card before), as the same card that sits between the editor's lines, with
   **defer** while planning; a closed one folds to a line with **reopen**. The agent's latest edit to the doc shows for
   ten minutes as green blocks labelled "agent edited 4s ago", a one-line change as its old words struck through

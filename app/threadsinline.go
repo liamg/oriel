@@ -17,14 +17,22 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// inlineNew is a thread being opened between the editor's lines, not sent yet.
+// inlineNew is a thread being opened between the editor's lines (or beside a presentation's block), not sent yet.
+// One opened by place has no buffer until its file is next decorated.
 type inlineNew struct {
-	path   string
-	text   string // the line, as it was
-	buf    *text.Buffer
-	anchor text.AnchorID
-	draft  string
-	focus  bool
+	path      string
+	line, end int    // 0-based; end is the last line of a range, or -1
+	text      string // the first line, as it was
+	buf       *text.Buffer
+	anchor    text.AnchorID
+	draft     string
+	focus     bool
+}
+
+func (n *inlineNew) release() {
+	if n.buf != nil {
+		n.buf.Release(n.anchor)
+	}
 }
 
 // threadAnchor is a thread's place in one buffer, which moves with its edits.
@@ -58,25 +66,35 @@ func anchoredLine(lines []string, a *core.Anchor) int {
 	return min(want, len(lines)-1)
 }
 
-// newInline opens a thread on the cursor's line: a composer between the lines, sent with ⏎.
-func (x *requests) newInline() error {
-	if x.sh.editor == nil || x.sh.editor.e == nil {
-		return errors.New("no editor")
-	}
-	p := x.sh.editor.current()
-	path := p.Name()
-	if path == "" {
-		return errors.New("the editor has no file here")
-	}
-	if !filepath.IsAbs(path) {
-		path = filepath.Join(x.sh.editor.dir, path)
-	}
-	snap, line := p.Buf(), p.Cursor().Line
+// newInline opens a thread on {file}'s {line} (1-based) through {end_line}, or on the cursor's line: a composer between
+// the lines, sent with ⏎.
+func (x *requests) newInline(a registry.Args) error {
 	st := x.state("")
-	if n := st.inline; n != nil {
-		n.buf.Release(n.anchor)
+	n := &inlineNew{path: a.String("file"), line: a.Int("line") - 1, end: a.Int("end_line") - 1, focus: true}
+	if n.path == "" {
+		if x.sh.editor == nil || x.sh.editor.e == nil {
+			return errors.New("no editor")
+		}
+		p := x.sh.editor.current()
+		if p.Name() == "" {
+			return errors.New("the editor has no file here")
+		}
+		snap := p.Buf()
+		n.path, n.line, n.end, n.buf = x.sh.editor.path(p), p.Cursor().Line, -1, p.Buffer()
+		n.text = string(snap.Line(n.line))
+		n.anchor = n.buf.Anchor(snap.LineStart(n.line), text.Left)
 	}
-	st.inline = &inlineNew{path: path, text: string(snap.Line(line)), buf: p.Buffer(), anchor: p.Buffer().Anchor(snap.LineStart(line), text.Left), focus: true}
+	if n.line < 0 {
+		return errors.New("thread.new needs a line")
+	}
+	if o := st.inline; o != nil && filepath.Clean(o.path) == filepath.Clean(n.path) && o.line == n.line && o.end == n.end {
+		n.release()
+		o.focus = true
+		return nil
+	} else if o != nil {
+		o.release()
+	}
+	st.inline = n
 	return nil
 }
 
@@ -97,34 +115,73 @@ func (x *requests) lineOf(ctx registry.DecorationCtx, t core.Thread) int {
 	return line
 }
 
-// decorations put the session's open threads between the editor's lines, under the line each is about, with a
-// mark in the gutter; and the composer of one being opened.
+// decorations put the session's threads anchored in the file under the line each is about, with a mark in the
+// gutter, and the composer of one being opened. In a presentation, where they're cards in its margin, the closed ones
+// stay folded to a line. Where the window hides them, each line with threads gets a speech bubble instead.
 func (x *requests) decorations(ctx registry.DecorationCtx) []registry.Decoration {
 	se, ok := x.front()
 	if !ok {
 		return nil
 	}
 	st := x.state(se.ID)
+	hidden := x.hiddenIn(ctx.Window, ctx.Path)
+	present := ctx.Presenter != ""
 	var out []registry.Decoration
+	byLine := map[int][]core.Thread{}
+	var lines []int
 	for _, t := range se.Threads {
-		if t.Anchor == nil || !t.Open() || t.Btw || filepath.Clean(anchorPath(se, t.Anchor)) != filepath.Clean(ctx.Path) {
+		if t.Anchor == nil || t.Btw || !t.Open() && (!present || hidden) || filepath.Clean(anchorPath(se, t.Anchor)) != filepath.Clean(ctx.Path) {
 			continue
 		}
 		line := x.lineOf(ctx, t)
+		x.lineNow[t.ID] = line
 		if line < ctx.Top || line >= ctx.Bottom {
 			continue
 		}
-		id := t.ID
-		_, tok := statusLabel(se, t)
-		out = append(out,
-			registry.Decoration{Kind: registry.Sign, Line: line, Text: "▪", Style: tok.Name(), Priority: 20, Command: "request.open",
-				Args: registry.Args{"thread": string(id)}, Tooltip: t.Heading()},
-			registry.Decoration{Kind: registry.Block, Line: line, Priority: 20, Node: &ui.Func{Key: "thread." + string(id), Fn: func(c *ui.Ctx) {
-				x.inlineThread(c, id)
-			}}})
+		if hidden {
+			if byLine[line] == nil {
+				lines = append(lines, line)
+			}
+			byLine[line] = append(byLine[line], t)
+			continue
+		}
+		id, tok := t.ID, groupTone(se, t)
+		reveal := x.reveal == id
+		if reveal {
+			x.reveal = ""
+		}
+		if !present {
+			_, sign := statusLabel(se, t)
+			out = append(out, registry.Decoration{Kind: registry.Sign, Line: line, Text: "▪", Style: sign.Name(), Priority: 20, Command: "request.open",
+				Args: registry.Args{"thread": string(id)}, Tooltip: t.Heading()})
+		}
+		d := registry.Decoration{Kind: registry.Block, Line: line, Priority: 20, Reveal: reveal, Node: &ui.Func{Key: "thread." + string(id), Fn: func(c *ui.Ctx) {
+			x.inlineThread(c, id, !present)
+		}}}
+		if t.Open() {
+			d.Style = tok.Name()
+		}
+		out = append(out, d)
 	}
-	if n := st.inline; n != nil && n.buf == ctx.Buffer {
-		if off, ok := n.buf.Resolve(n.anchor); ok {
+	if hidden {
+		bubbles := map[int]core.ThreadID{}
+		for _, line := range lines {
+			ts := byLine[line]
+			bubbles[line] = ts[0].ID
+			out = append(out, x.bubble(se, ctx.Window, line, ts))
+		}
+		x.bubbles[ctx.Window] = bubbles
+	}
+	if n := st.inline; n != nil && filepath.Clean(n.path) == filepath.Clean(ctx.Path) {
+		if n.buf == nil && ctx.Buffer != nil && n.line < ctx.Snap.Lines() {
+			n.buf, n.text = ctx.Buffer, string(ctx.Snap.Line(n.line))
+			n.anchor = n.buf.Anchor(ctx.Snap.LineStart(n.line), text.Left)
+		}
+		off, ok := 0, false
+		if n.buf != nil && n.buf == ctx.Buffer {
+			off, ok = n.buf.Resolve(n.anchor)
+		}
+		if ok {
 			line := ctx.Snap.PosAt(min(off, ctx.Snap.Len())).Line
 			if line >= ctx.Top && line < ctx.Bottom {
 				out = append(out, registry.Decoration{Kind: registry.Block, Line: line, Priority: 25, Reveal: n.focus,
@@ -133,6 +190,15 @@ func (x *requests) decorations(ctx registry.DecorationCtx) []registry.Decoration
 		}
 	}
 	return out
+}
+
+// groupTone is a thread's colour beside its lines: its state's, the accent while it's simply open.
+func groupTone(se core.SessionState, t core.Thread) theme.TokenID {
+	if groupOf(t) == groupOpen {
+		return theme.Accent
+	}
+	_, tok := statusLabel(se, t)
+	return tok
 }
 
 // inlineCard is a thread's card between the lines: its header, a body, at most 780 wide.
@@ -148,7 +214,9 @@ func inlineCard(c *ui.Ctx, label string, body func(c *ui.Ctx, width float32)) {
 	})
 }
 
-func (x *requests) inlineThread(c *ui.Ctx, id core.ThreadID) {
+// inlineThread is a thread's card: between the editor's lines (with open, for its request), or in a presentation's
+// margin, where a closed one folds to a line.
+func (x *requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 	se, ok := x.front()
 	if !ok {
 		return
@@ -157,19 +225,53 @@ func (x *requests) inlineThread(c *ui.Ctx, id core.ThreadID) {
 	if !ok {
 		return
 	}
+	if !t.Open() {
+		foldedThread(c, x.h, se, t, x.lineNow[id])
+		return
+	}
 	st := x.state(se.ID)
 	d := x.draftFor(st, id)
+	focus := x.focusReply == id
+	if focus {
+		x.focusReply = ""
+	}
 	inlineThreadCard(c, x.h, se, t, &d.text, func() {
 		if err := x.send(context.Background(), st, id, false); err != nil {
 			x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
 		}
-	}, threadCardOpts{Open: true})
+	}, threadCardOpts{Open: open, Defer: se.Planning(), Focus: focus})
+}
+
+// foldedThread is a closed thread as one line: where it is, its state, what it asked and the answer, and reopen.
+func foldedThread(c *ui.Ctx, h ext.Host, se core.SessionState, t core.Thread, line int) {
+	th := c.Theme()
+	_, tok := statusLabel(se, t)
+	c.Row("folded", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center, Radius: 6, Stroke: th.C(tReqThreadBd), Border: 1,
+		Role: ui.RoleGroup, Label: "Thread " + t.Heading()}, func(c *ui.Ctx) {
+		c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(tok)}, nil)
+		c.Text("l", fmt.Sprintf("L%d", line+1), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11, Weight: typeset.SemiBold}, Color: th.C(theme.FgMuted)})
+		widget.Chip(c, "status", string(t.Status), th.C(tok), "agent/requests#inline")
+		quote := "“" + firstLine(t.Heading()) + "”"
+		if last, ok := t.Last(); ok && last.Author == core.AuthorAgent {
+			quote += " → " + firstLine(plainMarkdown(last.Body))
+		}
+		if r, ok := c.Rect(c.Next("q")); ok {
+			quote = truncate(quote, max(int(r.Dx()/6.4), 8))
+		}
+		c.Box("q", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", quote, uiFont(11.5, th.C(theme.FgFaint))) })
+		if widget.Link(c, "reopen", "reopen", "agent/requests#inline") {
+			if err := h.Run(context.Background(), "request.reopen", registry.Args{"thread": string(t.ID)}); err != nil {
+				h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
+			}
+		}
+	})
 }
 
 // threadCardOpts is what a thread's card offers beside resolving it and replying.
 type threadCardOpts struct {
 	Open  bool // a link to its request in the main area
 	Defer bool // deferring it, so it doesn't hold up Start work
+	Focus bool // its reply field takes focus
 }
 
 // inlineThreadCard is a thread as a card: its place, status and actions, the comments, and a reply field that send sends.
@@ -230,6 +332,9 @@ func inlineThreadCard(c *ui.Ctx, h ext.Host, se core.SessionState, t core.Thread
 					})
 				})
 			}
+			if o.Focus {
+				c.Focus(c.Next("reply"))
+			}
 			if widget.Input(c, "reply", reply, widget.InputOpts{Label: "Reply to the thread", Placeholder: "Reply…", Help: "agent/requests#inline"}).Submitted {
 				send()
 			}
@@ -260,14 +365,17 @@ func (x *requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 			switch {
 			case r.Submitted && strings.TrimSpace(n.draft) != "":
 				a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}
+				if n.end > n.line {
+					a["end_line"] = line + 1 + n.end - n.line
+				}
 				if err := x.h.Run(context.Background(), "request.comment", a); err != nil {
 					x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
 					return
 				}
-				n.buf.Release(n.anchor)
+				n.release()
 				st.inline = nil
 			case r.Cancelled:
-				n.buf.Release(n.anchor)
+				n.release()
 				st.inline = nil
 			}
 		})

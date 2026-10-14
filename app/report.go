@@ -47,7 +47,8 @@ type shell struct {
 	editor      *editorExt
 	search      *projectSearch
 	tests       *testsExt
-	sessions    *sessions // the workers' sessions; nil while it isn't active
+	sessions    *sessions     // the workers' sessions; nil while it isn't active
+	present     *presentFocus // the presentation with focus, for its keys
 }
 
 // report is "Copy report" (errors.md): version, OS, settings that differ from their defaults, plugins, the

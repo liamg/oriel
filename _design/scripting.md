@@ -274,3 +274,29 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   the `tickets` view for that project. `scope = "session"` (the default) lists it below the projects. A reload that
   drops the call removes the entry.
 - A Lua view's `ctx.project` is the project its instance was opened for, "" for a session's view.
+
+## As built (ED-15)
+
+- `oriel.editor.action{ name, label, label_on, icon, icon_on, command, args, run, when, on, note, order, help }` adds a
+  button at the right of an editor's breadcrumb (a `registry.EditorAction`): `when(path)` picks the files, `on(window)`
+  lights it (`window` is `{ id, path, presenter }`), `label_on`/`icon_on` show while it's on, `note(window)` is dim text
+  after its label; `command` runs with `args.window` set to the window it was clicked in, or `run` is a function.
+- `oriel.editor.presenter{ name, label, when, comments, order, build = fn(ctx) }` adds a buffer presenter (a
+  `registry.BufferPresenter`). `ctx` has `path`, `name`, `lines` and `width`; `ctx.block(from_line, to_line, fn)` adds
+  a block made from those source lines (1-based), drawn by `fn(width)`, which returns `oriel.ui` nodes (or the nodes in
+  place of `fn`). The file's threads sit in the margin beside the block holding their line, and with `comments` a click
+  on a block opens a thread on its lines. `oriel.editor.present(name)` shows the focused window with it, and again
+  shows its text (`editor.present`).
+
+```lua
+oriel.editor.presenter{ name = "csv", label = "Table", comments = true,
+  when = function(path) return path:match("%.csv$") ~= nil end,
+  build = function(ctx)
+    for i, line in ipairs(ctx.lines) do
+      ctx.block(i, i, function() return oriel.ui.text((line:gsub(",", "  │  "))) end)
+    end
+  end }
+oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", command = "editor.present", args = { name = "csv" },
+  when = function(path) return path:match("%.csv$") ~= nil end,
+  on = function(window) return window.presenter == "csv" end }
+```

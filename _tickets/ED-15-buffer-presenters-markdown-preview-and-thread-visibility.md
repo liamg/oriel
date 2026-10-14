@@ -2,7 +2,7 @@
 id: ED-15
 title: "Buffer presenters with a source map, a built-in markdown preview, and showing or hiding a file's threads"
 phase: P5
-status: todo
+status: review
 area: Editor
 module: app, registry, script
 depends_on: [ED-7, AI-5, AI-8, SH-17]
@@ -39,7 +39,7 @@ in a preview, and a file's threads can be hidden behind gutter bubbles.
   with the shared markdown renderer (`app/markdown.go`) with comments on. Replaceable and removable, like any built-in.
 - **Plan mode on it:** AI-8's plan doc view becomes the markdown presenter with comments on; its margin, block
   numbers and edit highlight come from the host, not a copy.
-- **Threads shown or hidden per file:** a **💬 n** editor action and `threads.toggle` (`␣rh`) per window;
+- **Threads shown or hidden per file:** a **💬 n** editor action and `threads.toggle` (`␣R`) per window;
   `editor.threads = "shown" | "hidden"` sets how files open. Hidden, each line with threads gets a speech-bubble sign
   coloured by state (with a count when there are several). Hovering it shows a popover with the thread (title, state,
   last messages as markdown) that goes when the pointer leaves the sign and the popover, never taking focus or keys;

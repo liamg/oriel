@@ -64,7 +64,30 @@ flowchart TB
   `vim.RegisterObject` in Go today; their Lua bindings come with PL-1).
 - ex commands with ranges, bang, counts and completion.
 - decorations: highlights, signs, virtual text, virtual lines, inline blocks, conceal. A provider gets the buffer, the
-  lines in view and `FileBytes` (the buffer as it would be written), for diffing against a file's other versions.
+  lines in view and `FileBytes` (the buffer as it would be written), for diffing against a file's other versions, and
+  where it's drawn: `Window` (the editor window's id), `Presenter` (the presenter drawing the buffer, "" for its text)
+  and `Now` (the frame's time). A `Sign` can be a built-in icon (`Icon`, its `Text` small beside it: a count) and have a
+  `Hover` card, shown while the pointer is on the sign or the card and never taking focus (`widget.HoverCard`). A
+  `LineBg` on a changed line can say what the line read before (`Was`), for a presenter that shows the change. The
+  agent's latest edit to a file is a built-in provider (`agent.edits`): its lines lit green for ten minutes, a one-line
+  change's old text in `Was`, and "agent edited 4s ago" after the first.
+- buffer presenters (`registry.BufferPresenter{Name, Label, When(path), Comments, Build(ctx)}`, ED-15): a way to draw a
+  buffer other than as its text, per window. `editor.present {name, window}` shows a window (the focused one by
+  default) with it, and again shows the text; the buffer stays open and editable, and the presentation is built again
+  each frame from its text, so two windows on one file can be in Edit and a presentation at once. `Build` maps each
+  block it makes to the source lines it came from: `ctx.Block(from, to, body)` (0-based, inclusive; `Space` above it,
+  `Label` its accessible name), whose body is drawn with `PresentDraw{Width, Decorations, Kicker}`. From that map the
+  host (`app/present.go`) gives every presenter the same: the decorations of the file (every provider's, all its lines)
+  on the block holding their line (a line no block maps belongs to the nearest block before it): `Block`s are cards
+  in a margin level with their block (the file's threads), `Sign`s sit beside the block, a `LineBg` fills it and
+  colours its edge, a `VirtualText` is a label at its top right, an underline colours its edge; the block's line
+  number shows where a card is; with `Comments`, a click on a block, or `j`/`k` then `c`/`⏎`, runs
+  `thread.new {file, line, end_line}` on its lines, a real code anchor that shows in Edit too; `o` goes to its source
+  (`present.next`, `present.prev`, `present.comment`, `present.source`, key mode `present`); and scrolling a
+  presentation keeps the window's top line with the block at its top, so Edit comes back where the presentation was
+  (and a presentation opens where Edit was). A window's presenter is kept across restarts with its file. The built-in
+  `markdown` plugin (`app/mdpreview.go`) is one, with comments on, drawing with the shared markdown renderer's blocks
+  (`mdParse`), its **Preview / Edit** action and `:MarkdownPreview`; plan mode's doc is the same presenter.
 - filetypes and ftplugins, grammars, queries, formatters, linters, LSP and DAP specs. A query kind is any name:
   `syntax.Parser.Query(kind)` and `syntax.Document.Query(kind)` run a language's `<kind>.scm` and return its matches
   with named captures and `#set!` properties. Built-in kinds: `highlights`, `folds`, `injections`, `units`, and
@@ -84,6 +107,9 @@ flowchart TB
 - command-line hints (`registry.CmdlineHint`): text at the right of the `:` line while it applies, as the LSP's
   "⇥ use LSP rename" on a `:s` of a whole word.
 - editor actions (`registry.EditorAction`): buttons at the right of an editor's breadcrumb for the files they apply to,
+  their command run with `window` (the window clicked in) added to their args. `On(window)` lights one for the window
+  it's in (`registry.EditorWindow{ID, Path, Presenter}`), and `LabelOn`/`IconOn` show while it's on (Preview ↔ Edit);
+  `Note(window)` is dim text after the label (a count); an `Icon` naming a built-in icon is drawn.
   lit while `On` says so (the tests' file, failed, watch and coverage).
 - explainers (`registry.Explainer`): answer an `ExplainRequest` (a failure, a diagnostic, a selection) in markdown,
   with no way to change anything; every "ask to explain" uses the first. The agent's comes with AI.
@@ -98,11 +124,20 @@ flowchart TB
 - requests (AI-5): `request.comment {thread | file, line, text; body, title, urgent, btw}` is how anything comments to
   the agent (it fires `CommentSend` first: a rewrite changes the comment, a veto stops it); `request.resolve`,
   `request.reopen`, `request.new {text, context, file, line}`, `request.open {thread}` and `request.attach {items |
-  text, title}` (the pickers' `⌃a`) drive the Requests views, and `thread.new` opens a thread on the cursor's line.
+  text, title}` (the pickers' `⌃a`) drive the Requests views, and `thread.new` opens a thread on the cursor's line, or on `{file}`'s `{line}` through `{end_line}`.
+- threads shown or hidden (ED-15): each window shows its file's threads between the lines or hides them; `threads.toggle
+  {window}` (`␣R`, and the **💬 n** editor action, n the file's open threads) switches the focused window, and
+  `editor.threads = "shown" | "hidden"` is how a window shows a file it hasn't been switched on. Hidden, each line with
+  threads has a speech-bubble sign in the colour of its first thread's state, with their count when there are several;
+  hovering it shows a card of them (title, state, the last two messages as markdown) that goes when the pointer leaves
+  the sign and the card and never takes focus or keys; a click, or `⏎` on the line (the `threads.hidden` key layer),
+  runs `threads.show {window, thread}`: the threads again, scrolled to that one with its reply field focused. In a
+  presentation the same bubbles sit beside the blocks; shown, its margin also keeps closed threads, folded to a line
+  with **reopen**, and a planning session's cards have **defer**.
   The `threads` picker source lists the session in front's requests. A test run is shown by `test.run.show {id,
   session}` (the `test.run` view), which evidence chips run.
-- plan (AI-8): `plan.open {doc}` shows a planning session's docs (the `plan` and `plan.docs` views), `plan.next`,
-  `plan.prev` and `plan.comment` move through a doc and open a thread on a block (the `plan` key mode), and
+- plan (AI-8): `plan.open {doc}` shows a planning session's docs (the `plan` and `plan.docs` views), and its doc
+  is the `markdown` presenter's, so a presentation's keys (`present.*`) move through it and comment on a block, and
   `session.start-work {clear, fresh, branches, sandbox, network, model, effort}` is available while the session in
   front is planning; `plan.start-work` opens its dialog, and `plan.start-work.run` (⌘↵ in the `startwork` key
   mode) runs what the dialog holds. A comment on a file at the workspace root,
@@ -131,7 +166,7 @@ flowchart TB
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
-- icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `ship`, `debug`, `tests`, `settings`,
+- icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
   `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD tats, notification cards. Title-bar segments are views named
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage`.

@@ -34,6 +34,12 @@ Version 0.4.0.
 - `oriel.diagnostics.list()`: Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.
 - `oriel.diagnostics.set(owner, file, list)`: Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config.
 
+## oriel.editor
+
+- `oriel.editor.action(spec)`: Add a button at the right of an editor's breadcrumb, for the files when(path) takes: { name, label, label_on, icon, icon_on, command, args, run = fn(window), when = fn(path), on = fn(window), note = fn(window), order (50 by default), help }. window is { id, path, presenter }. on lights it, and label_on and icon_on show while it's on; note is dim text after the label (a count). icon is a built-in icon's name or a glyph. command runs with args.window set to the window it was clicked in; run is a function in its place.
+- `oriel.editor.present(name)`: Show the focused editor window with the presenter name, or as text again when it shows it already.
+- `oriel.editor.presenter(spec)`: Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text.
+
 ## oriel.hud
 
 - `oriel.hud.tat(name, opts, fn)`: A HUD tat: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.

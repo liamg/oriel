@@ -1,0 +1,535 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="shell.css">
+<style>
+html,body{height:2470px}
+body{background:var(--bg0);display:flex;flex-direction:column}
+.top{padding:22px 26px 4px;display:flex;align-items:baseline;gap:14px;flex:none}
+.top h1{font:600 20px var(--disp);color:var(--fg)}
+.top span{color:var(--fg3);font-size:12.5px}
+.top .cap{margin-left:auto;color:var(--fg2)}
+.sheet{flex:1;display:flex;flex-direction:column;gap:16px;padding:14px 26px 22px;min-height:0}
+.cap2{display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.cap2 .lt{font:700 13px var(--mono);color:var(--cyan)}
+.cap2 h2{font:600 15px var(--disp);color:var(--fg)}
+.cap2 span{font-size:12px;color:var(--fg3)}
+.cap2 .chip{align-self:center}
+.case{display:flex;flex-direction:column;gap:6px}
+.case .cl{display:flex;align-items:center;gap:8px}
+.case .cl .n{font:700 10px var(--mono);color:#111;background:var(--fg3);border-radius:8px;padding:0 6px;line-height:15px}
+.case .cl .d{font-size:11.5px;color:var(--fg3)}
+.case .cl .kbd{font-size:9px;padding:0 4px;line-height:12px}
+
+/* a slice of the window */
+.win{border:1px solid var(--line2);background:var(--bg0);display:flex;flex-direction:column;overflow:hidden}
+.win .titlebar{height:30px}
+.win .brand{padding:0 10px}
+.win .stab{font-size:11.5px;padding:0 10px;gap:6px}
+.wb{display:flex;min-height:0;position:relative}
+.wb.h1{height:704px} .wb.h2{height:830px} .wb.h3{height:360px}
+.pq{width:7px;height:7px;border-radius:1px;flex:none;display:inline-block}
+.pn{display:inline-flex;align-items:center;gap:6px;font:600 11px var(--mono);color:var(--fg);white-space:nowrap}
+
+/* the project sidebar, wide (42) */
+.sb{width:224px;background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column;flex:none;min-height:0;overflow:hidden}
+.sbh{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px 0 12px;border-bottom:1px solid var(--line);flex:none}
+.sbh .tg.pl+.tg{margin-left:4px}
+.sbh .tg{margin-left:auto;font:600 11px/1 var(--mono);color:var(--fg3);border:1px solid var(--line2);border-radius:4px;padding:2px 5px;background:var(--bg2)}
+.pj{padding:5px 8px 5px 10px;display:flex;flex-direction:column;gap:1px;flex:none}
+.pj .l1{display:flex;align-items:center;gap:6px}
+.pj .tw{font:11px var(--mono);color:var(--fg3);width:9px}
+.pj .kbd{margin-left:auto;font-size:9px;padding:0 4px;color:var(--fg3)}
+.pj .l2{display:flex;align-items:center;gap:5px;padding-left:15px;font:10px var(--mono);color:var(--fg3);white-space:nowrap}
+.pj .l2 b{font-weight:500;color:var(--green)}
+.pj .l2 .x{color:var(--yellow)}
+.pj.on{background:linear-gradient(90deg,rgba(255,210,63,.07),transparent)}
+.pj.off .pn{color:var(--fg2)}
+.ent{display:flex;align-items:center;gap:8px;height:23px;padding:0 10px 0 33px;font:12px var(--ui);color:var(--fg2);white-space:nowrap;flex:none}
+.ent .g{width:14px;text-align:center;font:600 11.5px var(--mono);color:var(--fg3)}
+.ent .r{margin-left:auto;font:10px var(--mono);color:var(--fg3);display:flex;align-items:center;gap:5px}
+.ent .pill{min-width:15px;height:14px;border-radius:7px;background:var(--yellow);color:#111;font:700 9px/14px var(--mono);text-align:center;padding:0 4px}
+.ent.ss{padding-left:12px}
+.sdiv{height:1px;background:var(--line2);margin:5px 10px;flex:none}
+
+/* main tab / page */
+.rp{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg0)}
+.rp .edtabs{height:28px} .rp .edtab{padding:0 10px;font-size:11.5px;white-space:nowrap;gap:6px}
+.rp .edtab .x{color:var(--fg4);font-size:10px;margin-left:4px}
+.rptop{height:42px;display:flex;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid var(--line);background:var(--bg1);flex:none}
+.rptop h1{font:600 14px var(--disp);letter-spacing:.04em;color:var(--fg)}
+.rptop .btn{height:24px;font-size:11.5px;white-space:nowrap}
+.rptop .m{font:11px var(--mono);color:var(--fg3);white-space:nowrap}
+.pg{flex:1;min-height:0;padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+
+/* toolbar */
+.tb{height:40px;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--line);background:var(--bg0);flex:none;white-space:nowrap}
+.tb .lb{font:600 9px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fg4)}
+.sg{display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;flex:none}
+.sg span{font:600 9.5px/22px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--fg3);border-right:1px solid var(--line2);padding:0 8px;white-space:nowrap}
+.sg span:last-child{border-right:0}
+.sg span.on{background:var(--cyanbg);color:var(--cyan);box-shadow:inset 0 -2px var(--cyan)}
+.fc{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border:1px solid var(--line2);border-radius:11px;font:10.5px var(--mono);color:var(--fg2);background:var(--bg1);white-space:nowrap}
+.fc .k{color:var(--fg4)} .fc .x{color:var(--fg4);font-size:9px}
+.fc.on{border-color:rgba(255,210,63,.35);background:var(--cyanbg);color:var(--fg)}
+.fc.add{border-style:dashed;color:var(--fg3);background:transparent}
+.tgl{display:inline-flex;align-items:center;gap:7px;font:11px var(--ui);color:var(--fg2);white-space:nowrap}
+.tgl .sw{width:24px;height:13px;border-radius:7px;background:var(--bg3);border:1px solid var(--line2);position:relative;flex:none}
+.tgl .sw::after{content:"";position:absolute;left:1px;top:1px;width:9px;height:9px;border-radius:50%;background:var(--fg3)}
+.tgl .sw.on{background:rgba(255,210,63,.18);border-color:rgba(255,210,63,.5)}
+.tgl .sw.on::after{left:12px;background:var(--cyan)}
+
+/* tiles */
+.tiles{display:flex;gap:10px;flex:none}
+.tile{flex:1;min-width:0;background:var(--bg1);border:1px solid var(--line);border-radius:8px;padding:8px 11px 9px;display:flex;flex-direction:column;gap:5px}
+.tile .v{font:600 19px/1 var(--disp);color:var(--fg);white-space:nowrap}
+.tile .v small{font:500 11px var(--mono);color:var(--fg3);margin-left:4px}
+.tile .s{font:10px var(--mono);color:var(--fg3);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tile .s .up{color:var(--yellow)} .tile .s .dn{color:var(--green)}
+.tile .bar{width:auto;flex:1}
+
+/* cards */
+.rw{display:flex;gap:12px;min-height:0}
+.card{flex:1;min-width:0;background:var(--bg1);border:1px solid var(--line);border-radius:8px;padding:9px 12px 10px;display:flex;flex-direction:column;gap:7px}
+.card .hd{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.card .hd .r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.card .hd .m{font:10px var(--mono);color:var(--fg4)}
+.lg{display:flex;align-items:center;gap:12px;font:10.5px var(--mono);color:var(--fg2);white-space:nowrap;flex-wrap:wrap}
+.lg span{display:inline-flex;align-items:center;gap:5px}
+.lg i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.lg em{font-style:normal;color:var(--fg4)}
+.note{font:10px/1.45 var(--mono);color:var(--fg4)}
+svg text{font-family:'JetBrains Mono',monospace}
+
+/* tables */
+.tt{width:100%;border-collapse:collapse;font:11px var(--mono);color:var(--fg2)}
+.tt th{font:600 9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--fg4);text-align:right;padding:0 8px 5px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tt th:first-child,.tt td:first-child{text-align:left;padding-left:2px}
+.tt td{padding:0 8px;height:22px;text-align:right;white-space:nowrap;border-bottom:1px solid rgba(36,34,29,.6)}
+.tt td.n{color:var(--fg)}
+.tt td.e{color:var(--red)} .tt td.z{color:var(--fg4)}
+.tt tr.hov td{background:var(--cyanbg)}
+.tt tr.hov td:first-child{box-shadow:inset 2px 0 var(--cyan)}
+.tt tr.tot td{color:var(--fg);border-bottom:0;border-top:1px solid var(--line2)}
+.tt .nm{display:inline-flex;align-items:center;gap:7px;color:var(--fg);font:500 11.5px var(--mono)}
+.sh{display:inline-block;height:6px;border-radius:2px;vertical-align:middle}
+.shw{display:inline-flex;align-items:center;gap:7px;justify-content:flex-end}
+.shw .tr{width:90px;height:6px;background:var(--bg3);border-radius:2px;position:relative;overflow:hidden}
+.shw .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+.dist{display:inline-flex;align-items:flex-end;gap:4px;height:14px;vertical-align:middle}
+.dist i{width:16px;background:var(--fg3);border-radius:1px 1px 0 0;display:block;opacity:.85}
+.dl{display:inline-flex;gap:4px;font:8.5px var(--mono);color:var(--fg4)}
+.dl span{width:16px;text-align:center}
+.hint{font:10px var(--mono);color:var(--cyan);display:inline-flex;align-items:center;gap:5px}
+.hint .kbd{font-size:9px;padding:0 4px;line-height:12px;color:var(--cyan);border-color:rgba(255,210,63,.4)}
+
+/* 100% split bars */
+.split{display:flex;height:14px;gap:2px;border-radius:3px;overflow:hidden;flex:none}
+.split i{display:block;height:100%}
+.kv{display:flex;align-items:center;gap:8px;font:11px var(--mono);color:var(--fg2);white-space:nowrap;height:20px}
+.kv .nm{display:inline-flex;align-items:center;gap:6px;color:var(--fg)}
+.kv .r{margin-left:auto;display:flex;gap:12px}
+.kv .r b{font-weight:500;color:var(--fg);min-width:52px;text-align:right}
+.kv .r span{min-width:40px;text-align:right}
+
+.tip{position:absolute;background:var(--bg2);border:1px solid var(--line2);border-radius:6px;padding:6px 9px;box-shadow:0 12px 30px rgba(0,0,0,.6);z-index:20;display:flex;flex-direction:column;gap:2px;font:10.5px var(--mono);color:var(--fg2);white-space:nowrap}
+.tip .t{color:var(--fg);font-weight:600;margin-bottom:2px}
+.tip .l{display:flex;align-items:center;gap:6px}
+.tip .l i{width:7px;height:7px;border-radius:2px;display:inline-block}
+.tip .l b{margin-left:auto;padding-left:14px;font-weight:500;color:var(--fg)}
+
+.notes{display:flex;gap:22px}
+.notes .nc{flex:1;min-width:0;font-size:12px;color:var(--fg2);line-height:1.5;display:flex;flex-direction:column;gap:6px}
+.notes .nh{font:600 9.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--fg3);border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:2px}
+.notes .nc>div:not(.nh){position:relative;padding-left:14px}
+.notes .nc>div:not(.nh)::before{content:"";position:absolute;left:2px;top:7px;width:5px;height:5px;background:var(--fg4);transform:rotate(45deg)}
+.notes b{color:var(--fg);font-weight:500}
+.notes .kbd{font-size:9.5px;padding:0 4px}
+.notes code{font:11px var(--mono);background:var(--bg4);color:var(--p);padding:0 4px;border-radius:3px}
+</style>
+<div class="top" data-h="2470"><h1>Stats</h1><span>what the agents cost and did · one session's stats as a main tab, and :Stats across every session and worker, grouped by repo</span><span class="cap">design sheet · proposal</span></div>
+<div class="sheet">
+<div class="cap2"><span class="lt">S</span><h2>Session stats and global stats</h2><span>from the agents' transcripts; cost is estimated from a price table; repos, not working directories, are the unit</span><span class="chip c">proposal</span></div>
+
+<!-- ============ 1: session stats ============ -->
+<div class="case">
+  <div class="cl"><span class="n">1</span><span class="d">session stats · a main tab, opened from the session summary or the tally's <b style="color:var(--fg2);font-weight:500">$</b> · pricing-rounding spans pricing and billing-ui</span></div>
+  <div class="win brk">
+    <div class="titlebar"><div class="brand"><svg width="18" height="18" viewBox="0 0 100 100"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg></div>
+      <div class="stabs"><div class="stab"><span class="dot o"></span>INF-2310 admin filters<span class="mini">work</span><span class="k">⌘1</span></div><div class="stab on"><span class="dot g"></span>pricing-rounding<span class="mini">working</span><span class="k">⌘2</span></div></div></div>
+    <div class="wb h1">
+      <div class="sb">
+        <div class="sbh"><span class="cap">Projects</span><span class="tg pl">+</span><span class="tg">«</span></div>
+        <div class="pj on">
+          <div class="l1"><span class="tw">▾</span><span class="pn"><span class="fi" style="background:var(--orange)"></span>pricing</span><span class="kbd">⌃1</span></div>
+          <div class="l2">rethink/rounding <b>↑2</b> · <span class="x">3 changed</span> · no PR</div>
+        </div>
+        <div class="ent"><span class="g">⌥</span>Explorer</div>
+        <div class="ent"><span class="g">⌕</span>Search</div>
+        <div class="ent"><span class="g">±</span>Git<span class="r">3</span></div>
+        <div class="ent"><span class="g">⎇</span>Pull request<span class="r">not raised</span></div>
+        <div class="ent"><span class="g">▷</span>Tests<span class="r" style="color:var(--red)">1 ✗</span></div>
+        <div class="pj off">
+          <div class="l1"><span class="tw">▸</span><span class="pn"><span class="fi" style="background:var(--pink)"></span>billing-ui</span><span class="kbd">⌃2</span></div>
+          <div class="l2">rethink/rounding · <span class="x">2 changed</span></div>
+        </div>
+        <div class="sdiv"></div>
+        <div class="ent ss"><span class="g">◈</span>Requests<span class="r"><span class="pill">1</span></span></div>
+        <div class="ent ss"><span class="g">⇉</span>Ship<span class="r">2 projects</span></div>
+        <div class="ent ss"><span class="g">⚙</span>Settings</div>
+      </div>
+      <div class="rp">
+        <div class="edtabs"><div class="edtab"><span class="pq" style="background:var(--orange)"></span>round.go</div><div class="edtab"><span class="pq" style="background:var(--pink)"></span>InvoiceTotal.tsx</div><div class="edtab on">◔ Stats · pricing-rounding<span class="x">✕</span></div></div>
+        <div class="rptop">
+          <h1>STATS</h1><span class="pn" style="font-size:12px">pricing-rounding</span>
+          <span class="m">claude · opus-4.1 high · mbp · today 09:12 – 12:17 · live</span>
+          <span style="margin-left:auto" class="row gap8"><span class="sg"><span class="on">$ cost</span><span>tokens</span></span><span class="btn ghost">All sessions <span class="kbd" style="font-size:9.5px;padding:0 4px">:Stats</span></span></span>
+        </div>
+        <div class="pg">
+          <div class="tiles">
+            <div class="tile"><span class="cap">Cost · est.</span><span class="v">$14.62</span><span class="s">$4.74 / active hour</span></div>
+            <div class="tile"><span class="cap">Tokens</span><span class="v">21.4M</span><span class="s">cache hit <b style="color:var(--fg);font-weight:500">94%</b></span></div>
+            <div class="tile"><span class="cap">Requests</span><span class="v">412</span><span class="s">10.8 per turn</span></div>
+            <div class="tile"><span class="cap">Turns</span><span class="v">38</span><span class="s">5 subagents</span></div>
+            <div class="tile"><span class="cap">Tool calls</span><span class="v">611<small>14 err</small></span><span class="s"><span style="color:var(--red)">2.3%</span> errored</span></div>
+            <div class="tile"><span class="cap">Active</span><span class="v">1h 48m<small>of 3h 05m</small></span><span class="s"><span class="bar"><i style="width:58%"></i></span>58%</span></div>
+            <div class="tile"><span class="cap">Peak context</span><span class="v">168k<small>/ 200k</small></span><span class="s"><span class="bar w"><i style="width:84%"></i></span>1 compact</span></div>
+          </div>
+
+          <div class="rw" style="height:232px">
+            <div class="card" style="flex:1.95">
+              <div class="hd"><span class="cap">Cost over the session</span><span class="m">per 5 min · by token kind</span>
+                <span class="r"><span class="lg" id="kindlg"></span></span></div>
+              <div style="position:relative;flex:1"><svg id="sesschart" width="808" height="178"></svg></div>
+            </div>
+            <div class="card">
+              <div class="hd"><span class="cap">Cost per repo</span><span class="r"><span class="tgl"><span class="sw"></span>count whole session in each</span></span></div>
+              <div class="split" style="margin-top:2px"><i style="width:68%;background:var(--orange)"></i><i style="width:32%;background:var(--pink)"></i></div>
+              <div class="kv"><span class="nm"><span class="fi" style="background:var(--orange)"></span>pricing</span><span class="r"><span>68%</span><b>$9.94</b></span></div>
+              <div class="kv"><span class="nm"><span class="fi" style="background:var(--pink)"></span>billing-ui</span><span class="r"><span>32%</span><b>$4.68</b></span></div>
+              <div class="note">split by each repo's share of edits and file tool calls (Read, Edit, Write, Grep, Glob): 214 in pricing, 101 in billing-ui</div>
+              <div style="height:1px;background:var(--line);margin:2px 0"></div>
+              <div class="hd"><span class="cap">Models</span><span class="r m">req · tokens · cost</span></div>
+              <div class="kv"><span class="nm"><span class="dot" style="background:var(--fg2);width:6px;height:6px"></span>opus-4.1</span><span class="r"><span>352</span><span>19.8M</span><b>$13.91</b></span></div>
+              <div class="kv"><span class="nm"><span class="dot" style="background:var(--fg4);width:6px;height:6px"></span>sonnet-4.5<span class="dim" style="font-size:10px">subagents</span></span><span class="r"><span>60</span><span>1.6M</span><b>$0.71</b></span></div>
+            </div>
+          </div>
+
+          <div class="rw" style="flex:1">
+            <div class="card" style="flex:1.95">
+              <div class="hd"><span class="cap">Tools</span><span class="m">611 calls · 14 errors</span><span class="r m">time per call</span></div>
+              <table class="tt" id="tools"></table>
+            </div>
+            <div class="col" style="flex:1;gap:12px;min-width:0">
+              <div class="card" style="flex:none">
+                <div class="hd"><span class="cap">Hours of the day</span><span class="r m">cost by hour started · today</span></div>
+                <svg id="sesshours" width="374" height="76"></svg>
+              </div>
+              <div class="card">
+                <div class="hd"><span class="cap">Effort</span><span class="r m">req · cost</span></div>
+                <div class="split"><i style="width:71%;background:var(--fg2)"></i><i style="width:22%;background:var(--fg3)"></i><i style="width:7%;background:var(--fg4)"></i></div>
+                <div class="kv"><span class="nm">high</span><span class="r"><span>71%</span><span>292</span><b>$11.85</b></span></div>
+                <div class="kv"><span class="nm" style="color:var(--fg2)">medium</span><span class="r"><span>22%</span><span>91</span><b>$2.31</b></span></div>
+                <div class="kv"><span class="nm" style="color:var(--fg3)">low</span><span class="r"><span>7%</span><span>29</span><b>$0.46</b></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2: global stats, by repo ============ -->
+<div class="case">
+  <div class="cl"><span class="n">2</span><span class="d">global stats · <span class="kbd">:Stats</span> opens a main page over every session and worker · grouped by repo; hovering billing-ui's row picks it out in the chart, a click drills in</span></div>
+  <div class="win brk">
+    <div class="titlebar"><div class="brand"><svg width="18" height="18" viewBox="0 0 100 100"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg></div>
+      <div class="stabs"><div class="stab"><span class="dot o"></span>INF-2310 admin filters<span class="mini">work</span><span class="k">⌘1</span></div><div class="stab on"><span class="dot g"></span>pricing-rounding<span class="mini">working</span><span class="k">⌘2</span></div></div></div>
+    <div class="wb h2">
+      <div class="sb">
+        <div class="sbh"><span class="cap">Projects</span><span class="tg pl">+</span><span class="tg">«</span></div>
+        <div class="pj off">
+          <div class="l1"><span class="tw">▸</span><span class="pn"><span class="fi" style="background:var(--orange)"></span>pricing</span><span class="kbd">⌃1</span></div>
+          <div class="l2">rethink/rounding <b>↑2</b> · <span class="x">3 changed</span> · no PR</div>
+        </div>
+        <div class="pj off">
+          <div class="l1"><span class="tw">▸</span><span class="pn"><span class="fi" style="background:var(--pink)"></span>billing-ui</span><span class="kbd">⌃2</span></div>
+          <div class="l2">rethink/rounding · <span class="x">2 changed</span></div>
+        </div>
+        <div class="sdiv"></div>
+        <div class="ent ss"><span class="g">◈</span>Requests<span class="r"><span class="pill">1</span></span></div>
+        <div class="ent ss"><span class="g">⇉</span>Ship<span class="r">2 projects</span></div>
+        <div class="ent ss"><span class="g">⚙</span>Settings</div>
+      </div>
+      <div class="rp">
+        <div class="rptop">
+          <h1>STATS</h1><span class="m">all sessions · 2 workers · 64 sessions · Sep 15 – Oct 14</span>
+          <span style="margin-left:auto" class="row gap12"><span class="m">scanned 40s ago</span><span class="btn ghost">Copy as CSV</span><span class="btn ghost">Close <span class="kbd" style="font-size:9.5px;padding:0 4px">esc</span></span></span>
+        </div>
+        <div class="tb">
+          <span class="sg"><span>7d</span><span class="on">30d</span><span>90d</span><span>custom</span></span>
+          <span class="lb">group by</span>
+          <span class="sg"><span class="on">Repo</span><span>Session</span><span>Kind</span><span>Model</span><span>Provider</span><span>Day</span></span>
+          <span class="fc"><span class="k">repo</span>all<span class="x">▾</span></span>
+          <span class="fc on"><span class="k">worker</span>mbp<span class="x">✕</span></span>
+          <span class="fc on"><span class="k">worker</span>devbox<span class="x">✕</span></span>
+          <span class="fc"><span class="k">provider</span>all<span class="x">▾</span></span>
+          <span class="fc add">+ filter</span>
+          <span class="tgl" style="margin-left:auto"><span class="sw on"></span>split multi-repo sessions</span>
+        </div>
+        <div class="pg">
+          <div class="tiles">
+            <div class="tile"><span class="cap">Cost · est.</span><span class="v">$412.80</span><span class="s"><span class="up">▲ 12%</span>vs prev 30d $368.40</span></div>
+            <div class="tile"><span class="cap">Tokens</span><span class="v">612M</span><span class="s"><span class="up">▲ 8%</span>cache hit 91%</span></div>
+            <div class="tile"><span class="cap">Requests</span><span class="v">9,840</span><span class="s"><span class="up">▲ 6%</span>412 turns</span></div>
+            <div class="tile"><span class="cap">Sessions</span><span class="v">64</span><span class="s"><span class="dn">▼ 5%</span>21 multi-repo</span></div>
+            <div class="tile"><span class="cap">Tool calls</span><span class="v">15.2k</span><span class="s"><span class="dn">▼ 0.4pt</span>2.1% errored</span></div>
+            <div class="tile"><span class="cap">Active</span><span class="v">71h<small>of 182h</small></span><span class="s"><span class="up">▲ 9%</span>$5.81 / active hour</span></div>
+          </div>
+
+          <div class="card" style="flex:none;height:226px">
+            <div class="hd"><span class="cap">Cost per repo per day</span><span class="m">stacked · split sessions</span><span class="r"><span class="lg" id="repolg"></span></span></div>
+            <div style="position:relative;flex:1"><svg id="globchart" width="1284" height="172"></svg></div>
+          </div>
+
+          <div class="card" style="flex:none">
+            <div class="hd"><span class="cap">Repos</span><span class="m">6 repos · sorted by cost</span><span class="r"><span class="hint"><span class="kbd">⏎</span>drill into billing-ui</span></span></div>
+            <table class="tt" id="repos"></table>
+          </div>
+
+          <div class="rw" style="flex:1">
+            <div class="card">
+              <div class="hd"><span class="cap">Tokens by kind</span><span class="r m">tokens · cost</span></div>
+              <div class="split" id="kindsplit"></div>
+              <div id="kindrows"></div>
+            </div>
+            <div class="card">
+              <div class="hd"><span class="cap">Models</span><span class="r m">req · tokens · cost</span></div>
+              <div class="split"><i style="width:69.4%;background:var(--fg2)"></i><i style="width:18.9%;background:var(--fg3)"></i><i style="width:11.7%;background:var(--fg4)"></i></div>
+              <div class="kv"><span class="nm">opus-4.1</span><span class="r"><span>4,120</span><span>318M</span><b>$286.40</b></span></div>
+              <div class="kv"><span class="nm" style="color:var(--fg2)">sonnet-4.5</span><span class="r"><span>3,860</span><span>214M</span><b>$78.10</b></span></div>
+              <div class="kv"><span class="nm" style="color:var(--fg3)">gpt-5-codex</span><span class="r"><span>1,860</span><span>80M</span><b>$48.30</b></span></div>
+              <div class="note">bar is share of cost</div>
+            </div>
+            <div class="card">
+              <div class="hd"><span class="cap">Tools by error rate</span><span class="r m">≥ 100 calls</span></div>
+              <div id="errtools"></div>
+            </div>
+            <div class="card">
+              <div class="hd"><span class="cap">Hours of the day</span><span class="r m">cost by hour · local</span></div>
+              <svg id="globhours" width="284" height="96"></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3: grouped by session ============ -->
+<div class="case">
+  <div class="cl"><span class="n">3</span><span class="d">the same page grouped by <b style="color:var(--fg2);font-weight:500">Session</b> · crit's only view, here one option of six; each session lists its repos · the chart's hover tooltip on Oct 9 · page body only, chrome as in 2</span></div>
+  <div class="win brk">
+    <div class="wb h3">
+      <div class="rp">
+        <div class="tb">
+          <span class="sg"><span>7d</span><span class="on">30d</span><span>90d</span><span>custom</span></span>
+          <span class="lb">group by</span>
+          <span class="sg"><span>Repo</span><span class="on">Session</span><span>Kind</span><span>Model</span><span>Provider</span><span>Day</span></span>
+          <span class="fc"><span class="k">repo</span>all<span class="x">▾</span></span>
+          <span class="fc on"><span class="k">worker</span>mbp<span class="x">✕</span></span>
+          <span class="fc on"><span class="k">worker</span>devbox<span class="x">✕</span></span>
+          <span class="fc"><span class="k">provider</span>all<span class="x">▾</span></span>
+          <span class="tgl" style="margin-left:auto;color:var(--fg4)"><span class="sw"></span>split multi-repo sessions<span class="m" style="font:10px var(--mono)">· n/a by session</span></span>
+        </div>
+        <div class="pg">
+          <div class="rw" style="flex:1">
+            <div class="card" style="flex:1">
+              <div class="hd"><span class="cap">Cost per session per day</span><span class="m">top 5 · the rest as other</span></div>
+              <div class="lg" id="sesslg"></div>
+              <div style="position:relative;flex:1"><svg id="sesschart2" width="578" height="204"></svg>
+                <div class="tip" id="tip3"><span class="t">Thu Oct 9 · $21.40</span>
+                  <span class="l"><i style="background:#5cd2ff"></i>pricing-rounding<b>$9.10</b></span>
+                  <span class="l"><i style="background:#ff8a1f"></i>INF-2231 usage api<b>$5.80</b></span>
+                  <span class="l"><i style="background:#a5e075"></i>flaky e2e sweep<b>$3.20</b></span>
+                  <span class="l"><i style="background:var(--fg4)"></i>other · 4<b>$3.30</b></span></div>
+              </div>
+            </div>
+            <div class="card" style="flex:1.45">
+              <div class="hd"><span class="cap">Sessions</span><span class="m">64 · sorted by cost</span></div>
+              <table class="tt" id="sessions"></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="notes">
+  <div class="nc">
+    <div class="nh">The two pages</div>
+    <div><b>Session stats</b> is a main tab for one session: totals, cost over its life by token kind with idle gaps and turns marked, cost per repo, models, tools with errors and timing, hours, effort.</div>
+    <div><b>Global stats</b> is a main page across every session and worker: a range, a group-by, filters, totals against the previous period, the headline chart, a table of groups and four small breakdowns.</div>
+    <div>Every number is <b>est.</b>: tokens are counted, cost is tokens × the price table, so a price change re-costs history.</div>
+  </div>
+  <div class="nc">
+    <div class="nh">Grouped by repo</div>
+    <div><b>Repo is the default group</b>, not the session or its working directory. Repos keep their project colour from the sidebar (42) in every chart.</div>
+    <div>A <b>multi-repo session splits</b> by its share of edits and file tool calls per repo; requests that touch no file follow the same split. Totals stay exact.</div>
+    <div><b>Split off</b> (global) or <b>count whole session</b> (session tab): each repo is charged the full session, the table says the rows overlap, and the total stays the real one.</div>
+    <div><b>Clicking a repo row</b> drills in: a <code>repo:billing-ui</code> chip, grouped by Session. Hovering a row picks its series out in the chart.</div>
+  </div>
+  <div class="nc">
+    <div class="nh">Where it comes from</div>
+    <div>The <b>worker scans transcripts incrementally</b>: per request, tokens by kind, model, effort, time; per tool call, name, error, duration. It keeps an offset per file, so a rescan reads only what's new.</div>
+    <div>It knows each <b>session's projects and repos</b>, so every request lands on a session, a repo and a worker.</div>
+    <div><b>Remote workers report their own</b> rollups over the bus; the page merges them. A worker that's offline shows its last report, marked stale.</div>
+    <div><b>Active</b> time counts gaps under 5 min between requests; the rest of the span is idle.</div>
+  </div>
+  <div class="nc">
+    <div class="nh">Keys and entry points</div>
+    <div><span class="kbd">:Stats</span> opens the global page; <span class="kbd">:Stats repo=api 7d</span> opens it filtered. From the <b>start view</b>, its "this week" figure.</div>
+    <div><b>Session stats</b> from the tally's <b>$</b>, the session summary, or <span class="kbd">:Stats session</span>.</div>
+    <div>In the page: <span class="kbd">g</span> then <span class="kbd">r</span> <span class="kbd">s</span> <span class="kbd">k</span> <span class="kbd">m</span> <span class="kbd">p</span> <span class="kbd">d</span> picks the group; <span class="kbd">[</span> <span class="kbd">]</span> step the range; <span class="kbd">j</span> <span class="kbd">k</span> rows, <span class="kbd">⏎</span> drills in, <span class="kbd">⌫</span> back out; <span class="kbd">esc</span> closes.</div>
+    <div>The charts are one general <b><code>widget.Chart</code></b> (stacked bars, area, sparkline, strip) with hover, a legend and a table view; any plugin can use it.</div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function rnd(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const GRID='#24221d',AX='#4f4a40',SURF='#0c0c0b';
+
+// stacked bar chart: o.series[{c,v[]}] bottom→top
+function stacked(svg,o){
+  const W=+svg.getAttribute('width'),H=+svg.getAttribute('height');
+  const L=o.l||40,B=o.b||18,T=6,R=4,pw=W-L-R,ph=H-B-T,n=o.n;
+  const ymax=o.ymax;
+  o.ticks.forEach(t=>{const y=T+ph-t/ymax*ph;el('line',{x1:L,x2:W-R,y1:y,y2:y,stroke:GRID,'stroke-width':1},svg);
+    const tx=el('text',{x:L-6,y:y+3,'text-anchor':'end','font-size':9,fill:AX},svg);tx.textContent=o.fmt(t)});
+  if(o.shade)o.shade.forEach(([a,b,label])=>{const x=L+a*pw/n,w=(b-a)*pw/n;
+    el('rect',{x,y:T,width:w,height:ph,fill:'url(#hatch)'},svg);
+    const t=el('text',{x:x+w/2,y:T+12,'text-anchor':'middle','font-size':9,fill:AX},svg);t.textContent=label});
+  const bw=pw/n,g=o.gap??2,w=Math.max(2,bw-g);
+  for(let i=0;i<n;i++){let y=T+ph;const x=L+i*bw+g/2;
+    const segs=o.series.map((s,j)=>({h:s.v[i]/ymax*ph,c:s.c,j})).filter(s=>s.h>0);
+    segs.forEach((s,k)=>{const top=k===segs.length-1;const hh=Math.max(0,s.h-(top?0:1.5));y-=s.h;
+      const op=o.hi!=null?(s.j===o.hi?1:.22):(o.op||.9);
+      if(hh<.5)return;
+      el('rect',{x,y:top?y:y+1.5,width:w,height:hh,fill:s.c,'fill-opacity':op,rx:top?Math.min(2,w/3):0},svg)})
+    if(o.mark&&o.mark===i){el('rect',{x:x-1.5,y:T,width:w+3,height:ph,fill:'none',stroke:'#b3ab99','stroke-opacity':.5,'stroke-dasharray':'2 2'},svg)}
+  }
+  el('line',{x1:L,x2:W-R,y1:T+ph,y2:T+ph,stroke:'#332f27'},svg);
+  for(let i=0;i<n;i++){const s=o.xl(i);if(s==null)continue;
+    const t=el('text',{x:L+i*bw+bw/2,y:H-(o.ticksBelow?14:4),'text-anchor':'middle','font-size':9,fill:AX},svg);t.textContent=s}
+  return {L,T,pw,ph,bw};
+}
+function defs(svg){const d=el('defs',{},svg);const p=el('pattern',{id:'hatch',width:6,height:6,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'},d);
+  el('rect',{width:6,height:6,fill:'#0f0f0d'},p);el('line',{x1:0,y1:0,x2:0,y2:6,stroke:'#1d1b17','stroke-width':3},p)}
+
+// ---------- token kinds
+const KIND=[['cache read','#7c7566'],['cache write 1h','#8a63d2'],['cache write 5m','#c792ff'],['output','#ff8a1f'],['input','#5cd2ff']];
+document.getElementById('kindlg').innerHTML=KIND.map(k=>`<span><i style="background:${k[1]}"></i>${k[0]}</span>`).join('');
+
+// ---------- session chart: 37 × 5min buckets 09:10–12:15
+(function(){
+  const r=rnd(7),n=37,idle=new Set([14,15,16,17,18,27,28]);
+  const share=[.34,.05,.24,.31,.06];
+  const tot=[];for(let i=0;i<n;i++){tot.push(idle.has(i)?0:(.15+r()*.7)*(i<3?.5:1)*(i>30?1.3:1)*(i===9||i===23?1.8:1))}
+  const sum=tot.reduce((a,b)=>a+b,0);const sc=14.62/sum;
+  const series=KIND.map((k,j)=>({c:k[1],v:tot.map(t=>t*sc*share[j]*(0.85+r()*.3))}));
+  const svg=document.getElementById('sesschart');defs(svg);
+  const g=stacked(svg,{n,l:36,b:30,ymax:1.4,ticks:[0,.5,1],fmt:v=>'$'+v.toFixed(2).replace(/\.00$/,''),series,gap:3,ticksBelow:true,
+    shade:[[14,19,'idle 25m'],[27,29,'idle']],
+    xl:i=>{const m=9*60+10+i*5;return m%30===0?String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'):null}});
+  // turn ticks
+  const H=+svg.getAttribute('height');
+  const turns=[0,1,3,4,5,6,8,9,9.5,10,11,12,13,13.6,19,20,20.5,21,22,23,24,24.5,25,26,29,30,30.4,31,32,32.5,33,33.6,34,34.5,35,35.5,36,36.4];
+  turns.forEach(t=>el('line',{x1:g.L+t*g.bw+g.bw/2,x2:g.L+t*g.bw+g.bw/2,y1:H-9,y2:H-3,stroke:'#b3ab99','stroke-width':1.2},svg));
+  const t=el('text',{x:4,y:H-3,'font-size':8.5,fill:AX},svg);t.textContent='turns';
+  // compaction marker
+  const cx=g.L+24*g.bw+g.bw/2;el('line',{x1:cx,x2:cx,y1:g.T,y2:g.T+g.ph,stroke:'#ff9b45','stroke-dasharray':'3 3','stroke-opacity':.7},svg);
+  const ct=el('text',{x:cx-4,'text-anchor':'end',y:g.T+10,'font-size':9,fill:'#ff9b45'},svg);ct.textContent='compacted 168k → 41k';
+})();
+
+// ---------- tools table
+(function(){
+  const rows=[['Read',214,0,[62,30,6,2,0],'0.1s'],['Edit',96,3,[40,52,6,2,0],'0.2s'],['Bash',88,8,[4,22,38,30,6],'4.1s'],['Grep',71,0,[48,44,8,0,0],'0.1s'],
+    ['TodoWrite',54,0,[90,10,0,0,0],'<0.1s'],['Glob',38,0,[70,28,2,0,0],'<0.1s'],['Write',12,0,[30,62,8,0,0],'0.2s'],['Task',9,1,[0,0,0,34,66],'2m 10s'],['WebFetch',4,2,[0,0,50,50,0],'9.8s'],['3 more',25,0,[50,30,20,0,0],'0.3s']];
+  let h=`<tr><th>tool</th><th>calls</th><th>errors</th><th>err %</th><th style="text-align:center"><span class="dl"><span>.1s</span><span>1s</span><span>10s</span><span>1m</span><span>1m+</span></span></th><th>p50</th><th style="text-align:left;width:150px">calls</th></tr>`;
+  rows.forEach(r=>{const er=r[2]?`<td class="e">${r[2]}</td><td class="e">${(r[2]/r[1]*100).toFixed(1)}%</td>`:`<td class="z">0</td><td class="z">–</td>`;
+    const d=r[3].map(v=>`<i style="height:${Math.max(v?2:0,v/100*14)}px;${v?'':'opacity:0'}"></i>`).join('');
+    h+=`<tr><td><span class="nm" style="${r[0]=='3 more'?'color:var(--fg3)':''}">${r[0]}</span></td><td class="n">${r[1]}</td>${er}<td style="text-align:center"><span class="dist">${d}</span></td><td>${r[4]}</td><td style="text-align:left"><span class="sh" style="width:${r[1]/214*140}px;background:var(--fg3)"></span></td></tr>`});
+  document.getElementById('tools').innerHTML=h;
+})();
+
+// ---------- hours strip
+function hours(svg,vals,lit,lbl){
+  const W=+svg.getAttribute('width'),H=+svg.getAttribute('height'),B=14,bw=W/24,mx=Math.max(...vals);
+  vals.forEach((v,i)=>{const h=v?Math.max(2,v/mx*(H-B-16)):1;
+    el('rect',{x:i*bw+1,y:H-B-h,width:bw-2,height:h,rx:1.5,fill:v?'#ffd23f':'#23211c','fill-opacity':v?(lit?.9:.25+.65*v/mx):1},svg)});
+  [0,6,12,18,23].forEach(i=>{const t=el('text',{x:i*bw+bw/2,y:H-2,'text-anchor':'middle','font-size':9,fill:AX},svg);t.textContent=String(i).padStart(2,'0')});
+  if(lbl)lbl(svg,bw,H-B,mx);
+}
+hours(document.getElementById('sesshours'),[0,0,0,0,0,0,0,0,0,3.92,4.71,3.10,2.89,0,0,0,0,0,0,0,0,0,0,0],true,(svg,bw,base,mx)=>{
+  const t=el('text',{x:10*bw+bw/2,y:base-(base-16)-4,'text-anchor':'middle','font-size':9,fill:'#b3ab99'},svg);t.textContent='$4.71'});
+hours(document.getElementById('globhours'),[2,1,0,0,0,0,1,4,14,30,38,36,22,30,35,33,28,20,9,8,14,12,7,4]);
+
+// ---------- global
+const REPOS=[['pricing','#4cc9f0',118.40,9,2410,172],['billing-ui','#ff6fae',71.30,6,1320,108],['admin-ui','#ffd23f',58.90,11,1260,86],['api','#a98bff',96.20,17,2180,144],['web','#4fe0a0',45.60,19,1940,71],['infra','#ff9b45',22.40,7,730,31]];
+document.getElementById('repolg').innerHTML=REPOS.map(k=>`<span><i style="background:${k[1]}"></i>${k[0]}</span>`).join('');
+const days=[];{const d0=new Date(2026,8,15);for(let i=0;i<30;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);days.push(d)}}
+const repoVals=REPOS.map((rp,j)=>{const r=rnd(31+j);
+  const raw=days.map((d,i)=>{const wk=(d.getDay()==0||d.getDay()==6)?.12:1;
+    const phase=j==0?(i>18?1.8:.6):j==1?(i>20?1.7:.5):j==2?(i<12?1.6:.7):j==3?1+.4*Math.sin(i/4):j==4?.9:(i>8&&i<13?3:.4);
+    return wk*phase*(.4+r()*.9)});
+  const s=raw.reduce((a,b)=>a+b,0);return raw.map(v=>v*rp[2]/s)});
+(function(){
+  const svg=document.getElementById('globchart');
+  stacked(svg,{n:30,l:40,b:18,ymax:30,ticks:[0,10,20,30],fmt:v=>'$'+v,series:REPOS.map((r,j)=>({c:r[1],v:repoVals[j]})),gap:6,hi:1,
+    xl:i=>{const d=days[i];return (i%3===0||i===29)?(d.toLocaleString('en',{month:'short'})+' '+d.getDate()):null}});
+  const t=el('text',{x:1284-6,y:16,'text-anchor':'end','font-size':9.5,fill:'#ff6fae'},svg);t.textContent='billing-ui · $71.30 · 17.3%';
+})();
+(function(){
+  const order=[0,3,1,2,4,5],last=['now','12m ago','now','2h ago','1h ago','3d ago'];
+  let h=`<tr><th>repo</th><th>sessions</th><th>requests</th><th>tokens</th><th>cost</th><th style="text-align:left;padding-left:18px">share</th><th>last active</th><th style="text-align:left">30 days</th><th></th></tr>`;
+  order.forEach((j,k)=>{const r=REPOS[j],v=repoVals[j],mx=Math.max(...v);
+    const pts=v.map((x,i)=>`${i*120/29},${16-x/mx*14}`).join(' ');
+    h+=`<tr class="${j==1?'hov':''}"><td><span class="nm"><span class="fi" style="background:${r[1]}"></span>${r[0]}</span></td><td>${r[3]}</td><td>${r[4].toLocaleString('en')}</td><td>${r[5]}M</td><td class="n">$${r[2].toFixed(2)}</td>
+    <td style="text-align:left;padding-left:18px"><span class="shw"><span class="tr"><i style="width:${r[2]/118.4*100}%;background:${r[1]}"></i></span><span style="width:38px;text-align:right">${(r[2]/412.8*100).toFixed(1)}%</span></span></td>
+    <td>${last[k]}</td><td style="text-align:left"><svg width="120" height="18" style="vertical-align:middle"><polyline points="${pts}" fill="none" stroke="${r[1]}" stroke-width="1.5" stroke-linejoin="round"/></svg></td><td style="color:${j==1?'var(--cyan)':'var(--fg4)'};width:20px">›</td></tr>`});
+  h+=`<tr class="tot"><td><span class="nm" style="color:var(--fg2)">total</span></td><td>64</td><td>9,840</td><td>612M</td><td class="n">$412.80</td><td style="text-align:left;padding-left:18px;color:var(--fg4)">69 repo-sessions from 64</td><td></td><td></td><td></td></tr>`;
+  document.getElementById('repos').innerHTML=h;
+})();
+(function(){
+  const K=[['cache read','#7c7566','548M',138.20],['cache write 5m','#c792ff','33M',102.40],['cache write 1h','#8a63d2','6M',31.60],['output','#ff8a1f','16M',121.70],['input','#5cd2ff','9M',18.90]];
+  document.getElementById('kindsplit').innerHTML=K.map(k=>`<i style="width:${k[3]/412.8*100}%;background:${k[1]}"></i>`).join('');
+  document.getElementById('kindrows').innerHTML=K.map(k=>`<div class="kv"><span class="nm"><span class="fi" style="background:${k[1]}"></span>${k[0]}</span><span class="r"><span>${k[2]}</span><b>$${k[3].toFixed(2)}</b></span></div>`).join('');
+  const E=[['Bash','3,210',6.8],['WebFetch','140',5.0],['Edit','2,480',2.9],['apply_patch','610',2.6],['Task','220',1.8]];
+  document.getElementById('errtools').innerHTML=E.map(e=>`<div class="kv"><span class="nm">${e[0]}</span><span class="r"><span>${e[1]}</span><span class="shw"><span class="tr" style="width:60px"><i style="width:${e[2]/7*100}%;background:var(--red);opacity:.8"></i></span></span><b style="min-width:36px">${e[2].toFixed(1)}%</b></span></div>`).join('')
+    +`<div class="note" style="margin-top:2px">bar is the share of calls that errored</div>`;
+})();
+
+// ---------- by session
+(function(){
+  const S=[['pricing-rounding','#5cd2ff',['#4cc9f0','#ff6fae'],['pricing','billing-ui'],3,'$61.20',412,'now'],['INF-2231 usage api','#ff8a1f',['#a98bff','#4fe0a0'],['api','web'],5,'$48.90',903,'12m ago'],
+    ['INF-2310 admin filters','#c792ff',['#ffd23f','#a98bff','#4fe0a0'],['admin-ui','api','web'],4,'$44.10',811,'now'],['flaky e2e sweep','#a5e075',['#4fe0a0','#ff9b45'],['web','infra'],2,'$29.80',640,'1h ago'],
+    ['invoice-pdf','#ffcf5c',['#ff6fae'],['billing-ui'],6,'$27.40',522,'3d ago']];
+  document.getElementById('sesslg').innerHTML=S.map(s=>`<span><i style="background:${s[1]}"></i>${s[0]}</span>`).join('')+`<span><i style="background:#4f4a40"></i>other · 59</span>`;
+  const n=30,vals=S.map((s,j)=>{const r=rnd(90+j),a=[[20,30],[8,22],[2,14],[9,14],[0,9]][j];return days.map((d,i)=>(i>=a[0]&&i<=a[1]&&d.getDay()%6)?(.5+r())*[6.1,3.6,3.4,3.2,3.0][j]:0)});
+  const other=days.map((d,i)=>{const v=12.4-vals.reduce((a,s)=>a+s[i],0)*.25;return d.getDay()%6?Math.max(3,v):1});
+  const svg=document.getElementById('sesschart2');
+  vals[0][24]=9.1;vals[1][24]=5.8;vals[2][24]=0;vals[3][24]=3.2;vals[4][24]=0;other[24]=3.3;
+  const g=stacked(svg,{n,l:36,b:18,ymax:30,ticks:[0,10,20,30],fmt:v=>'$'+v,series:[{c:'#4f4a40',v:other},...S.map((s,j)=>({c:s[1],v:vals[j]}))],gap:4,mark:24,
+    xl:i=>{const d=days[i];return (i%5===0)?(d.toLocaleString('en',{month:'short'})+' '+d.getDate()):null}});
+  const tip=document.getElementById('tip3');tip.style.left=(g.L+24*g.bw-190)+'px';tip.style.top='18px';
+  let h=`<tr><th>session</th><th style="text-align:left">repos</th><th>days</th><th>requests</th><th>cost</th><th>last active</th></tr>`;
+  S.forEach(s=>{h+=`<tr><td><span class="nm"><span class="fi" style="background:${s[1]}"></span>${s[0]}</span></td><td style="text-align:left">${s[2].map((c,i)=>`<span style="display:inline-flex;align-items:center;gap:4px;margin-right:9px;color:var(--fg2)"><span class="pq" style="background:${c}"></span>${s[3][i]}</span>`).join('')}</td><td>${s[4]}</td><td>${s[6]}</td><td class="n">${s[5]}</td><td>${s[7]}</td></tr>`});
+  h+=`<tr><td><span class="nm" style="color:var(--fg3)">59 more</span></td><td style="text-align:left;color:var(--fg4)">admin-ui, api, web, infra …</td><td></td><td>6,552</td><td class="n">$201.40</td><td></td></tr>`;
+  h+=`<tr class="tot"><td><span class="nm" style="color:var(--fg2)">total</span></td><td style="text-align:left;color:var(--fg4)">21 of 64 span several repos</td><td></td><td>9,840</td><td class="n">$412.80</td><td></td></tr>`;
+  document.getElementById('sessions').innerHTML=h;
+})();
+</script>

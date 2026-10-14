@@ -120,6 +120,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.max_line_length` | 0: none | app | | ED-9 |
 | `editor.binary` | false | app | | ED-9 |
 | `editor.modelines` | false | app | | ED-9 |
+| `editor.threads` | `shown`: files open with their threads between the lines; `hidden`, behind gutter bubbles | app | | ED-15 |
 | `files.generated` | false | app | | ED-9 |
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | | FG-2 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |

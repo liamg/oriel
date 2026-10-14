@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -92,6 +93,8 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	}
 	th := c.Theme()
 	x.checkDisk(c)
+	x.now = c.Now()
+	wp, pr, presented := x.presenting(p)
 	codeID := ui.Child(c.Next("pane"), "code")
 	in := c.Interaction(codeID)
 	if focused && !p.Current() {
@@ -118,10 +121,10 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 			x.pendingSince = c.Now()
 		}
 	}
-	if focused && !c.FocusWithin(codeID) {
+	if focused && !presented && !c.FocusWithin(codeID) {
 		c.Focus(codeID) // unless a block between its lines has it: a thread's reply
 	}
-	if r, ok := c.Rect(codeID); ok {
+	if r, ok := c.Rect(codeID); ok && !presented {
 		// The rows the window has for text: what blocks between its lines took last frame doesn't show text, so the
 		// engine keeps the cursor clear of them.
 		x.rows[id] = max(int((r.Dy()-codePadT-x.blockPx[id])/m.lineH), 1)
@@ -135,7 +138,11 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	}
 	p, _ = x.e.Pane(id) // what the keys left
 	c.Column("pane", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tEditorBg), Clip: true}, func(c *ui.Ctx) {
-		x.breadcrumb(c, p)
+		x.breadcrumb(c, p, wp)
+		if presented {
+			x.presentPane(c, p, wp, pr, focused, 0)
+			return
+		}
 		x.drawing = st
 		c.Column("code", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{T: codePadT}, Clip: true, Focusable: true,
 			KeyMode: st.Mode().KeyMode, Wheel: true, Cursor: render.CursorText, Help: "editor/pane", Role: ui.RoleTextBox,
@@ -161,7 +168,7 @@ func (x *editorExt) click(p vim.Pane, r render.Rect, at render.Point, m paneMetr
 	x.e.SetCursor(vim.Pos{Line: line, Col: colAtVCol(p.Buf().Line(line), max(want, 0), p.TabStop())})
 }
 
-func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
+func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
 	th := c.Theme()
 	name := tildePath(p.Name())
 	if name == "" {
@@ -196,29 +203,47 @@ func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane) {
 		if ro := p.ReadOnly(); ro != "" {
 			c.Text("ro", "read-only · "+ro, ui.TextStyle{Font: style.Font, Color: th.C(theme.Warn)})
 		}
-		path := p.Name()
-		if path != "" && !filepath.IsAbs(path) {
-			path = filepath.Join(x.dir, path)
-		}
+		path := x.path(p)
 		if acts := registry.EditorActions(x.h, path); len(acts) > 0 {
+			w := registry.EditorWindow{ID: strconv.Itoa(int(p.ID())), Path: path}
+			if wp != nil {
+				w.Presenter = wp.name
+			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			for _, a := range acts {
-				on := false
-				if a.On != nil {
-					registry.Call(func() error { on = a.On(); return nil })
-				}
-				label := a.Label
-				if a.Icon != "" {
-					label = a.Icon + " " + label
-				}
-				if widget.ToggleChip(c, "act-"+a.Name, label, on, widget.ToggleChipOpts{Help: cmpOr(a.Help, "editor/pane")}) != on {
-					if err := x.h.Run(context.Background(), a.Command, a.Args); err != nil {
-						x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, Key: true, Text: err.Error()})
-					}
-				}
+				x.action(c, a, w)
 			}
 		}
 	})
+}
+
+// action is an editor action's chip: its icon (drawn, when it's a built-in one), label and note, lit while it's on.
+// A click runs its command in the window.
+func (x *editorExt) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWindow) {
+	on, ic, label := a.Shown(w)
+	note := ""
+	if a.Note != nil {
+		registry.Call(func() error { note = a.Note(w); return nil })
+	}
+	o := widget.ToggleChipOpts{Help: cmpOr(a.Help, "editor/pane")}
+	switch {
+	case icons[ic] != nil:
+		o.Lead = func(c *ui.Ctx, fg render.Color) { icon(c, "icon", ic, 11, fg) }
+	case ic != "":
+		label = strings.TrimSpace(ic + " " + label)
+	}
+	o.Label = strings.TrimSpace(cmpOr(label, a.Name) + " " + note)
+	label = strings.TrimSpace(label + " " + note)
+	if widget.ToggleChip(c, "act-"+a.Name, label, on, o) == on {
+		return
+	}
+	args := registry.Args{"window": w.ID}
+	for k, v := range a.Args {
+		args[k] = v
+	}
+	if err := x.h.Run(context.Background(), a.Command, args); err != nil {
+		x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, Key: true, Text: err.Error()})
+	}
 }
 
 // lines draws the rows the window shows: the gutter, the text in its highlights, a closed fold as one row,
@@ -271,7 +296,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 			c.Row("gutter", ui.Style{W: ui.Px(gw), Pad: ui.Insets{R: 16}, Main: ui.End}, func(c *ui.Ctx) {
 				c.Text("n", num, ns)
 			})
-			x.signs(c, th, ds, gw, m)
+			x.signs(c, ds, gw, m)
 			if edge.A > 0 {
 				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.lineH), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
 			}
@@ -560,6 +585,9 @@ func (x *editorExt) modeSegment(c *ui.Ctx) {
 	label := modeName(mode)
 	if st := x.inputFor(x.current()); !isVim(st) {
 		mode, label = "insert", st.Mode().Label
+	}
+	if _, pr, ok := x.presenting(x.current()); ok {
+		mode, label = "", strings.ToUpper(cmpOr(pr.Label, pr.Name))
 	}
 	bg := map[string]theme.TokenID{"insert": tModeInsert, "replace": tModeInsert, "visual": tModeVisual, "visual-line": tModeVisual,
 		"visual-block": tModeVisual, "cmdline": tModeCommand}[mode]

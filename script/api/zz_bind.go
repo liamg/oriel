@@ -83,6 +83,20 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Editor{a: a}
+		vm.Bind("editor", map[string]script.GoFunc{
+			"action": func(c *script.Args) ([]any, error) {
+				return nil, x.Action(c.Table(0), c.Where())
+			},
+			"present": func(c *script.Args) ([]any, error) {
+				return nil, x.Present(c.String(0))
+			},
+			"presenter": func(c *script.Args) ([]any, error) {
+				return nil, x.Presenter(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := HUD{a: a}
 		vm.Bind("hud", map[string]script.GoFunc{
 			"tat": func(c *script.Args) ([]any, error) {

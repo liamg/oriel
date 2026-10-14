@@ -66,6 +66,9 @@ clip 44,38 1176x936 r 0
       text "pricing" @129.34375,85.96 #7c7566 JetBrains Mono 11
       text "›" @181.5,85.96 #7c7566 JetBrains Mono 11
       text "round.go" @194.09375,85.96 #b3ab99 JetBrains Mono 11
+      rect 1173,73 33x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      path 8 segments stroke 1.25 #ffd23f
+      text "1" @1194,85.6 #ffd23f JetBrains Mono 10
       clip 44,95 1176x879 r 0
         text "38" @75.1875,116.36 #4f4a40 JetBrains Mono 13.5
         text "// roundHalfEven rounds v to p decimal places, ties to even." @112,116.36 #5c6b7e JetBrains Mono 13.5

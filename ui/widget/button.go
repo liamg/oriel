@@ -63,7 +63,8 @@ func Chip(c *ui.Ctx, key any, label string, tone color.NRGBA, help string) ui.ID
 type ToggleChipOpts struct {
 	Help    string
 	Tooltip string
-	Label   string // its accessible name, when the label alone doesn't say it ("✕ 1"); the label by default
+	Label   string                           // its accessible name, when the label alone doesn't say it ("✕ 1"); the label by default
+	Lead    func(c *ui.Ctx, fg render.Color) // drawn before the label, in its colour: an icon
 }
 
 // ToggleChip is a small mono button that's lit while on, for a column or filter that toggles. It returns the value
@@ -78,8 +79,13 @@ func ToggleChip(c *ui.Ctx, key any, label string, on bool, o ToggleChipOpts) boo
 		name = label
 	}
 	in := Clickable(c, key, ui.Style{Dir: ui.Row, H: ui.Px(18), Pad: ui.PadXY(6, 0), Cross: ui.Center, Radius: 4, Stroke: border, Border: 1,
-		Fill: fill, Focusable: true, Selected: on, Label: name, Tooltip: o.Tooltip, Help: o.Help}, func(c *ui.Ctx) {
-		c.Text("l", label, monoText(10, typeset.Medium, fg, 0))
+		Fill: fill, Focusable: true, Selected: on, Label: name, Tooltip: o.Tooltip, Help: o.Help, Gap: 4}, func(c *ui.Ctx) {
+		if o.Lead != nil {
+			o.Lead(c, fg)
+		}
+		if label != "" {
+			c.Text("l", label, monoText(10, typeset.Medium, fg, 0))
+		}
 	})
 	if in.Clicked {
 		return !on

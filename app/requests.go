@@ -78,6 +78,12 @@ type requests struct {
 	by map[core.SessionID]*requestsState
 
 	anchors map[threadAnchor]text.AnchorID
+
+	shown      map[string]threadsShown          // windows that showed or hid their threads
+	bubbles    map[string]map[int]core.ThreadID // each window's speech bubbles, by line, as last decorated
+	lineNow    map[core.ThreadID]int            // where each thread was last decorated, 0-based
+	reveal     core.ThreadID                    // a thread to bring into view
+	focusReply core.ThreadID                    // a thread whose reply field takes focus
 }
 
 // draft is what's being written to a request: its text, how it goes, and what's attached.
@@ -130,6 +136,7 @@ func (x *requests) Activate(_ context.Context, h ext.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*requestsState{}
 	x.anchors = map[threadAnchor]text.AnchorID{}
+	x.shown, x.bubbles, x.lineNow = map[string]threadsShown{}, map[string]map[int]core.ThreadID{}, map[core.ThreadID]int{}
 	inFront := func(registry.Args) bool { return x.sh.sessions != nil && h.State().Focus != "" }
 	selected := func(a registry.Args) registry.Args {
 		out := registry.Args{}
@@ -186,8 +193,12 @@ func (x *requests) Activate(_ context.Context, h ext.Host) error {
 			}},
 		{ID: "request.attach", Title: "Attach to the request being written: {items} ({path, line, text} each), or {text} with a {title}", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.attach(ctx, a) }},
-		{ID: "thread.new", Title: "Open a thread on the line at the cursor: ask the agent about it, between the lines", Available: inFront,
-			Run: func(registry.Ctx, registry.Args) error { return x.newInline() }},
+		{ID: "thread.new", Title: "Open a thread on {file}'s {line} through {end_line}, or the line at the cursor: ask the agent about it, between the lines",
+			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
+		{ID: "threads.toggle", Title: "Show or hide the threads of the file in a {window}, the focused one by default",
+			Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
+		{ID: "threads.show", Title: "Show the threads of the file in a {window}, at {thread} (the cursor line's by default) with its reply field ready",
+			Run: func(_ registry.Ctx, a registry.Args) error { return x.showThreads(a) }},
 		{ID: "requests.summary", Title: "Show the session's summary at the right: its requests, tasks and tally, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", registry.Args{"id": SummaryView, "place": "dock", "edge": "right", "size": 380, "title": "Session"})
 		}},
@@ -215,6 +226,19 @@ func (x *requests) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.Picker(x.threadsSource()))
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>r", Command: "picker.open", Args: registry.Args{"source": "threads"}, Desc: "Threads"}))
 	x.add(h.Decorations("threads", registry.DecorationFunc(x.decorations)))
+	x.add(h.Decorations("agent.edits", registry.DecorationFunc(x.agentEdits)))
+	for _, o := range threadsOptions() {
+		x.add(h.Option(o))
+	}
+	x.add(h.Contribute(x.threadsAction()))
+	x.add(h.Contribute(x.hiddenLayer()))
+	for _, k := range []registry.Keymap{
+		{Mode: "n", Keys: "<Leader>R", Command: "threads.toggle", Desc: "Show or hide the file's threads"},
+		{Mode: PresentKeyMode, Keys: "<Leader>R", Command: "threads.toggle", Desc: "Show or hide the file's threads"},
+		{Mode: ThreadsHiddenKeyMode, Keys: "<CR>", Command: "threads.show", Desc: "Show the line's threads"},
+	} {
+		x.add(h.Keymap(k))
+	}
 	x.add(h.View(RequestsView, requestsList{x}))
 	x.add(h.View(RequestView, requestView{x}))
 	x.add(h.View(SummaryView, summaryView{x}))

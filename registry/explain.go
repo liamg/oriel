@@ -41,18 +41,45 @@ func Explainers(r Registry) []Explainer {
 }
 
 // EditorAction is a button at the right of an editor's breadcrumb, for files it applies to: run this file's tests,
-// watch, coverage.
+// watch, coverage, a markdown file's Preview. Its command runs with the window it was clicked in added to Args as
+// "window", unless Args names one.
 type EditorAction struct {
 	Name    string
 	Label   string
-	Icon    string // a glyph before the label
+	LabelOn string // the label while it's on, if it differs: Preview's "Edit"
+	Icon    string // before the label: a built-in icon's name, or a glyph
+	IconOn  string // the icon while it's on, if it differs
 	Command string
 	Args    Args
-	When    func(path string) bool // nil: every file
-	On      func() bool            // lit while it says so: a toggle
+	When    func(path string) bool      // nil: every file
+	On      func(w EditorWindow) bool   // lit while it says so, for the window it's in: a toggle
+	Note    func(w EditorWindow) string // dim text after the label: a count
 	Order   int
 	Help    string
 	Source  string
+}
+
+// EditorWindow is the editor window an action is drawn in: its id, file, and the presenter showing it ("" while
+// it's text).
+type EditorWindow struct {
+	ID        string
+	Path      string
+	Presenter string
+}
+
+// Shown is whether the action is on in w, and the icon and label it shows then.
+func (a EditorAction) Shown(w EditorWindow) (on bool, icon, label string) {
+	if a.On != nil {
+		Call(func() error { on = a.On(w); return nil })
+	}
+	icon, label = a.Icon, a.Label
+	if on && a.IconOn != "" {
+		icon = a.IconOn
+	}
+	if on && a.LabelOn != "" {
+		label = a.LabelOn
+	}
+	return on, icon, label
 }
 
 func (EditorAction) ContributionKind() string   { return "editor.action" }

@@ -6,9 +6,11 @@ import (
 	"image/color"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -19,47 +21,18 @@ import (
 )
 
 // decorations are the decorations of the lines [top, bottom) of a pane's buffer, by line, each line's in priority
-// order. A provider that panics is turned off, as any contribution is.
+// order.
 func (x *editorExt) decorations(p vim.Pane, top, bottom int) map[int][]registry.Decoration {
-	snap := p.Buf()
 	path := p.Name()
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(x.dir, path)
 	}
-	ctx := registry.DecorationCtx{Name: p.Name(), Path: path, Buffer: p.Buffer(), Snap: snap, Top: top, Bottom: bottom, FileBytes: p.FileBytes}
-	off := map[string]bool{}
-	for _, o := range x.h.TurnedOff() {
-		if o.Kind == registry.KindDecoration {
-			off[o.ID] = true
-		}
-	}
-	out := map[int][]registry.Decoration{}
-	for _, prov := range x.h.DecorationProviders() {
-		if off[prov.ID] {
-			continue
-		}
-		var ds []registry.Decoration
-		if err := registry.Call(func() error { ds = prov.Decorations(ctx); return nil }); err != nil {
-			x.h.TurnOff(registry.KindDecoration, prov.ID, err)
-			continue
-		}
-		for _, d := range ds {
-			if d.Anchor != 0 {
-				o, ok := p.Buffer().Resolve(d.Anchor)
-				if !ok {
-					continue
-				}
-				d.Line = snap.PosAt(min(o, snap.Len())).Line
-			}
-			if d.Line >= top && d.Line < bottom {
-				out[d.Line] = append(out[d.Line], d)
-			}
-		}
-	}
-	for _, ds := range out {
-		slices.SortStableFunc(ds, func(a, b registry.Decoration) int { return a.Priority - b.Priority })
-	}
-	return out
+	return decorate(x.h, registry.DecorationCtx{Window: strconv.Itoa(int(p.ID())), Now: x.now, Name: p.Name(), Path: path, Buffer: p.Buffer(),
+		Snap: p.Buf(), Top: top, Bottom: bottom, FileBytes: p.FileBytes})
+}
+
+func sortDecorations(ds []registry.Decoration) {
+	slices.SortStableFunc(ds, func(a, b registry.Decoration) int { return a.Priority - b.Priority })
 }
 
 // tokenColour is a decoration's Style as a colour: a theme token or palette colour, or a syntax group.
@@ -87,43 +60,69 @@ func lineBg(th *theme.Resolved, ds []registry.Decoration) (bg, edge color.NRGBA)
 	return bg, edge
 }
 
-// signs draws a line's gutter signs, between its number and its text; one with a command runs it when clicked.
-func (x *editorExt) signs(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration, gw float32, m paneMetrics) {
+// signs draws a line's gutter signs, between its number and its text.
+func (x *editorExt) signs(c *ui.Ctx, ds []registry.Decoration, gw float32, m paneMetrics) {
 	c.Row("signs", ui.Style{W: ui.Px(14), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
 		for i, d := range ds {
 			if d.Kind != registry.Sign {
 				continue
 			}
-			col := tokenColour(th, d.Style, th.C(theme.FgMuted))
-			draw := func(c *ui.Ctx) {
-				if d.Text == "" {
-					c.Box("box", ui.Style{W: ui.Px(12), H: ui.Px(12), Radius: 3, Fill: col}, nil)
-					return
-				}
-				if w, h, ok := blockPart(d.Text); ok {
-					c.Box("cell", ui.Style{W: ui.Px(m.charW), H: ui.Px(m.lineH)}, func(c *ui.Ctx) {
-						c.Box("part", ui.Style{W: ui.Px(w * m.charW), H: ui.Px(h * m.lineH), Fill: col,
-							Float: &ui.Float{Offset: render.Point{Y: (1 - h) * m.lineH}}}, nil)
-					})
-					return
-				}
-				c.Text("t", d.Text, ui.TextStyle{Font: m.font, Color: col})
-			}
-			if d.Command == "" {
-				c.Box(i, ui.Style{}, draw)
+			if w, h, ok := blockPart(d.Text); ok && d.Icon == "" && d.Command == "" && d.Hover == nil {
+				col := tokenColour(c.Theme(), d.Style, c.Theme().C(theme.FgMuted))
+				c.Box(i, ui.Style{W: ui.Px(m.charW), H: ui.Px(m.lineH)}, func(c *ui.Ctx) {
+					c.Box("part", ui.Style{W: ui.Px(w * m.charW), H: ui.Px(h * m.lineH), Fill: col, Float: &ui.Float{Offset: render.Point{Y: (1 - h) * m.lineH}}}, nil)
+				})
 				continue
 			}
-			tip := d.Tooltip
-			if tip == "" {
-				tip = d.Command
-			}
-			if widget.Clickable(c, i, ui.Style{Radius: 3, Label: tip, Tooltip: tip, Help: "editor/pane"}, draw).Clicked {
-				if err := x.h.Run(context.Background(), d.Command, d.Args); err != nil {
-					x.h.Notify(core.Notice{ID: "editor.sign", Severity: core.SevWarning, Key: true, Text: err.Error()})
-				}
-			}
+			drawSign(c, x.h, i, d, m.font.Size)
 		}
 	})
+}
+
+// drawSign draws a sign: a box, its text, or an icon with its text small beside it. One with a command runs it when
+// clicked, and one with a Hover shows that card while the pointer is on it.
+func drawSign(c *ui.Ctx, h ext.Host, key any, d registry.Decoration, size float32) {
+	th := c.Theme()
+	col := tokenColour(th, d.Style, th.C(theme.FgMuted))
+	draw := func(c *ui.Ctx) {
+		switch {
+		case d.Icon != "":
+			icon(c, "icon", d.Icon, 12, col)
+			if d.Text != "" {
+				c.Box("n", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: 1}, Self: render.Point{X: .5, Y: .7}}}, func(c *ui.Ctx) {
+					c.Text("t", d.Text, monoFont(8, col))
+				})
+			}
+		case d.Text == "":
+			c.Box("box", ui.Style{W: ui.Px(12), H: ui.Px(12), Radius: 3, Fill: col}, nil)
+		default:
+			c.Text("t", d.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size}, Color: col})
+		}
+	}
+	if d.Command == "" && d.Hover == nil {
+		c.Box(key, ui.Style{}, draw)
+		return
+	}
+	tip := cmpOr(d.Tooltip, d.Command)
+	st := ui.Style{Radius: 3, Label: tip, Help: "editor/pane"}
+	if d.Hover == nil {
+		st.Tooltip = tip
+	}
+	id := c.Next(key)
+	if widget.Clickable(c, key, st, draw).Clicked && d.Command != "" {
+		if err := h.Run(context.Background(), d.Command, d.Args); err != nil {
+			h.Notify(core.Notice{ID: "editor.sign", Severity: core.SevWarning, Key: true, Text: err.Error()})
+		}
+	}
+	if d.Hover != nil {
+		widget.HoverCard(c, struct{ k any }{key}, id, widget.HoverCardOpts{Help: "editor/pane#threads", Width: 380}, func(c *ui.Ctx) {
+			if f, ok := d.Hover.(*ui.Func); ok {
+				f.Fn(c)
+				return
+			}
+			c.Node(d.Hover)
+		})
+	}
 }
 
 // blockPart is the part of a line's cell a lower (▁…█) or left (▉…▏) block element fills, so a run of them on

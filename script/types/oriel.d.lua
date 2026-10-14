@@ -7,6 +7,7 @@
 ---@field coverage oriel.coverage
 ---@field decor oriel.decor
 ---@field diagnostics oriel.diagnostics
+---@field editor oriel.editor
 ---@field hud oriel.hud
 ---@field keymap oriel.keymap
 ---@field language oriel.language
@@ -122,6 +123,21 @@ function oriel.diagnostics.list() end
 ---@param file string
 ---@param list any
 function oriel.diagnostics.set(owner, file, list) end
+
+---@class oriel.editor
+oriel.editor = {}
+
+--- Add a button at the right of an editor's breadcrumb, for the files when(path) takes: { name, label, label_on, icon, icon_on, command, args, run = fn(window), when = fn(path), on = fn(window), note = fn(window), order (50 by default), help }. window is { id, path, presenter }. on lights it, and label_on and icon_on show while it's on; note is dim text after the label (a count). icon is a built-in icon's name or a glyph. command runs with args.window set to the window it was clicked in; run is a function in its place.
+---@param spec table
+function oriel.editor.action(spec) end
+
+--- Show the focused editor window with the presenter name, or as text again when it shows it already.
+---@param name string
+function oriel.editor.present(name) end
+
+--- Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text.
+---@param spec table
+function oriel.editor.presenter(spec) end
 
 ---@class oriel.hud
 oriel.hud = {}

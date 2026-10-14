@@ -93,3 +93,18 @@ The Tests panel (`␣to`) has every test by package, with its recent runs, the f
 tests marked, and the output of the one picked, of the whole run, or the raw JSON.
 
 {{keys "test.*"}}
+
+## Presentations {#present}
+
+A file can be shown as something other than its text: a markdown file as a document (its **Preview** button, or
+`:MarkdownPreview`), or as a plugin's presenter draws it (`editor.present`). The file stays open and editable, and
+the presentation follows its text, so two windows on one file can show it both ways at once. The file's threads sit
+in the margin beside the blocks they're about. `j`/`k` move between blocks, `c` or `⏎` (or a click) opens a thread on a
+block's lines, and `o` goes to its source. **Edit** shows the text again, where you were.
+
+## Threads in a file {#threads}
+
+A file's threads open between its lines. `␣R` (`threads.toggle`), or the 💬 button with their count, hides them
+behind speech bubbles in the gutter, coloured by the thread's state; `editor.threads = "hidden"` opens files that way.
+Hovering a bubble shows its threads without taking the keys; a click, or `⏎` on its line, shows them again at that
+thread with its reply field ready.

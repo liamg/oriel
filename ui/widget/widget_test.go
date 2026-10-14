@@ -873,3 +873,61 @@ func TestRichStrikesThrough(t *testing.T) {
 		t.Error("no line through the struck run")
 	}
 }
+
+// ED-15: a hover card shows while the pointer is on its anchor, stays while the pointer moves into it to read it, and
+// goes when the pointer leaves both; it never takes focus, so keys still go where they went.
+func TestHoverCardFollowsThePointer(t *testing.T) {
+	var anchor, field ui.ID
+	text := ""
+	var shown bool
+	h := newHarness(t, theme.Dark, render.Point{X: 600, Y: 400}, func(c *ui.Ctx) {
+		c.Column("page", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(20), Gap: 20}, func(c *ui.Ctx) {
+			field = c.Next("field")
+			Input(c, "field", &text, InputOpts{Label: "Field", Help: "test/hover"})
+			anchor = c.Next("sign")
+			Clickable(c, "sign", ui.Style{W: ui.Px(16), H: ui.Px(16), Label: "2 threads", Help: "test/hover"}, nil)
+			shown = HoverCard(c, "card", anchor, HoverCardOpts{Label: "Thread", Help: "test/hover", Width: 240}, func(c *ui.Ctx) {
+				c.Text("t", "the card's text", ui.TextStyle{})
+			})
+		})
+	})
+	h.u.Focus(field)
+	h.frame()
+	if shown || h.drew("the card's text") {
+		t.Fatal("the card shows before the pointer is on its anchor")
+	}
+	ax, ay := mid(h.rect(anchor))
+	h.pointer(render.PointerMove, 0, ax, ay)
+	h.frame()
+	h.frame()
+	if !shown || !h.drew("the card's text") {
+		t.Fatal("no card with the pointer on its anchor")
+	}
+	card := h.find("Thread")
+	if card == nil {
+		t.Fatal("the card has no accessible name")
+	}
+	a := h.rect(anchor)
+	for _, p := range []render.Point{{X: (a.Max.X + card.Bounds.Min.X) / 2, Y: (a.Min.Y + a.Max.Y) / 2}, {X: card.Bounds.Min.X + 30, Y: card.Bounds.Min.Y + 12},
+		{X: card.Bounds.Max.X - 10, Y: card.Bounds.Max.Y - 4}} {
+		h.pointer(render.PointerMove, 0, p.X, p.Y)
+		h.frame()
+		h.frame()
+		if !shown {
+			t.Fatalf("the card went with the pointer at %v, on the way into it or in it", p)
+		}
+	}
+	if h.u.Focused() != field {
+		t.Error("the card took focus")
+	}
+	h.keys("x")
+	if text != "x" {
+		t.Errorf("a key with the card up went elsewhere: the field has %q", text)
+	}
+	h.pointer(render.PointerMove, 0, 580, 380)
+	h.frame()
+	h.frame()
+	if shown || h.drew("the card's text") {
+		t.Error("the card stays with the pointer gone")
+	}
+}

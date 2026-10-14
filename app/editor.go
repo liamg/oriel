@@ -50,7 +50,9 @@ type editorExt struct {
 	disk    diskWatch
 	maps    map[string]registry.Disposable // :map's keymaps, by mode and keys
 	inputs  map[vim.WindowID]paneInput
+	present map[vim.WindowID]*windowPresent // the windows a presenter draws
 
+	now          time.Time   // the frame's, for decorations
 	drawing      input.State // the engine of the pane being drawn
 	caret        ui.ID       // the current window's cursor, last frame: where popups at the cursor go
 	pendingSince time.Time   // when the current window's engine began waiting for more keys
@@ -77,6 +79,7 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.disk.asked = map[int]time.Time{}
 	x.maps = map[string]registry.Disposable{}
 	x.inputs = map[vim.WindowID]paneInput{}
+	x.present = map[vim.WindowID]*windowPresent{}
 	x.builtinInputs()
 	x.sh.enginePending = x.pending
 	x.sh.engineHints = func(keys []string) []ext.Hint {
@@ -137,6 +140,7 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.add(disposeFn(h.Layout().OnClose(func(v layout.ViewRef) {
 		if id, ok := windowOf(v); ok {
 			x.e.WindowClosed(id)
+			delete(x.present, id)
 		}
 	})))
 
@@ -215,6 +219,8 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 			x.e.MultiVertical(-1)
 			return nil
 		}},
+		{ID: "editor.present", Title: "Show a {window} (the focused one by default) with the presenter {name}, or as text again when it shows it already",
+			Run: func(_ registry.Ctx, a registry.Args) error { return x.presentIn(str(a, "window"), str(a, "name")) }},
 		{ID: "editor.grep-word", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
 		}},
@@ -222,6 +228,12 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 		x.add(h.Command(c))
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "c", Keys: "<Tab>", Command: "editor.complete", Desc: "Complete the command line"}))
+	for _, c := range presentCommands(x.sh, h) {
+		x.add(h.Command(c))
+	}
+	for _, k := range presentKeys() {
+		x.add(h.Keymap(k))
+	}
 	x.add(h.View(EditorView, editorView{x}))
 	x.add(h.Picker(x.filesSource()))
 	syms := x.symbolsSource()
@@ -654,9 +666,10 @@ func (v editorView) Location(instance string) (string, bool) {
 
 // editorState is an editor window as the layout keeps it across restarts: its file and cursor.
 type editorState struct {
-	Path string `json:"path"`
-	Line int    `json:"line"`
-	Col  int    `json:"col"`
+	Path    string `json:"path"`
+	Line    int    `json:"line"`
+	Col     int    `json:"col"`
+	Present string `json:"present,omitempty"` // the presenter drawing it
 }
 
 func (v editorView) Persist(instance string) (json.RawMessage, bool) {
@@ -670,7 +683,11 @@ func (v editorView) Persist(instance string) (json.RawMessage, bool) {
 		return nil, false
 	}
 	c := p.Cursor()
-	b, _ := json.Marshal(editorState{Path: path, Line: c.Line, Col: c.Col})
+	es := editorState{Path: path, Line: c.Line, Col: c.Col}
+	if wp := v.x.present[p.ID()]; wp != nil {
+		es.Present = wp.name
+	}
+	b, _ := json.Marshal(es)
 	return b, true
 }
 
@@ -690,6 +707,10 @@ func (v editorView) Revive(state json.RawMessage) (string, error) {
 	v.x.e.EnterWindow(id)
 	v.x.e.SetCursor(vim.Pos{Line: s.Line, Col: s.Col})
 	v.x.conv.refresh()
+	if s.Present != "" {
+		v.x.present[id] = &windowPresent{name: s.Present, st: newPresentState()}
+		v.x.present[id].st.top = s.Line
+	}
 	return strconv.Itoa(int(id)), nil
 }
 

@@ -173,9 +173,9 @@ func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
 	for _, a := range []registry.EditorAction{
 		{Name: "tests.file", Icon: "▶", Label: "file", Command: "test.run.file", When: isTest, Order: 10, Help: "editor/pane#tests"},
 		{Name: "tests.failed", Label: "failed", Command: "test.run.failed", When: isTest, Order: 20, Help: "editor/pane#tests"},
-		{Name: "tests.watch", Icon: "●", Label: "watch", Command: "test.watch", When: isTest, On: func() bool { return x.watch }, Order: 30,
+		{Name: "tests.watch", Icon: "●", Label: "watch", Command: "test.watch", When: isTest, On: func(registry.EditorWindow) bool { return x.watch }, Order: 30,
 			Help: "editor/pane#tests"},
-		{Name: "tests.coverage", Label: "coverage", Command: "test.coverage", On: func() bool { return x.showCov }, Order: 40,
+		{Name: "tests.coverage", Label: "coverage", Command: "test.coverage", On: func(registry.EditorWindow) bool { return x.showCov }, Order: 40,
 			When: func(path string) bool { return isTest(path) || len(x.h.CoverageFor(path)) > 0 },
 			Help: "editor/pane#tests"},
 	} {
