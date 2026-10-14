@@ -508,6 +508,25 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - A step dock with ← → across files and repos. Code outside the step dims.
 - Notes pinned to ranges with leader lines: the annotation house style.
+- Built in RV-6 (`app/walkthrough*.go`, the `explain.change` built-in): **Explain this change** (`explain.change`: the
+  omnibox, `␣E`, and the Changed units panel's link) reads every project's changed and untracked files against its
+  branch's base (else HEAD), open buffers standing for their files, and asks the first explainer (the session's
+  agent, forked) for a walkthrough, with each file's diff numbered as the file is now. It answers in JSON steps in a
+  fenced block (`walkFormat`: title, project, file, lines, prose, and notes with title, lines, an optional `mark` to
+  highlight and text), read leniently: the first fenced block or object that has steps, lines as `[a, b]`, `a`,
+  `"a-b"` or `"La–b"`, trailing commas forgiven, a file found by the end of its path; an answer without steps is an
+  error with **Try again**. The view (a tab, mode EXPLAIN) has the EXPLAIN THIS CHANGE header (project / file,
+  lines, "throwaway · discarded if the code changes", Discard); the step's file from three lines above it, the
+  lines its notes are on lit in their colours with a gutter edge and the rest dimmed, each note an annotation
+  (`widget.Annotation`) beside its first line with a leader line, kept from overlapping; and the dock: step chips
+  across files and repos (a summary step is "— summary"), STEP 03/07, the title and markdown prose, **Ask about this
+  step** (`request.new` with the step and its code), **Comment on L<n>** (opens the file at the line and
+  `thread.new`; `j`/`k` pick the line, as does a click on the code), the explainer's byline, and ← →. The status
+  line says `step 3/7 · invoice.go · ←/→ step · c comment · q quit`. `q`/Escape close it and keep it; it's
+  discarded, with a notice, once the text of any step's lines (its own and its notes') reads differently from when
+  it was written, in an open buffer or on disk (looked at once a second while it's shown), so an edit that moves
+  them counts too. Not yet: the diff view's header button (RV-1 wires `explain.change`); notes whose lines are
+  scrolled out of view aren't shown; a step on a deleted file has no code.
 
 ## 07b · Explain by code unit, and "Explain this"
 

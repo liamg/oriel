@@ -241,7 +241,7 @@ engine never feels like another binary running in a pane.
 ## What the editor surface can show between lines
 
 - Comment threads (Claude, Codex, GitHub reviewers), collapsed or open.
-- Explain-walkthrough notes pinned to ranges.
+- Explain-walkthrough notes pinned to ranges (RV-6 draws them in its own view, not between the editor's lines).
 - Diff hunks, inline (deleted lines as ghost blocks) or as a split view.
 - Diagnostics as virtual text, or as a full block for long messages.
 - Inlay hints, code lenses, and test results next to the test function.

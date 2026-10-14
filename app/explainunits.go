@@ -405,6 +405,15 @@ func (x *explainExt) panelView(c *ui.Ctx) {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", fmt.Sprintf("%d %s · tree-sitter", n, plural(n, "unit", "units")), monoTok(c, 10, theme.FgGhost))
 		})
+		if n > 0 {
+			c.Row("walk", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 6}}, func(c *ui.Ctx) {
+				if widget.Link(c, "explain", "Explain this change, step by step", "editor/pane#explain-change") {
+					if err := x.h.Run(context.Background(), "explain.change", nil); err != nil {
+						x.notify(err)
+					}
+				}
+			})
+		}
 		if len(roots) == 0 {
 			msg := "The branch changes no code units."
 			switch {

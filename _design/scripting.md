@@ -88,7 +88,8 @@ L.agent.tool{
 
 -- prompt packs and session kinds
 L.agent.explainer{ name = "local", order = 5, label = "a local model",   -- answers every "explain this" first
-  run = function(req) return my_model(req.subject .. "\n" .. req.context, req.depth) end }
+  byline = "written by a local model",                                  -- under a long answer: a walkthrough
+  run = function(req) return my_model(req.subject .. "\n" .. req.context, req.depth, req.format) end }
 L.agent.pack("hotfix", { prompt = L.read("~/.config/oriel/agents/hotfix.md"), tools = { "staging_logs" } })
 L.session.kind("hotfix", { pack = "hotfix", gates = { "tests", "ledger" }, status = "red-until-merged" })
 

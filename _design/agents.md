@@ -267,6 +267,9 @@ type Session interface {
   agent with the request's depth (brief, detailed, why · history) over the wire's `agent.fork`; its label is "fork
   of <provider> · knows this session". With no session in front it says so: the resident utility session isn't
   built yet (PL-4).
+- Built in RV-6: a request with a `Format` (the walkthrough's JSON steps) is forked with the format at the end of the
+  prompt instead of the depth's "in markdown" instruction; the agent explainer's byline is "written by <provider>
+  from the session's own context".
 
 ### The session host as built (`worker`)
 

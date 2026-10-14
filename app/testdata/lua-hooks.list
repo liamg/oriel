@@ -157,13 +157,13 @@ clip 760,38 640x844.84 r 0
     pop
   pop
 pop
-text "app.statusline: init.lua:59: oriel.ledger.frac isn't available until RV-2 (the review ledger)" @0,896.10004 #ff5f6d JetBrains Mono 13
+text "app.statusline: init.lua:60: oriel.ledger.frac isn't available until RV-2 (the review ledger)" @0,896.10004 #ff5f6d JetBrains Mono 13
 rect 944,12 440x114.55859 fill #121210 radius 8 stroke 1 #ff5f6d8c
 rect 958,27.154785 7x7 fill #ff5f6d radius 3.5
 text "VIEW ERROR" @973,34.074783 #ff5f6d JetBrains Mono 9.5
-text "init.lua:53" @1054.3,34.074783 #7c7566 JetBrains Mono 9.5
+text "init.lua:54" @1054.3,34.074783 #7c7566 JetBrains Mono 9.5
 text "✕" @1361.4062,34.65625 #7c7566 Inter 11
-text "init.lua:59: oriel.ledger.frac isn't available until RV-2 (the review" @958,58.418945 #ece6d8 Inter 12.5
+text "init.lua:60: oriel.ledger.frac isn't available until RV-2 (the review" @958,58.418945 #ece6d8 Inter 12.5
 text "ledger) · app.statusline view turned off after 3 errors" @958,76.54346 #ece6d8 Inter 12.5
 text "Open at line" @958,104.92383 #ffd23f Inter 12
 rect 958,108.81836 68.515625x1 fill #ffd23fb3

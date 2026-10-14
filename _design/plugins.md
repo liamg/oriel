@@ -117,7 +117,11 @@ flowchart TB
   comes with AI; Lua adds one with `oriel.agent.explainer`. `explain.ask {file, line, end_line | text; subject, kind,
   context, depth; key}` (RV-5) is how a feature asks: about a file's lines, a card between them; about text (or just a
   `context`), a notice; with a `key`, the answer is kept for the place that asked to draw (the failure block's card).
-  It's unavailable until an explainer is registered. RV-6's walkthrough goes through it.
+  It's unavailable until an explainer is registered. A feature that parses the answer calls `registry.Explain` with
+  `ExplainRequest.Format` (RV-6): the shape the answer must take instead of prose, which replaces the explainer's own
+  instructions on length and form (the walkthrough's JSON steps). `Explainer.Byline` says who wrote a long answer
+  ("written by claude from the session's own context"); `Explainer.WrittenBy()` falls back to "written by" and the
+  label. Lua: `oriel.agent.explainer{…, byline}`, and `req.format`.
 - fix and explain twins (TR-6): something gone wrong is a `registry.Trouble` (kind, subject, context, file and lines,
   the fix request's text). Every "ask the agent to fix" runs `agent.fix` (`registry.FixCommand`) with
   `Trouble.Args()`, which writes a request with it attached; its twin runs `explain.ask` (`registry.ExplainCommand`)
@@ -126,6 +130,15 @@ flowchart TB
   as the code actions'); a plugin's too. `MenuItem.Trouble(at)` computes the trouble where the menu opened, and hides
   the pair when there's none (the terminal's failed command). Buttons use `askTwins` (explain then fix, the answer
   under them by `key`). A fix that runs `request.new` itself is a test failure (`TestFixesGoThroughAgentFix`).
+- the walkthrough (RV-6): `explain.change` opens Explain this change (the `explain.change` view, a tab in the main
+  area) and asks for a walkthrough when there's none still good; `explain.change.step {step | by}`,
+  `explain.change.line {by}`, `explain.change.ask`, `explain.change.comment {line}`, `explain.change.discard` and
+  `explain.change.close` drive it, and its keys are the `explain.change` key mode. A diff view's header button runs
+  `explain.change`.
+- annotations (RV-6): `widget.Annotation(c, key, AnnotationOpts{N, Title, Tone, Width, Ground}, body)` is a note in
+  the annotation house style (a numbered diamond and its title over the body, in a card with two corners cut;
+  `widget.AnnotationBody` is its prose's style), `widget.Diamond` a numbered diamond, and `widget.Leader(frame, from,
+  to, tone)` (`LeaderPath`) the angled leader line from code to its card. Theme tokens `annotation.*`.
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
   so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
@@ -478,7 +491,8 @@ type Host interface {
   `keymap.timeoutlen`.
 - Views named `app.overlay.<name>` float over the window: the omnibox is `app.overlay.omnibox`.
 - The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
-  in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.
+  in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment. A
+  segment with nothing to show builds a nil node and takes no room (the walkthrough's `statusline.left.05-explain`).
 - A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`),
   `ViewCtx.Focused`, and `ViewCtx.Project`: the project it was opened for (`view.open {project}`, a project entry's
   panel), "" for a session's view or a window with one project. The project is part of the instance

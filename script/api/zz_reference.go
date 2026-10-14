@@ -16,7 +16,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.statusline(fn)", Doc: "Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."},
 	},
 	"agent": {
-		{Call: "oriel.agent.explainer(spec)", Doc: "An explainer: { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning markdown }. req has kind, subject, context, files and depth. It only answers: explaining changes nothing."},
+		{Call: "oriel.agent.explainer(spec)", Doc: "An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing."},
 		{Call: "oriel.agent.pack(name, spec)", Doc: "A prompt pack: { prompt, tools }, for sessions to start with."},
 		{Call: "oriel.agent.tool(spec)", Doc: "Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }."},
 	},

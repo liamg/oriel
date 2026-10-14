@@ -79,7 +79,7 @@ function oriel.statusline(fn) end
 ---@class oriel.agent
 oriel.agent = {}
 
---- An explainer: { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning markdown }. req has kind, subject, context, files and depth. It only answers: explaining changes nothing.
+--- An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing.
 ---@param spec table
 function oriel.agent.explainer(spec) end
 

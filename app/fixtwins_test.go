@@ -210,6 +210,7 @@ func TestFixesGoThroughAgentFix(t *testing.T) {
 		"requestsview.go": true,
 		"explain.go":      true, // Ask a follow-up and request.this: not fixes
 		"explainask.go":   true, // agent.fix
+		"walkthrough.go":  true, // Ask about this step: not a fix
 	}
 	files, _ := filepath.Glob("*.go")
 	for _, f := range files {

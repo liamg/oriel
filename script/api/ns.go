@@ -134,7 +134,7 @@ func (g Agent) Tool(spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api doc="An explainer: { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning markdown }. req has kind, subject, context, files and depth. It only answers: explaining changes nothing."
+//oriel:api doc="An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing."
 func (g Agent) Explainer(spec script.Table, where string) error {
 	run, _ := spec["run"].(*script.Fn)
 	if str(spec, "name") == "" || run == nil {
@@ -143,7 +143,7 @@ func (g Agent) Explainer(spec script.Table, where string) error {
 	e := registry.Explainer{Name: str(spec, "name"), Source: where,
 		Explain: func(_ context.Context, r registry.ExplainRequest) (string, error) {
 			out, err := g.a.VM.Call(run, script.Table{"kind": r.Kind, "subject": r.Subject, "context": r.Context, "files": r.Files,
-				"depth": cmpOr(r.Depth, registry.ExplainBrief)})
+				"depth": cmpOr(r.Depth, registry.ExplainBrief), "format": r.Format})
 			if err != nil || len(out) == 0 {
 				return "", err
 			}
@@ -155,6 +155,9 @@ func (g Agent) Explainer(spec script.Table, where string) error {
 	}
 	if l := str(spec, "label"); l != "" {
 		e.Label = func() string { return l }
+	}
+	if b := str(spec, "byline"); b != "" {
+		e.Byline = func() string { return b }
 	}
 	g.a.own(g.a.Host.Contribute(e))
 	return nil

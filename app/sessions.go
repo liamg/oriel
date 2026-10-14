@@ -71,7 +71,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
 	if len(x.sh.cfg.Workers) > 0 {
-		x.add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain, Label: x.explainer}))
+		x.add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain, Label: x.explainer, Byline: x.explainerByline}))
 	}
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "AgentTurnEnd", Fired: true, Payload: AgentTurnEnd{},
 		Doc: "A session's agent finished a turn."}))
@@ -818,10 +818,18 @@ func (x *sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 		how = "briefly, in a short paragraph"
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "Explain this %s %s, in markdown. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
-		r.Kind, how, r.Subject, r.Context)
+	if r.Format != "" {
+		fmt.Fprintf(&b, "Explain this %s. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
+			r.Kind, r.Subject, r.Context)
+	} else {
+		fmt.Fprintf(&b, "Explain this %s %s, in markdown. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
+			r.Kind, how, r.Subject, r.Context)
+	}
 	if len(r.Files) > 0 {
 		fmt.Fprintf(&b, "\n\nFiles: %s", strings.Join(r.Files, ", "))
+	}
+	if r.Format != "" {
+		b.WriteString("\n\n" + r.Format)
 	}
 	return c.Fork(ctx, id, b.String())
 }
@@ -833,6 +841,15 @@ func (x *sessions) explainer() string {
 		return "no session in front"
 	}
 	return "fork of " + cmpOr(se.Snapshot().Agent.Provider, "the agent") + " · knows this session"
+}
+
+// explainerByline is who wrote a long answer, such as a walkthrough: the agent in front, from what it knows.
+func (x *sessions) explainerByline() string {
+	se, ok := x.sh.cfg.Store.Session(x.focused())
+	if !ok {
+		return "written by the agent"
+	}
+	return "written by " + cmpOr(se.Snapshot().Agent.Provider, "the agent") + " from the session's own context"
 }
 
 // mainInput is what a hook matches a tool's input on: a shell's command, an edit's path, else the JSON.
