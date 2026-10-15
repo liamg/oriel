@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -35,8 +38,97 @@ type catalogPlugin struct {
 	waiting  map[string]catalog.Status
 	failed   map[string]string // why, by id, as last noticed
 	busy     bool              // the last sync had something: a plugin listed, loaded or waiting
-	resolver catalog.Resolver
-	synced   chan struct{} // closed and made again after each sync, for tests
+	client   *catalog.Client   // the registries' indexes, once fetched
+	updates  map[string]bool   // ids to update at the next sync
+	revoked  map[string]catalog.Status
+	offers   map[string]catalog.Status // updates waiting to be asked for: [registry] updates = ask
+	synced   chan struct{}             // closed and made again after each sync, for tests
+	page     pluginsPage
+}
+
+// registryEvery is how often the registries' indexes are fetched again (catalog.md, The index).
+var registryEvery = time.Hour
+
+// github is how plugins and registries are read: the config's, or GitHub's API with your gh login's token.
+func (x *catalogPlugin) github() catalog.GitHub {
+	if g := x.sh.cfg.GitHub; g != nil {
+		return *g
+	}
+	return catalog.GitHub{Auth: gh.Token}
+}
+
+// sources are [registry] sources with their keys: the default registry's built in unless keys pins another.
+func (x *catalogPlugin) sources() []catalog.Source {
+	o := x.h.Options()
+	v, _, _ := o.Get("registry.sources", registry.At{})
+	repos, _ := v.([]string)
+	kv, _, _ := o.Get("registry.keys", registry.At{})
+	keys, _ := kv.(map[string]string)
+	var out []catalog.Source
+	for _, r := range repos {
+		s := catalog.Source{Repo: r}
+		if k, err := catalog.ParseKey(keys[r]); err == nil {
+			s.Key = k
+		} else if r == catalog.DefaultRepo {
+			s.Key = catalog.DefaultKey()
+		}
+		out = append(out, s)
+	}
+	return out
+}
+
+// refresh fetches every registry's index, then syncs.
+func (x *catalogPlugin) refresh() {
+	x.fetchIndexes()
+	x.kick()
+}
+
+// fetchIndexes fetches every registry's index. They're fetched only once something needs them: a registry entry in
+// [plugins], the Registry tab, plugins.refresh; then hourly.
+func (x *catalogPlugin) fetchIndexes() {
+	g := x.github()
+	c := &catalog.Client{Sources: x.sources(), Fetch: g.LatestAsset, Cache: filepath.Join(x.cacheDir(), "registry")}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	err := c.Refresh(ctx)
+	cancel()
+	if err != nil {
+		x.h.Log().Warn("plugin registries", "err", err)
+		x.h.Notify(core.Notice{ID: "plugins.registry", Severity: core.SevWarning, Title: "Plugin registries", Text: err.Error()})
+	} else {
+		x.h.Dismiss("plugins.registry")
+	}
+	x.mu.Lock()
+	x.client = c
+	x.mu.Unlock()
+}
+
+func (x *catalogPlugin) cacheDir() string {
+	if d := x.sh.cfg.CacheDir; d != "" {
+		return d
+	}
+	return filepath.Join(cmpOr(x.sh.cfg.DataDir, DefaultDataDir()), "cache")
+}
+
+// resolver is a sync's resolver for registry entries, nil until the indexes are fetched.
+func (x *catalogPlugin) newResolver() catalog.Resolver {
+	x.mu.Lock()
+	c := x.client
+	if c == nil {
+		x.mu.Unlock()
+		return nil
+	}
+	updates := x.updates
+	x.updates = map[string]bool{}
+	x.mu.Unlock()
+	o := x.h.Options()
+	u, _, _ := o.Get("registry.updates", registry.At{})
+	hold, _, _ := o.Get("registry.trusted_hold", registry.At{})
+	r := &catalog.RegistryResolver{Client: c, GitHub: x.github(), Updates: u.(string), Hold: hold.(time.Duration),
+		Platform: runtime.GOOS + "/" + runtime.GOARCH, Now: x.h.UI().Now}
+	for id := range updates {
+		r.Update(id)
+	}
+	return r
 }
 
 type loadedPlugin struct {
@@ -56,10 +148,24 @@ func (x *catalogPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: 
 func (x *catalogPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.loaded, x.waiting, x.failed = map[string]*loadedPlugin{}, map[string]catalog.Status{}, map[string]string{}
+	x.updates = map[string]bool{}
 	x.synced = make(chan struct{})
 	x.add(h.Option(registry.OptionSpec{Name: PluginsOption, Type: registry.Table, Default: map[string]any{}, Section: "plugins",
 		Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help:   "The installed plugins, by id: a version range from the registries, or { git = … } or { path = … }; editing it installs and uninstalls"}))
+	for _, o := range []registry.OptionSpec{
+		{Name: "registry.sources", Type: registry.List, Default: []string{catalog.DefaultRepo}, Section: "plugins", Scopes: registry.ScopeUser,
+			Help: "The plugin registries, as GitHub repos (owner/name), in order: an id in more than one comes from the first"},
+		{Name: "registry.keys", Type: registry.Map, Default: map[string]string{}, Section: "plugins", Scopes: registry.ScopeUser,
+			KeyLabel: "registry", ValueLabel: "key", Validate: registry.MapOf(func(_, v string) error { _, err := catalog.ParseKey(v); return err }),
+			Help: "Each registry's public key, ed25519:<hex>, which its index must be signed with; the default registry's is built in"},
+		{Name: "registry.updates", Type: registry.Enum, Values: []string{"auto", "ask", "manual"}, Default: "ask", Section: "plugins",
+			Scopes: registry.ScopeUser, Help: "Plugin updates that ask for no more: auto takes them, ask offers them in the inbox, manual on the Plugins page only"},
+		{Name: "registry.trusted_hold", Type: registry.Duration, Default: 24 * time.Hour, Section: "plugins", Scopes: registry.ScopeUser,
+			Help: "How long a trusted plugin's new tag waits before it's offered"},
+	} {
+		x.add(h.Option(o))
+	}
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return v }
 	for _, c := range []registry.Command{
 		{ID: "plugins.sync", Title: "Install and load what [plugins] lists now", Run: func(registry.Ctx, registry.Args) error {
@@ -89,12 +195,49 @@ func (x *catalogPlugin) Activate(_ context.Context, h plugin.Host) error {
 		{ID: "plugins.accept", Title: "Record consent to the plugin waiting in {dir}, and load it", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.accept(str(a, "dir"))
 		}},
+		{ID: "plugins.update", Title: "Update {id} to the newest version its range allows", Run: func(_ registry.Ctx, a registry.Args) error {
+			x.mu.Lock()
+			x.updates[str(a, "id")] = true
+			x.mu.Unlock()
+			x.kick()
+			return nil
+		}},
+		{ID: "plugins.refresh", Title: "Fetch the plugin registries' indexes now", Run: func(registry.Ctx, registry.Args) error {
+			go x.refresh()
+			return nil
+		}},
 	} {
 		x.add(h.Command(c))
 	}
 	x.add(h.Contribute(registry.InboxSource{Name: "plugins", Cards: x.cards, Source: "builtin:catalog"}))
+	x.pageCommands(h)
 	cancel := h.Options().Watch(PluginsOption, x.kick)
 	x.add(disposeFn(cancel))
+	for _, o := range []string{"registry.sources", "registry.keys"} {
+		x.add(disposeFn(h.Options().Watch(o, func() { go x.refresh() })))
+	}
+	for _, o := range []string{"registry.updates", "registry.trusted_hold"} {
+		x.add(disposeFn(h.Options().Watch(o, x.kick)))
+	}
+	stop := make(chan struct{})
+	go func() {
+		t := time.NewTicker(registryEvery)
+		defer t.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-t.C:
+				x.mu.Lock()
+				used := x.client != nil
+				x.mu.Unlock()
+				if used {
+					x.refresh()
+				}
+			}
+		}
+	}()
+	x.add(disposeFn(func() { close(stop) }))
 	x.add(disposeFn(func() {
 		x.mu.Lock()
 		loaded := x.loaded
@@ -106,14 +249,6 @@ func (x *catalogPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}))
 	x.kick()
 	return nil
-}
-
-// SetResolver is how the registry client resolves registry entries (PL-21).
-func (x *catalogPlugin) setResolver(r catalog.Resolver) {
-	x.mu.Lock()
-	x.resolver = r
-	x.mu.Unlock()
-	x.kick()
 }
 
 // kick syncs off the loop, once at a time: a change while it runs syncs again after.
@@ -129,6 +264,15 @@ func (x *catalogPlugin) kick() {
 	go func() {
 		for {
 			files := x.files()
+			if needsRegistry(files) {
+				x.mu.Lock()
+				fetched := x.client != nil
+				x.mu.Unlock()
+				if !fetched {
+					x.fetchIndexes()
+					files = x.files()
+				}
+			}
 			var sts []catalog.Status
 			var removed []string
 			for i, f := range files {
@@ -173,14 +317,21 @@ func (x *catalogPlugin) kick() {
 	}()
 }
 
+func needsRegistry(fs []pluginFile) bool {
+	for _, f := range fs {
+		if slices.ContainsFunc(f.entries, func(e catalog.Entry) bool { return e.Registry() }) {
+			return true
+		}
+	}
+	return false
+}
+
 // files are your settings.toml's [plugins] and the window's project's, which applies only once it's trusted (the
 // settings layer has no value until then). An id in both is yours.
 func (x *catalogPlugin) files() []pluginFile {
 	cfg := x.sh.cfg
 	store := catalog.Store{Dir: filepath.Join(cmpOr(cfg.DataDir, DefaultDataDir()), "plugins")}
-	x.mu.Lock()
-	res := x.resolver
-	x.mu.Unlock()
+	res := x.newResolver()
 	o := x.h.Options()
 	read := func(l registry.Layer, at registry.At, file string) []catalog.Entry {
 		v, _ := o.Lookup(PluginsOption, l, at)
@@ -225,6 +376,12 @@ func (x *catalogPlugin) apply(sts []catalog.Status) {
 	x.mu.Unlock()
 	listed := map[string]bool{}
 	waiting := map[string]catalog.Status{}
+	revoked := map[string]catalog.Status{}
+	offers := map[string]catalog.Status{}
+	ask := false
+	if v, _, _ := x.h.Options().Get("registry.updates", registry.At{}); v == "ask" {
+		ask = true
+	}
 	for _, st := range sts {
 		id := st.Entry.ID
 		listed[id] = true
@@ -233,6 +390,12 @@ func (x *catalogPlugin) apply(sts []catalog.Status) {
 			delete(x.failed, id)
 			x.h.Dismiss("plugins.failed." + id)
 			x.load(st)
+			if st.Update != "" && ask {
+				offers[id] = st
+			}
+		case catalog.Revoked:
+			x.stop(id)
+			revoked[id] = st
 		case catalog.Disabled:
 			x.stop(id)
 		case catalog.Consent:
@@ -250,7 +413,7 @@ func (x *catalogPlugin) apply(sts []catalog.Status) {
 		}
 	}
 	x.mu.Lock()
-	x.waiting = waiting
+	x.waiting, x.revoked, x.offers = waiting, revoked, offers
 	x.busy = len(sts) > 0 || len(x.loaded) > 0 || len(waiting) > 0
 	x.mu.Unlock()
 	x.h.Redraw()
@@ -302,6 +465,23 @@ func (x *catalogPlugin) cards() []registry.InboxCard {
 				{Label: "Review", Key: "r", Primary: true, Command: "plugins.review", Args: registry.Args{"id": id}},
 				{Label: "Uninstall", Key: "u", Command: "plugins.uninstall", Args: registry.Args{"id": id, "scope": scopeOf(st.Entry)}},
 			}})
+	}
+	for _, id := range sortedKeys(x.revoked) {
+		st := x.revoked[id]
+		out = append(out, registry.InboxCard{ID: "revoked:" + id, Type: "plugin-revoked", Icon: "✕", Tone: "error", Interrupt: true,
+			Kicker: "PLUGIN · REVOKED", Title: id + " " + st.Locked.Version + " is disabled", Sub: "plugins · " + strings.TrimPrefix(st.Locked.Source, "registry:"),
+			Detail: st.Err.Error(), Note: "Its registry revoked this version, so it no longer runs.",
+			Actions: []registry.InboxAction{
+				{Label: "Update", Key: "u", Primary: true, Command: "plugins.update", Args: registry.Args{"id": id}},
+				{Label: "Uninstall", Key: "x", Command: "plugins.uninstall", Args: registry.Args{"id": id, "scope": scopeOf(st.Entry)}},
+			}})
+	}
+	for _, id := range sortedKeys(x.offers) {
+		st := x.offers[id]
+		out = append(out, registry.InboxCard{ID: "update:" + id, Type: "plugin-update", Icon: "↑", Tone: "accent",
+			Kicker: "PLUGIN · UPDATE", Title: id + " " + st.Update, Sub: "plugins · " + st.Locked.Version + " → " + st.Update,
+			Detail:  "A newer version is in the registry. One that asks for more shows the consent screen first.",
+			Actions: []registry.InboxAction{{Label: "Update", Key: "u", Primary: true, Command: "plugins.update", Args: registry.Args{"id": id}}}})
 	}
 	return out
 }

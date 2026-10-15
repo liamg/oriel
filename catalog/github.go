@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // GitHub is the little of GitHub's REST API the registry needs: org membership, release assets, a repo's tags.
@@ -14,6 +15,7 @@ import (
 type GitHub struct {
 	Base   string // https://api.github.com if ""
 	Token  string
+	Auth   func(ctx context.Context) string // the token, asked for each request, when Token is ""
 	Client *http.Client
 }
 
@@ -27,8 +29,12 @@ func (g GitHub) get(ctx context.Context, url, accept string) (*http.Response, er
 	}
 	req.Header.Set("Accept", accept)
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	if g.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+g.Token)
+	tok := g.Token
+	if tok == "" && g.Auth != nil {
+		tok = g.Auth(ctx)
+	}
+	if tok != "" {
+		req.Header.Set("Authorization", "Bearer "+tok)
 	}
 	c := g.Client
 	if c == nil {
@@ -132,7 +138,7 @@ func (g GitHub) Tags(ctx context.Context, repo string) (map[string]string, error
 }
 
 // CommitTime is when commit was made: the start of a trusted tag's hold.
-func (g GitHub) CommitTime(ctx context.Context, repo, commit string) (string, error) {
+func (g GitHub) CommitTime(ctx context.Context, repo, commit string) (time.Time, error) {
 	var c struct {
 		Commit struct {
 			Committer struct {
@@ -141,9 +147,9 @@ func (g GitHub) CommitTime(ctx context.Context, repo, commit string) (string, er
 		} `json:"commit"`
 	}
 	if err := g.json(ctx, "/repos/"+repo+"/commits/"+commit, &c); err != nil {
-		return "", err
+		return time.Time{}, err
 	}
-	return c.Commit.Committer.Date, nil
+	return time.Parse(time.RFC3339, c.Commit.Committer.Date)
 }
 
 func (g GitHub) json(ctx context.Context, url string, v any) error {

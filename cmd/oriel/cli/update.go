@@ -16,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/update"
 )
@@ -54,13 +55,7 @@ func appBundle(exe string) (bundle, inner string, ok bool) {
 }
 
 // ghToken is the user's GitHub token, from their gh login, for a private repo's releases; "" without one.
-func ghToken(ctx context.Context) (string, error) {
-	out, err := exec.CommandContext(ctx, "gh", "auth", "token").Output()
-	if err != nil {
-		return "", nil
-	}
-	return strings.TrimSpace(string(out)), nil
-}
+func ghToken(ctx context.Context) (string, error) { return gh.Token(ctx), nil }
 
 // newUpdater is the updater for this copy, reading releases from src (GitHub's if nil); nil when this build trusts
 // no release key, as a build CI didn't make doesn't.

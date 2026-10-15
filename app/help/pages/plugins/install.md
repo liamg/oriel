@@ -1,6 +1,6 @@
 ---
 id: plugins/install
-covers: [app.overlay.plugins.consent]
+covers: [app.overlay.plugins.consent, app.overlay.plugins]
 related: [plugins/lua, plugins/api]
 ---
 
@@ -31,6 +31,25 @@ uninstalls it: its files go, and its line leaves `oriel-lock.toml`.
 capabilities. A plugin the lockfile covers loads without asking, which is how your dotfiles work on a new machine.
 One that asks for more stays off, with a card in the inbox that opens this screen. A project's
 `.oriel/settings.toml` can list plugins too, once you trust the project.
+
+## The Plugins page {#page}
+
+`:Plugins` lists what's installed: the built-ins and everything in `[plugins]`, with what each contributes, the
+capabilities it holds and how it runs. **Updates** lists what has a newer version or waits for your consent.
+**Registry** browses the plugin registries; Install adds the plugin's line to `[plugins]`.
+
+## Registries {#registries}
+
+```toml
+[registry]
+sources      = ["liamg/oriel-plugins", "acme/oriel-plugins"]
+keys         = { "acme/oriel-plugins" = "ed25519:…" }
+updates      = "ask"     # auto | ask | manual
+trusted_hold = "24h"
+```
+
+Each registry's index is signed, and Oriel refuses one that doesn't verify with its key. An id in more than one
+registry comes from the first. A version a registry revokes is disabled, with a card saying why.
 
 ## Badges {#badges}
 

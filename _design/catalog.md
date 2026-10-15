@@ -405,6 +405,37 @@ sequenceDiagram
   and check its exact bytes with ed25519, and nothing in an unverified index is read. Keys are written
   `ed25519:<hex>` (`ParseKey`, `FormatKey`).
 
+## As built (PL-21)
+
+- **`catalog.Client`** fetches each `[registry] sources` repo's newest release with `index.json`
+  (`GitHub.LatestAsset`). It verifies the index with that registry's key and caches it under
+  `<cache>/registry/<owner>/<name>/`.
+  - A failed fetch, or a bad signature, keeps the last verified index (verified again from the cache) and reports
+    the error. An index that never verified offers nothing.
+  - Keys come from `[registry] keys`. The default registry's is `catalog.DefaultKey()`, embedded as
+    `catalog.defaultKey`, or set with `-X github.com/liamg/oriel/catalog.defaultKey=ed25519:…`. Without one, the
+    default registry is refused.
+  - `Find` gives an id from the first source that lists it, and `Also` names the rest. `All` is everything listed.
+- **`catalog.RegistryResolver`** is the manager's `Resolver` for registry entries:
+  - It offers reviewed versions that aren't yanked or revoked. For a trusted plugin it also offers semver tags
+    (`GitHub.Tags`) whose commit is older than `trusted_hold` (`GitHub.CommitTime`).
+  - A locked version stays while it's in range, unless `[registry] updates = "auto"` or `plugins.update {id}` asked
+    for the newest. A newer version is then `Status.Update`.
+  - A locked version that's revoked comes back as `Revoked`. The plugin is stopped and an interrupting card says
+    why, with Update and Uninstall.
+  - With `updates = "ask"`, an update is a card.
+  - The archive `<name>-<version>-<os>-<arch>.tar.gz` is fetched from the tag's release only if that commit isn't
+    installed, and checked against the index's sha256. Without an archive, the repo is cloned at the commit. A
+    registry plugin with binaries but no archive, and none in its source, fails.
+  - Facts for the install screen: pinned commit, badge, sha256, the review PR or "trusted since", registry.
+- **`[registry]`** is four options, on the settings page's plugins section: `registry.sources`, `registry.keys`
+  (each checked as a key), `registry.updates` (`auto`, `ask`, `manual`) and `registry.trusted_hold`.
+- **Indexes are fetched only once something needs them**: a registry entry in `[plugins]`, the Registry tab, or
+  `plugins.refresh`. They're then fetched hourly while in use. GitHub is `app.Config.GitHub`, or the public API with
+  your gh login's token (`gh.Token`).
+- **The Plugins page**: ui.md 16, "Built in PL-21". Mockups 16 and 29 now say Plugins, `settings.toml` and
+  reviewed.
+
 ## Tickets
 
 - PL-19 package format, `oriel.process` / `oriel.wasm` / `oriel.asset`, `oriel plugin pack`

@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
@@ -72,6 +73,8 @@ type Config struct {
 	Voice   VoiceConfig // dictation's microphone, transcriber and speaker; the real ones, from the voice.* options, if nil
 	// Net is what plugins' HTTP goes through (http.request); a client of its own if nil.
 	Net *http.Client
+	// GitHub is how plugins and the plugin registries are read; GitHub's API with your gh login's token if nil.
+	GitHub *catalog.GitHub
 	// Secrets are the named secrets plugins' requests carry (security.md); secrets.json in StateDir if nil.
 	Secrets plugin.Secrets
 }
@@ -290,6 +293,7 @@ func newShell(cfg Config, poke func()) (*shell, func()) {
 // activate starts the built-ins, then cfg.Plugins, each on a host of its own, adding each to active as it starts.
 // It answers the last built-in's host.
 func (sh *shell) activate(ctx context.Context, active *[]plugin.Plugin) (*host, error) {
+	sh.active = active
 	var last *host
 	for _, e := range builtins(sh) {
 		last = sh.host("builtin:" + e.Manifest().ID)

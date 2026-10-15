@@ -47,8 +47,9 @@ type shell struct {
 	reopen      chan reopenTo // the directory for the loop to start again on: Open Directory's, or a session's
 	recents     *recents
 	secretsOnce sync.Once
-	secrets     plugin.Secrets // the store plugins' requests take secrets from, each one handed out redacted from the logs
-	git         *gitPlugin     // the work tree's git status
+	secrets     plugin.Secrets   // the store plugins' requests take secrets from, each one handed out redacted from the logs
+	git         *gitPlugin       // the work tree's git status
+	active      *[]plugin.Plugin // the built-ins and the config's plugins, as they started
 	editor      *editorPlugin
 	search      *projectSearch
 	tests       *testsPlugin

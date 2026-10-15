@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/liamg/oriel/gitx"
@@ -29,9 +30,12 @@ const (
 	Consent               // installed, but asking for more than the lockfile covers: inactive until you accept
 	Disabled              // enabled = false
 	Failed                // couldn't be resolved, fetched or read
+	Revoked               // the version installed was revoked by its registry: disabled
 )
 
-func (s State) String() string { return [...]string{"ready", "consent", "disabled", "failed"}[s] }
+func (s State) String() string {
+	return [...]string{"ready", "consent", "disabled", "failed", "revoked"}[s]
+}
 
 // Status is one [plugins] entry, resolved.
 type Status struct {
@@ -45,6 +49,7 @@ type Status struct {
 	Locked   Locked           // what the lockfile will say once it's consented to
 	Facts    []plugin.Fact    // its provenance, for the install screen
 	Warning  string
+	Update   string // a newer version the registry offers, not taken yet
 }
 
 // Grants are what it's granted once loaded: what its manifest declares, all of which you accepted.
@@ -64,11 +69,14 @@ type Resolver interface {
 
 // Resolution is a registry plugin's version to install.
 type Resolution struct {
-	Locked          // source, version, commit, badge and archives; Capabilities empty
-	Repo     string // the git repository, cloned when there's no archive for this platform
-	Archive  string // a downloaded archive for this platform, checked against Locked.Archives
+	Locked        // source, version, commit, badge and archives; Capabilities empty
+	Repo   string // the git repository, cloned when there's no archive for this platform
+	// Fetch downloads this platform's archive, checked against Locked.Archives, and says its file and sha256; ""
+	// when there's none, and the repo is cloned at the commit instead. Nil for no archive.
+	Fetch    func(ctx context.Context) (file, sha256 string, err error)
 	Facts    []plugin.Fact
 	Revoked  string // why the locked version was revoked: it isn't loaded
+	Update   string // a newer version in the range, not taken: [registry] updates isn't auto
 	Platform string
 }
 
@@ -160,19 +168,31 @@ func (m *Manager) resolve(ctx context.Context, lock *Lock, e Entry) Status {
 		if err != nil {
 			return fail(err)
 		}
+		if r.Revoked != "" {
+			st.Locked, st.State, st.Err = r.Locked, Revoked, fmt.Errorf("%s %s was revoked: %s", e.ID, r.Version, r.Revoked)
+			return st
+		}
 		var dir string
-		if r.Archive != "" {
-			dir, err = m.Store.FetchArchive(e.ID, r.Commit, r.Archive)
+		file := ""
+		if !m.Store.Has(e.ID, r.Commit) && r.Fetch != nil {
+			var sum string
+			if file, sum, err = r.Fetch(ctx); err != nil {
+				return fail(err)
+			}
+			if file != "" {
+				defer os.Remove(file)
+				r.Archives = map[string]string{r.Platform: sum}
+			}
+		}
+		if file != "" {
+			dir, err = m.Store.FetchArchive(e.ID, r.Commit, file)
 		} else {
 			dir, _, err = m.Store.FetchGit(ctx, e.ID, r.Repo, r.Commit)
 		}
 		if err != nil {
 			return fail(err)
 		}
-		st.Dir, st.Locked, st.Facts = dir, r.Locked, r.Facts
-		if r.Revoked != "" {
-			return fail(fmt.Errorf("%s %s was revoked: %s", e.ID, r.Version, r.Revoked))
-		}
+		st.Dir, st.Locked, st.Facts, st.Update = dir, r.Locked, r.Facts, r.Update
 	}
 	man, err := plugin.LoadManifest(st.Dir)
 	if err != nil {
@@ -180,6 +200,11 @@ func (m *Manager) resolve(ctx context.Context, lock *Lock, e Entry) Status {
 	}
 	if man.ID != e.ID {
 		return fail(fmt.Errorf("%s is %s, not %s", st.Dir, man.ID, e.ID))
+	}
+	if e.Registry() && len(man.Binaries) > 0 {
+		if _, err := os.Stat(filepath.Join(st.Dir, "bin")); err != nil {
+			return fail(fmt.Errorf("%s %s has no archive for this platform, and its binaries aren't in its source", e.ID, man.Version))
+		}
 	}
 	if e.Git != "" && len(man.Binaries) > 0 {
 		return fail(fmt.Errorf("%s ships process binaries, which come from a registry's release archives: install it from a registry, or from a path where you've built it", e.ID))

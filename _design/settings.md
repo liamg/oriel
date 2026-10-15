@@ -136,6 +136,10 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | | RV-4 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |
 | `plugins` | `{}`: the installed plugins by id, a table (catalog.md, `[plugins]`); user and project | app | | PL-20 |
+| `registry.sources` | `["liamg/oriel-plugins"]`: the plugin registries in order; an id in more than one comes from the first | app | | PL-21 |
+| `registry.keys` | `{}`: each registry's `ed25519:<hex>` key; the default registry's is built in | app | | PL-21 |
+| `registry.updates` | `ask`: plugin updates that ask for no more; `auto` takes them, `manual` leaves them on the Plugins page | app | | PL-21 |
+| `registry.trusted_hold` | 24h: how long a trusted plugin's new tag waits before it's offered | app | | PL-21 |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
 | `lsp.start` | `project`: a project's servers start when it opens; `file`: when one of their files does | app | | – |
 | `keymap.leader` | Space | app | | FW-3 |

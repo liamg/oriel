@@ -850,10 +850,21 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 ![16-plugins](mockups/16-plugins.png)
 
-- The mockup still says "Extensions", `extensions.toml` and COMMUNITY. The page is **Plugins**, the file is
-  `settings.toml`, and badges are reviewed, trusted or unverified (`catalog.md`, PL-21).
+- The page is **Plugins**, the file is `settings.toml`, and badges are reviewed, trusted or unverified (`catalog.md`).
 - The REGISTRY tab browses the plugin registries. Installing writes a line to `[plugins]`.
 - Every plugin shows what it contributes, the permissions it holds, how it runs (in-process, process or wasm) and live resource use.
+- Built in PL-21 (`app/pluginspage.go`): `:Plugins {tab}` or `plugins.open {tab}`, and a Start entry. It's a page with
+  INSTALLED, UPDATES and REGISTRY tabs and a filter over name, badge, kind and permissions.
+  - **Installed** lists the built-ins, then every `[plugins]` entry. Each row has its badge, its state (loaded,
+    waiting for consent, disabled, failed, revoked), what it contributes (counted from the registry by source, plus
+    its `[contributes]`), its locked capabilities, and how it runs (BUILT-IN, NATIVE, LUA, PROCESS, WASM, DATA).
+  - The side panel shows the manifest, what's granted, the provenance and warning, and Review, Update and
+    Uninstall.
+  - **Updates** is what has an update or waits for consent.
+  - **Registry** fetches the indexes when it's first opened. It lists every plugin, each from the first registry
+    that has it ("also in" the others), with its badge, newest version and Install, which runs `plugins.install`:
+    one line in `[plugins]`. A registry whose index failed says why.
+  - Not yet: live CPU and memory, the activity log, and Reload.
 
 ## 17 · Light theme
 

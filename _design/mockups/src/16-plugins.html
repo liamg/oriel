@@ -57,16 +57,16 @@
     <div class="grp">AI</div>
     <div>Agents<span class="n">2</span></div><div>Prompts<span class="n">28</span></div><div>Review gates</div><div>Assistant</div>
     <div class="grp">Platform</div>
-    <div class="on">Extensions<span class="n">14</span></div><div>Integrations</div><div>Workers<span class="n">3</span></div><div>Sandbox &amp; network</div><div>Trusted orgs</div><div>Voice</div>
+    <div class="on">Plugins<span class="n">14</span></div><div>Integrations</div><div>Workers<span class="n">3</span></div><div>Sandbox &amp; network</div><div>Trusted orgs</div><div>Voice</div>
   </div>
   <div class="list">
     <div class="lhead">
-      <div><div class="cap" style="color:var(--cyan)">Settings</div><h2>Extensions</h2></div>
+      <div><div class="cap" style="color:var(--cyan)">Settings</div><h2>Plugins</h2></div>
       <div class="row gap6" style="margin-left:18px;margin-bottom:3px"><span class="chip c">installed 14</span><span class="chip">updates 2</span><span class="chip">registry</span></div>
       <div class="input" style="margin-left:auto;width:280px">⌕ filter by name, kind, permission…</div>
     </div>
     <div class="tbl">
-      <div class="tr h"><span></span><span>Extension</span><span>Contributes</span><span>Permissions</span><span>Runs</span><span style="text-align:right">CPU · MEM</span></div>
+      <div class="tr h"><span></span><span>Plugin</span><span>Contributes</span><span>Permissions</span><span>Runs</span><span style="text-align:right">CPU · MEM</span></div>
 
       <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#ff9b6b,#d9774a)">C</div><div><div><span class="nm">Claude Code</span><span class="ver">1.4.0</span></div><div class="by">builtin · provider</div></div><div class="chips"><span class="chip o">provider</span><span class="chip">tools</span><span class="chip">usage</span></div><div class="perm"><b>exec</b> claude · <b>fs</b> ~/.claude<br><b>net</b> via sandbox proxy</div><div class="iso" style="color:var(--fg2)">out-of-proc</div><div class="res">0.4% · 38M</div></div>
 
@@ -90,7 +90,7 @@
 
       <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#1d2531,#424d5b);color:var(--cyan)">◆</div><div><div><span class="nm">Theme: Oriel Night</span><span class="ver">1.0</span></div><div class="by">builtin · theme</div></div><div class="chips"><span class="chip g">theme</span><span class="chip">fonts</span></div><div class="perm"><b>none</b></div><div class="iso" style="color:var(--cyan)">data</div><div class="res">—</div></div>
 
-      <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#5c8dff,#2a4fb0)">J</div><div><div><span class="nm">jira</span><span class="ver">0.2.0</span><span class="chip y" style="margin-left:6px;font-size:8.5px;padding:0 5px">community</span></div><div class="by">@kestrel-dev · integration</div></div><div class="chips"><span class="chip v">integration</span><span class="chip">launcher</span><span class="chip">panel</span></div><div class="perm"><b>net</b> *.atlassian.net <span style="color:var(--yellow)">⚠ wildcard</span><br><b>secrets</b> JIRA_TOKEN</div><div class="iso" style="color:var(--violet)">wasm</div><div class="res">— · 6M</div></div>
+      <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#5c8dff,#2a4fb0)">J</div><div><div><span class="nm">jira</span><span class="ver">0.2.0</span><span class="chip g" style="margin-left:6px;font-size:8.5px;padding:0 5px">reviewed</span></div><div class="by">@kestrel-dev · integration</div></div><div class="chips"><span class="chip v">integration</span><span class="chip">launcher</span><span class="chip">panel</span></div><div class="perm"><b>net</b> *.atlassian.net <span style="color:var(--yellow)">⚠ wildcard</span><br><b>secrets</b> JIRA_TOKEN</div><div class="iso" style="color:var(--violet)">wasm</div><div class="res">— · 6M</div></div>
     </div>
   </div>
   <div class="detail">
@@ -137,6 +137,6 @@
 </div>
 <div class="status">
   <span class="mode" style="background:var(--fg3)">SETTINGS</span>
-  <span>extensions</span><span class="dim">14 installed · 9 running · 2 updates</span>
-  <span style="margin-left:auto;padding-right:12px" class="dim">~/.config/oriel/extensions.toml</span>
+  <span>plugins</span><span class="dim">14 installed · 9 running · 2 updates</span>
+  <span style="margin-left:auto;padding-right:12px" class="dim">~/.config/oriel/settings.toml</span>
 </div>
