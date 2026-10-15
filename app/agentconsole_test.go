@@ -326,10 +326,13 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 		return containsAll(s, "Fake on devbox needs you to log in", "OAuth token revoked · Please run /login", "Log in", "Check again",
 			"signed out", "needs you")
 	})
-	st := r.store.State()
-	if n := st.Notifications; len(n) == 0 || n[len(n)-1].ID != "agent.login" || n[len(n)-1].Session != "" ||
-		!strings.Contains(n[len(n)-1].Text, "devbox") || !strings.Contains(n[len(n)-1].Text, "/login") {
-		t.Errorf("notices = %+v", n)
+	// The notice comes through Notify, not with the frame that shows the card.
+	st := waitState(t, r.store, "the login notice", func(st core.State) bool {
+		n := st.Notifications
+		return len(n) > 0 && n[len(n)-1].ID == "agent.login"
+	})
+	if n := st.Notifications[len(st.Notifications)-1]; n.Session != "" || !strings.Contains(n.Text, "devbox") || !strings.Contains(n.Text, "/login") {
+		t.Errorf("notice = %+v", n)
 	}
 	r.do(func() error { return r.host.Run(context.Background(), "session.new", nil) })
 	r.waitText("Signed out: OAuth token revoked · Please run /login")
