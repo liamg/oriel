@@ -35,13 +35,14 @@ type Server struct {
 	issue    map[string][]*gh.IssueComment
 	resolved map[int64]bool      // review threads resolved, by their first comment
 	members  map[string][]string // org → logins
+	sizes    map[string]PRSize   // by owner/name#number
 }
 
 // New starts a fake GitHub that closes with the test.
 func New(t testing.TB) *Server {
 	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{},
 		logs: map[int64]string{}, fail: map[string]*gh.Error{}, login: "you", review: map[string][]*gh.ReviewComment{}, reviews: map[string][]gh.Review{},
-		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}}
+		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls", s.listPRs)
 	mux.HandleFunc("POST /repos/{owner}/{name}/pulls", s.createPR)
@@ -58,6 +59,10 @@ func New(t testing.TB) *Server {
 	mux.HandleFunc("POST /repos/{owner}/{name}/issues/{num}/comments", s.addIssueComment)
 	mux.HandleFunc("GET /orgs/{org}/members/{user}", s.member)
 	mux.HandleFunc("GET /search/issues", s.search)
+	mux.HandleFunc("GET /user", s.user)
+	mux.HandleFunc("GET /repos/{owner}/{name}/pulls/{num}", s.prDetails)
+	mux.HandleFunc("GET /repos/{owner}/{name}/pulls/{num}/files", s.prFiles)
+	mux.HandleFunc("POST /repos/{owner}/{name}/pulls/{num}/reviews", s.submitReview)
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		s.calls = append(s.calls, r.Method+" "+r.URL.Path)

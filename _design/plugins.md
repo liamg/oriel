@@ -886,6 +886,53 @@ type Host interface {
   directory for a process binary). Not carried over from crit (crit-reference.md): the company feed, "Continue" for a
   ticket with a workspace, and the ticket's done move on merge.
 
+## As built (PL-5)
+
+- **agentbus** (`integ/agentbus`, crit-reference.md → agentbus): a plugin built on the APIs below, as a third party's
+  would be. `plugin/oriel.toml` (net `*:80`, `*:443` and `api.github.com`; `secrets = { GITHUB_TOKEN = "api.github.com" }`;
+  exec `tailscale`; `agent.tools` for its two tools; `agent.prompt` for the auto-answer) and `plugin/init.lua`, which
+  spawns `bin/oriel-agentbus` (`integ/agentbus/cmd/oriel-agentbus`): crit's `internal/agentbus` ported (`agentbus.Bus`:
+  the items, the auto-answer deadline (30 s before `answer_by`, else before the TTL's end, given a minute's window),
+  Later/Ignore/Show, Claim, Result, the requests you sent followed until reviewed, the log as JSON lines in the
+  plugin's data directory, the last 2000), `internal/autoapprove` (`agentbus/autoapprove`: rules as crit's JSON,
+  validated: every way one passes needs a paths or maxLines check) and `worker/ghreviewed.go` with
+  `worker/autoapprove.go` (`agentbus.Reviewer`: the PR's details for its card; a request a rule passes is claimed,
+  approved on GitHub at the head that was read, its result sent, and logged, never shown; a review you submit on
+  GitHub after the request goes back as its result, claimed first, every 2 minutes). Its client speaks agentbus's
+  wire format (`agentbus.Frame` …, written here, not imported) over `golang.org/x/net/websocket`;
+  `agentbus/bustest` is a fake agentbusd (its routing, dev identity from `X-Agentbus-User`, `DefaultUser`).
+  GitHub goes through the host's `http.request` with `auth = "GITHUB_TOKEN"` (`agentbus.HostTransport`, a
+  `gh.Transport`), so neither the process nor the Lua sees the token.
+- The process's methods (`agentbus.Server.Handle`): `configure {url, instance, label, version, asks, reviews, repos,
+  presence, rules}` (again on every option change; a new URL or instance reconnects), `snapshot`, `answer {id, text |
+  option}`, `later`, `ignore`, `show`, `claim`, `result {id, state, summary, link}`, `due {now}` (the asks past their
+  deadline on the window's clock, each handed out once, with crit's prompt; not your own), `auto_answer {id, text}`
+  (sent as the agent's, after "My human was unavailable, but my answer follows:"), `request_review {pr, note, to}`,
+  `request_state`, `ask {to, text}`, `ask_state`, `who`, `log {limit}`, `check_github`; it notifies `changed` with
+  an `agentbus.Snapshot` (status, items with their times in seconds, auto-approvals, the log's tail, a rules error).
+- The Lua: a card per question (`group = "bus"`, the countdown to the deadline, the options as numbered actions,
+  Later, a field to type an answer in its `body`, "else your agent answers, read-only") and review request (Ignore,
+  Claim, Claim + Open, which claims and runs `session.start {kind = "review", pr}`; "AI review auto-starts"); a
+  done card and a notice for each auto-approval; every 5 s on the window's clock (the title bar's **BUS** indicator,
+  its dot the presence and its count who's online) the due asks go to `oriel.agent.fork` and back as
+  `auto_answer`; presence chips in `inbox.foot`, the `mission` strip and the HUD's `agentbus` panel (span 2: the
+  connection, the counts, the log's tail); the PR action **Ask agentbus**; the assistant's `request_review` (an act)
+  and `review_requests.agentbus`, which adds agentbus's half to `review_requests`. Options `plugin.agentbus.url`,
+  `instance`, `asks`, `reviews`, `repos`, `presence`, `auto_approve`.
+- General pieces it needed: `ext.Plugin.Data`, a plugin's own data directory, which its processes may write and find
+  in `$ORIEL_PLUGIN_DATA` (`app.ScriptPlugin`'s is `plugins/<id>` in the state directory); the indicator slot
+  `registry.SlotInboxFoot` (`inbox.foot`, under the Inbox panel's list); `registry.AgentTool.Adds`, a part of another
+  tool's answer, not offered on its own: `registry.CallAgentTool` answers with each one's result under its `Reads`
+  (or name), a part's error beside the rest (`registry.AgentToolParts`), and the assistant lists the parts' sources;
+  `gh.API` `Me`, `PRDetails`, `PRFiles`, `ApproveAt` and `gh.Green`, with the fake's `GET /user`, `pulls/{n}`,
+  `pulls/{n}/files` and `POST pulls/{n}/reviews` (`ghtest.SetPRSize`, `SetNow`, `Reviews`); and the Lua below.
+- Not yet: installing it (PL-19/20, as Linear: it isn't bundled, since `app.ScriptPlugin` has no directory for a
+  process binary); an auto-answer with no session to fork waits for the utility session (agents.md), and the fork has
+  no tools rather than crit's read-only ones; review routing takes `plugin.agentbus.repos` rather than every local
+  clone (the Lua can't list a worker's repos); crit's search of GitHub's own review requests for the rules, the
+  result of a review a session submits (Oriel's agents never post one: the GitHub poll covers it), and who was seen
+  before (`people`).
+
 ## Performance and native plugins
 
 **How fast each tier is** (rough figures on a 2024 laptop):

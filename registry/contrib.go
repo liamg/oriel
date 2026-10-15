@@ -68,7 +68,10 @@ type AgentTool struct {
 	// Confirm makes it an act that waits for the user's yes: what it will do, shown by the agent's owner before Run.
 	Confirm func(ctx Ctx, params map[string]any) (Confirmation, error)
 	Run     func(ctx Ctx, params map[string]any) (any, error)
-	Source  string
+	// Adds makes it a part of another tool's answer rather than a tool of its own: when the tool named Adds is
+	// called, the answer is each one's result under its Reads (or Name): agentbus's review requests beside GitHub's.
+	Adds   string
+	Source string
 }
 
 // PromptPack is a named prompt and the tools that go with it (AI-4).
@@ -91,7 +94,7 @@ type SessionKind struct {
 // reads state as it's drawn (a ui.Func) is live without any of them.
 type Indicator struct {
 	Name  string // unique among indicators: "deploys"
-	Slot  string // SlotTitleBar, SlotStatusLeft, SlotStatusRight, SlotHUD, SlotMission, or a slot a panel draws: SlotHUDToday
+	Slot  string // SlotTitleBar, SlotStatusLeft, SlotStatusRight, SlotHUD, SlotMission, or a slot a panel draws: SlotHUDToday, SlotInboxFoot
 	Order int    // in its slot, among the slot's views: titlebar.right.40-usage is 40
 	// Title is a HUD panel's heading, Note what it says at the heading's right ("3 online"), and Span how many of the
 	// HUD's four columns it takes (1 if 0). Help is its help page and anchor.
@@ -109,9 +112,10 @@ const (
 	SlotTitleBar    = "titlebar.right"
 	SlotStatusLeft  = "statusline.left"
 	SlotStatusRight = "statusline.right"
-	SlotHUD         = "hud"       // the HUD's panels
-	SlotHUDToday    = "hud.today" // under the HUD's Today panel: the next meeting
-	SlotMission     = "mission"   // mission control's strip along its foot: usage, workers' load
+	SlotHUD         = "hud"        // the HUD's panels
+	SlotHUDToday    = "hud.today"  // under the HUD's Today panel: the next meeting
+	SlotMission     = "mission"    // mission control's strip along its foot: usage, workers' load
+	SlotInboxFoot   = "inbox.foot" // the Inbox panel's foot: agentbus's presence
 )
 
 // Indicators are the indicators in slot, by Order then name.

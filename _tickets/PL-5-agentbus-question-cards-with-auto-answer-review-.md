@@ -2,7 +2,7 @@
 id: PL-5
 title: "agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process)"
 phase: P7
-status: todo
+status: review
 area: Platform
 module: integ/agentbus
 depends_on: [AI-1]

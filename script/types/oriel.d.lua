@@ -30,7 +30,7 @@
 ---@field ui oriel.ui
 ---@field view oriel.view
 ---@field wasm oriel.wasm
----@field option table<string, any>|fun(spec: table) Your settings, by name or vim alias, as init.lua sets them; called with { name, type, default, help, values, min, max, section }, it declares one (a plugin's are named plugin.<name>.…)
+---@field option table<string, any>|fun(spec: table) Your settings, by name or vim alias, as init.lua sets them; called with { name, type, default, help, values, min, max, section, on_change = fn(value) }, it declares one (a plugin's are named plugin.<name>.…)
 ---@field buffer_option table<string, any> The current buffer's settings
 ---@field session_option table<string, any> The current session's settings
 ---@field platform string The OS Oriel runs on: darwin or linux
@@ -95,6 +95,11 @@ oriel.agent = {}
 ---@param spec table
 function oriel.agent.explainer(spec) end
 
+--- Asks a session's agent a side question, answered outside its conversation with no tools (the first forker's answer: the agent's is a fork of it): req { session (the session in front if omitted, else the newest open one), prompt, timeout (seconds, 180 by default) }. fn(answer, err, label) gets it on the loop; label says who answered: 'claude · fork, no tools'.
+---@param req table
+---@param fn function
+function oriel.agent.fork(req, fn) end
+
 --- A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools.
 ---@param spec table
 function oriel.agent.forker(spec) end
@@ -104,7 +109,7 @@ function oriel.agent.forker(spec) end
 ---@param spec table
 function oriel.agent.pack(name, spec) end
 
---- Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' } }. for names the agents it's for (session kinds, or the assistant); none is every session's.
+--- Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' }, confirm = fn(p), async, adds }. for names the agents it's for (session kinds, or the assistant); none is every session's. confirm makes it an act that waits for the user's yes: it returns { title, lead, rows = { { key, value, url } }, note, line }, and run's table { result, line, detail } says what was done. async gives run a second argument, done(result, err), to answer later: after a process or HTTP call. adds names another tool whose answer this one's result joins, under its reads, instead of being a tool of its own.
 ---@param spec table
 function oriel.agent.tool(spec) end
 
@@ -189,7 +194,7 @@ function oriel.hud.set(name, nodes) end
 ---@class oriel.inbox
 oriel.inbox = {}
 
---- Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), actions = { { label, key, primary, command, args } } }. An action runs its command and answers the card: it goes to the inbox's history.
+--- Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } } }. An action runs its command or its function and answers the card: it goes to the inbox's history.
 ---@param card table
 function oriel.inbox.add(card) end
 

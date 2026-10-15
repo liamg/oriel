@@ -70,20 +70,30 @@ func (ps *Processes) Spawn(p Plugin, name string, o SpawnOpts) (*Process, error)
 	}
 	var cmd *exec.Cmd
 	tmp := ""
+	var data []string
+	if p.Data != "" {
+		if err := os.MkdirAll(p.Data, 0o700); err != nil {
+			return nil, err
+		}
+		data = []string{EnvData + "=" + p.Data}
+	}
 	if p.Trusted() {
 		cmd = exec.Command(path, o.Args...)
-		cmd.Env = append(os.Environ(), o.Env...)
+		cmd.Env = append(append(os.Environ(), data...), o.Env...)
 	} else {
 		if tmp, err = os.MkdirTemp("", "oriel-plugin-"); err != nil {
 			return nil, err
 		}
 		prof := ProfileFor(p, ps.Places)
 		prof.Write = append(prof.Write, tmp)
+		if p.Data != "" {
+			prof.Write = append(prof.Write, RealPath(p.Data))
+		}
 		if cmd, err = ossandbox.Command(prof, path, o.Args...); err != nil {
 			os.RemoveAll(tmp)
 			return nil, fmt.Errorf("%s: can't sandbox its process: %w", p.ID, err)
 		}
-		cmd.Env = append(pluginEnv(tmp), o.Env...)
+		cmd.Env = append(append(pluginEnv(tmp), data...), o.Env...)
 	}
 	cmd.Dir = cmpOr(o.Dir, p.Dir)
 	stdin, err := cmd.StdinPipe()

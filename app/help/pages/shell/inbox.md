@@ -1,7 +1,7 @@
 ---
 id: shell/inbox
 covers: [inbox, app.overlay.inbox, inbox.*]
-related: [agent/asks, shell/tabs, shell/hud, plugins/lua]
+related: [agent/asks, shell/tabs, shell/hud, plugins/lua, plugins/agentbus]
 ---
 
 # The inbox
@@ -28,6 +28,11 @@ you, or select it with `j` and `k`, and it opens under its row to be answered th
 **All**, **Me** (for you by name), **Agents** (your own agents' asks), **Bus** (other people's agents),
 **GitHub** and **Sandbox** (held connections and gateway calls).
 
+## The panel's foot {#foot}
+
+Plugins put what goes with the inbox at the foot of the Inbox panel: agentbus's presence, **ACTIVE**, **IDLE** and
+**DND**, and the bus you're on.
+
 ## The title bar {#title-bar}
 
 **INBOX** in the title bar counts the cards waiting on you; a click opens the panel. Each session's tab counts its
@@ -36,4 +41,5 @@ own, in the colour of the first.
 ## Adding cards {#plugins}
 
 Cards come from inbox sources (`registry.InboxSource`): the asks of every session are one; a plugin adds its own with
-`oriel.inbox.add`, and takes them away with `oriel.inbox.remove`.
+`oriel.inbox.add`, and takes them away with `oriel.inbox.remove`. A card's `body` holds what its buttons can't: a
+field to type an answer in.

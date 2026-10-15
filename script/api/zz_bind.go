@@ -80,6 +80,12 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return nil, x.Explainer(c.Table(0), c.Where())
 			},
+			"fork": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.prompt"); err != nil {
+					return nil, err
+				}
+				return nil, x.Fork(c.Table(0), c.Fn(1))
+			},
 			"forker": func(c *script.Args) ([]any, error) {
 				if err := a.check("agent.read"); err != nil {
 					return nil, err

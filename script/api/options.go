@@ -141,7 +141,7 @@ var optionTypes = map[string]registry.OptionType{"bool": registry.Bool, "int": r
 var zeros = map[registry.OptionType]any{registry.Bool: false, registry.Int: 0, registry.Float: 0.0, registry.String: "", registry.Duration: time.Duration(0),
 	registry.Key: "", registry.List: []string{}, registry.Map: map[string]string{}}
 
-// declare registers an option from oriel.option{ name, type, default, help, values, min, max, section } (catalog.md,
+// declare registers an option from oriel.option{ name, type, default, help, values, min, max, section, on_change } (catalog.md,
 // "Plugin options"). A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.
 func (a *APIs) declare(t script.Table, where string) error {
 	name := str(t, "name")
@@ -173,6 +173,15 @@ func (a *APIs) declare(t script.Table, where string) error {
 		return fmt.Errorf("%s: default: %w", name, err)
 	}
 	a.own(a.Host.Option(sp))
+	if fn, ok := t["on_change"].(*script.Fn); ok {
+		o := a.Host.Options()
+		a.own(disposeFunc(o.Watch(name, func() {
+			a.Host.Do(func() {
+				v, _, _ := o.Get(name, registry.At{})
+				a.callback(script.Table{"on_change": fn}, "on_change", v)
+			})
+		})))
+	}
 	a.ApplyPending()
 	return nil
 }

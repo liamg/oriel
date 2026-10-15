@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/ext"
@@ -112,7 +114,7 @@ func (d Decor) Provider(name string, fn *script.Fn) error {
 //oriel:api name=agent cap=agent.tools
 type Agent struct{ a *APIs }
 
-//oriel:api doc="Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' } }. for names the agents it's for (session kinds, or the assistant); none is every session's."
+//oriel:api doc="Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' }, confirm = fn(p), async, adds }. for names the agents it's for (session kinds, or the assistant); none is every session's. confirm makes it an act that waits for the user's yes: it returns { title, lead, rows = { { key, value, url } }, note, line }, and run's table { result, line, detail } says what was done. async gives run a second argument, done(result, err), to answer later: after a process or HTTP call. adds names another tool whose answer this one's result joins, under its reads, instead of being a tool of its own."
 func (g Agent) Tool(spec script.Table, where string) error {
 	run, _ := spec["run"].(*script.Fn)
 	if str(spec, "name") == "" || run == nil {
@@ -128,16 +130,106 @@ func (g Agent) Tool(spec script.Table, where string) error {
 		}
 	}
 	readOnly, _ := spec["read_only"].(bool)
-	g.a.own(g.a.Host.Contribute(registry.AgentTool{Name: str(spec, "name"), Desc: str(spec, "desc"), Params: params, Source: where,
-		ReadOnly: readOnly, Reads: str(spec, "reads"), For: strs(spec["for"]),
-		Run: func(_ registry.Ctx, p map[string]any) (any, error) {
-			out, err := g.a.VM.Call(run, p)
-			if err != nil || len(out) == 0 {
-				return nil, err
+	async, _ := spec["async"].(bool)
+	confirm, _ := spec["confirm"].(*script.Fn)
+	t := registry.AgentTool{Name: str(spec, "name"), Desc: str(spec, "desc"), Params: params, Source: where,
+		ReadOnly: readOnly, Reads: str(spec, "reads"), For: strs(spec["for"]), Adds: str(spec, "adds"),
+		Run: func(ctx registry.Ctx, p map[string]any) (any, error) {
+			var out any
+			var err error
+			if async {
+				out, err = g.later(ctx, run, p)
+			} else {
+				var res []any
+				if res, err = g.a.VM.Call(run, p); len(res) > 0 {
+					out = res[0]
+				}
 			}
-			return out[0], nil
-		}}))
+			if err != nil || confirm == nil {
+				return out, err
+			}
+			if t, ok := out.(script.Table); ok && str(t, "line") != "" {
+				return registry.Acted{Result: t["result"], Line: str(t, "line"), Detail: str(t, "detail")}, nil
+			}
+			return out, nil
+		}}
+	if confirm != nil {
+		t.Confirm = func(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+			out, err := g.a.callOnLoop(ctx, confirm, p)
+			if err != nil {
+				return registry.Confirmation{}, err
+			}
+			var c registry.Confirmation
+			if len(out) > 0 {
+				if t, ok := out[0].(script.Table); ok {
+					c = registry.Confirmation{Title: str(t, "title"), Lead: str(t, "lead"), Note: str(t, "note"), Line: str(t, "line")}
+					rows, _ := t["rows"].([]any)
+					for _, r := range rows {
+						if rt, ok := r.(script.Table); ok {
+							c.Rows = append(c.Rows, registry.ConfirmRow{Key: str(rt, "key"), Value: str(rt, "value"), URL: str(rt, "url")})
+						}
+					}
+				}
+			}
+			c.Title = cmpOr(c.Title, str(spec, "name"))
+			c.Line = cmpOr(c.Line, c.Title)
+			return c, nil
+		}
+	}
+	g.a.own(g.a.Host.Contribute(t))
 	return nil
+}
+
+// callOnLoop calls fn with args on the app's loop, where the VM runs, and waits for what it returns.
+func (a *APIs) callOnLoop(ctx context.Context, fn *script.Fn, args ...any) ([]any, error) {
+	type answer struct {
+		out []any
+		err error
+	}
+	ch := make(chan answer, 1)
+	a.Host.Do(func() {
+		out, err := a.VM.Call(fn, args...)
+		ch <- answer{out, err}
+	})
+	a.Host.Redraw()
+	select {
+	case r := <-ch:
+		return r.out, r.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// later runs an async tool's function on the loop and waits for it to call done(result, err).
+func (g Agent) later(ctx context.Context, run *script.Fn, p map[string]any) (any, error) {
+	type answer struct {
+		v   any
+		err error
+	}
+	ch := make(chan answer, 1)
+	var once sync.Once
+	done := script.GoFunc(func(c *script.Args) ([]any, error) {
+		once.Do(func() {
+			if msg := c.String(1); msg != "" {
+				ch <- answer{err: errors.New(msg)}
+				return
+			}
+			ch <- answer{v: c.Any(0)}
+		})
+		return nil, nil
+	})
+	g.a.Host.Do(func() {
+		if _, err := g.a.VM.Call(run, p, done); err != nil {
+			once.Do(func() { ch <- answer{err: err} })
+		}
+	})
+	g.a.Host.Redraw()
+	select {
+	case r := <-ch:
+		return r.v, r.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 //oriel:api doc="An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing." cap=agent.read
@@ -191,6 +283,48 @@ func (g Agent) Forker(spec script.Table, where string) error {
 		f.Label = func(string) string { return l }
 	}
 	g.a.own(g.a.Host.Contribute(f))
+	return nil
+}
+
+//oriel:api doc="Asks a session's agent a side question, answered outside its conversation with no tools (the first forker's answer: the agent's is a fork of it): req { session (the session in front if omitted, else the newest open one), prompt, timeout (seconds, 180 by default) }. fn(answer, err, label) gets it on the loop; label says who answered: 'claude · fork, no tools'." cap=agent.prompt
+func (g Agent) Fork(req script.Table, fn *script.Fn) error {
+	prompt := str(req, "prompt")
+	if prompt == "" || fn == nil {
+		return fmt.Errorf("fork needs a prompt and a function for the answer")
+	}
+	session := cmpOr(str(req, "session"), string(g.a.Host.State().Focus))
+	if session == "" {
+		var newest time.Time
+		for _, se := range g.a.Host.Sessions() {
+			if st := se.Snapshot(); !st.Archived && (session == "" || st.Created.After(newest)) {
+				session, newest = string(st.ID), st.Created
+			}
+		}
+	}
+	timeout := 180 * time.Second
+	if t, ok := req["timeout"].(float64); ok && t > 0 {
+		timeout = time.Duration(t * float64(time.Second))
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		var answer, msg any
+		label := ""
+		if session == "" {
+			msg = "no session's agent to ask"
+		} else {
+			out, f, err := registry.Fork(ctx, g.a.Host, registry.ForkRequest{Session: session, Prompt: prompt})
+			if err != nil {
+				msg = err.Error()
+			} else {
+				answer = out
+			}
+			if f.Label != nil {
+				registry.Call(func() error { label = f.Label(session); return nil })
+			}
+		}
+		g.a.Host.Do(func() { g.a.VM.Call(fn, answer, msg, label) })
+	}()
 	return nil
 }
 

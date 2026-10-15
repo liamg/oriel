@@ -88,8 +88,10 @@ func (x *assistantExt) about() string {
 func (x *assistantExt) sources() []string {
 	var out []string
 	for _, t := range registry.AgentToolsFor(x.h, assistantAgent, true) {
-		if t.Reads != "" && !slices.Contains(out, t.Reads) {
-			out = append(out, t.Reads)
+		for _, p := range append([]registry.AgentTool{t}, registry.AgentToolParts(x.h, t.Name, assistantAgent, true)...) {
+			if p.Reads != "" && !slices.Contains(out, p.Reads) {
+				out = append(out, p.Reads)
+			}
 		}
 	}
 	return out

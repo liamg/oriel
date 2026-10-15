@@ -83,10 +83,18 @@ func (t AgentTool) OfferedTo(agent string, utility bool) bool {
 	return slices.Contains(t.For, agent)
 }
 
-// AgentToolsFor are the agent tools offered to an agent (OfferedTo), by name.
+// AgentToolsFor are the agent tools offered to an agent (OfferedTo), by name; not the parts other tools' answers add.
 func AgentToolsFor(r Registry, agent string, utility bool) []AgentTool {
-	return slices.DeleteFunc(AgentTools(r), func(t AgentTool) bool { return !t.OfferedTo(agent, utility) })
+	return slices.DeleteFunc(AgentTools(r), func(t AgentTool) bool { return t.Adds != "" || !t.OfferedTo(agent, utility) })
 }
+
+// AgentToolParts are the parts added to tool's answer (AgentTool.Adds) for an agent, by name.
+func AgentToolParts(r Registry, tool, agent string, utility bool) []AgentTool {
+	return slices.DeleteFunc(AgentTools(r), func(t AgentTool) bool { return t.Adds != tool || !t.OfferedTo(agent, utility) })
+}
+
+// partKey is where a tool's result goes in an answer with parts.
+func (t AgentTool) partKey() string { return cmp.Or(t.Reads, t.Name) }
 
 type agentKey struct{}
 
@@ -202,9 +210,31 @@ func CallAgentTool(ctx Ctx, r Registry, t AgentTool, params map[string]any) (str
 			out = cmp.Or(a.Line, "done")
 		}
 	}
+	if parts := partsOf(ctx, r, t); len(parts) > 0 {
+		all := map[string]any{t.partKey(): out}
+		for _, p := range parts {
+			var v any
+			if err := Call(func() (err error) { v, err = p.Run(ctx, params); return }); err != nil {
+				v = map[string]string{"error": err.Error()}
+			}
+			all[p.partKey()] = v
+		}
+		out = all
+	}
 	if s, ok := out.(string); ok {
 		return s, nil
 	}
 	b, err := json.MarshalIndent(out, "", "  ")
 	return string(b), err
+}
+
+// partsOf are the parts added to t's answer for the agent in ctx: any agent's, as a session's tools are offered.
+func partsOf(ctx Ctx, r Registry, t AgentTool) []AgentTool {
+	var out []AgentTool
+	for _, p := range AgentTools(r) {
+		if p.Adds == t.Name && p.Run != nil && (len(p.For) == 0 || slices.Contains(p.For, AgentOf(ctx))) {
+			out = append(out, p)
+		}
+	}
+	return out
 }

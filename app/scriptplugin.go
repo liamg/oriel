@@ -3,9 +3,11 @@ package app
 import (
 	"context"
 	"io/fs"
+	"path/filepath"
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/script/api"
@@ -53,7 +55,7 @@ func (p *scriptPlugin) Activate(_ context.Context, h ext.Host) error {
 	g.Grant(p.m.ID, p.m.Permissions)
 	vm := script.New()
 	vm.OnSlow = func(src string, took time.Duration) { h.Log().Warn("slow Lua", "function", src, "took", took) }
-	apis := api.InstallPlugin(vm, h, ext.Plugin{ID: p.m.ID, Guard: g})
+	apis := api.InstallPlugin(vm, h, ext.Plugin{ID: p.m.ID, Guard: g, Data: filepath.Join(logs.StateDir(), "plugins", p.m.ID)})
 	if err := vm.Load(script.Chunk{Name: p.m.ID + "/init.lua", Source: src}); err != nil {
 		apis.Dispose()
 		vm.Close()

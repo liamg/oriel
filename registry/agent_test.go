@@ -84,3 +84,33 @@ func TestActToolsWaitForTheOwnersYes(t *testing.T) {
 		t.Error("the agent isn't in the call's context")
 	}
 }
+
+// PL-5: a feature adds its half to another tool's answer (crit's review_requests: "from GitHub and agentbus"). The
+// part isn't a tool of its own; the answer has each one's result under what it reads, and a part that fails says so
+// beside the rest.
+func TestAgentToolParts(t *testing.T) {
+	r := registry.New()
+	base := registry.AgentTool{Name: "review_requests", For: []string{"assistant"}, ReadOnly: true, Reads: "github",
+		Run: func(registry.Ctx, map[string]any) (any, error) { return []string{"acme/api#1"}, nil }}
+	r.Contribute(base)
+	r.Contribute(registry.AgentTool{Name: "review_requests.agentbus", Adds: "review_requests", For: []string{"assistant"}, ReadOnly: true,
+		Reads: "agentbus", Run: func(registry.Ctx, map[string]any) (any, error) { return []string{"priya: acme/api#2"}, nil }})
+	r.Contribute(registry.AgentTool{Name: "review_requests.down", Adds: "review_requests", For: []string{"assistant"}, Reads: "down",
+		Run: func(registry.Ctx, map[string]any) (any, error) { return nil, errors.New("offline") }})
+	for _, tl := range registry.AgentToolsFor(r, "assistant", true) {
+		if tl.Adds != "" {
+			t.Errorf("a part is offered as a tool: %s", tl.Name)
+		}
+	}
+	if ps := registry.AgentToolParts(r, "review_requests", "assistant", true); len(ps) != 2 {
+		t.Errorf("parts: %+v", ps)
+	}
+	out, err := registry.CallAgentTool(registry.WithAgent(context.Background(), "assistant"), r, base, nil)
+	want := "{\n  \"agentbus\": [\n    \"priya: acme/api#2\"\n  ],\n  \"down\": {\n    \"error\": \"offline\"\n  },\n  \"github\": [\n    \"acme/api#1\"\n  ]\n}"
+	if err != nil || out != want {
+		t.Errorf("answer: %s %v", out, err)
+	}
+	if out, _ := registry.CallAgentTool(registry.WithAgent(context.Background(), "work"), r, base, nil); strings.Contains(out, "agentbus") {
+		t.Errorf("parts for another agent: %s", out)
+	}
+}

@@ -21,7 +21,13 @@ type Plugin struct {
 	ID    string
 	Dir   string // its own files: its binaries and .wasm start with no grant
 	Guard Guard  // nil for your own config, which is trusted
+	// Data is the plugin's own directory for what it keeps (a log, a cache): its processes may write there, and
+	// find it in $ORIEL_PLUGIN_DATA. None if empty.
+	Data string
 }
+
+// EnvData names the plugin's data directory in its processes' environment.
+const EnvData = "ORIEL_PLUGIN_DATA"
 
 // Trusted is your own config, which may do anything and runs unsandboxed (security.md).
 func (p Plugin) Trusted() bool { return p.Guard == nil }

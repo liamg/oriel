@@ -447,3 +447,17 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `Bearer` when it isn't given.
 - `oriel.on("SessionStart", fn)` and `oriel.on("PrSeen", fn)` see a session start and its PR first read (plugins.md,
   "As built (PL-8)").
+
+## As built (PL-5)
+
+- `oriel.inbox.add` takes `body` (oriel.ui nodes, or a function returning them, drawn under the card's text: a field
+  to type an answer in) and an action's `run = fn()` instead of a command; a card's `expires` counts from the
+  window's clock.
+- `oriel.agent.fork({ session, prompt, timeout }, fn(answer, err, label))` (cap `agent.prompt`) asks a session's
+  agent a side question, the first forker's answer: the session in front by default, else the newest open one.
+- `oriel.agent.tool` takes `confirm = fn(p)` (an act: it returns `{ title, lead, rows = { { key, value, url } }, note,
+  line }`, called on the loop, and run's table `{ result, line, detail }` says what was done), `async = true` (run
+  gets `done(result, err)` and is called on the loop) and `adds = "tool"` (a part of that tool's answer).
+- `oriel.option{ …, on_change = fn(value) }` hears the option change, from wherever it's set.
+- `oriel.hud.indicator` takes `slot = "inbox.foot"` (the Inbox panel's foot) and, since SH-7, `"mission"`.
+

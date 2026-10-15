@@ -19,9 +19,10 @@ Version 0.4.0.
 ## oriel.agent
 
 - `oriel.agent.explainer(spec)` (`agent.read`): An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing.
+- `oriel.agent.fork(req, fn)` (`agent.prompt`): Asks a session's agent a side question, answered outside its conversation with no tools (the first forker's answer: the agent's is a fork of it): req { session (the session in front if omitted, else the newest open one), prompt, timeout (seconds, 180 by default) }. fn(answer, err, label) gets it on the loop; label says who answered: 'claude · fork, no tools'.
 - `oriel.agent.forker(spec)` (`agent.read`): A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools.
 - `oriel.agent.pack(name, spec)` (`agent.prompt`): A prompt pack: { prompt, tools }, for sessions to start with.
-- `oriel.agent.tool(spec)` (`agent.tools`): Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' } }. for names the agents it's for (session kinds, or the assistant); none is every session's.
+- `oriel.agent.tool(spec)` (`agent.tools`): Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' }, confirm = fn(p), async, adds }. for names the agents it's for (session kinds, or the assistant); none is every session's. confirm makes it an act that waits for the user's yes: it returns { title, lead, rows = { { key, value, url } }, note, line }, and run's table { result, line, detail } says what was done. async gives run a second argument, done(result, err), to answer later: after a process or HTTP call. adds names another tool whose answer this one's result joins, under its reads, instead of being a tool of its own.
 
 ## oriel.coverage
 
@@ -55,7 +56,7 @@ Version 0.4.0.
 
 ## oriel.inbox
 
-- `oriel.inbox.add(card)` (`ui`): Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), actions = { { label, key, primary, command, args } } }. An action runs its command and answers the card: it goes to the inbox's history.
+- `oriel.inbox.add(card)` (`ui`): Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } } }. An action runs its command or its function and answers the card: it goes to the inbox's history.
 - `oriel.inbox.remove(id)` (`ui`): Takes the inbox card id away: answered, it stays in the inbox's history.
 
 ## oriel.keymap

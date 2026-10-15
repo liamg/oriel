@@ -56,6 +56,13 @@ func fakePlugin() {
 				json.Unmarshal(r.Params, &a)
 				b, err := os.ReadFile(a.Path)
 				r.Reply(string(b), err)
+			case "write":
+				var a struct{ Path string }
+				json.Unmarshal(r.Params, &a)
+				if a.Path == "" {
+					a.Path = filepath.Join(os.Getenv(EnvData), "kept")
+				}
+				r.Reply(a.Path, os.WriteFile(a.Path, []byte("kept"), 0o600))
 			default:
 				r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: r.Method})
 			}
@@ -175,6 +182,30 @@ func TestProcessPlugin(t *testing.T) {
 	}
 	if len(ps.List()) != 0 {
 		t.Error("still listed")
+	}
+}
+
+// A plugin's data directory is its process's to keep things in, found in $ORIEL_PLUGIN_DATA; elsewhere stays shut.
+func TestProcessDataDir(t *testing.T) {
+	if err := ossandbox.Available(); err != nil {
+		t.Skip(err)
+	}
+	dir, _ := installed(t)
+	data := filepath.Join(t.TempDir(), "plugins", "acme", "fake")
+	ps := testProcesses(&syncBuf{})
+	pr, err := ps.Spawn(Plugin{ID: "acme/fake", Dir: dir, Guard: NewGrants(), Data: data}, "bin/fake", SpawnOpts{Env: []string{fakeEnv + "=1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pr.Stop()
+	if got, err := call(t, pr, "write", map[string]string{}); err != nil || got != fmt.Sprintf("%q", filepath.Join(data, "kept")) {
+		t.Fatalf("write in its data directory: %s, %v", got, err)
+	}
+	if b, err := os.ReadFile(filepath.Join(data, "kept")); err != nil || string(b) != "kept" {
+		t.Errorf("kept: %q %v", b, err)
+	}
+	if _, err := call(t, pr, "write", map[string]string{"path": filepath.Join(t.TempDir(), "x")}); err == nil {
+		t.Error("the process wrote outside its data directory")
 	}
 }
 

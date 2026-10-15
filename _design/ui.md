@@ -451,7 +451,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   `agent.terminal` a command away; a tool's cursor moves and clears are dropped so it can't wipe the card. Cards sort
   by urgency within a group. Opening at launch waits for the first session, since sessions arrive from the worker
   after the window opens; with none the start view stays.
-- Not yet: the title bar's `⌘⇧K` chip, agentbus presence in the strip (PL-5), CI check rows on a CI card.
+- Not yet: the title bar's `⌘⇧K` chip, CI check rows on a CI card. Since PL-5 the strip has agentbus's presence.
 
 ## 04 · New session
 
@@ -688,7 +688,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   (`UsageSampled`), and today's totals, asked again 10 s after an agent event.
 - Built in PL-10: the next meeting under Today is the calendar plugin's (`integ/ical`, plugins.md "As built (PL-10)"):
   a ring counting down the hour before it, "NEXT MEETING · 14:30", its title, and where with how many are invited.
-- Not yet: the agentbus panel (PL-5), the merge train, the session footer slot (the mission-control slot came with
+- Built in PL-5: the agentbus panel (span 2): the connection, presence chips, what waits, and the log's tail, newest
+  first ("14:02  bob · answered: yes"); and the title bar's **● BUS 4** (its dot the presence, its count who's online).
+- Not yet: the merge train, the session footer slot (the mission-control slot came with
   SH-7), dimming what's under the drawer, and the burn's projection in a help page's "Right now".
 
 ## 11 · Comms (the assistant)
@@ -757,7 +759,10 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   since nothing tracks which cards were seen; the Inbox opens with ⌘⇧I and `<Leader>i`, not the mockup's `g i`,
   which is vim's (insert where insert last stopped); a security-key card's only action is Cancel (crit's modal had
   none); the key wait covers the worker's git operations for a session, not a worktree cut before the session exists.
-- Not yet: presence (ACTIVE, IDLE, DND) and the bus's name at the panel's foot, which come with agentbus (PL-5).
+- Built in PL-5 (plugins.md, "As built (PL-5)"): agentbus's question and review-request cards, and at the panel's
+  foot (`inbox.foot`) presence, **ACTIVE**, **IDLE**, **DND**, and the bus's name. A question's options are its
+  numbered actions rather than the mockup's rows, and its row's second line has no "auto in" (a row's text isn't
+  redrawn on the clock; the card's ring counts down).
 
 ## 13 · Verify
 

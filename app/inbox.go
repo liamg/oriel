@@ -523,6 +523,17 @@ func (x *inboxExt) panel(c *ui.Ctx, vc registry.ViewCtx) {
 				})
 			}
 		})
+		if inds := registry.Indicators(x.h, registry.SlotInboxFoot); len(inds) > 0 && x.sh.hud != nil {
+			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.Insets{L: 16, R: 16}, Gap: 10, Cross: ui.Center, Clip: true,
+				Help: inboxHelp + "#foot"}, func(c *ui.Ctx) {
+				for _, ind := range inds {
+					if n := x.sh.hud.indicator(c, ind); n != nil {
+						c.Row(ind.Name, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) { c.Node(n) })
+					}
+				}
+			})
+		}
 	})
 }
 
