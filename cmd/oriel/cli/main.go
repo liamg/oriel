@@ -45,6 +45,7 @@ func runApp(args []string) {
 		os.Exit(2)
 	}
 	cfg.Extensions = append(cfg.Extensions, ext.Native()...)
+	appUpdates(&cfg)
 	cfg.LocalWorker = func(ctx context.Context) (worker.Client, error) { return worker.DialLocal(ctx, orielHome(), "") }
 	if c, err := localWorker(); err != nil {
 		fmt.Fprintln(os.Stderr, "oriel: no worker, so no sessions:", err)
@@ -70,7 +71,7 @@ func runApp(args []string) {
 
 // subcommands are the first arguments that aren't files to open.
 var subcommands = map[string]bool{"version": true, "worker": true, "dev": true, "hook": true, "new": true, "review": true,
-	"init": true, "repos": true, "sessions": true, "build": true}
+	"init": true, "repos": true, "sessions": true, "build": true, "update": true}
 
 func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
@@ -89,6 +90,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "worker":
 		if err := runWorker(args[1:], stderr); err != nil {
 			fmt.Fprintln(stderr, "oriel worker:", err)
+			return 1
+		}
+		return 0
+	case "update":
+		if err := runUpdate(args[1:], stdout, stderr); err != nil {
+			fmt.Fprintln(stderr, "oriel update:", err)
 			return 1
 		}
 		return 0

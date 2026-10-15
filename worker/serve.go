@@ -85,6 +85,9 @@ func (w *Worker) Serve(conn wire.Conn) {
 	w.serveGitHub(fn)
 	conn.HandleStream(MethodEvents, wire.StreamFunc(w.serveEvents))
 	conn.HandleStream(MethodTerminal, wire.StreamFunc(w.serveTerminal))
+	for _, h := range w.opts.Handlers {
+		h(conn)
+	}
 }
 
 // serveEvents sends every session as it is, then each event as it happens.

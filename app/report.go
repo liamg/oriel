@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/worker"
 )
 
 // IssueURL is where a report goes, by hand: Oriel never sends one itself.
@@ -50,13 +51,49 @@ type shell struct {
 	search      *projectSearch
 	tests       *testsExt
 	explain     *explainExt
-	sessions    *sessions                   // the workers' sessions; nil while it isn't active
-	stats       *statsExt                   // what the workers' sessions cost
-	hud         *hudExt                     // the HUD, and what every slot's indicators last built
-	present     *presentFocus               // the presentation with focus, for its keys
-	afterOpen   *afterOpen                  // what session.open runs once the window has opened again on the session
-	draining    atomic.Pointer[workerDrain] // this machine's worker handing over, for a restart or a quit
-	closeWin    func()                      // closes the window, which quits
+	sessions    *sessions                    // the workers' sessions; nil while it isn't active
+	stats       *statsExt                    // what the workers' sessions cost
+	hud         *hudExt                      // the HUD, and what every slot's indicators last built
+	present     *presentFocus                // the presentation with focus, for its keys
+	afterOpen   *afterOpen                   // what session.open runs once the window has opened again on the session
+	draining    atomic.Pointer[workerDrain]  // this machine's worker handing over, for a restart or a quit
+	closeWin    func()                       // closes the window, which quits
+	relaunch    atomic.Pointer[func() error] // starts Oriel again once the window has closed: an update's restart
+	joinMu      sync.Mutex
+	onJoin      map[*joinHook]struct{} // told of each worker as it connects
+}
+
+type joinHook struct {
+	fn func(worker.Client, worker.Info)
+}
+
+// onWorkerJoined calls fn, off the loop, with each worker that connects from now on, and its info: the updater
+// pushes a release to one that's behind. cancel stops it.
+func (sh *shell) onWorkerJoined(fn func(worker.Client, worker.Info)) (cancel func()) {
+	k := &joinHook{fn}
+	sh.joinMu.Lock()
+	if sh.onJoin == nil {
+		sh.onJoin = map[*joinHook]struct{}{}
+	}
+	sh.onJoin[k] = struct{}{}
+	sh.joinMu.Unlock()
+	return func() {
+		sh.joinMu.Lock()
+		delete(sh.onJoin, k)
+		sh.joinMu.Unlock()
+	}
+}
+
+func (sh *shell) workerJoined(c worker.Client, info worker.Info) {
+	sh.joinMu.Lock()
+	hooks := make([]*joinHook, 0, len(sh.onJoin))
+	for k := range sh.onJoin {
+		hooks = append(hooks, k)
+	}
+	sh.joinMu.Unlock()
+	for _, k := range hooks {
+		k.fn(c, info)
+	}
 }
 
 type afterOpen struct {

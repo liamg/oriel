@@ -24,6 +24,7 @@ import (
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/sandbox/agentcmd"
+	"github.com/liamg/oriel/update"
 	"github.com/liamg/oriel/wire"
 	"github.com/liamg/oriel/worker"
 )
@@ -37,8 +38,9 @@ func orielHome() string {
 	return filepath.Join(home, ".oriel")
 }
 
-// newWorker is this machine's worker with the built-in providers and prompt packs.
-func newWorker(home string, log *slog.Logger, id core.WorkerID, name string) (*worker.Worker, error) {
+// newWorker is this machine's worker with the built-in providers and prompt packs; handlers add methods to each app
+// connection.
+func newWorker(home string, log *slog.Logger, id core.WorkerID, name string, handlers ...func(wire.Conn)) (*worker.Worker, error) {
 	providers := &agent.Providers{}
 	providers.Register(claude.Provider{ProbeDir: filepath.Join(home, "probe")})
 	providers.Register(&codex.Provider{})
@@ -47,7 +49,7 @@ func newWorker(home string, log *slog.Logger, id core.WorkerID, name string) (*w
 	}
 	sandboxes := worker.NewSandboxFactory(nil)
 	w, err := worker.New(worker.Options{ID: id, Name: name, Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: packs.Get, Log: log, Version: version,
-		TrustPath: filepath.Join(app.DefaultConfigDir(), "trusted.toml")})
+		TrustPath: filepath.Join(app.DefaultConfigDir(), "trusted.toml"), Handlers: handlers})
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +71,7 @@ func runWorker(args []string, stderr io.Writer) error {
 	}
 	log := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	host, _ := os.Hostname()
+	var err error
 	var id core.WorkerID // this machine's
 	if *connect != "" {
 		if *name == "" {
@@ -76,8 +79,13 @@ func runWorker(args []string, stderr io.Writer) error {
 		}
 		id = core.WorkerID(*name)
 	}
-	w, err := newWorker(*home, log, id, *name)
-	if err != nil {
+	var w *worker.Worker
+	var restarting chan struct{}
+	if *connect == "" {
+		if w, err = newWorker(*home, log, id, *name); err != nil {
+			return err
+		}
+	} else if w, restarting, err = updatableWorker(*home, log, id, *name); err != nil || w == nil {
 		return err
 	}
 	defer w.Close()
@@ -98,6 +106,11 @@ func runWorker(args []string, stderr io.Writer) error {
 	log.Info("serving the app", "app", *connect, "name", *name, "certificate", wire.Words(*fingerprint))
 	for ctx.Err() == nil {
 		err := w.ServeApp(ctx, *connect, *fingerprint, hello)
+		select {
+		case <-restarting:
+			select {} // the update re-execs this process
+		default:
+		}
 		var rejected *wire.ErrRejected
 		if errors.As(err, &rejected) {
 			return err
@@ -109,6 +122,52 @@ func runWorker(args []string, stderr io.Writer) error {
 		}
 	}
 	return nil
+}
+
+// updatableWorker is a remote worker that takes updates the app streams to it (distribution.md). It boots through
+// the installer first: after a swap, starting the worker is the new version's health check, and a failure rolls back
+// and re-execs onto the previous binary. restarting closes when an update's restart has begun.
+func updatableWorker(home string, log *slog.Logger, id core.WorkerID, name string) (*worker.Worker, chan struct{}, error) {
+	exe, err := os.Executable()
+	if err == nil {
+		exe, err = filepath.EvalSymlinks(exe)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	in := &update.Installer{Target: exe, Dir: filepath.Join(home, "updates")}
+	restarting := make(chan struct{})
+	var w *worker.Worker
+	rcv := &update.Receiver{Installer: in, Keys: update.Keys(), Version: version, Restart: func() {
+		close(restarting)
+		w.HandOver()
+		log.Error("re-exec after an update", "err", update.Reexec(in.Executable()))
+		os.Exit(1)
+	}}
+	start := func(context.Context) (err error) {
+		w, err = newWorker(home, log, id, name, rcv.Serve)
+		return err
+	}
+	out, err := in.Boot(context.Background(), start)
+	if out.RolledBack != nil {
+		log.Warn("update rolled back", "version", out.RolledBack.Version, "reason", out.RolledBack.Reason)
+		if w != nil {
+			w.Close()
+		}
+		return nil, nil, update.Reexec(in.Executable())
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	if out.Confirmed != "" {
+		log.Info("updated", "version", out.Confirmed)
+	}
+	if w == nil {
+		if err := start(context.Background()); err != nil {
+			return nil, nil, err
+		}
+	}
+	return w, restarting, nil
 }
 
 // runHook is `oriel hook …`, which the agents' side of Oriel runs: Claude's mod, Codex's MCP server.

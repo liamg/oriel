@@ -365,6 +365,12 @@ flowchart TB
   `workers.add {name, listen}`, `workers.rename {name, to}`, `workers.revoke {name}`, `workers.forget {name}`,
   `workers.restart`, `workers.dialog.save`; option `workers.listen`; key modes `workers` and `workers.add`; the
   `workers` icon; views `app.overlay.workers` and `app.overlay.workers.dialog`.
+- updates (PL-6): commands `:UpdateCheck` / `update.check`, `update.notes` (the card), `update.install`,
+  `update.restart`; options `updates.mode` (`automatic`, `ask`, `manual`) and `updates.channel` (`stable`,
+  `nightly`); the view `app.overlay.update` (the card) and the indicator `update` in `statusline.right` ("update ready ·
+  restart", built again with `hud.refresh {name = "update"}` as it changes). Notices `update.available` (with What's new and Update),
+  `update.ready` (Restart), `update.failed` and `update.worker`. `worker.Options.Handlers` add wire methods to each
+  app connection.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**

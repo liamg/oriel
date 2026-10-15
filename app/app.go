@@ -63,6 +63,10 @@ type Config struct {
 	Workers    []worker.Client // the workers whose sessions the window shows: this machine's, and any others
 	// LocalWorker reaches this machine's worker, starting one: after one from another build hands over to this build's.
 	LocalWorker func(context.Context) (worker.Client, error)
+	// Updates is Oriel updating itself and its workers (distribution.md); nil in a build that doesn't.
+	Updates *Updates
+	// Started is called once the window is open and every extension active: what the updater's health check waits for.
+	Started func()
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -188,6 +192,12 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	for _, opt := range []string{"ui.theme", "ui.variant"} {
 		defer cfg.Registry.Options().Watch(opt, retheme)()
 	}
+	if cfg.Started != nil {
+		sh.todoMu.Lock()
+		sh.todo = append(sh.todo, cfg.Started)
+		sh.todoMu.Unlock()
+	}
+	defer sh.relaunchAfter(&err)
 	timer := time.NewTimer(0)
 	<-timer.C
 	var acts <-chan render.AccessAction

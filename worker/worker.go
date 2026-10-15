@@ -53,6 +53,8 @@ type Options struct {
 	TrustPath string
 	// GitHub is the GitHub client for a checkout, with the git guard's env; the user's gh (gh.CLI) if nil.
 	GitHub func(dir string, env []string) gh.Client
+	// Handlers add methods to each app connection, as the updater's do.
+	Handlers []func(conn wire.Conn)
 }
 
 // Worker hosts sessions.

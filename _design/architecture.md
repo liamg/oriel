@@ -85,7 +85,7 @@ flowchart LR
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
-| `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker |
+| `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker, update |
 | `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. Superseded by `render/gio`; kept for its report | gioui.org |
 | `toml` | TOML 1.0 parser and round-tripping editor, for settings and themes (`settings.md`) | – |
 | `theme` | theme files, colour maths (CSS Color 4, OkLCh) and token resolution into a flat table (`theming.md`) | toml |
@@ -175,4 +175,6 @@ type Worker interface {
   are crit's pinned-TLS handshake for workers elsewhere. `worker.Client` is the worker's methods over a `wire.Conn`;
   its `Events` stream sends each session whole (`SessionSynced`) and then every event, which the app applies to its
   store. LSP and DAP still run in the app for now.
+- As built (PL-6): `worker.Options.Handlers` add methods to each app connection; `oriel worker --connect` serves the
+  updater's through it (`distribution.md`).
 

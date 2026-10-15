@@ -2,5 +2,6 @@ source: https://go.dev (the Go toolchain's own help, and its source at https://g
 ref: go1.26.0
 path: help-testflag.txt (`go help testflag`), help-test.txt (`go help test`), help-list.txt (`go help list`),
   doc-test2json.txt (`go doc test2json`), doc-testing.txt (`go doc testing`), all written by go1.26.0;
-  src/testing/match.go and src/cmd/vendor/golang.org/x/tools/cover/profile.go (copied from GOROOT)
+  src/testing/match.go, src/cmd/vendor/golang.org/x/tools/cover/profile.go, src/crypto/ed25519/ed25519.go and
+  src/os/file.go (copied from GOROOT)
 license: BSD-3-Clause (see LICENSE)

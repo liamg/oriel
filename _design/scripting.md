@@ -382,3 +382,10 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   docs/api.md says each function's. Besides the glue: `exec` checks its program, `lsp.server` its `cmd`,
   `agent.tool` its name, and a hook's veto or decision needs `gate` (without it the hook's run is an error and
   nothing is vetoed).
+
+## As built (PL-6)
+
+- Updates are commands: `oriel.cmd("update.check")` checks now and opens the card, `update.install` installs the
+  release it found here and on the workers behind it, `update.restart` restarts onto it.
+  `oriel.option["updates.mode"] = "manual"` stops the hourly check; `oriel.option["updates.channel"] = "nightly"`
+  takes pre-releases.

@@ -118,6 +118,7 @@ func (sh *shell) drain(r *workerDrain) {
 		sh.draining.Store(nil)
 		switch {
 		case errors.Is(err, errQuitCancelled):
+			sh.relaunch.Store(nil)
 		case r.quit.Load():
 			sh.closeWindow()
 		case err != nil:

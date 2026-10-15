@@ -247,6 +247,7 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want 
 			old.Conn.Close()
 		}
 		x.sendSandbox()
+		x.sh.workerJoined(c, info)
 		h.Redraw()
 		if x.sh.cfg.LocalWorker != nil && info.ID == core.LocalWorker && info.Build != worker.Build() {
 			x.sh.restartWorker(c, info.ID)
