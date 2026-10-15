@@ -145,6 +145,9 @@ func TestSharedCard(t *testing.T) {
 	for range 2 {
 		go func() { out <- allow(s, "one.example.com", 443) }()
 	}
+	for s.callers("one.example.com:443") < 2 {
+		time.Sleep(time.Millisecond)
+	}
 	c.answer(t, Answer{Key: Once})
 	if !<-out || !<-out {
 		t.Fatal("both connections to one destination allowed by one card")
@@ -193,6 +196,16 @@ func dialVia(t *testing.T, s *Session, host string, port int) (net.Conn, error) 
 		var d net.Dialer
 		return d.DialContext(ctx, "tcp", srv.Listener.Addr().String())
 	}, "", host, port)
+}
+
+// callers is how many Decides are waiting on key's card.
+func (s *Session) callers(key string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if a := s.asks[key]; a != nil {
+		return a.callers
+	}
+	return 0
 }
 
 func (s *Session) scope(key string) Scope {
