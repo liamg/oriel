@@ -43,15 +43,14 @@ type testsExt struct {
 	set     *testrun.Set
 	history *testrun.History
 
-	mu       sync.Mutex
-	live     *testrun.Run
-	exec     *testrun.Exec
-	last     *testrun.Request
-	watch    bool
-	showCov  bool
-	found    map[*text.Buffer]*discovery
-	explains map[string]*explanation
-	busy     sync.WaitGroup
+	mu      sync.Mutex
+	live    *testrun.Run
+	exec    *testrun.Exec
+	last    *testrun.Request
+	watch   bool
+	showCov bool
+	found   map[*text.Buffer]*discovery
+	busy    sync.WaitGroup
 
 	panel testsPanel
 }
@@ -62,13 +61,6 @@ type discovery struct {
 	items   []testrun.Item
 }
 
-// explanation is an explainer's answer about a failure.
-type explanation struct {
-	loading bool
-	text    string
-	err     error
-}
-
 func (x *testsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "tests"} }
 
 func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
@@ -77,7 +69,7 @@ func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
 	x.set = testrun.Builtin()
 	x.add(disposeFn(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.history = testrun.NewHistory(20)
-	x.found, x.explains = map[*text.Buffer]*discovery{}, map[string]*explanation{}
+	x.found = map[*text.Buffer]*discovery{}
 	if f, err := os.Open(x.historyPath()); err == nil {
 		if hs, err := testrun.LoadHistory(f); err == nil {
 			x.history = hs
@@ -136,9 +128,16 @@ func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
 				}
 				return h.Run(ctx, "debug.test", registry.Args{"key": it.Key(), "file": it.File})
 			}},
-		{ID: "test.explain", Title: "Ask to explain a failure: {key}", Run: func(_ registry.Ctx, a registry.Args) error {
-			return x.explain(a.String("key"))
-		}},
+		{ID: "test.explain", Title: "Ask to explain a failure: {key}; the answer shows under it", Available: func(registry.Args) bool { return h.Available(registry.ExplainCommand, nil) },
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				res, _ := x.result(a.String("key"))
+				if res == nil || res.Failure == nil {
+					return fmt.Errorf("no failure to explain")
+				}
+				args := x.failureTrouble(res).Args()
+				args["key"] = failureKey(res.Key())
+				return h.Run(ctx, registry.ExplainCommand, args)
+			}},
 		{ID: "tests.open", Title: "Show the Tests panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.open", registry.Args{"id": TestsView, "place": "dock", "edge": "bottom", "size": 300, "title": "Tests"})
 		}},

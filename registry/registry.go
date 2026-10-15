@@ -124,6 +124,9 @@ type Keymap struct {
 	Args    Args
 	Desc    string
 	Source  string
+	// Nowait runs it as soon as it matches, without waiting for a longer mapping in a mode after its own to be typed
+	// (vim's <nowait>): a key layer's "[" over the editor's "[c".
+	Nowait bool
 }
 
 type View interface {
@@ -159,6 +162,12 @@ type Moded interface {
 // is a theme token.
 type Marked interface {
 	Mark(instance string) (text, style string)
+}
+
+// Shown is a view that a slot drawing it (the diff's columns) leaves out while it has nothing for an instance, so
+// the slot can give the room to the rest: the AI review outside a session.
+type Shown interface {
+	Shown(instance string) bool
 }
 
 // Persisted is a view whose instances come back when the app starts again on the same directory: the layout keeps
@@ -461,17 +470,60 @@ func (r *reg) Keymaps() []Keymap {
 }
 
 func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
+	exclusive := map[string]func(Keymap) bool{}
+	for _, c := range r.Contributions("keys.exclusive") {
+		e := c.(ExclusiveKeys)
+		active := true
+		if e.Active != nil {
+			Call(func() error { active = e.Active(); return nil })
+		}
+		if !active {
+			continue
+		}
+		allow := e.Allow
+		if allow == nil {
+			allow = func(Keymap) bool { return false }
+		}
+		exclusive[e.Mode] = allow
+	}
 	seq := strings.Join(keys, sep)
+	type found struct {
+		km     *Keymap
+		prefix bool
+	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	fs := make([]found, len(modes))
+	for i, m := range modes {
+		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && km.Command != "" {
+			fs[i].km = &km
+		}
+		fs[i].prefix = r.prefixes[keymapKey{m, seq}] > 0
+	}
+	r.mu.Unlock()
 	var exact *Keymap
 	more := false
-	for _, m := range modes {
-		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && exact == nil && km.Command != "" {
-			exact = &km
+	var allow func(Keymap) bool // the exclusive mode's, once keys have passed it
+	for i, m := range modes {
+		f := fs[i]
+		if allow != nil {
+			lent := false
+			if f.km != nil && exact == nil {
+				Call(func() error { lent = allow(*f.km); return nil })
+			}
+			if lent {
+				exact = f.km
+			}
+			continue
 		}
-		if r.prefixes[keymapKey{m, seq}] > 0 {
-			more = true
+		if f.km != nil && exact == nil {
+			exact = f.km
+			if f.km.Nowait && !more && !f.prefix {
+				return exact, false
+			}
+		}
+		more = more || f.prefix
+		if a, ok := exclusive[m]; ok {
+			allow = a
 		}
 	}
 	return exact, more

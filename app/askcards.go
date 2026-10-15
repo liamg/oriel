@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -10,8 +11,10 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/sandbox/gateway"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -84,6 +87,36 @@ func domainOf(hostport string) (domain, port string) {
 	return strings.Join(parts, "."), port
 }
 
+// reviewState is the review ledger where a gateway call commits, pushes or raises a PR (ui.md 12, "Approvals show
+// the review state right where you approve a push"): "21 agent lines unread", or "0 unreviewed lines ✓".
+func reviewState(h ext.Host, se core.SessionState, a core.Ask) string {
+	tool := strings.TrimPrefix(a.Tool, gateway.Prefix)
+	if tool != "commit" && tool != "push" && tool != "pr_create" {
+		return ""
+	}
+	var in struct {
+		Project string `json:"project"`
+	}
+	_ = json.Unmarshal([]byte(a.Input), &in)
+	p, ok := se.Primary()
+	for _, q := range se.Projects {
+		if in.Project != "" && q.Name == in.Project {
+			p, ok = q, true
+		}
+	}
+	if !ok || p.Dir == "" {
+		return ""
+	}
+	l, found := registry.LedgerOf(h, p.Dir)
+	if !found || !l.Ready {
+		return ""
+	}
+	if n := l.All.NotRead(); n > 0 {
+		return fmt.Sprintf("%d agent %s unread", n, plural(n, "line", "lines"))
+	}
+	return "0 unreviewed lines ✓"
+}
+
 // askCard is an ask as a card, with what answers it: in the console where it arose, or stacked over the window
 // with its session's name (kicker).
 func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a core.Ask, kicker bool, selected bool) {
@@ -153,6 +186,9 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 		}
 		if a.Rule != "" {
 			o.Note = "rule: " + a.Rule
+		}
+		if r := reviewState(x.h, se, a); r != "" {
+			o.Note = strings.TrimPrefix(o.Note+" · "+r, " · ")
 		}
 		add("Allow", "y", true, registry.Args{"decision": "allow"})
 		if a.Rule != "" {

@@ -82,6 +82,11 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #7c7566
   path 3 segments stroke 1.25 #7c7566
   text "Jobs" @33,372.30524 #b3ab99 Inter 12
+  path 5 segments stroke 1.25 #7c7566
+  path 5 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  text "Workers" @33,395.30524 #b3ab99 Inter 12
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -92,7 +97,7 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Settings" @33,395.30524 #b3ab99 Inter 12
+  text "Settings" @33,418.30524 #b3ab99 Inter 12
 pop
 rect 223,38 1x936 fill #24221d
 rect 224,38 1376x936 fill #060606
@@ -160,7 +165,7 @@ clip 484,38 1116x936 r 0
     rect 1234.5156,89.5 7x7 fill #4cc9f0 radius 3.5
     text "agent editing PLAN.md" @1248.5156,96.78 #b3ab99 JetBrains Mono 10.5
     rect 1398.9844,80 89.0625x26 fill #191815 radius 6 stroke 1 #332f27
-    text "Preview diff" @1408.9844,97.365234 #4f4a40 Inter 12
+    text "Preview diff" @1408.9844,97.365234 #ece6d8 Inter 12
     rect 1500.0469,80 79.953125x26 fill #191815 radius 6 stroke 1 #332f27
     text "Start work" @1510.0469,97.365234 #4f4a40 Inter 12
     rect 484,117 1116x1 fill #24221d

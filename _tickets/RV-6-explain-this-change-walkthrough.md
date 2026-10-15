@@ -2,7 +2,7 @@
 id: RV-6
 title: "Explain this change walkthrough"
 phase: P6
-status: todo
+status: review
 area: Review and explain
 module: explain
 depends_on: [RV-5]

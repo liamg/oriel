@@ -92,6 +92,70 @@ func TestWorkerGoneTakesItsSessions(t *testing.T) {
 	}
 }
 
+// AI-15: a worker keeps the app's name for it and when it came or went; Forget takes an offline one off.
+func TestWorkerLabelSinceAndForget(t *testing.T) {
+	s := New()
+	at := func(m int) time.Time { return when.Add(time.Duration(m) * time.Minute) }
+	s.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Connected: true, Sampled: at(0)}})
+	if err := s.Apply(core.WorkerRenamed{ID: "devbox", Label: "Build box"}); err != nil {
+		t.Fatal(err)
+	}
+	s.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Connected: true, Sampled: at(5)}})
+	w := s.State().Workers[0]
+	if w.Title() != "Build box" || !w.Since.Equal(at(0)) || s.State().WorkerName("devbox") != "Build box" {
+		t.Fatalf("after a reading: %+v", w)
+	}
+	if err := s.Apply(core.WorkerForgotten{ID: "devbox"}); err == nil {
+		t.Fatal("a connected worker was forgotten")
+	}
+	s.Apply(core.WorkerGone{ID: "devbox", At: at(9)})
+	if w := s.State().Workers[0]; w.Connected || !w.Since.Equal(at(9)) || w.Label != "Build box" {
+		t.Fatalf("gone: %+v", w)
+	}
+	s.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Connected: true, Sampled: at(20)}})
+	if w := s.State().Workers[0]; !w.Connected || !w.Since.Equal(at(20)) {
+		t.Fatalf("back: %+v", w)
+	}
+	s.Apply(core.WorkerGone{ID: "devbox", At: at(30)})
+	if err := s.Apply(core.WorkerForgotten{ID: "devbox"}); err != nil || len(s.State().Workers) != 0 {
+		t.Fatalf("forget: %v, %+v", err, s.State().Workers)
+	}
+}
+
+// AI-15: a worker speaks only for itself and its own sessions.
+func TestFromWorker(t *testing.T) {
+	s := New()
+	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "mine", Kind: core.KindWork, Worker: "devbox"}})
+	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "local", Kind: core.KindWork, Worker: core.LocalWorker}})
+	st := s.State()
+	for _, c := range []struct {
+		ev   core.Event
+		want bool
+	}{
+		{core.WorkerChanged{Worker: core.WorkerState{ID: "devbox"}}, true},
+		{core.WorkerChanged{Worker: core.WorkerState{ID: core.LocalWorker}}, false},
+		{core.WorkerGone{ID: core.LocalWorker}, false},
+		{core.WorkerRenamed{ID: core.LocalWorker, Label: "x"}, false},
+		{core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Workers: []core.WorkerID{"devbox"}}}, true},
+		{core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Workers: []core.WorkerID{core.LocalWorker}}}, false},
+		{core.SessionSynced{Session: core.SessionState{ID: "new", Worker: "devbox"}}, true},
+		{core.SessionSynced{Session: core.SessionState{ID: "new", Worker: core.LocalWorker}}, false},
+		{core.SessionSynced{Session: core.SessionState{ID: "local", Worker: "devbox"}}, false},
+		{core.AgentChanged{ID: "mine"}, true},
+		{core.AgentChanged{ID: "local"}, false},
+		{core.AgentChanged{ID: "unknown"}, false},
+		{core.SessionFocused{ID: "local"}, false},
+		{core.Notified{Notice: core.Notice{ID: "n"}}, true},
+	} {
+		if got := st.FromWorker("devbox", c.ev); got != c.want {
+			t.Errorf("%T %+v from devbox: %v, want %v", c.ev, c.ev, got, c.want)
+		}
+	}
+	if !st.FromWorker(core.LocalWorker, core.AgentChanged{ID: "local"}) {
+		t.Error("this machine's worker can't speak for its own session")
+	}
+}
+
 func TestDeriveStatus(t *testing.T) {
 	agent := core.AgentState{Provider: "claude", Running: true}
 	you := core.Comment{Author: core.AuthorYou, Body: "x"}

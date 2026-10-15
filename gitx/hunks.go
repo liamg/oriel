@@ -259,6 +259,14 @@ func (r Repo) HeadFile(ctx context.Context, path string) ([]byte, bool) {
 	return r.blob(ctx, "HEAD:"+path)
 }
 
+// FileAt is a file as a revision has it ("HEAD", a merge-base's hash), and whether it's there.
+func (r Repo) FileAt(ctx context.Context, rev, path string) ([]byte, bool) {
+	if rev == "" {
+		return nil, false
+	}
+	return r.blob(ctx, rev+":"+path)
+}
+
 // UnstagedHunks are the hunks from the index's version of path to contents: a buffer's text, saved or not.
 func (r Repo) UnstagedHunks(ctx context.Context, path string, contents []byte) ([]Hunk, error) {
 	idx, _ := r.IndexFile(ctx, path)

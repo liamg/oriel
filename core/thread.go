@@ -75,6 +75,30 @@ type Comment struct {
 	Activity  []Activity `json:"activity,omitempty"`
 	Evidence  []Evidence `json:"evidence,omitempty"`
 	Unbacked  string     `json:"unbacked,omitempty"` // a claim with no evidence: "says tests pass, but ran none"
+	// Draft is an agent's reply not sent where the thread came from: the user forwards it (a GitHub thread's).
+	Draft bool `json:"draft,omitempty"`
+	// GitHubID is the comment's on GitHub: one mirrored from there, or a draft once forwarded.
+	GitHubID int64     `json:"githubId,omitempty"`
+	Sent     time.Time `json:"sent,omitzero"`      // when the user forwarded it
+	Redacted bool      `json:"redacted,omitempty"` // its author isn't trusted, so the agent isn't given its text
+	Edited   bool      `json:"edited,omitempty"`   // changed where it came from since it was first mirrored
+}
+
+// Origins of threads that came from elsewhere.
+const OriginGitHub = "github"
+
+// GitHubThread is where a mirrored thread lives on GitHub: a review comment's thread on a PR's line, or the PR's
+// conversation (Root 0).
+type GitHubThread struct {
+	Project  string `json:"project"`
+	Repo     string `json:"repo"` // owner/name
+	PR       int    `json:"pr"`
+	Root     int64  `json:"root,omitempty"`     // the review thread's first comment
+	Reviewer string `json:"reviewer,omitempty"` // who started it
+	State    string `json:"state,omitempty"`    // the reviewer's review: CHANGES_REQUESTED, APPROVED, COMMENTED
+	URL      string `json:"url,omitempty"`
+	Resolved bool   `json:"resolved,omitempty"` // resolved on GitHub, as last synced
+	Outdated bool   `json:"outdated,omitempty"` // its line is gone from the PR's head
 }
 
 // Touched is a file the agent changed while working on a thread.
@@ -87,18 +111,19 @@ type Touched struct {
 
 // Thread is a request: a comment and its replies, anchored to a place or to the whole change.
 type Thread struct {
-	ID       ThreadID     `json:"id"`
-	Anchor   *Anchor      `json:"anchor,omitempty"`
-	Title    string       `json:"title,omitempty"`
-	Status   ThreadStatus `json:"status"`
-	Urgent   bool         `json:"urgent,omitempty"`
-	Btw      bool         `json:"btw,omitempty"`  // a side question thread, answered by a fork
-	Busy     bool         `json:"busy,omitempty"` // the agent has it and hasn't answered
-	Origin   string       `json:"origin,omitempty"`
-	Comments []Comment    `json:"comments"`
-	Touched  []Touched    `json:"touched,omitempty"`
-	Created  time.Time    `json:"created,omitzero"`
-	Updated  time.Time    `json:"updated,omitzero"`
+	ID       ThreadID      `json:"id"`
+	Anchor   *Anchor       `json:"anchor,omitempty"`
+	Title    string        `json:"title,omitempty"`
+	Status   ThreadStatus  `json:"status"`
+	Urgent   bool          `json:"urgent,omitempty"`
+	Btw      bool          `json:"btw,omitempty"`    // a side question thread, answered by a fork
+	Busy     bool          `json:"busy,omitempty"`   // the agent has it and hasn't answered
+	Origin   string        `json:"origin,omitempty"` // where it came from: "" for Oriel, OriginGitHub
+	GitHub   *GitHubThread `json:"github,omitempty"`
+	Comments []Comment     `json:"comments"`
+	Touched  []Touched     `json:"touched,omitempty"`
+	Created  time.Time     `json:"created,omitzero"`
+	Updated  time.Time     `json:"updated,omitzero"`
 }
 
 // Last is the last thing said in the thread.
@@ -118,11 +143,11 @@ func (t Thread) AgentAnswered() bool {
 	return ok && c.Author == AuthorAgent && !c.Progress
 }
 
-// Undelivered are your comments the agent hasn't been given yet.
+// Undelivered are your comments, and those mirrored from GitHub, the agent hasn't been given yet.
 func (t Thread) Undelivered() []Comment {
 	var out []Comment
 	for _, c := range t.Comments {
-		if c.Author == AuthorYou && !c.Delivered && !c.Btw {
+		if (c.Author == AuthorYou || c.Author == AuthorGitHub) && !c.Delivered && !c.Btw {
 			out = append(out, c)
 		}
 	}
@@ -141,7 +166,18 @@ func (t Thread) WaitsOnAgent() bool {
 	if c.Author == AuthorAgent {
 		return c.Progress
 	}
-	return c.Author == AuthorYou
+	return c.Author == AuthorYou || c.Author == AuthorGitHub
+}
+
+// Drafts are the agent's replies waiting for the user to forward them.
+func (t Thread) Drafts() []Comment {
+	var out []Comment
+	for _, c := range t.Comments {
+		if c.Draft {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // Heading is what a list shows for the thread: its title, else the first line of its first comment.

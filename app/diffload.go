@@ -1,0 +1,291 @@
+package app
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"strings"
+
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/text"
+)
+
+// diffContext is how many unchanged lines the diff shows around a change, as git diff does by default.
+const diffContext = 3
+
+// diffInput is what a file's diff is made from; the diff is made again when it changes.
+type diffInput struct {
+	rev        string // the base revision; "" for none
+	path, old  string // repo paths: the file, and a rename's old name
+	code       byte
+	add, del   int
+	size       int64
+	mtime      int64
+	buf        *text.Buffer // the open buffer it's read from, nil for the file on disk
+	version    uint64
+	repo, work string
+}
+
+// diffFile is one file's branch diff, made off the loop: its hunks with their highlights, word marks and function,
+// and who wrote its added lines.
+type diffFile struct {
+	in      diffInput
+	binary  bool
+	newText []byte
+	hunks   []diffHunk
+	authors map[string]int // added lines by who wrote them
+	err     error
+}
+
+// diffHunk is a hunk as the view draws it.
+type diffHunk struct {
+	gitx.DiffHunk
+	ids   []string
+	fn    string      // the function it's in
+	spans [][]span    // each line's text, by highlight
+	marks [][][2]int  // each line's changed words
+	adds  []addedLine // each line's change and author, for those it adds
+}
+
+// addedLine is a line a change adds: its change's ID, its key in the ledger (core.LineKey), and who wrote it, as
+// the authorship box names them.
+type addedLine struct {
+	change, key string
+	who         string
+	committed   bool
+}
+
+// loadDiff makes a file's diff: the base revision's version against newText (the buffer's), or the file on disk
+// when newText is nil.
+func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snapshot) *diffFile {
+	ctx := context.Background()
+	repo := gitx.Repo{Dir: in.repo}
+	f := &diffFile{in: in}
+	var old []byte
+	if in.code != 'A' && in.code != '?' {
+		old, _ = repo.FileAt(ctx, in.rev, cmpOr(in.old, in.path))
+	}
+	if newText == nil && in.code != 'D' {
+		b, err := os.ReadFile(in.work)
+		if err != nil && !os.IsNotExist(err) {
+			f.err = err
+			return f
+		}
+		newText = b
+	}
+	f.newText = newText
+	if isBinary(old) || isBinary(newText) {
+		f.binary = true
+		return f
+	}
+	hs := gitx.Unified(old, newText, diffContext)
+	oldLines, newLines := gitx.SplitLines(old), gitx.SplitLines(newText)
+	oldHL, newHL := highlightLines(r, in.path, old, oldLines, hs, true), highlightLines(r, in.path, newText, newLines, hs, false)
+	units := outline(r, in.path, newText)
+	for _, h := range hs {
+		dh := diffHunk{DiffHunk: h, ids: h.IDs(), spans: make([][]span, len(h.Lines)), marks: make([][][2]int, len(h.Lines))}
+		dh.fn = hunkFunc(h, units, newText, newLines, oldLines)
+		dh.adds = make([]addedLine, len(h.Lines))
+		k := 0
+		for _, c := range h.Changes {
+			om, nm := c.Intraline()
+			for k < len(h.Lines) && h.Lines[k].Op == ' ' {
+				k++
+			}
+			for i := range om {
+				dh.marks[k+i] = om[i]
+			}
+			k += len(om)
+			id := c.ID()
+			for i := range nm {
+				dh.marks[k+i] = nm[i]
+				dh.adds[k+i] = addedLine{change: id, key: core.LineKey(id, i)}
+			}
+			k += len(nm)
+		}
+		for i, l := range h.Lines {
+			text := strings.TrimRight(l.Text, "\r\n")
+			switch {
+			case l.Op == '-' && oldHL != nil:
+				dh.spans[i] = oldHL[l.Old-1]
+			case l.Op != '-' && newHL != nil:
+				dh.spans[i] = newHL[l.New-1]
+			default:
+				dh.spans[i] = []span{{text: text}}
+			}
+		}
+		f.hunks = append(f.hunks, dh)
+	}
+	f.authors = authorship(ctx, repo, in.path, newText, f.hunks, snap)
+	return f
+}
+
+func isBinary(b []byte) bool { return bytes.IndexByte(b[:min(len(b), 8000)], 0) >= 0 }
+
+// highlightLines is each line of src that a hunk shows on its side, cut into runs by highlight; nil without a
+// grammar.
+func highlightLines(r registry.Registry, path string, src []byte, lines []string, hs []gitx.DiffHunk, old bool) [][]span {
+	lang, ok := languageFor(r, path, src)
+	if !ok || len(src) == 0 {
+		return nil
+	}
+	p, err := syntax.NewParser(lang)
+	if err != nil {
+		return nil
+	}
+	defer p.Close()
+	p.Parse(src)
+	starts := make([]int, len(lines)+1)
+	for i, l := range lines {
+		starts[i+1] = starts[i] + len(l)
+	}
+	out := make([][]span, len(lines))
+	for _, h := range hs {
+		start, n := h.NewStart, h.NewLines
+		if old {
+			start, n = h.OldStart, h.OldLines
+		}
+		from, to := max(start-1, 0), min(start-1+n, len(lines))
+		if n == 0 || from >= to {
+			continue
+		}
+		var hl []syntax.Span
+		for start := starts[from]; start < starts[to]; start += 1 << 10 {
+			end := min(start+1<<10, starts[to])
+			spans, err := p.Highlights(start, end)
+			if err != nil {
+				break
+			}
+			for _, s := range spans {
+				s.Range.Start, s.Range.End = max(s.Range.Start, start), min(s.Range.End, end)
+				if s.Range.Start < s.Range.End {
+					hl = append(hl, s)
+				}
+			}
+		}
+		for i := from; i < to; i++ {
+			out[i] = splitSpans(strings.TrimRight(lines[i], "\r\n"), starts[i], hl)
+		}
+	}
+	return out
+}
+
+// outline is the functions, methods and types of src, by tree-sitter.
+func outline(r registry.Registry, path string, src []byte) []text.Unit {
+	lang, ok := languageFor(r, path, src)
+	if !ok || len(src) == 0 {
+		return nil
+	}
+	p, err := syntax.NewParser(lang)
+	if err != nil {
+		return nil
+	}
+	defer p.Close()
+	p.Parse(src)
+	us, _ := p.Outline()
+	return us
+}
+
+// hunkFunc is what a hunk's header names after its @@: the smallest function, method or type around its first
+// change, from its line up to its name ("func roundHalfEven"); without one, the line git would name.
+func hunkFunc(h gitx.DiffHunk, units []text.Unit, src []byte, lines, oldLines []string) string {
+	at, before := -1, 0
+	for _, l := range h.Lines {
+		if l.Op == ' ' {
+			before = l.New
+			continue
+		}
+		at = l.New - 1
+		if l.New == 0 {
+			at = max(before-1, 0) // a deletion: the line before it
+		}
+		break
+	}
+	if at >= 0 && at < len(lines) {
+		off := 0
+		for _, l := range lines[:at] {
+			off += len(l)
+		}
+		best := -1
+		for i, u := range units {
+			if u.Range.Start <= off && off < u.Range.End && (best < 0 || u.Range.Len() < units[best].Range.Len()) {
+				best = i
+			}
+		}
+		if best >= 0 {
+			u := units[best]
+			first, _, _ := strings.Cut(string(src[u.Range.Start:u.Range.End]), "\n")
+			if i := strings.Index(first, u.Name); i >= 0 {
+				first = first[:i+len(u.Name)]
+			}
+			return truncate(strings.TrimSpace(first), 80)
+		}
+	}
+	return truncate(gitx.FuncLine(oldLines, h.OldStart), 80)
+}
+
+// authorship is who wrote the lines a diff adds, set on each hunk's added lines and counted: blame for those
+// committed (an agent, you, someone else), and for those not yet, the open buffer's authors (snap), else
+// "uncommitted".
+func authorship(ctx context.Context, repo gitx.Repo, path string, src []byte, hs []diffHunk, snap *text.Snapshot) map[string]int {
+	out := map[string]int{}
+	blame, _ := repo.Blame(ctx, path, src)
+	for _, h := range hs {
+		for k, l := range h.Lines {
+			if l.Op != '+' {
+				continue
+			}
+			who, committed := "uncommitted", false
+			if i := l.New - 1; i < len(blame) {
+				committed = blame[i].Kind != gitx.NotCommitted
+				switch blame[i].Kind {
+				case gitx.ByAgent:
+					who = "agent"
+				case gitx.ByYou:
+					who = "you"
+				case gitx.ByOther:
+					who = cmpOr(blame[i].Author, "others")
+				}
+			}
+			if who == "uncommitted" && snap != nil && l.New-1 < snap.Lines() {
+				who = cmpOr(lineAuthor(*snap, l.New-1), who)
+			}
+			h.adds[k].who, h.adds[k].committed = who, committed
+			out[who]++
+		}
+	}
+	return out
+}
+
+// lineAuthor is who wrote most of a buffer's line, as the authorship groups name them; "" when it's as loaded.
+func lineAuthor(s text.Snapshot, line int) string {
+	n := map[string]int{}
+	start, end := s.LineStart(line), s.LineEnd(line)
+	if end <= start {
+		return ""
+	}
+	for a := range s.Authors(text.Range{Start: start, End: end}) {
+		who := ""
+		switch a.Author.Kind {
+		case text.Agent:
+			who = "agent"
+		case text.User:
+			who = "you"
+		case text.Format, text.LSP:
+			who = "formatter"
+		}
+		if who != "" {
+			n[who] += a.Range.Len()
+		}
+	}
+	best := ""
+	for k, v := range n {
+		if best == "" || v > n[best] || v == n[best] && k < best {
+			best = k
+		}
+	}
+	return best
+}

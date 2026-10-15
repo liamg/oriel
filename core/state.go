@@ -20,44 +20,57 @@ type State struct {
 }
 
 type SessionState struct {
-	ID         SessionID  `json:"id"`
-	Name       string     `json:"name,omitempty"`
-	Kind       Kind       `json:"kind"`
-	Status     Status     `json:"status"`
-	Unseen     int        `json:"unseen,omitempty"` // errors since the session last had focus
-	Worker     WorkerID   `json:"worker,omitempty"`
-	Dir        string     `json:"dir,omitempty"` // the workspace on the worker; the directory itself when direct
-	Branch     string     `json:"branch,omitempty"`
-	Projects   []Project  `json:"projects,omitempty"`
-	Prompt     string     `json:"prompt,omitempty"`
-	Ticket     string     `json:"ticket,omitempty"`
-	PR         string     `json:"pr,omitempty"`
-	Source     string     `json:"source,omitempty"` // "crit" for a crit workspace, which the worker drops
-	Job        string     `json:"job,omitempty"`    // the saved job this session is a run of
-	Created    time.Time  `json:"created,omitzero"`
-	Archived   bool       `json:"archived,omitempty"`
-	Unplanned  bool       `json:"unplanned,omitempty"` // work started with no plan or ticket
-	StartWork  bool       `json:"startWork,omitempty"` // its worktrees come at Start work: a plan
-	Started    bool       `json:"started,omitempty"`   // a plan session whose work has started
-	Past       []PastPR   `json:"past,omitempty"`
-	Agent      AgentState `json:"agent,omitzero"`
-	Threads    []Thread   `json:"threads,omitempty"`
-	Tasks      []Task     `json:"tasks,omitempty"`
-	Subagents  []Subagent `json:"subagents,omitempty"`
-	Asks       []Ask      `json:"asks,omitempty"`
-	Transcript []Item     `json:"transcript,omitempty"`
-	Runs       []TestRun  `json:"runs,omitempty"`
-	Rules      []string   `json:"rules,omitempty"` // "Always in this workspace": Bash(go test:*), net(*.golang.org:443)
-	ProjectUI  ProjectUI  `json:"projectUI,omitzero"`
+	ID         SessionID      `json:"id"`
+	Name       string         `json:"name,omitempty"`
+	Kind       Kind           `json:"kind"`
+	Status     Status         `json:"status"`
+	Unseen     int            `json:"unseen,omitempty"` // errors since the session last had focus
+	Worker     WorkerID       `json:"worker,omitempty"`
+	Dir        string         `json:"dir,omitempty"` // the workspace on the worker; the directory itself when direct
+	Branch     string         `json:"branch,omitempty"`
+	Projects   []Project      `json:"projects,omitempty"`
+	Prompt     string         `json:"prompt,omitempty"`
+	Ticket     string         `json:"ticket,omitempty"`
+	PR         string         `json:"pr,omitempty"`
+	Source     string         `json:"source,omitempty"` // "crit" for a crit workspace, which the worker drops
+	Job        string         `json:"job,omitempty"`    // the saved job this session is a run of
+	Created    time.Time      `json:"created,omitzero"`
+	Archived   bool           `json:"archived,omitempty"`
+	Unplanned  bool           `json:"unplanned,omitempty"` // work started with no plan or ticket
+	StartWork  bool           `json:"startWork,omitempty"` // its worktrees come at Start work: a plan
+	Started    bool           `json:"started,omitempty"`   // a plan session whose work has started
+	Past       []PastPR       `json:"past,omitempty"`
+	Agent      AgentState     `json:"agent,omitzero"`
+	Threads    []Thread       `json:"threads,omitempty"`
+	Tasks      []Task         `json:"tasks,omitempty"`
+	Subagents  []Subagent     `json:"subagents,omitempty"`
+	Asks       []Ask          `json:"asks,omitempty"`
+	Transcript []Item         `json:"transcript,omitempty"`
+	Runs       []TestRun      `json:"runs,omitempty"`
+	Rules      []string       `json:"rules,omitempty"`      // "Always in this workspace": Bash(go test:*), net(*.golang.org:443)
+	Reviews    []Review       `json:"reviews,omitempty"`    // what's been marked reviewed in the diff, per file
+	CommitGate string         `json:"commitGate,omitempty"` // its kind's commit gate: hard, soft or off; "" for DefaultGate
+	Overrides  []GateOverride `json:"overrides,omitempty"`  // commits made past the gate
+	AIReviews  []AIReview     `json:"aiReviews,omitempty"`
+	Findings   []Finding      `json:"findings,omitempty"` // the AI reviews' findings
+	// Verifications are the verify quizzes taken before raising its PRs, the last one standing.
+	Verifications []Verification `json:"verifications,omitempty"`
+	ProjectUI     ProjectUI      `json:"projectUI,omitzero"`
 }
 
 // WorkerState is a worker as the app sees it.
 type WorkerState struct {
 	ID        WorkerID  `json:"id"`
 	Name      string    `json:"name,omitempty"`
+	Label     string    `json:"label,omitempty"` // the app's name for it (WorkerRenamed), over Name
 	Host      string    `json:"host,omitempty"`
 	OS        string    `json:"os,omitempty"`
+	Arch      string    `json:"arch,omitempty"`
+	Version   string    `json:"version,omitempty"`
+	Build     string    `json:"build,omitempty"`
+	Providers []string  `json:"providers,omitempty"` // the agents it can run
 	Connected bool      `json:"connected"`
+	Since     time.Time `json:"since,omitzero"` // when it connected, or went away
 	Cores     int       `json:"cores,omitempty"`
 	CPU       float64   `json:"cpu,omitempty"` // 0–1, the whole machine
 	Mem       uint64    `json:"mem,omitempty"` // bytes in use
@@ -104,17 +117,25 @@ func (u ProviderUsage) Same(o ProviderUsage) bool {
 	return u.Provider == o.Provider && u.Account == o.Account
 }
 
-// WorkerName is how a worker reads: its name, else its ID. "" is this machine's.
+// Title is how a worker reads: the app's name for it, else its own, else its ID.
+func (w WorkerState) Title() string {
+	switch {
+	case w.Label != "":
+		return w.Label
+	case w.Name != "":
+		return w.Name
+	}
+	return string(w.ID)
+}
+
+// WorkerName is how a worker reads (WorkerState.Title). "" is this machine's.
 func (s State) WorkerName(id WorkerID) string {
 	if id == "" {
 		id = LocalWorker
 	}
 	for _, w := range s.Workers {
 		if w.ID == id {
-			if w.Name != "" {
-				return w.Name
-			}
-			break
+			return w.Title()
 		}
 	}
 	return string(id)

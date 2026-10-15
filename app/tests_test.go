@@ -226,7 +226,7 @@ func TestFailureBlock(t *testing.T) {
 	s.frame()
 	s.frame()
 	s.click(centre(s.access("ask agent to explain").Bounds))
-	s.tests().wait()
+	s.explainer().wait()
 	s.sh.runTodo()
 	s.frame()
 	s.frame()

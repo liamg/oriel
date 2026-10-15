@@ -21,10 +21,8 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 - [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md): Process plugins with an OS sandbox; WASM plugins; oriel build --with
 - [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and indicators in slots
 - [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key)
-- [FG-6](FG-6-ship-page-uncommitted-behind-unpushed-pr-checks-.md): Ship page: uncommitted → behind → unpushed → PR → checks, multi-project
-- [RV-1](RV-1-split-and-unified-diff-intraline-per-hunk-review.md): Split and unified diff, intraline, per-hunk reviewed
 
-P4 is done.
+P4 is done. P6 (FG-6, AI-10, RV-1–RV-7, TR-6, AI-15) is in review.
 
 ## Suggested order
 
@@ -142,6 +140,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 65. [RV-6](RV-6-explain-this-change-walkthrough.md): Explain this change walkthrough · after RV-5
 66. [RV-7](RV-7-verify-raise-quiz.md): Verify & raise quiz · after AI-5
 67. [TR-6](TR-6-ask-to-explain-next-to-every-ask-to-fix-tests-di.md): "Ask to explain" next to every "ask to fix" (tests, diagnostics, CI, conflicts, failed terminal commands) · after TR-2, RV-5
+68. [AI-15](AI-15-workers-page-remote-workers-pairing.md): Workers page: this machine's and remote workers, pairing, revoke, rename, forget, restart · after AI-1, AI-12, SE-5 (P6 follow-up)
 
 ### Phase 7 · the rest
 

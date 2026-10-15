@@ -66,12 +66,13 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	x.sandboxKick = make(chan struct{}, 1)
 	x.sandboxSettings(ctx)
 	for _, c := range x.sh.cfg.Workers {
-		x.serve(ctx, h, c)
+		x.serve(ctx, h, c, "")
 	}
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
 	if len(x.sh.cfg.Workers) > 0 {
-		x.add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain}))
+		x.add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain, Label: x.explainer, Byline: x.explainerByline}))
+		x.add(h.Contribute(registry.Forker{Name: "agent", Order: 10, Fork: x.fork, Label: x.forker}))
 	}
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "AgentTurnEnd", Fired: true, Payload: AgentTurnEnd{},
 		Doc: "A session's agent finished a turn."}))
@@ -208,8 +209,10 @@ func (x *sessions) Deactivate(ctx context.Context) error {
 	return x.disposer.Deactivate(ctx)
 }
 
-// serve mirrors one worker into the store and answers its calls, until ctx ends or it goes away.
-func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
+// serve mirrors one worker into the store and answers its calls, until ctx ends or it goes away. A worker speaks
+// only for itself (core.State.FromWorker); want, when set, is the ID it must have: a remote worker's, from its key.
+// A worker that connects again replaces its old connection.
+func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want core.WorkerID) {
 	c.Conn.Handle(worker.MethodAppTools, func(context.Context, json.RawMessage) (any, error) { return x.agentTools(h), nil })
 	c.Conn.Handle(worker.MethodAppTool, func(ctx context.Context, raw json.RawMessage) (any, error) {
 		var call worker.ToolCall
@@ -231,25 +234,47 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
 			h.Log().Warn("worker", "err", err)
 			return
 		}
+		if want != "" && info.ID != want {
+			h.Log().Warn("a worker claimed another's name", "key", want, "claimed", info.ID)
+			c.Conn.Close()
+			return
+		}
 		x.mu.Lock()
+		old, had := x.workers[info.ID]
 		x.workers[info.ID] = c
 		x.mu.Unlock()
+		if had && old.Conn != c.Conn {
+			old.Conn.Close()
+		}
 		x.sendSandbox()
 		h.Redraw()
 		if x.sh.cfg.LocalWorker != nil && info.ID == core.LocalWorker && info.Build != worker.Build() {
 			x.sh.restartWorker(c, info.ID)
 		}
-		err = c.Events(ctx, x.sh.cfg.Store.Apply)
+		store := x.sh.cfg.Store
+		err = c.Events(ctx, func(ev core.Event) error {
+			if !store.State().FromWorker(info.ID, ev) {
+				return nil
+			}
+			return store.Apply(ev)
+		})
 		if r := x.sh.draining.Load(); r != nil && r.old.Conn == c.Conn {
 			r.lost()
 			return
 		}
-		if ctx.Err() == nil {
-			h.Log().Warn("lost the worker", "worker", info.ID, "err", err)
-			_ = x.sh.cfg.Store.Apply(core.WorkerGone{ID: info.ID})
-			x.mu.Lock()
+		if ctx.Err() != nil {
+			return
+		}
+		x.mu.Lock()
+		current := x.workers[info.ID].Conn == c.Conn
+		if current {
 			delete(x.workers, info.ID)
-			x.mu.Unlock()
+		}
+		x.mu.Unlock()
+		if current {
+			h.Log().Warn("lost the worker", "worker", info.ID, "err", err)
+			_ = store.Apply(core.WorkerGone{ID: info.ID, At: time.Now()})
+			h.Redraw()
 		}
 	}()
 }
@@ -258,7 +283,7 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
 // the notices of those that work again.
 func (x *sessions) loginNotices(w core.WorkerState, was []core.Login) {
 	source := "worker:" + string(w.ID)
-	where := cmpOr(w.Name, string(w.ID))
+	where := w.Title()
 	if len(w.SignedOut) == 0 {
 		for _, n := range x.h.State().Notifications {
 			if n.ID == "agent.login" && n.Source == source && !n.Dismissed {
@@ -379,7 +404,8 @@ func (x *sessions) comment(ctx registry.Ctx, a registry.Args) error {
 		if strings.TrimSpace(ev.Body) == "" {
 			return errors.New("the comment is empty")
 		}
-		req := worker.CommentReq{Session: id, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw}
+		req := worker.CommentReq{Session: id, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
+			Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding")}
 		if ev.Thread == "" && ev.File != "" {
 			req.Anchor = x.anchor(id, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
 		}
@@ -811,13 +837,62 @@ func (x *sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 	if err != nil {
 		return "", err
 	}
+	how := map[string]string{registry.ExplainDetailed: "in detail: what it does, step by step, and the cases it handles",
+		registry.ExplainWhy: "and why it is the way it is, from its history below and what you know of this session"}[r.Depth]
+	if how == "" {
+		how = "briefly, in a short paragraph"
+	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "Explain this %s briefly, in markdown. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
-		r.Kind, r.Subject, r.Context)
+	if r.Format != "" {
+		fmt.Fprintf(&b, "Explain this %s. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
+			r.Kind, r.Subject, r.Context)
+	} else {
+		fmt.Fprintf(&b, "Explain this %s %s, in markdown. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
+			r.Kind, how, r.Subject, r.Context)
+	}
 	if len(r.Files) > 0 {
 		fmt.Fprintf(&b, "\n\nFiles: %s", strings.Join(r.Files, ", "))
 	}
+	if r.Format != "" {
+		b.WriteString("\n\n" + r.Format)
+	}
 	return c.Fork(ctx, id, b.String())
+}
+
+// explainer is who answers explain: the session in front's agent, forked.
+func (x *sessions) explainer() string {
+	se, ok := x.sh.cfg.Store.Session(x.focused())
+	if !ok {
+		return "no session in front"
+	}
+	return "fork of " + cmpOr(se.Snapshot().Agent.Provider, "the agent") + " · knows this session"
+}
+
+// explainerByline is who wrote a long answer, such as a walkthrough: the agent in front, from what it knows.
+func (x *sessions) explainerByline() string {
+	se, ok := x.sh.cfg.Store.Session(x.focused())
+	if !ok {
+		return "written by the agent"
+	}
+	return "written by " + cmpOr(se.Snapshot().Agent.Provider, "the agent") + " from the session's own context"
+}
+
+// fork answers a side question from a tool-less fork of the session's agent.
+func (x *sessions) fork(ctx context.Context, r registry.ForkRequest) (string, error) {
+	c, err := x.client(core.SessionID(r.Session))
+	if err != nil {
+		return "", err
+	}
+	return c.Fork(ctx, core.SessionID(r.Session), r.Prompt)
+}
+
+// forker is who answers a session's side questions: "claude · fork, no tools".
+func (x *sessions) forker(id string) string {
+	se, ok := x.sh.cfg.Store.Session(core.SessionID(id))
+	if !ok {
+		return ""
+	}
+	return cmpOr(se.Snapshot().Agent.Provider, "the agent") + " · fork, no tools"
 }
 
 // mainInput is what a hook matches a tool's input on: a shell's command, an edit's path, else the JSON.

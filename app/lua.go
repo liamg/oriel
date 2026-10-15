@@ -68,7 +68,6 @@ type replLine struct {
 
 // Events features fire later, declared now so hooks on them show what they wait for (plugins.md, "Go interfaces").
 var laterEvents = []registry.EventInfo{
-	{Name: "Commit", Doc: "A commit about to be made (FG-6); a veto stops it. { project, message, unread }"},
 	{Name: "PrRaise", Doc: "A pull request about to be raised (FG-6); a veto stops it. { project, title }"},
 	{Name: "ModeChanged", Doc: "The editor's mode changing (a later ticket). { old, new }"},
 }

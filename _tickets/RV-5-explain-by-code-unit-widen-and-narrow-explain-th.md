@@ -2,7 +2,7 @@
 id: RV-5
 title: "Explain by code unit, [/] widen and narrow, Explain this on a selection"
 phase: P6
-status: todo
+status: review
 area: Review and explain
 module: explain, syntax
 depends_on: [ED-6, AI-2]

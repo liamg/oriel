@@ -247,6 +247,19 @@ func CmdlineHints(r Registry, line string) []string {
 	return out
 }
 
+// ExclusiveKeys is a key mode that stands alone while Active says so (nil: always): keys resolving in it, the modes
+// after it ("n", "global") lend it only the keymaps Allow lets through (nil: none), and none of their longer keys, so
+// a screen keeps to its own keys (the start view to its entries'). Key layers before it are untouched.
+type ExclusiveKeys struct {
+	Mode   string
+	Active func() bool
+	Allow  func(Keymap) bool
+	Source string
+}
+
+func (ExclusiveKeys) ContributionKind() string   { return "keys.exclusive" }
+func (e ExclusiveKeys) ContributionName() string { return e.Mode }
+
 // RawKeys is a key mode whose widget takes control keys itself: while it has focus, global maps of ⌃ keys (without ⌘
 // or ⌥) don't apply, so a terminal's program gets ⌃W and ⌃J. Its own mode's maps still do.
 type RawKeys struct {

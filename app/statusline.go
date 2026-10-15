@@ -11,7 +11,8 @@ import (
 )
 
 // The status line's segments are views named for their side and place: statusline.left.00-mode,
-// statusline.right.90-position. Any extension adds one by registering a view so named; they sit in name order.
+// statusline.right.90-position. Any extension adds one by registering a view so named; they sit in name order. A
+// segment with nothing to show builds no node, and takes no room.
 const (
 	StatusLeft  = "statusline.left."
 	StatusRight = "statusline.right."
@@ -33,8 +34,12 @@ func (s *statusLine) Activate(_ context.Context, h ext.Host) error {
 				Role:  ui.RoleStatus, Label: "Status line"}, func(c *ui.Ctx) {
 				ids := h.Views()
 				segment := func(id string) {
-					if v, ok := h.ViewByID(id); ok {
-						c.Row(id, ui.Style{H: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
+					v, ok := h.ViewByID(id)
+					if !ok {
+						return
+					}
+					if n := v.Build(vc); n != nil {
+						c.Row(id, ui.Style{H: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) { c.Node(n) })
 					}
 				}
 				for _, id := range ids {

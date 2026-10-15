@@ -174,6 +174,8 @@ type Float struct {
 	At     render.Point // the anchor's corner: {1, 0} is its top right
 	Self   render.Point // the box's corner placed there
 	Offset render.Point
+	// Fill makes a float placed against its parent and sized Flex fill the parent that way: a card's edge.
+	Fill bool
 }
 
 type TextStyle struct {

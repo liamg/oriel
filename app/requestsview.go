@@ -256,7 +256,7 @@ func (x *requests) requestView(c *ui.Ctx, vc registry.ViewCtx) {
 						}
 						for _, cm := range t.Comments {
 							block(cm.ID)
-							x.comment(c, se, cm, width)
+							x.comment(c, se, t, cm, width)
 						}
 					})
 					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
@@ -391,8 +391,9 @@ func (x *requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 
 // comment is one message: who said it and when, its body as markdown, and for the agent's, what it did on the way
 // (the activity block) and the runs behind what it claims (evidence chips).
-func (x *requests) comment(c *ui.Ctx, se core.SessionState, cm core.Comment, width float32) {
+func (x *requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm core.Comment, width float32) {
 	th := c.Theme()
+	src, sourced := registry.ThreadSourceFor(x.h, t.Origin)
 	c.Row(cm.ID, ui.Style{W: ui.Px(width), Gap: 14, Role: ui.RoleListItem, Label: cmpOr(cm.Name, string(cm.Author))}, func(c *ui.Ctx) {
 		avatar(c, "av", cm)
 		inner := width - 42
@@ -403,8 +404,11 @@ func (x *requests) comment(c *ui.Ctx, se core.SessionState, cm core.Comment, wid
 					name = providerName(cm.Name)
 				}
 				c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-				if !cm.Time.IsZero() {
-					c.Text("t", ago(c.Now(), cm.Time), monoFont(10, th.C(theme.FgGhost)))
+				if when := commentWhen(c.Now(), cm, t.Origin); when != "" {
+					c.Text("t", when, monoFont(10, th.C(theme.FgGhost)))
+				}
+				if cm.Redacted {
+					widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 				}
 				if cm.Model != "" {
 					widget.Chip(c, "model", cm.Model, th.C(theme.FgMuted), "agent/requests#request")
@@ -420,6 +424,9 @@ func (x *requests) comment(c *ui.Ctx, se core.SessionState, cm core.Comment, wid
 				}
 			})
 			markdownText(c, "body", cm.Body, inner, uiFont(13, th.C(theme.Fg)))
+			if sourced && src.Comment != nil {
+				src.Comment(c, string(se.ID), string(t.ID), cm.ID, inner)
+			}
 			for i, img := range cm.Images {
 				c.Row(fmt.Sprint("img", i), ui.Style{Pad: ui.PadXY(10, 6), Gap: 8, Radius: 6, Stroke: th.C(tBlockLine), Border: 1, Cross: ui.Center},
 					func(c *ui.Ctx) {
@@ -586,12 +593,17 @@ func (x *requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 				stat(c, "agent", "agent", word, th.C(tok))
 			})
 			if len(t.Touched) > 0 {
+				ledgers := map[string]registry.Ledger{}
 				section(c, "changed", "Changed by this request", "", func(c *ui.Ctx) {
 					for i, f := range t.Touched {
 						c.Row(i, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 							c.Text("m", "M", monoFont(11.5, th.C(theme.Warn)))
 							c.Text("p", truncate(relTo(se, f.Path), 30), monoFont(11.5, th.C(theme.FgMuted)))
 							c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+							if n, ok := touchedLedger(x.h, se, f, ledgers); ok {
+								readBar(c, "read", n)
+								c.Text("rd", fmt.Sprintf("%d/%d", n.Read, n.Total()), monoFont(10, ledgerTone(th, n)))
+							}
 							widget.DiffStat(c, "s", f.Added, f.Removed, widget.DiffStatOpts{})
 						})
 					}

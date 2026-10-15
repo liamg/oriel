@@ -18,17 +18,21 @@ The work tree, in three scopes. `⌥1` `⌥2` `⌥3` switch between them, and ea
 ## Changed {#changed}
 
 Each file has a dot: `●` uncommitted only, `◉` committed with more on top, `○` committed only. **tree** nests
-files by directory; **flat** lists them by path.
+files by directory; **flat** lists them by path; **by review** lists those with the most agent-written lines still
+to read first. A file with agent-written lines has a read bar: read, then skimmed (the review ledger, see the
+diff's help).
 
 ## Columns {#columns}
 
 In All, the chips turn columns on and off: **status** (the letter, and the name tinted to match), **± lines**
-(with a bar for the size of the change) and **diag** (error and warning counts). Folders show a dot and how many
+(with a bar for the size of the change), **agent** (`◆` where agent-written lines are still to read, `◇` once
+you've read them all) and **diag** (error and warning counts). Folders show a dot and how many
 changed files are under them. **changed-only** (`⌥C`) narrows All to the changed files.
 
 ## Keys {#keys}
 
 In Uncommitted, fugitive's keys: `s` stages the file (or unstages a staged one), `u` unstages, `x` discards its
-unstaged changes after asking (an untracked file is deleted), `=` opens its diff.
+unstaged changes after asking (an untracked file is deleted), `=` opens its diff. `c` commits what's staged and `C`
+everything uncommitted, past the commit gates (**Commit…** does the same).
 
 {{keys "explorer.*"}}

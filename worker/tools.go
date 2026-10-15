@@ -35,7 +35,8 @@ const (
 // tools are what the agent is offered as mcp__oriel__*: the worker's own, then the app's (LSP lookups, say).
 func (w *Worker) tools(h *host) []agent.Tool {
 	own := []agent.Tool{
-		{Name: "reply", Description: "Reply in an Oriel thread. working: a progress note that keeps the thread marked in progress. resolve: resolve the thread after replying.",
+		{Name: "reply", Description: "Reply in an Oriel thread. working: a progress note that keeps the thread marked in progress. resolve: resolve the thread after replying. " +
+			"On a thread with origin=\"github\" your reply is a draft: the user reads it and forwards it to GitHub themselves. You never post to GitHub.",
 			Schema: schema(`"thread":`+str+`,"body":`+str+`,"working":`+bl+`,"resolve":`+bl, "thread", "body"), Call: h.toolReply},
 		{Name: "thread", Description: "Read one Oriel thread in full: every comment, with nothing clipped.", ReadOnly: true,
 			Schema: schema(`"thread":`+str, "thread"), Call: h.toolThread},
@@ -145,7 +146,7 @@ func (h *host) toolReply(_ context.Context, raw json.RawMessage) (string, error)
 	}
 	h.mu.Unlock()
 	c := core.Comment{ID: newID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body, Time: h.w.opts.Now().UTC(),
-		Progress: working, Model: modelLabel(se.Agent)}
+		Progress: working, Model: modelLabel(se.Agent), Draft: t.Origin == core.OriginGitHub && !working}
 	if !working {
 		c.Activity = activity
 		c.Evidence, c.Unbacked = evidence(se, body, runs)
@@ -165,10 +166,14 @@ func (h *host) toolReply(_ context.Context, raw json.RawMessage) (string, error)
 		h.w.completeTasks(h.id, t.ID)
 	}
 	h.w.restatus(h.id)
-	if c.Unbacked != "" {
-		return "replied; note: " + c.Unbacked + ". Run the tests with test_run and cite the run.", nil
+	said := "replied"
+	if c.Draft {
+		said = "drafted: the user reads your reply and forwards it to GitHub; nothing was posted"
 	}
-	return "replied", nil
+	if c.Unbacked != "" {
+		return said + "; note: " + c.Unbacked + ". Run the tests with test_run and cite the run.", nil
+	}
+	return said, nil
 }
 
 var (
@@ -370,9 +375,10 @@ func (h *host) toolProjects(ctx context.Context, _ json.RawMessage) (string, err
 	return string(b), err
 }
 
-// toolDraft keeps a commit message or PR draft for the Ship page, per project.
+// toolDraft keeps a commit message or PR draft for the Ship page, per project, with the code it was drafted
+// against. One the user wrote stays.
 func (h *host) toolDraft(kind string) func(context.Context, json.RawMessage) (string, error) {
-	return func(_ context.Context, raw json.RawMessage) (string, error) {
+	return func(ctx context.Context, raw json.RawMessage) (string, error) {
 		a := parse(raw)
 		se, err := h.w.session(h.id)
 		if err != nil {
@@ -384,20 +390,18 @@ func (h *host) toolDraft(kind string) func(context.Context, json.RawMessage) (st
 				project = p.Name
 			}
 		}
-		dir := filepath.Join(h.w.sessionDir(h.id), "drafts")
-		if err := os.MkdirAll(dir, 0o700); err != nil {
+		_, p, repo, err := h.w.projectRepo(h.id, project)
+		if err != nil {
 			return "", err
 		}
-		var body string
+		if h.w.readDraft(h.id, p.Name, kind).By == DraftByYou {
+			return fmt.Sprintf("Not saved: the user wrote %s's %s themselves. Leave it.", p.Name, draftNoun[kind]), nil
+		}
+		code := draftCode(ctx, repo, repo.FlightBase(ctx, p.Base), kind)
 		if kind == "commit" {
-			body = a.str("message")
-		} else {
-			body = "# " + a.str("title") + "\n\n" + a.str("body")
+			return "saved", h.w.writeDraft(h.id, p.Name, kind, "", a.str("message"), se.Agent.Provider, code)
 		}
-		if strings.TrimSpace(body) == "" {
-			return "", errors.New("the draft is empty")
-		}
-		return "saved", os.WriteFile(filepath.Join(dir, Sanitise(project)+"."+kind+".md"), []byte(body), 0o600)
+		return "saved", h.w.writeDraft(h.id, p.Name, kind, a.str("title"), a.str("body"), se.Agent.Provider, code)
 	}
 }
 

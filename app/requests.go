@@ -41,6 +41,9 @@ var (
 	tReqUnbacked  = theme.Declare("requests.unbacked", "warn")
 	tReqThreadBg  = theme.Declare("requests.inline.bg", "bg.surface")
 	tReqThreadBd  = theme.Declare("requests.inline.border", "line.strong")
+	tReqAvatarGH  = theme.Declare("requests.avatar.github", "violet")
+	tReqDraftBg   = theme.Declare("requests.draft.bg", "alpha(violet, 4%)")
+	tReqDraftBd   = theme.Declare("requests.draft.border", "alpha(violet, 35%)")
 )
 
 // reqGroup is where a request sits in the list: what it waits on.
@@ -151,7 +154,7 @@ func (x *requests) Activate(_ context.Context, h ext.Host) error {
 		return out
 	}
 	cmds := []registry.Command{
-		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side",
+		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.sh.sessions.comment(ctx, a) }},
 		{ID: "request.resolve", Title: "Resolve a request: {thread} of {id}, the one selected by default; or set its {status}: open, resolved, deferred, dismissed",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -595,8 +598,11 @@ func msgs(n int) string { return fmt.Sprintf("%d %s", n, plural(n, "msg", "msgs"
 func avatar(c *ui.Ctx, key any, cm core.Comment) {
 	th := c.Theme()
 	tone, label := th.C(tReqAvatarYou), cmpOr(initials(cm.Name), "U")
-	if cm.Author == core.AuthorAgent {
+	switch cm.Author {
+	case core.AuthorAgent:
 		tone, label = th.C(tReqAvatarAI), strings.ToUpper(providerName(cm.Name)[:1])
+	case core.AuthorGitHub:
+		tone, label = th.C(tReqAvatarGH), cmpOr(initials(strings.NewReplacer("-", " ", "_", " ", ".", " ").Replace(cm.Name)), "GH")
 	}
 	c.Box(key, ui.Style{W: ui.Px(28), H: ui.Px(28), Radius: 6, Fill: tone, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", label, ui.TextStyle{Font: kickerFont(render.Color{}).Font, Color: th.C(theme.AccentInk)})

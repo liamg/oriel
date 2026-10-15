@@ -111,20 +111,59 @@ flowchart TB
   it's in (`registry.EditorWindow{ID, Path, Presenter}`), and `LabelOn`/`IconOn` show while it's on (Preview ↔ Edit);
   `Note(window)` is dim text after the label (a count); an `Icon` naming a built-in icon is drawn.
   lit while `On` says so (the tests' file, failed, watch and coverage).
-- explainers (`registry.Explainer`): answer an `ExplainRequest` (a failure, a diagnostic, a selection) in markdown,
-  with no way to change anything; every "ask to explain" uses the first. The agent's comes with AI.
+- explainers (`registry.Explainer`): answer an `ExplainRequest` (a failure, a diagnostic, a selection, a code unit;
+  `Depth` brief, detailed or why) in markdown, with no way to change anything; every "ask to explain" uses the first
+  (`registry.Explain`), and its `Label` (“fork of claude · knows this session”) shows under the answer. The agent's
+  comes with AI; Lua adds one with `oriel.agent.explainer`. `explain.ask {file, line, end_line | text; subject, kind,
+  context, depth; key}` (RV-5) is how a feature asks: about a file's lines, a card between them; about text (or just a
+  `context`), a notice; with a `key`, the answer is kept for the place that asked to draw (the failure block's card).
+  It's unavailable until an explainer is registered. A feature that parses the answer calls `registry.Explain` with
+  `ExplainRequest.Format` (RV-6): the shape the answer must take instead of prose, which replaces the explainer's own
+  instructions on length and form (the walkthrough's JSON steps). `Explainer.Byline` says who wrote a long answer
+  ("written by claude from the session's own context"); `Explainer.WrittenBy()` falls back to "written by" and the
+  label. Lua: `oriel.agent.explainer{…, byline}`, and `req.format`.
+- forkers (`registry.Forker`, RV-7): answer a side question for a session (`ForkRequest{Session, Prompt}`) from its
+  agent's context, with no tools and outside its conversation (agents.md: btw, explain, the verify quiz);
+  `registry.Fork` asks the first by `Order` and `registry.ForkLabel(session)` says who ("claude · fork, no tools").
+  The sessions extension registers the agent's (order 10, the wire's `agent.fork`); Lua adds one with
+  `oriel.agent.forker { name, order, label, run = fn({ session, prompt }) }`.
+- fix and explain twins (TR-6): something gone wrong is a `registry.Trouble` (kind, subject, context, file and lines,
+  the fix request's text). Every "ask the agent to fix" runs `agent.fix` (`registry.FixCommand`) with
+  `Trouble.Args()`, which writes a request with it attached; its twin runs `explain.ask` (`registry.ExplainCommand`)
+  with the same args. A `MenuItem` whose command is `agent.fix` gets its twin right after it, labelled "Ask the agent
+  to explain", wherever menu items are listed (`registry.MenuItems`, `registry.WithTwins` for a menu of one's own such
+  as the code actions'); a plugin's too. `MenuItem.Trouble(at)` computes the trouble where the menu opened, and hides
+  the pair when there's none (the terminal's failed command). Buttons use `askTwins` (explain then fix, the answer
+  under them by `key`). A fix that runs `request.new` itself is a test failure (`TestFixesGoThroughAgentFix`).
+- the walkthrough (RV-6): `explain.change` opens Explain this change (the `explain.change` view, a tab in the main
+  area) and asks for a walkthrough when there's none still good; `explain.change.step {step | by}`,
+  `explain.change.line {by}`, `explain.change.ask`, `explain.change.comment {line}`, `explain.change.discard` and
+  `explain.change.close` drive it, and its keys are the `explain.change` key mode. A diff view's header button runs
+  `explain.change`.
+- annotations (RV-6): `widget.Annotation(c, key, AnnotationOpts{N, Title, Tone, Width, Ground}, body)` is a note in
+  the annotation house style (a numbered diamond and its title over the body, in a card with two corners cut;
+  `widget.AnnotationBody` is its prose's style), `widget.Diamond` a numbered diamond, and `widget.Leader(frame, from,
+  to, tone)` (`LeaderPath`) the angled leader line from code to its card. Theme tokens `annotation.*`.
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
   so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
+- a keymap with `Nowait` (vim's `<nowait>`) runs as soon as it matches, not waiting for a longer mapping in a mode
+  after its own: the explain card's `[` over the editor's `[c`.
 - key layers (`registry.KeyLayer`): a keymap mode laid over every other while its `Active` says so, as the completion
   menu's `⌃n` and `⏎`; keys it doesn't map go on as before.
+- exclusive keys (`registry.ExclusiveKeys{Mode, Active, Allow}`): while `Active`, a keymap mode stands alone; the modes
+  after it lend it only the keymaps `Allow` lets through and none of their longer keys. The start view's `empty` mode
+  is exclusive with no directory open, lending only its entries' and links' commands.
 - raw keys (`registry.RawKeys`): a keymap mode whose ⌃ keys skip the global maps, so a terminal's program gets `⌃W`;
   ⌘ and ⌥ chords, and the mode's own maps, still apply.
 - picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.
-- requests (AI-5): `request.comment {thread | file, line, text; body, title, urgent, btw}` is how anything comments to
+- requests (AI-5): `request.comment {thread | file, line, text; body, title, urgent, btw, status}` is how anything comments to
   the agent (it fires `CommentSend` first: a rewrite changes the comment, a veto stops it); `request.resolve`,
   `request.reopen`, `request.new {text, context, file, line}`, `request.open {thread}` and `request.attach {items |
   text, title}` (the pickers' `⌃a`) drive the Requests views, and `thread.new` opens a thread on the cursor's line, or on `{file}`'s `{line}` through `{end_line}`.
+  A new thread with `{status: "resolved"}` is a note: it's kept on its lines but never handed to the agent (explain's
+  Pin as note). `request.this {what: review | tests | refactor}` writes a request about the selection or the unit at
+  the cursor (RV-5's right-click entries).
 - threads shown or hidden (ED-15): each window shows its file's threads between the lines or hides them; `threads.toggle
   {window}` (`␣R`, and the **💬 n** editor action, n the file's open threads) switches the focused window, and
   `editor.threads = "shown" | "hidden"` is how a window shows a file it hasn't been switched on. Hidden, each line with
@@ -145,6 +184,52 @@ flowchart TB
   outside every project, is anchored to the project `core.DocsProject` (`"__docs__"`) with the path relative to the
   workspace; `request.comment {file}` does that for an absolute path, and an agent's `comment` tool takes
   `project: "__docs__"`.
+- the review diff (RV-1): `diff.open {path}` opens a file's or a repo's branch diff (the `diff` view, one per repo
+  root); `diff.layout {layout}`, `diff.hunk.next`/`prev`, `diff.line.next`/`prev`, `diff.review {path, hunk}`,
+  `diff.review.file {path, reviewed}`, `diff.comment`, `diff.explain`, `diff.source`, `diff.expand {path}` drive it
+  (key mode `diff`). Its slots are views drawn in name order, built with the repo's root as `ViewCtx.Instance`:
+  `diff.header.<order>-<name>` above the files (the review ledger), `diff.side.<order>-<name>` in the left column
+  under the changed files (the built-in `diff.side.50-authorship`), and `diff.right.<order>-<name>` in a column at
+  the right (an AI review's findings). Between its lines it draws every decoration provider's Blocks on the new side,
+  asked with `DecorationCtx.Presenter = "diff"`, so a provider can tell it's in the diff (an explain card, a review
+  finding, a mirrored GitHub thread). `?` runs `explain.unit {path, line}`, which RV-5 registers. Reviewed marks are
+  the session event `core.HunksReviewed {session, project, file, hunks, reviewed}` (`SessionState.Reviews`,
+  `ReviewedHunks`), sent through the worker's `review.set` (`worker.Client.SetReviewed`), each hunk named by
+  `gitx.Hunk.ID`; `gitx.Unified`, `gitx.Intraline` and `Repo.FileAt` are the diff's pieces for others to reuse.
+  `widget.Check` is a checkbox with on, off and mixed states. `diff.open {path, line}` selects the new side's line.
+- the review ledger and commit gates (RV-2): `registry.ReviewLedger{Name, Order, Get(root) Ledger}` (kind
+  `review.ledger`) answers `registry.LedgerOf(r, root)`: a repo's agent-written lines as `LedgerCount{Read, Skimmed,
+  Unread}`, for the whole change (`All`), those not committed yet (`Uncommitted`) and per file (`Files`, `File`,
+  `Of`); `Ready` is false while diffs are still being read. The built-in one (`diff`, Order 100) counts from the diff;
+  a lower Order shadows it. `registry.CommitGate{Name, Label, Order, Check(CommitCheck) GateResult}` (kind
+  `commit.gate`) is asked by `registry.CheckCommit(r, CommitCheck{Root, Files, Message})` before every commit: a
+  `GateResult` says its `Mode` (hard, soft, off), `Pass`, `Pending`, progress `Done`/`Total`, `Reason`, the
+  `Trailer` a commit past it carries, `Unread`, and a `Review` command with its label. The built-in gate is `ledger`.
+  `git.commit {path, message, all, anyway, confirm}` is every commit path's command (the Explorer, the diff's
+  ledger bar, the Ship page, scripts): no message opens a dialog; a hard gate holds the commit in the COMMIT GATED
+  dialog (key mode `commit`: `a` `git.commit.anyway`, `r` `git.commit.review`, `⏎` `git.commit.confirm`, `esc`
+  `git.commit.cancel`) until anyway; a soft one until confirm; then it fires the `Commit` hook (`CommitEvent{project,
+  root, message, files, unread}`; a veto stops it) and commits with `gitx.Repo.CommitStaged(message, trailers...)`.
+  Lines seen in the diff are `core.LinesSeen` (worker `review.seen`), a commit past a gate `core.CommitGateOverridden`
+  (worker `review.override`). `widget.MeterOpts.Then` stacks more parts on a meter.
+- the AI review (RV-3): the built-in `ai-review` extension draws `diff.right.50-ai-review`. `review.ai.run {id, full}`
+  asks the session's worker for a review (`worker.Client.AIReview`, `review.ai.run`, `AIReviewReq{session, provider,
+  model, full, pack}`), `review.ai.thread` / `review.ai.fix` / `review.ai.dismiss {dismissed}` /
+  `review.ai.add-project` / `review.ai.open` take `{id, finding}`, `review.ai.filter {severity}`,
+  `review.ai.dismissed` and `review.ai.prompt` drive the column. Reviews and findings are session events,
+  `core.AIReviewChanged {session, review}` and `core.FindingsRecorded {session, findings}` (replaced by ID;
+  `SessionState.AIReviews`, `Findings`, `SortedFindings`, `FindingOpen`; `core.Severities` is the threads' scale), and
+  the app changes a finding through `review.ai.findings` (`Client.SetFindings`: dismissed or not). **The ship gate's
+  "AI review" row** reads `SessionState.AIReviewGate() (ok, label)`: not run, running, "n high or critical open", or
+  clear; the built-in `ai-review` ship gate shows it. `request.comment` takes `{severity, finding}` for a new thread
+  (`CommentReq.Severity`, `Finding`: the thread's `Origin` is `core.OriginAIReview` and the finding records it). A
+  session kind's `KindSpec.AutoReview` reviews its change as it starts (the review kind's does). The reviewer runs
+  on the `ai-review` prompt pack, overridden by the user's `agents/ai-review.md` (sent with each request, since the
+  worker may be elsewhere; `packs.FromText` reads it). `gitx.Repo.MergeBase`, `Snapshot` (the work tree as a git tree,
+  the index untouched) and `Diff` are its git pieces. `widget.ToggleChipOpts.Tone` makes a toned filter chip.
+  A slot view that implements `registry.Shown` (`Shown(instance) bool`) is left out of the diff's columns while it
+  has nothing for that repo, so the room goes to the rest: the AI review outside a session. `DiffRight` views share
+  the column's height, each scrolling its own content.
 - a Block decoration's controls take and keep focus (a reply field between the lines): the editor doesn't take focus
   back from something inside its code column.
 - inlay decorations (`registry.Inlay`): text drawn inline before a column, the code after it moved along the grid.
@@ -165,11 +250,48 @@ flowchart TB
   pill, `Active(project)` lights it (for an entry with neither, a `view.*` command's `id` showing for the project
   does), and `Shown(project)` leaves it out (Pull request without a remote). `registry.ProjectEntries` and
   `SessionEntries` list them. `ProjectState` contributions add to each project's header line after its branch and
-  changes (`StatePart{Text, Style, Dot}`: a PR's number, a CI result with its dot); FG-6 adds the PR and CI. Both
+  changes (`StatePart{Text, Style, Dot}`: a PR's number, a CI result with its dot); FG-6's `ship` adds the PR and CI. Both
   kinds of entry are
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
+- ship (FG-6; ui.md 18): "before this ships" gates are `registry.ShipGate{Name, Title, Order, Check(session) Gate}`
+  (`Gate{State, Note, Action, Command, Args}`, State pass, warn, fail, pending or optional, "" to leave it out; an
+  `Action` is a button under the gate's row running `Command` with `Args`, as the verify quiz's **Verify…** and AI
+  review's **Review**; `oriel.ship.gate`), listed by
+  `registry.ShipGates(r, session, kind)`, a session kind's `Gates` naming the ones it gets. Built in: plan, threads,
+  tests; the review ledger, the verify quiz and AI review add theirs. A gate informs; what stops a step is a hook:
+  `ShipCommit {session, project, message, files, force}` before a commit (a veto shows its reason in the commit box and
+  offers **Commit anyway…**, which fires it again with `force`; a rewrite adds a trailer) and `ShipRaise {session,
+  project, title, body, draft, reviewers, edit, all}` before a raise or edit (a veto shows on the Raise PR tab; a rewrite can change
+  the body, as a passed verify quiz's reviewer notes; `all` is one of `ship.raise-all`'s). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
+  `ship.commit-all`, `ship.sync {project}`, `ship.sync-all`, `ship.push {project}`, `ship.raise {project, title,
+  body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.pr.open`, `ship.fix-ci`, `ship.redraft {project,
+  kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `pr` (instance = project). A worker answers
+  `ship.read` (`worker.ShipReq` → `[]worker.Ship`: files, behind and predicted conflicts, unpushed commits, the PR,
+  checks and a failing job's log line, the drafts and who wrote them, the PR template, CODEOWNERS), `ship.commit`,
+  `ship.push`, `ship.sync`, `ship.pr` (raise or edit, ask reviewers, cross-link the session's PRs), `ship.ready` and
+  `ship.draft` (`worker.Client.Ship*`; AI-10: a `DraftReq` with `Drop` clears the user's draft, and a `Draft` read
+  says `Stale` once the code moved on; `ship.draft.save {project, kind, title, body}` saves the commit box's or the
+  PR tab's as the user's); its GitHub client is `worker.Options.GitHub` (the user's gh by default).
+  `gh.Client` is GitHub as Oriel uses it, `gh.API` over a `gh.Transport` (`gh.CLI`, `gh.HTTP`), and `gh/ghtest` a
+  fake GitHub for tests.
+- verify (RV-7; ui.md 13): the optional quiz is the `verify` extension, built only on the above: the `verify` ShipGate
+  (whose **Verify…** starts it), questions and grades through `registry.Fork`, a `ShipRaise` rewrite hook ("verify
+  notes") adding a passed quiz's answers to the PR's body, and the `core.Verified` session event (`Verification{Result,
+  Projects, By, Questions}`, `SessionState.Verifications`, sent to the worker as `verify.record`). Commands
+  `verify.open {id}`, `verify.send {text}`, `verify.again`, `verify.open-file`, `verify.close`; keymap mode `verify`
+  (`⌘↵`, `⌥O`, Escape); view `app.overlay.verify`.
+- GitHub review mirroring (RV-4; ui.md 06): a worker answers `github.sync` (`worker.MirrorReq{Session, Fresh, Trust}`
+  → `worker.Mirror`: the PRs and each reviewer's state), `github.forward` (`worker.ForwardReq` → the sent comment) and
+  `github.draft` (`worker.DraftEditReq`) (`worker.Client.SyncGitHub`, `ForwardGitHub`, `EditDraft`). `gh.Client`
+  reads `ReviewComments`, `Reviews`, `IssueComments`, `ResolvedThreads` (GraphQL) and `OrgMember`, and posts
+  `ReplyReview` and `Comment`; `gh.ReviewStates` is where each reviewer stands; `gh/ghtest` fakes them all
+  (`AddReviewComment`, `AddReview`, `AddIssueComment`, `EditComment`, `Resolve`, `AddMember`, `SetLogin`).
+  Commands `github.sync`, `github.forward {thread, comment}`, `github.edit`, `github.draft.save {thread, comment,
+  body}`; options `github.trusted_orgs`, `github.trusted_users`; the status segment `statusline.left.70-github`;
+  theme tokens `github.accent`, `github.changes`, `github.approved`, `requests.avatar.github`, `requests.draft.bg`,
+  `requests.draft.border`.
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
   `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
@@ -215,6 +337,13 @@ flowchart TB
   `jobs.save`, `jobs.run`, `jobs.delete`, `session.delete`, `jobs.form.save`; key modes `jobs` and `jobs.form`; theme
   tokens `jobs.run.running`, `jobs.run.done`, `jobs.run.blocked`, `jobs.run.stopped`. A kind's `PromptFile` writes its
   prompt into the workspace as the session starts (the job kind's `JOB.md`).
+- workers (AI-15): `core.WorkerState` carries `Label` (the app's name, `WorkerRenamed`; `Title()` reads it first),
+  `Arch`, `Version`, `Build`, `Providers` and `Since` (when it connected or went away; `WorkerGone.At`);
+  `WorkerForgotten` takes an offline one off the list, and `core.State.FromWorker` says which events a worker may
+  send. `wire.HashKey` and `wire.KeyHashAuth` keep and check keys by hash. Commands: `workers.open`, `:Workers`,
+  `workers.add {name, listen}`, `workers.rename {name, to}`, `workers.revoke {name}`, `workers.forget {name}`,
+  `workers.restart`, `workers.dialog.save`; option `workers.listen`; key modes `workers` and `workers.add`; the
+  `workers` icon; views `app.overlay.workers` and `app.overlay.workers.dialog`.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**
@@ -231,7 +360,12 @@ flowchart TB
   `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the worker yet.
   `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
   (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a built-in part) overrides one.
-- thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"),
+- thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"). Built in RV-4:
+  `registry.ThreadSource{Origin, Title, Head, Comment}` (`registry.ThreadSourceFor`) draws threads of an origin in
+  every thread card (between the editor's and the diff's lines, and in a request): its title, its head after the
+  status dot, and what goes under a comment; the built-in `github` source's Comment is a draft's Forward and Edit.
+  A `core.Comment.Draft` is a reply not sent where the thread came from. `widget.ButtonOpts.Tone` fills a primary
+  button with a colour of its own. No Lua binding yet.
   review-ledger rules, commit and PR gates, slop rules, and status-colour rules.
 
 **Workspace**
@@ -430,7 +564,8 @@ type Host interface {
   `keymap.timeoutlen`.
 - Views named `app.overlay.<name>` float over the window: the omnibox is `app.overlay.omnibox`.
 - The status line is segments: views named `statusline.left.<order>-<name>` and `statusline.right.<order>-<name>`,
-  in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment.
+  in name order (`statusline.left.00-mode`, `statusline.right.90-position`). Register one to add a segment. A
+  segment with nothing to show builds a nil node and takes no room (the walkthrough's `statusline.left.05-explain`).
 - A view open in the layout is built with `ViewCtx.Instance` (which instance: `editor#3` is instance `3`),
   `ViewCtx.Focused`, and `ViewCtx.Project`: the project it was opened for (`view.open {project}`, a project entry's
   panel), "" for a session's view or a window with one project. The project is part of the instance
@@ -476,7 +611,8 @@ type Host interface {
   selection, help-id prefix); the window's one context menu gathers those that match what was clicked
   (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the
   layout (`Root.Visible`), and the file and selection from a view that implements `registry.Located` (the editor).
-  The built-in entries (Copy path, Move pane…, Close) are menu items too. Lua: `oriel.menu.add`.
+  The built-in entries (Copy path, Move pane…, Close) are menu items too. Lua: `oriel.menu.add`. An item running
+  `agent.fix` comes with its explain twin (TR-6).
 - Drag and drop (PL-15): `ui.Style.Drag` (a `DragData`: kind, data, label) makes a node a drag source and
   `Style.Drop` (kinds) a target; the UI tracks the drag, lights the target under it that takes the kind and draws a
   ghost, and on release hands the payload to the target as `Interaction.Dropped` (`DragOver` while it's over). A

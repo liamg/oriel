@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
@@ -70,10 +71,12 @@ type explorer struct {
 	h  ext.Host
 
 	scopes      map[core.SessionID]gitx.Scope // remembered per session
-	cols        struct{ status, lines, diag bool }
+	cols        struct{ status, lines, diag, agent bool }
 	changedOnly bool
 	flat        bool
-	selected    string // the selected row's id: a repo path, a directory "dir/", or a section
+	byReview    bool            // Changed flat, the files with the most unread agent lines first
+	ledger      registry.Ledger // the review ledger, as last drawn
+	selected    string          // the selected row's id: a repo path, a directory "dir/", or a section
 	hunks       explorerHunks
 	work        *gitTree // the work tree of the project last drawn
 	index       *explorerIndex
@@ -90,6 +93,7 @@ type explorerRowsKey struct {
 	th                           *theme.Resolved
 	root                         string
 	changedOnly, flat, statusCol bool
+	order                        string // Changed's files by review, when sorted so
 }
 
 // explorerIndex is what rows look up in a git state, built once per state.
@@ -166,7 +170,7 @@ func (e *explorer) Manifest() ext.Manifest { return ext.Manifest{ID: "explorer"}
 func (e *explorer) Activate(_ context.Context, h ext.Host) error {
 	e.h = h
 	e.scopes = map[core.SessionID]gitx.Scope{}
-	e.cols.status, e.cols.lines, e.cols.diag = true, true, true
+	e.cols.status, e.cols.lines, e.cols.diag, e.cols.agent = true, true, true, true
 	show := func(ctx registry.Ctx) error {
 		for _, v := range h.Layout().Visible() {
 			if v.ID == ExplorerView {
@@ -225,6 +229,10 @@ func (e *explorer) Activate(_ context.Context, h ext.Host) error {
 			}
 			return nil
 		}},
+		{ID: "explorer.commit", Title: "Commit what's staged in the Explorer's repo ({all}: everything uncommitted), past the commit gates",
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().root(), "all": a["all"] == true})
+			}},
 		{ID: "explorer.diff", Title: "Open the selected file's diff", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {
 				return e.openDiff(ctx, f.Path)
@@ -245,6 +253,8 @@ func (e *explorer) Activate(_ context.Context, h ext.Host) error {
 		{Keys: "u", Command: "explorer.unstage", Desc: "Unstage"},
 		{Keys: "x", Command: "explorer.discard", Desc: "Discard"},
 		{Keys: "=", Command: "explorer.diff", Desc: "Diff"},
+		{Keys: "c", Command: "explorer.commit", Desc: "Commit"},
+		{Keys: "C", Command: "explorer.commit", Args: registry.Args{"all": true}, Desc: "Commit all"},
 		{Keys: "q", Command: "view.close", Desc: "Close"},
 		{Keys: "<Esc>", Command: "view.close", Args: registry.Args{"docked": true}, Desc: "Close"},
 	} {
@@ -377,6 +387,7 @@ func (e *explorer) build(c *ui.Ctx) {
 	var x *explorerIndex
 	if st != nil {
 		x = e.indexFor(st)
+		e.ledger, _ = registry.LedgerOf(e.h, e.git().root())
 	}
 	c.Column("explorer", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tExplorerBg), Help: "files/explorer", Role: ui.RoleRegion, Label: "Explorer"}, func(c *ui.Ctx) {
 		if e.git().ready && e.git().root() == "" {
@@ -429,7 +440,8 @@ func (e *explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 		case gitx.All:
 			const help = "files/explorer#columns"
 			widget.Toolbar(c, "cols", []widget.ToolItem{{Key: "status", Label: "status", On: &e.cols.status, Help: help},
-				{Key: "lines", Label: "± lines", On: &e.cols.lines, Help: help}, {Key: "diag", Label: "diag", On: &e.cols.diag, Help: help},
+				{Key: "lines", Label: "± lines", On: &e.cols.lines, Help: help}, {Key: "agent", Label: "agent", On: &e.cols.agent, Help: help},
+				{Key: "diag", Label: "diag", On: &e.cols.diag, Help: help},
 				{Key: "only", Label: "⌥C changed-only", On: &e.changedOnly, Help: help}}, widget.ToolbarOpts{Help: help, Label: "Columns"})
 		case gitx.Changed:
 			base := st.Base
@@ -437,12 +449,15 @@ func (e *explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 				base = "HEAD"
 			}
 			c.Text("vs", "vs "+base+"@"+st.BaseHash, monoTok(c, 10.5, theme.FgFaint))
-			flat := 0
-			if e.flat {
-				flat = 1
+			view := 0
+			switch {
+			case e.byReview:
+				view = 2
+			case e.flat:
+				view = 1
 			}
-			if widget.Segmented(c, "view", []string{"tree", "flat"}, &flat, widget.SegmentedOpts{Help: "files/explorer#changed", Label: "Layout"}) {
-				e.flat = flat == 1
+			if widget.Segmented(c, "view", []string{"tree", "flat", "by review"}, &view, widget.SegmentedOpts{Help: "files/explorer#changed", Label: "Layout"}) {
+				e.flat, e.byReview = view == 1, view == 2
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			add, del := 0, 0
@@ -458,6 +473,11 @@ func (e *explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 				add, del = add+f.Add, del+f.Del
 			}
 			widget.DiffStat(c, "total", add, del, widget.DiffStatOpts{})
+			if widget.Button(c, "commit", "Commit…", widget.ButtonOpts{Ghost: true, Key: "c", Help: "files/commit"}) {
+				if err := e.h.Run(context.Background(), "explorer.commit", nil); err != nil {
+					e.h.Notify(core.Notice{ID: "git.commit", Severity: core.SevError, Key: true, Text: err.Error()})
+				}
+			}
 		}
 	})
 }
@@ -466,7 +486,7 @@ func (e *explorer) footer(c *ui.Ctx, sc gitx.Scope) {
 	hint := "⌥1 changed · ⌥2 uncommitted · ⌥3 all"
 	switch sc {
 	case gitx.Uncommitted:
-		hint = "s stage · u unstage · x discard · = diff"
+		hint = "s stage · u unstage · x discard · = diff · c commit"
 	case gitx.Changed:
 		hint = "⏎ opens the diff, not the file"
 	}
@@ -497,6 +517,9 @@ func (e *explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.Tree
 		return e.buildItems(c.Theme(), st, sc)
 	}
 	key := explorerRowsKey{st: st, sc: sc, th: c.Theme(), root: e.git().root(), changedOnly: e.changedOnly, flat: e.flat, statusCol: e.cols.status}
+	if sc == gitx.Changed && e.byReview {
+		key.order = strings.Join(e.reviewOrder(st), "\x00")
+	}
 	if e.rows.key != key || e.rows.items == nil {
 		e.rows.key, e.rows.items = key, e.buildItems(c.Theme(), st, sc)
 	}
@@ -529,6 +552,17 @@ func (e *explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 		}
 		return out
 	case gitx.Changed:
+		if e.byReview {
+			byPath := map[string]gitx.FileState{}
+			for _, f := range files {
+				byPath[f.Path] = f
+			}
+			var out []widget.TreeItem
+			for _, p := range e.reviewOrder(st) {
+				out = append(out, e.fileItem(th, byPath[p], p, sc))
+			}
+			return out
+		}
 		if e.flat {
 			var out []widget.TreeItem
 			for _, f := range files {
@@ -551,6 +585,17 @@ func (e *explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 	}
 	return []widget.TreeItem{{ID: "\x02", Label: root, Note: note, Swatch: th.C(theme.Accent), Open: true, Children: e.tree(th, files, sc),
 		Help: "files/explorer"}}
+}
+
+// reviewOrder is Changed's files by review: the most agent-written lines not read first, then by path.
+func (e *explorer) reviewOrder(st *gitx.State) []string {
+	var ps []string
+	for _, f := range st.Files(gitx.Changed) {
+		ps = append(ps, f.Path)
+	}
+	left := func(p string) int { f, _ := e.ledger.File(p); return f.All.NotRead() }
+	slices.SortStableFunc(ps, func(a, b string) int { return cmp.Or(cmp.Compare(left(b), left(a)), strings.Compare(a, b)) })
+	return ps
 }
 
 // hunkSection is a file's hunks, staged ticked, each row its first line and size.
@@ -706,6 +751,20 @@ func (e *explorer) trailing(c *ui.Ctx, x *scopeIndex, sc gitx.Scope, it widget.T
 	}
 	if e.cols.diag || sc != gitx.All {
 		e.diagCounts(c, e.git().abs(p))
+	}
+	if lf, ok := e.ledger.File(p); ok {
+		switch {
+		case sc == gitx.Changed:
+			readBar(c, "read", lf.All)
+		case sc == gitx.All && e.cols.agent:
+			glyph := "◆"
+			if lf.All.NotRead() == 0 {
+				glyph = "◇"
+			}
+			c.Box("agent", ui.Style{Tooltip: fmt.Sprintf("%d of %d agent-written lines read", lf.All.Read, lf.All.Total())}, func(c *ui.Ctx) {
+				c.Text("t", glyph, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(tDiffAuthAgent)})
+			})
+		}
 	}
 	if (e.cols.lines || sc != gitx.All) && (f.Add > 0 || f.Del > 0) {
 		widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Bar: sc != gitx.Uncommitted, Scale: 80})

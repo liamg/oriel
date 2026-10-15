@@ -98,7 +98,7 @@ func (x *jobsExt) workerNames() string {
 	var out []string
 	for _, w := range x.h.State().Workers {
 		if w.Connected {
-			out = append(out, cmpOr(w.Name, string(w.ID)))
+			out = append(out, w.Title())
 		}
 	}
 	slices.Sort(out)
@@ -108,7 +108,7 @@ func (x *jobsExt) workerNames() string {
 func (x *jobsExt) workerName(id core.WorkerID) string {
 	for _, w := range x.h.State().Workers {
 		if w.ID == id {
-			return cmpOr(w.Name, string(id))
+			return w.Title()
 		}
 	}
 	return string(id)

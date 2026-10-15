@@ -36,13 +36,13 @@ clip 0,38 149x356 r 0
   path 2 segments stroke 1.25 #4f4a40
   text "Git" @33,132.86523 #4f4a40 Inter 12
   text "4" @133,132.1 #7c7566 JetBrains Mono 10
-  path 6 segments stroke 1.25 #4f4a40
-  path 6 segments stroke 1.25 #4f4a40
-  path 6 segments stroke 1.25 #4f4a40
-  path 2 segments stroke 1.25 #4f4a40
-  path 3 segments stroke 1.25 #4f4a40
-  path 3 segments stroke 1.25 #4f4a40
-  text "Pull request" @33,155.86523 #4f4a40 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  text "Pull request" @33,155.86523 #b3ab99 Inter 12
   path 3 segments stroke 1.25 #7c7566
   text "Tests" @33,178.86523 #b3ab99 Inter 12
   rect 10,191 129x1 fill #332f27
@@ -53,11 +53,11 @@ clip 0,38 149x356 r 0
   text "3" @129.59375,211.73999 #141006 JetBrains Mono 9
   path 4 segments stroke 1.25 #4f4a40
   text "Debug" @33,235.86523 #4f4a40 Inter 12
-  path 2 segments stroke 1.25 #4f4a40
-  path 2 segments stroke 1.25 #4f4a40
-  path 3 segments stroke 1.25 #4f4a40
-  path 3 segments stroke 1.25 #4f4a40
-  text "Ship" @33,258.86523 #4f4a40 Inter 12
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  text "Ship" @33,258.86523 #b3ab99 Inter 12
   rect 10,271 129x1 fill #332f27
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -72,6 +72,11 @@ clip 0,38 149x356 r 0
   path 2 segments stroke 1.25 #7c7566
   path 3 segments stroke 1.25 #7c7566
   text "Jobs" @33,338.86523 #b3ab99 Inter 12
+  path 5 segments stroke 1.25 #7c7566
+  path 5 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  text "Workers" @33,361.86523 #b3ab99 Inter 12
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -82,7 +87,7 @@ clip 0,38 149x356 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Settings" @33,361.86523 #b3ab99 Inter 12
+  text "Settings" @33,384.86523 #b3ab99 Inter 12
 pop
 rect 149,38 1x356 fill #24221d
 rect 150,38 610x356 fill #060606
@@ -107,10 +112,12 @@ clip 150,38 300x356 r 0
       text "status" @168,125.6 #ffd23f JetBrains Mono 10
       rect 216,113 54x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
       text "± lines" @222,125.6 #ffd23f JetBrains Mono 10
-      rect 276,113 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "diag" @282,125.6 #ffd23f JetBrains Mono 10
-      rect 318,113 102x18 radius 4 stroke 1 #332f27
-      text "⌥C changed-only" @324,125.6 #7c7566 JetBrains Mono 10
+      rect 276,113 42x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "agent" @282,125.6 #ffd23f JetBrains Mono 10
+      rect 324,113 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "diag" @330,125.6 #ffd23f JetBrains Mono 10
+      rect 366,113 72x18 radius 4 stroke 1 #332f27
+      text "⌥C change…" @372,125.6 #7c7566 JetBrains Mono 10
     pop
     clip 150,135 300x231 r 0
       rect 150,113 300x22 fill #1f1c0f

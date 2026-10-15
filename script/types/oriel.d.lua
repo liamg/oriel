@@ -11,12 +11,14 @@
 ---@field hud oriel.hud
 ---@field keymap oriel.keymap
 ---@field language oriel.language
+---@field ledger oriel.ledger
 ---@field lsp oriel.lsp
 ---@field menu oriel.menu
 ---@field overview oriel.overview
 ---@field rail oriel.rail
 ---@field regex oriel.regex
 ---@field session oriel.session
+---@field ship oriel.ship
 ---@field start oriel.start
 ---@field status oriel.status
 ---@field thread oriel.thread
@@ -77,6 +79,14 @@ function oriel.statusline(fn) end
 
 ---@class oriel.agent
 oriel.agent = {}
+
+--- An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing.
+---@param spec table
+function oriel.agent.explainer(spec) end
+
+--- A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools.
+---@param spec table
+function oriel.agent.forker(spec) end
 
 --- A prompt pack: { prompt, tools }, for sessions to start with.
 ---@param name string
@@ -151,7 +161,7 @@ function oriel.hud.indicator(name, opts, fn) end
 ---@class oriel.keymap
 oriel.keymap = {}
 
---- Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args.
+--- Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).
 ---@param modes string|string[]
 ---@param lhs string
 ---@param rhs any
@@ -165,6 +175,19 @@ oriel.language = {}
 ---@param spec table
 function oriel.language.add(spec) end
 
+---@class oriel.ledger
+oriel.ledger = {}
+
+--- The share of a project's agent-written lines read, 0 to 1 (1 with none to read); project as for unread.
+---@param project? string
+---@return number
+function oriel.ledger.frac(project) end
+
+--- How many agent-written lines of a project's change aren't read yet (unread, or only skimmed): project is the session's name for it or a path in it, the project in front if none.
+---@param project? string
+---@return integer
+function oriel.ledger.unread(project) end
+
 ---@class oriel.lsp
 oriel.lsp = {}
 
@@ -175,7 +198,7 @@ function oriel.lsp.server(spec) end
 ---@class oriel.menu
 oriel.menu = {}
 
---- Add a right-click menu entry: { label, run = fn(at) or a command id, when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help.
+--- Add a right-click menu entry: { label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help. An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.
 ---@param spec table
 function oriel.menu.add(spec) end
 
@@ -232,6 +255,13 @@ oriel.session = {}
 ---@param name string
 ---@param spec table
 function oriel.session.kind(name, spec) end
+
+---@class oriel.ship
+oriel.ship = {}
+
+--- Add a \
+---@param spec table
+function oriel.ship.gate(spec) end
 
 ---@class oriel.start
 oriel.start = {}

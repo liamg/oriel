@@ -404,7 +404,7 @@ func (x *launcher) header(c *ui.Ctx) {
 func (x *launcher) workerName() string {
 	for _, w := range x.h.State().Workers {
 		if w.ID == x.worker || x.worker == "" && w.ID == core.LocalWorker {
-			return cmpOr(w.Name, string(w.ID))
+			return w.Title()
 		}
 	}
 	return string(x.worker)
@@ -750,7 +750,7 @@ func (x *launcher) runOn(c *ui.Ctx) {
 		if !w.Connected {
 			continue
 		}
-		l := cmpOr(w.Name, string(w.ID))
+		l := w.Title()
 		if w.Cores > 0 {
 			l += fmt.Sprintf(" · %d cores · cpu %d%%", w.Cores, int(w.CPU*100+.5))
 		}

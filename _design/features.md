@@ -113,24 +113,25 @@ How everything hangs together, built and tested before features land on it.
 | AI-7 | Permissions, three layers; network and gateway approvals | 15, 12 | agent, sandbox | P5 | AI-2, AI-11 | each layer holds or denies as `agents.md` describes |
 | AI-8 | Plan mode: rendered docs, margin threads, readiness, Start work | 05 | app, plan | P5 | AI-5 | the crit plan flow works end to end |
 | AI-9 | Tasks rail, session stats, usage windows | 01 | core | P5 | AI-2 | – |
-| AI-10 | Commit and PR drafts when the agent goes idle | 18 | agent | P6 | AI-2, FG-6 | – |
+| AI-10 | Commit and PR drafts when the agent goes idle | 18 | agent | P6 | AI-2, FG-6 | a turn ending idle with a draft missing or behind the code asks the agent once per change (fake provider); clean trees and branches with no work of their own aren't asked; the user's draft is never overwritten; the Ship page marks a stale draft. Built in AI-10: see agents.md "Drafts when the agent goes idle" and ui.md 18 |
 | AI-11 | Sandbox, gateway MCP, egress proxy (ported) | – | sandbox | P5 | AI-1 | crit's tests ported and passing |
 | AI-12 | Stats and Usage: session stats tab, global Stats grouped by repo, Usage page, their entry points; `widget.Chart` | 43 | worker, app, ui | P5 | AI-1, AI-2, AI-3, AI-9, SH-17 | a worker answers `stats.query` by repo with the split rule and by session, rescanning only what was appended; the pages match 43; each entry point opens its page |
 | AI-13 | A lost agent login: detected in the provider (Claude's log and screen, Codex's errors), flagged on its worker's sessions, fixed from Oriel | 12 | agent, worker, app | P5 | AI-2, AI-3, AI-12 | a fake session whose log or screen shows the recorded signed-out error raises `AuthExpired`; its worker's sessions turn needs-you with the card; the notice, the indicator and the launcher show it; Log in opens the raw terminal with `/login`, and a login clears every flag |
 | AI-14 | Stats and Usage follow-ups: a custom range with `widget.DatePicker`, tools counted per range, plan tier chips, the active span, a session's account at the time | 43 | worker, app, ui | P5 | AI-12 | a custom range picked with the date picker (mouse and keys) re-queries, and its tools match the fixture calls inside it; Usage shows the tier from a fixture account file, none when unknown; the Active tile reads "of Nh"; a session started before a login change stays with its first account |
 | SE-4 | Jobs: saved prompts on the worker, runs as job sessions, the Jobs page, schedules | 44 | worker, app | P5 | SE-1, AI-12 | a job saved from the page or the launcher runs as a job session against a fake provider and its row shows status, repos, summary, cost by repo and duration; Open, Resume and Delete work; a blocked run shows in Requests; a schedule fires on a fake clock and skips while one runs; the page matches 44 |
+| AI-15 | Workers page: this machine's and remote workers, pairing a new one (the app listens on `workers.listen`, keys hashed at rest, the pinned TLS handshake), revoke, rename, forget, restart | – (ui.md 45) | app, core, wire, worker | P6 | AI-1, AI-12, SE-5 | a real worker over TLS with the key from Add a worker shows online with its sessions; a wrong or revoked key is refused (`wire.ErrRejected`), a wrong fingerprint by the worker; offline and back on reconnect; Forget, Rename and Restart work; the page passes the help lint |
 
 ## Review and explain
 
 | ID | Feature | Mockup | Module | Phase | After | Done when |
 |---|---|---|---|---|---|---|
 | RV-1 | Split and unified diff, intraline, per-hunk reviewed | 06 | app, diff | P6 | ED-7, FG-2 | – |
-| RV-2 | Review ledger and commit gate (hard, soft, off by session kind) | 06, 18 | core | P6 | RV-1 | the gate blocks; "commit anyway" writes the trailer |
-| RV-3 | Cross-model AI review findings | 06 | agent | P6 | RV-1, AI-3 | – |
-| RV-4 | GitHub review mirroring and Forward to GitHub | 06 | gh | P6 | RV-1, FG-6 | the agent never posts; the user's forward does |
+| RV-2 | Review ledger and commit gate (hard, soft, off by session kind) | 06, 18 | core | P6 | RV-1 | the gate blocks; "commit anyway" writes the trailer. Built: `registry.LedgerOf`, `CommitGate`/`CheckCommit`, `ledger.gate`, `git.commit` and its dialog, `core.LinesSeen`/`CommitGateOverridden`, `oriel.ledger`; not yet: the gateway's commit gated, the PR gate |
+| RV-3 | Cross-model AI review findings | 06 | agent | P6 | RV-1, AI-3 | with fake providers: a Claude session's change is reviewed by Codex (and back; the same provider on another model with one installed); findings sorted by severity in the diff's column, filtered, turned into threads, dismissed; a re-review reads only what changed since |
+| RV-4 | GitHub review mirroring and Forward to GitHub | 06 | gh | P6 | RV-1, FG-6 | the agent never posts; the user's forward does (built: ui.md 06 "Built in RV-4") |
 | RV-5 | Explain by code unit, `[`/`]` widen and narrow, Explain this on a selection | 25 | explain, syntax | P6 | ED-6, AI-2 | units are correct for fixtures in 4 languages; cache invalidated only by edits inside the unit |
-| RV-6 | Explain this change walkthrough | 07 | explain | P6 | RV-5 | – |
-| RV-7 | Verify & raise quiz | 13 | agent | P6 | AI-5 | – |
+| RV-6 | Explain this change walkthrough | 07 | explain | P6 | RV-5 | a fake explainer's JSON steps over two projects walk with ←/→ and the step chips, the notes' lines lit and the rest dimmed; Ask about this step and Comment on L<n> make a request and a thread; an edit inside a step's lines (buffer or disk) discards it, one outside keeps it; the view matches 07 |
+| RV-7 | Verify & raise quiz | 13 | agent | P6 | AI-5 | the quiz is optional and a raise never waits for it; answers are graded, a partial one points at a file; the gate shows the result; off per repo |
 | RV-8 | Tours: reader, 7 kinds, export | 14 | tour | P7 | RV-5 | crit's tour features ported |
 
 ## Platform

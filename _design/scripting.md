@@ -52,6 +52,7 @@ L.session_option.agent = "claude"                  -- session-local
 L.keymap.set("n", "<leader>rr", "agent.review")             -- a command
 L.keymap.set({ "n", "x" }, "ga", function() L.thread.new() end)
 L.keymap.set("requests", "x", "request.resolve")            -- keys inside the Requests panel
+L.keymap.set("n", ",", "my.thing", { nowait = true })       -- don't wait for ",x" mappings (vim's <nowait>)
 
 -- commands
 L.command("Ship", function(args)
@@ -86,6 +87,9 @@ L.agent.tool{
 }
 
 -- prompt packs and session kinds
+L.agent.explainer{ name = "local", order = 5, label = "a local model",   -- answers every "explain this" first
+  byline = "written by a local model",                                  -- under a long answer: a walkthrough
+  run = function(req) return my_model(req.subject .. "\n" .. req.context, req.depth, req.format) end }
 L.agent.pack("hotfix", { prompt = L.read("~/.config/oriel/agents/hotfix.md"), tools = { "staging_logs" } })
 L.session.kind("hotfix", { pack = "hotfix", gates = { "tests", "ledger" }, status = "red-until-merged" })
 
@@ -193,20 +197,23 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   parameter named `where` is the calling line, so everything registered says where it came from (`init.lua:12`).
 - Namespaces now: `oriel.command`, `cmd`, `on`, `notify`, `log`, `read`, `exec`, `json`, `statusline`; `keymap`,
   `view`, `decor`, `agent` (tool, pack), `session` (kind), `hud` (indicator), `status` (rule), `thread`, `ui`, `regex` (PCRE2),
-  `language`, and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
+  `language`, `ship` (gate: a "before this ships" gate, FG-6), and `option`, `buffer_option`, `session_option` over the registry's options (`oriel.option` sets the Lua layer;
   `local o = oriel.option` if you want it short). A list option takes a table of strings and a map option a table of
   strings by name (`oriel.option["sandbox.servers"] = { docs = "https://docs.example.com/mcp" }`); reading one gives
   the same. There's one global, `oriel`; a config that wants a short name writes `local L = oriel`, as the sample does.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.indicator`, `status.rule`) are
-  general registry contributions now (`Registry.Contribute`); their tickets consume them. `oriel.ledger`, `linear`,
-  `http` and `async` load, and calling into one says which ticket brings it. An option
+  general registry contributions now (`Registry.Contribute`); their tickets consume them. `linear`, `http` and
+  `async` load, and calling into one says which ticket brings it. RV-2 built `oriel.ledger`: `unread(project)` (the
+  agent-written lines not read, unread or only skimmed) and `frac(project)` (the share read, 1 with none), project
+  being the session's name for it or a path, the project in front when omitted. An option
   set before anything registers it waits, and `:Hooks` lists it.
 - Hooks are the registry's (`Registry.Hook`, `Fire`, `DeclareEvent`): in priority order, a veto or decision stops
   them, a rewrite changes the event the next sees; one that panics is turned off. The editor fires `BufRead` (a rewrite
   that sets `read_only`, saying why, opens the file read-only: how files outside the session do),
   `BufWritePre` (a veto stops the write) and `BufWritePost`; the sessions fire `CommentSend` (a rewrite changes the
-  comment, a veto stops it), `Permission` and `AgentTurnEnd`; `Commit`, `PrRaise` and `ModeChanged` are declared for
-  the features that fire them.
+  comment, a veto stops it), `Permission` and `AgentTurnEnd`; `git.commit` fires `Commit` (RV-2: `{ project, root, message, files,
+  unread }`, after the commit gates, a veto stops it); `PrRaise` and `ModeChanged` are declared for the features
+  that fire them.
 - Saving `init.lua` or anything under `lua/` reloads the config within 500 ms: everything it registered goes, it
   loads again, and a toast says how long and how many things it registered; an error is a notice with its line.
 - `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`, history) and
@@ -245,8 +252,10 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   the height it's given, so it sits right in a bar; a column runs from the top, as a panel does. A demo plugin
   (`app/plugindemo_test.go`) adds a dock panel with buttons, a tab, title-bar and status-line segments and editor
   marks, using only this API.
-- `oriel.menu.add{ label, run, when, group, order, key }` adds a right-click entry (PL-13); `run` is a function, given
-  what was clicked (`view`, `instance`, `file`, `selection`, `help`), or a command id.
+- `oriel.menu.add{ label, run, args, when, group, order, key }` adds a right-click entry (PL-13); `run` is a function,
+  given what was clicked (`view`, `instance`, `file`, `selection`, `help`), or a command id run with `args`. An entry
+  that runs `agent.fix` (with `kind`, `subject`, `context`, `file`, `line`, `fix`) gets an "Ask the agent to explain"
+  twin beside it (TR-6).
 - Form widgets (PL-14): `oriel.ui.input`, `toggle` and `select` on the same widgets the built-ins use
   (`widget.Input`, `widget.Toggle`, `widget.Select`; the settings page draws with the last two); `on_change` gets the
   new value and the view redraws. `oriel.ui.state(key, initial)` is a table the VM keeps by key (`VM.State`). A
@@ -335,3 +344,12 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `"weekly mon 07:00"`, `"mon,thu 07:00"`, or a table `{ every = "days", days = { "Mon", "Thu" }, at = "07:00" }`.
   `jobs.new` opens the dialog with any of them filled in; `jobs.delete { name }` forgets one; `session.delete { id }`
   throws a run (or any session of Oriel's) away.
+
+
+## As built (AI-15)
+
+- Workers are commands: `oriel.cmd("workers.add", { name = "devbox", listen = ":7437" })` makes its key and opens the
+  dialog with the command to run there (`listen` only when `workers.listen` is empty);
+  `oriel.cmd("workers.rename", { name = "devbox", to = "Build box" })` (`to = ""` goes back to its own name),
+  `workers.revoke { name }`, `workers.forget { name }`, `workers.restart`, `workers.open { name }`.
+  `oriel.option["workers.listen"]` is where Oriel listens for them.

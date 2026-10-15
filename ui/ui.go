@@ -483,6 +483,11 @@ func (u *UI) grow(e *elem, axis int) {
 		e.run = u.sh.Shape(Elide(u.sh, e.text, e.ts.Font, e.size[0]), e.ts.Font)
 	}
 	for _, c := range e.kids {
+		if fl := c.style.Float; fl != nil && fl.Fill && fl.To == 0 && fl.Point == nil {
+			if s := c.sz(axis); s.Kind == Grow {
+				c.size[axis] = s.clamp(e.size[axis])
+			}
+		}
 		u.grow(c, axis)
 	}
 }

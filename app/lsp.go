@@ -685,19 +685,43 @@ func (x *lspExt) startHover(ctx registry.Ctx) error {
 	return nil
 }
 
-// actionMenu is the code actions menu.
+// actionMenu is the code actions menu: the server's, then the Agent group.
 type actionMenu struct {
 	path    string
 	actions []lsp.Action
 	client  *lsp.Client
+	agent   []registry.MenuItem
+}
+
+// agentActions are the Agent group for the diagnostics on a line: ask the agent to fix them, and its explain twin.
+func (x *lspExt) agentActions(path string, snap text.Snapshot, line int) []registry.MenuItem {
+	var ds []registry.Diagnostic
+	for _, d := range x.h.DiagnosticsFor(path) {
+		if d.Line == line {
+			ds = append(ds, d)
+		}
+	}
+	if len(ds) == 0 {
+		return nil
+	}
+	return registry.WithTwins([]registry.MenuItem{{Name: "lsp.fix", Label: "Ask the agent to fix in a thread", Group: "agent",
+		Command: registry.FixCommand, Args: diagnosticTrouble(snap, ds).Args(), Source: "builtin:lsp"}})
 }
 
 func (x *lspExt) codeActions(ctx registry.Ctx) error {
 	p, path, d := x.current()
-	if d == nil || d.client == nil {
-		return fmt.Errorf("no language server for this file")
+	if path == "" {
+		return fmt.Errorf("the editor has no file here")
 	}
 	pos := p.Cursor()
+	agent := x.agentActions(path, p.Buf(), pos.Line)
+	if d == nil || d.client == nil {
+		if len(agent) == 0 {
+			return fmt.Errorf("no language server for this file")
+		}
+		x.actions = &actionMenu{path: path, agent: agent}
+		return nil
+	}
 	var diags []lsp.Diagnostic
 	for _, dg := range d.client.Diagnostics(path) {
 		if dg.Range.Start.Line <= pos.Line && dg.Range.End.Line >= pos.Line {
@@ -713,13 +737,15 @@ func (x *lspExt) codeActions(ctx registry.Ctx) error {
 		func(as []lsp.Action, err error) {
 			if err != nil {
 				x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevWarning, Key: true, Text: err.Error()})
+				as = nil
+			}
+			if len(as) == 0 && len(agent) == 0 {
+				if err == nil {
+					x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevInfo, Key: true, Text: "No code actions here"})
+				}
 				return
 			}
-			if len(as) == 0 {
-				x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevInfo, Key: true, Text: "No code actions here"})
-				return
-			}
-			x.actions = &actionMenu{path: path, actions: as, client: c}
+			x.actions = &actionMenu{path: path, actions: as, client: c, agent: agent}
 		})
 	return nil
 }

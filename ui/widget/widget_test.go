@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"image/color"
 	"slices"
 	"strings"
 	"testing"
@@ -459,6 +460,30 @@ func TestSegmentedBadges(t *testing.T) {
 }
 
 // An icon button in a row shows while the pointer's in the row, stays while it moves onto the button, and clicks.
+// A primary button with a Tone is filled with it rather than the accent.
+func TestButtonTone(t *testing.T) {
+	violet := color.NRGBA{R: 0xb9, G: 0x8a, B: 0xff, A: 0xff}
+	clicks := 0
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("fwd")
+		if Button(c, "fwd", "Forward", ButtonOpts{Primary: true, Tone: violet, Help: "test/button"}) {
+			clicks++
+		}
+	})
+	filled := false
+	for _, op := range h.list.Ops {
+		filled = filled || op.Kind == render.OpRect && op.Style.Fill == violet
+	}
+	if !filled {
+		t.Error("no rect was filled with the tone")
+	}
+	h.click(mid(h.rect(id)))
+	if clicks != 1 {
+		t.Errorf("%d clicks", clicks)
+	}
+}
+
 func TestIconButtonInARow(t *testing.T) {
 	var row ui.ID
 	shown, clicks := false, 0
@@ -602,6 +627,38 @@ func TestToggleChip(t *testing.T) {
 	h.keys(" ")
 	if on {
 		t.Error("Space didn't turn it off")
+	}
+}
+
+// A toned toggle chip (a severity filter) draws its label in its tone, tinted more strongly while on.
+func TestToggleChipTone(t *testing.T) {
+	red := color.NRGBA{R: 0xff, G: 0x5f, B: 0x6d, A: 0xff}
+	var id ui.ID
+	on := false
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("chip")
+		on = ToggleChip(c, "chip", "1 high", on, ToggleChipOpts{Help: "test/chip", Tone: red})
+	})
+	fill := func() render.Color {
+		for _, op := range h.list.Ops {
+			if op.Kind == render.OpRect && op.Rect == h.rect(id) {
+				return op.Style.Fill
+			}
+		}
+		return render.Color{}
+	}
+	label := false
+	for _, op := range h.list.Ops {
+		label = label || op.Kind == render.OpGlyphs && op.Run.Text == "1 high" && op.Color == red
+	}
+	if !label {
+		t.Error("the label isn't drawn in the chip's tone")
+	}
+	off := fill()
+	h.click(mid(h.rect(id)))
+	h.frame()
+	if !on || fill().A <= off.A {
+		t.Errorf("on: %v, fill %v, off %v", on, fill(), off)
 	}
 }
 
@@ -1032,5 +1089,34 @@ func TestInputLines(t *testing.T) {
 	h.frame()
 	if got := h.rect(id).Dy(); got <= two {
 		t.Errorf("a line of 150 characters in a 280px field is %v high: it should wrap", got)
+	}
+}
+
+// FG-6: a plain checkbox ticks and unticks on a click on it or its text, and with Space while focused.
+func TestCheckPlain(t *testing.T) {
+	on := true
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("cb")
+		st := CheckOff
+		if on {
+			st = CheckOn
+		}
+		if Check(c, "cb", st, CheckOpts{Text: "handler.go", Plain: true, Help: "test/checkbox"}) {
+			on = !on
+		}
+	})
+	r := h.rect(id)
+	h.click(r.Max.X-4, (r.Min.Y+r.Max.Y)/2)
+	if on {
+		t.Fatal("a click on the text didn't untick it")
+	}
+	h.frame()
+	if n := h.access(id); n == nil || n.Name != "handler.go" || n.Selected {
+		t.Errorf("its node: %+v", n)
+	}
+	h.keys(" ")
+	if !on {
+		t.Error("Space didn't tick it")
 	}
 }

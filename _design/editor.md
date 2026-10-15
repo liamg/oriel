@@ -233,11 +233,15 @@ engine never feels like another binary running in a pane.
   LSP `documentSymbol` adds names and kinds where available.
 - `text.Unit{Kind, Name, Range, Parent}` is a shared model. It's used by explain (`ui.md` 07b), the
   outline, the `af`/`if`/`ic` text objects, the review checklist, sticky scroll headers and agent anchors.
+- Built in RV-5: `text.Innermost` (the smallest unit holding a range), `text.UnitPath` (a breadcrumb),
+  `text.Owners` (the units owning a set of changed ranges), `Unit.Label` ("func roundHalfEven", "case 0") and
+  `text.FilterUnits(us, text.Explainable)` (every kind but a plain block). `syntax/testdata/units` has fixtures in Go,
+  Python, TypeScript and Rust (`TestUnitFixtures`).
 
 ## What the editor surface can show between lines
 
 - Comment threads (Claude, Codex, GitHub reviewers), collapsed or open.
-- Explain-walkthrough notes pinned to ranges.
+- Explain-walkthrough notes pinned to ranges (RV-6 draws them in its own view, not between the editor's lines).
 - Diff hunks, inline (deleted lines as ghost blocks) or as a split view.
 - Diagnostics as virtual text, or as a full block for long messages.
 - Inlay hints, code lenses, and test results next to the test function.

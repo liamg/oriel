@@ -116,6 +116,29 @@ flowchart LR
   as plugin-provided in the transcript, and plugins can't inject text into the system prompt or prompt packs unless granted
   `agent.prompt`.
 - `gate` grants are listed in the HUD while active ("2 plugins can answer permission prompts") — never invisible.
+- No agent posts to a GitHub review or a PR's conversation, whatever a rule or a grant says: the gateway never offers a
+  tool that does, and the agent's shell and permission asks are refused (RV-4; agents.md). Strangers' review text
+  is withheld from the agent (trusted orgs).
+
+## Remote workers (AI-15)
+
+A worker on another machine runs sessions and agents for the app, so letting one in is letting it act in your
+window: its sessions, requests and notices show there, and it can call the tools plugins offer agents. The door:
+
+- **Off by default.** The app listens only while `workers.listen` is set; Add a worker sets it, asking where.
+- **The app is pinned, not named.** A self-signed certificate (P-256, TLS 1.3 only), made once and kept owner-only
+  in the state directory. A worker dials with its fingerprint in the command line and checks it before it sends
+  anything (`wire.Dial`), so a wrong host never sees the key. The fingerprint as six words (`wire.Words`) is shown by
+  the dialog and printed by the worker, for checking the command arrived intact.
+- **A key per worker.** 256 random bits, shown once in the Add dialog's command and never kept in the clear: the
+  keys file (`workers.json`, owner-only) holds its SHA-256 (`wire.HashKey`), compared in constant time
+  (`wire.KeyHashAuth`). The handshake reads at most 2 KB from a stranger and times out after 15s.
+- **A worker is only itself.** It must report the ID its key is for; `local` is never a remote worker's. Its events
+  are filtered to its own worker state, usage and sessions (`core.State.FromWorker`), so it can't change another
+  worker's sessions or pose as this machine's.
+- **Revoke** removes the key and cuts the connection; the worker is refused from then on (`wire.ErrRejected`, which
+  stops `oriel worker --connect` retrying). Refusals are logged and listed on the worker's page.
+- Not yet: rotating the certificate (delete it and re-add the workers), and limiting which addresses may connect.
 
 ## Operations
 

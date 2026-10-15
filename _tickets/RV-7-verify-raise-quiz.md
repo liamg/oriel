@@ -2,7 +2,7 @@
 id: RV-7
 title: "Verify & raise quiz"
 phase: P6
-status: todo
+status: review
 area: Review and explain
 module: agent
 depends_on: [AI-5]
@@ -34,3 +34,8 @@ Acceptance tests derived from the design docs above, written first, all passing 
 - Test-first, with verified spec references (`_design/testing.md`).
 - No new dependency without approval (`_design/deps.md`).
 - Update the design doc in the same PR if behaviour differs from it.
+
+## Changed after review
+
+- Verify is optional, a thing of its own: a raise never waits for it, so there's no skip. It starts from **Verify…**
+  on its "before this ships" row (ui.md 13).

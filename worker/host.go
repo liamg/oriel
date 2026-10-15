@@ -64,6 +64,8 @@ type host struct {
 	items        map[string]core.Item
 	waiting      map[string]chan AnswerReq // asks the user hasn't answered
 	turnAt       time.Time
+	drafts       bool              // its pack fills the Ship page's drafts (commit_draft)
+	nudged       map[string]string // project/kind → the code it was last asked to draft for
 }
 
 func (w *Worker) hostFor(id core.SessionID, start bool) (*host, error) {
@@ -75,7 +77,7 @@ func (w *Worker) hostFor(id core.SessionID, start bool) (*host, error) {
 			return nil, nil
 		}
 		h = &host{w: w, id: id, ctx: context.Background(), calls: map[string]agent.ToolCall{}, items: map[string]core.Item{},
-			waiting: map[string]chan AnswerReq{}}
+			waiting: map[string]chan AnswerReq{}, nudged: map[string]string{}}
 		w.hosts[id] = h
 	}
 	w.mu.Unlock()
@@ -149,6 +151,9 @@ func (h *host) launch() (agent.Session, Sandbox, error) {
 			spec.Pack = pack
 		}
 	}
+	h.mu.Lock()
+	h.drafts = slices.Contains(spec.Pack.Tools, "commit_draft")
+	h.mu.Unlock()
 	var box Sandbox
 	if se.Agent.Sandboxed {
 		if w.opts.Sandbox == nil {
@@ -365,7 +370,7 @@ func (h *host) send(sess agent.Session, in agent.Input, threads []core.ThreadID)
 			_, _ = h.w.mutateThread(h.id, tid, func(t *core.Thread) error {
 				t.Busy = false
 				for i := range t.Comments {
-					t.Comments[i].Delivered = t.Comments[i].Delivered && t.Comments[i].Author != core.AuthorYou
+					t.Comments[i].Delivered = t.Comments[i].Delivered && t.Comments[i].Author == core.AuthorAgent
 				}
 				return nil
 			})
@@ -678,6 +683,7 @@ func (h *host) turnEnd(ev agent.TurnEnd, now time.Time) {
 		}
 	})
 	h.kick()
+	h.idle()
 }
 
 // askUser opens an ask and waits for the user's answer, or for ctx.
@@ -727,6 +733,11 @@ func (h *host) permission(sess agent.Session, p agent.Permission) {
 	ask := core.Ask{ID: p.ID, Kind: core.AskPermission, Tool: p.Tool, Summary: p.Summary, Input: string(p.Input), Rule: p.Rule}
 	if ask.Rule == "" {
 		ask.Rule = RuleFor(p.Tool, p.Input)
+	}
+	if postsReview(p.Tool, p.Input) {
+		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Note: NoPosting})
+		h.appendItem(core.Item{ID: newID(6), Kind: core.ItemSystem, Time: h.w.opts.Now().UTC(), Text: p.Tool + " denied: agents never post to GitHub reviews"})
+		return
 	}
 	if v, ok := h.w.policy(h.id, ask); ok {
 		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Allow: v.Decision == "allow", Note: v.Note})

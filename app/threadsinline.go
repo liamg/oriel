@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
@@ -284,15 +285,24 @@ func inlineThreadCard(c *ui.Ctx, h ext.Host, se core.SessionState, t core.Thread
 			h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
 		}
 	}
-	inlineCard(c, "Thread "+t.Heading(), func(c *ui.Ctx, width float32) {
+	src, sourced := registry.ThreadSourceFor(h, t.Origin)
+	title := "Thread"
+	if sourced && src.Title != "" {
+		title = src.Title
+	}
+	inlineCard(c, title+" "+t.Heading(), func(c *ui.Ctx, width float32) {
 		word, tok := statusLabel(se, t)
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(tok)}, nil)
-			c.Text("t", "Thread", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-			if t.Anchor != nil {
-				c.Text("l", fmt.Sprintf("· L%d ·", t.Anchor.Line), monoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+			if sourced && src.Head != nil {
+				src.Head(c, string(se.ID), string(id))
+			} else {
+				if t.Anchor != nil {
+					c.Text("l", fmt.Sprintf("· L%d ·", t.Anchor.Line), monoFont(10.5, th.C(theme.FgFaint)))
+				}
+				widget.Chip(c, "status", word, th.C(tok), "agent/requests#inline")
 			}
-			widget.Chip(c, "status", word, th.C(tok), "agent/requests#inline")
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if o.Open && widget.Link(c, "open", "open ↗", "agent/requests#inline") {
 				run("request.open", registry.Args{"thread": string(id)})
@@ -308,20 +318,32 @@ func inlineThreadCard(c *ui.Ctx, h ext.Host, se core.SessionState, t core.Thread
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tReqThreadBd)}, nil)
 		c.Column("comments", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12}, func(c *ui.Ctx) {
 			for _, cm := range t.Comments {
-				c.Row(cm.ID, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+				inner := width - 62
+				row := ui.Style{W: ui.Flex(1), Gap: 10}
+				if cm.Draft {
+					row.Pad, row.Fill, row.Stroke, row.Border, row.Radius = ui.Pad(8), th.C(tReqDraftBg), th.C(tReqDraftBd), 1, 6
+					inner -= 18
+				}
+				c.Row(cm.ID, row, func(c *ui.Ctx) {
 					avatar(c, "av", cm)
-					c.Column("in", ui.Style{W: ui.Px(width - 62), Gap: 4}, func(c *ui.Ctx) {
+					c.Column("in", ui.Style{W: ui.Px(inner), Gap: 4}, func(c *ui.Ctx) {
 						c.Row("who", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 							name := cmpOr(cm.Name, "you")
 							if cm.Author == core.AuthorAgent {
 								name = providerName(cm.Name)
 							}
 							c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-							if !cm.Time.IsZero() {
-								c.Text("t", ago(c.Now(), cm.Time), monoFont(9.5, th.C(theme.FgGhost)))
+							if when := commentWhen(c.Now(), cm, t.Origin); when != "" {
+								c.Text("t", when, monoFont(9.5, th.C(theme.FgGhost)))
+							}
+							if cm.Redacted {
+								widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 							}
 						})
-						markdownText(c, "body", cm.Body, width-62, uiFont(12.5, th.C(theme.FgMuted)))
+						markdownText(c, "body", cm.Body, inner, uiFont(12.5, th.C(theme.FgMuted)))
+						if sourced && src.Comment != nil {
+							src.Comment(c, string(se.ID), string(id), cm.ID, inner)
+						}
 						if len(cm.Evidence) > 0 {
 							c.Row("ev", ui.Style{Gap: 6}, func(c *ui.Ctx) {
 								for i, e := range cm.Evidence {
@@ -340,6 +362,27 @@ func inlineThreadCard(c *ui.Ctx, h ext.Host, se core.SessionState, t core.Thread
 			}
 		})
 	})
+}
+
+// commentWhen is the small text after a comment's author: how long ago, where it came from, and whether it was sent.
+func commentWhen(now time.Time, cm core.Comment, origin string) string {
+	var parts []string
+	switch {
+	case cm.Draft:
+		return "draft · not sent"
+	case !cm.Time.IsZero():
+		parts = append(parts, ago(now, cm.Time))
+	}
+	switch {
+	case cm.Author == core.AuthorGitHub:
+		parts = append(parts, origin)
+	case !cm.Sent.IsZero():
+		parts = append(parts, "sent to "+origin)
+	}
+	if cm.Edited {
+		parts = append(parts, "edited")
+	}
+	return strings.Join(parts, " · ")
 }
 
 // inlineComposer is the card of a thread being opened on a line: ⏎ sends it, Escape drops it.

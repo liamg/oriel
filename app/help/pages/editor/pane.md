@@ -50,6 +50,9 @@ Without a server, `K` is vim's.
 ## Code actions {#code-actions}
 
 `␣ca` (or `gra`) lists the server's fixes and refactors for the cursor's line, by kind. Taking one makes its edit.
+On a line with diagnostics the **Agent** group has **Ask the agent to fix in a thread** (a request with the
+diagnostics and the code around them attached) and, beside it, **Ask the agent to explain** (a card under the line;
+nothing is changed). Without a language server, a line with diagnostics still shows the Agent group.
 
 ## References {#references}
 
@@ -93,6 +96,46 @@ The Tests panel (`␣to`) has every test by package, with its recent runs, the f
 tests marked, and the output of the one picked, of the whole run, or the raw JSON.
 
 {{keys "test.*"}}
+
+## Explain by code unit {#explain}
+
+A `?` in the gutter marks each code unit the branch changed: the smallest function, method, type, `case`, `if`, loop
+or closure that owns a change against the branch's base (tree-sitter finds them, in every language with a units
+query). Click it, or put the cursor in a unit and press `␣e`, to explain it in a card under the unit. The card's
+breadcrumb (`func roundHalfEven › switch diff › case 0`) shows where you are; click a crumb, or press `[` and `]`
+while the cursor is in the unit, to widen and narrow along the syntax tree, and `␣e` again widens. In Visual mode
+`␣e` explains the selection. **Brief**, **detailed** and **why · history** (which adds git blame, the commits, the
+session's PR and the threads on those lines) ask again at another depth.
+
+Answers come from the first explainer: the session's agent, forked without tools, so nothing changes. They're
+cached by the unit's text: an edit inside the unit marks the card **changed since it was explained**, with
+**refresh**; edits elsewhere keep it. **Ask a follow-up** writes a request with the explanation attached, and **Pin
+as note** keeps it as a resolved thread on those lines. The right-click menu has **Explain this**, and **Review
+this**, **Write tests for this** and **Refactor this…**, which start a request about the selection or the unit.
+
+{{keys "explain.*"}}
+
+## Changed units {#changed-units}
+
+The Changed units panel (`explain.units`, or **explain by unit** above the editor) lists every unit the branch
+touched, by file and nested as the code is, with whether it's been explained, is open, has changed since, or not
+(`–`). Opening one goes to it and explains it, so explaining by unit doubles as a review checklist.
+
+## Explain this change {#explain-change}
+
+**Explain this change** (`explain.change`, `␣E`, or the omnibox) asks the session's agent, forked without tools, for
+a walkthrough of the branch's whole change: every changed file in every project, against where the branch left its
+base. It answers in steps, each about some lines of a file, with notes pinned to parts of them, and ends with a
+summary. The step's file is shown with the lines its notes are on lit in their colours and the rest dimmed, each note
+beside its lines with a leader line. The dock along the bottom has a chip for every step across files and repos;
+click one, or press `←` and `→`, to move between them. `j` and `k` pick the line **Comment on** opens a thread on
+(`c`), and **Ask about this step** (`a`) writes a request with the step attached. `q` or Escape closes the
+walkthrough; Explain this change brings it back as it was.
+
+A walkthrough is throwaway: once the lines a step is about change (in the editor or on disk), it's discarded, and
+Explain this change asks for a new one. **Discard** throws it away now.
+
+{{keys "explain.change*"}}
 
 ## Presentations {#present}
 

@@ -72,6 +72,23 @@ func KeyAuth(keys func(name string) (string, bool)) Authenticator {
 	})
 }
 
+// HashKey is how a worker's key is kept at rest: what KeyHashAuth compares.
+func HashKey(key string) string {
+	sum := sha256.Sum256([]byte(key))
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// KeyHashAuth is KeyAuth over the keys' hashes (HashKey), so the app never keeps a key in the clear.
+func KeyHashAuth(hashes func(name string) (string, bool)) Authenticator {
+	return AuthenticatorFunc(func(_ net.Addr, h Hello) Welcome {
+		want, ok := hashes(h.Name)
+		if !ok || h.Key == "" || subtle.ConstantTimeCompare([]byte(want), []byte(HashKey(h.Key))) != 1 {
+			return Welcome{Status: StatusDenied, Reason: "unknown worker or wrong key"}
+		}
+		return Welcome{Status: StatusOK}
+	})
+}
+
 // ErrRejected is returned when a worker was not let in.
 type ErrRejected struct {
 	Welcome Welcome

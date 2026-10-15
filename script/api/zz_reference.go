@@ -16,6 +16,8 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.statusline(fn)", Doc: "Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."},
 	},
 	"agent": {
+		{Call: "oriel.agent.explainer(spec)", Doc: "An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing."},
+		{Call: "oriel.agent.forker(spec)", Doc: "A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools."},
 		{Call: "oriel.agent.pack(name, spec)", Doc: "A prompt pack: { prompt, tools }, for sessions to start with."},
 		{Call: "oriel.agent.tool(spec)", Doc: "Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }."},
 	},
@@ -39,16 +41,20 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.hud.indicator(name, opts, fn)", Doc: "A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."},
 	},
 	"keymap": {
-		{Call: "oriel.keymap.set(modes, lhs, rhs, opts?)", Doc: "Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args."},
+		{Call: "oriel.keymap.set(modes, lhs, rhs, opts?)", Doc: "Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping)."},
 	},
 	"language": {
 		{Call: "oriel.language.add(spec)", Doc: "Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }."},
+	},
+	"ledger": {
+		{Call: "oriel.ledger.frac(project?)", Doc: "The share of a project's agent-written lines read, 0 to 1 (1 with none to read); project as for unread."},
+		{Call: "oriel.ledger.unread(project?)", Doc: "How many agent-written lines of a project's change aren't read yet (unread, or only skimmed): project is the session's name for it or a path in it, the project in front if none."},
 	},
 	"lsp": {
 		{Call: "oriel.lsp.server(spec)", Doc: "Register a language server: { name, languages = { \\"},
 	},
 	"menu": {
-		{Call: "oriel.menu.add(spec)", Doc: "Add a right-click menu entry: { label, run = fn(at) or a command id, when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help."},
+		{Call: "oriel.menu.add(spec)", Doc: "Add a right-click menu entry: { label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help. An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args."},
 	},
 	"overview": {
 		{Call: "oriel.overview.add(spec)", Doc: "Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick."},
@@ -64,6 +70,9 @@ var Reference = map[string][]RefFunc{
 	},
 	"session": {
 		{Call: "oriel.session.kind(name, spec)", Doc: "A kind of session: { pack, gates, status }."},
+	},
+	"ship": {
+		{Call: "oriel.ship.gate(spec)", Doc: "Add a \\"},
 	},
 	"start": {
 		{Call: "oriel.start.add(spec)", Doc: "Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure."},

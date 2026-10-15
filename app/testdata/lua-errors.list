@@ -34,6 +34,10 @@ clip 0,38 43x836 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -322,7 +326,7 @@ text "0" @130.90375,890.95996 #b3ab99 JetBrains Mono 11
 text "Lua · utf-8 · LF" @1193.75,884.71 #b3ab99 JetBrains Mono 10.5
 text "7:1" @1315.25,884.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 70%" @1351.0312,884.71 #b3ab99 JetBrains Mono 10.5
-text "●" @94.796875,240.77 #ff5f6d JetBrains Mono 13.5
+text "●" @93.296875,240.77 #ff5f6d JetBrains Mono 13.5
 rect 106,227 2x21 fill #ff5f6d
 path 237 segments stroke 1 #ff5f6d
 rect 112,228 8.40625x19 fill #ffd23f

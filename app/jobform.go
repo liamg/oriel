@@ -342,7 +342,7 @@ func (x *jobsExt) workerSelect(c *ui.Ctx, f *jobForm) {
 		if !w.Connected {
 			continue
 		}
-		labels, ids = append(labels, cmpOr(w.Name, string(w.ID))), append(ids, w.ID)
+		labels, ids = append(labels, w.Title()), append(ids, w.ID)
 		if w.ID == f.worker || f.worker == "" && w.ID == core.LocalWorker {
 			current = labels[len(labels)-1]
 		}

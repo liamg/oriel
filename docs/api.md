@@ -17,6 +17,8 @@ Version 0.4.0.
 
 ## oriel.agent
 
+- `oriel.agent.explainer(spec)`: An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing.
+- `oriel.agent.forker(spec)`: A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools.
 - `oriel.agent.pack(name, spec)`: A prompt pack: { prompt, tools }, for sessions to start with.
 - `oriel.agent.tool(spec)`: Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }.
 
@@ -46,11 +48,16 @@ Version 0.4.0.
 
 ## oriel.keymap
 
-- `oriel.keymap.set(modes, lhs, rhs, opts?)`: Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args.
+- `oriel.keymap.set(modes, lhs, rhs, opts?)`: Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).
 
 ## oriel.language
 
 - `oriel.language.add(spec)`: Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.
+
+## oriel.ledger
+
+- `oriel.ledger.frac(project?)`: The share of a project's agent-written lines read, 0 to 1 (1 with none to read); project as for unread.
+- `oriel.ledger.unread(project?)`: How many agent-written lines of a project's change aren't read yet (unread, or only skimmed): project is the session's name for it or a path in it, the project in front if none.
 
 ## oriel.lsp
 
@@ -58,7 +65,7 @@ Version 0.4.0.
 
 ## oriel.menu
 
-- `oriel.menu.add(spec)`: Add a right-click menu entry: { label, run = fn(at) or a command id, when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help.
+- `oriel.menu.add(spec)`: Add a right-click menu entry: { label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help }, group, order (50 by default), key }. at has view, instance, file, selection and help. An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.
 
 ## oriel.overview
 
@@ -78,6 +85,10 @@ Version 0.4.0.
 ## oriel.session
 
 - `oriel.session.kind(name, spec)`: A kind of session: { pack, gates, status }.
+
+## oriel.ship
+
+- `oriel.ship.gate(spec)`: Add a \
 
 ## oriel.start
 

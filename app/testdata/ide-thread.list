@@ -50,6 +50,10 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -424,6 +428,6 @@ text "46:11" @1502.0625,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 57%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
 rect 24.09375,217 11.40625x13 fill #ff9b45 radius 6.5
 text "4" @27.09375,226.56 #141006 JetBrains Mono 8.5
-text "▪" @94.796875,282.77 #4cc9f0 JetBrains Mono 13.5
+text "▪" @93.296875,282.77 #4cc9f0 JetBrains Mono 13.5
 rect 196.0625,270 8.40625x19 fill #ffd23f
 text ":" @196.0625,283.77 #141006 JetBrains Mono 13.5

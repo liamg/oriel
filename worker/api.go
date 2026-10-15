@@ -44,8 +44,15 @@ const (
 	MethodLogAppend = "log.append"
 	MethodLogRead   = "log.read"
 	MethodRunTests  = "tests.record"
+	MethodReview    = "review.set"      // marks a file's changes reviewed in the diff, or not
+	MethodSeen      = "review.seen"     // records lines of a change seen in the diff: read or skimmed
+	MethodOverride  = "review.override" // records a commit made past the commit gate
+	MethodVerified  = "verify.record"   // a verify quiz's result, kept in the session
 	MethodSessions  = "sessions.list"
 	MethodFork      = "agent.fork"
+	// MethodAIReview starts an AI review of a session's change; MethodFindings changes its findings (dismissed or not).
+	MethodAIReview = "review.ai.run"
+	MethodFindings = "review.ai.findings"
 	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
 	MethodSandboxConfig = "sandbox.config"
 	// MethodStatsQuery answers a stats.Query over the worker's sessions; MethodStatsSession is one session's stats.
@@ -126,6 +133,22 @@ type CommentReq struct {
 	Images  []string       `json:"images,omitempty"`
 	Urgent  bool           `json:"urgent,omitempty"` // interrupts the turn
 	Btw     bool           `json:"btw,omitempty"`    // a side question, answered by a fork
+	// Status opens a new thread in this status rather than open; one that isn't open stays with the user, as a
+	// note pinned to its anchor.
+	Status   core.ThreadStatus `json:"status,omitempty"`
+	Severity string            `json:"severity,omitempty"` // a new thread's rating, as a review finding's (core.Severities)
+	Finding  string            `json:"finding,omitempty"`  // the AI review finding a new thread is opened from
+}
+
+// AIReviewReq asks for an AI review of a session's change (agents.md, Guardrails: cross-model review).
+type AIReviewReq struct {
+	Session  core.SessionID `json:"session"`
+	Provider string         `json:"provider,omitempty"` // the reviewer's; "" for one other than the author's
+	Model    string         `json:"model,omitempty"`    // "" for the provider's default
+	// Full reviews the whole change since the base; otherwise a session reviewed before has what changed since.
+	Full bool `json:"full,omitempty"`
+	// Pack is the reviewer's prompt, when it isn't the worker's ai-review pack: the user's own.
+	Pack string `json:"pack,omitempty"`
 }
 
 // ThreadReq changes a thread's status: resolve, reopen, defer, dismiss.
@@ -395,6 +418,37 @@ func (c Client) Search(ctx context.Context, r SearchReq) ([]Hit, error) {
 
 func (c Client) RecordRun(ctx context.Context, id core.SessionID, run core.TestRun) error {
 	return c.Conn.Call(ctx, MethodRunTests, core.TestRunRecorded{Session: id, Run: run}, nil)
+}
+
+// AIReview starts an AI review of a session's change and returns its ID; its findings come as events.
+func (c Client) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
+	var out string
+	return out, c.Conn.Call(ctx, MethodAIReview, r, &out)
+}
+
+// SetFindings records findings as they now are: dismissed, or not.
+func (c Client) SetFindings(ctx context.Context, r core.FindingsRecorded) error {
+	return c.Conn.Call(ctx, MethodFindings, r, nil)
+}
+
+// SetReviewed marks a file's changes reviewed, or takes the marks off.
+func (c Client) SetReviewed(ctx context.Context, r core.HunksReviewed) error {
+	return c.Conn.Call(ctx, MethodReview, r, nil)
+}
+
+// SetSeen records lines of a file's change seen in the diff.
+func (c Client) SetSeen(ctx context.Context, r core.LinesSeen) error {
+	return c.Conn.Call(ctx, MethodSeen, r, nil)
+}
+
+// RecordOverride records a commit made past the commit gate, in the session's state and log.
+func (c Client) RecordOverride(ctx context.Context, r core.CommitGateOverridden) error {
+	return c.Conn.Call(ctx, MethodOverride, r, nil)
+}
+
+// RecordVerified keeps a verify quiz's result in the session and its log.
+func (c Client) RecordVerified(ctx context.Context, v core.Verified) error {
+	return c.Conn.Call(ctx, MethodVerified, v, nil)
 }
 
 // Events streams every session the worker has, as SessionSynced, then every event after, into apply. It

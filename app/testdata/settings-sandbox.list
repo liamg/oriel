@@ -34,6 +34,10 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -83,15 +87,17 @@ clip 0,38 1600x962 r 0
     text "git" @18,204.26901 #b3ab99 Inter 13
     text "keymap" @18,234.26901 #b3ab99 Inter 13
     text "lsp" @18,264.269 #b3ab99 Inter 13
-    rect 8,275.54 224x28 fill #1f1c0f radius 5
-    text "sandbox" @18,294.269 #ece6d8 Inter 13
-    text "● 3" @204,293.14 #ffd23f JetBrains Mono 10
-    text "sidebar" @18,324.269 #b3ab99 Inter 13
-    text "stats" @18,354.269 #b3ab99 Inter 13
-    text "terminal" @18,384.269 #b3ab99 Inter 13
-    text "ui" @18,414.269 #b3ab99 Inter 13
-    text "usage" @18,444.269 #b3ab99 Inter 13
-    text "whichkey" @18,474.269 #b3ab99 Inter 13
+    text "review" @18,294.269 #b3ab99 Inter 13
+    rect 8,305.54 224x28 fill #1f1c0f radius 5
+    text "sandbox" @18,324.269 #ece6d8 Inter 13
+    text "● 3" @204,323.14 #ffd23f JetBrains Mono 10
+    text "sidebar" @18,354.269 #b3ab99 Inter 13
+    text "stats" @18,384.269 #b3ab99 Inter 13
+    text "terminal" @18,414.269 #b3ab99 Inter 13
+    text "ui" @18,444.269 #b3ab99 Inter 13
+    text "usage" @18,474.269 #b3ab99 Inter 13
+    text "whichkey" @18,504.269 #b3ab99 Inter 13
+    text "workers" @18,534.26904 #b3ab99 Inter 13
   pop
   rect 240,91 1x879 fill #24221d
   clip 241,91 1359x879 r 0

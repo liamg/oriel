@@ -3,6 +3,7 @@ package gitx
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,8 +14,12 @@ import (
 	"time"
 )
 
-// Repo is a git work tree, read by running git in it.
-type Repo struct{ Dir string }
+// Repo is a git work tree, read by running git in it. Env is added to git's environment: a sandboxed workspace's
+// guard (sandbox.GitEnv).
+type Repo struct {
+	Dir string
+	Env []string
+}
 
 // IsRepo reports whether dir is the top of a work tree.
 func IsRepo(dir string) bool {
@@ -23,8 +28,13 @@ func IsRepo(dir string) bool {
 }
 
 func (r Repo) git(ctx context.Context, args ...string) ([]byte, error) {
+	return r.gitEnv(ctx, nil, args...)
+}
+
+// gitEnv is git with more environment.
+func (r Repo) gitEnv(ctx context.Context, env []string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", r.Dir, "--no-pager"}, args...)...)
-	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C")
+	cmd.Env = append(append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...), env...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
@@ -93,6 +103,50 @@ func (r Repo) CommitTimes(ctx context.Context, since time.Time) ([]time.Time, er
 		}
 	}
 	return ts, nil
+}
+
+// CommitStaged commits what's staged with message, adding each trailer ("Unreviewed-Agent-Lines: 38") as git commit
+// --trailer does, and returns the new commit's hash. It commits as the repo's git identity, signed if git signs.
+func (r Repo) CommitStaged(ctx context.Context, message string, trailers ...string) (string, error) {
+	return r.commit(ctx, message, trailers, nil)
+}
+
+// commit commits what's staged (or, with paths, only those paths) with message and its trailers, and returns the
+// new commit's hash.
+func (r Repo) commit(ctx context.Context, message string, trailers, paths []string) (string, error) {
+	if strings.TrimSpace(message) == "" {
+		return "", errors.New("a commit needs a message")
+	}
+	args := []string{"-C", r.Dir, "commit", "-q", "-F", "-"}
+	for _, t := range trailers {
+		args = append(args, "--trailer", t)
+	}
+	if len(paths) > 0 {
+		args = append(append(args, "--"), paths...)
+	}
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Env = append(append(os.Environ(), "LC_ALL=C"), r.Env...)
+	cmd.Stdin = strings.NewReader(message)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("git commit: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	out, err := r.git(ctx, "rev-parse", "HEAD")
+	return strings.TrimSpace(string(out)), err
+}
+
+// StagedFiles are the paths with staged changes, as git names them.
+func (r Repo) StagedFiles(ctx context.Context) ([]string, error) {
+	out, err := r.git(ctx, "diff", "--cached", "--name-only", "-z")
+	if err != nil {
+		return nil, err
+	}
+	var ps []string
+	for _, p := range strings.Split(string(out), "\x00") {
+		if p != "" {
+			ps = append(ps, p)
+		}
+	}
+	return ps, nil
 }
 
 // Commit is one commit, as a log line shows it.

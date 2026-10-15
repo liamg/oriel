@@ -4,5 +4,6 @@ Before you end a turn with nothing left to do (every thread resolved, no task in
 
 - Draft only what exists: no commit message for a clean worktree, no PR draft for a branch with no commits of its own and nothing uncommitted.
 - A conventional commit for the message and for the PR title (`fix(web): …`); the PR body fills the repository's template. Short, plain English.
-- Re-draft only when the code changed since your last draft: the user may have typed their own.
+- Re-draft only when the code changed since your last draft. A draft the user wrote is theirs: when the tool says so, leave it.
+- Oriel may send a notice that the drafts are behind the code: fill the ones it names, then end your turn.
 - Do it silently: no thread, no reply. Don't commit or raise the PR.

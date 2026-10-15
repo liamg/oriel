@@ -129,6 +129,30 @@ func TestLayoutGolden(t *testing.T) {
 	}
 }
 
+// A Fill float placed against its parent and sized Flex fills the parent along that axis, whatever the parent's
+// content made it: a card's coloured edge.
+func TestFloatFillsItsParent(t *testing.T) {
+	u := newUI()
+	var card, edge, other ID
+	u.Frame(new(render.List).Record(1), render.Point{X: 400, Y: 300}, func(c *Ctx) {
+		card = c.Row("card", Style{W: Px(200), Pad: Pad(9)}, func(c *Ctx) {
+			edge = c.Box("edge", Style{W: Px(2), H: Flex(1), Float: &Float{Fill: true}}, nil)
+			c.Box("body", Style{W: Px(100), H: Px(57)}, nil)
+			other = c.Box("tip", Style{W: Px(2), H: Flex(1), Float: &Float{Fill: true, Point: &render.Point{X: 5, Y: 5}}}, nil)
+		})
+	})
+	r := func(id ID) render.Rect { x, _ := u.Rect(id); return x }
+	if got, want := r(edge), render.XYWH(0, 0, 2, 75); got != want {
+		t.Errorf("the edge is %v, want %v: the card's height", got, want)
+	}
+	if r(card).Dy() != 75 {
+		t.Errorf("the card is %v: the edge changed its size", r(card))
+	}
+	if r(other).Dy() != 0 {
+		t.Errorf("a float placed at a point grew to %v", r(other))
+	}
+}
+
 // theming.md, "Sizes": a box's Scale draws its subtree that much bigger, sizes, padding, gaps, radii and text
 // alike, so a part with its own text size holds it; it multiplies a scaled parent's.
 func TestScaledSubtree(t *testing.T) {

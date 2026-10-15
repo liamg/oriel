@@ -3,6 +3,7 @@ package registry
 import (
 	"cmp"
 	"context"
+	"errors"
 	"slices"
 	"strings"
 )
@@ -10,19 +11,64 @@ import (
 // ExplainRequest is something to explain (ide.md, "Explain sits next to fix everywhere"): what kind of thing it is,
 // a line naming it, and everything an explainer needs to know about it.
 type ExplainRequest struct {
-	Kind    string // "test-failure", "diagnostic", "selection"
+	Kind    string // "test-failure", "diagnostic", "selection", "unit", "change"
 	Subject string // "TestRoundHalfEven/-3.5 failed"
 	Context string // the failure, the test's code, the code under test…
 	Files   []string
+	Depth   string // ExplainBrief (""), ExplainDetailed or ExplainWhy
+	// Format, when set, is the shape the answer must take instead of markdown prose, for a caller that parses it
+	// (the walkthrough's JSON steps); it replaces the explainer's own instructions on length and form.
+	Format string
 }
+
+// How deep an explanation goes (ui.md 07b): brief by default, detailed on demand, and why · history, whose Context
+// carries the blame, the commits, the PR and the threads that touched it.
+const (
+	ExplainBrief    = "brief"
+	ExplainDetailed = "detailed"
+	ExplainWhy      = "why"
+)
 
 // Explainer explains things without changing anything: it only answers, in markdown. The agent's (a tool-less fork
 // of the session's, AI) registers one; until something does, "ask to explain" is unavailable.
 type Explainer struct {
 	Name    string
 	Explain func(ctx context.Context, r ExplainRequest) (markdown string, err error)
-	Order   int // the first by Order answers
-	Source  string
+	Order   int           // the first by Order answers
+	Label   func() string // who answers, under each answer: "fork of claude · knows this session"
+	// Byline says who wrote a long answer, under it: "written by claude from the session's own context". Without
+	// one, it's "written by " and the Label.
+	Byline func() string
+	Source string
+}
+
+// Explain asks the first explainer about r, and says which answered.
+func Explain(ctx context.Context, reg Registry, r ExplainRequest) (string, Explainer, error) {
+	es := Explainers(reg)
+	if len(es) == 0 {
+		return "", Explainer{}, errors.New("nothing can explain yet: it needs an agent")
+	}
+	var md string
+	err := Call(func() (err error) { md, err = es[0].Explain(ctx, r); return err })
+	return md, es[0], err
+}
+
+// WrittenBy is the explainer's byline, or "written by " and its label (or name).
+func (e Explainer) WrittenBy() string {
+	var s string
+	Call(func() error {
+		switch {
+		case e.Byline != nil:
+			s = e.Byline()
+		case e.Label != nil:
+			s = "written by " + e.Label()
+		}
+		return nil
+	})
+	if s == "" {
+		s = "written by " + e.Name
+	}
+	return s
 }
 
 func (Explainer) ContributionKind() string   { return "explainer" }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -15,6 +16,8 @@ type ButtonOpts struct {
 	Disabled bool
 	Help     string
 	Key      string // a key cap after the label: the key that does the same, "y"
+	// Tone is a primary button's colour in place of the accent: a GitHub action's violet.
+	Tone color.NRGBA
 }
 
 // Button is a 26px push button (base.css .btn). It returns true on the frame it's clicked, or pressed with
@@ -26,6 +29,9 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 	bg, hover, pressed, fg, border := col(c, tButtonBg), col(c, tButtonHover), col(c, tButtonPressed), col(c, tButtonFg), col(c, tButtonBorder)
 	if o.Primary && !o.Disabled {
 		bg, hover, pressed, fg = col(c, tPrimaryBg), col(c, tPrimaryHover), col(c, tPrimaryPressed), col(c, tPrimaryFg)
+		if o.Tone.A != 0 {
+			bg, hover, pressed = o.Tone, theme.Lighten(o.Tone, .04), theme.Lighten(o.Tone, -.06)
+		}
 		border = bg
 	}
 	switch {
@@ -65,13 +71,19 @@ type ToggleChipOpts struct {
 	Tooltip string
 	Label   string                           // its accessible name, when the label alone doesn't say it ("✕ 1"); the label by default
 	Lead    func(c *ui.Ctx, fg render.Color) // drawn before the label, in its colour: an icon
+	Tone    color.NRGBA                      // a status colour for its text and edge, as a Chip's: a severity filter
 }
 
 // ToggleChip is a small mono button that's lit while on, for a column or filter that toggles. It returns the value
 // after this frame's clicks.
 func ToggleChip(c *ui.Ctx, key any, label string, on bool, o ToggleChipOpts) bool {
 	fg, border, fill := col(c, tSegFg), col(c, tSegBorder), color.NRGBA{}
-	if on {
+	switch {
+	case o.Tone != (color.NRGBA{}) && on:
+		fg, border, fill = o.Tone, o.Tone, alpha(o.Tone, .2)
+	case o.Tone != (color.NRGBA{}):
+		fg, border, fill = o.Tone, alpha(o.Tone, .35), alpha(o.Tone, .07)
+	case on:
 		fg, border, fill = col(c, tSegOnFg), alpha(col(c, tSegOnFg), .45), col(c, tSegOnBg)
 	}
 	name := o.Label

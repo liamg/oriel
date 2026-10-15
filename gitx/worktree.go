@@ -143,9 +143,9 @@ func Clone(ctx context.Context, url, dir string) error {
 	return nil
 }
 
-// RemoteURL is the URL of origin, or "".
+// RemoteURL is the URL of origin as it's configured (before any url.insteadOf), or "".
 func (r Repo) RemoteURL(ctx context.Context) string {
-	out, err := r.git(ctx, "remote", "get-url", "origin")
+	out, err := r.git(ctx, "config", "--get", "remote.origin.url")
 	if err != nil {
 		return ""
 	}

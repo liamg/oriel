@@ -19,7 +19,9 @@ pane from a terminal, `⌃Esc` then `⌃W h`/`j`/`k`/`l`.
 With a shell that marks its prompts (OSC 133) each command gets a dot by its prompt: green if it exited 0, red if not.
 In terminal-normal mode `[[` and `]]` jump between prompts. `term.copy_last_output` copies the last command's output,
 `term.send_last_output` sends it to a request, and `term.rerun_last` runs it again in a new split. When the shell
-reports its directory (OSC 7), the tab shows it.
+reports its directory (OSC 7), the tab shows it. If the last command failed, right-click the terminal for **Ask
+the agent to fix the failed command** (a request with the command, its output and its exit status) and **Ask the
+agent to explain** (an answer in a notice; nothing is changed).
 
 When Oriel quits, each terminal's screen and scrollback are kept, and come back when it opens the directory again.
 

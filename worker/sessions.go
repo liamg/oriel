@@ -77,7 +77,7 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	id := core.SessionID(name)
 	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Worker: w.opts.ID, Prompt: spec.Prompt, Ticket: spec.Ticket,
 		PR: spec.PR, Job: spec.Job, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
-		StartWork: k.Worktrees == WorktreesStartWork || k.Worktrees == WorktreesInit,
+		StartWork: k.Worktrees == WorktreesStartWork || k.Worktrees == WorktreesInit, CommitGate: k.Gate,
 		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: gate(spec),
 			Sandboxed: spec.Sandbox.Container, Network: spec.Sandbox.Network}}
 	branch := spec.Branch
@@ -104,6 +104,11 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	se.Status = core.DeriveStatus(se)
 	if err := w.emit(core.SessionSynced{Session: se}); err != nil {
 		return "", err
+	}
+	if k.AutoReview {
+		if _, err := w.AIReview(context.WithoutCancel(ctx), AIReviewReq{Session: id}); err != nil {
+			w.log.Warn("AI review", "session", id, "err", err)
+		}
 	}
 	if p := strings.TrimSpace(spec.Prompt); p != "" {
 		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: firstLine(p), Body: p}); err != nil {

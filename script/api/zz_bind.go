@@ -44,6 +44,12 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := Agent{a: a}
 		vm.Bind("agent", map[string]script.GoFunc{
+			"explainer": func(c *script.Args) ([]any, error) {
+				return nil, x.Explainer(c.Table(0), c.Where())
+			},
+			"forker": func(c *script.Args) ([]any, error) {
+				return nil, x.Forker(c.Table(0), c.Where())
+			},
 			"pack": func(c *script.Args) ([]any, error) {
 				return nil, x.Pack(c.String(0), c.Table(1), c.Where())
 			},
@@ -121,6 +127,17 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Ledger{a: a}
+		vm.Bind("ledger", map[string]script.GoFunc{
+			"frac": func(c *script.Args) ([]any, error) {
+				return []any{x.Frac(c.String(0))}, nil
+			},
+			"unread": func(c *script.Args) ([]any, error) {
+				return []any{x.Unread(c.String(0))}, nil
+			},
+		})
+	}
+	{
 		x := LSP{a: a}
 		vm.Bind("lsp", map[string]script.GoFunc{
 			"server": func(c *script.Args) ([]any, error) {
@@ -176,6 +193,14 @@ func (a *APIs) bind(vm *script.VM) {
 		vm.Bind("session", map[string]script.GoFunc{
 			"kind": func(c *script.Args) ([]any, error) {
 				return nil, x.Kind(c.String(0), c.Table(1), c.Where())
+			},
+		})
+	}
+	{
+		x := Ship{a: a}
+		vm.Bind("ship", map[string]script.GoFunc{
+			"gate": func(c *script.Args) ([]any, error) {
+				return nil, x.Gate(c.Table(0), c.Where())
 			},
 		})
 	}

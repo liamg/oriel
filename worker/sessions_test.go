@@ -69,6 +69,9 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	if se.Unplanned {
 		t.Error("a work session from a ticket isn't unplanned")
 	}
+	if se.CommitGate != core.GateHard {
+		t.Errorf("a work session's commit gate is %q, want hard (agents.md)", se.CommitGate)
+	}
 }
 
 func TestWorkNeedsARepo(t *testing.T) {
@@ -95,6 +98,9 @@ func TestDirectNeverCreatesAWorktree(t *testing.T) {
 	}
 	if got := branchOf(t, r.repo.Dir); got != "main" {
 		t.Errorf("the checkout moved to %q", got)
+	}
+	if se.CommitGate != core.GateOff {
+		t.Errorf("a direct session's commit gate is %q", se.CommitGate)
 	}
 	// A directory that isn't a repo opens directly too.
 	plain := t.TempDir()

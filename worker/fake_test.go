@@ -15,13 +15,14 @@ type nopExec struct{ agent.Exec }
 
 // rig is a worker on a temporary home, with a fake provider and a fixture repo.
 type rig struct {
-	t    *testing.T
-	w    *Worker
-	home string
-	fake *agenttest.Fake
-	repo *gittest.Repo
-	now  time.Time
-	more []agent.Provider // beside the fake
+	t     *testing.T
+	w     *Worker
+	home  string
+	fake  *agenttest.Fake
+	repo  *gittest.Repo
+	now   time.Time
+	more  []agent.Provider // beside the fake
+	tools []string         // the packs' tools
 }
 
 func newRig(t *testing.T, more ...agent.Provider) *rig {
@@ -51,7 +52,7 @@ func (r *rig) open() {
 	}
 	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Now: func() time.Time { return r.now },
 		Packs: func(name string) (agent.Pack, bool) {
-			return agent.Pack{Name: name, Skill: name, Text: "pack " + name}, true
+			return agent.Pack{Name: name, Skill: name, Text: "pack " + name, Tools: r.tools}, true
 		}})
 	if err != nil {
 		r.t.Fatal(err)

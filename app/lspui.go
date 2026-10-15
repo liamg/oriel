@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/fuzzy"
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -249,6 +250,14 @@ func (x *lspExt) actionsMenu(c *ui.Ctx, at render.Point) {
 			index = append(index, i)
 		}
 	}
+	for j, it := range m.agent {
+		if j == 0 {
+			items, index = append(items, widget.MenuItem{Label: "Agent", Heading: true}), append(index, -1)
+		}
+		items = append(items, widget.MenuItem{Label: it.Label, Icon: "◈", IconTone: th.C(theme.Accent), Disabled: !x.h.Available(it.Command, it.Args),
+			Help: "editor/pane#code-actions"})
+		index = append(index, len(m.actions)+j)
+	}
 	id := ui.Child(c.Next("actions"), "menu")
 	if c.Interaction(id).Keys == nil && !c.FocusWithin(id) {
 		c.Focus(id)
@@ -258,6 +267,12 @@ func (x *lspExt) actionsMenu(c *ui.Ctx, at render.Point) {
 		switch {
 		case closed:
 			x.actions = nil
+		case chosen >= 0 && index[chosen] >= len(m.actions):
+			x.actions = nil
+			it := m.agent[index[chosen]-len(m.actions)]
+			if err := x.h.Run(context.Background(), it.Command, it.Args); err != nil {
+				x.h.Notify(core.Notice{ID: "lsp.code_action", Severity: core.SevWarning, Key: true, Text: err.Error()})
+			}
 		case chosen >= 0 && index[chosen] >= 0:
 			x.actions = nil
 			x.runAction(m, m.actions[index[chosen]])

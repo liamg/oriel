@@ -1,6 +1,9 @@
 package syntax
 
 import (
+	"strings"
+
+	"github.com/liamg/oriel/text"
 	"os"
 	"testing"
 )
@@ -106,5 +109,103 @@ func TestRegisterLanguage(t *testing.T) {
 	}
 	if got["MAX_N"] != "constant" || got["other"] != "variable" {
 		t.Fatalf("captures = %v", got)
+	}
+}
+
+// RV-5, done when: "units are correct for fixtures in 4 languages". Each case is a line, found by its text, and the
+// breadcrumb of explain units around it (ui.md 07b: "the smallest syntax node that owns a change: a function, a
+// method, a case, an if, a loop, a closure, a type"), then the units owning a set of changed lines.
+func TestUnitFixtures(t *testing.T) {
+	type at struct{ line, want string }
+	for _, c := range []struct {
+		lang, file string
+		at         []at
+		changed    []string // lines changed
+		owners     []string // the units owning them
+	}{
+		{"go", "round.go", []at{
+			{"t := scaled.Truncate(0)", "func roundHalfEven"},
+			{"\t\t\treturn t.Shift(-p)", "func roundHalfEven › switch diff.Cmp(half) › case 0 › if t.IntPart()%2 == 0"},
+			{"\t\treturn t.Add(sign(v)).Shift(-p)\n\t}", "func roundHalfEven › switch diff.Cmp(half) › case 0"},
+			{"\tcase 1:", "func roundHalfEven › switch diff.Cmp(half) › case 1"},
+			{"Currency string", "type Money"},
+			{"return Money{}, fmt.Errorf", "func RoundMinor › if !ok"},
+			{"round := func", "func RoundMinor"}, // the line assigns the closure too
+			{"=return roundHalfEven(v, p) }", "func RoundMinor › func(v Decimal) Decimal { return roundH…"},
+			{"m.Lines[i] = round", "func RoundMinor › for i := range m.Lines"},
+		}, []string{"diff := scaled", "\tcase 0:", "\t\t\treturn t.Shift(-p)", "\tfor i := range m.Lines", "V        Decimal"},
+			[]string{"func roundHalfEven", "case 0", "if t.IntPart()%2 == 0", "type Money", "for i := range m.Lines"}},
+		{"python", "round.py", []at{
+			{"t = scaled.truncate(0)", "func round_half_even"},
+			{"                return t.shift(-p)", "func round_half_even › match (scaled - t).compare(HALF) › case 0 › if t.int_part() % 2 == 0"},
+			{"case 1:", "func round_half_even › match (scaled - t).compare(HALF) › case 1"},
+			{"raise ValueError", "type Money › func round_minor › if p is None"},
+			{"rnd = lambda", "type Money › func round_minor"},
+			{"=v: round_half_even(v, p)", "type Money › func round_minor › lambda v: round_half_even(v, p)"},
+			{"self.lines[i] = rnd(line)", "type Money › func round_minor › for i, line in enumerate(self.lines)"},
+		}, []string{"scaled = v.shift(p)", "            return t.add(sign(v)).shift(-p)\n    return", "        rnd = lambda"},
+			[]string{"func round_half_even", "case 0", "func round_minor"}},
+		{"typescript", "round.ts", []at{
+			{"const t = scaled.truncate(0);", "func roundHalfEven"},
+			{"        return t.shift(-p);", "func roundHalfEven › switch (scaled.sub(t).abs().cmp(HALF)) › case 0 › if (t.intPart() % 2 === 0)"},
+			{"case 1:", "func roundHalfEven › switch (scaled.sub(t).abs().cmp(HALF)) › case 1"},
+			{"==> roundHalfEven(v, p)", "type Money › func roundMinor › func round › (v: Decimal) => roundHalfEven(v, p)"},
+			{"throw new Error", "type Money › func roundMinor › if (p === undefined)"},
+			{"this.lines[i] = round", "type Money › func roundMinor › for (let i = 0; i < this.lines.length; …"},
+		}, []string{"const scaled", "      if (t.intPart()", "return new Money"},
+			[]string{"func roundHalfEven", "if (t.intPart() % 2 === 0)", "func roundMinor"}},
+		{"rust", "round.rs", []at{
+			{"let t = scaled.trunc();", "func round_half_even"},
+			{"                return t.shift(-p);", "func round_half_even › match (scaled - t).abs().cmp(&HALF) › Ordering::Equal => › if t.int_part() % 2 == 0"},
+			{"Ordering::Less", "func round_half_even › match (scaled - t).abs().cmp(&HALF) › Ordering::Less => t.shift(-p),"},
+			{"currency: String", "type Money"},
+			{"*line = round", "type Money › func round_minor › for line in self.lines.iter_mut()"},
+			{"let round = |v", "type Money › func round_minor"},
+			{"=| round_half_even(v, p)", "type Money › func round_minor › |v: Decimal| round_half_even(v, p)"},
+		}, []string{"let scaled", "Ordering::Greater", "            t.add(sign(v)).shift(-p)", "Ok(Money {"},
+			[]string{"func round_half_even", "Ordering::Greater => t.add(sign(v)).shi…", "Ordering::Equal =>", "func round_minor"}},
+	} {
+		p, src := parse(t, c.lang, "testdata/units/"+c.file)
+		all, err := p.Units()
+		if err != nil {
+			t.Fatal(err)
+		}
+		us := text.FilterUnits(all, text.Explainable)
+		lineOf := func(needle string) text.Range {
+			if exact, ok := strings.CutPrefix(needle, "="); ok { // just these bytes, not the whole line
+				i := strings.Index(string(src), exact)
+				return text.Range{Start: i, End: i + len(exact)}
+			}
+			i := strings.Index(string(src), needle)
+			if i < 0 {
+				t.Fatalf("%s: no %q", c.file, needle)
+			}
+			start := strings.LastIndexByte(string(src[:i]), '\n') + 1
+			end := i + strings.IndexByte(string(src[i:]), '\n')
+			for start < end && (src[start] == ' ' || src[start] == '\t') {
+				start++
+			}
+			return text.Range{Start: start, End: end}
+		}
+		for _, a := range c.at {
+			var crumbs []string
+			for _, i := range text.UnitPath(us, text.Innermost(us, lineOf(a.line))) {
+				crumbs = append(crumbs, us[i].Label(src))
+			}
+			if got := strings.Join(crumbs, " › "); got != a.want {
+				t.Errorf("%s: at %q the units are %q, want %q", c.lang, a.line, got, a.want)
+			}
+		}
+		var rs []text.Range
+		for _, l := range c.changed {
+			rs = append(rs, lineOf(l))
+		}
+		var got []string
+		for _, i := range text.Owners(us, rs) {
+			got = append(got, us[i].Label(src))
+		}
+		if strings.Join(got, "|") != strings.Join(c.owners, "|") {
+			t.Errorf("%s: the changed lines' units are %q, want %q", c.lang, got, c.owners)
+		}
 	}
 }

@@ -20,6 +20,8 @@ flowchart LR
 - **Session**: a workspace plus a **kind**, an agent (or none), a branch, and everything that accrues: threads, tasks, ledger,
   test runs, transcript and layout. Sessions are what mission control and the omnibox list; a tab is a session
   open in the window: started, resumed or brought to the front, never just for being on the start view.
+  Built in RV-2: the ledger's state is the session's `Reviews` (hunks marked, lines read and skimmed), its kind's
+  commit gate is `CommitGate` (from `KindSpec.Gate`), and commits made past the gate are `Overrides`.
 
 ## Kinds
 
@@ -150,9 +152,21 @@ type Sessions interface {
 
 - **The worker** (`oriel worker`) is a process of its own on each machine. The app and the CLI reach this machine's
   on `~/.oriel/worker.sock` (owner only), starting it if it isn't running; a worker elsewhere dials the app over
-  pinned TLS (`oriel worker --connect host:port --fingerprint …`). Remote workers run sessions and agents, but
+  pinned TLS (`oriel worker --connect host:port --fingerprint …`; AI-15 below). Remote workers run sessions and agents, but
   editing a remote session's files from the app needs the buffer replica (`architecture.md` → Where buffers live),
   which isn't built: the window only follows sessions on this machine.
+- **Remote workers** (AI-15): the app listens for them while `workers.listen` is set (an address; empty, the default,
+  doesn't listen), TLS 1.3 with a self-signed certificate kept in the state directory (`workers/tls.crt`, `tls.key`,
+  owner-only) that workers pin by fingerprint. A worker is let in by its name and key (`wire.KeyHashAuth` over
+  `workers.json` in the config directory, owner-only, each key kept as `wire.HashKey`). Once in, it's served exactly
+  as this machine's worker is (the `sessions` extension's `serve`): its `WorkerChanged`, usage and sessions join the
+  store, and it answers the same calls. It must say it's the worker its key is for (`Info.ID`), or it's cut off, and
+  it speaks only for itself (`core.State.FromWorker`: events about another worker or another worker's sessions are
+  dropped). One that connects again replaces its old connection; one that goes away is `WorkerGone` (offline, with
+  `Since`) and its sessions leave the window until it's back. `oriel worker --connect` names the worker (`--name`,
+  the machine's by default), which is its `WorkerID`, and logs the certificate's fingerprint as words; a refusal
+  (`wire.ErrRejected`, a revoked key) stops it, anything else retries every 5s. The Workers page (`ui.md` 45) adds,
+  revokes, renames and forgets them, and restarts this machine's (the drain below, `workerDrain.asked`).
 - **This machine's worker hands over** (`worker.handover`): it stops its agents as `StoppedByHandOver` and quits, and
   the next worker to start resumes them. The app drains it first: with an agent mid-turn it waits for the turns to
   end, at most 60s, with a dialog naming the sessions and counting down; ⌘↵ (`worker.hand-over-now`, in the
@@ -206,7 +220,8 @@ type Sessions interface {
 - **Direct** never makes a worktree or a workspace: the directory itself, git repo or not. **Scratch** gets a
   directory for notes and no repo. **New repo** makes the repo from a template (`empty`, `go-module`, `go-cli`, or a
   git URL), commits it, registers it, and carries on as a plan for it. **Review** fetches `pull/<n>/head` from the
-  registered repo whose remote matches the PR's URL, and pins a read-only worktree there.
+  registered repo whose remote matches the PR's URL, and pins a read-only worktree there. Since RV-3 it's AI-reviewed
+  as it starts, by a model other than its agent's (`KindSpec.AutoReview`; `agents.md`, Guardrails).
 - **The launcher** (`ui.md` 04) lists the worker's kinds (`kinds.list`, `worker.KindSpec`: title, `Desc`, `About`,
   `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
   The CLI takes its flags after the prompt too (`oriel new "fix stale usage prices" --repo pricing`), and every

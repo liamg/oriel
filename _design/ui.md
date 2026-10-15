@@ -81,8 +81,8 @@ They are design sketches, not the implementation: the app draws natively (see `s
   glyphs) and the session stats at its foot (CTX meter, CACHE, $, TASKS, the latest run's TESTS). The agent console's side has
   the same tasks rail. The title bar's usage windows (`titlebar.right.40-usage`) are the plan of the session in front's
   provider (`State.Usage`): `5H` and `WK` meters with their share; since AI-12 one button that opens Usage, with a
-  hover card (43). Not yet: REVIEWED (the ledger, RV-2), and opening
-  the summary by default with a session.
+  hover card (43). Since RV-2 the stats show REVIEWED (read / agent-written lines of the session's
+  projects, from `registry.LedgerOf`) once there are any. Not yet: opening the summary by default with a session.
 - Bottom: the agent pane, terminal, problems, debug and tests. The orange tab dot means something's running.
 - Built in ED-15: a window can show its buffer through a presenter instead of as text (`editor.present`): a markdown
   file's **Preview** button (it reads **Edit** while previewing; `:MarkdownPreview`) draws it as plan mode draws a doc,
@@ -134,7 +134,8 @@ They are design sketches, not the implementation: the app draws natively (see `s
   focused. A presentation has the same bubbles beside its blocks. The toggle is `␣R` beside the picker's `␣r`, as `␣T`
   is beside `␣t`, so `␣r` stays a key of its own.
 - Not yet: the multi-line composer, `@file`/`#symbol` completion as you type, image paste and dictation (the chips
-  aren't there), `g r` (vim's `gr`), the request's own read/unread ledger (RV-2), and turn cost per request.
+  aren't there), `g r` (vim's `gr`), and turn cost per request. Since RV-2 each file the request changed shows its
+  read bar and read/total, the file's whole ledger rather than only the lines that request wrote.
 
 ## 01e · Start view: nothing open
 
@@ -157,7 +158,11 @@ What the window shows with no directory and no session open: at launch (plain `o
 - **Open Directory** opens a directory as it is, git repo or not: no worktree, no branch. It's a picker over typed paths
   and directories under `~`, with a **Browse…** row for the OS's folder chooser. The window reopens on it: every
   extension starts again there. `oriel <dir>` does the same. With sessions, this becomes the **direct** kind (`sessions.md`).
-- Keys: the empty main area has its own keymap mode, `empty`, before `n` and `global`, so `␣␣` and the rest still work.
+- Keys: the empty main area has its own keymap mode, `empty`, before `n` and `global`. Over a directory's overview
+  `␣␣` and the rest still work. The start view keeps to its own keys (the user's decision): its rows' `j`/`k`/`⏎`/`⌫`
+  and the keys of its entries and links (⌘N, ⌘O, ⇧⌘O, ⌘,, and Stats', Usage's, Jobs' and Workers' own); ⌘K, `:`, `␣␣`
+  and other global or editor keys do nothing there, as they've nothing to act on yet (`registry.ExclusiveKeys`). No
+  footer advertises them.
 
 ## 01f · The rail
 
@@ -244,6 +249,15 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   ("admin-ui · Explorer"). Search searches its project's directory, or with **All projects** each project's, grouped
   under a heading per project. With 2+ projects tabs lead with their project's square (`layout.Panes.Lead`), their
   tooltip names it (`Panes.Tip`), and the breadcrumb starts with it.
+- Built in FG-6: Pull request and Ship are lit. A header's line gets the PR's number and a CI dot (`ProjectState`
+  "ship": "#790 ● CI failing", "CI running", "CI passing", "merged", or "no PR" with commits and none raised), and the
+  Pull request entry's note says "#790", "drafting" or "not raised". The `pull-request` view is the dock's checklist
+  (its PR's title or "Not raised", `branch → base · n commits`, then Committed, Up to date, Pushed, PR, Checks with the
+  failing line; Raise PR and Ship ⇉, or Edit PR and Fix CI with agent). Raise PR / Edit PR is the `pr` view, a main
+  tab per project (`ship.pr.open {project}`): title, body (Write or Preview; the agent's `pr_draft`, else the open
+  PR's, else the repo's template with the first commit's subject as the title), REVIEWERS (CODEOWNERS', added ones,
+  each removable), CROSS-LINKED PRS, and at the right the gates and the ticket; Save draft, Raise as draft and Push +
+  raise PR, or Update PR once it's open. A `ShipRaise` veto shows its reason there.
 - Not yet: the session entries pinned while the projects scroll (the whole sidebar scrolls), hovering an initial
   shows its header line as a tooltip rather than 42's card, the Tests panel runs in the window's directory whatever
   its project, and with one project or a directory the breadcrumb doesn't start with its name (42's panels 4 and 5 do).
@@ -285,9 +299,12 @@ Superseded alternatives (41-project-context.png):
   `u`, `x` (asks first; an untracked file is deleted) and `=`. They run the general `git.stage`, `git.unstage` and
   `git.discard {path}`. Rows are `widget.Tree` rows (a note, a tint, a strike-through, a leading glyph, trailing
   content, sections, items open by default) with `widget.DiffStat` and `widget.ToggleChip`. Changed opens a file
-  with `diff.open` when something registers it (RV-1), the file until then. Tabs carry the letter through the
+  with `diff.open` (RV-1, 06), the file if it isn't registered. Tabs carry the letter through the
   `registry.Marked` view interface; the files picker ranks changed files up and notes their letter. Not yet: the
-  agent and threads columns (P5), and the read bar and "by review" (the ledger, P6). SH-17: the Explorer reads its
+  threads column (P5). Built in RV-2: Changed's files have a read bar (read, then skimmed, of their agent-written
+  lines) and a third layout, **by review** (flat, the most lines not read first); All has the **agent** column (◆
+  lines to read, ◇ all read); Uncommitted has **Commit…**, `c` (what's staged) and `C` (everything), through
+  `git.commit`. SH-17: the Explorer reads its
   project from its view instance (`ViewCtx.Project`), each project's work tree read on its own (`gitExt.tree`).
 
 ## 01d · Layout: any pane, anywhere
@@ -468,6 +485,67 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Authorship breakdown: Claude, you, gofmt.
 - **Cross-model AI review**: Codex reviews Claude's work (or the other way round), with findings sorted by severity.
 - GitHub threads mirrored inline. The agent drafts a reply, and **you** forward it.
+- Built in RV-1 (`app/diff*.go`, `gitx/diff.go`): `diff.open {path}` opens the `diff` view, a main tab per repo
+  (its root is the instance), for a file (opened, selected and scrolled to) or a repo's whole change (a session's
+  workspace means its primary project); the Explorer's Changed, the agent console's "view in diff", plan's
+  **Preview diff** and the request's **View diff** reach it. It's the branch against the merge-base with its base
+  (`gitx.State.BaseHash`), uncommitted work and unsaved buffers included, in git's `-U3` hunks (`gitx.Unified`, held
+  to `git diff`). Left: **CHANGES**, each file with a reviewed box (`widget.Check`: ticked when every hunk is
+  marked, half when some are; a click marks or unmarks the file) and its size; then the `diff.side.*` views
+  (Authorship is the built-in `diff.side.50-authorship`: added lines by blame, an agent's, yours, others', and lines
+  not committed by the open buffer's authors, else "uncommitted"); then the keys. Middle: the `diff.header.*` views
+  (RV-2's ledger goes here), then each file's header (path, size, "n/m hunks reviewed" or **reviewed**, **⌄ expand**
+  to open it, SPLIT / UNIFIED while open) and its hunks: a `?` (explain), the `@@` line with the smallest function,
+  method or type around the change from tree-sitter (`func roundHalfEven`; git's default funcname line without a
+  grammar), and **MARK REVIEWED** / **✓ REVIEWED**; lines highlighted by the editor's grammars, changed words marked
+  (`gitx.Intraline`: a word diff that matches git's `--word-diff`, none for lines with under a third in common).
+  Every decoration provider's Blocks sit under the new line they're on (`DecorationCtx.Presenter` is `diff`), so
+  threads open and show between the diff's lines. Right: a column of the `diff.right.*` views when any is
+  registered (RV-3's findings). `diff.layout` (`split`, `unified`) remembers the toggle. Keys (mode `diff`): `]h`
+  `[h` hunks, `j` `k` lines, `r` marks the hunk reviewed, `gc` opens a thread on the line or the hunk's changed lines
+  (`thread.new`), `?` runs `explain.unit {path, line}` (RV-5's; the `?` is dimmed until it's registered), `o` opens
+  the line in the editor, `⏎` shows or folds the file, `q` closes. A mark is per change (`gitx.Hunk.ID`, a hash of
+  what it removes and adds), so it survives edits to other hunks; a hunk is reviewed when all its changes are. In a
+  session they're `core.HunksReviewed` events the worker keeps (`review.set`, `SessionState.Reviews`); outside one
+  they last as long as the window. Not yet: more context between hunks, and per-line marks inside a hunk.
+- Built in RV-2 (`app/ledger.go`, `app/commit.go`): the REVIEW LEDGER bar is the `diff.header.10-ledger` view: "You
+  have read 142 / 310 agent-written lines", a stacked `widget.Meter` (read, then skimmed; `MeterOpts.Then`), "28
+  skimmed", the gate's chip (⏻ COMMIT GATED UNTIL 100% for hard, COMMIT ASKS FIRST for soft, ✓ ALL READ) and
+  **Commit**. A folded file shows UNREAD · n LINES. Lines on screen count as skimmed, then read (agents.md,
+  "Guardrails"). Not yet: the status line's read/skimmed/unread counts in REVIEW mode.
+- Built in RV-3 (`app/aireview.go`, `worker/aireview.go`, `core/aireview.go`): the right column is the AI review
+  (`diff.right.50-ai-review`, the session whose project the diff's repo is). Its header names the reviewer
+  (provider · model) and the commit the change was read from ("since a3f9e1"); a toned chip per severity counts the
+  findings not dismissed (critical, high, med, low, nit), and a click shows only those; "n dismissed" shows the
+  dismissed ones too, with **Restore**. Cards sit worst first, then by file and line: a coloured edge, severity and
+  category chips, the title, `file:line` (a click selects that line in the diff, `diff.open {path, line}`) and the
+  body. **→ Thread** and **Fix** open a thread on the finding's line for the session's agent, rated as the finding
+  (asking whether it's right, or to fix it), and the card then shows **Thread · open** (or its status), which opens
+  it; a finding about a repo the session hasn't got offers **Add project** (`session.add-repo`) instead; **Dismiss**.
+  The REVIEWER foot says "different model from the author" (or "same model as the author" when it fell back that
+  far), **Review changes** / **Re-review changes** (`review.ai.run`; what changed since the last review) and
+  **Prompt…**, which opens the user's `agents/ai-review.md`, made from the built-in pack the first time. While a
+  review runs the column says so and the button waits. Not yet: the status line's GH and review counts; findings as
+  decorations between the diff's lines (they're in the column only). The "before this ships" row "AI review" is the
+  `ai-review` ship gate, from `SessionState.AIReviewGate`.
+- Built in RV-4 (`gh/review.go`, `gh/guard.go`, `worker/github.go`, `app/github.go`): the session's worker mirrors each
+  project's PR (`github.sync`, every 30 s for the session in front and on demand) into threads with `Origin: github`
+  and `Thread.GitHub` (repo, PR, the review thread's first comment, the reviewer and where their review stands,
+  resolved on GitHub, outdated): one per review comment thread, anchored to its file and line (the old side for a
+  LEFT comment), and one for the PR's conversation (its comments and reviews' summaries). Their comments are
+  `AuthorGitHub` with the login and `GitHubID`; they reach the agent like yours. The card between the diff's (and the
+  editor's) lines and the request show them through the `github` `registry.ThreadSource`: **GitHub review · L80 ·
+  @reviewer · changes requested · synced 30s ago**, avatars of the login's initials, the agent's reply as a
+  `Comment.Draft` in a violet box ("draft · not sent") with **↗ Forward to GitHub** (`github.forward`, posted from
+  the worker with the user's gh, once; then "sent to github") and **Edit** (`github.edit`, then **Save draft** or
+  ⌘⏎: `github.draft.save`), and "<agent> never posts to GitHub. You do." Echoes are matched by GitHub ID; an edit on
+  GitHub changes the comment (marked edited, given to the agent again), a deleted one goes, a resolution on GitHub
+  resolves the thread and an unresolve reopens it; a review thread whose first comment is gone is dismissed. The status
+  line's `statusline.left.70-github` says "GH 1 changes requested" (and approvals). Text by authors outside
+  `github.trusted_orgs` (the repo's owner when empty) and `github.trusted_users` is withheld from the agent
+  (`Comment.Redacted`, "hidden from the agent"). Not yet: the PR's body isn't mirrored (so isn't redacted); the
+  worker syncs only while a window asks; review comments past GitHub's first 100 aren't read; a draft's border is
+  solid, not dashed.
 
 ## 07 · Explain this change
 
@@ -475,6 +553,26 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - A step dock with ← → across files and repos. Code outside the step dims.
 - Notes pinned to ranges with leader lines: the annotation house style.
+- Built in RV-6 (`app/walkthrough*.go`, the `explain.change` built-in): **Explain this change** (`explain.change`: the
+  omnibox, `␣E`, and the Changed units panel's link) reads every project's changed and untracked files against its
+  branch's base (else HEAD), open buffers standing for their files, and asks the first explainer (the session's
+  agent, forked) for a walkthrough, with each file's diff numbered as the file is now. It answers in JSON steps in a
+  fenced block (`walkFormat`: title, project, file, lines, prose, and notes with title, lines, an optional `mark` to
+  highlight and text), read leniently: the first fenced block or object that has steps, lines as `[a, b]`, `a`,
+  `"a-b"` or `"La–b"`, trailing commas forgiven, a file found by the end of its path; an answer without steps is an
+  error with **Try again**. The view (a tab, mode EXPLAIN) has the EXPLAIN THIS CHANGE header (project / file,
+  lines, "throwaway · discarded if the code changes", Discard); the step's file from three lines above it, the
+  lines its notes are on lit in their colours with a gutter edge and the rest dimmed, each note an annotation
+  (`widget.Annotation`) beside its first line with a leader line, kept from overlapping, lettered A, B, C in its
+  diamond (the user's decision after RV-6: numbers read as the steps' in the dock, as the mockup's do); and the dock: step chips
+  across files and repos (a summary step is "— summary"), STEP 03/07, the title and markdown prose, **Ask about this
+  step** (`request.new` with the step and its code), **Comment on L<n>** (opens the file at the line and
+  `thread.new`; `j`/`k` pick the line, as does a click on the code), the explainer's byline, and ← →. The status
+  line says `step 3/7 · invoice.go · ←/→ step · c comment · q quit`. `q`/Escape close it and keep it; it's
+  discarded, with a notice, once the text of any step's lines (its own and its notes') reads differently from when
+  it was written, in an open buffer or on disk (looked at once a second while it's shown), so an edit that moves
+  them counts too. Not yet: the diff view's header button (RV-1 wires `explain.change`); notes whose lines are
+  scrolled out of view aren't shown; a step on a deleted file has no code.
 
 ## 07b · Explain by code unit, and "Explain this"
 
@@ -499,6 +597,25 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - *Pin as note* turns an explanation into a resolved thread on that range. *Ask a follow-up* turns it into a request.
 - The **Changed units** panel lists every unit the branch touched, with its explain status. Explaining
   by unit doubles as a review checklist that follows the code's structure rather than the diff's.
+- Built in RV-5 (`app/explain*.go`, the `explain` built-in; `text.Unit` helpers `Innermost`, `UnitPath`, `Owners`,
+  `Label`): units are the tree-sitter `units.scm` captures except a plain `block` (the body of the unit around it),
+  with fixtures in Go, Python, TypeScript and Rust. A change is the buffer (as it would be written) against the branch's
+  merge-base, else HEAD (`gitx.State.BaseHash`, `Repo.FileAt`); each changed line belongs to the smallest unit holding
+  it, and a deletion to the end of the line before it. The `?` marks, the unit's lines and the card are decorations
+  (`explain` provider), so they show wherever the buffer is drawn. `␣e` (`explain.unit`; again widens), `␣e` in Visual
+  mode (`explain.selection`), a `?` click and the Changed units panel open the card; crumbs are toggle chips, and `[`
+  / `]` / Escape are the `explain` key layer (`Nowait`), active while the editor is in normal mode with the cursor in
+  the outermost crumb. Narrowing past the innermost crumb goes into the child unit holding the cursor. Answers are
+  cached by `(kind, text)` hash and depth; an explained unit is tracked by an anchor at its start, so an edit inside
+  it shows "changed since it was explained" and **refresh**, even after closing and reopening. Why · history adds
+  the blame's commits of those lines, the session's PR and the session's threads on them. Pin as note is
+  `request.comment {status: resolved}`; Ask a follow-up is `request.new {context}`; Review this, Write tests for this
+  and Refactor this… are `request.this` menu items next to Explain this and Ask about this…. The panel
+  (`explain.units`, also the **explain by unit · n changed units · n hunks** editor action) is the `explain.units`
+  view: a tree per changed file of the owning units and the units around them.
+  Not yet: LSP `documentSymbol`/`selectionRange` (tree-sitter only); outside a session nothing answers (the resident
+  utility session is PL-4); Explain this on terminal output and debugger frames; LSP code actions in the menu; the
+  status line's explain hints; the mockup's leader lines into the margin.
 
 ## 08 · Debugging
 
@@ -513,6 +630,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - Completion with docs, signature help, hover, inlay hints, diagnostics.
 - Code actions include an **Agent** group ("ask Claude to fix in a thread").
+  Built in TR-6: "Ask the agent to fix in a thread" and, beside it, "Ask the agent to explain" (the explain card
+  between the diagnostic's lines), on any line with diagnostics; every other "ask to fix" has the same twin
+  (`ide.md`, "Explain sits next to fix everywhere").
 - References peek inline, as an embedded editor.
 - Vim `:s` with live match highlights, offering "use LSP rename" instead.
 
@@ -551,14 +671,34 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   this machine (`agent.login`: the agent's terminal with `/login` typed) or what to run on the worker, and Check again
   `c` (`decision: recheck`). All answer through `ask.answer {id, ask, decision, note, scope,
   answers}`; `ask.deny-note` opens the note. Session tabs count their asks. Not yet: the Inbox panel and its history
-  (SH-9, P7), the countdown ring, review requests and the security-key card.
+  (SH-9, P7), the countdown ring, review requests and the security-key card. Since RV-2 a gateway card for
+  `commit`, `push` or `pr_create` notes the project's ledger: "21 agent lines unread" or "0 unreviewed lines ✓".
 
-## 13 · Verify & raise
+## 13 · Verify
 
 ![13-verify](mockups/13-verify.png)
 
-- The quiz before the PR, as a chat. Each answer gets a verdict, and a partial one points at the file to read.
-- A skip is allowed, and logged.
+- A quiz about the change, as a chat. Each answer gets a verdict, and a partial one points at the file to read.
+- Optional (the user's decision after RV-7): you take it when you want to; a PR never waits for it, so there's no skip.
+  The mockup's "Verify & raise PR" and "Skip verification (logged)" are superseded.
+- Built in RV-7 (`app/verify.go`, `app/verifyview.go`): **Verify…** on the "Verify quiz" row of "before this ships"
+  (the Ship page and the Raise PR tab; `verify.open`) opens VERIFY THIS CHANGE over the page (`widget.Scrim` on the
+  dialog layer; Escape, ✕ or a click outside closes it and the quiz waits where it was, **Resume** on the row brings it
+  back). The header has who asks ("claude · fork, no tools"),
+  "Can you explain this change?", a progress mark per question in its verdict's colour (right green, partly amber,
+  wrong red, the one being asked yellow) and "2/4". The fork is asked once for four questions as JSON
+  (`{"questions": [{question, file, line}]}`) and once per answer for a grade (`{verdict, note, file, line}`); a
+  reply that isn't JSON is read as a numbered list or questions, and a grade from its first word or glyph (unread:
+  partly, its text the note); a file named in the note is pointed at. Questions and verdicts show as a chat with
+  inline code, a typing indicator while the fork thinks. The composer is `widget.Input` (⌘↵ or Send); ⌥O
+  (`verify.open-file`) or the verdict's file link opens the file it's asking about, closing the quiz until it's
+  resumed. The foot says "optional: a raise never waits for it". At the end: "Verified · 3 right · 1 partly" with
+  **Add the answers to the PR as reviewer notes** (on by default; a block between `<!-- oriel:verify -->` markers,
+  added to the next PR raised by a `ShipRaise` rewrite) and **Done**; with a wrong answer, **Ask again**.
+- Decided in RV-7: a passed quiz stands for the session's later raises; editing an open PR adds no notes; partly
+  right passes.
+- Not yet: asking again when the change moves on after a pass, the VERIFY mode chip in the status line, italics in
+  the fork's prose, and the diff itself in the question prompt (the fork already knows the session).
 
 ## 14 · Tours
 
@@ -610,6 +750,44 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - A flight checklist per project: uncommitted → behind base → unpushed → PR → checks → merge.
 - Multiple projects side by side, with cross-linked PRs and a merge order.
 - "Before this ships" lists the gates: plan, threads, ledger, tests, verify, AI review.
+- Built in FG-6 (`app/ship.go`, `app/shipview.go`, `app/prtab.go`; `worker/ship.go`, `gitx/flight.go`, `gh`): the
+  `ship` view is the page (the sidebar's Ship, `ship.open`), one column per project in the session's order: its colour,
+  name, `branch ← base` and a chip (needs you, CI running, CI failing, ready, merged); then four numbered steps on a
+  rail, the first not done open and amber, done ones ticked and folded to a line. **Uncommitted**: each file with a
+  checkbox (ticked files go in the commit; `widget.Check` with `Plain`) and its ±, then the commit box, filled with the agent's
+  `commit_draft` and marked "drafted by <provider>" until you type; Commit, Redraft (asks the agent to draft again),
+  and after a `ShipCommit` veto its reason and **Commit anyway…**. **Behind main**: the count from origin's base, and
+  conflicts predicted with `git merge-tree`; Rebase (`ship.sync`: fetch, rebase `--autostash`, undone on a conflict
+  that names the files); "Up to date with main · rebased 6m ago" after. **Unpushed**: each commit's hash and subject;
+  Push (the session's branch only). **Pull request**: not raised, its reviewers (CODEOWNERS of the branch's change)
+  and how it links to the others, Raise PR…; raised, `#n · title` with its state, the checks (`CHECKS · 5 OF 7`, each
+  with its time, running or queued), the first failing Actions job's failing log line, reviewers, links, Ready for
+  review, Fix CI with agent (`agent.fix` with the failing checks and the line attached; its twin Explain with agent,
+  TR-6), Edit PR, Open on GitHub ↗. At the right: "before
+  this ships" (`registry.ShipGates`), MERGE ORDER (the session's project order, with each PR's number) and the
+  ticket. The header has Sync all, Commit all and Push + raise both PRs (`ship.raise-all`: push and raise each in
+  merge order). The session is read from its worker (`ship.read`) when it comes to the front, every 10 s while it's
+  there, and fresh (fetching, and asking GitHub again) after each step and on `ship.refresh`.
+- Built in AI-10: drafts appear without asking (agents.md, "Drafts when the agent goes idle"). The commit box's and the
+  Raise PR tab's chip says who wrote the draft and whether the code moved on since: "drafted by codex", "drafted by
+  codex · stale" (warn), "written by you"; the PR step's note says "draft stale". Typing into either keeps the text on
+  the worker as the user's draft (`ship.draft.save`'s `DraftReq`, By "you"): at once on the first key, then a second
+  after the typing rests. Redraft drops the user's draft (`DraftReq.Drop`) before asking the agent.
+- Decided in FG-6: the merge order is the session's project order; a cross-linked PR's description gets a block
+  between `<!-- oriel:linked-prs -->` markers listing every PR of the session in that order, rewritten as each is
+  raised or edited. The file checkboxes pick what's committed (18 draws them as the ledger's; RV-2 adds its column).
+- With RV-2: the commit box runs the commit gates (`registry.CheckCommit`, the same as `git.commit`) before the
+  `ShipCommit` hook. A hard gate holds the commit with its reason and its review button ("Review 21 lines", the gate's
+  `ReviewLabel`); **Commit anyway…** commits with the gates' trailers (`ShipCommitReq.Trailers`) and records the
+  override in the session (`core.CommitGateOverridden`), as `git.commit` does. Each file shows its uncommitted
+  agent-written lines read ("0 / 18", "reviewed ✓"), the step "21 LINES UNREVIEWED" (`registry.LedgerOf`), and
+  "review gate on" while a gate is hard or soft. "Agent lines reviewed 38 / 59" is the ledger's `ShipGate`, its `All`
+  over the session's projects.
+- Built in RV-7: the "Verify quiz" gate (order 50): "optional" with **Verify…** until it's taken, "2/4" with
+  **Resume** while it's going, "3/4 right" passed, "1 wrong" (warn) with **Again**. A gate's `Action` is a button
+  under its row; AI review's is **Review** until one has run.
+- Not yet: the ticket's state moving (Linear), the status bar's
+  CI chip, merging, and a project's Git panel (still dim: it needs the flow without a worker, for a plain directory).
 
 ## 19 · Your config, live
 
@@ -749,3 +927,46 @@ pins; each run is a session of kind job (`sessions.md` → Jobs).
   dimmed, nothing to open): "skipped (last run still going)". The dialog's worker can be changed on a saved job:
   Save moves it there (`jobs.save {to}`: saved on the new worker, then deleted from the old; its runs stay where they
   ran).
+
+
+## 45 · Workers
+
+No mockup: it's drawn in 43's and 44's style. A worker is one per machine (`architecture.md`): this machine's, which
+the app starts, and remote ones, which dial the app over pinned TLS (`sessions.md`, `security.md` → Remote workers).
+
+- **The Workers page** (`:Workers {name}`, `workers.open {name}`, the sidebar's global **Workers** with its figure,
+  "2 online", the start view's **Workers** link with nothing open, the omnibox's Pages) is a page over the main area (`widget.Page` with `Over`), one of the pages that
+  replace each other, key mode `workers`. The header reads WORKERS, then "2 online · 1 offline", then whether Oriel
+  listens for workers ("listening on :7437" or "not listening for workers elsewhere") with the certificate's
+  fingerprint as words; **+ Add a worker** (`a`) and **Close** (`esc`).
+- **The list** (`widget.Rows`, `j`/`k`): this machine's worker first, then the others by name; known workers that
+  aren't connected (keys in the file, or ones seen this run) are listed too. Each row: a status dot (online in the
+  quiet colour, offline faint, revoked in red), its name ("this machine" after this one's), and under it its host,
+  OS/arch and "online 2h" / "offline since 14:02" / "never connected" / "revoked". The foot says where the keys live.
+- **The selected worker**: its name (its own name in grey after it once renamed), **Rename** (`r`), **Restart** (this
+  machine's), **Revoke** (a remote one; asks "Sure?" once), **Forget** (an offline one; asks once). A meta line: host,
+  OS/arch, version and build, online or offline and since, the address it last came from. Then cards:
+  - **LOAD**: CPU of the whole machine and its cores, memory used of the total, as meters, and when sampled (the
+    worker's `sysload` readings); "no reading" while offline.
+  - **AGENTS**: each provider the worker has, with its account and plan tier from the usage it reports, or "signed out"
+    in red with what the provider said.
+  - **SESSIONS**: how many sessions and how many agents running, and the sessions by name with their status dot.
+  - **CONNECTION**: this machine's "on ~/.oriel/worker.sock (owner only)"; a remote one's "dials Oriel with its key ·
+    added Oct 12", and the last address.
+- **Add a worker** (`workers.add {name, listen}`, a `widget.Modal`, key mode `workers.add`): a name (letters, digits,
+  `-`, `_`, `.`; not one in use, not `local`), and, while `workers.listen` is empty, the address to listen on,
+  `:7437` by default, saved to `workers.listen`. **Add** (`⌘↵`) makes the key and shows the next step: "Run this on
+  devbox:" and the one-line command (`oriel worker --connect host:7437 --fingerprint … --key … --name devbox`) with
+  **Copy**; "The worker checks Oriel's certificate. It prints these words as it connects: amber-…"; the key is shown
+  this once. Under them a status line waits ("Waiting for devbox to connect…") and turns to "devbox connected ·
+  linux/arm64 · v0.4.2" when it does. **Done** closes it.
+- **Rename** is a small dialog of one field, the worker's name in Oriel: it renames it wherever a worker is named.
+- Built in AI-15 (`app/workers.go`, `app/workerspage.go`): as above. Decided where the design was silent: workers
+  known only from the keys file (added, never connected or offline since Oriel opened) are listed too, with the file's
+  last-seen time; a name is the worker's ID, so Rename is a label of the app's (kept in `workers.json`) and the
+  worker keeps its own; Revoke keeps the worker listed as revoked until Forget; the command's host is the listen
+  address's, or this machine's name when it listens on every address; this machine's worker can't be revoked or
+  forgotten, and Restart is only offered while Oriel starts it (`Config.LocalWorker`). The sidebar's Workers comes
+  after Jobs (order 40), with the `workers` icon. No global key.
+- Not yet: a mockup; editing a remote session's files (the buffer replica, sessions.md); a worker's own log or
+  terminal from the page; restarting or updating a remote worker from here (PL-6); rotating the certificate.

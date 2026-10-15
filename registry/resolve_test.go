@@ -136,6 +136,23 @@ func TestResolvePanelLocalFirst(t *testing.T) {
 	}
 }
 
+func TestResolveNowait(t *testing.T) {
+	// ref:   nvim/map.txt *:map-<nowait>*
+	// quote: "Then the mapping will be used when it matches, Vim does not wait for more characters to be typed."
+	r := registry.New()
+	bind(r, "n", "[c", "hunk.prev")
+	r.Keymap(registry.Keymap{Mode: "card", Keys: "[", Command: "widen", Nowait: true})
+	bind(r, "card", "]", "narrow")
+	bind(r, "n", "]c", "hunk.next")
+	modes := []string{"card", "n"}
+	if got := trace(registry.NewResolver(r), modes, time.Unix(0, 0), "["); got != "run:widen" {
+		t.Errorf("[ with <nowait>: %q, want it run at once", got)
+	}
+	if got := trace(registry.NewResolver(r), modes, time.Unix(0, 0), "]"); got != "wait" {
+		t.Errorf("] without <nowait>: %q, want it to wait for ]c", got)
+	}
+}
+
 func TestLeaderIsExpandedWhenDefined(t *testing.T) {
 	// ref:   nvim/map.txt *mapleader*
 	// quote: "Note that the value of \"g:mapleader\" is used at the moment the mapping is defined.  Changing \"g:mapleader\" after that has no effect for already defined mappings."
@@ -247,5 +264,25 @@ func TestResolveAccept(t *testing.T) {
 	res.Feed([]string{"n"}, "g", t0)
 	if res.Complete() != nil || res.Accept(t0) != nil || len(res.Pending()) != 1 {
 		t.Errorf("g alone accepted something")
+	}
+}
+
+// An exclusive mode keeps to its own keys: the modes after it lend only what its Allow lets through, and don't make
+// it wait for their longer keys.
+func TestResolveExclusiveMode(t *testing.T) {
+	r := registry.New()
+	bind(r, "start", "j", "start.next")
+	bind(r, "global", "<D-n>", "session.new")
+	bind(r, "global", "<D-k>", "omnibox.open")
+	bind(r, "n", "<Space><Space>", "picker.files")
+	r.Contribute(registry.ExclusiveKeys{Mode: "start", Allow: func(k registry.Keymap) bool { return k.Command == "session.new" }})
+	modes := []string{"start", "n", "global"}
+	for keys, want := range map[string]string{"j": "run:start.next", "<D-n>": "run:session.new", "<D-k>": "key:<D-k>", "<Space>": "key:<Space>"} {
+		if got := trace(registry.NewResolver(r), modes, time.Unix(0, 0), keys); got != want {
+			t.Errorf("%s: %q, want %q", keys, got, want)
+		}
+	}
+	if got := trace(registry.NewResolver(r), []string{"n", "global"}, time.Unix(0, 0), "<D-k>"); got != "run:omnibox.open" {
+		t.Errorf("⌘K outside the exclusive mode: %q", got)
 	}
 }

@@ -20,7 +20,9 @@ tab_width = 4               # Go uses tabs anyway
 
 [agent]
 default_provider = "claude"
-commit_gate = "soft"
+
+[ledger]
+gate = "soft"
 ```
 
 ### Plugins
@@ -125,6 +127,12 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.threads` | `shown`: files open with their threads between the lines; `hidden`, behind gutter bubbles | app | | ED-15 |
 | `files.generated` | false | app | | ED-9 |
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | | FG-2 |
+| `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | | RV-1 |
+| `ledger.gate` | `auto`: the commit gate by the session's kind (hard for work, plan and a new repo, soft for jobs, off for the rest); `hard`, `soft` or `off`; a project's `.oriel/settings.toml` overrides it for its repo | app | | RV-2 |
+| `review.ai.provider` | the provider AI reviews run on; empty: one other than the session agent's, else the author's on another model | app | | RV-3 |
+| `review.ai.model` | the model AI reviews run on; empty: the reviewer's default | app | | RV-3 |
+| `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | | RV-4 |
+| `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | | RV-4 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
 | `lsp.start` | `project`: a project's servers start when it opens; `file`: when one of their files does | app | | – |
@@ -157,6 +165,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `sandbox.pids_limit` | 0: 4096; -1 for no cap | app | | AI-11 |
 | `usage.accounts` | empty: names for the accounts plans belong to, account identity → label ("Work", "Personal"); unnamed, an account shows its email or organisation | app | | AI-12 |
 | `stats.split_sessions` | true: a multi-repo session's cost splits over its repos by their share of its file work; off, each repo is charged the whole session. The Stats page's toggle and the session tab's "count whole session in each" both set it | app | | AI-12 |
+| `workers.listen` | empty: Oriel doesn't listen for workers on other machines; an address, `:7437` or `10.0.0.2:7437`, listens there (pinned TLS, keys in `workers.json`; security.md, Remote workers). Add a worker sets it | app | | AI-15 |
 
 ## The settings page (`:Settings`, ⌘,)
 

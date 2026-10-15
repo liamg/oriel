@@ -60,18 +60,25 @@ func lineBg(th *theme.Resolved, ds []registry.Decoration) (bg, edge color.NRGBA)
 	return bg, edge
 }
 
-// signs draws a line's gutter signs, between its number and its text.
+// signColW is the width of the gutter's sign column, and signBarW what its right edge keeps for block signs.
+const (
+	signColW = 14
+	signBarW = 3
+)
+
+// signs draws a line's gutter signs, between its number and its text. A block sign (the git bar) has a fixed place
+// at the column's right edge, so a run of them lines up whatever else a line has; the rest sit centred left of it.
 func (x *editorExt) signs(c *ui.Ctx, ds []registry.Decoration, gw float32, m paneMetrics) {
-	c.Row("signs", ui.Style{W: ui.Px(14), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
+	c.Row("signs", ui.Style{W: ui.Px(signColW), H: ui.Flex(1), Pad: ui.Insets{R: signBarW}, Cross: ui.Center, Main: ui.Center,
+		Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
 		for i, d := range ds {
 			if d.Kind != registry.Sign {
 				continue
 			}
 			if w, h, ok := blockPart(d.Text); ok && d.Icon == "" && d.Command == "" && d.Hover == nil {
 				col := tokenColour(c.Theme(), d.Style, c.Theme().C(theme.FgMuted))
-				c.Box(i, ui.Style{W: ui.Px(m.charW), H: ui.Px(m.lineH)}, func(c *ui.Ctx) {
-					c.Box("part", ui.Style{W: ui.Px(w * m.charW), H: ui.Px(h * m.lineH), Fill: col, Float: &ui.Float{Offset: render.Point{Y: (1 - h) * m.lineH}}}, nil)
-				})
+				c.Box(i, ui.Style{W: ui.Px(w * m.charW), H: ui.Px(h * m.lineH), Fill: col,
+					Float: &ui.Float{Offset: render.Point{X: signColW - w*m.charW, Y: (1 - h) * m.lineH}}}, nil)
 				continue
 			}
 			drawSign(c, x.h, i, d, m.font.Size)

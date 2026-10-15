@@ -263,6 +263,16 @@ type Session interface {
   (`AuthExpired`).
 - `Fork` returns the answer rather than a session: every side question so far (btw, explain, the quiz) wants one
   answer, and both providers produce it in one turn.
+- Built in RV-5: explain asks through the `agent` explainer (`app/sessions.go`), which forks the session in front's
+  agent with the request's depth (brief, detailed, why · history) over the wire's `agent.fork`; its label is "fork
+  of <provider> · knows this session". With no session in front it says so: the resident utility session isn't
+  built yet (PL-4).
+- Built in RV-6: a request with a `Format` (the walkthrough's JSON steps) is forked with the format at the end of the
+  prompt instead of the depth's "in markdown" instruction; the agent explainer's byline is "written by <provider>
+  from the session's own context".
+- Built in RV-7: side questions in general are `registry.Forker`s (`registry.Fork`); the sessions extension registers
+  the agent's, which forks the session named in the request (not just the one in front) over `agent.fork`. The verify
+  quiz asks through it.
 
 ### The session host as built (`worker`)
 
@@ -284,6 +294,27 @@ type Session interface {
   (`Comment.Evidence`): runs of its `test_run` tool, and shell commands that ran tests (`go test`, `pytest`, …,
   parsed from their output). A reply that says tests pass with no passing run behind it is flagged
   (`Comment.Unbacked`), and the agent is told so in the tool's answer.
+
+### Drafts when the agent goes idle (AI-10)
+
+- Two halves. The prompt packs that offer `commit_draft` (work, plan, job, new repo; `parts/drafts.md`) tell the agent
+  to fill each project's drafts before it ends a turn with nothing left to do, as crit's skill does. Behind that, the
+  host (`worker/drafts.go`) checks when a turn ends with nothing queued: for each writable project, a commit message is
+  due for uncommitted work, a PR draft for a branch with commits of its own or uncommitted work and no open PR (as the
+  last GitHub reading has it; no network call). One is due when it's missing or its fingerprint isn't the code's now;
+  never when the user wrote it.
+- The fingerprint (`gitx.Repo.Fingerprint`) hashes each path that differs from HEAD (a commit message) or from the
+  merge base with the base (a PR draft), tracked or not, with what it holds now; so committing doesn't stale a PR
+  draft. `commit_draft` and `pr_draft` store it beside the draft (`drafts/<project>.<kind>.code`), and `ship.read`
+  marks a draft `Stale` when it no longer matches.
+- The ask is a `<notice>` in a batch led by `NoticeLead`, not a thread. The host remembers the code it last asked
+  about per project and kind, so it asks at most once per change, and again only after the code moves; a turn that
+  ends without drafting isn't asked twice.
+- A draft by "you" (`worker.DraftByYou`) is the user's: `commit_draft`/`pr_draft` answer "Not saved: the user wrote …"
+  and leave it. `ship.draft` with `Drop` clears it (Redraft).
+- Decided in AI-10: a session whose pack doesn't offer `commit_draft` (direct, review, tour, scratch) is never asked.
+- Not yet: an option to turn the nudge off, and remembering what was asked across a worker restart (one repeat ask
+  after a restart).
 
 ### Claude and Codex, side by side
 
@@ -529,21 +560,73 @@ All on by default, all configurable, none a nag:
 - **Review ledger.** Every agent-written line is unread until you've seen it in
   the diff (scrolled past it, or marked its hunk reviewed). The ledger is
   visible in the session HUD.
+  Built in RV-1: marking a hunk reviewed in the diff is a session event (`core.HunksReviewed`) keyed by the change's
+  content, which the ledger (RV-2) counts from.
 - **Commit gate** (`ledger.gate`), set per session kind:
   - **work and plan: hard.** Commit and PR are blocked until every agent-written line is read. "Commit anyway" is one keypress,
     and it's recorded in a commit trailer (`Unreviewed-Agent-Lines: 38`) and in the session log.
   - **jobs: soft.** One confirmation, logged.
   - **tours and scratch sessions: off.**
   - Repos can override it in `.oriel/`, and the ledger shows in the HUD, on the Ship page and in the PR description.
+  - Built in RV-2: the ledger counts the agent-written lines of a repo's branch change (against the merge-base,
+    uncommitted work included): an added line is the agent's when blame says so (an agent author or Co-Authored-By),
+    when the open buffer's authors say so, or, not committed yet and with no author known, when the session's
+    transcript has an edit of the agent's adding that text to that file. Blank lines don't count. A line is **read**
+    when its change is marked reviewed (`core.HunksReviewed`) or it stayed wholly on screen in the diff for 1 s plus
+    150 ms per unread agent line showing with it (at most 8 s); **skimmed** when it stayed 400 ms or more but less;
+    a line flicked past in under 400 ms counts for nothing. Lines seen are the session event `core.LinesSeen`
+    (`Review.Read`, `Review.Skimmed`, keyed `core.LineKey(change, n)`), sent through the worker's `review.seen`;
+    outside a session they last as long as the window. The gate is `ledger.gate` (`auto` by default: the session's
+    `CommitGate`, set by the worker from its kind's `KindSpec.Gate`, else `core.DefaultGate`; off outside a session),
+    settable per repo in `.oriel/settings.toml` and per session. It counts the not-yet-committed agent lines of the
+    files the commit takes (staged, or everything with `all`), skimmed ones as not read. Hard: `git.commit` opens
+    the COMMIT GATED dialog (Review `r`, Commit anyway `a`, Cancel `esc`); anyway commits with
+    `Unreviewed-Agent-Lines: N` (git's `--trailer`), a warning notice in the session's log, and
+    `core.CommitGateOverridden` in `SessionState.Overrides` (worker `review.override`). Soft: one confirmation (`⏎`),
+    logged the same way without a trailer. Not yet: the gateway's `commit` (an agent's, approved on its card) isn't
+    gated, though its card shows the ledger; the PR gate (FG-6) and the PR description's ledger.
 - **Evidence.** The agent attaches proof to claims ("tests pass" links to the
   test run in the session log), and replies without evidence get flagged.
 ![06-review](mockups/06-review.png)
 
-- **Verify & raise.** crit's quiz carries over: the agent asks you about the
-  change before the PR goes out.
+- **Verify.** crit's quiz carries over, as something you choose to take: the agent asks you about the change before
+  you put your name on it. It never holds up a PR (the user's decision after RV-7).
+  Built in RV-7 (`app/verify.go`, ui.md 13): **Verify…** on the "Verify quiz" row of "before this ships". Four
+  questions from a tool-less fork, each answer graded right, partly or wrong; it passes with no wrong answers, and a
+  passed quiz's answers can go in the next PR raised as reviewer notes. The result is a session event and a session
+  log line.
 - **Cross-model review.** AI review runs on a different provider from the
   author by default (Codex reviews Claude's work, and the other way round).
+  Built in RV-3 (`worker/aireview.go`): the reviewer is a short-lived session the worker starts on the reviewer's
+  provider (`Provider.Start`, so Claude is its interactive CLI, never `claude -p`) with the `ai-review` pack, the
+  `ask` policy and every permission it raises refused, so it only reads (Claude's Read and Grep, Codex's safe
+  commands), and two tools: `finding` (severity on the threads' scale, category, title, file and line, body, project,
+  and `repo` for a repository the session hasn't got) and `projects`. It isn't a session of its own: its findings and
+  its run are the reviewed session's events. Not a `Fork`: a fork is the author's own model and tool-less, and the
+  point is another model that reads the code. The provider is `review.ai.provider` if set, else the first installed and
+  signed-in provider other than the session agent's at its default model, else the author's provider on another of its
+  models (the default first), else the same model, which the column says ("same model as the author"). The prompt is
+  who wrote it, the session's prompt, each project's change as `git diff` writes it (cut at 120 kB: read the files for
+  the rest), and the earlier findings with what became of them. The first review reads from the merge-base with the
+  project's base (`gitx.Repo.MergeBase`; a pinned project's from origin's default branch); each review keeps the work
+  tree it read as a git tree (`Snapshot`), so **Re-review changes** reads only what changed since, committed or not.
+  Findings come as the tool is called; a reviewer that writes them as a JSON block instead has them read from its
+  answer (`ParseFindings`, lenient about severities, `file:line` and string lines). Its turn's end ends it; a
+  failure, a lost login, 20 minutes or the worker stopping end it with an error. A review session reviews its pull
+  request this way as it starts (`KindSpec.AutoReview`), beside its own agent's review.
+  Not yet: the reviewer runs on the worker's host even for a sandboxed session (read-only, with every permission
+  refused); a running review can't be stopped from the app; Codex's own `review/start` isn't used.
 - **Slop gate.** crit's phrase filter runs on everything the agent posts.
 - **Trusted authors.** crit's trusted-orgs redaction carries over unchanged.
+  Built in RV-4: a mirrored GitHub comment whose author isn't a member of `github.trusted_orgs` (the repository's
+  owner when none is set: its OWNER and MEMBER association, else `orgs/{org}/members`) or in `github.trusted_users`
+  reaches the agent as `[redacted: …]` (`worker.Redacted`), in its batches and the `thread` tool alike.
+- **The agent never posts to GitHub reviews.** On a thread with `origin: github` the agent's `reply` is a draft; the
+  user forwards it (ui.md 06). Built in RV-4, the guards refuse every way an agent could post itself, whatever the
+  user's rules say: Claude's `tool.check` denies a Bash `gh pr review|comment`, `gh issue comment`, `--comment` on
+  close/reopen/merge and a `gh api` write to a PR's comments, reviews or replies (or a review GraphQL mutation)
+  (`gh.PostsReview`), and an MCP review tool on any server (`gh.ReviewTool`), on the host and in a sandbox; the worker
+  refuses such a permission ask from any provider before rules or the user see it; the gateway never offers or runs
+  one (`gateway.FromOriel`). Not yet: Codex running with no approvals isn't checked command by command.
 - **Authorship.** Blame shows who wrote each line (you, the agent, a
   formatter), so "the AI wrote it" never gets lost after a commit.

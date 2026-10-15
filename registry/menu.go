@@ -19,6 +19,9 @@ type MenuItem struct {
 	Command string // run this, with Args, or Run
 	Args    Args
 	Run     func(ctx Ctx, at MenuCtx) error
+	// Trouble, with Command FixCommand, is what's wrong where it was clicked: the item shows only where there's
+	// something, and runs with its Args.
+	Trouble func(at MenuCtx) (Trouble, bool)
 	Source  string
 }
 
@@ -62,13 +65,24 @@ func (m MenuItem) Matches(at MenuCtx) bool {
 	return w.Help == "" || strings.HasPrefix(at.Help, w.Help)
 }
 
-// MenuItems are r's menu items that apply at at, grouped and ordered.
+// MenuItems are r's menu items that apply at at, grouped and ordered, each fix with its explain twin after it.
 func MenuItems(r Registry, at MenuCtx) []MenuItem {
 	var out []MenuItem
 	for _, c := range r.Contributions("menu.item") {
-		if m := c.(MenuItem); m.Matches(at) {
-			out = append(out, m)
+		m := c.(MenuItem)
+		if !m.Matches(at) {
+			continue
 		}
+		if m.Trouble != nil {
+			var t Trouble
+			var ok bool
+			Call(func() error { t, ok = m.Trouble(at); return nil })
+			if !ok {
+				continue
+			}
+			m.Args = t.Args()
+		}
+		out = append(out, m)
 	}
 	first := map[string]int{}
 	for _, m := range out {
@@ -80,7 +94,7 @@ func MenuItems(r Registry, at MenuCtx) []MenuItem {
 		return cmp.Or(cmp.Compare(first[a.Group], first[b.Group]), strings.Compare(a.Group, b.Group), cmp.Compare(a.Order, b.Order),
 			strings.Compare(a.Label, b.Label))
 	})
-	return out
+	return WithTwins(out)
 }
 
 // Located is a view that can say what's at an instance for the right-click menu: its file and whether there's a
