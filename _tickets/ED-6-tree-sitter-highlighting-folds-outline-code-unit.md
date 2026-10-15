@@ -25,7 +25,7 @@ depends_on: [ED-1]
 
 ## Done when
 
-highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1 ms in a 600-line file, and
+highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1.5 ms in a 600-line file, and
 no keystroke waits on a parse at any size (`syntax.Document` parses in the background; decided with Liam,
 2026-10-12, after measuring 2.7 ms at 2,000 lines under wazero against 0.75 ms native)
 

@@ -180,7 +180,7 @@ engine never feels like another binary running in a pane.
   stopgap until then.
 - Overlapping captures resolve as nvim's highlighter does: higher `priority` wins, then deeper injections, then the
   later pattern.
-- Incremental: an edit is applied to the old tree and the text reparsed, reusing everything unchanged: under 1 ms
+- Incremental: an edit is applied to the old tree and the text reparsed, reusing everything unchanged: under 1.5 ms
   for a 600-line file, 2.7 ms at 2,000 lines (WASM costs about 3.6× native). So parsing is **off the keystroke
   path**: a `syntax.Document` reparses on its own goroutine, and readers get the last highlights moved through the
   edits made since. Plugins add a

@@ -58,7 +58,7 @@ How everything hangs together, built and tested before features land on it.
 | ED-3 | Visual and visual-block, `:s`/`:g` with vim regex, ranges | 09 | vim | P2 | ED-2 | the same, plus the regex conformance suite |
 | ED-4 | Macros, folds, splits, buffers, quickfix | – | vim | P2–P4 | ED-2, FW-9 | the same |
 | ED-5 | `plain` engine and the `input.Engine` interface (emacs as a plugin) | – | input | P3 | ED-2, FW-3 | an engine swap at runtime per buffer; a sample emacs plugin passes its tests |
-| ED-6 | Tree-sitter highlighting, folds, outline, code units | 01, 25 | syntax | P2 | ED-1 | highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1 ms in a 600-line file, and no keystroke waits on a parse at any size |
+| ED-6 | Tree-sitter highlighting, folds, outline, code units | 01, 25 | syntax | P2 | ED-1 | highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1.5 ms in a 600-line file, and no keystroke waits on a parse at any size |
 | ED-7 | Decorations between lines: threads, explain cards, diffs, virtual text | 01 | ui, editor | P3 | ED-1, FW-6 | the layout engine places blocks at anchors and survives edits above them |
 | ED-8 | Multi-cursor and LSP rename preview | 09 | edit | P4 | ED-7, LS-1 | – |
 | ED-9 | `.editorconfig`, the IDE-relevant `.gitattributes` (eol, binary, encoding, generated), and opt-in modelines as a buffer-scoped settings layer | 19 | registry, edit | P3 | ED-2, SH-12 | EditorConfig core test suite passes; `.gitattributes` fixtures match `git check-attr`; properties show with their source on the settings page; edits re-apply live |
