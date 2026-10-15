@@ -593,6 +593,6 @@ text "✓ main" @1351.375,990.95996 #4fe0a0 JetBrains Mono 11
 text "Go · utf-8 · LF" @1406.9375,984.71 #b3ab99 JetBrains Mono 10.5
 text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 1%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
-text "◆" @94.796875,156.77 #ffd23f JetBrains Mono 13.5
+text "◆" @93.296875,156.77 #ffd23f JetBrains Mono 13.5
 rect 112,102 8.40625x19 fill #ffd23f
 text "p" @112,115.770004 #141006 JetBrains Mono 13.5

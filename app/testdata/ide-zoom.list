@@ -234,7 +234,7 @@ text "Go · utf-8 · LF" @867.0104,651.3767 #b3ab99 JetBrains Mono 10.5
 text "1:1" @981.9166,651.3767 #b3ab99 JetBrains Mono 10.5
 text "≡ 14%" @1017.6979,651.3767 #b3ab99 JetBrains Mono 10.5
 rect 98,278 102.1875x1 fill #ff5f6d
-rect 344.79688,206 2.1015625x21 fill #4fe0a0
-rect 344.79688,227 2.1015625x21 fill #4fe0a0
+rect 353.89844,206 2.1015625x21 fill #4fe0a0
+rect 353.89844,227 2.1015625x21 fill #4fe0a0
 rect 362,102 8.40625x19 fill #ffd23f
 text "p" @362,115.770004 #141006 JetBrains Mono 13.5
