@@ -396,6 +396,28 @@ flowchart TB
   `core.Login` on each session waiting on it) and checks it with `Detect` (AI-13). `agent.login {id | provider, worker}`
   opens a local agent's terminal with the provider's `Terminal` login typed.
 - **agent tools**: an MCP tool defined in Lua or Go and offered to the session's agent.
+  Since PL-4 a `registry.AgentTool` says who it's for: `For` (session kinds such as `work`, or a utility agent's name
+  such as `assistant`; none is every session's agent and no utility agent's; `registry.AgentToolsFor`), what data it
+  `Reads` (the assistant lists it as a source), `InputSchema` when `Params` can't say it, and `Confirm`, which makes it
+  an act: `registry.CallAgentTool` asks the agent's `registry.AgentOwner` (a contribution by agent name with `Confirm`
+  and `Acted`) with the `registry.Confirmation` it describes (title, lead, rows, a block, a note, a line) and runs it
+  only on a yes; a session's agent has no owner, so an act there is refused. `Run` may return a `registry.Acted`
+  (`Result` for the agent; `Line`, `Detail`, `Open`/`OpenArgs` and `Undo` for the owner). The worker asks the app for
+  an agent's tools with `worker.ToolsReq{Session, Agent}` and calls them with `ToolCall.Agent`; utility agents are
+  `utility.run` / `utility.send` / `utility.interrupt` (`architecture.md`). Lua: `oriel.agent.tool{…, for, read_only,
+  reads}`.
+- **the assistant** (PL-4, ui.md 11): its tools are agent tools `for = { "assistant" }`: the built-ins (`reply`,
+  `sessions`, `past_sessions`, `open_session`, `rename_session`, `resume_session`, `new_session`, `start_session`,
+  `stop_session`, `review_pr`, `jobs`, `run_job`, `repos`, `my_prs`, `review_requests`, `usage`, `workers`,
+  `settings`), and any a plugin adds: Linear's `my_tickets` (PL-8), mission control's `mission_control` (SH-7) and
+  agentbus's `request_review` (PL-5) come this way. Commands `assistant.toggle` (`⌘/`), `assistant.open {text}`,
+  `assistant.close`, `assistant.say {text, voice}`, `assistant.send`, `assistant.new`, `assistant.stop` (`⌘.`),
+  `assistant.answer {id, yes}`, `assistant.pick {n}` (`⌘1`–`⌘9`), `assistant.undo {id}`, `assistant.show {id}`; key
+  mode `assistant`; view `app.overlay.assistant`; options `assistant.provider`, `assistant.model`, `assistant.web`,
+  `assistant.wake`, `assistant.idle`; the prompt `assistant.system` (group Assistant, `{{date}}`, `{{workers}}`);
+  the inbox source `assistant`; a Decide hook on `VoiceWake`. `session.start {background}` starts a session behind the
+  one in front. `gh.SearchPRs` (`gh.SearchMine`, `gh.SearchReview`) through the worker's `github.prs`
+  (`Client.SearchPRs`); `gh.ParsePR` reads a PR's URL or `owner/name#N`.
 - prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
   registered on the worker (`worker.Kinds().Register(worker.KindSpec{…})`: its title, a few words (`Desc`), what
   starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees,

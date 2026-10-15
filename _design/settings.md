@@ -174,10 +174,15 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `voice.model` | the Whisper model: `base.en`, `small.en`, `medium.en` or a path to a ggml model; empty picks one for the machine (`small.en` on Apple silicon, else `base.en`) | app | | PL-11 |
 | `voice.url` | an OpenAI-compatible transcription endpoint used instead of a local whisper-server; empty uses whisper-server | app | | PL-11 |
 | `voice.recorder` | the program that captures audio: `pw-record`, `parecord`, `arecord` (Linux), `rec` (sox), `ffmpeg`; empty uses the first installed | app | | PL-11 |
-| `voice.wake` | false; true listens for the wake word, sending what follows it to the agent in front, its reply spoken | app | | PL-11 |
+| `voice.wake` | false; true listens for the wake word, sending what follows it to the assistant (`assistant.wake`), else the agent in front, its reply spoken | app | | PL-11 |
 | `voice.wake_word` | `computer`: one word of letters, up to 20 | app | | PL-11 |
 | `voice.speech` | `system` (say, spd-say or espeak), `piper` or `off`: how replies are spoken | app | | PL-11 |
 | `voice.piper_voice` | a Piper voice's name in `~/.oriel/piper`; empty uses the first there | app | | PL-11 |
+| `assistant.provider` | empty: the first agent installed and signed in; `claude` or `codex` | app | | PL-4 |
+| `assistant.model` | empty: the provider's small model (Claude's Haiku), else its default | app | | PL-4 |
+| `assistant.web` | true: the assistant may search the web (the provider's WebSearch and WebFetch) | app | | PL-4 |
+| `assistant.wake` | true: with `voice.wake` on, what follows the wake word goes to the assistant, its answer spoken | app | | PL-4 |
+| `assistant.idle` | 15: minutes of quiet before a conversation ends and the next starts afresh | app | | PL-4 |
 
 ## The settings page (`:Settings`, ⌘,)
 

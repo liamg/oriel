@@ -28,7 +28,28 @@ const (
 	MethodGitHubSync    = "github.sync"
 	MethodGitHubForward = "github.forward"
 	MethodGitHubDraft   = "github.draft"
+	// MethodGitHubPRs searches GitHub's pull requests with the user's gh: theirs, and those waiting on their review.
+	MethodGitHubPRs = "github.prs"
 )
+
+// PRsReq is a search of GitHub's pull requests: gh.SearchMine, gh.SearchReview.
+type PRsReq struct {
+	Query string `json:"query"`
+}
+
+// SearchPRs finds pull requests across GitHub as the user's gh is signed in.
+func (w *Worker) SearchPRs(ctx context.Context, r PRsReq) ([]gh.Found, error) {
+	if strings.TrimSpace(r.Query) == "" {
+		return nil, errors.New("no search")
+	}
+	return w.github(gitx.Repo{}).SearchPRs(ctx, r.Query)
+}
+
+// SearchPRs finds pull requests across GitHub with the worker's gh.
+func (c Client) SearchPRs(ctx context.Context, query string) ([]gh.Found, error) {
+	var out []gh.Found
+	return out, c.Conn.Call(ctx, MethodGitHubPRs, PRsReq{Query: query}, &out)
+}
 
 // NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
 const NoPosting = "Oriel: agents never post to GitHub reviews. Answer the thread with mcp__oriel__reply: on a GitHub " +
@@ -436,6 +457,7 @@ func (w *Worker) serveGitHub(fn func(string, wire.Handler)) {
 	fn(MethodGitHubSync, wire.Func(func(ctx context.Context, r MirrorReq) (Mirror, error) { return w.SyncGitHub(ctx, r) }))
 	fn(MethodGitHubForward, wire.Func(func(ctx context.Context, r ForwardReq) (core.Comment, error) { return w.ForwardGitHub(ctx, r) }))
 	fn(MethodGitHubDraft, wire.Func(func(_ context.Context, r DraftEditReq) (any, error) { return nil, w.EditDraft(r) }))
+	fn(MethodGitHubPRs, wire.Func(func(ctx context.Context, r PRsReq) ([]gh.Found, error) { return w.SearchPRs(ctx, r) }))
 }
 
 // SyncGitHub mirrors a session's PRs' reviews into its threads (github.sync).

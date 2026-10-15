@@ -99,7 +99,7 @@ func (x *voiceExt) Activate(_ context.Context, h ext.Host) error {
 		{Name: "voice.recorder", Type: registry.String, Default: "", Choices: voice.RecorderNames,
 			Help: "The program that captures audio: one of " + strings.Join(voice.RecorderNames(), ", ") + ". Empty uses the first installed."},
 		{Name: "voice.wake", Type: registry.Bool, Default: false,
-			Help: "Listen for the wake word: said after a pause, what follows it goes to the session in front's agent, and its reply is spoken."},
+			Help: "Listen for the wake word: said after a pause, what follows it goes to the assistant (assistant.wake), else the session in front's agent, and the reply is spoken."},
 		{Name: "voice.wake_word", Type: registry.String, Default: voice.DefaultWakeWord, Validate: func(v any) error {
 			if !wakeWordRe.MatchString(v.(string)) {
 				return errors.New("the wake word is one word of letters, up to 20")

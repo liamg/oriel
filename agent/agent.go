@@ -67,6 +67,8 @@ type Model struct {
 	Efforts []string `json:"efforts,omitempty"`
 	Context int      `json:"context,omitempty"` // tokens
 	Default bool     `json:"default,omitempty"`
+	// Small is a quick, cheap model for utility agents (agents.md: the resident utility session).
+	Small bool `json:"small,omitempty"`
 }
 
 // Mount is a file a sandboxed agent needs from the host: its credentials, stripped to what it uses.

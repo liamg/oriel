@@ -44,6 +44,7 @@ type PR struct {
 	Number    int       `json:"number"`
 	NodeID    string    `json:"nodeId,omitempty"`
 	Title     string    `json:"title"`
+	Author    string    `json:"author,omitempty"` // who opened it
 	Body      string    `json:"body,omitempty"`
 	URL       string    `json:"url,omitempty"`
 	State     string    `json:"state,omitempty"` // open or closed
@@ -141,6 +142,8 @@ type Client interface {
 	Comment(ctx context.Context, repo Repo, number int, body string) (IssueComment, error)
 	// OrgMember says whether login is a member of org, as far as the caller can see.
 	OrgMember(ctx context.Context, org, login string) (bool, error)
+	// SearchPRs finds pull requests across GitHub: SearchMine, SearchReview.
+	SearchPRs(ctx context.Context, query string) ([]Found, error)
 }
 
 // Error is GitHub saying no: its HTTP status and message.

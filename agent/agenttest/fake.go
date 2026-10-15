@@ -313,18 +313,22 @@ func (s *FakeSession) Ask(p agent.Permission) chan agent.Decision {
 // Call runs one of the tools it was offered, as the agent would.
 func (s *FakeSession) Call(t testing.TB, name string, args any) string {
 	t.Helper()
+	out, err := s.CallErr(name, args)
+	if err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+	return out
+}
+
+// CallErr runs one of the tools it was offered, and says how the call went.
+func (s *FakeSession) CallErr(name string, args any) (string, error) {
 	b, _ := json.Marshal(args)
 	for _, tool := range s.Spec.Tools {
 		if tool.Name == name {
-			out, err := tool.Call(context.Background(), b)
-			if err != nil {
-				t.Fatalf("%s: %v", name, err)
-			}
-			return out
+			return tool.Call(context.Background(), b)
 		}
 	}
-	t.Fatalf("no tool %s", name)
-	return ""
+	return "", fmt.Errorf("no tool %s", name)
 }
 
 // WaitSent is the next thing it was given.

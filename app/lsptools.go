@@ -55,17 +55,7 @@ func (x *lspExt) agentPath(ctx registry.Ctx, file string) (string, error) {
 	return filepath.Join(root, file), nil
 }
 
-// onLoop runs fn on the app's loop and waits for it.
-func (x *lspExt) onLoop(ctx context.Context, fn func()) error {
-	done := make(chan struct{})
-	x.h.Do(func() { fn(); close(done) })
-	select {
-	case <-done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
+func (x *lspExt) onLoop(ctx context.Context, fn func()) error { return onLoop(ctx, x.h, fn) }
 
 // agentDoc is the server's client for path, opening the file on it from disk when no editor has; release closes
 // what it opened.

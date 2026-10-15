@@ -21,13 +21,16 @@ var _ Client = API{}
 
 // The REST shapes read, cut to what Oriel uses.
 type restPR struct {
-	Number    int        `json:"number"`
-	NodeID    string     `json:"node_id"`
-	Title     string     `json:"title"`
-	Body      string     `json:"body"`
-	HTMLURL   string     `json:"html_url"`
-	State     string     `json:"state"`
-	Draft     bool       `json:"draft"`
+	Number  int    `json:"number"`
+	NodeID  string `json:"node_id"`
+	Title   string `json:"title"`
+	Body    string `json:"body"`
+	HTMLURL string `json:"html_url"`
+	State   string `json:"state"`
+	Draft   bool   `json:"draft"`
+	User    struct {
+		Login string `json:"login"`
+	} `json:"user"`
 	MergedAt  *time.Time `json:"merged_at"`
 	CreatedAt time.Time  `json:"created_at"`
 	Head      struct {
@@ -45,7 +48,7 @@ type restPR struct {
 }
 
 func (p restPR) pr(owner string) *PR {
-	out := &PR{Number: p.Number, NodeID: p.NodeID, Title: p.Title, Body: p.Body, URL: p.HTMLURL, State: p.State, Draft: p.Draft,
+	out := &PR{Number: p.Number, NodeID: p.NodeID, Title: p.Title, Author: p.User.Login, Body: p.Body, URL: p.HTMLURL, State: p.State, Draft: p.Draft,
 		Merged: p.MergedAt != nil, Head: p.Head.Ref, Base: p.Base.Ref, Created: p.CreatedAt}
 	for _, r := range p.Reviewers {
 		out.Reviewers = append(out.Reviewers, r.Login)

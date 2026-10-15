@@ -79,6 +79,8 @@ type Worker struct {
 
 	jobsMu sync.Mutex // the jobs' files, and when the schedules last ran
 
+	utility utilities
+
 	shipOnce sync.Once
 	mirror   mirrorState // GitHub review mirroring
 	ship     *shipState

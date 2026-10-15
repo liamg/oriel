@@ -25,8 +25,9 @@ silicon), checked against its checksum, into `~/.oriel/whisper`. `voice.dictatio
 ## The wake word {#wake}
 
 With `voice.wake` on, Oriel listens for `voice.wake_word` ("computer" by default) said after a pause. What you say
-after it goes to the agent of the session in front, and its reply is spoken when it ends the turn; with no session
-in front, it opens the omnibox with it. A plugin can take the request first with a `VoiceWake` hook.
+after it goes to the [assistant](agent/assistant), whose answer is spoken (`assistant.wake`; it takes it through a
+`VoiceWake` hook, as a plugin could). With that off, it goes to the agent of the session in front, and its reply is
+spoken when it ends the turn; with no session in front, it opens the omnibox with it.
 
 ## Spoken replies {#speech}
 

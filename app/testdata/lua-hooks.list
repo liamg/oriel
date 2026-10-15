@@ -92,7 +92,7 @@ clip 760,38 640x847.48 r 0
   clip 760,69 640x816.48 r 0
     clip 770,79 620x796.48 r 0
       text ":HOOKS" @784,99.2 #ffd23f JetBrains Mono 10
-      text "10 hooks · 8 events" @830,99.71 #7c7566 JetBrains Mono 10.5
+      text "11 hooks · 9 events" @830,99.71 #7c7566 JetBrains Mono 10.5
       text "EVENT" @784,118.55 #7c7566 JetBrains Mono 9.5
       text "HOOK" @932,118.55 #7c7566 JetBrains Mono 9.5
       text "KIND" @1110,118.55 #7c7566 JetBrains Mono 9.5
@@ -188,7 +188,16 @@ clip 760,38 640x847.48 r 0
         text "builtin:verify" @1198,413.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,413.36 #4f4a40 JetBrains Mono 11
-      text "set before anything registered them: agent (init.lua:6), relativenumber (init.lua:4)" @784,438.11 #7c7566 JetBrains Mono 10.5
+      text "VoiceWake" @784,443.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,431.81 170x15.179993 r 0
+        text "the assistant takes wh…" @932,443.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "DECIDE" @1110,442.82 #b98aff JetBrains Mono 9.5
+      clip 1198,432.13998 200x14.519989 r 0
+        text "builtin:assistant" @1198,443.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,443.36 #4f4a40 JetBrains Mono 11
+      text "set before anything registered them: agent (init.lua:6), relativenumber (init.lua:4)" @784,468.11 #7c7566 JetBrains Mono 10.5
     pop
   pop
 pop

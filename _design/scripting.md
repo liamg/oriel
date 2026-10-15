@@ -202,6 +202,9 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   `local o = oriel.option` if you want it short). A list option takes a table of strings and a map option a table of
   strings by name (`oriel.option["sandbox.servers"] = { docs = "https://docs.example.com/mcp" }`); reading one gives
   the same. There's one global, `oriel`; a config that wants a short name writes `local L = oriel`, as the sample does.
+- PL-4: `oriel.agent.tool{…}` also takes `for` (the agents it's offered to: session kinds, or `"assistant"`; none
+  is every session's agent), `read_only` and `reads` (the data it reads, which the assistant lists as a source):
+  `oriel.agent.tool{ name = "deploys", ["for"] = { "assistant" }, read_only = true, reads = "deploys", run = … }`.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.indicator`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `linear`, `http` and
   `async` load, and calling into one says which ticket brings it. RV-2 built `oriel.ledger`: `unread(project)` (the

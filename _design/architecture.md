@@ -84,6 +84,7 @@ flowchart LR
 | `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`); `registry/settingsfile` (settings files and their trust, shared with the worker) needs only toml |
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
+| `assistant` | the assistant's conversation (ui.md 11): turns typed or spoken, replies and their rows, confirmations, actions with an undo, idle reaping; its agent behind an interface (a worker's utility agent in the app) | – |
 | `voice` | dictation: a recorder program as the microphone, phrases at pauses, whisper.cpp or an OpenAI-compatible endpoint, the wake word, speech; `voice/voicetest` (a scripted mic and transcriber) | – |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
 | `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker, update |
@@ -176,6 +177,12 @@ type Worker interface {
   are crit's pinned-TLS handshake for workers elsewhere. `worker.Client` is the worker's methods over a `wire.Conn`;
   its `Events` stream sends each session whole (`SessionSynced`) and then every event, which the app applies to its
   store. LSP and DAP still run in the app for now.
+- As built (PL-4): a worker also runs **utility agents** (`worker/utility.go`): an agent with no session, for the
+  assistant. `utility.run` is a stream (`UtilitySpec{Name, Provider, Model, Pack, Prompt, Allow}`): the worker starts
+  the provider in `<Home>/utility/<name>` on its small model (`agent.Model.Small`), offered only the app's tools for
+  that name (`app.tools` with `ToolsReq{Agent}`; a session asks with its kind), sends `ready` then `UtilityEvent`s,
+  refuses every permission but `Allow`'s and every question, and stops the agent when the stream ends.
+  `utility.send` and `utility.interrupt` take turns. `worker.Client.StartUtility` is the app's side.
 - As built (PL-6): `worker.Options.Handlers` add methods to each app connection; `oriel worker --connect` serves the
   updater's through it (`distribution.md`).
 

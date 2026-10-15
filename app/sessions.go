@@ -140,7 +140,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 		return &ui.Func{Key: "workerdrain", Fn: x.drainView}
 	})))
 	for _, c := range []registry.Command{
-		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…; {clone} the repos the worker lacks first, a URL by repo",
+		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…; {clone} the repos the worker lacks first, a URL by repo; {background} leaves it behind the one in front",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.start(ctx, a); return err }},
 		{ID: "repos.clone", Title: "Clone {url} onto {worker} (this machine's if none) as {name}, and register it", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -227,7 +227,13 @@ func (x *sessions) Deactivate(ctx context.Context) error {
 // only for itself (core.State.FromWorker); want, when set, is the ID it must have: a remote worker's, from its key.
 // A worker that connects again replaces its old connection.
 func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want core.WorkerID) {
-	c.Conn.Handle(worker.MethodAppTools, func(context.Context, json.RawMessage) (any, error) { return x.agentTools(h), nil })
+	c.Conn.Handle(worker.MethodAppTools, func(_ context.Context, raw json.RawMessage) (any, error) {
+		var r worker.ToolsReq
+		if err := json.Unmarshal(raw, &r); err != nil {
+			return nil, err
+		}
+		return x.agentTools(h, r), nil
+	})
 	c.Conn.Handle(worker.MethodAppTool, func(ctx context.Context, raw json.RawMessage) (any, error) {
 		var call worker.ToolCall
 		if err := json.Unmarshal(raw, &call); err != nil {
@@ -568,7 +574,7 @@ func specFrom(a registry.Args) core.SessionSpec {
 	return s
 }
 
-// start starts a session on its worker and brings it to the front.
+// start starts a session on its worker and brings it to the front, unless {background}.
 func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {
 	spec := specFrom(a)
 	c, err := x.worker(spec.Worker)
@@ -597,6 +603,9 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		if _, ok := x.sh.cfg.Store.Session(id); ok {
+			if a.Bool("background") {
+				return id, nil
+			}
 			return id, x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -761,17 +770,32 @@ func within(path, dir string) bool {
 	return err1 == nil && err2 == nil && in(rp, rd)
 }
 
-// agentTools are the tools plugins offer agents, as a worker hands them on.
-func (x *sessions) agentTools(h ext.Host) []agent.Tool {
+// agentTools are the tools plugins offer an agent, as a worker hands them on.
+func (x *sessions) agentTools(h ext.Host, r worker.ToolsReq) []agent.Tool {
 	var out []agent.Tool
-	for _, t := range registry.AgentTools(h) {
-		out = append(out, agent.Tool{Name: t.Name, Description: t.Desc, Schema: t.Schema(), ReadOnly: t.ReadOnly})
+	name, utility := x.agentName(r.Session, r.Agent)
+	for _, t := range registry.AgentToolsFor(h, name, utility) {
+		out = append(out, agent.Tool{Name: t.Name, Description: t.Desc, Schema: t.Schema(), ReadOnly: t.ReadOnly && t.Confirm == nil})
 	}
 	return out
 }
 
+// agentName is the agent a worker asks for: a session's, by its kind, or a utility agent with no session.
+func (x *sessions) agentName(id core.SessionID, agent string) (string, bool) {
+	if id == "" {
+		return agent, true
+	}
+	if agent == "" {
+		if se, ok := x.sh.cfg.Store.Session(id); ok {
+			agent = string(se.Kind())
+		}
+	}
+	return agent, false
+}
+
 func (x *sessions) callTool(ctx context.Context, h ext.Host, call worker.ToolCall) (string, error) {
-	for _, t := range registry.AgentTools(h) {
+	name, utility := x.agentName(call.Session, call.Agent)
+	for _, t := range registry.AgentToolsFor(h, name, utility) {
 		if t.Name != call.Tool || t.Run == nil {
 			continue
 		}
@@ -781,20 +805,7 @@ func (x *sessions) callTool(ctx context.Context, h ext.Host, call worker.ToolCal
 				return "", err
 			}
 		}
-		var out any
-		err := registry.Call(func() error {
-			var err error
-			out, err = t.Run(registry.WithSession(ctx, string(call.Session)), params)
-			return err
-		})
-		if err != nil {
-			return "", err
-		}
-		if s, ok := out.(string); ok {
-			return s, nil
-		}
-		b, err := json.MarshalIndent(out, "", "  ")
-		return string(b), err
+		return registry.CallAgentTool(registry.WithAgent(registry.WithSession(ctx, string(call.Session)), name), h, t, params)
 	}
 	return "", fmt.Errorf("no tool %q", call.Tool)
 }

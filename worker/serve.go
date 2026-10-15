@@ -85,6 +85,7 @@ func (w *Worker) Serve(conn wire.Conn) {
 	fn(MethodTermInput, wire.Func(func(_ context.Context, r TermReq) (any, error) { return nil, w.termInput(r) }))
 	w.serveShip(fn)
 	w.serveGitHub(fn)
+	w.serveUtility(conn)
 	conn.HandleStream(MethodEvents, wire.StreamFunc(w.serveEvents))
 	conn.HandleStream(MethodTerminal, wire.StreamFunc(w.serveTerminal))
 	for _, h := range w.opts.Handlers {

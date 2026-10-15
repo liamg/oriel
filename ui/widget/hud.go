@@ -132,7 +132,8 @@ type DrawerResult struct {
 }
 
 // Drawer is a sheet pulled down over the window from Top, as wide as it, as tall as body: the HUD. A pinned one
-// holds keyboard focus while nothing in it has it; Escape there or on something in it closes it (KeyMode's keys).
+// holds keyboard focus while nothing in it has it, a page under it included (it's a focus trap); Escape there or on
+// something in it closes it (KeyMode's keys).
 func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(c *ui.Ctx)) DrawerResult {
 	id := c.Next(key)
 	res := DrawerResult{Pressed: c.PressedWithin(id)}
@@ -140,7 +141,7 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(c *ui.Ctx)) DrawerResult
 	at := render.Point{Y: o.Top}
 	edge, glow, grid := col(c, tDrawerEdge), col(c, tDrawerGlow), col(c, tDrawerGrid)
 	c.Column(key, ui.Style{W: ui.Px(size.X), Pad: ui.Insets{L: 16, T: 14, R: 16, B: 14}, Gap: 12, Fill: col(c, tDrawerBg), Z: ui.LayerDialog,
-		Float: &ui.Float{Point: &at}, Interactive: true, NoHover: true, Focusable: o.Pinned, KeyMode: o.KeyMode, Role: ui.RoleDialog, Label: o.Label,
+		Float: &ui.Float{Point: &at}, Interactive: true, NoHover: true, Focusable: o.Pinned, Trap: o.Pinned, KeyMode: o.KeyMode, Role: ui.RoleDialog, Label: o.Label,
 		Help: o.Help, Enter: &ui.Transition{Shift: render.Point{Y: -24}, Fade: true}, Exit: &ui.Transition{Shift: render.Point{Y: -24}, Fade: true}},
 		func(c *ui.Ctx) {
 			if o.Pinned && !c.FocusWithin(id) {

@@ -59,31 +59,42 @@ func (w *Worker) tools(h *host) []agent.Tool {
 			Schema: schema(`"dir":` + str + `,"filter":` + str + `,"project":` + str), Call: h.toolTestRun},
 	}
 	own = append(own, w.tourTools(h)...)
-	for _, app := range w.appConns() {
-		var list []agent.Tool
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		err := app.Call(ctx, MethodAppTools, SessionRef{h.id}, &list)
-		cancel()
-		if err != nil {
-			continue
-		}
-		for _, t := range list {
-			if slices.ContainsFunc(own, func(o agent.Tool) bool { return o.Name == t.Name }) {
-				continue
-			}
-			t.Call = h.appTool(t.Name)
+	kind := ""
+	if se, err := w.session(h.id); err == nil {
+		kind = string(se.Kind)
+	}
+	for _, t := range w.appTools(ToolsReq{Session: h.id, Agent: kind}) {
+		if !slices.ContainsFunc(own, func(o agent.Tool) bool { return o.Name == t.Name }) {
 			own = append(own, t)
 		}
-		break
 	}
 	return own
 }
 
-func (h *host) appTool(name string) func(context.Context, json.RawMessage) (string, error) {
+// appTools are the tools the app offers an agent, each called back in the app.
+func (w *Worker) appTools(r ToolsReq) []agent.Tool {
+	for _, app := range w.appConns() {
+		var list []agent.Tool
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := app.Call(ctx, MethodAppTools, r, &list)
+		cancel()
+		if err != nil {
+			continue
+		}
+		for i, t := range list {
+			list[i].Call = w.appTool(ToolCall{Session: r.Session, Agent: r.Agent, Tool: t.Name})
+		}
+		return list
+	}
+	return nil
+}
+
+func (w *Worker) appTool(call ToolCall) func(context.Context, json.RawMessage) (string, error) {
 	return func(ctx context.Context, args json.RawMessage) (string, error) {
-		for _, app := range h.w.appConns() {
+		for _, app := range w.appConns() {
 			var out string
-			if err := app.Call(ctx, MethodAppTool, ToolCall{Session: h.id, Tool: name, Args: args}, &out); err != nil {
+			call.Args = args
+			if err := app.Call(ctx, MethodAppTool, call, &out); err != nil {
 				return "", err
 			}
 			return out, nil

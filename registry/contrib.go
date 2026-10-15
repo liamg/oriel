@@ -2,6 +2,7 @@ package registry
 
 import (
 	"cmp"
+	"encoding/json"
 	"slices"
 	"strings"
 	"time"
@@ -50,14 +51,24 @@ func (r *reg) Contributions(kind string) []Contribution {
 	return out
 }
 
-// AgentTool is a tool offered to every session's agent beside Oriel's own (agents.md): an LSP lookup, a plugin's
-// query. The agent sees it as mcp__oriel__<Name>. Run runs in the app; SessionOf(ctx) is the session that asked.
+// AgentTool is a tool offered to agents beside Oriel's own (agents.md): an LSP lookup, a plugin's query, the
+// assistant's sessions. The agent sees it as mcp__oriel__<Name>. Run runs in the app; SessionOf(ctx) is the session
+// that asked, AgentOf(ctx) the agent. Run may return an Acted to say what it did and how to take it back.
 type AgentTool struct {
 	Name, Desc string
-	Params     map[string]string // name → type: "string", "number?"
-	ReadOnly   bool              // changes nothing: allowed without asking
-	Run        func(ctx Ctx, params map[string]any) (any, error)
-	Source     string
+	Params     map[string]string // name → type: "string", "number?"; or InputSchema
+	// InputSchema is the input's JSON Schema, when Params can't say it: lists, enums.
+	InputSchema json.RawMessage
+	ReadOnly    bool // changes nothing: allowed without asking
+	// For are the agents it's offered to: session kinds ("work") or utility agents ("assistant"). None is every
+	// session's agent and no utility agent.
+	For []string
+	// Reads names the data it reads ("github", "linear"), which the assistant lists as its sources.
+	Reads string
+	// Confirm makes it an act that waits for the user's yes: what it will do, shown by the agent's owner before Run.
+	Confirm func(ctx Ctx, params map[string]any) (Confirmation, error)
+	Run     func(ctx Ctx, params map[string]any) (any, error)
+	Source  string
 }
 
 // PromptPack is a named prompt and the tools that go with it (AI-4).

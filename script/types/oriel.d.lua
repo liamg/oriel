@@ -104,7 +104,7 @@ function oriel.agent.forker(spec) end
 ---@param spec table
 function oriel.agent.pack(name, spec) end
 
---- Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }.
+--- Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' } }. for names the agents it's for (session kinds, or the assistant); none is every session's.
 ---@param spec table
 function oriel.agent.tool(spec) end
 

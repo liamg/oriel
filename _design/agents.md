@@ -222,6 +222,12 @@ In Oriel each of those uses the subscription instead:
 - **Outside a session** (the assistant, an auto-answer with no matching session): a **resident utility
   session**. That's a hidden interactive `claude` in a PTY with the Oriel mod, a small model, read-only tools,
   and a fresh context per task. It's started on demand and kept warm.
+  Built in PL-4 as the worker's utility agents (`architecture.md`, `worker/utility.go`): started through
+  `Provider.Start` like any session (so Claude is its interactive CLI, `/oriel:<name> <first turn>`, never `claude -p`),
+  in Oriel's own folder, policy `ask` with every permission refused but the spec's `Allow` (the assistant's
+  WebSearch and WebFetch), offered only the agent tools `for` its name. "Kept warm" is per conversation: the assistant
+  keeps its agent while the conversation lasts (until **New conversation** or `assistant.idle` minutes of quiet), and
+  the next conversation starts a fresh one. Not yet: explain and agentbus auto-answers with no session don't use it.
 - Claude's plan windows come from the mod's `$.session.usage()`: in live sessions, and in the hidden `/usage` session
   a worker starts once (above), which is interactive, so not `claude -p`.
 

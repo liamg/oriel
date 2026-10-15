@@ -112,7 +112,7 @@ func (d Decor) Provider(name string, fn *script.Fn) error {
 //oriel:api name=agent cap=agent.tools
 type Agent struct{ a *APIs }
 
-//oriel:api doc="Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }."
+//oriel:api doc="Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' } }. for names the agents it's for (session kinds, or the assistant); none is every session's."
 func (g Agent) Tool(spec script.Table, where string) error {
 	run, _ := spec["run"].(*script.Fn)
 	if str(spec, "name") == "" || run == nil {
@@ -127,7 +127,9 @@ func (g Agent) Tool(spec script.Table, where string) error {
 			params[k] = fmt.Sprint(v)
 		}
 	}
+	readOnly, _ := spec["read_only"].(bool)
 	g.a.own(g.a.Host.Contribute(registry.AgentTool{Name: str(spec, "name"), Desc: str(spec, "desc"), Params: params, Source: where,
+		ReadOnly: readOnly, Reads: str(spec, "reads"), For: strs(spec["for"]),
 		Run: func(_ registry.Ctx, p map[string]any) (any, error) {
 			out, err := g.a.VM.Call(run, p)
 			if err != nil || len(out) == 0 {

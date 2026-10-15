@@ -206,7 +206,7 @@ func (Provider) Models(context.Context) ([]agent.Model, error) {
 		{ID: "opus[1m]", Name: "Opus (1M context)", Efforts: efforts, Context: 1_000_000},
 		{ID: "sonnet", Name: "Sonnet", Efforts: efforts, Context: 200_000},
 		{ID: "sonnet[1m]", Name: "Sonnet (1M context)", Efforts: efforts, Context: 1_000_000},
-		{ID: "haiku", Name: "Haiku", Context: 200_000},
+		{ID: "haiku", Name: "Haiku", Context: 200_000, Small: true},
 	}, nil
 }
 

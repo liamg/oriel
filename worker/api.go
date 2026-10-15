@@ -225,9 +225,17 @@ type LogAppendReq struct {
 	Record  logs.Record    `json:"record"`
 }
 
+// ToolsReq asks the app for the tools it offers an agent: a session's (Agent is its kind), or a utility agent's (no
+// Session; Agent is its name).
+type ToolsReq struct {
+	Session core.SessionID `json:"session,omitempty"`
+	Agent   string         `json:"agent,omitempty"`
+}
+
 // ToolCall is an agent calling a tool the app offers.
 type ToolCall struct {
-	Session core.SessionID  `json:"session"`
+	Session core.SessionID  `json:"session,omitempty"`
+	Agent   string          `json:"agent,omitempty"`
 	Tool    string          `json:"tool"`
 	Args    json.RawMessage `json:"args"`
 }

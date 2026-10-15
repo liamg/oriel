@@ -674,6 +674,24 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - The room's assistant as a drawer on `/`: "what needs me?", "review this PR".
 - Answers come back as actionable rows (number keys pick one). Every action has an undo with a countdown.
 - It shows what it's allowed to do, and its data sources with how fresh each is.
+- Built in PL-4 (`app/assistant*.go`, module `assistant`): `⌘/` (`assistant.toggle`) pulls a pinned `widget.Drawer`
+  (a focus trap now, so it takes focus over a page) down to about two thirds of the window; `esc` or its ✕ puts it
+  away and the conversation waits. The start view keeps to its own keys, so there it's `:` or the omnibox. Header:
+  COMMS, the ASSISTANT chip, the model it runs on, what it reads, the keys, **New conversation**. The conversation:
+  your turns as bubbles at the right; its turns with the tools it used as ✓ chips, its answer in markdown, the rows
+  its `reply` tool offers (a status dot, title, text, meta, `⌘1`–`⌘9`; a row opens its session or link, else asks
+  about it), a confirmation card for each act (`widget.ActionCard`: what will happen as facts, the prompt or tasks, a
+  note; **Yes** `y`, **No** `n`, the seconds left; it takes focus as it comes), and a card for what its tools did
+  (**Open** `o`, **Undo** `u` with a 10 s countdown). The composer: ⏎ sends, **dictate** (`voice.dictate`), **Stop**
+  `⌘.` while it answers. The side: WHAT IT CAN DO (each acting tool, ✓ or **asks first**, and "edit code, run
+  commands, post anywhere · never"), SOURCES (each `Reads` of its tools, with how long ago a tool last read it, and
+  web search on or off), RECENT ACTIONS, and the wake word and spoken replies. Its confirmations are also an
+  `InboxSource` ("assistant"): with the drawer away they stack over the window like any ask, and what it did is
+  history in the Inbox panel.
+- Decided in PL-4: "every action has an undo" applies to what can be taken back: a session or review it started, or
+  a job's run, is deleted; a rename goes back; a stopped session resumes; a resumed one stops. Opening something
+  (a session, the launcher, settings) has nothing to undo. Acts that start or stop an agent confirm first (crit's
+  rule), and the undo follows.
 
 ## 12 · Inbox and interrupts
 

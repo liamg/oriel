@@ -20,7 +20,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.agent.explainer(spec)", Doc: "An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing."},
 		{Call: "oriel.agent.forker(spec)", Doc: "A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools."},
 		{Call: "oriel.agent.pack(name, spec)", Doc: "A prompt pack: { prompt, tools }, for sessions to start with."},
-		{Call: "oriel.agent.tool(spec)", Doc: "Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }."},
+		{Call: "oriel.agent.tool(spec)", Doc: "Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' } }. for names the agents it's for (session kinds, or the assistant); none is every session's."},
 	},
 	"coverage": {
 		{Call: "oriel.coverage.lines(file, first, last)", Doc: "A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner."},

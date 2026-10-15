@@ -57,6 +57,7 @@ func New(t testing.TB) *Server {
 	mux.HandleFunc("GET /repos/{owner}/{name}/issues/{num}/comments", s.listIssueComments)
 	mux.HandleFunc("POST /repos/{owner}/{name}/issues/{num}/comments", s.addIssueComment)
 	mux.HandleFunc("GET /orgs/{org}/members/{user}", s.member)
+	mux.HandleFunc("GET /search/issues", s.search)
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		s.calls = append(s.calls, r.Method+" "+r.URL.Path)
@@ -166,7 +167,11 @@ func restPR(repo string, p *gh.PR) map[string]any {
 	if p.Merged {
 		merged = p.Created
 	}
-	return map[string]any{"number": p.Number, "node_id": p.NodeID, "title": p.Title, "body": p.Body, "html_url": p.URL, "state": p.State,
+	var user any
+	if p.Author != "" {
+		user = map[string]string{"login": p.Author}
+	}
+	return map[string]any{"number": p.Number, "node_id": p.NodeID, "title": p.Title, "user": user, "body": p.Body, "html_url": p.URL, "state": p.State,
 		"draft": p.Draft, "merged_at": merged, "created_at": p.Created, "head": map[string]string{"ref": p.Head}, "base": map[string]string{"ref": p.Base},
 		"requested_reviewers": users, "requested_teams": teams}
 }
@@ -364,4 +369,49 @@ func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "Could not resolve to a node"}}})
+}
+
+// search is GitHub's issue search over the fake's pull requests, for the terms gh.SearchMine and gh.SearchReview
+// use: is:pr, is:open, author: and review-requested:, with @me the fake's login. A PR with no author is the login's.
+func (s *Server) search(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	type hit struct {
+		repo string
+		p    *gh.PR
+	}
+	var hits []hit
+	for repo, prs := range s.prs {
+		for _, p := range prs {
+			hits = append(hits, hit{repo, p})
+		}
+	}
+	me := func(v string) string {
+		if v == "@me" {
+			return s.login
+		}
+		return v
+	}
+	for _, term := range strings.Fields(r.URL.Query().Get("q")) {
+		k, v, _ := strings.Cut(term, ":")
+		hits = slices.DeleteFunc(hits, func(h hit) bool {
+			switch k {
+			case "is":
+				return v == "open" && !h.p.Open() || v == "closed" && h.p.Open()
+			case "author":
+				return cmpOr(h.p.Author, s.login) != me(v)
+			case "review-requested":
+				return !slices.Contains(h.p.Reviewers, me(v))
+			}
+			return false
+		})
+	}
+	slices.SortFunc(hits, func(a, b hit) int { return b.p.Created.Compare(a.p.Created) })
+	items := []map[string]any{}
+	for _, h := range hits {
+		items = append(items, map[string]any{"number": h.p.Number, "title": h.p.Title, "html_url": h.p.URL, "state": h.p.State,
+			"draft": h.p.Draft, "created_at": h.p.Created, "updated_at": h.p.Created, "user": map[string]string{"login": cmpOr(h.p.Author, s.login)},
+			"repository_url": s.URL + "/repos/" + h.repo, "pull_request": map[string]any{"html_url": h.p.URL}})
+	}
+	reply(w, 200, map[string]any{"total_count": len(items), "items": items})
 }
