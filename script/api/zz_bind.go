@@ -444,11 +444,11 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := TicketAPI{a: a}
 		vm.Bind("ticket", map[string]script.GoFunc{
-			"source": func(c *script.Args) ([]any, error) {
+			"tracker": func(c *script.Args) ([]any, error) {
 				if err := a.check("agent.prompt"); err != nil {
 					return nil, err
 				}
-				return nil, x.Source(c.Table(0), c.Where())
+				return nil, x.Tracker(c.Table(0), c.Where())
 			},
 		})
 	}

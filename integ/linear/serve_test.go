@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/integ/linear/lineartest"
+	"github.com/liamg/oriel/registry"
 )
 
 // host is the app's side of the process: its host methods, the plugin granted what its oriel.toml declares.
@@ -67,22 +68,29 @@ func TestServeThroughTheHost(t *testing.T) {
 
 	secrets.SetSecret(Secret, lineartest.Key)
 	var got struct {
-		Issues []Issue `json:"issues"`
+		Tickets []registry.Ticket `json:"tickets"`
 	}
 	if err := conn.Call(ctx, "assigned", nil, &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Issues) != 4 || got.Issues[0].Key != "INF-2231" || got.Issues[0].StateType != "unstarted" {
-		t.Errorf("assigned %+v", got.Issues)
+	if len(got.Tickets) != 4 || got.Tickets[0].Key != "INF-2231" || got.Tickets[0].Stage != registry.TicketTodo ||
+		got.Tickets[0].PR == nil || got.Tickets[0].PR.Number != 4398 || got.Tickets[0].PriorityLabel != "High" {
+		t.Errorf("assigned %+v", got.Tickets)
 	}
-	var tk TicketAnswer
+	if b := got.Tickets[1]; b.Key != "INF-2240" || len(b.BlockedBy) != 1 {
+		t.Errorf("INF-2240 %+v", b)
+	}
+	if s := got.Tickets[2]; s.Key != "INF-2219" || s.Stage != registry.TicketStarted {
+		t.Errorf("INF-2219 %+v", s)
+	}
+	var tk registry.Ticket
 	if err := conn.Call(ctx, "ticket", Params{Key: "INF-2231"}, &tk); err != nil {
 		t.Fatal(err)
 	}
 	if tk.Key != "INF-2231" || !strings.Contains(tk.Context, "## Comments (4)") || len(tk.Facts) != 4 || tk.Summary == "" {
 		t.Errorf("ticket %+v", tk)
 	}
-	var moved Moved
+	var moved registry.TicketMove
 	if err := conn.Call(ctx, "start", Params{Key: "INF-2231"}, &moved); err != nil || !moved.Moved || moved.State != "In Progress" {
 		t.Errorf("start: %+v, %v", moved, err)
 	}

@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"sync"
 
+	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/ui"
@@ -71,70 +73,126 @@ func (p Picker) Source(spec script.Table, where string) error {
 //oriel:api name=ticket cap=agent.prompt
 type TicketAPI struct{ a *APIs }
 
-//oriel:api doc="A tracker's tickets, for the launcher's ticket field (ui.md 04: a ticket ID expands into a card): { name, title, order (50), match = fn(key) → bool, lookup = fn(key, done) }. lookup answers with done(ticket) or done(nil, err), now or later; ticket is { key, title, url, state, state_tone, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt."
-func (t TicketAPI) Source(spec script.Table, where string) error {
+//oriel:api doc="A ticket tracker (Linear, Jira…): Oriel builds the rest on it, the omnibox's tickets (!), the launcher's card, the moves as a session starts from a ticket and its PR is seen, and the assistant's my_tickets. { name, title, order (50), keys = a regular expression its keys match ('^[A-Z][A-Z0-9]*-[0-9]+$'; every key when nil), secret = the secret it needs set first, which Oriel asks for while it isn't, and the functions, each answering with done(value) or done(nil, err), now or later: lookup = fn(key, done) with a ticket; assigned = fn(done) with the open tickets assigned to you, in any order; start = fn(key, done) and review = fn(key, done) moving it into progress or review, with { moved, state }; link = fn(key, pr, done) attaching pr = { number, url, repo, title } }. Only lookup is required. A ticket is { key, title, url, state, stage ('todo', 'started' or 'review'), project, priority (1 the most urgent; 0 none), priority_label, blocked, blocked_by = { keys }, pr = { number, url, repo }, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt."
+func (t TicketAPI) Tracker(spec script.Table, where string) error {
 	a := t.a
 	name := str(spec, "name")
 	lookup, _ := spec["lookup"].(*script.Fn)
 	if name == "" || lookup == nil {
-		return errors.New("a ticket source needs a name and lookup")
+		return errors.New("a ticket tracker needs a name and lookup")
 	}
-	s := registry.TicketSource{Name: name, Title: str(spec, "title"), Order: 50, Source: where}
+	tr := registry.TicketTracker{Name: name, Title: str(spec, "title"), Order: 50, Secret: str(spec, "secret"), Source: where}
 	if o, ok := spec["order"].(float64); ok {
-		s.Order = int(o)
+		tr.Order = int(o)
 	}
-	if m, ok := spec["match"].(*script.Fn); ok {
-		s.Match = func(key string) bool {
-			out, err := a.VM.Call(m, key)
+	if k := str(spec, "keys"); k != "" {
+		re, err := regexp.Compile(k)
+		if err != nil {
+			return fmt.Errorf("the tracker's keys: %w", err)
+		}
+		tr.Keys = re
+	}
+	if tr.Secret != "" {
+		if err := a.Plugin.Check(ext.CapSecrets, tr.Secret); err != nil {
+			return err
+		}
+	}
+	tr.Lookup = func(ctx context.Context, key string) (registry.Ticket, error) {
+		v, err := a.await(ctx, lookup, key)
+		if err != nil {
+			return registry.Ticket{}, err
+		}
+		tt, ok := v.(script.Table)
+		if !ok {
+			return registry.Ticket{}, errors.New("no ticket " + key)
+		}
+		return ticketOf(tt), nil
+	}
+	if fn, ok := spec["assigned"].(*script.Fn); ok {
+		tr.Assigned = func(ctx context.Context) ([]registry.Ticket, error) {
+			v, err := a.await(ctx, fn)
 			if err != nil {
-				a.Host.Report("ticket.source", name, err)
-				return false
+				return nil, err
 			}
-			ok, _ := first(out).(bool)
-			return ok
+			list, _ := v.([]any)
+			out := []registry.Ticket{}
+			for _, x := range list {
+				if tt, ok := x.(script.Table); ok {
+					out = append(out, ticketOf(tt))
+				}
+			}
+			return out, nil
 		}
 	}
-	s.Lookup = func(ctx context.Context, key string) (registry.Ticket, error) {
-		type answer struct {
-			t   registry.Ticket
-			err error
+	move := func(field string) func(ctx context.Context, key string) (registry.TicketMove, error) {
+		fn, ok := spec[field].(*script.Fn)
+		if !ok {
+			return nil
 		}
-		ch := make(chan answer, 1)
-		var once sync.Once
-		done := script.GoFunc(func(c *script.Args) ([]any, error) {
-			once.Do(func() {
-				if tt := c.Table(0); tt != nil {
-					ch <- answer{t: ticketOf(tt)}
-					return
-				}
-				msg := c.String(1)
-				if msg == "" {
-					msg = "no ticket " + key
-				}
-				ch <- answer{err: errors.New(msg)}
-			})
-			return nil, nil
-		})
-		a.Host.Do(func() {
-			if _, err := a.VM.Call(lookup, key, done); err != nil {
-				once.Do(func() { ch <- answer{err: err} })
+		return func(ctx context.Context, key string) (registry.TicketMove, error) {
+			v, err := a.await(ctx, fn, key)
+			if err != nil {
+				return registry.TicketMove{}, err
 			}
-		})
-		a.Host.Redraw()
-		select {
-		case r := <-ch:
-			return r.t, r.err
-		case <-ctx.Done():
-			return registry.Ticket{}, fmt.Errorf("looking up %s: %w", key, ctx.Err())
+			tt, _ := v.(script.Table)
+			moved, _ := tt["moved"].(bool)
+			return registry.TicketMove{Moved: moved, State: str(tt, "state")}, nil
 		}
 	}
-	a.own(a.Host.Contribute(s))
+	tr.Start, tr.Review = move("start"), move("review")
+	if fn, ok := spec["link"].(*script.Fn); ok {
+		tr.Link = func(ctx context.Context, key string, pr registry.TicketPR) error {
+			_, err := a.await(ctx, fn, key, map[string]any{"number": pr.Number, "url": pr.URL, "repo": pr.Repo, "title": pr.Title})
+			return err
+		}
+	}
+	a.own(a.Host.Contribute(tr))
 	return nil
 }
 
+// await calls a Lua function on the app's loop with args and a done(value) / done(nil, err) after them, and waits
+// for its answer. Never call it on the loop.
+func (a *APIs) await(ctx context.Context, fn *script.Fn, args ...any) (any, error) {
+	type answer struct {
+		v   any
+		err error
+	}
+	ch := make(chan answer, 1)
+	var once sync.Once
+	done := script.GoFunc(func(c *script.Args) ([]any, error) {
+		once.Do(func() {
+			if c.Len() > 1 && c.Any(1) != nil {
+				ch <- answer{err: errors.New(c.String(1))}
+				return
+			}
+			ch <- answer{v: c.Any(0)}
+		})
+		return nil, nil
+	})
+	a.Host.Do(func() {
+		if _, err := a.VM.Call(fn, append(args, done)...); err != nil {
+			once.Do(func() { ch <- answer{err: err} })
+		}
+	})
+	a.Host.Redraw()
+	select {
+	case r := <-ch:
+		return r.v, r.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
 func ticketOf(t script.Table) registry.Ticket {
-	return registry.Ticket{Key: str(t, "key"), Title: str(t, "title"), URL: str(t, "url"), State: str(t, "state"),
-		StateTone: str(t, "state_tone"), Summary: str(t, "summary"), Facts: strs(t["facts"]), Context: str(t, "context")}
+	tk := registry.Ticket{Key: str(t, "key"), Title: str(t, "title"), URL: str(t, "url"), State: str(t, "state"), Stage: str(t, "stage"),
+		Project: str(t, "project"), Priority: int(num(t["priority"])), PriorityLabel: str(t, "priority_label"), BlockedBy: strs(t["blocked_by"]),
+		Summary: str(t, "summary"), Facts: strs(t["facts"]), Context: str(t, "context")}
+	tk.Blocked, _ = t["blocked"].(bool)
+	tk.Blocked = tk.Blocked || len(tk.BlockedBy) > 0
+	if pr, ok := t["pr"].(script.Table); ok {
+		tk.PR = &registry.TicketPR{Number: int(num(pr["number"])), URL: str(pr, "url"), Repo: str(pr, "repo")}
+	}
+	return tk
 }
 
 func first(out []any) any {

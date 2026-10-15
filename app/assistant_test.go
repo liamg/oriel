@@ -269,8 +269,8 @@ func TestTheWakeWordGoesToTheAssistant(t *testing.T) {
 	}
 }
 
-// Linear's my_tickets (PL-8), mission control (SH-7) and agentbus's request_review (PL-5) are their features' tools:
-// a plugin offers them for the assistant through the registry, and they reach it, and only it, like its own. An act
+// my_tickets (the tickets'), mission control (SH-7) and agentbus's request_review (PL-5) are their features' tools:
+// a feature or plugin offers them for the assistant through the registry (this my_tickets shadows the app's), and they reach it, and only it, like its own. An act
 // of theirs asks first just the same.
 func TestPluginToolsReachTheAssistant(t *testing.T) {
 	s, lw, _ := assistantScene(t, worker.Options{}, nil, nil)

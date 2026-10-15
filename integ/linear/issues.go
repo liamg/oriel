@@ -3,9 +3,12 @@ package linear
 import (
 	"context"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/liamg/oriel/registry"
 )
 
 // Issue is one ticket assigned to the API key's owner, as the tickets list shows it.
@@ -212,56 +215,38 @@ func hiddenState(name, typ string) bool {
 	return strings.EqualFold(strings.TrimSpace(name), "duplicate")
 }
 
-// sortIssues orders the list as the work happens: priority (urgent down to none), blocked last in its band, then
-// in progress, then with a pull request, then by key so it never wobbles between refreshes.
+// sortIssues orders the list as the work happens (registry.SortTickets).
 func sortIssues(issues []Issue) {
-	sort.SliceStable(issues, func(i, j int) bool {
-		a, b := issues[i], issues[j]
-		if pa, pb := priorityRank(a.Priority), priorityRank(b.Priority); pa != pb {
-			return pa < pb
-		}
-		if a.Blocked != b.Blocked {
-			return b.Blocked
-		}
-		if a.Started != b.Started {
-			return a.Started
-		}
-		if ha, hb := a.PR != nil, b.PR != nil; ha != hb {
-			return ha
-		}
-		return lessTicketKey(a.Key, b.Key)
-	})
-}
-
-// priorityRank is Linear's scale as a sort key: 1 urgent … 4 low, then none (0).
-func priorityRank(p float64) float64 {
-	if p <= 0 {
-		return 5
-	}
-	return p
+	slices.SortStableFunc(issues, func(a, b Issue) int { return registry.CompareTickets(a.Ticket(), b.Ticket()) })
 }
 
 // lessTicketKey compares ticket keys by prefix, then numerically: FIX-9 before FIX-10.
-func lessTicketKey(a, b string) bool {
-	pa, na := splitTicketKey(a)
-	pb, nb := splitTicketKey(b)
-	if pa != pb {
-		return pa < pb
+func lessTicketKey(a, b string) bool { return registry.CompareTicketKeys(a, b) < 0 }
+
+// stage is a Linear state's stage: its type, and In Review by name, since Linear files it under started.
+func stage(name, typ string) string {
+	switch {
+	case typ != "started":
+		return registry.TicketTodo
+	case strings.EqualFold(strings.TrimSpace(name), "in review"):
+		return registry.TicketInReview
 	}
-	if na != nb {
-		return na < nb
-	}
-	return a < b
+	return registry.TicketStarted
 }
 
-func splitTicketKey(k string) (string, int) {
-	i := strings.LastIndex(k, "-")
-	if i < 0 {
-		return k, 0
+// Ticket is the issue as a row of Oriel's tickets.
+func (is Issue) Ticket() registry.Ticket {
+	st := stage(is.State, is.StateType)
+	if is.Started && st == registry.TicketTodo {
+		st = registry.TicketStarted
 	}
-	n, err := strconv.Atoi(k[i+1:])
-	if err != nil {
-		return k, 0
+	t := registry.Ticket{Key: is.Key, Title: is.Title, URL: is.URL, State: is.State, Stage: st, Project: is.Project,
+		Priority: int(is.Priority), Blocked: is.Blocked, BlockedBy: is.BlockedBy}
+	if is.Priority > 0 {
+		t.PriorityLabel = is.PriorityLabel
 	}
-	return k[:i], n
+	if is.PR != nil {
+		t.PR = &registry.TicketPR{Number: is.PR.Number, URL: is.PR.URL, Repo: is.PR.Repo}
+	}
+	return t
 }

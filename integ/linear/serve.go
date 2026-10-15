@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent/jsonrpc"
+	"github.com/liamg/oriel/registry"
 )
 
 // CodeNoKey is the JSON-RPC error of a request made before the API key is set.
@@ -22,26 +23,13 @@ type Params struct {
 	Title  string `json:"title"`  // link
 }
 
-// TicketAnswer is ticket's answer: the ticket, and what the launcher's card and the agent get of it.
-type TicketAnswer struct {
-	Ticket
-	Summary string   `json:"summary"`
-	Facts   []string `json:"facts"`
-	Context string   `json:"context"`
-}
-
-// Moved is start's and review's answer.
-type Moved struct {
-	Moved bool   `json:"moved"`
-	State string `json:"state"`
-}
-
 // Server answers the plugin's Lua.
 type Server struct {
 	Client Client
 }
 
-// Handle answers one request: assigned, ticket, start, review or link.
+// Handle answers one request, each in Oriel's shapes for a tracker (registry.TicketTracker): assigned
+// ({tickets}), ticket (a registry.Ticket), start and review (a registry.TicketMove), or link.
 func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage) (any, error) {
 	var p Params
 	if len(raw) > 0 && string(raw) != "null" {
@@ -59,14 +47,18 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 	case "assigned":
 		var issues []Issue
 		issues, err = c.AssignedIssues(ctx)
-		out = map[string]any{"issues": issues}
+		tickets := make([]registry.Ticket, len(issues))
+		for i, is := range issues {
+			tickets[i] = is.Ticket()
+		}
+		out = map[string]any{"tickets": tickets}
 	case "ticket":
 		var t Ticket
 		if t, err = c.Ticket(ctx, p.Key); err == nil {
-			out = TicketAnswer{Ticket: t, Summary: t.Summary(), Facts: t.Facts(), Context: t.Context()}
+			out = t.Detail()
 		}
 	case "start", "review":
-		var m Moved
+		var m registry.TicketMove
 		if method == "start" {
 			m.Moved, m.State, err = c.Start(ctx, p.Key)
 		} else {

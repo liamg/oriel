@@ -79,7 +79,7 @@ type launcher struct {
 const ticketWait = 350 * time.Millisecond
 
 // ticketCard is the ticket the ticket field names, as its tracker tells it (ui.md 04: a ticket ID expands into a
-// card). The first registry.TicketSource that takes the key looks it up.
+// card). The first registry.TicketTracker that takes the key looks it up.
 type ticketCard struct {
 	key     string    // what the field held when it last changed
 	changed time.Time // when; zero to look it up at once
@@ -605,11 +605,11 @@ func (x *launcher) lookTicket(c *ui.Ctx) {
 		return
 	}
 	x.card.asked = key
-	src, ok := registry.TicketFor(x.h, key)
+	src, ok := registry.TrackerFor(x.h, key)
 	if !ok {
 		return
 	}
-	x.card.busy, x.card.source = true, cmpOr(src.Title, src.Name)
+	x.card.busy, x.card.source = true, src.Label()
 	gen := x.gen
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -651,11 +651,7 @@ func (x *launcher) ticketCard(c *ui.Ctx) {
 		c.Column("id", ui.Style{W: ui.Px(110), Gap: 6}, func(c *ui.Ctx) {
 			c.Text("key", t.Key, monoFont(11, th.C(theme.Accent)))
 			if t.State != "" {
-				tone := th.C(theme.Accent)
-				if c, ok := th.Color(t.StateTone); ok {
-					tone = c
-				}
-				widget.Chip(c, "state", t.State, tone, help)
+				widget.Chip(c, "state", t.State, tokenColour(th, stageTone(t.Stage), th.C(theme.Accent)), help)
 			}
 		})
 		c.Column("body", ui.Style{W: ui.Flex(1), Gap: 6, Clip: true}, func(c *ui.Ctx) {

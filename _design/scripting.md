@@ -440,13 +440,24 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   icon_style, badge, badge_style, key, boost, id, … }`, matched by the omnibox on label and detail, and handed back
   to `run` and `preview` as given. `items` runs as the omnibox draws, so answer from what you have and fetch in the
   background.
-- `oriel.ticket.source{ name, title, order, match = fn(key), lookup = fn(key, done) }` (cap `agent.prompt`) looks
-  tickets up for the launcher: `done({ key, title, url, state, state_tone, summary, facts, context })` or
-  `done(nil, why)`, now or later.
+- `oriel.ticket.source{…}` was the launcher's lookup alone; it's `oriel.ticket.tracker` now ("As built (tickets)").
 - `oriel.http.request` takes `auth_scheme`: `"none"` sends the secret as it is (Linear), anything else before it, and
   `Bearer` when it isn't given.
 - `oriel.on("SessionStart", fn)` and `oriel.on("PrSeen", fn)` see a session start and its PR first read (plugins.md,
   "As built (PL-8)").
+
+## As built (tickets)
+
+- `oriel.ticket.tracker{ name, title, order, keys, secret, lookup, assigned, start, review, link }` (cap
+  `agent.prompt`) makes a ticket tracker, and Oriel builds the rest on it: the omnibox's `!` tickets, the launcher's
+  card, the moves as a session starts from a ticket and its PR is seen, the PR link, the ask for its key and the
+  assistant's `my_tickets` (plugins.md, "As built (tickets)"). `keys` is a regular expression (Go's) the tracker's keys
+  match, `secret` one the plugin declares. Each function answers `done(value)` or `done(nil, why)`, now or later:
+  `lookup = fn(key, done)` with a ticket, `assigned = fn(done)` with a list of them, `start` and `review = fn(key, done)`
+  with `{ moved, state }`, `link = fn(key, pr, done)` given `pr = { number, url, repo, title }`. A ticket is `{ key,
+  title, url, state, stage, project, priority, priority_label, blocked, blocked_by, pr = { number, url, repo }, summary,
+  facts, context }`; `stage` is `todo`, `started` or `review`.
+
 
 ## As built (PL-5)
 

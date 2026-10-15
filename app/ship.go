@@ -309,7 +309,7 @@ func (x *shipExt) refresh(id core.SessionID, fresh bool) {
 		if len(seen) > 0 {
 			x.h.Do(func() {
 				for _, ev := range seen {
-					x.h.Fire(context.Background(), "PrSeen", ev.URL, ev)
+					x.h.Fire(context.Background(), "PrSeen", ev.URL, &ev)
 				}
 			})
 		}

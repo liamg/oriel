@@ -51,7 +51,9 @@ type PickerSource struct {
 	Live       bool
 	PickerOnly bool // in the pickers, not the omnibox's merged list
 	Unlisted   bool // opened by its command only, not in the pickers' strip or ⇥: a result list, such as callers
-	Source     string
+	// Available says whether it has anything to offer now; one that hasn't is left out of Pickers. Nil is always.
+	Available func() bool
+	Source    string
 }
 
 func (r *reg) Picker(s PickerSource) Disposable {
@@ -67,11 +69,21 @@ func (r *reg) Picker(s PickerSource) Disposable {
 
 func (r *reg) Pickers() []PickerSource {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-	out := make([]PickerSource, 0, len(r.pickers))
+	all := make([]PickerSource, 0, len(r.pickers))
 	for id := range r.pickers {
 		s, _ := r.pickers.top(id)
-		out = append(out, s)
+		all = append(all, s)
+	}
+	r.mu.Unlock()
+	out := all[:0]
+	for _, s := range all {
+		ok := s.Available == nil
+		if !ok {
+			Call(func() error { ok = s.Available(); return nil })
+		}
+		if ok {
+			out = append(out, s)
+		}
 	}
 	slices.SortFunc(out, func(a, b PickerSource) int { return cmp.Or(cmp.Compare(a.Order, b.Order), cmp.Compare(a.ID, b.ID)) })
 	return out

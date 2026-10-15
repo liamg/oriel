@@ -599,7 +599,7 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 		return "", err
 	}
 	ev := SessionStart{Session: string(id), Kind: string(spec.Kind), Ticket: spec.Ticket, Prompt: spec.Prompt, Worker: string(spec.Worker)}
-	x.h.Do(func() { x.h.Fire(context.Background(), "SessionStart", string(id), ev) })
+	x.h.Do(func() { x.h.Fire(context.Background(), "SessionStart", string(id), &ev) })
 	// The worker's events bring the session; focus it once it's here.
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {

@@ -21,8 +21,8 @@ import (
 
 // The assistant (ui.md 11, crit-reference.md "Assistant"): a drawer you ask "what needs me?" or "review this PR".
 // Its agent is a utility agent on this machine's worker (agents.md: Claude in its PTY with the mod, never claude -p),
-// offered only the agent tools for "assistant": the built-ins here, and any a plugin adds (Linear's my_tickets,
-// mission control's). An act waits for your yes on a confirmation card (registry.AgentOwner), and what its tools did
+// offered only the agent tools for "assistant": the built-ins here, and any another feature or a plugin adds (the
+// tickets' my_tickets, mission control's). An act waits for your yes on a confirmation card (registry.AgentOwner), and what its tools did
 // can be undone for a few seconds. The wake word hands it requests through the VoiceWake hook.
 const (
 	AssistantView     = OverlayPrefix + "assistant"

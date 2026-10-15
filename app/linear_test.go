@@ -283,7 +283,7 @@ func TestLinearTicketsForTheAssistant(t *testing.T) {
 	loadLinear(t, s)
 	tools := registry.AgentToolsFor(s.reg, assistantAgent, true)
 	i := slices.IndexFunc(tools, func(t registry.AgentTool) bool { return t.Name == "my_tickets" })
-	if i < 0 || !tools[i].ReadOnly || tools[i].Reads != "linear" {
+	if i < 0 || !tools[i].ReadOnly || tools[i].Reads != "tickets" {
 		t.Fatalf("the assistant's tools: %+v", tools)
 	}
 	if slices.ContainsFunc(registry.AgentToolsFor(s.reg, "work", false), func(t registry.AgentTool) bool { return t.Name == "my_tickets" }) {

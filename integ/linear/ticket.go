@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/registry"
 )
 
 // Ticket is one ticket in full: what the launcher's card shows, and what the agent is given.
@@ -156,6 +158,16 @@ func (t Ticket) Facts() []string {
 	}
 	if n := len(t.Comments); n > 0 {
 		out = append(out, plural(n, "comment"))
+	}
+	return out
+}
+
+// Detail is the ticket as Oriel's card and the agent get it.
+func (t Ticket) Detail() registry.Ticket {
+	out := registry.Ticket{Key: t.Key, Title: t.Title, URL: t.URL, State: t.State, Stage: stage(t.State, t.StateType),
+		Project: t.Project, PriorityLabel: t.PriorityLabel, Summary: t.Summary(), Facts: t.Facts(), Context: t.Context()}
+	if t.PR != nil {
+		out.PR = &registry.TicketPR{Number: t.PR.Number, URL: t.PR.URL, Repo: t.PR.Repo}
 	}
 	return out
 }

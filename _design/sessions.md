@@ -47,7 +47,7 @@ flowchart LR
 
 - **The app opens on mission control** (`ui.md` 03), not a file dialog. `⌘N` opens the launcher (`ui.md` 04): prompt, mode,
   provider, repos, worker, sandbox.
-- **From anywhere**: a Linear ticket (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
+- **From anywhere**: a ticket from any tracker, Linear or another (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
   ("fix CI" opens a work session on the PR's branch), or an agentbus review request.
 - **CLI**: `oriel new "fix stale usage prices" --repo pricing --ticket INF-2231`, `oriel review <pr-url>`, `oriel open <session>`,
   `oriel init <name> --template go-cli`, `oriel ~/src/foo` (direct).
@@ -127,7 +127,7 @@ type Kind string // "plan" | "work" | "review" | "tour" | "job" | "newrepo" | "d
 type SessionSpec struct {
     Kind     Kind
     Prompt   string
-    Ticket   string            // optional
+    Ticket   string            // optional: its tracker is the first whose keys take it (plugins.md, "As built (tickets)")
     PR       string            // review kind
     Repos    []RepoID          // 0..n
     Branch   string            // derived if empty
@@ -249,6 +249,13 @@ type Sessions interface {
   that worker over the wire (`agent.terminal`, as Raw terminal does) with `/login` typed, and the card says what to
   run there only for an agent with no terminal (Codex). **Check again** asks the worker to look. Once it's signed in, every card
   goes and the sessions carry on: held comments go, and a turn the login stopped is told to carry on.
+
+## As built (tickets)
+
+- A session has at most one ticket (`SessionSpec.Ticket`), any tracker's: its tracker is the first whose keys take it
+  (`registry.TrackerFor`). The app, not the tracker's plugin, calls that tracker as the session goes: `Start` on
+  `SessionStart`, `Link` and then `Review` (while the PR is open) on `PrSeen`, and the launcher's card is its `Lookup`
+  (plugins.md, "As built (tickets)").
 
 ## Jobs (SE-4)
 

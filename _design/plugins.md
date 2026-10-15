@@ -423,7 +423,8 @@ flowchart TB
 - **the assistant** (PL-4, ui.md 11): its tools are agent tools `for = { "assistant" }`: the built-ins (`reply`,
   `sessions`, `past_sessions`, `open_session`, `rename_session`, `resume_session`, `new_session`, `start_session`,
   `stop_session`, `review_pr`, `jobs`, `run_job`, `repos`, `my_prs`, `review_requests`, `usage`, `workers`,
-  `settings`), and any a plugin adds: Linear's `my_tickets` (PL-8), mission control's `mission_control` (SH-7) and
+  `settings`), and any another feature or a plugin adds: the tickets' `my_tickets` (every tracker's, "As built
+  (tickets)"), mission control's `mission_control` (SH-7) and
   agentbus's `request_review` (PL-5) come this way. Commands `assistant.toggle` (`⌘/`), `assistant.open {text}`,
   `assistant.close`, `assistant.say {text, voice}`, `assistant.send`, `assistant.new`, `assistant.stop` (`⌘.`),
   `assistant.answer {id, yes}`, `assistant.pick {n}` (`⌘1`–`⌘9`), `assistant.undo {id}`, `assistant.show {id}`; key
@@ -670,7 +671,8 @@ type Host interface {
 - Picker sources: `Registry.Picker(PickerSource{ID, Title, Prefix, Order, Items, Preview, Run})`. `Items(ctx, query)`
   gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
   query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
-  selection. Sessions, commands, files and symbols are built-in sources; tickets and PRs come from their plugins.
+  selection. Sessions, commands, files, symbols and tickets (every tracker's, "As built (tickets)") are built-in
+  sources; PRs come from their plugin.
 - `Host.Pending()` is the keys typed towards a longer mapping or engine command, with the engine's next keys, for
   which-key. A keymap with no command is a group's label, never run. `Host.HoldPending()` keeps the pending mapping
   from timing out until the next key: which-key calls it while it shows the keys, so the popup doesn't vanish at
@@ -841,11 +843,49 @@ type Host interface {
   `slack.webhook` opens the secret's dialog. Post counts are the plugin's memory, so they start again with the app
   (crit kept them in its config): plugins have no store of their own yet.
 
+## As built (tickets)
+
+- **Ticket trackers** (`registry.TicketTracker`, kind `ticket.tracker`) replace PL-8's ticket sources: a tracker (Linear,
+  Jira…) brings its tickets, and the app builds everything generic on it once. A tracker is `{Name, Title, Order, Keys
+  (a regexp of the keys it takes; nil takes all), Secret (what it needs set first), Assigned(ctx), Lookup(ctx, key),
+  Start(ctx, key), Review(ctx, key), Link(ctx, key, TicketPR)}`; only `Lookup` is required, and the funcs may block (the
+  app calls them off its loop). `registry.TicketTrackers`, `TrackerFor(r, key)` (the first by Order whose `Keys` take
+  it), `LookupTicket`, `AssignedTickets` (each fills in `Ticket.Tracker`), and `SortTickets` / `CompareTickets` (crit's
+  order across trackers: priority, blocked last, started, with a PR, then `CompareTicketKeys`).
+- A `registry.Ticket` is `{Key, Title, URL, State, Stage, Project, Priority, PriorityLabel, Blocked, BlockedBy, PR,
+  Summary, Facts, Context, Tracker}`. `Stage` is `todo`, `started` or `review` (`registry.TicketTodo`…), whatever the
+  tracker calls the state: it colours the state chip (violet, cyan, pink) and orders the list. `Priority` is 1 for the
+  most urgent, 0 for none. A move answers `registry.TicketMove{Moved, State}`. Their JSON is the shape Lua and a
+  plugin's process use (`priority_label`, `blocked_by`), so a tracker's process answers in it and its Lua passes it on.
+- **The app's side** (`app/tickets.go`): the omnibox source `tickets` (`!`): each tracker still without its secret
+  first ("Set your Linear API key", ↵ opens the secrets dialog), a tracker that failed ("Linear: why", ↵ asks again),
+  then every tracker's tickets in one order, each asked for again after 10 minutes, after a move, and on
+  `tickets.refresh`; ↵ on a ticket runs `session.new {kind = "plan", ticket}`. The launcher's card (PL-8) asks
+  `TrackerFor`. On `SessionStart` the session's ticket's tracker gets `Start`; on `PrSeen`, `Link`, then `Review` while
+  the PR is open; a move is a notice ("INF-2231 moved to In Progress in Linear"), a failure a line in the log. The
+  assistant's `my_tickets` (`Reads = "tickets"`) is every tracker's list, asked for first when it's stale, with a note
+  for a tracker without its key. Commands `Tickets` (the omnibox on them), `tickets.refresh`, `tickets.key {tracker}`
+  and `:TicketKey [tracker]`; the source and the commands are there only while a tracker is (`PickerSource.Available`,
+  new: a source with nothing to offer is left out of `Registry.Pickers`). `SessionStart` and `PrSeen` are fired as
+  pointers, so a Go hook (`registry.On`) takes them.
+- Lua: `oriel.ticket.tracker{ name, title, order, keys, secret, lookup = fn(key, done), assigned = fn(done), start =
+  fn(key, done), review = fn(key, done), link = fn(key, pr, done) }` (cap `agent.prompt`; a `secret` must be one the
+  plugin declares), each answering `done(value)` or `done(nil, why)`; `oriel.ticket.source` is gone. A process or WASM
+  plugin is fronted by its Lua, as Linear is: there's no tracker over `ext` alone, since nothing else registers
+  contributions from a process yet.
+- **Linear** is now only its API calls and their mapping: its process answers `assigned` with `{tickets}` and `ticket`
+  with a `registry.Ticket` (`Issue.Ticket`, `Ticket.Detail`), `start`/`review` with a `registry.TicketMove`, and its
+  `init.lua` is the tracker forwarding to it (`keys = "^[A-Z][A-Z0-9]*-[0-9]+$"`, `secret = "LINEAR_TOKEN"`). Its
+  omnibox source, hooks, `my_tickets`, key ask and commands (`LinearTickets`, `LinearKey`, `linear.refresh`) are the
+  app's now, and its manifest drops `agent.tools`. A second, Jira-like tracker (keys `OPS-n`, tests only:
+  `app/tickets_test.go`) shows beside it in the omnibox, the launcher, the moves, the PR link and `my_tickets`.
+
 ## As built (PL-8)
 
-- **Ticket sources** (`registry.TicketSource{Name, Title, Order, Match(key), Lookup(ctx, key) (Ticket, error)}`, kind
-  `ticket.source`): a tracker's tickets by key. `registry.TicketFor(r, key)` is the first by Order whose `Match` takes
-  the key (on the loop), `registry.LookupTicket(ctx, source, key)` asks it. A `registry.Ticket` is `{Key, Title, URL,
+- **Ticket sources**, since replaced by ticket trackers ("As built (tickets)") (`registry.TicketSource{Name, Title,
+  Order, Match(key), Lookup(ctx, key) (Ticket, error)}`, kind `ticket.source`): a tracker's tickets by key.
+  `registry.TicketFor(r, key)` is the first by Order whose `Match` takes the key (on the loop),
+  `registry.LookupTicket(ctx, source, key)` asks it. A `registry.Ticket` is `{Key, Title, URL,
   State, StateTone, Summary, Facts, Context}`: what the launcher's card shows (ui.md 04), and `Context`, markdown that
   goes to the agent with the prompt. Lua: `oriel.ticket.source` (cap `agent.prompt`, since the context reaches the
   agent).
