@@ -616,7 +616,7 @@ func (x *walkthroughExt) stage(c *ui.Ctx, w *walkthrough) {
 		for _, p := range ps {
 			n := s.Notes[p.i]
 			c.Box(fmt.Sprint("note", p.i), ui.Style{Float: &ui.Float{Offset: render.Point{X: cardX, Y: p.y}}, Z: ui.LayerContent + 1}, func(c *ui.Ctx) {
-				id := widget.Annotation(c, "card", widget.AnnotationOpts{N: fmt.Sprint(p.i + 1), Title: n.Title, Tone: noteTone(th, p.i),
+				id := widget.Annotation(c, "card", widget.AnnotationOpts{N: noteMark(p.i), Title: n.Title, Tone: noteTone(th, p.i),
 					Width: ui.Px(notesW), Ground: th.C(tEditorBg), Help: walkHelp}, func(c *ui.Ctx) {
 					if n.Text != "" {
 						markdownText(c, "md", n.Text, notesW-28, widget.AnnotationBody(c))
@@ -806,4 +806,12 @@ func (x *walkthroughExt) statusSegment(c *ui.Ctx) {
 		c.Box("sep", ui.Style{W: ui.Px(1), H: ui.Px(12), Fill: th.C(theme.Line)}, nil)
 		c.Text("keys", "←/→ step · c comment · q quit", statusText(c, tStatusFg))
 	})
+}
+
+// noteMark names a step's note in its diamond with a letter, A onwards, so notes don't read as the steps' numbers.
+func noteMark(i int) string {
+	if i < 26 {
+		return string(rune('A' + i))
+	}
+	return fmt.Sprint(i + 1)
 }

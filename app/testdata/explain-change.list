@@ -338,14 +338,14 @@ clip 224,99 1376x715.256 r 0
 pop
 rect 1120,194.5 440x63.179993 fill #0c0c0b radius 2 stroke 1 #4cc9f073
 path 5 segments fill #4cc9f0
-text "1" @1140,218.06401 #060606 JetBrains Mono 9.900001
+text "A" @1140,218.06401 #060606 JetBrains Mono 9.900001
 text "ROUNDED ONCE, AT CREATION" @1160,218.09999 #4cc9f0 JetBrains Mono 10
 rect 1134,228.5 80.03125x17.179993 fill #161615 radius 3
 text "RoundMinor" @1138,241.23 #ece6d8 JetBrains Mono 11.5
 text "can fail." @1217.6875,241.63712 #b3ab99 Inter 12.5
 rect 1120,278.5 440x61.12451 fill #0c0c0b radius 2 stroke 1 #ff7ad673
 path 5 segments fill #ff7ad6
-text "2" @1140,302.064 #060606 JetBrains Mono 9.900001
+text "B" @1140,302.064 #060606 JetBrains Mono 9.900001
 text "THE MODE IS STORED" @1160,302.1 #ff7ad6 JetBrains Mono 10
 text "Each line records how it was rounded." @1134,324.60938 #b3ab99 Inter 12.5
 path 4 segments fill #060606

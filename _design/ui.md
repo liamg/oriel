@@ -559,7 +559,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   error with **Try again**. The view (a tab, mode EXPLAIN) has the EXPLAIN THIS CHANGE header (project / file,
   lines, "throwaway · discarded if the code changes", Discard); the step's file from three lines above it, the
   lines its notes are on lit in their colours with a gutter edge and the rest dimmed, each note an annotation
-  (`widget.Annotation`) beside its first line with a leader line, kept from overlapping; and the dock: step chips
+  (`widget.Annotation`) beside its first line with a leader line, kept from overlapping, lettered A, B, C in its
+  diamond (the user's decision after RV-6: numbers read as the steps' in the dock, as the mockup's do); and the dock: step chips
   across files and repos (a summary step is "— summary"), STEP 03/07, the title and markdown prose, **Ask about this
   step** (`request.new` with the step and its code), **Comment on L<n>** (opens the file at the line and
   `thread.new`; `j`/`k` pick the line, as does a click on the code), the explainer's byline, and ← →. The status
