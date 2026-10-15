@@ -136,6 +136,7 @@ type SessionSpec struct {
     Sandbox  SandboxPolicy
     Template string            // newrepo kind
     Variant  string            // one of the kind's variants: a tour's walkthrough, onboarding…
+    Context  string            // goes to the agent after the prompt, not kept as it: a ticket's text (PL-8)
 }
 
 type Sessions interface {

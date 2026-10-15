@@ -347,7 +347,7 @@ Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
 - Preview pane: the highlighted session's waiting question, tasks and last moves, so you can answer without switching.
 - Built from SH-4: `⌘K` opens it; `⇥` steps through the scopes; each source is a registry picker source, so its
   preview is the source's own. Symbols come from the open buffers' outlines until LSP's workspace symbols (LS-2);
-  tickets and PRs from their plugins (PL-8, the GitHub integration). The session preview grows its question, tasks
+  tickets and PRs from their plugins (PL-8's `tickets`, `!`; the GitHub integration). The session preview grows its question, tasks
   and moves as the AI tickets add them.
 
 ## 02b · Pickers: files, grep, keymaps, and the rest
@@ -446,7 +446,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   toggle starts from `sandbox.default`, on unless it says `host`. A repo the chosen worker lacks says "not on
   <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). **Save as job** (SE-4) hands the
   prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. The prompt takes several
-  lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Not yet: a ticket expanding into a card (PL-8),
+  lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Since PL-8 a ticket expands into a card (plugins.md, "As built (PL-8)"). Not yet:
   templates, toolchains and LSPs in the pre-flight.
 
 ## 05 · Plan mode

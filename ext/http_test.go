@@ -102,6 +102,14 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	if a := got[n0].Header.Get("Authorization"); a != "Bearer tok-XXXXSECRET" {
 		t.Errorf("the header: %q", a)
 	}
+	// Linear's personal API keys go in the header as they are (auth_scheme = "none").
+	if _, err := call(map[string]any{"url": "https://api.linear.app/graphql", "auth": "TOKEN", "auth_scheme": "none"}); err != nil {
+		t.Fatal(err)
+	}
+	if a := got[n0+1].Header.Get("Authorization"); a != "tok-XXXXSECRET" {
+		t.Errorf("the header with no scheme: %q", a)
+	}
+	n0++
 
 	// A request carrying a secret doesn't follow a redirect.
 	secrets.SetSecret("SLACK_WEBHOOK", "https://hooks.slack.com/redirect?k=XXXXSECRET")

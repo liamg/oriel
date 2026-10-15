@@ -114,8 +114,8 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 			w.log.Warn("AI review", "session", id, "err", err)
 		}
 	}
-	if p := strings.TrimSpace(spec.Prompt); p != "" {
-		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: firstLine(p), Body: p}); err != nil {
+	if p, body := strings.TrimSpace(spec.Prompt), firstRequest(spec); body != "" {
+		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: firstLine(cmp.Or(p, body)), Body: body}); err != nil {
 			return id, err
 		}
 	} else if spec.Provider != "" {
@@ -124,6 +124,18 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 		}
 	}
 	return id, nil
+}
+
+// firstRequest is what the agent is first asked: the prompt, then what came with it.
+func firstRequest(spec core.SessionSpec) string {
+	p, c := strings.TrimSpace(spec.Prompt), strings.TrimSpace(spec.Context)
+	switch {
+	case c == "":
+		return p
+	case p == "":
+		return c
+	}
+	return p + "\n\n" + c
 }
 
 // gate is the agent's own gate for a spec: the light gate inside a sandbox by default (agents.md).

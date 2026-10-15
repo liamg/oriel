@@ -429,3 +429,18 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   raised PR (plugins.md, "As built (PL-9)"); `pr` is `{ session, project, repo, number, title, url, state, draft,
   merged }`, and a label function returning nil leaves it off.
 
+
+## As built (PL-8)
+
+- `oriel.picker.source{ id, title, prefix, order, picker_only, items = fn(query), run = fn(item), preview = fn(item) }`
+  adds an omnibox and picker source (ui.md 02b's `oriel.picker.source`): items are tables `{ label, detail, note, icon,
+  icon_style, badge, badge_style, key, boost, id, … }`, matched by the omnibox on label and detail, and handed back
+  to `run` and `preview` as given. `items` runs as the omnibox draws, so answer from what you have and fetch in the
+  background.
+- `oriel.ticket.source{ name, title, order, match = fn(key), lookup = fn(key, done) }` (cap `agent.prompt`) looks
+  tickets up for the launcher: `done({ key, title, url, state, state_tone, summary, facts, context })` or
+  `done(nil, why)`, now or later.
+- `oriel.http.request` takes `auth_scheme`: `"none"` sends the secret as it is (Linear), anything else before it, and
+  `Bearer` when it isn't given.
+- `oriel.on("SessionStart", fn)` and `oriel.on("PrSeen", fn)` see a session start and its PR first read (plugins.md,
+  "As built (PL-8)").

@@ -17,6 +17,7 @@
 ---@field lsp oriel.lsp
 ---@field menu oriel.menu
 ---@field overview oriel.overview
+---@field picker oriel.picker
 ---@field process oriel.process
 ---@field rail oriel.rail
 ---@field regex oriel.regex
@@ -25,6 +26,7 @@
 ---@field start oriel.start
 ---@field status oriel.status
 ---@field thread oriel.thread
+---@field ticket oriel.ticket
 ---@field ui oriel.ui
 ---@field view oriel.view
 ---@field wasm oriel.wasm
@@ -161,7 +163,7 @@ function oriel.editor.presenter(spec) end
 ---@class oriel.http
 oriel.http = {}
 
---- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it as a bearer token, url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
+--- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another ('none': as it is), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
 ---@param spec table
 ---@param fn function
 function oriel.http.request(spec, fn) end
@@ -245,6 +247,13 @@ oriel.overview = {}
 --- Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick.
 ---@param spec table
 function oriel.overview.add(spec) end
+
+---@class oriel.picker
+oriel.picker = {}
+
+--- A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item) }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background. preview returns oriel.ui nodes.
+---@param spec table
+function oriel.picker.source(spec) end
 
 ---@class oriel.process
 oriel.process = {}
@@ -352,6 +361,13 @@ function oriel.thread.reply(id, body, opts) end
 ---@param id string
 ---@param status? string
 function oriel.thread.resolve(id, status) end
+
+---@class oriel.ticket
+oriel.ticket = {}
+
+--- A tracker's tickets, for the launcher's ticket field (ui.md 04: a ticket ID expands into a card): { name, title, order (50), match = fn(key) → bool, lookup = fn(key, done) }. lookup answers with done(ticket) or done(nil, err), now or later; ticket is { key, title, url, state, state_tone, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt.
+---@param spec table
+function oriel.ticket.source(spec) end
 
 ---@class oriel.ui
 oriel.ui = {}

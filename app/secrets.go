@@ -150,8 +150,10 @@ func (x *secretsExt) dialog(c *ui.Ctx) {
 		}
 		heading(c, "h", "Value", note)
 		if d.focus {
-			c.Focus(c.Next("value"))
-			d.focus = false
+			// Asked for until it lands: opened from another overlay (the omnibox), that one holds focus a frame more.
+			id := c.Next("value")
+			c.Focus(id)
+			d.focus = !c.Interaction(id).Focused
 		}
 		res := widget.Input(c, "value", &d.value, widget.InputOpts{Label: d.name, Placeholder: "paste it here", Secret: true, Help: secretsHelp,
 			KeyMode: SecretDialogMode, Invalid: d.err != ""})

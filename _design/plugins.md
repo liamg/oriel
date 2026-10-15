@@ -807,6 +807,45 @@ type Host interface {
   `slack.webhook` opens the secret's dialog. Post counts are the plugin's memory, so they start again with the app
   (crit kept them in its config): plugins have no store of their own yet.
 
+## As built (PL-8)
+
+- **Ticket sources** (`registry.TicketSource{Name, Title, Order, Match(key), Lookup(ctx, key) (Ticket, error)}`, kind
+  `ticket.source`): a tracker's tickets by key. `registry.TicketFor(r, key)` is the first by Order whose `Match` takes
+  the key (on the loop), `registry.LookupTicket(ctx, source, key)` asks it. A `registry.Ticket` is `{Key, Title, URL,
+  State, StateTone, Summary, Facts, Context}`: what the launcher's card shows (ui.md 04), and `Context`, markdown that
+  goes to the agent with the prompt. Lua: `oriel.ticket.source` (cap `agent.prompt`, since the context reaches the
+  agent).
+- **The launcher's ticket** (`app/launcher.go`): the ticket field, once it has rested 350 ms (or at once when
+  `session.new {ticket}` filled it), is looked up from the first source that takes it; the card shows the key, a state
+  chip, the title, the description's start and the facts, with ✕ to take it off; Start waits while it's being looked
+  up; the header says "from ticket". `session.start {context}` carries the card's context:
+  `core.SessionSpec.Context`, which the worker sends after the prompt as the first request (or alone, with no prompt)
+  and doesn't keep as the session's prompt.
+- **Picker sources from Lua**: `oriel.picker.source{ id, title, prefix, order, picker_only, items = fn(query), run,
+  preview }` registers a `registry.PickerSource`; items are tables (`label, detail, note, icon, icon_style, badge,
+  badge_style, key, boost, id`, and the source's own fields), handed back to `run` and `preview` as given.
+- **Events**: `SessionStart {session, kind, ticket, prompt, worker}`, fired after `session.start` starts one (the
+  subject its id), and `PrSeen {session, project, ticket, number, url, title, state, draft, merged}`, fired the first
+  time the app reads a session's PR on the Ship page's read (the session in front, every 10 s), whoever raised it.
+- **http.request**'s `auth_scheme` (`ext.HTTPRequest.AuthScheme`): what goes before the secret in the Authorization
+  header, `Bearer` by default, `none` for the value as it is (Linear's personal API keys).
+- **Linear** (`integ/linear`, crit-reference.md → Linear): a plugin built as a third party's would be, on the APIs
+  above. `plugin/oriel.toml` (net `api.linear.app`, `secrets = { LINEAR_TOKEN = "api.linear.app" }`, `agent.prompt`)
+  and `plugin/init.lua`, which spawns its process, `bin/oriel-linear` (`integ/linear/cmd/oriel-linear`, Go: crit's
+  `internal/linear` ported, `linear.Serve`). The process asks the host for each GraphQL request (`http.request` with
+  `auth = "LINEAR_TOKEN", auth_scheme = "none"`), so neither it nor the Lua sees the key. Its methods: `assigned`,
+  `ticket {key}` (with comments and attachments, a summary, facts and the agent's context), `start {key}` (into the
+  team's In Progress, from triage, backlog or unstarted), `review {key}` (into In Review, from any state before it;
+  a team without one stays put), `link {key, url, number, title}` (an attachment titled "#12 title"), `activity`
+  (created and moved, 48 h, newest first). The Lua adds the `tickets` omnibox source (`!`, crit's order, a key ask
+  while there's none), Linear's ticket source, `SessionStart` and `PrSeen` hooks (into progress; link, then into
+  review while the PR is open) and the HUD panel **LINEAR** (the workspace's moves, every 5 min); commands
+  `LinearTickets`, `LinearKey`, `linear.refresh`. `integ/linear/lineartest` is the recorded API (`testdata/*.json`,
+  served as api.linear.app over TLS, mutations kept and applied).
+- Not yet: installing it (PL-19/20 bring the plugin manager; it isn't bundled, since `app.ScriptPlugin` has no
+  directory for a process binary), crit's "Continue" for a ticket with a workspace, the ticket's done move on merge,
+  and the Linear moves joining a company feed with GitHub's (there's no company feed yet).
+
 ## Performance and native plugins
 
 **How fast each tier is** (rough figures on a 2024 laptop):

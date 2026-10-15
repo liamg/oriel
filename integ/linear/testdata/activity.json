@@ -1,0 +1,134 @@
+{
+ "data": {
+  "issues": {
+   "nodes": [
+    {
+     "identifier": "INF-2231",
+     "title": "Usage API returns stale prices after plan change",
+     "url": "https://linear.app/infracost/issue/INF-2231/usage-api-returns-stale-prices-after-plan-change",
+     "createdAt": "2026-10-12T17:03:00.000Z",
+     "creator": {
+      "displayName": "ana"
+     },
+     "history": {
+      "nodes": [
+       {
+        "createdAt": "2026-10-12T17:03:00.000Z",
+        "actor": {
+         "displayName": "ana"
+        },
+        "fromState": null,
+        "toState": {
+         "name": "Triage",
+         "type": "triage"
+        }
+       },
+       {
+        "createdAt": "2026-10-15T12:29:30.000Z",
+        "actor": {
+         "displayName": "ana"
+        },
+        "fromState": {
+         "name": "Backlog"
+        },
+        "toState": {
+         "name": "Todo",
+         "type": "unstarted"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "identifier": "INF-2244",
+     "title": "Annual plan proration rounds the wrong way",
+     "url": "https://linear.app/infracost/issue/INF-2244",
+     "createdAt": "2026-10-15T13:04:30.000Z",
+     "creator": {
+      "displayName": "ben"
+     },
+     "history": {
+      "nodes": [
+       {
+        "createdAt": "2026-10-15T13:04:30.000Z",
+        "actor": {
+         "displayName": "ben"
+        },
+        "fromState": null,
+        "toState": {
+         "name": "Todo",
+         "type": "unstarted"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "identifier": "INF-2219",
+     "title": "Round minor units half-even, per currency",
+     "url": "https://linear.app/infracost/issue/INF-2219/round-minor-units-half-even-per-currency",
+     "createdAt": "2026-10-01T09:00:00.000Z",
+     "creator": {
+      "displayName": "liam"
+     },
+     "history": {
+      "nodes": [
+       {
+        "createdAt": "2026-10-15T14:09:30.000Z",
+        "actor": {
+         "displayName": "priya"
+        },
+        "fromState": {
+         "name": "In Progress"
+        },
+        "toState": {
+         "name": "In Review",
+         "type": "started"
+        }
+       },
+       {
+        "createdAt": "2026-10-11T10:00:00.000Z",
+        "actor": {
+         "displayName": "liam"
+        },
+        "fromState": {
+         "name": "Todo"
+        },
+        "toState": {
+         "name": "In Progress",
+         "type": "started"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "identifier": "INF-2190",
+     "title": "Drop the v0 usage endpoint",
+     "url": "https://linear.app/infracost/issue/INF-2190",
+     "createdAt": "2026-09-20T09:00:00.000Z",
+     "creator": {
+      "displayName": "ben"
+     },
+     "history": {
+      "nodes": [
+       {
+        "createdAt": "2026-10-15T09:44:30.000Z",
+        "actor": {
+         "displayName": "ben"
+        },
+        "fromState": {
+         "name": "In Review"
+        },
+        "toState": {
+         "name": "Done",
+         "type": "completed"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -5,14 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/ext"
-	"github.com/liamg/oriel/ext/ossandbox"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/script"
@@ -22,27 +20,7 @@ import (
 // built into bin/. It's granted what its manifest declares, with net narrowed or widened by net.
 func icalPlugin(t *testing.T, net []string) ext.Plugin {
 	t.Helper()
-	if err := ossandbox.Available(); err != nil {
-		t.Skip(err)
-	}
-	src := filepath.Join("..", "integ", "ical", "plugin")
-	dir := t.TempDir()
-	for _, f := range []string{"oriel.toml", "init.lua", "eventkit.js"} {
-		b, err := os.ReadFile(filepath.Join(src, f))
-		if err != nil {
-			t.Fatal(err)
-		}
-		os.WriteFile(filepath.Join(dir, f), b, 0o644)
-	}
-	build := exec.Command("go", "build", "-buildvcs=false", "-o", filepath.Join(dir, "bin", "oriel-ical"), "./integ/ical/cmd/oriel-ical")
-	build.Dir = ".."
-	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("building the plugin's process: %v\n%s", err, out)
-	}
-	m, err := ext.LoadManifest(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir, m := integPlugin(t, "ical", "oriel.toml", "init.lua", "eventkit.js")
 	var grants []ext.Grant
 	for _, g := range m.Permissions {
 		if g.Cap == ext.CapNet {

@@ -45,6 +45,15 @@ type AgentTurnEnd struct {
 	Session string `json:"session"`
 }
 
+// SessionStart is the SessionStart hook's event: a session just started, from the launcher, a command or a script.
+type SessionStart struct {
+	Session string `json:"session"`
+	Kind    string `json:"kind"`
+	Ticket  string `json:"ticket,omitempty"`
+	Prompt  string `json:"prompt,omitempty"`
+	Worker  string `json:"worker,omitempty"`
+}
+
 // CommentSend is the CommentSend hook's event: a comment about to go to an agent. A rewrite changes it, a veto
 // stops it.
 type CommentSend struct {
@@ -87,6 +96,8 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 			}
 			return registry.Verdict{}, nil
 		}))
+	x.add(h.DeclareEvent(registry.EventInfo{Name: "SessionStart", Fired: true, Payload: SessionStart{},
+		Doc: "A session just started; the subject is its id. { session, kind, ticket, prompt, worker }"}))
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "CommentSend", Fired: true, Payload: CommentSend{},
 		Doc: "A comment about to go to an agent; a rewrite changes it, a veto stops it. { session, thread, file, line, body, urgent, btw }"}))
 	working := map[core.SessionID]bool{}
@@ -529,7 +540,7 @@ func (x *sessions) addSource(h ext.Host) registry.PickerSource {
 
 // spec is a session spec from a command's args.
 func specFrom(a registry.Args) core.SessionSpec {
-	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"),
+	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"), Context: a.String("context"),
 		PR: a.String("pr"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
 		Model: a.String("model"), Effort: a.String("effort"), Worker: core.WorkerID(a.String("worker")), Template: a.String("template"),
 		Variant: a.String("variant"), Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate")}}
@@ -580,6 +591,8 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 	if err != nil {
 		return "", err
 	}
+	ev := SessionStart{Session: string(id), Kind: string(spec.Kind), Ticket: spec.Ticket, Prompt: spec.Prompt, Worker: string(spec.Worker)}
+	x.h.Do(func() { x.h.Fire(context.Background(), "SessionStart", string(id), ev) })
 	// The worker's events bring the session; focus it once it's here.
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {

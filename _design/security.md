@@ -209,6 +209,11 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
   with no host reaches none. A request carrying a secret goes over https only and follows no redirect; its error is
   the method, the host and the cause, never the URL, and its answer is masked of the secret's value. Each value handed
   out is added to the log's redactor.
+- Since PL-8, `auth_scheme` says what goes before the secret in the header (`none`: the value as it is).
+- PL-8's Linear plugin is app-side Lua that starts a process plugin (`oriel.process.spawn`), as PL-2 built it and
+  PL-10's calendar does, though "App-side plugins are Lua or WASM only" above says otherwise: the process is
+  OS-sandboxed, has no network of its own to use (it asks the host for every request, through `http.request`) and
+  never holds the key, but its sandbox lets it connect to port 443 since its net grant names a host.
 - Honestly: a plugin can still tell whether a secret is set (an error says so), and `:Secrets` (which plugin uses
   which, and when last) isn't built.
 

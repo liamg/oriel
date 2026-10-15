@@ -45,6 +45,20 @@ type ShipCommit struct {
 	Force   bool     `json:"force,omitempty"`
 }
 
+// PrSeen is the PrSeen hook's event: a session's pull request, the first time the app reads it, whoever raised it
+// (the Ship page, the agent, gh by hand).
+type PrSeen struct {
+	Session string `json:"session"`
+	Project string `json:"project"`
+	Ticket  string `json:"ticket,omitempty"`
+	Number  int    `json:"number"`
+	URL     string `json:"url"`
+	Title   string `json:"title"`
+	State   string `json:"state"`
+	Draft   bool   `json:"draft,omitempty"`
+	Merged  bool   `json:"merged,omitempty"`
+}
+
 // ShipRaise is the ShipRaise hook's event: a pull request about to be raised, or edited. A veto stops it, its reason
 // shown on the Raise PR tab: a quiz to take first.
 type ShipRaise struct {
@@ -71,6 +85,7 @@ type shipExt struct {
 
 	mu      sync.Mutex
 	reports map[core.SessionID]*shipReport
+	seenPRs map[string]bool // the PRs PrSeen has fired for, by URL
 
 	// On the loop: what's typed, by session/project.
 	commits map[string]*commitForm
@@ -162,6 +177,8 @@ func (x *shipExt) Activate(_ context.Context, h ext.Host) error {
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "ShipCommit", Fired: true, Payload: ShipCommit{},
 		Doc: "A commit about to be made from the Ship page; a veto stops it (its reason shows in the commit box) unless force, a rewrite changes it. { session, project, message, files, force }"}))
+	x.add(h.DeclareEvent(registry.EventInfo{Name: "PrSeen", Fired: true, Payload: PrSeen{},
+		Doc: "A session's pull request, the first time Oriel reads it, whoever raised it; the subject is its URL. { session, project, ticket, number, url, title, state, draft, merged }"}))
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
 		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
 	x.add(h.Contribute(registry.Indicator{Name: "ci", Slot: registry.SlotHUD, Order: 70, Title: "CI queue", Help: hudHelp + "#ci", Note: x.ciNote,
@@ -287,9 +304,38 @@ func (x *shipExt) refresh(id core.SessionID, fresh bool) {
 		} else {
 			r.ships, r.err, r.read = ships, "", time.Now()
 		}
+		seen := x.newPRs(id, ships)
 		x.mu.Unlock()
+		if len(seen) > 0 {
+			x.h.Do(func() {
+				for _, ev := range seen {
+					x.h.Fire(context.Background(), "PrSeen", ev.URL, ev)
+				}
+			})
+		}
 		x.h.Redraw()
 	}()
+}
+
+// newPRs are the PRs in ships not seen before, as PrSeen events; x.mu is held.
+func (x *shipExt) newPRs(id core.SessionID, ships []worker.Ship) []PrSeen {
+	if x.seenPRs == nil {
+		x.seenPRs = map[string]bool{}
+	}
+	ticket := ""
+	if se, ok := x.h.Session(id); ok {
+		ticket = se.Snapshot().Ticket
+	}
+	var out []PrSeen
+	for _, s := range ships {
+		if s.PR == nil || s.PR.URL == "" || x.seenPRs[s.PR.URL] {
+			continue
+		}
+		x.seenPRs[s.PR.URL] = true
+		out = append(out, PrSeen{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
+			Title: s.PR.Title, State: s.PR.State, Draft: s.PR.Draft, Merged: s.PR.Merged})
+	}
+	return out
 }
 
 // wait is until every read and step started has finished.

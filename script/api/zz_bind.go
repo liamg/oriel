@@ -289,6 +289,17 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Picker{a: a}
+		vm.Bind("picker", map[string]script.GoFunc{
+			"source": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Source(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := Process{a: a}
 		vm.Bind("process", map[string]script.GoFunc{
 			"spawn": func(c *script.Args) ([]any, error) {
@@ -421,6 +432,17 @@ func (a *APIs) bind(vm *script.VM) {
 					return nil, err
 				}
 				return nil, x.Resolve(c.String(0), c.String(1))
+			},
+		})
+	}
+	{
+		x := TicketAPI{a: a}
+		vm.Bind("ticket", map[string]script.GoFunc{
+			"source": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.prompt"); err != nil {
+					return nil, err
+				}
+				return nil, x.Source(c.Table(0), c.Where())
 			},
 		})
 	}

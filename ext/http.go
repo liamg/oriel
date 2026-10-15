@@ -19,16 +19,19 @@ type Network interface {
 	Secrets() Secrets
 }
 
-// HTTPRequest is http.request's params. A secret is named, never given: Auth is sent as a bearer token, and
-// URLSecret is the whole URL (an incoming webhook), each only to the host the plugin's grant binds it to.
+// HTTPRequest is http.request's params. A secret is named, never given: Auth is sent in the Authorization header
+// (a bearer token, unless AuthScheme says otherwise), and URLSecret is the whole URL (an incoming webhook), each only
+// to the host the plugin's grant binds it to.
 type HTTPRequest struct {
-	Method    string            `json:"method"`
-	URL       string            `json:"url"`
-	Headers   map[string]string `json:"headers"`
-	Body      string            `json:"body"`
-	Auth      string            `json:"auth"`
-	URLSecret string            `json:"url_secret"`
-	Timeout   float64           `json:"timeout"` // seconds; 30 by default
+	Method  string            `json:"method"`
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers"`
+	Body    string            `json:"body"`
+	Auth    string            `json:"auth"`
+	// AuthScheme goes before Auth's value: "Bearer" when "", none when "none" (Linear's personal API keys).
+	AuthScheme string  `json:"auth_scheme"`
+	URLSecret  string  `json:"url_secret"`
+	Timeout    float64 `json:"timeout"` // seconds; 30 by default
 }
 
 // HTTPResponse is http.request's answer.
@@ -133,7 +136,14 @@ func Fetch(ctx context.Context, n Network, p Plugin, r HTTPRequest) (*HTTPRespon
 	}
 	if r.Auth != "" {
 		v, _ := n.Secrets().Secret(r.Auth)
-		req.Header.Set("Authorization", "Bearer "+v)
+		switch r.AuthScheme {
+		case "":
+			v = "Bearer " + v
+		case "none":
+		default:
+			v = r.AuthScheme + " " + v
+		}
+		req.Header.Set("Authorization", v)
 	}
 	c := *n.Net()
 	if len(secrets) > 0 {

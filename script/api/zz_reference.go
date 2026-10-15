@@ -39,7 +39,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.editor.presenter(spec)", Doc: "Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text."},
 	},
 	"http": {
-		{Call: "oriel.http.request(spec, fn)", Doc: "Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it as a bearer token, url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it."},
+		{Call: "oriel.http.request(spec, fn)", Doc: "Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another ('none': as it is), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it."},
 	},
 	"hud": {
 		{Call: "oriel.hud.indicator(name, opts, build)", Doc: "An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD) or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh."},
@@ -68,6 +68,9 @@ var Reference = map[string][]RefFunc{
 	},
 	"overview": {
 		{Call: "oriel.overview.add(spec)", Doc: "Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick."},
+	},
+	"picker": {
+		{Call: "oriel.picker.source(spec)", Doc: "A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item) }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background. preview returns oriel.ui nodes."},
 	},
 	"process": {
 		{Call: "oriel.process.spawn(path, opts?)", Doc: "Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop()."},
@@ -100,6 +103,9 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.thread.open(id)", Doc: "Show a request by id in the Requests view."},
 		{Call: "oriel.thread.reply(id, body, opts?)", Doc: "Reply to a request by id: opts { urgent (interrupts the agent's turn), btw (a side question, answered by a fork) }."},
 		{Call: "oriel.thread.resolve(id, status?)", Doc: "Resolve a request by id, or set its status: open, resolved, deferred or dismissed."},
+	},
+	"ticket": {
+		{Call: "oriel.ticket.source(spec)", Doc: "A tracker's tickets, for the launcher's ticket field (ui.md 04: a ticket ID expands into a card): { name, title, order (50), match = fn(key) → bool, lookup = fn(key, done) }. lookup answers with done(ticket) or done(nil, err), now or later; ticket is { key, title, url, state, state_tone, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt."},
 	},
 	"ui": {
 		{Call: "oriel.ui.button(spec)", Doc: "A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change."},
