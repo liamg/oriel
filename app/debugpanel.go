@@ -112,9 +112,9 @@ func (x *debugExt) toolbar(c *ui.Ctx) {
 			}
 		} else {
 			for _, b := range []struct{ glyph, label, cmd string }{
-				{"▶", "Continue (F5)", "debug.continue"}, {"⏸", "Pause (F6)", "debug.pause"}, {"↷", "Step over (F10)", "debug.step.over"},
+				{"▶", "Continue (F5)", "debug.continue"}, {"‖", "Pause (F6)", "debug.pause"}, {"↪", "Step over (F10)", "debug.step.over"},
 				{"↓", "Step into (F11)", "debug.step.into"}, {"↑", "Step out (⇧F11)", "debug.step.out"},
-				{"⟲", "Restart (⇧⌘F5)", "debug.restart"}, {"■", "Stop (⇧F5)", "debug.stop"},
+				{"↻", "Restart (⇧⌘F5)", "debug.restart"}, {"■", "Stop (⇧F5)", "debug.stop"},
 			} {
 				if widget.IconButton(c, b.cmd, b.glyph, widget.IconButtonOpts{Label: b.label, Help: debugHelp, Size: 22}) {
 					x.run(b.cmd, nil)

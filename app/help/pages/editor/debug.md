@@ -37,6 +37,15 @@ mode = "debug"         # anything else is the adapter's own
 While paused, the line is marked with `➜`; `F5` continues, `F10` steps over, `F11` into, `⇧F11` out, `F6` pauses,
 `⇧F5` stops and `⇧⌘F5` restarts. `]f` and `[f` move up and down the stack, and `:Dc` continues.
 
+While paused, each variable of the selected frame shows its value after the line that first names it, from the top
+of its function down to the paused line. `debug.inline_values = false` turns that off.
+
+## Debugging a test {#tests}
+
+`⇧`-click a test's `▶` in the gutter to debug just that test, subtest or table row; `␣td` debugs the test at the
+cursor, and a failure's **debug this case** debugs the failing case with a breakpoint at its assertion. Go tests run
+under delve with `-test.run` naming the case; pytest cases run under debugpy with their node id.
+
 ## The Debug panel {#panel}
 
 The panel shows the call stack (pick a frame to see its variables and its line), the breakpoints with their hit

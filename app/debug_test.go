@@ -15,10 +15,13 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-// Re-record with dlv installed: go test ./app -run 'TestDebugSession|TestAgentDebuggerTools' -dap-record
+// Re-record with dlv (and debugpy with pytest) installed: go test ./app -run 'TestDebug|TestAgentDebuggerTools' -dap-record
 var dapRecord = flag.Bool("dap-record", false, "run the debugger's tests against dlv and rewrite their recordings in testdata/dap")
 
 const debugTranscript = "testdata/dap/go.jsonl"
+
+// adapterVersions are the versions the recordings were made with.
+var adapterVersions = map[string]string{"dlv": "Delve Debugger Version: 1.27.2", "debugpy": "debugpy 1.8.22 python 3.11.2"}
 
 // debugScene is the dap module's Go fixture open in the editor, delve answering from the recorded session (or live,
 // recording it, with -dap-record).
@@ -34,11 +37,19 @@ func debugSceneWith(t *testing.T, change func(*Config)) (*errScene, string, func
 // debugSceneOn is debugSceneWith on the recording at transcript, which -dap-record rewrites.
 func debugSceneOn(t *testing.T, transcript string, change func(*Config)) (*errScene, string, func()) {
 	t.Helper()
+	s, root, finish := debugFixture(t, filepath.Join("..", "dap", "testdata", "go"), "dlv", transcript, "main.go", change)
+	return s, filepath.Join(root, "main.go"), finish
+}
+
+// debugFixture copies the project in src to a directory and opens a file of it, the adapter (a built-in's name)
+// answering from the transcript; finish checks every request had an answer (or with -dap-record, writes the
+// transcript).
+func debugFixture(t *testing.T, src, adapter, transcript, open string, change func(*Config)) (*errScene, string, func()) {
+	t.Helper()
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	src := filepath.Join("..", "dap", "testdata", "go")
 	ents, _ := os.ReadDir(src)
 	for _, e := range ents {
 		b, _ := os.ReadFile(filepath.Join(src, e.Name()))
@@ -48,13 +59,13 @@ func debugSceneOn(t *testing.T, transcript string, change func(*Config)) (*errSc
 	vars := daptest.MachineVars(root)
 	finish := func() {}
 	for _, spec := range dap.Builtins() {
-		if spec.Name != "dlv" {
+		if spec.Name != adapter {
 			continue
 		}
 		spec.Source = "test"
 		if *dapRecord {
 			if !dap.Installed(spec) {
-				t.Skip("dlv isn't installed")
+				t.Skipf("%s isn't installed", adapter)
 			}
 			rec := &daptest.Recorder{Vars: vars}
 			spec.Connect = rec.Launcher(dap.Exec)
@@ -65,7 +76,7 @@ func debugSceneOn(t *testing.T, transcript string, change func(*Config)) (*errSc
 					t.Fatal(err)
 				}
 				defer f.Close()
-				rec.Transcript(daptest.Header{Adapter: "dlv", Version: "Delve Debugger Version: 1.27.2", Cmd: spec.Cmd}).Write(f)
+				rec.Transcript(daptest.Header{Adapter: adapter, Version: adapterVersions[adapter], Cmd: spec.Cmd}).Write(f)
 			}
 		} else {
 			tr, err := daptest.Load(transcript)
@@ -82,9 +93,9 @@ func debugSceneOn(t *testing.T, transcript string, change func(*Config)) (*errSc
 		}
 		s.reg.Contribute(registry.DebugAdapter(spec))
 	}
-	s.run("editor.open", registry.Args{"path": filepath.Join(root, "main.go")})
+	s.run("editor.open", registry.Args{"path": filepath.Join(root, open)})
 	s.frame()
-	return s, filepath.Join(root, "main.go"), finish
+	return s, root, finish
 }
 
 func (s *errScene) debugger() *debugExt {

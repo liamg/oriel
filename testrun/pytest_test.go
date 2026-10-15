@@ -187,6 +187,32 @@ func TestPytestCommand(t *testing.T) {
 	}
 }
 
+// TestPytestDebugLaunch debugs one parametrized case: pytest as debugpy's module, given only that case's node id.
+//
+// ref: pytest/doc/en/explanation/goodpractices.rst
+// quote: "command line arguments can be used in any combination of directories, file names or node ids."
+func TestPytestDebugLaunch(t *testing.T) {
+	root := fixtureRoot(t, "python/basic")
+	file := filepath.Join(root, "tests", "test_calc.py")
+	cmd, err := (&Pytest{}).Command(Workspace{Root: root}, []Item{{Package: "tests/test_calc.py", Name: "test_words[two words]", File: file, Kind: KindRow}}, ModeDebug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := cmd.Launch
+	if l == nil {
+		t.Fatal("no launch for a debug run")
+	}
+	if l.Type != "python" || l.Program != "" || l.Cwd != root || l.Extra["module"] != "pytest" || l.Extra["python"] != nil {
+		t.Errorf("launch = %+v", l)
+	}
+	if want := []string{file + "::test_words[two words]"}; !slices.Equal(l.Args, want) {
+		t.Errorf("args = %q, want %q", l.Args, want)
+	}
+	if l.Name != "pytest tests/test_calc.py::test_words[two words]" {
+		t.Errorf("name = %q", l.Name)
+	}
+}
+
 // TestPytestCoverage reads pytest-cov's JSON report.
 //
 // ref: pytest-cov/docs/reporting.rst

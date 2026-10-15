@@ -116,8 +116,8 @@ func drawSign(c *ui.Ctx, h ext.Host, key any, d registry.Decoration, size float3
 		st.Tooltip = tip
 	}
 	id := c.Next(key)
-	if widget.Clickable(c, key, st, draw).Clicked && d.Command != "" {
-		if err := h.Run(context.Background(), d.Command, d.Args); err != nil {
+	if in := widget.Clickable(c, key, st, draw); in.Clicked && d.Command != "" {
+		if err := h.Run(context.Background(), signCommand(d, in.Mods), d.Args); err != nil {
 			h.Notify(core.Notice{ID: "editor.sign", Severity: core.SevWarning, Key: true, Text: err.Error()})
 		}
 	}
@@ -130,6 +130,19 @@ func drawSign(c *ui.Ctx, h ext.Host, key any, d registry.Decoration, size float3
 			c.Node(d.Hover)
 		})
 	}
+}
+
+// signCommand is what a click on a sign runs with mods held: its Modified command for them, else its Command.
+func signCommand(d registry.Decoration, mods render.Mods) string {
+	for _, m := range []struct {
+		mod  render.Mods
+		name string
+	}{{render.ModShift, "shift"}, {render.ModAlt, "alt"}, {render.ModCtrl, "ctrl"}, {render.ModSuper, "super"}} {
+		if mods&m.mod != 0 && d.Modified[m.name] != "" {
+			return d.Modified[m.name]
+		}
+	}
+	return d.Command
 }
 
 // blockPart is the part of a line's cell a lower (▁…█) or left (▉…▏) block element fills, so a run of them on
@@ -154,6 +167,14 @@ func virtualText(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration) {
 			continue
 		}
 		c.Box(fmt.Sprint("vgap", i), ui.Style{W: ui.Px(22)}, nil)
+		if d.Bg != "" {
+			fg := tokenColour(th, d.Style, th.C(theme.Accent))
+			c.Row(fmt.Sprint("vt", i), ui.Style{Pad: ui.PadXY(7, 1), Fill: tokenColour(th, d.Bg, th.C(theme.BgRaised)), Stroke: theme.WithAlpha(fg, .35),
+				Border: 1, Radius: 3, Cross: ui.Center}, func(c *ui.Ctx) {
+				c.Text("t", d.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11.5}, Color: fg})
+			})
+			continue
+		}
 		c.Text(fmt.Sprint("vt", i), d.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Italic: true},
 			Color: tokenColour(th, d.Style, th.C(theme.FgGhost))})
 	}

@@ -80,7 +80,7 @@ func (a *APIs) viewCtx(vc registry.ViewCtx) script.Table {
 //oriel:api name=decor cap=ui
 type Decor struct{ a *APIs }
 
-//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text } (1-based lines)."
+//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour)."
 func (d Decor) Provider(name string, fn *script.Fn) error {
 	d.a.own(d.a.Host.Decorations(name, registry.DecorationFunc(func(ctx registry.DecorationCtx) []registry.Decoration {
 		out, err := d.a.VM.Call(fn, ctx.Name, ctx.Top+1, ctx.Bottom+1)
@@ -103,7 +103,7 @@ func (d Decor) Provider(name string, fn *script.Fn) error {
 				ds = append(ds, registry.Decoration{Kind: registry.Sign, Line: int(line) - 1, Text: s, Style: str(t, "hl")})
 			}
 			if s := str(t, "text"); s != "" {
-				ds = append(ds, registry.Decoration{Kind: registry.VirtualText, Line: int(line) - 1, Text: s, Style: str(t, "hl")})
+				ds = append(ds, registry.Decoration{Kind: registry.VirtualText, Line: int(line) - 1, Text: s, Style: str(t, "hl"), Bg: str(t, "bg")})
 			}
 		}
 		return ds

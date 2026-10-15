@@ -31,7 +31,7 @@ Version 0.4.0.
 
 ## oriel.decor
 
-- `oriel.decor.provider(name, fn)` (`ui`): Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text } (1-based lines).
+- `oriel.decor.provider(name, fn)` (`ui`): Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour).
 
 ## oriel.diagnostics
 

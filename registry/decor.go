@@ -38,11 +38,16 @@ type Decoration struct {
 	// Command, for a Sign, runs with Args when the sign is clicked: a test's ▶, a breakpoint.
 	Command string
 	Args    Args
-	Tooltip string
+	// Modified are the commands a Sign's click runs instead with a modifier held, by its name ("shift", "alt",
+	// "ctrl", "super"), with Args: ⇧ on a test's ▶ debugs it.
+	Modified map[string]string
+	Tooltip  string
 	// Icon draws a Sign as a built-in icon ("comment"), Text beside it small: a count.
 	Icon string
 	// Hover, for a Sign, is a card shown while the pointer is on the sign or the card; it never takes focus.
 	Hover ui.Node
+	// Bg, for VirtualText, is a theme token it's drawn on, as a chip: a debugger's inline values.
+	Bg string
 	// Was, for a LineBg on a changed line, is what the line read before, for a presenter that shows the change.
 	Was string
 }

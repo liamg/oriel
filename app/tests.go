@@ -118,6 +118,8 @@ func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
 			return nil
 		}},
 		{ID: "test.next_failure", Title: "Go to the next failure", Run: func(registry.Ctx, registry.Args) error { return x.nextFailure() }},
+		{ID: "debug.test", Title: "Debug a test: {key} as found in {file}, as ⇧ on the gutter's ▶ does; {line} sets a breakpoint to stop at",
+			Available: func(registry.Args) bool { return h.Available("debug.launch", nil) }, Run: x.debugTest},
 		{ID: "test.debug.nearest", Title: "Debug the test at the cursor", Available: func(registry.Args) bool { return h.Available("debug.test", nil) },
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				it, ok := x.nearest()
@@ -318,7 +320,8 @@ func (x *testsExt) decorations(ctx registry.DecorationCtx) []registry.Decoration
 			}
 		}
 		out = append(out, registry.Decoration{Kind: registry.Sign, Line: it.Line, Text: "▶", Style: style, Command: "test.run",
-			Args: registry.Args{"key": it.Key(), "file": ctx.Path}, Tooltip: "Run " + it.Name, Priority: 20})
+			Modified: map[string]string{"shift": "debug.test"}, Args: registry.Args{"key": it.Key(), "file": ctx.Path},
+			Tooltip: "Run " + it.Name + " · ⇧ debug", Priority: 20})
 		if note != "" {
 			out = append(out, registry.Decoration{Kind: registry.VirtualText, Line: it.Line, Text: note, Style: style, Priority: 20})
 		}

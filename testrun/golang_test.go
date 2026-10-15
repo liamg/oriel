@@ -291,6 +291,37 @@ func TestGoCommand(t *testing.T) {
 	}
 }
 
+// TestGoDebugLaunch debugs one table row: delve's test mode on its package, the test binary told to run only it.
+//
+// ref: go/help-testflag.txt
+// quote: "Each of these flags is also recognized with an optional 'test.' prefix,"
+func TestGoDebugLaunch(t *testing.T) {
+	root := fixtureRoot(t, "go/basic")
+	calc := filepath.Join(root, "calc", "calc_test.go")
+	cmd, err := (&Go{}).Command(Workspace{Root: root}, []Item{{Name: "TestTable/a+b", File: calc, Kind: KindRow}}, ModeDebug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := cmd.Launch
+	if l == nil {
+		t.Fatal("no launch for a debug run")
+	}
+	dir := filepath.Join(root, "calc")
+	if l.Type != "go" || l.Program != dir || l.Cwd != dir || l.Extra["mode"] != "test" {
+		t.Errorf("launch = %+v", l)
+	}
+	if want := []string{"-test.v", "-test.run", `^TestTable$/^a\+b$`}; !slices.Equal(l.Args, want) {
+		t.Errorf("args = %q, want %q", l.Args, want)
+	}
+	if l.Name != "go test -run TestTable/a+b" {
+		t.Errorf("name = %q", l.Name)
+	}
+	if _, err := (&Go{}).Command(Workspace{Root: root}, []Item{{Name: "TestA", File: calc}, {Name: "TestB", File: filepath.Join(root, "panics", "x_test.go")}},
+		ModeDebug); err == nil {
+		t.Error("two packages can't be debugged in one session")
+	}
+}
+
 // TestGoCoverage reads the recorded -coverprofile into lines per file.
 //
 // ref: go/src/cmd/vendor/golang.org/x/tools/cover/profile.go#ParseProfilesFromReader

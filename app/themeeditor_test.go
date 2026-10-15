@@ -58,12 +58,15 @@ func (s *errScene) access(label string) *render.AccessNode {
 	return n
 }
 
-func (s *errScene) click(p render.Point) {
+func (s *errScene) click(p render.Point) { s.clickWith(p, 0) }
+
+// clickWith clicks at p with modifier keys held.
+func (s *errScene) clickWith(p render.Point, mods render.Mods) {
 	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
 	s.frame()
-	s.ui.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonPrimary})
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonPrimary, Mods: mods})
 	s.frame()
-	s.ui.Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonPrimary})
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonPrimary, Mods: mods})
 	s.frame()
 }
 

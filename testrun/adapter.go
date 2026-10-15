@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/text"
@@ -132,6 +133,18 @@ type Cmd struct {
 	Files     map[string][]byte // name in the run's directory → content
 	CoverFile string            // the coverage file a Coverage run writes, in the run's directory
 	Stderr    bool              // Parse reads stderr too, merged with stdout
+	Launch    *Launch           // a ModeDebug run: how a debug adapter launches it, Args being its command-line equivalent
+}
+
+// Launch is a debug adapter's launch of a ModeDebug run: the fields of a launch config (.oriel/debug.toml's).
+type Launch struct {
+	Name    string // the session's name: "go test -run TestX/case"
+	Type    string // the debug adapter's type: go, python
+	Program string
+	Args    []string
+	Cwd     string
+	Env     map[string]string
+	Extra   map[string]any // the adapter's own arguments: delve's mode, debugpy's module
 }
 
 // ErrUnsupported is returned by Command for a mode the adapter can't run.
@@ -139,3 +152,14 @@ var ErrUnsupported = errors.New("testrun: mode not supported by this adapter")
 
 // RunDir is how a Cmd names the directory the runner makes for it.
 const RunDir = "${ORIEL_TESTRUN_DIR}"
+
+// envMap is KEY=value entries as a map.
+func envMap(env []string) map[string]string {
+	out := map[string]string{}
+	for _, e := range env {
+		if k, v, ok := strings.Cut(e, "="); ok {
+			out[k] = v
+		}
+	}
+	return out
+}

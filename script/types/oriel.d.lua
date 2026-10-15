@@ -132,7 +132,7 @@ function oriel.coverage.set(owner, file, hits) end
 ---@class oriel.decor
 oriel.decor = {}
 
---- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text } (1-based lines).
+--- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour).
 ---@param name string
 ---@param fn function
 function oriel.decor.provider(name, fn) end

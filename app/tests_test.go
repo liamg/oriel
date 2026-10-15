@@ -155,22 +155,25 @@ func TestTestGutter(t *testing.T) {
 // wantSignBesideNumber checks the sign drawn on the row numbered num starts after the number ends.
 func (s *errScene) wantSignBesideNumber(t *testing.T, num, sign string) {
 	t.Helper()
-	var n, g *render.Op
+	n, g := s.signOnRow(t, num, sign)
+	if end := n.At.X + n.Run.Advance; g.At.X < end {
+		t.Errorf("the sign at x=%.1f covers the number, which ends at x=%.1f", g.At.X, end)
+	}
+}
+
+// signOnRow is the line number num drawn in the gutter and the sign drawn on its row.
+func (s *errScene) signOnRow(t *testing.T, num, sign string) (n, g *render.Op) {
+	t.Helper()
 	for i, op := range s.list.Ops {
 		if op.Kind == render.OpGlyphs && op.Run.Text == num {
 			n = &s.list.Ops[i]
 		}
 		if op.Kind == render.OpGlyphs && op.Run.Text == sign && n != nil && op.At.Y > n.At.Y-8 && op.At.Y < n.At.Y+8 {
-			g = &s.list.Ops[i]
-			break
+			return n, &s.list.Ops[i]
 		}
 	}
-	if n == nil || g == nil {
-		t.Fatalf("no %q and %q on one row", num, sign)
-	}
-	if end := n.At.X + n.Run.Advance; g.At.X < end {
-		t.Errorf("the sign at x=%.1f covers the number, which ends at x=%.1f", g.At.X, end)
-	}
+	t.Fatalf("no %q and %q on one row", num, sign)
+	return nil, nil
 }
 
 // TR-1: ␣tt runs the nearest test; it shows ✓ and its duration on its line, and the status line counts it.

@@ -629,8 +629,9 @@ type DecorationProvider interface {
 }
 
 // Decoration{Kind, Line or Anchor, From/To, Style, Edge, Text, Node, Priority}. Kinds: Sign (gutter), LineBg
-// (with a gutter Edge), Highlight and Underline (byte columns), VirtualText (after the line), Block (a ui.Node
-// between this line and the next). An Anchor the provider made on the Buffer moves with edits, so a block
+// (with a gutter Edge), Highlight and Underline (byte columns), VirtualText (after the line; with a Bg token, drawn
+// as a chip), Block (a ui.Node between this line and the next). A Sign with a Command runs it when clicked, or the
+// one Modified names for a modifier held ({"shift": "debug.test"} on a test's ▶). An Anchor the provider made on the Buffer moves with edits, so a block
 // stays with its text. Providers run under the guard; one that panics is turned off (KindDecoration).
 ```
 
@@ -724,6 +725,11 @@ type Host interface {
   listed by `registry.DebugAdapters(r)`; a later one of a name shadows the built-in (`dap.Builtins()`: dlv, debugpy),
   and a config's type picks the first installed by `Order`. Hook events `DebugStopped` and `DebugEnded`
   (ide.md, "As built (DB-1)").
+- Debugging from anywhere (DB-2): the command `debug.launch` takes a launch config whole, as a `.oriel/debug.toml`
+  table (`name`, `type`, `request`, `program`, `args`, `cwd`, `env`, `pid`, and the adapter's own keys), and starts
+  it on the first installed adapter for its type. A test adapter's `ModeDebug` command carries a `testrun.Launch` (the
+  same fields) in `Cmd.Launch`; `debug.test {key, file, line}` launches it, so a plugin's test adapter gets "debug this
+  case" by filling it in. `debug.breakpoint.set` takes `keep` to leave a breakpoint already on the line alone.
 - Gutter actions (DB-1): `registry.GutterAction{Name, Command, Args, When(path), Order}` (kind `editor.gutter`); a
   click on an editor's line numbers runs the lowest-order one that applies to the file, with `{file, line}` (1-based)
   added to its args. The debugger's breakpoint toggle is one.

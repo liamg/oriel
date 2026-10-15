@@ -171,8 +171,37 @@ below.
   drives the same through the gutter, keys and the panel on its own recording (`-dap-record`).
 - Not yet: breakpoints that move with edits (they stay on their line numbers), function, exception-option and data
   breakpoints in the UI, setting a variable, threads other than the stopped one in the panel, attach by picking a
-  process, a Lua binding for `dap.adapter`, running adapters on the worker, inline values (DB-2), the agent's tools
-  and the frame thread (DB-3).
+  process, a Lua binding for `dap.adapter`, running adapters on the worker, the agent's tools and the frame thread
+  (DB-3).
+
+### As built (DB-2)
+
+- **Inline values.** Paused, the selected frame's arguments and locals (every scope but expensive ones, registers
+  and globals; names that can't be written in code, like delve's `~r0`, left out) show as chips after the lines that
+  name them: each variable once, where it's first named, from the first line of the innermost function, method or
+  closure around the frame's line (the language's `units` query) down to that line. A line names a variable where the
+  syntax highlights it as `@variable` or `@variable.parameter`; with no grammar, any identifier not after a `.`, over
+  the 30 lines above. A value is cut at 40 characters (the Variables panel has it whole). Selecting another frame
+  shows its values; they go when the debuggee runs on or the session ends. `debug.inline_values` (true) turns them
+  off. They're `VirtualText` decorations with the new `Decoration.Bg`, which draws virtual text as a chip (tokens
+  `debug.value`, `debug.value.bg`; Lua's `decor.provider` takes `bg`).
+- **Debug a single test case.** `testrun.Cmd` has a `Launch` (name, type, program, args, cwd, env, the adapter's
+  own keys) for `ModeDebug`. Go: delve's `mode: test` on the item's package, the binary given
+  `-test.v -test.run <pattern>` (the run pattern, so a subtest or table row runs alone), named `go test -run
+  TestX/row`; more than one package is `ErrUnsupported`. pytest: debugpy with `module: pytest` and the node ids
+  (`python` set when the project has a venv), named `pytest <file>::<id>`. vitest, jest and cargo still return
+  `ErrUnsupported`. The app's `debug.test {key, file, line}` (registered by the tests built-in, available while
+  `debug.launch` is) finds the item, asks its adapter, sets a breakpoint at `line` unless one is there, and runs the
+  new `debug.launch` (a launch config given whole). Entry points: ⇧-click on any ▶ in the gutter (`Decoration.Modified`,
+  a sign's commands by modifier), `␣td` (nearest) and the failure block's **debug this case**, which stops at the
+  assertion. A debug launch isn't a test run: nothing is added to the Tests panel's history.
+- **Tests.** `TestGoDebugLaunch`/`TestPytestDebugLaunch` check the launches. The app's `TestDebugTestCase` (⇧ on a Go
+  table row's ▶, inline values in two frames, the option, the `debug` snapshot against 08-debug),
+  `TestDebugFailingCase` (a real `go test`, then the failure block's button) and `TestDebugPytestCase` (⇧ on a
+  `pytest.param` id) replay recordings of delve 1.27.2 and debugpy 1.8.22 with pytest 9.1.1 (`-dap-record` re-records;
+  pytest's own frames in the Python one are written as `/usr/lib/python3/dist-packages`).
+- Not yet: the frame thread of 08 (see DB-3); values that changed since the last stop marked; inline values from an
+  LSP server's `textDocument/inlineValue`; debugging vitest, jest and cargo tests.
 
 ### As built (DB-3)
 
@@ -296,7 +325,8 @@ results, failure block and tests panel are still to build on it.
   - Rust: `cargo nextest run --message-format libtest-json-plus` (the `-plus` form names each suite's target) with
     `NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1` and an `-E` filterset when nextest is installed, otherwise `cargo test` with
     stderr merged (`Cmd.Stderr`) for its "Running …" lines.
-  - Debug: Go returns `dlv test`, pytest `debugpy`; DB-2 wires them to DAP. The others return `ErrUnsupported`.
+  - Debug: Go returns `dlv test`, pytest `debugpy`, each with its DAP launch in `Cmd.Launch` ("As built (DB-2)"). The
+    others return `ErrUnsupported`.
 - **Events.** `Started`, `Output` (a raw line), `Passed`, `Failed{Failure{Reason, Message, Want, Got, Loc}}`, `Skipped`
   (with the reason), `BuildFailed`, each with `Elapsed`; an empty `Test` is the package's own. Reasons: assert, panic,
   timeout, build, error (pytest setup or teardown). Want and got are best effort from Go's `got X, want Y` shapes,
@@ -330,7 +360,7 @@ results, failure block and tests panel are still to build on it.
   (the differing middle marked), output and four actions.
 - Explain and fix go through extension points so they work the moment the agent exists: explain asks the first
   `registry.Explainer` (it answers text only, so explaining can't change a file), fix runs `agent.fix` (TR-6), debug runs
-  `debug.test` (DB-2); each is dimmed while nothing provides it.
+  `debug.test` (DB-2, "As built (DB-2)"); each is dimmed while nothing provides it.
 - Run scopes: `␣tt` nearest, `␣tf` file, `␣tp` package, `␣ta` all, `␣tF` failed, `␣tl` last, `]t` next failure; the
   file buttons over the editor are `registry.EditorAction`s. A run's `Change` is `testrun.Fingerprint` (paths, sizes,
   times), so flaky detection needs no git. History (20 runs) persists per work dir in the state directory.
@@ -339,7 +369,7 @@ results, failure block and tests panel are still to build on it.
   The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.indicator` for the HUD (SH-8).
 - Watch (TR-4) is a `BufWritePost` hook running `Set.Affected`; coverage (`␣tc`) marks covered and uncovered lines with
   gutter edges until toggled off.
-- Not yet: running in the worker's sandbox (AI-1), debug (DB-2).
+- Not yet: running in the worker's sandbox (AI-1).
 
 ### As built (TR-5)
 

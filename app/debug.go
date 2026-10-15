@@ -148,7 +148,8 @@ type debugExt struct {
 	busy    sync.WaitGroup
 	mu      sync.Mutex // guards sess.client for the goroutines that use it
 
-	panel debugPanel
+	panel  debugPanel
+	inline *inlineCache
 }
 
 func (x *debugExt) Manifest() ext.Manifest { return ext.Manifest{ID: "debug"} }
@@ -161,6 +162,8 @@ func (x *debugExt) Activate(_ context.Context, h ext.Host) error {
 		x.add(h.Contribute(registry.DebugAdapter(s)))
 	}
 	x.add(h.Decorations("debug", registry.DecorationFunc(x.decorations)))
+	x.add(h.Option(registry.OptionSpec{Name: InlineValuesOption, Section: "editor", Type: registry.Bool, Default: true,
+		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "While the debugger is paused, show the frame's variables after the lines that name them."}))
 	x.add(h.Contribute(registry.GutterAction{Name: "debug.breakpoint", Command: "debug.breakpoint.toggle", Order: 50, When: x.debuggable,
 		Source: "builtin:debug"}))
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "DebugStopped", Fired: true, Payload: DebugStopped{},
@@ -201,6 +204,8 @@ func (x *debugExt) commands(h ext.Host) {
 	for _, c := range []registry.Command{
 		{ID: "debug.start", Title: "Start debugging: the launch config {config} by name, else the first in .oriel/debug.toml, else one for the current file",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.startNamed(a.String("config")) }},
+		{ID: "debug.launch", Title: "Start debugging a launch config given whole: {name, type, request, program, args, cwd, env, pid} and the adapter's own keys, as in .oriel/debug.toml",
+			Run: func(_ registry.Ctx, a registry.Args) error { return x.launch(a) }},
 		{ID: "Debug", Title: "Start debugging; :Debug {config}", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.startNamed(strings.TrimSpace(a.String("args")))
 		}},
@@ -238,11 +243,14 @@ func (x *debugExt) commands(h ext.Host) {
 				x.toggle(file, line)
 				return nil
 			}},
-		{ID: "debug.breakpoint.set", Title: "Set a breakpoint at {file}:{line} (the cursor's by default) with a {condition}, {hit} condition or {log} message",
+		{ID: "debug.breakpoint.set", Title: "Set a breakpoint at {file}:{line} (the cursor's by default) with a {condition}, {hit} condition or {log} message; {keep} leaves one already there as it is",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				file, line, err := x.place(a)
 				if err != nil {
 					return err
+				}
+				if a.Bool("keep") && x.find(file, line) >= 0 {
+					return nil
 				}
 				x.set(file, debugBreakpoint{Line: line, Condition: a.String("condition"), HitCondition: a.String("hit"), LogMessage: a.String("log")})
 				return nil
@@ -584,6 +592,20 @@ func (x *debugExt) startNamed(name string) error {
 		}
 		cfg = c
 	}
+	return x.startConfig(cfg)
+}
+
+// launch starts the launch config args spell out, on the first installed adapter for its type.
+func (x *debugExt) launch(a registry.Args) error {
+	cfg, err := dap.ConfigFromMap(map[string]any(a), x.sh.editor.dir)
+	if err != nil {
+		return err
+	}
+	return x.startConfig(cfg)
+}
+
+// startConfig starts cfg on the first installed adapter for its type, ending the session running first.
+func (x *debugExt) startConfig(cfg dap.LaunchConfig) error {
 	spec, err := x.adapterFor(cfg)
 	if err != nil {
 		return err
@@ -996,7 +1018,7 @@ func (x *debugExt) decorations(ctx registry.DecorationCtx) []registry.Decoration
 			registry.Decoration{Kind: registry.Sign, Line: f.Line, Text: "➜", Style: "debug.frame", Priority: 40},
 			registry.Decoration{Kind: registry.LineBg, Line: f.Line, Style: "debug.frame.bg", Edge: "debug.frame", Priority: 40})
 	}
-	return out
+	return append(out, x.inlineValues(ctx)...)
 }
 
 // counts is "3 breakpoints · 1 conditional · 1 logpoint", for the status line.
