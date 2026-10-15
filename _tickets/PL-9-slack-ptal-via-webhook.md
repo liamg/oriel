@@ -2,7 +2,7 @@
 id: PL-9
 title: "Slack PTAL via webhook"
 phase: P7
-status: review
+status: done
 area: Platform
 module: integ/slack (plugin)
 depends_on: [PL-2]

@@ -2,7 +2,7 @@
 id: PL-6
 title: "Self-update for the app and workers (self-signed, ed25519)"
 phase: P7
-status: review
+status: done
 area: Platform
 module: update
 depends_on: [AI-1]

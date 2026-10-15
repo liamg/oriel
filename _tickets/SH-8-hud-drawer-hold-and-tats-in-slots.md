@@ -2,7 +2,7 @@
 id: SH-8
 title: "HUD drawer (hold ⌥) and indicators in slots"
 phase: P7
-status: review
+status: done
 area: Shell and navigation
 module: app, hud
 depends_on: [FW-6, FW-2]

@@ -2,7 +2,7 @@
 id: PL-4
 title: "Comms assistant drawer (utility session, no -p)"
 phase: P7
-status: review
+status: done
 area: Platform
 module: assistant
 depends_on: [AI-2]

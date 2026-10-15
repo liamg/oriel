@@ -2,7 +2,7 @@
 id: DB-2
 title: "Inline values while stopped; debug a single test case"
 phase: P7
-status: review
+status: done
 area: LSP, tests, debugging
 module: dap, testrun
 depends_on: [DB-1, TR-1]

@@ -2,7 +2,7 @@
 id: PL-8
 title: "Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source"
 phase: P7
-status: review
+status: done
 area: Platform
 module: integ/linear (plugin)
 depends_on: [PL-2, SE-1]

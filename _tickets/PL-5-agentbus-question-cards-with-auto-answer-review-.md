@@ -2,7 +2,7 @@
 id: PL-5
 title: "agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process)"
 phase: P7
-status: review
+status: done
 area: Platform
 module: github.com/liamg/oriel-agentbus
 depends_on: [AI-1]
