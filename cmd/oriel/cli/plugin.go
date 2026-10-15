@@ -12,18 +12,23 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/catalog"
+	"github.com/liamg/oriel/catalog/registrycmd"
 )
 
-const pluginUsage = `oriel plugin pack [DIR]                  check the plugin in DIR (here by default) and build its release archives
+const pluginUsage = `oriel plugin pack [-o OUT] [DIR]          check the plugin in DIR (here by default) and build its release archives
                                          into DIR/dist, printing their sha256s
 oriel plugin init [--process] [--id OWNER/NAME] [DIR]
                                          start a plugin: oriel.toml and init.lua, and with --process a Go command
-                                         under cmd/ that init.lua spawns`
+                                         under cmd/ that init.lua spawns
+` + registrycmd.Usage
 
 // runPlugin is `oriel plugin …` (catalog.md, Publishing).
 func runPlugin(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		return fmt.Errorf("usage:\n%s", pluginUsage)
+	}
+	if args[0] == "registry" {
+		return registrycmd.Run(args[1:], stdout, stderr)
 	}
 	fs := flag.NewFlagSet("oriel plugin "+args[0], flag.ContinueOnError)
 	fs.SetOutput(stderr)

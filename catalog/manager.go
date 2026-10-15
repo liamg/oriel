@@ -181,6 +181,9 @@ func (m *Manager) resolve(ctx context.Context, lock *Lock, e Entry) Status {
 	if man.ID != e.ID {
 		return fail(fmt.Errorf("%s is %s, not %s", st.Dir, man.ID, e.ID))
 	}
+	if e.Git != "" && len(man.Binaries) > 0 {
+		return fail(fmt.Errorf("%s ships process binaries, which come from a registry's release archives: install it from a registry, or from a path where you've built it", e.ID))
+	}
 	if e.Lazy != nil {
 		man.Lazy = *e.Lazy
 	}

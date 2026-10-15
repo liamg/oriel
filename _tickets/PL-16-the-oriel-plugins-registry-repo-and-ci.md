@@ -2,7 +2,7 @@
 id: PL-16
 title: "The liamg/oriel-plugins registry repo and its CI"
 phase: P8
-status: todo
+status: review
 area: Platform
 module: tools (repo)
 depends_on: [PL-19]

@@ -368,6 +368,43 @@ sequenceDiagram
   - Workers getting a plugin's archive over wire.
   - The audit log the consent footer mentions.
 
+## As built (PL-16)
+
+- **`liamg/oriel-plugins`** holds `plugins/<owner>/<name>/plugin.toml` (`catalog.ParseListing`, `ReadListings`), a
+  README for authors, and two workflows:
+  - `pr.yml` runs `oriel-registry check` and comments. It's `pull_request_target`, so a fork's PR gets the secrets.
+    The PR's checkout is only read as data.
+  - `index.yml` runs `oriel-registry index` on each merge to `main`, then releases `index.json` and `index.sig` as
+    `index-<time>-<sha>`.
+  - Both build `catalog/cmd/oriel-registry` from an Oriel checkout, read with the `ORIEL_READ_TOKEN` secret. It's
+    `oriel plugin registry` (`catalog/registrycmd`) alone, built without cgo, so CI doesn't build the app.
+  - The signing key is the `ORIEL_REGISTRY_KEY` secret: an ed25519 seed in hex, from `oriel plugin registry keygen`.
+- **It's seeded with nothing yet.** Neither first-party plugin has `oriel.toml` at the root of a repo of its own:
+  agentbus is under `plugin/` in `liamg/oriel-agentbus`, and Linear is in Oriel's tree. They're listed once they do.
+- **`catalog.PRCheck`** checks every `plugin.toml` the PR adds or changes against the base. Its GitHub access (`Fetch`,
+  `Tag`, `Asset`, `Org`) can be replaced, so tests use local repositories.
+  - Owner: the path's owner is `repo`'s owner, and the author is that owner or a member of the org
+    (`GitHub.Member`).
+  - Revoking a version while `trusted` stays is a problem.
+  - For each new reviewed version:
+    - the tag `v<version>` (or `<version>`) points at the commit;
+    - the manifest's id and version match;
+    - `Pack` passes at the commit;
+    - every platform in `binaries` has an archive. A Go plugin must be `built = "ci"` and its rebuild must match.
+      Any other must be `built = "author"`, and its release asset must match;
+    - `go.mod`'s requires are checked against `deps/allow.txt` (`tools/depcheck`). Ones outside it are listed, not
+      failed.
+  - The comment, for each version:
+    - the capability diff since the newest reviewed version before it (`plugin.Ask`): new and wider grants marked,
+      dropped ones struck;
+    - a `gate` warning;
+    - the compare link (or the tree, for a new plugin);
+    - a table of the checks, sizes and deps.
+  - It then notes trust given or taken, revocations and yanks, then the problems.
+- **The index** (`catalog.Index{Registry, Built, Plugins}`) is every listing as JSON. `SignIndex` and `VerifyIndex` sign
+  and check its exact bytes with ed25519, and nothing in an unverified index is read. Keys are written
+  `ed25519:<hex>` (`ParseKey`, `FormatKey`).
+
 ## Tickets
 
 - PL-19 package format, `oriel.process` / `oriel.wasm` / `oriel.asset`, `oriel plugin pack`
