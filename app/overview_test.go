@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/tools/perf"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -184,6 +185,7 @@ func TestOverviewPluginPanelAndReturn(t *testing.T) {
 
 // FG-7: on a 100k-file repo the overview shows at once, and frames stay under a frame's budget while it counts.
 func TestOverviewBigRepoBudget(t *testing.T) {
+	perf.Timed(t)
 	if testing.Short() {
 		t.Skip("makes 100,000 files")
 	}

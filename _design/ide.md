@@ -457,7 +457,7 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 - **Parse throughput.** On a mixed stream (logs, test results, coloured `ls`, `git log`, compiler errors; 14 escapes
   per KB) the native core parses about 260 MB/s, within the 200 MB/s budget. Wasm parses about 80 MB/s, about 3.5×
   slower: Ghostty's SIMD paths are C++ (highway, simdutf) and off for freestanding wasm, and wazero checks bounds
-  explicitly. That is still far above what a PTY delivers. `TestParseThroughput` holds native to the budget and
+  explicitly. That is still far above what a PTY delivers. `TestParseThroughputBudget` holds native to the budget and
   wasm to 40 MB/s.
 - `term/ghostty` hides the two behind a `machine` (the shim's calls and its in/out buffers): `cgo.go` calls the
   shim compiled with the library (`shim_native.c`), `wazero.go` the wasm module. `Options.Backend` picks one; the

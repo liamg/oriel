@@ -91,7 +91,7 @@ flowchart LR
 | `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. Superseded by `render/gio`; kept for its report | gioui.org |
 | `toml` | TOML 1.0 parser and round-tripping editor, for settings and themes (`settings.md`) | – |
 | `theme` | theme files, colour maths (CSS Color 4, OkLCh) and token resolution into a flat table (`theming.md`) | toml |
-| `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck` | – |
+| `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck`; `tools/perf` (the timing budgets' `perf.Timed`) | – |
 
 Rules:
 

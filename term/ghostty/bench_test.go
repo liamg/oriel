@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/tools/perf"
 )
 
 // mixedStream is terminal output as a session produces it: log lines, test results, coloured ls, git log and compiler
@@ -64,7 +66,8 @@ const budget = 200e6
 // 80 MB/s of this stream, under budget, a deviation accepted in FG-4 for builds that can't link the native core.
 const wasmFloor = 40e6
 
-func TestParseThroughput(t *testing.T) {
+func TestParseThroughputBudget(t *testing.T) {
+	perf.Timed(t)
 	if testing.Short() || raceEnabled {
 		t.Skip("throughput isn't measured with -short or -race")
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/tools/perf"
 )
 
 func paintOps(u *UI, size render.Point, build func(c *Ctx)) []render.Op {
@@ -154,6 +155,7 @@ func TestListBuildsOnlyVisibleRows(t *testing.T) {
 // A 10k-row list scrolled a row per frame must build, lay out and paint well inside the 4 ms frame
 // budget at 120 Hz (rendering.md).
 func TestListScrollBudget(t *testing.T) {
+	perf.Timed(t)
 	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
 		t.Skip("timing under -race, -short or -cover means nothing")
 	}

@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/text"
+	"github.com/liamg/oriel/tools/perf"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden highlight snapshots")
@@ -208,10 +209,11 @@ func TestIncrementalMatchesFullParse(t *testing.T) {
 	}
 }
 
-// TestIncrementalReparseUnderOneMillisecond is the ticket's budget: typing a character into an identifier
+// TestIncrementalReparseBudget is the ticket's budget: typing a character into an identifier
 // in a 600-line Go file reparses in under 1 ms (the median of 50 edits, the best of a few rounds). Bigger files parse off the
 // keystroke path, in a Document (TestDocumentNeverBlocksTyping).
-func TestIncrementalReparseUnderOneMillisecond(t *testing.T) {
+func TestIncrementalReparseBudget(t *testing.T) {
+	perf.Timed(t)
 	if testing.Short() || raceEnabled {
 		t.Skip("timing budget: not under -short or -race")
 	}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/tools/perf"
 )
 
 type clock struct{ t time.Time }
@@ -250,6 +251,7 @@ func TestSprings(t *testing.T) {
 
 // 200 hover targets under a moving pointer: a frame with input still fits the 4 ms budget at 120 Hz.
 func TestHoverTargetsBudget(t *testing.T) {
+	perf.Timed(t)
 	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
 		t.Skip("timing under -race, -short or -cover means nothing")
 	}

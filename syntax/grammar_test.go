@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/tools/perf"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
@@ -67,7 +68,8 @@ func TestCoreSetSize(t *testing.T) {
 
 // ED-11: "Opening a file in an already-compiled language is under 20 ms from cache": a runtime that finds the
 // compiled grammar on disk compiles, instantiates and parses a fixture in that.
-func TestCompiledFromCache(t *testing.T) {
+func TestCompiledFromCacheBudget(t *testing.T) {
+	perf.Timed(t)
 	dir := t.TempDir()
 	l, _ := Builtin().Language("go")
 	wasm, _, err := l.load()
