@@ -646,6 +646,40 @@ type Host interface {
 - Process extensions see it as JSON-RPC methods. WASM sees it as host functions.
   One declaration, three bindings.
 
+## As built (PL-2)
+
+- `ext.Manifest` is `oriel.toml` (`ext.ParseManifest`, `LoadManifest`): id, version, oriel, description, license,
+  icon, runs, lazy, binaries and `[permissions]` as `[]ext.Grant{Cap, Scope, Why}`, in security.md's forms and
+  plugins.md's short one (`net = ["api.linear.app"]`); a dotted key (`fs.read = …`) works unquoted. An unknown
+  capability, or a scoped one (net, fs, exec, secrets, agent.tools) with no scope, is an error.
+- `ext.Plugin{ID, Dir, Guard}` is a plugin as the hosts see it: `Dir` holds its own files (`Path`, `Own`, symlinks
+  followed), and a nil `Guard` is your own config, trusted. `ext.Methods` are host functions called by name with JSON
+  params (`Method{Name, Cap, Target, Run}`; a later one shadows until disposed), each checked by the guard before it
+  runs; `ext.HostMethods` has `log`, `notify`, `fs.read {path}` and `fs.write {path, data}`. A refused call is a
+  JSON-RPC error with `ext.CodeNotDeclared` (-32001).
+- `ext.Processes.Spawn(plugin, name, SpawnOpts{Args, Dir, Env, Request, Notify, Exit, Stderr})` starts a process
+  plugin: JSON-RPC 2.0 over stdio, one message a line (`agent/jsonrpc`). Its requests and notifications go to the
+  plugin's own handlers first, then to the host methods. Its stderr goes to `logs.Lines` under `plugin:<id>`
+  (`ext.Logger`). A plugin's process runs in `ext/ossandbox` (`ext.ProfileFor`: its directory, its fs grants, its
+  exec programs, its net hosts' ports), with a PATH, its own temp dir as HOME and TMPDIR and the locale for an
+  environment; your config's runs as you. `Process.Call`, `Notify`, `Pid`, `Done`, `Err`, `Stop` (stdin closed,
+  then killed after `StopAfter`); `Processes.List`, `Close`.
+- `ext.WASM.Load(ctx, plugin, name, WASMOpts{Request})` runs a module in wazero (64 MiB at most, stopped with its
+  context), with WASI holding no files, environment or sockets (stdout and stderr to the plugin's log) and the host
+  module `oriel`: `request(method_ptr, method_len, params_ptr, params_len) i64`, `notify(…)` and `log(level, ptr,
+  len)`. Data crosses through the module's exported `oriel_alloc(len) ptr`; a JSON function takes `(ptr, len)` and
+  returns `ptr << 32 | len` of a JSON-RPC response body (`{"result": …}` or `{"error": …}`), both ways.
+  `Module.Call` (numbers), `Request` (JSON), `Exports`, `Close`. `ext/exttest.Module()` is a hand-assembled module
+  for tests.
+- Native plugins: a package's `init` calls `ext.Register(e)`; `ext.Native()` lists them, `cmd/oriel` activates them
+  after the built-ins and `oriel version` names them. `oriel build --with PKG[@VERSION][=DIR] [--oriel VERSION|DIR]
+  [-o FILE] [-tags …]` (`ext/nativebuild`) writes a module whose main imports each package and runs
+  `cmd/oriel/cli.Main` (the command's body, importable for this), replaces what comes from directories (a checkout's
+  go.work modules all), and runs `go get`, `go mod tidy` and `go build -trimpath`.
+- Not yet: the plugin manager's loading of installed plugins and `:Plugins` (PL-19, PL-20), process plugins' JSON
+  views, `http` and secrets as host methods (AI-7), a `--oriel VERSION` base (oriel's modules don't require one
+  another at versions yet: build from a checkout), and offering to rebuild when the native list changes.
+
 ## Performance and native plugins
 
 **How fast each tier is** (rough figures on a 2024 laptop):

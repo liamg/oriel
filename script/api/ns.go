@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -15,7 +16,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-//oriel:api name=keymap
+//oriel:api name=keymap cap=ui
 type Keymap struct{ a *APIs }
 
 //oriel:api doc="Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping)." optional=opts
@@ -38,7 +39,7 @@ func (k Keymap) Set(modes []string, lhs string, rhs any, opts script.Table, wher
 	return nil
 }
 
-//oriel:api name=view
+//oriel:api name=view cap=ui
 type View struct{ a *APIs }
 
 //oriel:api doc="Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes."
@@ -74,7 +75,7 @@ func (a *APIs) viewCtx(vc registry.ViewCtx) script.Table {
 	return t
 }
 
-//oriel:api name=decor
+//oriel:api name=decor cap=ui
 type Decor struct{ a *APIs }
 
 //oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text } (1-based lines)."
@@ -108,7 +109,7 @@ func (d Decor) Provider(name string, fn *script.Fn) error {
 	return nil
 }
 
-//oriel:api name=agent
+//oriel:api name=agent cap=agent.tools
 type Agent struct{ a *APIs }
 
 //oriel:api doc="Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }."
@@ -116,6 +117,9 @@ func (g Agent) Tool(spec script.Table, where string) error {
 	run, _ := spec["run"].(*script.Fn)
 	if str(spec, "name") == "" || run == nil {
 		return fmt.Errorf("a tool needs a name and a run function")
+	}
+	if err := g.a.Check(ext.CapAgentTools, str(spec, "name")); err != nil {
+		return err
 	}
 	params := map[string]string{}
 	if p, ok := spec["params"].(script.Table); ok {
@@ -134,7 +138,7 @@ func (g Agent) Tool(spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api doc="An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing."
+//oriel:api doc="An explainer: { name, order (lower answers first; the agent's is 10), label, byline, run = fn(req) returning markdown }. req has kind, subject, context, files, depth and format (when set, the shape the answer must take instead of prose). It only answers: explaining changes nothing." cap=agent.read
 func (g Agent) Explainer(spec script.Table, where string) error {
 	run, _ := spec["run"].(*script.Fn)
 	if str(spec, "name") == "" || run == nil {
@@ -163,7 +167,7 @@ func (g Agent) Explainer(spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api doc="A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools."
+//oriel:api doc="A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools." cap=agent.read
 func (g Agent) Forker(spec script.Table, where string) error {
 	run, _ := spec["run"].(*script.Fn)
 	if str(spec, "name") == "" || run == nil {
@@ -188,13 +192,13 @@ func (g Agent) Forker(spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api doc="A prompt pack: { prompt, tools }, for sessions to start with."
+//oriel:api doc="A prompt pack: { prompt, tools }, for sessions to start with." cap=agent.prompt
 func (g Agent) Pack(name string, spec script.Table, where string) error {
 	g.a.own(g.a.Host.Contribute(registry.PromptPack{Name: name, Prompt: str(spec, "prompt"), Tools: strs(spec["tools"]), Source: where}))
 	return nil
 }
 
-//oriel:api name=session
+//oriel:api name=session cap=session.control
 type Session struct{ a *APIs }
 
 //oriel:api doc="A kind of session: { pack, gates, status }."
@@ -204,7 +208,7 @@ func (s Session) Kind(name string, spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api name=hud
+//oriel:api name=hud cap=ui
 type HUD struct{ a *APIs }
 
 //oriel:api doc="A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."
@@ -225,7 +229,7 @@ func (h HUD) Indicator(name string, opts script.Table, fn *script.Fn, where stri
 	return nil
 }
 
-//oriel:api name=status
+//oriel:api name=status cap=ui
 type Status struct{ a *APIs }
 
 //oriel:api doc="A status rule: fn(session) returns a status colour name, or nil to leave it."
@@ -241,7 +245,7 @@ func (s Status) Rule(fn *script.Fn, where string) error {
 	return nil
 }
 
-//oriel:api name=regex
+//oriel:api name=regex cap=ui
 type Regex struct{ a *APIs }
 
 func compile(pat, flags string) (*regex.Regex, error) {
@@ -325,7 +329,7 @@ func (Regex) Replace(pat, s, repl, flags string) ([]any, error) {
 	return []any{out, n}, err
 }
 
-//oriel:api name=language
+//oriel:api name=language cap=ui
 type Language struct{ a *APIs }
 
 //oriel:api doc="Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }."

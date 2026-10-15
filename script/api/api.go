@@ -6,6 +6,7 @@ package api
 //go:generate go run ../../tools/cmd/apigen
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -28,8 +29,13 @@ var futures = map[string]string{
 
 // APIs is the API for one VM over a host. What a config registers is kept, so a reload drops it all first.
 type APIs struct {
-	Host ext.Host
-	VM   *script.VM
+	Host   ext.Host
+	VM     *script.VM
+	Plugin ext.Plugin // whose VM it is: every call is checked against its grants; your config's is trusted
+
+	procs *ext.Processes // its process plugins, started on first use
+	wasm  *ext.WASM
+	hostm *ext.Methods
 
 	mu      sync.Mutex
 	owned   []registry.Disposable
@@ -38,9 +44,14 @@ type APIs struct {
 	touched map[optKey]optPrev       // options the config set, and what they held before
 }
 
-// Install puts the API in vm.
-func Install(vm *script.VM, h ext.Host) *APIs {
-	a := &APIs{Host: h, VM: vm, pending: map[string]pendingOption{}, touched: map[optKey]optPrev{}}
+// Install puts the API in vm, for your own config: trusted, its files in dir.
+func Install(vm *script.VM, h ext.Host, dir string) *APIs {
+	return InstallPlugin(vm, h, ext.Plugin{ID: "init.lua", Dir: dir})
+}
+
+// InstallPlugin puts the API in vm for a plugin: each call it makes is checked against p's grants.
+func InstallPlugin(vm *script.VM, h ext.Host, p ext.Plugin) *APIs {
+	a := &APIs{Host: h, VM: vm, Plugin: p, pending: map[string]pendingOption{}, touched: map[optKey]optPrev{}}
 	a.bind(vm)
 	a.options(vm)
 	vm.SetValue("api", "version", Version)
@@ -50,16 +61,31 @@ func Install(vm *script.VM, h ext.Host) *APIs {
 	return a
 }
 
-// Dispose drops everything the config registered: keymaps, commands, hooks, views and the rest.
+// Dispose drops everything the config registered: keymaps, commands, hooks, views and the rest, and stops its
+// processes and WASM modules.
 func (a *APIs) Dispose() {
 	a.mu.Lock()
 	owned := a.owned
 	a.owned = nil
+	procs, wasm := a.procs, a.wasm
+	a.procs, a.wasm = nil, nil
 	a.mu.Unlock()
 	for _, d := range owned {
 		d.Dispose()
 	}
+	if procs != nil {
+		procs.Close()
+	}
+	if wasm != nil {
+		wasm.Close(context.Background())
+	}
 }
+
+// check is the guard on a call: the generated glue asks it for each function's capability.
+func (a *APIs) check(c string) error { return a.Plugin.Check(ext.Capability(c), "") }
+
+// Check asks the guard whether the VM's plugin may use c on target.
+func (a *APIs) Check(c ext.Capability, target string) error { return a.Plugin.Check(c, target) }
 
 // Registered is how many things the config has registered.
 func (a *APIs) Registered() int {

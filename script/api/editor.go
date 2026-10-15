@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-//oriel:api name=editor
+//oriel:api name=editor cap=ui
 type Editor struct{ a *APIs }
 
 // windowTable is an editor window as Lua sees it.

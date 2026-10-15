@@ -12,11 +12,12 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
 
-//oriel:api name=
+//oriel:api name= cap=ui
 type Root struct{ a *APIs }
 
 //oriel:api doc="Add a command: name is what :Name and the omnibox run, fn gets the command's arguments." optional=opts
@@ -60,7 +61,13 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 		if err != nil {
 			return registry.Verdict{}, err
 		}
-		return verdict(out, ev), nil
+		v := verdict(out, ev)
+		if v.Veto || v.Decided {
+			if err := r.a.Check(ext.CapGate, event); err != nil {
+				return registry.Verdict{}, err
+			}
+		}
+		return v, nil
 	}
 	r.a.own(r.a.Host.Hook(h))
 	return nil
@@ -122,19 +129,37 @@ func expand(p string) string {
 	return p
 }
 
-//oriel:api doc="A file's contents, or nil and why not. ~ is your home." returns="string?,string?"
-func (r Root) Read(path string) []any {
-	b, err := os.ReadFile(expand(path))
-	if err != nil {
-		return []any{nil, err.Error()}
+//oriel:api doc="A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read." returns="string?,string?" cap=target
+func (r Root) Read(path string) ([]any, error) {
+	p := r.a.Plugin.Path(path)
+	if !r.a.Plugin.Own(p) {
+		if err := r.a.Check(ext.CapFSRead, ext.RealPath(p)); err != nil {
+			return nil, err
+		}
 	}
-	return []any{string(b)}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return []any{nil, err.Error()}, nil
+	}
+	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default)." optional=opts returns=string
+//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default)." optional=opts returns=string cap=exec
 func (r Root) Exec(argv []string, opts script.Table) (string, error) {
 	if len(argv) == 0 {
 		return "", fmt.Errorf("no program")
+	}
+	if !r.a.Plugin.Trusted() {
+		prog, err := exec.LookPath(expand(argv[0]))
+		if err != nil {
+			return "", err
+		}
+		if prog, err = filepath.Abs(prog); err != nil {
+			return "", err
+		}
+		if err := r.a.Check(ext.CapExec, ext.RealPath(prog)); err != nil {
+			return "", err
+		}
 	}
 	secs, _ := opts["timeout"].(float64)
 	if secs == 0 {

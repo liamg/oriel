@@ -20,7 +20,7 @@ import (
 
 func coreSession(id string) core.SessionID { return core.SessionID(id) }
 
-//oriel:api name=ui
+//oriel:api name=ui cap=ui
 type UI struct{ a *APIs }
 
 //oriel:api doc="A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths)." returns=table

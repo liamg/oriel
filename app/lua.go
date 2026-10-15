@@ -169,7 +169,7 @@ func (x *luaExt) reload(toast bool) {
 		x.h.Log().Warn("slow Lua", "function", src, "took", took)
 	}
 	vm.OnError = x.mark
-	apis := api.Install(vm, x.h)
+	apis := api.Install(vm, x.h, x.dir)
 	x.clearMarks()
 	src, err := os.ReadFile(x.initLua())
 	if os.IsNotExist(err) {

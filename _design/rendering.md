@@ -301,7 +301,7 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
 - A right-click gives the node `Interaction.Context`; `ContextMenu` opens there and always ends with Help for the
   target's help id (`help.md`).
 - `ui.Func` lets a Go view build with the frame's `*Ctx` (and so use widgets and keep their state by id, through
-  `ui.State[T]`). Process plugins' JSON views get the widgets as node types when PL-2 lands.
+  `ui.State[T]`). Process plugins' JSON views (not built yet: a process plugin draws through its Lua) will get the widgets as node types.
 
 ```go
 // package ui/layout — one tree for every view; docks are its edges (FW-9)

@@ -15,6 +15,7 @@
 ---@field lsp oriel.lsp
 ---@field menu oriel.menu
 ---@field overview oriel.overview
+---@field process oriel.process
 ---@field rail oriel.rail
 ---@field regex oriel.regex
 ---@field session oriel.session
@@ -24,6 +25,7 @@
 ---@field thread oriel.thread
 ---@field ui oriel.ui
 ---@field view oriel.view
+---@field wasm oriel.wasm
 ---@field option table<string, any> Your settings, by name or vim alias, as init.lua sets them
 ---@field buffer_option table<string, any> The current buffer's settings
 ---@field session_option table<string, any> The current session's settings
@@ -68,7 +70,7 @@ function oriel.notify(msg, lvl) end
 ---@param fn any
 function oriel.on(event, opts, fn) end
 
---- A file's contents, or nil and why not. ~ is your home.
+--- A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read.
 ---@param path string
 ---@return string?,string?
 function oriel.read(path) end
@@ -208,6 +210,15 @@ oriel.overview = {}
 --- Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick.
 ---@param spec table
 function oriel.overview.add(spec) end
+
+---@class oriel.process
+oriel.process = {}
+
+--- Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop().
+---@param path string
+---@param opts? table
+---@return table
+function oriel.process.spawn(path, opts) end
 
 ---@class oriel.rail
 oriel.rail = {}
@@ -384,4 +395,13 @@ oriel.view = {}
 ---@param id string
 ---@param fn function
 function oriel.view.override(id, fn) end
+
+---@class oriel.wasm
+oriel.wasm = {}
+
+--- Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON (the ABI in plugins.md), mod:exports(), mod:close().
+---@param path string
+---@param opts? table
+---@return table
+function oriel.wasm.load(path, opts) end
 

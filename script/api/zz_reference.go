@@ -12,7 +12,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.log(msg, lvl)", Doc: "Write to Oriel's log: level is debug, info, warn or error."},
 		{Call: "oriel.notify(msg, lvl)", Doc: "Tell the user something, through the one path every notice takes: level is info, warn or error."},
 		{Call: "oriel.on(event, opts?, fn)", Doc: "Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc."},
-		{Call: "oriel.read(path)", Doc: "A file's contents, or nil and why not. ~ is your home."},
+		{Call: "oriel.read(path)", Doc: "A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read."},
 		{Call: "oriel.statusline(fn)", Doc: "Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."},
 	},
 	"agent": {
@@ -58,6 +58,9 @@ var Reference = map[string][]RefFunc{
 	},
 	"overview": {
 		{Call: "oriel.overview.add(spec)", Doc: "Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick."},
+	},
+	"process": {
+		{Call: "oriel.process.spawn(path, opts?)", Doc: "Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop()."},
 	},
 	"rail": {
 		{Call: "oriel.rail.add(spec)", Doc: "Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available."},
@@ -105,5 +108,8 @@ var Reference = map[string][]RefFunc{
 	},
 	"view": {
 		{Call: "oriel.view.override(id, fn)", Doc: "Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes."},
+	},
+	"wasm": {
+		{Call: "oriel.wasm.load(path, opts?)", Doc: "Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON (the ABI in plugins.md), mod:exports(), mod:close()."},
 	},
 }

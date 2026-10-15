@@ -9,34 +9,58 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Root{a: a}
 		vm.Bind("", map[string]script.GoFunc{
 			"cmd": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Cmd(c.String(0), c.Table(1))
 			},
 			"command": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Command(c.String(0), c.Fn(1), c.Table(2), c.Where())
 			},
 			"exec": func(c *script.Args) ([]any, error) {
+				if err := a.check("exec"); err != nil {
+					return nil, err
+				}
 				v, err := x.Exec(c.Strings(0), c.Table(1))
 				return []any{v}, err
 			},
 			"json": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				v, err := x.JSON(c.Any(0))
 				return []any{v}, err
 			},
 			"log": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				x.Log(c.String(0), c.String(1), c.Where())
 				return nil, nil
 			},
 			"notify": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				x.Notify(c.String(0), c.String(1), c.Where())
 				return nil, nil
 			},
 			"on": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.On(c.String(0), c.Any(1), c.Any(2), c.Where())
 			},
 			"read": func(c *script.Args) ([]any, error) {
-				return x.Read(c.String(0)), nil
+				return x.Read(c.String(0))
 			},
 			"statusline": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Statusline(c.Fn(0), c.Where())
 			},
 		})
@@ -45,15 +69,27 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Agent{a: a}
 		vm.Bind("agent", map[string]script.GoFunc{
 			"explainer": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.read"); err != nil {
+					return nil, err
+				}
 				return nil, x.Explainer(c.Table(0), c.Where())
 			},
 			"forker": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.read"); err != nil {
+					return nil, err
+				}
 				return nil, x.Forker(c.Table(0), c.Where())
 			},
 			"pack": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.prompt"); err != nil {
+					return nil, err
+				}
 				return nil, x.Pack(c.String(0), c.Table(1), c.Where())
 			},
 			"tool": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.tools"); err != nil {
+					return nil, err
+				}
 				return nil, x.Tool(c.Table(0), c.Where())
 			},
 		})
@@ -62,9 +98,15 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Coverage{a: a}
 		vm.Bind("coverage", map[string]script.GoFunc{
 			"lines": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Lines(c.String(0), c.Int(1), c.Int(2))}, nil
 			},
 			"set": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Set(c.String(0), c.String(1), c.Any(2))
 			},
 		})
@@ -73,6 +115,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Decor{a: a}
 		vm.Bind("decor", map[string]script.GoFunc{
 			"provider": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Provider(c.String(0), c.Fn(1))
 			},
 		})
@@ -81,9 +126,15 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Diagnostics{a: a}
 		vm.Bind("diagnostics", map[string]script.GoFunc{
 			"list": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.List()}, nil
 			},
 			"set": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Set(c.String(0), c.String(1), c.Any(2))
 			},
 		})
@@ -92,12 +143,21 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Editor{a: a}
 		vm.Bind("editor", map[string]script.GoFunc{
 			"action": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Action(c.Table(0), c.Where())
 			},
 			"present": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Present(c.String(0))
 			},
 			"presenter": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Presenter(c.Table(0), c.Where())
 			},
 		})
@@ -106,6 +166,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := HUD{a: a}
 		vm.Bind("hud", map[string]script.GoFunc{
 			"indicator": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Indicator(c.String(0), c.Table(1), c.Fn(2), c.Where())
 			},
 		})
@@ -114,6 +177,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Keymap{a: a}
 		vm.Bind("keymap", map[string]script.GoFunc{
 			"set": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Set(c.Strings(0), c.String(1), c.Any(2), c.Table(3), c.Where())
 			},
 		})
@@ -122,6 +188,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Language{a: a}
 		vm.Bind("language", map[string]script.GoFunc{
 			"add": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Add(c.Table(0), c.Where())
 			},
 		})
@@ -130,9 +199,15 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Ledger{a: a}
 		vm.Bind("ledger", map[string]script.GoFunc{
 			"frac": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.read"); err != nil {
+					return nil, err
+				}
 				return []any{x.Frac(c.String(0))}, nil
 			},
 			"unread": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.read"); err != nil {
+					return nil, err
+				}
 				return []any{x.Unread(c.String(0))}, nil
 			},
 		})
@@ -141,6 +216,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := LSP{a: a}
 		vm.Bind("lsp", map[string]script.GoFunc{
 			"server": func(c *script.Args) ([]any, error) {
+				if err := a.check("exec"); err != nil {
+					return nil, err
+				}
 				return nil, x.Server(c.Table(0), c.Where())
 			},
 		})
@@ -149,6 +227,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Menu{a: a}
 		vm.Bind("menu", map[string]script.GoFunc{
 			"add": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Add(c.Table(0), c.Where())
 			},
 		})
@@ -157,7 +238,19 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Overview{a: a}
 		vm.Bind("overview", map[string]script.GoFunc{
 			"add": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Add(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
+		x := Process{a: a}
+		vm.Bind("process", map[string]script.GoFunc{
+			"spawn": func(c *script.Args) ([]any, error) {
+				v, err := x.Spawn(c.String(0), c.Table(1))
+				return []any{v}, err
 			},
 		})
 	}
@@ -165,6 +258,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Rail{a: a}
 		vm.Bind("rail", map[string]script.GoFunc{
 			"add": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Add(c.Table(0), c.Where())
 			},
 		})
@@ -173,17 +269,29 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Regex{a: a}
 		vm.Bind("regex", map[string]script.GoFunc{
 			"find": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return x.Find(c.String(0), c.String(1), c.String(2))
 			},
 			"find_all": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				v, err := x.FindAll(c.String(0), c.String(1), c.String(2))
 				return []any{v}, err
 			},
 			"match": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				v, err := x.Match(c.String(0), c.String(1), c.String(2))
 				return []any{v}, err
 			},
 			"replace": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return x.Replace(c.String(0), c.String(1), c.String(2), c.String(3))
 			},
 		})
@@ -192,6 +300,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Session{a: a}
 		vm.Bind("session", map[string]script.GoFunc{
 			"kind": func(c *script.Args) ([]any, error) {
+				if err := a.check("session.control"); err != nil {
+					return nil, err
+				}
 				return nil, x.Kind(c.String(0), c.Table(1), c.Where())
 			},
 		})
@@ -200,6 +311,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Ship{a: a}
 		vm.Bind("ship", map[string]script.GoFunc{
 			"gate": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Gate(c.Table(0), c.Where())
 			},
 		})
@@ -208,6 +322,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Start{a: a}
 		vm.Bind("start", map[string]script.GoFunc{
 			"add": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Add(c.Table(0), c.Where())
 			},
 		})
@@ -216,6 +333,9 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Status{a: a}
 		vm.Bind("status", map[string]script.GoFunc{
 			"rule": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Rule(c.Fn(0), c.Where())
 			},
 		})
@@ -224,18 +344,33 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Thread{a: a}
 		vm.Bind("thread", map[string]script.GoFunc{
 			"list": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.read"); err != nil {
+					return nil, err
+				}
 				return []any{x.List()}, nil
 			},
 			"new": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.prompt"); err != nil {
+					return nil, err
+				}
 				return nil, x.New(c.Table(0))
 			},
 			"open": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.prompt"); err != nil {
+					return nil, err
+				}
 				return nil, x.Open(c.String(0))
 			},
 			"reply": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.prompt"); err != nil {
+					return nil, err
+				}
 				return nil, x.Reply(c.String(0), c.String(1), c.Table(2))
 			},
 			"resolve": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.prompt"); err != nil {
+					return nil, err
+				}
 				return nil, x.Resolve(c.String(0), c.String(1))
 			},
 		})
@@ -244,45 +379,87 @@ func (a *APIs) bind(vm *script.VM) {
 		x := UI{a: a}
 		vm.Bind("ui", map[string]script.GoFunc{
 			"button": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Button(c.Table(0))}, nil
 			},
 			"chart": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Chart(c.Table(0))}, nil
 			},
 			"column": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Column(c.Any(0))}, nil
 			},
 			"date_picker": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.DatePicker(c.Table(0))}, nil
 			},
 			"indicator": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Indicator(c.Table(0))}, nil
 			},
 			"input": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Input(c.Table(0))}, nil
 			},
 			"list": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.List(c.Any(0), c.Fn(1))}, nil
 			},
 			"mode": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Mode()}, nil
 			},
 			"row": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Row(c.Any(0))}, nil
 			},
 			"select": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Select(c.Table(0))}, nil
 			},
 			"spacer": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Spacer()}, nil
 			},
 			"state": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.State(c.String(0), c.Any(1))}, nil
 			},
 			"text": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Text(c.Any(0), c.String(1))}, nil
 			},
 			"toggle": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return []any{x.Toggle(c.Table(0))}, nil
 			},
 		})
@@ -291,7 +468,19 @@ func (a *APIs) bind(vm *script.VM) {
 		x := View{a: a}
 		vm.Bind("view", map[string]script.GoFunc{
 			"override": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
 				return nil, x.Override(c.String(0), c.Fn(1), c.Where())
+			},
+		})
+	}
+	{
+		x := WASM{a: a}
+		vm.Bind("wasm", map[string]script.GoFunc{
+			"load": func(c *script.Args) ([]any, error) {
+				v, err := x.Load(c.String(0), c.Table(1))
+				return []any{v}, err
 			},
 		})
 	}

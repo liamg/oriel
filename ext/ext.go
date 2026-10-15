@@ -21,10 +21,6 @@ type Extension interface {
 	Deactivate(ctx context.Context) error
 }
 
-type Manifest struct {
-	ID string
-}
-
 // Host is what an extension sees of the app.
 type Host interface {
 	registry.Registry

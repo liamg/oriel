@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/script"
 )
 
-//oriel:api name=ship
+//oriel:api name=ship cap=ui
 type Ship struct{ a *APIs }
 
 //oriel:api doc="Add a \"before this ships\" gate to the Ship page and the Raise PR tab: { name, title, order (50 by default), check = fn(session) }. check returns a state (pass, warn, fail, pending or optional; nil leaves the gate out) or { state, note }, the note dim text at its right. It runs on the app's loop as the page is drawn, so keep it quick. A gate informs; a veto hook on ShipCommit or ShipRaise is what stops one."

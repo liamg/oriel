@@ -453,6 +453,17 @@ func (a *Args) Strings(i int) []string {
 	return nil
 }
 
+// Method is fn as a method of a table, called with a colon (proc:stop()): its arguments start after self.
+func Method(fn GoFunc) GoFunc {
+	return func(a *Args) ([]any, error) {
+		b := *a
+		if _, ok := a.get(0).(*lua.LTable); ok {
+			b.base++
+		}
+		return fn(&b)
+	}
+}
+
 // Where is the Lua line calling: "init.lua:12".
 func (a *Args) Where() string { return where(a.L, 1) }
 

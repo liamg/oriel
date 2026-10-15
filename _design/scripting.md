@@ -124,7 +124,8 @@ end)
 L.status.rule(function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
 ```
 
-A plugin's own Lua also has these (catalog.md; P8, not built yet), which an `init.lua` doesn't:
+A plugin's own Lua also has these (catalog.md; `option` and `asset` are P8's, `process` and `wasm` PL-2's and open to
+`init.lua` too):
 
 ```lua
 local L = oriel
@@ -353,3 +354,22 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `oriel.cmd("workers.rename", { name = "devbox", to = "Build box" })` (`to = ""` goes back to its own name),
   `workers.revoke { name }`, `workers.forget { name }`, `workers.restart`, `workers.open { name }`.
   `oriel.option["workers.listen"]` is where Oriel listens for them.
+
+
+## As built (PL-2)
+
+- `oriel.process.spawn(path, { args, cwd, env, on = { method = fn(params) }, on_exit = fn(err) })` starts a process
+  plugin and returns `proc`: `proc:request(method, params, fn(result, err))` (the answer comes on the loop),
+  `proc:notify(method, params)`, `proc:on(method, fn)`, `proc:pid()`, `proc:running()`, `proc:stop()`. The
+  process's requests and notifications reach `on` first, then the host methods (plugins.md, "As built (PL-2)").
+- `oriel.wasm.load(path, { on })` loads a module and returns `mod`: `mod:call(fn, ...)` with numbers,
+  `mod:request(fn, value)` with JSON, `mod:exports()`, `mod:close()`. A call is stopped past the watchdog's budget.
+- A plugin's VM is `api.InstallPlugin(vm, host, ext.Plugin{…})`; your config's is `api.Install(vm, host, dir)`,
+  trusted. A relative path given to `oriel.read`, `process.spawn` or `wasm.load` is in the plugin's directory (your
+  config's for `init.lua`). The config's processes and modules stop when it reloads.
+- Every API function declares its capability: `//oriel:api name=keymap cap=ui` on a namespace, or `cap=…` on a
+  function, and the glue apigen writes checks it before the call; `cap=target` is a function that checks its own
+  against what it's given (`read`, `process.spawn`, `wasm.load`). One with neither fails `go generate`.
+  docs/api.md says each function's. Besides the glue: `exec` checks its program, `lsp.server` its `cmd`,
+  `agent.tool` its name, and a hook's veto or decision needs `gate` (without it the hook's run is an error and
+  nothing is vetoed).

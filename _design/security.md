@@ -171,3 +171,26 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
 
 - The `//oriel:api cap=…` annotation from `scripting.md` makes the capability part of the generated binding: an API without
   a declared capability fails `go generate`, so no unguarded door can be added by accident.
+
+## As built (PL-2)
+
+- `ext.Guard` is `Check(plugin, cap, target)`, `Audit()` (the last 1000 checks) and `Declared(plugin)`, which the OS
+  sandbox is built from; `ext.Grants` is it. A refusal is an `*ext.NotDeclared` (`errors.Is(err,
+  ext.ErrNotDeclared)`) naming the plugin, the capability and the target. Scopes: hosts match case-insensitively,
+  `*.x` any subdomain, a port only when given; paths are compared with symlinks followed, and `worktree` and
+  `config` resolve through `Grants.Places`; a bare command matches only the program PATH finds for it; `*` is
+  anything.
+- The Lua API checks every call (scripting.md, "As built (PL-2)"); a process's or a module's host calls go through
+  `ext.Methods`, checked the same way.
+- The OS sandbox (`ext/ossandbox`): on Linux the binary re-runs itself as a helper (`ossandbox.Main`, first in
+  `main`) that applies a Landlock ruleset (every right the kernel's ABI knows; reads under the system's library,
+  certificate and resolver paths, the plugin's directory and its fs.read grants; writes under its fs.write grants
+  and its temp dir; running only its program, its exec grants and their ELF or `#!` interpreters; TCP connect only
+  to its ports; signals and abstract sockets kept in its domain on ABI 6+), sets no_new_privs, and with no ports a
+  seccomp filter refusing every socket but AF_UNIX and io_uring; then it execs the program. On macOS it's
+  `sandbox-exec -p` with `ossandbox.SBPL(profile)`: deny default, the same lists. With neither (an old kernel, another
+  OS) a plugin's process doesn't start.
+- Honestly: the OS filters TCP by port, not host, so a net grant's hosts are enforced only through the egress proxy
+  (a session's sandbox); outside one a plugin with net may reach any host on those ports. UDP is open once it has a
+  port. The worktree isn't readable unless declared (`fs.read = { scope = "worktree" }`). Not guarded yet:
+  `oriel.cmd` runs any command (commands don't declare a capability), and options set from Lua.
