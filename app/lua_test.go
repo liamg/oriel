@@ -108,6 +108,9 @@ func TestSampleInitLua(t *testing.T) {
 	}
 	for kind, name := range map[string]string{"agent.tool": "staging_logs", "agent.pack": "hotfix", "session.kind": "hotfix", "hud.indicator": "deploys"} {
 		cs := slices.DeleteFunc(s.reg.Contributions(kind), func(c registry.Contribution) bool {
+			if i, ok := c.(registry.Indicator); ok {
+				return i.Source == "" // the built-ins' panels and indicators
+			}
 			t, ok := c.(registry.AgentTool)
 			return ok && strings.HasPrefix(t.Source, "builtin:")
 		})

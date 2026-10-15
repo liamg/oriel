@@ -18,6 +18,10 @@ type KeyEvent struct {
 	Mods Mods
 }
 
+// ModsEvent is the modifier keys held now, sent when one goes down or comes up, and with none when the window loses
+// focus: a modifier held on its own (hold ⌥ for the HUD).
+type ModsEvent struct{ Mods Mods }
+
 // ResizeEvent reports a new window size in logical pixels.
 type ResizeEvent struct{ Size Point }
 
@@ -80,6 +84,7 @@ const (
 )
 
 func (KeyEvent) isEvent()          {}
+func (ModsEvent) isEvent()         {}
 func (PointerEvent) isEvent()      {}
 func (ResizeEvent) isEvent()       {}
 func (RedrawEvent) isEvent()       {}

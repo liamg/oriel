@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -127,10 +128,10 @@ func TestThemePickerSnapshot(t *testing.T) {
 	}
 }
 
-// clickText clicks the middle of the first run of text in the frame that reads text.
+// clickText clicks the middle of the run of text that reads text painted last, on top of any other.
 func (s *errScene) clickText(t *testing.T, text string) {
 	t.Helper()
-	for _, op := range s.list.Ops {
+	for _, op := range slices.Backward(s.list.Ops) { // the one painted last, on top
 		if op.Kind == render.OpGlyphs && op.Run.Text == text {
 			s.click(render.Point{X: op.At.X + op.Run.Advance/2, Y: op.At.Y - op.Run.Ascent/2})
 			s.frame()

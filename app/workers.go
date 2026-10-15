@@ -74,7 +74,8 @@ type workersExt struct {
 	bound   string // the address it listens on
 	fp      string // the certificate's fingerprint
 	lnErr   string
-	refused []refusal // newest first
+	refused []refusal                       // newest first
+	load    map[core.WorkerID][]loadReading // each worker's CPU over the last loadSpan, for the HUD
 
 	open    bool
 	sel     core.WorkerID
@@ -129,6 +130,7 @@ func (x *workersExt) Activate(_ context.Context, h ext.Host) error {
 	x.add(onDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.WorkerChanged:
+			x.sampled(ev.Worker)
 			if l := x.label(ev.Worker.ID); l != "" && l != ev.Worker.Label {
 				h.Do(func() { _ = x.sh.cfg.Store.Apply(core.WorkerRenamed{ID: ev.Worker.ID, Label: l}) })
 			}
@@ -185,6 +187,10 @@ func (x *workersExt) Activate(_ context.Context, h ext.Host) error {
 		Order: 40, Note: func(string) string { return x.figure() }, Active: func(string) bool { return x.open }}))
 	x.add(h.Contribute(registry.StartEntry{Name: "workers", Icon: "workers", Title: "Workers", Desc: "The machines that run sessions, and adding more",
 		Command: "workers.open", Order: 90, Link: true, Note: x.figure}))
+	x.add(h.Contribute(registry.Indicator{Name: "workers", Slot: registry.SlotHUD, Order: 20, Title: "Workers", Help: hudHelp + "#workers",
+		Note: x.workersNote, Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "workers", Fn: x.workersPanel}, nil }}))
+	x.add(h.Contribute(registry.Indicator{Name: "workers.status", Slot: registry.SlotStatusRight, Order: 70, Help: hudHelp + "#indicators",
+		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "workers", Fn: x.workersStatus}, nil }}))
 	x.add(h.View(OverlayPrefix+"workers", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "workers", Fn: x.page} })))
 	x.add(h.View(OverlayPrefix+"workers.dialog", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "workersdlg", Fn: x.dialog} })))
 	return nil

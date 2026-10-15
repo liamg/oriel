@@ -84,7 +84,7 @@ func newStatsRig(t *testing.T) *statsRig {
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
 	providers.Register(r.codex)
-	w, err := worker.New(worker.Options{Home: r.home, Name: "mbp", Providers: providers, Exec: nopExec{},
+	w, err := worker.New(worker.Options{Home: r.home, Name: "mbp", Providers: providers, Exec: nopExec{}, Load: steadyLoad,
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)

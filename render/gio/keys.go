@@ -21,11 +21,16 @@ var names = map[key.Name]string{
 	key.NameF7: "F7", key.NameF8: "F8", key.NameF9: "F9", key.NameF10: "F10", key.NameF11: "F11", key.NameF12: "F12",
 }
 
+// modKeys are the modifier keys by Gio's name.
+var modKeys = map[key.Name]render.Mods{key.NameShift: render.ModShift, key.NameCtrl: render.ModCtrl, key.NameAlt: render.ModAlt,
+	key.NameSuper: render.ModSuper, key.NameCommand: render.ModSuper}
+
 // translate turns Gio input into key events. Typed text comes from EditEvents, so a key press
 // that only types a character is left to its EditEvent; presses with Ctrl, Alt or Super, and named
 // keys, come from key.Events. held is the buttons down before ev: Gio's press and release carry those
-// down after it, and ours the one pressed or released.
-func translate(ev event.Event, scale float32, held *pointer.Buttons) []render.Event {
+// down after it, and ours the one pressed or released. down is the modifier keys held: a modifier's press or release
+// is a ModsEvent of them.
+func translate(ev event.Event, scale float32, held *pointer.Buttons, down *render.Mods) []render.Event {
 	switch ev := ev.(type) {
 	case pointer.Event:
 		pe := render.PointerEvent{Pos: render.Point{X: ev.Position.X / scale, Y: ev.Position.Y / scale}, Mods: mods(ev.Modifiers)}
@@ -60,7 +65,25 @@ func translate(ev event.Event, scale float32, held *pointer.Buttons) []render.Ev
 			out = append(out, render.KeyEvent{Key: string(r)})
 		}
 		return out
+	case key.FocusEvent:
+		if ev.Focus || *down == 0 {
+			return nil
+		}
+		*down = 0
+		return []render.Event{render.ModsEvent{}}
 	case key.Event:
+		if m, ok := modKeys[ev.Name]; ok {
+			was := *down
+			if ev.State == key.Press {
+				*down |= m
+			} else {
+				*down &^= m
+			}
+			if *down == was {
+				return nil
+			}
+			return []render.Event{render.ModsEvent{Mods: *down}}
+		}
 		if ev.State != key.Press {
 			return nil
 		}

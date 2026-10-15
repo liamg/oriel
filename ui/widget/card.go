@@ -194,6 +194,8 @@ type MeterOpts struct {
 	Label  string  // its accessible name
 	// Then are more parts after frac's, each in its own tone: the review ledger's skimmed after its read.
 	Then []MeterPart
+	// To hatches on from frac to where it's headed, with a tick there: a plan window's share at its reset.
+	To float64
 }
 
 // MeterPart is a stretch of a meter: its share (0–1) and its tone.
@@ -215,9 +217,22 @@ func Meter(c *ui.Ctx, key any, frac float64, o MeterOpts) {
 	}
 	track := alpha(col(c, tMeterTrack), 1)
 	parts := append([]MeterPart{{Frac: frac, Tone: o.Tone}}, o.Then...)
+	to := min(max(o.To, frac), 1)
+	hatch, tick := col(c, tMeterProjection), col(c, tMeterProjectMark)
 	c.Box(key, ui.Style{W: w, Role: ui.RoleStatus, Label: fmt.Sprintf("%s %d%%", o.Label, int(frac*100+.5))}, func(c *ui.Ctx) {
 		c.Paint("bar", ui.Flex(1), ui.Px(h), func(f render.Frame, r render.Rect) {
 			f.Rect(r, render.Style{Fill: track, Radius: min(h/2, 2)})
+			if to > frac {
+				pr := render.Rect{Min: render.Point{X: r.Min.X + r.Dx()*float32(frac), Y: r.Min.Y}, Max: render.Point{X: r.Min.X + r.Dx()*float32(to), Y: r.Max.Y}}
+				f.PushClip(pr, 0)
+				var p render.Path
+				for x := pr.Min.X - r.Dy(); x < pr.Max.X; x += 4 {
+					p.MoveTo(render.Point{X: x, Y: r.Max.Y}).LineTo(render.Point{X: x + r.Dy(), Y: r.Min.Y})
+				}
+				f.Path(&p, render.Style{Stroke: hatch, Width: 1.5})
+				f.Pop()
+				f.Rect(render.XYWH(pr.Max.X-.5, r.Min.Y-3, 1, r.Dy()+6), render.Style{Fill: tick})
+			}
 			at := float64(0)
 			for _, p := range parts {
 				from := min(max(at, 0), 1)

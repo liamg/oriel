@@ -6,8 +6,10 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 629.0625x38 r 0
+clip 102.9375,0 568.2125x38 r 0
 pop
+rect 699.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @706.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 150x356 fill #0c0c0b
 clip 0,38 149x356 r 0
   clip 12,45.73 107x12.539997 r 0

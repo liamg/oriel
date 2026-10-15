@@ -236,7 +236,12 @@ L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function(
 end)
 L.status.rule(function(sess) if sess.red then return "error" end end)
 `)
-	indicator := s.reg.Contributions("hud.indicator")[0].(registry.Indicator)
+	var indicator registry.Indicator
+	for _, ind := range registry.Indicators(s.reg, registry.SlotTitleBar) {
+		if ind.Name == "deploys" {
+			indicator = ind
+		}
+	}
 	if indicator.Slot != "titlebar.right" || indicator.Every.Seconds() != 30 {
 		t.Errorf("indicator %+v", indicator)
 	}

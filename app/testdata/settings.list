@@ -6,8 +6,10 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1469.0625x38 r 0
+clip 102.9375,0 1408.2125x38 r 0
 pop
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 44x936 fill #0c0c0b
 clip 0,38 43x936 r 0
   text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
@@ -85,20 +87,21 @@ clip 0,38 1600x962 r 0
     text "editor" @18,144.26901 #b3ab99 Inter 13
     text "files" @18,174.26901 #b3ab99 Inter 13
     text "git" @18,204.26901 #b3ab99 Inter 13
-    text "keymap" @18,234.26901 #b3ab99 Inter 13
-    text "lsp" @18,264.269 #b3ab99 Inter 13
-    text "review" @18,294.269 #b3ab99 Inter 13
-    text "sandbox" @18,324.269 #b3ab99 Inter 13
-    text "sidebar" @18,354.269 #b3ab99 Inter 13
-    text "stats" @18,384.269 #b3ab99 Inter 13
-    text "terminal" @18,414.269 #b3ab99 Inter 13
-    rect 8,425.54 224x28 fill #1f1c0f radius 5
-    text "ui" @18,444.269 #ece6d8 Inter 13
-    text "● 2" @204,443.14 #ffd23f JetBrains Mono 10
-    text "usage" @18,474.269 #b3ab99 Inter 13
-    text "whichkey" @18,504.269 #b3ab99 Inter 13
-    text "● 1" @204,503.14 #ffd23f JetBrains Mono 10
-    text "workers" @18,534.26904 #b3ab99 Inter 13
+    text "hud" @18,234.26901 #b3ab99 Inter 13
+    text "keymap" @18,264.269 #b3ab99 Inter 13
+    text "lsp" @18,294.269 #b3ab99 Inter 13
+    text "review" @18,324.269 #b3ab99 Inter 13
+    text "sandbox" @18,354.269 #b3ab99 Inter 13
+    text "sidebar" @18,384.269 #b3ab99 Inter 13
+    text "stats" @18,414.269 #b3ab99 Inter 13
+    text "terminal" @18,444.269 #b3ab99 Inter 13
+    rect 8,455.54 224x28 fill #1f1c0f radius 5
+    text "ui" @18,474.269 #ece6d8 Inter 13
+    text "● 2" @204,473.14 #ffd23f JetBrains Mono 10
+    text "usage" @18,504.269 #b3ab99 Inter 13
+    text "whichkey" @18,534.26904 #b3ab99 Inter 13
+    text "● 1" @204,533.1401 #ffd23f JetBrains Mono 10
+    text "workers" @18,564.26904 #b3ab99 Inter 13
   pop
   rect 240,91 1x879 fill #24221d
   clip 241,91 1359x879 r 0

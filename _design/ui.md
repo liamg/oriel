@@ -90,7 +90,9 @@ They are design sketches, not the implementation: the app draws natively (see `s
   source. The status line's mode reads the presenter's label (PREVIEW). Each window has its own: one window can preview
   a file while another edits it, the preview following the edits. The window's top line follows the preview's scroll,
   so Edit comes back where you were reading, and the presenter comes back after a restart.
-- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem indicators.
+- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem indicators. Built in SH-8: the
+  status line's and the title bar's slots draw the indicators in them (`statusline.right.70-workers.status`: WKR
+  and each connected worker's CPU, amber with a dot from 80%) beside the views named for the slot.
 
 ## 01b · Requests: the main conversation view
 
@@ -643,6 +645,25 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - The control room as an instrument cluster: usage with **burn-rate projection**,
   workers, sessions by status, today's stats, the log tail, agentbus, the CI queue.
 - Release to hide, click to pin. Nothing here is a separate screen.
+- Built in SH-8 (`app/hud.go`, `app/hudpanels.go`, `ui/widget/hud.go`): the backend sends `render.ModsEvent` (the
+  modifiers held, as one goes down or up, none when the window loses focus); `ui.Ctx.HeldAlone` is a modifier held
+  with no key or press since (`UI.Chord` ends it). Holding `⌥` alone for `hud.hold_delay` (250 ms, so `⌥O` doesn't
+  flash it) brings the HUD down under the title bar (`app.overlay.hud`, `widget.Drawer` on the dialog layer: over
+  pages, under an omnibox opened after it); letting go puts it away. A click on it, or the title bar's **⌥ HUD**
+  (`titlebar.right.90-hud`) or `hud.toggle`, pins it: it takes focus (key mode `hud`), and `Esc`, its tab ("PINNED ·
+  ESC OR CLICK TO PUT AWAY") or **⌥ HUD** put it away. `hud.hold` picks the key (alt, ctrl, shift, super, off).
+- Its panels are indicators in the `hud` slot (`registry.Indicator` with `Title`, `Note`, `Span`), four columns to a
+  row, each contributed by the extension that owns the data and drawn in `widget.Panel`: Plan usage (stats: each
+  account's 5-hour and weekly windows, the meter hatched on to the share at the reset with a tick, `MeterOpts.To`),
+  Workers (each worker's sessions, CPU and memory, its CPU over 15 minutes from its `WorkerChanged` events), Sessions
+  (open and need-you counts, the status strip, the five most urgent with why; a click focuses one), Today (since
+  midnight: tokens, cost, cache share, requests opened, ledger reviewed and unread, then the `hud.today` slot), Logs
+  (span 2: the log ring's tail, info and up, newest first; **Open the log**) and CI queue (ship: the PRs the Ship
+  page has read, failing first). Panels read the store as they're drawn and redraw on its events; what the store
+  doesn't keep, owners gather from events: a worker's load, plan readings since the history was fetched
+  (`UsageSampled`), and today's totals, asked again 10 s after an agent event.
+- Not yet: the agentbus panel (PL-5), the merge train, the session footer and mission-control slots (no mission
+  control yet), dimming what's under the drawer, and the burn's projection in a help page's "Right now".
 
 ## 11 · Comms (the assistant)
 

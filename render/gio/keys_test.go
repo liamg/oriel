@@ -32,7 +32,29 @@ func TestTranslate(t *testing.T) {
 		{pointer.Event{Kind: pointer.Drag, Position: f32.Pt(4, 4), Buttons: pointer.ButtonPrimary}, []render.Event{render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 2, Y: 2}, Buttons: render.ButtonPrimary}}},
 		{pointer.Event{Kind: pointer.Scroll, Scroll: f32.Pt(0, 30)}, []render.Event{render.PointerEvent{Kind: render.PointerScroll, Scroll: render.Point{Y: 15}}}},
 	} {
-		if got := translate(tt.in, 2, new(pointer.Buttons)); !reflect.DeepEqual(got, tt.want) {
+		if got := translate(tt.in, 2, new(pointer.Buttons), new(render.Mods)); !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("translate(%+v) = %+v, want %+v", tt.in, got, tt.want)
+		}
+	}
+}
+
+// SH-8: a modifier going down or up is the set held now, so ⌥ held alone can pull the HUD down; losing focus lets go of
+// them all.
+func TestTranslateMods(t *testing.T) {
+	var down render.Mods
+	for _, tt := range []struct {
+		in   event.Event
+		want []render.Event
+	}{
+		{key.Event{Name: key.NameAlt, State: key.Press}, []render.Event{render.ModsEvent{Mods: render.ModAlt}}},
+		{key.Event{Name: key.NameAlt, State: key.Press, Modifiers: key.ModAlt}, nil}, // a repeat
+		{key.Event{Name: key.NameCommand, State: key.Press}, []render.Event{render.ModsEvent{Mods: render.ModAlt | render.ModSuper}}},
+		{key.Event{Name: key.NameAlt, State: key.Release}, []render.Event{render.ModsEvent{Mods: render.ModSuper}}},
+		{key.FocusEvent{Focus: false}, []render.Event{render.ModsEvent{}}},
+		{key.FocusEvent{Focus: false}, nil},
+		{key.Event{Name: key.NameShift, State: key.Press}, []render.Event{render.ModsEvent{Mods: render.ModShift}}},
+	} {
+		if got := translate(tt.in, 1, new(pointer.Buttons), &down); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("translate(%+v) = %+v, want %+v", tt.in, got, tt.want)
 		}
 	}
@@ -51,7 +73,7 @@ func TestTranslateClick(t *testing.T) {
 		{pointer.Event{Kind: pointer.Release, Buttons: pointer.ButtonPrimary}, render.ButtonSecondary},
 		{pointer.Event{Kind: pointer.Release}, render.ButtonPrimary},
 	} {
-		got := translate(tt.in, 1, &held)
+		got := translate(tt.in, 1, &held, new(render.Mods))
 		if len(got) != 1 || got[0].(render.PointerEvent).Buttons != tt.want {
 			t.Errorf("translate(%v %v) = %+v, want buttons %v", tt.in.Kind, tt.in.Buttons, got, tt.want)
 		}

@@ -85,6 +85,9 @@ type input struct {
 	passed  map[ID][]render.KeyEvent // keys a node was given and didn't take, by that node
 	ask     focusAsk                 // Ctx.Focus's, this frame
 	bar     *barDrag                 // a scrollbar thumb being dragged
+	held    render.Mods              // the modifier keys down
+	heldAt  time.Time                // when the set held last changed
+	chorded bool                     // a key or button went down while they were held
 }
 
 type focusAsk struct {
@@ -153,6 +156,7 @@ func (u *UI) Pointer(ev render.PointerEvent) {
 		if ev.Buttons&render.ButtonPrimary == 0 {
 			return
 		}
+		u.Chord()
 		in.active, in.mods = in.hot, ev.Mods
 		// A press focuses the nearest focusable node at or above what's pressed, or nothing.
 		in.focus, in.visible = 0, false
@@ -267,6 +271,21 @@ func (u *UI) Key(ev render.KeyEvent) bool {
 	u.in.visible = true
 	return true
 }
+
+// Mods is the modifier keys held now (render.ModsEvent). A change of them starts their being held alone afresh.
+func (u *UI) Mods(m render.Mods) {
+	in := &u.in
+	if m == in.held {
+		return
+	}
+	in.held, in.heldAt = m, u.now()
+	if m == 0 {
+		in.chorded = false
+	}
+}
+
+// Chord says a key went down: the modifiers held are part of a chord now, not held alone. A press does too.
+func (u *UI) Chord() { u.in.chorded = true }
 
 // PassKeys hands keys id was given and doesn't take to the nearest node above it that takes keys, for its next frame:
 // Escape on a focused toggle reaches the page it's on.

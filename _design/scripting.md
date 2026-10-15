@@ -226,6 +226,15 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   from a source to its line (`gd`), and a project's `.oriel/init.lua` (it needs the trust prompt security.md
   describes).
 
+## As built (SH-8)
+
+- `oriel.hud.indicator(name, opts, build)`: `opts { slot, order, every, on = { event names }, title, note, span, help }`;
+  `build` is a function returning `oriel.ui` nodes, or the nodes themselves. It's built again every `every`, on each
+  core event named in `on`, and by `oriel.hud.set(name, nodes)` (shown until it's next built; for good, for one given
+  its nodes) or `oriel.hud.refresh(name)` (`hud.refresh`). `slot = "hud"` makes it a HUD panel, `"hud.today"` a line
+  under Today: PL-10's next meeting. `oriel.ui.indicator` takes `dot` and `id` and is drawn by `widget.Indicator`.
+- The sample's `every = "30s"` is a duration as Go reads it.
+
 ## As built (PL-12)
 
 - `script.Error` has `Where()` (a syntax error's line, the message's, or the innermost Lua frame's), `Frames()` and

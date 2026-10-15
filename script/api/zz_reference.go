@@ -38,7 +38,9 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.editor.presenter(spec)", Doc: "Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text."},
 	},
 	"hud": {
-		{Call: "oriel.hud.indicator(name, opts, fn)", Doc: "A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."},
+		{Call: "oriel.hud.indicator(name, opts, build)", Doc: "An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD) or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh."},
+		{Call: "oriel.hud.refresh(name)", Doc: "Builds the indicator name again now."},
+		{Call: "oriel.hud.set(name, nodes)", Doc: "Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes."},
 	},
 	"keymap": {
 		{Call: "oriel.keymap.set(modes, lhs, rhs, opts?)", Doc: "Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping)."},
@@ -95,7 +97,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.ui.chart(spec)", Doc: "A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1."},
 		{Call: "oriel.ui.column(children)", Doc: "A column of nodes; options beside them: gap, pad (px)."},
 		{Call: "oriel.ui.date_picker(spec)", Doc: "A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30."},
-		{Call: "oriel.ui.indicator(spec)", Doc: "A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }."},
+		{Call: "oriel.ui.indicator(spec)", Doc: "An indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error), dot (a status dot before the value: ok, warn, error, accent, dim), id }."},
 		{Call: "oriel.ui.input(spec)", Doc: "A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value."},
 		{Call: "oriel.ui.list(items, row)", Doc: "A list: each of items through row(item), which returns a node."},
 		{Call: "oriel.ui.mode()", Doc: "The editor's mode, as the built-in status line shows it."},

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/liamg/oriel/worker/sysload"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -39,6 +40,7 @@ type Options struct {
 	OrielBin  string     // the oriel binary the agents' hooks run; os.Executable() if ""
 	Log       *slog.Logger
 	Now       func() time.Time
+	Load      func() sysload.Reading // the machine's load; sysload.Read if nil
 	Version   string
 	Build     string // which binary this is, so an app from another can replace it; Build() if ""
 	// Sandbox makes the container, gateway and egress proxy for a session that asks for one; nil refuses.
@@ -118,6 +120,9 @@ func New(opts Options) (*Worker, error) {
 	}
 	if opts.Now == nil {
 		opts.Now = time.Now
+	}
+	if opts.Load == nil {
+		opts.Load = sysload.Read
 	}
 	if opts.Build == "" {
 		opts.Build = Build()

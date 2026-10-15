@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/worker/sysload"
 )
 
 // ProviderInfo is each provider as the launcher shows it: installed, logged in, its models, its usage.
@@ -46,7 +45,7 @@ func (w *Worker) ProviderInfo(ctx context.Context) []ProviderInfo {
 // workerState is this worker as the app sees it, with a fresh reading of its load.
 func (w *Worker) workerState() core.WorkerState {
 	host, _ := os.Hostname()
-	r := sysload.Read()
+	r := w.opts.Load()
 	var providers []string
 	if w.opts.Providers != nil {
 		for _, p := range w.opts.Providers.List() {

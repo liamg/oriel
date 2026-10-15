@@ -221,6 +221,7 @@ func (w *Window) loop() {
 	f := NewFrame()
 	tag := new(int)
 	var held pointer.Buttons
+	var down render.Mods // the modifier keys held
 	viewed, placed := false, false
 	defer w.pl.close()
 	for {
@@ -284,7 +285,7 @@ func (w *Window) loop() {
 				case key.Event, key.FocusEvent:
 					w.ask.Store(true)
 				}
-				for _, k := range translate(ev, scale, &held) {
+				for _, k := range translate(ev, scale, &held, &down) {
 					w.post(k)
 				}
 			}

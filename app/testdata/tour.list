@@ -6,7 +6,7 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1469.0625x38 r 0
+clip 102.9375,0 1408.2125x38 r 0
   rect 102.9375,0 110.59375x38 fill #121210
   rect 102.9375,0 110.59375x2 fill #ffd23f
   rect 114.9375,16 8x8 fill #4fe0a0 radius 4
@@ -14,6 +14,8 @@ clip 102.9375,0 1469.0625x38 r 0
   text "⌘1" @189.53125,23.42 #4f4a40 JetBrains Mono 9.5
   rect 213.53125,0 1x38 fill #24221d
 pop
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 224x936 fill #0c0c0b
 clip 0,38 223x936 r 0
   clip 12,45.73 181x12.539997 r 0
@@ -510,8 +512,8 @@ text "✕" @367.75876,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @379.3525,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @399.94626,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @411.54,990.95996 #b3ab99 JetBrains Mono 11
-text "h/l step · j/k scroll · gd open quote in editor" @1210.3125,990.78 #b3ab99 JetBrains Mono 10.5
-text "4/9" @1532.2188,990.78 #ece6d8 JetBrains Mono 10.5
+text "h/l step · j/k scroll · gd open quote in editor" @1194.3125,990.78 #b3ab99 JetBrains Mono 10.5
+text "4/9" @1516.2188,990.78 #ece6d8 JetBrains Mono 10.5
 rect 210,306.7694 2x36 fill #ffd23f
 rect 576.8125,337.62488 2x21 fill #ffd23f
 rect 576.8125,493.8739 2x21 fill #ffd23f

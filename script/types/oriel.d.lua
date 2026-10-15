@@ -154,11 +154,20 @@ function oriel.editor.presenter(spec) end
 ---@class oriel.hud
 oriel.hud = {}
 
---- A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
+--- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD) or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 ---@param name string
 ---@param opts table
----@param fn function
-function oriel.hud.indicator(name, opts, fn) end
+---@param build any
+function oriel.hud.indicator(name, opts, build) end
+
+--- Builds the indicator name again now.
+---@param name string
+function oriel.hud.refresh(name) end
+
+--- Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes.
+---@param name string
+---@param nodes any
+function oriel.hud.set(name, nodes) end
 
 ---@class oriel.keymap
 oriel.keymap = {}
@@ -337,7 +346,7 @@ function oriel.ui.column(children) end
 ---@return table
 function oriel.ui.date_picker(spec) end
 
---- A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
+--- An indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error), dot (a status dot before the value: ok, warn, error, accent, dim), id }.
 ---@param spec table
 ---@return table
 function oriel.ui.indicator(spec) end

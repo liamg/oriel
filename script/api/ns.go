@@ -211,22 +211,50 @@ func (s Session) Kind(name string, spec script.Table, where string) error {
 //oriel:api name=hud cap=ui
 type HUD struct{ a *APIs }
 
-//oriel:api doc="A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes."
-func (h HUD) Indicator(name string, opts script.Table, fn *script.Fn, where string) error {
+//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD) or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh."
+func (h HUD) Indicator(name string, opts script.Table, build any, where string) error {
 	every, _ := time.ParseDuration(str(opts, "every"))
-	h.a.own(h.a.Host.Contribute(registry.Indicator{Name: name, Slot: str(opts, "slot"), Every: every, Source: where,
+	fn, _ := build.(*script.Fn)
+	if fn == nil {
+		h.a.setIndicator(name, build)
+	}
+	ind := registry.Indicator{Name: name, Slot: str(opts, "slot"), Title: str(opts, "title"), Help: str(opts, "help"), Every: every,
+		On: strs(opts["on"]), Source: where,
 		Build: func(registry.Ctx) (ui.Node, error) {
-			out, err := h.a.VM.Call(fn)
-			if err != nil {
-				return nil, err
-			}
-			var v any
-			if len(out) > 0 {
-				v = out[0]
+			v, set := h.a.takeIndicator(name, fn != nil)
+			if fn != nil && !set {
+				out, err := h.a.VM.Call(fn)
+				if err != nil {
+					return nil, err
+				}
+				if len(out) > 0 {
+					v = out[0]
+				}
 			}
 			return &ui.Func{Key: name, Fn: func(c *ui.Ctx) { buildView(c, v, h.a) }}, nil
-		}}))
+		}}
+	if o, ok := opts["order"].(float64); ok {
+		ind.Order = int(o)
+	}
+	if n, ok := opts["span"].(float64); ok {
+		ind.Span = int(n)
+	}
+	if note := str(opts, "note"); note != "" {
+		ind.Note = func() string { return note }
+	}
+	h.a.own(h.a.Host.Contribute(ind))
 	return nil
+}
+
+//oriel:api doc="Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes."
+func (h HUD) Set(name string, nodes any) error {
+	h.a.setIndicator(name, nodes)
+	return h.Refresh(name)
+}
+
+//oriel:api doc="Builds the indicator name again now."
+func (h HUD) Refresh(name string) error {
+	return h.a.Host.Run(context.Background(), "hud.refresh", registry.Args{"name": name})
 }
 
 //oriel:api name=status cap=ui

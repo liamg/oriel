@@ -44,7 +44,9 @@ Version 0.4.0.
 
 ## oriel.hud
 
-- `oriel.hud.indicator(name, opts, fn)` (`ui`): A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
+- `oriel.hud.indicator(name, opts, build)` (`ui`): An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD) or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+- `oriel.hud.refresh(name)` (`ui`): Builds the indicator name again now.
+- `oriel.hud.set(name, nodes)` (`ui`): Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes.
 
 ## oriel.keymap
 
@@ -116,7 +118,7 @@ Version 0.4.0.
 - `oriel.ui.chart(spec)` (`ui`): A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1.
 - `oriel.ui.column(children)` (`ui`): A column of nodes; options beside them: gap, pad (px).
 - `oriel.ui.date_picker(spec)` (`ui`): A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30.
-- `oriel.ui.indicator(spec)` (`ui`): A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
+- `oriel.ui.indicator(spec)` (`ui`): An indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error), dot (a status dot before the value: ok, warn, error, accent, dim), id }.
 - `oriel.ui.input(spec)` (`ui`): A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value.
 - `oriel.ui.list(items, row)` (`ui`): A list: each of items through row(item), which returns a node.
 - `oriel.ui.mode()` (`ui`): The editor's mode, as the built-in status line shows it.

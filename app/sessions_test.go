@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"github.com/liamg/oriel/worker/sysload"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -54,6 +55,9 @@ func newWorkerWith(t *testing.T, o worker.Options, fakes ...*agenttest.Fake) *lo
 	}
 	o.Home, o.Providers, o.Exec = t.TempDir(), providers, nopExec{}
 	o.Packs = func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }
+	if o.Load == nil {
+		o.Load = steadyLoad
+	}
 	w, err := worker.New(o)
 	if err != nil {
 		t.Fatal(err)
@@ -64,6 +68,11 @@ func newWorkerWith(t *testing.T, o worker.Options, fakes ...*agenttest.Fake) *lo
 }
 
 type nopExec struct{ agent.Exec }
+
+// steadyLoad is a machine's load that doesn't change, so a scene showing it draws the same each run.
+func steadyLoad() sysload.Reading {
+	return sysload.Reading{CPU: 34, Cores: 12, MemUsed: 11 << 30, MemTotal: 32 << 30}
+}
 
 // connect is a Config change that connects the app to the worker.
 func (lw *localWorker) connect(t *testing.T) func(*Config) {

@@ -164,6 +164,8 @@ func (x *shipExt) Activate(_ context.Context, h ext.Host) error {
 		Doc: "A commit about to be made from the Ship page; a veto stops it (its reason shows in the commit box) unless force, a rewrite changes it. { session, project, message, files, force }"}))
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
 		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
+	x.add(h.Contribute(registry.Indicator{Name: "ci", Slot: registry.SlotHUD, Order: 70, Title: "CI queue", Help: hudHelp + "#ci", Note: x.ciNote,
+		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "ci", Fn: x.ciPanel}, nil }}))
 	x.add(h.Contribute(registry.ProjectState{Name: "ship", Order: 10, State: x.projectState}))
 	x.gates()
 	x.shadowEntries()

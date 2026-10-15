@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"image/color"
 	"slices"
-	"strings"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
@@ -91,6 +90,11 @@ func (t *sessionTabs) Activate(_ context.Context, h ext.Host) error {
 			Desc: fmt.Sprintf("Session %d", n)}))
 	}
 	t.add(h.Picker(sessionsSource(h)))
+	t.add(h.Contribute(registry.Indicator{Name: "sessions", Slot: registry.SlotHUD, Order: 30, Title: "Sessions", Help: hudHelp + "#sessions",
+		Note: func() string { return counted(len(h.State().Sessions), "session") },
+		Build: func(registry.Ctx) (ui.Node, error) {
+			return &ui.Func{Key: "sessions", Fn: func(c *ui.Ctx) { t.sessionsPanel(c, h) }}, nil
+		}}))
 	t.add(h.View(TitleBarView, registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "titlebar", Fn: func(c *ui.Ctx) { t.build(c, h, vc) }}
 	})))
@@ -117,13 +121,8 @@ func (t *sessionTabs) build(c *ui.Ctx, h ext.Host, vc registry.ViewCtx) {
 		if st.Focus != "" {
 			c.ScrollIntoView(tabs, ui.Child(tabs, st.Focus))
 		}
-		ids := h.Views()
 		c.Row("right", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
-			for _, id := range ids {
-				if v, ok := h.ViewByID(id); ok && strings.HasPrefix(id, TitleRight) {
-					c.Row(id, ui.Style{H: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
-				}
-			}
+			t.sh.slot(c, h, registry.SlotTitleBar, vc)
 		})
 	})
 }

@@ -42,6 +42,7 @@ type APIs struct {
 	n       int
 	pending map[string]pendingOption // options set before anything registered them
 	touched map[optKey]optPrev       // options the config set, and what they held before
+	shown   map[string]any           // oriel.hud.set's nodes, by indicator
 }
 
 // Install puts the API in vm, for your own config: trusted, its files in dir.
@@ -86,6 +87,27 @@ func (a *APIs) check(c string) error { return a.Plugin.Check(ext.Capability(c), 
 
 // Check asks the guard whether the VM's plugin may use c on target.
 func (a *APIs) Check(c ext.Capability, target string) error { return a.Plugin.Check(c, target) }
+
+func (a *APIs) setIndicator(name string, v any) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.shown == nil {
+		a.shown = map[string]any{}
+	}
+	a.shown[name] = v
+}
+
+// takeIndicator is the nodes set for name, and whether there were any; once taken from one built by a function
+// (once), they're gone.
+func (a *APIs) takeIndicator(name string, once bool) (any, bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	v, ok := a.shown[name]
+	if ok && once {
+		delete(a.shown, name)
+	}
+	return v, ok
+}
 
 // Registered is how many things the config has registered.
 func (a *APIs) Registered() int {

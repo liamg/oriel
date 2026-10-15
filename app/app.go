@@ -535,7 +535,10 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 		l.sh.dropped(ev)
 	case render.CloseRequestEvent:
 		l.sh.requestQuit()
+	case render.ModsEvent:
+		l.ui.Mods(ev.Mods)
 	case render.KeyEvent:
+		l.ui.Chord()
 		k := notation(ev)
 		if p := l.keys.Pending(); len(p) > 0 && k == "<CR>" && l.keys.Complete() != nil && acceptKey(l.sh.cfg.Registry, l.keys.Modes(), p) {
 			l.run(ctx, l.keys.Accept(time.Now()))

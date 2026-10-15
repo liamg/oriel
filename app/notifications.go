@@ -154,6 +154,8 @@ func (n *notices) Activate(_ context.Context, h ext.Host) error {
 	n.add(h.View("statusline.left.50-counts", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "status", Fn: n.status}
 	})))
+	n.add(h.Contribute(registry.Indicator{Name: "logs", Slot: registry.SlotHUD, Order: 50, Span: 2, Title: "Logs", Help: hudHelp + "#logs",
+		Note: func() string { return "tail" }, Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "logs", Fn: n.logsPanel}, nil }}))
 	n.add(h.View("log", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "log", Fn: n.panel.build}
 	})))

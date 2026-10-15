@@ -446,3 +446,45 @@ func TestPressedWithin(t *testing.T) {
 		t.Error("still pressed within after the release")
 	}
 }
+
+// SH-8: a modifier held alone is held alone from when it went down until a key or a press joins it, or the set held
+// changes; letting go of every modifier starts afresh.
+func TestHeldAlone(t *testing.T) {
+	h := newHarness()
+	alone := func() (m render.Mods, since time.Time) {
+		paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) { m, since = c.HeldAlone() })
+		return
+	}
+	if m, _ := alone(); m != 0 {
+		t.Fatalf("held alone before anything's down: %v", m)
+	}
+	h.u.Mods(render.ModAlt)
+	t0 := h.clk.t
+	h.clk.advance(300 * time.Millisecond)
+	if m, since := alone(); m != render.ModAlt || !since.Equal(t0) {
+		t.Errorf("⌥ down: %v since %v, want ⌥ since %v", m, since, t0)
+	}
+	h.u.Chord() // ⌥O
+	if m, _ := alone(); m != 0 {
+		t.Errorf("⌥ with a key is a chord, not held alone: %v", m)
+	}
+	h.u.Mods(0)
+	h.u.Mods(render.ModAlt)
+	if m, _ := alone(); m != render.ModAlt {
+		t.Errorf("⌥ again after letting go: %v", m)
+	}
+	h.u.Mods(render.ModAlt | render.ModSuper)
+	if m, since := alone(); m != render.ModAlt|render.ModSuper || !since.Equal(h.clk.t) {
+		t.Errorf("⌥⌘: %v since %v", m, since)
+	}
+	h.u.Mods(render.ModAlt)
+	h.pointer(render.PointerPress, 20, 20)
+	if m, _ := alone(); m != 0 {
+		t.Errorf("a press while ⌥ is down: %v", m)
+	}
+	paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) {
+		if c.Held() != render.ModAlt {
+			t.Errorf("held: %v", c.Held())
+		}
+	})
+}

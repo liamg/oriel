@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"cmp"
 	"slices"
 	"strings"
 	"time"
@@ -20,11 +21,19 @@ func (r *reg) Contribute(c Contribution) Disposable {
 	defer r.mu.Unlock()
 	k := c.ContributionKind() + "\x00" + c.ContributionName()
 	tok := r.contribs.push(k, c)
+	r.contribGen++
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.contribs.remove(k, tok)
+		r.contribGen++
 	})
+}
+
+func (r *reg) ContributionsGen() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.contribGen
 }
 
 func (r *reg) Contributions(kind string) []Contribution {
@@ -65,12 +74,44 @@ type SessionKind struct {
 	Source             string
 }
 
-// Indicator is a HUD indicator: a small view in a slot, built again every Every (SH-8).
+// Indicator is a small live readout in a slot (ui.md, "Indicators"): the title bar's right, the status line's sides, the
+// HUD's panels, a panel's own slot. What Build returns is kept and drawn until the indicator is built again: every
+// Every, when one of the events named in On happens, or when it's refreshed (the hud.refresh command). A node that
+// reads state as it's drawn (a ui.Func) is live without any of them.
 type Indicator struct {
-	Name, Slot string
-	Every      time.Duration
-	Build      func(ctx Ctx) (ui.Node, error)
-	Source     string
+	Name  string // unique among indicators: "deploys"
+	Slot  string // SlotTitleBar, SlotStatusLeft, SlotStatusRight, SlotHUD, or a slot a panel draws: SlotHUDToday
+	Order int    // in its slot, among the slot's views: titlebar.right.40-usage is 40
+	// Title is a HUD panel's heading, Note what it says at the heading's right ("3 online"), and Span how many of the
+	// HUD's four columns it takes (1 if 0). Help is its help page and anchor.
+	Title, Help string
+	Note        func() string
+	Span        int
+	Every       time.Duration
+	On          []string // core event names that build it again: "WorkerChanged"
+	Build       func(ctx Ctx) (ui.Node, error)
+	Source      string
+}
+
+// The slots indicators go in.
+const (
+	SlotTitleBar    = "titlebar.right"
+	SlotStatusLeft  = "statusline.left"
+	SlotStatusRight = "statusline.right"
+	SlotHUD         = "hud"       // the HUD's panels
+	SlotHUDToday    = "hud.today" // under the HUD's Today panel: the next meeting
+)
+
+// Indicators are the indicators in slot, by Order then name.
+func Indicators(r Registry, slot string) []Indicator {
+	var out []Indicator
+	for _, c := range r.Contributions("hud.indicator") {
+		if i := c.(Indicator); i.Slot == slot {
+			out = append(out, i)
+		}
+	}
+	slices.SortStableFunc(out, func(a, b Indicator) int { return cmp.Compare(a.Order, b.Order) })
+	return out
 }
 
 // StatusRule picks a session's status colour from its fields, or "" to leave it (SH-2's colours).

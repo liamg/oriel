@@ -306,6 +306,18 @@ flowchart TB
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats extension's since AI-12: one button to Usage with a
   hover card).
+- indicators in slots (SH-8): `registry.Indicator{Name, Slot, Order, Title, Note, Span, Help, Every, On, Build}`
+  (kind `hud.indicator`), listed by `registry.Indicators(r, slot)`. Slots: `titlebar.right`, `statusline.left`,
+  `statusline.right` (drawn among the views named `<slot>.<order>-<name>`, an indicator sorting as
+  `<slot>.<Order>-<Name>`), `hud` (the HUD's panels: `Title`, `Note`, `Span` of four columns) and `hud.today` (under
+  the Today panel). What `Build` returns is kept and drawn until it's built again: every `Every`, on a core event
+  named in `On`, on `hud.refresh {name}`, or when any contribution comes or goes (`Registry.ContributionsGen`); a
+  `ui.Func` that reads the store as it's drawn is live without any. An error draws in its place and counts towards
+  turning it off (`Report("hud.indicator", name, err)`). Commands `hud.toggle`, `hud.close`, `hud.refresh`; key mode
+  `hud`; view `app.overlay.hud`; options `hud.hold`, `hud.hold_delay`. Widgets `widget.Indicator`, `widget.Panel`,
+  `widget.Drawer`, `MeterOpts.To` (hatched on to a projection). Input: `render.ModsEvent` (the modifiers held),
+  `ui.UI.Mods`/`Chord`, `ui.Ctx.Held` and `HeldAlone` (a modifier held with nothing pressed since). A worker's load
+  reading is `worker.Options.Load` (`sysload.Read` by default).
 - agent console side sections: views named `agent.console.side.<order>-<name>` are drawn at the top of the console's
   right column, in name order, built with the session's ID as `ViewCtx.Instance`; one that has nothing to say for a
   session draws nothing. Jobs adds `agent.console.side.10-job` (SE-4).

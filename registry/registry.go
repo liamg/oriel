@@ -53,6 +53,7 @@ type Registry interface {
 	// Fire runs event's hooks (registry/hook.go): a veto or decision, and the hooks' errors.
 	Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error)
 	Contributions(kind string) []Contribution // by name
+	ContributionsGen() int                    // a generation that moves whenever a contribution comes or goes
 	InputByID(id string) (input.Engine, bool)
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
 	Pickers() []PickerSource              // the winning source for each id, by Order then id
@@ -227,29 +228,30 @@ const sep = "\x00"
 type keymapKey struct{ mode, seq string }
 
 type reg struct {
-	mu        sync.Mutex
-	commands  stacks[string, Command]
-	keymaps   stacks[keymapKey, Keymap]
-	sorted    []Keymap          // Keymaps, until one is added or removed
-	prefixes  map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
-	views     stacks[string, View]
-	inputs    stacks[string, input.Engine]
-	decor     stacks[string, DecorationProvider]
-	pickers   stacks[string, PickerSource]
-	help      []entry[HelpSource]
-	helpGen   int
-	live      stacks[string, func(c *ui.Ctx)]
-	themes    []entry[theme.Source]
-	themeGen  int
-	languages stacks[string, Language]
-	hooks     hooks
-	contribs  stacks[string, Contribution]
-	langGen   int
-	options   *options
-	faults    faults
-	diags     map[diagKey][]Diagnostic
-	diagGen   int
-	cover     map[diagKey]map[int]int
+	mu         sync.Mutex
+	commands   stacks[string, Command]
+	keymaps    stacks[keymapKey, Keymap]
+	sorted     []Keymap          // Keymaps, until one is added or removed
+	prefixes   map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
+	views      stacks[string, View]
+	inputs     stacks[string, input.Engine]
+	decor      stacks[string, DecorationProvider]
+	pickers    stacks[string, PickerSource]
+	help       []entry[HelpSource]
+	helpGen    int
+	live       stacks[string, func(c *ui.Ctx)]
+	themes     []entry[theme.Source]
+	themeGen   int
+	languages  stacks[string, Language]
+	hooks      hooks
+	contribs   stacks[string, Contribution]
+	contribGen int
+	langGen    int
+	options    *options
+	faults     faults
+	diags      map[diagKey][]Diagnostic
+	diagGen    int
+	cover      map[diagKey]map[int]int
 }
 
 func New() Registry {
