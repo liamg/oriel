@@ -705,6 +705,14 @@ type Host interface {
   `Roots`, `Init`, `Settings`, `Order`, `Source`), listed by `registry.LSPServers(r)`. A later one of a name shadows
   the built-in (`lsp.Builtins()`); among the servers for a language the lowest `Order` that's installed runs. The
   app's `lsp.Manager` reads them on every open (ide.md, "As built (LS-1/LS-2 core)").
+- Debug adapters (DB-1): `registry.DebugAdapter` contributions (kind `dap.adapter`: `Name`, `Type`, `Language`,
+  `Cmd`, `Transport` (stdio, tcp, reverse), `Probe`, `Launch`, `Attach`, `Infer`, `Order`, `Source`, `Connect`),
+  listed by `registry.DebugAdapters(r)`; a later one of a name shadows the built-in (`dap.Builtins()`: dlv, debugpy),
+  and a config's type picks the first installed by `Order`. Hook events `DebugStopped` and `DebugEnded`
+  (ide.md, "As built (DB-1)").
+- Gutter actions (DB-1): `registry.GutterAction{Name, Command, Args, When(path), Order}` (kind `editor.gutter`); a
+  click on an editor's line numbers runs the lowest-order one that applies to the file, with `{file, line}` (1-based)
+  added to its args. The debugger's breakpoint toggle is one.
 - Right-click menus (PL-13): `registry.MenuItem` contributions (kind `menu.item`) with a `When` (view, file glob,
   selection, help-id prefix); the window's one context menu gathers those that match what was clicked
   (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the

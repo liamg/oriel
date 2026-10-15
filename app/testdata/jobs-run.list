@@ -38,7 +38,7 @@ clip 0,38 43x936 r 0
   rect 9.5,292 24x1 fill #332f27
   path 5 segments stroke 1.4545455 #7c7566
   path 5 segments stroke 1.4545455 #7c7566
-  path 4 segments stroke 1.4545455 #4f4a40
+  path 4 segments stroke 1.4545455 #7c7566
   rect -0.5,373 2x18 fill #ffd23f radius 1
   rect 5.5,366 32x32 fill #1f1c0f radius 7
   path 3 segments stroke 1.4545455 #ffd23f

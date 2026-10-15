@@ -73,8 +73,8 @@ clip 0,38 223x936 r 0
   path 5 segments stroke 1.25 #7c7566
   path 5 segments stroke 1.25 #7c7566
   text "Requests" @33,292.30524 #b3ab99 Inter 12
-  path 4 segments stroke 1.25 #4f4a40
-  text "Debug" @33,315.30524 #4f4a40 Inter 12
+  path 4 segments stroke 1.25 #7c7566
+  text "Debug" @33,315.30524 #b3ab99 Inter 12
   rect 0,322.44 223x23 fill #1f1c0f
   rect 0,322.44 2x23 fill #ffd23f
   path 2 segments stroke 1.25 #ffd23f

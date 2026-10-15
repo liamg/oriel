@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -17,7 +16,6 @@ import (
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
-	"github.com/liamg/oriel/vim"
 )
 
 // TestsView is the Tests panel (ide.md, "Running tests").
@@ -344,7 +342,7 @@ func (x *testsExt) decorations(ctx registry.DecorationCtx) []registry.Decoration
 // nearest is the test at the cursor: the innermost one starting at or above it.
 func (x *testsExt) nearest() (testrun.Item, bool) {
 	p := x.sh.editor.current()
-	path := x.panePath(p)
+	path := x.sh.editor.panePath(p)
 	d := x.discover(path, p.Buffer())
 	line := p.Cursor().Line
 	best, ok := testrun.Item{}, false
@@ -362,19 +360,11 @@ func (x *testsExt) nearest() (testrun.Item, bool) {
 	return best, ok
 }
 
-func (x *testsExt) panePath(p vim.Pane) string {
-	path := p.Name()
-	if path != "" && !filepath.IsAbs(path) {
-		path = filepath.Join(x.sh.editor.dir, path)
-	}
-	return path
-}
-
 // runScope runs the tests a scope names, from the current file.
 func (x *testsExt) runScope(trigger string, mode testrun.Mode) error {
 	ws := x.workspace()
 	p := x.sh.editor.current()
-	path := x.panePath(p)
+	path := x.sh.editor.panePath(p)
 	d := x.discover(path, p.Buffer())
 	a := d.adapter
 	if a == nil {
@@ -568,7 +558,7 @@ func (x *testsExt) nextFailure() error {
 		return fmt.Errorf("no failure to go to")
 	}
 	p := x.sh.editor.current()
-	path, line := x.panePath(p), p.Cursor().Line
+	path, line := x.sh.editor.panePath(p), p.Cursor().Line
 	next := locs[0]
 	for _, l := range locs {
 		if l.File == path && l.Line > line {

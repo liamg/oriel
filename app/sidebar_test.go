@@ -12,7 +12,6 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/layout"
 )
 
@@ -397,18 +396,9 @@ func TestSidebarFormDockAndAvailability(t *testing.T) {
 	if s.access("Pull request").Disabled || s.access("Ship").Disabled {
 		t.Error("Pull request and Ship are dimmed, though FG-6 registers their views")
 	}
-	if !s.access("Debug").Disabled {
-		t.Error("Debug isn't dimmed with nothing to open")
-	}
-	s.reg.View("debug", ui0())
-	s.frame()
 	if s.access("Debug").Disabled {
-		t.Error("Debug stays dimmed once its view is registered")
+		t.Error("Debug is dimmed, though DB-1 registers its view")
 	}
-}
-
-func ui0() registry.View {
-	return registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() })
 }
 
 // SH-17: the user adds a project to the session: + in the sidebar's header picks a repo or a typed path, and the

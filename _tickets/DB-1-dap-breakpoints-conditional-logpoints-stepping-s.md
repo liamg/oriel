@@ -2,7 +2,7 @@
 id: DB-1
 title: "DAP: breakpoints (conditional, logpoints), stepping, stack, variables, watch, REPL"
 phase: P7
-status: todo
+status: review
 area: LSP, tests, debugging
 module: dap
 depends_on: [ED-7, FW-9]

@@ -66,7 +66,7 @@ flowchart LR
 | `vim` | modal engine over `edit` | text, edit |
 | `syntax` | tree-sitter (wazero), highlight, folds, units, outline | text, wazero |
 | `lsp` | LSP client, server registry, capabilities | text |
-| `dap` | DAP client, adapter registry | – |
+| `dap` | DAP client, adapter registry | lsp/jsonrpc (the base protocol's framing) |
 | `testrun` | test discovery, runner adapters (go, pytest, vitest/jest, cargo), result streams, watch, coverage | text, syntax |
 | `term` | the terminal model behind `term.Emulator`: grid, scrollback, modes, keys, snapshots, OSC 133 commands and OSC 7 cwd; `term/ghostty` (libghostty-vt as wasm under wazero), `term/pty` (pseudo-terminals over `x/sys/unix`), `term/vttest` (esctest-style case runner) | wazero, x/sys |
 | `wire` | yamux protocol, typed RPC + event streams | – |

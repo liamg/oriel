@@ -24,6 +24,15 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
       - run: make check
+      - name: Install delve and debugpy, so the dap tests run live too (DB-1)
+        shell: bash
+        run: |
+          go install github.com/go-delve/delve/cmd/dlv@v1.27.2
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          curl -sSfL -o debugpy.whl https://files.pythonhosted.org/packages/56/3d/c7dc9f35bc9e22cdb53679f844bee40fd5cff871862f60595869a433400d/debugpy-1.8.22-py2.py3-none-any.whl
+          echo "a9e9d3550e15ca479c59333e90845029190531f0cacfedab3b815a57bd913947  debugpy.whl" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/py" && unzip -q debugpy.whl -d "$RUNNER_TEMP/py"
+          echo "PYTHONPATH=$RUNNER_TEMP/py" >> "$GITHUB_ENV"
       - name: make test (under Xvfb on Linux, for render/gio's window test)
         shell: bash
         run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test; else make test; fi

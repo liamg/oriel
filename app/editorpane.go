@@ -163,6 +163,19 @@ func (x *editorExt) click(p vim.Pane, r render.Rect, at render.Point, m paneMetr
 		line = p.NextRow(line)
 	}
 	line = min(line, p.Buf().Lines()-1)
+	if at.X-r.Min.X < gutterWidth(p.Buf().Lines(), m) {
+		path := x.panePath(p)
+		if a, ok := registry.GutterActionFor(x.h, path); ok {
+			args := registry.Args{"file": path, "line": line + 1}
+			for k, v := range a.Args {
+				args[k] = v
+			}
+			if err := x.h.Run(context.Background(), a.Command, args); err != nil {
+				x.h.Notify(core.Notice{ID: "editor.gutter", Severity: core.SevWarning, Key: true, Text: err.Error()})
+			}
+			return
+		}
+	}
 	want := int((at.X - r.Min.X - m.textX + m.charW/2) / m.charW)
 	x.e.EnterWindow(p.ID())
 	x.e.SetCursor(vim.Pos{Line: line, Col: colAtVCol(p.Buf().Line(line), max(want, 0), p.TabStop())})
@@ -276,8 +289,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	}
 	decor := x.decorations(p, line, last)
 	cur := p.Cursor()
-	digits := max(len(fmt.Sprint(snap.Lines())), 3)
-	gw := max(float32(gutterW), float32(digits)*m.charW+34)
+	gw := gutterWidth(snap.Lines(), m)
 	numStyle := ui.TextStyle{Font: x.pane.font, Color: th.C(tGutterFg)}
 	for row := 0; row < rows && line < snap.Lines(); row++ {
 		rowID := c.Next(line)
@@ -332,6 +344,21 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 		x.e.ScrollTo(p.ID(), revealTo)
 		x.h.Redraw()
 	}
+}
+
+// panePath is the absolute path of a window's file, "" for none.
+func (x *editorExt) panePath(p vim.Pane) string {
+	path := p.Name()
+	if path != "" && !filepath.IsAbs(path) {
+		path = filepath.Join(x.dir, path)
+	}
+	return path
+}
+
+// gutterWidth is the width of a window's gutter: its line numbers and signs.
+func gutterWidth(lines int, m paneMetrics) float32 {
+	digits := max(len(fmt.Sprint(lines)), 3)
+	return max(float32(gutterW), float32(digits)*m.charW+34)
 }
 
 // textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop.

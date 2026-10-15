@@ -124,6 +124,56 @@ below.
 
 ![08-debug](mockups/08-debug.png)
 
+### As built (DB-1)
+
+- **`dap`** (it imports only `lsp/jsonrpc`, for the base protocol's framing, which is LSP's). `dap.Start(ctx, spec,
+  LaunchConfig, Options)` launches an adapter and runs the launch sequence (`overview.md`): initialize, launch or
+  attach, then on `initialized` the breakpoints (`Options.Breakpoints`, by path), the exception filters (the
+  adapter's defaults unless `Options.Exceptions`) and `configurationDone`; it returns once the launch has succeeded.
+  `*dap.Client` implements `dap.Session` (the seam DB-3's agent tools wrap): `SetBreakpoints` (a file's whole set,
+  each with `Condition`, `HitCondition`, `LogMessage`; what the adapter made of them is `Breakpoints(path)`),
+  `SetExceptionBreakpoints`, `Threads`, `Stack`, `Scopes`, `Variables`, `Evaluate(frame, expr, context)` (watch, repl,
+  hover), `Continue`, `Step(over | in | out)`, `Pause`, `Stop` (a disconnect, which ends a launched debuggee). Lines are
+  0-based as everywhere in Oriel; the client speaks 1-based to the adapter. Events (`Stopped`, `Continued`, `Output`,
+  `Exited`, `Terminated`, `ThreadChanged`, `BreakpointChanged`, `ProcessStarted`) go to `Options.OnEvent` in order, on
+  the client's own goroutine. Reverse requests (runInTerminal, startDebugging) are refused: the client doesn't offer
+  them. An error response is a `*dap.Error` with the body's formatted message.
+- **`dap.AdapterSpec`** (name, type, languages, `Cmd`, `Transport`, `Probe`, default `Launch`/`Attach` arguments,
+  `Infer`, `Order`, `Connect`) is registered as `registry.DebugAdapter` (kind `dap.adapter`), the same fields as
+  `lsp.ServerSpec`/`registry.LSPServer`. Transports: `stdio`; `tcp` (the adapter listens on `${port}`); `reverse`
+  (Oriel listens on `${addr}` and the adapter connects, as `dlv dap --client-addr` does). Built in: delve
+  (`outputMode: remote`, so the program's output is in the console) and debugpy (`python3 -m debugpy.adapter`, found
+  by probing `import debugpy`; `console: internalConsole`). js-debug and codelldb aren't built in yet: a plugin
+  registers them the same way.
+- **Launch configs**: `.oriel/debug.toml`'s `[[debug]]` tables (`name`, `type`, `request`, `program`, `args`, `cwd`,
+  `env`, `pid`; any other key is the adapter's own, `dap.ConfigFromMap`). With none, the adapter's `Infer` for the
+  current file: delve debugs a `package main` file's program, otherwise its package's tests; debugpy the file.
+- **The app** (`app/debug*.go`, a built-in): breakpoints by file, kept per work directory with the watches;
+  `registry.GutterAction` (new: a click on an editor's line numbers runs a command with `{file, line}`) toggles one;
+  `:Breakpoint {condition}`, `:Logpoint {message}`, `debug.breakpoint.set {file, line, condition, hit, log}`. Signs: ●,
+  ○ conditional or hit-conditional, ◆ logpoint, grey when the adapter couldn't place it; their condition and hit
+  count after the line. Paused, the frame's line has ➜ and a tint, and the editor goes to it. Commands `debug.start
+  {config}` (`:Debug`), `debug.continue` (F5, which starts when nothing runs; `:Dc`), `debug.pause` (F6),
+  `debug.step.over|into|out` (F10, F11, ⇧F11), `debug.stop` (⇧F5), `debug.restart` (⇧⌘F5), `debug.frame {index}`,
+  `debug.frame.up|down` (`]f`/`[f`), `debug.watch.add` (`:Watch`), `debug.eval` (`:Eval`), `debug.open`; `␣db`,
+  `␣dc`, `␣do`, `␣dx`. The Debug view (the rail's Debug, a bottom dock): a toolbar, the call stack and breakpoints,
+  variables (a structured one's children fetched when opened) and watches, and the debug console with a REPL. The
+  status line shows `● paused main.go:12 · 3 breakpoints · 1 conditional`. Hook events `DebugStopped {adapter,
+  reason, thread, file, line}` and `DebugEnded {adapter, exit_code}`. Each adapter's stderr is a `logs.Lines` with
+  the source `dap:<name>`.
+- **Tests.** `spec/dap` vendors the specification, the overview and the JSON schema. `dap/daptest` records a session
+  through a proxy (machine paths written as `${root}`, `${goroot}`, `${home}`; telemetry left out) and replays it
+  strictly (`Fake`) or in any order (`Responder`, for the app). `TestSession` replays one script (a plain breakpoint,
+  step in, over and out, breakpoints set again with a hit condition, a condition and a logpoint, the stack, scopes,
+  variables and a child, watch and REPL evaluation in two frames, an evaluation error, running to the end) against
+  delve 1.27.2 and debugpy 1.8.22; `TestLive` runs it against whichever is installed (CI installs both) and `-record`
+  re-records; `TestRequestsMatchSchema` holds every recorded request to the schema. The app's `TestDebugSession`
+  drives the same through the gutter, keys and the panel on its own recording (`-dap-record`).
+- Not yet: breakpoints that move with edits (they stay on their line numbers), function, exception-option and data
+  breakpoints in the UI, setting a variable, threads other than the stopped one in the panel, attach by picking a
+  process, a Lua binding for `dap.adapter`, running adapters on the worker, inline values (DB-2), the agent's tools
+  and the frame thread (DB-3).
+
 ## Running tests
 
 ![36-tests](mockups/36-tests.png)
