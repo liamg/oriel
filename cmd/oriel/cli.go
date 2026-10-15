@@ -38,7 +38,7 @@ func orielHome() string {
 }
 
 // newWorker is this machine's worker with the built-in providers and prompt packs.
-func newWorker(home string, log *slog.Logger) (*worker.Worker, error) {
+func newWorker(home string, log *slog.Logger, id core.WorkerID, name string) (*worker.Worker, error) {
 	providers := &agent.Providers{}
 	providers.Register(claude.Provider{ProbeDir: filepath.Join(home, "probe")})
 	providers.Register(&codex.Provider{})
@@ -46,7 +46,7 @@ func newWorker(home string, log *slog.Logger) (*worker.Worker, error) {
 		log.Warn("prompt packs", "err", err)
 	}
 	sandboxes := worker.NewSandboxFactory(nil)
-	w, err := worker.New(worker.Options{Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: packs.Get, Log: log, Version: version,
+	w, err := worker.New(worker.Options{ID: id, Name: name, Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: packs.Get, Log: log, Version: version,
 		TrustPath: filepath.Join(app.DefaultConfigDir(), "trusted.toml")})
 	if err != nil {
 		return nil, err
@@ -68,7 +68,15 @@ func runWorker(args []string, stderr io.Writer) error {
 		return err
 	}
 	log := slog.New(slog.NewTextHandler(stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	w, err := newWorker(*home, log)
+	host, _ := os.Hostname()
+	var id core.WorkerID // this machine's
+	if *connect != "" {
+		if *name == "" {
+			*name = host
+		}
+		id = core.WorkerID(*name)
+	}
+	w, err := newWorker(*home, log, id, *name)
 	if err != nil {
 		return err
 	}
@@ -86,11 +94,8 @@ func runWorker(args []string, stderr io.Writer) error {
 		log.Info("worker listening", "socket", worker.SocketPath(*home))
 		return w.Listen(ctx, worker.SocketPath(*home))
 	}
-	host, _ := os.Hostname()
 	hello := wire.Hello{Name: *name, Key: *key, OS: runtime.GOOS, Arch: runtime.GOARCH, Hostname: host, Version: version}
-	if hello.Name == "" {
-		hello.Name = host
-	}
+	log.Info("serving the app", "app", *connect, "name", *name, "certificate", wire.Words(*fingerprint))
 	for ctx.Err() == nil {
 		err := w.ServeApp(ctx, *connect, *fingerprint, hello)
 		var rejected *wire.ErrRejected

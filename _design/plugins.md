@@ -334,6 +334,13 @@ flowchart TB
   `jobs.save`, `jobs.run`, `jobs.delete`, `session.delete`, `jobs.form.save`; key modes `jobs` and `jobs.form`; theme
   tokens `jobs.run.running`, `jobs.run.done`, `jobs.run.blocked`, `jobs.run.stopped`. A kind's `PromptFile` writes its
   prompt into the workspace as the session starts (the job kind's `JOB.md`).
+- workers (AI-15): `core.WorkerState` carries `Label` (the app's name, `WorkerRenamed`; `Title()` reads it first),
+  `Arch`, `Version`, `Build`, `Providers` and `Since` (when it connected or went away; `WorkerGone.At`);
+  `WorkerForgotten` takes an offline one off the list, and `core.State.FromWorker` says which events a worker may
+  send. `wire.HashKey` and `wire.KeyHashAuth` keep and check keys by hash. Commands: `workers.open`, `:Workers`,
+  `workers.add {name, listen}`, `workers.rename {name, to}`, `workers.revoke {name}`, `workers.forget {name}`,
+  `workers.restart`, `workers.dialog.save`; option `workers.listen`; key modes `workers` and `workers.add`; the
+  `workers` icon; views `app.overlay.workers` and `app.overlay.workers.dialog`.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**

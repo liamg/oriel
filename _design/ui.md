@@ -922,3 +922,46 @@ pins; each run is a session of kind job (`sessions.md` → Jobs).
   dimmed, nothing to open): "skipped (last run still going)". The dialog's worker can be changed on a saved job:
   Save moves it there (`jobs.save {to}`: saved on the new worker, then deleted from the old; its runs stay where they
   ran).
+
+
+## 45 · Workers
+
+No mockup: it's drawn in 43's and 44's style. A worker is one per machine (`architecture.md`): this machine's, which
+the app starts, and remote ones, which dial the app over pinned TLS (`sessions.md`, `security.md` → Remote workers).
+
+- **The Workers page** (`:Workers {name}`, `workers.open {name}`, the sidebar's global **Workers** with its figure,
+  "2 online", the omnibox's Pages) is a page over the main area (`widget.Page` with `Over`), one of the pages that
+  replace each other, key mode `workers`. The header reads WORKERS, then "2 online · 1 offline", then whether Oriel
+  listens for workers ("listening on :7437" or "not listening for workers elsewhere") with the certificate's
+  fingerprint as words; **+ Add a worker** (`a`) and **Close** (`esc`).
+- **The list** (`widget.Rows`, `j`/`k`): this machine's worker first, then the others by name; known workers that
+  aren't connected (keys in the file, or ones seen this run) are listed too. Each row: a status dot (online in the
+  quiet colour, offline faint, revoked in red), its name ("this machine" after this one's), and under it its host,
+  OS/arch and "online 2h" / "offline since 14:02" / "never connected" / "revoked". The foot says where the keys live.
+- **The selected worker**: its name (its own name in grey after it once renamed), **Rename** (`r`), **Restart** (this
+  machine's), **Revoke** (a remote one; asks "Sure?" once), **Forget** (an offline one; asks once). A meta line: host,
+  OS/arch, version and build, online or offline and since, the address it last came from. Then cards:
+  - **LOAD**: CPU of the whole machine and its cores, memory used of the total, as meters, and when sampled (the
+    worker's `sysload` readings); "no reading" while offline.
+  - **AGENTS**: each provider the worker has, with its account and plan tier from the usage it reports, or "signed out"
+    in red with what the provider said.
+  - **SESSIONS**: how many sessions and how many agents running, and the sessions by name with their status dot.
+  - **CONNECTION**: this machine's "on ~/.oriel/worker.sock (owner only)"; a remote one's "dials Oriel with its key ·
+    added Oct 12", and the last address.
+- **Add a worker** (`workers.add {name, listen}`, a `widget.Modal`, key mode `workers.add`): a name (letters, digits,
+  `-`, `_`, `.`; not one in use, not `local`), and, while `workers.listen` is empty, the address to listen on,
+  `:7437` by default, saved to `workers.listen`. **Add** (`⌘↵`) makes the key and shows the next step: "Run this on
+  devbox:" and the one-line command (`oriel worker --connect host:7437 --fingerprint … --key … --name devbox`) with
+  **Copy**; "The worker checks Oriel's certificate. It prints these words as it connects: amber-…"; the key is shown
+  this once. Under them a status line waits ("Waiting for devbox to connect…") and turns to "devbox connected ·
+  linux/arm64 · v0.4.2" when it does. **Done** closes it.
+- **Rename** is a small dialog of one field, the worker's name in Oriel: it renames it wherever a worker is named.
+- Built in AI-15 (`app/workers.go`, `app/workerspage.go`): as above. Decided where the design was silent: workers
+  known only from the keys file (added, never connected or offline since Oriel opened) are listed too, with the file's
+  last-seen time; a name is the worker's ID, so Rename is a label of the app's (kept in `workers.json`) and the
+  worker keeps its own; Revoke keeps the worker listed as revoked until Forget; the command's host is the listen
+  address's, or this machine's name when it listens on every address; this machine's worker can't be revoked or
+  forgotten, and Restart is only offered while Oriel starts it (`Config.LocalWorker`). The sidebar's Workers comes
+  after Jobs (order 40), with the `workers` icon. No global key.
+- Not yet: a mockup; editing a remote session's files (the buffer replica, sessions.md); a worker's own log or
+  terminal from the page; restarting or updating a remote worker from here (PL-6); rotating the certificate.

@@ -152,9 +152,21 @@ type Sessions interface {
 
 - **The worker** (`oriel worker`) is a process of its own on each machine. The app and the CLI reach this machine's
   on `~/.oriel/worker.sock` (owner only), starting it if it isn't running; a worker elsewhere dials the app over
-  pinned TLS (`oriel worker --connect host:port --fingerprint …`). Remote workers run sessions and agents, but
+  pinned TLS (`oriel worker --connect host:port --fingerprint …`; AI-15 below). Remote workers run sessions and agents, but
   editing a remote session's files from the app needs the buffer replica (`architecture.md` → Where buffers live),
   which isn't built: the window only follows sessions on this machine.
+- **Remote workers** (AI-15): the app listens for them while `workers.listen` is set (an address; empty, the default,
+  doesn't listen), TLS 1.3 with a self-signed certificate kept in the state directory (`workers/tls.crt`, `tls.key`,
+  owner-only) that workers pin by fingerprint. A worker is let in by its name and key (`wire.KeyHashAuth` over
+  `workers.json` in the config directory, owner-only, each key kept as `wire.HashKey`). Once in, it's served exactly
+  as this machine's worker is (the `sessions` extension's `serve`): its `WorkerChanged`, usage and sessions join the
+  store, and it answers the same calls. It must say it's the worker its key is for (`Info.ID`), or it's cut off, and
+  it speaks only for itself (`core.State.FromWorker`: events about another worker or another worker's sessions are
+  dropped). One that connects again replaces its old connection; one that goes away is `WorkerGone` (offline, with
+  `Since`) and its sessions leave the window until it's back. `oriel worker --connect` names the worker (`--name`,
+  the machine's by default), which is its `WorkerID`, and logs the certificate's fingerprint as words; a refusal
+  (`wire.ErrRejected`, a revoked key) stops it, anything else retries every 5s. The Workers page (`ui.md` 45) adds,
+  revokes, renames and forgets them, and restarts this machine's (the drain below, `workerDrain.asked`).
 - **This machine's worker hands over** (`worker.handover`): it stops its agents as `StoppedByHandOver` and quits, and
   the next worker to start resumes them. The app drains it first: with an agent mid-turn it waits for the turns to
   end, at most 60s, with a dialog naming the sessions and counting down; ⌘↵ (`worker.hand-over-now`, in the

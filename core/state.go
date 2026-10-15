@@ -62,9 +62,15 @@ type SessionState struct {
 type WorkerState struct {
 	ID        WorkerID  `json:"id"`
 	Name      string    `json:"name,omitempty"`
+	Label     string    `json:"label,omitempty"` // the app's name for it (WorkerRenamed), over Name
 	Host      string    `json:"host,omitempty"`
 	OS        string    `json:"os,omitempty"`
+	Arch      string    `json:"arch,omitempty"`
+	Version   string    `json:"version,omitempty"`
+	Build     string    `json:"build,omitempty"`
+	Providers []string  `json:"providers,omitempty"` // the agents it can run
 	Connected bool      `json:"connected"`
+	Since     time.Time `json:"since,omitzero"` // when it connected, or went away
 	Cores     int       `json:"cores,omitempty"`
 	CPU       float64   `json:"cpu,omitempty"` // 0–1, the whole machine
 	Mem       uint64    `json:"mem,omitempty"` // bytes in use
@@ -111,17 +117,25 @@ func (u ProviderUsage) Same(o ProviderUsage) bool {
 	return u.Provider == o.Provider && u.Account == o.Account
 }
 
-// WorkerName is how a worker reads: its name, else its ID. "" is this machine's.
+// Title is how a worker reads: the app's name for it, else its own, else its ID.
+func (w WorkerState) Title() string {
+	switch {
+	case w.Label != "":
+		return w.Label
+	case w.Name != "":
+		return w.Name
+	}
+	return string(w.ID)
+}
+
+// WorkerName is how a worker reads (WorkerState.Title). "" is this machine's.
 func (s State) WorkerName(id WorkerID) string {
 	if id == "" {
 		id = LocalWorker
 	}
 	for _, w := range s.Workers {
 		if w.ID == id {
-			if w.Name != "" {
-				return w.Name
-			}
-			break
+			return w.Title()
 		}
 	}
 	return string(id)

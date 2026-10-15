@@ -147,6 +147,32 @@ func TestKeyAuth(t *testing.T) {
 	}
 }
 
+func TestKeyHashAuth(t *testing.T) {
+	hashes := map[string]string{"devbox": HashKey("secret")}
+	if strings.Contains(hashes["devbox"], "secret") || HashKey("secret") == HashKey("secreu") {
+		t.Fatalf("the hash is %q", hashes["devbox"])
+	}
+	addr, fp, _ := pair(t, KeyHashAuth(func(n string) (string, bool) { k, ok := hashes[n]; return k, ok }))
+	h := hello("devbox")
+	h.Key = "secret"
+	p, _, err := dial(t, addr, fp, h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Conn.Close()
+	var rejected *ErrRejected
+	for _, k := range []string{"wrong", HashKey("secret"), ""} {
+		h.Key = k
+		if _, w, err := dial(t, addr, fp, h); !errors.As(err, &rejected) || w.Status != StatusDenied {
+			t.Fatalf("key %q got %+v, %v", k, w, err)
+		}
+	}
+	h.Name, h.Key = "laptop", "secret"
+	if _, _, err := dial(t, addr, fp, h); !errors.As(err, &rejected) {
+		t.Fatalf("an unknown worker got %v", err)
+	}
+}
+
 func TestOversizedHelloIsRefused(t *testing.T) {
 	addr, _, _ := pair(t, allow())
 	raw, err := net.Dial("tcp", addr)

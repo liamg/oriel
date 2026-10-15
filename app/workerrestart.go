@@ -41,6 +41,7 @@ type workerDrain struct {
 	deadline time.Time
 	quit     atomic.Bool // Oriel quits after
 	restart  bool        // for another build: a quit asked for meanwhile can be called off
+	asked    bool        // a restart the user asked for, not a rebuild
 	confirm  atomic.Bool // a quit waiting for Quit: scheduled jobs and nothing mid-turn
 	now      chan struct{}
 	nowOnce  sync.Once
@@ -214,7 +215,7 @@ waiting:
 				sh.cfg.Workers[i] = c
 			}
 		}
-		x.serve(x.ctx, x.h, c)
+		x.serve(x.ctx, x.h, c, "")
 	})
 	return nil
 }
@@ -313,6 +314,9 @@ func (x *sessions) drainBody(c *ui.Ctx, r *workerDrain, busy []core.SessionState
 	quit := r.quit.Load()
 	if r.handing.Load() {
 		text := "Starting this build's worker. The agents come back on it."
+		if r.asked {
+			text = "Starting the worker again. The agents come back on it."
+		}
 		if quit {
 			text = "Stopping the worker. Its agents come back when Oriel opens again."
 		}
@@ -327,6 +331,9 @@ func (x *sessions) drainBody(c *ui.Ctx, r *workerDrain, busy []core.SessionState
 		}
 		lead, then := "Oriel was rebuilt; the worker running your sessions is from the earlier build.",
 			fmt.Sprintf("It restarts when these turns end, or in %s, and their agents come back on the new one.", left)
+		if r.asked {
+			lead = "The worker running your sessions restarts."
+		}
 		if quit {
 			lead, then = "Oriel stops the worker running your sessions as it quits.",
 				fmt.Sprintf("It quits when these turns end, or in %s; their agents come back when Oriel opens again.", left)

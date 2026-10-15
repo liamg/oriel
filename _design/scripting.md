@@ -344,3 +344,12 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `"weekly mon 07:00"`, `"mon,thu 07:00"`, or a table `{ every = "days", days = { "Mon", "Thu" }, at = "07:00" }`.
   `jobs.new` opens the dialog with any of them filled in; `jobs.delete { name }` forgets one; `session.delete { id }`
   throws a run (or any session of Oriel's) away.
+
+
+## As built (AI-15)
+
+- Workers are commands: `oriel.cmd("workers.add", { name = "devbox", listen = ":7437" })` makes its key and opens the
+  dialog with the command to run there (`listen` only when `workers.listen` is empty);
+  `oriel.cmd("workers.rename", { name = "devbox", to = "Build box" })` (`to = ""` goes back to its own name),
+  `workers.revoke { name }`, `workers.forget { name }`, `workers.restart`, `workers.open { name }`.
+  `oriel.option["workers.listen"]` is where Oriel listens for them.

@@ -108,6 +108,11 @@ clip 0,38 223x356 r 0
   path 2 segments stroke 1.25 #7c7566
   path 3 segments stroke 1.25 #7c7566
   text "Jobs" @33,458.02524 #b3ab99 Inter 12
+  path 5 segments stroke 1.25 #7c7566
+  path 5 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  text "Workers" @33,481.02524 #b3ab99 Inter 12
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -118,7 +123,7 @@ clip 0,38 223x356 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Settings" @33,481.02524 #b3ab99 Inter 12
+  text "Settings" @33,504.02524 #b3ab99 Inter 12
 pop
 rect 223,38 1x356 fill #24221d
 rect 224,38 536x356 fill #060606

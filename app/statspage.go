@@ -266,7 +266,7 @@ func (x *statsExt) values(key string) []string {
 	switch key {
 	case "worker":
 		for _, w := range st.Workers {
-			add(cmpOr(w.Name, string(w.ID)))
+			add(w.Title())
 		}
 	case "account":
 		for _, u := range st.Usage {
@@ -303,7 +303,7 @@ func (x *statsExt) filterValue(key, v string) string {
 	switch key {
 	case "worker":
 		for _, w := range st.Workers {
-			if w.Name == v {
+			if w.Title() == v {
 				return string(w.ID)
 			}
 		}

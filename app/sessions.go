@@ -66,7 +66,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	x.sandboxKick = make(chan struct{}, 1)
 	x.sandboxSettings(ctx)
 	for _, c := range x.sh.cfg.Workers {
-		x.serve(ctx, h, c)
+		x.serve(ctx, h, c, "")
 	}
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
@@ -209,8 +209,10 @@ func (x *sessions) Deactivate(ctx context.Context) error {
 	return x.disposer.Deactivate(ctx)
 }
 
-// serve mirrors one worker into the store and answers its calls, until ctx ends or it goes away.
-func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
+// serve mirrors one worker into the store and answers its calls, until ctx ends or it goes away. A worker speaks
+// only for itself (core.State.FromWorker); want, when set, is the ID it must have: a remote worker's, from its key.
+// A worker that connects again replaces its old connection.
+func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want core.WorkerID) {
 	c.Conn.Handle(worker.MethodAppTools, func(context.Context, json.RawMessage) (any, error) { return x.agentTools(h), nil })
 	c.Conn.Handle(worker.MethodAppTool, func(ctx context.Context, raw json.RawMessage) (any, error) {
 		var call worker.ToolCall
@@ -232,25 +234,47 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
 			h.Log().Warn("worker", "err", err)
 			return
 		}
+		if want != "" && info.ID != want {
+			h.Log().Warn("a worker claimed another's name", "key", want, "claimed", info.ID)
+			c.Conn.Close()
+			return
+		}
 		x.mu.Lock()
+		old, had := x.workers[info.ID]
 		x.workers[info.ID] = c
 		x.mu.Unlock()
+		if had && old.Conn != c.Conn {
+			old.Conn.Close()
+		}
 		x.sendSandbox()
 		h.Redraw()
 		if x.sh.cfg.LocalWorker != nil && info.ID == core.LocalWorker && info.Build != worker.Build() {
 			x.sh.restartWorker(c, info.ID)
 		}
-		err = c.Events(ctx, x.sh.cfg.Store.Apply)
+		store := x.sh.cfg.Store
+		err = c.Events(ctx, func(ev core.Event) error {
+			if !store.State().FromWorker(info.ID, ev) {
+				return nil
+			}
+			return store.Apply(ev)
+		})
 		if r := x.sh.draining.Load(); r != nil && r.old.Conn == c.Conn {
 			r.lost()
 			return
 		}
-		if ctx.Err() == nil {
-			h.Log().Warn("lost the worker", "worker", info.ID, "err", err)
-			_ = x.sh.cfg.Store.Apply(core.WorkerGone{ID: info.ID})
-			x.mu.Lock()
+		if ctx.Err() != nil {
+			return
+		}
+		x.mu.Lock()
+		current := x.workers[info.ID].Conn == c.Conn
+		if current {
 			delete(x.workers, info.ID)
-			x.mu.Unlock()
+		}
+		x.mu.Unlock()
+		if current {
+			h.Log().Warn("lost the worker", "worker", info.ID, "err", err)
+			_ = store.Apply(core.WorkerGone{ID: info.ID, At: time.Now()})
+			h.Redraw()
 		}
 	}()
 }
@@ -259,7 +283,7 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client) {
 // the notices of those that work again.
 func (x *sessions) loginNotices(w core.WorkerState, was []core.Login) {
 	source := "worker:" + string(w.ID)
-	where := cmpOr(w.Name, string(w.ID))
+	where := w.Title()
 	if len(w.SignedOut) == 0 {
 		for _, n := range x.h.State().Notifications {
 			if n.ID == "agent.login" && n.Source == source && !n.Dismissed {
