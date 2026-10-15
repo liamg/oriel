@@ -2,7 +2,7 @@ package api
 
 import "github.com/liamg/oriel/registry"
 
-//oriel:api name=ledger
+//oriel:api name=ledger cap=agent.read
 type Ledger struct{ a *APIs }
 
 // count is a project's review ledger: by the session's name for it or a path in it, the project in front if "".

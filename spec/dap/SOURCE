@@ -1,0 +1,5 @@
+source: https://github.com/microsoft/debug-adapter-protocol
+branch: main
+commit: c10f18c3332ca04cece1081aa00232a9d882438d
+path: specification.md, overview.md, debugAdapterProtocol.json, License.txt
+license: documentation under Creative Commons Attribution, code (the JSON schema) under MIT (see License.txt)

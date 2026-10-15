@@ -205,3 +205,20 @@ func TestAgentAskingToPostAReviewIsRefused(t *testing.T) {
 		t.Errorf("the user was asked: %+v", ask)
 	}
 }
+
+// The assistant's my_prs and review_requests read GitHub through the worker's gh (crit-reference.md, "PR lists").
+func TestSearchPRsThroughTheWorker(t *testing.T) {
+	r := newRig(t)
+	hub := ghtest.New(t)
+	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
+	hub.AddPR("acme/api", gh.PR{Title: "retry transient 502s", Author: "maria", Reviewers: []string{"you"}})
+	hub.AddPR("acme/api", gh.PR{Title: "round half to even"})
+	c, _ := r.app()
+	got, err := c.SearchPRs(context.Background(), gh.SearchReview)
+	if err != nil || len(got) != 1 || got[0].Title != "retry transient 502s" || got[0].Repo != "acme/api" {
+		t.Errorf("review requests: %+v, %v", got, err)
+	}
+	if _, err := c.SearchPRs(context.Background(), " "); err == nil {
+		t.Error("an empty search ran")
+	}
+}

@@ -2,12 +2,14 @@ package ui
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/tools/perf"
 )
 
 func paintOps(u *UI, size render.Point, build func(c *Ctx)) []render.Op {
@@ -153,6 +155,7 @@ func TestListBuildsOnlyVisibleRows(t *testing.T) {
 // A 10k-row list scrolled a row per frame must build, lay out and paint well inside the 4 ms frame
 // budget at 120 Hz (rendering.md).
 func TestListScrollBudget(t *testing.T) {
+	perf.Timed(t)
 	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
 		t.Skip("timing under -race, -short or -cover means nothing")
 	}
@@ -167,19 +170,27 @@ func TestListScrollBudget(t *testing.T) {
 		})
 	}
 	id := childID(0, "list")
-	var times []time.Duration
-	for range 240 {
-		var l render.List
-		t0 := time.Now()
-		u.Frame(l.Record(1), size, build)
-		times = append(times, time.Since(t0))
-		u.ScrollBy(id, 0, 21)
+	// The best p99 of a few rounds: a round the scheduler preempted under a parallel test load can't fail the
+	// budget, and a slow frame still fails every round.
+	best := time.Duration(math.MaxInt64)
+	for range 3 {
+		var times []time.Duration
+		for range 240 {
+			var l render.List
+			t0 := time.Now()
+			u.Frame(l.Record(1), size, build)
+			times = append(times, time.Since(t0))
+			u.ScrollBy(id, 0, 21)
+		}
+		slices.Sort(times)
+		p50, p99 := times[len(times)/2], times[len(times)*99/100]
+		t.Logf("10k-row list, 48 rows in view: p50 %v, p99 %v per frame", p50, p99)
+		if best = min(best, p99); best <= 4*time.Millisecond {
+			break
+		}
 	}
-	slices.Sort(times)
-	p50, p99 := times[len(times)/2], times[len(times)*99/100]
-	t.Logf("10k-row list, 48 rows in view: p50 %v, p99 %v per frame", p50, p99)
-	if p99 > 4*time.Millisecond {
-		t.Errorf("p99 %v per frame, budget 4ms", p99)
+	if best > 4*time.Millisecond {
+		t.Errorf("p99 %v per frame, budget 4ms", best)
 	}
 }
 

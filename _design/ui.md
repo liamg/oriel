@@ -90,7 +90,9 @@ They are design sketches, not the implementation: the app draws natively (see `s
   source. The status line's mode reads the presenter's label (PREVIEW). Each window has its own: one window can preview
   a file while another edits it, the preview following the edits. The window's top line follows the preview's scroll,
   so Edit comes back where you were reading, and the presenter comes back after a restart.
-- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem indicators.
+- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem indicators. Built in SH-8: the
+  status line's and the title bar's slots draw the indicators in them (`statusline.right.70-workers.status`: WKR
+  and each connected worker's CPU, amber with a dot from 80%) beside the views named for the slot.
 
 ## 01b · Requests: the main conversation view
 
@@ -150,7 +152,8 @@ What the window shows with no directory and no session open: at launch (plain `o
 - Entries are a contribution point. An entry whose command isn't available is dimmed with a `soon` tag; New Session and
   Resume a Session are, while no worker is connected.
 - Recent lists the sessions first (not archived, newest first: kind, projects, branch, a diamond in the status
-  colour), and opening one runs `session.open`. Until mission control (SH-7), this is what the app opens on.
+  colour), and opening one runs `session.open`. Since SH-7 the app opens on mission control over it once there's a
+  session to show (03).
 - `j`/`k` or arrows move, `⏎` runs, `⌫` (or the `✕` on a recent under the pointer) forgets a recent, until it's opened again. The same actions are commands, so they're in the omnibox too.
 - The pointer moving onto a row selects it, as `j`/`k` do.
 - It fits the window: the columns shrink to fit, and below 760 wide Start and Recent become tabs. Taller than the window, it
@@ -345,7 +348,8 @@ Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
 - Preview pane: the highlighted session's waiting question, tasks and last moves, so you can answer without switching.
 - Built from SH-4: `⌘K` opens it; `⇥` steps through the scopes; each source is a registry picker source, so its
   preview is the source's own. Symbols come from the open buffers' outlines until LSP's workspace symbols (LS-2);
-  tickets and PRs from their plugins (PL-8, the GitHub integration). The session preview grows its question, tasks
+  tickets from every ticket tracker a plugin brings (the app's `tickets`, `!`: plugins.md, "As built (tickets)")
+  and PRs from the GitHub integration. The session preview grows its question, tasks
   and moves as the AI tickets add them.
 
 ## 02b · Pickers: files, grep, keymaps, and the rest
@@ -426,6 +430,29 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Left: the **needs you** queue, oldest first, plus agentbus questions with their auto-answer countdowns.
 - Bottom strip: usage per provider, worker CPU sparklines, agentbus presence.
 - Fully keyboard-driven: `hjkl`, `⏎` opens, `a` allows, `x` stops.
+- Built in SH-7 (`app/mission.go`, `app/missionview.go`): `⌘⇧K` or `mission.toggle` shows it under the title bar
+  (`widget.Page`, key mode `mission`; Escape goes back); the start view links to it. Header: the counts by status, BY
+  WORKER / BY STATUS / BY REPO, a filter (`/`). Cards are grouped by worker (its load in the heading; the last card of
+  a connected worker's group starts a session there, `n`), most urgent first, as many to a row as fit; the border is
+  the status colour, the selected card's the accent; heading: name (a click opens it), kind, PR, provider; foot:
+  tasks, context, the change, how long. A **working** card's body is a terminal: the agent's recent activity (each
+  tool call with a dot, cyan running, red failed, and the end of its output with its colours; prose in cyan) written
+  into a Ghostty VT the size of the box, so it streams as the transcript grows. A card with a waiting **inbox card**
+  for its session shows that card, the same one the inbox draws (`registry.InboxCard.Draw`), answered the same way
+  (`ask.answer`); while mission control is up those cards aren't stacked over the window too. Otherwise a box says
+  what the status is about (replied and awaiting you, with a reviewer, CI running, stopped). Left: the queue,
+  every waiting card and every session needing you with none (its last words), oldest first; agentbus's apart with
+  their auto-answer countdowns. Bottom: the `mission` indicator slot (usage per account, each worker's CPU over 15
+  minutes), then the keys and where Escape goes. Keys: `hjkl`/arrows, `⏎` (`session.open`), `a` (allows the
+  selected card's first ask), `x` (`session.stop`), `r` (renames on the card), `n`, `/`. Every action is a
+  `mission.*` command, and the assistant reads or opens it with `mission_control`. The app opens on it at launch
+  (`mission.at_launch`) once a session is known, if it started with nothing open.
+- Decided in SH-7 (the design was silent): the live terminal shows the agent's activity from its transcript rather
+  than mirroring the raw PTY (Claude's full-screen TUI doesn't read at a card's size, and Codex has none), with
+  `agent.terminal` a command away; a tool's cursor moves and clears are dropped so it can't wipe the card. Cards sort
+  by urgency within a group. Opening at launch waits for the first session, since sessions arrive from the worker
+  after the window opens; with none the start view stays.
+- Not yet: the title bar's `⌘⇧K` chip, CI check rows on a CI card. Since PL-5 the strip has agentbus's presence, from the agentbus plugin's `mission` indicator.
 
 ## 04 · New session
 
@@ -444,7 +471,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   toggle starts from `sandbox.default`, on unless it says `host`. A repo the chosen worker lacks says "not on
   <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). **Save as job** (SE-4) hands the
   prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. The prompt takes several
-  lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Not yet: a ticket expanding into a card (PL-8),
+  lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Since PL-8 a ticket expands into a card (plugins.md, "As built (PL-8)"), from whichever tracker takes its key
+  ("As built (tickets)"); a ticket that already has a session says "Continue · <session name>", and Start continues it. Not yet:
   templates, toolchains and LSPs in the pre-flight.
 
 ## 05 · Plan mode
@@ -643,6 +671,29 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - The control room as an instrument cluster: usage with **burn-rate projection**,
   workers, sessions by status, today's stats, the log tail, agentbus, the CI queue.
 - Release to hide, click to pin. Nothing here is a separate screen.
+- Built in SH-8 (`app/hud.go`, `app/hudpanels.go`, `ui/widget/hud.go`): the backend sends `render.ModsEvent` (the
+  modifiers held, as one goes down or up, none when the window loses focus); `ui.Ctx.HeldAlone` is a modifier held
+  with no key or press since (`UI.Chord` ends it). Holding `⌥` alone for `hud.hold_delay` (250 ms, so `⌥O` doesn't
+  flash it) brings the HUD down under the title bar (`app.overlay.hud`, `widget.Drawer` on the dialog layer: over
+  pages, under an omnibox opened after it); letting go puts it away. A click on it, or the title bar's **⌥ HUD**
+  (`titlebar.right.90-hud`) or `hud.toggle`, pins it: it takes focus (key mode `hud`), and `Esc`, its tab ("PINNED ·
+  ESC OR CLICK TO PUT AWAY") or **⌥ HUD** put it away. `hud.hold` picks the key (alt, ctrl, shift, super, off).
+- Its panels are indicators in the `hud` slot (`registry.Indicator` with `Title`, `Note`, `Span`), four columns to a
+  row, each contributed by the extension that owns the data and drawn in `widget.Panel`: Plan usage (stats: each
+  account's 5-hour and weekly windows, the meter hatched on to the share at the reset with a tick, `MeterOpts.To`),
+  Workers (each worker's sessions, CPU and memory, its CPU over 15 minutes from its `WorkerChanged` events), Sessions
+  (open and need-you counts, the status strip, the five most urgent with why; a click focuses one), Today (since
+  midnight: tokens, cost, cache share, requests opened, ledger reviewed and unread, then the `hud.today` slot), Logs
+  (span 2: the log ring's tail, info and up, newest first; **Open the log**) and CI queue (ship: the PRs the Ship
+  page has read, failing first). Panels read the store as they're drawn and redraw on its events; what the store
+  doesn't keep, owners gather from events: a worker's load, plan readings since the history was fetched
+  (`UsageSampled`), and today's totals, asked again 10 s after an agent event.
+- The next meeting under Today isn't built: the calendar isn't carried over (crit-reference.md). A plugin can put a
+  line there through the `hud.today` slot.
+- Built in PL-5, drawn by the agentbus plugin (`github.com/liamg/oriel-agentbus`, through the `hud` slot): the agentbus panel (span 2): the connection, presence chips, what waits, and the log's tail, newest
+  first ("14:02  bob · answered: yes"); and the title bar's **● BUS 4** (its dot the presence, its count who's online).
+- Not yet: the merge train, the session footer slot (the mission-control slot came with
+  SH-7), dimming what's under the drawer, and the burn's projection in a help page's "Right now".
 
 ## 11 · Comms (the assistant)
 
@@ -651,6 +702,24 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - The room's assistant as a drawer on `/`: "what needs me?", "review this PR".
 - Answers come back as actionable rows (number keys pick one). Every action has an undo with a countdown.
 - It shows what it's allowed to do, and its data sources with how fresh each is.
+- Built in PL-4 (`app/assistant*.go`, module `assistant`): `⌘/` (`assistant.toggle`) pulls a pinned `widget.Drawer`
+  (a focus trap now, so it takes focus over a page) down to about two thirds of the window; `esc` or its ✕ puts it
+  away and the conversation waits. The start view keeps to its own keys, so there it's `:` or the omnibox. Header:
+  COMMS, the ASSISTANT chip, the model it runs on, what it reads, the keys, **New conversation**. The conversation:
+  your turns as bubbles at the right; its turns with the tools it used as ✓ chips, its answer in markdown, the rows
+  its `reply` tool offers (a status dot, title, text, meta, `⌘1`–`⌘9`; a row opens its session or link, else asks
+  about it), a confirmation card for each act (`widget.ActionCard`: what will happen as facts, the prompt or tasks, a
+  note; **Yes** `y`, **No** `n`, the seconds left; it takes focus as it comes), and a card for what its tools did
+  (**Open** `o`, **Undo** `u` with a 10 s countdown). The composer: ⏎ sends, **dictate** (`voice.dictate`), **Stop**
+  `⌘.` while it answers. The side: WHAT IT CAN DO (each acting tool, ✓ or **asks first**, and "edit code, run
+  commands, post anywhere · never"), SOURCES (each `Reads` of its tools, with how long ago a tool last read it, and
+  web search on or off), RECENT ACTIONS, and the wake word and spoken replies. Its confirmations are also an
+  `InboxSource` ("assistant"): with the drawer away they stack over the window like any ask, and what it did is
+  history in the Inbox panel.
+- Decided in PL-4: "every action has an undo" applies to what can be taken back: a session or review it started, or
+  a job's run, is deleted; a rename goes back; a stopped session resumes; a resumed one stops. Opening something
+  (a session, the launcher, settings) has nothing to undo. Acts that start or stop an agent confirm first (crit's
+  rule), and the undo follows.
 
 ## 12 · Inbox and interrupts
 
@@ -670,9 +739,32 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   are picked then answered), and a typed answer. Login (AI-13): "Claude on devbox needs you to log in", Log in `l` on
   this machine (`agent.login`: the agent's terminal with `/login` typed) or what to run on the worker, and Check again
   `c` (`decision: recheck`). All answer through `ask.answer {id, ask, decision, note, scope,
-  answers}`; `ask.deny-note` opens the note. Session tabs count their asks. Not yet: the Inbox panel and its history
-  (SH-9, P7), the countdown ring, review requests and the security-key card. Since RV-2 a gateway card for
+  answers}`; `ask.deny-note` opens the note. Session tabs count their asks. The Inbox panel and its history, the
+  countdown ring, review requests and the security-key card came with SH-9 (below). Since RV-2 a gateway card for
   `commit`, `push` or `pr_create` notes the project's ledger: "21 agent lines unread" or "0 unreviewed lines ✓".
+- Built in SH-9 (`app/inbox.go`, `registry.InboxSource`): every card comes from an inbox source, the asks of every
+  session being one (`app/askcards.go`), so a plugin's card type (agentbus's questions and review requests with PL-5,
+  `oriel.inbox.add` from Lua) stacks, counts and lists like the built-ins. The stack (`app.overlay.inbox`, up to four,
+  then "+N more waiting" and **Open the inbox**) sits beside the Inbox panel while that's open. Each card has a ✕, and
+  Escape while it has focus, that dismisses it: off the stack, it waits on in the panel and on its tab's badge. A card
+  that `Expires` shows a countdown ring (m:ss) at its top right. **Security key** (crit's touch prompt): a commit,
+  push, pull, fetch or rebase the worker runs for a session (the Ship page's and the gateway's) that has run five
+  seconds (`worker.KeyWait`, `worker.Options.KeyWait`) asks the session with a `core.AskKey` ask until it ends, drawn
+  as a banner at the window's top centre ("Touch your security key", what's waiting, the session) with **Cancel**
+  `c`, which stops the operation (`worker.ErrKeyCancelled`); it makes the session needs-you. The Inbox panel (`inbox`,
+  docked right, ⌘⇧I or `<Leader>i`, or the title bar's **INBOX** with its count): "N waiting", the filters **All**,
+  **Me**, **Agents**, **Bus**, **GitHub**, **Sandbox**, then a row per card (icon, title, what it's about, how long
+  ago), those waiting first, then those answered (dimmed, ✓), each newest first; a click (or `j`/`k`) on a waiting
+  one opens its card under it to answer there; Escape closes the panel. Session tabs count their waiting cards in
+  the first one's tone.
+- Decided in SH-9 (the design was silent): the panel's count says "N waiting" rather than the mockup's "6 NEW",
+  since nothing tracks which cards were seen; the Inbox opens with ⌘⇧I and `<Leader>i`, not the mockup's `g i`,
+  which is vim's (insert where insert last stopped); a security-key card's only action is Cancel (crit's modal had
+  none); the key wait covers the worker's git operations for a session, not a worktree cut before the session exists.
+- Built in PL-5 (plugins.md, "As built (PL-5)"), drawn by the agentbus plugin (`github.com/liamg/oriel-agentbus`): its question and review-request cards, and at the panel's
+  foot (`inbox.foot`) presence, **ACTIVE**, **IDLE**, **DND**, and the bus's name. A question's options are its
+  numbered actions rather than the mockup's rows, and its row's second line has no "auto in" (a row's text isn't
+  redrawn on the clock; the card's ring counts down).
 
 ## 13 · Verify
 
@@ -706,6 +798,32 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - Prose, quoted code (real files, real line numbers) and pinned notes. The note numbers recur in the diagram.
 - Ask about any step. Export to a single HTML file.
+- Built in RV-8 (`app/tour*.go`, the `tour` built-in; `worker/tour`, crit's `internal/tour`): the reader opens by
+  itself when a tour session comes to the front (`tour.open`). Steps are the `NN-slug.md` files at the workspace
+  root, read again each second or when the agent does something, so they appear as they land. At the left: TOUR ·
+  KIND, the question, the repos' chips, PINNED @ the first repo's commit, a bar of how many steps have been read, the
+  steps (✓ once read, the one shown lit) and **↓ Export as HTML** with "self-contained · no fetches · share as
+  artifact" (and "shared ↗" once published). In the middle: STEP 4 OF 9, the title (the step's `# heading`), then
+  its prose (markdown, an image on a line of its own drawn), its quotes (the repo, path, lines, language and
+  **open ↗**; the lines read from the pinned worktree, or `rev=` another revision, numbered as the file's and in its
+  syntax colours, `mark=` lines lit with the accent at their edge, each `note` under its line in the annotation
+  house style, numbered; a quote over 60 lines with marks shows 4 lines around them and **… n more lines**; one that
+  can't be read says why), examples, recorded runs (`$ cmd`, exit, output) and screenshots with their numbered pins,
+  boxes and arrows (percentages of the picture). At the right: the step's diagrams, ASK ABOUT THIS STEP (the threads
+  on the step's file, and a field that asks in its open thread, else opens one on the file's line 1), and ← Prev,
+  "step 4 / 9", Next →. Keys (mode `tour`): `h`/`l` (← →) step, `j`/`k` scroll, `gd` opens the step's first quote in
+  the editor at its first marked line, `a` asks, `q`/Escape close. The status line: "auth flow walkthrough · 2
+  repos · 14 quotes" and "h/l step · j/k scroll · gd open quote in editor 4/9". Before any step: what the agent is
+  doing, the question's thread and a field. Export writes `tour.html` (one page a step at a time, ← → and dots,
+  Present for full screen, `#step=N`; the code coloured by the window's languages, the theme's dark and light
+  following the reader's preference or a host's `data-theme`; images inlined) and asks the agent in the tour's
+  thread to publish it and `tour_share` the link; `tour.export {format: md}` writes `tour.md`. The launcher's Tour
+  mode picks the kind (sessions.md, Variants).
+- Decided in RV-8 (the design was silent): diagrams show as their mermaid source in the reader and the export
+  (crit inlined mermaid.js, which isn't an approved dependency); the reader reads the session's directory on this
+  machine, as the plan view does.
+- Not yet: drawing mermaid diagrams; the reader for a session on another machine's worker; changing the kind from
+  the reader; zooming a screenshot.
 
 ## 15 · Agent console (Codex here)
 
@@ -786,6 +904,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Built in RV-7: the "Verify quiz" gate (order 50): "optional" with **Verify…** until it's taken, "2/4" with
   **Resume** while it's going, "3/4 right" passed, "1 wrong" (warn) with **Again**. A gate's `Action` is a button
   under its row; AI review's is **Review** until one has run.
+- Built in PL-9: plugins' PR actions (`registry.PRAction`) sit after Edit PR on a raised PR and on the Pull request
+  panel; the Slack plugin's **Slack** (PTAL; then **Bump Slack**, **Bump 2**…) is one (plugins.md, "As built (PL-9)").
 - Not yet: the ticket's state moving (Linear), the status bar's
   CI chip, merging, and a project's Git panel (still dim: it needs the flow without a worker, for a plain directory).
 

@@ -45,6 +45,32 @@ type ShipCommit struct {
 	Force   bool     `json:"force,omitempty"`
 }
 
+// PrSeen is the PrSeen hook's event: a session's pull request, the first time the app reads it, whoever raised it
+// (the Ship page, the agent, gh by hand).
+type PrSeen struct {
+	Session string `json:"session"`
+	Project string `json:"project"`
+	Ticket  string `json:"ticket,omitempty"`
+	Number  int    `json:"number"`
+	URL     string `json:"url"`
+	Title   string `json:"title"`
+	State   string `json:"state"`
+	Draft   bool   `json:"draft,omitempty"`
+	Merged  bool   `json:"merged,omitempty"`
+}
+
+// PrMerged is the PrMerged hook's event: a session's pull request read as merged, the first time the app sees it so,
+// whoever merged it. Open is how many of the session's other PRs are still open, or not known.
+type PrMerged struct {
+	Session string `json:"session"`
+	Project string `json:"project"`
+	Ticket  string `json:"ticket,omitempty"`
+	Number  int    `json:"number"`
+	URL     string `json:"url"`
+	Title   string `json:"title"`
+	Open    int    `json:"open"`
+}
+
 // ShipRaise is the ShipRaise hook's event: a pull request about to be raised, or edited. A veto stops it, its reason
 // shown on the Raise PR tab: a quiz to take first.
 type ShipRaise struct {
@@ -71,6 +97,8 @@ type shipExt struct {
 
 	mu      sync.Mutex
 	reports map[core.SessionID]*shipReport
+	seenPRs map[string]bool // the PRs PrSeen has fired for, by URL
+	merged  map[string]bool // the PRs PrMerged has fired for, by URL
 
 	// On the loop: what's typed, by session/project.
 	commits map[string]*commitForm
@@ -162,8 +190,14 @@ func (x *shipExt) Activate(_ context.Context, h ext.Host) error {
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "ShipCommit", Fired: true, Payload: ShipCommit{},
 		Doc: "A commit about to be made from the Ship page; a veto stops it (its reason shows in the commit box) unless force, a rewrite changes it. { session, project, message, files, force }"}))
+	x.add(h.DeclareEvent(registry.EventInfo{Name: "PrSeen", Fired: true, Payload: PrSeen{},
+		Doc: "A session's pull request, the first time Oriel reads it, whoever raised it; the subject is its URL. { session, project, ticket, number, url, title, state, draft, merged }"}))
+	x.add(h.DeclareEvent(registry.EventInfo{Name: "PrMerged", Fired: true, Payload: PrMerged{},
+		Doc: "A session's pull request read as merged, the first time Oriel sees it so, whoever merged it; the subject is its URL. open is how many of the session's other PRs are still open. { session, project, ticket, number, url, title, open }"}))
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
 		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
+	x.add(h.Contribute(registry.Indicator{Name: "ci", Slot: registry.SlotHUD, Order: 70, Title: "CI queue", Help: hudHelp + "#ci", Note: x.ciNote,
+		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "ci", Fn: x.ciPanel}, nil }}))
 	x.add(h.Contribute(registry.ProjectState{Name: "ship", Order: 10, State: x.projectState}))
 	x.gates()
 	x.shadowEntries()
@@ -285,9 +319,54 @@ func (x *shipExt) refresh(id core.SessionID, fresh bool) {
 		} else {
 			r.ships, r.err, r.read = ships, "", time.Now()
 		}
+		seen, merged := x.newPRs(id, ships)
 		x.mu.Unlock()
+		if len(seen)+len(merged) > 0 {
+			x.h.Do(func() {
+				for _, ev := range seen {
+					x.h.Fire(context.Background(), "PrSeen", ev.URL, &ev)
+				}
+				for _, ev := range merged {
+					x.h.Fire(context.Background(), "PrMerged", ev.URL, &ev)
+				}
+			})
+		}
 		x.h.Redraw()
 	}()
+}
+
+// newPRs are the PRs in ships not seen before, as PrSeen events, and those not seen merged before, as PrMerged
+// events; x.mu is held.
+func (x *shipExt) newPRs(id core.SessionID, ships []worker.Ship) (seen []PrSeen, merged []PrMerged) {
+	if x.seenPRs == nil {
+		x.seenPRs, x.merged = map[string]bool{}, map[string]bool{}
+	}
+	ticket := ""
+	if se, ok := x.h.Session(id); ok {
+		ticket = se.Snapshot().Ticket
+	}
+	open := 0 // a project GitHub didn't answer for counts as open
+	for _, s := range ships {
+		if s.PR.Open() || s.PR == nil && s.GitHubError != "" {
+			open++
+		}
+	}
+	for _, s := range ships {
+		if s.PR == nil || s.PR.URL == "" {
+			continue
+		}
+		if !x.seenPRs[s.PR.URL] {
+			x.seenPRs[s.PR.URL] = true
+			seen = append(seen, PrSeen{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
+				Title: s.PR.Title, State: s.PR.State, Draft: s.PR.Draft, Merged: s.PR.Merged})
+		}
+		if s.PR.Merged && !x.merged[s.PR.URL] {
+			x.merged[s.PR.URL] = true
+			merged = append(merged, PrMerged{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
+				Title: s.PR.Title, Open: open})
+		}
+	}
+	return seen, merged
 }
 
 // wait is until every read and step started has finished.

@@ -6,7 +6,7 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 629.0625x38 r 0
+clip 102.9375,0 513.2438x38 r 0
   rect 102.9375,0 214x38 fill #121210
   rect 102.9375,0 214x2 fill #ffd23f
   rect 114.9375,16 8x8 fill #4cc9f0 radius 4
@@ -15,6 +15,9 @@ clip 102.9375,0 629.0625x38 r 0
   text "⌘1" @292.9375,23.42 #4f4a40 JetBrains Mono 9.5
   rect 316.9375,0 1x38 fill #24221d
 pop
+text "INBOX" @648.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 699.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @706.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 44x356 fill #0c0c0b
 clip 0,38 43x356 r 0
   text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
@@ -44,7 +47,7 @@ clip 0,38 43x356 r 0
   rect 9.5,326 24x1 fill #332f27
   path 5 segments stroke 1.4545455 #7c7566
   path 5 segments stroke 1.4545455 #7c7566
-  path 4 segments stroke 1.4545455 #4f4a40
+  path 4 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566

@@ -1,2 +1,2 @@
-// Package integ holds integrations: Linear, Slack, iCal and the agentbus helper.
+// Package integ holds integrations: Linear and Slack.
 package integ

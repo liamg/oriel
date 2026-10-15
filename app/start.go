@@ -417,7 +417,7 @@ func startLinks(c *ui.Ctx, h ext.Host) {
 	if len(links) == 0 {
 		return
 	}
-	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{T: 2}}, func(c *ui.Ctx) {
+	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{T: 2}, ScrollX: true, Bars: ui.BarsHidden}, func(c *ui.Ctx) {
 		for _, e := range links {
 			note := ""
 			if e.Note != nil {

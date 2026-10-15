@@ -1,0 +1,529 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1353.2438x38 r 0
+  rect 102.9375,0 110.59375x38 fill #121210
+  rect 102.9375,0 110.59375x2 fill #ffd23f
+  rect 114.9375,16 8x8 fill #4fe0a0 radius 4
+  text "auth flow" @129.9375,24.365234 #ece6d8 Inter 12
+  text "⌘1" @189.53125,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 213.53125,0 1x38 fill #24221d
+pop
+text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
+rect 0,38 224x936 fill #0c0c0b
+clip 0,38 223x936 r 0
+  clip 12,45.73 181x12.539997 r 0
+    text "PROJECTS" @12,55.42 #7c7566 JetBrains Mono 9.5
+  pop
+  text "«" @203.70312,55.96 #7c7566 JetBrains Mono 11
+  rect 0,66 223x1 fill #24221d
+  rect 0,71 223x39.72 fill #1d160f
+  text "▾" @10,87.22 #7c7566 JetBrains Mono 11
+  rect 25,79.26 8x8 fill #4cc9f0 radius 2
+  text "api" @39,87.22 #ece6d8 JetBrains Mono 11
+  rect 196.1875,76.32 18.8125x13.879997 radius 3 stroke 1 #332f27
+  text "⌃1" @200.1875,86.5 #7c7566 JetBrains Mono 9
+  clip 10,92.520004 205x13.199997 r 0
+    text "main" @25,102.72 #7c7566 JetBrains Mono 10
+    text "·" @53,102.72 #7c7566 JetBrains Mono 10
+    text "clean" @63,102.72 #7c7566 JetBrains Mono 10
+  pop
+  path 7 segments stroke 1.25 #7c7566
+  text "Explorer" @54,126.585236 #b3ab99 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Search" @54,149.58524 #b3ab99 Inter 12
+  path 6 segments stroke 1.25 #4f4a40
+  path 6 segments stroke 1.25 #4f4a40
+  path 6 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  text "Git" @54,172.58524 #4f4a40 Inter 12
+  path 3 segments stroke 1.25 #7c7566
+  text "Tests" @54,195.58524 #b3ab99 Inter 12
+  text "▸" @10,218.94 #7c7566 JetBrains Mono 11
+  rect 25,210.98 8x8 fill #b98aff radius 2
+  text "dashboard" @39,218.94 #b3ab99 JetBrains Mono 11
+  rect 196.1875,208.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
+  text "⌃2" @200.1875,218.22 #7c7566 JetBrains Mono 9
+  clip 10,224.24 205x13.199997 r 0
+    text "main" @25,234.44 #7c7566 JetBrains Mono 10
+    text "·" @53,234.44 #7c7566 JetBrains Mono 10
+    text "clean" @63,234.44 #7c7566 JetBrains Mono 10
+  pop
+  rect 10,247.44 203x1 fill #332f27
+  path 5 segments stroke 1.25 #7c7566
+  path 5 segments stroke 1.25 #7c7566
+  text "Requests" @33,269.30524 #b3ab99 Inter 12
+  rect 199.59375,257.94 13.40625x14 fill #ff9b45 radius 7
+  text "2" @203.59375,268.18 #141006 JetBrains Mono 9
+  path 4 segments stroke 1.25 #7c7566
+  text "Debug" @33,292.30524 #b3ab99 Inter 12
+  rect 10,304.44 203x1 fill #332f27
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Stats" @33,326.30524 #b3ab99 Inter 12
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Usage" @33,349.30524 #b3ab99 Inter 12
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  text "Jobs" @33,372.30524 #b3ab99 Inter 12
+  path 5 segments stroke 1.25 #7c7566
+  path 5 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  text "Workers" @33,395.30524 #b3ab99 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Settings" @33,418.30524 #b3ab99 Inter 12
+pop
+rect 223,38 1x936 fill #24221d
+rect 224,38 1376x936 fill #060606
+clip 224,38 1376x936 r 0
+  rect 224,38 1376x30 fill #0c0c0b
+  clip 224,38 1376x30 r 0
+    rect 224,38 73.5625x30 fill #121210
+    rect 224,38 73.5625x2 fill #ffd23f
+    text "Tour" @238,58.365234 #ece6d8 Inter 12
+    text "✕" @278.26562,57.96 #7c7566 JetBrains Mono 11
+  pop
+  rect 224,68 1376x1 fill #24221d
+  clip 224,69 1376x905 r 0
+    rect 224,69 1376x905 fill #060606
+    clip 224,69 1376x905 r 0
+      rect 224,69 270x905 fill #0c0c0b
+      text "TOUR · WALKTHROUGH" @238,94.69 #ffd23f JetBrains Mono 9.5
+      text "How authentication works" @238,121.07125 #ece6d8 Inter 15
+      clip 238,133.68942 242x16.539993 r 0
+        rect 238,133.68942 33.70999x16.539993 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
+        text "API" @245,145.37943 #4cc9f0 JetBrains Mono 9.5
+        rect 277.71,133.68942 73.130005x16.539993 fill #b98aff12 radius 10 stroke 1 #b98aff59
+        text "DASHBOARD" @284.71,145.37943 #b98aff JetBrains Mono 9.5
+      pop
+      rect 238,159.22942 119.119995x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+      text "PINNED @ 8392AED" @245,170.91942 #b3ab99 JetBrains Mono 9.5
+      rect 238,184.76941 242x2 fill #24221d radius 1
+      rect 238,184.76941 53.77777x2 fill #ffd23f radius 1
+      clip 224,198.76941 270x683.83057 r 0
+        rect 238,207.76941 18x18 radius 3 stroke 1 #4fe0a0
+        text "✓" @244,220.3694 #4fe0a0 JetBrains Mono 10
+        clip 266,208.90466 214x15.729492 r 0
+          text "The login request arrives" @266,221.49841 #b3ab99 Inter 13
+        pop
+        rect 238,243.76941 18x18 radius 3 stroke 1 #332f27
+        text "2" @244,256.36942 #7c7566 JetBrains Mono 10
+        clip 266,244.90466 214x15.729492 r 0
+          text "OAuth callback and state check" @266,257.4984 #b3ab99 Inter 13
+        pop
+        rect 238,279.7694 18x18 radius 3 stroke 1 #332f27
+        text "3" @244,292.36942 #7c7566 JetBrains Mono 10
+        clip 266,280.90466 214x15.729492 r 0
+          text "Finding or creating the user" @266,293.4984 #b3ab99 Inter 13
+        pop
+        rect 224,306.7694 270x36 fill #ffd23f12
+        rect 238,315.7694 18x18 fill #ffd23f radius 3 stroke 1 #ffd23f
+        text "4" @244,328.36942 #141006 JetBrains Mono 10
+        clip 266,316.90466 214x15.729492 r 0
+          text "Session tokens are minted" @266,329.4984 #ece6d8 Inter 13
+        pop
+        rect 238,351.7694 18x18 radius 3 stroke 1 #332f27
+        text "5" @244,364.36942 #7c7566 JetBrains Mono 10
+        clip 266,352.90466 214x15.729492 r 0
+          text "The cookie, and why it's split" @266,365.4984 #b3ab99 Inter 13
+        pop
+        rect 238,387.7694 18x18 radius 3 stroke 1 #332f27
+        text "6" @244,400.36942 #7c7566 JetBrains Mono 10
+        clip 266,388.90466 214x15.729492 r 0
+          text "Middleware on every request" @266,401.4984 #b3ab99 Inter 13
+        pop
+        rect 238,423.7694 18x18 radius 3 stroke 1 #332f27
+        text "7" @244,436.36942 #7c7566 JetBrains Mono 10
+        clip 266,424.90466 214x15.729492 r 0
+          text "Refresh without a round trip" @266,437.4984 #b3ab99 Inter 13
+        pop
+        rect 238,459.7694 18x18 radius 3 stroke 1 #332f27
+        text "8" @244,472.36942 #7c7566 JetBrains Mono 10
+        clip 266,460.90466 214x15.729492 r 0
+          text "API keys: the other door" @266,473.4984 #b3ab99 Inter 13
+        pop
+        rect 238,495.7694 18x18 radius 3 stroke 1 #332f27
+        text "9" @244,508.36942 #7c7566 JetBrains Mono 10
+        clip 266,496.90466 214x15.729492 r 0
+          text "Where it can go wrong" @266,509.4984 #b3ab99 Inter 13
+        pop
+      pop
+      rect 238,896.6 125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "↓ Export as HTML" @248,913.9652 #ece6d8 Inter 12
+      text "self-contained · no fetches ·" @272,940.8 #7c7566 JetBrains Mono 10
+      text "share as artifact" @272,957 #7c7566 JetBrains Mono 10
+      clip 494,69 726x905 r 0
+        text "STEP 4 OF 9" @538,112.69 #ffd23f JetBrains Mono 9.5
+        text "Session tokens are minted" @538,157.124 #ece6d8 Space Grotesk 26
+        text "Once the user exists, the callback hands off to" @538,195.90067 #ece6d8 Inter 14.5
+        rect 871.4531,180.716 108.875x19.820007 fill #161615 radius 3
+        text "session.Mint" @875.4531,195.48601 #ece6d8 JetBrains Mono 13.5
+        text ". It issues two tokens with" @980.3281,195.90067 #ece6d8 Inter 14.5
+        text "very different lifetimes: a short" @538,217.58289 #ece6d8 Inter 14.5
+        text "access token" @760.21875,217.58289 #ece6d8 Inter 14.5
+        text "the API checks on every request, and a long" @860.6719,217.58289 #ece6d8 Inter 14.5
+        text "refresh token" @538,238.12732 #ece6d8 Inter 14.5
+        text "that only the refresh endpoint ever reads." @639.9375,238.12732 #ece6d8 Inter 14.5
+        rect 538,257.62488 638x400.55353 fill #0c0c0b radius 6
+        clip 538,257.62488 638x400.55353 r 6
+          text "api" @550,277.7649 #4cc9f0 JetBrains Mono 11.5
+          clip 579.6094,266.03488 452.21936x15.179993 r 0
+            text "internal/auth/session.go" @579.6094,277.7649 #ece6d8 JetBrains Mono 11.5
+          pop
+          text "L42-49" @1039.8287,277.40488 #7c7566 JetBrains Mono 10.5
+          rect 1087.3912,265.3549 27.140015x16.540009 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+          text "GO" @1094.3912,277.0449 #b3ab99 JetBrains Mono 9.5
+          text "open ↗" @1122.5312,276.9901 #ffd23f Inter 12
+          rect 1122.5312,280.88464 41.46875x1 fill #ffd23fb3
+          clip 538,289.62488 638x368.55353 r 0
+            text "42" @552,310.98486 #4f4a40 JetBrains Mono 13.5
+            text "func" @582.8125,310.98486 #c792ff JetBrains Mono 13.5
+            text " " @616.4375,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "(" @624.84375,310.98486 #89ddff JetBrains Mono 13.5
+            text "m" @633.25,310.98486 #d6dde6 JetBrains Mono 13.5
+            text " " @641.65625,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "*" @650.0625,310.98486 #89ddff JetBrains Mono 13.5
+            text "Minter" @658.46875,310.98486 #ffcf5c JetBrains Mono 13.5
+            text ")" @708.90625,310.98486 #89ddff JetBrains Mono 13.5
+            text " " @717.3125,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "Mint" @725.71875,310.98486 #5cd2ff JetBrains Mono 13.5
+            text "(" @759.34375,310.98486 #89ddff JetBrains Mono 13.5
+            text "ctx" @767.75,310.98486 #d6dde6 JetBrains Mono 13.5
+            text " " @792.96875,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "context" @801.375,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "." @860.21875,310.98486 #89ddff JetBrains Mono 13.5
+            text "Context" @868.625,310.98486 #ffcf5c JetBrains Mono 13.5
+            text "," @927.46875,310.98486 #89ddff JetBrains Mono 13.5
+            text " " @935.875,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "u" @944.28125,310.98486 #d6dde6 JetBrains Mono 13.5
+            text " " @952.6875,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "User" @961.09375,310.98486 #ffcf5c JetBrains Mono 13.5
+            text ")" @994.71875,310.98486 #89ddff JetBrains Mono 13.5
+            text " " @1003.125,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "(" @1011.53125,310.98486 #89ddff JetBrains Mono 13.5
+            text "Pair" @1019.9375,310.98486 #ffcf5c JetBrains Mono 13.5
+            text "," @1053.5625,310.98486 #89ddff JetBrains Mono 13.5
+            text " " @1061.9688,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "error" @1070.375,310.98486 #ffcf5c JetBrains Mono 13.5
+            text ")" @1112.4062,310.98486 #89ddff JetBrains Mono 13.5
+            text " " @1120.8125,310.98486 #ece6d8 JetBrains Mono 13.5
+            text "{" @1129.2188,310.98486 #89ddff JetBrains Mono 13.5
+            text "43" @552,331.98486 #4f4a40 JetBrains Mono 13.5
+            text "    " @582.8125,331.98486 #ece6d8 JetBrains Mono 13.5
+            text "now" @616.4375,331.98486 #d6dde6 JetBrains Mono 13.5
+            text " " @641.65625,331.98486 #ece6d8 JetBrains Mono 13.5
+            text ":=" @650.0625,331.98486 #89ddff JetBrains Mono 13.5
+            text " " @666.875,331.98486 #ece6d8 JetBrains Mono 13.5
+            text "m" @675.28125,331.98486 #d6dde6 JetBrains Mono 13.5
+            text "." @683.6875,331.98486 #89ddff JetBrains Mono 13.5
+            text "clock" @692.09375,331.98486 #ece6d8 JetBrains Mono 13.5
+            text "." @734.125,331.98486 #89ddff JetBrains Mono 13.5
+            text "Now" @742.53125,331.98486 #5cd2ff JetBrains Mono 13.5
+            text "()" @767.75,331.98486 #89ddff JetBrains Mono 13.5
+            rect 538,337.62488 683.6875x21 fill #1d1a0f
+            text "44" @552,352.98486 #ffd23f JetBrains Mono 13.5
+            text "    " @582.8125,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "access" @616.4375,352.98486 #d6dde6 JetBrains Mono 13.5
+            text "," @666.875,352.98486 #89ddff JetBrains Mono 13.5
+            text " " @675.28125,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "err" @683.6875,352.98486 #d6dde6 JetBrains Mono 13.5
+            text " " @708.90625,352.98486 #ece6d8 JetBrains Mono 13.5
+            text ":=" @717.3125,352.98486 #89ddff JetBrains Mono 13.5
+            text " " @734.125,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "m" @742.53125,352.98486 #d6dde6 JetBrains Mono 13.5
+            text "." @750.9375,352.98486 #89ddff JetBrains Mono 13.5
+            text "sign" @759.34375,352.98486 #5cd2ff JetBrains Mono 13.5
+            text "(" @792.96875,352.98486 #89ddff JetBrains Mono 13.5
+            text "claims" @801.375,352.98486 #ffcf5c JetBrains Mono 13.5
+            text "{" @851.8125,352.98486 #89ddff JetBrains Mono 13.5
+            text "Sub" @860.21875,352.98486 #d6dde6 JetBrains Mono 13.5
+            text ":" @885.4375,352.98486 #89ddff JetBrains Mono 13.5
+            text " " @893.84375,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "u" @902.25,352.98486 #d6dde6 JetBrains Mono 13.5
+            text "." @910.65625,352.98486 #89ddff JetBrains Mono 13.5
+            text "ID" @919.0625,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "," @935.875,352.98486 #89ddff JetBrains Mono 13.5
+            text " " @944.28125,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "Exp" @952.6875,352.98486 #d6dde6 JetBrains Mono 13.5
+            text ":" @977.90625,352.98486 #89ddff JetBrains Mono 13.5
+            text " " @986.3125,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "now" @994.71875,352.98486 #d6dde6 JetBrains Mono 13.5
+            text "." @1019.9375,352.98486 #89ddff JetBrains Mono 13.5
+            text "Add" @1028.3438,352.98486 #5cd2ff JetBrains Mono 13.5
+            text "(" @1053.5625,352.98486 #89ddff JetBrains Mono 13.5
+            text "15" @1061.9688,352.98486 #ff9e64 JetBrains Mono 13.5
+            text " " @1078.7812,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "*" @1087.1875,352.98486 #89ddff JetBrains Mono 13.5
+            text " " @1095.5938,352.98486 #ece6d8 JetBrains Mono 13.5
+            text "time" @1104,352.98486 #d6dde6 JetBrains Mono 13.5
+            text "." @1137.625,352.98486 #89ddff JetBrains Mono 13.5
+            text "Minute" @1146.0312,352.98486 #ece6d8 JetBrains Mono 13.5
+            text ")})" @1196.4688,352.98486 #89ddff JetBrains Mono 13.5
+            text "45" @552,373.98486 #4f4a40 JetBrains Mono 13.5
+            text "    " @582.8125,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "if" @616.4375,373.98486 #c792ff JetBrains Mono 13.5
+            text " " @633.25,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "err" @641.65625,373.98486 #d6dde6 JetBrains Mono 13.5
+            text " " @666.875,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "!=" @675.28125,373.98486 #89ddff JetBrains Mono 13.5
+            text " " @692.09375,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "nil" @700.5,373.98486 #ece6d8 JetBrains Mono 13.5
+            text " " @725.71875,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "{" @734.125,373.98486 #89ddff JetBrains Mono 13.5
+            text " " @742.53125,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "return" @750.9375,373.98486 #c792ff JetBrains Mono 13.5
+            text " " @801.375,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "Pair" @809.78125,373.98486 #ffcf5c JetBrains Mono 13.5
+            text "{}" @843.40625,373.98486 #89ddff JetBrains Mono 13.5
+            text "," @860.21875,373.98486 #89ddff JetBrains Mono 13.5
+            text " " @868.625,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "err" @877.03125,373.98486 #d6dde6 JetBrains Mono 13.5
+            text " " @902.25,373.98486 #ece6d8 JetBrains Mono 13.5
+            text "}" @910.65625,373.98486 #89ddff JetBrains Mono 13.5
+            rect 582.8125,385.62488 565.1875x79.24902 fill #0c0c0b radius 2 stroke 1 #b98aff73
+            path 5 segments fill #b98aff
+            text "1" @602.8125,409.18887 #060606 JetBrains Mono 9.900001
+            text "LINE 45" @622.8125,409.22488 #b98aff JetBrains Mono 10
+            text "Fifteen minutes is the whole blast radius of a leaked access token: no revocation list is" @596.8125,431.73425 #b3ab99 Inter 12.5
+            text "checked on the hot path." @596.8125,449.85876 #b3ab99 Inter 12.5
+            text "46" @552,488.2339 #4f4a40 JetBrains Mono 13.5
+            text "    " @582.8125,488.2339 #ece6d8 JetBrains Mono 13.5
+            text "family" @616.4375,488.2339 #d6dde6 JetBrains Mono 13.5
+            text " " @666.875,488.2339 #ece6d8 JetBrains Mono 13.5
+            text ":=" @675.28125,488.2339 #89ddff JetBrains Mono 13.5
+            text " " @692.09375,488.2339 #ece6d8 JetBrains Mono 13.5
+            text "newFamilyID" @700.5,488.2339 #ece6d8 JetBrains Mono 13.5
+            text "()" @792.96875,488.2339 #89ddff JetBrains Mono 13.5
+            rect 538,493.8739 700.5x21 fill #1d1a0f
+            text "47" @552,509.2339 #ffd23f JetBrains Mono 13.5
+            text "    " @582.8125,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "refresh" @616.4375,509.2339 #d6dde6 JetBrains Mono 13.5
+            text " " @675.28125,509.2339 #ece6d8 JetBrains Mono 13.5
+            text ":=" @683.6875,509.2339 #89ddff JetBrains Mono 13.5
+            text " " @700.5,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "m" @708.90625,509.2339 #d6dde6 JetBrains Mono 13.5
+            text "." @717.3125,509.2339 #89ddff JetBrains Mono 13.5
+            text "store" @725.71875,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "." @767.75,509.2339 #89ddff JetBrains Mono 13.5
+            text "Insert" @776.15625,509.2339 #5cd2ff JetBrains Mono 13.5
+            text "(" @826.59375,509.2339 #89ddff JetBrains Mono 13.5
+            text "ctx" @835,509.2339 #d6dde6 JetBrains Mono 13.5
+            text "," @860.21875,509.2339 #89ddff JetBrains Mono 13.5
+            text " " @868.625,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "family" @877.03125,509.2339 #d6dde6 JetBrains Mono 13.5
+            text "," @927.46875,509.2339 #89ddff JetBrains Mono 13.5
+            text " " @935.875,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "u" @944.28125,509.2339 #d6dde6 JetBrains Mono 13.5
+            text "." @952.6875,509.2339 #89ddff JetBrains Mono 13.5
+            text "ID" @961.09375,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "," @977.90625,509.2339 #89ddff JetBrains Mono 13.5
+            text " " @986.3125,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "now" @994.71875,509.2339 #d6dde6 JetBrains Mono 13.5
+            text "." @1019.9375,509.2339 #89ddff JetBrains Mono 13.5
+            text "Add" @1028.3438,509.2339 #5cd2ff JetBrains Mono 13.5
+            text "(" @1053.5625,509.2339 #89ddff JetBrains Mono 13.5
+            text "30" @1061.9688,509.2339 #ff9e64 JetBrains Mono 13.5
+            text " " @1078.7812,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "*" @1087.1875,509.2339 #89ddff JetBrains Mono 13.5
+            text " " @1095.5938,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "24" @1104,509.2339 #ff9e64 JetBrains Mono 13.5
+            text " " @1120.8125,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "*" @1129.2188,509.2339 #89ddff JetBrains Mono 13.5
+            text " " @1137.625,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "time" @1146.0312,509.2339 #d6dde6 JetBrains Mono 13.5
+            text "." @1179.6562,509.2339 #89ddff JetBrains Mono 13.5
+            text "Hour" @1188.0625,509.2339 #ece6d8 JetBrains Mono 13.5
+            text "))" @1221.6875,509.2339 #89ddff JetBrains Mono 13.5
+            rect 582.8125,520.8739 565.1875x81.304504 fill #0c0c0b radius 2 stroke 1 #b98aff73
+            path 5 segments fill #b98aff
+            text "2" @602.8125,544.4379 #060606 JetBrains Mono 9.900001
+            text "LINE 47" @622.8125,544.47394 #b98aff JetBrains Mono 10
+            text "The refresh token is a row, not a JWT: the" @596.8125,568.01105 #b3ab99 Inter 12.5
+            rect 859.09375,554.8739 51.21875x17.179993 fill #161615 radius 3
+            text "family" @863.09375,567.6039 #ece6d8 JetBrains Mono 11.5
+            text "lets step 7 revoke every" @913.96875,568.01105 #b3ab99 Inter 12.5
+            text "descendant when a reused token shows up." @596.8125,587.16327 #b3ab99 Inter 12.5
+            text "48" @552,625.53845 #4f4a40 JetBrains Mono 13.5
+            text "    " @582.8125,625.53845 #ece6d8 JetBrains Mono 13.5
+            text "return" @616.4375,625.53845 #c792ff JetBrains Mono 13.5
+            text " " @666.875,625.53845 #ece6d8 JetBrains Mono 13.5
+            text "Pair" @675.28125,625.53845 #ffcf5c JetBrains Mono 13.5
+            text "{" @708.90625,625.53845 #89ddff JetBrains Mono 13.5
+            text "Access" @717.3125,625.53845 #d6dde6 JetBrains Mono 13.5
+            text ":" @767.75,625.53845 #89ddff JetBrains Mono 13.5
+            text " " @776.15625,625.53845 #ece6d8 JetBrains Mono 13.5
+            text "access" @784.5625,625.53845 #d6dde6 JetBrains Mono 13.5
+            text "," @835,625.53845 #89ddff JetBrains Mono 13.5
+            text " " @843.40625,625.53845 #ece6d8 JetBrains Mono 13.5
+            text "Refresh" @851.8125,625.53845 #d6dde6 JetBrains Mono 13.5
+            text ":" @910.65625,625.53845 #89ddff JetBrains Mono 13.5
+            text " " @919.0625,625.53845 #ece6d8 JetBrains Mono 13.5
+            text "refresh" @927.46875,625.53845 #d6dde6 JetBrains Mono 13.5
+            text "}" @986.3125,625.53845 #89ddff JetBrains Mono 13.5
+            text "," @994.71875,625.53845 #89ddff JetBrains Mono 13.5
+            text " " @1003.125,625.53845 #ece6d8 JetBrains Mono 13.5
+            text "nil" @1011.53125,625.53845 #ece6d8 JetBrains Mono 13.5
+            text "49" @552,646.53845 #4f4a40 JetBrains Mono 13.5
+            text "}" @582.8125,646.53845 #89ddff JetBrains Mono 13.5
+          pop
+        pop
+        rect 538,257.62488 638x400.55353 radius 6 stroke 1 #24221d
+        text "The dashboard never sees the refresh token's value. It only learns when the access token" @538,688.2253 #ece6d8 Inter 14.5
+        text "will expire, so it can schedule a refresh before the user notices:" @538,708.7697 #ece6d8 Inter 14.5
+        rect 538,728.2673 638x86 fill #0c0c0b radius 6
+        clip 538,728.2673 638x86 r 6
+          text "dashboard" @550,748.4072 #b98aff JetBrains Mono 11.5
+          clip 622.8281,736.67725 409.0006x15.179993 r 0
+            text "src/auth/useSession.ts" @622.8281,748.4072 #ece6d8 JetBrains Mono 11.5
+          pop
+          text "L18-19" @1039.8287,748.0473 #7c7566 JetBrains Mono 10.5
+          rect 1087.3912,735.99725 27.140015x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+          text "TS" @1094.3912,747.68726 #b3ab99 JetBrains Mono 9.5
+          text "open ↗" @1122.5312,747.6325 #ffd23f Inter 12
+          rect 1122.5312,751.52704 41.46875x1 fill #ffd23fb3
+          clip 538,760.2673 638x54 r 0
+            text "18" @552,781.6273 #4f4a40 JetBrains Mono 13.5
+            text "const" @582.8125,781.6273 #c792ff JetBrains Mono 13.5
+            text " " @624.84375,781.6273 #ece6d8 JetBrains Mono 13.5
+            text "expiresAt" @633.25,781.6273 #d6dde6 JetBrains Mono 13.5
+            text " " @708.90625,781.6273 #ece6d8 JetBrains Mono 13.5
+            text "=" @717.3125,781.6273 #89ddff JetBrains Mono 13.5
+            text " " @725.71875,781.6273 #ece6d8 JetBrains Mono 13.5
+            text "decodeExp" @734.125,781.6273 #5cd2ff JetBrains Mono 13.5
+            text "(" @809.78125,781.6273 #89ddff JetBrains Mono 13.5
+            text "res" @818.1875,781.6273 #d6dde6 JetBrains Mono 13.5
+            text "." @843.40625,781.6273 #89ddff JetBrains Mono 13.5
+            text "headers" @851.8125,781.6273 #d6dde6 JetBrains Mono 13.5
+            text "." @910.65625,781.6273 #89ddff JetBrains Mono 13.5
+            text "get" @919.0625,781.6273 #5cd2ff JetBrains Mono 13.5
+            text "(" @944.28125,781.6273 #89ddff JetBrains Mono 13.5
+            text "\"x-access-exp\"" @952.6875,781.6273 #a5e075 JetBrains Mono 13.5
+            text "))" @1070.375,781.6273 #89ddff JetBrains Mono 13.5
+            rect 538,787.2673 481.9375x21 fill #1d1a0f
+            text "19" @552,802.6273 #ffd23f JetBrains Mono 13.5
+            text "setTimeout" @582.8125,802.6273 #5cd2ff JetBrains Mono 13.5
+            text "(" @666.875,802.6273 #89ddff JetBrains Mono 13.5
+            text "refresh" @675.28125,802.6273 #d6dde6 JetBrains Mono 13.5
+            text "," @734.125,802.6273 #89ddff JetBrains Mono 13.5
+            text " " @742.53125,802.6273 #ece6d8 JetBrains Mono 13.5
+            text "expiresAt" @750.9375,802.6273 #d6dde6 JetBrains Mono 13.5
+            text " " @826.59375,802.6273 #ece6d8 JetBrains Mono 13.5
+            text "-" @835,802.6273 #89ddff JetBrains Mono 13.5
+            text " " @843.40625,802.6273 #ece6d8 JetBrains Mono 13.5
+            text "Date" @851.8125,802.6273 #ffcf5c JetBrains Mono 13.5
+            text "." @885.4375,802.6273 #89ddff JetBrains Mono 13.5
+            text "now" @893.84375,802.6273 #5cd2ff JetBrains Mono 13.5
+            text "()" @919.0625,802.6273 #89ddff JetBrains Mono 13.5
+            text " " @935.875,802.6273 #ece6d8 JetBrains Mono 13.5
+            text "-" @944.28125,802.6273 #89ddff JetBrains Mono 13.5
+            text " " @952.6875,802.6273 #ece6d8 JetBrains Mono 13.5
+            text "60_000" @961.09375,802.6273 #ff9e64 JetBrains Mono 13.5
+            text ")" @1011.53125,802.6273 #89ddff JetBrains Mono 13.5
+          pop
+        pop
+        rect 538,728.2673 638x86 radius 6 stroke 1 #24221d
+      pop
+      clip 1220,69 380x855 r 0
+        text "DIAGRAM" @1234,93.020004 #7c7566 JetBrains Mono 9.5
+        text "mermaid" @1544,93.2 #7c7566 JetBrains Mono 10
+        rect 1234,104.2 352x59.559998 fill #0c0c0b radius 4
+        clip 1234,104.2 352x59.559998 r 4
+          text "sequenceDiagram" @1244,123.42 #b3ab99 JetBrains Mono 11
+          text "  callback->>Minter: Mint(user)" @1244,137.94 #b3ab99 JetBrains Mono 11
+          text "  Minter->>store: Insert(family, 30d)" @1244,152.45999 #b3ab99 JetBrains Mono 11
+        pop
+        rect 1234,104.2 352x59.559998 radius 4 stroke 1 #24221d
+        text "refresh never leaves the server as a JWT" @1234,183.385 #b3ab99 Inter 12
+        text "ASK ABOUT THIS STEP" @1234,223.96954 #7c7566 JetBrains Mono 9.5
+        rect 1234,236.81953 352x230.6616 fill #0c0c0b radius 6
+        clip 1234,236.81953 352x230.6616 r 6
+          rect 1246,250.31953 7x6.9999847 fill #ff5f6d radius 3.5
+          text "Thread" @1261,258.36664 #ece6d8 Inter 12.5
+          text "· L1 ·" @1313.9531,257.59952 #7c7566 JetBrains Mono 10.5
+          rect 1361.5156,245.54953 73.130005x16.540009 fill #ff5f6d12 radius 10 stroke 1 #ff5f6d59
+          text "NEEDS YOU" @1368.5156,257.23953 #ff5f6d JetBrains Mono 9.5
+          text "resolve" @1499.625,257.18475 #ffd23f Inter 12
+          rect 1499.625,261.07928 42.375x1 fill #ffd23fb3
+          text "t:s4" @1550,257.41953 #4f4a40 JetBrains Mono 10
+          rect 1234,270.81952 352x1 fill #332f27
+          rect 1246,281.81952 28x28 fill #ff9b45 radius 6
+          text "L" @1256.335,299.23953 #141006 JetBrains Mono 9.5
+          text "liam" @1284,293.44452 #ece6d8 Inter 12
+          text "3m" @1315.9844,292.4993 #4f4a40 JetBrains Mono 9.5
+          text "what stops a stolen refresh token being used" @1284,312.44843 #b3ab99 Inter 12.5
+          text "twice?" @1284,330.57294 #b3ab99 Inter 12.5
+          rect 1246,345.58807 28x28 fill #ff8a1f radius 6
+          text "C" @1256.335,363.0081 #141006 JetBrains Mono 9.5
+          text "Claude" @1284,357.21307 #ece6d8 Inter 12
+          text "2m" @1332.7969,356.26785 #4f4a40 JetBrains Mono 9.5
+          text "Reuse detection, which is step 7. I've added a" @1284,376.21698 #b3ab99 Inter 12.5
+          text "pinned note here pointing forward to it (note" @1284,394.3415 #b3ab99 Inter 12.5
+          text "2)." @1284,412.466 #b3ab99 Inter 12.5
+          rect 1246,427.48114 328x30 fill #060606 radius 6
+          clip 1246,427.48114 328x30 r 6
+            text "Reply…" @1256,447.02826 #7c7566 Inter 12.5
+          pop
+          rect 1246,427.48114 328x30 radius 6 stroke 1 #332f27
+        pop
+        rect 1234,236.81953 352x230.6616 radius 6 stroke 1 #332f27
+        rect 1234,477.48117 352x30 fill #060606 radius 6
+        clip 1234,477.48117 352x30 r 6
+          text "Ask, or ask to rework this step…" @1244,497.0283 #7c7566 Inter 12.5
+        pop
+        rect 1234,477.48117 352x30 radius 6 stroke 1 #332f27
+      pop
+      rect 1234,936 60.9375x26 radius 6 stroke 1 #332f27
+      text "← Prev" @1244,953.36523 #ece6d8 Inter 12
+      text "step 4 / 9" @1376.625,952.78 #7c7566 JetBrains Mono 10.5
+      rect 1524.25,936 61.75x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+      text "Next →" @1534.25,953.36523 #141006 Inter 12
+    pop
+  pop
+pop
+rect 0,974 1600x26 fill #0c0c0b
+rect 0,974 55.415x26 fill #ffd23f
+text "TOUR" @12,990.78 #141006 JetBrains Mono 10.5
+text "auth flow" @71.415,990.78 #ece6d8 JetBrains Mono 10.5
+text "walkthrough · 2 repos · 2 quotes" @140.75876,990.78 #b3ab99 JetBrains Mono 10.5
+text "✕" @367.75876,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @379.3525,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @399.94626,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @411.54,990.95996 #b3ab99 JetBrains Mono 11
+text "h/l step · j/k scroll · gd open quote in editor" @1194.3125,990.78 #b3ab99 JetBrains Mono 10.5
+text "4/9" @1516.2188,990.78 #ece6d8 JetBrains Mono 10.5
+rect 210,306.7694 2x36 fill #ffd23f
+rect 576.8125,337.62488 2x21 fill #ffd23f
+rect 576.8125,493.8739 2x21 fill #ffd23f
+rect 576.8125,787.2673 2x21 fill #ffd23f
+path 4 segments fill #0c0c0b
+path 2 segments stroke 1 #b98aff73
+path 4 segments fill #0c0c0b
+path 2 segments stroke 1 #b98aff73
+path 4 segments fill #0c0c0b
+path 2 segments stroke 1 #b98aff73
+path 4 segments fill #0c0c0b
+path 2 segments stroke 1 #b98aff73

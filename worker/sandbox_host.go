@@ -72,7 +72,7 @@ func (g gatewayHost) project(name string) (core.Project, error) {
 	return core.Project{}, fmt.Errorf("%w %q", gateway.ErrNoProject, name)
 }
 
-func (g gatewayHost) Commit(_ context.Context, project, message string, files []string) (int, error) {
+func (g gatewayHost) Commit(ctx context.Context, project, message string, files []string) (int, error) {
 	p, err := g.project(project)
 	if err != nil {
 		return 0, err
@@ -95,13 +95,13 @@ func (g gatewayHost) Commit(_ context.Context, project, message string, files []
 	if n == 0 {
 		return 0, errors.New("nothing to commit")
 	}
-	if _, err := sandbox.Git(p.Dir, "commit", "-m", message); err != nil {
+	if err := g.keyed(ctx, p, "git commit", "commit", "-m", message); err != nil {
 		return 0, err
 	}
 	return n, nil
 }
 
-func (g gatewayHost) Push(_ context.Context, project string) error {
+func (g gatewayHost) Push(ctx context.Context, project string) error {
 	p, err := g.project(project)
 	if err != nil {
 		return err
@@ -110,11 +110,10 @@ func (g gatewayHost) Push(_ context.Context, project string) error {
 	if err != nil {
 		return err
 	}
-	_, err = sandbox.Git(p.Dir, "push", "origin", "HEAD:refs/heads/"+branch)
-	return err
+	return g.keyed(ctx, p, "git push", "push", "origin", "HEAD:refs/heads/"+branch)
 }
 
-func (g gatewayHost) Pull(_ context.Context, project string) error {
+func (g gatewayHost) Pull(ctx context.Context, project string) error {
 	p, err := g.project(project)
 	if err != nil {
 		return err
@@ -123,17 +122,23 @@ func (g gatewayHost) Pull(_ context.Context, project string) error {
 	if err != nil {
 		return err
 	}
-	_, err = sandbox.Git(p.Dir, "pull", "--ff-only", "origin", branch)
-	return err
+	return g.keyed(ctx, p, "git pull", "pull", "--ff-only", "origin", branch)
 }
 
-func (g gatewayHost) Fetch(_ context.Context, project string) error {
+func (g gatewayHost) Fetch(ctx context.Context, project string) error {
 	p, err := g.project(project)
 	if err != nil {
 		return err
 	}
-	_, err = sandbox.Git(p.Dir, "fetch", "origin")
-	return err
+	return g.keyed(ctx, p, "git fetch origin", "fetch", "origin")
+}
+
+// keyed runs host git in a project for the gateway, asking for a security-key touch while it waits on one.
+func (g gatewayHost) keyed(ctx context.Context, p core.Project, what string, args ...string) error {
+	return g.b.w.keyed(ctx, g.b.id, what, p.Name, func(ctx context.Context) error {
+		_, err := sandbox.GitContext(ctx, p.Dir, args...)
+		return err
+	})
 }
 
 func (g gatewayHost) CreatePR(ctx context.Context, project, title, body string) (string, error) {

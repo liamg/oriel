@@ -164,6 +164,7 @@ const (
 	AskNetwork    AskKind = "network"    // layer 3: the egress proxy holds a connection
 	AskGateway    AskKind = "gateway"    // layer 3: the gateway holds a call
 	AskLogin      AskKind = "login"      // the agent's login on its worker is gone
+	AskKey        AskKind = "key"        // a git operation has waited long enough that it's likely waiting on a security-key touch
 )
 
 // Login is a provider's sign-in on a worker that has stopped working, and how to sign in again.

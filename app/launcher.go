@@ -62,7 +62,7 @@ type launcher struct {
 
 	kind                                          int
 	prompt, ticket, pr, dir, name, parent, branch string
-	template, repoPath                            string
+	template, repoPath, variant                   string
 	provider, model, effort                       string
 	chosen                                        []core.RepoID
 	clones                                        map[core.RepoID]string // a URL to clone onto the worker, by a chosen repo it lacks
@@ -72,6 +72,22 @@ type launcher struct {
 	sandbox, openNet                              bool
 	busy                                          bool
 	err                                           string
+	card                                          ticketCard
+}
+
+// ticketWait is how long the ticket field rests before its ticket is looked up.
+const ticketWait = 350 * time.Millisecond
+
+// ticketCard is the ticket the ticket field names, as its tracker tells it (ui.md 04: a ticket ID expands into a
+// card). The first registry.TicketTracker that takes the key looks it up.
+type ticketCard struct {
+	key     string    // what the field held when it last changed
+	changed time.Time // when; zero to look it up at once
+	asked   string    // the key looked up
+	source  string    // who it was asked of: "Linear"
+	busy    bool
+	t       *registry.Ticket
+	err     string
 }
 
 func (x *launcher) Manifest() ext.Manifest { return ext.Manifest{ID: "launcher"} }
@@ -97,8 +113,9 @@ func (x *launcher) openWith(a registry.Args) {
 	spec := specFrom(a)
 	*x = launcher{disposer: x.disposer, sh: x.sh, h: x.h, gen: x.gen + 1, open: true, focusField: true,
 		worker: spec.Worker, wantKind: core.Kind(a.String("kind")), prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
-		name: spec.Name, template: spec.Template, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
-		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", branch: spec.Branch}
+		name: spec.Name, template: spec.Template, variant: spec.Variant, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
+		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", branch: spec.Branch,
+		card: ticketCard{key: strings.TrimSpace(spec.Ticket)}}
 	if x.template == "" {
 		x.template = worker.Templates[0]
 	}
@@ -204,6 +221,8 @@ func (x *launcher) missing() string {
 		return "pick a repo"
 	case takesRepos(k) && x.uncloned() != "":
 		return fmt.Sprintf("clone %s onto %s, or remove it", x.uncloned(), x.workerName())
+	case startsFrom(k) == worker.FromPrompt && x.card.busy:
+		return "wait for " + x.card.asked + " from " + x.card.source
 	case startsFrom(k) == worker.FromPR && strings.TrimSpace(x.pr) == "":
 		return "paste the pull request's URL"
 	case startsFrom(k) == worker.FromName && strings.TrimSpace(x.name) == "":
@@ -212,6 +231,37 @@ func (x *launcher) missing() string {
 		return "pick a directory"
 	}
 	return ""
+}
+
+// chosenVariant is the kind's variant the launcher holds: the one picked, else its first; "" for a kind with none.
+func (x *launcher) chosenVariant(k worker.KindSpec) string {
+	for _, v := range k.Variants {
+		if v.ID == x.variant {
+			return v.ID
+		}
+	}
+	if len(k.Variants) > 0 {
+		return k.Variants[0].ID
+	}
+	return ""
+}
+
+// variantField picks the kind's variant (a tour's walkthrough, demo…).
+func (x *launcher) variantField(c *ui.Ctx, k worker.KindSpec) {
+	cur := x.chosenVariant(k)
+	var opts []string
+	label := cur
+	for _, v := range k.Variants {
+		o := v.ID + " · " + v.Desc
+		opts = append(opts, o)
+		if v.ID == cur {
+			label = o
+		}
+	}
+	if o, ok := widget.Select(c, "variant", strings.ToLower(k.Title)+": "+label, opts, widget.SelectOpts{Label: k.Title + " kind", Help: "agent/launcher#prompt",
+		Width: 300}); ok {
+		x.variant, _, _ = strings.Cut(o, " · ")
+	}
 }
 
 // home expands a leading ~ for this machine's worker.
@@ -236,9 +286,15 @@ func (x *launcher) args() registry.Args {
 			a["network"] = "open"
 		}
 	}
+	if v := x.chosenVariant(k); v != "" {
+		a["variant"] = v
+	}
 	switch startsFrom(k) {
 	case worker.FromPrompt:
 		a["ticket"] = strings.TrimSpace(x.ticket)
+		if t := x.ticketHere(); t != nil {
+			a["context"] = t.Context
+		}
 	case worker.FromPR:
 		a["pr"] = strings.TrimSpace(x.pr)
 	case worker.FromName:
@@ -302,20 +358,28 @@ func (x *launcher) openClone(r core.RepoID) {
 	}
 }
 
-// start runs session.start with what the launcher holds; the launcher closes once the session is in front.
+// start runs session.start with what the launcher holds, or continues the ticket's session; the launcher closes once
+// the session is in front.
 func (x *launcher) start() error {
 	if x.busy {
 		return nil
+	}
+	if se, ok := x.continues(); ok {
+		return x.launch("session.open", registry.Args{"id": string(se.ID())})
 	}
 	if m := x.missing(); m != "" {
 		x.err = "To start: " + m + "."
 		return errors.New(x.err)
 	}
-	a := x.args()
+	return x.launch("session.start", x.args())
+}
+
+// launch runs command off the loop, the launcher busy until it answers, and closes the launcher once it has.
+func (x *launcher) launch(command string, a registry.Args) error {
 	x.busy, x.err = true, ""
 	gen := x.gen
 	go func() {
-		err := x.h.Run(context.Background(), "session.start", a)
+		err := x.h.Run(context.Background(), command, a)
 		x.h.Do(func() {
 			if gen != x.gen {
 				return
@@ -330,6 +394,15 @@ func (x *launcher) start() error {
 		x.h.Redraw()
 	}()
 	return nil
+}
+
+// continues is the session the ticket field's ticket already has, when the kind starts from a prompt: Start
+// continues it rather than starting another (ticketSession).
+func (x *launcher) continues() (core.Session, bool) {
+	if k, ok := x.current(); !ok || startsFrom(k) != worker.FromPrompt {
+		return nil, false
+	}
+	return ticketSession(x.h, x.ticket)
 }
 
 // saveAsJob hands what the launcher holds to the New job dialog: the prompt, the agent, where it runs.
@@ -390,8 +463,15 @@ func (x *launcher) header(c *ui.Ctx) {
 		})
 		c.Text("title", "NEW SESSION", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
 			Color: th.C(theme.Fg)})
+		meta := []string{}
+		if x.ticketHere() != nil {
+			meta = append(meta, "from ticket")
+		}
 		if w := x.workerName(); w != "" {
-			c.Text("meta", "worker "+w, monoFont(10.5, th.C(theme.FgFaint)))
+			meta = append(meta, "worker "+w)
+		}
+		if len(meta) > 0 {
+			c.Text("meta", strings.Join(meta, " · "), monoFont(10.5, th.C(theme.FgFaint)))
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: "agent/launcher"}) {
@@ -469,10 +549,19 @@ func (x *launcher) form(c *ui.Ctx) {
 		}
 		x.field(c, "text", &x.prompt, "Prompt", promptPlaceholder, f == worker.FromPrompt || f == worker.FromNothing, ui.Flex(1), 8)
 		if f == worker.FromPrompt {
+			x.lookTicket(c)
+			x.ticketCard(c)
 			c.Row("extra", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				x.field(c, "ticket", &x.ticket, "Ticket", "ticket: INF-2231", false, ui.Px(220), 1)
+				if len(k.Variants) > 0 {
+					x.variantField(c, k)
+				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("note", "the ticket names the branch and goes to the agent", monoFont(10, th.C(theme.FgFaint)))
+				note := "the ticket names the branch and goes to the agent"
+				if x.ticketHere() != nil {
+					note = "the ticket, comments and attachments go to the agent as context"
+				}
+				c.Text("note", note, monoFont(10, th.C(theme.FgFaint)))
 			})
 		}
 	})
@@ -508,6 +597,99 @@ func (x *launcher) form(c *ui.Ctx) {
 			c.Column("repos", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) { x.reposSection(c, k) })
 		}
 		c.Column("run", ui.Style{W: ui.Flex(1), Gap: 10}, x.runOn)
+	})
+}
+
+// ticketHere is the card's ticket, while the field still names it.
+func (x *launcher) ticketHere() *registry.Ticket {
+	if x.card.t == nil || x.card.key != strings.TrimSpace(x.ticket) {
+		return nil
+	}
+	return x.card.t
+}
+
+// lookTicket looks up the ticket the field names once it has rested, off the loop.
+func (x *launcher) lookTicket(c *ui.Ctx) {
+	key := strings.TrimSpace(x.ticket)
+	if key != x.card.key {
+		x.card = ticketCard{key: key, changed: c.Now()}
+	}
+	if key == "" || x.card.asked == key {
+		return
+	}
+	if due := x.card.changed.Add(ticketWait); !x.card.changed.IsZero() && c.Now().Before(due) {
+		c.WakeAt(due)
+		return
+	}
+	x.card.asked = key
+	src, ok := registry.TrackerFor(x.h, key)
+	if !ok {
+		return
+	}
+	x.card.busy, x.card.source = true, src.Label()
+	gen := x.gen
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		t, err := registry.LookupTicket(ctx, src, key)
+		x.h.Do(func() {
+			if gen != x.gen || x.card.key != key {
+				return
+			}
+			x.card.busy = false
+			if err != nil {
+				x.card.err = err.Error()
+				return
+			}
+			x.card.t = &t
+		})
+		x.h.Redraw()
+	}()
+}
+
+// ticketCard is the ticket under the prompt: its key and state, title, summary and what's on it; ✕ takes it off.
+func (x *launcher) ticketCard(c *ui.Ctx) {
+	const help = "agent/launcher#ticket"
+	th := c.Theme()
+	t := x.ticketHere()
+	se, cont := x.continues()
+	switch {
+	case t == nil && cont && !x.card.busy:
+		c.Text("ticket-continue", continueLabel(se), monoFont(10.5, th.C(theme.Accent)))
+		return
+	case x.card.busy:
+		c.Text("ticket-wait", "Looking up "+x.card.asked+" in "+x.card.source+"…", monoFont(10.5, th.C(theme.FgFaint)))
+		return
+	case x.card.err != "" && x.card.key == strings.TrimSpace(x.ticket):
+		c.Text("ticket-err", x.card.asked+": "+x.card.err, monoFont(10.5, th.C(theme.Warn)))
+		return
+	case t == nil:
+		return
+	}
+	width := float32(min(1260, c.Size().X-32)) - 331 - 48 - 28 - 110 - 14 - 30
+	c.Row("ticket-card", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12), Gap: 14, Stroke: th.C(tLaunchCardLine), Border: 1, Radius: 8,
+		Role: ui.RoleGroup, Label: "Ticket " + t.Key, Help: help}, func(c *ui.Ctx) {
+		c.Column("id", ui.Style{W: ui.Px(110), Gap: 6}, func(c *ui.Ctx) {
+			c.Text("key", t.Key, monoFont(11, th.C(theme.Accent)))
+			if t.State != "" {
+				widget.Chip(c, "state", t.State, tokenColour(th, stageTone(t.Stage), th.C(theme.Accent)), help)
+			}
+		})
+		c.Column("body", ui.Style{W: ui.Flex(1), Gap: 6, Clip: true}, func(c *ui.Ctx) {
+			c.Text("title", t.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+			if t.Summary != "" {
+				widget.Wrap(c, "summary", t.Summary, width, uiFont(12, th.C(theme.FgMuted)))
+			}
+			if len(t.Facts) > 0 {
+				c.Text("facts", strings.Join(t.Facts, "   "), monoFont(10, th.C(theme.FgFaint)))
+			}
+			if cont {
+				c.Text("continue", continueLabel(se), monoFont(10.5, th.C(theme.Accent)))
+			}
+		})
+		if widget.IconButton(c, "drop", "✕", widget.IconButtonOpts{Label: "Take " + t.Key + " off", Help: help, Size: 18}) {
+			x.ticket, x.card = "", ticketCard{}
+		}
 	})
 }
 
@@ -901,6 +1083,9 @@ func (x *launcher) footer(c *ui.Ctx) {
 		label := "Start"
 		if k.Title != "" {
 			label = "Start " + k.Title
+		}
+		if _, ok := x.continues(); ok {
+			label = "Continue"
 		}
 		if widget.Button(c, "start", label, widget.ButtonOpts{Primary: true, Key: "⌘↵", Disabled: x.busy || k.Kind == "",
 			Help: "agent/launcher"}) {

@@ -44,6 +44,8 @@ The same split as settings (`settings.md`): the GUI and hand edits write the sam
     That's how dotfiles on a new machine work.
   - If not, or if it now asks for more than you accepted, it stays **inactive**, and an inbox card opens the consent
     screen (mockup 29). Nothing runs half-granted.
+  - The pieces are PL-3's: `ext.Diff(ext.Locked(grants), lock.capabilities)` is what a plugin asks for beyond its
+    lock entry, and `plugins.consent` is the screen (security.md, "As built (PL-3)").
 - If an entry is removed, the plugin is deactivated, its files are removed, and its lock entry is dropped.
 - The GUI installs by writing one line to `[plugins]`, then follows the same path. The file is the only list, so the
   GUI and the file can't disagree.
@@ -60,6 +62,8 @@ oriel.option{ name = "plugin.jira.site", type = "string", help = "Your Jira host
 
 - They appear in the plugin's section of the settings page, save to `[plugin.jira]`, and `@plugin:jira` filters to them.
 - Options aren't declared in the manifest, so they can't drift from the code that reads them.
+- Built in PL-10 (scripting.md, "As built (PL-10)"): the section is the plugin's name (`[plugin.jira]` is the jira
+  section), and a name outside `plugin.<name>.` is an error.
 
 ### The lockfile: `oriel-lock.toml`
 

@@ -225,3 +225,23 @@ func TestDialKeepsAnotherBuildsWorkerMidTurn(t *testing.T) {
 		t.Fatalf("info = %+v, %v; want the worker mid-turn", info, err)
 	}
 }
+
+// Options.Handlers add methods to every app connection, beside the worker's own (the updater's are).
+func TestHandlersServeEachAppConnection(t *testing.T) {
+	w, err := New(Options{Home: t.TempDir(), Handlers: []func(wire.Conn){func(c wire.Conn) {
+		c.Handle("extra.ping", wire.Func(func(context.Context, struct{}) (string, error) { return "pong", nil }))
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer w.Close()
+	for range 2 {
+		a, b := wire.Pipe()
+		w.Serve(b)
+		var got string
+		if err := a.Call(context.Background(), "extra.ping", nil, &got); err != nil || got != "pong" {
+			t.Fatalf("extra.ping = %q, %v", got, err)
+		}
+		a.Close()
+	}
+}

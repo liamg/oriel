@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
 
-//oriel:api name=lsp
+//oriel:api name=lsp cap=exec
 type LSP struct{ a *APIs }
 
 //oriel:api doc="Register a language server: { name, languages = { \"go\" }, cmd = { \"gopls\" }, roots = { \"go.mod\" }, settings = {…}, init = {…}, order }. One with a built-in's name replaces it; order picks among a language's servers, lowest first."
@@ -17,6 +18,11 @@ func (l LSP) Server(spec script.Table, where string) error {
 		Source: where}
 	if s.Name == "" || len(s.Language) == 0 || len(s.Cmd) == 0 {
 		return fmt.Errorf("a language server needs a name, languages and a cmd")
+	}
+	if !l.a.Plugin.Trusted() {
+		if err := l.a.Check(ext.CapExec, s.Cmd[0]); err != nil {
+			return err
+		}
 	}
 	if o, ok := spec["order"].(float64); ok {
 		s.Order = int(o)

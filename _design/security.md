@@ -105,8 +105,9 @@ flowchart LR
 - **Sessions without a sandbox** (local, unsandboxed): process plugins get an OS sandbox instead —
   **Landlock + seccomp** on Linux (via `x/sys`), `sandbox-exec` profile on macOS — scoped to the worktree and the declared
   `fs`, `net`, `exec` grants.
-- **App-side plugins** are Lua or WASM only (no process plugins in the app) — the in-VM enforcement above is enough, and
-  nothing app-side can exec.
+- **App-side plugins** are Lua or WASM, enforced in-VM as above. App-side Lua may also start a process plugin
+  (`oriel.process.spawn`, with its `exec` grant), which always runs under the OS sandbox above, scoped to its own
+  directory and its declared grants, never unsandboxed (Linear's helper does this, plugins.md "As built (PL-8)").
 - A plugin that needs both halves is split: a UI part (app) and a worker part (session), talking through `oriel.*` messages.
 
 ## Agent-facing risk
@@ -171,3 +172,68 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
 
 - The `//oriel:api cap=…` annotation from `scripting.md` makes the capability part of the generated binding: an API without
   a declared capability fails `go generate`, so no unguarded door can be added by accident.
+
+## As built (PL-2)
+
+- `ext.Guard` is `Check(plugin, cap, target)`, `Audit()` (the last 1000 checks) and `Declared(plugin)`, which the OS
+  sandbox is built from; `ext.Grants` is it. A refusal is an `*ext.NotDeclared` (`errors.Is(err,
+  ext.ErrNotDeclared)`) naming the plugin, the capability and the target. Scopes: hosts match case-insensitively,
+  `*.x` any subdomain, a port only when given; paths are compared with symlinks followed, and `worktree` and
+  `config` resolve through `Grants.Places`; a bare command matches only the program PATH finds for it; `*` is
+  anything.
+- The Lua API checks every call (scripting.md, "As built (PL-2)"); a process's or a module's host calls go through
+  `ext.Methods`, checked the same way.
+- The OS sandbox (`ext/ossandbox`): on Linux the binary re-runs itself as a helper (`ossandbox.Main`, first in
+  `main`) that applies a Landlock ruleset (every right the kernel's ABI knows; reads under the system's library,
+  certificate and resolver paths, the plugin's directory and its fs.read grants; writes under its fs.write grants
+  and its temp dir; running only its program, its exec grants and their ELF or `#!` interpreters; TCP connect only
+  to its ports; signals and abstract sockets kept in its domain on ABI 6+), sets no_new_privs, and with no ports a
+  seccomp filter refusing every socket but AF_UNIX and io_uring; then it execs the program. On macOS it's
+  `sandbox-exec -p` with `ossandbox.SBPL(profile)`: deny default, the same lists. With neither (an old kernel, another
+  OS) a plugin's process doesn't start.
+- Honestly: the OS filters TCP by port, not host, so a net grant's hosts are enforced only through the egress proxy
+  (a session's sandbox); outside one a plugin with net may reach any host on those ports. UDP is open once it has a
+  port. The worktree isn't readable unless declared (`fs.read = { scope = "worktree" }`). Not guarded yet:
+  `oriel.cmd` runs any command (commands don't declare a capability), and options set from Lua.
+
+## As built (PL-9)
+
+- Secrets are kept by `ext.Secrets`; the built one is `ext.SecretFile`, `secrets.json` in the state directory, written
+  0600 (its directory 0700). Not the OS keychain yet. You set one only through its dialog, `:Secret NAME` or
+  `secrets.set {name}` (a field that shows dots, to the eye and to assistive technology, and won't copy:
+  `widget.InputOpts.Secret`); no command takes a value, so `oriel.cmd` can't set one. `secrets.delete {name}` removes
+  it.
+- A plugin uses one by name through `http.request` (`oriel.http.request`): `auth = "NAME"` sends it as
+  `Authorization: Bearer …`, `url_secret = "NAME"` is a secret that is the whole URL (an incoming webhook). The host
+  checks `net` against the host the request goes to (for `url_secret`, the secret's own host), then `secrets` against
+  `NAME@host`: a secret declared `NAME = "host"` reaches only that host (`*.x` matching as net does), and one declared
+  with no host reaches none. A request carrying a secret goes over https only and follows no redirect; its error is
+  the method, the host and the cause, never the URL, and its answer is masked of the secret's value. Each value handed
+  out is added to the log's redactor.
+- Since PL-8, `auth_scheme` says what goes before the secret in the header (`none`: the value as it is).
+- PL-8's Linear plugin is app-side Lua that starts a process plugin (`oriel.process.spawn`), as "App-side plugins"
+  above allows: the process is OS-sandboxed, has no network of its own to use (it asks the host for every request,
+  through `http.request`) and never holds the key, but its sandbox lets it connect to port 443 since its net grant
+  names a host.
+- Honestly: a plugin can still tell whether a secret is set (an error says so), and `:Secrets` (which plugin uses
+  which, and when last) isn't built.
+
+## As built (PL-3)
+
+- `ext.Ask(manifest, from)` is the consent a plugin asks for (`ext.Consent`): a row per capability beyond the
+  always-allowed ones (`ext.ConsentRow`: the grant, its risk, a heading from `ext.Groups`, Oriel's line from
+  `ext.Explain`, and the author's `Why`), the source and provenance facts the installer knows, and, for an update
+  (`from` the installed manifest), what each row adds and what the update drops. `Silent()` is nothing to ask: an
+  install of only always-allowed capabilities, or an update adding none.
+- Consent in the lockfile's form: `Grant.Lock()` is `net:acme.atlassian.net` per scope item (or the capability
+  alone), `ext.Locked(grants)` a plugin's whole list, and `ext.Diff(want, accepted)` what consent to `accepted`
+  doesn't cover (`cap:*` covers any of cap's scope), which is how PL-20 tells a locked plugin from one asking for
+  more. Scopes are compared as written: a narrower scope that's spelled differently asks again.
+- The dialog (mockup 29) is `builtin:consent`, opened with `plugins.consent {dir, from, then, source}`: the manifest
+  in `dir`, an update from the one in `from`, and on Install (or Update, `⌘↵`) it runs the command `then` with
+  `{dir}`. Cancel, Stay, `esc` and a click outside grant nothing; a silent consent runs `then` at once. Each row's
+  help is `plugins/install#<capability>`, Oriel's page. Not yet: the provenance facts (commit, checksum, badge, deps)
+  and where consent is recorded come with P8 (PL-20, PL-21).
+- Grammar packs (`languages.install {path}`) ask for nothing: a grammar has no host imports. Their integrity check
+  is the checksum list the binary ships (editor.md, "Languages as plugins").
+

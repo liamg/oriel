@@ -63,7 +63,7 @@ Tickets that say "port from crit" or "crit behaviour preserved" mean what's writ
 **Trusted orgs**
 - PR and comment text from outside the trusted orgs and users is redacted for the agent (`review/redact.go`).
 
-**agentbus** (`internal/agentbus`, `worker/agentbus.go`)
+**agentbus** (`internal/agentbus`, `worker/agentbus.go`). Ported as an external plugin, `github.com/liamg/oriel-agentbus` (PL-5), not part of Oriel.
 - Question cards with an auto-answer at the deadline (read-only tools, labelled).
 - Review-request cards (Ignore, Claim, Claim + Open), with the result reported back to the asker, including GitHub-submitted reviews (`ghreviewed.go`).
 - Auto-approve rules (`internal/autoapprove`), presence (active, idle, DND), and a log.
@@ -71,17 +71,11 @@ Tickets that say "port from crit" or "crit behaviour preserved" mean what's writ
 **Linear** (`internal/linear`, `dash/linear.js`, `dashboard/linear*.go`)
 - A list of assigned tickets.
 - Start work from a ticket: the ticket, its comments and attachments become the plan prompt.
-- Ticket state moves (to in progress on start, to in review on PR) and links back to the PR.
-- A company feed of Linear moves.
+- Ticket state moves (to in progress on start, to in review on PR, to done on merge) and links back to the PR.
+- "Continue" for a ticket that already has a session (crit: a workspace), instead of starting another.
 
 **Slack** (`internal/slack`)
 - A "PTAL" button posting a review request through an incoming webhook.
-
-**Calendar** (`internal/ical`, `dashboard/maccal.go`)
-- The next meeting from an iCal URL or macOS EventKit.
-
-**Company feed** (`dashboard/company.go`)
-- Org-wide PRs merged and opened, plus Linear moves.
 
 **PR lists** (`prmerge.go`, `worker/prlists.go`)
 - Mine and review-requested, merged across workers.
@@ -110,4 +104,6 @@ Tickets that say "port from crit" or "crit behaviour preserved" mean what's writ
 ## Not carried over
 
 - The 3D room, scenes, sea and coast, black hole, lights, post-its, cinema/IPTV/YouTube/CCTV, Spotify and music, and chess puzzles.
+- The calendar (`internal/ical`, `dashboard/maccal.go`: the next meeting from an iCal URL or macOS EventKit).
+- The company feed (`dashboard/company.go`: org-wide PRs and Linear moves).
 - `internal/media` and all of `web/static/room` apart from the omnibox, launch, assistant and panes logic, which are reimplemented natively.

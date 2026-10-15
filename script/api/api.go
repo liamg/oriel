@@ -6,7 +6,9 @@ package api
 //go:generate go run ../../tools/cmd/apigen
 
 import (
+	"context"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -18,47 +20,95 @@ import (
 // Version is oriel.api.version: a breaking change bumps its major (scripting.md, "Stability").
 const Version = "0.4.0"
 
-// futures are namespaces for features that aren't built yet: calling into one says which ticket brings it, so a
-// config written for them loads (PL-1).
+// futures are namespaces, or the rest of one, for features that aren't built yet: calling into one says which
+// ticket brings it, so a config written for them loads (PL-1).
 var futures = map[string]string{
-	"linear": "PL-8 (Linear)",
-	"http":   "AI-7 (network approvals)",
-	"async":  "a later ticket (timers, processes and RPC from Lua)",
+	"http":  "AI-7 (network approvals)", // what oriel.http lacks yet: request is here, a blocking get isn't
+	"async": "a later ticket (timers, processes and RPC from Lua)",
 }
 
 // APIs is the API for one VM over a host. What a config registers is kept, so a reload drops it all first.
 type APIs struct {
-	Host ext.Host
-	VM   *script.VM
+	Host   ext.Host
+	VM     *script.VM
+	Plugin ext.Plugin // whose VM it is: every call is checked against its grants; your config's is trusted
+
+	procs *ext.Processes // its process plugins, started on first use
+	wasm  *ext.WASM
+	hostm *ext.Methods
 
 	mu      sync.Mutex
 	owned   []registry.Disposable
 	n       int
 	pending map[string]pendingOption // options set before anything registered them
 	touched map[optKey]optPrev       // options the config set, and what they held before
+	shown   map[string]any           // oriel.hud.set's nodes, by indicator
+	inbox   *luaInbox                // oriel.inbox's cards
 }
 
-// Install puts the API in vm.
-func Install(vm *script.VM, h ext.Host) *APIs {
-	a := &APIs{Host: h, VM: vm, pending: map[string]pendingOption{}, touched: map[optKey]optPrev{}}
+// Install puts the API in vm, for your own config: trusted, its files in dir.
+func Install(vm *script.VM, h ext.Host, dir string) *APIs {
+	return InstallPlugin(vm, h, ext.Plugin{ID: "init.lua", Dir: dir})
+}
+
+// InstallPlugin puts the API in vm for a plugin: each call it makes is checked against p's grants.
+func InstallPlugin(vm *script.VM, h ext.Host, p ext.Plugin) *APIs {
+	a := &APIs{Host: h, VM: vm, Plugin: p, pending: map[string]pendingOption{}, touched: map[optKey]optPrev{}}
 	a.bind(vm)
 	a.options(vm)
 	vm.SetValue("api", "version", Version)
+	vm.SetValue("", "platform", runtime.GOOS)
 	for ns, ticket := range futures {
 		vm.Future(ns, ticket)
 	}
 	return a
 }
 
-// Dispose drops everything the config registered: keymaps, commands, hooks, views and the rest.
+// Dispose drops everything the config registered: keymaps, commands, hooks, views and the rest, and stops its
+// processes and WASM modules.
 func (a *APIs) Dispose() {
 	a.mu.Lock()
 	owned := a.owned
-	a.owned = nil
+	a.owned, a.inbox = nil, nil
+	procs, wasm := a.procs, a.wasm
+	a.procs, a.wasm = nil, nil
 	a.mu.Unlock()
 	for _, d := range owned {
 		d.Dispose()
 	}
+	if procs != nil {
+		procs.Close()
+	}
+	if wasm != nil {
+		wasm.Close(context.Background())
+	}
+}
+
+// check is the guard on a call: the generated glue asks it for each function's capability.
+func (a *APIs) check(c string) error { return a.Plugin.Check(ext.Capability(c), "") }
+
+// Check asks the guard whether the VM's plugin may use c on target.
+func (a *APIs) Check(c ext.Capability, target string) error { return a.Plugin.Check(c, target) }
+
+func (a *APIs) setIndicator(name string, v any) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.shown == nil {
+		a.shown = map[string]any{}
+	}
+	a.shown[name] = v
+}
+
+// takeIndicator is the nodes set for name, and whether there were any; once taken from one built by a function
+// (once), they're gone.
+func (a *APIs) takeIndicator(name string, once bool) (any, bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	v, ok := a.shown[name]
+	if ok && once {
+		delete(a.shown, name)
+	}
+	return v, ok
 }
 
 // Registered is how many things the config has registered.

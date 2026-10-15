@@ -1,6 +1,8 @@
 package registry
 
 import (
+	"cmp"
+	"encoding/json"
 	"slices"
 	"strings"
 	"time"
@@ -20,11 +22,19 @@ func (r *reg) Contribute(c Contribution) Disposable {
 	defer r.mu.Unlock()
 	k := c.ContributionKind() + "\x00" + c.ContributionName()
 	tok := r.contribs.push(k, c)
+	r.contribGen++
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.contribs.remove(k, tok)
+		r.contribGen++
 	})
+}
+
+func (r *reg) ContributionsGen() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.contribGen
 }
 
 func (r *reg) Contributions(kind string) []Contribution {
@@ -41,14 +51,28 @@ func (r *reg) Contributions(kind string) []Contribution {
 	return out
 }
 
-// AgentTool is a tool offered to every session's agent beside Oriel's own (agents.md): an LSP lookup, a plugin's
-// query. The agent sees it as mcp__oriel__<Name>. Run runs in the app; SessionOf(ctx) is the session that asked.
+// AgentTool is a tool offered to agents beside Oriel's own (agents.md): an LSP lookup, a plugin's query, the
+// assistant's sessions. The agent sees it as mcp__oriel__<Name>. Run runs in the app; SessionOf(ctx) is the session
+// that asked, AgentOf(ctx) the agent. Run may return an Acted to say what it did and how to take it back.
 type AgentTool struct {
 	Name, Desc string
-	Params     map[string]string // name → type: "string", "number?"
-	ReadOnly   bool              // changes nothing: allowed without asking
-	Run        func(ctx Ctx, params map[string]any) (any, error)
-	Source     string
+	Params     map[string]string // name → type: "string", "number?"; or InputSchema
+	// InputSchema is the input's JSON Schema, when Params can't say it: lists, enums.
+	InputSchema json.RawMessage
+	ReadOnly    bool // changes nothing: allowed without asking
+	// For are the agents it's offered to: session kinds ("work") or utility agents ("assistant"). None is every
+	// session's agent and no utility agent.
+	For []string
+	// Reads names the data it reads ("github", "linear"), which the assistant lists as its sources.
+	Reads string
+	// Confirm makes it an act that waits for the user's yes: what it will do, shown by the agent's owner before Run.
+	// It returns Granted when this call needs no yes, and an error to refuse it.
+	Confirm func(ctx Ctx, params map[string]any) (Confirmation, error)
+	Run     func(ctx Ctx, params map[string]any) (any, error)
+	// Adds makes it a part of another tool's answer rather than a tool of its own: when the tool named Adds is
+	// called, the answer is each one's result under its Reads (or Name): agentbus's review requests beside GitHub's.
+	Adds   string
+	Source string
 }
 
 // PromptPack is a named prompt and the tools that go with it (AI-4).
@@ -65,12 +89,46 @@ type SessionKind struct {
 	Source             string
 }
 
-// Indicator is a HUD indicator: a small view in a slot, built again every Every (SH-8).
+// Indicator is a small live readout in a slot (ui.md, "Indicators"): the title bar's right, the status line's sides, the
+// HUD's panels, a panel's own slot. What Build returns is kept and drawn until the indicator is built again: every
+// Every, when one of the events named in On happens, or when it's refreshed (the hud.refresh command). A node that
+// reads state as it's drawn (a ui.Func) is live without any of them.
 type Indicator struct {
-	Name, Slot string
-	Every      time.Duration
-	Build      func(ctx Ctx) (ui.Node, error)
-	Source     string
+	Name  string // unique among indicators: "deploys"
+	Slot  string // SlotTitleBar, SlotStatusLeft, SlotStatusRight, SlotHUD, SlotMission, or a slot a panel draws: SlotHUDToday, SlotInboxFoot
+	Order int    // in its slot, among the slot's views: titlebar.right.40-usage is 40
+	// Title is a HUD panel's heading, Note what it says at the heading's right ("3 online"), and Span how many of the
+	// HUD's four columns it takes (1 if 0). Help is its help page and anchor.
+	Title, Help string
+	Note        func() string
+	Span        int
+	Every       time.Duration
+	On          []string // core event names that build it again: "WorkerChanged"
+	Build       func(ctx Ctx) (ui.Node, error)
+	Source      string
+}
+
+// The slots indicators go in.
+const (
+	SlotTitleBar    = "titlebar.right"
+	SlotStatusLeft  = "statusline.left"
+	SlotStatusRight = "statusline.right"
+	SlotHUD         = "hud"        // the HUD's panels
+	SlotHUDToday    = "hud.today"  // under the HUD's Today panel: a plugin's lines
+	SlotMission     = "mission"    // mission control's strip along its foot: usage, workers' load
+	SlotInboxFoot   = "inbox.foot" // the Inbox panel's foot: agentbus's presence
+)
+
+// Indicators are the indicators in slot, by Order then name.
+func Indicators(r Registry, slot string) []Indicator {
+	var out []Indicator
+	for _, c := range r.Contributions("hud.indicator") {
+		if i := c.(Indicator); i.Slot == slot {
+			out = append(out, i)
+		}
+	}
+	slices.SortStableFunc(out, func(a, b Indicator) int { return cmp.Compare(a.Order, b.Order) })
+	return out
 }
 
 // StatusRule picks a session's status colour from its fields, or "" to leave it (SH-2's colours).

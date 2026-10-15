@@ -66,17 +66,17 @@ flowchart LR
 | `vim` | modal engine over `edit` | text, edit |
 | `syntax` | tree-sitter (wazero), highlight, folds, units, outline | text, wazero |
 | `lsp` | LSP client, server registry, capabilities | text |
-| `dap` | DAP client, adapter registry | – |
+| `dap` | DAP client, adapter registry | lsp/jsonrpc (the base protocol's framing) |
 | `testrun` | test discovery, runner adapters (go, pytest, vitest/jest, cargo), result streams, watch, coverage | text, syntax |
 | `term` | the terminal model behind `term.Emulator`: grid, scrollback, modes, keys, snapshots, OSC 133 commands and OSC 7 cwd; `term/ghostty` (libghostty-vt as wasm under wazero), `term/pty` (pseudo-terminals over `x/sys/unix`), `term/vttest` (esctest-style case runner) | wazero, x/sys |
 | `wire` | yamux protocol, typed RPC + event streams | – |
 | `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | wire |
-| `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/jsonrpc` | core, term (PTYs) |
+| `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/prompts` (the editable prompts and the user's versions of them); `agent/jsonrpc` | core, term (PTYs) |
 | `agent/claude`, `agent/codex` | provider impls | agent |
 | `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep); `worker/sysload` (CPU and memory) | core, agent, gitx, testrun (test runs as evidence), wire, sandbox, registry/settingsfile and toml (its repos' own project settings) |
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
-| `integ/*` | linear, slack, ical; agentbus via the `oriel-agentbus` helper process (keeps its sqlite dependency out of Oriel) | core |
+| `integ/*` | linear, slack (agentbus is company-specific, so it's an external plugin, `github.com/liamg/oriel-agentbus`, with its `oriel-agentbus` helper process) | core; their processes `agent/jsonrpc`, `gh` |
 | `render` | GPU surface interface and display lists; `render/typeset` (shaping, fonts, rasterising, atlas); `render/raster` (draws display lists on the CPU); `render/bake` (glows and rounded rects as images); `render/headless` (keeps display lists and shoots them, for tests); `render/snapshot` (golden lists and perceptual PNG diffs); `render/scenes` (01-ide and the budget scenes) | go-text, x/image, theme |
 | `render/gio` | the Gio backend: windows, input, offscreen rendering, the glyph atlas and baked shapes | render, gioui.org |
 | `ui` | widgets, layout, theme, animation, input routing | render |
@@ -84,12 +84,14 @@ flowchart LR
 | `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`); `registry/settingsfile` (settings files and their trust, shared with the worker) needs only toml |
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
+| `assistant` | the assistant's conversation (ui.md 11): turns typed or spoken, replies and their rows, confirmations, actions with an undo, idle reaping; its agent behind an interface (a worker's utility agent in the app) | – |
+| `voice` | dictation: a recorder program as the microphone, phrases at pauses, whisper.cpp or an OpenAI-compatible endpoint, the wake word, speech; `voice/voicetest` (a scripted mic and transcriber) | – |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
-| `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker |
+| `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker, update |
 | `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. Superseded by `render/gio`; kept for its report | gioui.org |
 | `toml` | TOML 1.0 parser and round-tripping editor, for settings and themes (`settings.md`) | – |
 | `theme` | theme files, colour maths (CSS Color 4, OkLCh) and token resolution into a flat table (`theming.md`) | toml |
-| `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck` | – |
+| `tools` | repo tooling run by tests and CI: the layout check, `depcheck`, `refcheck`; `tools/perf` (the timing budgets' `perf.Timed`) | – |
 
 Rules:
 
@@ -175,4 +177,12 @@ type Worker interface {
   are crit's pinned-TLS handshake for workers elsewhere. `worker.Client` is the worker's methods over a `wire.Conn`;
   its `Events` stream sends each session whole (`SessionSynced`) and then every event, which the app applies to its
   store. LSP and DAP still run in the app for now.
+- As built (PL-4): a worker also runs **utility agents** (`worker/utility.go`): an agent with no session, for the
+  assistant. `utility.run` is a stream (`UtilitySpec{Name, Provider, Model, Pack, Prompt, Allow}`): the worker starts
+  the provider in `<Home>/utility/<name>` on its small model (`agent.Model.Small`), offered only the app's tools for
+  that name (`app.tools` with `ToolsReq{Agent}`; a session asks with its kind), sends `ready` then `UtilityEvent`s,
+  refuses every permission but `Allow`'s and every question, and stops the agent when the stream ends.
+  `utility.send` and `utility.interrupt` take turns. `worker.Client.StartUtility` is the app's side.
+- As built (PL-6): `worker.Options.Handlers` add methods to each app connection; `oriel worker --connect` serves the
+  updater's through it (`distribution.md`).
 

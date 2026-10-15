@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/tools/perf"
 )
 
 type clock struct{ t time.Time }
@@ -250,6 +251,7 @@ func TestSprings(t *testing.T) {
 
 // 200 hover targets under a moving pointer: a frame with input still fits the 4 ms budget at 120 Hz.
 func TestHoverTargetsBudget(t *testing.T) {
+	perf.Timed(t)
 	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
 		t.Skip("timing under -race, -short or -cover means nothing")
 	}
@@ -444,5 +446,72 @@ func TestPressedWithin(t *testing.T) {
 	h.pointer(render.PointerRelease, 20, 20)
 	if bar, _ := within(); bar {
 		t.Error("still pressed within after the release")
+	}
+}
+
+// SH-8: a modifier held alone is held alone from when it went down until a key or a press joins it, or the set held
+// changes; letting go of every modifier starts afresh.
+func TestHeldAlone(t *testing.T) {
+	h := newHarness()
+	alone := func() (m render.Mods, since time.Time) {
+		paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) { m, since = c.HeldAlone() })
+		return
+	}
+	if m, _ := alone(); m != 0 {
+		t.Fatalf("held alone before anything's down: %v", m)
+	}
+	h.u.Mods(render.ModAlt)
+	t0 := h.clk.t
+	h.clk.advance(300 * time.Millisecond)
+	if m, since := alone(); m != render.ModAlt || !since.Equal(t0) {
+		t.Errorf("⌥ down: %v since %v, want ⌥ since %v", m, since, t0)
+	}
+	h.u.Chord() // ⌥O
+	if m, _ := alone(); m != 0 {
+		t.Errorf("⌥ with a key is a chord, not held alone: %v", m)
+	}
+	h.u.Mods(0)
+	h.u.Mods(render.ModAlt)
+	if m, _ := alone(); m != render.ModAlt {
+		t.Errorf("⌥ again after letting go: %v", m)
+	}
+	h.u.Mods(render.ModAlt | render.ModSuper)
+	if m, since := alone(); m != render.ModAlt|render.ModSuper || !since.Equal(h.clk.t) {
+		t.Errorf("⌥⌘: %v since %v", m, since)
+	}
+	h.u.Mods(render.ModAlt)
+	h.pointer(render.PointerPress, 20, 20)
+	if m, _ := alone(); m != 0 {
+		t.Errorf("a press while ⌥ is down: %v", m)
+	}
+	paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) {
+		if c.Held() != render.ModAlt {
+			t.Errorf("held: %v", c.Held())
+		}
+	})
+}
+
+// A focused node with Text takes typed text; one without, or disabled, or that takes no keys, doesn't.
+func TestTakesText(t *testing.T) {
+	u := newUI()
+	var ids []ID
+	build := func(c *Ctx) {
+		ids = ids[:0]
+		c.Row("r", Style{}, func(c *Ctx) {
+			ids = append(ids, c.Box("field", Style{W: Px(10), H: Px(10), Focusable: true, KeyMode: "input", Text: true}, nil))
+			ids = append(ids, c.Box("list", Style{W: Px(10), H: Px(10), Focusable: true, KeyMode: "list"}, nil))
+			ids = append(ids, c.Box("bare", Style{W: Px(10), H: Px(10), Focusable: true, Text: true}, nil))
+		})
+	}
+	paintOps(u, render.Point{X: 100, Y: 100}, build)
+	if u.TakesText() {
+		t.Error("nothing is focused, yet it takes text")
+	}
+	for i, want := range []bool{true, false, false} {
+		u.Focus(ids[i])
+		paintOps(u, render.Point{X: 100, Y: 100}, build)
+		if got := u.TakesText(); got != want {
+			t.Errorf("node %d takes text: %v, want %v", i, got, want)
+		}
 	}
 }

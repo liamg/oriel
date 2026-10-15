@@ -37,11 +37,21 @@ type sessions struct {
 	repos   []core.Repo // the session in front's worker's registered repos, for adding one
 
 	sandboxKick chan struct{} // the sandbox settings are to go to the workers
+	promptsKick chan struct{} // the user's prompts are to go to the workers
 }
 
 // AgentTurnEnd is the AgentTurnEnd hook's event.
 type AgentTurnEnd struct {
 	Session string `json:"session"`
+}
+
+// SessionStart is the SessionStart hook's event: a session just started, from the launcher, a command or a script.
+type SessionStart struct {
+	Session string `json:"session"`
+	Kind    string `json:"kind"`
+	Ticket  string `json:"ticket,omitempty"`
+	Prompt  string `json:"prompt,omitempty"`
+	Worker  string `json:"worker,omitempty"`
 }
 
 // CommentSend is the CommentSend hook's event: a comment about to go to an agent. A rewrite changes it, a veto
@@ -65,6 +75,8 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	x.workers = map[core.WorkerID]worker.Client{}
 	x.sandboxKick = make(chan struct{}, 1)
 	x.sandboxSettings(ctx)
+	x.promptsKick = make(chan struct{}, 1)
+	x.promptSettings(ctx)
 	for _, c := range x.sh.cfg.Workers {
 		x.serve(ctx, h, c, "")
 	}
@@ -84,6 +96,8 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 			}
 			return registry.Verdict{}, nil
 		}))
+	x.add(h.DeclareEvent(registry.EventInfo{Name: "SessionStart", Fired: true, Payload: SessionStart{},
+		Doc: "A session just started; the subject is its id. { session, kind, ticket, prompt, worker }"}))
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "CommentSend", Fired: true, Payload: CommentSend{},
 		Doc: "A comment about to go to an agent; a rewrite changes it, a veto stops it. { session, thread, file, line, body, urgent, btw }"}))
 	working := map[core.SessionID]bool{}
@@ -116,6 +130,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	})))
 	has := func(registry.Args) bool { return len(x.clients()) > 0 }
 	focused := func(registry.Args) bool { return has(nil) && x.focused() != "" }
+	named := func(a registry.Args) bool { return has(nil) && (a.String("id") != "" || x.focused() != "") } // {id}, or the one in front
 	planning := func(registry.Args) bool {
 		se, ok := x.sh.cfg.Store.Session(x.focused())
 		return ok && has(nil) && se.Snapshot().Planning()
@@ -126,7 +141,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 		return &ui.Func{Key: "workerdrain", Fn: x.drainView}
 	})))
 	for _, c := range []registry.Command{
-		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…; {clone} the repos the worker lacks first, a URL by repo",
+		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…; {clone} the repos the worker lacks first, a URL by repo; {background} leaves it behind the one in front",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.start(ctx, a); return err }},
 		{ID: "repos.clone", Title: "Clone {url} onto {worker} (this machine's if none) as {name}, and register it", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -157,9 +172,9 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "sessions"})
 			}},
-		{ID: "session.stop", Title: "Stop the agent of {id}, or the session in front", Available: focused,
+		{ID: "session.stop", Title: "Stop the agent of {id}, or the session in front", Available: named,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.Stop(ctx, id) })},
-		{ID: "session.archive", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: focused,
+		{ID: "session.archive", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.Archive(ctx, id) })},
 		{ID: "session.next-pr", Title: "Start the next PR in this session, on a fresh branch from the updated base", Available: focused,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.NextPR(ctx, id) })},
@@ -170,9 +185,9 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 					return c.StartWork(ctx, startWorkReq(id, a))
 				})(ctx, a)
 			}},
-		{ID: "session.interrupt", Title: "Interrupt the agent's turn", Available: focused,
+		{ID: "session.interrupt", Title: "Interrupt the agent's turn: {id}'s, or the session in front's", Available: named,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.Interrupt(ctx, id) })},
-		{ID: "session.rename", Title: "Rename the session in front: {name}", Available: focused,
+		{ID: "session.rename", Title: "Rename {id}, or the session in front: {name}", Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error {
 					return c.Rename(ctx, id, a.String("name"))
@@ -213,13 +228,19 @@ func (x *sessions) Deactivate(ctx context.Context) error {
 // only for itself (core.State.FromWorker); want, when set, is the ID it must have: a remote worker's, from its key.
 // A worker that connects again replaces its old connection.
 func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want core.WorkerID) {
-	c.Conn.Handle(worker.MethodAppTools, func(context.Context, json.RawMessage) (any, error) { return x.agentTools(h), nil })
+	c.Conn.Handle(worker.MethodAppTools, func(_ context.Context, raw json.RawMessage) (any, error) {
+		var r worker.ToolsReq
+		if err := json.Unmarshal(raw, &r); err != nil {
+			return nil, err
+		}
+		return x.agentTools(h, r), nil
+	})
 	c.Conn.Handle(worker.MethodAppTool, func(ctx context.Context, raw json.RawMessage) (any, error) {
 		var call worker.ToolCall
 		if err := json.Unmarshal(raw, &call); err != nil {
 			return nil, err
 		}
-		return x.callTool(ctx, h, call)
+		return x.callTool(ctx, h, c, call)
 	})
 	c.Conn.Handle(worker.MethodAppDecide, func(ctx context.Context, raw json.RawMessage) (any, error) {
 		var d worker.Decide
@@ -247,6 +268,8 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want 
 			old.Conn.Close()
 		}
 		x.sendSandbox()
+		x.sh.workerJoined(c, info)
+		x.sendPrompts()
 		h.Redraw()
 		if x.sh.cfg.LocalWorker != nil && info.ID == core.LocalWorker && info.Build != worker.Build() {
 			x.sh.restartWorker(c, info.ID)
@@ -524,10 +547,10 @@ func (x *sessions) addSource(h ext.Host) registry.PickerSource {
 
 // spec is a session spec from a command's args.
 func specFrom(a registry.Args) core.SessionSpec {
-	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"),
+	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"), Context: a.String("context"),
 		PR: a.String("pr"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
 		Model: a.String("model"), Effort: a.String("effort"), Worker: core.WorkerID(a.String("worker")), Template: a.String("template"),
-		TourKind: a.String("tour"), Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate")}}
+		Variant: a.String("variant"), Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate")}}
 	if s.Kind == "" {
 		s.Kind = core.KindWork
 	}
@@ -552,7 +575,7 @@ func specFrom(a registry.Args) core.SessionSpec {
 	return s
 }
 
-// start starts a session on its worker and brings it to the front.
+// start starts a session on its worker and brings it to the front, unless {background}.
 func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {
 	spec := specFrom(a)
 	c, err := x.worker(spec.Worker)
@@ -575,10 +598,15 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 	if err != nil {
 		return "", err
 	}
+	ev := SessionStart{Session: string(id), Kind: string(spec.Kind), Ticket: spec.Ticket, Prompt: spec.Prompt, Worker: string(spec.Worker)}
+	x.h.Do(func() { x.h.Fire(context.Background(), "SessionStart", string(id), &ev) })
 	// The worker's events bring the session; focus it once it's here.
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		if _, ok := x.sh.cfg.Store.Session(id); ok {
+			if a.Bool("background") {
+				return id, nil
+			}
 			return id, x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -743,17 +771,34 @@ func within(path, dir string) bool {
 	return err1 == nil && err2 == nil && in(rp, rd)
 }
 
-// agentTools are the tools plugins offer agents, as a worker hands them on.
-func (x *sessions) agentTools(h ext.Host) []agent.Tool {
+// agentTools are the tools plugins offer an agent, as a worker hands them on.
+func (x *sessions) agentTools(h ext.Host, r worker.ToolsReq) []agent.Tool {
 	var out []agent.Tool
-	for _, t := range registry.AgentTools(h) {
-		out = append(out, agent.Tool{Name: t.Name, Description: t.Desc, Schema: t.Schema(), ReadOnly: t.ReadOnly})
+	name, utility := x.agentName(r.Session, r.Agent)
+	for _, t := range registry.AgentToolsFor(h, name, utility) {
+		out = append(out, agent.Tool{Name: t.Name, Description: t.Desc, Schema: t.Schema(), ReadOnly: t.ReadOnly && t.Confirm == nil})
 	}
 	return out
 }
 
-func (x *sessions) callTool(ctx context.Context, h ext.Host, call worker.ToolCall) (string, error) {
-	for _, t := range registry.AgentTools(h) {
+// agentName is the agent a worker asks for: a session's, by its kind, or a utility agent with no session.
+func (x *sessions) agentName(id core.SessionID, agent string) (string, bool) {
+	if id == "" {
+		return agent, true
+	}
+	if agent == "" {
+		if se, ok := x.sh.cfg.Store.Session(id); ok {
+			agent = string(se.Kind())
+		}
+	}
+	return agent, false
+}
+
+// callTool runs a tool for an agent on worker c. A session's agent is owned by its worker: an act there is asked
+// through the session's rules, the policy hooks and then the user's card, as the agent's own gate is.
+func (x *sessions) callTool(ctx context.Context, h ext.Host, c worker.Client, call worker.ToolCall) (string, error) {
+	name, utility := x.agentName(call.Session, call.Agent)
+	for _, t := range registry.AgentToolsFor(h, name, utility) {
 		if t.Name != call.Tool || t.Run == nil {
 			continue
 		}
@@ -763,22 +808,33 @@ func (x *sessions) callTool(ctx context.Context, h ext.Host, call worker.ToolCal
 				return "", err
 			}
 		}
-		var out any
-		err := registry.Call(func() error {
-			var err error
-			out, err = t.Run(registry.WithSession(ctx, string(call.Session)), params)
-			return err
-		})
-		if err != nil {
-			return "", err
+		ctx := registry.WithAgent(registry.WithSession(ctx, string(call.Session)), name)
+		if call.Session != "" {
+			ctx = registry.WithOwner(ctx, registry.AgentOwner{Agent: name, Source: "builtin:sessions",
+				Confirm: func(ctx registry.Ctx, tool string, cf registry.Confirmation) (bool, error) {
+					return askForSession(ctx, c, call, cf)
+				}})
 		}
-		if s, ok := out.(string); ok {
-			return s, nil
-		}
-		b, err := json.MarshalIndent(out, "", "  ")
-		return string(b), err
+		return registry.CallAgentTool(ctx, h, t, params)
 	}
 	return "", fmt.Errorf("no tool %q", call.Tool)
+}
+
+// askForSession asks for a session's agent's act on its worker. The rule "Always" makes is the tool's name.
+func askForSession(ctx context.Context, c worker.Client, call worker.ToolCall, cf registry.Confirmation) (bool, error) {
+	tool := "mcp__oriel__" + call.Tool
+	v, err := c.Ask(ctx, worker.AskReq{Session: call.Session, Ask: core.Ask{Kind: core.AskPermission, Tool: tool,
+		Summary: cmpOr(cf.Line, cf.Title), Detail: cf.Lead, Input: string(call.Args), Rule: tool}})
+	if err != nil {
+		return false, err
+	}
+	if v.Decision == "allow" {
+		return true, nil
+	}
+	if v.Note != "" {
+		return false, fmt.Errorf("denied by %s: %s", cmpOr(v.By, "the user"), v.Note)
+	}
+	return false, fmt.Errorf("denied by %s, so nothing was done", cmpOr(v.By, "the user"))
 }
 
 // decide runs the Permission hooks on an ask: layer 2, before it reaches the user.

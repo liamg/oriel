@@ -2,7 +2,7 @@
 id: AI-10
 title: "Commit and PR drafts when the agent goes idle"
 phase: P6
-status: review
+status: done
 area: Sessions and AI
 module: agent
 depends_on: [AI-2, FG-6]

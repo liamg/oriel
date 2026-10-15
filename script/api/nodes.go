@@ -20,7 +20,7 @@ import (
 
 func coreSession(id string) core.SessionID { return core.SessionID(id) }
 
-//oriel:api name=ui
+//oriel:api name=ui cap=ui
 type UI struct{ a *APIs }
 
 //oriel:api doc="A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths)." returns=table
@@ -54,7 +54,7 @@ func container(kind string, v any) script.Table {
 	return t
 }
 
-//oriel:api doc="Text, in a style: dim, faint, accent, warn, error or ok." optional=style returns=table
+//oriel:api doc="Text, in a style: dim, faint, accent, warn, error, ok, or title (larger and bold: a heading, a meeting's name)." optional=style returns=table
 func (UI) Text(s any, style string) script.Table {
 	text := ""
 	if s != nil {
@@ -69,7 +69,7 @@ func (UI) Spacer() script.Table { return script.Table{"type": "spacer"} }
 //oriel:api doc="The editor's mode, as the built-in status line shows it." returns=table
 func (UI) Mode() script.Table { return script.Table{"type": "view", "id": "statusline.left.00-mode"} }
 
-//oriel:api doc="A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }." returns=table
+//oriel:api doc="An indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error), dot (a status dot before the value: ok, warn, error, accent, dim), id }." returns=table
 func (UI) Indicator(spec script.Table) script.Table {
 	t := script.Table{"type": "indicator"}
 	for k, v := range spec {
@@ -77,6 +77,9 @@ func (UI) Indicator(spec script.Table) script.Table {
 	}
 	return t
 }
+
+//oriel:api doc="A dial (widget.Ring): { value (0 to 1 of the ring lit, clockwise from twelve o'clock), label (in the middle: '18m'), color (a theme token or #rrggbb; the accent by default), size (px across, 44 by default), name (what it measures, read out with the label), id }." returns=table
+func (UI) Ring(spec script.Table) script.Table { return node("ring", spec) }
 
 //oriel:api doc="A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change." returns=table
 func (UI) Button(spec script.Table) script.Table {
@@ -171,7 +174,15 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			if tok, ok := styles[str(n, "style")]; ok {
 				col = th.C(tok)
 			}
-			c.Text(nil, str(n, "text"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: col})
+			font := typeset.FontSpec{Family: typeset.Mono, Size: 11}
+			if str(n, "style") == "title" {
+				font = typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}
+			}
+			c.Text(nil, str(n, "text"), ui.TextStyle{Font: font, Color: col})
+		case "ring":
+			size, _ := n["size"].(float64)
+			widget.Ring(c, cmpOr(str(n, "id"), str(n, "name"), "ring"), widget.RingOpts{Frac: num(n["value"]), Label: str(n, "label"),
+				Tone: tone(th, str(n, "color"), render.Color{}), Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
 		case "spacer":
 			c.Box(nil, ui.Style{W: ui.Flex(1)}, nil)
 		case "view":
@@ -293,39 +304,30 @@ func (a *APIs) callback(n script.Table, field string, args ...any) {
 	a.Host.Redraw()
 }
 
-// indicator is a label, a bar and a value, as the HUD and status line draw them.
+// indicator is a label, a bar and a value, as the HUD and status line draw them (widget.Indicator).
 func indicator(c *ui.Ctx, n script.Table, th *theme.Resolved) {
-	mono := func(tok theme.TokenID) ui.TextStyle {
-		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(tok)}
-	}
-	tone := theme.Accent
+	o := widget.IndicatorOpts{Label: str(n, "label"), Help: "plugins/lua#ui"}
 	switch str(n, "tone") {
 	case "warn":
-		tone = theme.Warn
+		o.Tone = th.C(theme.Warn)
 	case "error":
-		tone = theme.Error
+		o.Tone = th.C(theme.Error)
 	case "ok":
-		tone = theme.OK
+		o.Tone = th.C(theme.OK)
 	}
-	c.Row(nil, ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("label", str(n, "label"), mono(theme.FgMuted))
-		if bar, ok := n["bar"].(float64); ok {
-			if warn, ok := n["warn"].(float64); ok && bar >= warn {
-				tone = theme.Warn
-			}
-			fill := th.C(tone)
-			track := th.C(theme.BgStrong)
-			c.Paint("bar", ui.Px(48), ui.Px(4), func(f render.Frame, r render.Rect) {
-				f.Rect(r, render.Style{Fill: track, Radius: 2})
-				w := r.Dx() * float32(max(0, min(1, bar)))
-				f.Rect(render.XYWH(r.Min.X, r.Min.Y, w, r.Dy()), render.Style{Fill: fill, Radius: 2})
-			})
-			c.Text("pct", fmt.Sprintf("%d%%", int(bar*100+0.5)), mono(theme.Fg))
+	if bar, ok := n["bar"].(float64); ok {
+		o.Meter, o.Frac = true, max(0, min(1, bar))
+		o.Warn, _ = n["warn"].(float64)
+	}
+	if v, ok := n["value"]; ok && v != nil {
+		o.Value = fmt.Sprint(v)
+	}
+	if d := str(n, "dot"); d != "" {
+		if tok, ok := styles[d]; ok {
+			o.Dot = th.C(tok)
 		}
-		if v, ok := n["value"]; ok {
-			c.Text("value", fmt.Sprint(v), mono(tone))
-		}
-	})
+	}
+	widget.Indicator(c, cmpOr(str(n, "id"), str(n, "label"), "indicator"), o)
 }
 
 // toTable is an event as Lua sees it: a struct's fields under snake_case names, or a map as it is.

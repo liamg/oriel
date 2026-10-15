@@ -144,6 +144,15 @@ flowchart TB
   the annotation house style (a numbered diamond and its title over the body, in a card with two corners cut;
   `widget.AnnotationBody` is its prose's style), `widget.Diamond` a numbered diamond, and `widget.Leader(frame, from,
   to, tone)` (`LeaderPath`) the angled leader line from code to its card. Theme tokens `annotation.*`.
+- images (RV-8): `widget.Image(c, key, img, width, ImageOpts{Label, Help})` draws an `image.Image` at a width, its
+  shape kept, scaled once per size to the device's pixels (`ui.RoleImage` to assistive technology).
+- tours (RV-8): `tour.open` opens the tour reader (the `tour` view, a tab) for the tour session in front, and opens
+  by itself when one comes to the front; `tour.step {step | by}`, `tour.scroll {by}`, `tour.open-quote {n}`,
+  `tour.ask {text}`, `tour.export {format, ask}` and `tour.close` drive it, and its keys are the `tour` key mode.
+  Steps are read by `worker/tour` (`tour.NewLoader().Load(ctx, root, worker.TourOf(root))`, the model a plugin's own
+  reader would draw), `tour.Markdown` and `tour.HTML(t, HTMLOptions{Highlight, Palette})` export them, and
+  `tour.Palette(dark, light)` is a page's colours. The app offers the `tour_export` agent tool
+  (`registry.AgentTool`); the worker its `tour_kind`, `tour_steps`, `tour_run` and `tour_share`.
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
   so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
@@ -255,6 +264,7 @@ flowchart TB
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
+- PR actions (PL-9): `registry.PRAction` buttons on a raised PR (`oriel.ship.action`), as the Slack plugin's PTAL.
 - ship (FG-6; ui.md 18): "before this ships" gates are `registry.ShipGate{Name, Title, Order, Check(session) Gate}`
   (`Gate{State, Note, Action, Command, Args}`, State pass, warn, fail, pending or optional, "" to leave it out; an
   `Action` is a button under the gate's row running `Command` with `Args`, as the verify quiz's **Verify…** and AI
@@ -293,10 +303,38 @@ flowchart TB
   theme tokens `github.accent`, `github.changes`, `github.approved`, `requests.avatar.github`, `requests.draft.bg`,
   `requests.draft.border`.
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
-  `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
+  `plus`, `resume`, `folder`; since SH-9 `key`, `inbox`, `network`, `gateway`, `question`, `permission`, `review`; since SH-7 `mission`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats extension's since AI-12: one button to Usage with a
   hover card).
+- indicators in slots (SH-8): `registry.Indicator{Name, Slot, Order, Title, Note, Span, Help, Every, On, Build}`
+  (kind `hud.indicator`), listed by `registry.Indicators(r, slot)`. Slots: `titlebar.right`, `statusline.left`,
+  `statusline.right` (drawn among the views named `<slot>.<order>-<name>`, an indicator sorting as
+  `<slot>.<Order>-<Name>`), `hud` (the HUD's panels: `Title`, `Note`, `Span` of four columns), `hud.today` (under
+  the Today panel) and, since SH-7, `mission` (`registry.SlotMission`: mission control's strip, each part drawn with
+  `missionCell`). What `Build` returns is kept and drawn until it's built again: every `Every`, on a core event
+  named in `On`, on `hud.refresh {name}`, or when any contribution comes or goes (`Registry.ContributionsGen`); a
+  `ui.Func` that reads the store as it's drawn is live without any. An error draws in its place and counts towards
+  turning it off (`Report("hud.indicator", name, err)`). Commands `hud.toggle`, `hud.close`, `hud.refresh`; key mode
+  `hud`; view `app.overlay.hud`; options `hud.hold`, `hud.hold_delay`. Widgets `widget.Indicator`, `widget.Panel`,
+  `widget.Drawer`, `MeterOpts.To` (hatched on to a projection). Input: `render.ModsEvent` (the modifiers held),
+  `ui.UI.Mods`/`Chord`, `ui.Ctx.Held` and `HeldAlone` (a modifier held with nothing pressed since). A worker's load
+  reading is `worker.Options.Load` (`sysload.Read` by default).
+- inbox cards (SH-9): `registry.InboxSource{Name, Cards}` (kind `inbox.source`) gives the inbox its cards, read on
+  the app's loop as it's drawn; `registry.InboxCards(r)` gathers every source's, by source name, each keyed
+  `<source>/<id>` (`InboxCard.Key`). An `InboxCard` has `ID`, `Type` (its help anchor), `Group` (the Inbox panel's
+  filter: `agents`, `bus`, `github`, `sandbox`), `Mine` (the ME filter), `Session` (whose tab counts it), `Icon`,
+  `Tone` (a theme token), `Title`, `Sub`, `Created`, `Expires` (a countdown ring), `Interrupt` (stacks at the
+  window's bottom right while it waits), `Banner` (on its own at the top), `Done` (history only); its face as
+  `Kicker`, `Detail`, `Code`, `Note`, `Body` and `Actions` (`InboxAction{Label, Key, Primary, Command, Args, Run}`) in
+  a `widget.ActionCard`, or `Draw(c, key, CardPlace{Stacked, Dismiss})` drawing it whole; `Dismissed` hears its ✕ or
+  Escape. A card its source stops giving is answered: the inbox keeps it as history (the last 200). Every session's
+  asks are the built-in source `asks` (`app/askcards.go`); agentbus (PL-5) adds its question and review-request
+  cards the same way. Commands `inbox.open` (⌘⇧I, `<Leader>i`), `inbox.dismiss {id}`, `inbox.next`, `inbox.prev`;
+  key mode `inbox`; views `inbox` and `app.overlay.inbox` (replacing AI-7's `app.overlay.asks`); the title-bar
+  indicator `inbox`. `widget.ActionCardOpts` gained `Dismiss` (a ✕ and Escape, `ActionCardResult.Dismissed`),
+  `Countdown`/`Left` (the ring) and `Icon`. Theme tokens `ask.key`, `inbox.count`, `inbox.row.selected`,
+  `inbox.done`.
 - agent console side sections: views named `agent.console.side.<order>-<name>` are drawn at the top of the console's
   right column, in name order, built with the session's ID as `ViewCtx.Instance`; one that has nothing to say for a
   session draws nothing. Jobs adds `agent.console.side.10-job` (SE-4).
@@ -344,6 +382,12 @@ flowchart TB
   `workers.add {name, listen}`, `workers.rename {name, to}`, `workers.revoke {name}`, `workers.forget {name}`,
   `workers.restart`, `workers.dialog.save`; option `workers.listen`; key modes `workers` and `workers.add`; the
   `workers` icon; views `app.overlay.workers` and `app.overlay.workers.dialog`.
+- updates (PL-6): commands `:UpdateCheck` / `update.check`, `update.notes` (the card), `update.install`,
+  `update.restart`; options `updates.mode` (`automatic`, `ask`, `manual`) and `updates.channel` (`stable`,
+  `nightly`); the view `app.overlay.update` (the card) and the indicator `update` in `statusline.right` ("update ready ·
+  restart", built again with `hud.refresh {name = "update"}` as it changes). Notices `update.available` (with What's new and Update),
+  `update.ready` (Restart), `update.failed` and `update.worker`. `worker.Options.Handlers` add wire methods to each
+  app connection.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**
@@ -353,13 +397,82 @@ flowchart TB
   `core.Login` on each session waiting on it) and checks it with `Detect` (AI-13). `agent.login {id | provider, worker}`
   opens a local agent's terminal with the provider's `Terminal` login typed.
 - **agent tools**: an MCP tool defined in Lua or Go and offered to the session's agent.
+  Since PL-4 a `registry.AgentTool` says who it's for: `For` (session kinds such as `work`, or a utility agent's name
+  such as `assistant`; none is every session's agent and no utility agent's; `registry.AgentToolsFor`), what data it
+  `Reads` (the assistant lists it as a source), `InputSchema` when `Params` can't say it, and `Confirm`, which makes it
+  an act: `registry.CallAgentTool` asks the agent's `registry.AgentOwner` (a contribution by agent name with `Confirm`
+  and `Acted`) with the `registry.Confirmation` it describes (title, lead, rows, a block, a note, a line) and runs it
+  only on a yes. Since DB-3 `Confirm` may return `registry.Granted` (this call needs no yes: the user granted it
+  already) or an error (refused, the agent reads why), and a call may carry its owner (`registry.WithOwner`, ahead of
+  the registered one): a session's agent is owned by its worker, which asks through the session's permission layers
+  (`worker.AskReq` on `ask.put`: its rules, the `Permission` hooks, then a permission card whose "Always" allows the
+  tool for the session). `Run` may return a `registry.Acted`
+  (`Result` for the agent; `Line`, `Detail`, `Open`/`OpenArgs` and `Undo` for the owner). The worker asks the app for
+  an agent's tools with `worker.ToolsReq{Session, Agent}` and calls them with `ToolCall.Agent`; utility agents are
+  `utility.run` / `utility.send` / `utility.interrupt` (`architecture.md`). Lua: `oriel.agent.tool{…, for, read_only,
+  reads}`.
+- **mission control** (SH-7, ui.md 03): commands `mission.toggle` (`⌘⇧K`), `mission.open {by, filter, id}`,
+  `mission.close`, `mission.group {by}` (worker, status or repo), `mission.filter {text}`, `mission.find`,
+  `mission.select {id}`, `mission.move {dir}`, `mission.open-card {id}`, `mission.allow {id}`, `mission.deny {id}`,
+  `mission.stop {id}`, `mission.rename {id, name}`, `mission.new {worker}`; key mode `mission`; view
+  `app.overlay.mission`; option `mission.at_launch`; the `mission` indicator slot; a start-view link; the
+  assistant's `mission_control` tool (`{show, by, filter, id}`: its state, opened first with `show`). Its cards'
+  asks are the inbox's cards (`registry.InboxCard.Draw`), so any inbox source's card for a session shows on it; while
+  it's up those cards aren't stacked over the window. `session.stop`, `session.archive`, `session.interrupt` and
+  `session.rename` take `{id}` with no session in front.
+- **the assistant** (PL-4, ui.md 11): its tools are agent tools `for = { "assistant" }`: the built-ins (`reply`,
+  `sessions`, `past_sessions`, `open_session`, `rename_session`, `resume_session`, `new_session`, `start_session`,
+  `stop_session`, `review_pr`, `jobs`, `run_job`, `repos`, `my_prs`, `review_requests`, `usage`, `workers`,
+  `settings`), and any another feature or a plugin adds: the tickets' `my_tickets` (every tracker's, "As built
+  (tickets)"), mission control's `mission_control` (SH-7) and
+  agentbus's `request_review` (PL-5) come this way. Commands `assistant.toggle` (`⌘/`), `assistant.open {text}`,
+  `assistant.close`, `assistant.say {text, voice}`, `assistant.send`, `assistant.new`, `assistant.stop` (`⌘.`),
+  `assistant.answer {id, yes}`, `assistant.pick {n}` (`⌘1`–`⌘9`), `assistant.undo {id}`, `assistant.show {id}`; key
+  mode `assistant`; view `app.overlay.assistant`; options `assistant.provider`, `assistant.model`, `assistant.web`,
+  `assistant.wake`, `assistant.idle`; the prompt `assistant.system` (group Assistant, `{{date}}`, `{{workers}}`);
+  the inbox source `assistant`; a Decide hook on `VoiceWake`. `session.start {background}` starts a session behind the
+  one in front. `gh.SearchPRs` (`gh.SearchMine`, `gh.SearchReview`) through the worker's `github.prs`
+  (`Client.SearchPRs`); `gh.ParsePR` reads a PR's URL or `owner/name#N`.
 - prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
   registered on the worker (`worker.Kinds().Register(worker.KindSpec{…})`: its title, a few words (`Desc`), what
-  starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees);
-  the launcher lists the worker's kinds (`kinds.list`), so a registered one is a mode there with no more code.
+  starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees,
+  and its `Variants`, the sorts of it a session can be, the first the default: a tour's seven kinds, RV-8);
+  the launcher lists the worker's kinds (`kinds.list`), so a registered one is a mode there with no more code, and a
+  kind with variants gets a picker whose choice is `session.start {variant}` (`SessionSpec.Variant`).
   `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the worker yet.
   `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
-  (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a built-in part) overrides one.
+  (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a part, the user's
+  `agents/parts/<part>.md` before the built-in one) overrides one. `packs.Builtins()`, `Source(name)` (as written,
+  includes unexpanded), `Parts()`, `Part(name)` and `FromTextWith(src, name, part)` read and build them.
+- **editable prompts** (PL-11, `agent/prompts`): every prompt the Prompts page edits is a `prompts.Def{ID, Group,
+  Label, Help, Vars, Default, File}`: the built-ins (`agent/prompts/defaults/NN-<id>.md`, crit's frontmatter: group,
+  label, help, vars), each built-in pack (`pack.<name>`, kept in `agents/<name>.md`) and part (`part.<name>`,
+  `agents/parts/<name>.md`), and any `prompts.Register(Def)` adds (kept in `prompts/<id>.md`): the worker registers
+  each tour kind's guidance as `tour.<kind>` (`worker.TourKindID`). Only the user's
+  changes are kept (`prompts.Store{Dir}`: `Load`, `Set`, which takes the file away for empty or default text,
+  `Reset`, `Path`). `prompts.Overrides` reads them: `Text(id)`, `Custom(id)`, `Style()`, `Render(id, vars)` (with
+  `{{style}}` the coding style, `prompts.StyleID`), `Pack(name, base)` (a built-in pack the user changed, or whose
+  parts they changed, built from their text; any other from base). The app sends them to every worker on connect and
+  on each change (`prompts.set`, `worker.Client.SetPrompts`); the worker binary's packs are the built-in ones for
+  the built-in kinds (the user's versions come from the app) and `agents/` only adds kinds. The worker writes
+  each workspace's agent notes (`worker.NotesFiles`: `CLAUDE.md` and `AGENTS.md`) with the projects and the coding
+  style, as crit's `WriteAgentNotes` does. Commands `Prompts`, `prompts.open {id}`, `prompts.set {id, text}`,
+  `prompts.reset {id}`, `prompts.save`, `prompts.edit {id}`; key modes `prompts` and `prompts.text`; view
+  `app.overlay.prompts`; the `prompts` icon. No Lua binding of its own yet: the commands are Lua's way in.
+- **voice** (PL-11, module `voice`): `voice.Mic` → `voice.Stream` (20 ms frames of 16 kHz mono); `voice.Recorder`
+  runs a recorder program (pw-record, parecord, arecord, sox's rec, ffmpeg) rather than linking an audio library;
+  `voice.Transcriber` (`voice.Whisper`: a resident whisper-server, or an OpenAI-compatible `URL`; models downloaded
+  with checksums); `voice.Dictate` (phrases at pauses, the live one re-transcribed each second), `voice.Wake` and
+  `voice.WakeMatch`; `voice.Speaker` (`voice.System`, `voice.Piper`). `voice/voicetest` has a scripted mic and a
+  transcriber. In the app, `Config.Voice` swaps them; options `voice.dictation`, `voice.model`, `voice.url`,
+  `voice.recorder`, `voice.wake`, `voice.wake_word`, `voice.speech`, `voice.piper_voice`; commands `voice.dictate`
+  (`<C-S-Space>`, and `<D-S-Space>` on macOS), `voice.cancel` (`<Esc>` in the `voice` key layer), `voice.download
+  {model}`, `voice.speak {text}`; the `VoiceWake` hook (`VoiceWake{Text}`: a Decide hook takes the request, a
+  rewrite changes it, a veto drops it; otherwise it goes to the agent in front with `agent.send`, whose reply is
+  spoken at `AgentTurnEnd`, or to the omnibox). Dictation types into whatever has focus and takes text:
+  `ui.Style.Text` marks such a node (`widget.Input` sets it, the editor while its engine's `input.Mode.Text` is
+  set: vim's insert and replace, plain, emacs), and `ext.UIView.TakesText()` and `UIView.Key(ev)` let any plugin
+  type there, past the keymaps.
 - thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"). Built in RV-4:
   `registry.ThreadSource{Origin, Title, Head, Comment}` (`registry.ThreadSourceFor`) draws threads of an origin in
   every thread card (between the editor's and the diff's lines, and in a request): its title, its head after the
@@ -436,6 +549,51 @@ session sandbox. All of this is in `security.md`.
 
 The same layout under `<repo>/.oriel/` gives per-project config, trusted on
 first open the way direnv works.
+
+## Testing a plugin
+
+A plugin's tests, in Oriel or in its own repository, drive it through the real app with `app/plugintest`: Oriel's
+built-ins with no window, drawn a frame at a time on the test's goroutine, at a size and on a clock the test sets.
+It's built on `app.Headless` (below), the same core the app's own tests (`errScene`) use.
+
+```go
+func TestMain(m *testing.M) { plugintest.Main(m) } // a plugin's process starts in the OS sandbox through the test binary
+
+func TestCards(t *testing.T) {
+    dir := plugintest.Install(t, "../plugin", "../cmd/oriel-agentbus") // its files, its processes built into bin/
+    a := plugintest.New(t, plugintest.Options{Size: render.Point{X: 1600, Y: 1000}, Now: start})
+    a.Apply(core.SessionSynced{…}, core.SessionFocused{ID: "pricing"})
+    a.Load(dir, grants) // nil grants: what its manifest declares
+    a.SetOption("plugin.agentbus.url", bus.URL())
+    a.UntilText("AGENTBUS · QUESTION")
+    a.ClickText("Claim + Open")
+    out, err := a.CallTool("assistant", a.Tool("assistant", "review_requests"), nil)
+}
+```
+
+- `New(t, Options{Size, Now, Config})` starts the app with a home, config and state directory of the test's (`Config`
+  changes `app.Config` first: `Net`, `Secrets`, `Workers`), and stops every extension when the test ends. `Now`,
+  `SetNow` are the window's clock (`oriel.now`, countdowns, an indicator's `every`).
+- `Install(t, src, cmds…)` lays a plugin out as an install does, each Go command built into its `bin/`, and skips where
+  the OS sandbox isn't there; `Manifest(t, dir)`. `Load(dir, grants)` starts the Lua plugin in `dir` with a data
+  directory of the test's (`Plugin{ID, Dir, Data}`); a load error fails the test.
+- `Apply(events…)` applies core events, as a worker's; `SetOption(name, v)` sets one as `settings.toml` would;
+  `Run(id, args)` runs a command; `Registry()` and `Store()` for anything else (a stand-in `session.start`, a
+  `Forker`, an `AgentOwner` that answers an act's confirmation).
+- `Frame()`, `Text()` (the frame's runs of text, a line each), `Has`, `WantText`, `Access()` and `Find(name)` (the
+  accessibility tree); `ClickText(text)` (the run painted last), `Click(p, mods)`, `Type(keys…)` (a character or a
+  name such as `CR`, `Esc`), `TypeIn(text, placeholder)`.
+- `Tool(agent, name)` is the tool offered to an agent; `CallTool(agent, tool, args)` calls it as its MCP server does,
+  off the loop, while frames are drawn, and answers its JSON.
+- `Until(what, ok)` and `UntilText(texts…)` draw frames and run what the plugin handed the loop until ok, failing with
+  the frame's text after `Timeout` (15 s); `Pump(d)` does it for a while, for a test that something doesn't happen.
+
+Under it, in `app`: `app.NewHeadless(cfg, HeadlessOpts{Size, Clock})` is the app as `Run` starts it (the same shell
+and activation, then the dark oriel theme with motion reduced), with no window or loop: `Frame`, `RunQueued`, `Until`,
+`Text`, `TextAt`, `Access`, `Click`, `Key`, `CallTool`, `Activate` (an extension now) and `Close`.
+`app.ScriptPluginWith(fsys, PluginOpts{Dir, Grants, Data})` is `ScriptPlugin` with its directory (where
+`oriel.process.spawn` finds `bin/…`), its grants and its data directory given; `app.DirPlugin(dir, opts)` is the plugin
+in a directory. `ext/exttest.Install` is `Install` for the app's own tests.
 
 ## Go interfaces
 
@@ -517,8 +675,9 @@ type DecorationProvider interface {
 }
 
 // Decoration{Kind, Line or Anchor, From/To, Style, Edge, Text, Node, Priority}. Kinds: Sign (gutter), LineBg
-// (with a gutter Edge), Highlight and Underline (byte columns), VirtualText (after the line), Block (a ui.Node
-// between this line and the next). An Anchor the provider made on the Buffer moves with edits, so a block
+// (with a gutter Edge), Highlight and Underline (byte columns), VirtualText (after the line; with a Bg token, drawn
+// as a chip), Block (a ui.Node between this line and the next). A Sign with a Command runs it when clicked, or the
+// one Modified names for a modifier held ({"shift": "debug.test"} on a test's ▶). An Anchor the provider made on the Buffer moves with edits, so a block
 // stays with its text. Providers run under the guard; one that panics is turned off (KindDecoration).
 ```
 
@@ -557,7 +716,8 @@ type Host interface {
 - Picker sources: `Registry.Picker(PickerSource{ID, Title, Prefix, Order, Items, Preview, Run})`. `Items(ctx, query)`
   gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
   query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
-  selection. Sessions, commands, files and symbols are built-in sources; tickets and PRs come from their plugins.
+  selection. Sessions, commands, files, symbols and tickets (every tracker's, "As built (tickets)") are built-in
+  sources; PRs come from their plugin.
 - `Host.Pending()` is the keys typed towards a longer mapping or engine command, with the engine's next keys, for
   which-key. A keymap with no command is a group's label, never run. `Host.HoldPending()` keeps the pending mapping
   from timing out until the next key: which-key calls it while it shows the keys, so the popup doesn't vanish at
@@ -607,6 +767,19 @@ type Host interface {
   `Roots`, `Init`, `Settings`, `Order`, `Source`), listed by `registry.LSPServers(r)`. A later one of a name shadows
   the built-in (`lsp.Builtins()`); among the servers for a language the lowest `Order` that's installed runs. The
   app's `lsp.Manager` reads them on every open (ide.md, "As built (LS-1/LS-2 core)").
+- Debug adapters (DB-1): `registry.DebugAdapter` contributions (kind `dap.adapter`: `Name`, `Type`, `Language`,
+  `Cmd`, `Transport` (stdio, tcp, reverse), `Probe`, `Launch`, `Attach`, `Infer`, `Order`, `Source`, `Connect`),
+  listed by `registry.DebugAdapters(r)`; a later one of a name shadows the built-in (`dap.Builtins()`: dlv, debugpy),
+  and a config's type picks the first installed by `Order`. Hook events `DebugStopped` and `DebugEnded`
+  (ide.md, "As built (DB-1)").
+- Debugging from anywhere (DB-2): the command `debug.launch` takes a launch config whole, as a `.oriel/debug.toml`
+  table (`name`, `type`, `request`, `program`, `args`, `cwd`, `env`, `pid`, and the adapter's own keys), and starts
+  it on the first installed adapter for its type. A test adapter's `ModeDebug` command carries a `testrun.Launch` (the
+  same fields) in `Cmd.Launch`; `debug.test {key, file, line}` launches it, so a plugin's test adapter gets "debug this
+  case" by filling it in. `debug.breakpoint.set` takes `keep` to leave a breakpoint already on the line alone.
+- Gutter actions (DB-1): `registry.GutterAction{Name, Command, Args, When(path), Order}` (kind `editor.gutter`); a
+  click on an editor's line numbers runs the lowest-order one that applies to the file, with `{file, line}` (1-based)
+  added to its args. The debugger's breakpoint toggle is one.
 - Right-click menus (PL-13): `registry.MenuItem` contributions (kind `menu.item`) with a `When` (view, file glob,
   selection, help-id prefix); the window's one context menu gathers those that match what was clicked
   (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the
@@ -645,6 +818,230 @@ type Host interface {
 - Lua sees the same API through generated bindings (`oriel.on("Commit", fn)` is `registry.On[Commit]`).
 - Process extensions see it as JSON-RPC methods. WASM sees it as host functions.
   One declaration, three bindings.
+
+## As built (PL-2)
+
+- `ext.Manifest` is `oriel.toml` (`ext.ParseManifest`, `LoadManifest`): id, version, oriel, description, license,
+  icon, runs, lazy, binaries and `[permissions]` as `[]ext.Grant{Cap, Scope, Why}`, in security.md's forms and
+  plugins.md's short one (`net = ["api.linear.app"]`); a dotted key (`fs.read = …`) works unquoted. An unknown
+  capability, or a scoped one (net, fs, exec, secrets, agent.tools) with no scope, is an error.
+- `ext.Plugin{ID, Dir, Guard}` is a plugin as the hosts see it: `Dir` holds its own files (`Path`, `Own`, symlinks
+  followed), and a nil `Guard` is your own config, trusted. `ext.Methods` are host functions called by name with JSON
+  params (`Method{Name, Cap, Target, Run}`; a later one shadows until disposed), each checked by the guard before it
+  runs; `ext.HostMethods` has `log`, `notify`, `fs.read {path}` and `fs.write {path, data}`. A refused call is a
+  JSON-RPC error with `ext.CodeNotDeclared` (-32001).
+- `ext.Processes.Spawn(plugin, name, SpawnOpts{Args, Dir, Env, Request, Notify, Exit, Stderr})` starts a process
+  plugin: JSON-RPC 2.0 over stdio, one message a line (`agent/jsonrpc`). Its requests and notifications go to the
+  plugin's own handlers first, then to the host methods. Its stderr goes to `logs.Lines` under `plugin:<id>`
+  (`ext.Logger`). A plugin's process runs in `ext/ossandbox` (`ext.ProfileFor`: its directory, its fs grants, its
+  exec programs, its net hosts' ports), with a PATH, its own temp dir as HOME and TMPDIR and the locale for an
+  environment; your config's runs as you. `Process.Call`, `Notify`, `Pid`, `Done`, `Err`, `Stop` (stdin closed,
+  then killed after `StopAfter`); `Processes.List`, `Close`.
+- `ext.WASM.Load(ctx, plugin, name, WASMOpts{Request})` runs a module in wazero (64 MiB at most, stopped with its
+  context), with WASI holding no files, environment or sockets (stdout and stderr to the plugin's log) and the host
+  module `oriel`: `request(method_ptr, method_len, params_ptr, params_len) i64`, `notify(…)` and `log(level, ptr,
+  len)`. Data crosses through the module's exported `oriel_alloc(len) ptr`; a JSON function takes `(ptr, len)` and
+  returns `ptr << 32 | len` of a JSON-RPC response body (`{"result": …}` or `{"error": …}`), both ways.
+  `Module.Call` (numbers), `Request` (JSON), `Exports`, `Close`. `ext/exttest.Module()` is a hand-assembled module
+  for tests.
+- Native plugins: a package's `init` calls `ext.Register(e)`; `ext.Native()` lists them, `cmd/oriel` activates them
+  after the built-ins and `oriel version` names them. `oriel build --with PKG[@VERSION][=DIR] [--oriel VERSION|DIR]
+  [-o FILE] [-tags …]` (`ext/nativebuild`) writes a module whose main imports each package and runs
+  `cmd/oriel/cli.Main` (the command's body, importable for this), replaces what comes from directories (a checkout's
+  go.work modules all), and runs `go get`, `go mod tidy` and `go build -trimpath`.
+- Not yet: the plugin manager's loading of installed plugins and `:Plugins` (PL-19, PL-20), process plugins' JSON
+  views, a `--oriel VERSION` base (oriel's modules don't require one
+  another at versions yet: build from a checkout), and offering to rebuild when the native list changes.
+
+## As built (PL-10)
+
+- The calendar plugin isn't carried over (crit-reference.md). The general pieces built for it stay:
+  `oriel.option{ name, type, default, help, values, min, max, section }` declares an option (catalog.md, "Plugin
+  options"; a plugin's are named `plugin.<name>.…`, in its own section, disposed with it);
+  `oriel.now()` is the window's clock (`ext.UIView.Now`, `ui.UI.Now`), which a test fixes; `oriel.platform`;
+  `oriel.exec(argv, { on_done })` runs in the background; `oriel.ui.ring` and `widget.Ring` (theme tokens
+  `ring.track`, `ring.arc`, `ring.label`); a `title` text style.
+
+## As built (PL-9)
+
+- **PR actions** (`registry.PRAction{Name, Order, Label(PullRequest) string, Help, Command, Args}`, kind
+  `ship.pr.action`): buttons on a raised PR, after Edit PR on the Ship page's PR step and on the Pull request panel.
+  `Label` names it for the PR, "" leaving it off (a closed PR's); a click runs `Command` with `Args` and the PR's
+  fields (`registry.PullRequest{Session, Project, Repo, Number, Title, URL, State, Draft, Merged}`, `Args()`).
+  `registry.PRActions(r, pr)` lists them by Order. Lua: `oriel.ship.action`.
+- **HTTP and secrets** (security.md, "As built (PL-9)"): `ext.Host` has `Net()` (the client plugins' requests go
+  through, `app.Config.Net`) and `Secrets()` (`ext.Secrets`: `Secret`, `SetSecret`, `SecretNames`; `ext.SecretFile`
+  is the store, `app.Config.Secrets`). The host method `http.request` (`ext.HTTPMethod`, in `ext.HostMethods` when the
+  reporter is an `ext.Network`; `ext.Fetch` is its body) takes `ext.HTTPRequest{method, url, headers, body, auth,
+  url_secret, timeout}` and answers `ext.HTTPResponse{status, body, headers}`, so process and WASM plugins have it
+  too; Lua's is `oriel.http.request`. `ext/exttest.Net(srv)` is a client whose every host is a TLS test server.
+- **Lua plugins shipped in the build**: `app.ScriptPlugin(fsys)` runs the oriel.toml and init.lua at an `fs.FS`'s root
+  as an extension, in a VM of its own under a guard granting what the manifest declares (the build is the consent
+  until PL-20's lock file); one that fails to load is a notice, not a failed start. `cmd/oriel` runs `integ/slack`'s
+  this way.
+- **Slack PTAL** (`integ/slack`, ui.md 18): a Lua plugin (`plugin/oriel.toml`, `plugin/init.lua`, embedded as
+  `slack.Files`) with `net = hooks.slack.com` and `secrets = { SLACK_WEBHOOK = "hooks.slack.com" }`. It adds the
+  `slack` PR action on open PRs ("Slack", then "Bump Slack", "Bump 2"…, "Sending…" while it posts) running
+  `slack.ptal {url, title; channel, username, emoji}`, which posts crit's message (`internal/slack`: "PTAL:
+  *title* — <url|owner/name#n>", the title escaped and cut to 160 characters, "Bump! "/"2nd Bump! " before a repeat)
+  with `url_secret = "SLACK_WEBHOOK"` and says "Posted to Slack", "Bump 1 posted", or Slack's own reason for refusing.
+  `slack.webhook` opens the secret's dialog. Post counts are the plugin's memory, so they start again with the app
+  (crit kept them in its config): plugins have no store of their own yet.
+
+## As built (tickets)
+
+- **Ticket trackers** (`registry.TicketTracker`, kind `ticket.tracker`) replace PL-8's ticket sources: a tracker (Linear,
+  Jira…) brings its tickets, and the app builds everything generic on it once. A tracker is `{Name, Title, Order, Keys
+  (a regexp of the keys it takes; nil takes all), Secret (what it needs set first), Assigned(ctx), Lookup(ctx, key),
+  Start(ctx, key), Review(ctx, key), Done(ctx, key), Link(ctx, key, TicketPR)}`; only `Lookup` is required, and the funcs may block (the
+  app calls them off its loop). `registry.TicketTrackers`, `TrackerFor(r, key)` (the first by Order whose `Keys` take
+  it), `LookupTicket`, `AssignedTickets` (each fills in `Ticket.Tracker`), and `SortTickets` / `CompareTickets` (crit's
+  order across trackers: priority, blocked last, started, with a PR, then `CompareTicketKeys`).
+- A `registry.Ticket` is `{Key, Title, URL, State, Stage, Project, Priority, PriorityLabel, Blocked, BlockedBy, PR,
+  Summary, Facts, Context, Tracker}`. `Stage` is `todo`, `started` or `review` (`registry.TicketTodo`…), whatever the
+  tracker calls the state: it colours the state chip (violet, cyan, pink) and orders the list. `Priority` is 1 for the
+  most urgent, 0 for none. A move answers `registry.TicketMove{Moved, State}`. Their JSON is the shape Lua and a
+  plugin's process use (`priority_label`, `blocked_by`), so a tracker's process answers in it and its Lua passes it on.
+- **The app's side** (`app/tickets.go`): the omnibox source `tickets` (`!`): each tracker still without its secret
+  first ("Set your Linear API key", ↵ opens the secrets dialog), a tracker that failed ("Linear: why", ↵ asks again),
+  then every tracker's tickets in one order, each asked for again after 10 minutes, after a move, and on
+  `tickets.refresh`; ↵ on a ticket runs `session.new {kind = "plan", ticket}`. The launcher's card (PL-8) asks
+  `TrackerFor`. On `SessionStart` the session's ticket's tracker gets `Start`; on `PrSeen`, `Link`, then `Review` while
+  the PR is open; on `PrMerged` with no other PR of the session open, `Done`; a move is a notice ("INF-2231 moved to
+  In Progress in Linear", "… moved to Done …"), a failure a line in the log. The
+  assistant's `my_tickets` (`Reads = "tickets"`) is every tracker's list, asked for first when it's stale, with a note
+  for a tracker without its key. Commands `Tickets` (the omnibox on them), `tickets.refresh`, `tickets.key {tracker}`
+  and `:TicketKey [tracker]`; the source and the commands are there only while a tracker is (`PickerSource.Available`,
+  new: a source with nothing to offer is left out of `Registry.Pickers`). `SessionStart`, `PrSeen` and `PrMerged` are
+  fired as pointers, so a Go hook (`registry.On`) takes them.
+- **Continue** (crit's, crit-reference.md → Linear): a ticket that already has a session continues it rather than
+  starting another. That session is one whose `Ticket` is the key (any kind; a live one before an archived one, then
+  the newest: `ticketSession`). Its omnibox row's note is "Continue · <session name>" (the PR and priority move to the
+  preview, which adds the session) and ↵ runs `session.open {id}`, which resumes a stopped or archived session. The
+  launcher's card says "Continue · <session name>" (alone, where the card goes, when no tracker takes the key), its
+  Start button says "Continue", and Start runs `session.open` instead of `session.start`, for a kind that starts from a
+  prompt; ✕ on the card takes the ticket off to start afresh. An omnibox row's note now stays whole (`Keep`), as a
+  status does: the label is cut first.
+- **`PrMerged {session, project, ticket, number, url, title, open}`**, fired (the subject its URL) the first time the
+  app reads a session's PR merged, on the Ship page's read (the session in front, every 10 s, and on `ship.refresh`),
+  whoever merged it; a PR first read already merged fires `PrSeen`, then `PrMerged`. `open` is how many of the
+  session's other PRs are still open, a project whose GitHub read failed counting as one, so a hook can wait for the
+  last. `ghtest.Server.Merge` merges one in tests. crit asked first ("Pull request merged · Mark it done"); Oriel
+  moves the ticket itself, as the other moves.
+- Lua: `oriel.ticket.tracker{ name, title, order, keys, secret, lookup = fn(key, done), assigned = fn(done), start =
+  fn(key, done), review = fn(key, done), link = fn(key, pr, done) }` (cap `agent.prompt`; a `secret` must be one the
+  plugin declares), each answering `done(value)` or `done(nil, why)`; `oriel.ticket.source` is gone. A process or WASM
+  plugin is fronted by its Lua, as Linear is: there's no tracker over `ext` alone, since nothing else registers
+  contributions from a process yet.
+- **Linear** is now only its API calls and their mapping: its process answers `assigned` with `{tickets}` and `ticket`
+  with a `registry.Ticket` (`Issue.Ticket`, `Ticket.Detail`), `start`/`review` with a `registry.TicketMove`, and its
+  `init.lua` is the tracker forwarding to it (`keys = "^[A-Z][A-Z0-9]*-[0-9]+$"`, `secret = "LINEAR_TOKEN"`). `done
+  {key}` moves a ticket to its team's completed state called Done, else its first completed one (crit's `doneState`),
+  unless it's completed or canceled already. Its
+  omnibox source, hooks, `my_tickets`, key ask and commands (`LinearTickets`, `LinearKey`, `linear.refresh`) are the
+  app's now, and its manifest drops `agent.tools`. A second, Jira-like tracker (keys `OPS-n`, tests only:
+  `app/tickets_test.go`, all Lua) shows beside it in the omnibox, the launcher, Continue, the moves (done on merge
+  too), the PR link and `my_tickets`.
+
+## As built (PL-8)
+
+- **Ticket sources**, since replaced by ticket trackers ("As built (tickets)") (`registry.TicketSource{Name, Title,
+  Order, Match(key), Lookup(ctx, key) (Ticket, error)}`, kind `ticket.source`): a tracker's tickets by key.
+  `registry.TicketFor(r, key)` is the first by Order whose `Match` takes the key (on the loop),
+  `registry.LookupTicket(ctx, source, key)` asks it. A `registry.Ticket` is `{Key, Title, URL,
+  State, StateTone, Summary, Facts, Context}`: what the launcher's card shows (ui.md 04), and `Context`, markdown that
+  goes to the agent with the prompt. Lua: `oriel.ticket.source` (cap `agent.prompt`, since the context reaches the
+  agent).
+- **The launcher's ticket** (`app/launcher.go`): the ticket field, once it has rested 350 ms (or at once when
+  `session.new {ticket}` filled it), is looked up from the first source that takes it; the card shows the key, a state
+  chip, the title, the description's start and the facts, with ✕ to take it off; Start waits while it's being looked
+  up; the header says "from ticket". `session.start {context}` carries the card's context:
+  `core.SessionSpec.Context`, which the worker sends after the prompt as the first request (or alone, with no prompt)
+  and doesn't keep as the session's prompt.
+- **Picker sources from Lua**: `oriel.picker.source{ id, title, prefix, order, picker_only, items = fn(query), run,
+  preview }` registers a `registry.PickerSource`; items are tables (`label, detail, note, icon, icon_style, badge,
+  badge_style, key, boost, id`, and the source's own fields), handed back to `run` and `preview` as given.
+- **Events**: `SessionStart {session, kind, ticket, prompt, worker}`, fired after `session.start` starts one (the
+  subject its id), and `PrSeen {session, project, ticket, number, url, title, state, draft, merged}`, fired the first
+  time the app reads a session's PR on the Ship page's read (the session in front, every 10 s), whoever raised it.
+- **http.request**'s `auth_scheme` (`ext.HTTPRequest.AuthScheme`): what goes before the secret in the Authorization
+  header, `Bearer` by default, `none` for the value as it is (Linear's personal API keys).
+- **Linear** (`integ/linear`, crit-reference.md → Linear): a plugin built as a third party's would be, on the APIs
+  above. `plugin/oriel.toml` (net `api.linear.app`, `secrets = { LINEAR_TOKEN = "api.linear.app" }`, `agent.prompt`)
+  and `plugin/init.lua`, which spawns its process, `bin/oriel-linear` (`integ/linear/cmd/oriel-linear`, Go: crit's
+  `internal/linear` ported, `linear.Serve`). The process asks the host for each GraphQL request (`http.request` with
+  `auth = "LINEAR_TOKEN", auth_scheme = "none"`), so neither it nor the Lua sees the key. Its methods: `assigned`,
+  `ticket {key}` (with comments and attachments, a summary, facts and the agent's context), `start {key}` (into the
+  team's In Progress, from triage, backlog or unstarted), `review {key}` (into In Review, from any state before it;
+  a team without one stays put), `link {key, url, number, title}` (an attachment titled "#12 title"). The Lua adds the `tickets` omnibox source (`!`, crit's order, a key ask
+  while there's none), Linear's ticket source, `SessionStart` and `PrSeen` hooks (into progress; link, then into
+  review while the PR is open), the assistant's `my_tickets` tool (`agent.tools`; the tickets the omnibox lists, as
+  Linear last told them); commands
+  `LinearTickets`, `LinearKey`, `linear.refresh`. `integ/linear/lineartest` is the recorded API (`testdata/*.json`,
+  served as api.linear.app over TLS, mutations kept and applied).
+- Not yet: installing it (PL-19/20 bring the plugin manager; it isn't bundled: a plugin with a process loads from a
+  directory, `app.DirPlugin`, not from the binary's embedded files). Not carried over from crit (crit-reference.md): the company feed. "Continue" and
+  the done move on merge came later, on every tracker ("As built (tickets)").
+
+## As built (PL-5)
+
+- **Where it lives**: agentbus is company-specific, so it's an external plugin, `liamg/agentbus` in its own repository,
+  `github.com/liamg/oriel-agentbus` (catalog.md's `oriel-<name>`), moved out of Oriel as it was: `plugin/` (the
+  Lua), `cmd/oriel-agentbus` (its process), the bus package at the module's root, `autoapprove` and `bustest`. Its
+  module requires Oriel's modules and replaces them with `../oriel/<module>`, a checkout beside it, since Oriel is
+  private and untagged; its end-to-end tests drive the real plugin through `app/plugintest` ("Testing a plugin").
+  Oriel keeps only the general pieces below, and a fake agentbus card source in its own tests (`app/inbox_test.go`).
+- **agentbus** (crit-reference.md → agentbus): a plugin built on the APIs below, as a third party's
+  would be. `plugin/oriel.toml` (net `*:80`, `*:443` and `api.github.com`; `secrets = { GITHUB_TOKEN = "api.github.com" }`;
+  exec `tailscale`; `agent.tools` for its two tools; `agent.prompt` for the auto-answer) and `plugin/init.lua`, which
+  spawns `bin/oriel-agentbus` (`cmd/oriel-agentbus`): crit's `internal/agentbus` ported (`agentbus.Bus`:
+  the items, the auto-answer deadline (30 s before `answer_by`, else before the TTL's end, given a minute's window),
+  Later/Ignore/Show, Claim, Result, the requests you sent followed until reviewed, the log as JSON lines in the
+  plugin's data directory, the last 2000), `internal/autoapprove` (`agentbus/autoapprove`: rules as crit's JSON,
+  validated: every way one passes needs a paths or maxLines check) and `worker/ghreviewed.go` with
+  `worker/autoapprove.go` (`agentbus.Reviewer`: the PR's details for its card; a request a rule passes is claimed,
+  approved on GitHub at the head that was read, its result sent, and logged, never shown; a review you submit on
+  GitHub after the request goes back as its result, claimed first, every 2 minutes). Its client speaks agentbus's
+  wire format (`agentbus.Frame` …, written here, not imported) over `golang.org/x/net/websocket`;
+  `agentbus/bustest` is a fake agentbusd (its routing, dev identity from `X-Agentbus-User`, `DefaultUser`).
+  GitHub goes through the host's `http.request` with `auth = "GITHUB_TOKEN"` (`agentbus.HostTransport`, a
+  `gh.Transport`), so neither the process nor the Lua sees the token.
+- The process's methods (`agentbus.Server.Handle`): `configure {url, instance, label, version, asks, reviews, repos,
+  presence, rules}` (again on every option change; a new URL or instance reconnects), `snapshot`, `answer {id, text |
+  option}`, `later`, `ignore`, `show`, `claim`, `result {id, state, summary, link}`, `due {now}` (the asks past their
+  deadline on the window's clock, each handed out once, with crit's prompt; not your own), `auto_answer {id, text}`
+  (sent as the agent's, after "My human was unavailable, but my answer follows:"), `request_review {pr, note, to}`,
+  `request_state`, `ask {to, text}`, `ask_state`, `who`, `log {limit}`, `check_github`; it notifies `changed` with
+  an `agentbus.Snapshot` (status, items with their times in seconds, auto-approvals, the log's tail, a rules error).
+- The Lua: a card per question (`group = "bus"`, the countdown to the deadline, the options as numbered actions,
+  Later, a field to type an answer in its `body`, "else your agent answers, read-only") and review request (Ignore,
+  Claim, Claim + Open, which claims and runs `session.start {kind = "review", pr}`; "AI review auto-starts"); a
+  done card and a notice for each auto-approval; every 5 s on the window's clock (the title bar's **BUS** indicator,
+  its dot the presence and its count who's online) the due asks go to `oriel.agent.fork` and back as
+  `auto_answer`; presence chips in `inbox.foot`, the `mission` strip and the HUD's `agentbus` panel (span 2: the
+  connection, the counts, the log's tail); the PR action **Ask agentbus**; the assistant's `request_review` (an act)
+  and `review_requests.agentbus`, which adds agentbus's half to `review_requests`. Options `plugin.agentbus.url`,
+  `instance`, `asks`, `reviews`, `repos`, `presence`, `auto_approve`.
+- General pieces it needed: `ext.Plugin.Data`, a plugin's own data directory, which its processes may write and find
+  in `$ORIEL_PLUGIN_DATA` (`app.ScriptPlugin`'s is `plugins/<id>` in the state directory); the indicator slot
+  `registry.SlotInboxFoot` (`inbox.foot`, under the Inbox panel's list); `registry.AgentTool.Adds`, a part of another
+  tool's answer, not offered on its own: `registry.CallAgentTool` answers with each one's result under its `Reads`
+  (or name), a part's error beside the rest (`registry.AgentToolParts`), and the assistant lists the parts' sources;
+  `gh.API` `Me`, `PRDetails`, `PRFiles`, `ApproveAt` and `gh.Green`, with the fake's `GET /user`, `pulls/{n}`,
+  `pulls/{n}/files` and `POST pulls/{n}/reviews` (`ghtest.SetPRSize`, `SetNow`, `Reviews`); and the Lua below.
+- Not yet: installing it from `[plugins]` (PL-19/20; its README builds the process into `plugin/bin/` for a `path`
+  source, and `app.DirPlugin` loads the directory in a program embedding Oriel); an auto-answer with no session to fork waits for the utility session (agents.md), and the fork has
+  no tools rather than crit's read-only ones; review routing takes `plugin.agentbus.repos` rather than every local
+  clone (the Lua can't list a worker's repos); crit's search of GitHub's own review requests for the rules, the
+  result of a review a session submits (Oriel's agents never post one: the GitHub poll covers it), and who was seen
+  before (`people`).
+
+## As built (PL-3)
+
+- Install consent is `ext.Ask` → `ext.Consent`, with `ext.Locked` and `ext.Diff` for the lockfile's form, and the
+  dialog any installer opens with the command `plugins.consent {dir, from, then, source}` (security.md, "As built
+  (PL-3)"). It's a command, so a plugin, Lua (`oriel.cmd`) or the P8 plugin manager asks the same way.
+- `languages.install {path}` installs a grammar pack (editor.md, "Languages as plugins").
 
 ## Performance and native plugins
 

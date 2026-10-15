@@ -347,6 +347,30 @@ func (vm *VM) Metatable(ns string, get func(a *Args, key string) (any, error), s
 	vm.L.SetMetatable(t, mt)
 }
 
+// Callable makes oriel.<ns> callable as a function too: oriel.option{ … } declares an option. fn gets the call's
+// arguments after the table itself.
+func (vm *VM) Callable(ns string, fn GoFunc) {
+	t := vm.namespace(ns)
+	mt, ok := vm.L.GetMetatable(t).(*lua.LTable)
+	if !ok {
+		mt = vm.L.NewTable()
+		vm.L.SetMetatable(t, mt)
+	}
+	full := "oriel." + ns
+	mt.RawSetString("__call", vm.L.NewFunction(func(L *lua.LState) int {
+		out, err, stack := callGo(fn, &Args{vm: vm, L: L, name: full, base: 1})
+		if err != nil {
+			vm.raised = raised{name: full, stack: stack}
+			L.RaiseError("%s: %s", full, err.Error())
+			return 0
+		}
+		for _, v := range out {
+			L.Push(vm.toLua(v))
+		}
+		return len(out)
+	}))
+}
+
 func (vm *VM) wrap(ns, name string, fn GoFunc) lua.LGFunction {
 	full := "oriel." + name
 	if ns != "" {
@@ -451,6 +475,17 @@ func (a *Args) Strings(i int) []string {
 		return out
 	}
 	return nil
+}
+
+// Method is fn as a method of a table, called with a colon (proc:stop()): its arguments start after self.
+func Method(fn GoFunc) GoFunc {
+	return func(a *Args) ([]any, error) {
+		b := *a
+		if _, ok := a.get(0).(*lua.LTable); ok {
+			b.base++
+		}
+		return fn(&b)
+	}
 }
 
 // Where is the Lua line calling: "init.lua:12".

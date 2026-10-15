@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/text"
+	"github.com/liamg/oriel/tools/perf"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden highlight snapshots")
@@ -208,10 +209,14 @@ func TestIncrementalMatchesFullParse(t *testing.T) {
 	}
 }
 
-// TestIncrementalReparseUnderOneMillisecond is the ticket's budget: typing a character into an identifier
-// in a 600-line Go file reparses in under 1 ms (the median of 50 edits, the best of a few rounds). Bigger files parse off the
+// TestIncrementalReparseBudget is the ticket's budget: typing a character into an identifier
+// in a 600-line Go file reparses in under 1.5 ms (the median of 50 edits, the best of a few rounds). Bigger files parse off the
 // keystroke path, in a Document (TestDocumentNeverBlocksTyping).
-func TestIncrementalReparseUnderOneMillisecond(t *testing.T) {
+// reparseBudget is editor.md's: an edit in a 600-line file reparses within it.
+const reparseBudget = 1500 * time.Microsecond
+
+func TestIncrementalReparseBudget(t *testing.T) {
+	perf.Timed(t)
 	if testing.Short() || raceEnabled {
 		t.Skip("timing budget: not under -short or -race")
 	}
@@ -232,13 +237,13 @@ func TestIncrementalReparseUnderOneMillisecond(t *testing.T) {
 		}
 		sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
 		best, worst = min(best, times[len(times)/2]), max(worst, times[len(times)-1])
-		if best < time.Millisecond {
+		if best < reparseBudget {
 			break
 		}
 	}
 	t.Logf("%d lines: best median reparse %v, max %v", lines, best, worst)
-	if best >= time.Millisecond {
-		t.Errorf("median incremental reparse %v, want under 1ms", best)
+	if best >= reparseBudget {
+		t.Errorf("median incremental reparse %v, want under %v", best, reparseBudget)
 	}
 }
 

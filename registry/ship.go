@@ -73,3 +73,74 @@ func ShipGates(r Registry, session, kind string) []ShipGateState {
 	}
 	return out
 }
+
+// PullRequest is a session's raised PR as its actions see it.
+type PullRequest struct {
+	Session, Project string
+	Repo             string // owner/name
+	Number           int
+	Title, URL       string
+	State            string // open or closed
+	Draft, Merged    bool
+}
+
+// Args are the PR as a command's arguments.
+func (p PullRequest) Args() Args {
+	return Args{"session": p.Session, "project": p.Project, "repo": p.Repo, "number": p.Number, "title": p.Title, "url": p.URL,
+		"state": p.State, "draft": p.Draft, "merged": p.Merged}
+}
+
+// PRAction is a button on a raised PR, beside Ready for review and Open on GitHub (ui.md 18): the Ship page's
+// PR step and the Pull request panel. Label names it for the PR, "" leaving it out; it runs on the app's loop as
+// the page is drawn. A click runs Command with Args and the PR's (PullRequest.Args).
+type PRAction struct {
+	Name    string
+	Order   int
+	Label   func(pr PullRequest) string
+	Help    string
+	Command string
+	Args    Args
+	Source  string
+}
+
+func (PRAction) ContributionKind() string   { return "ship.pr.action" }
+func (a PRAction) ContributionName() string { return a.Name }
+
+// PRActionState is an action labelled for a PR.
+type PRActionState struct {
+	PRAction
+	PR    PullRequest
+	Label string
+}
+
+// RunArgs are what its command runs with: its Args, then the PR's.
+func (a PRActionState) RunArgs() Args {
+	out := Args{}
+	for k, v := range a.Args {
+		out[k] = v
+	}
+	for k, v := range a.PR.Args() {
+		out[k] = v
+	}
+	return out
+}
+
+// PRActions are the actions for pr, by Order; one that panics or gives no label is left out.
+func PRActions(r Registry, pr PullRequest) []PRActionState {
+	var as []PRAction
+	for _, c := range r.Contributions("ship.pr.action") {
+		if a := c.(PRAction); a.Label != nil {
+			as = append(as, a)
+		}
+	}
+	slices.SortFunc(as, func(a, b PRAction) int { return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name)) })
+	var out []PRActionState
+	for _, a := range as {
+		label := ""
+		Call(func() error { label = a.Label(pr); return nil })
+		if label != "" {
+			out = append(out, PRActionState{PRAction: a, PR: pr, Label: label})
+		}
+	}
+	return out
+}

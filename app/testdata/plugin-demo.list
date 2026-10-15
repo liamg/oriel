@@ -6,10 +6,13 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1400.9062x38 r 0
+clip 102.9375,0 1287.0875x38 r 0
 pop
-text "DEPLOY" @1517.8438,22.779999 #b3ab99 JetBrains Mono 10.5
-text "3" @1565.4062,22.779999 #ff9b45 JetBrains Mono 10.5
+text "DEPLOY" @1404.025,22.779999 #7c7566 JetBrains Mono 10.5
+text "3" @1449.5875,22.779999 #ff9b45 JetBrains Mono 10.5
+text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 44x936 fill #0c0c0b
 clip 0,38 43x936 r 0
   text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
@@ -25,7 +28,7 @@ clip 0,38 43x936 r 0
   rect 9.5,208 24x1 fill #332f27
   path 5 segments stroke 1.4545455 #7c7566
   path 5 segments stroke 1.4545455 #7c7566
-  path 4 segments stroke 1.4545455 #4f4a40
+  path 4 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -550,14 +553,14 @@ clip 651,38 529x936 r 0
   rect 651,68 529x1 fill #24221d
   clip 651,69 529x905 r 0
     text "TEAM DASHBOARD" @675,104.22 #ffd23f JetBrains Mono 11
-    text "ERROR BUDGET" @675,128.23001 #b3ab99 JetBrains Mono 10.5
-    rect 762.125,122.450005 48x4 fill #23211c radius 2
-    rect 762.125,122.450005 39.359985x4 fill #ff9b45 radius 2
-    text "82%" @818.125,128.23001 #ece6d8 JetBrains Mono 10.5
-    text "P99" @675,152.09001 #b3ab99 JetBrains Mono 10.5
-    text "184ms" @702.78125,152.09001 #4fe0a0 JetBrains Mono 10.5
-    text "OPEN INCIDENTS" @675,175.95001 #b3ab99 JetBrains Mono 10.5
-    text "1" @775.3125,175.95001 #ff5f6d JetBrains Mono 10.5
+    text "ERROR BUDGET" @675,128.23001 #7c7566 JetBrains Mono 10.5
+    rect 760.125,122.450005 44x4 fill #24221d radius 2
+    rect 760.125,122.450005 36.080017x4 fill #ff9b45 radius 2
+    text "82%" @810.125,128.23001 #ece6d8 JetBrains Mono 10.5
+    text "P99" @675,152.09001 #7c7566 JetBrains Mono 10.5
+    text "184ms" @700.78125,152.09001 #4fe0a0 JetBrains Mono 10.5
+    text "OPEN INCIDENTS" @675,175.95001 #7c7566 JetBrains Mono 10.5
+    text "1" @773.3125,175.95001 #ff5f6d JetBrains Mono 10.5
   pop
 pop
 rect 1180,38 420x936 fill #0c0c0b
@@ -592,8 +595,8 @@ text "✕" @87.1225,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @98.71625,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @119.31,990.95996 #ff9b45 JetBrains Mono 11
 text "1" @130.90375,990.95996 #b3ab99 JetBrains Mono 11
-text "CI" @1326.1875,990.95996 #b3ab99 JetBrains Mono 11
-text "✓ main" @1351.375,990.95996 #4fe0a0 JetBrains Mono 11
+text "CI" @1310.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "✓ main" @1335.375,990.95996 #4fe0a0 JetBrains Mono 11
 text "Go · utf-8 · LF" @1406.9375,984.71 #b3ab99 JetBrains Mono 10.5
 text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 1%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5

@@ -1,10 +1,13 @@
 package worker
 
 import (
+	"fmt"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/worker/tour"
 )
 
 // Worktrees is when and how a kind of session gets its projects' worktrees.
@@ -46,12 +49,55 @@ type KindSpec struct {
 	AutoReview bool `json:"autoReview,omitempty"`
 	// PromptFile is a file at the workspace root the prompt is written to as the session starts: a job's JOB.md.
 	PromptFile string `json:"promptFile,omitempty"`
+	// Variants are the sorts of this kind a session can be (a tour's walkthrough, demo…), the first the default; the
+	// launcher offers them, and SessionSpec.Variant picks one.
+	Variants []Variant `json:"variants,omitempty"`
+
+	reg int // which registration it is
+}
+
+// Variant is one sort of a kind of session.
+type Variant struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Desc  string `json:"desc,omitempty"`
+}
+
+// variant is the variant a spec asks for: its own, else the kind's first; "" for a kind with none.
+func (k KindSpec) variant(asked string) (string, error) {
+	if len(k.Variants) == 0 {
+		if asked != "" {
+			return "", fmt.Errorf("a %s session has no variant %q", strings.ToLower(k.Title), asked)
+		}
+		return "", nil
+	}
+	if asked == "" {
+		return k.Variants[0].ID, nil
+	}
+	if !slices.ContainsFunc(k.Variants, func(v Variant) bool { return v.ID == asked }) {
+		var ids []string
+		for _, v := range k.Variants {
+			ids = append(ids, v.ID)
+		}
+		return "", fmt.Errorf("a %s session is one of %s, not %q", strings.ToLower(k.Title), strings.Join(ids, ", "), asked)
+	}
+	return asked, nil
+}
+
+// tourVariants are the kinds of tour.
+func tourVariants() []Variant {
+	var out []Variant
+	for _, k := range tour.Kinds {
+		out = append(out, Variant{ID: k.ID, Title: k.Title, Desc: k.Desc})
+	}
+	return out
 }
 
 // Kinds is the set of session kinds, a later one shadowing an earlier with the same Kind.
 type Kinds struct {
 	mu   sync.RWMutex
 	list []KindSpec
+	regs int
 }
 
 func builtinKinds() *Kinds {
@@ -63,7 +109,7 @@ func builtinKinds() *Kinds {
 		{Kind: core.KindReview, Title: "Review PR", Desc: "someone else's change", From: FromPR, Pack: "review", Worktrees: WorktreesPR, Gate: "off",
 			AutoReview: true, About: "The PR's head is checked out read-only from the repo whose remote it's on, and the agent reviews it."},
 		{Kind: core.KindTour, Title: "Tour", Desc: "explain how it works", From: FromPrompt, Pack: "tour", Worktrees: WorktreesPinned, Gate: "off",
-			About: "The agent answers with a guided tour through the code, in a pinned, read-only worktree."},
+			Variants: tourVariants(), About: "The agent answers with a guided tour through the code, in a pinned, read-only worktree."},
 		{Kind: core.KindJob, Title: "Job", Desc: "runs to done on its own", From: FromPrompt, Pack: "job", Worktrees: WorktreesNow, Gate: "soft",
 			PromptFile: "JOB.md", About: "The agent runs the prompt until it's done or blocked, and makes worktrees as it needs them."},
 		{Kind: core.KindNewRepo, Title: "New repo", Desc: "start from nothing", From: FromName, Pack: "newrepo", Worktrees: WorktreesInit, Gate: "hard",
@@ -79,12 +125,14 @@ func builtinKinds() *Kinds {
 func (k *Kinds) Register(s KindSpec) (unregister func()) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
+	k.regs++
+	s.reg = k.regs
 	k.list = append(k.list, s)
 	return func() {
 		k.mu.Lock()
 		defer k.mu.Unlock()
 		for i := len(k.list) - 1; i >= 0; i-- {
-			if k.list[i] == s {
+			if k.list[i].reg == s.reg {
 				k.list = slices.Delete(k.list, i, i+1)
 				return
 			}

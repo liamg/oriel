@@ -2,7 +2,7 @@
 id: PL-11
 title: "Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation"
 phase: P7
-status: todo
+status: review
 area: Platform
 module: prompts, voice
 depends_on: [AI-2]

@@ -2,7 +2,7 @@
 id: RV-8
 title: "Tours: reader, 7 kinds, export"
 phase: P7
-status: todo
+status: review
 area: Review and explain
 module: tour
 depends_on: [RV-5]

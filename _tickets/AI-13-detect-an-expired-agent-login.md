@@ -2,7 +2,7 @@
 id: AI-13
 title: "Detect an expired agent login, flag it on its worker, and fix it from Oriel"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: agent, worker, app
 depends_on: [AI-2, AI-3, AI-12]

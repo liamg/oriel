@@ -2,7 +2,7 @@
 id: AI-8
 title: "Plan mode: rendered docs, margin threads, readiness, Start work"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: app, plan
 depends_on: [AI-5]

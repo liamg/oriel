@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/sandbox"
@@ -31,6 +32,7 @@ const (
 	MethodComment   = "thread.comment"
 	MethodThread    = "thread.set"
 	MethodAnswer    = "ask.answer"
+	MethodAsk       = "ask.put" // the app asks the user for a session: its rules and the policy hooks first
 	MethodSend      = "agent.send"
 	MethodInterrupt = "agent.interrupt"
 	MethodTerminal  = "agent.terminal" // a stream of the agent's raw terminal
@@ -55,6 +57,8 @@ const (
 	MethodFindings = "review.ai.findings"
 	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
 	MethodSandboxConfig = "sandbox.config"
+	// MethodPrompts is the user's versions of the prompts (agent/prompts), sent on connect and whenever one changes.
+	MethodPrompts = "prompts.set"
 	// MethodStatsQuery answers a stats.Query over the worker's sessions; MethodStatsSession is one session's stats.
 	MethodStatsQuery   = "stats.query"
 	MethodStatsSession = "stats.session"
@@ -169,6 +173,13 @@ type AnswerReq struct {
 	Scope    string            `json:"scope,omitempty"` // a network rule's host pattern
 }
 
+// AskReq is something the app asks the user for a session, as its agent's own gate would: an agent tool that asks
+// first. The session's rules and the policy hooks answer before the user sees a card; "always" adds Ask.Rule.
+type AskReq struct {
+	Session core.SessionID `json:"session"`
+	Ask     core.Ask       `json:"ask"`
+}
+
 // SendReq is a message to the agent outside any thread: the console's composer.
 type SendReq struct {
 	Session core.SessionID `json:"session"`
@@ -222,9 +233,17 @@ type LogAppendReq struct {
 	Record  logs.Record    `json:"record"`
 }
 
+// ToolsReq asks the app for the tools it offers an agent: a session's (Agent is its kind), or a utility agent's (no
+// Session; Agent is its name).
+type ToolsReq struct {
+	Session core.SessionID `json:"session,omitempty"`
+	Agent   string         `json:"agent,omitempty"`
+}
+
 // ToolCall is an agent calling a tool the app offers.
 type ToolCall struct {
-	Session core.SessionID  `json:"session"`
+	Session core.SessionID  `json:"session,omitempty"`
+	Agent   string          `json:"agent,omitempty"`
 	Tool    string          `json:"tool"`
 	Args    json.RawMessage `json:"args"`
 }
@@ -311,6 +330,11 @@ func (c Client) StartWork(ctx context.Context, r StartWorkReq) error {
 	return c.Conn.Call(ctx, MethodStartWork, r, nil)
 }
 
+// SetPrompts hands the worker the user's versions of the prompts: its packs and agent notes use them.
+func (c Client) SetPrompts(ctx context.Context, o prompts.Overrides) error {
+	return c.Conn.Call(ctx, MethodPrompts, o, nil)
+}
+
 // SetSandboxConfig hands the worker the sandbox settings its sandboxes run on.
 func (c Client) SetSandboxConfig(ctx context.Context, cfg sandbox.Config) error {
 	return c.Conn.Call(ctx, MethodSandboxConfig, cfg, nil)
@@ -336,6 +360,12 @@ func (c Client) SetThread(ctx context.Context, r ThreadReq) error {
 
 func (c Client) Answer(ctx context.Context, r AnswerReq) error {
 	return c.Conn.Call(ctx, MethodAnswer, r, nil)
+}
+
+// Ask puts an ask to a session's rules, the policy hooks, then the user, and waits for the answer: allow or deny.
+func (c Client) Ask(ctx context.Context, r AskReq) (Verdict, error) {
+	var out Verdict
+	return out, c.Conn.Call(ctx, MethodAsk, r, &out)
 }
 
 func (c Client) Send(ctx context.Context, r SendReq) error {

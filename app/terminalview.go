@@ -213,9 +213,14 @@ type termRun struct {
 	underline term.Underline
 }
 
-// drawTermLine draws a row of cells: backgrounds, then text in runs of one style, each at its cell's column so wide
-// characters keep the grid, and box-drawing and block characters drawn as shapes so they join.
+// drawTermLine draws a row of cells in the terminal's font.
 func drawTermLine(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells []term.Cell, x0, y, charW float32) {
+	drawTermLineIn(f, sh, th, cells, x0, y, charW, termFont, termLineH)
+}
+
+// drawTermLineIn draws a row of cells in base, lineH high: backgrounds, then text in runs of one style, each at its
+// cell's column so wide characters keep the grid, and box-drawing and block characters drawn as shapes so they join.
+func drawTermLineIn(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells []term.Cell, x0, y, charW float32, base typeset.FontSpec, lineH float32) {
 	defFg := th.C(tTermFg)
 	var run *termRun
 	flush := func() {
@@ -223,7 +228,7 @@ func drawTermLine(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells [
 			run = nil
 			return
 		}
-		font := termFont
+		font := base
 		if run.attrs&term.Bold != 0 {
 			font.Weight = typeset.Bold
 		}
@@ -235,11 +240,11 @@ func drawTermLine(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells [
 			col = theme.WithAlpha(col, .6)
 		}
 		g := sh.Shape(strings.TrimRight(run.text.String(), " "), font)
-		f.Glyphs(g, render.Point{X: x0 + float32(run.from)*charW, Y: y + (termLineH+g.Ascent-g.Descent)/2}, col)
+		f.Glyphs(g, render.Point{X: x0 + float32(run.from)*charW, Y: y + (lineH+g.Ascent-g.Descent)/2}, col)
 		if run.underline != term.UnderlineNone || run.attrs&term.Strikethrough != 0 {
-			uy := y + termLineH - 3
+			uy := y + lineH - 3
 			if run.attrs&term.Strikethrough != 0 {
-				uy = y + termLineH/2
+				uy = y + lineH/2
 			}
 			f.Rect(render.Rect{Min: render.Point{X: x0 + float32(run.from)*charW, Y: uy},
 				Max: render.Point{X: x0 + float32(run.from+run.cells)*charW, Y: uy + 1}}, render.Style{Fill: col})
@@ -263,10 +268,10 @@ func drawTermLine(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells [
 		}
 		cx := x0 + float32(col)*charW
 		if bg.A > 0 {
-			f.Rect(render.Rect{Min: render.Point{X: cx, Y: y}, Max: render.Point{X: cx + float32(w)*charW, Y: y + termLineH}}, render.Style{Fill: bg})
+			f.Rect(render.Rect{Min: render.Point{X: cx, Y: y}, Max: render.Point{X: cx + float32(w)*charW, Y: y + lineH}}, render.Style{Fill: bg})
 		}
 		r, _ := utf8.DecodeRuneInString(cell.Text)
-		if boxGlyph(f, r, render.Rect{Min: render.Point{X: cx, Y: y}, Max: render.Point{X: cx + float32(w)*charW, Y: y + termLineH}}, fg) {
+		if boxGlyph(f, r, render.Rect{Min: render.Point{X: cx, Y: y}, Max: render.Point{X: cx + float32(w)*charW, Y: y + lineH}}, fg) {
 			flush()
 			continue
 		}

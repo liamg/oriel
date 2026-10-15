@@ -6,7 +6,7 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1469.0625x38 r 0
+clip 102.9375,0 1353.2438x38 r 0
   rect 102.9375,0 184.10938x38 fill #121210
   rect 102.9375,0 184.10938x2 fill #ffd23f
   rect 114.9375,16 8x8 fill #4cc9f0 radius 4
@@ -15,6 +15,9 @@ clip 102.9375,0 1469.0625x38 r 0
   text "⌘1" @263.04688,23.42 #4f4a40 JetBrains Mono 9.5
   rect 287.04688,0 1x38 fill #24221d
 pop
+text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 44x936 fill #0c0c0b
 clip 0,38 43x936 r 0
   text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
@@ -30,7 +33,7 @@ clip 0,38 43x936 r 0
   rect 9.5,208 24x1 fill #332f27
   path 5 segments stroke 1.4545455 #7c7566
   path 5 segments stroke 1.4545455 #7c7566
-  path 4 segments stroke 1.4545455 #4f4a40
+  path 4 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -171,7 +174,7 @@ clip 250,92 1100x660 r 10
     text "job" @419.32812,272.78 #7c7566 JetBrains Mono 10.5
     text "off" @913,272.6 #4f4a40 JetBrains Mono 10
     text "COMMANDS" @268,301.42 #7c7566 JetBrains Mono 9.5
-    text "4 of 95" @889,301.42 #7c7566 JetBrains Mono 9.5
+    text "4 of 126" @883,301.42 #7c7566 JetBrains Mono 9.5
     text "›" @275.6953,331.36523 #7c7566 Inter 12
     text "Run job: " @296,331.729 #ece6d8 Inter 13
     text "pri" @349.70312,331.729 #ffd23f Inter 13

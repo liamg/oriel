@@ -34,17 +34,21 @@ func (x *lspExt) agentTools(h ext.Host) {
 	}
 }
 
-// agentPath is a tool's file argument as an absolute path: relative to the asking session's project, or the
-// window's.
 func (x *lspExt) agentPath(ctx registry.Ctx, file string) (string, error) {
+	return x.sh.agentPath(x.h, ctx, file)
+}
+
+// agentPath is an agent tool's file argument as an absolute path: relative to the asking session's project, or the
+// window's.
+func (sh *shell) agentPath(h ext.Host, ctx registry.Ctx, file string) (string, error) {
 	if file == "" {
 		return "", errors.New("no file given")
 	}
 	if filepath.IsAbs(file) {
 		return filepath.Clean(file), nil
 	}
-	root := x.sh.cfg.WorkDir
-	if se, ok := x.h.Session(core.SessionID(registry.SessionOf(ctx))); ok {
+	root := sh.cfg.WorkDir
+	if se, ok := h.Session(core.SessionID(registry.SessionOf(ctx))); ok {
 		if dir := sessionDir(se.Snapshot()); dir != "" {
 			root = dir
 		}
@@ -55,17 +59,7 @@ func (x *lspExt) agentPath(ctx registry.Ctx, file string) (string, error) {
 	return filepath.Join(root, file), nil
 }
 
-// onLoop runs fn on the app's loop and waits for it.
-func (x *lspExt) onLoop(ctx context.Context, fn func()) error {
-	done := make(chan struct{})
-	x.h.Do(func() { fn(); close(done) })
-	select {
-	case <-done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
+func (x *lspExt) onLoop(ctx context.Context, fn func()) error { return onLoop(ctx, x.h, fn) }
 
 // agentDoc is the server's client for path, opening the file on it from disk when no editor has; release closes
 // what it opened.
@@ -172,9 +166,11 @@ func (x *lspExt) toolLocations(what string, find func(*lsp.Client, context.Conte
 	}
 }
 
-// agentRel is a path as the agent gave it: relative to the project when it's inside it.
-func (x *lspExt) agentRel(path string) string {
-	if root := x.sh.cfg.WorkDir; root != "" {
+func (x *lspExt) agentRel(path string) string { return x.sh.agentRel(path) }
+
+// agentRel is a path as an agent gives it: relative to the project when it's inside it.
+func (sh *shell) agentRel(path string) string {
+	if root := sh.cfg.WorkDir; root != "" {
 		if rel, err := filepath.Rel(root, path); err == nil && !strings.HasPrefix(rel, "..") {
 			return rel
 		}

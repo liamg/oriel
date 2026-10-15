@@ -4,6 +4,7 @@ import (
 	"context"
 	"image"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -21,16 +22,16 @@ type Extension interface {
 	Deactivate(ctx context.Context) error
 }
 
-type Manifest struct {
-	ID string
-}
-
 // Host is what an extension sees of the app.
 type Host interface {
 	registry.Registry
 	Session(id core.SessionID) (core.Session, bool)
 	Sessions() []core.Session
 	Log() *slog.Logger
+	Net() *http.Client // what plugins' HTTP goes through
+	// Secrets are the named secrets the host attaches to a plugin's requests (http.request); a plugin never reads
+	// them.
+	Secrets() Secrets
 	// Notify tells the user something, through the one path every notice takes (errors.md). Source defaults to
 	// the extension's id and Time to now; the text is redacted before it's kept.
 	Notify(n core.Notice)
@@ -70,6 +71,9 @@ type UIView interface {
 	FocusNext(dir int) // moves keyboard focus to the next focusable node (back with -1), wrapping
 	DragKey() bool     // picks up the focused node's drag, or drops the one held on it (ui/dnd.go)
 	CancelDrag()
+	TakesText() bool             // the focused node inserts typed text: a text field, an editor in insert mode
+	Key(ev render.KeyEvent) bool // types a key at the focused node, past the keymaps, for its next frame
+	Now() time.Time              // the window's clock: what the frames are drawn at, a test's fixed time
 }
 
 // Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's

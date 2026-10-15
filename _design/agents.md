@@ -222,6 +222,12 @@ In Oriel each of those uses the subscription instead:
 - **Outside a session** (the assistant, an auto-answer with no matching session): a **resident utility
   session**. That's a hidden interactive `claude` in a PTY with the Oriel mod, a small model, read-only tools,
   and a fresh context per task. It's started on demand and kept warm.
+  Built in PL-4 as the worker's utility agents (`architecture.md`, `worker/utility.go`): started through
+  `Provider.Start` like any session (so Claude is its interactive CLI, `/oriel:<name> <first turn>`, never `claude -p`),
+  in Oriel's own folder, policy `ask` with every permission refused but the spec's `Allow` (the assistant's
+  WebSearch and WebFetch), offered only the agent tools `for` its name. "Kept warm" is per conversation: the assistant
+  keeps its agent while the conversation lasts (until **New conversation** or `assistant.idle` minutes of quiet), and
+  the next conversation starts a fresh one. Not yet: explain and agentbus auto-answers with no session don't use it.
 - Claude's plan windows come from the mod's `$.session.usage()`: in live sessions, and in the hidden `/usage` session
   a worker starts once (above), which is interactive, so not `claude -p`.
 
@@ -280,6 +286,11 @@ type Session interface {
   (`agent/packs`), Oriel's tools (`reply`, `thread`, `resolve`, `comment`, `task_add`, `task_update`, `tasks`,
   `projects`, `commit_draft`, `pr_draft`, `test_run`) and any the app's plugins offer (`registry.AgentTool`, reached
   back over the wire: LS-3's `lsp_*`), and the user's checkouts as `Protect`.
+- Built in RV-8: a tour's agent also has `tour_kind` (its kind and that kind's guidance, `worker/tour/kinds/*.md`;
+  with `kind`, it changes it), `tour_steps`, `tour_run` (a command run inside the tour, its output, exit code and
+  time appended to a step as a run block; refused in a sandbox, where only the agent's own shell runs commands) and
+  `tour_share` (the published export's link), and the app's `tour_export`. The tour's question is its `where="tour"`
+  thread.
 - Comments go to the agent as a batch in crit's tagged format (`worker/prompt.go`): at once when it's idle; after
   `Interrupt` when one is urgent; at the turn's end otherwise. A delivered thread is `Busy` until the agent replies.
   btw is a `Fork`, its answer a `Btw` comment. The console's messages queue (`Agent.Queue`) the same way.
@@ -294,6 +305,28 @@ type Session interface {
   (`Comment.Evidence`): runs of its `test_run` tool, and shell commands that ran tests (`go test`, `pytest`, …,
   parsed from their output). A reply that says tests pass with no passing run behind it is flagged
   (`Comment.Unbacked`), and the agent is told so in the tool's answer.
+
+### Prompts and voice (PL-11, as built)
+
+- The Prompts page (`:Prompts`, `app/prompts.go`) edits every `agent/prompts` prompt: the coding style (crit's text),
+  each built-in pack, each part the packs include, and each tour kind's guidance (RV-8's `worker/tour/kinds`, which
+  the worker registers as `tour.<kind>` and the `tour_kind` tool reads through the user's prompts). crit's other 27 prompts don't carry over one for one: in
+  Oriel their text lives in the packs (drafts, comments, tours) or in code that hasn't been made editable yet
+  (Start work's request, explain's depths, the walkthrough format); `prompts.Register` is how those join the page.
+- Only the user's changes are kept, a file each: `prompts/style.code.md`, `agents/<kind>.md` (the same file a
+  hand-written pack override is) and `agents/parts/<part>.md`. The app sends them to each worker on connect and on
+  each change (and when one of those files is saved in the editor); the worker keeps them in `prompts.json` and
+  builds a built-in pack the user changed (or whose parts they changed) from them. Its own `packs.LoadDir` of
+  `agents/` now only adds kinds: a built-in kind's override always comes from the app, so a reset there takes.
+- The coding style goes into the `CLAUDE.md` (and `AGENTS.md`, for Codex) the worker writes at the root of each
+  workspace it made, never in a direct session's own directory, with the list of projects and their own
+  instructions: when the agent starts, when the projects change, and when the prompts change. Both are in the
+  workspace's `.git/info/exclude`, and plan mode doesn't list them as docs.
+- Dictation (`app/voice.go`, module `voice`): crit captured audio in the browser; Oriel runs a recorder program and
+  reads raw PCM from its stdout, so it adds no audio dependency. The rest is crit's: phrases at a 600 ms pause, the
+  live phrase transcribed again each second, whisper-server started on first use and stopped after ten idle
+  minutes, models fetched with checksums. Dictation types through `UIView.Key`, taking back the live phrase with
+  backspaces as a new pass replaces it, and stops if focus moves. The wake word is off by default (`voice.wake`).
 
 ### Drafts when the agent goes idle (AI-10)
 
@@ -530,6 +563,10 @@ sequenceDiagram
 - `sandbox.servers` reach the gateway as `Config.Servers`: `Discover` lists them after Claude Code's own (user scope,
   then plugins), and `sandbox.hidden_servers` hides any of them.
 - Not yet: `Dismissed` and approved `Dockerfile` hashes aren't settings and aren't sent.
+- **The app's agent tools ask through the same layers** (DB-3): an act tool called by a session's agent (the
+  debugger's, when its access is `ask`) is put to the session's worker with `Client.Ask` (`ask.put`,
+  `worker.AskReq{Session, Ask}`), which runs `approve` as for layer 3: the session's rules, then the `Permission`
+  hooks, then a `core.AskPermission` card for `mcp__oriel__<tool>`; "Always" adds the tool's name as a rule.
 
 ## Comments to agent, without `crit wait`
 

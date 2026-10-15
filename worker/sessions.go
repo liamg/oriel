@@ -8,12 +8,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
 )
 
@@ -73,6 +72,11 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	if spec.Sandbox.Container && w.opts.Sandbox == nil {
 		return "", errors.New("this worker can't run a sandbox")
 	}
+	variant, err := k.variant(spec.Variant)
+	if err != nil {
+		return "", err
+	}
+	spec.Variant = variant
 	name := w.freshName(spec)
 	id := core.SessionID(name)
 	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Worker: w.opts.ID, Prompt: spec.Prompt, Ticket: spec.Ticket,
@@ -84,7 +88,6 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	if branch == "" {
 		branch = BranchName(whoAmI(ctx), spec.Ticket, name)
 	}
-	var err error
 	switch k.Worktrees {
 	case WorktreesNone:
 		err = w.startInPlace(ctx, &se, spec)
@@ -110,8 +113,8 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 			w.log.Warn("AI review", "session", id, "err", err)
 		}
 	}
-	if p := strings.TrimSpace(spec.Prompt); p != "" {
-		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: firstLine(p), Body: p}); err != nil {
+	if p, body := strings.TrimSpace(spec.Prompt), firstRequest(spec); body != "" {
+		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: firstLine(cmp.Or(p, body)), Body: body}); err != nil {
 			return id, err
 		}
 	} else if spec.Provider != "" {
@@ -120,6 +123,18 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 		}
 	}
 	return id, nil
+}
+
+// firstRequest is what the agent is first asked: the prompt, then what came with it.
+func firstRequest(spec core.SessionSpec) string {
+	p, c := strings.TrimSpace(spec.Prompt), strings.TrimSpace(spec.Context)
+	switch {
+	case c == "":
+		return p
+	case p == "":
+		return c
+	}
+	return p + "\n\n" + c
 }
 
 // gate is the agent's own gate for a spec: the light gate inside a sandbox by default (agents.md).
@@ -164,7 +179,7 @@ func (w *Worker) startWorkspace(ctx context.Context, se *core.SessionState, spec
 	root := filepath.Join(w.workspacesDir(), string(se.ID))
 	m := Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(spec.Kind), Ticket: spec.Ticket, Model: spec.Model}
 	if spec.Kind == core.KindTour {
-		m.Tour = &TourInfo{Title: spec.Prompt, Kind: spec.TourKind}
+		m.Tour = &TourInfo{Title: spec.Prompt, Kind: spec.Variant}
 	}
 	if err := newWorkspace(ctx, root, m); err != nil {
 		return err
@@ -228,18 +243,16 @@ func (w *Worker) undo(root string, err error) error {
 	return err
 }
 
-var prURL = regexp.MustCompile(`github\.com[/:]([^/]+)/([^/]+?)(?:\.git)?/pull/(\d+)`)
-
 // prRepo is the registered repo whose remote is the PR's.
 func (w *Worker) prRepo(ctx context.Context, spec core.SessionSpec) (core.Repo, error) {
-	m := prURL.FindStringSubmatch(spec.PR)
-	if m == nil {
-		return core.Repo{}, fmt.Errorf("%q is not a GitHub pull request URL", spec.PR)
+	pr, _, err := gh.ParsePR(spec.PR)
+	if err != nil {
+		return core.Repo{}, err
 	}
 	if len(spec.Repos) > 0 {
 		return w.resolveRepo(ctx, string(spec.Repos[0]))
 	}
-	want := strings.ToLower(m[1] + "/" + m[2])
+	want := strings.ToLower(pr.String())
 	for _, r := range w.repos.all() {
 		if strings.Contains(strings.ToLower(remotePath(r.Remote)), want) {
 			return r, nil
@@ -260,8 +273,10 @@ func remotePath(remote string) string {
 
 // addPRProject fetches the PR's head and pins a worktree there.
 func (w *Worker) addPRProject(ctx context.Context, root string, m *Manifest, r core.Repo, pr string) (ManifestEntry, error) {
-	sm := prURL.FindStringSubmatch(pr)
-	n, _ := strconv.Atoi(sm[3])
+	_, n, err := gh.ParsePR(pr)
+	if err != nil {
+		return ManifestEntry{}, err
+	}
 	ref := fmt.Sprintf("refs/oriel/pr/%d", n)
 	g := gitx.Repo{Dir: r.Path}
 	if _, err := g.Run(ctx, "fetch", "--quiet", "origin", fmt.Sprintf("+pull/%d/head:%s", n, ref)); err != nil {
@@ -396,6 +411,7 @@ func (w *Worker) NextPR(ctx context.Context, id core.SessionID) error {
 	if err := w.emit(core.ProjectsChanged{ID: id, Branch: b, Projects: projects, Past: past, Started: se.Started}); err != nil {
 		return err
 	}
+	w.writeNotes(id)
 	w.saveProjects(id)
 	return nil
 }
@@ -461,6 +477,7 @@ func (w *Worker) StartWork(ctx context.Context, r StartWorkReq) error {
 	if err := w.emit(core.ProjectsChanged{ID: id, Branch: branch, Projects: projects, Past: se.Past, Started: true}); err != nil {
 		return err
 	}
+	w.writeNotes(id)
 	prompt := startWorkPrompt(projects)
 	if !r.KeepThreads {
 		note, err := w.clearPlanThreads(se)
@@ -631,6 +648,7 @@ func (w *Worker) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID
 	if err := w.emit(core.ProjectsChanged{ID: id, Branch: b, Projects: projects, Past: se.Past, Started: se.Started}); err != nil {
 		return err
 	}
+	w.writeNotes(id)
 	if h, _ := w.hostFor(id, false); h != nil {
 		h.note(fmt.Sprintf("The repo %s joined this session at %s.", r.ID, projects[len(projects)-1].Dir))
 	}

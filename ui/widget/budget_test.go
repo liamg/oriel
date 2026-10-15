@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/tools/perf"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -40,6 +41,7 @@ func busy(t testing.TB) (*harness, func()) {
 // FW-13: "The frame budgets in rendering.md still hold with several things animating": a frame (build, layout and
 // paint) stays under 4 ms of CPU.
 func TestAnimatingFrameBudget(t *testing.T) {
+	perf.Timed(t)
 	h, kick := busy(t)
 	var total time.Duration
 	const frames = 240

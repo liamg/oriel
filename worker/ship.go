@@ -328,7 +328,11 @@ func (w *Worker) ShipCommit(ctx context.Context, r ShipCommitReq) (string, error
 	if p.ReadOnly || p.Detached {
 		return "", fmt.Errorf("%s is read-only here", p.Name)
 	}
-	hash, err := repo.CommitWith(ctx, r.Message, r.Trailers, r.Files...)
+	var hash string
+	err = w.keyed(ctx, r.Session, "git commit", p.Name, func(ctx context.Context) (err error) {
+		hash, err = repo.CommitWith(ctx, r.Message, r.Trailers, r.Files...)
+		return err
+	})
 	if err != nil {
 		return "", err
 	}
@@ -347,7 +351,7 @@ func (w *Worker) ShipPush(ctx context.Context, r ShipRef) error {
 		return err
 	}
 	defer w.forget(r.Session, p.Name)
-	return repo.Push(ctx, branch)
+	return w.keyed(ctx, r.Session, "git push", p.Name, func(ctx context.Context) error { return repo.Push(ctx, branch) })
 }
 
 // ShipSync fetches origin and rebases a project's branch onto its base, carrying uncommitted work over. One that
@@ -360,14 +364,14 @@ func (w *Worker) ShipSync(ctx context.Context, r ShipRef) error {
 	if _, err := ownBranch(p); err != nil {
 		return err
 	}
-	if err := repo.Fetch(ctx); err != nil {
+	if err := w.keyed(ctx, r.Session, "git fetch origin", p.Name, repo.Fetch); err != nil {
 		return err
 	}
 	base := repo.FlightBase(ctx, p.Base)
 	if base == "" {
 		return fmt.Errorf("%s has no base branch to rebase onto", p.Name)
 	}
-	if err := repo.Rebase(ctx, base); err != nil {
+	if err := w.keyed(ctx, r.Session, "git rebase "+base+" (signing commits)", p.Name, func(ctx context.Context) error { return repo.Rebase(ctx, base) }); err != nil {
 		return err
 	}
 	st := w.shipMu()

@@ -31,7 +31,7 @@ func (s vimState) Key(k string) input.Result {
 func (s vimState) Mode() input.Mode {
 	m := s.x.e.Mode()
 	shape := map[vim.Shape]input.Shape{vim.Block: input.Block, vim.Bar: input.Bar, vim.Underline: input.Underline}[s.x.e.CursorShape()]
-	return input.Mode{Label: modeName(m), Shape: shape, KeyMode: keyMode(m)}
+	return input.Mode{Label: modeName(m), Shape: shape, KeyMode: keyMode(m), Text: m == "insert" || m == "replace"}
 }
 
 func (s vimState) Pending() string { return strings.Join(s.x.e.Pending(), "") }

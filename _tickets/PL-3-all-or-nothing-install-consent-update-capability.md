@@ -2,7 +2,7 @@
 id: PL-3
 title: "All-or-nothing install consent, update capability diff"
 phase: P7
-status: todo
+status: review
 area: Platform
 module: ext
 depends_on: [PL-2, ED-11]
@@ -37,6 +37,12 @@ Acceptance tests derived from the design docs above, written first, all passing 
 
 - A grammar pack installs into `~/.config/oriel/languages/<name>/` (`language.toml`, `grammar.wasm`, `queries/`);
   `builtin:languages` registers what's there at startup. Grammars have no host imports, so they need no capabilities.
+
+## As built
+
+- See security.md and plugins.md, "As built (PL-3)", and editor.md, "Languages as plugins" (grammar packs).
+  `ext.Ask`/`ext.Consent`, `ext.Locked`/`ext.Diff` and the `plugins.consent` dialog are the pieces PL-20 and PL-21
+  build on; recording consent in `oriel-lock.toml`, provenance facts and fetching packs are theirs.
 
 ## Rules
 

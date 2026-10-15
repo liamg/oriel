@@ -3,3 +3,4 @@ bin/
 *.failed.png
 *.prof
 cover.out
+syntax/grammars/packs-out/

@@ -2,7 +2,7 @@
 id: RV-1
 title: "Split and unified diff, intraline, per-hunk reviewed"
 phase: P6
-status: review
+status: done
 area: Review and explain
 module: app, diff
 depends_on: [ED-7, FG-2]

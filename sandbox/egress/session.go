@@ -77,6 +77,7 @@ type Session struct {
 
 type ask struct {
 	done    chan struct{}
+	callers int // the Decides waiting on the card
 	once    sync.Once
 	cancel  context.CancelFunc
 	ok      bool
@@ -240,6 +241,7 @@ func (s *Session) Allow(ctx context.Context, host string, port int) bool {
 		a = &ask{done: make(chan struct{})}
 		s.asks[key] = a
 	}
+	a.callers++
 	s.mu.Unlock()
 	if !waiting {
 		go s.ask(key, host, port, a)

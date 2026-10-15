@@ -2,7 +2,7 @@
 id: SH-17
 title: "Project sidebar: per-project panels, the session's entries, one tab strip across projects"
 phase: P5
-status: review
+status: done
 area: Shell and navigation
 module: app, registry, core
 depends_on: [SH-16, FG-1, FG-3, TR-3, AI-1, SE-1]

@@ -131,8 +131,11 @@ func (r *rail) Activate(_ context.Context, h ext.Host) error {
 		{"ship", "ship", "Ship", "ship", "", "tab", 60},
 	} {
 		args := registry.Args{"id": s.view, "place": s.place, "edge": "left", "title": s.title}
-		if s.place == "tab" {
+		switch {
+		case s.place == "tab":
 			args = registry.Args{"id": s.view, "place": "tab", "title": s.title}
+		case s.name == "debug":
+			args = debugViewArgs()
 		}
 		e := registry.RailEntry{Name: s.name, Icon: s.icon, Title: s.title, Command: "view.toggle", Args: args, Order: s.order}
 		if s.name == "requests" {

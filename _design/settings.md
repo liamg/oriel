@@ -127,6 +127,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.threads` | `shown`: files open with their threads between the lines; `hidden`, behind gutter bubbles | app | | ED-15 |
 | `files.generated` | false | app | | ED-9 |
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | | FG-2 |
+| `debug.inline_values` | true: while paused, the frame's variables after the lines that name them | app | | DB-2 |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | | RV-1 |
 | `ledger.gate` | `auto`: the commit gate by the session's kind (hard for work, plan and a new repo, soft for jobs, off for the rest); `hard`, `soft` or `off`; a project's `.oriel/settings.toml` overrides it for its repo | app | | RV-2 |
 | `review.ai.provider` | the provider AI reviews run on; empty: one other than the session agent's, else the author's on another model | app | | RV-3 |
@@ -165,7 +166,29 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `sandbox.pids_limit` | 0: 4096; -1 for no cap | app | | AI-11 |
 | `usage.accounts` | empty: names for the accounts plans belong to, account identity → label ("Work", "Personal"); unnamed, an account shows its email or organisation | app | | AI-12 |
 | `stats.split_sessions` | true: a multi-repo session's cost splits over its repos by their share of its file work; off, each repo is charged the whole session. The Stats page's toggle and the session tab's "count whole session in each" both set it | app | | AI-12 |
+| `hud.hold` | alt: the modifier that pulls the HUD down while held on its own (alt, ctrl, shift, super, off) | app | | SH-8 |
+| `hud.hold_delay` | 250: milliseconds the hold key is held alone before the HUD comes down, so a chord doesn't flash it | app | | SH-8 |
+| `mission.at_launch` | true: open on mission control when Oriel starts with nothing open, once there's a session to show | app | | SH-7 |
 | `workers.listen` | empty: Oriel doesn't listen for workers on other machines; an address, `:7437` or `10.0.0.2:7437`, listens there (pinned TLS, keys in `workers.json`; security.md, Remote workers). Add a worker sets it | app | | AI-15 |
+| `updates.mode` | `ask`: a new release is offered in a notice; `automatic` installs it, and its workers', as it comes out; `manual` only checks on `:UpdateCheck` (distribution.md) | app | | PL-6 |
+| `updates.channel` | `stable`; or `nightly`, pre-releases too | app | | PL-6 |
+| `voice.dictation` | true: ⌃⇧Space dictates into the focused text field (a recorder and whisper-server, or `voice.url`, needed); false turns it off | app | | PL-11 |
+| `voice.model` | the Whisper model: `base.en`, `small.en`, `medium.en` or a path to a ggml model; empty picks one for the machine (`small.en` on Apple silicon, else `base.en`) | app | | PL-11 |
+| `voice.url` | an OpenAI-compatible transcription endpoint used instead of a local whisper-server; empty uses whisper-server | app | | PL-11 |
+| `voice.recorder` | the program that captures audio: `pw-record`, `parecord`, `arecord` (Linux), `rec` (sox), `ffmpeg`; empty uses the first installed | app | | PL-11 |
+| `voice.wake` | false; true listens for the wake word, sending what follows it to the assistant (`assistant.wake`), else the agent in front, its reply spoken | app | | PL-11 |
+| `voice.wake_word` | `computer`: one word of letters, up to 20 | app | | PL-11 |
+| `voice.speech` | `system` (say, spd-say or espeak), `piper` or `off`: how replies are spoken | app | | PL-11 |
+| `voice.piper_voice` | a Piper voice's name in `~/.oriel/piper`; empty uses the first there | app | | PL-11 |
+| `assistant.provider` | empty: the first agent installed and signed in; `claude` or `codex` | app | | PL-4 |
+| `assistant.model` | empty: the provider's small model (Claude's Haiku), else its default | app | | PL-4 |
+| `assistant.web` | true: the assistant may search the web (the provider's WebSearch and WebFetch) | app | | PL-4 |
+| `assistant.wake` | true: with `voice.wake` on, what follows the wake word goes to the assistant, its answer spoken | app | | PL-4 |
+| `assistant.idle` | 15: minutes of quiet before a conversation ends and the next starts afresh | app | | PL-4 |
+| `debug.agent.read` | allow: agents may read the paused stack, frames and variables (allow, ask or off) | app | | DB-3 |
+| `debug.agent.eval` | allow: agents may evaluate expressions in a paused frame | app | | DB-3 |
+| `debug.agent.breakpoints` | ask: agents may set and remove breakpoints once you allow each on a permission card | app | | DB-3 |
+| `debug.agent.step` | off: agents may not continue or step the debuggee | app | | DB-3 |
 
 ## The settings page (`:Settings`, ⌘,)
 

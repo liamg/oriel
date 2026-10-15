@@ -19,8 +19,20 @@ import (
 
 func builtins(sh *shell) []ext.Extension {
 	sh.layout = &layoutExt{sh: sh}
-	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{}, &sessionTabs{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
-		&editorExt{sh: sh}, &markdownExt{}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspExt{sh: sh}, &testsExt{sh: sh}, &explainExt{sh: sh}, &walkthroughExt{sh: sh}, &terminals{sh: sh}, &settingsExt{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, &statsExt{sh: sh}, &jobsExt{sh: sh}, &workersExt{sh: sh}, &launcher{sh: sh}, &requests{sh: sh}, &planExt{sh: sh}, &diffExt{sh: sh}, &shipExt{sh: sh}, &aiReviewExt{sh: sh}, &verifyExt{sh: sh}, &githubExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
+	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{sh: sh}, &sessionTabs{sh: sh}, &hudExt{sh: sh}, &inboxExt{sh: sh}, &missionExt{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &consentExt{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
+		&editorExt{sh: sh}, &markdownExt{}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspExt{sh: sh}, &testsExt{sh: sh}, &debugExt{sh: sh}, &explainExt{sh: sh}, &walkthroughExt{sh: sh}, &tourExt{sh: sh}, &terminals{sh: sh}, &settingsExt{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, &statsExt{sh: sh}, &jobsExt{sh: sh}, &workersExt{sh: sh}, &updateExt{sh: sh}, &promptsExt{sh: sh}, &voiceExt{sh: sh}, &assistantExt{sh: sh}, &ticketsExt{}, &launcher{sh: sh}, &requests{sh: sh}, &planExt{sh: sh}, &diffExt{sh: sh}, &shipExt{sh: sh}, &aiReviewExt{sh: sh}, &verifyExt{sh: sh}, &githubExt{sh: sh}, &secretsExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
+}
+
+// onLoop runs fn on the app's loop and waits for it: an agent tool's way in from the worker's goroutine.
+func onLoop(ctx context.Context, h ext.Host, fn func()) error {
+	done := make(chan struct{})
+	h.Do(func() { fn(); close(done) })
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // disposer is the usual way for an extension to undo what it registered.

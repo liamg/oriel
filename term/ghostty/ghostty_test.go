@@ -16,7 +16,7 @@ import (
 )
 
 // testBackend is the core the tests use: $ORIEL_VT_BACKEND (native or wasm), else the build's default. CI runs them
-// with each; TestConformance and TestParseThroughput run every backend built in.
+// with each; TestConformance and TestParseThroughputBudget run every backend built in.
 var testBackend = os.Getenv("ORIEL_VT_BACKEND")
 
 // backends are the cores built in: wasm always, native with the ghostty_native tag.

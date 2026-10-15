@@ -12,11 +12,12 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
 
-//oriel:api name=
+//oriel:api name= cap=ui
 type Root struct{ a *APIs }
 
 //oriel:api doc="Add a command: name is what :Name and the omnibox run, fn gets the command's arguments." optional=opts
@@ -60,7 +61,13 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 		if err != nil {
 			return registry.Verdict{}, err
 		}
-		return verdict(out, ev), nil
+		v := verdict(out, ev)
+		if v.Veto || v.Decided {
+			if err := r.a.Check(ext.CapGate, event); err != nil {
+				return registry.Verdict{}, err
+			}
+		}
+		return v, nil
 	}
 	r.a.own(r.a.Host.Hook(h))
 	return nil
@@ -122,34 +129,77 @@ func expand(p string) string {
 	return p
 }
 
-//oriel:api doc="A file's contents, or nil and why not. ~ is your home." returns="string?,string?"
-func (r Root) Read(path string) []any {
-	b, err := os.ReadFile(expand(path))
-	if err != nil {
-		return []any{nil, err.Error()}
+//oriel:api doc="A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read." returns="string?,string?" cap=target
+func (r Root) Read(path string) ([]any, error) {
+	p := r.a.Plugin.Path(path)
+	if !r.a.Plugin.Own(p) {
+		if err := r.a.Check(ext.CapFSRead, ext.RealPath(p)); err != nil {
+			return nil, err
+		}
 	}
-	return []any{string(b)}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return []any{nil, err.Error()}, nil
+	}
+	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default)." optional=opts returns=string
-func (r Root) Exec(argv []string, opts script.Table) (string, error) {
+//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't)." optional=opts returns=string? cap=exec
+func (r Root) Exec(argv []string, opts script.Table) (any, error) {
 	if len(argv) == 0 {
-		return "", fmt.Errorf("no program")
+		return nil, fmt.Errorf("no program")
+	}
+	if !r.a.Plugin.Trusted() {
+		prog, err := exec.LookPath(expand(argv[0]))
+		if err != nil {
+			return nil, err
+		}
+		if prog, err = filepath.Abs(prog); err != nil {
+			return nil, err
+		}
+		if err := r.a.Check(ext.CapExec, ext.RealPath(prog)); err != nil {
+			return nil, err
+		}
 	}
 	secs, _ := opts["timeout"].(float64)
 	if secs == 0 {
 		secs = 10
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
-	defer cancel()
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
-	cmd.Dir = expand(str(opts, "cwd"))
-	var out, errb bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &errb
-	if err := cmd.Run(); err != nil {
-		return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
+	run := func() (string, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
+		defer cancel()
+		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+		cmd.Dir = expand(str(opts, "cwd"))
+		var out, errb bytes.Buffer
+		cmd.Stdout, cmd.Stderr = &out, &errb
+		if err := cmd.Run(); err != nil {
+			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
+		}
+		return out.String(), nil
 	}
-	return out.String(), nil
+	done, ok := opts["on_done"].(*script.Fn)
+	if !ok {
+		out, err := run()
+		return out, err
+	}
+	go func() {
+		out, err := run()
+		var msg any
+		if err != nil {
+			msg = err.Error()
+		}
+		r.a.Host.Do(func() { r.a.VM.Call(done, out, msg) })
+	}()
+	return nil, nil
+}
+
+//oriel:api doc="The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown." returns=number
+func (r Root) Now() float64 {
+	t := time.Now()
+	if u := r.a.Host.UI(); u != nil {
+		t = u.Now()
+	}
+	return float64(t.UnixMicro()) / 1e6
 }
 
 //oriel:api doc="Decode JSON text to a table, or encode a value as JSON text." returns=any

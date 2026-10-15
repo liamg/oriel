@@ -154,7 +154,9 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 | `agent/*` | the provider conformance suite (start, send, tool call, permission, interrupt, fork, resume) against a **fake `claude`/`codex` binary** that replays recorded hook and transcript traffic; plus a slow live suite run on demand | recorded sessions from real CLIs, re-recorded when versions bump |
 | `wire`, `worker` | in-process worker tests; chaos tests (drop the connection mid-stream, reconnect, compare state) | – |
 | `gitx` | fixture repos built by script; porcelain output parsing | git man pages |
-| perf | benchmarks for key-to-photon latency, scroll frame time and parse throughput; CI fails on a >10% regression | budgets in `rendering.md` |
+| `app` | the app's built-ins driven a frame at a time on a fixed clock: `app.Headless` (no window, no loop; draw, run what extensions queued, click, press keys, read the text and the accessibility tree, call an agent tool). The app's own tests wrap it in `errScene`; `startApp` runs the real `Run` loop on the headless backend | the mockups, the design docs |
+| plugins | `app/plugintest`, the public harness on `app.Headless` that a plugin's own tests import, in Oriel or in its own repository (plugins.md, "Testing a plugin"); Oriel tests it on `app/plugintest/testdata/hello` | the plugin's design |
+| perf | benchmarks for key-to-photon latency, scroll frame time and parse throughput; CI fails on a >10% regression | budgets in `rendering.md`; a timing test is named `…Budget` and calls `perf.Timed`, and `make test` runs those in a pass of their own, one package at a time, so other packages' tests can't slow them |
 
 ## Example: a test that can't hallucinate
 

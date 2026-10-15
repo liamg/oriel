@@ -47,7 +47,7 @@ flowchart LR
 
 - **The app opens on mission control** (`ui.md` 03), not a file dialog. `⌘N` opens the launcher (`ui.md` 04): prompt, mode,
   provider, repos, worker, sandbox.
-- **From anywhere**: a Linear ticket (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
+- **From anywhere**: a ticket from any tracker, Linear or another (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
   ("fix CI" opens a work session on the PR's branch), or an agentbus review request.
 - **CLI**: `oriel new "fix stale usage prices" --repo pricing --ticket INF-2231`, `oriel review <pr-url>`, `oriel open <session>`,
   `oriel init <name> --template go-cli`, `oriel ~/src/foo` (direct).
@@ -127,7 +127,7 @@ type Kind string // "plan" | "work" | "review" | "tour" | "job" | "newrepo" | "d
 type SessionSpec struct {
     Kind     Kind
     Prompt   string
-    Ticket   string            // optional
+    Ticket   string            // optional: its tracker is the first whose keys take it (plugins.md, "As built (tickets)")
     PR       string            // review kind
     Repos    []RepoID          // 0..n
     Branch   string            // derived if empty
@@ -135,6 +135,8 @@ type SessionSpec struct {
     Worker   WorkerID
     Sandbox  SandboxPolicy
     Template string            // newrepo kind
+    Variant  string            // one of the kind's variants: a tour's walkthrough, onboarding…
+    Context  string            // goes to the agent after the prompt, not kept as it: a ticket's text (PL-8)
 }
 
 type Sessions interface {
@@ -226,8 +228,11 @@ type Sessions interface {
   `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
   The CLI takes its flags after the prompt too (`oriel new "fix stale usage prices" --repo pricing`), and every
   kind starts from it: `new --kind plan|work|tour|job|direct|scratch`, `review <pr-url>`, `init <name>`.
-- **The app opens on the start view**, not mission control: mission control is SH-7 (P7). Until then the start
-  view's Recent lists the sessions first, and opening one brings it to the front.
+  A kind's `Variants` (RV-8: a tour's walkthrough, onboarding, archaeology, showcase, demo, incident and
+  feasibility) are a picker beside the ticket and `--variant` on the CLI; the first is the default, and one the kind
+  hasn't is refused. A tour's is its manifest's `tour.kind`.
+- **The app opens on mission control** (SH-7) once there's a session to show, when it starts with nothing open
+  (`mission.at_launch`); with no session it stays on the start view, whose Recent lists the sessions first.
 - **Files outside the session** open read-only: the sessions extension's `BufRead` rewrite hook marks a file outside
   every project and the session's own directory "outside the session", and one in a project the session only reads
   (a plan's checkouts before Start work, a tour, a review) "the session only reads it". It applies while the window
@@ -244,6 +249,16 @@ type Sessions interface {
   that worker over the wire (`agent.terminal`, as Raw terminal does) with `/login` typed, and the card says what to
   run there only for an agent with no terminal (Codex). **Check again** asks the worker to look. Once it's signed in, every card
   goes and the sessions carry on: held comments go, and a turn the login stopped is told to carry on.
+
+## As built (tickets)
+
+- A session has at most one ticket (`SessionSpec.Ticket`), any tracker's: its tracker is the first whose keys take it
+  (`registry.TrackerFor`). The app, not the tracker's plugin, calls that tracker as the session goes: `Start` on
+  `SessionStart`, `Link` and then `Review` (while the PR is open) on `PrSeen`, `Done` on `PrMerged` once none of the
+  session's PRs is open, and the launcher's card is its `Lookup` (plugins.md, "As built (tickets)").
+- A ticket that has a session is continued, not started again: Start work on it from the omnibox's `!` or the
+  launcher's card ("Continue · <session name>") brings that session to the front with `session.open`, resuming it
+  if it's stopped or archived. Several sessions on one ticket: a live one before an archived one, then the newest.
 
 ## Jobs (SE-4)
 

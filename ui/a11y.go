@@ -34,6 +34,7 @@ const (
 	RoleDialog   = render.RoleDialog
 	RoleStatus   = render.RoleStatus
 	RoleSlider   = render.RoleSlider
+	RoleImage    = render.RoleImage
 
 	ActionClick  = render.ActionClick
 	ActionFocus  = render.ActionFocus

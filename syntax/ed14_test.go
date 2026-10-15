@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/text"
+	"github.com/liamg/oriel/tools/perf"
 )
 
 // manyDecls is a 10,000-line Go file of many top-level declarations, the shape that made each capture's parent
@@ -28,6 +29,7 @@ func manyDecls() []byte {
 // top-level declaration before it, nor walk down from the root for each capture's parent. Each chunk the parser
 // queries stays under 2 ms, so the wasm call never holds up the Go runtime for longer.
 func TestHighlightQueryBudget(t *testing.T) {
+	perf.Timed(t)
 	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
 		t.Skip("timing under -race, -short or -cover means nothing")
 	}

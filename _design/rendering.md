@@ -228,8 +228,9 @@ func (u *UI) Rect(id ID) (render.Rect, bool)      // last frame's layout
 func (u *UI) Hit(p render.Point) []ID              // topmost first, as clipped when painted
 func (u *UI) ScrollBy(id ID, dx, dy float32)
 
-func Indicator(c *ui.Ctx, label string, frac float32, tone theme.Token) // a HUD readout
-func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
+func Indicator(c *ui.Ctx, key any, o IndicatorOpts) ui.ID               // a readout: label, meter, value, dot (SH-8)
+func Panel(c *ui.Ctx, key any, o PanelOpts, body func(*ui.Ctx)) ui.ID   // a HUD instrument: frame, brackets, title, note
+func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult // a sheet pulled down from Top
 ```
 
 - **Layout** (FW-4) works like Clay's: sizes are fitted up the tree on each axis, then grow and percent space is
@@ -301,7 +302,7 @@ func Panel(c *ui.Ctx, title string, body func(*ui.Ctx))
 - A right-click gives the node `Interaction.Context`; `ContextMenu` opens there and always ends with Help for the
   target's help id (`help.md`).
 - `ui.Func` lets a Go view build with the frame's `*Ctx` (and so use widgets and keep their state by id, through
-  `ui.State[T]`). Process plugins' JSON views get the widgets as node types when PL-2 lands.
+  `ui.State[T]`). Process plugins' JSON views (not built yet: a process plugin draws through its Lua) will get the widgets as node types.
 
 ```go
 // package ui/layout — one tree for every view; docks are its edges (FW-9)

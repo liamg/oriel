@@ -2,7 +2,7 @@
 id: RV-4
 title: "GitHub review mirroring and Forward to GitHub"
 phase: P6
-status: review
+status: done
 area: Review and explain
 module: gh
 depends_on: [RV-1, FG-6]

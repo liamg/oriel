@@ -1,10 +1,13 @@
 // Package apigen generates the oriel.* Lua API from annotated Go (scripting.md, "Stability"): the VM glue, the
 // LuaLS types and the reference, from one source so they can't drift apart.
 //
-//	//oriel:api name=keymap                     on a type: a namespace (empty for oriel's own functions)
+//	//oriel:api name=keymap cap=ui              on a type: a namespace (empty for oriel's own functions)
 //	//oriel:api doc="…" optional=a,b returns=t  on its methods: a function
 //
-// A parameter named where is the calling Lua line, not an argument.
+// cap is the capability a plugin needs to call a function (security.md), on its namespace or, overriding it, on the
+// function; cap=target means the function checks its own, against what it's called on (a path, a program). Every
+// function has one, or generation fails, so no door is added unguarded. A parameter named where is the calling Lua
+// line, not an argument.
 package apigen
 
 import (
@@ -30,7 +33,11 @@ type Func struct {
 	Results  []string // Go types
 	Optional map[string]bool
 	Returns  string // the Lua return type, when annotated
+	Cap      string // the capability the glue checks; "target" when the function checks its own
 }
+
+// CapTarget is a function that checks its capability itself, against its target.
+const CapTarget = "target"
 
 // Param is a function's parameter.
 type Param struct{ Name, Type string }
@@ -39,6 +46,7 @@ type Param struct{ Name, Type string }
 type Namespace struct {
 	Type, Name string
 	Doc        string
+	Cap        string // its functions' capability, unless one says otherwise
 	Funcs      []Func
 }
 
@@ -94,7 +102,7 @@ func Parse(dir string) ([]Namespace, error) {
 				}
 				for _, s := range d.Specs {
 					if ts, ok := s.(*ast.TypeSpec); ok {
-						byType[ts.Name.Name] = &Namespace{Type: ts.Name.Name, Name: a["name"], Doc: a["doc"]}
+						byType[ts.Name.Name] = &Namespace{Type: ts.Name.Name, Name: a["name"], Doc: a["doc"], Cap: a["cap"]}
 					}
 				}
 			case *ast.FuncDecl:
@@ -112,7 +120,11 @@ func Parse(dir string) ([]Namespace, error) {
 		if !ok {
 			return nil, fmt.Errorf("%s.%s is annotated, but %s isn't a namespace", recv, d.Name.Name, recv)
 		}
-		fn := Func{Go: d.Name.Name, Lua: luaName(d.Name.Name), Doc: a["doc"], Returns: a["returns"], Optional: map[string]bool{}}
+		fn := Func{Go: d.Name.Name, Lua: luaName(d.Name.Name), Doc: a["doc"], Returns: a["returns"], Optional: map[string]bool{},
+			Cap: cmpOr(a["cap"], ns.Cap)}
+		if fn.Cap == "" {
+			return nil, fmt.Errorf("%s.%s declares no capability: add cap=… to it or to %s", recv, d.Name.Name, ns.Type)
+		}
 		for _, o := range strings.Split(a["optional"], ",") {
 			if o != "" {
 				fn.Optional[o] = true
@@ -140,6 +152,13 @@ func Parse(dir string) ([]Namespace, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
+}
+
+func cmpOr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }
 
 func exprString(e ast.Expr) string {
@@ -213,6 +232,9 @@ func Bind(pkg string, nss []Namespace) ([]byte, error) {
 			default:
 				return nil, fmt.Errorf("%s.%s: can't return %v", ns.Type, f.Go, f.Results)
 			}
+			if f.Cap != CapTarget {
+				body = fmt.Sprintf("if err := a.check(%q); err != nil {\n\t\t\t\t\treturn nil, err\n\t\t\t\t}\n\t\t\t\t", f.Cap) + body
+			}
 			fmt.Fprintf(&b, "\t\t\t%q: func(c *script.Args) ([]any, error) {\n\t\t\t\t%s\n\t\t\t},\n", f.Lua, body)
 		}
 		b.WriteString("\t\t})\n\t}\n")
@@ -231,9 +253,10 @@ func Types(nss []Namespace, version string) []byte {
 			fmt.Fprintf(&b, "---@field %s oriel.%s\n", ns.Name, ns.Name)
 		}
 	}
-	b.WriteString("---@field option table<string, any> Your settings, by name or vim alias, as init.lua sets them\n")
+	b.WriteString("---@field option table<string, any>|fun(spec: table) Your settings, by name or vim alias, as init.lua sets them; called with { name, type, default, help, values, min, max, section, on_change = fn(value) }, it declares one (a plugin's are named plugin.<name>.…)\n")
 	b.WriteString("---@field buffer_option table<string, any> The current buffer's settings\n")
 	b.WriteString("---@field session_option table<string, any> The current session's settings\n")
+	b.WriteString("---@field platform string The OS Oriel runs on: darwin or linux\n")
 	b.WriteString("---@field api { version: string }\noriel = {}\n\n")
 	for _, ns := range nss {
 		table := "oriel"
@@ -294,10 +317,18 @@ func Docs(nss []Namespace, version string) []byte {
 				}
 				ps = append(ps, n)
 			}
-			fmt.Fprintf(&b, "- `%s.%s(%s)`: %s\n", name, f.Lua, strings.Join(ps, ", "), f.Doc)
+			fmt.Fprintf(&b, "- `%s.%s(%s)` (%s): %s\n", name, f.Lua, strings.Join(ps, ", "), capDoc(f.Cap), f.Doc)
 		}
 	}
 	return []byte(b.String())
+}
+
+// capDoc is what a function needs, as the reference says it.
+func capDoc(c string) string {
+	if c == CapTarget {
+		return "capability by target"
+	}
+	return "`" + c + "`"
 }
 
 // Reference is the reference as Go, for help pages to show (zz_reference.go): each namespace's calls and docs.

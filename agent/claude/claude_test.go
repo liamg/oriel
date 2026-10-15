@@ -96,6 +96,13 @@ func TestArgs(t *testing.T) {
 	if a[len(a)-2] != "--" {
 		t.Errorf("a prompt like a flag = %q", a)
 	}
+	// AGENTS.md: "Claude is driven through its interactive CLI in a PTY with hooks, never claude -p". A utility
+	// agent (the assistant) is no exception: its turn goes in as the skill's prompt.
+	a, _ = args(agent.StartSpec{Model: "haiku", Pack: agent.Pack{Skill: "assistant"}, Prompt: "what needs me?"}, "/m", "s1", "")
+	want = []string{"--plugin-dir", "/m", "--permission-mode", "default", "--model", "haiku", "--session-id", "s1", "/oriel:assistant what needs me?"}
+	if !slices.Equal(a, want) || slices.Contains(a, "-p") || slices.Contains(a, "--print") {
+		t.Errorf("the assistant = %q\nwant %q", a, want)
+	}
 }
 
 func TestWriteMod(t *testing.T) {

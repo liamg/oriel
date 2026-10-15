@@ -11,7 +11,7 @@ import (
 	"github.com/liamg/oriel/script"
 )
 
-//oriel:api name=diagnostics
+//oriel:api name=diagnostics cap=ui
 type Diagnostics struct{ a *APIs }
 
 //oriel:api doc="Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config."
@@ -53,7 +53,7 @@ func (f disposeFunc) Dispose() { f() }
 // cmpOr is the first of ss that isn't empty.
 func cmpOr(ss ...string) string { return cmp.Or(ss...) }
 
-//oriel:api name=coverage
+//oriel:api name=coverage cap=ui
 type Coverage struct{ a *APIs }
 
 //oriel:api doc="Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config."

@@ -58,7 +58,7 @@ How everything hangs together, built and tested before features land on it.
 | ED-3 | Visual and visual-block, `:s`/`:g` with vim regex, ranges | 09 | vim | P2 | ED-2 | the same, plus the regex conformance suite |
 | ED-4 | Macros, folds, splits, buffers, quickfix | – | vim | P2–P4 | ED-2, FW-9 | the same |
 | ED-5 | `plain` engine and the `input.Engine` interface (emacs as a plugin) | – | input | P3 | ED-2, FW-3 | an engine swap at runtime per buffer; a sample emacs plugin passes its tests |
-| ED-6 | Tree-sitter highlighting, folds, outline, code units | 01, 25 | syntax | P2 | ED-1 | highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1 ms in a 600-line file, and no keystroke waits on a parse at any size |
+| ED-6 | Tree-sitter highlighting, folds, outline, code units | 01, 25 | syntax | P2 | ED-1 | highlight snapshots for Go/TS/Py/Rust/Lua/MD; edits re-parse incrementally in under 1.5 ms in a 600-line file, and no keystroke waits on a parse at any size |
 | ED-7 | Decorations between lines: threads, explain cards, diffs, virtual text | 01 | ui, editor | P3 | ED-1, FW-6 | the layout engine places blocks at anchors and survives edits above them |
 | ED-8 | Multi-cursor and LSP rename preview | 09 | edit | P4 | ED-7, LS-1 | – |
 | ED-9 | `.editorconfig`, the IDE-relevant `.gitattributes` (eol, binary, encoding, generated), and opt-in modelines as a buffer-scoped settings layer | 19 | registry, edit | P3 | ED-2, SH-12 | EditorConfig core test suite passes; `.gitattributes` fixtures match `git check-attr`; properties show with their source on the settings page; edits re-apply live |
@@ -132,7 +132,7 @@ How everything hangs together, built and tested before features land on it.
 | RV-5 | Explain by code unit, `[`/`]` widen and narrow, Explain this on a selection | 25 | explain, syntax | P6 | ED-6, AI-2 | units are correct for fixtures in 4 languages; cache invalidated only by edits inside the unit |
 | RV-6 | Explain this change walkthrough | 07 | explain | P6 | RV-5 | a fake explainer's JSON steps over two projects walk with ←/→ and the step chips, the notes' lines lit and the rest dimmed; Ask about this step and Comment on L<n> make a request and a thread; an edit inside a step's lines (buffer or disk) discards it, one outside keeps it; the view matches 07 |
 | RV-7 | Verify & raise quiz | 13 | agent | P6 | AI-5 | the quiz is optional and a raise never waits for it; answers are graded, a partial one points at a file; the gate shows the result; off per repo |
-| RV-8 | Tours: reader, 7 kinds, export | 14 | tour | P7 | RV-5 | crit's tour features ported |
+| RV-8 | Tours: reader, 7 kinds, export | 14 | tour | P7 | RV-5 | crit's tour features ported: quotes read from the pinned worktrees (or a revision) with marks and pinned notes, examples, runs, annotated screenshots; the reader walks them as they land, asks about a step, and exports a self-contained HTML (or markdown) file; the 7 kinds are picked at launch and steer the agent through `tour_kind`; the view matches 14 |
 
 ## Platform
 
@@ -146,10 +146,10 @@ How everything hangs together, built and tested before features land on it.
 | PL-2 | Process plugins with an OS sandbox; WASM plugins; `oriel build --with` | 16 | ext | P7 | PL-1 | the capability guard rejects undeclared calls; Landlock/sandbox-exec profiles applied |
 | PL-3 | All-or-nothing install consent, update capability diff; grammar packs (CI-built, checksummed) | 29 | ext | P7 | PL-2, ED-11 | – |
 | PL-4 | Comms assistant drawer (utility session, no `-p`) | 11 | assistant | P7 | AI-2 | – |
-| PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | integ/agentbus | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus |
+| PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | external plugin `github.com/liamg/oriel-agentbus` (`liamg/agentbus`) | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus. Built; it lives in `github.com/liamg/oriel-agentbus`, outside Oriel, and its tests drive it through `app/plugintest` |
 | PL-8 | Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source | 04, 02 | integ/linear (plugin) | P7 | PL-2, SE-1 | `crit-reference.md` → Linear, against a recorded Linear API |
 | PL-9 | Slack PTAL via webhook | 18 | integ/slack (plugin) | P7 | PL-2 | – |
-| PL-10 | Calendar: next meeting indicator (iCal URL or macOS EventKit) | 10 | integ/ical (plugin) | P7 | PL-2 | – |
+| PL-10 | ~~Calendar: next meeting indicator (iCal URL or macOS EventKit)~~ dropped: not carried over (crit-reference.md) | 10 | – | P7 | PL-2 | – |
 | PL-11 | Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation | – | prompts, voice | P7 | AI-2 | `crit-reference.md` → Prompts and Voice |
 | PL-6 | Self-update for the app and workers (self-signed, ed25519) | – | update | P7 | AI-1 | an update round-trips on macOS and Linux with rollback on a failed health check |
 | PL-19 | Package format: Lua entry point, `oriel.process` / `oriel.wasm` / `oriel.asset`, `[contributes]` assets, `oriel plugin pack` | – | ext, script | P8 | PL-2, PL-3 | a data-only theme plugin, a Lua plugin and a Lua + process plugin each load from a directory; `pack` rejects an undeclared capability and an oversize plugin |

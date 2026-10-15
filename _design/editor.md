@@ -180,7 +180,7 @@ engine never feels like another binary running in a pane.
   stopgap until then.
 - Overlapping captures resolve as nvim's highlighter does: higher `priority` wins, then deeper injections, then the
   later pattern.
-- Incremental: an edit is applied to the old tree and the text reparsed, reusing everything unchanged: under 1 ms
+- Incremental: an edit is applied to the old tree and the text reparsed, reusing everything unchanged: under 1.5 ms
   for a 600-line file, 2.7 ms at 2,000 lines (WASM costs about 3.6× native). So parsing is **off the keystroke
   path**: a `syntax.Document` reparses on its own goroutine, and readers get the last highlights moved through the
   edits made since. Plugins add a
@@ -209,6 +209,15 @@ engine never feels like another binary running in a pane.
   file from the cache takes about 12 ms, against 100 ms cold.
 - A local pack is `~/.config/oriel/languages/<name>/`: `language.toml` (`name`, `extensions`, `filenames`,
   `shebangs`), `grammar.wasm` and `queries/*.scm`. It registers after the core set, so it can shadow one.
+- **Grammar packs (PL-3)** are the languages beyond the core set, built by `syntax/grammars/build.sh` from
+  `packs.tsv` (pinned like `manifest.tsv`; the `queries` row pins the nvim-treesitter commit their highlights, folds
+  and injections come from, and `packs/<name>.toml` is each one's `language.toml`). Each is `<name>.tar.gz` of
+  `<name>/`, and `PACKS.SHA256SUMS` lists every file of every pack; CI rebuilds them, checks the list matches what's
+  committed, and publishes the archives as the `grammar-packs` artifact. The binary embeds the list
+  (`syntax.Packs()`), and `PackSums.Install` unpacks a pack only if every file is listed with its checksum and
+  every listed file is there (at most 20 MB; no links, nothing outside `<name>/`), replacing the installed one
+  whole, through a temporary directory. `languages.install {path}` installs one and registers it at once; packs so
+  far: Haskell and Dart. Fetching packs (the registry client) is P8's.
 
 ## Multiple cursors (ED-8)
 

@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/tools/perf"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -200,6 +201,7 @@ func BenchmarkEditorTyping(b *testing.B) {
 
 // PLAN.md's budget: keypress to frame under 8 ms while typing in a 10,000-line Go file.
 func TestEditorTypingBudget(t *testing.T) {
+	perf.Timed(t)
 	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
 		t.Skip("timing needs a build without the race detector or coverage")
 	}

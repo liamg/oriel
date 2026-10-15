@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"strings"
 
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
@@ -21,7 +20,10 @@ const (
 const statusH = 26
 
 // statusLine is the status line along the bottom (01-ide): its segments, left and right.
-type statusLine struct{ disposer }
+type statusLine struct {
+	disposer
+	sh *shell
+}
 
 func (s *statusLine) Manifest() ext.Manifest { return ext.Manifest{ID: "statusline"} }
 
@@ -32,27 +34,9 @@ func (s *statusLine) Activate(_ context.Context, h ext.Host) error {
 			c.Row("statusline", ui.Style{W: ui.Flex(1), H: ui.Px(statusH), Gap: 16, Cross: ui.Center, Fill: th.C(tStatusBg), Stroke: th.C(theme.Line),
 				Scale: partScale(h.Options(), "ui.statusline.font_size"),
 				Role:  ui.RoleStatus, Label: "Status line"}, func(c *ui.Ctx) {
-				ids := h.Views()
-				segment := func(id string) {
-					v, ok := h.ViewByID(id)
-					if !ok {
-						return
-					}
-					if n := v.Build(vc); n != nil {
-						c.Row(id, ui.Style{H: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) { c.Node(n) })
-					}
-				}
-				for _, id := range ids {
-					if strings.HasPrefix(id, StatusLeft) {
-						segment(id)
-					}
-				}
+				s.sh.slot(c, h, registry.SlotStatusLeft, vc)
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				for _, id := range ids {
-					if strings.HasPrefix(id, StatusRight) {
-						segment(id)
-					}
-				}
+				s.sh.slot(c, h, registry.SlotStatusRight, vc)
 				c.Box("end", ui.Style{W: ui.Px(0)}, nil)
 			})
 		}}

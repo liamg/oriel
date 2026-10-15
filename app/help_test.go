@@ -146,7 +146,7 @@ func TestHelpShowsTheLuaAPI(t *testing.T) {
 	s.frame()
 	s.frame()
 	text := strings.ReplaceAll(s.frameText(), "\n", " ")
-	for _, want := range []string{"oriel.agent.tool(spec)", "Offer a tool to the session's agent", "oriel.keymap"} {
+	for _, want := range []string{"oriel.agent.tool(spec)", "Offer a tool to agents over MCP", "oriel.keymap"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the API page lacks %q:\n%s", want, s.frameText())
 		}

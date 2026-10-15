@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"bytes"
@@ -17,6 +17,8 @@ func TestRun(t *testing.T) {
 		{[]string{"dev"}, 1, ""},
 		{[]string{"dev", "nope"}, 1, ""},
 		{[]string{"nope"}, 2, ""},
+		{[]string{"build"}, 1, ""},
+		{[]string{"build", "--with", "example.com/p"}, 1, ""}, // a dev build needs --oriel
 	}
 	for _, tt := range tests {
 		var out, errOut bytes.Buffer

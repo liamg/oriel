@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/liamg/oriel/registry"
@@ -125,6 +126,64 @@ func (a *APIs) options(vm *script.VM) {
 			return o.SetFrom(sp.Name, l, at, cv, args.Where())
 		})
 	}
+	vm.Callable("option", func(c *script.Args) ([]any, error) {
+		if err := a.check("ui"); err != nil {
+			return nil, err
+		}
+		return nil, a.declare(c.Table(0), c.Where())
+	})
+}
+
+var optionTypes = map[string]registry.OptionType{"bool": registry.Bool, "int": registry.Int, "float": registry.Float, "string": registry.String,
+	"enum": registry.Enum, "duration": registry.Duration, "key": registry.Key, "list": registry.List, "map": registry.Map}
+
+// zeros are each type's default when a declaration gives none.
+var zeros = map[registry.OptionType]any{registry.Bool: false, registry.Int: 0, registry.Float: 0.0, registry.String: "", registry.Duration: time.Duration(0),
+	registry.Key: "", registry.List: []string{}, registry.Map: map[string]string{}}
+
+// declare registers an option from oriel.option{ name, type, default, help, values, min, max, section, on_change } (catalog.md,
+// "Plugin options"). A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.
+func (a *APIs) declare(t script.Table, where string) error {
+	name := str(t, "name")
+	typ, ok := optionTypes[cmpOr(str(t, "type"), "string")]
+	if name == "" || !ok {
+		return fmt.Errorf("an option needs a name and a type (bool, int, float, string, enum, duration, key, list or map): %v", t)
+	}
+	sp := registry.OptionSpec{Name: name, Section: str(t, "section"), Type: typ, Values: strs(t["values"]), Help: str(t, "help"),
+		Min: num(t["min"]), Max: num(t["max"]), Scopes: registry.ScopeUser, Source: where}
+	if !a.Plugin.Trusted() {
+		_, plugin, _ := strings.Cut(a.Plugin.ID, "/")
+		if !strings.HasPrefix(name, "plugin."+plugin+".") {
+			return fmt.Errorf("%s: a plugin's options are named plugin.%s.<option>", name, plugin)
+		}
+		sp.Section = cmpOr(sp.Section, plugin)
+	}
+	sp.Default = zeros[typ]
+	if typ == registry.Enum && len(sp.Values) > 0 {
+		sp.Default = sp.Values[0]
+	}
+	if v, ok := t["default"]; ok && v != nil {
+		cv, err := optionValue(sp, v)
+		if err != nil {
+			return err
+		}
+		sp.Default = cv
+	}
+	if err := sp.Check(sp.Default); err != nil {
+		return fmt.Errorf("%s: default: %w", name, err)
+	}
+	a.own(a.Host.Option(sp))
+	if fn, ok := t["on_change"].(*script.Fn); ok {
+		o := a.Host.Options()
+		a.own(disposeFunc(o.Watch(name, func() {
+			a.Host.Do(func() {
+				v, _, _ := o.Get(name, registry.At{})
+				a.callback(script.Table{"on_change": fn}, "on_change", v)
+			})
+		})))
+	}
+	a.ApplyPending()
+	return nil
 }
 
 // ApplyPending sets the values Lua gave options that have been registered since, and reports how many are still
@@ -177,6 +236,9 @@ func optionValue(sp registry.OptionSpec, v any) (any, error) {
 			return time.Duration(d * float64(time.Millisecond)), nil
 		}
 	case registry.List:
+		if t, ok := v.(script.Table); ok && len(t) == 0 {
+			return []string{}, nil // {} reads as an empty table, not a list
+		}
 		if l, ok := settingsfile.Strings(v); ok {
 			return l, nil
 		}

@@ -34,16 +34,9 @@ func (s *errScene) jobs() *jobsExt {
 // until draws frames, running what the loop was handed, until ok.
 func (s *errScene) until(t *testing.T, what string, ok func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(15 * time.Second)
-	for !ok() {
-		if time.Now().After(deadline) {
-			t.Fatalf("waiting for %s:\n%s", what, s.frameText())
-		}
-		s.frame()
-		s.sh.runTodo()
-		time.Sleep(5 * time.Millisecond)
+	if !s.Until(15*time.Second, ok) {
+		t.Fatalf("waiting for %s:\n%s", what, s.frameText())
 	}
-	s.frame()
 }
 
 // within is the first node named label under the first node named in: a run row's button, say.
@@ -321,7 +314,7 @@ func newJobsRig(t *testing.T) *jobsRig {
 	}
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
-	w, err := worker.New(worker.Options{Home: t.TempDir(), Name: "mbp", Providers: providers, Exec: nopExec{}, Now: r.clock.now,
+	w, err := worker.New(worker.Options{Home: t.TempDir(), Name: "mbp", Providers: providers, Exec: nopExec{}, Load: steadyLoad, Now: r.clock.now,
 		Sandbox: fakeSandboxes{}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)

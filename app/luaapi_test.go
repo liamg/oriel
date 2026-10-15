@@ -207,11 +207,11 @@ end)
 	}
 }
 
-// A decoration provider in Lua marks lines in the editor: a sign and virtual text, 1-based.
+// A decoration provider in Lua marks lines in the editor: a sign and virtual text, 1-based, and a chip.
 func TestLuaDecorations(t *testing.T) {
 	s := luaScene(t, `local L = oriel
 L.decor.provider("todo", function(buf, top, bottom)
-  return { { line = 2, sign = "T", hl = "warn", text = "todo here" }, "not a table" }
+  return { { line = 2, sign = "T", hl = "warn", text = "todo here" }, { line = 3, text = "x = 1", bg = "bg.raised" }, "not a table" }
 end)
 `)
 	file := filepath.Join(t.TempDir(), "a.txt")
@@ -222,6 +222,9 @@ end)
 	ds := s.editor().decorations(mustPane(t, s), 0, 3)
 	if len(ds[1]) != 2 || ds[1][0].Text != "T" || ds[1][1].Text != "todo here" {
 		t.Errorf("line 2's decorations: %+v", ds)
+	}
+	if len(ds[2]) != 1 || ds[2][0].Text != "x = 1" || ds[2][0].Bg != "bg.raised" {
+		t.Errorf("line 3's chip: %+v", ds[2])
 	}
 	if !strings.Contains(s.frameText(), "todo here") {
 		t.Errorf("not drawn:\n%s", s.frameText())
@@ -236,7 +239,12 @@ L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function(
 end)
 L.status.rule(function(sess) if sess.red then return "error" end end)
 `)
-	indicator := s.reg.Contributions("hud.indicator")[0].(registry.Indicator)
+	var indicator registry.Indicator
+	for _, ind := range registry.Indicators(s.reg, registry.SlotTitleBar) {
+		if ind.Name == "deploys" {
+			indicator = ind
+		}
+	}
 	if indicator.Slot != "titlebar.right" || indicator.Every.Seconds() != 30 {
 		t.Errorf("indicator %+v", indicator)
 	}

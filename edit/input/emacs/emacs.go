@@ -45,7 +45,7 @@ type state struct {
 }
 
 func (s *state) Mode() input.Mode {
-	return input.Mode{Label: "EMACS", Shape: input.Bar, KeyMode: "emacs"}
+	return input.Mode{Label: "EMACS", Shape: input.Bar, KeyMode: "emacs", Text: true}
 }
 
 func (s *state) Pending() string { return s.prefix }

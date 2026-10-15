@@ -137,6 +137,7 @@ type Style struct {
 	Tooltip     string    // shown after the pointer rests on it
 	Help        string    // its help page and anchor, "hud/usage#weekly-window" (help.md)
 	KeyMode     string    // when focused, keymaps in this mode come first and unmapped keys come to it
+	Text        bool      // typed characters insert text here, so dictation may type into it (UI.TakesText)
 	Trap        bool      // keeps keyboard focus inside while it's up, as a modal does
 	Drag        *DragData // dragging it carries this, to a node that takes its kind (dnd.go)
 	Drop        []string  // the kinds of drag it takes; one let go over it is its Interaction's Dropped

@@ -9,10 +9,10 @@ import (
 	"github.com/liamg/oriel/script"
 )
 
-//oriel:api name=thread
+//oriel:api name=thread cap=agent.prompt
 type Thread struct{ a *APIs }
 
-//oriel:api doc="The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent) }." returns=table
+//oriel:api doc="The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent) }." returns=table cap=agent.read
 func (t Thread) List() []any {
 	st := t.a.Host.State()
 	se, ok := st.Session(st.Focus)

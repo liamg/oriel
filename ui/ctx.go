@@ -260,6 +260,18 @@ func (noClipboard) ReadClipboard() (string, bool) { return "", false }
 // Now is the UI's clock.
 func (c *Ctx) Now() time.Time { return c.u.now() }
 
+// Held is the modifier keys held now.
+func (c *Ctx) Held() render.Mods { return c.u.in.held }
+
+// HeldAlone is the modifier keys held with no key or button pressed since they went down, and since when: ⌥ held
+// on its own pulls the HUD down. It's 0 while none are, or they're part of a chord.
+func (c *Ctx) HeldAlone() (render.Mods, time.Time) {
+	if c.u.in.chorded || c.u.in.held == 0 {
+		return 0, time.Time{}
+	}
+	return c.u.in.held, c.u.in.heldAt
+}
+
 // WakeAt asks for a frame at t, for a widget waiting on time (a toast's timeout).
 func (c *Ctx) WakeAt(t time.Time) {
 	if c.u.wake.IsZero() || t.Before(c.u.wake) {

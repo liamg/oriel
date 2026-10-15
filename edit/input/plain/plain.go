@@ -26,7 +26,7 @@ type state struct {
 }
 
 func (s *state) Mode() input.Mode {
-	return input.Mode{Label: "EDIT", Shape: input.Bar, KeyMode: "plain"}
+	return input.Mode{Label: "EDIT", Shape: input.Bar, KeyMode: "plain", Text: true}
 }
 
 func (s *state) Pending() string { return "" }

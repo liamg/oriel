@@ -8,13 +8,17 @@
 ---@field decor oriel.decor
 ---@field diagnostics oriel.diagnostics
 ---@field editor oriel.editor
+---@field http oriel.http
 ---@field hud oriel.hud
+---@field inbox oriel.inbox
 ---@field keymap oriel.keymap
 ---@field language oriel.language
 ---@field ledger oriel.ledger
 ---@field lsp oriel.lsp
 ---@field menu oriel.menu
 ---@field overview oriel.overview
+---@field picker oriel.picker
+---@field process oriel.process
 ---@field rail oriel.rail
 ---@field regex oriel.regex
 ---@field session oriel.session
@@ -22,11 +26,14 @@
 ---@field start oriel.start
 ---@field status oriel.status
 ---@field thread oriel.thread
+---@field ticket oriel.ticket
 ---@field ui oriel.ui
 ---@field view oriel.view
----@field option table<string, any> Your settings, by name or vim alias, as init.lua sets them
+---@field wasm oriel.wasm
+---@field option table<string, any>|fun(spec: table) Your settings, by name or vim alias, as init.lua sets them; called with { name, type, default, help, values, min, max, section, on_change = fn(value) }, it declares one (a plugin's are named plugin.<name>.…)
 ---@field buffer_option table<string, any> The current buffer's settings
 ---@field session_option table<string, any> The current session's settings
+---@field platform string The OS Oriel runs on: darwin or linux
 ---@field api { version: string }
 oriel = {}
 
@@ -41,10 +48,10 @@ function oriel.cmd(id, args) end
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default).
+--- Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
 ---@param argv string|string[]
 ---@param opts? table
----@return string
+---@return string?
 function oriel.exec(argv, opts) end
 
 --- Decode JSON text to a table, or encode a value as JSON text.
@@ -62,13 +69,17 @@ function oriel.log(msg, lvl) end
 ---@param lvl string
 function oriel.notify(msg, lvl) end
 
+--- The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown.
+---@return number
+function oriel.now() end
+
 --- Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc.
 ---@param event string
 ---@param opts? any
 ---@param fn any
 function oriel.on(event, opts, fn) end
 
---- A file's contents, or nil and why not. ~ is your home.
+--- A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read.
 ---@param path string
 ---@return string?,string?
 function oriel.read(path) end
@@ -84,6 +95,11 @@ oriel.agent = {}
 ---@param spec table
 function oriel.agent.explainer(spec) end
 
+--- Asks a session's agent a side question, answered outside its conversation with no tools (the first forker's answer: the agent's is a fork of it): req { session (the session in front if omitted, else the newest open one), prompt, timeout (seconds, 180 by default) }. fn(answer, err, label) gets it on the loop; label says who answered: 'claude · fork, no tools'.
+---@param req table
+---@param fn function
+function oriel.agent.fork(req, fn) end
+
 --- A forker, which answers side questions for a session (btw, explain, the verify quiz): { name, order (lower answers first; the agent's is 10), label, run = fn(req) returning the answer }. req has session and prompt. It only answers, with no tools.
 ---@param spec table
 function oriel.agent.forker(spec) end
@@ -93,7 +109,7 @@ function oriel.agent.forker(spec) end
 ---@param spec table
 function oriel.agent.pack(name, spec) end
 
---- Offer a tool to the session's agent over MCP: { name, desc, params = { name = 'string' }, run = fn(p) }.
+--- Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' }, confirm = fn(p), async, adds }. for names the agents it's for (session kinds, or the assistant); none is every session's. confirm makes it an act that waits for the user's yes: it returns { title, lead, rows = { { key, value, url } }, note, line }, and run's table { result, line, detail } says what was done. async gives run a second argument, done(result, err), to answer later: after a process or HTTP call. adds names another tool whose answer this one's result joins, under its reads, instead of being a tool of its own.
 ---@param spec table
 function oriel.agent.tool(spec) end
 
@@ -116,7 +132,7 @@ function oriel.coverage.set(owner, file, hits) end
 ---@class oriel.decor
 oriel.decor = {}
 
---- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text } (1-based lines).
+--- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour).
 ---@param name string
 ---@param fn function
 function oriel.decor.provider(name, fn) end
@@ -149,14 +165,42 @@ function oriel.editor.present(name) end
 ---@param spec table
 function oriel.editor.presenter(spec) end
 
+---@class oriel.http
+oriel.http = {}
+
+--- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another ('none': as it is), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
+---@param spec table
+---@param fn function
+function oriel.http.request(spec, fn) end
+
 ---@class oriel.hud
 oriel.hud = {}
 
---- A HUD indicator: opts { slot, every = '30s' }, fn() returns oriel.ui nodes.
+--- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), hud.today, or mission (mission control's strip). opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 ---@param name string
 ---@param opts table
----@param fn function
-function oriel.hud.indicator(name, opts, fn) end
+---@param build any
+function oriel.hud.indicator(name, opts, build) end
+
+--- Builds the indicator name again now.
+---@param name string
+function oriel.hud.refresh(name) end
+
+--- Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes.
+---@param name string
+---@param nodes any
+function oriel.hud.set(name, nodes) end
+
+---@class oriel.inbox
+oriel.inbox = {}
+
+--- Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } } }. An action runs its command or its function and answers the card: it goes to the inbox's history.
+---@param card table
+function oriel.inbox.add(card) end
+
+--- Takes the inbox card id away: answered, it stays in the inbox's history.
+---@param id string
+function oriel.inbox.remove(id) end
 
 ---@class oriel.keymap
 oriel.keymap = {}
@@ -209,6 +253,22 @@ oriel.overview = {}
 ---@param spec table
 function oriel.overview.add(spec) end
 
+---@class oriel.picker
+oriel.picker = {}
+
+--- A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item) }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background. preview returns oriel.ui nodes.
+---@param spec table
+function oriel.picker.source(spec) end
+
+---@class oriel.process
+oriel.process = {}
+
+--- Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop().
+---@param path string
+---@param opts? table
+---@return table
+function oriel.process.spawn(path, opts) end
+
 ---@class oriel.rail
 oriel.rail = {}
 
@@ -259,6 +319,10 @@ function oriel.session.kind(name, spec) end
 ---@class oriel.ship
 oriel.ship = {}
 
+--- Add a button to a raised pull request, beside Ready for review and Open on GitHub (the Ship page and the Pull request panel): { name, label = 'text' or fn(pr), command, args, run = fn(pr), order (50 by default), help }. pr is { session, project, repo (owner/name), number, title, url, state (open or closed), draft, merged }; a label function returning nil leaves the button off that PR, and runs as the page is drawn, so keep it quick. A click runs command with args and pr's fields, or run(pr).
+---@param spec table
+function oriel.ship.action(spec) end
+
 --- Add a \
 ---@param spec table
 function oriel.ship.gate(spec) end
@@ -303,6 +367,13 @@ function oriel.thread.reply(id, body, opts) end
 ---@param status? string
 function oriel.thread.resolve(id, status) end
 
+---@class oriel.ticket
+oriel.ticket = {}
+
+--- A ticket tracker (Linear, Jira…): Oriel builds the rest on it, the omnibox's tickets (!), the launcher's card, the moves as a session starts from a ticket and its PR is seen and merged, and the assistant's my_tickets. { name, title, order (50), keys = a regular expression its keys match ('^[A-Z][A-Z0-9]*-[0-9]+$'; every key when nil), secret = the secret it needs set first, which Oriel asks for while it isn't, and the functions, each answering with done(value) or done(nil, err), now or later: lookup = fn(key, done) with a ticket; assigned = fn(done) with the open tickets assigned to you, in any order; start = fn(key, done), review = fn(key, done) and done = fn(key, done) moving it into progress, into review (its PR is open) or to done (the session's PRs are merged), with { moved, state }; link = fn(key, pr, done) attaching pr = { number, url, repo, title } }. Only lookup is required. A ticket is { key, title, url, state, stage ('todo', 'started' or 'review'), project, priority (1 the most urgent; 0 none), priority_label, blocked, blocked_by = { keys }, pr = { number, url, repo }, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt.
+---@param spec table
+function oriel.ticket.tracker(spec) end
+
 ---@class oriel.ui
 oriel.ui = {}
 
@@ -326,7 +397,7 @@ function oriel.ui.column(children) end
 ---@return table
 function oriel.ui.date_picker(spec) end
 
---- A indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error) }.
+--- An indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error), dot (a status dot before the value: ok, warn, error, accent, dim), id }.
 ---@param spec table
 ---@return table
 function oriel.ui.indicator(spec) end
@@ -345,6 +416,11 @@ function oriel.ui.list(items, row) end
 --- The editor's mode, as the built-in status line shows it.
 ---@return table
 function oriel.ui.mode() end
+
+--- A dial (widget.Ring): { value (0 to 1 of the ring lit, clockwise from twelve o'clock), label (in the middle: '18m'), color (a theme token or #rrggbb; the accent by default), size (px across, 44 by default), name (what it measures, read out with the label), id }.
+---@param spec table
+---@return table
+function oriel.ui.ring(spec) end
 
 --- A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).
 ---@param children any
@@ -366,7 +442,7 @@ function oriel.ui.spacer() end
 ---@return table
 function oriel.ui.state(key, initial) end
 
---- Text, in a style: dim, faint, accent, warn, error or ok.
+--- Text, in a style: dim, faint, accent, warn, error, ok, or title (larger and bold: a heading, a meeting's name).
 ---@param s any
 ---@param style? string
 ---@return table
@@ -384,4 +460,13 @@ oriel.view = {}
 ---@param id string
 ---@param fn function
 function oriel.view.override(id, fn) end
+
+---@class oriel.wasm
+oriel.wasm = {}
+
+--- Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON (the ABI in plugins.md), mod:exports(), mod:close().
+---@param path string
+---@param opts? table
+---@return table
+function oriel.wasm.load(path, opts) end
 

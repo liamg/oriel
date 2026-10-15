@@ -1,0 +1,715 @@
+package app
+
+import (
+	"cmp"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/liamg/oriel/assistant"
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/worker"
+)
+
+// The assistant's own tools (crit-reference.md, "Assistant"), offered only to it. Reading tools read; the ones that
+// show something just do it; those that start, stop or run an agent are acts, which wait for the user's yes on a
+// card. Whatever can be undone says how. my_tickets, mission_control and request_review are the tools of the
+// features that own that data (tickets, mission control, agentbus): they offer them for "assistant" the same way.
+
+var replySchema = json.RawMessage(`{"type":"object","properties":{` +
+	`"text":{"type":"string","description":"your answer, in markdown"},` +
+	`"expects_reply":{"type":"boolean","description":"true only when you asked them a direct question"},` +
+	`"items":{"type":"array","description":"things they can act on, in order: they pick one with a number key","items":{"type":"object","properties":{` +
+	`"title":{"type":"string","description":"a few words: the session's name, review #4410"},` +
+	`"text":{"type":"string","description":"what it's about, in a line"},` +
+	`"meta":{"type":"string","description":"how long ago, and where: 22m · devbox"},` +
+	`"session":{"type":"string","description":"a session's id: picking it opens it"},` +
+	`"url":{"type":"string","description":"a link: picking it opens it"}},"required":["title"]}}},"required":["text"]}`)
+
+func (x *assistantExt) tools() []registry.AgentTool {
+	id := map[string]string{"id": "string"}
+	return []registry.AgentTool{
+		{Name: "reply", InputSchema: replySchema, Run: x.toolReply,
+			Desc: "Your answer for this turn, said aloud in a spoken turn. Call exactly once, last. items are rows the user can pick."},
+		{Name: "sessions", ReadOnly: true, Reads: "sessions", Run: x.toolSessions,
+			Desc: "Every open Oriel session: id, name, kind, status (needs_you, permission, working, quiet…) and why, worker, repos, branch, prompt, ticket, pull request, unfinished tasks and what it asks."},
+		{Name: "past_sessions", ReadOnly: true, Reads: "sessions", Run: x.toolPastSessions,
+			Desc: "Finished sessions that can be resumed, newest first: id, name, kind, repos, worker, ticket, pull request."},
+		{Name: "open_session", Params: id, Run: x.toolOpenSession, Desc: "Bring a session to the front. id is from sessions."},
+		{Name: "rename_session", Params: map[string]string{"id": "string", "name": "string"}, Run: x.toolRenameSession,
+			Desc: "Give a session a new name. id is from sessions."},
+		{Name: "resume_session", Params: id, Run: x.toolResumeSession,
+			Desc: "Bring a finished or stopped session back and open it. id is from past_sessions."},
+		{Name: "new_session", Params: map[string]string{"kind": "string?", "prompt": "string?", "repos": "string?"}, Run: x.toolNewSession,
+			Desc: "Open the new-session launcher for the user to finish, with a kind (plan, work, review, tour, job), prompt and repos (names, comma separated) filled in."},
+		{Name: "start_session", Params: map[string]string{"repo": "string", "prompt": "string", "kind": "string?", "worker": "string?"},
+			Confirm: x.confirmStart, Run: x.toolStart,
+			Desc: "Start a session: kind plan (the default) drafts a plan first, work starts at once on a fresh branch, tour explains how something works. repo is a name from repos. Check sessions first: when one is already on that ticket or work, open it instead."},
+		{Name: "stop_session", Params: id, Confirm: x.confirmStop, Run: x.toolStop,
+			Desc: "Stop a session's agent, only when the user asked to. Its workspace stays and it can be resumed. id is from sessions."},
+		{Name: "review_pr", Params: map[string]string{"pr": "string"}, Confirm: x.confirmReview, Run: x.toolReview,
+			Desc: "Start a review session on any pull request, by URL or owner/name#N: one the user was sent, not only those on their lists. Check sessions first: when one is already on that PR, open it instead."},
+		{Name: "jobs", ReadOnly: true, Reads: "jobs", Run: x.toolJobs,
+			Desc: "The user's saved jobs (prompts run on demand or on a schedule): name, title, worker, schedule, and how the last run went."},
+		{Name: "run_job", Params: map[string]string{"name": "string", "worker": "string?"}, Confirm: x.confirmRunJob, Run: x.toolRunJob,
+			Desc: "Run a saved job now, in a fresh workspace. name and worker are from jobs."},
+		{Name: "repos", ReadOnly: true, Reads: "repos", Run: x.toolRepos,
+			Desc: "The repositories registered on each worker: name, path, remote and worker."},
+		{Name: "my_prs", ReadOnly: true, Reads: "github", Run: x.toolPRs(gh.SearchMine),
+			Desc: "The user's open pull requests across GitHub: number, title, repo, url, draft, when last updated, and the session on it if there is one."},
+		{Name: "review_requests", ReadOnly: true, Reads: "github", Run: x.toolPRs(gh.SearchReview),
+			Desc: "Pull requests on GitHub waiting on the user's review: number, title, repo, url, author, when last updated, and the session on it if there is one."},
+		{Name: "usage", ReadOnly: true, Reads: "usage", Run: x.toolUsage,
+			Desc: "The user's plan usage for each agent and account: how much of each limit window is used and when it resets."},
+		{Name: "workers", ReadOnly: true, Reads: "workers", Run: x.toolWorkers,
+			Desc: "The machines sessions run on: connected or not, CPU and memory in use, and their sessions."},
+		{Name: "settings", Params: map[string]string{"section": "string?", "query": "string?"}, Run: x.toolSettings,
+			Desc: "Open Oriel's settings page, at a section (editor, git, voice, assistant…) or searching for a setting."},
+	}
+}
+
+func pstr(p map[string]any, k string) string {
+	switch v := p[k].(type) {
+	case string:
+		return strings.TrimSpace(v)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	}
+	return ""
+}
+
+// run runs a command on the app's loop, as a key would.
+func (x *assistantExt) run(ctx context.Context, id string, args registry.Args) error {
+	var err error
+	if lerr := onLoop(ctx, x.h, func() { err = x.h.Run(ctx, id, args) }); lerr != nil {
+		return lerr
+	}
+	return err
+}
+
+func (x *assistantExt) toolReply(_ registry.Ctx, p map[string]any) (any, error) {
+	text := pstr(p, "text")
+	if text == "" {
+		return nil, errors.New("the reply is empty")
+	}
+	var items []assistant.Item
+	if raw, err := json.Marshal(p["items"]); err == nil {
+		_ = json.Unmarshal(raw, &items)
+	}
+	st := x.h.State()
+	for i, it := range items {
+		if se, ok := st.Session(core.SessionID(it.Session)); ok {
+			items[i].Status = string(se.Status())
+		}
+	}
+	expects, _ := p["expects_reply"].(bool)
+	x.conv.Reply(text, expects, items)
+	return "shown", nil
+}
+
+// sessionLine is a session as the assistant reads it.
+type sessionLine struct {
+	ID      string   `json:"id"`
+	Name    string   `json:"name,omitempty"`
+	Kind    string   `json:"kind"`
+	Status  string   `json:"status"`
+	Why     string   `json:"why,omitempty"`
+	Worker  string   `json:"worker,omitempty"`
+	Repos   []string `json:"repos,omitempty"`
+	Branch  string   `json:"branch,omitempty"`
+	Prompt  string   `json:"prompt,omitempty"`
+	Ticket  string   `json:"ticket,omitempty"`
+	PR      string   `json:"pr,omitempty"`
+	Tasks   []string `json:"tasks,omitempty"`
+	Asks    []string `json:"asks,omitempty"`
+	Stopped bool     `json:"stopped,omitempty"`
+	Since   string   `json:"since,omitempty"` // a finished one's
+}
+
+func (x *assistantExt) workerName(st core.State, id core.WorkerID) string {
+	for _, w := range st.Workers {
+		if w.ID == cmp.Or(id, core.LocalWorker) {
+			return w.Title()
+		}
+	}
+	return string(id)
+}
+
+func clipLine(s string, n int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) > n {
+		return s[:n] + "…"
+	}
+	return s
+}
+
+func (x *assistantExt) lineOf(st core.State, s core.SessionState, now time.Time) sessionLine {
+	l := sessionLine{ID: string(s.ID), Name: s.Name, Kind: string(s.Kind), Status: string(s.Status), Why: why(s, now),
+		Worker: x.workerName(st, s.Worker), Branch: s.Branch, Prompt: clipLine(s.Prompt, 200), Ticket: s.Ticket, PR: s.PR,
+		Stopped: s.Agent.Provider != "" && !s.Agent.Running}
+	for _, p := range s.Projects {
+		l.Repos = append(l.Repos, p.Name)
+	}
+	for _, t := range s.Tasks {
+		if t.Status != core.TaskCompleted {
+			l.Tasks = append(l.Tasks, t.Subject)
+		}
+	}
+	for _, a := range s.Asks {
+		l.Asks = append(l.Asks, strings.TrimSpace(a.Tool+" "+firstLine(cmpOr(a.Summary, a.Host))))
+	}
+	return l
+}
+
+func (x *assistantExt) toolSessions(registry.Ctx, map[string]any) (any, error) {
+	st := x.h.State()
+	now := time.Now()
+	var ss []core.SessionState
+	for _, s := range st.Sessions {
+		if !s.Archived {
+			ss = append(ss, s)
+		}
+	}
+	slices.SortStableFunc(ss, func(a, b core.SessionState) int {
+		return cmp.Or(slices.Index(statusOrder, a.Status)-slices.Index(statusOrder, b.Status), a.Created.Compare(b.Created))
+	})
+	out := []sessionLine{}
+	for _, s := range ss {
+		out = append(out, x.lineOf(st, s, now))
+	}
+	return out, nil
+}
+
+// finished says whether a session can be resumed: archived, or its agent stopped.
+func finished(s core.SessionState) bool {
+	return s.Archived || s.Agent.Provider != "" && !s.Agent.Running
+}
+
+func (x *assistantExt) toolPastSessions(registry.Ctx, map[string]any) (any, error) {
+	st := x.h.State()
+	var ss []core.SessionState
+	for _, s := range st.Sessions {
+		if finished(s) {
+			ss = append(ss, s)
+		}
+	}
+	at := func(s core.SessionState) time.Time {
+		if !s.Agent.StoppedAt.IsZero() {
+			return s.Agent.StoppedAt
+		}
+		return s.Created
+	}
+	slices.SortStableFunc(ss, func(a, b core.SessionState) int { return at(b).Compare(at(a)) })
+	out := []sessionLine{}
+	for _, s := range ss[:min(len(ss), 30)] {
+		l := x.lineOf(st, s, time.Now())
+		l.Status, l.Why, l.Since = "", "", at(s).Format(time.RFC3339)
+		out = append(out, l)
+	}
+	return out, nil
+}
+
+// session finds a session by its id, or by its name.
+func (x *assistantExt) session(ref string) (core.SessionState, error) {
+	st := x.h.State()
+	if s, ok := st.Session(core.SessionID(ref)); ok {
+		return s.Snapshot(), nil
+	}
+	var hits []core.SessionState
+	for _, s := range st.Sessions {
+		if ref != "" && strings.EqualFold(s.Name, ref) {
+			hits = append(hits, s)
+		}
+	}
+	switch len(hits) {
+	case 0:
+		return core.SessionState{}, fmt.Errorf("no session %q: read sessions again", ref)
+	case 1:
+		return hits[0], nil
+	}
+	return core.SessionState{}, fmt.Errorf("more than one session is called %q: ask which, by id", ref)
+}
+
+func label(s core.SessionState) string { return cmpOr(s.Name, string(s.ID)) }
+
+func (x *assistantExt) toolOpenSession(ctx registry.Ctx, p map[string]any) (any, error) {
+	s, err := x.session(pstr(p, "id"))
+	if err != nil {
+		return nil, err
+	}
+	if err := x.run(ctx, "session.open", registry.Args{"id": string(s.ID)}); err != nil {
+		return nil, err
+	}
+	_ = onLoop(ctx, x.h, func() { x.setOpen(false) })
+	return registry.Acted{Result: "opened", Line: "opened " + label(s)}, nil
+}
+
+func (x *assistantExt) toolRenameSession(ctx registry.Ctx, p map[string]any) (any, error) {
+	s, err := x.session(pstr(p, "id"))
+	if err != nil {
+		return nil, err
+	}
+	name := pstr(p, "name")
+	if name == "" {
+		return nil, errors.New("what should it be called?")
+	}
+	if err := x.run(ctx, "session.rename", registry.Args{"id": string(s.ID), "name": name}); err != nil {
+		return nil, err
+	}
+	old := s.Name
+	return registry.Acted{Result: "renamed", Line: "renamed " + label(s) + " to " + name, Undo: func(ctx registry.Ctx) error {
+		return x.run(ctx, "session.rename", registry.Args{"id": string(s.ID), "name": old})
+	}}, nil
+}
+
+func (x *assistantExt) toolResumeSession(ctx registry.Ctx, p map[string]any) (any, error) {
+	s, err := x.session(pstr(p, "id"))
+	if err != nil {
+		return nil, err
+	}
+	if !finished(s) {
+		return nil, fmt.Errorf("%s is running already: open_session opens it", label(s))
+	}
+	if err := x.run(ctx, "session.open", registry.Args{"id": string(s.ID)}); err != nil {
+		return nil, err
+	}
+	_ = onLoop(ctx, x.h, func() { x.setOpen(false) })
+	return registry.Acted{Result: "resumed; it opens when it's up", Line: "resumed " + label(s), Undo: func(ctx registry.Ctx) error {
+		return x.run(ctx, "session.stop", registry.Args{"id": string(s.ID)})
+	}}, nil
+}
+
+func (x *assistantExt) toolNewSession(ctx registry.Ctx, p map[string]any) (any, error) {
+	args := registry.Args{}
+	for _, k := range []string{"kind", "prompt", "repos"} {
+		if v := pstr(p, k); v != "" {
+			args[k] = v
+		}
+	}
+	if err := x.run(ctx, "session.new", args); err != nil {
+		return nil, err
+	}
+	_ = onLoop(ctx, x.h, func() { x.setOpen(false) })
+	return registry.Acted{Result: "the launcher is open for the user to finish", Line: "opened the launcher"}, nil
+}
+
+func (x *assistantExt) toolSettings(ctx registry.Ctx, p map[string]any) (any, error) {
+	if err := x.run(ctx, "settings.open", registry.Args{"section": pstr(p, "section"), "query": pstr(p, "query")}); err != nil {
+		return nil, err
+	}
+	_ = onLoop(ctx, x.h, func() { x.setOpen(false) })
+	return registry.Acted{Result: "opened", Line: "opened settings"}, nil
+}
+
+// repoLine is a registered repo as the assistant reads it.
+type repoLine struct {
+	ID       core.RepoID   `json:"id"`
+	Name     string        `json:"name"`
+	Path     string        `json:"path"`
+	Remote   string        `json:"remote,omitempty"`
+	Worker   string        `json:"worker"`
+	WorkerID core.WorkerID `json:"-"`
+}
+
+func (x *assistantExt) repos(ctx context.Context) []repoLine {
+	st := x.h.State()
+	var out []repoLine
+	for wid, c := range x.sh.sessions.byWorker() {
+		rs, err := c.Repos(ctx)
+		if err != nil {
+			continue
+		}
+		for _, r := range rs {
+			out = append(out, repoLine{ID: r.ID, Name: filepath.Base(r.Path), Path: r.Path, Remote: r.Remote, Worker: x.workerName(st, wid), WorkerID: wid})
+		}
+	}
+	slices.SortFunc(out, func(a, b repoLine) int {
+		return cmp.Or(strings.Compare(a.Name, b.Name), strings.Compare(a.Worker, b.Worker))
+	})
+	return out
+}
+
+func (x *assistantExt) toolRepos(ctx registry.Ctx, _ map[string]any) (any, error) {
+	out := x.repos(ctx)
+	if out == nil {
+		out = []repoLine{}
+	}
+	return out, nil
+}
+
+// repo finds a registered repo by name or path, on a worker if one is named.
+func (x *assistantExt) repo(ctx context.Context, name, worker string) (repoLine, error) {
+	var hits []repoLine
+	for _, r := range x.repos(ctx) {
+		if (strings.EqualFold(r.Name, name) || r.Path == name) && (worker == "" || strings.EqualFold(r.Worker, worker) || string(r.WorkerID) == worker) {
+			hits = append(hits, r)
+		}
+	}
+	switch len(hits) {
+	case 0:
+		return repoLine{}, fmt.Errorf("no repository called %s: read repos", name)
+	case 1:
+		return hits[0], nil
+	}
+	var where []string
+	for _, h := range hits {
+		where = append(where, h.Path+" on "+h.Worker)
+	}
+	return repoLine{}, fmt.Errorf("%s is ambiguous: %s. Ask which", name, strings.Join(where, "; "))
+}
+
+var startNotes = map[string]string{
+	"plan": "A plan session drafts a plan first; no work starts until you press Start work.",
+	"work": "A work session starts at once, on a fresh branch from the updated base.",
+	"tour": "A tour reads the code in a pinned, read-only worktree and writes a guided tour.",
+}
+
+type startReq struct {
+	kind, prompt string
+	repo         repoLine
+}
+
+func (x *assistantExt) startReq(ctx context.Context, p map[string]any) (startReq, error) {
+	r := startReq{kind: cmpOr(pstr(p, "kind"), "plan"), prompt: pstr(p, "prompt")}
+	if startNotes[r.kind] == "" {
+		return r, fmt.Errorf("kind is plan, work or tour, not %q", r.kind)
+	}
+	if r.prompt == "" {
+		return r, errors.New("what should the session do? prompt is empty")
+	}
+	var err error
+	r.repo, err = x.repo(ctx, pstr(p, "repo"), pstr(p, "worker"))
+	return r, err
+}
+
+func (x *assistantExt) confirmStart(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+	r, err := x.startReq(ctx, p)
+	if err != nil {
+		return registry.Confirmation{}, err
+	}
+	return registry.Confirmation{Title: "Start a " + r.kind + " session",
+		Lead:  fmt.Sprintf("The assistant wants to start a %s session in %s on %s.", r.kind, r.repo.Name, r.repo.Worker),
+		Rows:  []registry.ConfirmRow{{Key: "repository", Value: r.repo.Name + " — " + r.repo.Path}, {Key: "worker", Value: r.repo.Worker}},
+		Block: &registry.ConfirmBlock{Label: "The prompt the agent will be given", Text: r.prompt}, Note: startNotes[r.kind],
+		Line: "start a " + r.kind + " session in " + r.repo.Name}, nil
+}
+
+func (x *assistantExt) toolStart(ctx registry.Ctx, p map[string]any) (any, error) {
+	r, err := x.startReq(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	id, err := x.sh.sessions.start(ctx, registry.Args{"kind": r.kind, "prompt": r.prompt, "repos": []string{string(r.repo.ID)},
+		"worker": string(r.repo.WorkerID), "background": true})
+	if err != nil {
+		return nil, err
+	}
+	return x.started(id, "started a "+r.kind+" session in "+r.repo.Name, r.repo.Worker+" · "+r.kind), nil
+}
+
+// started is a session an act made: it opens from the card, and undoing it deletes it.
+func (x *assistantExt) started(id core.SessionID, line, detail string) registry.Acted {
+	return registry.Acted{Result: map[string]any{"session": id, "done": line}, Line: line, Detail: detail,
+		Open: "session.open", OpenArgs: registry.Args{"id": string(id)},
+		Undo: func(ctx registry.Ctx) error { return x.run(ctx, "session.delete", registry.Args{"id": string(id)}) }}
+}
+
+func (x *assistantExt) confirmStop(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+	s, err := x.session(pstr(p, "id"))
+	if err != nil {
+		return registry.Confirmation{}, err
+	}
+	l := x.lineOf(x.h.State(), s, time.Now())
+	c := registry.Confirmation{Title: "Stop a session", Lead: "The assistant wants to stop this session and its agent:",
+		Rows: []registry.ConfirmRow{{Key: "session", Value: label(s)}, {Key: "repositories", Value: strings.Join(l.Repos, ", ")},
+			{Key: "worker", Value: l.Worker}, {Key: "ticket", Value: s.Ticket}},
+		Block: &registry.ConfirmBlock{Label: "Its unfinished tasks", Items: l.Tasks},
+		Note:  "Its workspace stays, and the session can be resumed later.", Line: "stop " + label(s)}
+	if len(l.Tasks) == 0 {
+		c.Block.Text = "none"
+	}
+	return c, nil
+}
+
+func (x *assistantExt) toolStop(ctx registry.Ctx, p map[string]any) (any, error) {
+	s, err := x.session(pstr(p, "id"))
+	if err != nil {
+		return nil, err
+	}
+	if err := x.run(ctx, "session.stop", registry.Args{"id": string(s.ID)}); err != nil {
+		return nil, err
+	}
+	return registry.Acted{Result: "stopped", Line: "stopped " + label(s), Undo: func(ctx registry.Ctx) error {
+		c, err := x.sh.sessions.client(s.ID)
+		if err != nil {
+			return err
+		}
+		return c.Resume(ctx, s.ID)
+	}}, nil
+}
+
+// pullRequest is a PR named by URL or owner/name#N, as its URL and owner/name#N.
+func pullRequest(ref string) (url, key string, err error) {
+	r, n, err := gh.ParsePR(ref)
+	if err != nil {
+		return "", "", err
+	}
+	return gh.PRURL(r, n), fmt.Sprintf("%s#%d", r, n), nil
+}
+
+// reviewOf is the open session already on a pull request.
+func (x *assistantExt) reviewOf(url string) (core.SessionState, bool) {
+	for _, s := range x.h.State().Sessions {
+		if !s.Archived && strings.EqualFold(strings.TrimSuffix(s.PR, "/"), url) {
+			return s, true
+		}
+	}
+	return core.SessionState{}, false
+}
+
+func (x *assistantExt) confirmReview(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+	url, key, err := pullRequest(pstr(p, "pr"))
+	if err != nil {
+		return registry.Confirmation{}, err
+	}
+	repo, num, _ := strings.Cut(key, "#")
+	c := registry.Confirmation{Title: "Start a review", Lead: "The assistant wants to start a review of this pull request:",
+		Rows: []registry.ConfirmRow{{Key: "repository", Value: repo}, {Key: "number", Value: "#" + num}, {Key: "link", Value: url, URL: url}},
+		Note: "A review session checks out its head read-only, and an AI review starts as it opens.", Line: "start a review of " + key}
+	if s, ok := x.reviewOf(url); ok {
+		c.Title, c.Lead = "Open the review", "This pull request has a session already ("+label(s)+"): the assistant wants to open it."
+		c.Note, c.Line = "", "open the review of "+key
+	}
+	return c, nil
+}
+
+func (x *assistantExt) toolReview(ctx registry.Ctx, p map[string]any) (any, error) {
+	url, key, err := pullRequest(pstr(p, "pr"))
+	if err != nil {
+		return nil, err
+	}
+	if s, ok := x.reviewOf(url); ok {
+		if err := x.run(ctx, "session.open", registry.Args{"id": string(s.ID)}); err != nil {
+			return nil, err
+		}
+		return registry.Acted{Result: "it had a session already: opened " + label(s), Line: "opened the review of " + key}, nil
+	}
+	id, err := x.sh.sessions.start(ctx, registry.Args{"kind": string(core.KindReview), "pr": url, "background": true})
+	if err != nil {
+		return nil, err
+	}
+	return x.started(id, "started a review of "+key, "review · AI review starting"), nil
+}
+
+// jobLine is a saved job as the assistant reads it.
+type jobLine struct {
+	Name     string `json:"name"`
+	Title    string `json:"title,omitempty"`
+	Worker   string `json:"worker"`
+	Schedule string `json:"schedule,omitempty"`
+	Running  bool   `json:"running,omitempty"`
+	LastRun  string `json:"lastRun,omitempty"` // done, blocked, stopped
+	Summary  string `json:"summary,omitempty"`
+	LastAt   string `json:"lastAt,omitempty"`
+
+	worker core.WorkerID
+	at     time.Time
+}
+
+func (x *assistantExt) jobs(ctx context.Context) []jobLine {
+	st := x.h.State()
+	var out []jobLine
+	for wid, c := range x.sh.sessions.byWorker() {
+		js, err := c.Jobs(ctx)
+		if err != nil {
+			continue
+		}
+		for _, j := range js {
+			l := jobLine{Name: j.Name, Title: j.Title, Worker: x.workerName(st, wid), worker: wid}
+			if j.Schedule.Every != "" {
+				l.Schedule = j.Schedule.String()
+			}
+			for _, s := range st.Sessions {
+				if s.Job != j.Name || s.Worker != wid && !(s.Worker == "" && wid == core.LocalWorker) || s.Created.Before(l.at) {
+					continue
+				}
+				r := worker.RunOf(s)
+				l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == worker.RunRunning
+				l.LastAt = s.Created.Format(time.RFC3339)
+			}
+			out = append(out, l)
+		}
+	}
+	slices.SortFunc(out, func(a, b jobLine) int {
+		return cmp.Or(strings.Compare(a.Name, b.Name), strings.Compare(a.Worker, b.Worker))
+	})
+	return out
+}
+
+func (x *assistantExt) toolJobs(ctx registry.Ctx, _ map[string]any) (any, error) {
+	out := x.jobs(ctx)
+	if out == nil {
+		out = []jobLine{}
+	}
+	return out, nil
+}
+
+func (x *assistantExt) job(ctx context.Context, p map[string]any) (jobLine, error) {
+	name, wk := pstr(p, "name"), pstr(p, "worker")
+	var hits []jobLine
+	for _, j := range x.jobs(ctx) {
+		if (j.Name == name || strings.EqualFold(j.Title, name)) && (wk == "" || strings.EqualFold(j.Worker, wk) || string(j.worker) == wk) {
+			hits = append(hits, j)
+		}
+	}
+	switch len(hits) {
+	case 0:
+		return jobLine{}, fmt.Errorf("no job called %s: read jobs", name)
+	case 1:
+		return hits[0], nil
+	}
+	return jobLine{}, fmt.Errorf("%s is on more than one worker: say which", name)
+}
+
+func (x *assistantExt) confirmRunJob(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+	j, err := x.job(ctx, p)
+	if err != nil {
+		return registry.Confirmation{}, err
+	}
+	title := cmpOr(j.Title, j.Name)
+	last := "never run"
+	if j.LastRun != "" {
+		last = j.LastRun + ", " + ago(time.Now(), j.at) + " ago"
+	}
+	c := registry.Confirmation{Title: "Run a job", Lead: "The assistant wants to run this saved job now, in a fresh workspace:",
+		Rows: []registry.ConfirmRow{{Key: "job", Value: title}, {Key: "worker", Value: j.Worker}, {Key: "last run", Value: last}},
+		Line: "run " + title}
+	if j.Summary != "" {
+		c.Block = &registry.ConfirmBlock{Label: "What the last run said", Text: j.Summary}
+	}
+	if j.Running {
+		c.Note = "A run of this job is still going."
+	}
+	return c, nil
+}
+
+func (x *assistantExt) toolRunJob(ctx registry.Ctx, p map[string]any) (any, error) {
+	j, err := x.job(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	c, err := x.sh.sessions.worker(j.worker)
+	if err != nil {
+		return nil, err
+	}
+	id, err := c.RunJob(ctx, j.Name)
+	if err != nil {
+		return nil, err
+	}
+	return x.started(id, "running "+cmpOr(j.Title, j.Name), j.Worker+" · job"), nil
+}
+
+// prLine is a pull request as the assistant reads it.
+type prLine struct {
+	Number  int    `json:"number"`
+	Title   string `json:"title"`
+	Repo    string `json:"repo"`
+	URL     string `json:"url"`
+	Author  string `json:"author,omitempty"`
+	Draft   bool   `json:"draft,omitempty"`
+	Updated string `json:"updated,omitempty"`
+	Session string `json:"session,omitempty"` // the open session on it
+}
+
+func (x *assistantExt) toolPRs(query string) func(registry.Ctx, map[string]any) (any, error) {
+	return func(ctx registry.Ctx, _ map[string]any) (any, error) {
+		c, err := x.sh.sessions.worker("")
+		if err != nil {
+			return nil, err
+		}
+		found, err := c.SearchPRs(ctx, query)
+		if err != nil {
+			return nil, err
+		}
+		out := []prLine{}
+		for _, f := range found {
+			l := prLine{Number: f.Number, Title: f.Title, Repo: f.Repo, URL: f.URL, Author: f.Author, Draft: f.Draft}
+			if !f.Updated.IsZero() {
+				l.Updated = f.Updated.Format(time.RFC3339)
+			}
+			if s, ok := x.reviewOf(f.URL); ok {
+				l.Session = string(s.ID)
+			}
+			out = append(out, l)
+		}
+		return out, nil
+	}
+}
+
+func (x *assistantExt) toolUsage(registry.Ctx, map[string]any) (any, error) {
+	type window struct {
+		Name   string `json:"name"`
+		Used   string `json:"used"`
+		Resets string `json:"resets,omitempty"`
+	}
+	type plan struct {
+		Provider string   `json:"provider"`
+		Account  string   `json:"account,omitempty"`
+		Plan     string   `json:"plan,omitempty"`
+		Windows  []window `json:"windows"`
+		Read     string   `json:"read,omitempty"`
+	}
+	out := []plan{}
+	for _, u := range x.h.State().Usage {
+		p := plan{Provider: u.Provider, Account: u.AccountName, Plan: u.Plan, Windows: []window{}}
+		if !u.Sampled.IsZero() {
+			p.Read = u.Sampled.Format(time.RFC3339)
+		}
+		for _, w := range u.Windows {
+			ww := window{Name: w.Name, Used: fmt.Sprintf("%.0f%%", w.Used*100)}
+			if !w.Resets.IsZero() {
+				ww.Resets = w.Resets.Format(time.RFC3339)
+			}
+			p.Windows = append(p.Windows, ww)
+		}
+		out = append(out, p)
+	}
+	return map[string]any{"now": time.Now().Format(time.RFC3339), "plans": out}, nil
+}
+
+func (x *assistantExt) toolWorkers(registry.Ctx, map[string]any) (any, error) {
+	type row struct {
+		Name      string `json:"name"`
+		Connected bool   `json:"connected"`
+		OS        string `json:"os,omitempty"`
+		CPU       string `json:"cpu,omitempty"`
+		Memory    string `json:"memory,omitempty"`
+		Sessions  int    `json:"sessions"`
+	}
+	st := x.h.State()
+	out := []row{}
+	for _, w := range st.Workers {
+		r := row{Name: w.Title(), Connected: w.Connected, OS: w.OS}
+		if w.Cores > 0 {
+			r.CPU = fmt.Sprintf("%.0f%% of %d cores", w.CPU*100, w.Cores)
+		}
+		if w.MemTotal > 0 {
+			r.Memory = fmt.Sprintf("%.0f%% of %d GB", float64(w.Mem)*100/float64(w.MemTotal), w.MemTotal>>30)
+		}
+		for _, s := range st.Sessions {
+			if !s.Archived && cmp.Or(s.Worker, core.LocalWorker) == w.ID {
+				r.Sessions++
+			}
+		}
+		out = append(out, r)
+	}
+	return out, nil
+}

@@ -124,6 +124,109 @@ below.
 
 ![08-debug](mockups/08-debug.png)
 
+### As built (DB-1)
+
+- **`dap`** (it imports only `lsp/jsonrpc`, for the base protocol's framing, which is LSP's). `dap.Start(ctx, spec,
+  LaunchConfig, Options)` launches an adapter and runs the launch sequence (`overview.md`): initialize, launch or
+  attach, then on `initialized` the breakpoints (`Options.Breakpoints`, by path), the exception filters (the
+  adapter's defaults unless `Options.Exceptions`) and `configurationDone`; it returns once the launch has succeeded.
+  `*dap.Client` implements `dap.Session` (the seam DB-3's agent tools wrap): `SetBreakpoints` (a file's whole set,
+  each with `Condition`, `HitCondition`, `LogMessage`; what the adapter made of them is `Breakpoints(path)`),
+  `SetExceptionBreakpoints`, `Threads`, `Stack`, `Scopes`, `Variables`, `Evaluate(frame, expr, context)` (watch, repl,
+  hover), `Continue`, `Step(over | in | out)`, `Pause`, `Stop` (a disconnect, which ends a launched debuggee). Lines are
+  0-based as everywhere in Oriel; the client speaks 1-based to the adapter. Events (`Stopped`, `Continued`, `Output`,
+  `Exited`, `Terminated`, `ThreadChanged`, `BreakpointChanged`, `ProcessStarted`) go to `Options.OnEvent` in order, on
+  the client's own goroutine. Reverse requests (runInTerminal, startDebugging) are refused: the client doesn't offer
+  them. An error response is a `*dap.Error` with the body's formatted message.
+- **`dap.AdapterSpec`** (name, type, languages, `Cmd`, `Transport`, `Probe`, default `Launch`/`Attach` arguments,
+  `Infer`, `Order`, `Connect`) is registered as `registry.DebugAdapter` (kind `dap.adapter`), the same fields as
+  `lsp.ServerSpec`/`registry.LSPServer`. Transports: `stdio`; `tcp` (the adapter listens on `${port}`); `reverse`
+  (Oriel listens on `${addr}` and the adapter connects, as `dlv dap --client-addr` does). Built in: delve
+  (`outputMode: remote`, so the program's output is in the console) and debugpy (`python3 -m debugpy.adapter`, found
+  by probing `import debugpy`; `console: internalConsole`). js-debug and codelldb aren't built in yet: a plugin
+  registers them the same way.
+- **Launch configs**: `.oriel/debug.toml`'s `[[debug]]` tables (`name`, `type`, `request`, `program`, `args`, `cwd`,
+  `env`, `pid`; any other key is the adapter's own, `dap.ConfigFromMap`). With none, the adapter's `Infer` for the
+  current file: delve debugs a `package main` file's program, otherwise its package's tests; debugpy the file.
+- **The app** (`app/debug*.go`, a built-in): breakpoints by file, kept per work directory with the watches;
+  `registry.GutterAction` (new: a click on an editor's line numbers runs a command with `{file, line}`) toggles one;
+  `:Breakpoint {condition}`, `:Logpoint {message}`, `debug.breakpoint.set {file, line, condition, hit, log}`. Signs: ●,
+  ○ conditional or hit-conditional, ◆ logpoint, grey when the adapter couldn't place it; their condition and hit
+  count after the line. Paused, the frame's line has ➜ and a tint, and the editor goes to it. Commands `debug.start
+  {config}` (`:Debug`), `debug.continue` (F5, which starts when nothing runs; `:Dc`), `debug.pause` (F6),
+  `debug.step.over|into|out` (F10, F11, ⇧F11), `debug.stop` (⇧F5), `debug.restart` (⇧⌘F5), `debug.frame {index}`,
+  `debug.frame.up|down` (`]f`/`[f`), `debug.watch.add` (`:Watch`), `debug.eval` (`:Eval`), `debug.open`; `␣db`,
+  `␣dc`, `␣do`, `␣dx`. The Debug view (the rail's Debug, a bottom dock): a toolbar, the call stack and breakpoints,
+  variables (a structured one's children fetched when opened) and watches, and the debug console with a REPL. The
+  status line shows `● paused main.go:12 · 3 breakpoints · 1 conditional`. Hook events `DebugStopped {adapter,
+  reason, thread, file, line}` and `DebugEnded {adapter, exit_code}`. Each adapter's stderr is a `logs.Lines` with
+  the source `dap:<name>`.
+- **Tests.** `spec/dap` vendors the specification, the overview and the JSON schema. `dap/daptest` records a session
+  through a proxy (machine paths written as `${root}`, `${goroot}`, `${home}`; telemetry left out) and replays it
+  strictly (`Fake`) or in any order (`Responder`, for the app). `TestSession` replays one script (a plain breakpoint,
+  step in, over and out, breakpoints set again with a hit condition, a condition and a logpoint, the stack, scopes,
+  variables and a child, watch and REPL evaluation in two frames, an evaluation error, running to the end) against
+  delve 1.27.2 and debugpy 1.8.22; `TestLive` runs it against whichever is installed (CI installs both) and `-record`
+  re-records; `TestRequestsMatchSchema` holds every recorded request to the schema. The app's `TestDebugSession`
+  drives the same through the gutter, keys and the panel on its own recording (`-dap-record`).
+- Not yet: breakpoints that move with edits (they stay on their line numbers), function, exception-option and data
+  breakpoints in the UI, setting a variable, threads other than the stopped one in the panel, attach by picking a
+  process, a Lua binding for `dap.adapter`, running adapters on the worker, the agent's tools and the frame thread
+  (DB-3).
+
+### As built (DB-2)
+
+- **Inline values.** Paused, the selected frame's arguments and locals (every scope but expensive ones, registers
+  and globals; names that can't be written in code, like delve's `~r0`, left out) show as chips after the lines that
+  name them: each variable once, where it's first named, from the first line of the innermost function, method or
+  closure around the frame's line (the language's `units` query) down to that line. A line names a variable where the
+  syntax highlights it as `@variable` or `@variable.parameter`; with no grammar, any identifier not after a `.`, over
+  the 30 lines above. A value is cut at 40 characters (the Variables panel has it whole). Selecting another frame
+  shows its values; they go when the debuggee runs on or the session ends. `debug.inline_values` (true) turns them
+  off. They're `VirtualText` decorations with the new `Decoration.Bg`, which draws virtual text as a chip (tokens
+  `debug.value`, `debug.value.bg`; Lua's `decor.provider` takes `bg`).
+- **Debug a single test case.** `testrun.Cmd` has a `Launch` (name, type, program, args, cwd, env, the adapter's
+  own keys) for `ModeDebug`. Go: delve's `mode: test` on the item's package, the binary given
+  `-test.v -test.run <pattern>` (the run pattern, so a subtest or table row runs alone), named `go test -run
+  TestX/row`; more than one package is `ErrUnsupported`. pytest: debugpy with `module: pytest` and the node ids
+  (`python` set when the project has a venv), named `pytest <file>::<id>`. vitest, jest and cargo still return
+  `ErrUnsupported`. The app's `debug.test {key, file, line}` (registered by the tests built-in, available while
+  `debug.launch` is) finds the item, asks its adapter, sets a breakpoint at `line` unless one is there, and runs the
+  new `debug.launch` (a launch config given whole). Entry points: ⇧-click on any ▶ in the gutter (`Decoration.Modified`,
+  a sign's commands by modifier), `␣td` (nearest) and the failure block's **debug this case**, which stops at the
+  assertion. A debug launch isn't a test run: nothing is added to the Tests panel's history.
+- **Tests.** `TestGoDebugLaunch`/`TestPytestDebugLaunch` check the launches. The app's `TestDebugTestCase` (⇧ on a Go
+  table row's ▶, inline values in two frames, the option, the `debug` snapshot against 08-debug),
+  `TestDebugFailingCase` (a real `go test`, then the failure block's button) and `TestDebugPytestCase` (⇧ on a
+  `pytest.param` id) replay recordings of delve 1.27.2 and debugpy 1.8.22 with pytest 9.1.1 (`-dap-record` re-records;
+  pytest's own frames in the Python one are written as `/usr/lib/python3/dist-packages`).
+- Not yet: the frame thread of 08 (see DB-3); values that changed since the last stop marked; inline values from an
+  LSP server's `textDocument/inlineValue`; debugging vitest, jest and cargo tests.
+
+### As built (DB-3)
+
+- **The agent's tools** (`app/debugtools.go`) are ordinary `registry.AgentTool`s over the running session, offered
+  to every session's agent (none to utility agents): `debug_stack` (running or paused and why, the paused thread's
+  frames by index, the breakpoints), `debug_frame {frame}` (a frame's scopes and variables, a structured one with
+  its `ref`), `debug_variables {ref}`, `debug_eval {expression, frame}` (the REPL context; it shows in the debug
+  console as `agent › …`), `debug_breakpoint {file, line, condition, hit, log, remove}` (a file relative to the
+  project debugged), `debug_continue` and `debug_step {kind: over | into | out}`, which wait (up to 30s) for the next
+  stop or the end and say where. Frames are the selected one by default; lines are 1-based for the agent.
+- **The scope** (`DebugScope` above) is four options, `debug.agent.read | eval | breakpoints | step`, each `allow`,
+  `ask` or `off` (defaults allow, allow, ask, off, as in 08), at the user layer only, so a project's file can't
+  grant its own agent more. The Debug panel shows them as chips under the console ("AGENT'S DEBUGGER ACCESS"); a
+  click moves one on, and `debug.agent.access {action, level}` sets one. Each tool's `Confirm` reads its action's
+  level when it's called: `allow` returns `registry.Granted` (no card), `off` refuses with a reason naming the
+  option, and `ask` describes the call. A session's agent is owned by its worker (`registry.WithOwner` in the
+  app's tool calls), which puts the ask through the permission layers (`worker.MethodAsk`, `agents.md`): the
+  session's rules, the `Permission` hooks, then a permission card; "Always" adds the tool's name as a rule.
+- **Tests.** `TestAgentDebuggerTools` drives a work session's fake agent against `testdata/dap/agent.jsonl` (dlv
+  1.27.2, `-dap-record` re-records): stack, frame and eval allowed; step and continue refused while off without
+  moving the debuggee; a breakpoint set after the user allows its card; stepping granted by clicking its chip, then
+  a step into and two continues to the agent's conditional breakpoint; eval refused once turned off.
+- Not yet: the frame thread of 08 ("Ask Claude about this frame", the right-hand panel): the access chips are in the
+  Debug panel instead. Lua agent tools can't ask first (no `confirm` in `oriel.agent.tool`).
+
 ## Running tests
 
 ![36-tests](mockups/36-tests.png)
@@ -222,7 +325,8 @@ results, failure block and tests panel are still to build on it.
   - Rust: `cargo nextest run --message-format libtest-json-plus` (the `-plus` form names each suite's target) with
     `NEXTEST_EXPERIMENTAL_LIBTEST_JSON=1` and an `-E` filterset when nextest is installed, otherwise `cargo test` with
     stderr merged (`Cmd.Stderr`) for its "Running …" lines.
-  - Debug: Go returns `dlv test`, pytest `debugpy`; DB-2 wires them to DAP. The others return `ErrUnsupported`.
+  - Debug: Go returns `dlv test`, pytest `debugpy`, each with its DAP launch in `Cmd.Launch` ("As built (DB-2)"). The
+    others return `ErrUnsupported`.
 - **Events.** `Started`, `Output` (a raw line), `Passed`, `Failed{Failure{Reason, Message, Want, Got, Loc}}`, `Skipped`
   (with the reason), `BuildFailed`, each with `Elapsed`; an empty `Test` is the package's own. Reasons: assert, panic,
   timeout, build, error (pytest setup or teardown). Want and got are best effort from Go's `got X, want Y` shapes,
@@ -256,7 +360,7 @@ results, failure block and tests panel are still to build on it.
   (the differing middle marked), output and four actions.
 - Explain and fix go through extension points so they work the moment the agent exists: explain asks the first
   `registry.Explainer` (it answers text only, so explaining can't change a file), fix runs `agent.fix` (TR-6), debug runs
-  `debug.test` (DB-2); each is dimmed while nothing provides it.
+  `debug.test` (DB-2, "As built (DB-2)"); each is dimmed while nothing provides it.
 - Run scopes: `␣tt` nearest, `␣tf` file, `␣tp` package, `␣ta` all, `␣tF` failed, `␣tl` last, `]t` next failure; the
   file buttons over the editor are `registry.EditorAction`s. A run's `Change` is `testrun.Fingerprint` (paths, sizes,
   times), so flaky detection needs no git. History (20 runs) persists per work dir in the state directory.
@@ -265,7 +369,7 @@ results, failure block and tests panel are still to build on it.
   The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.indicator` for the HUD (SH-8).
 - Watch (TR-4) is a `BufWritePost` hook running `Set.Affected`; coverage (`␣tc`) marks covered and uncovered lines with
   gutter edges until toggled off.
-- Not yet: running in the worker's sandbox (AI-1), debug (DB-2).
+- Not yet: running in the worker's sandbox (AI-1).
 
 ### As built (TR-5)
 
@@ -353,7 +457,7 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 - **Parse throughput.** On a mixed stream (logs, test results, coloured `ls`, `git log`, compiler errors; 14 escapes
   per KB) the native core parses about 260 MB/s, within the 200 MB/s budget. Wasm parses about 80 MB/s, about 3.5×
   slower: Ghostty's SIMD paths are C++ (highway, simdutf) and off for freestanding wasm, and wazero checks bounds
-  explicitly. That is still far above what a PTY delivers. `TestParseThroughput` holds native to the budget and
+  explicitly. That is still far above what a PTY delivers. `TestParseThroughputBudget` holds native to the budget and
   wasm to 40 MB/s.
 - `term/ghostty` hides the two behind a `machine` (the shim's calls and its in/out buffers): `cgo.go` calls the
   shim compiled with the library (`shim_native.c`), `wazero.go` the wasm module. `Options.Backend` picks one; the

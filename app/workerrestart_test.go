@@ -31,7 +31,7 @@ func oldBuildWorker(t *testing.T) (r *running, lw *localWorker, turn *agenttest.
 		cfg.LocalWorker = func(context.Context) (worker.Client, error) {
 			providers := &agent.Providers{}
 			providers.Register(lw.fake)
-			w, err := worker.New(worker.Options{Home: home, Providers: providers, Exec: nopExec{},
+			w, err := worker.New(worker.Options{Home: home, Providers: providers, Exec: nopExec{}, Load: steadyLoad,
 				Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 			if err != nil {
 				return worker.Client{}, err

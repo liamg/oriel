@@ -2,7 +2,7 @@
 id: PL-2
 title: "Process plugins with an OS sandbox; WASM plugins; oriel build --with"
 phase: P7
-status: todo
+status: review
 area: Platform
 module: ext
 depends_on: [PL-1]

@@ -235,6 +235,46 @@ func TestPermissionLayers(t *testing.T) {
 	}
 }
 
+// DB-3: the app asks for a session's agent (a tool that asks first) through the same layers: a card, "always" making
+// a rule that answers the next at once, and a deny's note.
+func TestTheAppAsksThroughTheSessionsLayers(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Debug it")
+	a.WaitSent(t)
+	ask := core.Ask{Tool: "mcp__oriel__debug_step", Summary: "step over in main.main", Rule: "mcp__oriel__debug_step"}
+	got := make(chan Verdict, 1)
+	go func() {
+		v, err := r.w.Ask(context.Background(), AskReq{Session: id, Ask: ask})
+		if err != nil {
+			t.Error(err)
+		}
+		got <- v
+	}()
+	se := r.eventually(id, "the card", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	if k := se.Asks[0].Kind; k != core.AskPermission || se.Asks[0].Summary != ask.Summary {
+		t.Fatalf("ask = %+v", se.Asks[0])
+	}
+	r.w.Answer(AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "always"})
+	if v := <-got; v.Decision != "allow" || v.By != "the user" {
+		t.Errorf("always = %+v", v)
+	}
+	if v, err := r.w.Ask(context.Background(), AskReq{Session: id, Ask: ask}); err != nil || v.Decision != "allow" || !strings.HasPrefix(v.By, "rule ") {
+		t.Errorf("after always: %+v %v", v, err)
+	}
+	go func() {
+		v, _ := r.w.Ask(context.Background(), AskReq{Session: id, Ask: core.Ask{Tool: "mcp__oriel__debug_eval", Summary: "evaluate os.Exit(1)"}})
+		got <- v
+	}()
+	se = r.eventually(id, "the second card", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	r.w.Answer(AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "deny", Note: "not that"})
+	if v := <-got; v.Decision != "deny" || v.Note != "not that" {
+		t.Errorf("deny = %+v", v)
+	}
+	if _, err := r.w.Ask(context.Background(), AskReq{Session: "nope", Ask: ask}); err == nil {
+		t.Error("asked for a session that isn't running")
+	}
+}
+
 func TestQuestionsWaitForTheUser(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Ask")

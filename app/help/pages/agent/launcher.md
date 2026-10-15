@@ -15,6 +15,13 @@ What the agent should do. A **ticket** names the branch and goes to the agent to
 **Review PR** a pull request's URL, **New repo** a name, a template (empty, a Go module, a Go CLI, or a git URL) and
 where it goes, **Direct** the directory to open.
 
+## Ticket
+
+A ticket's ID in the ticket field (`INF-2231`) expands into a card once a tracker's plugin knows it (Linear's does):
+its key and state, its title, the start of its description, and what's on it (attachments, a linked PR, comments).
+The ticket, with its comments and attachments, goes to the agent as context after your prompt; with no prompt of
+your own, the ticket is the request. **✕** takes it off. Start waits while the card is still being looked up.
+
 ## Mode
 
 The kind of session, and so the prompt pack its agent starts with: **Plan** drafts docs first and makes worktrees at

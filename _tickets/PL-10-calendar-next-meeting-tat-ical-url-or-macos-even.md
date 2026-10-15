@@ -2,13 +2,17 @@
 id: PL-10
 title: "Calendar: next meeting indicator (iCal URL or macOS EventKit)"
 phase: P7
-status: todo
+status: dropped
 area: Platform
 module: integ/ical (plugin)
 depends_on: [PL-2]
 ---
 
 # PL-10 · Calendar: next meeting indicator (iCal URL or macOS EventKit)
+
+**Dropped:** the calendar isn't carried over from crit (crit-reference.md, "Not carried over"). The general pieces built
+for it (`oriel.option{…}`, `oriel.now()`, `oriel.platform`, background `oriel.exec`, `widget.Ring`) stay; see
+plugins.md and scripting.md, "As built (PL-10)".
 
 **Phase** 7 · the rest · **After** [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md) · **Unblocks** nothing yet
 

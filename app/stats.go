@@ -104,7 +104,12 @@ type statsExt struct {
 	details  map[string]fetched[stats.Detail]                   // by session and split
 	history  map[core.WorkerID]fetched[[]core.ProviderUsage]
 	inflight map[string]bool
+	live     []core.ProviderUsage // readings since the history was fetched, from UsageSampled
+	changed  time.Time            // when an agent last did something that costs: answers fetched before are stale
 }
+
+// liveAfter is how soon a report is asked for again once the agents it counts have moved on.
+const liveAfter = 10 * time.Second
 
 func (x *statsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "stats"} }
 
@@ -231,10 +236,31 @@ func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
 	} {
 		x.add(h.Contribute(e))
 	}
+	x.add(onDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+		switch ev := ev.(type) {
+		case core.UsageSampled:
+			x.mu.Lock()
+			x.live = append(x.live, ev.Usage)
+			if n := len(x.live); n > 500 {
+				x.live = x.live[n-500:]
+			}
+			x.mu.Unlock()
+		case core.AgentChanged, core.TranscriptAppended, core.ThreadUpdated, core.SessionOpened:
+			x.mu.Lock()
+			x.changed = x.now()
+			x.mu.Unlock()
+		}
+	})))
 	x.add(h.Picker(pagesSource(h)))
 	x.add(h.View(StatsSessionView, sessionStatsView{x}))
 	x.add(h.View(OverlayPrefix+"stats", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "stats", Fn: x.page} })))
 	x.add(h.View(OverlayPrefix+"usage", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "usage", Fn: x.usagePage} })))
+	x.add(h.Contribute(registry.Indicator{Name: "usage", Slot: registry.SlotHUD, Order: 10, Title: "Plan usage", Help: hudHelp + "#usage",
+		Note: x.usageNote, Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "usage", Fn: x.usagePanel}, nil }}))
+	x.add(h.Contribute(registry.Indicator{Name: "today", Slot: registry.SlotHUD, Order: 40, Title: "Today", Help: hudHelp + "#today",
+		Note: func() string { return "since 00:00" }, Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "today", Fn: x.todayPanel}, nil }}))
+	x.add(h.Contribute(registry.Indicator{Name: "usage.mission", Slot: registry.SlotMission, Order: 10, Help: missionHelp + "#strip",
+		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "usage", Fn: x.usageStrip}, nil }}))
 	x.add(h.View(TitleRight+"40-usage", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "usage", Fn: x.indicators} })))
 	return nil
 }
@@ -435,7 +461,7 @@ func (x *statsExt) report(q stats.Query) (stats.Report, reportMeta) {
 		if meta.at.IsZero() || f.at.Before(meta.at) {
 			meta.at = f.at
 		}
-		if x.now().Sub(f.at) > refetchAfter {
+		if x.now().Sub(f.at) > refetchAfter || f.at.Before(x.changed) && x.now().Sub(f.at) > liveAfter {
 			old = true
 		}
 	}
@@ -535,11 +561,20 @@ func (x *statsExt) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 			old = true
 		}
 	}
+	var last time.Time
 	for _, f := range x.history {
 		for _, u := range f.v {
 			if u.Same(acct) {
 				out = append(out, u)
+				if u.Sampled.After(last) {
+					last = u.Sampled
+				}
 			}
+		}
+	}
+	for _, u := range x.live {
+		if u.Same(acct) && u.Sampled.After(last) {
+			out = append(out, u)
 		}
 	}
 	busy := x.inflight["usage.history"]

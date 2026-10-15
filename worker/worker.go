@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/liamg/oriel/worker/sysload"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
@@ -39,6 +41,7 @@ type Options struct {
 	OrielBin  string     // the oriel binary the agents' hooks run; os.Executable() if ""
 	Log       *slog.Logger
 	Now       func() time.Time
+	Load      func() sysload.Reading // the machine's load; sysload.Read if nil
 	Version   string
 	Build     string // which binary this is, so an app from another can replace it; Build() if ""
 	// Sandbox makes the container, gateway and egress proxy for a session that asks for one; nil refuses.
@@ -51,6 +54,11 @@ type Options struct {
 	TrustPath string
 	// GitHub is the GitHub client for a checkout, with the git guard's env; the user's gh (gh.CLI) if nil.
 	GitHub func(dir string, env []string) gh.Client
+	// Handlers add methods to each app connection, as the updater's do.
+	Handlers []func(conn wire.Conn)
+	// KeyWait is how long a git operation that may need a security-key touch runs before its session asks for one;
+	// KeyWait (the constant) if 0, never if negative.
+	KeyWait time.Duration
 }
 
 // Worker hosts sessions.
@@ -71,6 +79,8 @@ type Worker struct {
 
 	jobsMu sync.Mutex // the jobs' files, and when the schedules last ran
 
+	utility utilities
+
 	shipOnce sync.Once
 	mirror   mirrorState // GitHub review mirroring
 	ship     *shipState
@@ -86,8 +96,11 @@ type Worker struct {
 	lost     map[string]*lostLogin // logins gone, by provider and account
 	// sandboxCfg is the sandbox settings the app last sent.
 	sandboxCfg sandbox.Config
-	closed     chan struct{}
-	stopOnce   sync.Once
+	// prompts is the user's versions of the prompts the app last sent; promptsSent, whether it has.
+	prompts     prompts.Overrides
+	promptsSent bool
+	closed      chan struct{}
+	stopOnce    sync.Once
 }
 
 type sessionLog struct {
@@ -119,6 +132,9 @@ func New(opts Options) (*Worker, error) {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
+	if opts.Load == nil {
+		opts.Load = sysload.Read
+	}
 	if opts.Build == "" {
 		opts.Build = Build()
 	}
@@ -146,6 +162,7 @@ func New(opts Options) (*Worker, error) {
 	if err := w.loadSandboxConfig(); err != nil {
 		return nil, err
 	}
+	w.loadPrompts()
 	if err := w.restore(); err != nil {
 		return nil, err
 	}

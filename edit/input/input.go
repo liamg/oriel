@@ -39,6 +39,7 @@ type Mode struct {
 	Label   string
 	Shape   Shape
 	KeyMode string
+	Text    bool // typed characters insert text, so dictation may type here
 }
 
 // Wrap is an engine that sees each key before inner does, and decides whether to hand it on with next.

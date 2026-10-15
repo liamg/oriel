@@ -2,7 +2,7 @@
 id: AI-12
 title: "Stats and Usage: session stats, global stats grouped by repo, plan usage, and how you reach them"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: worker, app, ui
 depends_on: [AI-1, AI-2, AI-3, AI-9, SH-17]

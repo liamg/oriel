@@ -2,6 +2,7 @@ package widget
 
 import (
 	"math"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -26,6 +27,9 @@ type InputOpts struct {
 	// scrolls; ⏎ is a new line and ⌘⏎ (Ctrl⏎ elsewhere) submits. 0 and 1 are one line.
 	Lines    int
 	MinLines int // the lines a multi-line field shows at least
+	// Secret shows each character as a dot, to the eye and to assistive technology, and won't copy or cut it: a
+	// token being pasted in. One line only.
+	Secret bool
 }
 
 // Digits accepts what a whole number is typed with.
@@ -116,7 +120,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	in := c.Interaction(id)
 	st := ui.State[inputState](c, id)
 	font := typeset.FontSpec{Family: typeset.UI, Size: 12.5}
-	multi := o.Lines > 1
+	multi := o.Lines > 1 && !o.Secret
 	runes := []rune(*text)
 	st.cursor, st.anchor = clampInt(st.cursor, 0, len(runes)), clampInt(st.anchor, 0, len(runes))
 	var res InputResult
@@ -125,7 +129,22 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	}
 	st.focused = in.Focused
 
-	advance := func(from, to int) float32 { return c.Shaper().Shape(string(runes[from:to]), font).Advance }
+	// shown is the text as drawn: dots for a secret's.
+	shown := func(from, to int) string {
+		if o.Secret {
+			return strings.Repeat("•", to-from)
+		}
+		return string(runes[from:to])
+	}
+	advance := func(from, to int) float32 { return c.Shaper().Shape(shown(from, to), font).Advance }
+	words := func(at func([]rune, int) int, end int) func(i int) int {
+		return func(i int) int {
+			if o.Secret {
+				return end
+			}
+			return at(runes, i)
+		}
+	}
 	prefix := func(n int) float32 { return advance(0, n) }
 	spans := func() []span {
 		if !multi {
@@ -251,9 +270,9 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 					move(st.cursor + 1)
 				}
 			case "word-left":
-				move(wordLeft(runes, st.cursor))
+				move(words(wordLeft, 0)(st.cursor))
 			case "word-right":
-				move(wordRight(runes, st.cursor))
+				move(words(wordRight, len(runes))(st.cursor))
 			case "line-start":
 				move(line().from)
 			case "line-end":
@@ -265,7 +284,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			case "select-all":
 				st.anchor, st.cursor = 0, len(runes)
 			case "copy", "cut":
-				if lo != hi {
+				if lo != hi && !o.Secret {
 					c.Clipboard().SetClipboard(string(runes[lo:hi]))
 					if key == "cut" {
 						cut()
@@ -277,12 +296,12 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 				}
 			case "delete-back", "delete-word-back", "delete-line-back":
 				if lo == hi {
-					lo = map[string]int{"delete-back": max(lo-1, 0), "delete-word-back": wordLeft(runes, lo), "delete-line-back": line().from}[key]
+					lo = map[string]int{"delete-back": max(lo-1, 0), "delete-word-back": words(wordLeft, 0)(lo), "delete-line-back": line().from}[key]
 				}
 				cut()
 			case "delete", "delete-word":
 				if lo == hi {
-					hi = map[string]int{"delete": min(hi+1, len(runes)), "delete-word": wordRight(runes, hi)}[key]
+					hi = map[string]int{"delete": min(hi+1, len(runes)), "delete-word": words(wordRight, len(runes))(hi)}[key]
 				}
 				cut()
 			default:
@@ -318,7 +337,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	lo, hi := min(st.cursor, st.anchor), max(st.cursor, st.anchor)
 	focused := in.Focused
 	style := ui.Style{W: width, Fill: col(c, tInputBg), Stroke: border, Border: 1, Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled,
-		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Role: ui.RoleTextBox, Label: o.Label, Value: string(runes)}
+		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Text: true, Role: ui.RoleTextBox, Label: o.Label, Value: shown(0, len(runes))}
 	if multi {
 		if r, ok := c.Rect(id); ok {
 			st.width = r.Dx() - 20
@@ -387,7 +406,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 				sel := c.Theme().C(tRowSelected)
 				f.Rect(render.XYWH(r.Min.X+selFrom-scroll, r.Min.Y+7, selTo-selFrom, 16), render.Style{Fill: sel})
 			}
-			s, tc := string(runes), fg
+			s, tc := shown(0, len(runes)), fg
 			if s == "" {
 				s, tc = o.Placeholder, col(c, tInputHint)
 			}

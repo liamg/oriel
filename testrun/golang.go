@@ -337,9 +337,17 @@ func (g *Go) Command(ws Workspace, items []Item, mode Mode) (Cmd, error) {
 			return Cmd{}, ErrUnsupported
 		}
 		cmd.Args = []string{"dlv", "test", pkgs[0], "--", "-test.v"}
+		dir := filepath.Join(ws.Root, pkgs[0])
+		l := &Launch{Name: "go test " + pkgs[0], Type: "go", Program: dir, Cwd: dir, Args: []string{"-test.v"}, Extra: map[string]any{"mode": "test"}}
 		if run != "" {
 			cmd.Args = append(cmd.Args, "-test.run", run)
+			l.Args = append(l.Args, "-test.run", run)
+			l.Name = "go test -run " + strings.Join(names, " ")
 		}
+		if len(ws.Env) > 0 {
+			l.Env = envMap(ws.Env)
+		}
+		cmd.Launch = l
 	}
 	return cmd, nil
 }

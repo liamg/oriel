@@ -2,8 +2,11 @@ MODULES := $(shell go list -m -f '{{.Path}}/...')
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
 .PHONY: test test-vt vet build native oracle check fmt-check depcheck refcheck vendor-check vulncheck
+# test runs the timing budgets (tests named …Budget, perf.Timed) after the rest, one package at a time, so other
+# packages' tests running alongside can't fail them.
 test:
-	go test $(MODULES)
+	ORIEL_BUDGETS=later go test $(MODULES)
+	go test -p 1 -run 'Budget$$' $(MODULES)
 
 # test-vt runs the terminal emulator's suite on both backends; it needs native first.
 test-vt:

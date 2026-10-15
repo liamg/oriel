@@ -69,22 +69,26 @@ type host struct {
 }
 
 func (w *Worker) hostFor(id core.SessionID, start bool) (*host, error) {
+	if !start {
+		w.mu.Lock()
+		defer w.mu.Unlock()
+		return w.hosts[id], nil
+	}
+	h := w.hostOf(id)
+	return h, h.start()
+}
+
+// hostOf is session id's host, made if it has none, without starting its agent.
+func (w *Worker) hostOf(id core.SessionID) *host {
 	w.mu.Lock()
+	defer w.mu.Unlock()
 	h := w.hosts[id]
 	if h == nil {
-		if !start {
-			w.mu.Unlock()
-			return nil, nil
-		}
 		h = &host{w: w, id: id, ctx: context.Background(), calls: map[string]agent.ToolCall{}, items: map[string]core.Item{},
 			waiting: map[string]chan AnswerReq{}, nudged: map[string]string{}}
 		w.hosts[id] = h
 	}
-	w.mu.Unlock()
-	if start {
-		return h, h.start()
-	}
-	return h, nil
+	return h
 }
 
 func (h *host) running() bool {
@@ -142,15 +146,16 @@ func (h *host) launch() (agent.Session, Sandbox, error) {
 	spec := agent.StartSpec{Cwd: agentDir(se), Model: se.Agent.Model, Effort: se.Agent.Effort, Policy: agent.Policy(se.Agent.Policy),
 		Tools: w.tools(h), Protect: w.protected(se), Exec: w.opts.Exec, StateDir: filepath.Join(w.sessionDir(h.id), "agent"),
 		Env: []string{"ORIEL_SESSION=" + string(h.id)}}
-	if k, ok := w.kinds.Get(se.Kind); ok && w.opts.Packs != nil {
+	if k, ok := w.kinds.Get(se.Kind); ok {
 		name := k.Pack
 		if se.Agent.Pack != "" {
 			name = se.Agent.Pack
 		}
-		if pack, ok := w.opts.Packs(name); ok {
+		if pack, ok := w.pack(name); ok {
 			spec.Pack = pack
 		}
 	}
+	w.writeNotes(h.id)
 	h.mu.Lock()
 	h.drafts = slices.Contains(spec.Pack.Tools, "commit_draft")
 	h.mu.Unlock()

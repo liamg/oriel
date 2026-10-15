@@ -8,7 +8,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-//oriel:api name=rail
+//oriel:api name=rail cap=ui
 type Rail struct{ a *APIs }
 
 //oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available."
@@ -44,7 +44,7 @@ func (r Rail) Add(spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api name=start
+//oriel:api name=start cap=ui
 type Start struct{ a *APIs }
 
 //oriel:api doc="Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure."
@@ -74,7 +74,7 @@ func (s Start) Add(spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api name=overview
+//oriel:api name=overview cap=ui
 type Overview struct{ a *APIs }
 
 //oriel:api doc="Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick."

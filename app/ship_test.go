@@ -38,8 +38,8 @@ func shipRepo(t *testing.T, name string, files map[string]string) (checkout, ups
 }
 
 // shipScene is 18's session: usage-api and web-dashboard on GitHub (a fake), a work session on both with the fake
-// agent, and the window on it.
-func shipScene(t *testing.T) (s *errScene, lw *localWorker, hub *ghtest.Server, se core.SessionState, ups map[string]string) {
+// agent, and the window on it. more changes the app's config besides.
+func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localWorker, hub *ghtest.Server, se core.SessionState, ups map[string]string) {
 	t.Helper()
 	t.Setenv("GIT_AUTHOR_NAME", "You")
 	t.Setenv("GIT_AUTHOR_EMAIL", "you@example.com")
@@ -54,7 +54,12 @@ func shipScene(t *testing.T) (s *errScene, lw *localWorker, hub *ghtest.Server, 
 		".github/pull_request_template.md": "## What\n\n## Why\n",
 	})
 	web, webUp := shipRepo(t, "web-dashboard", map[string]string{"src/usage.ts": "export const usage = 1\n"})
-	s = newSceneWith(t, "", "", mockupSize, lw.connect(t))
+	s = newSceneWith(t, "", "", mockupSize, func(cfg *Config) {
+		lw.connect(t)(cfg)
+		for _, m := range more {
+			m(cfg)
+		}
+	})
 	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
 	s.run("session.start", registry.Args{"kind": "work", "prompt": "Usage API rate-limit headers", "ticket": "INF-2231", "provider": "fake",
 		"repos": []string{api, web}})

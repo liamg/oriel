@@ -3,6 +3,7 @@ go 1.26.0
 use (
 	./agent
 	./app
+	./assistant
 	./cmd/oriel
 	./cmd/oriel-spike
 	./core
@@ -28,6 +29,7 @@ use (
 	./tools
 	./ui
 	./update
+	./voice
 	./vim
 	./wire
 	./worker

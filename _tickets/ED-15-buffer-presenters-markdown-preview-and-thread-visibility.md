@@ -2,7 +2,7 @@
 id: ED-15
 title: "Buffer presenters with a source map, a built-in markdown preview, and showing or hiding a file's threads"
 phase: P5
-status: review
+status: done
 area: Editor
 module: app, registry, script
 depends_on: [ED-7, AI-5, AI-8, SH-17]

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -360,6 +361,7 @@ func (p *Pytest) Command(ws Workspace, items []Item, mode Mode) (Cmd, error) {
 		args = append(args, "--cov="+ws.Root, "--cov-report=json:"+RunDir+"/coverage.json")
 	}
 	seen := map[string]bool{}
+	var names []string
 	for _, it := range items {
 		var target string
 		switch it.Kind {
@@ -371,9 +373,22 @@ func (p *Pytest) Command(ws Workspace, items []Item, mode Mode) (Cmd, error) {
 		if !seen[target] {
 			seen[target] = true
 			args = append(args, target)
+			names = append(names, ws.Rel(target))
 		}
 	}
 	cmd.Args = args
+	if mode == ModeDebug {
+		targets := args[len(args)-len(seen):]
+		l := &Launch{Name: "pytest " + strings.Join(names, " "), Type: "python", Cwd: ws.Root,
+			Args: append(slices.Clone(p.Args), targets...), Extra: map[string]any{"module": "pytest"}}
+		if py != "python3" {
+			l.Extra["python"] = py
+		}
+		if len(ws.Env) > 0 {
+			l.Env = envMap(ws.Env)
+		}
+		cmd.Launch = l
+	}
 	return cmd, nil
 }
 

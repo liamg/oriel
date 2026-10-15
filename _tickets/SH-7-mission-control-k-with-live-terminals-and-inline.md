@@ -2,7 +2,7 @@
 id: SH-7
 title: "Mission control (⌘⇧K) with live terminals and inline asks"
 phase: P7
-status: todo
+status: review
 area: Shell and navigation
 module: app
 depends_on: [SH-2, AI-1]

@@ -73,6 +73,50 @@ sequenceDiagram
   shows "update ready · restart" when one is staged.
 - **Release notes** appear in the update card, rendered from the release markdown.
 
+- As built (PL-6): `update` has the pieces, tested with real `go build`s of `update/internal/testworker` and a test
+  key, never GitHub:
+  - `Manifest` / `Release` (the manifest's exact bytes and their signature); `Sign`, `Release.Verify(keys)`. The
+    trusted keys come from `update.Keys()`, linked in by CI with `-X github.com/liamg/oriel/update.releaseKeys=<hex>`
+    (comma-separated during a rotation). A build with no key refuses every update.
+  - Artifacts are `binary` (workers, Linux) or `bundle` (the macOS `.app` as a `.tar.gz` of paths relative to the
+    bundle; no path or link may leave it).
+  - `Installer{Target, Exe, Dir}`: `Stage` checks the size and sha256 against the manifest, unpacks a bundle, then
+    runs `<exe> version` and refuses it unless it prints the manifest's version (crit's verify-before-swap). `Swap`
+    moves it beside Target and renames it in; the old copy is kept beside Target as `.<name>.prev` (the same
+    filesystem, so swap and rollback are each a rename). The swap is recorded as pending in `Dir`.
+  - `Boot(ctx, health)` runs first on every start: a pending swap gets one start to pass `health`. A failure, or an
+    earlier start that never reported (a crash, a hang), puts the previous version back, records why
+    (`Installer.Last`), and the caller re-execs onto it (`update.Reexec`, unix).
+  - Over the wire: the app's `Publisher` offers a release (`update.offer`); the worker's `Receiver` verifies it,
+    picks its platform's artifact and streams it back from the app (`update.artifact`, 256 KB chunks), stages it,
+    and swaps, drains and re-execs on `update.swap`. `update.status` reports its version, what's staged or pending,
+    and the last rollback. A worker only takes a release newer than it is (a `dev` build takes none).
+  - The app finds releases through a `Source`: `GitHub` (the releases API with a token; a pre-release counts only on
+    `nightly`) or `Dir`. `Cache` keeps each verified download, so one serves this machine and every worker on its
+    platform. `Check` is "newer than me?".
+  - Wired: `oriel worker --connect` (a remote worker) boots through the installer (starting the worker is the health
+    check) and serves the `Receiver` through `worker.Options.Handlers`; its restart is the hand-over drain then a
+    re-exec. This machine's worker shares the app's binary and follows it by the existing hand-over to a new build.
+  - The app (`app/update.go`, `Config.Updates`): an `update.Updater` (the `GitHub` source with the token from `gh auth
+    token`, `update.Keys()`, an `Installer` on the `.app` bundle or the binary, staged in the state directory's
+    `updates/`). It checks 30 s after start and hourly on `updates.channel`, unless `updates.mode` is manual. Ask
+    (the default) offers a release in a notice (What's new, Update); automatic installs it. Installing pushes the
+    release to every connected worker that's behind (each verifies, runs, swaps, drains and restarts), then swaps
+    this copy in. A worker that connects later while behind a release the app holds is pushed it as it connects.
+  - The update card (`app.overlay.update`, `:UpdateCheck` or `update.notes`): the version, the one you have, the
+    channel, and the release notes as markdown, with Later and Update, then Restart.
+  - "update ready · restart" is the indicator `update` (SH-8's `registry.Indicator`) in the `statusline.right` slot,
+    shown once an update is installed and while one installs. Clicking it, Restart on the card or in the notice, or
+    `update.restart` quits (this machine's worker drains) and relaunches the installed copy once the window has
+    closed (`open -n` for a bundle).
+  - The app runs `Boot` as it starts: the health check is the window opening (`Config.Started`) within two minutes.
+    A failure, or a start before that crashed, rolls back and re-execs onto the previous copy.
+  - `oriel update [--check] [--channel nightly] [--from DIR]` checks and installs without the app.
+  - A custom build (`oriel build --with`, native plugins linked in) has no updater either: a release would drop its
+    plugins, so it's rebuilt instead.
+  - A build with no release key (any build CI didn't make) has no updater: the app doesn't check and `oriel update`
+    says so. `Boot` still runs, for a swap made before.
+
 ## Linux
 
 - Release artifacts: a static binary (tar.gz) per arch, plus an AppImage for the desktop app later. Same updater, same

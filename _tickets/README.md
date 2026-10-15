@@ -2,7 +2,7 @@
 
 Markdown tickets, one per file, generated from `_design/features.md`. Edit them freely; they're ours now.
 
-- **Frontmatter**: `id`, `title`, `phase`, `status` (todo · doing · review · done), `area`, `module`, `depends_on`.
+- **Frontmatter**: `id`, `title`, `phase`, `status` (todo · doing · review · done · dropped), `area`, `module`, `depends_on`.
 - **Order** comes from `depends_on`: a ticket starts when everything it depends on is `done`. Phases only group them.
   The suggested order below is a topological sort, phase-major.
 - **Workflow**: start a session in this repo and name the ticket ("do PL-8"). The agent reads the ticket, then its
@@ -16,13 +16,9 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 ## Ready now (no unmet dependencies)
 
 - [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
-- [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md): Worker, wire, sessions, workspaces with multi-repo worktrees
-- [DB-1](DB-1-dap-breakpoints-conditional-logpoints-stepping-s.md): DAP: breakpoints (conditional, logpoints), stepping, stack, variables, watch, REPL
-- [PL-2](PL-2-process-plugins-with-an-os-sandbox-wasm-plugins-.md): Process plugins with an OS sandbox; WASM plugins; oriel build --with
-- [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and indicators in slots
-- [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key)
 
-P4 is done. P6 (FG-6, AI-10, RV-1–RV-7, TR-6, AI-15) is in review.
+P6 is done. P7 is in review: every ticket but PL-10, which is dropped (the calendar isn't carried over). P8 starts
+when P7 is done: PL-18 and PL-19 first.
 
 ## Suggested order
 

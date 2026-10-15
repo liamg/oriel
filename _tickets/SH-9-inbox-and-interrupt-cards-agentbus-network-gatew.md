@@ -2,7 +2,7 @@
 id: SH-9
 title: "Inbox and interrupt cards (agentbus, network, gateway, security key)"
 phase: P7
-status: todo
+status: review
 area: Shell and navigation
 module: app
 depends_on: [FW-6]

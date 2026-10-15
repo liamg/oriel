@@ -2,7 +2,7 @@
 id: RV-3
 title: "Cross-model AI review findings"
 phase: P6
-status: review
+status: done
 area: Review and explain
 module: agent
 depends_on: [RV-1, AI-3]

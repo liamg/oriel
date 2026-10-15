@@ -147,13 +147,13 @@ func TestPlanWorktreesComeAtStartWork(t *testing.T) {
 
 func TestTourIsPinnedAndReadOnly(t *testing.T) {
 	r := newRig(t)
-	id := r.start(core.SessionSpec{Kind: core.KindTour, Prompt: "How does rounding work?", TourKind: "walkthrough", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindTour, Prompt: "How does rounding work?", Variant: "demo", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p := r.session(id).Projects[0]
 	if !p.Detached || !p.ReadOnly || p.Commit == "" || branchOf(t, p.Dir) != "HEAD" {
 		t.Fatalf("tour project = %+v", p)
 	}
 	m, _ := LoadManifest(r.session(id).Dir)
-	if m.Tour == nil || m.Tour.Kind != "walkthrough" {
+	if m.Tour == nil || m.Tour.Kind != "demo" {
 		t.Errorf("manifest tour = %+v", m.Tour)
 	}
 }

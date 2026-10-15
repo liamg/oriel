@@ -124,7 +124,8 @@ end)
 L.status.rule(function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
 ```
 
-A plugin's own Lua also has these (catalog.md; P8, not built yet), which an `init.lua` doesn't:
+A plugin's own Lua also has these (catalog.md; `asset` is P8's, `process` and `wasm` PL-2's and `option` PL-10's, all
+open to `init.lua` too):
 
 ```lua
 local L = oriel
@@ -201,6 +202,9 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   `local o = oriel.option` if you want it short). A list option takes a table of strings and a map option a table of
   strings by name (`oriel.option["sandbox.servers"] = { docs = "https://docs.example.com/mcp" }`); reading one gives
   the same. There's one global, `oriel`; a config that wants a short name writes `local L = oriel`, as the sample does.
+- PL-4: `oriel.agent.tool{…}` also takes `for` (the agents it's offered to: session kinds, or `"assistant"`; none
+  is every session's agent), `read_only` and `reads` (the data it reads, which the assistant lists as a source):
+  `oriel.agent.tool{ name = "deploys", ["for"] = { "assistant" }, read_only = true, reads = "deploys", run = … }`.
 - Registrations for later features (`agent.tool`, `agent.pack`, `session.kind`, `hud.indicator`, `status.rule`) are
   general registry contributions now (`Registry.Contribute`); their tickets consume them. `linear`, `http` and
   `async` load, and calling into one says which ticket brings it. RV-2 built `oriel.ledger`: `unread(project)` (the
@@ -224,6 +228,34 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - Not yet: the LuaJIT swap, process and WASM bindings of the same declarations, a `vim` shim, `:Plugins`, jumping
   from a source to its line (`gd`), and a project's `.oriel/init.lua` (it needs the trust prompt security.md
   describes).
+
+## As built (SH-9)
+
+- `oriel.inbox.add(card)` adds a card to the inbox, or replaces the one with its `id`: `{ id, type, title, sub, group,
+  mine, session, icon, tone, kicker, detail, code, note, interrupt, banner, done, expires (seconds from now), actions =
+  { { label, key, primary, command, args } } }`. An action runs its command and answers the card (it goes to the
+  inbox's history); `oriel.inbox.remove(id)` takes one away. A VM's cards are its own inbox source, `lua:<plugin>`,
+  dropped on reload. Capability `ui`.
+
+## As built (SH-8)
+
+- `oriel.hud.indicator(name, opts, build)`: `opts { slot, order, every, on = { event names }, title, note, span, help }`;
+  `build` is a function returning `oriel.ui` nodes, or the nodes themselves. It's built again every `every`, on each
+  core event named in `on`, and by `oriel.hud.set(name, nodes)` (shown until it's next built; for good, for one given
+  its nodes) or `oriel.hud.refresh(name)` (`hud.refresh`). `slot = "hud"` makes it a HUD panel, `"mission"` (SH-7) a part of mission control's strip, `"hud.today"` a line
+  under Today. `oriel.ui.indicator` takes `dot` and `id` and is drawn by `widget.Indicator`.
+- The sample's `every = "30s"` is a duration as Go reads it.
+
+## As built (PL-10)
+
+- `oriel.option{ name, type, default, help, values, min, max, section }` declares an option: type is bool, int, float,
+  string, enum (its first value the default), duration, key, list or map. A plugin's must be named
+  `plugin.<name>.<option>` (its id's name) and go in its own section of the settings page; the config may name any.
+  They're disposed with what declared them. `oriel.option[...]` still reads and sets them; `{}` is an empty list.
+- `oriel.now()` is the window's clock in seconds (a test's fixed time), `oriel.platform` the OS (`darwin`, `linux`).
+- `oriel.exec(argv, { on_done = fn(output, err) })` runs the program in the background and returns nothing.
+- `oriel.ui.ring{ value, label, color, size, name, id }` is a dial (`widget.Ring`); `oriel.ui.text(s, "title")` is a
+  heading.
 
 ## As built (PL-12)
 
@@ -353,3 +385,94 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `oriel.cmd("workers.rename", { name = "devbox", to = "Build box" })` (`to = ""` goes back to its own name),
   `workers.revoke { name }`, `workers.forget { name }`, `workers.restart`, `workers.open { name }`.
   `oriel.option["workers.listen"]` is where Oriel listens for them.
+
+
+## As built (PL-2)
+
+- `oriel.process.spawn(path, { args, cwd, env, on = { method = fn(params) }, on_exit = fn(err) })` starts a process
+  plugin and returns `proc`: `proc:request(method, params, fn(result, err))` (the answer comes on the loop),
+  `proc:notify(method, params)`, `proc:on(method, fn)`, `proc:pid()`, `proc:running()`, `proc:stop()`. The
+  process's requests and notifications reach `on` first, then the host methods (plugins.md, "As built (PL-2)").
+- `oriel.wasm.load(path, { on })` loads a module and returns `mod`: `mod:call(fn, ...)` with numbers,
+  `mod:request(fn, value)` with JSON, `mod:exports()`, `mod:close()`. A call is stopped past the watchdog's budget.
+- A plugin's VM is `api.InstallPlugin(vm, host, ext.Plugin{…})`; your config's is `api.Install(vm, host, dir)`,
+  trusted. A relative path given to `oriel.read`, `process.spawn` or `wasm.load` is in the plugin's directory (your
+  config's for `init.lua`). The config's processes and modules stop when it reloads.
+- Every API function declares its capability: `//oriel:api name=keymap cap=ui` on a namespace, or `cap=…` on a
+  function, and the glue apigen writes checks it before the call; `cap=target` is a function that checks its own
+  against what it's given (`read`, `process.spawn`, `wasm.load`). One with neither fails `go generate`.
+  docs/api.md says each function's. Besides the glue: `exec` checks its program, `lsp.server` its `cmd`,
+  `agent.tool` its name, and a hook's veto or decision needs `gate` (without it the hook's run is an error and
+  nothing is vetoed).
+
+## As built (PL-6)
+
+- Updates are commands: `oriel.cmd("update.check")` checks now and opens the card, `update.install` installs the
+  release it found here and on the workers behind it, `update.restart` restarts onto it.
+  `oriel.option["updates.mode"] = "manual"` stops the hourly check; `oriel.option["updates.channel"] = "nightly"`
+  takes pre-releases.
+
+## As built (PL-11)
+
+- Prompts are commands: `oriel.cmd("prompts.set", { id = "style.code", text = "Tabs, never spaces." })` keeps your
+  version (empty text or the default puts it back), `prompts.reset { id }`, `prompts.open { id }`,
+  `prompts.edit { id }`. Ids are `style.code`, `pack.<kind>` and `part.<part>`.
+- Voice is commands and options: `oriel.cmd("voice.dictate")` (`⌃⇧Space`), `voice.speak { text = "Done." }`,
+  `voice.download { model = "small.en" }`; `oriel.option["voice.wake"] = true`. `oriel.on("VoiceWake", fn)`
+  sees what followed the wake word: return a decision to take the request yourself.
+
+## As built (PL-9)
+
+- `oriel.http.request(spec, fn(res, err))` makes a request off the loop and answers on it: `spec { method, url,
+  headers, body, auth, url_secret, timeout }`, `res { status, body, headers }`. The host must be in the plugin's `net`
+  grant; `auth` and `url_secret` name a secret the host attaches for the host its grant binds it to, which the plugin
+  never reads (security.md, "As built (PL-9)"). The sample's blocking `oriel.http.get` isn't built: it still says it
+  comes with AI-7.
+- `oriel.ship.action{ name, label = "text" | fn(pr), command, args, run = fn(pr), order, help }` adds a button to a
+  raised PR (plugins.md, "As built (PL-9)"); `pr` is `{ session, project, repo, number, title, url, state, draft,
+  merged }`, and a label function returning nil leaves it off.
+
+
+## As built (PL-8)
+
+- `oriel.picker.source{ id, title, prefix, order, picker_only, items = fn(query), run = fn(item), preview = fn(item) }`
+  adds an omnibox and picker source (ui.md 02b's `oriel.picker.source`): items are tables `{ label, detail, note, icon,
+  icon_style, badge, badge_style, key, boost, id, … }`, matched by the omnibox on label and detail, and handed back
+  to `run` and `preview` as given. `items` runs as the omnibox draws, so answer from what you have and fetch in the
+  background.
+- `oriel.ticket.source{…}` was the launcher's lookup alone; it's `oriel.ticket.tracker` now ("As built (tickets)").
+- `oriel.http.request` takes `auth_scheme`: `"none"` sends the secret as it is (Linear), anything else before it, and
+  `Bearer` when it isn't given.
+- `oriel.on("SessionStart", fn)` and `oriel.on("PrSeen", fn)` see a session start and its PR first read (plugins.md,
+  "As built (PL-8)").
+
+## As built (tickets)
+
+- `oriel.ticket.tracker{ name, title, order, keys, secret, lookup, assigned, start, review, done, link }` (cap
+  `agent.prompt`) makes a ticket tracker, and Oriel builds the rest on it: the omnibox's `!` tickets, the launcher's
+  card, Continue for a ticket with a session, the moves as a session starts from a ticket and its PR is seen and
+  merged, the PR link, the ask for its key and the assistant's `my_tickets` (plugins.md, "As built (tickets)"). `keys` is a regular expression (Go's) the tracker's keys
+  match, `secret` one the plugin declares. Each function answers `done(value)` or `done(nil, why)`, now or later:
+  `lookup = fn(key, done)` with a ticket, `assigned = fn(done)` with a list of them, `start`, `review` and `done =
+  fn(key, done)` with `{ moved, state }` (`done` is asked once the session's PRs are merged; its callback is the second
+  argument like the others', so name it as you like), `link = fn(key, pr, done)` given `pr = { number, url, repo,
+  title }`. A ticket is `{ key,
+  title, url, state, stage, project, priority, priority_label, blocked, blocked_by, pr = { number, url, repo }, summary,
+  facts, context }`; `stage` is `todo`, `started` or `review`.
+- `oriel.on("PrMerged", fn)` sees a session's PR merged, whoever merged it: `{ session, project, ticket, number, url,
+  title, open }`, `open` the session's other PRs still open (plugins.md, "As built (tickets)").
+
+
+## As built (PL-5)
+
+- `oriel.inbox.add` takes `body` (oriel.ui nodes, or a function returning them, drawn under the card's text: a field
+  to type an answer in) and an action's `run = fn()` instead of a command; a card's `expires` counts from the
+  window's clock.
+- `oriel.agent.fork({ session, prompt, timeout }, fn(answer, err, label))` (cap `agent.prompt`) asks a session's
+  agent a side question, the first forker's answer: the session in front by default, else the newest open one.
+- `oriel.agent.tool` takes `confirm = fn(p)` (an act: it returns `{ title, lead, rows = { { key, value, url } }, note,
+  line }`, called on the loop, and run's table `{ result, line, detail }` says what was done), `async = true` (run
+  gets `done(result, err)` and is called on the loop) and `adds = "tool"` (a part of that tool's answer).
+- `oriel.option{ …, on_change = fn(value) }` hears the option change, from wherever it's set.
+- `oriel.hud.indicator` takes `slot = "inbox.foot"` (the Inbox panel's foot) and, since SH-7, `"mission"`.
+
