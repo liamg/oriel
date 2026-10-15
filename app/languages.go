@@ -12,7 +12,6 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
-	"github.com/liamg/oriel/toml"
 )
 
 // languagesPlugin is builtin:languages (ED-11): Oriel's core grammars, registered as a third-party pack would be, and
@@ -53,7 +52,7 @@ func (x *languagesPlugin) Activate(_ context.Context, h plugin.Host) error {
 
 // load registers the pack in dir/name, in place of what it registered before.
 func (x *languagesPlugin) load(name string) error {
-	l, err := readPack(filepath.Join(x.dir, name))
+	l, err := plugin.ReadLanguagePack(filepath.Join(x.dir, name))
 	if err != nil {
 		x.h.Log().Warn("language pack", "dir", name, "err", err)
 		return err
@@ -87,46 +86,6 @@ func (x *languagesPlugin) install(path string) error {
 		return err
 	}
 	return x.load(name)
-}
-
-// readPack reads a grammar pack: language.toml (name, extensions, filenames, shebangs), grammar.wasm and queries/.
-func readPack(dir string) (registry.Language, error) {
-	l := registry.Language{Name: filepath.Base(dir), Source: dir, Queries: map[string]string{}}
-	if src, err := os.ReadFile(filepath.Join(dir, "language.toml")); err == nil {
-		doc, err := toml.Parse(src)
-		if err != nil {
-			return l, err
-		}
-		v := doc.Value()
-		if n, ok := v["name"].(string); ok {
-			l.Name = n
-		}
-		strs := func(k string) []string {
-			var out []string
-			if xs, ok := v[k].([]any); ok {
-				for _, x := range xs {
-					if s, ok := x.(string); ok {
-						out = append(out, s)
-					}
-				}
-			}
-			return out
-		}
-		l.Extensions, l.Filenames, l.Shebangs = strs("extensions"), strs("filenames"), strs("shebangs")
-	}
-	wasm := filepath.Join(dir, "grammar.wasm")
-	if _, err := os.Stat(wasm); err == nil {
-		l.Grammar = func() ([]byte, error) { return os.ReadFile(wasm) }
-	}
-	qs, _ := filepath.Glob(filepath.Join(dir, "queries", "*.scm"))
-	for _, q := range qs {
-		b, err := os.ReadFile(q)
-		if err != nil {
-			return l, err
-		}
-		l.Queries[strings.TrimSuffix(filepath.Base(q), ".scm")] = string(b)
-	}
-	return l, nil
 }
 
 // langSets are the registry's languages as a syntax.Set, made again when they change.

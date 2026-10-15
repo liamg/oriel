@@ -1,0 +1,4 @@
+source: https://semver.org (https://github.com/semver/semver.org)
+ref: v2.0.0, spec/v2.0.0.md on the gh-pages branch, fetched 2026-10-15
+path: semver.md
+license: Creative Commons Attribution 3.0 (CC BY 3.0), as semver.org states

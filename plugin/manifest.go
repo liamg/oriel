@@ -26,6 +26,7 @@ type Manifest struct {
 	Lazy        Lazy     // when to load it; at start when empty
 	Binaries    []string // the os/arch pairs it ships a process binary for
 	Permissions []Grant  // what it declares, sorted by capability
+	Contributes Contributes
 }
 
 // Lazy is what loads a plugin that isn't loaded at start.
@@ -59,10 +60,25 @@ func ParseManifest(src []byte) (Manifest, error) {
 	if owner, name, ok := strings.Cut(m.ID, "/"); !ok || owner == "" || name == "" || strings.Contains(name, "/") {
 		return m, fmt.Errorf("oriel.toml: id %q isn't <owner>/<name>", m.ID)
 	}
+	if m.Version != "" {
+		if _, err := ParseVersion(m.Version); err != nil {
+			return m, fmt.Errorf("oriel.toml: version: %w", err)
+		}
+	}
 	switch m.Runs {
 	case "", "app", "session", "both":
 	default:
 		return m, fmt.Errorf("oriel.toml: runs is app, session or both, not %q", m.Runs)
+	}
+	for _, b := range m.Binaries {
+		if !slices.Contains(Platforms, b) {
+			return m, fmt.Errorf("oriel.toml: binaries: %q isn't one of %s", b, strings.Join(Platforms, ", "))
+		}
+	}
+	if c, ok := v["contributes"].(map[string]any); ok {
+		if m.Contributes, err = contributes(c); err != nil {
+			return m, err
+		}
 	}
 	if l, ok := v["lazy"].(map[string]any); ok {
 		m.Lazy = Lazy{Commands: tstrs(l["commands"]), Events: tstrs(l["events"]), Keys: tstrs(l["keys"]),

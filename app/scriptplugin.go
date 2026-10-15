@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -10,19 +11,22 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/script/api"
 )
 
-// scriptPlugin is a Lua plugin run as a plugin: its oriel.toml and init.lua, in a VM of its own whose every
-// call is checked against the permissions it's granted (security.md).
+// scriptPlugin is a plugin from its files (catalog.md, "What a plugin is"): its oriel.toml's [contributes], then its
+// init.lua in a VM of its own whose every call is checked against the permissions it's granted (security.md). A
+// data-only plugin has no init.lua.
 type scriptPlugin struct {
-	fsys fs.FS
-	o    PluginOpts
-	m    plugin.Manifest
-	err  error
-	vm   *script.VM
-	apis *api.APIs
+	fsys    fs.FS
+	o       PluginOpts
+	m       plugin.Manifest
+	err     error
+	contrib registry.Disposable
+	vm      *script.VM
+	apis    *api.APIs
 }
 
 // PluginOpts is where a script plugin's own files are and what it's granted.
@@ -65,8 +69,24 @@ func (p *scriptPlugin) Activate(_ context.Context, h plugin.Host) error {
 		p.failed(h, p.err)
 		return nil
 	}
-	src, err := fs.ReadFile(p.fsys, "init.lua")
+	if !p.m.Contributes.Empty() {
+		if p.o.Dir == "" {
+			p.failed(h, errors.New("[contributes] needs the plugin's directory"))
+			return nil
+		}
+		d, err := plugin.Contribute(h, p.o.Dir, p.m.ID, p.m.Contributes)
+		if err != nil {
+			p.failed(h, err)
+			return nil
+		}
+		p.contrib = d
+	}
+	src, err := fs.ReadFile(p.fsys, plugin.EntryFile)
+	if errors.Is(err, fs.ErrNotExist) && p.contrib != nil {
+		return nil
+	}
 	if err != nil {
+		p.Deactivate(context.Background())
 		p.failed(h, err)
 		return nil
 	}
@@ -83,9 +103,10 @@ func (p *scriptPlugin) Activate(_ context.Context, h plugin.Host) error {
 	vm := script.New()
 	vm.OnSlow = func(src string, took time.Duration) { h.Log().Warn("slow Lua", "function", src, "took", took) }
 	apis := api.InstallPlugin(vm, h, plugin.Caller{ID: p.m.ID, Dir: p.o.Dir, Guard: g, Data: data})
-	if err := vm.Load(script.Chunk{Name: p.m.ID + "/init.lua", Source: src}); err != nil {
+	if err := vm.Load(script.Chunk{Name: p.m.ID + "/" + plugin.EntryFile, Source: src}); err != nil {
 		apis.Dispose()
 		vm.Close()
+		p.Deactivate(context.Background())
 		p.failed(h, err)
 		return nil
 	}
@@ -98,6 +119,10 @@ func (p *scriptPlugin) failed(h plugin.Host, err error) {
 }
 
 func (p *scriptPlugin) Deactivate(context.Context) error {
+	if p.contrib != nil {
+		p.contrib.Dispose()
+		p.contrib = nil
+	}
 	if p.apis != nil {
 		p.apis.Dispose()
 		p.vm.Close()

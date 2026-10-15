@@ -4,6 +4,7 @@ use (
 	./agent
 	./app
 	./assistant
+	./catalog
 	./cmd/oriel
 	./cmd/oriel-spike
 	./core

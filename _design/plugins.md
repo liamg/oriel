@@ -888,6 +888,14 @@ type Host interface {
   `slack.webhook` opens the secret's dialog. Post counts are the plugin's memory, so they start again with the app
   (crit kept them in its config): plugins have no store of their own yet.
 
+## As built (PL-19)
+
+- New contribution kinds: `registry.Font{Name, Path, Source}` (`font`) and `registry.Icon{Name, Path, Source}`
+  (`icon`), which a plugin's `[contributes]` registers from its files. The rest of `[contributes]` uses the existing
+  points: `Registry.Theme`, `Registry.Language`, `registry.PromptPack` and `Registry.HelpPages` (catalog.md, "As built
+  (PL-19)").
+- `app.DirPlugin` loads a data-only plugin (no `init.lua`) as well as a Lua one.
+
 ## As built (tickets)
 
 - **Ticket trackers** (`registry.TicketTracker`, kind `ticket.tracker`) replace PL-8's ticket sources: a tracker (Linear,

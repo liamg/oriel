@@ -124,7 +124,7 @@ end)
 L.status.rule(function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
 ```
 
-A plugin's own Lua also has these (catalog.md; `asset` is P8's, `process` and `wasm` PL-2's and `option` PL-10's, all
+A plugin's own Lua also has these (catalog.md; `asset` is PL-19's, `process` and `wasm` PL-2's and `option` PL-10's, all
 open to `init.lua` too):
 
 ```lua
@@ -404,6 +404,12 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   docs/api.md says each function's. Besides the glue: `exec` checks its program, `lsp.server` its `cmd`,
   `agent.tool` its name, and a hook's veto or decision needs `gate` (without it the hook's run is an error and
   nothing is vetoed).
+
+## As built (PL-19)
+
+- `oriel.asset(path)` returns the contents of one of the plugin's own assets, as a string: path is under its
+  `assets/` directory and may not lead out of it, and it needs no capability (catalog.md, "As built (PL-19)").
+- `api.Reference` lists each function's capability as `Cap`, which `oriel plugin pack` checks plugins against.
 
 ## As built (PL-6)
 

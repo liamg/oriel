@@ -73,7 +73,7 @@ func runApp(args []string) {
 
 // subcommands are the first arguments that aren't files to open.
 var subcommands = map[string]bool{"version": true, "worker": true, "dev": true, "hook": true, "new": true, "review": true,
-	"init": true, "repos": true, "sessions": true, "build": true, "update": true}
+	"init": true, "repos": true, "sessions": true, "build": true, "update": true, "plugin": true}
 
 func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
@@ -86,6 +86,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "build":
 		if err := runBuild(args[1:], stdout, stderr); err != nil {
 			fmt.Fprintln(stderr, "oriel build:", err)
+			return 1
+		}
+		return 0
+	case "plugin":
+		if err := runPlugin(args[1:], stdout, stderr); err != nil {
+			fmt.Fprintln(stderr, "oriel plugin:", err)
 			return 1
 		}
 		return 0

@@ -30,6 +30,7 @@ like this" isn't a source.
 | text | Unicode UAX #29 (graphemes), #14 (line breaks), #11 (width), plus the UCD data files (`spec/unicode`: #11 and #29 so far) | Unicode version |
 | colour | CSS Color 4 (OKLCH), WCAG 2 (contrast ratio) | commit |
 | git | the `git` binary as the oracle (`git check-attr`, porcelain output); docs linked, not vendored | git version |
+| versions | Semantic Versioning 2.0.0 (`spec/semver`) for precedence; node-semver's README (`spec/node-semver`) for ranges: caret, tilde, X-ranges, `||` and prerelease tags | fetch date (no tags) |
 | editor conventions | the EditorConfig specification and its core-test suite | commit |
 
 - `spec/` is data: no code from it is linked. Updating a pin is a PR that re-runs every referencing test.

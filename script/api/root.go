@@ -144,6 +144,12 @@ func (r Root) Read(path string) ([]any, error) {
 	return []any{string(b)}, nil
 }
 
+//oriel:api doc="One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability." returns=string
+func (r Root) Asset(path string) (string, error) {
+	b, err := plugin.Asset(r.a.Plugin.Dir, path)
+	return string(b), err
+}
+
 //oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't)." optional=opts returns=string? cap=exec
 func (r Root) Exec(argv []string, opts script.Table) (any, error) {
 	if len(argv) == 0 {

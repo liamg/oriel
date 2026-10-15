@@ -273,7 +273,10 @@ sequenceDiagram
 - **Trusted means the author's GitHub account is the root of trust.** A hijacked account ships to everyone on the next
   update. Mitigations: the capability diff, `trusted_hold`, and revocation.
 - **Binaries on macOS** that Oriel downloads aren't quarantined, but they're only ad-hoc signed. They should run fine
-  under sandbox-exec: PL-19 checks.
+  under sandbox-exec. The spike is `TestDownloadedAdhocBinaryRuns` (`plugin/ossandbox`, darwin only): a binary
+  fetched over HTTP as an install does, signed ad hoc with `codesign -s -`, checked unquarantined, then run under
+  sandbox-exec with a profile. Result: not run yet. It needs a Mac (the sandbox PL-19 was built in is Linux), and
+  macOS CI runs it.
 - **Review load**: every version of an untrusted plugin is a PR. Trust is the relief valve.
 - **Abuse at scale**: if the registry ever goes public with many authors, PR review won't scale. That's when to
   consider a hosted service. The client reads only `index.json`, so that change stays server-side.
@@ -281,6 +284,51 @@ sequenceDiagram
 ## Out of scope
 
 - A web catalog site, ratings, download counts. Paid plugins. A hosted registry service.
+
+## As built (PL-19)
+
+- **A plugin is a directory** with `oriel.toml` (`plugin.ManifestFile`) and, unless it's data-only, `init.lua`
+  (`plugin.EntryFile`). `app.DirPlugin(dir, opts)` loads one: its `[contributes]` first, then `init.lua` in a VM of its
+  own. A plugin with neither fails to load with a notice. The manifest never had a `run` field.
+- **The manifest** also checks that `version` is a full semver version (`plugin.ParseVersion`) and that each
+  `binaries` entry is one of `plugin.Platforms` (darwin/arm64, darwin/amd64, linux/amd64, linux/arm64).
+- **`[contributes]`** (`plugin.Contributes`, `plugin.Contribute(registry, dir, source, c)`) takes globs of the plugin's
+  own files (`icons` is a directory). A pattern leaving the plugin is a manifest error, and one matching nothing is a
+  load error, so a typo doesn't pass for an empty plugin. A symlink out of the plugin is skipped.
+  - `themes`: each file is a theme (`theme.File`), checked as it's registered.
+  - `languages`: each directory is a grammar pack (`plugin.ReadLanguagePack`, shared with the local packs).
+  - `prompts`: each file is a prompt pack named after it (`registry.PromptPack`).
+  - `help`: the files are help pages, as one source named after the plugin.
+  - `fonts` and `icons` register `registry.Font` and `registry.Icon` contributions (kinds `font` and `icon`), so the
+    Plugins page can list them. Nothing draws them yet: the typesetter's faces are fixed when the window opens, and
+    icons are drawn as strokes, with no SVG renderer.
+  - Everything is taken back when the plugin stops.
+- **`oriel.asset(path)`** returns an asset's contents: path is under `assets/`, needs no capability, and can't lead out
+  of `assets/` (`plugin.Asset`).
+- **`oriel.process.spawn` and `oriel.wasm.load`** were already scoped as PL-19 asks (PL-2): the plugin's own file
+  needs no grant, and anything else needs `exec` or `fs.read` (`TestSpawnNeedsExecForOthers`).
+- **The size limit** is `plugin.MaxSize` (20 MB, unpacked): pack enforces it on every archive, and `catalog.Unpack`
+  refuses an archive over it.
+- **`oriel plugin pack [DIR]`** (`catalog.Pack`):
+  - Checks the manifest, the entry point or `[contributes]`, each pattern and the icon, and the capabilities.
+  - The capability check (`catalog.Undeclared`) lexes `init.lua` and `lua/**/*.lua`. It finds `oriel.ns.fn`
+    directly or through an alias (`local L = oriel`), and looks up each function's capability in the API reference.
+    apigen now writes `Cap` into `api.Reference`. `process.spawn`, `wasm.load` and `read` given a literal relative
+    path are the plugin's own file and need nothing; otherwise they need `exec` or `fs.read`. `http.request` needs
+    `net`.
+  - Archives go to `DIR/dist`. A plugin with no binaries gets one archive, `<name>-<version>.tar.gz` (platform `any`).
+    A plugin with binaries gets `<name>-<version>-<os>-<arch>.tar.gz` for each platform in `binaries`, holding the
+    plugin and its `bin/`:
+    - with a `go.mod`, each `cmd/<x>` is built for that platform with `catalog.GoBuildFlags` (`-trimpath
+      -buildvcs=false -ldflags=-buildid=`, `CGO_ENABLED=0`);
+    - otherwise the binaries come from `bin/<os>-<arch>/`.
+  - Dot files, `bin/` and `dist/` aren't packed. Archives are reproducible: sorted, with fixed times, owners and
+    modes, so the registry's CI can build them again and compare.
+  - It prints `sha256:<hex>  <platform>  <file>` for each archive.
+- **`oriel plugin init [--process] [--id OWNER/NAME] [DIR]`** (`catalog.Scaffold`) writes `oriel.toml` and
+  `init.lua`. With `--process` it also writes `binaries`, a `go.mod`, `cmd/<name>/main.go` (a stdio JSON-RPC
+  server with a `hello` method) and an `init.lua` that spawns it. The id defaults to the GitHub owner of `origin`
+  and the directory's name, without an `oriel-` prefix. It never writes over a file.
 
 ## Tickets
 
