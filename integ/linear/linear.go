@@ -1,5 +1,5 @@
-// Package linear is the Linear plugin's process: the viewer's assigned tickets, one ticket in detail, the moves and
-// links made on them, and the workspace's recent activity, over Linear's GraphQL API (crit-reference.md → Linear).
+// Package linear is the Linear plugin's process: the viewer's assigned tickets, one ticket in detail, and the moves and
+// links made on them, over Linear's GraphQL API (crit-reference.md → Linear).
 // It never holds the API key: each request goes through the host's http.request, which adds the key only for
 // api.linear.app (security.md).
 package linear

@@ -1,6 +1,6 @@
 -- Linear (crit-reference.md → Linear): your assigned tickets in the omnibox (! narrows to them), Start work from one
 -- in the launcher with the ticket as the agent's context, the ticket moved into progress as its session starts and
--- into review as its PR is raised, the PR linked back, and the workspace's moves in the HUD. Linear is reached by
+-- into review as its PR is raised, and the PR linked back. Linear is reached by
 -- this plugin's process (bin/oriel-linear, built from integ/linear/cmd/oriel-linear), through Oriel, which holds the
 -- API key: neither the process nor this Lua ever sees it.
 local L = oriel
@@ -9,10 +9,8 @@ local SECRET = "LINEAR_TOKEN"
 local NOKEY = "no Linear API key yet"
 local STALE = 10 * 60 -- crit's ticket list refresh
 local NOKEY_AGAIN = 2 -- how soon to look again while there's no key, as one is being set
-local FEED_EVERY = "5m"
 
 local tickets = { issues = nil, err = nil, at = nil, busy = false }
-local feed = { events = nil, err = nil, busy = false }
 local proc
 
 local function process()
@@ -171,48 +169,10 @@ L.on("PrSeen", function(ev)
   end)
 end, { desc = "Linear: link the PR, and the ticket into review" })
 
--- The workspace's moves, newest first (crit's company feed, its Linear half).
-local function fetch_feed()
-  if feed.busy then
-    return
-  end
-  feed.busy = true
-  process():request("activity", { limit = 6 }, function(res, err)
-    feed.busy = false
-    if err then
-      feed.err = why(err)
-    else
-      feed.err, feed.events = nil, res.events or {}
-    end
-    L.hud.refresh("linear.moves")
-  end)
-end
-
-L.hud.indicator("linear.moves", { slot = "hud", title = "LINEAR", order = 80, every = FEED_EVERY }, function()
-  if not feed.busy then
-    fetch_feed()
-  end
-  if feed.err == NOKEY then
-    return L.ui.column{ L.ui.text("Set your Linear API key: :LinearKey", "dim") }
-  end
-  if feed.events == nil then
-    return L.ui.column{ L.ui.text(feed.err or "Asking Linear…", feed.err and "warn" or "dim") }
-  end
-  if #feed.events == 0 then
-    return L.ui.column{ L.ui.text("Nothing moved in the last two days", "dim") }
-  end
-  local rows = { gap = 4 }
-  for _, e in ipairs(feed.events) do
-    local what = e.kind == "moved" and (e.from .. " → " .. e.to) or "created"
-    rows[#rows + 1] = L.ui.row{ L.ui.text(e.ago, "faint"), L.ui.text(e.key, "accent"), L.ui.text(what), L.ui.text(e.who or "", "dim"), gap = 8 }
-  end
-  return L.ui.column(rows)
-end)
 
 L.command("LinearTickets", function() L.cmd("omnibox.open", { scope = "tickets" }) end, { desc = "Your Linear tickets, in the omnibox" })
 L.command("LinearKey", ask_key, { desc = "Set your Linear API key" })
 L.command("linear.refresh", function()
   tickets.at = nil
   refresh()
-  fetch_feed()
-end, { desc = "Ask Linear for your tickets and its moves again now" })
+end, { desc = "Ask Linear for your tickets again now" })

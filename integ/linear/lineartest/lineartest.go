@@ -9,21 +9,16 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/ext/exttest"
 )
 
 // Key is the API key the recording accepts.
 const Key = "lin_api_r3c0rd3d"
-
-// Recorded is when activity.json was recorded: its times are replayed as long before now as they were then.
-var Recorded = time.Date(2026, 10, 15, 14, 30, 0, 0, time.UTC)
 
 // Mutation is a change sent to Linear.
 type Mutation struct {
@@ -39,7 +34,6 @@ type Linear struct {
 	mu        sync.Mutex
 	assigned  map[string]any
 	issues    map[string]map[string]any // by identifier
-	activity  []byte
 	mutations []Mutation
 	auths     []string // each request's host and Authorization
 }
@@ -54,11 +48,6 @@ func New(t *testing.T) *Linear {
 		key := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(m), "issue-"), ".json")
 		l.issues[key] = l.load(filepath.Base(m))
 	}
-	b, err := os.ReadFile(filepath.Join(dir(), "activity.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	l.activity = b
 	l.Server = httptest.NewTLSServer(http.HandlerFunc(l.serve))
 	t.Cleanup(l.Close)
 	return l
@@ -96,20 +85,6 @@ func (l *Linear) Auths() []string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return append([]string(nil), l.auths...)
-}
-
-var stamp = regexp.MustCompile(`\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z`)
-
-// replay moves every time in b as far on as now is from Recorded.
-func replay(b []byte, now time.Time) []byte {
-	shift := now.Sub(Recorded)
-	return stamp.ReplaceAllFunc(b, func(s []byte) []byte {
-		t, err := time.Parse(time.RFC3339Nano, string(s))
-		if err != nil {
-			return s
-		}
-		return []byte(t.Add(shift).UTC().Format(time.RFC3339Nano))
-	})
 }
 
 func (l *Linear) serve(w http.ResponseWriter, r *http.Request) {
@@ -157,8 +132,6 @@ func (l *Linear) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		json.NewEncoder(w).Encode(is)
-	case strings.Contains(q, "issues(first"):
-		w.Write(replay(l.activity, time.Now()))
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`{"errors":[{"message":"not in the recording"}]}`))

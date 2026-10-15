@@ -836,15 +836,14 @@ type Host interface {
   `auth = "LINEAR_TOKEN", auth_scheme = "none"`), so neither it nor the Lua sees the key. Its methods: `assigned`,
   `ticket {key}` (with comments and attachments, a summary, facts and the agent's context), `start {key}` (into the
   team's In Progress, from triage, backlog or unstarted), `review {key}` (into In Review, from any state before it;
-  a team without one stays put), `link {key, url, number, title}` (an attachment titled "#12 title"), `activity`
-  (created and moved, 48 h, newest first). The Lua adds the `tickets` omnibox source (`!`, crit's order, a key ask
+  a team without one stays put), `link {key, url, number, title}` (an attachment titled "#12 title"). The Lua adds the `tickets` omnibox source (`!`, crit's order, a key ask
   while there's none), Linear's ticket source, `SessionStart` and `PrSeen` hooks (into progress; link, then into
-  review while the PR is open) and the HUD panel **LINEAR** (the workspace's moves, every 5 min); commands
+  review while the PR is open); commands
   `LinearTickets`, `LinearKey`, `linear.refresh`. `integ/linear/lineartest` is the recorded API (`testdata/*.json`,
   served as api.linear.app over TLS, mutations kept and applied).
 - Not yet: installing it (PL-19/20 bring the plugin manager; it isn't bundled, since `app.ScriptPlugin` has no
-  directory for a process binary), crit's "Continue" for a ticket with a workspace, the ticket's done move on merge,
-  and the Linear moves joining a company feed with GitHub's (there's no company feed yet).
+  directory for a process binary). Not carried over from crit (crit-reference.md): the company feed, "Continue" for a
+  ticket with a workspace, and the ticket's done move on merge.
 
 ## Performance and native plugins
 

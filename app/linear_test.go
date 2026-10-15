@@ -13,7 +13,6 @@ import (
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/integ/linear/lineartest"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/script"
 )
 
@@ -224,28 +223,6 @@ func TestLinearPRLinkedBack(t *testing.T) {
 	s.sh.runTodo()
 	if n := len(l.Mutations()); n != sent {
 		t.Errorf("%d changes after a second read, %d before", n, sent)
-	}
-}
-
-// crit-reference → Linear: "A company feed of Linear moves": the workspace's moves and new tickets of the last two
-// days, newest first, as a panel of the HUD.
-func TestLinearMovesInTheHUD(t *testing.T) {
-	l := lineartest.New(t)
-	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
-	s := newSceneWith(t, "", "", mockupSize, change)
-	loadLinear(t, s)
-	s.hold(render.ModAlt, 300*time.Millisecond)
-	s.until(t, "the moves", func() bool { return strings.Contains(s.frameText(), "INF-2190") })
-	text := s.frameText()
-	for _, want := range []string{"LINEAR", "20m", "INF-2219", "In Progress → In Review", "priya", "INF-2244", "created", "ben",
-		"Backlog → Todo", "In Review → Done"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("the HUD lacks %q:\n%s", want, text)
-		}
-	}
-	if strings.Index(text, "INF-2219") > strings.Index(text, "INF-2190") {
-		t.Error("the moves aren't newest first")
 	}
 }
 

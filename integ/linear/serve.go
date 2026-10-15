@@ -11,9 +11,6 @@ import (
 	"github.com/liamg/oriel/agent/jsonrpc"
 )
 
-// Window is how far back the feed of moves reaches (crit's company feed).
-const Window = 48 * time.Hour
-
 // CodeNoKey is the JSON-RPC error of a request made before the API key is set.
 const CodeNoKey = -32010
 
@@ -23,7 +20,6 @@ type Params struct {
 	URL    string `json:"url"`    // link: the pull request's
 	Number int    `json:"number"` // link
 	Title  string `json:"title"`  // link
-	Limit  int    `json:"limit"`  // activity: how many, 12 if 0
 }
 
 // TicketAnswer is ticket's answer: the ticket, and what the launcher's card and the agent get of it.
@@ -43,10 +39,9 @@ type Moved struct {
 // Server answers the plugin's Lua.
 type Server struct {
 	Client Client
-	Now    func() time.Time // time.Now when nil
 }
 
-// Handle answers one request: assigned, ticket, start, review, link or activity.
+// Handle answers one request: assigned, ticket, start, review or link.
 func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage) (any, error) {
 	var p Params
 	if len(raw) > 0 && string(raw) != "null" {
@@ -54,14 +49,10 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 			return nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: err.Error()}
 		}
 	}
-	if method != "assigned" && method != "activity" && strings.TrimSpace(p.Key) == "" {
+	if method != "assigned" && strings.TrimSpace(p.Key) == "" {
 		return nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: method + " needs a ticket's key"}
 	}
 	c := s.Client
-	now := time.Now
-	if s.Now != nil {
-		now = s.Now
-	}
 	var out any
 	var err error
 	switch method {
@@ -85,14 +76,6 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 	case "link":
 		err = c.LinkPR(ctx, p.Key, p.URL, p.Number, p.Title)
 		out = map[string]any{"linked": err == nil}
-	case "activity":
-		var events []Activity
-		n := now()
-		events, err = c.Activity(ctx, n.Add(-Window), n)
-		if limit := cmpInt(p.Limit, 12); len(events) > limit {
-			events = events[:limit]
-		}
-		out = map[string]any{"events": events}
 	default:
 		return nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "no method " + method}
 	}
@@ -137,11 +120,4 @@ func Serve(r io.Reader, w io.Writer) error {
 		return err
 	}
 	return nil
-}
-
-func cmpInt(a, b int) int {
-	if a > 0 {
-		return a
-	}
-	return b
 }

@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/integ/linear/lineartest"
 )
@@ -210,25 +209,6 @@ func TestLinkPR(t *testing.T) {
 		"title": "#4398 fix(usage): key price cache by plan"}
 	if len(m) != 1 || m[0].Op != "attachmentCreate" || !reflect.DeepEqual(m[0].Vars["input"], want) {
 		t.Errorf("mutations %+v", m)
-	}
-}
-
-// "A company feed of Linear moves": what was created and moved in the last 48 hours, newest first.
-func TestActivity(t *testing.T) {
-	c, _ := recorded(t)
-	now := time.Now()
-	events, err := c.Activity(t.Context(), now.Add(-Window), now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got []string
-	for _, e := range events {
-		got = append(got, e.Ago+" "+e.Who+" "+e.Kind+" "+e.Key+" "+e.From+"→"+e.To)
-	}
-	want := []string{"20m priya moved INF-2219 In Progress→In Review", "1h ben created INF-2244 →", "2h ana moved INF-2231 Backlog→Todo",
-		"4h ben moved INF-2190 In Review→Done"}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("feed:\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
 
