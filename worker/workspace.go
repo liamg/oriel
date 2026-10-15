@@ -200,7 +200,7 @@ func newWorkspace(ctx context.Context, root string, m Manifest) error {
 	if err := os.MkdirAll(filepath.Dir(exclude), 0o755); err != nil {
 		return err
 	}
-	ignore := ManifestFile + "\n" + ReposDir + "/\n"
+	ignore := ManifestFile + "\n" + ReposDir + "/\n" + strings.Join(NotesFiles, "\n") + "\n"
 	if m.Tour != nil {
 		ignore += tour.HTMLFile + "\n" + tour.MarkdownFile + "\n"
 	}

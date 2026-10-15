@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/sandbox"
@@ -55,6 +56,8 @@ const (
 	MethodFindings = "review.ai.findings"
 	// MethodSandboxConfig is the sandbox settings, sent on connect and whenever a sandbox.* option changes.
 	MethodSandboxConfig = "sandbox.config"
+	// MethodPrompts is the user's versions of the prompts (agent/prompts), sent on connect and whenever one changes.
+	MethodPrompts = "prompts.set"
 	// MethodStatsQuery answers a stats.Query over the worker's sessions; MethodStatsSession is one session's stats.
 	MethodStatsQuery   = "stats.query"
 	MethodStatsSession = "stats.session"
@@ -309,6 +312,11 @@ func (c Client) NextPR(ctx context.Context, id core.SessionID) error {
 
 func (c Client) StartWork(ctx context.Context, r StartWorkReq) error {
 	return c.Conn.Call(ctx, MethodStartWork, r, nil)
+}
+
+// SetPrompts hands the worker the user's versions of the prompts: its packs and agent notes use them.
+func (c Client) SetPrompts(ctx context.Context, o prompts.Overrides) error {
+	return c.Conn.Call(ctx, MethodPrompts, o, nil)
 }
 
 // SetSandboxConfig hands the worker the sandbox settings its sandboxes run on.

@@ -67,6 +67,7 @@ type Config struct {
 	Updates *Updates
 	// Started is called once the window is open and every extension active: what the updater's health check waits for.
 	Started func()
+	Voice   VoiceConfig // dictation's microphone, transcriber and speaker; the real ones, from the voice.* options, if nil
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -785,7 +786,8 @@ func fromNotation(tok string) render.KeyEvent {
 func notation(ev render.KeyEvent) string {
 	single := utf8.RuneCountInString(ev.Key) == 1
 	mods := ev.Mods
-	if single {
+	// A character's shift is in the character; Space's isn't, so ⌃⇧Space keeps it (⇧Space alone is still a space).
+	if single && (ev.Key != " " || mods&(render.ModCtrl|render.ModAlt|render.ModSuper) == 0) {
 		mods &^= render.ModShift
 	}
 	if single && mods == 0 {

@@ -170,6 +170,14 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `workers.listen` | empty: Oriel doesn't listen for workers on other machines; an address, `:7437` or `10.0.0.2:7437`, listens there (pinned TLS, keys in `workers.json`; security.md, Remote workers). Add a worker sets it | app | | AI-15 |
 | `updates.mode` | `ask`: a new release is offered in a notice; `automatic` installs it, and its workers', as it comes out; `manual` only checks on `:UpdateCheck` (distribution.md) | app | | PL-6 |
 | `updates.channel` | `stable`; or `nightly`, pre-releases too | app | | PL-6 |
+| `voice.dictation` | true: ⌃⇧Space dictates into the focused text field (a recorder and whisper-server, or `voice.url`, needed); false turns it off | app | | PL-11 |
+| `voice.model` | the Whisper model: `base.en`, `small.en`, `medium.en` or a path to a ggml model; empty picks one for the machine (`small.en` on Apple silicon, else `base.en`) | app | | PL-11 |
+| `voice.url` | an OpenAI-compatible transcription endpoint used instead of a local whisper-server; empty uses whisper-server | app | | PL-11 |
+| `voice.recorder` | the program that captures audio: `pw-record`, `parecord`, `arecord` (Linux), `rec` (sox), `ffmpeg`; empty uses the first installed | app | | PL-11 |
+| `voice.wake` | false; true listens for the wake word, sending what follows it to the agent in front, its reply spoken | app | | PL-11 |
+| `voice.wake_word` | `computer`: one word of letters, up to 20 | app | | PL-11 |
+| `voice.speech` | `system` (say, spd-say or espeak), `piper` or `off`: how replies are spoken | app | | PL-11 |
+| `voice.piper_voice` | a Piper voice's name in `~/.oriel/piper`; empty uses the first there | app | | PL-11 |
 
 ## The settings page (`:Settings`, ⌘,)
 

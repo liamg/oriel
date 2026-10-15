@@ -145,7 +145,7 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 		}
 		x.drawing = st
 		c.Column("code", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{T: codePadT}, Clip: true, Focusable: true,
-			KeyMode: st.Mode().KeyMode, Wheel: true, Cursor: render.CursorText, Help: "editor/pane", Role: ui.RoleTextBox,
+			KeyMode: st.Mode().KeyMode, Text: st.Mode().Text, Wheel: true, Cursor: render.CursorText, Help: "editor/pane", Role: ui.RoleTextBox,
 			Label: p.Name()}, func(c *ui.Ctx) {
 			x.lines(c, p, m)
 		})

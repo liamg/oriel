@@ -142,15 +142,16 @@ func (h *host) launch() (agent.Session, Sandbox, error) {
 	spec := agent.StartSpec{Cwd: agentDir(se), Model: se.Agent.Model, Effort: se.Agent.Effort, Policy: agent.Policy(se.Agent.Policy),
 		Tools: w.tools(h), Protect: w.protected(se), Exec: w.opts.Exec, StateDir: filepath.Join(w.sessionDir(h.id), "agent"),
 		Env: []string{"ORIEL_SESSION=" + string(h.id)}}
-	if k, ok := w.kinds.Get(se.Kind); ok && w.opts.Packs != nil {
+	if k, ok := w.kinds.Get(se.Kind); ok {
 		name := k.Pack
 		if se.Agent.Pack != "" {
 			name = se.Agent.Pack
 		}
-		if pack, ok := w.opts.Packs(name); ok {
+		if pack, ok := w.pack(name); ok {
 			spec.Pack = pack
 		}
 	}
+	w.writeNotes(h.id)
 	h.mu.Lock()
 	h.drafts = slices.Contains(spec.Pack.Tools, "commit_draft")
 	h.mu.Unlock()

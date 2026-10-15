@@ -66,6 +66,8 @@ type UIView interface {
 	FocusNext(dir int) // moves keyboard focus to the next focusable node (back with -1), wrapping
 	DragKey() bool     // picks up the focused node's drag, or drops the one held on it (ui/dnd.go)
 	CancelDrag()
+	TakesText() bool             // the focused node inserts typed text: a text field, an editor in insert mode
+	Key(ev render.KeyEvent) bool // types a key at the focused node, past the keymaps, for its next frame
 }
 
 // Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's

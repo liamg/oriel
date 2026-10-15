@@ -318,7 +318,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	lo, hi := min(st.cursor, st.anchor), max(st.cursor, st.anchor)
 	focused := in.Focused
 	style := ui.Style{W: width, Fill: col(c, tInputBg), Stroke: border, Border: 1, Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled,
-		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Role: ui.RoleTextBox, Label: o.Label, Value: string(runes)}
+		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Text: true, Role: ui.RoleTextBox, Label: o.Label, Value: string(runes)}
 	if multi {
 		if r, ok := c.Rect(id); ok {
 			st.width = r.Dx() - 20

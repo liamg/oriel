@@ -388,7 +388,38 @@ flowchart TB
   kind with variants gets a picker whose choice is `session.start {variant}` (`SessionSpec.Variant`).
   `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the worker yet.
   `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
-  (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a built-in part) overrides one.
+  (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a part, the user's
+  `agents/parts/<part>.md` before the built-in one) overrides one. `packs.Builtins()`, `Source(name)` (as written,
+  includes unexpanded), `Parts()`, `Part(name)` and `FromTextWith(src, name, part)` read and build them.
+- **editable prompts** (PL-11, `agent/prompts`): every prompt the Prompts page edits is a `prompts.Def{ID, Group,
+  Label, Help, Vars, Default, File}`: the built-ins (`agent/prompts/defaults/NN-<id>.md`, crit's frontmatter: group,
+  label, help, vars), each built-in pack (`pack.<name>`, kept in `agents/<name>.md`) and part (`part.<name>`,
+  `agents/parts/<name>.md`), and any `prompts.Register(Def)` adds (kept in `prompts/<id>.md`): the worker registers
+  each tour kind's guidance as `tour.<kind>` (`worker.TourKindID`). Only the user's
+  changes are kept (`prompts.Store{Dir}`: `Load`, `Set`, which takes the file away for empty or default text,
+  `Reset`, `Path`). `prompts.Overrides` reads them: `Text(id)`, `Custom(id)`, `Style()`, `Render(id, vars)` (with
+  `{{style}}` the coding style, `prompts.StyleID`), `Pack(name, base)` (a built-in pack the user changed, or whose
+  parts they changed, built from their text; any other from base). The app sends them to every worker on connect and
+  on each change (`prompts.set`, `worker.Client.SetPrompts`); the worker binary's packs are the built-in ones for
+  the built-in kinds (the user's versions come from the app) and `agents/` only adds kinds. The worker writes
+  each workspace's agent notes (`worker.NotesFiles`: `CLAUDE.md` and `AGENTS.md`) with the projects and the coding
+  style, as crit's `WriteAgentNotes` does. Commands `Prompts`, `prompts.open {id}`, `prompts.set {id, text}`,
+  `prompts.reset {id}`, `prompts.save`, `prompts.edit {id}`; key modes `prompts` and `prompts.text`; view
+  `app.overlay.prompts`; the `prompts` icon. No Lua binding of its own yet: the commands are Lua's way in.
+- **voice** (PL-11, module `voice`): `voice.Mic` → `voice.Stream` (20 ms frames of 16 kHz mono); `voice.Recorder`
+  runs a recorder program (pw-record, parecord, arecord, sox's rec, ffmpeg) rather than linking an audio library;
+  `voice.Transcriber` (`voice.Whisper`: a resident whisper-server, or an OpenAI-compatible `URL`; models downloaded
+  with checksums); `voice.Dictate` (phrases at pauses, the live one re-transcribed each second), `voice.Wake` and
+  `voice.WakeMatch`; `voice.Speaker` (`voice.System`, `voice.Piper`). `voice/voicetest` has a scripted mic and a
+  transcriber. In the app, `Config.Voice` swaps them; options `voice.dictation`, `voice.model`, `voice.url`,
+  `voice.recorder`, `voice.wake`, `voice.wake_word`, `voice.speech`, `voice.piper_voice`; commands `voice.dictate`
+  (`<C-S-Space>`, and `<D-S-Space>` on macOS), `voice.cancel` (`<Esc>` in the `voice` key layer), `voice.download
+  {model}`, `voice.speak {text}`; the `VoiceWake` hook (`VoiceWake{Text}`: a Decide hook takes the request, a
+  rewrite changes it, a veto drops it; otherwise it goes to the agent in front with `agent.send`, whose reply is
+  spoken at `AgentTurnEnd`, or to the omnibox). Dictation types into whatever has focus and takes text:
+  `ui.Style.Text` marks such a node (`widget.Input` sets it, the editor while its engine's `input.Mode.Text` is
+  set: vim's insert and replace, plain, emacs), and `ext.UIView.TakesText()` and `UIView.Key(ev)` let any plugin
+  type there, past the keymaps.
 - thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"). Built in RV-4:
   `registry.ThreadSource{Origin, Title, Head, Comment}` (`registry.ThreadSourceFor`) draws threads of an origin in
   every thread card (between the editor's and the diff's lines, and in a request): its title, its head after the

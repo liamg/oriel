@@ -488,3 +488,28 @@ func TestHeldAlone(t *testing.T) {
 		}
 	})
 }
+
+// A focused node with Text takes typed text; one without, or disabled, or that takes no keys, doesn't.
+func TestTakesText(t *testing.T) {
+	u := newUI()
+	var ids []ID
+	build := func(c *Ctx) {
+		ids = ids[:0]
+		c.Row("r", Style{}, func(c *Ctx) {
+			ids = append(ids, c.Box("field", Style{W: Px(10), H: Px(10), Focusable: true, KeyMode: "input", Text: true}, nil))
+			ids = append(ids, c.Box("list", Style{W: Px(10), H: Px(10), Focusable: true, KeyMode: "list"}, nil))
+			ids = append(ids, c.Box("bare", Style{W: Px(10), H: Px(10), Focusable: true, Text: true}, nil))
+		})
+	}
+	paintOps(u, render.Point{X: 100, Y: 100}, build)
+	if u.TakesText() {
+		t.Error("nothing is focused, yet it takes text")
+	}
+	for i, want := range []bool{true, false, false} {
+		u.Focus(ids[i])
+		paintOps(u, render.Point{X: 100, Y: 100}, build)
+		if got := u.TakesText(); got != want {
+			t.Errorf("node %d takes text: %v, want %v", i, got, want)
+		}
+	}
+}

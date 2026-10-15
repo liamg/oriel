@@ -96,6 +96,18 @@ var icons = map[string]func(p *iconPen){
 		p.circle(4.5, 4.5, .6)
 		p.circle(4.5, 11.5, .6)
 	},
+	"prompts": func(p *iconPen) {
+		p.poly(true, 3, 1.5, 10, 1.5, 13, 4.5, 13, 14.5, 3, 14.5)
+		p.line(5.5, 7, 10.5, 7)
+		p.line(5.5, 9.5, 10.5, 9.5)
+		p.line(5.5, 12, 8.5, 12)
+	},
+	"mic": func(p *iconPen) {
+		p.poly(true, 6, 2, 10, 2, 10, 9, 6, 9)
+		p.curve(3.5, 7.5, 3.5, 11, 6, 12, 8, 12)
+		p.curve(8, 12, 10, 12, 12.5, 11, 12.5, 7.5)
+		p.line(8, 12, 8, 14.5)
+	},
 	"folder": func(p *iconPen) {
 		p.poly(true, 2, 3.5, 6.5, 3.5, 8, 5, 14, 5, 14, 13, 2, 13)
 		p.line(2, 7, 14, 7)

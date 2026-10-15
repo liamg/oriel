@@ -28,6 +28,7 @@ use (
 	./tools
 	./ui
 	./update
+	./voice
 	./vim
 	./wire
 	./worker

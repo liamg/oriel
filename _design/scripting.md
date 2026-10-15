@@ -389,3 +389,12 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   release it found here and on the workers behind it, `update.restart` restarts onto it.
   `oriel.option["updates.mode"] = "manual"` stops the hourly check; `oriel.option["updates.channel"] = "nightly"`
   takes pre-releases.
+
+## As built (PL-11)
+
+- Prompts are commands: `oriel.cmd("prompts.set", { id = "style.code", text = "Tabs, never spaces." })` keeps your
+  version (empty text or the default puts it back), `prompts.reset { id }`, `prompts.open { id }`,
+  `prompts.edit { id }`. Ids are `style.code`, `pack.<kind>` and `part.<part>`.
+- Voice is commands and options: `oriel.cmd("voice.dictate")` (`⌃⇧Space`), `voice.speak { text = "Done." }`,
+  `voice.download { model = "small.en" }`; `oriel.option["voice.wake"] = true`. `oriel.on("VoiceWake", fn)`
+  sees what followed the wake word: return a decision to take the request yourself.

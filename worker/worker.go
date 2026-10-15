@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
@@ -90,8 +91,11 @@ type Worker struct {
 	lost     map[string]*lostLogin // logins gone, by provider and account
 	// sandboxCfg is the sandbox settings the app last sent.
 	sandboxCfg sandbox.Config
-	closed     chan struct{}
-	stopOnce   sync.Once
+	// prompts is the user's versions of the prompts the app last sent; promptsSent, whether it has.
+	prompts     prompts.Overrides
+	promptsSent bool
+	closed      chan struct{}
+	stopOnce    sync.Once
 }
 
 type sessionLog struct {
@@ -153,6 +157,7 @@ func New(opts Options) (*Worker, error) {
 	if err := w.loadSandboxConfig(); err != nil {
 		return nil, err
 	}
+	w.loadPrompts()
 	if err := w.restore(); err != nil {
 		return nil, err
 	}

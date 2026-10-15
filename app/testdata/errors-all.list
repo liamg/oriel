@@ -84,28 +84,36 @@ clip 0,38 1600x576 r 0
   pop
   rect 741.8125,458.01 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
   text "⌘," @748.8125,471.23 #b3ab99 JetBrains Mono 11
-  rect 265,512.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  text "Stats" @294,529.63525 #ece6d8 Inter 12
-  rect 340.60938,512.27 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  text "Usage" @369.60938,529.63525 #ece6d8 Inter 12
-  rect 423.96875,512.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 3 segments stroke 1.25 #ffd23f
-  text "Jobs" @452.96875,529.63525 #ece6d8 Inter 12
-  rect 498.6875,512.27 86.984375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 5 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  path 6 segments stroke 1.25 #ffd23f
-  path 6 segments stroke 1.25 #ffd23f
-  text "Workers" @527.6875,529.63525 #ece6d8 Inter 12
+  clip 265,510.27002 520x28 r 0
+    rect 265,512.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    text "Stats" @294,529.63525 #ece6d8 Inter 12
+    rect 340.60938,512.27 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    text "Usage" @369.60938,529.63525 #ece6d8 Inter 12
+    rect 423.96875,512.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 3 segments stroke 1.25 #ffd23f
+    text "Jobs" @452.96875,529.63525 #ece6d8 Inter 12
+    rect 498.6875,512.27 86.984375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    path 5 segments stroke 1.25 #ffd23f
+    path 5 segments stroke 1.25 #ffd23f
+    path 6 segments stroke 1.25 #ffd23f
+    path 6 segments stroke 1.25 #ffd23f
+    text "Workers" @527.6875,529.63525 #ece6d8 Inter 12
+    rect 593.6719,512.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    path 6 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    text "Prompts" @622.6719,529.63525 #ece6d8 Inter 12
+  pop
   text "RECENT" @875,193.42 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1229.0469,193.93 #7c7566 JetBrains Mono 10
   text "SESSIONS" @887,224.62 #7c7566 JetBrains Mono 9.5

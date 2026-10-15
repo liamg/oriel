@@ -37,6 +37,7 @@ type sessions struct {
 	repos   []core.Repo // the session in front's worker's registered repos, for adding one
 
 	sandboxKick chan struct{} // the sandbox settings are to go to the workers
+	promptsKick chan struct{} // the user's prompts are to go to the workers
 }
 
 // AgentTurnEnd is the AgentTurnEnd hook's event.
@@ -65,6 +66,8 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	x.workers = map[core.WorkerID]worker.Client{}
 	x.sandboxKick = make(chan struct{}, 1)
 	x.sandboxSettings(ctx)
+	x.promptsKick = make(chan struct{}, 1)
+	x.promptSettings(ctx)
 	for _, c := range x.sh.cfg.Workers {
 		x.serve(ctx, h, c, "")
 	}
@@ -248,6 +251,7 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want 
 		}
 		x.sendSandbox()
 		x.sh.workerJoined(c, info)
+		x.sendPrompts()
 		h.Redraw()
 		if x.sh.cfg.LocalWorker != nil && info.ID == core.LocalWorker && info.Build != worker.Build() {
 			x.sh.restartWorker(c, info.ID)

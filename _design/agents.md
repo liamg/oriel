@@ -300,6 +300,28 @@ type Session interface {
   parsed from their output). A reply that says tests pass with no passing run behind it is flagged
   (`Comment.Unbacked`), and the agent is told so in the tool's answer.
 
+### Prompts and voice (PL-11, as built)
+
+- The Prompts page (`:Prompts`, `app/prompts.go`) edits every `agent/prompts` prompt: the coding style (crit's text),
+  each built-in pack, each part the packs include, and each tour kind's guidance (RV-8's `worker/tour/kinds`, which
+  the worker registers as `tour.<kind>` and the `tour_kind` tool reads through the user's prompts). crit's other 27 prompts don't carry over one for one: in
+  Oriel their text lives in the packs (drafts, comments, tours) or in code that hasn't been made editable yet
+  (Start work's request, explain's depths, the walkthrough format); `prompts.Register` is how those join the page.
+- Only the user's changes are kept, a file each: `prompts/style.code.md`, `agents/<kind>.md` (the same file a
+  hand-written pack override is) and `agents/parts/<part>.md`. The app sends them to each worker on connect and on
+  each change (and when one of those files is saved in the editor); the worker keeps them in `prompts.json` and
+  builds a built-in pack the user changed (or whose parts they changed) from them. Its own `packs.LoadDir` of
+  `agents/` now only adds kinds: a built-in kind's override always comes from the app, so a reset there takes.
+- The coding style goes into the `CLAUDE.md` (and `AGENTS.md`, for Codex) the worker writes at the root of each
+  workspace it made, never in a direct session's own directory, with the list of projects and their own
+  instructions: when the agent starts, when the projects change, and when the prompts change. Both are in the
+  workspace's `.git/info/exclude`, and plan mode doesn't list them as docs.
+- Dictation (`app/voice.go`, module `voice`): crit captured audio in the browser; Oriel runs a recorder program and
+  reads raw PCM from its stdout, so it adds no audio dependency. The rest is crit's: phrases at a 600 ms pause, the
+  live phrase transcribed again each second, whisper-server started on first use and stopped after ten idle
+  minutes, models fetched with checksums. Dictation types through `UIView.Key`, taking back the live phrase with
+  backspaces as a new pass replaces it, and stops if focus moves. The wake word is off by default (`voice.wake`).
+
 ### Drafts when the agent goes idle (AI-10)
 
 - Two halves. The prompt packs that offer `commit_draft` (work, plan, job, new repo; `parts/drafts.md`) tell the agent

@@ -400,6 +400,7 @@ func (w *Worker) NextPR(ctx context.Context, id core.SessionID) error {
 	if err := w.emit(core.ProjectsChanged{ID: id, Branch: b, Projects: projects, Past: past, Started: se.Started}); err != nil {
 		return err
 	}
+	w.writeNotes(id)
 	w.saveProjects(id)
 	return nil
 }
@@ -465,6 +466,7 @@ func (w *Worker) StartWork(ctx context.Context, r StartWorkReq) error {
 	if err := w.emit(core.ProjectsChanged{ID: id, Branch: branch, Projects: projects, Past: se.Past, Started: true}); err != nil {
 		return err
 	}
+	w.writeNotes(id)
 	prompt := startWorkPrompt(projects)
 	if !r.KeepThreads {
 		note, err := w.clearPlanThreads(se)
@@ -635,6 +637,7 @@ func (w *Worker) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID
 	if err := w.emit(core.ProjectsChanged{ID: id, Branch: b, Projects: projects, Past: se.Past, Started: se.Started}); err != nil {
 		return err
 	}
+	w.writeNotes(id)
 	if h, _ := w.hostFor(id, false); h != nil {
 		h.note(fmt.Sprintf("The repo %s joined this session at %s.", r.ID, projects[len(projects)-1].Dir))
 	}

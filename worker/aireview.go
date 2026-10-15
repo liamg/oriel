@@ -109,7 +109,7 @@ func (w *Worker) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
 	if r.Pack != "" {
 		pack, ok = agent.Pack{Name: AIReviewPack, Skill: AIReviewPack, Text: r.Pack, Tools: []string{"finding", "projects"}}, true
 	} else if w.opts.Packs != nil {
-		pack, ok = w.opts.Packs(AIReviewPack)
+		pack, ok = w.pack(AIReviewPack)
 	}
 	if !ok {
 		return "", errors.New("this worker has no ai-review prompt pack")

@@ -103,28 +103,8 @@ clip 0,38 1600x56 r 0
   pop
   rect 741.8125,406.28 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
   text "⌘," @748.8125,419.5 #b3ab99 JetBrains Mono 11
-  rect 265,460.54 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  text "Stats" @294,477.90524 #ece6d8 Inter 12
-  rect 340.60938,460.54 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  text "Usage" @369.60938,477.90524 #ece6d8 Inter 12
-  rect 423.96875,460.54 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 3 segments stroke 1.25 #ffd23f
-  text "Jobs" @452.96875,477.90524 #ece6d8 Inter 12
-  rect 498.6875,460.54 86.984375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 5 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  path 6 segments stroke 1.25 #ffd23f
-  path 6 segments stroke 1.25 #ffd23f
-  text "Workers" @527.6875,477.90524 #ece6d8 Inter 12
+  clip 265,458.54 520x28 r 0
+  pop
   text "RECENT" @875,141.69 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1229.0469,142.2 #7c7566 JetBrains Mono 10
   text "SESSIONS" @887,172.89 #7c7566 JetBrains Mono 9.5

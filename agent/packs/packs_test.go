@@ -206,3 +206,39 @@ func TestLoadDirRejectsBadFiles(t *testing.T) {
 		}
 	}
 }
+
+// A pack's source keeps its include lines, and building it with a part of the user's puts theirs in place of the
+// built-in one.
+func TestSourcesAndPartOverrides(t *testing.T) {
+	if got := len(Builtins()); got != builtins {
+		t.Fatalf("Builtins() has %d, want %d", got, builtins)
+	}
+	src, ok := Source("work")
+	if !ok || !strings.Contains(src, "<!-- include: drafts -->") {
+		t.Fatalf("work's source should keep its include lines: %.80q", src)
+	}
+	if !slices.Contains(Parts(), "drafts") {
+		t.Fatalf("Parts() = %v, want drafts among them", Parts())
+	}
+	built, _ := Get("work")
+	p, err := FromTextWith(src, "work", func(name string) (string, bool) {
+		if name == "drafts" {
+			return "MY DRAFTS RULES\n", true
+		}
+		return "", false
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	drafts, _ := Part("drafts")
+	if !strings.Contains(p.Text, "MY DRAFTS RULES") || strings.Contains(p.Text, strings.TrimSpace(drafts)) {
+		t.Errorf("the user's part didn't replace the built-in one")
+	}
+	if p.Text == built.Text || !slices.Equal(p.Tools, built.Tools) {
+		t.Errorf("only the part should change: tools %v, want %v", p.Tools, built.Tools)
+	}
+	same, _ := FromTextWith(src, "work", nil)
+	if same.Text != built.Text {
+		t.Error("with no parts of the user's, the source builds the built-in pack")
+	}
+}

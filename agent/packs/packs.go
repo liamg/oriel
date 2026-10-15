@@ -35,7 +35,7 @@ var GatewayTools = []string{
 //go:embed text
 var files embed.FS
 
-var builtin = loadBuiltin()
+var builtin, sources = loadBuiltin()
 
 type entry struct{ p agent.Pack }
 
@@ -99,9 +99,9 @@ func Register(p agent.Pack) (unregister func()) {
 }
 
 // LoadDir registers each <name>.md in dir as a pack (the user's ~/.config/oriel/agents/). A file is a pack's
-// markdown: frontmatter (name, description, tools) and body, with the built-ins' include lines expanded. Without
-// a name the file's is used; without tools, the Oriel tools its text names. A missing dir loads nothing; a bad file
-// loads nothing.
+// markdown: frontmatter (name, description, tools) and body, with the include lines expanded, from dir/parts/
+// first. Without a name the file's is used; without tools, the Oriel tools its text names. A missing dir loads
+// nothing; a bad file loads nothing.
 func LoadDir(dir string) (unregister func(), err error) {
 	ents, err := os.ReadDir(dir)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -109,6 +109,10 @@ func LoadDir(dir string) (unregister func(), err error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+	part := func(name string) (string, bool) {
+		b, err := os.ReadFile(filepath.Join(dir, "parts", name+".md"))
+		return string(b), err == nil && strings.TrimSpace(string(b)) != ""
 	}
 	var ps []agent.Pack
 	for _, ent := range ents {
@@ -120,7 +124,7 @@ func LoadDir(dir string) (unregister func(), err error) {
 		if err != nil {
 			return nil, err
 		}
-		p, err := build(string(b), strings.TrimSuffix(ent.Name(), ".md"))
+		p, err := buildWith(string(b), strings.TrimSuffix(ent.Name(), ".md"), part)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
@@ -186,18 +190,65 @@ func Parse(src string) (Meta, string, error) {
 // frontmatter or the Oriel tools the text names.
 func FromText(src, name string) (agent.Pack, error) { return build(src, name) }
 
+// FromTextWith is FromText with the parts it includes looked up in part first: the user's own versions of them.
+func FromTextWith(src, name string, part func(name string) (string, bool)) (agent.Pack, error) {
+	return buildWith(src, name, part)
+}
+
+// Builtins are the names of the built-in packs, sorted.
+func Builtins() []string {
+	out := make([]string, 0, len(sources))
+	for n := range sources {
+		out = append(out, n)
+	}
+	slices.Sort(out)
+	return out
+}
+
+// Source is a built-in pack's markdown as written, its include lines not yet expanded.
+func Source(name string) (string, bool) {
+	s, ok := sources[name]
+	return s, ok
+}
+
+// Parts are the names of the parts a pack can include, sorted.
+func Parts() []string {
+	ents, _ := files.ReadDir("text/parts")
+	var out []string
+	for _, e := range ents {
+		out = append(out, strings.TrimSuffix(e.Name(), ".md"))
+	}
+	return out
+}
+
+// Part is a built-in part's text.
+func Part(name string) (string, bool) {
+	b, err := files.ReadFile("text/parts/" + name + ".md")
+	if err != nil {
+		return "", false
+	}
+	return string(b), true
+}
+
 var include = regexp.MustCompile(`(?m)^<!-- include: ([a-z0-9_-]+) -->$`)
 
-func build(src, name string) (agent.Pack, error) {
+func build(src, name string) (agent.Pack, error) { return buildWith(src, name, nil) }
+
+func buildWith(src, name string, override func(string) (string, bool)) (agent.Pack, error) {
 	var missing error
 	src = include.ReplaceAllStringFunc(src, func(s string) string {
 		part := include.FindStringSubmatch(s)[1]
-		b, err := files.ReadFile("text/parts/" + part + ".md")
-		if err != nil {
+		if override != nil {
+			if t, ok := override(part); ok {
+				return strings.TrimRight(t, "\n")
+			}
+		}
+		t, ok := Part(part)
+		if !ok {
 			missing = fmt.Errorf("no part %q to include", part)
 			return s
 		}
-		return strings.TrimRight(string(b), "\n")
+		return strings.TrimRight(t, "\n")
 	})
 	if missing != nil {
 		return agent.Pack{}, missing
@@ -229,12 +280,12 @@ func mentions(text string) []string {
 	return out
 }
 
-func loadBuiltin() map[string]agent.Pack {
+func loadBuiltin() (map[string]agent.Pack, map[string]string) {
 	ents, err := files.ReadDir("text")
 	if err != nil {
 		panic(err)
 	}
-	out := map[string]agent.Pack{}
+	out, srcs := map[string]agent.Pack{}, map[string]string{}
 	for _, ent := range ents {
 		if ent.IsDir() {
 			continue
@@ -248,8 +299,9 @@ func loadBuiltin() map[string]agent.Pack {
 			panic(fmt.Sprintf("packs: %s: %v", ent.Name(), err))
 		}
 		out[p.Name] = p
+		srcs[p.Name] = string(b)
 	}
-	return out
+	return out, srcs
 }
 
 func clone(p agent.Pack) agent.Pack {

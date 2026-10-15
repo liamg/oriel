@@ -9,9 +9,25 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/worker/tour"
 )
+
+// TourKindID is a tour kind's guidance as an editable prompt.
+func TourKindID(kind string) string { return "tour." + kind }
+
+// The tour kinds' guidance is on the Prompts page, under its own group.
+func init() {
+	for _, k := range tour.Kinds {
+		if g := tour.Guidance(k.ID); g != "" {
+			if _, err := prompts.Register(prompts.Def{ID: TourKindID(k.ID), Group: "Tour kinds", Label: k.Title, Default: g,
+				Help: "How to shape " + article(k.ID) + " " + k.ID + " tour (" + k.Desc + "): what the tour_kind tool tells a tour's agent."}); err != nil {
+				panic(err)
+			}
+		}
+	}
+}
 
 // tourTools are crit's tour commands as agent tools (RV-8): the kind and how to shape it, the steps, a recorded run,
 // and where the export was published. The export itself is the app's tour_export, which colours the code.
@@ -72,7 +88,8 @@ func (h *host) toolTourKind(_ context.Context, raw json.RawMessage) (string, err
 	}
 	info, _ := TourOf(se.Dir)
 	out := fmt.Sprintf("This tour %s %s %s tour. Kinds: %s.", verb, article(info.Kind), info.Kind, tourKindList())
-	if g := tour.Guidance(info.Kind); g != "" {
+	o, _ := h.w.Prompts()
+	if g := strings.TrimSpace(o.Text(TourKindID(info.Kind))); g != "" {
 		out += fmt.Sprintf("\n\nHow to shape %s %s tour:\n\n%s", article(info.Kind), info.Kind, g)
 	}
 	return out, nil

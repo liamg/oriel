@@ -48,7 +48,15 @@ func newWorker(home string, log *slog.Logger, id core.WorkerID, name string, han
 		log.Warn("prompt packs", "err", err)
 	}
 	sandboxes := worker.NewSandboxFactory(nil)
-	w, err := worker.New(worker.Options{ID: id, Name: name, Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: packs.Get, Log: log, Version: version,
+	// A built-in kind's pack is the built-in one, or the user's version the app sends (prompts.set); agents/ adds kinds.
+	builtinOr := func(name string) (agent.Pack, bool) {
+		if src, ok := packs.Source(name); ok {
+			p, err := packs.FromText(src, name)
+			return p, err == nil
+		}
+		return packs.Get(name)
+	}
+	w, err := worker.New(worker.Options{ID: id, Name: name, Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: builtinOr, Log: log, Version: version,
 		TrustPath: filepath.Join(app.DefaultConfigDir(), "trusted.toml"), Handlers: handlers})
 	if err != nil {
 		return nil, err

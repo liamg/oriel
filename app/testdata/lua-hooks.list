@@ -91,85 +91,103 @@ clip 760,38 640x847.48 r 0
   clip 760,69 640x816.48 r 0
     clip 770,79 620x796.48 r 0
       text ":HOOKS" @784,99.2 #ffd23f JetBrains Mono 10
-      text "8 hooks · 7 events" @830,99.71 #7c7566 JetBrains Mono 10.5
+      text "10 hooks · 8 events" @830,99.71 #7c7566 JetBrains Mono 10.5
       text "EVENT" @784,118.55 #7c7566 JetBrains Mono 9.5
       text "HOOK" @932,118.55 #7c7566 JetBrains Mono 9.5
       text "KIND" @1110,118.55 #7c7566 JetBrains Mono 9.5
       text "SOURCE" @1198,118.55 #7c7566 JetBrains Mono 9.5
       text "P99" @1406,118.55 #7c7566 JetBrains Mono 9.5
-      text "BufRead" @784,143.54 #ece6d8 JetBrains Mono 11.5
+      text "AgentTurnEnd" @784,143.54 #ece6d8 JetBrains Mono 11.5
       clip 932,131.81 170x15.179993 r 0
-        text "files outside the sess…" @932,143.54 #b3ab99 JetBrains Mono 11.5
+        text "speak the reply to a s…" @932,143.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "REWRITE" @1110,142.82 #b98aff JetBrains Mono 9.5
+      text "—" @1110,142.82 #b98aff JetBrains Mono 9.5
       clip 1198,132.14 200x14.520004 r 0
-        text "builtin:sessions" @1198,143.36 #ffd23f JetBrains Mono 11
+        text "builtin:voice" @1198,143.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,143.36 #4f4a40 JetBrains Mono 11
-      text "BufWritePost" @784,173.54 #ece6d8 JetBrains Mono 11.5
+      text "BufRead" @784,173.54 #ece6d8 JetBrains Mono 11.5
       clip 932,161.81 170x15.179993 r 0
-        text "tell the language serv…" @932,173.54 #b3ab99 JetBrains Mono 11.5
+        text "files outside the sess…" @932,173.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,172.81999 #b98aff JetBrains Mono 9.5
+      text "REWRITE" @1110,172.81999 #b98aff JetBrains Mono 9.5
       clip 1198,162.14 200x14.520004 r 0
-        text "builtin:lsp" @1198,173.36 #ffd23f JetBrains Mono 11
+        text "builtin:sessions" @1198,173.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,173.36 #4f4a40 JetBrains Mono 11
       text "BufWritePost" @784,203.54 #ece6d8 JetBrains Mono 11.5
       clip 932,191.81 170x15.179993 r 0
-        text "re-run the tests the s…" @932,203.54 #b3ab99 JetBrains Mono 11.5
+        text "tell the language serv…" @932,203.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "—" @1110,202.81999 #b98aff JetBrains Mono 9.5
       clip 1198,192.14 200x14.520004 r 0
-        text "builtin:tests" @1198,203.36 #ffd23f JetBrains Mono 11
+        text "builtin:lsp" @1198,203.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,203.36 #4f4a40 JetBrains Mono 11
-      text "BufWritePre" @784,233.54 #ece6d8 JetBrains Mono 11.5
+      text "BufWritePost" @784,233.54 #ece6d8 JetBrains Mono 11.5
       clip 932,221.81 170x15.179993 r 0
-        text "—" @932,233.54 #b3ab99 JetBrains Mono 11.5
+        text "re-run the tests the s…" @932,233.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "—" @1110,232.81999 #b98aff JetBrains Mono 9.5
       clip 1198,222.14 200x14.520004 r 0
-        text "init.lua:21" @1198,233.36 #ffd23f JetBrains Mono 11
+        text "builtin:tests" @1198,233.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,233.36 #4f4a40 JetBrains Mono 11
-      text "CommentSend" @784,263.54 #ece6d8 JetBrains Mono 11.5
+      text "BufWritePost" @784,263.54 #ece6d8 JetBrains Mono 11.5
       clip 932,251.81 170x15.179993 r 0
-        text "—" @932,263.54 #b3ab99 JetBrains Mono 11.5
+        text "send the prompts to th…" @932,263.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "—" @1110,262.81998 #b98aff JetBrains Mono 9.5
       clip 1198,252.14 200x14.520004 r 0
-        text "init.lua:29" @1198,263.36 #ffd23f JetBrains Mono 11
+        text "builtin:prompts" @1198,263.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,263.36 #4f4a40 JetBrains Mono 11
-      text "Commit" @784,293.54 #ece6d8 JetBrains Mono 11.5
+      text "BufWritePre" @784,293.54 #ece6d8 JetBrains Mono 11.5
       clip 932,281.81 170x15.179993 r 0
         text "—" @932,293.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "—" @1110,292.82 #b98aff JetBrains Mono 9.5
       clip 1198,282.13998 200x14.519989 r 0
-        text "init.lua:23" @1198,293.36 #ffd23f JetBrains Mono 11
+        text "init.lua:21" @1198,293.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,293.36 #4f4a40 JetBrains Mono 11
-      text "Permission" @784,323.54 #ece6d8 JetBrains Mono 11.5
+      text "CommentSend" @784,323.54 #ece6d8 JetBrains Mono 11.5
       clip 932,311.81 170x15.179993 r 0
         text "—" @932,323.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "DECIDE" @1110,322.82 #b98aff JetBrains Mono 9.5
+      text "—" @1110,322.82 #b98aff JetBrains Mono 9.5
       clip 1198,312.13998 200x14.519989 r 0
-        text "init.lua:34" @1198,323.36 #ffd23f JetBrains Mono 11
+        text "init.lua:29" @1198,323.36 #ffd23f JetBrains Mono 11
       pop
-      text "<1ms" @1406,323.36 #b3ab99 JetBrains Mono 11
-      text "ShipRaise" @784,353.54 #ece6d8 JetBrains Mono 11.5
+      text "—" @1406,323.36 #4f4a40 JetBrains Mono 11
+      text "Commit" @784,353.54 #ece6d8 JetBrains Mono 11.5
       clip 932,341.81 170x15.179993 r 0
-        text "verify notes" @932,353.54 #b3ab99 JetBrains Mono 11.5
+        text "—" @932,353.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "REWRITE" @1110,352.82 #b98aff JetBrains Mono 9.5
+      text "—" @1110,352.82 #b98aff JetBrains Mono 9.5
       clip 1198,342.13998 200x14.519989 r 0
-        text "builtin:verify" @1198,353.36 #ffd23f JetBrains Mono 11
+        text "init.lua:23" @1198,353.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,353.36 #4f4a40 JetBrains Mono 11
-      text "set before anything registered them: agent (init.lua:6), relativenumber (init.lua:4)" @784,378.11 #7c7566 JetBrains Mono 10.5
+      text "Permission" @784,383.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,371.81 170x15.179993 r 0
+        text "—" @932,383.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "DECIDE" @1110,382.82 #b98aff JetBrains Mono 9.5
+      clip 1198,372.13998 200x14.519989 r 0
+        text "init.lua:34" @1198,383.36 #ffd23f JetBrains Mono 11
+      pop
+      text "<1ms" @1406,383.36 #b3ab99 JetBrains Mono 11
+      text "ShipRaise" @784,413.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,401.81 170x15.179993 r 0
+        text "verify notes" @932,413.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "REWRITE" @1110,412.82 #b98aff JetBrains Mono 9.5
+      clip 1198,402.13998 200x14.519989 r 0
+        text "builtin:verify" @1198,413.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,413.36 #4f4a40 JetBrains Mono 11
+      text "set before anything registered them: agent (init.lua:6), relativenumber (init.lua:4)" @784,438.11 #7c7566 JetBrains Mono 10.5
     pop
   pop
 pop

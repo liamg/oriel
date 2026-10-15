@@ -323,6 +323,12 @@ func (u *UI) bubble() {
 // KeyMode is the focused node's key mode, or "" when nothing focused takes keys.
 func (u *UI) KeyMode() string { return u.flags[u.in.focus].keyMode }
 
+// TakesText reports whether the focused node inserts what's typed at it as text (Style.Text), last frame.
+func (u *UI) TakesText() bool {
+	f := u.flags[u.in.focus]
+	return f.text && f.keyMode != ""
+}
+
 // Help is id's help id, or that of the nearest ancestor with one.
 func (u *UI) Help(id ID) string {
 	for id != 0 {

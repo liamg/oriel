@@ -71,7 +71,7 @@ flowchart LR
 | `term` | the terminal model behind `term.Emulator`: grid, scrollback, modes, keys, snapshots, OSC 133 commands and OSC 7 cwd; `term/ghostty` (libghostty-vt as wasm under wazero), `term/pty` (pseudo-terminals over `x/sys/unix`), `term/vttest` (esctest-style case runner) | wazero, x/sys |
 | `wire` | yamux protocol, typed RPC + event streams | – |
 | `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | wire |
-| `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/jsonrpc` | core, term (PTYs) |
+| `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/prompts` (the editable prompts and the user's versions of them); `agent/jsonrpc` | core, term (PTYs) |
 | `agent/claude`, `agent/codex` | provider impls | agent |
 | `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep); `worker/sysload` (CPU and memory) | core, agent, gitx, testrun (test runs as evidence), wire, sandbox, registry/settingsfile and toml (its repos' own project settings) |
 | `sandbox` | containers, gateway, egress (ported from crit) | – |
@@ -84,6 +84,7 @@ flowchart LR
 | `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`); `registry/settingsfile` (settings files and their trust, shared with the worker) needs only toml |
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
 | `ext` | extension host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
+| `voice` | dictation: a recorder program as the microphone, phrases at pauses, whisper.cpp or an OpenAI-compatible endpoint, the wake word, speech; `voice/voicetest` (a scripted mic and transcriber) | – |
 | `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
 | `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker, update |
 | `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. Superseded by `render/gio`; kept for its report | gioui.org |

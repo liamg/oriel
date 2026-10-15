@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/worker"
 )
 
 // Plan mode's views (ui.md 05): a plan doc rendered, with its threads in the margin, and the docs beside it with the
@@ -164,7 +165,7 @@ func (x *planExt) docs(se core.SessionState, st *planState, now time.Time) []pla
 	}
 	entries, _ := os.ReadDir(se.Dir)
 	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") {
+		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") || slices.Contains(worker.NotesFiles, e.Name()) {
 			continue
 		}
 		path := filepath.Join(se.Dir, e.Name())
