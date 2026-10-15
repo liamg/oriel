@@ -6,10 +6,11 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1342.0563x38 r 0
+clip 102.9375,0 1287.0875x38 r 0
 pop
-text "DEPLOY" @1458.9938,22.779999 #7c7566 JetBrains Mono 10.5
-text "3" @1504.5563,22.779999 #ff9b45 JetBrains Mono 10.5
+text "DEPLOY" @1404.025,22.779999 #7c7566 JetBrains Mono 10.5
+text "3" @1449.5875,22.779999 #ff9b45 JetBrains Mono 10.5
+text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
 rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
 text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 44x936 fill #0c0c0b

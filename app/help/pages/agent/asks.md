@@ -7,7 +7,8 @@ related: [agent/console, plugins/hooks]
 
 When an agent wants something only you can give, it waits for a card's answer. Cards show in the agent console where
 they arose, and stacked at the bottom right of the window for any session (with its name), whatever view is in
-front. A session's tab counts the cards waiting on it. A `Permission` hook can answer before a card shows.
+front; the inbox keeps them all. A session's tab counts the cards waiting on it. A `Permission` hook can answer
+before a card shows.
 
 ## Permission
 
@@ -41,5 +42,11 @@ with that provider waits on this card, and a notice says which worker and what t
 (`l`) opens the agent's own terminal with its login command typed (`/login` for Claude); finish signing in there.
 On a worker elsewhere the card says what to run on it. Once you're signed in the cards go by themselves, and the
 sessions carry on; **Check again** (`c`) asks the worker to look now.
+
+## Security key {#key}
+
+A commit, push, fetch or rebase has waited five seconds: it's most likely waiting for a touch of your security key,
+to sign or to reach the remote over ssh. Touch the key and the card goes once the operation finishes. **Cancel**
+(`c`) stops the operation instead.
 
 {{keys "ask.*"}}

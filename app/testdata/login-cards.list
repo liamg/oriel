@@ -6,7 +6,7 @@ path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 1225.3063x38 r 0
+clip 102.9375,0 1148.9313x38 r 0
   rect 102.9375,0 257.03125x38 fill #121210
   rect 102.9375,0 257.03125x2 fill #ffd23f
   rect 114.9375,16 8x8 fill #b98aff radius 4
@@ -17,12 +17,15 @@ clip 102.9375,0 1225.3063x38 r 0
   text "⌘1" @335.96875,23.42 #4f4a40 JetBrains Mono 9.5
   rect 359.96875,0 1x38 fill #24221d
 pop
-rect 1342.2438,0 182.90625x24 radius 5 stroke 1 #ff5f6d
-text "signed out" @1350.2438,15.780001 #ff5f6d JetBrains Mono 10.5
-text "5H" @1424.1813,15.780001 #7c7566 JetBrains Mono 10.5
-rect 1445.3688,10 44x4 fill #24221d radius 2
-rect 1445.3688,10 16.71997x4 fill #ff9b45 radius 2
-text "38%" @1497.3688,15.780001 #ece6d8 JetBrains Mono 10.5
+rect 1265.8688,0 182.90625x24 radius 5 stroke 1 #ff5f6d
+text "signed out" @1273.8688,15.780001 #ff5f6d JetBrains Mono 10.5
+text "5H" @1347.8063,15.780001 #7c7566 JetBrains Mono 10.5
+rect 1368.9938,10 44x4 fill #24221d radius 2
+rect 1368.9938,10 16.71997x4 fill #ff9b45 radius 2
+text "38%" @1420.9938,15.780001 #ece6d8 JetBrains Mono 10.5
+text "INBOX" @1466.775,14.280001 #b3ab99 JetBrains Mono 10.5
+rect 1505.7438,3 15.40625x15 fill #b98aff radius 7.5
+text "4" @1510.7438,13.74 #141006 JetBrains Mono 9
 rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
 text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 1600x936 fill #060606
@@ -151,79 +154,83 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-rect 1144,401.8819 440x169.50452 fill #0c0c0b radius 8 stroke 1 #b98aff8c
-text "INF-2231 USAGE API · PERMISSION" @1158,423.5719 #b98aff JetBrains Mono 9.5
-text "sandbox · network ask" @1444,423.5719 #7c7566 JetBrains Mono 9.5
-rect 1158,439.48416 7x7 fill #b98aff radius 3.5
-text "Codex wants to run a command" @1173,447.53128 #ece6d8 Inter 12.5
-rect 1158,459.54642 412x29.839996 fill #060606 radius 5
-clip 1158,459.54642 412x29.839996 r 5
-  text "$ go test ./internal/api/... -run TestUsage -count=1" @1168,478.7864 #ece6d8 JetBrains Mono 12
+rect 1144,380.04193 440x174.96454 fill #0c0c0b radius 8 stroke 1 #b98aff8c
+text "INF-2231 USAGE API · PERMISSION" @1158,404.46194 #b98aff JetBrains Mono 9.5
+text "sandbox · network ask" @1418,404.46194 #7c7566 JetBrains Mono 9.5
+text "✕" @1558,404.60593 #7c7566 JetBrains Mono 9.900001
+rect 1158,423.1042 7x7 fill #b98aff radius 3.5
+text "Codex wants to run a command" @1173,431.1513 #ece6d8 Inter 12.5
+rect 1158,443.16644 412x29.839996 fill #060606 radius 5
+clip 1158,443.16644 412x29.839996 r 5
+  text "$ go test ./internal/api/... -run TestUsage -count=1" @1168,462.40643 #ece6d8 JetBrains Mono 12
 pop
-rect 1158,459.54642 412x29.839996 radius 5 stroke 1 #332f27
-rect 1158,498.3864 104.171875x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-text "Allow once" @1168,515.75165 #141006 Inter 12
-rect 1238.1719,503.8864 14x15 radius 3 stroke 1 #14100666
-text "y" @1242.1719,514.8064 #141006cc JetBrains Mono 9.5
-rect 1270.1719,498.3864 185.5625x26 fill #191815 radius 6 stroke 1 #332f27
-text "Always in this workspace" @1280.1719,515.75165 #ece6d8 Inter 12
-rect 1431.7344,503.8864 14x15 radius 3 stroke 1 #ece6d866
-text "a" @1435.7344,514.8064 #ece6d8cc JetBrains Mono 9.5
-rect 1463.7344,498.3864 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Deny" @1473.7344,515.75165 #ece6d8 Inter 12
-rect 1509.5625,503.8864 14x15 radius 3 stroke 1 #ece6d866
-text "n" @1513.5625,514.8064 #ece6d8cc JetBrains Mono 9.5
-rect 1158,533.3864 143.03125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Deny with note…" @1168,550.75165 #ece6d8 Inter 12
-rect 1271.0312,538.8864 20x15 radius 3 stroke 1 #ece6d866
-text "⇧n" @1275.0312,549.8064 #ece6d8cc JetBrains Mono 9.5
-text "rule: Bash(go test:*)" @1444,549.8064 #7c7566 JetBrains Mono 9.5
-rect 1144,579.3864 440x146.20453 fill #0c0c0b radius 8 stroke 1 #4cc9f08c
-text "INF-2231 USAGE API · NETWORK" @1158,601.0764 #4cc9f0 JetBrains Mono 9.5
-rect 1158,624.75867 7x7 fill #4cc9f0 radius 3.5
-text "Network: proxy.golang.org:443" @1173,625.03577 #ece6d8 Inter 12.5
-text "go mod download · first request from this workspace · egress proxy" @1173,640.7409 #7c7566 JetBrains Mono 9.5
-rect 1158,652.59094 100x26 fill #191815 radius 6 stroke 1 #332f27
-text "Allow host" @1168,669.9562 #ece6d8 Inter 12
-rect 1234,658.09094 14x15 radius 3 stroke 1 #ece6d866
-text "y" @1238,669.0109 #ece6d8cc JetBrains Mono 9.5
-rect 1266,652.59094 145.40625x26 fill #191815 radius 6 stroke 1 #332f27
-text "Allow *.golang.org" @1276,669.9562 #ece6d8 Inter 12
-rect 1387.4062,658.09094 14x15 radius 3 stroke 1 #ece6d866
-text "a" @1391.4062,669.0109 #ece6d8cc JetBrains Mono 9.5
-rect 1419.4062,652.59094 70.390625x26 fill #191815 radius 6 stroke 1 #332f27
-text "Once" @1429.4062,669.9562 #ece6d8 Inter 12
-rect 1465.7969,658.09094 14x15 radius 3 stroke 1 #ece6d866
-text "o" @1469.7969,669.0109 #ece6d8cc JetBrains Mono 9.5
-rect 1158,687.59094 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Deny" @1168,704.9562 #ece6d8 Inter 12
-rect 1203.8281,693.09094 14x15 radius 3 stroke 1 #ece6d866
-text "n" @1207.8281,704.0109 #ece6d8cc JetBrains Mono 9.5
-rect 1144,733.59094 440x111.20453 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
-text "PRICING-ROUNDING · LOGIN" @1158,755.28094 #ff5f6d JetBrains Mono 9.5
-rect 1158,778.9632 7x7 fill #ff5f6d radius 3.5
-text "Claude on mbp needs you to log in" @1173,779.2403 #ece6d8 Inter 12.5
-text "OAuth token revoked · Please run /login" @1173,794.94543 #7c7566 JetBrains Mono 9.5
-rect 1158,806.7955 75.109375x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-text "Log in" @1168,824.1607 #141006 Inter 12
-rect 1209.1094,812.2955 14x15 radius 3 stroke 1 #14100666
-text "l" @1213.1094,823.21545 #141006cc JetBrains Mono 9.5
-rect 1241.1094,806.7955 111.203125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Check again" @1251.1094,824.1607 #ece6d8 Inter 12
-rect 1328.3125,812.2955 14x15 radius 3 stroke 1 #ece6d866
-text "c" @1332.3125,823.21545 #ece6d8cc JetBrains Mono 9.5
-text "opens its terminal with /login" @1390,823.21545 #7c7566 JetBrains Mono 9.5
-rect 1144,852.7955 440x111.20453 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
-text "SWEEP-DEPS · LOGIN" @1158,874.4855 #ff5f6d JetBrains Mono 9.5
+rect 1158,443.16644 412x29.839996 radius 5 stroke 1 #332f27
+rect 1158,482.00644 104.171875x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+text "Allow once" @1168,499.37167 #141006 Inter 12
+rect 1238.1719,487.50644 14x15 radius 3 stroke 1 #14100666
+text "y" @1242.1719,498.42645 #141006cc JetBrains Mono 9.5
+rect 1270.1719,482.00644 185.5625x26 fill #191815 radius 6 stroke 1 #332f27
+text "Always in this workspace" @1280.1719,499.37167 #ece6d8 Inter 12
+rect 1431.7344,487.50644 14x15 radius 3 stroke 1 #ece6d866
+text "a" @1435.7344,498.42645 #ece6d8cc JetBrains Mono 9.5
+rect 1463.7344,482.00644 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Deny" @1473.7344,499.37167 #ece6d8 Inter 12
+rect 1509.5625,487.50644 14x15 radius 3 stroke 1 #ece6d866
+text "n" @1513.5625,498.42645 #ece6d8cc JetBrains Mono 9.5
+rect 1158,517.0065 143.03125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Deny with note…" @1168,534.3717 #ece6d8 Inter 12
+rect 1271.0312,522.5065 20x15 radius 3 stroke 1 #ece6d866
+text "⇧n" @1275.0312,533.42645 #ece6d8cc JetBrains Mono 9.5
+text "rule: Bash(go test:*)" @1444,533.42645 #7c7566 JetBrains Mono 9.5
+rect 1144,563.0065 440x151.66455 fill #0c0c0b radius 8 stroke 1 #4cc9f08c
+text "INF-2231 USAGE API · NETWORK" @1158,587.42645 #4cc9f0 JetBrains Mono 9.5
+text "✕" @1558,587.5705 #7c7566 JetBrains Mono 9.900001
+rect 1158,613.83875 7x7 fill #4cc9f0 radius 3.5
+text "Network: proxy.golang.org:443" @1173,614.11584 #ece6d8 Inter 12.5
+text "go mod download · first request from this workspace · egress proxy" @1173,629.821 #7c7566 JetBrains Mono 9.5
+rect 1158,641.67096 100x26 fill #191815 radius 6 stroke 1 #332f27
+text "Allow host" @1168,659.0362 #ece6d8 Inter 12
+rect 1234,647.17096 14x15 radius 3 stroke 1 #ece6d866
+text "y" @1238,658.09094 #ece6d8cc JetBrains Mono 9.5
+rect 1266,641.67096 145.40625x26 fill #191815 radius 6 stroke 1 #332f27
+text "Allow *.golang.org" @1276,659.0362 #ece6d8 Inter 12
+rect 1387.4062,647.17096 14x15 radius 3 stroke 1 #ece6d866
+text "a" @1391.4062,658.09094 #ece6d8cc JetBrains Mono 9.5
+rect 1419.4062,641.67096 70.390625x26 fill #191815 radius 6 stroke 1 #332f27
+text "Once" @1429.4062,659.0362 #ece6d8 Inter 12
+rect 1465.7969,647.17096 14x15 radius 3 stroke 1 #ece6d866
+text "o" @1469.7969,658.09094 #ece6d8cc JetBrains Mono 9.5
+rect 1158,676.67096 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Deny" @1168,694.0362 #ece6d8 Inter 12
+rect 1203.8281,682.17096 14x15 radius 3 stroke 1 #ece6d866
+text "n" @1207.8281,693.09094 #ece6d8cc JetBrains Mono 9.5
+rect 1144,722.67096 440x116.66449 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
+text "PRICING-ROUNDING · LOGIN" @1158,747.09094 #ff5f6d JetBrains Mono 9.5
+text "✕" @1558,747.235 #7c7566 JetBrains Mono 9.900001
+rect 1158,773.50323 7x7 fill #ff5f6d radius 3.5
+text "Claude on mbp needs you to log in" @1173,773.78033 #ece6d8 Inter 12.5
+text "OAuth token revoked · Please run /login" @1173,789.4855 #7c7566 JetBrains Mono 9.5
+rect 1158,801.33545 75.109375x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+text "Log in" @1168,818.7007 #141006 Inter 12
+rect 1209.1094,806.83545 14x15 radius 3 stroke 1 #14100666
+text "l" @1213.1094,817.75543 #141006cc JetBrains Mono 9.5
+rect 1241.1094,801.33545 111.203125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Check again" @1251.1094,818.7007 #ece6d8 Inter 12
+rect 1328.3125,806.83545 14x15 radius 3 stroke 1 #ece6d866
+text "c" @1332.3125,817.75543 #ece6d8cc JetBrains Mono 9.5
+text "opens its terminal with /login" @1390,817.75543 #7c7566 JetBrains Mono 9.5
+rect 1144,847.33545 440x116.66449 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
+text "SWEEP-DEPS · LOGIN" @1158,871.75543 #ff5f6d JetBrains Mono 9.5
+text "✕" @1558,871.8995 #7c7566 JetBrains Mono 9.900001
 rect 1158,898.1677 7x7 fill #ff5f6d radius 3.5
 text "Claude on devbox needs you to log in" @1173,898.4448 #ece6d8 Inter 12.5
 text "OAuth token revoked · Please run /login" @1173,914.14996 #7c7566 JetBrains Mono 9.5
-rect 1158,926 75.109375x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-text "Log in" @1168,943.36523 #141006 Inter 12
-rect 1209.1094,931.5 14x15 radius 3 stroke 1 #14100666
-text "l" @1213.1094,942.42 #141006cc JetBrains Mono 9.5
-rect 1241.1094,926 111.203125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Check again" @1251.1094,943.36523 #ece6d8 Inter 12
-rect 1328.3125,931.5 14x15 radius 3 stroke 1 #ece6d866
-text "c" @1332.3125,942.42 #ece6d8cc JetBrains Mono 9.5
-text "opens its terminal with /login" @1390,942.42 #7c7566 JetBrains Mono 9.5
+rect 1158,925.99994 75.109375x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+text "Log in" @1168,943.3652 #141006 Inter 12
+rect 1209.1094,931.49994 14x15 radius 3 stroke 1 #14100666
+text "l" @1213.1094,942.4199 #141006cc JetBrains Mono 9.5
+rect 1241.1094,925.99994 111.203125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Check again" @1251.1094,943.3652 #ece6d8 Inter 12
+rect 1328.3125,931.49994 14x15 radius 3 stroke 1 #ece6d866
+text "c" @1332.3125,942.4199 #ece6d8cc JetBrains Mono 9.5
+text "opens its terminal with /login" @1390,942.4199 #7c7566 JetBrains Mono 9.5

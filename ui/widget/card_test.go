@@ -3,6 +3,7 @@ package widget
 import (
 	"image/color"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
@@ -46,6 +47,35 @@ func TestActionCard(t *testing.T) {
 	h.keys("+N")
 	if picked != 2 {
 		t.Errorf("⇧n on the card picked %d, want Deny with note", picked)
+	}
+}
+
+// SH-9: a dismissable card's ✕, or Escape while it has focus, dismisses it; a countdown shows its ring and the time
+// left.
+func TestActionCardDismissAndCountdown(t *testing.T) {
+	var id ui.ID
+	dismissed := 0
+	h := newHarness(t, theme.Dark, render.Point{X: 640, Y: 300}, func(c *ui.Ctx) {
+		id = c.Next("card")
+		res := ActionCard(c, "card", ActionCardOpts{Kicker: "agentbus · question", Title: "tom's agent asks", Tone: col(c, tCardFg), Help: "test/card",
+			Dismiss: true, Countdown: 2 * time.Minute, Left: 102 * time.Second, Actions: []CardAction{{Label: "Answer"}}}, nil)
+		if res.Dismissed {
+			dismissed++
+		}
+	})
+	h.frame()
+	if !h.drew("1:42") || !h.drew("✕") {
+		t.Fatalf("no ring or ✕: %q", h.texts())
+	}
+	h.click(mid(h.rect(ui.Child(ui.Child(id, "kicker"), "dismiss"))))
+	if dismissed != 1 {
+		t.Fatalf("a click on ✕ dismissed %d times", dismissed)
+	}
+	h.u.Focus(id)
+	h.frame()
+	h.keys("Esc")
+	if dismissed != 2 {
+		t.Errorf("Escape on the card dismissed %d times, want once more", dismissed)
 	}
 }
 

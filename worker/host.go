@@ -69,22 +69,26 @@ type host struct {
 }
 
 func (w *Worker) hostFor(id core.SessionID, start bool) (*host, error) {
+	if !start {
+		w.mu.Lock()
+		defer w.mu.Unlock()
+		return w.hosts[id], nil
+	}
+	h := w.hostOf(id)
+	return h, h.start()
+}
+
+// hostOf is session id's host, made if it has none, without starting its agent.
+func (w *Worker) hostOf(id core.SessionID) *host {
 	w.mu.Lock()
+	defer w.mu.Unlock()
 	h := w.hosts[id]
 	if h == nil {
-		if !start {
-			w.mu.Unlock()
-			return nil, nil
-		}
 		h = &host{w: w, id: id, ctx: context.Background(), calls: map[string]agent.ToolCall{}, items: map[string]core.Item{},
 			waiting: map[string]chan AnswerReq{}, nudged: map[string]string{}}
 		w.hosts[id] = h
 	}
-	w.mu.Unlock()
-	if start {
-		return h, h.start()
-	}
-	return h, nil
+	return h
 }
 
 func (h *host) running() bool {

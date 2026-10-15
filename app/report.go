@@ -54,6 +54,7 @@ type shell struct {
 	sessions    *sessions                    // the workers' sessions; nil while it isn't active
 	stats       *statsExt                    // what the workers' sessions cost
 	hud         *hudExt                      // the HUD, and what every slot's indicators last built
+	inbox       *inboxExt                    // every card waiting on you, and those answered
 	present     *presentFocus                // the presentation with focus, for its keys
 	afterOpen   *afterOpen                   // what session.open runs once the window has opened again on the session
 	draining    atomic.Pointer[workerDrain]  // this machine's worker handing over, for a restart or a quit

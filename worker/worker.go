@@ -56,6 +56,9 @@ type Options struct {
 	GitHub func(dir string, env []string) gh.Client
 	// Handlers add methods to each app connection, as the updater's do.
 	Handlers []func(conn wire.Conn)
+	// KeyWait is how long a git operation that may need a security-key touch runs before its session asks for one;
+	// KeyWait (the constant) if 0, never if negative.
+	KeyWait time.Duration
 }
 
 // Worker hosts sessions.

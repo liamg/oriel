@@ -693,9 +693,29 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   are picked then answered), and a typed answer. Login (AI-13): "Claude on devbox needs you to log in", Log in `l` on
   this machine (`agent.login`: the agent's terminal with `/login` typed) or what to run on the worker, and Check again
   `c` (`decision: recheck`). All answer through `ask.answer {id, ask, decision, note, scope,
-  answers}`; `ask.deny-note` opens the note. Session tabs count their asks. Not yet: the Inbox panel and its history
-  (SH-9, P7), the countdown ring, review requests and the security-key card. Since RV-2 a gateway card for
+  answers}`; `ask.deny-note` opens the note. Session tabs count their asks. The Inbox panel and its history, the
+  countdown ring, review requests and the security-key card came with SH-9 (below). Since RV-2 a gateway card for
   `commit`, `push` or `pr_create` notes the project's ledger: "21 agent lines unread" or "0 unreviewed lines ✓".
+- Built in SH-9 (`app/inbox.go`, `registry.InboxSource`): every card comes from an inbox source, the asks of every
+  session being one (`app/askcards.go`), so a plugin's card type (agentbus's questions and review requests with PL-5,
+  `oriel.inbox.add` from Lua) stacks, counts and lists like the built-ins. The stack (`app.overlay.inbox`, up to four,
+  then "+N more waiting" and **Open the inbox**) sits beside the Inbox panel while that's open. Each card has a ✕, and
+  Escape while it has focus, that dismisses it: off the stack, it waits on in the panel and on its tab's badge. A card
+  that `Expires` shows a countdown ring (m:ss) at its top right. **Security key** (crit's touch prompt): a commit,
+  push, pull, fetch or rebase the worker runs for a session (the Ship page's and the gateway's) that has run five
+  seconds (`worker.KeyWait`, `worker.Options.KeyWait`) asks the session with a `core.AskKey` ask until it ends, drawn
+  as a banner at the window's top centre ("Touch your security key", what's waiting, the session) with **Cancel**
+  `c`, which stops the operation (`worker.ErrKeyCancelled`); it makes the session needs-you. The Inbox panel (`inbox`,
+  docked right, ⌘⇧I or `<Leader>i`, or the title bar's **INBOX** with its count): "N waiting", the filters **All**,
+  **Me**, **Agents**, **Bus**, **GitHub**, **Sandbox**, then a row per card (icon, title, what it's about, how long
+  ago), those waiting first, then those answered (dimmed, ✓), each newest first; a click (or `j`/`k`) on a waiting
+  one opens its card under it to answer there; Escape closes the panel. Session tabs count their waiting cards in
+  the first one's tone.
+- Decided in SH-9 (the design was silent): the panel's count says "N waiting" rather than the mockup's "6 NEW",
+  since nothing tracks which cards were seen; the Inbox opens with ⌘⇧I and `<Leader>i`, not the mockup's `g i`,
+  which is vim's (insert where insert last stopped); a security-key card's only action is Cancel (crit's modal had
+  none); the key wait covers the worker's git operations for a session, not a worktree cut before the session exists.
+- Not yet: presence (ACTIVE, IDLE, DND) and the bus's name at the panel's foot, which come with agentbus (PL-5).
 
 ## 13 · Verify
 

@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -263,11 +264,16 @@ func within(p, dir string) bool {
 // Git runs host git in dir with GitEnv applied, returning stdout. Host git
 // in a sandboxed workspace goes through here, or through GitEnv.
 func Git(dir string, args ...string) (string, error) {
+	return GitContext(context.Background(), dir, args...)
+}
+
+// GitContext is Git, killed when ctx ends.
+func GitContext(ctx context.Context, dir string, args ...string) (string, error) {
 	env, err := GitEnv(dir)
 	if err != nil {
 		return "", err
 	}
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = dir
 	if env != nil {
 		cmd.Env = append(os.Environ(), env...)

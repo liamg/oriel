@@ -3,7 +3,9 @@ package widget
 import (
 	"fmt"
 	"image/color"
+	"math"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -42,10 +44,17 @@ type ActionCardOpts struct {
 	Help     string
 	Label    string // its accessible name; the title by default
 	Selected bool   // lit, as the selected block of a list
+	// Icon is drawn in a ring before the title, in its tone: a security key.
+	Icon func(c *ui.Ctx, tone color.NRGBA)
+	// Dismiss puts a ✕ at its top right; it, or Escape while the card has focus, dismisses the card.
+	Dismiss bool
+	// Countdown draws a ring at its top right that empties as Left runs out of it, with Left as m:ss inside.
+	Countdown, Left time.Duration
 }
 
 type ActionCardResult struct {
-	Action int // the action clicked or typed, or -1
+	Action    int // the action clicked or typed, or -1
+	Dismissed bool
 }
 
 // ActionCard is a card that wants an answer (12-inbox, 15-agent): a toned edge and dot, a kicker and title, a code
@@ -56,6 +65,10 @@ func ActionCard(c *ui.Ctx, key any, o ActionCardOpts, body func(c *ui.Ctx)) Acti
 	id := c.Next(key)
 	in := c.Interaction(id)
 	passOn(c, id, in.Keys, func(k render.KeyEvent) bool {
+		if o.Dismiss && k.Mods == 0 && k.Key == "Esc" {
+			res.Dismissed = true
+			return true
+		}
 		for i, a := range o.Actions {
 			if a.Key != "" && cardKey(k) == a.Key {
 				res.Action = i
@@ -106,6 +119,14 @@ func ActionCard(c *ui.Ctx, key any, o ActionCardOpts, body func(c *ui.Ctx)) Acti
 	}
 	noteBeside := o.Note == "" || avail == 0 || line+c.Shaper().Shape(o.Note, monoText(9.5, typeset.Normal, col(c, tCardMuted), 0).Font).Advance+16 < avail
 	muted := monoText(9.5, typeset.Normal, col(c, tCardMuted), 0)
+	corner := func(c *ui.Ctx) {
+		if o.Countdown > 0 {
+			countdownRing(c, o.Left, o.Countdown, o.Tone)
+		}
+		if o.Dismiss && IconButton(c, "dismiss", "✕", IconButtonOpts{Label: "Dismiss", Tooltip: "Dismiss (Esc): it waits on in the inbox", Help: o.Help, Size: 18}) {
+			res.Dismissed = true
+		}
+	}
 	c.Column(key, ui.Style{W: w, Pad: ui.PadXY(14, 12), Gap: 9, Fill: fill, Stroke: alpha(o.Tone, .55), Border: 1, Radius: 8, Focusable: true,
 		KeyMode: "card", Help: o.Help, Role: ui.RoleGroup, Label: label}, func(c *ui.Ctx) {
 		if o.Kicker != "" {
@@ -115,10 +136,18 @@ func ActionCard(c *ui.Ctx, key any, o ActionCardOpts, body func(c *ui.Ctx)) Acti
 				if o.Meta != "" {
 					c.Text("meta", o.Meta, muted)
 				}
+				corner(c)
 			})
 		}
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: o.Tone}, nil)
+			if o.Icon != nil {
+				c.Row("icon", ui.Style{W: ui.Px(30), H: ui.Px(30), Radius: 15, Stroke: alpha(o.Tone, .6), Border: 1, Fill: alpha(o.Tone, .1), Main: ui.Center,
+					Cross: ui.Center}, func(c *ui.Ctx) {
+					o.Icon(c, o.Tone)
+				})
+			} else {
+				c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: o.Tone}, nil)
+			}
 			c.Column("titles", ui.Style{W: ui.Flex(1), Gap: 3}, func(c *ui.Ctx) {
 				c.Text("title", o.Title, uiText(c, 12.5, typeset.SemiBold, col(c, tCardFg)))
 				if o.Detail != "" {
@@ -127,6 +156,9 @@ func ActionCard(c *ui.Ctx, key any, o ActionCardOpts, body func(c *ui.Ctx)) Acti
 			})
 			if o.Kicker == "" && o.Meta != "" {
 				c.Text("meta", o.Meta, muted)
+			}
+			if o.Kicker == "" {
+				corner(c)
 			}
 			if inline {
 				c.Row("actions", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -166,6 +198,43 @@ func ActionCard(c *ui.Ctx, key any, o ActionCardOpts, body func(c *ui.Ctx)) Acti
 		}
 	})
 	return res
+}
+
+// countdownRing is a small ring emptying as left runs out of all, with left as m:ss inside.
+func countdownRing(c *ui.Ctx, left, all time.Duration, tone color.NRGBA) {
+	frac := min(max(float32(left)/float32(all), 0), 1)
+	secs := int(left.Round(time.Second) / time.Second)
+	label := fmt.Sprintf("%d:%02d", secs/60, secs%60)
+	track := col(c, tMeterTrack)
+	c.Row("ring", ui.Style{W: ui.Px(32), H: ui.Px(32), Main: ui.Center, Cross: ui.Center, Role: ui.RoleStatus, Label: label + " left"}, func(c *ui.Ctx) {
+		c.Box("arc", ui.Style{Float: &ui.Float{Fill: true}, W: ui.Flex(1), H: ui.Flex(1), Z: ui.LayerUnder}, func(c *ui.Ctx) {
+			c.Paint("arc", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
+				mid := render.Point{X: (r.Min.X + r.Max.X) / 2, Y: (r.Min.Y + r.Max.Y) / 2}
+				rad := min(r.Dx(), r.Dy())/2 - 1.5
+				arc := func(to float32, tone color.NRGBA) {
+					const steps = 48
+					n := int(to*steps + .5)
+					if n == 0 {
+						return
+					}
+					var p render.Path
+					for i := 0; i <= n; i++ {
+						a := -math.Pi/2 + 2*math.Pi*float64(i)/steps
+						pt := render.Point{X: mid.X + rad*float32(math.Cos(a)), Y: mid.Y + rad*float32(math.Sin(a))}
+						if i == 0 {
+							p.MoveTo(pt)
+						} else {
+							p.LineTo(pt)
+						}
+					}
+					f.Path(&p, render.Style{Stroke: tone, Width: 2})
+				}
+				arc(1, track)
+				arc(frac, tone)
+			})
+		})
+		c.Text("t", label, monoText(8.5, typeset.SemiBold, col(c, tCardFg), 0))
+	})
 }
 
 // cardKey is a key press as an action's Key names it: "y", or "N" for ⇧n.

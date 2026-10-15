@@ -302,7 +302,7 @@ flowchart TB
   theme tokens `github.accent`, `github.changes`, `github.approved`, `requests.avatar.github`, `requests.draft.bg`,
   `requests.draft.border`.
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
-  `plus`, `resume`, `folder`) is drawn, not a font's; any other name is drawn as a glyph.
+  `plus`, `resume`, `folder`; since SH-9 `key`, `inbox`, `network`, `gateway`, `question`, `permission`, `review`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats extension's since AI-12: one button to Usage with a
   hover card).
@@ -318,6 +318,21 @@ flowchart TB
   `widget.Drawer`, `MeterOpts.To` (hatched on to a projection). Input: `render.ModsEvent` (the modifiers held),
   `ui.UI.Mods`/`Chord`, `ui.Ctx.Held` and `HeldAlone` (a modifier held with nothing pressed since). A worker's load
   reading is `worker.Options.Load` (`sysload.Read` by default).
+- inbox cards (SH-9): `registry.InboxSource{Name, Cards}` (kind `inbox.source`) gives the inbox its cards, read on
+  the app's loop as it's drawn; `registry.InboxCards(r)` gathers every source's, by source name, each keyed
+  `<source>/<id>` (`InboxCard.Key`). An `InboxCard` has `ID`, `Type` (its help anchor), `Group` (the Inbox panel's
+  filter: `agents`, `bus`, `github`, `sandbox`), `Mine` (the ME filter), `Session` (whose tab counts it), `Icon`,
+  `Tone` (a theme token), `Title`, `Sub`, `Created`, `Expires` (a countdown ring), `Interrupt` (stacks at the
+  window's bottom right while it waits), `Banner` (on its own at the top), `Done` (history only); its face as
+  `Kicker`, `Detail`, `Code`, `Note`, `Body` and `Actions` (`InboxAction{Label, Key, Primary, Command, Args, Run}`) in
+  a `widget.ActionCard`, or `Draw(c, key, CardPlace{Stacked, Dismiss})` drawing it whole; `Dismissed` hears its ✕ or
+  Escape. A card its source stops giving is answered: the inbox keeps it as history (the last 200). Every session's
+  asks are the built-in source `asks` (`app/askcards.go`); agentbus (PL-5) adds its question and review-request
+  cards the same way. Commands `inbox.open` (⌘⇧I, `<Leader>i`), `inbox.dismiss {id}`, `inbox.next`, `inbox.prev`;
+  key mode `inbox`; views `inbox` and `app.overlay.inbox` (replacing AI-7's `app.overlay.asks`); the title-bar
+  indicator `inbox`. `widget.ActionCardOpts` gained `Dismiss` (a ✕ and Escape, `ActionCardResult.Dismissed`),
+  `Countdown`/`Left` (the ring) and `Icon`. Theme tokens `ask.key`, `inbox.count`, `inbox.row.selected`,
+  `inbox.done`.
 - agent console side sections: views named `agent.console.side.<order>-<name>` are drawn at the top of the console's
   right column, in name order, built with the session's ID as `ViewCtx.Instance`; one that has nothing to say for a
   session draws nothing. Jobs adds `agent.console.side.10-job` (SE-4).

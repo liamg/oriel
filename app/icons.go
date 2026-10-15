@@ -112,6 +112,39 @@ var icons = map[string]func(p *iconPen){
 		p.poly(true, 2, 3.5, 6.5, 3.5, 8, 5, 14, 5, 14, 13, 2, 13)
 		p.line(2, 7, 14, 7)
 	},
+	"key": func(p *iconPen) {
+		p.circle(5, 8, 3)
+		p.line(8, 8, 14.5, 8)
+		p.line(12, 8, 12, 10.5)
+		p.line(14.5, 8, 14.5, 10.5)
+	},
+	"inbox": func(p *iconPen) {
+		p.poly(true, 2, 2.5, 14, 2.5, 14, 13.5, 2, 13.5)
+		p.poly(false, 2, 9, 5.5, 9, 6.5, 11, 9.5, 11, 10.5, 9, 14, 9)
+	},
+	"network": func(p *iconPen) {
+		p.poly(false, 2, 5.5, 13, 5.5)
+		p.poly(false, 10.5, 3, 13, 5.5, 10.5, 8)
+		p.poly(false, 14, 10.5, 3, 10.5)
+		p.poly(false, 5.5, 8, 3, 10.5, 5.5, 13)
+	},
+	"gateway": func(p *iconPen) {
+		p.line(8, 14, 8, 2.5)
+		p.poly(false, 4, 6.5, 8, 2.5, 12, 6.5)
+	},
+	"question": func(p *iconPen) {
+		p.curve(5, 5.5, 5, 2, 11, 2, 11, 5.5)
+		p.curve(11, 5.5, 11, 8, 8, 8, 8, 10.5)
+		p.circle(8, 13.5, .6)
+	},
+	"permission": func(p *iconPen) {
+		p.poly(true, 8, 1.5, 13.5, 3.5, 13.5, 8, 8, 14.5, 2.5, 8, 2.5, 3.5)
+	},
+	"review": func(p *iconPen) {
+		p.poly(false, 6, 2, 3, 2, 3, 14, 6, 14)
+		p.poly(false, 10, 2, 13, 2, 13, 14, 10, 14)
+		p.circle(8, 8, 1.6)
+	},
 }
 
 func cos(a float64) float32 { return float32(math.Cos(a)) }

@@ -46,6 +46,7 @@ var (
 	tAskNetwork    = theme.Declare("ask.network", "cyan")
 	tAskGateway    = theme.Declare("ask.gateway", "amber")
 	tAskQuestion   = theme.Declare("ask.question", "status.needs_you")
+	tAskKey        = theme.Declare("ask.key", "cyan")
 	tRuleAllow     = theme.Declare("agent.rule.allow", "ok")
 	tRuleAsk       = theme.Declare("agent.rule.ask", "pink")
 	tMeterContext  = theme.Declare("agent.meter.context", "amber")
@@ -217,9 +218,7 @@ func (x *agentConsole) Activate(_ context.Context, h ext.Host) error {
 			}}))
 	}
 	x.add(h.View(AgentConsoleView, consoleView{x}))
-	x.add(h.View(OverlayPrefix+"asks", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
-		return &ui.Func{Key: "asks", Fn: x.interrupts}
-	})))
+	x.add(h.Contribute(registry.InboxSource{Name: "asks", Cards: x.askCards, Source: "builtin:agentconsole"}))
 	return nil
 }
 
@@ -605,7 +604,7 @@ func (x *agentConsole) transcript(c *ui.Ctx, se core.SessionState, st *consoleSt
 				k := "ask:" + a.ID
 				block(k)
 				keys = append(keys, k)
-				c.Box(k, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, a, false, st.sel == k) })
+				c.Box(k, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, a, false, st.sel == k, nil) })
 			}
 		}
 		if len(se.Transcript) == 0 && len(asks) == 0 {

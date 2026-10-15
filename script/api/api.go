@@ -44,6 +44,7 @@ type APIs struct {
 	pending map[string]pendingOption // options set before anything registered them
 	touched map[optKey]optPrev       // options the config set, and what they held before
 	shown   map[string]any           // oriel.hud.set's nodes, by indicator
+	inbox   *luaInbox                // oriel.inbox's cards
 }
 
 // Install puts the API in vm, for your own config: trusted, its files in dir.
@@ -69,7 +70,7 @@ func InstallPlugin(vm *script.VM, h ext.Host, p ext.Plugin) *APIs {
 func (a *APIs) Dispose() {
 	a.mu.Lock()
 	owned := a.owned
-	a.owned = nil
+	a.owned, a.inbox = nil, nil
 	procs, wasm := a.procs, a.wasm
 	a.procs, a.wasm = nil, nil
 	a.mu.Unlock()

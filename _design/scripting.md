@@ -226,6 +226,14 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   from a source to its line (`gd`), and a project's `.oriel/init.lua` (it needs the trust prompt security.md
   describes).
 
+## As built (SH-9)
+
+- `oriel.inbox.add(card)` adds a card to the inbox, or replaces the one with its `id`: `{ id, type, title, sub, group,
+  mine, session, icon, tone, kicker, detail, code, note, interrupt, banner, done, expires (seconds from now), actions =
+  { { label, key, primary, command, args } } }`. An action runs its command and answers the card (it goes to the
+  inbox's history); `oriel.inbox.remove(id)` takes one away. A VM's cards are its own inbox source, `lua:<plugin>`,
+  dropped on reload. Capability `ui`.
+
 ## As built (SH-8)
 
 - `oriel.hud.indicator(name, opts, build)`: `opts { slot, order, every, on = { event names }, title, note, span, help }`;

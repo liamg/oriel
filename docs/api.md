@@ -49,6 +49,11 @@ Version 0.4.0.
 - `oriel.hud.refresh(name)` (`ui`): Builds the indicator name again now.
 - `oriel.hud.set(name, nodes)` (`ui`): Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes.
 
+## oriel.inbox
+
+- `oriel.inbox.add(card)` (`ui`): Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), actions = { { label, key, primary, command, args } } }. An action runs its command and answers the card: it goes to the inbox's history.
+- `oriel.inbox.remove(id)` (`ui`): Takes the inbox card id away: answered, it stays in the inbox's history.
+
 ## oriel.keymap
 
 - `oriel.keymap.set(modes, lhs, rhs, opts?)` (`ui`): Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).

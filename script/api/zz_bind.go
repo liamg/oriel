@@ -192,6 +192,23 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Inbox{a: a}
+		vm.Bind("inbox", map[string]script.GoFunc{
+			"add": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Add(c.Table(0), c.Where())
+			},
+			"remove": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Remove(c.String(0))
+			},
+		})
+	}
+	{
 		x := Keymap{a: a}
 		vm.Bind("keymap", map[string]script.GoFunc{
 			"set": func(c *script.Args) ([]any, error) {

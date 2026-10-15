@@ -22,43 +22,72 @@ import (
 	"github.com/liamg/oriel/worker"
 )
 
-// maxInterrupts is how many asks' cards stack at once over the window; the rest wait behind a count.
-const maxInterrupts = 4
-
-// interrupts are the asks waiting on you, from every session, as cards stacked at the window's bottom right (ui.md
-// 12). The session in front's are in its console instead while that shows.
-func (x *agentConsole) interrupts(c *ui.Ctx) {
+// askCards are the asks waiting on you, from every session, as the inbox's cards (ui.md 12): stacked over the
+// window, except the session in front's while its console shows them; a security-key touch on its own at the top.
+func (x *agentConsole) askCards() []registry.InboxCard {
 	st := x.h.State()
 	inConsole := x.shown()
-	type waiting struct {
-		se  core.SessionState
-		ask core.Ask
+	var out []registry.InboxCard
+	for _, se := range st.Sessions {
+		for _, a := range se.Asks {
+			card := registry.InboxCard{ID: string(se.ID) + "/" + a.ID, Type: string(a.Kind), Group: askGroup(a.Kind), Mine: true, Session: string(se.ID),
+				Icon: string(a.Kind), Tone: askTone(a.Kind).Name(), Created: a.Created,
+				Interrupt: se.ID != st.Focus || !inConsole || a.Kind == core.AskKey, Banner: a.Kind == core.AskKey,
+				Draw: func(c *ui.Ctx, key string, p registry.CardPlace) {
+					x.askCard(c, key, se, a, p.Stacked, false, p.Dismiss)
+				}}
+			title, sub := x.askRow(se, a)
+			card.Title, card.Sub = title, joinParts(sub, cmpOr(se.Name, string(se.ID)))
+			out = append(out, card)
+		}
 	}
-	var all []waiting
-	for _, s := range st.Sessions {
-		if s.ID == st.Focus && inConsole {
-			continue
+	return out
+}
+
+// askGroup is the Inbox filter an ask is under.
+func askGroup(k core.AskKind) string {
+	switch k {
+	case core.AskNetwork, core.AskGateway:
+		return registry.GroupSandbox
+	case core.AskKey:
+		return ""
+	}
+	return registry.GroupAgents
+}
+
+// askRow is an ask as a row of the Inbox panel: its title, and what it's about.
+func (x *agentConsole) askRow(se core.SessionState, a core.Ask) (title, sub string) {
+	prov := providerName(se.Agent.Provider)
+	switch a.Kind {
+	case core.AskPermission:
+		return "Permission: " + a.Tool + "(" + cmpOr(a.Summary, mainInput(a.Input)) + ")", strings.ToLower(prov)
+	case core.AskNetwork:
+		return "Network: " + a.Host, joinParts("sandbox", a.Detail)
+	case core.AskGateway:
+		return cmpOr(a.Summary, a.Tool), joinParts("gateway", a.Detail)
+	case core.AskQuestion:
+		q := ""
+		if len(a.Questions) > 0 {
+			q = ": " + a.Questions[0].Question
 		}
-		for _, a := range s.Asks {
-			all = append(all, waiting{s, a})
+		return prov + " asks" + q, "question"
+	case core.AskLogin:
+		return prov + " needs you to log in", "login"
+	case core.AskKey:
+		return "Touch your security key", a.Summary
+	}
+	return cmpOr(a.Summary, string(a.Kind)), string(a.Kind)
+}
+
+// joinParts joins the parts that say something with " · ", once each.
+func joinParts(parts ...string) string {
+	var out []string
+	for _, p := range parts {
+		if p != "" && !slices.Contains(out, p) {
+			out = append(out, p)
 		}
 	}
-	if len(all) == 0 {
-		return
-	}
-	th := c.Theme()
-	corner := render.Point{X: c.Size().X - 16, Y: c.Size().Y - 36}
-	c.Column("asks", ui.Style{W: ui.Px(440), Gap: 8, Z: ui.LayerToast, Float: &ui.Float{Point: &corner, Self: render.Point{X: 1, Y: 1}},
-		Role: ui.RoleGroup, Label: "Waiting on you"}, func(c *ui.Ctx) {
-		for _, w := range all[:min(len(all), maxInterrupts)] {
-			c.Box(string(w.se.ID)+"/"+w.ask.ID, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { x.askCard(c, "card", w.se, w.ask, true, false) })
-		}
-		if n := len(all) - maxInterrupts; n > 0 {
-			c.Row("more", ui.Style{W: ui.Flex(1), Main: ui.End}, func(c *ui.Ctx) {
-				c.Text("t", fmt.Sprintf("+%d more waiting", n), monoFont(10, th.C(theme.FgFaint)))
-			})
-		}
-	})
+	return strings.Join(out, " · ")
 }
 
 // askTone is an ask's colour, by kind.
@@ -70,6 +99,8 @@ func askTone(k core.AskKind) theme.TokenID {
 		return tAskGateway
 	case core.AskQuestion, core.AskLogin:
 		return tAskQuestion
+	case core.AskKey:
+		return tAskKey
 	}
 	return tAskPermission
 }
@@ -118,13 +149,13 @@ func reviewState(h ext.Host, se core.SessionState, a core.Ask) string {
 }
 
 // askCard is an ask as a card, with what answers it: in the console where it arose, or stacked over the window
-// with its session's name (kicker).
-func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a core.Ask, kicker bool, selected bool) {
+// with its session's name (kicker). With dismiss, its ✕ and Escape take it off the stack.
+func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a core.Ask, kicker bool, selected bool, dismiss func()) {
 	th := c.Theme()
 	st := x.state(se.ID)
 	prov := providerName(se.Agent.Provider)
 	tone := th.C(askTone(a.Kind))
-	o := widget.ActionCardOpts{Tone: tone, Selected: selected, Help: "agent/asks#" + string(a.Kind)}
+	o := widget.ActionCardOpts{Tone: tone, Selected: selected, Help: "agent/asks#" + string(a.Kind), Dismiss: dismiss != nil}
 	if kicker {
 		o.Kicker = cmpOr(se.Name, string(se.ID)) + " · " + string(a.Kind)
 	}
@@ -214,6 +245,12 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 			o.Note = "On " + where + ", run " + l.Shell
 		}
 		add("Check again", "c", !canLogIn(l), registry.Args{"decision": "recheck"})
+	case core.AskKey:
+		o.Kicker = ""
+		o.Title = "Touch your security key"
+		o.Detail = joinParts(a.Summary, a.Detail, cmpOr(se.Name, string(se.ID)))
+		o.Icon = func(c *ui.Ctx, tone render.Color) { icon(c, "icon", "key", 15, tone) }
+		add("Cancel", "c", false, registry.Args{"decision": "deny"})
 	case core.AskQuestion:
 		o.Title = prov + " asks"
 		body = func(c *ui.Ctx) { x.questions(c, se, a, st) }
@@ -232,6 +269,9 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 		}
 	}
 	res := widget.ActionCard(c, key, o, body)
+	if res.Dismissed && dismiss != nil {
+		dismiss()
+	}
 	if res.Action < 0 {
 		return
 	}

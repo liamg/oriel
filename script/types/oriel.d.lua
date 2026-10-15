@@ -9,6 +9,7 @@
 ---@field diagnostics oriel.diagnostics
 ---@field editor oriel.editor
 ---@field hud oriel.hud
+---@field inbox oriel.inbox
 ---@field keymap oriel.keymap
 ---@field language oriel.language
 ---@field ledger oriel.ledger
@@ -173,6 +174,17 @@ function oriel.hud.refresh(name) end
 ---@param name string
 ---@param nodes any
 function oriel.hud.set(name, nodes) end
+
+---@class oriel.inbox
+oriel.inbox = {}
+
+--- Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), actions = { { label, key, primary, command, args } } }. An action runs its command and answers the card: it goes to the inbox's history.
+---@param card table
+function oriel.inbox.add(card) end
+
+--- Takes the inbox card id away: answered, it stays in the inbox's history.
+---@param id string
+function oriel.inbox.remove(id) end
 
 ---@class oriel.keymap
 oriel.keymap = {}
