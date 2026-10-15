@@ -470,20 +470,60 @@ func (r *reg) Keymaps() []Keymap {
 }
 
 func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
+	exclusive := map[string]func(Keymap) bool{}
+	for _, c := range r.Contributions("keys.exclusive") {
+		e := c.(ExclusiveKeys)
+		active := true
+		if e.Active != nil {
+			Call(func() error { active = e.Active(); return nil })
+		}
+		if !active {
+			continue
+		}
+		allow := e.Allow
+		if allow == nil {
+			allow = func(Keymap) bool { return false }
+		}
+		exclusive[e.Mode] = allow
+	}
 	seq := strings.Join(keys, sep)
+	type found struct {
+		km     *Keymap
+		prefix bool
+	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	fs := make([]found, len(modes))
+	for i, m := range modes {
+		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && km.Command != "" {
+			fs[i].km = &km
+		}
+		fs[i].prefix = r.prefixes[keymapKey{m, seq}] > 0
+	}
+	r.mu.Unlock()
 	var exact *Keymap
 	more := false
-	for _, m := range modes {
-		if km, ok := r.keymaps.top(keymapKey{m, seq}); ok && exact == nil && km.Command != "" {
-			exact = &km
-			if km.Nowait && !more && r.prefixes[keymapKey{m, seq}] == 0 {
+	var allow func(Keymap) bool // the exclusive mode's, once keys have passed it
+	for i, m := range modes {
+		f := fs[i]
+		if allow != nil {
+			lent := false
+			if f.km != nil && exact == nil {
+				Call(func() error { lent = allow(*f.km); return nil })
+			}
+			if lent {
+				exact = f.km
+			}
+			continue
+		}
+		if f.km != nil && exact == nil {
+			exact = f.km
+			if f.km.Nowait && !more && !f.prefix {
 				return exact, false
 			}
 		}
-		if r.prefixes[keymapKey{m, seq}] > 0 {
-			more = true
+		more = more || f.prefix
+		if a, ok := exclusive[m]; ok {
+			allow = a
 		}
 	}
 	return exact, more

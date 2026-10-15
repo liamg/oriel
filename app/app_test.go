@@ -81,7 +81,8 @@ func bootIn(t *testing.T, configDir string, exts ...ext.Extension) *booted {
 	be := headless.New()
 	b := &booted{store: eventstore.New(), done: make(chan error, 1)}
 	go func() {
-		b.done <- app.Run(ctx, be, app.Config{Store: b.store, Extensions: exts, ConfigDir: configDir})
+		// A directory is open: the start view keeps to its own keys (TestStartViewKeepsToItsOwnKeys).
+		b.done <- app.Run(ctx, be, app.Config{Store: b.store, Extensions: exts, ConfigDir: configDir, WorkDir: t.TempDir()})
 	}()
 	select {
 	case b.win = <-be.Windows():

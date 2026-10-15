@@ -266,3 +266,23 @@ func TestResolveAccept(t *testing.T) {
 		t.Errorf("g alone accepted something")
 	}
 }
+
+// An exclusive mode keeps to its own keys: the modes after it lend only what its Allow lets through, and don't make
+// it wait for their longer keys.
+func TestResolveExclusiveMode(t *testing.T) {
+	r := registry.New()
+	bind(r, "start", "j", "start.next")
+	bind(r, "global", "<D-n>", "session.new")
+	bind(r, "global", "<D-k>", "omnibox.open")
+	bind(r, "n", "<Space><Space>", "picker.files")
+	r.Contribute(registry.ExclusiveKeys{Mode: "start", Allow: func(k registry.Keymap) bool { return k.Command == "session.new" }})
+	modes := []string{"start", "n", "global"}
+	for keys, want := range map[string]string{"j": "run:start.next", "<D-n>": "run:session.new", "<D-k>": "key:<D-k>", "<Space>": "key:<Space>"} {
+		if got := trace(registry.NewResolver(r), modes, time.Unix(0, 0), keys); got != want {
+			t.Errorf("%s: %q, want %q", keys, got, want)
+		}
+	}
+	if got := trace(registry.NewResolver(r), []string{"n", "global"}, time.Unix(0, 0), "<D-k>"); got != "run:omnibox.open" {
+		t.Errorf("⌘K outside the exclusive mode: %q", got)
+	}
+}

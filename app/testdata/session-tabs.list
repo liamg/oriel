@@ -154,7 +154,6 @@ clip 0,38 1600x56 r 0
   path 5 segments fill #4f4a40
   clip 925,515.2769 398x31.589478 r 0
   pop
-  text "⌘K search everything · ⌘? help · : command" @661.53125,628.08636 #4f4a40 JetBrains Mono 11
 pop
 rect 0,94 1600x26 fill #0c0c0b
 text "✕" @16,110.96 #b3ab99 JetBrains Mono 11

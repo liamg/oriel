@@ -158,7 +158,11 @@ What the window shows with no directory and no session open: at launch (plain `o
 - **Open Directory** opens a directory as it is, git repo or not: no worktree, no branch. It's a picker over typed paths
   and directories under `~`, with a **Browse…** row for the OS's folder chooser. The window reopens on it: every
   extension starts again there. `oriel <dir>` does the same. With sessions, this becomes the **direct** kind (`sessions.md`).
-- Keys: the empty main area has its own keymap mode, `empty`, before `n` and `global`, so `␣␣` and the rest still work.
+- Keys: the empty main area has its own keymap mode, `empty`, before `n` and `global`. Over a directory's overview
+  `␣␣` and the rest still work. The start view keeps to its own keys (the user's decision): its rows' `j`/`k`/`⏎`/`⌫`
+  and the keys of its entries and links (⌘N, ⌘O, ⇧⌘O, ⌘,, and Stats', Usage's, Jobs' and Workers' own); ⌘K, `:`, `␣␣`
+  and other global or editor keys do nothing there, as they've nothing to act on yet (`registry.ExclusiveKeys`). No
+  footer advertises them.
 
 ## 01f · The rail
 

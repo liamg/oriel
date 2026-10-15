@@ -151,6 +151,9 @@ flowchart TB
   after its own: the explain card's `[` over the editor's `[c`.
 - key layers (`registry.KeyLayer`): a keymap mode laid over every other while its `Active` says so, as the completion
   menu's `⌃n` and `⏎`; keys it doesn't map go on as before.
+- exclusive keys (`registry.ExclusiveKeys{Mode, Active, Allow}`): while `Active`, a keymap mode stands alone; the modes
+  after it lend it only the keymaps `Allow` lets through and none of their longer keys. The start view's `empty` mode
+  is exclusive with no directory open, lending only its entries' and links' commands.
 - raw keys (`registry.RawKeys`): a keymap mode whose ⌃ keys skip the global maps, so a terminal's program gets `⌃W`;
   ⌘ and ⌥ chords, and the mode's own maps, still apply.
 - picker sources can be `Unlisted`: opened by their command only (a result list, such as callers), not in the strip.

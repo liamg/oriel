@@ -115,11 +115,19 @@ func (s *start) Activate(_ context.Context, h ext.Host) error {
 		k.Mode = "global"
 		s.add(h.Keymap(k))
 	}
+	s.add(h.Contribute(registry.ExclusiveKeys{Mode: EmptyKeyMode, Active: func() bool { return s.sh.cfg.WorkDir == "" },
+		Allow: func(k registry.Keymap) bool { return s.keeps(h, k) }, Source: "builtin:start"}))
 	s.add(h.Picker(directoriesSource(h, s.sh)))
 	s.add(h.View(StartView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "start", Fn: func(c *ui.Ctx) { s.build(c, h) }}
 	})))
 	return nil
+}
+
+// keeps says whether a key from beyond the start view works while it shows: only its own entries' and links' (ui.md
+// 01e).
+func (s *start) keeps(h ext.Host, k registry.Keymap) bool {
+	return slices.ContainsFunc(registry.StartEntries(h), func(e registry.StartEntry) bool { return e.Command == k.Command })
 }
 
 // openDir reopens the window on dir.
@@ -330,10 +338,6 @@ func (s *start) content(c *ui.Ctx, h ext.Host, actions, recent []startRow, narro
 				})
 			})
 		}
-		c.Row("foot", ui.Style{Pad: ui.Insets{T: 60}, Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-			hint := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgGhost)}
-			c.Text("k", "⌘K search everything · ⌘? help · : command", hint)
-		})
 	})
 }
 

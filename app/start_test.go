@@ -373,3 +373,35 @@ func TestStartViewForgetOnHover(t *testing.T) {
 		t.Error("dotfiles still shows")
 	}
 }
+
+// ui.md 01e: the start view keeps to its own keys. Its entries' and links' keys work (⌘, Settings); the rest don't
+// (a global key such as ⌘K, an editor key such as ␣␣), as they've nothing to act on yet. With a directory open they
+// all work again.
+func TestStartViewKeepsToItsOwnKeys(t *testing.T) {
+	ran := make(chan string, 4)
+	setup := func(h ext.Host) {
+		h.Command(registry.Command{ID: "test.global", Run: func(registry.Ctx, registry.Args) error { ran <- "global"; return nil }})
+		h.Command(registry.Command{ID: "test.normal", Run: func(registry.Ctx, registry.Args) error { ran <- "normal"; return nil }})
+		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-y>", Command: "test.global"})
+		h.Keymap(registry.Keymap{Mode: "n", Keys: "<Space>z", Command: "test.normal"})
+	}
+	r := startApp(t, t.TempDir(), "", setup)
+	r.waitText("Open Directory")
+	r.typeKeys("<D-y>")
+	r.typeKeys("<Space>z")
+	r.typeKeys("<D-,>")
+	r.waitText("SETTINGS")
+	select {
+	case k := <-ran:
+		t.Errorf("a %s key ran on the start view", k)
+	default:
+	}
+
+	r2 := startApp(t, t.TempDir(), t.TempDir(), setup)
+	r2.typeKeys("<D-y>")
+	select {
+	case <-ran:
+	case <-time.After(5 * time.Second):
+		t.Fatal("a global key didn't run with a directory open")
+	}
+}
