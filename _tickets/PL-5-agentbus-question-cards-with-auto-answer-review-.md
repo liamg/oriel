@@ -4,7 +4,7 @@ title: "agentbus: question cards with auto-answer, review requests, presence, lo
 phase: P7
 status: review
 area: Platform
-module: integ/agentbus
+module: github.com/liamg/oriel-agentbus
 depends_on: [AI-1]
 ---
 
@@ -35,3 +35,10 @@ depends_on: [AI-1]
 - Test-first, with verified spec references (`_design/testing.md`).
 - No new dependency without approval (`_design/deps.md`).
 - Update the design doc in the same PR if behaviour differs from it.
+
+## As built
+
+- Built, and it lives outside Oriel: agentbus is company-specific, so it's an external plugin, `liamg/agentbus`, in
+  `github.com/liamg/oriel-agentbus` (the Lua plugin and its `oriel-agentbus` process, moved as they were). Its tests,
+  the end-to-end ones included, run there, through `app/plugintest`. See plugins.md, "As built (PL-5)": the general
+  pieces it added stay in Oriel.

@@ -1,0 +1,6 @@
+id          = "test/hello"
+version     = "0.1.0"
+description = "plugintest's own plugin: an option, a command, a panel at the Inbox's foot, a process and an agent tool"
+
+[permissions]
+"agent.tools" = { tools = ["greet"], why = "Greet someone for the assistant" }

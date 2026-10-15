@@ -15,7 +15,7 @@ import (
 	"github.com/liamg/oriel/worker"
 )
 
-// fakeBus is an inbox source as agentbus (PL-5) will be: other people's agents' questions, with a countdown to the
+// fakeBus is an inbox source as the agentbus plugin (PL-5, github.com/liamg/oriel-agentbus) is: other people's agents' questions, with a countdown to the
 // auto-answer, and review requests, which go once they're acted on.
 type fakeBus struct {
 	cards     []registry.InboxCard

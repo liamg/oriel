@@ -550,6 +550,51 @@ session sandbox. All of this is in `security.md`.
 The same layout under `<repo>/.oriel/` gives per-project config, trusted on
 first open the way direnv works.
 
+## Testing a plugin
+
+A plugin's tests, in Oriel or in its own repository, drive it through the real app with `app/plugintest`: Oriel's
+built-ins with no window, drawn a frame at a time on the test's goroutine, at a size and on a clock the test sets.
+It's built on `app.Headless` (below), the same core the app's own tests (`errScene`) use.
+
+```go
+func TestMain(m *testing.M) { plugintest.Main(m) } // a plugin's process starts in the OS sandbox through the test binary
+
+func TestCards(t *testing.T) {
+    dir := plugintest.Install(t, "../plugin", "../cmd/oriel-agentbus") // its files, its processes built into bin/
+    a := plugintest.New(t, plugintest.Options{Size: render.Point{X: 1600, Y: 1000}, Now: start})
+    a.Apply(core.SessionSynced{…}, core.SessionFocused{ID: "pricing"})
+    a.Load(dir, grants) // nil grants: what its manifest declares
+    a.SetOption("plugin.agentbus.url", bus.URL())
+    a.UntilText("AGENTBUS · QUESTION")
+    a.ClickText("Claim + Open")
+    out, err := a.CallTool("assistant", a.Tool("assistant", "review_requests"), nil)
+}
+```
+
+- `New(t, Options{Size, Now, Config})` starts the app with a home, config and state directory of the test's (`Config`
+  changes `app.Config` first: `Net`, `Secrets`, `Workers`), and stops every extension when the test ends. `Now`,
+  `SetNow` are the window's clock (`oriel.now`, countdowns, an indicator's `every`).
+- `Install(t, src, cmds…)` lays a plugin out as an install does, each Go command built into its `bin/`, and skips where
+  the OS sandbox isn't there; `Manifest(t, dir)`. `Load(dir, grants)` starts the Lua plugin in `dir` with a data
+  directory of the test's (`Plugin{ID, Dir, Data}`); a load error fails the test.
+- `Apply(events…)` applies core events, as a worker's; `SetOption(name, v)` sets one as `settings.toml` would;
+  `Run(id, args)` runs a command; `Registry()` and `Store()` for anything else (a stand-in `session.start`, a
+  `Forker`, an `AgentOwner` that answers an act's confirmation).
+- `Frame()`, `Text()` (the frame's runs of text, a line each), `Has`, `WantText`, `Access()` and `Find(name)` (the
+  accessibility tree); `ClickText(text)` (the run painted last), `Click(p, mods)`, `Type(keys…)` (a character or a
+  name such as `CR`, `Esc`), `TypeIn(text, placeholder)`.
+- `Tool(agent, name)` is the tool offered to an agent; `CallTool(agent, tool, args)` calls it as its MCP server does,
+  off the loop, while frames are drawn, and answers its JSON.
+- `Until(what, ok)` and `UntilText(texts…)` draw frames and run what the plugin handed the loop until ok, failing with
+  the frame's text after `Timeout` (15 s); `Pump(d)` does it for a while, for a test that something doesn't happen.
+
+Under it, in `app`: `app.NewHeadless(cfg, HeadlessOpts{Size, Clock})` is the app as `Run` starts it (the same shell
+and activation, then the dark oriel theme with motion reduced), with no window or loop: `Frame`, `RunQueued`, `Until`,
+`Text`, `TextAt`, `Access`, `Click`, `Key`, `CallTool`, `Activate` (an extension now) and `Close`.
+`app.ScriptPluginWith(fsys, PluginOpts{Dir, Grants, Data})` is `ScriptPlugin` with its directory (where
+`oriel.process.spawn` finds `bin/…`), its grants and its data directory given; `app.DirPlugin(dir, opts)` is the plugin
+in a directory. `ext/exttest.Install` is `Install` for the app's own tests.
+
 ## Go interfaces
 
 ```go
@@ -934,16 +979,22 @@ type Host interface {
   Linear last told them); commands
   `LinearTickets`, `LinearKey`, `linear.refresh`. `integ/linear/lineartest` is the recorded API (`testdata/*.json`,
   served as api.linear.app over TLS, mutations kept and applied).
-- Not yet: installing it (PL-19/20 bring the plugin manager; it isn't bundled, since `app.ScriptPlugin` has no
-  directory for a process binary). Not carried over from crit (crit-reference.md): the company feed. "Continue" and
+- Not yet: installing it (PL-19/20 bring the plugin manager; it isn't bundled: a plugin with a process loads from a
+  directory, `app.DirPlugin`, not from the binary's embedded files). Not carried over from crit (crit-reference.md): the company feed. "Continue" and
   the done move on merge came later, on every tracker ("As built (tickets)").
 
 ## As built (PL-5)
 
-- **agentbus** (`integ/agentbus`, crit-reference.md → agentbus): a plugin built on the APIs below, as a third party's
+- **Where it lives**: agentbus is company-specific, so it's an external plugin, `liamg/agentbus` in its own repository,
+  `github.com/liamg/oriel-agentbus` (catalog.md's `oriel-<name>`), moved out of Oriel as it was: `plugin/` (the
+  Lua), `cmd/oriel-agentbus` (its process), the bus package at the module's root, `autoapprove` and `bustest`. Its
+  module requires Oriel's modules and replaces them with `../oriel/<module>`, a checkout beside it, since Oriel is
+  private and untagged; its end-to-end tests drive the real plugin through `app/plugintest` ("Testing a plugin").
+  Oriel keeps only the general pieces below, and a fake agentbus card source in its own tests (`app/inbox_test.go`).
+- **agentbus** (crit-reference.md → agentbus): a plugin built on the APIs below, as a third party's
   would be. `plugin/oriel.toml` (net `*:80`, `*:443` and `api.github.com`; `secrets = { GITHUB_TOKEN = "api.github.com" }`;
   exec `tailscale`; `agent.tools` for its two tools; `agent.prompt` for the auto-answer) and `plugin/init.lua`, which
-  spawns `bin/oriel-agentbus` (`integ/agentbus/cmd/oriel-agentbus`): crit's `internal/agentbus` ported (`agentbus.Bus`:
+  spawns `bin/oriel-agentbus` (`cmd/oriel-agentbus`): crit's `internal/agentbus` ported (`agentbus.Bus`:
   the items, the auto-answer deadline (30 s before `answer_by`, else before the TTL's end, given a minute's window),
   Later/Ignore/Show, Claim, Result, the requests you sent followed until reviewed, the log as JSON lines in the
   plugin's data directory, the last 2000), `internal/autoapprove` (`agentbus/autoapprove`: rules as crit's JSON,
@@ -978,8 +1029,8 @@ type Host interface {
   (or name), a part's error beside the rest (`registry.AgentToolParts`), and the assistant lists the parts' sources;
   `gh.API` `Me`, `PRDetails`, `PRFiles`, `ApproveAt` and `gh.Green`, with the fake's `GET /user`, `pulls/{n}`,
   `pulls/{n}/files` and `POST pulls/{n}/reviews` (`ghtest.SetPRSize`, `SetNow`, `Reviews`); and the Lua below.
-- Not yet: installing it (PL-19/20, as Linear: it isn't bundled, since `app.ScriptPlugin` has no directory for a
-  process binary); an auto-answer with no session to fork waits for the utility session (agents.md), and the fork has
+- Not yet: installing it from `[plugins]` (PL-19/20; its README builds the process into `plugin/bin/` for a `path`
+  source, and `app.DirPlugin` loads the directory in a program embedding Oriel); an auto-answer with no session to fork waits for the utility session (agents.md), and the fork has
   no tools rather than crit's read-only ones; review routing takes `plugin.agentbus.repos` rather than every local
   clone (the Lua can't list a worker's repos); crit's search of GitHub's own review requests for the rules, the
   result of a review a session submits (Oriel's agents never post one: the GitHub poll covers it), and who was seen

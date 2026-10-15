@@ -88,15 +88,7 @@ func DefaultConfigDir() string {
 
 // Run opens a window and runs the app until the window closes or ctx is done.
 func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
-	if cfg.Store == nil {
-		cfg.Store = eventstore.New()
-	}
-	if cfg.Registry == nil {
-		cfg.Registry = registry.New()
-	}
-	if cfg.Logs == nil {
-		cfg.Logs = NewLogs(LogOpts{})
-	}
+	cfg.defaults()
 	if cfg.CacheDir == "" {
 		if d, err := os.UserCacheDir(); err == nil {
 			cfg.CacheDir = filepath.Join(d, "oriel")
@@ -105,13 +97,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	if cfg.ConfigDir == "" {
 		cfg.ConfigDir = DefaultConfigDir()
 	}
-	if cfg.Version == "" {
-		cfg.Version = "dev"
-	}
 	log := cfg.Logs.Logger("core")
-	events := newEventTail(500)
-	defer cfg.Store.Subscribe(core.Filter{}, events.add)()
-	defer cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })()
 	dirty := make(chan struct{}, 1)
 	poke := func() {
 		select {
@@ -122,7 +108,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	if cfg.StateDir == "" {
 		cfg.StateDir = logs.StateDir()
 	}
-	sh := &shell{cfg: cfg, events: events, poke: poke, reopen: make(chan reopenTo, 1)}
+	sh, unsubscribe := newShell(cfg, poke)
+	defer unsubscribe()
 	sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
 	if cfg.WorkDir != "" {
 		sh.recents.add(cfg.WorkDir, time.Now())
@@ -142,19 +129,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	defer func() { err = errors.Join(err, deactivate()) }()
 	activate := func() error {
-		for _, e := range builtins(sh) {
-			if err := e.Activate(ctx, sh.host("builtin:"+e.Manifest().ID)); err != nil {
-				return fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
-			}
-			active = append(active, e)
-		}
-		for _, e := range cfg.Extensions {
-			if err := e.Activate(ctx, sh.host(e.Manifest().ID)); err != nil {
-				return fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
-			}
-			active = append(active, e)
-		}
-		return nil
+		_, err := sh.activate(ctx, &active)
+		return err
 	}
 	if err := activate(); err != nil {
 		return err
@@ -273,6 +249,52 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			l.timed(func() string { return describeEvent(ev) }, func() { l.handle(ctx, ev) })
 		}
 	}
+}
+
+// defaults fills in what Config says it makes when it's nil.
+func (cfg *Config) defaults() {
+	if cfg.Store == nil {
+		cfg.Store = eventstore.New()
+	}
+	if cfg.Registry == nil {
+		cfg.Registry = registry.New()
+	}
+	if cfg.Logs == nil {
+		cfg.Logs = NewLogs(LogOpts{})
+	}
+	if cfg.Version == "" {
+		cfg.Version = "dev"
+	}
+}
+
+// newShell is the shell over cfg, keeping the store's recent events and logging its notices until unsubscribed.
+func newShell(cfg Config, poke func()) (*shell, func()) {
+	events := newEventTail(500)
+	log := cfg.Logs.Logger("core")
+	tail := cfg.Store.Subscribe(core.Filter{}, events.add)
+	notices := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })
+	sh := &shell{cfg: cfg, events: events, poke: poke, reopen: make(chan reopenTo, 1)}
+	return sh, func() { tail(); notices() }
+}
+
+// activate starts the built-ins, then cfg.Extensions, each on a host of its own, adding each to active as it starts.
+// It answers the last built-in's host.
+func (sh *shell) activate(ctx context.Context, active *[]ext.Extension) (*host, error) {
+	var last *host
+	for _, e := range builtins(sh) {
+		last = sh.host("builtin:" + e.Manifest().ID)
+		if err := e.Activate(ctx, last); err != nil {
+			return nil, fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
+		}
+		*active = append(*active, e)
+	}
+	for _, e := range sh.cfg.Extensions {
+		if err := e.Activate(ctx, sh.host(e.Manifest().ID)); err != nil {
+			return nil, fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
+		}
+		*active = append(*active, e)
+	}
+	return last, nil
 }
 
 // lastMove is the last of a run of pointer moves already waiting from ev, so a frame isn't built for each, and the

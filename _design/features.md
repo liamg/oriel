@@ -146,7 +146,7 @@ How everything hangs together, built and tested before features land on it.
 | PL-2 | Process plugins with an OS sandbox; WASM plugins; `oriel build --with` | 16 | ext | P7 | PL-1 | the capability guard rejects undeclared calls; Landlock/sandbox-exec profiles applied |
 | PL-3 | All-or-nothing install consent, update capability diff; grammar packs (CI-built, checksummed) | 29 | ext | P7 | PL-2, ED-11 | – |
 | PL-4 | Comms assistant drawer (utility session, no `-p`) | 11 | assistant | P7 | AI-2 | – |
-| PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | integ/agentbus | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus |
+| PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | external plugin `github.com/liamg/oriel-agentbus` (`liamg/agentbus`) | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus. Built; it lives in `github.com/liamg/oriel-agentbus`, outside Oriel, and its tests drive it through `app/plugintest` |
 | PL-8 | Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source | 04, 02 | integ/linear (plugin) | P7 | PL-2, SE-1 | `crit-reference.md` → Linear, against a recorded Linear API |
 | PL-9 | Slack PTAL via webhook | 18 | integ/slack (plugin) | P7 | PL-2 | – |
 | PL-10 | ~~Calendar: next meeting indicator (iCal URL or macOS EventKit)~~ dropped: not carried over (crit-reference.md) | 10 | – | P7 | PL-2 | – |

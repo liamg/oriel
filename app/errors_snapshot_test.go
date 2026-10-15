@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"image"
 	"os"
 	"path/filepath"
 	"slices"
@@ -15,38 +14,25 @@ import (
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/edit"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
-	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
 var mockupSize = render.Point{X: 1600, Y: 1000}
 
-type clipboard struct{ text string }
-
-func (c *clipboard) SetClipboard(s string)         { c.text = s }
-func (c *clipboard) ReadClipboard() (string, bool) { return c.text, c.text != "" }
-func (c *clipboard) OpenURL(u string) error        { return nil }
-
-// errScene is the app's built-ins over a store, drawn the way Run draws the window, on a fixed clock.
+// errScene is the app's built-ins over a store, drawn the way Run draws the window, on a fixed clock: a Headless app
+// with the test's helpers.
 type errScene struct {
+	*Headless
 	t     testing.TB
-	sh    *shell
 	store core.Store
 	reg   registry.Registry
-	host  ext.Host
-	ui    *ui.UI
 	now   time.Time
-	list  *render.List
-	clip  *clipboard
-	exts  []ext.Extension
-	size  render.Point
-	scale float32 // the zoom it's drawn at; 1 when 0
+	clip  *memDesktop
 	// overviewOff hides the project overview, whose temporary paths would change every run; overview tests dispose it.
 	overviewOff registry.Disposable
 }
@@ -70,49 +56,18 @@ func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, cha
 	os.MkdirAll(conf, 0o755)
 	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(initLua), 0o644)
 
-	s := &errScene{t: t, store: eventstore.New(), reg: registry.New(), clip: &clipboard{}, size: size}
+	s := &errScene{t: t, store: eventstore.New(), reg: registry.New(), clip: &memDesktop{}}
 	cfg := Config{Store: s.store, Registry: s.reg, Logs: NewLogs(LogOpts{}), ConfigDir: conf, CrashDir: crashDir, Version: "v0.4.2",
-		WorkDir: workDir}
+		WorkDir: workDir, Desktop: s.clip}
 	if change != nil {
 		change(&cfg)
 	}
-	// A scene is a window that's been up a while: mission control doesn't open as if it had just launched.
-	s.sh = &shell{cfg: cfg, events: newEventTail(500), desktop: s.clip, poke: func() {}, reopen: make(chan reopenTo, 1), launchDone: true}
-	s.store.Subscribe(core.Filter{}, s.sh.events.add)
-	s.store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(s.store, cfg.Logs.Logger("core"), ev) })
-	s.exts = builtins(s.sh)
-	for _, e := range s.exts {
-		h := s.sh.host("builtin:" + e.Manifest().ID)
-		if err := e.Activate(context.Background(), h); err != nil {
-			t.Fatal(err)
-		}
-		s.host = h
-	}
-	ts, err := typeset.NewBundled()
+	h, err := NewHeadless(cfg, HeadlessOpts{Size: size, Clock: func() time.Time { return s.now }})
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.ui = ui.New(ts, textStyle)
-	s.ui.SetClipboard(s.clip)
-	st, _ := theme.Stack(theme.Builtins(), "oriel")
-	r, err := theme.Resolve(st, theme.Dark)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.ui.SetTheme(r)
-	o := s.ui.Options()
-	o.ReducedMotion = true // scenes are of the settled UI on a stopped clock
-	s.ui.SetOptions(o)
-	s.ui.SetClock(func() time.Time { return s.now })
+	s.Headless = h
 	s.overviewOff = s.reg.View(OverviewView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() }))
-	s.sh.ui = s.ui
-	s.sh.theme = s.ui.Theme
-	s.sh.shot = func(th *theme.Resolved) *image.RGBA {
-		if th == nil {
-			th = s.ui.Theme()
-		}
-		return shotOf(s.ui, s.reg, s.size, th)
-	}
 	return s
 }
 
@@ -132,14 +87,12 @@ func (s *errScene) reopen() bool {
 		}
 	}
 	s.sh.cfg.WorkDir, s.sh.cfg.Files = to.dir, nil
-	s.exts = builtins(s.sh)
-	for _, e := range s.exts {
-		h := s.sh.host("builtin:" + e.Manifest().ID)
-		if err := e.Activate(context.Background(), h); err != nil {
-			s.t.Fatal(err)
-		}
-		s.host = h
+	s.exts = nil
+	last, err := s.sh.activate(context.Background(), &s.exts)
+	if err != nil {
+		s.t.Fatal(err)
 	}
+	s.host = last
 	s.overviewOff = s.reg.View(OverviewView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() }))
 	return true
 }
@@ -148,38 +101,10 @@ func (s *errScene) reopen() bool {
 // runs on the loop.
 func (s *errScene) callTool(t *testing.T, ctx context.Context, tool registry.AgentTool, args map[string]any) (string, error) {
 	t.Helper()
-	type answer struct {
-		out string
-		err error
-	}
-	done := make(chan answer, 1)
-	go func() {
-		out, err := registry.CallAgentTool(ctx, s.reg, tool, args)
-		done <- answer{out, err}
-	}()
-	var a answer
-	s.until(t, tool.Name+"'s answer", func() bool {
-		select {
-		case a = <-done:
-			return true
-		default:
-			return false
-		}
-	})
-	return a.out, a.err
+	return s.CallTool(ctx, 15*time.Second, tool, args)
 }
 
-func (s *errScene) frame() {
-	s.list = new(render.List)
-	s.ui.Frame(s.list.Record(s.zoomed()), s.size, func(c *ui.Ctx) { buildWindow(c, s.reg, s.size) })
-}
-
-func (s *errScene) zoomed() float32 {
-	if s.scale == 0 {
-		return 1
-	}
-	return s.scale
-}
+func (s *errScene) frame() { s.Frame() }
 
 // zoom draws the scene at z, the same window laid out at its size over z, as ui.font_size does.
 func (s *errScene) zoom(z float32) {
@@ -330,15 +255,7 @@ func panel(s *errScene) *logPanel {
 	return nil
 }
 
-func (s *errScene) frameText() string {
-	var lines []string
-	for _, op := range s.list.Ops {
-		if op.Kind == render.OpGlyphs {
-			lines = append(lines, op.Run.Text)
-		}
-	}
-	return strings.Join(lines, "\n")
-}
+func (s *errScene) frameText() string { return s.Text() }
 
 // fullText is the frame's texts one a line, whole where the frame cut them to fit with "…".
 func (s *errScene) fullText() string {

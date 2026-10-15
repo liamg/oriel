@@ -3,12 +3,10 @@ package app
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 )
 
@@ -131,12 +129,10 @@ func TestThemePickerSnapshot(t *testing.T) {
 // clickText clicks the middle of the run of text that reads text painted last, on top of any other.
 func (s *errScene) clickText(t *testing.T, text string) {
 	t.Helper()
-	for _, op := range slices.Backward(s.list.Ops) { // the one painted last, on top
-		if op.Kind == render.OpGlyphs && op.Run.Text == text {
-			s.click(render.Point{X: op.At.X + op.Run.Advance/2, Y: op.At.Y - op.Run.Ascent/2})
-			s.frame()
-			return
-		}
+	p, ok := s.TextAt(text)
+	if !ok {
+		t.Fatalf("no %q in the frame", text)
 	}
-	t.Fatalf("no %q in the frame", text)
+	s.click(p)
+	s.frame()
 }

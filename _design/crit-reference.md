@@ -63,7 +63,7 @@ Tickets that say "port from crit" or "crit behaviour preserved" mean what's writ
 **Trusted orgs**
 - PR and comment text from outside the trusted orgs and users is redacted for the agent (`review/redact.go`).
 
-**agentbus** (`internal/agentbus`, `worker/agentbus.go`)
+**agentbus** (`internal/agentbus`, `worker/agentbus.go`). Ported as an external plugin, `github.com/liamg/oriel-agentbus` (PL-5), not part of Oriel.
 - Question cards with an auto-answer at the deadline (read-only tools, labelled).
 - Review-request cards (Ignore, Claim, Claim + Open), with the result reported back to the asker, including GitHub-submitted reviews (`ghreviewed.go`).
 - Auto-approve rules (`internal/autoapprove`), presence (active, idle, DND), and a log.

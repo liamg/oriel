@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/ext/exttest"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/integ/linear/lineartest"
 	"github.com/liamg/oriel/registry"
@@ -21,7 +22,11 @@ import (
 // built into bin/, granted what its manifest declares.
 func linearPlugin(t *testing.T) ext.Plugin {
 	t.Helper()
-	dir, m := integPlugin(t, "linear", "oriel.toml", "init.lua")
+	dir := exttest.Install(t, "../integ/linear/plugin", "../integ/linear/cmd/oriel-linear")
+	m, err := ext.LoadManifest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	g := ext.NewGrants()
 	g.Grant(m.ID, m.Permissions)
 	return ext.Plugin{ID: m.ID, Dir: dir, Guard: g}
