@@ -157,6 +157,7 @@ How everything hangs together, built and tested before features land on it.
 | PL-21 | Registry client: signed `index.json`, several registries, badges, trusted tags and hold, yank and revoke; the Plugins page and its Registry tab | 16, 29 | catalog, app | P8 | PL-20, PL-6 | against a fixture index: a bad signature is refused, a revoked version is disabled with a card, a trusted tag waits out `trusted_hold`; the page installs by writing `[plugins]` |
 | PL-16 | The `liamg/oriel-plugins` repo and its CI: owner check, `pack`, reproducible Go archives, deps check, capability-diff comment, signed index release | – | tools (repo) | P8 | PL-19 | a fixture PR for a new version gets the comment; a merge publishes a verifiable `index.json` |
 | PL-17 | `oriel plugin publish` opens the registry PR | – | cmd | P8 | PL-16, PL-21 | against a fake GitHub, publish forks, branches and opens a PR with the right `plugin.toml` change; on a trusted plugin it does nothing |
+| PL-22 | Lazy loading: a plugin loads on its first command, event, key, filetype or omnibox source | – | app, registry | P8 | PL-20 | a plugin with `lazy = { commands = ["Hi*"] }` loads when `:Hi` first runs, and `:Hi` works that time |
 | PL-18 | Rename the `ext` package and `Extension` types to `plugin` | – | plugin | P8 | PL-3 | no `Extension` identifier or "extension" UI string left outside file-extension code |
 
 ## What "Start work" does

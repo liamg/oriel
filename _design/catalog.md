@@ -330,6 +330,44 @@ sequenceDiagram
   server with a `hello` method) and an `init.lua` that spawns it. The id defaults to the GitHub owner of `origin`
   and the directory's name, without an `oriel-` prefix. It never writes over a file.
 
+## As built (PL-20)
+
+- **`[plugins]` is an option** (`app.PluginsOption`, `plugins`) of a new type, `registry.Table`: a settings table of
+  any values that its owner reads, so it gets the settings files' watching, layers and project trust for free.
+  `settings.set {name, key, value, scope}` and `settings.reset {name, key, scope}` change one key of a table: one
+  line. A table isn't edited on the settings page, only counted there, and Reset all leaves it alone.
+- **The catalog module**:
+  - `catalog.ParseEntries` reads the table. A git source may name a `rev` (a tag, branch or commit; the default
+    branch otherwise). A host path such as `github.com/x/y` is cloned over https; a URL or a local path is cloned
+    as it is.
+  - `catalog.Lock` is `oriel-lock.toml`, kept as a `toml.Document`, so a write changes only the plugins that changed.
+  - `catalog.Store` installs a git source's checkout, with no `.git`, read-only, at
+    `<data dir>/plugins/<id>/<commit>/`, with a `current` link to the commit in use. A path source loads in place.
+  - `catalog.Manager.Sync` resolves each entry and says where it stands: `Ready`, `Consent`, `Disabled` or `Failed`.
+    An entry the lockfile pins is fetched at its locked commit. An entry is `Ready` when its lock entry has the
+    same source and `plugin.Diff` finds nothing it asks for beyond the lock's capabilities, or when it asks for
+    nothing consent covers. The lockfile then follows its commit and version.
+- **Each `settings.toml` has its own lockfile beside it.** A trusted project's `.oriel/settings.toml` has
+  `.oriel/oriel-lock.toml`, which is committed with it. An id in both your file and the project's is yours.
+- **`builtin:catalog`** (`app/catalog.go`) syncs on start and whenever `plugins` changes:
+  - It loads each ready plugin with `Host.Load` (new: a plugin manager starts another plugin on a host of its own,
+    and stops it with Dispose). The plugin is granted what its manifest declares, all of it accepted.
+  - It stops what's disabled or gone. A plugin waiting on an update's consent keeps running the version accepted.
+  - A plugin waiting for consent is a card in the inbox (`plugins` source, interrupting). Review opens
+    `plugins.consent` with the source, badge, warning and provenance facts. Accepting runs `plugins.accept {dir}`,
+    which writes the lock entry and loads the plugin. Uninstall removes its line.
+  - `plugins.install {id, version | git | path, scope}` writes one line to `[plugins]`, and `plugins.uninstall
+    {id, scope}` removes it. `plugins.sync` syncs now.
+- **The consent screen** takes `badge`, `warning` and `facts` (`plugin.Consent.Badge`, `Warning`). The badge is a chip
+  in its header, and the warning comes first, framed (`plugins.badge.*` and `plugins.consent.warning` tokens).
+  git and path sources are `unverified`, with `catalog.UnverifiedWarning`.
+- **The data directory** is `app.Config.DataDir`: `$XDG_DATA_HOME/oriel`, or `~/.local/share/oriel`.
+- **Not yet:**
+  - Lazy loading. Every plugin loads at start. A `lazy` override replaces the manifest's, which nothing reads yet
+    (PL-22).
+  - Workers getting a plugin's archive over wire.
+  - The audit log the consent footer mentions.
+
 ## Tickets
 
 - PL-19 package format, `oriel.process` / `oriel.wasm` / `oriel.asset`, `oriel plugin pack`

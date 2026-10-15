@@ -108,12 +108,20 @@ func (s *settingsPlugin) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return nil
 		}},
-		{ID: "settings.set", Title: "Set an option: {name} = {value}, at {scope}: user, project or session", Run: func(_ registry.Ctx, a registry.Args) error {
-			return s.set(str(a, "name"), a["value"], s.scopeArg(str(a, "scope")))
-		}},
-		{ID: "settings.reset", Title: "Reset an option at {scope}: its line leaves the file", Run: func(_ registry.Ctx, a registry.Args) error {
-			return s.reset(str(a, "name"), s.scopeArg(str(a, "scope")))
-		}},
+		{ID: "settings.set", Title: "Set an option: {name} = {value}, at {scope}: user, project or session; with {key}, that key of a table option alone",
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				if k := str(a, "key"); k != "" {
+					return s.setKey(str(a, "name"), k, a["value"], s.scopeArg(str(a, "scope")))
+				}
+				return s.set(str(a, "name"), a["value"], s.scopeArg(str(a, "scope")))
+			}},
+		{ID: "settings.reset", Title: "Reset an option at {scope}: its line leaves the file; with {key}, that key of a table option alone",
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				if k := str(a, "key"); k != "" {
+					return s.setKey(str(a, "name"), k, nil, s.scopeArg(str(a, "scope")))
+				}
+				return s.reset(str(a, "name"), s.scopeArg(str(a, "scope")))
+			}},
 		{ID: "settings.reset_section", Title: "Reset every option in a {section}", Run: func(_ registry.Ctx, a registry.Args) error {
 			return s.resetWhere(func(sp registry.OptionSpec) bool { return sectionOf(sp) == str(a, "section") }, s.scope)
 		}},
@@ -215,7 +223,7 @@ func (s *settingsPlugin) loadAll() bool {
 func fileKeys(o registry.Options, m map[string]any) []settingsfile.Key {
 	return settingsfile.Keys(m, func(name string) bool {
 		sp, ok := o.Spec(name)
-		return ok && sp.Type == registry.Map
+		return ok && (sp.Type == registry.Map || sp.Type == registry.Table)
 	})
 }
 
@@ -323,6 +331,10 @@ func fromTOML(sp registry.OptionSpec, v any) (any, error) {
 		if m, ok := settingsfile.StringMap(v); ok {
 			return m, nil
 		}
+	case registry.Table:
+		if m, ok := v.(map[string]any); ok {
+			return m, nil
+		}
 	default:
 		return v, nil
 	}
@@ -337,7 +349,7 @@ func toTOML(sp registry.OptionSpec, v any) any {
 }
 
 func typeName(sp registry.OptionSpec) string {
-	return [...]string{"bool", "int", "float", "string", "enum", "duration", "key", "list of strings", "map of strings"}[sp.Type]
+	return [...]string{"bool", "int", "float", "string", "enum", "duration", "key", "list of strings", "map of strings", "table"}[sp.Type]
 }
 
 // --- trust ---
@@ -471,6 +483,34 @@ func (s *settingsPlugin) set(name string, v any, scope int) error {
 	})
 }
 
+// setKey sets one key of a table option in the user or project file, or removes it when v is nil: one line.
+func (s *settingsPlugin) setKey(name, key string, v any, scope int) error {
+	o := s.h.Options()
+	sp, ok := o.Spec(name)
+	if !ok {
+		return fmt.Errorf("no option %q", name)
+	}
+	if sp.Type != registry.Table {
+		return fmt.Errorf("%s isn't a table: set it whole", sp.Name)
+	}
+	f, err := s.fileFor(scope)
+	if err != nil {
+		return err
+	}
+	if f == nil {
+		return fmt.Errorf("%s is kept in a settings file: set it at the user or project scope", sp.Name)
+	}
+	return s.write(f, sp, func(doc *toml.Document, p []string) error {
+		if v == nil {
+			if _, ok := doc.Get(append(p, key)...); !ok {
+				return nil
+			}
+			return doc.Delete(append(p, key)...)
+		}
+		return doc.Set(append(slices.Clone(p), key), v)
+	})
+}
+
 // checkValue validates v for sp at f's layer without leaving it set.
 func checkValue(o registry.Options, sp registry.OptionSpec, f *settingsFile, v any) error {
 	old, had := o.Lookup(sp.Name, f.layer, f.at)
@@ -504,7 +544,8 @@ func (s *settingsPlugin) reset(name string, scope int) error {
 func (s *settingsPlugin) resetWhere(keep func(registry.OptionSpec) bool, scope int) error {
 	var errs []error
 	for _, sp := range s.h.Options().Specs() {
-		if keep(sp) {
+		// A table is a list its owner manages ([plugins]): resetting settings doesn't empty it.
+		if keep(sp) && sp.Type != registry.Table {
 			if _, set := s.h.Options().Lookup(sp.Name, s.layerFor(scope), s.atFor(scope)); set {
 				errs = append(errs, s.reset(sp.Name, scope))
 			}
@@ -931,6 +972,10 @@ func (s *settingsPlugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.Opti
 			Disabled: disabled, Help: help, Validate: entryCheck(sp)}); ok {
 			s.fail(s.set(sp.Name, nm, s.scope))
 		}
+		return
+	case registry.Table:
+		m, _ := v.(map[string]any)
+		c.Text("table", fmt.Sprintf("%d %s · in settings.toml", len(m), plural(len(m), "entry", "entries")), monoFont(11, th.C(theme.FgMuted)))
 		return
 	case registry.Bool:
 		on, _ := v.(bool)

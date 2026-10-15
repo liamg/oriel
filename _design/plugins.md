@@ -896,6 +896,13 @@ type Host interface {
   (PL-19)").
 - `app.DirPlugin` loads a data-only plugin (no `init.lua`) as well as a Lua one.
 
+## As built (PL-20)
+
+- `plugin.Host.Load(p)` starts another plugin on a host of its own (its id as the source), and Dispose stops it: what
+  a plugin manager needs, built-in or not. Call it on the loop.
+- `registry.Table` is an option type for a settings table its owner reads (`[plugins]`), held as `map[string]any`;
+  Lua declares one with `type = "table"`.
+
 ## As built (tickets)
 
 - **Ticket trackers** (`registry.TicketTracker`, kind `ticket.tracker`) replace PL-8's ticket sources: a tracker (Linear,

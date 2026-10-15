@@ -11,6 +11,8 @@ type Consent struct {
 	Plugin  Manifest
 	From    *Manifest // the version installed, for an update; nil for an install
 	Source  string    // where it comes from: a registry, a git URL, a directory
+	Badge   string    // who looked at its code: reviewed, trusted, unverified (catalog.md, Badges)
+	Warning string    // said before anything else: an unverified source's "Nobody has reviewed this code."
 	Facts   []Fact    // what the installer knows of its provenance: commit, checksum, badge, deps
 	Rows    []ConsentRow
 	Removed []string // capabilities the installed version had and this one drops, as Lock writes them

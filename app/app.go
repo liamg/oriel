@@ -61,6 +61,7 @@ type Config struct {
 	WorkDir   string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
 	StateDir  string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
 	CacheDir  string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
+	DataDir   string          // installed plugins, in its plugins/; DefaultDataDir() if ""
 	Workers   []worker.Client // the workers whose sessions the window shows: this machine's, and any others
 	// LocalWorker reaches this machine's worker, starting one: after one from another build hands over to this build's.
 	LocalWorker func(context.Context) (worker.Client, error)
@@ -84,6 +85,15 @@ func DefaultConfigDir() string {
 	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "oriel")
+}
+
+// DefaultDataDir is $XDG_DATA_HOME/oriel, or ~/.local/share/oriel, on every platform (catalog.md, Files on disk).
+func DefaultDataDir() string {
+	if d := os.Getenv("XDG_DATA_HOME"); d != "" {
+		return filepath.Join(d, "oriel")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".local", "share", "oriel")
 }
 
 // Run opens a window and runs the app until the window closes or ctx is done.
@@ -385,6 +395,17 @@ func (h *host) CurrentTheme() *theme.Resolved {
 		return nil
 	}
 	return h.sh.theme()
+}
+
+func (h *host) Load(p plugin.Plugin) (registry.Disposable, error) {
+	if err := p.Activate(context.Background(), h.sh.host(p.Manifest().ID)); err != nil {
+		return nil, err
+	}
+	return disposeFn(func() {
+		if err := p.Deactivate(context.Background()); err != nil {
+			h.log.Warn("stopping a plugin", "plugin", p.Manifest().ID, "err", err)
+		}
+	}), nil
 }
 
 func (h *host) Shot(th *theme.Resolved) *image.RGBA {

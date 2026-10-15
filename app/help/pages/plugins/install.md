@@ -14,6 +14,32 @@ an error naming the capability.
 
 A plugin that needs only the always-allowed capabilities installs without asking. `⌘↵` installs, `esc` cancels.
 
+## Installing from settings.toml {#settings}
+
+Plugins are listed in `settings.toml` under `[plugins]`, by id. Adding a line installs the plugin, and taking it out
+uninstalls it: its files go, and its line leaves `oriel-lock.toml`.
+
+```toml
+[plugins]
+"acme/jira"     = "^0.4"                                 # from the registry
+"someone/thing" = { git = "github.com/someone/thing" }   # not in a registry: unverified
+"me/wip"        = { path = "~/src/wip" }                  # a local directory
+"acme/linear"   = { version = "^1", enabled = false }     # installed, not loaded
+```
+
+`oriel-lock.toml`, next to `settings.toml`, records what you accepted for each plugin: its exact commit and its
+capabilities. A plugin the lockfile covers loads without asking, which is how your dotfiles work on a new machine.
+One that asks for more stays off, with a card in the inbox that opens this screen. A project's
+`.oriel/settings.toml` can list plugins too, once you trust the project.
+
+## Badges {#badges}
+
+The badge says who has looked at the code, not what it may do: consent is the same for every badge.
+
+- **reviewed**: this exact commit was reviewed in a registry pull request.
+- **trusted**: the registry trusts its author; this version wasn't reviewed.
+- **unverified**: a `git` or `path` source, in no registry. Nobody has reviewed this code.
+
 ## Updates {#updates}
 
 An update that asks for more is the same choice again: the dialog lists the new version's capabilities with what's

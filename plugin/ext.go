@@ -54,6 +54,9 @@ type Host interface {
 	HoldPending()                                  // keeps the pending mapping waiting past keymap.timeoutlen, until the next key
 	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
 	CurrentTheme() *theme.Resolved                 // the theme the window is drawn in
+	// Load starts p as a plugin of its own, on a host whose source is its id, as a plugin manager does; Dispose
+	// stops it. Call it on the loop.
+	Load(p Plugin) (registry.Disposable, error)
 	// Shot is the window as it is now, built and drawn again on the CPU in th (its own theme when nil), in logical
 	// pixels. A probe theme (theme.Probe) makes it a map of which token painted each pixel. Call it on the loop.
 	Shot(th *theme.Resolved) *image.RGBA

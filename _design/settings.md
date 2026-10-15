@@ -85,7 +85,7 @@ help and validation are all generated from the spec.
 |---|---|
 | `Name` | `editor.line_numbers`. The section is the prefix. |
 | `Section` | title and order on the page, when it differs from the prefix |
-| `Type` | bool, enum (with values), int or float (with range), string, colour, duration, key, list (of strings), map (strings by name) |
+| `Type` | bool, enum (with values), int or float (with range), string, colour, duration, key, list (of strings), map (strings by name), table (any values by name, which its owner reads: `[plugins]`) |
 | `Choices` | the values a string or a list's items suggest, worked out when asked; others are still allowed |
 | `Validate` | refuses a value of the right type that's still wrong: a malformed rule in a list. `registry.ListOf` and `MapOf` make one an editor can ask about a single item or entry |
 | `KeyLabel`, `ValueLabel` | a map's two sides, as the page names them: `name` and `server` |
@@ -135,6 +135,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | | RV-4 |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | | RV-4 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |
+| `plugins` | `{}`: the installed plugins by id, a table (catalog.md, `[plugins]`); user and project | app | | PL-20 |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
 | `lsp.start` | `project`: a project's servers start when it opens; `file`: when one of their files does | app | | – |
 | `keymap.leader` | Space | app | | FW-3 |

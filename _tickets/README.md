@@ -169,3 +169,4 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 90. [PL-16](PL-16-the-oriel-plugins-registry-repo-and-ci.md): The liamg/oriel-plugins registry repo and its CI · after PL-19
 91. [PL-21](PL-21-registry-client-badges-and-the-plugins-page.md): Registry client, badges, trusted tags, yank and revoke, the Plugins page · after PL-20, PL-6
 92. [PL-17](PL-17-oriel-plugin-publish.md): oriel plugin publish · after PL-16, PL-21
+93. [PL-22](PL-22-lazy-loading.md): Lazy loading: commands, events, keys, filetypes and omnibox sources load a plugin when first used · after PL-20

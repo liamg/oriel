@@ -27,7 +27,26 @@ var (
 	tRiskHigh = theme.Declare("plugins.consent.risk.high", "cyan")
 	tRiskCrit = theme.Declare("plugins.consent.risk.critical", "red")
 	tRiskRow  = theme.Declare("plugins.consent.row.border", "line")
+
+	tBadgeBuiltin    = theme.Declare("plugins.badge.builtin", "fg.faint")
+	tBadgeReviewed   = theme.Declare("plugins.badge.reviewed", "green")
+	tBadgeTrusted    = theme.Declare("plugins.badge.trusted", "cyan")
+	tBadgeUnverified = theme.Declare("plugins.badge.unverified", "warn")
+	tConsentWarning  = theme.Declare("plugins.consent.warning", "warn")
 )
+
+// badgeTone is a plugin badge's colour (catalog.md, Badges).
+func badgeTone(badge string) theme.TokenID {
+	switch badge {
+	case "reviewed":
+		return tBadgeReviewed
+	case "trusted":
+		return tBadgeTrusted
+	case "unverified":
+		return tBadgeUnverified
+	}
+	return tBadgeBuiltin
+}
 
 // consentPlugin is builtin:consent: the all-or-nothing install and update consent (security.md, mockup 29). An
 // installer asks through plugins.consent; the dialog shows every capability the plugin declares, with Oriel's
@@ -51,7 +70,7 @@ func (x *consentPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	open := func(registry.Args) bool { return len(x.queue) > 0 }
 	for _, c := range []registry.Command{
-		{ID: "plugins.consent", Title: "Ask to install the plugin in {dir} (or update to it from the one in {from}), then run {then} with {dir} if it's accepted",
+		{ID: "plugins.consent", Title: "Ask to install the plugin in {dir} (or update to it from the one in {from}), then run {then} with {dir} if it's accepted; {source}, {badge}, {warning} and {facts} ({label, value}s) are what's known of where it comes from",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.consentCommand(a) }},
 		{ID: "plugins.consent.accept", Title: "Install: accept every capability the plugin asks for", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.answer(true); return nil }},
@@ -125,6 +144,16 @@ func (x *consentPlugin) consentCommand(a registry.Args) error {
 	c.Source = a.String("source")
 	if c.Source == "" {
 		c.Source = dir
+	}
+	c.Badge, c.Warning = a.String("badge"), a.String("warning")
+	if fs, ok := a["facts"].([]any); ok {
+		for _, f := range fs {
+			if f, ok := f.(map[string]any); ok {
+				l, _ := f["label"].(string)
+				v, _ := f["value"].(string)
+				c.Facts = append(c.Facts, plugin.Fact{Label: l, Value: v})
+			}
+		}
 	}
 	then := a.String("then")
 	x.ask(c, func(ok bool) {
@@ -234,6 +263,9 @@ func (x *consentPlugin) header(c *ui.Ctx, k plugin.Consent) {
 			meta = append(meta, "runs: "+runsOf(m))
 			c.Text("meta", strings.Join(meta, " · "), monoFont(10.5, th.C(theme.FgFaint)))
 		})
+		if k.Badge != "" {
+			widget.Chip(c, "badge", strings.ToUpper(k.Badge), th.C(badgeTone(k.Badge)), consentHelp+"#badges")
+		}
 		if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: consentHelp}) {
 			x.answer(false)
 		}
@@ -254,6 +286,13 @@ func consentRows(c *ui.Ctx, k plugin.Consent, width float32) {
 	intro := "Installing grants all of these. Anything not listed is denied. Explanations in plain type are Oriel's; italic lines are the author's own reasons."
 	if k.Update() {
 		intro = "This version asks for more. Updating grants all of these; staying keeps the version you have. Anything not listed is denied."
+	}
+	if k.Warning != "" {
+		c.Row("warning", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 10, Stroke: th.C(tConsentWarning), Border: 1, Radius: 6,
+			Role: ui.RoleGroup, Label: k.Warning}, func(c *ui.Ctx) {
+			c.Text("sign", "⚠", uiFont(12.5, th.C(tConsentWarning)))
+			widget.Wrap(c, "t", k.Warning, width-60, uiFont(12.5, th.C(tConsentWarning)))
+		})
 	}
 	widget.Wrap(c, "intro", intro, width, uiFont(12.5, th.C(theme.FgMuted)))
 	for _, g := range plugin.Groups {

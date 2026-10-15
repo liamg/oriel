@@ -94,19 +94,20 @@ clip 0,38 1600x962 r 0
     text "keymap" @18,324.269 #b3ab99 Inter 13
     text "lsp" @18,354.269 #b3ab99 Inter 13
     text "mission" @18,384.269 #b3ab99 Inter 13
-    text "review" @18,414.269 #b3ab99 Inter 13
-    rect 8,425.54 224x28 fill #1f1c0f radius 5
-    text "sandbox" @18,444.269 #ece6d8 Inter 13
-    text "● 3" @204,443.14 #ffd23f JetBrains Mono 10
-    text "sidebar" @18,474.269 #b3ab99 Inter 13
-    text "stats" @18,504.269 #b3ab99 Inter 13
-    text "terminal" @18,534.26904 #b3ab99 Inter 13
-    text "ui" @18,564.26904 #b3ab99 Inter 13
-    text "updates" @18,594.26904 #b3ab99 Inter 13
-    text "usage" @18,624.26904 #b3ab99 Inter 13
-    text "voice" @18,654.26904 #b3ab99 Inter 13
-    text "whichkey" @18,684.26904 #b3ab99 Inter 13
-    text "workers" @18,714.26904 #b3ab99 Inter 13
+    text "plugins" @18,414.269 #b3ab99 Inter 13
+    text "review" @18,444.269 #b3ab99 Inter 13
+    rect 8,455.54 224x28 fill #1f1c0f radius 5
+    text "sandbox" @18,474.269 #ece6d8 Inter 13
+    text "● 3" @204,473.14 #ffd23f JetBrains Mono 10
+    text "sidebar" @18,504.269 #b3ab99 Inter 13
+    text "stats" @18,534.26904 #b3ab99 Inter 13
+    text "terminal" @18,564.26904 #b3ab99 Inter 13
+    text "ui" @18,594.26904 #b3ab99 Inter 13
+    text "updates" @18,624.26904 #b3ab99 Inter 13
+    text "usage" @18,654.26904 #b3ab99 Inter 13
+    text "voice" @18,684.26904 #b3ab99 Inter 13
+    text "whichkey" @18,714.26904 #b3ab99 Inter 13
+    text "workers" @18,744.26904 #b3ab99 Inter 13
   pop
   rect 240,91 1x879 fill #24221d
   clip 241,91 1359x879 r 0

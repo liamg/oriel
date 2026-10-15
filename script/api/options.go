@@ -135,11 +135,11 @@ func (a *APIs) options(vm *script.VM) {
 }
 
 var optionTypes = map[string]registry.OptionType{"bool": registry.Bool, "int": registry.Int, "float": registry.Float, "string": registry.String,
-	"enum": registry.Enum, "duration": registry.Duration, "key": registry.Key, "list": registry.List, "map": registry.Map}
+	"enum": registry.Enum, "duration": registry.Duration, "key": registry.Key, "list": registry.List, "map": registry.Map, "table": registry.Table}
 
 // zeros are each type's default when a declaration gives none.
 var zeros = map[registry.OptionType]any{registry.Bool: false, registry.Int: 0, registry.Float: 0.0, registry.String: "", registry.Duration: time.Duration(0),
-	registry.Key: "", registry.List: []string{}, registry.Map: map[string]string{}}
+	registry.Key: "", registry.List: []string{}, registry.Map: map[string]string{}, registry.Table: map[string]any{}}
 
 // declare registers an option from oriel.option{ name, type, default, help, values, min, max, section, on_change } (catalog.md,
 // "Plugin options"). A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.
@@ -147,7 +147,7 @@ func (a *APIs) declare(t script.Table, where string) error {
 	name := str(t, "name")
 	typ, ok := optionTypes[cmpOr(str(t, "type"), "string")]
 	if name == "" || !ok {
-		return fmt.Errorf("an option needs a name and a type (bool, int, float, string, enum, duration, key, list or map): %v", t)
+		return fmt.Errorf("an option needs a name and a type (bool, int, float, string, enum, duration, key, list, map or table): %v", t)
 	}
 	sp := registry.OptionSpec{Name: name, Section: str(t, "section"), Type: typ, Values: strs(t["values"]), Help: str(t, "help"),
 		Min: num(t["min"]), Max: num(t["max"]), Scopes: registry.ScopeUser, Source: where}
@@ -248,6 +248,11 @@ func optionValue(sp registry.OptionSpec, v any) (any, error) {
 			return m, nil
 		}
 		return nil, fmt.Errorf("%s takes a table of strings by name, not %v", sp.Name, v)
+	case registry.Table:
+		if m, ok := v.(script.Table); ok {
+			return map[string]any(m), nil
+		}
+		return nil, fmt.Errorf("%s takes a table, not %v", sp.Name, v)
 	default:
 		return v, nil
 	}
