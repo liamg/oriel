@@ -1,10 +1,12 @@
 package worker
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/worker/tour"
 )
 
 // The workspace layout is crit's, unchanged (sessions.md): a directory holding the manifest, its own git repo
@@ -40,9 +43,58 @@ type Manifest struct {
 	Label         string          `json:"label,omitempty"`
 }
 
+// TourInfo is a tour's: the question it answers, its kind, and where its export was published.
 type TourInfo struct {
-	Title string `json:"title"`
-	Kind  string `json:"kind,omitempty"`
+	Title string     `json:"title"`
+	Kind  string     `json:"kind,omitempty"`
+	Share *TourShare `json:"share,omitempty"`
+}
+
+type TourShare struct {
+	URL        string    `json:"url"`
+	ExportedAt time.Time `json:"exportedAt"`
+}
+
+// TourOf is the tour at a workspace's root, as the tour package reads it; ok is false when it isn't a tour.
+func TourOf(root string) (tour.Info, bool) {
+	m, ok := LoadManifest(root)
+	if !ok || m.Tour == nil {
+		return tour.Info{}, false
+	}
+	info := tour.Info{Name: m.Name, Title: m.Tour.Title, Kind: cmp.Or(m.Tour.Kind, tour.DefaultKind)}
+	if sh := m.Tour.Share; sh != nil {
+		info.ShareURL, info.SharedAt = sh.URL, sh.ExportedAt
+	}
+	for _, p := range m.projects(root) {
+		info.Repos = append(info.Repos, tour.Repo{Name: p.Name, Repo: p.Repo, Dir: p.Dir, Base: p.Base, Commit: p.Commit})
+	}
+	return info, true
+}
+
+// SetTourKind changes which kind of tour a workspace is.
+func SetTourKind(root, kind string) error {
+	if !tour.ValidKind(kind) {
+		var ids []string
+		for _, k := range tour.Kinds {
+			ids = append(ids, k.ID)
+		}
+		return fmt.Errorf("%q isn't a kind of tour: one of %s", kind, strings.Join(ids, ", "))
+	}
+	return editTour(root, func(t *TourInfo) { t.Kind = kind })
+}
+
+// SetTourShare records where a tour's export was published.
+func SetTourShare(root, url string, at time.Time) error {
+	return editTour(root, func(t *TourInfo) { t.Share = &TourShare{URL: url, ExportedAt: at.UTC()} })
+}
+
+func editTour(root string, fn func(*TourInfo)) error {
+	m, ok := LoadManifest(root)
+	if !ok || m.Tour == nil {
+		return errors.New("this session isn't a tour")
+	}
+	fn(m.Tour)
+	return saveManifest(root, m)
 }
 
 // ManifestEntry is a project as the manifest records it: Dir relative to the workspace, so it can move.
@@ -148,7 +200,11 @@ func newWorkspace(ctx context.Context, root string, m Manifest) error {
 	if err := os.MkdirAll(filepath.Dir(exclude), 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(exclude, []byte(ManifestFile+"\n"+ReposDir+"/\n"), 0o644); err != nil {
+	ignore := ManifestFile + "\n" + ReposDir + "/\n"
+	if m.Tour != nil {
+		ignore += tour.HTMLFile + "\n" + tour.MarkdownFile + "\n"
+	}
+	if err := os.WriteFile(exclude, []byte(ignore), 0o644); err != nil {
 		return err
 	}
 	return saveManifest(root, m)

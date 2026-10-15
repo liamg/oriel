@@ -132,7 +132,7 @@ How everything hangs together, built and tested before features land on it.
 | RV-5 | Explain by code unit, `[`/`]` widen and narrow, Explain this on a selection | 25 | explain, syntax | P6 | ED-6, AI-2 | units are correct for fixtures in 4 languages; cache invalidated only by edits inside the unit |
 | RV-6 | Explain this change walkthrough | 07 | explain | P6 | RV-5 | a fake explainer's JSON steps over two projects walk with ←/→ and the step chips, the notes' lines lit and the rest dimmed; Ask about this step and Comment on L<n> make a request and a thread; an edit inside a step's lines (buffer or disk) discards it, one outside keeps it; the view matches 07 |
 | RV-7 | Verify & raise quiz | 13 | agent | P6 | AI-5 | the quiz is optional and a raise never waits for it; answers are graded, a partial one points at a file; the gate shows the result; off per repo |
-| RV-8 | Tours: reader, 7 kinds, export | 14 | tour | P7 | RV-5 | crit's tour features ported |
+| RV-8 | Tours: reader, 7 kinds, export | 14 | tour | P7 | RV-5 | crit's tour features ported: quotes read from the pinned worktrees (or a revision) with marks and pinned notes, examples, runs, annotated screenshots; the reader walks them as they land, asks about a step, and exports a self-contained HTML (or markdown) file; the 7 kinds are picked at launch and steer the agent through `tour_kind`; the view matches 14 |
 
 ## Platform
 

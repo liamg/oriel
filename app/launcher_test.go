@@ -95,7 +95,13 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 			r.typeText("https://github.com/acme/pricing/pull/7")
 			addRepo()
 		}},
-		{"Tour", "tour", func() { prompt("How does rounding work?"); addRepo() }},
+		{"Tour", "tour", func() {
+			prompt("How does rounding work?")
+			addRepo()
+			r.clickTop("tour: walkthrough · how the code works ▾")
+			r.clickTop("demo · built and run for real")
+			r.waitText("tour: demo · built and run for real")
+		}},
 		{"Job", "job", func() { prompt("Sweep stale deps"); addRepo() }},
 		{"New repo", "newrepo", func() {
 			r.clickTop(namePlaceholder)
@@ -126,6 +132,9 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 	kinds := map[core.Kind]core.SessionState{}
 	for _, se := range st.Sessions {
 		kinds[se.Kind] = se
+	}
+	if m, _ := worker.LoadManifest(kinds[core.KindTour].Dir); m.Tour == nil || m.Tour.Kind != "demo" {
+		t.Errorf("the tour is %+v, want the demo picked", m.Tour)
 	}
 	if d := kinds[core.KindDirect]; d.Dir != plain || len(d.Projects) != 1 || d.Projects[0].Dir != plain {
 		t.Errorf("direct = %+v, want the directory itself", d)

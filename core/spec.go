@@ -39,7 +39,7 @@ type SessionSpec struct {
 	Worker   WorkerID      `json:"worker,omitempty"`
 	Sandbox  SandboxPolicy `json:"sandbox,omitzero"`
 	Template string        `json:"template,omitempty"` // new repo kind
-	TourKind string        `json:"tourKind,omitempty"` // tour kind: walkthrough, onboarding…
+	Variant  string        `json:"variant,omitempty"`  // which of its kind's variants: a tour's walkthrough, onboarding…
 	Job      string        `json:"job,omitempty"`      // the saved job this is a run of
 }
 

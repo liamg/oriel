@@ -280,6 +280,11 @@ type Session interface {
   (`agent/packs`), Oriel's tools (`reply`, `thread`, `resolve`, `comment`, `task_add`, `task_update`, `tasks`,
   `projects`, `commit_draft`, `pr_draft`, `test_run`) and any the app's plugins offer (`registry.AgentTool`, reached
   back over the wire: LS-3's `lsp_*`), and the user's checkouts as `Protect`.
+- Built in RV-8: a tour's agent also has `tour_kind` (its kind and that kind's guidance, `worker/tour/kinds/*.md`;
+  with `kind`, it changes it), `tour_steps`, `tour_run` (a command run inside the tour, its output, exit code and
+  time appended to a step as a run block; refused in a sandbox, where only the agent's own shell runs commands) and
+  `tour_share` (the published export's link), and the app's `tour_export`. The tour's question is its `where="tour"`
+  thread.
 - Comments go to the agent as a batch in crit's tagged format (`worker/prompt.go`): at once when it's idle; after
   `Interrupt` when one is urgent; at the turn's end otherwise. A delivered thread is `Busy` until the agent replies.
   btw is a `Fork`, its answer a `Btw` comment. The console's messages queue (`Agent.Queue`) the same way.

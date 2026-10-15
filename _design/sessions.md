@@ -135,6 +135,7 @@ type SessionSpec struct {
     Worker   WorkerID
     Sandbox  SandboxPolicy
     Template string            // newrepo kind
+    Variant  string            // one of the kind's variants: a tour's walkthrough, onboarding…
 }
 
 type Sessions interface {
@@ -226,6 +227,9 @@ type Sessions interface {
   `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
   The CLI takes its flags after the prompt too (`oriel new "fix stale usage prices" --repo pricing`), and every
   kind starts from it: `new --kind plan|work|tour|job|direct|scratch`, `review <pr-url>`, `init <name>`.
+  A kind's `Variants` (RV-8: a tour's walkthrough, onboarding, archaeology, showcase, demo, incident and
+  feasibility) are a picker beside the ticket and `--variant` on the CLI; the first is the default, and one the kind
+  hasn't is refused. A tour's is its manifest's `tour.kind`.
 - **The app opens on the start view**, not mission control: mission control is SH-7 (P7). Until then the start
   view's Recent lists the sessions first, and opening one brings it to the front.
 - **Files outside the session** open read-only: the sessions extension's `BufRead` rewrite hook marks a file outside

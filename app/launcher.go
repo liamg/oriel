@@ -62,7 +62,7 @@ type launcher struct {
 
 	kind                                          int
 	prompt, ticket, pr, dir, name, parent, branch string
-	template, repoPath                            string
+	template, repoPath, variant                   string
 	provider, model, effort                       string
 	chosen                                        []core.RepoID
 	clones                                        map[core.RepoID]string // a URL to clone onto the worker, by a chosen repo it lacks
@@ -97,7 +97,7 @@ func (x *launcher) openWith(a registry.Args) {
 	spec := specFrom(a)
 	*x = launcher{disposer: x.disposer, sh: x.sh, h: x.h, gen: x.gen + 1, open: true, focusField: true,
 		worker: spec.Worker, wantKind: core.Kind(a.String("kind")), prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
-		name: spec.Name, template: spec.Template, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
+		name: spec.Name, template: spec.Template, variant: spec.Variant, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
 		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", branch: spec.Branch}
 	if x.template == "" {
 		x.template = worker.Templates[0]
@@ -214,6 +214,37 @@ func (x *launcher) missing() string {
 	return ""
 }
 
+// chosenVariant is the kind's variant the launcher holds: the one picked, else its first; "" for a kind with none.
+func (x *launcher) chosenVariant(k worker.KindSpec) string {
+	for _, v := range k.Variants {
+		if v.ID == x.variant {
+			return v.ID
+		}
+	}
+	if len(k.Variants) > 0 {
+		return k.Variants[0].ID
+	}
+	return ""
+}
+
+// variantField picks the kind's variant (a tour's walkthrough, demo…).
+func (x *launcher) variantField(c *ui.Ctx, k worker.KindSpec) {
+	cur := x.chosenVariant(k)
+	var opts []string
+	label := cur
+	for _, v := range k.Variants {
+		o := v.ID + " · " + v.Desc
+		opts = append(opts, o)
+		if v.ID == cur {
+			label = o
+		}
+	}
+	if o, ok := widget.Select(c, "variant", strings.ToLower(k.Title)+": "+label, opts, widget.SelectOpts{Label: k.Title + " kind", Help: "agent/launcher#prompt",
+		Width: 300}); ok {
+		x.variant, _, _ = strings.Cut(o, " · ")
+	}
+}
+
 // home expands a leading ~ for this machine's worker.
 func (x *launcher) home(p string) string {
 	p = strings.TrimSpace(p)
@@ -235,6 +266,9 @@ func (x *launcher) args() registry.Args {
 		if x.openNet {
 			a["network"] = "open"
 		}
+	}
+	if v := x.chosenVariant(k); v != "" {
+		a["variant"] = v
 	}
 	switch startsFrom(k) {
 	case worker.FromPrompt:
@@ -471,6 +505,9 @@ func (x *launcher) form(c *ui.Ctx) {
 		if f == worker.FromPrompt {
 			c.Row("extra", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				x.field(c, "ticket", &x.ticket, "Ticket", "ticket: INF-2231", false, ui.Px(220), 1)
+				if len(k.Variants) > 0 {
+					x.variantField(c, k)
+				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("note", "the ticket names the branch and goes to the agent", monoFont(10, th.C(theme.FgFaint)))
 			})

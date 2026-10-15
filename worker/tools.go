@@ -58,6 +58,7 @@ func (w *Worker) tools(h *host) []agent.Tool {
 		{Name: "test_run", Description: "Run tests and record the run as evidence. Returns the run's id: cite it (run:<id>) when you say tests pass. dir: a directory in a project (the primary project if empty); filter: a test name pattern.",
 			Schema: schema(`"dir":` + str + `,"filter":` + str + `,"project":` + str), Call: h.toolTestRun},
 	}
+	own = append(own, w.tourTools(h)...)
 	for _, app := range w.appConns() {
 		var list []agent.Tool
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

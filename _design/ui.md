@@ -706,6 +706,32 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - Prose, quoted code (real files, real line numbers) and pinned notes. The note numbers recur in the diagram.
 - Ask about any step. Export to a single HTML file.
+- Built in RV-8 (`app/tour*.go`, the `tour` built-in; `worker/tour`, crit's `internal/tour`): the reader opens by
+  itself when a tour session comes to the front (`tour.open`). Steps are the `NN-slug.md` files at the workspace
+  root, read again each second or when the agent does something, so they appear as they land. At the left: TOUR ·
+  KIND, the question, the repos' chips, PINNED @ the first repo's commit, a bar of how many steps have been read, the
+  steps (✓ once read, the one shown lit) and **↓ Export as HTML** with "self-contained · no fetches · share as
+  artifact" (and "shared ↗" once published). In the middle: STEP 4 OF 9, the title (the step's `# heading`), then
+  its prose (markdown, an image on a line of its own drawn), its quotes (the repo, path, lines, language and
+  **open ↗**; the lines read from the pinned worktree, or `rev=` another revision, numbered as the file's and in its
+  syntax colours, `mark=` lines lit with the accent at their edge, each `note` under its line in the annotation
+  house style, numbered; a quote over 60 lines with marks shows 4 lines around them and **… n more lines**; one that
+  can't be read says why), examples, recorded runs (`$ cmd`, exit, output) and screenshots with their numbered pins,
+  boxes and arrows (percentages of the picture). At the right: the step's diagrams, ASK ABOUT THIS STEP (the threads
+  on the step's file, and a field that asks in its open thread, else opens one on the file's line 1), and ← Prev,
+  "step 4 / 9", Next →. Keys (mode `tour`): `h`/`l` (← →) step, `j`/`k` scroll, `gd` opens the step's first quote in
+  the editor at its first marked line, `a` asks, `q`/Escape close. The status line: "auth flow walkthrough · 2
+  repos · 14 quotes" and "h/l step · j/k scroll · gd open quote in editor 4/9". Before any step: what the agent is
+  doing, the question's thread and a field. Export writes `tour.html` (one page a step at a time, ← → and dots,
+  Present for full screen, `#step=N`; the code coloured by the window's languages, the theme's dark and light
+  following the reader's preference or a host's `data-theme`; images inlined) and asks the agent in the tour's
+  thread to publish it and `tour_share` the link; `tour.export {format: md}` writes `tour.md`. The launcher's Tour
+  mode picks the kind (sessions.md, Variants).
+- Decided in RV-8 (the design was silent): diagrams show as their mermaid source in the reader and the export
+  (crit inlined mermaid.js, which isn't an approved dependency); the reader reads the session's directory on this
+  machine, as the plan view does.
+- Not yet: drawing mermaid diagrams; the reader for a session on another machine's worker; changing the kind from
+  the reader; zooming a screenshot.
 
 ## 15 · Agent console (Codex here)
 

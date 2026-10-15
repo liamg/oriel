@@ -29,6 +29,7 @@ const (
 	RoleDialog   Role = "dialog"
 	RoleStatus   Role = "status" // a polite live region: toasts, the statusline
 	RoleSlider   Role = "slider" // its Label carries the value
+	RoleImage    Role = "image"  // its Label says what it shows
 )
 
 // Action is something assistive technology asks a node to do.

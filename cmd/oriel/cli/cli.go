@@ -155,6 +155,7 @@ func sessionSpec(cmd string, args []string, wd string, stderr io.Writer) (spec c
 	fs.Var(&repos, "repo", "a repo, by name or path (more than one for a multi-repo session)")
 	kind := fs.String("kind", "work", "plan, work, review, tour, job, newrepo, direct or scratch")
 	ticket := fs.String("ticket", "", "the ticket this is for")
+	variant := fs.String("variant", "", "which of its kind's variants: a tour's walkthrough, onboarding, archaeology, showcase, demo, incident or feasibility")
 	provider := fs.String("provider", "claude", `the agent: claude, codex, or "" for none`)
 	model := fs.String("model", "", "the agent's model")
 	effort := fs.String("effort", "", "the agent's effort")
@@ -171,7 +172,7 @@ func sessionSpec(cmd string, args []string, wd string, stderr io.Writer) (spec c
 		}
 		rest, args = append(rest, args[0]), args[1:]
 	}
-	spec = core.SessionSpec{Kind: core.Kind(*kind), Ticket: *ticket, Provider: *provider, Model: *model, Effort: *effort,
+	spec = core.SessionSpec{Kind: core.Kind(*kind), Ticket: *ticket, Variant: *variant, Provider: *provider, Model: *model, Effort: *effort,
 		Sandbox: core.SandboxPolicy{Container: *sandboxed}}
 	for _, r := range repos {
 		if strings.ContainsRune(r, filepath.Separator) && !filepath.IsAbs(r) {

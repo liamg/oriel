@@ -73,6 +73,11 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	if spec.Sandbox.Container && w.opts.Sandbox == nil {
 		return "", errors.New("this worker can't run a sandbox")
 	}
+	variant, err := k.variant(spec.Variant)
+	if err != nil {
+		return "", err
+	}
+	spec.Variant = variant
 	name := w.freshName(spec)
 	id := core.SessionID(name)
 	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Worker: w.opts.ID, Prompt: spec.Prompt, Ticket: spec.Ticket,
@@ -84,7 +89,6 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	if branch == "" {
 		branch = BranchName(whoAmI(ctx), spec.Ticket, name)
 	}
-	var err error
 	switch k.Worktrees {
 	case WorktreesNone:
 		err = w.startInPlace(ctx, &se, spec)
@@ -164,7 +168,7 @@ func (w *Worker) startWorkspace(ctx context.Context, se *core.SessionState, spec
 	root := filepath.Join(w.workspacesDir(), string(se.ID))
 	m := Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(spec.Kind), Ticket: spec.Ticket, Model: spec.Model}
 	if spec.Kind == core.KindTour {
-		m.Tour = &TourInfo{Title: spec.Prompt, Kind: spec.TourKind}
+		m.Tour = &TourInfo{Title: spec.Prompt, Kind: spec.Variant}
 	}
 	if err := newWorkspace(ctx, root, m); err != nil {
 		return err

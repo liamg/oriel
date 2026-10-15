@@ -527,7 +527,7 @@ func specFrom(a registry.Args) core.SessionSpec {
 	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"),
 		PR: a.String("pr"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
 		Model: a.String("model"), Effort: a.String("effort"), Worker: core.WorkerID(a.String("worker")), Template: a.String("template"),
-		TourKind: a.String("tour"), Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate")}}
+		Variant: a.String("variant"), Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate")}}
 	if s.Kind == "" {
 		s.Kind = core.KindWork
 	}

@@ -144,6 +144,15 @@ flowchart TB
   the annotation house style (a numbered diamond and its title over the body, in a card with two corners cut;
   `widget.AnnotationBody` is its prose's style), `widget.Diamond` a numbered diamond, and `widget.Leader(frame, from,
   to, tone)` (`LeaderPath`) the angled leader line from code to its card. Theme tokens `annotation.*`.
+- images (RV-8): `widget.Image(c, key, img, width, ImageOpts{Label, Help})` draws an `image.Image` at a width, its
+  shape kept, scaled once per size to the device's pixels (`ui.RoleImage` to assistive technology).
+- tours (RV-8): `tour.open` opens the tour reader (the `tour` view, a tab) for the tour session in front, and opens
+  by itself when one comes to the front; `tour.step {step | by}`, `tour.scroll {by}`, `tour.open-quote {n}`,
+  `tour.ask {text}`, `tour.export {format, ask}` and `tour.close` drive it, and its keys are the `tour` key mode.
+  Steps are read by `worker/tour` (`tour.NewLoader().Load(ctx, root, worker.TourOf(root))`, the model a plugin's own
+  reader would draw), `tour.Markdown` and `tour.HTML(t, HTMLOptions{Highlight, Palette})` export them, and
+  `tour.Palette(dark, light)` is a page's colours. The app offers the `tour_export` agent tool
+  (`registry.AgentTool`); the worker its `tour_kind`, `tour_steps`, `tour_run` and `tour_share`.
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
   so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
@@ -355,8 +364,10 @@ flowchart TB
 - **agent tools**: an MCP tool defined in Lua or Go and offered to the session's agent.
 - prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
   registered on the worker (`worker.Kinds().Register(worker.KindSpec{…})`: its title, a few words (`Desc`), what
-  starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees);
-  the launcher lists the worker's kinds (`kinds.list`), so a registered one is a mode there with no more code.
+  starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees,
+  and its `Variants`, the sorts of it a session can be, the first the default: a tour's seven kinds, RV-8);
+  the launcher lists the worker's kinds (`kinds.list`), so a registered one is a mode there with no more code, and a
+  kind with variants gets a picker whose choice is `session.start {variant}` (`SessionSpec.Variant`).
   `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the worker yet.
   `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
   (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a built-in part) overrides one.
