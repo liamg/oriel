@@ -12,6 +12,7 @@ import (
 )
 
 // fixture copies testdata/tree into a fresh git repository, with $GIT_DIR/info/attributes, and returns its root.
+// The tree's attribute files are kept as gitattributes, so they don't apply to this repository's own checkout.
 func fixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -20,6 +21,9 @@ func fixture(t *testing.T) string {
 			return err
 		}
 		rel, _ := filepath.Rel("testdata/tree", p)
+		if d.Name() == "gitattributes" {
+			rel = filepath.Join(filepath.Dir(rel), ".gitattributes")
+		}
 		b, err := os.ReadFile(p)
 		if err != nil {
 			return err
