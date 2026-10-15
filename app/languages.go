@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,16 +17,24 @@ import (
 
 // languagesExt is builtin:languages (ED-11): Oriel's core grammars, registered as a third-party pack would be, and
 // the local packs in the config directory's languages/, which may shadow them. Grammars run sandboxed in wazero with
-// no host imports, so a pack on disk needs no consent.
+// no host imports, so a pack on disk needs no consent. languages.install adds a grammar pack CI built (PL-3).
 type languagesExt struct {
 	disposer
-	dir      string // ~/.config/oriel/languages
-	cacheDir string // where compiled grammars are kept
+	dir      string          // ~/.config/oriel/languages
+	cacheDir string          // where compiled grammars are kept
+	sums     syntax.PackSums // the packs it installs; the binary's list when nil
+
+	h     ext.Host
+	packs map[string]registry.Disposable // each local pack's registration, by its directory's name
 }
 
 func (x *languagesExt) Manifest() ext.Manifest { return ext.Manifest{ID: "languages"} }
 
 func (x *languagesExt) Activate(_ context.Context, h ext.Host) error {
+	x.h, x.packs = h, map[string]registry.Disposable{}
+	x.add(onDispose(func() { x.packs = nil }))
+	x.add(h.Command(registry.Command{ID: "languages.install", Title: "Install the grammar pack in the .tar.gz at {path}, if it's one this build of Oriel lists",
+		Run: func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("path")) }}))
 	if x.cacheDir != "" {
 		syntax.SetCacheDir(x.cacheDir)
 	}
@@ -35,17 +44,49 @@ func (x *languagesExt) Activate(_ context.Context, h ext.Host) error {
 	}
 	entries, _ := os.ReadDir(x.dir)
 	for _, e := range entries {
-		if !e.IsDir() {
-			continue
+		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
+			x.load(e.Name())
 		}
-		l, err := readPack(filepath.Join(x.dir, e.Name()))
-		if err != nil {
-			h.Log().Warn("language pack", "dir", e.Name(), "err", err)
-			continue
-		}
-		x.add(h.Language(l))
 	}
 	return nil
+}
+
+// load registers the pack in dir/name, in place of what it registered before.
+func (x *languagesExt) load(name string) error {
+	l, err := readPack(filepath.Join(x.dir, name))
+	if err != nil {
+		x.h.Log().Warn("language pack", "dir", name, "err", err)
+		return err
+	}
+	if d := x.packs[name]; d != nil {
+		d.Dispose()
+	}
+	d := x.h.Language(l)
+	x.packs[name] = d
+	x.add(d)
+	return nil
+}
+
+// install puts the grammar pack at path into the languages directory and registers it. Only a pack matching the
+// checksums the binary ships installs (deps.md). A grammar has no host imports, so there's no consent to ask.
+func (x *languagesExt) install(path string) error {
+	if path == "" {
+		return fmt.Errorf("languages.install needs the pack's {path}")
+	}
+	sums := x.sums
+	if sums == nil {
+		sums = syntax.Packs()
+	}
+	f, err := os.Open(ext.Expand(path))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	name, err := sums.Install(f, x.dir)
+	if err != nil {
+		return err
+	}
+	return x.load(name)
 }
 
 // readPack reads a grammar pack: language.toml (name, extensions, filenames, shebangs), grammar.wasm and queries/.

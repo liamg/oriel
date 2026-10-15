@@ -1,0 +1,3 @@
+name = "haskell"
+extensions = [".hs", ".hs-boot"]
+shebangs = ["runhaskell", "runghc", "stack"]

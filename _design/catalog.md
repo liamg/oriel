@@ -44,6 +44,8 @@ The same split as settings (`settings.md`): the GUI and hand edits write the sam
     That's how dotfiles on a new machine work.
   - If not, or if it now asks for more than you accepted, it stays **inactive**, and an inbox card opens the consent
     screen (mockup 29). Nothing runs half-granted.
+  - The pieces are PL-3's: `ext.Diff(ext.Locked(grants), lock.capabilities)` is what a plugin asks for beyond its
+    lock entry, and `plugins.consent` is the screen (security.md, "As built (PL-3)").
 - If an entry is removed, the plugin is deactivated, its files are removed, and its lock entry is dropped.
 - The GUI installs by writing one line to `[plugins]`, then follows the same path. The file is the only list, so the
   GUI and the file can't disagree.

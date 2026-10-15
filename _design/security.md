@@ -217,3 +217,22 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
 - Honestly: a plugin can still tell whether a secret is set (an error says so), and `:Secrets` (which plugin uses
   which, and when last) isn't built.
 
+## As built (PL-3)
+
+- `ext.Ask(manifest, from)` is the consent a plugin asks for (`ext.Consent`): a row per capability beyond the
+  always-allowed ones (`ext.ConsentRow`: the grant, its risk, a heading from `ext.Groups`, Oriel's line from
+  `ext.Explain`, and the author's `Why`), the source and provenance facts the installer knows, and, for an update
+  (`from` the installed manifest), what each row adds and what the update drops. `Silent()` is nothing to ask: an
+  install of only always-allowed capabilities, or an update adding none.
+- Consent in the lockfile's form: `Grant.Lock()` is `net:acme.atlassian.net` per scope item (or the capability
+  alone), `ext.Locked(grants)` a plugin's whole list, and `ext.Diff(want, accepted)` what consent to `accepted`
+  doesn't cover (`cap:*` covers any of cap's scope), which is how PL-20 tells a locked plugin from one asking for
+  more. Scopes are compared as written: a narrower scope that's spelled differently asks again.
+- The dialog (mockup 29) is `builtin:consent`, opened with `plugins.consent {dir, from, then, source}`: the manifest
+  in `dir`, an update from the one in `from`, and on Install (or Update, `⌘↵`) it runs the command `then` with
+  `{dir}`. Cancel, Stay, `esc` and a click outside grant nothing; a silent consent runs `then` at once. Each row's
+  help is `plugins/install#<capability>`, Oriel's page. Not yet: the provenance facts (commit, checksum, badge, deps)
+  and where consent is recorded come with P8 (PL-20, PL-21).
+- Grammar packs (`languages.install {path}`) ask for nothing: a grammar has no host imports. Their integrity check
+  is the checksum list the binary ships (editor.md, "Languages as plugins").
+

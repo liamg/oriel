@@ -52,7 +52,8 @@ jobs:
       - run: make oracle
 
   grammars:
-    # The tree-sitter grammars are rebuilt from their pinned sources and must match what's committed (deps.md).
+    # The tree-sitter grammars and grammar packs are rebuilt from their pinned sources and must match what's
+    # committed (deps.md); the packs the binary's PACKS.SHA256SUMS lists are published as an artifact.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,7 +66,14 @@ jobs:
       - run: syntax/grammars/build.sh
       # The .wasm.gz bytes depend on gzip's version; what's built is checked by its checksums, and the Go tests
       # check that what's embedded decompresses to the same.
-      - run: git diff --exit-code -- syntax/grammars/SHA256SUMS syntax/grammars/manifest.tsv
+      - run: git diff --exit-code -- syntax/grammars/SHA256SUMS syntax/grammars/manifest.tsv syntax/grammars/PACKS.SHA256SUMS syntax/grammars/packs.tsv syntax/grammars/packs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: grammar-packs
+          path: |
+            syntax/grammars/packs-out/*.tar.gz
+            syntax/grammars/PACKS.SHA256SUMS
+          if-no-files-found: error
 
   ghostty:
     # libghostty-vt is rebuilt from its pinned commit: the wasm must match what's committed, and the native library

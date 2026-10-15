@@ -937,6 +937,13 @@ type Host interface {
   result of a review a session submits (Oriel's agents never post one: the GitHub poll covers it), and who was seen
   before (`people`).
 
+## As built (PL-3)
+
+- Install consent is `ext.Ask` → `ext.Consent`, with `ext.Locked` and `ext.Diff` for the lockfile's form, and the
+  dialog any installer opens with the command `plugins.consent {dir, from, then, source}` (security.md, "As built
+  (PL-3)"). It's a command, so a plugin, Lua (`oriel.cmd`) or the P8 plugin manager asks the same way.
+- `languages.install {path}` installs a grammar pack (editor.md, "Languages as plugins").
+
 ## Performance and native plugins
 
 **How fast each tier is** (rough figures on a 2024 laptop):
