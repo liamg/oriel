@@ -101,6 +101,10 @@ func reviewState(states []State) *State {
 	return nil
 }
 
+// doneState is where a ticket goes when its session's PRs are merged: the team's completed state called Done, else
+// its first completed state; nil if it has none.
+func doneState(states []State) *State { return pickState(states, "completed", "done") }
+
 // AssignedIssues are the viewer's open assigned issues, in the order the work happens in (sortIssues).
 func (c Client) AssignedIssues(ctx context.Context) ([]Issue, error) {
 	const query = `{ viewer { assignedIssues(first: 50, filter: {state: {type: {nin: ["completed", "canceled"]}}}) {

@@ -110,6 +110,15 @@ func (s *Server) AddPR(repo string, p gh.PR) gh.PR {
 	return p
 }
 
+// Merge merges a pull request, as someone on GitHub would.
+func (s *Server) Merge(repo string, number int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, p := s.findNum(repo, number); p != nil {
+		p.State, p.Merged = "closed", true
+	}
+}
+
 // SetChecks sets the checks on a ref of a repository: a branch name, as the Ship page asks.
 func (s *Server) SetChecks(repo, ref string, cs ...gh.Check) {
 	s.mu.Lock()

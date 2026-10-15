@@ -1,7 +1,7 @@
 -- Linear (crit-reference.md → Linear) as a ticket tracker: Oriel lists its tickets, starts work from one, moves it as
--- the work goes and links the PR back (oriel.ticket.tracker). Linear is reached by this plugin's process
--- (bin/oriel-linear, built from integ/linear/cmd/oriel-linear), through Oriel, which holds the API key: neither the
--- process nor this Lua ever sees it.
+-- the work goes (into progress, into review, to done on merge) and links the PR back (oriel.ticket.tracker). Linear is
+-- reached by this plugin's process (bin/oriel-linear, built from integ/linear/cmd/oriel-linear), through Oriel, which
+-- holds the API key: neither the process nor this Lua ever sees it.
 local L = oriel
 
 local proc
@@ -26,6 +26,7 @@ L.ticket.tracker{ name = "linear", title = "Linear", order = 10, keys = "^[A-Z][
   lookup = function(key, done) call("ticket", { key = key }, done) end,
   start = function(key, done) call("start", { key = key }, done) end,
   review = function(key, done) call("review", { key = key }, done) end,
+  done = function(key, done) call("done", { key = key }, done) end,
   link = function(key, pr, done)
     call("link", { key = key, url = pr.url, number = pr.number, title = pr.title }, done)
   end }

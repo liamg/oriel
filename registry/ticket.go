@@ -56,8 +56,8 @@ type TicketMove struct {
 }
 
 // TicketTracker is a ticket tracker (Linear, Jira…), as its plugin brings it. The app builds everything else on it:
-// the omnibox's tickets, the launcher's card, the moves as a session starts from a ticket and its PR is seen, and the
-// assistant's my_tickets. The funcs may block and are called off the app's loop; any but Lookup may be nil.
+// the omnibox's tickets, the launcher's card, the moves as a session starts from a ticket and its PR is seen and
+// merged, and the assistant's my_tickets. The funcs may block and are called off the app's loop; any but Lookup may be nil.
 type TicketTracker struct {
 	Name  string // "linear"
 	Title string // "Linear"
@@ -70,6 +70,7 @@ type TicketTracker struct {
 	Lookup   func(ctx context.Context, key string) (Ticket, error)
 	Start    func(ctx context.Context, key string) (TicketMove, error) // into progress: a session started from it
 	Review   func(ctx context.Context, key string) (TicketMove, error) // into review: its PR is open
+	Done     func(ctx context.Context, key string) (TicketMove, error) // into done: its session's PRs merged
 	Link     func(ctx context.Context, key string, pr TicketPR) error  // the PR attached to it
 	Source   string
 }

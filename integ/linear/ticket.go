@@ -253,6 +253,20 @@ func (c Client) Review(ctx context.Context, key string) (moved bool, state strin
 	return c.move(ctx, t, *st)
 }
 
+// Done moves a ticket into its team's completed state once its PR is merged (crit's done on merge); a ticket already
+// completed or canceled stays where it is.
+func (c Client) Done(ctx context.Context, key string) (moved bool, state string, err error) {
+	t, err := c.Ticket(ctx, key)
+	if err != nil {
+		return false, "", err
+	}
+	st := doneState(t.States)
+	if st == nil || t.StateType == "completed" || t.StateType == "canceled" {
+		return false, t.State, nil
+	}
+	return c.move(ctx, t, *st)
+}
+
 func (c Client) move(ctx context.Context, t Ticket, st State) (bool, string, error) {
 	ok, err := c.UpdateIssue(ctx, t.ID, map[string]any{"stateId": st.ID})
 	if err != nil {

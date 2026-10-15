@@ -313,8 +313,9 @@ func (o *omnibox) list(c *ui.Ctx, groups []group) {
 	}
 }
 
-// resultRow is one result: its icon, label with the matched characters lit, detail, note, badge and key. on is
-// the highlighted row; picked a row multi-selected. It reports a click.
+// resultRow is one result: its icon, label with the matched characters lit, detail, note, badge and key; the note
+// stays whole, as a status does, and the label is cut first. on is the highlighted row; picked a row multi-selected.
+// It reports a click.
 func resultRow(c *ui.Ctx, i int, h hit, on, picked bool) bool {
 	th := c.Theme()
 	fill, edge := color.NRGBA{}, color.NRGBA{}
@@ -342,7 +343,9 @@ func resultRow(c *ui.Ctx, i int, h hit, on, picked bool) bool {
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if it.Note != "" {
-			c.Text("note", it.Note, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgGhost)})
+			c.Row("note", ui.Style{Keep: true}, func(c *ui.Ctx) {
+				c.Text("t", it.Note, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgGhost)})
+			})
 		}
 		if it.Badge != "" {
 			widget.Chip(c, "badge", it.Badge, tokenColour(th, it.BadgeStyle, th.C(theme.FgMuted)), "shell/omnibox")

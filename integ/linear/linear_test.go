@@ -103,6 +103,16 @@ func TestStates(t *testing.T) {
 	if st := reviewState([]State{{ID: "prog", Name: "In Progress", Type: "started"}}); st != nil {
 		t.Errorf("a team with no In Review: %+v", st)
 	}
+	done := []State{{ID: "shipped", Name: "Shipped", Type: "completed", Position: 5}, {ID: "released", Name: "Released", Type: "completed", Position: 4}}
+	if st := doneState(done); st == nil || st.ID != "released" {
+		t.Errorf("a team with no Done: %+v", st)
+	}
+	if st := doneState(append(done, State{ID: "done", Name: "Done", Type: "completed", Position: 6})); st == nil || st.ID != "done" {
+		t.Errorf("the done state: %+v", st)
+	}
+	if st := doneState(states); st != nil {
+		t.Errorf("a team with no completed state: %+v", st)
+	}
 }
 
 // crit-reference → Linear: "A list of assigned tickets", in crit's order, from the recorded API: the duplicate left
@@ -171,7 +181,7 @@ func TestTicketForTheAgent(t *testing.T) {
 	}
 }
 
-// "Ticket state moves (to in progress on start, to in review on PR)": once each, never backwards.
+// "Ticket state moves (to in progress on start, to in review on PR)", and to done on merge: once each, never backwards.
 func TestStateMoves(t *testing.T) {
 	c, l := recorded(t)
 	ctx := t.Context()
@@ -190,8 +200,17 @@ func TestStateMoves(t *testing.T) {
 	if moved, state, _ := c.Start(ctx, "INF-2240"); moved || state != "In Review" {
 		t.Errorf("start moved a ticket in review back: %v %q", moved, state)
 	}
+	if moved, state, err := c.Done(ctx, "INF-2240"); err != nil || !moved || state != "Done" {
+		t.Fatalf("done: %v %q %v", moved, state, err)
+	}
+	if moved, state, _ := c.Done(ctx, "INF-2240"); moved || state != "Done" {
+		t.Errorf("done again: %v %q", moved, state)
+	}
+	if moved, _, _ := c.Review(ctx, "INF-2240"); moved {
+		t.Error("review moved a done ticket back")
+	}
 	m := l.Mutations()
-	if len(m) != 2 || m[0].Op != "issueUpdate" || m[0].Vars["id"] != "b81c40d7-9a2e-4c55-9e0b-7d1f3c2a2240" ||
+	if len(m) != 3 || m[2].Vars["input"].(map[string]any)["stateId"] != "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a05" || m[0].Op != "issueUpdate" || m[0].Vars["id"] != "b81c40d7-9a2e-4c55-9e0b-7d1f3c2a2240" ||
 		m[0].Vars["input"].(map[string]any)["stateId"] != "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a03" ||
 		m[1].Vars["input"].(map[string]any)["stateId"] != "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a04" {
 		t.Errorf("mutations %+v", m)

@@ -18,8 +18,8 @@ import (
 const ticketsStale = 10 * time.Minute
 
 // ticketsExt is everything about tickets that isn't a tracker's own, built once on every registry.TicketTracker:
-// the omnibox's tickets (`!`), the ask for a tracker's key, the moves and the PR link as a session started from a
-// ticket goes on, and the assistant's my_tickets.
+// the omnibox's tickets (`!`), Continue on a ticket that has a session, the ask for a tracker's key, the moves and
+// the PR link as a session started from a ticket goes on, and the assistant's my_tickets.
 type ticketsExt struct {
 	disposer
 	h ext.Host
@@ -77,6 +77,10 @@ func (x *ticketsExt) Activate(_ context.Context, h ext.Host) error {
 		x.prSeen(*ev)
 		return registry.Verdict{}, nil
 	}))
+	x.add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker moves it to done once the session's PRs are merged"}, func(_ registry.Ctx, ev *PrMerged) (registry.Verdict, error) {
+		x.prMerged(*ev)
+		return registry.Verdict{}, nil
+	}))
 	x.add(h.Contribute(registry.AgentTool{Name: "my_tickets", For: []string{assistantAgent}, ReadOnly: true, Reads: "tickets",
 		Source: "builtin:tickets", Run: x.toolMyTickets,
 		Desc: "The tickets assigned to the user in every ticket tracker (Linear…), most pressing first: key, tracker, title, state, project, priority, whether it's blocked, its PR and URL."}))
@@ -106,6 +110,30 @@ func (x *ticketsExt) askKey(ctx registry.Ctx, name string) error {
 	}
 	return fmt.Errorf("no ticket tracker %q takes a key", name)
 }
+
+// ticketSession is the session to continue a ticket in, rather than start another: one whose ticket is key, a live
+// one before an archived one, then the newest.
+func ticketSession(h ext.Host, key string) (core.Session, bool) {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return nil, false
+	}
+	var best core.Session
+	var bestSt core.SessionState
+	for _, se := range h.Sessions() {
+		st := se.Snapshot()
+		if !strings.EqualFold(strings.TrimSpace(st.Ticket), key) {
+			continue
+		}
+		if best == nil || bestSt.Archived && !st.Archived || bestSt.Archived == st.Archived && !st.Created.Before(bestSt.Created) {
+			best, bestSt = se, st
+		}
+	}
+	return best, best != nil
+}
+
+// continueLabel is how a ticket with a session says so: "Continue · fix-prices".
+func continueLabel(se core.Session) string { return "Continue · " + se.Name() }
 
 // fresh asks a tracker for its list when it has none or it's stale, and gives the ask under way, if any.
 func (x *ticketsExt) fresh(tr registry.TicketTracker) <-chan struct{} {
@@ -241,6 +269,9 @@ func (x *ticketsExt) source() registry.PickerSource {
 					t := r.ticket
 					it.ID, it.Label, it.Detail, it.Note = t.Key, t.Key+" "+t.Title, t.Project, ticketNote(*t)
 					it.Badge, it.BadgeStyle = t.State, stageTone(t.Stage)
+					if se, ok := ticketSession(x.h, t.Key); ok {
+						it.Note = continueLabel(se) // the PR and priority are in the preview
+					}
 				}
 				out = append(out, it)
 			}
@@ -271,7 +302,12 @@ func (x *ticketsExt) source() registry.PickerSource {
 					if t.Blocked {
 						previewField(c, "blocked by", cmpOr(strings.Join(t.BlockedBy, ", "), "another ticket"))
 					}
-					c.Text("hint", "↵ starts work on it: a plan, the ticket its context", uiFont(11, th.C(theme.FgFaint)))
+					hint := "↵ starts work on it: a plan, the ticket its context"
+					if se, ok := ticketSession(x.h, t.Key); ok {
+						previewField(c, "session", se.Name())
+						hint = "↵ continues it in " + se.Name() + ", resumed if it's stopped or archived"
+					}
+					c.Text("hint", hint, uiFont(11, th.C(theme.FgFaint)))
 				})
 			}}
 		},
@@ -284,6 +320,9 @@ func (x *ticketsExt) source() registry.PickerSource {
 				x.stale(r.tracker.Name)
 				x.fresh(r.tracker)
 				return nil
+			}
+			if se, ok := ticketSession(x.h, r.ticket.Key); ok {
+				return x.h.Run(ctx, "session.open", registry.Args{"id": string(se.ID())})
 			}
 			return x.h.Run(ctx, "session.new", registry.Args{"kind": string(core.KindPlan), "ticket": r.ticket.Key})
 		},
@@ -345,6 +384,22 @@ func (x *ticketsExt) prSeen(ev PrSeen) {
 			return nil
 		}
 		m, err := tr.Review(ctx, key)
+		if err == nil {
+			x.moved(tr, key, m)
+		}
+		return err
+	})
+}
+
+// prMerged moves a session's ticket to done once the last of its open PRs merges, whoever merged it.
+func (x *ticketsExt) prMerged(ev PrMerged) {
+	tr, ok := registry.TrackerFor(x.h, ev.Ticket)
+	if !ok || tr.Done == nil || ev.Open > 0 {
+		return
+	}
+	key := strings.TrimSpace(ev.Ticket)
+	x.trackerCall(tr, "move "+key+" to done", func(ctx context.Context) error {
+		m, err := tr.Done(ctx, key)
 		if err == nil {
 			x.moved(tr, key, m)
 		}

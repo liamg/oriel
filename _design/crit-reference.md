@@ -71,7 +71,8 @@ Tickets that say "port from crit" or "crit behaviour preserved" mean what's writ
 **Linear** (`internal/linear`, `dash/linear.js`, `dashboard/linear*.go`)
 - A list of assigned tickets.
 - Start work from a ticket: the ticket, its comments and attachments become the plan prompt.
-- Ticket state moves (to in progress on start, to in review on PR) and links back to the PR.
+- Ticket state moves (to in progress on start, to in review on PR, to done on merge) and links back to the PR.
+- "Continue" for a ticket that already has a session (crit: a workspace), instead of starting another.
 
 **Slack** (`internal/slack`)
 - A "PTAL" button posting a review request through an incoming webhook.
@@ -104,6 +105,5 @@ Tickets that say "port from crit" or "crit behaviour preserved" mean what's writ
 
 - The 3D room, scenes, sea and coast, black hole, lights, post-its, cinema/IPTV/YouTube/CCTV, Spotify and music, and chess puzzles.
 - The calendar (`internal/ical`, `dashboard/maccal.go`: the next meeting from an iCal URL or macOS EventKit).
-- The company feed (`dashboard/company.go`: org-wide PRs and Linear moves), and from Linear, "Continue" for a ticket
-  that already has a workspace and moving a ticket to done on merge.
+- The company feed (`dashboard/company.go`: org-wide PRs and Linear moves).
 - `internal/media` and all of `web/static/room` apart from the omnibox, launch, assistant and panes logic, which are reimplemented natively.

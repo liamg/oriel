@@ -6,10 +6,12 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/integ/linear/lineartest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -50,6 +52,7 @@ oriel.ticket.tracker{ name = "jira", title = "Jira", order = 5, keys = "^OPS-[0-
   end,
   start = function(key, done) calls[#calls + 1] = "start " .. key; done({ moved = true, state = "In Progress" }) end,
   review = function(key, done) calls[#calls + 1] = "review " .. key; done({ moved = true, state = "In Review" }) end,
+  done = function(key, reply) calls[#calls + 1] = "done " .. key; reply({ moved = true, state = "Done" }) end,
   link = function(key, pr, done) calls[#calls + 1] = "link " .. key .. " #" .. math.floor(pr.number) .. " " .. pr.title; done() end }
 `
 
@@ -226,4 +229,223 @@ func TestPRLinkedToAnyTracker(t *testing.T) {
 		return slices.Contains(c, link) && slices.Contains(c, "review OPS-12")
 	})
 	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "OPS-12 moved to In Review in Jira") })
+}
+
+// ticketScene is the app on a local worker with the fake agent, Linear (its key set) and the Jira-like tracker loaded.
+func ticketScene(t *testing.T) (*errScene, *localWorker, *lineartest.Linear, *script.VM) {
+	t.Helper()
+	l := lineartest.New(t)
+	change, secrets := linearConfig(t, l)
+	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	secrets.SetSecret("JIRA_TOKEN", "jira-t0ken")
+	lw := newLocalWorker(t)
+	if _, err := lw.client(t).AddRepoPath(context.Background(), lw.repo); err != nil {
+		t.Fatal(err)
+	}
+	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { lw.connect(t)(cfg); change(cfg) })
+	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	loadLinear(t, s)
+	jira := loadJira(t, s)
+	if err := s.reg.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
+		t.Fatal(err)
+	}
+	return s, lw, l, jira
+}
+
+// startTicketSession starts a session on ticket (none for ""), and gives it once it's in front.
+func startTicketSession(t *testing.T, s *errScene, lw *localWorker, prompt, ticket string) core.SessionState {
+	t.Helper()
+	before := s.store.State().Focus
+	s.run("session.start", registry.Args{"kind": "plan", "prompt": prompt, "ticket": ticket, "provider": "fake"})
+	st := waitState(t, s.store, prompt+" in front", func(st core.State) bool { return st.Focus != "" && st.Focus != before })
+	lw.fake.WaitStarted(t)
+	se, _ := st.Session(st.Focus)
+	return se.Snapshot()
+}
+
+// continueTicket checks that Start work on key, from the omnibox's `!` and from the launcher's card, continues se
+// rather than starting another session: each shows "Continue · <name>" first, and brings se to the front.
+func continueTicket(t *testing.T, s *errScene, other core.SessionID, se core.SessionState, key, card string) {
+	t.Helper()
+	sessions := len(s.store.State().Sessions)
+	name := se.Name
+	if name == "" {
+		name = string(se.ID)
+	}
+	focus := func() {
+		if err := s.store.Apply(core.SessionFocused{ID: other}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	focus()
+	s.run("omnibox.open", registry.Args{"query": "!" + key})
+	s.until(t, "the ticket's session", func() bool { return strings.Contains(s.frameText(), "Continue · "+name) })
+	if !strings.Contains(s.frameText(), "↵ continues it in "+name) {
+		t.Errorf("the preview doesn't say it continues:\n%s", s.frameText())
+	}
+	s.typeKeys("CR")
+	waitState(t, s.store, key+"'s session in front", func(st core.State) bool { return st.Focus == se.ID })
+	if strings.Contains(s.frameText(), "NEW SESSION") {
+		t.Errorf("the launcher opened:\n%s", s.frameText())
+	}
+
+	focus()
+	s.run("session.new", registry.Args{"kind": "plan", "ticket": key})
+	s.until(t, "the card", func() bool {
+		return strings.Contains(s.frameText(), card) && strings.Contains(s.frameText(), "Continue · "+name)
+	})
+	s.run("session.launch", nil)
+	waitState(t, s.store, key+"'s session in front from the launcher", func(st core.State) bool { return st.Focus == se.ID })
+	s.until(t, "the launcher closed", func() bool { return !strings.Contains(s.frameText(), "NEW SESSION") })
+	if n := len(s.store.State().Sessions); n != sessions {
+		t.Errorf("%d sessions, %d before: a duplicate was started", n, sessions)
+	}
+}
+
+// "If a session already exists for a change we want to continue with it instead of creating a duplicate" (crit's
+// Continue, crit-reference.md → Linear): Start work on a Jira-like ticket with a session brings that session to the
+// front, from the omnibox and from the launcher, and an archived one is resumed.
+func TestContinueTicketSession(t *testing.T) {
+	s, lw, _, jira := ticketScene(t)
+	se := startTicketSession(t, s, lw, "Queue depth alert", "OPS-12")
+	other := startTicketSession(t, s, lw, "Something else", "")
+	continueTicket(t, s, other.ID, se, "OPS-12", "Page when the jobs queue backs up.")
+
+	s.run("session.archive", registry.Args{"id": string(se.ID)})
+	waitState(t, s.store, "the session archived", func(st core.State) bool {
+		a, _ := st.Session(se.ID)
+		return a.Snapshot().Archived
+	})
+	if err := s.store.Apply(core.SessionFocused{ID: other.ID}); err != nil {
+		t.Fatal(err)
+	}
+	sessions := len(s.store.State().Sessions)
+	s.run("omnibox.open", registry.Args{"query": "!OPS-12"})
+	s.until(t, "the archived session offered", func() bool { return strings.Contains(s.frameText(), "Continue · ") })
+	s.typeKeys("CR")
+	waitState(t, s.store, "the archived session resumed in front", func(st core.State) bool {
+		a, _ := st.Session(se.ID)
+		return st.Focus == se.ID && !a.Snapshot().Archived
+	})
+	if n := len(s.store.State().Sessions); n != sessions {
+		t.Errorf("%d sessions, %d before", n, sessions)
+	}
+	if c := jiraCalls(jira); calledTimes(c, "start OPS-12") > 1 {
+		t.Errorf("the ticket was started again: %v", c)
+	}
+}
+
+// Continue is the app's, whatever the tracker: a Linear ticket whose session is stopped resumes it, and the launcher's
+// card for it continues it too.
+func TestLinearContinueTicketSession(t *testing.T) {
+	s, lw, _, _ := ticketScene(t)
+	se := startTicketSession(t, s, lw, "Stale prices", "INF-2231")
+	other := startTicketSession(t, s, lw, "Something else", "")
+	s.run("session.stop", registry.Args{"id": string(se.ID)})
+	waitState(t, s.store, "the session stopped", func(st core.State) bool {
+		a, _ := st.Session(se.ID)
+		return !a.Snapshot().Agent.Running
+	})
+	continueTicket(t, s, other.ID, se, "INF-2231", "linked PR #4398")
+	waitState(t, s.store, "the session resumed", func(st core.State) bool {
+		a, _ := st.Session(se.ID)
+		return a.Snapshot().Agent.Running
+	})
+}
+
+// shipPRs raises a PR for each of the session's projects named, on its branch, and gives them by project.
+func shipPRs(t *testing.T, s *errScene, hub *ghtest.Server, se core.SessionState, projects ...string) map[string]gh.PR {
+	t.Helper()
+	out := map[string]gh.PR{}
+	for _, name := range projects {
+		branch := se.Branch
+		for _, p := range se.Projects {
+			if p.Name == name && p.Branch != "" {
+				branch = p.Branch
+			}
+		}
+		out[name] = hub.AddPR("acme/"+name, gh.PR{Title: "feat: " + name, Head: branch, Base: "main"})
+	}
+	s.run("ship.refresh", nil)
+	return out
+}
+
+// "When the session's PR merges, its ticket moves to Done", through the tracker's Lua alone, whoever merged it: the
+// Jira-like tracker's done is asked once the last of the session's open PRs is merged, not before.
+func TestTicketDoneOnMerge(t *testing.T) {
+	s, _, hub, first, _ := shipScene(t)
+	jira := loadJira(t, s)
+	var repos []string
+	for _, p := range first.Projects {
+		repos = append(repos, p.Repo)
+	}
+	s.run("session.start", registry.Args{"kind": "work", "prompt": "Queue depth alert", "ticket": "OPS-12", "provider": "fake", "repos": repos})
+	st := waitState(t, s.store, "the OPS-12 session in front", func(st core.State) bool {
+		se, ok := st.Session(st.Focus)
+		return ok && se.Snapshot().Ticket == "OPS-12" && se.Snapshot().Branch != "" && len(se.Projects()) == 2
+	})
+	se, _ := st.Session(st.Focus)
+	prs := shipPRs(t, s, hub, se.Snapshot(), "usage-api", "web-dashboard")
+	s.shipSettle(t, "both PRs in review", func() bool { return slices.Contains(jiraCalls(jira), "review OPS-12") })
+
+	hub.Merge("acme/usage-api", prs["usage-api"].Number)
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the first PR read merged", func() bool {
+		sh, ok := s.ship().ship(se.ID(), "usage-api")
+		return ok && sh.PR != nil && sh.PR.Merged
+	})
+	time.Sleep(50 * time.Millisecond)
+	s.sh.runTodo()
+	if slices.Contains(jiraCalls(jira), "done OPS-12") {
+		t.Fatalf("done while web-dashboard's PR is open: %v", jiraCalls(jira))
+	}
+
+	hub.Merge("acme/web-dashboard", prs["web-dashboard"].Number)
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the ticket done", func() bool { return slices.Contains(jiraCalls(jira), "done OPS-12") })
+	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "OPS-12 moved to Done in Jira") })
+
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "a second read", func() bool { return true })
+	time.Sleep(50 * time.Millisecond)
+	s.sh.runTodo()
+	if c := jiraCalls(jira); calledTimes(c, "done OPS-12") != 1 {
+		t.Errorf("done twice: %v", c)
+	}
+}
+
+// Linear's done on merge is the same tracker move, through its Lua and process: the ticket goes to its team's
+// completed state.
+func TestLinearDoneOnMerge(t *testing.T) {
+	l := lineartest.New(t)
+	change, secrets := linearConfig(t, l)
+	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	s, _, hub, se, _ := shipScene(t, change)
+	loadLinear(t, s)
+	s.until(t, "the session's start moved", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to In Progress in Linear") })
+	prs := shipPRs(t, s, hub, se, "usage-api")
+	s.shipSettle(t, "the PR in review", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to In Review in Linear") })
+	hub.Merge("acme/usage-api", prs["usage-api"].Number)
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the ticket done", func() bool {
+		for _, m := range l.Mutations() {
+			in, _ := m.Vars["input"].(map[string]any)
+			if m.Op == "issueUpdate" && m.Vars["id"] == "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231" && in["stateId"] == "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a05" {
+				return true
+			}
+		}
+		return false
+	})
+	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to Done in Linear") })
+}
+
+func calledTimes(list []string, s string) int {
+	n := 0
+	for _, x := range list {
+		if x == s {
+			n++
+		}
+	}
+	return n
 }

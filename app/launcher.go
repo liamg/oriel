@@ -358,20 +358,28 @@ func (x *launcher) openClone(r core.RepoID) {
 	}
 }
 
-// start runs session.start with what the launcher holds; the launcher closes once the session is in front.
+// start runs session.start with what the launcher holds, or continues the ticket's session; the launcher closes once
+// the session is in front.
 func (x *launcher) start() error {
 	if x.busy {
 		return nil
+	}
+	if se, ok := x.continues(); ok {
+		return x.launch("session.open", registry.Args{"id": string(se.ID())})
 	}
 	if m := x.missing(); m != "" {
 		x.err = "To start: " + m + "."
 		return errors.New(x.err)
 	}
-	a := x.args()
+	return x.launch("session.start", x.args())
+}
+
+// launch runs command off the loop, the launcher busy until it answers, and closes the launcher once it has.
+func (x *launcher) launch(command string, a registry.Args) error {
 	x.busy, x.err = true, ""
 	gen := x.gen
 	go func() {
-		err := x.h.Run(context.Background(), "session.start", a)
+		err := x.h.Run(context.Background(), command, a)
 		x.h.Do(func() {
 			if gen != x.gen {
 				return
@@ -386,6 +394,15 @@ func (x *launcher) start() error {
 		x.h.Redraw()
 	}()
 	return nil
+}
+
+// continues is the session the ticket field's ticket already has, when the kind starts from a prompt: Start
+// continues it rather than starting another (ticketSession).
+func (x *launcher) continues() (core.Session, bool) {
+	if k, ok := x.current(); !ok || startsFrom(k) != worker.FromPrompt {
+		return nil, false
+	}
+	return ticketSession(x.h, x.ticket)
 }
 
 // saveAsJob hands what the launcher holds to the New job dialog: the prompt, the agent, where it runs.
@@ -635,7 +652,11 @@ func (x *launcher) ticketCard(c *ui.Ctx) {
 	const help = "agent/launcher#ticket"
 	th := c.Theme()
 	t := x.ticketHere()
+	se, cont := x.continues()
 	switch {
+	case t == nil && cont && !x.card.busy:
+		c.Text("ticket-continue", continueLabel(se), monoFont(10.5, th.C(theme.Accent)))
+		return
 	case x.card.busy:
 		c.Text("ticket-wait", "Looking up "+x.card.asked+" in "+x.card.source+"…", monoFont(10.5, th.C(theme.FgFaint)))
 		return
@@ -661,6 +682,9 @@ func (x *launcher) ticketCard(c *ui.Ctx) {
 			}
 			if len(t.Facts) > 0 {
 				c.Text("facts", strings.Join(t.Facts, "   "), monoFont(10, th.C(theme.FgFaint)))
+			}
+			if cont {
+				c.Text("continue", continueLabel(se), monoFont(10.5, th.C(theme.Accent)))
 			}
 		})
 		if widget.IconButton(c, "drop", "✕", widget.IconButtonOpts{Label: "Take " + t.Key + " off", Help: help, Size: 18}) {
@@ -1059,6 +1083,9 @@ func (x *launcher) footer(c *ui.Ctx) {
 		label := "Start"
 		if k.Title != "" {
 			label = "Start " + k.Title
+		}
+		if _, ok := x.continues(); ok {
+			label = "Continue"
 		}
 		if widget.Button(c, "start", label, widget.ButtonOpts{Primary: true, Key: "⌘↵", Disabled: x.busy || k.Kind == "",
 			Help: "agent/launcher"}) {

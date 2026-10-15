@@ -848,7 +848,7 @@ type Host interface {
 - **Ticket trackers** (`registry.TicketTracker`, kind `ticket.tracker`) replace PL-8's ticket sources: a tracker (Linear,
   Jira…) brings its tickets, and the app builds everything generic on it once. A tracker is `{Name, Title, Order, Keys
   (a regexp of the keys it takes; nil takes all), Secret (what it needs set first), Assigned(ctx), Lookup(ctx, key),
-  Start(ctx, key), Review(ctx, key), Link(ctx, key, TicketPR)}`; only `Lookup` is required, and the funcs may block (the
+  Start(ctx, key), Review(ctx, key), Done(ctx, key), Link(ctx, key, TicketPR)}`; only `Lookup` is required, and the funcs may block (the
   app calls them off its loop). `registry.TicketTrackers`, `TrackerFor(r, key)` (the first by Order whose `Keys` take
   it), `LookupTicket`, `AssignedTickets` (each fills in `Ticket.Tracker`), and `SortTickets` / `CompareTickets` (crit's
   order across trackers: priority, blocked last, started, with a PR, then `CompareTicketKeys`).
@@ -862,12 +862,27 @@ type Host interface {
   then every tracker's tickets in one order, each asked for again after 10 minutes, after a move, and on
   `tickets.refresh`; ↵ on a ticket runs `session.new {kind = "plan", ticket}`. The launcher's card (PL-8) asks
   `TrackerFor`. On `SessionStart` the session's ticket's tracker gets `Start`; on `PrSeen`, `Link`, then `Review` while
-  the PR is open; a move is a notice ("INF-2231 moved to In Progress in Linear"), a failure a line in the log. The
+  the PR is open; on `PrMerged` with no other PR of the session open, `Done`; a move is a notice ("INF-2231 moved to
+  In Progress in Linear", "… moved to Done …"), a failure a line in the log. The
   assistant's `my_tickets` (`Reads = "tickets"`) is every tracker's list, asked for first when it's stale, with a note
   for a tracker without its key. Commands `Tickets` (the omnibox on them), `tickets.refresh`, `tickets.key {tracker}`
   and `:TicketKey [tracker]`; the source and the commands are there only while a tracker is (`PickerSource.Available`,
-  new: a source with nothing to offer is left out of `Registry.Pickers`). `SessionStart` and `PrSeen` are fired as
-  pointers, so a Go hook (`registry.On`) takes them.
+  new: a source with nothing to offer is left out of `Registry.Pickers`). `SessionStart`, `PrSeen` and `PrMerged` are
+  fired as pointers, so a Go hook (`registry.On`) takes them.
+- **Continue** (crit's, crit-reference.md → Linear): a ticket that already has a session continues it rather than
+  starting another. That session is one whose `Ticket` is the key (any kind; a live one before an archived one, then
+  the newest: `ticketSession`). Its omnibox row's note is "Continue · <session name>" (the PR and priority move to the
+  preview, which adds the session) and ↵ runs `session.open {id}`, which resumes a stopped or archived session. The
+  launcher's card says "Continue · <session name>" (alone, where the card goes, when no tracker takes the key), its
+  Start button says "Continue", and Start runs `session.open` instead of `session.start`, for a kind that starts from a
+  prompt; ✕ on the card takes the ticket off to start afresh. An omnibox row's note now stays whole (`Keep`), as a
+  status does: the label is cut first.
+- **`PrMerged {session, project, ticket, number, url, title, open}`**, fired (the subject its URL) the first time the
+  app reads a session's PR merged, on the Ship page's read (the session in front, every 10 s, and on `ship.refresh`),
+  whoever merged it; a PR first read already merged fires `PrSeen`, then `PrMerged`. `open` is how many of the
+  session's other PRs are still open, a project whose GitHub read failed counting as one, so a hook can wait for the
+  last. `ghtest.Server.Merge` merges one in tests. crit asked first ("Pull request merged · Mark it done"); Oriel
+  moves the ticket itself, as the other moves.
 - Lua: `oriel.ticket.tracker{ name, title, order, keys, secret, lookup = fn(key, done), assigned = fn(done), start =
   fn(key, done), review = fn(key, done), link = fn(key, pr, done) }` (cap `agent.prompt`; a `secret` must be one the
   plugin declares), each answering `done(value)` or `done(nil, why)`; `oriel.ticket.source` is gone. A process or WASM
@@ -875,10 +890,13 @@ type Host interface {
   contributions from a process yet.
 - **Linear** is now only its API calls and their mapping: its process answers `assigned` with `{tickets}` and `ticket`
   with a `registry.Ticket` (`Issue.Ticket`, `Ticket.Detail`), `start`/`review` with a `registry.TicketMove`, and its
-  `init.lua` is the tracker forwarding to it (`keys = "^[A-Z][A-Z0-9]*-[0-9]+$"`, `secret = "LINEAR_TOKEN"`). Its
+  `init.lua` is the tracker forwarding to it (`keys = "^[A-Z][A-Z0-9]*-[0-9]+$"`, `secret = "LINEAR_TOKEN"`). `done
+  {key}` moves a ticket to its team's completed state called Done, else its first completed one (crit's `doneState`),
+  unless it's completed or canceled already. Its
   omnibox source, hooks, `my_tickets`, key ask and commands (`LinearTickets`, `LinearKey`, `linear.refresh`) are the
   app's now, and its manifest drops `agent.tools`. A second, Jira-like tracker (keys `OPS-n`, tests only:
-  `app/tickets_test.go`) shows beside it in the omnibox, the launcher, the moves, the PR link and `my_tickets`.
+  `app/tickets_test.go`, all Lua) shows beside it in the omnibox, the launcher, Continue, the moves (done on merge
+  too), the PR link and `my_tickets`.
 
 ## As built (PL-8)
 
@@ -917,8 +935,8 @@ type Host interface {
   `LinearTickets`, `LinearKey`, `linear.refresh`. `integ/linear/lineartest` is the recorded API (`testdata/*.json`,
   served as api.linear.app over TLS, mutations kept and applied).
 - Not yet: installing it (PL-19/20 bring the plugin manager; it isn't bundled, since `app.ScriptPlugin` has no
-  directory for a process binary). Not carried over from crit (crit-reference.md): the company feed, "Continue" for a
-  ticket with a workspace, and the ticket's done move on merge.
+  directory for a process binary). Not carried over from crit (crit-reference.md): the company feed. "Continue" and
+  the done move on merge came later, on every tracker ("As built (tickets)").
 
 ## As built (PL-5)
 

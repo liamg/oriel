@@ -29,7 +29,7 @@ type Server struct {
 }
 
 // Handle answers one request, each in Oriel's shapes for a tracker (registry.TicketTracker): assigned
-// ({tickets}), ticket (a registry.Ticket), start and review (a registry.TicketMove), or link.
+// ({tickets}), ticket (a registry.Ticket), start, review and done (a registry.TicketMove), or link.
 func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage) (any, error) {
 	var p Params
 	if len(raw) > 0 && string(raw) != "null" {
@@ -57,13 +57,10 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 		if t, err = c.Ticket(ctx, p.Key); err == nil {
 			out = t.Detail()
 		}
-	case "start", "review":
+	case "start", "review", "done":
+		move := map[string]func(context.Context, string) (bool, string, error){"start": c.Start, "review": c.Review, "done": c.Done}[method]
 		var m registry.TicketMove
-		if method == "start" {
-			m.Moved, m.State, err = c.Start(ctx, p.Key)
-		} else {
-			m.Moved, m.State, err = c.Review(ctx, p.Key)
-		}
+		m.Moved, m.State, err = move(ctx, p.Key)
 		out = m
 	case "link":
 		err = c.LinkPR(ctx, p.Key, p.URL, p.Number, p.Title)

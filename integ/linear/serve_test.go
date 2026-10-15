@@ -94,6 +94,9 @@ func TestServeThroughTheHost(t *testing.T) {
 	if err := conn.Call(ctx, "start", Params{Key: "INF-2231"}, &moved); err != nil || !moved.Moved || moved.State != "In Progress" {
 		t.Errorf("start: %+v, %v", moved, err)
 	}
+	if err := conn.Call(ctx, "done", Params{Key: "INF-2231"}, &moved); err != nil || !moved.Moved || moved.State != "Done" {
+		t.Errorf("done: %+v, %v", moved, err)
+	}
 	if err := conn.Call(ctx, "ticket", Params{}, nil); err == nil {
 		t.Error("a ticket with no key")
 	}

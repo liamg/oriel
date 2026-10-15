@@ -254,8 +254,11 @@ type Sessions interface {
 
 - A session has at most one ticket (`SessionSpec.Ticket`), any tracker's: its tracker is the first whose keys take it
   (`registry.TrackerFor`). The app, not the tracker's plugin, calls that tracker as the session goes: `Start` on
-  `SessionStart`, `Link` and then `Review` (while the PR is open) on `PrSeen`, and the launcher's card is its `Lookup`
-  (plugins.md, "As built (tickets)").
+  `SessionStart`, `Link` and then `Review` (while the PR is open) on `PrSeen`, `Done` on `PrMerged` once none of the
+  session's PRs is open, and the launcher's card is its `Lookup` (plugins.md, "As built (tickets)").
+- A ticket that has a session is continued, not started again: Start work on it from the omnibox's `!` or the
+  launcher's card ("Continue · <session name>") brings that session to the front with `session.open`, resuming it
+  if it's stopped or archived. Several sessions on one ticket: a live one before an archived one, then the newest.
 
 ## Jobs (SE-4)
 

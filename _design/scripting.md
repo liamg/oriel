@@ -448,15 +448,19 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 
 ## As built (tickets)
 
-- `oriel.ticket.tracker{ name, title, order, keys, secret, lookup, assigned, start, review, link }` (cap
+- `oriel.ticket.tracker{ name, title, order, keys, secret, lookup, assigned, start, review, done, link }` (cap
   `agent.prompt`) makes a ticket tracker, and Oriel builds the rest on it: the omnibox's `!` tickets, the launcher's
-  card, the moves as a session starts from a ticket and its PR is seen, the PR link, the ask for its key and the
-  assistant's `my_tickets` (plugins.md, "As built (tickets)"). `keys` is a regular expression (Go's) the tracker's keys
+  card, Continue for a ticket with a session, the moves as a session starts from a ticket and its PR is seen and
+  merged, the PR link, the ask for its key and the assistant's `my_tickets` (plugins.md, "As built (tickets)"). `keys` is a regular expression (Go's) the tracker's keys
   match, `secret` one the plugin declares. Each function answers `done(value)` or `done(nil, why)`, now or later:
-  `lookup = fn(key, done)` with a ticket, `assigned = fn(done)` with a list of them, `start` and `review = fn(key, done)`
-  with `{ moved, state }`, `link = fn(key, pr, done)` given `pr = { number, url, repo, title }`. A ticket is `{ key,
+  `lookup = fn(key, done)` with a ticket, `assigned = fn(done)` with a list of them, `start`, `review` and `done =
+  fn(key, done)` with `{ moved, state }` (`done` is asked once the session's PRs are merged; its callback is the second
+  argument like the others', so name it as you like), `link = fn(key, pr, done)` given `pr = { number, url, repo,
+  title }`. A ticket is `{ key,
   title, url, state, stage, project, priority, priority_label, blocked, blocked_by, pr = { number, url, repo }, summary,
   facts, context }`; `stage` is `todo`, `started` or `review`.
+- `oriel.on("PrMerged", fn)` sees a session's PR merged, whoever merged it: `{ session, project, ticket, number, url,
+  title, open }`, `open` the session's other PRs still open (plugins.md, "As built (tickets)").
 
 
 ## As built (PL-5)

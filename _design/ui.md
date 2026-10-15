@@ -472,7 +472,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). **Save as job** (SE-4) hands the
   prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. The prompt takes several
   lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Since PL-8 a ticket expands into a card (plugins.md, "As built (PL-8)"), from whichever tracker takes its key
-  ("As built (tickets)"). Not yet:
+  ("As built (tickets)"); a ticket that already has a session says "Continue · <session name>", and Start continues it. Not yet:
   templates, toolchains and LSPs in the pre-flight.
 
 ## 05 · Plan mode
