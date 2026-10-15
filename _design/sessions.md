@@ -231,8 +231,8 @@ type Sessions interface {
   A kind's `Variants` (RV-8: a tour's walkthrough, onboarding, archaeology, showcase, demo, incident and
   feasibility) are a picker beside the ticket and `--variant` on the CLI; the first is the default, and one the kind
   hasn't is refused. A tour's is its manifest's `tour.kind`.
-- **The app opens on the start view**, not mission control: mission control is SH-7 (P7). Until then the start
-  view's Recent lists the sessions first, and opening one brings it to the front.
+- **The app opens on mission control** (SH-7) once there's a session to show, when it starts with nothing open
+  (`mission.at_launch`); with no session it stays on the start view, whose Recent lists the sessions first.
 - **Files outside the session** open read-only: the sessions extension's `BufRead` rewrite hook marks a file outside
   every project and the session's own directory "outside the session", and one in a project the session only reads
   (a plan's checkouts before Start work, a tour, a review) "the session only reads it". It applies while the window

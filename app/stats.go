@@ -259,6 +259,8 @@ func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
 		Note: x.usageNote, Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "usage", Fn: x.usagePanel}, nil }}))
 	x.add(h.Contribute(registry.Indicator{Name: "today", Slot: registry.SlotHUD, Order: 40, Title: "Today", Help: hudHelp + "#today",
 		Note: func() string { return "since 00:00" }, Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "today", Fn: x.todayPanel}, nil }}))
+	x.add(h.Contribute(registry.Indicator{Name: "usage.mission", Slot: registry.SlotMission, Order: 10, Help: missionHelp + "#strip",
+		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "usage", Fn: x.usageStrip}, nil }}))
 	x.add(h.View(TitleRight+"40-usage", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "usage", Fn: x.indicators} })))
 	return nil
 }

@@ -136,6 +136,41 @@ func (x *statsExt) usagePanel(c *ui.Ctx) {
 	}
 }
 
+// usageStrip is mission control's: each account's windows, the account in front first.
+func (x *statsExt) usageStrip(c *ui.Ctx) {
+	th := c.Theme()
+	front, _ := x.frontUsage()
+	us := slices.Clone(x.h.State().Usage)
+	slices.SortStableFunc(us, func(a, b core.ProviderUsage) int {
+		switch {
+		case a.Same(front):
+			return -1
+		case b.Same(front):
+			return 1
+		}
+		return 0
+	})
+	c.Row("usage", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
+		for i, u := range us {
+			title := joinParts("Usage", providerName(u.Provider)+strings.TrimSuffix(" "+u.Tier, " "))
+			missionCell(c, i, title, func(c *ui.Ctx) {
+				c.Row("w", ui.Style{Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
+					for j, w := range u.Windows {
+						if qualifier(w) != "" {
+							continue
+						}
+						c.Row(j, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
+							c.Text("k", usageShort(w), monoFont(10, th.C(theme.FgMuted)))
+							widget.Meter(c, "m", w.Used, widget.MeterOpts{Tone: windowTone(th, w), Width: ui.Px(56), Height: 5, Label: w.Name})
+							c.Text("v", fmt.Sprintf("%d%%", pct(w.Used)), mono(10.5, typeset.SemiBold, th.C(theme.Fg)))
+						})
+					}
+				})
+			})
+		}
+	})
+}
+
 // headed is where a window's burn takes it, shortly: "→59% at reset", "→97% Thu", "idle", "full Thu 14:38".
 func (x *statsExt) headed(r windowRead, now time.Time) string {
 	switch {
@@ -362,6 +397,37 @@ func (x *workersExt) workersPanel(c *ui.Ctx) {
 			})
 		})
 	}
+}
+
+// workersStrip is mission control's: each connected worker's CPU over the last 15 minutes, this machine's first.
+func (x *workersExt) workersStrip(c *ui.Ctx) {
+	th := c.Theme()
+	ws := slices.Clone(x.h.State().Workers)
+	slices.SortStableFunc(ws, func(a, b core.WorkerState) int {
+		switch {
+		case a.ID == core.LocalWorker:
+			return -1
+		case b.ID == core.LocalWorker:
+			return 1
+		}
+		return strings.Compare(a.Title(), b.Title())
+	})
+	c.Row("workers", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
+		for _, w := range ws {
+			if !w.Connected {
+				continue
+			}
+			missionCell(c, w.ID, fmt.Sprintf("%s · CPU %dm", w.Title(), int(loadSpan.Minutes())), func(c *ui.Ctx) {
+				load := x.loadOf(w.ID)
+				if len(load) < 2 {
+					c.Text("none", fmt.Sprintf("%d%%", pct(w.CPU)), mono(10.5, typeset.SemiBold, th.C(theme.Fg)))
+					return
+				}
+				widget.Chart(c, "spark", []widget.ChartSeries{{Name: "CPU", Values: load, Tone: loadTone(th, w.CPU)}},
+					widget.ChartOpts{Kind: widget.ChartSpark, Width: ui.Px(120), Height: 20, Max: 1, Label: w.Title() + " CPU, the last 15 minutes"})
+			})
+		}
+	})
 }
 
 // workersNote is how many are online, and how far back their load goes.

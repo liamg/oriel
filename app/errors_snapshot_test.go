@@ -76,7 +76,8 @@ func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, cha
 	if change != nil {
 		change(&cfg)
 	}
-	s.sh = &shell{cfg: cfg, events: newEventTail(500), desktop: s.clip, poke: func() {}, reopen: make(chan reopenTo, 1)}
+	// A scene is a window that's been up a while: mission control doesn't open as if it had just launched.
+	s.sh = &shell{cfg: cfg, events: newEventTail(500), desktop: s.clip, poke: func() {}, reopen: make(chan reopenTo, 1), launchDone: true}
 	s.store.Subscribe(core.Filter{}, s.sh.events.add)
 	s.store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(s.store, cfg.Logs.Logger("core"), ev) })
 	s.exts = builtins(s.sh)

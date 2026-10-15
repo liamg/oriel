@@ -152,7 +152,8 @@ What the window shows with no directory and no session open: at launch (plain `o
 - Entries are a contribution point. An entry whose command isn't available is dimmed with a `soon` tag; New Session and
   Resume a Session are, while no worker is connected.
 - Recent lists the sessions first (not archived, newest first: kind, projects, branch, a diamond in the status
-  colour), and opening one runs `session.open`. Until mission control (SH-7), this is what the app opens on.
+  colour), and opening one runs `session.open`. Since SH-7 the app opens on mission control over it once there's a
+  session to show (03).
 - `j`/`k` or arrows move, `⏎` runs, `⌫` (or the `✕` on a recent under the pointer) forgets a recent, until it's opened again. The same actions are commands, so they're in the omnibox too.
 - The pointer moving onto a row selects it, as `j`/`k` do.
 - It fits the window: the columns shrink to fit, and below 760 wide Start and Recent become tabs. Taller than the window, it
@@ -428,6 +429,29 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Left: the **needs you** queue, oldest first, plus agentbus questions with their auto-answer countdowns.
 - Bottom strip: usage per provider, worker CPU sparklines, agentbus presence.
 - Fully keyboard-driven: `hjkl`, `⏎` opens, `a` allows, `x` stops.
+- Built in SH-7 (`app/mission.go`, `app/missionview.go`): `⌘⇧K` or `mission.toggle` shows it under the title bar
+  (`widget.Page`, key mode `mission`; Escape goes back); the start view links to it. Header: the counts by status, BY
+  WORKER / BY STATUS / BY REPO, a filter (`/`). Cards are grouped by worker (its load in the heading; the last card of
+  a connected worker's group starts a session there, `n`), most urgent first, as many to a row as fit; the border is
+  the status colour, the selected card's the accent; heading: name (a click opens it), kind, PR, provider; foot:
+  tasks, context, the change, how long. A **working** card's body is a terminal: the agent's recent activity (each
+  tool call with a dot, cyan running, red failed, and the end of its output with its colours; prose in cyan) written
+  into a Ghostty VT the size of the box, so it streams as the transcript grows. A card with a waiting **inbox card**
+  for its session shows that card, the same one the inbox draws (`registry.InboxCard.Draw`), answered the same way
+  (`ask.answer`); while mission control is up those cards aren't stacked over the window too. Otherwise a box says
+  what the status is about (replied and awaiting you, with a reviewer, CI running, stopped). Left: the queue,
+  every waiting card and every session needing you with none (its last words), oldest first; agentbus's apart with
+  their auto-answer countdowns. Bottom: the `mission` indicator slot (usage per account, each worker's CPU over 15
+  minutes), then the keys and where Escape goes. Keys: `hjkl`/arrows, `⏎` (`session.open`), `a` (allows the
+  selected card's first ask), `x` (`session.stop`), `r` (renames on the card), `n`, `/`. Every action is a
+  `mission.*` command, and the assistant reads or opens it with `mission_control`. The app opens on it at launch
+  (`mission.at_launch`) once a session is known, if it started with nothing open.
+- Decided in SH-7 (the design was silent): the live terminal shows the agent's activity from its transcript rather
+  than mirroring the raw PTY (Claude's full-screen TUI doesn't read at a card's size, and Codex has none), with
+  `agent.terminal` a command away; a tool's cursor moves and clears are dropped so it can't wipe the card. Cards sort
+  by urgency within a group. Opening at launch waits for the first session, since sessions arrive from the worker
+  after the window opens; with none the start view stays.
+- Not yet: the title bar's `⌘⇧K` chip, agentbus presence in the strip (PL-5), CI check rows on a CI card.
 
 ## 04 · New session
 
@@ -664,8 +688,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   (`UsageSampled`), and today's totals, asked again 10 s after an agent event.
 - Built in PL-10: the next meeting under Today is the calendar plugin's (`integ/ical`, plugins.md "As built (PL-10)"):
   a ring counting down the hour before it, "NEXT MEETING · 14:30", its title, and where with how many are invited.
-- Not yet: the agentbus panel (PL-5), the merge train, the session footer and mission-control slots (no mission
-  control yet), dimming what's under the drawer, and the burn's projection in a help page's "Right now".
+- Not yet: the agentbus panel (PL-5), the merge train, the session footer slot (the mission-control slot came with
+  SH-7), dimming what's under the drawer, and the burn's projection in a help page's "Right now".
 
 ## 11 · Comms (the assistant)
 

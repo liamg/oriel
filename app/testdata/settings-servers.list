@@ -92,18 +92,19 @@ clip 0,38 1600x962 r 0
     text "hud" @18,264.269 #b3ab99 Inter 13
     text "keymap" @18,294.269 #b3ab99 Inter 13
     text "lsp" @18,324.269 #b3ab99 Inter 13
-    text "review" @18,354.269 #b3ab99 Inter 13
-    text "sandbox" @18,384.269 #b3ab99 Inter 13
-    text "● 1" @204,383.14 #ffd23f JetBrains Mono 10
-    text "sidebar" @18,414.269 #b3ab99 Inter 13
-    text "stats" @18,444.269 #b3ab99 Inter 13
-    text "terminal" @18,474.269 #b3ab99 Inter 13
-    text "ui" @18,504.269 #b3ab99 Inter 13
-    text "updates" @18,534.26904 #b3ab99 Inter 13
-    text "usage" @18,564.26904 #b3ab99 Inter 13
-    text "voice" @18,594.26904 #b3ab99 Inter 13
-    text "whichkey" @18,624.26904 #b3ab99 Inter 13
-    text "workers" @18,654.26904 #b3ab99 Inter 13
+    text "mission" @18,354.269 #b3ab99 Inter 13
+    text "review" @18,384.269 #b3ab99 Inter 13
+    text "sandbox" @18,414.269 #b3ab99 Inter 13
+    text "● 1" @204,413.14 #ffd23f JetBrains Mono 10
+    text "sidebar" @18,444.269 #b3ab99 Inter 13
+    text "stats" @18,474.269 #b3ab99 Inter 13
+    text "terminal" @18,504.269 #b3ab99 Inter 13
+    text "ui" @18,534.26904 #b3ab99 Inter 13
+    text "updates" @18,564.26904 #b3ab99 Inter 13
+    text "usage" @18,594.26904 #b3ab99 Inter 13
+    text "voice" @18,624.26904 #b3ab99 Inter 13
+    text "whichkey" @18,654.26904 #b3ab99 Inter 13
+    text "workers" @18,684.26904 #b3ab99 Inter 13
   pop
   rect 240,91 1x879 fill #24221d
   clip 241,91 1359x879 r 0

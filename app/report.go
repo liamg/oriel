@@ -64,6 +64,7 @@ type shell struct {
 	relaunch    atomic.Pointer[func() error] // starts Oriel again once the window has closed: an update's restart
 	joinMu      sync.Mutex
 	onJoin      map[*joinHook]struct{} // told of each worker as it connects
+	launchDone  bool                   // the window has started once: mission control opens at launch only
 }
 
 type joinHook struct {

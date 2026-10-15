@@ -49,7 +49,7 @@ Version 0.4.0.
 
 ## oriel.hud
 
-- `oriel.hud.indicator(name, opts, build)` (`ui`): An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD) or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+- `oriel.hud.indicator(name, opts, build)` (`ui`): An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), hud.today, or mission (mission control's strip). opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 - `oriel.hud.refresh(name)` (`ui`): Builds the indicator name again now.
 - `oriel.hud.set(name, nodes)` (`ui`): Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes.
 

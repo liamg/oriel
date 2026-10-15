@@ -167,6 +167,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `stats.split_sessions` | true: a multi-repo session's cost splits over its repos by their share of its file work; off, each repo is charged the whole session. The Stats page's toggle and the session tab's "count whole session in each" both set it | app | | AI-12 |
 | `hud.hold` | alt: the modifier that pulls the HUD down while held on its own (alt, ctrl, shift, super, off) | app | | SH-8 |
 | `hud.hold_delay` | 250: milliseconds the hold key is held alone before the HUD comes down, so a chord doesn't flash it | app | | SH-8 |
+| `mission.at_launch` | true: open on mission control when Oriel starts with nothing open, once there's a session to show | app | | SH-7 |
 | `workers.listen` | empty: Oriel doesn't listen for workers on other machines; an address, `:7437` or `10.0.0.2:7437`, listens there (pinned TLS, keys in `workers.json`; security.md, Remote workers). Add a worker sets it | app | | AI-15 |
 | `updates.mode` | `ask`: a new release is offered in a notice; `automatic` installs it, and its workers', as it comes out; `manual` only checks on `:UpdateCheck` (distribution.md) | app | | PL-6 |
 | `updates.channel` | `stable`; or `nightly`, pre-releases too | app | | PL-6 |

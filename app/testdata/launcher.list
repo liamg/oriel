@@ -105,12 +105,12 @@ clip 0,38 1600x936 r 0
     path 6 segments stroke 1.25 #ffd23f
     text "Workers" @624.6875,709.63525 #ece6d8 Inter 12
     text "1 online" @679.6719,708.87006 #7c7566 JetBrains Mono 10
-    rect 745.6719,692.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
-    path 6 segments stroke 1.25 #ffd23f
-    path 2 segments stroke 1.25 #ffd23f
-    path 2 segments stroke 1.25 #ffd23f
-    path 2 segments stroke 1.25 #ffd23f
-    text "Prompts" @774.6719,709.63525 #ece6d8 Inter 12
+    rect 745.6719,692.27 125.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    path 5 segments stroke 1.25 #ffd23f
+    path 5 segments stroke 1.25 #ffd23f
+    path 5 segments stroke 1.25 #ffd23f
+    path 5 segments stroke 1.25 #ffd23f
+    text "Mission control" @774.6719,709.63525 #ece6d8 Inter 12
   pop
   text "RECENT" @875,373.41998 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1229.0469,373.93 #7c7566 JetBrains Mono 10

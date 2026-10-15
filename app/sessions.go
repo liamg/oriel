@@ -130,6 +130,7 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 	})))
 	has := func(registry.Args) bool { return len(x.clients()) > 0 }
 	focused := func(registry.Args) bool { return has(nil) && x.focused() != "" }
+	named := func(a registry.Args) bool { return has(nil) && (a.String("id") != "" || x.focused() != "") } // {id}, or the one in front
 	planning := func(registry.Args) bool {
 		se, ok := x.sh.cfg.Store.Session(x.focused())
 		return ok && has(nil) && se.Snapshot().Planning()
@@ -171,9 +172,9 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "sessions"})
 			}},
-		{ID: "session.stop", Title: "Stop the agent of {id}, or the session in front", Available: focused,
+		{ID: "session.stop", Title: "Stop the agent of {id}, or the session in front", Available: named,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.Stop(ctx, id) })},
-		{ID: "session.archive", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: focused,
+		{ID: "session.archive", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.Archive(ctx, id) })},
 		{ID: "session.next-pr", Title: "Start the next PR in this session, on a fresh branch from the updated base", Available: focused,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.NextPR(ctx, id) })},
@@ -184,9 +185,9 @@ func (x *sessions) Activate(_ context.Context, h ext.Host) error {
 					return c.StartWork(ctx, startWorkReq(id, a))
 				})(ctx, a)
 			}},
-		{ID: "session.interrupt", Title: "Interrupt the agent's turn", Available: focused,
+		{ID: "session.interrupt", Title: "Interrupt the agent's turn: {id}'s, or the session in front's", Available: named,
 			Run: x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error { return c.Interrupt(ctx, id) })},
-		{ID: "session.rename", Title: "Rename the session in front: {name}", Available: focused,
+		{ID: "session.rename", Title: "Rename {id}, or the session in front: {name}", Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.onSession(func(ctx context.Context, c worker.Client, id core.SessionID) error {
 					return c.Rename(ctx, id, a.String("name"))

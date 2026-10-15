@@ -91,7 +91,7 @@ type SessionKind struct {
 // reads state as it's drawn (a ui.Func) is live without any of them.
 type Indicator struct {
 	Name  string // unique among indicators: "deploys"
-	Slot  string // SlotTitleBar, SlotStatusLeft, SlotStatusRight, SlotHUD, or a slot a panel draws: SlotHUDToday
+	Slot  string // SlotTitleBar, SlotStatusLeft, SlotStatusRight, SlotHUD, SlotMission, or a slot a panel draws: SlotHUDToday
 	Order int    // in its slot, among the slot's views: titlebar.right.40-usage is 40
 	// Title is a HUD panel's heading, Note what it says at the heading's right ("3 online"), and Span how many of the
 	// HUD's four columns it takes (1 if 0). Help is its help page and anchor.
@@ -111,6 +111,7 @@ const (
 	SlotStatusRight = "statusline.right"
 	SlotHUD         = "hud"       // the HUD's panels
 	SlotHUDToday    = "hud.today" // under the HUD's Today panel: the next meeting
+	SlotMission     = "mission"   // mission control's strip along its foot: usage, workers' load
 )
 
 // Indicators are the indicators in slot, by Order then name.

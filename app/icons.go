@@ -140,6 +140,12 @@ var icons = map[string]func(p *iconPen){
 	"permission": func(p *iconPen) {
 		p.poly(true, 8, 1.5, 13.5, 3.5, 13.5, 8, 8, 14.5, 2.5, 8, 2.5, 3.5)
 	},
+	"mission": func(p *iconPen) {
+		p.poly(true, 2, 2.5, 7, 2.5, 7, 7, 2, 7)
+		p.poly(true, 9, 2.5, 14, 2.5, 14, 7, 9, 7)
+		p.poly(true, 2, 9, 7, 9, 7, 13.5, 2, 13.5)
+		p.poly(true, 9, 9, 14, 9, 14, 13.5, 9, 13.5)
+	},
 	"review": func(p *iconPen) {
 		p.poly(false, 6, 2, 3, 2, 3, 14, 6, 14)
 		p.poly(false, 10, 2, 13, 2, 13, 14, 10, 14)

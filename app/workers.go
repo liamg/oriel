@@ -189,6 +189,8 @@ func (x *workersExt) Activate(_ context.Context, h ext.Host) error {
 		Command: "workers.open", Order: 90, Link: true, Note: x.figure}))
 	x.add(h.Contribute(registry.Indicator{Name: "workers", Slot: registry.SlotHUD, Order: 20, Title: "Workers", Help: hudHelp + "#workers",
 		Note: x.workersNote, Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "workers", Fn: x.workersPanel}, nil }}))
+	x.add(h.Contribute(registry.Indicator{Name: "workers.mission", Slot: registry.SlotMission, Order: 20, Help: missionHelp + "#strip",
+		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "workers", Fn: x.workersStrip}, nil }}))
 	x.add(h.Contribute(registry.Indicator{Name: "workers.status", Slot: registry.SlotStatusRight, Order: 70, Help: hudHelp + "#indicators",
 		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "workers", Fn: x.workersStatus}, nil }}))
 	x.add(h.View(OverlayPrefix+"workers", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "workers", Fn: x.page} })))

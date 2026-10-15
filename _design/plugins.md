@@ -303,15 +303,16 @@ flowchart TB
   theme tokens `github.accent`, `github.changes`, `github.approved`, `requests.avatar.github`, `requests.draft.bg`,
   `requests.draft.border`.
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
-  `plus`, `resume`, `folder`; since SH-9 `key`, `inbox`, `network`, `gateway`, `question`, `permission`, `review`) is drawn, not a font's; any other name is drawn as a glyph.
+  `plus`, `resume`, `folder`; since SH-9 `key`, `inbox`, `network`, `gateway`, `question`, `permission`, `review`; since SH-7 `mission`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats extension's since AI-12: one button to Usage with a
   hover card).
 - indicators in slots (SH-8): `registry.Indicator{Name, Slot, Order, Title, Note, Span, Help, Every, On, Build}`
   (kind `hud.indicator`), listed by `registry.Indicators(r, slot)`. Slots: `titlebar.right`, `statusline.left`,
   `statusline.right` (drawn among the views named `<slot>.<order>-<name>`, an indicator sorting as
-  `<slot>.<Order>-<Name>`), `hud` (the HUD's panels: `Title`, `Note`, `Span` of four columns) and `hud.today` (under
-  the Today panel). What `Build` returns is kept and drawn until it's built again: every `Every`, on a core event
+  `<slot>.<Order>-<Name>`), `hud` (the HUD's panels: `Title`, `Note`, `Span` of four columns), `hud.today` (under
+  the Today panel) and, since SH-7, `mission` (`registry.SlotMission`: mission control's strip, each part drawn with
+  `missionCell`). What `Build` returns is kept and drawn until it's built again: every `Every`, on a core event
   named in `On`, on `hud.refresh {name}`, or when any contribution comes or goes (`Registry.ContributionsGen`); a
   `ui.Func` that reads the store as it's drawn is live without any. An error draws in its place and counts towards
   turning it off (`Report("hud.indicator", name, err)`). Commands `hud.toggle`, `hud.close`, `hud.refresh`; key mode
@@ -406,6 +407,15 @@ flowchart TB
   an agent's tools with `worker.ToolsReq{Session, Agent}` and calls them with `ToolCall.Agent`; utility agents are
   `utility.run` / `utility.send` / `utility.interrupt` (`architecture.md`). Lua: `oriel.agent.tool{…, for, read_only,
   reads}`.
+- **mission control** (SH-7, ui.md 03): commands `mission.toggle` (`⌘⇧K`), `mission.open {by, filter, id}`,
+  `mission.close`, `mission.group {by}` (worker, status or repo), `mission.filter {text}`, `mission.find`,
+  `mission.select {id}`, `mission.move {dir}`, `mission.open-card {id}`, `mission.allow {id}`, `mission.deny {id}`,
+  `mission.stop {id}`, `mission.rename {id, name}`, `mission.new {worker}`; key mode `mission`; view
+  `app.overlay.mission`; option `mission.at_launch`; the `mission` indicator slot; a start-view link; the
+  assistant's `mission_control` tool (`{show, by, filter, id}`: its state, opened first with `show`). Its cards'
+  asks are the inbox's cards (`registry.InboxCard.Draw`), so any inbox source's card for a session shows on it; while
+  it's up those cards aren't stacked over the window. `session.stop`, `session.archive`, `session.interrupt` and
+  `session.rename` take `{id}` with no session in front.
 - **the assistant** (PL-4, ui.md 11): its tools are agent tools `for = { "assistant" }`: the built-ins (`reply`,
   `sessions`, `past_sessions`, `open_session`, `rename_session`, `resume_session`, `new_session`, `start_session`,
   `stop_session`, `review_pr`, `jobs`, `run_job`, `repos`, `my_prs`, `review_requests`, `usage`, `workers`,
