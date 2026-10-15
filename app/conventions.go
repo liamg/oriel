@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -30,6 +31,7 @@ type conventions struct {
 	h       ext.Host
 	buffers func() []string // the names of the open buffers with files
 	dir     string          // relative names are under it; sources are shown relative to it
+	reposMu sync.Mutex      // project search reads repos off the loop
 	repos   map[string]*attr.Repo
 	applied map[string]map[string]any // by buffer name: what the file layer holds
 	warned  map[string]bool
@@ -95,11 +97,13 @@ func (c *conventions) repo(path string) (*attr.Repo, string) {
 			break
 		}
 	}
+	c.reposMu.Lock()
 	r, ok := c.repos[root]
 	if !ok {
 		r = attr.Open(root)
 		c.repos[root] = r
 	}
+	c.reposMu.Unlock()
 	rel, _ := filepath.Rel(root, path)
 	return r, filepath.ToSlash(rel)
 }
