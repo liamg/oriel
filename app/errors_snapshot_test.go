@@ -144,6 +144,31 @@ func (s *errScene) reopen() bool {
 	return true
 }
 
+// callTool calls an agent tool as its MCP server does, off the loop, running frames until it answers: a Lua tool
+// runs on the loop.
+func (s *errScene) callTool(t *testing.T, ctx context.Context, tool registry.AgentTool, args map[string]any) (string, error) {
+	t.Helper()
+	type answer struct {
+		out string
+		err error
+	}
+	done := make(chan answer, 1)
+	go func() {
+		out, err := registry.CallAgentTool(ctx, s.reg, tool, args)
+		done <- answer{out, err}
+	}()
+	var a answer
+	s.until(t, tool.Name+"'s answer", func() bool {
+		select {
+		case a = <-done:
+			return true
+		default:
+			return false
+		}
+	})
+	return a.out, a.err
+}
+
 func (s *errScene) frame() {
 	s.list = new(render.List)
 	s.ui.Frame(s.list.Record(s.zoomed()), s.size, func(c *ui.Ctx) { buildWindow(c, s.reg, s.size) })

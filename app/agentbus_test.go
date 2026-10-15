@@ -178,20 +178,7 @@ func TestAgentbusReviewRequests(t *testing.T) {
 		Confirm: func(_ registry.Ctx, _ string, c registry.Confirmation) (bool, error) { asked = c; return true, nil },
 		Acted:   func(_ registry.Ctx, _ string, a registry.Acted) { did = a }})
 	ctx := registry.WithAgent(context.Background(), "assistant")
-	done := make(chan error, 1)
-	go func() {
-		_, err := registry.CallAgentTool(ctx, s.reg, request, map[string]any{"pr": "acme/api#4421", "who": "priya@x.io"})
-		done <- err
-	}()
-	var callErr error
-	s.until(t, "the request sent", func() bool {
-		select {
-		case callErr = <-done:
-			return true
-		default:
-			return false
-		}
-	})
+	_, callErr := s.callTool(t, ctx, request, map[string]any{"pr": "acme/api#4421", "who": "priya@x.io"})
 	if callErr != nil || asked.Title != "Ask for a review" || !strings.Contains(asked.Lead, "priya@x.io to review acme/api#4421") ||
 		did.Line != "asked priya@x.io to review acme/api#4421" {
 		t.Errorf("request_review: %v, asked %+v, did %+v", callErr, asked, did)
@@ -199,20 +186,7 @@ func TestAgentbusReviewRequests(t *testing.T) {
 
 	// GitHub's half is the built-in's, through the worker; here a stand-in, as the part is what's agentbus's.
 	base := registry.AgentTool{Name: "review_requests", Reads: "github", Run: func(registry.Ctx, map[string]any) (any, error) { return []string{}, nil }}
-	var out string
-	go func() {
-		var err error
-		out, err = registry.CallAgentTool(ctx, s.reg, base, nil)
-		done <- err
-	}()
-	s.until(t, "review_requests", func() bool {
-		select {
-		case callErr = <-done:
-			return true
-		default:
-			return false
-		}
-	})
+	out, callErr := s.callTool(t, ctx, base, nil)
 	if err := callErr; err != nil || !strings.Contains(out, `"agentbus"`) || !strings.Contains(out, "https://github.com/acme/api/pull/4419") {
 		t.Errorf("review_requests: %s %v", out, err)
 	}

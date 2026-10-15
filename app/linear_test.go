@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -293,11 +292,11 @@ func TestLinearTicketsForTheAssistant(t *testing.T) {
 	ctx := registry.WithAgent(context.Background(), assistantAgent)
 	var out string
 	s.until(t, "the tickets", func() bool {
-		o, err := registry.CallAgentTool(ctx, s.reg, tools[i], nil)
+		o, err := s.callTool(t, ctx, tools[i], nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		out = fmt.Sprint(o)
+		out = o
 		return strings.Contains(out, "INF-2231")
 	})
 	for _, want := range []string{"Usage API returns stale prices after plan change", "INF-2252", "https://linear.app/"} {

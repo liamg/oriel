@@ -141,7 +141,7 @@ func (g Agent) Tool(spec script.Table, where string) error {
 				out, err = g.later(ctx, run, p)
 			} else {
 				var res []any
-				if res, err = g.a.VM.Call(run, p); len(res) > 0 {
+				if res, err = g.a.callOnLoop(ctx, run, p); len(res) > 0 {
 					out = res[0]
 				}
 			}

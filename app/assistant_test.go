@@ -363,7 +363,7 @@ func TestLuaToolsForTheAssistant(t *testing.T) {
 	if slices.ContainsFunc(registry.AgentToolsFor(s.reg, "work", false), func(t registry.AgentTool) bool { return t.Name == "deploys" }) {
 		t.Error("a work session's agent was offered the assistant's tool")
 	}
-	out, err := registry.CallAgentTool(registry.WithAgent(context.Background(), assistantAgent), s.reg, tools[i], nil)
+	out, err := s.callTool(t, registry.WithAgent(context.Background(), assistantAgent), tools[i], nil)
 	if err != nil || out != "2 today" {
 		t.Errorf("deploys: %q %v", out, err)
 	}
