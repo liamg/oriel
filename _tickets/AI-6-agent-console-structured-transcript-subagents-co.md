@@ -2,7 +2,7 @@
 id: AI-6
 title: "Agent console: structured transcript, subagents, composer"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: app
 depends_on: [AI-2]

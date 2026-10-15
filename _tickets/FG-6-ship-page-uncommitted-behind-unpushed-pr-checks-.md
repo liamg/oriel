@@ -2,7 +2,7 @@
 id: FG-6
 title: "Ship page: uncommitted → behind → unpushed → PR → checks, multi-project"
 phase: P6
-status: review
+status: done
 area: Files, git, terminals
 module: gitx, gh
 depends_on: [FG-2]

@@ -2,7 +2,7 @@
 id: AI-11
 title: "Sandbox, gateway MCP, egress proxy (ported)"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: sandbox
 depends_on: [AI-1]

@@ -2,7 +2,7 @@
 id: AI-2
 title: "Claude provider: interactive PTY plus mod hooks (no -p)"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: agent/claude
 depends_on: [AI-1]

@@ -2,7 +2,7 @@
 id: SE-2
 title: "Session lifecycle: worktrees from a fetched base, Start next PR, archive, resume after restart"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: core, worker
 depends_on: [SE-1]

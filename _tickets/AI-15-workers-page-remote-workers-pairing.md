@@ -2,7 +2,7 @@
 id: AI-15
 title: "Workers page: the workers (this machine's and remote ones), pairing a new one, revoke, rename, forget, restart"
 phase: P6 follow-up
-status: review
+status: done
 area: Sessions and AI
 module: app, core, wire, worker, cmd/oriel
 depends_on: [AI-1, AI-12, SE-5]

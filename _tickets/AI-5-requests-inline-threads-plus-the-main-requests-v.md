@@ -2,7 +2,7 @@
 id: AI-5
 title: "Requests: inline threads plus the main Requests view, composer, urgent, btw"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: core, app
 depends_on: [AI-2, ED-7]

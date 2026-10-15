@@ -2,7 +2,7 @@
 id: SE-5
 title: "Jobs and login follow-ups: multi-line prompts, pages that replace each other, run tabs, schedules, remote log in"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: app, worker, ui, agent
 depends_on: [SE-4, AI-13]

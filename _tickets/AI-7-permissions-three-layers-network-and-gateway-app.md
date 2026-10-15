@@ -2,7 +2,7 @@
 id: AI-7
 title: "Permissions, three layers; network and gateway approvals"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: agent, sandbox
 depends_on: [AI-2, AI-11]

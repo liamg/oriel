@@ -2,7 +2,7 @@
 id: AI-4
 title: "New-session launcher: modes, provider, repos, worker, sandbox"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: app
 depends_on: [AI-1, FW-6]

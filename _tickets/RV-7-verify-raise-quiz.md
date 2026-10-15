@@ -2,7 +2,7 @@
 id: RV-7
 title: "Verify & raise quiz"
 phase: P6
-status: review
+status: done
 area: Review and explain
 module: agent
 depends_on: [AI-5]
