@@ -427,12 +427,13 @@ func (c PRCheck) tag(ctx context.Context, repo, tag string) (string, error) {
 	if c.Tag != nil {
 		return c.Tag(ctx, repo, tag)
 	}
-	return LsRemoteTag(ctx, "https://"+strings.TrimPrefix(repo, "https://"), tag)
+	return LsRemoteTag(ctx, ".", "https://"+strings.TrimPrefix(repo, "https://"), tag)
 }
 
 // LsRemoteTag is the commit a remote's tag points at, peeled through an annotated tag; "" if there's no such tag.
-func LsRemoteTag(ctx context.Context, url, tag string) (string, error) {
-	out, err := (gitx.Repo{Dir: "."}).Run(ctx, "ls-remote", "--tags", url, "refs/tags/"+tag, "refs/tags/"+tag+"^{}")
+// remote is a URL, or a remote of the repository in dir.
+func LsRemoteTag(ctx context.Context, dir, remote, tag string) (string, error) {
+	out, err := (gitx.Repo{Dir: dir}).Run(ctx, "ls-remote", "--tags", remote, "refs/tags/"+tag, "refs/tags/"+tag+"^{}")
 	if err != nil {
 		return "", err
 	}

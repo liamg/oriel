@@ -16,10 +16,9 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 ## Ready now (no unmet dependencies)
 
 - [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
-- [PL-18](PL-18-rename-ext-to-plugin.md): Rename the ext package and Extension types to plugin
-- [PL-19](PL-19-package-format-lua-entry-point-assets-plugin-pack.md): Package format: Lua entry point, process/wasm/asset APIs, oriel plugin pack
 
-P7 is done, but for PL-10, which is dropped (the calendar isn't carried over). P8 starts with PL-18 and PL-19.
+P7 is done, but for PL-10, which is dropped (the calendar isn't carried over). P8 is in review, but for PL-22 (lazy
+loading, split out of PL-20).
 
 ## Suggested order
 

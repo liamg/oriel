@@ -436,6 +436,23 @@ sequenceDiagram
 - **The Plugins page**: ui.md 16, "Built in PL-21". Mockups 16 and 29 now say Plugins, `settings.toml` and
   reviewed.
 
+## As built (PL-17)
+
+- **`oriel plugin publish [--registry OWNER/NAME] [DIR]`** (`catalog.Publish`) is run in a plugin's repository. It
+  checks four things first:
+  - HEAD is tagged `v<version>` from `oriel.toml`;
+  - the work tree is clean;
+  - origin is the GitHub repo of the id's owner;
+  - origin has the tag at HEAD.
+- **Then it packs** the plugin as the registry's CI will, and reads the registry's `plugin.toml`:
+  - **A new plugin** gets a `plugin.toml` with `repo`, `description` and the version.
+  - **A new version** gets a `[[versions]]` entry, inserted first (newest first). The entry holds `version` and
+    `commit`, plus `archives` and `built` (`ci` with a `go.mod`, else `author`) when there are binaries.
+  - **A trusted plugin**, or a version already listed, gets no PR, and says why.
+- **The PR** is opened through `catalog.Registrar`. `catalog.GH` is the gh CLI: fork, clone the fork, branch
+  `publish/<owner>-<name>-<version>` from upstream's default branch, commit, push, `gh pr create`. It then pushes
+  again with `reviewed` set to the PR's URL.
+
 ## Tickets
 
 - PL-19 package format, `oriel.process` / `oriel.wasm` / `oriel.asset`, `oriel plugin pack`

@@ -20,6 +20,8 @@ const pluginUsage = `oriel plugin pack [-o OUT] [DIR]          check the plugin 
 oriel plugin init [--process] [--id OWNER/NAME] [DIR]
                                          start a plugin: oriel.toml and init.lua, and with --process a Go command
                                          under cmd/ that init.lua spawns
+oriel plugin publish [--registry OWNER/NAME] [DIR]
+                                         propose DIR's tagged version to the registry: a PR through gh
 ` + registrycmd.Usage
 
 // runPlugin is `oriel plugin …` (catalog.md, Publishing).
@@ -36,6 +38,7 @@ func runPlugin(args []string, stdout, stderr io.Writer) error {
 	process := fs.Bool("process", false, "with a process binary, in Go")
 	id := fs.String("id", "", "the plugin's id, <owner>/<name>")
 	out := fs.String("o", "", "where pack writes the archives (DIR/dist by default)")
+	reg := fs.String("registry", catalog.DefaultRepo, "the registry to publish to")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -57,6 +60,17 @@ func runPlugin(args []string, stdout, stderr io.Writer) error {
 			}
 			fmt.Fprintf(stdout, "sha256:%s  %s  %s\n", a.SHA256, a.Platform, rel)
 		}
+		return nil
+	case "publish":
+		p, err := catalog.Publish(context.Background(), catalog.PublishOpts{Dir: dir, Registry: *reg, Registrar: catalog.GH{}})
+		if err != nil {
+			return err
+		}
+		if p.PR == "" {
+			fmt.Fprintln(stdout, p.Note)
+			return nil
+		}
+		fmt.Fprintf(stdout, "%s %s: %s\n", p.ID, p.Version, p.PR)
 		return nil
 	case "init":
 		if *id == "" {
