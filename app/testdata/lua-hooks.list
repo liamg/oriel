@@ -155,9 +155,9 @@ clip 760,38 640x847.48 r 0
       text "<1ms" @1406,323.36 #b3ab99 JetBrains Mono 11
       text "ShipRaise" @784,353.54 #ece6d8 JetBrains Mono 11.5
       clip 932,341.81 170x15.179993 r 0
-        text "verify quiz" @932,353.54 #b3ab99 JetBrains Mono 11.5
+        text "verify notes" @932,353.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "VETO" @1110,352.82 #b98aff JetBrains Mono 9.5
+      text "REWRITE" @1110,352.82 #b98aff JetBrains Mono 9.5
       clip 1198,342.13998 200x14.519989 r 0
         text "builtin:verify" @1198,353.36 #ffd23f JetBrains Mono 11
       pop

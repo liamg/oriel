@@ -695,25 +695,34 @@ func (x *shipExt) gatesList(c *ui.Ctx, se core.SessionState) {
 		c.Text("none", "No gates for this session.", uiFont(12, th.C(theme.FgFaint)))
 	}
 	for _, g := range gs {
-		c.Row(g.Name, ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center, Role: ui.RoleText, Label: g.Title + " " + g.State},
-			func(c *ui.Ctx) {
-				glyph, tone := "✓", th.C(theme.OK)
-				switch g.State {
-				case registry.GateWarn:
-					glyph, tone = "!", th.C(theme.Warn)
-				case registry.GateFail:
-					glyph, tone = "✗", th.C(theme.Error)
-				case registry.GatePending, registry.GateOptional:
-					glyph, tone = "○", th.C(theme.FgFaint)
-				}
-				c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, uiFont(13, tone)) })
-				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", g.Title, uiFont(12.5, th.C(theme.FgMuted))) })
-				noteTone := th.C(theme.FgFaint)
-				if g.State == registry.GateWarn {
-					noteTone = th.C(theme.Warn)
-				}
-				c.Text("n", g.Note, monoFont(10.5, noteTone))
-			})
+		c.Column(g.Name, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+			c.Row("row", ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center, Role: ui.RoleText, Label: g.Title + " " + g.State},
+				func(c *ui.Ctx) {
+					glyph, tone := "✓", th.C(theme.OK)
+					switch g.State {
+					case registry.GateWarn:
+						glyph, tone = "!", th.C(theme.Warn)
+					case registry.GateFail:
+						glyph, tone = "✗", th.C(theme.Error)
+					case registry.GatePending, registry.GateOptional:
+						glyph, tone = "○", th.C(theme.FgFaint)
+					}
+					c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, uiFont(13, tone)) })
+					c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", g.Title, uiFont(12.5, th.C(theme.FgMuted))) })
+					noteTone := th.C(theme.FgFaint)
+					if g.State == registry.GateWarn {
+						noteTone = th.C(theme.Warn)
+					}
+					c.Text("n", g.Note, monoFont(10.5, noteTone))
+				})
+			if g.Action != "" {
+				c.Row("act", ui.Style{Pad: ui.Insets{L: 24, B: 6}}, func(c *ui.Ctx) {
+					if widget.Button(c, "act", g.Action, widget.ButtonOpts{Disabled: !x.h.Available(g.Command, g.Args), Help: "git/ship#gates"}) {
+						x.run(g.Command, g.Args)
+					}
+				})
+			}
+		})
 	}
 	c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
 	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)

@@ -131,7 +131,6 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `ledger.gate` | `auto`: the commit gate by the session's kind (hard for work, plan and a new repo, soft for jobs, off for the rest); `hard`, `soft` or `off`; a project's `.oriel/settings.toml` overrides it for its repo | app | | RV-2 |
 | `review.ai.provider` | the provider AI reviews run on; empty: one other than the session agent's, else the author's on another model | app | | RV-3 |
 | `review.ai.model` | the model AI reviews run on; empty: the reviewer's default | app | | RV-3 |
-| `review.verify_before_pr` | `work`: the verify quiz before a PR is raised, in work and plan sessions; `on` in every session, `off` never. A repo sets its own in `.oriel/settings.toml` | app | | RV-7 |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | | RV-4 |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | | RV-4 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |

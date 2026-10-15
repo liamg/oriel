@@ -529,7 +529,7 @@ func (x *aiReviewExt) shipGate(id string) registry.Gate {
 	r, ran := s.LastAIReview()
 	switch {
 	case !ran:
-		return registry.Gate{State: registry.GateOptional, Note: "optional"}
+		return registry.Gate{State: registry.GateOptional, Note: "optional", Action: "Review", Command: "review.ai.run", Args: registry.Args{"id": id}}
 	case r.Running:
 		return registry.Gate{State: registry.GatePending, Note: label}
 	case pass:

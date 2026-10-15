@@ -56,7 +56,7 @@ none of the room.
 - Explain: crit's hunk `?` cards become **explain by code unit** (function, block, condition) plus **Explain this** on any selection; the "Explain this change" walkthrough, tours with their 7 kinds.
 - AI review, Git page, PR page, GitHub review mirroring ("Forward to GitHub"), PR template drafts.
 - Commit and PR drafts written when the agent goes idle.
-- Verify & raise (the quiz before a PR), the slop gate, trusted-orgs redaction.
+- Verify (an optional quiz about the change; a PR never waits for it), the slop gate, trusted-orgs redaction.
 - Tasks rail, subagents box, permission and question cards.
 - Sandbox, gateway MCP, egress approvals, ssh-agent grants.
 - agentbus (questions, review requests, auto-answer), Linear, Slack PTAL, calendar.

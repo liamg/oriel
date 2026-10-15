@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -47,7 +46,7 @@ func (x *verifyExt) run(id string) {
 	}
 }
 
-// dialog is VERIFY BEFORE RAISING (ui.md 13) over everything, while a quiz is open.
+// dialog is VERIFY THIS CHANGE (ui.md 13) over everything, while a quiz is open.
 func (x *verifyExt) dialog(c *ui.Ctx) {
 	q := x.shown()
 	if q == nil {
@@ -88,7 +87,7 @@ func (x *verifyExt) header(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	c.Column("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 18, R: 18, T: 14, B: 12}, Gap: 6}, func(c *ui.Ctx) {
 		c.Row("kick", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("k", "VERIFY BEFORE RAISING", kickerFont(th.C(tVerifyKicker)))
+			c.Text("k", "VERIFY THIS CHANGE", kickerFont(th.C(tVerifyKicker)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("by", q.by, monoFont(10.5, th.C(theme.FgFaint)))
 			if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close the quiz", Help: verifyHelp, Size: 18}) {
@@ -279,8 +278,6 @@ func (x *verifyExt) outcome(c *ui.Ctx, q *quiz) {
 			switch q.result {
 			case core.VerifyFailed:
 				head, tone = "Not yet · ", th.C(tVerifyWrong)
-			case core.VerifySkipped:
-				head, tone = "Skipped · ", th.C(tVerifyPartly)
 			}
 			c.Text("t", head+strings.Join(parts, " · "), mono(12, typeset.SemiBold, tone))
 			if q.result == core.VerifyPassed {
@@ -299,15 +296,8 @@ func (x *verifyExt) outcome(c *ui.Ctx, q *quiz) {
 			}
 			return
 		}
-		label := "Done"
-		if q.resume != nil {
-			label = "Raise PR"
-			if q.resume.cmd == "ship.raise-all" {
-				label = "Raise PRs"
-			}
-		}
-		if widget.Button(c, "go", label, widget.ButtonOpts{Primary: true, Help: verifyHelp}) {
-			x.run("verify.continue")
+		if widget.Button(c, "go", "Done", widget.ButtonOpts{Primary: true, Help: verifyHelp}) {
+			x.run("verify.close")
 		}
 	})
 }
@@ -321,33 +311,6 @@ func (x *verifyExt) footer(c *ui.Ctx, q *quiz) {
 			x.run("verify.open-file")
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		if q.result != core.VerifyPassed && q.result != core.VerifySkipped {
-			if widget.Button(c, "skip", "Skip verification (logged)", widget.ButtonOpts{Ghost: true, Help: verifyHelp + "#skip"}) {
-				x.run("verify.skip")
-			}
-		}
+		c.Text("opt", "optional: a raise never waits for it", monoFont(10.5, th.C(theme.FgGhost)))
 	})
-}
-
-// status is "verify-before-PR: on for this repo" at the right of the status line, while the quiz is open.
-func (x *verifyExt) status(c *ui.Ctx) {
-	q := x.shown()
-	if q == nil {
-		return
-	}
-	sess, ok := x.h.Session(q.session)
-	if !ok {
-		return
-	}
-	se := sess.Snapshot()
-	where := "on for " + string(se.Kind) + " sessions"
-	if ps := raisable(se); len(ps) > 0 {
-		switch v, l := x.setting(se, ps[0].Name); {
-		case l == registry.LayerProject:
-			where = v + " for this repo"
-		case l != registry.LayerDefault:
-			where = v
-		}
-	}
-	c.Text("verify", "verify-before-PR: "+where, monoFont(11, c.Theme().C(theme.FgFaint)))
 }

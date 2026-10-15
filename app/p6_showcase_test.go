@@ -248,7 +248,7 @@ func TestShowcaseP6Verify(t *testing.T) {
 	s, _, _, _ := verifyScene(t)
 	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
 	s.until(t, "the tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
-	s.click(centre(s.access("Push + raise PR").Bounds))
+	s.click(centre(s.access("Verify…").Bounds))
 	s.verifySettle(t, "the first question", func(f string) bool { return strings.Contains(f, "QUESTION 1") })
 	s.answer(t, "It rounds to -2: the tie check at round.go:42 returns the even one.")
 	s.verifySettle(t, "the first verdict", func(f string) bool { return strings.Contains(f, "QUESTION 2") })

@@ -387,25 +387,29 @@ clip 224,38 1376x936 r 0
       pop
       text "go test 2m ago" @1481.6875,255.32002 #7c7566 JetBrains Mono 10.5
       text "○" @1306,294.269 #7c7566 Inter 13
-      clip 1330,281.97775 154.875x15.124512 r 0
+      clip 1330,281.97775 181.25x15.124512 r 0
         text "Verify quiz" @1330,294.08713 #b3ab99 Inter 12.5
       pop
-      text "before raise" @1494.875,293.32 #7c7566 JetBrains Mono 10.5
-      text "○" @1306,332.269 #7c7566 Inter 13
-      clip 1330,319.97775 181.25x15.124512 r 0
-        text "AI review" @1330,332.08713 #b3ab99 Inter 12.5
+      text "optional" @1521.25,293.32 #7c7566 JetBrains Mono 10.5
+      rect 1330,304.54 65.609375x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Verify…" @1340,321.90524 #4f4a40 Inter 12
+      text "○" @1306,364.269 #7c7566 Inter 13
+      clip 1330,351.97775 181.25x15.124512 r 0
+        text "AI review" @1330,364.08713 #b3ab99 Inter 12.5
       pop
-      text "optional" @1521.25,331.32 #7c7566 JetBrains Mono 10.5
-      rect 1306,364.54 268x1 fill #24221d
-      text "MERGE ORDER" @1306,397.23 #7c7566 JetBrains Mono 9.5
-      text "1 · usage-api → #—" @1306,423.04 #b3ab99 JetBrains Mono 11
-      text "2 · web-dashboard → #812" @1306,453.04 #b3ab99 JetBrains Mono 11
-      rect 1306,482.08002 268x1 fill #24221d
-      text "TICKET" @1306,514.77 #7c7566 JetBrains Mono 9.5
-      text "INF-2231" @1306,537.35 #b98aff JetBrains Mono 11.5
-      text "Commits, pushes and PRs run on the session's" @1306,567.4563 #7c7566 Inter 11
-      text "worker with your git and gh. The agent can draft," @1306,583.76587 #7c7566 Inter 11
-      text "never send." @1306,600.07544 #7c7566 Inter 11
+      text "optional" @1521.25,363.32 #7c7566 JetBrains Mono 10.5
+      rect 1330,374.54 61.75x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Review" @1340,391.90524 #4f4a40 Inter 12
+      rect 1306,428.54 268x1 fill #24221d
+      text "MERGE ORDER" @1306,461.23 #7c7566 JetBrains Mono 9.5
+      text "1 · usage-api → #—" @1306,487.04 #b3ab99 JetBrains Mono 11
+      text "2 · web-dashboard → #812" @1306,517.04 #b3ab99 JetBrains Mono 11
+      rect 1306,546.08 268x1 fill #24221d
+      text "TICKET" @1306,578.77 #7c7566 JetBrains Mono 9.5
+      text "INF-2231" @1306,601.35 #b98aff JetBrains Mono 11.5
+      text "Commits, pushes and PRs run on the session's" @1306,631.4563 #7c7566 Inter 11
+      text "worker with your git and gh. The agent can draft," @1306,647.76587 #7c7566 Inter 11
+      text "never send." @1306,664.07544 #7c7566 Inter 11
     pop
   pop
 pop

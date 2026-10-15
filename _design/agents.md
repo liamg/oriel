@@ -589,11 +589,12 @@ All on by default, all configurable, none a nag:
   test run in the session log), and replies without evidence get flagged.
 ![06-review](mockups/06-review.png)
 
-- **Verify & raise.** crit's quiz carries over: the agent asks you about the
-  change before the PR goes out.
-  Built in RV-7 (`app/verify.go`, ui.md 13): on by default for work and plan sessions (`review.verify_before_pr`,
-  per repo in `.oriel/settings.toml`). Four questions from a tool-less fork, each answer graded right, partly or
-  wrong; it passes with no wrong answers. The result, or a skip, is a session event and a session log line.
+- **Verify.** crit's quiz carries over, as something you choose to take: the agent asks you about the change before
+  you put your name on it. It never holds up a PR (the user's decision after RV-7).
+  Built in RV-7 (`app/verify.go`, ui.md 13): **Verify…** on the "Verify quiz" row of "before this ships". Four
+  questions from a tool-less fork, each answer graded right, partly or wrong; it passes with no wrong answers, and a
+  passed quiz's answers can go in the next PR raised as reviewer notes. The result is a session event and a session
+  log line.
 - **Cross-model review.** AI review runs on a different provider from the
   author by default (Codex reviews Claude's work, and the other way round).
   Built in RV-3 (`worker/aireview.go`): the reviewer is a short-lived session the worker starts on the reviewer's

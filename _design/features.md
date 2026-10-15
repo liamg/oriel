@@ -130,7 +130,7 @@ How everything hangs together, built and tested before features land on it.
 | RV-4 | GitHub review mirroring and Forward to GitHub | 06 | gh | P6 | RV-1, FG-6 | the agent never posts; the user's forward does (built: ui.md 06 "Built in RV-4") |
 | RV-5 | Explain by code unit, `[`/`]` widen and narrow, Explain this on a selection | 25 | explain, syntax | P6 | ED-6, AI-2 | units are correct for fixtures in 4 languages; cache invalidated only by edits inside the unit |
 | RV-6 | Explain this change walkthrough | 07 | explain | P6 | RV-5 | a fake explainer's JSON steps over two projects walk with ←/→ and the step chips, the notes' lines lit and the rest dimmed; Ask about this step and Comment on L<n> make a request and a thread; an edit inside a step's lines (buffer or disk) discards it, one outside keeps it; the view matches 07 |
-| RV-7 | Verify & raise quiz | 13 | agent | P6 | AI-5 | a raise waits for the quiz; answers are graded, a partial one points at a file; a skip is logged and lets the raise through; the gate shows the result; off per repo |
+| RV-7 | Verify & raise quiz | 13 | agent | P6 | AI-5 | the quiz is optional and a raise never waits for it; answers are graded, a partial one points at a file; the gate shows the result; off per repo |
 | RV-8 | Tours: reader, 7 kinds, export | 14 | tour | P7 | RV-5 | crit's tour features ported |
 
 ## Platform

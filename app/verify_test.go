@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -12,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui/layout"
@@ -81,7 +79,6 @@ func (s *errScene) verifySettle(t *testing.T, what string, ok func(frame string)
 // verifyScene is 18's session with a commit on usage-api to raise, and a fake fork in front of the agent's.
 func verifyScene(t *testing.T) (*errScene, *fakeQuiz, core.SessionState, func() []gh.PR) {
 	s, _, hub, se, _ := shipScene(t)
-	s.reg.Options().Unset(verifyOption, registry.LayerUser, registry.At{})
 	x := s.ship()
 	writeFiles(t, shipDir(se, "usage-api"), map[string]string{
 		"round.go":            "package usage\n\nfunc round() {}\n",
@@ -104,9 +101,10 @@ func (s *errScene) answer(t *testing.T, text string) {
 }
 
 // RV-7, ui.md 13: "The quiz before the PR, as a chat. Each answer gets a verdict, and a partial one points at the
-// file to read." agents.md: "the agent asks you about the change before the PR goes out", through the fork
-// ("Side questions (btw, explain, verify quiz): $.model.fork: tool-less, outside the main conversation").
-func TestVerifyQuizBeforeRaise(t *testing.T) {
+// file to read." It's optional: you start it from its row in "before this ships", and a raise never waits for it.
+// agents.md: side questions go through the fork ("Side questions (btw, explain, verify quiz): $.model.fork:
+// tool-less, outside the main conversation").
+func TestVerifyQuiz(t *testing.T) {
 	s, f, se, prs := verifyScene(t)
 	x := s.verify()
 
@@ -127,20 +125,17 @@ func TestVerifyQuizBeforeRaise(t *testing.T) {
 		}
 		return out
 	}
-	if g := gates()["verify"]; g.Title != "Verify quiz" || g.State != registry.GatePending || g.Note != "before raise" {
+	if g := gates()["verify"]; g.Title != "Verify quiz" || g.State != registry.GateOptional || g.Note != "optional" || g.Action != "Verify…" {
 		t.Errorf("the gate before the quiz: %+v", g)
 	}
 
-	// Raise: the quiz stops it and opens over the tab.
-	s.click(centre(s.access("Push + raise PR").Bounds))
+	// Verify… on its row opens the quiz over the tab.
+	s.click(centre(s.access("Verify…").Bounds))
 	s.verifySettle(t, "the first question", func(f string) bool { return strings.Contains(f, "QUESTION 1") })
-	if len(prs()) != 0 {
-		t.Fatal("the PR was raised before the quiz")
-	}
-	s.wantFrame(t, "VERIFY BEFORE RAISING", "claude · fork, no tools", "Can you explain this change?",
+	s.wantFrame(t, "VERIFY THIS CHANGE", "claude · fork, no tools", "Can you explain this change?",
 		"Four short questions about the diff", "if you want them there.",
 		"0/4", "What happens to a", "-2.5", "tie now, and which line decides it?", "⌘↵ send", "open the file it's asking about",
-		"Skip verification (logged)", "verify-before-PR: on for work sessions")
+		"optional: a raise never waits for it")
 	if asked := f.asked(); len(asked) != 1 || asked[0].Session != string(se.ID) || !strings.Contains(asked[0].Prompt, "usage-api") {
 		t.Errorf("the questions were asked: %+v", asked)
 	}
@@ -150,7 +145,7 @@ func TestVerifyQuizBeforeRaise(t *testing.T) {
 	s.answer(t, "It rounds to -2: the tie check at round.go:42 returns the even one.")
 	s.verifySettle(t, "the first verdict", func(f string) bool { return strings.Contains(f, "QUESTION 2") })
 	s.wantFrame(t, "It rounds to -2", "✓", "Right, including the line.", "1/4", "If someone regenerates an invoice from March")
-	if g := gates()["verify"]; g.State != registry.GatePending || g.Note != "1/4" {
+	if g := gates()["verify"]; g.State != registry.GatePending || g.Note != "1/4" || g.Action != "Resume" {
 		t.Errorf("the gate during the quiz: %+v", g)
 	}
 
@@ -169,27 +164,32 @@ func TestVerifyQuizBeforeRaise(t *testing.T) {
 		t.Error("the quiz stayed open over the file")
 	}
 
-	// Raising again goes back to the quiz where it was.
+	// Resume on its row goes back to the quiz where it was.
 	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
 	s.until(t, "the tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
-	s.click(centre(s.access("Push + raise PR").Bounds))
-	s.verifySettle(t, "the quiz again", func(f string) bool { return strings.Contains(f, "VERIFY BEFORE RAISING") })
+	s.click(centre(s.access("Resume").Bounds))
+	s.verifySettle(t, "the quiz again", func(f string) bool { return strings.Contains(f, "VERIFY THIS CHANGE") })
 	s.wantFrame(t, "QUESTION 3", "XYZ", "2/4")
-	if len(prs()) != 0 {
-		t.Fatal("the PR was raised mid-quiz")
-	}
 	s.typeInto(t, "Your answer", "It shows two decimal places, the default.")
 	s.click(centre(s.access("Send").Bounds))
 	s.verifySettle(t, "question 4", func(f string) bool { return strings.Contains(f, "QUESTION 4") })
 	s.answer(t, "Half-to-even doesn't drift on sums of many lines.")
 	s.verifySettle(t, "the outcome", func(f string) bool { return strings.Contains(f, "Verified") })
-	s.wantFrame(t, "Verified · 3 right · 1 partly", "Add the answers to the PR as reviewer notes", "Raise PR", "4/4")
+	s.wantFrame(t, "Verified · 3 right · 1 partly", "Add the answers to the PR as reviewer notes", "Done", "4/4")
 	if g := gates()["verify"]; g.State != registry.GatePass || g.Note != "3/4 right" {
 		t.Errorf("the gate after the quiz: %+v", g)
 	}
+	if len(prs()) != 0 {
+		t.Fatal("the quiz raised the PR")
+	}
 
-	// Raise PR goes on with the raise, the answers in its body as reviewer notes.
-	s.click(centre(s.access("Raise PR").Bounds))
+	// Done closes it; the raise that follows carries the answers as reviewer notes.
+	s.click(centre(s.access("Done").Bounds))
+	s.frame()
+	if x.open != "" {
+		t.Error("Done left the quiz open")
+	}
+	s.click(centre(s.access("Push + raise PR").Bounds))
 	s.verifySettle(t, "the PR", func(string) bool { return len(prs()) == 1 })
 	body := prs()[0].Body
 	for _, want := range []string{"<!-- oriel:verify -->", "### Reviewer notes", "Verified before raising (claude · fork, no tools): 3 of 4 right, 1 partly.",
@@ -209,9 +209,6 @@ func TestVerifyQuizBeforeRaise(t *testing.T) {
 		v.Questions[1].File != "migrations/0042.sql" || v.By != "claude · fork, no tools" {
 		t.Errorf("the verification: %+v", v)
 	}
-	if x.open != "" {
-		t.Error("the quiz is still open after the raise")
-	}
 }
 
 // RV-7: the reviewer notes go in the PR when chosen, and not when not.
@@ -219,9 +216,7 @@ func TestVerifyNotesInThePR(t *testing.T) {
 	for _, notes := range []bool{true, false} {
 		t.Run(fmt.Sprint(notes), func(t *testing.T) {
 			s, _, se, prs := verifyScene(t)
-			if err := s.host.Run(context.Background(), "ship.raise", registry.Args{"project": "usage-api"}); err == nil {
-				t.Fatal("the raise went through before the quiz")
-			}
+			s.run("verify.open", nil)
 			s.verifySettle(t, "the quiz", func(f string) bool { return strings.Contains(f, "QUESTION 1") })
 			for i := range 4 {
 				s.answer(t, "the tie check at round.go:42")
@@ -230,7 +225,8 @@ func TestVerifyNotesInThePR(t *testing.T) {
 			if !notes {
 				s.click(centre(s.access("Add the answers to the PR as reviewer notes").Bounds))
 			}
-			s.click(centre(s.access("Raise PR").Bounds))
+			s.click(centre(s.access("Done").Bounds))
+			s.run("ship.raise", registry.Args{"project": "usage-api"})
 			s.verifySettle(t, "the PR", func(string) bool { return len(prs()) == 1 })
 			if got := strings.Contains(prs()[0].Body, "### Reviewer notes"); got != notes {
 				t.Errorf("reviewer notes in the PR: %v, want %v:\n%s", got, notes, prs()[0].Body)
@@ -239,56 +235,23 @@ func TestVerifyNotesInThePR(t *testing.T) {
 	}
 }
 
-// RV-7, ui.md 13: "A skip is allowed, and logged."
-func TestVerifySkipIsLogged(t *testing.T) {
-	s, _, se, prs := verifyScene(t)
+// RV-7: verify is a thing of its own; a raise never waits for it, taken or not, nor one left part way.
+func TestRaiseNeverWaitsForVerify(t *testing.T) {
+	s, f, se, prs := verifyScene(t)
 	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
 	s.until(t, "the tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
 	s.click(centre(s.access("Push + raise PR").Bounds))
-	s.verifySettle(t, "the quiz", func(f string) bool { return strings.Contains(f, "QUESTION 1") })
-	s.click(centre(s.access("Skip verification (logged)").Bounds))
-	s.verifySettle(t, "the PR", func(string) bool { return len(prs()) == 1 })
-	waitState(t, s.store, "the skip recorded", func(st core.State) bool {
-		se, _ := st.Session(se.ID)
-		v, ok := se.Snapshot().Verification()
-		return ok && v.Result == core.VerifySkipped
-	})
-	if !slices.ContainsFunc(s.sh.cfg.Logs.Ring.Records(), func(r logs.Record) bool {
-		return r.Session == se.ID && r.Level == slog.LevelWarn && r.Msg == "verification skipped"
-	}) {
-		t.Error("the skip isn't in the session's log")
-	}
-	if strings.Contains(prs()[0].Body, "Reviewer notes") {
-		t.Error("a skipped quiz added reviewer notes")
-	}
-	if g := registry.ShipGates(s.reg, string(se.ID), string(se.Kind)); !slices.ContainsFunc(g, func(g registry.ShipGateState) bool {
-		return g.Name == "verify" && g.State == registry.GateWarn && g.Note == "skipped"
-	}) {
-		t.Errorf("the gate after a skip: %+v", g)
-	}
-}
-
-// RV-7: verify-before-PR is per repo (.oriel/settings.toml); off, a raise goes straight through.
-func TestVerifyOffForARepo(t *testing.T) {
-	s, f, se, prs := verifyScene(t)
-	var repo string
-	for _, p := range se.Projects {
-		if p.Name == "usage-api" {
-			repo = cmpOr(p.Repo, p.Dir)
-		}
-	}
-	if err := s.reg.Options().Set(verifyOption, registry.LayerProject, registry.At{Project: repo}, "off"); err != nil {
-		t.Fatal(err)
-	}
-	if g := registry.ShipGates(s.reg, string(se.ID), string(se.Kind)); !slices.ContainsFunc(g, func(g registry.ShipGateState) bool {
-		return g.Name == "verify" && g.State == registry.GateOptional && g.Note == "off for this repo"
-	}) {
-		t.Errorf("the gate with verify off: %+v", g)
-	}
-	s.run("ship.raise", registry.Args{"project": "usage-api"})
 	s.verifySettle(t, "the PR", func(string) bool { return len(prs()) == 1 })
 	if s.verify().open != "" || len(f.asked()) != 0 {
-		t.Error("the quiz ran for a repo with it off")
+		t.Error("raising started the quiz")
+	}
+	if strings.Contains(prs()[0].Body, "Reviewer notes") {
+		t.Error("a PR raised without the quiz has reviewer notes")
+	}
+	if g := registry.ShipGates(s.reg, string(se.ID), string(se.Kind)); !slices.ContainsFunc(g, func(g registry.ShipGateState) bool {
+		return g.Name == "verify" && g.State == registry.GateOptional
+	}) {
+		t.Errorf("the gate after a raise without it: %+v", g)
 	}
 }
 

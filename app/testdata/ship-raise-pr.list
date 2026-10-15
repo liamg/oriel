@@ -261,20 +261,24 @@ clip 474,38 1126x936 r 0
       pop
       text "go test 2m ago" @1481.6875,255.32002 #7c7566 JetBrains Mono 10.5
       text "○" @1346,294.269 #7c7566 Inter 13
-      clip 1370,281.97775 114.875x15.124512 r 0
+      clip 1370,281.97775 141.25x15.124512 r 0
         text "Verify quiz" @1370,294.08713 #b3ab99 Inter 12.5
       pop
-      text "before raise" @1494.875,293.32 #7c7566 JetBrains Mono 10.5
-      text "○" @1346,332.269 #7c7566 Inter 13
-      clip 1370,319.97775 141.25x15.124512 r 0
-        text "AI review" @1370,332.08713 #b3ab99 Inter 12.5
+      text "optional" @1521.25,293.32 #7c7566 JetBrains Mono 10.5
+      rect 1370,304.54 65.609375x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Verify…" @1380,321.90524 #4f4a40 Inter 12
+      text "○" @1346,364.269 #7c7566 Inter 13
+      clip 1370,351.97775 141.25x15.124512 r 0
+        text "AI review" @1370,364.08713 #b3ab99 Inter 12.5
       pop
-      text "optional" @1521.25,331.32 #7c7566 JetBrains Mono 10.5
-      rect 1346,364.54 228x1 fill #24221d
-      text "TICKET" @1346,397.23 #7c7566 JetBrains Mono 9.5
-      text "INF-2231" @1346,419.81003 #b98aff JetBrains Mono 11.5
-      text "Across projects, the merge order and" @1346,449.91626 #7c7566 Inter 11
-      text "\"raise all\" live in Ship." @1346,466.22583 #7c7566 Inter 11
+      text "optional" @1521.25,363.32 #7c7566 JetBrains Mono 10.5
+      rect 1370,374.54 61.75x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Review" @1380,391.90524 #4f4a40 Inter 12
+      rect 1346,428.54 228x1 fill #24221d
+      text "TICKET" @1346,461.23 #7c7566 JetBrains Mono 9.5
+      text "INF-2231" @1346,483.81003 #b98aff JetBrains Mono 11.5
+      text "Across projects, the merge order and" @1346,513.91626 #7c7566 Inter 11
+      text "\"raise all\" live in Ship." @1346,530.2258 #7c7566 Inter 11
     pop
   pop
 pop

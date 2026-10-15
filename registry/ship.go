@@ -21,7 +21,11 @@ type ShipGate struct {
 // Gate is a gate's state for a session.
 type Gate struct {
 	State string // GatePass, GateWarn, GateFail, GatePending or GateOptional; "" leaves the gate out
-	Note  string // dim text at its right: "9", "38 / 59", "go test 2m ago", "before raise"
+	Note  string // dim text at its right: "9", "38 / 59", "go test 2m ago", "optional"
+	// Action is a button on the gate's row that works towards it ("Verify…"), running Command with Args.
+	Action  string
+	Command string
+	Args    Args
 }
 
 // Gate states: met; not met but not in the way (a "!"); failed; still to come; and one that's up to you.

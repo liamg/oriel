@@ -21,16 +21,16 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// Verify & raise (agents.md, ui.md 13): before a session's PR is raised, a tool-less fork of its agent asks you
-// about the change, one question at a time, and grades each answer. It's built on the public pieces: a ShipRaise veto
-// hook stops the raise, registry.Fork asks, a ShipGate shows the result, and the result is a session event.
+// Verify (agents.md, ui.md 13): when you choose to, a tool-less fork of the session's agent asks you about the change,
+// one question at a time, and grades each answer. It never holds a raise. It's built on the public pieces:
+// registry.Fork asks, a ShipGate shows the result and starts it, a ShipRaise rewrite adds a passed quiz's answers to
+// the PR as reviewer notes, and the result is a session event.
 
 // VerifyKeyMode is the quiz dialog's keymap mode.
 const VerifyKeyMode = "verify"
 
 const (
 	verifyHelp    = "git/verify"
-	verifyOption  = "review.verify_before_pr"
 	quizLength    = 4
 	verifyTimeout = 5 * time.Minute
 )
@@ -65,17 +65,10 @@ type quiz struct {
 	err      string
 	answer   string // the composer
 	notes    bool   // the answers go in the PR as reviewer notes
-	result   string // once every question is graded, or it's skipped
-	resume   *raiseAgain
+	result   string // once every question is graded
 	gen      int
 	scroll   scrollState
 	focus    bool
-}
-
-// raiseAgain is the raise the quiz stopped, run again once it passes or is skipped.
-type raiseAgain struct {
-	cmd  string
-	args registry.Args
 }
 
 func (x *verifyExt) Manifest() ext.Manifest { return ext.Manifest{ID: "verify"} }
@@ -84,10 +77,7 @@ func (x *verifyExt) Activate(_ context.Context, h ext.Host) error {
 	x.h = h
 	x.quizzes = map[core.SessionID]*quiz{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
-	x.add(h.Option(registry.OptionSpec{Name: verifyOption, Section: "git", Type: registry.Enum, Values: []string{"work", "on", "off"},
-		Default: "work", Scopes: registry.ScopeUser | registry.ScopeProject | registry.ScopeSession,
-		Help: "The verify quiz before a PR is raised: work (on for work and plan sessions), on for every session, or off. A repo sets its own in .oriel/settings.toml."}))
-	x.add(registry.On(h, registry.Hook{Kind: registry.Veto, Label: "verify quiz"}, x.beforeRaise))
+	x.add(registry.On(h, registry.Hook{Kind: registry.Rewrite, Label: "verify notes"}, x.beforeRaise))
 	x.add(h.Contribute(registry.ShipGate{Name: "verify", Title: "Verify quiz", Order: 50, Check: x.gate}))
 	open := func(registry.Args) bool { return x.shown() != nil }
 	for _, c := range []registry.Command{
@@ -95,16 +85,12 @@ func (x *verifyExt) Activate(_ context.Context, h ext.Host) error {
 			Available: func(a registry.Args) bool { _, ok := x.session(a); return ok && len(registry.Forkers(h)) > 0 },
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
-				return x.begin(se, nil)
+				return x.begin(se)
 			}},
 		{ID: "verify.send", Title: "Send your answer to the quiz's question: {text}, else what's in the composer", Available: open,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.send(x.shown(), a.String("text")) }},
-		{ID: "verify.skip", Title: "Skip the verify quiz, logged in the session, and go on with the raise", Available: open,
-			Run: func(registry.Ctx, registry.Args) error { return x.skip(x.shown()) }},
 		{ID: "verify.again", Title: "Take the verify quiz again, with new questions", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.again(x.shown()) }},
-		{ID: "verify.continue", Title: "Go on with the raise the passed quiz held", Available: open,
-			Run: func(registry.Ctx, registry.Args) error { return x.proceed(x.shown()) }},
 		{ID: "verify.open-file", Title: "Open the file the quiz is asking about", Available: open,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.openFile(ctx, x.shown()) }},
 		{ID: "verify.close", Title: "Close the verify quiz; it waits where it was", Available: open,
@@ -117,9 +103,6 @@ func (x *verifyExt) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.Keymap(registry.Keymap{Mode: VerifyKeyMode, Keys: "<Esc>", Command: "verify.close", Desc: "Close the quiz"}))
 	x.add(h.View(OverlayPrefix+"verify", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "verify", Fn: x.dialog}
-	})))
-	x.add(h.View(StatusRight+"30-verify", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
-		return &ui.Func{Key: "verify-status", Fn: x.status}
 	})))
 	return nil
 }
@@ -154,30 +137,6 @@ func (x *verifyExt) session(a registry.Args) (core.SessionState, bool) {
 	return se.Snapshot(), true
 }
 
-// setting is the verify option for a session's project, and the layer it came from.
-func (x *verifyExt) setting(se core.SessionState, project string) (string, registry.Layer) {
-	at := registry.At{Session: string(se.ID)}
-	for _, p := range se.Projects {
-		if p.Name == project {
-			at.Project = cmpOr(p.Repo, p.Dir)
-		}
-	}
-	v, l, _ := x.h.Options().Get(verifyOption, at)
-	s, _ := v.(string)
-	return s, l
-}
-
-// required says whether a raise of project needs the quiz first.
-func (x *verifyExt) required(se core.SessionState, project string) bool {
-	switch v, _ := x.setting(se, project); v {
-	case "on":
-		return true
-	case "off":
-		return false
-	}
-	return se.Kind == core.KindWork || se.Kind == core.KindPlan
-}
-
 // raisable are the session's projects that can have a PR.
 func raisable(se core.SessionState) []core.Project {
 	var out []core.Project
@@ -200,7 +159,7 @@ func (x *verifyExt) result(se core.SessionState) (string, *quiz) {
 	return "", nil
 }
 
-// beforeRaise is the ShipRaise veto: a raise waits for a passed (or skipped) quiz, which then adds its notes.
+// beforeRaise adds a passed quiz's answers to a PR it raises, as reviewer notes, when they're wanted.
 func (x *verifyExt) beforeRaise(_ registry.Ctx, ev *ShipRaise) (registry.Verdict, error) {
 	if ev.Edit {
 		return registry.Verdict{}, nil
@@ -209,39 +168,16 @@ func (x *verifyExt) beforeRaise(_ registry.Ctx, ev *ShipRaise) (registry.Verdict
 	if !ok {
 		return registry.Verdict{}, nil
 	}
-	se := sess.Snapshot()
-	if !x.required(se, ev.Project) {
+	res, q := x.result(sess.Snapshot())
+	if res != core.VerifyPassed || q == nil || !q.notes || strings.Contains(ev.Body, notesStart) {
 		return registry.Verdict{}, nil
 	}
-	res, q := x.result(se)
-	switch res {
-	case core.VerifySkipped:
-		return registry.Verdict{}, nil
-	case core.VerifyPassed:
-		if q == nil || !q.notes || strings.Contains(ev.Body, notesStart) {
-			return registry.Verdict{}, nil
-		}
-		ev.Body = strings.TrimRight(ev.Body, "\n") + "\n\n" + reviewerNotes(q)
-		return registry.Verdict{Rewrote: true}, nil
-	}
-	again := &raiseAgain{cmd: "ship.raise", args: registry.Args{"id": ev.Session, "project": ev.Project, "title": ev.Title, "body": ev.Body,
-		"draft": ev.Draft, "reviewers": ev.Reviewers}}
-	if ev.All {
-		again = &raiseAgain{cmd: "ship.raise-all", args: registry.Args{"id": ev.Session}}
-	}
-	if err := x.begin(se, again); err != nil {
-		return registry.Verdict{Veto: true, Reason: "Verify before raising: " + err.Error()}, nil
-	}
-	reason := "Verify before raising: the quiz runs first."
-	if res == core.VerifyFailed {
-		reason = "The verify quiz had wrong answers: take it again, or skip it (logged)."
-	}
-	return registry.Verdict{Veto: true, Reason: reason}, nil
+	ev.Body = strings.TrimRight(ev.Body, "\n") + "\n\n" + reviewerNotes(q)
+	return registry.Verdict{Rewrote: true}, nil
 }
 
-// begin opens the dialog on the session's quiz, starting one if there's none to go back to; again is the raise to
-// run once it's through.
-func (x *verifyExt) begin(se core.SessionState, again *raiseAgain) error {
+// begin opens the dialog on the session's quiz, starting one if there's none to go back to.
+func (x *verifyExt) begin(se core.SessionState) error {
 	if len(registry.Forkers(x.h)) == 0 {
 		return errors.New("the quiz needs an agent to ask it")
 	}
@@ -250,9 +186,6 @@ func (x *verifyExt) begin(se core.SessionState, again *raiseAgain) error {
 		q = &quiz{session: se.ID, notes: true}
 		x.quizzes[se.ID] = q
 		x.start(q, se)
-	}
-	if again != nil {
-		q.resume = again
 	}
 	q.focus = true
 	x.open = se.ID
@@ -342,11 +275,7 @@ func (x *verifyExt) record(q *quiz, result string) {
 	v := core.Verification{Result: result, Projects: q.projects, By: q.by, Questions: append([]core.QuizQuestion(nil), q.qs[:q.at]...),
 		At: time.Now()}
 	log := x.h.Log().With("session", string(q.session))
-	if result == core.VerifySkipped {
-		log.Warn("verification skipped", "answered", q.at, "of", len(q.qs))
-	} else {
-		log.Info("verification "+result, "right", v.Count(core.VerdictRight), "partly", v.Count(core.VerdictPartly), "wrong", v.Count(core.VerdictWrong))
-	}
+	log.Info("verification "+result, "right", v.Count(core.VerdictRight), "partly", v.Count(core.VerdictPartly), "wrong", v.Count(core.VerdictWrong))
 	if x.sh.sessions == nil {
 		return
 	}
@@ -366,19 +295,6 @@ func (x *verifyExt) record(q *quiz, result string) {
 	}()
 }
 
-// skip lets the raise through without the quiz, and logs that it did.
-func (x *verifyExt) skip(q *quiz) error {
-	if q == nil {
-		return nil
-	}
-	if q.result != core.VerifyPassed {
-		q.gen++
-		q.asking = false
-		x.record(q, core.VerifySkipped)
-	}
-	return x.proceed(q)
-}
-
 // again starts a new quiz in place of a finished one.
 func (x *verifyExt) again(q *quiz) error {
 	if q == nil {
@@ -390,20 +306,6 @@ func (x *verifyExt) again(q *quiz) error {
 	}
 	x.start(q, sess.Snapshot())
 	return nil
-}
-
-// proceed closes the dialog and runs the raise it held, once the quiz is through.
-func (x *verifyExt) proceed(q *quiz) error {
-	if q == nil || q.result != core.VerifyPassed && q.result != core.VerifySkipped {
-		return errors.New("the quiz isn't through yet")
-	}
-	x.open = ""
-	r := q.resume
-	q.resume = nil
-	if r == nil {
-		return nil
-	}
-	return x.h.Run(context.Background(), r.cmd, r.args)
 }
 
 // pointer is the file the quiz is asking about: the last answer's, when it wasn't right, else the question's.
@@ -424,7 +326,7 @@ func (q *quiz) pointer() (string, int) {
 	return "", 0
 }
 
-// openFile opens the file the quiz is asking about; the quiz waits, closed, until the raise is tried again.
+// openFile opens the file the quiz is asking about; the quiz waits, closed, until it's opened again.
 func (x *verifyExt) openFile(ctx registry.Ctx, q *quiz) error {
 	if q == nil {
 		return nil
@@ -474,24 +376,14 @@ func quizPath(se core.SessionState, f string) string {
 	return f
 }
 
-// gate is the "Verify quiz" gate on the Ship page and the Raise PR tab.
+// gate is the "Verify quiz" row of "before this ships": up to you, and where to start it or go back to it.
 func (x *verifyExt) gate(id string) registry.Gate {
 	sess, ok := x.h.Session(core.SessionID(id))
-	if !ok {
+	if !ok || len(raisable(sess.Snapshot())) == 0 {
 		return registry.Gate{}
 	}
 	se := sess.Snapshot()
-	need := false
-	for _, p := range raisable(se) {
-		if x.required(se, p.Name) {
-			need = true
-		} else if v, l := x.setting(se, p.Name); v == "off" && l == registry.LayerProject {
-			return registry.Gate{State: registry.GateOptional, Note: "off for this repo"}
-		}
-	}
-	if !need {
-		return registry.Gate{}
-	}
+	open := registry.Args{"id": id}
 	res, q := x.result(se)
 	switch res {
 	case core.VerifyPassed, core.VerifyFailed:
@@ -500,16 +392,16 @@ func (x *verifyExt) gate(id string) registry.Gate {
 			v = core.Verification{Questions: q.qs}
 		}
 		if res == core.VerifyFailed {
-			return registry.Gate{State: registry.GateFail, Note: fmt.Sprintf("%d wrong", v.Count(core.VerdictWrong))}
+			return registry.Gate{State: registry.GateWarn, Note: fmt.Sprintf("%d wrong", v.Count(core.VerdictWrong)), Action: "Again",
+				Command: "verify.open", Args: open}
 		}
 		return registry.Gate{State: registry.GatePass, Note: fmt.Sprintf("%d/%d right", v.Count(core.VerdictRight), len(v.Questions))}
-	case core.VerifySkipped:
-		return registry.Gate{State: registry.GateWarn, Note: "skipped"}
 	}
 	if q != nil && len(q.qs) > 0 {
-		return registry.Gate{State: registry.GatePending, Note: fmt.Sprintf("%d/%d", q.at, len(q.qs))}
+		return registry.Gate{State: registry.GatePending, Note: fmt.Sprintf("%d/%d", q.at, len(q.qs)), Action: "Resume",
+			Command: "verify.open", Args: open}
 	}
-	return registry.Gate{State: registry.GatePending, Note: "before raise"}
+	return registry.Gate{State: registry.GateOptional, Note: "optional", Action: "Verify…", Command: "verify.open", Args: open}
 }
 
 // reviewerNotes are a passed quiz's questions and answers, for the PR's body.

@@ -253,13 +253,15 @@ flowchart TB
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
 - ship (FG-6; ui.md 18): "before this ships" gates are `registry.ShipGate{Name, Title, Order, Check(session) Gate}`
-  (`Gate{State, Note}`, State pass, warn, fail, pending or optional, "" to leave it out; `oriel.ship.gate`), listed by
+  (`Gate{State, Note, Action, Command, Args}`, State pass, warn, fail, pending or optional, "" to leave it out; an
+  `Action` is a button under the gate's row running `Command` with `Args`, as the verify quiz's **Verify…** and AI
+  review's **Review**; `oriel.ship.gate`), listed by
   `registry.ShipGates(r, session, kind)`, a session kind's `Gates` naming the ones it gets. Built in: plan, threads,
   tests; the review ledger, the verify quiz and AI review add theirs. A gate informs; what stops a step is a hook:
   `ShipCommit {session, project, message, files, force}` before a commit (a veto shows its reason in the commit box and
   offers **Commit anyway…**, which fires it again with `force`; a rewrite adds a trailer) and `ShipRaise {session,
-  project, title, body, draft, reviewers, edit, all}` before a raise or edit (a veto shows on the Raise PR tab: the verify
-  quiz runs first; `all` is one of `ship.raise-all`'s). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
+  project, title, body, draft, reviewers, edit, all}` before a raise or edit (a veto shows on the Raise PR tab; a rewrite can change
+  the body, as a passed verify quiz's reviewer notes; `all` is one of `ship.raise-all`'s). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
   `ship.commit-all`, `ship.sync {project}`, `ship.sync-all`, `ship.push {project}`, `ship.raise {project, title,
   body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.pr.open`, `ship.fix-ci`, `ship.redraft {project,
   kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `pr` (instance = project). A worker answers
@@ -271,13 +273,12 @@ flowchart TB
   PR tab's as the user's); its GitHub client is `worker.Options.GitHub` (the user's gh by default).
   `gh.Client` is GitHub as Oriel uses it, `gh.API` over a `gh.Transport` (`gh.CLI`, `gh.HTTP`), and `gh/ghtest` a
   fake GitHub for tests.
-- verify (RV-7; ui.md 13): the quiz is the `verify` extension, built only on the above: a `ShipRaise` veto hook ("verify
-  quiz"), questions and grades through `registry.Fork`, the `verify` ShipGate, and the `core.Verified` session event
-  (`Verification{Result, Projects, By, Questions}`, `SessionState.Verifications`, sent to the worker as
-  `verify.record`). Option `review.verify_before_pr` (`work`, `on`, `off`; user, project or session). Commands
-  `verify.open {id}`, `verify.send {text}`, `verify.skip`, `verify.again`, `verify.continue`, `verify.open-file`,
-  `verify.close`; keymap mode `verify` (`⌘↵`, `⌥O`, Escape); view `app.overlay.verify` and the status segment
-  `statusline.right.30-verify`.
+- verify (RV-7; ui.md 13): the optional quiz is the `verify` extension, built only on the above: the `verify` ShipGate
+  (whose **Verify…** starts it), questions and grades through `registry.Fork`, a `ShipRaise` rewrite hook ("verify
+  notes") adding a passed quiz's answers to the PR's body, and the `core.Verified` session event (`Verification{Result,
+  Projects, By, Questions}`, `SessionState.Verifications`, sent to the worker as `verify.record`). Commands
+  `verify.open {id}`, `verify.send {text}`, `verify.again`, `verify.open-file`, `verify.close`; keymap mode `verify`
+  (`⌘↵`, `⌥O`, Escape); view `app.overlay.verify`.
 - GitHub review mirroring (RV-4; ui.md 06): a worker answers `github.sync` (`worker.MirrorReq{Session, Fresh, Trust}`
   → `worker.Mirror`: the PRs and each reviewer's state), `github.forward` (`worker.ForwardReq` → the sent comment) and
   `github.draft` (`worker.DraftEditReq`) (`worker.Client.SyncGitHub`, `ForwardGitHub`, `EditDraft`). `gh.Client`
