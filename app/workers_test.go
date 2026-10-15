@@ -401,3 +401,16 @@ func TestWorkersPageSnapshot(t *testing.T) {
 	s.wantFrame(t, "WORKERS", "2 online", "1 offline", "mbp", "this machine", "devbox", "ci-runner", "offline since", "signed out: token expired",
 		"ada@example.com", "2 sessions", "Round half-even", "last from 10.0.0.5:51234")
 }
+
+// ui.md 01e: with nothing open there's no sidebar, so the start view's links reach the Workers page too.
+func TestWorkersFromTheStartView(t *testing.T) {
+	s := newScene(t, "", "", mockupSize)
+	s.frame()
+	s.wantFrame(t, "Stats", "Usage", "Workers")
+	s.click(centre(s.access("Workers").Bounds))
+	s.frame()
+	x := s.workers()
+	if x == nil || !x.open {
+		t.Fatal("the start view's Workers link didn't open the page")
+	}
+}

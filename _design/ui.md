@@ -931,7 +931,7 @@ No mockup: it's drawn in 43's and 44's style. A worker is one per machine (`arch
 the app starts, and remote ones, which dial the app over pinned TLS (`sessions.md`, `security.md` → Remote workers).
 
 - **The Workers page** (`:Workers {name}`, `workers.open {name}`, the sidebar's global **Workers** with its figure,
-  "2 online", the omnibox's Pages) is a page over the main area (`widget.Page` with `Over`), one of the pages that
+  "2 online", the start view's **Workers** link with nothing open, the omnibox's Pages) is a page over the main area (`widget.Page` with `Over`), one of the pages that
   replace each other, key mode `workers`. The header reads WORKERS, then "2 online · 1 offline", then whether Oriel
   listens for workers ("listening on :7437" or "not listening for workers elsewhere") with the certificate's
   fingerprint as words; **+ Add a worker** (`a`) and **Close** (`esc`).

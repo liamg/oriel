@@ -183,6 +183,8 @@ func (x *workersExt) Activate(_ context.Context, h ext.Host) error {
 	}
 	x.add(h.Contribute(registry.RailEntry{Name: "workers", Icon: "workers", Title: "Workers", Command: "workers.open", Scope: registry.ScopeGlobalEntry,
 		Order: 40, Note: func(string) string { return x.figure() }, Active: func(string) bool { return x.open }}))
+	x.add(h.Contribute(registry.StartEntry{Name: "workers", Icon: "workers", Title: "Workers", Desc: "The machines that run sessions, and adding more",
+		Command: "workers.open", Order: 90, Link: true, Note: x.figure}))
 	x.add(h.View(OverlayPrefix+"workers", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "workers", Fn: x.page} })))
 	x.add(h.View(OverlayPrefix+"workers.dialog", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "workersdlg", Fn: x.dialog} })))
 	return nil

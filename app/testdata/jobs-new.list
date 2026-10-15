@@ -182,6 +182,13 @@ clip 224,38 1376x936 r 0
   path 3 segments stroke 1.25 #ffd23f
   text "Jobs" @667.96875,503.23834 #ece6d8 Inter 12
   text "6 jobs" @702.6875,502.4731 #7c7566 JetBrains Mono 10
+  rect 756.6875,485.8731 140.3125x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 5 segments stroke 1.25 #ffd23f
+  path 5 segments stroke 1.25 #ffd23f
+  path 6 segments stroke 1.25 #ffd23f
+  path 6 segments stroke 1.25 #ffd23f
+  text "Workers" @785.6875,503.23834 #ece6d8 Inter 12
+  text "1 onli…" @840.6719,502.4731 #7c7566 JetBrains Mono 10
   text "RECENT" @987,167.0231 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1341.0469,167.5331 #7c7566 JetBrains Mono 10
   text "SESSIONS" @999,198.2231 #7c7566 JetBrains Mono 9.5

@@ -79,6 +79,13 @@ clip 0,38 1600x936 r 0
   path 2 segments stroke 1.25 #ffd23f
   path 3 segments stroke 1.25 #ffd23f
   text "Jobs" @549.96875,637.37524 #ece6d8 Inter 12
+  rect 595.6875,620.01 141.98438x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 5 segments stroke 1.25 #ffd23f
+  path 5 segments stroke 1.25 #ffd23f
+  path 6 segments stroke 1.25 #ffd23f
+  path 6 segments stroke 1.25 #ffd23f
+  text "Workers" @624.6875,637.37524 #ece6d8 Inter 12
+  text "1 online" @679.6719,636.61005 #7c7566 JetBrains Mono 10
   effect glow 1159,390.46997 39x150 blur 4 #ff8a1f4d
   path 6 segments stroke 24 #ffd23f
   path 5 segments fill #ff8a1f
