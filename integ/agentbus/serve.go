@@ -362,9 +362,22 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 // host's http.request with the GITHUB_TOKEN secret, which the host attaches for api.github.com: the process never
 // sees it.
 func Serve(r io.Reader, w io.Writer, s *Server) {
+	// Configures are applied one at a time in the order they came, so an older one can't undo a newer; the rest
+	// answer as they finish.
+	configs := make(chan *jsonrpc.Request, 64)
+	go func() {
+		for req := range configs {
+			req.Reply(s.Handle(context.Background(), req.Method, req.Params))
+		}
+	}()
+	defer close(configs)
 	var conn *jsonrpc.Conn
 	conn = jsonrpc.NewConn(r, w, jsonrpc.Handlers{
 		Request: func(req *jsonrpc.Request) {
+			if req.Method == "configure" {
+				configs <- req
+				return
+			}
 			go func() { req.Reply(s.Handle(context.Background(), req.Method, req.Params)) }()
 		},
 	}, jsonrpc.Options{Version: "2.0"})
