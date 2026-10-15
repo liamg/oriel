@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -36,12 +36,12 @@ var (
 	tHookSlow  = theme.Declare("hooks.slow", "warn")
 )
 
-// luaExt is the Lua config (scripting.md, PL-1): init.lua and lua/ in the config directory, loaded into one VM with
+// luaPlugin is the Lua config (scripting.md, PL-1): init.lua and lua/ in the config directory, loaded into one VM with
 // the oriel.* API, reloaded when they change, with :Hooks, the :lua REPL and :Inspect over what's registered.
-type luaExt struct {
+type luaPlugin struct {
 	disposer
 	sh   *shell
-	h    ext.Host
+	h    plugin.Host
 	dir  string
 	vm   *script.VM
 	apis *api.APIs
@@ -72,9 +72,9 @@ var laterEvents = []registry.EventInfo{
 	{Name: "ModeChanged", Doc: "The editor's mode changing (a later ticket). { old, new }"},
 }
 
-func (x *luaExt) Manifest() ext.Manifest { return ext.Manifest{ID: "lua"} }
+func (x *luaPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lua"} }
 
-func (x *luaExt) Activate(_ context.Context, h ext.Host) error {
+func (x *luaPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	for _, e := range laterEvents {
 		x.add(h.DeclareEvent(e))
@@ -135,10 +135,10 @@ func (x *luaExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *luaExt) initLua() string { return filepath.Join(x.dir, "init.lua") }
+func (x *luaPlugin) initLua() string { return filepath.Join(x.dir, "init.lua") }
 
 // sources is a checksum of init.lua and every file under lua/, to see a save.
-func (x *luaExt) sources() [32]byte {
+func (x *luaPlugin) sources() [32]byte {
 	h := sha256.New()
 	if b, err := os.ReadFile(x.initLua()); err == nil {
 		h.Write(b)
@@ -157,12 +157,12 @@ func (x *luaExt) sources() [32]byte {
 	return sum
 }
 
-func (x *luaExt) changed() bool { return x.sources() != x.sum }
+func (x *luaPlugin) changed() bool { return x.sources() != x.sum }
 
 // reload loads the config again, in a new VM. One that loads replaces the config running, and a toast says what
 // changed. One that fails leaves the last good config running, and a notice and a diagnostic say where it failed;
 // with no good config to keep (at startup), what ran before the error stays.
-func (x *luaExt) reload(toast bool) {
+func (x *luaPlugin) reload(toast bool) {
 	x.sum = x.sources()
 	vm := script.New(filepath.Join(x.dir, "lua"))
 	vm.OnSlow = func(src string, took time.Duration) {
@@ -211,7 +211,7 @@ func (x *luaExt) reload(toast bool) {
 }
 
 // swap makes vm the config running, the one before it gone.
-func (x *luaExt) swap(vm *script.VM, apis *api.APIs) {
+func (x *luaPlugin) swap(vm *script.VM, apis *api.APIs) {
 	if x.apis != nil {
 		x.apis.Handover(apis)
 		x.apis.Dispose()
@@ -221,7 +221,7 @@ func (x *luaExt) swap(vm *script.VM, apis *api.APIs) {
 }
 
 // loadError is the notice for a config that didn't load, with a link to the line.
-func (x *luaExt) loadError(err error, kept bool) {
+func (x *luaPlugin) loadError(err error, kept bool) {
 	text := err.Error()
 	if kept {
 		text += " · the last good config is still running"
@@ -240,7 +240,7 @@ func (x *luaExt) loadError(err error, kept bool) {
 var luaPrefix = regexp.MustCompile(`^[\w./-]+\.lua(:\d+:| line:\d+\(column:\d+\))\s*`)
 
 // mark puts a Lua error on its line in the config, as a diagnostic, until the config next loads.
-func (x *luaExt) mark(e *script.Error) {
+func (x *luaPlugin) mark(e *script.Error) {
 	file, line := script.SplitLoc(e.Where())
 	if line == 0 || !strings.HasSuffix(file, ".lua") {
 		return
@@ -260,7 +260,7 @@ func (x *luaExt) mark(e *script.Error) {
 	x.h.SetDiagnostics("lua", file, x.marks[file])
 }
 
-func (x *luaExt) clearMarks() {
+func (x *luaPlugin) clearMarks() {
 	for file := range x.marks {
 		x.h.SetDiagnostics("lua", file, nil)
 	}
@@ -269,7 +269,7 @@ func (x *luaExt) clearMarks() {
 
 // eval runs a line at the REPL: as an expression first, so `1 + 1` shows 2, then as a statement. An error shows
 // with its trace; the expression is in a table, so a call in it keeps its frame rather than being a tail call.
-func (x *luaExt) eval(line string) {
+func (x *luaPlugin) eval(line string) {
 	x.repl = append(x.repl, replLine{text: line})
 	x.history = append(x.history, line)
 	x.hist = len(x.history)
@@ -332,7 +332,7 @@ func show(v any) string {
 var completeRe = regexp.MustCompile(`([A-Za-z_][\w.]*)$`)
 
 // complete is what the REPL offers for the word before the cursor: the names under oriel that it starts.
-func (x *luaExt) complete(line string) (prefix string, names []string) {
+func (x *luaPlugin) complete(line string) (prefix string, names []string) {
 	m := completeRe.FindString(line)
 	if m == "" {
 		return "", nil
@@ -356,7 +356,7 @@ func (x *luaExt) complete(line string) (prefix string, names []string) {
 	return m, names
 }
 
-func (x *luaExt) replView(c *ui.Ctx) {
+func (x *luaPlugin) replView(c *ui.Ctx) {
 	th := c.Theme()
 	mono := func(tok theme.TokenID) ui.TextStyle {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12}, Color: th.C(tok)}
@@ -419,7 +419,7 @@ func lastPart(s string) string {
 
 // hooksView is :Hooks (19-config): every hook by event, what it does, who registered it and its p99, slow ones
 // marked against the 2 ms budget, and events nothing fires yet.
-func (x *luaExt) hooksView(c *ui.Ctx) {
+func (x *luaPlugin) hooksView(c *ui.Ctx) {
 	th := c.Theme()
 	hooks := x.h.Hooks()
 	fired := map[string]bool{}
@@ -510,7 +510,7 @@ func fmtDur(d time.Duration) string {
 }
 
 // keymapRows are the keymaps in the modes keys go through now, the shadowed ones faded (20-inspect).
-func (x *luaExt) keymapRows() []registry.InspectRow {
+func (x *luaPlugin) keymapRows() []registry.InspectRow {
 	var out []registry.InspectRow
 	won := map[string]bool{}
 	for _, m := range x.modes {
@@ -540,7 +540,7 @@ func (x *luaExt) keymapRows() []registry.InspectRow {
 }
 
 // viewRows are the window's views, and which of them something has replaced.
-func (x *luaExt) viewRows() []registry.InspectRow {
+func (x *luaPlugin) viewRows() []registry.InspectRow {
 	var out []registry.InspectRow
 	for _, id := range []string{TitleBarView, RootView, StatusLineView, EditorView} {
 		src := "builtin"
@@ -557,7 +557,7 @@ func (x *luaExt) viewRows() []registry.InspectRow {
 }
 
 // inspectView is :Inspect (20-inspect): every section contributed, over the window.
-func (x *luaExt) inspectView(c *ui.Ctx) {
+func (x *luaPlugin) inspectView(c *ui.Ctx) {
 	if !x.inspect || c.Theme().IsProbe() {
 		return
 	}

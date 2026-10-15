@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/render"
@@ -29,12 +29,12 @@ var (
 // description, from the registry's keymaps and the engine's own commands. Built only on the public API.
 type whichKey struct {
 	disposer
-	h ext.Host
+	h plugin.Host
 }
 
-func (w *whichKey) Manifest() ext.Manifest { return ext.Manifest{ID: "whichkey"} }
+func (w *whichKey) Manifest() plugin.Manifest { return plugin.Manifest{ID: "whichkey"} }
 
-func (w *whichKey) Activate(_ context.Context, h ext.Host) error {
+func (w *whichKey) Activate(_ context.Context, h plugin.Host) error {
 	w.h = h
 	w.add(h.Option(registry.OptionSpec{Name: "whichkey.enabled", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Show what keys can follow a prefix, after a short pause."}))
@@ -53,7 +53,7 @@ type entry struct {
 
 // entries are what can follow keys in modes: each keymap one key longer (or a group of longer ones, under the
 // label a keymap with no command gives it), then the engine's own hints for keys no mapping takes.
-func entries(h ext.Host, p ext.Pending) (title string, out []entry) {
+func entries(h plugin.Host, p plugin.Pending) (title string, out []entry) {
 	prefix := keymap.Format(p.Keys)
 	n := len(p.Keys)
 	byKey := map[string]*entry{}

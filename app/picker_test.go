@@ -9,7 +9,7 @@ import (
 )
 
 func (s *errScene) picker() *picker {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if p, ok := e.(*picker); ok {
 			return p
 		}

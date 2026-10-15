@@ -21,9 +21,9 @@ import (
 
 var asstNow = time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC)
 
-func (s *errScene) assistant() *assistantExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*assistantExt); ok {
+func (s *errScene) assistant() *assistantPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*assistantPlugin); ok {
 			return x
 		}
 	}

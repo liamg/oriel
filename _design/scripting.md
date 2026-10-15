@@ -35,7 +35,7 @@ in microseconds, and can touch everything.
 - One VM on the UI loop, like neovim. Script calls are synchronous and never block.
 - Async through coroutines plus `oriel.async` (timers, processes, RPC,
   agent calls), resumed on the UI loop.
-- Heavy work belongs in a process extension. A watchdog warns, then
+- Heavy work belongs in a process plugin. A watchdog warns, then
   interrupts, a script that runs past 50 ms.
 
 ## API shape (sketch)
@@ -177,7 +177,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 
 // `go generate ./...` emits:
 //   script/bind_ledger.go   — VM glue: argument checks, conversions
-//   rpc/ledger.go           — the same method for process extensions
+//   rpc/ledger.go           — the same method for process plugins
 //   types/oriel.d.lua         — LuaLS annotations for completion in init.lua
 //   docs/api/ledger.md
 ```
@@ -222,7 +222,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   loads again, and a toast says how long and how many things it registered; an error is a notice with its line.
 - `:Hooks` (19-config), `:lua` (the REPL: expressions first, `⇥` completion over `oriel`, history) and
   `:Inspect` (20-inspect) are built. `:Inspect`'s parts are contributions (`registry.InspectSection`): the editor
-  gives the tree-sitter path (a new `node_path` in the grammar shim), the highlight and decorations; the Lua extension
+  gives the tree-sitter path (a new `node_path` in the grammar shim), the highlight and decorations; the Lua plugin
   gives the keymaps that apply and the window's views, with what replaced them (`Registry.ViewSource`).
 - Which-key's `?` opens the keymaps picker on the prefix.
 - Not yet: the LuaJIT swap, process and WASM bindings of the same declarations, a `vim` shim, `:Plugins`, jumping
@@ -395,7 +395,7 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   process's requests and notifications reach `on` first, then the host methods (plugins.md, "As built (PL-2)").
 - `oriel.wasm.load(path, { on })` loads a module and returns `mod`: `mod:call(fn, ...)` with numbers,
   `mod:request(fn, value)` with JSON, `mod:exports()`, `mod:close()`. A call is stopped past the watchdog's budget.
-- A plugin's VM is `api.InstallPlugin(vm, host, ext.Plugin{…})`; your config's is `api.Install(vm, host, dir)`,
+- A plugin's VM is `api.InstallPlugin(vm, host, plugin.Caller{…})`; your config's is `api.Install(vm, host, dir)`,
   trusted. A relative path given to `oriel.read`, `process.spawn` or `wasm.load` is in the plugin's directory (your
   config's for `init.lua`). The config's processes and modules stop when it reloads.
 - Every API function declares its capability: `//oriel:api name=keymap cap=ui` on a namespace, or `cap=…` on a

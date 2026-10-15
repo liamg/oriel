@@ -40,14 +40,14 @@ func verdictTone(th *theme.Resolved, v string) render.Color {
 	return th.C(tVerifyPip)
 }
 
-func (x *verifyExt) run(id string) {
+func (x *verifyPlugin) run(id string) {
 	if err := x.h.Run(context.Background(), id, nil); err != nil {
 		x.h.Notify(core.Notice{ID: "verify", Severity: core.SevError, Key: true, Text: err.Error()})
 	}
 }
 
 // dialog is VERIFY THIS CHANGE (ui.md 13) over everything, while a quiz is open.
-func (x *verifyExt) dialog(c *ui.Ctx) {
+func (x *verifyPlugin) dialog(c *ui.Ctx) {
 	q := x.shown()
 	if q == nil {
 		return
@@ -83,7 +83,7 @@ func (x *verifyExt) dialog(c *ui.Ctx) {
 	}
 }
 
-func (x *verifyExt) header(c *ui.Ctx, q *quiz) {
+func (x *verifyPlugin) header(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	c.Column("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 18, R: 18, T: 14, B: 12}, Gap: 6}, func(c *ui.Ctx) {
 		c.Row("kick", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -125,7 +125,7 @@ func countWord(n int) string {
 	return fmt.Sprint(n)
 }
 
-func (x *verifyExt) chat(c *ui.Ctx, q *quiz) {
+func (x *verifyPlugin) chat(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	width := min(640, c.Size().X-32) - 36
 	scrolled(c, "chat", &q.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)},
@@ -172,7 +172,7 @@ func (x *verifyExt) chat(c *ui.Ctx, q *quiz) {
 }
 
 // theirs is a bubble from the fork, with its avatar.
-func (x *verifyExt) theirs(c *ui.Ctx, key any, q *quiz, text string, width float32) {
+func (x *verifyPlugin) theirs(c *ui.Ctx, key any, q *quiz, text string, width float32) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.End}, func(c *ui.Ctx) {
 		c.Box("av", ui.Style{W: ui.Px(22), H: ui.Px(22), Radius: 5, Fill: th.C(tVerifyAvatar), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -185,7 +185,7 @@ func (x *verifyExt) theirs(c *ui.Ctx, key any, q *quiz, text string, width float
 }
 
 // verdict is the grade on an answer: ✓, ◐ or ✕, what it says, and the file to read.
-func (x *verifyExt) verdict(c *ui.Ctx, qq core.QuizQuestion, width float32) {
+func (x *verifyPlugin) verdict(c *ui.Ctx, qq core.QuizQuestion, width float32) {
 	th := c.Theme()
 	tone := verdictTone(th, qq.Verdict)
 	c.Row("v", ui.Style{Gap: 10, Pad: ui.Insets{L: 30}}, func(c *ui.Ctx) {
@@ -221,7 +221,7 @@ func (x *verifyExt) verdict(c *ui.Ctx, qq core.QuizQuestion, width float32) {
 }
 
 // typing is the fork thinking: three dots in a bubble.
-func (x *verifyExt) typing(c *ui.Ctx, q *quiz) {
+func (x *verifyPlugin) typing(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	c.Column("typing", ui.Style{Gap: 6}, func(c *ui.Ctx) {
 		if len(q.qs) == 0 {
@@ -239,7 +239,7 @@ func (x *verifyExt) typing(c *ui.Ctx, q *quiz) {
 	})
 }
 
-func (x *verifyExt) composer(c *ui.Ctx, q *quiz) {
+func (x *verifyPlugin) composer(c *ui.Ctx, q *quiz) {
 	c.Row("composer", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 12), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		in := c.Next("answer")
 		if q.focus {
@@ -262,7 +262,7 @@ func (x *verifyExt) composer(c *ui.Ctx, q *quiz) {
 }
 
 // outcome is how it went, once every question is graded: go on with the raise, or take it again.
-func (x *verifyExt) outcome(c *ui.Ctx, q *quiz) {
+func (x *verifyPlugin) outcome(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	v := core.Verification{Questions: q.qs}
 	c.Row("outcome", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 12), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -302,7 +302,7 @@ func (x *verifyExt) outcome(c *ui.Ctx, q *quiz) {
 	})
 }
 
-func (x *verifyExt) footer(c *ui.Ctx, q *quiz) {
+func (x *verifyPlugin) footer(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	f, _ := q.pointer()
 	c.Row("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 7), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {

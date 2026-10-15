@@ -17,7 +17,7 @@ type windowPresent struct {
 }
 
 // windowID is a window by its id, the current one for "".
-func (x *editorExt) windowID(s string) (vim.WindowID, error) {
+func (x *editorPlugin) windowID(s string) (vim.WindowID, error) {
 	if s == "" {
 		return x.e.WindowID(), nil
 	}
@@ -32,7 +32,7 @@ func (x *editorExt) windowID(s string) (vim.WindowID, error) {
 }
 
 // path is a window's file, absolute.
-func (x *editorExt) path(p vim.Pane) string {
+func (x *editorPlugin) path(p vim.Pane) string {
 	path := p.Name()
 	if path != "" && !filepath.IsAbs(path) {
 		path = filepath.Join(x.dir, path)
@@ -41,7 +41,7 @@ func (x *editorExt) path(p vim.Pane) string {
 }
 
 // presentIn shows window with the presenter name, or as text again when it shows it already.
-func (x *editorExt) presentIn(window, name string) error {
+func (x *editorPlugin) presentIn(window, name string) error {
 	id, err := x.windowID(window)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func presents(pr registry.BufferPresenter, path string) bool {
 }
 
 // presenting is the presenter drawing window id, if one is and it still takes the window's file.
-func (x *editorExt) presenting(p vim.Pane) (*windowPresent, registry.BufferPresenter, bool) {
+func (x *editorPlugin) presenting(p vim.Pane) (*windowPresent, registry.BufferPresenter, bool) {
 	wp := x.present[p.ID()]
 	if wp == nil {
 		return nil, registry.BufferPresenter{}, false
@@ -90,7 +90,7 @@ func (x *editorExt) presenting(p vim.Pane) (*windowPresent, registry.BufferPrese
 }
 
 // presentPane draws a window as its presenter does, keeping the window's top line with what's at the top of it.
-func (x *editorExt) presentPane(c *ui.Ctx, p vim.Pane, wp *windowPresent, pr registry.BufferPresenter, focused bool, width float32) {
+func (x *editorPlugin) presentPane(c *ui.Ctx, p vim.Pane, wp *windowPresent, pr registry.BufferPresenter, focused bool, width float32) {
 	id := p.ID()
 	root := c.Next("present")
 	c.Column("present", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {

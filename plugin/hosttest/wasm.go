@@ -1,5 +1,5 @@
-// Package exttest has test helpers for the plugin hosts.
-package exttest
+// Package hosttest has test helpers for the plugin hosts.
+package hosttest
 
 // leb is n as unsigned LEB128.
 func leb(n int) []byte {

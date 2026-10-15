@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
-	"github.com/liamg/oriel/ext/exttest"
 	"github.com/liamg/oriel/integ/slack"
+	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/plugin/hosttest"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -85,7 +85,7 @@ func slackScene(t *testing.T) (*errScene, core.SessionState, *webhook, string) {
 	t.Cleanup(srv.Close)
 	s, se := mockup18(t)
 	secrets := filepath.Join(t.TempDir(), "secrets.json")
-	s.sh.cfg.Net, s.sh.cfg.Secrets = exttest.Net(srv), &ext.SecretFile{Path: secrets}
+	s.sh.cfg.Net, s.sh.cfg.Secrets = hosttest.Net(srv), &plugin.SecretFile{Path: secrets}
 	s.ship().reports[se.ID].ships[1].PR.URL = "https://github.com/acme/web-dashboard/pull/812"
 	p := ScriptPlugin(slack.Files)
 	if p.Manifest().ID != "oriel/slack" {

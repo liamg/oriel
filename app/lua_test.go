@@ -28,9 +28,9 @@ func sample(t *testing.T) string {
 	return s[:strings.Index(s, "```")]
 }
 
-func (s *errScene) lua() *luaExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*luaExt); ok {
+func (s *errScene) lua() *luaPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*luaPlugin); ok {
 			return x
 		}
 	}

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -39,10 +39,10 @@ var holdMods = map[string]render.Mods{"alt": render.ModAlt, "ctrl": render.ModCt
 
 var modGlyphs = map[render.Mods]string{render.ModAlt: "⌥", render.ModCtrl: "⌃", render.ModShift: "⇧", render.ModSuper: "⌘"}
 
-type hudExt struct {
+type hudPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	held   bool // pulled down by holding the hold key, until it's let go
 	pinned bool // stays until closed
@@ -60,9 +60,9 @@ type builtIndicator struct {
 	dirty bool
 }
 
-func (x *hudExt) Manifest() ext.Manifest { return ext.Manifest{ID: "hud"} }
+func (x *hudPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "hud"} }
 
-func (x *hudExt) Activate(_ context.Context, h ext.Host) error {
+func (x *hudPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.sh.hud = h, x
 	x.cache = map[string]*builtIndicator{}
 	x.add(h.Option(registry.OptionSpec{Name: HoldOption, Type: registry.Enum, Values: []string{"alt", "ctrl", "shift", "super", "off"}, Default: "alt",
@@ -109,7 +109,7 @@ func (x *hudExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 // refresh has name built again before it's next drawn; every indicator when name is "".
-func (x *hudExt) refresh(name string) {
+func (x *hudPlugin) refresh(name string) {
 	x.mu.Lock()
 	for n, b := range x.cache {
 		if name == "" || n == name {
@@ -121,11 +121,11 @@ func (x *hudExt) refresh(name string) {
 }
 
 // shown says whether the HUD is down.
-func (x *hudExt) shown() bool { return x.held || x.pinned }
+func (x *hudPlugin) shown() bool { return x.held || x.pinned }
 
 // node is ind's node as last built, built again first when it's due: never built, refreshed, one of its events
 // happened, Every passed, or the contributions changed.
-func (x *hudExt) node(c *ui.Ctx, ind registry.Indicator) (ui.Node, error) {
+func (x *hudPlugin) node(c *ui.Ctx, ind registry.Indicator) (ui.Node, error) {
 	now := c.Now()
 	gen := x.h.ContributionsGen()
 	x.mu.Lock()
@@ -151,7 +151,7 @@ func (x *hudExt) node(c *ui.Ctx, ind registry.Indicator) (ui.Node, error) {
 }
 
 // off says whether ind has been turned off for failing.
-func (x *hudExt) off(ind registry.Indicator) bool {
+func (x *hudPlugin) off(ind registry.Indicator) bool {
 	for _, o := range x.h.TurnedOff() {
 		if o.Kind == "hud.indicator" && o.ID == ind.Name {
 			return true
@@ -162,7 +162,7 @@ func (x *hudExt) off(ind registry.Indicator) bool {
 
 // slot draws a slot of a bar: the views named slot.<order>-<name> (titlebar.right.40-usage) and the indicators in
 // slot, together in order.
-func (sh *shell) slot(c *ui.Ctx, h ext.Host, slot string, vc registry.ViewCtx) {
+func (sh *shell) slot(c *ui.Ctx, h plugin.Host, slot string, vc registry.ViewCtx) {
 	type part struct {
 		key  string
 		view registry.View
@@ -196,7 +196,7 @@ func (sh *shell) slot(c *ui.Ctx, h ext.Host, slot string, vc registry.ViewCtx) {
 }
 
 // indicator is ind's node to draw, or its error in its place; nil once it's been turned off.
-func (x *hudExt) indicator(c *ui.Ctx, ind registry.Indicator) ui.Node {
+func (x *hudPlugin) indicator(c *ui.Ctx, ind registry.Indicator) ui.Node {
 	if x.off(ind) {
 		return nil
 	}
@@ -211,13 +211,13 @@ func (x *hudExt) indicator(c *ui.Ctx, ind registry.Indicator) ui.Node {
 }
 
 // holdKey is the modifier that pulls the HUD down, or 0 for none.
-func (x *hudExt) holdKey() render.Mods {
+func (x *hudPlugin) holdKey() render.Mods {
 	v, _, _ := x.h.Options().Get(HoldOption, registry.At{})
 	s, _ := v.(string)
 	return holdMods[s]
 }
 
-func (x *hudExt) holdDelay() time.Duration {
+func (x *hudPlugin) holdDelay() time.Duration {
 	v, _, _ := x.h.Options().Get(HoldDelayOption, registry.At{})
 	ms, _ := v.(int)
 	return time.Duration(ms) * time.Millisecond
@@ -225,7 +225,7 @@ func (x *hudExt) holdDelay() time.Duration {
 
 // drawer is the HUD while it's down: the hold key held alone for the delay brings it, letting go puts it away
 // unless it was pinned.
-func (x *hudExt) drawer(c *ui.Ctx) {
+func (x *hudPlugin) drawer(c *ui.Ctx) {
 	key := x.holdKey()
 	if key != 0 && !x.held && !x.pinned {
 		if m, since := c.HeldAlone(); m == key {
@@ -257,7 +257,7 @@ func (x *hudExt) drawer(c *ui.Ctx) {
 }
 
 // panels are the indicators in the hud slot, in rows of four columns.
-func (x *hudExt) panels(c *ui.Ctx) {
+func (x *hudPlugin) panels(c *ui.Ctx) {
 	var rows [][]registry.Indicator
 	used := hudColumns
 	for _, ind := range registry.Indicators(x.h, registry.SlotHUD) {
@@ -297,7 +297,7 @@ func (x *hudExt) panels(c *ui.Ctx) {
 }
 
 // button is the title bar's ⌥ HUD: lit while the HUD is down; a click pins it or puts it away.
-func (x *hudExt) button(c *ui.Ctx) {
+func (x *hudPlugin) button(c *ui.Ctx) {
 	th := c.Theme()
 	fg, line := th.C(tHUDKey), th.C(theme.LineStrong)
 	if x.shown() {

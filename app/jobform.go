@@ -79,7 +79,7 @@ func formFor(j worker.Job) *jobForm {
 }
 
 // newForm opens the dialog on a new job, with what the args give filled in.
-func (x *jobsExt) newForm(a registry.Args) {
+func (x *jobsPlugin) newForm(a registry.Args) {
 	j := worker.Job{Title: a.String("title"), Prompt: a.String("prompt"), Provider: a.String("provider"), Model: a.String("model"),
 		Effort: a.String("effort"), Worker: core.WorkerID(a.String("worker"))}
 	switch v := a["sandbox"].(type) {
@@ -95,7 +95,7 @@ func (x *jobsExt) newForm(a registry.Args) {
 }
 
 // editForm opens the dialog on a job: to change it, or as a new copy of it.
-func (x *jobsExt) editForm(a registry.Args, copy bool) error {
+func (x *jobsPlugin) editForm(a registry.Args, copy bool) error {
 	j, err := x.target(a)
 	if err != nil {
 		return err
@@ -107,7 +107,7 @@ func (x *jobsExt) editForm(a registry.Args, copy bool) error {
 	return nil
 }
 
-func (x *jobsExt) show(f *jobForm) {
+func (x *jobsPlugin) show(f *jobForm) {
 	if x.form != nil {
 		f.gen = x.form.gen + 1
 	}
@@ -116,7 +116,7 @@ func (x *jobsExt) show(f *jobForm) {
 }
 
 // loadAgents asks the form's worker for its providers.
-func (x *jobsExt) loadAgents() {
+func (x *jobsPlugin) loadAgents() {
 	f := x.form
 	c, err := x.client(f.worker)
 	if err != nil {
@@ -150,7 +150,7 @@ func (x *jobsExt) loadAgents() {
 }
 
 // submit saves the dialog's job, running it too when run; the dialog closes and the page shows it once it's saved.
-func (x *jobsExt) submit(run bool) {
+func (x *jobsPlugin) submit(run bool) {
 	f := x.form
 	if f == nil || f.busy {
 		return
@@ -190,7 +190,7 @@ func (x *jobsExt) submit(run bool) {
 	}()
 }
 
-func (x *jobsExt) dialog(c *ui.Ctx) {
+func (x *jobsPlugin) dialog(c *ui.Ctx) {
 	f := x.form
 	if f == nil {
 		return
@@ -207,7 +207,7 @@ func (x *jobsExt) dialog(c *ui.Ctx) {
 }
 
 // field is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ saves and runs.
-func (x *jobsExt) field(c *ui.Ctx, key string, text *string, label, placeholder string, focus bool, o widget.InputOpts) {
+func (x *jobsPlugin) field(c *ui.Ctx, key string, text *string, label, placeholder string, focus bool, o widget.InputOpts) {
 	if focus {
 		c.Focus(c.Next(key))
 	}
@@ -217,7 +217,7 @@ func (x *jobsExt) field(c *ui.Ctx, key string, text *string, label, placeholder 
 	}
 }
 
-func (x *jobsExt) formBody(c *ui.Ctx, f *jobForm) {
+func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 	th := c.Theme()
 	focus := f.focus
 	f.focus = false
@@ -334,7 +334,7 @@ func trimSlug(s string) string {
 }
 
 // workerSelect picks the worker the job lives on; another for a saved job moves it there.
-func (x *jobsExt) workerSelect(c *ui.Ctx, f *jobForm) {
+func (x *jobsPlugin) workerSelect(c *ui.Ctx, f *jobForm) {
 	var labels []string
 	var ids []core.WorkerID
 	current := ""

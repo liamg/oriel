@@ -4,7 +4,7 @@ title: "Package format: Lua entry point, process/wasm/asset APIs, oriel plugin p
 phase: P8
 status: todo
 area: Platform
-module: ext, script
+module: plugin, script
 depends_on: [PL-2, PL-3]
 ---
 

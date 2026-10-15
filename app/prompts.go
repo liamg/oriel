@@ -12,7 +12,7 @@ import (
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -31,10 +31,10 @@ const (
 	promptsHelp        = "agent/prompts"
 )
 
-type promptsExt struct {
+type promptsPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	open   bool
 	sel    string
@@ -45,11 +45,11 @@ type promptsExt struct {
 	o      prompts.Overrides // the user's versions, as last read
 }
 
-func (x *promptsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "prompts"} }
+func (x *promptsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "prompts"} }
 
-func (x *promptsExt) store() prompts.Store { return prompts.Store{Dir: x.sh.cfg.ConfigDir} }
+func (x *promptsPlugin) store() prompts.Store { return prompts.Store{Dir: x.sh.cfg.ConfigDir} }
 
-func (x *promptsExt) Activate(_ context.Context, h ext.Host) error {
+func (x *promptsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.drafts = h, map[string]string{}
 	for _, c := range []registry.Command{
 		{ID: "Prompts", Title: "The Prompts page; :Prompts {id}", Run: func(_ registry.Ctx, a registry.Args) error {
@@ -95,7 +95,7 @@ func (x *promptsExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 // isPromptFile reports whether path is where a prompt's version is kept.
-func (x *promptsExt) isPromptFile(path string) bool {
+func (x *promptsPlugin) isPromptFile(path string) bool {
 	for _, d := range prompts.Defs() {
 		if filepath.Clean(path) == filepath.Join(x.sh.cfg.ConfigDir, d.File) {
 			return true
@@ -104,7 +104,7 @@ func (x *promptsExt) isPromptFile(path string) bool {
 	return false
 }
 
-func (x *promptsExt) openPage(id string) error {
+func (x *promptsPlugin) openPage(id string) error {
 	x.open, x.err, x.saved = true, "", ""
 	x.o = x.store().Load()
 	if id != "" {
@@ -117,21 +117,21 @@ func (x *promptsExt) openPage(id string) error {
 }
 
 // target is the prompt {id}, or the one selected.
-func (x *promptsExt) target(a registry.Args) string {
+func (x *promptsPlugin) target(a registry.Args) string {
 	if id := a.String("id"); id != "" {
 		return id
 	}
 	return x.selected()
 }
 
-func (x *promptsExt) selected() string {
+func (x *promptsPlugin) selected() string {
 	if _, ok := prompts.Lookup(x.sel); ok {
 		return x.sel
 	}
 	return prompts.StyleID
 }
 
-func (x *promptsExt) set(id, text string) error {
+func (x *promptsPlugin) set(id, text string) error {
 	if err := x.store().Set(id, text); err != nil {
 		x.err = err.Error()
 		return err
@@ -143,14 +143,14 @@ func (x *promptsExt) set(id, text string) error {
 }
 
 // changed reads the prompts again and sends them to every worker.
-func (x *promptsExt) changed() {
+func (x *promptsPlugin) changed() {
 	x.o = x.store().Load()
 	if x.sh.sessions != nil {
 		x.sh.sessions.sendPrompts()
 	}
 }
 
-func (x *promptsExt) edit(ctx registry.Ctx, id string) error {
+func (x *promptsPlugin) edit(ctx registry.Ctx, id string) error {
 	path, err := x.store().Path(id)
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func (x *sessions) pushPrompts(ctx context.Context, c worker.Client, o prompts.O
 
 // The page.
 
-func (x *promptsExt) page(c *ui.Ctx) {
+func (x *promptsPlugin) page(c *ui.Ctx) {
 	if !x.open || c.Theme().IsProbe() {
 		return
 	}
@@ -226,7 +226,7 @@ func (x *promptsExt) page(c *ui.Ctx) {
 		})
 }
 
-func (x *promptsExt) header(c *ui.Ctx, o prompts.Overrides) {
+func (x *promptsPlugin) header(c *ui.Ctx, o prompts.Overrides) {
 	th := c.Theme()
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "PROMPTS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
@@ -262,7 +262,7 @@ func promptRows(defs []prompts.Def) []promptRow {
 	return out
 }
 
-func (x *promptsExt) list(c *ui.Ctx, defs []prompts.Def, o prompts.Overrides) {
+func (x *promptsPlugin) list(c *ui.Ctx, defs []prompts.Def, o prompts.Overrides) {
 	th := c.Theme()
 	rows := promptRows(defs)
 	cur := x.selected()
@@ -298,7 +298,7 @@ func (x *promptsExt) list(c *ui.Ctx, defs []prompts.Def, o prompts.Overrides) {
 	})
 }
 
-func (x *promptsExt) rowView(c *ui.Ctx, d prompts.Def, on, custom bool) {
+func (x *promptsPlugin) rowView(c *ui.Ctx, d prompts.Def, on, custom bool) {
 	th := c.Theme()
 	fill, edge := render.Color{}, render.Color{}
 	if on {
@@ -316,7 +316,7 @@ func (x *promptsExt) rowView(c *ui.Ctx, d prompts.Def, on, custom bool) {
 	})
 }
 
-func (x *promptsExt) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
+func (x *promptsPlugin) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 	th := c.Theme()
 	help := promptsHelp + "#prompt"
 	custom := o.Custom(d.ID)
@@ -376,7 +376,7 @@ func (x *promptsExt) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 	})
 }
 
-func (x *promptsExt) run(id string, a registry.Args) {
+func (x *promptsPlugin) run(id string, a registry.Args) {
 	x.err = ""
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		x.err = err.Error()

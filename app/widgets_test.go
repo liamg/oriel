@@ -11,7 +11,7 @@ import (
 
 // pointerSurfaces read clicks themselves: the pointer's position is what they're about, not a control.
 var pointerSurfaces = map[string]bool{
-	"editorExt.paneView":    true, // the editor's text: a click places the cursor
+	"editorPlugin.paneView": true, // the editor's text: a click places the cursor
 	"themeEditor.buildPick": true, // pick mode: a click picks whatever's under it
 	"themeEditor.preview":   true, // the preview: a click picks the token under it
 }

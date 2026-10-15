@@ -205,7 +205,7 @@ func resets(now time.Time, loc *time.Location, w core.UsageWindow) (string, stri
 
 // indicators are the title bar's: the plan of the session in front's provider, its windows as meters, one button
 // that opens Usage, with every provider's windows in a card under the pointer.
-func (x *statsExt) indicators(c *ui.Ctx) {
+func (x *statsPlugin) indicators(c *ui.Ctx) {
 	u, ok := x.frontUsage()
 	if !ok {
 		return
@@ -244,7 +244,7 @@ func (x *statsExt) indicators(c *ui.Ctx) {
 }
 
 // usageCard is every provider's windows, the session in front's first: what the title bar's card shows.
-func (x *statsExt) usageCard(c *ui.Ctx, front core.ProviderUsage) {
+func (x *statsPlugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 	th := c.Theme()
 	now := x.now()
 	us := slices.Clone(x.h.State().Usage)
@@ -334,7 +334,7 @@ func providerMark(c *ui.Ctx, provider string) {
 	})
 }
 
-func (x *statsExt) usagePage(c *ui.Ctx) {
+func (x *statsPlugin) usagePage(c *ui.Ctx) {
 	if !x.usageOpen || c.Theme().IsProbe() {
 		return
 	}
@@ -386,7 +386,7 @@ func (x *statsExt) usagePage(c *ui.Ctx) {
 }
 
 // provider is one provider's section: its windows, their week, and what burned the weekly one.
-func (x *statsExt) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Time) {
+func (x *statsPlugin) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Time) {
 	th := c.Theme()
 	hist := x.usageHistory(u)
 	c.Column(fmt.Sprint("prov", i), ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleGroup, Label: cmpOr(u.Plan, providerName(u.Provider))}, func(c *ui.Ctx) {
@@ -417,7 +417,7 @@ func (x *statsExt) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Tim
 }
 
 // providerLine is the models and sessions an account runs: "opus-4.1 · sonnet-4.5 · 4 sessions on mbp and devbox".
-func (x *statsExt) providerLine(u core.ProviderUsage) string {
+func (x *statsPlugin) providerLine(u core.ProviderUsage) string {
 	var models, workers []string
 	n := 0
 	for _, se := range x.h.State().Sessions {
@@ -443,7 +443,7 @@ func (x *statsExt) providerLine(u core.ProviderUsage) string {
 	return strings.Join(parts, " · ")
 }
 
-func (x *statsExt) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
+func (x *statsPlugin) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 	th := c.Theme()
 	w := r.w
 	line := th.C(tStatsCardLine)
@@ -549,7 +549,7 @@ func projected(c *ui.Ctx, used, at float64, tone, out render.Color, runsOut bool
 
 // weekChart is the provider's windows over the last 7 days, hour by hour: the 5-hour window's peak in each as
 // bars, the weekly ones as lines, dashed on to the reset at their burn.
-func (x *statsExt) weekChart(c *ui.Ctx, u core.ProviderUsage, hist []core.ProviderUsage, now time.Time) {
+func (x *statsPlugin) weekChart(c *ui.Ctx, u core.ProviderUsage, hist []core.ProviderUsage, now time.Time) {
 	th := c.Theme()
 	start := now.Truncate(time.Hour).Add(-6*24*time.Hour - 12*time.Hour)
 	end := now.Truncate(time.Hour).Add(time.Hour)
@@ -720,7 +720,7 @@ func burned(r stats.Report, w core.UsageWindow, ss []reading) ([]burnRow, float6
 }
 
 // burnedCard is what used one of the provider's windows, by repo.
-func (x *statsExt) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.ProviderUsage, now time.Time) {
+func (x *statsPlugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.ProviderUsage, now time.Time) {
 	th := c.Theme()
 	if len(u.Windows) == 0 {
 		return
@@ -800,7 +800,7 @@ func (x *statsExt) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provi
 }
 
 // usageAccount is the account the Usage page shows: the one picked, else the session in front's.
-func (x *statsExt) usageAccount() (core.ProviderUsage, bool) {
+func (x *statsPlugin) usageAccount() (core.ProviderUsage, bool) {
 	for _, u := range x.h.State().Usage {
 		if x.acct != "" && accountKey(u) == x.acct {
 			return u, true
@@ -810,7 +810,7 @@ func (x *statsExt) usageAccount() (core.ProviderUsage, bool) {
 }
 
 // accountSwitch picks the account the page shows. Accounts' windows are separate limits, so there's no "all".
-func (x *statsExt) accountSwitch(c *ui.Ctx, cur core.ProviderUsage) {
+func (x *statsPlugin) accountSwitch(c *ui.Ctx, cur core.ProviderUsage) {
 	us := slices.Clone(x.h.State().Usage)
 	if len(us) < 2 {
 		return

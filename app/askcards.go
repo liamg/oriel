@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/sandbox/gateway"
@@ -120,7 +120,7 @@ func domainOf(hostport string) (domain, port string) {
 
 // reviewState is the review ledger where a gateway call commits, pushes or raises a PR (ui.md 12, "Approvals show
 // the review state right where you approve a push"): "21 agent lines unread", or "0 unreviewed lines ✓".
-func reviewState(h ext.Host, se core.SessionState, a core.Ask) string {
+func reviewState(h plugin.Host, se core.SessionState, a core.Ask) string {
 	tool := strings.TrimPrefix(a.Tool, gateway.Prefix)
 	if tool != "commit" && tool != "push" && tool != "pr_create" {
 		return ""

@@ -1,4 +1,4 @@
-package exttest
+package hosttest
 
 import (
 	"io/fs"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/liamg/oriel/ext/ossandbox"
+	"github.com/liamg/oriel/plugin/ossandbox"
 )
 
 // Install lays out the plugin in src as an install does, in a directory of the test's: src's files, and each Go

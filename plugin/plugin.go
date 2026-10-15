@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"context"
@@ -16,8 +16,8 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// Plugin is a plugin as the process and WASM hosts see it.
-type Plugin struct {
+// Caller is a plugin as the process and WASM hosts see it.
+type Caller struct {
 	ID    string
 	Dir   string // its own files: its binaries and .wasm start with no grant
 	Guard Guard  // nil for your own config, which is trusted
@@ -30,10 +30,10 @@ type Plugin struct {
 const EnvData = "ORIEL_PLUGIN_DATA"
 
 // Trusted is your own config, which may do anything and runs unsandboxed (security.md).
-func (p Plugin) Trusted() bool { return p.Guard == nil }
+func (p Caller) Trusted() bool { return p.Guard == nil }
 
 // Check asks the guard whether p may use c on target.
-func (p Plugin) Check(c Capability, target string) error {
+func (p Caller) Check(c Capability, target string) error {
 	if p.Guard == nil {
 		return nil
 	}
@@ -41,7 +41,7 @@ func (p Plugin) Check(c Capability, target string) error {
 }
 
 // Path is a path the plugin named: under its directory when relative, ~ its home.
-func (p Plugin) Path(name string) string {
+func (p Caller) Path(name string) string {
 	name = Expand(name)
 	if !filepath.IsAbs(name) && p.Dir != "" {
 		name = filepath.Join(p.Dir, name)
@@ -51,7 +51,7 @@ func (p Plugin) Path(name string) string {
 
 // Own says whether path is one of the plugin's own files, symlinks followed, so a link out of its directory
 // isn't.
-func (p Plugin) Own(path string) bool {
+func (p Caller) Own(path string) bool {
 	if p.Dir == "" {
 		return false
 	}
@@ -72,7 +72,7 @@ type Method struct {
 	Name   string
 	Cap    Capability
 	Target func(params json.RawMessage) string // what the call touches: a path, a host; nil for the capability alone
-	Run    func(ctx context.Context, p Plugin, params json.RawMessage) (any, error)
+	Run    func(ctx context.Context, p Caller, params json.RawMessage) (any, error)
 }
 
 // Methods are the host functions plugins can call.
@@ -126,7 +126,7 @@ func (ms *Methods) Names() []string {
 
 // Call runs a method for p, once the guard allows it. An unknown method is MethodNotFound, an undeclared call
 // CodeNotDeclared, both as *jsonrpc.Error.
-func (ms *Methods) Call(ctx context.Context, p Plugin, name string, params json.RawMessage) (any, error) {
+func (ms *Methods) Call(ctx context.Context, p Caller, name string, params json.RawMessage) (any, error) {
 	ms.mu.Lock()
 	l := ms.m[name]
 	ms.mu.Unlock()
@@ -144,7 +144,7 @@ func (ms *Methods) Call(ctx context.Context, p Plugin, name string, params json.
 	return m.Run(ctx, p, params)
 }
 
-// Reporter is where host methods log and notify: an ext.Host.
+// Reporter is where host methods log and notify: a plugin.Host.
 type Reporter interface {
 	Log() *slog.Logger
 	Notify(n core.Notice)
@@ -164,7 +164,7 @@ func HostMethods(r Reporter) *Methods {
 		json.Unmarshal(raw, &p)
 		return RealPath(p.Path)
 	}
-	ms.Add(Method{Name: "log", Cap: CapNotify, Run: func(_ context.Context, p Plugin, raw json.RawMessage) (any, error) {
+	ms.Add(Method{Name: "log", Cap: CapNotify, Run: func(_ context.Context, p Caller, raw json.RawMessage) (any, error) {
 		var a struct{ Level, Message string }
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return nil, err
@@ -182,7 +182,7 @@ func HostMethods(r Reporter) *Methods {
 		}
 		return nil, nil
 	}})
-	ms.Add(Method{Name: "notify", Cap: CapNotify, Run: func(_ context.Context, p Plugin, raw json.RawMessage) (any, error) {
+	ms.Add(Method{Name: "notify", Cap: CapNotify, Run: func(_ context.Context, p Caller, raw json.RawMessage) (any, error) {
 		var a struct{ Title, Text, Level string }
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return nil, err
@@ -197,7 +197,7 @@ func HostMethods(r Reporter) *Methods {
 		r.Notify(core.Notice{ID: "plugin." + p.ID, Severity: sev, Source: p.ID, Title: a.Title, Text: a.Text})
 		return nil, nil
 	}})
-	ms.Add(Method{Name: "fs.read", Cap: CapFSRead, Target: path, Run: func(_ context.Context, _ Plugin, raw json.RawMessage) (any, error) {
+	ms.Add(Method{Name: "fs.read", Cap: CapFSRead, Target: path, Run: func(_ context.Context, _ Caller, raw json.RawMessage) (any, error) {
 		p := path(raw)
 		if !filepath.IsAbs(p) {
 			return nil, errors.New("fs.read: the path must be absolute")
@@ -205,7 +205,7 @@ func HostMethods(r Reporter) *Methods {
 		b, err := os.ReadFile(p)
 		return string(b), err
 	}})
-	ms.Add(Method{Name: "fs.write", Cap: CapFSWrite, Target: path, Run: func(_ context.Context, _ Plugin, raw json.RawMessage) (any, error) {
+	ms.Add(Method{Name: "fs.write", Cap: CapFSWrite, Target: path, Run: func(_ context.Context, _ Caller, raw json.RawMessage) (any, error) {
 		var a struct{ Path, Data string }
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return nil, err

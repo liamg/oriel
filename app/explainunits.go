@@ -51,7 +51,7 @@ func unitHash(kind string, content []byte) string {
 }
 
 // parseUnits are src's explain units, in the language for path; none when it has no units query.
-func (x *explainExt) parseUnits(path string, src []byte) []text.Unit {
+func (x *explainPlugin) parseUnits(path string, src []byte) []text.Unit {
 	lang, ok := languageFor(x.h, path, src)
 	if !ok {
 		return nil
@@ -109,7 +109,7 @@ func changedRanges(src []byte, hunks []gitx.Hunk) []text.Range {
 }
 
 // computeUnits are src's units and the ones base→file touches: file is src as it would be written.
-func (x *explainExt) computeUnits(path string, src, file, base []byte, haveBase bool) *fileUnits {
+func (x *explainPlugin) computeUnits(path string, src, file, base []byte, haveBase bool) *fileUnits {
 	fu := &fileUnits{src: src, units: x.parseUnits(path, src)}
 	for _, u := range fu.units {
 		fu.hashes = append(fu.hashes, unitHash(u.Kind, src[u.Range.Start:u.Range.End]))
@@ -123,7 +123,7 @@ func (x *explainExt) computeUnits(path string, src, file, base []byte, haveBase 
 }
 
 // baseOf is the branch's base's version of a file, loaded off the loop: ok is false until it's read, or outside a repo.
-func (x *explainExt) baseOf(abs string) (data []byte, gen int, ok bool) {
+func (x *explainPlugin) baseOf(abs string) (data []byte, gen int, ok bool) {
 	g := x.sh.git
 	if g == nil || g.status == nil || abs == "" {
 		return nil, 0, false
@@ -168,7 +168,7 @@ func (x *explainExt) baseOf(abs string) (data []byte, gen int, ok bool) {
 
 // bufferUnits are a buffer's units and changed units, worked out off the loop for each version; until then, the
 // last version's.
-func (x *explainExt) bufferUnits(path string, buf *text.Buffer, fileBytes func() []byte) *fileUnits {
+func (x *explainPlugin) bufferUnits(path string, buf *text.Buffer, fileBytes func() []byte) *fileUnits {
 	snap := buf.Snapshot()
 	base, gen, haveBase := x.baseOf(path)
 	x.mu.Lock()
@@ -198,7 +198,7 @@ func (x *explainExt) bufferUnits(path string, buf *text.Buffer, fileBytes func()
 }
 
 // unitsNow are a buffer's units as it is now, parsed here if they haven't been yet.
-func (x *explainExt) unitsNow(path string, buf *text.Buffer) []text.Unit {
+func (x *explainPlugin) unitsNow(path string, buf *text.Buffer) []text.Unit {
 	snap := buf.Snapshot()
 	x.mu.Lock()
 	fu := x.bufs[buf]
@@ -235,7 +235,7 @@ type panelState struct {
 
 // changedFiles are the branch's changed files' units, worked out off the loop when the status or an open buffer
 // changes.
-func (x *explainExt) changedFiles() ([]changedFile, bool) {
+func (x *explainPlugin) changedFiles() ([]changedFile, bool) {
 	g := x.sh.git
 	st := g.state()
 	if st == nil {
@@ -325,7 +325,7 @@ func lineAt(src []byte, off int) int { return strings.Count(string(src[:min(off,
 
 // unitStatus is what the panel and the ? marks say of a unit: "open" while its card is, "explained", "changed" once
 // an edit inside it has made its explanation stale, else "".
-func (x *explainExt) unitStatus(path string, u text.Unit, hash string) string {
+func (x *explainPlugin) unitStatus(path string, u text.Unit, hash string) string {
 	if cd := x.card; cd != nil && filepath.Clean(cd.path) == filepath.Clean(path) {
 		if r, ok := cd.rangeOf(cd.sel); ok && r.Start == u.Range.Start && !cd.crumbs[cd.sel].selection {
 			return "open"
@@ -368,7 +368,7 @@ func unitStatusWord(s string) (string, theme.TokenID) {
 	return "–", theme.FgGhost
 }
 
-type changedUnitsView struct{ x *explainExt }
+type changedUnitsView struct{ x *explainPlugin }
 
 func (v changedUnitsView) Title(string) string { return "Changed units" }
 func (v changedUnitsView) EdgeToEdge()         {}
@@ -378,7 +378,7 @@ func (v changedUnitsView) Build(registry.ViewCtx) ui.Node {
 
 // panelView lists every unit the branch touched by file, nested as the code is, with each one's explain status;
 // opening one goes to it and explains it (25-explain-unit).
-func (x *explainExt) panelView(c *ui.Ctx) {
+func (x *explainPlugin) panelView(c *ui.Ctx) {
 	th := c.Theme()
 	files, loading := x.changedFiles()
 	n := 0
@@ -452,7 +452,7 @@ func monoCaps(c *ui.Ctx, tok theme.TokenID) ui.TextStyle {
 }
 
 // openRow goes to a panel row's unit and explains it.
-func (x *explainExt) openRow(id string) {
+func (x *explainPlugin) openRow(id string) {
 	parts := strings.Split(id, ":")
 	if len(parts) < 3 {
 		return

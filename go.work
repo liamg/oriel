@@ -9,13 +9,13 @@ use (
 	./core
 	./dap
 	./edit
-	./ext
 	./gh
 	./gitx
 	./integ
 	./lsp
-	./registry
+	./plugin
 	./regex
+	./registry
 	./render
 	./render/gio
 	./sandbox
@@ -29,8 +29,8 @@ use (
 	./tools
 	./ui
 	./update
-	./voice
 	./vim
+	./voice
 	./wire
 	./worker
 )

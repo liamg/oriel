@@ -44,7 +44,7 @@ The same split as settings (`settings.md`): the GUI and hand edits write the sam
     That's how dotfiles on a new machine work.
   - If not, or if it now asks for more than you accepted, it stays **inactive**, and an inbox card opens the consent
     screen (mockup 29). Nothing runs half-granted.
-  - The pieces are PL-3's: `ext.Diff(ext.Locked(grants), lock.capabilities)` is what a plugin asks for beyond its
+  - The pieces are PL-3's: `plugin.Diff(plugin.Locked(grants), lock.capabilities)` is what a plugin asks for beyond its
     lock entry, and `plugins.consent` is the screen (security.md, "As built (PL-3)").
 - If an entry is removed, the plugin is deactivated, its files are removed, and its lock entry is dropped.
 - The GUI installs by writing one line to `[plugins]`, then follows the same path. The file is the only list, so the
@@ -289,4 +289,4 @@ sequenceDiagram
 - PL-21 registry client, badges, the Registry tab, "Extensions" → "Plugins" in the UI
 - PL-16 the `liamg/oriel-plugins` repo and its CI
 - PL-17 `oriel plugin publish`
-- PL-18 rename the `ext` package to `plugin`
+- PL-18 rename the `plugin` package to `plugin`

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/text"
@@ -55,12 +55,12 @@ type presentation struct {
 type presentFocus struct {
 	st     *presentState
 	p      presentation
-	h      ext.Host
+	h      plugin.Host
 	opened bool // a thread was opened on a block this frame
 }
 
 // presentCommands are the keys of whatever presentation has focus.
-func presentCommands(sh *shell, h ext.Host) []registry.Command {
+func presentCommands(sh *shell, h plugin.Host) []registry.Command {
 	on := func(fn func(f *presentFocus)) func(registry.Ctx, registry.Args) error {
 		return func(registry.Ctx, registry.Args) error {
 			if f := sh.present; f != nil {
@@ -132,7 +132,7 @@ func (f *presentFocus) comment(i int) {
 
 // decorate is every provider's decorations of ctx's lines [Top, Bottom), by line, each line's in priority order. A
 // provider that panics is turned off, as any contribution is.
-func decorate(h ext.Host, ctx registry.DecorationCtx) map[int][]registry.Decoration {
+func decorate(h plugin.Host, ctx registry.DecorationCtx) map[int][]registry.Decoration {
 	off := map[string]bool{}
 	for _, o := range h.TurnedOff() {
 		if o.Kind == registry.KindDecoration {
@@ -179,7 +179,7 @@ type blockDecor struct {
 }
 
 // blockDecorations are the decorations of a presentation's buffer, put on the blocks holding their lines.
-func blockDecorations(h ext.Host, dctx registry.DecorationCtx, ctx *registry.PresentCtx) []blockDecor {
+func blockDecorations(h plugin.Host, dctx registry.DecorationCtx, ctx *registry.PresentCtx) []blockDecor {
 	decor := make([]blockDecor, len(ctx.Blocks()))
 	ds := decorate(h, dctx)
 	for line := range dctx.Snap.Lines() {
@@ -219,7 +219,7 @@ func blockDecorations(h ext.Host, dctx registry.DecorationCtx, ctx *registry.Pre
 // drawPresentation draws a presentation: its blocks, numbered where something is, the selected one lit, and the
 // margin of cards (the file's threads) level with their blocks. It reports the source line at its top, and
 // whether the reader scrolled it there.
-func drawPresentation(c *ui.Ctx, h ext.Host, sh *shell, st *presentState, p presentation, width float32) (top int, scrolled bool) {
+func drawPresentation(c *ui.Ctx, h plugin.Host, sh *shell, st *presentState, p presentation, width float32) (top int, scrolled bool) {
 	th := c.Theme()
 	snap := p.buf.Snapshot()
 	body := c.Next("body")
@@ -321,7 +321,7 @@ func scrolledBox(c *ui.Ctx, key any, st *scrollState, s ui.Style, body func(c *u
 // presentBlock is one block: its number where a card is (or where it's selected), an edge in its card's or
 // decoration's colour, its body, and a label at its top right. A click selects it and comments on it. It returns
 // the ID of what's clicked, whose top a card for it is level with.
-func presentBlock(c *ui.Ctx, h ext.Host, f *presentFocus, i int, b *registry.PresentBlock, bd blockDecor, width float32, kicker string) ui.ID {
+func presentBlock(c *ui.Ctx, h plugin.Host, f *presentFocus, i int, b *registry.PresentBlock, bd blockDecor, width float32, kicker string) ui.ID {
 	th := c.Theme()
 	st := f.st
 	line, tone := 0, render.Color{}

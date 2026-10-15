@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -36,10 +36,10 @@ var (
 	tGitHubOK     = theme.Declare("github.approved", "ok")
 )
 
-type githubExt struct {
+type githubPlugin struct {
 	disposer
 	sh     *shell
-	h      ext.Host
+	h      plugin.Host
 	now    func() time.Time
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -61,9 +61,9 @@ type githubMirror struct {
 	err string
 }
 
-func (x *githubExt) Manifest() ext.Manifest { return ext.Manifest{ID: "github"} }
+func (x *githubPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "github"} }
 
-func (x *githubExt) Activate(_ context.Context, h ext.Host) error {
+func (x *githubPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	if x.now == nil {
 		x.now = time.Now
@@ -105,14 +105,14 @@ func (x *githubExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *githubExt) Deactivate(ctx context.Context) error {
+func (x *githubPlugin) Deactivate(ctx context.Context) error {
 	x.cancel()
 	x.poller.Wait()
 	x.busy.Wait()
 	return x.disposer.Deactivate(ctx)
 }
 
-func (x *githubExt) poll() {
+func (x *githubPlugin) poll() {
 	defer x.poller.Done()
 	t := time.NewTicker(githubPoll)
 	defer t.Stop()
@@ -129,9 +129,9 @@ func (x *githubExt) poll() {
 }
 
 // wait is until every sync and forward started has finished.
-func (x *githubExt) wait() { x.busy.Wait() }
+func (x *githubPlugin) wait() { x.busy.Wait() }
 
-func (x *githubExt) session(a registry.Args) (core.SessionState, bool) {
+func (x *githubPlugin) session(a registry.Args) (core.SessionState, bool) {
 	id := core.SessionID(a.String("id"))
 	if id == "" {
 		id = x.sh.cfg.Store.Focus()
@@ -143,7 +143,7 @@ func (x *githubExt) session(a registry.Args) (core.SessionState, bool) {
 	return se.Snapshot(), true
 }
 
-func (x *githubExt) client(id core.SessionID) (worker.Client, error) {
+func (x *githubPlugin) client(id core.SessionID) (worker.Client, error) {
 	if x.sh.sessions == nil {
 		return worker.Client{}, errors.New("no worker is connected")
 	}
@@ -151,7 +151,7 @@ func (x *githubExt) client(id core.SessionID) (worker.Client, error) {
 }
 
 // trust is the trusted orgs and users, from the options.
-func (x *githubExt) trust() worker.Trust {
+func (x *githubPlugin) trust() worker.Trust {
 	list := func(name string) []string {
 		v, _, _ := x.h.Options().Get(name, registry.At{})
 		l, _ := v.([]string)
@@ -161,7 +161,7 @@ func (x *githubExt) trust() worker.Trust {
 }
 
 // sync asks the session's worker to mirror its PRs' reviews, off the loop.
-func (x *githubExt) sync(id core.SessionID, fresh bool) {
+func (x *githubPlugin) sync(id core.SessionID, fresh bool) {
 	x.mu.Lock()
 	if x.syncing[id] {
 		x.mu.Unlock()
@@ -193,7 +193,7 @@ func (x *githubExt) sync(id core.SessionID, fresh bool) {
 	}()
 }
 
-func (x *githubExt) mirror(id core.SessionID) (githubMirror, bool) {
+func (x *githubPlugin) mirror(id core.SessionID) (githubMirror, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	m, ok := x.mirrors[id]
@@ -201,7 +201,7 @@ func (x *githubExt) mirror(id core.SessionID) (githubMirror, bool) {
 }
 
 // draft is the session in front's thread and draft comment that a command names.
-func (x *githubExt) draft(a registry.Args) (core.SessionState, core.Thread, core.Comment, error) {
+func (x *githubPlugin) draft(a registry.Args) (core.SessionState, core.Thread, core.Comment, error) {
 	se, ok := x.session(a)
 	if !ok {
 		return se, core.Thread{}, core.Comment{}, errors.New("no session")
@@ -223,7 +223,7 @@ func (x *githubExt) draft(a registry.Args) (core.SessionState, core.Thread, core
 }
 
 // forward posts a draft to GitHub through the worker, as the user, off the loop.
-func (x *githubExt) forward(a registry.Args) error {
+func (x *githubPlugin) forward(a registry.Args) error {
 	se, t, cm, err := x.draft(a)
 	if err != nil {
 		return err
@@ -258,7 +258,7 @@ func (x *githubExt) forward(a registry.Args) error {
 }
 
 // edit opens a draft for editing in its card.
-func (x *githubExt) edit(a registry.Args) error {
+func (x *githubPlugin) edit(a registry.Args) error {
 	_, _, cm, err := x.draft(a)
 	if err != nil {
 		return err
@@ -271,7 +271,7 @@ func (x *githubExt) edit(a registry.Args) error {
 }
 
 // save keeps an edited draft, through the worker.
-func (x *githubExt) save(a registry.Args) error {
+func (x *githubPlugin) save(a registry.Args) error {
 	se, t, cm, err := x.draft(a)
 	if err != nil {
 		return err
@@ -298,14 +298,14 @@ func (x *githubExt) save(a registry.Args) error {
 	return nil
 }
 
-func (x *githubExt) run(cmd string, a registry.Args) {
+func (x *githubPlugin) run(cmd string, a registry.Args) {
 	if err := x.h.Run(context.Background(), cmd, a); err != nil {
 		x.h.Notify(core.Notice{ID: "github", Severity: core.SevError, Source: "github", Text: err.Error()})
 	}
 }
 
 // head is a GitHub thread's card head after "GitHub review": its line, the reviewer, where they stand, the sync.
-func (x *githubExt) head(c *ui.Ctx, session, thread string) {
+func (x *githubPlugin) head(c *ui.Ctx, session, thread string) {
 	th := c.Theme()
 	se, ok := x.h.Session(core.SessionID(session))
 	if !ok {
@@ -359,7 +359,7 @@ func syncedAgo(now, t time.Time) string {
 }
 
 // comment is what goes under a draft reply: ↗ Forward to GitHub, Edit, and the promise; or the draft being edited.
-func (x *githubExt) comment(c *ui.Ctx, session, thread, comment string, width float32) {
+func (x *githubPlugin) comment(c *ui.Ctx, session, thread, comment string, width float32) {
 	th := c.Theme()
 	se, ok := x.h.Session(core.SessionID(session))
 	if !ok {
@@ -417,7 +417,7 @@ func (x *githubExt) comment(c *ui.Ctx, session, thread, comment string, width fl
 }
 
 // statusSegment is "GH 1 changes requested": where the reviewers of the session in front's PRs stand.
-func (x *githubExt) statusSegment(c *ui.Ctx) {
+func (x *githubPlugin) statusSegment(c *ui.Ctx) {
 	id := x.sh.cfg.Store.Focus()
 	m, ok := x.mirror(id)
 	if !ok || len(m.PRs) == 0 {

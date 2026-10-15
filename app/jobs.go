@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -50,10 +50,10 @@ func runTone(status string) theme.TokenID {
 // runFilters are the runs card's filters: all, then each status.
 var runFilters = []string{"", worker.RunRunning, worker.RunDone, worker.RunBlocked, worker.RunStopped}
 
-type jobsExt struct {
+type jobsPlugin struct {
 	disposer
 	sh  *shell
-	h   ext.Host
+	h   plugin.Host
 	now func() time.Time
 	loc *time.Location
 
@@ -114,9 +114,9 @@ func (r jobRow) last() (runRow, bool) {
 	return r.runs[0], true
 }
 
-func (x *jobsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "jobs"} }
+func (x *jobsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "jobs"} }
 
-func (x *jobsExt) Activate(_ context.Context, h ext.Host) error {
+func (x *jobsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	if x.now == nil {
 		x.now = time.Now
@@ -187,7 +187,7 @@ func (x *jobsExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *jobsExt) openPage(job string) error {
+func (x *jobsPlugin) openPage(job string) error {
 	x.open, x.err, x.confirm = true, "", ""
 	x.refresh()
 	if job != "" {
@@ -203,7 +203,7 @@ func (x *jobsExt) openPage(job string) error {
 }
 
 // refresh asks the workers for their jobs again.
-func (x *jobsExt) refresh() {
+func (x *jobsPlugin) refresh() {
 	x.mu.Lock()
 	x.stale = true
 	x.mu.Unlock()
@@ -211,7 +211,7 @@ func (x *jobsExt) refresh() {
 }
 
 // load is every worker's jobs and repos as last answered, asking again when they're old or missing.
-func (x *jobsExt) load() (map[core.WorkerID][]worker.Job, map[core.WorkerID][]core.Repo) {
+func (x *jobsPlugin) load() (map[core.WorkerID][]worker.Job, map[core.WorkerID][]core.Repo) {
 	var clients map[core.WorkerID]worker.Client
 	if x.sh.sessions != nil {
 		clients = x.sh.sessions.byWorker()
@@ -245,7 +245,7 @@ func (x *jobsExt) load() (map[core.WorkerID][]worker.Job, map[core.WorkerID][]co
 	return out, repos
 }
 
-func (x *jobsExt) fetch(clients map[core.WorkerID]worker.Client) {
+func (x *jobsPlugin) fetch(clients map[core.WorkerID]worker.Client) {
 	type answer struct {
 		jobs  []worker.Job
 		repos []core.Repo
@@ -280,14 +280,14 @@ func (x *jobsExt) fetch(clients map[core.WorkerID]worker.Client) {
 }
 
 // busy says whether an answer is on its way.
-func (x *jobsExt) busy() bool {
+func (x *jobsPlugin) busy() bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.inflight || x.stale
 }
 
 // rows are every worker's jobs with their runs, the one that ran last first and those never run last.
-func (x *jobsExt) rows() []jobRow {
+func (x *jobsPlugin) rows() []jobRow {
 	all, _ := x.load()
 	st := x.h.State()
 	var out []jobRow
@@ -326,7 +326,7 @@ func (x *jobsExt) rows() []jobRow {
 }
 
 // selected is the selected job's row, else the first.
-func (x *jobsExt) selected(rows []jobRow) (jobRow, int, bool) {
+func (x *jobsPlugin) selected(rows []jobRow) (jobRow, int, bool) {
 	for i, r := range rows {
 		if jobKey(r.job) == x.selKey {
 			return r, i, true
@@ -339,7 +339,7 @@ func (x *jobsExt) selected(rows []jobRow) (jobRow, int, bool) {
 }
 
 // target is the job a command names by {name} and {worker}, else the selected one.
-func (x *jobsExt) target(a registry.Args) (worker.Job, error) {
+func (x *jobsPlugin) target(a registry.Args) (worker.Job, error) {
 	rows := x.rows()
 	name, wid := a.String("name"), a.String("worker")
 	if name == "" {
@@ -356,7 +356,7 @@ func (x *jobsExt) target(a registry.Args) (worker.Job, error) {
 	return worker.Job{}, fmt.Errorf("no job %q", name)
 }
 
-func (x *jobsExt) client(wid core.WorkerID) (worker.Client, error) {
+func (x *jobsPlugin) client(wid core.WorkerID) (worker.Client, error) {
 	if x.sh.sessions == nil {
 		return worker.Client{}, errors.New("no worker is connected")
 	}
@@ -364,7 +364,7 @@ func (x *jobsExt) client(wid core.WorkerID) (worker.Client, error) {
 }
 
 // save is jobs.save: the job named, with what the args give changed, or a new one; it returns the job as saved.
-func (x *jobsExt) save(ctx context.Context, a registry.Args) (worker.Job, error) {
+func (x *jobsPlugin) save(ctx context.Context, a registry.Args) (worker.Job, error) {
 	j := worker.Job{Worker: core.WorkerID(a.String("worker"))}
 	if a.String("name") != "" {
 		var err error
@@ -418,7 +418,7 @@ func (x *jobsExt) save(ctx context.Context, a registry.Args) (worker.Job, error)
 	return saved, nil
 }
 
-func (x *jobsExt) runJob(ctx context.Context, a registry.Args) error {
+func (x *jobsPlugin) runJob(ctx context.Context, a registry.Args) error {
 	j, err := x.target(a)
 	if err != nil {
 		return err
@@ -431,7 +431,7 @@ func (x *jobsExt) runJob(ctx context.Context, a registry.Args) error {
 	return err
 }
 
-func (x *jobsExt) deleteJob(ctx context.Context, a registry.Args) error {
+func (x *jobsPlugin) deleteJob(ctx context.Context, a registry.Args) error {
 	j, err := x.target(a)
 	if err != nil {
 		return err
@@ -448,7 +448,7 @@ func (x *jobsExt) deleteJob(ctx context.Context, a registry.Args) error {
 }
 
 // do runs a command off the loop, as a click asks, and shows what went wrong on the page.
-func (x *jobsExt) do(id string, a registry.Args) {
+func (x *jobsPlugin) do(id string, a registry.Args) {
 	go func() {
 		err := x.h.Run(context.Background(), id, a)
 		x.h.Do(func() {
@@ -462,7 +462,7 @@ func (x *jobsExt) do(id string, a registry.Args) {
 }
 
 // figure is the sidebar's note: how many runs are going.
-func (x *jobsExt) figure() string {
+func (x *jobsPlugin) figure() string {
 	n := 0
 	for _, se := range x.h.State().Sessions {
 		if se.Job != "" && worker.RunOf(se).Status == worker.RunRunning {
@@ -476,7 +476,7 @@ func (x *jobsExt) figure() string {
 }
 
 // count is the start view's note: how many jobs there are.
-func (x *jobsExt) count() string {
+func (x *jobsPlugin) count() string {
 	all, _ := x.load()
 	n := 0
 	for _, js := range all {

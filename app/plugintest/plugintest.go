@@ -14,9 +14,9 @@ import (
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
-	"github.com/liamg/oriel/ext/exttest"
-	"github.com/liamg/oriel/ext/ossandbox"
+	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/plugin/hosttest"
+	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
@@ -96,13 +96,13 @@ func Main(m *testing.M) {
 // OS sandbox a plugin's processes run in isn't there.
 func Install(t testing.TB, src string, cmds ...string) string {
 	t.Helper()
-	return exttest.Install(t, src, cmds...)
+	return hosttest.Install(t, src, cmds...)
 }
 
 // Manifest is the oriel.toml in dir.
-func Manifest(t testing.TB, dir string) ext.Manifest {
+func Manifest(t testing.TB, dir string) plugin.Manifest {
 	t.Helper()
-	m, err := ext.LoadManifest(dir)
+	m, err := plugin.LoadManifest(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ type Plugin struct {
 
 // Load starts the Lua plugin in dir granted grants (what its manifest declares if nil), with a data directory of
 // the test's.
-func (a *App) Load(dir string, grants []ext.Grant) Plugin {
+func (a *App) Load(dir string, grants []plugin.Grant) Plugin {
 	a.t.Helper()
 	m := Manifest(a.t, dir)
 	p := Plugin{ID: m.ID, Dir: dir, Data: filepath.Join(a.t.TempDir(), "data")}

@@ -22,9 +22,9 @@ import (
 	"github.com/liamg/oriel/worker"
 )
 
-func (s *errScene) jobs() *jobsExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*jobsExt); ok {
+func (s *errScene) jobs() *jobsPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*jobsPlugin); ok {
 			return x
 		}
 	}
@@ -183,7 +183,7 @@ func TestSaveAsJobFromTheLauncher(t *testing.T) {
 	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
 	s.run("session.new", registry.Args{"prompt": "Draft this week's changelog from the PRs merged since Monday."})
 	var l *launcher
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if v, ok := e.(*launcher); ok {
 			l = v
 		}
@@ -474,7 +474,7 @@ func (r *jobsRig) build() {
 }
 
 // jobsScene is the app on 44's worker and clock, the Jobs page open.
-func jobsScene(t *testing.T) (*errScene, *jobsRig, *jobsExt) {
+func jobsScene(t *testing.T) (*errScene, *jobsRig, *jobsPlugin) {
 	t.Helper()
 	r := newJobsRig(t)
 	r.build()
@@ -492,7 +492,7 @@ func jobsScene(t *testing.T) (*errScene, *jobsRig, *jobsExt) {
 	return s, r, x
 }
 
-func (s *errScene) settleJobs(t *testing.T, x *jobsExt) {
+func (s *errScene) settleJobs(t *testing.T, x *jobsPlugin) {
 	t.Helper()
 	s.until(t, "the jobs", func() bool { return !x.busy() })
 	s.settleStats(s.sh.stats)
@@ -612,7 +612,7 @@ func TestARunOpensInItsSessionTab(t *testing.T) {
 		return false
 	})
 	var r *rail
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if v, ok := e.(*rail); ok {
 			r = v
 		}
@@ -718,7 +718,7 @@ func TestTheLauncherPromptTakesLines(t *testing.T) {
 	}
 	s.run("session.new", registry.Args{"kind": "scratch"})
 	var l *launcher
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if v, ok := e.(*launcher); ok {
 			l = v
 		}

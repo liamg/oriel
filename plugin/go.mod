@@ -1,4 +1,4 @@
-module github.com/liamg/oriel/ext
+module github.com/liamg/oriel/plugin
 
 go 1.26.0
 

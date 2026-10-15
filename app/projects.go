@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
@@ -21,7 +21,7 @@ type here struct {
 }
 
 // projectsHere reads it from the host, as a plugin would.
-func projectsHere(h ext.Host) here {
+func projectsHere(h plugin.Host) here {
 	work := ""
 	if at := h.Here(); at.Project != "" {
 		work = at.Project
@@ -114,7 +114,7 @@ func (w here) colour(th *theme.Resolved, name string) render.Color {
 }
 
 // showing says whether a view with id is on screen for project ("" for the window's own).
-func showing(h ext.Host, id, project string) bool {
+func showing(h plugin.Host, id, project string) bool {
 	for _, v := range h.Layout().Visible() {
 		if v.ID == id && v.Project == project {
 			return true
@@ -133,7 +133,7 @@ func viewArgs(id, title string, size int) registry.Args {
 }
 
 // viewFile is the file a view instance shows, for one that's Located (an editor's buffer).
-func viewFile(h ext.Host, v layout.ViewRef) string {
+func viewFile(h plugin.Host, v layout.ViewRef) string {
 	view, ok := h.ViewByID(v.ID)
 	if !ok {
 		return ""
@@ -148,7 +148,7 @@ func viewFile(h ext.Host, v layout.ViewRef) string {
 }
 
 // viewProject is the project a view instance is of: the one it was opened for, else the one its file is in.
-func viewProject(h ext.Host, w here, v layout.ViewRef) (core.Project, bool) {
+func viewProject(h plugin.Host, w here, v layout.ViewRef) (core.Project, bool) {
 	if v.Project != "" {
 		return w.project(v.Project)
 	}

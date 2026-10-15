@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/text"
@@ -77,7 +77,7 @@ func groupOf(t core.Thread) reqGroup {
 type requests struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 	by map[core.SessionID]*requestsState
 
 	anchors map[threadAnchor]text.AnchorID
@@ -133,9 +133,9 @@ type requestsState struct {
 	inline    *inlineNew
 }
 
-func (x *requests) Manifest() ext.Manifest { return ext.Manifest{ID: "requests"} }
+func (x *requests) Manifest() plugin.Manifest { return plugin.Manifest{ID: "requests"} }
 
-func (x *requests) Activate(_ context.Context, h ext.Host) error {
+func (x *requests) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*requestsState{}
 	x.anchors = map[threadAnchor]text.AnchorID{}

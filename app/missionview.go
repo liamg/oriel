@@ -41,7 +41,7 @@ var missionTermFont = typeset.FontSpec{Family: typeset.Mono, Size: 11}
 
 // page is mission control while it's open, under the title bar: the header, the needs-you queue beside the cards,
 // the strip of indicators and the keys along its foot.
-func (x *missionExt) page(c *ui.Ctx) {
+func (x *missionPlugin) page(c *ui.Ctx) {
 	if x.pending {
 		st := x.h.State()
 		switch {
@@ -96,7 +96,7 @@ func (x *missionExt) page(c *ui.Ctx) {
 }
 
 // header is the title, the sessions by status, the grouping and the filter.
-func (x *missionExt) header(c *ui.Ctx, st core.State) {
+func (x *missionPlugin) header(c *ui.Ctx, st core.State) {
 	th := c.Theme()
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 18, Cross: ui.Center, Fill: th.C(tMissionHead)}, func(c *ui.Ctx) {
 		c.Text("h", "MISSION CONTROL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 15, Weight: typeset.SemiBold, Tracking: .2},
@@ -162,7 +162,7 @@ type queueItem struct {
 
 // queue is what needs you, oldest first: every card waiting, and the sessions that need you with none; agentbus's
 // apart, with their countdowns.
-func (x *missionExt) queue(c *ui.Ctx, st core.State, waiting []*inboxRow) {
+func (x *missionPlugin) queue(c *ui.Ctx, st core.State, waiting []*inboxRow) {
 	th := c.Theme()
 	now := c.Now()
 	var mine, bus []queueItem
@@ -216,7 +216,7 @@ func (x *missionExt) queue(c *ui.Ctx, st core.State, waiting []*inboxRow) {
 	})
 }
 
-func (x *missionExt) queueSection(c *ui.Ctx, key, title, note string, tone render.Color, items []queueItem, now time.Time) {
+func (x *missionPlugin) queueSection(c *ui.Ctx, key, title, note string, tone render.Color, items []queueItem, now time.Time) {
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		c.Row("h", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Cross: ui.Center}, func(c *ui.Ctx) {
@@ -272,7 +272,7 @@ func (x *missionExt) queueSection(c *ui.Ctx, key, title, note string, tone rende
 }
 
 // grid is the cards under their groups' headings, as many to a row as fit.
-func (x *missionExt) grid(c *ui.Ctx, st core.State, groups []missionGroup, waiting []*inboxRow) {
+func (x *missionPlugin) grid(c *ui.Ctx, st core.State, groups []missionGroup, waiting []*inboxRow) {
 	th := c.Theme()
 	id := c.Next("grid")
 	cols := 3
@@ -347,7 +347,7 @@ func (x *missionExt) grid(c *ui.Ctx, st core.State, groups []missionGroup, waiti
 
 // card is a session as mission control shows it: its border in its status's colour, its live output while it works,
 // else what it waits on; a click selects it.
-func (x *missionExt) card(c *ui.Ctx, st core.State, se core.SessionState, on bool, waiting []*inboxRow) ui.ID {
+func (x *missionPlugin) card(c *ui.Ctx, st core.State, se core.SessionState, on bool, waiting []*inboxRow) ui.ID {
 	th := c.Theme()
 	tone := th.C(statusTokens[se.Status])
 	line, border := theme.WithAlpha(tone, .5), float32(1)
@@ -369,7 +369,7 @@ func (x *missionExt) card(c *ui.Ctx, st core.State, se core.SessionState, on boo
 	return id
 }
 
-func (x *missionExt) cardHead(c *ui.Ctx, st core.State, se core.SessionState, tone render.Color) {
+func (x *missionPlugin) cardHead(c *ui.Ctx, st core.State, se core.SessionState, tone render.Color) {
 	th := c.Theme()
 	name := cmpOr(se.Name, string(se.ID))
 	c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -422,7 +422,7 @@ func prLabel(pr string) string {
 
 // cardBody is what a card shows: the agent's live output while it works; a card waiting on you, answered here as
 // in the inbox; else what its status is about.
-func (x *missionExt) cardBody(c *ui.Ctx, se core.SessionState, tone render.Color, waiting []*inboxRow) {
+func (x *missionPlugin) cardBody(c *ui.Ctx, se core.SessionState, tone render.Color, waiting []*inboxRow) {
 	th := c.Theme()
 	var mine []*inboxRow
 	for _, r := range waiting {
@@ -482,7 +482,7 @@ func firstLines(s string, n int) string {
 }
 
 // cardFoot is the session's tasks, context, change and how long it's been.
-func (x *missionExt) cardFoot(c *ui.Ctx, se core.SessionState) {
+func (x *missionPlugin) cardFoot(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	now := c.Now()
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -531,7 +531,7 @@ func (x *missionExt) cardFoot(c *ui.Ctx, se core.SessionState) {
 }
 
 // newCard is a worker's last card: a session started there.
-func (x *missionExt) newCard(c *ui.Ctx, g missionGroup) {
+func (x *missionPlugin) newCard(c *ui.Ctx, g missionGroup) {
 	th := c.Theme()
 	label := "New session on " + strings.ToLower(g.title)
 	box, ok := c.Rect(c.Next("new"))
@@ -584,7 +584,7 @@ func modeKey(h interface{ Keymaps() []registry.Keymap }, mode, command string) s
 
 // liveOutput is a working card's terminal: the agent's tool calls and what they print, prose as it comes, in a VT the
 // size of the box, so a tool's colours come through.
-func (x *missionExt) liveOutput(c *ui.Ctx, se core.SessionState) {
+func (x *missionPlugin) liveOutput(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	x.seen[se.ID] = true
 	charW := c.Shaper().Shape("M", missionTermFont).Advance
@@ -775,7 +775,7 @@ func missionCell(c *ui.Ctx, key any, title string, body func(c *ui.Ctx)) {
 }
 
 // strip is the indicators in the mission slot along the foot: usage per provider, each worker's CPU.
-func (x *missionExt) strip(c *ui.Ctx) {
+func (x *missionPlugin) strip(c *ui.Ctx) {
 	th := c.Theme()
 	inds := registry.Indicators(x.h, registry.SlotMission)
 	if len(inds) == 0 || x.sh.hud == nil {
@@ -792,7 +792,7 @@ func (x *missionExt) strip(c *ui.Ctx) {
 }
 
 // footer is the keys that act on the cards, and where Escape goes back to.
-func (x *missionExt) footer(c *ui.Ctx, st core.State) {
+func (x *missionPlugin) footer(c *ui.Ctx, st core.State) {
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(20, 0), Gap: 16, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 		keys := func(cmd string, args registry.Args) string {
 			for _, k := range x.h.Keymaps() {
@@ -828,7 +828,7 @@ func (x *missionExt) footer(c *ui.Ctx, st core.State) {
 	})
 }
 
-func (x *missionExt) run(id string, a registry.Args) {
+func (x *missionPlugin) run(id string, a registry.Args) {
 	x.err = ""
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		x.err = err.Error()

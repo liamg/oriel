@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -50,7 +50,7 @@ const (
 type overview struct {
 	disposer
 	sh    *shell
-	h     ext.Host
+	h     plugin.Host
 	mu    sync.Mutex
 	cards map[string]*card
 	scans map[string]*scan
@@ -77,9 +77,9 @@ type panelResult struct {
 	done bool
 }
 
-func (o *overview) Manifest() ext.Manifest { return ext.Manifest{ID: "overview"} }
+func (o *overview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "overview"} }
 
-func (o *overview) Activate(_ context.Context, h ext.Host) error {
+func (o *overview) Activate(_ context.Context, h plugin.Host) error {
 	o.h, o.cards, o.scans = h, map[string]*card{}, map[string]*scan{}
 	if o.now == nil {
 		o.now = time.Now
@@ -287,7 +287,7 @@ func (o *overview) scanOf(ctx context.Context, dir string) *scan {
 }
 
 // langIndex maps file extensions and names to the registered languages' names.
-func langIndex(h ext.Host) func(name string) string {
+func langIndex(h plugin.Host) func(name string) string {
 	langs, _ := h.Languages()
 	byExt, byName := map[string]string{}, map[string]string{}
 	for _, l := range langs {

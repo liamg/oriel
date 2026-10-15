@@ -17,7 +17,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/edit/input"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/syntax"
@@ -31,12 +31,12 @@ import (
 // EditorView is the editor pane's view id; each window is an instance of it, named by the window's id.
 const EditorView = "editor"
 
-// editorExt is the editor: one vim engine whose windows are views in the layout, whose files are on disk,
+// editorPlugin is the editor: one vim engine whose windows are views in the layout, whose files are on disk,
 // whose notices are the IDE's and whose "+ and "* are the system clipboard (editor.md, "Part of the IDE").
-type editorExt struct {
+type editorPlugin struct {
 	disposer
 	sh   *shell
-	h    ext.Host
+	h    plugin.Host
 	ed   *edit.Editor
 	e    *vim.Engine
 	conv *conventions
@@ -67,9 +67,9 @@ type diskWatch struct {
 // diskInterval is how often the files of open buffers are looked at.
 const diskInterval = time.Second
 
-func (x *editorExt) Manifest() ext.Manifest { return ext.Manifest{ID: "editor"} }
+func (x *editorPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "editor"} }
 
-func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
+func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.sh.editor = h, x
 	x.dir = x.sh.cfg.WorkDir
 	if x.dir == "" {
@@ -82,14 +82,14 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	x.present = map[vim.WindowID]*windowPresent{}
 	x.builtinInputs()
 	x.sh.enginePending = x.pending
-	x.sh.engineHints = func(keys []string) []ext.Hint {
+	x.sh.engineHints = func(keys []string) []plugin.Hint {
 		f := x.h.Layout().Focus
 		if f == nil || f.ID != EditorView || !isVim(x.inputFor(x.current())) || x.e.Mode() != "normal" {
 			return nil
 		}
-		var out []ext.Hint
+		var out []plugin.Hint
 		for _, h := range vim.HintsFor(keys) {
-			out = append(out, ext.Hint{Keys: h.Keys, Desc: h.Desc})
+			out = append(out, plugin.Hint{Keys: h.Keys, Desc: h.Desc})
 		}
 		return out
 	}
@@ -267,7 +267,7 @@ func (x *editorExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *editorExt) Deactivate(ctx context.Context) error {
+func (x *editorPlugin) Deactivate(ctx context.Context) error {
 	for _, d := range x.docs {
 		d.close()
 	}
@@ -292,7 +292,7 @@ func windowOf(v layout.ViewRef) (vim.WindowID, bool) {
 
 // open opens path in a new editor tab beside the focused editor, or shows the tab that has it. place "split" or
 // "vsplit" opens a new window on it beside the focused editor instead.
-func (x *editorExt) open(ctx registry.Ctx, path, place string) error {
+func (x *editorPlugin) open(ctx registry.Ctx, path, place string) error {
 	name := x.relName(path)
 	root := x.h.Layout()
 	for _, id := range x.e.WindowIDs() {
@@ -322,7 +322,7 @@ func (x *editorExt) open(ctx registry.Ctx, path, place string) error {
 }
 
 // window is a new window on name: the engine's first window while it isn't on screen yet, or another.
-func (x *editorExt) window(name string) (vim.WindowID, error) {
+func (x *editorPlugin) window(name string) (vim.WindowID, error) {
 	if ids := x.e.WindowIDs(); len(ids) == 1 && x.h.Layout().Find(windowRef(ids[0])) == nil {
 		x.e.Edit(name)
 		return ids[0], nil
@@ -331,7 +331,7 @@ func (x *editorExt) window(name string) (vim.WindowID, error) {
 }
 
 // relName is how the editor names path: relative to its directory when inside it.
-func (x *editorExt) relName(path string) string {
+func (x *editorPlugin) relName(path string) string {
 	if rel, err := filepath.Rel(x.dir, path); err == nil && filepath.IsAbs(path) && !strings.HasPrefix(rel, "..") {
 		return rel
 	}
@@ -369,7 +369,7 @@ func argInt(v any) int {
 // editorHost is the IDE as the engine sees it: files from disk, and the IDE's own views for :ls, :copen and
 // :messages. An ex command the engine doesn't know runs the registry command of that name.
 type editorHost struct {
-	x    *editorExt
+	x    *editorPlugin
 	disk vim.Disk
 }
 
@@ -481,7 +481,7 @@ func (h *editorHost) Command(name, args string, bang bool) bool {
 
 // editorLayout is the engine's windows as views in the IDE's layout: :split splits the pane, CTRL-W moves
 // between panes, and a pane dragged elsewhere is where the engine finds it.
-type editorLayout struct{ x *editorExt }
+type editorLayout struct{ x *editorPlugin }
 
 func (l *editorLayout) root() *layout.Root { return l.x.h.Layout() }
 
@@ -632,7 +632,7 @@ func (l *editorLayout) Focus(w vim.WindowID) {
 }
 
 // editorView is the pane view: one instance per window.
-type editorView struct{ x *editorExt }
+type editorView struct{ x *editorPlugin }
 
 func (v editorView) EdgeToEdge() {}
 
@@ -767,7 +767,7 @@ func (h *highlighter) close() {
 }
 
 // highlights is the buffer's highlighter, started the first time a pane draws it.
-func (x *editorExt) highlights(p vim.Pane) *highlighter {
+func (x *editorPlugin) highlights(p vim.Pane) *highlighter {
 	b := p.Buffer()
 	if h, ok := x.docs[b]; ok {
 		return h
@@ -815,29 +815,29 @@ func (x *editorExt) highlights(p vim.Pane) *highlighter {
 }
 
 // pending is the focused editor's engine waiting for more keys: vim's g, z or a count, emacs's C-x.
-func (x *editorExt) pending() ext.Pending {
+func (x *editorPlugin) pending() plugin.Pending {
 	f := x.h.Layout().Focus
 	if f == nil || f.ID != EditorView || x.pendingSince.IsZero() {
-		return ext.Pending{}
+		return plugin.Pending{}
 	}
 	st := x.inputFor(x.current())
-	p := ext.Pending{Modes: []string{st.Mode().KeyMode, "global"}, Since: x.pendingSince}
+	p := plugin.Pending{Modes: []string{st.Mode().KeyMode, "global"}, Since: x.pendingSince}
 	if isVim(st) {
 		p.Keys = x.e.Pending()
 		for _, h := range x.e.NextKeys() {
-			p.Hints = append(p.Hints, ext.Hint{Keys: h.Keys, Desc: h.Desc})
+			p.Hints = append(p.Hints, plugin.Hint{Keys: h.Keys, Desc: h.Desc})
 		}
 	} else if s := st.Pending(); s != "" {
 		p.Keys = []string{s}
 	}
 	if len(p.Keys) == 0 {
-		return ext.Pending{}
+		return plugin.Pending{}
 	}
 	return p
 }
 
 // checkDisk reloads a buffer whose file changed on disk, or asks when the buffer has changes of its own.
-func (x *editorExt) checkDisk(c *ui.Ctx) {
+func (x *editorPlugin) checkDisk(c *ui.Ctx) {
 	now := c.Now()
 	if now.Before(x.disk.next) {
 		c.WakeAt(x.disk.next)
@@ -876,7 +876,7 @@ func (x *editorExt) checkDisk(c *ui.Ctx) {
 
 // complete is <Tab> on the command line: the longest common start of the ex commands, buffers or files that
 // match what's typed, then each in turn.
-func (x *editorExt) complete() {
+func (x *editorPlugin) complete() {
 	line, ok := x.e.Cmdline()
 	if !ok || !strings.HasPrefix(line, ":") {
 		return
@@ -926,7 +926,7 @@ func (x *editorExt) complete() {
 }
 
 // files are the paths under the editor's directory that complete arg.
-func (x *editorExt) files(arg string) []string {
+func (x *editorPlugin) files(arg string) []string {
 	dir, base := filepath.Split(arg)
 	ents, err := os.ReadDir(filepath.Join(x.dir, dir))
 	if err != nil {
@@ -983,7 +983,7 @@ func keyMode(m string) string {
 }
 
 // unsearchable are the work dir's files .gitattributes marks generated or vendored, which search leaves out.
-func (x *editorExt) unsearchable() []string {
+func (x *editorPlugin) unsearchable() []string {
 	all := (&fileList{dir: x.dir}).list()
 	keep := map[string]bool{}
 	for _, f := range x.conv.searchable(all) {
@@ -999,7 +999,7 @@ func (x *editorExt) unsearchable() []string {
 }
 
 // openBuffer is the listed buffer holding the file at path, if one does.
-func (x *editorExt) openBuffer(path string) (vim.FileState, bool) {
+func (x *editorPlugin) openBuffer(path string) (vim.FileState, bool) {
 	for _, f := range x.e.Files() {
 		if f.File != nil && filepath.Clean(f.File.Path) == filepath.Clean(path) {
 			return f, true
@@ -1009,7 +1009,7 @@ func (x *editorExt) openBuffer(path string) (vim.FileState, bool) {
 }
 
 // openFileBytes is an open buffer's text as it would be written, by its path: absolute, or relative to the work dir.
-func (x *editorExt) openFileBytes(rel string) ([]byte, bool) {
+func (x *editorPlugin) openFileBytes(rel string) ([]byte, bool) {
 	path := rel
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(x.dir, rel)

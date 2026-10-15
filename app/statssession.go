@@ -20,7 +20,7 @@ import (
 // The session stats tab (43's panel 1): one session's stats as a main tab, its instance the session's ID; for one
 // outside Oriel, id@worker.
 
-type sessionStatsView struct{ x *statsExt }
+type sessionStatsView struct{ x *statsPlugin }
 
 func (v sessionStatsView) Title(instance string) string {
 	if se, ok := v.x.h.Session(core.SessionID(instance)); ok {
@@ -56,7 +56,7 @@ type tabState struct{ tokens int }
 // maxSteps is how many steps the session chart draws at most; a longer session's are wider than five minutes.
 const maxSteps = 150
 
-func (x *statsExt) sessionTab(c *ui.Ctx, id core.SessionID) {
+func (x *statsPlugin) sessionTab(c *ui.Ctx, id core.SessionID) {
 	th := c.Theme()
 	d, ok := x.detail(id)
 	se, _ := x.h.Session(id)
@@ -90,7 +90,7 @@ func (x *statsExt) sessionTab(c *ui.Ctx, id core.SessionID) {
 	})
 }
 
-func (x *statsExt) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabState) {
+func (x *statsPlugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabState) {
 	th := c.Theme()
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "STATS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
@@ -187,7 +187,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 }
 
 // overTime is the session's cost (or tokens) per step by token kind, with idle stretches, compactions and turns.
-func (x *statsExt) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
+func (x *statsPlugin) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
 	th := c.Theme()
 	if len(d.Buckets) == 0 {
 		statsCard(c, "time", ui.Flex(2.2), "COST OVER THE SESSION", "", nil, func(c *ui.Ctx) { note(c, "none", "no requests yet") })
@@ -268,7 +268,7 @@ func (x *statsExt) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
 }
 
 // repoCard is the session's cost per repo, split or whole, then its models.
-func (x *statsExt) repoCard(c *ui.Ctx, d stats.Detail) {
+func (x *statsPlugin) repoCard(c *ui.Ctx, d stats.Detail) {
 	th := c.Theme()
 	st := x.h.State()
 	whole := !x.split()

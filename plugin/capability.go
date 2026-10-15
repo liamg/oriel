@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 // Capability is something a plugin may do, declared in its manifest's [permissions] (security.md).
 type Capability string

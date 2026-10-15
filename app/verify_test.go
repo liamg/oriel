@@ -55,9 +55,9 @@ func (f *fakeQuiz) asked() []registry.ForkRequest {
 	return slices.Clone(f.prompts)
 }
 
-func (s *errScene) verify() *verifyExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*verifyExt); ok {
+func (s *errScene) verify() *verifyPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*verifyPlugin); ok {
 			return x
 		}
 	}

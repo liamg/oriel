@@ -12,7 +12,7 @@ import (
 
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
@@ -35,21 +35,21 @@ var (
 	tFindReviewer = theme.Declare("review.reviewer", "cyan")
 )
 
-// aiReviewExt is the cross-model AI review (agents.md, Guardrails): its commands, options and the diff's column.
+// aiReviewPlugin is the cross-model AI review (agents.md, Guardrails): its commands, options and the diff's column.
 // Reviews run on the session's worker (worker.Client.AIReview); findings are session state.
-type aiReviewExt struct {
+type aiReviewPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	filter    string // a severity the cards are narrowed to, or ""
 	dismissed bool   // dismissed findings are shown too
 	busy      sync.WaitGroup
 }
 
-func (x *aiReviewExt) Manifest() ext.Manifest { return ext.Manifest{ID: "ai-review"} }
+func (x *aiReviewPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ai-review"} }
 
-func (x *aiReviewExt) Activate(_ context.Context, h ext.Host) error {
+func (x *aiReviewPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.String, Default: "", Scopes: registry.ScopeUser,
 		Help: "The provider AI reviews run on: claude, codex; empty for one other than the session agent's (the author's), else the author's on another model."}))
@@ -139,13 +139,13 @@ func (x *aiReviewExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *aiReviewExt) Deactivate(ctx context.Context) error {
+func (x *aiReviewPlugin) Deactivate(ctx context.Context) error {
 	x.busy.Wait()
 	return x.disposer.Deactivate(ctx)
 }
 
 // aiReviewView is the column, shown for a diff in a session.
-type aiReviewView struct{ x *aiReviewExt }
+type aiReviewView struct{ x *aiReviewPlugin }
 
 func (v aiReviewView) Build(vc registry.ViewCtx) ui.Node {
 	return &ui.Func{Key: "ai-review", Fn: func(c *ui.Ctx) { v.x.view(c, vc.Instance, vc.Width) }}
@@ -157,12 +157,12 @@ func (v aiReviewView) Shown(root string) bool {
 }
 
 // promptPath is the user's own AI review prompt, which overrides the built-in pack.
-func (x *aiReviewExt) promptPath() string {
+func (x *aiReviewPlugin) promptPath() string {
 	return filepath.Join(x.sh.cfg.ConfigDir, "agents", worker.AIReviewPack+".md")
 }
 
 // session is the session {id}, or the one in front.
-func (x *aiReviewExt) session(a registry.Args) (core.SessionState, error) {
+func (x *aiReviewPlugin) session(a registry.Args) (core.SessionState, error) {
 	id := core.SessionID(a.String("id"))
 	st := x.h.State()
 	if id == "" {
@@ -175,7 +175,7 @@ func (x *aiReviewExt) session(a registry.Args) (core.SessionState, error) {
 	return se.Snapshot(), nil
 }
 
-func (x *aiReviewExt) client(a registry.Args) (worker.Client, error) {
+func (x *aiReviewPlugin) client(a registry.Args) (worker.Client, error) {
 	se, err := x.session(a)
 	if err != nil {
 		return worker.Client{}, err
@@ -187,7 +187,7 @@ func (x *aiReviewExt) client(a registry.Args) (worker.Client, error) {
 }
 
 // run asks the session's worker for a review, with the user's prompt when they have one.
-func (x *aiReviewExt) run(a registry.Args) error {
+func (x *aiReviewPlugin) run(a registry.Args) error {
 	se, err := x.session(a)
 	if err != nil {
 		return err
@@ -219,7 +219,7 @@ func (x *aiReviewExt) run(a registry.Args) error {
 	return nil
 }
 
-func (x *aiReviewExt) setFinding(se core.SessionState, f core.Finding) error {
+func (x *aiReviewPlugin) setFinding(se core.SessionState, f core.Finding) error {
 	c, err := x.sh.sessions.client(se.ID)
 	if err != nil {
 		return err
@@ -235,7 +235,7 @@ func (x *aiReviewExt) setFinding(se core.SessionState, f core.Finding) error {
 }
 
 // thread hands a finding to the session's agent as a thread on its line: to answer, or to fix.
-func (x *aiReviewExt) thread(ctx context.Context, se core.SessionState, f core.Finding, fix bool) error {
+func (x *aiReviewPlugin) thread(ctx context.Context, se core.SessionState, f core.Finding, fix bool) error {
 	if f.Thread != "" {
 		return x.h.Run(ctx, "request.open", registry.Args{"thread": string(f.Thread)})
 	}
@@ -325,7 +325,7 @@ func severityTone(th *theme.Resolved, s string) render.Color {
 const findHelp = "files/ai-review"
 
 // view is the column: the review's header and severity chips, its findings worst first, and the reviewer's foot.
-func (x *aiReviewExt) view(c *ui.Ctx, root string, width float32) {
+func (x *aiReviewPlugin) view(c *ui.Ctx, root string, width float32) {
 	th := c.Theme()
 	se, _, inSession := sessionAt(x.h.State(), root)
 	last, reviewed := se.LastAIReview()
@@ -442,7 +442,7 @@ func (x *aiReviewExt) view(c *ui.Ctx, root string, width float32) {
 }
 
 // card is one finding: its severity and category, title, place (a click shows it in the diff), body and actions.
-func (x *aiReviewExt) card(c *ui.Ctx, se core.SessionState, f core.Finding, width float32) {
+func (x *aiReviewPlugin) card(c *ui.Ctx, se core.SessionState, f core.Finding, width float32) {
 	th := c.Theme()
 	tone := severityTone(th, f.Severity)
 	fg, title := th.C(theme.FgFaint), th.C(theme.Fg)
@@ -519,7 +519,7 @@ func (x *aiReviewExt) card(c *ui.Ctx, se core.SessionState, f core.Finding, widt
 
 // shipGate is the AI review as a "before this ships" gate: up to you until one runs, then met once every high and
 // critical finding is dealt with.
-func (x *aiReviewExt) shipGate(id string) registry.Gate {
+func (x *aiReviewPlugin) shipGate(id string) registry.Gate {
 	se, ok := x.h.Session(core.SessionID(id))
 	if !ok {
 		return registry.Gate{}

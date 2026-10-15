@@ -26,7 +26,7 @@ func mainArea() ui.ID { return ui.Child(ui.Child(ui.Child(0, "shell"), "main"), 
 // statsTop is how many groups the chart draws apart; the rest are one "other" series.
 const statsTop = 6
 
-func (x *statsExt) page(c *ui.Ctx) {
+func (x *statsPlugin) page(c *ui.Ctx) {
 	if !x.open || c.Theme().IsProbe() {
 		return
 	}
@@ -72,9 +72,9 @@ func (x *statsExt) page(c *ui.Ctx) {
 		})
 }
 
-func (x *statsExt) workerName(id core.WorkerID) string { return x.h.State().WorkerName(id) }
+func (x *statsPlugin) workerName(id core.WorkerID) string { return x.h.State().WorkerName(id) }
 
-func (x *statsExt) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMeta) {
+func (x *statsPlugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMeta) {
 	th := c.Theme()
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "STATS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
@@ -141,7 +141,7 @@ func (x *statsExt) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportM
 	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 }
 
-func (x *statsExt) run(id string, a registry.Args) {
+func (x *statsPlugin) run(id string, a registry.Args) {
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		x.h.Log().Error("stats", "command", id, "err", err)
 	}
@@ -151,7 +151,7 @@ func (x *statsExt) run(id string, a registry.Args) {
 func counted(n int, what string) string { return fmt.Sprintf("%d %s", n, plural(n, what, what+"s")) }
 
 // toolbar is the range, the grouping, the filter chips and the split toggle.
-func (x *statsExt) toolbar(c *ui.Ctx) {
+func (x *statsPlugin) toolbar(c *ui.Ctx) {
 	th := c.Theme()
 	c.Row("bar", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 		var labels []string
@@ -220,7 +220,7 @@ func (x *statsExt) toolbar(c *ui.Ctx) {
 
 // filterChips are a filter's chips: one for each value, ✕ taking it off; for the main three with none, a menu of
 // what there is.
-func (x *statsExt) filterChips(c *ui.Ctx, key string) {
+func (x *statsPlugin) filterChips(c *ui.Ctx, key string) {
 	th := c.Theme()
 	vals := x.q.filters[key]
 	for i, v := range vals {
@@ -255,7 +255,7 @@ func (x *statsExt) filterChips(c *ui.Ctx, key string) {
 }
 
 // values are what a filter can be: the repos, workers and providers the app knows of; sessions, kinds and models.
-func (x *statsExt) values(key string) []string {
+func (x *statsPlugin) values(key string) []string {
 	st := x.h.State()
 	var out []string
 	add := func(v string) {
@@ -298,7 +298,7 @@ func (x *statsExt) values(key string) []string {
 }
 
 // filterValue is what a filter's menu shows as what the query wants: a worker's or session's ID for its name.
-func (x *statsExt) filterValue(key, v string) string {
+func (x *statsPlugin) filterValue(key, v string) string {
 	st := x.h.State()
 	switch key {
 	case "worker":
@@ -324,7 +324,7 @@ func (x *statsExt) filterValue(key, v string) string {
 }
 
 // moreFilters are the filters + filter offers: a session, kind or model.
-func (x *statsExt) moreFilters() []string {
+func (x *statsPlugin) moreFilters() []string {
 	var out []string
 	for _, k := range []string{"session", "kind", "model"} {
 		for _, v := range x.values(k) {
@@ -336,7 +336,7 @@ func (x *statsExt) moreFilters() []string {
 	return out
 }
 
-func (x *statsExt) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
+func (x *statsPlugin) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 	t, p := r.Totals, r.Prev
 	days := int(math.Round(q.To.Sub(q.From).Hours() / 24))
 	c.Row("tiles", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
@@ -412,7 +412,7 @@ func cacheHit(t stats.Tokens) float64 {
 }
 
 // groupTones are each group's colour: a repo's project colour, else the palette's by rank.
-func (x *statsExt) groupTones(c *ui.Ctx, r stats.Report) []render.Color {
+func (x *statsPlugin) groupTones(c *ui.Ctx, r stats.Report) []render.Color {
 	th := c.Theme()
 	st := x.h.State()
 	out := make([]render.Color, len(r.Groups))
@@ -438,7 +438,7 @@ func (x *statsExt) groupTones(c *ui.Ctx, r stats.Report) []render.Color {
 }
 
 // series are the chart's: the top groups, then the rest as one.
-func (x *statsExt) series(c *ui.Ctx, r stats.Report, tones []render.Color) []widget.ChartSeries {
+func (x *statsPlugin) series(c *ui.Ctx, r stats.Report, tones []render.Color) []widget.ChartSeries {
 	var out []widget.ChartSeries
 	other := make([]float64, len(r.Points))
 	rest := 0
@@ -460,7 +460,7 @@ func (x *statsExt) series(c *ui.Ctx, r stats.Report, tones []render.Color) []wid
 	return out
 }
 
-func (x *statsExt) chart(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.Color, w ui.Size) {
+func (x *statsPlugin) chart(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.Color, w ui.Size) {
 	series := x.series(c, r, tones)
 	what := map[string]string{stats.ByRepo: "REPO", stats.BySession: "SESSION", stats.ByKind: "KIND", stats.ByModel: "MODEL",
 		stats.ByProvider: "PROVIDER", stats.ByAccount: "ACCOUNT", stats.ByOrigin: "ORIGIN", stats.ByDay: "DAY"}[q.Group]
@@ -506,7 +506,7 @@ func (x *statsExt) chart(c *ui.Ctx, q stats.Query, r stats.Report, tones []rende
 }
 
 // legend is the series' names in their colours, perLine to a line (0 for one line).
-func (x *statsExt) legend(c *ui.Ctx, series []widget.ChartSeries, perLine int) {
+func (x *statsPlugin) legend(c *ui.Ctx, series []widget.ChartSeries, perLine int) {
 	th := c.Theme()
 	if perLine <= 0 {
 		perLine = len(series)
@@ -526,7 +526,7 @@ func (x *statsExt) legend(c *ui.Ctx, series []widget.ChartSeries, perLine int) {
 }
 
 // table is the groups: a row each, the selected one drilled into with ⏎ or a click.
-func (x *statsExt) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.Color, w ui.Size) {
+func (x *statsPlugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.Color, w ui.Size) {
 	th := c.Theme()
 	what := map[string]string{stats.ByRepo: "repo", stats.BySession: "session", stats.ByKind: "kind", stats.ByModel: "model",
 		stats.ByProvider: "provider", stats.ByAccount: "account", stats.ByOrigin: "origin", stats.ByDay: "day"}[q.Group]
@@ -609,7 +609,7 @@ func (x *statsExt) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []rende
 	})
 }
 
-func (x *statsExt) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []statsCol, tone render.Color, bySession bool) {
+func (x *statsPlugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []statsCol, tone render.Color, bySession bool) {
 	th := c.Theme()
 	on := i == x.sel || i == x.hover
 	fill := render.Color{}
@@ -677,7 +677,7 @@ func (x *statsExt) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []s
 	}
 }
 
-func (x *statsExt) lastActive(g stats.Group) string {
+func (x *statsPlugin) lastActive(g stats.Group) string {
 	if g.Last.IsZero() {
 		return ""
 	}

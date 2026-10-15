@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/text"
@@ -19,7 +19,7 @@ import (
 )
 
 // fix is agent.fix: a request with the trouble attached, about its file and line.
-func (x *explainExt) fix(ctx registry.Ctx, a registry.Args) error {
+func (x *explainPlugin) fix(ctx registry.Ctx, a registry.Args) error {
 	t := registry.TroubleOf(a)
 	args := registry.Args{"text": t.FixText(), "context": strings.TrimSpace(t.Subject + "\n\n" + t.Context)}
 	if t.File != "" {
@@ -29,7 +29,7 @@ func (x *explainExt) fix(ctx registry.Ctx, a registry.Args) error {
 }
 
 // keep asks about req off the loop, its answer kept under key for explainKept to show where it was asked.
-func (x *explainExt) keep(key string, req registry.ExplainRequest) {
+func (x *explainPlugin) keep(key string, req registry.ExplainRequest) {
 	a := &answer{loading: true}
 	x.mu.Lock()
 	x.kept[key] = a
@@ -56,7 +56,7 @@ func (x *explainExt) keep(key string, req registry.ExplainRequest) {
 }
 
 // keptAnswer is the answer asked for under key, if one was.
-func (x *explainExt) keptAnswer(key string) (answer, bool) {
+func (x *explainPlugin) keptAnswer(key string) (answer, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	a, ok := x.kept[key]
@@ -68,12 +68,12 @@ func (x *explainExt) keptAnswer(key string) (answer, bool) {
 
 // askTwins are "ask agent to explain" and "ask agent to fix" about t, side by side (ide.md, "Explain sits next to
 // fix everywhere"). Explain answers under key, which explainKept draws where it was asked; fix writes a request.
-func askTwins(c *ui.Ctx, h ext.Host, key string, t registry.Trouble, help string) {
+func askTwins(c *ui.Ctx, h plugin.Host, key string, t registry.Trouble, help string) {
 	askTwinsLabelled(c, h, key, t, help, "ask agent to explain", "ask agent to fix")
 }
 
 // askTwinsLabelled is askTwins with its buttons' own words ("Explain with agent", "Fix CI with agent").
-func askTwinsLabelled(c *ui.Ctx, h ext.Host, key string, t registry.Trouble, help, explainLabel, fixLabel string) {
+func askTwinsLabelled(c *ui.Ctx, h plugin.Host, key string, t registry.Trouble, help, explainLabel, fixLabel string) {
 	fix := t.Args()
 	explain := maps.Clone(fix)
 	explain["key"] = key

@@ -45,7 +45,7 @@ var (
 
 func debugAccessOption(action string) string { return "debug.agent." + action }
 
-func (x *debugExt) accessOptions() {
+func (x *debugPlugin) accessOptions() {
 	for _, a := range debugAccesses {
 		x.add(x.h.Option(registry.OptionSpec{Name: debugAccessOption(a.Action), Type: registry.Enum, Values: debugLevels, Default: a.Default,
 			Scopes: registry.ScopeUser,
@@ -54,7 +54,7 @@ func (x *debugExt) accessOptions() {
 }
 
 // level is how far the agent may take an action: allow, ask or off.
-func (x *debugExt) level(action string) string {
+func (x *debugPlugin) level(action string) string {
 	v, _, _ := x.h.Options().Get(debugAccessOption(action), registry.At{})
 	if s, _ := v.(string); slices.Contains(debugLevels, s) {
 		return s
@@ -62,7 +62,7 @@ func (x *debugExt) level(action string) string {
 	return "off"
 }
 
-func (x *debugExt) setLevel(action, level string) error {
+func (x *debugPlugin) setLevel(action, level string) error {
 	i := slices.IndexFunc(debugAccesses, func(a debugAccess) bool { return a.Action == action })
 	if i < 0 {
 		return fmt.Errorf("no debugger action %q: read, eval, breakpoints or step", action)
@@ -74,7 +74,7 @@ func (x *debugExt) setLevel(action, level string) error {
 }
 
 // gate is a tool's Confirm: granted, refused, or what the user is asked.
-func (x *debugExt) gate(action string, line func(p map[string]any) string) func(registry.Ctx, map[string]any) (registry.Confirmation, error) {
+func (x *debugPlugin) gate(action string, line func(p map[string]any) string) func(registry.Ctx, map[string]any) (registry.Confirmation, error) {
 	return func(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
 		a := debugAccesses[slices.IndexFunc(debugAccesses, func(a debugAccess) bool { return a.Action == action })]
 		switch x.level(action) {
@@ -91,7 +91,7 @@ func (x *debugExt) gate(action string, line func(p map[string]any) string) func(
 
 // agentTools are the debugger's tools for agents (DB-3, ide.md "Debugging"): ordinary agent tools over the running
 // session, each gated by the access the user granted.
-func (x *debugExt) agentTools() {
+func (x *debugPlugin) agentTools() {
 	x.accessOptions()
 	x.add(x.h.Command(registry.Command{ID: "debug.agent.access",
 		Title: "Set what agents may do in the debugger: {action} read, eval, breakpoints or step, to {level} allow, ask or off (the next by default)",
@@ -123,7 +123,7 @@ func (x *debugExt) agentTools() {
 	}
 }
 
-func (x *debugExt) breakpointLine(p map[string]any) string {
+func (x *debugPlugin) breakpointLine(p map[string]any) string {
 	file, _ := p["file"].(string)
 	verb := "set a breakpoint at"
 	if b, _ := p["remove"].(bool); b {
@@ -136,20 +136,20 @@ func (x *debugExt) breakpointLine(p map[string]any) string {
 	return l
 }
 
-func (x *debugExt) agentBreakpoint(p map[string]any) debugBreakpoint {
+func (x *debugPlugin) agentBreakpoint(p map[string]any) debugBreakpoint {
 	str := func(k string) string { s, _ := p[k].(string); return s }
 	return debugBreakpoint{Line: intArg(p["line"]) - 1, Condition: str("condition"), HitCondition: str("hit"), LogMessage: str("log")}
 }
 
 // where is a frame as the agent reads it: "main.half at main.go:12".
-func (x *debugExt) where(f dap.Frame) string {
+func (x *debugPlugin) where(f dap.Frame) string {
 	if f.Path == "" {
 		return f.Name
 	}
 	return fmt.Sprintf("%s at %s:%d", f.Name, x.sh.agentRel(f.Path), f.Line+1)
 }
 
-func (x *debugExt) toolStack(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *debugPlugin) toolStack(ctx registry.Ctx, _ map[string]any) (any, error) {
 	var out string
 	err := onLoop(ctx, x.h, func() {
 		var b strings.Builder
@@ -185,7 +185,7 @@ func (x *debugExt) toolStack(ctx registry.Ctx, _ map[string]any) (any, error) {
 }
 
 // paused is the running client and a frame of the paused stack: its index, or the selected one when p has none.
-func (x *debugExt) paused(ctx registry.Ctx, p map[string]any) (*dap.Client, dap.Frame, error) {
+func (x *debugPlugin) paused(ctx registry.Ctx, p map[string]any) (*dap.Client, dap.Frame, error) {
 	var (
 		c   *dap.Client
 		f   dap.Frame
@@ -213,7 +213,7 @@ func (x *debugExt) paused(ctx registry.Ctx, p map[string]any) (*dap.Client, dap.
 	return c, f, err
 }
 
-func (x *debugExt) writeVars(b *strings.Builder, indent string, vs []dap.Variable) {
+func (x *debugPlugin) writeVars(b *strings.Builder, indent string, vs []dap.Variable) {
 	for _, v := range vs {
 		fmt.Fprintf(b, "%s%s", indent, v.Name)
 		if v.Type != "" {
@@ -227,7 +227,7 @@ func (x *debugExt) writeVars(b *strings.Builder, indent string, vs []dap.Variabl
 	}
 }
 
-func (x *debugExt) toolFrame(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *debugPlugin) toolFrame(ctx registry.Ctx, p map[string]any) (any, error) {
 	c, f, err := x.paused(ctx, p)
 	if err != nil {
 		return nil, err
@@ -255,7 +255,7 @@ func (x *debugExt) toolFrame(ctx registry.Ctx, p map[string]any) (any, error) {
 	return strings.TrimSpace(b.String()), nil
 }
 
-func (x *debugExt) toolVariables(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *debugPlugin) toolVariables(ctx registry.Ctx, p map[string]any) (any, error) {
 	ref := intArg(p["ref"])
 	c, _, err := x.paused(ctx, nil)
 	if err != nil {
@@ -279,7 +279,7 @@ func (x *debugExt) toolVariables(ctx registry.Ctx, p map[string]any) (any, error
 }
 
 // toolEval evaluates as the debug console does, and shows it there as the agent's.
-func (x *debugExt) toolEval(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *debugPlugin) toolEval(ctx registry.Ctx, p map[string]any) (any, error) {
 	expr, _ := p["expression"].(string)
 	if expr = strings.TrimSpace(expr); expr == "" {
 		return nil, errors.New("nothing to evaluate")
@@ -308,7 +308,7 @@ func (x *debugExt) toolEval(ctx registry.Ctx, p map[string]any) (any, error) {
 	return out, nil
 }
 
-func (x *debugExt) toolBreakpoint(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *debugPlugin) toolBreakpoint(ctx registry.Ctx, p map[string]any) (any, error) {
 	file, _ := p["file"].(string)
 	if file == "" {
 		return nil, errors.New("no file given")
@@ -339,7 +339,7 @@ func (x *debugExt) toolBreakpoint(ctx registry.Ctx, p map[string]any) (any, erro
 	return registry.Acted{Line: fmt.Sprintf("%s %s:%d", what, x.sh.agentRel(path), b.Line+1)}, nil
 }
 
-func (x *debugExt) toolStep(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *debugPlugin) toolStep(ctx registry.Ctx, p map[string]any) (any, error) {
 	kinds := map[string]dap.StepKind{"over": dap.StepOver, "into": dap.StepIn, "in": dap.StepIn, "out": dap.StepOut}
 	k, _ := p["kind"].(string)
 	kind, ok := kinds[k]
@@ -350,7 +350,7 @@ func (x *debugExt) toolStep(ctx registry.Ctx, p map[string]any) (any, error) {
 }
 
 // toolResume runs the debuggee on and waits until it stops again or ends, and says where.
-func (x *debugExt) toolResume(run func() error) func(registry.Ctx, map[string]any) (any, error) {
+func (x *debugPlugin) toolResume(run func() error) func(registry.Ctx, map[string]any) (any, error) {
 	return func(ctx registry.Ctx, _ map[string]any) (any, error) {
 		var (
 			s   *debugSession

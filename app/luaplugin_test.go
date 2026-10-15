@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/ext"
-	"github.com/liamg/oriel/ext/exttest"
-	"github.com/liamg/oriel/ext/ossandbox"
+	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/plugin/hosttest"
+	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/script/api"
 )
 
 // pluginVM is a Lua VM for plugin p over the scene's host, as a plugin's init.lua runs in.
-func (s *errScene) pluginVM(t *testing.T, p ext.Plugin) *script.VM {
+func (s *errScene) pluginVM(t *testing.T, p plugin.Caller) *script.VM {
 	t.Helper()
 	vm := script.New()
 	apis := api.InstallPlugin(vm, s.lua().h, p)
@@ -46,8 +46,8 @@ func global(vm *script.VM, name string) any {
 // allowed) and nothing else: each other door fails with an error naming the capability (security.md).
 func TestPluginLuaGuard(t *testing.T) {
 	s := luaScene(t, "")
-	g := ext.NewGrants()
-	p := ext.Plugin{ID: "acme/x", Dir: t.TempDir(), Guard: g}
+	g := plugin.NewGrants()
+	p := plugin.Caller{ID: "acme/x", Dir: t.TempDir(), Guard: g}
 	os.WriteFile(filepath.Join(p.Dir, "notes.txt"), []byte("own"), 0o644)
 	vm := s.pluginVM(t, p)
 	if err := luaErr(t, vm, `oriel.keymap.set("n", "<leader>x", "noop"); oriel.command("X", function() end)
@@ -73,7 +73,7 @@ own = oriel.read("notes.txt")`); err != "" {
 			t.Errorf("%s: %q, want an error naming %s", src, err, capability)
 		}
 	}
-	g.Grant("acme/x", []ext.Grant{{Cap: ext.CapAgentTools, Scope: []string{"lookup"}}})
+	g.Grant("acme/x", []plugin.Grant{{Cap: plugin.CapAgentTools, Scope: []string{"lookup"}}})
 	if err := luaErr(t, vm, `oriel.agent.tool{ name = "lookup", run = function() end }`); err != "" {
 		t.Errorf("a declared tool: %s", err)
 	}
@@ -86,8 +86,8 @@ own = oriel.read("notes.txt")`); err != "" {
 // error, not a veto.
 func TestPluginGateHooks(t *testing.T) {
 	s := luaScene(t, "")
-	g := ext.NewGrants()
-	vm := s.pluginVM(t, ext.Plugin{ID: "acme/gate", Guard: g})
+	g := plugin.NewGrants()
+	vm := s.pluginVM(t, plugin.Caller{ID: "acme/gate", Guard: g})
 	if err := luaErr(t, vm, `oriel.on("Commit", function(ev) seen = true; return false, "no" end)`); err != "" {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestPluginGateHooks(t *testing.T) {
 	if global(vm, "seen") != true {
 		t.Error("the hook didn't run")
 	}
-	g.Grant("acme/gate", []ext.Grant{{Cap: ext.CapGate}})
+	g.Grant("acme/gate", []plugin.Grant{{Cap: plugin.CapGate}})
 	if v, _ := s.reg.Fire(nil, "Commit", "", &struct{ Project string }{"p"}); !v.Veto {
 		t.Error("with gate, no veto")
 	}
@@ -108,8 +108,8 @@ func TestPluginGateHooks(t *testing.T) {
 func TestLuaWASM(t *testing.T) {
 	s := luaScene(t, "")
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "m.wasm"), exttest.Module(), 0o644)
-	vm := s.pluginVM(t, ext.Plugin{ID: "acme/w", Dir: dir, Guard: ext.NewGrants()})
+	os.WriteFile(filepath.Join(dir, "m.wasm"), hosttest.Module(), 0o644)
+	vm := s.pluginVM(t, plugin.Caller{ID: "acme/w", Dir: dir, Guard: plugin.NewGrants()})
 	if err := luaErr(t, vm, `local m = oriel.wasm.load("m.wasm", { on = { ["fs.read"] = function(p) return "lua read " .. p.path end } })
 sum = m:call("add", 2, 3)
 echoed = m:request("echo", { result = { a = 1 } }).a
@@ -122,7 +122,7 @@ n = #m:exports()`); err != "" {
 			t.Errorf("%s = %v, want %v", name, got, want)
 		}
 	}
-	vm2 := s.pluginVM(t, ext.Plugin{ID: "acme/w2", Dir: dir, Guard: ext.NewGrants()})
+	vm2 := s.pluginVM(t, plugin.Caller{ID: "acme/w2", Dir: dir, Guard: plugin.NewGrants()})
 	if err := luaErr(t, vm2, `oriel.wasm.load("m.wasm"):request("ask", { path = "/etc/hostname" })`); !strings.Contains(err, `"fs.read" capability isn't declared`) {
 		t.Errorf("the module's undeclared host call: %s", err)
 	}
@@ -155,7 +155,7 @@ func TestLuaProcess(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "bin"), 0o755)
 	os.WriteFile(filepath.Join(dir, "bin", "plugin"), []byte(rpcScript), 0o755)
-	vm := s.pluginVM(t, ext.Plugin{ID: "acme/p", Dir: dir, Guard: ext.NewGrants()})
+	vm := s.pluginVM(t, plugin.Caller{ID: "acme/p", Dir: dir, Guard: plugin.NewGrants()})
 	if err := luaErr(t, vm, `proc = oriel.process.spawn("bin/plugin", {
   on = { greet = function(p) greeted = p.n; return "hi" end, hello = function(p) hello = p end },
   on_exit = function(err) exited = true end,
@@ -190,7 +190,7 @@ proc:request("echo", { x = 1 }, function(res, err) answer = res; failed = err en
 func TestPluginOptions(t *testing.T) {
 	s := luaScene(t, "")
 	writeFile(t, filepath.Join(s.sh.cfg.ConfigDir, "settings.toml"), "[plugin.jira]\nsite = \"acme.atlassian.net\"\n")
-	p := ext.Plugin{ID: "acme/jira", Dir: t.TempDir(), Guard: ext.NewGrants()}
+	p := plugin.Caller{ID: "acme/jira", Dir: t.TempDir(), Guard: plugin.NewGrants()}
 	vm := script.New()
 	apis := api.InstallPlugin(vm, s.lua().h, p)
 	defer vm.Close()

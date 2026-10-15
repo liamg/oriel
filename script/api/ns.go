@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -120,7 +120,7 @@ func (g Agent) Tool(spec script.Table, where string) error {
 	if str(spec, "name") == "" || run == nil {
 		return fmt.Errorf("a tool needs a name and a run function")
 	}
-	if err := g.a.Check(ext.CapAgentTools, str(spec, "name")); err != nil {
+	if err := g.a.Check(plugin.CapAgentTools, str(spec, "name")); err != nil {
 		return err
 	}
 	params := map[string]string{}

@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 
 	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/ext/ossandbox"
+	"github.com/liamg/oriel/plugin/ossandbox"
 )
 
 // Handler answers a plugin's request to its own host side (its Lua), before the host's methods: handled false
@@ -63,7 +63,7 @@ type Process struct {
 }
 
 // Spawn starts name, the plugin's own binary (relative to its directory) or a program its exec grant names.
-func (ps *Processes) Spawn(p Plugin, name string, o SpawnOpts) (*Process, error) {
+func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error) {
 	path, err := ps.program(p, name)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (ps *Processes) Spawn(p Plugin, name string, o SpawnOpts) (*Process, error)
 }
 
 // program is the path of what p asked to run: its own file needs no grant, anything else its exec grant.
-func (ps *Processes) program(p Plugin, name string) (string, error) {
+func (ps *Processes) program(p Caller, name string) (string, error) {
 	if name == "" {
 		return "", errors.New("no program")
 	}
@@ -219,7 +219,7 @@ func pluginEnv(tmp string) []string {
 
 // ProfileFor is the OS sandbox a plugin's process gets: its own directory to read, its fs grants, the programs its
 // exec grant names, and the TCP ports of its net grant's hosts (443 for a host with none).
-func ProfileFor(p Plugin, places func(string) []string) ossandbox.Profile {
+func ProfileFor(p Caller, places func(string) []string) ossandbox.Profile {
 	var prof ossandbox.Profile
 	if p.Dir != "" {
 		prof.Read = append(prof.Read, RealPath(p.Dir))

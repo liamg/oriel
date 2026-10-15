@@ -16,7 +16,7 @@ import (
 
 // prTab is Raise PR (or Edit PR once it's raised) for a project, a main tab in 18's style (42's panel 6): the title,
 // the body from the agent's draft or the template, reviewers, cross-linked PRs; at the right the gates and the ticket.
-func (x *shipExt) prTab(c *ui.Ctx, project string) {
+func (x *shipPlugin) prTab(c *ui.Ctx, project string) {
 	th := c.Theme()
 	se, p, ok := x.here(project)
 	c.Column("prtab", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
@@ -46,7 +46,7 @@ func (x *shipExt) prTab(c *ui.Ctx, project string) {
 	})
 }
 
-func (x *shipExt) prHeader(c *ui.Ctx, se core.SessionState, s worker.Ship, f *prForm) {
+func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s worker.Ship, f *prForm) {
 	th := c.Theme()
 	edit := s.PR.Open()
 	busy := x.doing(se.ID, s.Project)
@@ -89,7 +89,7 @@ func (x *shipExt) prHeader(c *ui.Ctx, se core.SessionState, s worker.Ship, f *pr
 }
 
 // prFields is the tab's form: title, body (write or preview), reviewers and cross-linked PRs.
-func (x *shipExt) prFields(c *ui.Ctx, se core.SessionState, s worker.Ship, f *prForm) {
+func (x *shipPlugin) prFields(c *ui.Ctx, se core.SessionState, s worker.Ship, f *prForm) {
 	th := c.Theme()
 	if f.veto != "" {
 		widget.Wrap(c, "veto", f.veto, 600, monoFont(11, th.C(theme.Warn)))
@@ -159,7 +159,7 @@ func (x *shipExt) prFields(c *ui.Ctx, se core.SessionState, s worker.Ship, f *pr
 }
 
 // reviewerRows are the PR's reviewers, each removable, and a field to add one: CODEOWNERS' first.
-func (x *shipExt) reviewerRows(c *ui.Ctx, s worker.Ship, f *prForm) {
+func (x *shipPlugin) reviewerRows(c *ui.Ctx, s worker.Ship, f *prForm) {
 	th := c.Theme()
 	rs := f.reviewersOf(s)
 	if s.PR != nil {

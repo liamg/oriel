@@ -387,16 +387,16 @@ func (r *statsRig) readings(t *testing.T) {
 const workAccount = "u1/o-acme"
 
 // statsScene is the app on the rig's worker, on mockup 43's clock, with pricing-rounding in front.
-func statsScene(t *testing.T) (*errScene, *statsRig, *statsExt) {
+func statsScene(t *testing.T) (*errScene, *statsRig, *statsPlugin) {
 	t.Helper()
 	r := newStatsRig(t)
 	r.build()
 	r.readings(t)
 	s := newSceneWith(t, "", "", mockupSize, r.connect(t))
 	s.now = statsNow
-	var x *statsExt
-	for _, e := range s.exts {
-		if v, ok := e.(*statsExt); ok {
+	var x *statsPlugin
+	for _, e := range s.plugins {
+		if v, ok := e.(*statsPlugin); ok {
 			x = v
 		}
 	}
@@ -417,7 +417,7 @@ func statsScene(t *testing.T) (*errScene, *statsRig, *statsExt) {
 }
 
 // settle draws frames until every answer the page asked for is in.
-func (s *errScene) settleStats(x *statsExt) {
+func (s *errScene) settleStats(x *statsPlugin) {
 	s.t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
@@ -644,9 +644,9 @@ func TestStatsEntryPoints(t *testing.T) {
 func TestStartViewLinks(t *testing.T) {
 	r := newStatsRig(t)
 	s := newSceneWith(t, "", "", mockupSize, r.connect(t))
-	var x *statsExt
-	for _, e := range s.exts {
-		if v, ok := e.(*statsExt); ok {
+	var x *statsPlugin
+	for _, e := range s.plugins {
+		if v, ok := e.(*statsPlugin); ok {
 			x = v
 		}
 	}
@@ -708,9 +708,9 @@ func TestUsageIsPerAccount(t *testing.T) {
 		}
 		return false
 	})
-	var x *statsExt
-	for _, e := range s.exts {
-		if v, ok := e.(*statsExt); ok {
+	var x *statsPlugin
+	for _, e := range s.plugins {
+		if v, ok := e.(*statsPlugin); ok {
 			x = v
 		}
 	}
@@ -869,7 +869,7 @@ func (r *statsRig) fixtureSpan(t *testing.T, from, to time.Time) time.Duration {
 }
 
 // wantTools checks the Stats page's tools against the calls the fixture logs make in its range.
-func (r *statsRig) wantTools(t *testing.T, x *statsExt) {
+func (r *statsRig) wantTools(t *testing.T, x *statsPlugin) {
 	t.Helper()
 	q := x.query()
 	want := r.fixtureCalls(t, q.From, q.To)

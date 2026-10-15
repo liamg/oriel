@@ -20,7 +20,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/render"
@@ -48,31 +48,31 @@ const (
 )
 
 type Config struct {
-	Store      core.Store        // the materialised state the worker feeds; in-memory if nil
-	Registry   registry.Registry // a fresh one if nil
-	Extensions []ext.Extension   // activated in order, after the built-ins
-	Logs       *Logs             // where log records go; a ring in memory if nil
-	ConfigDir  string            // ~/.config/oriel unless set; user themes live in its themes/
-	CrashDir   string            // crash reports are written to and offered from here; none if ""
-	Version    string
-	Desktop    Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
-	Debug      bool            // oriel --debug: the frame-time overlay
-	Files      []string        // open in the editor at start
-	WorkDir    string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
-	StateDir   string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
-	CacheDir   string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
-	Workers    []worker.Client // the workers whose sessions the window shows: this machine's, and any others
+	Store     core.Store        // the materialised state the worker feeds; in-memory if nil
+	Registry  registry.Registry // a fresh one if nil
+	Plugins   []plugin.Plugin   // activated in order, after the built-ins
+	Logs      *Logs             // where log records go; a ring in memory if nil
+	ConfigDir string            // ~/.config/oriel unless set; user themes live in its themes/
+	CrashDir  string            // crash reports are written to and offered from here; none if ""
+	Version   string
+	Desktop   Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
+	Debug     bool            // oriel --debug: the frame-time overlay
+	Files     []string        // open in the editor at start
+	WorkDir   string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
+	StateDir  string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
+	CacheDir  string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
+	Workers   []worker.Client // the workers whose sessions the window shows: this machine's, and any others
 	// LocalWorker reaches this machine's worker, starting one: after one from another build hands over to this build's.
 	LocalWorker func(context.Context) (worker.Client, error)
 	// Updates is Oriel updating itself and its workers (distribution.md); nil in a build that doesn't.
 	Updates *Updates
-	// Started is called once the window is open and every extension active: what the updater's health check waits for.
+	// Started is called once the window is open and every plugin active: what the updater's health check waits for.
 	Started func()
 	Voice   VoiceConfig // dictation's microphone, transcriber and speaker; the real ones, from the voice.* options, if nil
 	// Net is what plugins' HTTP goes through (http.request); a client of its own if nil.
 	Net *http.Client
 	// Secrets are the named secrets plugins' requests carry (security.md); secrets.json in StateDir if nil.
-	Secrets ext.Secrets
+	Secrets plugin.Secrets
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -119,7 +119,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			err = sh.crashed(v, debug.Stack())
 		}
 	}()
-	var active []ext.Extension
+	var active []plugin.Plugin
 	deactivate := func() (err error) {
 		for _, e := range slices.Backward(active) {
 			err = errors.Join(err, e.Deactivate(context.WithoutCancel(ctx)))
@@ -226,7 +226,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			return ctx.Err()
 		case <-dirty:
 		case to := <-sh.reopen:
-			// Open Directory, or another session in front: every extension starts again on its directory.
+			// Open Directory, or another session in front: every plugin starts again on its directory.
 			if err := deactivate(); err != nil {
 				log.Error("reopen", "dir", to.dir, "err", err)
 			}
@@ -277,9 +277,9 @@ func newShell(cfg Config, poke func()) (*shell, func()) {
 	return sh, func() { tail(); notices() }
 }
 
-// activate starts the built-ins, then cfg.Extensions, each on a host of its own, adding each to active as it starts.
+// activate starts the built-ins, then cfg.Plugins, each on a host of its own, adding each to active as it starts.
 // It answers the last built-in's host.
-func (sh *shell) activate(ctx context.Context, active *[]ext.Extension) (*host, error) {
+func (sh *shell) activate(ctx context.Context, active *[]plugin.Plugin) (*host, error) {
 	var last *host
 	for _, e := range builtins(sh) {
 		last = sh.host("builtin:" + e.Manifest().ID)
@@ -288,7 +288,7 @@ func (sh *shell) activate(ctx context.Context, active *[]ext.Extension) (*host, 
 		}
 		*active = append(*active, e)
 	}
-	for _, e := range sh.cfg.Extensions {
+	for _, e := range sh.cfg.Plugins {
 		if err := e.Activate(ctx, sh.host(e.Manifest().ID)); err != nil {
 			return nil, fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
 		}
@@ -330,7 +330,7 @@ type host struct {
 	sh     *shell
 }
 
-// host is what an extension registered as source sees.
+// host is what a plugin registered as source sees.
 func (sh *shell) host(source string) *host {
 	return &host{Registry: registry.WithSource(sh.cfg.Registry, source), store: sh.cfg.Store, source: source, logs: sh.cfg.Logs,
 		log: sh.cfg.Logs.Logger(source), sh: sh}
@@ -359,7 +359,7 @@ func (sh *shell) runTodo() {
 	}
 }
 
-func (h *host) UI() ext.UIView {
+func (h *host) UI() plugin.UIView {
 	if h.sh.ui == nil {
 		return nil
 	}
@@ -394,9 +394,9 @@ func (h *host) Shot(th *theme.Resolved) *image.RGBA {
 	return h.sh.shot(th)
 }
 
-func (h *host) Pending() ext.Pending {
+func (h *host) Pending() plugin.Pending {
 	if k := h.sh.keys; k != nil && len(k.Pending()) > 0 {
-		p := ext.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
+		p := plugin.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
 		if m := k.Complete(); m != nil && acceptKey(h.sh.cfg.Registry, p.Modes, p.Keys) {
 			p.Runs = cmpOr(m.Desc, m.Command)
 		}
@@ -408,7 +408,7 @@ func (h *host) Pending() ext.Pending {
 	if h.sh.enginePending != nil {
 		return h.sh.enginePending()
 	}
-	return ext.Pending{}
+	return plugin.Pending{}
 }
 
 func (h *host) HoldPending() {

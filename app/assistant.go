@@ -13,7 +13,7 @@ import (
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/assistant"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/worker"
@@ -38,10 +38,10 @@ var assistantPrompt string
 // assistantWeb are the provider tools the assistant may use without asking, with assistant.web on.
 var assistantWeb = []string{"WebSearch", "WebFetch"}
 
-type assistantExt struct {
+type assistantPlugin struct {
 	disposer
 	sh   *shell
-	h    ext.Host
+	h    plugin.Host
 	conv *assistant.Conversation
 
 	// On the loop.
@@ -56,9 +56,9 @@ type assistantExt struct {
 	ran string // what the conversation runs on: "claude · haiku"
 }
 
-func (x *assistantExt) Manifest() ext.Manifest { return ext.Manifest{ID: "assistant"} }
+func (x *assistantPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "assistant"} }
 
-func (x *assistantExt) Activate(_ context.Context, h ext.Host) error {
+func (x *assistantPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.focused = map[string]bool{}
 	if unregister, err := prompts.Register(prompts.Def{ID: assistantPromptID, Group: "Assistant", Label: "The assistant",
@@ -158,15 +158,15 @@ func (x *assistantExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *assistantExt) opt(name string) any {
+func (x *assistantPlugin) opt(name string) any {
 	v, _, _ := x.h.Options().Get(name, registry.At{})
 	return v
 }
 
-func (x *assistantExt) str(name string) string { s, _ := x.opt(name).(string); return s }
-func (x *assistantExt) bool(name string) bool  { b, _ := x.opt(name).(bool); return b }
+func (x *assistantPlugin) str(name string) string { s, _ := x.opt(name).(string); return s }
+func (x *assistantPlugin) bool(name string) bool  { b, _ := x.opt(name).(bool); return b }
 
-func (x *assistantExt) setOpen(open bool) {
+func (x *assistantPlugin) setOpen(open bool) {
 	x.open = open
 	if open {
 		x.focus = true
@@ -175,7 +175,7 @@ func (x *assistantExt) setOpen(open bool) {
 }
 
 // send says what's in the composer.
-func (x *assistantExt) send() {
+func (x *assistantPlugin) send() {
 	if strings.TrimSpace(x.draft) == "" {
 		return
 	}
@@ -186,7 +186,7 @@ func (x *assistantExt) send() {
 
 // changed is the log changing: it's redrawn, the conversation's quiet ends it after assistant.idle, and a spoken
 // turn's answer is said.
-func (x *assistantExt) changed() {
+func (x *assistantPlugin) changed() {
 	x.conv.Idle = time.Duration(max(1, x.optInt("assistant.idle"))) * time.Minute
 	log, _ := x.conv.Log()
 	for _, e := range log {
@@ -201,10 +201,10 @@ func (x *assistantExt) changed() {
 	x.h.Redraw()
 }
 
-func (x *assistantExt) optInt(name string) int { n, _ := x.opt(name).(int); return n }
+func (x *assistantPlugin) optInt(name string) int { n, _ := x.opt(name).(int); return n }
 
 // prompt is what the assistant is told as a conversation starts: the user's version of it, filled in.
-func (x *assistantExt) prompt() string {
+func (x *assistantPlugin) prompt() string {
 	var workers []string
 	for _, w := range x.h.State().Workers {
 		if w.Connected {
@@ -219,7 +219,7 @@ func (x *assistantExt) prompt() string {
 }
 
 // startAgent starts the conversation's agent: a utility agent on this machine's worker.
-func (x *assistantExt) startAgent(ctx context.Context, first string) (assistant.Agent, error) {
+func (x *assistantPlugin) startAgent(ctx context.Context, first string) (assistant.Agent, error) {
 	if x.sh.sessions == nil {
 		return nil, errors.New("there's no worker to run it on")
 	}
@@ -246,7 +246,7 @@ func (x *assistantExt) startAgent(ctx context.Context, first string) (assistant.
 }
 
 // runsOn is what the conversation runs on, as the drawer's chip says: the model, else the option's.
-func (x *assistantExt) runsOn() string {
+func (x *assistantPlugin) runsOn() string {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	if _, model, ok := strings.Cut(x.ran, " · "); ok && model != "" {
@@ -292,7 +292,7 @@ func (a *utilityAgent) pump() {
 
 // confirm is the assistant's owner asking you about an act: its card is in the drawer, and in the inbox, stacked
 // over the window while the drawer is away; the act waits for your answer.
-func (x *assistantExt) confirm(ctx registry.Ctx, tool string, c registry.Confirmation) (bool, error) {
+func (x *assistantPlugin) confirm(ctx registry.Ctx, tool string, c registry.Confirmation) (bool, error) {
 	x.h.Redraw()
 	switch x.conv.Confirm(ctx, tool, c.Line, c) {
 	case assistant.Yes:
@@ -306,7 +306,7 @@ func (x *assistantExt) confirm(ctx registry.Ctx, tool string, c registry.Confirm
 }
 
 // acted is what a tool did, kept in the log with its undo.
-func (x *assistantExt) acted(_ registry.Ctx, tool string, a registry.Acted) {
+func (x *assistantPlugin) acted(_ registry.Ctx, tool string, a registry.Acted) {
 	act := assistant.Act{Tool: tool, Line: a.Line, Detail: a.Detail, Open: a.Open, OpenArgs: a.OpenArgs}
 	if a.Undo != nil {
 		act.Undo = func(ctx context.Context) error { return a.Undo(ctx) }
@@ -314,7 +314,7 @@ func (x *assistantExt) acted(_ registry.Ctx, tool string, a registry.Acted) {
 	x.conv.Acted(act)
 }
 
-func (x *assistantExt) answer(id string, yes bool) error {
+func (x *assistantPlugin) answer(id string, yes bool) error {
 	if id == "" {
 		w := x.conv.Waiting()
 		if len(w) == 0 {
@@ -330,7 +330,7 @@ func (x *assistantExt) answer(id string, yes bool) error {
 }
 
 // lastItems are the rows of the latest reply that offers some.
-func (x *assistantExt) lastItems() []assistant.Item {
+func (x *assistantPlugin) lastItems() []assistant.Item {
 	log, _ := x.conv.Log()
 	for _, e := range slices.Backward(log) {
 		if e.Kind == assistant.KindReply && len(e.Items) > 0 {
@@ -341,7 +341,7 @@ func (x *assistantExt) lastItems() []assistant.Item {
 }
 
 // pick does what row n of the latest answer offers: opens its session or link, else asks about it.
-func (x *assistantExt) pick(n int) error {
+func (x *assistantPlugin) pick(n int) error {
 	items := x.lastItems()
 	if n < 1 || n > len(items) {
 		return fmt.Errorf("there's no row %d", n)
@@ -359,7 +359,7 @@ func (x *assistantExt) pick(n int) error {
 }
 
 // action is the action {id}, else the latest that offers what's asked.
-func (x *assistantExt) action(id string, ok func(assistant.Entry) bool) (assistant.Entry, error) {
+func (x *assistantPlugin) action(id string, ok func(assistant.Entry) bool) (assistant.Entry, error) {
 	log, _ := x.conv.Log()
 	for _, e := range slices.Backward(log) {
 		if e.Kind == assistant.KindAction && (id == e.ID || id == "" && ok(e)) {
@@ -370,7 +370,7 @@ func (x *assistantExt) action(id string, ok func(assistant.Entry) bool) (assista
 }
 
 // undo takes an action back, off the loop: what undoes it may wait on the loop.
-func (x *assistantExt) undo(id string) error {
+func (x *assistantPlugin) undo(id string) error {
 	e, err := x.action(id, func(e assistant.Entry) bool { return !e.Until.IsZero() && !e.Undone && time.Now().Before(e.Until) })
 	if err != nil {
 		return errors.New("nothing to undo")
@@ -383,7 +383,7 @@ func (x *assistantExt) undo(id string) error {
 	return nil
 }
 
-func (x *assistantExt) show(ctx context.Context, id string) error {
+func (x *assistantPlugin) show(ctx context.Context, id string) error {
 	e, err := x.action(id, func(e assistant.Entry) bool { return e.Open != "" && !e.Undone })
 	if err != nil || e.Open == "" {
 		return errors.New("nothing to open")
@@ -421,7 +421,7 @@ func assistantProgress(tool string) string {
 
 // inboxCards are the assistant's in the inbox (ui.md 12): its confirmations waiting, stacked over the window while
 // the drawer is away, and what it did, as history.
-func (x *assistantExt) inboxCards() []registry.InboxCard {
+func (x *assistantPlugin) inboxCards() []registry.InboxCard {
 	log, _ := x.conv.Log()
 	waiting := map[string]bool{}
 	for _, e := range x.conv.Waiting() {

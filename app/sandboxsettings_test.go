@@ -351,7 +351,7 @@ func TestTrustOnAWorkerElsewhere(t *testing.T) {
 func TestLauncherSandboxStartsFromTheOption(t *testing.T) {
 	s := newScene(t, "", t.TempDir(), mockupSize)
 	var l *launcher
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if x, ok := e.(*launcher); ok {
 			l = x
 		}

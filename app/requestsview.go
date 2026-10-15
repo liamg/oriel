@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -670,7 +670,7 @@ func runLabel(r core.TestRun) string {
 }
 
 // evidenceChip is a link to a test run: ✓ or ✕, its counts and id; a click opens the run.
-func evidenceChip(c *ui.Ctx, key any, h ext.Host, session core.SessionID, run, label string, ok bool) {
+func evidenceChip(c *ui.Ctx, key any, h plugin.Host, session core.SessionID, run, label string, ok bool) {
 	th := c.Theme()
 	tone, glyph := th.C(tToolOK), "✓"
 	if !ok {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
@@ -54,7 +54,7 @@ func TestGGGoesToTheTop(t *testing.T) {
 // A command that holds the loop up is logged by name, so a stall says what caused it.
 func TestSlowLoopIsLogged(t *testing.T) {
 	logs := NewLogs(LogOpts{})
-	r := startAppWith(t, t.TempDir(), t.TempDir(), func(h ext.Host) {
+	r := startAppWith(t, t.TempDir(), t.TempDir(), func(h plugin.Host) {
 		h.Command(registry.Command{ID: "test.slow", Run: func(registry.Ctx, registry.Args) error { time.Sleep(80 * time.Millisecond); return nil }})
 		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-y>", Command: "test.slow"})
 	}, func(c *Config) { c.Logs = logs })

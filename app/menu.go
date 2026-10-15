@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
@@ -17,15 +17,15 @@ import (
 type contextMenus struct {
 	disposer
 	sh     *shell
-	h      ext.Host
+	h      plugin.Host
 	target ui.ID
 	at     registry.MenuCtx
 	items  []registry.MenuItem
 }
 
-func (m *contextMenus) Manifest() ext.Manifest { return ext.Manifest{ID: "menus"} }
+func (m *contextMenus) Manifest() plugin.Manifest { return plugin.Manifest{ID: "menus"} }
 
-func (m *contextMenus) Activate(_ context.Context, h ext.Host) error {
+func (m *contextMenus) Activate(_ context.Context, h plugin.Host) error {
 	m.h = h
 	m.add(h.View(OverlayPrefix+"context-menu", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "context-menu", Fn: m.build}

@@ -72,7 +72,7 @@ func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, cha
 }
 
 // reopen does what the app's loop does when the window is asked to open again on a directory (a session's): every
-// extension starts again on it. It says whether it was asked.
+// plugin starts again on it. It says whether it was asked.
 func (s *errScene) reopen() bool {
 	s.t.Helper()
 	var to reopenTo
@@ -81,14 +81,14 @@ func (s *errScene) reopen() bool {
 	default:
 		return false
 	}
-	for _, e := range slices.Backward(s.exts) {
+	for _, e := range slices.Backward(s.plugins) {
 		if err := e.Deactivate(context.Background()); err != nil {
 			s.t.Fatal(err)
 		}
 	}
 	s.sh.cfg.WorkDir, s.sh.cfg.Files = to.dir, nil
-	s.exts = nil
-	last, err := s.sh.activate(context.Background(), &s.exts)
+	s.plugins = nil
+	last, err := s.sh.activate(context.Background(), &s.plugins)
 	if err != nil {
 		s.t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestErrorsSnapshots(t *testing.T) {
 }
 
 func panel(s *errScene) *logPanel {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if n, ok := e.(*notices); ok {
 			return n.panel
 		}
@@ -331,7 +331,7 @@ func TestEventsView(t *testing.T) {
 			t.Errorf(":Events lacks %s", want)
 		}
 	}
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if n, ok := e.(*notices); ok {
 			n.events = "focused"
 		}

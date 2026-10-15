@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
@@ -17,14 +17,14 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-func builtins(sh *shell) []ext.Extension {
-	sh.layout = &layoutExt{sh: sh}
-	return []ext.Extension{&uiOptions{}, &languagesExt{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitExt{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{sh: sh}, &sessionTabs{sh: sh}, &hudExt{sh: sh}, &inboxExt{sh: sh}, &missionExt{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &consentExt{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
-		&editorExt{sh: sh}, &markdownExt{}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspExt{sh: sh}, &testsExt{sh: sh}, &debugExt{sh: sh}, &explainExt{sh: sh}, &walkthroughExt{sh: sh}, &tourExt{sh: sh}, &terminals{sh: sh}, &settingsExt{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, &statsExt{sh: sh}, &jobsExt{sh: sh}, &workersExt{sh: sh}, &updateExt{sh: sh}, &promptsExt{sh: sh}, &voiceExt{sh: sh}, &assistantExt{sh: sh}, &ticketsExt{}, &launcher{sh: sh}, &requests{sh: sh}, &planExt{sh: sh}, &diffExt{sh: sh}, &shipExt{sh: sh}, &aiReviewExt{sh: sh}, &verifyExt{sh: sh}, &githubExt{sh: sh}, &secretsExt{sh: sh}, &luaExt{sh: sh, dir: sh.cfg.ConfigDir}}
+func builtins(sh *shell) []plugin.Plugin {
+	sh.layout = &layoutPlugin{sh: sh}
+	return []plugin.Plugin{&uiOptions{}, &languagesPlugin{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitPlugin{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{sh: sh}, &sessionTabs{sh: sh}, &hudPlugin{sh: sh}, &inboxPlugin{sh: sh}, &missionPlugin{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &consentPlugin{}, &helpView{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
+		&editorPlugin{sh: sh}, &markdownPlugin{}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspPlugin{sh: sh}, &testsPlugin{sh: sh}, &debugPlugin{sh: sh}, &explainPlugin{sh: sh}, &walkthroughPlugin{sh: sh}, &tourPlugin{sh: sh}, &terminals{sh: sh}, &settingsPlugin{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, &statsPlugin{sh: sh}, &jobsPlugin{sh: sh}, &workersPlugin{sh: sh}, &updatePlugin{sh: sh}, &promptsPlugin{sh: sh}, &voicePlugin{sh: sh}, &assistantPlugin{sh: sh}, &ticketsPlugin{}, &launcher{sh: sh}, &requests{sh: sh}, &planPlugin{sh: sh}, &diffPlugin{sh: sh}, &shipPlugin{sh: sh}, &aiReviewPlugin{sh: sh}, &verifyPlugin{sh: sh}, &githubPlugin{sh: sh}, &secretsPlugin{sh: sh}, &luaPlugin{sh: sh, dir: sh.cfg.ConfigDir}}
 }
 
 // onLoop runs fn on the app's loop and waits for it: an agent tool's way in from the worker's goroutine.
-func onLoop(ctx context.Context, h ext.Host, fn func()) error {
+func onLoop(ctx context.Context, h plugin.Host, fn func()) error {
 	done := make(chan struct{})
 	h.Do(func() { fn(); close(done) })
 	select {
@@ -35,7 +35,7 @@ func onLoop(ctx context.Context, h ext.Host, fn func()) error {
 	}
 }
 
-// disposer is the usual way for an extension to undo what it registered.
+// disposer is the usual way for a plugin to undo what it registered.
 type disposer []registry.Disposable
 
 func (d *disposer) add(x registry.Disposable) { *d = append(*d, x) }
@@ -53,9 +53,9 @@ func (d *disposer) Deactivate(context.Context) error {
 	return nil
 }
 
-// layoutExt is the layout every view lives in (ui.md 01d), and the commands and ⌃W keys that move views
+// layoutPlugin is the layout every view lives in (ui.md 01d), and the commands and ⌃W keys that move views
 // around it. view.open is how anything, built-in or plugin, puts a view on screen.
-type layoutExt struct {
+type layoutPlugin struct {
 	disposer
 	sh    *shell
 	root  *layout.Root
@@ -69,7 +69,7 @@ type layoutExt struct {
 	writer   stateWriter
 }
 
-func (l *layoutExt) Manifest() ext.Manifest { return ext.Manifest{ID: "layout"} }
+func (l *layoutPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "layout"} }
 
 var movePlacements = []struct {
 	label, keys string
@@ -83,9 +83,9 @@ var movePlacements = []struct {
 	{"Drop-down (quake)", "^`", registry.Args{"place": "dropdown"}},
 }
 
-func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
+func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 	l.root, l.saved = layout.New(), map[string]layout.Snapshot{}
-	h.Do(func() { // once every extension has registered its views
+	h.Do(func() { // once every plugin has registered its views
 		l.restore(h)
 		l.restored = true
 		if l.sh != nil && l.sh.afterOpen != nil && l.sh.afterOpen.session == h.State().Focus {
@@ -309,7 +309,7 @@ func (l *layoutExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 // matching is the first of vs that's view {id}, of {instance} and {project} when they're given.
-func (l *layoutExt) matching(a registry.Args, vs []layout.ViewRef) (layout.ViewRef, bool) {
+func (l *layoutPlugin) matching(a registry.Args, vs []layout.ViewRef) (layout.ViewRef, bool) {
 	for _, v := range vs {
 		if v.ID == a.String("id") && (a.String("instance") == "" || v.Instance == a.String("instance")) && v.Project == a.String("project") {
 			return v, true
@@ -319,7 +319,7 @@ func (l *layoutExt) matching(a registry.Args, vs []layout.ViewRef) (layout.ViewR
 }
 
 // moveMenu is ⌃W M: the placements, with their keys (24-layout).
-func (l *layoutExt) moveMenu(c *ui.Ctx, h ext.Host) {
+func (l *layoutPlugin) moveMenu(c *ui.Ctx, h plugin.Host) {
 	items := make([]widget.MenuItem, len(movePlacements))
 	for i, p := range movePlacements {
 		items[i] = widget.MenuItem{Label: p.label, Shortcut: p.keys, Help: layout.HelpPane}
@@ -352,9 +352,9 @@ type introspect struct {
 	configDir string
 }
 
-func (i *introspect) Manifest() ext.Manifest { return ext.Manifest{ID: "introspect"} }
+func (i *introspect) Manifest() plugin.Manifest { return plugin.Manifest{ID: "introspect"} }
 
-func (i *introspect) Activate(_ context.Context, h ext.Host) error {
+func (i *introspect) Activate(_ context.Context, h plugin.Host) error {
 	pick := func(source string) func(registry.Ctx, registry.Args) error {
 		return func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": source})
@@ -401,9 +401,9 @@ func zoomOf(o registry.Options) float32 {
 	return 1
 }
 
-func (o *uiOptions) Manifest() ext.Manifest { return ext.Manifest{ID: "ui"} }
+func (o *uiOptions) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ui"} }
 
-func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
+func (o *uiOptions) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range []registry.Command{
 		{ID: "ui.focus.next", Title: "Move keyboard focus to the next control", Run: func(registry.Ctx, registry.Args) error { return o.focus(h, 1) }},
 		{ID: "ui.focus.prev", Title: "Move keyboard focus to the previous control", Run: func(registry.Ctx, registry.Args) error { return o.focus(h, -1) }},
@@ -472,7 +472,7 @@ func (o *uiOptions) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (o *uiOptions) focus(h ext.Host, dir int) error {
+func (o *uiOptions) focus(h plugin.Host, dir int) error {
 	if u := h.UI(); u != nil {
 		u.FocusNext(dir)
 	}
@@ -485,9 +485,9 @@ type themes struct {
 	dir string
 }
 
-func (t *themes) Manifest() ext.Manifest { return ext.Manifest{ID: "themes"} }
+func (t *themes) Manifest() plugin.Manifest { return plugin.Manifest{ID: "themes"} }
 
-func (t *themes) Activate(_ context.Context, h ext.Host) error {
+func (t *themes) Activate(_ context.Context, h plugin.Host) error {
 	for _, s := range theme.Builtins() {
 		t.add(h.Theme(s))
 	}
@@ -504,7 +504,7 @@ func (t *themes) Activate(_ context.Context, h ext.Host) error {
 }
 
 // themeSwatches are a theme's main colours, in the variant in use, for the picker's preview.
-func themeSwatches(h ext.Host, name string) ui.Node {
+func themeSwatches(h plugin.Host, name string) ui.Node {
 	variant := theme.Dark
 	if cur := h.CurrentTheme(); cur != nil {
 		variant = cur.Variant
@@ -596,7 +596,7 @@ func themeNames(h registry.Registry) []string {
 
 // themePicker is :Themes: each theme shows as it's highlighted, Enter keeps it in your settings, and Esc goes back
 // to the one before.
-func themePicker(h ext.Host) registry.PickerSource {
+func themePicker(h plugin.Host) registry.PickerSource {
 	type prev struct {
 		v      any // the user layer's
 		had    bool

@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/wire"
@@ -27,7 +27,7 @@ import (
 
 // Workers (AI-15, ui.md 45): this machine's worker and remote ones. The app listens for remote workers on
 // workers.listen, letting in those whose keys are in workers.json; a worker let in joins the store through the
-// sessions extension, as this machine's does.
+// sessions plugin, as this machine's does.
 const (
 	WorkersKeyMode   = "workers"
 	WorkerDialogMode = "workers.add"
@@ -59,10 +59,10 @@ type refusal struct {
 	at     time.Time
 }
 
-type workersExt struct {
+type workersPlugin struct {
 	disposer
 	sh  *shell
-	h   ext.Host
+	h   plugin.Host
 	now func() time.Time
 
 	mu      sync.Mutex
@@ -102,9 +102,9 @@ type pairing struct {
 	copied  bool
 }
 
-func (x *workersExt) Manifest() ext.Manifest { return ext.Manifest{ID: "workers"} }
+func (x *workersPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "workers"} }
 
-func (x *workersExt) Activate(_ context.Context, h ext.Host) error {
+func (x *workersPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	if x.now == nil {
 		x.now = time.Now
@@ -198,7 +198,7 @@ func (x *workersExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *workersExt) openPage(id core.WorkerID) error {
+func (x *workersPlugin) openPage(id core.WorkerID) error {
 	x.open, x.err, x.confirm = true, "", ""
 	if id == "" {
 		return nil
@@ -213,7 +213,7 @@ func (x *workersExt) openPage(id core.WorkerID) error {
 }
 
 // target is the worker {name} names, by ID or title, else the selected one.
-func (x *workersExt) target(a registry.Args) core.WorkerID {
+func (x *workersPlugin) target(a registry.Args) core.WorkerID {
 	name := a.String("name")
 	if name == "" {
 		return x.selected()
@@ -226,7 +226,7 @@ func (x *workersExt) target(a registry.Args) core.WorkerID {
 	return core.WorkerID(name)
 }
 
-func (x *workersExt) selected() core.WorkerID {
+func (x *workersPlugin) selected() core.WorkerID {
 	rows := x.rows(x.h.State())
 	for _, r := range rows {
 		if r.w.ID == x.sel {
@@ -240,7 +240,7 @@ func (x *workersExt) selected() core.WorkerID {
 }
 
 // figure is the sidebar's: how many workers are online.
-func (x *workersExt) figure() string {
+func (x *workersPlugin) figure() string {
 	n := 0
 	for _, w := range x.h.State().Workers {
 		if w.Connected {
@@ -255,7 +255,7 @@ func (x *workersExt) figure() string {
 
 // The keys file.
 
-func (x *workersExt) loadKeys() error {
+func (x *workersPlugin) loadKeys() error {
 	b, err := os.ReadFile(x.path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -276,7 +276,7 @@ func (x *workersExt) loadKeys() error {
 }
 
 // saveLocked writes the keys file, owner-only. x.mu is held.
-func (x *workersExt) saveLocked() error {
+func (x *workersPlugin) saveLocked() error {
 	b, err := json.MarshalIndent(struct {
 		Workers []workerKey `json:"workers"`
 	}{x.keys}, "", "  ")
@@ -294,7 +294,7 @@ func (x *workersExt) saveLocked() error {
 }
 
 // edit changes a worker's entry, making it if fn asks, and saves.
-func (x *workersExt) edit(id core.WorkerID, fn func(k *workerKey) bool) error {
+func (x *workersPlugin) edit(id core.WorkerID, fn func(k *workerKey) bool) error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	i := slices.IndexFunc(x.keys, func(k workerKey) bool { return k.Name == id })
@@ -313,7 +313,7 @@ func (x *workersExt) edit(id core.WorkerID, fn func(k *workerKey) bool) error {
 	return x.saveLocked()
 }
 
-func (x *workersExt) key(id core.WorkerID) (workerKey, bool) {
+func (x *workersPlugin) key(id core.WorkerID) (workerKey, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	i := slices.IndexFunc(x.keys, func(k workerKey) bool { return k.Name == id })
@@ -323,13 +323,13 @@ func (x *workersExt) key(id core.WorkerID) (workerKey, bool) {
 	return x.keys[i], true
 }
 
-func (x *workersExt) label(id core.WorkerID) string {
+func (x *workersPlugin) label(id core.WorkerID) string {
 	k, _ := x.key(id)
 	return k.Label
 }
 
 // hash is a remote worker's key's hash, for the handshake: none for this machine's or a revoked one.
-func (x *workersExt) hash(name string) (string, bool) {
+func (x *workersPlugin) hash(name string) (string, bool) {
 	k, ok := x.key(core.WorkerID(name))
 	if !ok || k.Name == core.LocalWorker || k.Revoked || k.Hash == "" {
 		return "", false
@@ -337,7 +337,7 @@ func (x *workersExt) hash(name string) (string, bool) {
 	return k.Hash, true
 }
 
-func (x *workersExt) seen(id core.WorkerID, addr string, at time.Time) {
+func (x *workersPlugin) seen(id core.WorkerID, addr string, at time.Time) {
 	if id == core.LocalWorker || at.IsZero() {
 		return
 	}
@@ -356,7 +356,7 @@ func (x *workersExt) seen(id core.WorkerID, addr string, at time.Time) {
 // The listener.
 
 // relisten applies workers.listen: it stops listening, and listens again on the new address.
-func (x *workersExt) relisten() {
+func (x *workersPlugin) relisten() {
 	v, _, _ := x.h.Options().Get("workers.listen", registry.At{})
 	addr, _ := v.(string)
 	x.mu.Lock()
@@ -390,20 +390,20 @@ func (x *workersExt) relisten() {
 	x.h.Redraw()
 }
 
-func (x *workersExt) closeListener() {
+func (x *workersPlugin) closeListener() {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	x.closeLocked()
 }
 
-func (x *workersExt) closeLocked() {
+func (x *workersPlugin) closeLocked() {
 	if x.ln != nil {
 		x.ln.Close()
 	}
 	x.ln, x.bound, x.lnErr = nil, "", ""
 }
 
-func (x *workersExt) accept(ln net.Listener, cfg *tls.Config) {
+func (x *workersPlugin) accept(ln net.Listener, cfg *tls.Config) {
 	auth := wire.KeyHashAuth(x.hash)
 	for {
 		raw, err := ln.Accept()
@@ -421,7 +421,7 @@ func (x *workersExt) accept(ln net.Listener, cfg *tls.Config) {
 	}
 }
 
-func (x *workersExt) refuse(err error) {
+func (x *workersPlugin) refuse(err error) {
 	var rej *wire.ErrRejected
 	if !errors.As(err, &rej) {
 		x.h.Log().Info("workers: a connection that didn't finish the handshake", "err", err)
@@ -435,15 +435,15 @@ func (x *workersExt) refuse(err error) {
 	x.h.Redraw()
 }
 
-// joined hands a worker that's let in to the sessions extension, which mirrors it as it does this machine's.
-func (x *workersExt) joined(p *wire.Peer) {
+// joined hands a worker that's let in to the sessions plugin, which mirrors it as it does this machine's.
+func (x *workersPlugin) joined(p *wire.Peer) {
 	id := core.WorkerID(p.Hello.Name)
 	x.seen(id, p.Remote.String(), x.now())
 	x.sh.whenSessions(func(s *sessions) { s.serve(s.ctx, s.h, worker.Client{Conn: p.Conn}, id) })
 }
 
 // listening is the address workers dial and the certificate's fingerprint, or "" while Oriel isn't listening.
-func (x *workersExt) listening() (addr, fp, failed string) {
+func (x *workersPlugin) listening() (addr, fp, failed string) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	if x.ln == nil {
@@ -468,7 +468,7 @@ func dialAddr(bound string) string {
 // The actions.
 
 // pair makes a key for a new worker, listening first if Oriel isn't, and shows the command to run there.
-func (x *workersExt) pair(id core.WorkerID, listen string) error {
+func (x *workersPlugin) pair(id core.WorkerID, listen string) error {
 	if err := x.checkName(id); err != nil {
 		return err
 	}
@@ -501,7 +501,7 @@ func (x *workersExt) pair(id core.WorkerID, listen string) error {
 	return nil
 }
 
-func (x *workersExt) checkName(id core.WorkerID) error {
+func (x *workersPlugin) checkName(id core.WorkerID) error {
 	if !workerName.MatchString(string(id)) {
 		return fmt.Errorf("%q: a worker's name is letters, digits, '-', '_' and '.'", id)
 	}
@@ -519,7 +519,7 @@ func (x *workersExt) checkName(id core.WorkerID) error {
 	return nil
 }
 
-func (x *workersExt) rename(id core.WorkerID, to string) error {
+func (x *workersPlugin) rename(id core.WorkerID, to string) error {
 	if id == "" {
 		return errors.New("no worker to rename")
 	}
@@ -542,7 +542,7 @@ func (x *workersExt) rename(id core.WorkerID, to string) error {
 	return nil
 }
 
-func (x *workersExt) revoke(id core.WorkerID) error {
+func (x *workersPlugin) revoke(id core.WorkerID) error {
 	k, ok := x.key(id)
 	switch {
 	case id == core.LocalWorker:
@@ -561,7 +561,7 @@ func (x *workersExt) revoke(id core.WorkerID) error {
 	return nil
 }
 
-func (x *workersExt) forget(id core.WorkerID) error {
+func (x *workersPlugin) forget(id core.WorkerID) error {
 	if id == core.LocalWorker {
 		return errors.New("this machine's worker can't be forgotten")
 	}
@@ -588,7 +588,7 @@ func (x *workersExt) forget(id core.WorkerID) error {
 }
 
 // restartable says whether this machine's worker can be restarted: Oriel starts it, it's connected, and no drain runs.
-func (x *workersExt) restartable() bool {
+func (x *workersPlugin) restartable() bool {
 	if x.sh.cfg.LocalWorker == nil || x.sh.sessions == nil || x.sh.draining.Load() != nil {
 		return false
 	}
@@ -613,7 +613,7 @@ func (sh *shell) restartLocal() error {
 }
 
 // submit is the dialog's Add, or Rename's Save.
-func (x *workersExt) submit() {
+func (x *workersPlugin) submit() {
 	d := x.dlg
 	if d == nil {
 		return
@@ -636,7 +636,7 @@ func (x *workersExt) submit() {
 }
 
 // title is how a worker reads, from the store or the keys file.
-func (x *workersExt) title(id core.WorkerID) string {
+func (x *workersPlugin) title(id core.WorkerID) string {
 	for _, w := range x.h.State().Workers {
 		if w.ID == id {
 			return w.Title()
@@ -658,7 +658,7 @@ type workerRow struct {
 func (r workerRow) local() bool { return r.w.ID == core.LocalWorker }
 
 // rows are the workers: this machine's first, then by name; known workers that aren't connected too.
-func (x *workersExt) rows(st core.State) []workerRow {
+func (x *workersPlugin) rows(st core.State) []workerRow {
 	x.mu.Lock()
 	keys := slices.Clone(x.keys)
 	x.mu.Unlock()
@@ -689,7 +689,7 @@ func (x *workersExt) rows(st core.State) []workerRow {
 }
 
 // refusals are the recent refusals of a worker by name.
-func (x *workersExt) refusals(id core.WorkerID) []refusal {
+func (x *workersPlugin) refusals(id core.WorkerID) []refusal {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	var out []refusal

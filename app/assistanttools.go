@@ -34,7 +34,7 @@ var replySchema = json.RawMessage(`{"type":"object","properties":{` +
 	`"session":{"type":"string","description":"a session's id: picking it opens it"},` +
 	`"url":{"type":"string","description":"a link: picking it opens it"}},"required":["title"]}}},"required":["text"]}`)
 
-func (x *assistantExt) tools() []registry.AgentTool {
+func (x *assistantPlugin) tools() []registry.AgentTool {
 	id := map[string]string{"id": "string"}
 	return []registry.AgentTool{
 		{Name: "reply", InputSchema: replySchema, Run: x.toolReply,
@@ -87,7 +87,7 @@ func pstr(p map[string]any, k string) string {
 }
 
 // run runs a command on the app's loop, as a key would.
-func (x *assistantExt) run(ctx context.Context, id string, args registry.Args) error {
+func (x *assistantPlugin) run(ctx context.Context, id string, args registry.Args) error {
 	var err error
 	if lerr := onLoop(ctx, x.h, func() { err = x.h.Run(ctx, id, args) }); lerr != nil {
 		return lerr
@@ -95,7 +95,7 @@ func (x *assistantExt) run(ctx context.Context, id string, args registry.Args) e
 	return err
 }
 
-func (x *assistantExt) toolReply(_ registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolReply(_ registry.Ctx, p map[string]any) (any, error) {
 	text := pstr(p, "text")
 	if text == "" {
 		return nil, errors.New("the reply is empty")
@@ -134,7 +134,7 @@ type sessionLine struct {
 	Since   string   `json:"since,omitempty"` // a finished one's
 }
 
-func (x *assistantExt) workerName(st core.State, id core.WorkerID) string {
+func (x *assistantPlugin) workerName(st core.State, id core.WorkerID) string {
 	for _, w := range st.Workers {
 		if w.ID == cmp.Or(id, core.LocalWorker) {
 			return w.Title()
@@ -151,7 +151,7 @@ func clipLine(s string, n int) string {
 	return s
 }
 
-func (x *assistantExt) lineOf(st core.State, s core.SessionState, now time.Time) sessionLine {
+func (x *assistantPlugin) lineOf(st core.State, s core.SessionState, now time.Time) sessionLine {
 	l := sessionLine{ID: string(s.ID), Name: s.Name, Kind: string(s.Kind), Status: string(s.Status), Why: why(s, now),
 		Worker: x.workerName(st, s.Worker), Branch: s.Branch, Prompt: clipLine(s.Prompt, 200), Ticket: s.Ticket, PR: s.PR,
 		Stopped: s.Agent.Provider != "" && !s.Agent.Running}
@@ -169,7 +169,7 @@ func (x *assistantExt) lineOf(st core.State, s core.SessionState, now time.Time)
 	return l
 }
 
-func (x *assistantExt) toolSessions(registry.Ctx, map[string]any) (any, error) {
+func (x *assistantPlugin) toolSessions(registry.Ctx, map[string]any) (any, error) {
 	st := x.h.State()
 	now := time.Now()
 	var ss []core.SessionState
@@ -193,7 +193,7 @@ func finished(s core.SessionState) bool {
 	return s.Archived || s.Agent.Provider != "" && !s.Agent.Running
 }
 
-func (x *assistantExt) toolPastSessions(registry.Ctx, map[string]any) (any, error) {
+func (x *assistantPlugin) toolPastSessions(registry.Ctx, map[string]any) (any, error) {
 	st := x.h.State()
 	var ss []core.SessionState
 	for _, s := range st.Sessions {
@@ -218,7 +218,7 @@ func (x *assistantExt) toolPastSessions(registry.Ctx, map[string]any) (any, erro
 }
 
 // session finds a session by its id, or by its name.
-func (x *assistantExt) session(ref string) (core.SessionState, error) {
+func (x *assistantPlugin) session(ref string) (core.SessionState, error) {
 	st := x.h.State()
 	if s, ok := st.Session(core.SessionID(ref)); ok {
 		return s.Snapshot(), nil
@@ -240,7 +240,7 @@ func (x *assistantExt) session(ref string) (core.SessionState, error) {
 
 func label(s core.SessionState) string { return cmpOr(s.Name, string(s.ID)) }
 
-func (x *assistantExt) toolOpenSession(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolOpenSession(ctx registry.Ctx, p map[string]any) (any, error) {
 	s, err := x.session(pstr(p, "id"))
 	if err != nil {
 		return nil, err
@@ -252,7 +252,7 @@ func (x *assistantExt) toolOpenSession(ctx registry.Ctx, p map[string]any) (any,
 	return registry.Acted{Result: "opened", Line: "opened " + label(s)}, nil
 }
 
-func (x *assistantExt) toolRenameSession(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolRenameSession(ctx registry.Ctx, p map[string]any) (any, error) {
 	s, err := x.session(pstr(p, "id"))
 	if err != nil {
 		return nil, err
@@ -270,7 +270,7 @@ func (x *assistantExt) toolRenameSession(ctx registry.Ctx, p map[string]any) (an
 	}}, nil
 }
 
-func (x *assistantExt) toolResumeSession(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolResumeSession(ctx registry.Ctx, p map[string]any) (any, error) {
 	s, err := x.session(pstr(p, "id"))
 	if err != nil {
 		return nil, err
@@ -287,7 +287,7 @@ func (x *assistantExt) toolResumeSession(ctx registry.Ctx, p map[string]any) (an
 	}}, nil
 }
 
-func (x *assistantExt) toolNewSession(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolNewSession(ctx registry.Ctx, p map[string]any) (any, error) {
 	args := registry.Args{}
 	for _, k := range []string{"kind", "prompt", "repos"} {
 		if v := pstr(p, k); v != "" {
@@ -301,7 +301,7 @@ func (x *assistantExt) toolNewSession(ctx registry.Ctx, p map[string]any) (any, 
 	return registry.Acted{Result: "the launcher is open for the user to finish", Line: "opened the launcher"}, nil
 }
 
-func (x *assistantExt) toolSettings(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolSettings(ctx registry.Ctx, p map[string]any) (any, error) {
 	if err := x.run(ctx, "settings.open", registry.Args{"section": pstr(p, "section"), "query": pstr(p, "query")}); err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ type repoLine struct {
 	WorkerID core.WorkerID `json:"-"`
 }
 
-func (x *assistantExt) repos(ctx context.Context) []repoLine {
+func (x *assistantPlugin) repos(ctx context.Context) []repoLine {
 	st := x.h.State()
 	var out []repoLine
 	for wid, c := range x.sh.sessions.byWorker() {
@@ -337,7 +337,7 @@ func (x *assistantExt) repos(ctx context.Context) []repoLine {
 	return out
 }
 
-func (x *assistantExt) toolRepos(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *assistantPlugin) toolRepos(ctx registry.Ctx, _ map[string]any) (any, error) {
 	out := x.repos(ctx)
 	if out == nil {
 		out = []repoLine{}
@@ -346,7 +346,7 @@ func (x *assistantExt) toolRepos(ctx registry.Ctx, _ map[string]any) (any, error
 }
 
 // repo finds a registered repo by name or path, on a worker if one is named.
-func (x *assistantExt) repo(ctx context.Context, name, worker string) (repoLine, error) {
+func (x *assistantPlugin) repo(ctx context.Context, name, worker string) (repoLine, error) {
 	var hits []repoLine
 	for _, r := range x.repos(ctx) {
 		if (strings.EqualFold(r.Name, name) || r.Path == name) && (worker == "" || strings.EqualFold(r.Worker, worker) || string(r.WorkerID) == worker) {
@@ -377,7 +377,7 @@ type startReq struct {
 	repo         repoLine
 }
 
-func (x *assistantExt) startReq(ctx context.Context, p map[string]any) (startReq, error) {
+func (x *assistantPlugin) startReq(ctx context.Context, p map[string]any) (startReq, error) {
 	r := startReq{kind: cmpOr(pstr(p, "kind"), "plan"), prompt: pstr(p, "prompt")}
 	if startNotes[r.kind] == "" {
 		return r, fmt.Errorf("kind is plan, work or tour, not %q", r.kind)
@@ -390,7 +390,7 @@ func (x *assistantExt) startReq(ctx context.Context, p map[string]any) (startReq
 	return r, err
 }
 
-func (x *assistantExt) confirmStart(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+func (x *assistantPlugin) confirmStart(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
 	r, err := x.startReq(ctx, p)
 	if err != nil {
 		return registry.Confirmation{}, err
@@ -402,7 +402,7 @@ func (x *assistantExt) confirmStart(ctx registry.Ctx, p map[string]any) (registr
 		Line: "start a " + r.kind + " session in " + r.repo.Name}, nil
 }
 
-func (x *assistantExt) toolStart(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolStart(ctx registry.Ctx, p map[string]any) (any, error) {
 	r, err := x.startReq(ctx, p)
 	if err != nil {
 		return nil, err
@@ -416,13 +416,13 @@ func (x *assistantExt) toolStart(ctx registry.Ctx, p map[string]any) (any, error
 }
 
 // started is a session an act made: it opens from the card, and undoing it deletes it.
-func (x *assistantExt) started(id core.SessionID, line, detail string) registry.Acted {
+func (x *assistantPlugin) started(id core.SessionID, line, detail string) registry.Acted {
 	return registry.Acted{Result: map[string]any{"session": id, "done": line}, Line: line, Detail: detail,
 		Open: "session.open", OpenArgs: registry.Args{"id": string(id)},
 		Undo: func(ctx registry.Ctx) error { return x.run(ctx, "session.delete", registry.Args{"id": string(id)}) }}
 }
 
-func (x *assistantExt) confirmStop(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+func (x *assistantPlugin) confirmStop(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
 	s, err := x.session(pstr(p, "id"))
 	if err != nil {
 		return registry.Confirmation{}, err
@@ -439,7 +439,7 @@ func (x *assistantExt) confirmStop(_ registry.Ctx, p map[string]any) (registry.C
 	return c, nil
 }
 
-func (x *assistantExt) toolStop(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolStop(ctx registry.Ctx, p map[string]any) (any, error) {
 	s, err := x.session(pstr(p, "id"))
 	if err != nil {
 		return nil, err
@@ -466,7 +466,7 @@ func pullRequest(ref string) (url, key string, err error) {
 }
 
 // reviewOf is the open session already on a pull request.
-func (x *assistantExt) reviewOf(url string) (core.SessionState, bool) {
+func (x *assistantPlugin) reviewOf(url string) (core.SessionState, bool) {
 	for _, s := range x.h.State().Sessions {
 		if !s.Archived && strings.EqualFold(strings.TrimSuffix(s.PR, "/"), url) {
 			return s, true
@@ -475,7 +475,7 @@ func (x *assistantExt) reviewOf(url string) (core.SessionState, bool) {
 	return core.SessionState{}, false
 }
 
-func (x *assistantExt) confirmReview(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+func (x *assistantPlugin) confirmReview(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
 	url, key, err := pullRequest(pstr(p, "pr"))
 	if err != nil {
 		return registry.Confirmation{}, err
@@ -491,7 +491,7 @@ func (x *assistantExt) confirmReview(_ registry.Ctx, p map[string]any) (registry
 	return c, nil
 }
 
-func (x *assistantExt) toolReview(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolReview(ctx registry.Ctx, p map[string]any) (any, error) {
 	url, key, err := pullRequest(pstr(p, "pr"))
 	if err != nil {
 		return nil, err
@@ -524,7 +524,7 @@ type jobLine struct {
 	at     time.Time
 }
 
-func (x *assistantExt) jobs(ctx context.Context) []jobLine {
+func (x *assistantPlugin) jobs(ctx context.Context) []jobLine {
 	st := x.h.State()
 	var out []jobLine
 	for wid, c := range x.sh.sessions.byWorker() {
@@ -554,7 +554,7 @@ func (x *assistantExt) jobs(ctx context.Context) []jobLine {
 	return out
 }
 
-func (x *assistantExt) toolJobs(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *assistantPlugin) toolJobs(ctx registry.Ctx, _ map[string]any) (any, error) {
 	out := x.jobs(ctx)
 	if out == nil {
 		out = []jobLine{}
@@ -562,7 +562,7 @@ func (x *assistantExt) toolJobs(ctx registry.Ctx, _ map[string]any) (any, error)
 	return out, nil
 }
 
-func (x *assistantExt) job(ctx context.Context, p map[string]any) (jobLine, error) {
+func (x *assistantPlugin) job(ctx context.Context, p map[string]any) (jobLine, error) {
 	name, wk := pstr(p, "name"), pstr(p, "worker")
 	var hits []jobLine
 	for _, j := range x.jobs(ctx) {
@@ -579,7 +579,7 @@ func (x *assistantExt) job(ctx context.Context, p map[string]any) (jobLine, erro
 	return jobLine{}, fmt.Errorf("%s is on more than one worker: say which", name)
 }
 
-func (x *assistantExt) confirmRunJob(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+func (x *assistantPlugin) confirmRunJob(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
 	j, err := x.job(ctx, p)
 	if err != nil {
 		return registry.Confirmation{}, err
@@ -601,7 +601,7 @@ func (x *assistantExt) confirmRunJob(ctx registry.Ctx, p map[string]any) (regist
 	return c, nil
 }
 
-func (x *assistantExt) toolRunJob(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *assistantPlugin) toolRunJob(ctx registry.Ctx, p map[string]any) (any, error) {
 	j, err := x.job(ctx, p)
 	if err != nil {
 		return nil, err
@@ -629,7 +629,7 @@ type prLine struct {
 	Session string `json:"session,omitempty"` // the open session on it
 }
 
-func (x *assistantExt) toolPRs(query string) func(registry.Ctx, map[string]any) (any, error) {
+func (x *assistantPlugin) toolPRs(query string) func(registry.Ctx, map[string]any) (any, error) {
 	return func(ctx registry.Ctx, _ map[string]any) (any, error) {
 		c, err := x.sh.sessions.worker("")
 		if err != nil {
@@ -654,7 +654,7 @@ func (x *assistantExt) toolPRs(query string) func(registry.Ctx, map[string]any) 
 	}
 }
 
-func (x *assistantExt) toolUsage(registry.Ctx, map[string]any) (any, error) {
+func (x *assistantPlugin) toolUsage(registry.Ctx, map[string]any) (any, error) {
 	type window struct {
 		Name   string `json:"name"`
 		Used   string `json:"used"`
@@ -685,7 +685,7 @@ func (x *assistantExt) toolUsage(registry.Ctx, map[string]any) (any, error) {
 	return map[string]any{"now": time.Now().Format(time.RFC3339), "plans": out}, nil
 }
 
-func (x *assistantExt) toolWorkers(registry.Ctx, map[string]any) (any, error) {
+func (x *assistantPlugin) toolWorkers(registry.Ctx, map[string]any) (any, error) {
 	type row struct {
 		Name      string `json:"name"`
 		Connected bool   `json:"connected"`

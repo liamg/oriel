@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"context"
@@ -15,14 +15,14 @@ import (
 	"github.com/liamg/oriel/ui/layout"
 )
 
-// Extension is a plugin in any tier; built-ins are extensions too.
-type Extension interface {
+// Plugin is a plugin in any tier; built-ins are plugins too.
+type Plugin interface {
 	Manifest() Manifest
 	Activate(ctx context.Context, h Host) error
 	Deactivate(ctx context.Context) error
 }
 
-// Host is what an extension sees of the app.
+// Host is what a plugin sees of the app.
 type Host interface {
 	registry.Registry
 	Session(id core.SessionID) (core.Session, bool)
@@ -33,7 +33,7 @@ type Host interface {
 	// them.
 	Secrets() Secrets
 	// Notify tells the user something, through the one path every notice takes (errors.md). Source defaults to
-	// the extension's id and Time to now; the text is redacted before it's kept.
+	// the plugin's id and Time to now; the text is redacted before it's kept.
 	Notify(n core.Notice)
 	// Dismiss takes down the toasts of the notices with id: a problem that's gone. Their rows stay in the history.
 	Dismiss(id string)
@@ -59,7 +59,7 @@ type Host interface {
 	Shot(th *theme.Resolved) *image.RGBA
 }
 
-// UIView is the window's widget tree as extensions may read it, last frame's.
+// UIView is the window's widget tree as plugins may read it, last frame's.
 type UIView interface {
 	Focused() ui.ID
 	Layered(z int) bool // last frame drew a float on layer z (ui.LayerPage: a full-window page is up)

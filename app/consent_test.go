@@ -45,9 +45,9 @@ func consentScene(t *testing.T) (*errScene, *[]string) {
 	return s, &installed
 }
 
-func (s *errScene) consent() *consentExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*consentExt); ok {
+func (s *errScene) consent() *consentPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*consentPlugin); ok {
 			return x
 		}
 	}

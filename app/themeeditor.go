@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
@@ -44,7 +44,7 @@ var (
 // reads what painted a pixel off the window drawn in a probe theme. Built only on the public API.
 type themeEditor struct {
 	disposer
-	h   ext.Host
+	h   plugin.Host
 	dir string // the user's themes directory, where a local theme goes
 
 	open    bool
@@ -82,9 +82,9 @@ type fixture struct {
 	probe  *image.RGBA
 }
 
-func (e *themeEditor) Manifest() ext.Manifest { return ext.Manifest{ID: "theme"} }
+func (e *themeEditor) Manifest() plugin.Manifest { return plugin.Manifest{ID: "theme"} }
 
-func (e *themeEditor) Activate(_ context.Context, h ext.Host) error {
+func (e *themeEditor) Activate(_ context.Context, h plugin.Host) error {
 	e.h = h
 	e.live = map[string]*liveFile{}
 	e.fixtures = map[*theme.Resolved]*fixture{}

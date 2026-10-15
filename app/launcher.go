@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -47,7 +47,7 @@ var (
 type launcher struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	open       bool
 	focusField bool // focus the mode's first field next frame
@@ -90,9 +90,9 @@ type ticketCard struct {
 	err     string
 }
 
-func (x *launcher) Manifest() ext.Manifest { return ext.Manifest{ID: "launcher"} }
+func (x *launcher) Manifest() plugin.Manifest { return plugin.Manifest{ID: "launcher"} }
 
-func (x *launcher) Activate(_ context.Context, h ext.Host) error {
+func (x *launcher) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	hasWorker := func(registry.Args) bool { return x.sh.sessions != nil && len(x.sh.sessions.clients()) > 0 }
 	x.add(h.Command(registry.Command{ID: "session.new",

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -79,10 +79,10 @@ type fetched[T any] struct {
 	err error
 }
 
-type statsExt struct {
+type statsPlugin struct {
 	disposer
 	sh  *shell
-	h   ext.Host
+	h   plugin.Host
 	now func() time.Time
 	loc *time.Location
 
@@ -111,9 +111,9 @@ type statsExt struct {
 // liveAfter is how soon a report is asked for again once the agents it counts have moved on.
 const liveAfter = 10 * time.Second
 
-func (x *statsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "stats"} }
+func (x *statsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "stats"} }
 
-func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
+func (x *statsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.sh.stats = h, x
 	if x.now == nil {
 		x.now = time.Now
@@ -266,13 +266,13 @@ func (x *statsExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 // split is stats.split_sessions.
-func (x *statsExt) split() bool {
+func (x *statsPlugin) split() bool {
 	v, _, _ := x.h.Options().Get(SplitOption, registry.At{})
 	on, ok := v.(bool)
 	return on || !ok
 }
 
-func (x *statsExt) setSplit(ctx registry.Ctx, on bool) error {
+func (x *statsPlugin) setSplit(ctx registry.Ctx, on bool) error {
 	if x.h.Available("settings.set", nil) {
 		return x.h.Run(ctx, "settings.set", registry.Args{"name": SplitOption, "value": on, "scope": "user"})
 	}
@@ -281,7 +281,7 @@ func (x *statsExt) setSplit(ctx registry.Ctx, on bool) error {
 
 // ex runs :Stats with its words: "session" for the session in front's tab, else a page with key=value filters, a
 // range (7d) and a group.
-func (x *statsExt) ex(ctx registry.Ctx, args string) error {
+func (x *statsPlugin) ex(ctx registry.Ctx, args string) error {
 	a := registry.Args{}
 	for _, w := range strings.Fields(args) {
 		switch k, v, ok := strings.Cut(w, "="); {
@@ -298,7 +298,7 @@ func (x *statsExt) ex(ctx registry.Ctx, args string) error {
 	return x.openPage(a)
 }
 
-func (x *statsExt) openPage(a registry.Args) error {
+func (x *statsPlugin) openPage(a registry.Args) error {
 	q := statsQuery{rng: x.q.rng, group: cmpOr(a.String("group"), stats.ByRepo), filters: map[string][]string{}}
 	if r := strings.ToUpper(a.String("range")); r != "" {
 		i := slices.IndexFunc(statsRanges, func(s statsRange) bool { return s.label == r })
@@ -335,16 +335,16 @@ func (x *statsExt) openPage(a registry.Args) error {
 }
 
 // custom makes the page's range r's days.
-func (x *statsExt) custom(r widget.DateRange) {
+func (x *statsPlugin) custom(r widget.DateRange) {
 	x.q.rng, x.q.from, x.q.to, x.sel = len(statsRanges)-1, r.From, r.To.AddDate(0, 0, 1), 0
 }
 
-func (x *statsExt) openUsage() error {
+func (x *statsPlugin) openUsage() error {
 	x.usageOpen, x.open = true, false
 	return nil
 }
 
-func (x *statsExt) regroup(by string) error {
+func (x *statsPlugin) regroup(by string) error {
 	if !slices.ContainsFunc(statsGroups, func(g statsGroup) bool { return g.key == by }) {
 		return fmt.Errorf("no grouping %q: repo, session, kind, model, provider, account, origin or day", by)
 	}
@@ -353,7 +353,7 @@ func (x *statsExt) regroup(by string) error {
 }
 
 // setOrigin keeps the page to one origin's sessions, or every one's with "".
-func (x *statsExt) setOrigin(origin string) error {
+func (x *statsPlugin) setOrigin(origin string) error {
 	switch origin {
 	case "":
 		delete(x.q.filters, "origin")
@@ -372,7 +372,7 @@ var drillOrder = map[string]string{stats.ByRepo: stats.BySession, stats.BySessio
 	stats.ByDay: stats.BySession}
 
 // drill narrows the page to a group's row: its filter chip, regrouped. A day becomes the range.
-func (x *statsExt) drill(g stats.Group) {
+func (x *statsPlugin) drill(g stats.Group) {
 	x.back = append(x.back, x.q.clone())
 	q := x.q.clone()
 	if q.group == stats.ByDay {
@@ -387,7 +387,7 @@ func (x *statsExt) drill(g stats.Group) {
 	x.q, x.sel, x.hover = q, 0, -1
 }
 
-func (x *statsExt) drillSelected() error {
+func (x *statsPlugin) drillSelected() error {
 	r, _ := x.report(x.query())
 	if x.sel >= 0 && x.sel < len(r.Groups) {
 		x.drill(r.Groups[x.sel])
@@ -396,7 +396,7 @@ func (x *statsExt) drillSelected() error {
 }
 
 // span is the page's range: its last days up to the end of today, or the custom one.
-func (x *statsExt) span(q statsQuery) (time.Time, time.Time) {
+func (x *statsPlugin) span(q statsQuery) (time.Time, time.Time) {
 	if statsRanges[q.rng].days == 0 && !q.from.IsZero() {
 		return q.from, q.to
 	}
@@ -409,13 +409,13 @@ func (x *statsExt) span(q statsQuery) (time.Time, time.Time) {
 	return end.AddDate(0, 0, -days), end
 }
 
-func (x *statsExt) offset() int {
+func (x *statsPlugin) offset() int {
 	_, off := x.now().In(x.loc).Zone()
 	return off
 }
 
 // query is the page's query.
-func (x *statsExt) query() stats.Query {
+func (x *statsPlugin) query() stats.Query {
 	from, to := x.span(x.q)
 	return stats.Query{Group: x.q.group, From: from, To: to, Offset: x.offset(), Filters: cloneFilters(x.q.filters), Split: x.split()}
 }
@@ -433,7 +433,7 @@ type reportMeta struct {
 	loading bool
 }
 
-func (x *statsExt) clients() map[core.WorkerID]worker.Client {
+func (x *statsPlugin) clients() map[core.WorkerID]worker.Client {
 	if x.sh.sessions == nil {
 		return nil
 	}
@@ -441,7 +441,7 @@ func (x *statsExt) clients() map[core.WorkerID]worker.Client {
 }
 
 // report is q's answer: every worker's last, merged, asking again when it's old or missing.
-func (x *statsExt) report(q stats.Query) (stats.Report, reportMeta) {
+func (x *statsPlugin) report(q stats.Query) (stats.Report, reportMeta) {
 	key := queryKey(q)
 	clients := x.clients()
 	x.mu.Lock()
@@ -491,7 +491,7 @@ func (x *statsExt) report(q stats.Query) (stats.Report, reportMeta) {
 }
 
 // fetch asks every worker in the background, and stores each answer on the app's loop.
-func (x *statsExt) fetch(key string, clients map[core.WorkerID]worker.Client, ask func(context.Context, worker.Client) (any, error),
+func (x *statsPlugin) fetch(key string, clients map[core.WorkerID]worker.Client, ask func(context.Context, worker.Client) (any, error),
 	store func(core.WorkerID, any, error, time.Time)) {
 	x.mu.Lock()
 	x.inflight[key] = true
@@ -524,7 +524,7 @@ func (x *statsExt) fetch(key string, clients map[core.WorkerID]worker.Client, as
 
 // detail is a session's stats from its worker, asked for again when old: an Oriel session's ID, or an outside one's
 // tab instance (target).
-func (x *statsExt) detail(instance core.SessionID) (stats.Detail, bool) {
+func (x *statsPlugin) detail(instance core.SessionID) (stats.Detail, bool) {
 	id, wid := x.target(string(instance))
 	split := x.split()
 	key := fmt.Sprintf("%s|%s|%v", id, wid, split)
@@ -550,7 +550,7 @@ func (x *statsExt) detail(instance core.SessionID) (stats.Detail, bool) {
 
 // usageHistory is every worker's readings of an account's plan over the last week, oldest first: two workers on
 // one account read the same plan.
-func (x *statsExt) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
+func (x *statsPlugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 	clients := x.clients()
 	x.mu.Lock()
 	var out []core.ProviderUsage
@@ -592,7 +592,7 @@ func (x *statsExt) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 	return out
 }
 
-func (x *statsExt) refreshUsage(ctx registry.Ctx) error {
+func (x *statsPlugin) refreshUsage(ctx registry.Ctx) error {
 	for _, c := range x.clients() {
 		if err := c.ReadUsage(ctx); err != nil {
 			x.h.Log().Warn("usage", "err", err)
@@ -606,7 +606,7 @@ func (x *statsExt) refreshUsage(ctx registry.Ctx) error {
 }
 
 // figure is the cost of today or this week, for the sidebar and the start view.
-func (x *statsExt) figure(span string) string {
+func (x *statsPlugin) figure(span string) string {
 	now := x.now().In(x.loc)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.loc).AddDate(0, 0, 1)
 	from := end.AddDate(0, 0, -1)
@@ -624,7 +624,7 @@ func (x *statsExt) figure(span string) string {
 }
 
 // usageFigure is the session in front's provider's weekly window: "wk 71%".
-func (x *statsExt) usageFigure() string {
+func (x *statsPlugin) usageFigure() string {
 	u, ok := x.frontUsage()
 	if !ok {
 		return ""
@@ -641,7 +641,7 @@ func (x *statsExt) usageFigure() string {
 
 // frontUsage is the plan of the account the session in front runs on (its provider's, on its worker); with no
 // session, the local worker's; else the first read.
-func (x *statsExt) frontUsage() (core.ProviderUsage, bool) {
+func (x *statsPlugin) frontUsage() (core.ProviderUsage, bool) {
 	st := x.h.State()
 	us := st.Usage
 	if len(us) == 0 {
@@ -665,7 +665,7 @@ func (x *statsExt) frontUsage() (core.ProviderUsage, bool) {
 }
 
 // accountLabel is how an account reads: the user's label for it (usage.accounts), else its email or organisation.
-func (x *statsExt) accountLabel(account, name string) string {
+func (x *statsPlugin) accountLabel(account, name string) string {
 	v, _, _ := x.h.Options().Get(AccountsOption, registry.At{})
 	if m, ok := v.(map[string]string); ok && m[account] != "" {
 		return m[account]
@@ -674,7 +674,7 @@ func (x *statsExt) accountLabel(account, name string) string {
 }
 
 // accountTitle is an account as the Usage page's switcher names it: its label, plan and workers.
-func (x *statsExt) accountTitle(u core.ProviderUsage) string {
+func (x *statsPlugin) accountTitle(u core.ProviderUsage) string {
 	parts := []string{x.accountLabel(u.Account, u.AccountName), cmpOr(u.Plan, providerName(u.Provider))}
 	var ws []string
 	for _, w := range u.Workers {
@@ -689,7 +689,7 @@ func (x *statsExt) accountTitle(u core.ProviderUsage) string {
 
 // openSession opens a session's stats as a main tab: an Oriel session's, or one outside Oriel on wid, the worker the
 // Stats page found it on when "".
-func (x *statsExt) openSession(ctx registry.Ctx, id core.SessionID, wid core.WorkerID) error {
+func (x *statsPlugin) openSession(ctx registry.Ctx, id core.SessionID, wid core.WorkerID) error {
 	if id == "" {
 		id = x.h.State().Focus
 	}
@@ -709,7 +709,7 @@ func (x *statsExt) openSession(ctx registry.Ctx, id core.SessionID, wid core.Wor
 }
 
 // target is the session a stats tab's instance shows, and its worker: an Oriel session's ID, else id@worker.
-func (x *statsExt) target(instance string) (core.SessionID, core.WorkerID) {
+func (x *statsPlugin) target(instance string) (core.SessionID, core.WorkerID) {
 	if se, ok := x.h.Session(core.SessionID(instance)); ok {
 		return core.SessionID(instance), cmp.Or(se.Snapshot().Worker, core.LocalWorker)
 	}
@@ -720,7 +720,7 @@ func (x *statsExt) target(instance string) (core.SessionID, core.WorkerID) {
 }
 
 // found is a session's row in any answer the Stats page has had grouped by session.
-func (x *statsExt) found(id core.SessionID) (stats.Group, bool) {
+func (x *statsPlugin) found(id core.SessionID) (stats.Group, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	for _, byWorker := range x.reports {
@@ -736,7 +736,7 @@ func (x *statsExt) found(id core.SessionID) (stats.Group, bool) {
 }
 
 // csv is the page's table.
-func (x *statsExt) csv() string {
+func (x *statsPlugin) csv() string {
 	r, _ := x.report(x.query())
 	var b strings.Builder
 	b.WriteString(x.q.group + ",sessions,requests,tokens,cost,share\n")
@@ -758,7 +758,7 @@ func csvField(s string) string {
 }
 
 // pagesSource is the omnibox's pages: every global sidebar entry, with its figure and key.
-func pagesSource(h ext.Host) registry.PickerSource {
+func pagesSource(h plugin.Host) registry.PickerSource {
 	return registry.PickerSource{ID: "pages", Title: "Pages", Order: 15,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem

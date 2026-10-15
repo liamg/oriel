@@ -34,7 +34,7 @@ var (
 	tShipCapFg    = theme.Declare("ship.caption", "fg.faint")
 )
 
-func (x *shipExt) views() {
+func (x *shipPlugin) views() {
 	x.add(x.h.View(ShipView, registry.ViewFunc(func(v registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "ship", Fn: func(c *ui.Ctx) { x.page(c) }}
 	})))
@@ -46,7 +46,7 @@ func (x *shipExt) views() {
 	})))
 }
 
-func (x *shipExt) run(id string, a registry.Args) {
+func (x *shipPlugin) run(id string, a registry.Args) {
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		if errors.Is(err, errStopped) {
 			return
@@ -57,7 +57,7 @@ func (x *shipExt) run(id string, a registry.Args) {
 }
 
 // here is the session in front and a docked view's project ("" is the open one's).
-func (x *shipExt) here(project string) (core.SessionState, string, bool) {
+func (x *shipPlugin) here(project string) (core.SessionState, string, bool) {
 	w := projectsHere(x.h)
 	if w.session == nil {
 		return core.SessionState{}, "", false
@@ -80,7 +80,7 @@ func shipEmpty(c *ui.Ctx, msg string) {
 
 // --- the Ship page (18) ---
 
-func (x *shipExt) page(c *ui.Ctx) {
+func (x *shipPlugin) page(c *ui.Ctx) {
 	th := c.Theme()
 	se, _, ok := x.here("")
 	c.Column("page", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
@@ -117,7 +117,7 @@ func (x *shipExt) page(c *ui.Ctx) {
 	})
 }
 
-func (x *shipExt) pageHeader(c *ui.Ctx, se core.SessionState, ships []worker.Ship) {
+func (x *shipPlugin) pageHeader(c *ui.Ctx, se core.SessionState, ships []worker.Ship) {
 	th := c.Theme()
 	raisable := 0
 	for _, s := range ships {
@@ -160,7 +160,7 @@ func (x *shipExt) pageHeader(c *ui.Ctx, se core.SessionState, ships []worker.Shi
 }
 
 // columnHeader is a project's name, colour, branch and base, and a chip for where it stands.
-func (x *shipExt) columnHeader(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) columnHeader(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 	th := c.Theme()
 	c.Row("ph", ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Box("sq", ui.Style{W: ui.Px(11), H: ui.Px(11), Radius: 2, Fill: tokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
@@ -198,7 +198,7 @@ func statusChip(th *theme.Resolved, s worker.Ship) (string, render.Color) {
 }
 
 // column is a project's checklist: uncommitted → behind → unpushed → PR and its checks.
-func (x *shipExt) column(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) column(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 	th := c.Theme()
 	if s.ReadOnly {
 		shipEmpty(c, "This worktree is pinned or read-only: nothing to ship from it.")
@@ -233,7 +233,7 @@ func currentStep(s worker.Ship) int {
 }
 
 // stepRow is a step's marker on the column's rail, and its card.
-func (x *shipExt) stepRow(c *ui.Ctx, key string, n, cur int, done bool, card func(c *ui.Ctx)) {
+func (x *shipPlugin) stepRow(c *ui.Ctx, key string, n, cur int, done bool, card func(c *ui.Ctx)) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		c.Column("mark", ui.Style{W: ui.Px(20), H: ui.Flex(1), Cross: ui.Center, Pad: ui.Insets{T: 9}}, func(c *ui.Ctx) {
@@ -280,7 +280,7 @@ func stepTitle(c *ui.Ctx, title, note string) {
 	})
 }
 
-func (x *shipExt) uncommitted(c *ui.Ctx, se core.SessionState, s worker.Ship, open bool) {
+func (x *shipPlugin) uncommitted(c *ui.Ctx, se core.SessionState, s worker.Ship, open bool) {
 	th := c.Theme()
 	if len(s.Files) == 0 {
 		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, "Uncommitted", "clean") }, nil)
@@ -343,7 +343,7 @@ func draftChip(c *ui.Ctx, d worker.Draft) {
 }
 
 // commitBox is the commit message, filled with the agent's draft until you type, and its buttons.
-func (x *shipExt) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f *commitForm) {
+func (x *shipPlugin) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f *commitForm) {
 	th := c.Theme()
 	if !f.edited {
 		f.message = s.CommitDraft.Body
@@ -392,7 +392,7 @@ func (x *shipExt) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f *c
 	}
 }
 
-func (x *shipExt) behind(c *ui.Ctx, s worker.Ship) {
+func (x *shipPlugin) behind(c *ui.Ctx, s worker.Ship) {
 	th := c.Theme()
 	base := cmpOr(s.Base, "base")
 	if s.Behind == 0 {
@@ -429,7 +429,7 @@ func (x *shipExt) behind(c *ui.Ctx, s worker.Ship) {
 	}())
 }
 
-func (x *shipExt) unpushed(c *ui.Ctx, s worker.Ship) {
+func (x *shipPlugin) unpushed(c *ui.Ctx, s worker.Ship) {
 	th := c.Theme()
 	if len(s.Unpushed) == 0 {
 		note := "nothing committed yet"
@@ -456,7 +456,7 @@ func (x *shipExt) unpushed(c *ui.Ctx, s worker.Ship) {
 }
 
 // prStep is the PR: not raised, with its draft and reviewers; or raised, with its checks.
-func (x *shipExt) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 	th := c.Theme()
 	if s.GitHub == "" {
 		note := "no remote"
@@ -538,7 +538,7 @@ func (x *shipExt) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 }
 
 // prActions are the buttons plugins add to a raised PR (registry.PRAction).
-func (x *shipExt) prActions(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) prActions(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 	if s.PR == nil {
 		return
 	}
@@ -553,7 +553,7 @@ func (x *shipExt) prActions(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 }
 
 // checks lists a PR's checks, with what the first failing one's log says.
-func (x *shipExt) checks(c *ui.Ctx, s worker.Ship) {
+func (x *shipPlugin) checks(c *ui.Ctx, s worker.Ship) {
 	th := c.Theme()
 	pass := 0
 	for _, ch := range s.Checks {
@@ -607,7 +607,7 @@ func dur(d time.Duration) string {
 }
 
 // reviewersLine is who reviews: each with their initials, CODEOWNERS' marked.
-func (x *shipExt) reviewersLine(c *ui.Ctx, s worker.Ship, reviewers, owners []string) {
+func (x *shipPlugin) reviewersLine(c *ui.Ctx, s worker.Ship, reviewers, owners []string) {
 	th := c.Theme()
 	c.Row("reviewers", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 		shipCap(c, "REVIEWERS")
@@ -649,7 +649,7 @@ func reviewerAvatar(c *ui.Ctx, who string) {
 }
 
 // links is how the project's PR relates to the session's others: what it depends on, or pairs with, and the order.
-func (x *shipExt) links(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) links(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 	if len(se.Projects) < 2 {
 		return
 	}
@@ -703,7 +703,7 @@ func prRef(s worker.Ship) string {
 }
 
 // gatesList is "before this ships": every gate's state for the session.
-func (x *shipExt) gatesList(c *ui.Ctx, se core.SessionState) {
+func (x *shipPlugin) gatesList(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	shipCap(c, "BEFORE THIS SHIPS")
 	gs := registry.ShipGates(x.h, string(se.ID), string(se.Kind))
@@ -746,7 +746,7 @@ func (x *shipExt) gatesList(c *ui.Ctx, se core.SessionState) {
 }
 
 // mergeOrder is the session's PRs in the order they merge: its projects' order.
-func (x *shipExt) mergeOrder(c *ui.Ctx, se core.SessionState, ships []worker.Ship) {
+func (x *shipPlugin) mergeOrder(c *ui.Ctx, se core.SessionState, ships []worker.Ship) {
 	th := c.Theme()
 	var rows []worker.Ship
 	for _, s := range ships {
@@ -772,7 +772,7 @@ func (x *shipExt) mergeOrder(c *ui.Ctx, se core.SessionState, ships []worker.Shi
 	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
 }
 
-func (x *shipExt) ticket(c *ui.Ctx, se core.SessionState) {
+func (x *shipPlugin) ticket(c *ui.Ctx, se core.SessionState) {
 	if se.Ticket == "" {
 		return
 	}
@@ -784,7 +784,7 @@ func (x *shipExt) ticket(c *ui.Ctx, se core.SessionState) {
 // --- the dock: Pull request (01h) and Git ---
 
 // checklist is a project's Pull request panel: committed → up to date → pushed → PR → checks, in a line each.
-func (x *shipExt) checklist(c *ui.Ctx, project string) {
+func (x *shipPlugin) checklist(c *ui.Ctx, project string) {
 	th := c.Theme()
 	se, p, ok := x.here(project)
 	c.Column("pr", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 4, ScrollY: true}, func(c *ui.Ctx) {

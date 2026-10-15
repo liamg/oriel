@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"context"
@@ -46,7 +46,7 @@ type WASM struct {
 
 // Module is one loaded WASM module. Calls into it aren't safe from two goroutines at once.
 type Module struct {
-	Plugin Plugin
+	Plugin Caller
 	Path   string
 
 	w       *WASM
@@ -82,7 +82,7 @@ func (w *WASM) runtime(ctx context.Context) (wazero.Runtime, error) {
 
 // Load compiles and starts a module: the plugin's own .wasm (relative to its directory) needs no grant, any
 // other file its fs.read grant. A module's _initialize runs; a command's _start doesn't.
-func (w *WASM) Load(ctx context.Context, p Plugin, name string, o WASMOpts) (*Module, error) {
+func (w *WASM) Load(ctx context.Context, p Caller, name string, o WASMOpts) (*Module, error) {
 	path := p.Path(name)
 	if !p.Own(path) {
 		if err := p.Check(CapFSRead, RealPath(path)); err != nil {
@@ -97,7 +97,7 @@ func (w *WASM) Load(ctx context.Context, p Plugin, name string, o WASMOpts) (*Mo
 }
 
 // Instantiate starts a module from its bytes, as Load does once it has read them.
-func (w *WASM) Instantiate(ctx context.Context, p Plugin, path string, code []byte, o WASMOpts) (*Module, error) {
+func (w *WASM) Instantiate(ctx context.Context, p Caller, path string, code []byte, o WASMOpts) (*Module, error) {
 	rt, err := w.runtime(ctx)
 	if err != nil {
 		return nil, err

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -29,25 +29,25 @@ var (
 	tRiskRow  = theme.Declare("plugins.consent.row.border", "line")
 )
 
-// consentExt is builtin:consent: the all-or-nothing install and update consent (security.md, mockup 29). An
+// consentPlugin is builtin:consent: the all-or-nothing install and update consent (security.md, mockup 29). An
 // installer asks through plugins.consent; the dialog shows every capability the plugin declares, with Oriel's
 // explanation and the author's reason, and Install (or Update) runs the installer's command. Nothing is granted
 // in part.
-type consentExt struct {
+type consentPlugin struct {
 	disposer
-	h     ext.Host
+	h     plugin.Host
 	queue []*consentAsk // the first is on screen
 	focus bool
 }
 
 type consentAsk struct {
-	c      ext.Consent
+	c      plugin.Consent
 	answer func(accepted bool)
 }
 
-func (x *consentExt) Manifest() ext.Manifest { return ext.Manifest{ID: "consent"} }
+func (x *consentPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "consent"} }
 
-func (x *consentExt) Activate(_ context.Context, h ext.Host) error {
+func (x *consentPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	open := func(registry.Args) bool { return len(x.queue) > 0 }
 	for _, c := range []registry.Command{
@@ -67,7 +67,7 @@ func (x *consentExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *consentExt) Deactivate(ctx context.Context) error {
+func (x *consentPlugin) Deactivate(ctx context.Context) error {
 	for _, a := range x.queue {
 		a.answer(false)
 	}
@@ -77,7 +77,7 @@ func (x *consentExt) Deactivate(ctx context.Context) error {
 
 // ask shows c and calls answer with the choice; a consent with nothing to ask is accepted at once. Call it on the
 // loop.
-func (x *consentExt) ask(c ext.Consent, answer func(accepted bool)) {
+func (x *consentPlugin) ask(c plugin.Consent, answer func(accepted bool)) {
 	if c.Silent() {
 		answer(true)
 		return
@@ -89,7 +89,7 @@ func (x *consentExt) ask(c ext.Consent, answer func(accepted bool)) {
 	x.h.Redraw()
 }
 
-func (x *consentExt) answer(accepted bool) {
+func (x *consentPlugin) answer(accepted bool) {
 	if len(x.queue) == 0 {
 		return
 	}
@@ -101,18 +101,18 @@ func (x *consentExt) answer(accepted bool) {
 }
 
 // consentCommand is plugins.consent: the manifests in dir and from, and the command to run once accepted.
-func (x *consentExt) consentCommand(a registry.Args) error {
-	dir := ext.Expand(a.String("dir"))
+func (x *consentPlugin) consentCommand(a registry.Args) error {
+	dir := plugin.Expand(a.String("dir"))
 	if dir == "" {
 		return fmt.Errorf("plugins.consent needs the plugin's {dir}")
 	}
-	m, err := ext.LoadManifest(dir)
+	m, err := plugin.LoadManifest(dir)
 	if err != nil {
 		return err
 	}
-	var from *ext.Manifest
+	var from *plugin.Manifest
 	if f := a.String("from"); f != "" {
-		old, err := ext.LoadManifest(ext.Expand(f))
+		old, err := plugin.LoadManifest(plugin.Expand(f))
 		if err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func (x *consentExt) consentCommand(a registry.Args) error {
 		}
 		from = &old
 	}
-	c := ext.Ask(m, from)
+	c := plugin.Ask(m, from)
 	c.Source = a.String("source")
 	if c.Source == "" {
 		c.Source = dir
@@ -140,23 +140,23 @@ func (x *consentExt) consentCommand(a registry.Args) error {
 	return nil
 }
 
-func riskTone(r ext.Risk) theme.TokenID {
+func riskTone(r plugin.Risk) theme.TokenID {
 	switch r {
-	case ext.RiskMedium:
+	case plugin.RiskMedium:
 		return tRiskMed
-	case ext.RiskHigh:
+	case plugin.RiskHigh:
 		return tRiskHigh
-	case ext.RiskCritical:
+	case plugin.RiskCritical:
 		return tRiskCrit
 	}
 	return tRiskLow
 }
 
-func riskWord(r ext.Risk) string {
+func riskWord(r plugin.Risk) string {
 	return [...]string{"low", "med", "high", "crit"}[r]
 }
 
-func (x *consentExt) view(c *ui.Ctx) {
+func (x *consentPlugin) view(c *ui.Ctx) {
 	if len(x.queue) == 0 {
 		return
 	}
@@ -210,7 +210,7 @@ func pluginName(id string) string {
 	return name
 }
 
-func (x *consentExt) header(c *ui.Ctx, k ext.Consent) {
+func (x *consentPlugin) header(c *ui.Ctx, k plugin.Consent) {
 	th := c.Theme()
 	m := k.Plugin
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(68), Pad: ui.PadXY(20, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -240,7 +240,7 @@ func (x *consentExt) header(c *ui.Ctx, k ext.Consent) {
 	})
 }
 
-func runsOf(m ext.Manifest) string {
+func runsOf(m plugin.Manifest) string {
 	if m.Runs == "" {
 		return "app"
 	}
@@ -249,15 +249,15 @@ func runsOf(m ext.Manifest) string {
 
 // consentRows are the capabilities under their headings, each with its risk, Oriel's explanation and the
 // author's reason.
-func consentRows(c *ui.Ctx, k ext.Consent, width float32) {
+func consentRows(c *ui.Ctx, k plugin.Consent, width float32) {
 	th := c.Theme()
 	intro := "Installing grants all of these. Anything not listed is denied. Explanations in plain type are Oriel's; italic lines are the author's own reasons."
 	if k.Update() {
 		intro = "This version asks for more. Updating grants all of these; staying keeps the version you have. Anything not listed is denied."
 	}
 	widget.Wrap(c, "intro", intro, width, uiFont(12.5, th.C(theme.FgMuted)))
-	for _, g := range ext.Groups {
-		var rows []ext.ConsentRow
+	for _, g := range plugin.Groups {
+		var rows []plugin.ConsentRow
 		for _, r := range k.Rows {
 			if r.Group == g {
 				rows = append(rows, r)
@@ -285,14 +285,14 @@ func consentRows(c *ui.Ctx, k ext.Consent, width float32) {
 	}
 }
 
-func consentRow(c *ui.Ctx, k ext.Consent, r ext.ConsentRow, width float32) {
+func consentRow(c *ui.Ctx, k plugin.Consent, r plugin.ConsentRow, width float32) {
 	th := c.Theme()
 	tone := th.C(riskTone(r.Info.Risk))
 	border := th.C(tRiskRow)
 	switch {
 	case len(r.Added) > 0:
 		border = th.C(theme.Accent)
-	case r.Info.Risk == ext.RiskCritical:
+	case r.Info.Risk == plugin.RiskCritical:
 		border = tone
 	}
 	help := consentHelp + "#" + strings.ReplaceAll(string(r.Cap), ".", "-")
@@ -328,7 +328,7 @@ func consentRow(c *ui.Ctx, k ext.Consent, r ext.ConsentRow, width float32) {
 }
 
 // consentSide is where the plugin runs, what's known of where it comes from, and what it gets without asking.
-func consentSide(c *ui.Ctx, k ext.Consent, width float32) {
+func consentSide(c *ui.Ctx, k plugin.Consent, width float32) {
 	th := c.Theme()
 	where := map[string]string{
 		"app":     "In the app, as Lua or WASM: every call checked against these grants in the VM.",
@@ -339,7 +339,7 @@ func consentSide(c *ui.Ctx, k ext.Consent, width float32) {
 	widget.Wrap(c, "runs", where, width, uiFont(12, th.C(theme.Fg)))
 	c.Box("gap", ui.Style{H: ui.Px(6)}, nil)
 	c.Text("prov", "PROVENANCE", kickerFont(th.C(theme.FgFaint)))
-	facts := append([]ext.Fact{{Label: "source", Value: k.Source}}, k.Facts...)
+	facts := append([]plugin.Fact{{Label: "source", Value: k.Source}}, k.Facts...)
 	for i, f := range facts {
 		c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 			c.Text("l", f.Label, monoFont(10.5, th.C(theme.FgFaint)))
@@ -355,7 +355,7 @@ func consentSide(c *ui.Ctx, k ext.Consent, width float32) {
 		width, uiFont(12, th.C(theme.FgMuted)))
 }
 
-func (x *consentExt) footer(c *ui.Ctx, k ext.Consent) {
+func (x *consentPlugin) footer(c *ui.Ctx, k plugin.Consent) {
 	th := c.Theme()
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(56), Pad: ui.PadXY(20, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		parts := []string{"all or nothing", fmt.Sprintf("%d %s", len(k.Rows), plural(len(k.Rows), "capability", "capabilities"))}
@@ -368,7 +368,7 @@ func (x *consentExt) footer(c *ui.Ctx, k ext.Consent) {
 			}
 			parts = append(parts, fmt.Sprintf("%d more than v%s", n, k.From.Version))
 		}
-		if n := k.Count(ext.RiskCritical); n > 0 {
+		if n := k.Count(plugin.RiskCritical); n > 0 {
 			parts = append(parts, fmt.Sprintf("%d critical", n))
 		}
 		parts = append(parts, "audit log in :Plugins")

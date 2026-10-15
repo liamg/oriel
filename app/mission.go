@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/term"
 	"github.com/liamg/oriel/ui"
@@ -30,10 +30,10 @@ const (
 // missionGroups are how the cards are grouped: the segmented control's order, and mission.group's {by}.
 var missionGroups = []string{"worker", "status", "repo"}
 
-type missionExt struct {
+type missionPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	open    bool
 	group   int
@@ -60,9 +60,9 @@ type liveTerm struct {
 	sig        string
 }
 
-func (x *missionExt) Manifest() ext.Manifest { return ext.Manifest{ID: "mission"} }
+func (x *missionPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "mission"} }
 
-func (x *missionExt) Activate(_ context.Context, h ext.Host) error {
+func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.terms = map[core.SessionID]*liveTerm{}
 	if !x.sh.launchDone {
@@ -185,7 +185,7 @@ func (x *missionExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *missionExt) Deactivate(ctx context.Context) error {
+func (x *missionPlugin) Deactivate(ctx context.Context) error {
 	x.closeTerms(nil)
 	if x.sh.inbox != nil {
 		x.sh.inbox.showInline(nil)
@@ -193,16 +193,16 @@ func (x *missionExt) Deactivate(ctx context.Context) error {
 	return x.disposer.Deactivate(ctx)
 }
 
-func (x *missionExt) show() {
+func (x *missionPlugin) show() {
 	x.open, x.err, x.reveal = true, "", true
 }
 
-func (x *missionExt) close() {
+func (x *missionPlugin) close() {
 	x.open, x.renaming = false, ""
 }
 
 // set takes mission control's state from a: {by}, {filter}, {id}.
-func (x *missionExt) set(a registry.Args) error {
+func (x *missionPlugin) set(a registry.Args) error {
 	if by := a.String("by"); by != "" {
 		i := slices.Index(missionGroups, by)
 		if i < 0 {
@@ -222,7 +222,7 @@ func (x *missionExt) set(a registry.Args) error {
 	return nil
 }
 
-func (x *missionExt) session(id core.SessionID) (core.SessionState, bool) {
+func (x *missionPlugin) session(id core.SessionID) (core.SessionState, bool) {
 	if s, ok := x.h.State().Session(id); ok && id != "" {
 		return s.Snapshot(), true
 	}
@@ -230,7 +230,7 @@ func (x *missionExt) session(id core.SessionID) (core.SessionState, bool) {
 }
 
 // selected is the selected card's session: the one chosen, while it's still shown, else the first card.
-func (x *missionExt) selected() core.SessionID {
+func (x *missionPlugin) selected() core.SessionID {
 	var first core.SessionID
 	for _, g := range x.groups(x.h.State()) {
 		for _, se := range g.cards {
@@ -246,7 +246,7 @@ func (x *missionExt) selected() core.SessionID {
 }
 
 // move selects the card beside the selected one, as the cards were last laid out.
-func (x *missionExt) move(dir string) error {
+func (x *missionPlugin) move(dir string) error {
 	cur := x.selected()
 	r, col := -1, 0
 	for i, row := range x.rows {
@@ -286,7 +286,7 @@ func (x *missionExt) move(dir string) error {
 }
 
 // decide answers the first of a session's asks that takes an allow or a deny, through ask.answer as its card does.
-func (x *missionExt) decide(ctx registry.Ctx, id core.SessionID, decision string) error {
+func (x *missionPlugin) decide(ctx registry.Ctx, id core.SessionID, decision string) error {
 	se, ok := x.session(id)
 	if !ok {
 		return fmt.Errorf("no session %q", id)
@@ -301,7 +301,7 @@ func (x *missionExt) decide(ctx registry.Ctx, id core.SessionID, decision string
 }
 
 // needNote is the start view's link figure: how many sessions need you.
-func (x *missionExt) needNote() string {
+func (x *missionPlugin) needNote() string {
 	n := 0
 	for _, s := range x.h.State().Sessions {
 		if !s.Archived && (s.Status == core.StatusNeedsYou || s.Status == core.StatusPermission) {
@@ -324,7 +324,7 @@ type missionGroup struct {
 }
 
 // live are the sessions mission control shows: not archived, and matching the filter.
-func (x *missionExt) live(st core.State) []core.SessionState {
+func (x *missionPlugin) live(st core.State) []core.SessionState {
 	q := strings.ToLower(strings.TrimSpace(x.filter))
 	var out []core.SessionState
 	for _, se := range st.Sessions {
@@ -360,7 +360,7 @@ func workerOf(se core.SessionState) core.WorkerID {
 }
 
 // groups are the cards under their headings, as mission control is grouped now.
-func (x *missionExt) groups(st core.State) []missionGroup {
+func (x *missionPlugin) groups(st core.State) []missionGroup {
 	ss := x.live(st)
 	var out []missionGroup
 	switch missionGroups[x.group] {
@@ -449,7 +449,7 @@ func workerMeta(w core.WorkerState) string {
 }
 
 // closeTerms closes the live terminals of cards not in keep.
-func (x *missionExt) closeTerms(keep map[core.SessionID]bool) {
+func (x *missionPlugin) closeTerms(keep map[core.SessionID]bool) {
 	for id, t := range x.terms {
 		if !keep[id] {
 			t.emu.Close()
@@ -484,7 +484,7 @@ type missionState struct {
 }
 
 // tool is mission_control, the assistant's: mission control's state, opened first with {show}.
-func (x *missionExt) tool(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *missionPlugin) tool(ctx registry.Ctx, p map[string]any) (any, error) {
 	var out missionState
 	var err error
 	lerr := onLoop(ctx, x.h, func() {
@@ -509,7 +509,7 @@ func (x *missionExt) tool(ctx registry.Ctx, p map[string]any) (any, error) {
 }
 
 // state is mission control as it reads now, open or not.
-func (x *missionExt) state(now time.Time) missionState {
+func (x *missionPlugin) state(now time.Time) missionState {
 	st := x.h.State()
 	out := missionState{Open: x.open, By: missionGroups[x.group], Filter: x.filter, Selected: string(x.selected())}
 	waiting := map[string]string{}

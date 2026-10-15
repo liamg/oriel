@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
@@ -20,7 +20,7 @@ func (l LSP) Server(spec script.Table, where string) error {
 		return fmt.Errorf("a language server needs a name, languages and a cmd")
 	}
 	if !l.a.Plugin.Trusted() {
-		if err := l.a.Check(ext.CapExec, s.Cmd[0]); err != nil {
+		if err := l.a.Check(plugin.CapExec, s.Cmd[0]); err != nil {
 			return err
 		}
 	}

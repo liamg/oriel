@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"errors"
@@ -86,7 +86,7 @@ func TestGuardFollowsSymlinks(t *testing.T) {
 	ms := HostMethods(nopReporter{})
 	g := NewGrants()
 	g.Grant("p/q", []Grant{{Cap: CapFSRead, Scope: []string{work}}})
-	_, err := ms.Call(t.Context(), Plugin{ID: "p/q", Guard: g}, "fs.read", []byte(`{"path":"`+filepath.Join(work, "link", "secret")+`"}`))
+	_, err := ms.Call(t.Context(), Caller{ID: "p/q", Guard: g}, "fs.read", []byte(`{"path":"`+filepath.Join(work, "link", "secret")+`"}`))
 	if err == nil || !strings.Contains(err.Error(), "fs.read") {
 		t.Errorf("read through a link out of the grant: %v", err)
 	}

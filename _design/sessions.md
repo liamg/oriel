@@ -161,7 +161,7 @@ type Sessions interface {
   doesn't listen), TLS 1.3 with a self-signed certificate kept in the state directory (`workers/tls.crt`, `tls.key`,
   owner-only) that workers pin by fingerprint. A worker is let in by its name and key (`wire.KeyHashAuth` over
   `workers.json` in the config directory, owner-only, each key kept as `wire.HashKey`). Once in, it's served exactly
-  as this machine's worker is (the `sessions` extension's `serve`): its `WorkerChanged`, usage and sessions join the
+  as this machine's worker is (the `sessions` plugin's `serve`): its `WorkerChanged`, usage and sessions join the
   store, and it answers the same calls. It must say it's the worker its key is for (`Info.ID`), or it's cut off, and
   it speaks only for itself (`core.State.FromWorker`: events about another worker or another worker's sessions are
   dropped). One that connects again replaces its old connection; one that goes away is `WorkerGone` (offline, with
@@ -233,7 +233,7 @@ type Sessions interface {
   hasn't is refused. A tour's is its manifest's `tour.kind`.
 - **The app opens on mission control** (SH-7) once there's a session to show, when it starts with nothing open
   (`mission.at_launch`); with no session it stays on the start view, whose Recent lists the sessions first.
-- **Files outside the session** open read-only: the sessions extension's `BufRead` rewrite hook marks a file outside
+- **Files outside the session** open read-only: the sessions plugin's `BufRead` rewrite hook marks a file outside
   every project and the session's own directory "outside the session", and one in a project the session only reads
   (a plan's checkouts before Start work, a tour, a review) "the session only reads it". It applies while the window
   is on the session in front. Go-to-definition and peek reach them as any file.

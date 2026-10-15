@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
@@ -120,7 +120,7 @@ func wordOn(f headless.Frame, s string, col render.Color) (render.Op, bool) {
 }
 
 // openDiff starts the app on the repo and opens round.go's diff from the Explorer's Changed scope.
-func openDiff(t *testing.T, r *gittest.Repo, setup func(h ext.Host)) *running {
+func openDiff(t *testing.T, r *gittest.Repo, setup func(h plugin.Host)) *running {
 	t.Helper()
 	app := startApp(t, t.TempDir(), r.Dir, setup)
 	app.typeKeys("<M-1>")
@@ -259,7 +259,7 @@ func TestDiffHunkKeysAndReviewed(t *testing.T) {
 func TestDiffExplainRunsExplainUnit(t *testing.T) {
 	r := diffRepo(t)
 	got := make(chan registry.Args, 1)
-	app := openDiff(t, r, func(h ext.Host) {
+	app := openDiff(t, r, func(h plugin.Host) {
 		h.Command(registry.Command{ID: ExplainUnit, Title: "Explain", Run: func(_ registry.Ctx, a registry.Args) error {
 			got <- a
 			return nil
@@ -399,9 +399,9 @@ func TestDiffOpenIsAvailableWithHelp(t *testing.T) {
 	s.lint("the diff")
 }
 
-func (s *errScene) diff() *diffExt {
-	for _, e := range s.exts {
-		if d, ok := e.(*diffExt); ok {
+func (s *errScene) diff() *diffPlugin {
+	for _, e := range s.plugins {
+		if d, ok := e.(*diffPlugin); ok {
 			return d
 		}
 	}
@@ -411,7 +411,7 @@ func (s *errScene) diff() *diffExt {
 // The diff's own buffer of a file's new side is edited to each new version, so an anchor in it (a thread's) stays
 // on its line when lines above it change.
 func TestDiffBufferFollowsEdits(t *testing.T) {
-	x := &diffExt{}
+	x := &diffPlugin{}
 	st := &diffState{bufs: map[string]diffBuf{}}
 	one := &diffFile{newText: []byte("a\nb\nc\nd\n")}
 	buf := x.newBuffer(st, "f", one)

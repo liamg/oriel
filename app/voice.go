@@ -15,7 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
@@ -45,10 +45,10 @@ type VoiceWake struct {
 
 var wakeWordRe = regexp.MustCompile(`^[a-z]{2,20}$`)
 
-type voiceExt struct {
+type voicePlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	whisper *voice.Whisper
 	ctx     context.Context
@@ -66,17 +66,17 @@ type voiceExt struct {
 	awaiting core.SessionID // the session a spoken request went to, whose reply is spoken
 }
 
-func (x *voiceExt) Manifest() ext.Manifest { return ext.Manifest{ID: "voice"} }
+func (x *voicePlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "voice"} }
 
-func (x *voiceExt) opt(name string) any {
+func (x *voicePlugin) opt(name string) any {
 	v, _, _ := x.h.Options().Get(name, registry.At{})
 	return v
 }
 
-func (x *voiceExt) str(name string) string { s, _ := x.opt(name).(string); return s }
-func (x *voiceExt) on(name string) bool    { b, _ := x.opt(name).(bool); return b }
+func (x *voicePlugin) str(name string) string { s, _ := x.opt(name).(string); return s }
+func (x *voicePlugin) on(name string) bool    { b, _ := x.opt(name).(bool); return b }
 
-func (x *voiceExt) Activate(_ context.Context, h ext.Host) error {
+func (x *voicePlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	var cancel context.CancelFunc
 	x.ctx, cancel = context.WithCancel(context.Background())
@@ -167,27 +167,27 @@ func (x *voiceExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *voiceExt) mic() voice.Mic {
+func (x *voicePlugin) mic() voice.Mic {
 	if m := x.sh.cfg.Voice.Mic; m != nil {
 		return m
 	}
 	return voice.Recorder{Name: x.str("voice.recorder")}
 }
 
-func (x *voiceExt) transcriber() voice.Transcriber {
+func (x *voicePlugin) transcriber() voice.Transcriber {
 	if t := x.sh.cfg.Voice.Transcriber; t != nil {
 		return t
 	}
 	return x.whisper
 }
 
-func (x *voiceExt) piper() voice.Piper {
+func (x *voicePlugin) piper() voice.Piper {
 	home, _ := os.UserHomeDir()
 	return voice.Piper{Dir: filepath.Join(home, ".oriel", "piper"), Voice: x.str("voice.piper_voice")}
 }
 
 // ready says why dictation can't run here, before the microphone opens.
-func (x *voiceExt) ready() error {
+func (x *voicePlugin) ready() error {
 	if !x.on("voice.dictation") {
 		return errors.New("dictation is off: turn on voice.dictation in Settings")
 	}
@@ -198,7 +198,7 @@ func (x *voiceExt) ready() error {
 }
 
 // vocab is the words Whisper should spell Oriel's way: its name and the projects of the session in front.
-func (x *voiceExt) vocab() string {
+func (x *voicePlugin) vocab() string {
 	words := []string{"Oriel"}
 	if se, ok := x.h.State().Session(x.h.State().Focus); ok {
 		for _, p := range se.Snapshot().Projects {
@@ -210,7 +210,7 @@ func (x *voiceExt) vocab() string {
 	return strings.Join(words, ", ") + "."
 }
 
-func (x *voiceExt) toggle(registry.Ctx, registry.Args) error {
+func (x *voicePlugin) toggle(registry.Ctx, registry.Args) error {
 	if x.dict != nil {
 		x.dict.Stop()
 		return nil
@@ -240,7 +240,7 @@ func (x *voiceExt) toggle(registry.Ctx, registry.Args) error {
 }
 
 // write puts a pass at the phrase in the field: the last pass's runes taken back, this one's typed.
-func (x *voiceExt) write(text string, final bool) {
+func (x *voicePlugin) write(text string, final bool) {
 	if x.dict == nil {
 		return
 	}
@@ -268,7 +268,7 @@ func (x *voiceExt) write(text string, final bool) {
 	}
 }
 
-func (x *voiceExt) ended(reason string, err error) {
+func (x *voicePlugin) ended(reason string, err error) {
 	if x.dict == nil {
 		return
 	}
@@ -287,7 +287,7 @@ func (x *voiceExt) ended(reason string, err error) {
 }
 
 // problem tells the user why voice didn't work, with the way to fix it when there's one.
-func (x *voiceExt) problem(err error) {
+func (x *voicePlugin) problem(err error) {
 	n := core.Notice{ID: "voice", Severity: core.SevError, Title: "Voice", Key: true, Text: err.Error()}
 	var noModel *voice.NoModelError
 	if errors.As(err, &noModel) {
@@ -297,7 +297,7 @@ func (x *voiceExt) problem(err error) {
 	x.h.Notify(n)
 }
 
-func (x *voiceExt) download(model string) error {
+func (x *voicePlugin) download(model string) error {
 	if model == "" {
 		_, model = x.whisper.ModelPath(x.str("voice.model"))
 	}
@@ -327,7 +327,7 @@ func (x *voiceExt) download(model string) error {
 	return nil
 }
 
-func (x *voiceExt) speaker() (voice.Speaker, bool) {
+func (x *voicePlugin) speaker() (voice.Speaker, bool) {
 	if s := x.sh.cfg.Voice.Speaker; s != nil {
 		return s, x.str("voice.speech") != "off"
 	}
@@ -340,7 +340,7 @@ func (x *voiceExt) speaker() (voice.Speaker, bool) {
 	return voice.System{}, true
 }
 
-func (x *voiceExt) speak(text string) error {
+func (x *voicePlugin) speak(text string) error {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return errors.New("nothing to say")
@@ -359,7 +359,7 @@ func (x *voiceExt) speak(text string) error {
 
 // The wake word.
 
-func (x *voiceExt) listenForWake() {
+func (x *voicePlugin) listenForWake() {
 	x.stopWake()
 	if !x.on("voice.wake") || x.dict != nil || x.ready() != nil {
 		return
@@ -377,7 +377,7 @@ func (x *voiceExt) listenForWake() {
 	x.mu.Unlock()
 }
 
-func (x *voiceExt) stopWake() {
+func (x *voicePlugin) stopWake() {
 	x.mu.Lock()
 	w := x.waker
 	x.waker = nil
@@ -388,7 +388,7 @@ func (x *voiceExt) stopWake() {
 }
 
 // woke takes what followed the wake word: a VoiceWake hook's, else the agent in front's, else the omnibox's.
-func (x *voiceExt) woke(text string) {
+func (x *voicePlugin) woke(text string) {
 	ev := &VoiceWake{Text: text}
 	v, _ := x.h.Fire(context.Background(), "VoiceWake", "", ev)
 	if v.Veto || v.Decided {
@@ -410,7 +410,7 @@ func (x *voiceExt) woke(text string) {
 }
 
 // replied speaks the agent's last words when it ends the turn a spoken request started.
-func (x *voiceExt) replied(id core.SessionID) {
+func (x *voicePlugin) replied(id core.SessionID) {
 	x.mu.Lock()
 	if x.awaiting != id {
 		x.mu.Unlock()
@@ -434,7 +434,7 @@ func (x *voiceExt) replied(id core.SessionID) {
 }
 
 // badge is "● listening" by the field dictation types into; red once it hears speech.
-func (x *voiceExt) badge(c *ui.Ctx) {
+func (x *voicePlugin) badge(c *ui.Ctx) {
 	if x.dict == nil {
 		return
 	}

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
@@ -31,7 +31,7 @@ var (
 type gitSigns struct {
 	disposer
 	sh  *shell
-	h   ext.Host
+	h   plugin.Host
 	now func() time.Time
 
 	mu       sync.Mutex
@@ -62,9 +62,9 @@ type bufHunks struct {
 	hunks   []gitx.Hunk
 }
 
-func (g *gitSigns) Manifest() ext.Manifest { return ext.Manifest{ID: "gitsigns"} }
+func (g *gitSigns) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gitsigns"} }
 
-func (g *gitSigns) Activate(_ context.Context, h ext.Host) error {
+func (g *gitSigns) Activate(_ context.Context, h plugin.Host) error {
 	g.h = h
 	if g.now == nil {
 		g.now = time.Now
@@ -90,10 +90,10 @@ func (g *gitSigns) Activate(_ context.Context, h ext.Host) error {
 		{ID: "git.hunk.unstage", Title: "Unstage the staged hunk at the cursor", Run: g.cmd(g.unstage)},
 		{ID: "git.hunk.reset", Title: "Put the hunk under the cursor back as the index has it", Run: g.cmd(g.reset)},
 		{ID: "git.hunk.preview", Title: "Show what the hunk under the cursor replaced (toggle)", Run: g.cmd(g.preview)},
-		{ID: "git.hunk.next", Title: "Go to the next hunk", Run: g.cmd(func(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+		{ID: "git.hunk.next", Title: "Go to the next hunk", Run: g.cmd(func(x *editorPlugin, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 			return g.jump(x, p, hs, 1)
 		})},
-		{ID: "git.hunk.prev", Title: "Go to the previous hunk", Run: g.cmd(func(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+		{ID: "git.hunk.prev", Title: "Go to the previous hunk", Run: g.cmd(func(x *editorPlugin, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 			return g.jump(x, p, hs, -1)
 		})},
 		{ID: "git.blame.toggle", Title: "Show or hide the cursor line's blame", Run: func(registry.Ctx, registry.Args) error {
@@ -305,7 +305,7 @@ func (g *gitSigns) blameLine(ctx registry.DecorationCtx, f gitFile) (registry.De
 }
 
 // cmd runs fn on the current editor window's file and hunks; outside a repo it says so.
-func (g *gitSigns) cmd(fn func(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) error) func(registry.Ctx, registry.Args) error {
+func (g *gitSigns) cmd(fn func(x *editorPlugin, p vim.Pane, f gitFile, hs []gitx.Hunk) error) func(registry.Ctx, registry.Args) error {
 	return func(registry.Ctx, registry.Args) error {
 		x := g.sh.editor
 		if x == nil {
@@ -329,7 +329,7 @@ func hunkAt(hs []gitx.Hunk, line int) (gitx.Hunk, bool) {
 	return gitx.Hunk{}, false
 }
 
-func (g *gitSigns) stage(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+func (g *gitSigns) stage(x *editorPlugin, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 	h, ok := hunkAt(hs, p.Cursor().Line)
 	if !ok {
 		return fmt.Errorf("no hunk on this line")
@@ -339,7 +339,7 @@ func (g *gitSigns) stage(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) er
 	return nil
 }
 
-func (g *gitSigns) unstage(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+func (g *gitSigns) unstage(x *editorPlugin, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 	// The cursor's line in the index's numbering: past every unstaged hunk above it.
 	line := p.Cursor().Line
 	at := line
@@ -367,7 +367,7 @@ func (g *gitSigns) unstage(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) 
 	return nil
 }
 
-func (g *gitSigns) reset(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+func (g *gitSigns) reset(x *editorPlugin, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 	h, ok := hunkAt(hs, p.Cursor().Line)
 	if !ok {
 		return fmt.Errorf("no hunk on this line")
@@ -380,7 +380,7 @@ func (g *gitSigns) reset(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) er
 	return err
 }
 
-func (g *gitSigns) preview(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+func (g *gitSigns) preview(x *editorPlugin, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 	h, ok := hunkAt(hs, p.Cursor().Line)
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -395,7 +395,7 @@ func (g *gitSigns) preview(x *editorExt, p vim.Pane, f gitFile, hs []gitx.Hunk) 
 	return nil
 }
 
-func (g *gitSigns) jump(x *editorExt, p vim.Pane, hs []gitx.Hunk, dir int) error {
+func (g *gitSigns) jump(x *editorPlugin, p vim.Pane, hs []gitx.Hunk, dir int) error {
 	line := p.Cursor().Line
 	starts := make([]int, len(hs))
 	for i, h := range hs {

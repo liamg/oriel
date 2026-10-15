@@ -1,4 +1,4 @@
-package exttest
+package hosttest
 
 import (
 	"context"

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/worker"
@@ -28,11 +28,11 @@ const (
 	tourHelp    = "agent/tour"
 )
 
-// tourExt is RV-8: crit's tour reader and export, on the tour package's reading of the steps.
-type tourExt struct {
+// tourPlugin is RV-8: crit's tour reader and export, on the tour package's reading of the steps.
+type tourPlugin struct {
 	disposer
 	sh     *shell
-	h      ext.Host
+	h      plugin.Host
 	loader *tour.Loader
 	by     map[core.SessionID]*tourState
 }
@@ -64,9 +64,9 @@ type tourImage struct {
 	size int64
 }
 
-func (x *tourExt) Manifest() ext.Manifest { return ext.Manifest{ID: "tour"} }
+func (x *tourPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "tour"} }
 
-func (x *tourExt) Activate(_ context.Context, h ext.Host) error {
+func (x *tourPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.loader, x.by = h, tour.NewLoader(), map[core.SessionID]*tourState{}
 	isTour := func(registry.Args) bool { _, ok := x.front(); return ok }
 	hasSteps := func(registry.Args) bool { _, st, ok := x.current(); return ok && len(st.t.Steps) > 0 }
@@ -124,7 +124,7 @@ func (x *tourExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 // front is the session in front, when it's a tour.
-func (x *tourExt) front() (core.SessionState, bool) {
+func (x *tourPlugin) front() (core.SessionState, bool) {
 	st := x.h.State()
 	se, ok := st.Session(st.Focus)
 	if !ok {
@@ -134,7 +134,7 @@ func (x *tourExt) front() (core.SessionState, bool) {
 	return s, s.Kind == core.KindTour && s.Dir != ""
 }
 
-func (x *tourExt) state(id core.SessionID) *tourState {
+func (x *tourPlugin) state(id core.SessionID) *tourState {
 	st := x.by[id]
 	if st == nil {
 		st = &tourState{visited: map[string]bool{}, replies: map[core.ThreadID]*string{}, expanded: map[*tour.QuoteText]bool{},
@@ -145,7 +145,7 @@ func (x *tourExt) state(id core.SessionID) *tourState {
 }
 
 // current is the tour in front and its reader, its steps read again each second or when the agent did something.
-func (x *tourExt) current() (core.SessionState, *tourState, bool) {
+func (x *tourPlugin) current() (core.SessionState, *tourState, bool) {
 	se, ok := x.front()
 	if !ok {
 		return se, nil, false
@@ -155,7 +155,7 @@ func (x *tourExt) current() (core.SessionState, *tourState, bool) {
 	return se, st, true
 }
 
-func (x *tourExt) reload(se core.SessionState, st *tourState, now time.Time) {
+func (x *tourPlugin) reload(se core.SessionState, st *tourState, now time.Time) {
 	if !st.read.IsZero() && now.Before(st.read.Add(time.Second)) && st.seen == len(se.Transcript) {
 		return
 	}
@@ -195,7 +195,7 @@ func quotesOf(s tour.Step) []*tour.QuoteText {
 }
 
 // openIfTour shows the reader when the window comes to a tour session.
-func (x *tourExt) openIfTour() {
+func (x *tourPlugin) openIfTour() {
 	se, ok := x.front()
 	if !ok || filepath.Clean(x.sh.cfg.WorkDir) != filepath.Clean(sessionDir(se)) {
 		return
@@ -210,7 +210,7 @@ func (x *tourExt) openIfTour() {
 	}
 }
 
-func (x *tourExt) open(ctx context.Context) error {
+func (x *tourPlugin) open(ctx context.Context) error {
 	se, ok := x.front()
 	if !ok {
 		return errors.New("the session in front isn't a tour")
@@ -219,7 +219,7 @@ func (x *tourExt) open(ctx context.Context) error {
 	return x.h.Run(ctx, "view.open", registry.Args{"id": TourView, "place": "tab", "title": "tour: " + se.Name})
 }
 
-func (x *tourExt) goTo(a registry.Args) {
+func (x *tourPlugin) goTo(a registry.Args) {
 	_, st, ok := x.current()
 	if !ok || len(st.t.Steps) == 0 {
 		return
@@ -236,7 +236,7 @@ func (x *tourExt) goTo(a registry.Args) {
 	st.focus = true
 }
 
-func (x *tourExt) scroll(by int) {
+func (x *tourPlugin) scroll(by int) {
 	if _, st, ok := x.current(); ok {
 		st.scroll += float32(by) * 20
 	}
@@ -251,7 +251,7 @@ func (st *tourState) current() (tour.Step, bool) {
 }
 
 // openQuote opens the step's quote n (1-based) in the editor at its first line; one at another revision can't be.
-func (x *tourExt) openQuote(ctx context.Context, n int) error {
+func (x *tourPlugin) openQuote(ctx context.Context, n int) error {
 	_, st, ok := x.current()
 	if !ok {
 		return errors.New("no tour is in front")
@@ -290,7 +290,7 @@ func stepThreads(se core.SessionState, file string) []core.Thread {
 	return out
 }
 
-func (x *tourExt) askCmd(ctx context.Context, text string) error {
+func (x *tourPlugin) askCmd(ctx context.Context, text string) error {
 	se, st, ok := x.current()
 	if !ok {
 		return errors.New("no tour is in front")
@@ -304,7 +304,7 @@ func (x *tourExt) askCmd(ctx context.Context, text string) error {
 
 // ask asks about the step shown: in its latest open thread, else a new one on its file, so the agent reads where it is.
 // Before there are steps, it's the tour's own thread.
-func (x *tourExt) ask(ctx context.Context, se core.SessionState, st *tourState, text string) error {
+func (x *tourPlugin) ask(ctx context.Context, se core.SessionState, st *tourState, text string) error {
 	s, ok := st.current()
 	if !ok {
 		return x.h.Run(ctx, "request.comment", registry.Args{"thread": string(se.PlanThread()), "body": text})
@@ -320,7 +320,7 @@ func (x *tourExt) ask(ctx context.Context, se core.SessionState, st *tourState, 
 }
 
 // exportCmd writes the export, and with ask (the reader's button) asks the agent in the tour's thread to publish it.
-func (x *tourExt) exportCmd(ctx context.Context, a registry.Args) error {
+func (x *tourPlugin) exportCmd(ctx context.Context, a registry.Args) error {
 	se, ok := x.front()
 	if !ok {
 		return errors.New("the session in front isn't a tour")
@@ -338,7 +338,7 @@ func (x *tourExt) exportCmd(ctx context.Context, a registry.Args) error {
 }
 
 // export writes the tour at root as html or md, and says what it wrote.
-func (x *tourExt) export(ctx context.Context, root, format string) (string, int, error) {
+func (x *tourPlugin) export(ctx context.Context, root, format string) (string, int, error) {
 	info, ok := worker.TourOf(root)
 	if !ok {
 		return "", 0, errors.New("this session isn't a tour")
@@ -362,7 +362,7 @@ func (x *tourExt) export(ctx context.Context, root, format string) (string, int,
 	return name, len(b), nil
 }
 
-func (x *tourExt) toolExport(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *tourPlugin) toolExport(ctx registry.Ctx, p map[string]any) (any, error) {
 	id := core.SessionID(registry.SessionOf(ctx))
 	se, ok := x.h.Session(id)
 	if !ok {
@@ -382,7 +382,7 @@ func (x *tourExt) toolExport(ctx registry.Ctx, p map[string]any) (any, error) {
 }
 
 // htmlOptions colour the export's code with the window's languages and its theme, dark and light.
-func (x *tourExt) htmlOptions() tour.HTMLOptions {
+func (x *tourPlugin) htmlOptions() tour.HTMLOptions {
 	name := "oriel"
 	if v, _, err := x.h.Options().Get("ui.theme", registry.At{}); err == nil {
 		name, _ = v.(string)

@@ -12,9 +12,9 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-func (s *errScene) github() *githubExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*githubExt); ok {
+func (s *errScene) github() *githubPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*githubPlugin); ok {
 			return x
 		}
 	}

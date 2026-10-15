@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/script"
 )
 
@@ -19,7 +19,7 @@ func (h HTTP) Request(spec script.Table, fn *script.Fn) error {
 	if fn == nil {
 		return errors.New("http.request needs a function for its answer")
 	}
-	r := ext.HTTPRequest{Method: str(spec, "method"), URL: str(spec, "url"), Body: str(spec, "body"), Auth: str(spec, "auth"), AuthScheme: str(spec, "auth_scheme"),
+	r := plugin.HTTPRequest{Method: str(spec, "method"), URL: str(spec, "url"), Body: str(spec, "body"), Auth: str(spec, "auth"), AuthScheme: str(spec, "auth_scheme"),
 		URLSecret: str(spec, "url_secret"), Headers: map[string]string{}}
 	for k, v := range tableOf(spec["headers"]) {
 		r.Headers[k] = fmt.Sprint(v)
@@ -39,7 +39,7 @@ func (h HTTP) Request(spec script.Table, fn *script.Fn) error {
 				a.VM.Call(fn, nil, err.Error())
 				return
 			}
-			res := v.(*ext.HTTPResponse)
+			res := v.(*plugin.HTTPResponse)
 			headers := script.Table{}
 			for k, v := range res.Headers {
 				headers[k] = v

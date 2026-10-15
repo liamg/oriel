@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/integ/linear/lineartest"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
@@ -59,13 +59,13 @@ oriel.ticket.tracker{ name = "jira", title = "Jira", order = 5, keys = "^OPS-[0-
 // loadJira runs the Jira-like tracker as an installed plugin's Lua.
 func loadJira(t *testing.T, s *errScene) *script.VM {
 	t.Helper()
-	m, err := ext.ParseManifest([]byte(jiraManifest))
+	m, err := plugin.ParseManifest([]byte(jiraManifest))
 	if err != nil {
 		t.Fatal(err)
 	}
-	g := ext.NewGrants()
+	g := plugin.NewGrants()
 	g.Grant(m.ID, m.Permissions)
-	vm := s.pluginVM(t, ext.Plugin{ID: m.ID, Dir: t.TempDir(), Guard: g})
+	vm := s.pluginVM(t, plugin.Caller{ID: m.ID, Dir: t.TempDir(), Guard: g})
 	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(jiraLua)}); err != nil {
 		t.Fatal(err)
 	}

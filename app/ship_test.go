@@ -70,9 +70,9 @@ func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localWorke
 	return s, lw, hub, se, map[string]string{"usage-api": apiUp, "web-dashboard": webUp}
 }
 
-func (s *errScene) ship() *shipExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*shipExt); ok {
+func (s *errScene) ship() *shipPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*shipPlugin); ok {
 			return x
 		}
 	}

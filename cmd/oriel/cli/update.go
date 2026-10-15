@@ -16,7 +16,7 @@ import (
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/update"
 )
 
@@ -69,7 +69,7 @@ func newUpdater(src update.Source) (*update.Updater, error) {
 	if len(keys) == 0 {
 		return nil, errors.New("this build of Oriel has no release key, so it can't update itself")
 	}
-	if len(ext.Native()) > 0 {
+	if len(plugin.Native()) > 0 {
 		return nil, errors.New("this is a custom build (oriel build --with): a release would drop its plugins, so rebuild it instead")
 	}
 	in, kind, err := selfInstaller()

@@ -98,9 +98,9 @@ func debugFixture(t *testing.T, src, adapter, transcript, open string, change fu
 	return s, root, finish
 }
 
-func (s *errScene) debugger() *debugExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*debugExt); ok {
+func (s *errScene) debugger() *debugPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*debugPlugin); ok {
 			return x
 		}
 	}

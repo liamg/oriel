@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -63,7 +63,7 @@ func titleOf(n core.Notification) string {
 type notices struct {
 	disposer
 	sh      *shell
-	h       ext.Host
+	h       plugin.Host
 	hovered map[uint64]time.Time // when each toast was last under the pointer
 	panel   *logPanel
 	crashes []Crash
@@ -71,9 +71,9 @@ type notices struct {
 	events  string // :Events filter
 }
 
-func (n *notices) Manifest() ext.Manifest { return ext.Manifest{ID: "notices"} }
+func (n *notices) Manifest() plugin.Manifest { return plugin.Manifest{ID: "notices"} }
 
-func (n *notices) Activate(_ context.Context, h ext.Host) error {
+func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.h, n.hovered = h, map[uint64]time.Time{}
 	n.panel = newLogPanel(n.sh, h)
 	cfg := n.sh.cfg

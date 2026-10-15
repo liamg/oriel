@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 
 	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext/ossandbox"
+	"github.com/liamg/oriel/plugin/ossandbox"
 )
 
 // fakeEnv makes this test binary a process plugin.
@@ -139,7 +139,7 @@ func TestProcessPlugin(t *testing.T) {
 	ps := testProcesses(&log)
 	ps.Places = g.Places
 	exited := make(chan error, 1)
-	pr, err := ps.Spawn(Plugin{ID: "acme/fake", Dir: dir, Guard: g}, "bin/fake", SpawnOpts{Env: []string{fakeEnv + "=1"},
+	pr, err := ps.Spawn(Caller{ID: "acme/fake", Dir: dir, Guard: g}, "bin/fake", SpawnOpts{Env: []string{fakeEnv + "=1"},
 		Exit: func(err error) { exited <- err }})
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +193,7 @@ func TestProcessDataDir(t *testing.T) {
 	dir, _ := installed(t)
 	data := filepath.Join(t.TempDir(), "plugins", "acme", "fake")
 	ps := testProcesses(&syncBuf{})
-	pr, err := ps.Spawn(Plugin{ID: "acme/fake", Dir: dir, Guard: NewGrants(), Data: data}, "bin/fake", SpawnOpts{Env: []string{fakeEnv + "=1"}})
+	pr, err := ps.Spawn(Caller{ID: "acme/fake", Dir: dir, Guard: NewGrants(), Data: data}, "bin/fake", SpawnOpts{Env: []string{fakeEnv + "=1"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +221,7 @@ func TestSpawnNeedsExecForOthers(t *testing.T) {
 		t.Skip(err)
 	}
 	g := NewGrants()
-	p := Plugin{ID: "acme/x", Dir: dir, Guard: g}
+	p := Caller{ID: "acme/x", Dir: dir, Guard: g}
 	ps := testProcesses(&syncBuf{})
 	for _, name := range []string{"true", tool, "./true"} {
 		if _, err := ps.Spawn(p, name, SpawnOpts{}); !errors.Is(err, ErrNotDeclared) || !strings.Contains(err.Error(), `"exec"`) {
@@ -250,7 +250,7 @@ func TestSpawnNeedsExecForOthers(t *testing.T) {
 func TestTrustedProcess(t *testing.T) {
 	self, _ := os.Executable()
 	ps := testProcesses(&syncBuf{})
-	pr, err := ps.Spawn(Plugin{ID: "init.lua"}, self, SpawnOpts{Env: []string{fakeEnv + "=1"}})
+	pr, err := ps.Spawn(Caller{ID: "init.lua"}, self, SpawnOpts{Env: []string{fakeEnv + "=1"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,11 +269,11 @@ func TestProfileFor(t *testing.T) {
 	g := NewGrants()
 	g.Grant("a/b", []Grant{{Cap: CapNet, Scope: []string{"api.linear.app", "hooks.example.com:8443"}},
 		{Cap: CapFSWrite, Scope: []string{"worktree"}}, {Cap: CapFSRead, Scope: []string{"/data"}}})
-	prof := ProfileFor(Plugin{ID: "a/b", Dir: "/plugins/a/b", Guard: g}, func(string) []string { return []string{"/src/w"} })
+	prof := ProfileFor(Caller{ID: "a/b", Dir: "/plugins/a/b", Guard: g}, func(string) []string { return []string{"/src/w"} })
 	if fmt.Sprint(prof.Ports) != "[443 8443]" || fmt.Sprint(prof.Write) != "[/src/w]" || fmt.Sprint(prof.Read) != "[/plugins/a/b /data]" {
 		t.Errorf("profile: %+v", prof)
 	}
-	if p := ProfileFor(Plugin{ID: "a/c", Guard: g}, nil); len(p.Ports) != 0 || len(p.Write) != 0 {
+	if p := ProfileFor(Caller{ID: "a/c", Guard: g}, nil); len(p.Ports) != 0 || len(p.Write) != 0 {
 		t.Errorf("a plugin with no grants: %+v", p)
 	}
 }

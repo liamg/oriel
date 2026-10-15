@@ -12,7 +12,7 @@ import (
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
@@ -27,9 +27,9 @@ type counter struct {
 	tab bool
 }
 
-func (c *counter) Manifest() ext.Manifest { return ext.Manifest{ID: "test.counter"} }
+func (c *counter) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.counter"} }
 
-func (c *counter) Activate(_ context.Context, h ext.Host) error {
+func (c *counter) Activate(_ context.Context, h plugin.Host) error {
 	h.Command(registry.Command{ID: "counter.add", Title: "Add one", Run: func(_ registry.Ctx, args registry.Args) error {
 		if n, ok := args["n"].(int); ok {
 			c.n += n
@@ -69,12 +69,12 @@ type booted struct {
 	done  chan error
 }
 
-func boot(t *testing.T, exts ...ext.Extension) *booted {
+func boot(t *testing.T, plugins ...plugin.Plugin) *booted {
 	t.Helper()
-	return bootIn(t, t.TempDir(), exts...)
+	return bootIn(t, t.TempDir(), plugins...)
 }
 
-func bootIn(t *testing.T, configDir string, exts ...ext.Extension) *booted {
+func bootIn(t *testing.T, configDir string, plugins ...plugin.Plugin) *booted {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
@@ -82,7 +82,7 @@ func bootIn(t *testing.T, configDir string, exts ...ext.Extension) *booted {
 	b := &booted{store: eventstore.New(), done: make(chan error, 1)}
 	go func() {
 		// A directory is open: the start view keeps to its own keys (TestStartViewKeepsToItsOwnKeys).
-		b.done <- app.Run(ctx, be, app.Config{Store: b.store, Extensions: exts, ConfigDir: configDir, WorkDir: t.TempDir()})
+		b.done <- app.Run(ctx, be, app.Config{Store: b.store, Plugins: plugins, ConfigDir: configDir, WorkDir: t.TempDir()})
 	}()
 	select {
 	case b.win = <-be.Windows():
@@ -165,8 +165,8 @@ func TestChordsWaitForTheirTimeout(t *testing.T) {
 // lister binds keys to the built-in :Keys and :Commands, and says when its command runs.
 type lister struct{ ran chan struct{} }
 
-func (lister) Manifest() ext.Manifest { return ext.Manifest{ID: "test.lister"} }
-func (l lister) Activate(_ context.Context, h ext.Host) error {
+func (lister) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.lister"} }
+func (l lister) Activate(_ context.Context, h plugin.Host) error {
 	h.Command(registry.Command{ID: "lister.noop", Title: "Do nothing", Run: func(registry.Ctx, registry.Args) error {
 		if l.ran != nil {
 			l.ran <- struct{}{}
@@ -250,8 +250,8 @@ func TestViewsCloseFromTheKeyboard(t *testing.T) {
 // opener opens the counter's view on F2.
 type opener struct{}
 
-func (opener) Manifest() ext.Manifest { return ext.Manifest{ID: "test.opener"} }
-func (opener) Activate(_ context.Context, h ext.Host) error {
+func (opener) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.opener"} }
+func (opener) Activate(_ context.Context, h plugin.Host) error {
 	h.Keymap(registry.Keymap{Mode: "global", Keys: "<F2>", Command: "view.open", Args: registry.Args{"id": "counter"}})
 	return nil
 }
@@ -270,8 +270,8 @@ func (b *booted) waitGone(t *testing.T, s string) {
 // pointy is a plugin view with a box that asks for the pointer cursor.
 type pointy struct{}
 
-func (pointy) Manifest() ext.Manifest { return ext.Manifest{ID: "test.pointy"} }
-func (pointy) Activate(_ context.Context, h ext.Host) error {
+func (pointy) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.pointy"} }
+func (pointy) Activate(_ context.Context, h plugin.Host) error {
 	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Box{Key: "link", Style: ui.Style{W: ui.Px(100), H: ui.Px(20), Cursor: render.CursorPointer}}
 	}))
@@ -305,8 +305,8 @@ func TestPointerSetsTheCursor(t *testing.T) {
 // themePicker sets ui.theme, as a user's settings would.
 type themePicker string
 
-func (p themePicker) Manifest() ext.Manifest { return ext.Manifest{ID: "test.theme"} }
-func (p themePicker) Activate(_ context.Context, h ext.Host) error {
+func (p themePicker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.theme"} }
+func (p themePicker) Activate(_ context.Context, h plugin.Host) error {
 	return h.Options().Set("ui.theme", registry.LayerUser, registry.At{}, string(p))
 }
 func (themePicker) Deactivate(context.Context) error { return nil }
@@ -383,8 +383,8 @@ type form struct {
 	saved int
 }
 
-func (*form) Manifest() ext.Manifest { return ext.Manifest{ID: "test.form"} }
-func (f *form) Activate(_ context.Context, h ext.Host) error {
+func (*form) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.form"} }
+func (f *form) Activate(_ context.Context, h plugin.Host) error {
 	h.Command(registry.Command{ID: "form.save", Run: func(registry.Ctx, registry.Args) error { f.saved++; return nil }})
 	h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-s>", Command: "form.save"})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "h", Command: "form.save"}) // vim's h mustn't fire inside the input
@@ -418,8 +418,8 @@ func TestWidgetsTakeKeysInTheirOwnMode(t *testing.T) {
 // panes is a plugin with two views and keys that put them on screen through the layout's commands.
 type panes struct{}
 
-func (panes) Manifest() ext.Manifest { return ext.Manifest{ID: "test.panes"} }
-func (panes) Activate(_ context.Context, h ext.Host) error {
+func (panes) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.panes"} }
+func (panes) Activate(_ context.Context, h plugin.Host) error {
 	for _, name := range []string{"alpha", "beta"} {
 		h.View(name, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("content of " + name) }))
 	}

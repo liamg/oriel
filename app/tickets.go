@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -17,12 +17,12 @@ import (
 // ticketsStale is how long a tracker's list is kept before it's asked again (crit's refresh).
 const ticketsStale = 10 * time.Minute
 
-// ticketsExt is everything about tickets that isn't a tracker's own, built once on every registry.TicketTracker:
+// ticketsPlugin is everything about tickets that isn't a tracker's own, built once on every registry.TicketTracker:
 // the omnibox's tickets (`!`), Continue on a ticket that has a session, the ask for a tracker's key, the moves and
 // the PR link as a session started from a ticket goes on, and the assistant's my_tickets.
-type ticketsExt struct {
+type ticketsPlugin struct {
 	disposer
-	h ext.Host
+	h plugin.Host
 
 	mu    sync.Mutex
 	lists map[string]*ticketList // by tracker
@@ -45,9 +45,9 @@ type ticketRow struct {
 	err     string
 }
 
-func (x *ticketsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "tickets"} }
+func (x *ticketsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "tickets"} }
 
-func (x *ticketsExt) Activate(_ context.Context, h ext.Host) error {
+func (x *ticketsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.lists = h, map[string]*ticketList{}
 	x.add(h.Picker(x.source()))
 	has := func(registry.Args) bool { return x.any() }
@@ -88,10 +88,10 @@ func (x *ticketsExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 // any says whether a tracker is registered.
-func (x *ticketsExt) any() bool { return len(registry.TicketTrackers(x.h)) > 0 }
+func (x *ticketsPlugin) any() bool { return len(registry.TicketTrackers(x.h)) > 0 }
 
 // needsKey says the tracker can't answer until its secret is set.
-func (x *ticketsExt) needsKey(tr registry.TicketTracker) bool {
+func (x *ticketsPlugin) needsKey(tr registry.TicketTracker) bool {
 	if tr.Secret == "" {
 		return false
 	}
@@ -99,7 +99,7 @@ func (x *ticketsExt) needsKey(tr registry.TicketTracker) bool {
 	return !ok
 }
 
-func (x *ticketsExt) askKey(ctx registry.Ctx, name string) error {
+func (x *ticketsPlugin) askKey(ctx registry.Ctx, name string) error {
 	for _, tr := range registry.TicketTrackers(x.h) {
 		if tr.Secret != "" && (tr.Name == name || name == "" && x.needsKey(tr)) {
 			return x.h.Run(ctx, "secrets.set", registry.Args{"name": tr.Secret})
@@ -113,7 +113,7 @@ func (x *ticketsExt) askKey(ctx registry.Ctx, name string) error {
 
 // ticketSession is the session to continue a ticket in, rather than start another: one whose ticket is key, a live
 // one before an archived one, then the newest.
-func ticketSession(h ext.Host, key string) (core.Session, bool) {
+func ticketSession(h plugin.Host, key string) (core.Session, bool) {
 	key = strings.TrimSpace(key)
 	if key == "" {
 		return nil, false
@@ -136,7 +136,7 @@ func ticketSession(h ext.Host, key string) (core.Session, bool) {
 func continueLabel(se core.Session) string { return "Continue · " + se.Name() }
 
 // fresh asks a tracker for its list when it has none or it's stale, and gives the ask under way, if any.
-func (x *ticketsExt) fresh(tr registry.TicketTracker) <-chan struct{} {
+func (x *ticketsPlugin) fresh(tr registry.TicketTracker) <-chan struct{} {
 	if tr.Assigned == nil || x.needsKey(tr) {
 		return nil
 	}
@@ -174,7 +174,7 @@ func (x *ticketsExt) fresh(tr registry.TicketTracker) <-chan struct{} {
 }
 
 // stale marks a tracker's list to be asked for again.
-func (x *ticketsExt) stale(name string) {
+func (x *ticketsPlugin) stale(name string) {
 	x.mu.Lock()
 	if l := x.lists[name]; l != nil {
 		l.at = time.Time{}
@@ -182,7 +182,7 @@ func (x *ticketsExt) stale(name string) {
 	x.mu.Unlock()
 }
 
-func (x *ticketsExt) refreshAll() {
+func (x *ticketsPlugin) refreshAll() {
 	for _, tr := range registry.TicketTrackers(x.h) {
 		x.stale(tr.Name)
 		x.fresh(tr)
@@ -190,7 +190,7 @@ func (x *ticketsExt) refreshAll() {
 }
 
 // list is a tracker's tickets as last told, and why there are none.
-func (x *ticketsExt) list(name string) ([]registry.Ticket, string, bool) {
+func (x *ticketsPlugin) list(name string) ([]registry.Ticket, string, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	l := x.lists[name]
@@ -201,7 +201,7 @@ func (x *ticketsExt) list(name string) ([]registry.Ticket, string, bool) {
 }
 
 // rows are the omnibox's tickets: each tracker's key ask or failure, then every tracker's tickets in one order.
-func (x *ticketsExt) rows() []ticketRow {
+func (x *ticketsPlugin) rows() []ticketRow {
 	var out []ticketRow
 	var all []registry.Ticket
 	trackers := map[string]registry.TicketTracker{}
@@ -254,7 +254,7 @@ func ticketNote(t registry.Ticket) string {
 	return strings.Join(parts, " · ")
 }
 
-func (x *ticketsExt) source() registry.PickerSource {
+func (x *ticketsPlugin) source() registry.PickerSource {
 	return registry.PickerSource{ID: "tickets", Title: "Tickets", Prefix: "!", Order: 40, Available: x.any,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem
@@ -330,7 +330,7 @@ func (x *ticketsExt) source() registry.PickerSource {
 }
 
 // moved tells the user a ticket moved, and asks its tracker for the list again.
-func (x *ticketsExt) moved(tr registry.TicketTracker, key string, m registry.TicketMove) {
+func (x *ticketsPlugin) moved(tr registry.TicketTracker, key string, m registry.TicketMove) {
 	if !m.Moved {
 		return
 	}
@@ -340,7 +340,7 @@ func (x *ticketsExt) moved(tr registry.TicketTracker, key string, m registry.Tic
 }
 
 // trackerCall runs a call to a tracker off the loop, with a time limit; a failure goes to the log.
-func (x *ticketsExt) trackerCall(tr registry.TicketTracker, what string, fn func(ctx context.Context) error) {
+func (x *ticketsPlugin) trackerCall(tr registry.TicketTracker, what string, fn func(ctx context.Context) error) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
@@ -351,7 +351,7 @@ func (x *ticketsExt) trackerCall(tr registry.TicketTracker, what string, fn func
 }
 
 // started moves a session's ticket into progress as the session starts from it.
-func (x *ticketsExt) started(ev SessionStart) {
+func (x *ticketsPlugin) started(ev SessionStart) {
 	tr, ok := registry.TrackerFor(x.h, ev.Ticket)
 	if !ok || tr.Start == nil {
 		return
@@ -367,7 +367,7 @@ func (x *ticketsExt) started(ev SessionStart) {
 }
 
 // prSeen links a session's PR to its ticket, whoever raised it, and moves the ticket into review while it's open.
-func (x *ticketsExt) prSeen(ev PrSeen) {
+func (x *ticketsPlugin) prSeen(ev PrSeen) {
 	tr, ok := registry.TrackerFor(x.h, ev.Ticket)
 	if !ok {
 		return
@@ -392,7 +392,7 @@ func (x *ticketsExt) prSeen(ev PrSeen) {
 }
 
 // prMerged moves a session's ticket to done once the last of its open PRs merges, whoever merged it.
-func (x *ticketsExt) prMerged(ev PrMerged) {
+func (x *ticketsPlugin) prMerged(ev PrMerged) {
 	tr, ok := registry.TrackerFor(x.h, ev.Ticket)
 	if !ok || tr.Done == nil || ev.Open > 0 {
 		return
@@ -422,7 +422,7 @@ type myTicket struct {
 
 // toolMyTickets is the assistant's my_tickets: every tracker's tickets as the omnibox lists them, asked for first
 // when they're stale, and why a tracker has none.
-func (x *ticketsExt) toolMyTickets(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *ticketsPlugin) toolMyTickets(ctx registry.Ctx, _ map[string]any) (any, error) {
 	trackers := registry.TicketTrackers(x.h)
 	var waits []<-chan struct{}
 	for _, tr := range trackers {

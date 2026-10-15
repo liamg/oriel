@@ -15,7 +15,7 @@ import (
 // what failed, and what it printed. An instance is "<session>/<run>".
 const TestRunView = "test.run"
 
-func (x *testsExt) evidence() []registry.Disposable {
+func (x *testsPlugin) evidence() []registry.Disposable {
 	return []registry.Disposable{
 		x.h.Command(registry.Command{ID: "test.run.show", Title: "Show a session's test run: {id}, of {session} (the one in front by default)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -34,7 +34,7 @@ func (x *testsExt) evidence() []registry.Disposable {
 	}
 }
 
-type testRunView struct{ x *testsExt }
+type testRunView struct{ x *testsPlugin }
 
 func (v testRunView) Title(instance string) string {
 	_, id, _ := strings.Cut(instance, "/")
@@ -45,7 +45,7 @@ func (v testRunView) Build(vc registry.ViewCtx) ui.Node {
 	return &ui.Func{Key: "run", Fn: func(c *ui.Ctx) { v.x.runView(c, vc.Instance) }}
 }
 
-func (x *testsExt) runView(c *ui.Ctx, instance string) {
+func (x *testsPlugin) runView(c *ui.Ctx, instance string) {
 	th := c.Theme()
 	session, id, _ := strings.Cut(instance, "/")
 	mono := func(size float32, tok theme.TokenID) ui.TextStyle {

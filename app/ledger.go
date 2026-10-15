@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -41,7 +41,7 @@ const ledgerGateAuto = "auto"
 
 // activateLedger registers the review ledger (agents.md, "Guardrails"): the query, the ledger.gate option, the
 // commit gate and the diff's header bar.
-func (x *diffExt) activateLedger() {
+func (x *diffPlugin) activateLedger() {
 	h := x.h
 	x.add(h.Option(registry.OptionSpec{Name: "ledger.gate", Section: "git", Type: registry.Enum, Values: []string{ledgerGateAuto, core.GateHard, core.GateSoft, core.GateOff},
 		Default: ledgerGateAuto, Scopes: registry.ScopeUser | registry.ScopeProject | registry.ScopeSession,
@@ -62,7 +62,7 @@ type agentTexts struct {
 }
 
 // agentTextsFor is root's session's agent's added lines by file; nil outside a session.
-func (x *diffExt) agentTextsFor(root string) map[string]map[string]bool {
+func (x *diffPlugin) agentTextsFor(root string) map[string]map[string]bool {
 	se, _, ok := x.session(root)
 	if !ok {
 		return nil
@@ -144,7 +144,7 @@ func countLine(c *registry.LedgerCount, s core.LineState) {
 
 // ledger is root's review ledger, from each changed file's diff (made off the loop, so it's Ready once they all
 // are) and the session's reviews.
-func (x *diffExt) ledger(root string) registry.Ledger {
+func (x *diffPlugin) ledger(root string) registry.Ledger {
 	l := registry.Ledger{Root: root}
 	if x.sh.git == nil {
 		return l
@@ -179,7 +179,7 @@ func (x *diffExt) ledger(root string) registry.Ledger {
 }
 
 // shipGate is the ledger as a "before this ships" gate: every agent-written line of the session's projects read.
-func (x *diffExt) shipGate(id string) registry.Gate {
+func (x *diffPlugin) shipGate(id string) registry.Gate {
 	se, ok := x.h.Session(core.SessionID(id))
 	if !ok {
 		return registry.Gate{}
@@ -203,7 +203,7 @@ func (x *diffExt) shipGate(id string) registry.Gate {
 }
 
 // gateMode is the commit gate for root: ledger.gate where it's set, else its session kind's; off outside a session.
-func (x *diffExt) gateMode(root string) string {
+func (x *diffPlugin) gateMode(root string) string {
 	at := registry.At{Project: root}
 	se, _, ok := x.session(root)
 	if ok {
@@ -220,7 +220,7 @@ func (x *diffExt) gateMode(root string) string {
 
 // gateCheck is the ledger's commit gate: the agent-written lines the commit's files have that aren't committed yet
 // must all be read.
-func (x *diffExt) gateCheck(c registry.CommitCheck) registry.GateResult {
+func (x *diffPlugin) gateCheck(c registry.CommitCheck) registry.GateResult {
 	l, _ := registry.LedgerOf(x.h, c.Root)
 	n := l.Of(c.Files, true)
 	res := registry.GateResult{Mode: x.gateMode(c.Root), Pass: n.NotRead() == 0, Pending: !l.Ready, Done: n.Read, Total: n.Total(), Unread: n.NotRead()}
@@ -241,7 +241,7 @@ func (x *diffExt) gateCheck(c registry.CommitCheck) registry.GateResult {
 
 // track counts agent-written lines on screen in the diff as skimmed, then read, as they stay there (agents.md: "until
 // you've seen it in the diff (scrolled past it, or marked its hunk reviewed)").
-func (x *diffExt) track(c *ui.Ctx, st *diffState, body ui.ID) {
+func (x *diffPlugin) track(c *ui.Ctx, st *diffState, body ui.ID) {
 	vp, ok := c.Rect(body)
 	if !ok {
 		return
@@ -336,7 +336,7 @@ func mergeKeys(a, b map[string][]string) map[string]bool {
 
 // ledgerBar is the diff's REVIEW LEDGER (06): the agent-written lines read of all of them, a bar of read and
 // skimmed, the commit gate and Commit.
-func (x *diffExt) ledgerBar(c *ui.Ctx, root string) {
+func (x *diffPlugin) ledgerBar(c *ui.Ctx, root string) {
 	l, _ := registry.LedgerOf(x.h, root)
 	n := l.All
 	if n.Total() == 0 {
@@ -414,7 +414,7 @@ func ledgerTone(th *theme.Resolved, n registry.LedgerCount) render.Color {
 
 // touchedLedger is the review ledger of a file a request changed: its agent-written lines read, of all of them in
 // the branch's change. ledgers keeps each project's for the frame.
-func touchedLedger(h ext.Host, se core.SessionState, f core.Touched, ledgers map[string]registry.Ledger) (registry.LedgerCount, bool) {
+func touchedLedger(h plugin.Host, se core.SessionState, f core.Touched, ledgers map[string]registry.Ledger) (registry.LedgerCount, bool) {
 	abs := anchorPath(se, &core.Anchor{Project: f.Project, File: f.Path})
 	for _, p := range se.Projects {
 		if p.Dir == "" || !within(abs, p.Dir) {

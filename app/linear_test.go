@@ -10,31 +10,31 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
-	"github.com/liamg/oriel/ext/exttest"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/integ/linear/lineartest"
+	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/plugin/hosttest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
 
 // linearPlugin is the Linear plugin (integ/linear/plugin) as an install lays it out: its files, and its process
 // built into bin/, granted what its manifest declares.
-func linearPlugin(t *testing.T) ext.Plugin {
+func linearPlugin(t *testing.T) plugin.Caller {
 	t.Helper()
-	dir := exttest.Install(t, "../integ/linear/plugin", "../integ/linear/cmd/oriel-linear")
-	m, err := ext.LoadManifest(dir)
+	dir := hosttest.Install(t, "../integ/linear/plugin", "../integ/linear/cmd/oriel-linear")
+	m, err := plugin.LoadManifest(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	g := ext.NewGrants()
+	g := plugin.NewGrants()
 	g.Grant(m.ID, m.Permissions)
-	return ext.Plugin{ID: m.ID, Dir: dir, Guard: g}
+	return plugin.Caller{ID: m.ID, Dir: dir, Guard: g}
 }
 
 // linearConfig is the app reaching the recorded Linear for the internet, with secrets kept in a file of the test's.
-func linearConfig(t *testing.T, l *lineartest.Linear) (func(*Config), *ext.SecretFile) {
-	secrets := &ext.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
+func linearConfig(t *testing.T, l *lineartest.Linear) (func(*Config), *plugin.SecretFile) {
+	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
 	return func(cfg *Config) { cfg.Net, cfg.Secrets = l.Client(), secrets }, secrets
 }
 
@@ -240,13 +240,13 @@ func TestLuaHTTPWithASecret(t *testing.T) {
 	change, secrets := linearConfig(t, l)
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
 	s := newSceneWith(t, "", "", mockupSize, change)
-	m, err := ext.LoadManifest(filepath.Join("..", "integ", "linear", "plugin"))
+	m, err := plugin.LoadManifest(filepath.Join("..", "integ", "linear", "plugin"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	g := ext.NewGrants()
+	g := plugin.NewGrants()
 	g.Grant(m.ID, m.Permissions)
-	vm := s.pluginVM(t, ext.Plugin{ID: m.ID, Dir: t.TempDir(), Guard: g})
+	vm := s.pluginVM(t, plugin.Caller{ID: m.ID, Dir: t.TempDir(), Guard: g})
 	s.frame()
 	if err := luaErr(t, vm, `
 oriel.http.request({ url = "https://api.linear.app/graphql", method = "POST", body = '{"query":"{ viewer { assignedIssues { nodes { id } } } }"}',

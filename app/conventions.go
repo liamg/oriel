@@ -15,8 +15,8 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/edit/editorconfig"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx/attr"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/vim/vimreg"
@@ -28,7 +28,7 @@ const conventionsEvery = 500 * time.Millisecond
 // conventions are each buffer's own: .editorconfig, the IDE-relevant .gitattributes and, when on, modelines, applied
 // as the registry's file layer, under :set (ED-9).
 type conventions struct {
-	h       ext.Host
+	h       plugin.Host
 	buffers func() []string // the names of the open buffers with files
 	dir     string          // relative names are under it; sources are shown relative to it
 	reposMu sync.Mutex      // project search reads repos off the loop
@@ -38,7 +38,7 @@ type conventions struct {
 	last    time.Time
 }
 
-func newConventions(h ext.Host, dir string, buffers func() []string) *conventions {
+func newConventions(h plugin.Host, dir string, buffers func() []string) *conventions {
 	return &conventions{h: h, dir: dir, buffers: buffers, repos: map[string]*attr.Repo{}, applied: map[string]map[string]any{}, warned: map[string]bool{}}
 }
 

@@ -175,15 +175,15 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
 
 ## As built (PL-2)
 
-- `ext.Guard` is `Check(plugin, cap, target)`, `Audit()` (the last 1000 checks) and `Declared(plugin)`, which the OS
-  sandbox is built from; `ext.Grants` is it. A refusal is an `*ext.NotDeclared` (`errors.Is(err,
-  ext.ErrNotDeclared)`) naming the plugin, the capability and the target. Scopes: hosts match case-insensitively,
+- `plugin.Guard` is `Check(plugin, cap, target)`, `Audit()` (the last 1000 checks) and `Declared(plugin)`, which the OS
+  sandbox is built from; `plugin.Grants` is it. A refusal is an `*plugin.NotDeclared` (`errors.Is(err,
+  plugin.ErrNotDeclared)`) naming the plugin, the capability and the target. Scopes: hosts match case-insensitively,
   `*.x` any subdomain, a port only when given; paths are compared with symlinks followed, and `worktree` and
   `config` resolve through `Grants.Places`; a bare command matches only the program PATH finds for it; `*` is
   anything.
 - The Lua API checks every call (scripting.md, "As built (PL-2)"); a process's or a module's host calls go through
-  `ext.Methods`, checked the same way.
-- The OS sandbox (`ext/ossandbox`): on Linux the binary re-runs itself as a helper (`ossandbox.Main`, first in
+  `plugin.Methods`, checked the same way.
+- The OS sandbox (`plugin/ossandbox`): on Linux the binary re-runs itself as a helper (`ossandbox.Main`, first in
   `main`) that applies a Landlock ruleset (every right the kernel's ABI knows; reads under the system's library,
   certificate and resolver paths, the plugin's directory and its fs.read grants; writes under its fs.write grants
   and its temp dir; running only its program, its exec grants and their ELF or `#!` interpreters; TCP connect only
@@ -198,7 +198,7 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
 
 ## As built (PL-9)
 
-- Secrets are kept by `ext.Secrets`; the built one is `ext.SecretFile`, `secrets.json` in the state directory, written
+- Secrets are kept by `plugin.Secrets`; the built one is `plugin.SecretFile`, `secrets.json` in the state directory, written
   0600 (its directory 0700). Not the OS keychain yet. You set one only through its dialog, `:Secret NAME` or
   `secrets.set {name}` (a field that shows dots, to the eye and to assistive technology, and won't copy:
   `widget.InputOpts.Secret`); no command takes a value, so `oriel.cmd` can't set one. `secrets.delete {name}` removes
@@ -220,13 +220,13 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
 
 ## As built (PL-3)
 
-- `ext.Ask(manifest, from)` is the consent a plugin asks for (`ext.Consent`): a row per capability beyond the
-  always-allowed ones (`ext.ConsentRow`: the grant, its risk, a heading from `ext.Groups`, Oriel's line from
-  `ext.Explain`, and the author's `Why`), the source and provenance facts the installer knows, and, for an update
+- `plugin.Ask(manifest, from)` is the consent a plugin asks for (`plugin.Consent`): a row per capability beyond the
+  always-allowed ones (`plugin.ConsentRow`: the grant, its risk, a heading from `plugin.Groups`, Oriel's line from
+  `plugin.Explain`, and the author's `Why`), the source and provenance facts the installer knows, and, for an update
   (`from` the installed manifest), what each row adds and what the update drops. `Silent()` is nothing to ask: an
   install of only always-allowed capabilities, or an update adding none.
 - Consent in the lockfile's form: `Grant.Lock()` is `net:acme.atlassian.net` per scope item (or the capability
-  alone), `ext.Locked(grants)` a plugin's whole list, and `ext.Diff(want, accepted)` what consent to `accepted`
+  alone), `plugin.Locked(grants)` a plugin's whole list, and `plugin.Diff(want, accepted)` what consent to `accepted`
   doesn't cover (`cap:*` covers any of cap's scope), which is how PL-20 tells a locked plugin from one asking for
   more. Scopes are compared as written: a narrower scope that's spelled differently asks again.
 - The dialog (mockup 29) is `builtin:consent`, opened with `plugins.consent {dir, from, then, source}`: the manifest

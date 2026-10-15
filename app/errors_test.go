@@ -12,7 +12,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
@@ -67,9 +67,9 @@ func findNotice(st core.State, prefix string) (core.Notification, bool) {
 // buggy is a plugin whose command and view panic.
 type buggy struct{ counter }
 
-func (b *buggy) Manifest() ext.Manifest { return ext.Manifest{ID: "test.buggy"} }
+func (b *buggy) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.buggy"} }
 
-func (b *buggy) Activate(ctx context.Context, h ext.Host) error {
+func (b *buggy) Activate(ctx context.Context, h plugin.Host) error {
 	if err := b.counter.Activate(ctx, h); err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (b *buggy) Activate(ctx context.Context, h ext.Host) error {
 // error notice with the Go stack as its detail, the offending contribution is turned off as above, and the app
 // keeps running."
 func TestPanickingCommandAndViewTurnOff(t *testing.T) {
-	b, _ := bootGrab(t, app.Config{Extensions: []ext.Extension{&buggy{counter{tab: true}}}},
+	b, _ := bootGrab(t, app.Config{Plugins: []plugin.Plugin{&buggy{counter{tab: true}}}},
 		registry.Keymap{Keys: "V", Command: "view.open", Args: registry.Args{"id": "buggy.view"}},
 		registry.Keymap{Keys: "C", Command: "view.open", Args: registry.Args{"id": "counter"}})
 	b.waitText(t, "count 0")
@@ -122,12 +122,12 @@ func TestPanickingCommandAndViewTurnOff(t *testing.T) {
 
 // grab hands the test its host, and maps keys to commands so the test runs them on the app's loop.
 type grab struct {
-	h    ext.Host
+	h    plugin.Host
 	keys map[string]registry.Keymap
 }
 
-func (g *grab) Manifest() ext.Manifest { return ext.Manifest{ID: "test.grab"} }
-func (g *grab) Activate(_ context.Context, h ext.Host) error {
+func (g *grab) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.grab"} }
+func (g *grab) Activate(_ context.Context, h plugin.Host) error {
 	g.h = h
 	for k, km := range g.keys {
 		km.Mode, km.Keys = "global", k
@@ -137,19 +137,19 @@ func (g *grab) Activate(_ context.Context, h ext.Host) error {
 }
 func (g *grab) Deactivate(context.Context) error { return nil }
 
-func bootGrab(t *testing.T, cfg app.Config, keys ...registry.Keymap) (*booted, ext.Host) {
+func bootGrab(t *testing.T, cfg app.Config, keys ...registry.Keymap) (*booted, plugin.Host) {
 	t.Helper()
 	g := &grab{keys: map[string]registry.Keymap{}}
 	for _, k := range keys {
 		g.keys[k.Keys] = k
 	}
-	cfg.Extensions = append(cfg.Extensions, g)
+	cfg.Plugins = append(cfg.Plugins, g)
 	return bootWith(t, cfg), g.h
 }
 
 // errors.md: "The same ID repeating collapses into one entry with a count".
 func TestRepeatedNoticeIsOneRowAndOneToast(t *testing.T) {
-	b, h := bootGrab(t, app.Config{Extensions: []ext.Extension{&counter{}}})
+	b, h := bootGrab(t, app.Config{Plugins: []plugin.Plugin{&counter{}}})
 	b.waitText(t, "count 0")
 	for range 100 {
 		h.Notify(core.Notice{ID: "lua.error", Severity: core.SevError, Title: "Config error", Text: "init.lua:15: attempt to index a nil value"})
@@ -179,7 +179,7 @@ func (b *booted) lastFrame(t *testing.T, want string) headless.Frame {
 // errors.md: "Errors from a session you're not looking at don't toast: they put an error mark on that session's
 // tab and wait in its log."
 func TestErrorInUnfocusedSessionDoesntToast(t *testing.T) {
-	b, h := bootGrab(t, app.Config{Extensions: []ext.Extension{&counter{}}})
+	b, h := bootGrab(t, app.Config{Plugins: []plugin.Plugin{&counter{}}})
 	b.waitText(t, "count 0")
 	for _, ev := range []core.Event{
 		core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet},
@@ -207,7 +207,7 @@ func TestErrorInUnfocusedSessionDoesntToast(t *testing.T) {
 // A panic outside every contribution is Oriel's own bug: it writes a crash report and the next launch offers it.
 func TestCrashReportOfferedOnNextLaunch(t *testing.T) {
 	crashes := t.TempDir()
-	cfg := app.Config{CrashDir: crashes, Version: "v0.4.2", Extensions: []ext.Extension{&counter{}}}
+	cfg := app.Config{CrashDir: crashes, Version: "v0.4.2", Plugins: []plugin.Plugin{&counter{}}}
 	cfg.Logs = app.NewLogs(app.LogOpts{})
 	cfg.Logs.Redact.Add("lin_api_secret_value")
 	b, h := bootGrab(t, cfg)
@@ -249,7 +249,7 @@ func TestCrashReportOfferedOnNextLaunch(t *testing.T) {
 // errors.md: "Secrets never reach a log". Redacted in the panel, the file and the report.
 func TestSecretsAreRedacted(t *testing.T) {
 	dir := t.TempDir()
-	cfg := app.Config{Extensions: []ext.Extension{&counter{tab: true}}}
+	cfg := app.Config{Plugins: []plugin.Plugin{&counter{tab: true}}}
 	cfg.Logs = app.NewLogs(app.LogOpts{File: filepath.Join(dir, "oriel.log")})
 	cfg.Logs.Redact.Add("ghp_supersecrettoken")
 	b, h := bootGrab(t, cfg, registry.Keymap{Keys: "L", Command: "Log"}, registry.Keymap{Keys: "R", Command: "log.copy_report"})

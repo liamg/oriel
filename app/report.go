@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/worker"
@@ -30,15 +30,15 @@ type shell struct {
 	cfg     Config
 	events  *eventTail
 	desktop Desktop
-	layout  *layoutExt
+	layout  *layoutPlugin
 	poke    func() // asks the loop for a frame
 	keys    *registry.Resolver
 	ui      *ui.UI
 	modes   func() []string
 	// enginePending is the focused editor's pending keys, when the editor is in front.
-	enginePending func() ext.Pending
+	enginePending func() plugin.Pending
 	// engineHints are the focused editor engine's own commands after keys a mapping is waiting on.
-	engineHints func(keys []string) []ext.Hint
+	engineHints func(keys []string) []plugin.Hint
 	theme       func() *theme.Resolved
 	todoMu      sync.Mutex
 	todo        []func()                         // Host.Do's, for the loop
@@ -47,16 +47,16 @@ type shell struct {
 	reopen      chan reopenTo // the directory for the loop to start again on: Open Directory's, or a session's
 	recents     *recents
 	secretsOnce sync.Once
-	secrets     ext.Secrets // the store plugins' requests take secrets from, each one handed out redacted from the logs
-	git         *gitExt     // the work tree's git status
-	editor      *editorExt
+	secrets     plugin.Secrets // the store plugins' requests take secrets from, each one handed out redacted from the logs
+	git         *gitPlugin     // the work tree's git status
+	editor      *editorPlugin
 	search      *projectSearch
-	tests       *testsExt
-	explain     *explainExt
+	tests       *testsPlugin
+	explain     *explainPlugin
 	sessions    *sessions                    // the workers' sessions; nil while it isn't active
-	stats       *statsExt                    // what the workers' sessions cost
-	hud         *hudExt                      // the HUD, and what every slot's indicators last built
-	inbox       *inboxExt                    // every card waiting on you, and those answered
+	stats       *statsPlugin                 // what the workers' sessions cost
+	hud         *hudPlugin                   // the HUD, and what every slot's indicators last built
+	inbox       *inboxPlugin                 // every card waiting on you, and those answered
 	present     *presentFocus                // the presentation with focus, for its keys
 	afterOpen   *afterOpen                   // what session.open runs once the window has opened again on the session
 	draining    atomic.Pointer[workerDrain]  // this machine's worker handing over, for a restart or a quit
@@ -112,7 +112,7 @@ func (sh *shell) report(head string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "oriel %s · %s/%s\n", sh.cfg.Version, runtime.GOOS, runtime.GOARCH)
 	var plugins []string
-	for _, e := range sh.cfg.Extensions {
+	for _, e := range sh.cfg.Plugins {
 		plugins = append(plugins, e.Manifest().ID)
 	}
 	fmt.Fprintf(&b, "plugins %s\n", orNone(strings.Join(plugins, ", ")))

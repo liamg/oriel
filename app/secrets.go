@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -29,11 +29,11 @@ func (h *host) Net() *http.Client {
 	return http.DefaultClient
 }
 
-func (h *host) Secrets() ext.Secrets { return h.sh.secretStore() }
+func (h *host) Secrets() plugin.Secrets { return h.sh.secretStore() }
 
 // secretStore is the config's secrets, or secrets.json in the state directory; each value it hands out is
 // redacted from the logs from then on (errors.md).
-func (sh *shell) secretStore() ext.Secrets {
+func (sh *shell) secretStore() plugin.Secrets {
 	sh.secretsOnce.Do(func() {
 		s := sh.cfg.Secrets
 		if s == nil {
@@ -41,7 +41,7 @@ func (sh *shell) secretStore() ext.Secrets {
 			if dir == "" {
 				dir = logs.StateDir()
 			}
-			s = &ext.SecretFile{Path: filepath.Join(dir, "secrets.json")}
+			s = &plugin.SecretFile{Path: filepath.Join(dir, "secrets.json")}
 		}
 		var r *logs.Redactor
 		if sh.cfg.Logs != nil {
@@ -53,7 +53,7 @@ func (sh *shell) secretStore() ext.Secrets {
 }
 
 type redacted struct {
-	ext.Secrets
+	plugin.Secrets
 	r *logs.Redactor
 }
 
@@ -65,11 +65,11 @@ func (s redacted) Secret(name string) (string, bool) {
 	return v, ok
 }
 
-// secretsExt sets the secrets plugins name (security.md): only you, through its dialog, and never shown back.
-type secretsExt struct {
+// secretsPlugin sets the secrets plugins name (security.md): only you, through its dialog, and never shown back.
+type secretsPlugin struct {
 	disposer
 	sh  *shell
-	h   ext.Host
+	h   plugin.Host
 	dlg *secretDialog
 }
 
@@ -80,9 +80,9 @@ type secretDialog struct {
 	err         string
 }
 
-func (x *secretsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "secrets"} }
+func (x *secretsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "secrets"} }
 
-func (x *secretsExt) Activate(_ context.Context, h ext.Host) error {
+func (x *secretsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	open := func(a registry.Args) bool { return x.dlg != nil }
 	for _, c := range []registry.Command{
@@ -109,7 +109,7 @@ func (x *secretsExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *secretsExt) open(name string) error {
+func (x *secretsPlugin) open(name string) error {
 	if name == "" || strings.ContainsAny(name, " \t@") {
 		return fmt.Errorf("a secret's name is one word, such as SLACK_WEBHOOK")
 	}
@@ -119,7 +119,7 @@ func (x *secretsExt) open(name string) error {
 	return nil
 }
 
-func (x *secretsExt) save() {
+func (x *secretsPlugin) save() {
 	d := x.dlg
 	if d == nil {
 		return
@@ -136,7 +136,7 @@ func (x *secretsExt) save() {
 	x.h.Notify(core.Notice{ID: "secrets.set", Severity: core.SevInfo, Title: "Secrets", Text: d.name + " is set"})
 }
 
-func (x *secretsExt) dialog(c *ui.Ctx) {
+func (x *secretsPlugin) dialog(c *ui.Ctx) {
 	d := x.dlg
 	if d == nil {
 		return

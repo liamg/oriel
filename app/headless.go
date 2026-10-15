@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -20,14 +20,14 @@ import (
 // Headless is the app as Run starts it, with no window and no loop of its own: the caller draws each frame on its
 // own goroutine, at a size, on the clock it gives. The app's tests and app/plugintest drive it.
 type Headless struct {
-	sh     *shell
-	ui     *ui.UI
-	exts   []ext.Extension
-	host   ext.Host // the last built-in's
-	size   render.Point
-	scale  float32 // the zoom it's drawn at; 1 when 0
-	list   *render.List
-	cancel func()
+	sh      *shell
+	ui      *ui.UI
+	plugins []plugin.Plugin
+	host    plugin.Host // the last built-in's
+	size    render.Point
+	scale   float32 // the zoom it's drawn at; 1 when 0
+	list    *render.List
+	cancel  func()
 }
 
 // HeadlessOpts is how a Headless app is drawn.
@@ -43,7 +43,7 @@ func (c *memDesktop) SetClipboard(s string)         { c.text = s }
 func (c *memDesktop) ReadClipboard() (string, bool) { return c.text, c.text != "" }
 func (c *memDesktop) OpenURL(string) error          { return nil }
 
-// NewHeadless starts the built-ins and cfg.Extensions over cfg, drawn in the dark oriel theme with motion reduced,
+// NewHeadless starts the built-ins and cfg.Plugins over cfg, drawn in the dark oriel theme with motion reduced,
 // so frames are of the settled UI.
 func NewHeadless(cfg Config, o HeadlessOpts) (*Headless, error) {
 	cfg.defaults()
@@ -60,7 +60,7 @@ func NewHeadless(cfg Config, o HeadlessOpts) (*Headless, error) {
 	sh.desktop = cfg.Desktop
 	sh.launchDone = true // a window that's been up a while: mission control doesn't open as at launch
 	h := &Headless{sh: sh, size: o.Size, cancel: cancel}
-	last, err := sh.activate(context.Background(), &h.exts)
+	last, err := sh.activate(context.Background(), &h.plugins)
 	if err != nil {
 		h.Close()
 		return nil, err
@@ -100,22 +100,22 @@ func (h *Headless) Store() core.Store           { return h.sh.cfg.Store }
 func (h *Headless) UI() *ui.UI                  { return h.ui }
 func (h *Headless) Size() render.Point          { return h.size }
 
-// Activate starts e now, as one of cfg.Extensions would have been; Close stops it.
-func (h *Headless) Activate(e ext.Extension) error {
+// Activate starts e now, as one of cfg.Plugins would have been; Close stops it.
+func (h *Headless) Activate(e plugin.Plugin) error {
 	if err := e.Activate(context.Background(), h.sh.host(e.Manifest().ID)); err != nil {
 		return err
 	}
-	h.exts = append(h.exts, e)
+	h.plugins = append(h.plugins, e)
 	return nil
 }
 
-// Close stops every extension, the last started first.
+// Close stops every plugin, the last started first.
 func (h *Headless) Close() error {
 	var err error
-	for _, e := range slices.Backward(h.exts) {
+	for _, e := range slices.Backward(h.plugins) {
 		err = errors.Join(err, e.Deactivate(context.Background()))
 	}
-	h.exts = nil
+	h.plugins = nil
 	if h.cancel != nil {
 		h.cancel()
 		h.cancel = nil
@@ -139,7 +139,7 @@ func (h *Headless) Frame() {
 // List is the last frame's display list.
 func (h *Headless) List() *render.List { return h.list }
 
-// RunQueued runs the work extensions handed the loop (Host.Do).
+// RunQueued runs the work plugins handed the loop (Host.Do).
 func (h *Headless) RunQueued() { h.sh.runTodo() }
 
 // Until draws frames, running what the loop was handed, until ok or the timeout; it says whether ok came.

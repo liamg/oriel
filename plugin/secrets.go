@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"encoding/json"

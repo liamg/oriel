@@ -13,7 +13,7 @@ import (
 )
 
 func (s *errScene) themeEditor() *themeEditor {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if t, ok := e.(*themeEditor); ok {
 			return t
 		}

@@ -10,15 +10,15 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/lsp"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 )
 
 // agentTools offers the language servers to agents, read-only (LS-3): where a symbol is defined, what refers to
 // it, and a file's diagnostics. They're ordinary agent tools, as a plugin's would be.
-func (x *lspExt) agentTools(h ext.Host) {
+func (x *lspPlugin) agentTools(h plugin.Host) {
 	at := map[string]string{"file": "string", "line": "number", "column": "number?", "symbol": "string?"}
 	for _, t := range []registry.AgentTool{
 		{Name: "lsp_definition", ReadOnly: true, Params: at, Run: x.toolLocations("definition", (*lsp.Client).Definition),
@@ -34,13 +34,13 @@ func (x *lspExt) agentTools(h ext.Host) {
 	}
 }
 
-func (x *lspExt) agentPath(ctx registry.Ctx, file string) (string, error) {
+func (x *lspPlugin) agentPath(ctx registry.Ctx, file string) (string, error) {
 	return x.sh.agentPath(x.h, ctx, file)
 }
 
 // agentPath is an agent tool's file argument as an absolute path: relative to the asking session's project, or the
 // window's.
-func (sh *shell) agentPath(h ext.Host, ctx registry.Ctx, file string) (string, error) {
+func (sh *shell) agentPath(h plugin.Host, ctx registry.Ctx, file string) (string, error) {
 	if file == "" {
 		return "", errors.New("no file given")
 	}
@@ -59,11 +59,11 @@ func (sh *shell) agentPath(h ext.Host, ctx registry.Ctx, file string) (string, e
 	return filepath.Join(root, file), nil
 }
 
-func (x *lspExt) onLoop(ctx context.Context, fn func()) error { return onLoop(ctx, x.h, fn) }
+func (x *lspPlugin) onLoop(ctx context.Context, fn func()) error { return onLoop(ctx, x.h, fn) }
 
 // agentDoc is the server's client for path, opening the file on it from disk when no editor has; release closes
 // what it opened.
-func (x *lspExt) agentDoc(ctx context.Context, path string) (c *lsp.Client, src []byte, release func(), err error) {
+func (x *lspPlugin) agentDoc(ctx context.Context, path string) (c *lsp.Client, src []byte, release func(), err error) {
 	release = func() {}
 	if err := x.onLoop(ctx, func() { src = x.fileText(path) }); err != nil {
 		return nil, nil, release, err
@@ -133,7 +133,7 @@ func intArg(v any) int {
 	return 0
 }
 
-func (x *lspExt) toolLocations(what string, find func(*lsp.Client, context.Context, lsp.Loc) ([]lsp.Location, error)) func(registry.Ctx, map[string]any) (any, error) {
+func (x *lspPlugin) toolLocations(what string, find func(*lsp.Client, context.Context, lsp.Loc) ([]lsp.Location, error)) func(registry.Ctx, map[string]any) (any, error) {
 	return func(ctx registry.Ctx, p map[string]any) (any, error) {
 		file, _ := p["file"].(string)
 		path, err := x.agentPath(ctx, file)
@@ -166,7 +166,7 @@ func (x *lspExt) toolLocations(what string, find func(*lsp.Client, context.Conte
 	}
 }
 
-func (x *lspExt) agentRel(path string) string { return x.sh.agentRel(path) }
+func (x *lspPlugin) agentRel(path string) string { return x.sh.agentRel(path) }
 
 // agentRel is a path as an agent gives it: relative to the project when it's inside it.
 func (sh *shell) agentRel(path string) string {
@@ -178,7 +178,7 @@ func (sh *shell) agentRel(path string) string {
 	return path
 }
 
-func (x *lspExt) toolDiagnostics(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *lspPlugin) toolDiagnostics(ctx registry.Ctx, p map[string]any) (any, error) {
 	var ds []registry.Diagnostic
 	if file, _ := p["file"].(string); file != "" {
 		path, err := x.agentPath(ctx, file)

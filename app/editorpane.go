@@ -62,7 +62,7 @@ type paneMetrics struct {
 }
 
 // metrics are the panes' for editor.font_size and editor.line_height now.
-func (x *editorExt) metrics(c *ui.Ctx) paneMetrics {
+func (x *editorPlugin) metrics(c *ui.Ctx) paneMetrics {
 	size, lh := float32(codeSize), float32(1.55)
 	o := x.h.Options()
 	if v, _, err := o.Get("editor.font_size", registry.At{}); err == nil {
@@ -81,7 +81,7 @@ func (x *editorExt) metrics(c *ui.Ctx) paneMetrics {
 
 // paneView draws window id: its breadcrumb, then its lines from the window's top, and the cursor in the
 // current window. Keys typed at it go to the engine after the keymap registry passes on them.
-func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
+func (x *editorPlugin) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	if x.conv.due() {
 		x.conv.refresh()
 	}
@@ -156,7 +156,7 @@ func (x *editorExt) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 }
 
 // click puts the cursor where the pointer is.
-func (x *editorExt) click(p vim.Pane, r render.Rect, at render.Point, m paneMetrics) {
+func (x *editorPlugin) click(p vim.Pane, r render.Rect, at render.Point, m paneMetrics) {
 	row := int((at.Y - r.Min.Y - codePadT) / m.lineH)
 	line := p.Top()
 	for ; row > 0 && line < p.Buf().Lines()-1; row-- {
@@ -181,7 +181,7 @@ func (x *editorExt) click(p vim.Pane, r render.Rect, at render.Point, m paneMetr
 	x.e.SetCursor(vim.Pos{Line: line, Col: colAtVCol(p.Buf().Line(line), max(want, 0), p.TabStop())})
 }
 
-func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
+func (x *editorPlugin) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
 	th := c.Theme()
 	name := tildePath(p.Name())
 	if name == "" {
@@ -232,7 +232,7 @@ func (x *editorExt) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
 
 // action is an editor action's chip: its icon (drawn, when it's a built-in one), label and note, lit while it's on.
 // A click runs its command in the window.
-func (x *editorExt) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWindow) {
+func (x *editorPlugin) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWindow) {
 	on, ic, label := a.Shown(w)
 	note := ""
 	if a.Note != nil {
@@ -261,7 +261,7 @@ func (x *editorExt) action(c *ui.Ctx, a registry.EditorAction, w registry.Editor
 
 // lines draws the rows the window shows: the gutter, the text in its highlights, a closed fold as one row,
 // the Visual selection and the cursor.
-func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
+func (x *editorPlugin) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	th := c.Theme()
 	code, haveCode := c.Rect(c.ID())
 	var blockPx float32
@@ -347,7 +347,7 @@ func (x *editorExt) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 }
 
 // panePath is the absolute path of a window's file, "" for none.
-func (x *editorExt) panePath(p vim.Pane) string {
+func (x *editorPlugin) panePath(p vim.Pane) string {
 	path := p.Name()
 	if path != "" && !filepath.IsAbs(path) {
 		path = filepath.Join(x.dir, path)
@@ -362,7 +362,7 @@ func gutterWidth(lines int, m paneMetrics) float32 {
 }
 
 // textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop.
-func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int, inl []registry.Decoration) {
+func (x *editorPlugin) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int, inl []registry.Decoration) {
 	th := c.Theme()
 	b := snap.Line(line)
 	start := snap.LineStart(line)
@@ -428,7 +428,7 @@ func (x *editorExt) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax
 	}
 }
 
-func (x *editorExt) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
+func (x *editorPlugin) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 	th := c.Theme()
 	first := strings.TrimSpace(strings.ReplaceAll(string(snap.Line(line)), "\t", " "))
 	c.Row("fold", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tFoldBg), Cross: ui.Center, Gap: 10}, func(c *ui.Ctx) {
@@ -438,7 +438,7 @@ func (x *editorExt) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 }
 
 // selections draws a row's selection, and each multi-cursor region on it, under its text.
-func (x *editorExt) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m paneMetrics, ds []registry.Decoration) {
+func (x *editorPlugin) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m paneMetrics, ds []registry.Decoration) {
 	fill := c.Theme().C(theme.Selection)
 	box := func(key any, from, to, extra int) {
 		a, z := p.VCol(line, from)+inlayShift(ds, from, true), p.VCol(line, to)+inlayShift(ds, to, false)+extra
@@ -464,7 +464,7 @@ func (x *editorExt) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m pa
 }
 
 // overlay draws, on the cursor's row of the current window, the cursor over its text, and the other cursors.
-func (x *editorExt) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m paneMetrics, ds []registry.Decoration) {
+func (x *editorPlugin) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m paneMetrics, ds []registry.Decoration) {
 	th := c.Theme()
 	cur := p.Cursor()
 	showCursor := p.Current() && line == cur.Line && x.e.Mode() != "cmdline"
@@ -576,7 +576,7 @@ func colAtVCol(b []byte, want, ts int) int {
 }
 
 // cmdline is the ":" line as an IDE input along the bottom of the pane, <Tab> completing it.
-func (x *editorExt) cmdline(c *ui.Ctx, line string) {
+func (x *editorPlugin) cmdline(c *ui.Ctx, line string) {
 	th := c.Theme()
 	c.Row("cmdline", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Gap: 0, Cross: ui.Center, Fill: th.C(tCmdlineBg),
 		Stroke: th.C(theme.LineStrong), Role: ui.RoleTextBox, Label: "Command line", Value: line}, func(c *ui.Ctx) {
@@ -590,7 +590,7 @@ func (x *editorExt) cmdline(c *ui.Ctx, line string) {
 }
 
 // modeSegment is the status line's mode chip: the current window's engine and its mode.
-func (x *editorExt) modeSegment(c *ui.Ctx) {
+func (x *editorPlugin) modeSegment(c *ui.Ctx) {
 	th := c.Theme()
 	if f := x.h.Layout().Focus; f != nil && f.ID != EditorView {
 		if v, ok := x.h.ViewByID(f.ID); ok {
@@ -637,7 +637,7 @@ func (x *editorExt) modeSegment(c *ui.Ctx) {
 }
 
 // shown reports whether any editor window is in the layout.
-func (x *editorExt) shown() bool {
+func (x *editorPlugin) shown() bool {
 	for _, id := range x.e.WindowIDs() {
 		if x.h.Layout().Find(windowRef(id)) != nil {
 			return true
@@ -646,13 +646,13 @@ func (x *editorExt) shown() bool {
 	return false
 }
 
-func (x *editorExt) current() vim.Pane {
+func (x *editorPlugin) current() vim.Pane {
 	p, _ := x.e.Pane(x.e.WindowID())
 	return p
 }
 
 // fileSegment is the file's language, encoding and line endings: "Go · utf-8 · LF".
-func (x *editorExt) fileSegment(c *ui.Ctx) {
+func (x *editorPlugin) fileSegment(c *ui.Ctx) {
 	if !x.shown() {
 		return
 	}
@@ -675,7 +675,7 @@ func (x *editorExt) fileSegment(c *ui.Ctx) {
 }
 
 // positionSegment is the cursor's line and column, and how far through the file it is.
-func (x *editorExt) positionSegment(c *ui.Ctx) {
+func (x *editorPlugin) positionSegment(c *ui.Ctx) {
 	if !x.shown() {
 		return
 	}
@@ -697,7 +697,7 @@ func statusText(c *ui.Ctx, tok theme.TokenID) ui.TextStyle {
 type lineCursor struct{ head, selFrom, selTo int }
 
 // otherCursors are the cursors of a multi-cursor edit on line, in the current window.
-func (x *editorExt) otherCursors(p vim.Pane, line int) []lineCursor {
+func (x *editorPlugin) otherCursors(p vim.Pane, line int) []lineCursor {
 	if !p.Current() {
 		return nil
 	}

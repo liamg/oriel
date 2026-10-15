@@ -95,9 +95,9 @@ func (rw *remoteWorker) updatedTo() string {
 	return p.Version
 }
 
-func (s *errScene) updates() *updateExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*updateExt); ok {
+func (s *errScene) updates() *updatePlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*updatePlugin); ok {
 			return x
 		}
 	}
@@ -202,7 +202,7 @@ func hasNotice(st core.State, id string) bool {
 	return false
 }
 
-// Config.Started runs once the window is open and every extension is active: the updater's health check after a
+// Config.Started runs once the window is open and every plugin is active: the updater's health check after a
 // swap waits for it.
 func TestStartedRunsOnceTheWindowIsUp(t *testing.T) {
 	started := make(chan struct{}, 2)

@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"context"
@@ -56,7 +56,7 @@ func HTTPMethod(n Network) Method {
 		}
 		return u.Host
 	}
-	return Method{Name: "http.request", Cap: CapNet, Target: target, Run: func(ctx context.Context, p Plugin, raw json.RawMessage) (any, error) {
+	return Method{Name: "http.request", Cap: CapNet, Target: target, Run: func(ctx context.Context, p Caller, raw json.RawMessage) (any, error) {
 		var r HTTPRequest
 		if err := json.Unmarshal(raw, &r); err != nil {
 			return nil, err
@@ -95,7 +95,7 @@ func unset(name string) error {
 // Fetch makes r's request for p once the guard allows each secret it names to go to the request's host. A
 // request carrying a secret goes over https only and doesn't follow redirects; no error or answer carries the
 // secret's value.
-func Fetch(ctx context.Context, n Network, p Plugin, r HTTPRequest) (*HTTPResponse, error) {
+func Fetch(ctx context.Context, n Network, p Caller, r HTTPRequest) (*HTTPResponse, error) {
 	u, err := requestURL(n, r)
 	if err != nil {
 		return nil, err

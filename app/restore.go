@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui/layout"
 )
@@ -38,7 +38,7 @@ type savedLayout struct {
 const revivedPrefix = "saved:"
 
 // capture is the layout as it would come back: an instance whose view can't keep it is left out.
-func (l *layoutExt) capture(h ext.Host) []byte {
+func (l *layoutPlugin) capture(h plugin.Host) []byte {
 	r, err := layout.Restore(l.root.Save())
 	if err != nil {
 		return nil
@@ -58,7 +58,7 @@ func (l *layoutExt) capture(h ext.Host) []byte {
 	return b
 }
 
-func persist(h ext.Host, v layout.ViewRef) (st json.RawMessage, ok bool) {
+func persist(h plugin.Host, v layout.ViewRef) (st json.RawMessage, ok bool) {
 	view, found := h.ViewByID(v.ID)
 	if !found {
 		return nil, false
@@ -72,7 +72,7 @@ func persist(h ext.Host, v layout.ViewRef) (st json.RawMessage, ok bool) {
 }
 
 // restore brings back the layout saved for this directory, unless something is open already.
-func (l *layoutExt) restore(h ext.Host) {
+func (l *layoutPlugin) restore(h plugin.Host) {
 	path := l.sh.dirState("layout")
 	b, err := os.ReadFile(path)
 	if path == "" || err != nil || len(l.root.All()) > 0 {
@@ -119,7 +119,7 @@ func (l *layoutExt) restore(h ext.Host) {
 }
 
 // keep saves the layout when it has changed since it was last saved.
-func (l *layoutExt) keep(h ext.Host) {
+func (l *layoutPlugin) keep(h plugin.Host) {
 	if !l.restored {
 		return
 	}
@@ -135,7 +135,7 @@ func (l *layoutExt) keep(h ext.Host) {
 	l.writer.write(path, b)
 }
 
-func (l *layoutExt) Deactivate(ctx context.Context) error {
+func (l *layoutPlugin) Deactivate(ctx context.Context) error {
 	l.writer.flush()
 	return l.disposer.Deactivate(ctx)
 }

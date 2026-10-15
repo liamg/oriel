@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -19,11 +19,11 @@ var (
 	tMdCodeBorder = theme.Declare("markdown.code.border", "line.strong")
 )
 
-// markdownExt is the built-in markdown preview: a presenter drawing a markdown buffer as a document with the shared
+// markdownPlugin is the built-in markdown preview: a presenter drawing a markdown buffer as a document with the shared
 // renderer's blocks (mdParse), its Preview / Edit action, and :MarkdownPreview. It's written as a plugin would be.
-type markdownExt struct{ disposer }
+type markdownPlugin struct{ disposer }
 
-func (x *markdownExt) Manifest() ext.Manifest { return ext.Manifest{ID: "markdown"} }
+func (x *markdownPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "markdown"} }
 
 func isMarkdown(path string) bool {
 	switch strings.ToLower(filepath.Ext(path)) {
@@ -33,7 +33,7 @@ func isMarkdown(path string) bool {
 	return false
 }
 
-func (x *markdownExt) Activate(_ context.Context, h ext.Host) error {
+func (x *markdownPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.Contribute(registry.BufferPresenter{Name: "markdown", Label: "Preview", When: isMarkdown, Comments: true, Build: markdownBlocks,
 		Help: "editor/pane#present"}))
 	x.add(h.Contribute(registry.EditorAction{Name: "markdown.preview", Label: "Preview", LabelOn: "Edit", Command: "editor.present",

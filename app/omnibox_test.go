@@ -41,7 +41,7 @@ func omniScene(t *testing.T, query string) *errScene {
 }
 
 func (s *errScene) omni() *omnibox {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if o, ok := e.(*omnibox); ok {
 			return o
 		}

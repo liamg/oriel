@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -22,7 +22,7 @@ import (
 
 // decorations are the decorations of the lines [top, bottom) of a pane's buffer, by line, each line's in priority
 // order.
-func (x *editorExt) decorations(p vim.Pane, top, bottom int) map[int][]registry.Decoration {
+func (x *editorPlugin) decorations(p vim.Pane, top, bottom int) map[int][]registry.Decoration {
 	path := p.Name()
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(x.dir, path)
@@ -68,7 +68,7 @@ const (
 
 // signs draws a line's gutter signs, between its number and its text. A block sign (the git bar) has a fixed place
 // at the column's right edge, so a run of them lines up whatever else a line has; the rest sit centred left of it.
-func (x *editorExt) signs(c *ui.Ctx, ds []registry.Decoration, gw float32, m paneMetrics) {
+func (x *editorPlugin) signs(c *ui.Ctx, ds []registry.Decoration, gw float32, m paneMetrics) {
 	c.Row("signs", ui.Style{W: ui.Px(signColW), H: ui.Flex(1), Pad: ui.Insets{R: signBarW}, Cross: ui.Center, Main: ui.Center,
 		Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
 		for i, d := range ds {
@@ -88,7 +88,7 @@ func (x *editorExt) signs(c *ui.Ctx, ds []registry.Decoration, gw float32, m pan
 
 // drawSign draws a sign: a box, its text, or an icon with its text small beside it. One with a command runs it when
 // clicked, and one with a Hover shows that card while the pointer is on it.
-func drawSign(c *ui.Ctx, h ext.Host, key any, d registry.Decoration, size float32) {
+func drawSign(c *ui.Ctx, h plugin.Host, key any, d registry.Decoration, size float32) {
 	th := c.Theme()
 	col := tokenColour(th, d.Style, th.C(theme.FgMuted))
 	draw := func(c *ui.Ctx) {

@@ -260,7 +260,7 @@ func TestLauncherSnapshot(t *testing.T) {
 	s.run("session.new", registry.Args{"kind": "plan", "ticket": "INF-2231", "repos": []string{"cloud", "pricing"},
 		"prompt": "I think the stale prices come from the usage cache never being invalidated when a plan changes: confirm that before fixing it, and keep the API response shape unchanged."})
 	var l *launcher
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if x, ok := e.(*launcher); ok {
 			l = x
 		}
@@ -351,7 +351,7 @@ func TestLauncherCloneSnapshot(t *testing.T) {
 	}
 	s.run("session.new", registry.Args{"kind": "work", "worker": "devbox", "repos": []string{checkout}, "prompt": "Round half even"})
 	var l *launcher
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if x, ok := e.(*launcher); ok {
 			l = x
 		}

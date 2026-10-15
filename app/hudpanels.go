@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -21,7 +21,7 @@ import (
 	"github.com/liamg/oriel/worker/stats"
 )
 
-// The HUD's panels (ui.md 10), each contributed by the extension that owns its data, as indicators in the hud slot.
+// The HUD's panels (ui.md 10), each contributed by the plugin that owns its data, as indicators in the hud slot.
 // They read the store as they're drawn, so a store event that redraws the window shows them changed; what the store
 // doesn't keep (a worker's recent load, the burn's readings, today's totals) their owners gather from its events.
 
@@ -63,7 +63,7 @@ func hudDot(c *ui.Ctx, key any, tone render.Color) {
 // --- Plan usage (stats) ---
 
 // usagePanel is every account's windows, the account in front first, each with where its burn takes it by the reset.
-func (x *statsExt) usagePanel(c *ui.Ctx) {
+func (x *statsPlugin) usagePanel(c *ui.Ctx) {
 	th := c.Theme()
 	now := x.now()
 	front, _ := x.frontUsage()
@@ -137,7 +137,7 @@ func (x *statsExt) usagePanel(c *ui.Ctx) {
 }
 
 // usageStrip is mission control's: each account's windows, the account in front first.
-func (x *statsExt) usageStrip(c *ui.Ctx) {
+func (x *statsPlugin) usageStrip(c *ui.Ctx) {
 	th := c.Theme()
 	front, _ := x.frontUsage()
 	us := slices.Clone(x.h.State().Usage)
@@ -172,7 +172,7 @@ func (x *statsExt) usageStrip(c *ui.Ctx) {
 }
 
 // headed is where a window's burn takes it, shortly: "→59% at reset", "→97% Thu", "idle", "full Thu 14:38".
-func (x *statsExt) headed(r windowRead, now time.Time) string {
+func (x *statsPlugin) headed(r windowRead, now time.Time) string {
 	switch {
 	case !r.runsOut.IsZero():
 		return "full " + r.runsOut.In(x.loc).Format("Mon 15:04")
@@ -187,7 +187,7 @@ func (x *statsExt) headed(r windowRead, now time.Time) string {
 }
 
 // usageNote is the panel's note: how many accounts, and how long ago they were read.
-func (x *statsExt) usageNote() string {
+func (x *statsPlugin) usageNote() string {
 	us := x.h.State().Usage
 	var read time.Time
 	for _, u := range us {
@@ -205,7 +205,7 @@ func (x *statsExt) usageNote() string {
 
 // todayPanel is today's totals across every worker: tokens, cost, the cache's share, the requests opened today and
 // the review ledger; then the hud.today slot's indicators.
-func (x *statsExt) todayPanel(c *ui.Ctx) {
+func (x *statsPlugin) todayPanel(c *ui.Ctx) {
 	th := c.Theme()
 	now := x.now().In(x.loc)
 	from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.loc)
@@ -273,7 +273,7 @@ type loadReading struct {
 }
 
 // sampled keeps a worker's reading, dropping those past loadSpan.
-func (x *workersExt) sampled(w core.WorkerState) {
+func (x *workersPlugin) sampled(w core.WorkerState) {
 	if w.Sampled.IsZero() {
 		return
 	}
@@ -296,7 +296,7 @@ func (x *workersExt) sampled(w core.WorkerState) {
 	x.load[w.ID] = rs
 }
 
-func (x *workersExt) loadOf(id core.WorkerID) []float64 {
+func (x *workersPlugin) loadOf(id core.WorkerID) []float64 {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	var out []float64
@@ -323,7 +323,7 @@ func gibShort(b uint64) string {
 }
 
 // workersPanel is each connected worker: its sessions, CPU and memory, and its CPU over the last 15 minutes.
-func (x *workersExt) workersPanel(c *ui.Ctx) {
+func (x *workersPlugin) workersPanel(c *ui.Ctx) {
 	th := c.Theme()
 	st := x.h.State()
 	ws := slices.Clone(st.Workers)
@@ -400,7 +400,7 @@ func (x *workersExt) workersPanel(c *ui.Ctx) {
 }
 
 // workersStrip is mission control's: each connected worker's CPU over the last 15 minutes, this machine's first.
-func (x *workersExt) workersStrip(c *ui.Ctx) {
+func (x *workersPlugin) workersStrip(c *ui.Ctx) {
 	th := c.Theme()
 	ws := slices.Clone(x.h.State().Workers)
 	slices.SortStableFunc(ws, func(a, b core.WorkerState) int {
@@ -431,7 +431,7 @@ func (x *workersExt) workersStrip(c *ui.Ctx) {
 }
 
 // workersNote is how many are online, and how far back their load goes.
-func (x *workersExt) workersNote() string {
+func (x *workersPlugin) workersNote() string {
 	n := 0
 	for _, w := range x.h.State().Workers {
 		if w.Connected {
@@ -442,7 +442,7 @@ func (x *workersExt) workersNote() string {
 }
 
 // workersStatus is the status line's: each connected worker's CPU, WKR before the first.
-func (x *workersExt) workersStatus(c *ui.Ctx) {
+func (x *workersPlugin) workersStatus(c *ui.Ctx) {
 	th := c.Theme()
 	var ws []core.WorkerState
 	for _, w := range x.h.State().Workers {
@@ -549,7 +549,7 @@ func elapsed(d time.Duration) string {
 
 // sessionsPanel is every session by status: how many are open and need you, the split as a strip, and the most
 // urgent five with why; a click brings one to the front.
-func (t *sessionTabs) sessionsPanel(c *ui.Ctx, h ext.Host) {
+func (t *sessionTabs) sessionsPanel(c *ui.Ctx, h plugin.Host) {
 	th := c.Theme()
 	now := c.Now()
 	var ss []core.SessionState
@@ -656,7 +656,7 @@ type ciRow struct {
 }
 
 // ciRows are the pull requests the Ship page has read, failing first, then running, then passing.
-func (x *shipExt) ciRows(now time.Time) []ciRow {
+func (x *shipPlugin) ciRows(now time.Time) []ciRow {
 	x.mu.Lock()
 	var out []ciRow
 	for _, r := range x.reports {
@@ -707,7 +707,7 @@ func (x *shipExt) ciRows(now time.Time) []ciRow {
 	return out
 }
 
-func (x *shipExt) ciPanel(c *ui.Ctx) {
+func (x *shipPlugin) ciPanel(c *ui.Ctx) {
 	th := c.Theme()
 	rows := x.ciRows(c.Now())
 	if len(rows) == 0 {
@@ -730,7 +730,7 @@ func (x *shipExt) ciPanel(c *ui.Ctx) {
 	}
 }
 
-func (x *shipExt) ciNote() string {
+func (x *shipPlugin) ciNote() string {
 	if n := len(x.ciRows(x.now())); n > 0 {
 		return counted(n, "PR")
 	}

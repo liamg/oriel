@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/ext/ossandbox"
+	"github.com/liamg/oriel/plugin/ossandbox"
 )
 
 // TestMain fixes the time zone for every test's times before any goroutine reads it.

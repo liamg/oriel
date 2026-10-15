@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -57,7 +57,7 @@ func (l *dirList) list() ([]string, map[string]bool) {
 
 // directoriesSource is Open Directory's picker: recent directories first, then git repos and the other directories
 // under home; a typed path lists what's in it; and Browse… asks the OS.
-func directoriesSource(h ext.Host, sh *shell) registry.PickerSource {
+func directoriesSource(h plugin.Host, sh *shell) registry.PickerSource {
 	home, _ := os.UserHomeDir()
 	all := &dirList{root: home}
 	return registry.PickerSource{ID: "directories", Title: "Directories", Order: 15, PickerOnly: true,

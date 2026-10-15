@@ -7,7 +7,7 @@ import (
 	"slices"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -67,9 +67,9 @@ type sessionTabs struct {
 	sh *shell
 }
 
-func (t *sessionTabs) Manifest() ext.Manifest { return ext.Manifest{ID: "sessiontabs"} }
+func (t *sessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sessiontabs"} }
 
-func (t *sessionTabs) Activate(_ context.Context, h ext.Host) error {
+func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 	focus := func(id core.SessionID) error { return t.sh.cfg.Store.Apply(core.SessionFocused{ID: id}) }
 	t.add(h.Command(registry.Command{ID: "session.focus", Title: "Focus a session: {n} counting from 1, or {id}", Run: func(_ registry.Ctx, a registry.Args) error {
 		if id, _ := a["id"].(string); id != "" {
@@ -101,7 +101,7 @@ func (t *sessionTabs) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (t *sessionTabs) build(c *ui.Ctx, h ext.Host, vc registry.ViewCtx) {
+func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc registry.ViewCtx) {
 	th := c.Theme()
 	st := h.State()
 	c.Row("titlebar", ui.Style{W: ui.Flex(1), H: ui.Px(titleH), Cross: ui.Center, Fill: th.C(tTitleBg), Role: ui.RoleToolbar, Label: "Sessions"}, func(c *ui.Ctx) {
@@ -127,7 +127,7 @@ func (t *sessionTabs) build(c *ui.Ctx, h ext.Host, vc registry.ViewCtx) {
 	})
 }
 
-func (t *sessionTabs) tab(c *ui.Ctx, h ext.Host, i int, s core.Session, on bool) {
+func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bool) {
 	th := c.Theme()
 	fill, name := color.NRGBA{}, th.C(tTabName)
 	if on {
@@ -190,7 +190,7 @@ func openTabs(st core.State) []core.Session {
 }
 
 // close closes id's tab, or the front one's. The one in front hands the front to its neighbour, or to the start view.
-func (t *sessionTabs) close(h ext.Host, id core.SessionID) error {
+func (t *sessionTabs) close(h plugin.Host, id core.SessionID) error {
 	st := h.State()
 	if id == "" {
 		id = st.Focus

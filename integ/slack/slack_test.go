@@ -5,17 +5,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/integ/slack"
+	"github.com/liamg/oriel/plugin"
 )
 
 // security.md: the webhook is a secret "bound to a host", and the plugin may reach that host and no other.
 func TestManifest(t *testing.T) {
-	b, err := fs.ReadFile(slack.Files, ext.ManifestFile)
+	b, err := fs.ReadFile(slack.Files, plugin.ManifestFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m, err := ext.ParseManifest(b)
+	m, err := plugin.ParseManifest(b)
 	if err != nil {
 		t.Fatal(err)
 	}

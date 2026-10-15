@@ -15,7 +15,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/ui"
@@ -28,7 +28,7 @@ import (
 type sessions struct {
 	disposer
 	sh     *shell
-	h      ext.Host
+	h      plugin.Host
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -66,9 +66,9 @@ type CommentSend struct {
 	Btw     bool   `json:"btw,omitempty"`
 }
 
-func (x *sessions) Manifest() ext.Manifest { return ext.Manifest{ID: "sessions"} }
+func (x *sessions) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sessions"} }
 
-func (x *sessions) Activate(_ context.Context, h ext.Host) error {
+func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 	x.sh.sessions, x.h = x, h
 	ctx, cancel := context.WithCancel(context.Background())
 	x.ctx, x.cancel = ctx, cancel
@@ -227,7 +227,7 @@ func (x *sessions) Deactivate(ctx context.Context) error {
 // serve mirrors one worker into the store and answers its calls, until ctx ends or it goes away. A worker speaks
 // only for itself (core.State.FromWorker); want, when set, is the ID it must have: a remote worker's, from its key.
 // A worker that connects again replaces its old connection.
-func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want core.WorkerID) {
+func (x *sessions) serve(ctx context.Context, h plugin.Host, c worker.Client, want core.WorkerID) {
 	c.Conn.Handle(worker.MethodAppTools, func(_ context.Context, raw json.RawMessage) (any, error) {
 		var r worker.ToolsReq
 		if err := json.Unmarshal(raw, &r); err != nil {
@@ -486,7 +486,7 @@ func (x *sessions) loadRepos() {
 
 // addSource is the picker + in the sidebar opens (ui.md 01h): the worker's repos the session hasn't got, and the
 // path typed. Choosing one adds it with session.add-repo, then opens it.
-func (x *sessions) addSource(h ext.Host) registry.PickerSource {
+func (x *sessions) addSource(h plugin.Host) registry.PickerSource {
 	return registry.PickerSource{ID: "projects.add", Title: "Add a project", PickerOnly: true, Unlisted: true, Live: true, Source: "builtin:sessions",
 		Items: func(_ registry.Ctx, query string) []registry.PickerItem {
 			se, ok := x.sh.cfg.Store.Session(x.focused())
@@ -653,7 +653,7 @@ func asArgs(v any) (registry.Args, bool) {
 }
 
 // runCalls runs calls in order, logging what fails.
-func runCalls(h ext.Host, calls []call) {
+func runCalls(h plugin.Host, calls []call) {
 	for _, c := range calls {
 		if err := h.Run(context.Background(), c.command, c.args); err != nil {
 			h.Log().Warn("session.open then", "command", c.command, "err", err)
@@ -772,7 +772,7 @@ func within(path, dir string) bool {
 }
 
 // agentTools are the tools plugins offer an agent, as a worker hands them on.
-func (x *sessions) agentTools(h ext.Host, r worker.ToolsReq) []agent.Tool {
+func (x *sessions) agentTools(h plugin.Host, r worker.ToolsReq) []agent.Tool {
 	var out []agent.Tool
 	name, utility := x.agentName(r.Session, r.Agent)
 	for _, t := range registry.AgentToolsFor(h, name, utility) {
@@ -796,7 +796,7 @@ func (x *sessions) agentName(id core.SessionID, agent string) (string, bool) {
 
 // callTool runs a tool for an agent on worker c. A session's agent is owned by its worker: an act there is asked
 // through the session's rules, the policy hooks and then the user's card, as the agent's own gate is.
-func (x *sessions) callTool(ctx context.Context, h ext.Host, c worker.Client, call worker.ToolCall) (string, error) {
+func (x *sessions) callTool(ctx context.Context, h plugin.Host, c worker.Client, call worker.ToolCall) (string, error) {
 	name, utility := x.agentName(call.Session, call.Agent)
 	for _, t := range registry.AgentToolsFor(h, name, utility) {
 		if t.Name != call.Tool || t.Run == nil {
@@ -838,7 +838,7 @@ func askForSession(ctx context.Context, c worker.Client, call worker.ToolCall, c
 }
 
 // decide runs the Permission hooks on an ask: layer 2, before it reaches the user.
-func (x *sessions) decide(ctx context.Context, h ext.Host, d worker.Decide) worker.Verdict {
+func (x *sessions) decide(ctx context.Context, h plugin.Host, d worker.Decide) worker.Verdict {
 	ev := registry.PermissionEvent{Session: string(d.Session), Kind: string(d.Ask.Kind), Tool: d.Ask.Tool, Summary: d.Ask.Summary,
 		Input: mainInput(d.Ask.Input), Rule: d.Ask.Rule, Host: d.Ask.Host}
 	subject := d.Ask.Tool

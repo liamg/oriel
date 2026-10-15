@@ -43,7 +43,7 @@ type startBranch struct{ project, branch, planned string }
 
 // openStartWork opens the dialog on the plan in front, filled from the session: its branches, sandbox, network,
 // model and effort.
-func (x *planExt) openStartWork() error {
+func (x *planPlugin) openStartWork() error {
 	se, ok := x.front()
 	if !ok || !se.Planning() {
 		return fmt.Errorf("no plan is in front to start work on")
@@ -89,7 +89,7 @@ func (x *planExt) openStartWork() error {
 	return nil
 }
 
-func (x *planExt) closeStartWork() {
+func (x *planPlugin) closeStartWork() {
 	x.dialog = nil
 	x.startGen++
 }
@@ -122,7 +122,7 @@ func (d *startWork) args() registry.Args {
 }
 
 // runStartWork starts work as the dialog says; it closes once the worker has.
-func (x *planExt) runStartWork() error {
+func (x *planPlugin) runStartWork() error {
 	d := x.dialog
 	if d == nil || d.busy {
 		return nil
@@ -149,7 +149,7 @@ func (x *planExt) runStartWork() error {
 }
 
 // startWorkView is the dialog, over everything, while it's open.
-func (x *planExt) startWorkView(c *ui.Ctx) {
+func (x *planPlugin) startWorkView(c *ui.Ctx) {
 	d := x.dialog
 	if d == nil {
 		return
@@ -190,7 +190,7 @@ func (x *planExt) startWorkView(c *ui.Ctx) {
 	}
 }
 
-func (x *planExt) startWorkHeader(c *ui.Ctx, se core.SessionState) {
+func (x *planPlugin) startWorkHeader(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("title", "START WORK", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
@@ -218,7 +218,7 @@ func threadCounts(se core.SessionState) (gone, carried int) {
 	return gone, carried
 }
 
-func (x *planExt) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
+func (x *planPlugin) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 	th := c.Theme()
 	c.Column("threads", ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 		gone, carried := threadCounts(se)
@@ -266,7 +266,7 @@ func (x *planExt) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 	})
 }
 
-func (x *planExt) startWorkFooter(c *ui.Ctx, d *startWork) {
+func (x *planPlugin) startWorkFooter(c *ui.Ctx, d *startWork) {
 	th := c.Theme()
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(60), Pad: ui.PadXY(24, 0), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Column("about", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -28,12 +28,12 @@ var (
 type problems struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 }
 
-func (p *problems) Manifest() ext.Manifest { return ext.Manifest{ID: "problems"} }
+func (p *problems) Manifest() plugin.Manifest { return plugin.Manifest{ID: "problems"} }
 
-func (p *problems) Activate(_ context.Context, h ext.Host) error {
+func (p *problems) Activate(_ context.Context, h plugin.Host) error {
 	p.h = h
 	p.add(h.Command(registry.Command{ID: "Problems", Title: "List every diagnostic: Lua errors, language servers'", Run: func(ctx registry.Ctx, _ registry.Args) error {
 		return h.Run(ctx, "view.open", registry.Args{"id": "problems", "place": "dock", "edge": "bottom", "title": "Problems", "size": 260})

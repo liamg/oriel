@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
@@ -63,7 +63,7 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 		}
 		v := verdict(out, ev)
 		if v.Veto || v.Decided {
-			if err := r.a.Check(ext.CapGate, event); err != nil {
+			if err := r.a.Check(plugin.CapGate, event); err != nil {
 				return registry.Verdict{}, err
 			}
 		}
@@ -133,7 +133,7 @@ func expand(p string) string {
 func (r Root) Read(path string) ([]any, error) {
 	p := r.a.Plugin.Path(path)
 	if !r.a.Plugin.Own(p) {
-		if err := r.a.Check(ext.CapFSRead, ext.RealPath(p)); err != nil {
+		if err := r.a.Check(plugin.CapFSRead, plugin.RealPath(p)); err != nil {
 			return nil, err
 		}
 	}
@@ -157,7 +157,7 @@ func (r Root) Exec(argv []string, opts script.Table) (any, error) {
 		if prog, err = filepath.Abs(prog); err != nil {
 			return nil, err
 		}
-		if err := r.a.Check(ext.CapExec, ext.RealPath(prog)); err != nil {
+		if err := r.a.Check(plugin.CapExec, plugin.RealPath(prog)); err != nil {
 			return nil, err
 		}
 	}

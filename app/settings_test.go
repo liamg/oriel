@@ -11,9 +11,9 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-func (s *errScene) settings() *settingsExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*settingsExt); ok {
+func (s *errScene) settings() *settingsPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*settingsPlugin); ok {
 			return x
 		}
 	}

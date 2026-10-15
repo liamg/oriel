@@ -13,35 +13,35 @@ import (
 
 	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/integ/linear/lineartest"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
 
 // host is the app's side of the process: its host methods, the plugin granted what its oriel.toml declares.
 type host struct {
 	client  *http.Client
-	secrets ext.Secrets
+	secrets plugin.Secrets
 }
 
-var _ ext.Network = host{}
+var _ plugin.Network = host{}
 
-func (h host) Log() *slog.Logger    { return slog.New(slog.DiscardHandler) }
-func (h host) Notify(core.Notice)   {}
-func (h host) Net() *http.Client    { return h.client }
-func (h host) Secrets() ext.Secrets { return h.secrets }
+func (h host) Log() *slog.Logger       { return slog.New(slog.DiscardHandler) }
+func (h host) Notify(core.Notice)      {}
+func (h host) Net() *http.Client       { return h.client }
+func (h host) Secrets() plugin.Secrets { return h.secrets }
 
 // serving runs Serve as the plugin's process would, and is the Lua's end of it.
 func serving(t *testing.T, h host) *jsonrpc.Conn {
 	t.Helper()
-	m, err := ext.LoadManifest(filepath.Join("plugin"))
+	m, err := plugin.LoadManifest(filepath.Join("plugin"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	g := ext.NewGrants()
+	g := plugin.NewGrants()
 	g.Grant(m.ID, m.Permissions)
-	p := ext.Plugin{ID: m.ID, Guard: g}
-	methods := ext.HostMethods(h)
+	p := plugin.Caller{ID: m.ID, Guard: g}
+	methods := plugin.HostMethods(h)
 	toProc, procIn := io.Pipe()
 	procOut, fromProc := io.Pipe()
 	go Serve(toProc, fromProc)
@@ -56,7 +56,7 @@ func serving(t *testing.T, h host) *jsonrpc.Conn {
 // process asks the host for each request, and the key goes only to api.linear.app.
 func TestServeThroughTheHost(t *testing.T) {
 	l := lineartest.New(t)
-	secrets := &ext.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
+	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
 	conn := serving(t, host{client: l.Client(), secrets: secrets})
 	ctx := t.Context()
 

@@ -1,4 +1,4 @@
-package ext
+package plugin
 
 import (
 	"context"
@@ -11,14 +11,14 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent/jsonrpc"
-	"github.com/liamg/oriel/ext/exttest"
+	"github.com/liamg/oriel/plugin/hosttest"
 )
 
 // PL-2, security.md → Enforcement by tier: WASM has "only host functions; each checks the grant". A module's
 // call to the host goes through the guard, and an undeclared one is an error naming the capability.
 func TestWASMPlugin(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "m.wasm"), exttest.Module(), 0o644)
+	os.WriteFile(filepath.Join(dir, "m.wasm"), hosttest.Module(), 0o644)
 	work := t.TempDir()
 	os.WriteFile(filepath.Join(work, "a.txt"), []byte("hello"), 0o644)
 	g := NewGrants()
@@ -26,7 +26,7 @@ func TestWASMPlugin(t *testing.T) {
 	w := &WASM{Methods: HostMethods(nopReporter{})}
 	ctx := context.Background()
 	defer w.Close(ctx)
-	p := Plugin{ID: "acme/w", Dir: dir, Guard: g}
+	p := Caller{ID: "acme/w", Dir: dir, Guard: g}
 	m, err := w.Load(ctx, p, "m.wasm", WASMOpts{})
 	if err != nil {
 		t.Fatal(err)
@@ -68,11 +68,11 @@ func TestWASMPlugin(t *testing.T) {
 // Loading a .wasm from outside the plugin's directory needs fs.read for it.
 func TestWASMLoadNeedsFSReadOutside(t *testing.T) {
 	elsewhere := t.TempDir()
-	os.WriteFile(filepath.Join(elsewhere, "m.wasm"), exttest.Module(), 0o644)
+	os.WriteFile(filepath.Join(elsewhere, "m.wasm"), hosttest.Module(), 0o644)
 	w := &WASM{}
 	defer w.Close(context.Background())
 	g := NewGrants()
-	p := Plugin{ID: "acme/w", Dir: t.TempDir(), Guard: g}
+	p := Caller{ID: "acme/w", Dir: t.TempDir(), Guard: g}
 	if _, err := w.Load(context.Background(), p, filepath.Join(elsewhere, "m.wasm"), WASMOpts{}); !errors.Is(err, ErrNotDeclared) {
 		t.Errorf("a .wasm outside its directory: %v", err)
 	}

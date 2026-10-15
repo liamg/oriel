@@ -12,9 +12,9 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-func (s *errScene) mission() *missionExt {
-	for _, e := range s.exts {
-		if m, ok := e.(*missionExt); ok {
+func (s *errScene) mission() *missionPlugin {
+	for _, e := range s.plugins {
+		if m, ok := e.(*missionPlugin); ok {
 			return m
 		}
 	}
