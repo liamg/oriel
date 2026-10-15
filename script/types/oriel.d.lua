@@ -26,9 +26,10 @@
 ---@field ui oriel.ui
 ---@field view oriel.view
 ---@field wasm oriel.wasm
----@field option table<string, any> Your settings, by name or vim alias, as init.lua sets them
+---@field option table<string, any>|fun(spec: table) Your settings, by name or vim alias, as init.lua sets them; called with { name, type, default, help, values, min, max, section }, it declares one (a plugin's are named plugin.<name>.…)
 ---@field buffer_option table<string, any> The current buffer's settings
 ---@field session_option table<string, any> The current session's settings
+---@field platform string The OS Oriel runs on: darwin or linux
 ---@field api { version: string }
 oriel = {}
 
@@ -43,10 +44,10 @@ function oriel.cmd(id, args) end
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default).
+--- Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
 ---@param argv string|string[]
 ---@param opts? table
----@return string
+---@return string?
 function oriel.exec(argv, opts) end
 
 --- Decode JSON text to a table, or encode a value as JSON text.
@@ -63,6 +64,10 @@ function oriel.log(msg, lvl) end
 ---@param msg string
 ---@param lvl string
 function oriel.notify(msg, lvl) end
+
+--- The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown.
+---@return number
+function oriel.now() end
 
 --- Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc.
 ---@param event string
@@ -366,6 +371,11 @@ function oriel.ui.list(items, row) end
 ---@return table
 function oriel.ui.mode() end
 
+--- A dial (widget.Ring): { value (0 to 1 of the ring lit, clockwise from twelve o'clock), label (in the middle: '18m'), color (a theme token or #rrggbb; the accent by default), size (px across, 44 by default), name (what it measures, read out with the label), id }.
+---@param spec table
+---@return table
+function oriel.ui.ring(spec) end
+
 --- A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).
 ---@param children any
 ---@return table
@@ -386,7 +396,7 @@ function oriel.ui.spacer() end
 ---@return table
 function oriel.ui.state(key, initial) end
 
---- Text, in a style: dim, faint, accent, warn, error or ok.
+--- Text, in a style: dim, faint, accent, warn, error, ok, or title (larger and bold: a heading, a meeting's name).
 ---@param s any
 ---@param style? string
 ---@return table

@@ -7,10 +7,11 @@ Version 0.4.0.
 
 - `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
-- `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default).
+- `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
 - `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode a value as JSON text.
 - `oriel.log(msg, lvl)` (`ui`): Write to Oriel's log: level is debug, info, warn or error.
 - `oriel.notify(msg, lvl)` (`ui`): Tell the user something, through the one path every notice takes: level is info, warn or error.
+- `oriel.now()` (`ui`): The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown.
 - `oriel.on(event, opts?, fn)` (`ui`): Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc.
 - `oriel.read(path)` (capability by target): A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read.
 - `oriel.statusline(fn)` (`ui`): Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session.
@@ -122,11 +123,12 @@ Version 0.4.0.
 - `oriel.ui.input(spec)` (`ui`): A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value.
 - `oriel.ui.list(items, row)` (`ui`): A list: each of items through row(item), which returns a node.
 - `oriel.ui.mode()` (`ui`): The editor's mode, as the built-in status line shows it.
+- `oriel.ui.ring(spec)` (`ui`): A dial (widget.Ring): { value (0 to 1 of the ring lit, clockwise from twelve o'clock), label (in the middle: '18m'), color (a theme token or #rrggbb; the accent by default), size (px across, 44 by default), name (what it measures, read out with the label), id }.
 - `oriel.ui.row(children)` (`ui`): A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).
 - `oriel.ui.select(spec)` (`ui`): A menu of choices: { value, options = { … }, on_change = fn(value), id, label }.
 - `oriel.ui.spacer()` (`ui`): Space that takes what's left.
 - `oriel.ui.state(key, initial?)` (`ui`): A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance.
-- `oriel.ui.text(s, style?)` (`ui`): Text, in a style: dim, faint, accent, warn, error or ok.
+- `oriel.ui.text(s, style?)` (`ui`): Text, in a style: dim, faint, accent, warn, error, ok, or title (larger and bold: a heading, a meeting's name).
 - `oriel.ui.toggle(spec)` (`ui`): An on/off switch: { on, on_change = fn(on), id, label }.
 
 ## oriel.view

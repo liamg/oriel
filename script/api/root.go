@@ -144,37 +144,62 @@ func (r Root) Read(path string) ([]any, error) {
 	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default)." optional=opts returns=string cap=exec
-func (r Root) Exec(argv []string, opts script.Table) (string, error) {
+//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't)." optional=opts returns=string? cap=exec
+func (r Root) Exec(argv []string, opts script.Table) (any, error) {
 	if len(argv) == 0 {
-		return "", fmt.Errorf("no program")
+		return nil, fmt.Errorf("no program")
 	}
 	if !r.a.Plugin.Trusted() {
 		prog, err := exec.LookPath(expand(argv[0]))
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if prog, err = filepath.Abs(prog); err != nil {
-			return "", err
+			return nil, err
 		}
 		if err := r.a.Check(ext.CapExec, ext.RealPath(prog)); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 	secs, _ := opts["timeout"].(float64)
 	if secs == 0 {
 		secs = 10
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
-	defer cancel()
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
-	cmd.Dir = expand(str(opts, "cwd"))
-	var out, errb bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &errb
-	if err := cmd.Run(); err != nil {
-		return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
+	run := func() (string, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
+		defer cancel()
+		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+		cmd.Dir = expand(str(opts, "cwd"))
+		var out, errb bytes.Buffer
+		cmd.Stdout, cmd.Stderr = &out, &errb
+		if err := cmd.Run(); err != nil {
+			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
+		}
+		return out.String(), nil
 	}
-	return out.String(), nil
+	done, ok := opts["on_done"].(*script.Fn)
+	if !ok {
+		out, err := run()
+		return out, err
+	}
+	go func() {
+		out, err := run()
+		var msg any
+		if err != nil {
+			msg = err.Error()
+		}
+		r.a.Host.Do(func() { r.a.VM.Call(done, out, msg) })
+	}()
+	return nil, nil
+}
+
+//oriel:api doc="The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown." returns=number
+func (r Root) Now() float64 {
+	t := time.Now()
+	if u := r.a.Host.UI(); u != nil {
+		t = u.Now()
+	}
+	return float64(t.UnixMicro()) / 1e6
 }
 
 //oriel:api doc="Decode JSON text to a table, or encode a value as JSON text." returns=any

@@ -662,6 +662,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   page has read, failing first). Panels read the store as they're drawn and redraw on its events; what the store
   doesn't keep, owners gather from events: a worker's load, plan readings since the history was fetched
   (`UsageSampled`), and today's totals, asked again 10 s after an agent event.
+- Built in PL-10: the next meeting under Today is the calendar plugin's (`integ/ical`, plugins.md "As built (PL-10)"):
+  a ring counting down the hour before it, "NEXT MEETING · 14:30", its title, and where with how many are invited.
 - Not yet: the agentbus panel (PL-5), the merge train, the session footer and mission-control slots (no mission
   control yet), dimming what's under the drawer, and the burn's projection in a help page's "Right now".
 

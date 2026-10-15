@@ -124,8 +124,8 @@ end)
 L.status.rule(function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
 ```
 
-A plugin's own Lua also has these (catalog.md; `option` and `asset` are P8's, `process` and `wasm` PL-2's and open to
-`init.lua` too):
+A plugin's own Lua also has these (catalog.md; `asset` is P8's, `process` and `wasm` PL-2's and `option` PL-10's, all
+open to `init.lua` too):
 
 ```lua
 local L = oriel
@@ -234,6 +234,17 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   its nodes) or `oriel.hud.refresh(name)` (`hud.refresh`). `slot = "hud"` makes it a HUD panel, `"hud.today"` a line
   under Today: PL-10's next meeting. `oriel.ui.indicator` takes `dot` and `id` and is drawn by `widget.Indicator`.
 - The sample's `every = "30s"` is a duration as Go reads it.
+
+## As built (PL-10)
+
+- `oriel.option{ name, type, default, help, values, min, max, section }` declares an option: type is bool, int, float,
+  string, enum (its first value the default), duration, key, list or map. A plugin's must be named
+  `plugin.<name>.<option>` (its id's name) and go in its own section of the settings page; the config may name any.
+  They're disposed with what declared them. `oriel.option[...]` still reads and sets them; `{}` is an empty list.
+- `oriel.now()` is the window's clock in seconds (a test's fixed time), `oriel.platform` the OS (`darwin`, `linux`).
+- `oriel.exec(argv, { on_done = fn(output, err) })` runs the program in the background and returns nothing.
+- `oriel.ui.ring{ value, label, color, size, name, id }` is a dial (`widget.Ring`); `oriel.ui.text(s, "title")` is a
+  heading.
 
 ## As built (PL-12)
 

@@ -60,6 +60,8 @@ oriel.option{ name = "plugin.jira.site", type = "string", help = "Your Jira host
 
 - They appear in the plugin's section of the settings page, save to `[plugin.jira]`, and `@plugin:jira` filters to them.
 - Options aren't declared in the manifest, so they can't drift from the code that reads them.
+- Built in PL-10 (scripting.md, "As built (PL-10)"): the section is the plugin's name (`[plugin.jira]` is the jira
+  section), and a name outside `plugin.<name>.` is an error.
 
 ### The lockfile: `oriel-lock.toml`
 

@@ -2,7 +2,7 @@
 id: PL-10
 title: "Calendar: next meeting indicator (iCal URL or macOS EventKit)"
 phase: P7
-status: todo
+status: review
 area: Platform
 module: integ/ical (plugin)
 depends_on: [PL-2]

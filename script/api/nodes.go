@@ -54,7 +54,7 @@ func container(kind string, v any) script.Table {
 	return t
 }
 
-//oriel:api doc="Text, in a style: dim, faint, accent, warn, error or ok." optional=style returns=table
+//oriel:api doc="Text, in a style: dim, faint, accent, warn, error, ok, or title (larger and bold: a heading, a meeting's name)." optional=style returns=table
 func (UI) Text(s any, style string) script.Table {
 	text := ""
 	if s != nil {
@@ -77,6 +77,9 @@ func (UI) Indicator(spec script.Table) script.Table {
 	}
 	return t
 }
+
+//oriel:api doc="A dial (widget.Ring): { value (0 to 1 of the ring lit, clockwise from twelve o'clock), label (in the middle: '18m'), color (a theme token or #rrggbb; the accent by default), size (px across, 44 by default), name (what it measures, read out with the label), id }." returns=table
+func (UI) Ring(spec script.Table) script.Table { return node("ring", spec) }
 
 //oriel:api doc="A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change." returns=table
 func (UI) Button(spec script.Table) script.Table {
@@ -171,7 +174,15 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			if tok, ok := styles[str(n, "style")]; ok {
 				col = th.C(tok)
 			}
-			c.Text(nil, str(n, "text"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: col})
+			font := typeset.FontSpec{Family: typeset.Mono, Size: 11}
+			if str(n, "style") == "title" {
+				font = typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}
+			}
+			c.Text(nil, str(n, "text"), ui.TextStyle{Font: font, Color: col})
+		case "ring":
+			size, _ := n["size"].(float64)
+			widget.Ring(c, cmpOr(str(n, "id"), str(n, "name"), "ring"), widget.RingOpts{Frac: num(n["value"]), Label: str(n, "label"),
+				Tone: tone(th, str(n, "color"), render.Color{}), Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
 		case "spacer":
 			c.Box(nil, ui.Style{W: ui.Flex(1)}, nil)
 		case "view":

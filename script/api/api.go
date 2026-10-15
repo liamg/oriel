@@ -8,6 +8,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -56,6 +57,7 @@ func InstallPlugin(vm *script.VM, h ext.Host, p ext.Plugin) *APIs {
 	a.bind(vm)
 	a.options(vm)
 	vm.SetValue("api", "version", Version)
+	vm.SetValue("", "platform", runtime.GOOS)
 	for ns, ticket := range futures {
 		vm.Future(ns, ticket)
 	}

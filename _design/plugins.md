@@ -740,6 +740,31 @@ type Host interface {
   views, `http` and secrets as host methods (AI-7), a `--oriel VERSION` base (oriel's modules don't require one
   another at versions yet: build from a checkout), and offering to rebuild when the native list changes.
 
+## As built (PL-10)
+
+- The calendar is a plugin built only on the above, as a third party would build it (`integ/ical`): `plugin/` is what
+  installs (`oriel.toml`, `init.lua`, `eventkit.js`), and `cmd/oriel-ical` its process, `bin/oriel-ical` once built.
+  The Lua declares its options, spawns the process (`oriel.process.spawn`) and asks it `upcoming {url, me, now,
+  limit}` (`ical.Server`, `ical.Serve`: the feed read in the process's OS sandbox, which its `net` grant opens) or,
+  with `plugin.ical.source = "mac"` on macOS, runs the EventKit script with `osascript` (its `exec` grant: a
+  sandboxed process can't reach EventKit) and asks the process to read the answer (`eventkit {output, now}`). The next
+  meeting is an indicator in `hud.today` (`ical.next`, built every 30 s, the meetings read again every 5 minutes):
+  a `ring` counting down the last hour to it ("18m"; "now" and the meeting's end once it starts), "NEXT MEETING ·
+  14:30", its title, and where (a link's host or the location) with how many are invited. ui.md asks for no title-bar
+  or status-line indicator, so there's none.
+- `integ/ical` is crit's reader, extended: `Upcoming(r, now, until, Options{Me, Zone})` leaves out invitations one of
+  `Me` declined (`ATTENDEE;PARTSTAT=DECLINED`; with no `Me`, a Google feed's `X-WR-CALNAME` names its owner), and an
+  `Event` has the call's `Link` (`X-GOOGLE-CONFERENCE`, `URL`) and `People`. `ParseEventKit` reads the script's answer
+  (`EventKitScript`, `EventKitArgs`), leaving out what you declined (`EKParticipant.isCurrentUser` and
+  `participantStatus`).
+- General pieces it needed: `oriel.option{ name, type, default, help, values, min, max, section }` declares an option
+  (catalog.md, "Plugin options"; a plugin's are named `plugin.<name>.…`, in its own section, disposed with it);
+  `oriel.now()` is the window's clock (`ext.UIView.Now`, `ui.UI.Now`), which a test fixes; `oriel.platform`;
+  `oriel.exec(argv, { on_done })` runs in the background; `oriel.ui.ring` and `widget.Ring` (theme tokens
+  `ring.track`, `ring.arc`, `ring.label`); a `title` text style.
+- Not yet: Windows time zone names in TZIDs (Outlook's "GMT Standard Time" reads as local time, as crit did), and
+  crit's beep a minute before.
+
 ## Performance and native plugins
 
 **How fast each tier is** (rough figures on a 2024 laptop):

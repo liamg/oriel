@@ -477,6 +477,9 @@ func (u *UI) Cursor() render.Cursor {
 // SetClock replaces time.Now, for tests.
 func (u *UI) SetClock(now func() time.Time) { u.clock = now }
 
+// Now is the time on the UI's clock: the frame's, a test's fixed one.
+func (u *UI) Now() time.Time { return u.now() }
+
 func (u *UI) now() time.Time {
 	if u.clock != nil {
 		return u.clock()

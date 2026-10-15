@@ -48,6 +48,12 @@ func (a *APIs) bind(vm *script.VM) {
 				x.Notify(c.String(0), c.String(1), c.Where())
 				return nil, nil
 			},
+			"now": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Now()}, nil
+			},
 			"on": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
@@ -437,6 +443,12 @@ func (a *APIs) bind(vm *script.VM) {
 					return nil, err
 				}
 				return []any{x.Mode()}, nil
+			},
+			"ring": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Ring(c.Table(0))}, nil
 			},
 			"row": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {

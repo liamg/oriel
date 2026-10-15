@@ -1,0 +1,10 @@
+id          = "liamg/ical"
+version     = "0.1.0"
+oriel       = ">=0.4"
+description = "Your next meeting in the HUD, from an iCal address or this Mac's calendars"
+license     = "MIT"
+binaries    = ["darwin/arm64", "darwin/amd64", "linux/amd64", "linux/arm64"]
+
+[permissions]
+net  = { hosts = ["*", "*:80"], why = "Read the calendar at the iCal address you give it, wherever it's hosted" }
+exec = { commands = ["osascript"], why = "Read this Mac's calendars through EventKit, when you choose them" }

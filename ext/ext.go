@@ -68,6 +68,7 @@ type UIView interface {
 	CancelDrag()
 	TakesText() bool             // the focused node inserts typed text: a text field, an editor in insert mode
 	Key(ev render.KeyEvent) bool // types a key at the focused node, past the keymaps, for its next frame
+	Now() time.Time              // the window's clock: what the frames are drawn at, a test's fixed time
 }
 
 // Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's

@@ -2,9 +2,12 @@ package app
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/ext/exttest"
@@ -178,5 +181,92 @@ proc:request("echo", { x = 1 }, function(res, err) answer = res; failed = err en
 	}
 	if !found {
 		t.Error("its stderr isn't in the log as plugin:acme/p")
+	}
+}
+
+// catalog.md, "Plugin options": "A plugin registers options from Lua with OptionSpec, named plugin.<name>.<option>
+// … They appear in the plugin's section of the settings page, save to [plugin.jira]". settings.toml's value reaches
+// the plugin, a name outside its own is refused, and the options go with the plugin.
+func TestPluginOptions(t *testing.T) {
+	s := luaScene(t, "")
+	writeFile(t, filepath.Join(s.sh.cfg.ConfigDir, "settings.toml"), "[plugin.jira]\nsite = \"acme.atlassian.net\"\n")
+	p := ext.Plugin{ID: "acme/jira", Dir: t.TempDir(), Guard: ext.NewGrants()}
+	vm := script.New()
+	apis := api.InstallPlugin(vm, s.lua().h, p)
+	defer vm.Close()
+	if err := luaErr(t, vm, `oriel.option{ name = "plugin.jira.site", type = "string", default = "", help = "Your Jira host" }
+oriel.option{ name = "plugin.jira.boards", type = "list", default = {} }
+oriel.option{ name = "plugin.jira.mode", type = "enum", values = { "mine", "team" } }`); err != "" {
+		t.Fatal(err)
+	}
+	s.settings().loadAll()
+	if err := luaErr(t, vm, `site = oriel.option["plugin.jira.site"]; mode = oriel.option["plugin.jira.mode"]; boards = #oriel.option["plugin.jira.boards"]`); err != "" {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]any{"site": "acme.atlassian.net", "mode": "mine", "boards": 0.0} {
+		if got := global(vm, name); got != want {
+			t.Errorf("%s = %v, want %v", name, got, want)
+		}
+	}
+	if sp, ok := s.reg.Options().Spec("plugin.jira.site"); !ok || sp.Section != "jira" || sp.Help != "Your Jira host" {
+		t.Errorf("the spec: %+v, %v", sp, ok)
+	}
+	if err := luaErr(t, vm, `oriel.option{ name = "editor.tabstop", type = "int", default = 8 }`); !strings.Contains(err, "plugin.jira.<option>") {
+		t.Errorf("a plugin declaring another's option: %q", err)
+	}
+	if err := luaErr(t, vm, `oriel.option{ name = "plugin.jira.n", type = "int", default = "x" }`); err == "" {
+		t.Error("a default of the wrong type was taken")
+	}
+	apis.Dispose()
+	if _, ok := s.reg.Options().Spec("plugin.jira.site"); ok {
+		t.Error("the option outlived its plugin")
+	}
+}
+
+// oriel.now is the window's clock, so a plugin's countdown follows a test's fixed time; oriel.platform says the OS.
+func TestLuaNowAndPlatform(t *testing.T) {
+	s := luaScene(t, "")
+	s.now = time.Date(2026, 10, 15, 13, 12, 0, 500_000_000, time.UTC)
+	if got := s.eval(t, "L.now()"); len(got) != 1 || got[0] != float64(s.now.UnixMilli())/1000 {
+		t.Errorf("L.now() = %v, want %v", got, float64(s.now.UnixMilli())/1000)
+	}
+	if got := s.eval(t, "L.platform"); len(got) != 1 || got[0] != runtime.GOOS {
+		t.Errorf("L.platform = %v", got)
+	}
+}
+
+// oriel.exec with on_done runs in the background: the call returns at once, and on_done gets the output, or why
+// it failed, on the loop.
+func TestLuaExecInBackground(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	s := luaScene(t, "")
+	if got := s.eval(t, `L.exec({ "sh", "-c", "sleep 0.1; echo hi" }, { on_done = function(out, err) said, failed = out, err end })`); len(got) != 1 || got[0] != nil {
+		t.Errorf("returned %v, want nothing", got)
+	}
+	if global(s.lua().vm, "said") != nil {
+		t.Fatal("on_done ran before the program finished")
+	}
+	s.until(t, "the output", func() bool { return global(s.lua().vm, "said") != nil })
+	if said, failed := global(s.lua().vm, "said"), global(s.lua().vm, "failed"); said != "hi\n" || failed != nil {
+		t.Errorf("said %q, failed %v", said, failed)
+	}
+	s.eval(t, `L.exec({ "sh", "-c", "echo nope >&2; exit 3" }, { on_done = function(out, err) failed = err end })`)
+	s.until(t, "the failure", func() bool { return global(s.lua().vm, "failed") != nil })
+	if f, _ := global(s.lua().vm, "failed").(string); !strings.Contains(f, "exit status 3") || !strings.Contains(f, "nope") {
+		t.Errorf("failed = %q", f)
+	}
+}
+
+// oriel.ui.ring draws widget.Ring: the label in the middle, read out with its name.
+func TestLuaRing(t *testing.T) {
+	s := luaScene(t, `oriel.hud.indicator("dial", { slot = "statusline.right" },
+  oriel.ui.ring{ value = 0.3, label = "18m", name = "next meeting in", size = 20, color = "warn" })`)
+	s.frame()
+	s.frame()
+	s.wantFrame(t, "18m")
+	if n := s.access("next meeting in 18m"); n.Role != "status" {
+		t.Errorf("the ring reads as %+v", n)
 	}
 }

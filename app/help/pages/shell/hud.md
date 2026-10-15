@@ -41,7 +41,9 @@ what it's running, when it replied. Click one to bring it to the front.
 ## Today {#today}
 
 Since midnight, on every worker: tokens, cost, the share served from the cache, requests opened, and the agent lines
-reviewed and still unread. Plugins add lines under it (the next meeting) in the `hud.today` slot.
+reviewed and still unread. Plugins add lines under it in the `hud.today` slot: the calendar plugin (`liamg/ical`)
+puts your next meeting there, with a dial counting down to it, from an iCal address (`plugin.ical.url`) or, on a
+Mac, your calendars (`plugin.ical.source = "mac"`). Invitations you declined are left out.
 
 ## Logs {#logs}
 
