@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/liamg/oriel/agent/prompts"
 	"slices"
 	"sync/atomic"
@@ -50,6 +51,7 @@ func (w *Worker) Serve(conn wire.Conn) {
 	fn(MethodComment, wire.Func(func(ctx context.Context, r CommentReq) (core.ThreadID, error) { return w.Comment(ctx, r) }))
 	fn(MethodThread, wire.Func(func(_ context.Context, r ThreadReq) (any, error) { return nil, w.SetThread(r) }))
 	fn(MethodAnswer, wire.Func(func(_ context.Context, r AnswerReq) (any, error) { return nil, w.Answer(r) }))
+	fn(MethodAsk, wire.Func(func(ctx context.Context, r AskReq) (Verdict, error) { return w.Ask(ctx, r) }))
 	fn(MethodSend, wire.Func(func(_ context.Context, r SendReq) (any, error) { return nil, w.Send(r) }))
 	fn(MethodFork, wire.Func(func(_ context.Context, r ForkReq) (string, error) { return w.Fork(r.Session, r.Prompt) }))
 	fn(MethodInterrupt, wire.Func(func(_ context.Context, r SessionRef) (any, error) { return nil, w.Interrupt(r.Session) }))
@@ -149,6 +151,26 @@ func (w *Worker) Answer(r AnswerReq) error {
 		return errors.New("nothing in that session is asking")
 	}
 	return h.answer(r)
+}
+
+// Ask is the app asking the user for a session's agent, as its own gate would (an agent tool that asks first).
+func (w *Worker) Ask(ctx context.Context, r AskReq) (Verdict, error) {
+	h, _ := w.hostFor(r.Session, false)
+	if h == nil {
+		return Verdict{}, fmt.Errorf("session %s isn't running here", r.Session)
+	}
+	if r.Ask.Kind == "" {
+		r.Ask.Kind = core.AskPermission
+	}
+	a, err := h.approve(ctx, r.Ask)
+	if err != nil {
+		return Verdict{}, err
+	}
+	v := Verdict{Decision: "deny", By: a.By, Note: a.Note}
+	if a.Allow {
+		v.Decision = "allow"
+	}
+	return v, nil
 }
 
 // Send is a message to the agent outside any thread: sent now if it's free, queued for the turn's end if not.

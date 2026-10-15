@@ -402,7 +402,11 @@ flowchart TB
   `Reads` (the assistant lists it as a source), `InputSchema` when `Params` can't say it, and `Confirm`, which makes it
   an act: `registry.CallAgentTool` asks the agent's `registry.AgentOwner` (a contribution by agent name with `Confirm`
   and `Acted`) with the `registry.Confirmation` it describes (title, lead, rows, a block, a note, a line) and runs it
-  only on a yes; a session's agent has no owner, so an act there is refused. `Run` may return a `registry.Acted`
+  only on a yes. Since DB-3 `Confirm` may return `registry.Granted` (this call needs no yes: the user granted it
+  already) or an error (refused, the agent reads why), and a call may carry its owner (`registry.WithOwner`, ahead of
+  the registered one): a session's agent is owned by its worker, which asks through the session's permission layers
+  (`worker.AskReq` on `ask.put`: its rules, the `Permission` hooks, then a permission card whose "Always" allows the
+  tool for the session). `Run` may return a `registry.Acted`
   (`Result` for the agent; `Line`, `Detail`, `Open`/`OpenArgs` and `Undo` for the owner). The worker asks the app for
   an agent's tools with `worker.ToolsReq{Session, Agent}` and calls them with `ToolCall.Agent`; utility agents are
   `utility.run` / `utility.send` / `utility.interrupt` (`architecture.md`). Lua: `oriel.agent.tool{…, for, read_only,

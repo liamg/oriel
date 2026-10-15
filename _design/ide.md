@@ -174,6 +174,30 @@ below.
   process, a Lua binding for `dap.adapter`, running adapters on the worker, inline values (DB-2), the agent's tools
   and the frame thread (DB-3).
 
+### As built (DB-3)
+
+- **The agent's tools** (`app/debugtools.go`) are ordinary `registry.AgentTool`s over the running session, offered
+  to every session's agent (none to utility agents): `debug_stack` (running or paused and why, the paused thread's
+  frames by index, the breakpoints), `debug_frame {frame}` (a frame's scopes and variables, a structured one with
+  its `ref`), `debug_variables {ref}`, `debug_eval {expression, frame}` (the REPL context; it shows in the debug
+  console as `agent › …`), `debug_breakpoint {file, line, condition, hit, log, remove}` (a file relative to the
+  project debugged), `debug_continue` and `debug_step {kind: over | into | out}`, which wait (up to 30s) for the next
+  stop or the end and say where. Frames are the selected one by default; lines are 1-based for the agent.
+- **The scope** (`DebugScope` above) is four options, `debug.agent.read | eval | breakpoints | step`, each `allow`,
+  `ask` or `off` (defaults allow, allow, ask, off, as in 08), at the user layer only, so a project's file can't
+  grant its own agent more. The Debug panel shows them as chips under the console ("AGENT'S DEBUGGER ACCESS"); a
+  click moves one on, and `debug.agent.access {action, level}` sets one. Each tool's `Confirm` reads its action's
+  level when it's called: `allow` returns `registry.Granted` (no card), `off` refuses with a reason naming the
+  option, and `ask` describes the call. A session's agent is owned by its worker (`registry.WithOwner` in the
+  app's tool calls), which puts the ask through the permission layers (`worker.MethodAsk`, `agents.md`): the
+  session's rules, the `Permission` hooks, then a permission card; "Always" adds the tool's name as a rule.
+- **Tests.** `TestAgentDebuggerTools` drives a work session's fake agent against `testdata/dap/agent.jsonl` (dlv
+  1.27.2, `-dap-record` re-records): stack, frame and eval allowed; step and continue refused while off without
+  moving the debuggee; a breakpoint set after the user allows its card; stepping granted by clicking its chip, then
+  a step into and two continues to the agent's conditional breakpoint; eval refused once turned off.
+- Not yet: the frame thread of 08 ("Ask Claude about this frame", the right-hand panel): the access chips are in the
+  Debug panel instead. Lua agent tools can't ask first (no `confirm` in `oriel.agent.tool`).
+
 ## Running tests
 
 ![36-tests](mockups/36-tests.png)

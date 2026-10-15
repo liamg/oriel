@@ -2,7 +2,7 @@
 id: DB-3
 title: "Agent debugger tools with scoped access"
 phase: P7
-status: todo
+status: review
 area: LSP, tests, debugging
 module: dap, agent
 depends_on: [DB-1, AI-2]

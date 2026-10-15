@@ -114,3 +114,49 @@ func TestAgentToolParts(t *testing.T) {
 		t.Errorf("parts for another agent: %s", out)
 	}
 }
+
+// DB-3: an act's Confirm may say the call is already granted, or refuse it, and the owner a call carries (a session's
+// worker) is asked ahead of any registered for the agent.
+func TestConfirmGrantsRefusesOrAsksTheCallsOwner(t *testing.T) {
+	r := registry.New()
+	level := "allow"
+	ran := 0
+	tool := registry.AgentTool{Name: "debug_step",
+		Confirm: func(registry.Ctx, map[string]any) (registry.Confirmation, error) {
+			switch level {
+			case "allow":
+				return registry.Confirmation{}, registry.Granted
+			case "off":
+				return registry.Confirmation{}, errors.New("not granted")
+			}
+			return registry.Confirmation{Title: "Step", Line: "step over"}, nil
+		},
+		Run: func(registry.Ctx, map[string]any) (any, error) { ran++; return "stepped", nil }}
+	ctx := registry.WithAgent(context.Background(), "work")
+	if out, err := registry.CallAgentTool(ctx, r, tool, nil); err != nil || out != "stepped" || ran != 1 {
+		t.Fatalf("granted: %q %v", out, err)
+	}
+	level = "off"
+	if _, err := registry.CallAgentTool(ctx, r, tool, nil); err == nil || err.Error() != "not granted" || ran != 1 {
+		t.Fatalf("refused: %v", err)
+	}
+	level = "ask"
+	if _, err := registry.CallAgentTool(ctx, r, tool, nil); err == nil || ran != 1 {
+		t.Fatalf("asked with no owner: %v", err)
+	}
+	var asked []string
+	r.Contribute(registry.AgentOwner{Agent: "work", Confirm: func(registry.Ctx, string, registry.Confirmation) (bool, error) {
+		asked = append(asked, "registered")
+		return false, nil
+	}})
+	ctx = registry.WithOwner(ctx, registry.AgentOwner{Agent: "work", Confirm: func(_ registry.Ctx, _ string, c registry.Confirmation) (bool, error) {
+		asked = append(asked, c.Line)
+		return true, nil
+	}})
+	if out, err := registry.CallAgentTool(ctx, r, tool, nil); err != nil || out != "stepped" || ran != 2 {
+		t.Fatalf("asked the call's owner: %q %v", out, err)
+	}
+	if len(asked) != 1 || asked[0] != "step over" {
+		t.Errorf("asked %q", asked)
+	}
+}

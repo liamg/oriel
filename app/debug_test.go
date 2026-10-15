@@ -15,8 +15,8 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-// Re-record with dlv installed: go test ./app -run TestDebugSession -dap-record
-var dapRecord = flag.Bool("dap-record", false, "run TestDebugSession against dlv and rewrite testdata/dap/go.jsonl")
+// Re-record with dlv installed: go test ./app -run 'TestDebugSession|TestAgentDebuggerTools' -dap-record
+var dapRecord = flag.Bool("dap-record", false, "run the debugger's tests against dlv and rewrite their recordings in testdata/dap")
 
 const debugTranscript = "testdata/dap/go.jsonl"
 
@@ -27,6 +27,12 @@ func debugScene(t *testing.T) (*errScene, string, func()) {
 }
 
 func debugSceneWith(t *testing.T, change func(*Config)) (*errScene, string, func()) {
+	t.Helper()
+	return debugSceneOn(t, debugTranscript, change)
+}
+
+// debugSceneOn is debugSceneWith on the recording at transcript, which -dap-record rewrites.
+func debugSceneOn(t *testing.T, transcript string, change func(*Config)) (*errScene, string, func()) {
 	t.Helper()
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -53,8 +59,8 @@ func debugSceneWith(t *testing.T, change func(*Config)) (*errScene, string, func
 			rec := &daptest.Recorder{Vars: vars}
 			spec.Connect = rec.Launcher(dap.Exec)
 			finish = func() {
-				os.MkdirAll(filepath.Dir(debugTranscript), 0o755)
-				f, err := os.Create(debugTranscript)
+				os.MkdirAll(filepath.Dir(transcript), 0o755)
+				f, err := os.Create(transcript)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -62,7 +68,7 @@ func debugSceneWith(t *testing.T, change func(*Config)) (*errScene, string, func
 				rec.Transcript(daptest.Header{Adapter: "dlv", Version: "Delve Debugger Version: 1.27.2", Cmd: spec.Cmd}).Write(f)
 			}
 		} else {
-			tr, err := daptest.Load(debugTranscript)
+			tr, err := daptest.Load(transcript)
 			if err != nil {
 				t.Fatal(err)
 			}

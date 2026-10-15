@@ -43,4 +43,16 @@ The panel shows the call stack (pick a frame to see its variables and its line),
 counts, the selected frame's variables (open a structured one to fetch its fields), watch expressions evaluated in
 the selected frame, and the debug console: the program's output, and a REPL that evaluates in the selected frame.
 
+## The agent's debugger access {#agent}
+
+A session's agent can use the debugger too, through its tools `debug_stack`, `debug_frame`, `debug_variables`,
+`debug_eval`, `debug_breakpoint`, `debug_continue` and `debug_step`, so it can inspect a paused frame rather than
+guess from the source. What it may do is yours to grant, shown as chips under the debug console: **read frames**,
+**eval**, **set breakpoints** and **step/continue**. Click a chip to go from allow, to ask, to off. Allowed actions
+just run. Asked ones show a permission card on the session, where your rules and `Permission` hooks can answer
+first, and **Always** allows that tool for the rest of the session. Actions that are off are refused, and the agent
+is told why. By default reading and eval are allowed, breakpoints ask and stepping is off. The options are
+`debug.agent.read`, `debug.agent.eval`, `debug.agent.breakpoints` and `debug.agent.step`, and
+`debug.agent.access {action, level}` sets one. What the agent evaluates shows in the console as `agent ›`.
+
 {{keys "debug.*"}}

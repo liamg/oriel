@@ -66,6 +66,7 @@ type AgentTool struct {
 	// Reads names the data it reads ("github", "linear"), which the assistant lists as its sources.
 	Reads string
 	// Confirm makes it an act that waits for the user's yes: what it will do, shown by the agent's owner before Run.
+	// It returns Granted when this call needs no yes, and an error to refuse it.
 	Confirm func(ctx Ctx, params map[string]any) (Confirmation, error)
 	Run     func(ctx Ctx, params map[string]any) (any, error)
 	// Adds makes it a part of another tool's answer rather than a tool of its own: when the tool named Adds is

@@ -184,6 +184,10 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `assistant.web` | true: the assistant may search the web (the provider's WebSearch and WebFetch) | app | | PL-4 |
 | `assistant.wake` | true: with `voice.wake` on, what follows the wake word goes to the assistant, its answer spoken | app | | PL-4 |
 | `assistant.idle` | 15: minutes of quiet before a conversation ends and the next starts afresh | app | | PL-4 |
+| `debug.agent.read` | allow: agents may read the paused stack, frames and variables (allow, ask or off) | app | | DB-3 |
+| `debug.agent.eval` | allow: agents may evaluate expressions in a paused frame | app | | DB-3 |
+| `debug.agent.breakpoints` | ask: agents may set and remove breakpoints once you allow each on a permission card | app | | DB-3 |
+| `debug.agent.step` | off: agents may not continue or step the debuggee | app | | DB-3 |
 
 ## The settings page (`:Settings`, ⌘,)
 

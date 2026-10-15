@@ -240,7 +240,7 @@ func (x *sessions) serve(ctx context.Context, h ext.Host, c worker.Client, want 
 		if err := json.Unmarshal(raw, &call); err != nil {
 			return nil, err
 		}
-		return x.callTool(ctx, h, call)
+		return x.callTool(ctx, h, c, call)
 	})
 	c.Conn.Handle(worker.MethodAppDecide, func(ctx context.Context, raw json.RawMessage) (any, error) {
 		var d worker.Decide
@@ -794,7 +794,9 @@ func (x *sessions) agentName(id core.SessionID, agent string) (string, bool) {
 	return agent, false
 }
 
-func (x *sessions) callTool(ctx context.Context, h ext.Host, call worker.ToolCall) (string, error) {
+// callTool runs a tool for an agent on worker c. A session's agent is owned by its worker: an act there is asked
+// through the session's rules, the policy hooks and then the user's card, as the agent's own gate is.
+func (x *sessions) callTool(ctx context.Context, h ext.Host, c worker.Client, call worker.ToolCall) (string, error) {
 	name, utility := x.agentName(call.Session, call.Agent)
 	for _, t := range registry.AgentToolsFor(h, name, utility) {
 		if t.Name != call.Tool || t.Run == nil {
@@ -806,9 +808,33 @@ func (x *sessions) callTool(ctx context.Context, h ext.Host, call worker.ToolCal
 				return "", err
 			}
 		}
-		return registry.CallAgentTool(registry.WithAgent(registry.WithSession(ctx, string(call.Session)), name), h, t, params)
+		ctx := registry.WithAgent(registry.WithSession(ctx, string(call.Session)), name)
+		if call.Session != "" {
+			ctx = registry.WithOwner(ctx, registry.AgentOwner{Agent: name, Source: "builtin:sessions",
+				Confirm: func(ctx registry.Ctx, tool string, cf registry.Confirmation) (bool, error) {
+					return askForSession(ctx, c, call, cf)
+				}})
+		}
+		return registry.CallAgentTool(ctx, h, t, params)
 	}
 	return "", fmt.Errorf("no tool %q", call.Tool)
+}
+
+// askForSession asks for a session's agent's act on its worker. The rule "Always" makes is the tool's name.
+func askForSession(ctx context.Context, c worker.Client, call worker.ToolCall, cf registry.Confirmation) (bool, error) {
+	tool := "mcp__oriel__" + call.Tool
+	v, err := c.Ask(ctx, worker.AskReq{Session: call.Session, Ask: core.Ask{Kind: core.AskPermission, Tool: tool,
+		Summary: cmpOr(cf.Line, cf.Title), Detail: cf.Lead, Input: string(call.Args), Rule: tool}})
+	if err != nil {
+		return false, err
+	}
+	if v.Decision == "allow" {
+		return true, nil
+	}
+	if v.Note != "" {
+		return false, fmt.Errorf("denied by %s: %s", cmpOr(v.By, "the user"), v.Note)
+	}
+	return false, fmt.Errorf("denied by %s, so nothing was done", cmpOr(v.By, "the user"))
 }
 
 // decide runs the Permission hooks on an ask: layer 2, before it reaches the user.

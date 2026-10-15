@@ -32,6 +32,7 @@ const (
 	MethodComment   = "thread.comment"
 	MethodThread    = "thread.set"
 	MethodAnswer    = "ask.answer"
+	MethodAsk       = "ask.put" // the app asks the user for a session: its rules and the policy hooks first
 	MethodSend      = "agent.send"
 	MethodInterrupt = "agent.interrupt"
 	MethodTerminal  = "agent.terminal" // a stream of the agent's raw terminal
@@ -170,6 +171,13 @@ type AnswerReq struct {
 	Note     string            `json:"note,omitempty"`
 	Answers  map[string]string `json:"answers,omitempty"`
 	Scope    string            `json:"scope,omitempty"` // a network rule's host pattern
+}
+
+// AskReq is something the app asks the user for a session, as its agent's own gate would: an agent tool that asks
+// first. The session's rules and the policy hooks answer before the user sees a card; "always" adds Ask.Rule.
+type AskReq struct {
+	Session core.SessionID `json:"session"`
+	Ask     core.Ask       `json:"ask"`
 }
 
 // SendReq is a message to the agent outside any thread: the console's composer.
@@ -352,6 +360,12 @@ func (c Client) SetThread(ctx context.Context, r ThreadReq) error {
 
 func (c Client) Answer(ctx context.Context, r AnswerReq) error {
 	return c.Conn.Call(ctx, MethodAnswer, r, nil)
+}
+
+// Ask puts an ask to a session's rules, the policy hooks, then the user, and waits for the answer: allow or deny.
+func (c Client) Ask(ctx context.Context, r AskReq) (Verdict, error) {
+	var out Verdict
+	return out, c.Conn.Call(ctx, MethodAsk, r, &out)
 }
 
 func (c Client) Send(ctx context.Context, r SendReq) error {

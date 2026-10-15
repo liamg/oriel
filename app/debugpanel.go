@@ -69,7 +69,10 @@ func (x *debugExt) panelView(c *ui.Ctx) {
 				x.watchList(c)
 			})
 			c.Box("e2", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
-			c.Column("right", ui.Style{W: ui.Flex(1.3), H: ui.Flex(1)}, func(c *ui.Ctx) { x.consoleView(c) })
+			c.Column("right", ui.Style{W: ui.Flex(1.3), H: ui.Flex(1)}, func(c *ui.Ctx) {
+				x.consoleView(c)
+				x.accessView(c)
+			})
 		})
 	})
 }
@@ -348,6 +351,8 @@ func (x *debugExt) consoleView(c *ui.Ctx) {
 				switch l.Kind {
 				case "input":
 					tok, text = theme.Accent, "› "+text
+				case "agent":
+					tok, text = theme.Accent, "agent › "+text
 				case "result":
 					tok = theme.Fg
 				case "error", "stderr":
@@ -371,6 +376,29 @@ func (x *debugExt) consoleView(c *ui.Ctx) {
 				}
 			}
 		})
+	})
+}
+
+// accessView is what agents may do in the debugger, a chip each: a click moves it on from allow to ask to off.
+func (x *debugExt) accessView(c *ui.Ctx) {
+	th := c.Theme()
+	debugHeading(c, "access-h", "AGENT'S DEBUGGER ACCESS", "")
+	c.Row("access", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 6), Gap: 6, Cross: ui.Center, ScrollX: true}, func(c *ui.Ctx) {
+		for _, a := range debugAccesses {
+			level := x.level(a.Action)
+			tone, label := th.C(tDebugAllow), a.Label
+			switch level {
+			case "ask":
+				tone, label = th.C(tDebugAsk), label+" · ask"
+			case "off":
+				tone, label = th.C(tDebugOff), label+" · off"
+			}
+			on := level == "allow"
+			if widget.ToggleChip(c, a.Action, strings.ToUpper(label), on, widget.ToggleChipOpts{Tone: tone, Help: debugHelp + "#agent",
+				Label: "Agents may " + a.Help + ": " + level, Tooltip: "Allow, ask or off: click for the next"}) != on {
+				x.run("debug.agent.access", registry.Args{"action": a.Action})
+			}
+		}
 	})
 }
 

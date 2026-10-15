@@ -82,7 +82,7 @@ func (b debugBreakpoint) note() string {
 
 // consoleLine is a line of the debug console.
 type consoleLine struct {
-	Kind string // input, result, error, stdout, stderr, console
+	Kind string // input, agent (the agent's input), result, error, stdout, stderr, console
 	Text string
 }
 
@@ -167,6 +167,7 @@ func (x *debugExt) Activate(_ context.Context, h ext.Host) error {
 		Doc: "The debuggee stopped: at a breakpoint, after a step, on an exception or a pause."}))
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "DebugEnded", Fired: true, Payload: DebugEnded{}, Doc: "A debug session ended."}))
 	x.commands(h)
+	x.agentTools()
 	x.add(h.View(DebugView, debugView{x}))
 	x.add(h.View("statusline.left.66-debug", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "debug", Fn: x.statusSegment} })))
 	return nil
@@ -485,12 +486,17 @@ func (x *debugExt) save() {
 	os.WriteFile(path, b, 0o644)
 }
 
+// dir is the directory debugged: the window's project.
+func (x *debugExt) dir() string {
+	if dir := x.sh.cfg.WorkDir; dir != "" {
+		return dir
+	}
+	return x.sh.editor.dir
+}
+
 // configs are the launch configs in .oriel/debug.toml, as [[debug]] tables.
 func (x *debugExt) configs() ([]dap.LaunchConfig, error) {
-	dir := x.sh.cfg.WorkDir
-	if dir == "" {
-		dir = x.sh.editor.dir
-	}
+	dir := x.dir()
 	src, err := os.ReadFile(filepath.Join(dir, ".oriel", "debug.toml"))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil

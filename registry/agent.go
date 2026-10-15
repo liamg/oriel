@@ -158,6 +158,12 @@ type AgentOwner struct {
 func (AgentOwner) ContributionKind() string   { return "agent.owner" }
 func (o AgentOwner) ContributionName() string { return o.Agent }
 
+type ownerKey struct{}
+
+// WithOwner is ctx for a call whose agent's owner is o, ahead of any registered: a session's agent is owned by its
+// worker, which asks through the session's rules, the policy hooks and then the user.
+func WithOwner(ctx Ctx, o AgentOwner) Ctx { return context.WithValue(ctx, ownerKey{}, o) }
+
 // OwnerOf is the owner of an agent, if it has one.
 func OwnerOf(r Registry, agent string) (AgentOwner, bool) {
 	for _, c := range r.Contributions("agent.owner") {
@@ -171,29 +177,34 @@ func OwnerOf(r Registry, agent string) (AgentOwner, bool) {
 // ErrNotConfirmed is an act the user didn't say yes to: nothing was done.
 var ErrNotConfirmed = errors.New("the user did not confirm, so nothing was done")
 
-// CallAgentTool runs a tool for the agent named in ctx (WithAgent): an act asks the agent's owner first and runs
-// only on a yes, and what the tool did goes to the owner. The answer is what the agent reads: a string as it is,
-// anything else as JSON.
+// Granted is what an AgentTool's Confirm returns when this call needs no yes: the user has already granted it.
+var Granted = errors.New("granted")
+
+func ownerOf(ctx Ctx, r Registry) (AgentOwner, bool) {
+	if o, ok := ctx.Value(ownerKey{}).(AgentOwner); ok {
+		return o, true
+	}
+	return OwnerOf(r, AgentOf(ctx))
+}
+
+// CallAgentTool runs a tool for the agent named in ctx (WithAgent): an act asks the agent's owner (WithOwner, else
+// the registered one) first and runs only on a yes, unless its Confirm says Granted; what the tool did goes to the
+// owner. The answer is what the agent reads: a string as it is, anything else as JSON.
 func CallAgentTool(ctx Ctx, r Registry, t AgentTool, params map[string]any) (string, error) {
 	if t.Run == nil {
 		return "", fmt.Errorf("%s does nothing", t.Name)
 	}
-	owner, owned := OwnerOf(r, AgentOf(ctx))
+	owner, owned := ownerOf(ctx, r)
 	if t.Confirm != nil {
-		if !owned || owner.Confirm == nil {
-			return "", fmt.Errorf("%s needs the user's yes, and there's no one to ask it of here", t.Name)
-		}
 		var c Confirmation
 		err := Call(func() (err error) { c, err = t.Confirm(ctx, params); return })
-		if err != nil {
+		if err != nil && !errors.Is(err, Granted) {
 			return "", err
 		}
-		yes, err := owner.Confirm(ctx, t.Name, c)
-		if err != nil {
-			return "", err
-		}
-		if !yes {
-			return "", ErrNotConfirmed
+		if err == nil {
+			if err := confirm(ctx, owner, owned, t.Name, c); err != nil {
+				return "", err
+			}
 		}
 	}
 	var out any
@@ -237,4 +248,19 @@ func partsOf(ctx Ctx, r Registry, t AgentTool) []AgentTool {
 		}
 	}
 	return out
+}
+
+// confirm asks owner for the user's yes to c.
+func confirm(ctx Ctx, owner AgentOwner, owned bool, tool string, c Confirmation) error {
+	if !owned || owner.Confirm == nil {
+		return fmt.Errorf("%s needs the user's yes, and there's no one to ask it of here", tool)
+	}
+	yes, err := owner.Confirm(ctx, tool, c)
+	if err != nil {
+		return err
+	}
+	if !yes {
+		return ErrNotConfirmed
+	}
+	return nil
 }

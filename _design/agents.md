@@ -563,6 +563,10 @@ sequenceDiagram
 - `sandbox.servers` reach the gateway as `Config.Servers`: `Discover` lists them after Claude Code's own (user scope,
   then plugins), and `sandbox.hidden_servers` hides any of them.
 - Not yet: `Dismissed` and approved `Dockerfile` hashes aren't settings and aren't sent.
+- **The app's agent tools ask through the same layers** (DB-3): an act tool called by a session's agent (the
+  debugger's, when its access is `ask`) is put to the session's worker with `Client.Ask` (`ask.put`,
+  `worker.AskReq{Session, Ask}`), which runs `approve` as for layer 3: the session's rules, then the `Permission`
+  hooks, then a `core.AskPermission` card for `mcp__oriel__<tool>`; "Always" adds the tool's name as a rule.
 
 ## Comments to agent, without `crit wait`
 
