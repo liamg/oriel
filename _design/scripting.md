@@ -243,7 +243,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   `build` is a function returning `oriel.ui` nodes, or the nodes themselves. It's built again every `every`, on each
   core event named in `on`, and by `oriel.hud.set(name, nodes)` (shown until it's next built; for good, for one given
   its nodes) or `oriel.hud.refresh(name)` (`hud.refresh`). `slot = "hud"` makes it a HUD panel, `"mission"` (SH-7) a part of mission control's strip, `"hud.today"` a line
-  under Today: PL-10's next meeting. `oriel.ui.indicator` takes `dot` and `id` and is drawn by `widget.Indicator`.
+  under Today. `oriel.ui.indicator` takes `dot` and `id` and is drawn by `widget.Indicator`.
 - The sample's `every = "30s"` is a duration as Go reads it.
 
 ## As built (PL-10)

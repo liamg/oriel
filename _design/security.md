@@ -105,8 +105,9 @@ flowchart LR
 - **Sessions without a sandbox** (local, unsandboxed): process plugins get an OS sandbox instead —
   **Landlock + seccomp** on Linux (via `x/sys`), `sandbox-exec` profile on macOS — scoped to the worktree and the declared
   `fs`, `net`, `exec` grants.
-- **App-side plugins** are Lua or WASM only (no process plugins in the app) — the in-VM enforcement above is enough, and
-  nothing app-side can exec.
+- **App-side plugins** are Lua or WASM, enforced in-VM as above. App-side Lua may also start a process plugin
+  (`oriel.process.spawn`, with its `exec` grant), which always runs under the OS sandbox above, scoped to its own
+  directory and its declared grants, never unsandboxed (Linear's helper does this, plugins.md "As built (PL-8)").
 - A plugin that needs both halves is split: a UI part (app) and a worker part (session), talking through `oriel.*` messages.
 
 ## Agent-facing risk
@@ -210,10 +211,10 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
   the method, the host and the cause, never the URL, and its answer is masked of the secret's value. Each value handed
   out is added to the log's redactor.
 - Since PL-8, `auth_scheme` says what goes before the secret in the header (`none`: the value as it is).
-- PL-8's Linear plugin is app-side Lua that starts a process plugin (`oriel.process.spawn`), as PL-2 built it and
-  PL-10's calendar does, though "App-side plugins are Lua or WASM only" above says otherwise: the process is
-  OS-sandboxed, has no network of its own to use (it asks the host for every request, through `http.request`) and
-  never holds the key, but its sandbox lets it connect to port 443 since its net grant names a host.
+- PL-8's Linear plugin is app-side Lua that starts a process plugin (`oriel.process.spawn`), as "App-side plugins"
+  above allows: the process is OS-sandboxed, has no network of its own to use (it asks the host for every request,
+  through `http.request`) and never holds the key, but its sandbox lets it connect to port 443 since its net grant
+  names a host.
 - Honestly: a plugin can still tell whether a secret is set (an error says so), and `:Secrets` (which plugin uses
   which, and when last) isn't built.
 

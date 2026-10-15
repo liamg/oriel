@@ -114,7 +114,7 @@ const (
 	SlotStatusLeft  = "statusline.left"
 	SlotStatusRight = "statusline.right"
 	SlotHUD         = "hud"        // the HUD's panels
-	SlotHUDToday    = "hud.today"  // under the HUD's Today panel: the next meeting
+	SlotHUDToday    = "hud.today"  // under the HUD's Today panel: a plugin's lines
 	SlotMission     = "mission"    // mission control's strip along its foot: usage, workers' load
 	SlotInboxFoot   = "inbox.foot" // the Inbox panel's foot: agentbus's presence
 )

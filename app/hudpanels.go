@@ -204,7 +204,7 @@ func (x *statsExt) usageNote() string {
 // --- Today (stats) ---
 
 // todayPanel is today's totals across every worker: tokens, cost, the cache's share, the requests opened today and
-// the review ledger; then the hud.today slot's indicators (the next meeting).
+// the review ledger; then the hud.today slot's indicators.
 func (x *statsExt) todayPanel(c *ui.Ctx) {
 	th := c.Theme()
 	now := x.now().In(x.loc)

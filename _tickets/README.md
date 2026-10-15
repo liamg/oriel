@@ -2,7 +2,7 @@
 
 Markdown tickets, one per file, generated from `_design/features.md`. Edit them freely; they're ours now.
 
-- **Frontmatter**: `id`, `title`, `phase`, `status` (todo · doing · review · done), `area`, `module`, `depends_on`.
+- **Frontmatter**: `id`, `title`, `phase`, `status` (todo · doing · review · done · dropped), `area`, `module`, `depends_on`.
 - **Order** comes from `depends_on`: a ticket starts when everything it depends on is `done`. Phases only group them.
   The suggested order below is a topological sort, phase-major.
 - **Workflow**: start a session in this repo and name the ticket ("do PL-8"). The agent reads the ticket, then its

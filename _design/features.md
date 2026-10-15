@@ -149,7 +149,7 @@ How everything hangs together, built and tested before features land on it.
 | PL-5 | agentbus: question cards with auto-answer, review requests, presence, log, auto-approve (as a helper process) | 12 | integ/agentbus | P7 | AI-1 | `crit-reference.md` → agentbus behaviour reproduced, against a fake bus |
 | PL-8 | Linear: assigned tickets, start work from a ticket, state moves, PR links, omnibox source | 04, 02 | integ/linear (plugin) | P7 | PL-2, SE-1 | `crit-reference.md` → Linear, against a recorded Linear API |
 | PL-9 | Slack PTAL via webhook | 18 | integ/slack (plugin) | P7 | PL-2 | – |
-| PL-10 | Calendar: next meeting indicator (iCal URL or macOS EventKit) | 10 | integ/ical (plugin) | P7 | PL-2 | – |
+| PL-10 | ~~Calendar: next meeting indicator (iCal URL or macOS EventKit)~~ dropped: not carried over (crit-reference.md) | 10 | – | P7 | PL-2 | – |
 | PL-11 | Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation | – | prompts, voice | P7 | AI-2 | `crit-reference.md` → Prompts and Voice |
 | PL-6 | Self-update for the app and workers (self-signed, ed25519) | – | update | P7 | AI-1 | an update round-trips on macOS and Linux with rollback on a failed health check |
 | PL-19 | Package format: Lua entry point, `oriel.process` / `oriel.wasm` / `oriel.asset`, `[contributes]` assets, `oriel plugin pack` | – | ext, script | P8 | PL-2, PL-3 | a data-only theme plugin, a Lua plugin and a Lua + process plugin each load from a directory; `pack` rejects an undeclared capability and an oversize plugin |

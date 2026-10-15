@@ -686,8 +686,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   page has read, failing first). Panels read the store as they're drawn and redraw on its events; what the store
   doesn't keep, owners gather from events: a worker's load, plan readings since the history was fetched
   (`UsageSampled`), and today's totals, asked again 10 s after an agent event.
-- Built in PL-10: the next meeting under Today is the calendar plugin's (`integ/ical`, plugins.md "As built (PL-10)"):
-  a ring counting down the hour before it, "NEXT MEETING · 14:30", its title, and where with how many are invited.
+- The next meeting under Today isn't built: the calendar isn't carried over (crit-reference.md). A plugin can put a
+  line there through the `hud.today` slot.
 - Built in PL-5: the agentbus panel (span 2): the connection, presence chips, what waits, and the log's tail, newest
   first ("14:02  bob · answered: yes"); and the title bar's **● BUS 4** (its dot the presence, its count who's online).
 - Not yet: the merge train, the session footer slot (the mission-control slot came with
