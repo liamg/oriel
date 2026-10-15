@@ -868,7 +868,8 @@ type Host interface {
   team's In Progress, from triage, backlog or unstarted), `review {key}` (into In Review, from any state before it;
   a team without one stays put), `link {key, url, number, title}` (an attachment titled "#12 title"). The Lua adds the `tickets` omnibox source (`!`, crit's order, a key ask
   while there's none), Linear's ticket source, `SessionStart` and `PrSeen` hooks (into progress; link, then into
-  review while the PR is open); commands
+  review while the PR is open), the assistant's `my_tickets` tool (`agent.tools`; the tickets the omnibox lists, as
+  Linear last told them); commands
   `LinearTickets`, `LinearKey`, `linear.refresh`. `integ/linear/lineartest` is the recorded API (`testdata/*.json`,
   served as api.linear.app over TLS, mutations kept and applied).
 - Not yet: installing it (PL-19/20 bring the plugin manager; it isn't bundled, since `app.ScriptPlugin` has no

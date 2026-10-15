@@ -170,6 +170,32 @@ L.on("PrSeen", function(ev)
 end, { desc = "Linear: link the PR, and the ticket into review" })
 
 
+-- The assistant's my_tickets (crit-reference.md → Assistant): the tickets the omnibox lists, as Linear last told them.
+L.agent.tool{
+  name = "my_tickets",
+  desc = "The Linear tickets assigned to the user, most pressing first: key, title, state, project, priority, whether it's blocked, its PR and URL",
+  ["for"] = { "assistant" },
+  read_only = true,
+  reads = "linear",
+  run = function()
+    if tickets.at == nil or os.time() - tickets.at >= (tickets.err == NOKEY and NOKEY_AGAIN or STALE) then
+      refresh()
+    end
+    if tickets.err == NOKEY then
+      return "No Linear API key is set yet: :LinearKey sets one."
+    end
+    if not tickets.issues then
+      return tickets.err and ("Linear: " .. tickets.err) or "Linear hasn't answered yet: ask again in a moment."
+    end
+    local out = {}
+    for _, t in ipairs(tickets.issues) do
+      out[#out + 1] = { key = t.key, title = t.title, state = t.state, project = t.project, priority = t.priorityLabel,
+        blocked = t.blocked, pr = t.pr and t.pr.url, url = t.url }
+    end
+    return out
+  end,
+}
+
 L.command("LinearTickets", function() L.cmd("omnibox.open", { scope = "tickets" }) end, { desc = "Your Linear tickets, in the omnibox" })
 L.command("LinearKey", ask_key, { desc = "Set your Linear API key" })
 L.command("linear.refresh", function()
