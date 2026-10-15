@@ -522,6 +522,7 @@ func (x *shipExt) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 			if s.PR.Open() && widget.Button(c, "edit", "Edit PR", widget.ButtonOpts{Help: "git/ship#raise"}) {
 				x.run("ship.pr.open", registry.Args{"project": s.Project})
 			}
+			x.prActions(c, se, s)
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Button(c, "github", "Open on GitHub ↗", widget.ButtonOpts{Help: "git/ship#pr"}) {
 				x.run("ship.github", registry.Args{"project": s.Project})
@@ -534,6 +535,21 @@ func (x *shipExt) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 		}
 		explainKept(c, x.sh, "ship.ci."+s.Project, "git/ship#checks")
 	})
+}
+
+// prActions are the buttons plugins add to a raised PR (registry.PRAction).
+func (x *shipExt) prActions(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+	if s.PR == nil {
+		return
+	}
+	pr := registry.PullRequest{Session: string(se.ID), Project: s.Project, Repo: s.GitHub, Number: s.PR.Number, Title: s.PR.Title,
+		URL: s.PR.URL, State: s.PR.State, Draft: s.PR.Draft, Merged: s.PR.Merged}
+	for _, a := range registry.PRActions(x.h, pr) {
+		args := a.RunArgs()
+		if widget.Button(c, "action."+a.Name, a.Label, widget.ButtonOpts{Disabled: !x.h.Available(a.Command, args), Help: cmpOr(a.Help, "git/ship#pr")}) {
+			x.run(a.Command, args)
+		}
+	}
 }
 
 // checks lists a PR's checks, with what the first failing one's log says.
@@ -863,6 +879,7 @@ func (x *shipExt) checklist(c *ui.Ctx, project string) {
 				if widget.Button(c, "edit", "Edit PR", widget.ButtonOpts{Help: "git/ship#raise"}) {
 					x.run("ship.pr.open", registry.Args{"project": p})
 				}
+				x.prActions(c, se, s)
 				return
 			}
 			if s.GitHub != "" && s.PR == nil && widget.Button(c, "raise", "Raise PR", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"}) {

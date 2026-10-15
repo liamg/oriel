@@ -194,3 +194,21 @@ func (h HTTP) Get(ctx PluginCtx, url string, opts ReqOpts) (*Response, error)
   (a session's sandbox); outside one a plugin with net may reach any host on those ports. UDP is open once it has a
   port. The worktree isn't readable unless declared (`fs.read = { scope = "worktree" }`). Not guarded yet:
   `oriel.cmd` runs any command (commands don't declare a capability), and options set from Lua.
+
+## As built (PL-9)
+
+- Secrets are kept by `ext.Secrets`; the built one is `ext.SecretFile`, `secrets.json` in the state directory, written
+  0600 (its directory 0700). Not the OS keychain yet. You set one only through its dialog, `:Secret NAME` or
+  `secrets.set {name}` (a field that shows dots, to the eye and to assistive technology, and won't copy:
+  `widget.InputOpts.Secret`); no command takes a value, so `oriel.cmd` can't set one. `secrets.delete {name}` removes
+  it.
+- A plugin uses one by name through `http.request` (`oriel.http.request`): `auth = "NAME"` sends it as
+  `Authorization: Bearer …`, `url_secret = "NAME"` is a secret that is the whole URL (an incoming webhook). The host
+  checks `net` against the host the request goes to (for `url_secret`, the secret's own host), then `secrets` against
+  `NAME@host`: a secret declared `NAME = "host"` reaches only that host (`*.x` matching as net does), and one declared
+  with no host reaches none. A request carrying a secret goes over https only and follows no redirect; its error is
+  the method, the host and the cause, never the URL, and its answer is masked of the secret's value. Each value handed
+  out is added to the log's redactor.
+- Honestly: a plugin can still tell whether a secret is set (an error says so), and `:Secrets` (which plugin uses
+  which, and when last) isn't built.
+

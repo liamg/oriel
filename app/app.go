@@ -7,6 +7,7 @@ import (
 	"github.com/liamg/oriel/render/raster"
 	"image"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -68,6 +69,10 @@ type Config struct {
 	// Started is called once the window is open and every extension active: what the updater's health check waits for.
 	Started func()
 	Voice   VoiceConfig // dictation's microphone, transcriber and speaker; the real ones, from the voice.* options, if nil
+	// Net is what plugins' HTTP goes through (http.request); a client of its own if nil.
+	Net *http.Client
+	// Secrets are the named secrets plugins' requests carry (security.md); secrets.json in StateDir if nil.
+	Secrets ext.Secrets
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}

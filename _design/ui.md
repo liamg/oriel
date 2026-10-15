@@ -855,6 +855,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Built in RV-7: the "Verify quiz" gate (order 50): "optional" with **Verify…** until it's taken, "2/4" with
   **Resume** while it's going, "3/4 right" passed, "1 wrong" (warn) with **Again**. A gate's `Action` is a button
   under its row; AI review's is **Review** until one has run.
+- Built in PL-9: plugins' PR actions (`registry.PRAction`) sit after Edit PR on a raised PR and on the Pull request
+  panel; the Slack plugin's **Slack** (PTAL; then **Bump Slack**, **Bump 2**…) is one (plugins.md, "As built (PL-9)").
 - Not yet: the ticket's state moving (Linear), the status bar's
   CI chip, merging, and a project's Git panel (still dim: it needs the flow without a worker, for a plain directory).
 

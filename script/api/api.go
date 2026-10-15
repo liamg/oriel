@@ -20,11 +20,11 @@ import (
 // Version is oriel.api.version: a breaking change bumps its major (scripting.md, "Stability").
 const Version = "0.4.0"
 
-// futures are namespaces for features that aren't built yet: calling into one says which ticket brings it, so a
-// config written for them loads (PL-1).
+// futures are namespaces, or the rest of one, for features that aren't built yet: calling into one says which
+// ticket brings it, so a config written for them loads (PL-1).
 var futures = map[string]string{
 	"linear": "PL-8 (Linear)",
-	"http":   "AI-7 (network approvals)",
+	"http":   "AI-7 (network approvals)", // what oriel.http lacks yet: request is here, a blocking get isn't
 	"async":  "a later ticket (timers, processes and RPC from Lua)",
 }
 

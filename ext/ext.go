@@ -4,6 +4,7 @@ import (
 	"context"
 	"image"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -27,6 +28,10 @@ type Host interface {
 	Session(id core.SessionID) (core.Session, bool)
 	Sessions() []core.Session
 	Log() *slog.Logger
+	Net() *http.Client // what plugins' HTTP goes through
+	// Secrets are the named secrets the host attaches to a plugin's requests (http.request); a plugin never reads
+	// them.
+	Secrets() Secrets
 	// Notify tells the user something, through the one path every notice takes (errors.md). Source defaults to
 	// the extension's id and Time to now; the text is redacted before it's kept.
 	Notify(n core.Notice)

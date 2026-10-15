@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/cmd/oriel/dev"
 	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/ext/ossandbox"
+	"github.com/liamg/oriel/integ/slack"
 	"github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/worker"
@@ -44,6 +45,7 @@ func runApp(args []string) {
 	if err != nil {
 		os.Exit(2)
 	}
+	cfg.Extensions = append(cfg.Extensions, app.ScriptPlugin(slack.Files))
 	cfg.Extensions = append(cfg.Extensions, ext.Native()...)
 	appUpdates(&cfg)
 	cfg.LocalWorker = func(ctx context.Context) (worker.Client, error) { return worker.DialLocal(ctx, orielHome(), "") }

@@ -169,6 +169,14 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := HTTP{a: a}
+		vm.Bind("http", map[string]script.GoFunc{
+			"request": func(c *script.Args) ([]any, error) {
+				return nil, x.Request(c.Table(0), c.Fn(1))
+			},
+		})
+	}
+	{
 		x := HUD{a: a}
 		vm.Bind("hud", map[string]script.GoFunc{
 			"indicator": func(c *script.Args) ([]any, error) {
@@ -345,6 +353,12 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := Ship{a: a}
 		vm.Bind("ship", map[string]script.GoFunc{
+			"action": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Action(c.Table(0), c.Where())
+			},
 			"gate": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err

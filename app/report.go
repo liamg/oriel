@@ -46,7 +46,9 @@ type shell struct {
 	shot        func(th *theme.Resolved) *image.RGBA
 	reopen      chan reopenTo // the directory for the loop to start again on: Open Directory's, or a session's
 	recents     *recents
-	git         *gitExt // the work tree's git status
+	secretsOnce sync.Once
+	secrets     ext.Secrets // the store plugins' requests take secrets from, each one handed out redacted from the logs
+	git         *gitExt     // the work tree's git status
 	editor      *editorExt
 	search      *projectSearch
 	tests       *testsExt

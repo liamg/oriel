@@ -83,3 +83,31 @@ func TestInputEditingKeys(t *testing.T) {
 		})
 	}
 }
+
+// A secret's field (a webhook being pasted in) shows dots to the eye and to assistive technology, and copy and cut
+// leave the clipboard alone; the text it edits is what was typed.
+func TestInputSecret(t *testing.T) {
+	text := ""
+	var id ui.ID
+	clip := &testClip{text: "https://hooks.slack.com/services/T/B/x"}
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("s")
+		Input(c, "s", &text, InputOpts{Label: "Webhook", Help: "test/input", Secret: true})
+	})
+	h.u.SetClipboard(clip)
+	h.u.Focus(id)
+	h.frame()
+	for _, ev := range []render.KeyEvent{{Key: "v", Mods: platform.primary}, {Key: "a", Mods: platform.primary}, {Key: "c", Mods: platform.primary}} {
+		h.u.Key(ev)
+		h.frame()
+	}
+	clip.text = "other"
+	h.u.Key(render.KeyEvent{Key: "x", Mods: platform.primary})
+	h.frame()
+	if text != "https://hooks.slack.com/services/T/B/x" || clip.text != "other" {
+		t.Errorf("text %q, clipboard %q", text, clip.text)
+	}
+	if v := h.access(id).Value; v != "••••••••••••••••••••••••••••••••••••••" {
+		t.Errorf("assistive technology reads %q", v)
+	}
+}

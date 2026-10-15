@@ -43,6 +43,10 @@ Version 0.4.0.
 - `oriel.editor.present(name)` (`ui`): Show the focused editor window with the presenter name, or as text again when it shows it already.
 - `oriel.editor.presenter(spec)` (`ui`): Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text.
 
+## oriel.http
+
+- `oriel.http.request(spec, fn)` (capability by target): Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it as a bearer token, url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
+
 ## oriel.hud
 
 - `oriel.hud.indicator(name, opts, build)` (`ui`): An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD) or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
@@ -100,6 +104,7 @@ Version 0.4.0.
 
 ## oriel.ship
 
+- `oriel.ship.action(spec)` (`ui`): Add a button to a raised pull request, beside Ready for review and Open on GitHub (the Ship page and the Pull request panel): { name, label = 'text' or fn(pr), command, args, run = fn(pr), order (50 by default), help }. pr is { session, project, repo (owner/name), number, title, url, state (open or closed), draft, merged }; a label function returning nil leaves the button off that PR, and runs as the page is drawn, so keep it quick. A click runs command with args and pr's fields, or run(pr).
 - `oriel.ship.gate(spec)` (`ui`): Add a \
 
 ## oriel.start

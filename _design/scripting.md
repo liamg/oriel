@@ -417,3 +417,15 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 - Voice is commands and options: `oriel.cmd("voice.dictate")` (`⌃⇧Space`), `voice.speak { text = "Done." }`,
   `voice.download { model = "small.en" }`; `oriel.option["voice.wake"] = true`. `oriel.on("VoiceWake", fn)`
   sees what followed the wake word: return a decision to take the request yourself.
+
+## As built (PL-9)
+
+- `oriel.http.request(spec, fn(res, err))` makes a request off the loop and answers on it: `spec { method, url,
+  headers, body, auth, url_secret, timeout }`, `res { status, body, headers }`. The host must be in the plugin's `net`
+  grant; `auth` and `url_secret` name a secret the host attaches for the host its grant binds it to, which the plugin
+  never reads (security.md, "As built (PL-9)"). The sample's blocking `oriel.http.get` isn't built: it still says it
+  comes with AI-7.
+- `oriel.ship.action{ name, label = "text" | fn(pr), command, args, run = fn(pr), order, help }` adds a button to a
+  raised PR (plugins.md, "As built (PL-9)"); `pr` is `{ session, project, repo, number, title, url, state, draft,
+  merged }`, and a label function returning nil leaves it off.
+

@@ -8,6 +8,7 @@
 ---@field decor oriel.decor
 ---@field diagnostics oriel.diagnostics
 ---@field editor oriel.editor
+---@field http oriel.http
 ---@field hud oriel.hud
 ---@field inbox oriel.inbox
 ---@field keymap oriel.keymap
@@ -157,6 +158,14 @@ function oriel.editor.present(name) end
 ---@param spec table
 function oriel.editor.presenter(spec) end
 
+---@class oriel.http
+oriel.http = {}
+
+--- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it as a bearer token, url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
+---@param spec table
+---@param fn function
+function oriel.http.request(spec, fn) end
+
 ---@class oriel.hud
 oriel.hud = {}
 
@@ -295,6 +304,10 @@ function oriel.session.kind(name, spec) end
 
 ---@class oriel.ship
 oriel.ship = {}
+
+--- Add a button to a raised pull request, beside Ready for review and Open on GitHub (the Ship page and the Pull request panel): { name, label = 'text' or fn(pr), command, args, run = fn(pr), order (50 by default), help }. pr is { session, project, repo (owner/name), number, title, url, state (open or closed), draft, merged }; a label function returning nil leaves the button off that PR, and runs as the page is drawn, so keep it quick. A click runs command with args and pr's fields, or run(pr).
+---@param spec table
+function oriel.ship.action(spec) end
 
 --- Add a \
 ---@param spec table

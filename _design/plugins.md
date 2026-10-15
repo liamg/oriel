@@ -264,6 +264,7 @@ flowchart TB
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
+- PR actions (PL-9): `registry.PRAction` buttons on a raised PR (`oriel.ship.action`), as the Slack plugin's PTAL.
 - ship (FG-6; ui.md 18): "before this ships" gates are `registry.ShipGate{Name, Title, Order, Check(session) Gate}`
   (`Gate{State, Note, Action, Command, Args}`, State pass, warn, fail, pending or optional, "" to leave it out; an
   `Action` is a button under the gate's row running `Command` with `Args`, as the verify quiz's **Verify…** and AI
@@ -752,7 +753,7 @@ type Host interface {
   `cmd/oriel/cli.Main` (the command's body, importable for this), replaces what comes from directories (a checkout's
   go.work modules all), and runs `go get`, `go mod tidy` and `go build -trimpath`.
 - Not yet: the plugin manager's loading of installed plugins and `:Plugins` (PL-19, PL-20), process plugins' JSON
-  views, `http` and secrets as host methods (AI-7), a `--oriel VERSION` base (oriel's modules don't require one
+  views, a `--oriel VERSION` base (oriel's modules don't require one
   another at versions yet: build from a checkout), and offering to rebuild when the native list changes.
 
 ## As built (PL-10)
@@ -779,6 +780,32 @@ type Host interface {
   `ring.track`, `ring.arc`, `ring.label`); a `title` text style.
 - Not yet: Windows time zone names in TZIDs (Outlook's "GMT Standard Time" reads as local time, as crit did), and
   crit's beep a minute before.
+
+## As built (PL-9)
+
+- **PR actions** (`registry.PRAction{Name, Order, Label(PullRequest) string, Help, Command, Args}`, kind
+  `ship.pr.action`): buttons on a raised PR, after Edit PR on the Ship page's PR step and on the Pull request panel.
+  `Label` names it for the PR, "" leaving it off (a closed PR's); a click runs `Command` with `Args` and the PR's
+  fields (`registry.PullRequest{Session, Project, Repo, Number, Title, URL, State, Draft, Merged}`, `Args()`).
+  `registry.PRActions(r, pr)` lists them by Order. Lua: `oriel.ship.action`.
+- **HTTP and secrets** (security.md, "As built (PL-9)"): `ext.Host` has `Net()` (the client plugins' requests go
+  through, `app.Config.Net`) and `Secrets()` (`ext.Secrets`: `Secret`, `SetSecret`, `SecretNames`; `ext.SecretFile`
+  is the store, `app.Config.Secrets`). The host method `http.request` (`ext.HTTPMethod`, in `ext.HostMethods` when the
+  reporter is an `ext.Network`; `ext.Fetch` is its body) takes `ext.HTTPRequest{method, url, headers, body, auth,
+  url_secret, timeout}` and answers `ext.HTTPResponse{status, body, headers}`, so process and WASM plugins have it
+  too; Lua's is `oriel.http.request`. `ext/exttest.Net(srv)` is a client whose every host is a TLS test server.
+- **Lua plugins shipped in the build**: `app.ScriptPlugin(fsys)` runs the oriel.toml and init.lua at an `fs.FS`'s root
+  as an extension, in a VM of its own under a guard granting what the manifest declares (the build is the consent
+  until PL-20's lock file); one that fails to load is a notice, not a failed start. `cmd/oriel` runs `integ/slack`'s
+  this way.
+- **Slack PTAL** (`integ/slack`, ui.md 18): a Lua plugin (`plugin/oriel.toml`, `plugin/init.lua`, embedded as
+  `slack.Files`) with `net = hooks.slack.com` and `secrets = { SLACK_WEBHOOK = "hooks.slack.com" }`. It adds the
+  `slack` PR action on open PRs ("Slack", then "Bump Slack", "Bump 2"…, "Sending…" while it posts) running
+  `slack.ptal {url, title; channel, username, emoji}`, which posts crit's message (`internal/slack`: "PTAL:
+  *title* — <url|owner/name#n>", the title escaped and cut to 160 characters, "Bump! "/"2nd Bump! " before a repeat)
+  with `url_secret = "SLACK_WEBHOOK"` and says "Posted to Slack", "Bump 1 posted", or Slack's own reason for refusing.
+  `slack.webhook` opens the secret's dialog. Post counts are the plugin's memory, so they start again with the app
+  (crit kept them in its config): plugins have no store of their own yet.
 
 ## Performance and native plugins
 

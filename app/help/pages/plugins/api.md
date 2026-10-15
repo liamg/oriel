@@ -25,6 +25,10 @@ editor completes and type-checks it from `script/types/oriel.d.lua`.
 
 {{api "oriel.diagnostics"}}
 
+## oriel.http
+
+{{api "oriel.http"}}
+
 ## oriel.hud
 
 {{api "oriel.hud"}}
@@ -60,6 +64,10 @@ editor completes and type-checks it from `script/types/oriel.d.lua`.
 ## oriel.session
 
 {{api "oriel.session"}}
+
+## oriel.ship
+
+{{api "oriel.ship"}}
 
 ## oriel.start
 

@@ -144,7 +144,7 @@ func (g *Grants) covers(gr Grant, target string) bool {
 				return true
 			}
 		case "names":
-			if s == target || strings.SplitN(s, "@", 2)[0] == target {
+			if matchName(s, target) {
 				return true
 			}
 		default:
@@ -202,6 +202,17 @@ func matchHost(pat, target string) bool {
 		return strings.HasSuffix(th, "."+rest)
 	}
 	return ph == th
+}
+
+// matchName is a declared secret ("TOKEN@api.linear.app") against a use of it: its name alone, or "NAME@host"
+// for the host it's about to be sent to, which must be the one it's bound to.
+func matchName(decl, target string) bool {
+	dn, dh, _ := strings.Cut(decl, "@")
+	tn, th, sent := strings.Cut(target, "@")
+	if dn != tn {
+		return false
+	}
+	return !sent || dh != "" && matchHost(dh, th)
 }
 
 func splitHost(s string) (host, port string) {

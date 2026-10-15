@@ -149,7 +149,8 @@ func Logger(r Reporter, plugin string) *slog.Logger {
 	return r.Log().With("source", "plugin:"+plugin)
 }
 
-// HostMethods are the built-in host functions: log and notify, and fs.read and fs.write under their grants.
+// HostMethods are the built-in host functions: log and notify, fs.read and fs.write under their grants, and
+// http.request when r is a Network.
 func HostMethods(r Reporter) *Methods {
 	ms := NewMethods()
 	path := func(raw json.RawMessage) string {
@@ -208,6 +209,9 @@ func HostMethods(r Reporter) *Methods {
 		}
 		return nil, os.WriteFile(RealPath(a.Path), []byte(a.Data), 0o644)
 	}})
+	if n, ok := r.(Network); ok {
+		ms.Add(HTTPMethod(n))
+	}
 	return ms
 }
 
