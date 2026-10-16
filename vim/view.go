@@ -327,5 +327,5 @@ var classes = []struct {
 	{0xff3b, 0xff40, classPunct},       // fullwidth ASCII punctuation
 	{0xff5b, 0xff65, classPunct},       // fullwidth ASCII punctuation
 	{0x1f000, 0x1faff, classEmoji},     // emoji and pictographs
-	{0x20000, 0x2fa1f, classCJK},       // CJK ideographs, extension B onwards
+	{0x20000, 0x2fa1f, classCJK},       // CJK ideographs, plugin B onwards
 }

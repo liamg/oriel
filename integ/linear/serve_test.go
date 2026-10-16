@@ -13,35 +13,35 @@ import (
 
 	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/integ/linear/lineartest"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
 
 // host is the app's side of the process: its host methods, the plugin granted what its oriel.toml declares.
 type host struct {
 	client  *http.Client
-	secrets ext.Secrets
+	secrets plugin.Secrets
 }
 
-var _ ext.Network = host{}
+var _ plugin.Network = host{}
 
-func (h host) Log() *slog.Logger    { return slog.New(slog.DiscardHandler) }
-func (h host) Notify(core.Notice)   {}
-func (h host) Net() *http.Client    { return h.client }
-func (h host) Secrets() ext.Secrets { return h.secrets }
+func (h host) Log() *slog.Logger       { return slog.New(slog.DiscardHandler) }
+func (h host) Notify(core.Notice)      {}
+func (h host) Net() *http.Client       { return h.client }
+func (h host) Secrets() plugin.Secrets { return h.secrets }
 
 // serving runs Serve as the plugin's process would, and is the Lua's end of it.
 func serving(t *testing.T, h host) *jsonrpc.Conn {
 	t.Helper()
-	m, err := ext.LoadManifest(filepath.Join("plugin"))
+	m, err := plugin.LoadManifest(filepath.Join("plugin"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	g := ext.NewGrants()
+	g := plugin.NewGrants()
 	g.Grant(m.ID, m.Permissions)
-	p := ext.Plugin{ID: m.ID, Guard: g}
-	methods := ext.HostMethods(h)
+	p := plugin.Caller{ID: m.ID, Guard: g}
+	methods := plugin.HostMethods(h)
 	toProc, procIn := io.Pipe()
 	procOut, fromProc := io.Pipe()
 	go Serve(toProc, fromProc)
@@ -56,7 +56,7 @@ func serving(t *testing.T, h host) *jsonrpc.Conn {
 // process asks the host for each request, and the key goes only to api.linear.app.
 func TestServeThroughTheHost(t *testing.T) {
 	l := lineartest.New(t)
-	secrets := &ext.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
+	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
 	conn := serving(t, host{client: l.Client(), secrets: secrets})
 	ctx := t.Context()
 
@@ -73,28 +73,28 @@ func TestServeThroughTheHost(t *testing.T) {
 	if err := conn.Call(ctx, "assigned", nil, &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Tickets) != 4 || got.Tickets[0].Key != "INF-2231" || got.Tickets[0].Stage != registry.TicketTodo ||
+	if len(got.Tickets) != 4 || got.Tickets[0].Key != "ENG-2231" || got.Tickets[0].Stage != registry.TicketTodo ||
 		got.Tickets[0].PR == nil || got.Tickets[0].PR.Number != 4398 || got.Tickets[0].PriorityLabel != "High" {
 		t.Errorf("assigned %+v", got.Tickets)
 	}
-	if b := got.Tickets[1]; b.Key != "INF-2240" || len(b.BlockedBy) != 1 {
-		t.Errorf("INF-2240 %+v", b)
+	if b := got.Tickets[1]; b.Key != "ENG-2240" || len(b.BlockedBy) != 1 {
+		t.Errorf("ENG-2240 %+v", b)
 	}
-	if s := got.Tickets[2]; s.Key != "INF-2219" || s.Stage != registry.TicketStarted {
-		t.Errorf("INF-2219 %+v", s)
+	if s := got.Tickets[2]; s.Key != "ENG-2219" || s.Stage != registry.TicketStarted {
+		t.Errorf("ENG-2219 %+v", s)
 	}
 	var tk registry.Ticket
-	if err := conn.Call(ctx, "ticket", Params{Key: "INF-2231"}, &tk); err != nil {
+	if err := conn.Call(ctx, "ticket", Params{Key: "ENG-2231"}, &tk); err != nil {
 		t.Fatal(err)
 	}
-	if tk.Key != "INF-2231" || !strings.Contains(tk.Context, "## Comments (4)") || len(tk.Facts) != 4 || tk.Summary == "" {
+	if tk.Key != "ENG-2231" || !strings.Contains(tk.Context, "## Comments (4)") || len(tk.Facts) != 4 || tk.Summary == "" {
 		t.Errorf("ticket %+v", tk)
 	}
 	var moved registry.TicketMove
-	if err := conn.Call(ctx, "start", Params{Key: "INF-2231"}, &moved); err != nil || !moved.Moved || moved.State != "In Progress" {
+	if err := conn.Call(ctx, "start", Params{Key: "ENG-2231"}, &moved); err != nil || !moved.Moved || moved.State != "In Progress" {
 		t.Errorf("start: %+v, %v", moved, err)
 	}
-	if err := conn.Call(ctx, "done", Params{Key: "INF-2231"}, &moved); err != nil || !moved.Moved || moved.State != "Done" {
+	if err := conn.Call(ctx, "done", Params{Key: "ENG-2231"}, &moved); err != nil || !moved.Moved || moved.State != "Done" {
 		t.Errorf("done: %+v, %v", moved, err)
 	}
 	if err := conn.Call(ctx, "ticket", Params{}, nil); err == nil {

@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/text"
@@ -38,7 +38,7 @@ var (
 type projectSearch struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	query, replace, globs string
 	ignoreCase            bool
@@ -72,9 +72,9 @@ type searchRun struct {
 	roots          string // the directories searched, joined by NULs
 }
 
-func (p *projectSearch) Manifest() ext.Manifest { return ext.Manifest{ID: "search"} }
+func (p *projectSearch) Manifest() plugin.Manifest { return plugin.Manifest{ID: "search"} }
 
-func (p *projectSearch) Activate(_ context.Context, h ext.Host) error {
+func (p *projectSearch) Activate(_ context.Context, h plugin.Host) error {
 	p.h = h
 	for _, c := range []registry.Command{
 		{ID: "search.open", Title: "Search the project for a PCRE2 {query}; \"@all \" first takes in generated files", Run: func(ctx registry.Ctx, a registry.Args) error {

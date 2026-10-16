@@ -94,9 +94,9 @@ func testsScene(t *testing.T) (*errScene, string) {
 // flipFiles are each tests scene's flip file, by its directory.
 var flipFiles = map[string]string{}
 
-func (s *errScene) tests() *testsExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*testsExt); ok {
+func (s *errScene) tests() *testsPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*testsPlugin); ok {
 			return x
 		}
 	}

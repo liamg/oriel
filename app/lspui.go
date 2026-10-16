@@ -51,12 +51,12 @@ func kindGlyph(k lsp.CompletionKind) (string, theme.TokenID) {
 	return "·", tKindOther
 }
 
-type lspOverlay struct{ x *lspExt }
+type lspOverlay struct{ x *lspPlugin }
 
 func (v lspOverlay) Build(registry.ViewCtx) ui.Node { return &ui.Func{Key: "lsp", Fn: v.x.overlay} }
 
 // overlay draws the popups at the editor's cursor, and closes those the cursor has left.
-func (x *lspExt) overlay(c *ui.Ctx) {
+func (x *lspPlugin) overlay(c *ui.Ctx) {
 	ed := x.sh.editor
 	if ed == nil {
 		return
@@ -108,7 +108,7 @@ func popup(c *ui.Ctx, key any, st ui.Style, body func(c *ui.Ctx)) {
 
 // completionMenu is the menu: each item's kind, label (the typed letters lit) and detail, and the highlighted one's
 // docs beside it.
-func (x *lspExt) completionMenu(c *ui.Ctx) {
+func (x *lspPlugin) completionMenu(c *ui.Ctx) {
 	th := c.Theme()
 	p := x.sh.editor.current()
 	ln := p.Buf().Line(x.comp.line)
@@ -164,7 +164,7 @@ func (x *lspExt) completionMenu(c *ui.Ctx) {
 }
 
 // resolve fills in an item's docs the first time it's highlighted.
-func (x *lspExt) resolve(i int) {
+func (x *lspPlugin) resolve(i int) {
 	if _, ok := x.comp.resolved[i]; ok {
 		return
 	}
@@ -183,7 +183,7 @@ func (x *lspExt) resolve(i int) {
 }
 
 // signatureCard is the call's signature with the parameter being typed lit, and its docs.
-func (x *lspExt) signatureCard(c *ui.Ctx) {
+func (x *lspPlugin) signatureCard(c *ui.Ctx) {
 	th := c.Theme()
 	h := x.sig.help
 	s := h.Signatures[min(max(h.Active, 0), len(h.Signatures)-1)]
@@ -214,7 +214,7 @@ func (x *lspExt) signatureCard(c *ui.Ctx) {
 }
 
 // hoverView is the K card.
-func (x *lspExt) hoverView(c *ui.Ctx) {
+func (x *lspPlugin) hoverView(c *ui.Ctx) {
 	popup(c, "card", ui.Style{W: ui.Px(520), Pad: ui.Pad(12), Gap: 8, Help: "editor/pane#hover"}, func(c *ui.Ctx) {
 		markdown(c, "md", x.hover.md, 494)
 		c.Text("keys", "esc to close", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: c.Theme().C(theme.FgGhost)})
@@ -222,7 +222,7 @@ func (x *lspExt) hoverView(c *ui.Ctx) {
 }
 
 // actionsMenu is the code actions, grouped by kind, focused until one's taken or it's closed.
-func (x *lspExt) actionsMenu(c *ui.Ctx, at render.Point) {
+func (x *lspPlugin) actionsMenu(c *ui.Ctx, at render.Point) {
 	m := x.actions
 	groups := []struct{ prefix, title string }{{"quickfix", "Quick fix"}, {"refactor", "Refactor"}, {"source", "Source"}, {"", "Other"}}
 	var items []widget.MenuItem
@@ -354,13 +354,13 @@ func plainMarkdown(s string) string {
 }
 
 // lspStatus is the status line's server segment: the current file's server and what it's doing.
-type lspStatus struct{ x *lspExt }
+type lspStatus struct{ x *lspPlugin }
 
 func (v lspStatus) Build(registry.ViewCtx) ui.Node {
 	return &ui.Func{Key: "lspstatus", Fn: v.x.statusSegment}
 }
 
-func (x *lspExt) statusSegment(c *ui.Ctx) {
+func (x *lspPlugin) statusSegment(c *ui.Ctx) {
 	if x.sh.editor == nil || !x.sh.editor.shown() {
 		return
 	}

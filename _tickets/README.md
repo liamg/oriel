@@ -17,8 +17,8 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 
 - [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
 
-P6 is done. P7 is in review: every ticket but PL-10, which is dropped (the calendar isn't carried over). P8 starts
-when P7 is done: PL-18 and PL-19 first.
+P7 is done, but for PL-10, which is dropped (the calendar isn't carried over). P8 is in review, but for PL-22 (lazy
+loading, split out of PL-20).
 
 ## Suggested order
 
@@ -168,3 +168,4 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 90. [PL-16](PL-16-the-oriel-plugins-registry-repo-and-ci.md): The liamg/oriel-plugins registry repo and its CI · after PL-19
 91. [PL-21](PL-21-registry-client-badges-and-the-plugins-page.md): Registry client, badges, trusted tags, yank and revoke, the Plugins page · after PL-20, PL-6
 92. [PL-17](PL-17-oriel-plugin-publish.md): oriel plugin publish · after PL-16, PL-21
+93. [PL-22](PL-22-lazy-loading.md): Lazy loading: commands, events, keys, filetypes and omnibox sources load a plugin when first used · after PL-20

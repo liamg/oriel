@@ -28,7 +28,7 @@ var (
 	tTourMarked = theme.DeclareOn("tour.code.marked", "alpha(accent, 7%)", "bg.surface")
 )
 
-type tourView struct{ x *tourExt }
+type tourView struct{ x *tourPlugin }
 
 func (v tourView) Title(string) string { return "Tour" }
 func (v tourView) EdgeToEdge()         {}
@@ -40,7 +40,7 @@ func (v tourView) Build(vc registry.ViewCtx) ui.Node {
 }
 
 // view is 14-tour: the steps at the left, the step in the middle, and its diagram and questions at the right.
-func (x *tourExt) view(c *ui.Ctx, vc registry.ViewCtx) {
+func (x *tourPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 	th := c.Theme()
 	se, st, ok := x.current()
 	root := c.Next("tour")
@@ -63,7 +63,7 @@ func (x *tourExt) view(c *ui.Ctx, vc registry.ViewCtx) {
 }
 
 // side is the tour's kind, question, repos and pin, how far it's been read, its steps, and Export.
-func (x *tourExt) side(c *ui.Ctx, se core.SessionState, st *tourState) {
+func (x *tourPlugin) side(c *ui.Ctx, se core.SessionState, st *tourState) {
 	th := c.Theme()
 	t := st.t
 	c.Column("side", ui.Style{W: ui.Px(270), H: ui.Flex(1), Fill: th.C(tTourSide), Stroke: th.C(theme.Line), Role: ui.RoleRegion, Label: "Steps",
@@ -120,7 +120,7 @@ func (x *tourExt) side(c *ui.Ctx, se core.SessionState, st *tourState) {
 }
 
 // stepRow is a step in the list: ✓ once read, else its number; the one shown lit. It says whether it was clicked.
-func (x *tourExt) stepRow(c *ui.Ctx, i int, s tour.Step, on, read bool) bool {
+func (x *tourPlugin) stepRow(c *ui.Ctx, i int, s tour.Step, on, read bool) bool {
 	th := c.Theme()
 	st := ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(36), Pad: ui.PadXY(14, 0), Gap: 10, Cross: ui.Center, Label: fmt.Sprintf("Step %d: %s", i+1, s.Title),
 		Selected: on, Help: tourHelp}
@@ -150,7 +150,7 @@ func (x *tourExt) stepRow(c *ui.Ctx, i int, s tour.Step, on, read bool) bool {
 
 // page is the step: its number and title, then what it says in order. Before any step lands, what the agent is doing
 // and the conversation.
-func (x *tourExt) page(c *ui.Ctx, se core.SessionState, st *tourState) {
+func (x *tourPlugin) page(c *ui.Ctx, se core.SessionState, st *tourState) {
 	th := c.Theme()
 	id := c.Next("page")
 	if st.top {
@@ -208,7 +208,7 @@ func (x *tourExt) page(c *ui.Ctx, se core.SessionState, st *tourState) {
 }
 
 // waiting is the page before any step: what the agent's doing, and the question's thread.
-func (x *tourExt) waiting(c *ui.Ctx, se core.SessionState, st *tourState, width float32) {
+func (x *tourPlugin) waiting(c *ui.Ctx, se core.SessionState, st *tourState, width float32) {
 	th := c.Theme()
 	what := "is waiting for a question"
 	if len(se.Threads) > 0 {
@@ -230,7 +230,7 @@ func (x *tourExt) waiting(c *ui.Ctx, se core.SessionState, st *tourState, width 
 var imageLine = regexp.MustCompile(`^\s*!\[([^\]]*)\]\(([^)\s]+)\)\s*$`)
 
 // prose is a step's markdown, with a line that's only an image drawn as the image.
-func (x *tourExt) prose(c *ui.Ctx, key any, text string, width float32) {
+func (x *tourPlugin) prose(c *ui.Ctx, key any, text string, width float32) {
 	th := c.Theme()
 	_, st, _ := x.current()
 	c.Column(key, ui.Style{W: ui.Px(width), Gap: 12}, func(c *ui.Ctx) {
@@ -262,7 +262,7 @@ func (x *tourExt) prose(c *ui.Ctx, key any, text string, width float32) {
 }
 
 // image is a picture in the tour, decoded once while its file stays the same.
-func (x *tourExt) image(st *tourState, root, src string) (image.Image, bool) {
+func (x *tourPlugin) image(st *tourState, root, src string) (image.Image, bool) {
 	p, err := tour.AssetPath(root, src)
 	if err != nil {
 		return nil, false
@@ -285,7 +285,7 @@ func (x *tourExt) image(st *tourState, root, src string) (image.Image, bool) {
 
 // quote is real code from its repo: a header naming where, its lines numbered as the file's with the marked ones lit,
 // and its notes under their lines. A long quote shows only around its marks until "… n more lines" is clicked.
-func (x *tourExt) quote(c *ui.Ctx, key any, st *tourState, s tour.Step, it tour.Item, n int, width float32) {
+func (x *tourPlugin) quote(c *ui.Ctx, key any, st *tourState, s tour.Step, it tour.Item, n int, width float32) {
 	th := c.Theme()
 	q := it.Quote
 	se, _ := x.front()
@@ -354,7 +354,7 @@ func (x *tourExt) quote(c *ui.Ctx, key any, st *tourState, s tour.Step, it tour.
 }
 
 // note is a note pinned in a quote: its number in the annotation house style, under the line it's about.
-func (x *tourExt) note(c *ui.Ctx, k int, n tour.PinnedNote, gutter, width float32) {
+func (x *tourPlugin) note(c *ui.Ctx, k int, n tour.PinnedNote, gutter, width float32) {
 	th := c.Theme()
 	w := width - gutter - 28
 	c.Row(fmt.Sprint("note", k), ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: gutter, R: 14, T: 6, B: 8}}, func(c *ui.Ctx) {
@@ -399,7 +399,7 @@ func tourCodeLine(c *ui.Ctx, key any, num, text string, hl *sourceFile, i int, m
 }
 
 // highlight is lines start through end of a file's src in its language's colours, worked out once per text.
-func (x *tourExt) highlight(st *tourState, path string, src []byte, start, end int) *sourceFile {
+func (x *tourPlugin) highlight(st *tourState, path string, src []byte, start, end int) *sourceFile {
 	if len(src) == 0 || path == "" {
 		return nil
 	}
@@ -416,7 +416,7 @@ func (x *tourExt) highlight(st *tourState, path string, src []byte, start, end i
 }
 
 // codeBox is code from nowhere (an example) or a recorded run's output, under a header.
-func (x *tourExt) codeBox(c *ui.Ctx, key any, head, tag, lang, text string, width float32) {
+func (x *tourPlugin) codeBox(c *ui.Ctx, key any, head, tag, lang, text string, width float32) {
 	th := c.Theme()
 	_, st, _ := x.current()
 	c.Column(key, ui.Style{W: ui.Px(width), Fill: th.C(tTourCode), Stroke: th.C(theme.Line), Border: 1, Radius: 6, Clip: true, Role: ui.RoleGroup, Label: head,
@@ -447,7 +447,7 @@ func (x *tourExt) codeBox(c *ui.Ctx, key any, head, tag, lang, text string, widt
 }
 
 // shot is a screenshot with its annotations over it: numbered pins, boxes, and arrows from where the eye starts.
-func (x *tourExt) shot(c *ui.Ctx, key any, st *tourState, it tour.Item, width float32) {
+func (x *tourPlugin) shot(c *ui.Ctx, key any, st *tourState, it tour.Item, width float32) {
 	th := c.Theme()
 	s := it.Shot
 	img, ok := x.image(st, st.t.Root, s.Src)
@@ -521,7 +521,7 @@ func (x *tourExt) shot(c *ui.Ctx, key any, st *tourState, it tour.Item, width fl
 }
 
 // rightColumn is the step's diagrams, asking about it, and ← →.
-func (x *tourExt) rightColumn(c *ui.Ctx, se core.SessionState, st *tourState) {
+func (x *tourPlugin) rightColumn(c *ui.Ctx, se core.SessionState, st *tourState) {
 	th := c.Theme()
 	s, has := st.current()
 	c.Column("right", ui.Style{W: ui.Px(380), H: ui.Flex(1), Stroke: th.C(theme.Line), Role: ui.RoleRegion, Label: "About this step", Help: tourHelp}, func(c *ui.Ctx) {
@@ -576,7 +576,7 @@ func (x *tourExt) rightColumn(c *ui.Ctx, se core.SessionState, st *tourState) {
 }
 
 // threadCard is a thread about the tour, as it is between an editor's lines.
-func (x *tourExt) threadCard(c *ui.Ctx, se core.SessionState, st *tourState, t core.Thread) {
+func (x *tourPlugin) threadCard(c *ui.Ctx, se core.SessionState, st *tourState, t core.Thread) {
 	d := st.replies[t.ID]
 	if d == nil {
 		d = new(string)
@@ -597,7 +597,7 @@ func (x *tourExt) threadCard(c *ui.Ctx, se core.SessionState, st *tourState, t c
 }
 
 // askField asks about the step shown, ⏎ sending it.
-func (x *tourExt) askField(c *ui.Ctx, se core.SessionState, st *tourState, placeholder string) {
+func (x *tourPlugin) askField(c *ui.Ctx, se core.SessionState, st *tourState, placeholder string) {
 	if st.focusAsk {
 		c.Focus(c.Next("askfield"))
 		st.focusAsk = false
@@ -615,19 +615,19 @@ func (x *tourExt) askField(c *ui.Ctx, se core.SessionState, st *tourState, place
 	}
 }
 
-func (x *tourExt) notify(err error) {
+func (x *tourPlugin) notify(err error) {
 	x.h.Notify(core.Notice{ID: "tour", Severity: core.SevWarning, Source: "tour", Key: true, Text: err.Error()})
 }
 
 // run runs a command from a control in the reader.
-func (x *tourExt) run(cmd string, a registry.Args) {
+func (x *tourPlugin) run(cmd string, a registry.Args) {
 	if err := x.h.Run(context.Background(), cmd, a); err != nil {
 		x.notify(err)
 	}
 }
 
 // tourSegment is a status line segment shown while the reader has focus.
-func tourSegment(x *tourExt, fn func(c *ui.Ctx)) registry.ViewFunc {
+func tourSegment(x *tourPlugin, fn func(c *ui.Ctx)) registry.ViewFunc {
 	return func(registry.ViewCtx) ui.Node {
 		if f := x.h.Layout().Focus; f == nil || f.ID != TourView {
 			return nil
@@ -640,7 +640,7 @@ func tourSegment(x *tourExt, fn func(c *ui.Ctx)) registry.ViewFunc {
 }
 
 // statusLeft is "auth flow  walkthrough · 2 repos · 14 quotes".
-func (x *tourExt) statusLeft(c *ui.Ctx) {
+func (x *tourPlugin) statusLeft(c *ui.Ctx) {
 	se, st, _ := x.current()
 	t := st.t
 	c.Row("tour", ui.Style{H: ui.Flex(1), Gap: 10, Cross: ui.Center, Role: ui.RoleStatus, Label: "Tour"}, func(c *ui.Ctx) {
@@ -651,7 +651,7 @@ func (x *tourExt) statusLeft(c *ui.Ctx) {
 }
 
 // statusRight is the reader's keys and the step: "h/l step · j/k scroll · gd open quote in editor  4/9".
-func (x *tourExt) statusRight(c *ui.Ctx) {
+func (x *tourPlugin) statusRight(c *ui.Ctx) {
 	_, st, _ := x.current()
 	c.Row("tour", ui.Style{H: ui.Flex(1), Gap: 12, Cross: ui.Center, Role: ui.RoleStatus, Label: "Tour keys"}, func(c *ui.Ctx) {
 		c.Text("keys", "h/l step · j/k scroll · gd open quote in editor", statusText(c, tStatusFg))

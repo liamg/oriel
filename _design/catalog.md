@@ -44,7 +44,7 @@ The same split as settings (`settings.md`): the GUI and hand edits write the sam
     That's how dotfiles on a new machine work.
   - If not, or if it now asks for more than you accepted, it stays **inactive**, and an inbox card opens the consent
     screen (mockup 29). Nothing runs half-granted.
-  - The pieces are PL-3's: `ext.Diff(ext.Locked(grants), lock.capabilities)` is what a plugin asks for beyond its
+  - The pieces are PL-3's: `plugin.Diff(plugin.Locked(grants), lock.capabilities)` is what a plugin asks for beyond its
     lock entry, and `plugins.consent` is the screen (security.md, "As built (PL-3)").
 - If an entry is removed, the plugin is deactivated, its files are removed, and its lock entry is dropped.
 - The GUI installs by writing one line to `[plugins]`, then follows the same path. The file is the only list, so the
@@ -273,7 +273,10 @@ sequenceDiagram
 - **Trusted means the author's GitHub account is the root of trust.** A hijacked account ships to everyone on the next
   update. Mitigations: the capability diff, `trusted_hold`, and revocation.
 - **Binaries on macOS** that Oriel downloads aren't quarantined, but they're only ad-hoc signed. They should run fine
-  under sandbox-exec: PL-19 checks.
+  under sandbox-exec. The spike is `TestDownloadedAdhocBinaryRuns` (`plugin/ossandbox`, darwin only): a binary
+  fetched over HTTP as an install does, signed ad hoc with `codesign -s -`, checked unquarantined, then run under
+  sandbox-exec with a profile. Result: not run yet. It needs a Mac (the sandbox PL-19 was built in is Linux), and
+  macOS CI runs it.
 - **Review load**: every version of an untrusted plugin is a PR. Trust is the relief valve.
 - **Abuse at scale**: if the registry ever goes public with many authors, PR review won't scale. That's when to
   consider a hosted service. The client reads only `index.json`, so that change stays server-side.
@@ -282,6 +285,174 @@ sequenceDiagram
 
 - A web catalog site, ratings, download counts. Paid plugins. A hosted registry service.
 
+## As built (PL-19)
+
+- **A plugin is a directory** with `oriel.toml` (`plugin.ManifestFile`) and, unless it's data-only, `init.lua`
+  (`plugin.EntryFile`). `app.DirPlugin(dir, opts)` loads one: its `[contributes]` first, then `init.lua` in a VM of its
+  own. A plugin with neither fails to load with a notice. The manifest never had a `run` field.
+- **The manifest** also checks that `version` is a full semver version (`plugin.ParseVersion`) and that each
+  `binaries` entry is one of `plugin.Platforms` (darwin/arm64, darwin/amd64, linux/amd64, linux/arm64).
+- **`[contributes]`** (`plugin.Contributes`, `plugin.Contribute(registry, dir, source, c)`) takes globs of the plugin's
+  own files (`icons` is a directory). A pattern leaving the plugin is a manifest error, and one matching nothing is a
+  load error, so a typo doesn't pass for an empty plugin. A symlink out of the plugin is skipped.
+  - `themes`: each file is a theme (`theme.File`), checked as it's registered.
+  - `languages`: each directory is a grammar pack (`plugin.ReadLanguagePack`, shared with the local packs).
+  - `prompts`: each file is a prompt pack named after it (`registry.PromptPack`).
+  - `help`: the files are help pages, as one source named after the plugin.
+  - `fonts` and `icons` register `registry.Font` and `registry.Icon` contributions (kinds `font` and `icon`), so the
+    Plugins page can list them. Nothing draws them yet: the typesetter's faces are fixed when the window opens, and
+    icons are drawn as strokes, with no SVG renderer.
+  - Everything is taken back when the plugin stops.
+- **`oriel.asset(path)`** returns an asset's contents: path is under `assets/`, needs no capability, and can't lead out
+  of `assets/` (`plugin.Asset`).
+- **`oriel.process.spawn` and `oriel.wasm.load`** were already scoped as PL-19 asks (PL-2): the plugin's own file
+  needs no grant, and anything else needs `exec` or `fs.read` (`TestSpawnNeedsExecForOthers`).
+- **The size limit** is `plugin.MaxSize` (20 MB, unpacked): pack enforces it on every archive, and `catalog.Unpack`
+  refuses an archive over it.
+- **`oriel plugin pack [DIR]`** (`catalog.Pack`):
+  - Checks the manifest, the entry point or `[contributes]`, each pattern and the icon, and the capabilities.
+  - The capability check (`catalog.Undeclared`) lexes `init.lua` and `lua/**/*.lua`. It finds `oriel.ns.fn`
+    directly or through an alias (`local L = oriel`), and looks up each function's capability in the API reference.
+    apigen now writes `Cap` into `api.Reference`. `process.spawn`, `wasm.load` and `read` given a literal relative
+    path are the plugin's own file and need nothing; otherwise they need `exec` or `fs.read`. `http.request` needs
+    `net`.
+  - Archives go to `DIR/dist`. A plugin with no binaries gets one archive, `<name>-<version>.tar.gz` (platform `any`).
+    A plugin with binaries gets `<name>-<version>-<os>-<arch>.tar.gz` for each platform in `binaries`, holding the
+    plugin and its `bin/`:
+    - with a `go.mod`, each `cmd/<x>` is built for that platform with `catalog.GoBuildFlags` (`-trimpath
+      -buildvcs=false -ldflags=-buildid=`, `CGO_ENABLED=0`);
+    - otherwise the binaries come from `bin/<os>-<arch>/`.
+  - Dot files, `bin/` and `dist/` aren't packed. Archives are reproducible: sorted, with fixed times, owners and
+    modes, so the registry's CI can build them again and compare.
+  - It prints `sha256:<hex>  <platform>  <file>` for each archive.
+- **`oriel plugin init [--process] [--id OWNER/NAME] [DIR]`** (`catalog.Scaffold`) writes `oriel.toml` and
+  `init.lua`. With `--process` it also writes `binaries`, a `go.mod`, `cmd/<name>/main.go` (a stdio JSON-RPC
+  server with a `hello` method) and an `init.lua` that spawns it. The id defaults to the GitHub owner of `origin`
+  and the directory's name, without an `oriel-` prefix. It never writes over a file.
+
+## As built (PL-20)
+
+- **`[plugins]` is an option** (`app.PluginsOption`, `plugins`) of a new type, `registry.Table`: a settings table of
+  any values that its owner reads, so it gets the settings files' watching, layers and project trust for free.
+  `settings.set {name, key, value, scope}` and `settings.reset {name, key, scope}` change one key of a table: one
+  line. A table isn't edited on the settings page, only counted there, and Reset all leaves it alone.
+- **The catalog module**:
+  - `catalog.ParseEntries` reads the table. A git source may name a `rev` (a tag, branch or commit; the default
+    branch otherwise). A host path such as `github.com/x/y` is cloned over https; a URL or a local path is cloned
+    as it is.
+  - `catalog.Lock` is `oriel-lock.toml`, kept as a `toml.Document`, so a write changes only the plugins that changed.
+  - `catalog.Store` installs a git source's checkout, with no `.git`, read-only, at
+    `<data dir>/plugins/<id>/<commit>/`, with a `current` link to the commit in use. A path source loads in place.
+  - `catalog.Manager.Sync` resolves each entry and says where it stands: `Ready`, `Consent`, `Disabled` or `Failed`.
+    An entry the lockfile pins is fetched at its locked commit. An entry is `Ready` when its lock entry has the
+    same source and `plugin.Diff` finds nothing it asks for beyond the lock's capabilities, or when it asks for
+    nothing consent covers. The lockfile then follows its commit and version.
+- **Each `settings.toml` has its own lockfile beside it.** A trusted project's `.oriel/settings.toml` has
+  `.oriel/oriel-lock.toml`, which is committed with it. An id in both your file and the project's is yours.
+- **`builtin:catalog`** (`app/catalog.go`) syncs on start and whenever `plugins` changes:
+  - It loads each ready plugin with `Host.Load` (new: a plugin manager starts another plugin on a host of its own,
+    and stops it with Dispose). The plugin is granted what its manifest declares, all of it accepted.
+  - It stops what's disabled or gone. A plugin waiting on an update's consent keeps running the version accepted.
+  - A plugin waiting for consent is a card in the inbox (`plugins` source, interrupting). Review opens
+    `plugins.consent` with the source, badge, warning and provenance facts. Accepting runs `plugins.accept {dir}`,
+    which writes the lock entry and loads the plugin. Uninstall removes its line.
+  - `plugins.install {id, version | git | path, scope}` writes one line to `[plugins]`, and `plugins.uninstall
+    {id, scope}` removes it. `plugins.sync` syncs now.
+- **The consent screen** takes `badge`, `warning` and `facts` (`plugin.Consent.Badge`, `Warning`). The badge is a chip
+  in its header, and the warning comes first, framed (`plugins.badge.*` and `plugins.consent.warning` tokens).
+  git and path sources are `unverified`, with `catalog.UnverifiedWarning`.
+- **The data directory** is `app.Config.DataDir`: `$XDG_DATA_HOME/oriel`, or `~/.local/share/oriel`.
+- **Not yet:**
+  - Lazy loading. Every plugin loads at start. A `lazy` override replaces the manifest's, which nothing reads yet
+    (PL-22).
+  - Workers getting a plugin's archive over wire.
+  - The audit log the consent footer mentions.
+
+## As built (PL-16)
+
+- **`liamg/oriel-plugins`** holds `plugins/<owner>/<name>/plugin.toml` (`catalog.ParseListing`, `ReadListings`), a
+  README for authors, and two workflows:
+  - `pr.yml` runs `oriel-registry check` and comments. It's `pull_request_target`, so a fork's PR gets the secrets.
+    The PR's checkout is only read as data.
+  - `index.yml` runs `oriel-registry index` on each merge to `main`, then releases `index.json` and `index.sig` as
+    `index-<time>-<sha>`.
+  - Both build `catalog/cmd/oriel-registry` from an Oriel checkout, read with the `ORIEL_READ_TOKEN` secret. It's
+    `oriel plugin registry` (`catalog/registrycmd`) alone, built without cgo, so CI doesn't build the app.
+  - The signing key is the `ORIEL_REGISTRY_KEY` secret: an ed25519 seed in hex, from `oriel plugin registry keygen`.
+- **It's seeded with nothing yet.** Neither first-party plugin has `oriel.toml` at the root of a repo of its own:
+  agentbus is under `plugin/` in `liamg/oriel-agentbus`, and Linear is in Oriel's tree. They're listed once they do.
+- **`catalog.PRCheck`** checks every `plugin.toml` the PR adds or changes against the base. Its GitHub access (`Fetch`,
+  `Tag`, `Asset`, `Org`) can be replaced, so tests use local repositories.
+  - Owner: the path's owner is `repo`'s owner, and the author is that owner or a member of the org
+    (`GitHub.Member`).
+  - Revoking a version while `trusted` stays is a problem.
+  - For each new reviewed version:
+    - the tag `v<version>` (or `<version>`) points at the commit;
+    - the manifest's id and version match;
+    - `Pack` passes at the commit;
+    - every platform in `binaries` has an archive. A Go plugin must be `built = "ci"` and its rebuild must match.
+      Any other must be `built = "author"`, and its release asset must match;
+    - `go.mod`'s requires are checked against `deps/allow.txt` (`tools/depcheck`). Ones outside it are listed, not
+      failed.
+  - The comment, for each version:
+    - the capability diff since the newest reviewed version before it (`plugin.Ask`): new and wider grants marked,
+      dropped ones struck;
+    - a `gate` warning;
+    - the compare link (or the tree, for a new plugin);
+    - a table of the checks, sizes and deps.
+  - It then notes trust given or taken, revocations and yanks, then the problems.
+- **The index** (`catalog.Index{Registry, Built, Plugins}`) is every listing as JSON. `SignIndex` and `VerifyIndex` sign
+  and check its exact bytes with ed25519, and nothing in an unverified index is read. Keys are written
+  `ed25519:<hex>` (`ParseKey`, `FormatKey`).
+
+## As built (PL-21)
+
+- **`catalog.Client`** fetches each `[registry] sources` repo's newest release with `index.json`
+  (`GitHub.LatestAsset`). It verifies the index with that registry's key and caches it under
+  `<cache>/registry/<owner>/<name>/`.
+  - A failed fetch, or a bad signature, keeps the last verified index (verified again from the cache) and reports
+    the error. An index that never verified offers nothing.
+  - Keys come from `[registry] keys`. The default registry's is `catalog.DefaultKey()`, embedded as
+    `catalog.defaultKey`, or set with `-X github.com/liamg/oriel/catalog.defaultKey=ed25519:…`. Without one, the
+    default registry is refused.
+  - `Find` gives an id from the first source that lists it, and `Also` names the rest. `All` is everything listed.
+- **`catalog.RegistryResolver`** is the manager's `Resolver` for registry entries:
+  - It offers reviewed versions that aren't yanked or revoked. For a trusted plugin it also offers semver tags
+    (`GitHub.Tags`) whose commit is older than `trusted_hold` (`GitHub.CommitTime`).
+  - A locked version stays while it's in range, unless `[registry] updates = "auto"` or `plugins.update {id}` asked
+    for the newest. A newer version is then `Status.Update`.
+  - A locked version that's revoked comes back as `Revoked`. The plugin is stopped and an interrupting card says
+    why, with Update and Uninstall.
+  - With `updates = "ask"`, an update is a card.
+  - The archive `<name>-<version>-<os>-<arch>.tar.gz` is fetched from the tag's release only if that commit isn't
+    installed, and checked against the index's sha256. Without an archive, the repo is cloned at the commit. A
+    registry plugin with binaries but no archive, and none in its source, fails.
+  - Facts for the install screen: pinned commit, badge, sha256, the review PR or "trusted since", registry.
+- **`[registry]`** is four options, on the settings page's plugins section: `registry.sources`, `registry.keys`
+  (each checked as a key), `registry.updates` (`auto`, `ask`, `manual`) and `registry.trusted_hold`.
+- **Indexes are fetched only once something needs them**: a registry entry in `[plugins]`, the Registry tab, or
+  `plugins.refresh`. They're then fetched hourly while in use. GitHub is `app.Config.GitHub`, or the public API with
+  your gh login's token (`gh.Token`).
+- **The Plugins page**: ui.md 16, "Built in PL-21". Mockups 16 and 29 now say Plugins, `settings.toml` and
+  reviewed.
+
+## As built (PL-17)
+
+- **`oriel plugin publish [--registry OWNER/NAME] [DIR]`** (`catalog.Publish`) is run in a plugin's repository. It
+  checks four things first:
+  - HEAD is tagged `v<version>` from `oriel.toml`;
+  - the work tree is clean;
+  - origin is the GitHub repo of the id's owner;
+  - origin has the tag at HEAD.
+- **Then it packs** the plugin as the registry's CI will, and reads the registry's `plugin.toml`:
+  - **A new plugin** gets a `plugin.toml` with `repo`, `description` and the version.
+  - **A new version** gets a `[[versions]]` entry, inserted first (newest first). The entry holds `version` and
+    `commit`, plus `archives` and `built` (`ci` with a `go.mod`, else `author`) when there are binaries.
+  - **A trusted plugin**, or a version already listed, gets no PR, and says why.
+- **The PR** is opened through `catalog.Registrar`. `catalog.GH` is the gh CLI: fork, clone the fork, branch
+  `publish/<owner>-<name>-<version>` from upstream's default branch, commit, push, `gh pr create`. It then pushes
+  again with `reviewed` set to the PR's URL.
+
 ## Tickets
 
 - PL-19 package format, `oriel.process` / `oriel.wasm` / `oriel.asset`, `oriel plugin pack`
@@ -289,4 +460,4 @@ sequenceDiagram
 - PL-21 registry client, badges, the Registry tab, "Extensions" → "Plugins" in the UI
 - PL-16 the `liamg/oriel-plugins` repo and its CI
 - PL-17 `oriel plugin publish`
-- PL-18 rename the `ext` package to `plugin`
+- PL-18 rename the `plugin` package to `plugin`

@@ -13,7 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -42,13 +42,13 @@ var (
 
 const walkHelp = "editor/pane#explain-change"
 
-// walkthroughExt is RV-6: explain.change asks the first explainer for a walkthrough of the branch's change, as JSON
+// walkthroughPlugin is RV-6: explain.change asks the first explainer for a walkthrough of the branch's change, as JSON
 // steps (walkFormat), and shows it a step at a time: the step's file with the lines it's about lit and its notes
 // beside them, and the step dock. It's thrown away once the code a step is about changes.
-type walkthroughExt struct {
+type walkthroughPlugin struct {
 	disposer
 	sh   *shell
-	h    ext.Host
+	h    plugin.Host
 	busy sync.WaitGroup
 
 	w     *walkthrough // on the loop only
@@ -84,9 +84,9 @@ type walkSrc struct {
 	hl      *sourceFile
 }
 
-func (x *walkthroughExt) Manifest() ext.Manifest { return ext.Manifest{ID: "explain.change"} }
+func (x *walkthroughPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain.change"} }
 
-func (x *walkthroughExt) Activate(_ context.Context, h ext.Host) error {
+func (x *walkthroughPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	ready := func(registry.Args) bool { return x.ready() }
 	for _, c := range []registry.Command{
@@ -152,31 +152,31 @@ func (x *walkthroughExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *walkthroughExt) Deactivate(ctx context.Context) error {
+func (x *walkthroughPlugin) Deactivate(ctx context.Context) error {
 	x.busy.Wait()
 	return x.disposer.Deactivate(ctx)
 }
 
-func (x *walkthroughExt) wait() { x.busy.Wait() }
+func (x *walkthroughPlugin) wait() { x.busy.Wait() }
 
-func (x *walkthroughExt) ready() bool {
+func (x *walkthroughPlugin) ready() bool {
 	return x.w != nil && !x.w.loading && x.w.err == nil && len(x.w.steps) > 0
 }
 
 // current is the step shown.
-func (x *walkthroughExt) current() walkStep {
+func (x *walkthroughPlugin) current() walkStep {
 	if !x.ready() {
 		return walkStep{}
 	}
 	return x.w.steps[x.w.step]
 }
 
-func (x *walkthroughExt) notify(sev core.Severity, msg string) {
+func (x *walkthroughPlugin) notify(sev core.Severity, msg string) {
 	x.h.Notify(core.Notice{ID: "explain.change", Severity: sev, Source: "explain", Key: true, Text: msg})
 }
 
 // open shows the walkthrough, asking for one first unless there's one still good.
-func (x *walkthroughExt) open(ctx context.Context) error {
+func (x *walkthroughPlugin) open(ctx context.Context) error {
 	if x.w != nil {
 		x.check(time.Now(), true)
 	}
@@ -190,7 +190,7 @@ func (x *walkthroughExt) open(ctx context.Context) error {
 }
 
 // projects are the projects the change is in: the session's, else the work dir.
-func (x *walkthroughExt) projects() []walkProject {
+func (x *walkthroughPlugin) projects() []walkProject {
 	var out []walkProject
 	for _, p := range projectsHere(x.h).projects {
 		if p.Dir != "" {
@@ -204,7 +204,7 @@ func (x *walkthroughExt) projects() []walkProject {
 }
 
 // start asks the first explainer for a walkthrough of the change, off the loop.
-func (x *walkthroughExt) start() error {
+func (x *walkthroughPlugin) start() error {
 	if len(registry.Explainers(x.h)) == 0 {
 		return errors.New("nothing can explain yet: it needs an agent")
 	}
@@ -261,14 +261,14 @@ func (x *walkthroughExt) start() error {
 }
 
 // discard throws the walkthrough away and closes it.
-func (x *walkthroughExt) discard() {
+func (x *walkthroughPlugin) discard() {
 	x.w = nil
 	if err := x.h.Run(context.Background(), "view.close", registry.Args{"id": ExplainChangeView}); err != nil {
 		x.h.Log().Warn("explain.change", "err", err)
 	}
 }
 
-func (x *walkthroughExt) stepArg(a registry.Args) int {
+func (x *walkthroughPlugin) stepArg(a registry.Args) int {
 	if n := a.Int("step"); n > 0 {
 		return n - 1
 	}
@@ -276,7 +276,7 @@ func (x *walkthroughExt) stepArg(a registry.Args) int {
 }
 
 // goTo shows step i, its first note's line picked.
-func (x *walkthroughExt) goTo(i int) {
+func (x *walkthroughPlugin) goTo(i int) {
 	w := x.w
 	if w == nil || len(w.steps) == 0 {
 		return
@@ -291,7 +291,7 @@ func (x *walkthroughExt) goTo(i int) {
 	clear(w.cardH)
 }
 
-func (x *walkthroughExt) moveLine(by int) {
+func (x *walkthroughPlugin) moveLine(by int) {
 	w := x.w
 	s := x.current()
 	if s.path == "" {
@@ -303,7 +303,7 @@ func (x *walkthroughExt) moveLine(by int) {
 
 // srcOf is a step file's text now: an open buffer's, else the file's, read again when it's changed on disk (looked
 // at once a second, or now when now is zero).
-func (x *walkthroughExt) srcOf(w *walkthrough, path string, now time.Time) *walkSrc {
+func (x *walkthroughPlugin) srcOf(w *walkthrough, path string, now time.Time) *walkSrc {
 	s := w.srcs[path]
 	if s == nil {
 		s = &walkSrc{}
@@ -329,7 +329,7 @@ func (x *walkthroughExt) srcOf(w *walkthrough, path string, now time.Time) *walk
 }
 
 // check discards the walkthrough once the lines a step is about read differently from when it was written.
-func (x *walkthroughExt) check(now time.Time, at bool) {
+func (x *walkthroughPlugin) check(now time.Time, at bool) {
 	w := x.w
 	if w == nil || w.loading || w.err != nil {
 		return
@@ -359,7 +359,7 @@ func (x *walkthroughExt) check(now time.Time, at bool) {
 }
 
 // ask writes a new request about the step shown, with it attached.
-func (x *walkthroughExt) ask(ctx context.Context) error {
+func (x *walkthroughPlugin) ask(ctx context.Context) error {
 	w, s := x.w, x.current()
 	var b strings.Builder
 	fmt.Fprintf(&b, "Step %d of %d of the walkthrough of this change: %s\n\n%s", w.step+1, len(w.steps), s.Title, s.Prose)
@@ -382,7 +382,7 @@ func (x *walkthroughExt) ask(ctx context.Context) error {
 }
 
 // comment opens a thread on a line of the step's file, in the editor.
-func (x *walkthroughExt) comment(ctx context.Context, line int) error {
+func (x *walkthroughPlugin) comment(ctx context.Context, line int) error {
 	s := x.current()
 	if s.path == "" {
 		return errors.New("this step isn't about a file")
@@ -397,14 +397,14 @@ func (x *walkthroughExt) comment(ctx context.Context, line int) error {
 }
 
 // run runs a command from a control in the view, and gives the view the keys back.
-func (x *walkthroughExt) run(cmd string, a registry.Args) {
+func (x *walkthroughPlugin) run(cmd string, a registry.Args) {
 	x.focus = true
 	if err := x.h.Run(context.Background(), cmd, a); err != nil {
 		x.notify(core.SevWarning, err.Error())
 	}
 }
 
-type walkView struct{ x *walkthroughExt }
+type walkView struct{ x *walkthroughPlugin }
 
 func (v walkView) Title(string) string { return "Explain this change" }
 func (v walkView) EdgeToEdge()         {}
@@ -416,7 +416,7 @@ func (v walkView) Build(vc registry.ViewCtx) ui.Node {
 }
 
 // view is 07-explain: the header, the step's file with its notes, and the step dock.
-func (x *walkthroughExt) view(c *ui.Ctx, vc registry.ViewCtx) {
+func (x *walkthroughPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 	th := c.Theme()
 	x.check(c.Now(), false)
 	root := c.Next("walk")
@@ -443,7 +443,7 @@ func (x *walkthroughExt) view(c *ui.Ctx, vc registry.ViewCtx) {
 }
 
 // message stands in for the stage: what's happening, or what went wrong with Try again.
-func (x *walkthroughExt) message(c *ui.Ctx, msg string, failed bool) {
+func (x *walkthroughPlugin) message(c *ui.Ctx, msg string, failed bool) {
 	th := c.Theme()
 	c.Column("msg", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 12}, func(c *ui.Ctx) {
 		tok := theme.FgFaint
@@ -459,7 +459,7 @@ func (x *walkthroughExt) message(c *ui.Ctx, msg string, failed bool) {
 }
 
 // header is EXPLAIN THIS CHANGE, the step's project and file and its lines, and the throwaway note with Discard.
-func (x *walkthroughExt) header(c *ui.Ctx, w *walkthrough) {
+func (x *walkthroughPlugin) header(c *ui.Ctx, w *walkthrough) {
 	th := c.Theme()
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(14, 0), Gap: 10, Cross: ui.Center, Fill: th.C(tWalkBarBg), Stroke: th.C(theme.Line),
 		Clip: true}, func(c *ui.Ctx) {
@@ -510,7 +510,7 @@ func noteTone(th *theme.Resolved, i int) render.Color {
 
 // stage is the step's file from a little above what it's about: the lines its notes are on lit in their colours, the
 // rest dimmed, and the notes beside them with leader lines; a step with no file says so.
-func (x *walkthroughExt) stage(c *ui.Ctx, w *walkthrough) {
+func (x *walkthroughPlugin) stage(c *ui.Ctx, w *walkthrough) {
 	th := c.Theme()
 	s := w.steps[w.step]
 	stageID := c.Next("stage")
@@ -565,7 +565,7 @@ func (x *walkthroughExt) stage(c *ui.Ctx, w *walkthrough) {
 			}
 		})
 		if r, ok := c.Rect(codeID); ok && click.Clicked {
-			l := w.top + int((click.Pointer.Y-r.Min.Y-10)/m.lineH)
+			l := w.top + int((click.Pointer().Y-r.Min.Y-10)/m.lineH)
 			w.line = min(max(l, w.top), last)
 		}
 		// The notes, each level with its first line and below the one before; then up from the bottom so none runs out.
@@ -633,7 +633,7 @@ func (x *walkthroughExt) stage(c *ui.Ctx, w *walkthrough) {
 
 // codeRow is line l of the step's file: its number, coloured by the note it's lit for, and its text, dimmed when no
 // note is on it, with a note's mark highlighted.
-func (x *walkthroughExt) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *sourceFile, lines []string, l int, gutter float32, m paneMetrics) {
+func (x *walkthroughPlugin) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *sourceFile, lines []string, l int, gutter float32, m paneMetrics) {
 	th := c.Theme()
 	note, on := lit(s, l)
 	tone := noteTone(th, note)
@@ -685,7 +685,7 @@ func (x *walkthroughExt) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *sour
 
 // dock is the step dock: a chip for each step across files and repos, then the step's number, title and prose, Ask
 // about this step, Comment on its line, who wrote it, and ← →.
-func (x *walkthroughExt) dock(c *ui.Ctx, w *walkthrough) {
+func (x *walkthroughPlugin) dock(c *ui.Ctx, w *walkthrough) {
 	th := c.Theme()
 	s := w.steps[w.step]
 	n := len(w.steps)
@@ -754,7 +754,7 @@ func (x *walkthroughExt) dock(c *ui.Ctx, w *walkthrough) {
 }
 
 // stepChip is a step's diamond and its project and file, lit while it's shown; it says whether it was clicked.
-func (x *walkthroughExt) stepChip(c *ui.Ctx, i int, s walkStep, on, done bool) bool {
+func (x *walkthroughPlugin) stepChip(c *ui.Ctx, i int, s walkStep, on, done bool) bool {
 	th := c.Theme()
 	fill, fg := th.C(theme.LineStrong), th.C(theme.FgFaint)
 	switch {
@@ -792,7 +792,7 @@ func (x *walkthroughExt) stepChip(c *ui.Ctx, i int, s walkStep, on, done bool) b
 
 // statusSegment is the status line's step, file and keys while the walkthrough has focus: "step 3/7 · invoice.go ·
 // ←/→ step · c comment · q quit".
-func (x *walkthroughExt) statusSegment(c *ui.Ctx) {
+func (x *walkthroughPlugin) statusSegment(c *ui.Ctx) {
 	if !x.ready() {
 		return
 	}

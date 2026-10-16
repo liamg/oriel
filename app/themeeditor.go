@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
@@ -44,7 +44,7 @@ var (
 // reads what painted a pixel off the window drawn in a probe theme. Built only on the public API.
 type themeEditor struct {
 	disposer
-	h   ext.Host
+	h   plugin.Host
 	dir string // the user's themes directory, where a local theme goes
 
 	open    bool
@@ -82,9 +82,9 @@ type fixture struct {
 	probe  *image.RGBA
 }
 
-func (e *themeEditor) Manifest() ext.Manifest { return ext.Manifest{ID: "theme"} }
+func (e *themeEditor) Manifest() plugin.Manifest { return plugin.Manifest{ID: "theme"} }
 
-func (e *themeEditor) Activate(_ context.Context, h ext.Host) error {
+func (e *themeEditor) Activate(_ context.Context, h plugin.Host) error {
 	e.h = h
 	e.live = map[string]*liveFile{}
 	e.fixtures = map[*theme.Resolved]*fixture{}
@@ -434,9 +434,9 @@ func (e *themeEditor) buildPick(c *ui.Ctx) {
 			return
 		}
 	}
-	if in.Pointer != e.hoverAt {
-		e.hoverAt = in.Pointer
-		name, r := probeAt(e.probe, e.probeTh, image.Pt(int(in.Pointer.X), int(in.Pointer.Y)))
+	if in.Pointer() != e.hoverAt {
+		e.hoverAt = in.Pointer()
+		name, r := probeAt(e.probe, e.probeTh, image.Pt(int(in.Pointer().X), int(in.Pointer().Y)))
 		e.hover = name
 		e.hoverR = render.Rect{Min: render.Point{X: float32(r.Min.X), Y: float32(r.Min.Y)}, Max: render.Point{X: float32(r.Max.X), Y: float32(r.Max.Y)}}
 	}
@@ -700,7 +700,7 @@ func (e *themeEditor) preview(c *ui.Ctx, th *theme.Resolved) {
 			if hit.Clicked {
 				if r, ok := c.Rect(id); ok {
 					img, p := e.probeFixture(c.Shaper(), t)
-					if name, _ := probeAt(img, p, image.Pt(int(hit.Pointer.X-r.Min.X), int(hit.Pointer.Y-r.Min.Y))); name != "" {
+					if name, _ := probeAt(img, p, image.Pt(int(hit.Pointer().X-r.Min.X), int(hit.Pointer().Y-r.Min.Y))); name != "" {
 						e.choose(name)
 					}
 				}

@@ -93,7 +93,7 @@ func TestLanguagePack(t *testing.T) {
 	}
 	s := newScene(t, "", t.TempDir(), render.Point{X: 800, Y: 600})
 	// builtin:languages as it starts with packs in its directory.
-	if err := (&languagesExt{dir: filepath.Join(conf, "languages")}).Activate(context.Background(), s.sh.host("builtin:languages")); err != nil {
+	if err := (&languagesPlugin{dir: filepath.Join(conf, "languages")}).Activate(context.Background(), s.sh.host("builtin:languages")); err != nil {
 		t.Fatal(err)
 	}
 	if got := captures(t, s.reg, "x.go"); !slices.Equal(got, []string{"pack.ident"}) {
@@ -143,7 +143,7 @@ func TestGrammarPackInstall(t *testing.T) {
 	}
 	s := newScene(t, "", t.TempDir(), render.Point{X: 800, Y: 600})
 	dir := filepath.Join(s.sh.cfg.ConfigDir, "languages")
-	x := &languagesExt{dir: dir, sums: sums}
+	x := &languagesPlugin{dir: dir, sums: sums}
 	if err := x.Activate(context.Background(), s.sh.host("builtin:languages")); err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestGrammarPackInstall(t *testing.T) {
 
 	// Installed, it's there at the next start (ED-11).
 	s2 := newScene(t, "", t.TempDir(), render.Point{X: 800, Y: 600})
-	if err := (&languagesExt{dir: dir}).Activate(context.Background(), s2.sh.host("builtin:languages")); err != nil {
+	if err := (&languagesPlugin{dir: dir}).Activate(context.Background(), s2.sh.host("builtin:languages")); err != nil {
 		t.Fatal(err)
 	}
 	if got := captures(t, s2.reg, "y.gox"); !slices.Equal(got, []string{"pack.package"}) {

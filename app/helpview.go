@@ -11,7 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/fuzzy"
 	"github.com/liamg/oriel/app/help"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -32,7 +32,7 @@ var (
 type helpView struct {
 	disposer
 	sh   *shell
-	h    ext.Host
+	h    plugin.Host
 	ix   *help.Index
 	gen  int
 	open bool
@@ -42,9 +42,9 @@ type helpView struct {
 	mode bool     // help mode: a ? on everything with help
 }
 
-func (v *helpView) Manifest() ext.Manifest { return ext.Manifest{ID: "help"} }
+func (v *helpView) Manifest() plugin.Manifest { return plugin.Manifest{ID: "help"} }
 
-func (v *helpView) Activate(_ context.Context, h ext.Host) error {
+func (v *helpView) Activate(_ context.Context, h plugin.Host) error {
 	v.h = h
 	v.add(h.HelpPages(registry.HelpSource{FS: help.Builtin(), Source: "builtin"}))
 	if dir := filepath.Join(v.sh.cfg.ConfigDir, "help"); dirExists(dir) {

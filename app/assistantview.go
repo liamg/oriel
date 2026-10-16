@@ -32,7 +32,7 @@ var (
 
 // drawer is the assistant's drawer (ui.md 11): the conversation and its composer, and beside them what it can do,
 // what it reads and how fresh that is, and what it did lately.
-func (x *assistantExt) drawer(c *ui.Ctx) {
+func (x *assistantPlugin) drawer(c *ui.Ctx) {
 	if !x.open {
 		return
 	}
@@ -55,7 +55,7 @@ func (x *assistantExt) drawer(c *ui.Ctx) {
 }
 
 // header is COMMS, what it runs on, what it reads and does, and its keys.
-func (x *assistantExt) header(c *ui.Ctx) {
+func (x *assistantPlugin) header(c *ui.Ctx) {
 	th := c.Theme()
 	c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(tAsstKicker)}, nil)
@@ -80,12 +80,12 @@ func (x *assistantExt) header(c *ui.Ctx) {
 }
 
 // about says what it reads and how it acts.
-func (x *assistantExt) about() string {
+func (x *assistantPlugin) about() string {
 	return "reads " + strings.Join(x.sources(), ", ") + " · acts, asks before starting or stopping an agent"
 }
 
 // sources are what its tools read, in order of first mention.
-func (x *assistantExt) sources() []string {
+func (x *assistantPlugin) sources() []string {
 	var out []string
 	for _, t := range registry.AgentToolsFor(x.h, assistantAgent, true) {
 		for _, p := range append([]registry.AgentTool{t}, registry.AgentToolParts(x.h, t.Name, assistantAgent, true)...) {
@@ -105,7 +105,7 @@ type asstBlock struct {
 
 // chat is the conversation: your turns at the right; the assistant's at the left, its tools as chips, its answer,
 // the rows it offers, and its confirmations and actions.
-func (x *assistantExt) chat(c *ui.Ctx, width float32) {
+func (x *assistantPlugin) chat(c *ui.Ctx, width float32) {
 	th := c.Theme()
 	log, busy := x.conv.Log()
 	now := c.Now()
@@ -175,7 +175,7 @@ func (x *assistantExt) chat(c *ui.Ctx, width float32) {
 }
 
 // mine is one of your turns: a bubble at the right.
-func (x *assistantExt) mine(c *ui.Ctx, key any, e assistant.Entry, width float32) {
+func (x *assistantPlugin) mine(c *ui.Ctx, key any, e assistant.Entry, width float32) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -187,7 +187,7 @@ func (x *assistantExt) mine(c *ui.Ctx, key any, e assistant.Entry, width float32
 }
 
 // theirs is one of the assistant's turns: its avatar and tool chips, then what it said and did.
-func (x *assistantExt) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, latestItems int, log []assistant.Entry, now time.Time, wake *time.Time) {
+func (x *assistantPlugin) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, latestItems int, log []assistant.Entry, now time.Time, wake *time.Time) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 		c.Box("av", ui.Style{W: ui.Px(22), H: ui.Px(22), Radius: 5, Fill: th.C(tAsstAvatar), Main: ui.Center, Cross: ui.Center, Role: ui.RoleText,
@@ -225,7 +225,7 @@ func (x *assistantExt) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, l
 }
 
 // items are a reply's rows: each opens its session or link, or asks about it; the latest reply's have keys.
-func (x *assistantExt) items(c *ui.Ctx, key any, items []assistant.Item, keyed bool) {
+func (x *assistantPlugin) items(c *ui.Ctx, key any, items []assistant.Item, keyed bool) {
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		for i, it := range items {
@@ -256,7 +256,7 @@ func (x *assistantExt) items(c *ui.Ctx, key any, items []assistant.Item, keyed b
 	})
 }
 
-func (x *assistantExt) pickRow(it assistant.Item) {
+func (x *assistantPlugin) pickRow(it assistant.Item) {
 	for i, o := range x.lastItems() {
 		if o == it {
 			x.report(x.pick(i + 1))
@@ -266,7 +266,7 @@ func (x *assistantExt) pickRow(it assistant.Item) {
 	x.conv.Say("Tell me more about "+it.Title, false)
 }
 
-func (x *assistantExt) report(err error) {
+func (x *assistantPlugin) report(err error) {
 	if err != nil {
 		x.h.Notify(core.Notice{ID: "assistant", Severity: core.SevError, Key: true, Text: err.Error()})
 	}
@@ -274,7 +274,7 @@ func (x *assistantExt) report(err error) {
 
 // confirmCard is an act waiting for your yes: what it will do, with Yes (y) and No (n). It takes focus as it comes,
 // so the keys answer it.
-func (x *assistantExt) confirmCard(c *ui.Ctx, e assistant.Entry, now time.Time, wake *time.Time) {
+func (x *assistantPlugin) confirmCard(c *ui.Ctx, e assistant.Entry, now time.Time, wake *time.Time) {
 	th := c.Theme()
 	cf, _ := e.Card.(registry.Confirmation)
 	if e.Answer != "" {
@@ -307,7 +307,7 @@ func (x *assistantExt) confirmCard(c *ui.Ctx, e assistant.Entry, now time.Time, 
 }
 
 // actionCard is something its tools did: Open what it made, and Undo with its countdown while it can be.
-func (x *assistantExt) actionCard(c *ui.Ctx, e assistant.Entry, now time.Time, wake *time.Time) {
+func (x *assistantPlugin) actionCard(c *ui.Ctx, e assistant.Entry, now time.Time, wake *time.Time) {
 	th := c.Theme()
 	var actions []widget.CardAction
 	open, undo := -1, -1
@@ -347,7 +347,7 @@ func earliest(a, b time.Time) time.Time {
 }
 
 // composer is where you type to it, or dictate.
-func (x *assistantExt) composer(c *ui.Ctx) {
+func (x *assistantPlugin) composer(c *ui.Ctx) {
 	th := c.Theme()
 	c.Row("composer", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 8), Gap: 10, Cross: ui.Center, Radius: 8, Fill: th.C(theme.BgBase),
 		Stroke: theme.WithAlpha(th.C(tAsstKicker), .45), Border: 1}, func(c *ui.Ctx) {
@@ -383,7 +383,7 @@ func (x *assistantExt) composer(c *ui.Ctx) {
 }
 
 // side is what it can do, its sources and how fresh each is, what it did lately, and how it listens.
-func (x *assistantExt) side(c *ui.Ctx, width float32) {
+func (x *assistantPlugin) side(c *ui.Ctx, width float32) {
 	th := c.Theme()
 	now := c.Now()
 	log, _ := x.conv.Log()
@@ -475,7 +475,7 @@ func (x *assistantExt) side(c *ui.Ctx, width float32) {
 }
 
 // lastRead is when each source was last read: the last time a tool reading it was used.
-func (x *assistantExt) lastRead(log []assistant.Entry) map[string]time.Time {
+func (x *assistantPlugin) lastRead(log []assistant.Entry) map[string]time.Time {
 	reads := map[string]string{}
 	for _, t := range registry.AgentToolsFor(x.h, assistantAgent, true) {
 		reads[t.Name] = t.Reads
@@ -490,7 +490,7 @@ func (x *assistantExt) lastRead(log []assistant.Entry) map[string]time.Time {
 }
 
 // confirmBody is a confirmation's facts and its block, in the drawer's card and the inbox's.
-func confirmBody(c *ui.Ctx, x *assistantExt, cf registry.Confirmation) {
+func confirmBody(c *ui.Ctx, x *assistantPlugin, cf registry.Confirmation) {
 	th := c.Theme()
 	if len(cf.Rows) > 0 {
 		c.Column("rows", ui.Style{W: ui.Flex(1), Gap: 3}, func(c *ui.Ctx) {

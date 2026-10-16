@@ -17,8 +17,8 @@ import (
 	"github.com/liamg/oriel/app/fuzzy"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/lsp"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/vim"
@@ -30,13 +30,13 @@ const (
 	HoverKeyMode      = "lsp.hover"
 )
 
-// lspExt is the editor's language servers (ide.md, "LSP"): one per language and project root, started as files
+// lspPlugin is the editor's language servers (ide.md, "LSP"): one per language and project root, started as files
 // open, fed their edits, with their diagnostics in Problems and the editor, completion as you type, signature help,
 // hover, code actions and inlay hints. Servers are registry contributions (registry.LSPServer).
-type lspExt struct {
+type lspPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 	m  *lsp.Manager
 
 	mu       sync.Mutex
@@ -74,9 +74,9 @@ type lspDoc struct {
 	tokensLoading bool
 }
 
-func (x *lspExt) Manifest() ext.Manifest { return ext.Manifest{ID: "lsp"} }
+func (x *lspPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lsp"} }
 
-func (x *lspExt) Activate(_ context.Context, h ext.Host) error {
+func (x *lspPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.docs, x.statuses = map[string]*lspDoc{}, map[string]lsp.Status{}
 	for _, s := range lsp.Builtins() {
@@ -161,7 +161,7 @@ func (x *lspExt) Activate(_ context.Context, h ext.Host) error {
 	x.add(h.Option(registry.OptionSpec{Name: "lsp.start", Type: registry.Enum, Values: []string{"project", "file"}, Default: "project",
 		Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help:   "When language servers start: project, as soon as a project with their root files (go.mod, Cargo.toml…) opens, so the first request doesn't wait; or file, when one of their files first opens."}))
-	h.Do(x.warm) // once every extension has contributed its servers
+	h.Do(x.warm) // once every plugin has contributed its servers
 	x.add(h.Contribute(registry.InspectSection{Name: "LANGUAGE SERVER", Order: 30, Rows: x.inspectRows, Source: "builtin:lsp"}))
 	x.add(h.Picker(x.callsSource()))
 	x.add(h.View(OverlayPrefix+"lsp", lspOverlay{x}))
@@ -169,7 +169,7 @@ func (x *lspExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *lspExt) Deactivate(ctx context.Context) error {
+func (x *lspPlugin) Deactivate(ctx context.Context) error {
 	x.mu.Lock()
 	for _, d := range x.docs {
 		if d.cancel != nil {
@@ -184,11 +184,11 @@ func (x *lspExt) Deactivate(ctx context.Context) error {
 	return x.disposer.Deactivate(ctx)
 }
 
-func (x *lspExt) wait() { x.busy.Wait() }
+func (x *lspPlugin) wait() { x.busy.Wait() }
 
 // warm starts the servers for the project the app is open on, and for the projects directly in it (a session's
 // worktrees), when lsp.start says to: each server whose own root files are there, its generic ones (.git) aside.
-func (x *lspExt) warm() {
+func (x *lspPlugin) warm() {
 	if v, _, err := x.h.Options().Get("lsp.start", registry.At{}); err != nil || v != "project" || x.sh.cfg.WorkDir == "" {
 		return
 	}
@@ -240,7 +240,7 @@ func hasOwnRoot(markers []string, dir string) bool {
 }
 
 // async runs fn off the loop, and done with its result back on it.
-func async[T any](x *lspExt, fn func(ctx context.Context) (T, error), done func(T, error)) {
+func async[T any](x *lspPlugin, fn func(ctx context.Context) (T, error), done func(T, error)) {
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
@@ -269,7 +269,7 @@ func registryDiagnostics(ds []lsp.Diagnostic) []registry.Diagnostic {
 }
 
 // doc is the server document for a buffer showing path, opening it the first time; nil when no server serves it.
-func (x *lspExt) doc(path string, buf *text.Buffer) *lspDoc {
+func (x *lspPlugin) doc(path string, buf *text.Buffer) *lspDoc {
 	x.mu.Lock()
 	d, ok := x.docs[path]
 	x.mu.Unlock()
@@ -332,7 +332,7 @@ func (x *lspExt) doc(path string, buf *text.Buffer) *lspDoc {
 }
 
 // changed sends a buffer's edit to its server, and asks for completion or signature help when typing calls for it.
-func (x *lspExt) changed(d *lspDoc, ch text.Change) {
+func (x *lspPlugin) changed(d *lspDoc, ch text.Change) {
 	if d.opening {
 		d.queue = append(d.queue, ch)
 		return
@@ -347,7 +347,7 @@ func (x *lspExt) changed(d *lspDoc, ch text.Change) {
 }
 
 // current is the current editor window's pane, its file's path, and its server document.
-func (x *lspExt) current() (vim.Pane, string, *lspDoc) {
+func (x *lspPlugin) current() (vim.Pane, string, *lspDoc) {
 	ed := x.sh.editor
 	if ed == nil {
 		return vim.Pane{}, "", nil
@@ -363,7 +363,7 @@ func (x *lspExt) current() (vim.Pane, string, *lspDoc) {
 	return p, path, x.doc(path, p.Buffer())
 }
 
-func (x *lspExt) decorations(ctx registry.DecorationCtx) []registry.Decoration {
+func (x *lspPlugin) decorations(ctx registry.DecorationCtx) []registry.Decoration {
 	d := x.doc(ctx.Path, ctx.Buffer)
 	if d == nil || d.client == nil {
 		return nil
@@ -401,7 +401,7 @@ func (x *lspExt) decorations(ctx registry.DecorationCtx) []registry.Decoration {
 }
 
 // lspCommands are the LSP's commands and keys.
-func (x *lspExt) lspCommands(h ext.Host) {
+func (x *lspPlugin) lspCommands(h plugin.Host) {
 	for _, c := range []registry.Command{
 		{ID: "lsp.hover", Title: "Show what the language server knows about the symbol under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.startHover(ctx)
@@ -489,7 +489,7 @@ func wordStart(line []byte, col int) int {
 
 // typed is after an edit in the current buffer: in insert mode, the menu refilters, closes, or is asked for; and
 // signature help opens on a call's ( or , and closes on its ).
-func (x *lspExt) typed(d *lspDoc) {
+func (x *lspPlugin) typed(d *lspDoc) {
 	p, path, cur := x.current()
 	if cur != d || path != d.path || x.sh.editor.e.Mode() != "insert" {
 		return
@@ -526,7 +526,7 @@ func (x *lspExt) typed(d *lspDoc) {
 }
 
 // requestCompletion asks the server for the items at the cursor.
-func (x *lspExt) requestCompletion(d *lspDoc, manual bool) {
+func (x *lspPlugin) requestCompletion(d *lspDoc, manual bool) {
 	p := x.sh.editor.current()
 	pos := p.Cursor()
 	line := p.Buf().Line(pos.Line)
@@ -553,7 +553,7 @@ func (x *lspExt) requestCompletion(d *lspDoc, manual bool) {
 }
 
 // filter ranks the items against the word typed so far, and opens the menu while any match.
-func (x *lspExt) filter(word []byte) {
+func (x *lspPlugin) filter(word []byte) {
 	type hit struct{ i, score int }
 	var hits []hit
 	for i, it := range x.comp.items {
@@ -584,7 +584,7 @@ func (x *lspExt) filter(word []byte) {
 }
 
 // selected is the highlighted item, resolved if it has been.
-func (x *lspExt) selected() (lsp.Completion, int, bool) {
+func (x *lspPlugin) selected() (lsp.Completion, int, bool) {
 	if !x.comp.open || x.comp.sel >= len(x.comp.shown) {
 		return lsp.Completion{}, 0, false
 	}
@@ -597,7 +597,7 @@ func (x *lspExt) selected() (lsp.Completion, int, bool) {
 
 // accept puts the highlighted item in, in place of the word typed, with its other edits (an import), and the cursor
 // at its first tab stop.
-func (x *lspExt) accept() error {
+func (x *lspPlugin) accept() error {
 	it, _, ok := x.selected()
 	if !ok {
 		return nil
@@ -640,7 +640,7 @@ type signature struct {
 	line int
 }
 
-func (x *lspExt) requestSignature(d *lspDoc) {
+func (x *lspPlugin) requestSignature(d *lspDoc) {
 	p := x.sh.editor.current()
 	pos := p.Cursor()
 	c := d.client
@@ -662,7 +662,7 @@ type hoverCard struct {
 	md   lsp.Markup
 }
 
-func (x *lspExt) startHover(ctx registry.Ctx) error {
+func (x *lspPlugin) startHover(ctx registry.Ctx) error {
 	p, path, d := x.current()
 	if d == nil || d.client == nil {
 		return x.h.Run(ctx, "editor.keys", registry.Args{"keys": "K", "noremap": true})
@@ -694,7 +694,7 @@ type actionMenu struct {
 }
 
 // agentActions are the Agent group for the diagnostics on a line: ask the agent to fix them, and its explain twin.
-func (x *lspExt) agentActions(path string, snap text.Snapshot, line int) []registry.MenuItem {
+func (x *lspPlugin) agentActions(path string, snap text.Snapshot, line int) []registry.MenuItem {
 	var ds []registry.Diagnostic
 	for _, d := range x.h.DiagnosticsFor(path) {
 		if d.Line == line {
@@ -708,7 +708,7 @@ func (x *lspExt) agentActions(path string, snap text.Snapshot, line int) []regis
 		Command: registry.FixCommand, Args: diagnosticTrouble(snap, ds).Args(), Source: "builtin:lsp"}})
 }
 
-func (x *lspExt) codeActions(ctx registry.Ctx) error {
+func (x *lspPlugin) codeActions(ctx registry.Ctx) error {
 	p, path, d := x.current()
 	if path == "" {
 		return fmt.Errorf("the editor has no file here")
@@ -751,7 +751,7 @@ func (x *lspExt) codeActions(ctx registry.Ctx) error {
 }
 
 // runAction resolves an action if it needs it, applies its edit, and runs its command.
-func (x *lspExt) runAction(m *actionMenu, a lsp.Action) {
+func (x *lspPlugin) runAction(m *actionMenu, a lsp.Action) {
 	async(x, func(ctx context.Context) (lsp.Action, error) {
 		if a.Edit == nil && a.Command == nil {
 			return m.client.ResolveAction(ctx, m.path, a)
@@ -781,7 +781,7 @@ func (x *lspExt) runAction(m *actionMenu, a lsp.Action) {
 
 // applyEdit makes a server's workspace edit: open buffers change in the buffer (one undoable step each), other files
 // on disk; files are created, renamed and deleted as it says.
-func (x *lspExt) applyEdit(e lsp.WorkspaceEdit) error {
+func (x *lspPlugin) applyEdit(e lsp.WorkspaceEdit) error {
 	var errs []error
 	for _, ch := range e.Changes {
 		switch ch.Op {

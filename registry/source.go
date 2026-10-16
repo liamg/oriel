@@ -1,7 +1,7 @@
 package registry
 
 // WithSource returns a view of r that stamps src on every command, keymap, hook and option registered through it
-// without a source of its own. Each extension registers through one, so listings can say where things came from.
+// without a source of its own. Each plugin registers through one, so listings can say where things came from.
 func WithSource(r Registry, src string) Registry { return sourced{r, src} }
 
 type sourced struct {

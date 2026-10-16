@@ -12,7 +12,7 @@ import (
 // debugTest debugs one test, subtest or table row through its adapter's debug launch (debug.launch): {key} as
 // discovered in {file}, stopping at {line} (1-based) of the file when it's given, on a breakpoint set there unless
 // one is.
-func (x *testsExt) debugTest(ctx registry.Ctx, a registry.Args) error {
+func (x *testsPlugin) debugTest(ctx registry.Ctx, a registry.Args) error {
 	file := a.String("file")
 	it, adapter, ok := x.item(file, a.String("key"))
 	if !ok {
@@ -34,7 +34,7 @@ func (x *testsExt) debugTest(ctx registry.Ctx, a registry.Args) error {
 }
 
 // item is the test with key discovered in file, or in any buffer discovered.
-func (x *testsExt) item(file, key string) (testrun.Item, testrun.Adapter, bool) {
+func (x *testsPlugin) item(file, key string) (testrun.Item, testrun.Adapter, bool) {
 	if f, ok := x.sh.editor.openBuffer(file); ok {
 		d := x.discover(file, f.Text)
 		for _, it := range d.items {

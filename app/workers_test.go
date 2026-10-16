@@ -18,9 +18,9 @@ import (
 	"github.com/liamg/oriel/worker"
 )
 
-func (s *errScene) workers() *workersExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*workersExt); ok {
+func (s *errScene) workers() *workersPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*workersPlugin); ok {
 			return x
 		}
 	}
@@ -28,7 +28,7 @@ func (s *errScene) workers() *workersExt {
 }
 
 // workersScene is the app with this machine's worker, its keys file and certificate in temporary directories.
-func workersScene(t *testing.T, change ...func(*Config)) (*errScene, *localWorker, *workersExt) {
+func workersScene(t *testing.T, change ...func(*Config)) (*errScene, *localWorker, *workersPlugin) {
 	t.Helper()
 	lw := newLocalWorker(t)
 	state := t.TempDir()
@@ -380,7 +380,7 @@ func TestWorkersPageSnapshot(t *testing.T) {
 			SignedOut: []core.Login{{Provider: "codex", Worker: "devbox", Detail: "token expired"}}}},
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "acct", AccountName: "ada@example.com", Plan: "Claude Max", Tier: "Max 20×",
 			Workers: []core.WorkerID{core.LocalWorker, "devbox"}}},
-		core.SessionSynced{Session: core.SessionState{ID: "inf-2231-fix-stale-usage-prices", Kind: core.KindWork, Worker: "devbox",
+		core.SessionSynced{Session: core.SessionState{ID: "eng-2231-fix-stale-usage-prices", Kind: core.KindWork, Worker: "devbox",
 			Agent: core.AgentState{Provider: "claude", Running: true, Working: true}}},
 		core.SessionSynced{Session: core.SessionState{ID: "rounding", Name: "Round half-even", Kind: core.KindWork, Worker: "devbox",
 			Agent: core.AgentState{Provider: "claude", Running: true}}},

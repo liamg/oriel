@@ -7,8 +7,8 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// SE-1: "each kind starts from ... the CLI"; sessions.md → Starting one: `oriel new "fix stale usage prices" --repo
-// pricing --ticket INF-2231`, `oriel review <pr-url>`, `oriel init <name> --template go-cli`; direct is the
+// SE-1: "each kind starts from ... the CLI"; sessions.md → Starting one: `oriel new "fix stale search results" --repo
+// pricing --ticket ENG-2231`, `oriel review <pr-url>`, `oriel init <name> --template go-cli`; direct is the
 // directory itself.
 func TestSessionCLISpecs(t *testing.T) {
 	const wd = "/src/pricing"
@@ -17,8 +17,8 @@ func TestSessionCLISpecs(t *testing.T) {
 		args []string
 		want core.SessionSpec
 	}{
-		{"new", []string{"fix stale usage prices", "--repo", "pricing", "--ticket", "INF-2231"}, core.SessionSpec{Kind: core.KindWork,
-			Prompt: "fix stale usage prices", Repos: []core.RepoID{"pricing"}, Ticket: "INF-2231", Provider: "claude"}},
+		{"new", []string{"fix stale search results", "--repo", "pricing", "--ticket", "ENG-2231"}, core.SessionSpec{Kind: core.KindWork,
+			Prompt: "fix stale search results", Repos: []core.RepoID{"pricing"}, Ticket: "ENG-2231", Provider: "claude"}},
 		{"new", []string{"--kind", "plan", "round", "invoices"}, core.SessionSpec{Kind: core.KindPlan, Prompt: "round invoices", Provider: "claude"}},
 		{"new", []string{"--kind", "tour", "how does rounding work?", "--variant", "archaeology"}, core.SessionSpec{Kind: core.KindTour,
 			Prompt: "how does rounding work?", Variant: "archaeology", Repos: []core.RepoID{wd}, Provider: "claude"}},

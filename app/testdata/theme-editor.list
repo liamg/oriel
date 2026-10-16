@@ -210,33 +210,33 @@ clip 0,38 1600x962 r 0
       rect 603.0469,94 1x37 fill #24221d
       effect glow-disc 616.0469,109 7x7 blur 8 #ff5f6de6
       path 6 segments fill #ff5f6d
-      text "INF-2231 usage api" @630.0469,116.865234 #b3ab99 Inter 12
-      text "needs you" @746.6719,116.1 #7c7566 JetBrains Mono 10
-      text "⌘2" @807.6719,115.92 #4f4a40 JetBrains Mono 9.5
-      rect 831.6719,94 1x37 fill #24221d
-      effect glow-disc 844.6719,109 7x7 blur 8 #b98affe6
+      text "ENG-2231 search api" @630.0469,116.865234 #b3ab99 Inter 12
+      text "needs you" @756.5625,116.1 #7c7566 JetBrains Mono 10
+      text "⌘2" @817.5625,115.92 #4f4a40 JetBrains Mono 9.5
+      rect 841.5625,94 1x37 fill #24221d
+      effect glow-disc 854.5625,109 7x7 blur 8 #b98affe6
       path 6 segments fill #b98aff
-      text "review #4410" @858.6719,116.865234 #b3ab99 Inter 12
-      text "permission" @942.3594,116.1 #7c7566 JetBrains Mono 10
-      text "⌘3" @1009.3594,115.92 #4f4a40 JetBrains Mono 9.5
-      rect 1033.3594,94 1x37 fill #24221d
-      effect glow-disc 1046.3594,109 7x7 blur 8 #5c8dffe6
+      text "review #4410" @868.5625,116.865234 #b3ab99 Inter 12
+      text "permission" @952.25,116.1 #7c7566 JetBrains Mono 10
+      text "⌘3" @1019.25,115.92 #4f4a40 JetBrains Mono 9.5
+      rect 1043.25,94 1x37 fill #24221d
+      effect glow-disc 1056.25,109 7x7 blur 8 #5c8dffe6
       path 6 segments fill #5c8dff
-      text "flaky e2e sweep" @1060.3594,116.865234 #b3ab99 Inter 12
-      text "ci" @1160.3438,116.1 #7c7566 JetBrains Mono 10
-      text "⌘4" @1179.3438,115.92 #4f4a40 JetBrains Mono 9.5
-      rect 1203.3438,94 1x37 fill #24221d
-      effect glow-disc 1216.3438,109 7x7 blur 8 #ff7ad6e6
+      text "flaky e2e sweep" @1070.25,116.865234 #b3ab99 Inter 12
+      text "ci" @1170.2344,116.1 #7c7566 JetBrains Mono 10
+      text "⌘4" @1189.2344,115.92 #4f4a40 JetBrains Mono 9.5
+      rect 1213.2344,94 1x37 fill #24221d
+      effect glow-disc 1226.2344,109 7x7 blur 8 #ff7ad6e6
       path 6 segments fill #ff7ad6
-      text "dash-filters" @1230.3438,116.865234 #b3ab99 Inter 12
-      text "in review" @1302.375,116.1 #7c7566 JetBrains Mono 10
-      text "⌘5" @1363.375,115.92 #4f4a40 JetBrains Mono 9.5
-      rect 1387.375,94 1x37 fill #24221d
-      effect glow-disc 1400.375,109 7x7 blur 8 #4fe0a0e6
+      text "dash-filters" @1240.2344,116.865234 #b3ab99 Inter 12
+      text "in review" @1312.2656,116.1 #7c7566 JetBrains Mono 10
+      text "⌘5" @1373.2656,115.92 #4f4a40 JetBrains Mono 9.5
+      rect 1397.2656,94 1x37 fill #24221d
+      effect glow-disc 1410.2656,109 7x7 blur 8 #4fe0a0e6
       path 6 segments fill #4fe0a0
-      text "tour: auth flow" @1414.375,116.865234 #b3ab99 Inter 12
-      text "⌘6" @1503.5312,115.92 #4f4a40 JetBrains Mono 9.5
-      rect 1527.5312,94 1x37 fill #24221d
+      text "tour: auth flow" @1424.2656,116.865234 #b3ab99 Inter 12
+      text "⌘6" @1513.4219,115.92 #4f4a40 JetBrains Mono 9.5
+      rect 1537.4219,94 1x37 fill #24221d
       text "5H" @1609.0938,116.28 #b3ab99 JetBrains Mono 10.5
       rect 1628.2812,110.5 46x4 fill #23211c radius 2
       rect 1628.2812,110.5 17.47998x4 fill #ffd23f radius 2

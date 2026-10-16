@@ -12,9 +12,9 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-func (s *errScene) github() *githubExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*githubExt); ok {
+func (s *errScene) github() *githubPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*githubPlugin); ok {
 			return x
 		}
 	}
@@ -32,19 +32,19 @@ func TestGitHubReviewForward(t *testing.T) {
 	ag.WaitSent(t)
 	ag.Emit(agent.TurnStart{})
 	ag.Emit(agent.TurnEnd{})
-	apiDir := shipDir(se, "usage-api")
+	apiDir := shipDir(se, "search-api")
 	file := filepath.Join(apiDir, "internal/api/usage/handler.go")
 	writeFiles(t, apiDir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() int { return 2 }\n"})
 	var branch string
 	for _, p := range se.Projects {
-		if p.Name == "usage-api" {
+		if p.Name == "search-api" {
 			branch = p.Branch
 		}
 	}
-	pr := hub.AddPR("acme/usage-api", gh.PR{Title: "feat(api): usage", Head: branch, Base: "main"})
-	root := hub.AddReviewComment("acme/usage-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
+	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat(api): usage", Head: branch, Base: "main"})
+	root := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
 		Path: "internal/api/usage/handler.go", Line: 3, Body: "Silently defaulting to 2 will hide config mistakes. Can this return an error instead?"})
-	hub.AddReview("acme/usage-api", pr.Number, gh.Review{User: "priya-k", Association: "MEMBER", State: gh.ReviewChangesRequested})
+	hub.AddReview("acme/search-api", pr.Number, gh.Review{User: "priya-k", Association: "MEMBER", State: gh.ReviewChangesRequested})
 
 	s.run("github.sync", nil)
 	var tid core.ThreadID
@@ -103,7 +103,7 @@ func TestGitHubReviewForward(t *testing.T) {
 	if p := ghPosts(hub); len(p) != 1 || !strings.HasSuffix(p[0], "/replies") {
 		t.Fatalf("posts %q, want one reply", p)
 	}
-	cs := hub.ReviewComments("acme/usage-api", pr.Number)
+	cs := hub.ReviewComments("acme/search-api", pr.Number)
 	if last := cs[len(cs)-1]; last.Body != "Agreed. `Handle` now returns an error. Logged too." || last.User != "you" {
 		t.Errorf("on GitHub: %+v", last)
 	}

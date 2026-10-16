@@ -35,7 +35,7 @@ type inlineCache struct {
 
 // inlineValues are the selected frame's variables after the lines of its function that name them, each where it's
 // first named, from the function's first line to the frame's (08-debug).
-func (x *debugExt) inlineValues(ctx registry.DecorationCtx) []registry.Decoration {
+func (x *debugPlugin) inlineValues(ctx registry.DecorationCtx) []registry.Decoration {
 	s := x.sess
 	f, ok := s.top()
 	if !ok || f.Path != ctx.Path || ctx.Buffer == nil || !x.inlineOn() {
@@ -67,13 +67,13 @@ func (x *debugExt) inlineValues(ctx registry.DecorationCtx) []registry.Decoratio
 	return out
 }
 
-func (x *debugExt) inlineOn() bool {
+func (x *debugPlugin) inlineOn() bool {
 	v, _, err := x.h.Options().Get(InlineValuesOption, registry.At{})
 	return err != nil || v != false
 }
 
 // frameValues are the selected frame's arguments and locals by name, the first scope's winning.
-func (x *debugExt) frameValues(s *debugSession) map[string]string {
+func (x *debugPlugin) frameValues(s *debugSession) map[string]string {
 	out := map[string]string{}
 	for _, sc := range s.scopes {
 		if sc.Expensive || sc.Hint == "registers" || strings.EqualFold(sc.Name, "globals") {

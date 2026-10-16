@@ -12,9 +12,9 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/lsp"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -54,7 +54,7 @@ type renamePrompt struct {
 // slowAnswer is how long a request the user waits on goes before they're told it's waiting.
 const slowAnswer = 400 * time.Millisecond
 
-func (x *lspExt) navigation(h ext.Host) {
+func (x *lspPlugin) navigation(h plugin.Host) {
 	goTo := func(what string, find func(c *lsp.Client, ctx context.Context, at lsp.Loc) ([]lsp.Location, error), vimKeys string) func(registry.Ctx, registry.Args) error {
 		var run func(ctx registry.Ctx, _ registry.Args) error
 		run = func(ctx registry.Ctx, args registry.Args) error {
@@ -161,7 +161,7 @@ func (x *lspExt) navigation(h ext.Host) {
 }
 
 // jump goes to a location as a vim jump in the current window, so ⌃O comes back.
-func (x *lspExt) jump(l lsp.Location) {
+func (x *lspPlugin) jump(l lsp.Location) {
 	r := l.Range
 	if l.Target != nil {
 		r = *l.Target
@@ -179,7 +179,7 @@ func (x *lspExt) jump(l lsp.Location) {
 }
 
 // toQuickfix lists locations in the quickfix list, and shows it.
-func (x *lspExt) toQuickfix(title string, ls []lsp.Location) {
+func (x *lspPlugin) toQuickfix(title string, ls []lsp.Location) {
 	var items []map[string]any
 	for _, l := range ls {
 		items = append(items, map[string]any{"path": l.Path, "line": l.Range.Start.Line + 1, "col": l.Range.Start.Col + 1, "text": lineOf(x, l)})
@@ -191,7 +191,7 @@ func (x *lspExt) toQuickfix(title string, ls []lsp.Location) {
 }
 
 // fileText is a file's text as the server sees it: an open buffer's, or what's on disk.
-func (x *lspExt) fileText(path string) []byte {
+func (x *lspPlugin) fileText(path string) []byte {
 	if f, ok := x.sh.editor.openBuffer(path); ok {
 		return f.Text.Snapshot().Bytes()
 	}
@@ -199,7 +199,7 @@ func (x *lspExt) fileText(path string) []byte {
 	return b
 }
 
-func lineOf(x *lspExt, l lsp.Location) string {
+func lineOf(x *lspPlugin, l lsp.Location) string {
 	lines := strings.Split(string(x.fileText(l.Path)), "\n")
 	if l.Range.Start.Line < len(lines) {
 		return strings.TrimSpace(lines[l.Range.Start.Line])
@@ -207,7 +207,7 @@ func lineOf(x *lspExt, l lsp.Location) string {
 	return ""
 }
 
-func (x *lspExt) references() error {
+func (x *lspPlugin) references() error {
 	p, path, d := x.current()
 	if d == nil || d.client == nil {
 		return fmt.Errorf("no language server for this file")
@@ -239,7 +239,7 @@ func (x *lspExt) references() error {
 	return nil
 }
 
-func (x *lspExt) peekMove(d int) {
+func (x *lspPlugin) peekMove(d int) {
 	if x.peek != nil {
 		n := len(x.peek.refs)
 		x.peek.sel = (x.peek.sel + d + n) % n
@@ -247,7 +247,7 @@ func (x *lspExt) peekMove(d int) {
 }
 
 // peekDecoration is the peek as a block under the line it's on.
-func (x *lspExt) peekDecoration(ctx registry.DecorationCtx) []registry.Decoration {
+func (x *lspPlugin) peekDecoration(ctx registry.DecorationCtx) []registry.Decoration {
 	pk := x.peek
 	if pk == nil || pk.path != ctx.Path || pk.line < ctx.Top || pk.line >= ctx.Bottom {
 		return nil
@@ -257,7 +257,7 @@ func (x *lspExt) peekDecoration(ctx registry.DecorationCtx) []registry.Decoratio
 }
 
 // peekView is the highlighted reference's code beside every reference, by file (09-lsp).
-func (x *lspExt) peekView(c *ui.Ctx, pk *refPeek) {
+func (x *lspPlugin) peekView(c *ui.Ctx, pk *refPeek) {
 	th := c.Theme()
 	sel := pk.refs[pk.sel]
 	root := x.sh.editor.dir
@@ -323,7 +323,7 @@ func (x *lspExt) peekView(c *ui.Ctx, pk *refPeek) {
 	})
 }
 
-func (x *lspExt) startRename() error {
+func (x *lspPlugin) startRename() error {
 	p, path, d := x.current()
 	if d == nil || d.client == nil {
 		return fmt.Errorf("no language server for this file")
@@ -346,7 +346,7 @@ func (x *lspExt) startRename() error {
 }
 
 // renameInput is the prompt at the cursor; Enter asks the server, then shows the rename as a diff.
-func (x *lspExt) renameInput(c *ui.Ctx, at render.Point) {
+func (x *lspPlugin) renameInput(c *ui.Ctx, at render.Point) {
 	rp := x.rename
 	id := ui.Child(ui.Child(c.Next("rename"), "card"), "in")
 	if !c.FocusWithin(id) && c.Interaction(id).Keys == nil {
@@ -370,7 +370,7 @@ func (x *lspExt) renameInput(c *ui.Ctx, at render.Point) {
 	})
 }
 
-func (x *lspExt) doRename(rp *renamePrompt) {
+func (x *lspPlugin) doRename(rp *renamePrompt) {
 	async(x, func(ctx context.Context) (*lsp.WorkspaceEdit, error) {
 		return rp.c.Rename(ctx, lsp.Loc{Path: rp.path, Pos: rp.at}, rp.value)
 	}, func(e *lsp.WorkspaceEdit, err error) {
@@ -388,7 +388,7 @@ func (x *lspExt) doRename(rp *renamePrompt) {
 
 // previewEdit shows a workspace edit as a diff of each file, which Apply makes. Edits that create, rename or delete
 // files are made as they are, without one.
-func (x *lspExt) previewEdit(title, detail string, e lsp.WorkspaceEdit) error {
+func (x *lspPlugin) previewEdit(title, detail string, e lsp.WorkspaceEdit) error {
 	var plan []search.FileEdit
 	count := 0
 	for _, ch := range e.Changes {
@@ -439,7 +439,7 @@ func (x *lspExt) previewEdit(title, detail string, e lsp.WorkspaceEdit) error {
 
 // symbolSources make the symbols pickers ask the servers: this file's symbols, and the workspace's as typed, with
 // the editor's own outline where no server answers.
-func (x *lspExt) symbolSources(h ext.Host) {
+func (x *lspPlugin) symbolSources(h plugin.Host) {
 	var file, all registry.PickerSource
 	for _, s := range h.Pickers() {
 		switch s.ID {
@@ -504,7 +504,7 @@ func lspCtx(ctx registry.Ctx) context.Context {
 	return ctx
 }
 
-func (x *lspExt) symbolItems(syms []lsp.Symbol) []registry.PickerItem {
+func (x *lspPlugin) symbolItems(syms []lsp.Symbol) []registry.PickerItem {
 	var out []registry.PickerItem
 	var walk func(ss []lsp.Symbol, container string)
 	walk = func(ss []lsp.Symbol, container string) {
@@ -527,7 +527,7 @@ func (x *lspExt) symbolItems(syms []lsp.Symbol) []registry.PickerItem {
 }
 
 // calls lists the incoming or outgoing calls of the function under the cursor in the lsp.calls picker.
-func (x *lspExt) calls(ctx registry.Ctx, incoming bool) error {
+func (x *lspPlugin) calls(ctx registry.Ctx, incoming bool) error {
 	p, path, d := x.current()
 	if d == nil || d.client == nil {
 		return fmt.Errorf("no language server for this file")
@@ -567,7 +567,7 @@ func (x *lspExt) calls(ctx registry.Ctx, incoming bool) error {
 }
 
 // callsSource is the call hierarchy's last answer, as a picker.
-func (x *lspExt) callsSource() registry.PickerSource {
+func (x *lspPlugin) callsSource() registry.PickerSource {
 	return registry.PickerSource{ID: "lsp.calls", Title: "Calls", Order: 45, PickerOnly: true, Unlisted: true,
 		Items: func(registry.Ctx, string) []registry.PickerItem { return x.callItems },
 		Preview: func(it registry.PickerItem) ui.Node {
@@ -580,7 +580,7 @@ func (x *lspExt) callsSource() registry.PickerSource {
 var substituteRe = regexp.MustCompile(`^:(?:%|[0-9.,$]*)s/\\<(\w+)\\>/(\w*)/`)
 
 // substitution is the word a :s on the command line replaces and what with, when a server could rename it instead.
-func (x *lspExt) substitution() (old, new string, ok bool) {
+func (x *lspPlugin) substitution() (old, new string, ok bool) {
 	line, open := x.sh.editor.e.Cmdline()
 	if !open {
 		return "", "", false
@@ -596,7 +596,7 @@ func (x *lspExt) substitution() (old, new string, ok bool) {
 }
 
 // substituteHints offer the rename while a :s of a whole word is typed (09-lsp), with how many matches the :s has.
-func (x *lspExt) substituteHints(h ext.Host) {
+func (x *lspPlugin) substituteHints(h plugin.Host) {
 	x.add(h.Contribute(registry.CmdlineHint{Name: "lsp.rename", Hint: func(string) string {
 		old, _, ok := x.substitution()
 		if !ok {

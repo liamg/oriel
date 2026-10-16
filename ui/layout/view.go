@@ -201,14 +201,14 @@ func dockEdge(c *ui.Ctx, st *viewState, e Edge, d *Dock) bool {
 	changed := false
 	if in.Held {
 		if st.edge == nil || st.edge.e != e {
-			st.edge = &dockResize{e: e, from: in.Pointer, size0: d.Size}
+			st.edge = &dockResize{e: e, from: in.Pointer(), size0: d.Size}
 		}
-		delta := in.Pointer.X - st.edge.from.X
+		delta := in.Pointer().X - st.edge.from.X
 		switch e {
 		case Right:
 			delta = -delta
 		case Bottom:
-			delta = st.edge.from.Y - in.Pointer.Y
+			delta = st.edge.from.Y - in.Pointer().Y
 		}
 		limit := c.Size().X * 0.8
 		if e == Bottom {
@@ -282,13 +282,13 @@ func splitter(c *ui.Ctx, st *viewState, n *Node, i int, s ui.Style) bool {
 	changed := false
 	if in.Held {
 		if st.resize == nil {
-			st.resize = &resize{split: n, i: i, from: in.Pointer, w0: append([]float32(nil), n.Weights...)}
+			st.resize = &resize{split: n, i: i, from: in.Pointer(), w0: append([]float32(nil), n.Weights...)}
 		}
 		rs := st.resize
 		if rs.split == n && rs.i == i && rs.span > 0 {
-			d := in.Pointer.X - rs.from.X
+			d := in.Pointer().X - rs.from.X
 			if n.Split == Vertical {
-				d = in.Pointer.Y - rs.from.Y
+				d = in.Pointer().Y - rs.from.Y
 			}
 			var total float32
 			for _, w := range rs.w0 {
@@ -363,10 +363,10 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool
 	switch {
 	case in.Held:
 		if st.drag == nil {
-			st.drag = &drag{view: v, from: in.Pointer}
+			st.drag = &drag{view: v, from: in.Pointer()}
 		}
 		if d := st.drag; d.view == v {
-			d.at = in.Pointer
+			d.at = in.Pointer()
 			if !d.moving && math.Hypot(float64(d.at.X-d.from.X), float64(d.at.Y-d.from.Y)) > dragSlop {
 				d.moving = true
 			}

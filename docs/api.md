@@ -5,6 +5,7 @@ Version 0.4.0.
 
 ## oriel
 
+- `oriel.asset(path)` (`ui`): One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
 - `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
 - `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).

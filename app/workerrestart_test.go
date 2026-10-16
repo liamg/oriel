@@ -101,13 +101,13 @@ func TestWorkerRestartStopsWaiting(t *testing.T) {
 func TestWorkerRestartDialogSnapshot(t *testing.T) {
 	s := newErrScene(t, t.TempDir())
 	s.sh.draining.Store(&workerDrain{restart: true, worker: core.LocalWorker, deadline: s.now.Add(42 * time.Second), focus: true,
-		busy: []core.SessionState{{ID: "inf-2231-fix-stale-usage-prices"}, {ID: "rounding", Name: "Round half-even"}}})
+		busy: []core.SessionState{{ID: "eng-2231-fix-stale-usage-prices"}, {ID: "rounding", Name: "Round half-even"}}})
 	for range 3 {
 		s.frame()
 	}
 	s.lint("the worker restart dialog")
 	s.golden("worker-restart")
-	if text := s.frameText(); !containsAll(text, "RESTARTING THE WORKER", "inf-2231-fix-stale-usage-prices", "Round half-even", "in 42s",
+	if text := s.frameText(); !containsAll(text, "RESTARTING THE WORKER", "eng-2231-fix-stale-usage-prices", "Round half-even", "in 42s",
 		"Hide", "Restart now") {
 		t.Errorf("the dialog reads:\n%s", text)
 	}

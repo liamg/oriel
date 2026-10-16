@@ -221,7 +221,7 @@ waiting:
 	return nil
 }
 
-// whenSessions runs fn on the loop with the sessions extension, if it's active.
+// whenSessions runs fn on the loop with the sessions plugin, if it's active.
 func (sh *shell) whenSessions(fn func(x *sessions)) {
 	sh.todoMu.Lock()
 	sh.todo = append(sh.todo, func() {

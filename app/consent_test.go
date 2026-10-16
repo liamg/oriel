@@ -18,7 +18,7 @@ runs = "both"
 [permissions]
 net     = { hosts = ["acme.atlassian.net"], why = "Fetch and update tickets on your Jira site" }
 secrets = { JIRA_TOKEN = "acme.atlassian.net", why = "Authenticate to your Jira" }
-"editor.read" = { why = "Spot ticket keys like INF-2231 in branches and commits" }
+"editor.read" = { why = "Spot ticket keys like ENG-2231 in branches and commits" }
 "agent.tools" = { tools = ["jira_ticket", "jira_comment"], why = "Let the agent read the ticket it is working on, and post progress comments" }
 "agent.prompt" = { why = "\"Start work\" on a ticket hands its description to the agent as the first prompt" }
 gate    = { why = "Skip prompts for our read-only jira-cli commands" }
@@ -45,9 +45,9 @@ func consentScene(t *testing.T) (*errScene, *[]string) {
 	return s, &installed
 }
 
-func (s *errScene) consent() *consentExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*consentExt); ok {
+func (s *errScene) consent() *consentPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*consentPlugin); ok {
 			return x
 		}
 	}

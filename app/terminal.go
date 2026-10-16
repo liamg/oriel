@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/edit"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/term"
 	"github.com/liamg/oriel/term/ghostty"
@@ -40,7 +40,7 @@ const (
 type terminals struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	mu    sync.Mutex
 	terms map[string]*terminal
@@ -77,9 +77,9 @@ type terminal struct {
 	bracket string        // [ or ] typed in terminal-normal mode, waiting for its twin
 }
 
-func (x *terminals) Manifest() ext.Manifest { return ext.Manifest{ID: "terminal"} }
+func (x *terminals) Manifest() plugin.Manifest { return plugin.Manifest{ID: "terminal"} }
 
-func (x *terminals) Activate(_ context.Context, h ext.Host) error {
+func (x *terminals) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.mu.Lock()
 	if x.terms == nil {

@@ -31,24 +31,24 @@ func (s *saidSpeaker) words() []string {
 	return append([]string(nil), s.said...)
 }
 
-func voiceScene(t *testing.T, mic *voicetest.Mic, tr *voicetest.Transcriber) (*errScene, *voiceExt, *saidSpeaker) {
+func voiceScene(t *testing.T, mic *voicetest.Mic, tr *voicetest.Transcriber) (*errScene, *voicePlugin, *saidSpeaker) {
 	t.Helper()
 	sp := &saidSpeaker{}
 	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) {
 		cfg.Voice = VoiceConfig{Mic: mic, Transcriber: tr, Speaker: sp}
 	})
-	var x *voiceExt
-	for _, e := range s.exts {
-		if v, ok := e.(*voiceExt); ok {
+	var x *voicePlugin
+	for _, e := range s.plugins {
+		if v, ok := e.(*voicePlugin); ok {
 			x = v
 		}
 	}
 	return s, x, sp
 }
 
-func (s *errScene) promptsPage() *promptsExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*promptsExt); ok {
+func (s *errScene) promptsPage() *promptsPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*promptsPlugin); ok {
 			return x
 		}
 	}

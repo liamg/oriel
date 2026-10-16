@@ -17,7 +17,7 @@ func TestProjectFocusAndPanels(t *testing.T) {
 		core.ProjectPanelOpened{ID: "inf", Project: "admin-ui", Panel: "explorer"},
 		core.ProjectPanelOpened{ID: "inf", Project: "api", Panel: "pull-request"},
 		core.ProjectColoured{ID: "inf", Project: "web", Colour: "red"},
-		core.SessionSynced{Session: core.SessionState{ID: "inf", Kind: core.KindWork, Projects: three, Branch: "inf-2310"}},
+		core.SessionSynced{Session: core.SessionState{ID: "inf", Kind: core.KindWork, Projects: three, Branch: "eng-2310"}},
 	} {
 		if err := s.Apply(ev); err != nil {
 			t.Fatalf("%T: %v", ev, err)

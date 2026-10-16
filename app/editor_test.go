@@ -12,7 +12,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/edit/input/emacs"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/render"
@@ -27,7 +27,7 @@ type running struct {
 	store core.Store
 	dir   string
 	done  chan error
-	host  ext.Host
+	host  plugin.Host
 	once  sync.Once
 }
 
@@ -41,13 +41,13 @@ func (r *running) stop() {
 
 // grabHost hands a test its host. It runs commands only through keymaps, on the app's loop.
 type grabHost struct {
-	h     ext.Host
+	h     plugin.Host
 	keys  []registry.Keymap
-	setup func(ext.Host)
+	setup func(plugin.Host)
 }
 
-func (g *grabHost) Manifest() ext.Manifest { return ext.Manifest{ID: "test.grab"} }
-func (g *grabHost) Activate(_ context.Context, h ext.Host) error {
+func (g *grabHost) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.grab"} }
+func (g *grabHost) Activate(_ context.Context, h plugin.Host) error {
 	g.h = h
 	for _, k := range g.keys {
 		h.Keymap(k)
@@ -64,7 +64,7 @@ func runEditor(t *testing.T, files map[string]string, open []string, keys ...reg
 	return runEditorWith(t, files, open, nil, keys...)
 }
 
-func runEditorWith(t *testing.T, files map[string]string, open []string, exts []ext.Extension, keys ...registry.Keymap) *running {
+func runEditorWith(t *testing.T, files map[string]string, open []string, plugins []plugin.Plugin, keys ...registry.Keymap) *running {
 	t.Helper()
 	dir := t.TempDir()
 	for name, body := range files {
@@ -79,7 +79,7 @@ func runEditorWith(t *testing.T, files map[string]string, open []string, exts []
 	be := headless.New()
 	g := &grabHost{keys: keys}
 	r := &running{t: t, store: eventstore.New(), dir: dir, done: make(chan error, 1)}
-	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), WorkDir: dir, Files: open, Extensions: append(exts, g)}
+	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), WorkDir: dir, Files: open, Plugins: append(plugins, g)}
 	go func() { r.done <- Run(ctx, be, cfg) }()
 	select {
 	case r.win = <-be.Windows():
@@ -274,7 +274,7 @@ func (r *running) shown() []layout.ViewRef {
 // ED-5: "an engine swap at runtime per buffer; a sample emacs plugin passes its tests".
 func TestEditorInputEnginePerBuffer(t *testing.T) {
 	r := runEditorWith(t, map[string]string{"a.txt": "alpha\n", "b.txt": "bravo\n"}, []string{"a.txt", "b.txt"},
-		[]ext.Extension{&emacs.Plugin{}},
+		[]plugin.Plugin{&emacs.Plugin{}},
 		registry.Keymap{Mode: "global", Keys: "<F2>", Command: "editor.input", Args: registry.Args{"engine": "plain"}},
 		registry.Keymap{Mode: "global", Keys: "<F3>", Command: "editor.input", Args: registry.Args{"engine": "emacs"}},
 		registry.Keymap{Mode: "global", Keys: "<F4>", Command: "editor.input", Args: registry.Args{"engine": "vim"}},

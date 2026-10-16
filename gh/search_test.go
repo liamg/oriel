@@ -40,11 +40,11 @@ func TestSearchPRs(t *testing.T) {
 
 func TestParsePR(t *testing.T) {
 	for ref, want := range map[string]string{
-		"https://github.com/infracost/infracost/pull/4410": "https://github.com/infracost/infracost/pull/4410",
-		"https://github.com/acme/api/pull/7/files":         "https://github.com/acme/api/pull/7",
-		"git@github.com:acme/api.git/pull/7":               "https://github.com/acme/api/pull/7",
-		" acme/api#12 ":                                    "https://github.com/acme/api/pull/12",
-		"github.com/acme/web.site/pull/3":                  "https://github.com/acme/web.site/pull/3",
+		"https://github.com/acme/acme/pull/4410":   "https://github.com/acme/acme/pull/4410",
+		"https://github.com/acme/api/pull/7/files": "https://github.com/acme/api/pull/7",
+		"git@github.com:acme/api.git/pull/7":       "https://github.com/acme/api/pull/7",
+		" acme/api#12 ":                            "https://github.com/acme/api/pull/12",
+		"github.com/acme/web.site/pull/3":          "https://github.com/acme/web.site/pull/3",
 	} {
 		r, n, err := gh.ParsePR(ref)
 		if err != nil || gh.PRURL(r, n) != want {

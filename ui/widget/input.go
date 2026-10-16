@@ -168,11 +168,11 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			if multi {
 				if tr, ok := c.Rect(ui.Child(id, "text")); ok {
 					ls := spans()
-					k := clampInt(int((in.Pointer.Y-tr.Min.Y)/lineH), 0, len(ls)-1)
-					at = nearest(ls[k], in.Pointer.X-tr.Min.X)
+					k := clampInt(int((in.Pointer().Y-tr.Min.Y)/lineH), 0, len(ls)-1)
+					at = nearest(ls[k], in.Pointer().X-tr.Min.X)
 				}
 			} else {
-				at = nearest(span{0, len(runes)}, in.Pointer.X-r.Min.X-10+st.scroll)
+				at = nearest(span{0, len(runes)}, in.Pointer().X-r.Min.X-10+st.scroll)
 			}
 			st.cursor, st.hasGoal = at, false
 			// The press anchors a selection (Shift keeps the old anchor); dragging extends it.

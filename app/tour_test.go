@@ -148,16 +148,16 @@ func TestTourStepsLandWhileReading(t *testing.T) {
 	s.tourFrames()
 	os.WriteFile(filepath.Join(ws, "10-summary.md"), []byte("# What you now know\n\nAll of it.\n"), 0o644)
 	s.now = s.now.Add(2 * time.Second)
-	x := s.tourExt()
+	x := s.tourPlugin()
 	se, _ := x.front()
 	x.state(se.ID).read = time.Time{}
 	s.tourFrames()
 	s.wantText(t, "a new step", "What you now know", "step 1 / 10")
 }
 
-func (s *errScene) tourExt() *tourExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*tourExt); ok {
+func (s *errScene) tourPlugin() *tourPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*tourPlugin); ok {
 			return x
 		}
 	}

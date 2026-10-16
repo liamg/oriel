@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/ui"
@@ -44,11 +44,11 @@ const diffPresenter = "diff"
 // ExplainUnit is the command the diff's ? runs, {file, line}: explain the code unit there (RV-5).
 const ExplainUnit = "explain.unit"
 
-// diffExt is the diff view, its commands and keys, and the review marks it keeps.
-type diffExt struct {
+// diffPlugin is the diff view, its commands and keys, and the review marks it keeps.
+type diffPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	by    map[string]*diffState // by instance: the repo's root
 	focus *diffState            // the diff with focus, or the last to have it
@@ -92,9 +92,9 @@ type diffSel struct {
 	hunk, line int
 }
 
-func (x *diffExt) Manifest() ext.Manifest { return ext.Manifest{ID: "diff"} }
+func (x *diffPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "diff"} }
 
-func (x *diffExt) Activate(_ context.Context, h ext.Host) error {
+func (x *diffPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by, x.files, x.loading = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}
 	x.local = core.State{Sessions: []core.SessionState{{ID: localReviews}}}
@@ -174,13 +174,13 @@ func (x *diffExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *diffExt) Deactivate(ctx context.Context) error {
+func (x *diffPlugin) Deactivate(ctx context.Context) error {
 	x.busy.Wait()
 	return x.disposer.Deactivate(ctx)
 }
 
 // wait is until the diffs being made are done.
-func (x *diffExt) wait() { x.busy.Wait() }
+func (x *diffPlugin) wait() { x.busy.Wait() }
 
 // hunkArg is the hunk {path} {hunk} names, or the selected one.
 func hunkArg(st *diffState, a registry.Args) diffSel {
@@ -190,14 +190,14 @@ func hunkArg(st *diffState, a registry.Args) diffSel {
 	return diffSel{file: a.String("path"), hunk: a.Int("hunk"), line: -1}
 }
 
-func (x *diffExt) layout() string {
+func (x *diffPlugin) layout() string {
 	if v, _, _ := x.h.Options().Get("diff.layout", registry.At{}); v == "unified" {
 		return "unified"
 	}
 	return "split"
 }
 
-func (x *diffExt) state(root string) *diffState {
+func (x *diffPlugin) state(root string) *diffState {
 	st := x.by[root]
 	if st == nil {
 		st = &diffState{root: root, open: map[string]bool{}, sel: diffSel{hunk: -1, line: -1}, bufs: map[string]diffBuf{}}
@@ -208,13 +208,13 @@ func (x *diffExt) state(root string) *diffState {
 
 // target is the repo a path is in and the file it names there ("" for the whole change): a file or directory in a
 // work tree, or a session's workspace (its primary project).
-func (x *diffExt) target(path string) (root, rel string, err error) {
+func (x *diffPlugin) target(path string) (root, rel string, err error) {
 	return repoTarget(x.sh, x.h, path)
 }
 
 // repoTarget is the repo a path is in and the file it names there ("" for the whole repo): a file or directory in
 // a work tree, or a session's workspace (its primary project); the work dir's with no path.
-func repoTarget(sh *shell, h ext.Host, path string) (root, rel string, err error) {
+func repoTarget(sh *shell, h plugin.Host, path string) (root, rel string, err error) {
 	if path == "" {
 		path = sh.cfg.WorkDir
 	}
@@ -255,7 +255,7 @@ func repoTarget(sh *shell, h ext.Host, path string) (root, rel string, err error
 }
 
 // open shows the diff of path's repo, with path's file open in it and selected, at its line when line isn't 0.
-func (x *diffExt) open(ctx context.Context, path string, line int) error {
+func (x *diffPlugin) open(ctx context.Context, path string, line int) error {
 	root, rel, err := x.target(path)
 	if err != nil {
 		return err
@@ -275,13 +275,13 @@ func (x *diffExt) open(ctx context.Context, path string, line int) error {
 const localReviews = "local"
 
 // session is the session and project whose work tree root is, for marks that last; ok is false outside one.
-func (x *diffExt) session(root string) (core.SessionState, string, bool) {
+func (x *diffPlugin) session(root string) (core.SessionState, string, bool) {
 	return projectSession(x.h, root)
 }
 
 // projectSession is the session and project whose work tree is root, the session in front first; ok is false
 // outside one.
-func projectSession(h ext.Host, root string) (core.SessionState, string, bool) {
+func projectSession(h plugin.Host, root string) (core.SessionState, string, bool) {
 	return sessionAt(h.State(), root)
 }
 
@@ -303,7 +303,7 @@ func sessionAt(st core.State, root string) (core.SessionState, string, bool) {
 }
 
 // review is what of a file's change has been reviewed: in its session, or for the window outside one.
-func (x *diffExt) review(root, file string) core.Review {
+func (x *diffPlugin) review(root, file string) core.Review {
 	if se, project, ok := x.session(root); ok {
 		return se.ReviewOf(project, file)
 	}
@@ -313,7 +313,7 @@ func (x *diffExt) review(root, file string) core.Review {
 }
 
 // marks are the changes of a file marked reviewed.
-func (x *diffExt) marks(root, file string) map[string]bool {
+func (x *diffPlugin) marks(root, file string) map[string]bool {
 	out := map[string]bool{}
 	for _, h := range x.review(root, file).Hunks {
 		out[h] = true
@@ -323,7 +323,7 @@ func (x *diffExt) marks(root, file string) map[string]bool {
 
 // record applies a review event: through the session's worker, so it lasts, or for as long as the window outside a
 // session. ev's session, and its project outside one, are filled in.
-func (x *diffExt) record(root string, ev core.Event, send func(c worker.Client, sid core.SessionID, project string) error) error {
+func (x *diffPlugin) record(root string, ev core.Event, send func(c worker.Client, sid core.SessionID, project string) error) error {
 	se, project, ok := x.session(root)
 	if !ok {
 		x.mu.Lock()
@@ -353,7 +353,7 @@ func (x *diffExt) record(root string, ev core.Event, send func(c worker.Client, 
 }
 
 // setMarks marks changes of a file reviewed or not.
-func (x *diffExt) setMarks(root, file string, ids []string, on bool) error {
+func (x *diffPlugin) setMarks(root, file string, ids []string, on bool) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -366,7 +366,7 @@ func (x *diffExt) setMarks(root, file string, ids []string, on bool) error {
 }
 
 // setSeen records lines of a file seen in the diff, read or skimmed.
-func (x *diffExt) setSeen(root, file string, read, skimmed []string) error {
+func (x *diffPlugin) setSeen(root, file string, read, skimmed []string) error {
 	if len(read)+len(skimmed) == 0 {
 		return nil
 	}
@@ -397,7 +397,7 @@ func reviewed(h diffHunk, marks map[string]bool) bool {
 	return len(h.ids) > 0
 }
 
-func (x *diffExt) reviewHunk(st *diffState, s diffSel) error {
+func (x *diffPlugin) reviewHunk(st *diffState, s diffSel) error {
 	h, ok := st.hunkAt(s)
 	if !ok {
 		return errors.New("no hunk is selected")
@@ -406,7 +406,7 @@ func (x *diffExt) reviewHunk(st *diffState, s diffSel) error {
 }
 
 // reviewFile marks every hunk of a file, reviewed unless want says otherwise, or every one already is.
-func (x *diffExt) reviewFile(st *diffState, file string, want *bool) error {
+func (x *diffPlugin) reviewFile(st *diffState, file string, want *bool) error {
 	hs := st.hunks[file]
 	if d := st.drawn[file]; d != nil {
 		hs = d.hunks
@@ -429,7 +429,7 @@ func (x *diffExt) reviewFile(st *diffState, file string, want *bool) error {
 }
 
 // moveHunk selects the next or previous hunk of the files open.
-func (x *diffExt) moveHunk(st *diffState, d int) {
+func (x *diffPlugin) moveHunk(st *diffState, d int) {
 	if len(st.order) == 0 {
 		return
 	}
@@ -448,7 +448,7 @@ func (x *diffExt) moveHunk(st *diffState, d int) {
 }
 
 // moveLine selects the next or previous line, across hunks.
-func (x *diffExt) moveLine(st *diffState, d int) {
+func (x *diffPlugin) moveLine(st *diffState, d int) {
 	if len(st.order) == 0 {
 		return
 	}
@@ -514,7 +514,7 @@ func (st *diffState) selLine() (path string, line, end int, ok bool) {
 }
 
 // comment opens a thread on the selection's lines, between them in the diff.
-func (x *diffExt) comment(st *diffState, _ registry.Args) error {
+func (x *diffPlugin) comment(st *diffState, _ registry.Args) error {
 	path, line, end, ok := st.selLine()
 	if !ok {
 		return errors.New("no hunk is selected")
@@ -527,7 +527,7 @@ func (x *diffExt) comment(st *diffState, _ registry.Args) error {
 }
 
 // explain opens the selected line in the editor and asks for its code unit to be explained there.
-func (x *diffExt) explain(st *diffState, _ registry.Args) error {
+func (x *diffPlugin) explain(st *diffState, _ registry.Args) error {
 	path, line, _, ok := st.selLine()
 	if !ok {
 		return errors.New("no hunk is selected")
@@ -538,7 +538,7 @@ func (x *diffExt) explain(st *diffState, _ registry.Args) error {
 	return x.h.Run(context.Background(), ExplainUnit, registry.Args{"file": path, "line": line})
 }
 
-func (x *diffExt) source(st *diffState, _ registry.Args) error {
+func (x *diffPlugin) source(st *diffState, _ registry.Args) error {
 	path, line, _, ok := st.selLine()
 	if !ok {
 		return errors.New("no hunk is selected")
@@ -547,7 +547,7 @@ func (x *diffExt) source(st *diffState, _ registry.Args) error {
 }
 
 // diffFor is a file's diff as last made, and makes it again (off the loop) when what it's made from has changed.
-func (x *diffExt) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState) *diffFile {
+func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState) *diffFile {
 	root := tree.root()
 	work := tree.abs(f.Path)
 	in := diffInput{rev: st.BaseHash, path: f.Path, old: f.Old, code: f.Code, add: f.Add, del: f.Del, repo: root, work: work}
@@ -595,7 +595,7 @@ func (x *diffExt) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState) *diff
 
 // newBuffer is the buffer of a file's new side, for its decorations: the editor's when it's open, else one of the
 // diff's own, edited to the text each new diff is made from so anchors in it follow the changes.
-func (x *diffExt) newBuffer(st *diffState, file string, d *diffFile) *text.Buffer {
+func (x *diffPlugin) newBuffer(st *diffState, file string, d *diffFile) *text.Buffer {
 	if d.in.buf != nil {
 		return d.in.buf
 	}
@@ -623,7 +623,7 @@ type diffBuf struct {
 	buf  *text.Buffer
 }
 
-type diffView struct{ x *diffExt }
+type diffView struct{ x *diffPlugin }
 
 func (v diffView) Title(instance string) string { return "Diff · " + filepath.Base(instance) }
 func (v diffView) EdgeToEdge()                  {}
@@ -667,7 +667,7 @@ func (v diffView) Revive(state json.RawMessage) (string, error) {
 }
 
 // agentName is what the authorship box calls the agent of root's session.
-func (x *diffExt) agentName(root string) string {
+func (x *diffPlugin) agentName(root string) string {
 	if se, _, ok := x.session(root); ok && se.Agent.Provider != "" {
 		return providerName(se.Agent.Provider)
 	}

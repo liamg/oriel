@@ -1,6 +1,6 @@
 ---
 id: plugins/install
-covers: [app.overlay.plugins.consent]
+covers: [app.overlay.plugins.consent, app.overlay.plugins]
 related: [plugins/lua, plugins/api]
 ---
 
@@ -13,6 +13,51 @@ partial grant, so a plugin never runs half-working. Anything not declared is ref
 an error naming the capability.
 
 A plugin that needs only the always-allowed capabilities installs without asking. `⌘↵` installs, `esc` cancels.
+
+## Installing from settings.toml {#settings}
+
+Plugins are listed in `settings.toml` under `[plugins]`, by id. Adding a line installs the plugin, and taking it out
+uninstalls it: its files go, and its line leaves `oriel-lock.toml`.
+
+```toml
+[plugins]
+"acme/jira"     = "^0.4"                                 # from the registry
+"someone/thing" = { git = "github.com/someone/thing" }   # not in a registry: unverified
+"me/wip"        = { path = "~/src/wip" }                  # a local directory
+"acme/linear"   = { version = "^1", enabled = false }     # installed, not loaded
+```
+
+`oriel-lock.toml`, next to `settings.toml`, records what you accepted for each plugin: its exact commit and its
+capabilities. A plugin the lockfile covers loads without asking, which is how your dotfiles work on a new machine.
+One that asks for more stays off, with a card in the inbox that opens this screen. A project's
+`.oriel/settings.toml` can list plugins too, once you trust the project.
+
+## The Plugins page {#page}
+
+`:Plugins` lists what's installed: the built-ins and everything in `[plugins]`, with what each contributes, the
+capabilities it holds and how it runs. **Updates** lists what has a newer version or waits for your consent.
+**Registry** browses the plugin registries; Install adds the plugin's line to `[plugins]`.
+
+## Registries {#registries}
+
+```toml
+[registry]
+sources      = ["liamg/oriel-plugins", "acme/oriel-plugins"]
+keys         = { "acme/oriel-plugins" = "ed25519:…" }
+updates      = "ask"     # auto | ask | manual
+trusted_hold = "24h"
+```
+
+Each registry's index is signed, and Oriel refuses one that doesn't verify with its key. An id in more than one
+registry comes from the first. A version a registry revokes is disabled, with a card saying why.
+
+## Badges {#badges}
+
+The badge says who has looked at the code, not what it may do: consent is the same for every badge.
+
+- **reviewed**: this exact commit was reviewed in a registry pull request.
+- **trusted**: the registry trusts its author; this version wasn't reviewed.
+- **unverified**: a `git` or `path` source, in no registry. Nobody has reviewed this code.
 
 ## Updates {#updates}
 

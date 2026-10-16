@@ -38,20 +38,20 @@
 </style>
 <div class="titlebar">
   <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
-  <div class="stabs"><div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">work</span><span class="k">⌘1</span></div><div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div></div>
+  <div class="stabs"><div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">work</span><span class="k">⌘1</span></div><div class="stab"><span class="dot r"></span>ENG-2231 search api<span class="mini">needs you</span><span class="k">⌘2</span></div></div>
   <div class="tbright"><span class="kbd">⌘K</span></div>
 </div>
 <div class="main">
   <div class="bgx code" style="padding-top:10px">
-    <div class="ln"><span class="g">1</span><span class="t"><span class="c">-- ~/.config/oriel/init.lua</span></span></div>
-    <div class="ln"><span class="g">2</span><span class="t">oriel.<span class="f">plugins</span>{ { <span class="s">"acme/oriel-jira"</span> } }</span></div>
+    <div class="ln"><span class="g">1</span><span class="t"><span class="c"># ~/.config/oriel/settings.toml</span></span></div>
+    <div class="ln"><span class="g">2</span><span class="t">[<span class="f">plugins</span>] <span class="s">"acme/jira"</span> = <span class="s">"^0.4"</span></span></div>
   </div>
   <div class="scrim2"></div>
   <div class="dlg">
     <div class="dh">
       <div class="logo">J</div>
       <div><h1>Install oriel-jira</h1><div class="meta">github.com/acme/oriel-jira · v0.4.2 · commit 9c1e07a · process plugin (Go) · runs: both</div></div>
-      <span style="margin-left:auto" class="row gap8"><span class="chip y">community</span><span class="chip">3 deps · all allowlisted</span></span>
+      <span style="margin-left:auto" class="row gap8"><span class="chip g">reviewed</span><span class="chip">3 deps · all allowlisted</span></span>
     </div>
     <div class="db">
       <div class="caps">
@@ -61,7 +61,7 @@
         <div class="cp"><span class="risk m">med</span><span class="nm">net</span><span class="ds"><div>HTTPS to <code>acme.atlassian.net</code> only</div><div class="why"><b>author says</b>Fetch and update tickets on your Jira site</div></span></div>
         <div class="cp"><span class="risk h">high</span><span class="nm">secrets</span><span class="ds"><div><code>JIRA_TOKEN</code> → bound to <code>acme.atlassian.net</code>; the plugin never sees the value</div><div class="why"><b>author says</b>Authenticate to your Jira</div></span></div>
         <div class="grp">Your code &amp; agents</div>
-        <div class="cp"><span class="risk m">med</span><span class="nm">editor.read</span><span class="ds"><div>read the worktree to find ticket keys in branch names and commits</div><div class="why"><b>author says</b>Spot ticket keys like INF-2231 in branches and commits</div></span></div>
+        <div class="cp"><span class="risk m">med</span><span class="nm">editor.read</span><span class="ds"><div>read the worktree to find ticket keys in branch names and commits</div><div class="why"><b>author says</b>Spot ticket keys like ENG-2231 in branches and commits</div></span></div>
         <div class="cp warn"><span class="risk h">high</span><span class="nm">agent.tools</span><span class="ds"><div>offer <code>jira_ticket</code> and <code>jira_comment</code> to agents — tool output reaches the agent</div><div class="why"><b>author says</b>Let the agent read the ticket it is working on, and post progress comments</div></span></div>
         <div class="cp warn"><span class="risk h">high</span><span class="nm">agent.prompt</span><span class="ds"><div>send a ticket's text as the first prompt when you "Start work"</div><div class="why"><b>author says</b>"Start work" on a ticket hands its description to the agent as the first prompt</div></span></div>
         <div class="grp" style="color:var(--red)">Critical</div>
@@ -83,4 +83,4 @@
     <div class="df"><span class="dim mono" style="font-size:10.5px">all or nothing · 6 capabilities · 1 critical · audit log in :Plugins</span><span style="margin-left:auto" class="row gap8"><span class="btn ghost">Cancel</span><span class="btn pri">Install</span></span></div>
   </div>
 </div>
-<div class="status"><span class="mode">NORMAL</span><span>:Plugins install acme/oriel-jira</span></div>
+<div class="status"><span class="mode">NORMAL</span><span>:Plugins registry</span></div>

@@ -12,7 +12,7 @@ import (
 
 // inspectRows are :Inspect's language server section: the server for the file, and the semantic token under the
 // cursor, asked for the first time it's shown after an edit.
-func (x *lspExt) inspectRows() []registry.InspectRow {
+func (x *lspPlugin) inspectRows() []registry.InspectRow {
 	p, path, d := x.current()
 	faded := func(s string) []registry.InspectRow {
 		return []registry.InspectRow{{Key: "—", Value: s, Faded: true}}

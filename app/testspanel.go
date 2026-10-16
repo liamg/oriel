@@ -26,7 +26,7 @@ type testsPanel struct {
 	out    int    // 0 this case's output, 1 the whole run's, 2 the raw JSON
 }
 
-type testsView struct{ x *testsExt }
+type testsView struct{ x *testsPlugin }
 
 func (v testsView) Title(string) string {
 	runs := v.x.history.Runs()
@@ -43,7 +43,7 @@ func (v testsView) Build(registry.ViewCtx) ui.Node {
 }
 
 // latest is each test's latest result, by key, from the run in progress and the runs kept.
-func (x *testsExt) latest() map[string]*testrun.Result {
+func (x *testsPlugin) latest() map[string]*testrun.Result {
 	out := map[string]*testrun.Result{}
 	for _, r := range x.history.Runs() {
 		for _, res := range r.Tests {
@@ -64,7 +64,7 @@ func (x *testsExt) latest() map[string]*testrun.Result {
 
 // panelView is the tree of packages, tests and cases with their states and recent runs, filters, the selected
 // case's output, and the last run (36-tests).
-func (x *testsExt) panelView(c *ui.Ctx) {
+func (x *testsPlugin) panelView(c *ui.Ctx) {
 	th := c.Theme()
 	latest := x.latest()
 	failed := 0
@@ -139,7 +139,7 @@ func (x *testsExt) panelView(c *ui.Ctx) {
 }
 
 // agentRun is the latest run the session in front's agent made, as the evidence its claims link to (TR-5).
-func (x *testsExt) agentRun(c *ui.Ctx) {
+func (x *testsPlugin) agentRun(c *ui.Ctx) {
 	st := x.h.State()
 	se, ok := st.Session(st.Focus)
 	if !ok {
@@ -159,7 +159,7 @@ func (x *testsExt) agentRun(c *ui.Ctx) {
 }
 
 // lastRunLine is the last run: its number, trigger, scope, counts and who started it.
-func (x *testsExt) lastRunLine(c *ui.Ctx) {
+func (x *testsPlugin) lastRunLine(c *ui.Ctx) {
 	runs := x.history.Runs()
 	if len(runs) == 0 {
 		return
@@ -179,7 +179,7 @@ func (x *testsExt) lastRunLine(c *ui.Ctx) {
 
 // treeItems are packages, then tests, then their cases; with a filter, the failing ones (and what holds them) or the
 // slowest ten.
-func (x *testsExt) treeItems(latest map[string]*testrun.Result, filter int) []widget.TreeItem {
+func (x *testsPlugin) treeItems(latest map[string]*testrun.Result, filter int) []widget.TreeItem {
 	keys := make([]string, 0, len(latest))
 	for k := range latest {
 		keys = append(keys, k)
@@ -266,7 +266,7 @@ func (x *testsExt) treeItems(latest map[string]*testrun.Result, filter int) []wi
 }
 
 // rowTrailing is a test's recent runs as a sparkline, flaky when it is, and its duration.
-func (x *testsExt) rowTrailing(c *ui.Ctx, latest map[string]*testrun.Result, id string) {
+func (x *testsPlugin) rowTrailing(c *ui.Ctx, latest map[string]*testrun.Result, id string) {
 	th := c.Theme()
 	r := latest[id]
 	if r == nil {
@@ -308,7 +308,7 @@ func (x *testsExt) rowTrailing(c *ui.Ctx, latest map[string]*testrun.Result, id 
 }
 
 // outputLines are what the output pane shows: the case's output, the whole run's, or its raw JSON.
-func (x *testsExt) outputLines(r *testrun.Result, which int) []string {
+func (x *testsPlugin) outputLines(r *testrun.Result, which int) []string {
 	runs := x.history.Runs()
 	var run *testrun.Run
 	if len(runs) > 0 {
@@ -346,7 +346,7 @@ func (x *testsExt) outputLines(r *testrun.Result, which int) []string {
 }
 
 // openResult goes to a test's failure, or its name.
-func (x *testsExt) openResult(r *testrun.Result) {
+func (x *testsPlugin) openResult(r *testrun.Result) {
 	if r == nil || r.Failure == nil || r.Failure.Loc == nil {
 		return
 	}

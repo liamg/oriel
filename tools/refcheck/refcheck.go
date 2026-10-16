@@ -313,7 +313,7 @@ func (c *Checker) checkMarkdown(r Ref, file, heading string) error {
 		}
 		return fmt.Errorf("%s: quote not found under %q in spec/%s: %q", r, heading, file, r.Quote)
 	}
-	return fmt.Errorf("%s: no heading %q in spec/%s", r, heading, file)
+	return c.checkUnderlined(r, file, heading) // a setext heading, underlined with = or -
 }
 
 var mdAnchor = regexp.MustCompile(`<a\b[^>]*\bname=["']([^"']+)["']`)

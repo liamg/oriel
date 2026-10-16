@@ -37,6 +37,11 @@
 ---@field api { version: string }
 oriel = {}
 
+--- One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
+---@param path string
+---@return string
+function oriel.asset(path) end
+
 --- Run a command by its id, with arguments.
 ---@param id string
 ---@param args? table

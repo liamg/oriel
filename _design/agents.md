@@ -262,7 +262,7 @@ type Session interface {
   policy, env, and the sandbox to exec into.
 - `Event` is one normalised union. Provider-specific extras ride in `Raw`.
 - Adding a provider (Gemini, Aider, OpenCode, a local model) means one Go
-  package, or an out-of-process extension speaking the same interface over RPC
+  package, or an out-of-process plugin speaking the same interface over RPC
   (see `plugins.md`).
 - A conformance test suite (`agent/agenttest`) runs every provider against a fake of its CLI:
   start, send, tool call, permission (allowed and denied), question, interrupt, fork, resume, and a lost login
@@ -276,7 +276,7 @@ type Session interface {
 - Built in RV-6: a request with a `Format` (the walkthrough's JSON steps) is forked with the format at the end of the
   prompt instead of the depth's "in markdown" instruction; the agent explainer's byline is "written by <provider>
   from the session's own context".
-- Built in RV-7: side questions in general are `registry.Forker`s (`registry.Fork`); the sessions extension registers
+- Built in RV-7: side questions in general are `registry.Forker`s (`registry.Fork`); the sessions plugin registers
   the agent's, which forks the session named in the request (not just the one in front) over `agent.fork`. The verify
   quiz asks through it.
 
@@ -468,11 +468,11 @@ type (
     Failure    struct{ Err error; Retryable bool }
 )
 
-// registration: built-in, or a process extension speaking the same methods over JSON-RPC
+// registration: built-in, or a process plugin speaking the same methods over JSON-RPC
 func init() { agent.Register("claude", claude.Provider{Bin: "claude"}) }
 ```
 
-- A process-extension provider (Gemini, say) implements the same methods as JSON-RPC.
+- A process-plugin provider (Gemini, say) implements the same methods as JSON-RPC.
   Its RPC adapter is also an `agent.Provider`, so the session host can't tell them apart.
 - The parts of the protocols above (`thread/start`, `item/commandExecution/requestApproval`, the Claude hook API
   and transcript format) get pinned and checked against the installed CLI version in `Detect`, because they move.

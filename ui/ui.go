@@ -93,6 +93,8 @@ type UI struct {
 	animating bool
 	wake      time.Time
 	clip      render.Clipboard
+	tracked   bool          // the latest frame read where the pointer is (Interaction.Pointer)
+	regions   []render.Rect // and asked whether it was in these
 }
 
 type flags struct {
@@ -164,6 +166,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.byID = map[ID]*elem{0: u.root}
 	u.floats = u.floats[:0]
 	u.animating, u.wake = false, time.Time{}
+	u.tracked, u.regions = false, u.regions[:0]
 	build(&Ctx{u: u, e: u.root})
 	u.settleFocus()
 	if u.in.pending() {
@@ -256,6 +259,7 @@ func (u *UI) tooltip() {
 		return
 	}
 	at := in.pos
+	u.tracked = true // it follows the pointer
 	c := &Ctx{u: u, e: u.root}
 	c.Box(tooltipKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: u.opts.TooltipStroke, Border: 1, Radius: 4,
 		Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}, Scale: u.opts.TooltipScale}, func(c *Ctx) {

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
@@ -29,13 +29,13 @@ var futures = map[string]string{
 
 // APIs is the API for one VM over a host. What a config registers is kept, so a reload drops it all first.
 type APIs struct {
-	Host   ext.Host
+	Host   plugin.Host
 	VM     *script.VM
-	Plugin ext.Plugin // whose VM it is: every call is checked against its grants; your config's is trusted
+	Plugin plugin.Caller // whose VM it is: every call is checked against its grants; your config's is trusted
 
-	procs *ext.Processes // its process plugins, started on first use
-	wasm  *ext.WASM
-	hostm *ext.Methods
+	procs *plugin.Processes // its process plugins, started on first use
+	wasm  *plugin.WASM
+	hostm *plugin.Methods
 
 	mu      sync.Mutex
 	owned   []registry.Disposable
@@ -47,12 +47,12 @@ type APIs struct {
 }
 
 // Install puts the API in vm, for your own config: trusted, its files in dir.
-func Install(vm *script.VM, h ext.Host, dir string) *APIs {
-	return InstallPlugin(vm, h, ext.Plugin{ID: "init.lua", Dir: dir})
+func Install(vm *script.VM, h plugin.Host, dir string) *APIs {
+	return InstallPlugin(vm, h, plugin.Caller{ID: "init.lua", Dir: dir})
 }
 
 // InstallPlugin puts the API in vm for a plugin: each call it makes is checked against p's grants.
-func InstallPlugin(vm *script.VM, h ext.Host, p ext.Plugin) *APIs {
+func InstallPlugin(vm *script.VM, h plugin.Host, p plugin.Caller) *APIs {
 	a := &APIs{Host: h, VM: vm, Plugin: p, pending: map[string]pendingOption{}, touched: map[optKey]optPrev{}}
 	a.bind(vm)
 	a.options(vm)
@@ -85,10 +85,10 @@ func (a *APIs) Dispose() {
 }
 
 // check is the guard on a call: the generated glue asks it for each function's capability.
-func (a *APIs) check(c string) error { return a.Plugin.Check(ext.Capability(c), "") }
+func (a *APIs) check(c string) error { return a.Plugin.Check(plugin.Capability(c), "") }
 
 // Check asks the guard whether the VM's plugin may use c on target.
-func (a *APIs) Check(c ext.Capability, target string) error { return a.Plugin.Check(c, target) }
+func (a *APIs) Check(c plugin.Capability, target string) error { return a.Plugin.Check(c, target) }
 
 func (a *APIs) setIndicator(name string, v any) {
 	a.mu.Lock()

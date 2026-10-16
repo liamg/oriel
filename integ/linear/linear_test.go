@@ -127,47 +127,47 @@ func TestAssignedTickets(t *testing.T) {
 	for _, is := range issues {
 		keys = append(keys, is.Key)
 	}
-	if want := "INF-2231 INF-2240 INF-2219 INF-2252"; strings.Join(keys, " ") != want {
+	if want := "ENG-2231 ENG-2240 ENG-2219 ENG-2252"; strings.Join(keys, " ") != want {
 		t.Fatalf("tickets %v, want %s", keys, want)
 	}
-	if is := issues[0]; is.PR == nil || is.PR.Number != 4398 || is.PR.Repo != "infracost/cloud" || is.State != "Todo" || is.PriorityLabel != "High" ||
+	if is := issues[0]; is.PR == nil || is.PR.Number != 4398 || is.PR.Repo != "acme/cloud" || is.State != "Todo" || is.PriorityLabel != "High" ||
 		is.Project != "Usage" {
-		t.Errorf("INF-2231: %+v", is)
+		t.Errorf("ENG-2231: %+v", is)
 	}
-	if is := issues[1]; !is.Blocked || strings.Join(is.BlockedBy, ",") != "INF-2231" {
-		t.Errorf("INF-2240 isn't blocked by INF-2231: %+v", is)
+	if is := issues[1]; !is.Blocked || strings.Join(is.BlockedBy, ",") != "ENG-2231" {
+		t.Errorf("ENG-2240 isn't blocked by ENG-2231: %+v", is)
 	}
 	if is := issues[2]; !is.Started || is.Blocked || is.PR == nil || is.PR.Number != 530 {
-		t.Errorf("INF-2219: %+v", is)
+		t.Errorf("ENG-2219: %+v", is)
 	}
 }
 
 // "Start work from a ticket: the ticket, its comments and attachments become the plan prompt."
 func TestTicketForTheAgent(t *testing.T) {
 	c, _ := recorded(t)
-	tk, err := c.Ticket(t.Context(), "INF-2231")
+	tk, err := c.Ticket(t.Context(), "ENG-2231")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !tk.Mine || tk.Assignee != "Liam Galvin" || len(tk.Comments) != 4 || len(tk.Attachments) != 2 || tk.PR == nil || tk.PR.Number != 4398 {
 		t.Fatalf("ticket %+v", tk)
 	}
-	if want := "Customers on the new Team plan see last month's unit prices in /v1/usage for up to 24h. Reported by 3 accounts; repro steps and a HAR attached."; tk.Summary() != want {
+	if want := "Customers who rebuild their index see last week's results from /v1/search for up to 24h. Reported by 3 accounts; repro steps and a HAR attached."; tk.Summary() != want {
 		t.Errorf("summary %q", tk.Summary())
 	}
-	if got := strings.Join(tk.Facts(), " · "); got != "linear.app/infracost/issue/INF-2231 · 2 attachments · linked PR #4398 · 4 comments" {
+	if got := strings.Join(tk.Facts(), " · "); got != "linear.app/acme/issue/ENG-2231 · 2 attachments · linked PR #4398 · 4 comments" {
 		t.Errorf("facts %q", got)
 	}
 	ctx := tk.Context()
 	for _, want := range []string{
-		"Linear ticket INF-2231: Usage API returns stale prices after plan change",
+		"Linear ticket ENG-2231: Search API returns stale results after a reindex",
 		"State: Todo · Priority: High · Project: Usage",
-		"3. Unit prices are Pro's until the nightly job runs",
+		"3. Results are the old index's until the nightly job runs",
 		"## Comments (4)",
-		"**priya** · 2026-10-14 11:20:\n\n> Probably the price table cache in usage-api. It's keyed by org, not org + plan.",
+		"**priya** · 2026-10-14 11:20:\n\n> Probably the result cache in search-api. It's keyed by org, not org + index version.",
 		"## Attachments (2)",
-		"- usage-stale-prices.har (412 KB): https://uploads.linear.app/1a2b3c/usage-stale-prices.har",
-		"- #4398 fix(usage): key price cache by plan (infracost/cloud): https://github.com/infracost/cloud/pull/4398",
+		"- search-stale-results.har (412 KB): https://uploads.linear.app/1a2b3c/search-stale-results.har",
+		"- #4398 fix(search): key result cache by index version (acme/cloud): https://github.com/acme/cloud/pull/4398",
 	} {
 		if !strings.Contains(ctx, want) {
 			t.Errorf("the agent's context has no %q:\n%s", want, ctx)
@@ -176,7 +176,7 @@ func TestTicketForTheAgent(t *testing.T) {
 	if strings.Index(ctx, "**ana** · 2026-10-13") > strings.Index(ctx, "**ben**") {
 		t.Error("the comments aren't oldest first")
 	}
-	if _, err := c.Ticket(t.Context(), "INF-9999"); err == nil || !strings.Contains(err.Error(), "Entity not found") {
+	if _, err := c.Ticket(t.Context(), "ENG-9999"); err == nil || !strings.Contains(err.Error(), "Entity not found") {
 		t.Errorf("a ticket Linear hasn't: %v", err)
 	}
 }
@@ -185,28 +185,28 @@ func TestTicketForTheAgent(t *testing.T) {
 func TestStateMoves(t *testing.T) {
 	c, l := recorded(t)
 	ctx := t.Context()
-	if moved, state, err := c.Start(ctx, "INF-2240"); err != nil || !moved || state != "In Progress" {
+	if moved, state, err := c.Start(ctx, "ENG-2240"); err != nil || !moved || state != "In Progress" {
 		t.Fatalf("start: %v %q %v", moved, state, err)
 	}
-	if moved, state, _ := c.Start(ctx, "INF-2240"); moved || state != "In Progress" {
+	if moved, state, _ := c.Start(ctx, "ENG-2240"); moved || state != "In Progress" {
 		t.Errorf("started again: %v %q", moved, state)
 	}
-	if moved, state, err := c.Review(ctx, "INF-2240"); err != nil || !moved || state != "In Review" {
+	if moved, state, err := c.Review(ctx, "ENG-2240"); err != nil || !moved || state != "In Review" {
 		t.Fatalf("review: %v %q %v", moved, state, err)
 	}
-	if moved, _, _ := c.Review(ctx, "INF-2240"); moved {
+	if moved, _, _ := c.Review(ctx, "ENG-2240"); moved {
 		t.Error("reviewed again")
 	}
-	if moved, state, _ := c.Start(ctx, "INF-2240"); moved || state != "In Review" {
+	if moved, state, _ := c.Start(ctx, "ENG-2240"); moved || state != "In Review" {
 		t.Errorf("start moved a ticket in review back: %v %q", moved, state)
 	}
-	if moved, state, err := c.Done(ctx, "INF-2240"); err != nil || !moved || state != "Done" {
+	if moved, state, err := c.Done(ctx, "ENG-2240"); err != nil || !moved || state != "Done" {
 		t.Fatalf("done: %v %q %v", moved, state, err)
 	}
-	if moved, state, _ := c.Done(ctx, "INF-2240"); moved || state != "Done" {
+	if moved, state, _ := c.Done(ctx, "ENG-2240"); moved || state != "Done" {
 		t.Errorf("done again: %v %q", moved, state)
 	}
-	if moved, _, _ := c.Review(ctx, "INF-2240"); moved {
+	if moved, _, _ := c.Review(ctx, "ENG-2240"); moved {
 		t.Error("review moved a done ticket back")
 	}
 	m := l.Mutations()
@@ -220,12 +220,12 @@ func TestStateMoves(t *testing.T) {
 // "…and links back to the PR."
 func TestLinkPR(t *testing.T) {
 	c, l := recorded(t)
-	if err := c.LinkPR(t.Context(), "INF-2231", "https://github.com/infracost/cloud/pull/4398", 4398, "fix(usage): key price cache by plan"); err != nil {
+	if err := c.LinkPR(t.Context(), "ENG-2231", "https://github.com/acme/cloud/pull/4398", 4398, "fix(search): key result cache by index version"); err != nil {
 		t.Fatal(err)
 	}
 	m := l.Mutations()
-	want := map[string]any{"issueId": "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231", "url": "https://github.com/infracost/cloud/pull/4398",
-		"title": "#4398 fix(usage): key price cache by plan"}
+	want := map[string]any{"issueId": "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231", "url": "https://github.com/acme/cloud/pull/4398",
+		"title": "#4398 fix(search): key result cache by index version"}
 	if len(m) != 1 || m[0].Op != "attachmentCreate" || !reflect.DeepEqual(m[0].Vars["input"], want) {
 		t.Errorf("mutations %+v", m)
 	}

@@ -25,7 +25,7 @@ func Slider(c *ui.Ctx, key any, v *float64, o SliderOpts) bool {
 	passOn(c, id, in.Keys, func(k render.KeyEvent) bool { return hasKey([]render.KeyEvent{k}, "h", "l", "Left", "Right") })
 	span := o.Max - o.Min
 	if r, ok := c.Rect(id); ok && in.Held && r.Dx() > 0 {
-		t := float64((in.Pointer.X - r.Min.X) / r.Dx())
+		t := float64((in.Pointer().X - r.Min.X) / r.Dx())
 		*v = o.Min + math.Max(0, math.Min(1, t))*span
 		if o.Step > 0 {
 			*v = math.Round(*v/o.Step) * o.Step

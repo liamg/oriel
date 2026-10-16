@@ -166,3 +166,19 @@ type InspectRow struct {
 
 func (InspectSection) ContributionKind() string   { return "inspect.section" }
 func (s InspectSection) ContributionName() string { return s.Name }
+
+// Font is a font file a plugin ships (catalog.md, [contributes] fonts), by its file name.
+type Font struct {
+	Name, Path, Source string
+}
+
+// Icon is an icon file a plugin ships (catalog.md, [contributes] icons), named by its file name without the
+// extension.
+type Icon struct {
+	Name, Path, Source string
+}
+
+func (Font) ContributionKind() string   { return "font" }
+func (f Font) ContributionName() string { return f.Name }
+func (Icon) ContributionKind() string   { return "icon" }
+func (i Icon) ContributionName() string { return i.Name }

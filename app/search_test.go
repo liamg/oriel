@@ -30,7 +30,7 @@ func searchScene(t *testing.T) (*errScene, string) {
 }
 
 func (s *errScene) search() *projectSearch {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if x, ok := e.(*projectSearch); ok {
 			return x
 		}

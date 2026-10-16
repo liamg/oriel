@@ -46,9 +46,9 @@ func lspScene(t *testing.T, fixture, server, file string) (*errScene, string) {
 	return s, root
 }
 
-func (s *errScene) lsp() *lspExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*lspExt); ok {
+func (s *errScene) lsp() *lspPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*lspPlugin); ok {
 			return x
 		}
 	}

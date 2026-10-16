@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/integ/linear/lineartest"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
@@ -59,13 +59,13 @@ oriel.ticket.tracker{ name = "jira", title = "Jira", order = 5, keys = "^OPS-[0-
 // loadJira runs the Jira-like tracker as an installed plugin's Lua.
 func loadJira(t *testing.T, s *errScene) *script.VM {
 	t.Helper()
-	m, err := ext.ParseManifest([]byte(jiraManifest))
+	m, err := plugin.ParseManifest([]byte(jiraManifest))
 	if err != nil {
 		t.Fatal(err)
 	}
-	g := ext.NewGrants()
+	g := plugin.NewGrants()
 	g.Grant(m.ID, m.Permissions)
-	vm := s.pluginVM(t, ext.Plugin{ID: m.ID, Dir: t.TempDir(), Guard: g})
+	vm := s.pluginVM(t, plugin.Caller{ID: m.ID, Dir: t.TempDir(), Guard: g})
 	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(jiraLua)}); err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 	loadJira(t, s)
 
 	s.run("omnibox.open", registry.Args{"query": "!"})
-	s.until(t, "Linear's tickets", func() bool { return strings.Contains(s.frameText(), "INF-2231") })
+	s.until(t, "Linear's tickets", func() bool { return strings.Contains(s.frameText(), "ENG-2231") })
 	if text := s.frameText(); !strings.Contains(text, "Set your Jira API key") || strings.Contains(text, "OPS-7") {
 		t.Errorf("Jira's tickets before its key:\n%s", text)
 	}
@@ -102,7 +102,7 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 	tools := registry.AgentToolsFor(s.reg, assistantAgent, true)
 	my := tools[slices.IndexFunc(tools, func(t registry.AgentTool) bool { return t.Name == "my_tickets" })]
 	out, err := s.callTool(t, ctx, my, nil)
-	if err != nil || !strings.Contains(out, "INF-2231") || !strings.Contains(out, "No Jira API key is set yet: :TicketKey jira sets one.") {
+	if err != nil || !strings.Contains(out, "ENG-2231") || !strings.Contains(out, "No Jira API key is set yet: :TicketKey jira sets one.") {
 		t.Errorf("my_tickets without Jira's key: %s %v", out, err)
 	}
 
@@ -121,11 +121,11 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 	s.run("omnibox.open", registry.Args{"query": "!"})
 	s.until(t, "both trackers' tickets", func() bool {
 		text := s.frameText()
-		return strings.Contains(text, "OPS-12") && strings.Contains(text, "INF-2219")
+		return strings.Contains(text, "OPS-12") && strings.Contains(text, "ENG-2219")
 	})
 	text := strings.ReplaceAll(s.frameText(), "\n", "")
-	order := []string{"OPS-7 Rotate the staging certificates", "INF-2231 Usage API returns stale prices after plan change",
-		"INF-2219 Round minor units half-even, per currency", "OPS-12 Alert on queue depth"}
+	order := []string{"OPS-7 Rotate the staging certificates", "ENG-2231 Search API returns stale results after a reindex",
+		"ENG-2219 Round minor units half-even, per currency", "OPS-12 Alert on queue depth"}
 	at := -1
 	for _, want := range order {
 		i := strings.Index(text, want)
@@ -155,7 +155,7 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 	for _, m := range mine {
 		got = append(got, m.Tracker+" "+m.Key)
 	}
-	if want := "Jira OPS-7,Linear INF-2231,Linear INF-2240,Linear INF-2219,Jira OPS-12,Linear INF-2252"; strings.Join(got, ",") != want {
+	if want := "Jira OPS-7,Linear ENG-2231,Linear ENG-2240,Linear ENG-2219,Jira OPS-12,Linear ENG-2252"; strings.Join(got, ",") != want {
 		t.Errorf("my_tickets: %v, want %s", got, want)
 	}
 	if mine[4].URL != "https://acme.atlassian.net/browse/OPS-12" || !mine[4].Blocked || mine[4].Priority != "Medium" {
@@ -210,7 +210,7 @@ func TestPRLinkedToAnyTracker(t *testing.T) {
 	jira := loadJira(t, s)
 	var api string
 	for _, p := range first.Projects {
-		if p.Name == "usage-api" {
+		if p.Name == "search-api" {
 			api = p.Repo
 		}
 	}
@@ -221,7 +221,7 @@ func TestPRLinkedToAnyTracker(t *testing.T) {
 		return ok && se.Snapshot().Ticket == "OPS-12" && se.Snapshot().Branch != ""
 	})
 	se, _ := st.Session(st.Focus)
-	pr := hub.AddPR("acme/usage-api", gh.PR{Title: "feat: alert on queue depth", Head: se.Snapshot().Branch, Base: "main"})
+	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat: alert on queue depth", Head: se.Snapshot().Branch, Base: "main"})
 	s.run("ship.refresh", nil)
 	link := "link OPS-12 #" + itoa(pr.Number) + " feat: alert on queue depth"
 	s.until(t, "the PR linked and the issue in review", func() bool {
@@ -340,14 +340,14 @@ func TestContinueTicketSession(t *testing.T) {
 // card for it continues it too.
 func TestLinearContinueTicketSession(t *testing.T) {
 	s, lw, _, _ := ticketScene(t)
-	se := startTicketSession(t, s, lw, "Stale prices", "INF-2231")
+	se := startTicketSession(t, s, lw, "Stale results", "ENG-2231")
 	other := startTicketSession(t, s, lw, "Something else", "")
 	s.run("session.stop", registry.Args{"id": string(se.ID)})
 	waitState(t, s.store, "the session stopped", func(st core.State) bool {
 		a, _ := st.Session(se.ID)
 		return !a.Snapshot().Agent.Running
 	})
-	continueTicket(t, s, other.ID, se, "INF-2231", "linked PR #4398")
+	continueTicket(t, s, other.ID, se, "ENG-2231", "linked PR #4398")
 	waitState(t, s.store, "the session resumed", func(st core.State) bool {
 		a, _ := st.Session(se.ID)
 		return a.Snapshot().Agent.Running
@@ -386,13 +386,13 @@ func TestTicketDoneOnMerge(t *testing.T) {
 		return ok && se.Snapshot().Ticket == "OPS-12" && se.Snapshot().Branch != "" && len(se.Projects()) == 2
 	})
 	se, _ := st.Session(st.Focus)
-	prs := shipPRs(t, s, hub, se.Snapshot(), "usage-api", "web-dashboard")
+	prs := shipPRs(t, s, hub, se.Snapshot(), "search-api", "web-dashboard")
 	s.shipSettle(t, "both PRs in review", func() bool { return slices.Contains(jiraCalls(jira), "review OPS-12") })
 
-	hub.Merge("acme/usage-api", prs["usage-api"].Number)
+	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "the first PR read merged", func() bool {
-		sh, ok := s.ship().ship(se.ID(), "usage-api")
+		sh, ok := s.ship().ship(se.ID(), "search-api")
 		return ok && sh.PR != nil && sh.PR.Merged
 	})
 	time.Sleep(50 * time.Millisecond)
@@ -423,10 +423,10 @@ func TestLinearDoneOnMerge(t *testing.T) {
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
 	s, _, hub, se, _ := shipScene(t, change)
 	loadLinear(t, s)
-	s.until(t, "the session's start moved", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to In Progress in Linear") })
-	prs := shipPRs(t, s, hub, se, "usage-api")
-	s.shipSettle(t, "the PR in review", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to In Review in Linear") })
-	hub.Merge("acme/usage-api", prs["usage-api"].Number)
+	s.until(t, "the session's start moved", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to In Progress in Linear") })
+	prs := shipPRs(t, s, hub, se, "search-api")
+	s.shipSettle(t, "the PR in review", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to In Review in Linear") })
+	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "the ticket done", func() bool {
 		for _, m := range l.Mutations() {
@@ -437,7 +437,7 @@ func TestLinearDoneOnMerge(t *testing.T) {
 		}
 		return false
 	})
-	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to Done in Linear") })
+	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to Done in Linear") })
 }
 
 func calledTimes(list []string, s string) int {

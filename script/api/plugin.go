@@ -10,37 +10,37 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/script"
 )
 
 // handlerWait is how long a process's request waits for its Lua handler to run on the loop.
 const handlerWait = 30 * time.Second
 
-func (a *APIs) methods() *ext.Methods {
+func (a *APIs) methods() *plugin.Methods {
 	if a.hostm == nil {
-		a.hostm = ext.HostMethods(a.Host)
+		a.hostm = plugin.HostMethods(a.Host)
 	}
 	return a.hostm
 }
 
-func (a *APIs) processes() *ext.Processes {
+func (a *APIs) processes() *plugin.Processes {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.procs == nil {
-		a.procs = &ext.Processes{Methods: a.methods(), Log: func(id string) *slog.Logger { return ext.Logger(a.Host, id) }}
-		if g, ok := a.Plugin.Guard.(*ext.Grants); ok {
+		a.procs = &plugin.Processes{Methods: a.methods(), Log: func(id string) *slog.Logger { return plugin.Logger(a.Host, id) }}
+		if g, ok := a.Plugin.Guard.(*plugin.Grants); ok {
 			a.procs.Places = g.Places
 		}
 	}
 	return a.procs
 }
 
-func (a *APIs) wasmHost() *ext.WASM {
+func (a *APIs) wasmHost() *plugin.WASM {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.wasm == nil {
-		a.wasm = &ext.WASM{Methods: a.methods(), Log: func(id string) *slog.Logger { return ext.Logger(a.Host, id) }}
+		a.wasm = &plugin.WASM{Methods: a.methods(), Log: func(id string) *slog.Logger { return plugin.Logger(a.Host, id) }}
 	}
 	return a.wasm
 }
@@ -138,7 +138,7 @@ func (p Process) Spawn(path string, opts script.Table) (script.Table, error) {
 		env = append(env, k+"="+fmt.Sprint(v))
 	}
 	sort.Strings(env)
-	o := ext.SpawnOpts{Args: strs(opts["args"]), Dir: expand(str(opts, "cwd")), Env: env, Request: handle, Notify: handle}
+	o := plugin.SpawnOpts{Args: strs(opts["args"]), Dir: expand(str(opts, "cwd")), Env: env, Request: handle, Notify: handle}
 	if f, ok := opts["on_exit"].(*script.Fn); ok {
 		o.Exit = func(err error) {
 			var msg any
@@ -202,7 +202,7 @@ type WASM struct{ a *APIs }
 func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 	a := w.a
 	h := newHandlers(tableOf(opts["on"]))
-	mod, err := a.wasmHost().Load(context.Background(), a.Plugin, path, ext.WASMOpts{
+	mod, err := a.wasmHost().Load(context.Background(), a.Plugin, path, plugin.WASMOpts{
 		Request: func(method string, params json.RawMessage) (any, bool, error) {
 			f := h.get(method)
 			if f == nil {

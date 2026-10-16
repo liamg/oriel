@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -64,7 +64,7 @@ func (a *commitAsk) hard() bool {
 	return false
 }
 
-func (g *gitExt) activateCommit(h ext.Host) {
+func (g *gitPlugin) activateCommit(h plugin.Host) {
 	g.add(h.DeclareEvent(registry.EventInfo{Name: "Commit", Fired: true, Payload: CommitEvent{},
 		Doc: "A commit about to be made, past its gates; a veto stops it. { project, root, message, files, unread }"}))
 	open := func(registry.Args) bool { return g.ask != nil }
@@ -110,7 +110,7 @@ func (g *gitExt) activateCommit(h ext.Host) {
 }
 
 // resume runs the dialog's commit again with more args: its message, anyway or confirm.
-func (g *gitExt) resume(more registry.Args) error {
+func (g *gitPlugin) resume(more registry.Args) error {
 	a := g.ask
 	if a == nil {
 		return errors.New("no commit is waiting")
@@ -136,7 +136,7 @@ func commitFiles(st *gitx.State, all bool) []string {
 // commit runs the commit gates and the Commit hooks, then commits off the loop. Without a message it asks for one;
 // a hard gate holds it until anyway, a soft one until confirm, and either shows the dialog. A gate still counting is
 // asked again, until commitWait from started.
-func (g *gitExt) commit(a registry.Args, started time.Time) error {
+func (g *gitPlugin) commit(a registry.Args, started time.Time) error {
 	root, _, err := repoTarget(g.sh, g.h, cmpOr(a.String("path"), g.h.Here().Project))
 	if err != nil {
 		return err
@@ -229,7 +229,7 @@ func (g *gitExt) commit(a registry.Args, started time.Time) error {
 
 // recordOverrides puts a commit made past gates in the session's log (a notice) and its state; outside a session,
 // in Oriel's log.
-func (g *gitExt) recordOverrides(se core.SessionState, project string, inSession bool, hash, message string, held []registry.GateCheck) {
+func (g *gitPlugin) recordOverrides(se core.SessionState, project string, inSession bool, hash, message string, held []registry.GateCheck) {
 	subject, _, _ := strings.Cut(strings.TrimSpace(message), "\n")
 	short := hash[:min(len(hash), 7)]
 	for _, c := range held {
@@ -267,7 +267,7 @@ func (g *gitExt) recordOverrides(se core.SessionState, project string, inSession
 }
 
 // commitView is the commit dialog while it's open: the message, or the gates holding the commit.
-func (g *gitExt) commitView(c *ui.Ctx) {
+func (g *gitPlugin) commitView(c *ui.Ctx) {
 	a := g.ask
 	if a == nil {
 		return
@@ -320,7 +320,7 @@ func (g *gitExt) commitView(c *ui.Ctx) {
 	}
 }
 
-func (g *gitExt) commitMessage(c *ui.Ctx, a *commitAsk, width float32) {
+func (g *gitPlugin) commitMessage(c *ui.Ctx, a *commitAsk, width float32) {
 	th := c.Theme()
 	what := "what's staged"
 	if a.all {
@@ -348,7 +348,7 @@ func (g *gitExt) commitMessage(c *ui.Ctx, a *commitAsk, width float32) {
 }
 
 // gatesFor are the gates that wouldn't pass the dialog's commit now, for a preview while the message is written.
-func (g *gitExt) gatesFor(a *commitAsk) []registry.GateCheck {
+func (g *gitPlugin) gatesFor(a *commitAsk) []registry.GateCheck {
 	st := g.tree(a.root).state()
 	if st == nil {
 		return nil
@@ -367,7 +367,7 @@ func gateLine(c registry.GateCheck) string {
 	return fmt.Sprintf("⏻ %s gate (%s): %s", cmpOr(c.Gate.Label, c.Gate.Name), c.Mode, c.Reason)
 }
 
-func (g *gitExt) commitGates(c *ui.Ctx, a *commitAsk, width float32) {
+func (g *gitPlugin) commitGates(c *ui.Ctx, a *commitAsk, width float32) {
 	th := c.Theme()
 	for i, gc := range a.checks {
 		c.Column(i, ui.Style{W: ui.Flex(1), Gap: 4, Role: ui.RoleGroup, Label: gc.Gate.Label}, func(c *ui.Ctx) {
@@ -394,7 +394,7 @@ func (g *gitExt) commitGates(c *ui.Ctx, a *commitAsk, width float32) {
 	widget.Wrap(c, "note", note, width, monoFont(10.5, th.C(theme.FgFaint)))
 }
 
-func (g *gitExt) commitButtons(c *ui.Ctx, a *commitAsk) {
+func (g *gitPlugin) commitButtons(c *ui.Ctx, a *commitAsk) {
 	run := func(cmd string) {
 		if err := g.h.Run(context.Background(), cmd, nil); err != nil {
 			g.h.Notify(core.Notice{ID: "git.commit", Severity: core.SevError, Key: true, Text: err.Error()})
@@ -431,7 +431,7 @@ func (g *gitExt) commitButtons(c *ui.Ctx, a *commitAsk) {
 }
 
 // submit commits the message written.
-func (g *gitExt) submit() {
+func (g *gitPlugin) submit() {
 	if g.ask == nil || strings.TrimSpace(g.ask.message) == "" {
 		return
 	}

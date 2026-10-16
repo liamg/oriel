@@ -177,7 +177,7 @@ func (u *UI) barAlpha(id ID, r render.Rect) float32 {
 	case BarsAlways:
 		return 1
 	}
-	if (u.in.bar != nil && u.in.bar.id == id) || (u.in.inside && inside(u.in.pos, r)) {
+	if (u.in.bar != nil && u.in.bar.id == id) || u.over(r) {
 		return 1
 	}
 	st := u.states[id]
@@ -217,7 +217,7 @@ func (u *UI) paintBars(f render.Frame, id ID, r render.Rect) {
 			continue
 		}
 		b := bs[axis]
-		hot := (u.in.bar != nil && u.in.bar.id == id && u.in.bar.axis == axis) || (u.in.inside && inside(u.in.pos, grow(b.track, barGrabMargin)))
+		hot := (u.in.bar != nil && u.in.bar.id == id && u.in.bar.axis == axis) || u.over(grow(b.track, barGrabMargin))
 		w := float32(barWidth)
 		col := u.opts.ScrollThumb
 		if hot {

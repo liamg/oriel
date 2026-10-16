@@ -31,7 +31,7 @@ type failure struct {
 }
 
 // failures are the failing results of the run in progress or the last one, that say where they failed.
-func (x *testsExt) failures() []failure {
+func (x *testsPlugin) failures() []failure {
 	var out []failure
 	runs := x.history.Runs()
 	x.mu.Lock()
@@ -58,7 +58,7 @@ func (x *testsExt) failures() []failure {
 }
 
 // failureBlocks are the failures of this file, each a block under its assertion's line (TR-2).
-func (x *testsExt) failureBlocks(ctx registry.DecorationCtx, d *discovery) []registry.Decoration {
+func (x *testsPlugin) failureBlocks(ctx registry.DecorationCtx, d *discovery) []registry.Decoration {
 	var out []registry.Decoration
 	for _, f := range x.failures() {
 		loc := f.res.Failure.Loc
@@ -73,7 +73,7 @@ func (x *testsExt) failureBlocks(ctx registry.DecorationCtx, d *discovery) []reg
 
 // failureView is the block: the test and where it failed, want and got side by side with what differs marked, its
 // output, and jump, debug, explain and fix; an explanation under it once asked for.
-func (x *testsExt) failureView(c *ui.Ctx, f failure) {
+func (x *testsPlugin) failureView(c *ui.Ctx, f failure) {
 	th := c.Theme()
 	res, fl := f.res, f.res.Failure
 	key := res.Key()
@@ -172,7 +172,7 @@ func failureOutput(res *testrun.Result) []string {
 }
 
 // failingSince is how long the test has failed: "first failed 2 runs ago".
-func (x *testsExt) failingSince(key string) string {
+func (x *testsPlugin) failingSince(key string) string {
 	es := x.history.Entries(key)
 	n := 0
 	for i := len(es) - 1; i >= 0 && es[i].Status.Failing(); i-- {
@@ -187,7 +187,7 @@ func (x *testsExt) failingSince(key string) string {
 }
 
 // failureContext is what an explainer or the agent gets: the failure, its output, and the test's code.
-func (x *testsExt) failureContext(res *testrun.Result) string {
+func (x *testsPlugin) failureContext(res *testrun.Result) string {
 	var b strings.Builder
 	fl := res.Failure
 	fmt.Fprintf(&b, "Test %s in %s failed", res.Test, res.Package)
@@ -210,7 +210,7 @@ func (x *testsExt) failureContext(res *testrun.Result) string {
 }
 
 // failureTrouble is a failure as something to fix or explain.
-func (x *testsExt) failureTrouble(res *testrun.Result) registry.Trouble {
+func (x *testsPlugin) failureTrouble(res *testrun.Result) registry.Trouble {
 	t := registry.Trouble{Kind: "test-failure", Subject: res.Test + " failed", Context: x.failureContext(res),
 		Fix: fmt.Sprintf("Fix the failing test %s.", res.Test)}
 	if l := res.Failure.Loc; l != nil {

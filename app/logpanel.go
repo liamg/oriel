@@ -13,7 +13,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -36,7 +36,7 @@ var levelOrder = []slog.Level{slog.LevelError, slog.LevelWarn, slog.LevelInfo, s
 // logPanel is :Log: the notification history and log records, newest last, with scopes, filters and search.
 type logPanel struct {
 	sh       *shell
-	h        ext.Host
+	h        plugin.Host
 	scope    int
 	show     map[slog.Level]bool
 	filter   string
@@ -46,7 +46,7 @@ type logPanel struct {
 	files    map[string]*sourceFile
 }
 
-func newLogPanel(sh *shell, h ext.Host) *logPanel {
+func newLogPanel(sh *shell, h plugin.Host) *logPanel {
 	return &logPanel{sh: sh, h: h, scope: scopeAll, files: map[string]*sourceFile{},
 		show: map[slog.Level]bool{slog.LevelError: true, slog.LevelWarn: true, slog.LevelInfo: true}}
 }

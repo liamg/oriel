@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -51,10 +51,10 @@ var inboxFilters = []struct {
 	{"Sandbox", func(c registry.InboxCard) bool { return c.Group == registry.GroupSandbox }},
 }
 
-type inboxExt struct {
+type inboxPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	mu        sync.Mutex
 	rows      map[string]*inboxRow // by card key
@@ -84,9 +84,9 @@ func (r *inboxRow) when() time.Time {
 	return r.seen
 }
 
-func (x *inboxExt) Manifest() ext.Manifest { return ext.Manifest{ID: "inbox"} }
+func (x *inboxPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "inbox"} }
 
-func (x *inboxExt) Activate(_ context.Context, h ext.Host) error {
+func (x *inboxPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.sh.inbox = h, x
 	x.rows, x.dismissed = map[string]*inboxRow{}, map[string]bool{}
 	open := registry.Args{"id": InboxView, "place": "dock", "edge": "right", "size": 380, "title": "Inbox"}
@@ -142,7 +142,7 @@ func (x *inboxExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 // gather reads every source again: new cards join the rows, and those a source has let go become history.
-func (x *inboxExt) gather() []*inboxRow {
+func (x *inboxPlugin) gather() []*inboxRow {
 	cards := registry.InboxCards(x.h)
 	x.mu.Lock()
 	defer x.mu.Unlock()
@@ -189,7 +189,7 @@ func (x *inboxExt) gather() []*inboxRow {
 }
 
 // stacked are the cards over the window: waiting, to interrupt, not dismissed; banner ones first.
-func (x *inboxExt) stacked() []*inboxRow {
+func (x *inboxPlugin) stacked() []*inboxRow {
 	var out []*inboxRow
 	for _, r := range x.gather() {
 		if r.waiting() && (r.card.Interrupt || r.card.Banner) && !x.isDismissed(r.card.Key()) && (r.card.Banner || !x.isInline(r.card.Key())) {
@@ -208,13 +208,13 @@ func (x *inboxExt) stacked() []*inboxRow {
 	return out
 }
 
-func (x *inboxExt) isDismissed(k string) bool {
+func (x *inboxPlugin) isDismissed(k string) bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.dismissed[k]
 }
 
-func (x *inboxExt) isInline(k string) bool {
+func (x *inboxPlugin) isInline(k string) bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.inline[k]
@@ -222,14 +222,14 @@ func (x *inboxExt) isInline(k string) bool {
 
 // showInline keeps the cards keyed in keys off the stack while a surface draws them itself, as mission control does;
 // nil gives them back. A banner card stays at the top whatever shows it.
-func (x *inboxExt) showInline(keys map[string]bool) {
+func (x *inboxPlugin) showInline(keys map[string]bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	x.inline = keys
 }
 
 // waiting are the cards waiting on you, in the order they came.
-func (x *inboxExt) waiting() []*inboxRow {
+func (x *inboxPlugin) waiting() []*inboxRow {
 	var out []*inboxRow
 	for _, r := range x.gather() {
 		if r.waiting() {
@@ -240,7 +240,7 @@ func (x *inboxExt) waiting() []*inboxRow {
 }
 
 // dismiss takes a card off the stack, and tells its source.
-func (x *inboxExt) dismiss(k string) error {
+func (x *inboxPlugin) dismiss(k string) error {
 	x.gather()
 	x.mu.Lock()
 	r := x.rows[k]
@@ -258,7 +258,7 @@ func (x *inboxExt) dismiss(k string) error {
 }
 
 // Count is how many cards wait in session, and the tone of the first: its tab's badge.
-func (x *inboxExt) Count(session string) (n int, tone string) {
+func (x *inboxPlugin) Count(session string) (n int, tone string) {
 	for _, r := range x.gather() {
 		if r.waiting() && r.card.Session == session {
 			if n == 0 {
@@ -271,7 +271,7 @@ func (x *inboxExt) Count(session string) (n int, tone string) {
 }
 
 // waitingCount is how many cards wait, in every session and none.
-func (x *inboxExt) waitingCount() int {
+func (x *inboxPlugin) waitingCount() int {
 	n := 0
 	for _, r := range x.gather() {
 		if r.waiting() {
@@ -282,7 +282,7 @@ func (x *inboxExt) waitingCount() int {
 }
 
 // overlay is the banner cards at the top and the stack at the bottom right.
-func (x *inboxExt) overlay(c *ui.Ctx) {
+func (x *inboxPlugin) overlay(c *ui.Ctx) {
 	all := x.stacked()
 	if len(all) == 0 {
 		return
@@ -333,7 +333,7 @@ func (x *inboxExt) overlay(c *ui.Ctx) {
 }
 
 // card draws a row's card: stacked, with its ✕; or in the panel.
-func (x *inboxExt) card(c *ui.Ctx, r *inboxRow, stacked bool) {
+func (x *inboxPlugin) card(c *ui.Ctx, r *inboxRow, stacked bool) {
 	k := r.card.Key()
 	p := registry.CardPlace{Stacked: stacked}
 	if stacked {
@@ -352,7 +352,7 @@ func (x *inboxExt) card(c *ui.Ctx, r *inboxRow, stacked bool) {
 }
 
 // face is a card with no Draw of its own: its fields in an action card, its actions running their commands.
-func (x *inboxExt) face(c *ui.Ctx, cd registry.InboxCard, p registry.CardPlace) {
+func (x *inboxPlugin) face(c *ui.Ctx, cd registry.InboxCard, p registry.CardPlace) {
 	th := c.Theme()
 	tone, ok := th.Color(cd.Tone)
 	if !ok {
@@ -397,7 +397,7 @@ func (x *inboxExt) face(c *ui.Ctx, cd registry.InboxCard, p registry.CardPlace) 
 }
 
 // visible are the panel's rows under its filter: those waiting first, then history, each newest first.
-func (x *inboxExt) visible() []*inboxRow {
+func (x *inboxPlugin) visible() []*inboxRow {
 	rows := x.gather()
 	x.mu.Lock()
 	keep := inboxFilters[x.filter].keep
@@ -421,7 +421,7 @@ func (x *inboxExt) visible() []*inboxRow {
 }
 
 // panelShown says whether the Inbox panel is open in the layout.
-func (x *inboxExt) panelShown() bool {
+func (x *inboxPlugin) panelShown() bool {
 	for _, v := range x.h.Layout().Visible() {
 		if v.ID == InboxView {
 			return true
@@ -431,7 +431,7 @@ func (x *inboxExt) panelShown() bool {
 }
 
 // move selects the next or the previous row of the panel.
-func (x *inboxExt) move(d int) {
+func (x *inboxPlugin) move(d int) {
 	rows := x.visible()
 	if len(rows) == 0 {
 		return
@@ -453,7 +453,7 @@ func (x *inboxExt) move(d int) {
 
 // panel is the Inbox panel (12-inbox, right): the filters, then a row for every card, the selected one's card open
 // under it.
-func (x *inboxExt) panel(c *ui.Ctx, vc registry.ViewCtx) {
+func (x *inboxPlugin) panel(c *ui.Ctx, vc registry.ViewCtx) {
 	th := c.Theme()
 	rows := x.visible()
 	waiting := x.waitingCount()
@@ -538,7 +538,7 @@ func (x *inboxExt) panel(c *ui.Ctx, vc registry.ViewCtx) {
 }
 
 // row is a card's line in the panel: its icon, title, what it's about and when. It reports a click.
-func (x *inboxExt) row(c *ui.Ctx, r *inboxRow, on bool, now time.Time) bool {
+func (x *inboxPlugin) row(c *ui.Ctx, r *inboxRow, on bool, now time.Time) bool {
 	th := c.Theme()
 	tone, ok := th.Color(r.card.Tone)
 	if !ok {
@@ -577,7 +577,7 @@ func (x *inboxExt) row(c *ui.Ctx, r *inboxRow, on bool, now time.Time) bool {
 }
 
 // indicator is the title bar's INBOX and its count; a click opens the panel.
-func (x *inboxExt) indicator(c *ui.Ctx) {
+func (x *inboxPlugin) indicator(c *ui.Ctx) {
 	th := c.Theme()
 	n := x.waitingCount()
 	label := "Inbox"

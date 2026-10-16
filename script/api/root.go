@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
@@ -63,7 +63,7 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 		}
 		v := verdict(out, ev)
 		if v.Veto || v.Decided {
-			if err := r.a.Check(ext.CapGate, event); err != nil {
+			if err := r.a.Check(plugin.CapGate, event); err != nil {
 				return registry.Verdict{}, err
 			}
 		}
@@ -133,7 +133,7 @@ func expand(p string) string {
 func (r Root) Read(path string) ([]any, error) {
 	p := r.a.Plugin.Path(path)
 	if !r.a.Plugin.Own(p) {
-		if err := r.a.Check(ext.CapFSRead, ext.RealPath(p)); err != nil {
+		if err := r.a.Check(plugin.CapFSRead, plugin.RealPath(p)); err != nil {
 			return nil, err
 		}
 	}
@@ -142,6 +142,12 @@ func (r Root) Read(path string) ([]any, error) {
 		return []any{nil, err.Error()}, nil
 	}
 	return []any{string(b)}, nil
+}
+
+//oriel:api doc="One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability." returns=string
+func (r Root) Asset(path string) (string, error) {
+	b, err := plugin.Asset(r.a.Plugin.Dir, path)
+	return string(b), err
 }
 
 //oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't)." optional=opts returns=string? cap=exec
@@ -157,7 +163,7 @@ func (r Root) Exec(argv []string, opts script.Table) (any, error) {
 		if prog, err = filepath.Abs(prog); err != nil {
 			return nil, err
 		}
-		if err := r.a.Check(ext.CapExec, ext.RealPath(prog)); err != nil {
+		if err := r.a.Check(plugin.CapExec, plugin.RealPath(prog)); err != nil {
 			return nil, err
 		}
 	}

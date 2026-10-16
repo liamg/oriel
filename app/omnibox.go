@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/fuzzy"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -37,16 +37,16 @@ var (
 // A source's prefix narrows it to that source; ⇥ steps through them.
 type omnibox struct {
 	disposer
-	h     ext.Host
+	h     plugin.Host
 	open  bool
 	query string
 	scope string // a source's id, or "" for all
 	sel   int
 }
 
-func (o *omnibox) Manifest() ext.Manifest { return ext.Manifest{ID: "omnibox"} }
+func (o *omnibox) Manifest() plugin.Manifest { return plugin.Manifest{ID: "omnibox"} }
 
-func (o *omnibox) Activate(_ context.Context, h ext.Host) error {
+func (o *omnibox) Activate(_ context.Context, h plugin.Host) error {
 	o.h = h
 	o.add(h.Command(registry.Command{ID: "omnibox.open", Title: "Search everything", Run: func(_ registry.Ctx, a registry.Args) error {
 		o.open, o.sel = true, 0
@@ -105,7 +105,7 @@ func (o *omnibox) results() []group {
 
 // rankSource is a source's items for query, best first, at most limit of them. A live source's items are its
 // results already, in its order.
-func rankSource(h ext.Host, s registry.PickerSource, q string, limit int) (group, bool) {
+func rankSource(h plugin.Host, s registry.PickerSource, q string, limit int) (group, bool) {
 	if s.Items == nil {
 		return group{}, false
 	}

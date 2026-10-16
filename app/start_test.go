@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core/eventstore"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
@@ -44,20 +44,20 @@ func TestConfigFromFlagsDirectory(t *testing.T) {
 }
 
 // startApp runs the app with nothing open, its state in state, and a grab host.
-func startApp(t *testing.T, state, workDir string, setup func(h ext.Host)) *running {
+func startApp(t *testing.T, state, workDir string, setup func(h plugin.Host)) *running {
 	t.Helper()
 	return startAppWith(t, state, workDir, setup, nil)
 }
 
 // startAppWith is startApp with its config changed first: workers to connect, say.
-func startAppWith(t *testing.T, state, workDir string, setup func(h ext.Host), change func(*Config)) *running {
+func startAppWith(t *testing.T, state, workDir string, setup func(h plugin.Host), change func(*Config)) *running {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	t.Cleanup(cancel)
 	be := headless.New()
 	g := &grabHost{setup: setup}
 	r := &running{t: t, store: eventstore.New(), dir: workDir, done: make(chan error, 1)}
-	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), StateDir: state, WorkDir: workDir, Extensions: []ext.Extension{g}}
+	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), StateDir: state, WorkDir: workDir, Plugins: []plugin.Plugin{g}}
 	if change != nil {
 		change(&cfg)
 	}
@@ -83,7 +83,7 @@ func TestStartViewAtLaunch(t *testing.T) {
 // SH-15: an entry runs its command on Enter; one whose command isn't registered doesn't, and a plugin adds its own.
 func TestStartViewEntries(t *testing.T) {
 	ran := make(chan string, 4)
-	r := startApp(t, t.TempDir(), "", func(h ext.Host) {
+	r := startApp(t, t.TempDir(), "", func(h plugin.Host) {
 		h.Command(registry.Command{ID: "test.hello", Run: func(registry.Ctx, registry.Args) error { ran <- "hello"; return nil }})
 		h.Contribute(registry.StartEntry{Name: "hello", Title: "Say hello", Desc: "A plugin's action", Command: "test.hello", Order: 5})
 	})
@@ -379,7 +379,7 @@ func TestStartViewForgetOnHover(t *testing.T) {
 // all work again.
 func TestStartViewKeepsToItsOwnKeys(t *testing.T) {
 	ran := make(chan string, 4)
-	setup := func(h ext.Host) {
+	setup := func(h plugin.Host) {
 		h.Command(registry.Command{ID: "test.global", Run: func(registry.Ctx, registry.Args) error { ran <- "global"; return nil }})
 		h.Command(registry.Command{ID: "test.normal", Run: func(registry.Ctx, registry.Args) error { ran <- "normal"; return nil }})
 		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-y>", Command: "test.global"})

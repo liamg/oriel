@@ -15,7 +15,7 @@ import (
 )
 
 func (s *errScene) terms() *terminals {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if x, ok := e.(*terminals); ok {
 			return x
 		}

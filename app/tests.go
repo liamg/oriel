@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/text"
@@ -31,12 +31,12 @@ var (
 	tTestUncovered = theme.Declare("tests.coverage.uncovered", "alpha(error, 70%)")
 )
 
-// testsExt runs tests (TR-1..TR-4): ▶ in the gutter on every test the adapters find, runs by scope, their results on
+// testsPlugin runs tests (TR-1..TR-4): ▶ in the gutter on every test the adapters find, runs by scope, their results on
 // the lines and in the Tests panel, failures inline at their assertion, watch mode and a coverage gutter.
-type testsExt struct {
+type testsPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	set     *testrun.Set
 	history *testrun.History
@@ -59,9 +59,9 @@ type discovery struct {
 	items   []testrun.Item
 }
 
-func (x *testsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "tests"} }
+func (x *testsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "tests"} }
 
-func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
+func (x *testsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.sh.tests = x
 	x.set = testrun.Builtin()
@@ -188,7 +188,7 @@ func (x *testsExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *testsExt) Deactivate(ctx context.Context) error {
+func (x *testsPlugin) Deactivate(ctx context.Context) error {
 	x.mu.Lock()
 	if x.exec != nil {
 		x.exec.Cancel()
@@ -198,20 +198,20 @@ func (x *testsExt) Deactivate(ctx context.Context) error {
 	return x.disposer.Deactivate(ctx)
 }
 
-func (x *testsExt) wait() { x.busy.Wait() }
+func (x *testsPlugin) wait() { x.busy.Wait() }
 
-func (x *testsExt) running() bool {
+func (x *testsPlugin) running() bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.exec != nil
 }
 
-func (x *testsExt) historyPath() string { return x.sh.dirState("tests") }
+func (x *testsPlugin) historyPath() string { return x.sh.dirState("tests") }
 
-func (x *testsExt) workspace() testrun.Workspace { return testrun.Workspace{Root: x.sh.editor.dir} }
+func (x *testsPlugin) workspace() testrun.Workspace { return testrun.Workspace{Root: x.sh.editor.dir} }
 
 // discover is the tests in a buffer, found again when it changes.
-func (x *testsExt) discover(path string, buf *text.Buffer) *discovery {
+func (x *testsPlugin) discover(path string, buf *text.Buffer) *discovery {
 	snap := buf.Snapshot()
 	x.mu.Lock()
 	d := x.found[buf]
@@ -231,7 +231,7 @@ func (x *testsExt) discover(path string, buf *text.Buffer) *discovery {
 	return d
 }
 
-func (x *testsExt) hasTests(path string) bool {
+func (x *testsPlugin) hasTests(path string) bool {
 	if f, ok := x.sh.editor.openBuffer(path); ok {
 		return len(x.discover(path, f.Text).items) > 0
 	}
@@ -239,7 +239,7 @@ func (x *testsExt) hasTests(path string) bool {
 }
 
 // result is a test's latest outcome: the run in progress's, or the last finished run's that ran it.
-func (x *testsExt) result(key string) (*testrun.Result, *testrun.Run) {
+func (x *testsPlugin) result(key string) (*testrun.Result, *testrun.Run) {
 	x.mu.Lock()
 	live := x.live
 	x.mu.Unlock()
@@ -290,7 +290,7 @@ func durationText(d time.Duration) string {
 	return fmt.Sprintf("%.2fs", d.Seconds())
 }
 
-func (x *testsExt) decorations(ctx registry.DecorationCtx) []registry.Decoration {
+func (x *testsPlugin) decorations(ctx registry.DecorationCtx) []registry.Decoration {
 	var out []registry.Decoration
 	d := x.discover(ctx.Path, ctx.Buffer)
 	for _, it := range d.items {
@@ -343,7 +343,7 @@ func (x *testsExt) decorations(ctx registry.DecorationCtx) []registry.Decoration
 }
 
 // nearest is the test at the cursor: the innermost one starting at or above it.
-func (x *testsExt) nearest() (testrun.Item, bool) {
+func (x *testsPlugin) nearest() (testrun.Item, bool) {
 	p := x.sh.editor.current()
 	path := x.sh.editor.panePath(p)
 	d := x.discover(path, p.Buffer())
@@ -364,7 +364,7 @@ func (x *testsExt) nearest() (testrun.Item, bool) {
 }
 
 // runScope runs the tests a scope names, from the current file.
-func (x *testsExt) runScope(trigger string, mode testrun.Mode) error {
+func (x *testsPlugin) runScope(trigger string, mode testrun.Mode) error {
 	ws := x.workspace()
 	p := x.sh.editor.current()
 	path := x.sh.editor.panePath(p)
@@ -419,7 +419,7 @@ func (x *testsExt) runScope(trigger string, mode testrun.Mode) error {
 }
 
 // runKeys runs tests by key, as discovered in file.
-func (x *testsExt) runKeys(file string, keys []string, trigger string, mode testrun.Mode) error {
+func (x *testsPlugin) runKeys(file string, keys []string, trigger string, mode testrun.Mode) error {
 	f, ok := x.sh.editor.openBuffer(file)
 	if !ok {
 		return fmt.Errorf("%s isn't open", file)
@@ -440,7 +440,7 @@ func (x *testsExt) runKeys(file string, keys []string, trigger string, mode test
 }
 
 // watchSaved runs the tests a saved file affects.
-func (x *testsExt) watchSaved(file string) {
+func (x *testsPlugin) watchSaved(file string) {
 	ws := x.workspace()
 	x.busy.Add(1)
 	go func() {
@@ -462,7 +462,7 @@ func (x *testsExt) watchSaved(file string) {
 }
 
 // start runs req, the one before it stopping first; its events show as they come.
-func (x *testsExt) start(req testrun.Request) error {
+func (x *testsPlugin) start(req testrun.Request) error {
 	x.mu.Lock()
 	if x.exec != nil {
 		x.exec.Cancel()
@@ -532,7 +532,7 @@ func (x *testsExt) start(req testrun.Request) error {
 	return nil
 }
 
-func (x *testsExt) saveHistory() {
+func (x *testsPlugin) saveHistory() {
 	if x.sh.cfg.StateDir == "" {
 		return
 	}
@@ -546,7 +546,7 @@ func (x *testsExt) saveHistory() {
 }
 
 // nextFailure goes to the next failing test's assertion, in any file.
-func (x *testsExt) nextFailure() error {
+func (x *testsPlugin) nextFailure() error {
 	runs := x.history.Runs()
 	if len(runs) == 0 {
 		return fmt.Errorf("no run yet")
@@ -574,7 +574,7 @@ func (x *testsExt) nextFailure() error {
 }
 
 // counts is the last run's counts as the sidebar's Tests entry notes them: "48 ✓", "2 ✕"; "" before a run.
-func (x *testsExt) counts() string {
+func (x *testsPlugin) counts() string {
 	if x == nil {
 		return ""
 	}
@@ -590,7 +590,7 @@ func (x *testsExt) counts() string {
 }
 
 // statusSegment is TESTS with the last run's counts, or the one running.
-func (x *testsExt) statusSegment(c *ui.Ctx) {
+func (x *testsPlugin) statusSegment(c *ui.Ctx) {
 	x.mu.Lock()
 	live := x.live
 	x.mu.Unlock()

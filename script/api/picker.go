@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/ui"
@@ -93,7 +93,7 @@ func (t TicketAPI) Tracker(spec script.Table, where string) error {
 		tr.Keys = re
 	}
 	if tr.Secret != "" {
-		if err := a.Plugin.Check(ext.CapSecrets, tr.Secret); err != nil {
+		if err := a.Plugin.Check(plugin.CapSecrets, tr.Secret); err != nil {
 			return err
 		}
 	}

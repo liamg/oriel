@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -17,7 +17,7 @@ import (
 )
 
 // buffersSource is the open buffers, as :ls lists them; it's what :ls opens.
-func (x *editorExt) buffersSource() registry.PickerSource {
+func (x *editorPlugin) buffersSource() registry.PickerSource {
 	return registry.PickerSource{ID: "buffers", Title: "Buffers", Order: 32, PickerOnly: true,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem
@@ -50,7 +50,7 @@ func (x *editorExt) buffersSource() registry.PickerSource {
 }
 
 // quickfixSource is the quickfix list; :copen opens it.
-func (x *editorExt) quickfixSource() registry.PickerSource {
+func (x *editorPlugin) quickfixSource() registry.PickerSource {
 	return registry.PickerSource{ID: "quickfix", Title: "Quickfix", Order: 60, PickerOnly: true,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			items, _, cur := x.e.Quickfix()
@@ -70,7 +70,7 @@ func (x *editorExt) quickfixSource() registry.PickerSource {
 }
 
 // fileSymbolsSource is the current buffer's functions, methods and types.
-func (x *editorExt) fileSymbolsSource(all registry.PickerSource) registry.PickerSource {
+func (x *editorPlugin) fileSymbolsSource(all registry.PickerSource) registry.PickerSource {
 	s := all
 	s.ID, s.Title, s.Prefix, s.Order, s.PickerOnly = "symbols.file", "Symbols here", "", 41, true
 	s.Items = func(ctx registry.Ctx, q string) []registry.PickerItem {
@@ -99,7 +99,7 @@ const maxGrep = 1000
 // grepSource searches the work dir's files as you type, with project search's engine (ripgrep, streamed), leaving
 // out generated and vendored files unless the query starts "@all ". The query is a PCRE2 pattern, or a literal
 // when it isn't one.
-func (x *editorExt) grepSource() registry.PickerSource {
+func (x *editorPlugin) grepSource() registry.PickerSource {
 	g := &grep{}
 	run := func(q string) {
 		g.mu.Lock()
@@ -152,7 +152,7 @@ func (x *editorExt) grepSource() registry.PickerSource {
 }
 
 // keymapsSource is every keymap, with its mode, keys and source: Enter runs it, ⌃e opens where it's defined.
-func keymapsSource(h ext.Host, configDir string) registry.PickerSource {
+func keymapsSource(h plugin.Host, configDir string) registry.PickerSource {
 	return registry.PickerSource{ID: "keymaps", Title: "Keymaps", Order: 50, PickerOnly: true,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem

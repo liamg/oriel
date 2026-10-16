@@ -126,19 +126,19 @@ clip 170,105 1260x790 r 10
     rect 194,207.2 881x48 radius 6 stroke 1 #ffd23f
     rect 190,203.2 889x56.000015 radius 10 stroke 2 #ffd23f
     rect 194,263.2 881x96.96857 radius 8 stroke 1 #24221d
-    text "INF-2231" @208,286.42 #ffd23f JetBrains Mono 11
+    text "ENG-2231" @208,286.42 #ffd23f JetBrains Mono 11
     rect 208,295.72 40.28x16.540009 fill #b98aff12 radius 10 stroke 1 #b98aff59
     text "TODO" @215,307.41 #b98aff JetBrains Mono 9.5
     clip 332,275.2 697x72.96857 r 0
-      text "Usage API returns stale prices after plan change" @332,287.79376 #ece6d8 Inter 13
-      text "Customers on the new Team plan see last month's unit prices in /v1/usage for up to 24h. Reported by 3 accounts; repro" @332,308.5545 #b3ab99 Inter 12
+      text "Search API returns stale results after a reindex" @332,287.79376 #ece6d8 Inter 13
+      text "Customers who rebuild their index see last week's results from /v1/search for up to 24h. Reported by 3 accounts; repro" @332,308.5545 #b3ab99 Inter 12
       text "steps and a HAR attached." @332,326.07404 #b3ab99 Inter 12
-      text "linear.app/infracost/issue/INF-2231   2 attachments   linked PR #4398   4 comments" @332,345.16858 #7c7566 JetBrains Mono 10
+      text "linear.app/acme/issue/ENG-2231   2 attachments   linked PR #4398   4 comments" @332,345.16858 #7c7566 JetBrains Mono 10
     pop
     text "✕" @1049,287.764 #7c7566 JetBrains Mono 9.900001
     rect 194,368.16855 220x30 fill #060606 radius 6
     clip 194,368.16855 220x30 r 6
-      text "INF-2231" @204,387.71567 #ece6d8 Inter 12.5
+      text "ENG-2231" @204,387.71567 #ece6d8 Inter 12.5
     pop
     rect 194,368.16855 220x30 radius 6 stroke 1 #332f27
     text "the ticket, comments and attachments go to the agent as context" @697,386.76855 #7c7566 JetBrains Mono 10

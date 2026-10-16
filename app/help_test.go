@@ -11,7 +11,7 @@ import (
 )
 
 func (s *errScene) help() *helpView {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if h, ok := e.(*helpView); ok {
 			return h
 		}

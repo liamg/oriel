@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -338,7 +338,7 @@ func latestRun(se core.SessionState) (core.TestRun, bool) {
 }
 
 // sessionStats is 01's session stats at the foot of the summary: context, cache and cost, then the latest tests.
-func sessionStats(c *ui.Ctx, h ext.Host, se core.SessionState, now time.Time) {
+func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time) {
 	th := c.Theme()
 	t := se.Agent.Stats
 	label := func(c *ui.Ctx, k, s string) { c.Text(k, s, monoFont(10.5, th.C(theme.FgFaint))) }
@@ -396,7 +396,7 @@ func sessionStats(c *ui.Ctx, h ext.Host, se core.SessionState, now time.Time) {
 }
 
 // sessionLedger is the review ledger of a session's projects together.
-func sessionLedger(h ext.Host, se core.SessionState) registry.LedgerCount {
+func sessionLedger(h plugin.Host, se core.SessionState) registry.LedgerCount {
 	var n registry.LedgerCount
 	for _, p := range se.Projects {
 		if p.Dir != "" && !p.ReadOnly {
@@ -408,7 +408,7 @@ func sessionLedger(h ext.Host, se core.SessionState) registry.LedgerCount {
 }
 
 // statsLink is a session's cost as a link to its stats (a main tab), with a card saying so under the pointer.
-func statsLink(c *ui.Ctx, h ext.Host, id core.SessionID, text string, size float32) {
+func statsLink(c *ui.Ctx, h plugin.Host, id core.SessionID, text string, size float32) {
 	th := c.Theme()
 	anchor := c.Next("statslink")
 	if widget.Clickable(c, "statslink", ui.Style{Label: "Open the session's stats", Help: "agent/stats#session", NoHover: true}, func(c *ui.Ctx) {

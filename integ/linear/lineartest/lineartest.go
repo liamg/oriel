@@ -14,7 +14,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/liamg/oriel/ext/exttest"
+	"github.com/liamg/oriel/plugin/hosttest"
 )
 
 // Key is the API key the recording accepts.
@@ -71,7 +71,7 @@ func (l *Linear) load(name string) map[string]any {
 }
 
 // Client reaches the recording whatever host a request names, as the internet would reach Linear.
-func (l *Linear) Client() *http.Client { return exttest.Net(l.Server) }
+func (l *Linear) Client() *http.Client { return hosttest.Net(l.Server) }
 
 // Mutations are the changes sent so far.
 func (l *Linear) Mutations() []Mutation {

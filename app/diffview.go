@@ -43,7 +43,7 @@ var diffCodeFont = typeset.FontSpec{Family: typeset.Mono, Size: 12.5}
 const diffLineH = 20
 
 // view is the diff: the changed files at the left, each file's hunks in the middle, plugins' columns at the right.
-func (x *diffExt) view(c *ui.Ctx, vc registry.ViewCtx) {
+func (x *diffPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 	th := c.Theme()
 	st := x.state(vc.Instance)
 	root := c.Next("diff")
@@ -123,7 +123,7 @@ func (st *diffState) seekLine() bool {
 }
 
 // slotIDs are the views registered under a prefix, by name, but those with nothing for root (registry.Shown).
-func (x *diffExt) slotIDs(prefix, root string) []string {
+func (x *diffPlugin) slotIDs(prefix, root string) []string {
 	var out []string
 	for _, id := range x.h.Views() {
 		if !strings.HasPrefix(id, prefix) {
@@ -142,7 +142,7 @@ func (x *diffExt) slotIDs(prefix, root string) []string {
 
 // slots draws the views registered under a prefix, each built for the diff's repo. DiffRight's share the column's
 // height, each scrolling what it holds.
-func (x *diffExt) slots(c *ui.Ctx, prefix, root string, width float32) {
+func (x *diffPlugin) slots(c *ui.Ctx, prefix, root string, width float32) {
 	h := ui.Size{}
 	if prefix == DiffRight {
 		h = ui.Flex(1)
@@ -178,7 +178,7 @@ func fileCheck(d *diffFile, marks map[string]bool) (widget.CheckState, int) {
 
 // changes is the left column: every changed file with its reviewed box and size, what plugins add under it
 // (authorship), and the keys.
-func (x *diffExt) changes(c *ui.Ctx, st *diffState, files []gitx.FileState) {
+func (x *diffPlugin) changes(c *ui.Ctx, st *diffState, files []gitx.FileState) {
 	th := c.Theme()
 	add, del := 0, 0
 	for _, f := range files {
@@ -223,7 +223,7 @@ func keyHint(c *ui.Ctx, key any, k, what string) {
 	})
 }
 
-func (x *diffExt) changeRow(c *ui.Ctx, st *diffState, f gitx.FileState) {
+func (x *diffPlugin) changeRow(c *ui.Ctx, st *diffState, f gitx.FileState) {
 	th := c.Theme()
 	sel := st.sel.file == f.Path
 	fill, edge := render.Color{}, render.Color{}
@@ -260,7 +260,7 @@ func (x *diffExt) changeRow(c *ui.Ctx, st *diffState, f gitx.FileState) {
 }
 
 // body is the files, each with its header and, open, its hunks.
-func (x *diffExt) body(c *ui.Ctx, vc registry.ViewCtx, st *diffState, gs *gitx.State, root ui.ID) {
+func (x *diffPlugin) body(c *ui.Ctx, vc registry.ViewCtx, st *diffState, gs *gitx.State, root ui.ID) {
 	th := c.Theme()
 	bodyID := c.Next("files")
 	if vc.Focused && !c.FocusWithin(root) || st.focus {
@@ -308,7 +308,7 @@ func (x *diffExt) body(c *ui.Ctx, vc registry.ViewCtx, st *diffState, gs *gitx.S
 
 // fileSection is a file's header (its path, size and how much is reviewed; a click shows or folds it) and, open,
 // its hunks. It returns the decorations that asked to be brought into view.
-func (x *diffExt) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout string) (reveal []ui.ID) {
+func (x *diffPlugin) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout string) (reveal []ui.ID) {
 	th := c.Theme()
 	open := st.open[f.Path]
 	d := st.drawn[f.Path]
@@ -383,7 +383,7 @@ func (x *diffExt) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout
 
 // hunk is a hunk's header (explain, its @@ line and function, the reviewed box) and its lines, split or unified,
 // with the decorations of each new line's under it.
-func (x *diffExt) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, layout string, decor map[int][]registry.Decoration) (reveal []ui.ID) {
+func (x *diffPlugin) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, layout string, decor map[int][]registry.Decoration) (reveal []ui.ID) {
 	th := c.Theme()
 	at := diffSel{file: file, hunk: i, line: -1}
 	st.order = append(st.order, at)
@@ -507,7 +507,7 @@ func lineTones(th *theme.Resolved, op byte) (fill, edge, word render.Color) {
 	return render.Color{}, render.Color{}, render.Color{}
 }
 
-func (x *diffExt) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHunk) {
+func (x *diffPlugin) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHunk) {
 	th := c.Theme()
 	l := h.Lines[k]
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
@@ -533,7 +533,7 @@ func (x *diffExt) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diff
 	}
 }
 
-func (x *diffExt) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h diffHunk) {
+func (x *diffPlugin) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h diffHunk) {
 	th := c.Theme()
 	k := p[1]
 	if k < 0 {
@@ -634,7 +634,7 @@ func markAt(marks [][2]int, at int) (bool, int) {
 
 // authorshipView is the diff's AUTHORSHIP box: who wrote the lines the change adds, from blame and the open
 // buffers' authors.
-func (x *diffExt) authorshipView(c *ui.Ctx, root string) {
+func (x *diffPlugin) authorshipView(c *ui.Ctx, root string) {
 	st := x.by[root]
 	if st == nil {
 		return

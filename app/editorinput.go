@@ -16,12 +16,12 @@ const InputOption = "editor.input"
 
 // vimInput is the vim engine as an input.Engine. The editor keeps one vim engine for all its windows, since vim's
 // windows, buffers and registers are shared; each window's state is that engine with the window current.
-type vimInput struct{ x *editorExt }
+type vimInput struct{ x *editorPlugin }
 
 func (vimInput) ID() string                        { return "vim" }
 func (v vimInput) Attach(*edit.Editor) input.State { return vimState(v) }
 
-type vimState struct{ x *editorExt }
+type vimState struct{ x *editorPlugin }
 
 func (s vimState) Key(k string) input.Result {
 	s.x.e.Key(k)
@@ -37,7 +37,7 @@ func (s vimState) Mode() input.Mode {
 func (s vimState) Pending() string { return strings.Join(s.x.e.Pending(), "") }
 
 // builtinInputs registers the engines Oriel ships, and the input option.
-func (x *editorExt) builtinInputs() {
+func (x *editorPlugin) builtinInputs() {
 	x.add(x.h.Input(vimInput{x}))
 	x.add(x.h.Input(plain.Engine{}))
 	x.add(x.h.Option(registry.OptionSpec{Name: InputOption, Type: registry.String, Default: "vim", Choices: x.h.Inputs,
@@ -52,7 +52,7 @@ type paneInput struct {
 	state  input.State
 }
 
-func (x *editorExt) inputFor(p vim.Pane) input.State {
+func (x *editorPlugin) inputFor(p vim.Pane) input.State {
 	id := "vim"
 	if v, _, err := x.h.Options().Get(InputOption, registry.At{Buffer: p.Name()}); err == nil {
 		id, _ = v.(string)

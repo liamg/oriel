@@ -59,8 +59,8 @@ body{position:relative}
     <div class="form">
       <div>
         <div class="lbl"><span class="cap">Prompt</span><span class="mono dim" style="font-size:10px;margin-left:auto">markdown · paste images · ⌃⇧space to dictate</span></div>
-        <div class="prompt">Pick up <span class="mono" style="color:var(--violet)">INF-2231</span>. I think the stale prices come from the usage cache never being invalidated when a plan changes — confirm that before fixing it, and keep the API response shape unchanged.<span class="caret"></span>
-          <div class="tkt"><div class="col gap4"><span class="id">INF-2231</span><span class="chip v">in progress</span></div><div class="grow"><div class="ti">Usage API returns stale prices after plan change</div><div class="ds">Customers on the new Team plan see last month's unit prices in /v1/usage for up to 24h. Reported by 3 accounts; repro steps and a HAR attached.</div><div class="mt"><span>linear.app/infracost/issue/INF-2231</span><span>2 attachments</span><span>linked PR #4398</span><span>4 comments</span></div></div><span class="dim" style="font:12px var(--mono)">✕</span></div>
+        <div class="prompt">Pick up <span class="mono" style="color:var(--violet)">ENG-2231</span>. I think the stale results come from the search cache never being invalidated when an index is rebuilt — confirm that before fixing it, and keep the API response shape unchanged.<span class="caret"></span>
+          <div class="tkt"><div class="col gap4"><span class="id">ENG-2231</span><span class="chip v">in progress</span></div><div class="grow"><div class="ti">Search API returns stale results after a reindex</div><div class="ds">Customers who rebuild their index see last week's results from /v1/search for up to 24h. Reported by 3 accounts; repro steps and a HAR attached.</div><div class="mt"><span>linear.app/acme/issue/ENG-2231</span><span>2 attachments</span><span>linked PR #4398</span><span>4 comments</span></div></div><span class="dim" style="font:12px var(--mono)">✕</span></div>
         </div>
         <div class="pfoot"><span class="chip">@ file</span><span class="chip">! ticket</span><span class="chip">⇲ PR url</span><span class="chip">template ▾</span><span style="margin-left:auto">the ticket, comments and attachments go to the agent as context</span></div>
       </div>
@@ -86,8 +86,8 @@ body{position:relative}
       <div class="two">
         <div>
           <div class="lbl"><span class="cap">Repositories</span><span class="mono dim" style="font-size:10px;margin-left:auto">one worktree each · same branch</span></div>
-          <div class="repos"><span class="rc on"><span class="dot g"></span>infracost/cloud<span class="x">✕</span></span><span class="rc on"><span class="dot g"></span>pricing-service<span class="x">✕</span></span><span class="rc" style="border-style:dashed;color:var(--fg4)">+ add · agent may add more</span></div>
-          <div class="optrow" style="margin-top:8px">Branch<span class="mono" style="color:var(--fg)">liam/inf-2231-usage-api</span><span class="h">from main · up to date</span></div>
+          <div class="repos"><span class="rc on"><span class="dot g"></span>acme/cloud<span class="x">✕</span></span><span class="rc on"><span class="dot g"></span>search-service<span class="x">✕</span></span><span class="rc" style="border-style:dashed;color:var(--fg4)">+ add · agent may add more</span></div>
+          <div class="optrow" style="margin-top:8px">Branch<span class="mono" style="color:var(--fg)">liam/eng-2231-search-api</span><span class="h">from main · up to date</span></div>
         </div>
         <div>
           <div class="lbl"><span class="cap">Run on</span></div>

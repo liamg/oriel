@@ -75,7 +75,7 @@ func (c *Canvas) titlebar() {
 	}
 	tabs := []stab{
 		{working, "pricing-rounding", "plan", "⌘1"},
-		{red, "INF-2231 usage api", "needs you", "⌘2"},
+		{red, "ENG-2231 search api", "needs you", "⌘2"},
 		{violet, "review #4410", "permission", "⌘3"},
 		{ciBlue, "flaky e2e sweep", "ci", "⌘4"},
 		{pink, "dash-filters", "in review", "⌘5"},

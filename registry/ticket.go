@@ -62,7 +62,7 @@ type TicketTracker struct {
 	Name  string // "linear"
 	Title string // "Linear"
 	Order int
-	Keys  *regexp.Regexp // the keys it takes (INF-2231); nil takes every key
+	Keys  *regexp.Regexp // the keys it takes (ENG-2231); nil takes every key
 	// Secret is the secret it needs set before it can answer (LINEAR_TOKEN): until it is, the app asks for it.
 	Secret string
 

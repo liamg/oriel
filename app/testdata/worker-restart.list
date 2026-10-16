@@ -128,7 +128,7 @@ clip 540,368.23822 520x263.52356 r 10
   text "Oriel was rebuilt; the worker running your sessions is from the earlier build." @564,451.3476 #ece6d8 Inter 12.5
   text "It restarts when these turns end, or in 42s, and their agents come back on the new" @564,477.98773 #b3ab99 Inter 12
   text "one." @564,495.50726 #b3ab99 Inter 12
-  text "inf-2231-fix-stale-usage-prices" @564,528.1318 #ece6d8 JetBrains Mono 11.5
+  text "eng-2231-fix-stale-usage-prices" @564,528.1318 #ece6d8 JetBrains Mono 11.5
   text "mid-turn" @797.2969,527.7718 #7c7566 JetBrains Mono 10.5
   text "Round half-even" @564,547.31177 #ece6d8 JetBrains Mono 11.5
   text "mid-turn" @682.0469,546.9518 #7c7566 JetBrains Mono 10.5

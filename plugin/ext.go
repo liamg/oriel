@@ -1,0 +1,95 @@
+package plugin
+
+import (
+	"context"
+	"image"
+	"log/slog"
+	"net/http"
+	"time"
+
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/layout"
+)
+
+// Plugin is a plugin in any tier; built-ins are plugins too.
+type Plugin interface {
+	Manifest() Manifest
+	Activate(ctx context.Context, h Host) error
+	Deactivate(ctx context.Context) error
+}
+
+// Host is what a plugin sees of the app.
+type Host interface {
+	registry.Registry
+	Session(id core.SessionID) (core.Session, bool)
+	Sessions() []core.Session
+	Log() *slog.Logger
+	Net() *http.Client // what plugins' HTTP goes through
+	// Secrets are the named secrets the host attaches to a plugin's requests (http.request); a plugin never reads
+	// them.
+	Secrets() Secrets
+	// Notify tells the user something, through the one path every notice takes (errors.md). Source defaults to
+	// the plugin's id and Time to now; the text is redacted before it's kept.
+	Notify(n core.Notice)
+	// Dismiss takes down the toasts of the notices with id: a problem that's gone. Their rows stay in the history.
+	Dismiss(id string)
+	State() core.State // a copy: notification history, focus, sessions
+	// Subscribe calls fn with every event the filter matches, from whichever goroutine applied it; Do gets back
+	// to the loop. cancel stops it.
+	Subscribe(f core.Filter, fn func(core.Event)) (cancel func())
+	// Here is where the user is, for reading options: the session in front, the project, and the focused editor's
+	// buffer and window.
+	Here() registry.At
+	// Layout is the tree every view is placed in (ui.md 01d). Change it only from commands and views, which run
+	// on the app's loop.
+	Layout() *layout.Root
+	PaneRect(v layout.ViewRef) (render.Rect, bool) // where v's pane was drawn last frame
+	Redraw()                                       // asks for a frame; safe from any goroutine
+	Do(fn func())                                  // runs fn on the app's loop, before the next frame; safe from any goroutine
+	Pending() Pending                              // keys typed towards a longer mapping or command, for which-key
+	HoldPending()                                  // keeps the pending mapping waiting past keymap.timeoutlen, until the next key
+	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
+	CurrentTheme() *theme.Resolved                 // the theme the window is drawn in
+	// Load starts p as a plugin of its own, on a host whose source is its id, as a plugin manager does; Dispose
+	// stops it. Call it on the loop.
+	Load(p Plugin) (registry.Disposable, error)
+	// Shot is the window as it is now, built and drawn again on the CPU in th (its own theme when nil), in logical
+	// pixels. A probe theme (theme.Probe) makes it a map of which token painted each pixel. Call it on the loop.
+	Shot(th *theme.Resolved) *image.RGBA
+}
+
+// UIView is the window's widget tree as plugins may read it, last frame's.
+type UIView interface {
+	Focused() ui.ID
+	Layered(z int) bool // last frame drew a float on layer z (ui.LayerPage: a full-window page is up)
+	Help(id ui.ID) string
+	HelpNodes() []ui.HelpNode
+	ContextClick() (ui.ID, render.Point, bool)
+	HelpRequest() (string, bool)
+	Rect(id ui.ID) (render.Rect, bool)
+	FocusNext(dir int) // moves keyboard focus to the next focusable node (back with -1), wrapping
+	DragKey() bool     // picks up the focused node's drag, or drops the one held on it (ui/dnd.go)
+	CancelDrag()
+	TakesText() bool             // the focused node inserts typed text: a text field, an editor in insert mode
+	Key(ev render.KeyEvent) bool // types a key at the focused node, past the keymaps, for its next frame
+	Now() time.Time              // the window's clock: what the frames are drawn at, a test's fixed time
+}
+
+// Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's
+// own, with the keys that engine has next.
+type Pending struct {
+	Keys  []string // vim notation
+	Modes []string
+	Since time.Time
+	Hints []Hint
+	Runs  string // what ⏎ runs now, when the keys are a mapping of their own as well as the start of longer ones
+}
+
+// Hint is a key that can come next, and what it does.
+type Hint struct {
+	Keys, Desc string
+}

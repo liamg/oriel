@@ -2,7 +2,7 @@
 id: PL-3
 title: "All-or-nothing install consent, update capability diff"
 phase: P7
-status: review
+status: done
 area: Platform
 module: ext
 depends_on: [PL-2, ED-11]

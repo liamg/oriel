@@ -17,10 +17,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/render"
@@ -48,31 +49,34 @@ const (
 )
 
 type Config struct {
-	Store      core.Store        // the materialised state the worker feeds; in-memory if nil
-	Registry   registry.Registry // a fresh one if nil
-	Extensions []ext.Extension   // activated in order, after the built-ins
-	Logs       *Logs             // where log records go; a ring in memory if nil
-	ConfigDir  string            // ~/.config/oriel unless set; user themes live in its themes/
-	CrashDir   string            // crash reports are written to and offered from here; none if ""
-	Version    string
-	Desktop    Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
-	Debug      bool            // oriel --debug: the frame-time overlay
-	Files      []string        // open in the editor at start
-	WorkDir    string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
-	StateDir   string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
-	CacheDir   string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
-	Workers    []worker.Client // the workers whose sessions the window shows: this machine's, and any others
+	Store     core.Store        // the materialised state the worker feeds; in-memory if nil
+	Registry  registry.Registry // a fresh one if nil
+	Plugins   []plugin.Plugin   // activated in order, after the built-ins
+	Logs      *Logs             // where log records go; a ring in memory if nil
+	ConfigDir string            // ~/.config/oriel unless set; user themes live in its themes/
+	CrashDir  string            // crash reports are written to and offered from here; none if ""
+	Version   string
+	Desktop   Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
+	Debug     bool            // oriel --debug: the frame-time overlay
+	Files     []string        // open in the editor at start
+	WorkDir   string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
+	StateDir  string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
+	CacheDir  string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
+	DataDir   string          // installed plugins, in its plugins/; DefaultDataDir() if ""
+	Workers   []worker.Client // the workers whose sessions the window shows: this machine's, and any others
 	// LocalWorker reaches this machine's worker, starting one: after one from another build hands over to this build's.
 	LocalWorker func(context.Context) (worker.Client, error)
 	// Updates is Oriel updating itself and its workers (distribution.md); nil in a build that doesn't.
 	Updates *Updates
-	// Started is called once the window is open and every extension active: what the updater's health check waits for.
+	// Started is called once the window is open and every plugin active: what the updater's health check waits for.
 	Started func()
 	Voice   VoiceConfig // dictation's microphone, transcriber and speaker; the real ones, from the voice.* options, if nil
 	// Net is what plugins' HTTP goes through (http.request); a client of its own if nil.
 	Net *http.Client
+	// GitHub is how plugins and the plugin registries are read; GitHub's API with your gh login's token if nil.
+	GitHub *catalog.GitHub
 	// Secrets are the named secrets plugins' requests carry (security.md); secrets.json in StateDir if nil.
-	Secrets ext.Secrets
+	Secrets plugin.Secrets
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -84,6 +88,15 @@ func DefaultConfigDir() string {
 	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "oriel")
+}
+
+// DefaultDataDir is $XDG_DATA_HOME/oriel, or ~/.local/share/oriel, on every platform (catalog.md, Files on disk).
+func DefaultDataDir() string {
+	if d := os.Getenv("XDG_DATA_HOME"); d != "" {
+		return filepath.Join(d, "oriel")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".local", "share", "oriel")
 }
 
 // Run opens a window and runs the app until the window closes or ctx is done.
@@ -119,7 +132,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			err = sh.crashed(v, debug.Stack())
 		}
 	}()
-	var active []ext.Extension
+	var active []plugin.Plugin
 	deactivate := func() (err error) {
 		for _, e := range slices.Backward(active) {
 			err = errors.Join(err, e.Deactivate(context.WithoutCancel(ctx)))
@@ -189,26 +202,46 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	var tree *render.AccessNode
 	var held render.Event // read past a run of pointer moves; handled on the next turn
+	var drawn, due time.Time
+	quiet := false // the last turn changed nothing a frame shows
+	// pointed paces pointer moves' frames to one a frameInterval, and builds none for a move that changes nothing.
+	pointed := func(ev render.Event, changed bool) {
+		if m, ok := ev.(render.PointerEvent); !ok || m.Kind != render.PointerMove {
+			return
+		}
+		if changed && due.IsZero() {
+			due = drawn.Add(frameInterval)
+		}
+		quiet = due.IsZero() || time.Now().Before(due)
+	}
 	for {
 		l.timed(func() string { return "work queued for the loop (Host.Do)" }, sh.runTodo)
-		var derr error
-		l.timed(func() string { return "building a frame" }, func() { derr = l.draw() })
-		if derr != nil {
-			return derr
+		framed := !quiet
+		quiet = false
+		if framed {
+			var derr error
+			l.timed(func() string { return "building a frame" }, func() { derr = l.draw() })
+			if derr != nil {
+				return derr
+			}
+			drawn, due = time.Now(), time.Time{}
 		}
 		// Keys typed behind ones the editor has now taken: looked up, or passed on raw while it's mid-command.
 		if acts := l.keys.Pump(l.sh.keyModes(), time.Now()); len(acts) > 0 || l.keys.Queued() {
 			l.run(ctx, acts)
 			poke()
 		}
-		if accessible != nil {
+		if accessible != nil && framed {
 			next := l.ui.AccessTree()
 			if up := render.AccessDiff(tree, next); len(up.Changed) > 0 || len(up.Removed) > 0 || tree == nil {
 				accessible.UpdateAccess(up)
 			}
 			tree = next
 		}
-		if d := l.wake(); !d.IsZero() {
+		if d := l.wake(); !d.IsZero() || !due.IsZero() {
+			if d.IsZero() || (!due.IsZero() && due.Before(d)) {
+				d = due
+			}
 			timer.Reset(time.Until(d))
 		} else {
 			timer.Stop()
@@ -216,7 +249,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		if held != nil {
 			ev := held
 			held = nil
-			l.timed(func() string { return describeEvent(ev) }, func() { l.handle(ctx, ev) })
+			var changed bool
+			l.timed(func() string { return describeEvent(ev) }, func() { changed = l.handle(ctx, ev) })
+			pointed(ev, changed)
 			continue
 		}
 		select {
@@ -226,7 +261,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			return ctx.Err()
 		case <-dirty:
 		case to := <-sh.reopen:
-			// Open Directory, or another session in front: every extension starts again on its directory.
+			// Open Directory, or another session in front: every plugin starts again on its directory.
 			if err := deactivate(); err != nil {
 				log.Error("reopen", "dir", to.dir, "err", err)
 			}
@@ -246,7 +281,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 				return nil
 			}
 			ev, held = lastMove(ev, w.Events())
-			l.timed(func() string { return describeEvent(ev) }, func() { l.handle(ctx, ev) })
+			var changed bool
+			l.timed(func() string { return describeEvent(ev) }, func() { changed = l.handle(ctx, ev) })
+			pointed(ev, changed)
 		}
 	}
 }
@@ -277,9 +314,10 @@ func newShell(cfg Config, poke func()) (*shell, func()) {
 	return sh, func() { tail(); notices() }
 }
 
-// activate starts the built-ins, then cfg.Extensions, each on a host of its own, adding each to active as it starts.
+// activate starts the built-ins, then cfg.Plugins, each on a host of its own, adding each to active as it starts.
 // It answers the last built-in's host.
-func (sh *shell) activate(ctx context.Context, active *[]ext.Extension) (*host, error) {
+func (sh *shell) activate(ctx context.Context, active *[]plugin.Plugin) (*host, error) {
+	sh.active = active
 	var last *host
 	for _, e := range builtins(sh) {
 		last = sh.host("builtin:" + e.Manifest().ID)
@@ -288,7 +326,7 @@ func (sh *shell) activate(ctx context.Context, active *[]ext.Extension) (*host, 
 		}
 		*active = append(*active, e)
 	}
-	for _, e := range sh.cfg.Extensions {
+	for _, e := range sh.cfg.Plugins {
 		if err := e.Activate(ctx, sh.host(e.Manifest().ID)); err != nil {
 			return nil, fmt.Errorf("activate %s: %w", e.Manifest().ID, err)
 		}
@@ -330,7 +368,7 @@ type host struct {
 	sh     *shell
 }
 
-// host is what an extension registered as source sees.
+// host is what a plugin registered as source sees.
 func (sh *shell) host(source string) *host {
 	return &host{Registry: registry.WithSource(sh.cfg.Registry, source), store: sh.cfg.Store, source: source, logs: sh.cfg.Logs,
 		log: sh.cfg.Logs.Logger(source), sh: sh}
@@ -359,7 +397,7 @@ func (sh *shell) runTodo() {
 	}
 }
 
-func (h *host) UI() ext.UIView {
+func (h *host) UI() plugin.UIView {
 	if h.sh.ui == nil {
 		return nil
 	}
@@ -387,6 +425,17 @@ func (h *host) CurrentTheme() *theme.Resolved {
 	return h.sh.theme()
 }
 
+func (h *host) Load(p plugin.Plugin) (registry.Disposable, error) {
+	if err := p.Activate(context.Background(), h.sh.host(p.Manifest().ID)); err != nil {
+		return nil, err
+	}
+	return disposeFn(func() {
+		if err := p.Deactivate(context.Background()); err != nil {
+			h.log.Warn("stopping a plugin", "plugin", p.Manifest().ID, "err", err)
+		}
+	}), nil
+}
+
 func (h *host) Shot(th *theme.Resolved) *image.RGBA {
 	if h.sh.shot == nil {
 		return nil
@@ -394,9 +443,9 @@ func (h *host) Shot(th *theme.Resolved) *image.RGBA {
 	return h.sh.shot(th)
 }
 
-func (h *host) Pending() ext.Pending {
+func (h *host) Pending() plugin.Pending {
 	if k := h.sh.keys; k != nil && len(k.Pending()) > 0 {
-		p := ext.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
+		p := plugin.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
 		if m := k.Complete(); m != nil && acceptKey(h.sh.cfg.Registry, p.Modes, p.Keys) {
 			p.Runs = cmpOr(m.Desc, m.Command)
 		}
@@ -408,7 +457,7 @@ func (h *host) Pending() ext.Pending {
 	if h.sh.enginePending != nil {
 		return h.sh.enginePending()
 	}
-	return ext.Pending{}
+	return plugin.Pending{}
 }
 
 func (h *host) HoldPending() {
@@ -562,10 +611,13 @@ func (l *loop) wake() time.Time {
 	return d
 }
 
-func (l *loop) handle(ctx context.Context, ev render.Event) {
+// handle feeds ev in. It reports whether the next frame can differ for it.
+func (l *loop) handle(ctx context.Context, ev render.Event) bool {
 	switch ev := ev.(type) {
 	case render.PointerEvent:
-		l.ui.Pointer(ev)
+		changed := l.ui.Pointer(ev)
+		l.win.SetCursor(l.ui.Cursor())
+		return changed
 	case render.AppearanceEvent:
 		l.osLight = !ev.Dark
 		l.themeDirty.Store(true)
@@ -580,7 +632,7 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 		k := notation(ev)
 		if p := l.keys.Pending(); len(p) > 0 && k == "<CR>" && l.keys.Complete() != nil && acceptKey(l.sh.cfg.Registry, l.keys.Modes(), p) {
 			l.run(ctx, l.keys.Accept(time.Now()))
-			return
+			return true
 		}
 		if p := l.keys.Pending(); len(p) > 0 && (k == "<BS>" || k == "<Esc>" || k == "?") {
 			switch k {
@@ -593,10 +645,11 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 			default:
 				l.keys.Cancel()
 			}
-			return
+			return true
 		}
 		l.run(ctx, l.keys.Feed(l.sh.keyModesFor(k), k, time.Now()))
 	}
+	return true
 }
 
 // acceptKey reports whether ⏎ after the pending keys runs their own mapping (which-key's ⏎), rather than going on

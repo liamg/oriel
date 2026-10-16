@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/render"
@@ -54,13 +54,13 @@ type settingsFile struct {
 	untrusted bool
 }
 
-// settingsExt is settings.toml storage (settings.md) and the settings page (:Settings, ⌘,): every option from the
+// settingsPlugin is settings.toml storage (settings.md) and the settings page (:Settings, ⌘,): every option from the
 // registry by section, with typed controls, where each value comes from, modified markers and reset. Edits write
 // the one line they change.
-type settingsExt struct {
+type settingsPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	user, project *settingsFile
 	othersMu      sync.Mutex
@@ -85,9 +85,9 @@ type settingsUndo struct {
 
 var scopeNames = []string{"USER", "PROJECT", "SESSION"}
 
-func (s *settingsExt) Manifest() ext.Manifest { return ext.Manifest{ID: "settings"} }
+func (s *settingsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "settings"} }
 
-func (s *settingsExt) Activate(_ context.Context, h ext.Host) error {
+func (s *settingsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	s.h = h
 	conf := s.sh.cfg.ConfigDir
 	s.user = &settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser}
@@ -108,12 +108,20 @@ func (s *settingsExt) Activate(_ context.Context, h ext.Host) error {
 			}
 			return nil
 		}},
-		{ID: "settings.set", Title: "Set an option: {name} = {value}, at {scope}: user, project or session", Run: func(_ registry.Ctx, a registry.Args) error {
-			return s.set(str(a, "name"), a["value"], s.scopeArg(str(a, "scope")))
-		}},
-		{ID: "settings.reset", Title: "Reset an option at {scope}: its line leaves the file", Run: func(_ registry.Ctx, a registry.Args) error {
-			return s.reset(str(a, "name"), s.scopeArg(str(a, "scope")))
-		}},
+		{ID: "settings.set", Title: "Set an option: {name} = {value}, at {scope}: user, project or session; with {key}, that key of a table option alone",
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				if k := str(a, "key"); k != "" {
+					return s.setKey(str(a, "name"), k, a["value"], s.scopeArg(str(a, "scope")))
+				}
+				return s.set(str(a, "name"), a["value"], s.scopeArg(str(a, "scope")))
+			}},
+		{ID: "settings.reset", Title: "Reset an option at {scope}: its line leaves the file; with {key}, that key of a table option alone",
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				if k := str(a, "key"); k != "" {
+					return s.setKey(str(a, "name"), k, nil, s.scopeArg(str(a, "scope")))
+				}
+				return s.reset(str(a, "name"), s.scopeArg(str(a, "scope")))
+			}},
 		{ID: "settings.reset_section", Title: "Reset every option in a {section}", Run: func(_ registry.Ctx, a registry.Args) error {
 			return s.resetWhere(func(sp registry.OptionSpec) bool { return sectionOf(sp) == str(a, "section") }, s.scope)
 		}},
@@ -155,7 +163,7 @@ func (s *settingsExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (s *settingsExt) files() []*settingsFile {
+func (s *settingsPlugin) files() []*settingsFile {
 	out := []*settingsFile{s.user}
 	if s.project != nil {
 		out = append(out, s.project)
@@ -174,7 +182,7 @@ func projectFile(root string) *settingsFile {
 }
 
 // addOthers reads the project files of repos sessions here work in, so their project values apply to them.
-func (s *settingsExt) addOthers() {
+func (s *settingsPlugin) addOthers() {
 	s.othersMu.Lock()
 	defer s.othersMu.Unlock()
 	for _, root := range projectRoots(s.sh.cfg.WorkDir, s.h.State()) {
@@ -189,7 +197,7 @@ func (s *settingsExt) addOthers() {
 }
 
 // loadAll reads each file that changed since it was last read, and reports whether any did.
-func (s *settingsExt) loadAll() bool {
+func (s *settingsPlugin) loadAll() bool {
 	s.loadMu.Lock()
 	defer s.loadMu.Unlock()
 	s.addOthers()
@@ -215,11 +223,11 @@ func (s *settingsExt) loadAll() bool {
 func fileKeys(o registry.Options, m map[string]any) []settingsfile.Key {
 	return settingsfile.Keys(m, func(name string) bool {
 		sp, ok := o.Spec(name)
-		return ok && sp.Type == registry.Map
+		return ok && (sp.Type == registry.Map || sp.Type == registry.Table)
 	})
 }
 
-func (s *settingsExt) load(f *settingsFile) bool {
+func (s *settingsPlugin) load(f *settingsFile) bool {
 	src, err := os.ReadFile(f.path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return false
@@ -278,7 +286,7 @@ func (s *settingsExt) load(f *settingsFile) bool {
 }
 
 // apply sets vals at f's layer and unsets what f set before and no longer does.
-func (s *settingsExt) apply(f *settingsFile, vals map[string]any) (errs []string) {
+func (s *settingsPlugin) apply(f *settingsFile, vals map[string]any) (errs []string) {
 	o := s.h.Options()
 	next := map[string]bool{}
 	for _, name := range slices.Sorted(maps.Keys(vals)) {
@@ -323,6 +331,10 @@ func fromTOML(sp registry.OptionSpec, v any) (any, error) {
 		if m, ok := settingsfile.StringMap(v); ok {
 			return m, nil
 		}
+	case registry.Table:
+		if m, ok := v.(map[string]any); ok {
+			return m, nil
+		}
 	default:
 		return v, nil
 	}
@@ -337,14 +349,14 @@ func toTOML(sp registry.OptionSpec, v any) any {
 }
 
 func typeName(sp registry.OptionSpec) string {
-	return [...]string{"bool", "int", "float", "string", "enum", "duration", "key", "list of strings", "map of strings"}[sp.Type]
+	return [...]string{"bool", "int", "float", "string", "enum", "duration", "key", "list of strings", "map of strings", "table"}[sp.Type]
 }
 
 // --- trust ---
 
-func (s *settingsExt) trust() settingsfile.Trust { return settingsfile.Trust{Path: s.trustPath} }
+func (s *settingsPlugin) trust() settingsfile.Trust { return settingsfile.Trust{Path: s.trustPath} }
 
-func (s *settingsExt) trustFile(path string) error {
+func (s *settingsPlugin) trustFile(path string) error {
 	var f *settingsFile
 	for _, x := range s.files() {
 		if x.trust && x.path == path {
@@ -369,7 +381,7 @@ func (s *settingsExt) trustFile(path string) error {
 }
 
 // trustOn trusts a settings file on another machine's worker, which reads its repos' files itself.
-func (s *settingsExt) trustOn(ctx context.Context, w core.WorkerID, path string) error {
+func (s *settingsPlugin) trustOn(ctx context.Context, w core.WorkerID, path string) error {
 	if s.sh.sessions == nil {
 		return errors.New("no worker is connected")
 	}
@@ -382,7 +394,7 @@ func (s *settingsExt) trustOn(ctx context.Context, w core.WorkerID, path string)
 
 // --- writing ---
 
-func (s *settingsExt) scopeArg(name string) int {
+func (s *settingsPlugin) scopeArg(name string) int {
 	switch name {
 	case "user":
 		return 0
@@ -395,7 +407,7 @@ func (s *settingsExt) scopeArg(name string) int {
 }
 
 // fileFor is the file a scope writes, or nil for the session, which is never written.
-func (s *settingsExt) fileFor(scope int) (*settingsFile, error) {
+func (s *settingsPlugin) fileFor(scope int) (*settingsFile, error) {
 	switch scope {
 	case 0:
 		return s.user, nil
@@ -408,12 +420,12 @@ func (s *settingsExt) fileFor(scope int) (*settingsFile, error) {
 	return nil, nil
 }
 
-func (s *settingsExt) sessionAt() registry.At {
+func (s *settingsPlugin) sessionAt() registry.At {
 	return registry.At{Session: s.h.Here().Session}
 }
 
 // shadow is the layer above scope's that decides name here, and where it was set: a change at scope wouldn't show.
-func (s *settingsExt) shadow(name string, scope int) (registry.Layer, string, bool) {
+func (s *settingsPlugin) shadow(name string, scope int) (registry.Layer, string, bool) {
 	at := s.atFor(scope)
 	_, l, err := s.h.Options().Get(name, at)
 	if err != nil || l <= s.layerFor(scope) {
@@ -424,14 +436,14 @@ func (s *settingsExt) shadow(name string, scope int) (registry.Layer, string, bo
 
 // readOnly says why the page can't change name at scope: init.lua sets it, and wins over the user file. The
 // project file and the session come after init.lua, so they can.
-func (s *settingsExt) readOnly(name string, scope int) error {
+func (s *settingsPlugin) readOnly(name string, scope int) error {
 	if l, src, ok := s.shadow(name, scope); ok && l == registry.LayerLua {
 		return fmt.Errorf("%s is set in %s, and init.lua wins over settings.toml; change it there, or set it for this project or session", name, src)
 	}
 	return nil
 }
 
-func (s *settingsExt) set(name string, v any, scope int) error {
+func (s *settingsPlugin) set(name string, v any, scope int) error {
 	o := s.h.Options()
 	sp, ok := o.Spec(name)
 	if !ok {
@@ -471,6 +483,34 @@ func (s *settingsExt) set(name string, v any, scope int) error {
 	})
 }
 
+// setKey sets one key of a table option in the user or project file, or removes it when v is nil: one line.
+func (s *settingsPlugin) setKey(name, key string, v any, scope int) error {
+	o := s.h.Options()
+	sp, ok := o.Spec(name)
+	if !ok {
+		return fmt.Errorf("no option %q", name)
+	}
+	if sp.Type != registry.Table {
+		return fmt.Errorf("%s isn't a table: set it whole", sp.Name)
+	}
+	f, err := s.fileFor(scope)
+	if err != nil {
+		return err
+	}
+	if f == nil {
+		return fmt.Errorf("%s is kept in a settings file: set it at the user or project scope", sp.Name)
+	}
+	return s.write(f, sp, func(doc *toml.Document, p []string) error {
+		if v == nil {
+			if _, ok := doc.Get(append(p, key)...); !ok {
+				return nil
+			}
+			return doc.Delete(append(p, key)...)
+		}
+		return doc.Set(append(slices.Clone(p), key), v)
+	})
+}
+
 // checkValue validates v for sp at f's layer without leaving it set.
 func checkValue(o registry.Options, sp registry.OptionSpec, f *settingsFile, v any) error {
 	old, had := o.Lookup(sp.Name, f.layer, f.at)
@@ -484,7 +524,7 @@ func checkValue(o registry.Options, sp registry.OptionSpec, f *settingsFile, v a
 	return nil
 }
 
-func (s *settingsExt) reset(name string, scope int) error {
+func (s *settingsPlugin) reset(name string, scope int) error {
 	o := s.h.Options()
 	sp, ok := o.Spec(name)
 	if !ok {
@@ -501,10 +541,11 @@ func (s *settingsExt) reset(name string, scope int) error {
 	return s.write(f, sp, func(doc *toml.Document, p []string) error { return doc.Delete(p...) })
 }
 
-func (s *settingsExt) resetWhere(keep func(registry.OptionSpec) bool, scope int) error {
+func (s *settingsPlugin) resetWhere(keep func(registry.OptionSpec) bool, scope int) error {
 	var errs []error
 	for _, sp := range s.h.Options().Specs() {
-		if keep(sp) {
+		// A table is a list its owner manages ([plugins]): resetting settings doesn't empty it.
+		if keep(sp) && sp.Type != registry.Table {
 			if _, set := s.h.Options().Lookup(sp.Name, s.layerFor(scope), s.atFor(scope)); set {
 				errs = append(errs, s.reset(sp.Name, scope))
 			}
@@ -515,7 +556,7 @@ func (s *settingsExt) resetWhere(keep func(registry.OptionSpec) bool, scope int)
 
 // write changes the line for sp in f with fn, at the key the file already spells it with (an alias, a dotted key)
 // or as its name's tables.
-func (s *settingsExt) write(f *settingsFile, sp registry.OptionSpec, fn func(doc *toml.Document, p []string) error) error {
+func (s *settingsPlugin) write(f *settingsFile, sp registry.OptionSpec, fn func(doc *toml.Document, p []string) error) error {
 	o := s.h.Options()
 	err := s.edit(f.path, true, func(doc *toml.Document) error {
 		p := strings.Split(sp.Name, ".")
@@ -540,7 +581,7 @@ func (s *settingsExt) write(f *settingsFile, sp registry.OptionSpec, fn func(doc
 }
 
 // edit rewrites the TOML file at path with fn, refusing one that doesn't parse. With undo, the old file is kept.
-func (s *settingsExt) edit(path string, undo bool, fn func(doc *toml.Document) error) error {
+func (s *settingsPlugin) edit(path string, undo bool, fn func(doc *toml.Document) error) error {
 	src, err := os.ReadFile(path)
 	had := err == nil
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -566,7 +607,7 @@ func (s *settingsExt) edit(path string, undo bool, fn func(doc *toml.Document) e
 	return os.WriteFile(path, out, 0o644)
 }
 
-func (s *settingsExt) undoLast() error {
+func (s *settingsPlugin) undoLast() error {
 	n := len(s.undo)
 	if n == 0 {
 		return nil
@@ -593,12 +634,12 @@ func (s *settingsExt) undoLast() error {
 	return nil
 }
 
-func (s *settingsExt) layerFor(scope int) registry.Layer {
+func (s *settingsPlugin) layerFor(scope int) registry.Layer {
 	return [...]registry.Layer{registry.LayerUser, registry.LayerProject, registry.LayerSession}[scope]
 }
 
 // atFor is where the page reads: where the user is, so a buffer's :set shows too.
-func (s *settingsExt) atFor(int) registry.At { return s.h.Here() }
+func (s *settingsPlugin) atFor(int) registry.At { return s.h.Here() }
 
 // --- the page ---
 
@@ -611,7 +652,7 @@ func sectionOf(sp registry.OptionSpec) string {
 	return sec
 }
 
-func (s *settingsExt) show(arg string) {
+func (s *settingsPlugin) show(arg string) {
 	s.open = true
 	if arg == "" {
 		return
@@ -683,7 +724,7 @@ func luaKey(k string) string {
 }
 
 // matches is the page's search: words of the name, help, aliases or value; @modified, @project and @plugin:id filter.
-func (s *settingsExt) matches(sp registry.OptionSpec, at registry.At) bool {
+func (s *settingsPlugin) matches(sp registry.OptionSpec, at registry.At) bool {
 	o := s.h.Options()
 	v, l, _ := o.Get(sp.Name, at)
 	for _, w := range strings.Fields(strings.ToLower(s.query)) {
@@ -710,7 +751,7 @@ func (s *settingsExt) matches(sp registry.OptionSpec, at registry.At) bool {
 	return true
 }
 
-func (s *settingsExt) build(c *ui.Ctx) {
+func (s *settingsPlugin) build(c *ui.Ctx) {
 	if !s.open || c.Theme().IsProbe() {
 		return
 	}
@@ -791,7 +832,7 @@ func (s *settingsExt) build(c *ui.Ctx) {
 	})
 }
 
-func (s *settingsExt) header(c *ui.Ctx, th *theme.Resolved) {
+func (s *settingsPlugin) header(c *ui.Ctx, th *theme.Resolved) {
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(16, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", "SETTINGS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11, Weight: typeset.SemiBold, Tracking: .14}, Color: th.C(theme.Accent)})
 		c.Box("q", ui.Style{W: ui.Size{Kind: ui.Grow, Value: 1, Max: 420}}, func(c *ui.Ctx) {
@@ -818,7 +859,7 @@ func (s *settingsExt) header(c *ui.Ctx, th *theme.Resolved) {
 	})
 }
 
-func (s *settingsExt) sourceLabel(name string, l registry.Layer, at registry.At) string {
+func (s *settingsPlugin) sourceLabel(name string, l registry.Layer, at registry.At) string {
 	switch l {
 	case registry.LayerDefault:
 		return "default"
@@ -832,7 +873,7 @@ func (s *settingsExt) sourceLabel(name string, l registry.Layer, at registry.At)
 	return l.String()
 }
 
-func (s *settingsExt) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, at registry.At) {
+func (s *settingsPlugin) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, at registry.At) {
 	o := s.h.Options()
 	v, l, _ := o.Get(sp.Name, at)
 	_, setHere := o.Lookup(sp.Name, s.layerFor(s.scope), at)
@@ -886,7 +927,7 @@ func (s *settingsExt) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec,
 
 // shadowNote says what decides a row's value over the layer the page edits: init.lua, with a link to the line, or
 // a later layer.
-func (s *settingsExt) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer, src string) {
+func (s *settingsPlugin) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer, src string) {
 	c.Row("shadow", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		if l != registry.LayerLua {
 			c.Text("t", "overridden here by "+strings.TrimSuffix(s.sourceLabel("", l, registry.At{})+" · "+src, " · "), monoAt(th, 10.5, theme.FgFaint))
@@ -909,7 +950,7 @@ func (s *settingsExt) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer
 }
 
 // control is a row's typed control: a toggle, choices, a list or map editor, or a field that's checked when entered.
-func (s *settingsExt) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, v any, disabled bool) {
+func (s *settingsPlugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, v any, disabled bool) {
 	const help = "shell/settings#rows"
 	switch sp.Type {
 	case registry.List:
@@ -931,6 +972,10 @@ func (s *settingsExt) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionS
 			Disabled: disabled, Help: help, Validate: entryCheck(sp)}); ok {
 			s.fail(s.set(sp.Name, nm, s.scope))
 		}
+		return
+	case registry.Table:
+		m, _ := v.(map[string]any)
+		c.Text("table", fmt.Sprintf("%d %s · in settings.toml", len(m), plural(len(m), "entry", "entries")), monoFont(11, th.C(theme.FgMuted)))
 		return
 	case registry.Bool:
 		on, _ := v.(bool)
@@ -976,14 +1021,14 @@ func entryCheck(sp registry.OptionSpec) func(k, v string) error {
 }
 
 // dropdown is a menu of values for a row.
-func (s *settingsExt) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, values []string, disabled bool) {
+func (s *settingsPlugin) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, values []string, disabled bool) {
 	if v, ok := widget.Select(c, "drop", cur, values, widget.SelectOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}); ok {
 		s.fail(s.set(sp.Name, v, s.scope))
 	}
 }
 
 // field is a text field for a value, checked as it's typed and set when entered.
-func (s *settingsExt) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled bool) {
+func (s *settingsPlugin) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled bool) {
 	text := fieldText(v)
 	fid := c.Next("field")
 	st := ui.State[fieldState](c, fid)
@@ -1060,7 +1105,7 @@ func parseField(sp registry.OptionSpec, s string) (any, error) {
 	return s, nil
 }
 
-func (s *settingsExt) footer(c *ui.Ctx, th *theme.Resolved) {
+func (s *settingsPlugin) footer(c *ui.Ctx, th *theme.Resolved) {
 	f, _ := s.fileFor(s.scope)
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(16, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tThemePanel), Stroke: th.C(theme.Line), Border: 1}, func(c *ui.Ctx) {
 		where := "this session: not written to disk"
@@ -1098,7 +1143,7 @@ func tildePath(p string) string {
 	return p
 }
 
-func (s *settingsExt) fail(err error) {
+func (s *settingsPlugin) fail(err error) {
 	if err != nil {
 		s.h.Notify(core.Notice{ID: "settings.set", Severity: core.SevError, Title: "Settings", Text: err.Error(), Key: true})
 	}

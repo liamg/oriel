@@ -1,0 +1,80 @@
+{
+ "data": {
+  "viewer": {
+   "id": "0f3a9c2e-7b1d-4e8f-9a6c-2d5b8e1f0001"
+  },
+  "issue": {
+   "id": "b81c40d7-9a2e-4c55-9e0b-7d1f3c2a2240",
+   "identifier": "ENG-2240",
+   "title": "Prime the result cache after a reindex",
+   "url": "https://linear.app/acme/issue/ENG-2240/price-cache-invalidation-on-plan-change",
+   "description": "Evict the org's cached results when its index is rebuilt, rather than waiting for the nightly job.",
+   "priorityLabel": "High",
+   "state": {
+    "name": "Todo",
+    "type": "unstarted"
+   },
+   "project": {
+    "name": "Usage"
+   },
+   "assignee": {
+    "id": "0f3a9c2e-7b1d-4e8f-9a6c-2d5b8e1f0001",
+    "name": "Liam Galvin"
+   },
+   "comments": {
+    "nodes": []
+   },
+   "attachments": {
+    "nodes": []
+   },
+   "team": {
+    "states": {
+     "nodes": [
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a01",
+       "name": "Backlog",
+       "type": "backlog",
+       "position": 0
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a02",
+       "name": "Todo",
+       "type": "unstarted",
+       "position": 1
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a03",
+       "name": "In Progress",
+       "type": "started",
+       "position": 2
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a04",
+       "name": "In Review",
+       "type": "started",
+       "position": 3
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a05",
+       "name": "Done",
+       "type": "completed",
+       "position": 4
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a06",
+       "name": "Canceled",
+       "type": "canceled",
+       "position": 5
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a07",
+       "name": "Duplicate",
+       "type": "canceled",
+       "position": 6
+      }
+     ]
+    }
+   }
+  }
+ }
+}

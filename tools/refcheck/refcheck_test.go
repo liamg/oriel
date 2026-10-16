@@ -31,6 +31,7 @@ func fakeSpec(t *testing.T) string {
 	write(t, root, "spec/css/Overview.bs", "<h2 id=\"mix\">Mixing</h2>\n<p>Mix &amp; <em>match</em>\n colours.\n<h3 id=\"sub\">Sub</h3>\nStill mixing.\n<h2 id='next'>Next</h2>\nElsewhere.\nset |x| to 1, giving&nbsp;''red'' or `blue`\n")
 	write(t, root, "spec/wcag/terms.html", "<dt><dfn id=\"dfn-ratio\">ratio</dfn></dt>\n<dd>\n  <p>(L1 + 0.05) /\n (L2 + 0.05)</p>\n</dd>\n<dt><dfn id=\"dfn-other\">other</dfn></dt>\n<dd>Elsewhere.</dd>\n")
 	write(t, root, "spec/wcag/sc.html", "<section id=\"min\" class=\"sc\">\n<h4>Minimum</h4>\n<p>at least 4.5:1</p>\n<section id=\"inner\">Inner.</section>\n</section>\nAfter.\n")
+	write(t, root, "spec/sv/semver.md", "Semantic Versioning\n===\n\nSpec\n----\n\nUse `X.Y.Z`.\n\nFAQ\n---\n\nAsk.\n")
 	write(t, root, "spec/ec/index.rst", "Title\n^^^^^\n\nFile Format\n===========\n\nRead ``one`` line\nat a time.\n\nSub\n---\n\nStill format.\n\nGlobs\n=====\n\nElsewhere.\n")
 	write(t, root, "spec/git/attrs.txt", "gitattributes(5)\n================\n\nEffects\n-------\n\n`text`\n^^^^^^\n\nThis attribute marks the path as a text file.\n\nOther\n-----\n\nElsewhere.\n")
 	write(t, root, "spec/go/help.txt", "The flags:\n\n\t-run regexp\n\t    Run only those tests matching\n\t    the regular expression.\n")
@@ -84,6 +85,9 @@ func TestCheck(t *testing.T) {
 		{"wcag/sc.html#min", "at least 4.5:1", true},
 		{"wcag/sc.html#min", "Inner.", true},
 		{"wcag/sc.html#min", "After.", false},
+		{"sv/semver.md#Spec", "Use X.Y.Z.", true},
+		{"sv/semver.md#Spec", "Ask.", false},
+		{"sv/semver.md#FAQ", "Ask.", true},
 		{"ec/index.rst#File Format", "Read one line at a time.", true},
 		{"ec/index.rst#File Format", "Still format.", true},
 		{"ec/index.rst#File Format", "Elsewhere.", false},

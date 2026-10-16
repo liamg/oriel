@@ -25,7 +25,7 @@ func HoverCard(c *ui.Ctx, key any, anchor ui.ID, o HoverCardOpts, body func(c *u
 	in := c.Interaction(anchor)
 	over := in.Hovered || in.Inside
 	if st.shown && !over {
-		over = c.Interaction(id).Inside || hoverBridge(c, anchor, id, in.Pointer)
+		over = c.Interaction(id).Inside || hoverBridge(c, anchor, id, in.Pointer())
 	}
 	st.shown = over
 	if !over {

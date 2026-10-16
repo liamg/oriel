@@ -8,11 +8,11 @@ import (
 	"io"
 	"strings"
 
-	"github.com/liamg/oriel/ext/nativebuild"
+	"github.com/liamg/oriel/plugin/nativebuild"
 )
 
 const buildUsage = `oriel build --with PKG[@VERSION][=DIR] ... [--oriel VERSION|DIR] [-o FILE] [-tags TAGS]
-    a custom oriel with native plugins linked in: each PKG's init calls ext.Register (plugins.md).
+    a custom oriel with native plugins linked in: each PKG's init calls plugin.Register (plugins.md).
     --oriel is oriel's version, or a checkout to build from; this build's version by default.`
 
 // runBuild is `oriel build --with …`.

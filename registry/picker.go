@@ -11,7 +11,7 @@ import (
 type PickerItem struct {
 	ID         string
 	Label      string
-	Detail     string // after the label, dim: "work · INF-2231"
+	Detail     string // after the label, dim: "work · ENG-2231"
 	Note       string // at the right: "replied 6m"
 	Icon       string // a glyph before the label; empty for a dot in IconStyle
 	IconStyle  string // a theme token

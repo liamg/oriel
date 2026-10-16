@@ -28,7 +28,7 @@ type debugPanel struct {
 	watchVals   []watchValue // the watches' values in the selected frame
 }
 
-type debugView struct{ x *debugExt }
+type debugView struct{ x *debugPlugin }
 
 func (v debugView) Title(string) string { return "Debug" }
 func (v debugView) EdgeToEdge()         {}
@@ -54,7 +54,7 @@ func debugHeading(c *ui.Ctx, key any, label, note string) {
 
 // panelView is the toolbar over three columns: the call stack and breakpoints, variables and watches, and the debug
 // console (08-debug).
-func (x *debugExt) panelView(c *ui.Ctx) {
+func (x *debugPlugin) panelView(c *ui.Ctx) {
 	th := c.Theme()
 	c.Column("debug", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tExplorerBg), Help: debugHelp, Role: ui.RoleRegion, Label: "Debug"}, func(c *ui.Ctx) {
 		x.toolbar(c)
@@ -78,7 +78,7 @@ func (x *debugExt) panelView(c *ui.Ctx) {
 }
 
 // stateLabel is "PAUSED · BREAKPOINT", "RUNNING"…
-func (x *debugExt) stateLabel() string {
+func (x *debugPlugin) stateLabel() string {
 	s := x.sess
 	if s == nil {
 		return "NOT RUNNING"
@@ -92,7 +92,7 @@ func (x *debugExt) stateLabel() string {
 	return strings.ToUpper(s.state)
 }
 
-func (x *debugExt) toolbar(c *ui.Ctx) {
+func (x *debugPlugin) toolbar(c *ui.Ctx) {
 	th := c.Theme()
 	s := x.sess
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
@@ -131,13 +131,13 @@ func (x *debugExt) toolbar(c *ui.Ctx) {
 	})
 }
 
-func (x *debugExt) run(cmd string, args registry.Args) {
+func (x *debugPlugin) run(cmd string, args registry.Args) {
 	if err := x.h.Run(context.Background(), cmd, args); err != nil {
 		x.print("error", err.Error())
 	}
 }
 
-func (x *debugExt) stackList(c *ui.Ctx) {
+func (x *debugPlugin) stackList(c *ui.Ctx) {
 	s := x.sess
 	var frames []dap.Frame
 	thread := ""
@@ -181,7 +181,7 @@ type bpRow struct {
 	bp   debugBreakpoint
 }
 
-func (x *debugExt) bpRows() []bpRow {
+func (x *debugPlugin) bpRows() []bpRow {
 	var out []bpRow
 	files := make([]string, 0, len(x.bps))
 	for f := range x.bps {
@@ -196,7 +196,7 @@ func (x *debugExt) bpRows() []bpRow {
 	return out
 }
 
-func (x *debugExt) breakpointList(c *ui.Ctx) {
+func (x *debugPlugin) breakpointList(c *ui.Ctx) {
 	rows := x.bpRows()
 	c.Column("bps", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		debugHeading(c, "h", "BREAKPOINTS", x.counts())
@@ -241,7 +241,7 @@ func (x *debugExt) breakpointList(c *ui.Ctx) {
 
 // variableItems are the tree's rows for variables, their children as fetched; an unfetched structured one has a
 // placeholder child so it can be opened, and refs records what each id expands.
-func (x *debugExt) variableItems(prefix string, vs []dap.Variable, refs map[string]int, depth int) []widget.TreeItem {
+func (x *debugPlugin) variableItems(prefix string, vs []dap.Variable, refs map[string]int, depth int) []widget.TreeItem {
 	th := x.h.CurrentTheme()
 	var out []widget.TreeItem
 	for i, v := range vs {
@@ -260,7 +260,7 @@ func (x *debugExt) variableItems(prefix string, vs []dap.Variable, refs map[stri
 	return out
 }
 
-func (x *debugExt) variables(c *ui.Ctx) {
+func (x *debugPlugin) variables(c *ui.Ctx) {
 	s := x.sess
 	c.Column("vars", ui.Style{W: ui.Flex(1), H: ui.Flex(1.4)}, func(c *ui.Ctx) {
 		var items []widget.TreeItem
@@ -296,7 +296,7 @@ func (x *debugExt) variables(c *ui.Ctx) {
 	})
 }
 
-func (x *debugExt) watchList(c *ui.Ctx) {
+func (x *debugPlugin) watchList(c *ui.Ctx) {
 	c.Column("watch", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		debugHeading(c, "h", "WATCH", "")
 		vals := x.panel.watchVals
@@ -332,7 +332,7 @@ func (x *debugExt) watchList(c *ui.Ctx) {
 	})
 }
 
-func (x *debugExt) consoleView(c *ui.Ctx) {
+func (x *debugPlugin) consoleView(c *ui.Ctx) {
 	note := ""
 	if s := x.sess; s != nil {
 		note = s.spec.Name
@@ -380,7 +380,7 @@ func (x *debugExt) consoleView(c *ui.Ctx) {
 }
 
 // accessView is what agents may do in the debugger, a chip each: a click moves it on from allow to ask to off.
-func (x *debugExt) accessView(c *ui.Ctx) {
+func (x *debugPlugin) accessView(c *ui.Ctx) {
 	th := c.Theme()
 	debugHeading(c, "access-h", "AGENT'S DEBUGGER ACCESS", "")
 	c.Row("access", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 6), Gap: 6, Cross: ui.Center, ScrollX: true}, func(c *ui.Ctx) {
@@ -403,7 +403,7 @@ func (x *debugExt) accessView(c *ui.Ctx) {
 }
 
 // statusSegment is where the debugger is, and the breakpoints: "● paused round.go:42 · 3 breakpoints · 1 conditional".
-func (x *debugExt) statusSegment(c *ui.Ctx) {
+func (x *debugPlugin) statusSegment(c *ui.Ctx) {
 	where := ""
 	s := x.sess
 	switch {

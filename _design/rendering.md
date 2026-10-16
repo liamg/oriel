@@ -264,6 +264,13 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   `NextFrame()` while anything moves or a tooltip is due, and the app redraws at 120 Hz until then. A frame that read
   input (a click, keys, the wheel) asks for the next one too, since what the input changed shows only then. The option
   `ui.reduced_motion` makes every spring jump.
+- **Frames for pointer moves**: no widget decides whether it needs drawing; the toolkit knows what a frame read.
+  `u.Pointer(ev)` reports whether a move can change the next frame: it does when a button is held, a drag or
+  scrollbar drag is on, what's hovered changes, a node read `Interaction.Pointer()` (a method, so the read is seen),
+  a tooltip is up (it follows the pointer), or the pointer crossed a region the toolkit tested (`over`, a scrollbar's
+  hover). Otherwise the app builds no frame, and sets the cursor alone. The frames moves do need are paced to one per
+  120 Hz interval; keys and other input draw at once. The Gio window also skips a display list identical to the last
+  (`render.List.Same`). A sweep over an open directory takes about 4% CPU.
 - `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer.
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
   selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,
@@ -333,7 +340,7 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool // dr
   window edge for a dock that's closed) with an accent fill and glow that glide between targets on springs.
 - `⌃W h/j/k/l` goes to the nearest pane in that direction by last frame's rects; a tie goes back to where focus came
   from, as vim's window moves feel.
-- The app's built-in `layout` extension owns the root and registers `view.open {id, place, edge, side, size}` (`size` is the height or width a closed dock opens at),
+- The app's built-in `layout` plugin owns the root and registers `view.open {id, place, edge, side, size}` (`size` is the height or width a closed dock opens at),
   `view.close`, `layout.move`, `layout.zoom`, `layout.focus {dir}`, `layout.dock {edge}`, `layout.equalize`,
   `layout.save/restore {name}` and `layout.menu`, with the ⌃W keys, `⌃J` and ``⌃` `` bound in `global`. Saved layouts
   are in memory until sessions persist them (SE-2).

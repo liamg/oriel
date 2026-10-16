@@ -2,9 +2,9 @@
 id: PL-19
 title: "Package format: Lua entry point, process/wasm/asset APIs, oriel plugin pack"
 phase: P8
-status: todo
+status: review
 area: Platform
-module: ext, script
+module: plugin, script
 depends_on: [PL-2, PL-3]
 ---
 

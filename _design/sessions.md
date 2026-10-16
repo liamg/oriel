@@ -49,7 +49,7 @@ flowchart LR
   provider, repos, worker, sandbox.
 - **From anywhere**: a ticket from any tracker, Linear or another (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
   ("fix CI" opens a work session on the PR's branch), or an agentbus review request.
-- **CLI**: `oriel new "fix stale usage prices" --repo pricing --ticket INF-2231`, `oriel review <pr-url>`, `oriel open <session>`,
+- **CLI**: `oriel new "fix stale search results" --repo search --ticket ENG-2231`, `oriel review <pr-url>`, `oriel open <session>`,
   `oriel init <name> --template go-cli`, `oriel ~/src/foo` (direct).
 
 ### Repos on a worker
@@ -161,7 +161,7 @@ type Sessions interface {
   doesn't listen), TLS 1.3 with a self-signed certificate kept in the state directory (`workers/tls.crt`, `tls.key`,
   owner-only) that workers pin by fingerprint. A worker is let in by its name and key (`wire.KeyHashAuth` over
   `workers.json` in the config directory, owner-only, each key kept as `wire.HashKey`). Once in, it's served exactly
-  as this machine's worker is (the `sessions` extension's `serve`): its `WorkerChanged`, usage and sessions join the
+  as this machine's worker is (the `sessions` plugin's `serve`): its `WorkerChanged`, usage and sessions join the
   store, and it answers the same calls. It must say it's the worker its key is for (`Info.ID`), or it's cut off, and
   it speaks only for itself (`core.State.FromWorker`: events about another worker or another worker's sessions are
   dropped). One that connects again replaces its old connection; one that goes away is `WorkerGone` (offline, with
@@ -186,7 +186,7 @@ type Sessions interface {
     and Cancel takes it back to the restart. Sessions the new worker doesn't have leave the window.
 - **Where things are**: workspaces in `~/.oriel/workspaces/<id>` with `.oriel-workspace.json` (crit's manifest,
   field for field); each session's event log, logs and drafts in `~/.oriel/sessions/<id>/`; registered repos in
-  `~/.oriel/repos.json`. A session's id is its name, from the prompt (`inf-2231-fix-stale-usage-prices`), unique on
+  `~/.oriel/repos.json`. A session's id is its name, from the prompt (`eng-2231-fix-stale-usage-prices`), unique on
   its worker.
 - **Only Oriel's own sessions are listed.** crit's workspaces aren't read: listed with Oriel's, they buried them, and
   each made a tab. A session the worker once took from crit (`Source: "crit"`) is dropped, with its log, on restore.
@@ -226,14 +226,14 @@ type Sessions interface {
   as it starts, by a model other than its agent's (`KindSpec.AutoReview`; `agents.md`, Guardrails).
 - **The launcher** (`ui.md` 04) lists the worker's kinds (`kinds.list`, `worker.KindSpec`: title, `Desc`, `About`,
   `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
-  The CLI takes its flags after the prompt too (`oriel new "fix stale usage prices" --repo pricing`), and every
+  The CLI takes its flags after the prompt too (`oriel new "fix stale search results" --repo search`), and every
   kind starts from it: `new --kind plan|work|tour|job|direct|scratch`, `review <pr-url>`, `init <name>`.
   A kind's `Variants` (RV-8: a tour's walkthrough, onboarding, archaeology, showcase, demo, incident and
   feasibility) are a picker beside the ticket and `--variant` on the CLI; the first is the default, and one the kind
   hasn't is refused. A tour's is its manifest's `tour.kind`.
 - **The app opens on mission control** (SH-7) once there's a session to show, when it starts with nothing open
   (`mission.at_launch`); with no session it stays on the start view, whose Recent lists the sessions first.
-- **Files outside the session** open read-only: the sessions extension's `BufRead` rewrite hook marks a file outside
+- **Files outside the session** open read-only: the sessions plugin's `BufRead` rewrite hook marks a file outside
   every project and the session's own directory "outside the session", and one in a project the session only reads
   (a plan's checkouts before Start work, a tour, a review) "the session only reads it". It applies while the window
   is on the session in front. Go-to-definition and peek reach them as any file.

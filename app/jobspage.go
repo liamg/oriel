@@ -25,7 +25,7 @@ import (
 // runsShown is how many runs the runs card lists before "N more".
 const runsShown = 6
 
-func (x *jobsExt) page(c *ui.Ctx) {
+func (x *jobsPlugin) page(c *ui.Ctx) {
 	if !x.open || c.Theme().IsProbe() {
 		return
 	}
@@ -49,7 +49,7 @@ func (x *jobsExt) page(c *ui.Ctx) {
 	})
 }
 
-func (x *jobsExt) header(c *ui.Ctx, rows []jobRow) {
+func (x *jobsPlugin) header(c *ui.Ctx, rows []jobRow) {
 	th := c.Theme()
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "JOBS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
@@ -87,14 +87,14 @@ func (x *jobsExt) header(c *ui.Ctx, rows []jobRow) {
 	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 }
 
-func (x *jobsExt) run(id string, a registry.Args) {
+func (x *jobsPlugin) run(id string, a registry.Args) {
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		x.err = err.Error()
 	}
 }
 
 // workerNames are the connected workers' names.
-func (x *jobsExt) workerNames() string {
+func (x *jobsPlugin) workerNames() string {
 	var out []string
 	for _, w := range x.h.State().Workers {
 		if w.Connected {
@@ -105,7 +105,7 @@ func (x *jobsExt) workerNames() string {
 	return strings.Join(out, ", ")
 }
 
-func (x *jobsExt) workerName(id core.WorkerID) string {
+func (x *jobsPlugin) workerName(id core.WorkerID) string {
 	for _, w := range x.h.State().Workers {
 		if w.ID == id {
 			return w.Title()
@@ -115,7 +115,7 @@ func (x *jobsExt) workerName(id core.WorkerID) string {
 }
 
 // list is the jobs, filtered, a row each.
-func (x *jobsExt) list(c *ui.Ctx, rows []jobRow) {
+func (x *jobsPlugin) list(c *ui.Ctx, rows []jobRow) {
 	th := c.Theme()
 	q := strings.ToLower(strings.TrimSpace(x.filter))
 	shown := slices.DeleteFunc(slices.Clone(rows), func(r jobRow) bool {
@@ -166,7 +166,7 @@ func (x *jobsExt) list(c *ui.Ctx, rows []jobRow) {
 	})
 }
 
-func (x *jobsExt) jobRowView(c *ui.Ctx, r jobRow, on bool) {
+func (x *jobsPlugin) jobRowView(c *ui.Ctx, r jobRow, on bool) {
 	th := c.Theme()
 	fill, edge := render.Color{}, render.Color{}
 	if on {
@@ -223,7 +223,7 @@ func pinChip(c *ui.Ctx, key any, sandbox string) {
 }
 
 // when is a run's start as the rows show it: "today 07:14", "yesterday 16:40", "Oct 11 · 3d ago".
-func (x *jobsExt) when(t time.Time) string {
+func (x *jobsPlugin) when(t time.Time) string {
 	now := x.now().In(x.loc)
 	t = t.In(x.loc)
 	day := func(t time.Time) time.Time { return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, x.loc) }
@@ -239,7 +239,7 @@ func (x *jobsExt) when(t time.Time) string {
 }
 
 // started is a run's start in the runs table: "today 12:13", "Oct 7 · 07:00".
-func (x *jobsExt) started(t time.Time) string {
+func (x *jobsPlugin) started(t time.Time) string {
 	now := x.now().In(x.loc)
 	t = t.In(x.loc)
 	if t.Year() == now.Year() && t.YearDay() == now.YearDay() {
@@ -248,7 +248,7 @@ func (x *jobsExt) started(t time.Time) string {
 	return t.Format("Jan 2 · 15:04")
 }
 
-func (x *jobsExt) empty(c *ui.Ctx) {
+func (x *jobsPlugin) empty(c *ui.Ctx) {
 	th := c.Theme()
 	c.Column("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(4, 40), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", "Save a prompt you'd run more than once, then press Run.", uiFont(13, th.C(theme.FgMuted)))
@@ -257,14 +257,14 @@ func (x *jobsExt) empty(c *ui.Ctx) {
 }
 
 // took is how long a run ran: so far while it runs.
-func (x *jobsExt) took(r runRow) time.Duration {
+func (x *jobsPlugin) took(r runRow) time.Duration {
 	if r.run.Status == worker.RunRunning {
 		return x.now().Sub(r.se.Created)
 	}
 	return r.run.Took()
 }
 
-func (x *jobsExt) detail(c *ui.Ctx, r jobRow) {
+func (x *jobsPlugin) detail(c *ui.Ctx, r jobRow) {
 	th := c.Theme()
 	j := r.job
 	key := jobKey(j)
@@ -350,7 +350,7 @@ func (x *jobsExt) detail(c *ui.Ctx, r jobRow) {
 var repoWord = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9._-]*`)
 
 // named are the worker's repos a prompt names, in the order it names them.
-func (x *jobsExt) named(j worker.Job) []string {
+func (x *jobsPlugin) named(j worker.Job) []string {
 	_, repos := x.load()
 	known := map[string]bool{}
 	for _, r := range repos[j.Worker] {
@@ -367,7 +367,7 @@ func (x *jobsExt) named(j worker.Job) []string {
 }
 
 // prompt is the job's prompt, the repos it names picked out in their colours.
-func (x *jobsExt) prompt(c *ui.Ctx, j worker.Job) {
+func (x *jobsPlugin) prompt(c *ui.Ctx, j worker.Job) {
 	th := c.Theme()
 	st := x.h.State()
 	names := x.named(j)
@@ -435,7 +435,7 @@ func promptSpans(line string, tones map[string]render.Color) []widget.Span {
 }
 
 // schedule is the job's schedule as a strip: manual, every weekday, weekly, or custom (the dialog's).
-func (x *jobsExt) schedule(c *ui.Ctx, j worker.Job) {
+func (x *jobsPlugin) schedule(c *ui.Ctx, j worker.Job) {
 	th := c.Theme()
 	s := j.Schedule
 	at := cmpOr(s.At, "07:00")
@@ -477,7 +477,7 @@ func (x *jobsExt) schedule(c *ui.Ctx, j worker.Job) {
 }
 
 // cost is a run's estimated cost and its split by repo: from its stats once they're in, its agent's until then.
-func (x *jobsExt) cost(r runRow) (float64, []stats.Share, bool) {
+func (x *jobsPlugin) cost(r runRow) (float64, []stats.Share, bool) {
 	if x.sh.stats != nil {
 		if d, ok := x.sh.stats.detail(r.se.ID); ok && d.Totals.Cost > 0 {
 			return d.Totals.Cost, d.Repos, true
@@ -488,7 +488,7 @@ func (x *jobsExt) cost(r runRow) (float64, []stats.Share, bool) {
 
 var runCols = []statsCol{{"STATUS", 96}, {"STARTED", 120}, {"REPOS", 200}, {"SUMMARY", 0}, {"COST", 78}, {"TOOK", 48}, {"", 160}}
 
-func (x *jobsExt) runs(c *ui.Ctx, r jobRow) {
+func (x *jobsPlugin) runs(c *ui.Ctx, r jobRow) {
 	th := c.Theme()
 	want := runFilters[x.runFilter]
 	all := append(slices.Clone(r.runs), skipRows(r.job)...)
@@ -539,7 +539,7 @@ func (x *jobsExt) runs(c *ui.Ctx, r jobRow) {
 var stoppedBy = map[string]string{core.StoppedByYou: " by you", core.StoppedByAgent: " by the agent", core.StoppedByWorker: " as the worker shut down"}
 
 // summary is what a run's row says it did.
-func (x *jobsExt) summary(r runRow) string {
+func (x *jobsPlugin) summary(r runRow) string {
 	if r.run.Status == worker.RunStopped {
 		s := "Stopped" + stoppedBy[r.run.StoppedBy]
 		if t := r.run.Took(); t > 0 {
@@ -551,7 +551,7 @@ func (x *jobsExt) summary(r runRow) string {
 }
 
 // openRun brings a run's session up as 44's panel 3 draws it: its console the main tab, the sidebar narrow.
-func (x *jobsExt) openRun(id core.SessionID) {
+func (x *jobsPlugin) openRun(id core.SessionID) {
 	x.open = false
 	x.do("session.open", registry.Args{"id": string(id), "then": []any{
 		registry.Args{"command": "view.open", "args": registry.Args{"id": AgentConsoleView, "place": "tab", "title": "Agent"}},
@@ -559,7 +559,7 @@ func (x *jobsExt) openRun(id core.SessionID) {
 	}})
 }
 
-func (x *jobsExt) runRowView(c *ui.Ctx, i int, r runRow) {
+func (x *jobsPlugin) runRowView(c *ui.Ctx, i int, r runRow) {
 	th := c.Theme()
 	st := x.h.State()
 	c.Row("row", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(0, 5), Cross: ui.Center}, func(c *ui.Ctx) {
@@ -628,7 +628,7 @@ func (x *jobsExt) runRowView(c *ui.Ctx, i int, r runRow) {
 
 // costCell is a run's cost over a strip of its split by repo, a link to its stats with the split in a card under the
 // pointer.
-func (x *jobsExt) costCell(c *ui.Ctx, r runRow) {
+func (x *jobsPlugin) costCell(c *ui.Ctx, r runRow) {
 	th := c.Theme()
 	st := x.h.State()
 	cost, shares, ok := x.cost(r)
@@ -661,7 +661,7 @@ func (x *jobsExt) costCell(c *ui.Ctx, r runRow) {
 }
 
 // more is the runs past those listed: how many, since when, how they went and what they cost.
-func (x *jobsExt) more(c *ui.Ctx, rest []runRow) {
+func (x *jobsPlugin) more(c *ui.Ctx, rest []runRow) {
 	th := c.Theme()
 	count := map[string]int{}
 	var total float64
@@ -694,7 +694,7 @@ func textCellLeft(c *ui.Ctx, key any, w float32, s string, tone render.Color) {
 
 // consoleSide is a run's job in its agent console (44's panel 3): the job, how this run is going and the last one
 // went, what it has cost in each repo so far, and what happens when it ends.
-func (x *jobsExt) consoleSide(c *ui.Ctx, id core.SessionID) {
+func (x *jobsPlugin) consoleSide(c *ui.Ctx, id core.SessionID) {
 	th := c.Theme()
 	view, ok := x.h.State().Session(id)
 	if !ok || view.Snapshot().Job == "" {

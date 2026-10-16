@@ -15,7 +15,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/dap"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/toml"
@@ -133,13 +133,13 @@ type DebugEnded struct {
 	ExitCode int    `json:"exit_code"`
 }
 
-// debugExt is the debugger (DB-1, ide.md "Debugging"): breakpoints in the gutter (conditional, hit counts,
+// debugPlugin is the debugger (DB-1, ide.md "Debugging"): breakpoints in the gutter (conditional, hit counts,
 // logpoints), sessions on registered debug adapters (registry.DebugAdapter), stepping, the stack, variables, watch
 // expressions and a REPL, in the Debug panel.
-type debugExt struct {
+type debugPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	bps     map[string][]debugBreakpoint // by absolute path
 	watches []string
@@ -152,9 +152,9 @@ type debugExt struct {
 	inline *inlineCache
 }
 
-func (x *debugExt) Manifest() ext.Manifest { return ext.Manifest{ID: "debug"} }
+func (x *debugPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "debug"} }
 
-func (x *debugExt) Activate(_ context.Context, h ext.Host) error {
+func (x *debugPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.bps = map[string][]debugBreakpoint{}
 	x.load()
@@ -176,7 +176,7 @@ func (x *debugExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *debugExt) Deactivate(ctx context.Context) error {
+func (x *debugPlugin) Deactivate(ctx context.Context) error {
 	x.mu.Lock()
 	var c *dap.Client
 	if x.sess != nil {
@@ -192,9 +192,9 @@ func (x *debugExt) Deactivate(ctx context.Context) error {
 	return x.disposer.Deactivate(ctx)
 }
 
-func (x *debugExt) wait() { x.busy.Wait() }
+func (x *debugPlugin) wait() { x.busy.Wait() }
 
-func (x *debugExt) commands(h ext.Host) {
+func (x *debugPlugin) commands(h plugin.Host) {
 	live := func(registry.Args) bool { return x.sess.live() && x.client() != nil }
 	paused := func(registry.Args) bool { return live(nil) && x.sess.state == debugPaused }
 	running := func(registry.Args) bool { return live(nil) && x.sess.state == debugRunning }
@@ -354,7 +354,7 @@ func debugViewArgs() registry.Args {
 }
 
 // client is the running session's client, nil while it starts or once it's gone.
-func (x *debugExt) client() *dap.Client {
+func (x *debugPlugin) client() *dap.Client {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	if x.sess == nil {
@@ -364,7 +364,7 @@ func (x *debugExt) client() *dap.Client {
 }
 
 // adapters are the registered adapters as specs, in the order they're tried.
-func (x *debugExt) adapters() []dap.AdapterSpec {
+func (x *debugPlugin) adapters() []dap.AdapterSpec {
 	var out []dap.AdapterSpec
 	for _, a := range registry.DebugAdapters(x.h) {
 		out = append(out, dap.AdapterSpec(a))
@@ -373,7 +373,7 @@ func (x *debugExt) adapters() []dap.AdapterSpec {
 }
 
 // debuggable reports whether an adapter debugs the language of the file at path.
-func (x *debugExt) debuggable(path string) bool {
+func (x *debugPlugin) debuggable(path string) bool {
 	lang, ok := languageFor(x.h, path, nil)
 	if !ok {
 		return false
@@ -382,7 +382,7 @@ func (x *debugExt) debuggable(path string) bool {
 }
 
 // place is the file and 0-based line a breakpoint command names: {file, line}, or the cursor's.
-func (x *debugExt) place(a registry.Args) (string, int, error) {
+func (x *debugPlugin) place(a registry.Args) (string, int, error) {
 	if file := a.String("file"); file != "" {
 		line := int(a.Int("line"))
 		if line < 1 {
@@ -398,11 +398,11 @@ func (x *debugExt) place(a registry.Args) (string, int, error) {
 	return path, p.Cursor().Line, nil
 }
 
-func (x *debugExt) find(file string, line int) int {
+func (x *debugPlugin) find(file string, line int) int {
 	return slices.IndexFunc(x.bps[file], func(b debugBreakpoint) bool { return b.Line == line })
 }
 
-func (x *debugExt) toggle(file string, line int) {
+func (x *debugPlugin) toggle(file string, line int) {
 	if x.find(file, line) >= 0 {
 		x.remove(file, line)
 		return
@@ -410,7 +410,7 @@ func (x *debugExt) toggle(file string, line int) {
 	x.set(file, debugBreakpoint{Line: line})
 }
 
-func (x *debugExt) set(file string, b debugBreakpoint) {
+func (x *debugPlugin) set(file string, b debugBreakpoint) {
 	if i := x.find(file, b.Line); i >= 0 {
 		x.bps[file][i] = b
 	} else {
@@ -421,7 +421,7 @@ func (x *debugExt) set(file string, b debugBreakpoint) {
 	x.sync(file)
 }
 
-func (x *debugExt) remove(file string, line int) {
+func (x *debugPlugin) remove(file string, line int) {
 	i := x.find(file, line)
 	if i < 0 {
 		return
@@ -435,7 +435,7 @@ func (x *debugExt) remove(file string, line int) {
 }
 
 // sync sends a file's breakpoints to the running session.
-func (x *debugExt) sync(file string) {
+func (x *debugPlugin) sync(file string) {
 	c := x.client()
 	if c == nil {
 		return
@@ -450,7 +450,7 @@ func (x *debugExt) sync(file string) {
 	}, nil)
 }
 
-func (x *debugExt) dapBreakpoints() map[string][]dap.Breakpoint {
+func (x *debugPlugin) dapBreakpoints() map[string][]dap.Breakpoint {
 	out := map[string][]dap.Breakpoint{}
 	for file, bs := range x.bps {
 		for _, b := range bs {
@@ -466,7 +466,7 @@ type debugState struct {
 	Watches     []string                     `json:"watches"`
 }
 
-func (x *debugExt) load() {
+func (x *debugPlugin) load() {
 	path := x.sh.dirState("debug")
 	if path == "" {
 		return
@@ -484,7 +484,7 @@ func (x *debugExt) load() {
 	}
 }
 
-func (x *debugExt) save() {
+func (x *debugPlugin) save() {
 	path := x.sh.dirState("debug")
 	if path == "" {
 		return
@@ -495,7 +495,7 @@ func (x *debugExt) save() {
 }
 
 // dir is the directory debugged: the window's project.
-func (x *debugExt) dir() string {
+func (x *debugPlugin) dir() string {
 	if dir := x.sh.cfg.WorkDir; dir != "" {
 		return dir
 	}
@@ -503,7 +503,7 @@ func (x *debugExt) dir() string {
 }
 
 // configs are the launch configs in .oriel/debug.toml, as [[debug]] tables.
-func (x *debugExt) configs() ([]dap.LaunchConfig, error) {
+func (x *debugPlugin) configs() ([]dap.LaunchConfig, error) {
 	dir := x.dir()
 	src, err := os.ReadFile(filepath.Join(dir, ".oriel", "debug.toml"))
 	if errors.Is(err, os.ErrNotExist) {
@@ -536,7 +536,7 @@ func (x *debugExt) configs() ([]dap.LaunchConfig, error) {
 }
 
 // inferred is the launch config for the current file, from the first adapter for its language that has one.
-func (x *debugExt) inferred() (dap.LaunchConfig, bool) {
+func (x *debugPlugin) inferred() (dap.LaunchConfig, bool) {
 	path := x.sh.editor.panePath(x.sh.editor.current())
 	lang, ok := languageFor(x.h, path, nil)
 	if path == "" || !ok {
@@ -555,7 +555,7 @@ func (x *debugExt) inferred() (dap.LaunchConfig, bool) {
 }
 
 // adapterFor is the first installed adapter for a config's type.
-func (x *debugExt) adapterFor(cfg dap.LaunchConfig) (dap.AdapterSpec, error) {
+func (x *debugPlugin) adapterFor(cfg dap.LaunchConfig) (dap.AdapterSpec, error) {
 	var names []string
 	for _, s := range x.adapters() {
 		if s.Debugs(cfg.Type) {
@@ -572,7 +572,7 @@ func (x *debugExt) adapterFor(cfg dap.LaunchConfig) (dap.AdapterSpec, error) {
 }
 
 // startNamed starts the config of that name, or with none, the first configured, or the current file's.
-func (x *debugExt) startNamed(name string) error {
+func (x *debugPlugin) startNamed(name string) error {
 	cfgs, err := x.configs()
 	if err != nil {
 		return err
@@ -596,7 +596,7 @@ func (x *debugExt) startNamed(name string) error {
 }
 
 // launch starts the launch config args spell out, on the first installed adapter for its type.
-func (x *debugExt) launch(a registry.Args) error {
+func (x *debugPlugin) launch(a registry.Args) error {
 	cfg, err := dap.ConfigFromMap(map[string]any(a), x.sh.editor.dir)
 	if err != nil {
 		return err
@@ -605,7 +605,7 @@ func (x *debugExt) launch(a registry.Args) error {
 }
 
 // startConfig starts cfg on the first installed adapter for its type, ending the session running first.
-func (x *debugExt) startConfig(cfg dap.LaunchConfig) error {
+func (x *debugPlugin) startConfig(cfg dap.LaunchConfig) error {
 	spec, err := x.adapterFor(cfg)
 	if err != nil {
 		return err
@@ -618,7 +618,7 @@ func (x *debugExt) startConfig(cfg dap.LaunchConfig) error {
 }
 
 // start runs a session; its events come back on the loop.
-func (x *debugExt) start(spec dap.AdapterSpec, cfg dap.LaunchConfig) {
+func (x *debugPlugin) start(spec dap.AdapterSpec, cfg dap.LaunchConfig) {
 	s := &debugSession{spec: spec, cfg: cfg, state: debugStarting, vars: map[int][]dap.Variable{}, hits: map[int]int{}}
 	x.mu.Lock()
 	x.sess = s
@@ -663,7 +663,7 @@ func (x *debugExt) start(spec dap.AdapterSpec, cfg dap.LaunchConfig) {
 	}()
 }
 
-func (x *debugExt) ended(s *debugSession) {
+func (x *debugPlugin) ended(s *debugSession) {
 	if s.state == debugEnded {
 		return
 	}
@@ -677,7 +677,7 @@ func (x *debugExt) ended(s *debugSession) {
 	x.h.Redraw()
 }
 
-func (x *debugExt) print(kind, text string) {
+func (x *debugPlugin) print(kind, text string) {
 	for _, l := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
 		x.console = append(x.console, consoleLine{Kind: kind, Text: l})
 	}
@@ -687,7 +687,7 @@ func (x *debugExt) print(kind, text string) {
 }
 
 // event applies what the adapter said to the session it's about.
-func (x *debugExt) event(s *debugSession, e dap.Event) {
+func (x *debugPlugin) event(s *debugSession, e dap.Event) {
 	defer x.h.Redraw()
 	switch e := e.(type) {
 	case dap.Stopped:
@@ -724,7 +724,7 @@ func (x *debugExt) event(s *debugSession, e dap.Event) {
 }
 
 // fetch reads a stop's stack, then the selected frame.
-func (x *debugExt) fetch(s *debugSession) {
+func (x *debugPlugin) fetch(s *debugSession) {
 	gen, c, thread := s.gen, s.client, s.thread
 	x.async(func(ctx context.Context) error {
 		frames, err := c.Stack(ctx, thread)
@@ -747,7 +747,7 @@ func (x *debugExt) fetch(s *debugSession) {
 }
 
 // frameChanged shows the selected frame: its scopes and their variables, the watches, and its line in the editor.
-func (x *debugExt) frameChanged(s *debugSession) {
+func (x *debugPlugin) frameChanged(s *debugSession) {
 	f, ok := s.top()
 	if !ok {
 		return
@@ -785,7 +785,7 @@ func (x *debugExt) frameChanged(s *debugSession) {
 }
 
 // refresh evaluates the watches in the selected frame.
-func (x *debugExt) refresh() {
+func (x *debugPlugin) refresh() {
 	s := x.sess
 	f, ok := s.top()
 	if !ok || s.client == nil {
@@ -820,7 +820,7 @@ func debugErrText(err error) string {
 }
 
 // expand fetches a structured variable's children.
-func (x *debugExt) expand(ref int) {
+func (x *debugPlugin) expand(ref int) {
 	s := x.sess
 	if s == nil || s.client == nil || ref <= 0 || s.vars[ref] != nil {
 		return
@@ -841,7 +841,7 @@ func (x *debugExt) expand(ref int) {
 	}, nil)
 }
 
-func (x *debugExt) selectFrame(i int) error {
+func (x *debugPlugin) selectFrame(i int) error {
 	s := x.sess
 	if s == nil || s.state != debugPaused {
 		return errors.New("not paused")
@@ -856,7 +856,7 @@ func (x *debugExt) selectFrame(i int) error {
 	return nil
 }
 
-func (x *debugExt) addWatch(expr string) error {
+func (x *debugPlugin) addWatch(expr string) error {
 	expr = strings.TrimSpace(expr)
 	if expr == "" {
 		return errors.New("nothing to watch")
@@ -869,7 +869,7 @@ func (x *debugExt) addWatch(expr string) error {
 }
 
 // eval evaluates in the REPL: in the selected frame while paused, globally otherwise.
-func (x *debugExt) eval(expr string) error {
+func (x *debugPlugin) eval(expr string) error {
 	expr = strings.TrimSpace(expr)
 	c := x.client()
 	if expr == "" || c == nil {
@@ -894,7 +894,7 @@ func (x *debugExt) eval(expr string) error {
 	return nil
 }
 
-func (x *debugExt) resume() error {
+func (x *debugPlugin) resume() error {
 	s, c := x.sess, x.client()
 	if c == nil || s.state != debugPaused {
 		return errors.New("not paused")
@@ -905,7 +905,7 @@ func (x *debugExt) resume() error {
 	return nil
 }
 
-func (x *debugExt) step(kind dap.StepKind) error {
+func (x *debugPlugin) step(kind dap.StepKind) error {
 	s, c := x.sess, x.client()
 	if c == nil || s.state != debugPaused {
 		return errors.New("not paused")
@@ -916,7 +916,7 @@ func (x *debugExt) step(kind dap.StepKind) error {
 	return nil
 }
 
-func (x *debugExt) pause() error {
+func (x *debugPlugin) pause() error {
 	s, c := x.sess, x.client()
 	if c == nil || s.state != debugRunning {
 		return errors.New("not running")
@@ -930,7 +930,7 @@ func (x *debugExt) pause() error {
 }
 
 // stopSession ends the session, then runs then on the loop.
-func (x *debugExt) stopSession(then func()) error {
+func (x *debugPlugin) stopSession(then func()) error {
 	s := x.sess
 	c := x.client()
 	if c == nil {
@@ -959,7 +959,7 @@ func (x *debugExt) stopSession(then func()) error {
 }
 
 // async runs fn off the loop; an error goes to the debug console.
-func (x *debugExt) async(fn func(ctx context.Context) error, done func()) {
+func (x *debugPlugin) async(fn func(ctx context.Context) error, done func()) {
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
@@ -979,7 +979,7 @@ func (x *debugExt) async(fn func(ctx context.Context) error, done func()) {
 }
 
 // stateOf is a breakpoint's state in the running session, by its place in the file's list.
-func (x *debugExt) stateOf(file string, i int) (dap.BreakpointState, bool) {
+func (x *debugPlugin) stateOf(file string, i int) (dap.BreakpointState, bool) {
 	c := x.client()
 	if c == nil || !x.sess.live() {
 		return dap.BreakpointState{}, false
@@ -991,7 +991,7 @@ func (x *debugExt) stateOf(file string, i int) (dap.BreakpointState, bool) {
 	return states[i], true
 }
 
-func (x *debugExt) decorations(ctx registry.DecorationCtx) []registry.Decoration {
+func (x *debugPlugin) decorations(ctx registry.DecorationCtx) []registry.Decoration {
 	var out []registry.Decoration
 	for i, b := range x.bps[ctx.Path] {
 		if b.Line < ctx.Top || b.Line >= ctx.Bottom {
@@ -1022,7 +1022,7 @@ func (x *debugExt) decorations(ctx registry.DecorationCtx) []registry.Decoration
 }
 
 // counts is "3 breakpoints · 1 conditional · 1 logpoint", for the status line.
-func (x *debugExt) counts() string {
+func (x *debugPlugin) counts() string {
 	n, cond, logs := 0, 0, 0
 	for _, bs := range x.bps {
 		for _, b := range bs {

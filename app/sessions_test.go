@@ -13,7 +13,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/wire"
 	"github.com/liamg/oriel/worker"
@@ -128,7 +128,7 @@ func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 // AI-7 layer 2: a Permission hook answers before the user is asked.
 func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 	lw := newLocalWorker(t)
-	r := startAppWith(t, t.TempDir(), "", func(h ext.Host) {
+	r := startAppWith(t, t.TempDir(), "", func(h plugin.Host) {
 		h.Hook(registry.Hook{Event: "Permission", Kind: registry.Decide, Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 			p := ev.(registry.PermissionEvent)
 			if p.Tool == "Bash" && strings.HasPrefix(p.Input, "go test ") {
@@ -163,7 +163,7 @@ func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 func TestAgentToolsRunInTheApp(t *testing.T) {
 	lw := newLocalWorker(t)
 	var session string
-	r := startAppWith(t, t.TempDir(), "", func(h ext.Host) {
+	r := startAppWith(t, t.TempDir(), "", func(h plugin.Host) {
 		h.Contribute(registry.AgentTool{Name: "staging_logs", Desc: "Tail the staging logs", Params: map[string]string{"service": "string", "lines": "number?"},
 			ReadOnly: true, Run: func(ctx registry.Ctx, p map[string]any) (any, error) {
 				session = registry.SessionOf(ctx)
@@ -193,7 +193,7 @@ func TestAgentToolsRunInTheApp(t *testing.T) {
 func TestAgentTurnEndFires(t *testing.T) {
 	lw := newLocalWorker(t)
 	ended := make(chan string, 4)
-	r := startAppWith(t, t.TempDir(), "", func(h ext.Host) {
+	r := startAppWith(t, t.TempDir(), "", func(h plugin.Host) {
 		h.Hook(registry.Hook{Event: "AgentTurnEnd", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 			ended <- ev.(AgentTurnEnd).Session
 			return registry.Verdict{}, nil

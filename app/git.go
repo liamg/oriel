@@ -9,22 +9,22 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
 
 // gitPoll is how often the work tree's status is read again while nothing else asks.
 const gitPoll = 2 * time.Second
 
-// gitExt is the work tree's git status, kept up to date for the explorer, the gutters and the pickers, and the
+// gitPlugin is the work tree's git status, kept up to date for the explorer, the gutters and the pickers, and the
 // git.* commands that change it. Outside a repo it has no status and its commands say so. Other projects' work
 // trees (a session's, ui.md 01h) are read too, from when something first asks for one.
-type gitExt struct {
+type gitPlugin struct {
 	disposer
 	gitTree // the work dir's
 	sh      *shell
-	h       ext.Host
+	h       plugin.Host
 	cancel  context.CancelFunc
 	busy    sync.WaitGroup
 
@@ -42,9 +42,9 @@ type gitTree struct {
 	ready  bool // its root and remote have been looked for
 }
 
-func (g *gitExt) Manifest() ext.Manifest { return ext.Manifest{ID: "git"} }
+func (g *gitPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "git"} }
 
-func (g *gitExt) Activate(ctx context.Context, h ext.Host) error {
+func (g *gitPlugin) Activate(ctx context.Context, h plugin.Host) error {
 	g.h, g.sh.git = h, g
 	g.others = map[string]*gitTree{}
 	g.work, g.ready = g.sh.cfg.WorkDir, true
@@ -138,7 +138,7 @@ func (g *gitExt) Activate(ctx context.Context, h ext.Host) error {
 }
 
 // poll reads every work tree's status again every gitPoll, until ctx ends.
-func (g *gitExt) poll(ctx context.Context) {
+func (g *gitPlugin) poll(ctx context.Context) {
 	t := time.NewTicker(gitPoll)
 	defer t.Stop()
 	for {
@@ -158,7 +158,7 @@ func (g *gitExt) poll(ctx context.Context) {
 	}
 }
 
-func (g *gitExt) trees() []*gitTree {
+func (g *gitPlugin) trees() []*gitTree {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	out := make([]*gitTree, 0, len(g.others))
@@ -170,7 +170,7 @@ func (g *gitExt) trees() []*gitTree {
 
 // tree is dir's work tree: the work dir's when dir is in it, else one read from now on. Until its root is found it
 // has no status.
-func (g *gitExt) tree(dir string) *gitTree {
+func (g *gitPlugin) tree(dir string) *gitTree {
 	if dir == "" || g.root() != "" && within(dir, g.root()) || filepath.Clean(dir) == filepath.Clean(g.work) {
 		return &g.gitTree
 	}
@@ -201,7 +201,7 @@ func (g *gitExt) tree(dir string) *gitTree {
 }
 
 // holding is the work tree a path is in: one already read whose root holds it, else the work dir's.
-func (g *gitExt) holding(p string) *gitTree {
+func (g *gitPlugin) holding(p string) *gitTree {
 	if filepath.IsAbs(p) {
 		for _, t := range g.trees() {
 			if t.root() != "" && within(p, t.root()) {
@@ -213,7 +213,7 @@ func (g *gitExt) holding(p string) *gitTree {
 }
 
 // settled says every work tree asked for has been looked at.
-func (g *gitExt) settled() bool {
+func (g *gitPlugin) settled() bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	for _, t := range g.others {
@@ -224,7 +224,7 @@ func (g *gitExt) settled() bool {
 	return true
 }
 
-func (g *gitExt) Deactivate(ctx context.Context) error {
+func (g *gitPlugin) Deactivate(ctx context.Context) error {
 	if g.cancel != nil {
 		g.cancel()
 	}
@@ -233,7 +233,7 @@ func (g *gitExt) Deactivate(ctx context.Context) error {
 }
 
 // async runs fn off the loop, then reads the status again; an error is a notice.
-func (g *gitExt) async(fn func(ctx context.Context) error) {
+func (g *gitPlugin) async(fn func(ctx context.Context) error) {
 	g.busy.Add(1)
 	go func() {
 		defer g.busy.Done()
@@ -254,23 +254,23 @@ func (g *gitExt) async(fn func(ctx context.Context) error) {
 }
 
 // wait is until the work queued with async is done.
-func (g *gitExt) wait() { g.busy.Wait() }
+func (g *gitPlugin) wait() { g.busy.Wait() }
 
-func (g *gitExt) state() *gitx.State {
+func (g *gitPlugin) state() *gitx.State {
 	if g == nil {
 		return nil
 	}
 	return g.gitTree.state()
 }
 
-func (g *gitExt) root() string {
+func (g *gitPlugin) root() string {
 	if g == nil {
 		return ""
 	}
 	return g.gitTree.root()
 }
 
-func (g *gitExt) rel(p string) string {
+func (g *gitPlugin) rel(p string) string {
 	if g == nil {
 		return p
 	}

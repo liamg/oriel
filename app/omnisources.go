@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/syntax"
@@ -40,7 +40,7 @@ func previewField(c *ui.Ctx, label, value string) {
 }
 
 // sessionsSource is the sessions, the ones that need you first.
-func sessionsSource(h ext.Host) registry.PickerSource {
+func sessionsSource(h plugin.Host) registry.PickerSource {
 	boost := map[core.Status]int{core.StatusNeedsYou: 40, core.StatusPermission: 30, core.StatusReviewer: 10}
 	return registry.PickerSource{ID: "sessions", Title: "Sessions", Order: 10,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
@@ -81,7 +81,7 @@ func sessionsSource(h ext.Host) registry.PickerSource {
 }
 
 // commandsSource is every command, by its title, with the keys bound to it.
-func commandsSource(h ext.Host) registry.PickerSource {
+func commandsSource(h plugin.Host) registry.PickerSource {
 	keysFor := func(id string) []registry.Keymap {
 		var out []registry.Keymap
 		for _, k := range h.Keymaps() {
@@ -166,7 +166,7 @@ func (l *fileList) list() []string {
 }
 
 // filesSource is the files of the editor's directory; open ones and shallower paths rank higher.
-func (x *editorExt) filesSource() registry.PickerSource {
+func (x *editorPlugin) filesSource() registry.PickerSource {
 	files := &fileList{dir: x.dir}
 	return registry.PickerSource{ID: "files", Title: "Files", Prefix: "@", Order: 30,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
@@ -200,7 +200,7 @@ func (x *editorExt) filesSource() registry.PickerSource {
 }
 
 // filePreview is a file's text from line, highlighted.
-func (x *editorExt) filePreview(name string, line int) ui.Node {
+func (x *editorPlugin) filePreview(name string, line int) ui.Node {
 	return &ui.Func{Key: "file", Fn: func(c *ui.Ctx) {
 		path := filepath.Join(x.dir, name)
 		src, err := os.ReadFile(path)
@@ -221,7 +221,7 @@ type symbols struct {
 }
 
 // symbolsSource is the functions, methods and types of the open buffers.
-func (x *editorExt) symbolsSource() registry.PickerSource {
+func (x *editorPlugin) symbolsSource() registry.PickerSource {
 	cache := map[*text.Buffer]*symbols{}
 	outline := func(name string, b *text.Buffer) []text.Unit {
 		snap := b.Snapshot()

@@ -413,7 +413,7 @@ func (s *emacsState) Key(k input.Key) input.Result {
 
 ```go
 // registering it: edit/input/emacs is a sample, with a Plugin that does this
-func (p *Plugin) Activate(_ context.Context, h ext.Host) error { p.d = h.Input(emacs.Engine{}); return nil }
+func (p *Plugin) Activate(_ context.Context, h plugin.Host) error { p.d = h.Input(emacs.Engine{}); return nil }
 // config: editor.input = "emacs"   (global, or per buffer)
 ```
 

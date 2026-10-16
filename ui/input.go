@@ -23,11 +23,27 @@ type Interaction struct {
 	Disabled     bool
 	Keys         []render.KeyEvent // keys typed at it since the last frame, while focused
 	Context      *render.Point     // where it was right-clicked since the last frame
-	Pointer      render.Point      // the pointer, wherever it is
 	Scroll       render.Point      // wheel movement over it since the last frame, for a box with Wheel
 	Mods         render.Mods       // the modifiers held at its last press
 	Dropped      *DragData         // a drag let go over it since the last frame, of a kind it takes (Style.Drop)
 	DragOver     bool              // a drag of a kind it takes is over it now
+
+	pos render.Point
+	u   *UI
+}
+
+// Pointer is where the pointer is, wherever it is. A frame that reads it is built again whenever the pointer moves.
+func (it Interaction) Pointer() render.Point {
+	if it.u != nil {
+		it.u.tracked = true
+	}
+	return it.pos
+}
+
+// over reports whether the pointer is in r, and has the next pointer move build a frame if that changes.
+func (u *UI) over(r render.Rect) bool {
+	u.regions = append(u.regions, r)
+	return u.in.inside && inside(u.in.pos, r)
 }
 
 // Options are how the UI looks and behaves where widgets don't say.
@@ -117,8 +133,28 @@ func (in *input) pending() bool {
 	return len(in.clicks) > 0 || len(in.keys) > 0 || len(in.context) > 0 || len(in.wheel) > 0 || len(in.dropped) > 0
 }
 
-// Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame.
-func (u *UI) Pointer(ev render.PointerEvent) {
+// Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame. It reports whether the
+// next frame can differ for it: a move with no button held that changes nothing the latest frame read (what's
+// hovered, Interaction.Pointer, the regions it tested) doesn't need one.
+func (u *UI) Pointer(ev render.PointerEvent) bool {
+	in := &u.in
+	from, inside0, hot := in.pos, in.inside, in.hot
+	u.pointer(ev)
+	if ev.Kind != render.PointerMove || ev.Buttons != 0 || in.active != 0 || in.bar != nil || in.dnd != nil {
+		return true
+	}
+	if u.tracked || in.hot != hot || in.inside != inside0 {
+		return true
+	}
+	for _, r := range u.regions {
+		if inside(from, r) != inside(in.pos, r) {
+			return true
+		}
+	}
+	return false
+}
+
+func (u *UI) pointer(ev render.PointerEvent) {
 	in := &u.in
 	switch ev.Kind {
 	case render.PointerLeave:
@@ -243,9 +279,10 @@ func (u *UI) Interaction(id ID) Interaction {
 		Focused:      in.focus == id && id != 0,
 		FocusVisible: in.focus == id && in.visible && id != 0,
 		Keys:         in.keys[id],
-		Pointer:      in.pos,
 		Scroll:       in.wheel[id],
 		Mods:         in.mods,
+		pos:          in.pos,
+		u:            u,
 	}
 	if p, ok := in.context[id]; ok {
 		it.Context = &p

@@ -34,7 +34,7 @@ func signsScene(t *testing.T) (*errScene, *gittest.Repo) {
 }
 
 func (s *errScene) signs() *gitSigns {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if g, ok := e.(*gitSigns); ok {
 			return g
 		}

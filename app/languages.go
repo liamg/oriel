@@ -9,28 +9,27 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
-	"github.com/liamg/oriel/toml"
 )
 
-// languagesExt is builtin:languages (ED-11): Oriel's core grammars, registered as a third-party pack would be, and
+// languagesPlugin is builtin:languages (ED-11): Oriel's core grammars, registered as a third-party pack would be, and
 // the local packs in the config directory's languages/, which may shadow them. Grammars run sandboxed in wazero with
 // no host imports, so a pack on disk needs no consent. languages.install adds a grammar pack CI built (PL-3).
-type languagesExt struct {
+type languagesPlugin struct {
 	disposer
 	dir      string          // ~/.config/oriel/languages
 	cacheDir string          // where compiled grammars are kept
 	sums     syntax.PackSums // the packs it installs; the binary's list when nil
 
-	h     ext.Host
+	h     plugin.Host
 	packs map[string]registry.Disposable // each local pack's registration, by its directory's name
 }
 
-func (x *languagesExt) Manifest() ext.Manifest { return ext.Manifest{ID: "languages"} }
+func (x *languagesPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "languages"} }
 
-func (x *languagesExt) Activate(_ context.Context, h ext.Host) error {
+func (x *languagesPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.packs = h, map[string]registry.Disposable{}
 	x.add(onDispose(func() { x.packs = nil }))
 	x.add(h.Command(registry.Command{ID: "languages.install", Title: "Install the grammar pack in the .tar.gz at {path}, if it's one this build of Oriel lists",
@@ -52,8 +51,8 @@ func (x *languagesExt) Activate(_ context.Context, h ext.Host) error {
 }
 
 // load registers the pack in dir/name, in place of what it registered before.
-func (x *languagesExt) load(name string) error {
-	l, err := readPack(filepath.Join(x.dir, name))
+func (x *languagesPlugin) load(name string) error {
+	l, err := plugin.ReadLanguagePack(filepath.Join(x.dir, name))
 	if err != nil {
 		x.h.Log().Warn("language pack", "dir", name, "err", err)
 		return err
@@ -69,7 +68,7 @@ func (x *languagesExt) load(name string) error {
 
 // install puts the grammar pack at path into the languages directory and registers it. Only a pack matching the
 // checksums the binary ships installs (deps.md). A grammar has no host imports, so there's no consent to ask.
-func (x *languagesExt) install(path string) error {
+func (x *languagesPlugin) install(path string) error {
 	if path == "" {
 		return fmt.Errorf("languages.install needs the pack's {path}")
 	}
@@ -77,7 +76,7 @@ func (x *languagesExt) install(path string) error {
 	if sums == nil {
 		sums = syntax.Packs()
 	}
-	f, err := os.Open(ext.Expand(path))
+	f, err := os.Open(plugin.Expand(path))
 	if err != nil {
 		return err
 	}
@@ -87,46 +86,6 @@ func (x *languagesExt) install(path string) error {
 		return err
 	}
 	return x.load(name)
-}
-
-// readPack reads a grammar pack: language.toml (name, extensions, filenames, shebangs), grammar.wasm and queries/.
-func readPack(dir string) (registry.Language, error) {
-	l := registry.Language{Name: filepath.Base(dir), Source: dir, Queries: map[string]string{}}
-	if src, err := os.ReadFile(filepath.Join(dir, "language.toml")); err == nil {
-		doc, err := toml.Parse(src)
-		if err != nil {
-			return l, err
-		}
-		v := doc.Value()
-		if n, ok := v["name"].(string); ok {
-			l.Name = n
-		}
-		strs := func(k string) []string {
-			var out []string
-			if xs, ok := v[k].([]any); ok {
-				for _, x := range xs {
-					if s, ok := x.(string); ok {
-						out = append(out, s)
-					}
-				}
-			}
-			return out
-		}
-		l.Extensions, l.Filenames, l.Shebangs = strs("extensions"), strs("filenames"), strs("shebangs")
-	}
-	wasm := filepath.Join(dir, "grammar.wasm")
-	if _, err := os.Stat(wasm); err == nil {
-		l.Grammar = func() ([]byte, error) { return os.ReadFile(wasm) }
-	}
-	qs, _ := filepath.Glob(filepath.Join(dir, "queries", "*.scm"))
-	for _, q := range qs {
-		b, err := os.ReadFile(q)
-		if err != nil {
-			return l, err
-		}
-		l.Queries[strings.TrimSuffix(filepath.Base(q), ".scm")] = string(b)
-	}
-	return l, nil
 }
 
 // langSets are the registry's languages as a syntax.Set, made again when they change.

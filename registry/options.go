@@ -18,14 +18,15 @@ const (
 	String
 	Enum
 	Duration
-	Key  // keys in vim notation
-	List // a list of strings
-	Map  // strings by name
+	Key   // keys in vim notation
+	List  // a list of strings
+	Map   // strings by name
+	Table // any values by name: a settings table its owner reads, such as [plugins]
 )
 
 // Values are held as bool, int, float64, string (String, Enum and Key), time.Duration, []string or map[string]string.
 var goTypes = map[OptionType]string{Bool: "bool", Int: "int", Float: "float64", String: "string", Enum: "string", Duration: "time.Duration", Key: "string",
-	List: "[]string", Map: "map[string]string"}
+	List: "[]string", Map: "map[string]string", Table: "map[string]any"}
 
 // Scope is where an option may be set, as a set of bits.
 type Scope uint8
@@ -144,6 +145,8 @@ func (s OptionSpec) Check(v any) error {
 		_, ok = v.([]string)
 	case Map:
 		_, ok = v.(map[string]string)
+	case Table:
+		_, ok = v.(map[string]any)
 	}
 	if !ok {
 		return fmt.Errorf("%s is a %s, not %T", s.Name, goTypes[s.Type], v)

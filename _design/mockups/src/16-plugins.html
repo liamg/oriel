@@ -37,7 +37,7 @@
   <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
   <div class="stabs">
     <div class="stab"><span class="dot o"></span>pricing-rounding<span class="mini">plan</span><span class="k">⌘1</span></div>
-    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot r"></span>ENG-2231 search api<span class="mini">needs you</span><span class="k">⌘2</span></div>
     <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
     <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
     <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div>
@@ -57,16 +57,16 @@
     <div class="grp">AI</div>
     <div>Agents<span class="n">2</span></div><div>Prompts<span class="n">28</span></div><div>Review gates</div><div>Assistant</div>
     <div class="grp">Platform</div>
-    <div class="on">Extensions<span class="n">14</span></div><div>Integrations</div><div>Workers<span class="n">3</span></div><div>Sandbox &amp; network</div><div>Trusted orgs</div><div>Voice</div>
+    <div class="on">Plugins<span class="n">14</span></div><div>Integrations</div><div>Workers<span class="n">3</span></div><div>Sandbox &amp; network</div><div>Trusted orgs</div><div>Voice</div>
   </div>
   <div class="list">
     <div class="lhead">
-      <div><div class="cap" style="color:var(--cyan)">Settings</div><h2>Extensions</h2></div>
+      <div><div class="cap" style="color:var(--cyan)">Settings</div><h2>Plugins</h2></div>
       <div class="row gap6" style="margin-left:18px;margin-bottom:3px"><span class="chip c">installed 14</span><span class="chip">updates 2</span><span class="chip">registry</span></div>
       <div class="input" style="margin-left:auto;width:280px">⌕ filter by name, kind, permission…</div>
     </div>
     <div class="tbl">
-      <div class="tr h"><span></span><span>Extension</span><span>Contributes</span><span>Permissions</span><span>Runs</span><span style="text-align:right">CPU · MEM</span></div>
+      <div class="tr h"><span></span><span>Plugin</span><span>Contributes</span><span>Permissions</span><span>Runs</span><span style="text-align:right">CPU · MEM</span></div>
 
       <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#ff9b6b,#d9774a)">C</div><div><div><span class="nm">Claude Code</span><span class="ver">1.4.0</span></div><div class="by">builtin · provider</div></div><div class="chips"><span class="chip o">provider</span><span class="chip">tools</span><span class="chip">usage</span></div><div class="perm"><b>exec</b> claude · <b>fs</b> ~/.claude<br><b>net</b> via sandbox proxy</div><div class="iso" style="color:var(--fg2)">out-of-proc</div><div class="res">0.4% · 38M</div></div>
 
@@ -76,7 +76,7 @@
 
       <div class="tr on"><div class="lg" style="background:linear-gradient(135deg,#5c8dff,#3a5ad6)">L</div><div><div><span class="nm">Linear</span><span class="ver">1.2.1</span></div><div class="by">builtin · integration</div></div><div class="chips"><span class="chip v">integration</span><span class="chip">panel</span><span class="chip">hud tat</span><span class="chip">command</span></div><div class="perm"><b>net</b> api.linear.app<br><b>secrets</b> LINEAR_TOKEN · <b>ui</b> panel, tat</div><div class="iso" style="color:var(--fg2)">out-of-proc</div><div class="res">0.0% · 14M</div></div>
 
-      <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#4fe0a0,#2a9f72)">B</div><div><div><span class="nm">agentbus</span><span class="ver">0.3.0</span></div><div class="by">infracost · integration</div></div><div class="chips"><span class="chip v">integration</span><span class="chip">inbox</span><span class="chip">hud tat</span></div><div class="perm"><b>net</b> bus.infracost.io<br><b>agent</b> read-only auto-answer</div><div class="iso" style="color:var(--fg2)">out-of-proc</div><div class="res">0.2% · 19M</div></div>
+      <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#4fe0a0,#2a9f72)">B</div><div><div><span class="nm">agentbus</span><span class="ver">0.3.0</span></div><div class="by">acme · integration</div></div><div class="chips"><span class="chip v">integration</span><span class="chip">inbox</span><span class="chip">hud tat</span></div><div class="perm"><b>net</b> bus.acme.io<br><b>agent</b> read-only auto-answer</div><div class="iso" style="color:var(--fg2)">out-of-proc</div><div class="res">0.2% · 19M</div></div>
 
       <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#ff7ac6,#c43c8c)">S</div><div><div><span class="nm">Slack</span><span class="ver">0.4.0</span></div><div class="by">builtin · integration</div></div><div class="chips"><span class="chip v">integration</span><span class="chip">command</span></div><div class="perm"><b>net</b> hooks.slack.com<br><b>secrets</b> SLACK_WEBHOOK</div><div class="iso" style="color:var(--violet)">wasm</div><div class="res">— · 3M</div></div>
 
@@ -90,7 +90,7 @@
 
       <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#1d2531,#424d5b);color:var(--cyan)">◆</div><div><div><span class="nm">Theme: Oriel Night</span><span class="ver">1.0</span></div><div class="by">builtin · theme</div></div><div class="chips"><span class="chip g">theme</span><span class="chip">fonts</span></div><div class="perm"><b>none</b></div><div class="iso" style="color:var(--cyan)">data</div><div class="res">—</div></div>
 
-      <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#5c8dff,#2a4fb0)">J</div><div><div><span class="nm">jira</span><span class="ver">0.2.0</span><span class="chip y" style="margin-left:6px;font-size:8.5px;padding:0 5px">community</span></div><div class="by">@kestrel-dev · integration</div></div><div class="chips"><span class="chip v">integration</span><span class="chip">launcher</span><span class="chip">panel</span></div><div class="perm"><b>net</b> *.atlassian.net <span style="color:var(--yellow)">⚠ wildcard</span><br><b>secrets</b> JIRA_TOKEN</div><div class="iso" style="color:var(--violet)">wasm</div><div class="res">— · 6M</div></div>
+      <div class="tr"><div class="lg" style="background:linear-gradient(135deg,#5c8dff,#2a4fb0)">J</div><div><div><span class="nm">jira</span><span class="ver">0.2.0</span><span class="chip g" style="margin-left:6px;font-size:8.5px;padding:0 5px">reviewed</span></div><div class="by">@kestrel-dev · integration</div></div><div class="chips"><span class="chip v">integration</span><span class="chip">launcher</span><span class="chip">panel</span></div><div class="perm"><b>net</b> *.atlassian.net <span style="color:var(--yellow)">⚠ wildcard</span><br><b>secrets</b> JIRA_TOKEN</div><div class="iso" style="color:var(--violet)">wasm</div><div class="res">— · 6M</div></div>
     </div>
   </div>
   <div class="detail">
@@ -126,8 +126,8 @@
     <div class="dsec" style="border-bottom:none">
       <div class="cap" style="margin-bottom:6px">Activity</div>
       <div class="mono" style="font-size:10.5px;line-height:18px;color:var(--fg2)">
-        <div><span class="dim">14:09</span> get_issue INF-2231 <span class="dim">← claude · 210ms</span></div>
-        <div><span class="dim">14:02</span> event pr.merged → moved INF-2198 to Done</div>
+        <div><span class="dim">14:09</span> get_issue ENG-2231 <span class="dim">← claude · 210ms</span></div>
+        <div><span class="dim">14:02</span> event pr.merged → moved ENG-2198 to Done</div>
         <div><span class="dim">13:40</span> panel refresh · 7 assigned</div>
       </div>
     </div>
@@ -137,6 +137,6 @@
 </div>
 <div class="status">
   <span class="mode" style="background:var(--fg3)">SETTINGS</span>
-  <span>extensions</span><span class="dim">14 installed · 9 running · 2 updates</span>
-  <span style="margin-left:auto;padding-right:12px" class="dim">~/.config/oriel/extensions.toml</span>
+  <span>plugins</span><span class="dim">14 installed · 9 running · 2 updates</span>
+  <span style="margin-left:auto;padding-right:12px" class="dim">~/.config/oriel/settings.toml</span>
 </div>

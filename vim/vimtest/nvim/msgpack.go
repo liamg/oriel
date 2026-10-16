@@ -9,7 +9,7 @@ import (
 	"sort"
 )
 
-// Ext is a msgpack extension value; nvim uses them for Buffer, Window and Tabpage handles.
+// Ext is a msgpack plugin value; nvim uses them for Buffer, Window and Tabpage handles.
 type Ext struct {
 	Type int8
 	Data []byte

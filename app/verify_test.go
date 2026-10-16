@@ -55,9 +55,9 @@ func (f *fakeQuiz) asked() []registry.ForkRequest {
 	return slices.Clone(f.prompts)
 }
 
-func (s *errScene) verify() *verifyExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*verifyExt); ok {
+func (s *errScene) verify() *verifyPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*verifyPlugin); ok {
 			return x
 		}
 	}
@@ -76,21 +76,21 @@ func (s *errScene) verifySettle(t *testing.T, what string, ok func(frame string)
 	})
 }
 
-// verifyScene is 18's session with a commit on usage-api to raise, and a fake fork in front of the agent's.
+// verifyScene is 18's session with a commit on search-api to raise, and a fake fork in front of the agent's.
 func verifyScene(t *testing.T) (*errScene, *fakeQuiz, core.SessionState, func() []gh.PR) {
 	s, _, hub, se, _ := shipScene(t)
 	x := s.ship()
-	writeFiles(t, shipDir(se, "usage-api"), map[string]string{
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{
 		"round.go":            "package usage\n\nfunc round() {}\n",
 		"migrations/0042.sql": "-- 0042\nALTER TABLE invoice_lines\n  ADD COLUMN legacy boolean NOT NULL DEFAULT true;\n",
 	})
 	s.run("ship.refresh", nil)
-	s.shipSettle(t, "the files", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return len(sh.Files) == 2 })
-	s.run("ship.commit", registry.Args{"project": "usage-api", "message": "fix(pricing): round invoice lines half-to-even"})
-	s.shipSettle(t, "the commit", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return sh.Commits == 1 })
+	s.shipSettle(t, "the files", func() bool { sh, _ := x.ship(se.ID, "search-api"); return len(sh.Files) == 2 })
+	s.run("ship.commit", registry.Args{"project": "search-api", "message": "fix(pricing): round invoice lines half-to-even"})
+	s.shipSettle(t, "the commit", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.Commits == 1 })
 	f := &fakeQuiz{}
 	s.reg.Contribute(registry.Forker{Name: "fake", Fork: f.fork, Label: func(string) string { return "claude · fork, no tools" }})
-	return s, f, se, func() []gh.PR { return hub.PRs("acme/usage-api") }
+	return s, f, se, func() []gh.PR { return hub.PRs("acme/search-api") }
 }
 
 // answer types into the quiz's composer and sends it with ⌘↵.
@@ -116,7 +116,7 @@ func TestVerifyQuiz(t *testing.T) {
 		t.Errorf("the label: %q", got)
 	}
 
-	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
+	s.run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.until(t, "the tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
 	gates := func() map[string]registry.ShipGateState {
 		out := map[string]registry.ShipGateState{}
@@ -136,7 +136,7 @@ func TestVerifyQuiz(t *testing.T) {
 		"Four short questions about the diff", "if you want them there.",
 		"0/4", "What happens to a", "-2.5", "tie now, and which line decides it?", "⌘↵ send", "open the file it's asking about",
 		"optional: a raise never waits for it")
-	if asked := f.asked(); len(asked) != 1 || asked[0].Session != string(se.ID) || !strings.Contains(asked[0].Prompt, "usage-api") {
+	if asked := f.asked(); len(asked) != 1 || asked[0].Session != string(se.ID) || !strings.Contains(asked[0].Prompt, "search-api") {
 		t.Errorf("the questions were asked: %+v", asked)
 	}
 	s.lint("the verify quiz")
@@ -157,7 +157,7 @@ func TestVerifyQuiz(t *testing.T) {
 	s.until(t, "the migration open", func() bool {
 		return slices.ContainsFunc(s.visibleRefs(), func(v layout.ViewRef) bool {
 			f, _ := s.editorFile(v.Instance)
-			return v.ID == EditorView && f == filepath.Join(shipDir(se, "usage-api"), "migrations", "0042.sql")
+			return v.ID == EditorView && f == filepath.Join(shipDir(se, "search-api"), "migrations", "0042.sql")
 		})
 	})
 	if x.open != "" {
@@ -165,7 +165,7 @@ func TestVerifyQuiz(t *testing.T) {
 	}
 
 	// Resume on its row goes back to the quiz where it was.
-	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
+	s.run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.until(t, "the tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
 	s.click(centre(s.access("Resume").Bounds))
 	s.verifySettle(t, "the quiz again", func(f string) bool { return strings.Contains(f, "VERIFY THIS CHANGE") })
@@ -226,7 +226,7 @@ func TestVerifyNotesInThePR(t *testing.T) {
 				s.click(centre(s.access("Add the answers to the PR as reviewer notes").Bounds))
 			}
 			s.click(centre(s.access("Done").Bounds))
-			s.run("ship.raise", registry.Args{"project": "usage-api"})
+			s.run("ship.raise", registry.Args{"project": "search-api"})
 			s.verifySettle(t, "the PR", func(string) bool { return len(prs()) == 1 })
 			if got := strings.Contains(prs()[0].Body, "### Reviewer notes"); got != notes {
 				t.Errorf("reviewer notes in the PR: %v, want %v:\n%s", got, notes, prs()[0].Body)
@@ -238,7 +238,7 @@ func TestVerifyNotesInThePR(t *testing.T) {
 // RV-7: verify is a thing of its own; a raise never waits for it, taken or not, nor one left part way.
 func TestRaiseNeverWaitsForVerify(t *testing.T) {
 	s, f, se, prs := verifyScene(t)
-	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
+	s.run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.until(t, "the tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
 	s.click(centre(s.access("Push + raise PR").Bounds))
 	s.verifySettle(t, "the PR", func(string) bool { return len(prs()) == 1 })

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/text"
@@ -30,12 +30,12 @@ const (
 
 var tPlanMark = theme.Declare("plan.mark", "amber")
 
-// planExt is AI-8: a plan session's docs, read as documents, with threads anchored to their lines, readiness, and
+// planPlugin is AI-8: a plan session's docs, read as documents, with threads anchored to their lines, readiness, and
 // Start work. It drives the requests and sessions through their commands.
-type planExt struct {
+type planPlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 	by map[core.SessionID]*planState
 
 	dialog   *startWork // the Start work dialog, while it's open
@@ -63,9 +63,9 @@ type planDoc struct {
 	blocks     []mdBlock
 }
 
-func (x *planExt) Manifest() ext.Manifest { return ext.Manifest{ID: "plan"} }
+func (x *planPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "plan"} }
 
-func (x *planExt) Activate(_ context.Context, h ext.Host) error {
+func (x *planPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*planState{}
 	hasPlan := func(registry.Args) bool {
@@ -98,7 +98,7 @@ func (x *planExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *planExt) front() (core.SessionState, bool) {
+func (x *planPlugin) front() (core.SessionState, bool) {
 	st := x.h.State()
 	if se, ok := st.Session(st.Focus); ok {
 		return se.Snapshot(), true
@@ -106,7 +106,7 @@ func (x *planExt) front() (core.SessionState, bool) {
 	return core.SessionState{}, false
 }
 
-func (x *planExt) state(id core.SessionID) *planState {
+func (x *planPlugin) state(id core.SessionID) *planState {
 	st := x.by[id]
 	if st == nil {
 		st = &planState{present: map[string]*presentState{}, bufs: map[string]*text.Buffer{}}
@@ -116,7 +116,7 @@ func (x *planExt) state(id core.SessionID) *planState {
 }
 
 // openIfPlanning shows the plan when the window is on a session that's planning.
-func (x *planExt) openIfPlanning() {
+func (x *planPlugin) openIfPlanning() {
 	se, ok := x.front()
 	if !ok || !se.Planning() || filepath.Clean(x.sh.cfg.WorkDir) != filepath.Clean(sessionDir(se)) {
 		return
@@ -127,7 +127,7 @@ func (x *planExt) openIfPlanning() {
 }
 
 // open shows the plan's views: the doc in the main area, the docs docked at the left.
-func (x *planExt) open(ctx context.Context, doc string) error {
+func (x *planPlugin) open(ctx context.Context, doc string) error {
 	se, ok := x.front()
 	if !ok {
 		return fmt.Errorf("no session is in front")
@@ -154,7 +154,7 @@ func (x *planExt) open(ctx context.Context, doc string) error {
 
 // docs are the markdown files at the session's workspace root, PLAN.md first, read again each second or when the
 // agent did something.
-func (x *planExt) docs(se core.SessionState, st *planState, now time.Time) []planDoc {
+func (x *planPlugin) docs(se core.SessionState, st *planState, now time.Time) []planDoc {
 	if st.docs != nil && now.Before(st.read.Add(time.Second)) && st.seen == len(se.Transcript) {
 		return st.docs
 	}
@@ -190,7 +190,7 @@ func (x *planExt) docs(se core.SessionState, st *planState, now time.Time) []pla
 }
 
 // current is the doc in front: the one chosen, else the first.
-func (x *planExt) current(st *planState, docs []planDoc) (planDoc, bool) {
+func (x *planPlugin) current(st *planState, docs []planDoc) (planDoc, bool) {
 	for i, d := range docs {
 		if d.name == st.doc {
 			st.docSel = i
@@ -263,13 +263,13 @@ func editing(se core.SessionState) string {
 	return ""
 }
 
-func (x *planExt) run(id string, a registry.Args) {
+func (x *planPlugin) run(id string, a registry.Args) {
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		x.h.Notify(core.Notice{ID: "plan", Severity: core.SevError, Source: "plan", Text: err.Error()})
 	}
 }
 
-type planView struct{ x *planExt }
+type planView struct{ x *planPlugin }
 
 func (v planView) Title(string) string {
 	if se, ok := v.x.front(); ok {
@@ -287,7 +287,7 @@ func (v planView) Build(vc registry.ViewCtx) ui.Node {
 	return &ui.Func{Key: "plan", Fn: func(c *ui.Ctx) { v.x.view(c, vc) }}
 }
 
-type planDocsView struct{ x *planExt }
+type planDocsView struct{ x *planPlugin }
 
 func (v planDocsView) Title(string) string { return "Plan docs" }
 func (v planDocsView) EdgeToEdge()         {}
@@ -312,7 +312,7 @@ func readiness(se core.SessionState) (open int, frac float64) {
 }
 
 // docsView is 05's left: the plan's docs with their threads, its source, its projects, and readiness.
-func (x *planExt) docsView(c *ui.Ctx) {
+func (x *planPlugin) docsView(c *ui.Ctx) {
 	th := c.Theme()
 	se, ok := x.front()
 	c.Column("plandocs", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgSurface), Role: ui.RoleRegion, Label: "Plan docs",
@@ -405,7 +405,7 @@ func (x *planExt) docsView(c *ui.Ctx) {
 }
 
 // docRow is a doc in the list: its name, and its threads that need you, or are being worked on, or are open.
-func (x *planExt) docRow(c *ui.Ctx, se core.SessionState, d planDoc, sel bool) {
+func (x *planPlugin) docRow(c *ui.Ctx, se core.SessionState, d planDoc, sel bool) {
 	th := c.Theme()
 	needs, working, open := 0, 0, 0
 	for _, t := range docThreads(se, d) {
@@ -440,7 +440,7 @@ func (x *planExt) docRow(c *ui.Ctx, se core.SessionState, d planDoc, sel bool) {
 }
 
 // view is 05's main area: the doc in front rendered, its threads in the margin.
-func (x *planExt) view(c *ui.Ctx, vc registry.ViewCtx) {
+func (x *planPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 	th := c.Theme()
 	se, ok := x.front()
 	root := c.Next("plan")
@@ -466,7 +466,7 @@ func (x *planExt) view(c *ui.Ctx, vc registry.ViewCtx) {
 	})
 }
 
-func (x *planExt) header(c *ui.Ctx, se core.SessionState, d planDoc, has bool) {
+func (x *planPlugin) header(c *ui.Ctx, se core.SessionState, d planDoc, has bool) {
 	th := c.Theme()
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(48), Pad: ui.PadXY(20, 0), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 		widget.Chip(c, "kind", "plan", th.C(tPlanMark), "agent/plan#header")
@@ -521,7 +521,7 @@ func (x *planExt) header(c *ui.Ctx, se core.SessionState, d planDoc, has bool) {
 }
 
 // document is the doc as a page, drawn by the markdown presenter, with its threads in the margin.
-func (x *planExt) document(c *ui.Ctx, vc registry.ViewCtx, se core.SessionState, st *planState, d planDoc, root ui.ID) {
+func (x *planPlugin) document(c *ui.Ctx, vc registry.ViewCtx, se core.SessionState, st *planState, d planDoc, root ui.ID) {
 	pr, ok := registry.PresenterNamed(x.h, "markdown")
 	if !ok {
 		c.Text("none", "No markdown presenter is registered.", uiFont(13, c.Theme().C(theme.FgFaint)))

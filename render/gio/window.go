@@ -179,6 +179,9 @@ func (w *Window) Close() {
 func (w *Window) Frame(fn func(render.Frame)) error {
 	l := new(render.List)
 	fn(l.Record(w.Scale()))
+	if old := w.latest.Load(); old != nil && l.Same(old) {
+		return nil // nothing changed: no need to draw it again
+	}
 	w.latest.Store(l)
 	w.win.Invalidate()
 	return nil

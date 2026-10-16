@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/render"
@@ -23,7 +23,7 @@ const pickerMax = 500
 // result, and actions on it. ⇥ steps to the next source keeping the query; ␣' resumes the last one as it was left.
 type picker struct {
 	disposer
-	h       ext.Host
+	h       plugin.Host
 	open    bool
 	source  string
 	query   string
@@ -33,9 +33,9 @@ type picker struct {
 	hovered string // the source and item last given to Hover
 }
 
-func (p *picker) Manifest() ext.Manifest { return ext.Manifest{ID: "picker"} }
+func (p *picker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "picker"} }
 
-func (p *picker) Activate(_ context.Context, h ext.Host) error {
+func (p *picker) Activate(_ context.Context, h plugin.Host) error {
 	p.h, p.picked = h, map[string]bool{}
 	p.add(h.Command(registry.Command{ID: "picker.open", Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
 		src, _ := a["source"].(string)
@@ -248,7 +248,7 @@ func (p *picker) close(cancelled bool) {
 }
 
 // startAt is where a source's list starts: on its current item (the theme in use), else the top.
-func startAt(s registry.PickerSource, query string, h ext.Host) int {
+func startAt(s registry.PickerSource, query string, h plugin.Host) int {
 	g, _ := rankSource(h, s, query, pickerMax)
 	for i, x := range g.hits {
 		if x.item.Current {

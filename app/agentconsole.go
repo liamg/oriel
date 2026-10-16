@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -56,7 +56,7 @@ var (
 type agentConsole struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	by map[core.SessionID]*consoleState
 }
@@ -87,9 +87,9 @@ type forkAnswer struct {
 	done bool
 }
 
-func (x *agentConsole) Manifest() ext.Manifest { return ext.Manifest{ID: "agentconsole"} }
+func (x *agentConsole) Manifest() plugin.Manifest { return plugin.Manifest{ID: "agentconsole"} }
 
-func (x *agentConsole) Activate(_ context.Context, h ext.Host) error {
+func (x *agentConsole) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*consoleState{}
 	open := registry.Args{"id": AgentConsoleView, "place": "dock", "edge": "bottom", "size": 460, "title": "Agent"}

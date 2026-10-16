@@ -13,7 +13,7 @@ The scripting API itself is in `scripting.md`. Installing, packaging and publish
 0. **No special cases.** Features never get private shortcuts into the core. When a feature needs a capability the
    API lacks, the API grows a general version of it (with Lua and RPC bindings), and the feature uses that. The test is
    whether a third party could build the same feature as a plugin.
-1. **Dogfood.** Every built-in feature is an extension: the vim keymaps, the
+1. **Dogfood.** Every built-in feature is a plugin: the vim keymaps, the
    panels, the HUD, the Claude provider, the review ledger. If a built-in needs
    an API, the API exists for everyone.
 2. **Everything is a command.** Every action has a name, takes arguments,
@@ -32,7 +32,7 @@ The scripting API itself is in `scripting.md`. Installing, packaging and publish
 |---|---|---|---|---|
 | **Config & scripts** (Lua) | in-process VM on the UI loop | µs | keymaps, options, autocmds, statusline, small panels, custom commands, agent tools | none: your own config is trusted |
 | **Script plugins** (Lua) | same VM, loaded from a plugin dir | µs | what neovim plugins do: surround, motions, pickers, panels | per-plugin namespace, declared permissions for net/exec |
-| **Process extensions** | child process, JSON-RPC (stdio) | ~0.2 ms | heavy or long-running work, other languages, integrations, providers | OS process + Landlock / sandbox-exec |
+| **Process plugins** | child process, JSON-RPC (stdio) | ~0.2 ms | heavy or long-running work, other languages, integrations, providers | OS process + Landlock / sandbox-exec |
 | **WASM modules** | wazero, in-process | ~µs | tree-sitter grammars, pure transforms, untrusted snippets | memory-safe, capability-only host calls |
 
 - An installed plugin always **enters through Lua** (`init.lua`). Its WASM modules and process binaries are started from
@@ -46,7 +46,7 @@ The scripting API itself is in `scripting.md`. Installing, packaging and publish
 flowchart TB
   Reg["contribution registry"]
   Lua["Lua VM: config + script plugins"] --> Reg
-  Proc["process extensions (JSON-RPC)"] --> Reg
+  Proc["process plugins (JSON-RPC)"] --> Reg
   Wasm["wasm modules"] --> Reg
   Go["built-in Go"] --> Reg
   Reg --> Cmd["commands"]
@@ -125,7 +125,7 @@ flowchart TB
 - forkers (`registry.Forker`, RV-7): answer a side question for a session (`ForkRequest{Session, Prompt}`) from its
   agent's context, with no tools and outside its conversation (agents.md: btw, explain, the verify quiz);
   `registry.Fork` asks the first by `Order` and `registry.ForkLabel(session)` says who ("claude · fork, no tools").
-  The sessions extension registers the agent's (order 10, the wire's `agent.fork`); Lua adds one with
+  The sessions plugin registers the agent's (order 10, the wire's `agent.fork`); Lua adds one with
   `oriel.agent.forker { name, order, label, run = fn({ session, prompt }) }`.
 - fix and explain twins (TR-6): something gone wrong is a `registry.Trouble` (kind, subject, context, file and lines,
   the fix request's text). Every "ask the agent to fix" runs `agent.fix` (`registry.FixCommand`) with
@@ -221,7 +221,7 @@ flowchart TB
   root, message, files, unread}`; a veto stops it) and commits with `gitx.Repo.CommitStaged(message, trailers...)`.
   Lines seen in the diff are `core.LinesSeen` (worker `review.seen`), a commit past a gate `core.CommitGateOverridden`
   (worker `review.override`). `widget.MeterOpts.Then` stacks more parts on a meter.
-- the AI review (RV-3): the built-in `ai-review` extension draws `diff.right.50-ai-review`. `review.ai.run {id, full}`
+- the AI review (RV-3): the built-in `ai-review` plugin draws `diff.right.50-ai-review`. `review.ai.run {id, full}`
   asks the session's worker for a review (`worker.Client.AIReview`, `review.ai.run`, `AIReviewReq{session, provider,
   model, full, pack}`), `review.ai.thread` / `review.ai.fix` / `review.ai.dismiss {dismissed}` /
   `review.ai.add-project` / `review.ai.open` take `{id, finding}`, `review.ai.filter {severity}`,
@@ -286,7 +286,7 @@ flowchart TB
   PR tab's as the user's); its GitHub client is `worker.Options.GitHub` (the user's gh by default).
   `gh.Client` is GitHub as Oriel uses it, `gh.API` over a `gh.Transport` (`gh.CLI`, `gh.HTTP`), and `gh/ghtest` a
   fake GitHub for tests.
-- verify (RV-7; ui.md 13): the optional quiz is the `verify` extension, built only on the above: the `verify` ShipGate
+- verify (RV-7; ui.md 13): the optional quiz is the `verify` plugin, built only on the above: the `verify` ShipGate
   (whose **Verify…** starts it), questions and grades through `registry.Fork`, a `ShipRaise` rewrite hook ("verify
   notes") adding a passed quiz's answers to the PR's body, and the `core.Verified` session event (`Verification{Result,
   Projects, By, Questions}`, `SessionState.Verifications`, sent to the worker as `verify.record`). Commands
@@ -305,7 +305,7 @@ flowchart TB
 - icons: the built-in set (`files`, `search`, `git`, `pullrequest`, `requests`, `comment`, `ship`, `debug`, `tests`, `settings`,
   `plus`, `resume`, `folder`; since SH-9 `key`, `inbox`, `network`, `gateway`, `question`, `permission`, `review`; since SH-7 `mission`) is drawn, not a font's; any other name is drawn as a glyph.
 - statusline, tabline (session tabs), titlebar and HUD indicators, notification cards. Title-bar segments are views named
-  `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats extension's since AI-12: one button to Usage with a
+  `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats plugin's since AI-12: one button to Usage with a
   hover card).
 - indicators in slots (SH-8): `registry.Indicator{Name, Slot, Order, Title, Note, Span, Help, Every, On, Build}`
   (kind `hud.indicator`), listed by `registry.Indicators(r, slot)`. Slots: `titlebar.right`, `statusline.left`,
@@ -471,7 +471,7 @@ flowchart TB
   rewrite changes it, a veto drops it; otherwise it goes to the agent in front with `agent.send`, whose reply is
   spoken at `AgentTurnEnd`, or to the omnibox). Dictation types into whatever has focus and takes text:
   `ui.Style.Text` marks such a node (`widget.Input` sets it, the editor while its engine's `input.Mode.Text` is
-  set: vim's insert and replace, plain, emacs), and `ext.UIView.TakesText()` and `UIView.Key(ev)` let any plugin
+  set: vim's insert and replace, plain, emacs), and `plugin.UIView.TakesText()` and `UIView.Key(ev)` let any plugin
   type there, past the keymaps.
 - thread sources (GitHub, Jira, agentbus), thread actions ("rewrite", "forward"). Built in RV-4:
   `registry.ThreadSource{Origin, Title, Head, Comment}` (`registry.ThreadSourceFor`) draws threads of an origin in
@@ -497,13 +497,13 @@ flowchart TB
 - Hooks run in priority order. Each one has a time budget, with a warning past 2 ms on hot paths.
 - `:Hooks` lists every hook on an event, who registered it and its p99 time.
 
-## UI from extensions: the view tree
+## UI from plugins: the view tree
 
 - Views are functions returning a tree of `ui.Node`s: `Box` (rows and columns, with sizes, padding, gaps, alignment,
   clipping, scrolling and floats), `Text`, `Paint`, and `Func` (Go views that build with widgets) today. `Code`, `Markdown`, `Button`, `Input`, `List`, `Table`,
   `Bar`, `Spark`, `Chart` (`widget.Chart`, AI-12; `oriel.ui.chart`), `Badge`, `Term`, `Editor` (an embedded buffer) and `Canvas` (draw ops) join them as their
   widgets land. Built-in widgets lay out through the same nodes, so a plugin's view and a built-in one behave alike.
-- Lua and Go build them directly. Process extensions send the same tree as
+- Lua and Go build them directly. Process plugins send the same tree as
   JSON, with id-keyed patches.
 - Built-in panels are written this way, so you can **replace** one:
   `oriel.view.override("requests", my_requests_view)`.
@@ -572,7 +572,7 @@ func TestCards(t *testing.T) {
 ```
 
 - `New(t, Options{Size, Now, Config})` starts the app with a home, config and state directory of the test's (`Config`
-  changes `app.Config` first: `Net`, `Secrets`, `Workers`), and stops every extension when the test ends. `Now`,
+  changes `app.Config` first: `Net`, `Secrets`, `Workers`), and stops every plugin when the test ends. `Now`,
   `SetNow` are the window's clock (`oriel.now`, countdowns, an indicator's `every`).
 - `Install(t, src, cmds…)` lays a plugin out as an install does, each Go command built into its `bin/`, and skips where
   the OS sandbox isn't there; `Manifest(t, dir)`. `Load(dir, grants)` starts the Lua plugin in `dir` with a data
@@ -590,10 +590,10 @@ func TestCards(t *testing.T) {
 
 Under it, in `app`: `app.NewHeadless(cfg, HeadlessOpts{Size, Clock})` is the app as `Run` starts it (the same shell
 and activation, then the dark oriel theme with motion reduced), with no window or loop: `Frame`, `RunQueued`, `Until`,
-`Text`, `TextAt`, `Access`, `Click`, `Key`, `CallTool`, `Activate` (an extension now) and `Close`.
+`Text`, `TextAt`, `Access`, `Click`, `Key`, `CallTool`, `Activate` (a plugin now) and `Close`.
 `app.ScriptPluginWith(fsys, PluginOpts{Dir, Grants, Data})` is `ScriptPlugin` with its directory (where
 `oriel.process.spawn` finds `bin/…`), its grants and its data directory given; `app.DirPlugin(dir, opts)` is the plugin
-in a directory. `ext/exttest.Install` is `Install` for the app's own tests.
+in a directory. `plugin/hosttest.Install` is `Install` for the app's own tests.
 
 ## Go interfaces
 
@@ -636,7 +636,7 @@ type Registry interface {
 // Every call into a contribution runs under registry.Call, which turns a panic into a *registry.Panic with its
 // Go stack. ui.Ctx.Guard does the same for a view's Func node while it builds.
 
-// Each extension registers through registry.WithSource(r, id), which stamps Source on what it registers:
+// Each plugin registers through registry.WithSource(r, id), which stamps Source on what it registers:
 // "builtin:introspect", "init.lua:14", a plugin's id.
 
 type Command struct {
@@ -682,8 +682,8 @@ type DecorationProvider interface {
 ```
 
 ```go
-// package ext — the plugin itself, in any tier
-type Extension interface {
+// package plugin — the plugin itself, in any tier
+type Plugin interface {
     Manifest() Manifest
     Activate(ctx context.Context, h Host) error
     Deactivate(ctx context.Context) error
@@ -696,13 +696,13 @@ type Host interface {
     Editor() edit.Editor                          // focused window
     Secrets() Secrets                             // only what the manifest declares
     Net() *http.Client                            // egress filtered to declared hosts
-    Log() *slog.Logger                            // redacted, with the extension as its source
+    Log() *slog.Logger                            // redacted, with the plugin as its source
     Notify(n core.Notice)                         // the one path every notice takes (errors.md)
     State() core.State                            // a copy: the notification history, focus, sessions
 }
 
 // core.Notice: ID ("lsp.crashed"), Severity (info, warning, error, question), Source (defaults to the
-// extension), Session ("" for Oriel's log), Title, Text, Detail (a trace, stderr), Location (file:line),
+// plugin), Session ("" for Oriel's log), Title, Text, Detail (a trace, stderr), Location (file:line),
 // Actions (each a command with args), Time, and Key (answers a key just typed, so it goes sooner).
 ```
 
@@ -757,7 +757,7 @@ type Host interface {
   knows its place (`Where()`, `Trace()`, as `script.Error` does) gets them on its notice, with **Open at line**
   (`editor.open`). `Host.Dismiss(id)` takes down a notice's toasts when its problem is gone.
 - Diagnostics (PL-12): `Registry.SetDiagnostics(owner, file, ds)` publishes a file's `Diagnostic{Line, From, To,
-  Severity, Message}` as LSP does; the built-in `problems` extension marks them in the editor through a decoration
+  Severity, Message}` as LSP does; the built-in `problems` plugin marks them in the editor through a decoration
   provider (`DecorationCtx.Path` is the buffer's absolute file) and lists them in `:Problems`. Lua's
   `L.diagnostics.set` binds it; the Lua config publishes its errors as owner `lua`.
 - Coverage (TR-4): `Registry.SetCoverage(owner, file, hits)` publishes a file's line hits the same way. A coverage run
@@ -816,37 +816,37 @@ type Host interface {
   (default 1 s, off with `keymap.timeout = false`), then the longest complete mapping runs, or the first key passes on
   unmapped. `keymap.leader` defaults to Space.
 - Lua sees the same API through generated bindings (`oriel.on("Commit", fn)` is `registry.On[Commit]`).
-- Process extensions see it as JSON-RPC methods. WASM sees it as host functions.
+- Process plugins see it as JSON-RPC methods. WASM sees it as host functions.
   One declaration, three bindings.
 
 ## As built (PL-2)
 
-- `ext.Manifest` is `oriel.toml` (`ext.ParseManifest`, `LoadManifest`): id, version, oriel, description, license,
-  icon, runs, lazy, binaries and `[permissions]` as `[]ext.Grant{Cap, Scope, Why}`, in security.md's forms and
+- `plugin.Manifest` is `oriel.toml` (`plugin.ParseManifest`, `LoadManifest`): id, version, oriel, description, license,
+  icon, runs, lazy, binaries and `[permissions]` as `[]plugin.Grant{Cap, Scope, Why}`, in security.md's forms and
   plugins.md's short one (`net = ["api.linear.app"]`); a dotted key (`fs.read = …`) works unquoted. An unknown
   capability, or a scoped one (net, fs, exec, secrets, agent.tools) with no scope, is an error.
-- `ext.Plugin{ID, Dir, Guard}` is a plugin as the hosts see it: `Dir` holds its own files (`Path`, `Own`, symlinks
-  followed), and a nil `Guard` is your own config, trusted. `ext.Methods` are host functions called by name with JSON
+- `plugin.Caller{ID, Dir, Guard}` is a plugin as the hosts see it: `Dir` holds its own files (`Path`, `Own`, symlinks
+  followed), and a nil `Guard` is your own config, trusted. `plugin.Methods` are host functions called by name with JSON
   params (`Method{Name, Cap, Target, Run}`; a later one shadows until disposed), each checked by the guard before it
-  runs; `ext.HostMethods` has `log`, `notify`, `fs.read {path}` and `fs.write {path, data}`. A refused call is a
-  JSON-RPC error with `ext.CodeNotDeclared` (-32001).
-- `ext.Processes.Spawn(plugin, name, SpawnOpts{Args, Dir, Env, Request, Notify, Exit, Stderr})` starts a process
+  runs; `plugin.HostMethods` has `log`, `notify`, `fs.read {path}` and `fs.write {path, data}`. A refused call is a
+  JSON-RPC error with `plugin.CodeNotDeclared` (-32001).
+- `plugin.Processes.Spawn(plugin, name, SpawnOpts{Args, Dir, Env, Request, Notify, Exit, Stderr})` starts a process
   plugin: JSON-RPC 2.0 over stdio, one message a line (`agent/jsonrpc`). Its requests and notifications go to the
   plugin's own handlers first, then to the host methods. Its stderr goes to `logs.Lines` under `plugin:<id>`
-  (`ext.Logger`). A plugin's process runs in `ext/ossandbox` (`ext.ProfileFor`: its directory, its fs grants, its
+  (`plugin.Logger`). A plugin's process runs in `plugin/ossandbox` (`plugin.ProfileFor`: its directory, its fs grants, its
   exec programs, its net hosts' ports), with a PATH, its own temp dir as HOME and TMPDIR and the locale for an
   environment; your config's runs as you. `Process.Call`, `Notify`, `Pid`, `Done`, `Err`, `Stop` (stdin closed,
   then killed after `StopAfter`); `Processes.List`, `Close`.
-- `ext.WASM.Load(ctx, plugin, name, WASMOpts{Request})` runs a module in wazero (64 MiB at most, stopped with its
+- `plugin.WASM.Load(ctx, plugin, name, WASMOpts{Request})` runs a module in wazero (64 MiB at most, stopped with its
   context), with WASI holding no files, environment or sockets (stdout and stderr to the plugin's log) and the host
   module `oriel`: `request(method_ptr, method_len, params_ptr, params_len) i64`, `notify(…)` and `log(level, ptr,
   len)`. Data crosses through the module's exported `oriel_alloc(len) ptr`; a JSON function takes `(ptr, len)` and
   returns `ptr << 32 | len` of a JSON-RPC response body (`{"result": …}` or `{"error": …}`), both ways.
-  `Module.Call` (numbers), `Request` (JSON), `Exports`, `Close`. `ext/exttest.Module()` is a hand-assembled module
+  `Module.Call` (numbers), `Request` (JSON), `Exports`, `Close`. `plugin/hosttest.Module()` is a hand-assembled module
   for tests.
-- Native plugins: a package's `init` calls `ext.Register(e)`; `ext.Native()` lists them, `cmd/oriel` activates them
+- Native plugins: a package's `init` calls `plugin.Register(e)`; `plugin.Native()` lists them, `cmd/oriel` activates them
   after the built-ins and `oriel version` names them. `oriel build --with PKG[@VERSION][=DIR] [--oriel VERSION|DIR]
-  [-o FILE] [-tags …]` (`ext/nativebuild`) writes a module whose main imports each package and runs
+  [-o FILE] [-tags …]` (`plugin/nativebuild`) writes a module whose main imports each package and runs
   `cmd/oriel/cli.Main` (the command's body, importable for this), replaces what comes from directories (a checkout's
   go.work modules all), and runs `go get`, `go mod tidy` and `go build -trimpath`.
 - Not yet: the plugin manager's loading of installed plugins and `:Plugins` (PL-19, PL-20), process plugins' JSON
@@ -858,7 +858,7 @@ type Host interface {
 - The calendar plugin isn't carried over (crit-reference.md). The general pieces built for it stay:
   `oriel.option{ name, type, default, help, values, min, max, section }` declares an option (catalog.md, "Plugin
   options"; a plugin's are named `plugin.<name>.…`, in its own section, disposed with it);
-  `oriel.now()` is the window's clock (`ext.UIView.Now`, `ui.UI.Now`), which a test fixes; `oriel.platform`;
+  `oriel.now()` is the window's clock (`plugin.UIView.Now`, `ui.UI.Now`), which a test fixes; `oriel.platform`;
   `oriel.exec(argv, { on_done })` runs in the background; `oriel.ui.ring` and `widget.Ring` (theme tokens
   `ring.track`, `ring.arc`, `ring.label`); a `title` text style.
 
@@ -869,14 +869,14 @@ type Host interface {
   `Label` names it for the PR, "" leaving it off (a closed PR's); a click runs `Command` with `Args` and the PR's
   fields (`registry.PullRequest{Session, Project, Repo, Number, Title, URL, State, Draft, Merged}`, `Args()`).
   `registry.PRActions(r, pr)` lists them by Order. Lua: `oriel.ship.action`.
-- **HTTP and secrets** (security.md, "As built (PL-9)"): `ext.Host` has `Net()` (the client plugins' requests go
-  through, `app.Config.Net`) and `Secrets()` (`ext.Secrets`: `Secret`, `SetSecret`, `SecretNames`; `ext.SecretFile`
-  is the store, `app.Config.Secrets`). The host method `http.request` (`ext.HTTPMethod`, in `ext.HostMethods` when the
-  reporter is an `ext.Network`; `ext.Fetch` is its body) takes `ext.HTTPRequest{method, url, headers, body, auth,
-  url_secret, timeout}` and answers `ext.HTTPResponse{status, body, headers}`, so process and WASM plugins have it
-  too; Lua's is `oriel.http.request`. `ext/exttest.Net(srv)` is a client whose every host is a TLS test server.
+- **HTTP and secrets** (security.md, "As built (PL-9)"): `plugin.Host` has `Net()` (the client plugins' requests go
+  through, `app.Config.Net`) and `Secrets()` (`plugin.Secrets`: `Secret`, `SetSecret`, `SecretNames`; `plugin.SecretFile`
+  is the store, `app.Config.Secrets`). The host method `http.request` (`plugin.HTTPMethod`, in `plugin.HostMethods` when the
+  reporter is an `plugin.Network`; `plugin.Fetch` is its body) takes `plugin.HTTPRequest{method, url, headers, body, auth,
+  url_secret, timeout}` and answers `plugin.HTTPResponse{status, body, headers}`, so process and WASM plugins have it
+  too; Lua's is `oriel.http.request`. `plugin/hosttest.Net(srv)` is a client whose every host is a TLS test server.
 - **Lua plugins shipped in the build**: `app.ScriptPlugin(fsys)` runs the oriel.toml and init.lua at an `fs.FS`'s root
-  as an extension, in a VM of its own under a guard granting what the manifest declares (the build is the consent
+  as a plugin, in a VM of its own under a guard granting what the manifest declares (the build is the consent
   until PL-20's lock file); one that fails to load is a notice, not a failed start. `cmd/oriel` runs `integ/slack`'s
   this way.
 - **Slack PTAL** (`integ/slack`, ui.md 18): a Lua plugin (`plugin/oriel.toml`, `plugin/init.lua`, embedded as
@@ -887,6 +887,21 @@ type Host interface {
   with `url_secret = "SLACK_WEBHOOK"` and says "Posted to Slack", "Bump 1 posted", or Slack's own reason for refusing.
   `slack.webhook` opens the secret's dialog. Post counts are the plugin's memory, so they start again with the app
   (crit kept them in its config): plugins have no store of their own yet.
+
+## As built (PL-19)
+
+- New contribution kinds: `registry.Font{Name, Path, Source}` (`font`) and `registry.Icon{Name, Path, Source}`
+  (`icon`), which a plugin's `[contributes]` registers from its files. The rest of `[contributes]` uses the existing
+  points: `Registry.Theme`, `Registry.Language`, `registry.PromptPack` and `Registry.HelpPages` (catalog.md, "As built
+  (PL-19)").
+- `app.DirPlugin` loads a data-only plugin (no `init.lua`) as well as a Lua one.
+
+## As built (PL-20)
+
+- `plugin.Host.Load(p)` starts another plugin on a host of its own (its id as the source), and Dispose stops it: what
+  a plugin manager needs, built-in or not. Call it on the loop.
+- `registry.Table` is an option type for a settings table its owner reads (`[plugins]`), held as `map[string]any`;
+  Lua declares one with `type = "table"`.
 
 ## As built (tickets)
 
@@ -907,7 +922,7 @@ type Host interface {
   then every tracker's tickets in one order, each asked for again after 10 minutes, after a move, and on
   `tickets.refresh`; ↵ on a ticket runs `session.new {kind = "plan", ticket}`. The launcher's card (PL-8) asks
   `TrackerFor`. On `SessionStart` the session's ticket's tracker gets `Start`; on `PrSeen`, `Link`, then `Review` while
-  the PR is open; on `PrMerged` with no other PR of the session open, `Done`; a move is a notice ("INF-2231 moved to
+  the PR is open; on `PrMerged` with no other PR of the session open, `Done`; a move is a notice ("ENG-2231 moved to
   In Progress in Linear", "… moved to Done …"), a failure a line in the log. The
   assistant's `my_tickets` (`Reads = "tickets"`) is every tracker's list, asked for first when it's stale, with a note
   for a tracker without its key. Commands `Tickets` (the omnibox on them), `tickets.refresh`, `tickets.key {tracker}`
@@ -931,7 +946,7 @@ type Host interface {
 - Lua: `oriel.ticket.tracker{ name, title, order, keys, secret, lookup = fn(key, done), assigned = fn(done), start =
   fn(key, done), review = fn(key, done), link = fn(key, pr, done) }` (cap `agent.prompt`; a `secret` must be one the
   plugin declares), each answering `done(value)` or `done(nil, why)`; `oriel.ticket.source` is gone. A process or WASM
-  plugin is fronted by its Lua, as Linear is: there's no tracker over `ext` alone, since nothing else registers
+  plugin is fronted by its Lua, as Linear is: there's no tracker over `plugin` alone, since nothing else registers
   contributions from a process yet.
 - **Linear** is now only its API calls and their mapping: its process answers `assigned` with `{tickets}` and `ticket`
   with a `registry.Ticket` (`Issue.Ticket`, `Ticket.Detail`), `start`/`review` with a `registry.TicketMove`, and its
@@ -964,7 +979,7 @@ type Host interface {
 - **Events**: `SessionStart {session, kind, ticket, prompt, worker}`, fired after `session.start` starts one (the
   subject its id), and `PrSeen {session, project, ticket, number, url, title, state, draft, merged}`, fired the first
   time the app reads a session's PR on the Ship page's read (the session in front, every 10 s), whoever raised it.
-- **http.request**'s `auth_scheme` (`ext.HTTPRequest.AuthScheme`): what goes before the secret in the Authorization
+- **http.request**'s `auth_scheme` (`plugin.HTTPRequest.AuthScheme`): what goes before the secret in the Authorization
   header, `Bearer` by default, `none` for the value as it is (Linear's personal API keys).
 - **Linear** (`integ/linear`, crit-reference.md → Linear): a plugin built as a third party's would be, on the APIs
   above. `plugin/oriel.toml` (net `api.linear.app`, `secrets = { LINEAR_TOKEN = "api.linear.app" }`, `agent.prompt`)
@@ -1022,7 +1037,7 @@ type Host interface {
   connection, the counts, the log's tail); the PR action **Ask agentbus**; the assistant's `request_review` (an act)
   and `review_requests.agentbus`, which adds agentbus's half to `review_requests`. Options `plugin.agentbus.url`,
   `instance`, `asks`, `reviews`, `repos`, `presence`, `auto_approve`.
-- General pieces it needed: `ext.Plugin.Data`, a plugin's own data directory, which its processes may write and find
+- General pieces it needed: `plugin.Plugin.Data`, a plugin's own data directory, which its processes may write and find
   in `$ORIEL_PLUGIN_DATA` (`app.ScriptPlugin`'s is `plugins/<id>` in the state directory); the indicator slot
   `registry.SlotInboxFoot` (`inbox.foot`, under the Inbox panel's list); `registry.AgentTool.Adds`, a part of another
   tool's answer, not offered on its own: `registry.CallAgentTool` answers with each one's result under its `Reads`
@@ -1038,7 +1053,7 @@ type Host interface {
 
 ## As built (PL-3)
 
-- Install consent is `ext.Ask` → `ext.Consent`, with `ext.Locked` and `ext.Diff` for the lockfile's form, and the
+- Install consent is `plugin.Ask` → `plugin.Consent`, with `plugin.Locked` and `plugin.Diff` for the lockfile's form, and the
   dialog any installer opens with the command `plugins.consent {dir, from, then, source}` (security.md, "As built
   (PL-3)"). It's a command, so a plugin, Lua (`oriel.cmd`) or the P8 plugin manager asks the same way.
 - `languages.install {path}` installs a grammar pack (editor.md, "Languages as plugins").

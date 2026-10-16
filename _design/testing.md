@@ -30,6 +30,7 @@ like this" isn't a source.
 | text | Unicode UAX #29 (graphemes), #14 (line breaks), #11 (width), plus the UCD data files (`spec/unicode`: #11 and #29 so far) | Unicode version |
 | colour | CSS Color 4 (OKLCH), WCAG 2 (contrast ratio) | commit |
 | git | the `git` binary as the oracle (`git check-attr`, porcelain output); docs linked, not vendored | git version |
+| versions | Semantic Versioning 2.0.0 (`spec/semver`) for precedence; node-semver's README (`spec/node-semver`) for ranges: caret, tilde, X-ranges, `||` and prerelease tags | fetch date (no tags) |
 | editor conventions | the EditorConfig specification and its core-test suite | commit |
 
 - `spec/` is data: no code from it is linked. Updating a pin is a PR that re-runs every referencing test.
@@ -154,7 +155,7 @@ regs:   "" = "foo"   "1 = (unset)   "- = "foo"
 | `agent/*` | the provider conformance suite (start, send, tool call, permission, interrupt, fork, resume) against a **fake `claude`/`codex` binary** that replays recorded hook and transcript traffic; plus a slow live suite run on demand | recorded sessions from real CLIs, re-recorded when versions bump |
 | `wire`, `worker` | in-process worker tests; chaos tests (drop the connection mid-stream, reconnect, compare state) | – |
 | `gitx` | fixture repos built by script; porcelain output parsing | git man pages |
-| `app` | the app's built-ins driven a frame at a time on a fixed clock: `app.Headless` (no window, no loop; draw, run what extensions queued, click, press keys, read the text and the accessibility tree, call an agent tool). The app's own tests wrap it in `errScene`; `startApp` runs the real `Run` loop on the headless backend | the mockups, the design docs |
+| `app` | the app's built-ins driven a frame at a time on a fixed clock: `app.Headless` (no window, no loop; draw, run what plugins queued, click, press keys, read the text and the accessibility tree, call an agent tool). The app's own tests wrap it in `errScene`; `startApp` runs the real `Run` loop on the headless backend | the mockups, the design docs |
 | plugins | `app/plugintest`, the public harness on `app.Headless` that a plugin's own tests import, in Oriel or in its own repository (plugins.md, "Testing a plugin"); Oriel tests it on `app/plugintest/testdata/hello` | the plugin's design |
 | perf | benchmarks for key-to-photon latency, scroll frame time and parse throughput; CI fails on a >10% regression | budgets in `rendering.md`; a timing test is named `…Budget` and calls `perf.Timed`, and `make test` runs those in a pass of their own, one package at a time, so other packages' tests can't slow them |
 

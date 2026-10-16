@@ -3,14 +3,14 @@ package app
 import (
 	"context"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
 // The status line's segments are views named for their side and place: statusline.left.00-mode,
-// statusline.right.90-position. Any extension adds one by registering a view so named; they sit in name order. A
+// statusline.right.90-position. Any plugin adds one by registering a view so named; they sit in name order. A
 // segment with nothing to show builds no node, and takes no room.
 const (
 	StatusLeft  = "statusline.left."
@@ -25,9 +25,9 @@ type statusLine struct {
 	sh *shell
 }
 
-func (s *statusLine) Manifest() ext.Manifest { return ext.Manifest{ID: "statusline"} }
+func (s *statusLine) Manifest() plugin.Manifest { return plugin.Manifest{ID: "statusline"} }
 
-func (s *statusLine) Activate(_ context.Context, h ext.Host) error {
+func (s *statusLine) Activate(_ context.Context, h plugin.Host) error {
 	s.add(h.View(StatusLineView, registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "statusline", Fn: func(c *ui.Ctx) {
 			th := c.Theme()

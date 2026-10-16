@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -61,13 +61,13 @@ var (
 type rail struct {
 	disposer
 	sh     *shell
-	h      ext.Host
+	h      plugin.Host
 	sel    int
 	form   string // the window's own: "wide" or "narrow"; "" follows sidebar.form
 	writer stateWriter
 }
 
-func (r *rail) Manifest() ext.Manifest { return ext.Manifest{ID: "rail"} }
+func (r *rail) Manifest() plugin.Manifest { return plugin.Manifest{ID: "rail"} }
 
 // sidebarState is what the window keeps of the sidebar across restarts.
 type sidebarState struct {
@@ -86,7 +86,7 @@ var projectPanels = []struct {
 	{"tests", "tests", "Tests", TestsView, "<D-T>", 50, 0},
 }
 
-func (r *rail) Activate(_ context.Context, h ext.Host) error {
+func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 	r.h = h
 	if path := r.sh.dirState("sidebar"); path != "" {
 		if b, err := os.ReadFile(path); err == nil {
@@ -250,7 +250,7 @@ func (r *rail) entry(name string) (registry.RailEntry, bool) {
 }
 
 // active says an entry's panel is showing for project: its Active, or for one that shows a view, that view.
-func active(h ext.Host, e registry.RailEntry, project string) bool {
+func active(h plugin.Host, e registry.RailEntry, project string) bool {
 	if e.Active != nil {
 		on := false
 		registry.Call(func() error { on = e.Active(project); return nil })
@@ -790,7 +790,7 @@ func badge(e registry.RailEntry) int {
 }
 
 // boundKey is the key bound to command with args right now, as the keyboard shows it ("⌘⇧E"), or "".
-func boundKey(h ext.Host, command string, args registry.Args) string {
+func boundKey(h plugin.Host, command string, args registry.Args) string {
 	for _, k := range h.Keymaps() {
 		if k.Command == command && (k.Mode == "global" || k.Mode == "n") && sameArgs(k.Args, args) {
 			return keyLabel(k.Keys)

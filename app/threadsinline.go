@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/text"
@@ -244,7 +244,7 @@ func (x *requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 }
 
 // foldedThread is a closed thread as one line: where it is, its state, what it asked and the answer, and reopen.
-func foldedThread(c *ui.Ctx, h ext.Host, se core.SessionState, t core.Thread, line int) {
+func foldedThread(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread, line int) {
 	th := c.Theme()
 	_, tok := statusLabel(se, t)
 	c.Row("folded", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center, Radius: 6, Stroke: th.C(tReqThreadBd), Border: 1,
@@ -277,7 +277,7 @@ type threadCardOpts struct {
 
 // inlineThreadCard is a thread as a card: its place, status and actions, the comments, and a reply field that send sends.
 // It's the thread between the editor's lines and in a plan's margin.
-func inlineThreadCard(c *ui.Ctx, h ext.Host, se core.SessionState, t core.Thread, reply *string, send func(), o threadCardOpts) {
+func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread, reply *string, send func(), o threadCardOpts) {
 	th := c.Theme()
 	id := t.ID
 	run := func(cmd string, a registry.Args) {

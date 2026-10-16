@@ -2,7 +2,7 @@
 id: PL-18
 title: "Rename the ext package and Extension types to plugin"
 phase: P8
-status: todo
+status: review
 area: Platform
 module: ext
 depends_on: [PL-3]

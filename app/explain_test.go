@@ -113,9 +113,9 @@ func explainScene(t *testing.T) (*errScene, *fakeExplainer, string) {
 	return s, f, path
 }
 
-func (s *errScene) explainer() *explainExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*explainExt); ok {
+func (s *errScene) explainer() *explainPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*explainPlugin); ok {
 			return x
 		}
 	}

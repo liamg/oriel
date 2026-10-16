@@ -8,6 +8,13 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := Root{a: a}
 		vm.Bind("", map[string]script.GoFunc{
+			"asset": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				v, err := x.Asset(c.String(0))
+				return []any{v}, err
+			},
 			"cmd": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err

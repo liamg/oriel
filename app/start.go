@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -51,9 +51,9 @@ const (
 	startNarrow = 760
 )
 
-func (s *start) Manifest() ext.Manifest { return ext.Manifest{ID: "start"} }
+func (s *start) Manifest() plugin.Manifest { return plugin.Manifest{ID: "start"} }
 
-func (s *start) Activate(_ context.Context, h ext.Host) error {
+func (s *start) Activate(_ context.Context, h plugin.Host) error {
 	s.sel, s.hovered = -1, -1 // the first action that's available
 	for _, e := range []registry.StartEntry{
 		{Name: "session.new", Icon: "plus", Title: "New Session", Desc: "A new session on a repository, with its own branch and worktree",
@@ -126,7 +126,7 @@ func (s *start) Activate(_ context.Context, h ext.Host) error {
 
 // keeps says whether a key from beyond the start view works while it shows: only its own entries' and links' (ui.md
 // 01e).
-func (s *start) keeps(h ext.Host, k registry.Keymap) bool {
+func (s *start) keeps(h plugin.Host, k registry.Keymap) bool {
 	return slices.ContainsFunc(registry.StartEntries(h), func(e registry.StartEntry) bool { return e.Command == k.Command })
 }
 
@@ -175,7 +175,7 @@ type startRow struct {
 	forget  func()
 }
 
-func (s *start) rows(h ext.Host) (actions, recent []startRow) {
+func (s *start) rows(h plugin.Host) (actions, recent []startRow) {
 	for _, e := range registry.StartEntries(h) {
 		e := e
 		if e.Link {
@@ -207,7 +207,7 @@ func (s *start) rows(h ext.Host) (actions, recent []startRow) {
 	return actions, recent
 }
 
-func (s *start) build(c *ui.Ctx, h ext.Host) {
+func (s *start) build(c *ui.Ctx, h plugin.Host) {
 	actions, recent := s.rows(h)
 	if s.sel < 0 {
 		s.sel = slices.IndexFunc(actions, func(r startRow) bool { return r.ok })
@@ -241,7 +241,7 @@ func (s *start) build(c *ui.Ctx, h ext.Host) {
 	s.hovered = s.hovering
 }
 
-func (s *start) content(c *ui.Ctx, h ext.Host, actions, recent []startRow, narrow bool, gap float32) {
+func (s *start) content(c *ui.Ctx, h plugin.Host, actions, recent []startRow, narrow bool, gap float32) {
 	th := c.Theme()
 	c.Column("content", ui.Style{W: ui.Flex(1), Cross: ui.Center, Pad: ui.Insets{T: 24, B: 24}}, func(c *ui.Ctx) {
 		width := ui.Flex(1).Clamp(0, startWide)
@@ -353,7 +353,7 @@ func (s *start) hover(c *ui.Ctx, n int, in ui.Interaction) {
 	}
 }
 
-func (s *start) all(h ext.Host) []startRow {
+func (s *start) all(h plugin.Host) []startRow {
 	actions, recent := s.rows(h)
 	return append(actions, recent...)
 }
@@ -364,7 +364,7 @@ func caption(c *ui.Ctx, key any, s string) {
 }
 
 // action is one action's card; it says whether it was clicked.
-func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow) bool {
+func (s *start) action(c *ui.Ctx, h plugin.Host, i int, r startRow) bool {
 	th := c.Theme()
 	e := r.entry
 	on := i == s.sel
@@ -406,7 +406,7 @@ func (s *start) action(c *ui.Ctx, h ext.Host, i int, r startRow) bool {
 }
 
 // startLinks are the link entries under the actions, each a page with its figure (ui.md 01e).
-func startLinks(c *ui.Ctx, h ext.Host) {
+func startLinks(c *ui.Ctx, h plugin.Host) {
 	th := c.Theme()
 	var links []registry.StartEntry
 	for _, e := range registry.StartEntries(h) {

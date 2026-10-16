@@ -10,7 +10,7 @@ import (
 
 // inspectSections are the editor's parts of :Inspect (20-inspect): the syntax tree and highlight under the cursor,
 // and the decorations on its line. The language server's section is lsp's.
-func (x *editorExt) inspectSections() []registry.InspectSection {
+func (x *editorPlugin) inspectSections() []registry.InspectSection {
 	return []registry.InspectSection{
 		{Name: "TREE-SITTER", Order: 10, Rows: x.inspectTree, Source: "builtin:editor"},
 		{Name: "HIGHLIGHT", Order: 20, Rows: x.inspectHighlight, Source: "builtin:editor"},
@@ -19,7 +19,7 @@ func (x *editorExt) inspectSections() []registry.InspectSection {
 }
 
 // cursorOffset is the cursor's byte offset in the current buffer, and where that is.
-func (x *editorExt) cursorOffset() (int, string) {
+func (x *editorPlugin) cursorOffset() (int, string) {
 	p, ok := x.e.Pane(x.e.WindowID())
 	if !ok {
 		return 0, ""
@@ -29,7 +29,7 @@ func (x *editorExt) cursorOffset() (int, string) {
 	return min(snap.LineStart(c.Line)+c.Col, snap.Len()), fmt.Sprintf("%s %d:%d", p.Name(), c.Line+1, c.Col+1)
 }
 
-func (x *editorExt) inspectTree() []registry.InspectRow {
+func (x *editorPlugin) inspectTree() []registry.InspectRow {
 	p, ok := x.e.Pane(x.e.WindowID())
 	if !ok {
 		return nil
@@ -42,7 +42,7 @@ func (x *editorExt) inspectTree() []registry.InspectRow {
 	return []registry.InspectRow{{Key: at, Value: strings.Join(h.doc.NodePath(off), " › "), Source: h.lang}}
 }
 
-func (x *editorExt) inspectHighlight() []registry.InspectRow {
+func (x *editorPlugin) inspectHighlight() []registry.InspectRow {
 	p, ok := x.e.Pane(x.e.WindowID())
 	if !ok {
 		return nil
@@ -69,7 +69,7 @@ func (x *editorExt) inspectHighlight() []registry.InspectRow {
 	return out
 }
 
-func (x *editorExt) inspectDecorations() []registry.InspectRow {
+func (x *editorPlugin) inspectDecorations() []registry.InspectRow {
 	p, ok := x.e.Pane(x.e.WindowID())
 	if !ok {
 		return nil

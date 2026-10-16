@@ -16,7 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 )
@@ -41,10 +41,10 @@ const (
 	notesEnd   = "<!-- /oriel:verify -->"
 )
 
-type verifyExt struct {
+type verifyPlugin struct {
 	disposer
 	sh     *shell
-	h      ext.Host
+	h      plugin.Host
 	ctx    context.Context
 	cancel context.CancelFunc
 	busy   sync.WaitGroup
@@ -71,9 +71,9 @@ type quiz struct {
 	focus    bool
 }
 
-func (x *verifyExt) Manifest() ext.Manifest { return ext.Manifest{ID: "verify"} }
+func (x *verifyPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "verify"} }
 
-func (x *verifyExt) Activate(_ context.Context, h ext.Host) error {
+func (x *verifyPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.quizzes = map[core.SessionID]*quiz{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
@@ -107,17 +107,17 @@ func (x *verifyExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *verifyExt) Deactivate(ctx context.Context) error {
+func (x *verifyPlugin) Deactivate(ctx context.Context) error {
 	x.cancel()
 	x.busy.Wait()
 	return x.disposer.Deactivate(ctx)
 }
 
 // wait is until every question asked of the fork has its answer.
-func (x *verifyExt) wait() { x.busy.Wait() }
+func (x *verifyPlugin) wait() { x.busy.Wait() }
 
 // shown is the quiz the dialog shows, nil while it's closed.
-func (x *verifyExt) shown() *quiz {
+func (x *verifyPlugin) shown() *quiz {
 	if x.open == "" {
 		return nil
 	}
@@ -125,7 +125,7 @@ func (x *verifyExt) shown() *quiz {
 }
 
 // session is {id}, else the session in front.
-func (x *verifyExt) session(a registry.Args) (core.SessionState, bool) {
+func (x *verifyPlugin) session(a registry.Args) (core.SessionState, bool) {
 	id := core.SessionID(a.String("id"))
 	if id == "" {
 		id = x.h.State().Focus
@@ -149,7 +149,7 @@ func raisable(se core.SessionState) []core.Project {
 }
 
 // result is how a session's quiz went: this run's, else the last one recorded; "" for none yet.
-func (x *verifyExt) result(se core.SessionState) (string, *quiz) {
+func (x *verifyPlugin) result(se core.SessionState) (string, *quiz) {
 	if q := x.quizzes[se.ID]; q != nil {
 		return q.result, q
 	}
@@ -160,7 +160,7 @@ func (x *verifyExt) result(se core.SessionState) (string, *quiz) {
 }
 
 // beforeRaise adds a passed quiz's answers to a PR it raises, as reviewer notes, when they're wanted.
-func (x *verifyExt) beforeRaise(_ registry.Ctx, ev *ShipRaise) (registry.Verdict, error) {
+func (x *verifyPlugin) beforeRaise(_ registry.Ctx, ev *ShipRaise) (registry.Verdict, error) {
 	if ev.Edit {
 		return registry.Verdict{}, nil
 	}
@@ -177,7 +177,7 @@ func (x *verifyExt) beforeRaise(_ registry.Ctx, ev *ShipRaise) (registry.Verdict
 }
 
 // begin opens the dialog on the session's quiz, starting one if there's none to go back to.
-func (x *verifyExt) begin(se core.SessionState) error {
+func (x *verifyPlugin) begin(se core.SessionState) error {
 	if len(registry.Forkers(x.h)) == 0 {
 		return errors.New("the quiz needs an agent to ask it")
 	}
@@ -193,7 +193,7 @@ func (x *verifyExt) begin(se core.SessionState) error {
 }
 
 // start asks the fork for the questions.
-func (x *verifyExt) start(q *quiz, se core.SessionState) {
+func (x *verifyPlugin) start(q *quiz, se core.SessionState) {
 	q.projects = nil
 	for _, p := range raisable(se) {
 		q.projects = append(q.projects, p.Name)
@@ -211,7 +211,7 @@ func (x *verifyExt) start(q *quiz, se core.SessionState) {
 }
 
 // ask puts a prompt to the fork off the loop, and gives the answer to got back on it.
-func (x *verifyExt) ask(q *quiz, prompt string, got func(out string) error) {
+func (x *verifyPlugin) ask(q *quiz, prompt string, got func(out string) error) {
 	q.gen++
 	gen := q.gen
 	q.asking, q.err = true, ""
@@ -239,7 +239,7 @@ func (x *verifyExt) ask(q *quiz, prompt string, got func(out string) error) {
 }
 
 // send gives the answer to the question being asked, to be graded.
-func (x *verifyExt) send(q *quiz, text string) error {
+func (x *verifyPlugin) send(q *quiz, text string) error {
 	if q == nil || q.asking || q.result != "" || q.at >= len(q.qs) {
 		return nil
 	}
@@ -270,7 +270,7 @@ func (x *verifyExt) send(q *quiz, text string) error {
 }
 
 // record keeps the quiz's result in the session, which logs it.
-func (x *verifyExt) record(q *quiz, result string) {
+func (x *verifyPlugin) record(q *quiz, result string) {
 	q.result = result
 	v := core.Verification{Result: result, Projects: q.projects, By: q.by, Questions: append([]core.QuizQuestion(nil), q.qs[:q.at]...),
 		At: time.Now()}
@@ -296,7 +296,7 @@ func (x *verifyExt) record(q *quiz, result string) {
 }
 
 // again starts a new quiz in place of a finished one.
-func (x *verifyExt) again(q *quiz) error {
+func (x *verifyPlugin) again(q *quiz) error {
 	if q == nil {
 		return nil
 	}
@@ -327,7 +327,7 @@ func (q *quiz) pointer() (string, int) {
 }
 
 // openFile opens the file the quiz is asking about; the quiz waits, closed, until it's opened again.
-func (x *verifyExt) openFile(ctx registry.Ctx, q *quiz) error {
+func (x *verifyPlugin) openFile(ctx registry.Ctx, q *quiz) error {
 	if q == nil {
 		return nil
 	}
@@ -339,7 +339,7 @@ func (x *verifyExt) openFile(ctx registry.Ctx, q *quiz) error {
 }
 
 // openAt opens a file of the session's, the quiz waiting closed.
-func (x *verifyExt) openAt(ctx registry.Ctx, q *quiz, f string, line int) error {
+func (x *verifyPlugin) openAt(ctx registry.Ctx, q *quiz, f string, line int) error {
 	sess, ok := x.h.Session(q.session)
 	if !ok {
 		return fmt.Errorf("no session %s", q.session)
@@ -377,7 +377,7 @@ func quizPath(se core.SessionState, f string) string {
 }
 
 // gate is the "Verify quiz" row of "before this ships": up to you, and where to start it or go back to it.
-func (x *verifyExt) gate(id string) registry.Gate {
+func (x *verifyPlugin) gate(id string) registry.Gate {
 	sess, ok := x.h.Session(core.SessionID(id))
 	if !ok || len(raisable(sess.Snapshot())) == 0 {
 		return registry.Gate{}

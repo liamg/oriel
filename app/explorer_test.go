@@ -157,7 +157,7 @@ func (s *errScene) selectRow(t *testing.T, text string) {
 }
 
 func (s *errScene) explorer() *explorer {
-	for _, e := range s.exts {
+	for _, e := range s.plugins {
 		if x, ok := e.(*explorer); ok {
 			return x
 		}

@@ -4,18 +4,19 @@ use (
 	./agent
 	./app
 	./assistant
+	./catalog
 	./cmd/oriel
 	./cmd/oriel-spike
 	./core
 	./dap
 	./edit
-	./ext
 	./gh
 	./gitx
 	./integ
 	./lsp
-	./registry
+	./plugin
 	./regex
+	./registry
 	./render
 	./render/gio
 	./sandbox
@@ -29,8 +30,8 @@ use (
 	./tools
 	./ui
 	./update
-	./voice
 	./vim
+	./voice
 	./wire
 	./worker
 )

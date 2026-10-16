@@ -56,7 +56,7 @@ func planScene(t *testing.T) *errScene {
 	}
 	transcript[3].Time = ago(4 * time.Second)
 	se := core.SessionState{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindPlan, StartWork: true, Status: core.StatusNeedsYou, Dir: ws,
-		Ticket: "INF-2231", Prompt: "Rounding on invoices drifts by 1¢ for tiered usage plans.",
+		Ticket: "ENG-2231", Prompt: "Rounding on invoices drifts by 1¢ for tiered usage plans.",
 		Projects: []core.Project{{Name: "pricing", Repo: pricing, Dir: pricing, Branch: "rethink/rounding", Primary: true, ReadOnly: true},
 			{Name: "billing-ui", Repo: billing, Dir: billing, Branch: "rethink/rounding", ReadOnly: true}},
 		Agent: core.AgentState{Provider: "claude", Model: "opus", Running: true, Working: true, TurnStarted: ago(30 * time.Second),
@@ -114,7 +114,7 @@ func TestPlanSnapshot(t *testing.T) {
 	s.lint("the plan view")
 	s.golden("plan")
 	text := s.frameText()
-	for _, want := range []string{"PLAN DOCS", "3 files", "PLAN.md", "api.md", "ui.md", "SOURCE", "INF-2231", "PROJECTS", "pricing", "billing-ui",
+	for _, want := range []string{"PLAN DOCS", "3 files", "PLAN.md", "api.md", "ui.md", "SOURCE", "ENG-2231", "PROJECTS", "pricing", "billing-ui",
 		"rethink/rounding", "READINESS", "3 open", "Start work unlocks when every thread",
 		"PLAN", "Round invoice lines half-to-even", "claude opus · drafting rev 4", "agent editing PLAN.md", "Preview diff", "Start work",
 		"PLAN.MD · REV 4", "Goal · Approach · Pieces · Risks", "Round each line in minor units, ties to even.", "AGENT EDITED 4S AGO",

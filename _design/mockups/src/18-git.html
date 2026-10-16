@@ -50,7 +50,7 @@
   <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
   <div class="stabs">
     <div class="stab"><span class="dot o"></span>pricing-rounding<span class="mini">working</span><span class="k">⌘1</span></div>
-    <div class="stab on"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab on"><span class="dot r"></span>ENG-2231 search api<span class="mini">needs you</span><span class="k">⌘2</span></div>
     <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
     <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
     <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div>
@@ -70,13 +70,13 @@
   </div>
   <div class="wrap">
     <div class="top">
-      <h1>SHIP</h1><span class="dim mono" style="font-size:11px">INF-2231 · usage API rate-limit headers · 2 projects · branch rethink/usage-endpoint</span>
+      <h1>SHIP</h1><span class="dim mono" style="font-size:11px">ENG-2231 · search API rate-limit headers · 2 projects · branch rethink/search-endpoint</span>
       <span style="margin-left:auto" class="row gap8"><span class="btn ghost">Sync all</span><span class="btn">Commit all</span><span class="btn pri">Push + raise both PRs</span></span>
     </div>
     <div class="cols">
       <!-- repo 1 -->
       <div class="repo">
-        <div class="rh"><span class="fi" style="background:#4fc1e9;width:12px;height:12px"></span><span class="nm">usage-api</span><span class="br">rethink/usage-endpoint ← main</span><span class="chip r" style="margin-left:auto">needs you</span></div>
+        <div class="rh"><span class="fi" style="background:#4fc1e9;width:12px;height:12px"></span><span class="nm">search-api</span><span class="br">rethink/search-endpoint ← main</span><span class="chip r" style="margin-left:auto">needs you</span></div>
         <div class="chk">
           <div class="step act"><span class="nd">1</span><div class="card">
             <div class="hd"><span class="t">Uncommitted</span><span class="s">3 files · +41 −6</span><div class="r"><span class="chip y">21 lines unreviewed</span></div></div>
@@ -84,7 +84,7 @@
               <div class="fl"><span class="x on">✓</span>internal/api/usage/handler.go<em><span style="color:var(--green)">+3</span> <span style="color:var(--red)">−1</span></em><span class="rv" style="color:var(--green)">reviewed ✓</span></div>
               <div class="fl"><span class="x"></span>internal/api/usage/handler_test.go<em><span style="color:var(--green)">+18</span></em><span class="rv" style="color:var(--yellow)">0 / 18</span></div>
               <div class="fl"><span class="x"></span>internal/api/usage/routes.go<em><span style="color:var(--green)">+20</span> <span style="color:var(--red)">−5</span></em><span class="rv" style="color:var(--yellow)">17 / 20</span></div>
-              <div class="msgbox"><span class="tag chip c">drafted by codex</span><span style="color:var(--violet)">feat(api):</span> set Retry-After on rate-limited usage responses<br><br><span class="dim">Both the single and batch usage endpoints now return Retry-After<br>from the limiter's reset time, rounded up to whole seconds.<br><br>Refs INF-2231</span></div>
+              <div class="msgbox"><span class="tag chip c">drafted by codex</span><span style="color:var(--violet)">feat(api):</span> set Retry-After on rate-limited usage responses<br><br><span class="dim">Both the single and batch usage endpoints now return Retry-After<br>from the limiter's reset time, rounded up to whole seconds.<br><br>Refs ENG-2231</span></div>
               <div class="row gap8" style="margin-top:10px"><span class="btn pri">Review 21 lines</span><span class="btn ghost" style="opacity:.6">Commit anyway…</span><span class="btn ghost">Redraft</span><span class="dim mono" style="font-size:10.5px;margin-left:auto">review gate on</span></div>
             </div>
           </div></div>
@@ -109,13 +109,13 @@
       </div>
       <!-- repo 2 -->
       <div class="repo">
-        <div class="rh"><span class="fi" style="background:#ffcf5c;width:12px;height:12px"></span><span class="nm">web-dashboard</span><span class="br">rethink/usage-endpoint ← main</span><span class="chip b" style="margin-left:auto;color:#7ea6ff;border-color:rgba(92,141,255,.4);background:rgba(92,141,255,.08)">ci running</span></div>
+        <div class="rh"><span class="fi" style="background:#ffcf5c;width:12px;height:12px"></span><span class="nm">web-dashboard</span><span class="br">rethink/search-endpoint ← main</span><span class="chip b" style="margin-left:auto;color:#7ea6ff;border-color:rgba(92,141,255,.4);background:rgba(92,141,255,.08)">ci running</span></div>
         <div class="chk">
           <div class="step done"><span class="nd">✓</span><div class="card"><div class="hd"><span class="t">Uncommitted</span><span class="s">clean</span></div></div></div>
           <div class="step done"><span class="nd">✓</span><div class="card"><div class="hd"><span class="t">Up to date with main</span><span class="s">rebased 6m ago</span></div></div></div>
           <div class="step done"><span class="nd">✓</span><div class="card"><div class="hd"><span class="t">Pushed</span><span class="s">3 commits</span></div></div></div>
           <div class="step blk"><span class="nd">4</span><div class="card" style="border-color:rgba(92,141,255,.35)">
-            <div class="hd"><span class="t">#812 · feat(usage): back off on 429 using Retry-After</span><div class="r"><span class="chip">draft</span></div></div>
+            <div class="hd"><span class="t">#812 · feat(search): back off on 429 using Retry-After</span><div class="r"><span class="chip">draft</span></div></div>
             <div class="bd">
               <div class="cap" style="margin-bottom:4px">Checks · 5 of 7</div>
               <div class="ci"><span class="ic2" style="color:var(--green)">✓</span>lint<em>38s</em></div>
@@ -125,8 +125,8 @@
               <div class="ci"><span class="ic2" style="color:var(--green)">✓</span>build<em>2m 05s</em></div>
               <div class="ci"><span class="ic2" style="color:#7ea6ff">◌</span>e2e · chromium<em>running 3m</em></div>
               <div class="ci"><span class="ic2" style="color:var(--fg4)">○</span>preview deploy<em>queued</em></div>
-              <div class="rvw" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span class="cap" style="width:70px">Reviewers</span><span class="dim">none yet — raise usage-api first</span></div>
-              <div class="link">↔ depends on <b>usage-api</b> PR (not raised) · merge order: api → dashboard</div>
+              <div class="rvw" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span class="cap" style="width:70px">Reviewers</span><span class="dim">none yet — raise search-api first</span></div>
+              <div class="link">↔ depends on <b>search-api</b> PR (not raised) · merge order: api → dashboard</div>
               <div class="row gap8" style="margin-top:10px"><span class="btn">Ready for review</span><span class="btn ghost">Fix CI with agent</span><span class="btn ghost" style="margin-left:auto">Open on GitHub ↗</span></div>
             </div>
           </div></div>
@@ -144,17 +144,17 @@
     <div class="gate"><span class="ck dim">○</span>AI review <span class="dim mono" style="font-size:10.5px;margin-left:auto">optional</span></div>
     <div style="height:1px;background:var(--line)"></div>
     <div class="cap">Merge order</div>
-    <div class="mono" style="font-size:11.5px;line-height:22px;color:var(--fg2)">1 · usage-api <span class="dim">→ #—</span><br>2 · web-dashboard <span class="dim">→ #812</span></div>
+    <div class="mono" style="font-size:11.5px;line-height:22px;color:var(--fg2)">1 · search-api <span class="dim">→ #—</span><br>2 · web-dashboard <span class="dim">→ #812</span></div>
     <div style="height:1px;background:var(--line)"></div>
     <div class="cap">Ticket</div>
-    <div style="font-size:12px;color:var(--fg2)"><span class="mono" style="color:var(--violet)">INF-2231</span> In Progress → <span style="color:var(--fg)">In Review</span> when both PRs are up</div>
+    <div style="font-size:12px;color:var(--fg2)"><span class="mono" style="color:var(--violet)">ENG-2231</span> In Progress → <span style="color:var(--fg)">In Review</span> when both PRs are up</div>
     <div style="flex:1"></div>
     <div class="dim" style="font-size:11px;line-height:1.5">Commits and pushes run on the host through the gateway. The agent can draft, never send.</div>
   </div>
 </div>
 <div class="status">
   <span class="mode">NORMAL</span>
-  <span>rethink/usage-endpoint</span><span class="dim">↑2 ↓4 ●3</span><span class="sep"></span>
+  <span>rethink/search-endpoint</span><span class="dim">↑2 ↓4 ●3</span><span class="sep"></span>
   <span style="color:#7ea6ff">◌ CI #812 5/7</span><span class="sep"></span>
   <span class="dim">gh · liamg · yubikey ready</span>
   <span style="margin-left:auto" class="row gap16">

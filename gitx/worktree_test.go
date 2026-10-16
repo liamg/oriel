@@ -95,7 +95,7 @@ func TestAddWorktreeDetached(t *testing.T) {
 // ref: oracle git — git-check-ref-format(1) --branch: what git takes as a new branch's name.
 func TestValidBranch(t *testing.T) {
 	ctx := context.Background()
-	for _, ok := range []string{"tester/inf-2231-round", "fix-1", "a/b/c"} {
+	for _, ok := range []string{"tester/eng-2231-round", "fix-1", "a/b/c"} {
 		if err := gitx.ValidBranch(ctx, ok); err != nil {
 			t.Errorf("ValidBranch(%q) = %v", ok, err)
 		}

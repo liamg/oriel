@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core/eventstore"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/headless"
 )
@@ -27,23 +27,23 @@ var agentKeys = []registry.Keymap{
 
 func whichKeyApp(t *testing.T) *running {
 	t.Helper()
-	return whichKeyAppWith(t, func(h ext.Host) { h.Options().Set("keymap.timeout", registry.LayerUser, registry.At{}, false) })
+	return whichKeyAppWith(t, func(h plugin.Host) { h.Options().Set("keymap.timeout", registry.LayerUser, registry.At{}, false) })
 }
 
-func whichKeyAppWith(t *testing.T, opts func(h ext.Host)) *running {
+func whichKeyAppWith(t *testing.T, opts func(h plugin.Host)) *running {
 	t.Helper()
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("alpha beta\n"), 0o644)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	t.Cleanup(cancel)
 	be := headless.New()
-	g := &grabHost{keys: agentKeys, setup: func(h ext.Host) {
+	g := &grabHost{keys: agentKeys, setup: func(h plugin.Host) {
 		h.Command(registry.Command{ID: "test.noop", Run: func(registry.Ctx, registry.Args) error { return nil }})
 		opts(h)
 	}}
 	r := &running{t: t, store: eventstore.New(), dir: dir, done: make(chan error, 1)}
 	go func() {
-		r.done <- Run(ctx, be, Config{Store: r.store, ConfigDir: t.TempDir(), WorkDir: dir, Files: []string{"a.txt"}, Extensions: []ext.Extension{g}})
+		r.done <- Run(ctx, be, Config{Store: r.store, ConfigDir: t.TempDir(), WorkDir: dir, Files: []string{"a.txt"}, Plugins: []plugin.Plugin{g}})
 	}()
 	r.win = <-be.Windows()
 	r.host = g.h
@@ -126,7 +126,7 @@ func TestWhichKeySnapshot(t *testing.T) {
 
 // Once which-key shows a prefix, it waits for the next key past keymap.timeoutlen, as which-key.nvim does.
 func TestWhichKeyHoldsThePrefix(t *testing.T) {
-	r := whichKeyAppWith(t, func(h ext.Host) {
+	r := whichKeyAppWith(t, func(h plugin.Host) {
 		h.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 500*time.Millisecond)
 	})
 	r.typeKeys("<Space>")

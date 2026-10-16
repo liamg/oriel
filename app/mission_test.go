@@ -12,9 +12,9 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-func (s *errScene) mission() *missionExt {
-	for _, e := range s.exts {
-		if m, ok := e.(*missionExt); ok {
+func (s *errScene) mission() *missionPlugin {
+	for _, e := range s.plugins {
+		if m, ok := e.(*missionPlugin); ok {
 			return m
 		}
 	}
@@ -65,11 +65,11 @@ func missionScene(t *testing.T) (*errScene, *[]string) {
 					Output: "ok  \tpricing\t0.214s"},
 				{ID: "a1", Kind: core.ItemAssistant, Text: "replying on round.go:46", Partial: true, Time: ago(2 * time.Second)},
 			}},
-		{ID: "ci-lint", Name: "ci lint fix", Kind: core.KindWork, Status: core.StatusNeedsYou, PR: "https://github.com/infracost/api/pull/4418",
+		{ID: "ci-lint", Name: "ci lint fix", Kind: core.KindWork, Status: core.StatusNeedsYou, PR: "https://github.com/acme/api/pull/4418",
 			Created: ago(time.Hour), Agent: core.AgentState{Provider: "claude", Running: true},
 			Transcript: []core.Item{{ID: "a1", Kind: core.ItemAssistant, Text: "golangci-lint: errcheck in usage/export.go:112, gofumpt in 2 files. Say “fix ci” or open.",
 				Time: ago(14 * time.Minute)}}},
-		{ID: "dash-filters", Name: "dash-filters", Kind: core.KindWork, Status: core.StatusReviewer, PR: "https://github.com/infracost/dash/pull/4402",
+		{ID: "dash-filters", Name: "dash-filters", Kind: core.KindWork, Status: core.StatusReviewer, PR: "https://github.com/acme/dash/pull/4402",
 			Created: ago(5 * time.Hour), Agent: core.AgentState{Provider: "claude"},
 			Transcript: []core.Item{{ID: "a1", Kind: core.ItemAssistant, Text: "@maria requested changes on FilterBar.tsx — 2 threads mirrored, drafts ready.",
 				Time: ago(2 * time.Hour)}}},
@@ -86,11 +86,11 @@ func missionScene(t *testing.T) (*errScene, *[]string) {
 		{ID: "review-4410", Name: "review #4410", Kind: core.KindReview, Status: core.StatusPermission, Worker: "devbox", Created: ago(time.Hour),
 			Agent: core.AgentState{Provider: "claude", Running: true, Sandboxed: true, Network: "ask"},
 			Asks:  []core.Ask{{ID: "p1", Kind: core.AskPermission, Tool: "Bash", Summary: "make e2e", Created: ago(22 * time.Minute)}}},
-		{ID: "usage-api", Name: "INF-2231 usage api", Kind: core.KindWork, Status: core.StatusNeedsYou, Worker: "devbox", Created: ago(2 * time.Hour),
-			Projects: []core.Project{{Name: "usage-api"}, {Name: "billing"}}, Agent: core.AgentState{Provider: "claude", Running: true},
+		{ID: "search-api", Name: "ENG-2231 search api", Kind: core.KindWork, Status: core.StatusNeedsYou, Worker: "devbox", Created: ago(2 * time.Hour),
+			Projects: []core.Project{{Name: "search-api"}, {Name: "billing"}}, Agent: core.AgentState{Provider: "claude", Running: true},
 			Transcript: []core.Item{{ID: "a1", Kind: core.ItemAssistant, Text: "Evict stale entries on read, or by the nightly job? Read-time is simpler but adds 4ms p99.",
 				Time: ago(6 * time.Minute)}}},
-		{ID: "flaky-e2e", Name: "flaky e2e sweep", Kind: core.KindJob, Status: core.StatusCI, Worker: "devbox", PR: "https://github.com/infracost/api/pull/4419",
+		{ID: "flaky-e2e", Name: "flaky e2e sweep", Kind: core.KindJob, Status: core.StatusCI, Worker: "devbox", PR: "https://github.com/acme/api/pull/4419",
 			Created: ago(time.Hour), Agent: core.AgentState{Provider: "claude"},
 			Asks: []core.Ask{{ID: "g1", Kind: core.AskGateway, Tool: "oriel__push", Summary: "git push origin flaky-e2e", Created: ago(8 * time.Minute)}}},
 	} {
@@ -170,7 +170,7 @@ func TestMissionControlGroupsByWorker(t *testing.T) {
 			t.Errorf("%s's card isn't under MBP", local)
 		}
 	}
-	for _, remote := range []string{"review #4410", "INF-2231 usage api", "flaky e2e sweep"} {
+	for _, remote := range []string{"review #4410", "ENG-2231 search api", "flaky e2e sweep"} {
 		if s.top(t, remote) < devbox {
 			t.Errorf("%s's card isn't under DEVBOX", remote)
 		}
@@ -187,7 +187,7 @@ func TestMissionControlGroupsByWorker(t *testing.T) {
 	s.run("mission.group", registry.Args{"by": "repo"})
 	s.frame()
 	s.frame()
-	s.onMission(t, "USAGE-API")
+	s.onMission(t, "SEARCH-API")
 	if err := s.reg.Run(context.Background(), "mission.group", registry.Args{"by": "colour"}); err == nil {
 		t.Error("mission.group took a grouping it hasn't")
 	}
@@ -286,7 +286,7 @@ func TestMissionKeys(t *testing.T) {
 	s.openMission(t)
 	m := s.mission()
 	// MBP's cards, most urgent first, three to a row: ci lint fix, pricing-rounding, deps sweep; dash-filters,
-	// tour: auth flow. devbox's: INF-2231 usage api, review #4410, flaky e2e sweep.
+	// tour: auth flow. devbox's: ENG-2231 search api, review #4410, flaky e2e sweep.
 	if m.selected() != "ci-lint" {
 		t.Fatalf("the first card selected is %s", m.selected())
 	}

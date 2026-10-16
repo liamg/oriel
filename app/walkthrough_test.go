@@ -105,9 +105,9 @@ func walkScene(t *testing.T) (s *errScene, f *fakeWalker, pricing, billing strin
 	return s, f, p.Dir, b.Dir
 }
 
-func (s *errScene) walker() *walkthroughExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*walkthroughExt); ok {
+func (s *errScene) walker() *walkthroughPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*walkthroughPlugin); ok {
 			return x
 		}
 	}

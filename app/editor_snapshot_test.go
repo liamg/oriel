@@ -76,9 +76,9 @@ func editorScene(t *testing.T) *errScene {
 	return s
 }
 
-func (s *errScene) editor() *editorExt {
-	for _, e := range s.exts {
-		if x, ok := e.(*editorExt); ok {
+func (s *errScene) editor() *editorPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*editorPlugin); ok {
 			return x
 		}
 	}

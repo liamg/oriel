@@ -13,8 +13,8 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -68,7 +68,7 @@ var explorerScopes = []string{"changed", "uncommitted", "all"}
 type explorer struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	scopes      map[core.SessionID]gitx.Scope // remembered per session
 	cols        struct{ status, lines, diag, agent bool }
@@ -165,9 +165,9 @@ type explorerHunks struct {
 	busy     sync.WaitGroup
 }
 
-func (e *explorer) Manifest() ext.Manifest { return ext.Manifest{ID: "explorer"} }
+func (e *explorer) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explorer"} }
 
-func (e *explorer) Activate(_ context.Context, h ext.Host) error {
+func (e *explorer) Activate(_ context.Context, h plugin.Host) error {
 	e.h = h
 	e.scopes = map[core.SessionID]gitx.Scope{}
 	e.cols.status, e.cols.lines, e.cols.diag, e.cols.agent = true, true, true, true

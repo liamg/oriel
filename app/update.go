@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ext"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -44,10 +44,10 @@ const (
 	updateManual    = "manual"
 )
 
-type updateExt struct {
+type updatePlugin struct {
 	disposer
 	sh *shell
-	h  ext.Host
+	h  plugin.Host
 
 	mu     sync.Mutex
 	busy   string // what it's doing now: "Checking for updates", "Updating"
@@ -56,16 +56,16 @@ type updateExt struct {
 	stop   chan struct{}
 }
 
-func (x *updateExt) Manifest() ext.Manifest { return ext.Manifest{ID: "update"} }
+func (x *updatePlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "update"} }
 
-func (x *updateExt) updater() *update.Updater {
+func (x *updatePlugin) updater() *update.Updater {
 	if x.sh.cfg.Updates == nil {
 		return nil
 	}
 	return x.sh.cfg.Updates.Updater
 }
 
-func (x *updateExt) Activate(_ context.Context, h ext.Host) error {
+func (x *updatePlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.add(h.Option(registry.OptionSpec{Name: "updates.mode", Type: registry.Enum, Values: []string{updateAutomatic, updateAsk, updateManual},
 		Default: updateAsk, Scopes: registry.ScopeUser,
@@ -107,26 +107,26 @@ func (x *updateExt) Activate(_ context.Context, h ext.Host) error {
 	return nil
 }
 
-func (x *updateExt) mode() string {
+func (x *updatePlugin) mode() string {
 	v, _, _ := x.h.Options().Get("updates.mode", registry.At{})
 	s, _ := v.(string)
 	return s
 }
 
-func (x *updateExt) channel() string {
+func (x *updatePlugin) channel() string {
 	v, _, _ := x.h.Options().Get("updates.channel", registry.At{})
 	s, _ := v.(string)
 	return s
 }
 
-func (x *updateExt) latest() (update.Manifest, bool) {
+func (x *updatePlugin) latest() (update.Manifest, bool) {
 	if u := x.updater(); u != nil {
 		return u.Latest()
 	}
 	return update.Manifest{}, false
 }
 
-func (x *updateExt) ready() (string, bool) {
+func (x *updatePlugin) ready() (string, bool) {
 	if u := x.updater(); u != nil {
 		return u.Ready()
 	}
@@ -134,13 +134,13 @@ func (x *updateExt) ready() (string, bool) {
 }
 
 // updating is whether an install is running.
-func (x *updateExt) updating() bool {
+func (x *updatePlugin) updating() bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return strings.HasPrefix(x.busy, "Updating")
 }
 
-func (x *updateExt) setCard(open bool) {
+func (x *updatePlugin) setCard(open bool) {
 	x.mu.Lock()
 	x.card = open
 	x.mu.Unlock()
@@ -148,7 +148,7 @@ func (x *updateExt) setCard(open bool) {
 }
 
 // watch checks now and then, unless updates are manual.
-func (x *updateExt) watch(stop chan struct{}, first, every time.Duration) {
+func (x *updatePlugin) watch(stop chan struct{}, first, every time.Duration) {
 	t := time.NewTimer(first)
 	defer t.Stop()
 	for {
@@ -164,7 +164,7 @@ func (x *updateExt) watch(stop chan struct{}, first, every time.Duration) {
 	}
 }
 
-func (x *updateExt) checkNow(asked bool) {
+func (x *updatePlugin) checkNow(asked bool) {
 	if asked {
 		x.setCard(true)
 	}
@@ -173,7 +173,7 @@ func (x *updateExt) checkNow(asked bool) {
 
 // check asks for a newer release. One the user asked for opens the card whatever it finds; one on the timer offers
 // a release (ask), installs it (automatic), or says nothing.
-func (x *updateExt) check(asked bool) {
+func (x *updatePlugin) check(asked bool) {
 	u := x.updater()
 	if !x.begin("Checking for updates") {
 		return
@@ -211,7 +211,7 @@ func (x *updateExt) check(asked bool) {
 	}
 }
 
-func (x *updateExt) begin(what string) bool {
+func (x *updatePlugin) begin(what string) bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	if x.busy != "" {
@@ -222,7 +222,7 @@ func (x *updateExt) begin(what string) bool {
 	return true
 }
 
-func (x *updateExt) end(err error) {
+func (x *updatePlugin) end(err error) {
 	x.mu.Lock()
 	x.busy = ""
 	if err != nil && !errors.Is(err, update.ErrUpToDate) {
@@ -233,11 +233,11 @@ func (x *updateExt) end(err error) {
 }
 
 // refresh builds the indicator again, as what it shows has changed.
-func (x *updateExt) refresh() {
+func (x *updatePlugin) refresh() {
 	x.h.Do(func() { _ = x.h.Run(context.Background(), "hud.refresh", registry.Args{"name": "update"}) })
 }
 
-func (x *updateExt) setFailed(s string) {
+func (x *updatePlugin) setFailed(s string) {
 	x.mu.Lock()
 	x.failed = s
 	x.mu.Unlock()
@@ -245,7 +245,7 @@ func (x *updateExt) setFailed(s string) {
 
 // install, on the loop, updates every connected worker that's behind, then this copy, which Oriel runs after a restart. A worker
 // that fails says so and doesn't stop the rest.
-func (x *updateExt) install() error {
+func (x *updatePlugin) install() error {
 	u := x.updater()
 	if u == nil {
 		return errors.New("this build of Oriel doesn't update itself")
@@ -288,7 +288,7 @@ func (x *updateExt) install() error {
 }
 
 // pushTo updates one worker that's behind the latest release.
-func (x *updateExt) pushTo(ctx context.Context, id core.WorkerID, c worker.Client) {
+func (x *updatePlugin) pushTo(ctx context.Context, id core.WorkerID, c worker.Client) {
 	p, err := x.updater().PushTo(ctx, c.Conn)
 	source := "worker:" + string(id)
 	switch {
@@ -304,7 +304,7 @@ func (x *updateExt) pushTo(ctx context.Context, id core.WorkerID, c worker.Clien
 
 // joined serves a worker that connects the releases offered to it, and updates it first if it's behind a release
 // Oriel already has (distribution.md, "Version skew").
-func (x *updateExt) joined(c worker.Client, info worker.Info) {
+func (x *updatePlugin) joined(c worker.Client, info worker.Info) {
 	u := x.updater()
 	u.Serve(c.Conn)
 	if x.mode() == updateManual {
@@ -321,7 +321,7 @@ func (x *updateExt) joined(c worker.Client, info worker.Info) {
 }
 
 // restart quits, draining this machine's worker, and starts the installed Oriel once the window has closed.
-func (x *updateExt) restart() error {
+func (x *updatePlugin) restart() error {
 	if _, ok := x.ready(); !ok {
 		return errors.New("no update is waiting for a restart")
 	}
@@ -342,7 +342,7 @@ func (sh *shell) relaunchAfter(err *error) {
 
 // statusSegment is "update ready · restart" on the status line once an update is installed, and what the updater
 // is doing while it works.
-func (x *updateExt) statusSegment(c *ui.Ctx) {
+func (x *updatePlugin) statusSegment(c *ui.Ctx) {
 	x.mu.Lock()
 	busy := x.busy
 	x.mu.Unlock()
@@ -368,7 +368,7 @@ func (x *updateExt) statusSegment(c *ui.Ctx) {
 
 // cardView is the update card (ui.md has none; distribution.md, "Release notes"): the newer release, its notes,
 // and Update, or Restart once it's installed.
-func (x *updateExt) cardView(c *ui.Ctx) {
+func (x *updatePlugin) cardView(c *ui.Ctx) {
 	x.mu.Lock()
 	open, busy, failed := x.card, x.busy, x.failed
 	x.mu.Unlock()
@@ -441,7 +441,7 @@ func (x *updateExt) cardView(c *ui.Ctx) {
 	}
 }
 
-func (x *updateExt) run(id string) {
+func (x *updatePlugin) run(id string) {
 	if err := x.h.Run(context.Background(), id, nil); err != nil {
 		x.setFailed(err.Error())
 		x.h.Redraw()

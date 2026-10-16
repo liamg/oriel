@@ -26,7 +26,7 @@ const (
 	sessionsShownPerWorker = 6
 )
 
-func (x *workersExt) page(c *ui.Ctx) {
+func (x *workersPlugin) page(c *ui.Ctx) {
 	if !x.open || c.Theme().IsProbe() {
 		return
 	}
@@ -53,7 +53,7 @@ func (x *workersExt) page(c *ui.Ctx) {
 		})
 }
 
-func (x *workersExt) header(c *ui.Ctx, rows []workerRow) {
+func (x *workersPlugin) header(c *ui.Ctx, rows []workerRow) {
 	th := c.Theme()
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "WORKERS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
@@ -99,7 +99,7 @@ func wordsOf(fp string) string {
 	return "certificate " + wire.Words(fp)
 }
 
-func (x *workersExt) run(id string, a registry.Args) {
+func (x *workersPlugin) run(id string, a registry.Args) {
 	x.err = ""
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		x.err = err.Error()
@@ -107,7 +107,7 @@ func (x *workersExt) run(id string, a registry.Args) {
 }
 
 // state is how a worker is as its row says it: its tone and words.
-func (x *workersExt) state(r workerRow, now time.Time) (string, theme.TokenID) {
+func (x *workersPlugin) state(r workerRow, now time.Time) (string, theme.TokenID) {
 	switch {
 	case r.w.Connected:
 		return "online " + ago(now, r.w.Since), theme.StatusQuiet
@@ -120,7 +120,7 @@ func (x *workersExt) state(r workerRow, now time.Time) (string, theme.TokenID) {
 }
 
 // when is a time as the page says it: "14:02" today, else "Oct 12 14:02".
-func (x *workersExt) when(now, t time.Time) string {
+func (x *workersPlugin) when(now, t time.Time) string {
 	t, now = t.In(time.Local), now.In(time.Local)
 	if t.YearDay() == now.YearDay() && t.Year() == now.Year() {
 		return t.Format("15:04")
@@ -135,7 +135,7 @@ func platform(w core.WorkerState) string {
 	return strings.Trim(w.OS+"/"+w.Arch, "/")
 }
 
-func (x *workersExt) list(c *ui.Ctx, rows []workerRow) {
+func (x *workersPlugin) list(c *ui.Ctx, rows []workerRow) {
 	th := c.Theme()
 	c.Column("list", ui.Style{W: ui.Px(300), H: ui.Flex(1), Fill: th.C(theme.BgSurface)}, func(c *ui.Ctx) {
 		c.Column("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
@@ -167,7 +167,7 @@ func (x *workersExt) list(c *ui.Ctx, rows []workerRow) {
 	})
 }
 
-func (x *workersExt) rowView(c *ui.Ctx, r workerRow, on bool) {
+func (x *workersPlugin) rowView(c *ui.Ctx, r workerRow, on bool) {
 	th := c.Theme()
 	fill, edge := render.Color{}, render.Color{}
 	if on {
@@ -190,7 +190,7 @@ func (x *workersExt) rowView(c *ui.Ctx, r workerRow, on bool) {
 	})
 }
 
-func (x *workersExt) detail(c *ui.Ctx, st core.State, r workerRow) {
+func (x *workersPlugin) detail(c *ui.Ctx, st core.State, r workerRow) {
 	th := c.Theme()
 	w := r.w
 	help := workersHelp + "#worker"
@@ -253,7 +253,7 @@ func (x *workersExt) detail(c *ui.Ctx, st core.State, r workerRow) {
 }
 
 // confirmButton is an action that asks "Sure?" once.
-func (x *workersExt) confirmButton(c *ui.Ctx, key, label, command string, args registry.Args, id core.WorkerID) {
+func (x *workersPlugin) confirmButton(c *ui.Ctx, key, label, command string, args registry.Args, id core.WorkerID) {
 	ask := key + ":" + string(id)
 	if x.confirm == ask {
 		label = "Sure?"
@@ -268,7 +268,7 @@ func (x *workersExt) confirmButton(c *ui.Ctx, key, label, command string, args r
 	}
 }
 
-func (x *workersExt) loadCard(c *ui.Ctx, w core.WorkerState) {
+func (x *workersPlugin) loadCard(c *ui.Ctx, w core.WorkerState) {
 	th := c.Theme()
 	sampled := ""
 	if w.Connected && !w.Sampled.IsZero() {
@@ -306,7 +306,7 @@ func (x *workersExt) loadCard(c *ui.Ctx, w core.WorkerState) {
 
 func gib(b uint64) string { return fmt.Sprintf("%.1f GB", float64(b)/(1<<30)) }
 
-func (x *workersExt) agentsCard(c *ui.Ctx, st core.State, w core.WorkerState) {
+func (x *workersPlugin) agentsCard(c *ui.Ctx, st core.State, w core.WorkerState) {
 	th := c.Theme()
 	providers := slices.Clone(w.Providers)
 	add := func(p string) {
@@ -349,7 +349,7 @@ func (x *workersExt) agentsCard(c *ui.Ctx, st core.State, w core.WorkerState) {
 	})
 }
 
-func (x *workersExt) sessionsCard(c *ui.Ctx, st core.State, w core.WorkerState) {
+func (x *workersPlugin) sessionsCard(c *ui.Ctx, st core.State, w core.WorkerState) {
 	th := c.Theme()
 	var mine []core.SessionState
 	running := 0
@@ -387,7 +387,7 @@ func (x *workersExt) sessionsCard(c *ui.Ctx, st core.State, w core.WorkerState) 
 	})
 }
 
-func (x *workersExt) connectionCard(c *ui.Ctx, r workerRow) {
+func (x *workersPlugin) connectionCard(c *ui.Ctx, r workerRow) {
 	th := c.Theme()
 	statsCard(c, "conn", ui.Flex(1), "CONNECTION", "", nil, func(c *ui.Ctx) {
 		line := func(key, s string) { c.Text(key, s, monoFont(10.5, th.C(theme.FgFaint))) }
@@ -421,7 +421,7 @@ func (x *workersExt) connectionCard(c *ui.Ctx, r workerRow) {
 
 // The dialog: Add a worker, then what to run there; or Rename.
 
-func (x *workersExt) dialog(c *ui.Ctx) {
+func (x *workersPlugin) dialog(c *ui.Ctx) {
 	d := x.dlg
 	if d == nil {
 		return
@@ -447,7 +447,7 @@ func (x *workersExt) dialog(c *ui.Ctx) {
 }
 
 // field is a text field of the dialog's: Tab moves on, Escape closes, ⏎ and ⌘↵ submit.
-func (x *workersExt) field(c *ui.Ctx, key string, text *string, label, placeholder string, focus bool, o widget.InputOpts) {
+func (x *workersPlugin) field(c *ui.Ctx, key string, text *string, label, placeholder string, focus bool, o widget.InputOpts) {
 	if focus {
 		c.Focus(c.Next(key))
 	}
@@ -463,7 +463,7 @@ func (x *workersExt) field(c *ui.Ctx, key string, text *string, label, placehold
 	}
 }
 
-func (x *workersExt) addBody(c *ui.Ctx, d *workerDialog) {
+func (x *workersPlugin) addBody(c *ui.Ctx, d *workerDialog) {
 	th := c.Theme()
 	focus := d.focus
 	d.focus = false
@@ -491,7 +491,7 @@ func (x *workersExt) addBody(c *ui.Ctx, d *workerDialog) {
 	})
 }
 
-func (x *workersExt) renameBody(c *ui.Ctx, d *workerDialog) {
+func (x *workersPlugin) renameBody(c *ui.Ctx, d *workerDialog) {
 	th := c.Theme()
 	focus := d.focus
 	d.focus = false
@@ -512,7 +512,7 @@ func (x *workersExt) renameBody(c *ui.Ctx, d *workerDialog) {
 	})
 }
 
-func (x *workersExt) pairingBody(c *ui.Ctx, p *pairing) {
+func (x *workersPlugin) pairingBody(c *ui.Ctx, p *pairing) {
 	th := c.Theme()
 	help := workersHelp + "#add"
 	c.Column("run", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
@@ -562,6 +562,6 @@ func (x *workersExt) pairingBody(c *ui.Ctx, p *pairing) {
 	})
 }
 
-func (x *workersExt) foot(c *ui.Ctx, buttons func(c *ui.Ctx)) {
+func (x *workersPlugin) foot(c *ui.Ctx, buttons func(c *ui.Ctx)) {
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Main: ui.End, Pad: ui.Insets{T: 6}}, buttons)
 }

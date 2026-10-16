@@ -18,7 +18,7 @@ import (
 
 const hudGrab = "⌥ RELEASE TO HIDE · CLICK TO PIN"
 
-func (s *errScene) hud() *hudExt { return s.sh.hud }
+func (s *errScene) hud() *hudPlugin { return s.sh.hud }
 
 // hold presses mods (0 lets go) and draws, d later.
 func (s *errScene) hold(m render.Mods, d time.Duration) {
