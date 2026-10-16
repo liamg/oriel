@@ -188,3 +188,10 @@ commit = "` + commitA + `"
 		t.Errorf("a revoked version: %+v", res)
 	}
 }
+
+// The default registry's key is embedded, so its index is accepted out of the box.
+func TestDefaultKeyParses(t *testing.T) {
+	if DefaultKey() == nil {
+		t.Fatalf("defaultKey %q doesn't parse", defaultKey)
+	}
+}

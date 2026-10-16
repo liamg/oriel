@@ -17,9 +17,9 @@ import (
 
 // defaultKey is liamg/oriel-plugins' public key, embedded in the binary (catalog.md, "More than one registry"); a
 // build can set it with -ldflags "-X github.com/liamg/oriel/catalog.defaultKey=ed25519:…".
-var defaultKey = ""
+var defaultKey = "ed25519:b5021d4a041cf659010987e4099d7b6d566ed9575149e32d33b43b6c9b199038"
 
-// DefaultKey is the default registry's key; nil until one is embedded, which leaves the default registry refused.
+// DefaultKey is the default registry's key; nil if defaultKey doesn't parse, which leaves the default registry refused.
 func DefaultKey() PublicKey {
 	k, err := ParseKey(defaultKey)
 	if err != nil {
