@@ -29,7 +29,7 @@ for k, name, desc, fn, small in cands:
     <div class="fav"><div class="tabchrome"><span>{svg(small(), 16, 2, glow=False)}</span>Fly — pricing-rounding</div>
       <div class="sz">{svg(fn(k+"c"), 32, 2.6)}{svg(small(), 16, 2, glow=False)}</div></div>
   </div>
-  <div class="titlebar2"><span class="b2">{svg(fn(k+"d"), 20, 3, glow=False)}<b>FLY</b></span><span class="st"><i></i>pricing-rounding</span><span class="st"><i class="r"></i>INF-2231</span></div>
+  <div class="titlebar2"><span class="b2">{svg(fn(k+"d"), 20, 3, glow=False)}<b>FLY</b></span><span class="st"><i></i>pricing-rounding</span><span class="st"><i class="r"></i>ENG-2231</span></div>
   <div class="lockup">{svg(fn(k+"e"), 54, 2)}<span>fly</span></div>
   <div class="light">{svg(fn(k+"f").replace(G,"#0a7a43"), 44, 2.2, glow=False, col="#0a7a43")}<span>fly</span></div>
 </div>'''

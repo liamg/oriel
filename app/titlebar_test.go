@@ -25,7 +25,7 @@ import (
 // The 01-ide sessions, and one of each other status.
 var tabFixture = []core.SessionOpened{
 	{ID: "s1", Name: "pricing-rounding", Kind: core.KindPlan, Status: core.StatusWorking},
-	{ID: "s2", Name: "INF-2231 usage api", Kind: core.KindWork, Status: core.StatusNeedsYou},
+	{ID: "s2", Name: "ENG-2231 usage api", Kind: core.KindWork, Status: core.StatusNeedsYou},
 	{ID: "s3", Name: "review #4410", Kind: core.KindReview, Status: core.StatusPermission},
 	{ID: "s4", Name: "flaky e2e sweep", Kind: core.KindJob, Status: core.StatusCI},
 	{ID: "s5", Name: "dash-filters", Kind: core.KindWork, Status: core.StatusReviewer},
@@ -63,7 +63,7 @@ func TestSessionTabsAreTheOpenSessions(t *testing.T) {
 	s.store.Apply(core.SessionFocused{ID: "s1"})
 	s.frame()
 	text := s.frameText()
-	if !strings.Contains(text, "review #4410") || !strings.Contains(text, "pricing-rounding") || strings.Contains(text, "INF-2231 usage api") {
+	if !strings.Contains(text, "review #4410") || !strings.Contains(text, "pricing-rounding") || strings.Contains(text, "ENG-2231 usage api") {
 		t.Errorf("the tabs aren't the two opened: %q", text)
 	}
 	if err := s.host.Run(context.Background(), "session.focus", registry.Args{"n": 2}); err != nil {

@@ -14,7 +14,7 @@ runs = "both"
 net     = { hosts = ["acme.atlassian.net"], why = "Fetch and update Jira tickets" }
 secrets = { JIRA_TOKEN = "acme.atlassian.net", why = "Authenticate to your Jira" }
 "agent.tools" = { tools = ["jira_ticket", "jira_comment"], why = "Let the agent read the ticket it's working on" }
-"editor.read" = { why = "Spot ticket keys like INF-2231 in branches and commits" }
+"editor.read" = { why = "Spot ticket keys like ENG-2231 in branches and commits" }
 "agent.prompt" = true
 gate = true
 ui = true

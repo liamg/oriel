@@ -64,7 +64,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 		".github/pull_request_template.md": "## What\n\n## Why\n",
 	})
 	web, _ := githubRepo(t, "web", map[string]string{"index.html": "<html></html>\n"})
-	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Back off on 429", Ticket: "INF-2231", Provider: "fake",
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Back off on 429", Ticket: "ENG-2231", Provider: "fake",
 		Repos: []core.RepoID{core.RepoID(api.Dir), core.RepoID(web.Dir)}})
 	se := r.session(id)
 	dirs := map[string]string{}

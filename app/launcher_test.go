@@ -257,7 +257,7 @@ func TestLauncherSnapshot(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	s.run("session.new", registry.Args{"kind": "plan", "ticket": "INF-2231", "repos": []string{"cloud", "pricing"},
+	s.run("session.new", registry.Args{"kind": "plan", "ticket": "ENG-2231", "repos": []string{"cloud", "pricing"},
 		"prompt": "I think the stale prices come from the usage cache never being invalidated when a plan changes: confirm that before fixing it, and keep the API response shape unchanged."})
 	var l *launcher
 	for _, e := range s.plugins {

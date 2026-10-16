@@ -552,7 +552,7 @@ func (x *launcher) form(c *ui.Ctx) {
 			x.lookTicket(c)
 			x.ticketCard(c)
 			c.Row("extra", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				x.field(c, "ticket", &x.ticket, "Ticket", "ticket: INF-2231", false, ui.Px(220), 1)
+				x.field(c, "ticket", &x.ticket, "Ticket", "ticket: ENG-2231", false, ui.Px(220), 1)
 				if len(k.Variants) > 0 {
 					x.variantField(c, k)
 				}

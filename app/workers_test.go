@@ -380,7 +380,7 @@ func TestWorkersPageSnapshot(t *testing.T) {
 			SignedOut: []core.Login{{Provider: "codex", Worker: "devbox", Detail: "token expired"}}}},
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "acct", AccountName: "ada@example.com", Plan: "Claude Max", Tier: "Max 20×",
 			Workers: []core.WorkerID{core.LocalWorker, "devbox"}}},
-		core.SessionSynced{Session: core.SessionState{ID: "inf-2231-fix-stale-usage-prices", Kind: core.KindWork, Worker: "devbox",
+		core.SessionSynced{Session: core.SessionState{ID: "eng-2231-fix-stale-usage-prices", Kind: core.KindWork, Worker: "devbox",
 			Agent: core.AgentState{Provider: "claude", Running: true, Working: true}}},
 		core.SessionSynced{Session: core.SessionState{ID: "rounding", Name: "Round half-even", Kind: core.KindWork, Worker: "devbox",
 			Agent: core.AgentState{Provider: "claude", Running: true}}},

@@ -94,7 +94,7 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 	loadJira(t, s)
 
 	s.run("omnibox.open", registry.Args{"query": "!"})
-	s.until(t, "Linear's tickets", func() bool { return strings.Contains(s.frameText(), "INF-2231") })
+	s.until(t, "Linear's tickets", func() bool { return strings.Contains(s.frameText(), "ENG-2231") })
 	if text := s.frameText(); !strings.Contains(text, "Set your Jira API key") || strings.Contains(text, "OPS-7") {
 		t.Errorf("Jira's tickets before its key:\n%s", text)
 	}
@@ -102,7 +102,7 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 	tools := registry.AgentToolsFor(s.reg, assistantAgent, true)
 	my := tools[slices.IndexFunc(tools, func(t registry.AgentTool) bool { return t.Name == "my_tickets" })]
 	out, err := s.callTool(t, ctx, my, nil)
-	if err != nil || !strings.Contains(out, "INF-2231") || !strings.Contains(out, "No Jira API key is set yet: :TicketKey jira sets one.") {
+	if err != nil || !strings.Contains(out, "ENG-2231") || !strings.Contains(out, "No Jira API key is set yet: :TicketKey jira sets one.") {
 		t.Errorf("my_tickets without Jira's key: %s %v", out, err)
 	}
 
@@ -121,11 +121,11 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 	s.run("omnibox.open", registry.Args{"query": "!"})
 	s.until(t, "both trackers' tickets", func() bool {
 		text := s.frameText()
-		return strings.Contains(text, "OPS-12") && strings.Contains(text, "INF-2219")
+		return strings.Contains(text, "OPS-12") && strings.Contains(text, "ENG-2219")
 	})
 	text := strings.ReplaceAll(s.frameText(), "\n", "")
-	order := []string{"OPS-7 Rotate the staging certificates", "INF-2231 Usage API returns stale prices after plan change",
-		"INF-2219 Round minor units half-even, per currency", "OPS-12 Alert on queue depth"}
+	order := []string{"OPS-7 Rotate the staging certificates", "ENG-2231 Usage API returns stale prices after plan change",
+		"ENG-2219 Round minor units half-even, per currency", "OPS-12 Alert on queue depth"}
 	at := -1
 	for _, want := range order {
 		i := strings.Index(text, want)
@@ -155,7 +155,7 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 	for _, m := range mine {
 		got = append(got, m.Tracker+" "+m.Key)
 	}
-	if want := "Jira OPS-7,Linear INF-2231,Linear INF-2240,Linear INF-2219,Jira OPS-12,Linear INF-2252"; strings.Join(got, ",") != want {
+	if want := "Jira OPS-7,Linear ENG-2231,Linear ENG-2240,Linear ENG-2219,Jira OPS-12,Linear ENG-2252"; strings.Join(got, ",") != want {
 		t.Errorf("my_tickets: %v, want %s", got, want)
 	}
 	if mine[4].URL != "https://acme.atlassian.net/browse/OPS-12" || !mine[4].Blocked || mine[4].Priority != "Medium" {
@@ -340,14 +340,14 @@ func TestContinueTicketSession(t *testing.T) {
 // card for it continues it too.
 func TestLinearContinueTicketSession(t *testing.T) {
 	s, lw, _, _ := ticketScene(t)
-	se := startTicketSession(t, s, lw, "Stale prices", "INF-2231")
+	se := startTicketSession(t, s, lw, "Stale prices", "ENG-2231")
 	other := startTicketSession(t, s, lw, "Something else", "")
 	s.run("session.stop", registry.Args{"id": string(se.ID)})
 	waitState(t, s.store, "the session stopped", func(st core.State) bool {
 		a, _ := st.Session(se.ID)
 		return !a.Snapshot().Agent.Running
 	})
-	continueTicket(t, s, other.ID, se, "INF-2231", "linked PR #4398")
+	continueTicket(t, s, other.ID, se, "ENG-2231", "linked PR #4398")
 	waitState(t, s.store, "the session resumed", func(st core.State) bool {
 		a, _ := st.Session(se.ID)
 		return a.Snapshot().Agent.Running
@@ -423,9 +423,9 @@ func TestLinearDoneOnMerge(t *testing.T) {
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
 	s, _, hub, se, _ := shipScene(t, change)
 	loadLinear(t, s)
-	s.until(t, "the session's start moved", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to In Progress in Linear") })
+	s.until(t, "the session's start moved", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to In Progress in Linear") })
 	prs := shipPRs(t, s, hub, se, "usage-api")
-	s.shipSettle(t, "the PR in review", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to In Review in Linear") })
+	s.shipSettle(t, "the PR in review", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to In Review in Linear") })
 	hub.Merge("acme/usage-api", prs["usage-api"].Number)
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "the ticket done", func() bool {
@@ -437,7 +437,7 @@ func TestLinearDoneOnMerge(t *testing.T) {
 		}
 		return false
 	})
-	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to Done in Linear") })
+	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to Done in Linear") })
 }
 
 func calledTimes(list []string, s string) int {

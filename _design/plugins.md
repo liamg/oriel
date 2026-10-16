@@ -922,7 +922,7 @@ type Host interface {
   then every tracker's tickets in one order, each asked for again after 10 minutes, after a move, and on
   `tickets.refresh`; ↵ on a ticket runs `session.new {kind = "plan", ticket}`. The launcher's card (PL-8) asks
   `TrackerFor`. On `SessionStart` the session's ticket's tracker gets `Start`; on `PrSeen`, `Link`, then `Review` while
-  the PR is open; on `PrMerged` with no other PR of the session open, `Done`; a move is a notice ("INF-2231 moved to
+  the PR is open; on `PrMerged` with no other PR of the session open, `Done`; a move is a notice ("ENG-2231 moved to
   In Progress in Linear", "… moved to Done …"), a failure a line in the log. The
   assistant's `my_tickets` (`Reads = "tickets"`) is every tracker's list, asked for first when it's stale, with a note
   for a tracker without its key. Commands `Tickets` (the omnibox on them), `tickets.refresh`, `tickets.key {tracker}`

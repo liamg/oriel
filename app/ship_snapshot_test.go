@@ -25,8 +25,8 @@ func mockup18(t *testing.T) (*errScene, core.SessionState) {
 	}
 	s := newScene(t, "", "", mockupSize)
 	s.now = at(9, 0, 0)
-	se := core.SessionState{ID: "inf-2231", Name: "usage API rate-limit headers", Kind: core.KindWork, Status: core.StatusNeedsYou,
-		Ticket: "INF-2231", Branch: "rethink/usage-endpoint", StartWork: true, Started: true,
+	se := core.SessionState{ID: "eng-2231", Name: "usage API rate-limit headers", Kind: core.KindWork, Status: core.StatusNeedsYou,
+		Ticket: "ENG-2231", Branch: "rethink/usage-endpoint", StartWork: true, Started: true,
 		Projects: []core.Project{{Name: "usage-api", Dir: dirs["usage-api"], Branch: "rethink/usage-endpoint", Base: "main", Primary: true},
 			{Name: "web-dashboard", Dir: dirs["web-dashboard"], Branch: "rethink/usage-endpoint", Base: "main"}},
 		Runs: []core.TestRun{{ID: "r1", Command: "go test ./...", OK: true, Passed: 12, Ended: s.now.Add(-2 * time.Minute)}}}
@@ -59,7 +59,7 @@ func mockup18(t *testing.T) (*errScene, core.SessionState) {
 			Unpushed: []worker.ShipCommit{{Hash: "a41c9e2", Subject: "feat(ratelimit): expose Reservation.ResetAt"},
 				{Hash: "7be0d13", Subject: "test(api): table-test the 429 path"}},
 			CommitDraft: worker.Draft{By: "codex", Body: "feat(api): set Retry-After on rate-limited usage responses\n\n" +
-				"Both the single and batch usage endpoints now return Retry-After\nfrom the limiter's reset time, rounded up to whole seconds.\n\nRefs INF-2231"},
+				"Both the single and batch usage endpoints now return Retry-After\nfrom the limiter's reset time, rounded up to whole seconds.\n\nRefs ENG-2231"},
 			PRDraft:  worker.Draft{By: "codex", Title: "feat(usage): back off on 429 using Retry-After", Body: "## What\n"},
 			Template: "## What\n\n## Why\n", TemplateFile: ".github/pull_request_template.md", Owners: []string{"acme/platform-team", "jkowalski"}},
 		{Project: "web-dashboard", Branch: "rethink/usage-endpoint", Base: "main", Remote: true, GitHub: "acme/web-dashboard",
@@ -79,7 +79,7 @@ func TestShipPageSnapshot(t *testing.T) {
 	s.run("ship.open", nil)
 	s.settleGit(t)
 	s.golden("ship-18")
-	s.wantFrame(t, "SHIP", "INF-2231 · usage API rate-limit headers · 2 projects · branch rethink/usage-endpoint", "Sync all", "Commit all",
+	s.wantFrame(t, "SHIP", "ENG-2231 · usage API rate-limit headers · 2 projects · branch rethink/usage-endpoint", "Sync all", "Commit all",
 		"Push + raise both PRs", "NEEDS YOU", "Uncommitted", "3 files · +41 -6", "DRAFTED BY CODEX", "Behind main", "4 commits · no conflicts predicted",
 		"Rebase", "Unpushed", "a41c9e2", "Pull request", "not raised · draft ready", "TEMPLATE FILLED", "platform-team", "jkowalski",
 		"pairs with web-dashboard", "CI RUNNING", "clean", "Up to date with main", "rebased 6m ago", "Pushed", "3 commits",

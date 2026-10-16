@@ -41,9 +41,9 @@ func TestCritSessionsAreDroppedOnRestore(t *testing.T) {
 // SE-1: each kind starts as sessions.md says.
 func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	r := newRig(t)
-	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale usage prices", Ticket: "INF-2231", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale usage prices", Ticket: "ENG-2231", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	se := r.session(id)
-	if id != "inf-2231-fix-stale-usage-prices" {
+	if id != "eng-2231-fix-stale-usage-prices" {
 		t.Errorf("id = %q", id)
 	}
 	if se.Dir != filepath.Join(r.home, "workspaces", string(id)) {
@@ -53,7 +53,7 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	if want := filepath.Join(se.Dir, "repos", filepath.Base(r.repo.Dir)); p.Dir != want {
 		t.Errorf("project dir = %q, want %q", p.Dir, want)
 	}
-	if got := branchOf(t, p.Dir); got != "tester/inf-2231-fix-stale-usage-prices" || se.Branch != got {
+	if got := branchOf(t, p.Dir); got != "tester/eng-2231-fix-stale-usage-prices" || se.Branch != got {
 		t.Errorf("branch = %q (state %q)", got, se.Branch)
 	}
 	if !gitx.IsRepo(se.Dir) {

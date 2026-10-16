@@ -32,7 +32,7 @@ func showExplainer(_ context.Context, r registry.ExplainRequest) (string, error)
 			"steps away from zero with `sign(v)`. That's banker's rounding: over many invoice lines the ups and downs cancel.\n\n" +
 			"`diff` is worked out once above the switch, so the comparison and this branch agree.", nil
 	case r.Depth == registry.ExplainWhy:
-		return "Added in **round half to even** (Claude, this branch) for INF-2231: finance reported month totals drifting by a cent " +
+		return "Added in **round half to even** (Claude, this branch) for ENG-2231: finance reported month totals drifting by a cent " +
 			"against the ledger. The thread on L12 settled on half-to-even over half-up.", nil
 	}
 	return "On an exact tie this rounds to the **even** neighbour: `2.5 → 2`, `3.5 → 4`. Before, every tie went down " +
@@ -82,7 +82,7 @@ func shipShowcase(t *testing.T) (*errScene, core.SessionState) {
 	r := s.ship().reports[se.ID]
 	r.ships[0].PRDraft.Body = "## What\n\nRate-limited usage responses (429) now carry `Retry-After`, from the limiter's reset time " +
 		"rounded up to whole seconds. Both the single and batch endpoints set it.\n\n## Why\n\nClients retried 429s at once and in " +
-		"lockstep (INF-2231); the dashboard (web-dashboard #812) now waits as told.\n\n## Testing\n\n- table test of the 429 path\n" +
+		"lockstep (ENG-2231); the dashboard (web-dashboard #812) now waits as told.\n\n## Testing\n\n- table test of the 429 path\n" +
 		"- `go test ./...` passes\n"
 	web := &r.ships[1]
 	web.PR.Body = "## What\n\nWhen the usage API answers 429, the dashboard waits for `Retry-After` before it polls again, " +

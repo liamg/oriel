@@ -61,7 +61,7 @@ func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localWorke
 		}
 	})
 	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
-	s.run("session.start", registry.Args{"kind": "work", "prompt": "Usage API rate-limit headers", "ticket": "INF-2231", "provider": "fake",
+	s.run("session.start", registry.Args{"kind": "work", "prompt": "Usage API rate-limit headers", "ticket": "ENG-2231", "provider": "fake",
 		"repos": []string{api, web}})
 	st := waitState(t, s.store, "the session in front", func(st core.State) bool { return st.Focus != "" })
 	sess, _ := st.Session(st.Focus)
@@ -114,7 +114,7 @@ func TestShipFlow(t *testing.T) {
 		f := s.frameText()
 		return strings.Contains(f, "SHIP") && strings.Contains(f, "usage-api") && strings.Contains(f, "web-dashboard") && strings.Contains(f, "BEFORE THIS SHIPS")
 	})
-	s.wantFrame(t, "INF-2231", "Plan approved", "All threads resolved", "1 open", "Tests ran this session", "AI review", "optional", "MERGE ORDER", "TICKET")
+	s.wantFrame(t, "ENG-2231", "Plan approved", "All threads resolved", "1 open", "Tests ran this session", "AI review", "optional", "MERGE ORDER", "TICKET")
 
 	// Uncommitted: the agent's draft fills the commit box; a file left out stays uncommitted.
 	writeFiles(t, apiDir, map[string]string{

@@ -129,7 +129,7 @@ clip 224,38 1376x936 r 0
     rect 234,79 1356x44 fill #0c0c0b
     text "SHIP" @256,105.844 #ece6d8 Space Grotesk 14
     clip 303.09436,93.74 931.2494x14.519997 r 0
-      text "INF-2231 · usage API rate-limit headers · 2 projects · branch rethink/usage-endpoint" @303.09436,104.96 #7c7566 JetBrains Mono 11
+      text "ENG-2231 · usage API rate-limit headers · 2 projects · branch rethink/usage-endpoint" @303.09436,104.96 #7c7566 JetBrains Mono 11
     pop
     rect 1248.3438,88 64.875x26 fill #191815 radius 6 stroke 1 #332f27
     text "Sync all" @1258.3438,105.365234 #ece6d8 Inter 12
@@ -192,7 +192,7 @@ clip 224,38 1376x936 r 0
           text "feat(api): set Retry-After on rate-limited usage responses" @310,338.62714 #ece6d8 Inter 12.5
           text "Both the single and batch usage endpoints now return Retry-After" @310,374.62714 #ece6d8 Inter 12.5
           text "from the limiter's reset time, rounded up to whole seconds." @310,392.62714 #ece6d8 Inter 12.5
-          text "Refs INF-2231" @310,428.62714 #ece6d8 Inter 12.5
+          text "Refs ENG-2231" @310,428.62714 #ece6d8 Inter 12.5
         pop
         rect 300,319.08002 438.5x120 radius 6 stroke 1 #332f27
         rect 300,447.08 65.15625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
@@ -414,7 +414,7 @@ clip 224,38 1376x936 r 0
       text "2 · web-dashboard → #812" @1306,517.04 #b3ab99 JetBrains Mono 11
       rect 1306,546.08 268x1 fill #24221d
       text "TICKET" @1306,578.77 #7c7566 JetBrains Mono 9.5
-      text "INF-2231" @1306,601.35 #b98aff JetBrains Mono 11.5
+      text "ENG-2231" @1306,601.35 #b98aff JetBrains Mono 11.5
       text "Commits, pushes and PRs run on the session's" @1306,631.4563 #7c7566 Inter 11
       text "worker with your git and gh. The agent can draft," @1306,647.76587 #7c7566 Inter 11
       text "never send." @1306,664.07544 #7c7566 Inter 11

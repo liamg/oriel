@@ -49,7 +49,7 @@ flowchart LR
   provider, repos, worker, sandbox.
 - **From anywhere**: a ticket from any tracker, Linear or another (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
   ("fix CI" opens a work session on the PR's branch), or an agentbus review request.
-- **CLI**: `oriel new "fix stale usage prices" --repo pricing --ticket INF-2231`, `oriel review <pr-url>`, `oriel open <session>`,
+- **CLI**: `oriel new "fix stale usage prices" --repo pricing --ticket ENG-2231`, `oriel review <pr-url>`, `oriel open <session>`,
   `oriel init <name> --template go-cli`, `oriel ~/src/foo` (direct).
 
 ### Repos on a worker
@@ -186,7 +186,7 @@ type Sessions interface {
     and Cancel takes it back to the restart. Sessions the new worker doesn't have leave the window.
 - **Where things are**: workspaces in `~/.oriel/workspaces/<id>` with `.oriel-workspace.json` (crit's manifest,
   field for field); each session's event log, logs and drafts in `~/.oriel/sessions/<id>/`; registered repos in
-  `~/.oriel/repos.json`. A session's id is its name, from the prompt (`inf-2231-fix-stale-usage-prices`), unique on
+  `~/.oriel/repos.json`. A session's id is its name, from the prompt (`eng-2231-fix-stale-usage-prices`), unique on
   its worker.
 - **Only Oriel's own sessions are listed.** crit's workspaces aren't read: listed with Oriel's, they buried them, and
   each made a tab. A session the worker once took from crit (`Source: "crit"`) is dropped, with its log, on restore.

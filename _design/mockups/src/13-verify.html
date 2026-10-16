@@ -37,7 +37,7 @@
   <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
   <div class="stabs">
     <div class="stab on"><span class="dot o"></span>pricing-rounding<span class="mini">plan</span><span class="k">⌘1</span></div>
-    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot r"></span>ENG-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
     <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
     <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
     <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div><div class="stab"><span class="dot g"></span>tour: auth flow<span class="k">⌘6</span></div>
@@ -61,7 +61,7 @@
       <div class="row gap8"><span class="chip">draft</span><span class="mono dim" style="font-size:11px">pricing · rethink/rounding → main</span></div>
       <div class="prt">fix(pricing): round invoice lines half-to-even</div>
       <div class="box"><div class="bh"><span class="cap">Description</span><span class="dim" style="font-size:11px">from .github/pull_request_template.md</span></div>
-        <div class="bb"><h4>What</h4>Invoice lines are rounded once, at creation, half-to-even in minor units. Currency precision moves to <code style="font:12px var(--mono);color:var(--p)">currency.go</code>.<h4>Why</h4>Totals drifted by up to 1¢ against Stripe on tiered plans (INF-2231).<h4>Testing</h4>Table tests for USD, JPY, BHD including negative ties; regenerated 40 historic invoices byte-identical.<h4>Related</h4>billing-ui#212</div></div>
+        <div class="bb"><h4>What</h4>Invoice lines are rounded once, at creation, half-to-even in minor units. Currency precision moves to <code style="font:12px var(--mono);color:var(--p)">currency.go</code>.<h4>Why</h4>Totals drifted by up to 1¢ against Stripe on tiered plans (ENG-2231).<h4>Testing</h4>Table tests for USD, JPY, BHD including negative ties; regenerated 40 historic invoices byte-identical.<h4>Related</h4>billing-ui#212</div></div>
       <div class="box"><div class="bh"><span class="cap">Checks</span></div>
         <div class="chk"><span style="color:var(--green)">✓</span>go test ./...<span class="dim" style="margin-left:auto">1m 12s</span></div>
         <div class="chk"><span style="color:var(--green)">✓</span>golangci-lint<span class="dim" style="margin-left:auto">38s</span></div>
@@ -70,7 +70,7 @@
     </div>
     <div class="prr">
       <div class="box" style="margin-top:44px"><div class="bh"><span class="cap">Reviewers</span></div>
-        <div class="bb"><div class="row gap8"><span class="av gh">PK</span>priya-k</div><div class="row gap8" style="margin-top:8px"><span class="av gh">BT</span>@infracost/billing</div></div></div>
+        <div class="bb"><div class="row gap8"><span class="av gh">PK</span>priya-k</div><div class="row gap8" style="margin-top:8px"><span class="av gh">BT</span>@acme/billing</div></div></div>
       <div class="box"><div class="bh"><span class="cap">Review ledger</span></div><div class="bb"><div class="row gap8"><div class="bar g" style="width:180px"><i style="width:100%"></i></div><b class="mono" style="color:var(--green)">310/310</b></div></div></div>
       <div style="margin-top:16px" class="row gap8"><span class="btn pri" style="height:32px">Verify &amp; raise PR</span><span class="btn ghost" style="height:32px">Save draft</span></div>
     </div>

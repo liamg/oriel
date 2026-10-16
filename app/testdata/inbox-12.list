@@ -23,19 +23,19 @@ clip 102.9375,0 1331.8375x38 r 0
   text "⌘2" @482.71875,23.42 #4f4a40 JetBrains Mono 9.5
   rect 506.71875,0 1x38 fill #24221d
   rect 519.71875,16 8x8 fill #b98aff radius 4
-  text "INF-2231 usage api" @534.71875,24.365234 #b3ab99 Inter 12
-  text "permission" @651.34375,23.599998 #7c7566 JetBrains Mono 10
-  rect 718.34375,12.5 15.40625x15 fill #b98aff radius 7.5
-  text "1" @723.34375,23.24 #141006 JetBrains Mono 9
-  text "⌘3" @740.75,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 764.75,0 1x38 fill #24221d
-  rect 777.75,16 8x8 fill #b98aff radius 4
-  text "flaky e2e sweep" @792.75,24.365234 #b3ab99 Inter 12
-  text "permission" @892.7344,23.599998 #7c7566 JetBrains Mono 10
-  rect 959.7344,12.5 15.40625x15 fill #4cc9f0 radius 7.5
-  text "1" @964.7344,23.24 #141006 JetBrains Mono 9
-  text "⌘4" @982.1406,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1006.1406,0 1x38 fill #24221d
+  text "ENG-2231 usage api" @534.71875,24.365234 #b3ab99 Inter 12
+  text "permission" @657.21875,23.599998 #7c7566 JetBrains Mono 10
+  rect 724.21875,12.5 15.40625x15 fill #b98aff radius 7.5
+  text "1" @729.21875,23.24 #141006 JetBrains Mono 9
+  text "⌘3" @746.625,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 770.625,0 1x38 fill #24221d
+  rect 783.625,16 8x8 fill #b98aff radius 4
+  text "flaky e2e sweep" @798.625,24.365234 #b3ab99 Inter 12
+  text "permission" @898.6094,23.599998 #7c7566 JetBrains Mono 10
+  rect 965.6094,12.5 15.40625x15 fill #4cc9f0 radius 7.5
+  text "1" @970.6094,23.24 #141006 JetBrains Mono 9
+  text "⌘4" @988.0156,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 1012.0156,0 1x38 fill #24221d
 pop
 text "INBOX" @1466.775,14.280001 #b3ab99 JetBrains Mono 10.5
 rect 1505.7438,3 15.40625x15 fill #b98aff radius 7.5
@@ -159,7 +159,7 @@ clip 0,38 1220x936 r 0
   rect 697,535.44366 26x26 fill #191815 radius 6
   path 5 segments fill #b98aff
   clip 735,532.6489 398x31.589478 r 0
-    text "INF-2231 usage api" @735,545.2427 #ece6d8 Inter 13
+    text "ENG-2231 usage api" @735,545.2427 #ece6d8 Inter 13
     text "work" @735,561.08844 #7c7566 JetBrains Mono 10.5
   pop
   rect 697,589.0332 26x26 fill #191815 radius 6
@@ -216,7 +216,7 @@ clip 1220,38 380x936 r 0
       path 4 segments stroke 1.25 #b98aff
       path 6 segments stroke 1.25 #b98aff
       text "priya → you: #4418 Add tiered discounts" @1278,270.2984 #ece6d8 Inter 12.5
-      text "agentbus · infracost/api · +212 -40" @1278,286.51355 #7c7566 JetBrains Mono 10
+      text "agentbus · acme/api · +212 -40" @1278,286.51355 #7c7566 JetBrains Mono 10
       text "2m" @1564,267.87903 #4f4a40 JetBrains Mono 9.5
       rect 1244,309.51355 24x24 radius 5 stroke 1 #4cc9f080
       path 2 segments stroke 1.25 #4cc9f0
@@ -235,7 +235,7 @@ clip 1220,38 380x936 r 0
       rect 1244,412.16257 24x24 radius 5 stroke 1 #b98aff80
       path 7 segments stroke 1.25 #b98aff
       text "Permission: Bash(make e2e)" @1278,424.27194 #ece6d8 Inter 12.5
-      text "claude · INF-2231 usage api" @1278,440.4871 #7c7566 JetBrains Mono 10
+      text "claude · ENG-2231 usage api" @1278,440.4871 #7c7566 JetBrains Mono 10
       text "4m" @1564,421.85257 #4f4a40 JetBrains Mono 9.5
       rect 1244,463.4871 24x24 radius 5 stroke 1 #4f4a4080
       text "✓" @1252.3984,479.4651 #4f4a40 JetBrains Mono 11.05
@@ -316,7 +316,7 @@ rect 1003.9219,714.53546 14x15 radius 3 stroke 1 #ece6d866
 text "n" @1007.9219,725.45544 #ece6d8cc JetBrains Mono 9.5
 text "rule: oriel__push" @1098,725.45544 #7c7566 JetBrains Mono 9.5
 rect 774,755.03546 440x174.96454 fill #0c0c0b radius 8 stroke 1 #b98aff8c
-text "INF-2231 USAGE API · PERMISSION" @788,779.45544 #b98aff JetBrains Mono 9.5
+text "ENG-2231 USAGE API · PERMISSION" @788,779.45544 #b98aff JetBrains Mono 9.5
 text "on this machine" @1084,779.45544 #7c7566 JetBrains Mono 9.5
 text "✕" @1188,779.5995 #7c7566 JetBrains Mono 9.900001
 rect 788,798.0977 7x7 fill #b98aff radius 3.5

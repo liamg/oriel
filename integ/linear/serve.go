@@ -17,7 +17,7 @@ const CodeNoKey = -32010
 
 // Params are what the plugin's Lua sends.
 type Params struct {
-	Key    string `json:"key"`    // a ticket's: INF-2231
+	Key    string `json:"key"`    // a ticket's: ENG-2231
 	URL    string `json:"url"`    // link: the pull request's
 	Number int    `json:"number"` // link
 	Title  string `json:"title"`  // link

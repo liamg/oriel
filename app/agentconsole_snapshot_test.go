@@ -21,7 +21,7 @@ func consoleScene(t *testing.T) *errScene {
 	for i := range 142 {
 		read = append(read, fmt.Sprintf("line %d", i))
 	}
-	se := core.SessionState{ID: "usage-api", Name: "INF-2231 usage api", Kind: core.KindWork, Status: core.StatusPermission, Ticket: "INF-2231",
+	se := core.SessionState{ID: "usage-api", Name: "ENG-2231 usage api", Kind: core.KindWork, Status: core.StatusPermission, Ticket: "ENG-2231",
 		Projects: []core.Project{{Name: "usage-api", Dir: "/src/usage-api", Branch: "rethink/usage-endpoint", Primary: true}},
 		Agent: core.AgentState{Provider: "codex", Model: "gpt-5.5-codex", Effort: "high", Running: true, Working: true, TurnStarted: s.now,
 			Policy: "light", Sandboxed: true, Network: "ask",

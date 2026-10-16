@@ -161,7 +161,7 @@ clip 260,160 1080x680 r 10
     pop
     text "read open buffers and the worktree files the session can see" @476,495.51654 #ece6d8 Inter 12.5
     text "AUTHOR SAYS" @476,513.2217 #4f4a40 JetBrains Mono 9.5
-    text "Spot ticket keys like INF-2231 in branches and commits" @564.63,514.6723 #b3ab99 Inter 11.5
+    text "Spot ticket keys like ENG-2231 in branches and commits" @564.63,514.6723 #b3ab99 Inter 11.5
     rect 280,535.4462 729x74.95361 radius 6 stroke 1 #24221d
     clip 294,564.653 170x16.539978 r 0
       rect 294,564.653 40.28x16.539978 fill #4cc9f012 radius 10 stroke 1 #4cc9f059

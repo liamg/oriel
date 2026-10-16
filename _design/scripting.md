@@ -70,7 +70,7 @@ L.on("Commit", function(ev)
 end)
 
 L.on("CommentSend", function(ev)        -- rewrite before the agent sees it
-  ev.body = ev.body:gsub("@t(%d+)", function(n) return L.linear.link("INF-" .. n) end)
+  ev.body = ev.body:gsub("@t(%d+)", function(n) return L.linear.link("ENG-" .. n) end)
   return ev
 end)
 

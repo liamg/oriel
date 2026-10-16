@@ -17,7 +17,7 @@ where it goes, **Direct** the directory to open.
 
 ## Ticket
 
-A ticket's ID in the ticket field (`INF-2231`) expands into a card once a tracker's plugin knows it (Linear's does):
+A ticket's ID in the ticket field (`ENG-2231`) expands into a card once a tracker's plugin knows it (Linear's does):
 its key and state, its title, the start of its description, and what's on it (attachments, a linked PR, comments).
 The ticket, with its comments and attachments, goes to the agent as context after your prompt; with no prompt of
 your own, the ticket is the request. **✕** takes it off. Start waits while the card is still being looked up.

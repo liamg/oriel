@@ -1,4 +1,5 @@
 import math
+import os
 G="#39ff88"
 def mirror(inner): return f'<g transform="translate(100,0) scale(-1,1)">{inner}</g>'
 def lines(pairs): return "".join(f'<line x1="{a[0]}" y1="{a[1]}" x2="{b[0]}" y2="{b[1]}"/>' for a,b in pairs)
@@ -129,4 +130,4 @@ body{{background:radial-gradient(1200px 600px at 50% 0%,#0d1712,var(--bg0))}}
 </style>
 <div class="top" data-h="930"><h1>Fly · logo concepts</h1><span>neon #39ff88 on graphite · each at 170 · 64 · 32 · 16 px, in the titlebar, and on light</span></div>
 <div class="grid">{cards}</div>'''
-open('/home/liamg/.crit/work/rethink/mockups/src/30-logos.html','w').write(html)
+open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src', '30-logos.html'), 'w').write(html)

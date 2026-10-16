@@ -284,7 +284,7 @@ clip 474,38 1126x936 r 0
       text "Review" @1380,391.90524 #4f4a40 Inter 12
       rect 1346,428.54 228x1 fill #24221d
       text "TICKET" @1346,461.23 #7c7566 JetBrains Mono 9.5
-      text "INF-2231" @1346,483.81003 #b98aff JetBrains Mono 11.5
+      text "ENG-2231" @1346,483.81003 #b98aff JetBrains Mono 11.5
       text "Across projects, the merge order and" @1346,513.91626 #7c7566 Inter 11
       text "\"raise all\" live in Ship." @1346,530.2258 #7c7566 Inter 11
     pop

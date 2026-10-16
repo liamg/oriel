@@ -56,14 +56,14 @@ func fixtureRepo(t *testing.T, root, name, branch string, files map[string]strin
 	return dir
 }
 
-// sidebarFixture is 42's three projects: admin-ui two ahead on inf-2310 with four files changed, api on
+// sidebarFixture is 42's three projects: admin-ui two ahead on eng-2310 with four files changed, api on
 // rate-limits, web on main, both clean.
 func sidebarFixture(t *testing.T) []core.Project {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
 	root := t.TempDir()
-	admin := fixtureRepo(t, root, "admin-ui", "inf-2310", map[string]string{
+	admin := fixtureRepo(t, root, "admin-ui", "eng-2310", map[string]string{
 		"src/components/FilterBar.tsx": "export function FilterBar() {\n  return null\n}\n",
 		"src/components/Table.tsx":     "export const Table = 1\n",
 		"src/hooks/useFilters.ts":      "export function useFilters() {}\n",
@@ -83,7 +83,7 @@ func sidebarFixture(t *testing.T) []core.Project {
 		"limiter/limiter.go": "package limiter\n",
 	}, 0, true)
 	web := fixtureRepo(t, root, "web", "main", map[string]string{"index.html": "<html></html>\n"}, 0, true)
-	return []core.Project{{Name: "admin-ui", Dir: admin, Branch: "inf-2310", Primary: true}, {Name: "api", Dir: api, Branch: "rate-limits"},
+	return []core.Project{{Name: "admin-ui", Dir: admin, Branch: "eng-2310", Primary: true}, {Name: "api", Dir: api, Branch: "rate-limits"},
 		{Name: "web", Dir: web, Branch: "main"}}
 }
 
@@ -93,9 +93,9 @@ func sessionScene(t *testing.T, kind core.Kind, projects []core.Project, size re
 	s := newScene(t, "", projects[0].Dir, size)
 	threads := []core.Thread{{ID: "t1", Status: core.ThreadOpen}, {ID: "t2", Status: core.ThreadOpen}, {ID: "t3", Status: core.ThreadOpen}}
 	for _, ev := range []core.Event{
-		core.SessionSynced{Session: core.SessionState{ID: "inf-2310", Name: "INF-2310 admin filters", Kind: kind, Status: core.StatusWorking,
+		core.SessionSynced{Session: core.SessionState{ID: "eng-2310", Name: "ENG-2310 admin filters", Kind: kind, Status: core.StatusWorking,
 			Projects: projects, Threads: threads}},
-		core.SessionFocused{ID: "inf-2310"},
+		core.SessionFocused{ID: "eng-2310"},
 	} {
 		if err := s.store.Apply(ev); err != nil {
 			t.Fatal(err)
@@ -133,7 +133,7 @@ func (s *errScene) settleGit(t *testing.T) {
 }
 
 func (s *errScene) openProject() string {
-	se, _ := s.store.State().Session("inf-2310")
+	se, _ := s.store.State().Session("eng-2310")
 	return se.Snapshot().OpenProject()
 }
 
@@ -151,7 +151,7 @@ func TestSidebarSnapshots(t *testing.T) {
 		s.settleGit(t)
 		s.golden("sidebar-three")
 		text := s.frameText()
-		for _, want := range []string{"PROJECTS", "admin-ui", "inf-2310", "↑2", "4 changed", "no PR", "api", "rate-limits", "#790",
+		for _, want := range []string{"PROJECTS", "admin-ui", "eng-2310", "↑2", "4 changed", "no PR", "api", "rate-limits", "#790",
 			"CI failing", "web", "clean", "Explorer", "Search", "Git", "Pull request", "Tests", "Requests", "3", "Ship", "Settings",
 			"admin-ui\nEXPLORER", "⌃1", "⌃2", "⌃3"} {
 			if !strings.Contains("\n"+text+"\n", "\n"+want+"\n") && !strings.Contains(text, want) {

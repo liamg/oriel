@@ -50,7 +50,7 @@ func mark(s string, pos []int) string {
 var candidates = []string{
 	"pricing api usage", "pricing-rounding", "price-feed backfill", "New plan from price…", "Review PR by URL…",
 	"Run job: pricing test sweep", "internal/pricing/round.go", "internal/pricing/tiers.go", "PriceForTier",
-	"INF-2240 Price cache invalidation on plan change", "#4412 fix: price lookup for spot instances",
+	"ENG-2240 Price cache invalidation on plan change", "#4412 fix: price lookup for spot instances",
 	"cmd/oriel/main.go", "app/editor.go", "app/editorpane.go", "app/notifications.go", "vim/scroll.go",
 	"layout.move", "layout.zoom", "editor.open", "view.open", "Log", "messages", "Events",
 	"render/typeset/typeset.go", "ui/widget/notice.go", "_design/PLAN.md", "app/logpanel.go",

@@ -15,7 +15,7 @@ const dndPlugin = `local s = oriel.ui.state("dnd", { got = "nothing" })
 oriel.view.override("tickets", function()
   return oriel.ui.column{ pad = 14, gap = 8,
     oriel.ui.text("TICKETS", "accent"),
-    oriel.ui.row{ id = "t1", drag = { kind = "demo.ticket", data = "INF-1", label = "INF-1" }, oriel.ui.text("INF-1 fix rounding") },
+    oriel.ui.row{ id = "t1", drag = { kind = "demo.ticket", data = "ENG-1", label = "ENG-1" }, oriel.ui.text("ENG-1 fix rounding") },
     oriel.ui.row{ id = "n1", drag = { kind = "demo.note", data = "a note" }, oriel.ui.text("a note") },
   }
 end)
@@ -80,7 +80,7 @@ func TestPluginDragAndDrop(t *testing.T) {
 		t.Fatalf("a kind the target doesn't take was dropped:\n%s", s.frameText())
 	}
 	// Half way through a drag of a ticket, the target glows and a ghost follows the pointer.
-	from := s.textAt(t, "INF-1 fix rounding")
+	from := s.textAt(t, "ENG-1 fix rounding")
 	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: from})
 	s.frame()
 	s.ui.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: from, Buttons: render.ButtonPrimary})
@@ -88,14 +88,14 @@ func TestPluginDragAndDrop(t *testing.T) {
 	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: target})
 	s.frame()
 	s.frame()
-	if !strings.Contains(s.frameText(), "INF-1\n") && !strings.HasSuffix(s.frameText(), "INF-1") {
+	if !strings.Contains(s.frameText(), "ENG-1\n") && !strings.HasSuffix(s.frameText(), "ENG-1") {
 		t.Errorf("no ghost under the pointer:\n%s", s.frameText())
 	}
 	s.golden("dnd")
 	s.ui.Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: target, Buttons: render.ButtonPrimary})
 	s.frame()
 	s.frame()
-	if !strings.Contains(s.frameText(), "got demo.ticket:INF-1") {
+	if !strings.Contains(s.frameText(), "got demo.ticket:ENG-1") {
 		t.Errorf("the drop didn't reach on_drop:\n%s", s.frameText())
 	}
 }
@@ -103,7 +103,7 @@ func TestPluginDragAndDrop(t *testing.T) {
 // PL-15: "Drags work by keyboard too (pick up, move focus, drop), for accessibility."
 func TestKeyboardDragAndDrop(t *testing.T) {
 	s := dndScene(t)
-	src := s.access("INF-1")
+	src := s.access("ENG-1")
 	if src == nil {
 		t.Fatalf("the draggable row isn't reachable:\n%s", s.frameText())
 	}
@@ -120,7 +120,7 @@ func TestKeyboardDragAndDrop(t *testing.T) {
 	}
 	s.keyCommand(t, "<Space>") // drop
 	s.frame()
-	if !strings.Contains(s.frameText(), "got demo.ticket:INF-1") {
+	if !strings.Contains(s.frameText(), "got demo.ticket:ENG-1") {
 		t.Errorf("the keyboard drop didn't land:\n%s", s.frameText())
 	}
 }

@@ -278,7 +278,7 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 	for _, tool := range []registry.AgentTool{
 		{Name: "my_tickets", For: []string{assistantAgent}, ReadOnly: true, Reads: "linear", Desc: "The user's Linear tickets.",
 			Run: func(registry.Ctx, map[string]any) (any, error) {
-				return []map[string]string{{"key": "INF-2231", "title": "usage api", "state": "In Progress"}}, nil
+				return []map[string]string{{"key": "ENG-2231", "title": "usage api", "state": "In Progress"}}, nil
 			}},
 		{Name: "mission_control", For: []string{assistantAgent}, ReadOnly: true, Reads: "mission control", Desc: "What mission control shows.",
 			Run: func(registry.Ctx, map[string]any) (any, error) { return "2 PRs failing CI", nil }},
@@ -308,7 +308,7 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 		}
 	}
 	ua.Emit(agent.ToolCall{ID: "c1", Tool: "mcp__oriel__my_tickets"})
-	if out, err := s.settleCall(t, asstCall(ua, "my_tickets", map[string]any{})); err != nil || !strings.Contains(out, "INF-2231") {
+	if out, err := s.settleCall(t, asstCall(ua, "my_tickets", map[string]any{})); err != nil || !strings.Contains(out, "ENG-2231") {
 		t.Errorf("my_tickets: %q %v", out, err)
 	}
 	s.until(t, "the source", func() bool { return strings.Contains(s.frameText(), "linear") })

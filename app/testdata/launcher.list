@@ -163,7 +163,7 @@ clip 170,105 1260x790 r 10
     rect 194,207.2 881x48 radius 6 stroke 1 #ffd23f
     rect 194,263.2 220x30 fill #060606 radius 6
     clip 194,263.2 220x30 r 6
-      text "INF-2231" @204,282.74713 #ece6d8 Inter 12.5
+      text "ENG-2231" @204,282.74713 #ece6d8 Inter 12.5
     pop
     rect 194,263.2 220x30 radius 6 stroke 1 #332f27
     text "the ticket names the branch and goes to the agent" @781,281.80002 #7c7566 JetBrains Mono 10

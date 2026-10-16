@@ -5,9 +5,9 @@
   },
   "issue": {
    "id": "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231",
-   "identifier": "INF-2231",
+   "identifier": "ENG-2231",
    "title": "Usage API returns stale prices after plan change",
-   "url": "https://linear.app/infracost/issue/INF-2231/usage-api-returns-stale-prices-after-plan-change",
+   "url": "https://linear.app/acme/issue/ENG-2231/usage-api-returns-stale-prices-after-plan-change",
    "description": "Customers on the new Team plan see last month's unit prices in /v1/usage for up to 24h. Reported by 3 accounts; repro steps and a HAR attached.\n\nSteps:\n1. Move an org from Pro to Team\n2. GET /v1/usage\n3. Unit prices are Pro's until the nightly job runs",
    "priorityLabel": "High",
    "state": {
@@ -67,8 +67,8 @@
      },
      {
       "title": "#4398 fix(usage): key price cache by plan",
-      "subtitle": "infracost/cloud",
-      "url": "https://github.com/infracost/cloud/pull/4398",
+      "subtitle": "acme/cloud",
+      "url": "https://github.com/acme/cloud/pull/4398",
       "createdAt": "2026-10-14T16:02:11.000Z"
      }
     ]

@@ -31,7 +31,7 @@ p code,li code{font:13px var(--mono);background:var(--bg3);color:var(--p);paddin
   <div class="brand"><svg class="mark" width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
   <div class="stabs">
     <div class="stab"><span class="dot o"></span>pricing-rounding<span class="mini">plan</span><span class="k">⌘1</span></div>
-    <div class="stab"><span class="dot r"></span>INF-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
+    <div class="stab"><span class="dot r"></span>ENG-2231 usage api<span class="mini">needs you</span><span class="k">⌘2</span></div>
     <div class="stab"><span class="dot v"></span>review #4410<span class="mini">permission</span><span class="k">⌘3</span></div>
     <div class="stab"><span class="dot b"></span>flaky e2e sweep<span class="mini">ci</span><span class="k">⌘4</span></div>
     <div class="stab"><span class="dot y"></span>dash-filters<span class="mini">in review</span><span class="k">⌘5</span></div>
@@ -53,7 +53,7 @@ p code,li code{font:13px var(--mono);background:var(--bg3);color:var(--p);paddin
     <div style="padding:14px 14px 10px">
       <div class="cap" style="color:var(--cyan)">Tour · walkthrough</div>
       <div style="font:600 15px var(--disp);color:var(--fg);margin-top:6px">How authentication works</div>
-      <div class="row gap6" style="margin-top:8px;flex-wrap:wrap"><span class="chip v">infracost/api</span><span class="chip v">dashboard</span><span class="chip">pinned @ 3f2a91c</span></div>
+      <div class="row gap6" style="margin-top:8px;flex-wrap:wrap"><span class="chip v">acme/api</span><span class="chip v">dashboard</span><span class="chip">pinned @ 3f2a91c</span></div>
     </div>
     <div class="prog"><i></i></div>
     <div class="st done"><span class="n">✓</span>The login request arrives</div>
@@ -77,7 +77,7 @@ p code,li code{font:13px var(--mono);background:var(--bg3);color:var(--p);paddin
       <h1>Session tokens are minted</h1>
       <p>Once the user exists, the callback hands off to <code>session.Mint</code>. It issues two tokens with very different lifetimes: a short <b style="color:var(--fg)">access token</b> the API checks on every request, and a long <b style="color:var(--fg)">refresh token</b> that only the refresh endpoint ever reads.</p>
       <div class="q">
-        <div class="qh"><span class="repo">infracost/api</span><b>internal/auth/session.go</b><span style="margin-left:auto">L42–56</span><span class="chip">go</span></div>
+        <div class="qh"><span class="repo">acme/api</span><b>internal/auth/session.go</b><span style="margin-left:auto">L42–56</span><span class="chip">go</span></div>
         <div class="code">
           <div class="ln"><span class="g">42</span><span class="t"><span class="k">func</span> (m <span class="p">*</span><span class="ty">Minter</span>) <span class="f">Mint</span>(ctx <span class="ty">context.Context</span>, u <span class="ty">User</span>) (<span class="ty">Pair</span>, <span class="ty">error</span>) {</span></div>
           <div class="ln"><span class="g">43</span><span class="t">    now <span class="p">:=</span> m.clock.<span class="f">Now</span>()</span></div>

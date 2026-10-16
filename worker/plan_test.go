@@ -200,9 +200,9 @@ func TestStartWorkChangesTheModel(t *testing.T) {
 // git wouldn't take, or for a project that isn't there, refuses before any worktree is made.
 func TestStartWorkBranchNames(t *testing.T) {
 	r := newRig(t)
-	id := r.start(core.SessionSpec{Kind: core.KindPlan, Ticket: "INF-2231", Prompt: "Round invoice lines", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindPlan, Ticket: "ENG-2231", Prompt: "Round invoice lines", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	name := r.session(id).Projects[0].Name
-	if got := r.session(id).Projects[0].Branch; got != "tester/inf-2231-round-invoice-lines" {
+	if got := r.session(id).Projects[0].Branch; got != "tester/eng-2231-round-invoice-lines" {
 		t.Errorf("the branch Start work offers is %q", got)
 	}
 	for _, bad := range []map[string]string{{name: "two..dots"}, {"nope": "tester/x"}} {

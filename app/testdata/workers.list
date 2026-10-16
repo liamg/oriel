@@ -167,7 +167,7 @@ clip 44,38 1556x936 r 0
   rect 909,428.2647 26x26 fill #191815 radius 6
   path 5 segments fill #060606
   clip 947,425.46997 398x31.589478 r 0
-    text "inf-2231-fix-stale-usage-prices" @947,438.06372 #ece6d8 Inter 13
+    text "eng-2231-fix-stale-usage-prices" @947,438.06372 #ece6d8 Inter 13
     text "work" @947,453.90945 #7c7566 JetBrains Mono 10.5
   pop
   rect 909,481.85422 26x26 fill #191815 radius 6
@@ -265,7 +265,7 @@ clip 0,38 1600x936 r 0
     text "SESSIONS" @331,283.78 #b3ab99 JetBrains Mono 9.5
     text "2 sessions · 2 agents running" @399.64,283.96002 #4f4a40 JetBrains Mono 10
     rect 331,299.05002 7x7 fill #4cc9f0 radius 3.5
-    text "inf-2231-fix-stale-usage-prices" @346,306.69003 #ece6d8 JetBrains Mono 11.5
+    text "eng-2231-fix-stale-usage-prices" @346,306.69003 #ece6d8 JetBrains Mono 11.5
     text "working" @890.5,306.15002 #7c7566 JetBrains Mono 10
     rect 331,322.23 7x7 fill #4fe0a0 radius 3.5
     text "Round half-even" @346,329.87003 #ece6d8 JetBrains Mono 11.5

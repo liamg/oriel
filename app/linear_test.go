@@ -79,10 +79,10 @@ func TestLinearTicketsInTheOmnibox(t *testing.T) {
 	}
 
 	s.run("omnibox.open", registry.Args{"query": "!"})
-	s.until(t, "the tickets", func() bool { return strings.Contains(s.frameText(), "INF-2252") })
+	s.until(t, "the tickets", func() bool { return strings.Contains(s.frameText(), "ENG-2252") })
 	text := strings.ReplaceAll(s.frameText(), "\n", "")
-	order := []string{"INF-2231 Usage API returns stale prices after plan change", "INF-2240 Price cache invalidation on plan change",
-		"INF-2219 Round minor units half-even, per currency", "INF-2252 Spot instance price lookup times out"}
+	order := []string{"ENG-2231 Usage API returns stale prices after plan change", "ENG-2240 Price cache invalidation on plan change",
+		"ENG-2219 Round minor units half-even, per currency", "ENG-2252 Spot instance price lookup times out"}
 	at := -1
 	for _, want := range order {
 		i := strings.Index(text, want)
@@ -97,7 +97,7 @@ func TestLinearTicketsInTheOmnibox(t *testing.T) {
 			t.Errorf("the tickets lack %q:\n%s", want, text)
 		}
 	}
-	if strings.Contains(text, "INF-2260") {
+	if strings.Contains(text, "ENG-2260") {
 		t.Error("the duplicate is listed")
 	}
 	for _, a := range l.Auths() {
@@ -129,14 +129,14 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s.run("omnibox.open", registry.Args{"query": "!INF-2231"})
+	s.run("omnibox.open", registry.Args{"query": "!ENG-2231"})
 	s.until(t, "the ticket", func() bool {
 		return strings.Contains(s.frameText(), "Usage API returns stale prices after plan change")
 	})
 	s.typeKeys("CR")
 	s.until(t, "the card", func() bool { return strings.Contains(s.frameText(), "linked PR #4398") })
 	text := s.frameText()
-	for _, want := range []string{"NEW SESSION", "from ticket · worker devbox", "INF-2231", "TODO", "Usage API returns stale prices after plan change",
+	for _, want := range []string{"NEW SESSION", "from ticket · worker devbox", "ENG-2231", "TODO", "Usage API returns stale prices after plan change",
 		"Customers on the new Team plan", "2 attachments", "4 comments", "the ticket, comments and attachments go to the agent as context",
 		"Start Plan"} {
 		if !strings.Contains(text, want) {
@@ -152,9 +152,9 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 	s.run("session.launch", nil)
 	s.until(t, "the session", func() bool { return !strings.Contains(s.frameText(), "NEW SESSION") })
 	sent := lw.fake.WaitStarted(t).WaitSent(t)
-	for _, want := range []string{"Confirm the cache is keyed by org first.", "Linear ticket INF-2231: Usage API returns stale prices after plan change",
+	for _, want := range []string{"Confirm the cache is keyed by org first.", "Linear ticket ENG-2231: Usage API returns stale prices after plan change",
 		"## Comments (4)", "> Please keep the response shape: the CLI pins it.", "usage-stale-prices.har (412 KB)",
-		"https://github.com/infracost/cloud/pull/4398"} {
+		"https://github.com/acme/cloud/pull/4398"} {
 		if !strings.Contains(sent.Text, want) {
 			t.Errorf("the agent wasn't given %q:\n%s", want, sent.Text)
 		}
@@ -168,9 +168,9 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 		}
 		return false
 	})
-	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to In Progress in Linear") })
+	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to In Progress in Linear") })
 	for _, se := range s.store.State().Sessions {
-		if se.Kind == core.KindPlan && se.Ticket != "INF-2231" {
+		if se.Kind == core.KindPlan && se.Ticket != "ENG-2231" {
 			t.Errorf("the session's ticket is %q", se.Ticket)
 		}
 	}
@@ -219,7 +219,7 @@ func TestLinearPRLinkedBack(t *testing.T) {
 		links[0]["title"] != "#"+itoa(pr.Number)+" feat: rate-limit headers" {
 		t.Errorf("the links: %+v", links)
 	}
-	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "INF-2231 moved to In Review in Linear") })
+	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to In Review in Linear") })
 
 	// Read again, the PR is old news: nothing more is sent.
 	sent := len(l.Mutations())
@@ -302,9 +302,9 @@ func TestLinearTicketsForTheAssistant(t *testing.T) {
 			t.Fatal(err)
 		}
 		out = o
-		return strings.Contains(out, "INF-2231")
+		return strings.Contains(out, "ENG-2231")
 	})
-	for _, want := range []string{"Usage API returns stale prices after plan change", "INF-2252", "https://linear.app/"} {
+	for _, want := range []string{"Usage API returns stale prices after plan change", "ENG-2252", "https://linear.app/"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("my_tickets lacks %q: %s", want, out)
 		}

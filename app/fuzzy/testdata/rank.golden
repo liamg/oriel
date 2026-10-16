@@ -7,7 +7,7 @@
   84  internal/[p][r][i]cing/round.go
   84  internal/[p][r][i]cing/tiers.go
   84  [P][r][i]ceForTier
-  84  INF-2240 [P][r][i]ce cache invalidation on plan change
+  84  ENG-2240 [P][r][i]ce cache invalidation on plan change
   84  #4412 fix: [p][r][i]ce lookup for spot instances
 == pr
   59  [p][r]icing api usage
@@ -19,7 +19,7 @@
   59  internal/[p][r]icing/round.go
   59  internal/[p][r]icing/tiers.go
   59  [P][r]iceForTier
-  59  INF-2240 [P][r]ice cache invalidation on plan change
+  59  ENG-2240 [P][r]ice cache invalidation on plan change
   59  #4412 fix: [p][r]ice lookup for spot instances
   24  ap[p]/edito[r].go
   24  ap[p]/edito[r]pane.go
@@ -37,25 +37,25 @@
   33  app/edito[r]pane.[g]o
   29  cmd/o[r]iel/main.[g]o
   26  p[r]icin[g] api usage
-  -5  INF-2240 P[r]ice cache invalidation on plan chan[g]e
+  -5  ENG-2240 P[r]ice cache invalidation on plan chan[g]e
 == edp
   69  app/[e][d]itor[p]ane.go
   67  [e][d]itor.o[p]en
   38  r[e]n[d]er/ty[p]eset/typeset.go
-  37  INF-2240 Price cach[e] invali[d]ation on [p]lan change
+  37  ENG-2240 Price cach[e] invali[d]ation on [p]lan change
 == app/ed
  159  [a][p][p][/][e][d]itor.go
  159  [a][p][p][/][e][d]itorpane.go
 == ap ed
  118  [a][p]p/[e][d]itor.go
  118  [a][p]p/[e][d]itorpane.go
-  54  INF-2240 Price cach[e] invali[d][a]tion on [p]lan change
+  54  ENG-2240 Price cach[e] invali[d][a]tion on [p]lan change
   50  int[e]rn[a]l/[p]ricing/roun[d].go
 == 'price
  143  [p][r][i][c][e]-feed backfill
  143  New plan from [p][r][i][c][e]…
  143  [P][r][i][c][e]ForTier
- 143  INF-2240 [P][r][i][c][e] cache invalidation on plan change
+ 143  ENG-2240 [P][r][i][c][e] cache invalidation on plan change
  143  #4412 fix: [p][r][i][c][e] lookup for spot instances
 == ^app
   93  [a][p][p]/editor.go
