@@ -59,6 +59,7 @@ type Config struct {
 	Desktop    Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
 	Debug      bool            // oriel --debug: the frame-time overlay
 	CPUProfile string          // oriel --cpuprofile: a CPU profile written here while the window is open
+	Trace      string          // oriel --trace: the execution trace of the seconds before a stall, written here
 	Files      []string        // open in the editor at start
 	WorkDir    string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
 	StateDir   string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
@@ -175,6 +176,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	cfg.Logs.Ring.OnWrite(poke)
 
 	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
+	l.stalls = startStallTrace(cfg.Trace, log)
+	defer l.stalls.stop()
 	l.ui.SetClipboard(sh.desktop)
 	l.ui.Title = "Oriel"
 	sh.keys, sh.modes, sh.ui = l.keys, l.modes, l.ui
@@ -227,7 +230,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 				return derr
 			}
 			drawn, due = time.Now(), time.Time{}
-			l.input.built(l.log)
+			if l.input.built(l.log) {
+				l.stalls.stalled()
+			}
 		}
 		// Keys typed behind ones the editor has now taken: looked up, or passed on raw while it's mid-command.
 		if acts := l.keys.Pump(l.sh.keyModes(), time.Now()); len(acts) > 0 || l.keys.Queued() {
@@ -528,6 +533,7 @@ type loop struct {
 
 	slowLogged time.Time // the last slow loop logged, so a slow stretch logs once a second
 	input      inputLag
+	stalls     *stallTrace
 }
 
 // lagWarn is how far behind the pointer may fall, from when it moved to a frame built with it, before it's logged.
@@ -552,18 +558,24 @@ func (in *inputLag) arrived(at time.Time, changed bool) {
 	}
 }
 
-// built ends a frame, and logs, once a second at most, when the moves in it had fallen behind.
-func (in *inputLag) built(log *slog.Logger) {
+// built ends a frame, and logs, once a second at most, when the moves in it had fallen behind. It reports whether
+// they had.
+func (in *inputLag) built(log *slog.Logger) bool {
 	if in.oldest.IsZero() {
-		return
+		return false
 	}
 	in.drawn = time.Since(in.oldest)
-	if in.drawn > lagWarn && time.Since(in.logged) > time.Second {
+	reached := in.reached
+	in.oldest, in.reached = time.Time{}, 0
+	if in.drawn <= lagWarn {
+		return false
+	}
+	if time.Since(in.logged) > time.Second {
 		in.logged = time.Now()
-		log.Warn("the pointer fell behind", "reached the loop after", in.reached.Round(time.Millisecond),
+		log.Warn("the pointer fell behind", "reached the loop after", reached.Round(time.Millisecond),
 			"drawn after", in.drawn.Round(time.Millisecond))
 	}
-	in.oldest, in.reached = time.Time{}, 0
+	return true
 }
 
 // slowLoop is how long one turn of the loop may take before it's logged: keys typed meanwhile wait behind it.
@@ -576,6 +588,7 @@ func (l *loop) timed(what func() string, fn func()) {
 	if d := time.Since(start); d > slowLoop && time.Since(l.slowLogged) > time.Second {
 		l.slowLogged = time.Now()
 		l.log.Warn("the window was held up", "by", what(), "took", d.Round(time.Millisecond))
+		l.stalls.stalled()
 	}
 }
 
@@ -668,6 +681,7 @@ func (l *loop) handle(ctx context.Context, ev render.Event) bool {
 		return changed
 	case render.SlowFrameEvent:
 		l.log.Warn("the window was slow to show a frame", "waited", ev.Waited.Round(time.Millisecond), "took", ev.Took.Round(time.Millisecond))
+		l.stalls.stalled()
 		return false
 	case render.AppearanceEvent:
 		l.osLight = !ev.Dark

@@ -3,8 +3,11 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -355,4 +358,22 @@ func TestExplorerFrameWithManyChangesBudget(t *testing.T) {
 	if many > 2*few+500*time.Microsecond {
 		t.Errorf("400 changed files make the Explorer's frame %v, against %v over 5", many, few)
 	}
+}
+
+// With --trace, a stall writes the execution trace of the seconds before it, for go tool trace.
+func TestSlowFrameWritesTrace(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "stall.trace")
+	r := startAppWith(t, t.TempDir(), t.TempDir(), nil, func(c *Config) { c.Trace = path })
+	r.win.Send(render.SlowFrameEvent{Waited: 900 * time.Millisecond})
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if b, err := os.ReadFile(path); err == nil && len(b) > 1<<10 {
+			if !bytes.HasPrefix(b, []byte("go 1.")) {
+				t.Fatalf("not a trace: %q", b[:16])
+			}
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("no trace written for the slow frame")
 }

@@ -282,7 +282,9 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   overlay shows it beside the frame time. The Gio window sends a `render.SlowFrameEvent` when a frame waits past 100 ms
   for it to start on it, or takes past 100 ms to draw and present (once a second at most); the app logs "the window
   was slow to show a frame". Between them the log says which stage a stall is in: reaching the loop, building the
-  frame, or putting it on screen.
+  frame, or putting it on screen. `oriel --trace <file>` keeps a flight recorder of the execution trace, and on any of
+  those stalls (or a loop turn held up past 50 ms) writes its last ~10 s to the file, later ones numbered beside it, at
+  most one every 10 s, for `go tool trace`: what the loop and the main thread were doing while the frame was late.
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
   selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,
   Escape closes it; one is up at a time, so opening one closes whichever was, SE-5), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with

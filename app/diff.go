@@ -588,8 +588,13 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, st
 		if d != nil && d.in != in && !x.mayRemake(k) {
 			return d, false
 		}
-		if d != nil && d.in != in {
+		switch {
+		case d == nil:
+			x.h.Log().Debug("making a diff", "path", f.Path, "styled", styled)
+		case d.in != in:
 			x.h.Log().Debug("remaking a diff", "path", f.Path, "changed", changedInputs(d.in, in))
+		default:
+			x.h.Log().Debug("styling a diff", "path", f.Path)
 		}
 		var newText []byte
 		if open {

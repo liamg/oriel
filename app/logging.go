@@ -82,6 +82,7 @@ func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, e
 	level := fs.String("log-level", "", "debug, info, warn or error (default info, or $ORIEL_LOG)")
 	debug := fs.Bool("debug", false, "debug logging and the frame-time overlay")
 	cpuprofile := fs.String("cpuprofile", "", "write a CPU profile to this file while the window is open")
+	tracefile := fs.String("trace", "", "write the execution trace of the seconds before a stall to this file, for go tool trace")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
 	}
@@ -111,6 +112,7 @@ func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, e
 		Version:    version,
 		Debug:      *debug,
 		CPUProfile: *cpuprofile,
+		Trace:      *tracefile,
 		Files:      files,
 		WorkDir:    dir,
 	}, nil

@@ -128,19 +128,27 @@ func diffLines(a, b []string) []Hunk {
 	return hs
 }
 
+// myersMaxD is the most edits myers looks for a shortest script in; past it, a and b are taken as replaced whole.
+// Its trace holds about D² ints, so this keeps a rewrite's diff to tens of megabytes.
+const myersMaxD = 2000
+
 // myers is the edit script from a to b: '=' keep, '-' delete from a, '+' insert from b; deletions before insertions
 // within a change, as git writes them.
 func myers(a, b []string) []byte {
 	n, m := len(a), len(b)
-	max := n + m
-	if max == 0 {
-		return nil
+	if n == 0 || m == 0 || n+m == 0 {
+		return append(bytes.Repeat([]byte{'-'}, n), bytes.Repeat([]byte{'+'}, m)...)
 	}
-	off := max
-	v := make([]int, 2*max+2)
-	var trace [][]int
-	for d := 0; d <= max; d++ {
-		trace = append(trace, append([]int(nil), v...))
+	most := n + m
+	off := most
+	v := make([]int, 2*most+2)
+	var trace []diagonals
+	for d := 0; d <= most; d++ {
+		if d > myersMaxD {
+			return append(bytes.Repeat([]byte{'-'}, n), bytes.Repeat([]byte{'+'}, m)...)
+		}
+		lo, hi := max(off-d-1, 0), min(off+d+2, len(v))
+		trace = append(trace, diagonals{lo: lo, v: append([]int(nil), v[lo:hi]...)})
 		for k := -d; k <= d; k += 2 {
 			var x int
 			if k == -d || k != d && v[off+k-1] < v[off+k+1] {
@@ -155,27 +163,34 @@ func myers(a, b []string) []byte {
 			}
 			v[off+k] = x
 			if x >= n && y >= m {
-				return backtrack(trace, v, d, n, m, off)
+				return backtrack(trace, d, n, m, off)
 			}
 		}
 	}
 	return nil
 }
 
-func backtrack(trace [][]int, last []int, d, n, m, off int) []byte {
+// diagonals are v as a step of myers found it, over the diagonals that step reads (its d±1 either side), from lo.
+type diagonals struct {
+	lo int
+	v  []int
+}
+
+func (g diagonals) at(i int) int { return g.v[i-g.lo] }
+
+func backtrack(trace []diagonals, d, n, m, off int) []byte {
 	var ops []byte
 	x, y := n, m
-	vs := append(trace[1:], last)
 	for ; d > 0; d-- {
-		v := vs[d-1]
+		v := trace[d]
 		k := x - y
 		var pk int
-		if k == -d || k != d && v[off+k-1] < v[off+k+1] {
+		if k == -d || k != d && v.at(off+k-1) < v.at(off+k+1) {
 			pk = k + 1
 		} else {
 			pk = k - 1
 		}
-		px := v[off+pk]
+		px := v.at(off + pk)
 		py := px - pk
 		for x > px && y > py {
 			ops = append(ops, '=')

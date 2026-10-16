@@ -530,7 +530,10 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 
 - Gutter hunks, stage and unstage a hunk (`<leader>hs`), inline blame with author kind (you, agent, other).
 - As built (FG-2): hunks are `gitx.DiffLines` (Myers, no context, git's numbering) from the index's version to the
-  buffer as it would be written (`DecorationCtx.FileBytes`, `vim.Pane.FileBytes`), so unsaved edits show. Staging
+  buffer as it would be written (`DecorationCtx.FileBytes`, `vim.Pane.FileBytes`), so unsaved edits show. Myers keeps
+  only the diagonals each step reads (about D² ints for D edits, not D × the file's length), a whole file added or
+  deleted needs none, and past 2,000 edits the two sides are taken as replaced whole: a 20,000-line new file diffs in
+  well under 64 MB, where it took gigabytes. Staging
   writes the index blob directly (`hash-object` + `update-index`, keeping the mode); tests hold each hunk against `git
   apply --cached` with git's own patch. Keys: `␣hs` stage, `␣hu` unstage, `␣hr` reset (one undo step), `␣hp` preview
   (a block of the old lines), `]c`/`[c`, `␣hb` blame (`git.blame.inline`). Blame is `git blame --contents -` on the
