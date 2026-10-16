@@ -126,10 +126,15 @@ func (p *Proxy) ListenAndServe(ctx context.Context, addr string) error {
 	if err != nil {
 		return err
 	}
+	return p.Serve(ctx, ln)
+}
+
+// Serve serves on ln until ctx ends.
+func (p *Proxy) Serve(ctx context.Context, ln net.Listener) error {
 	srv := &http.Server{Handler: p, ReadHeaderTimeout: 30 * time.Second}
 	stop := context.AfterFunc(ctx, func() { _ = srv.Close() })
 	defer stop()
-	err = srv.Serve(ln)
+	err := srv.Serve(ln)
 	if ctx.Err() != nil {
 		return nil
 	}

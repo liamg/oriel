@@ -55,13 +55,6 @@ func RepoDockerfile(repo string) (string, bool) {
 	return out, true
 }
 
-// Pending is a repo Dockerfile waiting for the user's approval.
-type Pending struct {
-	Repo       string `json:"repo"`
-	Sum        string `json:"sum"`
-	Dockerfile string `json:"dockerfile"`
-}
-
 var pendingMu sync.Mutex
 
 func pendingPath() string { return filepath.Join(sandbox.Base(), "pending-dockerfiles.json") }
@@ -70,19 +63,19 @@ func notePending(repo, df string) {
 	pendingMu.Lock()
 	defer pendingMu.Unlock()
 	all := loadPending()
-	all[repo] = Pending{Repo: repo, Sum: container.Sum(df), Dockerfile: df}
+	all[repo] = sandbox.Pending{Repo: repo, Sum: container.Sum(df), Dockerfile: df}
 	savePending(all)
 }
 
-func loadPending() map[string]Pending {
-	out := map[string]Pending{}
+func loadPending() map[string]sandbox.Pending {
+	out := map[string]sandbox.Pending{}
 	if b, err := os.ReadFile(pendingPath()); err == nil {
 		_ = json.Unmarshal(b, &out)
 	}
 	return out
 }
 
-func savePending(all map[string]Pending) {
+func savePending(all map[string]sandbox.Pending) {
 	b, _ := json.MarshalIndent(all, "", "  ")
 	_ = os.MkdirAll(sandbox.Base(), 0o700)
 	_ = os.WriteFile(pendingPath(), b, 0o600)
@@ -90,11 +83,11 @@ func savePending(all map[string]Pending) {
 
 // PendingDockerfiles lists the Dockerfiles awaiting approval, dropping any
 // that have since been approved or removed.
-func PendingDockerfiles(cfg sandbox.Config) []Pending {
+func PendingDockerfiles(cfg sandbox.Config) []sandbox.Pending {
 	pendingMu.Lock()
 	defer pendingMu.Unlock()
 	all := loadPending()
-	var out []Pending
+	var out []sandbox.Pending
 	approved := false
 	for repo, p := range all {
 		if cfg.Projects[repo].Dockerfile == p.Sum {

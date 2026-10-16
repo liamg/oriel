@@ -9,15 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/mcp"
 )
 
 // Prefix starts the name of each of Oriel's own tools.
 const Prefix = "oriel__"
-
-// SSHSocket is the forwarded ssh-agent's socket inside the container.
-const SSHSocket = sandbox.ContainerRunDir + "/ssh-agent.sock"
 
 // toolResult turns the outcome of a host action into a tool result.
 func toolResult(err error, ok string) mcp.CallResult {
@@ -164,8 +160,8 @@ func Builtins(h Host) map[string]Builtin {
 			if err != nil {
 				return mcp.TextResult(err.Error(), true), nil
 			}
-			return mcp.TextResult(fmt.Sprintf("The ssh-agent is available until %s (SSH_AUTH_SOCK=%s). Run what needs it now; after that it is closed again.",
-				until.Format("15:04:05"), SSHSocket), false), nil
+			return mcp.TextResult(fmt.Sprintf("The ssh-agent is available until %s, at $SSH_AUTH_SOCK. Run what needs it now; after that it is closed again.",
+				until.Format("15:04:05")), false), nil
 		})
 	ghBuiltins(h, func(name, desc string, sch json.RawMessage, readOnly bool, run func(context.Context, json.RawMessage) (mcp.CallResult, error)) {
 		add(name, desc, sch, false, run)

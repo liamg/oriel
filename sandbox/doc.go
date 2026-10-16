@@ -1,11 +1,12 @@
 // Package sandbox is Oriel's host-side account of sandboxed workspaces: which
-// workspace runs in a container, the files that describe it (all under
-// ~/.oriel/sandbox/<key>/, out of the container's reach), and the checks the
-// host makes before it trusts anything the container can write.
+// workspace runs sandboxed, the files that describe it (all under
+// ~/.oriel/sandbox/<key>/, out of the sandbox's reach), the checks the host
+// makes before it trusts anything the sandbox can write, and the Backend that
+// fences the agent in.
 //
-// The subpackages are the rest of the sandbox: container (the docker CLI),
-// runner (an agent's container, its mounts, toolchains and egress sidecar),
-// egress (the proxy and the host's network policy), gateway (Oriel's host
+// The subpackages are the rest of the sandbox: the backends runner (docker:
+// an agent's container, its mounts, toolchains and egress sidecar; on top of
+// container, the docker CLI) and seatbelt (macOS's sandbox-exec), egress (the proxy and the host's network policy), gateway (Oriel's host
 // tools and the user's MCP servers behind allow/ask/deny rules), mcp,
 // agentsock (the session socket) and agentcmd (what runs in the container).
 //
@@ -29,15 +30,17 @@
 //     Approve on the Gateway is host.Approve; Timeout is cfg.ApprovalSecs.
 //   - An agentsock.SSHAgent, served at RunDir(root)/ssh-agent.sock; the
 //     host's SSHAgent method is its Grant.
+//   - The Backend is BackendFor(cfg).
 //   - agentsock.Serve(ctx, &agentsock.Handler{...}, SocketPath(root), portFile)
-//     with Token from Load(root).AgentToken; portFile is PortPath(root) off
-//     Linux (SocketsMount false), "" on Linux.
-//   - runner.Launch(ctx, root, cwd, argv, Options{Config: cfg, ...}) returns
-//     the docker command to run under the agent's PTY; the agent's MCP config
+//     with Token from Load(root).AgentToken; portFile is PortPath(root) when
+//     the backend ServesPort, else "".
+//   - Backend.Launch(ctx, root, cwd, argv, LaunchOptions{Config: cfg, ...})
+//     returns the command to run under the agent's PTY; the agent's MCP config
 //     names the gateway as {"oriel-gw":{"command":"oriel","args":["mcp"]}}.
-//   - The container's /usr/local/bin/oriel is runner.OrielBinary: on Linux
-//     the running binary, so cmd/oriel must hand "mcp", "egress-proxy",
-//     "ssh-proxy" and "git-credential" to agentcmd.Main; elsewhere a Linux
-//     build of cmd/oriel-sandbox.
-//   - runner.Sweep and runner.Health run on timers.
+//   - The sandbox's oriel answers "mcp", "ssh-proxy" and "git-credential"
+//     (and, in docker's sidecar, "egress-proxy") through agentcmd.Main. In
+//     docker it is runner.OrielBinary: on Linux the running binary, elsewhere
+//     a Linux build of cmd/oriel-sandbox. Under seatbelt it is the running
+//     binary.
+//   - Backend.Sweep and Backend.Health run on timers.
 package sandbox

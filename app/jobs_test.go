@@ -256,11 +256,13 @@ func TestJobsEntryPoints(t *testing.T) {
 }
 
 // fakeSandboxes runs a sandboxed agent the way the fake provider runs any: on nothing.
-type fakeSandboxes struct{}
+type fakeSandboxes struct{ backends []string }
 
 func (fakeSandboxes) Open(context.Context, core.SessionState, worker.Approve) (worker.Sandbox, error) {
 	return fakeSandbox{}, nil
 }
+
+func (f fakeSandboxes) Backends() []string { return f.backends }
 
 type fakeSandbox struct{}
 
@@ -295,7 +297,8 @@ type jobsRig struct {
 	repos  map[string]string
 }
 
-func newJobsRig(t *testing.T) *jobsRig {
+// newJobsRig is the rig, its worker offering sandboxes in those backends.
+func newJobsRig(t *testing.T, sandboxes ...string) *jobsRig {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
@@ -315,7 +318,7 @@ func newJobsRig(t *testing.T) *jobsRig {
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
 	w, err := worker.New(worker.Options{Home: t.TempDir(), Name: "mbp", Providers: providers, Exec: nopExec{}, Load: steadyLoad, Now: r.clock.now,
-		Sandbox: fakeSandboxes{}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
+		Sandbox: fakeSandboxes{sandboxes}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
 	}

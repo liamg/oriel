@@ -25,7 +25,7 @@ func TestClaudeStartsInSandbox(t *testing.T) {
 	f := newFixture(t, sandbox.Config{NoEgressProxy: true})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	argv, err := Launch(ctx, f.root, f.root, []string{"claude"}, Options{Environ: os.Environ(), Config: f.cfg})
+	argv, err := Launch(ctx, f.root, f.root, []string{"claude"}, sandbox.LaunchOptions{Environ: os.Environ(), Config: f.cfg})
 	if err != nil {
 		t.Fatal(err)
 	}

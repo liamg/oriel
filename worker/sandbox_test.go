@@ -25,7 +25,6 @@ import (
 	"github.com/liamg/oriel/sandbox/egress"
 	"github.com/liamg/oriel/sandbox/gateway"
 	"github.com/liamg/oriel/sandbox/mcp"
-	"github.com/liamg/oriel/sandbox/runner"
 )
 
 // sandboxRig is a rig whose sessions run sandboxed, with the container launch faked: Docker isn't needed for
@@ -35,8 +34,31 @@ type sandboxRig struct {
 	f        *Sandboxes
 	remote   string
 	launched chan []string
-	opts     chan runner.Options
+	opts     chan sandbox.LaunchOptions
 }
+
+// fakeBackend launches an echo in place of the agent.
+type fakeBackend struct{ s *sandboxRig }
+
+func (fakeBackend) Name() string { return "fake" }
+
+func (f fakeBackend) Launch(_ context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+	f.s.launched <- argv
+	f.s.opts <- o
+	return sandbox.Command{Argv: []string{"echo", "in the container"}, Env: os.Environ()}, nil
+}
+
+func (fakeBackend) Available() error { return nil }
+
+func (fakeBackend) Stop(context.Context, string) error { return nil }
+
+func (fakeBackend) Health(context.Context, sandbox.Config) []sandbox.Problem { return nil }
+
+func (fakeBackend) Sweep(context.Context, func(string) bool) []string { return nil }
+
+func (fakeBackend) AgentRunDir(string) string { return "/run/oriel" }
+
+func (fakeBackend) ServesPort() bool { return false }
 
 func newSandboxRig(t *testing.T) *sandboxRig {
 	t.Helper()
@@ -51,14 +73,10 @@ func newSandboxRig(t *testing.T) *sandboxRig {
 	remote := filepath.Join(t.TempDir(), "origin.git")
 	r.repo.Git("init", "-q", "--bare", remote)
 	r.repo.Git("remote", "add", "origin", remote)
-	s := &sandboxRig{rig: r, remote: remote, launched: make(chan []string, 4), opts: make(chan runner.Options, 4)}
+	s := &sandboxRig{rig: r, remote: remote, launched: make(chan []string, 4), opts: make(chan sandbox.LaunchOptions, 4)}
 	s.f = NewSandboxFactory(nil)
-	s.f.Launch = func(_ context.Context, root, cwd string, argv []string, o runner.Options) ([]string, error) {
-		s.launched <- argv
-		s.opts <- o
-		return []string{"echo", "in the container"}, nil
-	}
-	s.f.Stop = func(context.Context, string) error { return nil }
+	s.f.Backend = func(sandbox.Config) (sandbox.Backend, error) { return fakeBackend{s}, nil }
+	s.f.Available = func() []string { return []string{"fake"} }
 	s.f.Attach(r.w)
 	r.w.opts.Sandbox = s.f
 	return s
@@ -126,10 +144,39 @@ func gatewayCall(t *testing.T, root, tool string, args any) mcp.CallResult {
 	return out
 }
 
+// A session runs in the backend it was started with, one of those its worker offers, over sandbox.backend.
+func TestSandboxBackendPerSession(t *testing.T) {
+	s := newSandboxRig(t)
+	s.f.Available = func() []string { return []string{"docker", "seatbelt"} }
+	chose := make(chan string, 4)
+	s.f.Backend = func(cfg sandbox.Config) (sandbox.Backend, error) { chose <- cfg.Backend; return fakeBackend{s}, nil }
+	if got := s.w.workerState().Sandboxes; !slices.Equal(got, []string{"docker", "seatbelt"}) {
+		t.Errorf("the worker offers %v", got)
+	}
+	spec := core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
+		Sandbox: core.SandboxPolicy{Container: true, Network: "ask", Backend: "podman"}}
+	if _, err := s.w.Start(context.Background(), spec); err == nil || !strings.Contains(err.Error(), "can't run a podman sandbox") {
+		t.Errorf("a backend the worker lacks: %v", err)
+	}
+	spec.Sandbox.Backend = "seatbelt"
+	id := s.start(spec)
+	select {
+	case got := <-chose:
+		if got != "seatbelt" {
+			t.Errorf("the session runs in %q", got)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no sandbox opened")
+	}
+	if se, _ := s.w.session(id); se.Agent.Backend != "seatbelt" {
+		t.Errorf("the session keeps %q", se.Agent.Backend)
+	}
+}
+
 func TestSandboxSpecNamesTheGateway(t *testing.T) {
 	s := newSandboxRig(t)
 	_, spec, b := s.sandboxed()
-	if spec.Sandbox == nil || spec.Sandbox.Name != runner.Name(b.root) {
+	if spec.Sandbox == nil || spec.Sandbox.Name != "fake:"+sandbox.Key(b.root) {
 		t.Fatalf("spec.Sandbox = %+v", spec.Sandbox)
 	}
 	data, err := os.ReadFile(spec.Sandbox.GatewayMCP)
@@ -174,7 +221,7 @@ func TestSandboxExecRunsTheLaunchCommand(t *testing.T) {
 	if argv[0] != "claude" || o.ModDir != "/state/claude-mod" {
 		t.Errorf("argv %v, mod %q", argv, o.ModDir)
 	}
-	if o.Extra["ORIEL_HOOK_SOCK"] != sandbox.ContainerRunDir+"/hook.sock" || o.Extra["ORIEL_BIN"] != "oriel" || o.Extra["PATH"] != "" {
+	if o.Extra["ORIEL_HOOK_SOCK"] != "/run/oriel/hook.sock" || o.Extra["ORIEL_BIN"] != "oriel" || o.Extra["PATH"] != "" {
 		t.Errorf("extra env = %v", o.Extra)
 	}
 }

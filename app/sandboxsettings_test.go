@@ -112,7 +112,7 @@ linear = "npx -y linear-mcp"
 	cfg := waitSandbox(t, lw, "the user's and both projects' settings", func(c sandbox.Config) bool {
 		return len(c.Projects[other].Rules) == 1 && len(c.Projects[lw.repo].Egress) == 1
 	})
-	want := sandbox.Config{Default: "sandbox", Memory: "4g", ApprovalSecs: 120, NoEgressProxy: true, Env: []string{"GOFLAGS"},
+	want := sandbox.Config{Default: "sandbox", Backend: "docker", Loopback: "all", Memory: "4g", ApprovalSecs: 120, NoEgressProxy: true, Env: []string{"GOFLAGS"},
 		Servers: map[string]json.RawMessage{"docs": json.RawMessage(`{"type":"http","url":"https://docs.example.com/mcp"}`),
 			"linear": json.RawMessage(`{"command":"npx","args":["-y","linear-mcp"]}`)},
 		Egress: []sandbox.EgressRule{{Host: "proxy.golang.org", Allow: true}, {Host: "ads.example.com"}},
@@ -156,7 +156,7 @@ func TestSettingsSandboxSection(t *testing.T) {
 	s.run("Settings", registry.Args{"args": "sandbox"})
 	s.golden("settings-sandbox")
 	text := s.frameText()
-	for _, want := range []string{"sandbox.egress", "sandbox.memory", "4g", "sandbox.egress_proxy", "sandbox.rules", "sandbox.default", "2 servers",
+	for _, want := range []string{"sandbox.egress", "sandbox.memory", "4g", "sandbox.egress_proxy", "sandbox.default", "sandbox.backend", "sandbox.loopback",
 		"none ▾"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the sandbox section lacks %q", want)
@@ -176,6 +176,19 @@ func TestSettingsSandboxSection(t *testing.T) {
 		s.frame()
 		s.frame()
 	}
+	search("sandbox.rules")
+	if !strings.Contains(s.frameText(), "sandbox.rules") {
+		t.Error("the sandbox section lacks sandbox.rules")
+	}
+	s.typeKeys("Esc")
+	s.frame()
+	search("sandbox.servers")
+	if !strings.Contains(s.frameText(), "2 servers") {
+		t.Error("sandbox.servers' row doesn't sum up its servers")
+	}
+	s.typeKeys("Esc")
+	s.frame()
+
 	search("sandbox.rules")
 	s.typeInto(t, "Add to sandbox.rules", "deny oriel__push")
 	s.typeKeys("CR")

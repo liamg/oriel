@@ -468,7 +468,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   kind joins them. A mode asks for what its kind starts from: a PR URL, a new repo's name, template and parent, or a
   directory. The right column is recent prompts (choosing one fills it in again) and the pre-flight: when worktrees
   are made, repos to fetch (and to clone), the agent and its prompt pack, where it runs and its network. The Sandbox
-  toggle starts from `sandbox.default`, on unless it says `host`. A repo the chosen worker lacks says "not on
+  toggle starts from `sandbox.default`, on unless it says `host`; under it, when the worker offers more than one
+  sandbox backend (`WorkerState.Sandboxes`), a Sandbox type picker that starts at `sandbox.backend` and goes to
+  `session.start` as `{backend}`. A repo the chosen worker lacks says "not on
   <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). **Save as job** (SE-4) hands the
   prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. The prompt takes several
   lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Since PL-8 a ticket expands into a card (plugins.md, "As built (PL-8)"), from whichever tracker takes its key

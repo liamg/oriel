@@ -47,9 +47,11 @@ starts.
 
 ## Run on
 
-The worker the session runs on, whether its agent runs in a sandbox (a container, with the gateway for git and gh;
-on unless the `sandbox.default` setting says `host`), and whether the sandbox's network is open or asks per new
-host.
+The worker the session runs on, whether its agent runs in a sandbox (with the gateway for git and gh; on unless
+the `sandbox.default` setting says `host`), and whether the sandbox's network is open or asks per new host.
+
+**Sandbox type** shows when the worker can run more than one kind of sandbox: `docker`, a container, or `seatbelt`,
+macOS's own sandbox. It starts at the `sandbox.backend` setting; the session keeps the one you pick.
 
 ## Recent prompts
 

@@ -69,6 +69,7 @@ type WorkerState struct {
 	Version   string    `json:"version,omitempty"`
 	Build     string    `json:"build,omitempty"`
 	Providers []string  `json:"providers,omitempty"` // the agents it can run
+	Sandboxes []string  `json:"sandboxes,omitempty"` // the sandbox backends it can run
 	Connected bool      `json:"connected"`
 	Since     time.Time `json:"since,omitzero"` // when it connected, or went away
 	Cores     int       `json:"cores,omitempty"`

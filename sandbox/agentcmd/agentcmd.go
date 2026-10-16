@@ -157,16 +157,29 @@ func EgressProxy(args []string) error {
 	} else if sock == "" {
 		return errors.New("not in an oriel sandbox: ORIEL_SOCKET is not set")
 	}
-	hostPorts := parsePorts(os.Getenv(runner.HostPortsEnv))
+	p := NewEgressProxy(ctx, c, dialSession, token, parsePorts(os.Getenv(runner.HostPortsEnv)))
+	fmt.Fprintf(os.Stderr, "oriel egress proxy on %s\n", *listen)
+	return p.ListenAndServe(ctx, *listen)
+}
+
+// NewEgressProxy is the sandbox's egress proxy: it asks the session over c
+// about each destination and dials through dialSession, except the host's
+// own endpoints at hostPorts, which it dials itself.
+func NewEgressProxy(ctx context.Context, c *agentsock.Client, dialSession func(context.Context) (net.Conn, error), token string, hostPorts []int) *egress.Proxy {
 	logs := make(chan egress.Event, 256)
 	go func() {
-		for ev := range logs {
-			_ = c.EgressLog(ev)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case ev := <-logs:
+				_ = c.EgressLog(ev)
+			}
 		}
 	}()
-	p := &egress.Proxy{
+	return &egress.Proxy{
 		Decider: newSocketDecider(c),
-		// The session dials: the host reaches networks this container cannot.
+		// The session dials: the host reaches networks the sandbox cannot.
 		Dial: func(ctx context.Context, _, addr string) (net.Conn, error) {
 			host, portStr, err := net.SplitHostPort(addr)
 			if err != nil {
@@ -199,8 +212,6 @@ func EgressProxy(args []string) error {
 			}
 		},
 	}
-	fmt.Fprintf(os.Stderr, "oriel egress proxy on %s\n", *listen)
-	return p.ListenAndServe(ctx, *listen)
 }
 
 // socketDecider asks the session on the host, and keeps why it refused each destination for the refusal.

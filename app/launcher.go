@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -70,6 +71,7 @@ type launcher struct {
 	cloneURL                                      string
 	cloneFocus                                    bool
 	sandbox, openNet                              bool
+	backend                                       string // the sandbox backend picked; "" is sandbox.backend
 	busy                                          bool
 	err                                           string
 	card                                          ticketCard
@@ -114,7 +116,7 @@ func (x *launcher) openWith(a registry.Args) {
 	*x = launcher{disposer: x.disposer, sh: x.sh, h: x.h, gen: x.gen + 1, open: true, focusField: true,
 		worker: spec.Worker, wantKind: core.Kind(a.String("kind")), prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
 		name: spec.Name, template: spec.Template, variant: spec.Variant, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
-		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", branch: spec.Branch,
+		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", backend: spec.Sandbox.Backend, branch: spec.Branch,
 		card: ticketCard{key: strings.TrimSpace(spec.Ticket)}}
 	if x.template == "" {
 		x.template = worker.Templates[0]
@@ -284,6 +286,9 @@ func (x *launcher) args() registry.Args {
 		a["network"] = "ask"
 		if x.openNet {
 			a["network"] = "open"
+		}
+		if x.backend != "" {
+			a["backend"] = x.backend
 		}
 	}
 	if v := x.chosenVariant(k); v != "" {
@@ -951,7 +956,13 @@ func (x *launcher) runOn(c *ui.Ctx) {
 			x.load(false)
 		}
 	}
-	sandboxToggles(c, &x.sandbox, &x.openNet, "agent/launcher#run-on")
+	pick := backendPick{chosen: &x.backend, setting: settingBackend(x.h)}
+	for _, w := range x.h.State().Workers {
+		if w.ID == x.worker || x.worker == "" && w.ID == core.LocalWorker {
+			pick.offered = w.Sandboxes
+		}
+	}
+	sandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#run-on")
 }
 
 // toggleRow is a toggle with its label, and a note at the right.
@@ -971,10 +982,55 @@ func toggleRow(c *ui.Ctx, key any, label, note string, on *bool, disabled bool, 
 	})
 }
 
-// sandboxToggles are where an agent runs: in a sandbox, and with an open network there.
-func sandboxToggles(c *ui.Ctx, sandbox, openNet *bool, help string) {
-	toggleRow(c, "sandbox", "Sandbox", "container · gateway for git & gh", sandbox, false, help)
-	toggleRow(c, "network", "Open network", "ask per new host when off", openNet, !*sandbox, help)
+// backendPick is the sandbox backend a session runs in: chosen from those its worker offers, sandbox.backend
+// until one is.
+type backendPick struct {
+	chosen  *string
+	offered []string
+	setting string
+}
+
+func (p backendPick) current() string {
+	if p.chosen != nil && *p.chosen != "" {
+		return *p.chosen
+	}
+	return p.setting
+}
+
+// settingBackend is sandbox.backend.
+func settingBackend(h plugin.Host) string {
+	v, _, _ := h.Options().Get("sandbox.backend", registry.At{})
+	s, _ := v.(string)
+	return s
+}
+
+// sandboxToggles are where an agent runs: in a sandbox, in which backend when its worker has more than one, and
+// with an open network there.
+func sandboxToggles(c *ui.Ctx, on, openNet *bool, pick backendPick, help string) {
+	toggleRow(c, "sandbox", "Sandbox", sandboxNoun(pick.current())+" · gateway for git & gh", on, false, help)
+	if *on && pick.chosen != nil && len(pick.offered) > 1 {
+		c.Row("backend", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+			labels := make([]string, len(pick.offered))
+			for i, b := range pick.offered {
+				labels[i] = strings.ToUpper(b)
+			}
+			at := slices.Index(pick.offered, pick.current())
+			c.Text("l", "Sandbox type", uiFont(12.5, c.Theme().C(theme.Fg)))
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			if widget.Segmented(c, "pick", labels, &at, widget.SegmentedOpts{Label: "Sandbox type", Help: help}) {
+				*pick.chosen = pick.offered[at]
+			}
+		})
+	}
+	toggleRow(c, "network", "Open network", "ask per new host when off", openNet, !*on, help)
+}
+
+// sandboxNoun is what a backend runs an agent in.
+func sandboxNoun(backend string) string {
+	if backend == "" || backend == sandbox.DefaultBackend {
+		return "container"
+	}
+	return backend + " sandbox"
 }
 
 // side is the recent prompts, and what starting will do.
@@ -1057,7 +1113,7 @@ func (x *launcher) preflight() [][2]string {
 	rows = append(rows, [2]string{"agent", agent}, [2]string{"prompt pack", cmpOr(k.Pack, "none")})
 	runs, network := "on the worker", "the worker's"
 	if x.sandbox {
-		runs, network = "in a container", "ask per new host"
+		runs, network = "in a "+sandboxNoun(backendPick{chosen: &x.backend, setting: settingBackend(x.h)}.current()), "ask per new host"
 		if x.openNet {
 			network = "open"
 		}

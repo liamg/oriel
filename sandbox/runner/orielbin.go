@@ -185,9 +185,9 @@ func findGo() (string, error) {
 
 // linuxOrielHealth is ok when the Linux build is current; otherwise it starts
 // the build and reports it.
-func linuxOrielHealth() (Problem, bool) {
+func linuxOrielHealth() (sandbox.Problem, bool) {
 	if linuxOrielCurrent() {
-		return Problem{}, true
+		return sandbox.Problem{}, true
 	}
 	orielMu.Lock()
 	defer orielMu.Unlock()
@@ -201,8 +201,8 @@ func linuxOrielHealth() (Problem, bool) {
 		}()
 	}
 	if orielErr != nil {
-		return Problem{Code: "oriel-linux-failed", Blocking: true, Message: "Building Oriel's sandbox helper failed: " + orielErr.Error(),
+		return sandbox.Problem{Code: "oriel-linux-failed", Blocking: true, Message: "Building Oriel's sandbox helper failed: " + orielErr.Error(),
 			Fix: "Oriel retries on the next check; or build one yourself with `GOOS=linux CGO_ENABLED=0 go build -o " + linuxOriel() + " " + helperPkg + "` and set `ORIEL_SANDBOX_BIN` to it."}, false
 	}
-	return Problem{Code: "oriel-linux-building", Message: "Building Oriel's sandbox helper — the first sandboxed launch waits for it"}, false
+	return sandbox.Problem{Code: "oriel-linux-building", Message: "Building Oriel's sandbox helper — the first sandboxed launch waits for it"}, false
 }

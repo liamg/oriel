@@ -15,6 +15,8 @@ import (
 type Config struct {
 	// Default is how new sessions run: "sandbox" (the default) or "host".
 	Default string `json:"default,omitempty"`
+	// Backend names the Backend sandboxes run in; "" is DefaultBackend.
+	Backend string `json:"backend,omitempty"`
 	// Image replaces the base image for every project.
 	Image string `json:"image,omitempty"`
 	// ClaudeVersion pins the agent's Claude Code: "" runs the host's.
@@ -39,6 +41,9 @@ type Config struct {
 	Memory string `json:"memory,omitempty"`
 	// PidsLimit caps each container's processes (-1 for no cap).
 	PidsLimit int `json:"pidsLimit,omitempty"`
+	// Loopback is which of the host's loopback ports a sandbox that shares the host's network may connect to:
+	// LoopbackAll (""), LoopbackEphemeral or LoopbackNone.
+	Loopback string `json:"loopback,omitempty"`
 	// Servers are extra MCP servers for the gateway, in Claude's mcpServers
 	// format, beside the ones Claude Code has installed.
 	Servers map[string]json.RawMessage `json:"servers,omitempty"`
@@ -74,6 +79,14 @@ type EgressRule struct {
 	// Private lets an allow reach private and tailnet addresses.
 	Private bool `json:"private,omitempty"`
 }
+
+// Which loopback ports a sandbox on the host's network may connect to: any; only the ephemeral range, where a
+// server on port 0 lands, not services on fixed ports; or none, beyond the sandbox's own proxy.
+const (
+	LoopbackAll       = "all"
+	LoopbackEphemeral = "ephemeral"
+	LoopbackNone      = "none"
+)
 
 // SandboxDefault is how a new session runs when nothing says otherwise.
 func (c Config) SandboxDefault() string {

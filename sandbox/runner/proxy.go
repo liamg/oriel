@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/container"
-	"github.com/liamg/oriel/sandbox/egress"
 )
 
 // ensureProxy starts root's egress sidecar: the only container on both the
@@ -30,11 +28,11 @@ func ensureProxy(ctx context.Context, root, image, orielBin string, id sandbox.I
 	for i, p := range hostPorts {
 		ports[i] = strconv.Itoa(p)
 	}
-	env := []string{"ORIEL_SOCKET=" + sandbox.ContainerSocket, "ORIEL_TOKEN=" + mustToken(root), HostPortsEnv + "=" + strings.Join(ports, ",")}
+	env := []string{"ORIEL_SOCKET=" + ContainerSocket, "ORIEL_TOKEN=" + mustToken(root), HostPortsEnv + "=" + strings.Join(ports, ",")}
 	cmd := []string{"egress-proxy", "--listen", ":" + strconv.Itoa(ProxyPort)}
-	if !sandbox.SocketsMount() {
+	if !SocketsMount() {
 		env = append(env, "ORIEL_PORT_FILE="+hostRunDir+"/port")
-		cmd = append(cmd, "--relay", sandbox.ContainerRunDir)
+		cmd = append(cmd, "--relay", ContainerRunDir)
 	}
 	spec := container.Spec{
 		Name:    ProxyName(root),
@@ -63,15 +61,3 @@ func ensureProxy(ctx context.Context, root, image, orielBin string, id sandbox.I
 
 // HostPortsEnv tells the egress proxy which host ports it may dial.
 const HostPortsEnv = "ORIEL_HOST_PORTS"
-
-// HostPorts are the host ports the sandbox's environment points at.
-func HostPorts(env map[string]string) []int {
-	var out []int
-	for _, r := range egress.EnvRules(env) {
-		if r.Host == sandbox.HostGateway && !slices.Contains(out, r.Port) {
-			out = append(out, r.Port)
-		}
-	}
-	slices.Sort(out)
-	return out
-}

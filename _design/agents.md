@@ -525,8 +525,31 @@ sequenceDiagram
 
 - A sandboxed session's `Open` records the workspace (`sandbox.Create`, its manifest), serves the session socket
   (gateway, egress decide/log/dial, ssh-agent) and writes the gateway's MCP config into the sandbox's Claude dir.
-  `Exec` turns the provider's command into `runner.Launch`'s docker command: the env the provider added goes in,
-  `ORIEL_BIN` becomes the container's `oriel`.
+  `Exec` turns the provider's command into the backend's (`sandbox.Backend.Launch`): the env the provider added
+  goes in, `ORIEL_BIN` becomes the sandbox's `oriel`.
+- **Backends.** What fences the agent in is a `sandbox.Backend`, chosen by `sandbox.backend` (`Config.Backend`,
+  default `docker`) from those registered with `sandbox.Register`, or by the session's own
+  (`SandboxPolicy.Backend`, kept as `AgentState.Backend`), one of those its worker can run (`Backend.Available`,
+  reported as `WorkerState.Sandboxes`, the launcher's Sandbox type); everything else (session socket, gateway,
+  egress decisions, approvals) is the same for all of them. A backend launches (`Launch` → a `Command`: argv, env,
+  dir), stops, reports `Health` and `Sweep`s, and says where the agent finds the run dir (`AgentRunDir`) and
+  whether the session must also serve on a port (`ServesPort`). What every backend gives the agent is shared in
+  `sandbox`: `Binds` (the workspace, Claude's dir and transcripts, attachments, each project's git dir with git's
+  own files read-only), `Prepare` (Claude settings and login, the home's ssh config, shims, git config), `AgentEnv`
+  and `LoginProblems`.
+  - `docker` (`sandbox/runner`): a container per run, binds as mounts, the egress sidecar on an internal network,
+    the project's image and toolchains, memory and process caps.
+  - `seatbelt` (`sandbox/seatbelt`, macOS): `sandbox-exec` with a generated profile, no container. The agent
+    reads the system but not `/Users`, `/Volumes` or the home directory, beyond toolchain directories (managers'
+    installs, `PATH` entries under home) and its binds; writes only its binds (later binds override earlier
+    ones, so git's own files stay read-only), its sandbox home, temp dir and the Go cache. A bind at another path
+    is a symlink to the host's. The network is loopback only: the egress proxy runs in the worker on a loopback
+    port and the session's sockets are reached directly. It runs the host's `claude` and toolchains; image,
+    Claude version, memory and process settings don't apply (`Health` warns). Weaker than a container where
+    the OS can't separate: it shares the host's loopback, and Seatbelt can't tell the agent's own servers from
+    the host's, so `sandbox.loopback` (`Config.Loopback`) picks what it may connect to: any port (`all`, the
+    default), the ephemeral range where a server on port 0 lands (`ephemeral`), or nothing beyond its proxy
+    (`none`). There are no resource caps.
 - Both layer-3 cards go through the host's `approve`, so layer 2 (rules, `MethodAppDecide` hooks) answers them
   first. Network: `AskNetwork`, rule `net(host:port)`; "always" also records the host machine-wide (egress
   always), and a scope (`*.golang.org`) records that pattern instead. Gateway: `AskGateway`, rule = the tool;
@@ -542,9 +565,10 @@ sequenceDiagram
   hook's source; `Note`). The gateway answers "oriel: init.lua denied oriel__push. They said: …"; the egress proxy's
   403 reads "oriel: host is not allowed for this session: denied by the user, who said: …", in the container too
   (the agent socket's decide answer carries `why`, and the sidecar's decider keeps it per destination).
-- The provider's hook socket (`agent.HookSocketEnv`, `ORIEL_HOOK_SOCK`) is carried into the container: `Exec`
-  points it at `/run/oriel/hook.sock`, which the box serves in the run dir (mounted on Linux) and the agent socket
-  serves at `agentsock.HookPath` for the sidecar's relay elsewhere; both reach the provider's socket on the host.
+- The provider's hook socket (`agent.HookSocketEnv`, `ORIEL_HOOK_SOCK`) is carried into the sandbox: `Exec`
+  points it at `hook.sock` in the backend's `AgentRunDir` (`/run/oriel` in a container), which the box serves in
+  the run dir (mounted on Linux) and the agent socket serves at `agentsock.HookPath` for the sidecar's relay
+  elsewhere; both reach the provider's socket on the host.
 - **Sandbox settings** are the `sandbox.*` options (settings.md, "Sandbox settings"). The worker can't read the
   app's options (init.lua, trust and the project layer live in the app), so the app resolves them into a
   `sandbox.Config` and sends it with `sandbox.config` (`Client.SetSandboxConfig`) when a worker connects and whenever

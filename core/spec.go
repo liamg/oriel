@@ -19,6 +19,7 @@ type SandboxPolicy struct {
 	Container bool   `json:"container,omitempty"` // run the agent in a container, with the gateway for git and gh
 	Network   string `json:"network,omitempty"`   // "ask" (per new host) or "open"
 	Gate      string `json:"gate,omitempty"`      // the agent's own gate: ask, light or bypass
+	Backend   string `json:"backend,omitempty"`   // the sandbox backend, one of the worker's Sandboxes; "" is its sandbox.backend
 }
 
 // SessionSpec is what a new session starts from (sessions.md).

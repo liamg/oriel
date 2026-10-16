@@ -23,22 +23,23 @@ import (
 	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/egress"
 	"github.com/liamg/oriel/sandbox/gateway"
-	"github.com/liamg/oriel/sandbox/runner"
+	_ "github.com/liamg/oriel/sandbox/runner"
+	_ "github.com/liamg/oriel/sandbox/seatbelt"
 )
 
 // GatewayServer is the gateway's name in the agent's MCP config.
 const GatewayServer = "oriel-gw"
 
-// Sandboxes is the SandboxFactory backed by the real sandbox: a container per agent run (runner), the egress
-// proxy's host side, the gateway and the session socket. Attach the worker before a session opens one.
+// Sandboxes is the SandboxFactory backed by the real sandbox: a sandbox.Backend that confines each agent run, the
+// egress proxy's host side, the gateway and the session socket. Attach the worker before a session opens one.
 type Sandboxes struct {
 	// Config is the sandbox's settings; nil means the attached worker's, as the app last sent them, with its repos'
 	// own project settings when the app asks.
 	Config func() sandbox.Config
-	// Launch readies the container and returns the command to run in the agent's place; runner.Launch.
-	Launch func(ctx context.Context, root, cwd string, argv []string, o runner.Options) ([]string, error)
-	// Stop removes a workspace's containers; runner.Stop.
-	Stop func(ctx context.Context, root string) error
+	// Backend is the backend a config names; sandbox.BackendFor.
+	Backend func(cfg sandbox.Config) (sandbox.Backend, error)
+	// Available are the backends this machine can run; sandbox.AvailableBackends.
+	Available func() []string
 
 	mu sync.Mutex
 	w  *Worker
@@ -48,8 +49,10 @@ var _ SandboxFactory = (*Sandboxes)(nil)
 
 // NewSandboxFactory makes the real sandbox factory.
 func NewSandboxFactory(config func() sandbox.Config) *Sandboxes {
-	return &Sandboxes{Config: config, Launch: runner.Launch, Stop: runner.Stop}
+	return &Sandboxes{Config: config, Backend: sandbox.BackendFor, Available: sandbox.AvailableBackends}
 }
+
+func (s *Sandboxes) Backends() []string { return s.Available() }
 
 // Attach gives the factory the worker whose sessions it serves.
 func (s *Sandboxes) Attach(w *Worker) {
@@ -82,6 +85,7 @@ type box struct {
 	root    string
 	approve Approve
 	cfg     sandbox.Config
+	backend sandbox.Backend
 
 	egress  *egress.Session
 	gateway *gateway.Gateway
@@ -97,7 +101,7 @@ type box struct {
 }
 
 // Open readies the sandbox for a session's workspace: its record and manifest, the egress session, the gateway,
-// the ssh-agent and the session socket. The container itself starts with the agent (Exec).
+// the ssh-agent and the session socket. The backend confines the agent when it starts (Exec).
 func (s *Sandboxes) Open(ctx context.Context, se core.SessionState, approve Approve) (Sandbox, error) {
 	w := s.worker()
 	if w == nil {
@@ -117,7 +121,14 @@ func (s *Sandboxes) Open(ctx context.Context, se core.SessionState, approve Appr
 	if se.Agent.Network == "open" {
 		cfg.NoEgressProxy = true
 	}
-	b := &box{f: s, w: w, id: se.ID, root: root, approve: approve, cfg: cfg}
+	if se.Agent.Backend != "" {
+		cfg.Backend = se.Agent.Backend
+	}
+	backend, err := s.Backend(cfg)
+	if err != nil {
+		return nil, err
+	}
+	b := &box{f: s, w: w, id: se.ID, root: root, approve: approve, cfg: cfg, backend: backend}
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 	b.egress = &egress.Session{
 		GrantsPath: sandbox.EgressGrantsPath(root),
@@ -147,7 +158,7 @@ func (s *Sandboxes) Open(ctx context.Context, se core.SessionState, approve Appr
 	}
 	rec, _ := sandbox.Load(root)
 	portFile := ""
-	if !sandbox.SocketsMount() {
+	if backend.ServesPort() {
 		portFile = sandbox.PortPath(root)
 	}
 	h := &agentsock.Handler{Token: rec.AgentToken, Gateway: b.gateway, Egress: b.egress, SSH: b.ssh, Hook: b.hookSocket}
@@ -261,7 +272,7 @@ func writeGatewayMCP(path string) error {
 }
 
 func (b *box) Spec() *agent.Sandbox {
-	return &agent.Sandbox{Name: runner.Name(b.root), GatewayMCP: b.mcp}
+	return &agent.Sandbox{Name: b.backend.Name() + ":" + sandbox.Key(b.root), GatewayMCP: b.mcp}
 }
 
 func (b *box) Exec() agent.Exec { return sandboxExec{b} }
@@ -275,10 +286,10 @@ func (b *box) Close() error {
 	b.mu.Lock()
 	launched := b.launched
 	b.mu.Unlock()
-	if launched && b.f.Stop != nil {
+	if launched {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		return b.f.Stop(ctx, b.root)
+		return b.backend.Stop(ctx, b.root)
 	}
 	return nil
 }
@@ -408,7 +419,7 @@ func (b *box) restartWhenIdle(why string) {
 	}()
 }
 
-// sandboxExec runs a provider's processes in the session's container.
+// sandboxExec runs a provider's processes in the session's sandbox.
 type sandboxExec struct{ b *box }
 
 func (e sandboxExec) StartPTY(ctx context.Context, cmd *exec.Cmd, cols, rows int) (agent.PTY, error) {
@@ -427,7 +438,7 @@ func (e sandboxExec) Start(ctx context.Context, cmd *exec.Cmd) (agent.Process, e
 	return hostexec.Exec{}.Start(ctx, wrapped)
 }
 
-// wrap turns a provider's command into the docker command that runs it in the container.
+// wrap turns a provider's command into the backend's command that runs it in the sandbox.
 func (b *box) wrap(ctx context.Context, cmd *exec.Cmd) (*exec.Cmd, error) {
 	if len(cmd.Args) == 0 {
 		return nil, errors.New("sandbox: no command")
@@ -437,22 +448,22 @@ func (b *box) wrap(ctx context.Context, cmd *exec.Cmd) (*exec.Cmd, error) {
 	if cwd == "" {
 		cwd = b.root
 	}
-	o := runner.Options{ModDir: pluginDir(argv), Environ: os.Environ(), Extra: extraEnv(cmd.Env), Config: b.cfg}
+	o := sandbox.LaunchOptions{ModDir: pluginDir(argv), Environ: os.Environ(), Extra: extraEnv(cmd.Env), Config: b.cfg}
 	if hook := o.Extra[agent.HookSocketEnv]; hook != "" {
 		b.mu.Lock()
 		b.hook = hook
 		b.mu.Unlock()
-		o.Extra[agent.HookSocketEnv] = sandbox.ContainerRunDir + "/" + sandbox.HookSocket
+		o.Extra[agent.HookSocketEnv] = filepath.Join(b.backend.AgentRunDir(b.root), sandbox.HookSocket)
 	}
-	docker, err := b.f.Launch(ctx, b.root, cwd, argv, o)
+	c, err := b.backend.Launch(ctx, b.root, cwd, argv, o)
 	if err != nil {
 		return nil, fmt.Errorf("sandbox: %w", err)
 	}
 	b.mu.Lock()
 	b.launched = true
 	b.mu.Unlock()
-	out := exec.Command(docker[0], docker[1:]...)
-	out.Env = os.Environ()
+	out := exec.Command(c.Argv[0], c.Argv[1:]...)
+	out.Env, out.Dir = c.Env, c.Dir
 	return out, nil
 }
 
@@ -465,8 +476,8 @@ func pluginDir(argv []string) string {
 	return ""
 }
 
-// extraEnv is what a provider added to the environment: the container gets that, not the host's own.
-// oriel is on the container's PATH.
+// extraEnv is what a provider added to the environment: the sandbox gets that, not the host's own.
+// oriel is on the sandbox's PATH.
 func extraEnv(env []string) map[string]string {
 	host := map[string]string{}
 	for _, kv := range os.Environ() {
