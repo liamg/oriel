@@ -372,11 +372,11 @@ sequenceDiagram
 
 - **`liamg/oriel-plugins`** holds `plugins/<owner>/<name>/plugin.toml` (`catalog.ParseListing`, `ReadListings`), a
   README for authors, and two workflows:
-  - `pr.yml` runs `oriel-registry check` and comments. It's `pull_request_target`, so it can comment on a fork's PR.
+  - `pr.yml` runs `oriel-registry check` and comments. It's `pull_request_target`, so a fork's PR gets the secrets.
     The PR's checkout is only read as data.
   - `index.yml` runs `oriel-registry index` on each merge to `main`, then releases `index.json` and `index.sig` as
     `index-<time>-<sha>`.
-  - Both build `catalog/cmd/oriel-registry` from a checkout of `liamg/oriel`, which has to be public for that. It's
+  - Both build `catalog/cmd/oriel-registry` from an Oriel checkout, read with the `ORIEL_READ_TOKEN` secret. It's
     `oriel plugin registry` (`catalog/registrycmd`) alone, built without cgo, so CI doesn't build the app.
   - The signing key is the `ORIEL_REGISTRY_KEY` secret: an ed25519 seed in hex, from `oriel plugin registry keygen`.
 - **It's seeded with nothing yet.** Neither first-party plugin has `oriel.toml` at the root of a repo of its own:

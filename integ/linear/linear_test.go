@@ -152,7 +152,7 @@ func TestTicketForTheAgent(t *testing.T) {
 	if !tk.Mine || tk.Assignee != "Liam Galvin" || len(tk.Comments) != 4 || len(tk.Attachments) != 2 || tk.PR == nil || tk.PR.Number != 4398 {
 		t.Fatalf("ticket %+v", tk)
 	}
-	if want := "Customers on the new Team plan see last month's unit prices in /v1/usage for up to 24h. Reported by 3 accounts; repro steps and a HAR attached."; tk.Summary() != want {
+	if want := "Customers who rebuild their index see last week's results from /v1/search for up to 24h. Reported by 3 accounts; repro steps and a HAR attached."; tk.Summary() != want {
 		t.Errorf("summary %q", tk.Summary())
 	}
 	if got := strings.Join(tk.Facts(), " · "); got != "linear.app/acme/issue/ENG-2231 · 2 attachments · linked PR #4398 · 4 comments" {
@@ -160,14 +160,14 @@ func TestTicketForTheAgent(t *testing.T) {
 	}
 	ctx := tk.Context()
 	for _, want := range []string{
-		"Linear ticket ENG-2231: Usage API returns stale prices after plan change",
+		"Linear ticket ENG-2231: Search API returns stale results after a reindex",
 		"State: Todo · Priority: High · Project: Usage",
-		"3. Unit prices are Pro's until the nightly job runs",
+		"3. Results are the old index's until the nightly job runs",
 		"## Comments (4)",
-		"**priya** · 2026-10-14 11:20:\n\n> Probably the price table cache in usage-api. It's keyed by org, not org + plan.",
+		"**priya** · 2026-10-14 11:20:\n\n> Probably the result cache in search-api. It's keyed by org, not org + index version.",
 		"## Attachments (2)",
-		"- usage-stale-prices.har (412 KB): https://uploads.linear.app/1a2b3c/usage-stale-prices.har",
-		"- #4398 fix(usage): key price cache by plan (acme/cloud): https://github.com/acme/cloud/pull/4398",
+		"- search-stale-results.har (412 KB): https://uploads.linear.app/1a2b3c/search-stale-results.har",
+		"- #4398 fix(search): key result cache by index version (acme/cloud): https://github.com/acme/cloud/pull/4398",
 	} {
 		if !strings.Contains(ctx, want) {
 			t.Errorf("the agent's context has no %q:\n%s", want, ctx)
@@ -220,12 +220,12 @@ func TestStateMoves(t *testing.T) {
 // "…and links back to the PR."
 func TestLinkPR(t *testing.T) {
 	c, l := recorded(t)
-	if err := c.LinkPR(t.Context(), "ENG-2231", "https://github.com/acme/cloud/pull/4398", 4398, "fix(usage): key price cache by plan"); err != nil {
+	if err := c.LinkPR(t.Context(), "ENG-2231", "https://github.com/acme/cloud/pull/4398", 4398, "fix(search): key result cache by index version"); err != nil {
 		t.Fatal(err)
 	}
 	m := l.Mutations()
 	want := map[string]any{"issueId": "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231", "url": "https://github.com/acme/cloud/pull/4398",
-		"title": "#4398 fix(usage): key price cache by plan"}
+		"title": "#4398 fix(search): key result cache by index version"}
 	if len(m) != 1 || m[0].Op != "attachmentCreate" || !reflect.DeepEqual(m[0].Vars["input"], want) {
 		t.Errorf("mutations %+v", m)
 	}

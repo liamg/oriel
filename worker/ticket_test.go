@@ -12,7 +12,7 @@ import (
 // session's own; the ticket's text follows it in the first request.
 func TestTicketContextGoesWithThePrompt(t *testing.T) {
 	r := newRig(t)
-	ctx := "## ENG-2231 · Usage API returns stale prices after plan change\n\n### Comments\n\n**Ana:** Repro attached."
+	ctx := "## ENG-2231 · Search API returns stale results after a reindex\n\n### Comments\n\n**Ana:** Repro attached."
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Pick up ENG-2231. Confirm the cache first.", Ticket: "ENG-2231",
 		Context: ctx, Provider: "fake", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	sent := r.agent().WaitSent(t)

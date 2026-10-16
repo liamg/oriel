@@ -24,7 +24,7 @@ func branchOf(t *testing.T, dir string) string {
 // Oriel lists its own sessions: a crit workspace's log is dropped on restore.
 func TestCritSessionsAreDroppedOnRestore(t *testing.T) {
 	r := newRig(t)
-	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale usage prices", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	if err := r.w.emit(core.SessionSynced{Session: core.SessionState{ID: "crit-p5", Name: "p5", Kind: core.KindWork, Source: "crit"}}); err != nil {
 		t.Fatal(err)
 	}
@@ -41,9 +41,9 @@ func TestCritSessionsAreDroppedOnRestore(t *testing.T) {
 // SE-1: each kind starts as sessions.md says.
 func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	r := newRig(t)
-	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale usage prices", Ticket: "ENG-2231", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", Ticket: "ENG-2231", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	se := r.session(id)
-	if id != "eng-2231-fix-stale-usage-prices" {
+	if id != "eng-2231-fix-stale-search-results" {
 		t.Errorf("id = %q", id)
 	}
 	if se.Dir != filepath.Join(r.home, "workspaces", string(id)) {
@@ -53,7 +53,7 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	if want := filepath.Join(se.Dir, "repos", filepath.Base(r.repo.Dir)); p.Dir != want {
 		t.Errorf("project dir = %q, want %q", p.Dir, want)
 	}
-	if got := branchOf(t, p.Dir); got != "tester/eng-2231-fix-stale-usage-prices" || se.Branch != got {
+	if got := branchOf(t, p.Dir); got != "tester/eng-2231-fix-stale-search-results" || se.Branch != got {
 		t.Errorf("branch = %q (state %q)", got, se.Branch)
 	}
 	if !gitx.IsRepo(se.Dir) {
@@ -63,7 +63,7 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 		t.Errorf("manifest = %+v %v", m, ok)
 	}
 	// The prompt opened the first request.
-	if len(se.Threads) != 1 || se.Threads[0].Title != "Fix stale usage prices" || se.Threads[0].Anchor != nil {
+	if len(se.Threads) != 1 || se.Threads[0].Title != "Fix stale search results" || se.Threads[0].Anchor != nil {
 		t.Errorf("threads = %+v", se.Threads)
 	}
 	if se.Unplanned {

@@ -49,8 +49,8 @@ func busScene(t *testing.T) (*errScene, *fakeBus) {
 	s := newScene(t, "", "", mockupSize)
 	s.now = at(14, 30, 0)
 	for _, ev := range []core.Event{
-		core.SessionSynced{Session: core.SessionState{ID: "pricing-service", Name: "pricing-service", Kind: core.KindWork, Status: core.StatusQuiet}},
-		core.SessionFocused{ID: "pricing-service"},
+		core.SessionSynced{Session: core.SessionState{ID: "search-service", Name: "search-service", Kind: core.KindWork, Status: core.StatusQuiet}},
+		core.SessionFocused{ID: "search-service"},
 	} {
 		if err := s.store.Apply(ev); err != nil {
 			t.Fatal(err)
@@ -61,14 +61,14 @@ func busScene(t *testing.T) (*errScene, *fakeBus) {
 		return func() { b.ran = append(b.ran, id+": "+text); b.drop(id) }
 	}
 	b.cards = []registry.InboxCard{
-		{ID: "q1", Type: "question", Group: registry.GroupBus, Session: "pricing-service", Icon: "question", Tone: "status.needs_you",
-			Kicker: "agentbus · question", Title: "tom's agent asks about RoundMinor", Sub: "agentbus · pricing-service",
+		{ID: "q1", Type: "question", Group: registry.GroupBus, Session: "search-service", Icon: "question", Tone: "status.needs_you",
+			Kicker: "agentbus · question", Title: "tom's agent asks about RoundMinor", Sub: "agentbus · search-service",
 			Detail: "Is pricing.RoundMinor safe to call for JPY amounts?", Interrupt: true, Created: s.now.Add(-18 * time.Second),
 			Expires: s.now.Add(102 * time.Second),
 			Actions: []registry.InboxAction{{Label: "Safe: precision comes from the currency table", Key: "1", Run: answer("q1", "safe")},
 				{Label: "Not yet", Key: "2", Run: answer("q1", "not yet")}}},
-		{ID: "r1", Type: "review-request", Group: registry.GroupBus, Mine: true, Session: "pricing-service", Icon: "review", Tone: "violet",
-			Kicker: "agentbus · review request", Title: "priya → you: #4418 Add tiered discounts", Sub: "agentbus · acme/api · +212 -40",
+		{ID: "r1", Type: "review-request", Group: registry.GroupBus, Mine: true, Session: "search-service", Icon: "review", Tone: "violet",
+			Kicker: "agentbus · review request", Title: "priya → you: #4418 Add saved searches", Sub: "agentbus · acme/api · +212 -40",
 			Interrupt: true, Created: s.now.Add(-2 * time.Minute),
 			Actions: []registry.InboxAction{{Label: "Ignore", Command: "bus.review", Args: registry.Args{"id": "r1", "do": "ignore"}},
 				{Label: "Claim", Command: "bus.review", Args: registry.Args{"id": "r1", "do": "claim"}},
@@ -139,8 +139,8 @@ func TestInboxCardsFromASourceActAndDismiss(t *testing.T) {
 
 	s.run("inbox.open", nil)
 	s.frame()
-	s.wantFrame(t, "INBOX", "1 WAITING", "tom's agent asks about RoundMinor", "priya → you: #4418 Add tiered discounts")
-	s.access("priya → you: #4418 Add tiered discounts (answered)")
+	s.wantFrame(t, "INBOX", "1 WAITING", "tom's agent asks about RoundMinor", "priya → you: #4418 Add saved searches")
+	s.access("priya → you: #4418 Add saved searches (answered)")
 	s.clickAccess(t, "tom's agent asks about RoundMinor")
 	s.clickText(t, "Not yet")
 	if len(b.ran) != 2 || b.ran[1] != "q1: not yet" {
@@ -299,7 +299,7 @@ func TestInboxSnapshot(t *testing.T) {
 				{ID: "k1", Kind: core.AskKey, Summary: "git push", Detail: "pricing", Created: ago(10 * time.Second)},
 				{ID: "g1", Kind: core.AskGateway, Tool: "oriel__push", Summary: "git push origin rethink/rounding", Detail: "3 commits · +184 -22",
 					Rule: "oriel__push", Created: ago(3 * time.Minute)}}},
-		{ID: "usage-api", Name: "ENG-2231 usage api", Kind: core.KindWork, Status: core.StatusPermission, Agent: core.AgentState{Provider: "claude", Running: true},
+		{ID: "search-api", Name: "ENG-2231 search api", Kind: core.KindWork, Status: core.StatusPermission, Agent: core.AgentState{Provider: "claude", Running: true},
 			Asks: []core.Ask{{ID: "p1", Kind: core.AskPermission, Tool: "Bash", Summary: "make e2e", Created: ago(4 * time.Minute)}}},
 		{ID: "flaky-e2e", Name: "flaky e2e sweep", Kind: core.KindJob, Status: core.StatusPermission, Agent: core.AgentState{Provider: "claude", Running: true, Sandboxed: true},
 			Asks: []core.Ask{{ID: "n1", Kind: core.AskNetwork, Host: "proxy.golang.org:443", Detail: "requested by go mod download · CONNECT",

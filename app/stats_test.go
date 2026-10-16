@@ -114,7 +114,7 @@ type fxSession struct {
 }
 
 var fxSessions = []fxSession{
-	{name: "usage-api", provider: "claude", model: "claude-opus-4-1", repos: []string{"api", "web"}, weights: []int{5, 2},
+	{name: "search-api", provider: "claude", model: "claude-opus-4-1", repos: []string{"api", "web"}, weights: []int{5, 2},
 		days: []int{0, 1, 2, 3, 5, 6, 8, 9}, perDay: 70},
 	{name: "admin-filters", provider: "claude", model: "claude-opus-4-1", repos: []string{"admin-ui", "api", "web"}, weights: []int{4, 2, 1},
 		days: []int{0, 1, 4, 6, 7}, perDay: 90},
@@ -484,7 +484,7 @@ func TestStatsPageSnapshots(t *testing.T) {
 		t.Fatalf("g s grouped by %s", x.q.group)
 	}
 	s.golden("stats-sessions")
-	s.wantFrame(t, "COST PER SESSION PER DAY", "pricing-rounding", "usage-api", "span several repos")
+	s.wantFrame(t, "COST PER SESSION PER DAY", "pricing-rounding", "search-api", "span several repos")
 }
 
 // AI-12: one session's stats as a main tab (43's panel 1), from the session stats box's cost.

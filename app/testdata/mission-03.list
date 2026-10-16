@@ -208,8 +208,8 @@ clip 44,38 1556x936 r 0
   rect 909,580.66473 26x26 fill #191815 radius 6
   path 5 segments fill #ff5f6d
   clip 947,577.87 372.8125x31.589478 r 0
-    text "ENG-2231 usage api" @947,590.46375 #ece6d8 Inter 13
-    text "work · usage-api, billing" @947,606.3095 #7c7566 JetBrains Mono 10.5
+    text "ENG-2231 search api" @947,590.46375 #ece6d8 Inter 13
+    text "work · search-api, billing" @947,606.3095 #7c7566 JetBrains Mono 10.5
   pop
   text "2h" @1331.8125,597.44476 #4f4a40 JetBrains Mono 10.5
   rect 909,634.2542 26x26 fill #191815 radius 6
@@ -299,7 +299,7 @@ clip 0,38 1600x962 r 0
     text "Evict stale entries on read, or by" @52,342.3319 #ece6d8 Inter 12.5
     text "the nightly job? Read-time is" @52,360.45642 #ece6d8 Inter 12.5
     text "simpler but adds 4ms p99." @52,378.58093 #ece6d8 Inter 12.5
-    text "ENG-2231 usage api · devbox · replied" @52,395.79608 #7c7566 JetBrains Mono 10
+    text "ENG-2231 search api · devbox · replied" @52,395.79608 #7c7566 JetBrains Mono 10
     rect 0,408.79608 300x1 fill #24221d
   pop
   rect 300,91 1x813 fill #24221d
@@ -422,8 +422,8 @@ clip 0,38 1600x962 r 0
     rect 644.50684,625.868 935.49316x1 fill #24221d
     rect 321,646.024 410.33337x223.73999 fill #0c0c0b radius 8 stroke 1 #ff5f6d80
     rect 333,662.794 7x7 fill #ff5f6d radius 3.5
-    text "ENG-2231 usage api" @348,671.023 #ece6d8 Inter 13
-    text "work · 2 repos" @483.07812,669.894 #7c7566 JetBrains Mono 10
+    text "ENG-2231 search api" @348,671.023 #ece6d8 Inter 13
+    text "work · 2 repos" @487.6875,669.894 #7c7566 JetBrains Mono 10
     rect 665.9133,658.024 53.419983x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
     text "CLAUDE" @672.9133,669.714 #b3ab99 JetBrains Mono 9.5
     rect 333,684.56396 386.33337x150 fill #060606 radius 6

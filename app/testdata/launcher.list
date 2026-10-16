@@ -156,8 +156,8 @@ clip 170,105 1260x790 r 10
     text "⌘↵ starts · esc closes" @939.0469,188.2 #7c7566 JetBrains Mono 10
     rect 194,207.2 881x48 fill #060606 radius 6
     clip 194,207.2 881x48 r 6
-      text "I think the stale prices come from the usage cache never being invalidated when a plan changes: confirm that before fixing it, and keep the " @204,226.74712 #ece6d8 Inter 12.5
-      text "API response shape unchanged." @204,244.74712 #ece6d8 Inter 12.5
+      text "I think the stale results come from the search cache never being invalidated when an index is rebuilt: confirm that before fixing it, and keep " @204,226.74712 #ece6d8 Inter 12.5
+      text "the API response shape unchanged." @204,244.74712 #ece6d8 Inter 12.5
       rect 204,214.2 1x16 fill #ffd23f
     pop
     rect 194,207.2 881x48 radius 6 stroke 1 #ffd23f

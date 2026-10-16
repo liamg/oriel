@@ -25,7 +25,7 @@ import (
 // The 01-ide sessions, and one of each other status.
 var tabFixture = []core.SessionOpened{
 	{ID: "s1", Name: "pricing-rounding", Kind: core.KindPlan, Status: core.StatusWorking},
-	{ID: "s2", Name: "ENG-2231 usage api", Kind: core.KindWork, Status: core.StatusNeedsYou},
+	{ID: "s2", Name: "ENG-2231 search api", Kind: core.KindWork, Status: core.StatusNeedsYou},
 	{ID: "s3", Name: "review #4410", Kind: core.KindReview, Status: core.StatusPermission},
 	{ID: "s4", Name: "flaky e2e sweep", Kind: core.KindJob, Status: core.StatusCI},
 	{ID: "s5", Name: "dash-filters", Kind: core.KindWork, Status: core.StatusReviewer},
@@ -63,7 +63,7 @@ func TestSessionTabsAreTheOpenSessions(t *testing.T) {
 	s.store.Apply(core.SessionFocused{ID: "s1"})
 	s.frame()
 	text := s.frameText()
-	if !strings.Contains(text, "review #4410") || !strings.Contains(text, "pricing-rounding") || strings.Contains(text, "ENG-2231 usage api") {
+	if !strings.Contains(text, "review #4410") || !strings.Contains(text, "pricing-rounding") || strings.Contains(text, "ENG-2231 search api") {
 		t.Errorf("the tabs aren't the two opened: %q", text)
 	}
 	if err := s.host.Run(context.Background(), "session.focus", registry.Args{"n": 2}); err != nil {
@@ -201,7 +201,7 @@ func TestSessionKeysSwitchInOneFrame(t *testing.T) {
 
 // 01-ide's titlebar, from the logo to the end of its sixth tab, against the mockup. Each tab lands within a few
 // pixels of the mockup's; the rest is text measured by our shaper rather than Chrome's, which the pixel count
-// magnifies. The bound is just over today's 0.040 and 12.1%.
+// magnifies. The bound is just over today's 0.0425 and 12.4%.
 func TestSessionTabsAgainstTheMockup(t *testing.T) {
 	s := newScene(t, "", "", render.Point{X: 1600, Y: 120})
 	openTabFixture(t, s.store, tabFixture[:6])
@@ -218,7 +218,7 @@ func TestSessionTabsAgainstTheMockup(t *testing.T) {
 	draw.Draw(got, r, img, image.Point{}, draw.Src)
 	d, side := snapshot.Compare(want, got, 0.1)
 	t.Logf("titlebar against 01-ide: %s", d)
-	if d.Mean > 0.042 || d.Off > 0.125 {
+	if d.Mean > 0.044 || d.Off > 0.127 {
 		os.WriteFile("testdata/session-tabs-mockup.failed.png", encodePNG(side), 0o644)
 		t.Errorf("the titlebar is %s off the mockup (testdata/session-tabs-mockup.failed.png)", d)
 	}

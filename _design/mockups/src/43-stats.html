@@ -464,7 +464,7 @@ svg text{font-family:var(--mono)}
               <div style="position:relative;flex:1"><svg id="sesschart2" width="578" height="204"></svg>
                 <div class="tip" id="tip3"><span class="t">Thu Oct 9 · $21.40</span>
                   <span class="l"><i style="background:#5cd2ff"></i>pricing-rounding<b>$9.10</b></span>
-                  <span class="l"><i style="background:#ff8a1f"></i>ENG-2231 usage api<b>$5.80</b></span>
+                  <span class="l"><i style="background:#ff8a1f"></i>ENG-2231 search api<b>$5.80</b></span>
                   <span class="l"><i style="background:#a5e075"></i>flaky e2e sweep<b>$3.20</b></span>
                   <span class="l"><i style="background:var(--fg4)"></i>other · 4<b>$3.30</b></span></div>
               </div>
@@ -599,7 +599,7 @@ svg text{font-family:var(--mono)}
             <div class="row" style="margin-bottom:6px"><span class="cap">Recent</span><span class="mono dim" style="font-size:10px;margin-left:auto">⏎ open · ⌫ forget</span></div>
             <div class="cap" style="color:var(--fg4);margin:10px 0 4px 10px">Sessions</div>
             <div class="rec"><div class="ic" style="background:rgba(76,201,240,.12);color:var(--orange)">◆</div><div><div class="n">pricing-rounding</div><div class="p">plan · pricing, billing-ui · rethink/rounding</div></div><span class="w">2h</span></div>
-            <div class="rec"><div class="ic" style="background:rgba(255,95,109,.12);color:var(--red)">◆</div><div><div class="n">ENG-2231 usage api</div><div class="p">work · api, web · fix/stale-prices</div></div><span class="w">yesterday</span></div>
+            <div class="rec"><div class="ic" style="background:rgba(255,95,109,.12);color:var(--red)">◆</div><div><div class="n">ENG-2231 search api</div><div class="p">work · api, web · fix/stale-results</div></div><span class="w">yesterday</span></div>
             <div class="rec"><div class="ic" style="background:rgba(255,155,69,.12);color:var(--yellow)">▶</div><div><div class="n">job: sweep stale deps</div><div class="p">job · running · api, web</div></div><span class="w">4m</span></div>
             <div class="cap" style="color:var(--fg4);margin:12px 0 4px 10px">Directories</div>
             <div class="rec"><div class="ic" style="background:var(--cyanbg);color:var(--cyan)">▤</div><div><div class="n">oriel</div><div class="p">~/src/oriel · main</div></div><span class="w">10m</span></div>
@@ -866,7 +866,7 @@ const repoVals=REPOS.map((rp,j)=>{const r=rnd(31+j);
 
 // ---------- by session
 (function(){
-  const S=[['pricing-rounding','#5cd2ff',['#4cc9f0','#ff6fae'],['pricing','billing-ui'],3,'$61.20',412,'now'],['ENG-2231 usage api','#ff8a1f',['#a98bff','#4fe0a0'],['api','web'],5,'$48.90',903,'12m ago'],
+  const S=[['pricing-rounding','#5cd2ff',['#4cc9f0','#ff6fae'],['pricing','billing-ui'],3,'$61.20',412,'now'],['ENG-2231 search api','#ff8a1f',['#a98bff','#4fe0a0'],['api','web'],5,'$48.90',903,'12m ago'],
     ['ENG-2310 admin filters','#c792ff',['#ffd23f','#a98bff','#4fe0a0'],['admin-ui','api','web'],4,'$44.10',811,'now'],['flaky e2e sweep','#a5e075',['#4fe0a0','#ff9b45'],['web','infra'],2,'$29.80',640,'1h ago'],
     ['invoice-pdf','#ffcf5c',['#ff6fae'],['billing-ui'],6,'$27.40',522,'3d ago']];
   document.getElementById('sesslg').innerHTML=S.map(s=>`<span><i style="background:${s[1]}"></i>${s[0]}</span>`).join('')+`<span><i style="background:#4f4a40"></i>other · 59</span>`;

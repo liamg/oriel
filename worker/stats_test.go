@@ -108,7 +108,7 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 		return se
 	}
 	a := start("pricing-rounding", pricing, billing)
-	b := start("usage-api", api, billing)
+	b := start("search-api", api, billing)
 	// a: 3 file calls in pricing, 1 in billing-ui. b: 1 in api, 1 in billing-ui.
 	f.logs[agentDir(a)] = fixtureLog(t, []string{a.Projects[0].Dir, a.Projects[1].Dir}, []int{3, 1})
 	f.logs[agentDir(b)] = fixtureLog(t, []string{b.Projects[0].Dir, b.Projects[1].Dir}, []int{1, 1})
@@ -164,7 +164,7 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 // A provider with no log of its own has its events recorded by the worker, which the stats read.
 func TestStatsFromRecordedEvents(t *testing.T) {
 	r := newRig(t)
-	id, fs := r.workSession("Fix stale usage prices")
+	id, fs := r.workSession("Fix stale search results")
 	se := r.session(id)
 	p, _ := se.Primary()
 	fs.Emit(agent.TurnStart{})

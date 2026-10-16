@@ -49,7 +49,7 @@ flowchart LR
   provider, repos, worker, sandbox.
 - **From anywhere**: a ticket from any tracker, Linear or another (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
   ("fix CI" opens a work session on the PR's branch), or an agentbus review request.
-- **CLI**: `oriel new "fix stale usage prices" --repo pricing --ticket ENG-2231`, `oriel review <pr-url>`, `oriel open <session>`,
+- **CLI**: `oriel new "fix stale search results" --repo search --ticket ENG-2231`, `oriel review <pr-url>`, `oriel open <session>`,
   `oriel init <name> --template go-cli`, `oriel ~/src/foo` (direct).
 
 ### Repos on a worker
@@ -226,7 +226,7 @@ type Sessions interface {
   as it starts, by a model other than its agent's (`KindSpec.AutoReview`; `agents.md`, Guardrails).
 - **The launcher** (`ui.md` 04) lists the worker's kinds (`kinds.list`, `worker.KindSpec`: title, `Desc`, `About`,
   `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
-  The CLI takes its flags after the prompt too (`oriel new "fix stale usage prices" --repo pricing`), and every
+  The CLI takes its flags after the prompt too (`oriel new "fix stale search results" --repo search`), and every
   kind starts from it: `new --kind plan|work|tour|job|direct|scratch`, `review <pr-url>`, `init <name>`.
   A kind's `Variants` (RV-8: a tour's walkthrough, onboarding, archaeology, showcase, demo, incident and
   feasibility) are a picker beside the ticket and `--variant` on the CLI; the first is the default, and one the kind

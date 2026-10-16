@@ -278,7 +278,7 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 	for _, tool := range []registry.AgentTool{
 		{Name: "my_tickets", For: []string{assistantAgent}, ReadOnly: true, Reads: "linear", Desc: "The user's Linear tickets.",
 			Run: func(registry.Ctx, map[string]any) (any, error) {
-				return []map[string]string{{"key": "ENG-2231", "title": "usage api", "state": "In Progress"}}, nil
+				return []map[string]string{{"key": "ENG-2231", "title": "search api", "state": "In Progress"}}, nil
 			}},
 		{Name: "mission_control", For: []string{assistantAgent}, ReadOnly: true, Reads: "mission control", Desc: "What mission control shows.",
 			Run: func(registry.Ctx, map[string]any) (any, error) { return "2 PRs failing CI", nil }},

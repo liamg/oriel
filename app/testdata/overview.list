@@ -59,8 +59,8 @@ clip 44,38 1556x936 r 0
   clip 78,64 1488x296.2875 r 12
     text "usage" @96,95.712 #ece6d8 Space Grotesk 18
     text "~/src/usage" @168.05624,93.444 #7c7566 JetBrains Mono 11
-    rect 1417.75,85.98399 7x7 fill #4cc9f0 radius 3.5
-    text "fix/stale-prices" @1432.75,93.624 #b3ab99 JetBrains Mono 11.5
+    rect 1410.5469,85.98399 7x7 fill #4cc9f0 radius 3.5
+    text "fix/stale-results" @1425.5469,93.624 #b3ab99 JetBrains Mono 11.5
     rect 78,114.968 1488x1 fill #24221d
     clip 78,115.968 330x169.27602 r 0
       text "LANGUAGES" @96,139.658 #7c7566 JetBrains Mono 9.5

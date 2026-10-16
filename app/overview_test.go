@@ -34,7 +34,7 @@ func gitRepo(t testing.TB, dir string, files map[string]string, commits int) {
 		}
 	}
 	os.MkdirAll(dir, 0o755)
-	run(nil, "init", "-q", "-b", "fix/stale-prices")
+	run(nil, "init", "-q", "-b", "fix/stale-results")
 	for name, body := range files {
 		os.MkdirAll(filepath.Join(dir, filepath.Dir(name)), 0o755)
 		os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644)
@@ -116,7 +116,7 @@ func TestOverviewSnapshot(t *testing.T) {
 		return dir
 	})
 	text := s.frameText()
-	for _, want := range []string{"usage", "~/src/usage", "fix/stale-prices", "1,300", "Go", "70%", "SQL", "commits in the last year",
+	for _, want := range []string{"usage", "~/src/usage", "fix/stale-results", "1,300", "Go", "70%", "SQL", "commits in the last year",
 		"Change 1", "Liam Galvin", "+ 1 more · 5 people"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the overview doesn't show %q:\n%s", want, text)

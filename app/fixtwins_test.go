@@ -91,10 +91,10 @@ var fixEntries = []fixEntry{
 	}},
 	{"conflicts on the Ship page", "conflict", func(t *testing.T) *errScene {
 		s, _, _, se, ups := shipScene(t)
-		writeFiles(t, ups["usage-api"], map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
-		git(t, ups["usage-api"], "commit", "-q", "-am", "routes")
-		git(t, ups["usage-api"], "push", "-q", "origin", "main")
-		dir := shipDir(se, "usage-api")
+		writeFiles(t, ups["search-api"], map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
+		git(t, ups["search-api"], "commit", "-q", "-am", "routes")
+		git(t, ups["search-api"], "push", "-q", "origin", "main")
+		dir := shipDir(se, "search-api")
 		writeFiles(t, dir, map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 3\n"})
 		git(t, dir, "commit", "-q", "-am", "ours")
 		s.run("ship.open", nil)

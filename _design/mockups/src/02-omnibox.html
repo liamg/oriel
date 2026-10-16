@@ -46,9 +46,9 @@ body{position:relative}
   <div class="bodyx">
     <div class="list">
       <div class="sec"><span class="cap">Sessions</span><span class="n">3 of 9</span></div>
-      <div class="it on"><span class="dot r"></span><b><span class="m">pri</span>cing api usage</b><span class="sub">work · ENG-2231 · acme/cloud</span><span class="rt"><span>replied 6m</span><span class="kbd">⌘2</span></span></div>
+      <div class="it on"><span class="dot r"></span><b><span class="m">pri</span>ority search fix</b><span class="sub">work · ENG-2231 · acme/cloud</span><span class="rt"><span>replied 6m</span><span class="kbd">⌘2</span></span></div>
       <div class="it"><span class="dot o"></span><b><span class="m">pri</span>cing-rounding</b><span class="sub">plan · pricing</span><span class="rt"><span>working · 0:41</span><span class="kbd">⌘1</span></span></div>
-      <div class="it"><span class="dot i"></span><span><span class="m">pri</span>ce-feed backfill</span><span class="sub">job · done · yesterday</span><span class="rt"><span>archived</span></span></div>
+      <div class="it"><span class="dot i"></span><span><span class="m">pri</span>ce-list backfill</span><span class="sub">job · done · yesterday</span><span class="rt"><span>archived</span></span></div>
       <div class="sec"><span class="cap">Commands</span></div>
       <div class="it"><span class="ico">+</span><span>New plan from <span class="m">pri</span>ce…</span><span class="rt">plan</span></div>
       <div class="it"><span class="ico">⇲</span><span>Review PR by URL…</span><span class="rt">review</span></div>
@@ -59,13 +59,13 @@ body{position:relative}
       <div class="sec"><span class="cap">Symbols</span></div>
       <div class="it"><span class="ico" style="color:var(--f)">ƒ</span><span><span class="m">Pri</span>ceForTier</span><span class="sub">pricing/tiers.go:88</span><span class="rt">gopls</span></div>
       <div class="sec"><span class="cap">Tickets &amp; PRs</span></div>
-      <div class="it"><span class="ico" style="color:var(--violet)">◆</span><span>ENG-2240 <span class="m">Pri</span>ce cache invalidation on plan change</span><span class="rt"><span class="chip v">todo</span></span></div>
-      <div class="it"><span class="ico" style="color:var(--green)">⎇</span><span>#4412 fix: <span class="m">pri</span>ce lookup for spot instances</span><span class="rt"><span class="chip y">review requested</span></span></div>
+      <div class="it"><span class="ico" style="color:var(--violet)">◆</span><span>ENG-2240 <span class="m">Pri</span>me the result cache after a reindex</span><span class="rt"><span class="chip v">todo</span></span></div>
+      <div class="it"><span class="ico" style="color:var(--green)">⎇</span><span>#4412 fix: <span class="m">pri</span>ce lookup for bundles</span><span class="rt"><span class="chip y">review requested</span></span></div>
     </div>
     <div class="prev">
       <div class="row gap8"><span class="dot r"></span><span class="cap" style="color:var(--red)">Needs you</span><span class="chip" style="margin-left:auto">claude opus</span></div>
       <h3>pricing api usage</h3>
-      <div class="kv"><span>ticket</span><span>ENG-2231 · Usage API returns stale prices</span><span>repos</span><span>cloud, pricing-service</span><span>branch</span><span>liam/eng-2231-usage-api</span><span>worker</span><span>devbox</span><span>diff</span><span><span style="color:var(--green)">+214</span> <span style="color:var(--red)">−38</span> · 9 files</span></div>
+      <div class="kv"><span>ticket</span><span>ENG-2231 · Search API returns stale results</span><span>repos</span><span>cloud, search-service</span><span>branch</span><span>liam/eng-2231-search-api</span><span>worker</span><span>devbox</span><span>diff</span><span><span style="color:var(--green)">+214</span> <span style="color:var(--red)">−38</span> · 9 files</span></div>
       <div class="need"><div class="t">“Should stale entries be evicted on read, or by the nightly job? Both work; read-time is simpler but adds 4ms p99.”</div><div class="s">claude replied on PLAN.md:31 · 6m ago</div></div>
       <div><div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="cap">Tasks</span><span class="mono dim" style="font-size:10px">3/6</span></div><div class="bar g" style="width:100%;height:3px"><i style="width:50%"></i></div></div>
       <div><span class="cap">Last moves</span>
@@ -73,7 +73,7 @@ body{position:relative}
           <div><span class="tm">6m</span><span style="color:var(--fg2)">replied</span> PLAN.md:31</div>
           <div><span class="tm">8m</span><span style="color:var(--green)">✓</span> go test ./usage/... (42 passed)</div>
           <div><span class="tm">11m</span>edit usage/cache.go +61 −12</div>
-          <div><span class="tm">14m</span>read pricing-service/api/prices.go</div>
+          <div><span class="tm">14m</span>read search-service/api/prices.go</div>
         </div></div>
     </div>
   </div>

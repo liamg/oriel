@@ -229,7 +229,7 @@ func sessionSpec(cmd string, args []string, wd string, stderr io.Writer) (spec c
 	template := fs.String("template", "empty", "init: empty, go-module, go-cli, or a git URL")
 	dir := fs.String("dir", "", "init: where the repo goes (~/src if empty)")
 	sandboxed := fs.Bool("sandbox", false, "run the agent in a container")
-	// Flags may follow the arguments: oriel new "fix stale usage prices" --repo pricing.
+	// Flags may follow the arguments: oriel new "fix stale search results" --repo search.
 	for {
 		if err := fs.Parse(args); err != nil {
 			return spec, nil, err

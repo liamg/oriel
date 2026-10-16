@@ -37,7 +37,7 @@ func shipRepo(t *testing.T, name string, files map[string]string) (checkout, ups
 	return checkout, upstream
 }
 
-// shipScene is 18's session: usage-api and web-dashboard on GitHub (a fake), a work session on both with the fake
+// shipScene is 18's session: search-api and web-dashboard on GitHub (a fake), a work session on both with the fake
 // agent, and the window on it. more changes the app's config besides.
 func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localWorker, hub *ghtest.Server, se core.SessionState, ups map[string]string) {
 	t.Helper()
@@ -47,7 +47,7 @@ func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localWorke
 	t.Setenv("GIT_COMMITTER_EMAIL", "you@example.com")
 	hub = ghtest.New(t)
 	lw = newWorkerWith(t, worker.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
-	api, apiUp := shipRepo(t, "usage-api", map[string]string{
+	api, apiUp := shipRepo(t, "search-api", map[string]string{
 		"internal/api/usage/handler.go":    "package usage\n\nfunc Handle() {}\n",
 		"internal/api/usage/routes.go":     "package usage\n\nvar Routes = 1\n",
 		".github/CODEOWNERS":               "/internal/api/  @acme/platform-team @jkowalski\n",
@@ -61,13 +61,13 @@ func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localWorke
 		}
 	})
 	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
-	s.run("session.start", registry.Args{"kind": "work", "prompt": "Usage API rate-limit headers", "ticket": "ENG-2231", "provider": "fake",
+	s.run("session.start", registry.Args{"kind": "work", "prompt": "Search API rate-limit headers", "ticket": "ENG-2231", "provider": "fake",
 		"repos": []string{api, web}})
 	st := waitState(t, s.store, "the session in front", func(st core.State) bool { return st.Focus != "" })
 	sess, _ := st.Session(st.Focus)
 	se = sess.Snapshot()
 	s.reopen()
-	return s, lw, hub, se, map[string]string{"usage-api": apiUp, "web-dashboard": webUp}
+	return s, lw, hub, se, map[string]string{"search-api": apiUp, "web-dashboard": webUp}
 }
 
 func (s *errScene) ship() *shipPlugin {
@@ -106,13 +106,13 @@ func shipDir(se core.SessionState, name string) string {
 func TestShipFlow(t *testing.T) {
 	s, lw, hub, se, ups := shipScene(t)
 	x := s.ship()
-	apiDir, webDir := shipDir(se, "usage-api"), shipDir(se, "web-dashboard")
+	apiDir, webDir := shipDir(se, "search-api"), shipDir(se, "web-dashboard")
 	agent := lw.fake.WaitStarted(t)
 
 	s.run("ship.open", nil)
 	s.shipSettle(t, "the Ship page", func() bool {
 		f := s.frameText()
-		return strings.Contains(f, "SHIP") && strings.Contains(f, "usage-api") && strings.Contains(f, "web-dashboard") && strings.Contains(f, "BEFORE THIS SHIPS")
+		return strings.Contains(f, "SHIP") && strings.Contains(f, "search-api") && strings.Contains(f, "web-dashboard") && strings.Contains(f, "BEFORE THIS SHIPS")
 	})
 	s.wantFrame(t, "ENG-2231", "Plan approved", "All threads resolved", "1 open", "Tests ran this session", "AI review", "optional", "MERGE ORDER", "TICKET")
 
@@ -122,7 +122,7 @@ func TestShipFlow(t *testing.T) {
 		"internal/api/usage/handler_test.go": "package usage\n",
 		"internal/api/usage/routes.go":       "package usage\n\nvar Routes = 2\n",
 	})
-	agent.Call(t, "commit_draft", map[string]any{"project": "usage-api", "message": "feat(api): set Retry-After on rate-limited usage responses"})
+	agent.Call(t, "commit_draft", map[string]any{"project": "search-api", "message": "feat(api): set Retry-After on rate-limited usage responses"})
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "the uncommitted files and the draft", func() bool {
 		f := s.frameText()
@@ -132,13 +132,13 @@ func TestShipFlow(t *testing.T) {
 	s.click(centre(s.access("internal/api/usage/routes.go").Bounds))
 	s.click(centre(s.access("Commit").Bounds))
 	s.shipSettle(t, "the commit", func() bool {
-		sh, _ := x.ship(se.ID, "usage-api")
+		sh, _ := x.ship(se.ID, "search-api")
 		return len(sh.Files) == 1 && len(sh.Unpushed) == 1
 	})
 	if got := git(t, apiDir, "log", "-1", "--format=%s%n%an"); got != "feat(api): set Retry-After on rate-limited usage responses\nYou\n" {
 		t.Errorf("the commit: %q", got)
 	}
-	if sh, _ := x.ship(se.ID, "usage-api"); sh.Files[0].Path != "internal/api/usage/routes.go" {
+	if sh, _ := x.ship(se.ID, "search-api"); sh.Files[0].Path != "internal/api/usage/routes.go" {
 		t.Errorf("the file left out was committed: %+v", sh.Files)
 	}
 
@@ -157,7 +157,7 @@ func TestShipFlow(t *testing.T) {
 	s.wantFrame(t, "21 lines unreviewed", "Commit anyway…")
 	s.click(centre(s.access("Commit anyway…").Bounds))
 	s.shipSettle(t, "the forced commit", func() bool {
-		sh, _ := x.ship(se.ID, "usage-api")
+		sh, _ := x.ship(se.ID, "search-api")
 		return len(sh.Files) == 0 && len(sh.Unpushed) == 2
 	})
 	gate.Dispose()
@@ -166,44 +166,44 @@ func TestShipFlow(t *testing.T) {
 	}
 
 	// Behind its base: Rebase brings it up to date.
-	writeFiles(t, ups["usage-api"], map[string]string{"README.md": "# usage-api\n"})
-	git(t, ups["usage-api"], "add", "-A")
-	git(t, ups["usage-api"], "commit", "-q", "-m", "docs")
-	git(t, ups["usage-api"], "push", "-q", "origin", "main")
+	writeFiles(t, ups["search-api"], map[string]string{"README.md": "# search-api\n"})
+	git(t, ups["search-api"], "add", "-A")
+	git(t, ups["search-api"], "commit", "-q", "-m", "docs")
+	git(t, ups["search-api"], "push", "-q", "origin", "main")
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "behind main", func() bool { return strings.Contains(s.frameText(), "Behind main") })
 	s.wantFrame(t, "no conflicts predicted")
 	s.click(centre(s.access("Rebase").Bounds))
-	s.shipSettle(t, "the rebase", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return sh.Behind == 0 && !sh.Synced.IsZero() })
+	s.shipSettle(t, "the rebase", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.Behind == 0 && !sh.Synced.IsZero() })
 	s.wantFrame(t, "Up to date with main", "rebased")
 
 	// Unpushed → Push.
 	s.wantFrame(t, "Unpushed", "2 commits")
 	s.click(centre(s.access("Push").Bounds))
-	s.shipSettle(t, "the push", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return sh.Pushed && len(sh.Unpushed) == 0 })
+	s.shipSettle(t, "the push", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.Pushed && len(sh.Unpushed) == 0 })
 
 	// Raise PR: a main tab, the agent's draft, CODEOWNERS as reviewers; raised as a draft.
-	agent.Call(t, "pr_draft", map[string]any{"project": "usage-api", "title": "feat(usage): back off on 429 using Retry-After",
+	agent.Call(t, "pr_draft", map[string]any{"project": "search-api", "title": "feat(search): back off on 429 using Retry-After",
 		"body": "## What\nRetry-After on 429s.\n\n## Why\nINF-2231.\n"})
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "the PR draft", func() bool { return strings.Contains(s.frameText(), "draft ready") })
 	s.click(centre(s.access("Raise PR…").Bounds))
 	s.until(t, "the Raise PR tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
 	if !slices.ContainsFunc(s.visibleRefs(), func(v layout.ViewRef) bool {
-		return v.ID == PRView && v.Instance == "usage-api" && v.Title == "Raise PR · usage-api"
+		return v.ID == PRView && v.Instance == "search-api" && v.Title == "Raise PR · search-api"
 	}) {
 		t.Errorf("the tab: %+v", s.visibleRefs())
 	}
 	s.wantFrame(t, "TITLE", "BODY", "DRAFTED BY FAKE", "TEMPLATE FILLED", "REVIEWERS", "platform-team", "jkowalski", "CODEOWNERS",
 		"CROSS-LINKED PRS", "pairs with web-dashboard", "BEFORE THIS SHIPS")
-	if v := s.access("Title").Value; v != "feat(usage): back off on 429 using Retry-After" {
+	if v := s.access("Title").Value; v != "feat(search): back off on 429 using Retry-After" {
 		t.Errorf("the title field has %q", v)
 	}
 	s.lint("the Raise PR tab")
 	s.click(centre(s.access("Raise as draft").Bounds))
-	s.shipSettle(t, "the PR", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return sh.PR != nil })
-	apiPRs := hub.PRs("acme/usage-api")
-	if len(apiPRs) != 1 || !apiPRs[0].Draft || apiPRs[0].Title != "feat(usage): back off on 429 using Retry-After" ||
+	s.shipSettle(t, "the PR", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.PR != nil })
+	apiPRs := hub.PRs("acme/search-api")
+	if len(apiPRs) != 1 || !apiPRs[0].Draft || apiPRs[0].Title != "feat(search): back off on 429 using Retry-After" ||
 		!strings.HasPrefix(apiPRs[0].Body, "## What\nRetry-After on 429s.") || !slices.Equal(apiPRs[0].Reviewers, []string{"jkowalski", "acme/platform-team"}) {
 		t.Fatalf("the PR on GitHub: %+v", apiPRs)
 	}
@@ -221,15 +221,15 @@ func TestShipFlow(t *testing.T) {
 	s.click(centre(s.access("Push + raise both PRs").Bounds))
 	s.shipSettle(t, "both PRs", func() bool {
 		sh, _ := x.ship(se.ID, "web-dashboard")
-		return sh.PR != nil && x.doing(se.ID, "usage-api") == "" && x.doing(se.ID, "web-dashboard") == ""
+		return sh.PR != nil && x.doing(se.ID, "search-api") == "" && x.doing(se.ID, "web-dashboard") == ""
 	})
-	webPRs, apiPRs := hub.PRs("acme/web-dashboard"), hub.PRs("acme/usage-api")
+	webPRs, apiPRs := hub.PRs("acme/web-dashboard"), hub.PRs("acme/search-api")
 	for _, b := range []string{apiPRs[0].Body, webPRs[0].Body} {
-		if !strings.Contains(b, "1. acme/usage-api#") || !strings.Contains(b, "2. acme/web-dashboard#") || strings.Count(b, "(this PR)") != 1 {
+		if !strings.Contains(b, "1. acme/search-api#") || !strings.Contains(b, "2. acme/web-dashboard#") || strings.Count(b, "(this PR)") != 1 {
 			t.Errorf("a PR body doesn't cross-link both in merge order:\n%s", b)
 		}
 	}
-	s.wantFrame(t, "1 · usage-api → #", "2 · web-dashboard → #", "depends on usage-api #")
+	s.wantFrame(t, "1 · search-api → #", "2 · web-dashboard → #", "depends on search-api #")
 
 	// Checks: failing CI shows on the column, the header line and the dock's checklist, with the log's line.
 	t0 := time.Now().Add(-3 * time.Minute)
@@ -248,9 +248,9 @@ func TestShipFlow(t *testing.T) {
 	}
 	s.lint("the Ship page")
 
-	// Ready for review takes usage-api's PR out of draft.
+	// Ready for review takes search-api's PR out of draft.
 	s.click(centre(s.access("Ready for review").Bounds))
-	s.shipSettle(t, "ready", func() bool { return !hub.PRs("acme/usage-api")[0].Draft })
+	s.shipSettle(t, "ready", func() bool { return !hub.PRs("acme/search-api")[0].Draft })
 
 	// The dock's Pull request checklist, for web-dashboard.
 	s.run("project.open", registry.Args{"project": "web-dashboard"})
@@ -268,11 +268,11 @@ func TestShipFlow(t *testing.T) {
 func TestShipRaiseHookStopsARaise(t *testing.T) {
 	s, _, hub, se, _ := shipScene(t)
 	x := s.ship()
-	writeFiles(t, shipDir(se, "usage-api"), map[string]string{"x.go": "package x\n"})
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{"x.go": "package x\n"})
 	s.run("ship.refresh", nil)
-	s.shipSettle(t, "the file", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return len(sh.Files) == 1 })
-	s.run("ship.commit", registry.Args{"project": "usage-api", "message": "feat: x"})
-	s.shipSettle(t, "the commit", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return sh.Commits == 1 })
+	s.shipSettle(t, "the file", func() bool { sh, _ := x.ship(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x"})
+	s.shipSettle(t, "the commit", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.Commits == 1 })
 	asked := 0
 	s.reg.Hook(registry.Hook{Event: "ShipRaise", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 		asked++
@@ -281,20 +281,20 @@ func TestShipRaiseHookStopsARaise(t *testing.T) {
 		}
 		return registry.Verdict{}, nil
 	}})
-	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
+	s.run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.until(t, "the tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
 	s.click(centre(s.access("Push + raise PR").Bounds))
 	s.wantFrame(t, "verify the change first: the quiz runs before the PR")
-	if len(hub.PRs("acme/usage-api")) != 0 {
+	if len(hub.PRs("acme/search-api")) != 0 {
 		t.Fatal("a vetoed raise raised the PR")
 	}
 	s.click(centre(s.access("Push + raise PR").Bounds))
-	s.shipSettle(t, "the PR", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return sh.PR != nil })
-	if got := hub.PRs("acme/usage-api"); len(got) != 1 || got[0].Title != "feat: x" || got[0].Body != "## What\n\n## Why\n" {
+	s.shipSettle(t, "the PR", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.PR != nil })
+	if got := hub.PRs("acme/search-api"); len(got) != 1 || got[0].Title != "feat: x" || got[0].Body != "## What\n\n## Why\n" {
 		t.Errorf("raised from the first commit and the template: %+v", got)
 	}
 	// Edit PR once it's raised.
-	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
+	s.run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.until(t, "Edit PR", func() bool { return strings.Contains(s.frameText(), "EDIT PR #") })
 }
 
@@ -305,7 +305,7 @@ func TestShipRaiseHookStopsARaise(t *testing.T) {
 func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
 	s, _, _, se, _ := shipScene(t)
 	x := s.ship()
-	apiDir := shipDir(se, "usage-api")
+	apiDir := shipDir(se, "search-api")
 	reviewed := false
 	s.reg.Command(registry.Command{ID: "test.review", Title: "Review", Run: func(registry.Ctx, registry.Args) error { reviewed = true; return nil }})
 	s.reg.Contribute(registry.CommitGate{Name: "fake", Label: "Agent lines reviewed", Check: func(c registry.CommitCheck) registry.GateResult {
@@ -315,12 +315,12 @@ func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
 	s.run("ship.open", nil)
 	writeFiles(t, apiDir, map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
 	s.run("ship.refresh", nil)
-	s.shipSettle(t, "the file", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return len(sh.Files) == 1 })
+	s.shipSettle(t, "the file", func() bool { sh, _ := x.ship(se.ID, "search-api"); return len(sh.Files) == 1 })
 	s.typeInto(t, "Commit message", "feat(api): routes")
 	s.click(centre(s.access("Commit").Bounds))
 	s.shipSettle(t, "the gate", func() bool { return strings.Contains(s.frameText(), "Commit anyway…") })
 	s.wantFrame(t, "5 agent-written lines unread", "Review 5 lines")
-	if sh, _ := x.ship(se.ID, "usage-api"); len(sh.Files) != 1 {
+	if sh, _ := x.ship(se.ID, "search-api"); len(sh.Files) != 1 {
 		t.Fatal("the gate didn't hold the commit")
 	}
 	s.click(centre(s.access("Review 5 lines").Bounds))
@@ -328,7 +328,7 @@ func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
 		t.Error("Review 5 lines didn't run the gate's review")
 	}
 	s.click(centre(s.access("Commit anyway…").Bounds))
-	s.shipSettle(t, "the commit", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return len(sh.Files) == 0 })
+	s.shipSettle(t, "the commit", func() bool { sh, _ := x.ship(se.ID, "search-api"); return len(sh.Files) == 0 })
 	if got := git(t, apiDir, "log", "-1", "--format=%B"); !strings.Contains(got, "feat(api): routes") || !strings.Contains(got, "Unreviewed-Agent-Lines: 5") {
 		t.Errorf("the commit's message: %q", got)
 	}
@@ -338,7 +338,7 @@ func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
 			return false
 		}
 		o := sess.Snapshot().Overrides
-		return len(o) == 1 && o[0].Gate == "fake" && o[0].Trailer == "Unreviewed-Agent-Lines: 5" && o[0].Project == "usage-api"
+		return len(o) == 1 && o[0].Gate == "fake" && o[0].Trailer == "Unreviewed-Agent-Lines: 5" && o[0].Project == "search-api"
 	})
 }
 
@@ -347,11 +347,11 @@ func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
 func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	s, lw, _, se, _ := shipScene(t)
 	x := s.ship()
-	apiDir := shipDir(se, "usage-api")
+	apiDir := shipDir(se, "search-api")
 	agent := lw.fake.WaitStarted(t)
 	s.run("ship.open", nil)
 	writeFiles(t, apiDir, map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
-	agent.Call(t, "commit_draft", map[string]any{"project": "usage-api", "message": "feat(api): two routes"})
+	agent.Call(t, "commit_draft", map[string]any{"project": "search-api", "message": "feat(api): two routes"})
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "the draft", func() bool { return strings.Contains(s.frameText(), "DRAFTED BY FAKE") })
 	if strings.Contains(s.frameText(), "STALE") {
@@ -367,7 +367,7 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	onWorker := func() worker.Draft {
 		ss, _ := lw.w.ShipRead(t.Context(), worker.ShipReq{Session: se.ID})
 		for _, sh := range ss {
-			if sh.Project == "usage-api" {
+			if sh.Project == "search-api" {
 				return sh.CommitDraft
 			}
 		}
@@ -380,11 +380,11 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	s.now = s.now.Add(draftSaveAfter)
 	s.frame()
 	s.shipSettle(t, "the whole message kept", func() bool { return onWorker().Body == "feat(api): two routes (3)" })
-	if out := agent.Call(t, "commit_draft", map[string]any{"project": "usage-api", "message": "feat(api): three routes"}); !strings.Contains(out, "the user wrote") {
+	if out := agent.Call(t, "commit_draft", map[string]any{"project": "search-api", "message": "feat(api): three routes"}); !strings.Contains(out, "the user wrote") {
 		t.Errorf("the agent's tool overwrote the user's draft: %q", out)
 	}
 	s.run("ship.refresh", nil)
-	s.shipSettle(t, "the read", func() bool { sh, _ := x.ship(se.ID, "usage-api"); return sh.CommitDraft.By == worker.DraftByYou })
+	s.shipSettle(t, "the read", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.CommitDraft.By == worker.DraftByYou })
 	if v := s.access("Commit message").Value; v != "feat(api): two routes (3)" {
 		t.Errorf("the box has %q", v)
 	}
@@ -402,7 +402,7 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	if got := agent.WaitSent(t); !strings.Contains(got.Text, "commit_draft") {
 		t.Errorf("Redraft sent %q", got.Text)
 	}
-	if out := agent.Call(t, "commit_draft", map[string]any{"project": "usage-api", "message": "feat(api): three routes"}); out != "saved" {
+	if out := agent.Call(t, "commit_draft", map[string]any{"project": "search-api", "message": "feat(api): three routes"}); out != "saved" {
 		t.Errorf("after Redraft the tool said %q", out)
 	}
 	s.run("ship.refresh", nil)

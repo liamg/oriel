@@ -6,9 +6,9 @@
   "issue": {
    "id": "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231",
    "identifier": "ENG-2231",
-   "title": "Usage API returns stale prices after plan change",
-   "url": "https://linear.app/acme/issue/ENG-2231/usage-api-returns-stale-prices-after-plan-change",
-   "description": "Customers on the new Team plan see last month's unit prices in /v1/usage for up to 24h. Reported by 3 accounts; repro steps and a HAR attached.\n\nSteps:\n1. Move an org from Pro to Team\n2. GET /v1/usage\n3. Unit prices are Pro's until the nightly job runs",
+   "title": "Search API returns stale results after a reindex",
+   "url": "https://linear.app/acme/issue/ENG-2231/search-api-returns-stale-results-after-a-reindex",
+   "description": "Customers who rebuild their index see last week's results from /v1/search for up to 24h. Reported by 3 accounts; repro steps and a HAR attached.\n\nSteps:\n1. Rebuild an org's index\n2. GET /v1/search\n3. Results are the old index's until the nightly job runs",
    "priorityLabel": "High",
    "state": {
     "name": "Todo",
@@ -40,7 +40,7 @@
       }
      },
      {
-      "body": "Probably the price table cache in usage-api. It's keyed by org, not org + plan.",
+      "body": "Probably the result cache in search-api. It's keyed by org, not org + index version.",
       "createdAt": "2026-10-14T11:20:15.000Z",
       "user": {
        "name": "Priya Kaur",
@@ -60,13 +60,13 @@
    "attachments": {
     "nodes": [
      {
-      "title": "usage-stale-prices.har",
+      "title": "search-stale-results.har",
       "subtitle": "412 KB",
-      "url": "https://uploads.linear.app/1a2b3c/usage-stale-prices.har",
+      "url": "https://uploads.linear.app/1a2b3c/search-stale-results.har",
       "createdAt": "2026-10-13T09:58:40.000Z"
      },
      {
-      "title": "#4398 fix(usage): key price cache by plan",
+      "title": "#4398 fix(search): key result cache by index version",
       "subtitle": "acme/cloud",
       "url": "https://github.com/acme/cloud/pull/4398",
       "createdAt": "2026-10-14T16:02:11.000Z"

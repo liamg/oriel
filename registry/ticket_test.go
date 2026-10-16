@@ -24,7 +24,7 @@ func TestTicketTrackers(t *testing.T) {
 			if key == "ENG-404" {
 				return registry.Ticket{}, errors.New("linear has no ticket ENG-404")
 			}
-			return registry.Ticket{Key: key, Title: "Usage API returns stale prices"}, nil
+			return registry.Ticket{Key: key, Title: "Search API returns stale results"}, nil
 		},
 		Assigned: func(context.Context) ([]registry.Ticket, error) { return []registry.Ticket{{Key: "ENG-1"}}, nil }})
 	if got := registry.TicketTrackers(r); len(got) != 2 || got[0].Name != "linear" {

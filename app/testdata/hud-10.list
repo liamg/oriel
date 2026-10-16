@@ -221,7 +221,7 @@ clip 778.375,52 369.1875x192.79999 r 0
   text "pricing-rounding" @805.375,157.656 #b3ab99 JetBrains Mono 10.5
   text "" @1135.5625,157.656 #7c7566 JetBrains Mono 10.5
   rect 790.375,169.37599 7x7 fill #4fe0a0 radius 3.5
-  text "usage-api" @805.375,176.656 #b3ab99 JetBrains Mono 10.5
+  text "search-api" @805.375,176.656 #b3ab99 JetBrains Mono 10.5
   text "" @1135.5625,176.656 #7c7566 JetBrains Mono 10.5
   rect 790.375,188.37599 7x7 fill #4fe0a0 radius 3.5
   text "admin-filters" @805.375,195.656 #b3ab99 JetBrains Mono 10.5

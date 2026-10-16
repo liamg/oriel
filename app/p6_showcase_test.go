@@ -39,7 +39,7 @@ func showExplainer(_ context.Context, r registry.ExplainRequest) (string, error)
 		"(`t.Floor()`), which skewed sums of many lines.", nil
 }
 
-// showLedger is a review ledger as 18 has it: 38 of usage-api's 59 agent-written lines read, 21 of them uncommitted
+// showLedger is a review ledger as 18 has it: 38 of search-api's 59 agent-written lines read, 21 of them uncommitted
 // and unread.
 func showLedger(dir string) registry.ReviewLedger {
 	return registry.ReviewLedger{Name: "showcase", Order: -1, Get: func(root string) registry.Ledger {
@@ -77,7 +77,7 @@ func showSession(t *testing.T, s *errScene, name, project, dir string) {
 // shipShowcase is 18's session with the review ledger counted and web-dashboard's CI failing.
 func shipShowcase(t *testing.T) (*errScene, core.SessionState) {
 	s, se := mockup18(t)
-	s.reg.Contribute(showLedger(sessionProjectDir(se, "usage-api")))
+	s.reg.Contribute(showLedger(sessionProjectDir(se, "search-api")))
 	s.reg.Contribute(registry.Explainer{Name: "show", Explain: showExplainer, Label: func() string { return "fork of codex · knows this session" }})
 	r := s.ship().reports[se.ID]
 	r.ships[0].PRDraft.Body = "## What\n\nRate-limited usage responses (429) now carry `Retry-After`, from the limiter's reset time " +
@@ -85,8 +85,8 @@ func shipShowcase(t *testing.T) (*errScene, core.SessionState) {
 		"lockstep (ENG-2231); the dashboard (web-dashboard #812) now waits as told.\n\n## Testing\n\n- table test of the 429 path\n" +
 		"- `go test ./...` passes\n"
 	web := &r.ships[1]
-	web.PR.Body = "## What\n\nWhen the usage API answers 429, the dashboard waits for `Retry-After` before it polls again, " +
-		"and says so under the chart.\n\n## Why\n\nINF-2231. Depends on acme/usage-api's PR.\n"
+	web.PR.Body = "## What\n\nWhen the search API answers 429, the dashboard waits for `Retry-After` before it polls again, " +
+		"and says so under the chart.\n\n## Why\n\nINF-2231. Depends on acme/search-api's PR.\n"
 	web.Checks[3].Conclusion = "failure"
 	web.Checks[3].Actions = true
 	web.FailLine = "--- FAIL: TestUsageBackoff (0.02s)  usage_test.go:88: Retry-After = 1, want 2"
@@ -113,7 +113,7 @@ func TestShowcaseP6RaisePR(t *testing.T) {
 	s, _ := shipShowcase(t)
 	s.run("view.close", registry.Args{"id": ShipView})
 	s.run("project.panel", registry.Args{"name": "pull-request"})
-	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
+	s.run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.shot(t, "p6-02-raise-pr")
 
 	d, _ := shipShowcase(t)
@@ -174,20 +174,20 @@ func TestShowcaseP6GitHub(t *testing.T) {
 	ag.WaitSent(t)
 	ag.Emit(agent.TurnStart{})
 	ag.Emit(agent.TurnEnd{})
-	apiDir := shipDir(se, "usage-api")
+	apiDir := shipDir(se, "search-api")
 	writeFiles(t, apiDir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nimport \"time\"\n\n" +
 		"// Handle says how long to wait.\nfunc Handle(cfg Config) time.Duration {\n" +
 		"\twait := cfg.RetryAfter\n\tif wait == 0 {\n\t\twait = 2 * time.Second\n\t}\n\treturn wait\n}\n"})
 	var branch string
 	for _, p := range se.Projects {
-		if p.Name == "usage-api" {
+		if p.Name == "search-api" {
 			branch = p.Branch
 		}
 	}
-	pr := hub.AddPR("acme/usage-api", gh.PR{Title: "feat(api): usage", Head: branch, Base: "main"})
-	root := hub.AddReviewComment("acme/usage-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
+	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat(api): usage", Head: branch, Base: "main"})
+	root := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
 		Path: "internal/api/usage/handler.go", Line: 9, Body: "Silently defaulting to 2s will hide config mistakes. Can this return an error instead?"})
-	hub.AddReview("acme/usage-api", pr.Number, gh.Review{User: "priya-k", Association: "MEMBER", State: gh.ReviewChangesRequested})
+	hub.AddReview("acme/search-api", pr.Number, gh.Review{User: "priya-k", Association: "MEMBER", State: gh.ReviewChangesRequested})
 	s.run("github.sync", nil)
 	var tid core.ThreadID
 	s.until(t, "the mirrored thread", func() bool {
@@ -246,7 +246,7 @@ func TestShowcaseP6Walkthrough(t *testing.T) {
 
 func TestShowcaseP6Verify(t *testing.T) {
 	s, _, _, _ := verifyScene(t)
-	s.run("ship.pr.open", registry.Args{"project": "usage-api"})
+	s.run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.until(t, "the tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
 	s.click(centre(s.access("Verify…").Bounds))
 	s.verifySettle(t, "the first question", func(f string) bool { return strings.Contains(f, "QUESTION 1") })

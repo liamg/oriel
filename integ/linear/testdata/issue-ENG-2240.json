@@ -6,9 +6,9 @@
   "issue": {
    "id": "b81c40d7-9a2e-4c55-9e0b-7d1f3c2a2240",
    "identifier": "ENG-2240",
-   "title": "Price cache invalidation on plan change",
+   "title": "Prime the result cache after a reindex",
    "url": "https://linear.app/acme/issue/ENG-2240/price-cache-invalidation-on-plan-change",
-   "description": "Evict the org's cached price table when its plan changes, rather than waiting for the nightly job.",
+   "description": "Evict the org's cached results when its index is rebuilt, rather than waiting for the nightly job.",
    "priorityLabel": "High",
    "state": {
     "name": "Todo",

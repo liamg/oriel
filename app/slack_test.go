@@ -106,7 +106,7 @@ func slackScene(t *testing.T) (*errScene, core.SessionState, *webhook, string) {
 // What it posts is crit's (internal/slack): "PTAL: *title* — <url|owner/name#n>", then "Bump! …", "2nd Bump! …".
 func TestSlackPTAL(t *testing.T) {
 	s, se, hook, secrets := slackScene(t)
-	s.wantFrame(t, "#812 · feat(usage): back off on 429 using Retry-After", "Slack")
+	s.wantFrame(t, "#812 · feat(search): back off on 429 using Retry-After", "Slack")
 	s.lint("the Ship page with the Slack button")
 
 	// No webhook yet: the notice says how to set one, and nothing is sent.
@@ -140,7 +140,7 @@ func TestSlackPTAL(t *testing.T) {
 	s.noticeWith(t, "Posted to Slack")
 	p, at := hook.last()
 	if at != "hooks.slack.com/services/T000/B000/XXXXSECRETXXXX" ||
-		p["text"] != "PTAL: *feat(usage): back off on 429 using Retry-After* — <https://github.com/acme/web-dashboard/pull/812|acme/web-dashboard#812>" {
+		p["text"] != "PTAL: *feat(search): back off on 429 using Retry-After* — <https://github.com/acme/web-dashboard/pull/812|acme/web-dashboard#812>" {
 		t.Errorf("posted %q to %s", p["text"], at)
 	}
 	for _, k := range []string{"username", "icon_emoji", "channel"} {
@@ -153,7 +153,7 @@ func TestSlackPTAL(t *testing.T) {
 	s.wantFrame(t, "Bump Slack")
 	s.click(centre(s.access("Bump Slack").Bounds))
 	s.noticeWith(t, "Bump 1 posted to Slack")
-	if p, _ := hook.last(); !strings.HasPrefix(p["text"].(string), "Bump! PTAL: *feat(usage)") {
+	if p, _ := hook.last(); !strings.HasPrefix(p["text"].(string), "Bump! PTAL: *feat(search)") {
 		t.Errorf("the first bump: %q", p["text"])
 	}
 	s.click(centre(s.access("Bump 2").Bounds))

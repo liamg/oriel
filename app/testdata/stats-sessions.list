@@ -228,11 +228,11 @@ clip 224,38 1376x936 r 0
     rect 254,259.914 8x8 fill #4cc9f0 radius 2
     text "pricing-tiers" @267,267.694 #b3ab99 JetBrains Mono 10.5
     rect 364.71875,259.914 8x8 fill #b98aff radius 2
-    text "usage-api" @377.71875,267.694 #b3ab99 JetBrains Mono 10.5
-    rect 449.0625,259.914 8x8 fill #4fe0a0 radius 2
-    text "pricing-rounding" @462.0625,267.694 #b3ab99 JetBrains Mono 10.5
-    rect 579.5625,259.914 8x8 fill #ff9b45 radius 2
-    text "admin-filters" @592.5625,267.694 #b3ab99 JetBrains Mono 10.5
+    text "search-api" @377.71875,267.694 #b3ab99 JetBrains Mono 10.5
+    rect 455.65625,259.914 8x8 fill #4fe0a0 radius 2
+    text "pricing-rounding" @468.65625,267.694 #b3ab99 JetBrains Mono 10.5
+    rect 586.15625,259.914 8x8 fill #ff9b45 radius 2
+    text "admin-filters" @599.15625,267.694 #b3ab99 JetBrains Mono 10.5
     rect 254,279.774 8x8 fill #ff7ad6 radius 2
     text "web-nav" @267,287.554 #b3ab99 JetBrains Mono 10.5
     rect 325.15625,279.774 8x8 fill #5c8dff radius 2
@@ -353,7 +353,7 @@ clip 224,38 1376x936 r 0
     pop
     clip 927.75,317.394 142.25x15.179993 r 0
       rect 933.75,320.984 8x8 fill #b98aff radius 2
-      text "usage-api" @948.75,329.12402 #ece6d8 JetBrains Mono 11.5
+      text "search-api" @948.75,329.12402 #ece6d8 JetBrains Mono 11.5
     pop
     clip 1070,317.724 200x14.519989 r 0
       rect 1076,320.984 8x8 fill #ff9b45 radius 2

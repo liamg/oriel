@@ -124,7 +124,7 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 		return strings.Contains(text, "OPS-12") && strings.Contains(text, "ENG-2219")
 	})
 	text := strings.ReplaceAll(s.frameText(), "\n", "")
-	order := []string{"OPS-7 Rotate the staging certificates", "ENG-2231 Usage API returns stale prices after plan change",
+	order := []string{"OPS-7 Rotate the staging certificates", "ENG-2231 Search API returns stale results after a reindex",
 		"ENG-2219 Round minor units half-even, per currency", "OPS-12 Alert on queue depth"}
 	at := -1
 	for _, want := range order {
@@ -210,7 +210,7 @@ func TestPRLinkedToAnyTracker(t *testing.T) {
 	jira := loadJira(t, s)
 	var api string
 	for _, p := range first.Projects {
-		if p.Name == "usage-api" {
+		if p.Name == "search-api" {
 			api = p.Repo
 		}
 	}
@@ -221,7 +221,7 @@ func TestPRLinkedToAnyTracker(t *testing.T) {
 		return ok && se.Snapshot().Ticket == "OPS-12" && se.Snapshot().Branch != ""
 	})
 	se, _ := st.Session(st.Focus)
-	pr := hub.AddPR("acme/usage-api", gh.PR{Title: "feat: alert on queue depth", Head: se.Snapshot().Branch, Base: "main"})
+	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat: alert on queue depth", Head: se.Snapshot().Branch, Base: "main"})
 	s.run("ship.refresh", nil)
 	link := "link OPS-12 #" + itoa(pr.Number) + " feat: alert on queue depth"
 	s.until(t, "the PR linked and the issue in review", func() bool {
@@ -340,7 +340,7 @@ func TestContinueTicketSession(t *testing.T) {
 // card for it continues it too.
 func TestLinearContinueTicketSession(t *testing.T) {
 	s, lw, _, _ := ticketScene(t)
-	se := startTicketSession(t, s, lw, "Stale prices", "ENG-2231")
+	se := startTicketSession(t, s, lw, "Stale results", "ENG-2231")
 	other := startTicketSession(t, s, lw, "Something else", "")
 	s.run("session.stop", registry.Args{"id": string(se.ID)})
 	waitState(t, s.store, "the session stopped", func(st core.State) bool {
@@ -386,13 +386,13 @@ func TestTicketDoneOnMerge(t *testing.T) {
 		return ok && se.Snapshot().Ticket == "OPS-12" && se.Snapshot().Branch != "" && len(se.Projects()) == 2
 	})
 	se, _ := st.Session(st.Focus)
-	prs := shipPRs(t, s, hub, se.Snapshot(), "usage-api", "web-dashboard")
+	prs := shipPRs(t, s, hub, se.Snapshot(), "search-api", "web-dashboard")
 	s.shipSettle(t, "both PRs in review", func() bool { return slices.Contains(jiraCalls(jira), "review OPS-12") })
 
-	hub.Merge("acme/usage-api", prs["usage-api"].Number)
+	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "the first PR read merged", func() bool {
-		sh, ok := s.ship().ship(se.ID(), "usage-api")
+		sh, ok := s.ship().ship(se.ID(), "search-api")
 		return ok && sh.PR != nil && sh.PR.Merged
 	})
 	time.Sleep(50 * time.Millisecond)
@@ -424,9 +424,9 @@ func TestLinearDoneOnMerge(t *testing.T) {
 	s, _, hub, se, _ := shipScene(t, change)
 	loadLinear(t, s)
 	s.until(t, "the session's start moved", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to In Progress in Linear") })
-	prs := shipPRs(t, s, hub, se, "usage-api")
+	prs := shipPRs(t, s, hub, se, "search-api")
 	s.shipSettle(t, "the PR in review", func() bool { return strings.Contains(s.fullText(), "ENG-2231 moved to In Review in Linear") })
-	hub.Merge("acme/usage-api", prs["usage-api"].Number)
+	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.run("ship.refresh", nil)
 	s.shipSettle(t, "the ticket done", func() bool {
 		for _, m := range l.Mutations() {

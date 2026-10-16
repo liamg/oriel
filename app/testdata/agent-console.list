@@ -7,15 +7,15 @@ path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1121.9x38 r 0
-  rect 102.9375,0 262.90625x38 fill #121210
-  rect 102.9375,0 262.90625x2 fill #ffd23f
+  rect 102.9375,0 266.92188x38 fill #121210
+  rect 102.9375,0 266.92188x2 fill #ffd23f
   rect 114.9375,16 8x8 fill #b98aff radius 4
-  text "ENG-2231 usage api" @129.9375,24.365234 #ece6d8 Inter 12
-  text "permission" @252.4375,23.599998 #7c7566 JetBrains Mono 10
-  rect 319.4375,12.5 15.40625x15 fill #b98aff radius 7.5
-  text "2" @324.4375,23.24 #141006 JetBrains Mono 9
-  text "⌘1" @341.84375,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 365.84375,0 1x38 fill #24221d
+  text "ENG-2231 search api" @129.9375,24.365234 #ece6d8 Inter 12
+  text "permission" @256.45312,23.599998 #7c7566 JetBrains Mono 10
+  rect 323.45312,12.5 15.40625x15 fill #b98aff radius 7.5
+  text "2" @328.45312,23.24 #141006 JetBrains Mono 9
+  text "⌘1" @345.85938,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 369.85938,0 1x38 fill #24221d
 pop
 rect 1238.8375,0 209.9375x24 radius 5 stroke 1 #332f27
 text "5H" @1246.8375,15.780001 #7c7566 JetBrains Mono 10.5
@@ -92,7 +92,7 @@ clip 44,38 1556x936 r 0
     text "high" @238.40625,94.96 #7c7566 JetBrains Mono 11
     rect 274.78125,82.73 119.119995x16.54 fill #b98aff12 radius 10 stroke 1 #b98aff59
     text "WANTS PERMISSION" @281.78125,94.420006 #b98aff JetBrains Mono 9.5
-    text "ENG-2231 · ENG-2231 usage api · rethink/usage-endpoint" @403.90125,94.96 #7c7566 JetBrains Mono 11
+    text "ENG-2231 · ENG-2231 search api · rethink/search-endpoint" @403.90125,94.96 #7c7566 JetBrains Mono 11
     rect 1322.875,78 45.25x26 fill #191815 radius 6 stroke 1 #332f27
     text "Fork" @1332.875,95.365234 #ece6d8 Inter 12
     rect 1378.125,78 101.609375x26 fill #191815 radius 6 stroke 1 #332f27

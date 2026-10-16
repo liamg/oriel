@@ -7,13 +7,13 @@ path 5 segments fill #ff8a1f
 text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 1353.2438x38 r 0
-  rect 102.9375,0 279.67188x38 fill #121210
-  rect 102.9375,0 279.67188x2 fill #ffd23f
+  rect 102.9375,0 283.6875x38 fill #121210
+  rect 102.9375,0 283.6875x2 fill #ffd23f
   rect 114.9375,16 8x8 fill #ff5f6d radius 4
-  text "usage API rate-limit headers" @129.9375,24.365234 #ece6d8 Inter 12
-  text "needs you" @297.60938,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘1" @358.60938,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 382.60938,0 1x38 fill #24221d
+  text "search API rate-limit headers" @129.9375,24.365234 #ece6d8 Inter 12
+  text "needs you" @301.625,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘1" @362.625,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 386.625,0 1x38 fill #24221d
 pop
 text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
 rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
@@ -28,13 +28,13 @@ clip 0,38 223x936 r 0
   rect 0,71 223x39.72 fill #1d160f
   text "▾" @10,87.22 #7c7566 JetBrains Mono 11
   rect 25,79.26 8x8 fill #4cc9f0 radius 2
-  text "usage-api" @39,87.22 #ece6d8 JetBrains Mono 11
+  text "search-api" @39,87.22 #ece6d8 JetBrains Mono 11
   rect 196.1875,76.32 18.8125x13.879997 radius 3 stroke 1 #332f27
   text "⌃1" @200.1875,86.5 #7c7566 JetBrains Mono 9
   clip 10,92.520004 205x13.199997 r 0
-    text "rethink/usage-endpoint" @25,102.72 #7c7566 JetBrains Mono 10
-    text "·" @161,102.72 #7c7566 JetBrains Mono 10
-    text "no PR" @171,102.72 #7c7566 JetBrains Mono 10
+    text "rethink/search-endpoint" @25,102.72 #7c7566 JetBrains Mono 10
+    text "·" @167,102.72 #7c7566 JetBrains Mono 10
+    text "no PR" @177,102.72 #7c7566 JetBrains Mono 10
   pop
   path 7 segments stroke 1.25 #7c7566
   text "Explorer" @54,126.585236 #b3ab99 Inter 12
@@ -65,11 +65,10 @@ clip 0,38 223x936 r 0
   rect 196.1875,231.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
   text "⌃2" @200.1875,241.22 #7c7566 JetBrains Mono 9
   clip 10,247.24 205x13.199997 r 0
-    text "rethink/usage-endpoint" @25,257.44 #7c7566 JetBrains Mono 10
-    text "·" @161,257.44 #7c7566 JetBrains Mono 10
-    text "#812" @171,257.44 #7c7566 JetBrains Mono 10
-    rect 199,250.84001 6x6.0000153 fill #4cc9f0 radius 3
-    text "…" @209,257.44 #4cc9f0 JetBrains Mono 10
+    text "rethink/search-endpoint" @25,257.44 #7c7566 JetBrains Mono 10
+    text "·" @167,257.44 #7c7566 JetBrains Mono 10
+    text "#812" @177,257.44 #7c7566 JetBrains Mono 10
+    rect 205,250.84001 6x6.0000153 fill #4cc9f0 radius 3
   pop
   rect 10,270.44 203x1 fill #332f27
   path 5 segments stroke 1.25 #7c7566
@@ -119,8 +118,8 @@ rect 224,38 250x936 fill #0c0c0b
 clip 224,38 250x936 r 0
   rect 224,38 250x30 fill #0c0c0b
   rect 238,50.5 7x7 fill #4cc9f0 radius 1
-  text "usage-api" @253,58.14 #ece6d8 JetBrains Mono 11.5
-  text "PULL REQUEST" @325.82812,57.600002 #7c7566 JetBrains Mono 10
+  text "search-api" @253,58.14 #ece6d8 JetBrains Mono 11.5
+  text "PULL REQUEST" @333.03125,57.600002 #7c7566 JetBrains Mono 10
   text "✕" @454.70312,57.96 #7c7566 JetBrains Mono 11
   rect 224,68 250x1 fill #24221d
   clip 224,69 250x905 r 0
@@ -129,7 +128,7 @@ clip 224,38 250x936 r 0
         text "Not raised" @246,101.59375 #ece6d8 Inter 13
       pop
       clip 246,108.72949 206x13.860001 r 0
-        text "rethink/usage-endpoint → main …" @246,119.43949 #7c7566 JetBrains Mono 10.5
+        text "rethink/search-endpoint → main…" @246,119.43949 #7c7566 JetBrains Mono 10.5
       pop
       text "!" @246,153.13661 #ff9b45 Inter 12.5
       clip 268,141.02724 104x15.124512 r 0
@@ -167,10 +166,10 @@ pop
 clip 474,38 1126x936 r 0
   rect 474,38 1126x30 fill #0c0c0b
   clip 474,38 1126x30 r 0
-    rect 474,38 163.67188x30 fill #121210
-    rect 474,38 163.67188x2 fill #ffd23f
-    text "Raise PR · usage-api" @488,58.365234 #ece6d8 Inter 12
-    text "✕" @618.375,57.96 #7c7566 JetBrains Mono 11
+    rect 474,38 167.6875x30 fill #121210
+    rect 474,38 167.6875x2 fill #ffd23f
+    text "Raise PR · search-api" @488,58.365234 #ece6d8 Inter 12
+    text "✕" @622.3906,57.96 #7c7566 JetBrains Mono 11
   pop
   rect 474,68 1126x1 fill #24221d
   clip 474,69 1126x905 r 0
@@ -178,9 +177,9 @@ clip 474,38 1126x936 r 0
     rect 484,79 1106x44 fill #0c0c0b
     text "RAISE PR" @502,105.844 #ece6d8 Space Grotesk 14
     rect 577.1887,96.5 9x9 fill #4cc9f0 radius 2
-    text "usage-api" @596.1887,105.32 #ece6d8 JetBrains Mono 12
-    clip 671.01685,93.74 583.2175x14.519997 r 0
-      text "rethink/usage-endpoint → main · 2 commits" @671.01685,104.96 #7c7566 JetBrains Mono 11
+    text "search-api" @596.1887,105.32 #ece6d8 JetBrains Mono 12
+    clip 678.22,93.74 576.0144x14.519997 r 0
+      text "rethink/search-endpoint → main · 2 commits" @678.22,104.96 #7c7566 JetBrains Mono 11
     pop
     rect 1264.2344,88 79.203125x26 fill #191815 radius 6 stroke 1 #332f27
     text "Save draft" @1274.2344,105.365234 #ece6d8 Inter 12
@@ -193,7 +192,7 @@ clip 474,38 1126x936 r 0
       text "TITLE" @502,147.69 #7c7566 JetBrains Mono 9.5
       rect 502,158.54 809x30 fill #060606 radius 6
       clip 502,158.54 809x30 r 6
-        text "feat(usage): back off on 429 using Retry-After" @512,178.08711 #ece6d8 Inter 12.5
+        text "feat(search): back off on 429 using Retry-After" @512,178.08711 #ece6d8 Inter 12.5
       pop
       rect 502,158.54 809x30 radius 6 stroke 1 #332f27
       text "BODY" @502,220.23001 #7c7566 JetBrains Mono 9.5

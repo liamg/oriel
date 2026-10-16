@@ -79,7 +79,7 @@ func TestStatsReadEveryTranscript(t *testing.T) {
 	se := r.eventually(in, "its agent's id", func(se core.SessionState) bool { return se.Agent.Session != "" })
 	writeLines(t, transcript.Path(config, agentDir(se), se.Agent.Session), claudeLog(at, agentDir(se), "round half to even")...)
 
-	cin := r.start(core.SessionSpec{Kind: core.KindWork, Name: "usage-api", Provider: "codex", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	cin := r.start(core.SessionSpec{Kind: core.KindWork, Name: "search-api", Provider: "codex", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	cs := cx.WaitStarted(t)
 	cse := r.eventually(cin, "its agent's id", func(se core.SessionState) bool { return se.Agent.Session != "" })
 	cs.Emit(agent.TurnStart{})

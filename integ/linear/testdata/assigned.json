@@ -6,9 +6,9 @@
      {
       "id": "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231",
       "identifier": "ENG-2231",
-      "title": "Usage API returns stale prices after plan change",
-      "url": "https://linear.app/acme/issue/ENG-2231/usage-api-returns-stale-prices-after-plan-change",
-      "description": "Customers on the new Team plan see last month's unit prices in /v1/usage for up to 24h. Reported by 3 accounts; repro steps and a HAR attached.\n\nSteps:\n1. Move an org from Pro to Team\n2. GET /v1/usage\n3. Unit prices are Pro's until the nightly job runs",
+      "title": "Search API returns stale results after a reindex",
+      "url": "https://linear.app/acme/issue/ENG-2231/search-api-returns-stale-results-after-a-reindex",
+      "description": "Customers who rebuild their index see last week's results from /v1/search for up to 24h. Reported by 3 accounts; repro steps and a HAR attached.\n\nSteps:\n1. Rebuild an org's index\n2. GET /v1/search\n3. Results are the old index's until the nightly job runs",
       "priority": 2,
       "priorityLabel": "High",
       "estimate": 3,
@@ -82,9 +82,9 @@
      {
       "id": "b81c40d7-9a2e-4c55-9e0b-7d1f3c2a2240",
       "identifier": "ENG-2240",
-      "title": "Price cache invalidation on plan change",
+      "title": "Prime the result cache after a reindex",
       "url": "https://linear.app/acme/issue/ENG-2240/price-cache-invalidation-on-plan-change",
-      "description": "Evict the org's cached price table when its plan changes, rather than waiting for the nightly job.",
+      "description": "Evict the org's cached results when its index is rebuilt, rather than waiting for the nightly job.",
       "priority": 2,
       "priorityLabel": "High",
       "estimate": 2,
@@ -178,11 +178,11 @@
       "attachments": {
        "nodes": [
         {
-         "url": "https://github.com/acme/pricing-service/pull/512",
+         "url": "https://github.com/acme/search-service/pull/512",
          "createdAt": "2026-10-12T10:00:00.000Z"
         },
         {
-         "url": "https://github.com/acme/pricing-service/pull/530",
+         "url": "https://github.com/acme/search-service/pull/530",
          "createdAt": "2026-10-13T09:30:00.000Z"
         }
        ]
@@ -253,7 +253,7 @@
      {
       "id": "d4e7f0a2-5c8b-4e1d-b3f6-7a0c4e9f2252",
       "identifier": "ENG-2252",
-      "title": "Spot instance price lookup times out",
+      "title": "Bundle price lookup times out",
       "url": "https://linear.app/acme/issue/ENG-2252/spot-instance-price-lookup-times-out",
       "description": "",
       "priority": 0,
@@ -324,7 +324,7 @@
      {
       "id": "e5f8a1b3-6d9c-4f2e-c4a7-8b1d5f0a2260",
       "identifier": "ENG-2260",
-      "title": "Usage API returns stale prices (dup)",
+      "title": "Search API returns stale results (dup)",
       "url": "https://linear.app/acme/issue/ENG-2260",
       "description": "",
       "priority": 2,

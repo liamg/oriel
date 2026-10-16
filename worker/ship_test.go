@@ -85,12 +85,12 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	// The agent drafts a commit message; it shows with who drafted it.
 	ag := r.agent()
 	ag.Call(t, "commit_draft", map[string]any{"message": "feat(api): back off on 429", "project": "api"})
-	ag.Call(t, "pr_draft", map[string]any{"title": "feat(usage): back off on 429", "body": "## What\nRetry-After.\n", "project": "api"})
+	ag.Call(t, "pr_draft", map[string]any{"title": "feat(search): back off on 429", "body": "## What\nRetry-After.\n", "project": "api"})
 	s = r.ship(id, false)
 	if d := s["api"].CommitDraft; d.Body != "feat(api): back off on 429" || d.By != "fake" {
 		t.Errorf("commit draft %+v", d)
 	}
-	if d := s["api"].PRDraft; d.Title != "feat(usage): back off on 429" || d.Body != "## What\nRetry-After." || d.By != "fake" {
+	if d := s["api"].PRDraft; d.Title != "feat(search): back off on 429" || d.Body != "## What\nRetry-After." || d.By != "fake" {
 		t.Errorf("PR draft %+v", d)
 	}
 
@@ -138,7 +138,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if out := apiUp.Git("ls-remote", "origin", se.Branch); !strings.Contains(out, se.Branch) {
 		t.Fatalf("origin hasn't got %s: %q", se.Branch, out)
 	}
-	pr, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: "api", Title: "feat(usage): back off on 429", Body: "## What\nRetry-After.\n",
+	pr, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: "api", Title: "feat(search): back off on 429", Body: "## What\nRetry-After.\n",
 		Draft: true, Reviewers: []string{"acme/platform-team", "jkowalski"}})
 	if err != nil {
 		t.Fatal(err)
@@ -172,10 +172,10 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	}
 
 	// Editing the PR keeps one block.
-	if _, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: "api", Title: "feat(usage): back off on 429s", Body: apiBody}); err != nil {
+	if _, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: "api", Title: "feat(search): back off on 429s", Body: apiBody}); err != nil {
 		t.Fatal(err)
 	}
-	if got := hub.PRs("acme/api"); len(got) != 1 || got[0].Title != "feat(usage): back off on 429s" || strings.Count(got[0].Body, linkStart) != 1 {
+	if got := hub.PRs("acme/api"); len(got) != 1 || got[0].Title != "feat(search): back off on 429s" || strings.Count(got[0].Body, linkStart) != 1 {
 		t.Fatalf("after editing: %+v", got)
 	}
 
