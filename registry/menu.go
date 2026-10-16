@@ -36,6 +36,7 @@ type MenuWhen struct {
 // MenuCtx is what was right-clicked: its view and instance, the file and selection there, and its help id.
 type MenuCtx struct {
 	View, Instance string
+	Project        string // the project the view was opened for, if any
 	File           string
 	Selection      bool
 	Help           string

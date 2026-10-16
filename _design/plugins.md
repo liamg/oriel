@@ -735,7 +735,7 @@ type Host interface {
   `registry.EdgeToEdge` to be drawn without the pane's padding; `registry.As[T](view)` sees through the guard.
   `Registry.Views()` lists every view id.
 - `Host.Layout()` is the layout tree, to change from commands and views (`Open`, `Close`, `Show`, `Swap`, `Row`,
-  `Shown`, `OnClose`), `Host.PaneRect(v)` where a view's pane was drawn, and `Host.Redraw()` asks for a frame from
+  `Shown`, `OnClose`), `Host.PaneRect(v)` where a view's pane was drawn, `Host.PaneTab(id)` the view whose tab holds a node, and `Host.Redraw()` asks for a frame from
   any goroutine. `view.open` takes `beside` (`"editor#3"`), `size`, `project` and `alone` (in a dock, by itself: what was there closes), and `view.toggle` and `view.close` an `id`,
   `instance` and `project`. `project.open {project | index}` opens a project of the session (`core.ProjectOpened`;
   the open project, each project's last panel (`ProjectPanelOpened`) and colour (`ProjectColoured`) are
@@ -782,9 +782,10 @@ type Host interface {
   added to its args. The debugger's breakpoint toggle is one.
 - Right-click menus (PL-13): `registry.MenuItem` contributions (kind `menu.item`) with a `When` (view, file glob,
   selection, help-id prefix); the window's one context menu gathers those that match what was clicked
-  (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the pane's view and instance from the
-  layout (`Root.Visible`), and the file and selection from a view that implements `registry.Located` (the editor).
-  The built-in entries (Copy path, Move pane…, Close) are menu items too. Lua: `oriel.menu.add`. An item running
+  (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the view, instance and project of
+  the tab clicked (`Host.PaneTab`) or else of the pane (`Root.Visible`), and the file and selection from a view that
+  implements `registry.Located` (the editor). The built-in entries (Copy path, Move pane…, Close; on a tab,
+  `When.Help` `layout.HelpTab`, Close Others, Close to the Left, Close to the Right, Close All) are menu items too. Lua: `oriel.menu.add`. An item running
   `agent.fix` comes with its explain twin (TR-6).
 - Drag and drop (PL-15): `ui.Style.Drag` (a `DragData`: kind, data, label) makes a node a drag source and
   `Style.Drop` (kinds) a target; the UI tracks the drag, lights the target under it that takes the kind and draws a

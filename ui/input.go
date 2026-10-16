@@ -438,7 +438,9 @@ func (u *UI) WithoutHelp() []ID {
 	return out
 }
 
-// within reports whether id is root or inside it.
+// Within reports whether id is root or inside it, in the latest frame.
+func (u *UI) Within(id, root ID) bool { return u.within(id, root) }
+
 func (u *UI) within(id, root ID) bool {
 	for ; id != 0; id = u.parents[id] {
 		if id == root {

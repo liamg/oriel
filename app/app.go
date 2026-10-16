@@ -212,7 +212,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		if changed && due.IsZero() {
 			due = drawn.Add(frameInterval)
 		}
-		quiet = due.IsZero() || time.Now().Before(due)
+		now, next := time.Now(), l.wake(drawn)
+		quiet = (due.IsZero() || now.Before(due)) && (next.IsZero() || now.Before(next))
 	}
 	for {
 		l.timed(func() string { return "work queued for the loop (Host.Do)" }, sh.runTodo)
@@ -238,7 +239,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			}
 			tree = next
 		}
-		if d := l.wake(); !d.IsZero() || !due.IsZero() {
+		if d := l.wake(drawn); !d.IsZero() || !due.IsZero() {
 			if d.IsZero() || (!due.IsZero() && due.Before(d)) {
 				d = due
 			}
@@ -475,6 +476,13 @@ func (h *host) PaneRect(v layout.ViewRef) (render.Rect, bool) {
 	return r, ok
 }
 
+func (h *host) PaneTab(id ui.ID) (layout.ViewRef, bool) {
+	if h.sh.ui == nil {
+		return layout.ViewRef{}, false
+	}
+	return h.sh.layout.panes.TabAt(h.sh.ui, id)
+}
+
 func (h *host) Session(id core.SessionID) (core.Session, bool) { return h.store.Session(id) }
 func (h *host) Sessions() []core.Session                       { return h.store.Sessions() }
 func (h *host) Log() *slog.Logger                              { return h.log }
@@ -597,11 +605,11 @@ func resolveTheme(sources []theme.Source, name string, v theme.Variant) (*theme.
 const frameInterval = time.Second / 120
 
 // wake is when the loop next has work without input: a pending chord's timeout, the next animation
-// frame, or a tooltip's delay.
-func (l *loop) wake() time.Time {
+// frame (a frameInterval after the one drawn last), or a tooltip's delay.
+func (l *loop) wake(drawn time.Time) time.Time {
 	d := l.keys.Deadline()
 	if u := l.ui.NextFrame(); !u.IsZero() {
-		if soon := time.Now().Add(frameInterval); u.Before(soon) {
+		if soon := drawn.Add(frameInterval); u.Before(soon) {
 			u = soon
 		}
 		if d.IsZero() || u.Before(d) {

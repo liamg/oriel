@@ -48,6 +48,7 @@ type Host interface {
 	// on the app's loop.
 	Layout() *layout.Root
 	PaneRect(v layout.ViewRef) (render.Rect, bool) // where v's pane was drawn last frame
+	PaneTab(id ui.ID) (layout.ViewRef, bool)       // the view whose tab holds node id, last frame
 	Redraw()                                       // asks for a frame; safe from any goroutine
 	Do(fn func())                                  // runs fn on the app's loop, before the next frame; safe from any goroutine
 	Pending() Pending                              // keys typed towards a longer mapping or command, for which-key

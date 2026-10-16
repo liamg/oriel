@@ -60,6 +60,7 @@ type drag struct {
 type viewState struct {
 	drag   *drag
 	leaves map[*Node]ui.ID // this frame's leaves, for drop targets and ⌃W h/j/k/l
+	tabs   map[ui.ID]ViewRef
 	docks  map[Edge]ui.ID
 	resize *resize
 	edge   *dockResize
@@ -90,10 +91,10 @@ type resize struct {
 func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 	id := c.Next(key)
 	st := ui.State[viewState](c, id)
-	st.leaves, st.docks = map[*Node]ui.ID{}, map[Edge]ui.ID{}
+	st.leaves, st.tabs, st.docks = map[*Node]ui.ID{}, map[ui.ID]ViewRef{}, map[Edge]ui.ID{}
 	st.title, st.mark, st.lead, st.tip = nil, nil, nil, nil
 	if panes != nil {
-		panes.leaves = st.leaves
+		panes.leaves, panes.tabs = st.leaves, st.tabs
 		st.title, st.mark, st.lead, st.tip = panes.Title, panes.Mark, panes.Lead, panes.Tip
 	}
 	changed := false
@@ -358,6 +359,7 @@ const closeSide = 20
 func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool) bool {
 	th := c.Theme()
 	id := c.Next(v)
+	st.tabs[id] = v
 	in := c.Interaction(id)
 	changed := false
 	switch {
@@ -639,6 +641,7 @@ func abs(v float32) float32 {
 // name keeps its own.
 type Panes struct {
 	leaves map[*Node]ui.ID
+	tabs   map[ui.ID]ViewRef
 	Title  func(v ViewRef) string
 	// Mark, when set, is a small marker after a view's tab title, in its colour: a file's git status letter.
 	Mark func(v ViewRef) (string, render.Color)
@@ -658,6 +661,16 @@ func (p *Panes) Rects(u *ui.UI) map[*Node]render.Rect {
 		}
 	}
 	return out
+}
+
+// TabAt is the view whose tab holds node id in the latest frame: a right-click on it, say.
+func (p *Panes) TabAt(u *ui.UI, id ui.ID) (ViewRef, bool) {
+	for tab, v := range p.tabs {
+		if u.Within(id, tab) {
+			return v, true
+		}
+	}
+	return ViewRef{}, false
 }
 
 // RectsIn is Rects from inside a frame being built: last frame's rects.
