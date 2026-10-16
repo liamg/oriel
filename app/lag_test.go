@@ -304,29 +304,6 @@ func TestSlowFrameIsLogged(t *testing.T) {
 	t.Fatalf("no log of the slow frame: %v", logs.Ring.Tail(10))
 }
 
-// changedRepo is a repo with n files of 100 lines changed since its one commit, every fifth line.
-func changedRepo(t *testing.T, n int) string {
-	r := gittest.New(t)
-	before, after := map[string]string{}, map[string]string{}
-	for i := range n {
-		var b, a strings.Builder
-		for l := range 100 {
-			fmt.Fprintf(&b, "line %d\n", l)
-			if l%5 == 0 {
-				fmt.Fprintf(&a, "line %d, changed\n", l)
-			} else {
-				fmt.Fprintf(&a, "line %d\n", l)
-			}
-		}
-		p := fmt.Sprintf("pkg%d/f%03d.txt", i%20, i)
-		before[p], after[p] = b.String(), a.String()
-	}
-	r.Write(before)
-	r.Commit("Ada", "base")
-	r.Write(after)
-	return r.Dir
-}
-
 // explorerFrame is the average frame with the Explorer open on dir's Changed scope, once every diff is made.
 func explorerFrame(t *testing.T, dir string, n int) time.Duration {
 	s := newScene(t, "", dir, mockupSize)
@@ -376,4 +353,76 @@ func TestSlowFrameWritesTrace(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatal("no trace written for the slow frame")
+}
+
+// Hovering the Explorer while it's still making the diffs of thousands of changed files: rows light up within budget
+// the whole time, not once every diff is in.
+func TestExplorerHoverLagWhileDiffsLoadBudget(t *testing.T) {
+	perf.Timed(t)
+	dir := changedRepo(t, 4000)
+	r := startAppWith(t, t.TempDir(), dir, nil, nil)
+	r.do(func() error {
+		return r.host.Run(context.Background(), "view.toggle", registry.Args{"id": ExplorerView})
+	})
+	r.waitText("f1080.txt")
+	ready := func() bool {
+		var ok bool
+		r.do(func() error {
+			l, found := registry.LedgerOf(r.host, dir)
+			ok = found && l.Ready
+			return nil
+		})
+		return ok
+	}
+	if ready() {
+		t.Fatal("every diff was made before the pointer moved: nothing tested")
+	}
+	var targets []render.Point
+	for _, f := range []string{"f1020.txt", "f040.txt", "f1080.txt", "f060.txt", "f1040.txt"} {
+		targets = append(targets, r.textPoint(f))
+	}
+	noise := sweep(r.textPoint("f000.txt"), r.textPoint("f080.txt"), 200)
+	var run lagRun
+	for i := 0; i < 20 || !ready() && i < 200; i++ {
+		run.behind = max(run.behind, r.moves(noise, 0))
+		run.probes = append(run.probes, r.probe(targets[i%len(targets)]))
+	}
+	r.check("while diffs load", run)
+}
+
+// While the diffs of thousands of changed files are still being made, the Explorer's frame costs what it does once
+// they're in: a diff landing doesn't make the next frame go over every changed file.
+func TestExplorerFrameWhileDiffsLoadBudget(t *testing.T) {
+	perf.Timed(t)
+	const n = 4000
+	dir := changedRepo(t, n)
+	s := newScene(t, "", dir, mockupSize)
+	s.sh.git.wait()
+	s.keyCommand(t, "<M-1>")
+	ready := func() bool {
+		l, ok := registry.LedgerOf(s.reg, dir)
+		return ok && l.Ready
+	}
+	var loading time.Duration
+	frames := 0
+	deadline := time.Now().Add(60 * time.Second)
+	for !ready() && time.Now().Before(deadline) {
+		start := time.Now()
+		s.frame()
+		loading += time.Since(start)
+		frames++
+	}
+	if frames == 0 || !ready() {
+		t.Fatalf("%d frames while loading; ready %v", frames, ready())
+	}
+	loading /= time.Duration(frames)
+	start := time.Now()
+	for range 100 {
+		s.frame()
+	}
+	settled := time.Since(start) / 100
+	t.Logf("%d frames while %d diffs loaded: %v each; settled: %v", frames, n, loading, settled)
+	if loading > 2*settled+time.Millisecond {
+		t.Errorf("a frame while the diffs load takes %v, against %v once they're in", loading, settled)
+	}
 }
