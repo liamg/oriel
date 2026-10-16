@@ -70,6 +70,10 @@ func TestLedgerCountsAgentLinesAndMarks(t *testing.T) {
 	if want == 0 {
 		t.Fatal("blame gives Claude no lines")
 	}
+	app.clickText("currency.go") // outside a session, the ledger counts the files opened
+	app.waitLedger("currency.go's lines", r.Dir, func(l registry.Ledger) bool { _, ok := l.File("internal/pricing/currency.go"); return ok })
+	app.clickText("internal/pricing/currency.go") // folded again
+	app.clickText("round.go")
 	l := app.waitLedger("every agent line", r.Dir, func(l registry.Ledger) bool { return l.All.Total() == want })
 	if l.All.Read != 0 || l.Uncommitted.Total() != 0 {
 		t.Errorf("before any review: %+v", l)
@@ -314,7 +318,11 @@ func TestExplorerByReview(t *testing.T) {
 	app := startApp(t, t.TempDir(), r.Dir, nil)
 	app.typeKeys("<M-1>")
 	app.waitText("CHANGED 2")
+	app.waitLedger("no file opened", r.Dir, func(l registry.Ledger) bool { return l.Ready && len(l.Files) == 0 })
+	app.clickText("currency.go") // outside a session, the ledger counts the files opened
+	app.clickText("round.go")
 	app.waitLedger("both files", r.Dir, func(l registry.Ledger) bool { return len(l.Files) == 2 })
+	app.typeKeys("<M-1>")
 	app.clickText("by review")
 	app.waitFrame("round.go, with more unread, first", func(s string) bool {
 		i, j := strings.Index(s, "internal/pricing/r"), strings.Index(s, "internal/pricing/cu")
@@ -331,4 +339,53 @@ func TestSummaryShowsReviewed(t *testing.T) {
 	l := r.waitLedger("the agent's lines", dir, func(l registry.Ledger) bool { return l.All.Unread > 0 })
 	r.do(func() error { return r.host.Run(context.Background(), "requests.summary", nil) })
 	r.waitFrame("REVIEWED", func(s string) bool { return containsAll(s, "REVIEWED", fmt.Sprintf("0/%d", l.All.Total())) })
+}
+
+// The ledger over hundreds of changed files no agent commit touched runs no more gits than over a few: their old
+// versions come through one, and there's nothing to blame. (The status, read every so often, is counted apart.)
+func TestLedgerGitsDontGrowWithFiles(t *testing.T) {
+	gits := func(n int) int {
+		dir := changedRepo(t, n)
+		runs := gittest.CountGit(t)
+		s := newScene(t, "", dir, mockupSize)
+		s.sh.git.wait()
+		ledger := []string{"cat-file", "blame", "log", "config"}
+		before := runs(ledger...)
+		s.keyCommand(t, "<M-1>")
+		if !s.Until(30*time.Second, func() bool {
+			l, ok := registry.LedgerOf(s.reg, dir)
+			return ok && l.Ready
+		}) {
+			t.Fatalf("the ledger over %d files was never ready", n)
+		}
+		return runs(ledger...) - before
+	}
+	few, many := gits(5), gits(300)
+	t.Logf("gits for the ledger over 5 files: %d; over 300: %d", few, many)
+	if many > few+3 {
+		t.Errorf("the ledger over 300 files ran %d gits, against %d over 5", many, few)
+	}
+}
+
+// changedRepo is a repo with n files of 100 lines changed since its one commit, every fifth line.
+func changedRepo(t *testing.T, n int) string {
+	r := gittest.New(t)
+	before, after := map[string]string{}, map[string]string{}
+	for i := range n {
+		var b, a strings.Builder
+		for l := range 100 {
+			fmt.Fprintf(&b, "line %d\n", l)
+			if l%5 == 0 {
+				fmt.Fprintf(&a, "line %d, changed\n", l)
+			} else {
+				fmt.Fprintf(&a, "line %d\n", l)
+			}
+		}
+		p := fmt.Sprintf("pkg%d/f%03d.txt", i%20, i)
+		before[p], after[p] = b.String(), a.String()
+	}
+	r.Write(before)
+	r.Commit("Ada", "base")
+	r.Write(after)
+	return r.Dir
 }

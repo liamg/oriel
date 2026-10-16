@@ -111,16 +111,21 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc registry.ViewCtx) {
 				Color: th.C(tWordmark)})
 		})
 		c.Box("sep", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
-		// More sessions than fit scroll sideways, the one in front kept in view.
-		tabs := c.Row("tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), ScrollX: true, Role: ui.RoleTabList, Label: "Sessions"}, func(c *ui.Ctx) {
-			for i, s := range openTabs(st) {
+		// More sessions than fit scroll sideways, the one in front brought into view when it changes.
+		open := openTabs(st)
+		o := widget.StripOpts{Help: "shell/tabs"}
+		for _, s := range open {
+			o.Items = append(o.Items, s.ID())
+		}
+		if st.Focus != "" {
+			o.Active = st.Focus
+		}
+		widget.Strip(c, "tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), Role: ui.RoleTabList, Label: "Sessions"}, o, func(c *ui.Ctx) {
+			for i, s := range open {
 				t.tab(c, h, i, s, s.ID() == st.Focus)
 				c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 			}
 		})
-		if st.Focus != "" {
-			c.ScrollIntoView(tabs, ui.Child(tabs, st.Focus))
-		}
 		c.Row("right", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 			t.sh.slot(c, h, registry.SlotTitleBar, vc)
 		})

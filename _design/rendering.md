@@ -209,6 +209,9 @@ func (c *Ctx) Text(key any, s string, ts TextStyle) ID
 func (c *Ctx) Paint(key any, w, h Size, fn func(f render.Frame, r render.Rect)) ID
 func (c *Ctx) Node(n Node)                        // a plugin's view tree: *Box, *Text, *Paint
 func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i int)) ID // builds only the rows in view
+func (c *Ctx) KeepInView(box, target ID) // scrolls to target when it changes; ScrollIntoView every frame fights the user
+func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i int)) ID // items of any height: only
+    // those in view are built, each as tall as when last built (o.Estimate before), o.Reveal scrolled to unbuilt
 
 type Style struct {
     Dir         Dir                               // Row or Column
@@ -218,6 +221,7 @@ type Style struct {
     Main, Cross Align                             // Start, Center, End; SpaceBetween on the main axis
     Fill, Stroke render.Color; Border, Radius float32
     Clip, ScrollX, ScrollY bool                   // scroll offsets persist by id
+    Sideways bool                                 // the wheel's up and down scroll it across: a strip of tabs
     Float *Float                                  // out of the flow, against another id's rect, a point, or the parent;
                                                   // a Fill one against its parent sized Flex fills it that way (a card's edge)
     Z     int                                     // floats paint after the flow, in Z order, outside their parent's clip
@@ -272,7 +276,19 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   120 Hz interval; keys and other input draw at once. An animation's next frame is due an interval after the last
   one drawn, so moves that build none never push it back (`TestMenuHoverWhileThePointerMovesBudget`). The Gio
   window also skips a display list identical to the last (`render.List.Same`). A sweep over an open directory takes about 4% CPU.
-- `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer.
+  The lag budgets (`app/lag_test.go`) hold this through the real loop: moves at 1 kHz over the Explorer, a context
+  menu, and the Explorer after drags, with a jump every so often onto something that lights up. That jump shows within
+  50 ms (p90), no slower at the end of a run than at its start, and the loop never falls more than 30 ms behind the moves.
+- `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer. A
+  `PointerEvent`'s `At` is when it happened, from the OS's timestamp (Gio's, read against the earliest epoch any event
+  gives), or zero. The loop times each move that changes a frame from `At` to the frame built with it, logs "the pointer
+  fell behind" (once a second at most) past 100 ms with how long it took to reach the loop and to be drawn, and `--debug`'s
+  overlay shows it beside the frame time. The Gio window sends a `render.SlowFrameEvent` when a frame waits past 100 ms
+  for it to start on it, or takes past 100 ms to draw and present (once a second at most); the app logs "the window
+  was slow to show a frame". Between them the log says which stage a stall is in: reaching the loop, building the
+  frame, or putting it on screen. `oriel --trace <file>` keeps a flight recorder of the execution trace, and on any of
+  those stalls (or a loop turn held up past 50 ms) writes its last ~10 s to the file, later ones numbered beside it, at
+  most one every 10 s, for `go tool trace`: what the loop and the main thread were doing while the frame was late.
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
   selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,
   Escape closes it; one is up at a time, so opening one closes whichever was, SE-5), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with

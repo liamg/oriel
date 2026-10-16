@@ -218,3 +218,43 @@ func TestBorderOverClippedContent(t *testing.T) {
 		t.Errorf("the border (op %d) is under the content (op %d)", border, content)
 	}
 }
+
+// items is a 100-tall Items column of n items, item i (i%3+1)×10 tall, noting which were built.
+func items(n, reveal int, built *[]int) func(c *Ctx) {
+	return func(c *Ctx) {
+		c.Items("items", Style{W: Flex(1), H: Px(100)}, n, ItemsOpts{Estimate: 15, Reveal: reveal}, func(c *Ctx, i int) {
+			*built = append(*built, i)
+			c.Box("b", Style{W: Flex(1), H: Px(float32(i%3+1) * 10)}, nil)
+		})
+	}
+}
+
+// Items builds only the items in view, each as tall as it was last built, and scrolls one not yet built into view.
+func TestItemsBuildsOnlyVisibleItems(t *testing.T) {
+	u := newUI()
+	var built []int
+	size := render.Point{X: 200, Y: 300}
+	id := childID(0, "items")
+	u.Layout(size, items(10_000, -1, &built))
+	u.Layout(size, items(10_000, -1, &built))
+	built = nil
+	u.Layout(size, items(10_000, -1, &built))
+	// 10, 20, 30, 10, 20: the first five fill 90 of the 100, and the sixth runs past it.
+	if want := []int{0, 1, 2, 3, 4, 5}; !slices.Equal(built, want) {
+		t.Errorf("built %v, want %v", built, want)
+	}
+	if len(built) > 20 {
+		t.Fatalf("built %d of 10,000", len(built))
+	}
+	built = nil
+	u.Layout(size, items(10_000, 9_000, &built))
+	u.Layout(size, items(10_000, -1, &built))
+	r, ok := u.Rect(childID(id, 9_000))
+	box, _ := u.Rect(id)
+	if !ok || r.Min.Y < box.Min.Y || r.Max.Y > box.Max.Y {
+		t.Errorf("item 9000 at %v (laid %v), the column at %v", r, ok, box)
+	}
+	if len(built) > 40 {
+		t.Errorf("revealing item 9000 built %d items", len(built))
+	}
+}

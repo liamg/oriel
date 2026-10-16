@@ -29,10 +29,12 @@ type diffInput struct {
 	repo, work string
 }
 
-// diffFile is one file's branch diff, made off the loop: its hunks with their highlights, word marks and function,
-// and who wrote its added lines.
+// diffFile is one file's branch diff, made off the loop: its hunks with their word marks and who wrote their added
+// lines, and when styled, for the view, their highlights and function.
 type diffFile struct {
 	in      diffInput
+	styled  bool
+	blamed  bool // who wrote each added line is known
 	binary  bool
 	newText []byte
 	hunks   []diffHunk
@@ -59,11 +61,12 @@ type addedLine struct {
 }
 
 // loadDiff makes a file's diff: the base revision's version against newText (the buffer's), or the file on disk
-// when newText is nil.
-func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snapshot) *diffFile {
+// when newText is nil. Highlights and each hunk's function, which only the view shows, are made when styled; who
+// wrote each added line when blamed.
+func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snapshot, styled, blame bool) *diffFile {
 	ctx := context.Background()
 	repo := gitx.Repo{Dir: in.repo}
-	f := &diffFile{in: in}
+	f := &diffFile{in: in, styled: styled, blamed: blame}
 	var old []byte
 	if in.code != 'A' && in.code != '?' {
 		old, _ = repo.FileAt(ctx, in.rev, cmpOr(in.old, in.path))
@@ -83,11 +86,17 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 	}
 	hs := gitx.Unified(old, newText, diffContext)
 	oldLines, newLines := gitx.SplitLines(old), gitx.SplitLines(newText)
-	oldHL, newHL := highlightLines(r, in.path, old, oldLines, hs, true), highlightLines(r, in.path, newText, newLines, hs, false)
-	units := outline(r, in.path, newText)
+	var oldHL, newHL [][]span
+	var units []text.Unit
+	if styled {
+		oldHL, newHL = highlightLines(r, in.path, old, oldLines, hs, true), highlightLines(r, in.path, newText, newLines, hs, false)
+		units = outline(r, in.path, newText)
+	}
 	for _, h := range hs {
 		dh := diffHunk{DiffHunk: h, ids: h.IDs(), spans: make([][]span, len(h.Lines)), marks: make([][][2]int, len(h.Lines))}
-		dh.fn = hunkFunc(h, units, newText, newLines, oldLines)
+		if styled {
+			dh.fn = hunkFunc(h, units, newText, newLines, oldLines)
+		}
 		dh.adds = make([]addedLine, len(h.Lines))
 		k := 0
 		for _, c := range h.Changes {
@@ -119,7 +128,9 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 		}
 		f.hunks = append(f.hunks, dh)
 	}
-	f.authors = authorship(ctx, repo, in.path, newText, f.hunks, snap)
+	if blame {
+		f.authors = authorship(ctx, repo, in.path, newText, f.hunks, snap)
+	}
 	return f
 }
 
@@ -132,11 +143,11 @@ func highlightLines(r registry.Registry, path string, src []byte, lines []string
 	if !ok || len(src) == 0 {
 		return nil
 	}
-	p, err := syntax.NewParser(lang)
+	p, err := syntax.Borrow(lang)
 	if err != nil {
 		return nil
 	}
-	defer p.Close()
+	defer p.Release()
 	p.Parse(src)
 	starts := make([]int, len(lines)+1)
 	for i, l := range lines {
@@ -179,11 +190,11 @@ func outline(r registry.Registry, path string, src []byte) []text.Unit {
 	if !ok || len(src) == 0 {
 		return nil
 	}
-	p, err := syntax.NewParser(lang)
+	p, err := syntax.Borrow(lang)
 	if err != nil {
 		return nil
 	}
-	defer p.Close()
+	defer p.Release()
 	p.Parse(src)
 	us, _ := p.Outline()
 	return us

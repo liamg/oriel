@@ -142,8 +142,8 @@ func countLine(c *registry.LedgerCount, s core.LineState) {
 	}
 }
 
-// ledger is root's review ledger, from each changed file's diff (made off the loop, so it's Ready once they all
-// are) and the session's reviews.
+// ledger is root's review ledger, from changed files' diffs (made off the loop, so it's Ready once they all are)
+// and the session's reviews.
 func (x *diffPlugin) ledger(root string) registry.Ledger {
 	l := registry.Ledger{Root: root}
 	if x.sh.git == nil {
@@ -155,27 +155,162 @@ func (x *diffPlugin) ledger(root string) registry.Ledger {
 		return l
 	}
 	root = tree.root()
+	x.mu.Lock()
+	key := ledgerKey{gs: gs, gen: x.gen, seq: x.h.State().Seq}
+	reviews := x.reviews
+	c, ok := x.ledgers[root]
+	paced := ok && !c.l.Ready && c.key.gs == key.gs && c.key.seq == key.seq && c.reviews == reviews &&
+		time.Since(c.made) < ledgerGap
+	if paced && !c.waking {
+		c.waking = true
+		x.ledgers[root] = c
+		time.AfterFunc(ledgerGap-time.Since(c.made), x.h.Redraw)
+	}
+	x.mu.Unlock()
+	if ok && c.key == key || paced {
+		return c.l
+	}
+	// In a session, the files an agent can have written are diffed and blamed for its gates; outside one, the ledger
+	// counts the diffs made already, of the files opened, and starts none.
+	_, _, inSession := x.session(root)
+	var touched map[string]bool
+	if inSession {
+		var known bool
+		if touched, known = x.agentTouched(root, tree.status.Repo(), gs); !known {
+			return l // not Ready: it's made once the branch's agent commits are read
+		}
+	}
 	l.Root, l.Ready = root, true
 	texts := x.agentTextsFor(root)
 	for _, f := range gs.Files(gitx.Changed) {
-		d := x.diffFor(tree, gs, f)
+		var d *diffFile
+		switch {
+		case inSession && (touched[f.Path] || len(texts[f.Path]) > 0):
+			var current bool
+			if d, current = x.diffFor(tree, gs, f, false, true); !current || !d.blamed {
+				l.Ready = false // a gate waits for the diff the file has now
+			}
+		case !inSession:
+			d = x.made(root, f.Path)
+		}
 		if d == nil {
-			l.Ready = false
 			continue
 		}
-		lf := registry.LedgerFile{Path: f.Path}
-		eachAgentLine(d, texts[f.Path], x.review(root, f.Path), func(_, _ int, a addedLine, s core.LineState) {
-			countLine(&lf.All, s)
-			if !a.committed {
-				countLine(&lf.Uncommitted, s)
-			}
+		lf := x.ledgerFile(diffKey{root, f.Path}, d, key.seq, reviews, func() registry.LedgerFile {
+			lf := registry.LedgerFile{Path: f.Path}
+			eachAgentLine(d, texts[f.Path], x.review(root, f.Path), func(_, _ int, a addedLine, s core.LineState) {
+				countLine(&lf.All, s)
+				if !a.committed {
+					countLine(&lf.Uncommitted, s)
+				}
+			})
+			return lf
 		})
 		if lf.All.Total() > 0 {
 			l.Files = append(l.Files, lf)
 			l.All, l.Uncommitted = l.All.Add(lf.All), l.Uncommitted.Add(lf.Uncommitted)
 		}
 	}
+	x.mu.Lock()
+	if x.ledgers == nil {
+		x.ledgers = map[string]cachedLedger{}
+	}
+	x.ledgers[root] = cachedLedger{key: key, reviews: reviews, made: time.Now(), l: l}
+	x.mu.Unlock()
 	return l
+}
+
+// agentTouched is the files the branch's agent commits touched, the ones whose ledger needs blame; known is false
+// while they're read, off the loop, with a frame drawn when they are.
+func (x *diffPlugin) agentTouched(root string, repo gitx.Repo, gs *gitx.State) (touched map[string]bool, known bool) {
+	k := touchedKey{root: root, base: gs.BaseHash, head: gs.Head}
+	if gs.BaseHash == "" || gs.Head == "" {
+		return nil, true
+	}
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	t, ok := x.touched[root]
+	if ok && t.key == k && t.read {
+		return t.files, true
+	}
+	if !ok || t.key != k {
+		if x.touched == nil {
+			x.touched = map[string]touchedFiles{}
+		}
+		x.touched[root] = touchedFiles{key: k}
+		x.busy.Add(1)
+		go func() {
+			defer x.busy.Done()
+			files, err := repo.AgentTouched(context.Background(), gs.BaseHash)
+			if err != nil {
+				x.h.Log().Warn("reading the branch's agent commits", "root", root, "err", err)
+				files = nil
+			}
+			x.mu.Lock()
+			if x.touched[root].key == k {
+				x.touched[root] = touchedFiles{key: k, files: files, read: true}
+				x.gen++
+			}
+			x.mu.Unlock()
+			x.h.Redraw()
+		}()
+	}
+	return nil, false
+}
+
+type touchedKey struct{ root, base, head string }
+
+type touchedFiles struct {
+	key   touchedKey
+	files map[string]bool
+	read  bool
+}
+
+// ledgerGap is the least time between making a ledger again while its diffs are still being made: thousands
+// landing one by one remake it at this pace, not once each.
+const ledgerGap = 250 * time.Millisecond
+
+// ledgerPart is a file's share of its ledger, and what it was counted from.
+type ledgerPart struct {
+	d       *diffFile
+	seq     uint64
+	reviews uint64
+	lf      registry.LedgerFile
+}
+
+// ledgerFile is k's share of its ledger, counted again only when its diff, the sessions or the local reviews change.
+func (x *diffPlugin) ledgerFile(k diffKey, d *diffFile, seq, reviews uint64, count func() registry.LedgerFile) registry.LedgerFile {
+	x.mu.Lock()
+	p, ok := x.parts[k]
+	x.mu.Unlock()
+	if ok && p.d == d && p.seq == seq && p.reviews == reviews {
+		return p.lf
+	}
+	p = ledgerPart{d: d, seq: seq, reviews: reviews, lf: count()}
+	x.mu.Lock()
+	if x.parts == nil {
+		x.parts = map[diffKey]ledgerPart{}
+	}
+	x.parts[k] = p
+	x.mu.Unlock()
+	return p.lf
+}
+
+// ledgerKey is everything a ledger is made from: the git reading, the diffs made and local reviews (gen), and the
+// sessions' reviews and transcripts (the store's seq). The Explorer asks every frame; it's made again only when one
+// of them changes.
+type ledgerKey struct {
+	gs  *gitx.State
+	gen uint64
+	seq uint64
+}
+
+type cachedLedger struct {
+	key     ledgerKey
+	reviews uint64
+	made    time.Time
+	waking  bool // a frame is set for when it can be made again
+	l       registry.Ledger
 }
 
 // shipGate is the ledger as a "before this ships" gate: every agent-written line of the session's projects read.

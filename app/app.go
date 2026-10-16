@@ -49,21 +49,23 @@ const (
 )
 
 type Config struct {
-	Store     core.Store        // the materialised state the worker feeds; in-memory if nil
-	Registry  registry.Registry // a fresh one if nil
-	Plugins   []plugin.Plugin   // activated in order, after the built-ins
-	Logs      *Logs             // where log records go; a ring in memory if nil
-	ConfigDir string            // ~/.config/oriel unless set; user themes live in its themes/
-	CrashDir  string            // crash reports are written to and offered from here; none if ""
-	Version   string
-	Desktop   Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
-	Debug     bool            // oriel --debug: the frame-time overlay
-	Files     []string        // open in the editor at start
-	WorkDir   string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
-	StateDir  string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
-	CacheDir  string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
-	DataDir   string          // installed plugins, in its plugins/; DefaultDataDir() if ""
-	Workers   []worker.Client // the workers whose sessions the window shows: this machine's, and any others
+	Store      core.Store        // the materialised state the worker feeds; in-memory if nil
+	Registry   registry.Registry // a fresh one if nil
+	Plugins    []plugin.Plugin   // activated in order, after the built-ins
+	Logs       *Logs             // where log records go; a ring in memory if nil
+	ConfigDir  string            // ~/.config/oriel unless set; user themes live in its themes/
+	CrashDir   string            // crash reports are written to and offered from here; none if ""
+	Version    string
+	Desktop    Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
+	Debug      bool            // oriel --debug: the frame-time overlay
+	CPUProfile string          // oriel --cpuprofile: a CPU profile written here while the window is open
+	Trace      string          // oriel --trace: the execution trace of the seconds before a stall, written here
+	Files      []string        // open in the editor at start
+	WorkDir    string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
+	StateDir   string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
+	CacheDir   string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
+	DataDir    string          // installed plugins, in its plugins/; DefaultDataDir() if ""
+	Workers    []worker.Client // the workers whose sessions the window shows: this machine's, and any others
 	// LocalWorker reaches this machine's worker, starting one: after one from another build hands over to this build's.
 	LocalWorker func(context.Context) (worker.Client, error)
 	// Updates is Oriel updating itself and its workers (distribution.md); nil in a build that doesn't.
@@ -174,6 +176,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	cfg.Logs.Ring.OnWrite(poke)
 
 	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
+	l.stalls = startStallTrace(cfg.Trace, log)
+	defer l.stalls.stop()
 	l.ui.SetClipboard(sh.desktop)
 	l.ui.Title = "Oriel"
 	sh.keys, sh.modes, sh.ui = l.keys, l.modes, l.ui
@@ -226,6 +230,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 				return derr
 			}
 			drawn, due = time.Now(), time.Time{}
+			if l.input.built(l.log) {
+				l.stalls.stalled()
+			}
 		}
 		// Keys typed behind ones the editor has now taken: looked up, or passed on raw while it's mid-command.
 		if acts := l.keys.Pump(l.sh.keyModes(), time.Now()); len(acts) > 0 || l.keys.Queued() {
@@ -525,6 +532,50 @@ type loop struct {
 	log   *slog.Logger
 
 	slowLogged time.Time // the last slow loop logged, so a slow stretch logs once a second
+	input      inputLag
+	stalls     *stallTrace
+}
+
+// lagWarn is how far behind the pointer may fall, from when it moved to a frame built with it, before it's logged.
+const lagWarn = 100 * time.Millisecond
+
+// inputLag times the pointer's moves through the loop: when each reached it, and when a frame was built with it.
+type inputLag struct {
+	oldest  time.Time     // the earliest move not yet in a frame
+	reached time.Duration // the longest a move took to reach the loop since the last frame
+	drawn   time.Duration // the last frame's: from its oldest move to built, for the debug overlay
+	logged  time.Time
+}
+
+// arrived notes a move that happened at at, reaching the loop now; one that changed nothing needs no frame.
+func (in *inputLag) arrived(at time.Time, changed bool) {
+	if at.IsZero() || !changed {
+		return
+	}
+	in.reached = max(in.reached, time.Since(at))
+	if in.oldest.IsZero() || at.Before(in.oldest) {
+		in.oldest = at
+	}
+}
+
+// built ends a frame, and logs, once a second at most, when the moves in it had fallen behind. It reports whether
+// they had.
+func (in *inputLag) built(log *slog.Logger) bool {
+	if in.oldest.IsZero() {
+		return false
+	}
+	in.drawn = time.Since(in.oldest)
+	reached := in.reached
+	in.oldest, in.reached = time.Time{}, 0
+	if in.drawn <= lagWarn {
+		return false
+	}
+	if time.Since(in.logged) > time.Second {
+		in.logged = time.Now()
+		log.Warn("the pointer fell behind", "reached the loop after", reached.Round(time.Millisecond),
+			"drawn after", in.drawn.Round(time.Millisecond))
+	}
+	return true
 }
 
 // slowLoop is how long one turn of the loop may take before it's logged: keys typed meanwhile wait behind it.
@@ -537,6 +588,7 @@ func (l *loop) timed(what func() string, fn func()) {
 	if d := time.Since(start); d > slowLoop && time.Since(l.slowLogged) > time.Second {
 		l.slowLogged = time.Now()
 		l.log.Warn("the window was held up", "by", what(), "took", d.Round(time.Millisecond))
+		l.stalls.stalled()
 	}
 }
 
@@ -624,8 +676,13 @@ func (l *loop) handle(ctx context.Context, ev render.Event) bool {
 	switch ev := ev.(type) {
 	case render.PointerEvent:
 		changed := l.ui.Pointer(ev)
+		l.input.arrived(ev.At, changed)
 		l.win.SetCursor(l.ui.Cursor())
 		return changed
+	case render.SlowFrameEvent:
+		l.log.Warn("the window was slow to show a frame", "waited", ev.Waited.Round(time.Millisecond), "took", ev.Took.Round(time.Millisecond))
+		l.stalls.stalled()
+		return false
 	case render.AppearanceEvent:
 		l.osLight = !ev.Dark
 		l.themeDirty.Store(true)
@@ -778,7 +835,7 @@ func (l *loop) draw() error {
 		l.ui.Frame(f, size, func(c *ui.Ctx) {
 			buildWindow(c, l.reg, size)
 			if l.debug {
-				frameOverlay(c, l.frameTime)
+				frameOverlay(c, l.frameTime, l.input.drawn)
 			}
 		})
 		l.frameTime = time.Since(start)
@@ -834,12 +891,12 @@ func buildWindow(c *ui.Ctx, reg registry.Registry, size render.Point) {
 	}
 }
 
-// frameOverlay is --debug's frame time, at the bottom right.
-func frameOverlay(c *ui.Ctx, d time.Duration) {
+// frameOverlay is --debug's frame time and how far the pointer was behind, at the bottom right.
+func frameOverlay(c *ui.Ctx, d, behind time.Duration) {
 	at := render.Point{X: c.Size().X - 8, Y: c.Size().Y - 30}
 	c.Box("frametime", ui.Style{Pad: ui.PadXY(6, 2), Radius: 4, Fill: c.Theme().C(theme.BgOverlay), Z: ui.LayerTooltip,
 		Float: &ui.Float{Point: &at, Self: render.Point{X: 1, Y: 1}}}, func(c *ui.Ctx) {
-		c.Text(nil, fmt.Sprintf("frame %.2f ms", float64(d.Microseconds())/1000), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10},
+		c.Text(nil, fmt.Sprintf("frame %.2f ms · pointer %d ms", float64(d.Microseconds())/1000, behind.Milliseconds()), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10},
 			Color: c.Theme().C(theme.Brand)})
 	})
 }

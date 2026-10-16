@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"gioui.org/app"
 	"gioui.org/io/clipboard"
@@ -94,6 +95,7 @@ type Window struct {
 	events chan render.Event // to the app, in order
 	queue  chan render.Event // from the event loop, which never blocks on the app
 	latest atomic.Pointer[render.List]
+	handed atomic.Int64 // when latest was handed over, in unix nanoseconds
 	redraw atomic.Bool
 	scale  atomic.Value // float32: the display's density times the zoom
 	dpi    atomic.Value // float32: the display's density
@@ -183,9 +185,16 @@ func (w *Window) Frame(fn func(render.Frame)) error {
 		return nil // nothing changed: no need to draw it again
 	}
 	w.latest.Store(l)
+	w.handed.Store(time.Now().UnixNano())
 	w.win.Invalidate()
 	return nil
 }
+
+// A frame is slow when it waits past slowWait for the window to start on it, or takes past slowDraw to draw and present.
+const (
+	slowWait = 100 * time.Millisecond
+	slowDraw = 100 * time.Millisecond
+)
 
 // post queues ev for the app. It drops ev only if the app is 1024 events behind.
 func (w *Window) post(ev render.Event) {
@@ -224,6 +233,9 @@ func (w *Window) loop() {
 	f := NewFrame()
 	tag := new(int)
 	var held pointer.Buttons
+	var clock inputClock
+	var shown *render.List
+	var slowSent time.Time
 	var down render.Mods // the modifier keys held
 	viewed, placed := false, false
 	defer w.pl.close()
@@ -289,22 +301,51 @@ func (w *Window) loop() {
 					w.ask.Store(true)
 				}
 				for _, k := range translate(ev, scale, &held, &down) {
+					if pe, ok := k.(render.PointerEvent); ok {
+						pe.At = clock.at(ev.(pointer.Event).Time)
+						k = pe
+					}
 					w.post(k)
 				}
 			}
 			if w.redraw.Swap(false) {
 				w.post(render.RedrawEvent{})
 			}
+			start := time.Now()
+			var waited time.Duration
 			f.Begin(gtx.Ops, scale)
 			if l := w.latest.Load(); l != nil {
+				if l != shown {
+					shown, waited = l, start.Sub(time.Unix(0, w.handed.Load()))
+				}
 				l.Replay(f)
 			}
 			f.End()
 			e.Frame(gtx.Ops)
+			if took := time.Since(start); (waited > slowWait || took > slowDraw) && time.Since(slowSent) > time.Second {
+				slowSent = time.Now()
+				w.post(render.SlowFrameEvent{Waited: waited, Took: took})
+			}
 		default:
 			if w.pl.view(e) {
 				viewed = true
 			}
 		}
 	}
+}
+
+// inputClock turns the OS's input timestamps, from an epoch of its own, into wall time. The epoch is the earliest any
+// event puts it at: the event that arrived soonest after it happened reads as arriving at once.
+type inputClock struct {
+	epoch time.Time
+}
+
+func (c *inputClock) at(t time.Duration) time.Time {
+	if t == 0 {
+		return time.Time{}
+	}
+	if e := time.Now().Add(-t); c.epoch.IsZero() || e.Before(c.epoch) {
+		c.epoch = e
+	}
+	return c.epoch.Add(t)
 }

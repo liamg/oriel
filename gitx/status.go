@@ -60,10 +60,17 @@ type State struct {
 	Branch   string
 	Base     string // the branch Changed compares with: origin's default, main or master; "" for none
 	BaseHash string // the merge-base with it, abbreviated
+	Head     string // HEAD's hash; "" before the first commit
 	Upstream string
 	Ahead    int
 	Behind   int
 	files    [3][]FileState
+}
+
+// sameRefs reports whether two readings agree on everything but their files.
+func (s *State) sameRefs(o *State) bool {
+	return s.Branch == o.Branch && s.Base == o.Base && s.BaseHash == o.BaseHash && s.Head == o.Head && s.Upstream == o.Upstream &&
+		s.Ahead == o.Ahead && s.Behind == o.Behind
 }
 
 // Files are the files of a scope, by path. Uncommitted lists a file once per area it has changes in.
@@ -119,38 +126,132 @@ func (r Repo) BaseRef(ctx context.Context, branch string) string {
 	return ""
 }
 
+type mergeBaseKey struct{ dir, head, refs string }
+
+type mergeBase struct {
+	ref, full, short string
+}
+
+var mergeBases = struct {
+	sync.Mutex
+	by map[mergeBaseKey]mergeBase
+}{by: map[mergeBaseKey]mergeBase{}}
+
+// mergeBase is where HEAD left base: of origin's base and the local branch of its name, the later merge-base, so
+// a stale origin doesn't put years of others' work in Changed. It's worked out again only when HEAD or either
+// branch moves.
+func (r Repo) mergeBase(ctx context.Context, head, base, branch string) (mergeBase, bool) {
+	refs := []string{base}
+	if local, ok := strings.CutPrefix(base, "origin/"); ok && local != branch {
+		refs = append(refs, local)
+	}
+	var full []string
+	for _, ref := range refs {
+		full = append(full, "refs/remotes/"+ref, "refs/heads/"+ref)
+	}
+	out, err := r.git(ctx, append([]string{"for-each-ref", "--format=%(refname) %(objectname)"}, full...)...)
+	if err != nil {
+		return mergeBase{}, false
+	}
+	k := mergeBaseKey{dir: r.Dir, head: head, refs: string(out)}
+	mergeBases.Lock()
+	mb, ok := mergeBases.by[k]
+	mergeBases.Unlock()
+	if ok {
+		return mb, mb.full != ""
+	}
+	for _, ref := range refs {
+		b, err := r.git(ctx, "merge-base", "HEAD", ref)
+		if err != nil {
+			continue
+		}
+		next := mergeBase{ref: ref, full: strings.TrimSpace(string(b))}
+		if mb.full != "" {
+			if _, err := r.git(ctx, "merge-base", "--is-ancestor", next.full, mb.full); err == nil {
+				continue // no later than the one already found
+			}
+		}
+		mb = next
+	}
+	if mb.full != "" {
+		if b, err := r.git(ctx, "rev-parse", "--short", mb.full); err == nil {
+			mb.short = strings.TrimSpace(string(b))
+		}
+	}
+	mergeBases.Lock()
+	if len(mergeBases.by) > 256 {
+		clear(mergeBases.by)
+	}
+	mergeBases.by[k] = mb
+	mergeBases.Unlock()
+	return mb, mb.full != ""
+}
+
 // Status reads the work tree's status in every scope.
 func (r Repo) Status(ctx context.Context) (*State, error) {
 	st := &State{}
-	st.Branch, _ = r.Branch(ctx)
-	_, headErr := r.git(ctx, "rev-parse", "--verify", "-q", "HEAD")
-	hasHead := headErr == nil
-	if t, err := r.AheadBehind(ctx); err == nil {
-		st.Upstream, st.Ahead, st.Behind = t.Upstream, t.Ahead, t.Behind
+	// What doesn't need the base runs alongside working the base out, each its own git.
+	var (
+		wg                    sync.WaitGroup
+		hasHead               bool
+		base                  = emptyTree
+		out, tracked, ign     []byte
+		statusErr, trackedErr error
+		ignErr                error
+		staged, unstaged      numstats
+	)
+	run := func(fn func()) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fn()
+		}()
 	}
-	base := emptyTree
-	if hasHead {
+	run(func() {
+		st.Branch, _ = r.Branch(ctx)
+		head, headErr := r.git(ctx, "rev-parse", "--verify", "-q", "HEAD")
+		hasHead = headErr == nil
+		if !hasHead {
+			return
+		}
+		st.Head = strings.TrimSpace(string(head))
+		var inner sync.WaitGroup
+		inner.Add(1)
+		go func() {
+			defer inner.Done()
+			if t, err := r.AheadBehind(ctx); err == nil {
+				st.Upstream, st.Ahead, st.Behind = t.Upstream, t.Ahead, t.Behind
+			}
+		}()
 		base = "HEAD"
 		if st.Base = r.BaseRef(ctx, st.Branch); st.Base != "" {
-			if out, err := r.git(ctx, "merge-base", "HEAD", st.Base); err == nil {
-				base = strings.TrimSpace(string(out))
+			if mb, ok := r.mergeBase(ctx, st.Head, st.Base, st.Branch); ok {
+				st.Base, base, st.BaseHash = mb.ref, mb.full, mb.short
 			} else {
 				st.Base = ""
 			}
 		}
-		if out, err := r.git(ctx, "rev-parse", "--short", base); err == nil {
-			st.BaseHash = strings.TrimSpace(string(out))
+		if base == "HEAD" {
+			if out, err := r.git(ctx, "rev-parse", "--short", base); err == nil {
+				st.BaseHash = strings.TrimSpace(string(out))
+			}
 		}
+		inner.Wait()
+	})
+	run(func() { out, statusErr = r.git(ctx, "status", "--porcelain=v2", "-z", "--untracked-files=all") })
+	run(func() { staged, _ = r.numstat(ctx, "diff", "--cached", "-M", "--numstat", "-z") })
+	run(func() { unstaged, _ = r.numstat(ctx, "diff", "--numstat", "-z") })
+	run(func() { tracked, trackedErr = r.git(ctx, "ls-files", "-z") })
+	run(func() {
+		ign, ignErr = r.git(ctx, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory")
+	})
+	wg.Wait()
+	if statusErr != nil {
+		return nil, statusErr
 	}
 
 	// Uncommitted, from git status.
-	out, err := r.git(ctx, "status", "--porcelain=v2", "-z", "--untracked-files=all")
-	if err != nil {
-		return nil, err
-	}
 	entries := parseStatusV2(out)
-	staged, _ := r.numstat(ctx, "diff", "--cached", "-M", "--numstat", "-z")
-	unstaged, _ := r.numstat(ctx, "diff", "--numstat", "-z")
 	var unc []FileState
 	working := map[string]bool{}
 	for _, e := range entries {
@@ -185,17 +286,24 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 	// Changed: the work tree against the merge-base.
 	var changed []FileState
 	if hasHead {
-		names, err := r.git(ctx, "diff", "-M", "--name-status", "-z", base)
+		var (
+			names, between  []byte
+			err, betweenErr error
+			counts          numstats
+		)
+		run(func() { names, err = r.git(ctx, "diff", "-M", "--name-status", "-z", base) })
+		run(func() { counts, _ = r.numstat(ctx, "diff", "-M", "--numstat", "-z", base) })
+		if base != "HEAD" {
+			run(func() { between, betweenErr = r.git(ctx, "diff", "-M", "--name-only", "-z", base, "HEAD") })
+		}
+		wg.Wait()
 		if err != nil {
 			return nil, err
 		}
-		counts, _ := r.numstat(ctx, "diff", "-M", "--numstat", "-z", base)
 		committed := map[string]bool{}
-		if base != "HEAD" {
-			if out, err := r.git(ctx, "diff", "-M", "--name-only", "-z", base, "HEAD"); err == nil {
-				for _, p := range strings.Split(string(out), "\x00") {
-					committed[p] = p != ""
-				}
+		if base != "HEAD" && betweenErr == nil {
+			for _, p := range strings.Split(string(between), "\x00") {
+				committed[p] = p != ""
 			}
 		}
 		for _, f := range parseNameStatus(names) {
@@ -223,7 +331,7 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 
 	// All: every file, with Changed's marks, the untracked ones, and ignored directories.
 	all := map[string]FileState{}
-	if tracked, err := r.git(ctx, "ls-files", "-z"); err == nil {
+	if trackedErr == nil {
 		for _, p := range strings.Split(string(tracked), "\x00") {
 			if p != "" {
 				all[p] = FileState{Path: p}
@@ -243,7 +351,7 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 			all[f.Path] = f
 		}
 	}
-	if ign, err := r.git(ctx, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"); err == nil {
+	if ignErr == nil {
 		for _, p := range strings.Split(string(ign), "\x00") {
 			if p != "" {
 				all[p] = FileState{Path: p, Ignored: true}
@@ -381,12 +489,13 @@ func countLines(path string) (int, bool) {
 // Status is a work tree's status kept up to date: what explorer scopes and gutters read (ide.md). Refresh reads
 // it again; watchers hear which paths' states changed.
 type Status struct {
-	repo Repo
-	mu   sync.Mutex
-	st   *State
-	seen bool
-	subs map[int]func(paths []string)
-	next int
+	repo    Repo
+	reading sync.Mutex // held through a refresh
+	mu      sync.Mutex
+	st      *State
+	seen    bool
+	subs    map[int]func(paths []string)
+	next    int
 }
 
 func NewStatus(r Repo) *Status { return &Status{repo: r, subs: map[int]func([]string){}} }
@@ -417,8 +526,10 @@ func (s *Status) Watch(fn func(paths []string)) (cancel func()) {
 	}
 }
 
-// Refresh reads the status again.
+// Refresh reads the status again. Refreshes run one at a time, so a reading never replaces a later one.
 func (s *Status) Refresh(ctx context.Context) error {
+	s.reading.Lock()
+	defer s.reading.Unlock()
 	st, err := s.repo.Status(ctx)
 	if err != nil {
 		return err
@@ -426,9 +537,13 @@ func (s *Status) Refresh(ctx context.Context) error {
 	s.mu.Lock()
 	changed := diffStates(s.st, st)
 	first := !s.seen
-	s.st, s.seen = st, true
+	same := !first && len(changed) == 0 && s.st.sameRefs(st)
+	if !same {
+		s.st = st // a reading that changed nothing keeps the last, so what's cached on it stays good
+	}
+	s.seen = true
 	var fns []func([]string)
-	if first || len(changed) > 0 || s.st.Branch != st.Branch {
+	if !same {
 		for _, fn := range s.subs {
 			fns = append(fns, fn)
 		}

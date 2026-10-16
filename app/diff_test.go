@@ -246,7 +246,7 @@ func TestDiffHunkKeysAndReviewed(t *testing.T) {
 	}
 	app.typeKeys("]h")
 	app.typeKeys("r")
-	app.waitFrame("both hunks reviewed", func(s string) bool { return !strings.Contains(s, "MARK REVIEWED") && strings.Contains(s, "reviewed") })
+	app.waitFrame("both hunks reviewed", func(s string) bool { return !strings.Contains(s, "MARK REVIEWED") && strings.Contains(s, "REVIEWED") })
 	app.waitAccess("the file's box ticked", func(r *running) bool { n := r.access(box); return n != nil && n.Selected })
 	app.clickAccess(box)
 	app.waitFrame("the marks off", func(s string) bool { return strings.Count(s, "MARK REVIEWED") == 2 })
@@ -278,8 +278,8 @@ func TestDiffExplainRunsExplainUnit(t *testing.T) {
 	}
 }
 
-// RV-1: ui.md 06, "Authorship breakdown: Claude, you, gofmt": who wrote the lines the change adds, by blame, with
-// those not committed yet counted apart.
+// RV-1: ui.md 06, "Authorship breakdown: Claude, you, gofmt": who wrote the lines the change adds in the files
+// opened, by blame, with those not committed yet counted apart.
 // ref: oracle git
 func TestDiffAuthorship(t *testing.T) {
 	r := diffRepo(t)
@@ -303,7 +303,8 @@ func TestDiffAuthorship(t *testing.T) {
 			}
 		}
 	}
-	agent += 3 // currency.go, all the agent's
+	agent += 3 // currency.go, all the agent's, once it's opened
+	app.clickText("currency.go")
 	app.waitFrame("the authorship box", func(s string) bool {
 		return containsAll(s, "AUTHORSHIP", "Agent", fmt.Sprintf("%d lines", agent), "uncommitted", fmt.Sprintf("%d lines", work))
 	})
@@ -321,7 +322,9 @@ func TestDiffReviewedLastsInTheSession(t *testing.T) {
 	git(t, dir, "update-ref", "refs/heads/main", "HEAD")
 	os.WriteFile(path, []byte(roundWork), 0o644)
 	r.do(func() error { return r.host.Run(context.Background(), "diff.open", registry.Args{"path": dir}) })
-	r.waitFrame("the session's diff", func(s string) bool { return containsAll(s, "func roundHalfEven", "func RoundMinor") })
+	r.waitFrame("the session's diff, both hunks against main", func(s string) bool {
+		return containsAll(s, "func roundHalfEven", "func RoundMinor") && strings.Count(s, "MARK REVIEWED") == 2
+	})
 	r.clickText("MARK REVIEWED")
 	st := waitState(t, r.store, "the mark in the session", func(st core.State) bool {
 		se, ok := st.Session("w")

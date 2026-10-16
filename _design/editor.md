@@ -207,6 +207,9 @@ engine never feels like another binary running in a pane.
   the lines it touched and the ranges tree-sitter reports changed.
 - wazero compiles into `<user cache>/oriel` (`Config.CacheDir`), so a grammar compiles once per version: opening a
   file from the cache takes about 12 ms, against 100 ms cold.
+- One-off work on a file (a diff's highlights, an outline, the log's source preview) borrows a parser
+  (`syntax.Borrow`, `Parser.Release`) rather than starting one: each language keeps up to 4 idle, their queries
+  compiled, so highlighting a diff's side costs about 24 ms and 3 MB rather than 68 ms and 15 MB.
 - A local pack is `~/.config/oriel/languages/<name>/`: `language.toml` (`name`, `extensions`, `filenames`,
   `shebangs`), `grammar.wasm` and `queries/*.scm`. It registers after the core set, so it can shadow one.
 - **Grammar packs (PL-3)** are the languages beyond the core set, built by `syntax/grammars/build.sh` from

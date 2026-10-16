@@ -250,6 +250,9 @@ func (u *UI) scrollAt(p render.Point, d render.Point) {
 			u.in.wheel[id] = render.Point{X: w.X + d.X, Y: w.Y + d.Y}
 			return
 		}
+		if f.sideways && f.scrollX && !f.scrollY && d.X == 0 {
+			d = render.Point{X: d.Y}
+		}
 		if (f.scrollX && d.X != 0) || (f.scrollY && d.Y != 0) {
 			if !f.scrollX {
 				d.X = 0

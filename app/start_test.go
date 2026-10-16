@@ -405,3 +405,11 @@ func TestStartViewKeepsToItsOwnKeys(t *testing.T) {
 		t.Fatal("a global key didn't run with a directory open")
 	}
 }
+
+// --cpuprofile names the file the CPU profile goes to.
+func TestConfigFromFlagsCPUProfile(t *testing.T) {
+	cfg, err := ConfigFromFlags([]string{"--cpuprofile", "/tmp/oriel.prof"}, "v1", io.Discard)
+	if err != nil || cfg.CPUProfile != "/tmp/oriel.prof" {
+		t.Fatalf("CPUProfile %q, err %v", cfg.CPUProfile, err)
+	}
+}

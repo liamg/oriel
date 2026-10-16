@@ -395,3 +395,46 @@ func TestOpenAlone(t *testing.T) {
 		t.Errorf("left dock = %v, want only %v", got, other)
 	}
 }
+
+// More tabs than the strip fits, the last active: scrolled back to the start, by the wheel or a trackpad, the strip
+// stays there rather than jumping back to the active tab each frame, and counts the tabs past its right edge.
+func TestTabStripScrollsAwayFromTheActiveTab(t *testing.T) {
+	h := newHarness(t)
+	var first, last ViewRef
+	for i := range 40 {
+		last = ViewRef{ID: "editor", Instance: fmt.Sprintf("file%02d.go", i)}
+		if i == 0 {
+			first = last
+		}
+		if err := h.r.Open(last, Tab, Opts{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	h.r.Focus = &last
+	for range 3 {
+		h.frame()
+	}
+	if !h.tabShown(last) || h.tabShown(first) {
+		t.Fatal("the last tab active, the strip isn't scrolled to it")
+	}
+	h.u.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: h.tabAt(last), Scroll: render.Point{Y: -1e5}})
+	for range 5 {
+		h.frame()
+	}
+	if !h.tabShown(first) {
+		t.Fatal("scrolled to the start, the strip came back to the active tab")
+	}
+	if !slices.ContainsFunc(h.list.Ops, func(op render.Op) bool { return op.Kind == render.OpGlyphs && strings.HasSuffix(op.Run.Text, " ›") }) {
+		t.Error("no count of the tabs past the strip's right edge")
+	}
+}
+
+// tabShown is whether v's tab label is drawn on screen in the latest frame.
+func (h *harness) tabShown(v ViewRef) bool {
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == v.String() && h.isTab(op) && op.At.X >= 0 && op.At.X < screen.X {
+			return true
+		}
+	}
+	return false
+}

@@ -505,7 +505,10 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   against HEAD, the index and the merge-base with origin's default branch, else main or master); `gitx.Status` keeps
   it, tells watchers which paths changed, and runs in the app until the worker exists (AI-1). It refreshes every 2 s,
   after a write and after each git command, rather than on fs-notify: a watcher over x/sys (inotify, kqueue) comes
-  with the worker. Fixture repos for tests are built with `gitx/gittest`.
+  with the worker. The gits a reading needs run at once, in two rounds (everything that doesn't need the
+  merge-base while it's found, then the diffs against it): 17 ms on this repo, against 55 ms one after another. A
+  reading that changes nothing keeps the last one, so what's cached on it (the Explorer's rows) stays good and
+  watchers hear nothing. Refreshes run one at a time, so a slow reading never lands after a newer one. Fixture repos for tests are built with `gitx/gittest`.
 
 ## Navigation and search
 
@@ -527,12 +530,21 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 
 - Gutter hunks, stage and unstage a hunk (`<leader>hs`), inline blame with author kind (you, agent, other).
 - As built (FG-2): hunks are `gitx.DiffLines` (Myers, no context, git's numbering) from the index's version to the
-  buffer as it would be written (`DecorationCtx.FileBytes`, `vim.Pane.FileBytes`), so unsaved edits show. Staging
+  buffer as it would be written (`DecorationCtx.FileBytes`, `vim.Pane.FileBytes`), so unsaved edits show. Myers keeps
+  only the diagonals each step reads (about D² ints for D edits, not D × the file's length), a whole file added or
+  deleted needs none, and past 2,000 edits the two sides are taken as replaced whole: a 20,000-line new file diffs in
+  well under 64 MB, where it took gigabytes. Staging
   writes the index blob directly (`hash-object` + `update-index`, keeping the mode); tests hold each hunk against `git
   apply --cached` with git's own patch. Keys: `␣hs` stage, `␣hu` unstage, `␣hr` reset (one undo step), `␣hp` preview
   (a block of the old lines), `]c`/`[c`, `␣hb` blame (`git.blame.inline`). Blame is `git blame --contents -` on the
   buffer; an author is an agent by name or email (claude, codex, anthropic, openai, copilot, `[bot]`) or a
-  Co-Authored-By trailer naming one, and "you" by `user.email`. The Explorer's Uncommitted lists the selected file's
+  Co-Authored-By trailer naming one, and "you" by `user.email`; a blame runs one git, with `user.email` read once a
+  repo (kept 30 s) and each commit's trailers once. A file at a commit's hash comes through one long-lived `git
+  cat-file --batch` per repo (`gitx.Repo.FileAt`), not a git each. In a session the review ledger diffs and blames only
+  the files an agent commit on the branch touched (`gitx.Repo.AgentTouched`, one `git log`) or the session's agent
+  edited; outside one it starts nothing. Its frame stays as quick while diffs land (each file's count kept until its
+  diff changes, the whole remade at most every 250 ms meanwhile, sizes and times on disk read again once a second
+  off the loop). The Explorer's Uncommitted lists the selected file's
   staged and unstaged hunks, and `s` stages or unstages one.
 - crit's Git and PR flow carried over: uncommitted → behind base → unpushed →
   PR → checks → merge, per project, cross-linked across projects.

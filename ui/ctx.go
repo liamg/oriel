@@ -197,6 +197,89 @@ func (c *Ctx) ListBehind(key any, st Style, n int, rowH float32, behind func(c *
 	})
 }
 
+// ItemsOpts are an Items column's estimate, keys and the item to bring into view.
+type ItemsOpts struct {
+	Estimate float32         // an item's height before it's first built; 24 if 0
+	Key      func(i int) any // item i's key, which its height is remembered by; i if nil
+	Reveal   int             // an item to scroll to the top of the view unless it's in view already; -1 for none
+}
+
+// itemsState is the height each item had when it was last built, and what was built last frame.
+type itemsState struct {
+	heights map[any]float32
+	built   []any
+}
+
+// Items adds a vertically scrolling column of n items of any height and builds only those in view: each is as tall
+// as it was when last built, or o.Estimate before then. Each item is a column keyed o.Key(i).
+func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i int)) ID {
+	st.Dir, st.ScrollY = Column, true
+	st.Gap = 0
+	est := o.Estimate
+	if est <= 0 {
+		est = 24
+	}
+	keyOf := o.Key
+	if keyOf == nil {
+		keyOf = func(i int) any { return i }
+	}
+	return c.Box(key, st, func(lc *Ctx) {
+		id := lc.e.id
+		is := State[itemsState](lc, Child(id, "\x00items"))
+		if is.heights == nil {
+			is.heights = map[any]float32{}
+		}
+		for _, k := range is.built {
+			if r, ok := lc.u.Rect(Child(id, k)); ok {
+				is.heights[k] = r.Dy()
+			}
+		}
+		height := func(i int) float32 {
+			if h, ok := is.heights[keyOf(i)]; ok {
+				return h
+			}
+			return est
+		}
+		view := 64 * est
+		if r, ok := lc.u.Rect(id); ok && r.Dy() > 0 {
+			view = r.Dy()
+		}
+		scroll := lc.u.Scroll(id).Y
+		if o.Reveal >= 0 && o.Reveal < n {
+			top := float32(0)
+			for i := range o.Reveal {
+				top += height(i)
+			}
+			if top < scroll || top+min(height(o.Reveal), view) > scroll+view {
+				scroll = top
+				lc.u.ScrollTo(id, render.Point{Y: top})
+			}
+		}
+		first, last := n, n
+		var above, below, y float32
+		for i := range n {
+			h := height(i)
+			switch {
+			case y+h <= scroll:
+				above += h
+			case y < scroll+view:
+				first, last = min(first, i), i+1
+			default:
+				below += h
+			}
+			y += h
+		}
+		is.built = is.built[:0]
+		lc.Box("\x00above", Style{H: Px(above)}, nil)
+		for i := first; i < last; i++ {
+			k := keyOf(i)
+			is.built = append(is.built, k)
+			lc.Box(k, Style{W: Flex(1), Dir: Column}, func(ic *Ctx) { item(ic, i) })
+		}
+		lc.Box("\x00below", Style{H: Px(below)}, nil)
+	})
+}
+
 // State is the widget state kept for id while it's built each frame, created zero the first time.
 func State[T any](c *Ctx, id ID) *T {
 	st := c.u.state(id)
@@ -289,6 +372,28 @@ func (c *Ctx) Scroll(id ID) render.Point { return c.u.Scroll(id) }
 
 // ScrollTo sets id's scroll offset; layout clamps it.
 func (c *Ctx) ScrollTo(id ID, p render.Point) { c.u.ScrollTo(id, p) }
+
+// keptView is the target KeepInView last brought into view.
+type keptView struct {
+	target ID
+	seen   bool
+}
+
+// KeepInView scrolls box to show target when target is new, as a selection that moves: between moves the pointer
+// and the scrollbar scroll away from it freely.
+func (c *Ctx) KeepInView(box, target ID) {
+	k := State[keptView](c, Child(box, "\x00kept"))
+	if k.seen && k.target == target {
+		return
+	}
+	br, ok := c.u.Rect(box)
+	tr, ok2 := c.u.Rect(target)
+	if !ok || !ok2 || br.Dx() <= 0 || tr.Dx() <= 0 && tr.Dy() <= 0 {
+		return // not laid out yet: next frame
+	}
+	c.ScrollIntoView(box, target)
+	k.target, k.seen = target, true
+}
 
 // ScrollIntoView scrolls box the least it takes to show target, a node inside it, as both were laid out last frame.
 func (c *Ctx) ScrollIntoView(box, target ID) {

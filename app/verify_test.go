@@ -130,6 +130,7 @@ func TestVerifyQuiz(t *testing.T) {
 	}
 
 	// Verify… on its row opens the quiz over the tab.
+	s.verifySettle(t, "the gates counted", func(f string) bool { return !strings.Contains(f, "counting") })
 	s.click(centre(s.access("Verify…").Bounds))
 	s.verifySettle(t, "the first question", func(f string) bool { return strings.Contains(f, "QUESTION 1") })
 	s.wantFrame(t, "VERIFY THIS CHANGE", "claude · fork, no tools", "Can you explain this change?",

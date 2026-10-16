@@ -2,6 +2,7 @@ package gitx
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -71,5 +72,52 @@ func TestCommitStagedWithTrailer(t *testing.T) {
 	}
 	if _, err := repo.CommitStaged(context.Background(), "  "); err == nil {
 		t.Error("committed with no message")
+	}
+}
+
+// Blame runs one git per file: who you are and the commits' trailers are read once, not for every file.
+func TestBlameRunsOneGitPerFile(t *testing.T) {
+	r := gittest.New(t)
+	r.Git("config", "user.email", "ada@example.com")
+	r.Write(map[string]string{"a.txt": "one\n", "b.txt": "two\n"})
+	r.Commit("Ada", "both\n\nCo-Authored-By: Claude <noreply@anthropic.com>")
+	runs := gittest.CountGit(t)
+	repo := Repo{Dir: r.Dir}
+	if _, err := repo.Blame(context.Background(), "a.txt", []byte("one\n")); err != nil {
+		t.Fatal(err)
+	}
+	before := runs()
+	bl, err := repo.Blame(context.Background(), "b.txt", []byte("two\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := runs() - before; n != 1 {
+		t.Errorf("the second file ran %d gits, want 1", n)
+	}
+	if len(bl) != 1 || bl[0].Kind != ByAgent {
+		t.Errorf("blame from what was read once: %+v", bl)
+	}
+}
+
+// AgentTouched names the files the branch's agent commits touched, by author or Co-Authored-By, and no others.
+// ref: oracle git
+func TestAgentTouched(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"base.txt": "x\n"})
+	r.Commit("Ada", "base")
+	base := strings.TrimSpace(r.Git("rev-parse", "HEAD"))
+	r.Write(map[string]string{"mine.txt": "x\n"})
+	r.Commit("Ada", "mine")
+	r.Write(map[string]string{"paired file.txt": "x\n"})
+	r.Commit("Ada", "paired\n\nCo-Authored-By: Claude <noreply@anthropic.com>")
+	r.Write(map[string]string{"own.txt": "x\n", "dir/deep.txt": "x\n"})
+	r.Commit("Codex", "the agent's own")
+	got, err := Repo{Dir: r.Dir}.AgentTouched(context.Background(), base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{"paired file.txt": true, "own.txt": true, "dir/deep.txt": true}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("touched %v, want %v", got, want)
 	}
 }

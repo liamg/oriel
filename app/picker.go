@@ -301,9 +301,14 @@ func (p *picker) sourceStrip(c *ui.Ctx, cur registry.PickerSource) {
 	label := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium, Tracking: .12}, Color: th.C(theme.FgFaint)}
 	c.Row("strip", ui.Style{W: ui.Flex(1), H: ui.Px(38), Pad: ui.PadXY(14, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("pick", "PICK", label)
-		// More sources than fit scroll sideways, the current one kept in view.
-		srcs := c.Row("sources", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, ScrollX: true}, func(c *ui.Ctx) { p.sources(c, cur, label) })
-		c.ScrollIntoView(srcs, ui.Child(srcs, "src-"+cur.ID))
+		// More sources than fit scroll sideways, the current one brought into view when it changes.
+		o := widget.StripOpts{Active: "src-" + cur.ID, Help: "shell/pickers"}
+		for _, s := range p.h.Pickers() {
+			if !s.Unlisted || s.ID == cur.ID {
+				o.Items = append(o.Items, "src-"+s.ID)
+			}
+		}
+		widget.Strip(c, "sources", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, o, func(c *ui.Ctx) { p.sources(c, cur, label) })
 		c.Text("next", "⇥ next source", label)
 	})
 }
