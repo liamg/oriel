@@ -49,6 +49,7 @@ func runApp(args []string) {
 	if err != nil {
 		os.Exit(2)
 	}
+	stopProfile := cpuProfile(cfg.CPUProfile)
 	cfg.Plugins = append(cfg.Plugins, app.ScriptPlugin(slack.Files))
 	cfg.Plugins = append(cfg.Plugins, plugin.Native()...)
 	appUpdates(&cfg)
@@ -64,7 +65,6 @@ func runApp(args []string) {
 		fmt.Fprintln(os.Stderr, "oriel:", err)
 		os.Exit(1)
 	}
-	stopProfile := cpuProfile(cfg.CPUProfile)
 	go func() {
 		defer cfg.Logs.Close()
 		err := app.Run(context.Background(), be, cfg)
