@@ -155,12 +155,21 @@ func (x *diffPlugin) ledger(root string) registry.Ledger {
 		return l
 	}
 	root = tree.root()
+	x.mu.Lock()
+	key := ledgerKey{gs: gs, gen: x.gen, seq: x.h.State().Seq}
+	c, ok := x.ledgers[root]
+	x.mu.Unlock()
+	if ok && c.key == key {
+		return c.l
+	}
 	l.Root, l.Ready = root, true
 	texts := x.agentTextsFor(root)
 	for _, f := range gs.Files(gitx.Changed) {
-		d := x.diffFor(tree, gs, f)
+		d, current := x.diffFor(tree, gs, f, false)
+		if !current {
+			l.Ready = false // a gate waits for the diff the file has now
+		}
 		if d == nil {
-			l.Ready = false
 			continue
 		}
 		lf := registry.LedgerFile{Path: f.Path}
@@ -175,7 +184,27 @@ func (x *diffPlugin) ledger(root string) registry.Ledger {
 			l.All, l.Uncommitted = l.All.Add(lf.All), l.Uncommitted.Add(lf.Uncommitted)
 		}
 	}
+	x.mu.Lock()
+	if x.ledgers == nil {
+		x.ledgers = map[string]cachedLedger{}
+	}
+	x.ledgers[root] = cachedLedger{key: key, l: l}
+	x.mu.Unlock()
 	return l
+}
+
+// ledgerKey is everything a ledger is made from: the git reading, the diffs made and local reviews (gen), and the
+// sessions' reviews and transcripts (the store's seq). The Explorer asks every frame; it's made again only when one
+// of them changes.
+type ledgerKey struct {
+	gs  *gitx.State
+	gen uint64
+	seq uint64
+}
+
+type cachedLedger struct {
+	key ledgerKey
+	l   registry.Ledger
 }
 
 // shipGate is the ledger as a "before this ships" gate: every agent-written line of the session's projects read.

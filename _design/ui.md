@@ -519,7 +519,11 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   **Preview diff** and the request's **View diff** reach it. It's the branch against the merge-base with its base
   (`gitx.State.BaseHash`), uncommitted work and unsaved buffers included, in git's `-U3` hunks (`gitx.Unified`, held
   to `git diff`). Each file's diff is made off the loop, again when its revision, size, mtime or buffer changes, but
-  no more than twice a second however fast it's written to; `--debug` logs each remake with what changed. Left: **CHANGES**, each file with a reviewed box (`widget.Check`: ticked when every hunk is
+  no more than twice a second however fast it's written to; `--debug` logs each remake with what changed. Only a
+  diff the view shows is styled (highlights, each hunk's function); the ledger's are plain, which is most of the
+  cost. The ledger is made again when the git reading, a diff, or the store changes, not on every frame that asks;
+  while a file's diff is older than the file it isn't Ready, so the commit gate waits rather than judging the old
+  one. Left: **CHANGES**, each file with a reviewed box (`widget.Check`: ticked when every hunk is
   marked, half when some are; a click marks or unmarks the file) and its size; then the `diff.side.*` views
   (Authorship is the built-in `diff.side.50-authorship`: added lines by blame, an agent's, yours, others', and lines
   not committed by the open buffer's authors, else "uncommitted"); then the keys. Middle: the `diff.header.*` views

@@ -59,6 +59,9 @@ type diffPlugin struct {
 	loading map[diffKey]bool
 	started map[diffKey]time.Time // when each file's last diff was started, so one changing fast isn't remade each time
 	waking  map[diffKey]bool      // a redraw is set for when a file's diff can be made again
+	gen     uint64                // bumped when a diff lands or a local review changes: what the ledger is made from
+	ledgers map[string]cachedLedger
+	styled  map[diffKey]bool      // files the view has shown, whose diffs are made styled from then on
 	local   core.State            // reviews made outside a session, as session "local" with each repo's root its project; they last as long as the window
 	texts   map[string]agentTexts // by session and root
 	busy    sync.WaitGroup
@@ -100,7 +103,7 @@ func (x *diffPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "di
 func (x *diffPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by, x.files, x.loading = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}
-	x.started, x.waking = map[diffKey]time.Time{}, map[diffKey]bool{}
+	x.started, x.waking, x.styled = map[diffKey]time.Time{}, map[diffKey]bool{}, map[diffKey]bool{}
 	x.local = core.State{Sessions: []core.SessionState{{ID: localReviews}}}
 	x.limit = make(chan struct{}, 4)
 	x.add(h.Option(registry.OptionSpec{Name: "diff.layout", Section: "git", Type: registry.Enum, Values: []string{"split", "unified"}, Default: "split",
@@ -332,6 +335,7 @@ func (x *diffPlugin) record(root string, ev core.Event, send func(c worker.Clien
 	if !ok {
 		x.mu.Lock()
 		err := ev.Apply(&x.local)
+		x.gen++
 		x.mu.Unlock()
 		x.h.Redraw()
 		return err
@@ -550,8 +554,9 @@ func (x *diffPlugin) source(st *diffState, _ registry.Args) error {
 	return x.h.Run(context.Background(), "editor.open", registry.Args{"path": path, "line": line})
 }
 
-// diffFor is a file's diff as last made, and makes it again (off the loop) when what it's made from has changed.
-func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState) *diffFile {
+// diffFor is a file's diff as last made, and makes it again (off the loop) when what it's made from has changed, or
+// styled when the view asks for one (styled) and it's plain. current is false while the diff is older than the file.
+func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, styled bool) (d *diffFile, current bool) {
 	root := tree.root()
 	work := tree.abs(f.Path)
 	in := diffInput{rev: st.BaseHash, path: f.Path, old: f.Old, code: f.Code, add: f.Add, del: f.Del, repo: root, work: work}
@@ -572,13 +577,18 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState) *d
 	}
 	k := diffKey{root, f.Path}
 	x.mu.Lock()
+	if styled {
+		x.styled[k] = true
+	}
+	styled = x.styled[k]
 	d, busy := x.files[k], x.loading[k]
 	x.mu.Unlock()
-	if (d == nil || d.in != in) && !busy {
-		if d != nil && !x.mayRemake(k) {
-			return d
+	current = d != nil && d.in == in
+	if (d == nil || d.in != in || styled && !d.styled) && !busy {
+		if d != nil && d.in != in && !x.mayRemake(k) {
+			return d, false
 		}
-		if d != nil {
+		if d != nil && d.in != in {
 			x.h.Log().Debug("remaking a diff", "path", f.Path, "changed", changedInputs(d.in, in))
 		}
 		var newText []byte
@@ -593,22 +603,24 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState) *d
 		go func() {
 			defer x.busy.Done()
 			x.limit <- struct{}{}
-			nd := loadDiff(x.h, in, newText, snap)
+			nd := loadDiff(x.h, in, newText, snap, styled)
 			<-x.limit
 			x.mu.Lock()
 			x.files[k], x.loading[k] = nd, false
+			x.gen++
 			x.mu.Unlock()
 			x.h.Redraw()
 		}()
 	}
-	return d
+	return d, current
 }
 
 // diffRemakeGap is the least time between starting a file's diffs: one written to over and over is remade at this
 // pace at most, not on every write.
 const diffRemakeGap = 500 * time.Millisecond
 
-// mayRemake reports whether k's diff can be made again now, and if not, has a frame drawn when it can.
+// mayRemake reports whether k's diff can be made again now, and if not, has a frame drawn when it can, with what's
+// cached on the old diff (the ledger) made again.
 func (x *diffPlugin) mayRemake(k diffKey) bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
@@ -621,6 +633,7 @@ func (x *diffPlugin) mayRemake(k diffKey) bool {
 		time.AfterFunc(wait, func() {
 			x.mu.Lock()
 			delete(x.waking, k)
+			x.gen++ // what was made from the old diff asks for the new one
 			x.mu.Unlock()
 			x.h.Redraw()
 		})

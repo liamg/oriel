@@ -300,3 +300,59 @@ func TestSlowFrameIsLogged(t *testing.T) {
 	}
 	t.Fatalf("no log of the slow frame: %v", logs.Ring.Tail(10))
 }
+
+// changedRepo is a repo with n files of 100 lines changed since its one commit, every fifth line.
+func changedRepo(t *testing.T, n int) string {
+	r := gittest.New(t)
+	before, after := map[string]string{}, map[string]string{}
+	for i := range n {
+		var b, a strings.Builder
+		for l := range 100 {
+			fmt.Fprintf(&b, "line %d\n", l)
+			if l%5 == 0 {
+				fmt.Fprintf(&a, "line %d, changed\n", l)
+			} else {
+				fmt.Fprintf(&a, "line %d\n", l)
+			}
+		}
+		p := fmt.Sprintf("pkg%d/f%03d.txt", i%20, i)
+		before[p], after[p] = b.String(), a.String()
+	}
+	r.Write(before)
+	r.Commit("Ada", "base")
+	r.Write(after)
+	return r.Dir
+}
+
+// explorerFrame is the average frame with the Explorer open on dir's Changed scope, once every diff is made.
+func explorerFrame(t *testing.T, dir string, n int) time.Duration {
+	s := newScene(t, "", dir, mockupSize)
+	s.sh.git.wait()
+	s.keyCommand(t, "<M-1>")
+	ready := func() bool {
+		l, ok := registry.LedgerOf(s.reg, dir)
+		return ok && l.Ready
+	}
+	if !s.Until(30*time.Second, ready) {
+		t.Fatalf("the ledger over %d changed files was never ready", n)
+	}
+	for range 10 {
+		s.frame()
+	}
+	start := time.Now()
+	for range 100 {
+		s.frame()
+	}
+	return time.Since(start) / 100
+}
+
+// The Explorer's frame doesn't grow with the files a branch changes: the review ledger it shows is made when a diff
+// lands or the status changes, not every frame.
+func TestExplorerFrameWithManyChangesBudget(t *testing.T) {
+	perf.Timed(t)
+	few, many := explorerFrame(t, changedRepo(t, 5), 5), explorerFrame(t, changedRepo(t, 400), 400)
+	t.Logf("a frame over 5 changed files: %v; over 400: %v", few, many)
+	if many > 2*few+500*time.Microsecond {
+		t.Errorf("400 changed files make the Explorer's frame %v, against %v over 5", many, few)
+	}
+}

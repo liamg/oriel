@@ -508,7 +508,7 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   with the worker. The gits a reading needs run at once, in two rounds (everything that doesn't need the
   merge-base while it's found, then the diffs against it): 17 ms on this repo, against 55 ms one after another. A
   reading that changes nothing keeps the last one, so what's cached on it (the Explorer's rows) stays good and
-  watchers hear nothing. Fixture repos for tests are built with `gitx/gittest`.
+  watchers hear nothing. Refreshes run one at a time, so a slow reading never lands after a newer one. Fixture repos for tests are built with `gitx/gittest`.
 
 ## Navigation and search
 

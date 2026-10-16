@@ -424,12 +424,13 @@ func countLines(path string) (int, bool) {
 // Status is a work tree's status kept up to date: what explorer scopes and gutters read (ide.md). Refresh reads
 // it again; watchers hear which paths' states changed.
 type Status struct {
-	repo Repo
-	mu   sync.Mutex
-	st   *State
-	seen bool
-	subs map[int]func(paths []string)
-	next int
+	repo    Repo
+	reading sync.Mutex // held through a refresh
+	mu      sync.Mutex
+	st      *State
+	seen    bool
+	subs    map[int]func(paths []string)
+	next    int
 }
 
 func NewStatus(r Repo) *Status { return &Status{repo: r, subs: map[int]func([]string){}} }
@@ -460,8 +461,10 @@ func (s *Status) Watch(fn func(paths []string)) (cancel func()) {
 	}
 }
 
-// Refresh reads the status again.
+// Refresh reads the status again. Refreshes run one at a time, so a reading never replaces a later one.
 func (s *Status) Refresh(ctx context.Context) error {
+	s.reading.Lock()
+	defer s.reading.Unlock()
 	st, err := s.repo.Status(ctx)
 	if err != nil {
 		return err

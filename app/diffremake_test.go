@@ -9,15 +9,17 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/registry"
 )
 
-// A changed file written to over and over has its diff remade twice a second at most, not on every write, and the
+// A changed file open in the diff view and written to over and over has its diff remade twice a second at most, not on every write, and the
 // diff still catches up with the last write.
 func TestDiffRemadeAtAPaceWhileWritten(t *testing.T) {
 	s, r := explorerScene(t)
 	s.sh.cfg.Logs.Level.Set(slog.LevelDebug)
-	s.keyCommand(t, "<M-1>")
 	const path = "internal/pricing/round.go"
+	s.run("diff.open", registry.Args{"path": filepath.Join(r.Dir, path)})
 	diffOf := func() *diffFile {
 		x := s.diff()
 		x.mu.Lock()
