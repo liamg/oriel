@@ -9,6 +9,7 @@ import (
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/ui"
 )
 
 // rightClick right-clicks at p and draws the menu.
@@ -126,4 +127,77 @@ func TestBuiltinMenuEntries(t *testing.T) {
 	if text := s.rightClick(centre(rects["main.go"])); strings.Contains(text, "Run go vet") {
 		t.Errorf("the reloaded-away entry is still there:\n%s", text)
 	}
+}
+
+// A tab's right-click menu closes it, the others in its pane, those to its left or right, or all of them.
+func TestTabMenuCloses(t *testing.T) {
+	cases := []struct {
+		item string
+		left []string
+	}{
+		{"Close", []string{"a.go", "c.go", "d.go"}},
+		{"Close Others", []string{"b.go"}},
+		{"Close to the Left", []string{"b.go", "c.go", "d.go"}},
+		{"Close to the Right", []string{"a.go", "b.go"}},
+		{"Close All", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.item, func(t *testing.T) {
+			dir := t.TempDir()
+			s := newScene(t, "", dir, mockupSize)
+			for _, f := range []string{"a.go", "b.go", "c.go", "d.go"} {
+				os.WriteFile(filepath.Join(dir, f), []byte("package main\n"), 0o644)
+				s.run("editor.open", registry.Args{"path": f})
+			}
+			s.frame()
+			s.frame()
+			tab := s.tabNamed("b.go") // not the one in front
+			if tab == nil {
+				t.Fatalf("no b.go tab:\n%s", s.frameText())
+			}
+			text := s.rightClick(centre(tab.Bounds))
+			order := []string{"Close", "Close Others", "Close to the Left", "Close to the Right", "Close All", "? Help"}
+			last := -1
+			for _, w := range order {
+				i := strings.Index(text[last+1:], w)
+				if i < 0 {
+					t.Fatalf("the tab's menu wants %v:\n%s", order, text)
+				}
+				last += 1 + i
+			}
+			b := s.access(tc.item)
+			if b == nil {
+				t.Fatalf("no %q to click", tc.item)
+			}
+			s.click(centre(b.Bounds))
+			s.frame()
+			var open []string
+			for _, v := range s.sh.layout.root.All() {
+				if f, _ := s.editorFile(v.Instance); v.ID == EditorView && f != "" {
+					open = append(open, filepath.Base(f))
+				}
+			}
+			if !slices.Equal(open, tc.left) {
+				t.Errorf("after %s the tabs are %v, want %v", tc.item, open, tc.left)
+			}
+		})
+	}
+}
+
+// tabNamed is the tab whose name holds name.
+func (s *errScene) tabNamed(name string) *render.AccessNode {
+	s.frame()
+	var find func(n *render.AccessNode) *render.AccessNode
+	find = func(n *render.AccessNode) *render.AccessNode {
+		if n.Role == ui.RoleTab && strings.Contains(n.Name, name) {
+			return n
+		}
+		for _, k := range n.Children {
+			if f := find(k); f != nil {
+				return f
+			}
+		}
+		return nil
+	}
+	return find(s.ui.AccessTree())
 }

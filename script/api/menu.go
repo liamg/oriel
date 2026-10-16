@@ -32,7 +32,7 @@ func (m Menu) Add(spec script.Table, where string) error {
 		}
 	case *script.Fn:
 		it.Run = func(_ registry.Ctx, at registry.MenuCtx) error {
-			_, err := m.a.VM.Call(run, script.Table{"view": at.View, "instance": at.Instance, "file": at.File,
+			_, err := m.a.VM.Call(run, script.Table{"view": at.View, "instance": at.Instance, "project": at.Project, "file": at.File,
 				"selection": at.Selection, "help": at.Help})
 			return err
 		}

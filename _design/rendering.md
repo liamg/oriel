@@ -269,8 +269,9 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   scrollbar drag is on, what's hovered changes, a node read `Interaction.Pointer()` (a method, so the read is seen),
   a tooltip is up (it follows the pointer), or the pointer crossed a region the toolkit tested (`over`, a scrollbar's
   hover). Otherwise the app builds no frame, and sets the cursor alone. The frames moves do need are paced to one per
-  120 Hz interval; keys and other input draw at once. The Gio window also skips a display list identical to the last
-  (`render.List.Same`). A sweep over an open directory takes about 4% CPU.
+  120 Hz interval; keys and other input draw at once. An animation's next frame is due an interval after the last
+  one drawn, so moves that build none never push it back (`TestMenuHoverWhileThePointerMovesBudget`). The Gio
+  window also skips a display list identical to the last (`render.List.Same`). A sweep over an open directory takes about 4% CPU.
 - `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer.
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
   selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,

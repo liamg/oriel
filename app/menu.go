@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"slices"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -45,26 +46,60 @@ func (m *contextMenus) Activate(_ context.Context, h plugin.Host) error {
 			}},
 		{Name: "pane.close", Label: "Close", Group: "pane", Order: 91, When: registry.MenuWhen{View: "*"}, Source: "builtin:menus",
 			Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
-				return m.h.Run(ctx, "view.close", registry.Args{"id": at.View, "instance": at.Instance})
+				return m.h.Run(ctx, "view.close", registry.Args{"id": at.View, "instance": at.Instance, "project": at.Project})
 			}},
+		m.closeTabs("tab.close-others", "Close Others", 92, func(i, at int) bool { return i != at }),
+		m.closeTabs("tab.close-left", "Close to the Left", 93, func(i, at int) bool { return i < at }),
+		m.closeTabs("tab.close-right", "Close to the Right", 94, func(i, at int) bool { return i > at }),
+		m.closeTabs("tab.close-all", "Close All", 95, func(int, int) bool { return true }),
 	} {
 		m.add(h.Contribute(it))
 	}
 	return nil
 }
 
-// where is what's at p: the pane's view and instance (the smallest pane holding p), and what that view says is
-// there.
-func (m *contextMenus) where(p render.Point, help string) registry.MenuCtx {
+// closeTabs is a tab's menu item closing the tabs beside it in its pane that close says to, by place.
+func (m *contextMenus) closeTabs(name, label string, order int, close func(i, at int) bool) registry.MenuItem {
+	return registry.MenuItem{Name: name, Label: label, Group: "pane", Order: order, When: registry.MenuWhen{View: "*", Help: layout.HelpTab},
+		Source: "builtin:menus", Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
+			v := layout.ViewRef{ID: at.View, Instance: at.Instance, Project: at.Project}
+			var tabs []layout.ViewRef
+			for _, t := range m.h.Layout().All() {
+				if t.ID == v.ID && t.Instance == v.Instance && t.Project == v.Project {
+					if w := m.h.Layout().Find(t); w != nil {
+						tabs = slices.Clone(w.Leaf.Tabs)
+					}
+					break
+				}
+			}
+			i := slices.IndexFunc(tabs, func(t layout.ViewRef) bool { return t.ID == v.ID && t.Instance == v.Instance && t.Project == v.Project })
+			for j, t := range tabs {
+				if i >= 0 && close(j, i) {
+					if err := m.h.Run(ctx, "view.close", registry.Args{"id": t.ID, "instance": t.Instance, "project": t.Project}); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}}
+}
+
+// where is what node t at p is in: the view whose tab it is, or else the pane's view (the smallest pane holding
+// p), and what that view says is there.
+func (m *contextMenus) where(t ui.ID, p render.Point, help string) registry.MenuCtx {
 	at := registry.MenuCtx{Help: help}
-	best := float32(-1)
-	for _, v := range m.h.Layout().Visible() {
-		r, ok := m.h.PaneRect(v)
-		if !ok || p.X < r.Min.X || p.X >= r.Max.X || p.Y < r.Min.Y || p.Y >= r.Max.Y {
-			continue
-		}
-		if area := r.Dx() * r.Dy(); best < 0 || area < best {
-			best, at.View, at.Instance = area, v.ID, v.Instance
+	if v, ok := m.h.PaneTab(t); ok {
+		at.View, at.Instance, at.Project = v.ID, v.Instance, v.Project
+	} else {
+		best := float32(-1)
+		for _, v := range m.h.Layout().Visible() {
+			r, ok := m.h.PaneRect(v)
+			if !ok || p.X < r.Min.X || p.X >= r.Max.X || p.Y < r.Min.Y || p.Y >= r.Max.Y {
+				continue
+			}
+			if area := r.Dx() * r.Dy(); best < 0 || area < best {
+				best, at.View, at.Instance, at.Project = area, v.ID, v.Instance, v.Project
+			}
 		}
 	}
 	if view, ok := m.h.ViewByID(at.View); ok {
@@ -81,7 +116,7 @@ func (m *contextMenus) build(c *ui.Ctx) {
 		return
 	}
 	if t, p, ok := u.ContextClick(); ok {
-		at := m.where(p, u.Help(t))
+		at := m.where(t, p, u.Help(t))
 		if items := registry.MenuItems(m.h, at); len(items) > 0 || at.Help != "" {
 			m.target, m.at, m.items = t, at, items
 		}
