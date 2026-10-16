@@ -170,7 +170,7 @@ func TestRequestHostIsDirect(t *testing.T) {
 
 func TestSSHAgentNamesTheSocket(t *testing.T) {
 	res := runTool(t, newFakeHost(t), "oriel__ssh_agent", `{"why":"private module","minutes":2}`)
-	if res.IsError || !strings.Contains(res.Text(), "until 12:00:00") || !strings.Contains(res.Text(), "SSH_AUTH_SOCK=/run/oriel/ssh-agent.sock") {
+	if res.IsError || !strings.Contains(res.Text(), "until 12:00:00") || !strings.Contains(res.Text(), "$SSH_AUTH_SOCK") {
 		t.Fatalf("ssh_agent: %q", res.Text())
 	}
 }

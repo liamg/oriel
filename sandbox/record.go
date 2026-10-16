@@ -8,7 +8,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 )
@@ -100,22 +99,11 @@ func CallsPath(root string) string { return filepath.Join(Dir(root), "calls.json
 func EgressGrantsPath(root string) string { return filepath.Join(Dir(root), "egress.json") }
 
 // PortPath holds the loopback port the session also serves the sandbox on,
-// where Docker Desktop cannot forward its sockets.
+// for a backend that cannot reach its sockets (Backend.ServesPort).
 func PortPath(root string) string { return filepath.Join(RunDir(root), "port") }
-
-// SocketsMount reports whether RunDir can be mounted into a container. Off
-// Linux, Docker Desktop cannot connect to a socket in a mounted directory,
-// and a socket mounted on its own stops working when any container stops.
-func SocketsMount() bool { return runtime.GOOS == "linux" }
-
-// ContainerRunDir is where RunDir is mounted inside the container.
-const ContainerRunDir = "/run/oriel"
 
 // HookSocket is the agent's hook socket in RunDir, carried to its provider's on the host.
 const HookSocket = "hook.sock"
-
-// ContainerSocket is the session socket as the container sees it.
-const ContainerSocket = ContainerRunDir + "/oriel.sock"
 
 // Load reads root's record; ok=false when root has never had one.
 func Load(root string) (Record, bool) {

@@ -414,8 +414,14 @@ func PrepareMountpoints(mounts []Mount) error {
 				continue
 			}
 			host := filepath.Join(p.Source, rel)
-			if _, err := os.Lstat(host); err == nil {
-				continue
+			if fi, err := os.Lstat(host); err == nil {
+				if fi.Mode()&os.ModeSymlink == 0 {
+					continue
+				}
+				// A link would be followed inside the container: the mount point is a real file.
+				if err := os.Remove(host); err != nil {
+					return err
+				}
 			}
 			fi, err := os.Stat(m.Source)
 			if err != nil {

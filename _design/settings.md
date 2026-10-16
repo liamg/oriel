@@ -157,6 +157,8 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `ui.variant` | `system`: follows the OS; or `dark`, `light` | app | | FW-7, SH-11 |
 | `whichkey.enabled` | true | app | | SH-6 |
 | `sandbox.default` | `sandbox`: a new session's agent runs in a container; or `host`, on the worker | app | | AI-11 |
+| `sandbox.backend` | `docker`: each agent runs in a container; or `seatbelt`, macOS's own sandbox with the host's toolchains | app | | AI-11 |
+| `sandbox.loopback` | `all`: the host's loopback ports a `seatbelt` sandbox may connect to; `ephemeral`, only 49152–65535 (servers on port 0, not services on fixed ports); or `none`, only its proxy | app | | AI-11 |
 | `sandbox.image` | empty: Oriel's base image; a project's applies to its repo | app | | AI-11 |
 | `sandbox.claude_version` | empty: the host's Claude Code | app | | AI-11 |
 | `sandbox.env` | empty: the default host variables a sandbox inherits; the page offers the host's | app | | AI-11 |

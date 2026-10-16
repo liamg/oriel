@@ -27,11 +27,11 @@ func RunVolumeName(root string) string { return Name(root) + "-run" }
 // and the sidecar also gets RunDir for the session's port.
 func runMounts(ctx context.Context, root string, id sandbox.Identity, sidecar bool) ([]container.Mount, error) {
 	dir := sandbox.RunDir(root)
-	if sandbox.SocketsMount() {
+	if SocketsMount() {
 		if err := waitFor(filepath.Join(dir, "oriel.sock"), sessionWait); err != nil {
 			return nil, err
 		}
-		return []container.Mount{{Source: dir, Target: sandbox.ContainerRunDir}}, nil
+		return []container.Mount{{Source: dir, Target: ContainerRunDir}}, nil
 	}
 	if err := waitFor(sandbox.PortPath(root), sessionWait); err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func runMounts(ctx context.Context, root string, id sandbox.Identity, sidecar bo
 	if err := container.EnsureTmpfsVolume(ctx, RunVolumeName(root), id.UID, id.GID); err != nil {
 		return nil, err
 	}
-	m := []container.Mount{{Source: RunVolumeName(root), Target: sandbox.ContainerRunDir, Volume: true}}
+	m := []container.Mount{{Source: RunVolumeName(root), Target: ContainerRunDir, Volume: true}}
 	if sidecar {
 		m = append(m, container.Mount{Source: dir, Target: hostRunDir, ReadOnly: true})
 	}

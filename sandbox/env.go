@@ -36,6 +36,18 @@ var endpointVars = []string{
 // FilterEnv keeps the entries of environ whose names match a pattern ("FOO"
 // or a "FOO_*" glob), with localhost endpoints pointed at the host.
 func FilterEnv(environ, patterns []string) map[string]string {
+	out := HostEnv(environ, patterns)
+	for _, k := range endpointVars {
+		if v, ok := out[k]; ok {
+			out[k] = RewriteLocalhost(v)
+		}
+	}
+	return out
+}
+
+// HostEnv keeps the entries of environ whose names match a pattern, as they
+// are: for an agent that shares the host's network.
+func HostEnv(environ, patterns []string) map[string]string {
 	if patterns == nil {
 		patterns = DefaultEnv
 	}
@@ -46,11 +58,6 @@ func FilterEnv(environ, patterns []string) map[string]string {
 			continue
 		}
 		out[k] = v
-	}
-	for _, k := range endpointVars {
-		if v, ok := out[k]; ok {
-			out[k] = RewriteLocalhost(v)
-		}
 	}
 	return out
 }

@@ -72,6 +72,9 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	if spec.Sandbox.Container && w.opts.Sandbox == nil {
 		return "", errors.New("this worker can't run a sandbox")
 	}
+	if b := spec.Sandbox.Backend; b != "" && spec.Sandbox.Container && !slices.Contains(w.opts.Sandbox.Backends(), b) {
+		return "", fmt.Errorf("this worker can't run a %s sandbox", b)
+	}
 	variant, err := k.variant(spec.Variant)
 	if err != nil {
 		return "", err
@@ -83,7 +86,7 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 		PR: spec.PR, Job: spec.Job, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
 		StartWork: k.Worktrees == WorktreesStartWork || k.Worktrees == WorktreesInit, CommitGate: k.Gate,
 		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: gate(spec),
-			Sandboxed: spec.Sandbox.Container, Network: spec.Sandbox.Network}}
+			Sandboxed: spec.Sandbox.Container, Network: spec.Sandbox.Network, Backend: spec.Sandbox.Backend}}
 	branch := spec.Branch
 	if branch == "" {
 		branch = BranchName(whoAmI(ctx), spec.Ticket, name)

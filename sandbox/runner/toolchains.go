@@ -223,7 +223,7 @@ func ProvisionProject(ctx context.Context, root, dir string, cfg sandbox.Config)
 	if len(tools) == 0 {
 		return nil, nil
 	}
-	id, err := identity()
+	id, err := sandbox.CurrentIdentity()
 	if err != nil {
 		return nil, err
 	}

@@ -79,6 +79,11 @@ func sandboxOptions(o registry.Options) []registry.OptionSpec {
 			Help: `Each container's memory cap in docker's units ("8g"); empty is 8g, "none" no cap.`},
 		{Name: "sandbox.pids_limit", Type: registry.Int, Default: 0, Min: -1, Max: 1 << 20, Scopes: user,
 			Help: "Each container's process cap; 0 is 4096, -1 no cap."},
+		{Name: "sandbox.backend", Type: registry.Enum, Values: sandbox.Backends(), Default: sandbox.DefaultBackend, Scopes: user,
+			Help: "What confines the agent: docker, a container; or seatbelt, macOS's own sandbox."},
+		{Name: "sandbox.loopback", Type: registry.Enum, Values: []string{sandbox.LoopbackAll, sandbox.LoopbackEphemeral, sandbox.LoopbackNone},
+			Default: sandbox.LoopbackAll, Scopes: user,
+			Help: "The host's loopback ports a seatbelt sandbox may connect to: all; ephemeral, not services on fixed ports; or none."},
 	}
 }
 
@@ -132,8 +137,9 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 		return slices.Clone(l)
 	}
 	str := func(name string) string { s, _ := get(name).(string); return s }
-	cfg := sandbox.Config{Default: str("sandbox.default"), Image: str("sandbox.image"), ClaudeVersion: str("sandbox.claude_version"),
-		Env: list("sandbox.env"), Hidden: list("sandbox.hidden_servers"), Memory: str("sandbox.memory")}
+	cfg := sandbox.Config{Default: str("sandbox.default"), Backend: str("sandbox.backend"), Image: str("sandbox.image"), ClaudeVersion: str("sandbox.claude_version"),
+		Env: list("sandbox.env"), Hidden: list("sandbox.hidden_servers"), Memory: str("sandbox.memory"),
+		Loopback: str("sandbox.loopback")}
 	cfg.Egress = sandbox.EgressRules(list("sandbox.egress"))
 	cfg.Rules = sandbox.PolicyRules(list("sandbox.rules"))
 	cfg.Servers, _ = mcpServers(get("sandbox.servers"))

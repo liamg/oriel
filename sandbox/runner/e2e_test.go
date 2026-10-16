@@ -91,7 +91,7 @@ func standInSession(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 	network, addr := "unix", sandbox.SocketPath(root)
-	if !sandbox.SocketsMount() {
+	if !SocketsMount() {
 		network, addr = "tcp", "127.0.0.1:0"
 	}
 	ln, err := net.Listen(network, addr)
@@ -100,7 +100,7 @@ func standInSession(t *testing.T, root string) {
 	}
 	t.Cleanup(func() { _ = ln.Close() })
 	go func() { _ = http.Serve(ln, http.NotFoundHandler()) }()
-	if !sandbox.SocketsMount() {
+	if !SocketsMount() {
 		port := strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)
 		mustWrite(t, sandbox.PortPath(root), port)
 	}
@@ -111,7 +111,7 @@ func (f fixture) run(t *testing.T, script string, environ ...string) string {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	argv, err := Launch(ctx, f.root, f.root, []string{"bash", "-c", script}, Options{Environ: environ, Config: f.cfg})
+	argv, err := Launch(ctx, f.root, f.root, []string{"bash", "-c", script}, sandbox.LaunchOptions{Environ: environ, Config: f.cfg})
 	if err != nil {
 		t.Fatal(err)
 	}

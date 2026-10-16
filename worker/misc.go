@@ -52,8 +52,12 @@ func (w *Worker) workerState() core.WorkerState {
 			providers = append(providers, p.ID())
 		}
 	}
+	var sandboxes []string
+	if w.opts.Sandbox != nil {
+		sandboxes = w.opts.Sandbox.Backends()
+	}
 	return core.WorkerState{ID: w.opts.ID, Name: w.opts.Name, Host: host, OS: runtime.GOOS, Arch: runtime.GOARCH, Version: w.opts.Version,
-		Build: w.opts.Build, Providers: providers, Connected: true, Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal,
+		Build: w.opts.Build, Providers: providers, Sandboxes: sandboxes, Connected: true, Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal,
 		Sampled: w.opts.Now().UTC(), SignedOut: w.lostLogins()}
 }
 

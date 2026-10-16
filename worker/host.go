@@ -16,11 +16,13 @@ import (
 	"github.com/liamg/oriel/worker/stats"
 )
 
-// SandboxFactory makes the container, gateway and egress proxy a sandboxed session runs in (AI-11). Layer-3
+// SandboxFactory makes the sandbox, gateway and egress proxy a sandboxed session runs in (AI-11). Layer-3
 // approvals (a held connection, a held gateway call) come back through approve, which shows the user a card
 // and waits for the answer.
 type SandboxFactory interface {
 	Open(ctx context.Context, se core.SessionState, approve Approve) (Sandbox, error)
+	// Backends are the sandbox backends this machine can run.
+	Backends() []string
 }
 
 // Approve puts an ask to the session's rules, the app's hooks, then the user, and waits for the answer.
@@ -34,7 +36,7 @@ type Approval struct {
 	Note  string
 }
 
-// Sandbox is one session's container.
+// Sandbox is one session's sandbox.
 type Sandbox interface {
 	Exec() agent.Exec
 	Spec() *agent.Sandbox

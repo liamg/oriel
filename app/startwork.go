@@ -28,6 +28,7 @@ type startWork struct {
 	id               core.SessionID
 	clear, fresh     bool
 	sandbox, openNet bool
+	backend          string // the session's sandbox backend; "" is sandbox.backend
 	model, effort    string
 	shown            [2]string           // the model and effort it opened on: only a change is sent
 	shownRun         [2]bool             // and the sandbox and open network
@@ -48,7 +49,7 @@ func (x *planPlugin) openStartWork() error {
 	if !ok || !se.Planning() {
 		return fmt.Errorf("no plan is in front to start work on")
 	}
-	d := &startWork{id: se.ID, clear: true, fresh: true, sandbox: se.Agent.Sandboxed, openNet: se.Agent.Network == "open",
+	d := &startWork{id: se.ID, clear: true, fresh: true, sandbox: se.Agent.Sandboxed, openNet: se.Agent.Network == "open", backend: se.Agent.Backend,
 		model: se.Agent.Model, effort: se.Agent.Effort, shown: [2]string{se.Agent.Model, se.Agent.Effort}, focus: true,
 		shownRun: [2]bool{se.Agent.Sandboxed, se.Agent.Network == "open"},
 		provider: worker.ProviderInfo{ID: se.Agent.Provider}}
@@ -262,7 +263,7 @@ func (x *planPlugin) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState
 	}
 	c.Column("run", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		heading(c, "head", "Run on", "")
-		sandboxToggles(c, &d.sandbox, &d.openNet, startWorkHelp)
+		sandboxToggles(c, &d.sandbox, &d.openNet, backendPick{setting: cmpOr(d.backend, settingBackend(x.h))}, startWorkHelp)
 	})
 }
 

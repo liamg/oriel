@@ -372,3 +372,33 @@ func TestLauncherCloneSnapshot(t *testing.T) {
 	}
 	s.lint("the launcher's Clone popover")
 }
+
+// The launcher's sandbox type: offered when the worker can run more than one backend, and the session runs in the
+// one picked.
+func TestLauncherPicksSandboxBackend(t *testing.T) {
+	jr := newJobsRig(t, "docker", "seatbelt")
+	r := startAppWith(t, t.TempDir(), "", nil, jr.connect(t))
+	waitState(t, r.store, "the worker's sandboxes", func(st core.State) bool { return len(st.Workers) == 1 && len(st.Workers[0].Sandboxes) == 2 })
+	r.waitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
+	r.typeKeys("<D-n>")
+	r.waitText("NEW SESSION")
+	r.clickTop("Work")
+	r.waitText("Sandbox type")
+	r.waitText("container · gateway for git & gh")
+	r.clickTop("SEATBELT")
+	r.waitText("seatbelt sandbox · gateway for git & gh")
+	r.clickTop(promptPlaceholder)
+	r.typeText("Fix stale search results")
+	r.clickTop("+ add ▾")
+	r.clickTop("pricing")
+	r.latest("the repo's chip", func(f headless.Frame) bool { return strings.Contains(f.Text(), "pricing\n✕") })
+	r.clickTop("Start Work")
+	waitState(t, r.store, "a session in seatbelt", func(st core.State) bool {
+		for _, se := range st.Sessions {
+			if se.Agent.Sandboxed && se.Agent.Backend == "seatbelt" {
+				return true
+			}
+		}
+		return false
+	})
+}
