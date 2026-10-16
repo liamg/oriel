@@ -81,6 +81,7 @@ func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, e
 	fs.SetOutput(stderr)
 	level := fs.String("log-level", "", "debug, info, warn or error (default info, or $ORIEL_LOG)")
 	debug := fs.Bool("debug", false, "debug logging and the frame-time overlay")
+	cpuprofile := fs.String("cpuprofile", "", "write a CPU profile to this file while the window is open")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
 	}
@@ -106,10 +107,11 @@ func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, e
 	return Config{
 		Logs: NewLogs(LogOpts{File: filepath.Join(logs.Dir(), "oriel.log"), SessionLogs: logs.Dirs{Root: filepath.Join(state, "sessions")},
 			Level: lv}),
-		CrashDir: filepath.Join(state, "crashes"),
-		Version:  version,
-		Debug:    *debug,
-		Files:    files,
-		WorkDir:  dir,
+		CrashDir:   filepath.Join(state, "crashes"),
+		Version:    version,
+		Debug:      *debug,
+		CPUProfile: *cpuprofile,
+		Files:      files,
+		WorkDir:    dir,
 	}, nil
 }

@@ -8,7 +8,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"runtime/pprof"
 	"strings"
+	"sync"
+	"syscall"
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/cmd/oriel/dev"
@@ -60,15 +64,49 @@ func runApp(args []string) {
 		fmt.Fprintln(os.Stderr, "oriel:", err)
 		os.Exit(1)
 	}
+	stopProfile := cpuProfile(cfg.CPUProfile)
 	go func() {
 		defer cfg.Logs.Close()
-		if err := app.Run(context.Background(), be, cfg); err != nil {
+		err := app.Run(context.Background(), be, cfg)
+		stopProfile()
+		if err != nil {
 			fmt.Fprintln(os.Stderr, "oriel:", err)
 			os.Exit(1)
 		}
 		os.Exit(0)
 	}()
 	gio.Main()
+}
+
+// cpuProfile starts a CPU profile into path, if there is one, and returns what stops it; ^C stops it and exits.
+func cpuProfile(path string) func() {
+	if path == "" {
+		return func() {}
+	}
+	f, err := os.Create(path)
+	if err == nil {
+		err = pprof.StartCPUProfile(f)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "oriel: cpu profile:", err)
+		return func() {}
+	}
+	var once sync.Once
+	stop := func() {
+		once.Do(func() {
+			pprof.StopCPUProfile()
+			f.Close()
+		})
+	}
+	// ^C writes it too, for a window that won't close.
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sig
+		stop()
+		os.Exit(130)
+	}()
+	return stop
 }
 
 // subcommands are the first arguments that aren't files to open.
