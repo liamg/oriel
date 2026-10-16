@@ -100,7 +100,10 @@ type Item struct {
 	Meta    string `json:"meta,omitempty"`    // "22m · devbox"
 	Session string `json:"session,omitempty"` // a session's id: picking it opens it
 	URL     string `json:"url,omitempty"`     // picking it opens the link
-	Status  string `json:"status,omitempty"`  // a session's status, for its dot
+	File    string `json:"file,omitempty"`    // picking it opens the file, of Project, at Line
+	Line    int    `json:"line,omitempty"`
+	Project string `json:"project,omitempty"`
+	Status  string `json:"status,omitempty"` // a session's status, for its dot
 }
 
 const keepEntries = 200

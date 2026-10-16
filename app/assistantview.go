@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -20,7 +23,6 @@ import (
 var (
 	tAsstKicker  = theme.Declare("assistant.kicker", "accent")
 	tAsstModel   = theme.Declare("assistant.model", "accent")
-	tAsstAvatar  = theme.Declare("assistant.avatar", "blue")
 	tAsstMine    = theme.DeclareOn("assistant.bubble.mine", "alpha(fg, 5%)", "bg.base")
 	tAsstTool    = theme.Declare("assistant.tool", "ok")
 	tAsstRow     = theme.DeclareOn("assistant.row", "alpha(fg, 3%)", "bg.base")
@@ -30,53 +32,88 @@ var (
 	tAsstNever   = theme.Declare("assistant.never", "error")
 )
 
-// drawer is the assistant's drawer (ui.md 11): the conversation and its composer, and beside them what it can do,
-// what it reads and how fresh that is, and what it did lately.
-func (x *assistantPlugin) drawer(c *ui.Ctx) {
+// window is Ori's window (ui.md 11): the conversation and its composer, and, when it's wide enough, beside them what
+// it can do, what it reads and how fresh that is, and what it did lately. It floats over the IDE until it's
+// minimised to its face on the rail.
+func (x *assistantPlugin) window(c *ui.Ctx) {
 	if !x.open {
 		return
 	}
 	size := c.Size()
-	height := max(360, size.Y*.68-titleH)
-	widget.Drawer(c, "assistant", widget.DrawerOpts{Top: titleH, Pinned: true, Label: "Assistant", Help: assistantHelp, KeyMode: AssistantKeyMode},
+	w, h := min(460, size.X-railW-24), min(620, size.Y-titleH-statusH-24)
+	def := render.Rect{Min: render.Point{X: railW + 12, Y: size.Y - statusH - 12 - h}}
+	def.Max = render.Point{X: def.Min.X + w, Y: def.Min.Y + h}
+	log, busy := x.conv.Log()
+	if len(log) > 0 {
+		x.seen = max(x.seen, log[len(log)-1].Seq)
+	}
+	th := c.Theme()
+	res := widget.Window(c, "assistant", &x.win, widget.WindowOpts{Title: "ORI", Default: def, Min: render.Point{X: 320, Y: 280},
+		Minimise: true, Label: "Ori, the assistant", Help: assistantHelp, KeyMode: AssistantKeyMode,
+		Lead: func(c *ui.Ctx) { ori(c, "face", 18, oriMood{busy: busy}) },
+		Head: func(c *ui.Ctx) { x.header(c) }},
 		func(c *ui.Ctx) {
-			th := c.Theme()
-			side := min(320, size.X*.26)
-			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Px(height), Gap: 16}, func(c *ui.Ctx) {
+			width := x.win.Rect.Dx()
+			side := float32(0)
+			if width >= 760 {
+				side = min(300, width*.32)
+			}
+			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 12, T: 10, R: 12, B: 12}, Gap: 14}, func(c *ui.Ctx) {
 				c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
-					x.header(c)
-					x.chat(c, size.X-side-80)
+					x.chat(c, width-side-48)
 					x.composer(c)
 				})
-				c.Box("rule", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
-				x.side(c, side)
+				if side > 0 {
+					c.Box("rule", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+					x.side(c, side)
+				}
 			})
 		})
+	if res.Minimised {
+		x.setOpen(false)
+	}
+	if !x.win.Dragging() && x.win.Rect != x.placed {
+		x.placed = x.win.Rect
+		go x.savePlace(x.placed)
+	}
 }
 
-// header is COMMS, what it runs on, what it reads and does, and its keys.
+// placeFile is where the window's place is kept between runs.
+func (x *assistantPlugin) placeFile() string {
+	if x.sh.cfg.StateDir == "" {
+		return ""
+	}
+	return filepath.Join(x.sh.cfg.StateDir, "assistant-window.json")
+}
+
+func (x *assistantPlugin) loadPlace() render.Rect {
+	var r render.Rect
+	if f := x.placeFile(); f != "" {
+		if b, err := os.ReadFile(f); err == nil {
+			_ = json.Unmarshal(b, &r)
+		}
+	}
+	return r
+}
+
+func (x *assistantPlugin) savePlace(r render.Rect) {
+	if f := x.placeFile(); f != "" {
+		b, _ := json.Marshal(r)
+		_ = os.WriteFile(f, b, 0o600)
+	}
+}
+
+// header is what sits in the window's title bar after ORI: the model it runs on, what it reads and does, and a
+// new conversation.
 func (x *assistantPlugin) header(c *ui.Ctx) {
 	th := c.Theme()
-	c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(tAsstKicker)}, nil)
-		c.Text("k", "COMMS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Weight: typeset.Bold, Tracking: .22},
-			Color: th.C(theme.Fg)})
-		widget.Chip(c, "who", "assistant", th.C(theme.FgMuted), assistantHelp)
-		widget.Chip(c, "model", x.runsOn(), th.C(tAsstModel), assistantHelp+"#model")
-		c.Row("about", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("t", x.about(), monoFont(10.5, th.C(theme.FgFaint)))
-		})
-		keycap(c, "toggle", "⌘/")
-		c.Text("toggle-t", "toggle", monoFont(10.5, th.C(theme.FgFaint)))
-		keycap(c, "esc", "esc")
-		c.Text("esc-t", "back to editor", monoFont(10.5, th.C(theme.FgFaint)))
-		if widget.Button(c, "new", "New conversation", widget.ButtonOpts{Ghost: true, Help: assistantHelp + "#conversation"}) {
-			x.conv.Clear()
-		}
-		if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Put the assistant away", Help: assistantHelp, Size: 18}) {
-			x.setOpen(false)
-		}
+	widget.Chip(c, "model", x.runsOn(), th.C(tAsstModel), assistantHelp+"#model")
+	c.Row("about", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+		c.Text("t", x.about(), monoFont(10.5, th.C(theme.FgFaint)))
 	})
+	if widget.Button(c, "new", "New", widget.ButtonOpts{Ghost: true, Help: assistantHelp + "#conversation"}) {
+		x.conv.Clear()
+	}
 }
 
 // about says what it reads and how it acts.
@@ -190,9 +227,8 @@ func (x *assistantPlugin) mine(c *ui.Ctx, key any, e assistant.Entry, width floa
 func (x *assistantPlugin) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, latestItems int, log []assistant.Entry, now time.Time, wake *time.Time) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-		c.Box("av", ui.Style{W: ui.Px(22), H: ui.Px(22), Radius: 5, Fill: th.C(tAsstAvatar), Main: ui.Center, Cross: ui.Center, Role: ui.RoleText,
-			Label: "Assistant"}, func(c *ui.Ctx) {
-			c.Text("g", "◇", mono(12, typeset.Bold, th.C(theme.AccentInk)))
+		c.Box("av", ui.Style{W: ui.Px(22), H: ui.Px(22), Role: ui.RoleText, Label: "Ori"}, func(c *ui.Ctx) {
+			ori(c, "face", 22, oriMood{still: true})
 		})
 		c.Column("turn", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
 			if len(b.tools) > 0 {
@@ -398,65 +434,13 @@ func (x *assistantPlugin) side(c *ui.Ctx, width float32) {
 			}
 			c.Text("l", label, monoFont(11, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("v", value, mono(11, typeset.SemiBold, tone))
+			c.Box("value", ui.Style{Keep: true}, func(c *ui.Ctx) { c.Text("v", value, mono(11, typeset.SemiBold, tone)) })
 		})
 	}
 	c.Column("side", ui.Style{W: ui.Px(width), H: ui.Flex(1), Gap: 9, Clip: true}, func(c *ui.Ctx) {
-		heading(c, "can", "WHAT IT CAN DO")
-		for _, t := range registry.AgentToolsFor(x.h, assistantAgent, true) {
-			if t.ReadOnly || t.Name == "reply" {
-				continue
-			}
-			value, tone := "✓", th.C(tAsstDone)
-			if t.Confirm != nil {
-				value, tone = "asks first", th.C(tAsstAsks)
-			}
-			row(c, "can."+t.Name, strings.ReplaceAll(t.Name, "_", " "), value, tone, nil)
-		}
-		row(c, "never", "edit code, run commands, post anywhere", "never", th.C(tAsstNever), nil)
-
-		c.Box("gap1", ui.Style{H: ui.Px(6)}, nil)
-		heading(c, "src", "SOURCES")
-		read := x.lastRead(log)
-		for _, s := range x.sources() {
-			fresh := "—"
-			if at, ok := read[s]; ok {
-				fresh = ago(now, at)
-			}
-			row(c, "src."+s, s, fresh, th.C(theme.FgMuted), func(c *ui.Ctx) {
-				c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(theme.OK)}, nil)
-			})
-		}
-		web := "off"
-		if x.bool("assistant.web") {
-			web = "on"
-		}
-		row(c, "src.web", "web search", web, th.C(theme.FgMuted), func(c *ui.Ctx) {
-			tone := th.C(theme.FgGhost)
-			if web == "on" {
-				tone = th.C(theme.OK)
-			}
-			c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: tone}, nil)
+		scrolled(c, "list", &x.sideScroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Gap: 9, Pad: ui.Insets{R: 8}}, func(c *ui.Ctx, _ func(string) ui.ID) {
+			x.sideList(c, now, log, heading, row)
 		})
-
-		c.Box("gap2", ui.Style{H: ui.Px(6)}, nil)
-		heading(c, "recent", "RECENT ACTIONS")
-		n := 0
-		for _, e := range slices.Backward(log) {
-			if e.Kind != assistant.KindAction || n == 5 {
-				continue
-			}
-			n++
-			mark, tone := "✓", th.C(tAsstDone)
-			if e.Undone {
-				mark, tone = "↶", th.C(theme.FgFaint)
-			}
-			row(c, fmt.Sprint("act", e.Seq), e.Text, ago(now, e.At), th.C(theme.FgFaint), func(c *ui.Ctx) { c.Text("m", mark, mono(11, typeset.Bold, tone)) })
-		}
-		if n == 0 {
-			c.Text("none", "nothing yet", monoFont(11, th.C(theme.FgGhost)))
-		}
-		c.Box("fill", ui.Style{H: ui.Flex(1)}, nil)
 		wake := "wake word off"
 		if on, _ := x.opt("voice.wake").(bool); on && x.bool("assistant.wake") {
 			word, _ := x.opt("voice.wake_word").(string)
@@ -472,6 +456,66 @@ func (x *assistantPlugin) side(c *ui.Ctx, width float32) {
 			c.Text("s", "spoken replies "+spoken, monoFont(10.5, th.C(theme.FgFaint)))
 		})
 	})
+}
+
+// sideList is what it can do, its sources and how fresh each is, and what it did lately.
+func (x *assistantPlugin) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, heading func(c *ui.Ctx, key any, s string),
+	row func(c *ui.Ctx, key any, label, value string, tone render.Color, lead func(c *ui.Ctx))) {
+	th := c.Theme()
+	heading(c, "can", "WHAT IT CAN DO")
+	row(c, "never", "edit code, run commands, post anywhere", "never", th.C(tAsstNever), nil)
+	for _, t := range registry.AgentToolsFor(x.h, assistantAgent, true) {
+		if t.ReadOnly || t.Name == "reply" {
+			continue
+		}
+		value, tone := "✓", th.C(tAsstDone)
+		if t.Confirm != nil {
+			value, tone = "asks first", th.C(tAsstAsks)
+		}
+		row(c, "can."+t.Name, strings.ReplaceAll(t.Name, "_", " "), value, tone, nil)
+	}
+
+	c.Box("gap1", ui.Style{H: ui.Px(6)}, nil)
+	heading(c, "src", "SOURCES")
+	read := x.lastRead(log)
+	for _, s := range x.sources() {
+		fresh := "—"
+		if at, ok := read[s]; ok {
+			fresh = ago(now, at)
+		}
+		row(c, "src."+s, s, fresh, th.C(theme.FgMuted), func(c *ui.Ctx) {
+			c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(theme.OK)}, nil)
+		})
+	}
+	web := "off"
+	if x.bool("assistant.web") {
+		web = "on"
+	}
+	row(c, "src.web", "web search", web, th.C(theme.FgMuted), func(c *ui.Ctx) {
+		tone := th.C(theme.FgGhost)
+		if web == "on" {
+			tone = th.C(theme.OK)
+		}
+		c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: tone}, nil)
+	})
+
+	c.Box("gap2", ui.Style{H: ui.Px(6)}, nil)
+	heading(c, "recent", "RECENT ACTIONS")
+	n := 0
+	for _, e := range slices.Backward(log) {
+		if e.Kind != assistant.KindAction || n == 5 {
+			continue
+		}
+		n++
+		mark, tone := "✓", th.C(tAsstDone)
+		if e.Undone {
+			mark, tone = "↶", th.C(theme.FgFaint)
+		}
+		row(c, fmt.Sprint("act", e.Seq), e.Text, ago(now, e.At), th.C(theme.FgFaint), func(c *ui.Ctx) { c.Text("m", mark, mono(11, typeset.Bold, tone)) })
+	}
+	if n == 0 {
+		c.Text("none", "nothing yet", monoFont(11, th.C(theme.FgGhost)))
+	}
 }
 
 // lastRead is when each source was last read: the last time a tool reading it was used.

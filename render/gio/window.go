@@ -128,6 +128,8 @@ var cursors = map[render.Cursor]pointer.Cursor{
 	render.CursorDefault: pointer.CursorDefault, render.CursorPointer: pointer.CursorPointer, render.CursorText: pointer.CursorText,
 	render.CursorNotAllowed: pointer.CursorNotAllowed, render.CursorGrab: pointer.CursorGrab, render.CursorResizeCol: pointer.CursorColResize,
 	render.CursorResizeRow: pointer.CursorRowResize, render.CursorCrosshair: pointer.CursorCrosshair,
+	render.CursorGrabbing: pointer.CursorGrabbing, render.CursorResizeNWSE: pointer.CursorNorthWestSouthEastResize,
+	render.CursorResizeNESW: pointer.CursorNorthEastSouthWestResize,
 }
 
 func (w *Window) SetCursor(c render.Cursor) {

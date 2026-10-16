@@ -665,9 +665,7 @@ func (r *rail) header(c *ui.Ctx, w here, row sideRow) {
 func (r *rail) entryNote(c *ui.Ctx, row sideRow, size float32) {
 	th := c.Theme()
 	if n := badge(row.entry); n > 0 {
-		c.Box("badge", ui.Style{H: ui.Px(14), Pad: ui.PadXY(4, 0), Radius: 7, Fill: th.C(tRailBadge), Cross: ui.Center, Main: ui.Center}, func(c *ui.Ctx) {
-			c.Text("n", fmt.Sprint(n), mono(size, typeset.Bold, th.C(tRailBadgeF)))
-		})
+		widget.Badge(c, "badge", n, widget.BadgeOpts{Fill: th.C(tRailBadge), Ink: th.C(tRailBadgeF), Size: size})
 		return
 	}
 	if note := noteOf(row); note != "" {
@@ -693,7 +691,7 @@ func (r *rail) wideEntry(c *ui.Ctx, row sideRow) {
 	c.Row("entry", ui.Style{W: ui.Flex(1), H: ui.Px(sidebarEntry), Fill: fill, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		c.Row("in", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: indent - 2, R: 10}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			icon(c, "icon", row.entry.Icon, 13, icol)
+			entryIcon(c, row.entry, 13, icol)
 			c.Text("t", row.entry.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: lcol})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			r.entryNote(c, row, 9)
@@ -749,11 +747,10 @@ func (r *rail) narrowRow(c *ui.Ctx, w here, row sideRow) {
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(18), Radius: 1, Fill: edge}, nil)
 			c.Box("gap", ui.Style{W: ui.Px(4)}, nil)
 			c.Box("ic", ui.Style{W: ui.Px(32), H: ui.Px(32), Radius: 7, Fill: fill, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-				icon(c, "icon", row.entry.Icon, 16, col)
+				entryIcon(c, row.entry, 16, col)
 				if n := badge(row.entry); n > 0 {
-					c.Box("badge", ui.Style{H: ui.Px(13), Pad: ui.PadXY(3, 0), Radius: 6.5, Fill: th.C(tRailBadge), Cross: ui.Center,
-						Float: &ui.Float{At: render.Point{X: 1}, Self: render.Point{X: 1}, Offset: render.Point{X: -2, Y: 3}}}, func(c *ui.Ctx) {
-						c.Text("n", fmt.Sprint(n), mono(8.5, typeset.Bold, th.C(tRailBadgeF)))
+					c.Box("badge", ui.Style{Float: &ui.Float{At: render.Point{X: 1}, Self: render.Point{X: 1}, Offset: render.Point{X: -2, Y: 3}}}, func(c *ui.Ctx) {
+						widget.Badge(c, "pill", n, widget.BadgeOpts{Fill: th.C(tRailBadge), Ink: th.C(tRailBadgeF), Size: 8.5})
 					})
 				}
 			})
@@ -778,6 +775,15 @@ func projectInitials(name string) string {
 		}
 	}
 	return string(rs)
+}
+
+// entryIcon is an entry's icon: drawn by the entry, else its Icon.
+func entryIcon(c *ui.Ctx, e registry.RailEntry, size float32, tone render.Color) {
+	if e.Draw != nil {
+		e.Draw(c, "icon", size, tone)
+		return
+	}
+	icon(c, "icon", e.Icon, size, tone)
 }
 
 func badge(e registry.RailEntry) int {

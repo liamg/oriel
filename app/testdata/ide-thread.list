@@ -57,6 +57,13 @@ clip 0,38 43x936 r 0
   path 5 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments fill #060606
+  path 6 segments stroke 1.4 #ffd23f
+  effect glow 18.9,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  effect glow 22.8,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  path 2 segments stroke 0.8 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -429,8 +436,8 @@ text "0" @130.90375,990.95996 #b3ab99 JetBrains Mono 11
 text "Go · utf-8 · LF" @1387.1562,984.71 #b3ab99 JetBrains Mono 10.5
 text "46:11" @1502.0625,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 57%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
-rect 24.09375,217 11.40625x13 fill #ff9b45 radius 6.5
-text "4" @27.09375,226.56 #141006 JetBrains Mono 8.5
+rect 22.09375,217 13.40625x13.5 fill #ff9b45 radius 6.75
+text "4" @26.09375,226.81 #141006 JetBrains Mono 8.5
 text "▪" @93.296875,282.77 #4cc9f0 JetBrains Mono 13.5
 rect 196.0625,270 8.40625x19 fill #ffd23f
 text ":" @196.0625,283.77 #141006 JetBrains Mono 13.5

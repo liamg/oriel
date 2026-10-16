@@ -601,3 +601,6 @@ func (*Jest) Coverage(ws Workspace, r io.Reader) (*Coverage, error) { return par
 func (*Jest) Affected(ws Workspace, file string) ([]Item, error) {
 	return []Item{{Package: file, File: file, Kind: KindFile}}, nil
 }
+
+func (*Vitest) TestFile(path string) bool { return isJSTestFile(path) }
+func (*Jest) TestFile(path string) bool   { return isJSTestFile(path) }

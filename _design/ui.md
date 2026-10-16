@@ -710,23 +710,38 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 ![11-assistant](mockups/11-assistant.png)
 
-- The room's assistant as a drawer on `/`: "what needs me?", "review this PR".
+- The room's assistant, Ori: "what needs me?", "review this PR", "where's that test I was working on?".
 - Answers come back as actionable rows (number keys pick one). Every action has an undo with a countdown.
 - It shows what it's allowed to do, and its data sources with how fresh each is.
-- Built in PL-4 (`app/assistant*.go`, module `assistant`): `⌘/` (`assistant.toggle`) pulls a pinned `widget.Drawer`
-  (a focus trap now, so it takes focus over a page) down to about two thirds of the window; `esc` or its ✕ puts it
-  away and the conversation waits. The start view keeps to its own keys, so there it's `:` or the omnibox. Header:
-  COMMS, the ASSISTANT chip, the model it runs on, what it reads, the keys, **New conversation**. The conversation:
+- Built in PL-4 (`app/assistant*.go`, module `assistant`), and since named **Ori**: a floating window
+  (`widget.Window`, `LayerWindow`) kept over the IDE, its toasts included, until it's minimised. Ori's face (
+  the logo's O with two of its cursor bars as eyes: they blink now and then like a caret (unevenly, sometimes twice), glance about while it works, and a dot lights while
+  something it said is unread; with `ui.reduced_motion` it keeps still) is a rail entry at the foot of the rail, over Settings, with a badge counting its
+  answers, questions and failures since the window last showed them; a click, or `⌘/` (`assistant.toggle`), opens
+  or minimises it. It opens beside the rail, its title bar drags it, its edges and bottom corners resize it, and its
+  place is kept between runs (`assistant-window.json` in the state dir). It doesn't trap focus: the editor under it
+  still takes clicks and keys; `esc` in it or its **–** minimises it and the conversation waits. Opening a session,
+  a file or settings for you leaves it up, so it can ask whether that's the one. Title bar: Ori's face, ORI, the
+  model it runs on, what it reads, **New**. The conversation:
   your turns as bubbles at the right; its turns with the tools it used as ✓ chips, its answer in markdown, the rows
-  its `reply` tool offers (a status dot, title, text, meta, `⌘1`–`⌘9`; a row opens its session or link, else asks
+  its `reply` tool offers (a status dot, title, text, meta, `⌘1`–`⌘9`; a row opens its session, link or file, else asks
   about it), a confirmation card for each act (`widget.ActionCard`: what will happen as facts, the prompt or tasks, a
   note; **Yes** `y`, **No** `n`, the seconds left; it takes focus as it comes), and a card for what its tools did
   (**Open** `o`, **Undo** `u` with a 10 s countdown). The composer: ⏎ sends, **dictate** (`voice.dictate`), **Stop**
-  `⌘.` while it answers. The side: WHAT IT CAN DO (each acting tool, ✓ or **asks first**, and "edit code, run
-  commands, post anywhere · never"), SOURCES (each `Reads` of its tools, with how long ago a tool last read it, and
+  `⌘.` while it answers. Dragged wider than 760, the side comes beside it, scrolling: WHAT IT CAN DO (each acting
+  tool, ✓ or **asks first**, and "edit code, run commands, post anywhere · never"), SOURCES (each `Reads` of its
+  tools, with how long ago a tool last read it, and
   web search on or off), RECENT ACTIONS, and the wake word and spoken replies. Its confirmations are also an
-  `InboxSource` ("assistant"): with the drawer away they stack over the window like any ask, and what it did is
+  `InboxSource` ("assistant"): with the window minimised they stack over the IDE like any ask, and what it did is
   history in the Inbox panel.
+- It steers the window too: `where` (the session in front, its projects and the open one, and the editor's file and
+  line), `changed_files` (what the session changed, on its branch, uncommitted or new, newest-modified first, each marked
+  a test or not by the test adapters' `TestFile`), `open_project` and `focus_file` (a file at a line, its session and
+  project brought to the front first; the assistant stays up). "Where's that test I was working on?" is the newest
+  changed test shown in the editor and "Is this it?", the other candidates as rows (a row's `file`, `line` and
+  `project` open it). The help viewer gives it `help_search` (`help.Index.Search`: the sections whose headings and
+  text, with their `{{keys}}` and `{{options}}` expanded, have most of the question's words, each with the line that
+  matched), `help_read` (a section as markdown) and `open_help`: "how do I…?" is answered from the pages.
 - Decided in PL-4: "every action has an undo" applies to what can be taken back: a session or review it started, or
   a job's run, is deleted; a rename goes back; a stopped session resumes; a resumed one stops. Opening something
   (a session, the launcher, settings) has nothing to undo. Acts that start or stop an agent confirm first (crit's

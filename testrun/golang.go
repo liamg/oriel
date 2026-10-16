@@ -580,3 +580,5 @@ func fileExists(p string) bool {
 	_, err := os.Stat(p)
 	return err == nil
 }
+
+func (*Go) TestFile(path string) bool { return strings.HasSuffix(path, "_test.go") }

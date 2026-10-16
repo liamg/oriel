@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -15,7 +16,9 @@ import (
 	"github.com/liamg/oriel/assistant"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/worker"
 )
 
@@ -32,7 +35,10 @@ var replySchema = json.RawMessage(`{"type":"object","properties":{` +
 	`"text":{"type":"string","description":"what it's about, in a line"},` +
 	`"meta":{"type":"string","description":"how long ago, and where: 22m · devbox"},` +
 	`"session":{"type":"string","description":"a session's id: picking it opens it"},` +
-	`"url":{"type":"string","description":"a link: picking it opens it"}},"required":["title"]}}},"required":["text"]}`)
+	`"url":{"type":"string","description":"a link: picking it opens it"},` +
+	`"file":{"type":"string","description":"a file, as changed_files gives it: picking it opens it, as focus_file does"},` +
+	`"line":{"type":"number","description":"the file's line to open at"},` +
+	`"project":{"type":"string","description":"the file's project"}},"required":["title"]}}},"required":["text"]}`)
 
 func (x *assistantPlugin) tools() []registry.AgentTool {
 	id := map[string]string{"id": "string"}
@@ -71,6 +77,15 @@ func (x *assistantPlugin) tools() []registry.AgentTool {
 			Desc: "The user's plan usage for each agent and account: how much of each limit window is used and when it resets."},
 		{Name: "workers", ReadOnly: true, Reads: "workers", Run: x.toolWorkers,
 			Desc: "The machines sessions run on: connected or not, CPU and memory in use, and their sessions."},
+		{Name: "where", ReadOnly: true, Reads: "editor", Run: x.toolWhere,
+			Desc: "What's in front of the user now: the session, its projects and the open one, and the file and line the editor is on, relative to its project. Read it for \"this file\", \"here\"."},
+		{Name: "changed_files", ReadOnly: true, Reads: "git", Params: map[string]string{"session": "string?", "project": "string?", "tests": "boolean?", "limit": "number?"},
+			Run:  x.toolChangedFiles,
+			Desc: "The files a session changed, on its branch or not committed yet, across its projects (or one), the most recently modified first: project, path, area, lines added and removed, how long ago it was modified, and whether it's a test. tests keeps only the tests. session is from sessions; the one in front by default."},
+		{Name: "open_project", Params: map[string]string{"project": "string", "session": "string?"}, Run: x.toolOpenProject,
+			Desc: "Make a project of a session the open one, bringing the session to the front first. session is from sessions; the one in front by default."},
+		{Name: "focus_file", Params: map[string]string{"path": "string", "line": "number?", "project": "string?", "session": "string?"}, Run: x.toolFocusFile,
+			Desc: "Show a file in the editor, at a line, bringing its session and project to the front first. path is relative to the project (as changed_files gives it); the open project by default. Your window stays open, so you can ask whether it's the one."},
 		{Name: "settings", Params: map[string]string{"section": "string?", "query": "string?"}, Run: x.toolSettings,
 			Desc: "Open Oriel's settings page, at a section (editor, git, voice, assistant…) or searching for a setting."},
 	}
@@ -248,7 +263,6 @@ func (x *assistantPlugin) toolOpenSession(ctx registry.Ctx, p map[string]any) (a
 	if err := x.run(ctx, "session.open", registry.Args{"id": string(s.ID)}); err != nil {
 		return nil, err
 	}
-	_ = onLoop(ctx, x.h, func() { x.setOpen(false) })
 	return registry.Acted{Result: "opened", Line: "opened " + label(s)}, nil
 }
 
@@ -281,7 +295,6 @@ func (x *assistantPlugin) toolResumeSession(ctx registry.Ctx, p map[string]any) 
 	if err := x.run(ctx, "session.open", registry.Args{"id": string(s.ID)}); err != nil {
 		return nil, err
 	}
-	_ = onLoop(ctx, x.h, func() { x.setOpen(false) })
 	return registry.Acted{Result: "resumed; it opens when it's up", Line: "resumed " + label(s), Undo: func(ctx registry.Ctx) error {
 		return x.run(ctx, "session.stop", registry.Args{"id": string(s.ID)})
 	}}, nil
@@ -297,7 +310,6 @@ func (x *assistantPlugin) toolNewSession(ctx registry.Ctx, p map[string]any) (an
 	if err := x.run(ctx, "session.new", args); err != nil {
 		return nil, err
 	}
-	_ = onLoop(ctx, x.h, func() { x.setOpen(false) })
 	return registry.Acted{Result: "the launcher is open for the user to finish", Line: "opened the launcher"}, nil
 }
 
@@ -305,7 +317,6 @@ func (x *assistantPlugin) toolSettings(ctx registry.Ctx, p map[string]any) (any,
 	if err := x.run(ctx, "settings.open", registry.Args{"section": pstr(p, "section"), "query": pstr(p, "query")}); err != nil {
 		return nil, err
 	}
-	_ = onLoop(ctx, x.h, func() { x.setOpen(false) })
 	return registry.Acted{Result: "opened", Line: "opened settings"}, nil
 }
 
@@ -712,4 +723,226 @@ func (x *assistantPlugin) toolWorkers(registry.Ctx, map[string]any) (any, error)
 		out = append(out, r)
 	}
 	return out, nil
+}
+
+func pint(p map[string]any, k string) int {
+	switch v := p[k].(type) {
+	case float64:
+		return int(v)
+	case int:
+		return v
+	case string:
+		n, _ := strconv.Atoi(strings.TrimSpace(v))
+		return n
+	}
+	return 0
+}
+
+// whereLine is what's in front of the user, as the assistant reads it.
+type whereLine struct {
+	Session  string        `json:"session,omitempty"`
+	Name     string        `json:"name,omitempty"`
+	Project  string        `json:"project,omitempty"` // the open one
+	Projects []projectLine `json:"projects,omitempty"`
+	File     string        `json:"file,omitempty"` // relative to its project, else absolute
+	FileIn   string        `json:"file_project,omitempty"`
+	Line     int           `json:"line,omitempty"`
+}
+
+type projectLine struct {
+	Name   string `json:"name"`
+	Branch string `json:"branch,omitempty"`
+	Dir    string `json:"dir"`
+}
+
+func (x *assistantPlugin) toolWhere(ctx registry.Ctx, _ map[string]any) (any, error) {
+	var at registry.At
+	var w here
+	if err := onLoop(ctx, x.h, func() { at, w = x.h.Here(), projectsHere(x.h) }); err != nil {
+		return nil, err
+	}
+	out := whereLine{Project: w.open, File: at.File, Line: at.Line}
+	if w.session != nil {
+		out.Session, out.Name = string(w.session.ID), w.session.Name
+	}
+	for _, p := range w.projects {
+		out.Projects = append(out.Projects, projectLine{Name: p.Name, Branch: p.Branch, Dir: p.Dir})
+		if at.File != "" && inside(at.File, p.Dir) {
+			out.FileIn = p.Name
+			if rel, err := filepath.Rel(p.Dir, at.File); err == nil {
+				out.File = filepath.ToSlash(rel)
+			}
+		}
+	}
+	return out, nil
+}
+
+// sessionOr is the session ref names, else the one in front.
+func (x *assistantPlugin) sessionOr(ref string) (core.SessionState, error) {
+	if ref == "" {
+		ref = string(x.h.State().Focus)
+		if ref == "" {
+			return core.SessionState{}, errors.New("no session is in front: name one from sessions")
+		}
+	}
+	return x.session(ref)
+}
+
+// projectOf is a session's project by name, else its open one.
+func projectOf(s core.SessionState, name string) (core.Project, error) {
+	if name == "" {
+		name = s.OpenProject()
+	}
+	var names []string
+	for _, p := range s.Projects {
+		if strings.EqualFold(p.Name, name) {
+			return p, nil
+		}
+		names = append(names, p.Name)
+	}
+	return core.Project{}, fmt.Errorf("%s has no project %q: it has %s", label(s), name, strings.Join(names, ", "))
+}
+
+// asstFile is a changed file as the assistant reads it.
+type asstFile struct {
+	Project  string `json:"project"`
+	Path     string `json:"path"`
+	Area     string `json:"area,omitempty"`
+	Add      int    `json:"added,omitempty"`
+	Del      int    `json:"removed,omitempty"`
+	Ago      string `json:"modified,omitempty"`
+	Test     bool   `json:"is_test,omitempty"`
+	Deleted  bool   `json:"deleted,omitempty"`
+	modified time.Time
+}
+
+func (x *assistantPlugin) toolChangedFiles(ctx registry.Ctx, p map[string]any) (any, error) {
+	s, err := x.sessionOr(pstr(p, "session"))
+	if err != nil {
+		return nil, err
+	}
+	projects := s.Projects
+	if name := pstr(p, "project"); name != "" {
+		pr, err := projectOf(s, name)
+		if err != nil {
+			return nil, err
+		}
+		projects = []core.Project{pr}
+	}
+	tests := testrun.Builtin()
+	if x.sh.tests != nil && x.sh.tests.set != nil {
+		tests = x.sh.tests.set
+	}
+	only, _ := p["tests"].(bool)
+	now := time.Now()
+	out := []asstFile{}
+	for _, pr := range projects {
+		st, err := gitx.Repo{Dir: pr.Dir}.Status(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't read %s: %w", pr.Name, err)
+		}
+		files := st.Files(gitx.Changed)
+		for _, f := range st.Files(gitx.Uncommitted) {
+			if f.Area == gitx.Untracked {
+				files = append(files, f)
+			}
+		}
+		for _, f := range files {
+			abs := filepath.Join(pr.Dir, filepath.FromSlash(f.Path))
+			l := asstFile{Project: pr.Name, Path: f.Path, Area: f.Area.String(), Add: f.Add, Del: f.Del, Test: tests.TestFile(abs), Deleted: f.Code == 'D'}
+			if only && !l.Test {
+				continue
+			}
+			if fi, err := os.Stat(abs); err == nil {
+				l.modified, l.Ago = fi.ModTime(), ago(now, fi.ModTime())
+			}
+			out = append(out, l)
+		}
+	}
+	slices.SortStableFunc(out, func(a, b asstFile) int { return b.modified.Compare(a.modified) })
+	if n := pint(p, "limit"); n > 0 && n < len(out) {
+		out = out[:n]
+	} else if len(out) > 50 {
+		out = out[:50]
+	}
+	return out, nil
+}
+
+// bringUp brings a session's project to the front, then runs then there: in place when it's the session in front,
+// else once the window is on it.
+func (x *assistantPlugin) bringUp(ctx registry.Ctx, s core.SessionState, p core.Project, then ...map[string]any) error {
+	calls := append([]map[string]any{{"command": "project.open", "args": map[string]any{"project": p.Name}}}, then...)
+	if s.ID != x.h.State().Focus {
+		list := make([]any, len(calls))
+		for i, c := range calls {
+			list[i] = c
+		}
+		return x.run(ctx, "session.open", registry.Args{"id": string(s.ID), "then": list})
+	}
+	for _, c := range calls {
+		args, _ := c["args"].(map[string]any)
+		if err := x.run(ctx, c["command"].(string), registry.Args(args)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (x *assistantPlugin) toolOpenProject(ctx registry.Ctx, p map[string]any) (any, error) {
+	s, err := x.sessionOr(pstr(p, "session"))
+	if err != nil {
+		return nil, err
+	}
+	pr, err := projectOf(s, pstr(p, "project"))
+	if err != nil {
+		return nil, err
+	}
+	if err := x.bringUp(ctx, s, pr); err != nil {
+		return nil, err
+	}
+	return registry.Acted{Result: "opened", Line: "opened " + pr.Name + " in " + label(s)}, nil
+}
+
+func (x *assistantPlugin) toolFocusFile(ctx registry.Ctx, p map[string]any) (any, error) {
+	s, err := x.sessionOr(pstr(p, "session"))
+	if err != nil {
+		return nil, err
+	}
+	path := pstr(p, "path")
+	if path == "" {
+		return nil, errors.New("which file?")
+	}
+	name := pstr(p, "project")
+	if name == "" && filepath.IsAbs(path) {
+		for _, pr := range s.Projects {
+			if inside(path, pr.Dir) {
+				name = pr.Name
+			}
+		}
+	}
+	pr, err := projectOf(s, name)
+	if err != nil {
+		return nil, err
+	}
+	abs := path
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(pr.Dir, filepath.FromSlash(path))
+	}
+	if _, err := os.Stat(abs); err != nil {
+		return nil, fmt.Errorf("there's no %s in %s: read changed_files again", path, pr.Name)
+	}
+	open := map[string]any{"path": abs}
+	line := pint(p, "line")
+	if line > 0 {
+		open["line"] = line
+	}
+	if err := x.bringUp(ctx, s, pr, map[string]any{"command": "editor.open", "args": open}); err != nil {
+		return nil, err
+	}
+	rel, _ := filepath.Rel(pr.Dir, abs)
+	where := filepath.ToSlash(rel)
+	if line > 0 {
+		where += fmt.Sprintf(":%d", line)
+	}
+	return registry.Acted{Result: "it's in front", Line: "showed " + where, Detail: pr.Name + " · " + label(s)}, nil
 }

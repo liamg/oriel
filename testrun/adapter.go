@@ -31,6 +31,11 @@ type Watcher interface {
 	Affected(ws Workspace, file string) ([]Item, error)
 }
 
+// TestFiler is an Adapter that tells its test files by their path alone.
+type TestFiler interface {
+	TestFile(path string) bool
+}
+
 // Workspace is a project the tests are in.
 type Workspace struct {
 	Root string

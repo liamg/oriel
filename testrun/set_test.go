@@ -139,3 +139,32 @@ func TestSetAffected(t *testing.T) {
 		t.Errorf("saving calc.py selects %q", files)
 	}
 }
+
+// go help test: "the file pattern \"*_test.go\"". pytest goodpractices: "search for “test_*.py“ or “*_test.py“
+// files". vitest config: "**Default:** `['**/*.{test,spec}.?(c|m)[jt]s?(x)']`". A plugin's adapter that can tell
+// one counts too.
+func TestSetTestFile(t *testing.T) {
+	s := Builtin()
+	s.Register(rspecFiles{rspec{name: "rspec"}})
+	for path, want := range map[string]bool{
+		"/r/round_test.go":          true,
+		"/r/round.go":               false,
+		"/r/tests/test_price.py":    true,
+		"/r/price_test.py":          true,
+		"/r/price.py":               false,
+		"/r/src/usage.test.ts":      true,
+		"/r/src/usage.spec.mjs":     true,
+		"/r/src/usage.ts":           false,
+		"/r/spec/billing_spec.rb":   true,
+		"/r/lib/billing.rb":         false,
+		"/r/internal/testdata/a.go": false,
+	} {
+		if got := s.TestFile(path); got != want {
+			t.Errorf("TestFile(%s) = %v, want %v", path, got, want)
+		}
+	}
+}
+
+type rspecFiles struct{ rspec }
+
+func (rspecFiles) TestFile(path string) bool { return strings.HasSuffix(path, "_spec.rb") }

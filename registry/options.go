@@ -79,6 +79,10 @@ type At struct {
 	Session string
 	Buffer  string
 	Window  string
+	// Where the focused editor window is, for what reads where the user is (Host.Here): its file, absolute, and
+	// its cursor's line, 1-based; empty with no editor.
+	File string
+	Line int
 }
 
 func (a At) key(l Layer) string {
