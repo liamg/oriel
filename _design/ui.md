@@ -518,7 +518,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   workspace means its primary project); the Explorer's Changed, the agent console's "view in diff", plan's
   **Preview diff** and the request's **View diff** reach it. It's the branch against the merge-base with its base
   (`gitx.State.BaseHash`), uncommitted work and unsaved buffers included, in git's `-U3` hunks (`gitx.Unified`, held
-  to `git diff`). Left: **CHANGES**, each file with a reviewed box (`widget.Check`: ticked when every hunk is
+  to `git diff`). Each file's diff is made off the loop, again when its revision, size, mtime or buffer changes, but
+  no more than twice a second however fast it's written to; `--debug` logs each remake with what changed. Left: **CHANGES**, each file with a reviewed box (`widget.Check`: ticked when every hunk is
   marked, half when some are; a click marks or unmarks the file) and its size; then the `diff.side.*` views
   (Authorship is the built-in `diff.side.50-authorship`: added lines by blame, an agent's, yours, others', and lines
   not committed by the open buffer's authors, else "uncommitted"); then the keys. Middle: the `diff.header.*` views

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,6 +57,8 @@ type diffPlugin struct {
 	mu      sync.Mutex
 	files   map[diffKey]*diffFile
 	loading map[diffKey]bool
+	started map[diffKey]time.Time // when each file's last diff was started, so one changing fast isn't remade each time
+	waking  map[diffKey]bool      // a redraw is set for when a file's diff can be made again
 	local   core.State            // reviews made outside a session, as session "local" with each repo's root its project; they last as long as the window
 	texts   map[string]agentTexts // by session and root
 	busy    sync.WaitGroup
@@ -97,6 +100,7 @@ func (x *diffPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "di
 func (x *diffPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by, x.files, x.loading = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}
+	x.started, x.waking = map[diffKey]time.Time{}, map[diffKey]bool{}
 	x.local = core.State{Sessions: []core.SessionState{{ID: localReviews}}}
 	x.limit = make(chan struct{}, 4)
 	x.add(h.Option(registry.OptionSpec{Name: "diff.layout", Section: "git", Type: registry.Enum, Values: []string{"split", "unified"}, Default: "split",
@@ -571,12 +575,19 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState) *d
 	d, busy := x.files[k], x.loading[k]
 	x.mu.Unlock()
 	if (d == nil || d.in != in) && !busy {
+		if d != nil && !x.mayRemake(k) {
+			return d
+		}
+		if d != nil {
+			x.h.Log().Debug("remaking a diff", "path", f.Path, "changed", changedInputs(d.in, in))
+		}
 		var newText []byte
 		if open {
 			newText = buf.Bytes()
 		}
 		x.mu.Lock()
 		x.loading[k] = true
+		x.started[k] = time.Now()
 		x.mu.Unlock()
 		x.busy.Add(1)
 		go func() {
@@ -591,6 +602,46 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState) *d
 		}()
 	}
 	return d
+}
+
+// diffRemakeGap is the least time between starting a file's diffs: one written to over and over is remade at this
+// pace at most, not on every write.
+const diffRemakeGap = 500 * time.Millisecond
+
+// mayRemake reports whether k's diff can be made again now, and if not, has a frame drawn when it can.
+func (x *diffPlugin) mayRemake(k diffKey) bool {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	wait := diffRemakeGap - time.Since(x.started[k])
+	if wait <= 0 {
+		return true
+	}
+	if !x.waking[k] {
+		x.waking[k] = true
+		time.AfterFunc(wait, func() {
+			x.mu.Lock()
+			delete(x.waking, k)
+			x.mu.Unlock()
+			x.h.Redraw()
+		})
+	}
+	return false
+}
+
+// changedInputs names what differs between two diffs' inputs, for the log.
+func changedInputs(a, b diffInput) string {
+	var out []string
+	for _, c := range []struct {
+		name string
+		same bool
+	}{{"rev", a.rev == b.rev}, {"path", a.path == b.path && a.old == b.old}, {"status", a.code == b.code},
+		{"counts", a.add == b.add && a.del == b.del}, {"size", a.size == b.size}, {"mtime", a.mtime == b.mtime},
+		{"buffer", a.buf == b.buf && a.version == b.version}, {"repo", a.repo == b.repo && a.work == b.work}} {
+		if !c.same {
+			out = append(out, c.name)
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 // newBuffer is the buffer of a file's new side, for its decorations: the editor's when it's open, else one of the

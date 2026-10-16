@@ -234,11 +234,11 @@ func (x *editorPlugin) symbolsSource() registry.PickerSource {
 		if !ok {
 			return nil
 		}
-		p, err := syntax.NewParser(lang)
+		p, err := syntax.Borrow(lang)
 		if err != nil {
 			return nil
 		}
-		defer p.Close()
+		defer p.Release()
 		p.ParseSnapshot(snap)
 		s.units, _ = p.Outline()
 		return s.units

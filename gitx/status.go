@@ -66,6 +66,12 @@ type State struct {
 	files    [3][]FileState
 }
 
+// sameRefs reports whether two readings agree on everything but their files.
+func (s *State) sameRefs(o *State) bool {
+	return s.Branch == o.Branch && s.Base == o.Base && s.BaseHash == o.BaseHash && s.Upstream == o.Upstream &&
+		s.Ahead == o.Ahead && s.Behind == o.Behind
+}
+
 // Files are the files of a scope, by path. Uncommitted lists a file once per area it has changes in.
 func (s *State) Files(sc Scope) []FileState {
 	if s == nil {
@@ -122,14 +128,38 @@ func (r Repo) BaseRef(ctx context.Context, branch string) string {
 // Status reads the work tree's status in every scope.
 func (r Repo) Status(ctx context.Context) (*State, error) {
 	st := &State{}
-	st.Branch, _ = r.Branch(ctx)
-	_, headErr := r.git(ctx, "rev-parse", "--verify", "-q", "HEAD")
-	hasHead := headErr == nil
-	if t, err := r.AheadBehind(ctx); err == nil {
-		st.Upstream, st.Ahead, st.Behind = t.Upstream, t.Ahead, t.Behind
+	// What doesn't need the base runs alongside working the base out, each its own git.
+	var (
+		wg                    sync.WaitGroup
+		hasHead               bool
+		base                  = emptyTree
+		out, tracked, ign     []byte
+		statusErr, trackedErr error
+		ignErr                error
+		staged, unstaged      numstats
+	)
+	run := func(fn func()) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fn()
+		}()
 	}
-	base := emptyTree
-	if hasHead {
+	run(func() {
+		st.Branch, _ = r.Branch(ctx)
+		_, headErr := r.git(ctx, "rev-parse", "--verify", "-q", "HEAD")
+		hasHead = headErr == nil
+		if !hasHead {
+			return
+		}
+		var inner sync.WaitGroup
+		inner.Add(1)
+		go func() {
+			defer inner.Done()
+			if t, err := r.AheadBehind(ctx); err == nil {
+				st.Upstream, st.Ahead, st.Behind = t.Upstream, t.Ahead, t.Behind
+			}
+		}()
 		base = "HEAD"
 		if st.Base = r.BaseRef(ctx, st.Branch); st.Base != "" {
 			if out, err := r.git(ctx, "merge-base", "HEAD", st.Base); err == nil {
@@ -141,16 +171,22 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 		if out, err := r.git(ctx, "rev-parse", "--short", base); err == nil {
 			st.BaseHash = strings.TrimSpace(string(out))
 		}
+		inner.Wait()
+	})
+	run(func() { out, statusErr = r.git(ctx, "status", "--porcelain=v2", "-z", "--untracked-files=all") })
+	run(func() { staged, _ = r.numstat(ctx, "diff", "--cached", "-M", "--numstat", "-z") })
+	run(func() { unstaged, _ = r.numstat(ctx, "diff", "--numstat", "-z") })
+	run(func() { tracked, trackedErr = r.git(ctx, "ls-files", "-z") })
+	run(func() {
+		ign, ignErr = r.git(ctx, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory")
+	})
+	wg.Wait()
+	if statusErr != nil {
+		return nil, statusErr
 	}
 
 	// Uncommitted, from git status.
-	out, err := r.git(ctx, "status", "--porcelain=v2", "-z", "--untracked-files=all")
-	if err != nil {
-		return nil, err
-	}
 	entries := parseStatusV2(out)
-	staged, _ := r.numstat(ctx, "diff", "--cached", "-M", "--numstat", "-z")
-	unstaged, _ := r.numstat(ctx, "diff", "--numstat", "-z")
 	var unc []FileState
 	working := map[string]bool{}
 	for _, e := range entries {
@@ -185,17 +221,24 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 	// Changed: the work tree against the merge-base.
 	var changed []FileState
 	if hasHead {
-		names, err := r.git(ctx, "diff", "-M", "--name-status", "-z", base)
+		var (
+			names, between  []byte
+			err, betweenErr error
+			counts          numstats
+		)
+		run(func() { names, err = r.git(ctx, "diff", "-M", "--name-status", "-z", base) })
+		run(func() { counts, _ = r.numstat(ctx, "diff", "-M", "--numstat", "-z", base) })
+		if base != "HEAD" {
+			run(func() { between, betweenErr = r.git(ctx, "diff", "-M", "--name-only", "-z", base, "HEAD") })
+		}
+		wg.Wait()
 		if err != nil {
 			return nil, err
 		}
-		counts, _ := r.numstat(ctx, "diff", "-M", "--numstat", "-z", base)
 		committed := map[string]bool{}
-		if base != "HEAD" {
-			if out, err := r.git(ctx, "diff", "-M", "--name-only", "-z", base, "HEAD"); err == nil {
-				for _, p := range strings.Split(string(out), "\x00") {
-					committed[p] = p != ""
-				}
+		if base != "HEAD" && betweenErr == nil {
+			for _, p := range strings.Split(string(between), "\x00") {
+				committed[p] = p != ""
 			}
 		}
 		for _, f := range parseNameStatus(names) {
@@ -223,7 +266,7 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 
 	// All: every file, with Changed's marks, the untracked ones, and ignored directories.
 	all := map[string]FileState{}
-	if tracked, err := r.git(ctx, "ls-files", "-z"); err == nil {
+	if trackedErr == nil {
 		for _, p := range strings.Split(string(tracked), "\x00") {
 			if p != "" {
 				all[p] = FileState{Path: p}
@@ -243,7 +286,7 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 			all[f.Path] = f
 		}
 	}
-	if ign, err := r.git(ctx, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"); err == nil {
+	if ignErr == nil {
 		for _, p := range strings.Split(string(ign), "\x00") {
 			if p != "" {
 				all[p] = FileState{Path: p, Ignored: true}
@@ -426,9 +469,13 @@ func (s *Status) Refresh(ctx context.Context) error {
 	s.mu.Lock()
 	changed := diffStates(s.st, st)
 	first := !s.seen
-	s.st, s.seen = st, true
+	same := !first && len(changed) == 0 && s.st.sameRefs(st)
+	if !same {
+		s.st = st // a reading that changed nothing keeps the last, so what's cached on it stays good
+	}
+	s.seen = true
 	var fns []func([]string)
-	if first || len(changed) > 0 || s.st.Branch != st.Branch {
+	if !same {
 		for _, fn := range s.subs {
 			fns = append(fns, fn)
 		}

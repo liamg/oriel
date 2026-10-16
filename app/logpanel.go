@@ -542,11 +542,11 @@ func highlightAround(r registry.Registry, path string, src []byte, line, before,
 	f.lines = all[first-1 : last]
 	var hl []syntax.Span
 	if lang, ok := languageFor(r, path, src); ok {
-		if ps, err := syntax.NewParser(lang); err == nil {
+		if ps, err := syntax.Borrow(lang); err == nil {
 			ps.Parse(src)
 			start := offsetOfLine(all, first)
 			hl, _ = ps.Highlights(start, start+len(strings.Join(f.lines, "\n")))
-			ps.Close()
+			ps.Release()
 		}
 	}
 	off := offsetOfLine(all, first)

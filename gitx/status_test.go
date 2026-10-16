@@ -190,6 +190,7 @@ func TestStatusWatch(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("the first refresh told no one")
 	}
+	first := s.State()
 	if err := s.Refresh(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -197,6 +198,9 @@ func TestStatusWatch(t *testing.T) {
 	case p := <-got:
 		t.Fatalf("a refresh with nothing changed told watchers %v", p)
 	default:
+	}
+	if s.State() != first {
+		t.Error("a refresh with nothing changed made a new reading, so what's cached on the last is thrown away")
 	}
 	r.Write(map[string]string{"internal/pricing/rates.go": "changed\n"})
 	if err := s.Refresh(ctx); err != nil {
@@ -212,6 +216,9 @@ func TestStatusWatch(t *testing.T) {
 	}
 	if fs := s.Files(Uncommitted); len(fs) != 5 {
 		t.Errorf("after the change, Uncommitted:\n%s", rows(fs))
+	}
+	if s.State() == first {
+		t.Error("a refresh after a change kept the old reading")
 	}
 }
 

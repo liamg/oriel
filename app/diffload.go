@@ -132,11 +132,11 @@ func highlightLines(r registry.Registry, path string, src []byte, lines []string
 	if !ok || len(src) == 0 {
 		return nil
 	}
-	p, err := syntax.NewParser(lang)
+	p, err := syntax.Borrow(lang)
 	if err != nil {
 		return nil
 	}
-	defer p.Close()
+	defer p.Release()
 	p.Parse(src)
 	starts := make([]int, len(lines)+1)
 	for i, l := range lines {
@@ -179,11 +179,11 @@ func outline(r registry.Registry, path string, src []byte) []text.Unit {
 	if !ok || len(src) == 0 {
 		return nil
 	}
-	p, err := syntax.NewParser(lang)
+	p, err := syntax.Borrow(lang)
 	if err != nil {
 		return nil
 	}
-	defer p.Close()
+	defer p.Release()
 	p.Parse(src)
 	us, _ := p.Outline()
 	return us

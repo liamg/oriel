@@ -505,7 +505,10 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   against HEAD, the index and the merge-base with origin's default branch, else main or master); `gitx.Status` keeps
   it, tells watchers which paths changed, and runs in the app until the worker exists (AI-1). It refreshes every 2 s,
   after a write and after each git command, rather than on fs-notify: a watcher over x/sys (inotify, kqueue) comes
-  with the worker. Fixture repos for tests are built with `gitx/gittest`.
+  with the worker. The gits a reading needs run at once, in two rounds (everything that doesn't need the
+  merge-base while it's found, then the diffs against it): 17 ms on this repo, against 55 ms one after another. A
+  reading that changes nothing keeps the last one, so what's cached on it (the Explorer's rows) stays good and
+  watchers hear nothing. Fixture repos for tests are built with `gitx/gittest`.
 
 ## Navigation and search
 
