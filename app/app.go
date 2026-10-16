@@ -226,6 +226,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 				return derr
 			}
 			drawn, due = time.Now(), time.Time{}
+			l.input.built(l.log)
 		}
 		// Keys typed behind ones the editor has now taken: looked up, or passed on raw while it's mid-command.
 		if acts := l.keys.Pump(l.sh.keyModes(), time.Now()); len(acts) > 0 || l.keys.Queued() {
@@ -525,6 +526,43 @@ type loop struct {
 	log   *slog.Logger
 
 	slowLogged time.Time // the last slow loop logged, so a slow stretch logs once a second
+	input      inputLag
+}
+
+// lagWarn is how far behind the pointer may fall, from when it moved to a frame built with it, before it's logged.
+const lagWarn = 100 * time.Millisecond
+
+// inputLag times the pointer's moves through the loop: when each reached it, and when a frame was built with it.
+type inputLag struct {
+	oldest  time.Time     // the earliest move not yet in a frame
+	reached time.Duration // the longest a move took to reach the loop since the last frame
+	drawn   time.Duration // the last frame's: from its oldest move to built, for the debug overlay
+	logged  time.Time
+}
+
+// arrived notes a move that happened at at, reaching the loop now; one that changed nothing needs no frame.
+func (in *inputLag) arrived(at time.Time, changed bool) {
+	if at.IsZero() || !changed {
+		return
+	}
+	in.reached = max(in.reached, time.Since(at))
+	if in.oldest.IsZero() || at.Before(in.oldest) {
+		in.oldest = at
+	}
+}
+
+// built ends a frame, and logs, once a second at most, when the moves in it had fallen behind.
+func (in *inputLag) built(log *slog.Logger) {
+	if in.oldest.IsZero() {
+		return
+	}
+	in.drawn = time.Since(in.oldest)
+	if in.drawn > lagWarn && time.Since(in.logged) > time.Second {
+		in.logged = time.Now()
+		log.Warn("the pointer fell behind", "reached the loop after", in.reached.Round(time.Millisecond),
+			"drawn after", in.drawn.Round(time.Millisecond))
+	}
+	in.oldest, in.reached = time.Time{}, 0
 }
 
 // slowLoop is how long one turn of the loop may take before it's logged: keys typed meanwhile wait behind it.
@@ -624,8 +662,12 @@ func (l *loop) handle(ctx context.Context, ev render.Event) bool {
 	switch ev := ev.(type) {
 	case render.PointerEvent:
 		changed := l.ui.Pointer(ev)
+		l.input.arrived(ev.At, changed)
 		l.win.SetCursor(l.ui.Cursor())
 		return changed
+	case render.SlowFrameEvent:
+		l.log.Warn("the window was slow to show a frame", "waited", ev.Waited.Round(time.Millisecond), "took", ev.Took.Round(time.Millisecond))
+		return false
 	case render.AppearanceEvent:
 		l.osLight = !ev.Dark
 		l.themeDirty.Store(true)
@@ -778,7 +820,7 @@ func (l *loop) draw() error {
 		l.ui.Frame(f, size, func(c *ui.Ctx) {
 			buildWindow(c, l.reg, size)
 			if l.debug {
-				frameOverlay(c, l.frameTime)
+				frameOverlay(c, l.frameTime, l.input.drawn)
 			}
 		})
 		l.frameTime = time.Since(start)
@@ -834,12 +876,12 @@ func buildWindow(c *ui.Ctx, reg registry.Registry, size render.Point) {
 	}
 }
 
-// frameOverlay is --debug's frame time, at the bottom right.
-func frameOverlay(c *ui.Ctx, d time.Duration) {
+// frameOverlay is --debug's frame time and how far the pointer was behind, at the bottom right.
+func frameOverlay(c *ui.Ctx, d, behind time.Duration) {
 	at := render.Point{X: c.Size().X - 8, Y: c.Size().Y - 30}
 	c.Box("frametime", ui.Style{Pad: ui.PadXY(6, 2), Radius: 4, Fill: c.Theme().C(theme.BgOverlay), Z: ui.LayerTooltip,
 		Float: &ui.Float{Point: &at, Self: render.Point{X: 1, Y: 1}}}, func(c *ui.Ctx) {
-		c.Text(nil, fmt.Sprintf("frame %.2f ms", float64(d.Microseconds())/1000), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10},
+		c.Text(nil, fmt.Sprintf("frame %.2f ms · pointer %d ms", float64(d.Microseconds())/1000, behind.Milliseconds()), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10},
 			Color: c.Theme().C(theme.Brand)})
 	})
 }

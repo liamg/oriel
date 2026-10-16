@@ -1,5 +1,7 @@
 package render
 
+import "time"
+
 type Event interface{ isEvent() }
 
 type Mods uint8
@@ -34,6 +36,10 @@ type DropEvent struct {
 	Paths []string
 }
 
+// SlowFrameEvent is a frame the window was slow to put on screen: Waited from the app handing it over to the window
+// starting on it, Took to draw and present it. A backend sends one past its own threshold, at most once a second.
+type SlowFrameEvent struct{ Waited, Took time.Duration }
+
 // AppearanceEvent is the OS's light or dark preference, sent when a window opens and whenever it changes.
 type AppearanceEvent struct{ Dark bool }
 
@@ -60,13 +66,15 @@ const (
 )
 
 // PointerEvent is the mouse or trackpad, in logical pixels. Buttons is the button pressed or released,
-// or those held during a move; Scroll is the distance a scroll moves the content's view.
+// or those held during a move; Scroll is the distance a scroll moves the content's view. At is when it happened, as
+// near as the backend can tell, or zero.
 type PointerEvent struct {
 	Kind    PointerKind
 	Pos     Point
 	Buttons Buttons
 	Scroll  Point
 	Mods    Mods
+	At      time.Time
 }
 
 // Cursor is the pointer's shape.
@@ -91,3 +99,4 @@ func (RedrawEvent) isEvent()       {}
 func (AppearanceEvent) isEvent()   {}
 func (DropEvent) isEvent()         {}
 func (CloseRequestEvent) isEvent() {}
+func (SlowFrameEvent) isEvent()    {}
