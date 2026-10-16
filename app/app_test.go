@@ -502,3 +502,30 @@ func TestSettingsFileReloadsLive(t *testing.T) {
 	}
 	b.close(t)
 }
+
+// Moving the pointer over nothing that reacts to it builds no frames.
+func TestPointerMovesOverNothingDrawNothing(t *testing.T) {
+	b := boot(t, pointy{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
+	settled := func() int {
+		n := len(b.win.Frames())
+		for {
+			time.Sleep(200 * time.Millisecond)
+			if m := len(b.win.Frames()); m == n || ctx.Err() != nil {
+				return m
+			}
+			n = len(b.win.Frames())
+		}
+	}
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 300}})
+	before := settled()
+	for i := range 100 {
+		b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300 + float32(i), Y: 300}})
+	}
+	if after := settled(); after != before {
+		t.Errorf("100 moves over an empty view built %d frames", after-before)
+	}
+	b.close(t)
+}

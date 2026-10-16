@@ -434,7 +434,7 @@ func chartPlot(c *ui.Ctx, series []ChartSeries, o ChartOpts) ChartResult {
 	canvas := prev
 	canvas.Max.Y = canvas.Min.Y + h*k
 	gm := g(canvas)
-	p := in.Pointer
+	p := in.Pointer()
 	if p.X < gm.r.Min.X || p.X > gm.r.Max.X || p.Y < gm.r.Min.Y || p.Y > gm.r.Max.Y || n == 0 {
 		return res
 	}

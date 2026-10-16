@@ -434,9 +434,9 @@ func (e *themeEditor) buildPick(c *ui.Ctx) {
 			return
 		}
 	}
-	if in.Pointer != e.hoverAt {
-		e.hoverAt = in.Pointer
-		name, r := probeAt(e.probe, e.probeTh, image.Pt(int(in.Pointer.X), int(in.Pointer.Y)))
+	if in.Pointer() != e.hoverAt {
+		e.hoverAt = in.Pointer()
+		name, r := probeAt(e.probe, e.probeTh, image.Pt(int(in.Pointer().X), int(in.Pointer().Y)))
 		e.hover = name
 		e.hoverR = render.Rect{Min: render.Point{X: float32(r.Min.X), Y: float32(r.Min.Y)}, Max: render.Point{X: float32(r.Max.X), Y: float32(r.Max.Y)}}
 	}
@@ -700,7 +700,7 @@ func (e *themeEditor) preview(c *ui.Ctx, th *theme.Resolved) {
 			if hit.Clicked {
 				if r, ok := c.Rect(id); ok {
 					img, p := e.probeFixture(c.Shaper(), t)
-					if name, _ := probeAt(img, p, image.Pt(int(hit.Pointer.X-r.Min.X), int(hit.Pointer.Y-r.Min.Y))); name != "" {
+					if name, _ := probeAt(img, p, image.Pt(int(hit.Pointer().X-r.Min.X), int(hit.Pointer().Y-r.Min.Y))); name != "" {
 						e.choose(name)
 					}
 				}

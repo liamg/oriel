@@ -130,7 +130,7 @@ func (x *editorPlugin) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 		x.rows[id] = max(int((r.Dy()-codePadT-x.blockPx[id])/m.lineH), 1)
 		x.e.SetRows(id, x.rows[id])
 		if in.Clicked {
-			x.click(p, r, in.Pointer, m)
+			x.click(p, r, in.Pointer(), m)
 		}
 	}
 	if in.Scroll.Y != 0 {

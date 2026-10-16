@@ -202,26 +202,46 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 	var tree *render.AccessNode
 	var held render.Event // read past a run of pointer moves; handled on the next turn
+	var drawn, due time.Time
+	quiet := false // the last turn changed nothing a frame shows
+	// pointed paces pointer moves' frames to one a frameInterval, and builds none for a move that changes nothing.
+	pointed := func(ev render.Event, changed bool) {
+		if m, ok := ev.(render.PointerEvent); !ok || m.Kind != render.PointerMove {
+			return
+		}
+		if changed && due.IsZero() {
+			due = drawn.Add(frameInterval)
+		}
+		quiet = due.IsZero() || time.Now().Before(due)
+	}
 	for {
 		l.timed(func() string { return "work queued for the loop (Host.Do)" }, sh.runTodo)
-		var derr error
-		l.timed(func() string { return "building a frame" }, func() { derr = l.draw() })
-		if derr != nil {
-			return derr
+		framed := !quiet
+		quiet = false
+		if framed {
+			var derr error
+			l.timed(func() string { return "building a frame" }, func() { derr = l.draw() })
+			if derr != nil {
+				return derr
+			}
+			drawn, due = time.Now(), time.Time{}
 		}
 		// Keys typed behind ones the editor has now taken: looked up, or passed on raw while it's mid-command.
 		if acts := l.keys.Pump(l.sh.keyModes(), time.Now()); len(acts) > 0 || l.keys.Queued() {
 			l.run(ctx, acts)
 			poke()
 		}
-		if accessible != nil {
+		if accessible != nil && framed {
 			next := l.ui.AccessTree()
 			if up := render.AccessDiff(tree, next); len(up.Changed) > 0 || len(up.Removed) > 0 || tree == nil {
 				accessible.UpdateAccess(up)
 			}
 			tree = next
 		}
-		if d := l.wake(); !d.IsZero() {
+		if d := l.wake(); !d.IsZero() || !due.IsZero() {
+			if d.IsZero() || (!due.IsZero() && due.Before(d)) {
+				d = due
+			}
 			timer.Reset(time.Until(d))
 		} else {
 			timer.Stop()
@@ -229,7 +249,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		if held != nil {
 			ev := held
 			held = nil
-			l.timed(func() string { return describeEvent(ev) }, func() { l.handle(ctx, ev) })
+			var changed bool
+			l.timed(func() string { return describeEvent(ev) }, func() { changed = l.handle(ctx, ev) })
+			pointed(ev, changed)
 			continue
 		}
 		select {
@@ -259,7 +281,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 				return nil
 			}
 			ev, held = lastMove(ev, w.Events())
-			l.timed(func() string { return describeEvent(ev) }, func() { l.handle(ctx, ev) })
+			var changed bool
+			l.timed(func() string { return describeEvent(ev) }, func() { changed = l.handle(ctx, ev) })
+			pointed(ev, changed)
 		}
 	}
 }
@@ -587,10 +611,13 @@ func (l *loop) wake() time.Time {
 	return d
 }
 
-func (l *loop) handle(ctx context.Context, ev render.Event) {
+// handle feeds ev in. It reports whether the next frame can differ for it.
+func (l *loop) handle(ctx context.Context, ev render.Event) bool {
 	switch ev := ev.(type) {
 	case render.PointerEvent:
-		l.ui.Pointer(ev)
+		changed := l.ui.Pointer(ev)
+		l.win.SetCursor(l.ui.Cursor())
+		return changed
 	case render.AppearanceEvent:
 		l.osLight = !ev.Dark
 		l.themeDirty.Store(true)
@@ -605,7 +632,7 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 		k := notation(ev)
 		if p := l.keys.Pending(); len(p) > 0 && k == "<CR>" && l.keys.Complete() != nil && acceptKey(l.sh.cfg.Registry, l.keys.Modes(), p) {
 			l.run(ctx, l.keys.Accept(time.Now()))
-			return
+			return true
 		}
 		if p := l.keys.Pending(); len(p) > 0 && (k == "<BS>" || k == "<Esc>" || k == "?") {
 			switch k {
@@ -618,10 +645,11 @@ func (l *loop) handle(ctx context.Context, ev render.Event) {
 			default:
 				l.keys.Cancel()
 			}
-			return
+			return true
 		}
 		l.run(ctx, l.keys.Feed(l.sh.keyModesFor(k), k, time.Now()))
 	}
+	return true
 }
 
 // acceptKey reports whether ⏎ after the pending keys runs their own mapping (which-key's ⏎), rather than going on

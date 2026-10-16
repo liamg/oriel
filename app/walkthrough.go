@@ -565,7 +565,7 @@ func (x *walkthroughPlugin) stage(c *ui.Ctx, w *walkthrough) {
 			}
 		})
 		if r, ok := c.Rect(codeID); ok && click.Clicked {
-			l := w.top + int((click.Pointer.Y-r.Min.Y-10)/m.lineH)
+			l := w.top + int((click.Pointer().Y-r.Min.Y-10)/m.lineH)
 			w.line = min(max(l, w.top), last)
 		}
 		// The notes, each level with its first line and below the one before; then up from the bottom so none runs out.

@@ -515,3 +515,55 @@ func TestTakesText(t *testing.T) {
 		}
 	}
 }
+
+// A pointer move needs a frame only when it changes something the latest frame read: what's hovered, the pointer
+// itself where a node asked for it, or a region a scrollbar tested.
+func TestPointerMovesThatChangeNothing(t *testing.T) {
+	h := newHarness()
+	move := func(x, y float32, b render.Buttons) bool {
+		return h.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: x, Y: y}, Buttons: b})
+	}
+	move(250, 80, 0)
+	h.frame()
+	if move(260, 85, 0) {
+		t.Error("a move over nothing interactive asks for a frame")
+	}
+	if !move(20, 20, 0) {
+		t.Error("a move onto a button doesn't ask for a frame")
+	}
+	h.frame()
+	if move(22, 21, 0) {
+		t.Error("a move within the hovered button asks for a frame")
+	}
+	if !move(23, 21, render.ButtonPrimary) {
+		t.Error("a move with a button held doesn't ask for a frame")
+	}
+	h.clk.advance(time.Second)
+	if !strings.Contains(h.frame(), "Save the file") {
+		t.Fatal("no tooltip")
+	}
+	if !move(24, 22, 0) {
+		t.Error("a move under a tooltip, which follows the pointer, doesn't ask for a frame")
+	}
+
+	var at render.Point
+	read := func(c *Ctx) { at = c.Interaction(c.Next("canvas")).Pointer() }
+	paintOps(h.u, render.Point{X: 300, Y: 100}, read)
+	if !move(30, 30, 0) {
+		t.Error("a move doesn't ask for a frame where the last one read the pointer")
+	}
+	paintOps(h.u, render.Point{X: 300, Y: 100}, read)
+	if at != (render.Point{X: 30, Y: 30}) {
+		t.Errorf("Interaction.Pointer is %v", at)
+	}
+
+	s := newScroller(20, BarsAuto)
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 200}})
+	s.frame()
+	if s.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 310, Y: 210}}) {
+		t.Error("a move outside a scrolling box asks for a frame")
+	}
+	if !s.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 50, Y: 50}}) {
+		t.Error("a move into a scrolling box, whose scrollbar shows on hover, doesn't ask for a frame")
+	}
+}
