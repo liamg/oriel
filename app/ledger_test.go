@@ -70,6 +70,10 @@ func TestLedgerCountsAgentLinesAndMarks(t *testing.T) {
 	if want == 0 {
 		t.Fatal("blame gives Claude no lines")
 	}
+	app.clickText("currency.go") // outside a session, the ledger counts the files opened
+	app.waitLedger("currency.go's lines", r.Dir, func(l registry.Ledger) bool { _, ok := l.File("internal/pricing/currency.go"); return ok })
+	app.clickText("internal/pricing/currency.go") // folded again
+	app.clickText("round.go")
 	l := app.waitLedger("every agent line", r.Dir, func(l registry.Ledger) bool { return l.All.Total() == want })
 	if l.All.Read != 0 || l.Uncommitted.Total() != 0 {
 		t.Errorf("before any review: %+v", l)
@@ -314,7 +318,11 @@ func TestExplorerByReview(t *testing.T) {
 	app := startApp(t, t.TempDir(), r.Dir, nil)
 	app.typeKeys("<M-1>")
 	app.waitText("CHANGED 2")
+	app.waitLedger("no file opened", r.Dir, func(l registry.Ledger) bool { return l.Ready && len(l.Files) == 0 })
+	app.clickText("currency.go") // outside a session, the ledger counts the files opened
+	app.clickText("round.go")
 	app.waitLedger("both files", r.Dir, func(l registry.Ledger) bool { return len(l.Files) == 2 })
+	app.typeKeys("<M-1>")
 	app.clickText("by review")
 	app.waitFrame("round.go, with more unread, first", func(s string) bool {
 		i, j := strings.Index(s, "internal/pricing/r"), strings.Index(s, "internal/pricing/cu")

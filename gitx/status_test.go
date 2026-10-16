@@ -266,3 +266,41 @@ M internal/pricing/round.go +1 -1 unstaged`; got != want {
 		t.Errorf("after discarding tiers.go and an untracked file:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+// Changed compares with the later merge-base of origin's base branch and the local one of its name: a stale
+// origin/main doesn't put the work merged into main since in Changed.
+// ref: oracle git
+func TestChangedAgainstTheLaterBase(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"old.txt": "x\n"})
+	r.Commit("Ada", "base")
+	r.Git("update-ref", "refs/remotes/origin/main", "HEAD")
+	r.Git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	r.Write(map[string]string{"merged.txt": "x\n"})
+	r.Commit("Ada", "merged into main since origin was read")
+	r.Git("checkout", "-q", "-b", "work")
+	r.Write(map[string]string{"mine.txt": "x\n"})
+	r.Commit("Ada", "the branch's own")
+	st, err := Repo{Dir: r.Dir}.Status(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range st.Files(Changed) {
+		got = append(got, f.Path)
+	}
+	if strings.Join(got, " ") != "mine.txt" || st.Base != "main" {
+		t.Errorf("changed %v against %q, want [mine.txt] against main", got, st.Base)
+	}
+	r.Git("update-ref", "refs/remotes/origin/main", "main")
+	r.Git("checkout", "-q", "main")
+	r.Write(map[string]string{"theirs.txt": "x\n"})
+	r.Commit("Bob", "on main, not origin")
+	r.Git("checkout", "-q", "work")
+	r.Git("update-ref", "refs/remotes/origin/main", "main")
+	r.Git("update-ref", "refs/heads/main", "main~1")
+	st, _ = Repo{Dir: r.Dir}.Status(context.Background())
+	if st.Base != "origin/main" {
+		t.Errorf("with origin ahead of main, the base is %q", st.Base)
+	}
+}

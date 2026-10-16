@@ -596,14 +596,19 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, st
 		if d != nil && d.in != in && !x.mayRemake(k) {
 			return d, false
 		}
+		// A diff is made in stages, each shown as it lands: plain, then styled, then blamed.
+		var styling, blaming bool
 		switch {
 		case d == nil:
-			x.h.Log().Debug("making a diff", "path", f.Path, "styled", styled)
+			x.h.Log().Debug("making a diff", "path", f.Path)
 		case d.in != in:
+			styling, blaming = d.styled, d.blamed
 			x.h.Log().Debug("remaking a diff", "path", f.Path, "changed", changedInputs(d.in, in))
 		case styled && !d.styled:
+			styling = true
 			x.h.Log().Debug("styling a diff", "path", f.Path)
 		default:
+			styling, blaming = d.styled, true
 			x.h.Log().Debug("blaming a diff", "path", f.Path)
 		}
 		var newText []byte
@@ -612,13 +617,15 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, st
 		}
 		x.mu.Lock()
 		x.loading[k] = true
-		x.started[k] = time.Now()
+		if d == nil || d.in != in {
+			x.started[k] = time.Now() // a stage on the same text doesn't hold back its remaking
+		}
 		x.mu.Unlock()
 		x.busy.Add(1)
 		go func() {
 			defer x.busy.Done()
 			x.limit <- struct{}{}
-			nd := loadDiff(x.h, in, newText, snap, styled, blame)
+			nd := loadDiff(x.h, in, newText, snap, styling, blaming)
 			<-x.limit
 			x.mu.Lock()
 			x.files[k], x.loading[k] = nd, false
@@ -628,6 +635,13 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, st
 		}()
 	}
 	return d, current
+}
+
+// made is the diff made last of a file, nil before one is; it starts none.
+func (x *diffPlugin) made(root, path string) *diffFile {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return x.files[diffKey{root, path}]
 }
 
 // statFresh is how long a file's size and time on disk are taken as read before they're read again.

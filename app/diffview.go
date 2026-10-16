@@ -66,7 +66,11 @@ func (x *diffPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 		st.files = files
 		st.drawn, st.marks = map[string]*diffFile{}, map[string]map[string]bool{}
 		for _, f := range files {
-			if d, _ := x.diffFor(tree, gs, f, true, true); d != nil {
+			d := x.made(tree.root(), f.Path)
+			if st.open[f.Path] || st.sel.file == f.Path {
+				d, _ = x.diffFor(tree, gs, f, true, true)
+			}
+			if d != nil {
 				st.drawn[f.Path] = d
 			}
 			st.marks[f.Path] = x.marks(st.root, f.Path)
@@ -185,20 +189,32 @@ func (x *diffPlugin) changes(c *ui.Ctx, st *diffState, files []gitx.FileState) {
 		add, del = add+f.Add, del+f.Del
 	}
 	c.Column("changes", ui.Style{W: ui.Px(230), H: ui.Flex(1), Fill: th.C(tDiffFiles)}, func(c *ui.Ctx) {
-		c.Column("top", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true}, func(c *ui.Ctx) {
-			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("k", "CHANGES", kickerFont(th.C(theme.FgFaint)))
-				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("n", fmt.Sprintf("%d %s · +%d −%d", len(files), plural(len(files), "file", "files"), add, del), monoFont(9.5, th.C(theme.FgGhost)))
-			})
-			c.Column("files", ui.Style{W: ui.Flex(1), Role: ui.RoleList, Label: "Changed files"}, func(c *ui.Ctx) {
-				for _, f := range files {
-					x.changeRow(c, st, f)
+		// The heading, a row a file, and the side slots, of which only those in view are built.
+		key := func(i int) any {
+			switch {
+			case i == 0:
+				return "\x00head"
+			case i <= len(files):
+				return files[i-1].Path
+			}
+			return "\x00side"
+		}
+		c.Items("top", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Role: ui.RoleList, Label: "Changed files"}, len(files)+2,
+			ui.ItemsOpts{Estimate: 26, Key: key}, func(c *ui.Ctx, i int) {
+				switch {
+				case i == 0:
+					c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Cross: ui.Center}, func(c *ui.Ctx) {
+						c.Text("k", "CHANGES", kickerFont(th.C(theme.FgFaint)))
+						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+						c.Text("n", fmt.Sprintf("%d %s · +%d −%d", len(files), plural(len(files), "file", "files"), add, del), monoFont(9.5, th.C(theme.FgGhost)))
+					})
+				case i <= len(files):
+					x.changeRow(c, st, files[i-1])
+				default:
+					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+					x.slots(c, DiffSide, st.root, 230)
 				}
 			})
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-			x.slots(c, DiffSide, st.root, 230)
-		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		c.Column("keys", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 5}, func(c *ui.Ctx) {
 			for i, pair := range [][2][2]string{{{"]h", "next hunk"}, {"r", "mark read"}}, {{"gc", "comment"}, {"?", "explain"}}} {
@@ -270,21 +286,22 @@ func (x *diffPlugin) body(c *ui.Ctx, vc registry.ViewCtx, st *diffState, gs *git
 	st.order, st.lines, st.ids, st.hunks = nil, map[diffSel]int{}, map[diffSel]ui.ID{}, map[string][]diffHunk{}
 	layout := x.layout()
 	var reveal []ui.ID
-	scrolled(c, "files", &st.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, KeyMode: DiffKeyMode, Role: ui.RoleList, Label: "Changes",
-		Help: "files/diff#hunks"}, ui.Style{}, func(c *ui.Ctx, _ func(string) ui.ID) {
-		if len(st.files) == 0 {
-			base := "its base"
-			if gs.Base != "" {
-				base = gs.Base + "@" + gs.BaseHash
-			}
-			c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.Pad(40), Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("t", "No changes against "+base+".", uiFont(13, th.C(theme.FgFaint)))
-			})
+	if len(st.files) == 0 {
+		base := "its base"
+		if gs.Base != "" {
+			base = gs.Base + "@" + gs.BaseHash
 		}
-		for _, f := range st.files {
-			reveal = append(reveal, x.fileSection(c, st, f, layout)...)
-		}
-	})
+		c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.Pad(40), Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Text("t", "No changes against "+base+".", uiFont(13, th.C(theme.FgFaint)))
+		})
+	}
+	at := -1 // the selected file, scrolled to when it's to be shown and wasn't built last frame
+	if _, laid := c.Rect(ui.Child(bodyID, st.sel.file)); st.reveal && !laid {
+		at = slices.IndexFunc(st.files, func(f gitx.FileState) bool { return f.Path == st.sel.file })
+	}
+	c.Items("files", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Focusable: true, KeyMode: DiffKeyMode, Role: ui.RoleList, Label: "Changes",
+		Help: "files/diff#hunks"}, len(st.files), ui.ItemsOpts{Estimate: 35, Key: func(i int) any { return st.files[i].Path }, Reveal: at},
+		func(c *ui.Ctx, i int) { reveal = append(reveal, x.fileSection(c, st, st.files[i], layout)...) })
 	if st.reveal {
 		id, ok := st.ids[st.sel]
 		if !ok {

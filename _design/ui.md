@@ -305,7 +305,8 @@ Superseded alternatives (41-project-context.png):
   with `diff.open` (RV-1, 06), the file if it isn't registered. Tabs carry the letter through the
   `registry.Marked` view interface; the files picker ranks changed files up and notes their letter. Not yet: the
   threads column (P5). Built in RV-2: Changed's files have a read bar (read, then skimmed, of their agent-written
-  lines) and a third layout, **by review** (flat, the most lines not read first); All has the **agent** column (◆
+  lines) and a third layout, **by review** (flat, the most lines not read first; outside a session, of the files
+  opened so far, as only those have diffs); All has the **agent** column (◆
   lines to read, ◇ all read); Uncommitted has **Commit…**, `c` (what's staged) and `C` (everything), through
   `git.commit`. SH-17: the Explorer reads its
   project from its view instance (`ViewCtx.Project`), each project's work tree read on its own (`gitExt.tree`).
@@ -518,14 +519,17 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   workspace means its primary project); the Explorer's Changed, the agent console's "view in diff", plan's
   **Preview diff** and the request's **View diff** reach it. It's the branch against the merge-base with its base
   (`gitx.State.BaseHash`), uncommitted work and unsaved buffers included, in git's `-U3` hunks (`gitx.Unified`, held
-  to `git diff`). Each file's diff is made off the loop, again when its revision, size, mtime or buffer changes, but
-  no more than twice a second however fast it's written to; `--debug` logs each remake with what changed. Only a
-  diff the view shows is styled (highlights, each hunk's function); the ledger's are plain, which is most of the
-  cost. The ledger is made again when the git reading, a diff, or the store changes, not on every frame that asks;
+  to `git diff`). Up front there's only git's status, name-status and numstat (each file's size); a file's diff is
+  made when it's open or selected in the view, off the loop, in stages each shown as it lands: plain, then styled
+  (highlights, each hunk's function), then blamed. It's made again when its revision, size, mtime or buffer changes,
+  but no more than twice a second however fast it's written to; `--debug` logs each one with why. The base is the
+  later merge-base of origin's base branch and the local one of its name, so a stale origin doesn't put others'
+  work in Changed. Both columns are `ui.Items`, built only in view, so a branch of thousands of files draws as
+  quickly as one of five. The ledger is made again when the git reading, a diff, or the store changes, not on every frame that asks;
   while a file's diff is older than the file it isn't Ready, so the commit gate waits rather than judging the old
   one. Left: **CHANGES**, each file with a reviewed box (`widget.Check`: ticked when every hunk is
   marked, half when some are; a click marks or unmarks the file) and its size; then the `diff.side.*` views
-  (Authorship is the built-in `diff.side.50-authorship`: added lines by blame, an agent's, yours, others', and lines
+  (Authorship is the built-in `diff.side.50-authorship`: added lines of the files opened by blame, an agent's, yours, others', and lines
   not committed by the open buffer's authors, else "uncommitted"); then the keys. Middle: the `diff.header.*` views
   (RV-2's ledger goes here), then each file's header (path, size, "n/m hunks reviewed" or **reviewed**, **⌄ expand**
   to open it, SPLIT / UNIFIED while open) and its hunks: a `?` (explain), the `@@` line with the smallest function,

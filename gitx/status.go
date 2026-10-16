@@ -126,6 +126,67 @@ func (r Repo) BaseRef(ctx context.Context, branch string) string {
 	return ""
 }
 
+type mergeBaseKey struct{ dir, head, refs string }
+
+type mergeBase struct {
+	ref, full, short string
+}
+
+var mergeBases = struct {
+	sync.Mutex
+	by map[mergeBaseKey]mergeBase
+}{by: map[mergeBaseKey]mergeBase{}}
+
+// mergeBase is where HEAD left base: of origin's base and the local branch of its name, the later merge-base, so
+// a stale origin doesn't put years of others' work in Changed. It's worked out again only when HEAD or either
+// branch moves.
+func (r Repo) mergeBase(ctx context.Context, head, base, branch string) (mergeBase, bool) {
+	refs := []string{base}
+	if local, ok := strings.CutPrefix(base, "origin/"); ok && local != branch {
+		refs = append(refs, local)
+	}
+	var full []string
+	for _, ref := range refs {
+		full = append(full, "refs/remotes/"+ref, "refs/heads/"+ref)
+	}
+	out, err := r.git(ctx, append([]string{"for-each-ref", "--format=%(refname) %(objectname)"}, full...)...)
+	if err != nil {
+		return mergeBase{}, false
+	}
+	k := mergeBaseKey{dir: r.Dir, head: head, refs: string(out)}
+	mergeBases.Lock()
+	mb, ok := mergeBases.by[k]
+	mergeBases.Unlock()
+	if ok {
+		return mb, mb.full != ""
+	}
+	for _, ref := range refs {
+		b, err := r.git(ctx, "merge-base", "HEAD", ref)
+		if err != nil {
+			continue
+		}
+		next := mergeBase{ref: ref, full: strings.TrimSpace(string(b))}
+		if mb.full != "" {
+			if _, err := r.git(ctx, "merge-base", "--is-ancestor", next.full, mb.full); err == nil {
+				continue // no later than the one already found
+			}
+		}
+		mb = next
+	}
+	if mb.full != "" {
+		if b, err := r.git(ctx, "rev-parse", "--short", mb.full); err == nil {
+			mb.short = strings.TrimSpace(string(b))
+		}
+	}
+	mergeBases.Lock()
+	if len(mergeBases.by) > 256 {
+		clear(mergeBases.by)
+	}
+	mergeBases.by[k] = mb
+	mergeBases.Unlock()
+	return mb, mb.full != ""
+}
+
 // Status reads the work tree's status in every scope.
 func (r Repo) Status(ctx context.Context) (*State, error) {
 	st := &State{}
@@ -164,14 +225,16 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 		}()
 		base = "HEAD"
 		if st.Base = r.BaseRef(ctx, st.Branch); st.Base != "" {
-			if out, err := r.git(ctx, "merge-base", "HEAD", st.Base); err == nil {
-				base = strings.TrimSpace(string(out))
+			if mb, ok := r.mergeBase(ctx, st.Head, st.Base, st.Branch); ok {
+				st.Base, base, st.BaseHash = mb.ref, mb.full, mb.short
 			} else {
 				st.Base = ""
 			}
 		}
-		if out, err := r.git(ctx, "rev-parse", "--short", base); err == nil {
-			st.BaseHash = strings.TrimSpace(string(out))
+		if base == "HEAD" {
+			if out, err := r.git(ctx, "rev-parse", "--short", base); err == nil {
+				st.BaseHash = strings.TrimSpace(string(out))
+			}
 		}
 		inner.Wait()
 	})

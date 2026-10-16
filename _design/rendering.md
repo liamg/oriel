@@ -209,6 +209,9 @@ func (c *Ctx) Text(key any, s string, ts TextStyle) ID
 func (c *Ctx) Paint(key any, w, h Size, fn func(f render.Frame, r render.Rect)) ID
 func (c *Ctx) Node(n Node)                        // a plugin's view tree: *Box, *Text, *Paint
 func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i int)) ID // builds only the rows in view
+func (c *Ctx) KeepInView(box, target ID) // scrolls to target when it changes; ScrollIntoView every frame fights the user
+func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i int)) ID // items of any height: only
+    // those in view are built, each as tall as when last built (o.Estimate before), o.Reveal scrolled to unbuilt
 
 type Style struct {
     Dir         Dir                               // Row or Column
@@ -218,6 +221,7 @@ type Style struct {
     Main, Cross Align                             // Start, Center, End; SpaceBetween on the main axis
     Fill, Stroke render.Color; Border, Radius float32
     Clip, ScrollX, ScrollY bool                   // scroll offsets persist by id
+    Sideways bool                                 // the wheel's up and down scroll it across: a strip of tabs
     Float *Float                                  // out of the flow, against another id's rect, a point, or the parent;
                                                   // a Fill one against its parent sized Flex fills it that way (a card's edge)
     Z     int                                     // floats paint after the flow, in Z order, outside their parent's clip

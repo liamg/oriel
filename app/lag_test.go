@@ -355,9 +355,9 @@ func TestSlowFrameWritesTrace(t *testing.T) {
 	t.Fatal("no trace written for the slow frame")
 }
 
-// Hovering the Explorer while it's still making the diffs of thousands of changed files: rows light up within budget
-// the whole time, not once every diff is in.
-func TestExplorerHoverLagWhileDiffsLoadBudget(t *testing.T) {
+// Hovering the Explorer over thousands of changed files: rows light up within budget from the start, the files'
+// diffs not made until they're opened.
+func TestExplorerHoverLagOverManyChangesBudget(t *testing.T) {
 	perf.Timed(t)
 	dir := changedRepo(t, 4000)
 	r := startAppWith(t, t.TempDir(), dir, nil, nil)
@@ -365,64 +365,50 @@ func TestExplorerHoverLagWhileDiffsLoadBudget(t *testing.T) {
 		return r.host.Run(context.Background(), "view.toggle", registry.Args{"id": ExplorerView})
 	})
 	r.waitText("f1080.txt")
-	ready := func() bool {
-		var ok bool
-		r.do(func() error {
-			l, found := registry.LedgerOf(r.host, dir)
-			ok = found && l.Ready
-			return nil
-		})
-		return ok
-	}
-	if ready() {
-		t.Fatal("every diff was made before the pointer moved: nothing tested")
-	}
 	var targets []render.Point
 	for _, f := range []string{"f1020.txt", "f040.txt", "f1080.txt", "f060.txt", "f1040.txt"} {
 		targets = append(targets, r.textPoint(f))
 	}
-	noise := sweep(r.textPoint("f000.txt"), r.textPoint("f080.txt"), 200)
-	var run lagRun
-	for i := 0; i < 20 || !ready() && i < 200; i++ {
-		run.behind = max(run.behind, r.moves(noise, 0))
-		run.probes = append(run.probes, r.probe(targets[i%len(targets)]))
-	}
-	r.check("while diffs load", run)
+	r.lag("over many changes", sweep(r.textPoint("f000.txt"), r.textPoint("f080.txt"), 200), targets, 30)
 }
 
-// While the diffs of thousands of changed files are still being made, the Explorer's frame costs what it does once
-// they're in: a diff landing doesn't make the next frame go over every changed file.
-func TestExplorerFrameWhileDiffsLoadBudget(t *testing.T) {
-	perf.Timed(t)
-	const n = 4000
-	dir := changedRepo(t, n)
+// diffViewFrame is the average frame of the branch diff of dir's n changed files, once its first file shows.
+func diffViewFrame(t *testing.T, dir string, n int) time.Duration {
 	s := newScene(t, "", dir, mockupSize)
 	s.sh.git.wait()
-	s.keyCommand(t, "<M-1>")
-	ready := func() bool {
-		l, ok := registry.LedgerOf(s.reg, dir)
-		return ok && l.Ready
+	s.run("diff.open", registry.Args{"path": dir})
+	made := func() (n int, done bool) {
+		x := s.diff()
+		x.mu.Lock()
+		defer x.mu.Unlock()
+		for _, d := range x.files {
+			done = done || d.styled && d.blamed
+		}
+		return len(x.files), done
 	}
-	var loading time.Duration
-	frames := 0
-	deadline := time.Now().Add(60 * time.Second)
-	for !ready() && time.Now().Before(deadline) {
-		start := time.Now()
+	if !s.Until(30*time.Second, func() bool { _, done := made(); return done }) {
+		t.Fatalf("the diff of %d changed files never showed its first", n)
+	}
+	for range 10 {
 		s.frame()
-		loading += time.Since(start)
-		frames++
 	}
-	if frames == 0 || !ready() {
-		t.Fatalf("%d frames while loading; ready %v", frames, ready())
-	}
-	loading /= time.Duration(frames)
 	start := time.Now()
 	for range 100 {
 		s.frame()
 	}
-	settled := time.Since(start) / 100
-	t.Logf("%d frames while %d diffs loaded: %v each; settled: %v", frames, n, loading, settled)
-	if loading > 2*settled+time.Millisecond {
-		t.Errorf("a frame while the diffs load takes %v, against %v once they're in", loading, settled)
+	took := time.Since(start) / 100
+	if m, _ := made(); m > 1 {
+		t.Errorf("%d of %d files diffed, with one open", m, n)
+	}
+	return took
+}
+
+// The branch diff's frame doesn't grow with the files the branch changes: only the files open in it are diffed.
+func TestDiffViewWithManyChangesBudget(t *testing.T) {
+	perf.Timed(t)
+	few, many := diffViewFrame(t, changedRepo(t, 5), 5), diffViewFrame(t, changedRepo(t, 4000), 4000)
+	t.Logf("the diff's frame over 5 changed files: %v; over 4000: %v", few, many)
+	if many > 2*few+2*time.Millisecond {
+		t.Errorf("4000 changed files make the diff's frame %v, against %v over 5", many, few)
 	}
 }

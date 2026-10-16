@@ -142,8 +142,8 @@ func countLine(c *registry.LedgerCount, s core.LineState) {
 	}
 }
 
-// ledger is root's review ledger, from each changed file's diff (made off the loop, so it's Ready once they all
-// are) and the session's reviews.
+// ledger is root's review ledger, from changed files' diffs (made off the loop, so it's Ready once they all are)
+// and the session's reviews.
 func (x *diffPlugin) ledger(root string) registry.Ledger {
 	l := registry.Ledger{Root: root}
 	if x.sh.git == nil {
@@ -170,16 +170,28 @@ func (x *diffPlugin) ledger(root string) registry.Ledger {
 	if ok && c.key == key || paced {
 		return c.l
 	}
-	touched, known := x.agentTouched(root, tree.status.Repo(), gs)
-	if !known {
-		return l // not Ready: it's made once the branch's agent commits are read
+	// In a session, the files an agent can have written are diffed and blamed for its gates; outside one, the ledger
+	// counts the diffs made already, of the files opened, and starts none.
+	_, _, inSession := x.session(root)
+	var touched map[string]bool
+	if inSession {
+		var known bool
+		if touched, known = x.agentTouched(root, tree.status.Repo(), gs); !known {
+			return l // not Ready: it's made once the branch's agent commits are read
+		}
 	}
 	l.Root, l.Ready = root, true
 	texts := x.agentTextsFor(root)
 	for _, f := range gs.Files(gitx.Changed) {
-		d, current := x.diffFor(tree, gs, f, false, touched[f.Path] || len(texts[f.Path]) > 0)
-		if !current {
-			l.Ready = false // a gate waits for the diff the file has now
+		var d *diffFile
+		switch {
+		case inSession && (touched[f.Path] || len(texts[f.Path]) > 0):
+			var current bool
+			if d, current = x.diffFor(tree, gs, f, false, true); !current || !d.blamed {
+				l.Ready = false // a gate waits for the diff the file has now
+			}
+		case !inSession:
+			d = x.made(root, f.Path)
 		}
 		if d == nil {
 			continue

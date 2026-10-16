@@ -606,7 +606,8 @@ All on by default, all configurable, none a nag:
   - **tours and scratch sessions: off.**
   - Repos can override it in `.oriel/`, and the ledger shows in the HUD, on the Ship page and in the PR description.
   - Built in RV-2: the ledger counts the agent-written lines of a repo's branch change (against the merge-base,
-    uncommitted work included): an added line is the agent's when blame says so (an agent author or Co-Authored-By),
+    uncommitted work included; in a session, of the files an agent commit on the branch touched or the session's
+    agent edited, each diffed and blamed off the loop; outside one, of the files opened in the diff, starting none): an added line is the agent's when blame says so (an agent author or Co-Authored-By),
     when the open buffer's authors say so, or, not committed yet and with no author known, when the session's
     transcript has an edit of the agent's adding that text to that file. Blank lines don't count. A line is **read**
     when its change is marked reviewed (`core.HunksReviewed`) or it stayed wholly on screen in the diff for 1 s plus

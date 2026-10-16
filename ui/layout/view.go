@@ -322,16 +322,26 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content, docked bo
 		if head {
 			role = ui.RoleNone
 		}
-		// More tabs than fit scroll sideways, the active one kept in view.
-		tabs := c.Row("tabs", ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: role, ScrollX: !head}, func(c *ui.Ctx) {
+		strip := ui.Style{W: ui.Flex(1), H: ui.Px(tabH), Fill: th.C(tTabStrip), Role: role}
+		tabs := func(c *ui.Ctx) {
 			for i, v := range l.Tabs {
 				if tab(c, r, st, l, i, v, head) {
 					changed = true
 				}
 			}
-		})
-		if !head && l.Active < len(l.Tabs) {
-			c.ScrollIntoView(tabs, ui.Child(tabs, l.Tabs[l.Active]))
+		}
+		if head {
+			c.Row("tabs", strip, tabs)
+		} else {
+			// More tabs than fit scroll sideways, the active one brought into view when it changes.
+			o := widget.StripOpts{Items: make([]any, len(l.Tabs)), Help: HelpTab}
+			for i, v := range l.Tabs {
+				o.Items[i] = v
+			}
+			if l.Active < len(l.Tabs) {
+				o.Active = l.Tabs[l.Active]
+			}
+			widget.Strip(c, "tabs", strip, o, tabs)
 		}
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tDivider)}, nil)
 		if len(l.Tabs) > 0 {

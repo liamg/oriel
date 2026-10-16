@@ -117,7 +117,9 @@ type Style struct {
 	ScrollX bool // scroll offsets persist by id; scrolling clips
 	ScrollY bool
 	Wheel   bool // takes the wheel itself: movement over it comes as Interaction.Scroll, for content it scrolls itself
-	Bars    Bars // when a scrolling box shows its scrollbars
+	// Sideways makes the wheel's up and down scroll it across, for a box that scrolls only that way: a strip of tabs.
+	Sideways bool
+	Bars     Bars // when a scrolling box shows its scrollbars
 
 	Float *Float  // out of the flow, placed against another node or a point
 	Z     int     // a float's layer (LayerPage…); one inside another float is at least that one's. Below 0 paints behind its parent's content
