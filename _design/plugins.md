@@ -92,7 +92,8 @@ flowchart TB
   `syntax.Parser.Query(kind)` and `syntax.Document.Query(kind)` run a language's `<kind>.scm` and return its matches
   with named captures and `#set!` properties. Built-in kinds: `highlights`, `folds`, `injections`, `units`, and
   `tests` (test discovery, below); a plugin's language brings its own the same way.
-- **test adapters** (`testrun.Adapter`: Detect, Discover, Command, Parse; optionally `Coverer` and `Watcher`), as a
+- **test adapters** (`testrun.Adapter`: Detect, Discover, Command, Parse; optionally `Coverer`, `Watcher` and `TestFiler`,
+  which tells a test file by its path for `Set.TestFile`), as a
   `testrun.Contribution{Adapter}` of kind `testrun.adapter` (`Registry.Contribute`). The app adds every one to its
   `testrun.Set` with `testrun.Contribute(set, reg.Contributions("testrun.adapter"))`; a later adapter of the same
   name shadows the built-in until disposed. An adapter for a language with a grammar usually finds tests with that
@@ -256,7 +257,8 @@ flowchart TB
   (the default) is listed below the projects; `global` (`registry.ScopeGlobalEntry`, AI-12) is a page every session
   shares (Stats, Usage, Jobs, Settings), listed last below a second divider and at the foot of the narrow form, and in
   the omnibox's **Pages** with its note and key (`registry.GlobalEntries`). `Note(project)` is dim text at its right ("4", "48 ✓"), `Badge()` a
-  pill, `Active(project)` lights it (for an entry with neither, a `view.*` command's `id` showing for the project
+  pill (`widget.Badge`), `Draw(c, key, size, tone)` draws its icon itself in place of `Icon` (a live one: Ori's face;
+  Go only, a Lua entry names an `Icon`), `Active(project)` lights it (for an entry with neither, a `view.*` command's `id` showing for the project
   does), and `Shown(project)` leaves it out (Pull request without a remote). `registry.ProjectEntries` and
   `SessionEntries` list them. `ProjectState` contributions add to each project's header line after its branch and
   changes (`StatePart{Text, Style, Dot}`: a PR's number, a CI result with its dot); FG-6's `ship` adds the PR and CI. Both
@@ -423,7 +425,8 @@ flowchart TB
 - **the assistant** (PL-4, ui.md 11): its tools are agent tools `for = { "assistant" }`: the built-ins (`reply`,
   `sessions`, `past_sessions`, `open_session`, `rename_session`, `resume_session`, `new_session`, `start_session`,
   `stop_session`, `review_pr`, `jobs`, `run_job`, `repos`, `my_prs`, `review_requests`, `usage`, `workers`,
-  `settings`), and any another feature or a plugin adds: the tickets' `my_tickets` (every tracker's, "As built
+  `settings`, and the window-steering `where`, `changed_files`, `open_project`, `focus_file`), and any another feature or a plugin
+  adds: the help viewer's `help_search`, `help_read` and `open_help`, the tickets' `my_tickets` (every tracker's, "As built
   (tickets)"), mission control's `mission_control` (SH-7) and
   agentbus's `request_review` (PL-5) come this way. Commands `assistant.toggle` (`⌘/`), `assistant.open {text}`,
   `assistant.close`, `assistant.say {text, voice}`, `assistant.send`, `assistant.new`, `assistant.stop` (`⌘.`),
@@ -750,7 +753,8 @@ type Host interface {
   kinds, HUD indicators, status rules, `:Inspect` sections). `Host.Do(fn)` runs fn on the loop from any goroutine.
   `registry.SourcedView` and `Registry.ViewSource` say who registered a view.
 - `Host.Here()` is where the user is, as an `At`: the session in front (or `oriel` with none), the project, and
-  the focused editor's buffer and window; read options there. `core.Store.Focus()` is the session in front, cheaply.
+  the focused editor's buffer and window, with its `File` (absolute) and cursor `Line` (1-based); read options there.
+  `core.Store.Focus()` is the session in front, cheaply.
 - Errors (PL-12): `Registry.Report(kind, id, err)` counts a contribution's errors in a row, and FailLimit (3) turn
   it off (`Fault.Errors` says so); `Fire` reports each hook's, and a Lua view or decoration reports its own.
   `Registry.OnFailure` hears each error and warning (a hook over the 2 ms budget), for the notices. An error that

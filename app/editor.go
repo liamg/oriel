@@ -130,6 +130,15 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 	})
 	x.sh.editorAt = func(at registry.At) registry.At {
 		at.Buffer, at.Window = x.e.Name(), strconv.Itoa(int(x.e.WindowID()))
+		if at.Buffer != "" {
+			at.File = x.e.Name()
+			if !filepath.IsAbs(at.File) {
+				at.File = filepath.Join(x.dir, at.File)
+			}
+			if p, ok := x.e.Pane(x.e.WindowID()); ok {
+				at.Line = p.Cursor().Line + 1
+			}
+		}
 		return at
 	}
 	x.e.SetSettings(vimreg.Settings{Options: h.Options(), At: func(buf, win string) registry.At {

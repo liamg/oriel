@@ -136,3 +136,13 @@ func (s *Set) Affected(ws Workspace, file string) (map[Adapter][]Item, error) {
 	}
 	return out, nil
 }
+
+// TestFile says whether any adapter that can tell (TestFiler) takes path for a test file.
+func (s *Set) TestFile(path string) bool {
+	for _, a := range s.Adapters() {
+		if f, ok := a.(TestFiler); ok && f.TestFile(path) {
+			return true
+		}
+	}
+	return false
+}

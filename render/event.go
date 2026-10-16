@@ -89,6 +89,9 @@ const (
 	CursorResizeCol
 	CursorResizeRow
 	CursorCrosshair
+	CursorGrabbing
+	CursorResizeNWSE // a corner dragged on the top-left to bottom-right diagonal
+	CursorResizeNESW
 )
 
 func (KeyEvent) isEvent()          {}

@@ -234,3 +234,7 @@ func MotionFor(speed float32) time.Duration {
 	}
 	return 2 * time.Second
 }
+
+// Still says whether the UI keeps still, with reduced motion or a theme's motion effect at 0: what loops on its own
+// (a blink, a scan) doesn't run.
+func (c *Ctx) Still() bool { return c.u.opts.ReducedMotion || c.u.opts.MotionSpeed <= 0 }

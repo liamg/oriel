@@ -698,6 +698,12 @@ func (u *UI) placeFloat(e *elem) {
 	u.place(e, x, y)
 }
 
+// overTrap says whether id is in a float layered over the trap t.
+func (u *UI) overTrap(id, t ID) bool {
+	e, ok := u.byID[id]
+	return ok && id != 0 && e.layer() > u.flags[t].z
+}
+
 // Paint draws the latest layout: the flow, then floats in Z order, each float outside its parent's clip.
 // Hover then follows whatever is now under a pointer that hasn't moved.
 func (u *UI) Paint(f render.Frame) {
@@ -705,8 +711,8 @@ func (u *UI) Paint(f render.Frame) {
 		if u.in.inside {
 			u.setHot(u.topInteractive(u.in.pos))
 		}
-		// While a trap is up, focus can't leave it.
-		if t := u.trap(); t != 0 && !u.within(u.in.focus, t) {
+		// While a trap is up, focus can't leave it, other than for a float layered over it: a window kept on top.
+		if t := u.trap(); t != 0 && !u.within(u.in.focus, t) && !u.overTrap(u.in.focus, t) {
 			u.in.focus, u.in.visible = t, false
 		}
 	}()

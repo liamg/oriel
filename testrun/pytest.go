@@ -585,3 +585,5 @@ func (p *Pytest) Affected(ws Workspace, file string) ([]Item, error) {
 	}
 	return loose, err
 }
+
+func (*Pytest) TestFile(path string) bool { return isPytestFile(path) }

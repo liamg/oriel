@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/liamg/oriel/script/api"
 	"os"
@@ -108,6 +109,17 @@ func (v *helpView) Activate(_ context.Context, h plugin.Host) error {
 		v.add(h.Keymap(registry.Keymap{Mode: mode, Keys: "K", Command: "help.focused", Desc: "Help on this"}))
 	}
 	v.add(h.Picker(v.source()))
+	for _, t := range []registry.AgentTool{
+		{Name: "help_search", Params: map[string]string{"query": "string"}, ReadOnly: true, Reads: "help", Run: v.toolSearch,
+			Desc: "Search Oriel's help pages, for how to do something in Oriel: the best sections first, each with its id, title and the line that matched. Read one with help_read."},
+		{Name: "help_read", Params: map[string]string{"id": "string"}, ReadOnly: true, Reads: "help", Run: v.toolRead,
+			Desc: "Read a help section as markdown, by its id from help_search (page or page#anchor), with the keys and settings it lists as they are now."},
+		{Name: "open_help", Params: map[string]string{"id": "string"}, Run: v.toolOpen,
+			Desc: "Open a help section in Oriel's help viewer, for the user to read, by its id from help_search."},
+	} {
+		t.For, t.Source = []string{assistantAgent}, "builtin:help"
+		v.add(h.Contribute(t))
+	}
 	v.add(h.View(OverlayPrefix+"help", registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "help", Fn: func(c *ui.Ctx) { v.build(c, vc) }}
 	})))
@@ -450,4 +462,85 @@ func (v *helpView) api(c *ui.Ctx, key any, ns string) {
 			})
 		}
 	})
+}
+
+const helpSearchHits = 8
+
+func (v *helpView) toolSearch(ctx registry.Ctx, p map[string]any) (any, error) {
+	q := strings.TrimSpace(pstr(p, "query"))
+	if q == "" {
+		return nil, errors.New("search for what?")
+	}
+	var hits []help.Result
+	if err := onLoop(ctx, v.h, func() { hits = v.index().Search(q, helpSearchHits, v.expand) }); err != nil {
+		return nil, err
+	}
+	if len(hits) == 0 {
+		return nil, fmt.Errorf("no help page mentions %q: try other words", q)
+	}
+	return hits, nil
+}
+
+type helpSection struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Text  string `json:"text"`
+}
+
+func (v *helpView) toolRead(ctx registry.Ctx, p map[string]any) (any, error) {
+	id := pstr(p, "id")
+	var out helpSection
+	ok := false
+	if err := onLoop(ctx, v.h, func() { out.Title, out.Text, ok = v.index().SectionText(id, v.expand) }); err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("no help section %q: find one with help_search", id)
+	}
+	out.ID = id
+	return out, nil
+}
+
+func (v *helpView) toolOpen(ctx registry.Ctx, p map[string]any) (any, error) {
+	id := pstr(p, "id")
+	var err error
+	if e := onLoop(ctx, v.h, func() { err = v.show(id) }); e != nil {
+		return nil, e
+	}
+	if err != nil {
+		return nil, err
+	}
+	return registry.Acted{Result: "opened", Line: "opened help: " + v.title(id)}, nil
+}
+
+// expand is a directive as text, as the page draws it now: the keys and settings it lists, an API's calls.
+func (v *helpView) expand(b help.Block) string {
+	var lines []string
+	switch b.Kind {
+	case "keys":
+		for _, k := range v.h.Keymaps() {
+			if ok, _ := path.Match(b.Text, k.Command); ok && k.Command != "" {
+				lines = append(lines, fmt.Sprintf("- %s (%s mode): %s", keyCap(k.Keys), k.Mode, cmpOr(k.Desc, k.Command)))
+			}
+		}
+		if len(lines) > 0 {
+			return "Keys:\n" + strings.Join(lines, "\n")
+		}
+	case "options":
+		for _, s := range v.h.Options().Specs() {
+			if s.Name == b.Text || strings.HasPrefix(s.Name, b.Text+".") {
+				val, _, _ := v.h.Options().Get(s.Name, registry.At{})
+				lines = append(lines, fmt.Sprintf("- %s = %v: %s", s.Name, val, s.Help))
+			}
+		}
+		if len(lines) > 0 {
+			return "Settings:\n" + strings.Join(lines, "\n")
+		}
+	case "api":
+		for _, f := range api.Reference[strings.TrimPrefix(strings.TrimPrefix(b.Text, "oriel"), ".")] {
+			lines = append(lines, fmt.Sprintf("- `%s`: %s", f.Call, f.Doc))
+		}
+		return strings.Join(lines, "\n")
+	}
+	return ""
 }

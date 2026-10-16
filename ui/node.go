@@ -165,6 +165,7 @@ const (
 	LayerPage    = 200 // full-window pages: settings, the theme editor
 	LayerPopup   = 300 // menus and popovers, over what opened them
 	LayerToast   = 400 // notifications
+	LayerWindow  = 450 // floating windows kept over the IDE and its notifications: the assistant's
 	LayerDialog  = 500 // dialogs over a scrim: the omnibox, pickers, help, modals
 	LayerOverlay = 600 // over everything: which-key, help markers, pick mode
 	LayerDrag    = 700 // a drag's target, glow and ghost

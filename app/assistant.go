@@ -15,11 +15,14 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/worker"
 )
 
-// The assistant (ui.md 11, crit-reference.md "Assistant"): a drawer you ask "what needs me?" or "review this PR".
+// The assistant, Ori (ui.md 11, crit-reference.md "Assistant"): a floating window you ask "what needs me?", "review
+// this PR" or "where's that test I was working on?", minimised to its face on the rail with a count of what's unread.
 // Its agent is a utility agent on this machine's worker (agents.md: Claude in its PTY with the mod, never claude -p),
 // offered only the agent tools for "assistant": the built-ins here, and any another feature or a plugin adds (the
 // tickets' my_tickets, mission control's). An act waits for your yes on a confirmation card (registry.AgentOwner), and what its tools did
@@ -45,12 +48,16 @@ type assistantPlugin struct {
 	conv *assistant.Conversation
 
 	// On the loop.
-	open    bool
-	draft   string
-	focus   bool            // the composer takes focus next frame
-	focused map[string]bool // the confirmations that have taken focus once
-	scroll  scrollState
-	spoken  int // the last reply said aloud
+	open       bool
+	draft      string
+	focus      bool            // the composer takes focus next frame
+	focused    map[string]bool // the confirmations that have taken focus once
+	scroll     scrollState
+	sideScroll scrollState
+	spoken     int // the last reply said aloud
+	seen       int // the last entry shown in the window: what's after it is unread
+	win        widget.WindowState
+	placed     render.Rect // where the window was last saved
 
 	mu  sync.Mutex
 	ran string // what the conversation runs on: "claude · haiku"
@@ -106,16 +113,16 @@ func (x *assistantPlugin) Activate(_ context.Context, h plugin.Host) error {
 		}))
 	isOpen := func(registry.Args) bool { return x.open }
 	for _, c := range []registry.Command{
-		{ID: "assistant.toggle", Title: "Open the assistant's drawer, or put it away", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "assistant.toggle", Title: "Open Ori, the assistant, or minimise it", Run: func(registry.Ctx, registry.Args) error {
 			x.setOpen(!x.open)
 			return nil
 		}},
-		{ID: "assistant.open", Title: "Open the assistant's drawer; with {text}, ask it that", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "assistant.open", Title: "Open Ori, the assistant; with {text}, ask it that", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.setOpen(true)
 			x.conv.Say(a.String("text"), false)
 			return nil
 		}},
-		{ID: "assistant.close", Title: "Put the assistant's drawer away; the conversation waits", Available: isOpen,
+		{ID: "assistant.close", Title: "Minimise Ori, the assistant; the conversation waits", Available: isOpen,
 			Run: func(registry.Ctx, registry.Args) error { x.setOpen(false); return nil }},
 		{ID: "assistant.say", Title: "Ask the assistant something: {text}; {voice} when it was spoken, so its answer is",
 			Run: func(_ registry.Ctx, a registry.Args) error {
@@ -147,14 +154,21 @@ func (x *assistantPlugin) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		x.add(h.Command(c))
 	}
-	x.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-/>", Command: "assistant.toggle", Desc: "Assistant"}))
-	x.add(h.Keymap(registry.Keymap{Mode: AssistantKeyMode, Keys: "<Esc>", Command: "assistant.close", Desc: "Back to the editor"}))
+	x.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-/>", Command: "assistant.toggle", Desc: "Ori"}))
+	x.add(h.Keymap(registry.Keymap{Mode: AssistantKeyMode, Keys: "<Esc>", Command: "assistant.close", Desc: "Minimise"}))
 	x.add(h.Keymap(registry.Keymap{Mode: AssistantKeyMode, Keys: "<D-.>", Command: "assistant.stop", Desc: "Stop its turn"}))
 	for n := 1; n <= 9; n++ {
 		x.add(h.Keymap(registry.Keymap{Mode: AssistantKeyMode, Keys: fmt.Sprintf("<D-%d>", n), Command: "assistant.pick",
 			Args: registry.Args{"n": n}, Desc: fmt.Sprintf("Pick row %d", n)}))
 	}
-	x.add(h.View(AssistantView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "assistant", Fn: x.drawer} })))
+	x.add(h.Contribute(registry.RailEntry{Name: "assistant", Title: "Ori", Command: "assistant.toggle", Scope: registry.ScopeGlobalEntry,
+		Order: 85, Bottom: true, Badge: x.unread, Active: func(string) bool { return x.open }, Source: "builtin:assistant",
+		Draw: func(c *ui.Ctx, key any, size float32, _ render.Color) {
+			ori(c, key, size, oriMood{busy: x.conv.Busy(), unread: x.unread() > 0})
+		}}))
+	x.win.Rect = x.loadPlace()
+	x.placed = x.win.Rect
+	x.add(h.View(AssistantView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "assistant", Fn: x.window} })))
 	return nil
 }
 
@@ -169,9 +183,24 @@ func (x *assistantPlugin) bool(name string) bool  { b, _ := x.opt(name).(bool); 
 func (x *assistantPlugin) setOpen(open bool) {
 	x.open = open
 	if open {
+		if log, _ := x.conv.Log(); len(log) > 0 {
+			x.seen = max(x.seen, log[len(log)-1].Seq)
+		}
 		x.focus = true
 		x.scroll.follow = true
 	}
+}
+
+// unread is how many of its answers, questions and failures came since the window last showed them.
+func (x *assistantPlugin) unread() int {
+	log, _ := x.conv.Log()
+	n := 0
+	for _, e := range log {
+		if e.Seq > x.seen && (e.Kind == assistant.KindReply || e.Kind == assistant.KindConfirm || e.Kind == assistant.KindError) {
+			n++
+		}
+	}
+	return n
 }
 
 // send says what's in the composer.
@@ -349,10 +378,17 @@ func (x *assistantPlugin) pick(n int) error {
 	it := items[n-1]
 	switch {
 	case it.Session != "":
-		x.setOpen(false)
 		return x.h.Run(context.Background(), "session.open", registry.Args{"id": it.Session})
 	case it.URL != "":
 		return x.sh.desktop.OpenURL(it.URL)
+	case it.File != "":
+		args := map[string]any{"path": it.File, "line": float64(it.Line), "project": it.Project}
+		go func() {
+			if _, err := x.toolFocusFile(context.Background(), args); err != nil {
+				x.h.Do(func() { x.report(err) })
+			}
+		}()
+		return nil
 	}
 	x.conv.Say("Tell me more about "+it.Title, false)
 	return nil
@@ -388,7 +424,6 @@ func (x *assistantPlugin) show(ctx context.Context, id string) error {
 	if err != nil || e.Open == "" {
 		return errors.New("nothing to open")
 	}
-	x.setOpen(false)
 	return x.h.Run(ctx, e.Open, registry.Args(e.OpenArgs))
 }
 
@@ -413,6 +448,14 @@ func assistantProgress(tool string) string {
 		return "checking the machines…"
 	case "mission_control":
 		return "checking mission control…"
+	case "changed_files":
+		return "looking at what you changed…"
+	case "focus_file":
+		return "bringing it up…"
+	case "open_project":
+		return "switching project…"
+	case "help_search", "help_read":
+		return "looking it up in the help…"
 	case "WebSearch", "WebFetch":
 		return "looking it up…"
 	}

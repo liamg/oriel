@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -12,8 +13,10 @@ import (
 // listed under the open project, or one of the session's, below them. It runs Command with Args, a project entry
 // with the project too ("project" in its args), and is dimmed while the command wouldn't run.
 type RailEntry struct {
-	Name    string // unique among rail entries: "explorer"
-	Icon    string // a built-in icon's name or a glyph
+	Name string // unique among rail entries: "explorer"
+	Icon string // a built-in icon's name or a glyph
+	// Draw draws the icon itself, in place of Icon, as a size-pixel square in tone: a live one, as the assistant's.
+	Draw    func(c *ui.Ctx, key any, size float32, tone render.Color)
 	Title   string // its label, and its tooltip with the key bound to Command and Args
 	Command string
 	Args    Args

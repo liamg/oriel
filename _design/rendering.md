@@ -313,11 +313,12 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   up to the nearest node above it with a `KeyMode` (`Ctx.PassKeys`), for its next frame: Escape on a focused button or
   toggle reaches the page it's on.
 - A press focuses the nearest focusable node at or above it. `Style.Trap` (a modal) keeps focus inside while it's
-  up. Focus a widget moves itself (`Ctx.Focus`) draws no focus ring; keyboard focus does. `Ctx.Focus` from under the
+  up, other than for a float layered over it (a window kept on top over a page). Focus a widget moves itself (`Ctx.Focus`) draws no focus ring; keyboard focus does. `Ctx.Focus` from under the
   float that holds focus, or took it this frame, is ignored, so a page can't take focus back from a dialog over it.
 - A float's `Z` is a named layer, lowest first: `LayerUnder` (behind its parent's content: a selection under the
   text), `LayerContent` (highlights, a cursor), `LayerPane` (floating panes),
-  `LayerPage` (settings, the theme editor), `LayerPopup` (menus, popovers), `LayerToast`, `LayerDialog` (the omnibox,
+  `LayerPage` (settings, the theme editor), `LayerPopup` (menus, popovers), `LayerToast`, `LayerWindow` (floating windows kept on top: the assistant's),
+  `LayerDialog` (the omnibox,
   pickers, help, modals), `LayerOverlay` (which-key, help markers, pick mode), `LayerDrag` and `LayerTooltip`; add a
   little (`LayerOverlay + 1`) to order floats within one. A float inside another is at least at its layer and paints
   over it, so a popover opened in a dialog is over the dialog. A test fails on a bare number for `Z`.
@@ -362,3 +363,9 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool // dr
   `layout.save/restore {name}` and `layout.menu`, with the ⌃W keys, `⌃J` and ``⌃` `` bound in `global`. Saved layouts
   are in memory until sessions persist them (SE-2).
 
+
+- `widget.Window` is a floating window over the IDE (`LayerWindow`): a title bar that drags it (with a lead, the title,
+  a head slot, and minimise and close buttons), left, right and bottom edges and bottom corners that resize it down to
+  its `Min`, kept whole in the viewport; its place is a `WindowState` its owner keeps. It doesn't trap focus. A
+  `widget.Badge` is a count in a pill (99+ past 99), as the rail's entries and the assistant show what's waiting.
+  `Ctx.Still` says the UI keeps still (reduced motion, or motion at 0), so what loops on its own doesn't.
