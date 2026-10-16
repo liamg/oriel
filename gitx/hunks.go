@@ -279,7 +279,17 @@ func (r Repo) FileAt(ctx context.Context, rev, path string) ([]byte, bool) {
 	if rev == "" {
 		return nil, false
 	}
+	if isHash(rev) {
+		if b, ok, err := r.object(ctx, rev+":"+path); err == nil {
+			return b, ok
+		}
+	}
 	return r.blob(ctx, rev+":"+path)
+}
+
+// isHash says rev is a commit's hash, whole or abbreviated, which names the same tree for as long as a batch runs.
+func isHash(rev string) bool {
+	return len(rev) >= 7 && len(rev) <= 64 && strings.Trim(rev, "0123456789abcdef") == ""
 }
 
 // UnstagedHunks are the hunks from the index's version of path to contents: a buffer's text, saved or not.

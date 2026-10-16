@@ -1,11 +1,8 @@
 package gitx
 
 import (
-	"bytes"
 	"context"
-	"os"
-	"os/exec"
-	"path/filepath"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -84,7 +81,7 @@ func TestBlameRunsOneGitPerFile(t *testing.T) {
 	r.Git("config", "user.email", "ada@example.com")
 	r.Write(map[string]string{"a.txt": "one\n", "b.txt": "two\n"})
 	r.Commit("Ada", "both\n\nCo-Authored-By: Claude <noreply@anthropic.com>")
-	runs := countGit(t)
+	runs := gittest.CountGit(t)
 	repo := Repo{Dir: r.Dir}
 	if _, err := repo.Blame(context.Background(), "a.txt", []byte("one\n")); err != nil {
 		t.Fatal(err)
@@ -102,21 +99,25 @@ func TestBlameRunsOneGitPerFile(t *testing.T) {
 	}
 }
 
-// countGit puts a git on PATH that counts its runs before running the real one.
-func countGit(t *testing.T) func() int {
-	real, err := exec.LookPath("git")
+// AgentTouched names the files the branch's agent commits touched, by author or Co-Authored-By, and no others.
+// ref: oracle git
+func TestAgentTouched(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"base.txt": "x\n"})
+	r.Commit("Ada", "base")
+	base := strings.TrimSpace(r.Git("rev-parse", "HEAD"))
+	r.Write(map[string]string{"mine.txt": "x\n"})
+	r.Commit("Ada", "mine")
+	r.Write(map[string]string{"paired file.txt": "x\n"})
+	r.Commit("Ada", "paired\n\nCo-Authored-By: Claude <noreply@anthropic.com>")
+	r.Write(map[string]string{"own.txt": "x\n", "dir/deep.txt": "x\n"})
+	r.Commit("Codex", "the agent's own")
+	got, err := Repo{Dir: r.Dir}.AgentTouched(context.Background(), base)
 	if err != nil {
-		t.Skip("no git")
-	}
-	dir := t.TempDir()
-	log := filepath.Join(dir, "runs")
-	script := "#!/bin/sh\necho x >> '" + log + "'\nexec '" + real + "' \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(dir, "git"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	return func() int {
-		b, _ := os.ReadFile(log)
-		return bytes.Count(b, []byte("\n"))
+	want := map[string]bool{"paired file.txt": true, "own.txt": true, "dir/deep.txt": true}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("touched %v, want %v", got, want)
 	}
 }

@@ -54,18 +54,23 @@ type diffPlugin struct {
 	by    map[string]*diffState // by instance: the repo's root
 	focus *diffState            // the diff with focus, or the last to have it
 
-	mu      sync.Mutex
-	files   map[diffKey]*diffFile
-	loading map[diffKey]bool
-	started map[diffKey]time.Time // when each file's last diff was started, so one changing fast isn't remade each time
-	waking  map[diffKey]bool      // a redraw is set for when a file's diff can be made again
-	gen     uint64                // bumped when a diff lands or a local review changes: what the ledger is made from
-	ledgers map[string]cachedLedger
-	styled  map[diffKey]bool      // files the view has shown, whose diffs are made styled from then on
-	local   core.State            // reviews made outside a session, as session "local" with each repo's root its project; they last as long as the window
-	texts   map[string]agentTexts // by session and root
-	busy    sync.WaitGroup
-	limit   chan struct{} // diffs made at once
+	mu       sync.Mutex
+	files    map[diffKey]*diffFile
+	loading  map[diffKey]bool
+	started  map[diffKey]time.Time // when each file's last diff was started, so one changing fast isn't remade each time
+	waking   map[diffKey]bool      // a redraw is set for when a file's diff can be made again
+	gen      uint64                // bumped when a diff lands or a local review changes: what the ledger is made from
+	reviews  uint64                // bumped when a local review changes
+	ledgers  map[string]cachedLedger
+	parts    map[diffKey]ledgerPart  // each file's share of its ledger
+	stats    map[diffKey]fileStat    // each changed file's size and time on disk, read off the loop
+	touched  map[string]touchedFiles // by root: the files the branch's agent commits touched
+	statting bool
+	styled   map[diffKey]bool      // files the view has shown, whose diffs are made styled from then on
+	local    core.State            // reviews made outside a session, as session "local" with each repo's root its project; they last as long as the window
+	texts    map[string]agentTexts // by session and root
+	busy     sync.WaitGroup
+	limit    chan struct{} // diffs made at once
 }
 
 type diffKey struct{ repo, path string }
@@ -336,6 +341,7 @@ func (x *diffPlugin) record(root string, ev core.Event, send func(c worker.Clien
 		x.mu.Lock()
 		err := ev.Apply(&x.local)
 		x.gen++
+		x.reviews++
 		x.mu.Unlock()
 		x.h.Redraw()
 		return err
@@ -556,7 +562,7 @@ func (x *diffPlugin) source(st *diffState, _ registry.Args) error {
 
 // diffFor is a file's diff as last made, and makes it again (off the loop) when what it's made from has changed, or
 // styled when the view asks for one (styled) and it's plain. current is false while the diff is older than the file.
-func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, styled bool) (d *diffFile, current bool) {
+func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, styled, blame bool) (d *diffFile, current bool) {
 	root := tree.root()
 	work := tree.abs(f.Path)
 	in := diffInput{rev: st.BaseHash, path: f.Path, old: f.Old, code: f.Code, add: f.Add, del: f.Del, repo: root, work: work}
@@ -572,19 +578,21 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, st
 	if open {
 		s := buf.Text.Snapshot()
 		in.buf, in.version, snap = buf.Text, s.Version(), &s
-	} else if fi, err := os.Stat(work); err == nil {
-		in.size, in.mtime = fi.Size(), fi.ModTime().UnixNano()
 	}
 	k := diffKey{root, f.Path}
+	if !open {
+		in.size, in.mtime = x.stat(k, work, styled)
+	}
 	x.mu.Lock()
 	if styled {
 		x.styled[k] = true
 	}
 	styled = x.styled[k]
+	blame = blame || styled
 	d, busy := x.files[k], x.loading[k]
 	x.mu.Unlock()
 	current = d != nil && d.in == in
-	if (d == nil || d.in != in || styled && !d.styled) && !busy {
+	if (d == nil || d.in != in || styled && !d.styled || blame && !d.blamed) && !busy {
 		if d != nil && d.in != in && !x.mayRemake(k) {
 			return d, false
 		}
@@ -593,8 +601,10 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, st
 			x.h.Log().Debug("making a diff", "path", f.Path, "styled", styled)
 		case d.in != in:
 			x.h.Log().Debug("remaking a diff", "path", f.Path, "changed", changedInputs(d.in, in))
-		default:
+		case styled && !d.styled:
 			x.h.Log().Debug("styling a diff", "path", f.Path)
+		default:
+			x.h.Log().Debug("blaming a diff", "path", f.Path)
 		}
 		var newText []byte
 		if open {
@@ -608,7 +618,7 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, st
 		go func() {
 			defer x.busy.Done()
 			x.limit <- struct{}{}
-			nd := loadDiff(x.h, in, newText, snap, styled)
+			nd := loadDiff(x.h, in, newText, snap, styled, blame)
 			<-x.limit
 			x.mu.Lock()
 			x.files[k], x.loading[k] = nd, false
@@ -618,6 +628,84 @@ func (x *diffPlugin) diffFor(tree *gitTree, st *gitx.State, f gitx.FileState, st
 		}()
 	}
 	return d, current
+}
+
+// statFresh is how long a file's size and time on disk are taken as read before they're read again.
+const statFresh = time.Second
+
+type fileStat struct {
+	size, mtime int64
+	read        time.Time
+}
+
+// stat is k's size and time on disk. The first read, and every one for the view (now), is now; after that it's what
+// was last read, with the reads older than statFresh done again off the loop, and a frame drawn when one has changed.
+func (x *diffPlugin) stat(k diffKey, work string, now bool) (size, mtime int64) {
+	x.mu.Lock()
+	st, ok := x.stats[k]
+	if now {
+		ok = false
+	}
+	stale := ok && time.Since(st.read) > statFresh && !x.statting
+	if stale {
+		x.statting = true
+	}
+	x.mu.Unlock()
+	if !ok {
+		st = statNow(work)
+		x.mu.Lock()
+		if x.stats == nil {
+			x.stats = map[diffKey]fileStat{}
+		}
+		x.stats[k] = st
+		x.mu.Unlock()
+	}
+	if stale {
+		x.busy.Add(1)
+		go x.restat()
+	}
+	return st.size, st.mtime
+}
+
+// restat reads again every file whose read is older than statFresh.
+func (x *diffPlugin) restat() {
+	defer x.busy.Done()
+	x.mu.Lock()
+	var due []diffKey
+	for k, st := range x.stats {
+		if time.Since(st.read) > statFresh {
+			due = append(due, k)
+		}
+	}
+	x.mu.Unlock()
+	changed := false
+	read := make(map[diffKey]fileStat, len(due))
+	for _, k := range due {
+		read[k] = statNow(filepath.Join(k.repo, filepath.FromSlash(k.path)))
+	}
+	x.mu.Lock()
+	for k, st := range read {
+		if old := x.stats[k]; old.size != st.size || old.mtime != st.mtime {
+			changed = true
+		}
+		x.stats[k] = st
+	}
+	x.statting = false
+	if changed {
+		x.gen++
+	}
+	x.mu.Unlock()
+	if changed {
+		x.h.Redraw()
+	}
+}
+
+func statNow(path string) fileStat {
+	st := fileStat{read: time.Now()}
+	if fi, err := os.Stat(path); err == nil {
+		st.size, st.mtime = fi.Size(), fi.ModTime().UnixNano()
+	}
+	return st
 }
 
 // diffRemakeGap is the least time between starting a file's diffs: one written to over and over is remade at this

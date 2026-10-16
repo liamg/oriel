@@ -60,6 +60,7 @@ type State struct {
 	Branch   string
 	Base     string // the branch Changed compares with: origin's default, main or master; "" for none
 	BaseHash string // the merge-base with it, abbreviated
+	Head     string // HEAD's hash; "" before the first commit
 	Upstream string
 	Ahead    int
 	Behind   int
@@ -68,7 +69,7 @@ type State struct {
 
 // sameRefs reports whether two readings agree on everything but their files.
 func (s *State) sameRefs(o *State) bool {
-	return s.Branch == o.Branch && s.Base == o.Base && s.BaseHash == o.BaseHash && s.Upstream == o.Upstream &&
+	return s.Branch == o.Branch && s.Base == o.Base && s.BaseHash == o.BaseHash && s.Head == o.Head && s.Upstream == o.Upstream &&
 		s.Ahead == o.Ahead && s.Behind == o.Behind
 }
 
@@ -147,11 +148,12 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 	}
 	run(func() {
 		st.Branch, _ = r.Branch(ctx)
-		_, headErr := r.git(ctx, "rev-parse", "--verify", "-q", "HEAD")
+		head, headErr := r.git(ctx, "rev-parse", "--verify", "-q", "HEAD")
 		hasHead = headErr == nil
 		if !hasHead {
 			return
 		}
+		st.Head = strings.TrimSpace(string(head))
 		var inner sync.WaitGroup
 		inner.Add(1)
 		go func() {

@@ -34,6 +34,7 @@ type diffInput struct {
 type diffFile struct {
 	in      diffInput
 	styled  bool
+	blamed  bool // who wrote each added line is known
 	binary  bool
 	newText []byte
 	hunks   []diffHunk
@@ -60,11 +61,12 @@ type addedLine struct {
 }
 
 // loadDiff makes a file's diff: the base revision's version against newText (the buffer's), or the file on disk
-// when newText is nil. Highlights and each hunk's function, which only the view shows, are made when styled.
-func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snapshot, styled bool) *diffFile {
+// when newText is nil. Highlights and each hunk's function, which only the view shows, are made when styled; who
+// wrote each added line when blamed.
+func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snapshot, styled, blame bool) *diffFile {
 	ctx := context.Background()
 	repo := gitx.Repo{Dir: in.repo}
-	f := &diffFile{in: in, styled: styled}
+	f := &diffFile{in: in, styled: styled, blamed: blame}
 	var old []byte
 	if in.code != 'A' && in.code != '?' {
 		old, _ = repo.FileAt(ctx, in.rev, cmpOr(in.old, in.path))
@@ -126,7 +128,9 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 		}
 		f.hunks = append(f.hunks, dh)
 	}
-	f.authors = authorship(ctx, repo, in.path, newText, f.hunks, snap)
+	if blame {
+		f.authors = authorship(ctx, repo, in.path, newText, f.hunks, snap)
+	}
 	return f
 }
 

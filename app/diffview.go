@@ -66,7 +66,7 @@ func (x *diffPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 		st.files = files
 		st.drawn, st.marks = map[string]*diffFile{}, map[string]map[string]bool{}
 		for _, f := range files {
-			if d, _ := x.diffFor(tree, gs, f, true); d != nil {
+			if d, _ := x.diffFor(tree, gs, f, true, true); d != nil {
 				st.drawn[f.Path] = d
 			}
 			st.marks[f.Path] = x.marks(st.root, f.Path)

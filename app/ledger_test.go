@@ -332,3 +332,52 @@ func TestSummaryShowsReviewed(t *testing.T) {
 	r.do(func() error { return r.host.Run(context.Background(), "requests.summary", nil) })
 	r.waitFrame("REVIEWED", func(s string) bool { return containsAll(s, "REVIEWED", fmt.Sprintf("0/%d", l.All.Total())) })
 }
+
+// The ledger over hundreds of changed files no agent commit touched runs no more gits than over a few: their old
+// versions come through one, and there's nothing to blame. (The status, read every so often, is counted apart.)
+func TestLedgerGitsDontGrowWithFiles(t *testing.T) {
+	gits := func(n int) int {
+		dir := changedRepo(t, n)
+		runs := gittest.CountGit(t)
+		s := newScene(t, "", dir, mockupSize)
+		s.sh.git.wait()
+		ledger := []string{"cat-file", "blame", "log", "config"}
+		before := runs(ledger...)
+		s.keyCommand(t, "<M-1>")
+		if !s.Until(30*time.Second, func() bool {
+			l, ok := registry.LedgerOf(s.reg, dir)
+			return ok && l.Ready
+		}) {
+			t.Fatalf("the ledger over %d files was never ready", n)
+		}
+		return runs(ledger...) - before
+	}
+	few, many := gits(5), gits(300)
+	t.Logf("gits for the ledger over 5 files: %d; over 300: %d", few, many)
+	if many > few+3 {
+		t.Errorf("the ledger over 300 files ran %d gits, against %d over 5", many, few)
+	}
+}
+
+// changedRepo is a repo with n files of 100 lines changed since its one commit, every fifth line.
+func changedRepo(t *testing.T, n int) string {
+	r := gittest.New(t)
+	before, after := map[string]string{}, map[string]string{}
+	for i := range n {
+		var b, a strings.Builder
+		for l := range 100 {
+			fmt.Fprintf(&b, "line %d\n", l)
+			if l%5 == 0 {
+				fmt.Fprintf(&a, "line %d, changed\n", l)
+			} else {
+				fmt.Fprintf(&a, "line %d\n", l)
+			}
+		}
+		p := fmt.Sprintf("pkg%d/f%03d.txt", i%20, i)
+		before[p], after[p] = b.String(), a.String()
+	}
+	r.Write(before)
+	r.Commit("Ada", "base")
+	r.Write(after)
+	return r.Dir
+}

@@ -100,3 +100,37 @@ func Lines(n int) string {
 	}
 	return b.String()
 }
+
+// CountGit puts a git on PATH that notes each run's arguments before running the real one, and returns the
+// count so far of runs naming any of subcommands, or of every run without any.
+func CountGit(t testing.TB) func(subcommands ...string) int {
+	t.Helper()
+	real, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("no git")
+	}
+	dir := t.TempDir()
+	log := filepath.Join(dir, "runs")
+	script := "#!/bin/sh\necho \" $* \" >> '" + log + "'\nexec '" + real + "' \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "git"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return func(subcommands ...string) int {
+		b, _ := os.ReadFile(log)
+		n := 0
+		for _, l := range strings.Split(string(b), "\n") {
+			if l == "" {
+				continue
+			}
+			named := len(subcommands) == 0
+			for _, c := range subcommands {
+				named = named || strings.Contains(l, " "+c+" ")
+			}
+			if named {
+				n++
+			}
+		}
+		return n
+	}
+}

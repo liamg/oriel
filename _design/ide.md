@@ -538,7 +538,13 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   apply --cached` with git's own patch. Keys: `␣hs` stage, `␣hu` unstage, `␣hr` reset (one undo step), `␣hp` preview
   (a block of the old lines), `]c`/`[c`, `␣hb` blame (`git.blame.inline`). Blame is `git blame --contents -` on the
   buffer; an author is an agent by name or email (claude, codex, anthropic, openai, copilot, `[bot]`) or a
-  Co-Authored-By trailer naming one, and "you" by `user.email`. The Explorer's Uncommitted lists the selected file's
+  Co-Authored-By trailer naming one, and "you" by `user.email`; a blame runs one git, with `user.email` read once a
+  repo (kept 30 s) and each commit's trailers once. A file at a commit's hash comes through one long-lived `git
+  cat-file --batch` per repo (`gitx.Repo.FileAt`), not a git each. The review ledger blames only the files an agent
+  commit on the branch touched (`gitx.Repo.AgentTouched`, one `git log`) or the session's agent edited; a branch of
+  thousands of changed files runs a handful of gits for it, and its frame stays as quick while the diffs land (each
+  file's count kept until its diff changes, the whole remade at most every 250 ms meanwhile, sizes and times on disk
+  read again once a second off the loop). The Explorer's Uncommitted lists the selected file's
   staged and unstaged hunks, and `s` stages or unstages one.
 - crit's Git and PR flow carried over: uncommitted → behind base → unpushed →
   PR → checks → merge, per project, cross-linked across projects.

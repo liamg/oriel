@@ -175,12 +175,7 @@ func (r Repo) coAuthoredByAgent(ctx context.Context, hashes []string) map[string
 		if !ok {
 			continue
 		}
-		read[h] = false
-		for _, line := range strings.Split(body, "\n") {
-			if k, v, ok := strings.Cut(line, ":"); ok && strings.EqualFold(strings.TrimSpace(k), "co-authored-by") && isAgent(v) {
-				read[h] = true
-			}
-		}
+		read[h] = coAuthoredAgent(body)
 	}
 	trailers.Lock()
 	if len(trailers.agent)+len(read) > maxTrailers {
@@ -191,4 +186,37 @@ func (r Repo) coAuthoredByAgent(ctx context.Context, hashes []string) map[string
 	}
 	trailers.Unlock()
 	return out
+}
+
+// AgentTouched is the files commits from base to HEAD by an agent touched: by their author, or a Co-Authored-By
+// trailer naming one. Only these can have lines blame calls an agent's.
+func (r Repo) AgentTouched(ctx context.Context, base string) (map[string]bool, error) {
+	out, err := r.git(ctx, "-c", "core.quotePath=false", "log", "--format=%x01%an%x00%ae%x00%B%x02", "--name-only", base+"..HEAD")
+	if err != nil {
+		return nil, err
+	}
+	touched := map[string]bool{}
+	for _, c := range strings.Split(string(out), "\x01") {
+		head, names, _ := strings.Cut(c, "\x02")
+		f := strings.SplitN(head, "\x00", 3)
+		if len(f) < 3 || !isAgent(f[0]) && !isAgent(f[1]) && !coAuthoredAgent(f[2]) {
+			continue
+		}
+		for _, n := range strings.Split(names, "\n") {
+			if n != "" {
+				touched[n] = true
+			}
+		}
+	}
+	return touched, nil
+}
+
+// coAuthoredAgent says a commit message has a Co-Authored-By trailer naming an agent.
+func coAuthoredAgent(body string) bool {
+	for _, line := range strings.Split(body, "\n") {
+		if k, v, ok := strings.Cut(line, ":"); ok && strings.EqualFold(strings.TrimSpace(k), "co-authored-by") && isAgent(v) {
+			return true
+		}
+	}
+	return false
 }
