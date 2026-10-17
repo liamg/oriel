@@ -2,7 +2,6 @@ package widget
 
 import (
 	"image/color"
-	"math"
 	"strings"
 
 	"github.com/liamg/oriel/render"
@@ -61,20 +60,5 @@ func Ring(c *ui.Ctx, key any, o RingOpts) ui.ID {
 		})
 }
 
-// arc is the part of the ellipse in r from twelve o'clock clockwise through frac of a turn, as short lines.
-func arc(r render.Rect, frac float64) *render.Path {
-	cx, cy := float64(r.Min.X+r.Max.X)/2, float64(r.Min.Y+r.Max.Y)/2
-	rx, ry := float64(r.Dx())/2, float64(r.Dy())/2
-	n := max(int(frac*96), 2)
-	p := new(render.Path)
-	for i := 0; i <= n; i++ {
-		a := 2 * math.Pi * frac * float64(i) / float64(n)
-		pt := render.Point{X: float32(cx + rx*math.Sin(a)), Y: float32(cy - ry*math.Cos(a))}
-		if i == 0 {
-			p.MoveTo(pt)
-		} else {
-			p.LineTo(pt)
-		}
-	}
-	return p
-}
+// arc is the part of the ellipse in r from twelve o'clock clockwise through frac of a turn.
+func arc(r render.Rect, frac float64) *render.Path { return arcFrom(r, 0, frac) }

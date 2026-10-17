@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os/exec"
 	"slices"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ type Fake struct {
 	Account string            // who it's signed in as
 	Offers  []agent.Model     // the models it offers; one, "m1", if nil
 	Started chan *FakeSession // each session as it starts
+	Launch  bool              // a session starts a process through the spec's Exec first, as a real provider's does
 
 	mu        sync.Mutex
 	resumed   []string
@@ -91,21 +93,40 @@ func (f *Fake) refused() error {
 	return f.refuse
 }
 
-func (f *Fake) Start(_ context.Context, s agent.StartSpec) (agent.Session, error) {
+func (f *Fake) Start(ctx context.Context, s agent.StartSpec) (agent.Session, error) {
 	if err := f.refused(); err != nil {
+		return nil, err
+	}
+	if err := f.launch(ctx, s); err != nil {
 		return nil, err
 	}
 	return f.open(s, ""), nil
 }
 
-func (f *Fake) Resume(_ context.Context, id string, s agent.StartSpec) (agent.Session, error) {
+func (f *Fake) Resume(ctx context.Context, id string, s agent.StartSpec) (agent.Session, error) {
 	if err := f.refused(); err != nil {
+		return nil, err
+	}
+	if err := f.launch(ctx, s); err != nil {
 		return nil, err
 	}
 	f.mu.Lock()
 	f.resumed = append(f.resumed, id)
 	f.mu.Unlock()
 	return f.open(s, id), nil
+}
+
+// launch starts the agent's process through the spec's Exec, when the fake is told to.
+func (f *Fake) launch(ctx context.Context, s agent.StartSpec) error {
+	if !f.Launch || s.Exec == nil {
+		return nil
+	}
+	p, err := s.Exec.Start(ctx, exec.Command(f.ID()))
+	if err != nil {
+		return err
+	}
+	go func() { _ = p.Wait() }()
+	return nil
 }
 
 // Resumed are the ids sessions were resumed by.

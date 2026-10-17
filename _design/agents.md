@@ -532,7 +532,7 @@ sequenceDiagram
   (`SandboxPolicy.Backend`, kept as `AgentState.Backend`), one of those its worker can run (`Backend.Available`,
   reported as `WorkerState.Sandboxes`, the launcher's Sandbox type); everything else (session socket, gateway,
   egress decisions, approvals) is the same for all of them. A backend launches (`Launch` → a `Command`: argv, env,
-  dir), stops, reports `Health` and `Sweep`s, and says where the agent finds the run dir (`AgentRunDir`) and
+  dir; a slow step says what it's doing with `sandbox.Report(ctx, …)`, sessions.md "Starting one"), stops, reports `Health` and `Sweep`s, and says where the agent finds the run dir (`AgentRunDir`) and
   whether the session must also serve on a port (`ServesPort`). What every backend gives the agent is shared in
   `sandbox`: `Binds` (the workspace, Claude's dir and transcripts, attachments, each project's git dir with git's
   own files read-only), `Prepare` (Claude settings and login, the home's ssh config, shims, git config), `AgentEnv`

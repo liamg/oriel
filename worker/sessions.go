@@ -121,9 +121,7 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 			return id, err
 		}
 	} else if spec.Provider != "" {
-		if err := w.Resume(ctx, id); err != nil {
-			return id, err
-		}
+		w.hostOf(id).startAside()
 	}
 	return id, nil
 }

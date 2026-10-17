@@ -141,7 +141,7 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 		return &ui.Func{Key: "workerdrain", Fn: x.drainView}
 	})))
 	for _, c := range []registry.Command{
-		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…; {clone} the repos the worker lacks first, a URL by repo; {background} leaves it behind the one in front",
+		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {worker}, {sandbox}…; {clone} the repos the worker lacks first, a URL by repo; {background} leaves it behind the one in front; {then} is a list of {command, args} run once the window is on it",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.start(ctx, a); return err }},
 		{ID: "repos.clone", Title: "Clone {url} onto {worker} (this machine's if none) as {name}, and register it", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -578,6 +578,10 @@ func specFrom(a registry.Args) core.SessionSpec {
 
 // start starts a session on its worker and brings it to the front, unless {background}.
 func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {
+	then, err := callsOf(a["then"])
+	if err != nil {
+		return "", err
+	}
 	spec := specFrom(a)
 	c, err := x.worker(spec.Worker)
 	if err != nil {
@@ -608,6 +612,7 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 			if a.Bool("background") {
 				return id, nil
 			}
+			x.after(id, then)
 			return id, x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -678,14 +683,20 @@ func (x *sessions) open(ctx context.Context, id core.SessionID, then []call) err
 			return err
 		}
 	}
-	if len(then) > 0 {
-		if x.moves(id) {
-			x.sh.afterOpen = &afterOpen{session: id, calls: then}
-		} else {
-			x.h.Do(func() { runCalls(x.h, then) })
-		}
-	}
+	x.after(id, then)
 	return x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
+}
+
+// after runs then once the window is on session id: after it opens again on the session's directory, if it does.
+func (x *sessions) after(id core.SessionID, then []call) {
+	if len(then) == 0 {
+		return
+	}
+	if x.moves(id) {
+		x.sh.afterOpen = &afterOpen{session: id, calls: then}
+	} else {
+		x.h.Do(func() { runCalls(x.h, then) })
+	}
 }
 
 // sessionDir is where the window opens for a session: its primary project, or its own directory.

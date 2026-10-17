@@ -81,6 +81,9 @@ func (UI) Indicator(spec script.Table) script.Table {
 //oriel:api doc="A dial (widget.Ring): { value (0 to 1 of the ring lit, clockwise from twelve o'clock), label (in the middle: '18m'), color (a theme token or #rrggbb; the accent by default), size (px across, 44 by default), name (what it measures, read out with the label), id }." returns=table
 func (UI) Ring(spec script.Table) script.Table { return node("ring", spec) }
 
+//oriel:api doc="Something in progress with no known end (widget.Spinner): { name (what's in progress, read out), color (a theme token or #rrggbb; the accent by default), size (px across, 14 by default), id }. It holds still with reduced motion." returns=table
+func (UI) Spinner(spec script.Table) script.Table { return node("spinner", spec) }
+
 //oriel:api doc="A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change." returns=table
 func (UI) Button(spec script.Table) script.Table {
 	t := script.Table{"type": "button"}
@@ -183,6 +186,10 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			size, _ := n["size"].(float64)
 			widget.Ring(c, cmpOr(str(n, "id"), str(n, "name"), "ring"), widget.RingOpts{Frac: num(n["value"]), Label: str(n, "label"),
 				Tone: tone(th, str(n, "color"), render.Color{}), Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
+		case "spinner":
+			size, _ := n["size"].(float64)
+			widget.Spinner(c, cmpOr(str(n, "id"), str(n, "name"), "spinner"), widget.SpinnerOpts{Tone: tone(th, str(n, "color"), render.Color{}),
+				Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
 		case "spacer":
 			c.Box(nil, ui.Style{W: ui.Flex(1)}, nil)
 		case "view":

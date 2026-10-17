@@ -437,6 +437,21 @@ func (x *missionPlugin) cardBody(c *ui.Ctx, se core.SessionState, tone render.Co
 		}
 		return
 	}
+	if s := se.Agent.Starting; s != nil {
+		c.Column("box", ui.Style{W: ui.Flex(1), H: ui.Px(missionBodyH), Pad: ui.Pad(12), Gap: 8, Fill: th.C(tMissionBox),
+			Stroke: theme.WithAlpha(th.C(theme.StatusWorking), .35), Border: 1, Radius: 6, Clip: true}, func(c *ui.Ctx) {
+			c.Row("k", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+				widget.Spinner(c, "spin", widget.SpinnerOpts{Size: 11, Tone: th.C(theme.StatusWorking), Name: "starting", Help: startingHelp})
+				c.Text("k", "STARTING · "+elapsed(c.Now().Sub(s.Since)), kickerFont(th.C(theme.StatusWorking)))
+			})
+			widget.Wrap(c, "t", s.Step+"…", missionMinCardW-40, uiFont(12.5, th.C(theme.Fg)))
+			if s.Note != "" {
+				widget.Wrap(c, "note", firstLines(s.Note, 3), missionMinCardW-40, uiFont(12, th.C(theme.FgMuted)))
+			}
+		})
+		c.WakeAt(c.Now().Truncate(time.Second).Add(time.Second))
+		return
+	}
 	if se.Status == core.StatusWorking || se.Agent.Working {
 		x.liveOutput(c, se)
 		return

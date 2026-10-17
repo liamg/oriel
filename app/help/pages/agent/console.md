@@ -23,10 +23,17 @@ conversation. The answer shows at the end of the transcript.
 
 Ends the agent's turn (`Esc` with the transcript focused). With the agent idle, `Esc` closes the console.
 
+## Starting {#starting}
+
+While the agent starts, a card with a spinner says what its start is doing and for how long: "Building the sandbox
+image", "Installing go@1.26 in the sandbox". A step that only happens once says so; later sessions reuse what it
+made and start in seconds. Your request is queued meanwhile and goes to the agent once it's up. If the start fails,
+the session says why.
+
 ## Raw terminal
 
 Opens the agent's own terminal, streamed from its worker, as a terminal tab: what the CLI shows, and what you type
-goes to it.
+goes to it. While the agent is still starting there is no terminal yet, and the tab says so.
 
 ## Transcript
 

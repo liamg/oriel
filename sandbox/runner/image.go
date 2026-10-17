@@ -31,7 +31,7 @@ func Image(ctx context.Context, root string, cfg sandbox.Config) (string, error)
 			if df, ok := RepoDockerfile(p.Repo); ok {
 				if ps.Dockerfile == container.Sum(df) {
 					tag := container.ProjectImage(df)
-					return tag, container.EnsureImage(ctx, tag, df)
+					return tag, ensureImage(ctx, tag, df)
 				}
 				notePending(p.Repo, df)
 			}
@@ -41,7 +41,16 @@ func Image(ctx context.Context, root string, cfg sandbox.Config) (string, error)
 		return cfg.Image, nil
 	}
 	tag := container.BaseImage()
-	return tag, container.EnsureImage(ctx, tag, container.BaseDockerfile)
+	return tag, ensureImage(ctx, tag, container.BaseDockerfile)
+}
+
+// ensureImage builds tag from dockerfile if it isn't there yet, saying so first.
+func ensureImage(ctx context.Context, tag, dockerfile string) error {
+	if !container.ImageExists(ctx, tag) {
+		sandbox.Report(ctx, sandbox.Progress{Step: "Building the sandbox image",
+			Note: "This happens once: later sessions reuse the image and start in seconds."})
+	}
+	return container.EnsureImage(ctx, tag, dockerfile)
 }
 
 // RepoDockerfile reads the repo's sandbox Dockerfile from its default branch,

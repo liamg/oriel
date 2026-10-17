@@ -100,6 +100,7 @@ type Worker struct {
 	prompts     prompts.Overrides
 	promptsSent bool
 	closed      chan struct{}
+	starts      sync.WaitGroup // agents starting off their callers (host.startAside)
 	stopOnce    sync.Once
 }
 
@@ -251,7 +252,7 @@ func (w *Worker) restore() error {
 // settle puts back what a restart stopped: nothing runs until it's resumed, and nobody is asked anything.
 func (w *Worker) settle() {
 	for _, se := range w.store.State().Sessions {
-		if se.Agent.Running || se.Agent.Working || len(se.Asks) > 0 {
+		if se.Agent.Running || se.Agent.Working || se.Agent.Starting != nil || len(se.Asks) > 0 {
 			a := se.Agent
 			a.Stopped(core.StoppedByWorker, w.opts.Now())
 			_ = w.store.Apply(core.AgentChanged{ID: se.ID, Agent: a})
@@ -359,6 +360,7 @@ func (w *Worker) Close() error {
 	for _, h := range hosts {
 		h.stop("the worker stopped", core.StoppedByWorker)
 	}
+	w.starts.Wait()
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	var err error

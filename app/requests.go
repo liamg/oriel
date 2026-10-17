@@ -570,9 +570,17 @@ func statusLabel(se core.SessionState, t core.Thread) (string, theme.TokenID) {
 	case t.Btw:
 		return "btw", theme.FgFaint
 	case len(t.Undelivered()) > 0:
-		return "queued", tQueued
+		return queuedLabel(se), tQueued
 	}
 	return "open", theme.FgFaint
+}
+
+// queuedLabel is what a request waiting for the agent says: that the agent is starting, when it is.
+func queuedLabel(se core.SessionState) string {
+	if se.Agent.Starting != nil {
+		return "queued · agent starting"
+	}
+	return "queued"
 }
 
 // preview is the list's second line for a request: the last word in it.

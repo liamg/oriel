@@ -115,8 +115,11 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 		}},
 		{"Scratch", "scratch", func() { prompt("notes for the offsite") }},
 	} {
-		r.typeKeys("<D-n>")
-		r.waitText("NEW SESSION")
+		// Start lands on the session's first request, where ⌘N is a new request: the launcher opens by its command.
+		if err := r.do(func() error { return r.host.Run(context.Background(), "session.new", nil) }); err != nil {
+			t.Fatal(err)
+		}
+		r.latest("the launcher", func(f headless.Frame) bool { return strings.Contains(f.Text(), "NEW SESSION") })
 		r.clickTop(tc.mode)
 		r.latest(tc.mode+" picked", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start "+tc.mode) })
 		tc.fill()
@@ -126,6 +129,10 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 			t.Errorf("%s started the %q pack, want %q", tc.mode, a.Spec.Pack.Name, tc.pack)
 		}
 		r.waitGone("NEW SESSION")
+		waitState(t, r.store, "the "+tc.mode+" session in front", func(st core.State) bool {
+			se, ok := st.Session(st.Focus)
+			return ok && se.Snapshot().Kind == core.Kind(tc.pack)
+		})
 	}
 
 	st := r.store.State()

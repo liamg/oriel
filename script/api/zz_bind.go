@@ -534,6 +534,12 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return []any{x.Spacer()}, nil
 			},
+			"spinner": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Spinner(c.Table(0))}, nil
+			},
 			"state": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err

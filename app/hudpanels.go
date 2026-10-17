@@ -502,6 +502,9 @@ func why(s core.SessionState, now time.Time) string {
 			}
 		}
 	case core.StatusWorking:
+		if st := s.Agent.Starting; st != nil {
+			return "starting · " + st.Step
+		}
 		n := 0
 		for _, a := range s.Subagents {
 			if a.Running {

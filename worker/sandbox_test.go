@@ -35,6 +35,7 @@ type sandboxRig struct {
 	remote   string
 	launched chan []string
 	opts     chan sandbox.LaunchOptions
+	hold     chan struct{} // when set, a launch reports a step and waits on it
 }
 
 // fakeBackend launches an echo in place of the agent.
@@ -42,9 +43,13 @@ type fakeBackend struct{ s *sandboxRig }
 
 func (fakeBackend) Name() string { return "fake" }
 
-func (f fakeBackend) Launch(_ context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (f fakeBackend) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
 	f.s.launched <- argv
 	f.s.opts <- o
+	if f.s.hold != nil {
+		sandbox.Report(ctx, sandbox.Progress{Step: "Building the sandbox image", Note: "Only the first time"})
+		<-f.s.hold
+	}
 	return sandbox.Command{Argv: []string{"echo", "in the container"}, Env: os.Environ()}, nil
 }
 
@@ -659,4 +664,49 @@ func TestGatewaySeesConfiguredServers(t *testing.T) {
 	if !slices.Contains(got, "linear stdio npx -y linear-mcp --flag") {
 		t.Errorf("the gateway's upstreams are %q", got)
 	}
+}
+
+// Starting a session doesn't wait for its agent: the session is there at once, and while the sandbox readies the
+// agent's state says what it's doing (a step and why it takes a while) until the agent is up and has the prompt.
+func TestStartDoesNotWaitForTheSandbox(t *testing.T) {
+	s := newSandboxRig(t)
+	s.fake.Launch = true
+	s.hold = make(chan struct{})
+	started := make(chan core.SessionID, 1)
+	go func() {
+		id, err := s.w.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake",
+			Repos: []core.RepoID{core.RepoID(s.repo.Dir)}, Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
+		if err != nil {
+			t.Error(err)
+		}
+		started <- id
+	}()
+	var id core.SessionID
+	select {
+	case id = <-started:
+	case <-time.After(5 * time.Second):
+		close(s.hold)
+		t.Fatal("Start waited for the sandbox")
+	}
+	se := s.eventually(id, "the sandbox's step", func(se core.SessionState) bool {
+		return se.Agent.Starting != nil && se.Agent.Starting.Step == "Building the sandbox image"
+	})
+	if se.Agent.Starting.Note != "Only the first time" || se.Agent.Starting.Since.IsZero() || se.Agent.Running {
+		t.Errorf("while starting: %+v", se.Agent)
+	}
+	if se.Status != core.StatusWorking {
+		t.Errorf("a session whose agent is starting is %s, want working", se.Status)
+	}
+	close(s.hold)
+	a := s.agent()
+	select {
+	case in := <-a.Sent:
+		if !strings.Contains(in.Text, "Work") {
+			t.Errorf("first input: %q", in.Text)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the agent never got the prompt")
+	}
+	se = s.eventually(id, "the agent up", func(se core.SessionState) bool { return se.Agent.Running && se.Agent.Starting == nil })
+	_ = se
 }

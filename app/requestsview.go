@@ -258,6 +258,7 @@ func (x *requests) requestView(c *ui.Ctx, vc registry.ViewCtx) {
 							block(cm.ID)
 							x.comment(c, se, t, cm, width)
 						}
+						startingCard(c, "starting", se, width)
 					})
 					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 					c.Row("composerwrap", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(0, 14), Main: ui.Center}, func(c *ui.Ctx) {
@@ -420,7 +421,7 @@ func (x *requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					widget.Chip(c, "progress", "working on it", th.C(theme.StatusWorking), "agent/requests#request")
 				}
 				if cm.Author == core.AuthorYou && !cm.Delivered && !cm.Btw && se.Agent.Provider != "" {
-					widget.Chip(c, "queued", "queued", th.C(tQueued), "agent/requests#request")
+					widget.Chip(c, "queued", queuedLabel(se), th.C(tQueued), "agent/requests#request")
 				}
 			})
 			markdownText(c, "body", cm.Body, inner, uiFont(13, th.C(theme.Fg)))

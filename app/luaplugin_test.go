@@ -270,3 +270,14 @@ func TestLuaRing(t *testing.T) {
 		t.Errorf("the ring reads as %+v", n)
 	}
 }
+
+// oriel.ui.spinner draws widget.Spinner, read out as what's in progress.
+func TestLuaSpinner(t *testing.T) {
+	s := luaScene(t, `oriel.hud.indicator("busy", { slot = "statusline.right" },
+  oriel.ui.spinner{ name = "syncing the wiki", size = 12, color = "accent" })`)
+	s.frame()
+	s.frame()
+	if n := s.access("syncing the wiki"); n.Role != "status" {
+		t.Errorf("the spinner reads as %+v", n)
+	}
+}

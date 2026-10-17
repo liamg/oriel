@@ -41,23 +41,31 @@ type PastPR struct {
 	Closed  time.Time `json:"closed,omitzero"`
 }
 
+// AgentStart is what an agent's start is doing: a step and why it's slow, since it began.
+type AgentStart struct {
+	Step  string    `json:"step"`           // "Building the sandbox image"
+	Note  string    `json:"note,omitempty"` // "Only the first time: later sessions reuse it."
+	Since time.Time `json:"since"`
+}
+
 // AgentState is a session's agent: who it is, and what it's doing.
 type AgentState struct {
-	Provider    string    `json:"provider,omitempty"` // "claude", "codex"; "" for none
-	Model       string    `json:"model,omitempty"`
-	Effort      string    `json:"effort,omitempty"`
-	Session     string    `json:"session,omitempty"` // the provider's own id, to resume by
-	Running     bool      `json:"running,omitempty"` // its process is up
-	Working     bool      `json:"working,omitempty"` // a turn is running
-	TurnStarted time.Time `json:"turnStarted,omitzero"`
-	Error       string    `json:"error,omitempty"`  // the last failure, until a turn succeeds
-	Policy      string    `json:"policy,omitempty"` // the agent's own gate: ask, light or bypass
-	Sandboxed   bool      `json:"sandboxed,omitempty"`
-	Network     string    `json:"network,omitempty"` // in a sandbox: ask or open
-	Backend     string    `json:"backend,omitempty"` // in a sandbox: what confines it; "" is the worker's sandbox.backend
-	Pack        string    `json:"pack,omitempty"`    // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
-	Queue       []string  `json:"queue,omitempty"`   // messages waiting for the turn to end
-	Stats       Stats     `json:"stats,omitzero"`
+	Provider    string      `json:"provider,omitempty"` // "claude", "codex"; "" for none
+	Model       string      `json:"model,omitempty"`
+	Effort      string      `json:"effort,omitempty"`
+	Session     string      `json:"session,omitempty"`  // the provider's own id, to resume by
+	Running     bool        `json:"running,omitempty"`  // its process is up
+	Starting    *AgentStart `json:"starting,omitempty"` // what its start is doing, until it's up or has failed
+	Working     bool        `json:"working,omitempty"`  // a turn is running
+	TurnStarted time.Time   `json:"turnStarted,omitzero"`
+	Error       string      `json:"error,omitempty"`  // the last failure, until a turn succeeds
+	Policy      string      `json:"policy,omitempty"` // the agent's own gate: ask, light or bypass
+	Sandboxed   bool        `json:"sandboxed,omitempty"`
+	Network     string      `json:"network,omitempty"` // in a sandbox: ask or open
+	Backend     string      `json:"backend,omitempty"` // in a sandbox: what confines it; "" is the worker's sandbox.backend
+	Pack        string      `json:"pack,omitempty"`    // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
+	Queue       []string    `json:"queue,omitempty"`   // messages waiting for the turn to end
+	Stats       Stats       `json:"stats,omitzero"`
 	// StoppedBy is who stopped it, while it's stopped: StoppedByYou, StoppedByAgent or StoppedByWorker.
 	StoppedBy string    `json:"stoppedBy,omitempty"`
 	StoppedAt time.Time `json:"stoppedAt,omitzero"`
@@ -84,12 +92,15 @@ func (a *AgentState) RanOn(at time.Time, account, name string) {
 	a.Accounts = append(slices.Clone(a.Accounts), AccountAt{At: at, Account: account, Name: name})
 }
 
+// Live says the agent is up or on its way: running, or starting.
+func (a AgentState) Live() bool { return a.Running || a.Starting != nil }
+
 // Stopped is the agent stopped at t by by; one that wasn't running keeps who stopped it.
 func (a *AgentState) Stopped(by string, t time.Time) {
 	if a.Running && by != "" {
 		a.StoppedBy, a.StoppedAt = by, t.UTC()
 	}
-	a.Running, a.Working = false, false
+	a.Running, a.Working, a.Starting = false, false, nil
 }
 
 // Who stopped an agent.

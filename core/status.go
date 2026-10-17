@@ -37,7 +37,7 @@ func DeriveStatus(se SessionState) Status {
 		owes = owes || t.WaitsOnAgent()
 	}
 	if owes {
-		if !se.Agent.Running {
+		if !se.Agent.Live() {
 			return StatusNeedsYou
 		}
 		return StatusWorking

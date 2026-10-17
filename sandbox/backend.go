@@ -16,7 +16,8 @@ type Backend interface {
 	// Name is the backend's name in sandbox.backend.
 	Name() string
 	// Launch readies root's sandbox for an agent in cwd running argv, and
-	// returns the command to run under the PTY in its place.
+	// returns the command to run under the PTY in its place. A slow step says
+	// what it's doing with Report(ctx, …).
 	Launch(ctx context.Context, root, cwd string, argv []string, o LaunchOptions) (Command, error)
 	// Stop ends what Launch started for root. The workspace is untouched.
 	Stop(ctx context.Context, root string) error

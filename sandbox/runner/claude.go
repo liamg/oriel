@@ -85,6 +85,8 @@ func downloadClaude(ctx context.Context, version string) (string, error) {
 	if _, err := os.Stat(dst); err == nil {
 		return dst, nil
 	}
+	sandbox.Report(ctx, sandbox.Progress{Step: "Downloading Claude Code " + version + " for the sandbox",
+		Note: "Once for each version: later sessions reuse it."})
 	platform := "linux-x64"
 	if runtime.GOARCH == "arm64" {
 		platform = "linux-arm64"

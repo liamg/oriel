@@ -370,6 +370,11 @@ func (x *agentConsole) fork(id core.SessionID, prompt string) error {
 
 // rawTerminal shows the agent's own terminal, streamed from its worker, in a terminal view, and types into it.
 func (x *agentConsole) rawTerminal(ctx registry.Ctx, id core.SessionID, typed string) error {
+	if se, ok := x.sh.cfg.Store.Session(id); ok {
+		if a := se.Snapshot().Agent; a.Starting != nil {
+			return fmt.Errorf("%s has no terminal yet: it's still starting (%s)", providerName(a.Provider), a.Starting.Step)
+		}
+	}
 	c, err := x.client(id)
 	if err != nil {
 		return err
@@ -453,6 +458,8 @@ func consoleStatus(se core.SessionState) (string, theme.TokenID) {
 		return "wants permission", theme.StatusPermission
 	case se.Agent.Working:
 		return "working", theme.StatusWorking
+	case se.Agent.Starting != nil:
+		return "starting", theme.StatusWorking
 	case se.Agent.Error != "":
 		return "failed", theme.Error
 	case se.Agent.Provider != "" && !se.Agent.Running:
@@ -607,7 +614,9 @@ func (x *agentConsole) transcript(c *ui.Ctx, se core.SessionState, st *consoleSt
 				c.Box(k, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, a, false, st.sel == k, nil) })
 			}
 		}
-		if len(se.Transcript) == 0 && len(asks) == 0 {
+		if se.Agent.Starting != nil {
+			startingCard(c, "starting", se, width)
+		} else if len(se.Transcript) == 0 && len(asks) == 0 {
 			c.Text("empty", "Nothing yet: the agent's turns show here as they happen.", uiFont(12.5, th.C(theme.FgGhost)))
 		}
 		for _, it := range se.Transcript {

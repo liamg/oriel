@@ -51,6 +51,19 @@ flowchart LR
   ("fix CI" opens a work session on the PR's branch), or an agentbus review request.
 - **CLI**: `oriel new "fix stale search results" --repo search --ticket ENG-2231`, `oriel review <pr-url>`, `oriel open <session>`,
   `oriel init <name> --template go-cli`, `oriel ~/src/foo` (direct).
+- **Starting doesn't wait for the agent.** `Worker.Start` returns once the session and its first request exist; the
+  agent starts off the call (`host.startAside`, which `Worker.Close` cancels and waits for), as does a comment to a
+  session whose agent isn't up. A sandbox's first start can take minutes (the image, toolchains, Claude's binary),
+  so while it starts `AgentState.Starting` says what it's doing: a step, a note when the step is a one-off, and
+  since when (`core.AgentStart`). A backend's slow steps say so with `sandbox.Report(ctx, Progress{Step, Note})`;
+  the docker backend reports building an image, installing toolchains and downloading Claude, each only when it
+  does the work. A session whose agent is starting is working, not "needs you" (`AgentState.Live`), and a job's
+  run is running. A failed start leaves `Starting` nil and `Error` set; a stop or a closing worker during a start
+  cancels it, and what it made is closed.
+- **Where Start lands.** The launcher's Start passes `session.start {then = [{command = "request.open"}]}` when the
+  session has a first request, so the window comes up on it: the request, queued "· agent starting", with a card
+  (spinner, step, time so far, the note) until the agent is up and has it. Mission control's card says STARTING
+  with the step, the console's header chip says starting, and the raw terminal says there's none yet.
 
 ### Repos on a worker
 

@@ -169,7 +169,7 @@ func clipLine(s string, n int) string {
 func (x *assistantPlugin) lineOf(st core.State, s core.SessionState, now time.Time) sessionLine {
 	l := sessionLine{ID: string(s.ID), Name: s.Name, Kind: string(s.Kind), Status: string(s.Status), Why: why(s, now),
 		Worker: x.workerName(st, s.Worker), Branch: s.Branch, Prompt: clipLine(s.Prompt, 200), Ticket: s.Ticket, PR: s.PR,
-		Stopped: s.Agent.Provider != "" && !s.Agent.Running}
+		Stopped: s.Agent.Provider != "" && !s.Agent.Live()}
 	for _, p := range s.Projects {
 		l.Repos = append(l.Repos, p.Name)
 	}
@@ -205,7 +205,7 @@ func (x *assistantPlugin) toolSessions(registry.Ctx, map[string]any) (any, error
 
 // finished says whether a session can be resumed: archived, or its agent stopped.
 func finished(s core.SessionState) bool {
-	return s.Archived || s.Agent.Provider != "" && !s.Agent.Running
+	return s.Archived || s.Agent.Provider != "" && !s.Agent.Live()
 }
 
 func (x *assistantPlugin) toolPastSessions(registry.Ctx, map[string]any) (any, error) {

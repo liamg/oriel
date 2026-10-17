@@ -124,9 +124,11 @@ func (w *Worker) Comment(ctx context.Context, r CommentReq) (core.ThreadID, erro
 	if se.Agent.Provider == "" || se.Archived || !t.Open() {
 		return t.ID, nil
 	}
-	h, err := w.hostFor(r.Session, true)
-	if err != nil {
-		return t.ID, err
+	h := w.hostOf(r.Session)
+	if !h.running() {
+		// A sandbox can take minutes to ready the first time: the comment waits for the agent, the caller doesn't.
+		h.startAside()
+		return t.ID, nil
 	}
 	if r.Urgent {
 		h.urgent()

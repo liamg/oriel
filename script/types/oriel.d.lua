@@ -441,6 +441,11 @@ function oriel.ui.select(spec) end
 ---@return table
 function oriel.ui.spacer() end
 
+--- Something in progress with no known end (widget.Spinner): { name (what's in progress, read out), color (a theme token or #rrggbb; the accent by default), size (px across, 14 by default), id }. It holds still with reduced motion.
+---@param spec table
+---@return table
+function oriel.ui.spinner(spec) end
+
 --- A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance.
 ---@param key string
 ---@param initial? any

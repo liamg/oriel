@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/worker/stats"
 )
 
@@ -107,13 +108,32 @@ func (h *host) start() error {
 		return nil
 	}
 	h.starting = true
+	since := h.w.opts.Now().UTC()
+	ctx, cancel := context.WithCancel(sandbox.WithProgress(context.Background(), func(p sandbox.Progress) {
+		h.setAgent(func(a *core.AgentState) {
+			if a.Starting != nil {
+				a.Starting = &core.AgentStart{Step: p.Step, Note: p.Note, Since: since}
+			}
+		})
+	}))
+	h.cancel = cancel
 	h.mu.Unlock()
-	sess, box, err := h.launch()
+	h.setAgent(func(a *core.AgentState) { a.Starting = &core.AgentStart{Step: "Starting the agent", Since: since} })
+	sess, box, err := h.launch(ctx, cancel)
 	h.mu.Lock()
 	h.starting = false
+	if err == nil && ctx.Err() != nil { // stopped while it started
+		h.mu.Unlock()
+		_ = sess.Close()
+		if box != nil {
+			_ = box.Close()
+		}
+		return errors.New("the agent was stopped as it started")
+	}
 	if err != nil {
 		h.mu.Unlock()
-		h.setAgent(func(a *core.AgentState) { a.Running, a.Working, a.Error = false, false, err.Error() })
+		cancel()
+		h.setAgent(func(a *core.AgentState) { a.Running, a.Working, a.Starting, a.Error = false, false, nil, err.Error() })
 		h.refusedForLogin(err)
 		return err
 	}
@@ -122,7 +142,7 @@ func (h *host) start() error {
 	acct, name := h.w.accountOf(h.snapshot().Agent.Provider)
 	now := h.w.opts.Now().UTC()
 	h.setAgent(func(a *core.AgentState) {
-		a.Running, a.Error, a.StoppedBy, a.StoppedAt = true, "", "", time.Time{}
+		a.Running, a.Starting, a.Error, a.StoppedBy, a.StoppedAt = true, nil, "", "", time.Time{}
 		a.RanOn(now, acct, name)
 	})
 	go h.loop(sess)
@@ -131,7 +151,17 @@ func (h *host) start() error {
 	return nil
 }
 
-func (h *host) launch() (agent.Session, Sandbox, error) {
+// startAside starts the agent off the caller: a failure is in the agent's state, and logged. Close waits for it.
+func (h *host) startAside() {
+	h.w.starts.Go(func() {
+		if err := h.start(); err != nil {
+			h.w.log.Warn("the agent didn't start", "session", h.id, "err", err)
+		}
+	})
+}
+
+// launch starts the agent under ctx, which cancel ends if it fails.
+func (h *host) launch(ctx context.Context, cancel context.CancelFunc) (agent.Session, Sandbox, error) {
 	w := h.w
 	se, err := w.session(h.id)
 	if err != nil {
@@ -141,10 +171,6 @@ func (h *host) launch() (agent.Session, Sandbox, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("no agent provider %q", se.Agent.Provider)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	h.mu.Lock()
-	h.cancel = cancel
-	h.mu.Unlock()
 	spec := agent.StartSpec{Cwd: agentDir(se), Model: se.Agent.Model, Effort: se.Agent.Effort, Policy: agent.Policy(se.Agent.Policy),
 		Tools: w.tools(h), Protect: w.protected(se), Exec: w.opts.Exec, StateDir: filepath.Join(w.sessionDir(h.id), "agent"),
 		Env: []string{"ORIEL_SESSION=" + string(h.id)}}

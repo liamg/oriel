@@ -434,7 +434,8 @@ flowchart TB
   mode `assistant`; view `app.overlay.assistant`; options `assistant.provider`, `assistant.model`, `assistant.web`,
   `assistant.wake`, `assistant.idle`; the prompt `assistant.system` (group Assistant, `{{date}}`, `{{workers}}`);
   the inbox source `assistant`; a Decide hook on `VoiceWake`. `session.start {background}` starts a session behind the
-  one in front. `gh.SearchPRs` (`gh.SearchMine`, `gh.SearchReview`) through the worker's `github.prs`
+  one in front; `session.start {then}`, like `session.open`'s, is a list of `{command, args}` run once the window
+  is on it (the launcher's opens the first request). `gh.SearchPRs` (`gh.SearchMine`, `gh.SearchReview`) through the worker's `github.prs`
   (`Client.SearchPRs`); `gh.ParsePR` reads a PR's URL or `owner/name#N`.
 - prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
   registered on the worker (`worker.Kinds().Register(worker.KindSpec{…})`: its title, a few words (`Desc`), what
@@ -865,7 +866,9 @@ type Host interface {
   options"; a plugin's are named `plugin.<name>.…`, in its own section, disposed with it);
   `oriel.now()` is the window's clock (`plugin.UIView.Now`, `ui.UI.Now`), which a test fixes; `oriel.platform`;
   `oriel.exec(argv, { on_done })` runs in the background; `oriel.ui.ring` and `widget.Ring` (theme tokens
-  `ring.track`, `ring.arc`, `ring.label`); a `title` text style.
+  `ring.track`, `ring.arc`, `ring.label`); a `title` text style. Since: `oriel.ui.spinner` and `widget.Spinner`
+  (tokens `spinner.track`, `spinner.arc`), a quarter arc going round in twelve ticks a turn, a frame a tick, still
+  with reduced motion.
 
 ## As built (PL-9)
 

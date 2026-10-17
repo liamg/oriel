@@ -122,6 +122,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.ui.row(children)", Doc: "A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).", Cap: "ui"},
 		{Call: "oriel.ui.select(spec)", Doc: "A menu of choices: { value, options = { … }, on_change = fn(value), id, label }.", Cap: "ui"},
 		{Call: "oriel.ui.spacer()", Doc: "Space that takes what's left.", Cap: "ui"},
+		{Call: "oriel.ui.spinner(spec)", Doc: "Something in progress with no known end (widget.Spinner): { name (what's in progress, read out), color (a theme token or #rrggbb; the accent by default), size (px across, 14 by default), id }. It holds still with reduced motion.", Cap: "ui"},
 		{Call: "oriel.ui.state(key, initial?)", Doc: "A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance.", Cap: "ui"},
 		{Call: "oriel.ui.text(s, style?)", Doc: "Text, in a style: dim, faint, accent, warn, error, ok, or title (larger and bold: a heading, a meeting's name).", Cap: "ui"},
 		{Call: "oriel.ui.toggle(spec)", Doc: "An on/off switch: { on, on_change = fn(on), id, label }.", Cap: "ui"},

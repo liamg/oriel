@@ -317,6 +317,9 @@ func (x *launcher) args() registry.Args {
 			a["clone"] = clone
 		}
 	}
+	if a.String("prompt") != "" || a.String("ticket") != "" {
+		a["then"] = []any{map[string]any{"command": "request.open"}} // the first request, as the agent gets it
+	}
 	return a
 }
 

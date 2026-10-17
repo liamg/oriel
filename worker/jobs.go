@@ -406,7 +406,7 @@ func RunOf(se core.SessionState) Run {
 		if asking && !t.AgentAnswered() {
 			r.Ended, r.Summary = time.Time{}, askText(se.Asks)
 		}
-	case se.Agent.Running && !se.Archived:
+	case se.Agent.Live() && !se.Archived:
 		r.Status, r.Ended = RunRunning, time.Time{}
 	default:
 		r.Status, r.StoppedBy = RunStopped, se.Agent.StoppedBy

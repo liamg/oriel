@@ -275,6 +275,8 @@ func Provision(ctx context.Context, image string, id sandbox.Identity, tools []T
 		missing = append(missing, t.String())
 	}
 	if len(missing) > 0 {
+		sandbox.Report(ctx, sandbox.Progress{Step: "Installing " + strings.Join(missing, ", ") + " in the sandbox",
+			Note: "Once for each version: later sessions reuse it."})
 		args := []string{"run", "--rm", "--user", fmt.Sprintf("%d:%d", id.UID, id.GID),
 			"-e", "HOME=/tmp", "-e", "MISE_YES=1",
 			"-e", "MISE_DATA_DIR=" + MiseDir + "/data", "-e", "MISE_CACHE_DIR=" + MiseDir + "/cache",
