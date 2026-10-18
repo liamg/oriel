@@ -1,30 +1,29 @@
 # Architecture
 
-One Go monorepo, many small modules behind interfaces. The desktop app is a
-client of a headless core. Workers stay as they are in crit: one per machine,
-dialling home.
+One Go monorepo, many small modules behind interfaces. One process per machine:
+the Oriel window, which hosts its sessions itself. Another machine runs its own
+Oriel; the two never talk.
 
 ## Processes
 
 ```mermaid
 flowchart LR
-  subgraph oriel_desktop_app
+  subgraph oriel_one_process_per_machine
     UI["ui + render"]
-    Core["core (in-process)"]
-    UI --> Core
-  end
-  subgraph oriel_worker_per_machine
-    Sess["session host"]
+    Core["core store"]
+    Sess["session host (host)"]
     Agent["agent provider (claude / codex)"]
-    LSP["lsp + dap hosts"]
+    LSP["lsp + dap"]
     PTY["pty / terminals"]
+    UI --> Core
+    UI -- "Go calls" --> Sess
+    Sess --> Core
   end
   subgraph sandbox_per_workspace
     Tools["agent tools, builds, tests"]
     GW["gateway MCP"]
     Egress["egress proxy"]
   end
-  Core -- "wire: yamux over TLS" --> Sess
   Sess --> Agent
   Agent --> Tools
   Tools --> GW
@@ -33,29 +32,28 @@ flowchart LR
   Sess --> PTY
 ```
 
-- **Desktop app** (`oriel`): UI, renderer and the client-side core in one process.
+- **Oriel** (`oriel`): UI, renderer, core and the session host in one process.
   Holds the editor buffers you're typing into, so keystrokes never leave the process.
-- **Worker** (`oriel worker`): what crit's worker and session servers are
-  today, merged into one process per machine. It owns worktrees, agents,
-  sandboxes, LSP/DAP servers and PTYs. The local machine runs one too.
+- **Session host** (`host`): what crit's worker and session servers are, as a
+  package in the app's process. It owns worktrees, agents, sandboxes, LSP/DAP
+  servers and PTYs. The app calls its methods directly; there is no socket.
+- **One Oriel at a time**: the app holds `~/.oriel/oriel.lock` (`sessions.md`).
 - **Sandbox**: kept from crit unchanged: container, gateway MCP, egress proxy, network approvals.
-- **No per-session HTTP servers.** Sessions are objects inside the worker,
-  reached over a single multiplexed connection. This cuts the port-range and
-  registry machinery.
+- **No per-session HTTP servers.** Sessions are objects inside the host,
+  reached by plain Go calls. This cuts the port-range and registry machinery.
 - **No browser, no built-in web client.** Remote control (a phone, a browser) would be a **plugin**: a process plugin
   with `session.control` and agent permissions that serves its own UI. The core protocol stays private.
 
 ## Where buffers live
 
-- The file of record is on the worker (in the worktree).
+- The file of record is in the worktree.
 - The app holds a **replica** per open buffer: `text` rope plus an op log.
 - Edits flow both ways as ops tagged with an author. The agent's edits arrive
-  as file changes on the worker, which turns them into ops (a diff against the
-  last synced snapshot). Simple OT is enough: there are only two writers, and
-  the worker sequences them.
-- LSP runs on the worker, next to the code and toolchain (and inside the
-  sandbox when there is one). The app forwards requests, and keeps the latency
-  tolerable with optimistic local highlighting from tree-sitter.
+  as file changes in the worktree, which the host turns into ops (a diff against
+  the last synced snapshot). Simple OT is enough: there are only two writers, and
+  the host sequences them.
+- LSP runs next to the code and toolchain (and inside the sandbox when there is
+  one), with optimistic local highlighting from tree-sitter.
 
 ## Go modules (one repo, `go.work`)
 
@@ -69,11 +67,10 @@ flowchart LR
 | `dap` | DAP client, adapter registry | lsp/jsonrpc (the base protocol's framing) |
 | `testrun` | test discovery, runner adapters (go, pytest, vitest/jest, cargo), result streams, watch, coverage | text, syntax |
 | `term` | the terminal model behind `term.Emulator`: grid, scrollback, modes, keys, snapshots, OSC 133 commands and OSC 7 cwd; `term/ghostty` (libghostty-vt as wasm under wazero), `term/pty` (pseudo-terminals over `x/sys/unix`), `term/vttest` (esctest-style case runner) | wazero, x/sys |
-| `wire` | yamux protocol, typed RPC + event streams | – |
-| `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | wire |
+| `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | – |
 | `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/prompts` (the editable prompts and the user's versions of them); `agent/jsonrpc` | core, term (PTYs) |
 | `agent/claude`, `agent/codex` | provider impls | agent |
-| `worker` | session host, pty, worktrees, launches providers; `worker/search` (project search on ripgrep); `worker/sysload` (CPU and memory) | core, agent, gitx, testrun (test runs as evidence), wire, sandbox, registry/settingsfile and toml (its repos' own project settings) |
+| `host` | the session host, in the app's process: sessions, pty, worktrees, launches providers, jobs; `host/search` (project search on ripgrep); `host/stats` (session stats); `host/sysload` (CPU and memory); `host/tour` (tours) | core, agent, gitx, gh, testrun (test runs as evidence), sandbox |
 | `sandbox` | sandbox backends (docker containers, macOS seatbelt), gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear, slack (agentbus is company-specific, so it's an external plugin, `github.com/liamg/oriel-agentbus`, with its `oriel-agentbus` helper process) | core; their processes `agent/jsonrpc`, `gh` |
@@ -81,14 +78,14 @@ flowchart LR
 | `render/gio` | the Gio backend: windows, input, offscreen rendering, the glyph atlas and baked shapes | render, gioui.org |
 | `ui` | widgets, layout, theme, animation, input routing | render |
 | `app` | the desktop app: screens, panels, HUD; wires it all together | everything |
-| `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`); `registry/settingsfile` (settings files and their trust, shared with the worker) needs only toml |
+| `registry` | contribution registry: commands, events/hooks, options, views, decorations | ui (a view returns a `ui.Node`); `registry/settingsfile` (settings files and their trust) needs only toml |
 | `script` | Lua VM (`script/gopherlua`, maybe `script/luajit`), the `oriel.*` bindings generated from Go | registry |
 | `catalog` | the plugin registry's client and the plugin manager (catalog.md): `oriel plugin pack`, `[plugins]` in settings.toml, oriel-lock.toml, signed indexes | plugin, registry, gitx, toml, script/api (the API's capabilities, for pack), tools/depcheck (a plugin's deps, for the registry's CI) |
 | `plugin` | plugin host: manifests, process RPC, wasm, plugin manager, permissions | registry, core (`Host` hands out sessions) |
-| `assistant` | the assistant's conversation (ui.md 11): turns typed or spoken, replies and their rows, confirmations, actions with an undo, idle reaping; its agent behind an interface (a worker's utility agent in the app) | – |
+| `assistant` | the assistant's conversation (ui.md 11): turns typed or spoken, replies and their rows, confirmations, actions with an undo, idle reaping; its agent behind an interface (the host's utility agent in the app) | – |
 | `voice` | dictation: a recorder program as the microphone, phrases at pauses, whisper.cpp or an OpenAI-compatible endpoint, the wake word, speech; `voice/voicetest` (a scripted mic and transcriber) | – |
-| `update` | release manifests (ed25519), staged swap and rollback, pushing updates to workers | wire |
-| `cmd/oriel` | the binary (app, worker, cli subcommands) | app, worker, update |
+| `update` | release manifests (ed25519), staged swap and rollback | – |
+| `cmd/oriel` | the binary (the app, and the `hook`, `version`, `build`, `plugin`, `update` and `dev` subcommands) | app, host, update |
 | `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. Superseded by `render/gio`; kept for its report | gioui.org |
 | `toml` | TOML 1.0 parser and round-tripping editor, for settings and themes (`settings.md`) | – |
 | `theme` | theme files, colour maths (CSS Color 4, OkLCh) and token resolution into a flat table (`theming.md`) | toml |
@@ -104,10 +101,10 @@ Rules:
 
 ## Events
 
-- The worker is the source of truth for session state, and streams typed events
-  (`ThreadUpdated`, `AgentTurn`, `TaskChanged`, `UsageSampled`, `WorkerLoad`, …).
-- The app keeps a materialised `core.State` and the UI reads from it. The UI
-  never asks the network on a frame.
+- The host is the source of truth for session state. It applies typed events
+  (`ThreadUpdated`, `AgentTurn`, `TaskChanged`, `UsageSampled`, `MachineChanged`, …)
+  to a `core.Store`, and the app shares that store.
+- The materialised `core.State` is what the UI reads. The UI never asks the host on a frame.
 - The same event log feeds the HUD, notifications, the assistant's context and tests.
 - An event is a plain struct with `Scope()` (its session, or none) and `Apply(*State) error`, its effect on state.
   A store applies it to a copy and keeps the copy only if it applied cleanly, so a rejected event changes nothing.
@@ -118,12 +115,12 @@ Rules:
 ## What crit code carries over
 
 - Ported almost as-is: `sandbox`, `egress`, `gateway`, `mcp`, `gh`, `git`,
-  `wire`, `agentbus`, `linear`, `prompts`, `slop`, `review`'s thread model,
+  `agentbus`, `linear`, `prompts`, `slop`, `review`'s thread model,
   `tour`, `job`, `quota`, `transcript`, `stats`.
-- Rewritten: everything under `web/`, `server/` (it becomes `worker` + `core`),
-  `manager` and `dashboard` (they fold into the app), `lsp` (it grows into a
+- Rewritten: everything under `web/`, `server/` (it becomes `host` + `core`),
+  `manager`, `dashboard` and the worker (they fold into the app), `lsp` (it grows into a
   full client), and the neovim editor.
-- Dropped: `media`, room, puzzle, sea and scenes, the 3D stack, and cinema.
+- Dropped: `wire` (no process boundary is left to cross), `media`, room, puzzle, sea and scenes, the 3D stack, and cinema.
 
 ## Go interfaces
 
@@ -132,7 +129,7 @@ Rules:
 type Store interface {
     Sessions() []Session
     Session(id SessionID) (Session, bool)
-    Apply(ev Event) error                          // the only mutation path; events come from the worker
+    Apply(ev Event) error                          // the only mutation path; the host applies events
     Subscribe(filter Filter, fn func(Event)) (cancel func())
     State() State                                  // a copy of the materialised state
 }
@@ -150,40 +147,26 @@ type Session interface {
 ```
 
 ```go
-// package wire — app ↔ worker, one connection, many streams
-type Conn interface {
-    Call(ctx context.Context, method string, in, out any) error
-    Stream(ctx context.Context, method string, in any) (Stream, error) // events, PTYs, logs
-    Handle(method string, h Handler)
-}
+// package host — the session host, in the app's process
+func New(opts Options) (*Host, error)
+func (h *Host) Store() core.Store                  // the app's store too
+func (h *Host) SetApp(a App)                       // the callbacks into the app
+func (h *Host) Start(ctx context.Context, spec core.SessionSpec) (core.SessionID, error)
+func (h *Host) Comment(ctx context.Context, r CommentReq) (core.ThreadID, error)
+func (h *Host) Terminal(ctx context.Context, s core.SessionID) (<-chan []byte, error)
+func (h *Host) StartUtility(ctx context.Context, spec UtilitySpec) (*Utility, error)
+func (h *Host) HandOver()                          // quit: stop the agents for the next launch, close
 ```
 
-```go
-// package worker — what the app asks a worker to do
-type Worker interface {
-    Open(ctx context.Context, spec SessionSpec) (core.SessionID, error)
-    Comment(ctx context.Context, t core.ThreadID, body string, opts CommentOpts) error
-    Files(ctx context.Context, s core.SessionID) (FileService, error)  // read/write/sync buffers
-    LSP(ctx context.Context, s core.SessionID, lang string) (lsp.Client, error)
-    Debug(ctx context.Context, s core.SessionID, cfg dap.LaunchConfig) (dap.Session, error)
-    PTY(ctx context.Context, s core.SessionID, spec PTYSpec) (PTY, error)
-}
-```
-
-- The worker is behind `wire`, so the app sees `lsp.Client`, `dap.Session` and friends as plain interfaces.
-  A local in-process worker (no network) is just another implementation, which helps tests and single-machine use.
-- As built (AI-1): `wire.Conn` adds `HandleStream`, `Close` and `Done`; either end calls and handles (the worker asks
-  the app for plugins' agent tools and for the Permission hooks). `wire.Pipe` is an in-process pair; `wire.Client` /
-  `wire.Server` serve a unix socket with no handshake (this machine's worker, owner-only); `wire.Dial` / `wire.Accept`
-  are crit's pinned-TLS handshake for workers elsewhere. `worker.Client` is the worker's methods over a `wire.Conn`;
-  its `Events` stream sends each session whole (`SessionSynced`) and then every event, which the app applies to its
-  store. LSP and DAP still run in the app for now.
-- As built (PL-4): a worker also runs **utility agents** (`worker/utility.go`): an agent with no session, for the
-  assistant. `utility.run` is a stream (`UtilitySpec{Name, Provider, Model, Pack, Prompt, Allow}`): the worker starts
-  the provider in `<Home>/utility/<name>` on its small model (`agent.Model.Small`), offered only the app's tools for
-  that name (`app.tools` with `ToolsReq{Agent}`; a session asks with its kind), sends `ready` then `UtilityEvent`s,
-  refuses every permission but `Allow`'s and every question, and stops the agent when the stream ends.
-  `utility.send` and `utility.interrupt` take turns. `worker.Client.StartUtility` is the app's side.
-- As built (PL-6): `worker.Options.Handlers` add methods to each app connection; `oriel worker --connect` serves the
-  updater's through it (`distribution.md`).
-
+- The app owns one `*host.Host` and calls it directly, off the UI goroutine.
+- The host calls back into the app through `SetApp(host.App{Tools, CallTool, Decide})`: plugins' agent tools and
+  the Permission hooks. With none installed (tests, a closing window) it has no tools and no hook answers.
+- Not crashing: every exported method, every goroutine the host starts and every callback into the app recovers a
+  panic, logs it ("panic in the session host") and returns it as an error.
+- As built (PL-4): the host also runs **utility agents** (`host/utility.go`): an agent with no session, for the
+  assistant. `StartUtility(UtilitySpec{Name, Provider, Model, Pack, Prompt, Allow})` starts the provider in
+  `<Home>/utility/<name>` on its small model (`agent.Model.Small`), offered only the app's tools for that name
+  (`App.Tools` with `ToolsReq{Agent}`; a session asks with its kind), refuses every permission but `Allow`'s and
+  every question, and returns a `*Utility`: `Send` and `Interrupt` take turns, `Events` streams `UtilityEvent`s,
+  `Close` stops the agent.
+- LSP and DAP still run in the app.

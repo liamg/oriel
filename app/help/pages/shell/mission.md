@@ -40,12 +40,12 @@ question. It's the same card the inbox shows, answered here the same way: Allow 
 
 ## Grouping {#group}
 
-**By worker** (the machine each session runs on, with its load), **by status** (most urgent first) or **by repo**
-(each session's primary repo). `mission.group` with `by` does the same.
+**By status** (most urgent first) or **by repo** (each session's primary repo). `mission.group` with `by` does the
+same.
 
 ## Filter {#filter}
 
-`/` types a filter: only the sessions whose name, kind, status, branch, repos, worker, ticket or PR match it are
+`/` types a filter: only the sessions whose name, kind, status, branch, repos, ticket or PR match it are
 shown. `⏎` or `Esc` leaves the field.
 
 ## Needs you {#queue}
@@ -56,11 +56,11 @@ row. Other people's agents' questions are apart, with how long until they're ans
 
 ## New session {#new}
 
-Each worker's group ends with a card that starts a session there; `n` starts one on the selected card's worker.
+`n` opens the launcher to start a session; with no sessions yet, so does **New session**.
 
 ## The strip {#strip}
 
-Indicators in the `mission` slot: your plan's usage for each provider, and each worker's CPU over the last 15
+Indicators in the `mission` slot: your plan's usage for each provider, and this machine's CPU over the last 15
 minutes. A plugin adds its own with an indicator in that slot.
 
 ## Keys {#keys}

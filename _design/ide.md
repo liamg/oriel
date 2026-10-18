@@ -14,7 +14,7 @@ The "professional IDE" half. Everything here works without an agent.
 - Server registry: language → command, init options, root markers. Built in:
   gopls, typescript-language-server or vtsls, pyright or basedpyright,
   rust-analyzer, clangd, lua-language-server, yaml/json-ls, bash-ls, terraform-ls.
-- Servers run on the worker (inside the sandbox if there is one), with the
+- Servers run in the session host (inside the sandbox if there is one), with the
   project toolchain from mise. Unknown languages degrade to tree-sitter only.
 - **Agent access**: the agent gets read-only LSP tools through MCP
   (`definition`, `references`, `diagnostics`, `hover`). Fewer grep-and-guess
@@ -34,7 +34,7 @@ below.
   reading files that aren't open from disk (`Options.ReadFile`). Out-of-range positions clamp to the line or text.
 - **`lsp.Client`** is a struct, not the interface sketched under "Go interfaces": one running server for one root.
   `Start(ctx, spec, root, Options)` launches and initializes it (`Options.Launch`, default `Exec`; a `Process` is
-  stdio plus `Wait` and `Kill`, so the worker or a sandbox can supply its own). Documents: `DidOpen`,
+  stdio plus `Wait` and `Kill`, so the session host or a sandbox can supply its own). Documents: `DidOpen`,
   `DidChange(path, text.Change)` (incremental when the server takes it: one replace, or several in either order;
   otherwise, or when a change doesn't follow the last one sent, the whole text; an older change is dropped),
   `DidSave`, `DidClose`. Requests: `Complete`/`ResolveCompletion`, `Hover`, `SignatureHelp`, `Definition`,
@@ -76,8 +76,8 @@ below.
   the UI would show. Recorded with gopls v0.20.0, typescript-language-server 5.3.0 with TypeScript 6.0.3, and
   pyright 1.1.413 (Node 22.12.0). `ORIEL_LSP_LIVE=1` runs it against the installed servers; `go test ./lsp -run
   TestSession -record` re-records.
-- Not yet: the editor wiring and the status-line segment, the Lua binding for `lsp.server`, running servers on
-  the worker, type hierarchy, linked editing, document highlights, `workspace/didChangeWatchedFiles`, workspace
+- Not yet: the editor wiring and the status-line segment, the Lua binding for `lsp.server`, running servers in
+  the session's sandbox, type hierarchy, linked editing, document highlights, `workspace/didChangeWatchedFiles`, workspace
   diagnostics and semantic token deltas.
 
 
@@ -171,7 +171,7 @@ below.
   drives the same through the gutter, keys and the panel on its own recording (`-dap-record`).
 - Not yet: breakpoints that move with edits (they stay on their line numbers), function, exception-option and data
   breakpoints in the UI, setting a variable, threads other than the stopped one in the panel, attach by picking a
-  process, a Lua binding for `dap.adapter`, running adapters on the worker, the agent's tools and the frame thread
+  process, a Lua binding for `dap.adapter`, running adapters in the session's sandbox, the agent's tools and the frame thread
   (DB-3).
 
 ### As built (DB-2)
@@ -217,8 +217,8 @@ below.
   grant its own agent more. The Debug panel shows them as chips under the console ("AGENT'S DEBUGGER ACCESS"); a
   click moves one on, and `debug.agent.access {action, level}` sets one. Each tool's `Confirm` reads its action's
   level when it's called: `allow` returns `registry.Granted` (no card), `off` refuses with a reason naming the
-  option, and `ask` describes the call. A session's agent is owned by its worker (`registry.WithOwner` in the
-  app's tool calls), which puts the ask through the permission layers (`worker.MethodAsk`, `agents.md`): the
+  option, and `ask` describes the call. A session's agent is owned by the session host (`registry.WithOwner` in the
+  app's tool calls), which puts the ask through the permission layers (`host.Host.Ask`, `agents.md`): the
   session's rules, the `Permission` hooks, then a permission card; "Always" adds the tool's name as a rule.
 - **Tests.** `TestAgentDebuggerTools` drives a work session's fake agent against `testdata/dap/agent.jsonl` (dlv
   1.27.2, `-dap-record` re-records): stack, frame and eval allowed; step and continue refused while off without
@@ -265,7 +265,7 @@ below.
   vitest/istanbul, cargo llvm-cov when installed).
 - **The agent's runs land in the same panel**, marked as the agent's, and they're the **evidence** that "tests pass" claims link to
   (`agents.md`). The HUD indicator shows `TESTS 13 ✓ 1 ✕` for the session.
-- **Runs happen on the worker, in the session sandbox**, with the project's mise toolchain, so they behave exactly like CI.
+- **Runs happen in the session host, in the session sandbox**, with the project's mise toolchain, so they behave exactly like CI.
 
 | Language | Discovery | Runner and result stream |
 |---|---|---|
@@ -369,11 +369,11 @@ results, failure block and tests panel are still to build on it.
   The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.indicator` for the HUD (SH-8).
 - Watch (TR-4) is a `BufWritePost` hook running `Set.Affected`; coverage (`␣tc`) marks covered and uncovered lines with
   gutter edges until toggled off.
-- Not yet: running in the worker's sandbox (AI-1).
+- Not yet: running in the session's sandbox (AI-1).
 
 ### As built (TR-5)
 
-- The worker records the agent's runs (`test_run`, and shell commands that ran tests, parsed from their output) as
+- The session host records the agent's runs (`test_run`, and shell commands that ran tests, parsed from their output) as
   `core.TestRun`s in the session, each with the transcript item that ran it (`TestRun.Item`), and links a reply's
   claims to them (`Comment.Evidence`), flagging a "tests pass" with no passing run behind it (`agents.md`).
 - An evidence chip (✓ or ✕, the counts, `run <id>`) links to the run: in a reply and its activity block (the Requests
@@ -388,19 +388,19 @@ results, failure block and tests panel are still to build on it.
 
 ```mermaid
 flowchart LR
-  PTY["PTY on the worker"] --> HV["headless VT copy (worker)"]
-  PTY -- "bytes over wire" --> AV["VT core (app)"]
+  PTY["PTY in the session host"] --> HV["headless VT copy (host)"]
+  PTY -- "bytes on a channel" --> AV["VT core (app)"]
   AV --> Grid["cell grid + dirty rows"]
   Grid --> R["terminal renderer"]
   Atlas["glyph atlas (shared with editor)"] --> R
-  HV -- "snapshot on reconnect" --> AV
+  HV -- "snapshot on attach" --> AV
   HV -- "screen text" --> Agent["agent tools"]
 ```
 
 **The VT core is Ghostty's** (decided). `libghostty-vt` parses escape codes into a cell grid, behind `term.Emulator`.
 
 - Two builds of the same core, behind one interface: linked natively via cgo (the desktop app, `-tags ghostty_native`),
-  and compiled to WASM under wazero (a build without cgo or the tag, and the worker): the same core crit already ships
+  and compiled to WASM under wazero (a build without cgo or the tag): the same core crit already ships
   in the browser (ghostty-web).
 - That gets us the kitty keyboard and graphics protocols, grapheme clusters and synchronized output.
 - Both are built from a pinned Ghostty commit (`deps.md`); the wasm is committed, the native libraries are built
@@ -420,10 +420,10 @@ flowchart LR
 
 **Where it runs**
 
-- The PTY lives on the worker, next to the code and the sandbox.
-- The **app runs the VT core** that renders, so typing and scrolling never wait on the network.
-- The **worker keeps a headless VT copy** (like tmux or mosh). It does two jobs:
-  - On reconnect or app restart it sends a screen snapshot, not the whole byte history.
+- The PTY lives in the session host, in Oriel's process, next to the code and the sandbox.
+- The **app runs the VT core** that renders, reading the PTY's bytes from `host.Host.Terminal`.
+- The **session host keeps a headless VT copy** (like tmux). It does two jobs:
+  - A view that attaches late gets a screen snapshot, not the whole byte history.
   - The agent can **read terminal screens** through a tool. "Why did this fail?" works on the terminal
     you're looking at, and you can attach a selection of output to a request.
 
@@ -465,7 +465,7 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 
 ### Panes and modes
 
-- Panes are splittable, attach to session PTYs on the worker, and survive app restarts.
+- Panes are splittable, attach to session PTYs in the session host, and come back after a restart.
 - Any placement: docked at the bottom like other editors, a split or tab in the main area, floating,
   drop-down, or zoomed full-window. The same layout model applies to every pane (`ui.md` 01d).
 - Terminal-normal mode (`⌃Esc`, or vim's `⌃\ ⌃N`) gives vim motions, search and yank over the scrollback.
@@ -476,9 +476,9 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 
 - `app/terminal*.go`, a built-in: `term.open {cmd, env, place, instance}` and the ex commands `:term` (`:term!` in the
   main area), `:vterm` and `:sterm`; terminals are `terminal#<n>` views, so every placement, move and zoom is the
-  layout's. Each runs its program on our PTY with Ghostty's VT (the worker's copy comes with AI-1), resized to its pane.
+  layout's. Each runs its program on our PTY with Ghostty's VT (the host's copy comes with AI-1), resized to its pane.
   `term.open {source, title}` shows any `TermSource` (read, write, resize, close) instead of starting a program: the
-  agent console's Raw terminal streams the agent's PTY from its worker this way (AI-6).
+  agent console's Raw terminal streams the agent's PTY from the session host this way (AI-6).
 - Drawn in one paint per terminal from the VT's grid: runs of one style placed on the cell grid, backgrounds, cursor
   shapes, and box-drawing, block and shade characters drawn as shapes so they join at any size. Colours are the
   theme's `terminal.ansi.0`–`15`, `terminal.fg/bg`, 256-colour and truecolor.
@@ -489,8 +489,8 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   The mode shows in the status line through `registry.Moded`, which any view can implement.
 - FG-5: exit dots from the OSC 133 command log, `[[`/`]]` between prompts, copy/send/re-run the last command, the
   OSC 7 directory in the tab.
-- "Snapshot on reconnect": the screens are snapshotted when the app stops and restored into the same instances when it
-  opens the directory again (the worker will keep the live PTYs).
+- "Snapshot on restart": the screens are snapshotted when the app stops and restored into the same instances when it
+  opens the directory again.
 - The desktop app runs the native core (about 260 MB/s against the 200 MB/s budget); wasm (about 80 MB/s) is the
   fallback without cgo.
 - Not yet: mouse reporting, selection with the pointer, OSC 8 links, images, ligatures, terminal search outside
@@ -499,13 +499,13 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 
 - **Changed** (branch vs merge-base, uncommitted included; opens diffs), **Uncommitted** (vs HEAD; staging),
   **All** (the whole tree, with git status, ± lines, agent-unread, thread and diagnostic markers).
-- Backed by one `gitx.Status` model on the worker: it streams file states and line counts, and refreshes on fs-notify.
+- Backed by one `gitx.Status` model in the session host: it streams file states and line counts, and refreshes on fs-notify.
 - See `ui.md` 01c.
 - As built (FG-1): `gitx.Repo.Status` reads every scope in one go (`git status --porcelain=v2`, `git diff --numstat`
   against HEAD, the index and the merge-base with origin's default branch, else main or master); `gitx.Status` keeps
-  it, tells watchers which paths changed, and runs in the app until the worker exists (AI-1). It refreshes every 2 s,
-  after a write and after each git command, rather than on fs-notify: a watcher over x/sys (inotify, kqueue) comes
-  with the worker. The gits a reading needs run at once, in two rounds (everything that doesn't need the
+  it, tells watchers which paths changed, and runs in the app. It refreshes every 2 s,
+  after a write and after each git command, rather than on fs-notify: a watcher over x/sys (inotify, kqueue) isn't
+  built yet. The gits a reading needs run at once, in two rounds (everything that doesn't need the
   merge-base while it's found, then the diffs against it): 17 ms on this repo, against 55 ms one after another. A
   reading that changes nothing keeps the last one, so what's cached on it (the Explorer's rows) stays good and
   watchers hear nothing. Refreshes run one at a time, so a slow reading never lands after a newer one. Fixture repos for tests are built with `gitx/gittest`.
@@ -515,10 +515,9 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
 - Omnibox `⌘K`: sessions, files, symbols, commands, tickets, PRs, jobs: one ranked list.
 - Pickers (snacks/telescope-style): `␣␣` files, `␣/` live grep, `␣k` keymaps, `␣s` symbols, `␣'` resume. Same engine
   as the omnibox, one source at a time, with preview (`ui.md` 02b). Which-key hints after a prefix (`ui.md` 02c).
-- Project search: ripgrep on the worker, results streamed into a quickfix panel, with replace-in-files preview.
-- As built (FG-3): `worker/search` runs `rg --json -P` (PCRE2, streamed in batches) and the same matching in Go
-  (`regex`) when rg isn't installed; tests hold the two to the same results. It runs in the app until the worker
-  exists (AI-1). Generated and vendored files go to rg as an `--ignore-file`, unless the query starts `@all `. The
+- Project search: ripgrep in the session host, results streamed into a quickfix panel, with replace-in-files preview.
+- As built (FG-3): `host/search` runs `rg --json -P` (PCRE2, streamed in batches) and the same matching in Go
+  (`regex`) when rg isn't installed; tests hold the two to the same results. Generated and vendored files go to rg as an `--ignore-file`, unless the query starts `@all `. The
   Search view (the rail's Search, `⌘F`, `⌘⇧F`, `search.open {query}`) streams matches by file; a replacement
   previews per match, and Replace all… opens `search.replace`, a tab with every file's diff (`search.Plan`,
   PCRE2's `$n`), which writes nothing until Apply. Apply edits open buffers in the buffer (one undo step) and writes
@@ -552,7 +551,7 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   HEAD, commits behind origin's base and the files a rebase would conflict in from `git merge-tree --write-tree`,
   the branch's commits and those origin lacks); `Commit`, `Push` (HEAD to origin's branch, tracked), `Fetch` and
   `Rebase` (`--autostash`, undone on conflict, `gitx.ErrConflict`) make the steps. `gitx.Repo.Env` carries the
-  sandbox's git guard, and `RemoteURL` is origin's configured URL. They run on the session's worker (`worker/ship.go`),
+  sandbox's git guard, and `RemoteURL` is origin's configured URL. They run in the session host (`host/ship.go`),
   where the checkout and your credentials are, with GitHub through `gh` (`gh api`, your login). The Ship page and
   panels are `ui.md` 18 and 01h.
 - Conflict resolution as a 3-way merge view, with "ask the agent" on a conflict block.

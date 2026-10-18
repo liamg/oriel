@@ -49,9 +49,6 @@ type Config struct {
 	Servers map[string]json.RawMessage `json:"servers,omitempty"`
 	// Dismissed are recommended servers the user said no to.
 	Dismissed []string `json:"dismissed,omitempty"`
-	// ReadProjects has the worker read its repos' own .oriel/settings.toml for Projects it lacks: the app can't
-	// see a remote worker's files.
-	ReadProjects bool `json:"readProjects,omitempty"`
 }
 
 // ProjectConfig overrides the sandbox settings for one repository.

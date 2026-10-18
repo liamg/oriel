@@ -115,16 +115,15 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
-	lw := newLocalWorker(t)
-	if _, err := lw.client(t).AddRepoPath(context.Background(), lw.repo); err != nil {
+	lw := newLocalHost(t)
+	if _, err := lw.w.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}
 	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { lw.connect(t)(cfg); change(cfg) })
 	s.now = at(14, 30, 0)
-	st := waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
-	s.store.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: st.Workers[0].ID, Name: "devbox", Connected: true, Cores: 32, CPU: .61}})
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
-	// The test worker has no sandbox factory.
+	// The test host has no sandbox factory.
 	if err := s.reg.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +135,7 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 	s.typeKeys("CR")
 	s.until(t, "the card", func() bool { return strings.Contains(s.frameText(), "linked PR #4398") })
 	text := s.frameText()
-	for _, want := range []string{"NEW SESSION", "from ticket · worker devbox", "ENG-2231", "TODO", "Search API returns stale results after a reindex",
+	for _, want := range []string{"NEW SESSION", "from ticket", "ENG-2231", "TODO", "Search API returns stale results after a reindex",
 		"Customers who rebuild their index", "2 attachments", "4 comments", "the ticket, comments and attachments go to the agent as context",
 		"Start Plan"} {
 		if !strings.Contains(text, want) {

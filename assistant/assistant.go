@@ -1,6 +1,6 @@
 // Package assistant is the conversation behind Oriel's assistant (ui.md 11, crit-reference.md "Assistant"): one
 // conversation at a time with a utility agent, fed typed or spoken turns, whose replies, progress, confirmations and
-// actions are kept as the log the drawer draws. The agent itself is behind Agent: a utility session on a worker.
+// actions are kept as the log the drawer draws. The agent itself is behind Agent: a utility session.
 package assistant
 
 import (

@@ -90,12 +90,6 @@ var icons = map[string]func(p *iconPen){
 		p.line(2.5, 12, 10, 12)
 		p.poly(false, 11, 6, 13.5, 8, 11, 10)
 	},
-	"workers": func(p *iconPen) {
-		p.poly(true, 2, 2.5, 14, 2.5, 14, 6.5, 2, 6.5)
-		p.poly(true, 2, 9.5, 14, 9.5, 14, 13.5, 2, 13.5)
-		p.circle(4.5, 4.5, .6)
-		p.circle(4.5, 11.5, .6)
-	},
 	"prompts": func(p *iconPen) {
 		p.poly(true, 3, 1.5, 10, 1.5, 13, 4.5, 13, 14.5, 3, 14.5)
 		p.line(5.5, 7, 10.5, 7)

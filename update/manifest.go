@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Artifact kinds: the executable alone (workers, Linux), or a macOS .app bundle as a .tar.gz.
+// Artifact kinds: the executable alone (Linux), or a macOS .app bundle as a .tar.gz.
 const (
 	KindBinary = "binary"
 	KindBundle = "bundle"

@@ -37,15 +37,11 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  path 5 segments stroke 1.4545455 #7c7566
-  path 5 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
   path 6 segments fill #060606
   path 6 segments stroke 1.4 #ffd23f
-  effect glow 18.9,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 18.9,397.9 1.2999992x3.600006 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 22.8,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 22.8,397.9 1.2999992x3.600006 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
@@ -139,24 +135,21 @@ clip 44,38 1556x936 r 0
     path 2 segments stroke 1.25 #ffd23f
     path 3 segments stroke 1.25 #ffd23f
     text "Jobs" @474.96875,674.63525 #ece6d8 Inter 12
-    rect 520.6875,657.27 86.984375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-    path 5 segments stroke 1.25 #ffd23f
-    path 5 segments stroke 1.25 #ffd23f
-    path 6 segments stroke 1.25 #ffd23f
-    path 6 segments stroke 1.25 #ffd23f
-    text "Workers" @549.6875,674.63525 #ece6d8 Inter 12
-    rect 615.6719,657.27 125.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    rect 520.6875,657.27 125.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
-    text "Mission control" @644.6719,674.63525 #ece6d8 Inter 12
-    rect 749.3594,657.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "Mission control" @549.6875,674.63525 #ece6d8 Inter 12
+    rect 654.375,657.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 6 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
-    text "Prompts" @778.3594,674.63525 #ece6d8 Inter 12
+    text "Prompts" @683.375,674.63525 #ece6d8 Inter 12
+    rect 748.875,657.27 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "…" @758.875,673.942 #ffd23f JetBrains Mono 10.200001
+    text "Plugins" @777.875,674.63525 #ece6d8 Inter 12
   pop
   effect glow 1181,427.72998 39x150 blur 4 #ff8a1f4d
   path 6 segments stroke 24 #ffd23f

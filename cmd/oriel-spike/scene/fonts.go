@@ -52,12 +52,12 @@ func Collection() ([]font.FontFace, error) {
 }
 
 // Fonts is the bundled faces, shaped through Gio, plus system faces for runes they lack. A
-// fallback face loads on a worker the first time a rune needs one, and is used by the atlas text
+// fallback face loads on a host the first time a rune needs one, and is used by the atlas text
 // path once it lands; until then the rune draws as tofu. Nothing scans or indexes the system fonts.
 type Fonts struct {
 	// NoFallback leaves runes the bundled faces lack as tofu.
 	NoFallback bool
-	// OnLoad is called, on the worker, when a fallback face has loaded.
+	// OnLoad is called, on the host, when a fallback face has loaded.
 	OnLoad func()
 
 	shaper    *text.Shaper
@@ -97,7 +97,7 @@ func (f *Fonts) Fallbacks() (files []string, missing []rune) {
 	return append([]string(nil), f.names...), append([]rune(nil), f.missing...)
 }
 
-// Request asks the worker for a face covering r, once per rune.
+// Request asks the host for a face covering r, once per rune.
 func (f *Fonts) Request(r rune) {
 	if f.NoFallback || f.requested[r] {
 		return

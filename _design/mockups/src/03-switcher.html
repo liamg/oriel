@@ -67,22 +67,34 @@
 <div class="hdr">
   <h1>Mission control</h1>
   <div class="tally"><span><span class="dot r"></span>3 need you</span><span><span class="dot v"></span>1 permission</span><span><span class="dot o"></span>3 working</span><span><span class="dot b"></span>1 ci</span><span><span class="dot y"></span>1 in review</span><span><span class="dot g"></span>2 quiet</span></div>
-  <div class="flt"><span class="chip c">by worker</span><span class="chip">by status</span><span class="chip">by repo</span><div class="input" style="width:220px;height:26px;margin-left:8px">/ filter sessions…</div></div>
+  <div class="flt"><span class="chip c">by status</span><span class="chip">by repo</span><div class="input" style="width:220px;height:26px;margin-left:8px">/ filter sessions…</div></div>
 </div>
 <div class="wrap">
   <div class="needs">
     <div class="ph"><span class="cap" style="color:var(--red)">Needs you</span><span class="mono dim" style="font-size:10px;margin-left:auto">oldest first</span></div>
-    <div class="nq v sel"><span class="age">22m</span><div><div class="t">Allow <span class="mono" style="color:var(--p)">Bash(make e2e)</span>?</div><div class="s">review #4410 · devbox · <span style="color:var(--violet)">permission</span></div></div></div>
-    <div class="nq"><span class="age">14m</span><div><div class="t">CI failing: lint (golangci) on #4418</div><div class="s">ci lint fix · mbp · 2 checks red</div></div></div>
-    <div class="nq"><span class="age">6m</span><div><div class="t">Evict stale entries on read, or nightly?</div><div class="s">ENG-2231 search api · devbox · replied</div></div></div>
-    <div class="nq"><span class="age">2m</span><div><div class="t">Uncommitted work, no PR yet</div><div class="s">dash-filters · mbp · 11 files</div></div></div>
+    <div class="nq v sel"><span class="age">22m</span><div><div class="t">Allow <span class="mono" style="color:var(--p)">Bash(make e2e)</span>?</div><div class="s">review #4410 · <span style="color:var(--violet)">permission</span></div></div></div>
+    <div class="nq"><span class="age">14m</span><div><div class="t">CI failing: lint (golangci) on #4418</div><div class="s">ci lint fix · 2 checks red</div></div></div>
+    <div class="nq"><span class="age">6m</span><div><div class="t">Evict stale entries on read, or nightly?</div><div class="s">ENG-2231 search api · replied</div></div></div>
+    <div class="nq"><span class="age">2m</span><div><div class="t">Uncommitted work, no PR yet</div><div class="s">dash-filters · 11 files</div></div></div>
     <div class="ph" style="border-top:1px solid var(--line);margin-top:10px"><span class="cap">AgentBus</span><span class="mono dim" style="font-size:10px;margin-left:auto">crit-mbp · active</span></div>
     <div class="nq"><span class="age" style="color:var(--cyan)">1m</span><div><div class="t">@sam's agent: “which redis keyspace holds price tiers?”</div><div class="s">question · auto-answer in 0:48</div></div></div>
     <div class="nq"><span class="age" style="color:var(--cyan)">9m</span><div><div class="t">Review requested: acme#4421 (+82 −14)</div><div class="s">from @maria · Claim · Claim+Open</div></div></div>
   </div>
   <div class="col grow">
     <div class="gridwrap">
-      <div class="grp"><span class="dot g"></span><span class="nm">mbp</span><span class="mono dim" style="font-size:10px">local · 10 cores · cpu 34% · mem 11.2/32G</span><span class="ln2"></span></div>
+      <div class="grp"><span class="dot r"></span><span class="nm">needs you</span><span class="mono dim" style="font-size:10px">3 sessions · oldest 22m</span><span class="ln2"></span></div>
+      <div class="grid">
+        <div class="card v sel"><div class="top"><span class="dot v"></span><span class="nm">review #4410</span><span class="kd">review pr</span><div class="rt"><span class="chip">claude</span></div></div>
+          <div class="mid"><div class="ask v"><span class="h" style="color:var(--violet)">Wants permission · 22m</span><span class="b2"><code>Bash(make e2e)</code> — run the e2e suite to confirm the retry change. Network: <code>registry.npmjs.org</code></span><div class="row gap6" style="margin-top:auto"><span class="btn pri" style="height:22px;font-size:11px">Allow once</span><span class="btn" style="height:22px;font-size:11px">Always</span><span class="btn ghost" style="height:22px;font-size:11px">Deny</span></div></div></div>
+          <div class="bot"><span>findings <b>5</b></span><span>ctx <b>37%</b></span><span>+82 −14</span><span style="margin-left:auto">22m</span></div></div>
+        <div class="card r"><div class="top"><span class="dot r"></span><span class="nm">ci lint fix</span><span class="kd">work</span><div class="rt"><span class="chip r">ci ✕</span><span class="chip">#4418</span></div></div>
+          <div class="mid"><div class="ask r"><span class="h" style="color:var(--red)">CI failing · lint</span><span class="b2">golangci-lint: <code>errcheck</code> in <code>usage/export.go:112</code>, <code>gofumpt</code> in 2 files.</span><span class="b2 dim" style="font-size:11px">Agent idle — say “fix ci” or open.</span><div class="row gap6" style="margin-top:auto"><span class="btn" style="height:22px;font-size:11px">Fix CI</span><span class="btn ghost" style="height:22px;font-size:11px">Logs</span></div></div></div>
+          <div class="bot"><span>tasks <b>4/4</b> <span class="mbar"><i style="width:100%"></i></span></span><span>ctx <b>61%</b></span><span><span style="color:var(--green)">+12</span> <span style="color:var(--red)">−4</span></span><span style="margin-left:auto">14m</span></div></div>
+        <div class="card r"><div class="top"><span class="dot r"></span><span class="nm">ENG-2231 search api</span><span class="kd">work · 2 repos</span><div class="rt"><span class="chip">claude</span></div></div>
+          <div class="mid"><div class="ask r"><span class="h" style="color:var(--red)">Replied — awaiting you</span><span class="b2">“Evict stale entries on read, or by the nightly job? Read-time is simpler but adds 4ms p99.”</span><span class="b2 dim" style="font-size:11px">PLAN.md:31</span></div></div>
+          <div class="bot"><span>tasks <b>3/6</b> <span class="mbar"><i style="width:50%"></i></span></span><span>ctx <b>34%</b></span><span><span style="color:var(--green)">+214</span> <span style="color:var(--red)">−38</span></span><span style="margin-left:auto">6m</span></div></div>
+      </div>
+      <div class="grp"><span class="dot o"></span><span class="nm">working</span><span class="mono dim" style="font-size:10px">3 sessions · 1 waiting on ci</span><span class="ln2"></span></div>
       <div class="grid">
         <div class="card o"><div class="top"><span class="dot o"></span><span class="nm">pricing-rounding</span><span class="kd">plan → work</span><div class="rt"><span class="chip">claude</span></div></div>
           <div class="mid"><div class="live"><span class="dot o"></span>LIVE</div><div class="term"><span class="mu">● Edit</span> round.go (+7 −1)
@@ -93,12 +105,6 @@
   <span class="ok">ok  pricing  0.214s</span>
 <span class="or">⠼ replying on round.go:46…</span></div></div>
           <div class="bot"><span>tasks <b>3/5</b> <span class="mbar"><i style="width:60%"></i></span></span><span>ctx <b>22%</b></span><span><span style="color:var(--green)">+48</span> <span style="color:var(--red)">−9</span></span><span style="margin-left:auto">0:41</span></div></div>
-        <div class="card r"><div class="top"><span class="dot r"></span><span class="nm">ci lint fix</span><span class="kd">work</span><div class="rt"><span class="chip r">ci ✕</span><span class="chip">#4418</span></div></div>
-          <div class="mid"><div class="ask r"><span class="h" style="color:var(--red)">CI failing · lint</span><span class="b2">golangci-lint: <code>errcheck</code> in <code>usage/export.go:112</code>, <code>gofumpt</code> in 2 files.</span><span class="b2 dim" style="font-size:11px">Agent idle — say “fix ci” or open.</span><div class="row gap6" style="margin-top:auto"><span class="btn" style="height:22px;font-size:11px">Fix CI</span><span class="btn ghost" style="height:22px;font-size:11px">Logs</span></div></div></div>
-          <div class="bot"><span>tasks <b>4/4</b> <span class="mbar"><i style="width:100%"></i></span></span><span>ctx <b>61%</b></span><span><span style="color:var(--green)">+12</span> <span style="color:var(--red)">−4</span></span><span style="margin-left:auto">14m</span></div></div>
-        <div class="card"><div class="top"><span class="dot y"></span><span class="nm">dash-filters</span><span class="kd">work</span><div class="rt"><span class="chip y">#4402 · 1 approval</span></div></div>
-          <div class="mid"><div class="ask q"><span class="h" style="color:var(--yellow)">With a reviewer</span><span class="b2">@maria requested changes on <code>FilterBar.tsx</code> — 2 threads mirrored, drafts ready.</span><div class="row gap6" style="margin-top:auto"><span class="chip">2 drafts</span><span class="chip g">checks ✓</span></div></div></div>
-          <div class="bot"><span>tasks <b>6/6</b> <span class="mbar"><i style="width:100%"></i></span></span><span>ctx <b>48%</b></span><span><span style="color:var(--green)">+311</span> <span style="color:var(--red)">−80</span></span><span style="margin-left:auto">2h</span></div></div>
         <div class="card o"><div class="top"><span class="dot o"></span><span class="nm">deps sweep</span><span class="kd">job</span><div class="rt"><span class="chip">codex</span></div></div>
           <div class="mid"><div class="live"><span class="dot o"></span>LIVE</div><div class="term"><span class="mu">$</span> <span class="cy">go get -u ./... &amp;&amp; go mod tidy</span>
 <span class="mu">go: upgraded</span> chroma v2.26.0 => v2.27.0
@@ -108,19 +114,6 @@
 <span class="ok">ok</span>  internal/git    1.02s
 <span class="or">▍</span></div></div>
           <div class="bot"><span>tasks <b>2/4</b> <span class="mbar"><i style="width:50%"></i></span></span><span>ctx <b>9%</b></span><span><span style="color:var(--green)">+18</span> <span style="color:var(--red)">−18</span></span><span style="margin-left:auto">3:12</span></div></div>
-        <div class="card"><div class="top"><span class="dot g"></span><span class="nm">tour: auth flow</span><span class="kd">tour · walkthrough</span></div>
-          <div class="mid"><div class="ask q"><span class="h" style="color:var(--green)">Ready · 9 steps</span><span class="b2">How a request is authenticated, from the edge middleware to the JWT verifier and session store.</span><div class="row gap6" style="margin-top:auto"><span class="chip">2 repos</span><span class="chip">export html</span></div></div></div>
-          <div class="bot"><span>read <b>4/9</b></span><span style="margin-left:auto">yesterday</span></div></div>
-        <div class="card" style="border:1px dashed var(--line2);background:transparent;align-items:center;justify-content:center;gap:10px"><span style="font:300 30px var(--disp);color:var(--fg4)">+</span><span class="cap">New session on mbp</span><span class="mono dim" style="font-size:10.5px">plan · work · review · tour · job</span><span class="kbd">n</span></div>
-      </div>
-      <div class="grp"><span class="dot g"></span><span class="nm">devbox</span><span class="mono dim" style="font-size:10px">ssh · 32 cores · cpu 61% · mem 48/128G</span><span class="ln2"></span></div>
-      <div class="grid">
-        <div class="card v sel"><div class="top"><span class="dot v"></span><span class="nm">review #4410</span><span class="kd">review pr</span><div class="rt"><span class="chip">claude</span></div></div>
-          <div class="mid"><div class="ask v"><span class="h" style="color:var(--violet)">Wants permission · 22m</span><span class="b2"><code>Bash(make e2e)</code> — run the e2e suite to confirm the retry change. Network: <code>registry.npmjs.org</code></span><div class="row gap6" style="margin-top:auto"><span class="btn pri" style="height:22px;font-size:11px">Allow once</span><span class="btn" style="height:22px;font-size:11px">Always</span><span class="btn ghost" style="height:22px;font-size:11px">Deny</span></div></div></div>
-          <div class="bot"><span>findings <b>5</b></span><span>ctx <b>37%</b></span><span>+82 −14</span><span style="margin-left:auto">22m</span></div></div>
-        <div class="card r"><div class="top"><span class="dot r"></span><span class="nm">ENG-2231 search api</span><span class="kd">work · 2 repos</span><div class="rt"><span class="chip">claude</span></div></div>
-          <div class="mid"><div class="ask r"><span class="h" style="color:var(--red)">Replied — awaiting you</span><span class="b2">“Evict stale entries on read, or by the nightly job? Read-time is simpler but adds 4ms p99.”</span><span class="b2 dim" style="font-size:11px">PLAN.md:31</span></div></div>
-          <div class="bot"><span>tasks <b>3/6</b> <span class="mbar"><i style="width:50%"></i></span></span><span>ctx <b>34%</b></span><span><span style="color:var(--green)">+214</span> <span style="color:var(--red)">−38</span></span><span style="margin-left:auto">6m</span></div></div>
         <div class="card b"><div class="top"><span class="dot b"></span><span class="nm">flaky e2e sweep</span><span class="kd">job</span><div class="rt"><span class="chip c">ci · 4/7</span></div></div>
           <div class="mid"><div class="live" style="color:#5c8dff"><span class="dot b"></span>CHECKS</div><div class="term"><span class="ok">✓</span> build             1m12s
 <span class="ok">✓</span> unit              3m40s
@@ -131,14 +124,22 @@
 <span class="mu">○</span> deploy-preview    <span class="mu">queued</span></div></div>
           <div class="bot"><span>pr <b>#4419</b></span><span>ctx <b>18%</b></span><span><span style="color:var(--green)">+40</span> <span style="color:var(--red)">−22</span></span><span style="margin-left:auto">8m</span></div></div>
       </div>
+      <div class="grp"><span class="dot y"></span><span class="nm">waiting</span><span class="mono dim" style="font-size:10px">1 in review · 1 quiet</span><span class="ln2"></span></div>
+      <div class="grid">
+        <div class="card"><div class="top"><span class="dot y"></span><span class="nm">dash-filters</span><span class="kd">work</span><div class="rt"><span class="chip y">#4402 · 1 approval</span></div></div>
+          <div class="mid"><div class="ask q"><span class="h" style="color:var(--yellow)">With a reviewer</span><span class="b2">@maria requested changes on <code>FilterBar.tsx</code> — 2 threads mirrored, drafts ready.</span><div class="row gap6" style="margin-top:auto"><span class="chip">2 drafts</span><span class="chip g">checks ✓</span></div></div></div>
+          <div class="bot"><span>tasks <b>6/6</b> <span class="mbar"><i style="width:100%"></i></span></span><span>ctx <b>48%</b></span><span><span style="color:var(--green)">+311</span> <span style="color:var(--red)">−80</span></span><span style="margin-left:auto">2h</span></div></div>
+        <div class="card"><div class="top"><span class="dot g"></span><span class="nm">tour: auth flow</span><span class="kd">tour · walkthrough</span></div>
+          <div class="mid"><div class="ask q"><span class="h" style="color:var(--green)">Ready · 9 steps</span><span class="b2">How a request is authenticated, from the edge middleware to the JWT verifier and session store.</span><div class="row gap6" style="margin-top:auto"><span class="chip">2 repos</span><span class="chip">export html</span></div></div></div>
+          <div class="bot"><span>read <b>4/9</b></span><span style="margin-left:auto">yesterday</span></div></div>
+      </div>
     </div>
   </div>
 </div>
 <div class="strip">
   <div class="cell" style="width:300px"><span class="cap">Usage · claude max</span><div class="row gap12"><div class="tat">5H <div class="bar"><i style="width:38%"></i></div><b>38%</b></div><div class="tat">WK <div class="bar w"><i style="width:71%"></i></div><b>71%</b></div></div></div>
   <div class="cell" style="width:200px"><span class="cap">Usage · codex</span><div class="tat">5H <div class="bar g"><i style="width:12%"></i></div><b>12%</b></div></div>
-  <div class="cell"><span class="cap">mbp · cpu 15m</span><div class="spk"><i style="height:6px"></i><i style="height:9px"></i><i style="height:7px"></i><i style="height:12px"></i><i style="height:15px"></i><i style="height:11px"></i><i style="height:8px"></i><i style="height:10px"></i><i style="height:14px"></i><i style="height:18px"></i><i style="height:12px"></i><i style="height:9px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:7px"></i></div></div>
-  <div class="cell"><span class="cap">devbox · cpu 15m</span><div class="spk"><i style="height:12px"></i><i style="height:14px"></i><i style="height:16px"></i><i style="height:18px"></i><i style="height:12px"></i><i style="height:15px"></i><i style="height:19px"></i><i style="height:20px"></i><i style="height:17px"></i><i style="height:13px"></i><i style="height:15px"></i><i style="height:18px"></i><i style="height:16px"></i><i style="height:12px"></i><i style="height:13px"></i></div></div>
+  <div class="cell"><span class="cap">CPU 15m</span><div class="spk"><i style="height:6px"></i><i style="height:9px"></i><i style="height:7px"></i><i style="height:12px"></i><i style="height:15px"></i><i style="height:11px"></i><i style="height:8px"></i><i style="height:10px"></i><i style="height:14px"></i><i style="height:18px"></i><i style="height:12px"></i><i style="height:9px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:7px"></i></div></div>
   <div class="cell grow"><span class="cap">AgentBus presence</span><div class="row tat" style="gap:20px"><span class="row gap6"><span class="dot g"></span>crit-mbp</span><span class="row gap6"><span class="dot g"></span>crit-devbox</span><span class="row gap6"><span class="dot y"></span>sam · idle</span><span class="row gap6"><span class="dot g"></span>maria</span><span class="row gap6"><span class="dot i"></span>alex · dnd</span></div></div>
 </div>
 <div class="keys"><span><span class="kbd">h</span><span class="kbd">j</span><span class="kbd">k</span><span class="kbd">l</span> move</span><span><span class="kbd">↵</span> open</span><span><span class="kbd">a</span> allow</span><span><span class="kbd">x</span> stop</span><span><span class="kbd">r</span> rename</span><span><span class="kbd">n</span> new session</span><span><span class="kbd">/</span> filter</span><span style="margin-left:auto"><span class="kbd">esc</span> back to review #4410</span></div>

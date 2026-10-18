@@ -12,8 +12,7 @@ reading costs no tokens.
 ## Accounts {#accounts}
 
 A plan belongs to an account, not to a provider or a machine: a work laptop on a company subscription and a personal
-one on Claude Max have separate windows, and they're never added up. Two workers signed in to the same account show
-one. The switcher at the top picks the account; it starts on the one the session in front runs on, else this
+one on Claude Max have separate windows, and they're never added up. The switcher at the top picks the account; it starts on the one the session in front runs on, else this
 machine's. Name accounts in `usage.accounts` ("Work", "Personal"); unnamed, an account shows its email or
 organisation.
 
@@ -24,7 +23,7 @@ account data. When the provider doesn't say, there's no chip.
 
 The title bar's meters are the plan of the account the session in front runs on (this machine's with no session).
 Hovering shows every account's windows with their resets and burn; a click opens this page. An account whose login
-has stopped working on a worker is marked **signed out** until you log in again.
+has stopped working is marked **signed out** until you log in again.
 
 ## Windows {#windows}
 

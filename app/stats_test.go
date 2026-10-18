@@ -18,10 +18,9 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/wire"
-	"github.com/liamg/oriel/worker"
-	"github.com/liamg/oriel/worker/stats"
 )
 
 // statsNow is mockup 43's: Wed Oct 14, 12:17.
@@ -51,11 +50,11 @@ func (f *loggedFake) Logs(cwd, _ string) []agent.Log {
 	return nil
 }
 
-// statsRig is a worker with six repos and the sessions of mockup 43 over them, each with a fixture transcript of a
-// month's work (or, for Codex, the worker's record of its events), and a week of plan readings.
+// statsRig is a session host with six repos and the sessions of mockup 43 over them, each with a fixture transcript
+// of a month's work (or, for Codex, Oriel's record of its events), and a week of plan readings.
 type statsRig struct {
 	t      *testing.T
-	w      *worker.Worker
+	w      *host.Host
 	home   string
 	claude *loggedFake
 	codex  *agenttest.Fake
@@ -84,7 +83,7 @@ func newStatsRig(t *testing.T) *statsRig {
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
 	providers.Register(r.codex)
-	w, err := worker.New(worker.Options{Home: r.home, Name: "mbp", Providers: providers, Exec: nopExec{}, Load: steadyLoad,
+	w, err := host.New(host.Options{Home: r.home, Providers: providers, Exec: nopExec{}, Load: steadyLoad,
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
@@ -94,13 +93,8 @@ func newStatsRig(t *testing.T) *statsRig {
 	return r
 }
 
-func (r *statsRig) connect(t *testing.T) func(*Config) {
-	return func(cfg *Config) {
-		a, b := wire.Pipe()
-		r.w.Serve(b)
-		t.Cleanup(func() { a.Close(); b.Close() })
-		cfg.Workers = append(cfg.Workers, worker.Client{Conn: a})
-	}
+func (r *statsRig) connect(*testing.T) func(*Config) {
+	return func(cfg *Config) { cfg.Host, cfg.Store = r.w, r.w.Store() }
 }
 
 // fxSession is how a fixture session worked: its repos and their weights in its file calls, its model, the days it
@@ -191,14 +185,7 @@ func (r *statsRig) wait(id core.SessionID) core.SessionState {
 	return core.SessionState{}
 }
 
-func (r *statsRig) state() []core.SessionState {
-	a, b := wire.Pipe()
-	defer a.Close()
-	defer b.Close()
-	r.w.Serve(b)
-	ss, _ := worker.Client{Conn: a}.Sessions(context.Background())
-	return ss
-}
+func (r *statsRig) state() []core.SessionState { return r.w.Store().State().Sessions }
 
 var tools = []struct {
 	name string
@@ -208,7 +195,7 @@ var tools = []struct {
 }{{"Read", true, 100, 0}, {"Read", true, 120, 0}, {"Edit", true, 200, 3}, {"Bash", false, 4100, 9}, {"Grep", true, 150, 0},
 	{"TodoWrite", false, 40, 0}, {"Glob", true, 60, 0}, {"Write", true, 300, 0}, {"Task", false, 130_000, 11}, {"WebFetch", false, 9_800, 50}}
 
-// dayLog is a day's requests, the Claude log's records or the worker's events for Codex.
+// dayLog is a day's requests, the Claude log's records or Oriel's events for Codex.
 func dayLog(rnd *rand.Rand, fx fxSession, dirs map[string]string, day time.Time, events bool) []string {
 	at := time.Date(day.Year(), day.Month(), day.Day(), 9+rnd.Intn(3), rnd.Intn(60), 0, 0, time.UTC)
 	if at.After(statsNow) {
@@ -386,7 +373,7 @@ func (r *statsRig) readings(t *testing.T) {
 // workAccount is the fixture's Claude login: the account and organisation of a company subscription.
 const workAccount = "u1/o-acme"
 
-// statsScene is the app on the rig's worker, on mockup 43's clock, with pricing-rounding in front.
+// statsScene is the app on the rig's session host, on mockup 43's clock, with pricing-rounding in front.
 func statsScene(t *testing.T) (*errScene, *statsRig, *statsPlugin) {
 	t.Helper()
 	r := newStatsRig(t)
@@ -402,7 +389,7 @@ func statsScene(t *testing.T) (*errScene, *statsRig, *statsPlugin) {
 	}
 	x.now, x.loc = func() time.Time { return s.now }, time.UTC
 	waitState(t, s.store, "the sessions and readings", func(st core.State) bool {
-		return len(st.Workers) == 1 && len(st.Sessions) == len(fxSessions) && len(st.Usage) == 2 && st.Usage[0].Sampled.After(statsNow.Add(-time.Minute))
+		return !st.Machine.Sampled.IsZero() && len(st.Sessions) == len(fxSessions) && len(st.Usage) == 2 && st.Usage[0].Sampled.After(statsNow.Add(-time.Minute))
 	})
 	if err := s.store.Apply(core.SessionFocused{ID: r.ids["pricing-rounding"]}); err != nil {
 		t.Fatal(err)
@@ -535,9 +522,9 @@ func TestUsageSnapshot(t *testing.T) {
 	s.lint("the usage page")
 	s.golden("usage")
 	s.wantFrame(t, "USAGE", "Claude Max", "Work", "5-HOUR WINDOW", "WEEKLY", "WEEKLY · OPUS", "BURNED THE WEEKLY WINDOW",
-		"won't run out", "before the reset", "WINDOW USAGE · LAST 7 DAYS", "WORK · CLAUDE MAX · MBP")
+		"won't run out", "before the reset", "WINDOW USAGE · LAST 7 DAYS", "WORK · CLAUDE MAX")
 	// Codex's account is its own: picked, its windows show instead.
-	s.click(s.textPoint(t, "ADA@EXAMPLE.COM · CHATGPT PRO · MBP"))
+	s.click(s.textPoint(t, "ADA@EXAMPLE.COM · CHATGPT PRO"))
 	s.settleStats(x)
 	s.wantFrame(t, "ChatGPT Pro", "22%", "48%")
 }
@@ -650,7 +637,7 @@ func TestStartViewLinks(t *testing.T) {
 			x = v
 		}
 	}
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.settleStats(x)
 	s.click(centre(s.startCard("Stats").Bounds))
 	if !x.open {
@@ -664,49 +651,40 @@ func TestStartViewLinks(t *testing.T) {
 	}
 }
 
-// AI-12: plan usage belongs to an account. Three workers: a work laptop and a devbox on the company's Claude account,
-// a personal laptop on its own. The shared account is one plan, reported by both its workers; the other is separate,
-// never added to it. Each session's meters are its own account's.
+// AI-12: plan usage belongs to an account. One machine signed in to two Claude accounts, a company's and a personal
+// one: each is its own plan, never added to the other. Each session's meters are its own account's.
 func TestUsageIsPerAccount(t *testing.T) {
-	type machine struct {
-		id      core.WorkerID
+	fake := agenttest.NewFake()
+	fake.Name = "claude"
+	lw := newHostWith(t, host.Options{}, fake)
+	accounts := []struct {
 		account string
 		used    float64
-	}
-	machines := []machine{{"mbp-work", "u1/o-acme", .71}, {"mbp-home", "u1/o-personal", .22}, {"devbox", "u1/o-acme", .71}}
-	var changes []func(*Config)
+	}{{"u1/o-acme", .71}, {"u1/o-personal", .22}}
 	var sessions []core.SessionID
-	for _, m := range machines {
-		fake := agenttest.NewFake()
-		fake.Name = "claude"
-		lw := newWorkerWith(t, worker.Options{ID: m.id, Name: string(m.id)}, fake)
-		id, err := lw.w.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Name: "on-" + string(m.id), Prompt: "go",
+	for _, a := range accounts {
+		id, err := lw.w.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Name: "on-" + strings.TrimPrefix(a.account, "u1/o-"), Prompt: "go",
 			Provider: "claude", Repos: []core.RepoID{core.RepoID(lw.repo)}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		sessions = append(sessions, id)
-		fake.WaitStarted(t).Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "claude", Account: m.account,
-			AccountName: strings.TrimPrefix(m.account, "u1/o-") + "@example.com", Plan: "Claude Max", Sampled: statsNow,
-			Windows: []core.UsageWindow{{Name: "Current week (all models)", Used: m.used, Resets: statsNow.Add(40 * time.Hour), Length: 7 * 24 * time.Hour}}}})
-		changes = append(changes, lw.connect(t))
+		fake.WaitStarted(t).Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "claude", Account: a.account,
+			AccountName: strings.TrimPrefix(a.account, "u1/o-") + "@example.com", Plan: "Claude Max", Sampled: statsNow,
+			Windows: []core.UsageWindow{{Name: "Current week (all models)", Used: a.used, Resets: statsNow.Add(40 * time.Hour), Length: 7 * 24 * time.Hour}}}})
 	}
-	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) {
-		for _, c := range changes {
-			c(cfg)
-		}
-	})
+	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	s.now = statsNow
-	st := waitState(t, s.store, "two accounts, the shared one from both its workers", func(st core.State) bool {
-		if len(st.Usage) != 2 || len(st.Workers) != 3 {
+	st := waitState(t, s.store, "two accounts, each its sessions'", func(st core.State) bool {
+		if len(st.Usage) != 2 {
 			return false
 		}
-		for _, u := range st.Usage {
-			if u.Account == "u1/o-acme" && len(u.Workers) == 2 {
-				return true
+		for _, id := range sessions {
+			if se, ok := st.Session(id); !ok || len(se.Snapshot().Agent.Accounts) == 0 {
+				return false
 			}
 		}
-		return false
+		return true
 	})
 	var x *statsPlugin
 	for _, e := range s.plugins {
@@ -716,28 +694,28 @@ func TestUsageIsPerAccount(t *testing.T) {
 	}
 	x.now, x.loc = func() time.Time { return s.now }, time.UTC
 	for _, u := range st.Usage {
-		if u.Account == "u1/o-personal" && (len(u.Workers) != 1 || u.Workers[0] != "mbp-home" || u.Windows[0].Used != .22) {
+		if u.Account == "u1/o-personal" && u.Windows[0].Used != .22 {
 			t.Errorf("the personal account = %+v", u)
-		}
-	}
-	for i, m := range machines {
-		s.store.Apply(core.SessionFocused{ID: sessions[i]})
-		if u, _ := x.frontUsage(); u.Account != m.account {
-			t.Errorf("the session on %s shows %s's plan, want %s's", m.id, u.Account, m.account)
 		}
 	}
 	s.run("usage.open", nil)
 	s.settleStats(x)
-	s.wantFrame(t, "ACCOUNT", "ACME@EXAMPLE.COM · CLAUDE MAX · DEVBOX, MBP-WORK", "PERSONAL@EXAMPLE.COM · CLAUDE MAX · MBP-HOME", "71%")
-	s.click(s.textPoint(t, "PERSONAL@EXAMPLE.COM · CLAUDE MAX · MBP-HOME"))
+	s.wantFrame(t, "ACCOUNT", "ACME@EXAMPLE.COM · CLAUDE MAX", "PERSONAL@EXAMPLE.COM · CLAUDE MAX", "71%")
+	s.click(s.textPoint(t, "PERSONAL@EXAMPLE.COM · CLAUDE MAX"))
 	s.settleStats(x)
 	s.wantFrame(t, "22%")
 	if u, _ := x.usageAccount(); u.Account != "u1/o-personal" {
 		t.Errorf("the switcher picked %s", u.Account)
 	}
+	for i, a := range accounts {
+		s.store.Apply(core.SessionFocused{ID: sessions[i]})
+		if u, _ := x.frontUsage(); u.Account != a.account {
+			t.Errorf("the session on %s shows %s's plan", a.account, u.Account)
+		}
+	}
 }
 
-// logRecord is the part of a fixture log line the oracles below read: Claude's records and the worker's events.
+// logRecord is the part of a fixture log line the oracles below read: Claude's records and Oriel's events.
 type logRecord struct {
 	Type      string    `json:"type"`
 	Timestamp time.Time `json:"timestamp"`
@@ -962,16 +940,16 @@ func TestUsageTierChip(t *testing.T) {
 	s.keyCommand(t, "<D-U>")
 	s.settleStats(x)
 	s.wantFrame(t, "Claude Max", "MAX 20×")
-	if s.countAccess("Max 20×") != 1 || s.countAccess("WORK · CLAUDE MAX · MBP, Max 20×") != 1 {
+	if s.countAccess("Max 20×") != 1 || s.countAccess("WORK · CLAUDE MAX, Max 20×") != 1 {
 		t.Error("the header or the switcher lacks the tier")
 	}
-	s.click(s.textPoint(t, "ADA@EXAMPLE.COM · CHATGPT PRO · MBP"))
+	s.click(s.textPoint(t, "ADA@EXAMPLE.COM · CHATGPT PRO"))
 	s.settleStats(x)
 	s.wantFrame(t, "ChatGPT Pro")
 	if s.countAccess("Max 20×") != 0 {
 		t.Error("Codex's header shows a tier")
 	}
-	if s.countAccess("ADA@EXAMPLE.COM · CHATGPT PRO · MBP") != 1 {
+	if s.countAccess("ADA@EXAMPLE.COM · CHATGPT PRO") != 1 {
 		t.Error("the switcher gave Codex's account a badge")
 	}
 }

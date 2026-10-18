@@ -13,7 +13,7 @@ func init() {
 }
 
 // ProjectUI is how the window shows a session's projects (ui.md 01h): the one open, the panel each had last, and
-// colours chosen for them. The app keeps it; a worker's sync of the session leaves it as it is.
+// colours chosen for them. The app keeps it; a sync of the session leaves it as it is.
 type ProjectUI struct {
 	Open    string            `json:"open,omitempty"`
 	Panels  map[string]string `json:"panels,omitempty"`  // project → the name of its last panel

@@ -252,7 +252,7 @@ svg text{font-family:var(--mono)}
 .howm b{color:var(--fg2);font-weight:500}
 .howm code{font:10.5px var(--mono);background:var(--bg4);color:var(--p);padding:0 4px;border-radius:3px}
 </style>
-<div class="top" data-h="4120"><h1>Stats</h1><span>what the agents cost and did · one session's stats as a main tab, :Stats across every session and worker grouped by repo, :Usage for the plan windows, and how you reach them</span><span class="cap">design sheet · proposal</span></div>
+<div class="top" data-h="4120"><h1>Stats</h1><span>what the agents cost and did · one session's stats as a main tab, :Stats across every session grouped by repo, :Usage for the plan windows, and how you reach them</span><span class="cap">design sheet · proposal</span></div>
 <div class="sheet">
 <div class="cap2"><span class="lt">S</span><h2>Session stats, global stats and usage</h2><span>from the agents' transcripts; cost is estimated from a price table; repos, not working directories, are the unit</span><span class="chip c">proposal</span></div>
 
@@ -291,7 +291,7 @@ svg text{font-family:var(--mono)}
         <div class="edtabs"><div class="edtab"><span class="pq" style="background:var(--orange)"></span>round.go</div><div class="edtab"><span class="pq" style="background:var(--pink)"></span>InvoiceTotal.tsx</div><div class="edtab on"><span class="gi" data-i="stats"></span>Stats · pricing-rounding<span class="x">✕</span></div></div>
         <div class="rptop">
           <h1>STATS</h1><span class="pn" style="font-size:12px">pricing-rounding</span>
-          <span class="m">claude · opus-4.1 high · mbp · today 09:12 – 12:17 · live</span>
+          <span class="m">claude · opus-4.1 high · today 09:12 – 12:17 · live</span>
           <span style="margin-left:auto" class="row gap8"><span class="sg"><span class="on">$ cost</span><span>tokens</span></span><span class="btn ghost">All sessions <span class="kbd" style="font-size:9.5px;padding:0 4px">:Stats</span></span></span>
         </div>
         <div class="pg">
@@ -351,7 +351,7 @@ svg text{font-family:var(--mono)}
 
 <!-- ============ 2: global stats, by repo ============ -->
 <div class="case">
-  <div class="cl"><span class="n">2</span><span class="d">global stats · <span class="kbd">:Stats</span> opens a main page over every session and worker · grouped by repo; hovering billing-ui's row picks it out in the chart, a click drills in</span></div>
+  <div class="cl"><span class="n">2</span><span class="d">global stats · <span class="kbd">:Stats</span> opens a main page over every session · grouped by repo; hovering billing-ui's row picks it out in the chart, a click drills in</span></div>
   <div class="win brk">
     <div class="titlebar"><div class="brand"><svg width="18" height="18" viewBox="0 0 100 100"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg></div>
       <div class="stabs"><div class="stab"><span class="dot o"></span>ENG-2310 admin filters<span class="mini">work</span><span class="k">⌘1</span></div><div class="stab on"><span class="dot g"></span>pricing-rounding<span class="mini">working</span><span class="k">⌘2</span></div></div></div>
@@ -377,7 +377,7 @@ svg text{font-family:var(--mono)}
       </div>
       <div class="rp">
         <div class="rptop">
-          <h1>STATS</h1><span class="m">all sessions · 2 workers · 64 sessions · Sep 15 – Oct 14</span>
+          <h1>STATS</h1><span class="m">all sessions · 64 sessions · Sep 15 – Oct 14</span>
           <span style="margin-left:auto" class="row gap12"><span class="m">scanned 40s ago</span><span class="btn ghost">Copy as CSV</span><span class="btn ghost">Close <span class="kbd" style="font-size:9.5px;padding:0 4px">esc</span></span></span>
         </div>
         <div class="tb">
@@ -385,8 +385,6 @@ svg text{font-family:var(--mono)}
           <span class="lb">group by</span>
           <span class="sg"><span class="on">Repo</span><span>Session</span><span>Kind</span><span>Model</span><span>Provider</span><span>Day</span></span>
           <span class="fc"><span class="k">repo</span>all<span class="x">▾</span></span>
-          <span class="fc on"><span class="k">worker</span>mbp<span class="x">✕</span></span>
-          <span class="fc on"><span class="k">worker</span>devbox<span class="x">✕</span></span>
           <span class="fc"><span class="k">provider</span>all<span class="x">▾</span></span>
           <span class="fc add">+ filter</span>
           <span class="tgl" style="margin-left:auto"><span class="sw on"></span>split multi-repo sessions</span>
@@ -451,8 +449,6 @@ svg text{font-family:var(--mono)}
           <span class="lb">group by</span>
           <span class="sg"><span>Repo</span><span class="on">Session</span><span>Kind</span><span>Model</span><span>Provider</span><span>Day</span></span>
           <span class="fc"><span class="k">repo</span>all<span class="x">▾</span></span>
-          <span class="fc on"><span class="k">worker</span>mbp<span class="x">✕</span></span>
-          <span class="fc on"><span class="k">worker</span>devbox<span class="x">✕</span></span>
           <span class="fc"><span class="k">provider</span>all<span class="x">▾</span></span>
           <span class="tgl" style="margin-left:auto;color:var(--fg4)"><span class="sw"></span>split multi-repo sessions<span class="m" style="font:10px var(--mono)">· n/a by session</span></span>
         </div>
@@ -639,11 +635,11 @@ svg text{font-family:var(--mono)}
       </div>
       <div class="rp">
         <div class="rptop">
-          <h1>USAGE</h1><span class="m">plan windows · 2 providers · 2 workers · Wed Oct 14 12:17</span>
+          <h1>USAGE</h1><span class="m">plan windows · 2 accounts · Wed Oct 14 12:17</span>
           <span style="margin-left:auto" class="row gap12"><span class="m">read 40s ago</span><span class="btn ghost">Refresh <span class="kbd" style="font-size:9.5px;padding:0 4px">r</span></span><span class="btn ghost"><span class="gi" data-i="stats"></span>Stats</span><span class="btn ghost">Close <span class="kbd" style="font-size:9.5px;padding:0 4px">esc</span></span></span>
         </div>
         <div class="pg">
-          <div class="prow"><span class="av cl2">C</span><span class="pv">Claude Max</span><span class="chip">max 20×</span><span class="m">opus-4.1 · sonnet-4.5 · 4 sessions on mbp and devbox</span><span class="r"><span>windows from <span style="color:var(--fg3)">/usage</span>, through the Oriel mod · 40s ago</span></span></div>
+          <div class="prow"><span class="av cl2">C</span><span class="pv">Claude Max</span><span class="chip">max 20×</span><span class="m">opus-4.1 · sonnet-4.5 · 4 sessions</span><span class="r"><span>windows from <span style="color:var(--fg3)">/usage</span>, through the Oriel mod · 40s ago</span></span></div>
           <div class="rw" style="flex:none">
             <div class="meter">
               <div class="hd"><span class="cap">5-hour window</span><span class="rs">resets 14:40 <em>· in 2h 23m</em></span></div>
@@ -683,7 +679,7 @@ svg text{font-family:var(--mono)}
               <div class="row" style="margin-top:auto;justify-content:space-between"><span class="note">pt: points of the window · $ est. from the price table</span><span class="hint">Open in Stats ›</span></div>
             </div>
           </div>
-          <div class="prow" style="margin-top:4px"><span class="av cx2">CX</span><span class="pv">ChatGPT Pro</span><span class="chip">pro</span><span class="m">gpt-5-codex · 1 session on devbox</span><span class="r"><span>windows from Codex's <span style="color:var(--fg3)">account/rateLimits</span> · 40s ago</span></span></div>
+          <div class="prow" style="margin-top:4px"><span class="av cx2">CX</span><span class="pv">ChatGPT Pro</span><span class="chip">pro</span><span class="m">gpt-5-codex · 1 session</span><span class="r"><span>windows from Codex's <span style="color:var(--fg3)">account/rateLimits</span> · 40s ago</span></span></div>
           <div class="rw" style="flex:none;height:150px">
             <div class="meter">
               <div class="hd"><span class="cap">5-hour window</span><span class="rs">resets 15:27 <em>· in 3h 10m</em></span></div>
@@ -707,7 +703,7 @@ svg text{font-family:var(--mono)}
               <div id="burnrows2"></div>
             </div>
           </div>
-          <div class="howm"><b>How it's measured</b>· the worker reads each provider's own figures: Claude's <code>/usage</code> windows through the Oriel mod (<code>$.session.usage()</code>), Codex's <code>account/rateLimits/read</code> · nothing is prompted, so measuring spends no tokens · burn is the slope over the last 30 min (5h) or 24h (weekly)</div>
+          <div class="howm"><b>How it's measured</b>· Oriel reads each provider's own figures: Claude's <code>/usage</code> windows through the Oriel mod (<code>$.session.usage()</code>), Codex's <code>account/rateLimits/read</code> · nothing is prompted, so measuring spends no tokens · burn is the slope over the last 30 min (5h) or 24h (weekly)</div>
         </div>
       </div>
     </div>
@@ -718,7 +714,7 @@ svg text{font-family:var(--mono)}
   <div class="nc">
     <div class="nh">The pages</div>
     <div><b>Session stats</b> is a main tab for one session: totals, cost over its life by token kind with idle gaps and turns marked, cost per repo, models, tools with errors and timing, hours, effort.</div>
-    <div><b>Global stats</b> is a main page across every session and worker: a range, a group-by, filters, totals against the previous period, the headline chart, a table of groups and four small breakdowns.</div>
+    <div><b>Global stats</b> is a main page across every session: a range, a group-by, filters, totals against the previous period, the headline chart, a table of groups and four small breakdowns.</div>
     <div><b>Usage</b> is a main page per provider: each plan window as a meter with its reset, burn rate and projection; 7 days of history with the resets; and which repos burned the window.</div>
     <div>Every cost is <b>est.</b>: tokens are counted, cost is tokens × the price table, so a price change re-costs history. Usage's percentages are the provider's own.</div>
   </div>
@@ -731,8 +727,7 @@ svg text{font-family:var(--mono)}
   </div>
   <div class="nc">
     <div class="nh">Where it comes from</div>
-    <div>The <b>worker scans transcripts incrementally</b>: per request, tokens by kind, model, effort, time; per tool call, name, error, duration. It keeps an offset per file, so a rescan reads only what's new.</div>
-    <div><b>Remote workers report their own</b> rollups over the bus; the page merges them. A worker that's offline shows its last report, marked stale.</div>
+    <div>Oriel <b>scans transcripts incrementally</b>: per request, tokens by kind, model, effort, time; per tool call, name, error, duration. It keeps an offset per file, so a rescan reads only what's new.</div>
     <div><b>Plan windows are the provider's own</b>: Claude's <code>/usage</code> through the Oriel mod, Codex's rate limits. No prompt is sent, so measuring costs nothing. With no session open, the resident utility session reports.</div>
     <div><b>Burn</b> is the slope over the last 30 min (5h) or 24h (weekly); the projection extends it to the reset. <b>Active</b> time counts gaps under 5 min.</div>
   </div>

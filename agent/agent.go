@@ -253,7 +253,7 @@ type (
 		Account  string // ProviderUsage.Account, when known
 		Detail   string // what the provider said: "OAuth token revoked · Please run /login"
 		Terminal string // typed into the session's terminal, signs in again: "/login"; "" when that can't
-		Shell    string // run in a shell on the agent's machine, signs in again: "claude, then /login"
+		Shell    string // run in a shell, signs in again: "claude, then /login"
 	}
 	// AuthRestored is a login seen to succeed, so whoever waits on one checks again.
 	AuthRestored struct{ Provider, Account string }

@@ -171,12 +171,12 @@ func TestStartWorkFromAnyTracker(t *testing.T) {
 	change, secrets := linearConfig(t, l)
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
 	secrets.SetSecret("JIRA_TOKEN", "jira-t0ken")
-	lw := newLocalWorker(t)
-	if _, err := lw.client(t).AddRepoPath(context.Background(), lw.repo); err != nil {
+	lw := newLocalHost(t)
+	if _, err := lw.w.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}
 	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { lw.connect(t)(cfg); change(cfg) })
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
 	jira := loadJira(t, s)
 	if err := s.reg.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
@@ -231,19 +231,19 @@ func TestPRLinkedToAnyTracker(t *testing.T) {
 	s.until(t, "the notice", func() bool { return strings.Contains(s.fullText(), "OPS-12 moved to In Review in Jira") })
 }
 
-// ticketScene is the app on a local worker with the fake agent, Linear (its key set) and the Jira-like tracker loaded.
-func ticketScene(t *testing.T) (*errScene, *localWorker, *lineartest.Linear, *script.VM) {
+// ticketScene is the app on a session host with the fake agent, Linear (its key set) and the Jira-like tracker loaded.
+func ticketScene(t *testing.T) (*errScene, *localHost, *lineartest.Linear, *script.VM) {
 	t.Helper()
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
 	secrets.SetSecret("JIRA_TOKEN", "jira-t0ken")
-	lw := newLocalWorker(t)
-	if _, err := lw.client(t).AddRepoPath(context.Background(), lw.repo); err != nil {
+	lw := newLocalHost(t)
+	if _, err := lw.w.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}
 	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { lw.connect(t)(cfg); change(cfg) })
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
 	jira := loadJira(t, s)
 	if err := s.reg.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
@@ -253,7 +253,7 @@ func ticketScene(t *testing.T) (*errScene, *localWorker, *lineartest.Linear, *sc
 }
 
 // startTicketSession starts a session on ticket (none for ""), and gives it once it's in front.
-func startTicketSession(t *testing.T, s *errScene, lw *localWorker, prompt, ticket string) core.SessionState {
+func startTicketSession(t *testing.T, s *errScene, lw *localHost, prompt, ticket string) core.SessionState {
 	t.Helper()
 	before := s.store.State().Focus
 	s.run("session.start", registry.Args{"kind": "plan", "prompt": prompt, "ticket": ticket, "provider": "fake"})

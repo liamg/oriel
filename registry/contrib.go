@@ -103,7 +103,7 @@ type Indicator struct {
 	Note        func() string
 	Span        int
 	Every       time.Duration
-	On          []string // core event names that build it again: "WorkerChanged"
+	On          []string // core event names that build it again: "MachineChanged"
 	Build       func(ctx Ctx) (ui.Node, error)
 	Source      string
 }

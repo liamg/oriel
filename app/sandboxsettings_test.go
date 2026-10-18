@@ -13,9 +13,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/sandbox"
-	"github.com/liamg/oriel/worker"
 )
 
 // settings.md, "sandbox.*": the sandbox's settings are options of the right types, with the project layer only
@@ -75,11 +73,11 @@ func TestSandboxOptionsAreDeclared(t *testing.T) {
 	}
 }
 
-// agents.md, "Sandbox settings": your sandbox.* values, and each trusted project file's own, reach the worker as the
+// agents.md, "Sandbox settings": your sandbox.* values, and each trusted project file's own, reach the host as the
 // sandbox.Config its sandboxes run on; a repo a session works in brings its project file even when the window is
-// elsewhere, and a change reaches the worker again.
-func TestSandboxSettingsReachTheWorker(t *testing.T) {
-	lw := newLocalWorker(t)
+// elsewhere, and a change reaches the host again.
+func TestSandboxSettingsReachTheHost(t *testing.T) {
+	lw := newLocalHost(t)
 	other := filepath.Join(t.TempDir(), "billing")
 	gitRepo(t, other, map[string]string{"README.md": "billing\n"}, 1)
 	s := newSceneWith(t, "", lw.repo, mockupSize, lw.connect(t))
@@ -121,7 +119,7 @@ linear = "npx -y linear-mcp"
 			other:   {Rules: []sandbox.PolicyRule{{Tool: "oriel__push", Action: "deny"}}, Image: "billing:dev"},
 		}}
 	if !reflect.DeepEqual(cfg, want) {
-		t.Errorf("the worker has\n%+v\nwant\n%+v", cfg, want)
+		t.Errorf("the host has\n%+v\nwant\n%+v", cfg, want)
 	}
 	if err := s.reg.Options().Set("sandbox.pids_limit", registry.LayerUser, registry.At{}, 256); err != nil {
 		t.Fatal(err)
@@ -129,7 +127,7 @@ linear = "npx -y linear-mcp"
 	waitSandbox(t, lw, "the change", func(c sandbox.Config) bool { return c.PidsLimit == 256 })
 }
 
-func waitSandbox(t *testing.T, lw *localWorker, what string, ok func(sandbox.Config) bool) sandbox.Config {
+func waitSandbox(t *testing.T, lw *localHost, what string, ok func(sandbox.Config) bool) sandbox.Config {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
 	for {
@@ -138,7 +136,7 @@ func waitSandbox(t *testing.T, lw *localWorker, what string, ok func(sandbox.Con
 			return c
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("waiting for %s; the worker has %+v", what, c)
+			t.Fatalf("waiting for %s; the host has %+v", what, c)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -323,39 +321,6 @@ func TestMapOptionLayers(t *testing.T) {
 	}
 	if got := formatValue(map[string]string{"cache 1": "a", "db": "b"}); got != `{ "cache 1" = "a", db = "b" }` {
 		t.Errorf("as TOML: %s", got)
-	}
-}
-
-// agents.md, "Sandbox settings": a worker elsewhere gets your values and reads its own repos' project files; the
-// app's are of paths on this machine.
-func TestRemoteWorkersReadTheirOwnProjects(t *testing.T) {
-	cfg := sandbox.Config{Memory: "4g", Projects: map[string]sandbox.ProjectConfig{"/src/pricing": {Image: "x"}}}
-	if got := forWorker(cfg, core.LocalWorker); !reflect.DeepEqual(got, cfg) {
-		t.Errorf("this machine's worker gets %+v", got)
-	}
-	if got := forWorker(cfg, "devbox"); got.Projects != nil || !got.ReadProjects || got.Memory != "4g" {
-		t.Errorf("a worker elsewhere gets %+v", got)
-	}
-}
-
-// A worker elsewhere is told to read its own project files, and a notice of its offers Trust, which trusts the file
-// on that worker's machine.
-func TestTrustOnAWorkerElsewhere(t *testing.T) {
-	trusted := filepath.Join(t.TempDir(), "trusted.toml")
-	devbox := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox", TrustPath: trusted})
-	file := filepath.Join(devbox.repo, ".oriel", "settings.toml")
-	writeFile(t, file, "[sandbox]\nimage = \"billing:dev\"\n")
-	ctx := context.Background()
-	if _, err := devbox.client(t).AddRepoPath(ctx, devbox.repo); err != nil {
-		t.Fatal(err)
-	}
-	s := newSceneWith(t, "", t.TempDir(), mockupSize, devbox.connect(t))
-	waitSandbox(t, devbox, "the settings, to read its projects with", func(c sandbox.Config) bool { return c.ReadProjects && c.Default == "sandbox" })
-	if err := s.reg.Run(ctx, "settings.trust", registry.Args{"path": file, "worker": "devbox"}); err != nil {
-		t.Fatal(err)
-	}
-	if !(settingsfile.Trust{Path: trusted}).Trusted(file, []byte(readFile(t, file))) {
-		t.Error("the file isn't trusted on the worker")
 	}
 }
 

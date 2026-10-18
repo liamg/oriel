@@ -13,9 +13,9 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/worker"
 )
 
 // sessionGo is internal/auth/session.go with 14-tour's Mint at lines 42-49.
@@ -56,7 +56,7 @@ func tourScene(t *testing.T) (*errScene, string) {
 	t.Helper()
 	ws := t.TempDir()
 	repo := func(name string, files map[string]string) string {
-		r := &gittest.Repo{T: t, Dir: filepath.Join(ws, worker.ReposDir, name), When: time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)}
+		r := &gittest.Repo{T: t, Dir: filepath.Join(ws, host.ReposDir, name), When: time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)}
 		os.MkdirAll(r.Dir, 0o755)
 		r.Git("init", "-q", "-b", "main")
 		r.Write(files)
@@ -70,11 +70,11 @@ func tourScene(t *testing.T) (*errScene, string) {
 	}
 	ts.WriteString("const expiresAt = decodeExp(res.headers.get(\"x-access-exp\"))\nsetTimeout(refresh, expiresAt - Date.now() - 60_000)\n")
 	dash := repo("dashboard", map[string]string{"src/auth/useSession.ts": ts.String()})
-	m := worker.Manifest{Name: "auth-flow", Kind: "tour", Tour: &worker.TourInfo{Title: "How authentication works", Kind: "walkthrough"},
-		Projects: []worker.ManifestEntry{{Name: "api", Repo: "/src/api", Dir: "repos/api", Primary: true, Detached: true, Commit: api, Base: "main"},
+	m := host.Manifest{Name: "auth-flow", Kind: "tour", Tour: &host.TourInfo{Title: "How authentication works", Kind: "walkthrough"},
+		Projects: []host.ManifestEntry{{Name: "api", Repo: "/src/api", Dir: "repos/api", Primary: true, Detached: true, Commit: api, Base: "main"},
 			{Name: "dashboard", Repo: "/src/dashboard", Dir: "repos/dashboard", Detached: true, Commit: dash, Base: "main"}}}
 	b, _ := json.Marshal(m)
-	os.WriteFile(filepath.Join(ws, worker.ManifestFile), b, 0o644)
+	os.WriteFile(filepath.Join(ws, host.ManifestFile), b, 0o644)
 	for i, title := range tourSteps {
 		body := "# " + title + "\n\nWhat happens here.\n"
 		if i == 3 {

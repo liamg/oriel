@@ -37,11 +37,11 @@ The agent asks something with options: click one to answer. Where it takes sever
 
 ## Login
 
-The agent's login on its worker stopped working: an expired or revoked login, or none. Every session on that worker
-with that provider waits on this card, and a notice says which worker and what to do. On this machine **Log in**
-(`l`) opens the agent's own terminal with its login command typed (`/login` for Claude); finish signing in there.
-On a worker elsewhere the card says what to run on it. Once you're signed in the cards go by themselves, and the
-sessions carry on; **Check again** (`c`) asks the worker to look now.
+The agent's login stopped working: an expired or revoked login, or none. Every session with that provider waits on
+this card, and a notice says what to do. **Log in** (`l`) opens the agent's own terminal with its login command typed
+(`/login` for Claude); finish signing in there. An agent with no login command of its own (Codex) says what to run in
+a terminal (`codex login`). Once you're signed in the cards go by themselves, and the sessions carry on; **Check
+again** (`c`) looks now.
 
 ## Security key {#key}
 

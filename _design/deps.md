@@ -39,7 +39,6 @@ Each tier-C row is a **question for you**: approve, reject, or "write our own".
 | Dependency | Used for | Maintainer | Tier | Alternative if rejected |
 |---|---|---|---|---|
 | `golang.org/x/{sys,net,crypto,sync,text}` | syscalls, Landlock, netlink, crypto | Go team | A ✓ | – |
-| `github.com/hashicorp/yamux` | app ↔ worker multiplexing (from crit) | HashiCorp | B ✓ | – |
 | `github.com/infracost/agentbus` | agentbus (from crit) | Infracost | B ✓ (your company) | – |
 | ↳ `tailscale.com` (indirect via agentbus) | tsnet | Tailscale | B ✓ | – |
 | ↳ `modernc.org/sqlite` + `libc`, `mathutil`, `memory` (indirect via agentbus) | pure-Go SQLite | individual (cznic) | **kept out of Oriel**: agentbus runs as a separate `oriel-agentbus` helper process | the helper has its own module tree; Oriel's has no sqlite |

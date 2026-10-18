@@ -12,6 +12,8 @@ depends_on: [AI-1]
 
 **Phase** 7 · the rest · **After** [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md) · **Unblocks** [PL-21](PL-21-registry-client-badges-and-the-plugins-page.md)
 
+**Note:** workers are gone (one Oriel per machine, see [AI-15](AI-15-workers-page-remote-workers-pairing.md)): the updater installs only this copy; nothing is pushed to workers.
+
 ## Design
 
 - `_design/distribution.md`

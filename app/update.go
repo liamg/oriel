@@ -15,10 +15,9 @@ import (
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/update"
-	"github.com/liamg/oriel/worker"
 )
 
-// Updates is Oriel updating itself and its workers (distribution.md, PL-6).
+// Updates is Oriel updating itself (distribution.md, PL-6).
 type Updates struct {
 	Updater *update.Updater
 	// Relaunch starts the installed Oriel again; it runs once the window has closed after an update's restart.
@@ -69,7 +68,7 @@ func (x *updatePlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.add(h.Option(registry.OptionSpec{Name: "updates.mode", Type: registry.Enum, Values: []string{updateAutomatic, updateAsk, updateManual},
 		Default: updateAsk, Scopes: registry.ScopeUser,
-		Help: "automatic installs a new release and its workers' as it comes out; ask offers it; manual only checks when you run :UpdateCheck"}))
+		Help: "automatic installs a new release as it comes out; ask offers it; manual only checks when you run :UpdateCheck"}))
 	x.add(h.Option(registry.OptionSpec{Name: "updates.channel", Type: registry.Enum, Values: []string{update.Stable, update.Nightly},
 		Default: update.Stable, Scopes: registry.ScopeUser, Help: "stable releases, or nightly builds as well"}))
 	can := func(registry.Args) bool { return x.updater() != nil }
@@ -80,10 +79,10 @@ func (x *updatePlugin) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(registry.Ctx, registry.Args) error { x.checkNow(true); return nil }},
 		{ID: "update.notes", Title: "Show the update card: the newer release and its notes", Available: can,
 			Run: func(registry.Ctx, registry.Args) error { x.setCard(true); return nil }},
-		{ID: "update.install", Title: "Install the newer release here and on every worker that's behind; Oriel runs it after a restart",
+		{ID: "update.install", Title: "Install the newer release; Oriel runs it after a restart",
 			Available: func(registry.Args) bool { _, ok := x.latest(); return ok },
 			Run:       func(registry.Ctx, registry.Args) error { return x.install() }},
-		{ID: "update.restart", Title: "Restart onto the installed update: this machine's worker drains first",
+		{ID: "update.restart", Title: "Restart onto the installed update: running agents hand over first",
 			Available: func(registry.Args) bool { _, ok := x.ready(); return ok },
 			Run:       func(registry.Ctx, registry.Args) error { return x.restart() }},
 	} {
@@ -98,7 +97,6 @@ func (x *updatePlugin) Activate(_ context.Context, h plugin.Host) error {
 			return &ui.Func{Key: "update", Fn: x.statusSegment}, nil
 		}}))
 	if u := x.updater(); u != nil {
-		x.add(onDispose(x.sh.onWorkerJoined(x.joined)))
 		x.stop = make(chan struct{})
 		stop := x.stop
 		x.add(onDispose(func() { close(stop) }))
@@ -243,11 +241,10 @@ func (x *updatePlugin) setFailed(s string) {
 	x.mu.Unlock()
 }
 
-// install, on the loop, updates every connected worker that's behind, then this copy, which Oriel runs after a restart. A worker
-// that fails says so and doesn't stop the rest.
+// install, on the loop, updates this copy, which Oriel runs after a restart.
 func (x *updatePlugin) install() error {
 	u := x.updater()
-	if u == nil {
+	if u == nil || u.Installer == nil {
 		return errors.New("this build of Oriel doesn't update itself")
 	}
 	m, ok := u.Latest()
@@ -258,26 +255,15 @@ func (x *updatePlugin) install() error {
 		return errors.New("an update is already running")
 	}
 	x.h.Dismiss("update.available")
-	var workers map[core.WorkerID]worker.Client
-	if x.sh.sessions != nil {
-		workers = x.sh.sessions.byWorker()
-	}
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 		defer cancel()
-		for id, c := range workers {
-			x.pushTo(ctx, id, c)
-		}
-		var err error
-		if u.Installer != nil {
-			err = u.Install(ctx)
-		}
+		err := u.Install(ctx)
 		x.end(err)
 		switch {
 		case err != nil:
 			x.h.Notify(core.Notice{ID: "update.failed", Severity: core.SevError, Title: "Update",
 				Text: fmt.Sprintf("Oriel %s didn't install: %v", m.Version, err)})
-		case u.Installer == nil:
 		default:
 			x.h.Notify(core.Notice{ID: "update.ready", Severity: core.SevInfo, Title: "Update",
 				Text:    fmt.Sprintf("Oriel %s is installed: it runs from the next restart.", m.Version),
@@ -287,40 +273,7 @@ func (x *updatePlugin) install() error {
 	return nil
 }
 
-// pushTo updates one worker that's behind the latest release.
-func (x *updatePlugin) pushTo(ctx context.Context, id core.WorkerID, c worker.Client) {
-	p, err := x.updater().PushTo(ctx, c.Conn)
-	source := "worker:" + string(id)
-	switch {
-	case err != nil:
-		x.h.Notify(core.Notice{ID: "update.worker", Severity: core.SevWarning, Source: source, Title: "Worker update",
-			Text: fmt.Sprintf("%s wasn't updated: %v", id, err)})
-	case p.To != "":
-		x.h.Log().Info("updated a worker", "worker", id, "from", p.From, "to", p.To)
-		x.h.Notify(core.Notice{ID: "update.worker", Severity: core.SevInfo, Source: source, Title: "Worker update",
-			Text: fmt.Sprintf("%s is restarting on %s (it ran %s); its agents come back on it.", id, p.To, p.From)})
-	}
-}
-
-// joined serves a worker that connects the releases offered to it, and updates it first if it's behind a release
-// Oriel already has (distribution.md, "Version skew").
-func (x *updatePlugin) joined(c worker.Client, info worker.Info) {
-	u := x.updater()
-	u.Serve(c.Conn)
-	if x.mode() == updateManual {
-		return
-	}
-	if _, ok := u.Latest(); !ok {
-		return
-	}
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-		defer cancel()
-		x.pushTo(ctx, info.ID, c)
-	}()
-}
-
-// restart quits, draining this machine's worker, and starts the installed Oriel once the window has closed.
+// restart quits, handing the agents over, and starts the installed Oriel once the window has closed.
 func (x *updatePlugin) restart() error {
 	if _, ok := x.ready(); !ok {
 		return errors.New("no update is waiting for a restart")

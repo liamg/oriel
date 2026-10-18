@@ -12,6 +12,8 @@ depends_on: [SE-4, AI-13]
 
 **Phase** 5 · AI (follow-up) · **After** [SE-4](SE-4-jobs-page-saved-prompts-runs-and-schedules.md), [AI-13](AI-13-detect-an-expired-agent-login.md) · **Unblocks** nothing yet
 
+**Note:** workers are gone (one Oriel per machine, see [AI-15](AI-15-workers-page-remote-workers-pairing.md)): a stop on quit is a hand-over, missed occurrences run when Oriel starts, a job has no worker to change, and there's no remote login.
+
 The gaps SE-4 and AI-13 left, filled.
 
 ## Design

@@ -1,13 +1,13 @@
 ---
 id: shell/update
 covers: [UpdateCheck, update.check, update.notes, update.install, update.restart, app.overlay.update, hud.indicator.update]
-related: [shell/settings, agent/workers]
+related: [shell/settings, shell/quit]
 ---
 
 # Updates
 
-Oriel keeps itself and its workers up to date. Each release is signed by Oriel's release key, and anything that
-doesn't verify is refused, whether it came from GitHub or over a worker's connection.
+Oriel keeps itself up to date. Each release is signed by Oriel's release key, and anything that doesn't verify is
+refused.
 
 ## Checking {#check}
 
@@ -27,17 +27,14 @@ and **Restart** appears once it's installed.
 
 ## Installing {#install}
 
-**Update** sends the release to every connected worker that's behind it first. Each one checks the release's
-signature, runs the new build, then drains: its agents finish their turns and come back on the new build. Then Oriel
-installs its own copy next to the one that's running, keeping the old one. While this happens the status line says
-**updating …**. Workers never need GitHub: Oriel streams each one the build for its platform. A worker that connects
-later while it's behind is updated as it connects, unless updates are manual.
+**Update** installs the new copy next to the one that's running, keeping the old one. While this happens the status
+line says **updating …**.
 
 ## Restarting {#ready}
 
 Once the update is installed, the status line shows **update ready · restart**. Click it, or **Restart** on the
-card or in the notice, and Oriel quits (this machine's worker drains first) and opens again on the new version. If
-the new version doesn't start properly, Oriel goes back to the previous one by itself, and so does a worker.
+card or in the notice, and Oriel quits (its agents hand over first, as at any quit) and opens again on the new version. If
+the new version doesn't start properly, Oriel goes back to the previous one by itself.
 
 From a terminal, `oriel update` checks and installs without the app: `--check` only says whether there's a newer
 release, and `--channel nightly` picks the channel.

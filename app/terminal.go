@@ -50,7 +50,7 @@ type terminals struct {
 }
 
 // TermSource is what a terminal shows and types into: a program in a PTY, or a stream from elsewhere, such as an
-// agent's terminal on a worker. term.open takes one as {source}.
+// agent's terminal. term.open takes one as {source}.
 type TermSource interface {
 	Read(p []byte) (int, error)
 	Write(p []byte) (int, error)

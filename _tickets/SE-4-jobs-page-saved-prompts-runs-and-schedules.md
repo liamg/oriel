@@ -12,6 +12,8 @@ depends_on: [SE-1, AI-12]
 
 **Phase** 5 · AI (follow-up) · **After** [SE-1](SE-1-session-kinds-plan-work-review-tour-job-new-repo.md), [AI-12](AI-12-stats-and-usage-pages-grouped-by-repo.md) · **Unblocks** nothing yet
 
+**Note:** workers are gone (one Oriel per machine, see [AI-15](AI-15-workers-page-remote-workers-pairing.md)): a job has no worker pin, lives in `~/.oriel/jobs` under its name, and its schedule runs while Oriel is open.
+
 Added after P5 from review: crit's jobs with a page of their own. Mockup 44 was signed off.
 
 ## Design

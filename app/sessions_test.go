@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"github.com/liamg/oriel/worker/sysload"
+	"github.com/liamg/oriel/host/sysload"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -13,28 +13,26 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/wire"
-	"github.com/liamg/oriel/worker"
 )
 
-// localWorker is a worker in the test's process, with the fake provider and a fixture repo, connected the way the
-// app connects to this machine's worker.
-type localWorker struct {
-	w    *worker.Worker
+// localHost is a session host with the fake provider and a fixture repo, given to the app as Oriel gives it.
+type localHost struct {
+	w    *host.Host
 	fake *agenttest.Fake
 	repo string
 }
 
-// newLocalWorker is a worker with the fake provider, or the fakes given (named as the providers they stand for).
-func newLocalWorker(t *testing.T, fakes ...*agenttest.Fake) *localWorker {
+// newLocalHost is a session host with the fake provider, or the fakes given (named as the providers they stand for).
+func newLocalHost(t *testing.T, fakes ...*agenttest.Fake) *localHost {
 	t.Helper()
-	return newWorkerWith(t, worker.Options{}, fakes...)
+	return newHostWith(t, host.Options{}, fakes...)
 }
 
-// newWorkerWith is newLocalWorker with options of its own: another machine's ID and name, its repos directory.
-func newWorkerWith(t *testing.T, o worker.Options, fakes ...*agenttest.Fake) *localWorker {
+// newHostWith is newLocalHost with options of its own: its repos directory, its clock.
+func newHostWith(t *testing.T, o host.Options, fakes ...*agenttest.Fake) *localHost {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
@@ -45,7 +43,7 @@ func newWorkerWith(t *testing.T, o worker.Options, fakes ...*agenttest.Fake) *lo
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
 	}
-	lw := &localWorker{fake: agenttest.NewFake(), repo: repo}
+	lw := &localHost{fake: agenttest.NewFake(), repo: repo}
 	providers := &agent.Providers{}
 	if len(fakes) == 0 {
 		fakes = []*agenttest.Fake{lw.fake}
@@ -61,7 +59,7 @@ func newWorkerWith(t *testing.T, o worker.Options, fakes ...*agenttest.Fake) *lo
 	if o.Load == nil {
 		o.Load = steadyLoad
 	}
-	w, err := worker.New(o)
+	w, err := host.New(o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,14 +75,35 @@ func steadyLoad() sysload.Reading {
 	return sysload.Reading{CPU: 34, Cores: 12, MemUsed: 11 << 30, MemTotal: 32 << 30}
 }
 
-// connect is a Config change that connects the app to the worker.
-func (lw *localWorker) connect(t *testing.T) func(*Config) {
+// connect is a Config change that gives the app the session host, and its store.
+func (lw *localHost) connect(*testing.T) func(*Config) {
 	return func(cfg *Config) {
-		a, b := wire.Pipe()
-		lw.w.Serve(b)
-		t.Cleanup(func() { a.Close(); b.Close() })
-		cfg.Workers = append(cfg.Workers, worker.Client{Conn: a})
+		cfg.Host, cfg.Store = lw.w, lw.w.Store()
 	}
+}
+
+func (s *errScene) machine() *machinePlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*machinePlugin); ok {
+			return x
+		}
+	}
+	return nil
+}
+
+// hostScene is the app with a session host, the scene's state in a temporary directory.
+func hostScene(t *testing.T, change ...func(*Config)) (*errScene, *localHost) {
+	t.Helper()
+	lw := newLocalHost(t)
+	state := t.TempDir()
+	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) {
+		lw.connect(t)(cfg)
+		cfg.StateDir = state
+		for _, f := range change {
+			f(cfg)
+		}
+	})
+	return s, lw
 }
 
 func waitState(t *testing.T, s core.Store, what string, ok func(core.State) bool) core.State {
@@ -102,11 +121,11 @@ func waitState(t *testing.T, s core.Store, what string, ok func(core.State) bool
 	}
 }
 
-// AI-1: the app mirrors the worker's sessions, starts one through a command, and the window follows it.
+// AI-1: the app mirrors the host's sessions, starts one through a command, and the window follows it.
 func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	err := r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.repo}})
 	})
@@ -130,7 +149,7 @@ func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 
 // AI-7 layer 2: a Permission hook answers before the user is asked.
 func TestPermissionHooksAnswerForTheUser(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	r := startAppWith(t, t.TempDir(), "", func(h plugin.Host) {
 		h.Hook(registry.Hook{Event: "Permission", Kind: registry.Decide, Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 			p := ev.(registry.PermissionEvent)
@@ -140,7 +159,7 @@ func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 			return registry.Verdict{}, nil
 		}})
 	}, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
 	})
@@ -164,7 +183,7 @@ func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 
 // LS-3's way in: a plugin's agent tool is offered to the agent, and runs in the app for the session that asked.
 func TestAgentToolsRunInTheApp(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	var session string
 	r := startAppWith(t, t.TempDir(), "", func(h plugin.Host) {
 		h.Contribute(registry.AgentTool{Name: "staging_logs", Desc: "Tail the staging logs", Params: map[string]string{"service": "string", "lines": "number?"},
@@ -173,7 +192,7 @@ func TestAgentToolsRunInTheApp(t *testing.T) {
 				return "logs of " + p["service"].(string), nil
 			}})
 	}, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
 	})
@@ -194,7 +213,7 @@ func TestAgentToolsRunInTheApp(t *testing.T) {
 
 // AI-2's turns fire the AgentTurnEnd hook, with the session, from Lua or Go.
 func TestAgentTurnEndFires(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	ended := make(chan string, 4)
 	r := startAppWith(t, t.TempDir(), "", func(h plugin.Host) {
 		h.Hook(registry.Hook{Event: "AgentTurnEnd", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
@@ -202,7 +221,7 @@ func TestAgentTurnEndFires(t *testing.T) {
 			return registry.Verdict{}, nil
 		}})
 	}, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
 	})

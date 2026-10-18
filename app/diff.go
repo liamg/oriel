@@ -15,12 +15,12 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/vim"
-	"github.com/liamg/oriel/worker"
 )
 
 // DiffView is the review diff (ui.md 06): a repo's branch against its base, every changed file, hunk by hunk.
@@ -333,9 +333,9 @@ func (x *diffPlugin) marks(root, file string) map[string]bool {
 	return out
 }
 
-// record applies a review event: through the session's worker, so it lasts, or for as long as the window outside a
+// record applies a review event: through the session host, so it lasts, or for as long as the window outside a
 // session. ev's session, and its project outside one, are filled in.
-func (x *diffPlugin) record(root string, ev core.Event, send func(c worker.Client, sid core.SessionID, project string) error) error {
+func (x *diffPlugin) record(root string, ev core.Event, send func(c *host.Host, sid core.SessionID, project string) error) error {
 	se, project, ok := x.session(root)
 	if !ok {
 		x.mu.Lock()
@@ -346,12 +346,12 @@ func (x *diffPlugin) record(root string, ev core.Event, send func(c worker.Clien
 		x.h.Redraw()
 		return err
 	}
-	var c worker.Client
+	var c *host.Host
 	var err error
 	if x.sh.sessions == nil {
-		err = errors.New("no worker is connected")
+		err = errors.New("there are no sessions in this window")
 	} else {
-		c, err = x.sh.sessions.client(se.ID)
+		c, err = x.sh.sessions.host()
 	}
 	if err != nil {
 		return err
@@ -372,10 +372,10 @@ func (x *diffPlugin) setMarks(root, file string, ids []string, on bool) error {
 		return nil
 	}
 	local := core.HunksReviewed{Session: localReviews, Project: root, File: file, Hunks: slices.Clone(ids), Reviewed: on}
-	return x.record(root, local, func(c worker.Client, sid core.SessionID, project string) error {
+	return x.record(root, local, func(c *host.Host, sid core.SessionID, project string) error {
 		ev := local
 		ev.Session, ev.Project = sid, project
-		return c.SetReviewed(context.Background(), ev)
+		return c.SetReviewed(ev)
 	})
 }
 
@@ -385,10 +385,10 @@ func (x *diffPlugin) setSeen(root, file string, read, skimmed []string) error {
 		return nil
 	}
 	local := core.LinesSeen{Session: localReviews, Project: root, File: file, Read: read, Skimmed: skimmed}
-	return x.record(root, local, func(c worker.Client, sid core.SessionID, project string) error {
+	return x.record(root, local, func(c *host.Host, sid core.SessionID, project string) error {
 		ev := local
 		ev.Session, ev.Project = sid, project
-		return c.SetSeen(context.Background(), ev)
+		return c.SetSeen(ev)
 	})
 }
 

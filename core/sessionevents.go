@@ -3,7 +3,6 @@ package core
 import (
 	"fmt"
 	"slices"
-	"time"
 )
 
 func init() {
@@ -21,10 +20,7 @@ func init() {
 	RegisterEvent[TranscriptAppended]("TranscriptAppended")
 	RegisterEvent[TestRunRecorded]("TestRunRecorded")
 	RegisterEvent[UsageSampled]("UsageSampled")
-	RegisterEvent[WorkerChanged]("WorkerChanged")
-	RegisterEvent[WorkerGone]("WorkerGone")
-	RegisterEvent[WorkerRenamed]("WorkerRenamed")
-	RegisterEvent[WorkerForgotten]("WorkerForgotten")
+	RegisterEvent[MachineChanged]("MachineChanged")
 	RegisterEvent[RuleAdded]("RuleAdded")
 }
 
@@ -46,7 +42,7 @@ func (s *State) mustSession(id SessionID) (*SessionState, error) {
 	return se, nil
 }
 
-// SessionSynced puts a session in the store whole, as its worker has it: on connect, and after a resume.
+// SessionSynced puts a session in the store whole: on a restore, and after a resume.
 type SessionSynced struct {
 	Session SessionState `json:"session"`
 }
@@ -316,139 +312,20 @@ func (e UsageSampled) Apply(s *State) error {
 		return fmt.Errorf("usage has no provider")
 	}
 	u := e.Usage
-	for _, old := range s.Usage {
-		if old.Same(u) {
-			for _, w := range old.Workers {
-				if !slices.Contains(u.Workers, w) {
-					u.Workers = append(slices.Clone(u.Workers), w)
-				}
-			}
-		}
-	}
 	s.Usage = upsert(s.Usage, u, func(o ProviderUsage) bool { return o.Same(u) })
 	return nil
 }
 
-// WorkerChanged is a worker as it is now: connected, its load.
-type WorkerChanged struct {
-	Worker WorkerState `json:"worker"`
+// MachineChanged is this machine as it is now: its load, its logins.
+type MachineChanged struct {
+	Machine MachineState `json:"machine"`
 }
 
-func (e WorkerChanged) Scope() SessionID { return "" }
+func (e MachineChanged) Scope() SessionID { return "" }
 
-// Apply keeps the app's label, and Since while it stays connected or not; a change of either starts Since at the
-// worker's reading.
-func (e WorkerChanged) Apply(s *State) error {
-	if e.Worker.ID == "" {
-		return fmt.Errorf("worker has no id")
-	}
-	w := e.Worker
-	if i := slices.IndexFunc(s.Workers, func(o WorkerState) bool { return o.ID == w.ID }); i >= 0 {
-		old := s.Workers[i]
-		if w.Label == "" {
-			w.Label = old.Label
-		}
-		if w.Since.IsZero() && old.Connected == w.Connected {
-			w.Since = old.Since
-		}
-	}
-	if w.Since.IsZero() {
-		w.Since = w.Sampled
-	}
-	s.Workers = upsert(s.Workers, w, func(o WorkerState) bool { return o.ID == w.ID })
+func (e MachineChanged) Apply(s *State) error {
+	s.Machine = e.Machine
 	return nil
-}
-
-// WorkerGone is a worker that disconnected, at At: its sessions leave the store until it's back.
-type WorkerGone struct {
-	ID WorkerID  `json:"id"`
-	At time.Time `json:"at,omitzero"`
-}
-
-func (e WorkerGone) Scope() SessionID { return "" }
-
-func (e WorkerGone) Apply(s *State) error {
-	i := slices.IndexFunc(s.Workers, func(w WorkerState) bool { return w.ID == e.ID })
-	if i < 0 {
-		return fmt.Errorf("no worker %s", e.ID)
-	}
-	s.Workers = slices.Clone(s.Workers)
-	s.Workers[i].Connected, s.Workers[i].Since = false, e.At
-	s.Sessions = slices.DeleteFunc(slices.Clone(s.Sessions), func(se SessionState) bool { return se.Worker == e.ID })
-	if s.session(s.Focus) == nil {
-		s.Focus = ""
-	}
-	return nil
-}
-
-// WorkerRenamed is the app's name for a worker; "" goes back to the worker's own.
-type WorkerRenamed struct {
-	ID    WorkerID `json:"id"`
-	Label string   `json:"label,omitempty"`
-}
-
-func (e WorkerRenamed) Scope() SessionID { return "" }
-
-func (e WorkerRenamed) Apply(s *State) error {
-	i := slices.IndexFunc(s.Workers, func(w WorkerState) bool { return w.ID == e.ID })
-	if i < 0 {
-		return fmt.Errorf("no worker %s", e.ID)
-	}
-	s.Workers = slices.Clone(s.Workers)
-	s.Workers[i].Label = e.Label
-	return nil
-}
-
-// WorkerForgotten takes a worker that isn't connected off the list.
-type WorkerForgotten struct {
-	ID WorkerID `json:"id"`
-}
-
-func (e WorkerForgotten) Scope() SessionID { return "" }
-
-func (e WorkerForgotten) Apply(s *State) error {
-	i := slices.IndexFunc(s.Workers, func(w WorkerState) bool { return w.ID == e.ID })
-	if i < 0 {
-		return fmt.Errorf("no worker %s", e.ID)
-	}
-	if s.Workers[i].Connected {
-		return fmt.Errorf("worker %s is connected", e.ID)
-	}
-	s.Workers = slices.Delete(slices.Clone(s.Workers), i, i+1)
-	return nil
-}
-
-// FromWorker says whether worker id may send ev: events about itself, its own sessions, its own usage, and
-// notices. Anything about another worker or its sessions isn't its to say.
-func (s State) FromWorker(id WorkerID, ev Event) bool {
-	own := func(w WorkerID) bool { return w == id || w == "" && id == LocalWorker }
-	switch ev := ev.(type) {
-	case WorkerChanged:
-		return ev.Worker.ID == id
-	case UsageSampled:
-		return !slices.ContainsFunc(ev.Usage.Workers, func(w WorkerID) bool { return w != id })
-	case Notified:
-	case SessionSynced:
-		if !own(ev.Session.Worker) {
-			return false
-		}
-	default:
-		if ev.Scope() == "" {
-			return false
-		}
-	}
-	sid := ev.Scope()
-	if sid == "" {
-		return true
-	}
-	if se := s.session(sid); se != nil {
-		return own(se.Worker)
-	}
-	switch ev.(type) {
-	case SessionSynced, Notified:
-		return true
-	}
-	return false
 }
 
 // RuleAdded lets something through from now on in this session: what "Always" makes of an ask.

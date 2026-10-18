@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
@@ -19,12 +18,11 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // The Prompts page (PL-11, crit-reference.md "Prompts page"): every prompt the user can edit (agent/prompts) on the
 // left, the selected one's text on the right. Only what they change is kept, a file each under the config dir; the
-// workers get them on connect and on every change.
+// session host gets them at start and on every change.
 const (
 	PromptsKeyMode     = "prompts"
 	PromptsTextKeyMode = "prompts.text"
@@ -82,7 +80,7 @@ func (x *promptsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		x.add(h.Keymap(k))
 	}
-	x.add(h.Hook(registry.Hook{Event: "BufWritePost", Label: "send the prompts to the workers", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
+	x.add(h.Hook(registry.Hook{Event: "BufWritePost", Label: "send the prompts to the session host", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 		if w, ok := ev.(*BufWritePost); ok && x.isPromptFile(w.File) {
 			x.changed()
 		}
@@ -142,7 +140,7 @@ func (x *promptsPlugin) set(id, text string) error {
 	return nil
 }
 
-// changed reads the prompts again and sends them to every worker.
+// changed reads the prompts again and sends them to the session host.
 func (x *promptsPlugin) changed() {
 	x.o = x.store().Load()
 	if x.sh.sessions != nil {
@@ -168,7 +166,7 @@ func (x *promptsPlugin) edit(ctx registry.Ctx, id string) error {
 	return x.h.Run(ctx, "editor.open", registry.Args{"path": path})
 }
 
-// sendPrompts asks for the prompts to go to the workers; asks that come while they're going are one.
+// sendPrompts asks for the prompts to go to the host; asks that come while they're going are one.
 func (x *sessions) sendPrompts() {
 	select {
 	case x.promptsKick <- struct{}{}:
@@ -176,7 +174,7 @@ func (x *sessions) sendPrompts() {
 	}
 }
 
-// promptSettings sends the user's prompts to every worker: when one connects, and whenever one changes.
+// promptSettings sends the user's prompts to the session host: at start, and whenever one changes.
 func (x *sessions) promptSettings(ctx context.Context) {
 	go func() {
 		for {
@@ -186,19 +184,13 @@ func (x *sessions) promptSettings(ctx context.Context) {
 			case <-x.promptsKick:
 			}
 			o := prompts.Store{Dir: x.sh.cfg.ConfigDir}.Load()
-			for _, c := range x.byWorker() {
-				x.pushPrompts(ctx, c, o)
+			if w := x.sh.cfg.Host; w != nil {
+				if err := w.SetPrompts(o); err != nil {
+					x.h.Log().Warn("prompts", "err", err)
+				}
 			}
 		}
 	}()
-}
-
-func (x *sessions) pushPrompts(ctx context.Context, c worker.Client, o prompts.Overrides) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	if err := c.SetPrompts(ctx, o); err != nil {
-		x.h.Log().Warn("prompts", "err", err)
-	}
 }
 
 // The page.
@@ -366,7 +358,7 @@ func (x *promptsPlugin) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 		case editing:
 			note(c, "state", "not saved")
 		case x.saved == d.ID:
-			note(c, "state", "saved · the workers have it")
+			note(c, "state", "saved · sessions use it from now on")
 		}
 		path, _ := x.store().Path(d.ID)
 		note(c, "file", tildePath(path))

@@ -9,14 +9,14 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
-	"github.com/liamg/oriel/worker/stats"
 )
 
 // The Jobs page (44's panel 1): the jobs on the left, the selected one's prompt, schedule and runs on the right, over
@@ -58,17 +58,12 @@ func (x *jobsPlugin) header(c *ui.Ctx, rows []jobRow) {
 		for _, r := range rows {
 			runs += len(r.runs)
 			for _, rr := range r.runs {
-				if rr.run.Status == worker.RunRunning {
+				if rr.run.Status == host.RunRunning {
 					running++
 				}
 			}
 		}
 		meta := []string{counted(len(rows), "job"), fmt.Sprintf("%d running", running), counted(runs, "run")}
-		if ws := x.workerNames(); ws != "" {
-			meta = append(meta, "on "+ws)
-		} else {
-			meta = append(meta, "no worker connected")
-		}
 		c.Text("m", strings.Join(meta, " · "), monoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.err != "" {
@@ -91,27 +86,6 @@ func (x *jobsPlugin) run(id string, a registry.Args) {
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		x.err = err.Error()
 	}
-}
-
-// workerNames are the connected workers' names.
-func (x *jobsPlugin) workerNames() string {
-	var out []string
-	for _, w := range x.h.State().Workers {
-		if w.Connected {
-			out = append(out, w.Title())
-		}
-	}
-	slices.Sort(out)
-	return strings.Join(out, ", ")
-}
-
-func (x *jobsPlugin) workerName(id core.WorkerID) string {
-	for _, w := range x.h.State().Workers {
-		if w.ID == id {
-			return w.Title()
-		}
-	}
-	return string(id)
 }
 
 // list is the jobs, filtered, a row each.
@@ -156,11 +130,7 @@ func (x *jobsPlugin) list(c *ui.Ctx, rows []jobRow) {
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 3}, func(c *ui.Ctx) {
-			where := "~/.oriel/jobs"
-			if ws := x.workerNames(); ws != "" {
-				where += " on " + ws
-			}
-			note(c, "a", where+" · one file per job")
+			note(c, "a", "~/.oriel/jobs · one file per job")
 			note(c, "b", "runs are workspaces; deleting a job keeps them")
 		})
 	})
@@ -192,7 +162,7 @@ func (x *jobsPlugin) jobRowView(c *ui.Ctx, r jobRow, on bool) {
 				default:
 					widget.Chip(c, "st", last.run.Status, th.C(runTone(last.run.Status)), "agent/jobs#runs")
 					when := x.when(last.se.Created)
-					if last.run.Status == worker.RunRunning {
+					if last.run.Status == host.RunRunning {
 						when = "started " + ago(x.now(), last.se.Created) + " ago"
 					}
 					c.Text("w", when, monoFont(10, th.C(theme.FgFaint)))
@@ -206,7 +176,7 @@ func (x *jobsPlugin) jobRowView(c *ui.Ctx, r jobRow, on bool) {
 	})
 }
 
-// pinChip is where a job runs: sandbox, host, or the worker's default.
+// pinChip is where a job runs: sandbox, host, or sandbox.default.
 func pinChip(c *ui.Ctx, key any, sandbox string) {
 	th := c.Theme()
 	label, tone := cmpOr(sandbox, "default"), th.C(theme.FgFaint)
@@ -258,7 +228,7 @@ func (x *jobsPlugin) empty(c *ui.Ctx) {
 
 // took is how long a run ran: so far while it runs.
 func (x *jobsPlugin) took(r runRow) time.Duration {
-	if r.run.Status == worker.RunRunning {
+	if r.run.Status == host.RunRunning {
 		return x.now().Sub(r.se.Created)
 	}
 	return r.run.Took()
@@ -272,7 +242,7 @@ func (x *jobsPlugin) detail(c *ui.Ctx, r jobRow) {
 		c.Text("t", j.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 17, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		c.Text("slug", j.Name, monoFont(11, th.C(theme.FgGhost)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		args := registry.Args{"name": j.Name, "worker": string(j.Worker)}
+		args := registry.Args{"name": j.Name}
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Key: "e", Help: "agent/jobs#job"}) {
 			x.run("jobs.edit", args)
 		}
@@ -305,11 +275,9 @@ func (x *jobsPlugin) detail(c *ui.Ctx, r jobRow) {
 		dot("d1")
 		agent := strings.TrimSpace(strings.ToLower(providerName(j.Provider)) + " " + j.Model + " " + j.Effort)
 		if j.Provider == "" {
-			agent = "the worker's agent"
+			agent = "the first agent installed"
 		}
 		c.Text("agent", agent, monoFont(11, th.C(theme.Fg)))
-		dot("d2")
-		c.Text("worker", x.workerName(j.Worker), monoFont(11, faint))
 		if len(r.runs) == 0 {
 			return
 		}
@@ -322,13 +290,13 @@ func (x *jobsPlugin) detail(c *ui.Ctx, r jobRow) {
 			count[rr.run.Status]++
 			cost, _, _ := x.cost(rr)
 			total += cost
-			if t := rr.run.Took(); t > 0 && rr.run.Status == worker.RunDone {
+			if t := rr.run.Took(); t > 0 && rr.run.Status == host.RunDone {
 				spent += t
 				ended++
 			}
 		}
 		var parts []string
-		for _, s := range []string{worker.RunDone, worker.RunBlocked, worker.RunStopped, worker.RunRunning} {
+		for _, s := range []string{host.RunDone, host.RunBlocked, host.RunStopped, host.RunRunning} {
 			if n := count[s]; n > 0 {
 				parts = append(parts, fmt.Sprintf("%d %s", n, s))
 			}
@@ -349,11 +317,11 @@ func (x *jobsPlugin) detail(c *ui.Ctx, r jobRow) {
 // repoWord finds the registered repos' names a prompt mentions.
 var repoWord = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9._-]*`)
 
-// named are the worker's repos a prompt names, in the order it names them.
-func (x *jobsPlugin) named(j worker.Job) []string {
+// named are the registered repos a prompt names, in the order it names them.
+func (x *jobsPlugin) named(j host.Job) []string {
 	_, repos := x.load()
 	known := map[string]bool{}
-	for _, r := range repos[j.Worker] {
+	for _, r := range repos {
 		known[string(r.ID)] = true
 	}
 	var out []string
@@ -367,7 +335,7 @@ func (x *jobsPlugin) named(j worker.Job) []string {
 }
 
 // prompt is the job's prompt, the repos it names picked out in their colours.
-func (x *jobsPlugin) prompt(c *ui.Ctx, j worker.Job) {
+func (x *jobsPlugin) prompt(c *ui.Ctx, j host.Job) {
 	th := c.Theme()
 	st := x.h.State()
 	names := x.named(j)
@@ -435,24 +403,24 @@ func promptSpans(line string, tones map[string]render.Color) []widget.Span {
 }
 
 // schedule is the job's schedule as a strip: manual, every weekday, weekly, or custom (the dialog's).
-func (x *jobsPlugin) schedule(c *ui.Ctx, j worker.Job) {
+func (x *jobsPlugin) schedule(c *ui.Ctx, j host.Job) {
 	th := c.Theme()
 	s := j.Schedule
 	at := cmpOr(s.At, "07:00")
 	day := time.Monday
-	if s.Every == worker.EveryWeek && len(s.Days) == 1 {
+	if s.Every == host.EveryWeek && len(s.Days) == 1 {
 		day = s.Days[0]
 	}
 	labels := []string{"MANUAL", "EVERY WEEKDAY " + at, "WEEKLY " + strings.ToUpper(dayName(day)) + " " + at, "CUSTOM…"}
-	cur := map[string]int{"": 0, worker.EveryWeekday: 1, worker.EveryWeek: 2, worker.EveryDays: 3}[s.Every]
-	if s.Every == worker.EveryDays {
+	cur := map[string]int{"": 0, host.EveryWeekday: 1, host.EveryWeek: 2, host.EveryDays: 3}[s.Every]
+	if s.Every == host.EveryDays {
 		labels[3] = strings.ToUpper(s.String())
 	}
 	c.Row("schedule", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 		caption(c, "cap", "Schedule")
 		pick := cur
 		if widget.Segmented(c, "every", labels, &pick, widget.SegmentedOpts{Label: "Schedule", Help: "agent/jobs#schedule"}) {
-			args := registry.Args{"name": j.Name, "worker": string(j.Worker)}
+			args := registry.Args{"name": j.Name}
 			switch pick {
 			case 0:
 				args["schedule"] = "manual"
@@ -472,7 +440,7 @@ func (x *jobsPlugin) schedule(c *ui.Ctx, j worker.Job) {
 			}
 			x.do("jobs.save", args)
 		}
-		c.Text("n", "runs on "+x.workerName(j.Worker)+" when it's awake · skips while the last run is going", monoFont(10, th.C(theme.FgGhost)))
+		c.Text("n", "runs while Oriel is open · skips while the last run is going", monoFont(10, th.C(theme.FgGhost)))
 	})
 }
 
@@ -536,11 +504,12 @@ func (x *jobsPlugin) runs(c *ui.Ctx, r jobRow) {
 }
 
 // stoppedBy is who a run's stop names.
-var stoppedBy = map[string]string{core.StoppedByYou: " by you", core.StoppedByAgent: " by the agent", core.StoppedByWorker: " as the worker shut down"}
+var stoppedBy = map[string]string{core.StoppedByYou: " by you", core.StoppedByAgent: " by the agent", core.StoppedByCrash: " when Oriel ended",
+	core.StoppedByHandOver: " as Oriel quit"}
 
 // summary is what a run's row says it did.
 func (x *jobsPlugin) summary(r runRow) string {
-	if r.run.Status == worker.RunStopped {
+	if r.run.Status == host.RunStopped {
 		s := "Stopped" + stoppedBy[r.run.StoppedBy]
 		if t := r.run.Took(); t > 0 {
 			s += " after " + hm(t)
@@ -587,7 +556,7 @@ func (x *jobsPlugin) runRowView(c *ui.Ctx, i int, r runRow) {
 				width = rc.Dx() - 12
 			}
 			tone := th.C(theme.FgMuted)
-			if r.run.Status == worker.RunBlocked {
+			if r.run.Status == host.RunBlocked {
 				tone = th.C(theme.Fg)
 			}
 			widget.Wrap(c, "t", truncate(x.summary(r), 150), width, uiFont(12, tone))
@@ -604,10 +573,10 @@ func (x *jobsPlugin) runRowView(c *ui.Ctx, i int, r runRow) {
 			if live {
 				label = "Open"
 			}
-			if widget.Button(c, "open", label, widget.ButtonOpts{Primary: r.run.Status == worker.RunRunning, Help: "agent/jobs#runs"}) {
+			if widget.Button(c, "open", label, widget.ButtonOpts{Primary: r.run.Status == host.RunRunning, Help: "agent/jobs#runs"}) {
 				x.openRun(r.se.ID)
 			}
-			if r.run.Status == worker.RunRunning {
+			if r.run.Status == host.RunRunning {
 				return
 			}
 			label = "Delete"
@@ -707,7 +676,7 @@ func (x *jobsPlugin) consoleSide(c *ui.Ctx, id core.SessionID) {
 			row = r
 		}
 	}
-	cur := runRow{se: se, run: worker.RunOf(se)}
+	cur := runRow{se: se, run: host.RunOf(se)}
 	section(c, "job", "Job", "", func(c *ui.Ctx) {
 		c.Row("title", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
 			widget.Wrap(c, "t", cmpOr(row.job.Title, se.Job), 240, uiFont(13, th.C(theme.Fg)))

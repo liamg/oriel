@@ -48,5 +48,5 @@ type Item struct {
 	Duration int64     `json:"duration,omitempty"` // milliseconds a tool took
 }
 
-// MaxTranscript is how many items a session's state keeps; its log on the worker keeps them all.
+// MaxTranscript is how many items a session's state keeps; its log keeps them all.
 const MaxTranscript = 2000

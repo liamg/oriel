@@ -95,20 +95,14 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #7c7566
   path 3 segments stroke 1.25 #7c7566
   text "Jobs" @33,395.30524 #b3ab99 Inter 12
-  path 5 segments stroke 1.25 #7c7566
-  path 5 segments stroke 1.25 #7c7566
-  path 6 segments stroke 1.25 #7c7566
-  path 6 segments stroke 1.25 #7c7566
-  text "Workers" @33,418.30524 #b3ab99 Inter 12
-  text "1 online" @165,417.54 #7c7566 JetBrains Mono 10
   path 6 segments fill #060606
   path 6 segments stroke 1.1374999 #ffd23f
-  effect glow 16.3875,435.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
+  effect glow 16.3875,412.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 19.55625,435.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
+  effect glow 19.55625,412.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
-  text "Ori" @33,441.30524 #b3ab99 Inter 12
+  text "Ori" @33,418.30524 #b3ab99 Inter 12
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -119,7 +113,7 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Settings" @33,464.30524 #b3ab99 Inter 12
+  text "Settings" @33,441.30524 #b3ab99 Inter 12
 pop
 rect 223,38 1x936 fill #24221d
 rect 224,38 1376x936 fill #060606
@@ -128,13 +122,13 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-text "WKR mbp" @1480.0625,984.71 #7c7566 JetBrains Mono 10.5
+text "CPU" @1506.4375,984.71 #7c7566 JetBrains Mono 10.5
 text "34%" @1532.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 224,38 1376x936 fill #060606
 clip 224,38 1376x936 r 0
   rect 224,38 1376x42 fill #0c0c0b
   text "STATS" @242,63.844 #ece6d8 Space Grotesk 14
-  text "all sessions · 1 worker · 8 sessions · Sep 15 – Oct 14" @296.70624,62.96 #7c7566 JetBrains Mono 11
+  text "all sessions · 8 sessions · Sep 15 – Oct 14" @296.70624,62.96 #7c7566 JetBrains Mono 11
   clip 1096.5312,47 164.25x24 r 5
     rect 1096.5312,47 40.849976x24 fill #1f1c0f
     text "ALL" @1106.5312,62.42 #ffd23f JetBrains Mono 9.5
@@ -173,17 +167,15 @@ clip 224,38 1376x936 r 0
     rect 491.19,89 404.10004x24 radius 5 stroke 1 #332f27
     rect 905.29004,88 72.84375x26 fill #191815 radius 6 stroke 1 #332f27
     text "repo all ▾" @915.29004,105.365234 #ece6d8 Inter 12
-    rect 988.1338,88 86.71875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "worker all ▾" @998.1338,105.365234 #ece6d8 Inter 12
-    rect 1084.8525,88 94.828125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "provider all ▾" @1094.8525,105.365234 #ece6d8 Inter 12
-    rect 1189.6807,88 92.90625x26 fill #191815 radius 6 stroke 1 #332f27
-    text "account all ▾" @1199.6807,105.365234 #ece6d8 Inter 12
-    rect 1292.5869,88 68x26 fill #191815 radius 6 stroke 1 #332f27
-    text "+ filter ▾" @1302.5869,105.365234 #ece6d8 Inter 12
-    rect 1380.5869,92 32x18 fill #ffd23f radius 9
-    rect 1396.5869,94 14x14 fill #ece6d8 radius 7
-    text "split multi-repo sessions · …" @1422.5869,105.18335 #b3ab99 Inter 11.5
+    rect 988.1338,88 94.828125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "provider all ▾" @998.1338,105.365234 #ece6d8 Inter 12
+    rect 1092.9619,88 92.90625x26 fill #191815 radius 6 stroke 1 #332f27
+    text "account all ▾" @1102.9619,105.365234 #ece6d8 Inter 12
+    rect 1195.8682,88 68x26 fill #191815 radius 6 stroke 1 #332f27
+    text "+ filter ▾" @1205.8682,105.365234 #ece6d8 Inter 12
+    rect 1309.0155,92 32x18 fill #ffd23f radius 9
+    rect 1325.0155,94 14x14 fill #ece6d8 radius 7
+    text "split multi-repo sessions · n/a by session" @1351.0155,105.18335 #b3ab99 Inter 11.5
   pop
   rect 224,121 1376x1 fill #24221d
   rect 224,122 1376x852 fill #060606

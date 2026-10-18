@@ -12,8 +12,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/worker/stats"
 )
 
 // outside gives the rig's Claude a transcript no Oriel session owns: a week of work in api, run in a terminal.
@@ -97,12 +97,12 @@ func TestStatsOriginSplit(t *testing.T) {
 		t.Fatal("Session stats didn't open the outside session's tab")
 	}
 	s.wantFrame(t, "Try the new lint rules", "outside Oriel", "COST OVER THE SESSION")
-	d, ok := x.detail(core.SessionID(id + "@" + string(core.LocalWorker)))
+	d, ok := x.detail(core.SessionID(id))
 	if !ok || d.Origin != stats.OriginOutside || d.Totals.Requests == 0 {
 		t.Errorf("the outside session's stats = %+v", d)
 	}
 	if err := x.h.Run(context.Background(), "stats.session", registry.Args{"id": "claude:nothing"}); err == nil {
-		t.Error("a session no worker has opened a tab")
+		t.Error("a session nobody has opened a tab")
 	}
 
 	// Usage's "burned the window" has them as its outside Oriel row, with what no transcript explains.

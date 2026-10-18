@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -20,7 +20,6 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // LauncherKeyMode is the new-session launcher's keymap mode: its fields and the dialog.
@@ -43,8 +42,8 @@ var (
 	tLaunchRepo     = theme.Declare("launcher.repo", "status.quiet")
 )
 
-// launcher is the new-session launcher (ui.md 04): prompt, mode, provider, repos, worker and sandbox. Its modes are
-// the worker's kinds of session, so a kind a plugin adds there is one more; Start runs session.start.
+// launcher is the new-session launcher (ui.md 04): prompt, mode, provider, repos and sandbox. Its modes are the
+// session host's kinds of session, so a kind a plugin adds there is one more; Start runs session.start.
 type launcher struct {
 	disposer
 	sh *shell
@@ -52,11 +51,10 @@ type launcher struct {
 
 	open       bool
 	focusField bool // focus the mode's first field next frame
-	gen        int  // which opening the worker's answers are for
+	gen        int  // which opening the host's answers are for
 
-	worker    core.WorkerID
-	kinds     []worker.KindSpec
-	providers []worker.ProviderInfo
+	kinds     []host.KindSpec
+	providers []host.ProviderInfo
 	repos     []core.Repo
 	loadErr   string
 	wantKind  core.Kind // asked for before the kinds arrived
@@ -66,10 +64,6 @@ type launcher struct {
 	template, repoPath, variant                   string
 	provider, model, effort                       string
 	chosen                                        []core.RepoID
-	clones                                        map[core.RepoID]string // a URL to clone onto the worker, by a chosen repo it lacks
-	cloning                                       core.RepoID            // the repo whose Clone popover is open
-	cloneURL                                      string
-	cloneFocus                                    bool
 	sandbox, openNet                              bool
 	backend                                       string // the sandbox backend picked; "" is sandbox.backend
 	busy                                          bool
@@ -96,10 +90,10 @@ func (x *launcher) Manifest() plugin.Manifest { return plugin.Manifest{ID: "laun
 
 func (x *launcher) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
-	hasWorker := func(registry.Args) bool { return x.sh.sessions != nil && len(x.sh.sessions.clients()) > 0 }
+	has := func(registry.Args) bool { return x.sh.sessions != nil && x.sh.cfg.Host != nil }
 	x.add(h.Command(registry.Command{ID: "session.new",
-		Title:     "New session: the launcher, with {kind}, {prompt}, {ticket}, {pr}, {dir}, {repos}, {provider} or {worker} filled in",
-		Available: hasWorker, Run: func(_ registry.Ctx, a registry.Args) error { x.openWith(a); return nil }}))
+		Title:     "New session: the launcher, with {kind}, {prompt}, {ticket}, {pr}, {dir}, {repos} or {provider} filled in",
+		Available: has, Run: func(_ registry.Ctx, a registry.Args) error { x.openWith(a); return nil }}))
 	x.add(h.Command(registry.Command{ID: "session.launch", Title: "Start the session the launcher holds",
 		Available: func(registry.Args) bool { return x.open }, Run: func(registry.Ctx, registry.Args) error { return x.start() }}))
 	x.add(h.Keymap(registry.Keymap{Mode: LauncherKeyMode, Keys: "<D-CR>", Command: "session.launch", Desc: "Start the session"}))
@@ -109,17 +103,16 @@ func (x *launcher) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-// openWith opens the launcher afresh, with what a command gave filled in, and asks the worker for its kinds,
-// providers and repos.
+// openWith opens the launcher afresh, with what a command gave filled in, and reads the kinds, providers and repos.
 func (x *launcher) openWith(a registry.Args) {
 	spec := specFrom(a)
 	*x = launcher{disposer: x.disposer, sh: x.sh, h: x.h, gen: x.gen + 1, open: true, focusField: true,
-		worker: spec.Worker, wantKind: core.Kind(a.String("kind")), prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
+		wantKind: core.Kind(a.String("kind")), prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
 		name: spec.Name, template: spec.Template, variant: spec.Variant, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
 		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", backend: spec.Sandbox.Backend, branch: spec.Branch,
 		card: ticketCard{key: strings.TrimSpace(spec.Ticket)}}
 	if x.template == "" {
-		x.template = worker.Templates[0]
+		x.template = host.Templates[0]
 	}
 	if _, given := a["sandbox"]; !given {
 		v, _, _ := x.h.Options().Get("sandbox.default", registry.At{})
@@ -129,24 +122,22 @@ func (x *launcher) openWith(a registry.Args) {
 }
 
 func (x *launcher) load(providerGiven bool) {
-	gen, id := x.gen, x.worker
+	gen := x.gen
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		var (
-			kinds     []worker.KindSpec
-			providers []worker.ProviderInfo
+			kinds     []host.KindSpec
+			providers []host.ProviderInfo
 			repos     []core.Repo
 			err       error
 		)
 		if x.sh.sessions == nil {
-			err = errors.New("no worker is connected")
-		} else if c, e := x.sh.sessions.worker(id); e != nil {
+			err = errors.New("there are no sessions in this window")
+		} else if c, e := x.sh.sessions.host(); e != nil {
 			err = e
-		} else if kinds, err = c.Kinds(ctx); err == nil {
-			if providers, err = c.Providers(ctx); err == nil {
-				repos, err = c.Repos(ctx)
-			}
+		} else {
+			kinds, providers, repos = c.Kinds().All(), c.ProviderInfo(ctx), c.Repos()
 		}
 		x.h.Do(func() {
 			if gen != x.gen {
@@ -156,7 +147,7 @@ func (x *launcher) load(providerGiven bool) {
 			if err != nil {
 				x.loadErr = err.Error()
 			}
-			if i := slices.IndexFunc(kinds, func(k worker.KindSpec) bool { return k.Kind == x.wantKind }); i >= 0 {
+			if i := slices.IndexFunc(kinds, func(k host.KindSpec) bool { return k.Kind == x.wantKind }); i >= 0 {
 				x.kind = i
 			}
 			if !providerGiven {
@@ -168,7 +159,7 @@ func (x *launcher) load(providerGiven bool) {
 }
 
 // defaultProvider is the first provider that's logged in, else the first.
-func defaultProvider(ps []worker.ProviderInfo) string {
+func defaultProvider(ps []host.ProviderInfo) string {
 	for _, p := range ps {
 		if p.Install.LoggedIn && p.Error == "" {
 			return p.ID
@@ -193,24 +184,24 @@ func (x *launcher) pickProvider(id string) {
 	}
 }
 
-func (x *launcher) current() (worker.KindSpec, bool) {
+func (x *launcher) current() (host.KindSpec, bool) {
 	if x.kind < len(x.kinds) {
 		return x.kinds[x.kind], true
 	}
-	return worker.KindSpec{}, false
+	return host.KindSpec{}, false
 }
 
-func startsFrom(k worker.KindSpec) worker.From {
+func startsFrom(k host.KindSpec) host.From {
 	if k.From == "" {
-		return worker.FromPrompt
+		return host.FromPrompt
 	}
 	return k.From
 }
 
 // takesRepos says whether the kind starts on repos the launcher picks.
-func takesRepos(k worker.KindSpec) bool {
+func takesRepos(k host.KindSpec) bool {
 	f := startsFrom(k)
-	return f == worker.FromPrompt || f == worker.FromPR
+	return f == host.FromPrompt || f == host.FromPR
 }
 
 // missing is what the session still needs before it can start, or "".
@@ -218,25 +209,23 @@ func (x *launcher) missing() string {
 	k, ok := x.current()
 	switch {
 	case !ok:
-		return "waiting for the worker"
+		return "a moment: reading the kinds of session"
 	case k.NeedsRepo && len(x.chosen) == 0:
 		return "pick a repo"
-	case takesRepos(k) && x.uncloned() != "":
-		return fmt.Sprintf("clone %s onto %s, or remove it", x.uncloned(), x.workerName())
-	case startsFrom(k) == worker.FromPrompt && x.card.busy:
+	case startsFrom(k) == host.FromPrompt && x.card.busy:
 		return "wait for " + x.card.asked + " from " + x.card.source
-	case startsFrom(k) == worker.FromPR && strings.TrimSpace(x.pr) == "":
+	case startsFrom(k) == host.FromPR && strings.TrimSpace(x.pr) == "":
 		return "paste the pull request's URL"
-	case startsFrom(k) == worker.FromName && strings.TrimSpace(x.name) == "":
+	case startsFrom(k) == host.FromName && strings.TrimSpace(x.name) == "":
 		return "name the repo"
-	case startsFrom(k) == worker.FromDir && strings.TrimSpace(x.dir) == "":
+	case startsFrom(k) == host.FromDir && strings.TrimSpace(x.dir) == "":
 		return "pick a directory"
 	}
 	return ""
 }
 
 // chosenVariant is the kind's variant the launcher holds: the one picked, else its first; "" for a kind with none.
-func (x *launcher) chosenVariant(k worker.KindSpec) string {
+func (x *launcher) chosenVariant(k host.KindSpec) string {
 	for _, v := range k.Variants {
 		if v.ID == x.variant {
 			return v.ID
@@ -249,7 +238,7 @@ func (x *launcher) chosenVariant(k worker.KindSpec) string {
 }
 
 // variantField picks the kind's variant (a tour's walkthrough, demo…).
-func (x *launcher) variantField(c *ui.Ctx, k worker.KindSpec) {
+func (x *launcher) variantField(c *ui.Ctx, k host.KindSpec) {
 	cur := x.chosenVariant(k)
 	var opts []string
 	label := cur
@@ -266,10 +255,10 @@ func (x *launcher) variantField(c *ui.Ctx, k worker.KindSpec) {
 	}
 }
 
-// home expands a leading ~ for this machine's worker.
+// home expands a leading ~.
 func (x *launcher) home(p string) string {
 	p = strings.TrimSpace(p)
-	if (x.worker == "" || x.worker == core.LocalWorker) && strings.HasPrefix(p, "~") {
+	if strings.HasPrefix(p, "~") {
 		if h, err := os.UserHomeDir(); err == nil {
 			p = filepath.Join(h, p[1:])
 		}
@@ -281,7 +270,7 @@ func (x *launcher) home(p string) string {
 func (x *launcher) args() registry.Args {
 	k, _ := x.current()
 	a := registry.Args{"kind": string(k.Kind), "prompt": strings.TrimSpace(x.prompt), "provider": x.provider, "model": x.model,
-		"effort": x.effort, "worker": string(x.worker), "sandbox": x.sandbox, "branch": strings.TrimSpace(x.branch)}
+		"effort": x.effort, "sandbox": x.sandbox, "branch": strings.TrimSpace(x.branch)}
 	if x.sandbox {
 		a["network"] = "ask"
 		if x.openNet {
@@ -295,16 +284,16 @@ func (x *launcher) args() registry.Args {
 		a["variant"] = v
 	}
 	switch startsFrom(k) {
-	case worker.FromPrompt:
+	case host.FromPrompt:
 		a["ticket"] = strings.TrimSpace(x.ticket)
 		if t := x.ticketHere(); t != nil {
 			a["context"] = t.Context
 		}
-	case worker.FromPR:
+	case host.FromPR:
 		a["pr"] = strings.TrimSpace(x.pr)
-	case worker.FromName:
+	case host.FromName:
 		a["name"], a["template"], a["dir"] = strings.TrimSpace(x.name), x.template, x.home(x.parent)
-	case worker.FromDir:
+	case host.FromDir:
 		a["dir"] = x.home(x.dir)
 	}
 	if takesRepos(k) {
@@ -313,57 +302,11 @@ func (x *launcher) args() registry.Args {
 			repos = append(repos, string(r))
 		}
 		a["repos"] = repos
-		if clone := x.toClone(); len(clone) > 0 {
-			a["clone"] = clone
-		}
 	}
 	if a.String("prompt") != "" || a.String("ticket") != "" {
 		a["then"] = []any{map[string]any{"command": "request.open"}} // the first request, as the agent gets it
 	}
 	return a
-}
-
-// toClone is session.start's {clone}: the URL each chosen repo the worker lacks is cloned from.
-func (x *launcher) toClone() map[string]any {
-	out := map[string]any{}
-	for _, r := range x.chosen {
-		if url := x.clones[r]; url != "" && x.lacks(r) {
-			out[string(r)] = url
-		}
-	}
-	return out
-}
-
-// local says whether the session runs on this machine's worker.
-func (x *launcher) local() bool { return x.worker == "" || x.worker == core.LocalWorker }
-
-// lacks says whether the worker hasn't got a chosen repo, once it has said which it has: one it hasn't registered,
-// unless it's a path this machine's worker registers as the session starts.
-func (x *launcher) lacks(r core.RepoID) bool {
-	if len(x.kinds) == 0 || x.loadErr != "" || x.local() && filepath.IsAbs(string(r)) {
-		return false
-	}
-	return !slices.ContainsFunc(x.repos, func(c core.Repo) bool { return c.ID == r || c.Path == string(r) })
-}
-
-// uncloned is the first chosen repo the worker lacks that isn't to be cloned, by name; "" if none.
-func (x *launcher) uncloned() string {
-	for _, r := range x.chosen {
-		if x.lacks(r) && x.clones[r] == "" {
-			return x.repoName(r)
-		}
-	}
-	return ""
-}
-
-// openClone opens r's Clone popover, its URL the local checkout's remote when r is one.
-func (x *launcher) openClone(r core.RepoID) {
-	x.cloning, x.cloneURL, x.cloneFocus = r, x.clones[r], true
-	if x.cloneURL == "" && filepath.IsAbs(string(r)) {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		x.cloneURL = gitx.Repo{Dir: string(r)}.RemoteURL(ctx)
-	}
 }
 
 // start runs session.start with what the launcher holds, or continues the ticket's session; the launcher closes once
@@ -407,7 +350,7 @@ func (x *launcher) launch(command string, a registry.Args) error {
 // continues is the session the ticket field's ticket already has, when the kind starts from a prompt: Start
 // continues it rather than starting another (ticketSession).
 func (x *launcher) continues() (core.Session, bool) {
-	if k, ok := x.current(); !ok || startsFrom(k) != worker.FromPrompt {
+	if k, ok := x.current(); !ok || startsFrom(k) != host.FromPrompt {
 		return nil, false
 	}
 	return ticketSession(x.h, x.ticket)
@@ -416,7 +359,7 @@ func (x *launcher) continues() (core.Session, bool) {
 // saveAsJob hands what the launcher holds to the New job dialog: the prompt, the agent, where it runs.
 func (x *launcher) saveAsJob() {
 	a := registry.Args{"prompt": strings.TrimSpace(x.prompt), "provider": x.provider, "model": x.model, "effort": x.effort,
-		"worker": string(x.worker), "sandbox": x.sandbox}
+		"sandbox": x.sandbox}
 	x.close()
 	if err := x.h.Run(context.Background(), "jobs.new", a); err != nil {
 		x.h.Log().Error("launcher", "err", err)
@@ -475,9 +418,6 @@ func (x *launcher) header(c *ui.Ctx) {
 		if x.ticketHere() != nil {
 			meta = append(meta, "from ticket")
 		}
-		if w := x.workerName(); w != "" {
-			meta = append(meta, "worker "+w)
-		}
 		if len(meta) > 0 {
 			c.Text("meta", strings.Join(meta, " · "), monoFont(10.5, th.C(theme.FgFaint)))
 		}
@@ -486,16 +426,6 @@ func (x *launcher) header(c *ui.Ctx) {
 			x.close()
 		}
 	})
-}
-
-// workerName is the worker the session will run on, as the user named it.
-func (x *launcher) workerName() string {
-	for _, w := range x.h.State().Workers {
-		if w.ID == x.worker || x.worker == "" && w.ID == core.LocalWorker {
-			return w.Title()
-		}
-	}
-	return string(x.worker)
 }
 
 // heading is a section's caption, with a note at its right.
@@ -541,22 +471,22 @@ func (x *launcher) form(c *ui.Ctx) {
 	c.Column("prompt", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
 		heading(c, "head", "Prompt", "⌘↵ starts · esc closes")
 		switch f {
-		case worker.FromPR:
+		case host.FromPR:
 			x.field(c, "pr", &x.pr, "Pull request", prPlaceholder, true, ui.Flex(1), 1)
-		case worker.FromName:
+		case host.FromName:
 			c.Row("repo", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				x.field(c, "name", &x.name, "Name", namePlaceholder, true, ui.Flex(1), 1)
-				if t, ok := widget.Select(c, "template", "template: "+x.template, worker.Templates,
+				if t, ok := widget.Select(c, "template", "template: "+x.template, host.Templates,
 					widget.SelectOpts{Label: "Template", Help: "agent/launcher#prompt"}); ok {
 					x.template = t
 				}
 				x.field(c, "parent", &x.parent, "Where it goes", parentPlaceholder, false, ui.Flex(1), 1)
 			})
-		case worker.FromDir:
+		case host.FromDir:
 			x.field(c, "dir", &x.dir, "Directory", dirPlaceholder, true, ui.Flex(1), 1)
 		}
-		x.field(c, "text", &x.prompt, "Prompt", promptPlaceholder, f == worker.FromPrompt || f == worker.FromNothing, ui.Flex(1), 8)
-		if f == worker.FromPrompt {
+		x.field(c, "text", &x.prompt, "Prompt", promptPlaceholder, f == host.FromPrompt || f == host.FromNothing, ui.Flex(1), 8)
+		if f == host.FromPrompt {
 			x.lookTicket(c)
 			x.ticketCard(c)
 			c.Row("extra", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -576,7 +506,7 @@ func (x *launcher) form(c *ui.Ctx) {
 	c.Column("mode", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		heading(c, "head", "Mode", "")
 		if !loaded {
-			msg := "Asking the worker…"
+			msg := "Reading the kinds of session…"
 			if x.loadErr != "" {
 				msg = x.loadErr
 			}
@@ -604,7 +534,7 @@ func (x *launcher) form(c *ui.Ctx) {
 		if takesRepos(k) {
 			c.Column("repos", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) { x.reposSection(c, k) })
 		}
-		c.Column("run", ui.Style{W: ui.Flex(1), Gap: 10}, x.runOn)
+		c.Column("run", ui.Style{W: ui.Flex(1), Gap: 10}, x.runsIn)
 	})
 }
 
@@ -702,7 +632,7 @@ func (x *launcher) ticketCard(c *ui.Ctx) {
 }
 
 // providerCard is one provider: its name, model and effort, and what's left of its plan.
-func (x *launcher) providerCard(c *ui.Ctx, p worker.ProviderInfo) {
+func (x *launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 	th := c.Theme()
 	on := x.provider == p.ID
 	fill, line := th.C(tLaunchCard), th.C(tLaunchCardLine)
@@ -745,7 +675,7 @@ func (x *launcher) providerCard(c *ui.Ctx, p worker.ProviderInfo) {
 
 // modelSelects are a provider's model and effort menus, at model and effort ("" is the default effort). It reports
 // a pick, with what's picked: a new model's effort is its default.
-func modelSelects(c *ui.Ctx, p worker.ProviderInfo, model, effort, help string) (string, string, bool) {
+func modelSelects(c *ui.Ctx, p host.ProviderInfo, model, effort, help string) (string, string, bool) {
 	name := providerName(p.ID)
 	picked := false
 	c.Row("model", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -770,7 +700,7 @@ func modelSelects(c *ui.Ctx, p worker.ProviderInfo, model, effort, help string) 
 }
 
 // defaultModel is a provider's default model, else its first.
-func defaultModel(p worker.ProviderInfo) string {
+func defaultModel(p host.ProviderInfo) string {
 	for _, m := range p.Models {
 		if m.Default {
 			return m.ID
@@ -783,7 +713,7 @@ func defaultModel(p worker.ProviderInfo) string {
 }
 
 // providerNote is a provider's plan and what's used of each window, or why it can't run.
-func providerNote(p worker.ProviderInfo, usage []core.ProviderUsage) string {
+func providerNote(p host.ProviderInfo, usage []core.ProviderUsage) string {
 	switch {
 	case p.Error != "":
 		return p.Error
@@ -810,7 +740,7 @@ func providerNote(p worker.ProviderInfo, usage []core.ProviderUsage) string {
 }
 
 // noAgentCard starts the session with no agent.
-func (x *launcher) noAgentCard(c *ui.Ctx, k worker.KindSpec) {
+func (x *launcher) noAgentCard(c *ui.Ctx, k host.KindSpec) {
 	th := c.Theme()
 	on := x.provider == ""
 	fill, line := render.Color{}, th.C(tLaunchCardLine)
@@ -830,10 +760,10 @@ func (x *launcher) noAgentCard(c *ui.Ctx, k worker.KindSpec) {
 	}
 }
 
-func (x *launcher) reposSection(c *ui.Ctx, k worker.KindSpec) {
+func (x *launcher) reposSection(c *ui.Ctx, k host.KindSpec) {
 	th := c.Theme()
 	note := "one worktree each · same branch"
-	if startsFrom(k) == worker.FromPR {
+	if startsFrom(k) == host.FromPR {
 		note = "the PR's repo, found by its remote if none"
 	}
 	heading(c, "head", "Repositories", note)
@@ -841,16 +771,10 @@ func (x *launcher) reposSection(c *ui.Ctx, k worker.KindSpec) {
 		for _, r := range slices.Clone(x.chosen) {
 			name := x.repoName(r)
 			tone := th.C(tLaunchRepo)
-			if x.lacks(r) {
-				tone = th.C(theme.Warn)
-			}
 			c.Row("repo."+string(r), ui.Style{Pad: ui.Insets{L: 10, R: 4, T: 3, B: 3}, Gap: 6, Cross: ui.Center, Radius: 12, Stroke: tone,
 				Border: 1, Role: ui.RoleGroup, Label: name}, func(c *ui.Ctx) {
 				c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: tone}, nil)
 				c.Text("name", name, monoFont(11.5, th.C(theme.Fg)))
-				if x.lacks(r) {
-					x.cloneChip(c, r, name)
-				}
 				if widget.IconButton(c, "remove", "✕", widget.IconButtonOpts{Label: "Remove " + name, Help: "agent/launcher#repositories", Size: 18}) {
 					x.chosen = slices.DeleteFunc(x.chosen, func(id core.RepoID) bool { return id == r })
 				}
@@ -869,54 +793,11 @@ func (x *launcher) reposSection(c *ui.Ctx, k worker.KindSpec) {
 		}
 	})
 	x.field(c, "repo-path", &x.repoPath, "Add a repo by its path", "or a checkout's path, ⏎ adds it", false, ui.Flex(1), 1)
-	if k.Worktrees == worker.WorktreesNow || k.Worktrees == worker.WorktreesStartWork {
+	if k.Worktrees == host.WorktreesNow || k.Worktrees == host.WorktreesStartWork {
 		c.Row("branch", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("l", "Branch", uiFont(12.5, th.C(theme.FgMuted)))
 			x.field(c, "branch", &x.branch, "Branch", "named from the ticket and prompt", false, ui.Flex(1), 1)
 		})
-	}
-}
-
-// cloneChip is a chip's "not on <worker>: Clone", whose popover takes the URL to clone it from as the session starts.
-func (x *launcher) cloneChip(c *ui.Ctx, r core.RepoID, name string) {
-	const help = "agent/launcher#repositories"
-	th := c.Theme()
-	note := "not on " + x.workerName() + ":"
-	if x.clones[r] != "" {
-		note = "clones onto " + x.workerName() + " at start:"
-	}
-	c.Text("missing", note, monoFont(10.5, th.C(theme.Warn)))
-	anchor := c.Next("clone")
-	label := "Clone"
-	if x.clones[r] != "" {
-		label = "Change"
-	}
-	if widget.Button(c, "clone", label, widget.ButtonOpts{Ghost: true, Help: help}) {
-		x.openClone(r)
-	}
-	open := x.cloning == r
-	widget.Popover(c, "clonepop", anchor, &open, widget.PopoverOpts{Label: "Clone " + name, Width: 460, Help: help}, func(c *ui.Ctx) {
-		c.Text("t", "Clone "+name+" onto "+x.workerName()+" from", uiFont(12.5, th.C(theme.Fg)))
-		if x.cloneFocus {
-			c.Focus(c.Next("url"))
-			x.cloneFocus = false
-		}
-		res := widget.Input(c, "url", &x.cloneURL, widget.InputOpts{Label: "Clone from", Placeholder: "a git URL: git@github.com:acme/pricing.git",
-			Help: help, KeyMode: LauncherKeyMode})
-		c.Text("n", "with the worker's own git and credentials, before the session starts", monoFont(10, th.C(theme.FgFaint)))
-		ok := strings.TrimSpace(x.cloneURL) != ""
-		if (widget.Button(c, "ok", "Clone at start", widget.ButtonOpts{Primary: true, Disabled: !ok, Help: help}) || res.Submitted) && ok {
-			if x.clones == nil {
-				x.clones = map[core.RepoID]string{}
-			}
-			x.clones[r], open = strings.TrimSpace(x.cloneURL), false
-		}
-		if res.Cancelled {
-			open = false
-		}
-	})
-	if !open && x.cloning == r {
-		x.cloning = ""
 	}
 }
 
@@ -930,42 +811,11 @@ func (x *launcher) repoName(r core.RepoID) string {
 	return filepath.Base(string(r))
 }
 
-// runOn is where the session runs: the worker, the sandbox and its network.
-func (x *launcher) runOn(c *ui.Ctx) {
-	heading(c, "head", "Run on", "")
-	var labels []string
-	var ids []core.WorkerID
-	current := ""
-	for _, w := range x.h.State().Workers {
-		if !w.Connected {
-			continue
-		}
-		l := w.Title()
-		if w.Cores > 0 {
-			l += fmt.Sprintf(" · %d cores · cpu %d%%", w.Cores, int(w.CPU*100+.5))
-		}
-		labels, ids = append(labels, l), append(ids, w.ID)
-		if w.ID == x.worker || x.worker == "" && w.ID == core.LocalWorker {
-			current = l
-		}
-	}
-	if current == "" && len(labels) > 0 {
-		current = labels[0]
-	}
-	if v, ok := widget.Select(c, "worker", current, labels, widget.SelectOpts{Label: "Worker", Help: "agent/launcher#run-on", Width: 320}); ok {
-		if i := slices.Index(labels, v); i >= 0 && ids[i] != x.worker {
-			x.worker, x.kinds, x.providers, x.repos, x.chosen = ids[i], nil, nil, nil, nil
-			x.gen++
-			x.load(false)
-		}
-	}
-	pick := backendPick{chosen: &x.backend, setting: settingBackend(x.h)}
-	for _, w := range x.h.State().Workers {
-		if w.ID == x.worker || x.worker == "" && w.ID == core.LocalWorker {
-			pick.offered = w.Sandboxes
-		}
-	}
-	sandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#run-on")
+// runsIn is where the session runs: in a sandbox or not, which backend, and its network.
+func (x *launcher) runsIn(c *ui.Ctx) {
+	heading(c, "head", "Runs in", "")
+	pick := backendPick{chosen: &x.backend, setting: settingBackend(x.h), offered: x.h.State().Machine.Sandboxes}
+	sandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#runs-in")
 }
 
 // toggleRow is a toggle with its label, and a note at the right.
@@ -985,7 +835,7 @@ func toggleRow(c *ui.Ctx, key any, label, note string, on *bool, disabled bool, 
 	})
 }
 
-// backendPick is the sandbox backend a session runs in: chosen from those its worker offers, sandbox.backend
+// backendPick is the sandbox backend a session runs in: chosen from those this machine offers, sandbox.backend
 // until one is.
 type backendPick struct {
 	chosen  *string
@@ -1007,7 +857,7 @@ func settingBackend(h plugin.Host) string {
 	return s
 }
 
-// sandboxToggles are where an agent runs: in a sandbox, in which backend when its worker has more than one, and
+// sandboxToggles are where an agent runs: in a sandbox, in which backend when this machine has more than one, and
 // with an open network there.
 func sandboxToggles(c *ui.Ctx, on, openNet *bool, pick backendPick, help string) {
 	toggleRow(c, "sandbox", "Sandbox", sandboxNoun(pick.current())+" · gateway for git & gh", on, false, help)
@@ -1081,7 +931,7 @@ func (x *launcher) side(c *ui.Ctx) {
 // reuse fills the launcher from an earlier session: its prompt, kind and repos.
 func (x *launcher) reuse(se core.SessionState) {
 	x.prompt, x.ticket, x.chosen = se.Prompt, se.Ticket, nil
-	if i := slices.IndexFunc(x.kinds, func(k worker.KindSpec) bool { return k.Kind == se.Kind }); i >= 0 {
+	if i := slices.IndexFunc(x.kinds, func(k host.KindSpec) bool { return k.Kind == se.Kind }); i >= 0 {
 		x.kind = i
 	}
 	for _, p := range se.Projects {
@@ -1094,27 +944,24 @@ func (x *launcher) reuse(se core.SessionState) {
 func (x *launcher) preflight() [][2]string {
 	k, ok := x.current()
 	if !ok {
-		return [][2]string{{"worker", "asking…"}}
+		return [][2]string{{"kinds", "reading…"}}
 	}
-	worktrees := map[worker.Worktrees]string{worker.WorktreesNow: "now, from a fetched base", worker.WorktreesStartWork: "at Start work",
-		worker.WorktreesPR: "the PR's head, read-only", worker.WorktreesPinned: "pinned, read-only", worker.WorktreesInit: "a new repo",
-		worker.WorktreesNone: "none"}[k.Worktrees]
+	worktrees := map[host.Worktrees]string{host.WorktreesNow: "now, from a fetched base", host.WorktreesStartWork: "at Start work",
+		host.WorktreesPR: "the PR's head, read-only", host.WorktreesPinned: "pinned, read-only", host.WorktreesInit: "a new repo",
+		host.WorktreesNone: "none"}[k.Worktrees]
 	if k.Kind == core.KindDirect {
 		worktrees = "none: the directory itself"
 	}
 	rows := [][2]string{{"worktrees", worktrees}}
-	if takesRepos(k) && k.Worktrees != worker.WorktreesStartWork {
+	if takesRepos(k) && k.Worktrees != host.WorktreesStartWork {
 		rows = append(rows, [2]string{"repos to fetch", fmt.Sprint(len(x.chosen))})
-	}
-	if n := len(x.toClone()); takesRepos(k) && n > 0 {
-		rows = append(rows, [2]string{"repos to clone", fmt.Sprint(n)})
 	}
 	agent := "none"
 	if x.provider != "" {
 		agent = strings.TrimSpace(providerName(x.provider) + " " + x.model)
 	}
 	rows = append(rows, [2]string{"agent", agent}, [2]string{"prompt pack", cmpOr(k.Pack, "none")})
-	runs, network := "on the worker", "the worker's"
+	runs, network := "on this machine", "this machine's"
 	if x.sandbox {
 		runs, network = "in a "+sandboxNoun(backendPick{chosen: &x.backend, setting: settingBackend(x.h)}.current()), "ask per new host"
 		if x.openNet {

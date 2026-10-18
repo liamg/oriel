@@ -15,7 +15,6 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
-	"github.com/liamg/oriel/worker"
 )
 
 // latest waits for the frame on screen, settled (no other drawn for a moment, so nothing's still moving), to satisfy
@@ -72,7 +71,7 @@ func (r *running) waitGone(s string) {
 
 // consoleSession starts a session with the fake agent, waits for the window to reopen on it, and opens its console
 // with ⌘⇧A.
-func consoleSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorker) {
+func consoleSession(t *testing.T) (*running, *agenttest.FakeSession, *localHost) {
 	t.Helper()
 	r, a, lw := agentSession(t)
 	r.typeKeys("<D-A>")
@@ -81,16 +80,16 @@ func consoleSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorke
 }
 
 // agentSession starts a session with the fake agent and waits for the window to reopen on it.
-func agentSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorker) {
+func agentSession(t *testing.T) (*running, *agenttest.FakeSession, *localHost) {
 	t.Helper()
-	return agentSessionOn(t, newLocalWorker(t))
+	return agentSessionOn(t, newLocalHost(t))
 }
 
-// agentSessionOn is agentSession on the worker given.
-func agentSessionOn(t *testing.T, lw *localWorker) (*running, *agenttest.FakeSession, *localWorker) {
+// agentSessionOn is agentSession on the host given.
+func agentSessionOn(t *testing.T, lw *localHost) (*running, *agenttest.FakeSession, *localHost) {
 	t.Helper()
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	err := r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
 	})
@@ -310,10 +309,10 @@ func TestTerminalShowsASource(t *testing.T) {
 }
 
 // AI-13 done when: a lost login turns its sessions needs-you with the card, the notice and the title bar's indicator
-// show it, and the launcher says signed out; on a local worker the card's Log in opens the agent's terminal with
-// /login typed, and a login there clears every flag and the session goes on.
+// show it, and the launcher says signed out; the card's Log in opens the agent's terminal with /login typed, and a
+// login there clears every flag and the session goes on.
 func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
-	lw := newWorkerWith(t, worker.Options{Name: "devbox"})
+	lw := newLocalHost(t)
 	lw.fake.Account = "u1"
 	r, a, _ := agentSessionOn(t, lw)
 	a.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "fake", Account: "u1", Plan: "Fake Pro",
@@ -323,7 +322,7 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 	a.LoseLogin("OAuth token revoked · Please run /login")
 	a.Emit(agent.TurnEnd{})
 	r.waitFrame("the card, the notice and the indicator", func(s string) bool {
-		return containsAll(s, "Fake on devbox needs you to log in", "OAuth token revoked · Please run /login", "Log in", "Check again",
+		return containsAll(s, "Fake needs you to log in", "OAuth token revoked · Please run /login", "Log in", "Check again",
 			"signed out", "needs you")
 	})
 	// The notice comes through Notify, not with the frame that shows the card.
@@ -331,7 +330,7 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 		n := st.Notifications
 		return len(n) > 0 && n[len(n)-1].ID == "agent.login"
 	})
-	if n := st.Notifications[len(st.Notifications)-1]; n.Session != "" || !strings.Contains(n.Text, "devbox") || !strings.Contains(n.Text, "/login") {
+	if n := st.Notifications[len(st.Notifications)-1]; n.Session != "" || !strings.Contains(n.Text, "/login") {
 		t.Errorf("notice = %+v", n)
 	}
 	r.do(func() error { return r.host.Run(context.Background(), "session.new", nil) })
@@ -352,44 +351,4 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 	if got := a.WaitSent(t); !strings.Contains(got.Text, "signed in again") {
 		t.Errorf("the agent was told %q", got.Text)
 	}
-}
-
-// SE-5 done when: "Log in on a fake remote worker opens its terminal with /login"; Check again asks the worker to look.
-func TestALostLoginElsewhereLogsInFromItsTerminal(t *testing.T) {
-	lw := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox"})
-	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
-	err := r.do(func() error {
-		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	a := lw.fake.WaitStarted(t)
-	a.LoseLogin("Not logged in · Run /login")
-	r.waitFrame("the card", func(s string) bool {
-		return containsAll(s, "Fake on devbox needs you to log in", "opens its terminal with /login", "Log in", "Check again")
-	})
-	r.typeKeys("<Esc>") // the notice's toast
-	askID := func() string {
-		if se, ok := r.store.State().Session("w"); ok && len(se.Snapshot().Asks) > 0 {
-			return se.Snapshot().Asks[0].ID
-		}
-		return ""
-	}
-	first := askID()
-	r.clickText("Check again")
-	waitState(t, r.store, "the card again", func(core.State) bool { id := askID(); return id != "" && id != first })
-	// The pointer leaves, as a hand does between clicks: the old card's buttons fade out under it.
-	r.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 5, Y: 5}})
-	r.latest("the old card gone", func(headless.Frame) bool { return true })
-	r.clickText("Log in")
-	deadline := time.Now().Add(5 * time.Second)
-	for !strings.Contains(a.Term().Shown(), "/login\r") {
-		if time.Now().After(deadline) {
-			t.Fatalf("devbox's agent terminal shows %q", a.Term().Shown())
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	r.waitGone("needs you to log in")
 }

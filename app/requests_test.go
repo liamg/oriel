@@ -18,7 +18,7 @@ import (
 )
 
 // requestsSession is agentSession with the Requests view open from the rail's key, ⌘⇧R.
-func requestsSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorker) {
+func requestsSession(t *testing.T) (*running, *agenttest.FakeSession, *localHost) {
 	t.Helper()
 	r, a, lw := agentSession(t)
 	r.typeKeys("<D-R>")
@@ -72,7 +72,7 @@ func newRequest(t *testing.T, r *running, a *agenttest.FakeSession, body string)
 }
 
 // AI-5, done when: "a comment reaches the agent within 1 s". The ticket's own bound; the fake agent is idle, so the
-// worker hands it over at once (agents.md, "Comments to agent").
+// host hands it over at once (agents.md, "Comments to agent").
 func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
 	r, a, _ := requestsSession(t)
 	in, took := newRequest(t, r, a, "Negative values round the wrong way")

@@ -12,13 +12,13 @@ import (
 
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // AIReviewView is the AI review's column at the diff's right (ui.md 06): the findings of a review by another model.
@@ -36,7 +36,7 @@ var (
 )
 
 // aiReviewPlugin is the cross-model AI review (agents.md, Guardrails): its commands, options and the diff's column.
-// Reviews run on the session's worker (worker.Client.AIReview); findings are session state.
+// Reviews run on the session host (host.Host.AIReview); findings are session state.
 type aiReviewPlugin struct {
 	disposer
 	sh *shell
@@ -122,7 +122,7 @@ func (x *aiReviewPlugin) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				path := x.promptPath()
 				if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-					p, _ := packs.Get(worker.AIReviewPack)
+					p, _ := packs.Get(host.AIReviewPack)
 					if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 						return err
 					}
@@ -158,7 +158,7 @@ func (v aiReviewView) Shown(root string) bool {
 
 // promptPath is the user's own AI review prompt, which overrides the built-in pack.
 func (x *aiReviewPlugin) promptPath() string {
-	return filepath.Join(x.sh.cfg.ConfigDir, "agents", worker.AIReviewPack+".md")
+	return filepath.Join(x.sh.cfg.ConfigDir, "agents", host.AIReviewPack+".md")
 }
 
 // session is the session {id}, or the one in front.
@@ -175,18 +175,17 @@ func (x *aiReviewPlugin) session(a registry.Args) (core.SessionState, error) {
 	return se.Snapshot(), nil
 }
 
-func (x *aiReviewPlugin) client(a registry.Args) (worker.Client, error) {
-	se, err := x.session(a)
-	if err != nil {
-		return worker.Client{}, err
+func (x *aiReviewPlugin) client(a registry.Args) (*host.Host, error) {
+	if _, err := x.session(a); err != nil {
+		return nil, err
 	}
 	if x.sh.sessions == nil {
-		return worker.Client{}, errors.New("no worker is connected")
+		return nil, errors.New("there are no sessions in this window")
 	}
-	return x.sh.sessions.client(se.ID)
+	return x.sh.sessions.host()
 }
 
-// run asks the session's worker for a review, with the user's prompt when they have one.
+// run asks the session host for a review, with the user's prompt when they have one.
 func (x *aiReviewPlugin) run(a registry.Args) error {
 	se, err := x.session(a)
 	if err != nil {
@@ -201,9 +200,9 @@ func (x *aiReviewPlugin) run(a registry.Args) error {
 		s, _ := v.(string)
 		return s
 	}
-	req := worker.AIReviewReq{Session: se.ID, Provider: opt("review.ai.provider"), Model: opt("review.ai.model"), Full: a.Bool("full")}
+	req := host.AIReviewReq{Session: se.ID, Provider: opt("review.ai.provider"), Model: opt("review.ai.model"), Full: a.Bool("full")}
 	if b, err := os.ReadFile(x.promptPath()); err == nil {
-		p, err := packs.FromText(string(b), worker.AIReviewPack)
+		p, err := packs.FromText(string(b), host.AIReviewPack)
 		if err != nil {
 			return fmt.Errorf("%s: %w", x.promptPath(), err)
 		}
@@ -220,14 +219,14 @@ func (x *aiReviewPlugin) run(a registry.Args) error {
 }
 
 func (x *aiReviewPlugin) setFinding(se core.SessionState, f core.Finding) error {
-	c, err := x.sh.sessions.client(se.ID)
+	c, err := x.sh.sessions.host()
 	if err != nil {
 		return err
 	}
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		if err := c.SetFindings(context.Background(), core.FindingsRecorded{Session: se.ID, Findings: []core.Finding{f}}); err != nil {
+		if err := c.SetFindings(core.FindingsRecorded{Session: se.ID, Findings: []core.Finding{f}}); err != nil {
 			x.h.Notify(core.Notice{ID: "review.ai", Severity: core.SevError, Key: true, Text: err.Error()})
 		}
 	}()
@@ -263,7 +262,7 @@ func (x *aiReviewPlugin) thread(ctx context.Context, se core.SessionState, f cor
 	return x.h.Run(ctx, "request.comment", a)
 }
 
-// findingPath is the file a finding is about, on the session's worker.
+// findingPath is the file a finding is about.
 func findingPath(se core.SessionState, f core.Finding) string {
 	if f.File == "" {
 		return ""

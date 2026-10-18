@@ -12,14 +12,14 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
-	"github.com/liamg/oriel/worker"
 )
 
 // The Ship page and its panels (ui.md 18, 01h): each project's way from uncommitted work to a merged PR, read from
-// its worker (worker.Ship), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
+// the session host (host.ShipRead), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
 // the same way; the gates are ShipGate contributions, and ShipCommit and ShipRaise hooks can stop a step.
 
 // The views.
@@ -92,7 +92,7 @@ type shipPlugin struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	busy   sync.WaitGroup // reads and steps
-	saving sync.WaitGroup // drafts the user typed, on their way to the worker
+	saving sync.WaitGroup // drafts the user typed, on their way to the session host
 	poller sync.WaitGroup
 
 	mu      sync.Mutex
@@ -107,7 +107,7 @@ type shipPlugin struct {
 
 // shipReport is a session's projects as last read, and the steps running on them.
 type shipReport struct {
-	ships   []worker.Ship
+	ships   []host.Ship
 	read    time.Time
 	loading bool
 	err     string
@@ -137,10 +137,10 @@ type prForm struct {
 	veto        string
 }
 
-// draftSaveAfter is how long typing in a draft box rests before what's typed is kept on the worker.
+// draftSaveAfter is how long typing in a draft box rests before what's typed is kept in the session.
 const draftSaveAfter = time.Second
 
-// autosave keeps what's typed into a draft box on the worker as the user's draft: at once on the first key, so the
+// autosave keeps what's typed into a draft box as the user's draft: at once on the first key, so the
 // agent is neither asked for it nor overwrites it, then each time the typing rests.
 type autosave struct {
 	pending bool
@@ -148,7 +148,7 @@ type autosave struct {
 }
 
 // keepTyped is called each frame a draft box is drawn: changed says it was typed into, first that it hadn't been.
-func (x *shipPlugin) keepTyped(c *ui.Ctx, a *autosave, changed, first bool, req worker.DraftReq) {
+func (x *shipPlugin) keepTyped(c *ui.Ctx, a *autosave, changed, first bool, req host.DraftReq) {
 	now := c.Now()
 	if changed {
 		a.pending, a.at = true, now
@@ -244,12 +244,12 @@ func (x *shipPlugin) poll() {
 
 func (x *shipPlugin) focused() core.SessionID { return x.sh.cfg.Store.Focus() }
 
-// client is the worker a session is on.
-func (x *shipPlugin) client(id core.SessionID) (worker.Client, error) {
+// client is the session host.
+func (x *shipPlugin) client(id core.SessionID) (*host.Host, error) {
 	if x.sh.sessions == nil {
-		return worker.Client{}, errors.New("no worker is connected")
+		return nil, errors.New("there are no sessions in this window")
 	}
-	return x.sh.sessions.client(id)
+	return x.sh.sessions.host()
 }
 
 // session is the session in front, or {id}.
@@ -279,16 +279,16 @@ func (x *shipPlugin) report(id core.SessionID) shipReport {
 }
 
 // ship is a project's last reading.
-func (x *shipPlugin) ship(id core.SessionID, project string) (worker.Ship, bool) {
+func (x *shipPlugin) ship(id core.SessionID, project string) (host.Ship, bool) {
 	for _, s := range x.report(id).ships {
 		if s.Project == project {
 			return s, true
 		}
 	}
-	return worker.Ship{}, false
+	return host.Ship{}, false
 }
 
-// refresh reads a session's projects from its worker, off the loop; fresh asks GitHub (and fetches) again.
+// refresh reads a session's projects, off the loop; fresh asks GitHub (and fetches) again.
 func (x *shipPlugin) refresh(id core.SessionID, fresh bool) {
 	x.mu.Lock()
 	r := x.reports[id]
@@ -305,11 +305,11 @@ func (x *shipPlugin) refresh(id core.SessionID, fresh bool) {
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		var ships []worker.Ship
+		var ships []host.Ship
 		c, err := x.client(id)
 		if err == nil {
 			ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-			ships, err = c.ShipRead(ctx, worker.ShipReq{Session: id, Fresh: fresh})
+			ships, err = c.ShipRead(ctx, host.ShipReq{Session: id, Fresh: fresh})
 			cancel()
 		}
 		x.mu.Lock()
@@ -337,7 +337,7 @@ func (x *shipPlugin) refresh(id core.SessionID, fresh bool) {
 
 // newPRs are the PRs in ships not seen before, as PrSeen events, and those not seen merged before, as PrMerged
 // events; x.mu is held.
-func (x *shipPlugin) newPRs(id core.SessionID, ships []worker.Ship) (seen []PrSeen, merged []PrMerged) {
+func (x *shipPlugin) newPRs(id core.SessionID, ships []host.Ship) (seen []PrSeen, merged []PrMerged) {
 	if x.seenPRs == nil {
 		x.seenPRs, x.merged = map[string]bool{}, map[string]bool{}
 	}
@@ -374,7 +374,7 @@ func (x *shipPlugin) wait() { x.busy.Wait() }
 
 // step runs one step on a project off the loop, showing doing while it runs; a failure is kept for the project and
 // sent as a notice. The session is read again after.
-func (x *shipPlugin) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c worker.Client) error) error {
+func (x *shipPlugin) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c *host.Host) error) error {
 	c, err := x.client(id)
 	if err != nil {
 		return err
@@ -445,7 +445,7 @@ func (x *shipPlugin) commitForm(id core.SessionID, project string) *commitForm {
 }
 
 // message is what a project's commit uses: what's typed, else the draft.
-func (f *commitForm) messageFor(s worker.Ship) string {
+func (f *commitForm) messageFor(s host.Ship) string {
 	if f.edited {
 		return f.message
 	}
@@ -453,7 +453,7 @@ func (f *commitForm) messageFor(s worker.Ship) string {
 }
 
 // files are the files a project's commit takes: every uncommitted one not left out.
-func (f *commitForm) files(s worker.Ship) []string {
+func (f *commitForm) files(s host.Ship) []string {
 	var out []string
 	for _, fl := range s.Files {
 		if !f.skip[fl.Path] {
@@ -464,7 +464,7 @@ func (f *commitForm) files(s worker.Ship) []string {
 }
 
 // prForm is a project's Raise PR tab, made on first use and filled from the PR, the draft or the template.
-func (x *shipPlugin) prForm(id core.SessionID, s worker.Ship) *prForm {
+func (x *shipPlugin) prForm(id core.SessionID, s host.Ship) *prForm {
 	k := formKey(id, s.Project)
 	f := x.prs[k]
 	if f == nil {
@@ -479,7 +479,7 @@ func (x *shipPlugin) prForm(id core.SessionID, s worker.Ship) *prForm {
 
 // prDefaults are a PR's title and body before anything's typed: the open PR's, else the agent's draft, else the first
 // commit's subject and the repo's template.
-func prDefaults(s worker.Ship) (title, body string) {
+func prDefaults(s host.Ship) (title, body string) {
 	switch {
 	case s.PR.Open():
 		return s.PR.Title, s.PR.Body
@@ -493,7 +493,7 @@ func prDefaults(s worker.Ship) (title, body string) {
 }
 
 // reviewersOf are who a project's PR asks: the CODEOWNERS of its change and those added, less those taken off.
-func (f *prForm) reviewersOf(s worker.Ship) []string {
+func (f *prForm) reviewersOf(s host.Ship) []string {
 	var out []string
 	for _, r := range append(slices.Clone(s.Owners), f.reviewers...) {
 		if !slices.Contains(out, r) && !slices.Contains(f.removed, r) {
@@ -699,8 +699,8 @@ func (x *shipPlugin) commands() {
 			}},
 		{ID: "ship.push", Title: "Push a project's branch to origin: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Pushing…", func(ctx context.Context, c worker.Client) error {
-					return c.ShipPush(ctx, worker.ShipRef{Session: se.ID, Project: p})
+				return x.step(se.ID, p, "Pushing…", func(ctx context.Context, c *host.Host) error {
+					return c.ShipPush(ctx, host.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
 		{ID: "ship.sync", Title: "Rebase a project's branch onto its base, fetched: {project}", Available: inFront,
@@ -727,8 +727,8 @@ func (x *shipPlugin) commands() {
 			}},
 		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Marking ready…", func(ctx context.Context, c worker.Client) error {
-					return c.ShipReady(ctx, worker.ShipRef{Session: se.ID, Project: p})
+				return x.step(se.ID, p, "Marking ready…", func(ctx context.Context, c *host.Host) error {
+					return c.ShipReady(ctx, host.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
 		{ID: "ship.pr.open", Title: "Open a project's Raise PR tab, or Edit PR once it's raised: {project}", Available: inFront,
@@ -767,17 +767,17 @@ func (x *shipPlugin) commands() {
 					f.edited, f.save = false, autosave{}
 				}
 				x.saving.Wait()
-				if err := c.ShipDraft(ctx, worker.DraftReq{Session: se.ID, Project: p, Kind: kind, Drop: true}); err != nil {
+				if err := c.ShipDraft(ctx, host.DraftReq{Session: se.ID, Project: p, Kind: kind, Drop: true}); err != nil {
 					return err
 				}
-				return c.Send(ctx, worker.SendReq{Session: se.ID, Text: text})
+				return c.Send(host.SendReq{Session: se.ID, Text: text})
 			})},
 		{ID: "ship.draft.save", Title: "Save a project's draft as yours, which the agent leaves: {project}, {kind} pr (the Raise PR tab's, by default) or commit (the commit box's), {title}, {body}",
 			Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 				kind := cmpOr(a.String("kind"), "pr")
 				s, _ := x.ship(se.ID, p)
-				req := worker.DraftReq{Session: se.ID, Project: p, Kind: kind}
+				req := host.DraftReq{Session: se.ID, Project: p, Kind: kind}
 				switch kind {
 				case "pr":
 					f := x.prForm(se.ID, s)
@@ -787,7 +787,7 @@ func (x *shipPlugin) commands() {
 				default:
 					return fmt.Errorf("a draft is a commit or a pr, not %q", kind)
 				}
-				return x.step(se.ID, p, "Saving…", func(ctx context.Context, c worker.Client) error { return c.ShipDraft(ctx, req) })
+				return x.step(se.ID, p, "Saving…", func(ctx context.Context, c *host.Host) error { return c.ShipDraft(ctx, req) })
 			})},
 		{ID: "ship.github", Title: "Open a project's PR on GitHub: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
@@ -802,7 +802,7 @@ func (x *shipPlugin) commands() {
 	}
 }
 
-// commit fires ShipCommit, then commits on the worker. A veto is kept in the commit box.
+// commit fires ShipCommit, then commits. A veto is kept in the commit box.
 func (x *shipPlugin) commit(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 	s, _ := x.ship(se.ID, p)
 	f := x.commitForm(se.ID, p)
@@ -854,9 +854,9 @@ func (x *shipPlugin) commit(ctx registry.Ctx, se core.SessionState, p string, a 
 		return fmt.Errorf("%w: %s", errStopped, v.Reason)
 	}
 	f.veto = ""
-	return x.step(se.ID, p, "Committing…", func(cx context.Context, c worker.Client) error {
+	return x.step(se.ID, p, "Committing…", func(cx context.Context, c *host.Host) error {
 		x.saving.Wait()
-		hash, err := c.ShipCommit(cx, worker.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files, Trailers: trailers})
+		hash, err := c.ShipCommit(cx, host.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files, Trailers: trailers})
 		if err != nil {
 			return err
 		}
@@ -945,16 +945,16 @@ func paths(v any) []string {
 }
 
 func (x *shipPlugin) sync(se core.SessionState, p string) error {
-	return x.step(se.ID, p, "Rebasing…", func(ctx context.Context, c worker.Client) error {
-		return c.ShipSync(ctx, worker.ShipRef{Session: se.ID, Project: p})
+	return x.step(se.ID, p, "Rebasing…", func(ctx context.Context, c *host.Host) error {
+		return c.ShipSync(ctx, host.ShipRef{Session: se.ID, Project: p})
 	})
 }
 
 // raiseReq is the PR a project's raise sends: the args', else the tab's, else its defaults, through ShipRaise.
-func (x *shipPlugin) raiseReq(ctx registry.Ctx, se core.SessionState, p string, a registry.Args, all bool) (worker.PRReq, error) {
+func (x *shipPlugin) raiseReq(ctx registry.Ctx, se core.SessionState, p string, a registry.Args, all bool) (host.PRReq, error) {
 	s, ok := x.ship(se.ID, p)
 	if !ok {
-		return worker.PRReq{}, fmt.Errorf("%s hasn't been read yet", p)
+		return host.PRReq{}, fmt.Errorf("%s hasn't been read yet", p)
 	}
 	f := x.prForm(se.ID, s)
 	ev := &ShipRaise{Session: string(se.ID), Project: p, Title: cmpOr(a.String("title"), f.title), Body: cmpOr(a.String("body"), f.body),
@@ -963,14 +963,14 @@ func (x *shipPlugin) raiseReq(ctx registry.Ctx, se core.SessionState, p string, 
 		ev.Reviewers = rs
 	}
 	if strings.TrimSpace(ev.Title) == "" {
-		return worker.PRReq{}, fmt.Errorf("%s's PR needs a title", p)
+		return host.PRReq{}, fmt.Errorf("%s's PR needs a title", p)
 	}
 	if v, _ := x.h.Fire(ctx, "ShipRaise", p, ev); v.Veto {
 		f.veto = v.Reason
-		return worker.PRReq{}, fmt.Errorf("%w: %s", errStopped, v.Reason)
+		return host.PRReq{}, fmt.Errorf("%w: %s", errStopped, v.Reason)
 	}
 	f.veto = ""
-	return worker.PRReq{Session: se.ID, Project: p, Title: ev.Title, Body: ev.Body, Draft: ev.Draft, Reviewers: ev.Reviewers}, nil
+	return host.PRReq{Session: se.ID, Project: p, Title: ev.Title, Body: ev.Body, Draft: ev.Draft, Reviewers: ev.Reviewers}, nil
 }
 
 // raise pushes what's unpushed, then raises the PR or edits it.
@@ -984,9 +984,9 @@ func (x *shipPlugin) raise(ctx registry.Ctx, se core.SessionState, p string, a r
 	if s.PR.Open() {
 		label = "Updating…"
 	}
-	return x.step(se.ID, p, label, func(cx context.Context, c worker.Client) error {
+	return x.step(se.ID, p, label, func(cx context.Context, c *host.Host) error {
 		if len(s.Unpushed) > 0 || !s.Pushed {
-			if err := c.ShipPush(cx, worker.ShipRef{Session: se.ID, Project: p}); err != nil {
+			if err := c.ShipPush(cx, host.ShipRef{Session: se.ID, Project: p}); err != nil {
 				return err
 			}
 		}
@@ -997,7 +997,7 @@ func (x *shipPlugin) raise(ctx registry.Ctx, se core.SessionState, p string, a r
 
 // raiseAll raises each project with commits, one after another in merge order, so each PR links the ones before it.
 func (x *shipPlugin) raiseAll(ctx registry.Ctx, se core.SessionState) error {
-	var reqs []worker.PRReq
+	var reqs []host.PRReq
 	for _, s := range x.report(se.ID).ships {
 		if s.ReadOnly || s.GitHub == "" || s.Commits == 0 && s.PR == nil {
 			continue
@@ -1019,9 +1019,9 @@ func (x *shipPlugin) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 		defer x.busy.Done()
 		for _, req := range reqs {
 			done := make(chan struct{})
-			err := x.step(se.ID, req.Project, "Raising…", func(cx context.Context, c worker.Client) error {
+			err := x.step(se.ID, req.Project, "Raising…", func(cx context.Context, c *host.Host) error {
 				defer close(done)
-				if err := c.ShipPush(cx, worker.ShipRef{Session: se.ID, Project: req.Project}); err != nil {
+				if err := c.ShipPush(cx, host.ShipRef{Session: se.ID, Project: req.Project}); err != nil {
 					return err
 				}
 				_, err := c.ShipPR(cx, req)
@@ -1038,22 +1038,22 @@ func (x *shipPlugin) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 }
 
 // sessionShips is the session's projects as read, with a placeholder for one not read yet.
-func (x *shipPlugin) sessionShips(se core.SessionState) ([]worker.Ship, shipReport) {
+func (x *shipPlugin) sessionShips(se core.SessionState) ([]host.Ship, shipReport) {
 	r := x.report(se.ID)
-	var out []worker.Ship
+	var out []host.Ship
 	for _, p := range se.Projects {
-		i := slices.IndexFunc(r.ships, func(s worker.Ship) bool { return s.Project == p.Name })
+		i := slices.IndexFunc(r.ships, func(s host.Ship) bool { return s.Project == p.Name })
 		if i >= 0 {
 			out = append(out, r.ships[i])
 		} else {
-			out = append(out, worker.Ship{Project: p.Name, Branch: p.Branch, Base: p.Base})
+			out = append(out, host.Ship{Project: p.Name, Branch: p.Branch, Base: p.Base})
 		}
 	}
 	return out, r
 }
 
 // ciTrouble is a project's failing checks as something to fix or explain, with the log's failing line.
-func ciTrouble(s worker.Ship) (registry.Trouble, bool) {
+func ciTrouble(s host.Ship) (registry.Trouble, bool) {
 	var failing []string
 	for _, c := range s.Checks {
 		if c.State() == gh.CheckFail {
@@ -1073,7 +1073,7 @@ func ciTrouble(s worker.Ship) (registry.Trouble, bool) {
 }
 
 // conflictTrouble is the conflicts a rebase onto the base would stop on, as something to fix or explain.
-func conflictTrouble(s worker.Ship) (registry.Trouble, bool) {
+func conflictTrouble(s host.Ship) (registry.Trouble, bool) {
 	if len(s.Conflicts) == 0 {
 		return registry.Trouble{}, false
 	}

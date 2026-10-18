@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host/search"
 	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -23,7 +24,6 @@ import (
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
-	"github.com/liamg/oriel/worker/search"
 )
 
 // PeekKeyMode is the references peek's key layer.

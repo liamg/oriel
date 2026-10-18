@@ -279,7 +279,7 @@ func (x *verifyPlugin) record(q *quiz, result string) {
 	if x.sh.sessions == nil {
 		return
 	}
-	c, err := x.sh.sessions.client(q.session)
+	c, err := x.sh.sessions.host()
 	if err != nil {
 		log.Error("verification not recorded", "err", err)
 		return
@@ -287,9 +287,7 @@ func (x *verifyPlugin) record(q *quiz, result string) {
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		ctx, cancel := context.WithTimeout(x.ctx, 30*time.Second)
-		defer cancel()
-		if err := c.RecordVerified(ctx, core.Verified{Session: q.session, Verification: v}); err != nil {
+		if err := c.RecordVerified(core.Verified{Session: q.session, Verification: v}); err != nil {
 			log.Error("verification not recorded", "err", err)
 		}
 	}()

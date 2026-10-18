@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-// WorkerID names a worker: one per machine. The app's own machine runs LocalWorker.
-type WorkerID string
-
-const LocalWorker WorkerID = "local"
-
 const (
 	KindNewRepo Kind = "newrepo"
 	KindDirect  Kind = "direct"
@@ -21,7 +16,7 @@ const (
 type Project struct {
 	Name     string `json:"name"`
 	Repo     string `json:"repo,omitempty"` // the checkout it's a worktree of; "" when Dir is the checkout
-	Dir      string `json:"dir"`            // absolute, on the session's worker
+	Dir      string `json:"dir"`            // absolute
 	Branch   string `json:"branch,omitempty"`
 	Base     string `json:"base,omitempty"` // the branch it was cut from
 	Primary  bool   `json:"primary,omitempty"`
@@ -62,11 +57,11 @@ type AgentState struct {
 	Policy      string      `json:"policy,omitempty"` // the agent's own gate: ask, light or bypass
 	Sandboxed   bool        `json:"sandboxed,omitempty"`
 	Network     string      `json:"network,omitempty"` // in a sandbox: ask or open
-	Backend     string      `json:"backend,omitempty"` // in a sandbox: what confines it; "" is the worker's sandbox.backend
+	Backend     string      `json:"backend,omitempty"` // in a sandbox: what confines it; "" is sandbox.backend
 	Pack        string      `json:"pack,omitempty"`    // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
 	Queue       []string    `json:"queue,omitempty"`   // messages waiting for the turn to end
 	Stats       Stats       `json:"stats,omitzero"`
-	// StoppedBy is who stopped it, while it's stopped: StoppedByYou, StoppedByAgent or StoppedByWorker.
+	// StoppedBy is who stopped it, while it's stopped: StoppedByYou, StoppedByAgent, StoppedByCrash or StoppedByHandOver.
 	StoppedBy string    `json:"stoppedBy,omitempty"`
 	StoppedAt time.Time `json:"stoppedAt,omitzero"`
 	// Accounts are the provider's accounts it ran on, oldest first: recorded when it starts and on a login change.
@@ -105,10 +100,10 @@ func (a *AgentState) Stopped(by string, t time.Time) {
 
 // Who stopped an agent.
 const (
-	StoppedByYou    = "you"
-	StoppedByAgent  = "agent"  // its process ended by itself
-	StoppedByWorker = "worker" // the worker shut down
-	// StoppedByHandOver is a worker that handed over to one from another build, which resumes the agent.
+	StoppedByYou   = "you"
+	StoppedByAgent = "agent" // its process ended by itself
+	StoppedByCrash = "crash" // Oriel ended while it ran; the next start resumes it
+	// StoppedByHandOver is Oriel quitting; the next start resumes it.
 	StoppedByHandOver = "handover"
 )
 
@@ -175,18 +170,17 @@ const (
 	AskQuestion   AskKind = "question"   // the agent asked something
 	AskNetwork    AskKind = "network"    // layer 3: the egress proxy holds a connection
 	AskGateway    AskKind = "gateway"    // layer 3: the gateway holds a call
-	AskLogin      AskKind = "login"      // the agent's login on its worker is gone
+	AskLogin      AskKind = "login"      // the agent's login is gone
 	AskKey        AskKind = "key"        // a git operation has waited long enough that it's likely waiting on a security-key touch
 )
 
-// Login is a provider's sign-in on a worker that has stopped working, and how to sign in again.
+// Login is a provider's sign-in that has stopped working, and how to sign in again.
 type Login struct {
-	Provider string   `json:"provider"`
-	Account  string   `json:"account,omitempty"` // ProviderUsage.Account; "" when not known
-	Worker   WorkerID `json:"worker,omitempty"`
-	Detail   string   `json:"detail,omitempty"`   // what the provider said: "OAuth token revoked · Please run /login"
-	Terminal string   `json:"terminal,omitempty"` // typed into the agent's own terminal, signs in: "/login"
-	Shell    string   `json:"shell,omitempty"`    // run in a shell on the worker, signs in: "claude, then /login"
+	Provider string `json:"provider"`
+	Account  string `json:"account,omitempty"`  // ProviderUsage.Account; "" when not known
+	Detail   string `json:"detail,omitempty"`   // what the provider said: "OAuth token revoked · Please run /login"
+	Terminal string `json:"terminal,omitempty"` // typed into the agent's own terminal, signs in: "/login"
+	Shell    string `json:"shell,omitempty"`    // run in a shell, signs in: "codex login"
 }
 
 // Ask is something waiting on the user: a permission, a question, a held connection or gateway call.

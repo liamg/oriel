@@ -37,7 +37,7 @@ How everything hangs together, built and tested before features land on it.
 | SH-4 | ⌘K omnibox (sessions, commands, files, symbols, tickets, PRs) with prefixes | 02 | app, picker | P3 | FW-6, FW-3 | fuzzy ranking golden tests; preview pane renders for each source |
 | SH-5 | Pickers (`␣␣` files, `␣/` grep, `␣k` keymaps…) with preview and actions | 26 | picker | P3–P4 | SH-4 | each source returns, ranks and previews; `␣'` resumes; quickfix and attach actions work |
 | SH-6 | Which-key popup | 27 | plugin (built-in) | P3 | FW-3, FW-6 | appears after 300 ms for any prefix, lists `desc`, `⌫` backs up |
-| SH-7 | Mission control (`⌘⇧K`) with live terminals and inline asks | 03 | app | P7 | SH-2, AI-1 | grouped by worker; working cards stream output; Allow/Deny works from the card |
+| SH-7 | Mission control (`⌘⇧K`) with live terminals and inline asks | 03 | app | P7 | SH-2, AI-1 | grouped by status or repo; working cards stream output; Allow/Deny works from the card |
 | SH-8 | HUD drawer (hold ⌥) and indicators in slots | 10, 01 | app, hud | P7 | FW-6, FW-2 | every panel bound to live events; indicators updatable from Lua |
 | SH-9 | Inbox and interrupt cards (agentbus, network, gateway, security key) | 12 | app | P7 | FW-6 | each card type acts and dismisses; badge counts on tabs |
 | SH-10 | Help everywhere (right-click → Help, `K`, `⌘?`, `:help`) | 28 | help | P3→ | FW-6 | CI lint: every interactive element resolves to a help page and anchor |
@@ -74,7 +74,7 @@ How everything hangs together, built and tested before features land on it.
 |---|---|---|---|---|---|---|
 | FG-1 | Explorer scopes: Changed, Uncommitted, All, with markers | 22 | gitx, app | P4 | FW-6, ED-6 | fixture repos produce the expected markers; `⌥1–3` switch scopes |
 | FG-2 | Gutter hunks, stage and unstage hunks, inline blame by author kind | 06 | gitx | P4 | ED-7 | staging a hunk matches `git apply --cached` |
-| FG-3 | Project search and replace preview | 26 | search | P4 | SH-5 | ripgrep on the worker streams results; replace shows a diff before applying |
+| FG-3 | Project search and replace preview | 26 | search | P4 | SH-5 | ripgrep in the session host streams results; replace shows a diff before applying |
 | FG-4 | Terminals: Ghostty VT under wazero, our renderer, placements, terminal-normal mode | 24 | term | P4 | FW-9 | vttest-style suite; parse throughput ≥ 200 MB/s; snapshot on reconnect |
 | FG-5 | Shell integration (OSC 133/7): prompt jumps, exit dots, send output to a request | 24 | term | P4 | FG-4 | – |
 | FG-6 | Ship page: uncommitted → behind → unpushed → PR → checks, multi-project | 18 | gitx, gh | P6 | FG-2 | flows tested against fixture repos and a fake GitHub |
@@ -101,13 +101,13 @@ How everything hangs together, built and tested before features land on it.
 
 | ID | Feature | Mockup | Module | Phase | After | Done when |
 |---|---|---|---|---|---|---|
-| AI-1 | Worker, wire, sessions, workspaces with multi-repo worktrees | – | worker, core | P5 | FW-2 | sessions live in workspaces of crit's layout, Oriel's own only |
-| SE-1 | Session kinds plan, work, review, tour, job, new repo, direct and scratch (`sessions.md`) | 04 | core, worker | P5 | AI-1 | each kind starts from the launcher and the CLI; direct never creates a worktree; new repo inits and registers |
-| SE-2 | Session lifecycle: worktrees from a fetched base, Start next PR, archive, resume after restart | 03, 18 | core, worker | P5 | SE-1 | archived sessions keep threads and transcripts searchable; restart restores the layout |
+| AI-1 | Session host, sessions, workspaces with multi-repo worktrees | – | host, core | P5 | FW-2 | sessions live in workspaces of crit's layout, Oriel's own only |
+| SE-1 | Session kinds plan, work, review, tour, job, new repo, direct and scratch (`sessions.md`) | 04 | core, host | P5 | AI-1 | each kind starts from the launcher and `session.start`; direct never creates a worktree; new repo inits and registers |
+| SE-2 | Session lifecycle: worktrees from a fetched base, Start next PR, archive, resume after restart | 03, 18 | core, host | P5 | SE-1 | archived sessions keep threads and transcripts searchable; restart restores the layout |
 | SE-3 | Files outside the session open read-only; app opens on mission control | 01 | app | P5 | SE-1 | – |
 | AI-2 | Claude provider: interactive PTY plus mod hooks (no `-p`) | 15 | agent/claude | P5 | AI-1 | conformance suite against a fake `claude` and a live smoke run |
 | AI-3 | Codex provider: `app-server` (billing checked in P0) | 15 | agent/codex | P5 | AI-1 | the same |
-| AI-4 | New-session launcher: modes, provider, repos, worker, sandbox | 04 | app | P5 | AI-1, FW-6 | each mode starts the right prompt pack |
+| AI-4 | New-session launcher: modes, provider, repos, sandbox | 04 | app | P5 | AI-1, FW-6 | each mode starts the right prompt pack |
 | AI-5 | Requests: inline threads plus the main Requests view, composer, urgent, btw | 01, 21 | core, app | P5 | AI-2, ED-7 | a comment reaches the agent within 1 s; replies render as markdown with activity blocks |
 | AI-6 | Agent console: structured transcript, subagents, composer | 15 | app | P5 | AI-2 | – |
 | AI-7 | Permissions, three layers; network and gateway approvals | 15, 12 | agent, sandbox | P5 | AI-2, AI-11 | each layer holds or denies as `agents.md` describes |
@@ -115,11 +115,11 @@ How everything hangs together, built and tested before features land on it.
 | AI-9 | Tasks rail, session stats, usage windows | 01 | core | P5 | AI-2 | – |
 | AI-10 | Commit and PR drafts when the agent goes idle | 18 | agent | P6 | AI-2, FG-6 | a turn ending idle with a draft missing or behind the code asks the agent once per change (fake provider); clean trees and branches with no work of their own aren't asked; the user's draft is never overwritten; the Ship page marks a stale draft. Built in AI-10: see agents.md "Drafts when the agent goes idle" and ui.md 18 |
 | AI-11 | Sandbox, gateway MCP, egress proxy (ported) | – | sandbox | P5 | AI-1 | crit's tests ported and passing |
-| AI-12 | Stats and Usage: session stats tab, global Stats grouped by repo, Usage page, their entry points; `widget.Chart` | 43 | worker, app, ui | P5 | AI-1, AI-2, AI-3, AI-9, SH-17 | a worker answers `stats.query` by repo with the split rule and by session, rescanning only what was appended; the pages match 43; each entry point opens its page |
-| AI-13 | A lost agent login: detected in the provider (Claude's log and screen, Codex's errors), flagged on its worker's sessions, fixed from Oriel | 12 | agent, worker, app | P5 | AI-2, AI-3, AI-12 | a fake session whose log or screen shows the recorded signed-out error raises `AuthExpired`; its worker's sessions turn needs-you with the card; the notice, the indicator and the launcher show it; Log in opens the raw terminal with `/login`, and a login clears every flag |
-| AI-14 | Stats and Usage follow-ups: a custom range with `widget.DatePicker`, tools counted per range, plan tier chips, the active span, a session's account at the time | 43 | worker, app, ui | P5 | AI-12 | a custom range picked with the date picker (mouse and keys) re-queries, and its tools match the fixture calls inside it; Usage shows the tier from a fixture account file, none when unknown; the Active tile reads "of Nh"; a session started before a login change stays with its first account |
-| SE-4 | Jobs: saved prompts on the worker, runs as job sessions, the Jobs page, schedules | 44 | worker, app | P5 | SE-1, AI-12 | a job saved from the page or the launcher runs as a job session against a fake provider and its row shows status, repos, summary, cost by repo and duration; Open, Resume and Delete work; a blocked run shows in Requests; a schedule fires on a fake clock and skips while one runs; the page matches 44 |
-| AI-15 | Workers page: this machine's and remote workers, pairing a new one (the app listens on `workers.listen`, keys hashed at rest, the pinned TLS handshake), revoke, rename, forget, restart | – (ui.md 45) | app, core, wire, worker | P6 | AI-1, AI-12, SE-5 | a real worker over TLS with the key from Add a worker shows online with its sessions; a wrong or revoked key is refused (`wire.ErrRejected`), a wrong fingerprint by the worker; offline and back on reconnect; Forget, Rename and Restart work; the page passes the help lint |
+| AI-12 | Stats and Usage: session stats tab, global Stats grouped by repo, Usage page, their entry points; `widget.Chart` | 43 | host, app, ui | P5 | AI-1, AI-2, AI-3, AI-9, SH-17 | the host answers `StatsQuery` by repo with the split rule and by session, rescanning only what was appended; the pages match 43; each entry point opens its page |
+| AI-13 | A lost agent login: detected in the provider (Claude's log and screen, Codex's errors), flagged on its sessions, fixed from Oriel | 12 | agent, host, app | P5 | AI-2, AI-3, AI-12 | a fake session whose log or screen shows the recorded signed-out error raises `AuthExpired`; its sessions turn needs-you with the card; the notice, the indicator and the launcher show it; Log in opens the raw terminal with `/login`, and a login clears every flag |
+| AI-14 | Stats and Usage follow-ups: a custom range with `widget.DatePicker`, tools counted per range, plan tier chips, the active span, a session's account at the time | 43 | host, app, ui | P5 | AI-12 | a custom range picked with the date picker (mouse and keys) re-queries, and its tools match the fixture calls inside it; Usage shows the tier from a fixture account file, none when unknown; the Active tile reads "of Nh"; a session started before a login change stays with its first account |
+| SE-4 | Jobs: saved prompts, runs as job sessions, the Jobs page, schedules | 44 | host, app | P5 | SE-1, AI-12 | a job saved from the page or the launcher runs as a job session against a fake provider and its row shows status, repos, summary, cost by repo and duration; Open, Resume and Delete work; a blocked run shows in Requests; a schedule fires on a fake clock and skips while one runs; the page matches 44 |
+| AI-15 | Workers page and remote workers (**dropped**: one Oriel per machine, which hosts its own sessions) | – | – | – | – | – |
 
 ## Review and explain
 
@@ -151,7 +151,7 @@ How everything hangs together, built and tested before features land on it.
 | PL-9 | Slack PTAL via webhook | 18 | integ/slack (plugin) | P7 | PL-2 | – |
 | PL-10 | ~~Calendar: next meeting indicator (iCal URL or macOS EventKit)~~ dropped: not carried over (crit-reference.md) | 10 | – | P7 | PL-2 | – |
 | PL-11 | Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation | – | prompts, voice | P7 | AI-2 | `crit-reference.md` → Prompts and Voice |
-| PL-6 | Self-update for the app and workers (self-signed, ed25519) | – | update | P7 | AI-1 | an update round-trips on macOS and Linux with rollback on a failed health check |
+| PL-6 | Self-update for the app (self-signed, ed25519) | – | update | P7 | AI-1 | an update round-trips on macOS and Linux with rollback on a failed health check |
 | PL-19 | Package format: Lua entry point, `oriel.process` / `oriel.wasm` / `oriel.asset`, `[contributes]` assets, `oriel plugin pack` | – | plugin, script | P8 | PL-2, PL-3 | a data-only theme plugin, a Lua plugin and a Lua + process plugin each load from a directory; `pack` rejects an undeclared capability and an oversize plugin |
 | PL-20 | `[plugins]` in `settings.toml`: install, update and uninstall from the file; `[plugin.<name>]` options; `oriel-lock.toml` consent | 16, 29 | catalog | P8 | PL-19, SH-12, SH-9 | adding a line installs and removing it uninstalls; a locked plugin activates silently on a fresh config dir; one asking for more stays inactive behind the consent card |
 | PL-21 | Registry client: signed `index.json`, several registries, badges, trusted tags and hold, yank and revoke; the Plugins page and its Registry tab | 16, 29 | catalog, app | P8 | PL-20, PL-6 | against a fixture index: a bad signature is refused, a revoked version is disabled with a card, a trusted tag waits out `trusted_hold`; the page installs by writing `[plugins]` |

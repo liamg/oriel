@@ -1,4 +1,4 @@
-// Package cli is the oriel command: the desktop app, the worker and the CLI. cmd/oriel's main runs Main, and so
+// Package cli is the oriel command: the desktop app and the CLI. cmd/oriel's main runs Main, and so
 // does a custom build's (`oriel build --with`).
 package cli
 
@@ -21,7 +21,6 @@ import (
 	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/theme"
-	"github.com/liamg/oriel/worker"
 )
 
 var version = "dev"
@@ -53,13 +52,25 @@ func runApp(args []string) {
 	cfg.Plugins = append(cfg.Plugins, app.ScriptPlugin(slack.Files))
 	cfg.Plugins = append(cfg.Plugins, plugin.Native()...)
 	appUpdates(&cfg)
-	cfg.LocalWorker = func(ctx context.Context) (worker.Client, error) { return worker.DialLocal(ctx, orielHome(), "") }
-	if c, err := localWorker(); err != nil {
-		fmt.Fprintln(os.Stderr, "oriel: no worker, so no sessions:", err)
-	} else {
-		cfg.Workers = append(cfg.Workers, c)
-		cfg.Logs.Router.Sessions = c.Logs() // session logs live on the worker (AI-1)
+	home := orielHome()
+	if held, err = lock(home); err != nil {
+		fmt.Fprintln(os.Stderr, "oriel:", err)
+		os.Exit(1)
 	}
+	if err := oldWorker(home); err != nil {
+		fmt.Fprintln(os.Stderr, "oriel:", err)
+		os.Exit(1)
+	}
+	log := cfg.Logs.Logger("host")
+	w, err := newHost(home, log)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "oriel: no sessions:", err)
+		os.Exit(1)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	startHost(ctx, w, log)
+	cfg.Host = w
+	cfg.Logs.Router.Sessions = w.Logs()
 	be, err := gio.New()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel:", err)
@@ -68,6 +79,8 @@ func runApp(args []string) {
 	go func() {
 		defer cfg.Logs.Close()
 		err := app.Run(context.Background(), be, cfg)
+		cancel()
+		w.Close()
 		stopProfile()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "oriel:", err)
@@ -110,8 +123,7 @@ func cpuProfile(path string) func() {
 }
 
 // subcommands are the first arguments that aren't files to open.
-var subcommands = map[string]bool{"version": true, "worker": true, "dev": true, "hook": true, "new": true, "review": true,
-	"init": true, "repos": true, "sessions": true, "build": true, "update": true, "plugin": true}
+var subcommands = map[string]bool{"version": true, "dev": true, "hook": true, "build": true, "update": true, "plugin": true}
 
 func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
@@ -133,12 +145,6 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
-	case "worker":
-		if err := runWorker(args[1:], stderr); err != nil {
-			fmt.Fprintln(stderr, "oriel worker:", err)
-			return 1
-		}
-		return 0
 	case "update":
 		if err := runUpdate(args[1:], stdout, stderr); err != nil {
 			fmt.Fprintln(stderr, "oriel update:", err)
@@ -147,12 +153,6 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "hook":
 		return runHook(args[1:], os.Stdin, stdout, stderr)
-	case "new", "review", "init", "repos", "sessions":
-		if err := runSessionCLI(args[0], args[1:], stdout, stderr); err != nil {
-			fmt.Fprintf(stderr, "oriel %s: %v\n", args[0], err)
-			return 1
-		}
-		return 0
 	case "dev":
 		if err := runDev(args[1:], stdout); err != nil {
 			fmt.Fprintln(stderr, "oriel dev:", err)

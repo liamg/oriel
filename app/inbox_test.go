@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/worker"
 )
 
 // fakeBus is an inbox source as the agentbus plugin (PL-5, github.com/liamg/oriel-agentbus) is: other people's agents' questions, with a countdown to the
@@ -226,7 +226,7 @@ func TestAskCardsActAndDismiss(t *testing.T) {
 // SH-9 (crit's security-key prompt): a commit whose signing waits shows "Touch your security key" over the window,
 // on its own at the top; its Cancel stops the commit and the card goes.
 func TestSecurityKeyCardCancelsAWaitingCommit(t *testing.T) {
-	r, _, _ := agentSessionOn(t, newWorkerWith(t, worker.Options{KeyWait: 100 * time.Millisecond}))
+	r, _, _ := agentSessionOn(t, newHostWith(t, host.Options{KeyWait: 100 * time.Millisecond}))
 	st := r.store.State()
 	se, _ := st.Session("w")
 	p, _ := se.Snapshot().Primary()

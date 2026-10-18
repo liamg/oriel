@@ -10,19 +10,19 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
-// GitHub review mirroring (ui.md 06, RV-4): the session's PRs' reviews are synced into threads by its worker
-// (github.sync), every githubPoll for the session in front and on demand. Their cards are this ThreadSource's: the
-// GitHub header, and under the agent's draft reply ↗ Forward to GitHub and Edit. Only a forward posts, from the
-// worker with the user's own gh. The status line says where the reviewers stand.
+// GitHub review mirroring (ui.md 06, RV-4): the session's PRs' reviews are synced into threads by the session host
+// (SyncGitHub), every githubPoll for the session in front and on demand. Their cards are this ThreadSource's: the
+// GitHub header, and under the agent's draft reply ↗ Forward to GitHub and Edit. Only a forward posts, with the
+// user's own gh. The status line says where the reviewers stand.
 
 // githubPoll is how often the session in front is synced.
 const githubPoll = 30 * time.Second
@@ -56,7 +56,7 @@ type githubPlugin struct {
 
 // githubMirror is a session's last sync, and when it came back.
 type githubMirror struct {
-	worker.Mirror
+	host.Mirror
 	at  time.Time
 	err string
 }
@@ -143,24 +143,24 @@ func (x *githubPlugin) session(a registry.Args) (core.SessionState, bool) {
 	return se.Snapshot(), true
 }
 
-func (x *githubPlugin) client(id core.SessionID) (worker.Client, error) {
+func (x *githubPlugin) client(id core.SessionID) (*host.Host, error) {
 	if x.sh.sessions == nil {
-		return worker.Client{}, errors.New("no worker is connected")
+		return nil, errors.New("there are no sessions in this window")
 	}
-	return x.sh.sessions.client(id)
+	return x.sh.sessions.host()
 }
 
 // trust is the trusted orgs and users, from the options.
-func (x *githubPlugin) trust() worker.Trust {
+func (x *githubPlugin) trust() host.Trust {
 	list := func(name string) []string {
 		v, _, _ := x.h.Options().Get(name, registry.At{})
 		l, _ := v.([]string)
 		return l
 	}
-	return worker.Trust{Orgs: list("github.trusted_orgs"), Users: list("github.trusted_users")}
+	return host.Trust{Orgs: list("github.trusted_orgs"), Users: list("github.trusted_users")}
 }
 
-// sync asks the session's worker to mirror its PRs' reviews, off the loop.
+// sync asks the session host to mirror the session's PRs' reviews, off the loop.
 func (x *githubPlugin) sync(id core.SessionID, fresh bool) {
 	x.mu.Lock()
 	if x.syncing[id] {
@@ -173,11 +173,11 @@ func (x *githubPlugin) sync(id core.SessionID, fresh bool) {
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		var m worker.Mirror
+		var m host.Mirror
 		c, err := x.client(id)
 		if err == nil {
 			ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-			m, err = c.SyncGitHub(ctx, worker.MirrorReq{Session: id, Fresh: fresh, Trust: trust})
+			m, err = c.SyncGitHub(ctx, host.MirrorReq{Session: id, Fresh: fresh, Trust: trust})
 			cancel()
 		}
 		x.mu.Lock()
@@ -222,7 +222,7 @@ func (x *githubPlugin) draft(a registry.Args) (core.SessionState, core.Thread, c
 	return se, t, core.Comment{}, errors.New("no draft reply in the thread")
 }
 
-// forward posts a draft to GitHub through the worker, as the user, off the loop.
+// forward posts a draft to GitHub, as the user, off the loop.
 func (x *githubPlugin) forward(a registry.Args) error {
 	se, t, cm, err := x.draft(a)
 	if err != nil {
@@ -244,7 +244,7 @@ func (x *githubPlugin) forward(a registry.Args) error {
 	go func() {
 		defer x.busy.Done()
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-		_, err := c.ForwardGitHub(ctx, worker.ForwardReq{Session: se.ID, Thread: t.ID, Comment: cm.ID})
+		_, err := c.ForwardGitHub(ctx, host.ForwardReq{Session: se.ID, Thread: t.ID, Comment: cm.ID})
 		cancel()
 		x.mu.Lock()
 		delete(x.forwarding, cm.ID)
@@ -270,7 +270,7 @@ func (x *githubPlugin) edit(a registry.Args) error {
 	return nil
 }
 
-// save keeps an edited draft, through the worker.
+// save keeps an edited draft.
 func (x *githubPlugin) save(a registry.Args) error {
 	se, t, cm, err := x.draft(a)
 	if err != nil {
@@ -289,9 +289,7 @@ func (x *githubPlugin) save(a registry.Args) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(x.ctx, 30*time.Second)
-	defer cancel()
-	if err := c.EditDraft(ctx, worker.DraftEditReq{Session: se.ID, Thread: t.ID, Comment: cm.ID, Body: body}); err != nil {
+	if err := c.EditDraft(host.DraftEditReq{Session: se.ID, Thread: t.ID, Comment: cm.ID, Body: body}); err != nil {
 		return err
 	}
 	delete(x.editing, cm.ID)

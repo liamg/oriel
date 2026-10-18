@@ -1,7 +1,7 @@
 ---
 id: agent/prompts
 covers: [Prompts, prompts.open, prompts.set, prompts.reset, prompts.save, prompts.edit, app.overlay.prompts]
-related: [agent/launcher, agent/workers, agent/voice]
+related: [agent/launcher, agent/voice]
 ---
 
 # Prompts
@@ -30,7 +30,6 @@ the first time: `prompts/style.code.md`, `prompts/tour.<kind>.md`, `agents/<kind
 your config directory.
 A hand-written `agents/<kind>.md` is the same override.
 
-Every worker gets your prompts as it connects and whenever one changes, so a session started after a save, on any
-machine, uses them. The coding style is also written into the `CLAUDE.md` and `AGENTS.md` Oriel generates at a
+Sessions get your prompts whenever one changes, so a session started after a save uses them. The coding style is also written into the `CLAUDE.md` and `AGENTS.md` Oriel generates at a
 workspace's root, beside the list of its projects, so an agent picks it up however it was started. `{{style}}` in
 any prompt is replaced with it.

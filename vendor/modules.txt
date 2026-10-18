@@ -68,9 +68,6 @@ github.com/go-text/typesetting/shaping
 # github.com/godbus/dbus/v5 v5.2.2
 ## explicit; go 1.20
 github.com/godbus/dbus/v5
-# github.com/hashicorp/yamux v0.1.2
-## explicit; go 1.20
-github.com/hashicorp/yamux
 # github.com/tetratelabs/wazero v1.12.0
 ## explicit; go 1.25.0
 github.com/tetratelabs/wazero

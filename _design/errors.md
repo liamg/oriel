@@ -20,9 +20,9 @@ trace) and `38-crash.png` (the crash report on the next launch).
 
 - **The Oriel log** is the app's: config and plugin errors, rendering, the GUI, update checks, Oriel's own panics.
 - **A session log** belongs to one session (`sessions.md`): its agent, worktree, LSP servers, test runs, terminals and
-  gateway. It lives with the session on its worker, survives a restart, and is archived with the session.
-  Session logs sit behind `logs.SessionLogs`. Until the worker exists (AI-1), the app keeps them itself, one file
-  per session under its state dir; AI-1 moves them onto the worker and streams their records to the app.
+  gateway. It lives with the session, survives a restart, and is archived with the session.
+  Session logs sit behind `logs.SessionLogs`; the host keeps each in the session's directory
+  (`~/.oriel/sessions/<id>/`), and the app reads them from the host.
 - A notice goes to exactly one of them, by its source. The log panel switches between **Oriel**, **Session · {name}**
   (the focused one) and **All**, which interleaves them with the session's name on each row.
 - Errors from a session you're not looking at don't toast: they put an error mark on that session's tab and wait in
@@ -45,10 +45,9 @@ is in daily use.
 | Oriel can't go on (quit with unsaved buffers, crash recovery on launch) | a modal | until answered |
 
 - No modal for anything that can wait. No sound.
-- A worker's lost agent login (AI-13) is one error notice per login, `agent.login`, from `worker:<id>`, Oriel's not a
-  session's: it names the worker and the fix ("Claude on devbox needs you to log in: OAuth token revoked · Please run
-  /login. Log in opens its terminal with /login typed.", with **Log in**; elsewhere "On devbox, run claude, then
-  /login."). It's taken back when the login works again. The title bar's usage indicator for that account says
+- A lost agent login (AI-13) is one error notice per login, `agent.login`, from `login:<provider>`, Oriel's not a
+  session's: it says the fix ("Claude needs you to log in: OAuth token revoked · Please run /login. Log in opens its
+  terminal with /login typed.", with **Log in**; for Codex "Run codex login in a terminal."). It's taken back when the login works again. The title bar's usage indicator for that account says
   **signed out**, in the error colour.
 - Clicking the ✕/⚠ counts, or "Details" on a toast, opens the log at that entry.
 
@@ -96,7 +95,8 @@ is in daily use.
 
 - Go code logs with `log/slog` (stdlib), structured, with a source attribute.
 - Records go to an in-memory ring (the log panel) and a rotating file: `~/Library/Logs/Oriel/oriel.log` on macOS,
-  `$XDG_STATE_HOME/oriel/oriel.log` on Linux. Workers log the same way; their records stream to the app.
+  `$XDG_STATE_HOME/oriel/oriel.log` on Linux. The session host logs to the same place; a panic it recovers is
+  logged as "panic in the session host".
 - LSP servers', DAP adapters' and process plugins' stderr are captured as records with their source.
 - Level: `info` by default; `oriel --log-level=debug`, `ORIEL_LOG=debug`, or `:Log level debug` live.
 - Secrets never reach a log: values from the secrets store (`security.md`) and tokens in URLs are redacted before
@@ -105,7 +105,7 @@ is in daily use.
 ## Debugging Oriel itself
 
 - `:Log` (above), `:Events` (the live core event stream with filters, from the event log), `:Inspect`, `:Hooks` with
-  timings, and the HUD's worker indicators.
+  timings, and the HUD's machine indicators.
 - `oriel --debug` turns on debug logging and the frame-time overlay.
 - "Copy report": version, OS, the settings that differ from defaults, enabled plugins, the last 500 log records and
   the event-log tail, redacted, as one block of text.

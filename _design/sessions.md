@@ -7,13 +7,13 @@ one or more repos, and Oriel gives it its own worktrees, branch, agent and histo
 
 ```mermaid
 flowchart LR
-  Repo["Repo: a checkout you registered, on a worker"] --> WT["Worktree: per session, on the session branch"]
+  Repo["Repo: a checkout you registered"] --> WT["Worktree: per session, on the session branch"]
   WS["Workspace: plan docs and worktrees"] --> WT
   S["Session: kind, agent, branch, threads, tasks, ledger"] --> WS
 ```
 
-- **Repo**: a checkout Oriel knows about (path, remote, default branch, toolchain), registered per worker. Registering
-  is one step (`oriel repos add ~/src/pricing`, or from the launcher), and repos are found from your GitHub and Linear history
+- **Repo**: a checkout Oriel knows about (path, remote, default branch, toolchain), registered once. Registering
+  is one step (`repos.add {path = "~/src/pricing"}`, or from the launcher), and repos are found from your GitHub and Linear history
   too. A repo is never edited directly.
 - **Workspace**: a directory under `~/.oriel/workspaces/<name>` holding the plan docs and **one git worktree per repo**,
   all on the session's branch. This is crit's model, carried over unchanged.
@@ -33,57 +33,47 @@ flowchart LR
 | **tour** | a question | a pinned, read-only worktree | writes the tour |
 | **job** | a saved prompt | created by the agent as needed | runs to done or blocked |
 | **new repo** | a name and a template | a fresh repo | optional |
-| **direct** | `oriel ~/src/foo`, or the launcher | **none: the directory itself**, git repo or not | optional, with a warning |
+| **direct** | a directory, from the launcher | **none: the directory itself**, git repo or not | optional, with a warning |
 | **scratch** | nothing | none | optional |
 
-- **New repo**: pick a name, where it lives (this Mac or a worker), and a template (empty, Go module, Go CLI, or any GitHub
+- **New repo**: pick a name and a template (empty, Go module, Go CLI, or any GitHub
   template repo). Oriel runs `git init`, optionally creates the GitHub repo (private by default, through the gateway with approval),
   registers it, and continues as a plan session ("what are we building?").
 - **Direct** is "classic" editing: it opens any directory in place, git repo or not, with no worktree and no new
-  branch. It's a first-class choice in the launcher, not only a CLI escape hatch. The tab is marked `direct`, and an agent there gets a warning first because it would be editing your real checkout.
+  branch. It's a first-class choice in the launcher. The tab is marked `direct`, and an agent there gets a warning first because it would be editing your real checkout.
 - **Scratch** holds notes, the assistant, and terminals with no repo.
 
 ## Starting one
 
 - **The app opens on mission control** (`ui.md` 03), not a file dialog. `⌘N` opens the launcher (`ui.md` 04): prompt, mode,
-  provider, repos, worker, sandbox.
+  provider, repos, sandbox.
 - **From anywhere**: a ticket from any tracker, Linear or another (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
   ("fix CI" opens a work session on the PR's branch), or an agentbus review request.
-- **CLI**: `oriel new "fix stale search results" --repo search --ticket ENG-2231`, `oriel review <pr-url>`, `oriel open <session>`,
-  `oriel init <name> --template go-cli`, `oriel ~/src/foo` (direct).
-- **Starting doesn't wait for the agent.** `Worker.Start` returns once the session and its first request exist; the
-  agent starts off the call (`host.startAside`, which `Worker.Close` cancels and waits for), as does a comment to a
+- **Commands**: `session.start` takes the launcher's fields as args (`{kind, prompt, repos, ticket, …}`), so Lua and
+  the assistant start any kind without the launcher; `session.new` opens the launcher.
+- **Starting doesn't wait for the agent.** `host.Start` returns once the session and its first request exist; the
+  agent starts off the call (`startAside`, which `Host.Close` cancels and waits for), as does a comment to a
   session whose agent isn't up. A sandbox's first start can take minutes (the image, toolchains, Claude's binary),
   so while it starts `AgentState.Starting` says what it's doing: a step, a note when the step is a one-off, and
   since when (`core.AgentStart`). A backend's slow steps say so with `sandbox.Report(ctx, Progress{Step, Note})`;
   the docker backend reports building an image, installing toolchains and downloading Claude, each only when it
   does the work. A session whose agent is starting is working, not "needs you" (`AgentState.Live`), and a job's
-  run is running. A failed start leaves `Starting` nil and `Error` set; a stop or a closing worker during a start
+  run is running. A failed start leaves `Starting` nil and `Error` set; a stop or a closing host during a start
   cancels it, and what it made is closed.
 - **Where Start lands.** The launcher's Start passes `session.start {then = [{command = "request.open"}]}` when the
   session has a first request, so the window comes up on it: the request, queued "· agent starting", with a card
   (spinner, step, time so far, the note) until the agent is up and has it. Mission control's card says STARTING
   with the step, the console's header chip says starting, and the raw terminal says there's none yet.
 
-### Repos on a worker
+### Repos
 
-- A worker only works on repos it has. Naming one it hasn't registered fails with how to get it there: `oriel repos
-  add <path>` for a checkout on that machine, or `oriel repos clone <url> [name]`.
-- `repos.clone {url, name}` (`Client.CloneRepo`) clones into the worker's repos directory (`Options.ReposDir`,
-  `~/src` by default, where new repos go too) as `name` (the URL's last part if none) with `gitx.Clone`, and
-  registers it. A checkout of the same URL already there is registered as it is; anything else there is an error. Git
-  never prompts: a clone that needs credentials fails with git's own message and says the worker clones with its
-  machine's credentials. The app's `repos.clone {url, name, worker}` command runs it.
-- `session.start {clone = {[repo] = url}}` clones each of those repos onto the worker first and starts on the clones.
-- In the launcher, a repo chip the chosen worker lacks (one it hasn't registered; on this machine's worker a path
-  still registers as the session starts) is outlined in warning and says "not on <worker>: **Clone**". Clone opens
-  a popover with the URL, filled from the local checkout's remote (`gitx.Repo.RemoteURL`) or typed, and "Clone at
-  start" queues it: the chip then says it clones at start, and the pre-flight counts the repos to clone. Start waits
-  until every such chip is queued or removed, then passes them as `clone`.
-- Not yet: credentials for a private repo on a worker elsewhere. The clone runs with that machine's git, ssh keys and
-  credential helpers, so they must be set up there; the app doesn't lend its ssh-agent or tokens to a worker's
-  git (a sandboxed agent's ssh-agent forwarding is per session and isn't used for this). The CLI has no `--worker`,
-  so it only offers the commands above for this machine's worker.
+- A session only works on repos Oriel has registered. A path registers as the session starts; naming a repo by an
+  ID it doesn't know fails with how to get it: `repos.add {path}` for a checkout, or `repos.clone {url}`.
+- `repos.clone {url, name}` (`host.CloneRepo`) clones into the repos directory (`Options.ReposDir`, `~/src` by
+  default, where new repos go too) as `name` (the URL's last part if none) with `gitx.Clone`, and registers it. A
+  checkout of the same URL already there is registered as it is; anything else there is an error. Git never prompts:
+  a clone that needs credentials fails with git's own message and says it clones with this machine's git
+  credentials.
 
 ## Lifecycle
 
@@ -129,7 +119,6 @@ stateDiagram-v2
 // package core
 type Repo struct {
     ID         RepoID
-    Worker     WorkerID
     Path       string          // the user's checkout: never written to, except in Direct sessions
     Remote     string
     BaseBranch string
@@ -145,7 +134,6 @@ type SessionSpec struct {
     Repos    []RepoID          // 0..n
     Branch   string            // derived if empty
     Provider string            // "claude", "codex", "" for none
-    Worker   WorkerID
     Sandbox  SandboxPolicy
     Template string            // newrepo kind
     Variant  string            // one of the kind's variants: a tour's walkthrough, onboarding…
@@ -165,44 +153,34 @@ type Sessions interface {
 
 ## As built (P5)
 
-- **The worker** (`oriel worker`) is a process of its own on each machine. The app and the CLI reach this machine's
-  on `~/.oriel/worker.sock` (owner only), starting it if it isn't running; a worker elsewhere dials the app over
-  pinned TLS (`oriel worker --connect host:port --fingerprint …`; AI-15 below). Remote workers run sessions and agents, but
-  editing a remote session's files from the app needs the buffer replica (`architecture.md` → Where buffers live),
-  which isn't built: the window only follows sessions on this machine.
-- **Remote workers** (AI-15): the app listens for them while `workers.listen` is set (an address; empty, the default,
-  doesn't listen), TLS 1.3 with a self-signed certificate kept in the state directory (`workers/tls.crt`, `tls.key`,
-  owner-only) that workers pin by fingerprint. A worker is let in by its name and key (`wire.KeyHashAuth` over
-  `workers.json` in the config directory, owner-only, each key kept as `wire.HashKey`). Once in, it's served exactly
-  as this machine's worker is (the `sessions` plugin's `serve`): its `WorkerChanged`, usage and sessions join the
-  store, and it answers the same calls. It must say it's the worker its key is for (`Info.ID`), or it's cut off, and
-  it speaks only for itself (`core.State.FromWorker`: events about another worker or another worker's sessions are
-  dropped). One that connects again replaces its old connection; one that goes away is `WorkerGone` (offline, with
-  `Since`) and its sessions leave the window until it's back. `oriel worker --connect` names the worker (`--name`,
-  the machine's by default), which is its `WorkerID`, and logs the certificate's fingerprint as words; a refusal
-  (`wire.ErrRejected`, a revoked key) stops it, anything else retries every 5s. The Workers page (`ui.md` 45) adds,
-  revokes, renames and forgets them, and restarts this machine's (the drain below, `workerDrain.asked`).
-- **This machine's worker hands over** (`worker.handover`): it stops its agents as `StoppedByHandOver` and quits, and
-  the next worker to start resumes them. The app drains it first: with an agent mid-turn it waits for the turns to
-  end, at most 60s, with a dialog naming the sessions and counting down; ⌘↵ (`worker.hand-over-now`, in the
-  `workerdrain` key mode) doesn't wait. A turn still going at 60s is cut short, and its agent comes back idle. It
-  drains for two reasons:
-  - **Quitting Oriel stops it**, so sessions' agents don't outlive the window: they come back when Oriel opens again.
-    The window holds its close (`render.CloseHolder`; on macOS Quit too) and the app gets a `CloseRequestEvent`.
-    With nothing mid-turn and no scheduled job it quits at once. The dialog (**Quit now**, **Cancel**/Escape) also
-    lists the scheduled jobs, which don't run while Oriel is closed; with only those, it waits for **Quit**. Asking
-    to quit again while it waits quits now. Cancel leaves the worker as it was. Workers on other machines carry on;
-    if Oriel crashes, the worker keeps running and the next Oriel connects to it.
-  - **A rebuilt Oriel restarts it.** A worker from another build (`Info.Build`, a hash of its binary) is drained and
-    the app starts this build's (`Config.LocalWorker`). With no agent mid-turn that happens as the app connects.
-    The dialog's **Hide**/Escape hides it and the restart still happens; quitting meanwhile turns it into the quit,
-    and Cancel takes it back to the restart. Sessions the new worker doesn't have leave the window.
+- **One process.** The session host (`host`) runs in the Oriel window's process: the app builds it with
+  `host.New(host.Options)` at start and calls its methods directly, off the UI goroutine. Its store is the app's
+  store. There is no socket and no other machine: another machine runs its own Oriel, and the two never talk.
+- **One Oriel at a time.** At start the app takes an `flock` on `~/.oriel/oriel.lock`; a second launch exits with
+  "Oriel is already running" (the first's live sessions would be resumed twice from the same logs). The OS drops the
+  lock when the process ends, however it ends; an update's relaunch lets it go first. Windows inside the one process
+  are unaffected.
+- **An older `oriel worker`.** An earlier release ran sessions in an `oriel worker` process. If one still answers on
+  `~/.oriel/worker.sock` (a bare dial, no protocol), the app exits: "an older `oriel worker` is still running: quit
+  it with `pkill -f 'oriel worker'`". A `worker.sock` nothing answers on is deleted.
+- **Not crashing.** Every exported host method, every goroutine the host starts and its callbacks into the app
+  recover a panic, log it ("panic in the session host") and return it as an error, so the window stays up.
+- **Quitting hands over** (`HandOver`): it stops the agents as `StoppedByHandOver` and closes the host, and the next
+  launch resumes them. Agents don't outlive the window. The window holds its close (`render.CloseHolder`; on macOS
+  Quit too) and the app gets a `CloseRequestEvent`. With nothing mid-turn and no scheduled job it quits at once.
+  Otherwise it drains: with an agent mid-turn it waits for the turns to end, at most 60s, with a dialog naming the
+  sessions and counting down; **Quit now** (⌘↵, `quit.now`, in the `quit` key mode) doesn't wait. A turn still
+  going at 60s is cut short, and its agent comes back idle. The dialog (**Quit now**, **Cancel**/Escape) also lists
+  the scheduled jobs, which don't run while Oriel is closed; with only those, it waits for **Quit**. Asking to quit
+  again while it waits quits now. Cancel leaves everything running. An update's restart goes through the same quit.
+- **A crash resumes too.** If Oriel dies with agents running, they die with it. At the next start, sessions whose
+  agents were running are marked `StoppedByCrash` and resumed, as hand-overs are.
 - **Where things are**: workspaces in `~/.oriel/workspaces/<id>` with `.oriel-workspace.json` (crit's manifest,
   field for field); each session's event log, logs and drafts in `~/.oriel/sessions/<id>/`; registered repos in
   `~/.oriel/repos.json`. A session's id is its name, from the prompt (`eng-2231-fix-stale-usage-prices`), unique on
-  its worker.
+  this machine.
 - **Only Oriel's own sessions are listed.** crit's workspaces aren't read: listed with Oriel's, they buried them, and
-  each made a tab. A session the worker once took from crit (`Source: "crit"`) is dropped, with its log, on restore.
+  each made a tab. A session once taken from crit (`Source: "crit"`) is dropped, with its log, on restore.
 - **Plan**: the repos are listed from the start and the agent reads the user's checkouts (protected from edits);
   Start work makes the worktrees, on the session's branch, once every thread is resolved or deferred (the plan's own
   thread, where the prompt is, and btw threads don't count: `SessionState.Holding`). A session whose kind makes its
@@ -214,7 +192,7 @@ type Sessions interface {
   `core.DocsProject` project with its path relative to the workspace (`where="PLAN.md:14"`).
 - **Plan → Start work** opens a dialog over the plan (`plan.start-work`; ⌘↵ starts, Esc, its esc and Cancel close,
   as does a click outside) with how the plan becomes work. Each choice is an arg of `session.start-work` and a field
-  of the worker's `StartWorkReq`, so Lua and the CLI start work the same way without the dialog; what an arg leaves
+  of the host's `StartWorkReq`, so Lua and the assistant start work the same way without the dialog; what an arg leaves
   out is the default or the session's own.
   - **Clear the plan's threads** (`clear`, on): every thread but the plan's own goes (`core.ThreadsRemoved`; the log
     keeps them). Resolved ones just go; open and deferred ones are carried into the Start work prompt as a note of
@@ -237,12 +215,10 @@ type Sessions interface {
   git URL), commits it, registers it, and carries on as a plan for it. **Review** fetches `pull/<n>/head` from the
   registered repo whose remote matches the PR's URL, and pins a read-only worktree there. Since RV-3 it's AI-reviewed
   as it starts, by a model other than its agent's (`KindSpec.AutoReview`; `agents.md`, Guardrails).
-- **The launcher** (`ui.md` 04) lists the worker's kinds (`kinds.list`, `worker.KindSpec`: title, `Desc`, `About`,
+- **The launcher** (`ui.md` 04) lists the host's kinds (`host.Kinds`, `host.KindSpec`: title, `Desc`, `About`,
   `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
-  The CLI takes its flags after the prompt too (`oriel new "fix stale search results" --repo search`), and every
-  kind starts from it: `new --kind plan|work|tour|job|direct|scratch`, `review <pr-url>`, `init <name>`.
   A kind's `Variants` (RV-8: a tour's walkthrough, onboarding, archaeology, showcase, demo, incident and
-  feasibility) are a picker beside the ticket and `--variant` on the CLI; the first is the default, and one the kind
+  feasibility) are a picker beside the ticket and `variant` on `session.start`; the first is the default, and one the kind
   hasn't is refused. A tour's is its manifest's `tour.kind`.
 - **The app opens on mission control** (SH-7) once there's a session to show, when it starts with nothing open
   (`mission.at_launch`); with no session it stays on the start view, whose Recent lists the sessions first.
@@ -252,16 +228,14 @@ type Sessions interface {
   is on the session in front. Go-to-definition and peek reach them as any file.
 - **Archive** refuses while a worktree has uncommitted work, then removes the worktrees and keeps the session's
   threads, transcript and test runs (`oriel` searches them: `session.search` over the whole log, not only what the
-  state keeps). **Restart**: the worker replays every session's log; nothing runs until it's resumed, which resumes
+  state keeps). **Restart**: the host replays every session's log; nothing runs until it's resumed, which resumes
   the agent by its own id.
-- **A lost login** (AI-13): when an agent's login on its worker stops working (`agents.md`, "A login that stops
-  working"), every session on that worker using it turns **needs you** with a card, "Claude on devbox needs you to log
-  in", and what the provider said. On this machine the card's **Log in** (`agent.login`) opens the agent's own
-  terminal (`agent.terminal`, the raw PTY) with `/login` typed; on a worker elsewhere it says what to run there
-  ("On devbox, run claude, then /login"); since SE-5 Log in works on any worker, opening the agent's terminal from
-  that worker over the wire (`agent.terminal`, as Raw terminal does) with `/login` typed, and the card says what to
-  run there only for an agent with no terminal (Codex). **Check again** asks the worker to look. Once it's signed in, every card
-  goes and the sessions carry on: held comments go, and a turn the login stopped is told to carry on.
+- **A lost login** (AI-13): when an agent's login stops working (`agents.md`, "A login that stops working"), every
+  session using it turns **needs you** with a card, "Claude needs you to log in", and what the provider said. The
+  card's **Log in** (`agent.login {provider}`) opens the agent's own terminal (`agent.terminal`, the raw PTY) with
+  `/login` typed. An agent with no in-terminal login (Codex) says what to run instead ("run codex login in a
+  terminal", `Login.Shell`). **Check again** asks the host to look. Once it's signed in, every card goes and the
+  sessions carry on: held comments go, and a turn the login stopped is told to carry on.
 
 ## As built (tickets)
 
@@ -275,35 +249,35 @@ type Sessions interface {
 
 ## Jobs (SE-4)
 
-- **A job** is a saved prompt with a title and pins: where it runs (`sandbox`, `host`, or "" for the worker's
+- **A job** is a saved prompt with a title and pins: where it runs (`sandbox`, `host`, or "" for
   `sandbox.default`), the provider, model and effort, and a schedule. It names no repo or branch: the prompt names the
-  repos, and the agent adds them (`projects` pack part). Each is one JSON file, `~/.oriel/jobs/<slug>.json` on its
-  worker (`worker.Job`), the slug from the title's first six words (from the prompt's first line when there's no
-  title), a new one stepping aside to `-2` from a name in use, as crit's `internal/job` does. The worker answers
-  `jobs.list`, `jobs.save` (a job without a name is new; with one, that job rewritten), `jobs.delete` and
-  `jobs.run` (`Client.Jobs`, `SaveJob`, `DeleteJob`, `RunJob`).
+  repos, and the agent adds them (`projects` pack part). Each is one JSON file, `~/.oriel/jobs/<slug>.json`
+  (`host.Job`), keyed by that name, the slug from the title's first six words (from the prompt's first line when there's no
+  title), a new one stepping aside to `-2` from a name in use, as crit's `internal/job` does. The host has
+  `Jobs`, `SaveJob` (a job without a name is new; with one, that job rewritten), `DeleteJob` and `RunJob`, behind
+  `jobs.save`, `jobs.delete` and `jobs.run`.
 - **A run** is a session of kind job (`SessionSpec.Job` and `SessionState.Job` name its job), named from the job's
   first three words, in a fresh workspace with no projects. The prompt is its first request and is written to the
   workspace as `JOB.md` (`KindSpec.PromptFile`, the job kind's). It runs on its own (the `job` pack) to done or
-  blocked. `worker.RunOf` reads its row from the request thread: **done** once it's resolved, **blocked** while the
+  blocked. `host.RunOf` reads its row from the request thread: **done** once it's resolved, **blocked** while the
   agent's answer (the pack's `**Blocked:**` reply) or a question waits on you (its session is needs-you, so the
   request is in Requests under Needs you with the question), **running** while the agent has it, **stopped** when it
   was stopped before either; the summary is the agent's last word on the request, how long it took runs to that, and
   its repos are its projects. Its cost and the split by repo are its session stats (AI-12).
-- **Delete** (`session.delete`, `Client.Delete`) throws a session away: its agent stops, its worktrees go with
-  whatever is in them, then its workspace and its log, and it's gone from every app. The repos are never touched.
+- **Delete** (`session.delete`, `host.Delete`) throws a session away: its agent stops, its worktrees go with
+  whatever is in them, then its workspace and its log, and it's gone. The repos are never touched.
   A direct session is refused (archive it). Deleting a job keeps its runs.
-- **Schedules** (`worker.Schedule`): manual (the zero one), `weekdays` at a time, `weekly` on a day at a time, or
-  `days`, a set of days at a time (the page's custom), in the worker's local time. `RunSchedules` checks them every
-  30 seconds while the worker runs, which is while Oriel is open (`oriel worker` starts it), and `RunDue` starts each job due since it last looked,
-  on the worker's clock (`Options.Now`), so an occurrence slept through runs when the worker wakes, once. One due while
+- **Schedules** (`host.Schedule`): manual (the zero one), `weekdays` at a time, `weekly` on a day at a time, or
+  `days`, a set of days at a time (the page's custom), in local time. `RunSchedules` checks them every
+  30 seconds while Oriel is open, and `RunDue` starts each job due since it last looked, on the host's clock
+  (`Options.Now`), so an occurrence slept through runs when the machine wakes, once. One due while
   the job's last run is still going is skipped, and the job keeps when (`Job.Skips`, the latest 50, listed among its
-  runs). Since SE-5 the job keeps the occurrence it last ran or skipped (`Job.Due`), so occurrences missed while the
-  worker was off (or restarting) run once when it starts: one run per job, not one per occurrence missed. An occurrence
+  runs). Since SE-5 the job keeps the occurrence it last ran or skipped (`Job.Due`), so occurrences missed while
+  Oriel was closed run once when it starts: one run per job, not one per occurrence missed. An occurrence
   counts from the job's last save, so editing a schedule doesn't run what it would have run before.
 - **Who stopped it** (SE-5): an agent that stops records who (`AgentState.StoppedBy`, `StoppedAt`): `you` (Stop,
-  Archive), `agent` (its process ended by itself), `worker` (the worker shut down, or wasn't shut down cleanly and
-  settles on restart). Starting again clears it. A run's `Run.StoppedBy` and its time run to `StoppedAt`.
+  Archive), `agent` (its process ended by itself), `handover` (Oriel quit; the next start resumes it), `crash` (Oriel ended
+  while it ran; the next start resumes it). Starting again clears it. A run's `Run.StoppedBy` and its time run to `StoppedAt`.
 - **Opening a session somewhere** (SE-5): `session.open {id, then}` takes a list of `{command, args}` and runs them
   once the window is on the session: after the window opens again on the session's directory (the layout restored
   first), or at once when it doesn't move. The Jobs page uses it for a run's layout.

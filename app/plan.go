@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
@@ -18,7 +19,6 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // Plan mode's views (ui.md 05): a plan doc rendered, with its threads in the margin, and the docs beside it with the
@@ -39,7 +39,7 @@ type planPlugin struct {
 	by map[core.SessionID]*planState
 
 	dialog   *startWork // the Start work dialog, while it's open
-	startGen int        // which opening of it the worker's answers are for
+	startGen int        // which opening of it the host's answers are for
 }
 
 // planState is one session's plan views: the doc in front, and each doc's presentation.
@@ -165,7 +165,7 @@ func (x *planPlugin) docs(se core.SessionState, st *planState, now time.Time) []
 	}
 	entries, _ := os.ReadDir(se.Dir)
 	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") || slices.Contains(worker.NotesFiles, e.Name()) {
+		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") || slices.Contains(host.NotesFiles, e.Name()) {
 			continue
 		}
 		path := filepath.Join(se.Dir, e.Name())

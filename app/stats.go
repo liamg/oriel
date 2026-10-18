@@ -1,7 +1,6 @@
 package app
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,16 +10,16 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
-	"github.com/liamg/oriel/worker/stats"
 )
 
 // Stats and Usage (AI-12, mockup 43): the session stats tab, the global Stats page and the Usage page, built on what
-// every worker answers (stats.query, stats.session, usage.history), and the ways to them: the sidebar's global
+// the session host answers (StatsQuery, SessionStats, UsageHistory), and the ways to them: the sidebar's global
 // entries, the title bar's indicators, the session stats box's cost, the start view's links and the omnibox.
 const (
 	StatsSessionView = "stats.session"
@@ -72,7 +71,7 @@ func cloneFilters(f map[string][]string) map[string][]string {
 	return out
 }
 
-// fetched is a worker's last answer.
+// fetched is the session host's last answer.
 type fetched[T any] struct {
 	v   T
 	at  time.Time
@@ -100,9 +99,9 @@ type statsPlugin struct {
 	burnWin   map[string]int // the Usage page's window picked for "burned the window", by account
 
 	mu       sync.Mutex
-	reports  map[string]map[core.WorkerID]fetched[stats.Report] // by query
-	details  map[string]fetched[stats.Detail]                   // by session and split
-	history  map[core.WorkerID]fetched[[]core.ProviderUsage]
+	reports  map[string]fetched[stats.Report] // by query
+	details  map[string]fetched[stats.Detail] // by session and split
+	history  fetched[[]core.ProviderUsage]
 	inflight map[string]bool
 	live     []core.ProviderUsage // readings since the history was fetched, from UsageSampled
 	changed  time.Time            // when an agent last did something that costs: answers fetched before are stale
@@ -124,25 +123,24 @@ func (x *statsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.q = statsQuery{rng: 1, group: stats.ByRepo, filters: map[string][]string{}}
 	x.hover = -1
 	x.burnWin = map[string]int{}
-	x.reports = map[string]map[core.WorkerID]fetched[stats.Report]{}
+	x.reports = map[string]fetched[stats.Report]{}
 	x.details = map[string]fetched[stats.Detail]{}
-	x.history = map[core.WorkerID]fetched[[]core.ProviderUsage]{}
 	x.inflight = map[string]bool{}
 	x.add(h.Option(registry.OptionSpec{Name: SplitOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Split a multi-repo session's cost over its repos by each one's share of edits and file tool calls. Off, each repo is charged the whole session. The Stats page's toggle and the session tab's \"count whole session in each\" set it."}))
 	x.add(h.Option(registry.OptionSpec{Name: AccountsOption, Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser,
 		KeyLabel: "account", ValueLabel: "label",
 		Help: "Names for the accounts plans belong to, by identity: \"Work\", \"Personal\". Usage and Stats show them in place of the account's email or organisation."}))
-	workers := func(registry.Args) bool { return x.sh.sessions != nil && len(x.sh.sessions.clients()) > 0 }
+	has := func(registry.Args) bool { return x.sh.sessions != nil && x.sh.cfg.Host != nil }
 	for _, c := range []registry.Command{
 		{ID: "Stats", Title: "The Stats page; :Stats {repo=api 7d session group=model}", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.ex(ctx, a.String("args"))
 		}},
-		{ID: "stats.open", Title: "Open the Stats page: {group} by, a {range} (7d, 30d, 90d), filtered by {repo}, {worker}, {provider}, {account}, {session}, {kind}, {model}, {origin} (oriel, outside)",
+		{ID: "stats.open", Title: "Open the Stats page: {group} by, a {range} (7d, 30d, 90d), filtered by {repo}, {provider}, {account}, {session}, {kind}, {model}, {origin} (oriel, outside)",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.openPage(a) }},
-		{ID: "stats.session", Title: "Open a session's stats as a main tab: {id}, the one in front by default; one outside Oriel on its {worker}",
-			Available: workers, Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.openSession(ctx, core.SessionID(a.String("id")), core.WorkerID(a.String("worker")))
+		{ID: "stats.session", Title: "Open a session's stats as a main tab: {id}, the one in front by default, or one outside Oriel",
+			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
+				return x.openSession(ctx, core.SessionID(a.String("id")))
 			}},
 		{ID: "stats.origin", Title: "Show the Stats page's sessions from {origin}: oriel, outside, or \"\" for every one", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.setOrigin(a.String("origin"))
@@ -194,7 +192,7 @@ func (x *statsPlugin) Activate(_ context.Context, h plugin.Host) error {
 		}},
 		{ID: "Usage", Title: "The Usage page: each provider's plan windows", Run: func(registry.Ctx, registry.Args) error { return x.openUsage() }},
 		{ID: "usage.open", Title: "Open the Usage page: each provider's plan windows", Run: func(registry.Ctx, registry.Args) error { return x.openUsage() }},
-		{ID: "usage.refresh", Title: "Read every provider's plan windows again", Available: workers, Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "usage.refresh", Title: "Read every provider's plan windows again", Available: has, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.refreshUsage(ctx)
 		}},
 	} {
@@ -286,7 +284,7 @@ func (x *statsPlugin) ex(ctx registry.Ctx, args string) error {
 	for _, w := range strings.Fields(args) {
 		switch k, v, ok := strings.Cut(w, "="); {
 		case w == "session" || w == "session=":
-			return x.openSession(ctx, "", "")
+			return x.openSession(ctx, "")
 		case ok && (k == "group" || k == "by"):
 			a["group"] = v
 		case ok:
@@ -315,7 +313,7 @@ func (x *statsPlugin) openPage(a registry.Args) error {
 	if !slices.ContainsFunc(statsGroups, func(g statsGroup) bool { return g.key == q.group }) {
 		return fmt.Errorf("no grouping %q: repo, session, kind, model, provider, account, origin or day", q.group)
 	}
-	for _, k := range []string{"repo", "worker", "provider", "account", "session", "kind", "model", "origin"} {
+	for _, k := range []string{"repo", "provider", "account", "session", "kind", "model", "origin"} {
 		switch v := a[k].(type) {
 		case string:
 			if v != "" {
@@ -425,96 +423,48 @@ func queryKey(q stats.Query) string {
 	return string(b)
 }
 
-// reportMeta is where a merged answer came from.
+// reportMeta is when an answer was read.
 type reportMeta struct {
-	workers []core.WorkerID
-	stale   []core.WorkerID // offline: their last answer
-	at      time.Time       // the oldest answer's
+	at      time.Time
 	loading bool
 }
 
-func (x *statsPlugin) clients() map[core.WorkerID]worker.Client {
-	if x.sh.sessions == nil {
-		return nil
-	}
-	return x.sh.sessions.byWorker()
-}
-
-// report is q's answer: every worker's last, merged, asking again when it's old or missing.
+// report is q's answer as last read, asking again when it's old or missing.
 func (x *statsPlugin) report(q stats.Query) (stats.Report, reportMeta) {
 	key := queryKey(q)
-	clients := x.clients()
+	w := x.sh.cfg.Host
 	x.mu.Lock()
-	got := x.reports[key]
-	var rs []stats.Report
-	var meta reportMeta
-	old := len(got) == 0
-	for id, f := range got {
-		if f.err != nil {
-			continue
-		}
-		rs = append(rs, f.v)
-		meta.workers = append(meta.workers, id)
-		if _, live := clients[id]; !live {
-			meta.stale = append(meta.stale, id)
-		}
-		if meta.at.IsZero() || f.at.Before(meta.at) {
-			meta.at = f.at
-		}
-		if x.now().Sub(f.at) > refetchAfter || f.at.Before(x.changed) && x.now().Sub(f.at) > liveAfter {
-			old = true
-		}
+	f, ok := x.reports[key]
+	meta := reportMeta{loading: x.inflight[key]}
+	if ok && f.err == nil {
+		meta.at = f.at
 	}
-	for id := range clients {
-		if _, ok := got[id]; !ok {
-			old = true
-		}
-	}
-	meta.loading = x.inflight[key]
+	old := !ok || x.now().Sub(f.at) > refetchAfter || f.at.Before(x.changed) && x.now().Sub(f.at) > liveAfter
 	x.mu.Unlock()
-	slices.Sort(meta.workers)
-	if old && len(clients) > 0 && !meta.loading {
-		x.fetch(key, clients, func(ctx context.Context, c worker.Client) (any, error) { return c.StatsQuery(ctx, q) },
-			func(id core.WorkerID, v any, err error, at time.Time) {
-				if x.reports[key] == nil {
-					x.reports[key] = map[core.WorkerID]fetched[stats.Report]{}
-				}
-				r, _ := v.(stats.Report)
-				x.reports[key][id] = fetched[stats.Report]{v: r, at: at, err: err}
-			})
+	if old && w != nil && !meta.loading {
+		x.fetch(key, func() (any, error) { return w.StatsQuery(q), nil }, func(v any, err error, at time.Time) {
+			r, _ := v.(stats.Report)
+			x.reports[key] = fetched[stats.Report]{v: r, at: at, err: err}
+		})
 		meta.loading = true
 	}
-	if len(rs) == 0 {
+	if !ok || f.err != nil {
 		return stats.Report{Points: q.Points()}, meta
 	}
-	return stats.Merge(rs...), meta
+	return f.v, meta
 }
 
-// fetch asks every worker in the background, and stores each answer on the app's loop.
-func (x *statsPlugin) fetch(key string, clients map[core.WorkerID]worker.Client, ask func(context.Context, worker.Client) (any, error),
-	store func(core.WorkerID, any, error, time.Time)) {
+// fetch asks the session host in the background, and stores its answer on the app's loop.
+func (x *statsPlugin) fetch(key string, ask func() (any, error), store func(any, error, time.Time)) {
 	x.mu.Lock()
 	x.inflight[key] = true
 	x.mu.Unlock()
 	go func() {
-		type answer struct {
-			id  core.WorkerID
-			v   any
-			err error
-		}
-		var out []answer
-		for id, c := range clients {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			v, err := ask(ctx, c)
-			cancel()
-			out = append(out, answer{id, v, err})
-		}
+		v, err := ask()
 		x.h.Do(func() {
 			at := x.now()
 			x.mu.Lock()
-			for _, a := range out {
-				store(a.id, a.v, a.err, at)
-			}
+			store(v, err, at)
 			delete(x.inflight, key)
 			x.mu.Unlock()
 		})
@@ -522,53 +472,38 @@ func (x *statsPlugin) fetch(key string, clients map[core.WorkerID]worker.Client,
 	}()
 }
 
-// detail is a session's stats from its worker, asked for again when old: an Oriel session's ID, or an outside one's
-// tab instance (target).
-func (x *statsPlugin) detail(instance core.SessionID) (stats.Detail, bool) {
-	id, wid := x.target(string(instance))
+// detail is a session's stats, asked for again when old: an Oriel session's, or one outside Oriel.
+func (x *statsPlugin) detail(id core.SessionID) (stats.Detail, bool) {
 	split := x.split()
-	key := fmt.Sprintf("%s|%s|%v", id, wid, split)
+	key := fmt.Sprintf("%s|%v", id, split)
 	x.mu.Lock()
 	f, ok := x.details[key]
 	busy := x.inflight[key]
 	x.mu.Unlock()
-	if (!ok || x.now().Sub(f.at) > refetchAfter) && !busy && x.sh.sessions != nil {
-		if c, err := x.sh.sessions.worker(wid); err == nil {
-			req := worker.StatsSessionReq{Session: id, Split: split, Offset: x.offset()}
-			x.fetch(key, map[core.WorkerID]worker.Client{wid: c}, func(ctx context.Context, c worker.Client) (any, error) {
-				return c.SessionStats(ctx, req)
-			}, func(_ core.WorkerID, v any, err error, at time.Time) {
-				d, _ := v.(stats.Detail)
-				if err == nil || !ok {
-					x.details[key] = fetched[stats.Detail]{v: d, at: at, err: err}
-				}
-			})
-		}
+	if w := x.sh.cfg.Host; (!ok || x.now().Sub(f.at) > refetchAfter) && !busy && w != nil {
+		req := host.StatsSessionReq{Session: id, Split: split, Offset: x.offset()}
+		x.fetch(key, func() (any, error) { return w.SessionStats(req) }, func(v any, err error, at time.Time) {
+			d, _ := v.(stats.Detail)
+			if err == nil || !ok {
+				x.details[key] = fetched[stats.Detail]{v: d, at: at, err: err}
+			}
+		})
 	}
 	return f.v, ok && f.err == nil
 }
 
-// usageHistory is every worker's readings of an account's plan over the last week, oldest first: two workers on
-// one account read the same plan.
+// usageHistory is the readings of an account's plan over the last week, oldest first.
 func (x *statsPlugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
-	clients := x.clients()
+	w := x.sh.cfg.Host
 	x.mu.Lock()
 	var out []core.ProviderUsage
-	old := false
-	for id := range clients {
-		f, ok := x.history[id]
-		if !ok || x.now().Sub(f.at) > refetchAfter {
-			old = true
-		}
-	}
+	old := x.history.at.IsZero() || x.now().Sub(x.history.at) > refetchAfter
 	var last time.Time
-	for _, f := range x.history {
-		for _, u := range f.v {
-			if u.Same(acct) {
-				out = append(out, u)
-				if u.Sampled.After(last) {
-					last = u.Sampled
-				}
+	for _, u := range x.history.v {
+		if u.Same(acct) {
+			out = append(out, u)
+			if u.Sampled.After(last) {
+				last = u.Sampled
 			}
 		}
 	}
@@ -579,27 +514,26 @@ func (x *statsPlugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage
 	}
 	busy := x.inflight["usage.history"]
 	x.mu.Unlock()
-	if old && !busy && len(clients) > 0 {
+	if old && !busy && w != nil {
 		since := x.now().Add(-8 * 24 * time.Hour)
-		x.fetch("usage.history", clients, func(ctx context.Context, c worker.Client) (any, error) {
-			return c.UsageHistory(ctx, worker.UsageHistoryReq{Since: since})
-		}, func(id core.WorkerID, v any, err error, at time.Time) {
-			h, _ := v.([]core.ProviderUsage)
-			x.history[id] = fetched[[]core.ProviderUsage]{v: h, at: at, err: err}
-		})
+		x.fetch("usage.history", func() (any, error) { return w.UsageHistory(host.UsageHistoryReq{Since: since}), nil },
+			func(v any, err error, at time.Time) {
+				h, _ := v.([]core.ProviderUsage)
+				x.history = fetched[[]core.ProviderUsage]{v: h, at: at, err: err}
+			})
 	}
 	slices.SortStableFunc(out, func(a, b core.ProviderUsage) int { return a.Sampled.Compare(b.Sampled) })
 	return out
 }
 
 func (x *statsPlugin) refreshUsage(ctx registry.Ctx) error {
-	for _, c := range x.clients() {
-		if err := c.ReadUsage(ctx); err != nil {
+	if w := x.sh.cfg.Host; w != nil {
+		if err := w.ReadUsage(ctx); err != nil {
 			x.h.Log().Warn("usage", "err", err)
 		}
 	}
 	x.mu.Lock()
-	clear(x.history)
+	x.history = fetched[[]core.ProviderUsage]{}
 	x.mu.Unlock()
 	x.h.Redraw()
 	return nil
@@ -614,7 +548,7 @@ func (x *statsPlugin) figure(span string) string {
 		from = end.AddDate(0, 0, -7)
 	}
 	r, meta := x.report(stats.Query{From: from, To: end, Offset: x.offset(), Split: true})
-	if len(meta.workers) == 0 {
+	if meta.at.IsZero() {
 		return ""
 	}
 	if span == "week" {
@@ -639,8 +573,7 @@ func (x *statsPlugin) usageFigure() string {
 	return strings.Join(parts, " ")
 }
 
-// frontUsage is the plan of the account the session in front runs on (its provider's, on its worker); with no
-// session, the local worker's; else the first read.
+// frontUsage is the plan of the account the session in front runs on (its provider's); else the first read.
 func (x *statsPlugin) frontUsage() (core.ProviderUsage, bool) {
 	st := x.h.State()
 	us := st.Usage
@@ -649,16 +582,14 @@ func (x *statsPlugin) frontUsage() (core.ProviderUsage, bool) {
 	}
 	if se, ok := st.Session(st.Focus); ok {
 		s := se.Snapshot()
-		wid := cmpOr(string(s.Worker), string(core.LocalWorker))
+		acct := ""
+		if n := len(s.Agent.Accounts); n > 0 {
+			acct = s.Agent.Accounts[n-1].Account
+		}
 		for _, v := range us {
-			if v.Provider == s.Agent.Provider && v.Uses(core.WorkerID(wid)) {
+			if v.Provider == s.Agent.Provider && (acct == "" || v.Account == acct) {
 				return v, true
 			}
-		}
-	}
-	for _, v := range us {
-		if v.Uses(core.LocalWorker) {
-			return v, true
 		}
 	}
 	return us[0], true
@@ -673,62 +604,38 @@ func (x *statsPlugin) accountLabel(account, name string) string {
 	return cmpOr(name, cmpOr(account, "unknown account"))
 }
 
-// accountTitle is an account as the Usage page's switcher names it: its label, plan and workers.
+// accountTitle is an account as the Usage page's switcher names it: its label and plan.
 func (x *statsPlugin) accountTitle(u core.ProviderUsage) string {
-	parts := []string{x.accountLabel(u.Account, u.AccountName), cmpOr(u.Plan, providerName(u.Provider))}
-	var ws []string
-	for _, w := range u.Workers {
-		ws = append(ws, x.workerName(w))
-	}
-	slices.Sort(ws)
-	if len(ws) > 0 {
-		parts = append(parts, strings.Join(ws, ", "))
-	}
-	return strings.Join(parts, " · ")
+	return x.accountLabel(u.Account, u.AccountName) + " · " + cmpOr(u.Plan, providerName(u.Provider))
 }
 
-// openSession opens a session's stats as a main tab: an Oriel session's, or one outside Oriel on wid, the worker the
-// Stats page found it on when "".
-func (x *statsPlugin) openSession(ctx registry.Ctx, id core.SessionID, wid core.WorkerID) error {
+// openSession opens a session's stats as a main tab: an Oriel session's, or one outside Oriel the Stats page found.
+func (x *statsPlugin) openSession(ctx registry.Ctx, id core.SessionID) error {
 	if id == "" {
 		id = x.h.State().Focus
 	}
-	instance, title := string(id), ""
+	title := ""
 	if se, ok := x.h.Session(id); ok {
 		title = se.Name()
 	} else {
 		g, found := x.found(id)
-		if wid == "" && !found {
+		if !found {
 			return fmt.Errorf("no session %q", id)
 		}
-		wid = cmp.Or(wid, core.WorkerID(g.Worker), core.LocalWorker)
-		instance, title = string(id)+"@"+string(wid), cmpOr(g.Label, string(id))
+		title = cmpOr(g.Label, string(id))
 	}
 	x.open, x.usageOpen = false, false
-	return x.h.Run(ctx, "view.open", registry.Args{"id": StatsSessionView, "instance": instance, "place": "tab", "title": "Stats · " + title})
-}
-
-// target is the session a stats tab's instance shows, and its worker: an Oriel session's ID, else id@worker.
-func (x *statsPlugin) target(instance string) (core.SessionID, core.WorkerID) {
-	if se, ok := x.h.Session(core.SessionID(instance)); ok {
-		return core.SessionID(instance), cmp.Or(se.Snapshot().Worker, core.LocalWorker)
-	}
-	if i := strings.LastIndexByte(instance, '@'); i > 0 {
-		return core.SessionID(instance[:i]), core.WorkerID(instance[i+1:])
-	}
-	return core.SessionID(instance), core.LocalWorker
+	return x.h.Run(ctx, "view.open", registry.Args{"id": StatsSessionView, "instance": string(id), "place": "tab", "title": "Stats · " + title})
 }
 
 // found is a session's row in any answer the Stats page has had grouped by session.
 func (x *statsPlugin) found(id core.SessionID) (stats.Group, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	for _, byWorker := range x.reports {
-		for _, f := range byWorker {
-			for _, g := range f.v.Groups {
-				if g.Key == string(id) && g.Origin != "" {
-					return g, true
-				}
+	for _, f := range x.reports {
+		for _, g := range f.v.Groups {
+			if g.Key == string(id) && g.Origin != "" {
+				return g, true
 			}
 		}
 	}

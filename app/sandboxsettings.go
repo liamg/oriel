@@ -15,7 +15,6 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/gateway"
-	"github.com/liamg/oriel/worker"
 )
 
 var (
@@ -35,7 +34,7 @@ func sandboxOptions(o registry.Options) []registry.OptionSpec {
 	user, project := registry.ScopeUser, registry.ScopeUser|registry.ScopeProject
 	return []registry.OptionSpec{
 		{Name: "sandbox.default", Type: registry.Enum, Values: []string{"host", "sandbox"}, Default: "sandbox", Scopes: user,
-			Help: "Where a new session's agent runs: on the worker (host) or in a container (sandbox). The launcher's Sandbox toggle starts here."},
+			Help: "Where a new session's agent runs: on this machine (host) or in a container (sandbox). The launcher's Sandbox toggle starts here."},
 		{Name: "sandbox.image", Type: registry.String, Default: "", Scopes: project,
 			Help: "The image sandboxes run; empty builds Oriel's base image. A project's applies to its repo."},
 		{Name: "sandbox.claude_version", Type: registry.String, Default: "", Scopes: user,
@@ -126,7 +125,7 @@ func mcpServers(v any) (map[string]json.RawMessage, bool) {
 	return out, true
 }
 
-// sandboxConfig is the sandbox.* options as the worker's sandbox.Config: yours, and each project's own at its root.
+// sandboxConfig is the sandbox.* options as the host's sandbox.Config: yours, and each project's own at its root.
 func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 	get := func(name string) any { v, _, _ := o.Get(name, registry.At{}); return v }
 	list := func(name string) []string {
@@ -170,18 +169,8 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 	return cfg
 }
 
-// forWorker is cfg as worker id gets it: a worker elsewhere reads its own repos' project files, since the paths
-// the app read them at are this machine's.
-func forWorker(cfg sandbox.Config, id core.WorkerID) sandbox.Config {
-	if id == "" || id == core.LocalWorker {
-		return cfg
-	}
-	cfg.Projects, cfg.ReadProjects = nil, true
-	return cfg
-}
-
 // projectRoots are the checkouts whose project settings apply here: the window's project, and the repos of every
-// session on this machine's worker.
+// session.
 func projectRoots(workDir string, st core.State) []string {
 	var out []string
 	add := func(p string) {
@@ -191,9 +180,6 @@ func projectRoots(workDir string, st core.State) []string {
 	}
 	add(workDir)
 	for _, s := range st.Sessions {
-		if s.Worker != "" && s.Worker != core.LocalWorker {
-			continue
-		}
 		for _, p := range s.Projects {
 			add(p.Repo)
 		}
@@ -201,7 +187,7 @@ func projectRoots(workDir string, st core.State) []string {
 	return out
 }
 
-// sandboxSettings sends the sandbox.* options to every worker: when one connects, and whenever one changes.
+// sandboxSettings sends the sandbox.* options to the session host: at start, and whenever one changes.
 func (x *sessions) sandboxSettings(ctx context.Context) {
 	o := x.h.Options()
 	for _, sp := range sandboxOptions(o) {
@@ -216,25 +202,19 @@ func (x *sessions) sandboxSettings(ctx context.Context) {
 			case <-x.sandboxKick:
 			}
 			cfg := sandboxConfig(o, projectRoots(x.sh.cfg.WorkDir, x.sh.cfg.Store.State()))
-			for id, c := range x.byWorker() {
-				x.pushSandbox(ctx, c, forWorker(cfg, id))
+			if w := x.sh.cfg.Host; w != nil {
+				if err := w.SetSandboxConfig(cfg); err != nil {
+					x.h.Log().Warn("sandbox settings", "err", err)
+				}
 			}
 		}
 	}()
 }
 
-// sendSandbox asks for the settings to go to the workers; asks that come while they're going are one.
+// sendSandbox asks for the settings to go to the host; asks that come while they're going are one.
 func (x *sessions) sendSandbox() {
 	select {
 	case x.sandboxKick <- struct{}{}:
 	default:
-	}
-}
-
-func (x *sessions) pushSandbox(ctx context.Context, c worker.Client, cfg sandbox.Config) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	if err := c.SetSandboxConfig(ctx, cfg); err != nil {
-		x.h.Log().Warn("sandbox settings", "err", err)
 	}
 }

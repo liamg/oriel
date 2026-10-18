@@ -2,13 +2,16 @@
 id: AI-15
 title: "Workers page: the workers (this machine's and remote ones), pairing a new one, revoke, rename, forget, restart"
 phase: P6 follow-up
-status: done
+status: dropped
 area: Sessions and AI
 module: app, core, wire, worker, cmd/oriel
 depends_on: [AI-1, AI-12, SE-5]
 ---
 
 # AI-15 · Workers page and remote workers
+
+**Dropped:** one Oriel per machine runs its own sessions in process; another machine runs its own Oriel and
+the two never talk. Workers, `wire`, pairing and the Workers page were removed.
 
 **Phase** 6 · Review (follow-up) · **After** [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md), [AI-12](AI-12-stats-and-usage-pages-grouped-by-repo.md), [SE-5](SE-5-jobs-and-login-follow-ups.md) · **Unblocks** nothing yet
 
