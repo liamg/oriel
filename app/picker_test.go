@@ -77,7 +77,7 @@ func TestPickerSources(t *testing.T) {
 	}
 }
 
-func (s *errScene) h() *host { return s.sh.host("test") }
+func (s *errScene) h() *pluginHost { return s.sh.host("test") }
 
 func mustSource(t *testing.T, s *errScene, id string) registry.PickerSource {
 	for _, src := range s.reg.Pickers() {

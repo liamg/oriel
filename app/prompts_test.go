@@ -60,7 +60,7 @@ func TestAPartReachesANewSessionsAgent(t *testing.T) {
 		return pk.Text, ok
 	}()
 	if !ok || !strings.Contains(p, "Leave the drafts to me.") {
-		t.Errorf("the work pack on the worker hasn't the part: %.200q", p)
+		t.Errorf("the work pack on the host hasn't the part: %.200q", p)
 	}
 	if err := s.reg.Run(context.Background(), "prompts.set", registry.Args{"id": "pack.work", "text": "<!-- include: nosuchpart -->"}); err == nil {
 		t.Error("a pack that doesn't build was saved")

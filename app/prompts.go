@@ -184,7 +184,7 @@ func (x *sessions) promptSettings(ctx context.Context) {
 			case <-x.promptsKick:
 			}
 			o := prompts.Store{Dir: x.sh.cfg.ConfigDir}.Load()
-			if w := x.sh.cfg.Worker; w != nil {
+			if w := x.sh.cfg.Host; w != nil {
 				if err := w.SetPrompts(o); err != nil {
 					x.h.Log().Warn("prompts", "err", err)
 				}

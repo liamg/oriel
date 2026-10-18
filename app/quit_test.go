@@ -8,13 +8,13 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/worker"
+	"github.com/liamg/oriel/host"
 )
 
 // quitScene is the app on its session host, with a session whose agent is running.
-func quitScene(t *testing.T, job *worker.Job) (r *running, lw *localWorker, a *agenttest.FakeSession) {
+func quitScene(t *testing.T, job *host.Job) (r *running, lw *localHost, a *agenttest.FakeSession) {
 	t.Helper()
-	lw = newLocalWorker(t)
+	lw = newLocalHost(t)
 	if job != nil {
 		if _, err := lw.w.SaveJob(*job); err != nil {
 			t.Fatal(err)
@@ -45,7 +45,7 @@ func (r *running) waitExit() {
 }
 
 // handedOver says whether the host stopped the session's agent for the next start to resume.
-func handedOver(lw *localWorker) bool {
+func handedOver(lw *localHost) bool {
 	se, ok := lw.w.Store().State().Session("rounding")
 	return ok && !se.Snapshot().Agent.Running && se.Snapshot().Agent.StoppedBy == core.StoppedByHandOver
 }
@@ -115,8 +115,8 @@ func TestASecondQuitDoesNotWait(t *testing.T) {
 
 // Scheduled jobs warn that they won't run while Oriel is closed, and quits only when told to.
 func TestQuitWarnsOfScheduledJobs(t *testing.T) {
-	r, _, _ := quitScene(t, &worker.Job{Title: "Sweep stale deps", Prompt: "sweep",
-		Schedule: worker.Schedule{Every: "weekdays", At: "07:00"}})
+	r, _, _ := quitScene(t, &host.Job{Title: "Sweep stale deps", Prompt: "sweep",
+		Schedule: host.Schedule{Every: "weekdays", At: "07:00"}})
 	r.win.RequestClose()
 	r.waitFrame("the warning", func(s string) bool {
 		return containsAll(s, "QUITTING ORIEL", "Sweep stale deps", "Quit", "Cancel")
@@ -134,7 +134,7 @@ func TestQuitDialogSnapshot(t *testing.T) {
 	s := newErrScene(t, t.TempDir())
 	r := &quitDrain{deadline: s.now.Add(42 * time.Second), focus: true, polled: true,
 		busy: []core.SessionState{{ID: "rounding", Name: "Round half-even"}},
-		jobs: []worker.Job{{Name: "sweep", Title: "Sweep stale deps", Schedule: worker.Schedule{Every: "weekdays", At: "07:00"}}}}
+		jobs: []host.Job{{Name: "sweep", Title: "Sweep stale deps", Schedule: host.Schedule{Every: "weekdays", At: "07:00"}}}}
 	s.sh.draining.Store(r)
 	for range 3 {
 		s.frame()

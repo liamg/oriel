@@ -69,7 +69,7 @@ func TestNoWorkerInAnyUI(t *testing.T) {
 	s.frame()
 	check("the start view", s.frameText())
 	s.run("session.new", nil)
-	for deadline := time.Now().Add(10 * time.Second); s.sh.cfg.Worker != nil; time.Sleep(10 * time.Millisecond) {
+	for deadline := time.Now().Add(10 * time.Second); s.sh.cfg.Host != nil; time.Sleep(10 * time.Millisecond) {
 		s.frame()
 		s.sh.runTodo()
 		if strings.Contains(s.frameText(), "Pre-flight") && !strings.Contains(s.frameText(), "reading") || time.Now().After(deadline) {

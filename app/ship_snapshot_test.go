@@ -7,8 +7,8 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/worker"
 )
 
 // mockup18 is 18's session as read: search-api with three files uncommitted, four behind and two unpushed; web-dashboard
@@ -51,16 +51,16 @@ func mockup18(t *testing.T) (*errScene, core.SessionState) {
 		}
 		return c
 	}
-	x.reports[se.ID] = &shipReport{doing: map[string]string{}, failed: map[string]string{}, ships: []worker.Ship{
+	x.reports[se.ID] = &shipReport{doing: map[string]string{}, failed: map[string]string{}, ships: []host.Ship{
 		{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", Remote: true, GitHub: "acme/search-api",
-			Files: []worker.ShipFile{{Path: "internal/api/usage/handler.go", Code: "M", Add: 3, Del: 1},
+			Files: []host.ShipFile{{Path: "internal/api/usage/handler.go", Code: "M", Add: 3, Del: 1},
 				{Path: "internal/api/usage/handler_test.go", Code: "M", Add: 18}, {Path: "internal/api/usage/routes.go", Code: "M", Add: 20, Del: 5}},
 			Behind: 4, Commits: 2,
-			Unpushed: []worker.ShipCommit{{Hash: "a41c9e2", Subject: "feat(ratelimit): expose Reservation.ResetAt"},
+			Unpushed: []host.ShipCommit{{Hash: "a41c9e2", Subject: "feat(ratelimit): expose Reservation.ResetAt"},
 				{Hash: "7be0d13", Subject: "test(api): table-test the 429 path"}},
-			CommitDraft: worker.Draft{By: "codex", Body: "feat(api): set Retry-After on rate-limited usage responses\n\n" +
+			CommitDraft: host.Draft{By: "codex", Body: "feat(api): set Retry-After on rate-limited usage responses\n\n" +
 				"Both the single and batch usage endpoints now return Retry-After\nfrom the limiter's reset time, rounded up to whole seconds.\n\nRefs ENG-2231"},
-			PRDraft:  worker.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"},
+			PRDraft:  host.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"},
 			Template: "## What\n\n## Why\n", TemplateFile: ".github/pull_request_template.md", Owners: []string{"acme/platform-team", "jkowalski"}},
 		{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", Remote: true, GitHub: "acme/web-dashboard",
 			Commits: 3, Pushed: true, Synced: s.now.Add(-6 * time.Minute),

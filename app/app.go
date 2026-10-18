@@ -21,6 +21,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
@@ -29,7 +30,6 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/layout"
-	"github.com/liamg/oriel/worker"
 )
 
 // The views the window is made of. Each is an ordinary view: override one to replace that part of the screen.
@@ -49,7 +49,7 @@ const (
 )
 
 type Config struct {
-	Store      core.Store        // the materialised state, shared with the session host; Worker's, else in-memory, if nil
+	Store      core.Store        // the materialised state, shared with the session host; Host's, else in-memory, if nil
 	Registry   registry.Registry // a fresh one if nil
 	Plugins    []plugin.Plugin   // activated in order, after the built-ins
 	Logs       *Logs             // where log records go; a ring in memory if nil
@@ -65,8 +65,8 @@ type Config struct {
 	StateDir   string   // state that isn't config, such as the recent directories; logs.StateDir() if ""
 	CacheDir   string   // compiled grammars and the like; the user's cache directory's oriel/ if ""
 	DataDir    string   // installed plugins, in its plugins/; DefaultDataDir() if ""
-	// Worker is the session host, in this process; no sessions if nil.
-	Worker *worker.Worker
+	// Host is the session host, in this process; no sessions if nil.
+	Host *host.Host
 	// Updates is Oriel updating itself (distribution.md); nil in a build that doesn't.
 	Updates *Updates
 	// Started is called once the window is open and every plugin active: what the updater's health check waits for.
@@ -162,7 +162,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		}
 	}()
 	sh.closeWin = w.Close
-	if ch, ok := w.(render.CloseHolder); ok && cfg.Worker != nil {
+	if ch, ok := w.(render.CloseHolder); ok && cfg.Host != nil {
 		ch.HoldClose(true) // quitting hands the agents over first
 	}
 	sh.desktop = cfg.Desktop
@@ -297,8 +297,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 
 // defaults fills in what Config says it makes when it's nil.
 func (cfg *Config) defaults() {
-	if cfg.Store == nil && cfg.Worker != nil {
-		cfg.Store = cfg.Worker.Store()
+	if cfg.Store == nil && cfg.Host != nil {
+		cfg.Store = cfg.Host.Store()
 	}
 	if cfg.Store == nil {
 		cfg.Store = eventstore.New()
@@ -326,9 +326,9 @@ func newShell(cfg Config, poke func()) (*shell, func()) {
 
 // activate starts the built-ins, then cfg.Plugins, each on a host of its own, adding each to active as it starts.
 // It answers the last built-in's host.
-func (sh *shell) activate(ctx context.Context, active *[]plugin.Plugin) (*host, error) {
+func (sh *shell) activate(ctx context.Context, active *[]plugin.Plugin) (*pluginHost, error) {
 	sh.active = active
-	var last *host
+	var last *pluginHost
 	for _, e := range builtins(sh) {
 		last = sh.host("builtin:" + e.Manifest().ID)
 		if err := e.Activate(ctx, last); err != nil {
@@ -369,7 +369,7 @@ func lastMove(ev render.Event, events <-chan render.Event) (render.Event, render
 	}
 }
 
-type host struct {
+type pluginHost struct {
 	registry.Registry
 	store  core.Store
 	source string
@@ -379,17 +379,19 @@ type host struct {
 }
 
 // host is what a plugin registered as source sees.
-func (sh *shell) host(source string) *host {
-	return &host{Registry: registry.WithSource(sh.cfg.Registry, source), store: sh.cfg.Store, source: source, logs: sh.cfg.Logs,
+func (sh *shell) host(source string) *pluginHost {
+	return &pluginHost{Registry: registry.WithSource(sh.cfg.Registry, source), store: sh.cfg.Store, source: source, logs: sh.cfg.Logs,
 		log: sh.cfg.Logs.Logger(source), sh: sh}
 }
 
-func (h *host) Layout() *layout.Root { return h.sh.layout.root }
+func (h *pluginHost) Layout() *layout.Root { return h.sh.layout.root }
 
-func (h *host) Subscribe(f core.Filter, fn func(core.Event)) func() { return h.store.Subscribe(f, fn) }
-func (h *host) Redraw()                                             { h.sh.poke() }
+func (h *pluginHost) Subscribe(f core.Filter, fn func(core.Event)) func() {
+	return h.store.Subscribe(f, fn)
+}
+func (h *pluginHost) Redraw() { h.sh.poke() }
 
-func (h *host) Do(fn func()) {
+func (h *pluginHost) Do(fn func()) {
 	h.sh.todoMu.Lock()
 	h.sh.todo = append(h.sh.todo, fn)
 	h.sh.todoMu.Unlock()
@@ -407,7 +409,7 @@ func (sh *shell) runTodo() {
 	}
 }
 
-func (h *host) UI() plugin.UIView {
+func (h *pluginHost) UI() plugin.UIView {
 	if h.sh.ui == nil {
 		return nil
 	}
@@ -417,7 +419,7 @@ func (h *host) UI() plugin.UIView {
 // noSession is the session runtime options go to while none is in front.
 const noSession = "oriel"
 
-func (h *host) Here() registry.At {
+func (h *pluginHost) Here() registry.At {
 	at := registry.At{Session: string(h.store.Focus()), Project: h.sh.cfg.WorkDir}
 	if at.Session == "" {
 		at.Session = noSession
@@ -428,14 +430,14 @@ func (h *host) Here() registry.At {
 	return at
 }
 
-func (h *host) CurrentTheme() *theme.Resolved {
+func (h *pluginHost) CurrentTheme() *theme.Resolved {
 	if h.sh.theme == nil {
 		return nil
 	}
 	return h.sh.theme()
 }
 
-func (h *host) Load(p plugin.Plugin) (registry.Disposable, error) {
+func (h *pluginHost) Load(p plugin.Plugin) (registry.Disposable, error) {
 	if err := p.Activate(context.Background(), h.sh.host(p.Manifest().ID)); err != nil {
 		return nil, err
 	}
@@ -446,14 +448,14 @@ func (h *host) Load(p plugin.Plugin) (registry.Disposable, error) {
 	}), nil
 }
 
-func (h *host) Shot(th *theme.Resolved) *image.RGBA {
+func (h *pluginHost) Shot(th *theme.Resolved) *image.RGBA {
 	if h.sh.shot == nil {
 		return nil
 	}
 	return h.sh.shot(th)
 }
 
-func (h *host) Pending() plugin.Pending {
+func (h *pluginHost) Pending() plugin.Pending {
 	if k := h.sh.keys; k != nil && len(k.Pending()) > 0 {
 		p := plugin.Pending{Keys: k.Pending(), Modes: k.Modes(), Since: k.Since()}
 		if m := k.Complete(); m != nil && acceptKey(h.sh.cfg.Registry, p.Modes, p.Keys) {
@@ -470,13 +472,13 @@ func (h *host) Pending() plugin.Pending {
 	return plugin.Pending{}
 }
 
-func (h *host) HoldPending() {
+func (h *pluginHost) HoldPending() {
 	if k := h.sh.keys; k != nil {
 		k.Hold()
 	}
 }
 
-func (h *host) PaneRect(v layout.ViewRef) (render.Rect, bool) {
+func (h *pluginHost) PaneRect(v layout.ViewRef) (render.Rect, bool) {
 	w := h.sh.layout.root.Find(v)
 	if w == nil {
 		return render.Rect{}, false
@@ -485,19 +487,19 @@ func (h *host) PaneRect(v layout.ViewRef) (render.Rect, bool) {
 	return r, ok
 }
 
-func (h *host) PaneTab(id ui.ID) (layout.ViewRef, bool) {
+func (h *pluginHost) PaneTab(id ui.ID) (layout.ViewRef, bool) {
 	if h.sh.ui == nil {
 		return layout.ViewRef{}, false
 	}
 	return h.sh.layout.panes.TabAt(h.sh.ui, id)
 }
 
-func (h *host) Session(id core.SessionID) (core.Session, bool) { return h.store.Session(id) }
-func (h *host) Sessions() []core.Session                       { return h.store.Sessions() }
-func (h *host) Log() *slog.Logger                              { return h.log }
-func (h *host) State() core.State                              { return h.store.State() }
+func (h *pluginHost) Session(id core.SessionID) (core.Session, bool) { return h.store.Session(id) }
+func (h *pluginHost) Sessions() []core.Session                       { return h.store.Sessions() }
+func (h *pluginHost) Log() *slog.Logger                              { return h.log }
+func (h *pluginHost) State() core.State                              { return h.store.State() }
 
-func (h *host) Notify(n core.Notice) {
+func (h *pluginHost) Notify(n core.Notice) {
 	if n.Source == "" {
 		n.Source = h.source
 	}
@@ -506,7 +508,7 @@ func (h *host) Notify(n core.Notice) {
 	}
 }
 
-func (h *host) Dismiss(id string) {
+func (h *pluginHost) Dismiss(id string) {
 	for _, n := range h.store.State().Notifications {
 		if n.ID == id && !n.Dismissed {
 			h.store.Apply(core.NoticeDismissed{Seq: n.Seq})

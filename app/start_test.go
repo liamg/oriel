@@ -49,7 +49,7 @@ func startApp(t *testing.T, state, workDir string, setup func(h plugin.Host)) *r
 	return startAppWith(t, state, workDir, setup, nil)
 }
 
-// startAppWith is startApp with its config changed first: workers to connect, say.
+// startAppWith is startApp with its config changed first: the session host, say.
 func startAppWith(t *testing.T, state, workDir string, setup func(h plugin.Host), change func(*Config)) *running {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -98,7 +98,7 @@ func TestStartViewEntries(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Enter didn't run the selected entry")
 	}
-	r.typeKeys("j<CR>") // New Session: no worker, so it does nothing
+	r.typeKeys("j<CR>") // New Session: no session host, so it does nothing
 	r.typeKeys("jjj<CR>")
 	r.waitText("SETTINGS") // the settings page's heading
 }

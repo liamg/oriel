@@ -11,9 +11,9 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/worker"
 )
 
 const hudGrab = "⌥ RELEASE TO HIDE · CLICK TO PIN"
@@ -222,7 +222,7 @@ L.hud.indicator("next-meeting", { slot = "hud.today" }, L.ui.row{
 	sh := s.ship()
 	t0 := statsNow.Add(-4 * time.Minute)
 	sh.mu.Lock()
-	sh.reports[r.ids["pricing-rounding"]] = &shipReport{ships: []worker.Ship{
+	sh.reports[r.ids["pricing-rounding"]] = &shipReport{ships: []host.Ship{
 		{Project: "pricing", GitHub: "acme/pricing", PR: &gh.PR{Number: 4421, State: "open"},
 			Checks: []gh.Check{{Name: "lint", Status: "completed", Conclusion: "success", Started: t0, Completed: t0.Add(time.Minute)},
 				{Name: "e2e", Status: "in_progress", Started: t0}}},

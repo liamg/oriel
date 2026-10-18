@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -19,7 +20,6 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // askCards are the asks waiting on you, from every session, as the inbox's cards (ui.md 12): stacked over the
@@ -449,7 +449,7 @@ func removeStr(xs []string, s string) []string {
 // agentTerm is an agent's raw terminal, as a terminal view's source: what it shows streams in, and what you type
 // goes back.
 type agentTerm struct {
-	c      *worker.Worker
+	c      *host.Host
 	id     core.SessionID
 	s      <-chan []byte
 	cancel context.CancelFunc
@@ -458,7 +458,7 @@ type agentTerm struct {
 	rest []byte
 }
 
-func newAgentTerm(c *worker.Worker, id core.SessionID) (*agentTerm, error) {
+func newAgentTerm(c *host.Host, id core.SessionID) (*agentTerm, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s, err := c.Terminal(ctx, id)
 	if err != nil {
@@ -484,7 +484,7 @@ func (t *agentTerm) Read(p []byte) (int, error) {
 }
 
 func (t *agentTerm) Write(p []byte) (int, error) {
-	err := t.c.TermInput(worker.TermReq{Session: t.id, Data: append([]byte(nil), p...)})
+	err := t.c.TermInput(host.TermReq{Session: t.id, Data: append([]byte(nil), p...)})
 	if err != nil {
 		return 0, err
 	}
@@ -492,7 +492,7 @@ func (t *agentTerm) Write(p []byte) (int, error) {
 }
 
 func (t *agentTerm) Resize(cols, rows int) error {
-	return t.c.TermInput(worker.TermReq{Session: t.id, Cols: cols, Rows: rows})
+	return t.c.TermInput(host.TermReq{Session: t.id, Cols: cols, Rows: rows})
 }
 
 func (t *agentTerm) Close() error {

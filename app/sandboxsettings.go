@@ -202,7 +202,7 @@ func (x *sessions) sandboxSettings(ctx context.Context) {
 			case <-x.sandboxKick:
 			}
 			cfg := sandboxConfig(o, projectRoots(x.sh.cfg.WorkDir, x.sh.cfg.Store.State()))
-			if w := x.sh.cfg.Worker; w != nil {
+			if w := x.sh.cfg.Host; w != nil {
 				if err := w.SetSandboxConfig(cfg); err != nil {
 					x.h.Log().Warn("sandbox settings", "err", err)
 				}

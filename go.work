@@ -12,6 +12,7 @@ use (
 	./edit
 	./gh
 	./gitx
+	./host
 	./integ
 	./lsp
 	./plugin
@@ -32,5 +33,4 @@ use (
 	./update
 	./vim
 	./voice
-	./worker
 )

@@ -7,13 +7,13 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker/stats"
 )
 
 // The global Stats page (43's panels 2 and 3): every session, grouped by repo by default, over the

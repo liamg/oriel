@@ -8,13 +8,13 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // StartWorkKeyMode is the Start work dialog's keymap mode: the dialog and its fields.
@@ -30,9 +30,9 @@ type startWork struct {
 	sandbox, openNet bool
 	backend          string // the session's sandbox backend; "" is sandbox.backend
 	model, effort    string
-	shown            [2]string           // the model and effort it opened on: only a change is sent
-	shownRun         [2]bool             // and the sandbox and open network
-	provider         worker.ProviderInfo // the session's provider, once the worker says
+	shown            [2]string         // the model and effort it opened on: only a change is sent
+	shownRun         [2]bool           // and the sandbox and open network
+	provider         host.ProviderInfo // the session's provider, once the host says
 	branches         []startBranch
 	focus            bool // focus the dialog next frame
 	busy             bool
@@ -52,7 +52,7 @@ func (x *planPlugin) openStartWork() error {
 	d := &startWork{id: se.ID, clear: true, fresh: true, sandbox: se.Agent.Sandboxed, openNet: se.Agent.Network == "open", backend: se.Agent.Backend,
 		model: se.Agent.Model, effort: se.Agent.Effort, shown: [2]string{se.Agent.Model, se.Agent.Effort}, focus: true,
 		shownRun: [2]bool{se.Agent.Sandboxed, se.Agent.Network == "open"},
-		provider: worker.ProviderInfo{ID: se.Agent.Provider}}
+		provider: host.ProviderInfo{ID: se.Agent.Provider}}
 	for _, p := range se.Projects {
 		if p.ReadOnly && p.Repo != "" {
 			d.branches = append(d.branches, startBranch{project: p.Name, branch: p.Branch, planned: p.Branch})

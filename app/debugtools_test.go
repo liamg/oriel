@@ -50,7 +50,7 @@ func (s *errScene) agentDebug(t *testing.T, a *agenttest.FakeSession, name strin
 // reads the paused stack and a frame and evaluates (allowed), is refused stepping and continuing (off), sets a
 // breakpoint once the user allows it on a permission card (ask), and steps once the user grants it in the panel.
 func TestAgentDebuggerTools(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	s, main, finish := debugSceneOn(t, "testdata/dap/agent.jsonl", lw.connect(t))
 	x := s.debugger()
 	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })

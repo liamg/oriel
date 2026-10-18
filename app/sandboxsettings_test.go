@@ -73,11 +73,11 @@ func TestSandboxOptionsAreDeclared(t *testing.T) {
 	}
 }
 
-// agents.md, "Sandbox settings": your sandbox.* values, and each trusted project file's own, reach the worker as the
+// agents.md, "Sandbox settings": your sandbox.* values, and each trusted project file's own, reach the host as the
 // sandbox.Config its sandboxes run on; a repo a session works in brings its project file even when the window is
-// elsewhere, and a change reaches the worker again.
-func TestSandboxSettingsReachTheWorker(t *testing.T) {
-	lw := newLocalWorker(t)
+// elsewhere, and a change reaches the host again.
+func TestSandboxSettingsReachTheHost(t *testing.T) {
+	lw := newLocalHost(t)
 	other := filepath.Join(t.TempDir(), "billing")
 	gitRepo(t, other, map[string]string{"README.md": "billing\n"}, 1)
 	s := newSceneWith(t, "", lw.repo, mockupSize, lw.connect(t))
@@ -119,7 +119,7 @@ linear = "npx -y linear-mcp"
 			other:   {Rules: []sandbox.PolicyRule{{Tool: "oriel__push", Action: "deny"}}, Image: "billing:dev"},
 		}}
 	if !reflect.DeepEqual(cfg, want) {
-		t.Errorf("the worker has\n%+v\nwant\n%+v", cfg, want)
+		t.Errorf("the host has\n%+v\nwant\n%+v", cfg, want)
 	}
 	if err := s.reg.Options().Set("sandbox.pids_limit", registry.LayerUser, registry.At{}, 256); err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ linear = "npx -y linear-mcp"
 	waitSandbox(t, lw, "the change", func(c sandbox.Config) bool { return c.PidsLimit == 256 })
 }
 
-func waitSandbox(t *testing.T, lw *localWorker, what string, ok func(sandbox.Config) bool) sandbox.Config {
+func waitSandbox(t *testing.T, lw *localHost, what string, ok func(sandbox.Config) bool) sandbox.Config {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
 	for {
@@ -136,7 +136,7 @@ func waitSandbox(t *testing.T, lw *localWorker, what string, ok func(sandbox.Con
 			return c
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("waiting for %s; the worker has %+v", what, c)
+			t.Fatalf("waiting for %s; the host has %+v", what, c)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

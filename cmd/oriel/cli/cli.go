@@ -15,8 +15,8 @@ import (
 	"github.com/liamg/oriel/agent/hostexec"
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/app"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/sandbox/agentcmd"
-	"github.com/liamg/oriel/worker"
 )
 
 // orielHome is ~/.oriel: sessions, workspaces, repos.
@@ -28,15 +28,15 @@ func orielHome() string {
 	return filepath.Join(home, ".oriel")
 }
 
-// newWorker is the session host with the built-in providers and prompt packs.
-func newWorker(home string, log *slog.Logger) (*worker.Worker, error) {
+// newHost is the session host with the built-in providers and prompt packs.
+func newHost(home string, log *slog.Logger) (*host.Host, error) {
 	providers := &agent.Providers{}
 	providers.Register(claude.Provider{ProbeDir: filepath.Join(home, "probe")})
 	providers.Register(&codex.Provider{})
 	if _, err := packs.LoadDir(filepath.Join(app.DefaultConfigDir(), "agents")); err != nil {
 		log.Warn("prompt packs", "err", err)
 	}
-	sandboxes := worker.NewSandboxFactory(nil)
+	sandboxes := host.NewSandboxFactory(nil)
 	// A built-in kind's pack is the built-in one, or the user's version the app sends (prompts.set); agents/ adds kinds.
 	builtinOr := func(name string) (agent.Pack, bool) {
 		if src, ok := packs.Source(name); ok {
@@ -45,7 +45,7 @@ func newWorker(home string, log *slog.Logger) (*worker.Worker, error) {
 		}
 		return packs.Get(name)
 	}
-	w, err := worker.New(worker.Options{Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: builtinOr, Log: log, Version: version})
+	w, err := host.New(host.Options{Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: builtinOr, Log: log, Version: version})
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +53,9 @@ func newWorker(home string, log *slog.Logger) (*worker.Worker, error) {
 	return w, nil
 }
 
-// startWorker starts the session host's background work until ctx ends: the machine's load, the plan windows'
+// startHost starts the session host's background work until ctx ends: the machine's load, the plan windows'
 // /usage probe, and the jobs' schedules.
-func startWorker(ctx context.Context, w *worker.Worker, log *slog.Logger) {
+func startHost(ctx context.Context, w *host.Host, log *slog.Logger) {
 	go w.SampleLoad(ctx, 5*time.Second)
 	go func() {
 		if err := w.ReadUsage(ctx); err != nil {

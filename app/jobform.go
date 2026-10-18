@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // The New job dialog (44's panel 2): a title, the prompt, where it runs, the agent and the schedule. New job, Edit,
@@ -19,7 +19,7 @@ import (
 var (
 	runsIn   = []string{"Sandbox", "Host", "Default"}
 	pinOf    = []string{"sandbox", "host", ""}
-	everyOf  = []string{"", worker.EveryWeekday, worker.EveryWeek, worker.EveryDays}
+	everyOf  = []string{"", host.EveryWeekday, host.EveryWeek, host.EveryDays}
 	everyFor = []string{"MANUAL", "WEEKDAYS", "WEEKLY", "CUSTOM"}
 )
 
@@ -39,30 +39,30 @@ type jobForm struct {
 	busy    bool
 	err     string
 	gen     int
-	agents  []worker.ProviderInfo
+	agents  []host.ProviderInfo
 	loading bool
 }
 
-func (f *jobForm) job() worker.Job {
-	s := worker.Schedule{Every: everyOf[f.every], At: strings.TrimSpace(f.at)}
+func (f *jobForm) job() host.Job {
+	s := host.Schedule{Every: everyOf[f.every], At: strings.TrimSpace(f.at)}
 	switch s.Every {
 	case "":
 		s.At = ""
-	case worker.EveryWeek:
+	case host.EveryWeek:
 		s.Days = []time.Weekday{days[f.day]}
-	case worker.EveryDays:
+	case host.EveryDays:
 		for _, d := range days {
 			if slices.Contains(f.custom, dayName(d)) {
 				s.Days = append(s.Days, d)
 			}
 		}
 	}
-	return worker.Job{Name: f.name, Title: f.title, Prompt: f.prompt, Sandbox: pinOf[f.runsIn], Provider: f.agent,
+	return host.Job{Name: f.name, Title: f.title, Prompt: f.prompt, Sandbox: pinOf[f.runsIn], Provider: f.agent,
 		Model: f.model, Effort: f.effort, Schedule: s}
 }
 
 // formFor is a dialog holding j.
-func formFor(j worker.Job) *jobForm {
+func formFor(j host.Job) *jobForm {
 	f := &jobForm{name: j.Name, title: j.Title, prompt: j.Prompt, runsIn: max(slices.Index(pinOf, j.Sandbox), 0),
 		agent: j.Provider, model: j.Model, effort: j.Effort, every: max(slices.Index(everyOf, j.Schedule.Every), 0), at: cmpOr(j.Schedule.At, "07:00"),
 		focus: true}
@@ -77,7 +77,7 @@ func formFor(j worker.Job) *jobForm {
 
 // newForm opens the dialog on a new job, with what the args give filled in.
 func (x *jobsPlugin) newForm(a registry.Args) {
-	j := worker.Job{Title: a.String("title"), Prompt: a.String("prompt"), Provider: a.String("provider"), Model: a.String("model"),
+	j := host.Job{Title: a.String("title"), Prompt: a.String("prompt"), Provider: a.String("provider"), Model: a.String("model"),
 		Effort: a.String("effort")}
 	switch v := a["sandbox"].(type) {
 	case bool:
@@ -262,7 +262,7 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 			switch everyOf[f.every] {
 			case "":
 				return
-			case worker.EveryWeek:
+			case host.EveryWeek:
 				var names []string
 				for _, d := range days {
 					names = append(names, dayName(d))
@@ -270,7 +270,7 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 				if v, ok := widget.Select(c, "day", dayName(days[f.day]), names, widget.SelectOpts{Label: "Day", Help: "agent/jobs#schedule", Width: 120}); ok {
 					f.day = slices.Index(names, v)
 				}
-			case worker.EveryDays:
+			case host.EveryDays:
 				if v, ok := widget.MultiSelect(c, "days", f.custom, func() []string {
 					var names []string
 					for _, d := range days {
@@ -294,7 +294,7 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 		} else {
 			file := f.name
 			if file == "" {
-				file = trimSlug(worker.Sanitise(cmpOr(f.title, firstLine(f.prompt))))
+				file = trimSlug(host.Sanitise(cmpOr(f.title, firstLine(f.prompt))))
 			}
 			c.Text("file", "→ "+cmpOr(file, "job")+".json", monoFont(10.5, th.C(theme.FgGhost)))
 		}

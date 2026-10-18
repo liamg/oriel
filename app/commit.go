@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -18,7 +19,6 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // CommitKeyMode is the commit dialog's keys while a gate holds the commit: a commits anyway, ⏎ confirms past a
@@ -257,7 +257,7 @@ func (g *gitPlugin) recordOverrides(se core.SessionState, project string, inSess
 		ev := core.CommitGateOverridden{Session: se.ID, Override: core.GateOverride{Project: project, Gate: c.Gate.Name, Mode: c.Mode, Unread: c.Unread,
 			Trailer: trailer, Commit: hash, Subject: subject, Time: time.Now().UTC()}}
 		g.busy.Add(1)
-		go func(cl *worker.Worker) {
+		go func(cl *host.Host) {
 			defer g.busy.Done()
 			if err := cl.RecordOverride(ev); err != nil {
 				g.h.Log().Warn("commit gate", "err", err)

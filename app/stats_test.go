@@ -18,9 +18,9 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/worker"
-	"github.com/liamg/oriel/worker/stats"
 )
 
 // statsNow is mockup 43's: Wed Oct 14, 12:17.
@@ -54,7 +54,7 @@ func (f *loggedFake) Logs(cwd, _ string) []agent.Log {
 // of a month's work (or, for Codex, Oriel's record of its events), and a week of plan readings.
 type statsRig struct {
 	t      *testing.T
-	w      *worker.Worker
+	w      *host.Host
 	home   string
 	claude *loggedFake
 	codex  *agenttest.Fake
@@ -83,7 +83,7 @@ func newStatsRig(t *testing.T) *statsRig {
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
 	providers.Register(r.codex)
-	w, err := worker.New(worker.Options{Home: r.home, Providers: providers, Exec: nopExec{}, Load: steadyLoad,
+	w, err := host.New(host.Options{Home: r.home, Providers: providers, Exec: nopExec{}, Load: steadyLoad,
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
@@ -94,7 +94,7 @@ func newStatsRig(t *testing.T) *statsRig {
 }
 
 func (r *statsRig) connect(*testing.T) func(*Config) {
-	return func(cfg *Config) { cfg.Worker, cfg.Store = r.w, r.w.Store() }
+	return func(cfg *Config) { cfg.Host, cfg.Store = r.w, r.w.Store() }
 }
 
 // fxSession is how a fixture session worked: its repos and their weights in its file calls, its model, the days it
@@ -656,7 +656,7 @@ func TestStartViewLinks(t *testing.T) {
 func TestUsageIsPerAccount(t *testing.T) {
 	fake := agenttest.NewFake()
 	fake.Name = "claude"
-	lw := newWorkerWith(t, worker.Options{}, fake)
+	lw := newHostWith(t, host.Options{}, fake)
 	accounts := []struct {
 		account string
 		used    float64

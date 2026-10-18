@@ -115,7 +115,7 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	if _, err := lw.w.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}

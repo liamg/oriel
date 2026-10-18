@@ -404,7 +404,7 @@ func TestSidebarFormDockAndAvailability(t *testing.T) {
 // SH-17: the user adds a project to the session: + in the sidebar's header picks a repo or a typed path, and the
 // project is added and opened.
 func TestSidebarAddsAProject(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	billing := filepath.Join(t.TempDir(), "billing")
 	git(t, filepath.Dir(billing), "init", "-q", "-b", "main", billing)
 	git(t, billing, "commit", "-q", "--allow-empty", "-m", "first")

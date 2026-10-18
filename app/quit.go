@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // QuitKeyMode is the keymap mode of the dialog shown while Oriel waits to quit.
@@ -39,7 +39,7 @@ type quitDrain struct {
 	handing  atomic.Bool // the wait is over
 	mu       sync.Mutex
 	busy     []core.SessionState // sessions mid-turn, as last polled
-	jobs     []worker.Job        // scheduled jobs, which don't run while Oriel is closed
+	jobs     []host.Job          // scheduled jobs, which don't run while Oriel is closed
 	polled   bool
 
 	hidden, focus bool // the dialog's; the loop's only
@@ -70,7 +70,7 @@ func (sh *shell) requestQuit() {
 		r.hidden = false
 		return
 	}
-	if sh.cfg.Worker == nil {
+	if sh.cfg.Host == nil {
 		sh.closeWindow()
 		return
 	}
@@ -95,23 +95,23 @@ func (sh *shell) drain(r *quitDrain) {
 }
 
 // poll reads which sessions are mid-turn, and which jobs are scheduled.
-func (r *quitDrain) poll(w *worker.Worker, st core.State) []core.SessionState {
+func (r *quitDrain) poll(w *host.Host, st core.State) []core.SessionState {
 	busy := slices.DeleteFunc(slices.Clone(st.Sessions), func(se core.SessionState) bool { return !se.Agent.Working })
-	jobs := slices.DeleteFunc(w.Jobs(), func(j worker.Job) bool { return j.Schedule.Every == "" })
+	jobs := slices.DeleteFunc(w.Jobs(), func(j host.Job) bool { return j.Schedule.Every == "" })
 	r.mu.Lock()
 	r.busy, r.jobs, r.polled = busy, jobs, true
 	r.mu.Unlock()
 	return busy
 }
 
-func (r *quitDrain) shown() (busy []core.SessionState, jobs []worker.Job, polled bool) {
+func (r *quitDrain) shown() (busy []core.SessionState, jobs []host.Job, polled bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.busy, r.jobs, r.polled
 }
 
 func (sh *shell) handOver(r *quitDrain) error {
-	w := sh.cfg.Worker
+	w := sh.cfg.Host
 	wait := time.NewTimer(time.Until(r.deadline))
 	defer wait.Stop()
 	tick := time.NewTicker(200 * time.Millisecond)
@@ -218,7 +218,7 @@ func (x *sessions) drainView(c *ui.Ctx) {
 	}
 }
 
-func (x *sessions) drainBody(c *ui.Ctx, r *quitDrain, busy []core.SessionState, jobs []worker.Job, width float32) {
+func (x *sessions) drainBody(c *ui.Ctx, r *quitDrain, busy []core.SessionState, jobs []host.Job, width float32) {
 	th := c.Theme()
 	if r.handing.Load() {
 		widget.Wrap(c, "t", "Stopping the agents. They come back when Oriel opens again.", width, uiFont(12.5, th.C(theme.Fg)))

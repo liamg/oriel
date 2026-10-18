@@ -17,9 +17,9 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/testrun"
-	"github.com/liamg/oriel/worker"
 )
 
 // The assistant's own tools (crit-reference.md, "Assistant"), offered only to it. Reading tools read; the ones that
@@ -532,8 +532,8 @@ func (x *assistantPlugin) jobs(context.Context) []jobLine {
 			if s.Job != j.Name || s.Created.Before(l.at) {
 				continue
 			}
-			r := worker.RunOf(s)
-			l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == worker.RunRunning
+			r := host.RunOf(s)
+			l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == host.RunRunning
 			l.LastAt = s.Created.Format(time.RFC3339)
 		}
 		out = append(out, l)
@@ -623,7 +623,7 @@ func (x *assistantPlugin) toolPRs(query string) func(registry.Ctx, map[string]an
 		if err != nil {
 			return nil, err
 		}
-		found, err := c.SearchPRs(ctx, worker.PRsReq{Query: query})
+		found, err := c.SearchPRs(ctx, host.PRsReq{Query: query})
 		if err != nil {
 			return nil, err
 		}

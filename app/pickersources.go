@@ -8,12 +8,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/host/search"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/ui"
-	"github.com/liamg/oriel/worker/search"
 )
 
 // buffersSource is the open buffers, as :ls lists them; it's what :ls opens.

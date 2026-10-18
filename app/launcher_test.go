@@ -11,10 +11,10 @@ import (
 
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
-	"github.com/liamg/oriel/worker"
 )
 
 // clickTop clicks the middle of the last run of text drawn in the frame on screen: the one on top.
@@ -47,7 +47,7 @@ func git(t *testing.T, dir string, args ...string) string {
 // AI-4 done when: "each mode starts the right prompt pack". SE-1: "each kind starts from the launcher"; "direct never
 // creates a worktree; new repo inits and registers". ui.md 04: "Mode: Plan · Work · Review PR · Tour · Job · New repo".
 func TestLauncherModesStartTheirPacks(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	ctx := context.Background()
 	c := lw.w
 	if _, err := c.AddRepoPath(ctx, lw.repo); err != nil {
@@ -60,7 +60,7 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.waitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
-	// The test worker has no sandbox factory.
+	// The test host has no sandbox factory.
 	r.do(func() error {
 		return r.host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host")
 	})
@@ -130,7 +130,7 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 	for _, se := range st.Sessions {
 		kinds[se.Kind] = se
 	}
-	if m, _ := worker.LoadManifest(kinds[core.KindTour].Dir); m.Tour == nil || m.Tour.Kind != "demo" {
+	if m, _ := host.LoadManifest(kinds[core.KindTour].Dir); m.Tour == nil || m.Tour.Kind != "demo" {
 		t.Errorf("the tour is %+v, want the demo picked", m.Tour)
 	}
 	if d := kinds[core.KindDirect]; d.Dir != plain || len(d.Projects) != 1 || d.Projects[0].Dir != plain {
@@ -152,7 +152,7 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 // SE-1: "Register session.new and session.resume; the start view's greyed entries light up on their own". SE-3 and
 // sessions.md: "The app opens on mission control", whose stand-in until SH-7 is the start view's recent sessions.
 func TestStartViewListsSessions(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	c := lw.w
 	if _, err := c.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Name: "pricing-rounding", Repos: []core.RepoID{core.RepoID(lw.repo)}}); err != nil {
 		t.Fatal(err)
@@ -175,7 +175,7 @@ func TestStartViewListsSessions(t *testing.T) {
 
 // SE-3, sessions.md: "Files outside the session's worktrees (the stdlib, dependencies, another repo) open read-only".
 func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	outside := filepath.Join(t.TempDir(), "other.go")
 	os.WriteFile(outside, []byte("package other\n"), 0o644)
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
@@ -222,7 +222,7 @@ func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 func TestLauncherSnapshot(t *testing.T) {
 	claude, codex := agenttest.NewFake(), agenttest.NewFake()
 	claude.Name, codex.Name = "claude", "codex"
-	lw := newLocalWorker(t, claude, codex)
+	lw := newLocalHost(t, claude, codex)
 	cloud := filepath.Join(t.TempDir(), "cloud")
 	git(t, filepath.Dir(cloud), "init", "-q", "-b", "main", cloud)
 	git(t, cloud, "commit", "-q", "--allow-empty", "-m", "first")
@@ -273,7 +273,7 @@ func TestLauncherSnapshot(t *testing.T) {
 // AGENTS.md: a closable surface closes with Escape (from a focused field too) and a visible close; a dialog over a
 // scrim closes on a click outside it.
 func TestLauncherCloses(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.waitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
@@ -287,7 +287,7 @@ func TestLauncherCloses(t *testing.T) {
 		},
 	} {
 		r.typeKeys("<D-n>")
-		r.latest("the launcher, asked the worker", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Plan") })
+		r.latest("the launcher, asked the host", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Plan") })
 		close()
 		r.waitGone("NEW SESSION")
 	}

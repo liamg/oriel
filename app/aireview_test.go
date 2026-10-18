@@ -18,11 +18,11 @@ import (
 
 // reviewSession is a work session on the fake whose worktree changes round.go from a committed base, with a second
 // provider, codex, installed to review it; the diff of the change is open.
-func reviewSession(t *testing.T) (*running, *agenttest.FakeSession, *agenttest.Fake, *localWorker) {
+func reviewSession(t *testing.T) (*running, *agenttest.FakeSession, *agenttest.Fake, *localHost) {
 	t.Helper()
 	author := agenttest.NewFake()
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4), Offers: []agent.Model{{ID: "gpt-5", Default: true}}}
-	lw := newLocalWorker(t, author, codex)
+	lw := newLocalHost(t, author, codex)
 	lw.fake = author
 	r, a, _ := agentSessionOn(t, lw)
 	dir := projectDir(t, r)

@@ -60,7 +60,7 @@ func TestAnOldWorkerStopsTheApp(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := oldWorker(home); err == nil || !strings.Contains(err.Error(), "pkill -f 'oriel worker'") {
-		t.Errorf("with a worker listening: %v", err)
+		t.Errorf("with a host listening: %v", err)
 	}
 	ln.(*net.UnixListener).SetUnlinkOnClose(false)
 	ln.Close()

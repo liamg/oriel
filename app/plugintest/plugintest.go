@@ -28,7 +28,7 @@ var Timeout = 15 * time.Second
 type Options struct {
 	Size   render.Point      // the window, in points; 1600×1000 if zero
 	Now    time.Time         // the clock's start; now, to the second, if zero
-	Config func(*app.Config) // changes the app's config before it starts: Net, Secrets, Worker…
+	Config func(*app.Config) // changes the app's config before it starts: Net, Secrets, Host…
 }
 
 // App is a running app, driven from the test's goroutine.

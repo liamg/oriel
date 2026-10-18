@@ -16,10 +16,10 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/voice/voicetest"
-	"github.com/liamg/oriel/worker"
 )
 
 var asstNow = time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC)
@@ -33,11 +33,11 @@ func (s *errScene) assistant() *assistantPlugin {
 	return nil
 }
 
-// assistantScene is the app on a local worker with the fake provider, at the mockup's size and a fixed clock, with
+// assistantScene is the app on a session host with the fake provider, at the mockup's size and a fixed clock, with
 // a scripted microphone and a speaker that keeps what it's given.
-func assistantScene(t *testing.T, o worker.Options, mic *voicetest.Mic, tr *voicetest.Transcriber) (*errScene, *localWorker, *saidSpeaker) {
+func assistantScene(t *testing.T, o host.Options, mic *voicetest.Mic, tr *voicetest.Transcriber) (*errScene, *localHost, *saidSpeaker) {
 	t.Helper()
-	lw := newWorkerWith(t, o)
+	lw := newHostWith(t, o)
 	sp := &saidSpeaker{}
 	if mic == nil {
 		mic, tr = &voicetest.Mic{}, &voicetest.Transcriber{}
@@ -81,7 +81,7 @@ func (s *errScene) settleCall(t *testing.T, done chan [2]any) (string, error) {
 }
 
 // started is the next agent the fake starts, framing while it waits: what starts it may wait on the loop.
-func (s *errScene) started(t *testing.T, lw *localWorker) *agenttest.FakeSession {
+func (s *errScene) started(t *testing.T, lw *localHost) *agenttest.FakeSession {
 	t.Helper()
 	var a *agenttest.FakeSession
 	s.until(t, "an agent to start", func() bool {
@@ -107,7 +107,7 @@ func toolNames(a *agenttest.FakeSession) []string {
 // pick one) … It shows what it's allowed to do, and its data sources with how fresh each is." agents.md: the
 // assistant is a resident utility session, never claude -p.
 func TestAssistantWhatNeedsMe(t *testing.T) {
-	s, lw, _ := assistantScene(t, worker.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
 	s.run("session.start", registry.Args{"kind": "work", "name": "rounding", "provider": "fake", "repos": []string{lw.repo}})
 	work := lw.fake.WaitStarted(t)
 	work.Ask(agent.Permission{ID: "p1", Tool: "Bash", Summary: "make e2e"})
@@ -232,8 +232,8 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 // crit-reference.md, "Assistant": "Confirmation cards". ui.md 11: "Every action has an undo with a countdown." An
 // act shows what it will do and waits; y does it, n doesn't, and what it made can be undone for a few seconds.
 func TestAssistantAsksFirst(t *testing.T) {
-	s, lw, _ := assistantScene(t, worker.Options{}, nil, nil)
-	c := s.sh.cfg.Worker
+	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+	c := s.sh.cfg.Host
 	if _, err := c.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +286,7 @@ func TestTheWakeWordGoesToTheAssistant(t *testing.T) {
 	mic := &voicetest.Mic{Hold: true, Script: voicetest.Script(voicetest.Silence(1200*time.Millisecond), voicetest.Speech(2*time.Second),
 		voicetest.Silence(time.Second))}
 	tr := &voicetest.Transcriber{Word: "x", Text: func(string) string { return "Computer, what needs me?" }}
-	s, lw, sp := assistantScene(t, worker.Options{}, mic, tr)
+	s, lw, sp := assistantScene(t, host.Options{}, mic, tr)
 	s.reg.Options().Set("voice.wake", registry.LayerUser, registry.At{}, true)
 	ua := s.started(t, lw)
 	s.reg.Options().Set("voice.wake", registry.LayerUser, registry.At{}, false)
@@ -310,7 +310,7 @@ func TestTheWakeWordGoesToTheAssistant(t *testing.T) {
 // a feature or plugin offers them for the assistant through the registry (this my_tickets shadows the app's), and they reach it, and only it, like its own. An act
 // of theirs asks first just the same.
 func TestPluginToolsReachTheAssistant(t *testing.T) {
-	s, lw, _ := assistantScene(t, worker.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
 	requested := ""
 	for _, tool := range []registry.AgentTool{
 		{Name: "my_tickets", For: []string{assistantAgent}, ReadOnly: true, Reads: "linear", Desc: "The user's Linear tickets.",
@@ -370,12 +370,12 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 }
 
 // crit-reference.md, "PR lists": "Mine and review-requested". The assistant reads them from GitHub through the
-// worker's gh, and says which has a session on it.
+// user's gh, and says which has a session on it.
 func TestAssistantReadsPullRequests(t *testing.T) {
 	hub := ghtest.New(t)
 	hub.AddPR("acme/api", gh.PR{Title: "retry transient 502s", Author: "maria", Reviewers: []string{"you"}})
 	mine := hub.AddPR("acme/api", gh.PR{Title: "round half to even", Draft: true})
-	s, lw, _ := assistantScene(t, worker.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }}, nil, nil)
+	s, lw, _ := assistantScene(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }}, nil, nil)
 	s.run("assistant.say", registry.Args{"text": "my PRs?"})
 	ua := lw.fake.WaitStarted(t)
 	out, err := s.settleCall(t, asstCall(ua, "my_prs", map[string]any{}))
@@ -411,7 +411,7 @@ func TestLuaToolsForTheAssistant(t *testing.T) {
 // asstWorkScene is a work session on two projects, pricing and web, in front, and the assistant's agent started.
 func asstWorkScene(t *testing.T) (*errScene, *agenttest.FakeSession, core.SessionState) {
 	t.Helper()
-	s, lw, _ := assistantScene(t, worker.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
 	web := filepath.Join(t.TempDir(), "web")
 	git(t, filepath.Dir(web), "init", "-q", "-b", "main", web)
 	writeFiles(t, lw.repo, map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
@@ -557,7 +557,7 @@ func (s *errScene) widenAssistant(t *testing.T) {
 // "How do I go back to the help page I was reading?": help_search finds the section, help_read gives it with its keys
 // as they're bound now, and open_help shows it.
 func TestAssistantSearchesTheHelp(t *testing.T) {
-	s, lw, _ := assistantScene(t, worker.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
 	s.run("assistant.open", registry.Args{"text": "how do I go back to the help page I was reading?"})
 	ua := lw.fake.WaitStarted(t)
 	for _, want := range []string{"help_search", "help_read", "open_help"} {

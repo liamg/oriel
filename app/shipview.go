@@ -10,13 +10,13 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 var (
@@ -117,7 +117,7 @@ func (x *shipPlugin) page(c *ui.Ctx) {
 	})
 }
 
-func (x *shipPlugin) pageHeader(c *ui.Ctx, se core.SessionState, ships []worker.Ship) {
+func (x *shipPlugin) pageHeader(c *ui.Ctx, se core.SessionState, ships []host.Ship) {
 	th := c.Theme()
 	raisable := 0
 	for _, s := range ships {
@@ -160,7 +160,7 @@ func (x *shipPlugin) pageHeader(c *ui.Ctx, se core.SessionState, ships []worker.
 }
 
 // columnHeader is a project's name, colour, branch and base, and a chip for where it stands.
-func (x *shipPlugin) columnHeader(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) columnHeader(c *ui.Ctx, se core.SessionState, s host.Ship) {
 	th := c.Theme()
 	c.Row("ph", ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Box("sq", ui.Style{W: ui.Px(11), H: ui.Px(11), Radius: 2, Fill: tokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
@@ -177,7 +177,7 @@ func (x *shipPlugin) columnHeader(c *ui.Ctx, se core.SessionState, s worker.Ship
 }
 
 // statusChip is where a project stands, as its column's chip.
-func statusChip(th *theme.Resolved, s worker.Ship) (string, render.Color) {
+func statusChip(th *theme.Resolved, s host.Ship) (string, render.Color) {
 	switch {
 	case s.ReadOnly:
 		return "read-only", th.C(theme.FgFaint)
@@ -198,7 +198,7 @@ func statusChip(th *theme.Resolved, s worker.Ship) (string, render.Color) {
 }
 
 // column is a project's checklist: uncommitted → behind → unpushed → PR and its checks.
-func (x *shipPlugin) column(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) column(c *ui.Ctx, se core.SessionState, s host.Ship) {
 	th := c.Theme()
 	if s.ReadOnly {
 		shipEmpty(c, "This worktree is pinned or read-only: nothing to ship from it.")
@@ -220,7 +220,7 @@ func (x *shipPlugin) column(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 }
 
 // currentStep is the first step not done: the one to do next.
-func currentStep(s worker.Ship) int {
+func currentStep(s host.Ship) int {
 	switch {
 	case len(s.Files) > 0:
 		return 1
@@ -280,7 +280,7 @@ func stepTitle(c *ui.Ctx, title, note string) {
 	})
 }
 
-func (x *shipPlugin) uncommitted(c *ui.Ctx, se core.SessionState, s worker.Ship, open bool) {
+func (x *shipPlugin) uncommitted(c *ui.Ctx, se core.SessionState, s host.Ship, open bool) {
 	th := c.Theme()
 	if len(s.Files) == 0 {
 		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, "Uncommitted", "clean") }, nil)
@@ -330,10 +330,10 @@ func (x *shipPlugin) uncommitted(c *ui.Ctx, se core.SessionState, s worker.Ship,
 }
 
 // draftChip says who wrote a draft, and whether the code has moved on since: "drafted by codex · stale".
-func draftChip(c *ui.Ctx, d worker.Draft) {
+func draftChip(c *ui.Ctx, d host.Draft) {
 	th := c.Theme()
 	text, tone := "drafted by "+d.By, th.C(tShipTodo)
-	if d.By == worker.DraftByYou {
+	if d.By == host.DraftByYou {
 		text, tone = "written by you", th.C(theme.FgMuted)
 	}
 	if d.Stale {
@@ -343,7 +343,7 @@ func draftChip(c *ui.Ctx, d worker.Draft) {
 }
 
 // commitBox is the commit message, filled with the agent's draft until you type, and its buttons.
-func (x *shipPlugin) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f *commitForm) {
+func (x *shipPlugin) commitBox(c *ui.Ctx, se core.SessionState, s host.Ship, f *commitForm) {
 	th := c.Theme()
 	if !f.edited {
 		f.message = s.CommitDraft.Body
@@ -360,7 +360,7 @@ func (x *shipPlugin) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f
 		} else if r.Submitted {
 			x.run("ship.commit", registry.Args{"project": s.Project})
 		}
-		x.keepTyped(c, &f.save, r.Changed, first, worker.DraftReq{Session: se.ID, Project: s.Project, Kind: "commit", Body: f.message})
+		x.keepTyped(c, &f.save, r.Changed, first, host.DraftReq{Session: se.ID, Project: s.Project, Kind: "commit", Body: f.message})
 	})
 	c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		busy := x.doing(se.ID, s.Project) != ""
@@ -392,7 +392,7 @@ func (x *shipPlugin) commitBox(c *ui.Ctx, se core.SessionState, s worker.Ship, f
 	}
 }
 
-func (x *shipPlugin) behind(c *ui.Ctx, s worker.Ship) {
+func (x *shipPlugin) behind(c *ui.Ctx, s host.Ship) {
 	th := c.Theme()
 	base := cmpOr(s.Base, "base")
 	if s.Behind == 0 {
@@ -429,7 +429,7 @@ func (x *shipPlugin) behind(c *ui.Ctx, s worker.Ship) {
 	}())
 }
 
-func (x *shipPlugin) unpushed(c *ui.Ctx, s worker.Ship) {
+func (x *shipPlugin) unpushed(c *ui.Ctx, s host.Ship) {
 	th := c.Theme()
 	if len(s.Unpushed) == 0 {
 		note := "nothing committed yet"
@@ -456,7 +456,7 @@ func (x *shipPlugin) unpushed(c *ui.Ctx, s worker.Ship) {
 }
 
 // prStep is the PR: not raised, with its draft and reviewers; or raised, with its checks.
-func (x *shipPlugin) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) prStep(c *ui.Ctx, se core.SessionState, s host.Ship) {
 	th := c.Theme()
 	if s.GitHub == "" {
 		note := "no remote"
@@ -538,7 +538,7 @@ func (x *shipPlugin) prStep(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 }
 
 // prActions are the buttons plugins add to a raised PR (registry.PRAction).
-func (x *shipPlugin) prActions(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) prActions(c *ui.Ctx, se core.SessionState, s host.Ship) {
 	if s.PR == nil {
 		return
 	}
@@ -553,7 +553,7 @@ func (x *shipPlugin) prActions(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 }
 
 // checks lists a PR's checks, with what the first failing one's log says.
-func (x *shipPlugin) checks(c *ui.Ctx, s worker.Ship) {
+func (x *shipPlugin) checks(c *ui.Ctx, s host.Ship) {
 	th := c.Theme()
 	pass := 0
 	for _, ch := range s.Checks {
@@ -607,7 +607,7 @@ func dur(d time.Duration) string {
 }
 
 // reviewersLine is who reviews: each with their initials, CODEOWNERS' marked.
-func (x *shipPlugin) reviewersLine(c *ui.Ctx, s worker.Ship, reviewers, owners []string) {
+func (x *shipPlugin) reviewersLine(c *ui.Ctx, s host.Ship, reviewers, owners []string) {
 	th := c.Theme()
 	c.Row("reviewers", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 		shipCap(c, "REVIEWERS")
@@ -649,7 +649,7 @@ func reviewerAvatar(c *ui.Ctx, who string) {
 }
 
 // links is how the project's PR relates to the session's others: what it depends on, or pairs with, and the order.
-func (x *shipPlugin) links(c *ui.Ctx, se core.SessionState, s worker.Ship) {
+func (x *shipPlugin) links(c *ui.Ctx, se core.SessionState, s host.Ship) {
 	if len(se.Projects) < 2 {
 		return
 	}
@@ -691,7 +691,7 @@ func (x *shipPlugin) links(c *ui.Ctx, se core.SessionState, s worker.Ship) {
 }
 
 // prRef is a project's PR as another names it: "api #790", or "api PR (not raised)".
-func prRef(s worker.Ship) string {
+func prRef(s host.Ship) string {
 	if s.PR == nil {
 		return s.Project + " PR (not raised)"
 	}
@@ -746,9 +746,9 @@ func (x *shipPlugin) gatesList(c *ui.Ctx, se core.SessionState) {
 }
 
 // mergeOrder is the session's PRs in the order they merge: its projects' order.
-func (x *shipPlugin) mergeOrder(c *ui.Ctx, se core.SessionState, ships []worker.Ship) {
+func (x *shipPlugin) mergeOrder(c *ui.Ctx, se core.SessionState, ships []host.Ship) {
 	th := c.Theme()
-	var rows []worker.Ship
+	var rows []host.Ship
 	for _, s := range ships {
 		if !s.ReadOnly && s.GitHub != "" {
 			rows = append(rows, s)

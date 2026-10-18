@@ -108,7 +108,7 @@ func TestVerifyQuiz(t *testing.T) {
 	s, f, se, prs := verifyScene(t)
 	x := s.verify()
 
-	// The agent's forker answers side questions for the session, through its worker.
+	// The agent's forker answers side questions for the session, through the session host.
 	if fs := registry.Forkers(s.reg); len(fs) != 2 || fs[0].Name != "fake" || fs[1].Name != "agent" {
 		t.Fatalf("forkers: %+v", fs)
 	}

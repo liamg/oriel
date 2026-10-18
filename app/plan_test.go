@@ -11,9 +11,9 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/worker"
 )
 
 const planMarkdown = `# Round invoice lines half-to-even
@@ -29,11 +29,11 @@ Invoice totals must equal the sum of their rounded lines.
 - Totals sum the rounded lines; never re-round a total.
 `
 
-// planSession starts a plan session with the fake agent on the worker's repo and waits for its prompt to reach the
+// planSession starts a plan session with the fake agent on the host's repo and waits for its prompt to reach the
 // agent and the window to follow it.
-func planSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorker) {
+func planSession(t *testing.T) (*running, *agenttest.FakeSession, *localHost) {
 	t.Helper()
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	err := r.do(func() error {
@@ -234,12 +234,12 @@ func TestStartWorkDialog(t *testing.T) {
 		body   string
 		status core.ThreadStatus
 	}{{"Is half-even what finance wants?", core.ThreadDeferred}, {"Which currencies?", core.ThreadResolved}} {
-		tid, err := lw.w.Comment(ctx, worker.CommentReq{Session: "rounding", Body: th.body,
+		tid, err := lw.w.Comment(ctx, host.CommentReq{Session: "rounding", Body: th.body,
 			Anchor: &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: 10}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := lw.w.SetThread(worker.ThreadReq{Session: "rounding", Thread: tid, Status: th.status}); err != nil {
+		if err := lw.w.SetThread(host.ThreadReq{Session: "rounding", Thread: tid, Status: th.status}); err != nil {
 			t.Fatal(err)
 		}
 	}

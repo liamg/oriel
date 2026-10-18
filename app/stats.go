@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
-	"github.com/liamg/oriel/worker/stats"
 )
 
 // Stats and Usage (AI-12, mockup 43): the session stats tab, the global Stats page and the Usage page, built on what
@@ -131,7 +131,7 @@ func (x *statsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.Option(registry.OptionSpec{Name: AccountsOption, Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser,
 		KeyLabel: "account", ValueLabel: "label",
 		Help: "Names for the accounts plans belong to, by identity: \"Work\", \"Personal\". Usage and Stats show them in place of the account's email or organisation."}))
-	has := func(registry.Args) bool { return x.sh.sessions != nil && x.sh.cfg.Worker != nil }
+	has := func(registry.Args) bool { return x.sh.sessions != nil && x.sh.cfg.Host != nil }
 	for _, c := range []registry.Command{
 		{ID: "Stats", Title: "The Stats page; :Stats {repo=api 7d session group=model}", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.ex(ctx, a.String("args"))
@@ -432,7 +432,7 @@ type reportMeta struct {
 // report is q's answer as last read, asking again when it's old or missing.
 func (x *statsPlugin) report(q stats.Query) (stats.Report, reportMeta) {
 	key := queryKey(q)
-	w := x.sh.cfg.Worker
+	w := x.sh.cfg.Host
 	x.mu.Lock()
 	f, ok := x.reports[key]
 	meta := reportMeta{loading: x.inflight[key]}
@@ -480,8 +480,8 @@ func (x *statsPlugin) detail(id core.SessionID) (stats.Detail, bool) {
 	f, ok := x.details[key]
 	busy := x.inflight[key]
 	x.mu.Unlock()
-	if w := x.sh.cfg.Worker; (!ok || x.now().Sub(f.at) > refetchAfter) && !busy && w != nil {
-		req := worker.StatsSessionReq{Session: id, Split: split, Offset: x.offset()}
+	if w := x.sh.cfg.Host; (!ok || x.now().Sub(f.at) > refetchAfter) && !busy && w != nil {
+		req := host.StatsSessionReq{Session: id, Split: split, Offset: x.offset()}
 		x.fetch(key, func() (any, error) { return w.SessionStats(req) }, func(v any, err error, at time.Time) {
 			d, _ := v.(stats.Detail)
 			if err == nil || !ok {
@@ -494,7 +494,7 @@ func (x *statsPlugin) detail(id core.SessionID) (stats.Detail, bool) {
 
 // usageHistory is the readings of an account's plan over the last week, oldest first.
 func (x *statsPlugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
-	w := x.sh.cfg.Worker
+	w := x.sh.cfg.Host
 	x.mu.Lock()
 	var out []core.ProviderUsage
 	old := x.history.at.IsZero() || x.now().Sub(x.history.at) > refetchAfter
@@ -516,7 +516,7 @@ func (x *statsPlugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage
 	x.mu.Unlock()
 	if old && !busy && w != nil {
 		since := x.now().Add(-8 * 24 * time.Hour)
-		x.fetch("usage.history", func() (any, error) { return w.UsageHistory(worker.UsageHistoryReq{Since: since}), nil },
+		x.fetch("usage.history", func() (any, error) { return w.UsageHistory(host.UsageHistoryReq{Since: since}), nil },
 			func(v any, err error, at time.Time) {
 				h, _ := v.([]core.ProviderUsage)
 				x.history = fetched[[]core.ProviderUsage]{v: h, at: at, err: err}
@@ -527,7 +527,7 @@ func (x *statsPlugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage
 }
 
 func (x *statsPlugin) refreshUsage(ctx registry.Ctx) error {
-	if w := x.sh.cfg.Worker; w != nil {
+	if w := x.sh.cfg.Host; w != nil {
 		if err := w.ReadUsage(ctx); err != nil {
 			x.h.Log().Warn("usage", "err", err)
 		}

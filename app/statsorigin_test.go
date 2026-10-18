@@ -12,8 +12,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/worker/stats"
 )
 
 // outside gives the rig's Claude a transcript no Oriel session owns: a week of work in api, run in a terminal.

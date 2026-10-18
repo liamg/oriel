@@ -310,7 +310,7 @@ func TestDiffAuthorship(t *testing.T) {
 	})
 }
 
-// RV-1 in a session: a hunk marked reviewed is a session event the worker keeps (core.HunksReviewed), keyed by the
+// RV-1 in a session: a hunk marked reviewed is a session event the host keeps (core.HunksReviewed), keyed by the
 // change itself, so it's still reviewed after another hunk of the file is edited.
 func TestDiffReviewedLastsInTheSession(t *testing.T) {
 	r, _, _ := agentSession(t)

@@ -22,14 +22,14 @@ const (
 	secretsHelp      = "plugins/secrets"
 )
 
-func (h *host) Net() *http.Client {
+func (h *pluginHost) Net() *http.Client {
 	if h.sh.cfg.Net != nil {
 		return h.sh.cfg.Net
 	}
 	return http.DefaultClient
 }
 
-func (h *host) Secrets() plugin.Secrets { return h.sh.secretStore() }
+func (h *pluginHost) Secrets() plugin.Secrets { return h.sh.secretStore() }
 
 // secretStore is the config's secrets, or secrets.json in the state directory; each value it hands out is
 // redacted from the logs from then on (errors.md).

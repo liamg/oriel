@@ -11,9 +11,9 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui/layout"
-	"github.com/liamg/oriel/worker"
 )
 
 // shipRepo is a fixture checkout whose origin is https://github.com/acme/<name>.git, answered by a bare repo on disk
@@ -39,14 +39,14 @@ func shipRepo(t *testing.T, name string, files map[string]string) (checkout, ups
 
 // shipScene is 18's session: search-api and web-dashboard on GitHub (a fake), a work session on both with the fake
 // agent, and the window on it. more changes the app's config besides.
-func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localWorker, hub *ghtest.Server, se core.SessionState, ups map[string]string) {
+func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localHost, hub *ghtest.Server, se core.SessionState, ups map[string]string) {
 	t.Helper()
 	t.Setenv("GIT_AUTHOR_NAME", "You")
 	t.Setenv("GIT_AUTHOR_EMAIL", "you@example.com")
 	t.Setenv("GIT_COMMITTER_NAME", "You")
 	t.Setenv("GIT_COMMITTER_EMAIL", "you@example.com")
 	hub = ghtest.New(t)
-	lw = newWorkerWith(t, worker.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
+	lw = newHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
 	api, apiUp := shipRepo(t, "search-api", map[string]string{
 		"internal/api/usage/handler.go":    "package usage\n\nfunc Handle() {}\n",
 		"internal/api/usage/routes.go":     "package usage\n\nvar Routes = 1\n",
@@ -343,7 +343,7 @@ func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
 }
 
 // AI-10: the commit box says who drafted it and whether the code has moved on since ("drafted by fake · stale"); what
-// the user types is kept on the worker as theirs, which the agent's tool leaves, and Redraft hands it back.
+// the user types is kept on the host as theirs, which the agent's tool leaves, and Redraft hands it back.
 func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	s, lw, _, se, _ := shipScene(t)
 	x := s.ship()
@@ -364,27 +364,27 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 
 	// Typing claims the draft at once, and keeps the whole message once the typing rests.
 	s.typeInto(t, "Commit message", " (3)")
-	onWorker := func() worker.Draft {
-		ss, _ := lw.w.ShipRead(t.Context(), worker.ShipReq{Session: se.ID})
+	onHost := func() host.Draft {
+		ss, _ := lw.w.ShipRead(t.Context(), host.ShipReq{Session: se.ID})
 		for _, sh := range ss {
 			if sh.Project == "search-api" {
 				return sh.CommitDraft
 			}
 		}
-		return worker.Draft{}
+		return host.Draft{}
 	}
-	s.shipSettle(t, "the claim", func() bool { return onWorker().By == worker.DraftByYou })
-	if d := onWorker(); d.Body == "feat(api): two routes (3)" {
+	s.shipSettle(t, "the claim", func() bool { return onHost().By == host.DraftByYou })
+	if d := onHost(); d.Body == "feat(api): two routes (3)" {
 		t.Errorf("kept before the typing rested: %+v", d)
 	}
 	s.now = s.now.Add(draftSaveAfter)
 	s.frame()
-	s.shipSettle(t, "the whole message kept", func() bool { return onWorker().Body == "feat(api): two routes (3)" })
+	s.shipSettle(t, "the whole message kept", func() bool { return onHost().Body == "feat(api): two routes (3)" })
 	if out := agent.Call(t, "commit_draft", map[string]any{"project": "search-api", "message": "feat(api): three routes"}); !strings.Contains(out, "the user wrote") {
 		t.Errorf("the agent's tool overwrote the user's draft: %q", out)
 	}
 	s.run("ship.refresh", nil)
-	s.shipSettle(t, "the read", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.CommitDraft.By == worker.DraftByYou })
+	s.shipSettle(t, "the read", func() bool { sh, _ := x.ship(se.ID, "search-api"); return sh.CommitDraft.By == host.DraftByYou })
 	if v := s.access("Commit message").Value; v != "feat(api): two routes (3)" {
 		t.Errorf("the box has %q", v)
 	}

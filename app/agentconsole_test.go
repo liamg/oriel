@@ -71,7 +71,7 @@ func (r *running) waitGone(s string) {
 
 // consoleSession starts a session with the fake agent, waits for the window to reopen on it, and opens its console
 // with ⌘⇧A.
-func consoleSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorker) {
+func consoleSession(t *testing.T) (*running, *agenttest.FakeSession, *localHost) {
 	t.Helper()
 	r, a, lw := agentSession(t)
 	r.typeKeys("<D-A>")
@@ -80,13 +80,13 @@ func consoleSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorke
 }
 
 // agentSession starts a session with the fake agent and waits for the window to reopen on it.
-func agentSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorker) {
+func agentSession(t *testing.T) (*running, *agenttest.FakeSession, *localHost) {
 	t.Helper()
-	return agentSessionOn(t, newLocalWorker(t))
+	return agentSessionOn(t, newLocalHost(t))
 }
 
-// agentSessionOn is agentSession on the worker given.
-func agentSessionOn(t *testing.T, lw *localWorker) (*running, *agenttest.FakeSession, *localWorker) {
+// agentSessionOn is agentSession on the host given.
+func agentSessionOn(t *testing.T, lw *localHost) (*running, *agenttest.FakeSession, *localHost) {
 	t.Helper()
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
@@ -312,7 +312,7 @@ func TestTerminalShowsASource(t *testing.T) {
 // show it, and the launcher says signed out; the card's Log in opens the agent's terminal with /login typed, and a
 // login there clears every flag and the session goes on.
 func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	lw.fake.Account = "u1"
 	r, a, _ := agentSessionOn(t, lw)
 	a.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "fake", Account: "u1", Plan: "Fake Pro",

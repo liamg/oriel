@@ -62,14 +62,14 @@ func runApp(args []string) {
 		os.Exit(1)
 	}
 	log := cfg.Logs.Logger("host")
-	w, err := newWorker(home, log)
+	w, err := newHost(home, log)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel: no sessions:", err)
 		os.Exit(1)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	startWorker(ctx, w, log)
-	cfg.Worker = w
+	startHost(ctx, w, log)
+	cfg.Host = w
 	cfg.Logs.Router.Sessions = w.Logs()
 	be, err := gio.New()
 	if err != nil {

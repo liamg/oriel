@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/tour"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
-	"github.com/liamg/oriel/worker"
-	"github.com/liamg/oriel/worker/tour"
 )
 
 // The tour reader (ui.md 14): a tour session's steps, read a step at a time, with their quotes, notes, diagrams,
@@ -160,7 +160,7 @@ func (x *tourPlugin) reload(se core.SessionState, st *tourState, now time.Time) 
 		return
 	}
 	st.read, st.seen = now, len(se.Transcript)
-	info, ok := worker.TourOf(se.Dir)
+	info, ok := host.TourOf(se.Dir)
 	if !ok {
 		info = tour.Info{Name: se.Name, Title: se.Prompt, Kind: tour.DefaultKind}
 		for _, p := range se.Projects {
@@ -339,7 +339,7 @@ func (x *tourPlugin) exportCmd(ctx context.Context, a registry.Args) error {
 
 // export writes the tour at root as html or md, and says what it wrote.
 func (x *tourPlugin) export(ctx context.Context, root, format string) (string, int, error) {
-	info, ok := worker.TourOf(root)
+	info, ok := host.TourOf(root)
 	if !ok {
 		return "", 0, errors.New("this session isn't a tour")
 	}

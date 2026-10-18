@@ -15,10 +15,10 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui/layout"
-	"github.com/liamg/oriel/worker"
 )
 
 func (s *errScene) jobs() *jobsPlugin {
@@ -79,7 +79,7 @@ func jobRun(st core.State, job string) (core.SessionState, bool) {
 // SE-4 done when: "A job saved from the page … runs as a job session against a fake provider; its row shows status,
 // repos, summary … and duration; Open, Resume and Delete work; a blocked run shows in Requests."
 func TestJobsRunAsJobSessions(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	x := s.jobs()
 	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
@@ -176,7 +176,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 
 // SE-4: "Save as job" in the launcher hands its prompt and agent to the New job dialog.
 func TestSaveAsJobFromTheLauncher(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	x := s.jobs()
 	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
@@ -211,7 +211,7 @@ func TestSaveAsJobFromTheLauncher(t *testing.T) {
 // SE-4: ":Jobs, ⌘⇧J and the sidebar entry open it", as do the start view's link; Stats kind=job opens Stats on
 // the job runs.
 func TestJobsEntryPoints(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	x := s.jobs()
 	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
@@ -257,7 +257,7 @@ func TestJobsEntryPoints(t *testing.T) {
 // fakeSandboxes runs a sandboxed agent the way the fake provider runs any: on nothing.
 type fakeSandboxes struct{ backends []string }
 
-func (fakeSandboxes) Open(context.Context, core.SessionState, worker.Approve) (worker.Sandbox, error) {
+func (fakeSandboxes) Open(context.Context, core.SessionState, host.Approve) (host.Sandbox, error) {
 	return fakeSandbox{}, nil
 }
 
@@ -290,7 +290,7 @@ func (c *clock) set(t time.Time) {
 // jobsRig is mockup 44's machine, mbp: api, web and pricing, six jobs, and their runs with transcripts to cost them.
 type jobsRig struct {
 	t      *testing.T
-	w      *worker.Worker
+	w      *host.Host
 	claude *loggedFake
 	clock  *clock
 	repos  map[string]string
@@ -316,7 +316,7 @@ func newJobsRig(t *testing.T, sandboxes ...string) *jobsRig {
 	}
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
-	w, err := worker.New(worker.Options{Home: t.TempDir(), Providers: providers, Exec: nopExec{}, Load: steadyLoad, Now: r.clock.now,
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: nopExec{}, Load: steadyLoad, Now: r.clock.now,
 		Sandbox: fakeSandboxes{sandboxes}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
@@ -333,10 +333,10 @@ func newJobsRig(t *testing.T, sandboxes ...string) *jobsRig {
 }
 
 func (r *jobsRig) connect(*testing.T) func(*Config) {
-	return func(cfg *Config) { cfg.Worker, cfg.Store = r.w, r.w.Store() }
+	return func(cfg *Config) { cfg.Host, cfg.Store = r.w, r.w.Store() }
 }
 
-func (r *jobsRig) save(at time.Time, j worker.Job) worker.Job {
+func (r *jobsRig) save(at time.Time, j host.Job) host.Job {
 	r.t.Helper()
 	r.clock.set(at)
 	saved, err := r.w.SaveJob(j)
@@ -397,15 +397,15 @@ func (r *jobsRig) run(job string, fx fxRun) core.SessionID {
 	r.clock.set(fx.start.Add(fx.took))
 	tid := string(se.Snapshot().Threads[0].ID)
 	switch fx.status {
-	case worker.RunDone:
+	case host.RunDone:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": fx.summary, "resolve": true})
 		r.stop(id)
-	case worker.RunBlocked:
+	case host.RunBlocked:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": "**Blocked:** " + fx.summary})
 		r.stop(id)
-	case worker.RunRunning:
+	case host.RunRunning:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": fx.summary, "working": true})
-	case worker.RunStopped:
+	case host.RunStopped:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": fx.summary, "working": true})
 		r.stop(id)
 	}
@@ -429,41 +429,41 @@ func (r *jobsRig) build() {
 	sweep := "In api, web and pricing, bump every dependency that's behind on a minor or patch version. Keep major versions where they are.\n" +
 		"Run each repo's tests after bumping. If one bump breaks them, back that bump out and say why in the summary; don't fix code to fit it.\n" +
 		"Open one PR per repo titled `chore(deps): sweep`, linked to each other. Stop as blocked if a repo won't build before you start."
-	opus := worker.Job{Provider: "claude", Model: "claude-opus-4-1", Effort: "high"}
-	job := func(at time.Time, title, prompt, pin string, s worker.Schedule) string {
+	opus := host.Job{Provider: "claude", Model: "claude-opus-4-1", Effort: "high"}
+	job := func(at time.Time, title, prompt, pin string, s host.Schedule) string {
 		j := opus
 		j.Title, j.Prompt, j.Sandbox, j.Schedule = title, prompt, pin, s
 		return r.save(at, j).Name
 	}
 	changelog := job(day44(10, 12, 9, 0), "Weekly changelog draft", "Draft this week's changelog for api and web from the PRs merged since last Monday.", "",
-		worker.Schedule{})
+		host.Schedule{})
 	_ = changelog
-	pts := job(day44(10, 1, 9, 0), "Pricing test sweep", "In pricing, find the slowest tests and say why they're slow.", "sandbox", worker.Schedule{})
-	feed := job(day44(9, 20, 9, 0), "Price-feed backfill", "Backfill the price feed in pricing for the days the importer missed.", "host", worker.Schedule{})
-	flaky := job(day44(9, 12, 9, 0), "Triage flaky e2e on main", "Find which web e2e tests flaked on main this week, and why.", "sandbox", worker.Schedule{})
+	pts := job(day44(10, 1, 9, 0), "Pricing test sweep", "In pricing, find the slowest tests and say why they're slow.", "sandbox", host.Schedule{})
+	feed := job(day44(9, 20, 9, 0), "Price-feed backfill", "Backfill the price feed in pricing for the days the importer missed.", "host", host.Schedule{})
+	flaky := job(day44(9, 12, 9, 0), "Triage flaky e2e on main", "Find which web e2e tests flaked on main this week, and why.", "sandbox", host.Schedule{})
 	ci := job(day44(9, 5, 9, 0), "Morning CI triage on my open PRs", "For each of my open PRs in api and web, say what CI failed and why.", "sandbox",
-		worker.Schedule{Every: worker.EveryWeekday, At: "07:00"})
-	deps := job(day44(8, 20, 9, 0), "Sweep stale deps, keep major versions", sweep, "sandbox", worker.Schedule{})
+		host.Schedule{Every: host.EveryWeekday, At: "07:00"})
+	deps := job(day44(8, 20, 9, 0), "Sweep stale deps, keep major versions", sweep, "sandbox", host.Schedule{})
 	all := []string{"api", "web", "pricing"}
 	for _, fx := range []fxRun{
-		{day44(8, 26, 7, 0), 24 * time.Minute, all, []int{3, 2, 1}, worker.RunDone, "3 PRs · 22 bumps"},
-		{day44(9, 2, 7, 0), 21 * time.Minute, all, []int{3, 2, 2}, worker.RunDone, "3 PRs · 30 bumps"},
-		{day44(9, 9, 7, 0), 19 * time.Minute, all, []int{4, 2, 2}, worker.RunDone, "3 PRs · 27 bumps · one bump backed out (grpc 1.66)"},
-		{day44(9, 16, 9, 12), 3 * time.Minute, []string{"api"}, []int{1}, worker.RunStopped, "Listing what's behind in api."},
-		{day44(9, 23, 7, 0), 18 * time.Minute, []string{"api", "pricing"}, []int{3, 2}, worker.RunDone, "2 PRs · 18 bumps · web already current"},
-		{day44(9, 30, 7, 0), 9 * time.Minute, []string{"web"}, []int{1}, worker.RunBlocked,
+		{day44(8, 26, 7, 0), 24 * time.Minute, all, []int{3, 2, 1}, host.RunDone, "3 PRs · 22 bumps"},
+		{day44(9, 2, 7, 0), 21 * time.Minute, all, []int{3, 2, 2}, host.RunDone, "3 PRs · 30 bumps"},
+		{day44(9, 9, 7, 0), 19 * time.Minute, all, []int{4, 2, 2}, host.RunDone, "3 PRs · 27 bumps · one bump backed out (grpc 1.66)"},
+		{day44(9, 16, 9, 12), 3 * time.Minute, []string{"api"}, []int{1}, host.RunStopped, "Listing what's behind in api."},
+		{day44(9, 23, 7, 0), 18 * time.Minute, []string{"api", "pricing"}, []int{3, 2}, host.RunDone, "2 PRs · 18 bumps · web already current"},
+		{day44(9, 30, 7, 0), 9 * time.Minute, []string{"web"}, []int{1}, host.RunBlocked,
 			"react-router 6.28 breaks loaders in 3 routes; held at 6.27. Needs a call: bump and fix, or pin?"},
-		{day44(10, 7, 7, 0), 22 * time.Minute, all, []int{5, 4, 3}, worker.RunDone, "3 PRs: api#812, web#4431, pricing#212 · 31 bumps · all green"},
-		{day44(10, 14, 12, 13), 4 * time.Minute, []string{"api", "web"}, []int{5, 1}, worker.RunRunning,
+		{day44(10, 7, 7, 0), 22 * time.Minute, all, []int{5, 4, 3}, host.RunDone, "3 PRs: api#812, web#4431, pricing#212 · 31 bumps · all green"},
+		{day44(10, 14, 12, 13), 4 * time.Minute, []string{"api", "web"}, []int{5, 1}, host.RunRunning,
 			"Bumping 14 deps in api; go test running. web next, pricing not added yet."},
 	} {
 		r.run(deps, fx)
 	}
-	r.run(ci, fxRun{day44(10, 14, 7, 0), 14 * time.Minute, []string{"api", "web"}, []int{1, 1}, worker.RunDone, "No failing CI on your 4 open PRs."})
-	r.run(flaky, fxRun{day44(10, 13, 16, 40), 11 * time.Minute, []string{"web"}, []int{1}, worker.RunBlocked,
+	r.run(ci, fxRun{day44(10, 14, 7, 0), 14 * time.Minute, []string{"api", "web"}, []int{1, 1}, host.RunDone, "No failing CI on your 4 open PRs."})
+	r.run(flaky, fxRun{day44(10, 13, 16, 40), 11 * time.Minute, []string{"web"}, []int{1}, host.RunBlocked,
 		"Two flaky specs share a fixture; fix the fixture or quarantine them?"})
-	r.run(feed, fxRun{day44(10, 13, 11, 2), 16 * time.Minute, []string{"pricing"}, []int{1}, worker.RunDone, "Backfilled Oct 3–9: 7 days, 12,400 rows."})
-	r.run(pts, fxRun{day44(10, 11, 9, 0), 6 * time.Minute, []string{"pricing"}, []int{1}, worker.RunStopped, "Timing the suite."})
+	r.run(feed, fxRun{day44(10, 13, 11, 2), 16 * time.Minute, []string{"pricing"}, []int{1}, host.RunDone, "Backfilled Oct 3–9: 7 days, 12,400 rows."})
+	r.run(pts, fxRun{day44(10, 11, 9, 0), 6 * time.Minute, []string{"pricing"}, []int{1}, host.RunStopped, "Timing the suite."})
 	r.clock.set(statsNow)
 }
 
@@ -479,7 +479,7 @@ func jobsScene(t *testing.T) (*errScene, *jobsRig, *jobsPlugin) {
 	s.sh.stats.now, s.sh.stats.loc = x.now, time.UTC
 	st := waitState(t, s.store, "the runs", func(st core.State) bool { return !st.Machine.Sampled.IsZero() && len(st.Sessions) == 12 })
 	for _, se := range st.Sessions {
-		if worker.RunOf(se).Status == worker.RunRunning {
+		if host.RunOf(se).Status == host.RunRunning {
 			s.store.Apply(core.SessionFocused{ID: se.ID})
 		}
 	}
@@ -537,7 +537,7 @@ func TestJobsPageSnapshots(t *testing.T) {
 
 // SE-5 done when: "⌘⇧J over Stats leaves only Jobs; the same for each pair of pages."
 func TestPagesReplaceEachOther(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	x, st, set := s.jobs(), s.sh.stats, s.settings()
@@ -624,8 +624,8 @@ func TestARunOpensInItsSessionTab(t *testing.T) {
 // SE-5 done when: "A run skipped while one is going shows in the list".
 func TestASkippedRunShowsInTheList(t *testing.T) {
 	r := newJobsRig(t)
-	j := r.save(day44(10, 13, 6, 0), worker.Job{Title: "Morning CI triage", Prompt: "Say what CI failed on my open PRs in api.",
-		Schedule: worker.Schedule{Every: worker.EveryWeekday, At: "07:00"}})
+	j := r.save(day44(10, 13, 6, 0), host.Job{Title: "Morning CI triage", Prompt: "Say what CI failed on my open PRs in api.",
+		Schedule: host.Schedule{Every: host.EveryWeekday, At: "07:00"}})
 	r.clock.set(day44(10, 13, 7, 0).Add(30 * time.Second))
 	r.w.RunDue(context.Background())
 	r.claude.WaitStarted(t)
@@ -648,7 +648,7 @@ func TestASkippedRunShowsInTheList(t *testing.T) {
 
 // SE-5 done when: "The job form's and launcher's prompts take several lines; ⌘⏎ submits."
 func TestTheJobPromptTakesLines(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	x := s.jobs()
 	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
@@ -671,7 +671,7 @@ func TestTheJobPromptTakesLines(t *testing.T) {
 
 // SE-5: the launcher's prompt takes several lines too; ⌘⏎ starts.
 func TestTheLauncherPromptTakesLines(t *testing.T) {
-	lw := newLocalWorker(t)
+	lw := newLocalHost(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	if err := s.host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil { // no sandbox here

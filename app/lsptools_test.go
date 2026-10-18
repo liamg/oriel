@@ -8,7 +8,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// agentTool runs an agent tool as a worker would, off the loop, pumping the loop while it waits.
+// agentTool runs an agent tool as a host would, off the loop, pumping the loop while it waits.
 func (s *errScene) agentTool(t *testing.T, name string, p map[string]any) string {
 	t.Helper()
 	out, err := s.agentToolErr(t, name, p)

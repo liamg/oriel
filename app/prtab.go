@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // prTab is Raise PR (or Edit PR once it's raised) for a project, a main tab in 18's style (42's panel 6): the title,
@@ -46,7 +46,7 @@ func (x *shipPlugin) prTab(c *ui.Ctx, project string) {
 	})
 }
 
-func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s worker.Ship, f *prForm) {
+func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s host.Ship, f *prForm) {
 	th := c.Theme()
 	edit := s.PR.Open()
 	busy := x.doing(se.ID, s.Project)
@@ -89,7 +89,7 @@ func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s worker.Ship, f 
 }
 
 // prFields is the tab's form: title, body (write or preview), reviewers and cross-linked PRs.
-func (x *shipPlugin) prFields(c *ui.Ctx, se core.SessionState, s worker.Ship, f *prForm) {
+func (x *shipPlugin) prFields(c *ui.Ctx, se core.SessionState, s host.Ship, f *prForm) {
 	th := c.Theme()
 	if f.veto != "" {
 		widget.Wrap(c, "veto", f.veto, 600, monoFont(11, th.C(theme.Warn)))
@@ -138,7 +138,7 @@ func (x *shipPlugin) prFields(c *ui.Ctx, se core.SessionState, s worker.Ship, f 
 		})
 	})
 	if !s.PR.Open() {
-		x.keepTyped(c, &f.save, typed, typed && first, worker.DraftReq{Session: se.ID, Project: s.Project, Kind: "pr", Title: f.title, Body: f.body})
+		x.keepTyped(c, &f.save, typed, typed && first, host.DraftReq{Session: se.ID, Project: s.Project, Kind: "pr", Title: f.title, Body: f.body})
 	}
 	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
 	c.Row("boxes", ui.Style{W: ui.Flex(1), Gap: 14}, func(c *ui.Ctx) {
@@ -159,7 +159,7 @@ func (x *shipPlugin) prFields(c *ui.Ctx, se core.SessionState, s worker.Ship, f 
 }
 
 // reviewerRows are the PR's reviewers, each removable, and a field to add one: CODEOWNERS' first.
-func (x *shipPlugin) reviewerRows(c *ui.Ctx, s worker.Ship, f *prForm) {
+func (x *shipPlugin) reviewerRows(c *ui.Ctx, s host.Ship, f *prForm) {
 	th := c.Theme()
 	rs := f.reviewersOf(s)
 	if s.PR != nil {

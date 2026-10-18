@@ -13,12 +13,12 @@ import (
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/assistant"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // The assistant, Ori (ui.md 11, crit-reference.md "Assistant"): a floating window you ask "what needs me?", "review
@@ -101,7 +101,7 @@ func (x *assistantPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.add(registry.On(h, registry.Hook{Kind: registry.Decide, Label: "the assistant takes what follows the wake word"},
 		func(_ registry.Ctx, ev *VoiceWake) (registry.Verdict, error) {
-			if !x.bool("assistant.wake") || strings.TrimSpace(ev.Text) == "" || x.sh.cfg.Worker == nil {
+			if !x.bool("assistant.wake") || strings.TrimSpace(ev.Text) == "" || x.sh.cfg.Host == nil {
 				return registry.Verdict{}, nil
 			}
 			text := ev.Text
@@ -249,7 +249,7 @@ func (x *assistantPlugin) startAgent(ctx context.Context, first string) (assista
 	if err != nil {
 		return nil, err
 	}
-	spec := worker.UtilitySpec{Name: assistantAgent, Provider: x.str("assistant.provider"), Model: x.str("assistant.model"),
+	spec := host.UtilitySpec{Name: assistantAgent, Provider: x.str("assistant.provider"), Model: x.str("assistant.model"),
 		Pack: x.prompt(), Prompt: first}
 	if x.bool("assistant.web") {
 		spec.Allow = assistantWeb
@@ -279,7 +279,7 @@ func (x *assistantPlugin) runsOn() string {
 
 // utilityAgent is a utility agent as the conversation drives it.
 type utilityAgent struct {
-	u   *worker.Utility
+	u   *host.Utility
 	sig chan assistant.Signal
 }
 

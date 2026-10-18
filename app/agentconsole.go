@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -17,7 +18,6 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/worker"
 )
 
 // AgentConsoleView is the agent console (ui.md 15): the session in front's structured transcript, its subagents and
@@ -136,7 +136,7 @@ func (x *agentConsole) Activate(_ context.Context, h plugin.Host) error {
 				if text == "" {
 					return errors.New("nothing to send")
 				}
-				return c.Send(worker.SendReq{Session: id, Text: text, Urgent: a.Bool("urgent")})
+				return c.Send(host.SendReq{Session: id, Text: text, Urgent: a.Bool("urgent")})
 			}},
 		{ID: "agent.console.send", Title: "Agent console: send what's in the composer; {urgent} interrupts the turn",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -209,7 +209,7 @@ func (x *agentConsole) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.Keymap(registry.Keymap{Mode: ComposerKeyMode, Keys: "<D-CR>", Command: "agent.console.send", Args: registry.Args{"urgent": true},
 		Desc: "Send now, interrupting the turn"}))
 	x.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-A>", Command: "agent.console", Desc: "Agent console"}))
-	if x.sh.cfg.Worker != nil {
+	if x.sh.cfg.Host != nil {
 		// The rail offers the console where there are agents.
 		x.add(h.Contribute(registry.RailEntry{Name: "agent", Icon: "agent", Title: "Agent console", Command: "agent.console", Order: 70,
 			Active: func(string) bool { return x.shown() }, Badge: func() int {
@@ -264,7 +264,7 @@ func (x *agentConsole) shown() bool {
 	return false
 }
 
-func (x *agentConsole) client(id core.SessionID) (*worker.Worker, error) {
+func (x *agentConsole) client(id core.SessionID) (*host.Host, error) {
 	if x.sh.sessions == nil {
 		return nil, errors.New("there are no sessions in this window")
 	}
@@ -319,7 +319,7 @@ func (x *agentConsole) answer(ctx context.Context, id core.SessionID, ask core.A
 	if err != nil {
 		return err
 	}
-	r := worker.AnswerReq{Session: id, Ask: ask.ID, Decision: a.String("decision"), Note: a.String("note"), Scope: a.String("scope")}
+	r := host.AnswerReq{Session: id, Ask: ask.ID, Decision: a.String("decision"), Note: a.String("note"), Scope: a.String("scope")}
 	switch m := a["answers"].(type) {
 	case map[string]string:
 		r.Answers = m
