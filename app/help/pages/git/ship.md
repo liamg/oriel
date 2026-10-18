@@ -8,8 +8,8 @@ related: [shell/rail, agent/requests, files/explorer]
 
 Each project's way from uncommitted work to a merged pull request: **uncommitted → behind its base → unpushed → PR →
 checks**. **Ship** in the sidebar is the session's page, every project side by side; a project's **Pull request**
-panel is the same checklist, a line a step, in the dock. Every step runs on the
-session's worker with your own git and gh: the agent can draft a commit or a PR, never send one.
+panel is the same checklist, a line a step, in the dock. Every step runs with your own
+git and gh: the agent can draft a commit or a PR, never send one.
 
 ## The page {#page}
 

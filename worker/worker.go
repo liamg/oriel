@@ -1,6 +1,6 @@
-// Package worker is the per-machine session host: workspaces and worktrees, agents, PTYs (architecture.md).
-// It is the source of truth for session state: every change is a core event, applied to its own store, kept in a
-// log per session so it survives a restart, and streamed to the app.
+// Package worker is the session host: workspaces and worktrees, agents, PTYs (architecture.md). It runs in the
+// app's process. It is the source of truth for session state: every change is a core event, applied to the store
+// it shares with the app, and kept in a log per session so it survives a restart.
 package worker
 
 import (
@@ -9,12 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/liamg/oriel/worker/sysload"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -27,15 +24,13 @@ import (
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/testrun"
-	"github.com/liamg/oriel/wire"
 	"github.com/liamg/oriel/worker/stats"
+	"github.com/liamg/oriel/worker/sysload"
 )
 
 // Options configure a worker.
 type Options struct {
-	ID        core.WorkerID // LocalWorker if ""
-	Name      string        // the machine's name if ""
-	Home      string        // ~/.oriel: sessions/, workspaces/, repos.json
+	Home      string // ~/.oriel: sessions/, workspaces/, repos.json
 	Providers *agent.Providers
 	Exec      agent.Exec // how agents' processes start; required to start one
 	OrielBin  string     // the oriel binary the agents' hooks run; os.Executable() if ""
@@ -43,19 +38,14 @@ type Options struct {
 	Now       func() time.Time
 	Load      func() sysload.Reading // the machine's load; sysload.Read if nil
 	Version   string
-	Build     string // which binary this is, so an app from another can replace it; Build() if ""
 	// Sandbox makes the container, gateway and egress proxy for a session that asks for one; nil refuses.
 	Sandbox SandboxFactory
 	// Packs finds a kind's prompt pack (agent/packs.Get, with plugins' and the user's overrides).
 	Packs func(name string) (agent.Pack, bool)
 	// ReposDir is where repos.clone and new repos go; ~/src if "".
 	ReposDir string
-	// TrustPath is the trusted.toml project settings files are trusted in, the app's on this machine; Home's if "".
-	TrustPath string
 	// GitHub is the GitHub client for a checkout, with the git guard's env; the user's gh (gh.CLI) if nil.
 	GitHub func(dir string, env []string) gh.Client
-	// Handlers add methods to each app connection, as the updater's do.
-	Handlers []func(conn wire.Conn)
 	// KeyWait is how long a git operation that may need a security-key touch runs before its session asks for one;
 	// KeyWait (the constant) if 0, never if negative.
 	KeyWait time.Duration
@@ -88,7 +78,7 @@ type Worker struct {
 	mu       sync.Mutex
 	recs     map[core.SessionID]*sessionLog
 	hosts    map[core.SessionID]*host
-	apps     []wire.Conn
+	app      App
 	repos    *repoList
 	sessLogs logs.Dirs
 	open     map[core.SessionID]logs.SessionLog
@@ -102,6 +92,7 @@ type Worker struct {
 	closed      chan struct{}
 	starts      sync.WaitGroup // agents starting off their callers (host.startAside)
 	stopOnce    sync.Once
+	closeErr    error
 }
 
 type sessionLog struct {
@@ -111,12 +102,6 @@ type sessionLog struct {
 
 // New starts a worker: it reads back every session it had.
 func New(opts Options) (*Worker, error) {
-	if opts.ID == "" {
-		opts.ID = core.LocalWorker
-	}
-	if opts.Name == "" {
-		opts.Name, _ = os.Hostname()
-	}
 	if opts.Home == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -136,9 +121,6 @@ func New(opts Options) (*Worker, error) {
 	if opts.Load == nil {
 		opts.Load = sysload.Read
 	}
-	if opts.Build == "" {
-		opts.Build = Build()
-	}
 	if opts.OrielBin == "" {
 		opts.OrielBin, _ = os.Executable()
 	}
@@ -146,9 +128,6 @@ func New(opts Options) (*Worker, error) {
 		if home, err := os.UserHomeDir(); err == nil {
 			opts.ReposDir = filepath.Join(home, "src")
 		}
-	}
-	if opts.TrustPath == "" {
-		opts.TrustPath = filepath.Join(opts.Home, "trusted.toml")
 	}
 	if err := os.MkdirAll(filepath.Join(opts.Home, "sessions"), 0o700); err != nil {
 		return nil, err
@@ -170,12 +149,14 @@ func New(opts Options) (*Worker, error) {
 	w.restoreUsage()
 	w.store.Subscribe(core.Filter{}, w.record)
 	w.settle()
+	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
 	w.resumeHandedOver()
 	return w, nil
 }
 
-// HandOver stops every agent for the next worker to resume, then the worker: one from another build takes over.
+// HandOver stops every agent for the next start to resume, then closes the host: Oriel quitting.
 func (w *Worker) HandOver() {
+	defer w.recover("HandOver", nil)
 	w.mu.Lock()
 	hosts := make([]*host, 0, len(w.hosts))
 	for _, h := range w.hosts {
@@ -183,28 +164,28 @@ func (w *Worker) HandOver() {
 	}
 	w.mu.Unlock()
 	for _, h := range hosts {
-		h.stop("handed over to another worker", core.StoppedByHandOver)
+		h.stop("Oriel quit", core.StoppedByHandOver)
 	}
 	w.Close()
 }
 
-// resumeHandedOver starts again the agents the last worker handed over.
+// resumeHandedOver starts again the agents the last process handed over, or had running when it crashed.
 func (w *Worker) resumeHandedOver() {
 	for _, se := range w.store.State().Sessions {
-		if !se.Agent.Running && se.Agent.StoppedBy == core.StoppedByHandOver {
-			go func() {
+		if by := se.Agent.StoppedBy; !se.Agent.Running && (by == core.StoppedByHandOver || by == core.StoppedByCrash) {
+			w.goSafe("resume", func() {
 				if err := w.Resume(context.Background(), se.ID); err != nil {
-					w.log.Warn("resume after a hand-over", "session", se.ID, "err", err)
+					w.log.Warn("resume after the last run", "session", se.ID, "by", by, "err", err)
 				}
-			}()
+			})
 		}
 	}
 }
 
-// Store is the worker's state.
+// Store is the session host's state, which the app shares.
 func (w *Worker) Store() core.Store { return w.store }
 
-// Kinds is the session kinds this worker starts: built-ins, and any a plugin adds.
+// Kinds is the session kinds the host starts: built-ins, and any a plugin adds.
 func (w *Worker) Kinds() *Kinds { return w.kinds }
 
 func (w *Worker) sessionDir(id core.SessionID) string {
@@ -249,12 +230,13 @@ func (w *Worker) restore() error {
 	return nil
 }
 
-// settle puts back what a restart stopped: nothing runs until it's resumed, and nobody is asked anything.
+// settle puts back what the last process left running when it ended without handing over: those agents stopped
+// with it (StoppedByCrash), and nobody is asked anything.
 func (w *Worker) settle() {
 	for _, se := range w.store.State().Sessions {
 		if se.Agent.Running || se.Agent.Working || se.Agent.Starting != nil || len(se.Asks) > 0 {
 			a := se.Agent
-			a.Stopped(core.StoppedByWorker, w.opts.Now())
+			a.Stopped(core.StoppedByCrash, w.opts.Now())
 			_ = w.store.Apply(core.AgentChanged{ID: se.ID, Agent: a})
 			for _, ask := range se.Asks {
 				_ = w.store.Apply(core.AskClosed{Session: se.ID, ID: ask.ID, Decision: "gone"})
@@ -263,7 +245,7 @@ func (w *Worker) settle() {
 		}
 		for _, rv := range se.AIReviews {
 			if rv.Running {
-				rv.Running, rv.Ended, rv.Error = false, w.opts.Now().UTC(), "the worker restarted during the review"
+				rv.Running, rv.Ended, rv.Error = false, w.opts.Now().UTC(), "Oriel ended during the review"
 				_ = w.store.Apply(core.AIReviewChanged{Session: se.ID, Review: rv})
 			}
 		}
@@ -319,7 +301,7 @@ func (w *Worker) record(ev core.Event) {
 	l.rec.Record(ev)
 }
 
-// emit applies an event to the worker's state.
+// emit applies an event to the host's state.
 func (w *Worker) emit(ev core.Event) error {
 	if err := w.store.Apply(ev); err != nil {
 		w.log.Warn("event rejected", "type", core.EventName(ev), "err", err)
@@ -348,45 +330,40 @@ func (w *Worker) restatus(id core.SessionID) {
 	}
 }
 
-// Close stops every agent and closes the logs.
+// Close stops every agent, without handing them over, and closes the logs. Only the first call does anything.
 func (w *Worker) Close() error {
-	w.stopOnce.Do(func() { close(w.closed) })
-	w.mu.Lock()
-	hosts := make([]*host, 0, len(w.hosts))
-	for _, h := range w.hosts {
-		hosts = append(hosts, h)
-	}
-	w.mu.Unlock()
-	for _, h := range hosts {
-		h.stop("the worker stopped", core.StoppedByWorker)
-	}
-	w.starts.Wait()
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	var err error
-	for _, l := range w.recs {
-		err = errors.Join(err, l.f.Close())
-	}
-	for _, l := range w.open {
-		err = errors.Join(err, l.Close())
-	}
-	return err
-}
-
-// Info is what the worker says about itself.
-func (w *Worker) Info() Info {
-	host, _ := os.Hostname()
-	home, _ := os.UserHomeDir()
-	return Info{ID: w.opts.ID, Name: w.opts.Name, Host: host, OS: runtime.GOOS, Home: home, Version: w.opts.Version, Build: w.opts.Build, StateDir: w.opts.Home}
+	w.stopOnce.Do(func() {
+		defer w.recover("Close", &w.closeErr)
+		close(w.closed)
+		w.mu.Lock()
+		hosts := make([]*host, 0, len(w.hosts))
+		for _, h := range w.hosts {
+			hosts = append(hosts, h)
+		}
+		w.mu.Unlock()
+		for _, h := range hosts {
+			h.stop("the session host closed", "")
+		}
+		w.starts.Wait()
+		w.mu.Lock()
+		defer w.mu.Unlock()
+		for _, l := range w.recs {
+			w.closeErr = errors.Join(w.closeErr, l.f.Close())
+		}
+		for _, l := range w.open {
+			w.closeErr = errors.Join(w.closeErr, l.Close())
+		}
+	})
+	return w.closeErr
 }
 
 // Search finds text in sessions' threads and transcripts: archived ones keep theirs, so they stay searchable.
-func (w *Worker) Search(q SearchReq) []Hit {
+func (w *Worker) Search(q SearchReq) (out []Hit) {
+	defer w.recover("Search", nil)
 	needle := strings.ToLower(strings.TrimSpace(q.Query))
 	if needle == "" {
 		return nil
 	}
-	var out []Hit
 	for _, se := range w.store.State().Sessions {
 		if se.Archived && !q.Archived {
 			continue
@@ -448,11 +425,4 @@ func snippet(s, needle string) string {
 	}
 	from, to := max(0, i-40), min(len(s), i+len(needle)+40)
 	return strings.TrimSpace(strings.ReplaceAll(s[from:to], "\n", " "))
-}
-
-// apps are the app connections this worker serves, newest last.
-func (w *Worker) appConns() []wire.Conn {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return slices.Clone(w.apps)
 }

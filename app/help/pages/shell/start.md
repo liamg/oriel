@@ -9,8 +9,7 @@ related: [shell/rail, shell/settings, shell/omnibox]
 What the window shows with nothing open. On the left, what you can start; on the right, your sessions and the
 directories you've opened lately.
 
-- **New Session** opens the launcher, and **Resume a Session** picks a session; both are dimmed while no worker is
-  connected.
+- **New Session** opens the launcher, and **Resume a Session** picks a session.
 - **Open Directory** opens a directory as it is: no worktree, no new branch. Type a path, pick a recent or a repo
   under your home directory, or choose **Browse…** for the system's folder chooser. `oriel <dir>` does the same.
 - `j` and `k` move, `↵` runs, `⌫` forgets a recent directory; so does the `✕` that shows on one under the pointer.
@@ -27,7 +26,7 @@ colour. Opening one brings it to the front, resuming its agent if it was stopped
 ## Links
 
 Under the actions, small links to the pages every session shares, each with its headline figure: **Stats** (this
-week's cost), **Usage** (the weekly window), **Jobs** and **Workers**. A plugin adds one with
+week's cost), **Usage** (the weekly window) and **Jobs**. A plugin adds one with
 `oriel.start.add{ link = true, note = fn }`.
 
 {{keys "directory.open"}}

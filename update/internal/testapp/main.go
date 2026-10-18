@@ -1,18 +1,17 @@
-// Command testworker is a tiny worker for update's tests: built at a version, healthy or not, it boots through the
-// installer, dials the test's socket and takes updates over the wire.
+// Command testapp is a tiny Oriel for update's tests: built at a version, healthy or not, it boots through the
+// installer, re-execs onto the previous version after a rollback, and prints what it runs as JSON.
 package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 
 	"github.com/liamg/oriel/update"
-	"github.com/liamg/oriel/wire"
 )
 
 var (
@@ -20,13 +19,19 @@ var (
 	healthy = "true"
 )
 
+// Status is what the test reads back.
+type Status struct {
+	Version    string           `json:"version"`
+	Pending    string           `json:"pending,omitempty"`
+	RolledBack *update.Rollback `json:"rolledBack,omitempty"`
+}
+
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "version" {
 		fmt.Println("oriel", version)
 		return
 	}
-	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	socket := fs.String("socket", "", "the app's socket")
+	fs := flag.NewFlagSet("boot", flag.ExitOnError)
 	dir := fs.String("dir", "", "the updates directory")
 	target := fs.String("target", "", "the installed binary or bundle")
 	exe := fs.String("exe", "", "a bundle's executable, inside it")
@@ -42,23 +47,14 @@ func main() {
 		log.Fatalf("boot: %v", err)
 	}
 	if out.RolledBack != nil {
-		log.Printf("%s rolled back: %s", out.RolledBack.Version, out.RolledBack.Reason)
 		log.Fatal(update.Reexec(in.Executable()))
 	}
-	raw, err := net.Dial("unix", *socket)
-	if err != nil {
-		log.Fatal(err)
+	st := Status{Version: version}
+	if p, ok := in.Pending(); ok {
+		st.Pending = p.Version
 	}
-	conn, err := wire.Client(raw)
-	if err != nil {
-		log.Fatal(err)
+	if rb, ok := in.Last(); ok {
+		st.RolledBack = &rb
 	}
-	r := &update.Receiver{Installer: in, Keys: update.Keys(), Version: version, Restart: func() {
-		log.Fatal(update.Reexec(in.Executable()))
-	}}
-	if *exe != "" {
-		r.Kind = update.KindBundle
-	}
-	r.Serve(conn)
-	<-conn.Done()
+	_ = json.NewEncoder(os.Stdout).Encode(st)
 }

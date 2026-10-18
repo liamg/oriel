@@ -32,7 +32,7 @@ the session says why.
 
 ## Raw terminal
 
-Opens the agent's own terminal, streamed from its worker, as a terminal tab: what the CLI shows, and what you type
+Opens the agent's own terminal as a terminal tab: what the CLI shows, and what you type
 goes to it. While the agent is still starting there is no terminal yet, and the tab says so.
 
 ## Transcript

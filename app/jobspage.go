@@ -64,11 +64,6 @@ func (x *jobsPlugin) header(c *ui.Ctx, rows []jobRow) {
 			}
 		}
 		meta := []string{counted(len(rows), "job"), fmt.Sprintf("%d running", running), counted(runs, "run")}
-		if ws := x.workerNames(); ws != "" {
-			meta = append(meta, "on "+ws)
-		} else {
-			meta = append(meta, "no worker connected")
-		}
 		c.Text("m", strings.Join(meta, " · "), monoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.err != "" {
@@ -91,27 +86,6 @@ func (x *jobsPlugin) run(id string, a registry.Args) {
 	if err := x.h.Run(context.Background(), id, a); err != nil {
 		x.err = err.Error()
 	}
-}
-
-// workerNames are the connected workers' names.
-func (x *jobsPlugin) workerNames() string {
-	var out []string
-	for _, w := range x.h.State().Workers {
-		if w.Connected {
-			out = append(out, w.Title())
-		}
-	}
-	slices.Sort(out)
-	return strings.Join(out, ", ")
-}
-
-func (x *jobsPlugin) workerName(id core.WorkerID) string {
-	for _, w := range x.h.State().Workers {
-		if w.ID == id {
-			return w.Title()
-		}
-	}
-	return string(id)
 }
 
 // list is the jobs, filtered, a row each.
@@ -156,11 +130,7 @@ func (x *jobsPlugin) list(c *ui.Ctx, rows []jobRow) {
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 3}, func(c *ui.Ctx) {
-			where := "~/.oriel/jobs"
-			if ws := x.workerNames(); ws != "" {
-				where += " on " + ws
-			}
-			note(c, "a", where+" · one file per job")
+			note(c, "a", "~/.oriel/jobs · one file per job")
 			note(c, "b", "runs are workspaces; deleting a job keeps them")
 		})
 	})
@@ -206,7 +176,7 @@ func (x *jobsPlugin) jobRowView(c *ui.Ctx, r jobRow, on bool) {
 	})
 }
 
-// pinChip is where a job runs: sandbox, host, or the worker's default.
+// pinChip is where a job runs: sandbox, host, or sandbox.default.
 func pinChip(c *ui.Ctx, key any, sandbox string) {
 	th := c.Theme()
 	label, tone := cmpOr(sandbox, "default"), th.C(theme.FgFaint)
@@ -272,7 +242,7 @@ func (x *jobsPlugin) detail(c *ui.Ctx, r jobRow) {
 		c.Text("t", j.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 17, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		c.Text("slug", j.Name, monoFont(11, th.C(theme.FgGhost)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		args := registry.Args{"name": j.Name, "worker": string(j.Worker)}
+		args := registry.Args{"name": j.Name}
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Key: "e", Help: "agent/jobs#job"}) {
 			x.run("jobs.edit", args)
 		}
@@ -305,11 +275,9 @@ func (x *jobsPlugin) detail(c *ui.Ctx, r jobRow) {
 		dot("d1")
 		agent := strings.TrimSpace(strings.ToLower(providerName(j.Provider)) + " " + j.Model + " " + j.Effort)
 		if j.Provider == "" {
-			agent = "the worker's agent"
+			agent = "the first agent installed"
 		}
 		c.Text("agent", agent, monoFont(11, th.C(theme.Fg)))
-		dot("d2")
-		c.Text("worker", x.workerName(j.Worker), monoFont(11, faint))
 		if len(r.runs) == 0 {
 			return
 		}
@@ -349,11 +317,11 @@ func (x *jobsPlugin) detail(c *ui.Ctx, r jobRow) {
 // repoWord finds the registered repos' names a prompt mentions.
 var repoWord = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9._-]*`)
 
-// named are the worker's repos a prompt names, in the order it names them.
+// named are the registered repos a prompt names, in the order it names them.
 func (x *jobsPlugin) named(j worker.Job) []string {
 	_, repos := x.load()
 	known := map[string]bool{}
-	for _, r := range repos[j.Worker] {
+	for _, r := range repos {
 		known[string(r.ID)] = true
 	}
 	var out []string
@@ -452,7 +420,7 @@ func (x *jobsPlugin) schedule(c *ui.Ctx, j worker.Job) {
 		caption(c, "cap", "Schedule")
 		pick := cur
 		if widget.Segmented(c, "every", labels, &pick, widget.SegmentedOpts{Label: "Schedule", Help: "agent/jobs#schedule"}) {
-			args := registry.Args{"name": j.Name, "worker": string(j.Worker)}
+			args := registry.Args{"name": j.Name}
 			switch pick {
 			case 0:
 				args["schedule"] = "manual"
@@ -472,7 +440,7 @@ func (x *jobsPlugin) schedule(c *ui.Ctx, j worker.Job) {
 			}
 			x.do("jobs.save", args)
 		}
-		c.Text("n", "runs on "+x.workerName(j.Worker)+" when it's awake · skips while the last run is going", monoFont(10, th.C(theme.FgGhost)))
+		c.Text("n", "runs while Oriel is open · skips while the last run is going", monoFont(10, th.C(theme.FgGhost)))
 	})
 }
 
@@ -536,7 +504,8 @@ func (x *jobsPlugin) runs(c *ui.Ctx, r jobRow) {
 }
 
 // stoppedBy is who a run's stop names.
-var stoppedBy = map[string]string{core.StoppedByYou: " by you", core.StoppedByAgent: " by the agent", core.StoppedByWorker: " as the worker shut down"}
+var stoppedBy = map[string]string{core.StoppedByYou: " by you", core.StoppedByAgent: " by the agent", core.StoppedByCrash: " when Oriel ended",
+	core.StoppedByHandOver: " as Oriel quit"}
 
 // summary is what a run's row says it did.
 func (x *jobsPlugin) summary(r runRow) string {

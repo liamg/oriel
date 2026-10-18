@@ -15,22 +15,12 @@ import (
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/sandbox"
-	"github.com/liamg/oriel/wire"
 )
 
 // GitHub review mirroring (ui.md 06, RV-4): a session's PRs' review threads and conversation become threads with
 // origin github, which reach the agent like any comment. On them the agent only drafts; the user forwards a draft,
-// and the worker posts it with the user's own GitHub login. A forwarded comment carries its GitHub ID, so it never
+// and the host posts it with the user's own GitHub login. A forwarded comment carries its GitHub ID, so it never
 // comes back as a new comment (echo reconciliation); edits, deletions and resolutions on GitHub update the mirror.
-
-// What the app asks of the mirror.
-const (
-	MethodGitHubSync    = "github.sync"
-	MethodGitHubForward = "github.forward"
-	MethodGitHubDraft   = "github.draft"
-	// MethodGitHubPRs searches GitHub's pull requests with the user's gh: theirs, and those waiting on their review.
-	MethodGitHubPRs = "github.prs"
-)
 
 // PRsReq is a search of GitHub's pull requests: gh.SearchMine, gh.SearchReview.
 type PRsReq struct {
@@ -38,17 +28,12 @@ type PRsReq struct {
 }
 
 // SearchPRs finds pull requests across GitHub as the user's gh is signed in.
-func (w *Worker) SearchPRs(ctx context.Context, r PRsReq) ([]gh.Found, error) {
+func (w *Worker) SearchPRs(ctx context.Context, r PRsReq) (_ []gh.Found, err error) {
+	defer w.recover("SearchPRs", &err)
 	if strings.TrimSpace(r.Query) == "" {
 		return nil, errors.New("no search")
 	}
 	return w.github(gitx.Repo{}).SearchPRs(ctx, r.Query)
-}
-
-// SearchPRs finds pull requests across GitHub with the worker's gh.
-func (c Client) SearchPRs(ctx context.Context, query string) ([]gh.Found, error) {
-	var out []gh.Found
-	return out, c.Conn.Call(ctx, MethodGitHubPRs, PRsReq{Query: query}, &out)
 }
 
 // NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
@@ -127,7 +112,8 @@ type ghMsg struct {
 }
 
 // SyncGitHub mirrors the review of each of a session's projects' PRs into its threads.
-func (w *Worker) SyncGitHub(ctx context.Context, r MirrorReq) (Mirror, error) {
+func (w *Worker) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error) {
+	defer w.recover("SyncGitHub", &err)
 	se, err := w.session(r.Session)
 	if err != nil {
 		return Mirror{}, err
@@ -371,7 +357,8 @@ func (w *Worker) truster(ctx context.Context, c gh.Client, repo gh.Repo, trust T
 }
 
 // ForwardGitHub posts the agent's draft reply to GitHub as the user, once, and marks it sent.
-func (w *Worker) ForwardGitHub(ctx context.Context, r ForwardReq) (core.Comment, error) {
+func (w *Worker) ForwardGitHub(ctx context.Context, r ForwardReq) (_ core.Comment, err error) {
+	defer w.recover("ForwardGitHub", &err)
 	w.mirror.mu.Lock()
 	defer w.mirror.mu.Unlock()
 	se, err := w.session(r.Session)
@@ -433,12 +420,13 @@ func (w *Worker) ForwardGitHub(ctx context.Context, r ForwardReq) (core.Comment,
 }
 
 // EditDraft rewrites a draft reply before it's forwarded.
-func (w *Worker) EditDraft(r DraftEditReq) error {
+func (w *Worker) EditDraft(r DraftEditReq) (err error) {
+	defer w.recover("EditDraft", &err)
 	body := strings.TrimSpace(r.Body)
 	if body == "" {
 		return errors.New("the draft is empty")
 	}
-	_, err := w.mutateThread(r.Session, r.Thread, func(t *core.Thread) error {
+	_, err = w.mutateThread(r.Session, r.Thread, func(t *core.Thread) error {
 		for i := range t.Comments {
 			if t.Comments[i].ID == r.Comment {
 				if !t.Comments[i].Draft {
@@ -451,28 +439,4 @@ func (w *Worker) EditDraft(r DraftEditReq) error {
 		return fmt.Errorf("no comment %s in the thread", r.Comment)
 	})
 	return err
-}
-
-func (w *Worker) serveGitHub(fn func(string, wire.Handler)) {
-	fn(MethodGitHubSync, wire.Func(func(ctx context.Context, r MirrorReq) (Mirror, error) { return w.SyncGitHub(ctx, r) }))
-	fn(MethodGitHubForward, wire.Func(func(ctx context.Context, r ForwardReq) (core.Comment, error) { return w.ForwardGitHub(ctx, r) }))
-	fn(MethodGitHubDraft, wire.Func(func(_ context.Context, r DraftEditReq) (any, error) { return nil, w.EditDraft(r) }))
-	fn(MethodGitHubPRs, wire.Func(func(ctx context.Context, r PRsReq) ([]gh.Found, error) { return w.SearchPRs(ctx, r) }))
-}
-
-// SyncGitHub mirrors a session's PRs' reviews into its threads (github.sync).
-func (c Client) SyncGitHub(ctx context.Context, r MirrorReq) (Mirror, error) {
-	var out Mirror
-	return out, c.Conn.Call(ctx, MethodGitHubSync, r, &out)
-}
-
-// ForwardGitHub posts a draft reply to GitHub as the user (github.forward).
-func (c Client) ForwardGitHub(ctx context.Context, r ForwardReq) (core.Comment, error) {
-	var out core.Comment
-	return out, c.Conn.Call(ctx, MethodGitHubForward, r, &out)
-}
-
-// EditDraft rewrites a draft reply (github.draft).
-func (c Client) EditDraft(ctx context.Context, r DraftEditReq) error {
-	return c.Conn.Call(ctx, MethodGitHubDraft, r, nil)
 }

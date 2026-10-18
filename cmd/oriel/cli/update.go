@@ -109,7 +109,10 @@ func appUpdates(cfg *app.Config) {
 	if err != nil {
 		return
 	}
-	cfg.Updates = &app.Updates{Updater: u, Relaunch: func() error { return relaunch(in) }}
+	cfg.Updates = &app.Updates{Updater: u, Relaunch: func() error {
+		unlock() // the new Oriel takes the lock; this one has handed its sessions over
+		return relaunch(in)
+	}}
 }
 
 // relaunch starts the installed Oriel again, on its own, with this one's arguments.

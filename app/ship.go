@@ -92,7 +92,7 @@ type shipPlugin struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	busy   sync.WaitGroup // reads and steps
-	saving sync.WaitGroup // drafts the user typed, on their way to the worker
+	saving sync.WaitGroup // drafts the user typed, on their way to the session host
 	poller sync.WaitGroup
 
 	mu      sync.Mutex
@@ -137,10 +137,10 @@ type prForm struct {
 	veto        string
 }
 
-// draftSaveAfter is how long typing in a draft box rests before what's typed is kept on the worker.
+// draftSaveAfter is how long typing in a draft box rests before what's typed is kept in the session.
 const draftSaveAfter = time.Second
 
-// autosave keeps what's typed into a draft box on the worker as the user's draft: at once on the first key, so the
+// autosave keeps what's typed into a draft box as the user's draft: at once on the first key, so the
 // agent is neither asked for it nor overwrites it, then each time the typing rests.
 type autosave struct {
 	pending bool
@@ -244,12 +244,12 @@ func (x *shipPlugin) poll() {
 
 func (x *shipPlugin) focused() core.SessionID { return x.sh.cfg.Store.Focus() }
 
-// client is the worker a session is on.
-func (x *shipPlugin) client(id core.SessionID) (worker.Client, error) {
+// client is the session host.
+func (x *shipPlugin) client(id core.SessionID) (*worker.Worker, error) {
 	if x.sh.sessions == nil {
-		return worker.Client{}, errors.New("no worker is connected")
+		return nil, errors.New("there are no sessions in this window")
 	}
-	return x.sh.sessions.client(id)
+	return x.sh.sessions.host()
 }
 
 // session is the session in front, or {id}.
@@ -288,7 +288,7 @@ func (x *shipPlugin) ship(id core.SessionID, project string) (worker.Ship, bool)
 	return worker.Ship{}, false
 }
 
-// refresh reads a session's projects from its worker, off the loop; fresh asks GitHub (and fetches) again.
+// refresh reads a session's projects, off the loop; fresh asks GitHub (and fetches) again.
 func (x *shipPlugin) refresh(id core.SessionID, fresh bool) {
 	x.mu.Lock()
 	r := x.reports[id]
@@ -374,7 +374,7 @@ func (x *shipPlugin) wait() { x.busy.Wait() }
 
 // step runs one step on a project off the loop, showing doing while it runs; a failure is kept for the project and
 // sent as a notice. The session is read again after.
-func (x *shipPlugin) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c worker.Client) error) error {
+func (x *shipPlugin) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c *worker.Worker) error) error {
 	c, err := x.client(id)
 	if err != nil {
 		return err
@@ -699,7 +699,7 @@ func (x *shipPlugin) commands() {
 			}},
 		{ID: "ship.push", Title: "Push a project's branch to origin: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Pushing…", func(ctx context.Context, c worker.Client) error {
+				return x.step(se.ID, p, "Pushing…", func(ctx context.Context, c *worker.Worker) error {
 					return c.ShipPush(ctx, worker.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
@@ -727,7 +727,7 @@ func (x *shipPlugin) commands() {
 			}},
 		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Marking ready…", func(ctx context.Context, c worker.Client) error {
+				return x.step(se.ID, p, "Marking ready…", func(ctx context.Context, c *worker.Worker) error {
 					return c.ShipReady(ctx, worker.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
@@ -770,7 +770,7 @@ func (x *shipPlugin) commands() {
 				if err := c.ShipDraft(ctx, worker.DraftReq{Session: se.ID, Project: p, Kind: kind, Drop: true}); err != nil {
 					return err
 				}
-				return c.Send(ctx, worker.SendReq{Session: se.ID, Text: text})
+				return c.Send(worker.SendReq{Session: se.ID, Text: text})
 			})},
 		{ID: "ship.draft.save", Title: "Save a project's draft as yours, which the agent leaves: {project}, {kind} pr (the Raise PR tab's, by default) or commit (the commit box's), {title}, {body}",
 			Available: inFront,
@@ -787,7 +787,7 @@ func (x *shipPlugin) commands() {
 				default:
 					return fmt.Errorf("a draft is a commit or a pr, not %q", kind)
 				}
-				return x.step(se.ID, p, "Saving…", func(ctx context.Context, c worker.Client) error { return c.ShipDraft(ctx, req) })
+				return x.step(se.ID, p, "Saving…", func(ctx context.Context, c *worker.Worker) error { return c.ShipDraft(ctx, req) })
 			})},
 		{ID: "ship.github", Title: "Open a project's PR on GitHub: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
@@ -802,7 +802,7 @@ func (x *shipPlugin) commands() {
 	}
 }
 
-// commit fires ShipCommit, then commits on the worker. A veto is kept in the commit box.
+// commit fires ShipCommit, then commits. A veto is kept in the commit box.
 func (x *shipPlugin) commit(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 	s, _ := x.ship(se.ID, p)
 	f := x.commitForm(se.ID, p)
@@ -854,7 +854,7 @@ func (x *shipPlugin) commit(ctx registry.Ctx, se core.SessionState, p string, a 
 		return fmt.Errorf("%w: %s", errStopped, v.Reason)
 	}
 	f.veto = ""
-	return x.step(se.ID, p, "Committing…", func(cx context.Context, c worker.Client) error {
+	return x.step(se.ID, p, "Committing…", func(cx context.Context, c *worker.Worker) error {
 		x.saving.Wait()
 		hash, err := c.ShipCommit(cx, worker.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files, Trailers: trailers})
 		if err != nil {
@@ -945,7 +945,7 @@ func paths(v any) []string {
 }
 
 func (x *shipPlugin) sync(se core.SessionState, p string) error {
-	return x.step(se.ID, p, "Rebasing…", func(ctx context.Context, c worker.Client) error {
+	return x.step(se.ID, p, "Rebasing…", func(ctx context.Context, c *worker.Worker) error {
 		return c.ShipSync(ctx, worker.ShipRef{Session: se.ID, Project: p})
 	})
 }
@@ -984,7 +984,7 @@ func (x *shipPlugin) raise(ctx registry.Ctx, se core.SessionState, p string, a r
 	if s.PR.Open() {
 		label = "Updating…"
 	}
-	return x.step(se.ID, p, label, func(cx context.Context, c worker.Client) error {
+	return x.step(se.ID, p, label, func(cx context.Context, c *worker.Worker) error {
 		if len(s.Unpushed) > 0 || !s.Pushed {
 			if err := c.ShipPush(cx, worker.ShipRef{Session: se.ID, Project: p}); err != nil {
 				return err
@@ -1019,7 +1019,7 @@ func (x *shipPlugin) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 		defer x.busy.Done()
 		for _, req := range reqs {
 			done := make(chan struct{})
-			err := x.step(se.ID, req.Project, "Raising…", func(cx context.Context, c worker.Client) error {
+			err := x.step(se.ID, req.Project, "Raising…", func(cx context.Context, c *worker.Worker) error {
 				defer close(done)
 				if err := c.ShipPush(cx, worker.ShipRef{Session: se.ID, Project: req.Project}); err != nil {
 					return err

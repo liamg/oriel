@@ -27,30 +27,27 @@ your own, the ticket is the request. **✕** takes it off. Start waits while the
 The kind of session, and so the prompt pack its agent starts with: **Plan** drafts docs first and makes worktrees at
 Start work; **Work** goes straight to the worktrees; **Review PR** checks out someone else's change read-only;
 **Tour** explains how something works; **Job** runs to done on its own; **New repo** starts from nothing; **Direct**
-opens a directory as it is, with no worktree; **Scratch** has no repo. Plugins add kinds to the worker, and they show
+opens a directory as it is, with no worktree; **Scratch** has no repo. Plugins add kinds of their own, and they show
 here too. `h` and `l` move along the strip.
 
 ## Agent
 
 Claude, Codex or another provider, with its model, effort and what's left of its plan; or no agent at all. An agent
-in a **Direct** session edits your real files. A provider that isn't signed in on the worker, or whose login has
-stopped working there, says so instead of its plan.
+in a **Direct** session edits your real files. A provider that isn't signed in, or whose login has stopped working,
+says so instead of its plan.
 
 ## Repositories
 
 The repos the session works on: each gets a worktree, all on one branch. Pick a registered repo with **+ add**, or
-type a checkout's path. The branch is named from the ticket and prompt unless you name it.
+type a checkout's path. The branch is named from the ticket and prompt unless you name it. To register a repo
+first, run `repos.add` with its `path`, or `repos.clone` with a `url`.
 
-A repo the chosen worker hasn't got says **not on** that worker, with **Clone**: give it the URL (filled from your
-checkout's remote) and it's cloned onto the worker, with that machine's own git and credentials, before the session
-starts.
+## Runs in
 
-## Run on
+Whether the agent runs in a sandbox (with the gateway for git and gh; on unless the `sandbox.default` setting says
+`host`), and whether the sandbox's network is open or asks per new host.
 
-The worker the session runs on, whether its agent runs in a sandbox (with the gateway for git and gh; on unless
-the `sandbox.default` setting says `host`), and whether the sandbox's network is open or asks per new host.
-
-**Sandbox type** shows when the worker can run more than one kind of sandbox: `docker`, a container, or `seatbelt`,
+**Sandbox type** shows when this machine can run more than one kind of sandbox: `docker`, a container, or `seatbelt`,
 macOS's own sandbox. It starts at the `sandbox.backend` setting; the session keeps the one you pick.
 
 ## Recent prompts

@@ -129,13 +129,8 @@ func (s *settingsPlugin) Activate(_ context.Context, h plugin.Host) error {
 			return s.resetWhere(func(registry.OptionSpec) bool { return true }, s.scope)
 		}},
 		{ID: "settings.undo", Title: "Undo the last settings change", Run: func(registry.Ctx, registry.Args) error { return s.undoLast() }},
-		{ID: "settings.trust", Title: "Trust a project's settings file, as it is now: {path}, on {worker} when it's another machine's",
-			Run: func(ctx registry.Ctx, a registry.Args) error {
-				if w := core.WorkerID(str(a, "worker")); w != "" && w != core.LocalWorker {
-					return s.trustOn(ctx, w, str(a, "path"))
-				}
-				return s.trustFile(str(a, "path"))
-			}},
+		{ID: "settings.trust", Title: "Trust a project's settings file, as it is now: {path}",
+			Run: func(_ registry.Ctx, a registry.Args) error { return s.trustFile(str(a, "path")) }},
 	} {
 		s.add(h.Command(c))
 	}
@@ -378,18 +373,6 @@ func (s *settingsPlugin) trustFile(path string) error {
 	f.mu.Unlock()
 	s.load(f)
 	return nil
-}
-
-// trustOn trusts a settings file on another machine's worker, which reads its repos' files itself.
-func (s *settingsPlugin) trustOn(ctx context.Context, w core.WorkerID, path string) error {
-	if s.sh.sessions == nil {
-		return errors.New("no worker is connected")
-	}
-	c, err := s.sh.sessions.worker(w)
-	if err != nil {
-		return err
-	}
-	return c.TrustSettings(ctx, path)
 }
 
 // --- writing ---

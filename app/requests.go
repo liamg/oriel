@@ -497,7 +497,7 @@ func (x *requests) openAnchor(ctx context.Context) error {
 	return x.h.Run(ctx, "editor.open", registry.Args{"path": anchorPath(se, t.Anchor), "line": t.Anchor.Line})
 }
 
-// anchorPath is where an anchor's file is on the session's worker.
+// anchorPath is where an anchor's file is.
 func anchorPath(se core.SessionState, a *core.Anchor) string {
 	if filepath.IsAbs(a.File) {
 		return a.File

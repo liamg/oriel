@@ -110,7 +110,7 @@ func (x *shipPlugin) page(c *ui.Ctx) {
 				x.mergeOrder(c, se, ships)
 				x.ticket(c, se)
 				c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
-				widget.Wrap(c, "note", "Commits, pushes and PRs run on the session's worker with your git and gh. The agent can draft, never send.", 266,
+				widget.Wrap(c, "note", "Commits, pushes and PRs run with your git and gh. The agent can draft, never send.", 266,
 					uiFont(11, th.C(theme.FgFaint)))
 			})
 		})

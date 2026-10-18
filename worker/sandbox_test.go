@@ -155,7 +155,7 @@ func TestSandboxBackendPerSession(t *testing.T) {
 	s.f.Available = func() []string { return []string{"docker", "seatbelt"} }
 	chose := make(chan string, 4)
 	s.f.Backend = func(cfg sandbox.Config) (sandbox.Backend, error) { chose <- cfg.Backend; return fakeBackend{s}, nil }
-	if got := s.w.workerState().Sandboxes; !slices.Equal(got, []string{"docker", "seatbelt"}) {
+	if got := s.w.machineState().Sandboxes; !slices.Equal(got, []string{"docker", "seatbelt"}) {
 		t.Errorf("the worker offers %v", got)
 	}
 	spec := core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
@@ -445,20 +445,17 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 func TestPolicyHooksAnswerSandboxAsks(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	c, _ := s.app()
-	c.Conn.Handle(MethodAppDecide, func(_ context.Context, raw json.RawMessage) (any, error) {
-		var d Decide
-		json.Unmarshal(raw, &d)
+	s.w.SetApp(App{Decide: func(_ context.Context, d Decide) Verdict {
 		switch {
 		case d.Ask.Kind == core.AskNetwork && d.Ask.Host == "pkgs.mirror.test:443":
-			return Verdict{Decision: "allow", By: "init.lua"}, nil
+			return Verdict{Decision: "allow", By: "init.lua"}
 		case d.Ask.Kind == core.AskNetwork && d.Ask.Host == "tracker.test:443":
-			return Verdict{Decision: "deny", By: "init.lua", Note: "no telemetry"}, nil
+			return Verdict{Decision: "deny", By: "init.lua", Note: "no telemetry"}
 		case d.Ask.Kind == core.AskGateway && d.Ask.Tool == "oriel__push":
-			return Verdict{Decision: "deny", By: "init.lua", Note: "pushes go through CI"}, nil
+			return Verdict{Decision: "deny", By: "init.lua", Note: "pushes go through CI"}
 		}
-		return Verdict{}, nil
-	})
+		return Verdict{}
+	}})
 	if !b.egress.Allow(context.Background(), "pkgs.mirror.test", 443) {
 		t.Error("the hook's allow didn't let the connection through")
 	}
@@ -500,7 +497,7 @@ func TestReposListsWhatCouldJoin(t *testing.T) {
 	_, _, b := s.sandboxed()
 	other := t.TempDir()
 	exec.Command("git", "init", "-q", other).Run()
-	if _, err := s.w.repos.add(context.Background(), s.w.opts.ID, other); err != nil {
+	if _, err := s.w.repos.add(context.Background(), other); err != nil {
 		t.Fatal(err)
 	}
 	r := gatewayCall(t, b.root, "oriel__repos", map[string]any{})
@@ -513,12 +510,11 @@ func TestReposListsWhatCouldJoin(t *testing.T) {
 // a restart, and a session's sandbox runs on it, with its repos' own rules.
 func TestSandboxRunsOnTheConfigTheAppSent(t *testing.T) {
 	s := newSandboxRig(t)
-	c, _ := s.app()
 	cfg := sandbox.Config{Memory: "2g", PidsLimit: 512, ApprovalSecs: 90, Env: []string{"GOFLAGS"},
 		Egress:   []sandbox.EgressRule{{Host: "proxy.golang.org", Allow: true}},
 		Rules:    []sandbox.PolicyRule{{Tool: "oriel__push", Action: "deny"}},
 		Projects: map[string]sandbox.ProjectConfig{s.repo.Dir: {Egress: []sandbox.EgressRule{{Host: "registry.npmjs.org", Port: 443, Allow: true}}}}}
-	if err := c.SetSandboxConfig(context.Background(), cfg); err != nil {
+	if err := s.w.SetSandboxConfig(cfg); err != nil {
 		t.Fatal(err)
 	}
 	s.restart()
@@ -551,89 +547,9 @@ func TestSandboxRunsOnTheConfigTheAppSent(t *testing.T) {
 	}
 }
 
-// agents.md, "Sandbox settings": a worker elsewhere reads its repos' own .oriel/settings.toml, trusted as the app
-// trusts one (by its SHA-256, again after a change), and merges it under the values the app sent; until it's
-// trusted a notice offers to.
-func TestWorkerReadsItsReposProjectFiles(t *testing.T) {
-	s := newSandboxRig(t)
-	ctx := context.Background()
-	c, store := s.app()
-	file := filepath.Join(s.repo.Dir, ".oriel", "settings.toml")
-	s.repo.Write(map[string]string{".oriel/settings.toml": "[sandbox]\negress = [\"allow registry.npmjs.org:443\"]\nrules = [\"deny oriel__push\"]\n"})
-	cfg := sandbox.Config{Memory: "2g", ReadProjects: true, Egress: []sandbox.EgressRule{{Host: "proxy.golang.org", Allow: true}}}
-	if err := c.SetSandboxConfig(ctx, cfg); err != nil {
-		t.Fatal(err)
-	}
-	_, _, b := s.sandboxed()
-	if _, ok := b.cfg.Projects[s.repo.Dir]; ok {
-		t.Errorf("an untrusted project file applied: %+v", b.cfg.Projects)
-	}
-	var trust core.Action
-	for deadline := time.Now().Add(5 * time.Second); trust.Command == ""; time.Sleep(10 * time.Millisecond) {
-		for _, n := range store.State().Notifications {
-			if len(n.Actions) > 0 && n.Actions[0].Command == "settings.trust" {
-				trust = n.Actions[0]
-			}
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("no notice offering to trust %s: %+v", file, store.State().Notifications)
-		}
-	}
-	if trust.Args["path"] != file || trust.Args["worker"] != string(s.w.opts.ID) {
-		t.Errorf("the notice's Trust runs %+v", trust)
-	}
-	if err := c.TrustSettings(ctx, file); err != nil {
-		t.Fatal(err)
-	}
-	_, _, b = s.sandboxed()
-	p := b.cfg.Projects[s.repo.Dir]
-	if b.cfg.Memory != "2g" || len(p.Egress) != 1 || p.Egress[0].Host != "registry.npmjs.org" || len(p.Rules) != 1 {
-		t.Errorf("the sandbox runs on %+v", b.cfg)
-	}
-	var hosts []string
-	for _, layer := range b.egressSettings() {
-		for _, r := range layer {
-			hosts = append(hosts, r.Host)
-		}
-	}
-	if !slices.Contains(hosts, "proxy.golang.org") || !slices.Contains(hosts, "registry.npmjs.org") {
-		t.Errorf("the egress rules are %v", hosts)
-	}
-	if got := s.w.SandboxConfig(); got.Projects != nil {
-		t.Errorf("reading the project file changed what the app sent: %+v", got.Projects)
-	}
-
-	s.repo.Write(map[string]string{".oriel/settings.toml": "[sandbox]\nimage = \"evil\"\n"})
-	_, _, b = s.sandboxed()
-	if p, ok := b.cfg.Projects[s.repo.Dir]; ok {
-		t.Errorf("a changed file applied without trusting it again: %+v", p)
-	}
-	if err := c.TrustSettings(ctx, filepath.Join(t.TempDir(), "settings.toml")); err == nil {
-		t.Error("trusted a file that isn't a registered repo's settings")
-	}
-}
-
-// A worker the app can see the files of (this machine's) leaves the project layer to the app.
-func TestWorkerLeavesProjectsToTheApp(t *testing.T) {
-	s := newSandboxRig(t)
-	c, _ := s.app()
-	s.repo.Write(map[string]string{".oriel/settings.toml": "[sandbox]\nimage = \"x\"\n"})
-	if _, err := s.w.repos.add(context.Background(), s.w.opts.ID, s.repo.Dir); err != nil {
-		t.Fatal(err)
-	}
-	if err := c.TrustSettings(context.Background(), filepath.Join(s.repo.Dir, ".oriel", "settings.toml")); err != nil {
-		t.Fatal(err)
-	}
-	_, _, b := s.sandboxed()
-	if len(b.cfg.Projects) != 0 {
-		t.Errorf("without ReadProjects the worker read %+v", b.cfg.Projects)
-	}
-}
-
 // settings.md, "sandbox.servers": a server the app sent reaches the gateway beside the ones Claude Code has.
 func TestGatewaySeesConfiguredServers(t *testing.T) {
 	s := newSandboxRig(t)
-	c, _ := s.app()
 	cfg := sandbox.Config{Servers: map[string]json.RawMessage{}}
 	for name, line := range map[string]string{"docs": "https://docs.example.com/mcp", "linear": "npx -y linear-mcp --flag"} {
 		raw, err := sandbox.ParseServer(line)
@@ -643,7 +559,7 @@ func TestGatewaySeesConfiguredServers(t *testing.T) {
 		cfg.Servers[name] = raw
 	}
 	cfg.Hidden = []string{"linear"}
-	if err := c.SetSandboxConfig(context.Background(), cfg); err != nil {
+	if err := s.w.SetSandboxConfig(cfg); err != nil {
 		t.Fatal(err)
 	}
 	_, _, b := s.sandboxed()
@@ -655,7 +571,7 @@ func TestGatewaySeesConfiguredServers(t *testing.T) {
 		t.Errorf("the gateway's upstreams are %q", got)
 	}
 	cfg.Hidden = nil
-	c.SetSandboxConfig(context.Background(), cfg)
+	s.w.SetSandboxConfig(cfg)
 	_, _, b = s.sandboxed()
 	got = nil
 	for _, sv := range b.gateway.Up.Servers {

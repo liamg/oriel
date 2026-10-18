@@ -50,10 +50,10 @@ func (w *Worker) lostLogins() []core.Login {
 	return out
 }
 
-// loginLost flags a provider's login as gone: the worker says so, and every session here with that provider's agent,
+// loginLost flags a provider's login as gone: the machine's state says so, and every session here with that provider's agent,
 // and from, the one it went in, waits on a card until it's back.
 func (w *Worker) loginLost(from core.SessionID, ev agent.AuthExpired) {
-	l := core.Login{Provider: ev.Provider, Account: ev.Account, Worker: w.opts.ID, Detail: ev.Detail, Terminal: ev.Terminal, Shell: ev.Shell}
+	l := core.Login{Provider: ev.Provider, Account: ev.Account, Detail: ev.Detail, Terminal: ev.Terminal, Shell: ev.Shell}
 	key := ev.Provider + "\x00" + ev.Account
 	w.loginMu.Lock()
 	if w.lost == nil {
@@ -64,13 +64,13 @@ func (w *Worker) loginLost(from core.SessionID, ev agent.AuthExpired) {
 	if old == nil {
 		nl := &lostLogin{login: l, asks: map[core.SessionID]*loginAsk{}, marked: make(chan struct{})}
 		w.lost[key] = nl
-		go w.markRefused(nl)
+		w.goSafe("a lost login", func() { w.markRefused(nl) })
 	} else {
 		old.login = l
 	}
 	w.loginMu.Unlock()
 	if changed {
-		_ = w.emit(core.WorkerChanged{Worker: w.workerState()})
+		_ = w.emit(core.MachineChanged{Machine: w.machineState()})
 		w.log.Warn("agent login lost", "provider", ev.Provider, "account", ev.Account, "detail", ev.Detail)
 	}
 	for _, se := range w.store.State().Sessions {
@@ -114,6 +114,7 @@ func (h *host) askLogin(key string) {
 	login := l.login
 	w.loginMu.Unlock()
 	go func() {
+		defer w.recover("a login ask", nil)
 		defer func() {
 			w.loginMu.Lock()
 			if l := w.lost[key]; l != nil && l.asks[h.id] == mine {
@@ -215,7 +216,7 @@ func (w *Worker) loginBack(provider string) {
 	if !cleared {
 		return
 	}
-	_ = w.emit(core.WorkerChanged{Worker: w.workerState()})
+	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
 	for _, a := range asks {
 		a.cancel()
 	}

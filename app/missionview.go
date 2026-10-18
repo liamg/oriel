@@ -25,7 +25,6 @@ var (
 	tMissionCardOn   = theme.Declare("mission.card.selected", "accent")
 	tMissionBox      = theme.Declare("mission.box", "bg.base")
 	tMissionLive     = theme.Declare("mission.live", "status.working")
-	tMissionNewLine  = theme.Declare("mission.new.border", "line.strong")
 	tMissionQueueOld = theme.Declare("mission.queue.age", "status.needs_you")
 	tMissionQueueOn  = theme.DeclareOn("mission.queue.selected", "alpha(accent, 6%)", "bg.surface")
 )
@@ -131,7 +130,7 @@ func (x *missionPlugin) header(c *ui.Ctx, st core.State) {
 			c.Text("err", x.err, monoFont(10.5, th.C(theme.Error)))
 		}
 		g := x.group
-		if widget.Segmented(c, "group", []string{"BY WORKER", "BY STATUS", "BY REPO"}, &g, widget.SegmentedOpts{Label: "Group by",
+		if widget.Segmented(c, "group", []string{"BY STATUS", "BY REPO"}, &g, widget.SegmentedOpts{Label: "Group by",
 			Help: missionHelp + "#group"}) {
 			x.group, x.reveal = g, true
 		}
@@ -202,7 +201,7 @@ func (x *missionPlugin) queue(c *ui.Ctx, st core.State, waiting []*inboxRow) {
 			title, what = cmpOr(why(se, now), statusName(se.Status)), ""
 		}
 		mine = append(mine, queueItem{key: "session/" + string(se.ID), title: title,
-			sub: joinParts(cmpOr(se.Name, string(se.ID)), st.WorkerName(se.Worker), what), at: at, session: se.ID, tone: th.C(statusTokens[se.Status])})
+			sub: joinParts(cmpOr(se.Name, string(se.ID)), what), at: at, session: se.ID, tone: th.C(statusTokens[se.Status])})
 	}
 	oldest := func(a, b queueItem) int { return a.at.Compare(b.at) }
 	slices.SortStableFunc(mine, oldest)
@@ -309,17 +308,10 @@ func (x *missionPlugin) grid(c *ui.Ctx, st core.State, groups []missionGroup, wa
 					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 				})
 				n := len(g.cards)
-				if g.newCard {
-					n++
-				}
 				for r := 0; r*cols < n; r++ {
 					var row []core.SessionID
 					c.Row(r, ui.Style{W: ui.Flex(1), Gap: 14}, func(c *ui.Ctx) {
 						for i := r * cols; i < min((r+1)*cols, n); i++ {
-							if i == len(g.cards) {
-								x.newCard(c, g)
-								continue
-							}
 							se := g.cards[i]
 							row = append(row, se.ID)
 							cid := x.card(c, st, se, se.ID == sel, waiting)
@@ -545,48 +537,6 @@ func (x *missionPlugin) cardFoot(c *ui.Ctx, se core.SessionState) {
 	})
 }
 
-// newCard is a worker's last card: a session started there.
-func (x *missionPlugin) newCard(c *ui.Ctx, g missionGroup) {
-	th := c.Theme()
-	label := "New session on " + strings.ToLower(g.title)
-	box, ok := c.Rect(c.Next("new"))
-	if widget.Clickable(c, "new", ui.Style{Dir: ui.Column, W: ui.Flex(1), H: ui.Px(missionCardH), Gap: 10, Main: ui.Center, Cross: ui.Center, Label: label,
-		Help: missionHelp + "#new"}, func(c *ui.Ctx) {
-		if ok {
-			tone := th.C(tMissionNewLine)
-			c.Box("frame", ui.Style{Float: &ui.Float{}, Z: ui.LayerUnder}, func(c *ui.Ctx) {
-				c.Paint("dashes", ui.Px(box.Dx()), ui.Px(box.Dy()), func(f render.Frame, r render.Rect) { dashedRect(f, r, tone) })
-			})
-		}
-		c.Text("plus", "+", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 22}, Color: th.C(theme.FgGhost)})
-		c.Text("t", "NEW SESSION ON "+g.title, kickerFont(th.C(theme.FgFaint)))
-		c.Text("k", "plan · work · review · tour · job", monoFont(10, th.C(theme.FgGhost)))
-		if k := modeKey(x.h, MissionKeyMode, "mission.new"); k != "" {
-			kbdKey(c, k)
-		}
-	}).Clicked {
-		x.run("mission.new", registry.Args{"worker": string(g.worker)})
-	}
-}
-
-// dashedRect strokes r's edge in dashes.
-func dashedRect(f render.Frame, r render.Rect, tone render.Color) {
-	var p render.Path
-	r = render.Rect{Min: render.Point{X: r.Min.X + .5, Y: r.Min.Y + .5}, Max: render.Point{X: r.Max.X - .5, Y: r.Max.Y - .5}}
-	const dash, gap = 5, 4
-	for x := r.Min.X; x < r.Max.X; x += dash + gap {
-		e := min(x+dash, r.Max.X)
-		p.MoveTo(render.Point{X: x, Y: r.Min.Y}).LineTo(render.Point{X: e, Y: r.Min.Y})
-		p.MoveTo(render.Point{X: x, Y: r.Max.Y}).LineTo(render.Point{X: e, Y: r.Max.Y})
-	}
-	for y := r.Min.Y; y < r.Max.Y; y += dash + gap {
-		e := min(y+dash, r.Max.Y)
-		p.MoveTo(render.Point{X: r.Min.X, Y: y}).LineTo(render.Point{X: r.Min.X, Y: e})
-		p.MoveTo(render.Point{X: r.Max.X, Y: y}).LineTo(render.Point{X: r.Max.X, Y: e})
-	}
-	f.Path(&p, render.Style{Stroke: tone, Width: 1})
-}
-
 // modeKey is the key bound to command in mode, as the keyboard shows it.
 func modeKey(h interface{ Keymaps() []registry.Keymap }, mode, command string) string {
 	for _, k := range h.Keymaps() {
@@ -789,7 +739,7 @@ func missionCell(c *ui.Ctx, key any, title string, body func(c *ui.Ctx)) {
 	})
 }
 
-// strip is the indicators in the mission slot along the foot: usage per provider, each worker's CPU.
+// strip is the indicators in the mission slot along the foot: usage per provider, the machine's CPU.
 func (x *missionPlugin) strip(c *ui.Ctx) {
 	th := c.Theme()
 	inds := registry.Indicators(x.h, registry.SlotMission)

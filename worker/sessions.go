@@ -56,7 +56,8 @@ func firstLine(s string) string {
 }
 
 // Start starts a session of the spec's kind (sessions.md → Kinds).
-func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.SessionID, error) {
+func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (_ core.SessionID, err error) {
+	defer w.recover("Start", &err)
 	k, ok := w.kinds.Get(spec.Kind)
 	if !ok {
 		return "", fmt.Errorf("no kind of session %q", spec.Kind)
@@ -70,10 +71,10 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 		}
 	}
 	if spec.Sandbox.Container && w.opts.Sandbox == nil {
-		return "", errors.New("this worker can't run a sandbox")
+		return "", errors.New("this machine can't run a sandbox")
 	}
 	if b := spec.Sandbox.Backend; b != "" && spec.Sandbox.Container && !slices.Contains(w.opts.Sandbox.Backends(), b) {
-		return "", fmt.Errorf("this worker can't run a %s sandbox", b)
+		return "", fmt.Errorf("this machine can't run a %s sandbox", b)
 	}
 	variant, err := k.variant(spec.Variant)
 	if err != nil {
@@ -82,7 +83,7 @@ func (w *Worker) Start(ctx context.Context, spec core.SessionSpec) (core.Session
 	spec.Variant = variant
 	name := w.freshName(spec)
 	id := core.SessionID(name)
-	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Worker: w.opts.ID, Prompt: spec.Prompt, Ticket: spec.Ticket,
+	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Prompt: spec.Prompt, Ticket: spec.Ticket,
 		PR: spec.PR, Job: spec.Job, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
 		StartWork: k.Worktrees == WorktreesStartWork || k.Worktrees == WorktreesInit, CommitGate: k.Gate,
 		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: gate(spec),
@@ -303,7 +304,7 @@ func (w *Worker) startNewRepo(ctx context.Context, se *core.SessionState, spec c
 		_ = os.RemoveAll(dir)
 		return err
 	}
-	r, err := w.repos.add(ctx, w.opts.ID, dir)
+	r, err := w.repos.add(ctx, dir)
 	if err != nil {
 		return err
 	}
@@ -313,7 +314,8 @@ func (w *Worker) startNewRepo(ctx context.Context, se *core.SessionState, spec c
 }
 
 // Resume starts the session's agent again: by its own id when it had one, so the conversation carries on.
-func (w *Worker) Resume(ctx context.Context, id core.SessionID) error {
+func (w *Worker) Resume(ctx context.Context, id core.SessionID) (err error) {
+	defer w.recover("Resume", &err)
 	se, err := w.session(id)
 	if err != nil {
 		return err
@@ -332,7 +334,8 @@ func (w *Worker) Resume(ctx context.Context, id core.SessionID) error {
 }
 
 // Stop stops the session's agent. Its threads wait for it.
-func (w *Worker) Stop(_ context.Context, id core.SessionID) error {
+func (w *Worker) Stop(_ context.Context, id core.SessionID) (err error) {
+	defer w.recover("Stop", &err)
 	if _, err := w.session(id); err != nil {
 		return err
 	}
@@ -344,7 +347,8 @@ func (w *Worker) Stop(_ context.Context, id core.SessionID) error {
 
 // Archive stops the agent and removes the worktrees, keeping threads, transcript and test runs. Worktrees with
 // uncommitted work are refused: removing them would lose it.
-func (w *Worker) Archive(ctx context.Context, id core.SessionID) error {
+func (w *Worker) Archive(ctx context.Context, id core.SessionID) (err error) {
+	defer w.recover("Archive", &err)
 	se, err := w.session(id)
 	if err != nil {
 		return err
@@ -379,7 +383,8 @@ func (w *Worker) Archive(ctx context.Context, id core.SessionID) error {
 }
 
 // NextPR moves each project onto a fresh branch cut from the updated base, keeping the last as a past PR.
-func (w *Worker) NextPR(ctx context.Context, id core.SessionID) error {
+func (w *Worker) NextPR(ctx context.Context, id core.SessionID) (err error) {
+	defer w.recover("NextPR", &err)
 	se, err := w.session(id)
 	if err != nil {
 		return err
@@ -420,7 +425,8 @@ func (w *Worker) NextPR(ctx context.Context, id core.SessionID) error {
 // StartWork makes a plan's worktrees and tells its agent to implement the plan (05-plan), as r asks: on the branches
 // it names, clearing the plan's threads into a note unless they're kept, and with the agent restarted fresh on the
 // work pack unless its conversation is kept, on the sandbox, network, model and effort given.
-func (w *Worker) StartWork(ctx context.Context, r StartWorkReq) error {
+func (w *Worker) StartWork(ctx context.Context, r StartWorkReq) (err error) {
+	defer w.recover("StartWork", &err)
 	id := r.Session
 	se, err := w.session(id)
 	if err != nil {
@@ -444,7 +450,7 @@ func (w *Worker) StartWork(ctx context.Context, r StartWorkReq) error {
 		}
 	}
 	if r.Sandbox != nil && *r.Sandbox && w.opts.Sandbox == nil {
-		return errors.New("this worker can't run a sandbox")
+		return errors.New("this machine can't run a sandbox")
 	}
 	m, ok := LoadManifest(se.Dir)
 	if !ok {
@@ -603,7 +609,8 @@ func startWorkPrompt(projects []core.Project) string {
 }
 
 // AddRepo brings another repo into a session, on the session's branch.
-func (w *Worker) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) error {
+func (w *Worker) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) (err error) {
+	defer w.recover("AddRepo", &err)
 	se, err := w.session(id)
 	if err != nil {
 		return err
@@ -683,14 +690,16 @@ func (w *Worker) saveProjects(id core.SessionID) {
 }
 
 // Rename names a session.
-func (w *Worker) Rename(id core.SessionID, name string) error {
+func (w *Worker) Rename(id core.SessionID, name string) (err error) {
+	defer w.recover("Rename", &err)
 	return w.emit(core.SessionRenamed{ID: id, Name: strings.TrimSpace(name)})
 }
 
 // Delete throws a session away: its agent stops, its worktrees go with whatever is in them, then its workspace and
 // its log. The repos themselves are never touched. A direct session's directory isn't Oriel's to remove, so it's
 // refused.
-func (w *Worker) Delete(ctx context.Context, id core.SessionID) error {
+func (w *Worker) Delete(ctx context.Context, id core.SessionID) (err error) {
+	defer w.recover("Delete", &err)
 	se, err := w.session(id)
 	if err != nil {
 		return err

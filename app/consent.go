@@ -372,7 +372,7 @@ func consentSide(c *ui.Ctx, k plugin.Consent, width float32) {
 	where := map[string]string{
 		"app":     "In the app, as Lua or WASM: every call checked against these grants in the VM.",
 		"session": "Inside each session's sandbox container: the worktree only, network through the egress proxy, no home directory.",
-		"both":    "A UI part in the app (Lua or WASM, checked in the VM) and a worker part inside each session's sandbox container: the worktree only, network through the egress proxy.",
+		"both":    "A UI part in the app (Lua or WASM, checked in the VM) and a session part inside each session's sandbox container: the worktree only, network through the egress proxy.",
 	}[runsOf(k.Plugin)]
 	c.Text("where", "WHERE IT RUNS", kickerFont(th.C(theme.FgFaint)))
 	widget.Wrap(c, "runs", where, width, uiFont(12, th.C(theme.Fg)))

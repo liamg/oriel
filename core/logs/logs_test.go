@@ -104,7 +104,7 @@ func TestFileRotates(t *testing.T) {
 	}
 }
 
-// errors.md: a session log "lives with the session on its worker, survives a restart, and is archived with
+// errors.md: a session log "lives with the session, survives a restart, and is archived with
 // the session". A notice goes to exactly one log, by its source.
 func TestSessionLogSurvivesRestart(t *testing.T) {
 	root := t.TempDir()

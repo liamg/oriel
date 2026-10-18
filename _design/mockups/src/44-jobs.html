@@ -381,7 +381,7 @@ svg text{font-family:var(--mono)}
       </div>
       <div class="rp">
         <div class="rptop">
-          <h1>JOBS</h1><span class="m">6 jobs · 1 running · 59 runs · on mbp</span>
+          <h1>JOBS</h1><span class="m">6 jobs · 1 running · 59 runs</span>
           <span style="margin-left:auto" class="row gap12"><span class="btn">+ New job <span class="kbd" style="font-size:9.5px;padding:0 4px">n</span></span><span class="btn ghost"><span class="gi" data-i="stats"></span>Stats <span class="kbd" style="font-size:9.5px;padding:0 4px">kind=job</span></span><span class="btn ghost">Close <span class="kbd" style="font-size:9.5px;padding:0 4px">esc</span></span></span>
         </div>
         <div class="rpb">
@@ -412,12 +412,12 @@ svg text{font-family:var(--mono)}
               <div class="t2"><span style="color:var(--fg4)">never run · saved Oct 12</span><span class="tag">default</span></div>
             </div>
             <div style="flex:1"></div>
-            <div class="note" style="padding:10px 14px;border-top:1px solid var(--line)">~/.oriel/jobs on mbp · one file per job<br>runs are workspaces; deleting a job keeps them</div>
+            <div class="note" style="padding:10px 14px;border-top:1px solid var(--line)">~/.oriel/jobs · one file per job<br>runs are workspaces; deleting a job keeps them</div>
           </div>
           <div class="jd">
             <div class="jh"><h2>Sweep stale deps, keep major versions</h2><span class="slug">sweep-stale-deps</span>
               <span class="r"><span class="btn ghost">Edit <span class="kbd" style="font-size:9.5px;padding:0 4px">e</span></span><span class="btn ghost">Duplicate</span><span class="btn ghost" style="color:var(--fg3)">Delete</span><span class="btn pri">▶ Run <span class="kbd">⌘↵</span></span></span></div>
-            <div class="jm"><span class="tag sbx">sandbox</span><span class="s">pinned</span><span class="s">·</span><span><b>claude</b> opus-4.1 high</span><span class="s">·</span><b>mbp</b><span class="s">·</span><span><b>13</b> runs: 9 done, 2 blocked, 1 stopped, 1 running</span><span class="s">·</span><span><b>$24.80</b> total</span><span class="s">·</span><span>avg <b>17m</b></span></div>
+            <div class="jm"><span class="tag sbx">sandbox</span><span class="s">pinned</span><span class="s">·</span><span><b>claude</b> opus-4.1 high</span><span class="s">·</span><span><b>13</b> runs: 9 done, 2 blocked, 1 stopped, 1 running</span><span class="s">·</span><span><b>$24.80</b> total</span><span class="s">·</span><span>avg <b>17m</b></span></div>
             <div class="pbox">
               <div class="ph3"><span class="cap">Prompt</span><span class="m">JOB.md for each run</span><span class="r">names <span class="rn" style="color:#a98bff;background:rgba(169,139,255,.1)">api</span><span class="rn" style="color:#4fe0a0;background:rgba(79,224,160,.08)">web</span><span class="rn" style="color:#4cc9f0;background:rgba(76,201,240,.1)">pricing</span>· the agent adds them</span></div>
               <div class="tx">In <span class="rn" style="color:#a98bff;background:rgba(169,139,255,.1)">api</span>, <span class="rn" style="color:#4fe0a0;background:rgba(79,224,160,.08)">web</span> and <span class="rn" style="color:#4cc9f0;background:rgba(76,201,240,.1)">pricing</span>, bump every dependency that's behind on a minor or patch version. Keep major versions where they are.<br>
@@ -426,7 +426,7 @@ svg text{font-family:var(--mono)}
             </div>
             <div class="schd"><span class="cap">Schedule</span><span class="chip c">proposal</span>
               <span class="sg"><span class="on">manual</span><span>every weekday 07:00</span><span>weekly mon 07:00</span><span>custom…</span></span>
-              <span class="note2">runs on mbp when it's awake · skips while the last run is going</span></div>
+              <span class="note2">runs while Oriel is open · skips while the last run is going</span></div>
             <div class="card" style="flex:1;padding-bottom:6px;position:relative">
               <div class="hd"><span class="cap">Runs</span><span class="m">13 · newest first · each a session of kind job</span><span class="r"><span class="sg"><span class="on">all</span><span>running</span><span>done</span><span>blocked</span><span>stopped</span></span></span></div>
               <table class="tt rt" id="runs"></table>
@@ -456,13 +456,10 @@ svg text{font-family:var(--mono)}
         <div><div class="lbx"><span class="cap">Prompt</span><span class="m">markdown · name the repos it needs</span></div>
           <div class="fta">Draft this week's changelog for <span class="rn" style="color:#a98bff;background:rgba(169,139,255,.1)">api</span> and <span class="rn" style="color:#4fe0a0;background:rgba(79,224,160,.08)">web</span> from the PRs merged since last Monday. Group by feature, link each PR, and leave anything internal out.<br>Write it to <span class="mono" style="font-size:11.5px">CHANGELOG.md</span> on a branch and open a draft PR in each.<span class="cursor bar"></span></div>
           <div class="note" style="margin-top:5px">no repo or branch here: the agent adds what the prompt names, fresh each run</div></div>
-        <div class="fgrid">
+        <div>
           <div><div class="lbx"><span class="cap">Runs in</span></div>
             <div class="seg2"><span class="on"><i class="dot g" style="width:6px;height:6px"></i>Sandbox</span><span>Host</span><span>Default</span></div>
-            <div class="note" style="margin-top:5px">pinned for every run · container, gateway for git &amp; gh</div></div>
-          <div><div class="lbx"><span class="cap">Worker</span></div>
-            <div class="sel">mbp · this Mac<span class="cv">▾</span></div>
-            <div class="note" style="margin-top:5px">devbox · 32 cores, also available</div></div>
+            <div class="note" style="margin-top:5px">pinned for every run · container, gateway for git &amp; gh · Host: on this machine itself · Default: sandbox.default</div></div>
         </div>
         <div><div class="lbx"><span class="cap">Agent</span><span class="m">provider · model · effort</span></div>
           <div class="pvc">
@@ -501,7 +498,7 @@ svg text{font-family:var(--mono)}
       <div class="cen">
         <div class="hdr">
           <div class="prov"><div class="av cl" style="width:22px;height:22px">C</div>Claude <span class="dim mono" style="font-size:10.5px;font-weight:400">opus-4.1 · high</span></div>
-          <span class="chip o">job · working</span><span class="dim mono" style="font-size:10.5px">run 13 · sandbox · mbp</span>
+          <span class="chip o">job · working</span><span class="dim mono" style="font-size:10.5px">run 13 · sandbox</span>
           <span style="margin-left:auto" class="row gap8"><span class="btn ghost">Stop <span class="kbd" style="font-size:9.5px;padding:0 4px">⌃X</span></span><span class="btn ghost">Raw terminal</span></span>
         </div>
         <div class="txs">
@@ -544,7 +541,7 @@ svg text{font-family:var(--mono)}
 <div class="notes">
   <div class="nc">
     <div class="nh">What a job is</div>
-    <div><b>A saved prompt you press Run on.</b> A title, the prompt, and a few pins: sandbox or host, provider, model and effort, worker.</div>
+    <div><b>A saved prompt you press Run on.</b> A title, the prompt, and a few pins: sandbox or host, provider, model and effort.</div>
     <div><b>It names no repo or branch.</b> The prompt names the repos it needs; the agent adds them each run, against whatever they look like that day. That's what makes it reusable.</div>
     <div>Repos the prompt names are <b>picked out in their project colours</b>, so you see what a run will touch before you press Run.</div>
   </div>
@@ -556,9 +553,9 @@ svg text{font-family:var(--mono)}
   </div>
   <div class="nc">
     <div class="nh">Where it lives</div>
-    <div><b>Jobs are files</b> under <code>~/.oriel/jobs</code> on the worker, one JSON per job, named by a slug of the title.</div>
+    <div><b>Jobs are files</b> under <code>~/.oriel/jobs</code>, one JSON per job, named by a slug of the title.</div>
     <div><b>Runs are workspaces</b>, in the run root like any session's. Deleting a job keeps its runs: the work outlives the prompt.</div>
-    <div>Each run gets the prompt as <code>JOB.md</code> in a fresh, empty workspace. The page lists every worker's jobs, each marked with its worker.</div>
+    <div>Each run gets the prompt as <code>JOB.md</code> in a fresh, empty workspace.</div>
   </div>
   <div class="nc">
     <div class="nh">Keys, and new versus crit</div>

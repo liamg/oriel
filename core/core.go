@@ -1,6 +1,6 @@
 package core
 
-// SessionID names a session; it is unique across workers.
+// SessionID names a session; it is unique.
 type SessionID string
 
 // Kind is what a session is for. Plugins may define their own.
@@ -31,7 +31,7 @@ const (
 type Store interface {
 	Sessions() []Session
 	Session(id SessionID) (Session, bool)
-	Apply(ev Event) error // the only mutation path; events come from the worker
+	Apply(ev Event) error // the only mutation path; events come from the session host and the app
 	Subscribe(filter Filter, fn func(Event)) (cancel func())
 	State() State     // a copy; the store keeps changing
 	Focus() SessionID // the session in front, without copying the state

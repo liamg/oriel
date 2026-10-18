@@ -5,29 +5,24 @@ import (
 	"crypto/ed25519"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
-
-	"github.com/liamg/oriel/wire"
 )
 
-// Updater is the app's side of updating: it finds releases, installs this copy of Oriel, and pushes each release to
-// the workers. It keeps no UI; the app and `oriel update` drive it.
+// Updater is the app's side of updating: it finds releases and installs this copy of Oriel. It keeps no UI; the app
+// and `oriel update` drive it.
 type Updater struct {
 	Source  Source
 	Keys    []ed25519.PublicKey
 	Version string // the running version
-	// Installer replaces this copy; nil when it can't be (a build run from a checkout): workers are still updated.
+	// Installer replaces this copy; nil when it can't be (a build run from a checkout).
 	Installer *Installer
 	Kind      string // this copy's artifact kind: KindBundle for the macOS .app, KindBinary if ""
 	Platform  string // Platform() if ""
-	CacheDir  string // downloads, kept for this machine and each worker
+	CacheDir  string // downloads
 
-	pub  Publisher
-	once sync.Once
-	mu   sync.Mutex
-	rel  *Release
-	m    Manifest
+	mu  sync.Mutex
+	rel *Release
+	m   Manifest
 }
 
 // ErrNoRelease is asking to install before a release was found.
@@ -108,48 +103,4 @@ func (u *Updater) Ready() (string, bool) {
 		return "", false
 	}
 	return p.Version, true
-}
-
-// Serve lets conn's worker fetch the releases offered to it.
-func (u *Updater) Serve(conn wire.Conn) { u.publisher().Serve(conn) }
-
-func (u *Updater) publisher() *Publisher {
-	u.once.Do(func() { u.pub.Keys = u.Keys })
-	return &u.pub
-}
-
-// Pushed is what PushTo did.
-type Pushed struct {
-	From, To string // the worker's version before, and the one it restarts onto; "" when it was left alone
-}
-
-// PushTo updates conn's worker to the latest release when it's older: it fetches, verifies and runs the release,
-// then swaps and restarts onto it. A worker that doesn't take updates (this machine's, which follows the app's own
-// binary) is left alone.
-func (u *Updater) PushTo(ctx context.Context, conn wire.Conn) (Pushed, error) {
-	rel, m, err := u.latest()
-	if err != nil {
-		return Pushed{}, err
-	}
-	st, err := StatusOf(ctx, conn)
-	if err != nil {
-		var re *wire.RemoteError
-		if errors.As(err, &re) && strings.HasSuffix(re.Message, wire.ErrNoMethod.Error()) {
-			return Pushed{}, nil
-		}
-		return Pushed{}, err
-	}
-	if !Newer(m.Version, st.Version) {
-		return Pushed{}, nil
-	}
-	if st.RolledBack != nil && st.RolledBack.Version == m.Version {
-		return Pushed{}, fmt.Errorf("it rolled %s back: %s", m.Version, st.RolledBack.Reason)
-	}
-	if _, err := u.publisher().Push(ctx, conn, rel, u.cache().Opener(m)); err != nil {
-		return Pushed{}, err
-	}
-	if err := Swap(ctx, conn); err != nil {
-		return Pushed{}, err
-	}
-	return Pushed{From: st.Version, To: m.Version}, nil
 }

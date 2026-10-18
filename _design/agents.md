@@ -23,7 +23,7 @@ Each provider is driven the way its **subscription** allows.
 | Side questions (btw, explain, verify quiz) | `$.model.fork`: tool-less, outside the main conversation | `thread/fork` |
 | Turn and subagent lifecycle | hook events (turn start/complete, subagent spawn/end, StopFailure) | notifications |
 | Messages and tool calls | tail `~/.claude/projects/*.jsonl` (crit's `transcript` package) | notifications + rollout files |
-| Usage / quota | `$.session.usage()`, reported by the mod; at worker start, a hidden `/usage` session's | `account/rateLimits/read` + `account/rateLimits/updated` |
+| Usage / quota | `$.session.usage()`, reported by the mod; as Oriel starts, a hidden `/usage` session's | `account/rateLimits/read` + `account/rateLimits/updated` |
 | Guard rails | `tool.check`: deny edits outside the worktree, deny raw network git/gh | sandbox policy + approvals |
 
 - **Terminal view comes free** for Claude: it *is* a PTY session, so "Show terminal" attaches to it.
@@ -56,12 +56,12 @@ Each provider is driven the way its **subscription** allows.
 
 ### The `/usage` probe (`agent/claude/usage.go`)
 
-The one probe Oriel runs, once as a worker starts (and on the Usage page's Refresh): a hidden interactive `claude`
+The one probe Oriel runs, once as Oriel starts (and on the Usage page's Refresh): a hidden interactive `claude`
 that only types a slash command, which Claude Code runs itself, so nothing reaches the model and nothing is billed.
 `claude -p "/usage"` won't do: in print mode it gives only the "what's contributing" text, with no percentages.
 
 - It's a session started the way any other is (`start`: the same binary, config dir, environment and mod, the
-  folder trusted in `.claude.json` first), in Oriel's own folder, `Provider.ProbeDir` (the worker's `<Home>/probe`),
+  folder trusted in `.claude.json` first), in Oriel's own folder, `Provider.ProbeDir` (the host's `<Home>/probe`),
   with a temporary state directory.
 - Nothing is read off the screen. At the mod's `hello` (`Ready`) the probe types `/usage` and Enter into the PTY; then
   every 500 ms it answers the mod's `wait` with `usage`, and the mod reports `$.session.usage()` as an `event` of kind
@@ -77,8 +77,8 @@ that only types a slash command, which Claude Code runs itself, so nothing reach
 
 `Detect` reads the login from files only when a session starts, so a login that expires or is revoked later is
 found where it shows, by the provider, as `agent.AuthExpired{Provider, Account, Detail, Terminal, Shell}`: `Terminal`
-is what signs in again typed into the session's own terminal (`/login`; "" when it can't), `Shell` what to run on the
-agent's machine (`claude, then /login`; `codex login`). A login seen to succeed is `agent.AuthRestored`. Detection is
+is what signs in again typed into the session's own terminal (`/login`; "" when it can't), `Shell` what to run in a
+terminal (`claude, then /login`; `codex login`). A login seen to succeed is `agent.AuthRestored`. Detection is
 written against what the CLIs recorded (`agent/claude/testdata`, Claude Code 2.1.296):
 
 - **Claude's log.** An API error is a record Claude Code writes in the agent's place, `isApiErrorMessage: true`, with
@@ -97,11 +97,11 @@ written against what the CLIs recorded (`agent/claude/testdata`, Claude Code 2.1
   looked for a `codex` to record it from and `account/updated` with, and there was none to run), and
   `Start` refuses a thread with no account (`account/read` → `account: null`) with `AuthExpired` as its error.
 
-The worker (`worker/login.go`) keeps the logins gone by provider and account. Every running session there with that
-provider, and one whose agent couldn't start for it, gets a `core.AskLogin` card (`Ask.Login`, a `core.Login` with
-the worker), so its status is needs you; nothing more is sent to those agents while it's flagged. The worker's state
-lists them (`WorkerState.SignedOut`), and `ProviderInfo` says the provider is signed out, with its detail. A card's
-answer (Check again) or an `AuthRestored` makes the worker ask the provider's `Detect`; signed in, every flag clears,
+The host (`host/login.go`) keeps the logins gone by provider and account. Every running session with that
+provider, and one whose agent couldn't start for it, gets a `core.AskLogin` card (`Ask.Login`, a `core.Login`), so
+its status is needs you; nothing more is sent to those agents while it's flagged. The machine's state
+lists them (`MachineState.SignedOut`), and `ProviderInfo` says the provider is signed out, with its detail. A card's
+answer (Check again) or an `AuthRestored` makes the host ask the provider's `Detect`; signed in, every flag clears,
 a turn the login stopped is told to carry on, held comments go, and an agent that couldn't start starts.
 
 **A real login check (SE-5).** Claude Code offers no way to ask the provider whether a login works without a request
@@ -111,7 +111,7 @@ file or Keychain token, an API key, a helper), never from the network: with a ma
 `CLAUDE_CONFIG_DIR` it says `"loggedIn": true` and exits 0. `claude doctor` checks the install, not the login.
 Internally it has a zero-token `POST /api/oauth/validate`, but only for an organisation pin
 (`forceLoginOrgUUID`) and the Chrome bridge, not at start and not behind a command; Oriel doesn't call Anthropic's
-API with Claude's token itself. So the check stays files-based, and the worker remembers a refusal: as a login is
+API with Claude's token itself. So the check stays files-based, and the host remembers a refusal: as a login is
 lost it records the login the provider's files hold then (`agent.Install.Login`, for Claude a hash of the
 credentials file's token; "" when it can't tell, as with the macOS Keychain). Check again then reads signed in only
 with a different login on disk (one made outside Oriel); with the same one, or one it can't tell apart, it stays
@@ -124,26 +124,26 @@ only the files to come back, as before.
 - Prices are `agent/price`: one table (Claude's families, and OpenAI's `gpt-5`, `gpt-5-mini` and `gpt-5-nano` at their
   list prices, cached input at a tenth), shared by the transcript reader and the stats. The OpenAI rows are marked
   unverified: they haven't been checked against OpenAI's pricing page.
-- The worker's stats (`worker/stats`, crit's `internal/stats` per session) read each session's logs incrementally, from
+- The host's stats (`host/stats`, crit's `internal/stats` per session) read each session's logs incrementally, from
   the offset the last read stopped at, kept in `<Home>/stats.json`: Claude's transcript and subagents' logs (the
-  provider's `agent.Logged`), or for a provider without a log (Codex) the worker's record of its events,
+  provider's `agent.Logged`), or for a provider without a log (Codex) the host's record of its events,
   `sessions/<id>/agent/events.jsonl` (turns, tool calls and results, and each turn's usage as a request).
 - The stats read **everything they can find**, not only Oriel's sessions, classified by origin: each provider that
   implements `agent.Discovered` lists every log it keeps on the machine (Claude: `<config>/projects/*/<id>.jsonl` with
   its subagents', `$CLAUDE_CONFIG_DIR` honoured; Codex: `$CODEX_HOME/sessions/**/rollout-*.jsonl` and
   `archived_sessions`, `~/.codex` by default; a compressed `.jsonl.zst` rollout isn't read), and on each scan the
-  worker counts every one that no Oriel session owns (by path, or by the provider and its session id) as a session
+  host counts every one that no Oriel session owns (by path, or by the provider and its session id) as a session
   **outside Oriel** (`stats.Session.Origin` `outside`, ID `<provider>:<session>`), so nothing is counted twice: an
   Oriel Codex session's rollout is skipped, its events already counted. An outside session is named by its first
   prompt (`Scan.Title`), else its cwd's folder, else the file; its repo is the work tree holding the cwd its log
-  records; its account is its provider's on the worker now. A query skips a log last written before the period it
+  records; its account is its provider's now. A query skips a log last written before the period it
   compares with (`From − (To − From)`), so a long history costs a stat per file; `stats.session` reads one outside
   session whatever its age. Codex's rollout (`stats.FormatCodex`, checked against `spec/codex`): each
   `token_count` is a request, its tokens the rise in the thread's total (cached input a cache read), a repeated total
   none; `turn_context` gives the model and effort, `user_message` the turns, `function_call`/`custom_tool_call` and
   their outputs the tools (a rollout doesn't say whether a call failed). Queries filter and group by origin
   (`origin` filter, `stats.ByOrigin`), each report carries `Origins` (sessions, requests, tokens and cost of each),
-  and a session's group carries its `Origin` and `Worker`; `stats.Merge` keeps them. A message
+  and a session's group carries its `Origin`. A message
   Claude writes over several records counts once. Per request: tokens by kind and their cost, model, effort, and
   the hour and five minutes it's in; per tool call: name, error, duration, and the files it names, which decide a
   multi-repo session's split (`stats.Session.Shares`). A compaction is the main loop's context falling to under half
@@ -155,12 +155,11 @@ only the files to come back, as before.
   file from before (`cacheVersion` below 3) is dropped and the logs read again.
 - Plan usage is per **account**: `ProviderUsage.Account` is the login (Claude: `oauthAccount`'s account and
   organisation in `.claude.json`, so a company subscription and a personal one differ; Codex: `account/read`'s email),
-  `AccountName` its email or organisation, and the worker stamps `Workers` with itself. `UsageSampled` keeps one entry per
-  provider and account, uniting the workers that report it: two workers on one account are one plan, two accounts never
-  merge. A session's account is the one it ran on at the time (AI-14): `AgentState.Accounts` records the account when
-  its agent starts (the worker's latest reading for the provider) and whenever a reading from its own agent names
+  `AccountName` its email or organisation. `UsageSampled` keeps one entry per
+  provider and account: two accounts never merge. A session's account is the one it ran on at the time (AI-14): `AgentState.Accounts` records the account when
+  its agent starts (the latest reading for the provider) and whenever a reading from its own agent names
   another (a login change), and `stats.Session.Accounts` charges each hour to the account in effect by its end. A
-  session that never recorded one takes its provider's account on the worker now. This drives Stats' account group
+  session that never recorded one takes its provider's account now. This drives Stats' account group
   and filter and the Usage page's "what burned the window".
 - The plan's tier (`ProviderUsage.Tier`, its chip: "Max 20×", "Team", "Pro"; "" when not known). Claude: the
   credentials file's `claudeAiOauth.subscriptionType` (`max`, `pro`, `team`, `enterprise`) and `rateLimitTier`
@@ -169,10 +168,10 @@ only the files to come back, as before.
   subscription Claude Code doesn't name has no tier. The key names are checked against a real Claude Code 2.x config
   (`agent/claude/testdata/account`, invented values) and the values against the ones Claude Code's own bundle
   compares with. Codex: `planType` (`pro_lite` is "Pro Lite").
-- The worker reads every provider's `Usage` once as it starts (`oriel worker`), and on `usage.read` (the Usage page's
+- The host reads every provider's `Usage` once as Oriel starts, and on `ReadUsage` (the Usage page's
   Refresh); a reading no newer than the one it holds for the account is dropped, so a session's newer one stays.
-- Every plan reading (`UsageSampled`, from a provider's `UsageUpdate` or `usage.read`, which asks each provider's
-  `Usage`) is kept in `<Home>/usage.jsonl` for a week (`usage.history`). A worker starting puts back each account's
+- Every plan reading (`UsageSampled`, from a provider's `UsageUpdate` or `ReadUsage`, which asks each provider's
+  `Usage`) is kept in `<Home>/usage.jsonl` for a week (`UsageHistory`). Oriel starting puts back each account's
   latest kept reading, so Claude's windows survive a restart before they're read again. `UsageWindow.Length`
   is a window's length and `ProviderUsage.Source` says where its windows come from; both providers set them.
 
@@ -222,14 +221,14 @@ In Oriel each of those uses the subscription instead:
 - **Outside a session** (the assistant, an auto-answer with no matching session): a **resident utility
   session**. That's a hidden interactive `claude` in a PTY with the Oriel mod, a small model, read-only tools,
   and a fresh context per task. It's started on demand and kept warm.
-  Built in PL-4 as the worker's utility agents (`architecture.md`, `worker/utility.go`): started through
+  Built in PL-4 as the host's utility agents (`architecture.md`, `host/utility.go`): started through
   `Provider.Start` like any session (so Claude is its interactive CLI, `/oriel:<name> <first turn>`, never `claude -p`),
   in Oriel's own folder, policy `ask` with every permission refused but the spec's `Allow` (the assistant's
   WebSearch and WebFetch), offered only the agent tools `for` its name. "Kept warm" is per conversation: the assistant
   keeps its agent while the conversation lasts (until **New conversation** or `assistant.idle` minutes of quiet), and
   the next conversation starts a fresh one. Not yet: explain and agentbus auto-answers with no session don't use it.
 - Claude's plan windows come from the mod's `$.session.usage()`: in live sessions, and in the hidden `/usage` session
-  a worker starts once (above), which is interactive, so not `claude -p`.
+  Oriel starts once (above), which is interactive, so not `claude -p`.
 
 ![15-agent](mockups/15-agent.png)
 
@@ -270,34 +269,34 @@ type Session interface {
 - `Fork` returns the answer rather than a session: every side question so far (btw, explain, the quiz) wants one
   answer, and both providers produce it in one turn.
 - Built in RV-5: explain asks through the `agent` explainer (`app/sessions.go`), which forks the session in front's
-  agent with the request's depth (brief, detailed, why · history) over the wire's `agent.fork`; its label is "fork
+  agent with the request's depth (brief, detailed, why · history) through the host's `Fork`; its label is "fork
   of <provider> · knows this session". With no session in front it says so: the resident utility session isn't
   built yet (PL-4).
 - Built in RV-6: a request with a `Format` (the walkthrough's JSON steps) is forked with the format at the end of the
   prompt instead of the depth's "in markdown" instruction; the agent explainer's byline is "written by <provider>
   from the session's own context".
 - Built in RV-7: side questions in general are `registry.Forker`s (`registry.Fork`); the sessions plugin registers
-  the agent's, which forks the session named in the request (not just the one in front) over `agent.fork`. The verify
+  the agent's, which forks the session named in the request (not just the one in front) through `Fork`. The verify
   quiz asks through it.
 
-### The session host as built (`worker`)
+### The session host as built (`host`)
 
-- The worker owns sessions (`worker/host.go`). It starts a session's provider with the kind's prompt pack
+- The host owns sessions (`host/session.go`), in the window's own process. It starts a session's provider with the kind's prompt pack
   (`agent/packs`), Oriel's tools (`reply`, `thread`, `resolve`, `comment`, `task_add`, `task_update`, `tasks`,
   `projects`, `commit_draft`, `pr_draft`, `test_run`) and any the app's plugins offer (`registry.AgentTool`, reached
-  back over the wire: LS-3's `lsp_*`), and the user's checkouts as `Protect`.
-- Built in RV-8: a tour's agent also has `tour_kind` (its kind and that kind's guidance, `worker/tour/kinds/*.md`;
+  through the app's callbacks: LS-3's `lsp_*`), and the user's checkouts as `Protect`.
+- Built in RV-8: a tour's agent also has `tour_kind` (its kind and that kind's guidance, `host/tour/kinds/*.md`;
   with `kind`, it changes it), `tour_steps`, `tour_run` (a command run inside the tour, its output, exit code and
   time appended to a step as a run block; refused in a sandbox, where only the agent's own shell runs commands) and
   `tour_share` (the published export's link), and the app's `tour_export`. The tour's question is its `where="tour"`
   thread.
-- Comments go to the agent as a batch in crit's tagged format (`worker/prompt.go`): at once when it's idle; after
+- Comments go to the agent as a batch in crit's tagged format (`host/prompt.go`): at once when it's idle; after
   `Interrupt` when one is urgent; at the turn's end otherwise. A delivered thread is `Busy` until the agent replies.
   btw is a `Fork`, its answer a `Btw` comment. The console's messages queue (`Agent.Queue`) the same way.
 - The app's side (`app/sessions.go`, `app/requests.go`): `request.comment` fires the `CommentSend` hook (a rewrite
-  changes the comment, a veto stops it), then `Client.Comment`; a new thread from the editor carries its anchor (the
-  project, the path relative to it, the line and its text). `request.resolve` is `Client.SetThread`.
-- A lost login (`AuthExpired`) flags every session on the worker with that provider: see "A login that stops
+  changes the comment, a veto stops it), then `Host.Comment`; a new thread from the editor carries its anchor (the
+  project, the path relative to it, the line and its text). `request.resolve` is `Host.SetThread`.
+- A lost login (`AuthExpired`) flags every session with that provider: see "A login that stops
   working" above.
 - Every agent event becomes core state (`TranscriptAppended`, `AgentChanged`, `SubagentChanged`, `AskOpened`, …),
   each session's in a log that survives a restart; status is `core.DeriveStatus` (crit's rules).
@@ -309,16 +308,16 @@ type Session interface {
 ### Prompts and voice (PL-11, as built)
 
 - The Prompts page (`:Prompts`, `app/prompts.go`) edits every `agent/prompts` prompt: the coding style (crit's text),
-  each built-in pack, each part the packs include, and each tour kind's guidance (RV-8's `worker/tour/kinds`, which
-  the worker registers as `tour.<kind>` and the `tour_kind` tool reads through the user's prompts). crit's other 27 prompts don't carry over one for one: in
+  each built-in pack, each part the packs include, and each tour kind's guidance (RV-8's `host/tour/kinds`, which
+  the host registers as `tour.<kind>` and the `tour_kind` tool reads through the user's prompts). crit's other 27 prompts don't carry over one for one: in
   Oriel their text lives in the packs (drafts, comments, tours) or in code that hasn't been made editable yet
   (Start work's request, explain's depths, the walkthrough format); `prompts.Register` is how those join the page.
 - Only the user's changes are kept, a file each: `prompts/style.code.md`, `agents/<kind>.md` (the same file a
-  hand-written pack override is) and `agents/parts/<part>.md`. The app sends them to each worker on connect and on
-  each change (and when one of those files is saved in the editor); the worker keeps them in `prompts.json` and
+  hand-written pack override is) and `agents/parts/<part>.md`. The app gives them to the host at start and on
+  each change (and when one of those files is saved in the editor); the host keeps them in `prompts.json` and
   builds a built-in pack the user changed (or whose parts they changed) from them. Its own `packs.LoadDir` of
   `agents/` now only adds kinds: a built-in kind's override always comes from the app, so a reset there takes.
-- The coding style goes into the `CLAUDE.md` (and `AGENTS.md`, for Codex) the worker writes at the root of each
+- The coding style goes into the `CLAUDE.md` (and `AGENTS.md`, for Codex) the host writes at the root of each
   workspace it made, never in a direct session's own directory, with the list of projects and their own
   instructions: when the agent starts, when the projects change, and when the prompts change. Both are in the
   workspace's `.git/info/exclude`, and plan mode doesn't list them as docs.
@@ -332,7 +331,7 @@ type Session interface {
 
 - Two halves. The prompt packs that offer `commit_draft` (work, plan, job, new repo; `parts/drafts.md`) tell the agent
   to fill each project's drafts before it ends a turn with nothing left to do, as crit's skill does. Behind that, the
-  host (`worker/drafts.go`) checks when a turn ends with nothing queued: for each writable project, a commit message is
+  host (`host/drafts.go`) checks when a turn ends with nothing queued: for each writable project, a commit message is
   due for uncommitted work, a PR draft for a branch with commits of its own or uncommitted work and no open PR (as the
   last GitHub reading has it; no network call). One is due when it's missing or its fingerprint isn't the code's now;
   never when the user wrote it.
@@ -343,10 +342,10 @@ type Session interface {
 - The ask is a `<notice>` in a batch led by `NoticeLead`, not a thread. The host remembers the code it last asked
   about per project and kind, so it asks at most once per change, and again only after the code moves; a turn that
   ends without drafting isn't asked twice.
-- A draft by "you" (`worker.DraftByYou`) is the user's: `commit_draft`/`pr_draft` answer "Not saved: the user wrote …"
+- A draft by "you" (`host.DraftByYou`) is the user's: `commit_draft`/`pr_draft` answer "Not saved: the user wrote …"
   and leave it. `ship.draft` with `Drop` clears it (Redraft).
 - Decided in AI-10: a session whose pack doesn't offer `commit_draft` (direct, review, tour, scratch) is never asked.
-- Not yet: an option to turn the nudge off, and remembering what was asked across a worker restart (one repeat ask
+- Not yet: an option to turn the nudge off, and remembering what was asked across a restart of Oriel (one repeat ask
   after a restart).
 
 ### Claude and Codex, side by side
@@ -521,7 +520,7 @@ sequenceDiagram
   or off (`bypass`) inside a sandbox, leaving layer 3 as the only gate. The default is a light gate inside a sandbox.
 - The sandbox, gateway and egress code is ported from crit unchanged (`architecture.md`).
 
-**Built in AI-7/AI-11** (`worker/sandbox.go`, `worker/sandbox_host.go`; `oriel worker` passes the factory):
+**Built in AI-7/AI-11** (`host/sandbox.go`, `host/sandbox_host.go`; the app passes the factory):
 
 - A sandboxed session's `Open` records the workspace (`sandbox.Create`, its manifest), serves the session socket
   (gateway, egress decide/log/dial, ssh-agent) and writes the gateway's MCP config into the sandbox's Claude dir.
@@ -529,8 +528,8 @@ sequenceDiagram
   goes in, `ORIEL_BIN` becomes the sandbox's `oriel`.
 - **Backends.** What fences the agent in is a `sandbox.Backend`, chosen by `sandbox.backend` (`Config.Backend`,
   default `docker`) from those registered with `sandbox.Register`, or by the session's own
-  (`SandboxPolicy.Backend`, kept as `AgentState.Backend`), one of those its worker can run (`Backend.Available`,
-  reported as `WorkerState.Sandboxes`, the launcher's Sandbox type); everything else (session socket, gateway,
+  (`SandboxPolicy.Backend`, kept as `AgentState.Backend`), one of those this machine can run (`Backend.Available`,
+  reported as `MachineState.Sandboxes`, the launcher's Sandbox type); everything else (session socket, gateway,
   egress decisions, approvals) is the same for all of them. A backend launches (`Launch` → a `Command`: argv, env,
   dir; a slow step says what it's doing with `sandbox.Report(ctx, …)`, sessions.md "Starting one"), stops, reports `Health` and `Sweep`s, and says where the agent finds the run dir (`AgentRunDir`) and
   whether the session must also serve on a port (`ServesPort`). What every backend gives the agent is shared in
@@ -543,23 +542,23 @@ sequenceDiagram
     reads the system but not `/Users`, `/Volumes` or the home directory, beyond toolchain directories (managers'
     installs, `PATH` entries under home) and its binds; writes only its binds (later binds override earlier
     ones, so git's own files stay read-only), its sandbox home, temp dir and the Go cache. A bind at another path
-    is a symlink to the host's. The network is loopback only: the egress proxy runs in the worker on a loopback
+    is a symlink to the host's. The network is loopback only: the egress proxy runs in Oriel on a loopback
     port and the session's sockets are reached directly. It runs the host's `claude` and toolchains; image,
     Claude version, memory and process settings don't apply (`Health` warns). Weaker than a container where
     the OS can't separate: it shares the host's loopback, and Seatbelt can't tell the agent's own servers from
     the host's, so `sandbox.loopback` (`Config.Loopback`) picks what it may connect to: any port (`all`, the
     default), the ephemeral range where a server on port 0 lands (`ephemeral`), or nothing beyond its proxy
     (`none`). There are no resource caps.
-- Both layer-3 cards go through the host's `approve`, so layer 2 (rules, `MethodAppDecide` hooks) answers them
+- Both layer-3 cards go through the host's `approve`, so layer 2 (rules, the app's `Decide` hooks) answers them
   first. Network: `AskNetwork`, rule `net(host:port)`; "always" also records the host machine-wide (egress
   always), and a scope (`*.golang.org`) records that pattern instead. Gateway: `AskGateway`, rule = the tool;
   "always" also grants it for the workspace. `request_host` and `ask_user_to_run` ask the same way: allow on
   `ask_user_to_run` runs the command on the host; a refused `request_host` holds for the session.
 - Host tools: git through `sandbox.Git` (the guard), push/pull only from the session's branch, `gh` through
-  `gateway.RunGH`, PRs from the `pr_draft` file, `repos` from the worker's registered repos, `add_project` via
+  `gateway.RunGH`, PRs from the `pr_draft` file, `repos` from the host's registered repos, `add_project` via
   `AddRepo` and a restart once the turn ends.
 - Tested without Docker: held connections and calls, allow/deny/always/scope, the hooks, push to a bare remote.
-  Needs Docker to verify (`go test -tags docker -run TestSandboxRunsInDocker ./worker/`): the container, the
+  Needs Docker to verify (`go test -tags docker -run TestSandboxRunsInDocker ./host/`): the container, the
   egress sidecar, and the mounts.
 - A refusal says who refused and what they said: `Approve` returns an `Approval` (`By`: "the user", "rule …", a
   hook's source; `Note`). The gateway answers "oriel: init.lua denied oriel__push. They said: …"; the egress proxy's
@@ -569,27 +568,20 @@ sequenceDiagram
   points it at `hook.sock` in the backend's `AgentRunDir` (`/run/oriel` in a container), which the box serves in
   the run dir (mounted on Linux) and the agent socket serves at `agentsock.HookPath` for the sidecar's relay
   elsewhere; both reach the provider's socket on the host.
-- **Sandbox settings** are the `sandbox.*` options (settings.md, "Sandbox settings"). The worker can't read the
-  app's options (init.lua, trust and the project layer live in the app), so the app resolves them into a
-  `sandbox.Config` and sends it with `sandbox.config` (`Client.SetSandboxConfig`) when a worker connects and whenever
-  one changes: your values at the user and Lua layers, and for each repo of a session on this machine (and the
-  window's project) its trusted project file's `egress`, `rules` and `image` as `Config.Projects[repo]`. The worker
-  keeps the last one in `~/.oriel/sandbox.json`, so sessions that start while no window is open run on it too, and
+- **Sandbox settings** are the `sandbox.*` options (settings.md, "Sandbox settings"). The host doesn't read
+  options or project settings files (init.lua, trust and the project layer live in the app), so the app resolves them
+  into a `sandbox.Config` and gives it to the host (`Host.SetSandboxConfig`) at start and whenever
+  one changes: your values at the user and Lua layers, and for each repo of a session (and the
+  window's project) its trusted project file's `egress`, `rules` and `image` as `Config.Projects[repo]`. An untrusted
+  file is left out, and the session gets a notice offering Trust (`settings.trust {path}`). The host
+  keeps the last config in `~/.oriel/sandbox.json`, and
   `Sandboxes` with no `Config` func reads it at each `Open`; the session's open network still turns the proxy off.
-- A worker on another machine has its repos at paths there, which the app can't read, so the app sends it your values
-  with `ReadProjects` set and no `Projects`. At each `Open` that worker reads the trusted `.oriel/settings.toml` of
-  every repo of the session that the app sent nothing for (`Worker.sandboxConfigFor`), with the app's trust rule
-  shared through `registry/settingsfile` (the file's SHA-256 in `Options.TrustPath`, that machine's
-  `~/.config/oriel/trusted.toml`), and adds its `egress`, `rules` and `image` as `Projects[repo]`. An untrusted file
-  is left out and the session gets a notice offering Trust: `settings.trust {path, worker}` in the app, which calls
-  the worker's `settings.trust` (`Client.TrustSettings`; only a registered repo's file). What the app sent is kept as
-  it was; the merge is per sandbox.
 - `sandbox.servers` reach the gateway as `Config.Servers`: `Discover` lists them after Claude Code's own (user scope,
   then plugins), and `sandbox.hidden_servers` hides any of them.
 - Not yet: `Dismissed` and approved `Dockerfile` hashes aren't settings and aren't sent.
 - **The app's agent tools ask through the same layers** (DB-3): an act tool called by a session's agent (the
-  debugger's, when its access is `ask`) is put to the session's worker with `Client.Ask` (`ask.put`,
-  `worker.AskReq{Session, Ask}`), which runs `approve` as for layer 3: the session's rules, then the `Permission`
+  debugger's, when its access is `ask`) is put to the host with `Host.Ask`
+  (`host.AskReq{Session, Ask}`), which runs `approve` as for layer 3: the session's rules, then the `Permission`
   hooks, then a `core.AskPermission` card for `mcp__oriel__<tool>`; "Always" adds the tool's name as a rule.
 
 ## Comments to agent, without `crit wait`
@@ -637,14 +629,14 @@ All on by default, all configurable, none a nag:
     when its change is marked reviewed (`core.HunksReviewed`) or it stayed wholly on screen in the diff for 1 s plus
     150 ms per unread agent line showing with it (at most 8 s); **skimmed** when it stayed 400 ms or more but less;
     a line flicked past in under 400 ms counts for nothing. Lines seen are the session event `core.LinesSeen`
-    (`Review.Read`, `Review.Skimmed`, keyed `core.LineKey(change, n)`), sent through the worker's `review.seen`;
+    (`Review.Read`, `Review.Skimmed`, keyed `core.LineKey(change, n)`), recorded with `Host.SetSeen`;
     outside a session they last as long as the window. The gate is `ledger.gate` (`auto` by default: the session's
-    `CommitGate`, set by the worker from its kind's `KindSpec.Gate`, else `core.DefaultGate`; off outside a session),
+    `CommitGate`, set by the host from its kind's `KindSpec.Gate`, else `core.DefaultGate`; off outside a session),
     settable per repo in `.oriel/settings.toml` and per session. It counts the not-yet-committed agent lines of the
     files the commit takes (staged, or everything with `all`), skimmed ones as not read. Hard: `git.commit` opens
     the COMMIT GATED dialog (Review `r`, Commit anyway `a`, Cancel `esc`); anyway commits with
     `Unreviewed-Agent-Lines: N` (git's `--trailer`), a warning notice in the session's log, and
-    `core.CommitGateOverridden` in `SessionState.Overrides` (worker `review.override`). Soft: one confirmation (`⏎`),
+    `core.CommitGateOverridden` in `SessionState.Overrides` (`Host.RecordOverride`). Soft: one confirmation (`⏎`),
     logged the same way without a trailer. Not yet: the gateway's `commit` (an agent's, approved on its card) isn't
     gated, though its card shows the ledger; the PR gate (FG-6) and the PR description's ledger.
 - **Evidence.** The agent attaches proof to claims ("tests pass" links to the
@@ -659,7 +651,7 @@ All on by default, all configurable, none a nag:
   log line.
 - **Cross-model review.** AI review runs on a different provider from the
   author by default (Codex reviews Claude's work, and the other way round).
-  Built in RV-3 (`worker/aireview.go`): the reviewer is a short-lived session the worker starts on the reviewer's
+  Built in RV-3 (`host/aireview.go`): the reviewer is a short-lived session the host starts on the reviewer's
   provider (`Provider.Start`, so Claude is its interactive CLI, never `claude -p`) with the `ai-review` pack, the
   `ask` policy and every permission it raises refused, so it only reads (Claude's Read and Grep, Codex's safe
   commands), and two tools: `finding` (severity on the threads' scale, category, title, file and line, body, project,
@@ -674,20 +666,20 @@ All on by default, all configurable, none a nag:
   tree it read as a git tree (`Snapshot`), so **Re-review changes** reads only what changed since, committed or not.
   Findings come as the tool is called; a reviewer that writes them as a JSON block instead has them read from its
   answer (`ParseFindings`, lenient about severities, `file:line` and string lines). Its turn's end ends it; a
-  failure, a lost login, 20 minutes or the worker stopping end it with an error. A review session reviews its pull
+  failure, a lost login, 20 minutes or Oriel quitting end it with an error. A review session reviews its pull
   request this way as it starts (`KindSpec.AutoReview`), beside its own agent's review.
-  Not yet: the reviewer runs on the worker's host even for a sandboxed session (read-only, with every permission
+  Not yet: the reviewer runs on the host machine even for a sandboxed session (read-only, with every permission
   refused); a running review can't be stopped from the app; Codex's own `review/start` isn't used.
 - **Slop gate.** crit's phrase filter runs on everything the agent posts.
 - **Trusted authors.** crit's trusted-orgs redaction carries over unchanged.
   Built in RV-4: a mirrored GitHub comment whose author isn't a member of `github.trusted_orgs` (the repository's
   owner when none is set: its OWNER and MEMBER association, else `orgs/{org}/members`) or in `github.trusted_users`
-  reaches the agent as `[redacted: …]` (`worker.Redacted`), in its batches and the `thread` tool alike.
+  reaches the agent as `[redacted: …]` (`host.Redacted`), in its batches and the `thread` tool alike.
 - **The agent never posts to GitHub reviews.** On a thread with `origin: github` the agent's `reply` is a draft; the
   user forwards it (ui.md 06). Built in RV-4, the guards refuse every way an agent could post itself, whatever the
   user's rules say: Claude's `tool.check` denies a Bash `gh pr review|comment`, `gh issue comment`, `--comment` on
   close/reopen/merge and a `gh api` write to a PR's comments, reviews or replies (or a review GraphQL mutation)
-  (`gh.PostsReview`), and an MCP review tool on any server (`gh.ReviewTool`), on the host and in a sandbox; the worker
+  (`gh.PostsReview`), and an MCP review tool on any server (`gh.ReviewTool`), on the host and in a sandbox; the session host
   refuses such a permission ask from any provider before rules or the user see it; the gateway never offers or runs
   one (`gateway.FromOriel`). Not yet: Codex running with no approvals isn't checked command by command.
 - **Authorship.** Blame shows who wrote each line (you, the agent, a

@@ -18,7 +18,6 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui/layout"
-	"github.com/liamg/oriel/wire"
 	"github.com/liamg/oriel/worker"
 )
 
@@ -83,7 +82,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	lw := newLocalWorker(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	x := s.jobs()
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.keyCommand(t, "<D-J>")
 	if !x.open {
 		t.Fatal("⌘⇧J didn't open the Jobs page")
@@ -95,7 +94,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	if x.form == nil {
 		t.Fatal("n didn't open the New job dialog")
 	}
-	s.until(t, "the worker's agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
+	s.until(t, "the agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
 	s.typeInto(t, "Title", "Sweep stale deps")
 	s.typeInto(t, "Prompt", "Bump every dependency in pricing that's behind.")
 	s.click(centre(s.within("New job", "Save and run").Bounds))
@@ -110,7 +109,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 		t.Errorf("the run is %s on %q", se.Kind, se.Agent.Provider)
 	}
 	if js := lw.w.Jobs(); len(js) != 1 || js[0].Title != "Sweep stale deps" || js[0].Prompt != "Bump every dependency in pricing that's behind." {
-		t.Fatalf("the worker's jobs: %+v", js)
+		t.Fatalf("the jobs: %+v", js)
 	}
 	a := lw.fake.WaitStarted(t)
 	s.until(t, "the running row", func() bool { return strings.Contains(s.frameText(), "RUNNING") })
@@ -180,7 +179,7 @@ func TestSaveAsJobFromTheLauncher(t *testing.T) {
 	lw := newLocalWorker(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	x := s.jobs()
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.run("session.new", registry.Args{"prompt": "Draft this week's changelog from the PRs merged since Monday."})
 	var l *launcher
 	for _, e := range s.plugins {
@@ -215,7 +214,7 @@ func TestJobsEntryPoints(t *testing.T) {
 	lw := newLocalWorker(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	x := s.jobs()
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.frame()
 	if !s.reg.Available("jobs.open", nil) || s.access("Jobs").Disabled {
 		t.Error("the sidebar's Jobs is still dimmed")
@@ -270,7 +269,7 @@ func (fakeSandbox) Exec() agent.Exec     { return nopExec{} }
 func (fakeSandbox) Spec() *agent.Sandbox { return &agent.Sandbox{} }
 func (fakeSandbox) Close() error         { return nil }
 
-// clock is a worker's clock a test moves.
+// clock is the session host's clock, which a test moves.
 type clock struct {
 	mu sync.Mutex
 	t  time.Time
@@ -288,7 +287,7 @@ func (c *clock) set(t time.Time) {
 	c.mu.Unlock()
 }
 
-// jobsRig is mockup 44's worker, mbp: api, web and pricing, six jobs, and their runs with transcripts to cost them.
+// jobsRig is mockup 44's machine, mbp: api, web and pricing, six jobs, and their runs with transcripts to cost them.
 type jobsRig struct {
 	t      *testing.T
 	w      *worker.Worker
@@ -297,7 +296,7 @@ type jobsRig struct {
 	repos  map[string]string
 }
 
-// newJobsRig is the rig, its worker offering sandboxes in those backends.
+// newJobsRig is the rig, its session host offering sandboxes in those backends.
 func newJobsRig(t *testing.T, sandboxes ...string) *jobsRig {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -317,7 +316,7 @@ func newJobsRig(t *testing.T, sandboxes ...string) *jobsRig {
 	}
 	providers := &agent.Providers{}
 	providers.Register(r.claude)
-	w, err := worker.New(worker.Options{Home: t.TempDir(), Name: "mbp", Providers: providers, Exec: nopExec{}, Load: steadyLoad, Now: r.clock.now,
+	w, err := worker.New(worker.Options{Home: t.TempDir(), Providers: providers, Exec: nopExec{}, Load: steadyLoad, Now: r.clock.now,
 		Sandbox: fakeSandboxes{sandboxes}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
@@ -325,24 +324,16 @@ func newJobsRig(t *testing.T, sandboxes ...string) *jobsRig {
 	t.Cleanup(func() { w.Close() })
 	r.w = w
 	ctx := context.Background()
-	c := worker.Client{Conn: r.pipe()}
 	for _, name := range []string{"api", "web", "pricing"} {
-		if _, err := c.AddRepoPath(ctx, r.repos[name]); err != nil {
+		if _, err := w.AddRepoPath(ctx, r.repos[name]); err != nil {
 			t.Fatal(err)
 		}
 	}
 	return r
 }
 
-func (r *jobsRig) pipe() wire.Conn {
-	a, b := wire.Pipe()
-	r.w.Serve(b)
-	r.t.Cleanup(func() { a.Close(); b.Close() })
-	return a
-}
-
-func (r *jobsRig) connect(t *testing.T) func(*Config) {
-	return func(cfg *Config) { cfg.Workers = append(cfg.Workers, worker.Client{Conn: r.pipe()}) }
+func (r *jobsRig) connect(*testing.T) func(*Config) {
+	return func(cfg *Config) { cfg.Worker, cfg.Store = r.w, r.w.Store() }
 }
 
 func (r *jobsRig) save(at time.Time, j worker.Job) worker.Job {
@@ -421,7 +412,7 @@ func (r *jobsRig) run(job string, fx fxRun) core.SessionID {
 	return id
 }
 
-// stop stops a run's agent, as a finished run's is once the worker restarts.
+// stop stops a run's agent, as a finished run's is once Oriel starts again.
 func (r *jobsRig) stop(id core.SessionID) {
 	r.t.Helper()
 	if err := r.w.Stop(context.Background(), id); err != nil {
@@ -476,7 +467,7 @@ func (r *jobsRig) build() {
 	r.clock.set(statsNow)
 }
 
-// jobsScene is the app on 44's worker and clock, the Jobs page open.
+// jobsScene is the app on 44's machine and clock, the Jobs page open.
 func jobsScene(t *testing.T) (*errScene, *jobsRig, *jobsPlugin) {
 	t.Helper()
 	r := newJobsRig(t)
@@ -486,7 +477,7 @@ func jobsScene(t *testing.T) (*errScene, *jobsRig, *jobsPlugin) {
 	x := s.jobs()
 	x.now, x.loc = func() time.Time { return s.now }, time.UTC
 	s.sh.stats.now, s.sh.stats.loc = x.now, time.UTC
-	st := waitState(t, s.store, "the runs", func(st core.State) bool { return len(st.Workers) == 1 && len(st.Sessions) == 12 })
+	st := waitState(t, s.store, "the runs", func(st core.State) bool { return !st.Machine.Sampled.IsZero() && len(st.Sessions) == 12 })
 	for _, se := range st.Sessions {
 		if worker.RunOf(se).Status == worker.RunRunning {
 			s.store.Apply(core.SessionFocused{ID: se.ID})
@@ -514,7 +505,7 @@ func TestJobsPageSnapshots(t *testing.T) {
 	s.frame()
 	s.lint("the jobs page")
 	s.golden("jobs-page")
-	s.wantFrame(t, "JOBS", "6 jobs · 1 running · 12 runs · on mbp", "Sweep stale deps, keep major versions", "Morning CI triage on my open PRs",
+	s.wantFrame(t, "JOBS", "6 jobs · 1 running · 12 runs", "Sweep stale deps, keep major versions", "Morning CI triage on my open PRs",
 		"never run", "PROMPT", "SCHEDULE", "EVERY WEEKDAY 07:00", "RUNS", "react-router 6.28 breaks loaders", "Stopped by you after 3m", "2 more",
 		"since Aug 26", "Oct 7 run", "session stats ›", "22m", "4m")
 	if r := s.within("Runs", "running run"); !strings.Contains(r.Name, "today 12:13") {
@@ -540,7 +531,7 @@ func TestJobsPageSnapshots(t *testing.T) {
 	s.typeInto(t, "Prompt", "Draft this week's changelog for api and web from the PRs merged since last Monday.")
 	s.lint("the new job dialog")
 	s.golden("jobs-new")
-	s.wantFrame(t, "New job", "TITLE", "PROMPT", "RUNS IN", "WORKER", "AGENT", "SCHEDULE", "Save and run", "weekly-changelog-draft.json")
+	s.wantFrame(t, "New job", "TITLE", "PROMPT", "RUNS IN", "AGENT", "SCHEDULE", "Save and run", "weekly-changelog-draft.json")
 
 }
 
@@ -548,7 +539,7 @@ func TestJobsPageSnapshots(t *testing.T) {
 func TestPagesReplaceEachOther(t *testing.T) {
 	lw := newLocalWorker(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	x, st, set := s.jobs(), s.sh.stats, s.settings()
 	pages := []struct {
 		name string
@@ -655,45 +646,12 @@ func TestASkippedRunShowsInTheList(t *testing.T) {
 	}
 }
 
-// SE-5 done when: "a job's worker can be changed": Edit, another worker, Save moves it there.
-func TestAJobMovesToAnotherWorker(t *testing.T) {
-	here := newLocalWorker(t)
-	there := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox"})
-	both := func(cfg *Config) { here.connect(t)(cfg); there.connect(t)(cfg) }
-	s := newSceneWith(t, "", "", mockupSize, both)
-	x := s.jobs()
-	waitState(t, s.store, "the workers", func(st core.State) bool { return len(st.Workers) == 2 })
-	j, err := here.w.SaveJob(worker.Job{Title: "Sweep stale deps", Prompt: "Bump what's behind in pricing."})
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.run("jobs.open", nil)
-	s.settleJobs(t, x)
-	s.run("jobs.edit", registry.Args{"name": j.Name, "worker": string(core.LocalWorker)})
-	s.until(t, "the agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
-	s.click(centre(s.within("Edit sweep-stale-deps", s.store.State().WorkerName(core.LocalWorker)+" ▾").Bounds))
-	s.frame()
-	s.clickText(t, "devbox")
-	if x.form == nil || x.form.worker != "devbox" {
-		t.Fatalf("picking devbox: %+v", x.form)
-	}
-	s.until(t, "devbox's agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
-	s.click(centre(s.within("Edit sweep-stale-deps", "Save").Bounds))
-	s.until(t, "the dialog closed", func() bool { return x.form == nil })
-	if js := here.w.Jobs(); len(js) != 0 {
-		t.Errorf("still on this machine: %+v", js)
-	}
-	if js := there.w.Jobs(); len(js) != 1 || js[0].Title != "Sweep stale deps" || js[0].Prompt != j.Prompt {
-		t.Errorf("devbox's jobs: %+v", js)
-	}
-}
-
 // SE-5 done when: "The job form's and launcher's prompts take several lines; ⌘⏎ submits."
 func TestTheJobPromptTakesLines(t *testing.T) {
 	lw := newLocalWorker(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
 	x := s.jobs()
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.run("jobs.new", nil)
 	s.until(t, "the agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
 	s.typeInto(t, "Prompt", "Sweep stale deps.")
@@ -715,7 +673,7 @@ func TestTheJobPromptTakesLines(t *testing.T) {
 func TestTheLauncherPromptTakesLines(t *testing.T) {
 	lw := newLocalWorker(t)
 	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	if err := s.host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil { // no sandbox here
 		t.Fatal(err)
 	}

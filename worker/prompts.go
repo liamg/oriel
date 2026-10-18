@@ -43,7 +43,8 @@ func (w *Worker) loadPrompts() {
 // SetPrompts is the user's versions of the prompts (agent/prompts), sent by the app on connect and whenever one
 // changes. They're the source of truth from then on: a built-in pack is theirs or the default, never an older
 // file's. Each workspace's notes are written again with the coding style.
-func (w *Worker) SetPrompts(o prompts.Overrides) error {
+func (w *Worker) SetPrompts(o prompts.Overrides) (err error) {
+	defer w.recover("SetPrompts", &err)
 	if o == nil {
 		o = prompts.Overrides{}
 	}
@@ -71,6 +72,7 @@ func (w *Worker) SetPrompts(o prompts.Overrides) error {
 
 // Prompts is the user's versions of the prompts the app last sent, and whether it has.
 func (w *Worker) Prompts() (prompts.Overrides, bool) {
+	defer w.recover("Prompts", nil)
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.prompts, w.promptsSent

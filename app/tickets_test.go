@@ -172,11 +172,11 @@ func TestStartWorkFromAnyTracker(t *testing.T) {
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
 	secrets.SetSecret("JIRA_TOKEN", "jira-t0ken")
 	lw := newLocalWorker(t)
-	if _, err := lw.client(t).AddRepoPath(context.Background(), lw.repo); err != nil {
+	if _, err := lw.w.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}
 	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { lw.connect(t)(cfg); change(cfg) })
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
 	jira := loadJira(t, s)
 	if err := s.reg.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
@@ -239,11 +239,11 @@ func ticketScene(t *testing.T) (*errScene, *localWorker, *lineartest.Linear, *sc
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
 	secrets.SetSecret("JIRA_TOKEN", "jira-t0ken")
 	lw := newLocalWorker(t)
-	if _, err := lw.client(t).AddRepoPath(context.Background(), lw.repo); err != nil {
+	if _, err := lw.w.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}
 	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { lw.connect(t)(cfg); change(cfg) })
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
 	jira := loadJira(t, s)
 	if err := s.reg.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {

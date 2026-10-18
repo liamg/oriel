@@ -172,7 +172,7 @@ func TestReviewChecksOutThePRHead(t *testing.T) {
 	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
 	clone.Git("clone", "-q", origin.Dir, ".")
 	clone.Git("remote", "set-url", "origin", origin.Dir)
-	if _, err := r.w.repos.add(ctx, r.w.opts.ID, clone.Dir); err != nil {
+	if _, err := r.w.repos.add(ctx, clone.Dir); err != nil {
 		t.Fatal(err)
 	}
 	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", Repos: []core.RepoID{core.RepoID(clone.Dir)}})

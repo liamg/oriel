@@ -49,7 +49,7 @@ func TestHUDHoldReleasePin(t *testing.T) {
 	if !s.hudDown() {
 		t.Fatalf("⌥ held alone didn't bring the HUD down:\n%s", s.frameText())
 	}
-	s.wantFrame(t, "WORKERS", "SESSIONS", "TODAY", "LOGS", "PLAN USAGE", "CI QUEUE")
+	s.wantFrame(t, "THIS MACHINE", "SESSIONS", "TODAY", "LOGS", "PLAN USAGE", "CI QUEUE")
 	s.lint("the HUD held down")
 	s.hold(0, 0)
 	if s.hudDown() {
@@ -114,7 +114,7 @@ func TestHUDOverOtherOverlays(t *testing.T) {
 	if !s.hudDown() {
 		t.Fatal("the HUD didn't come down over the settings page")
 	}
-	p := s.textPoint(t, "WORKERS")
+	p := s.textPoint(t, "THIS MACHINE")
 	if hit := s.ui.Hit(p); len(hit) == 0 || !strings.Contains(s.ui.Help(hit[0]), "shell/hud") {
 		t.Errorf("the settings page is over the HUD at %v", p)
 	}
@@ -134,7 +134,7 @@ func TestHUDOverOtherOverlays(t *testing.T) {
 func TestHUDBoundToEvents(t *testing.T) {
 	s := luaScene(t, `local L = oriel
 builds = 0
-L.hud.indicator("loads", { slot = "statusline.right", on = { "WorkerChanged" } }, function()
+L.hud.indicator("loads", { slot = "statusline.right", on = { "MachineChanged" } }, function()
   builds = builds + 1
   return L.ui.indicator{ label = "BUILDS", value = builds }
 end)
@@ -149,29 +149,29 @@ L.hud.indicator("meeting", { slot = "hud.today" }, L.ui.indicator{ label = "NEXT
 		s.frame()
 	}
 	s.wantFrame(t, "BUILDS", "1", "DEPLOY", "101")
-	worker := func(cpu float64, sampled time.Time) {
+	machine := func(cpu float64, sampled time.Time) {
 		t.Helper()
-		if err := s.store.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: core.LocalWorker, Name: "mbp", Connected: true, Cores: 12, CPU: cpu,
+		if err := s.store.Apply(core.MachineChanged{Machine: core.MachineState{Host: "mbp", Cores: 12, CPU: cpu,
 			Mem: 11 << 30, MemTotal: 32 << 30, Sampled: sampled}}); err != nil {
 			t.Fatal(err)
 		}
 		s.frame()
 	}
-	worker(.34, s.now)
-	s.wantFrame(t, "WKR mbp", "34%", "BUILDS", "2")
-	worker(.82, s.now.Add(time.Minute))
+	machine(.34, s.now)
+	s.wantFrame(t, "CPU", "34%", "BUILDS", "2")
+	machine(.82, s.now.Add(time.Minute))
 	s.wantFrame(t, "82%", "3")
 	s.now = s.now.Add(31 * time.Second)
 	s.frame()
-	s.wantFrame(t, "DEPLOY", "203") // every 30s: built again (and the two WorkerChanged builds before it)
+	s.wantFrame(t, "DEPLOY", "203") // every 30s: built again (and the two MachineChanged builds before it)
 	s.eval(t, `oriel.hud.set("meeting", oriel.ui.indicator{ label = "NEXT MEETING", value = "Pricing sync 14:30" })`)
 	s.eval(t, `oriel.hud.refresh("loads")`)
 	s.frame()
 	s.wantFrame(t, "BUILDS", "204")
 	s.hold(render.ModAlt, 300*time.Millisecond)
-	s.wantFrame(t, "NEXT MEETING", "Pricing sync 14:30", "mbp", "local · 12 cores", "CPU", "82%", "MEM", "11.0G", "1 online · 15m")
-	if load := s.workers().loadOf(core.LocalWorker); len(load) != 2 || load[1] != .82 {
-		t.Errorf("the worker's load, from its events: %v", load)
+	s.wantFrame(t, "NEXT MEETING", "Pricing sync 14:30", "mbp", "12 cores", "CPU", "82%", "MEM", "11.0G", "15m")
+	if load := s.machine().loadOf(); len(load) != 2 || load[1] != .82 {
+		t.Errorf("the machine's load, from its events: %v", load)
 	}
 	// A session's status changing shows in the Sessions panel with nothing else asking.
 	if err := s.store.Apply(core.SessionOpened{ID: "billing", Name: "billing-export", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
@@ -191,7 +191,7 @@ L.hud.indicator("meeting", { slot = "hud.today" }, L.ui.indicator{ label = "NEXT
 	s.wantFrame(t, "allow git fetch origin")
 }
 
-// 10-hud: the drawer held down over the editor, against the mockup: plan usage with its projections, the worker, the
+// 10-hud: the drawer held down over the editor, against the mockup: plan usage with its projections, the machine, the
 // sessions by status, today's figures with a plugin's next meeting, the log's tail and the CI queue.
 func TestHUDSnapshot(t *testing.T) {
 	s, r, x := statsScene(t)
@@ -205,7 +205,7 @@ L.hud.indicator("next-meeting", { slot = "hud.today" }, L.ui.row{
 	}
 	s.lua().reload(false)
 	for i, cpu := range []float64{.22, .25, .3, .21, .4, .45, .33, .38, .29, .34} {
-		if err := s.store.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: core.LocalWorker, Name: "mbp", Connected: true, Cores: 12, CPU: cpu,
+		if err := s.store.Apply(core.MachineChanged{Machine: core.MachineState{Host: "mbp", Cores: 12, CPU: cpu,
 			Mem: 11 << 30, MemTotal: 32 << 30, Sampled: statsNow.Add(time.Duration(i-9) * time.Minute)}}); err != nil {
 			t.Fatal(err)
 		}
@@ -213,7 +213,7 @@ L.hud.indicator("next-meeting", { slot = "hud.today" }, L.ui.row{
 	for i, l := range []struct {
 		src, msg string
 		lv       int
-	}{{"worker/devbox", "session pricing-rounding: turn started (claude opus, 44k ctx)", 0},
+	}{{"host", "session pricing-rounding: turn started (claude opus, 44k ctx)", 0},
 		{"gateway", "allow git fetch origin — policy: repo-default", 0},
 		{"egress", "ask proxy.golang.org:443 from sandbox flaky-e2e — awaiting user", 4},
 		{"gh", `billing-export: check "e2e (ubuntu)" failed — 3 tests`, 8}} {
@@ -236,8 +236,8 @@ L.hud.indicator("next-meeting", { slot = "hud.today" }, L.ui.row{
 	s.settleStats(x)
 	s.lint("the HUD")
 	s.golden("hud-10")
-	s.wantFrame(t, "PLAN USAGE", "2 accounts", "5H", "WK", "38%", "71%", "WORKERS", "mbp", "1 online · 15m", "SESSIONS", "open",
+	s.wantFrame(t, "PLAN USAGE", "2 accounts", "5H", "WK", "38%", "71%", "THIS MACHINE", "mbp", "15m", "SESSIONS", "open",
 		"need you", "TODAY", "since 00:00", "TOKENS", "COST", "CACHE", "THREADS", "REVIEWED", "UNREAD", "NEXT MEETING · 14:30", "Pricing sync",
 		"LOGS", "ALL PROCESSES", "INFO+", "gateway", "allow git fetch origin — policy: repo-default", "CI QUEUE", "3 PRs", "#4419 billing-export",
-		"e2e ✕", "#4421 pricing", "1/2 · 4m", "#4417 dash-filters", "passed", hudGrab, "⌥ HUD", "WKR mbp")
+		"e2e ✕", "#4421 pricing", "1/2 · 4m", "#4417 dash-filters", "passed", hudGrab, "⌥ HUD", "CPU")
 }

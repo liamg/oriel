@@ -1,7 +1,7 @@
 // Package stats turns agents' session logs into numbers worth charting: tokens and cost by kind, model and effort,
 // tool calls with their errors and timings, when the work happened, and which files it touched. It's crit's
 // internal/stats, read per session: Claude Code's own log (FormatClaude), Codex's rollout (FormatCodex), or the record
-// the worker keeps of a provider's events (FormatEvents).
+// Oriel keeps of a provider's events (FormatEvents).
 //
 // Reading is incremental: a log is append-only, so a scan resumes at the byte the last one stopped at.
 package stats
@@ -23,7 +23,7 @@ import (
 // Log formats.
 const (
 	FormatClaude = "claude" // <config>/projects/<slug>/<id>.jsonl and its subagents'
-	FormatEvents = "events" // the worker's record of a provider's events (Event)
+	FormatEvents = "events" // Oriel's record of a provider's events (Event)
 	FormatCodex  = "codex"  // $CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl
 )
 
@@ -386,7 +386,7 @@ func prompt(text string) bool {
 	return t != "" && !strings.HasPrefix(t, "<")
 }
 
-// Event is a line of the worker's record of a provider's events: a turn starting, a request with its tokens, a tool
+// Event is a line of Oriel's record of a provider's events: a turn starting, a request with its tokens, a tool
 // call, or its result.
 type Event struct {
 	At     time.Time       `json:"at"`

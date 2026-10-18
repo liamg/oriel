@@ -109,7 +109,7 @@ func TestStatsReadEveryTranscript(t *testing.T) {
 	}
 	stray := got["claude:stray"]
 	if stray.Origin != stats.OriginOutside || stray.Label != "tidy the css" || len(stray.Repos) != 1 || stray.Repos[0] != "web" ||
-		stray.Worker != string(core.LocalWorker) || !near(stray.Cost, 5) {
+		!near(stray.Cost, 5) {
 		t.Errorf("the stray Claude log = %+v", stray)
 	}
 	cstray := got["codex:0199a213-81c0-7800-8aa1-bbab2a035a53"]

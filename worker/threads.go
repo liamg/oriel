@@ -66,7 +66,8 @@ func findThread(se core.SessionState, ref string) (core.Thread, error) {
 
 // Comment adds your comment to a thread, opening one if needed, and hands it to the agent (agents.md →
 // Comments to agent): at once if it's idle, after an interrupt if urgent, else when the turn ends.
-func (w *Worker) Comment(ctx context.Context, r CommentReq) (core.ThreadID, error) {
+func (w *Worker) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, err error) {
+	defer w.recover("Comment", &err)
 	if strings.TrimSpace(r.Body) == "" && len(r.Images) == 0 {
 		return "", errors.New("the comment is empty")
 	}
@@ -118,7 +119,7 @@ func (w *Worker) Comment(ctx context.Context, r CommentReq) (core.ThreadID, erro
 	}
 	w.restatus(r.Session)
 	if r.Btw {
-		go w.answerBtw(r.Session, t.ID)
+		w.goSafe("a btw", func() { w.answerBtw(r.Session, t.ID) })
 		return t.ID, nil
 	}
 	if se.Agent.Provider == "" || se.Archived || !t.Open() {
@@ -138,7 +139,8 @@ func (w *Worker) Comment(ctx context.Context, r CommentReq) (core.ThreadID, erro
 }
 
 // SetThread changes a thread's status. Resolving one completes the tasks it asked for.
-func (w *Worker) SetThread(r ThreadReq) error {
+func (w *Worker) SetThread(r ThreadReq) (err error) {
+	defer w.recover("SetThread", &err)
 	t, err := w.mutateThread(r.Session, r.Thread, func(t *core.Thread) error {
 		if r.Status != "" {
 			t.Status = r.Status
@@ -238,7 +240,8 @@ func modelLabel(a core.AgentState) string {
 }
 
 // SetTask adds or changes a task from the app.
-func (w *Worker) SetTask(id core.SessionID, t core.Task) error {
+func (w *Worker) SetTask(id core.SessionID, t core.Task) (err error) {
+	defer w.recover("SetTask", &err)
 	if t.ID == "" {
 		t.ID = w.nextTaskID(id)
 		t.Created = w.opts.Now().UTC()

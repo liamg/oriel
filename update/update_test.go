@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/update"
-	"github.com/liamg/oriel/wire"
 )
 
 func signed(t *testing.T, key ed25519.PrivateKey, version string, arts ...update.Artifact) update.Release {
@@ -215,46 +214,6 @@ func TestBundleRefusesPathsOutsideIt(t *testing.T) {
 		if err := in.Stage(context.Background(), update.Manifest{Version: "2.0.0"}, a, bytes.NewReader(body)); err == nil {
 			t.Errorf("%s: a bundle reaching outside itself was staged", name)
 		}
-	}
-}
-
-// A worker takes only a signed release newer than it is, and only for its own platform.
-func TestReceiverRefusesOffers(t *testing.T) {
-	key := testKey(t)
-	trust := []ed25519.PublicKey{key.Public().(ed25519.PublicKey)}
-	appSide, workerSide := wire.Pipe()
-	defer appSide.Close()
-	r := &update.Receiver{Installer: installer(t), Keys: trust, Version: "2.0.0", Platform: "linux/amd64"}
-	r.Serve(workerSide)
-	pub := &update.Publisher{Keys: trust}
-	pub.Serve(appSide)
-	body := []byte("new")
-	open := func(context.Context, update.Artifact) (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(body)), nil
-	}
-	ctx := context.Background()
-
-	if _, err := pub.Push(ctx, appSide, signed(t, key, "1.0.0", update.Describe("o", "linux/amd64", update.KindBinary, body)), open); err == nil {
-		t.Error("an older release was taken")
-	}
-	if _, err := pub.Push(ctx, appSide, signed(t, key, "3.0.0", update.Describe("o", "darwin/arm64", update.KindBinary, body)), open); err == nil {
-		t.Error("another platform's release was taken")
-	}
-	forged := signed(t, testKey(t), "3.0.0", update.Describe("o", "linux/amd64", update.KindBinary, body))
-	if err := appSide.Call(ctx, update.MethodOffer, forged, nil); err == nil {
-		t.Error("a release signed by another key was taken")
-	}
-	st, err := pub.Push(ctx, appSide, signed(t, key, "3.0.0", update.Describe("o", "linux/amd64", update.KindBinary, body)), open)
-	if err != nil || st.Staged != "3.0.0" || st.Version != "2.0.0" {
-		t.Fatalf("Push = %+v, %v; want 3.0.0 staged on 2.0.0", st, err)
-	}
-	var none update.Chunk
-	s, err := workerSide.Stream(ctx, update.MethodArtifact, update.ArtifactReq{Version: "3.0.0", Name: "../../etc/passwd"})
-	if err == nil {
-		err = s.Recv(&none)
-	}
-	if err == nil {
-		t.Error("the app served a file no release named")
 	}
 }
 

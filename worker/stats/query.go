@@ -16,7 +16,6 @@ type Session struct {
 	Provider string
 	Model    string
 	Effort   string
-	Worker   string
 	// Accounts are the provider's accounts the session ran on (their plans), oldest first: each from when it was
 	// recorded until the next.
 	Accounts []Account
@@ -26,7 +25,7 @@ type Session struct {
 	Origin   string // OriginOriel or OriginOutside
 }
 
-// Origins: a session Oriel ran, or one the worker found in a provider's logs that no Oriel session owns.
+// Origins: a session Oriel ran, or one found in a provider's logs that no Oriel session owns.
 const (
 	OriginOriel   = "oriel"
 	OriginOutside = "outside"
@@ -139,7 +138,7 @@ type Query struct {
 	Step  string    `json:"step,omitempty"` // "day" (the default) or "hour": the series' resolution
 	// Offset is the zone the days and hours of the day are in, in seconds east of UTC.
 	Offset int `json:"offset,omitempty"`
-	// Filters keep what matches any of a key's values: repo, session, kind, model, provider, account, worker, origin.
+	// Filters keep what matches any of a key's values: repo, session, kind, model, provider, account, origin.
 	Filters map[string][]string `json:"filters,omitempty"`
 	// Split charges a multi-repo session to each repo by its share (Shares); otherwise each repo is charged the whole.
 	Split bool `json:"split,omitempty"`
@@ -172,7 +171,6 @@ type Group struct {
 	Cost     float64   `json:"cost"`
 	Last     time.Time `json:"last,omitzero"`
 	Origin   string    `json:"origin,omitempty"` // a session's
-	Worker   string    `json:"worker,omitempty"` // a session's
 	Series   []float64 `json:"series"`           // cost at each of the report's points
 	Used     []int64   `json:"used"`             // tokens at each point
 	sessions map[string]bool
@@ -214,7 +212,6 @@ type Effort struct {
 
 // Report is what a query answers: what both stats pages are drawn from.
 type Report struct {
-	Worker  string      `json:"worker,omitempty"`
 	Scanned time.Time   `json:"scanned,omitzero"`
 	Points  []time.Time `json:"points"`
 	Totals  Totals      `json:"totals"`
@@ -277,7 +274,7 @@ func (q Query) has(key string, vals ...string) bool {
 // weight is how much of session s a query counts: 0 when a filter leaves it out; with a repo filter, the share of
 // the repos it keeps (or all of it, unsplit). The account filter is the hour's (keeps).
 func (q Query) weight(s Session, shares []Share) float64 {
-	if !q.has("session", s.ID) || !q.has("kind", s.Kind) || !q.has("provider", s.Provider) || !q.has("worker", s.Worker) ||
+	if !q.has("session", s.ID) || !q.has("kind", s.Kind) || !q.has("provider", s.Provider) ||
 		!q.has("origin", originOf(s)) {
 		return 0
 	}
@@ -297,10 +294,10 @@ func (q Query) weight(s Session, shares []Share) float64 {
 }
 
 type part struct {
-	key, label     string
-	repos          []string
-	origin, worker string
-	w              float64
+	key, label string
+	repos      []string
+	origin     string
+	w          float64
 }
 
 // Run answers q from sessions.
@@ -352,7 +349,7 @@ func Run(q Query, sessions []Session) Report {
 				repos = append(repos, rp.Name)
 			}
 			parts = func(string, int64) []part {
-				return []part{{key: s.ID, label: cmpOr(s.Name, s.ID), repos: repos, origin: originOf(s), worker: s.Worker, w: w}}
+				return []part{{key: s.ID, label: cmpOr(s.Name, s.ID), repos: repos, origin: originOf(s), w: w}}
 			}
 		case ByOrigin:
 			parts = func(string, int64) []part { return []part{{key: originOf(s), label: originLabel(originOf(s)), w: w}} }
@@ -440,7 +437,7 @@ func Run(q Query, sessions []Session) Report {
 				for _, p := range parts(sl.Model, sl.Hour) {
 					g := groups[p.key]
 					if g == nil {
-						g = &Group{Key: p.key, Label: p.label, Repos: p.repos, Origin: p.origin, Worker: p.worker, Series: make([]float64, n),
+						g = &Group{Key: p.key, Label: p.label, Repos: p.repos, Origin: p.origin, Series: make([]float64, n),
 							Used: make([]int64, n), sessions: map[string]bool{}}
 						groups[p.key] = g
 					}
@@ -629,7 +626,6 @@ type Detail struct {
 	Provider string `json:"provider,omitempty"`
 	Model    string `json:"model,omitempty"`
 	Effort   string `json:"effort,omitempty"`
-	Worker   string `json:"worker,omitempty"`
 	Account  string `json:"account,omitempty"` // the latest it ran on
 	// AccountName is how the account reads: an email or an organisation.
 	AccountName string    `json:"accountName,omitempty"`
@@ -660,7 +656,7 @@ func Detailed(s Session, split bool, offset int) Detail {
 	if n := len(s.Accounts); n > 0 {
 		acct = s.Accounts[n-1]
 	}
-	d := Detail{Session: s.ID, Name: s.Name, Provider: s.Provider, Model: s.Model, Effort: s.Effort, Worker: s.Worker, Live: s.Live, Origin: originOf(s),
+	d := Detail{Session: s.ID, Name: s.Name, Provider: s.Provider, Model: s.Model, Effort: s.Effort, Live: s.Live, Origin: originOf(s),
 		Account: acct.ID, AccountName: acct.Name,
 		Totals: sum.Totals, Models: sum.Models, Tools: sum.Tools, Hours: sum.Hours, Efforts: sum.Efforts, Costs: sum.Costs}
 	buckets := map[int64]*Bucket{}

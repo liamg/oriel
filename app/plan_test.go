@@ -35,7 +35,7 @@ func planSession(t *testing.T) (*running, *agenttest.FakeSession, *localWorker) 
 	t.Helper()
 	lw := newLocalWorker(t)
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	err := r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "plan", "name": "rounding", "provider": "fake",
 			"prompt": "Round invoice lines half-to-even", "repos": []string{lw.repo}})

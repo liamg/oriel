@@ -192,7 +192,7 @@ func TestAIReviewAddProject(t *testing.T) {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
 	}
-	if _, err := lw.client(t).AddRepoPath(context.Background(), other); err != nil {
+	if _, err := lw.w.AddRepoPath(context.Background(), other); err != nil {
 		t.Fatal(err)
 	}
 	r.clickText("Review changes")

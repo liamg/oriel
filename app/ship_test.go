@@ -60,7 +60,7 @@ func shipScene(t *testing.T, more ...func(*Config)) (s *errScene, lw *localWorke
 			m(cfg)
 		}
 	})
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.run("session.start", registry.Args{"kind": "work", "prompt": "Search API rate-limit headers", "ticket": "ENG-2231", "provider": "fake",
 		"repos": []string{api, web}})
 	st := waitState(t, s.store, "the session in front", func(st core.State) bool { return st.Focus != "" })

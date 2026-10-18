@@ -16,7 +16,6 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
-	"github.com/liamg/oriel/wire"
 	"github.com/liamg/oriel/worker/stats"
 )
 
@@ -113,15 +112,8 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 	f.logs[agentDir(a)] = fixtureLog(t, []string{a.Projects[0].Dir, a.Projects[1].Dir}, []int{3, 1})
 	f.logs[agentDir(b)] = fixtureLog(t, []string{b.Projects[0].Dir, b.Projects[1].Dir}, []int{1, 1})
 
-	lw, app := wire.Pipe()
-	w.Serve(app)
-	t.Cleanup(func() { lw.Close(); app.Close() })
-	c := Client{Conn: lw}
 	q := stats.Query{From: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), To: time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC), Split: true}
-	r, err := c.StatsQuery(context.Background(), q)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r := w.StatsQuery(q)
 	cost := map[string]float64{}
 	for _, g := range r.Groups {
 		cost[g.Key] = g.Cost
@@ -131,11 +123,11 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 		!near(cost["billing-ui"], want["billing-ui"]) || !near(cost["api"], want["api"]) {
 		t.Errorf("by repo = %v, want %v", cost, want)
 	}
-	if !near(r.Totals.Cost, 16) || r.Totals.Sessions != 2 || r.Totals.MultiRepo != 2 || r.Worker != string(core.LocalWorker) {
-		t.Errorf("totals = %+v from %q", r.Totals, r.Worker)
+	if !near(r.Totals.Cost, 16) || r.Totals.Sessions != 2 || r.Totals.MultiRepo != 2 {
+		t.Errorf("totals = %+v", r.Totals)
 	}
 	q.Group = stats.BySession
-	r, _ = c.StatsQuery(context.Background(), q)
+	r = w.StatsQuery(q)
 	if len(r.Groups) != 2 || r.Groups[0].Label != "pricing-rounding" || !near(r.Groups[0].Cost, 8) || len(r.Groups[0].Repos) != 2 {
 		t.Errorf("by session = %+v", r.Groups)
 	}
@@ -147,12 +139,12 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 	body = append(body, []byte(`{"type":"assistant","timestamp":"2026-10-03T09:00:00Z","message":{"id":"m3","model":"claude-opus-5","content":[],"usage":{"input_tokens":0,"output_tokens":40000}}}`+"\n")...)
 	os.WriteFile(p, body, 0o644)
 	q.Group = stats.ByRepo
-	r, _ = c.StatsQuery(context.Background(), q)
+	r = w.StatsQuery(q)
 	if !near(r.Totals.Cost, 17) {
 		t.Errorf("after an append, total = %v, want $17: only the new $1 read", r.Totals.Cost)
 	}
 
-	d, err := c.SessionStats(context.Background(), StatsSessionReq{Session: a.ID, Split: true})
+	d, err := w.SessionStats(StatsSessionReq{Session: a.ID, Split: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,9 +207,6 @@ func TestUsageSurvivesRestart(t *testing.T) {
 	got := map[string]float64{}
 	for _, u := range r.w.store.State().Usage {
 		got[u.Provider+" "+u.Account] = u.Windows[0].Used
-		if len(u.Workers) != 1 || u.Workers[0] != r.w.opts.ID {
-			t.Errorf("%s workers = %v", u.Account, u.Workers)
-		}
 	}
 	want := map[string]float64{"claude u1/o-work": .3, "claude u1/o-home": .7}
 	if fmt.Sprint(got) != fmt.Sprint(want) {

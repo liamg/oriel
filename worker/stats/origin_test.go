@@ -95,10 +95,10 @@ func TestTitleIsTheFirstPrompt(t *testing.T) {
 	}
 }
 
-// Sessions from outside Oriel are counted with Oriel's, and the origin filters and groups them; the merge keeps it.
+// Sessions from outside Oriel are counted with Oriel's, and the origin filters and groups them.
 func TestOrigin(t *testing.T) {
 	in, out := fixture(t, "a", "/ws/a"), fixture(t, "claude:b", "/ws/b")
-	in.Origin, out.Origin, out.Worker = OriginOriel, OriginOutside, "mbp"
+	in.Origin, out.Origin = OriginOriel, OriginOutside
 	all := Run(october, []Session{in, out})
 	if all.Totals.Sessions != 2 || !near(all.Totals.Cost, 16) {
 		t.Errorf("all = %+v", all.Totals)
@@ -125,18 +125,8 @@ func TestOrigin(t *testing.T) {
 	for _, g := range r.Groups {
 		got[g.Key] = g
 	}
-	if got["claude:b"].Origin != OriginOutside || got["claude:b"].Worker != "mbp" || got["a"].Origin != OriginOriel {
+	if got["claude:b"].Origin != OriginOutside || got["a"].Origin != OriginOriel {
 		t.Errorf("by session = %+v", r.Groups)
-	}
-	m := Merge(r, Run(q, []Session{fixture(t, "c", "/ws/c")}))
-	for _, g := range m.Groups {
-		if g.Key == "claude:b" && (g.Origin != OriginOutside || g.Worker != "mbp") {
-			t.Errorf("merged lost the origin: %+v", g)
-		}
-	}
-	ma := Merge(all, all)
-	if len(ma.Origins) != 2 || ma.Origins[1].Name != OriginOutside || ma.Origins[1].Sessions != 2 || !near(ma.Origins[1].Cost, 16) {
-		t.Errorf("merged origins = %+v", ma.Origins)
 	}
 	if d := Detailed(out, true, 0); d.Origin != OriginOutside || d.Name != "claude:b" {
 		t.Errorf("detail = %q %q", d.Origin, d.Name)

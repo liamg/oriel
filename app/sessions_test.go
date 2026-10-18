@@ -15,25 +15,23 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/wire"
 	"github.com/liamg/oriel/worker"
 )
 
-// localWorker is a worker in the test's process, with the fake provider and a fixture repo, connected the way the
-// app connects to this machine's worker.
+// localWorker is a session host with the fake provider and a fixture repo, given to the app as Oriel gives it.
 type localWorker struct {
 	w    *worker.Worker
 	fake *agenttest.Fake
 	repo string
 }
 
-// newLocalWorker is a worker with the fake provider, or the fakes given (named as the providers they stand for).
+// newLocalWorker is a session host with the fake provider, or the fakes given (named as the providers they stand for).
 func newLocalWorker(t *testing.T, fakes ...*agenttest.Fake) *localWorker {
 	t.Helper()
 	return newWorkerWith(t, worker.Options{}, fakes...)
 }
 
-// newWorkerWith is newLocalWorker with options of its own: another machine's ID and name, its repos directory.
+// newWorkerWith is newLocalWorker with options of its own: its repos directory, its clock.
 func newWorkerWith(t *testing.T, o worker.Options, fakes ...*agenttest.Fake) *localWorker {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -77,14 +75,35 @@ func steadyLoad() sysload.Reading {
 	return sysload.Reading{CPU: 34, Cores: 12, MemUsed: 11 << 30, MemTotal: 32 << 30}
 }
 
-// connect is a Config change that connects the app to the worker.
-func (lw *localWorker) connect(t *testing.T) func(*Config) {
+// connect is a Config change that gives the app the session host, and its store.
+func (lw *localWorker) connect(*testing.T) func(*Config) {
 	return func(cfg *Config) {
-		a, b := wire.Pipe()
-		lw.w.Serve(b)
-		t.Cleanup(func() { a.Close(); b.Close() })
-		cfg.Workers = append(cfg.Workers, worker.Client{Conn: a})
+		cfg.Worker, cfg.Store = lw.w, lw.w.Store()
 	}
+}
+
+func (s *errScene) machine() *machinePlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*machinePlugin); ok {
+			return x
+		}
+	}
+	return nil
+}
+
+// hostScene is the app with a session host, the scene's state in a temporary directory.
+func hostScene(t *testing.T, change ...func(*Config)) (*errScene, *localWorker) {
+	t.Helper()
+	lw := newLocalWorker(t)
+	state := t.TempDir()
+	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) {
+		lw.connect(t)(cfg)
+		cfg.StateDir = state
+		for _, f := range change {
+			f(cfg)
+		}
+	})
+	return s, lw
 }
 
 func waitState(t *testing.T, s core.Store, what string, ok func(core.State) bool) core.State {
@@ -106,7 +125,7 @@ func waitState(t *testing.T, s core.Store, what string, ok func(core.State) bool
 func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 	lw := newLocalWorker(t)
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	err := r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.repo}})
 	})
@@ -140,7 +159,7 @@ func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 			return registry.Verdict{}, nil
 		}})
 	}, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
 	})
@@ -173,7 +192,7 @@ func TestAgentToolsRunInTheApp(t *testing.T) {
 				return "logs of " + p["service"].(string), nil
 			}})
 	}, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
 	})
@@ -202,7 +221,7 @@ func TestAgentTurnEndFires(t *testing.T) {
 			return registry.Verdict{}, nil
 		}})
 	}, lw.connect(t))
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.do(func() error {
 		return r.host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
 	})

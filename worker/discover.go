@@ -49,7 +49,7 @@ func (w *Worker) outsideSessions(only core.SessionID, since time.Time, own owned
 			for _, l := range t.Logs {
 				logs = append(logs, stats.Log{Path: l.Path, Format: l.Format})
 			}
-			s := stats.Session{ID: id, Provider: p.ID(), Worker: string(w.opts.ID), Origin: stats.OriginOutside,
+			s := stats.Session{ID: id, Provider: p.ID(), Origin: stats.OriginOutside,
 				Scans: w.statsStore().Scan(id, logs)}
 			main := s.Scans[0]
 			s.Name = main.Title

@@ -145,7 +145,7 @@ func (h *host) start() error {
 		a.Running, a.Starting, a.Error, a.StoppedBy, a.StoppedAt = true, nil, "", "", time.Time{}
 		a.RanOn(now, acct, name)
 	})
-	go h.loop(sess)
+	h.w.goSafe("an agent's events", func() { h.loop(sess) })
 	h.askLogins(h.snapshot().Agent.Provider)
 	h.kick()
 	return nil
@@ -154,6 +154,7 @@ func (h *host) start() error {
 // startAside starts the agent off the caller: a failure is in the agent's state, and logged. Close waits for it.
 func (h *host) startAside() {
 	h.w.starts.Go(func() {
+		defer h.w.recover("starting an agent", nil)
 		if err := h.start(); err != nil {
 			h.w.log.Warn("the agent didn't start", "session", h.id, "err", err)
 		}
@@ -191,7 +192,7 @@ func (h *host) launch(ctx context.Context, cancel context.CancelFunc) (agent.Ses
 	if se.Agent.Sandboxed {
 		if w.opts.Sandbox == nil {
 			cancel()
-			return nil, nil, errors.New("this worker can't run a sandbox")
+			return nil, nil, errors.New("this machine can't run a sandbox")
 		}
 		box, err = w.opts.Sandbox.Open(ctx, se, h.approve)
 		if err != nil {
@@ -202,7 +203,7 @@ func (h *host) launch(ctx context.Context, cancel context.CancelFunc) (agent.Ses
 	}
 	if spec.Exec == nil {
 		cancel()
-		return nil, nil, errors.New("this worker has no way to start an agent")
+		return nil, nil, errors.New("there is no way to start an agent")
 	}
 	var sess agent.Session
 	if se.Agent.Session != "" {
@@ -511,9 +512,9 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 		h.record(h.snapshot(), stats.Event{At: now, Kind: "result", ID: ev.ID, Error: ev.IsError})
 		h.toolResult(ev, now)
 	case agent.Permission:
-		go h.permission(sess, ev)
+		w.goSafe("a permission", func() { h.permission(sess, ev) })
 	case agent.Question:
-		go h.question(sess, ev)
+		w.goSafe("a question", func() { h.question(sess, ev) })
 	case agent.Subagent:
 		h.subagent(ev, now)
 	case agent.TurnEnd:
@@ -538,7 +539,7 @@ func (h *host) handle(sess agent.Session, ev agent.Event) {
 		w.loginLost(h.id, ev)
 	case agent.AuthRestored:
 		if w.signedOut(ev.Provider) {
-			go w.checkLogin(ev.Provider, true)
+			w.goSafe("a login check", func() { w.checkLogin(ev.Provider, true) })
 		}
 	case agent.Exited:
 		if ev.Err != "" {

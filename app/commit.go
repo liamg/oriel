@@ -250,16 +250,16 @@ func (g *gitPlugin) recordOverrides(se core.SessionState, project string, inSess
 		if !inSession || g.sh.sessions == nil {
 			continue
 		}
-		cl, err := g.sh.sessions.client(se.ID)
+		cl, err := g.sh.sessions.host()
 		if err != nil {
 			continue
 		}
 		ev := core.CommitGateOverridden{Session: se.ID, Override: core.GateOverride{Project: project, Gate: c.Gate.Name, Mode: c.Mode, Unread: c.Unread,
 			Trailer: trailer, Commit: hash, Subject: subject, Time: time.Now().UTC()}}
 		g.busy.Add(1)
-		go func(cl worker.Client) {
+		go func(cl *worker.Worker) {
 			defer g.busy.Done()
-			if err := cl.RecordOverride(context.Background(), ev); err != nil {
+			if err := cl.RecordOverride(ev); err != nil {
 				g.h.Log().Warn("commit gate", "err", err)
 			}
 		}(cl)

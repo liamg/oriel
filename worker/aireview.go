@@ -32,7 +32,8 @@ const aiReviewDiffMax = 120_000
 // different provider from the author's by default, else the author's provider on another model. The reviewer is a
 // short-lived session of the provider on the ai-review pack, which reads but changes nothing, and reports each finding
 // with its finding tool. It runs in the background; its findings are session events as they come.
-func (w *Worker) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
+func (w *Worker) AIReview(ctx context.Context, r AIReviewReq) (_ string, err error) {
+	defer w.recover("AIReview", &err)
 	se, err := w.session(r.Session)
 	if err != nil {
 		return "", err
@@ -112,7 +113,7 @@ func (w *Worker) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
 		pack, ok = w.pack(AIReviewPack)
 	}
 	if !ok {
-		return "", errors.New("this worker has no ai-review prompt pack")
+		return "", errors.New("there is no ai-review prompt pack")
 	}
 	if err := w.emit(core.AIReviewChanged{Session: se.ID, Review: rv}); err != nil {
 		return "", err
@@ -369,7 +370,7 @@ func (r *aiReviewRun) converse(ctx context.Context, sess agent.Session) ([]strin
 		case <-ctx.Done():
 			return said, "the reviewer took too long"
 		case <-r.w.closed:
-			return said, "the worker stopped during the review"
+			return said, "Oriel stopped during the review"
 		case ev, ok := <-sess.Events():
 			if !ok {
 				return said, "the reviewer exited before it finished"
@@ -412,7 +413,8 @@ func verdict(text string) string {
 }
 
 // SetFindings records findings as the user changed them: dismissed, or back.
-func (w *Worker) SetFindings(r core.FindingsRecorded) error {
+func (w *Worker) SetFindings(r core.FindingsRecorded) (err error) {
+	defer w.recover("SetFindings", &err)
 	se, err := w.session(r.Session)
 	if err != nil {
 		return err

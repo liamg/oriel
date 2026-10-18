@@ -13,9 +13,9 @@
 
 1. Create `github.com/liamg/oriel` with `go.work` and the module skeleton.
 2. Port the packages that don't need rethinking: `sandbox`, `egress`,
-   `gateway`, `mcp`, `gh`, `git`, `wire`, `agentbus`, `linear`, `slop`, `prompts`, `quota`.
+   `gateway`, `mcp`, `gh`, `git`, `agentbus`, `linear`, `slop`, `prompts`, `quota`.
 3. Build phases 0–4 (see `PLAN.md`). crit stays your daily driver for AI work.
-4. Phases 5–6: the new worker keeps the workspace layout and manifest fields crit uses,
+4. Phases 5–6: Oriel's session host keeps the workspace layout and manifest fields crit uses,
    but lists only its own sessions; crit's stay in crit.
 5. Once phases 5–6 are done: crit stops getting features. Fixes only.
 6. After phase 7 has had two weeks of daily use: archive crit, and its README points at Oriel.
@@ -24,8 +24,7 @@
 
 - Workspaces and worktrees: same layout, read in place.
 - Threads, tasks and comment history: imported once, by a converter.
-- Prompts overrides (`prompts.json`), settings, trusted orgs, worker enrolment
-  (re-enrolled, same TLS pinning).
+- Prompts overrides (`prompts.json`), settings, trusted orgs.
 
 ## Not carried
 

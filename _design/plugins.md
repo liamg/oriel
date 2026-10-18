@@ -19,7 +19,7 @@ The scripting API itself is in `scripting.md`. Installing, packaging and publish
 2. **Everything is a command.** Every action has a name, takes arguments,
    and is callable from a key, the omnibox, a script, the agent, or `:`.
 3. **Everything emits events.** Editor, sessions, agents, threads, git, LSP,
-   DAP, workers. Hooks can observe, **veto** or **rewrite** (see below).
+   DAP. Hooks can observe, **veto** or **rewrite** (see below).
 4. **Everything is an option.** Typed, scoped (global → session → project →
    buffer → window), introspectable with `:set foo?`, and observable.
 5. **Every surface is composable.** Statusline, tabline, HUD, panels, thread
@@ -126,7 +126,7 @@ flowchart TB
 - forkers (`registry.Forker`, RV-7): answer a side question for a session (`ForkRequest{Session, Prompt}`) from its
   agent's context, with no tools and outside its conversation (agents.md: btw, explain, the verify quiz);
   `registry.Fork` asks the first by `Order` and `registry.ForkLabel(session)` says who ("claude · fork, no tools").
-  The sessions plugin registers the agent's (order 10, the wire's `agent.fork`); Lua adds one with
+  The sessions plugin registers the agent's (order 10, the host's `Fork`); Lua adds one with
   `oriel.agent.forker { name, order, label, run = fn({ session, prompt }) }`.
 - fix and explain twins (TR-6): something gone wrong is a `registry.Trouble` (kind, subject, context, file and lines,
   the fix request's text). Every "ask the agent to fix" runs `agent.fix` (`registry.FixCommand`) with
@@ -150,10 +150,10 @@ flowchart TB
 - tours (RV-8): `tour.open` opens the tour reader (the `tour` view, a tab) for the tour session in front, and opens
   by itself when one comes to the front; `tour.step {step | by}`, `tour.scroll {by}`, `tour.open-quote {n}`,
   `tour.ask {text}`, `tour.export {format, ask}` and `tour.close` drive it, and its keys are the `tour` key mode.
-  Steps are read by `worker/tour` (`tour.NewLoader().Load(ctx, root, worker.TourOf(root))`, the model a plugin's own
+  Steps are read by `host/tour` (`tour.NewLoader().Load(ctx, root, host.TourOf(root))`, the model a plugin's own
   reader would draw), `tour.Markdown` and `tour.HTML(t, HTMLOptions{Highlight, Palette})` export them, and
   `tour.Palette(dark, light)` is a page's colours. The app offers the `tour_export` agent tool
-  (`registry.AgentTool`); the worker its `tour_kind`, `tour_steps`, `tour_run` and `tour_share`.
+  (`registry.AgentTool`); the host its `tour_kind`, `tour_steps`, `tour_run` and `tour_share`.
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
   so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
@@ -189,8 +189,8 @@ flowchart TB
   is the `markdown` presenter's, so a presentation's keys (`present.*`) move through it and comment on a block, and
   `session.start-work {clear, fresh, branches, sandbox, network, model, effort}` is available while the session in
   front is planning; `plan.start-work` opens its dialog, and `plan.start-work.run` (⌘↵ in the `startwork` key
-  mode) runs what the dialog holds. `worker.hand-over-now` drains this machine's worker without waiting for its agents'
-  turns, for a restart or a quit (⌘↵ in the `workerdrain` key mode; `sessions.md` → As built). A comment on a file at the workspace root,
+  mode) runs what the dialog holds. `quit.now` quits without waiting for the agents'
+  turns (⌘↵ in the `quit` key mode; `sessions.md` → Quitting). A comment on a file at the workspace root,
   outside every project, is anchored to the project `core.DocsProject` (`"__docs__"`) with the path relative to the
   workspace; `request.comment {file}` does that for an absolute path, and an agent's `comment` tool takes
   `project: "__docs__"`.
@@ -204,7 +204,7 @@ flowchart TB
   asked with `DecorationCtx.Presenter = "diff"`, so a provider can tell it's in the diff (an explain card, a review
   finding, a mirrored GitHub thread). `?` runs `explain.unit {path, line}`, which RV-5 registers. Reviewed marks are
   the session event `core.HunksReviewed {session, project, file, hunks, reviewed}` (`SessionState.Reviews`,
-  `ReviewedHunks`), sent through the worker's `review.set` (`worker.Client.SetReviewed`), each hunk named by
+  `ReviewedHunks`), sent through `host.Host.SetReviewed`, each hunk named by
   `gitx.Hunk.ID`; `gitx.Unified`, `gitx.Intraline` and `Repo.FileAt` are the diff's pieces for others to reuse.
   `widget.Check` is a checkbox with on, off and mixed states. `diff.open {path, line}` selects the new side's line.
 - the review ledger and commit gates (RV-2): `registry.ReviewLedger{Name, Order, Get(root) Ledger}` (kind
@@ -220,22 +220,22 @@ flowchart TB
   dialog (key mode `commit`: `a` `git.commit.anyway`, `r` `git.commit.review`, `⏎` `git.commit.confirm`, `esc`
   `git.commit.cancel`) until anyway; a soft one until confirm; then it fires the `Commit` hook (`CommitEvent{project,
   root, message, files, unread}`; a veto stops it) and commits with `gitx.Repo.CommitStaged(message, trailers...)`.
-  Lines seen in the diff are `core.LinesSeen` (worker `review.seen`), a commit past a gate `core.CommitGateOverridden`
-  (worker `review.override`). `widget.MeterOpts.Then` stacks more parts on a meter.
+  Lines seen in the diff are `core.LinesSeen` (`Host.SetSeen`), a commit past a gate `core.CommitGateOverridden`
+  (`Host.RecordOverride`). `widget.MeterOpts.Then` stacks more parts on a meter.
 - the AI review (RV-3): the built-in `ai-review` plugin draws `diff.right.50-ai-review`. `review.ai.run {id, full}`
-  asks the session's worker for a review (`worker.Client.AIReview`, `review.ai.run`, `AIReviewReq{session, provider,
+  asks the session host for a review (`host.Host.AIReview`, `AIReviewReq{session, provider,
   model, full, pack}`), `review.ai.thread` / `review.ai.fix` / `review.ai.dismiss {dismissed}` /
   `review.ai.add-project` / `review.ai.open` take `{id, finding}`, `review.ai.filter {severity}`,
   `review.ai.dismissed` and `review.ai.prompt` drive the column. Reviews and findings are session events,
   `core.AIReviewChanged {session, review}` and `core.FindingsRecorded {session, findings}` (replaced by ID;
   `SessionState.AIReviews`, `Findings`, `SortedFindings`, `FindingOpen`; `core.Severities` is the threads' scale), and
-  the app changes a finding through `review.ai.findings` (`Client.SetFindings`: dismissed or not). **The ship gate's
+  the app changes a finding through `Host.SetFindings` (dismissed or not). **The ship gate's
   "AI review" row** reads `SessionState.AIReviewGate() (ok, label)`: not run, running, "n high or critical open", or
   clear; the built-in `ai-review` ship gate shows it. `request.comment` takes `{severity, finding}` for a new thread
   (`CommentReq.Severity`, `Finding`: the thread's `Origin` is `core.OriginAIReview` and the finding records it). A
   session kind's `KindSpec.AutoReview` reviews its change as it starts (the review kind's does). The reviewer runs
-  on the `ai-review` prompt pack, overridden by the user's `agents/ai-review.md` (sent with each request, since the
-  worker may be elsewhere; `packs.FromText` reads it). `gitx.Repo.MergeBase`, `Snapshot` (the work tree as a git tree,
+  on the `ai-review` prompt pack, overridden by the user's `agents/ai-review.md` (sent with each request;
+  `packs.FromText` reads it). `gitx.Repo.MergeBase`, `Snapshot` (the work tree as a git tree,
   the index untouched) and `Diff` are its git pieces. `widget.ToggleChipOpts.Tone` makes a toned filter chip.
   A slot view that implements `registry.Shown` (`Shown(instance) bool`) is left out of the diff's columns while it
   has nothing for that repo, so the room goes to the rest: the AI review outside a session. `DiffRight` views share
@@ -279,24 +279,24 @@ flowchart TB
   the body, as a passed verify quiz's reviewer notes; `all` is one of `ship.raise-all`'s). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
   `ship.commit-all`, `ship.sync {project}`, `ship.sync-all`, `ship.push {project}`, `ship.raise {project, title,
   body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.pr.open`, `ship.fix-ci`, `ship.redraft {project,
-  kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `pr` (instance = project). A worker answers
-  `ship.read` (`worker.ShipReq` → `[]worker.Ship`: files, behind and predicted conflicts, unpushed commits, the PR,
-  checks and a failing job's log line, the drafts and who wrote them, the PR template, CODEOWNERS), `ship.commit`,
-  `ship.push`, `ship.sync`, `ship.pr` (raise or edit, ask reviewers, cross-link the session's PRs), `ship.ready` and
-  `ship.draft` (`worker.Client.Ship*`; AI-10: a `DraftReq` with `Drop` clears the user's draft, and a `Draft` read
+  kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `pr` (instance = project). The host answers
+  `ShipRead` (`host.ShipReq` → `[]host.Ship`: files, behind and predicted conflicts, unpushed commits, the PR,
+  checks and a failing job's log line, the drafts and who wrote them, the PR template, CODEOWNERS), `ShipCommit`,
+  `ShipPush`, `ShipSync`, `ShipPR` (raise or edit, ask reviewers, cross-link the session's PRs), `ShipReady` and
+  `ShipDraft` (AI-10: a `DraftReq` with `Drop` clears the user's draft, and a `Draft` read
   says `Stale` once the code moved on; `ship.draft.save {project, kind, title, body}` saves the commit box's or the
-  PR tab's as the user's); its GitHub client is `worker.Options.GitHub` (the user's gh by default).
+  PR tab's as the user's); its GitHub client is `host.Options.GitHub` (the user's gh by default).
   `gh.Client` is GitHub as Oriel uses it, `gh.API` over a `gh.Transport` (`gh.CLI`, `gh.HTTP`), and `gh/ghtest` a
   fake GitHub for tests.
 - verify (RV-7; ui.md 13): the optional quiz is the `verify` plugin, built only on the above: the `verify` ShipGate
   (whose **Verify…** starts it), questions and grades through `registry.Fork`, a `ShipRaise` rewrite hook ("verify
   notes") adding a passed quiz's answers to the PR's body, and the `core.Verified` session event (`Verification{Result,
-  Projects, By, Questions}`, `SessionState.Verifications`, sent to the worker as `verify.record`). Commands
+  Projects, By, Questions}`, `SessionState.Verifications`, recorded with `Host.RecordVerified`). Commands
   `verify.open {id}`, `verify.send {text}`, `verify.again`, `verify.open-file`, `verify.close`; keymap mode `verify`
   (`⌘↵`, `⌥O`, Escape); view `app.overlay.verify`.
-- GitHub review mirroring (RV-4; ui.md 06): a worker answers `github.sync` (`worker.MirrorReq{Session, Fresh, Trust}`
-  → `worker.Mirror`: the PRs and each reviewer's state), `github.forward` (`worker.ForwardReq` → the sent comment) and
-  `github.draft` (`worker.DraftEditReq`) (`worker.Client.SyncGitHub`, `ForwardGitHub`, `EditDraft`). `gh.Client`
+- GitHub review mirroring (RV-4; ui.md 06): the host answers `SyncGitHub` (`host.MirrorReq{Session, Fresh, Trust}`
+  → `host.Mirror`: the PRs and each reviewer's state), `ForwardGitHub` (`host.ForwardReq` → the sent comment) and
+  `EditDraft` (`host.DraftEditReq`). `gh.Client`
   reads `ReviewComments`, `Reviews`, `IssueComments`, `ResolvedThreads` (GraphQL) and `OrgMember`, and posts
   `ReplyReview` and `Comment`; `gh.ReviewStates` is where each reviewer stands; `gh/ghtest` fakes them all
   (`AddReviewComment`, `AddReview`, `AddIssueComment`, `EditComment`, `Resolve`, `AddMember`, `SetLogin`).
@@ -320,8 +320,8 @@ flowchart TB
   turning it off (`Report("hud.indicator", name, err)`). Commands `hud.toggle`, `hud.close`, `hud.refresh`; key mode
   `hud`; view `app.overlay.hud`; options `hud.hold`, `hud.hold_delay`. Widgets `widget.Indicator`, `widget.Panel`,
   `widget.Drawer`, `MeterOpts.To` (hatched on to a projection). Input: `render.ModsEvent` (the modifiers held),
-  `ui.UI.Mods`/`Chord`, `ui.Ctx.Held` and `HeldAlone` (a modifier held with nothing pressed since). A worker's load
-  reading is `worker.Options.Load` (`sysload.Read` by default).
+  `ui.UI.Mods`/`Chord`, `ui.Ctx.Held` and `HeldAlone` (a modifier held with nothing pressed since). The machine's load
+  reading is `host.Options.Load` (`sysload.Read` by default).
 - inbox cards (SH-9): `registry.InboxSource{Name, Cards}` (kind `inbox.source`) gives the inbox its cards, read on
   the app's loop as it's drawn; `registry.InboxCards(r)` gathers every source's, by source name, each keyed
   `<source>/<id>` (`InboxCard.Key`). An `InboxCard` has `ID`, `Type` (its help anchor), `Group` (the Inbox panel's
@@ -357,47 +357,40 @@ flowchart TB
   `oriel.ui.date_picker`. Stats' custom range is built on it.
 - segmented strips take `SegmentedOpts.Badges`, a small chip after each label: the Usage switcher's plan tiers.
 - stats: a provider that keeps its own log of a session implements `agent.Logged` (`Logs(cwd, session) []agent.Log`:
-  Claude's transcript and its subagents'); the worker records the events of one that doesn't (Codex). A provider that
+  Claude's transcript and its subagents'); the host records the events of one that doesn't (Codex). A provider that
   can find every log it keeps on the machine implements `agent.Discovered` (`Discover() []agent.Transcript`: the
-  provider's session id, its logs, when they last changed; Claude's config directory, Codex's rollouts); the worker
+  provider's session id, its logs, when they last changed; Claude's config directory, Codex's rollouts); the host
   counts those no Oriel session owns as outside Oriel (`stats.Session.Origin`, `stats.ByOrigin`, the `origin` filter,
-  `stats.Report.Origins`, `stats.Group.Origin`/`Worker`). The worker reads
-  them into `worker/stats` and answers `stats.query` (`stats.Query{Group, From, To, Step, Offset, Filters, Split}` →
-  `stats.Report`), `stats.session` (`worker.StatsSessionReq` → `stats.Detail`), `usage.history` and `usage.read`
-  (`worker.Client.StatsQuery`, `SessionStats`, `UsageHistory`, `ReadUsage`); `stats.Merge` adds workers' answers up.
-  Commands: `stats.open`, `stats.session` (`{id}`, and `{worker}` for a session outside Oriel), `stats.group`,
+  `stats.Report.Origins`, `stats.Group.Origin`). The host reads
+  them into `host/stats` and answers `StatsQuery` (`stats.Query{Group, From, To, Step, Offset, Filters, Split}` →
+  `stats.Report`), `SessionStats` (`host.StatsSessionReq` → `stats.Detail`), `UsageHistory` and `ReadUsage`.
+  Commands: `stats.open`, `stats.session` (`{id}`, one in Oriel or outside it), `stats.group`,
   `stats.origin`, `stats.range`, `stats.custom`, `stats.move`, `stats.drill`, `stats.back`, `stats.copy`,
   `stats.split`, `usage.open`, `usage.refresh`, `:Stats`, `:Usage`. Plans are per account
-  (`core.ProviderUsage.Account`, `Same`, `Uses`; `stats.ByAccount` and the `account` filter); `usage.accounts` names them.
+  (`core.ProviderUsage.Account`, `Same`; `stats.ByAccount` and the `account` filter); `usage.accounts` names them.
   A provider's reading carries its plan's tier (`ProviderUsage.Tier`), and a session the accounts it ran on
   (`core.AgentState.Accounts`, `RanOn`; `stats.Session.Accounts`).
-- jobs (SE-4): a worker answers `jobs.list`, `jobs.save`, `jobs.delete` and `jobs.run` (`worker.Job`,
-  `worker.Schedule`; `Client.Jobs`, `SaveJob`, `DeleteJob`, `RunJob`) and `session.delete` (`Client.Delete`); a run's
-  row is `worker.RunOf(session)`. Commands: `jobs.open`, `:Jobs`, `jobs.new`, `jobs.edit`, `jobs.duplicate`,
+- jobs (SE-4): the host keeps them (`host.Job`, `host.Schedule`; `Host.Jobs`, `SaveJob`, `DeleteJob`, `RunJob`,
+  and `Delete` for a session); a job's key is its name, and a run's row is `host.RunOf(session)`. Commands: `jobs.open`, `:Jobs`, `jobs.new`, `jobs.edit`, `jobs.duplicate`,
   `jobs.save`, `jobs.run`, `jobs.delete`, `session.delete`, `jobs.form.save`; key modes `jobs` and `jobs.form`; theme
   tokens `jobs.run.running`, `jobs.run.done`, `jobs.run.blocked`, `jobs.run.stopped`. A kind's `PromptFile` writes its
   prompt into the workspace as the session starts (the job kind's `JOB.md`).
-- workers (AI-15): `core.WorkerState` carries `Label` (the app's name, `WorkerRenamed`; `Title()` reads it first),
-  `Arch`, `Version`, `Build`, `Providers` and `Since` (when it connected or went away; `WorkerGone.At`);
-  `WorkerForgotten` takes an offline one off the list, and `core.State.FromWorker` says which events a worker may
-  send. `wire.HashKey` and `wire.KeyHashAuth` keep and check keys by hash. Commands: `workers.open`, `:Workers`,
-  `workers.add {name, listen}`, `workers.rename {name, to}`, `workers.revoke {name}`, `workers.forget {name}`,
-  `workers.restart`, `workers.dialog.save`; option `workers.listen`; key modes `workers` and `workers.add`; the
-  `workers` icon; views `app.overlay.workers` and `app.overlay.workers.dialog`.
+- this machine: `core.State.Machine` (`core.MachineState`: host name, OS, arch, version, providers, sandboxes,
+  cores, CPU, memory, when it was sampled, signed-out logins), set by `core.MachineChanged`. The HUD's `machine`
+  panel, the mission strip's `machine.mission` and the status indicator `machine.status` draw it.
 - updates (PL-6): commands `:UpdateCheck` / `update.check`, `update.notes` (the card), `update.install`,
   `update.restart`; options `updates.mode` (`automatic`, `ask`, `manual`) and `updates.channel` (`stable`,
   `nightly`); the view `app.overlay.update` (the card) and the indicator `update` in `statusline.right` ("update ready ·
   restart", built again with `hud.refresh {name = "update"}` as it changes). Notices `update.available` (with What's new and Update),
-  `update.ready` (Restart), `update.failed` and `update.worker`. `worker.Options.Handlers` add wire methods to each
-  app connection.
+  `update.ready` (Restart) and `update.failed`.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 
 **AI**
 - agent providers (`agent.Provider`). A provider whose login stops working says so with `agent.AuthExpired{Provider,
   Account, Detail, Terminal, Shell}` (an event, or `Start`'s error), and a login it sees succeed with
-  `agent.AuthRestored`; the worker flags the login (`core.WorkerState.SignedOut`, a `core.AskLogin` card with its
-  `core.Login` on each session waiting on it) and checks it with `Detect` (AI-13). `agent.login {id | provider, worker}`
-  opens a local agent's terminal with the provider's `Terminal` login typed.
+  `agent.AuthRestored`; the host flags the login (`core.MachineState.SignedOut`, a `core.AskLogin` card with its
+  `core.Login` on each session waiting on it) and checks it with `Detect` (AI-13). `agent.login {id | provider}`
+  opens an agent's terminal with the provider's `Terminal` login typed.
 - **agent tools**: an MCP tool defined in Lua or Go and offered to the session's agent.
   Since PL-4 a `registry.AgentTool` says who it's for: `For` (session kinds such as `work`, or a utility agent's name
   such as `assistant`; none is every session's agent and no utility agent's; `registry.AgentToolsFor`), what data it
@@ -406,17 +399,18 @@ flowchart TB
   and `Acted`) with the `registry.Confirmation` it describes (title, lead, rows, a block, a note, a line) and runs it
   only on a yes. Since DB-3 `Confirm` may return `registry.Granted` (this call needs no yes: the user granted it
   already) or an error (refused, the agent reads why), and a call may carry its owner (`registry.WithOwner`, ahead of
-  the registered one): a session's agent is owned by its worker, which asks through the session's permission layers
-  (`worker.AskReq` on `ask.put`: its rules, the `Permission` hooks, then a permission card whose "Always" allows the
+  the registered one): a session's agent is owned by the session host, which asks through the session's permission layers
+  (`host.Host.Ask` with an `AskReq`: its rules, the `Permission` hooks, then a permission card whose "Always" allows the
   tool for the session). `Run` may return a `registry.Acted`
-  (`Result` for the agent; `Line`, `Detail`, `Open`/`OpenArgs` and `Undo` for the owner). The worker asks the app for
-  an agent's tools with `worker.ToolsReq{Session, Agent}` and calls them with `ToolCall.Agent`; utility agents are
-  `utility.run` / `utility.send` / `utility.interrupt` (`architecture.md`). Lua: `oriel.agent.tool{…, for, read_only,
+  (`Result` for the agent; `Line`, `Detail`, `Open`/`OpenArgs` and `Undo` for the owner). The host asks the app for
+  an agent's tools with `host.ToolsReq{Session, Agent}` and calls them with `ToolCall.Agent`, through the callbacks
+  the app installs (`SetApp(host.App{Tools, CallTool, Decide})`); a utility agent is `Host.StartUtility`'s
+  `*host.Utility` (`Send`, `Interrupt`, `Events`, `Close`; `architecture.md`). Lua: `oriel.agent.tool{…, for, read_only,
   reads}`.
 - **mission control** (SH-7, ui.md 03): commands `mission.toggle` (`⌘⇧K`), `mission.open {by, filter, id}`,
-  `mission.close`, `mission.group {by}` (worker, status or repo), `mission.filter {text}`, `mission.find`,
+  `mission.close`, `mission.group {by}` (status or repo), `mission.filter {text}`, `mission.find`,
   `mission.select {id}`, `mission.move {dir}`, `mission.open-card {id}`, `mission.allow {id}`, `mission.deny {id}`,
-  `mission.stop {id}`, `mission.rename {id, name}`, `mission.new {worker}`; key mode `mission`; view
+  `mission.stop {id}`, `mission.rename {id, name}`, `mission.new` (the launcher); key mode `mission`; view
   `app.overlay.mission`; option `mission.at_launch`; the `mission` indicator slot; a start-view link; the
   assistant's `mission_control` tool (`{show, by, filter, id}`: its state, opened first with `show`). Its cards'
   asks are the inbox's cards (`registry.InboxCard.Draw`), so any inbox source's card for a session shows on it; while
@@ -424,7 +418,7 @@ flowchart TB
   `session.rename` take `{id}` with no session in front.
 - **the assistant** (PL-4, ui.md 11): its tools are agent tools `for = { "assistant" }`: the built-ins (`reply`,
   `sessions`, `past_sessions`, `open_session`, `rename_session`, `resume_session`, `new_session`, `start_session`,
-  `stop_session`, `review_pr`, `jobs`, `run_job`, `repos`, `my_prs`, `review_requests`, `usage`, `workers`,
+  `stop_session`, `review_pr`, `jobs`, `run_job`, `repos`, `my_prs`, `review_requests`, `usage`,
   `settings`, and the window-steering `where`, `changed_files`, `open_project`, `focus_file`), and any another feature or a plugin
   adds: the help viewer's `help_search`, `help_read` and `open_help`, the tickets' `my_tickets` (every tracker's, "As built
   (tickets)"), mission control's `mission_control` (SH-7) and
@@ -432,18 +426,18 @@ flowchart TB
   `assistant.close`, `assistant.say {text, voice}`, `assistant.send`, `assistant.new`, `assistant.stop` (`⌘.`),
   `assistant.answer {id, yes}`, `assistant.pick {n}` (`⌘1`–`⌘9`), `assistant.undo {id}`, `assistant.show {id}`; key
   mode `assistant`; view `app.overlay.assistant`; options `assistant.provider`, `assistant.model`, `assistant.web`,
-  `assistant.wake`, `assistant.idle`; the prompt `assistant.system` (group Assistant, `{{date}}`, `{{workers}}`);
+  `assistant.wake`, `assistant.idle`; the prompt `assistant.system` (group Assistant, `{{date}}`);
   the inbox source `assistant`; a Decide hook on `VoiceWake`. `session.start {background}` starts a session behind the
   one in front; `session.start {then}`, like `session.open`'s, is a list of `{command, args}` run once the window
-  is on it (the launcher's opens the first request). `gh.SearchPRs` (`gh.SearchMine`, `gh.SearchReview`) through the worker's `github.prs`
-  (`Client.SearchPRs`); `gh.ParsePR` reads a PR's URL or `owner/name#N`.
+  is on it (the launcher's opens the first request). `gh.SearchPRs` (`gh.SearchMine`, `gh.SearchReview`) through
+  `Host.SearchPRs`; `gh.ParsePR` reads a PR's URL or `owner/name#N`.
 - prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
-  registered on the worker (`worker.Kinds().Register(worker.KindSpec{…})`: its title, a few words (`Desc`), what
+  registered on the host (`host.Kinds().Register(host.KindSpec{…})`: its title, a few words (`Desc`), what
   starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees,
   and its `Variants`, the sorts of it a session can be, the first the default: a tour's seven kinds, RV-8);
-  the launcher lists the worker's kinds (`kinds.list`), so a registered one is a mode there with no more code, and a
+  the launcher lists the host's kinds (`Host.Kinds().All()`), so a registered one is a mode there with no more code, and a
   kind with variants gets a picker whose choice is `session.start {variant}` (`SessionSpec.Variant`).
-  `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the worker yet.
+  `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the host yet.
   `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
   (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a part, the user's
   `agents/parts/<part>.md` before the built-in one) overrides one. `packs.Builtins()`, `Source(name)` (as written,
@@ -451,15 +445,15 @@ flowchart TB
 - **editable prompts** (PL-11, `agent/prompts`): every prompt the Prompts page edits is a `prompts.Def{ID, Group,
   Label, Help, Vars, Default, File}`: the built-ins (`agent/prompts/defaults/NN-<id>.md`, crit's frontmatter: group,
   label, help, vars), each built-in pack (`pack.<name>`, kept in `agents/<name>.md`) and part (`part.<name>`,
-  `agents/parts/<name>.md`), and any `prompts.Register(Def)` adds (kept in `prompts/<id>.md`): the worker registers
-  each tour kind's guidance as `tour.<kind>` (`worker.TourKindID`). Only the user's
+  `agents/parts/<name>.md`), and any `prompts.Register(Def)` adds (kept in `prompts/<id>.md`): the host registers
+  each tour kind's guidance as `tour.<kind>` (`host.TourKindID`). Only the user's
   changes are kept (`prompts.Store{Dir}`: `Load`, `Set`, which takes the file away for empty or default text,
   `Reset`, `Path`). `prompts.Overrides` reads them: `Text(id)`, `Custom(id)`, `Style()`, `Render(id, vars)` (with
   `{{style}}` the coding style, `prompts.StyleID`), `Pack(name, base)` (a built-in pack the user changed, or whose
-  parts they changed, built from their text; any other from base). The app sends them to every worker on connect and
-  on each change (`prompts.set`, `worker.Client.SetPrompts`); the worker binary's packs are the built-in ones for
-  the built-in kinds (the user's versions come from the app) and `agents/` only adds kinds. The worker writes
-  each workspace's agent notes (`worker.NotesFiles`: `CLAUDE.md` and `AGENTS.md`) with the projects and the coding
+  parts they changed, built from their text; any other from base). The app gives them to the host at start and
+  on each change (`Host.SetPrompts`); the host's packs are the built-in ones for
+  the built-in kinds (the user's versions come from the app) and `agents/` only adds kinds. The host writes
+  each workspace's agent notes (`host.NotesFiles`: `CLAUDE.md` and `AGENTS.md`) with the projects and the coding
   style, as crit's `WriteAgentNotes` does. Commands `Prompts`, `prompts.open {id}`, `prompts.set {id, text}`,
   `prompts.reset {id}`, `prompts.save`, `prompts.edit {id}`; key modes `prompts` and `prompts.text`; view
   `app.overlay.prompts`; the `prompts` icon. No Lua binding of its own yet: the commands are Lua's way in.
@@ -486,7 +480,7 @@ flowchart TB
   review-ledger rules, commit and PR gates, slop rules, and status-colour rules.
 
 **Workspace**
-- worker hooks, sandbox policies, network-approval rules, gateway policies, git hooks.
+- session host hooks, sandbox policies, network-approval rules, gateway policies, git hooks.
 
 ## Hooks that can change things, not just watch
 
@@ -576,12 +570,12 @@ func TestCards(t *testing.T) {
 ```
 
 - `New(t, Options{Size, Now, Config})` starts the app with a home, config and state directory of the test's (`Config`
-  changes `app.Config` first: `Net`, `Secrets`, `Workers`), and stops every plugin when the test ends. `Now`,
+  changes `app.Config` first: `Net`, `Secrets`, `Host`), and stops every plugin when the test ends. `Now`,
   `SetNow` are the window's clock (`oriel.now`, countdowns, an indicator's `every`).
 - `Install(t, src, cmds…)` lays a plugin out as an install does, each Go command built into its `bin/`, and skips where
   the OS sandbox isn't there; `Manifest(t, dir)`. `Load(dir, grants)` starts the Lua plugin in `dir` with a data
   directory of the test's (`Plugin{ID, Dir, Data}`); a load error fails the test.
-- `Apply(events…)` applies core events, as a worker's; `SetOption(name, v)` sets one as `settings.toml` would;
+- `Apply(events…)` applies core events, as the host's; `SetOption(name, v)` sets one as `settings.toml` would;
   `Run(id, args)` runs a command; `Registry()` and `Store()` for anything else (a stand-in `session.start`, a
   `Forker`, an `AgentOwner` that answers an act's confirmation).
 - `Frame()`, `Text()` (the frame's runs of text, a line each), `Has`, `WantText`, `Access()` and `Find(name)` (the
@@ -979,12 +973,12 @@ type Host interface {
   `session.new {ticket}` filled it), is looked up from the first source that takes it; the card shows the key, a state
   chip, the title, the description's start and the facts, with ✕ to take it off; Start waits while it's being looked
   up; the header says "from ticket". `session.start {context}` carries the card's context:
-  `core.SessionSpec.Context`, which the worker sends after the prompt as the first request (or alone, with no prompt)
+  `core.SessionSpec.Context`, which the host sends after the prompt as the first request (or alone, with no prompt)
   and doesn't keep as the session's prompt.
 - **Picker sources from Lua**: `oriel.picker.source{ id, title, prefix, order, picker_only, items = fn(query), run,
   preview }` registers a `registry.PickerSource`; items are tables (`label, detail, note, icon, icon_style, badge,
   badge_style, key, boost, id`, and the source's own fields), handed back to `run` and `preview` as given.
-- **Events**: `SessionStart {session, kind, ticket, prompt, worker}`, fired after `session.start` starts one (the
+- **Events**: `SessionStart {session, kind, ticket, prompt}`, fired after `session.start` starts one (the
   subject its id), and `PrSeen {session, project, ticket, number, url, title, state, draft, merged}`, fired the first
   time the app reads a session's PR on the Ship page's read (the session in front, every 10 s), whoever raised it.
 - **http.request**'s `auth_scheme` (`plugin.HTTPRequest.AuthScheme`): what goes before the secret in the Authorization
@@ -1055,7 +1049,7 @@ type Host interface {
 - Not yet: installing it from `[plugins]` (PL-19/20; its README builds the process into `plugin/bin/` for a `path`
   source, and `app.DirPlugin` loads the directory in a program embedding Oriel); an auto-answer with no session to fork waits for the utility session (agents.md), and the fork has
   no tools rather than crit's read-only ones; review routing takes `plugin.agentbus.repos` rather than every local
-  clone (the Lua can't list a worker's repos); crit's search of GitHub's own review requests for the rules, the
+  clone (the Lua can't list the host's repos); crit's search of GitHub's own review requests for the rules, the
   result of a review a session submits (Oriel's agents never post one: the GitHub poll covers it), and who was seen
   before (`people`).
 

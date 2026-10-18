@@ -30,6 +30,7 @@ func (w *Worker) keyed(ctx context.Context, id core.SessionID, what, project str
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
+		defer w.recover("a key wait", nil)
 		t := time.NewTimer(wait)
 		defer t.Stop()
 		select {

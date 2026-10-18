@@ -71,38 +71,6 @@ func (w *Worker) tools(h *host) []agent.Tool {
 	return own
 }
 
-// appTools are the tools the app offers an agent, each called back in the app.
-func (w *Worker) appTools(r ToolsReq) []agent.Tool {
-	for _, app := range w.appConns() {
-		var list []agent.Tool
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		err := app.Call(ctx, MethodAppTools, r, &list)
-		cancel()
-		if err != nil {
-			continue
-		}
-		for i, t := range list {
-			list[i].Call = w.appTool(ToolCall{Session: r.Session, Agent: r.Agent, Tool: t.Name})
-		}
-		return list
-	}
-	return nil
-}
-
-func (w *Worker) appTool(call ToolCall) func(context.Context, json.RawMessage) (string, error) {
-	return func(ctx context.Context, args json.RawMessage) (string, error) {
-		for _, app := range w.appConns() {
-			var out string
-			call.Args = args
-			if err := app.Call(ctx, MethodAppTool, call, &out); err != nil {
-				return "", err
-			}
-			return out, nil
-		}
-		return "", errors.New("Oriel's window isn't open, and this tool runs there")
-	}
-}
-
 type toolArgs map[string]any
 
 func parse(raw json.RawMessage) toolArgs {
@@ -488,17 +456,13 @@ func (w *Worker) policy(id core.SessionID, ask core.Ask) (Verdict, bool) {
 			return Verdict{Decision: "allow", By: "rule " + r}, true
 		}
 	}
-	for _, app := range w.appConns() {
-		var v Verdict
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		err := app.Call(ctx, MethodAppDecide, Decide{Session: id, Ask: ask}, &v)
-		cancel()
-		if err == nil && (v.Decision == "allow" || v.Decision == "deny") {
-			if v.By == "" {
-				v.By = "policy"
-			}
-			return v, true
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if v, ok := w.decide(ctx, Decide{Session: id, Ask: ask}); ok {
+		if v.By == "" {
+			v.By = "policy"
 		}
+		return v, true
 	}
 	return Verdict{}, false
 }

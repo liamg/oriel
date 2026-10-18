@@ -46,7 +46,7 @@ func TestJobsAreOneFileEach(t *testing.T) {
 		t.Error("a job with no prompt saved")
 	}
 	jobs := r.w.Jobs()
-	if len(jobs) != 2 || jobs[0].Name != j.Name || jobs[0].Worker != core.LocalWorker {
+	if len(jobs) != 2 || jobs[0].Name != j.Name {
 		t.Errorf("jobs = %+v", jobs)
 	}
 	if err := r.w.DeleteJob(again.Name); err != nil {
@@ -158,8 +158,8 @@ func TestAStopSaysWho(t *testing.T) {
 	shut, _ := r.w.RunJob(ctx, j.Name)
 	r.agent()
 	r.restart()
-	if got := RunOf(r.session(shut)); got.Status != RunStopped || got.StoppedBy != core.StoppedByWorker {
-		t.Errorf("a run the worker stopped as it shut down: %+v", got)
+	if got := RunOf(r.session(shut)); got.Status != RunStopped {
+		t.Errorf("a run stopped as the host closed: %+v", got)
 	}
 	if err := r.w.Resume(ctx, shut); err != nil {
 		t.Fatal(err)

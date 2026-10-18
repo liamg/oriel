@@ -65,14 +65,11 @@ func (x *planPlugin) openStartWork() error {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
-			c, err := x.sh.sessions.client(se.ID)
+			c, err := x.sh.sessions.host()
 			if err != nil {
 				return
 			}
-			ps, err := c.Providers(ctx)
-			if err != nil {
-				return
-			}
+			ps := c.ProviderInfo(ctx)
 			x.h.Do(func() {
 				for _, p := range ps {
 					if gen == x.startGen && x.dialog != nil && p.ID == se.Agent.Provider {
@@ -122,7 +119,7 @@ func (d *startWork) args() registry.Args {
 	return a
 }
 
-// runStartWork starts work as the dialog says; it closes once the worker has.
+// runStartWork starts work as the dialog says; it closes once the session host has.
 func (x *planPlugin) runStartWork() error {
 	d := x.dialog
 	if d == nil || d.busy {

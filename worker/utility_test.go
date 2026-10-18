@@ -31,23 +31,21 @@ func nextUtility(t *testing.T, u *Utility) UtilityEvent {
 func TestUtilityAgent(t *testing.T) {
 	r := newRig(t)
 	r.fake.Offers = []agent.Model{{ID: "big", Default: true}, {ID: "small", Small: true}}
-	c, _ := r.app()
 	var asked ToolsReq
-	c.Conn.Handle(MethodAppTools, func(_ context.Context, raw json.RawMessage) (any, error) {
-		json.Unmarshal(raw, &asked)
-		return []agent.Tool{{Name: "sessions", Description: "Every session.", ReadOnly: true, Schema: json.RawMessage(`{"type":"object"}`)}}, nil
-	})
 	calls := make(chan ToolCall, 1)
-	c.Conn.Handle(MethodAppTool, func(_ context.Context, raw json.RawMessage) (any, error) {
-		var call ToolCall
-		json.Unmarshal(raw, &call)
-		calls <- call
-		return "rounding: needs you", nil
-	})
-	if _, err := c.StartUtility(context.Background(), UtilitySpec{Name: "../x", Pack: "p", Prompt: "hi"}); err == nil {
+	r.w.SetApp(App{
+		Tools: func(q ToolsReq) []agent.Tool {
+			asked = q
+			return []agent.Tool{{Name: "sessions", Description: "Every session.", ReadOnly: true, Schema: json.RawMessage(`{"type":"object"}`)}}
+		},
+		CallTool: func(_ context.Context, call ToolCall) (string, error) {
+			calls <- call
+			return "rounding: needs you", nil
+		}})
+	if _, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "../x", Pack: "p", Prompt: "hi"}); err == nil {
 		t.Error("a utility agent named ../x started")
 	}
-	u, err := c.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "what needs me?",
+	u, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "what needs me?",
 		Allow: []string{"WebSearch"}})
 	if err != nil {
 		t.Fatal(err)
@@ -114,15 +112,14 @@ func TestUtilityAgent(t *testing.T) {
 	}
 }
 
-// A session's agent isn't offered the tools of a utility agent: the worker asks the app for the session's kind's.
+// A session's agent isn't offered the tools of a utility agent: the host asks the app for the session's kind's.
 func TestSessionToolsAreAskedForByKind(t *testing.T) {
 	r := newRig(t)
-	c, _ := r.app()
 	var asked ToolsReq
-	c.Conn.Handle(MethodAppTools, func(_ context.Context, raw json.RawMessage) (any, error) {
-		json.Unmarshal(raw, &asked)
-		return nil, nil
-	})
+	r.w.SetApp(App{Tools: func(q ToolsReq) []agent.Tool {
+		asked = q
+		return nil
+	}})
 	id, _ := r.workSession("Work")
 	if asked.Session != id || asked.Agent != string(core.KindWork) {
 		t.Errorf("asked for %+v", asked)

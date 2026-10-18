@@ -369,22 +369,13 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 
 ## As built (SE-4)
 
-- Jobs are commands too: `oriel.cmd("jobs.open", { job = "sweep-stale-deps" })`, `oriel.cmd("jobs.run", { name = … })`,
+- Jobs are commands too: `oriel.cmd("jobs.open", { job = "sweep-stale-deps" })`, `oriel.cmd("jobs.run", { name = … })` (a job's key is its name),
   and `oriel.cmd("jobs.save", { title = "Weekly changelog draft", prompt = "…", sandbox = "sandbox", provider =
-  "claude", model = "…", effort = "high", schedule = "weekly mon 07:00", worker = "devbox", run = false })` saves one
+  "claude", model = "…", effort = "high", schedule = "weekly mon 07:00", run = false })` saves one
   without the dialog: given a `name`, it changes only what's given. `schedule` is `"manual"`, `"weekdays 07:00"`,
   `"weekly mon 07:00"`, `"mon,thu 07:00"`, or a table `{ every = "days", days = { "Mon", "Thu" }, at = "07:00" }`.
   `jobs.new` opens the dialog with any of them filled in; `jobs.delete { name }` forgets one; `session.delete { id }`
   throws a run (or any session of Oriel's) away.
-
-
-## As built (AI-15)
-
-- Workers are commands: `oriel.cmd("workers.add", { name = "devbox", listen = ":7437" })` makes its key and opens the
-  dialog with the command to run there (`listen` only when `workers.listen` is empty);
-  `oriel.cmd("workers.rename", { name = "devbox", to = "Build box" })` (`to = ""` goes back to its own name),
-  `workers.revoke { name }`, `workers.forget { name }`, `workers.restart`, `workers.open { name }`.
-  `oriel.option["workers.listen"]` is where Oriel listens for them.
 
 
 ## As built (PL-2)
@@ -414,7 +405,7 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 ## As built (PL-6)
 
 - Updates are commands: `oriel.cmd("update.check")` checks now and opens the card, `update.install` installs the
-  release it found here and on the workers behind it, `update.restart` restarts onto it.
+  release it found, `update.restart` restarts onto it.
   `oriel.option["updates.mode"] = "manual"` stops the hourly check; `oriel.option["updates.channel"] = "nightly"`
   takes pre-releases.
 

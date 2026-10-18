@@ -53,7 +53,7 @@ func TestAgentDebuggerTools(t *testing.T) {
 	lw := newLocalWorker(t)
 	s, main, finish := debugSceneOn(t, "testdata/dap/agent.jsonl", lw.connect(t))
 	x := s.debugger()
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.repo})
 	var a *agenttest.FakeSession
 	s.until(t, "the agent", func() bool {

@@ -28,7 +28,7 @@ var Timeout = 15 * time.Second
 type Options struct {
 	Size   render.Point      // the window, in points; 1600×1000 if zero
 	Now    time.Time         // the clock's start; now, to the second, if zero
-	Config func(*app.Config) // changes the app's config before it starts: Net, Secrets, Workers…
+	Config func(*app.Config) // changes the app's config before it starts: Net, Secrets, Worker…
 }
 
 // App is a running app, driven from the test's goroutine.
@@ -134,7 +134,7 @@ func (a *App) Load(dir string, grants []plugin.Grant) Plugin {
 	return p
 }
 
-// Apply applies core events to the app's state, as a worker's would: sessions, focus.
+// Apply applies core events to the app's state, as the session host's would: sessions, focus.
 func (a *App) Apply(evs ...core.Event) {
 	a.t.Helper()
 	for _, ev := range evs {

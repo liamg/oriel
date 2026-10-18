@@ -32,14 +32,14 @@ none of the room.
 | `editor.md` | **Decided: our own vim engine in Go, all the way** (no embedded neovim), held to vim behaviour by differential tests against headless neovim. |
 | `rendering.md` | Own immediate-mode `ui` toolkit, HarfBuzz-grade shaping, glyph atlas, a handful of shader effects for the look. |
 | `sessions.md` | **Sessions, not folders.** You start work (plan, work, review, tour, job, new repo) on repos, and Oriel creates worktrees on a branch. Also a `direct` mode for editing a checkout in place, and `scratch`. The app opens on mission control, not a file dialog. |
-| `architecture.md` | Desktop app (UI + core) ↔ one worker per machine over yamux. No per-session servers, no browser. |
+| `architecture.md` | One process per machine: the Oriel window hosts its sessions itself (the `host` package). No per-session servers, no sockets, no browser. |
 | `agents.md` | `agent.Provider` interface. Claude runs as an interactive PTY session driven by the Oriel mod's hooks (subscription billing, not `-p`); Codex via `app-server`. Nothing calls `claude -p`. |
 | `plugins.md` | Vim-level extensibility: every action a command, every event hookable (observe / veto / rewrite / decide), every surface replaceable. Tiers: Lua, process (JSON-RPC), WASM, built-in Go, all using the same registry. |
 | `scripting.md` | **Lua** config and plugins (gopher-lua first, LuaJIT if the benchmarks need it), with a neovim-shaped API, agent tools and gates defined in script, and full introspection. |
 | `theming.md` | Layered tokens (palette → semantic → component and syntax, plus effects and type) in TOML themes that `extends` a base and hold only overrides. A `:Theme` editor where you click anything to edit the token behind it. Imports VS Code, base16, nvim and terminal themes. |
 | `features.md` | **The feature inventory**: every capability in the mockups mapped to a module, a phase and a testable "done when". It also defines what Start work does (phase 0 only). |
 | `security.md` | Plugins are **deny by default**: they declare capabilities, each explained (optionally with the author's reason), and you install **all or nothing**. Secrets are bound to a host and never seen by the plugin. WASM and Lua are enforced in-VM. Process plugins are OS-sandboxed. Native plugins are full trust and labelled as such. Plugins that touch code run **inside the session's sandbox**. |
-| `distribution.md` | DMG once, then silent self-updates. A stable signing identity (self-signed now, Developer ID when public) avoids TCC and keychain re-prompts. Releases are verified with ed25519. The app streams updates to workers over the wire, so workers need no GitHub access. |
+| `distribution.md` | DMG once, then silent self-updates. A stable signing identity (self-signed now, Developer ID when public) avoids TCC and keychain re-prompts. Releases are verified with ed25519. |
 | `help.md` | **Help on everything**: right-click → Help, `K`/F1, `⌘?` help mode, `:help`. Markdown pages with live "right now" blocks and generated key, option and API sections. CI fails if an interactive element has no help. |
 | `testing.md` | **Test-first.** Every behaviour test cites a vendored spec (`:help` tag, LSP/DAP spec, xterm ctlseqs, Unicode) with a verbatim quote that CI checks. Vim expectations are also checked against headless nvim, plus differential fuzzing and mined vim tests. |
 | `deps.md` | Dependency policy: stdlib and `x/` are free, large accountable companies are allowed, **everything else needs approval first**. CI allowlist, vendored source, and WASM built from pinned source. Audits every dependency the plan names. |
@@ -61,12 +61,12 @@ none of the room.
 - Sandbox, gateway MCP, egress approvals, ssh-agent grants.
 - agentbus (questions, review requests, auto-answer), Linear, Slack PTAL.
 - The assistant: it moves from the room into a drawer.
-- Usage windows, session stats, stats, worker CPU/mem, logs, agentbus log.
+- Usage windows, session stats, stats, this machine's CPU/mem, logs, agentbus log.
 - Editable prompts page and coding style. Voice dictation.
 
 **Rewrite**
 - The whole UI (native), the editor (own vim), LSP (a full client), terminals (native).
-- Session servers and the manager/dashboard, which become the worker and the app.
+- Session servers, the worker and the manager/dashboard, which become the app and its in-process session host.
 - The Claude mod and hooks, which become provider-neutral session-host logic plus MCP.
 
 **Drop**
@@ -82,7 +82,7 @@ flowchart LR
   P1 --> P2["2 · Editor core: text, vim, syntax"]
   P2 --> P3["3 · Shell: tabs, omnibox, pickers, help, Lua"]
   P3 --> P4["4 · IDE: LSP, tests, terminals, git"]
-  P3 --> P5["5 · AI: worker, providers, sessions, threads"]
+  P3 --> P5["5 · AI: session host, providers, sessions, threads"]
   P4 --> P6["6 · Review: diff, ledger, explain, PR"]
   P5 --> P6
   P6 --> P7["7 · The rest: DAP, HUD, integrations, plugins"]
@@ -99,7 +99,7 @@ flowchart LR
 - **2. Editor core.** `text`, then `vim` test-first against the oracle, then `syntax` on wazero. Usable as a plain editor.
 - **3. Shell.** Session tabs, omnibox, pickers, which-key, help, Lua config.
 - **4. IDE.** LSP, running tests, terminals, git, search. Daily-drivable without AI.
-- **5. AI.** Worker and wire, the Claude and Codex providers, sessions, requests, plan and work.
+- **5. AI.** The session host, the Claude and Codex providers, sessions, requests, plan and work.
 - **6. Review.** Diff views, review ledger, explain, AI review, PR and Ship pages, verify.
 - **7. The rest.** DAP, HUD and mission control, plugins and security, integrations, assistant, tours, self-update. Then cut-over: crit is archived.
 - **8. Plugin registry.** `[plugins]` in `settings.toml`, lockfile consent, the package format, the registry repo and

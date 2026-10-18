@@ -11,8 +11,8 @@ import (
 )
 
 // ProviderInfo is each provider as the launcher shows it: installed, logged in, its models, its usage.
-func (w *Worker) ProviderInfo(ctx context.Context) []ProviderInfo {
-	var out []ProviderInfo
+func (w *Worker) ProviderInfo(ctx context.Context) (out []ProviderInfo) {
+	defer w.recover("ProviderInfo", nil)
 	st := w.store.State()
 	for _, p := range w.opts.Providers.List() {
 		info := ProviderInfo{ID: p.ID()}
@@ -42,8 +42,8 @@ func (w *Worker) ProviderInfo(ctx context.Context) []ProviderInfo {
 	return out
 }
 
-// workerState is this worker as the app sees it, with a fresh reading of its load.
-func (w *Worker) workerState() core.WorkerState {
+// machineState is this machine as the app shows it, with a fresh reading of its load.
+func (w *Worker) machineState() core.MachineState {
 	host, _ := os.Hostname()
 	r := w.opts.Load()
 	var providers []string
@@ -56,13 +56,14 @@ func (w *Worker) workerState() core.WorkerState {
 	if w.opts.Sandbox != nil {
 		sandboxes = w.opts.Sandbox.Backends()
 	}
-	return core.WorkerState{ID: w.opts.ID, Name: w.opts.Name, Host: host, OS: runtime.GOOS, Arch: runtime.GOARCH, Version: w.opts.Version,
-		Build: w.opts.Build, Providers: providers, Sandboxes: sandboxes, Connected: true, Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal,
+	return core.MachineState{Host: host, OS: runtime.GOOS, Arch: runtime.GOARCH, Version: w.opts.Version,
+		Providers: providers, Sandboxes: sandboxes, Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal,
 		Sampled: w.opts.Now().UTC(), SignedOut: w.lostLogins()}
 }
 
-// SampleLoad reports the worker's load every interval until ctx ends.
+// SampleLoad reports the machine's load every interval until ctx ends.
 func (w *Worker) SampleLoad(ctx context.Context, every time.Duration) {
+	defer w.recover("SampleLoad", nil)
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
@@ -72,46 +73,63 @@ func (w *Worker) SampleLoad(ctx context.Context, every time.Duration) {
 		case <-w.closed:
 			return
 		case <-t.C:
-			_ = w.emit(core.WorkerChanged{Worker: w.workerState()})
+			func() {
+				defer w.recover("SampleLoad", nil)
+				_ = w.emit(core.MachineChanged{Machine: w.machineState()})
+			}()
 		}
 	}
 }
 
-// serveTerminal streams the agent's raw terminal: what it has shown, then what it shows.
-func (w *Worker) serveTerminal(ctx context.Context, r SessionRef, send func(any) error) error {
-	h, _ := w.hostFor(r.Session, false)
+// Terminal is the agent's raw terminal: what it has shown, then what it shows, until ctx ends or the agent
+// stops.
+func (w *Worker) Terminal(ctx context.Context, id core.SessionID) (_ <-chan []byte, err error) {
+	defer w.recover("Terminal", &err)
+	h, _ := w.hostFor(id, false)
 	if h == nil {
-		return errors.New("the agent isn't running")
+		return nil, errors.New("the agent isn't running")
 	}
 	h.mu.Lock()
 	sess := h.sess
 	h.mu.Unlock()
 	if sess == nil || sess.Terminal() == nil {
-		return errors.New("this agent has no terminal")
+		return nil, errors.New("this agent has no terminal")
 	}
 	backlog, live, detach := sess.Terminal().Attach()
-	defer detach()
-	if len(backlog) > 0 {
-		if err := send(backlog); err != nil {
-			return err
-		}
-	}
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case b, ok := <-live:
-			if !ok {
-				return nil
-			}
-			if err := send(b); err != nil {
-				return err
+	out := make(chan []byte, 64)
+	w.goSafe("Terminal", func() {
+		defer close(out)
+		defer detach()
+		send := func(b []byte) bool {
+			select {
+			case out <- b:
+				return true
+			case <-ctx.Done():
+				return false
 			}
 		}
-	}
+		if len(backlog) > 0 && !send(backlog) {
+			return
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-w.closed:
+				return
+			case b, ok := <-live:
+				if !ok || !send(b) {
+					return
+				}
+			}
+		}
+	})
+	return out, nil
 }
 
-func (w *Worker) termInput(r TermReq) error {
+// TermInput types into the agent's terminal, and resizes it.
+func (w *Worker) TermInput(r TermReq) (err error) {
+	defer w.recover("TermInput", &err)
 	h, _ := w.hostFor(r.Session, false)
 	if h == nil {
 		return errors.New("the agent isn't running")

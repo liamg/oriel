@@ -39,7 +39,7 @@ type planPlugin struct {
 	by map[core.SessionID]*planState
 
 	dialog   *startWork // the Start work dialog, while it's open
-	startGen int        // which opening of it the worker's answers are for
+	startGen int        // which opening of it the host's answers are for
 }
 
 // planState is one session's plan views: the doc in front, and each doc's presentation.

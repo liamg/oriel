@@ -21,26 +21,21 @@ func (s *errScene) mission() *missionPlugin {
 	return nil
 }
 
-// missionScene is 03-switcher's: two workers, this Mac and devbox, and sessions on both in every status.
+// missionScene is 03-switcher's: this Mac, and sessions in every status.
 func missionScene(t *testing.T) (*errScene, *[]string) {
 	t.Helper()
 	s := newScene(t, "", "", mockupSize)
 	s.now = at(14, 30, 0)
 	ago := func(d time.Duration) time.Time { return s.now.Add(-d) }
 	gib := uint64(1 << 30)
-	evs := []core.Event{
-		core.WorkerChanged{Worker: core.WorkerState{ID: core.LocalWorker, Name: "mbp", Connected: true, Cores: 10, CPU: .34, Mem: 112 * gib / 10, MemTotal: 32 * gib,
-			Sampled: ago(time.Second), Providers: []string{"claude", "codex"}}},
-		core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Host: "ssh", Connected: true, Cores: 32, CPU: .61, Mem: 48 * gib,
-			MemTotal: 128 * gib, Sampled: ago(time.Second)}},
-	}
+	now := core.MachineChanged{Machine: core.MachineState{Host: "mbp", Cores: 10, CPU: .34, Mem: 112 * gib / 10, MemTotal: 32 * gib,
+		Sampled: ago(time.Second), Providers: []string{"claude", "codex"}}}
+	var evs []core.Event
 	for i := range 12 {
-		for _, w := range []core.WorkerState{{ID: core.LocalWorker, Name: "mbp", CPU: .2 + .03*float64(i%5)}, {ID: "devbox", Name: "devbox", Host: "ssh", CPU: .4 + .05*float64(i%4)}} {
-			w.Connected, w.Sampled = true, ago(time.Duration(12-i)*time.Minute)
-			evs = append(evs, core.WorkerChanged{Worker: w})
-		}
+		evs = append(evs, core.MachineChanged{Machine: core.MachineState{Host: "mbp", Cores: 10, CPU: .2 + .03*float64(i%5),
+			Sampled: ago(time.Duration(12-i) * time.Minute)}})
 	}
-	evs = append(evs, evs[0], evs[1])
+	evs = append(evs, now)
 	for _, u := range []core.ProviderUsage{
 		{Provider: "claude", Account: "liam", Tier: "Max", Sampled: ago(time.Minute), Windows: []core.UsageWindow{
 			{Name: "5-hour", Used: .38, Length: 5 * time.Hour, Resets: s.now.Add(2 * time.Hour)},
@@ -83,14 +78,14 @@ func missionScene(t *testing.T) (*errScene, *[]string) {
 		{ID: "tour-auth", Name: "tour: auth flow", Kind: core.KindTour, Status: core.StatusQuiet, Created: ago(30 * time.Hour),
 			Transcript: []core.Item{{ID: "a1", Kind: core.ItemAssistant, Text: "How a request is authenticated, from the edge middleware to the JWT verifier and session store.",
 				Time: ago(26 * time.Hour)}}},
-		{ID: "review-4410", Name: "review #4410", Kind: core.KindReview, Status: core.StatusPermission, Worker: "devbox", Created: ago(time.Hour),
+		{ID: "review-4410", Name: "review #4410", Kind: core.KindReview, Status: core.StatusPermission, Created: ago(time.Hour),
 			Agent: core.AgentState{Provider: "claude", Running: true, Sandboxed: true, Network: "ask"},
 			Asks:  []core.Ask{{ID: "p1", Kind: core.AskPermission, Tool: "Bash", Summary: "make e2e", Created: ago(22 * time.Minute)}}},
-		{ID: "search-api", Name: "ENG-2231 search api", Kind: core.KindWork, Status: core.StatusNeedsYou, Worker: "devbox", Created: ago(2 * time.Hour),
+		{ID: "search-api", Name: "ENG-2231 search api", Kind: core.KindWork, Status: core.StatusNeedsYou, Created: ago(2 * time.Hour),
 			Projects: []core.Project{{Name: "search-api"}, {Name: "billing"}}, Agent: core.AgentState{Provider: "claude", Running: true},
 			Transcript: []core.Item{{ID: "a1", Kind: core.ItemAssistant, Text: "Evict stale entries on read, or by the nightly job? Read-time is simpler but adds 4ms p99.",
 				Time: ago(6 * time.Minute)}}},
-		{ID: "flaky-e2e", Name: "flaky e2e sweep", Kind: core.KindJob, Status: core.StatusCI, Worker: "devbox", PR: "https://github.com/acme/api/pull/4419",
+		{ID: "flaky-e2e", Name: "flaky e2e sweep", Kind: core.KindJob, Status: core.StatusCI, PR: "https://github.com/acme/api/pull/4419",
 			Created: ago(time.Hour), Agent: core.AgentState{Provider: "claude"},
 			Asks: []core.Ask{{ID: "g1", Kind: core.AskGateway, Tool: "oriel__push", Summary: "git push origin flaky-e2e", Created: ago(8 * time.Minute)}}},
 	} {
@@ -157,39 +152,26 @@ func (s *errScene) top(t *testing.T, label string) float32 {
 	return s.onMission(t, label).Bounds.Min.Y
 }
 
-// SH-7 done when "grouped by worker": each worker's heading, with its load, over its own sessions' cards; the other
-// groupings regroup the same cards.
-func TestMissionControlGroupsByWorker(t *testing.T) {
+// SH-7: the cards are grouped by status, the most urgent first, or by repo; there's no card to start a session
+// beside them.
+func TestMissionControlGroups(t *testing.T) {
 	s, _ := missionScene(t)
 	s.openMission(t)
-	s.wantFrame(t, "MISSION CONTROL", "MBP", "local · 10 cores · cpu 34% · mem 11.2/32G", "DEVBOX", "ssh · 32 cores · cpu 61% · mem 48/128G",
-		"2 need you", "1 permission", "2 working", "1 ci", "1 in review", "1 quiet")
-	mbp, devbox := s.top(t, "MBP · local · 10 cores · cpu 34% · mem 11.2/32G"), s.top(t, "DEVBOX · ssh · 32 cores · cpu 61% · mem 48/128G")
-	for _, local := range []string{"pricing-rounding", "ci lint fix", "dash-filters", "deps sweep", "tour: auth flow"} {
-		if y := s.top(t, local); y < mbp || y > devbox {
-			t.Errorf("%s's card isn't under MBP", local)
-		}
-	}
-	for _, remote := range []string{"review #4410", "ENG-2231 search api", "flaky e2e sweep"} {
-		if s.top(t, remote) < devbox {
-			t.Errorf("%s's card isn't under DEVBOX", remote)
-		}
-	}
-	s.onMission(t, "New session on mbp")
-	s.onMission(t, "New session on devbox")
-
-	s.run("mission.group", registry.Args{"by": "status"})
-	s.frame()
-	s.frame()
+	s.wantFrame(t, "MISSION CONTROL", "NEEDS YOU", "WORKING", "2 need you", "1 permission", "2 working", "1 ci", "1 in review", "1 quiet")
 	if s.top(t, "NEEDS YOU") > s.top(t, "WORKING") || s.top(t, "pricing-rounding") < s.top(t, "WORKING") {
 		t.Error("grouped by status, the cards aren't under their statuses, most urgent first")
+	}
+	if strings.Contains(s.frameText(), "NEW SESSION ON") {
+		t.Error("a group ends with a card to start a session")
 	}
 	s.run("mission.group", registry.Args{"by": "repo"})
 	s.frame()
 	s.frame()
 	s.onMission(t, "SEARCH-API")
-	if err := s.reg.Run(context.Background(), "mission.group", registry.Args{"by": "colour"}); err == nil {
-		t.Error("mission.group took a grouping it hasn't")
+	for _, by := range []string{"colour", "worker"} {
+		if err := s.reg.Run(context.Background(), "mission.group", registry.Args{"by": by}); err == nil {
+			t.Errorf("mission.group took %s, a grouping it hasn't", by)
+		}
 	}
 }
 
@@ -273,35 +255,36 @@ func TestMissionAllowDenyFromTheCard(t *testing.T) {
 }
 
 // SH-7 (ui.md 03): "Fully keyboard-driven: hjkl, ⏎ opens, a allows, x stops"; r renames on the card, n starts a
-// session on the card's worker, / filters.
+// session, / filters.
 func TestMissionKeys(t *testing.T) {
 	s, _ := missionScene(t)
 	var ran []string
 	for _, id := range []string{"session.open", "session.stop", "session.rename", "session.new"} {
 		s.reg.Command(registry.Command{ID: id, Run: func(_ registry.Ctx, a registry.Args) error {
-			ran = append(ran, id+" "+a.String("id")+a.String("name")+a.String("worker"))
+			ran = append(ran, id+" "+a.String("id")+a.String("name"))
 			return nil
 		}})
 	}
 	s.openMission(t)
 	m := s.mission()
-	// MBP's cards, most urgent first, three to a row: ci lint fix, pricing-rounding, deps sweep; dash-filters,
-	// tour: auth flow. devbox's: ENG-2231 search api, review #4410, flaky e2e sweep.
-	if m.selected() != "ci-lint" {
+	// By status, the oldest first in each: needs you: ENG-2231 search api, ci lint fix; permission: review #4410;
+	// working: pricing-rounding, deps sweep; then flaky e2e sweep, dash-filters, tour: auth flow.
+	if m.selected() != "search-api" {
 		t.Fatalf("the first card selected is %s", m.selected())
 	}
 	s.keyCommand(t, "l")
 	s.keyCommand(t, "j")
-	if got := m.selected(); got != "tour-auth" {
-		t.Errorf("l then j selected %s, want the card under pricing-rounding", got)
+	if got := m.selected(); got != "review-4410" {
+		t.Errorf("l then j selected %s, want the card in the next group", got)
 	}
 	s.keyCommand(t, "j")
-	if got := m.selected(); got != "review-4410" {
-		t.Errorf("j into devbox's group selected %s", got)
+	s.keyCommand(t, "l")
+	if got := m.selected(); got != "deps-sweep" {
+		t.Errorf("j then l selected %s", got)
 	}
 	s.keyCommand(t, "k")
 	s.keyCommand(t, "h")
-	if got := m.selected(); got != "dash-filters" {
+	if got := m.selected(); got != "ci-lint" {
 		t.Errorf("k then h selected %s", got)
 	}
 	s.keyCommand(t, "x")
@@ -314,7 +297,7 @@ func TestMissionKeys(t *testing.T) {
 	s.typeKeys("CR")
 	s.frame()
 	s.keyCommand(t, "<CR>")
-	want := []string{"session.stop dash-filters", "session.new local", "session.rename dash-filtersnightly", "session.open dash-filters"}
+	want := []string{"session.stop ci-lint", "session.new ", "session.rename ci-lintnightly", "session.open ci-lint"}
 	if strings.Join(ran, "|") != strings.Join(want, "|") {
 		t.Errorf("the keys ran %q, want %q", ran, want)
 	}
@@ -322,7 +305,7 @@ func TestMissionKeys(t *testing.T) {
 		t.Error("⏎ left mission control open over the session")
 	}
 
-	s.run("mission.open", registry.Args{"by": "worker"})
+	s.run("mission.open", registry.Args{"by": "status"})
 	s.frame()
 	s.keyCommand(t, "/")
 	s.frame()
@@ -394,13 +377,15 @@ func TestMissionControlTool(t *testing.T) {
 		}
 	}
 	got := call(map[string]any{})
-	if got.Open || got.By != "worker" || len(got.Groups) != 2 || got.Groups[1].Title != "DEVBOX" {
+	if got.Open || got.By != "status" || len(got.Groups) != 6 || got.Groups[0].Title != "NEEDS YOU" {
 		t.Fatalf("mission_control read %+v", got)
 	}
 	var review missionCardLine
-	for _, c := range got.Groups[1].Sessions {
-		if c.ID == "review-4410" {
-			review = c
+	for _, g := range got.Groups {
+		for _, c := range g.Sessions {
+			if c.ID == "review-4410" {
+				review = c
+			}
 		}
 	}
 	if review.Status != "permission" || !strings.Contains(review.Waiting, "make e2e") {
@@ -409,8 +394,8 @@ func TestMissionControlTool(t *testing.T) {
 	if len(got.NeedsYou) == 0 || !strings.HasPrefix(got.NeedsYou[0], "Permission: Bash(make e2e)") {
 		t.Errorf("needs you, oldest first: %q", got.NeedsYou)
 	}
-	got = call(map[string]any{"show": true, "by": "status", "id": "flaky-e2e"})
-	if !got.Open || got.By != "status" || got.Selected != "flaky-e2e" || !s.mission().open {
+	got = call(map[string]any{"show": true, "by": "repo", "id": "flaky-e2e"})
+	if !got.Open || got.By != "repo" || got.Selected != "flaky-e2e" || !s.mission().open {
 		t.Errorf("show didn't open it as asked: %+v", got)
 	}
 }

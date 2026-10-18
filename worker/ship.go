@@ -15,7 +15,6 @@ import (
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/sandbox"
-	"github.com/liamg/oriel/wire"
 )
 
 // The Ship page's side on the worker (ui.md 18): each project's way from uncommitted work to a merged PR, read from
@@ -82,17 +81,6 @@ const DraftByYou = "you"
 
 // Empty says nothing was drafted.
 func (d Draft) Empty() bool { return strings.TrimSpace(d.Title+d.Body) == "" }
-
-// What the app asks of the Ship page's side.
-const (
-	MethodShipRead   = "ship.read"
-	MethodShipCommit = "ship.commit"
-	MethodShipPush   = "ship.push"
-	MethodShipSync   = "ship.sync"
-	MethodShipPR     = "ship.pr"
-	MethodShipReady  = "ship.ready"
-	MethodShipDraft  = "ship.draft"
-)
 
 // ShipReq reads a session's projects; Fresh asks GitHub again rather than answering from the last minute's.
 type ShipReq struct {
@@ -183,7 +171,8 @@ func (w *Worker) github(r gitx.Repo) gh.Client {
 }
 
 // ShipRead is every project of a session on its way to a PR.
-func (w *Worker) ShipRead(ctx context.Context, r ShipReq) ([]Ship, error) {
+func (w *Worker) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {
+	defer w.recover("ShipRead", &err)
 	se, err := w.session(r.Session)
 	if err != nil {
 		return nil, err
@@ -194,6 +183,7 @@ func (w *Worker) ShipRead(ctx context.Context, r ShipReq) ([]Ship, error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer w.recover("ShipRead", nil)
 			out[i] = w.shipProject(ctx, se, p, r.Fresh)
 		}()
 	}
@@ -320,7 +310,8 @@ func (w *Worker) forget(id core.SessionID, project string) {
 
 // ShipCommit commits a project's files with the user's git identity, drops the commit draft it used, and returns the
 // commit's hash.
-func (w *Worker) ShipCommit(ctx context.Context, r ShipCommitReq) (string, error) {
+func (w *Worker) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err error) {
+	defer w.recover("ShipCommit", &err)
 	_, p, repo, err := w.projectRepo(r.Session, r.Project)
 	if err != nil {
 		return "", err
@@ -341,7 +332,8 @@ func (w *Worker) ShipCommit(ctx context.Context, r ShipCommitReq) (string, error
 }
 
 // ShipPush pushes a project's branch to origin: the session's own branch only.
-func (w *Worker) ShipPush(ctx context.Context, r ShipRef) error {
+func (w *Worker) ShipPush(ctx context.Context, r ShipRef) (err error) {
+	defer w.recover("ShipPush", &err)
 	_, p, repo, err := w.projectRepo(r.Session, r.Project)
 	if err != nil {
 		return err
@@ -356,7 +348,8 @@ func (w *Worker) ShipPush(ctx context.Context, r ShipRef) error {
 
 // ShipSync fetches origin and rebases a project's branch onto its base, carrying uncommitted work over. One that
 // conflicts is undone and says where.
-func (w *Worker) ShipSync(ctx context.Context, r ShipRef) error {
+func (w *Worker) ShipSync(ctx context.Context, r ShipRef) (err error) {
+	defer w.recover("ShipSync", &err)
 	_, p, repo, err := w.projectRepo(r.Session, r.Project)
 	if err != nil {
 		return err
@@ -383,7 +376,8 @@ func (w *Worker) ShipSync(ctx context.Context, r ShipRef) error {
 
 // ShipPR raises a project's pull request from its pushed branch, or edits the open one, asks its reviewers, and
 // cross-links every PR of the session in their merge order (the session's project order).
-func (w *Worker) ShipPR(ctx context.Context, r PRReq) (*gh.PR, error) {
+func (w *Worker) ShipPR(ctx context.Context, r PRReq) (_ *gh.PR, err error) {
+	defer w.recover("ShipPR", &err)
 	se, p, repo, err := w.projectRepo(r.Session, r.Project)
 	if err != nil {
 		return nil, err
@@ -427,7 +421,8 @@ func (w *Worker) ShipPR(ctx context.Context, r PRReq) (*gh.PR, error) {
 }
 
 // ShipReady takes a project's draft PR out of draft.
-func (w *Worker) ShipReady(ctx context.Context, r ShipRef) error {
+func (w *Worker) ShipReady(ctx context.Context, r ShipRef) (err error) {
+	defer w.recover("ShipReady", &err)
 	_, p, repo, err := w.projectRepo(r.Session, r.Project)
 	if err != nil {
 		return err
@@ -581,7 +576,8 @@ func (w *Worker) dropDraft(id core.SessionID, project, kind string) {
 }
 
 // ShipDraft saves a draft the user wrote, or drops it.
-func (w *Worker) ShipDraft(ctx context.Context, r DraftReq) error {
+func (w *Worker) ShipDraft(ctx context.Context, r DraftReq) (err error) {
+	defer w.recover("ShipDraft", &err)
 	_, p, repo, err := w.projectRepo(r.Session, r.Project)
 	if err != nil {
 		return err
@@ -612,47 +608,4 @@ func ownBranch(p core.Project) (string, error) {
 			p.Name, got, p.Branch, p.Branch)
 	}
 	return p.Branch, nil
-}
-
-func (w *Worker) serveShip(fn func(string, wire.Handler)) {
-	fn(MethodShipRead, wire.Func(func(ctx context.Context, r ShipReq) ([]Ship, error) { return w.ShipRead(ctx, r) }))
-	fn(MethodShipCommit, wire.Func(func(ctx context.Context, r ShipCommitReq) (any, error) { return w.ShipCommit(ctx, r) }))
-	fn(MethodShipPush, wire.Func(func(ctx context.Context, r ShipRef) (any, error) { return nil, w.ShipPush(ctx, r) }))
-	fn(MethodShipSync, wire.Func(func(ctx context.Context, r ShipRef) (any, error) { return nil, w.ShipSync(ctx, r) }))
-	fn(MethodShipPR, wire.Func(func(ctx context.Context, r PRReq) (*gh.PR, error) { return w.ShipPR(ctx, r) }))
-	fn(MethodShipReady, wire.Func(func(ctx context.Context, r ShipRef) (any, error) { return nil, w.ShipReady(ctx, r) }))
-	fn(MethodShipDraft, wire.Func(func(ctx context.Context, r DraftReq) (any, error) { return nil, w.ShipDraft(ctx, r) }))
-}
-
-// ShipRead is a session's projects on their way to a PR (ship.read).
-func (c Client) ShipRead(ctx context.Context, r ShipReq) ([]Ship, error) {
-	var out []Ship
-	return out, c.Conn.Call(ctx, MethodShipRead, r, &out)
-}
-
-func (c Client) ShipCommit(ctx context.Context, r ShipCommitReq) (string, error) {
-	var hash string
-	return hash, c.Conn.Call(ctx, MethodShipCommit, r, &hash)
-}
-
-func (c Client) ShipPush(ctx context.Context, r ShipRef) error {
-	return c.Conn.Call(ctx, MethodShipPush, r, nil)
-}
-
-func (c Client) ShipSync(ctx context.Context, r ShipRef) error {
-	return c.Conn.Call(ctx, MethodShipSync, r, nil)
-}
-
-// ShipPR raises a project's PR, or edits its open one, and returns it.
-func (c Client) ShipPR(ctx context.Context, r PRReq) (*gh.PR, error) {
-	var out *gh.PR
-	return out, c.Conn.Call(ctx, MethodShipPR, r, &out)
-}
-
-func (c Client) ShipReady(ctx context.Context, r ShipRef) error {
-	return c.Conn.Call(ctx, MethodShipReady, r, nil)
-}
-
-func (c Client) ShipDraft(ctx context.Context, r DraftReq) error {
-	return c.Conn.Call(ctx, MethodShipDraft, r, nil)
 }

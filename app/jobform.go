@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -25,9 +24,7 @@ var (
 )
 
 type jobForm struct {
-	name    string        // the job edited; "" for a new one
-	from    core.WorkerID // the worker the job edited is on
-	worker  core.WorkerID
+	name    string // the job edited; "" for a new one
 	title   string
 	prompt  string
 	runsIn  int
@@ -60,13 +57,13 @@ func (f *jobForm) job() worker.Job {
 			}
 		}
 	}
-	return worker.Job{Name: f.name, Worker: f.worker, Title: f.title, Prompt: f.prompt, Sandbox: pinOf[f.runsIn], Provider: f.agent,
+	return worker.Job{Name: f.name, Title: f.title, Prompt: f.prompt, Sandbox: pinOf[f.runsIn], Provider: f.agent,
 		Model: f.model, Effort: f.effort, Schedule: s}
 }
 
 // formFor is a dialog holding j.
 func formFor(j worker.Job) *jobForm {
-	f := &jobForm{name: j.Name, from: j.Worker, worker: j.Worker, title: j.Title, prompt: j.Prompt, runsIn: max(slices.Index(pinOf, j.Sandbox), 0),
+	f := &jobForm{name: j.Name, title: j.Title, prompt: j.Prompt, runsIn: max(slices.Index(pinOf, j.Sandbox), 0),
 		agent: j.Provider, model: j.Model, effort: j.Effort, every: max(slices.Index(everyOf, j.Schedule.Every), 0), at: cmpOr(j.Schedule.At, "07:00"),
 		focus: true}
 	for _, d := range j.Schedule.Days {
@@ -81,7 +78,7 @@ func formFor(j worker.Job) *jobForm {
 // newForm opens the dialog on a new job, with what the args give filled in.
 func (x *jobsPlugin) newForm(a registry.Args) {
 	j := worker.Job{Title: a.String("title"), Prompt: a.String("prompt"), Provider: a.String("provider"), Model: a.String("model"),
-		Effort: a.String("effort"), Worker: core.WorkerID(a.String("worker"))}
+		Effort: a.String("effort")}
 	switch v := a["sandbox"].(type) {
 	case bool:
 		j.Sandbox = map[bool]string{true: "sandbox", false: "host"}[v]
@@ -115,10 +112,10 @@ func (x *jobsPlugin) show(f *jobForm) {
 	x.loadAgents()
 }
 
-// loadAgents asks the form's worker for its providers.
+// loadAgents reads the providers.
 func (x *jobsPlugin) loadAgents() {
 	f := x.form
-	c, err := x.client(f.worker)
+	c, err := x.client()
 	if err != nil {
 		f.err = err.Error()
 		return
@@ -128,15 +125,12 @@ func (x *jobsPlugin) loadAgents() {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		ps, err := c.Providers(ctx)
+		ps := c.ProviderInfo(ctx)
 		x.h.Do(func() {
 			if x.form == nil || x.form.gen != gen {
 				return
 			}
 			x.form.loading, x.form.agents = false, ps
-			if err != nil {
-				x.form.err = err.Error()
-			}
 			if x.form.agent == "" {
 				for _, p := range ps {
 					if p.ID == defaultProvider(ps) {
@@ -165,12 +159,9 @@ func (x *jobsPlugin) submit(run bool) {
 		return
 	}
 	a := registry.Args{"title": j.Title, "prompt": j.Prompt, "sandbox": j.Sandbox, "provider": j.Provider, "model": j.Model, "effort": j.Effort,
-		"worker": string(j.Worker), "schedule": j.Schedule, "run": run}
+		"schedule": j.Schedule, "run": run}
 	if j.Name != "" {
-		a["name"], a["worker"] = j.Name, string(f.from)
-		if j.Worker != f.from {
-			a["to"] = string(j.Worker)
-		}
+		a["name"] = j.Name
 	}
 	f.busy, f.err = true, ""
 	go func() {
@@ -231,24 +222,18 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 			widget.InputOpts{Lines: 8, MinLines: 5})
 		note(c, "n", "no repo or branch here: the agent adds what the prompt names, fresh each run")
 	})
-	c.Row("where", ui.Style{W: ui.Flex(1), Gap: 16}, func(c *ui.Ctx) {
-		c.Column("runs", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-			heading(c, "h", "Runs in", "")
-			widget.Segmented(c, "in", runsIn, &f.runsIn, widget.SegmentedOpts{Label: "Runs in", Help: "agent/jobs#new"})
-			note(c, "n", []string{"pinned for every run · container, gateway for git & gh", "pinned for every run · on the worker itself",
-				"the worker's sandbox.default"}[f.runsIn])
-		})
-		c.Column("worker", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-			heading(c, "h", "Worker", "")
-			x.workerSelect(c, f)
-		})
+	c.Column("runs", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
+		heading(c, "h", "Runs in", "")
+		widget.Segmented(c, "in", runsIn, &f.runsIn, widget.SegmentedOpts{Label: "Runs in", Help: "agent/jobs#new"})
+		note(c, "n", []string{"pinned for every run · container, gateway for git & gh", "pinned for every run · on this machine itself",
+			"sandbox.default"}[f.runsIn])
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		heading(c, "h", "Agent", "provider · model · effort")
 		if len(f.agents) == 0 {
-			msg := "the worker's first agent"
+			msg := "the first agent installed"
 			if f.loading {
-				msg = "Asking the worker…"
+				msg = "Looking for agents…"
 			}
 			c.Text("wait", msg, uiFont(12, th.C(theme.FgFaint)))
 			return
@@ -271,7 +256,7 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 		}
 	})
 	c.Column("schedule", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		heading(c, "h", "Schedule", "runs on the worker when it's awake · skips while the last run is going")
+		heading(c, "h", "Schedule", "runs while Oriel is open · skips while the last run is going")
 		c.Row("row", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			widget.Segmented(c, "every", everyFor, &f.every, widget.SegmentedOpts{Label: "Schedule", Help: "agent/jobs#schedule"})
 			switch everyOf[f.every] {
@@ -327,34 +312,8 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 	})
 }
 
-// trimSlug is a slug's first six words, as the worker names a new job.
+// trimSlug is a slug's first six words, as the session host names a new job.
 func trimSlug(s string) string {
 	parts := strings.Split(s, "-")
 	return strings.Join(parts[:min(len(parts), 6)], "-")
-}
-
-// workerSelect picks the worker the job lives on; another for a saved job moves it there.
-func (x *jobsPlugin) workerSelect(c *ui.Ctx, f *jobForm) {
-	var labels []string
-	var ids []core.WorkerID
-	current := ""
-	for _, w := range x.h.State().Workers {
-		if !w.Connected {
-			continue
-		}
-		labels, ids = append(labels, w.Title()), append(ids, w.ID)
-		if w.ID == f.worker || f.worker == "" && w.ID == core.LocalWorker {
-			current = labels[len(labels)-1]
-		}
-	}
-	if current == "" && len(labels) > 0 {
-		current = labels[0]
-	}
-	if v, ok := widget.Select(c, "worker", current, labels, widget.SelectOpts{Label: "Worker", Help: "agent/jobs#new", Width: 260}); ok {
-		if i := slices.Index(labels, v); i >= 0 && ids[i] != f.worker {
-			f.worker, f.agents, f.agent, f.model, f.effort = ids[i], nil, "", "", ""
-			f.gen++
-			x.loadAgents()
-		}
-	}
 }

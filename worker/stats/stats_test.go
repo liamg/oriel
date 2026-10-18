@@ -346,19 +346,6 @@ func TestDetail(t *testing.T) {
 	}
 }
 
-// The app merges every worker's answer: a repo worked on two machines is one row.
-func TestMergeAddsUpWorkers(t *testing.T) {
-	a := Run(october, []Session{fixture(t, "a", "/ws/a")})
-	b := Run(october, []Session{fixture(t, "b", "/ws/b")})
-	m := Merge(a, b)
-	if len(m.Groups) != 2 || !near(m.Groups[0].Cost, 12) || m.Groups[0].Sessions != 2 || !near(m.Groups[0].Series[0], 7.5) {
-		t.Errorf("merged groups = %+v", m.Groups)
-	}
-	if !near(m.Totals.Cost, 16) || m.Totals.Sessions != 2 || len(m.Models) != 1 || m.Models[0].Requests != 4 {
-		t.Errorf("merged totals %+v, models %+v", m.Totals, m.Models)
-	}
-}
-
 // AI-12: cost adds up across accounts, so a query counts them all; grouped or filtered by account, each is its own.
 func TestGroupByAccount(t *testing.T) {
 	a, b := fixture(t, "a", "/ws/a"), fixture(t, "b", "/ws/b")
@@ -447,9 +434,6 @@ func TestActiveSpanOfTheRange(t *testing.T) {
 	}
 	if r.Totals.ActiveS != 240 {
 		t.Errorf("active = %ds, want the 4 minutes between a and b", r.Totals.ActiveS)
-	}
-	if m := Merge(r, r); m.Totals.SpanS != 2*r.Totals.SpanS {
-		t.Errorf("merged span = %d", m.Totals.SpanS)
 	}
 }
 

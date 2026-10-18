@@ -23,7 +23,7 @@ import (
 
 // The assistant, Ori (ui.md 11, crit-reference.md "Assistant"): a floating window you ask "what needs me?", "review
 // this PR" or "where's that test I was working on?", minimised to its face on the rail with a count of what's unread.
-// Its agent is a utility agent on this machine's worker (agents.md: Claude in its PTY with the mod, never claude -p),
+// Its agent is a utility agent (agents.md: Claude in its PTY with the mod, never claude -p),
 // offered only the agent tools for "assistant": the built-ins here, and any another feature or a plugin adds (the
 // tickets' my_tickets, mission control's). An act waits for your yes on a confirmation card (registry.AgentOwner), and what its tools did
 // can be undone for a few seconds. The wake word hands it requests through the VoiceWake hook.
@@ -70,7 +70,7 @@ func (x *assistantPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.focused = map[string]bool{}
 	if unregister, err := prompts.Register(prompts.Def{ID: assistantPromptID, Group: "Assistant", Label: "The assistant",
 		Help:    "What the assistant is told as each conversation starts. A conversation already going keeps the text it started with.",
-		Vars:    []prompts.Var{{Name: "date", Desc: "today, with the weekday, the time and the time zone"}, {Name: "workers", Desc: "the machines sessions can run on"}},
+		Vars:    []prompts.Var{{Name: "date", Desc: "today, with the weekday, the time and the time zone"}},
 		Default: strings.TrimSpace(assistantPrompt)}); err == nil {
 		x.add(onDispose(unregister))
 	}
@@ -101,7 +101,7 @@ func (x *assistantPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.add(registry.On(h, registry.Hook{Kind: registry.Decide, Label: "the assistant takes what follows the wake word"},
 		func(_ registry.Ctx, ev *VoiceWake) (registry.Verdict, error) {
-			if !x.bool("assistant.wake") || strings.TrimSpace(ev.Text) == "" || x.sh.sessions == nil || len(x.sh.sessions.clients()) == 0 {
+			if !x.bool("assistant.wake") || strings.TrimSpace(ev.Text) == "" || x.sh.cfg.Worker == nil {
 				return registry.Verdict{}, nil
 			}
 			text := ev.Text
@@ -234,25 +234,18 @@ func (x *assistantPlugin) optInt(name string) int { n, _ := x.opt(name).(int); r
 
 // prompt is what the assistant is told as a conversation starts: the user's version of it, filled in.
 func (x *assistantPlugin) prompt() string {
-	var workers []string
-	for _, w := range x.h.State().Workers {
-		if w.Connected {
-			workers = append(workers, w.Title())
-		}
-	}
 	o := prompts.Store{Dir: x.sh.cfg.ConfigDir}.Load()
 	return o.Render(assistantPromptID, map[string]string{
-		"date":    time.Now().Format("Monday 2 January 2006, 15:04 MST"),
-		"workers": cmpOr(strings.Join(workers, ", "), "unknown"),
+		"date": time.Now().Format("Monday 2 January 2006, 15:04 MST"),
 	})
 }
 
-// startAgent starts the conversation's agent: a utility agent on this machine's worker.
+// startAgent starts the conversation's agent: a utility agent.
 func (x *assistantPlugin) startAgent(ctx context.Context, first string) (assistant.Agent, error) {
 	if x.sh.sessions == nil {
-		return nil, errors.New("there's no worker to run it on")
+		return nil, errors.New("there are no sessions in this window to run it")
 	}
-	c, err := x.sh.sessions.worker("")
+	c, err := x.sh.sessions.host()
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +277,7 @@ func (x *assistantPlugin) runsOn() string {
 	return cmpOr(x.str("assistant.model"), cmpOr(x.ran, "small model"))
 }
 
-// utilityAgent is a worker's utility agent as the conversation drives it.
+// utilityAgent is a utility agent as the conversation drives it.
 type utilityAgent struct {
 	u   *worker.Utility
 	sig chan assistant.Signal
@@ -444,8 +437,6 @@ func assistantProgress(tool string) string {
 		return "checking your jobs…"
 	case "usage":
 		return "checking your usage…"
-	case "workers":
-		return "checking the machines…"
 	case "mission_control":
 		return "checking mission control…"
 	case "changed_files":

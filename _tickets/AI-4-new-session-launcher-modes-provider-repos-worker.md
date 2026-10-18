@@ -12,6 +12,8 @@ depends_on: [AI-1, FW-6]
 
 **Phase** 5 · AI · **After** [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md), [FW-6](FW-6-widgets-buttons-chips-inputs-virtual-lists-trees.md) · **Unblocks** nothing yet
 
+**Note:** workers are gone (one Oriel per machine, see [AI-15](AI-15-workers-page-remote-workers-pairing.md)): the launcher has no "Run on" select or clone-onto-a-worker chip, and sandbox backends come from this machine.
+
 ## Design
 
 - `_design/agents.md`

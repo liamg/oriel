@@ -217,15 +217,12 @@ func TestPermissionLayers(t *testing.T) {
 		t.Errorf("deny = %+v", d)
 	}
 	// The app's policy hooks (layer 2) answer without a card.
-	c, _ := r.app()
-	c.Conn.Handle(MethodAppDecide, func(_ context.Context, raw json.RawMessage) (any, error) {
-		var d Decide
-		json.Unmarshal(raw, &d)
+	r.w.SetApp(App{Decide: func(_ context.Context, d Decide) Verdict {
 		if strings.Contains(d.Ask.Input, "curl") {
-			return Verdict{Decision: "deny", Note: "no network from Bash", By: "init.lua"}, nil
+			return Verdict{Decision: "deny", Note: "no network from Bash", By: "init.lua"}
 		}
-		return Verdict{}, nil
-	})
+		return Verdict{}
+	}})
 	curl, _ := json.Marshal(map[string]string{"command": "curl example.com"})
 	if d := <-a.Ask(agent.Permission{ID: "p4", Tool: "Bash", Input: curl}); d.Allow || d.Note != "no network from Bash" {
 		t.Errorf("policy hook = %+v", d)
@@ -393,16 +390,12 @@ func TestStartSpecCarriesThePackToolsAndGuards(t *testing.T) {
 // LS-3's way in: the app offers tools of its own (LSP lookups), and calls go back to it.
 func TestAppToolsReachTheAgent(t *testing.T) {
 	r := newRig(t)
-	c, _ := r.app()
-	c.Conn.Handle(MethodAppTools, func(context.Context, json.RawMessage) (any, error) {
-		return []agent.Tool{{Name: "lsp_definition", Description: "Where a symbol is defined.", ReadOnly: true,
-			Schema: json.RawMessage(`{"type":"object"}`)}}, nil
-	})
-	c.Conn.Handle(MethodAppTool, func(_ context.Context, raw json.RawMessage) (any, error) {
-		var call ToolCall
-		json.Unmarshal(raw, &call)
-		return "round.go:3 " + call.Tool, nil
-	})
+	r.w.SetApp(App{
+		Tools: func(ToolsReq) []agent.Tool {
+			return []agent.Tool{{Name: "lsp_definition", Description: "Where a symbol is defined.", ReadOnly: true,
+				Schema: json.RawMessage(`{"type":"object"}`)}}
+		},
+		CallTool: func(_ context.Context, call ToolCall) (string, error) { return "round.go:3 " + call.Tool, nil }})
 	_, a := r.workSession("Work")
 	if got := a.Call(t, "lsp_definition", map[string]any{"symbol": "Round"}); got != "round.go:3 lsp_definition" {
 		t.Errorf("app tool = %q", got)

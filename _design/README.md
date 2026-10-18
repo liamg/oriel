@@ -23,7 +23,7 @@ The design of Oriel, carried over from the planning session. **Start with `PLAN.
 | `errors.md` | notices, toasts, the log panel, Lua errors and tracebacks, panics, logs on disk, debugging Oriel |
 | `testing.md` | test-first, verified spec references, the nvim oracle |
 | `deps.md` | the dependency policy and every approved or rejected module |
-| `distribution.md` | signing, self-update, worker updates |
+| `distribution.md` | signing, self-update |
 | `migration.md` | moving off crit |
 
 Mockups: `mockups/*.png`. Sources are in `mockups/src` (HTML plus `base.css`); re-render with `mockups/render.sh`

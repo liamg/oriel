@@ -15,7 +15,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// Mission control (ui.md 03): every session as a card, grouped by worker, status or repo, over the window under the
+// Mission control (ui.md 03): every session as a card, grouped by status or repo, over the window under the
 // title bar. A working card shows the agent's live output in a terminal; any other shows what it waits on, its asks
 // answered from the card as the inbox answers them. Its opening and its state are commands, so a plugin or the
 // assistant drives it as the keys do.
@@ -28,7 +28,7 @@ const (
 )
 
 // missionGroups are how the cards are grouped: the segmented control's order, and mission.group's {by}.
-var missionGroups = []string{"worker", "status", "repo"}
+var missionGroups = []string{"status", "repo"}
 
 type missionPlugin struct {
 	disposer
@@ -87,15 +87,15 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 			x.show()
 			return nil
 		}},
-		{ID: "mission.open", Title: "Show mission control: grouped {by} worker, status or repo, {filter}ed, with the card of {id} selected",
+		{ID: "mission.open", Title: "Show mission control: grouped {by} status or repo, {filter}ed, with the card of {id} selected",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				x.show()
 				return x.set(a)
 			}},
 		{ID: "mission.close", Title: "Put mission control away", Run: func(registry.Ctx, registry.Args) error { x.close(); return nil }},
-		{ID: "mission.group", Title: "Group mission control's cards {by} worker, status or repo", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "mission.group", Title: "Group mission control's cards {by} status or repo", Run: func(_ registry.Ctx, a registry.Args) error {
 			if a.String("by") == "" {
-				return errors.New("group by worker, status or repo")
+				return errors.New("group by status or repo")
 			}
 			return x.set(a)
 		}},
@@ -141,18 +141,8 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 				}
 				return nil
 			}},
-		{ID: "mission.new", Title: "Start a session on the selected card's worker, or {worker}", Run: func(ctx registry.Ctx, a registry.Args) error {
-			w := a.String("worker")
-			if w == "" {
-				if se, ok := x.session(x.selected()); ok {
-					w = string(workerOf(se))
-				}
-			}
-			args := registry.Args{}
-			if w != "" {
-				args["worker"] = w
-			}
-			return h.Run(ctx, "session.new", args)
+		{ID: "mission.new", Title: "Start a new session: the launcher", Run: func(ctx registry.Ctx, _ registry.Args) error {
+			return h.Run(ctx, "session.new", nil)
 		}},
 	} {
 		x.add(h.Command(c))
@@ -178,7 +168,7 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.add(h.Contribute(registry.AgentTool{Name: "mission_control", For: []string{assistantAgent}, Reads: "mission control", Source: "builtin:mission",
 		Params: map[string]string{"show": "boolean?", "by": "string?", "filter": "string?", "id": "string?"}, Run: x.tool,
-		Desc: "What mission control shows: every open session grouped by worker (or by status or repo: by), each with its status and what it waits on, and the queue of what needs the user, oldest first. show: true also opens it on screen, grouped by, filtered and with the card of id selected."}))
+		Desc: "What mission control shows: every open session grouped by status (or by repo: by), each with its status and what it waits on, and the queue of what needs the user, oldest first. show: true also opens it on screen, grouped by, filtered and with the card of id selected."}))
 	x.add(h.Contribute(registry.StartEntry{Name: "mission", Icon: "mission", Title: "Mission control", Desc: "Every session as a card, and what each waits on",
 		Command: "mission.toggle", Order: 95, Link: true, Note: x.needNote}))
 	x.add(h.View(MissionView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "mission", Fn: x.page} })))
@@ -206,7 +196,7 @@ func (x *missionPlugin) set(a registry.Args) error {
 	if by := a.String("by"); by != "" {
 		i := slices.Index(missionGroups, by)
 		if i < 0 {
-			return fmt.Errorf("can't group by %q: by worker, status or repo", by)
+			return fmt.Errorf("can't group by %q: by status or repo", by)
 		}
 		x.group = i
 	}
@@ -314,12 +304,10 @@ func (x *missionPlugin) needNote() string {
 	return fmt.Sprintf("%d need you", n)
 }
 
-// missionGroup is a heading's cards: a worker's, a status's or a repo's.
+// missionGroup is a heading's cards: a status's or a repo's.
 type missionGroup struct {
 	key, title, meta string
 	tone             core.Status
-	worker           core.WorkerID // a worker's group, which ends with a card that starts a session there
-	newCard          bool
 	cards            []core.SessionState
 }
 
@@ -331,7 +319,7 @@ func (x *missionPlugin) live(st core.State) []core.SessionState {
 		if se.Archived {
 			continue
 		}
-		if q != "" && !strings.Contains(strings.ToLower(missionHay(st, se)), q) {
+		if q != "" && !strings.Contains(strings.ToLower(missionHay(se)), q) {
 			continue
 		}
 		out = append(out, se)
@@ -345,18 +333,13 @@ func (x *missionPlugin) live(st core.State) []core.SessionState {
 	return out
 }
 
-// missionHay is what the filter matches a session by: its name, kind, status, branch, projects, worker, ticket, PR.
-func missionHay(st core.State, se core.SessionState) string {
-	parts := []string{string(se.ID), se.Name, string(se.Kind), statusName(se.Status), se.Branch, se.Ticket, se.PR, st.WorkerName(se.Worker),
-		se.Agent.Provider}
+// missionHay is what the filter matches a session by: its name, kind, status, branch, projects, ticket, PR.
+func missionHay(se core.SessionState) string {
+	parts := []string{string(se.ID), se.Name, string(se.Kind), statusName(se.Status), se.Branch, se.Ticket, se.PR, se.Agent.Provider}
 	for _, p := range se.Projects {
 		parts = append(parts, p.Name)
 	}
 	return strings.Join(parts, " ")
-}
-
-func workerOf(se core.SessionState) core.WorkerID {
-	return core.WorkerID(cmpOr(string(se.Worker), string(core.LocalWorker)))
 }
 
 // groups are the cards under their headings, as mission control is grouped now.
@@ -364,7 +347,7 @@ func (x *missionPlugin) groups(st core.State) []missionGroup {
 	ss := x.live(st)
 	var out []missionGroup
 	switch missionGroups[x.group] {
-	case "status":
+	default:
 		for _, s := range statusOrder {
 			g := missionGroup{key: string(s), title: strings.ToUpper(statusName(s)), tone: s}
 			for _, se := range ss {
@@ -391,61 +374,8 @@ func (x *missionPlugin) groups(st core.State) []missionGroup {
 			}
 			out[i].cards = append(out[i].cards, se)
 		}
-	default:
-		ws := slices.Clone(st.Workers)
-		slices.SortStableFunc(ws, func(a, b core.WorkerState) int {
-			switch {
-			case a.ID == core.LocalWorker:
-				return -1
-			case b.ID == core.LocalWorker:
-				return 1
-			}
-			return strings.Compare(a.Title(), b.Title())
-		})
-		for _, se := range ss {
-			if !slices.ContainsFunc(ws, func(w core.WorkerState) bool { return w.ID == workerOf(se) }) {
-				ws = append(ws, core.WorkerState{ID: workerOf(se)})
-			}
-		}
-		for _, w := range ws {
-			g := missionGroup{key: string(w.ID), title: strings.ToUpper(w.Title()), meta: workerMeta(w), tone: core.StatusQuiet, worker: w.ID,
-				newCard: w.Connected && x.filter == ""}
-			if !w.Connected {
-				g.tone = core.StatusOff
-			}
-			for _, se := range ss {
-				if workerOf(se) == w.ID {
-					g.cards = append(g.cards, se)
-				}
-			}
-			if len(g.cards) > 0 || g.newCard {
-				out = append(out, g)
-			}
-		}
 	}
 	return out
-}
-
-// workerMeta is a worker's heading's detail: where it is, its cores, CPU and memory.
-func workerMeta(w core.WorkerState) string {
-	where := cmpOr(w.Host, "remote")
-	if w.ID == core.LocalWorker {
-		where = "local"
-	}
-	parts := []string{where}
-	if !w.Connected {
-		return joinParts(where, "offline")
-	}
-	if w.Cores > 0 {
-		parts = append(parts, fmt.Sprintf("%d cores", w.Cores))
-	}
-	if !w.Sampled.IsZero() {
-		parts = append(parts, fmt.Sprintf("cpu %d%%", pct(w.CPU)))
-		if w.MemTotal > 0 {
-			parts = append(parts, "mem "+strings.TrimSuffix(gibShort(w.Mem), "G")+"/"+gibShort(w.MemTotal))
-		}
-	}
-	return strings.Join(parts, " · ")
 }
 
 // closeTerms closes the live terminals of cards not in keep.

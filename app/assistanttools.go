@@ -46,9 +46,9 @@ func (x *assistantPlugin) tools() []registry.AgentTool {
 		{Name: "reply", InputSchema: replySchema, Run: x.toolReply,
 			Desc: "Your answer for this turn, said aloud in a spoken turn. Call exactly once, last. items are rows the user can pick."},
 		{Name: "sessions", ReadOnly: true, Reads: "sessions", Run: x.toolSessions,
-			Desc: "Every open Oriel session: id, name, kind, status (needs_you, permission, working, quiet…) and why, worker, repos, branch, prompt, ticket, pull request, unfinished tasks and what it asks."},
+			Desc: "Every open Oriel session: id, name, kind, status (needs_you, permission, working, quiet…) and why, repos, branch, prompt, ticket, pull request, unfinished tasks and what it asks."},
 		{Name: "past_sessions", ReadOnly: true, Reads: "sessions", Run: x.toolPastSessions,
-			Desc: "Finished sessions that can be resumed, newest first: id, name, kind, repos, worker, ticket, pull request."},
+			Desc: "Finished sessions that can be resumed, newest first: id, name, kind, repos, ticket, pull request."},
 		{Name: "open_session", Params: id, Run: x.toolOpenSession, Desc: "Bring a session to the front. id is from sessions."},
 		{Name: "rename_session", Params: map[string]string{"id": "string", "name": "string"}, Run: x.toolRenameSession,
 			Desc: "Give a session a new name. id is from sessions."},
@@ -56,7 +56,7 @@ func (x *assistantPlugin) tools() []registry.AgentTool {
 			Desc: "Bring a finished or stopped session back and open it. id is from past_sessions."},
 		{Name: "new_session", Params: map[string]string{"kind": "string?", "prompt": "string?", "repos": "string?"}, Run: x.toolNewSession,
 			Desc: "Open the new-session launcher for the user to finish, with a kind (plan, work, review, tour, job), prompt and repos (names, comma separated) filled in."},
-		{Name: "start_session", Params: map[string]string{"repo": "string", "prompt": "string", "kind": "string?", "worker": "string?"},
+		{Name: "start_session", Params: map[string]string{"repo": "string", "prompt": "string", "kind": "string?"},
 			Confirm: x.confirmStart, Run: x.toolStart,
 			Desc: "Start a session: kind plan (the default) drafts a plan first, work starts at once on a fresh branch, tour explains how something works. repo is a name from repos. Check sessions first: when one is already on that ticket or work, open it instead."},
 		{Name: "stop_session", Params: id, Confirm: x.confirmStop, Run: x.toolStop,
@@ -64,19 +64,17 @@ func (x *assistantPlugin) tools() []registry.AgentTool {
 		{Name: "review_pr", Params: map[string]string{"pr": "string"}, Confirm: x.confirmReview, Run: x.toolReview,
 			Desc: "Start a review session on any pull request, by URL or owner/name#N: one the user was sent, not only those on their lists. Check sessions first: when one is already on that PR, open it instead."},
 		{Name: "jobs", ReadOnly: true, Reads: "jobs", Run: x.toolJobs,
-			Desc: "The user's saved jobs (prompts run on demand or on a schedule): name, title, worker, schedule, and how the last run went."},
-		{Name: "run_job", Params: map[string]string{"name": "string", "worker": "string?"}, Confirm: x.confirmRunJob, Run: x.toolRunJob,
-			Desc: "Run a saved job now, in a fresh workspace. name and worker are from jobs."},
+			Desc: "The user's saved jobs (prompts run on demand or on a schedule): name, title, schedule, and how the last run went."},
+		{Name: "run_job", Params: map[string]string{"name": "string"}, Confirm: x.confirmRunJob, Run: x.toolRunJob,
+			Desc: "Run a saved job now, in a fresh workspace. name is from jobs."},
 		{Name: "repos", ReadOnly: true, Reads: "repos", Run: x.toolRepos,
-			Desc: "The repositories registered on each worker: name, path, remote and worker."},
+			Desc: "The registered repositories: name, path and remote."},
 		{Name: "my_prs", ReadOnly: true, Reads: "github", Run: x.toolPRs(gh.SearchMine),
 			Desc: "The user's open pull requests across GitHub: number, title, repo, url, draft, when last updated, and the session on it if there is one."},
 		{Name: "review_requests", ReadOnly: true, Reads: "github", Run: x.toolPRs(gh.SearchReview),
 			Desc: "Pull requests on GitHub waiting on the user's review: number, title, repo, url, author, when last updated, and the session on it if there is one."},
 		{Name: "usage", ReadOnly: true, Reads: "usage", Run: x.toolUsage,
 			Desc: "The user's plan usage for each agent and account: how much of each limit window is used and when it resets."},
-		{Name: "workers", ReadOnly: true, Reads: "workers", Run: x.toolWorkers,
-			Desc: "The machines sessions run on: connected or not, CPU and memory in use, and their sessions."},
 		{Name: "where", ReadOnly: true, Reads: "editor", Run: x.toolWhere,
 			Desc: "What's in front of the user now: the session, its projects and the open one, and the file and line the editor is on, relative to its project. Read it for \"this file\", \"here\"."},
 		{Name: "changed_files", ReadOnly: true, Reads: "git", Params: map[string]string{"session": "string?", "project": "string?", "tests": "boolean?", "limit": "number?"},
@@ -137,7 +135,6 @@ type sessionLine struct {
 	Kind    string   `json:"kind"`
 	Status  string   `json:"status"`
 	Why     string   `json:"why,omitempty"`
-	Worker  string   `json:"worker,omitempty"`
 	Repos   []string `json:"repos,omitempty"`
 	Branch  string   `json:"branch,omitempty"`
 	Prompt  string   `json:"prompt,omitempty"`
@@ -147,15 +144,6 @@ type sessionLine struct {
 	Asks    []string `json:"asks,omitempty"`
 	Stopped bool     `json:"stopped,omitempty"`
 	Since   string   `json:"since,omitempty"` // a finished one's
-}
-
-func (x *assistantPlugin) workerName(st core.State, id core.WorkerID) string {
-	for _, w := range st.Workers {
-		if w.ID == cmp.Or(id, core.LocalWorker) {
-			return w.Title()
-		}
-	}
-	return string(id)
 }
 
 func clipLine(s string, n int) string {
@@ -168,7 +156,7 @@ func clipLine(s string, n int) string {
 
 func (x *assistantPlugin) lineOf(st core.State, s core.SessionState, now time.Time) sessionLine {
 	l := sessionLine{ID: string(s.ID), Name: s.Name, Kind: string(s.Kind), Status: string(s.Status), Why: why(s, now),
-		Worker: x.workerName(st, s.Worker), Branch: s.Branch, Prompt: clipLine(s.Prompt, 200), Ticket: s.Ticket, PR: s.PR,
+		Branch: s.Branch, Prompt: clipLine(s.Prompt, 200), Ticket: s.Ticket, PR: s.PR,
 		Stopped: s.Agent.Provider != "" && !s.Agent.Live()}
 	for _, p := range s.Projects {
 		l.Repos = append(l.Repos, p.Name)
@@ -322,28 +310,23 @@ func (x *assistantPlugin) toolSettings(ctx registry.Ctx, p map[string]any) (any,
 
 // repoLine is a registered repo as the assistant reads it.
 type repoLine struct {
-	ID       core.RepoID   `json:"id"`
-	Name     string        `json:"name"`
-	Path     string        `json:"path"`
-	Remote   string        `json:"remote,omitempty"`
-	Worker   string        `json:"worker"`
-	WorkerID core.WorkerID `json:"-"`
+	ID     core.RepoID `json:"id"`
+	Name   string      `json:"name"`
+	Path   string      `json:"path"`
+	Remote string      `json:"remote,omitempty"`
 }
 
-func (x *assistantPlugin) repos(ctx context.Context) []repoLine {
-	st := x.h.State()
+func (x *assistantPlugin) repos(context.Context) []repoLine {
+	w, err := x.sh.sessions.host()
+	if err != nil {
+		return nil
+	}
 	var out []repoLine
-	for wid, c := range x.sh.sessions.byWorker() {
-		rs, err := c.Repos(ctx)
-		if err != nil {
-			continue
-		}
-		for _, r := range rs {
-			out = append(out, repoLine{ID: r.ID, Name: filepath.Base(r.Path), Path: r.Path, Remote: r.Remote, Worker: x.workerName(st, wid), WorkerID: wid})
-		}
+	for _, r := range w.Repos() {
+		out = append(out, repoLine{ID: r.ID, Name: filepath.Base(r.Path), Path: r.Path, Remote: r.Remote})
 	}
 	slices.SortFunc(out, func(a, b repoLine) int {
-		return cmp.Or(strings.Compare(a.Name, b.Name), strings.Compare(a.Worker, b.Worker))
+		return cmp.Or(strings.Compare(a.Name, b.Name), strings.Compare(a.Path, b.Path))
 	})
 	return out
 }
@@ -356,11 +339,11 @@ func (x *assistantPlugin) toolRepos(ctx registry.Ctx, _ map[string]any) (any, er
 	return out, nil
 }
 
-// repo finds a registered repo by name or path, on a worker if one is named.
-func (x *assistantPlugin) repo(ctx context.Context, name, worker string) (repoLine, error) {
+// repo finds a registered repo by name or path.
+func (x *assistantPlugin) repo(ctx context.Context, name string) (repoLine, error) {
 	var hits []repoLine
 	for _, r := range x.repos(ctx) {
-		if (strings.EqualFold(r.Name, name) || r.Path == name) && (worker == "" || strings.EqualFold(r.Worker, worker) || string(r.WorkerID) == worker) {
+		if strings.EqualFold(r.Name, name) || r.Path == name {
 			hits = append(hits, r)
 		}
 	}
@@ -372,7 +355,7 @@ func (x *assistantPlugin) repo(ctx context.Context, name, worker string) (repoLi
 	}
 	var where []string
 	for _, h := range hits {
-		where = append(where, h.Path+" on "+h.Worker)
+		where = append(where, h.Path)
 	}
 	return repoLine{}, fmt.Errorf("%s is ambiguous: %s. Ask which", name, strings.Join(where, "; "))
 }
@@ -397,7 +380,7 @@ func (x *assistantPlugin) startReq(ctx context.Context, p map[string]any) (start
 		return r, errors.New("what should the session do? prompt is empty")
 	}
 	var err error
-	r.repo, err = x.repo(ctx, pstr(p, "repo"), pstr(p, "worker"))
+	r.repo, err = x.repo(ctx, pstr(p, "repo"))
 	return r, err
 }
 
@@ -407,8 +390,8 @@ func (x *assistantPlugin) confirmStart(ctx registry.Ctx, p map[string]any) (regi
 		return registry.Confirmation{}, err
 	}
 	return registry.Confirmation{Title: "Start a " + r.kind + " session",
-		Lead:  fmt.Sprintf("The assistant wants to start a %s session in %s on %s.", r.kind, r.repo.Name, r.repo.Worker),
-		Rows:  []registry.ConfirmRow{{Key: "repository", Value: r.repo.Name + " — " + r.repo.Path}, {Key: "worker", Value: r.repo.Worker}},
+		Lead:  fmt.Sprintf("The assistant wants to start a %s session in %s.", r.kind, r.repo.Name),
+		Rows:  []registry.ConfirmRow{{Key: "repository", Value: r.repo.Name + " — " + r.repo.Path}},
 		Block: &registry.ConfirmBlock{Label: "The prompt the agent will be given", Text: r.prompt}, Note: startNotes[r.kind],
 		Line: "start a " + r.kind + " session in " + r.repo.Name}, nil
 }
@@ -419,11 +402,11 @@ func (x *assistantPlugin) toolStart(ctx registry.Ctx, p map[string]any) (any, er
 		return nil, err
 	}
 	id, err := x.sh.sessions.start(ctx, registry.Args{"kind": r.kind, "prompt": r.prompt, "repos": []string{string(r.repo.ID)},
-		"worker": string(r.repo.WorkerID), "background": true})
+		"background": true})
 	if err != nil {
 		return nil, err
 	}
-	return x.started(id, "started a "+r.kind+" session in "+r.repo.Name, r.repo.Worker+" · "+r.kind), nil
+	return x.started(id, "started a "+r.kind+" session in "+r.repo.Name, r.repo.Name+" · "+r.kind), nil
 }
 
 // started is a session an act made: it opens from the card, and undoing it deletes it.
@@ -441,7 +424,7 @@ func (x *assistantPlugin) confirmStop(_ registry.Ctx, p map[string]any) (registr
 	l := x.lineOf(x.h.State(), s, time.Now())
 	c := registry.Confirmation{Title: "Stop a session", Lead: "The assistant wants to stop this session and its agent:",
 		Rows: []registry.ConfirmRow{{Key: "session", Value: label(s)}, {Key: "repositories", Value: strings.Join(l.Repos, ", ")},
-			{Key: "worker", Value: l.Worker}, {Key: "ticket", Value: s.Ticket}},
+			{Key: "ticket", Value: s.Ticket}},
 		Block: &registry.ConfirmBlock{Label: "Its unfinished tasks", Items: l.Tasks},
 		Note:  "Its workspace stays, and the session can be resumed later.", Line: "stop " + label(s)}
 	if len(l.Tasks) == 0 {
@@ -459,7 +442,7 @@ func (x *assistantPlugin) toolStop(ctx registry.Ctx, p map[string]any) (any, err
 		return nil, err
 	}
 	return registry.Acted{Result: "stopped", Line: "stopped " + label(s), Undo: func(ctx registry.Ctx) error {
-		c, err := x.sh.sessions.client(s.ID)
+		c, err := x.sh.sessions.host()
 		if err != nil {
 			return err
 		}
@@ -524,44 +507,38 @@ func (x *assistantPlugin) toolReview(ctx registry.Ctx, p map[string]any) (any, e
 type jobLine struct {
 	Name     string `json:"name"`
 	Title    string `json:"title,omitempty"`
-	Worker   string `json:"worker"`
 	Schedule string `json:"schedule,omitempty"`
 	Running  bool   `json:"running,omitempty"`
 	LastRun  string `json:"lastRun,omitempty"` // done, blocked, stopped
 	Summary  string `json:"summary,omitempty"`
 	LastAt   string `json:"lastAt,omitempty"`
 
-	worker core.WorkerID
-	at     time.Time
+	at time.Time
 }
 
-func (x *assistantPlugin) jobs(ctx context.Context) []jobLine {
+func (x *assistantPlugin) jobs(context.Context) []jobLine {
+	w, err := x.sh.sessions.host()
+	if err != nil {
+		return nil
+	}
 	st := x.h.State()
 	var out []jobLine
-	for wid, c := range x.sh.sessions.byWorker() {
-		js, err := c.Jobs(ctx)
-		if err != nil {
-			continue
+	for _, j := range w.Jobs() {
+		l := jobLine{Name: j.Name, Title: j.Title}
+		if j.Schedule.Every != "" {
+			l.Schedule = j.Schedule.String()
 		}
-		for _, j := range js {
-			l := jobLine{Name: j.Name, Title: j.Title, Worker: x.workerName(st, wid), worker: wid}
-			if j.Schedule.Every != "" {
-				l.Schedule = j.Schedule.String()
+		for _, s := range st.Sessions {
+			if s.Job != j.Name || s.Created.Before(l.at) {
+				continue
 			}
-			for _, s := range st.Sessions {
-				if s.Job != j.Name || s.Worker != wid && !(s.Worker == "" && wid == core.LocalWorker) || s.Created.Before(l.at) {
-					continue
-				}
-				r := worker.RunOf(s)
-				l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == worker.RunRunning
-				l.LastAt = s.Created.Format(time.RFC3339)
-			}
-			out = append(out, l)
+			r := worker.RunOf(s)
+			l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == worker.RunRunning
+			l.LastAt = s.Created.Format(time.RFC3339)
 		}
+		out = append(out, l)
 	}
-	slices.SortFunc(out, func(a, b jobLine) int {
-		return cmp.Or(strings.Compare(a.Name, b.Name), strings.Compare(a.Worker, b.Worker))
-	})
+	slices.SortFunc(out, func(a, b jobLine) int { return strings.Compare(a.Name, b.Name) })
 	return out
 }
 
@@ -574,10 +551,10 @@ func (x *assistantPlugin) toolJobs(ctx registry.Ctx, _ map[string]any) (any, err
 }
 
 func (x *assistantPlugin) job(ctx context.Context, p map[string]any) (jobLine, error) {
-	name, wk := pstr(p, "name"), pstr(p, "worker")
+	name := pstr(p, "name")
 	var hits []jobLine
 	for _, j := range x.jobs(ctx) {
-		if (j.Name == name || strings.EqualFold(j.Title, name)) && (wk == "" || strings.EqualFold(j.Worker, wk) || string(j.worker) == wk) {
+		if j.Name == name || strings.EqualFold(j.Title, name) {
 			hits = append(hits, j)
 		}
 	}
@@ -587,7 +564,7 @@ func (x *assistantPlugin) job(ctx context.Context, p map[string]any) (jobLine, e
 	case 1:
 		return hits[0], nil
 	}
-	return jobLine{}, fmt.Errorf("%s is on more than one worker: say which", name)
+	return jobLine{}, fmt.Errorf("more than one job is called %s: ask which", name)
 }
 
 func (x *assistantPlugin) confirmRunJob(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
@@ -601,7 +578,7 @@ func (x *assistantPlugin) confirmRunJob(ctx registry.Ctx, p map[string]any) (reg
 		last = j.LastRun + ", " + ago(time.Now(), j.at) + " ago"
 	}
 	c := registry.Confirmation{Title: "Run a job", Lead: "The assistant wants to run this saved job now, in a fresh workspace:",
-		Rows: []registry.ConfirmRow{{Key: "job", Value: title}, {Key: "worker", Value: j.Worker}, {Key: "last run", Value: last}},
+		Rows: []registry.ConfirmRow{{Key: "job", Value: title}, {Key: "last run", Value: last}},
 		Line: "run " + title}
 	if j.Summary != "" {
 		c.Block = &registry.ConfirmBlock{Label: "What the last run said", Text: j.Summary}
@@ -617,7 +594,7 @@ func (x *assistantPlugin) toolRunJob(ctx registry.Ctx, p map[string]any) (any, e
 	if err != nil {
 		return nil, err
 	}
-	c, err := x.sh.sessions.worker(j.worker)
+	c, err := x.sh.sessions.host()
 	if err != nil {
 		return nil, err
 	}
@@ -625,7 +602,7 @@ func (x *assistantPlugin) toolRunJob(ctx registry.Ctx, p map[string]any) (any, e
 	if err != nil {
 		return nil, err
 	}
-	return x.started(id, "running "+cmpOr(j.Title, j.Name), j.Worker+" · job"), nil
+	return x.started(id, "running "+cmpOr(j.Title, j.Name), "job"), nil
 }
 
 // prLine is a pull request as the assistant reads it.
@@ -642,11 +619,11 @@ type prLine struct {
 
 func (x *assistantPlugin) toolPRs(query string) func(registry.Ctx, map[string]any) (any, error) {
 	return func(ctx registry.Ctx, _ map[string]any) (any, error) {
-		c, err := x.sh.sessions.worker("")
+		c, err := x.sh.sessions.host()
 		if err != nil {
 			return nil, err
 		}
-		found, err := c.SearchPRs(ctx, query)
+		found, err := c.SearchPRs(ctx, worker.PRsReq{Query: query})
 		if err != nil {
 			return nil, err
 		}
@@ -694,35 +671,6 @@ func (x *assistantPlugin) toolUsage(registry.Ctx, map[string]any) (any, error) {
 		out = append(out, p)
 	}
 	return map[string]any{"now": time.Now().Format(time.RFC3339), "plans": out}, nil
-}
-
-func (x *assistantPlugin) toolWorkers(registry.Ctx, map[string]any) (any, error) {
-	type row struct {
-		Name      string `json:"name"`
-		Connected bool   `json:"connected"`
-		OS        string `json:"os,omitempty"`
-		CPU       string `json:"cpu,omitempty"`
-		Memory    string `json:"memory,omitempty"`
-		Sessions  int    `json:"sessions"`
-	}
-	st := x.h.State()
-	out := []row{}
-	for _, w := range st.Workers {
-		r := row{Name: w.Title(), Connected: w.Connected, OS: w.OS}
-		if w.Cores > 0 {
-			r.CPU = fmt.Sprintf("%.0f%% of %d cores", w.CPU*100, w.Cores)
-		}
-		if w.MemTotal > 0 {
-			r.Memory = fmt.Sprintf("%.0f%% of %d GB", float64(w.Mem)*100/float64(w.MemTotal), w.MemTotal>>30)
-		}
-		for _, s := range st.Sessions {
-			if !s.Archived && cmp.Or(s.Worker, core.LocalWorker) == w.ID {
-				r.Sessions++
-			}
-		}
-		out = append(out, r)
-	}
-	return out, nil
 }
 
 func pint(p map[string]any, k string) int {

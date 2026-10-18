@@ -272,11 +272,7 @@ func (x *statsPlugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 				sub += " · this session's account"
 			}
 			if out := x.h.State().SignedOut(u); len(out) > 0 {
-				var where []string
-				for _, l := range out {
-					where = append(where, x.workerName(l.Worker))
-				}
-				sub += " · signed out on " + strings.Join(where, ", ")
+				sub += " · signed out"
 			}
 			c.Text("s", sub, monoFont(10, th.C(theme.FgFaint)))
 		})
@@ -352,7 +348,7 @@ func (x *statsPlugin) usagePage(c *ui.Ctx) {
 			c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tStatsHead)}, func(c *ui.Ctx) {
 				c.Text("h", "USAGE", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
 					Color: th.C(theme.Fg)})
-				c.Text("m", fmt.Sprintf("plan windows · %s · %s · %s", counted(len(st.Usage), "account"), counted(len(st.Workers), "worker"),
+				c.Text("m", fmt.Sprintf("plan windows · %s · %s", counted(len(st.Usage), "account"),
 					now.In(x.loc).Format("Mon Jan 2 15:04")), monoFont(11, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if !read.IsZero() {
@@ -379,7 +375,7 @@ func (x *statsPlugin) usagePage(c *ui.Ctx) {
 				}
 				c.Row("how", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 9), Gap: 6, Radius: 6, Stroke: th.C(theme.LineStrong), Border: 1}, func(c *ui.Ctx) {
 					c.Text("t", "How it's measured", monoFont(10.5, th.C(theme.Fg)))
-					note(c, "n", "the worker reads each provider's own figures; nothing is prompted, so reading spends no tokens · burn is the slope over the last 30 min (5h) or 24h (weekly)")
+					note(c, "n", "Oriel reads each provider's own figures; nothing is prompted, so reading spends no tokens · burn is the slope over the last 30 min (5h) or 24h (weekly)")
 				})
 			})
 		})
@@ -416,29 +412,25 @@ func (x *statsPlugin) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.
 	})
 }
 
-// providerLine is the models and sessions an account runs: "opus-4.1 · sonnet-4.5 · 4 sessions on mbp and devbox".
+// providerLine is the models and sessions an account runs: "opus-4.1 · sonnet-4.5 · 4 sessions".
 func (x *statsPlugin) providerLine(u core.ProviderUsage) string {
-	var models, workers []string
+	var models []string
 	n := 0
 	for _, se := range x.h.State().Sessions {
-		wid := se.Worker
-		if wid == "" {
-			wid = core.LocalWorker
+		if se.Agent.Provider != u.Provider || se.Archived {
+			continue
 		}
-		if se.Agent.Provider != u.Provider || se.Archived || !u.Uses(wid) {
+		if a := se.Agent.Accounts; len(a) > 0 && u.Account != "" && a[len(a)-1].Account != u.Account {
 			continue
 		}
 		n++
 		if m := se.Agent.Model; m != "" && !slices.Contains(models, m) {
 			models = append(models, m)
 		}
-		if w := x.workerName(wid); !slices.Contains(workers, w) {
-			workers = append(workers, w)
-		}
 	}
 	parts := models
 	if n > 0 {
-		parts = append(parts, counted(n, "session")+" on "+strings.Join(workers, " and "))
+		parts = append(parts, counted(n, "session"))
 	}
 	return strings.Join(parts, " · ")
 }

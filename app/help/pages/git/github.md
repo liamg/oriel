@@ -14,13 +14,13 @@ GitHub until you forward it. The agent never posts to GitHub. You do.
 
 Each review comment on a PR's line, with its replies, is one thread with a **GitHub review** header: the line, the
 reviewer, where their review stands (changes requested, approved, commented) and when it was last synced. The PR's
-conversation (its comments and reviews' summaries) is one more thread. The session's worker syncs them every 30
+conversation (its comments and reviews' summaries) is one more thread. Oriel syncs them every 30
 seconds while the session is in front, and at once with `github.sync`. An edit on GitHub changes the thread here, and
 the agent is given it again; a thread resolved on GitHub is resolved here, and reopened with it.
 
 ## Forward to GitHub {#forward}
 
-Under the agent's draft reply: **↗ Forward to GitHub** posts it as you, from the session's worker with your own gh,
+Under the agent's draft reply: **↗ Forward to GitHub** posts it as you, with your own gh,
 once; it then shows as sent and doesn't come back from GitHub as a new comment. **Edit** changes the draft first
 (**Save draft**, or ⌘⏎). `github.forward {thread, comment}` and `github.edit` do the same from keys or Lua.
 

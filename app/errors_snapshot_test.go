@@ -47,7 +47,7 @@ func newScene(t testing.TB, crashDir, workDir string, size render.Point) *errSce
 	return newSceneWith(t, crashDir, workDir, size, nil)
 }
 
-// newSceneWith is newScene with its config changed first: workers to connect, say.
+// newSceneWith is newScene with its config changed first: the session host, say.
 func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, change func(*Config)) *errScene {
 	t.Helper()
 	home := t.TempDir()
@@ -61,6 +61,7 @@ func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, cha
 		WorkDir: workDir, Desktop: s.clip}
 	if change != nil {
 		change(&cfg)
+		s.store = cfg.Store
 	}
 	h, err := NewHeadless(cfg, HeadlessOpts{Size: size, Clock: func() time.Time { return s.now }})
 	if err != nil {

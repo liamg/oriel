@@ -41,7 +41,7 @@ func TestALostLoginFlagsEverySessionOnTheWorker(t *testing.T) {
 	a1.LoseLogin("OAuth token revoked · Please run /login")
 	a1.Emit(agent.TurnEnd{})
 
-	want := core.Login{Provider: "fake", Account: "u1", Worker: core.LocalWorker, Detail: "OAuth token revoked · Please run /login",
+	want := core.Login{Provider: "fake", Account: "u1", Detail: "OAuth token revoked · Please run /login",
 		Terminal: "/login", Shell: "fake, then /login"}
 	for _, id := range []core.SessionID{id1, id2} {
 		se := r.eventually(id, "the login's card", flagged)
@@ -49,8 +49,8 @@ func TestALostLoginFlagsEverySessionOnTheWorker(t *testing.T) {
 			t.Errorf("%s: ask = %+v, want %+v", id, a, want)
 		}
 	}
-	if ws := r.w.workerState(); len(ws.SignedOut) != 1 || ws.SignedOut[0] != want {
-		t.Errorf("worker says %+v", ws.SignedOut)
+	if ms := r.w.store.State().Machine; len(ms.SignedOut) != 1 || ms.SignedOut[0] != want {
+		t.Errorf("the machine says %+v", ms.SignedOut)
 	}
 	if p := r.w.ProviderInfo(context.Background()); p[0].Install.LoggedIn || !strings.Contains(p[0].Install.Note, "OAuth token revoked") {
 		t.Errorf("the launcher's provider = %+v", p[0].Install)
@@ -66,8 +66,8 @@ func TestALostLoginFlagsEverySessionOnTheWorker(t *testing.T) {
 	for _, id := range []core.SessionID{id1, id2} {
 		r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
 	}
-	if ws := r.w.workerState(); len(ws.SignedOut) != 0 {
-		t.Errorf("signed in, the worker still says %+v", ws.SignedOut)
+	if ms := r.w.store.State().Machine; len(ms.SignedOut) != 0 {
+		t.Errorf("signed in, the machine still says %+v", ms.SignedOut)
 	}
 	if p := r.w.ProviderInfo(context.Background()); !p[0].Install.LoggedIn {
 		t.Errorf("signed in, the launcher's provider = %+v", p[0].Install)
@@ -105,9 +105,9 @@ func TestCheckingAgainKeepsTheCardUntilSignedIn(t *testing.T) {
 // signedIn waits for the worker to say every login is back: the card goes as it's answered, a moment before.
 func (r *rig) signedIn() {
 	r.t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); len(r.w.workerState().SignedOut) > 0; time.Sleep(10 * time.Millisecond) {
+	for deadline := time.Now().Add(5 * time.Second); len(r.w.store.State().Machine.SignedOut) > 0; time.Sleep(10 * time.Millisecond) {
 		if time.Now().After(deadline) {
-			r.t.Fatalf("signed in, the worker still says %+v", r.w.workerState().SignedOut)
+			r.t.Fatalf("signed in, the machine still says %+v", r.w.store.State().Machine.SignedOut)
 		}
 	}
 }

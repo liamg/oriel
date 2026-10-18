@@ -13,12 +13,9 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/update"
-	"github.com/liamg/oriel/wire"
-	"github.com/liamg/oriel/worker"
 )
 
-// updateRig is a signed release in a directory, an installed copy of Oriel in another, and remote workers that take
-// updates as `oriel worker --connect` does.
+// updateRig is a signed release in a directory, and an installed copy of Oriel in another.
 type updateRig struct {
 	t        *testing.T
 	key      ed25519.PrivateKey
@@ -67,34 +64,6 @@ func (r *updateRig) config(cfg *Config) {
 	}
 }
 
-// remoteWorker is a worker on another machine at version, taking updates through worker.Options.Handlers.
-type remoteWorker struct {
-	in        *update.Installer
-	client    worker.Client
-	restarted atomic.Int32
-}
-
-func (r *updateRig) worker(id core.WorkerID, version string) *remoteWorker {
-	r.t.Helper()
-	root := r.t.TempDir()
-	rw := &remoteWorker{in: &update.Installer{Target: filepath.Join(root, "oriel"), Dir: filepath.Join(root, "updates"), Probe: noProbe}}
-	if err := os.WriteFile(rw.in.Target, []byte("oriel "+version), 0o755); err != nil {
-		r.t.Fatal(err)
-	}
-	rcv := &update.Receiver{Installer: rw.in, Keys: r.trust, Version: version, Restart: func() { rw.restarted.Add(1) }}
-	lw := newWorkerWith(r.t, worker.Options{ID: id, Name: string(id), Version: version, Handlers: []func(wire.Conn){rcv.Serve}})
-	a, b := wire.Pipe()
-	lw.w.Serve(b)
-	r.t.Cleanup(func() { a.Close(); b.Close() })
-	rw.client = worker.Client{Conn: a}
-	return rw
-}
-
-func (rw *remoteWorker) updatedTo() string {
-	p, _ := rw.in.Pending()
-	return p.Version
-}
-
 func (s *errScene) updates() *updatePlugin {
 	for _, e := range s.plugins {
 		if x, ok := e.(*updatePlugin); ok {
@@ -104,23 +73,17 @@ func (s *errScene) updates() *updatePlugin {
 	return nil
 }
 
-// PL-6, the app's side: :UpdateCheck opens the card with the release's notes; Update sends the release to the worker
-// that's behind and installs this copy; the status line says "update ready · restart", which quits and relaunches.
-// A worker that connects later, still behind, is updated as it connects.
+// PL-6, the app's side: :UpdateCheck opens the card with the release's notes; Update installs this copy; the status
+// line says "update ready · restart", which quits and relaunches.
 func TestUpdateCardInstallsAndRestarts(t *testing.T) {
 	r := newUpdateRig(t)
-	r.publish("2.0.0", "## Highlights\n\n- Workers update over the wire\n- **Rollback** on a failed health check")
-	devbox := r.worker("devbox", "1.0.0")
-	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) {
-		r.config(cfg)
-		cfg.Workers = append(cfg.Workers, devbox.client)
-	})
-	waitState(t, s.store, "devbox", func(st core.State) bool { return len(st.Workers) == 1 })
+	r.publish("2.0.0", "## Highlights\n\n- Faster session start\n- **Rollback** on a failed health check")
+	s := newSceneWith(t, "", "", mockupSize, r.config)
 
 	s.run("UpdateCheck", nil)
 	s.frame()
 	s.until(t, "the card with the release", func() bool { return strings.Contains(s.frameText(), "Oriel 2.0.0") })
-	s.wantFrame(t, "WHAT'S NEW", "you have 1.0.0 · stable channel", "Highlights", "Workers update over the wire", "Rollback", "Later", "Update")
+	s.wantFrame(t, "WHAT'S NEW", "you have 1.0.0 · stable channel", "Highlights", "Faster session start", "Rollback", "Later", "Update")
 	s.lint("the update card")
 
 	s.click(centre(s.within("Oriel 2.0.0", "Update").Bounds))
@@ -128,18 +91,12 @@ func TestUpdateCardInstallsAndRestarts(t *testing.T) {
 	if b, _ := os.ReadFile(r.self.Target); string(b) != "oriel 2.0.0" {
 		t.Fatalf("this copy is %q", b)
 	}
-	s.until(t, "devbox swapped and restarting", func() bool { return devbox.updatedTo() == "2.0.0" && devbox.restarted.Load() == 1 })
 	s.until(t, "Restart on the card", func() bool { return strings.Contains(s.frameText(), "Oriel 2.0.0 is installed") })
 	s.wantFrame(t, "update ready · restart")
 	s.lint("an update ready")
 	if !hasNotice(s.store.State(), "update.ready") {
 		t.Error("no notice says the update is ready")
 	}
-
-	// A worker that connects later, still on 1.0.0, is updated before it's used.
-	late := r.worker("laptop", "1.0.0")
-	s.sh.whenSessions(func(x *sessions) { x.serve(x.ctx, x.h, late.client, "") })
-	s.until(t, "laptop updated", func() bool { return late.updatedTo() == "2.0.0" && late.restarted.Load() == 1 })
 
 	s.run("update.notes", nil)
 	s.frame()

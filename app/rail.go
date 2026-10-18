@@ -324,7 +324,7 @@ func (r *rail) formNow(w here) string {
 	return "narrow"
 }
 
-// canAdd says the user can add a project to the session in front: there's a worker, and it isn't a directory.
+// canAdd says the user can add a project to the session in front: there are sessions, and it isn't a directory.
 func (r *rail) canAdd(w here) bool {
 	return w.session != nil && w.session.Kind != core.KindDirect && r.h.Available("project.add", nil)
 }

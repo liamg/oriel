@@ -18,7 +18,7 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 - [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
 
 P7 is done, but for PL-10, which is dropped (the calendar isn't carried over). P8 is in review, but for PL-22 (lazy
-loading, split out of PL-20).
+loading, split out of PL-20). AI-15 (workers) is dropped: one Oriel per machine.
 
 ## Suggested order
 
@@ -136,7 +136,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 65. [RV-6](RV-6-explain-this-change-walkthrough.md): Explain this change walkthrough · after RV-5
 66. [RV-7](RV-7-verify-raise-quiz.md): Verify & raise quiz · after AI-5
 67. [TR-6](TR-6-ask-to-explain-next-to-every-ask-to-fix-tests-di.md): "Ask to explain" next to every "ask to fix" (tests, diagnostics, CI, conflicts, failed terminal commands) · after TR-2, RV-5
-68. [AI-15](AI-15-workers-page-remote-workers-pairing.md): Workers page: this machine's and remote workers, pairing, revoke, rename, forget, restart · after AI-1, AI-12, SE-5 (P6 follow-up)
+68. [AI-15](AI-15-workers-page-remote-workers-pairing.md): Workers page: this machine's and remote workers, pairing, revoke, rename, forget, restart · after AI-1, AI-12, SE-5 (P6 follow-up) · dropped (one Oriel per machine)
 
 ### Phase 7 · the rest
 

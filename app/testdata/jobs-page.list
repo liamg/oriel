@@ -88,20 +88,14 @@ clip 0,38 223x936 r 0
   path 3 segments stroke 1.25 #ffd23f
   text "Jobs" @33,395.30524 #ece6d8 Inter 12
   text "1 running" @159,394.54 #7c7566 JetBrains Mono 10
-  path 5 segments stroke 1.25 #7c7566
-  path 5 segments stroke 1.25 #7c7566
-  path 6 segments stroke 1.25 #7c7566
-  path 6 segments stroke 1.25 #7c7566
-  text "Workers" @33,418.30524 #b3ab99 Inter 12
-  text "1 online" @165,417.54 #7c7566 JetBrains Mono 10
   path 6 segments fill #060606
   path 6 segments stroke 1.1374999 #ffd23f
-  effect glow 16.3875,435.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
+  effect glow 16.3875,412.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 19.55625,435.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
+  effect glow 19.55625,412.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
-  text "Ori" @33,441.30524 #b3ab99 Inter 12
+  text "Ori" @33,418.30524 #b3ab99 Inter 12
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -112,7 +106,7 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Settings" @33,464.30524 #b3ab99 Inter 12
+  text "Settings" @33,441.30524 #b3ab99 Inter 12
 pop
 rect 223,38 1x936 fill #24221d
 rect 224,38 1376x936 fill #060606
@@ -194,13 +188,13 @@ clip 224,38 1376x936 r 0
     path 3 segments stroke 1.25 #ffd23f
     text "Jobs" @667.96875,540.49835 #ece6d8 Inter 12
     text "6 jobs" @702.6875,539.73315 #7c7566 JetBrains Mono 10
-    rect 756.6875,523.1331 141.98438x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    rect 756.6875,523.1331 192.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
-    path 6 segments stroke 1.25 #ffd23f
-    path 6 segments stroke 1.25 #ffd23f
-    text "Workers" @785.6875,540.49835 #ece6d8 Inter 12
-    text "1 online" @840.6719,539.73315 #7c7566 JetBrains Mono 10
+    path 5 segments stroke 1.25 #ffd23f
+    path 5 segments stroke 1.25 #ffd23f
+    text "Mission control" @785.6875,540.49835 #ece6d8 Inter 12
+    text "2 need you" @879.375,539.73315 #7c7566 JetBrains Mono 10
   pop
   text "RECENT" @987,204.28311 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1341.0469,204.7931 #7c7566 JetBrains Mono 10
@@ -295,13 +289,13 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-text "WKR mbp" @1480.0625,984.71 #7c7566 JetBrains Mono 10.5
+text "CPU" @1506.4375,984.71 #7c7566 JetBrains Mono 10.5
 text "34%" @1532.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 224,38 1376x936 fill #060606
 clip 224,38 1376x936 r 0
   rect 224,38 1376x42 fill #0c0c0b
   text "JOBS" @242,63.844 #ece6d8 Space Grotesk 14
-  text "6 jobs · 1 running · 12 runs · on mbp" @291.3806,62.96 #7c7566 JetBrains Mono 11
+  text "6 jobs · 1 running · 12 runs" @291.3806,62.96 #7c7566 JetBrains Mono 11
   rect 1264.0156,46 98.203125x26 fill #191815 radius 6 stroke 1 #332f27
   text "+ New job" @1274.0156,63.365234 #ece6d8 Inter 12
   rect 1338.2188,51.5 14x15 radius 3 stroke 1 #ece6d866
@@ -379,7 +373,7 @@ clip 224,38 1376x936 r 0
     pop
   pop
   rect 224,923.6 330x1 fill #24221d
-  text "~/.oriel/jobs on mbp · one file per job" @238,944.8 #4f4a40 JetBrains Mono 10
+  text "~/.oriel/jobs · one file per job" @238,944.8 #4f4a40 JetBrains Mono 10
   text "runs are workspaces; deleting a job keeps them" @238,961 #4f4a40 JetBrains Mono 10
   rect 554,81 1x893 fill #24221d
   rect 555,81 1045x893 fill #060606
@@ -404,13 +398,11 @@ clip 224,38 1376x936 r 0
     text "·" @680.5625,144.46 #4f4a40 JetBrains Mono 11
     text "claude claude-opus-4-1 high" @695.15625,144.46 #ece6d8 JetBrains Mono 11
     text "·" @881.1875,144.46 #4f4a40 JetBrains Mono 11
-    text "mbp" @895.78125,144.46 #7c7566 JetBrains Mono 11
-    text "·" @923.5625,144.46 #4f4a40 JetBrains Mono 11
-    text "8 runs: 5 done, 1 blocked, 1 stopped, 1 running" @938.15625,144.46 #7c7566 JetBrains Mono 11
-    text "·" @1256.0625,144.46 #4f4a40 JetBrains Mono 11
-    text "$29.93 total" @1270.6562,144.46 #ece6d8 JetBrains Mono 11
-    text "·" @1357.7812,144.46 #4f4a40 JetBrains Mono 11
-    text "avg 20m" @1372.375,144.46 #7c7566 JetBrains Mono 11
+    text "8 runs: 5 done, 1 blocked, 1 stopped, 1 running" @895.78125,144.46 #7c7566 JetBrains Mono 11
+    text "·" @1213.6875,144.46 #4f4a40 JetBrains Mono 11
+    text "$29.93 total" @1228.2812,144.46 #ece6d8 JetBrains Mono 11
+    text "·" @1315.4062,144.46 #4f4a40 JetBrains Mono 11
+    text "avg 20m" @1330,144.46 #7c7566 JetBrains Mono 11
     rect 573,160 1009x109.6095 fill #0c0c0b radius 8 stroke 1 #24221d
     text "PROMPT" @585,180.02 #b3ab99 JetBrains Mono 9.5
     text "JOB.md for each run" @638.98,180.2 #4f4a40 JetBrains Mono 10
@@ -446,7 +438,7 @@ clip 224,38 1376x936 r 0
       text "CUSTOM…" @998.58997,297.0295 #7c7566 JetBrains Mono 9.5
     pop
     rect 643.64,281.6095 413.59998x24 radius 5 stroke 1 #332f27
-    text "runs on mbp when it's awake · skips while the last run is going" @1069.24,297.2095 #4f4a40 JetBrains Mono 10
+    text "runs while Oriel is open · skips while the last run is going" @1069.24,297.2095 #4f4a40 JetBrains Mono 10
     rect 573,317.6095 1009x348.15625 fill #0c0c0b radius 8 stroke 1 #24221d
     text "RUNS" @585,342.0295 #b3ab99 JetBrains Mono 9.5
     text "8 · newest first · each a session of kind job" @624.32,342.2095 #4f4a40 JetBrains Mono 10

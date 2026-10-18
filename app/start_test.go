@@ -60,6 +60,7 @@ func startAppWith(t *testing.T, state, workDir string, setup func(h plugin.Host)
 	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), StateDir: state, WorkDir: workDir, Plugins: []plugin.Plugin{g}}
 	if change != nil {
 		change(&cfg)
+		r.store = cfg.Store
 	}
 	go func() { r.done <- Run(ctx, be, cfg) }()
 	select {

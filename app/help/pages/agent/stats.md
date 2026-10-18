@@ -11,12 +11,11 @@ tokens × the price table, so a price change re-costs history.
 
 ## Global stats {#page}
 
-`:Stats` or `⌘⇧S`, or **Stats** in the sidebar: every session on every worker, grouped by repo. An offline worker's
-last answer is still counted, marked stale in the header.
+`:Stats` or `⌘⇧S`, or **Stats** in the sidebar: every session, grouped by repo.
 
 ## Oriel and outside it {#origin}
 
-Each worker also reads every transcript Claude Code and Codex keep on its machine (`~/.claude/projects`, or
+Oriel also reads every transcript Claude Code and Codex keep on this machine (`~/.claude/projects`, or
 `$CLAUDE_CONFIG_DIR`'s, and `~/.codex/sessions`, or `$CODEX_HOME`'s), so what you run in a terminal or another tool
 counts too. A transcript an Oriel session owns is that session's; any other is a session **outside Oriel**, named by
 its first prompt and its repo taken from where it ran. Nothing is counted twice.
@@ -48,7 +47,7 @@ account it ran on at the time: signing in to another later moves only what comes
 
 ## Filters {#filters}
 
-Chips narrow what's counted: a repo, a worker, a provider, an account, and with **+ filter** a session, kind or model. A chip's ✕
+Chips narrow what's counted: a repo, a provider, an account, and with **+ filter** a session, kind or model. A chip's ✕
 takes it off.
 
 ## Splitting multi-repo sessions {#split}

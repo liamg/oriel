@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"slices"
 	"strings"
@@ -18,7 +19,6 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"github.com/liamg/oriel/wire"
 	"github.com/liamg/oriel/worker"
 )
 
@@ -231,8 +231,7 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 		if a.Login != nil {
 			l = *a.Login
 		}
-		where := x.h.State().WorkerName(se.Worker)
-		o.Title = providerName(l.Provider) + " on " + where + " needs you to log in"
+		o.Title = providerName(l.Provider) + " needs you to log in"
 		o.Detail = l.Detail
 		if !kicker {
 			o.Kicker = "login"
@@ -242,7 +241,7 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 			o.Actions = append(o.Actions, widget.CardAction{Label: "Log in", Key: "l", Primary: true})
 			acts = append(acts, act{cmd: "agent.login"})
 		} else if l.Shell != "" {
-			o.Note = "On " + where + ", run " + l.Shell
+			o.Note = "run " + l.Shell + " in a terminal"
 		}
 		add("Check again", "c", !canLogIn(l), registry.Args{"decision": "recheck"})
 	case core.AskKey:
@@ -286,14 +285,14 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 	x.run(context.Background(), cmpOr(acts[res.Action].cmd, "ask.answer"), args)
 }
 
-// canLogIn is a login the app signs in again itself: the agent's own terminal, from whichever worker runs it.
+// canLogIn is a login the app signs in again itself: the agent's own terminal.
 func canLogIn(l core.Login) bool { return l.Terminal != "" }
 
 // loginWaiting is the session waiting on a login, and its ask: session {id}, else the one in front, else any
-// waiting on {provider}'s login on {worker}.
+// waiting on {provider}'s login.
 func (x *agentConsole) loginWaiting(a registry.Args) (core.SessionState, core.Login, bool) {
 	st := x.h.State()
-	id, provider, wid := core.SessionID(a.String("id")), a.String("provider"), core.WorkerID(a.String("worker"))
+	id, provider := core.SessionID(a.String("id")), a.String("provider")
 	ss := slices.Clone(st.Sessions)
 	slices.SortStableFunc(ss, func(p, q core.SessionState) int {
 		switch {
@@ -313,7 +312,7 @@ func (x *agentConsole) loginWaiting(a registry.Args) (core.SessionState, core.Lo
 				continue
 			}
 			l := *ask.Login
-			if (provider == "" || l.Provider == provider) && (wid == "" || l.Worker == wid) {
+			if provider == "" || l.Provider == provider {
 				return se, l, true
 			}
 		}
@@ -321,15 +320,15 @@ func (x *agentConsole) loginWaiting(a registry.Args) (core.SessionState, core.Lo
 	return core.SessionState{}, core.Login{}, false
 }
 
-// logIn signs an agent in again: its own terminal, opened from its worker with the provider's login typed; for an
-// agent with no terminal to type it in, it says what to run there.
+// logIn signs an agent in again: its own terminal, opened with the provider's login typed; for an agent with no
+// terminal to type it in, it says what to run.
 func (x *agentConsole) logIn(ctx registry.Ctx, a registry.Args) error {
 	se, l, ok := x.loginWaiting(a)
 	if !ok {
 		return errors.New("no agent is waiting on a login")
 	}
 	if !canLogIn(l) {
-		return fmt.Errorf("on %s, run %s", x.h.State().WorkerName(se.Worker), cmpOr(l.Shell, "the agent's login"))
+		return fmt.Errorf("run %s in a terminal", cmpOr(l.Shell, "the agent's login"))
 	}
 	return x.rawTerminal(ctx, se.ID, l.Terminal+"\r")
 }
@@ -447,19 +446,19 @@ func removeStr(xs []string, s string) []string {
 	return out
 }
 
-// agentTerm is an agent's raw terminal on its worker, as a terminal view's source: what it shows streams in, and
-// what you type goes back.
+// agentTerm is an agent's raw terminal, as a terminal view's source: what it shows streams in, and what you type
+// goes back.
 type agentTerm struct {
-	c      worker.Client
+	c      *worker.Worker
 	id     core.SessionID
-	s      wire.Stream
+	s      <-chan []byte
 	cancel context.CancelFunc
 
 	mu   sync.Mutex
 	rest []byte
 }
 
-func newAgentTerm(c worker.Client, id core.SessionID) (*agentTerm, error) {
+func newAgentTerm(c *worker.Worker, id core.SessionID) (*agentTerm, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s, err := c.Terminal(ctx, id)
 	if err != nil {
@@ -473,9 +472,9 @@ func (t *agentTerm) Read(p []byte) (int, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	for len(t.rest) == 0 {
-		var b []byte
-		if err := t.s.Recv(&b); err != nil {
-			return 0, err
+		b, ok := <-t.s
+		if !ok {
+			return 0, io.EOF
 		}
 		t.rest = b
 	}
@@ -485,7 +484,7 @@ func (t *agentTerm) Read(p []byte) (int, error) {
 }
 
 func (t *agentTerm) Write(p []byte) (int, error) {
-	err := t.c.TermInput(context.Background(), worker.TermReq{Session: t.id, Data: append([]byte(nil), p...)})
+	err := t.c.TermInput(worker.TermReq{Session: t.id, Data: append([]byte(nil), p...)})
 	if err != nil {
 		return 0, err
 	}
@@ -493,10 +492,10 @@ func (t *agentTerm) Write(p []byte) (int, error) {
 }
 
 func (t *agentTerm) Resize(cols, rows int) error {
-	return t.c.TermInput(context.Background(), worker.TermReq{Session: t.id, Cols: cols, Rows: rows})
+	return t.c.TermInput(worker.TermReq{Session: t.id, Cols: cols, Rows: rows})
 }
 
 func (t *agentTerm) Close() error {
 	t.cancel()
-	return t.s.Close()
+	return nil
 }

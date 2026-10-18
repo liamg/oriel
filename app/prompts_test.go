@@ -13,9 +13,9 @@ import (
 
 // crit-reference.md, "Prompts page": "editable prompts, including Coding style (also written into the generated
 // CLAUDE.md). Only overrides are stored." Edited on the page, saved with ⌘S, kept as a file of its own, sent to
-// the worker; reset, the file goes and the worker has the default again.
+// the session host; reset, the file goes and the host has the default again.
 func TestThePromptsPage(t *testing.T) {
-	s, lw, _ := workersScene(t)
+	s, lw := hostScene(t)
 	s.run("prompts.open", nil)
 	s.frame()
 	s.frame()
@@ -30,8 +30,8 @@ func TestThePromptsPage(t *testing.T) {
 	if err != nil || !strings.Contains(string(b), "\nUse tabs.") {
 		t.Fatalf("the style's file: %q %v", b, err)
 	}
-	s.wantFrame(t, "1 yours", "saved · the workers have it")
-	s.until(t, "the worker to have the user's style", func() bool {
+	s.wantFrame(t, "1 yours", "saved · sessions use it from now on")
+	s.until(t, "the host to have the user's style", func() bool {
 		o, sent := lw.w.Prompts()
 		return sent && strings.Contains(o[prompts.StyleID], "\nUse tabs.")
 	})
@@ -43,17 +43,17 @@ func TestThePromptsPage(t *testing.T) {
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Error("reset kept the file")
 	}
-	s.until(t, "the worker to have the default style", func() bool {
+	s.until(t, "the host to have the default style", func() bool {
 		o, _ := lw.w.Prompts()
 		return len(o) == 0
 	})
 }
 
-// A part edited on the page is in the pack a new session's agent starts with, on the worker.
+// A part edited on the page is in the pack a new session's agent starts with.
 func TestAPartReachesANewSessionsAgent(t *testing.T) {
-	s, lw, _ := workersScene(t)
+	s, lw := hostScene(t)
 	s.run("prompts.set", registry.Args{"id": prompts.PartID("drafts"), "text": "Leave the drafts to me."})
-	s.until(t, "the worker to have the part", func() bool { o, _ := lw.w.Prompts(); return o.Custom(prompts.PartID("drafts")) })
+	s.until(t, "the host to have the part", func() bool { o, _ := lw.w.Prompts(); return o.Custom(prompts.PartID("drafts")) })
 	p, ok := func() (string, bool) {
 		o, _ := lw.w.Prompts()
 		pk, ok := o.Pack("work", nil)

@@ -136,7 +136,7 @@ func (x *agentConsole) Activate(_ context.Context, h plugin.Host) error {
 				if text == "" {
 					return errors.New("nothing to send")
 				}
-				return c.Send(ctx, worker.SendReq{Session: id, Text: text, Urgent: a.Bool("urgent")})
+				return c.Send(worker.SendReq{Session: id, Text: text, Urgent: a.Bool("urgent")})
 			}},
 		{ID: "agent.console.send", Title: "Agent console: send what's in the composer; {urgent} interrupts the turn",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -164,7 +164,7 @@ func (x *agentConsole) Activate(_ context.Context, h plugin.Host) error {
 			}},
 		{ID: "agent.terminal", Title: "Show the raw terminal of {id}'s agent, or the session in front's", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.rawTerminal(ctx, session(a), "") }},
-		{ID: "agent.login", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login on {worker}: its own terminal with the login typed",
+		{ID: "agent.login", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its own terminal with the login typed",
 			Available: func(a registry.Args) bool { _, _, ok := x.loginWaiting(a); return ok },
 			Run:       x.logIn},
 		{ID: "ask.answer", Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope}, {answers}",
@@ -209,8 +209,8 @@ func (x *agentConsole) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.Keymap(registry.Keymap{Mode: ComposerKeyMode, Keys: "<D-CR>", Command: "agent.console.send", Args: registry.Args{"urgent": true},
 		Desc: "Send now, interrupting the turn"}))
 	x.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-A>", Command: "agent.console", Desc: "Agent console"}))
-	if len(x.sh.cfg.Workers) > 0 {
-		// The rail offers the console where there are agents: with a worker connected.
+	if x.sh.cfg.Worker != nil {
+		// The rail offers the console where there are agents.
 		x.add(h.Contribute(registry.RailEntry{Name: "agent", Icon: "agent", Title: "Agent console", Command: "agent.console", Order: 70,
 			Active: func(string) bool { return x.shown() }, Badge: func() int {
 				se, _ := x.front()
@@ -264,11 +264,11 @@ func (x *agentConsole) shown() bool {
 	return false
 }
 
-func (x *agentConsole) client(id core.SessionID) (worker.Client, error) {
+func (x *agentConsole) client(id core.SessionID) (*worker.Worker, error) {
 	if x.sh.sessions == nil {
-		return worker.Client{}, errors.New("no worker is connected")
+		return nil, errors.New("there are no sessions in this window")
 	}
-	return x.sh.sessions.client(id)
+	return x.sh.sessions.host()
 }
 
 // move selects the next or previous block.
@@ -313,7 +313,7 @@ func (x *agentConsole) ask(id core.SessionID, ask string) (core.Ask, bool) {
 	return core.Ask{}, false
 }
 
-// answer sends the user's answer to an ask to its session's worker.
+// answer sends the user's answer to an ask to the session host.
 func (x *agentConsole) answer(ctx context.Context, id core.SessionID, ask core.Ask, a registry.Args) error {
 	c, err := x.client(id)
 	if err != nil {
@@ -338,7 +338,7 @@ func (x *agentConsole) answer(ctx context.Context, id core.SessionID, ask core.A
 	if st := x.by[id]; st != nil && st.noting == ask.ID {
 		st.noting, st.note = "", ""
 	}
-	return c.Answer(ctx, r)
+	return c.Answer(r)
 }
 
 func (x *agentConsole) startNote(id core.SessionID, ask string) {
@@ -357,7 +357,7 @@ func (x *agentConsole) fork(id core.SessionID, prompt string) error {
 	st.forks = append(st.forks, forkAnswer{q: prompt})
 	n := len(st.forks) - 1
 	go func() {
-		out, err := c.Fork(context.Background(), id, prompt)
+		out, err := c.Fork(id, prompt)
 		x.h.Do(func() {
 			if n < len(st.forks) {
 				st.forks[n].a, st.forks[n].err, st.forks[n].done = out, err, true
@@ -368,7 +368,7 @@ func (x *agentConsole) fork(id core.SessionID, prompt string) error {
 	return nil
 }
 
-// rawTerminal shows the agent's own terminal, streamed from its worker, in a terminal view, and types into it.
+// rawTerminal shows the agent's own terminal, streamed from the session host, in a terminal view, and types into it.
 func (x *agentConsole) rawTerminal(ctx registry.Ctx, id core.SessionID, typed string) error {
 	if se, ok := x.sh.cfg.Store.Session(id); ok {
 		if a := se.Snapshot().Agent; a.Starting != nil {

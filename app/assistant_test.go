@@ -48,7 +48,7 @@ func assistantScene(t *testing.T, o worker.Options, mic *voicetest.Mic, tr *voic
 	})
 	s.now = asstNow
 	s.assistant().conv.Now = func() time.Time { return s.now }
-	waitState(t, s.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.frame()
 	return s, lw, sp
 }
@@ -233,7 +233,7 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 // act shows what it will do and waits; y does it, n doesn't, and what it made can be undone for a few seconds.
 func TestAssistantAsksFirst(t *testing.T) {
 	s, lw, _ := assistantScene(t, worker.Options{}, nil, nil)
-	c, _ := s.sh.sessions.worker("")
+	c := s.sh.cfg.Worker
 	if _, err := c.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func TestAssistantAsksFirst(t *testing.T) {
 
 	done := asstCall(ua, "start_session", map[string]any{"repo": "pricing", "prompt": "Add a cache in front of the price lookups."})
 	s.until(t, "the card", func() bool { return strings.Contains(s.frameText(), "Start a plan session") })
-	s.wantFrame(t, "CONFIRM · START_SESSION", "The assistant wants to start a plan session in pricing on", "repository", "pricing — "+lw.repo,
+	s.wantFrame(t, "CONFIRM · START_SESSION", "The assistant wants to start a plan session in pricing.", "repository", "pricing — "+lw.repo,
 		"THE PROMPT THE AGENT WILL BE GIVEN", "Add a cache in front of the price lookups.", "A plan session drafts a plan first", "Yes", "No", "120s")
 	if len(s.store.State().Sessions) != 0 {
 		t.Fatal("a session started before the yes")

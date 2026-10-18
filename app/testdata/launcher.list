@@ -98,19 +98,18 @@ clip 0,38 1600x936 r 0
     path 2 segments stroke 1.25 #ffd23f
     path 3 segments stroke 1.25 #ffd23f
     text "Jobs" @549.96875,709.63525 #ece6d8 Inter 12
-    rect 595.6875,692.27 141.98438x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    rect 595.6875,692.27 125.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
+    path 5 segments stroke 1.25 #ffd23f
+    path 5 segments stroke 1.25 #ffd23f
+    text "Mission control" @624.6875,709.63525 #ece6d8 Inter 12
+    rect 729.375,692.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 6 segments stroke 1.25 #ffd23f
-    path 6 segments stroke 1.25 #ffd23f
-    text "Workers" @624.6875,709.63525 #ece6d8 Inter 12
-    text "1 online" @679.6719,708.87006 #7c7566 JetBrains Mono 10
-    rect 745.6719,692.27 125.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
-    path 5 segments stroke 1.25 #ffd23f
-    path 5 segments stroke 1.25 #ffd23f
-    path 5 segments stroke 1.25 #ffd23f
-    path 5 segments stroke 1.25 #ffd23f
-    text "Mission control" @774.6719,709.63525 #ece6d8 Inter 12
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    text "Prompts" @758.375,709.63525 #ece6d8 Inter 12
   pop
   text "RECENT" @875,373.41998 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1229.0469,373.93 #7c7566 JetBrains Mono 10
@@ -142,12 +141,13 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
+text "CPU" @1506.4375,984.71 #7c7566 JetBrains Mono 10.5
+text "34%" @1532.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 0,0 1600x1000 fill #03050899
 rect 170,105 1260x790 fill #0c0c0b radius 10
 clip 170,105 1260x790 r 10
   path 5 segments stroke 1.5 #ffd23f
   text "NEW SESSION" @220,135.844 #ece6d8 Space Grotesk 14
-  text "worker devbox" @359.8194,134.78 #7c7566 JetBrains Mono 10.5
   rect 1369.5625,118 40.4375x26 radius 6 stroke 1 #332f27
   text "esc" @1379.5625,135.36523 #ece6d8 Inter 12
   rect 170,157 1260x1 fill #24221d
@@ -268,17 +268,15 @@ clip 170,105 1260x790 r 10
       text "named from the ticket and prompt" @257.48438,706.23663 #7c7566 Inter 12.5
     pop
     rect 247.48438,686.6895 375.01562x30 radius 6 stroke 1 #332f27
-    text "RUN ON" @646.5,597.1795 #7c7566 JetBrains Mono 9.5
-    rect 646.5,618.0295 192.90625x26 fill #191815 radius 6 stroke 1 #332f27
-    text "devbox · 32 cores · cpu 61% ▾" @656.5,635.3947 #ece6d8 Inter 12
-    rect 646.5,654.0295 32x18 fill #ffd23f radius 9
-    rect 662.5,656.0295 14x14 fill #ece6d8 radius 7
-    text "Sandbox" @688.5,667.5766 #ece6d8 Inter 12.5
-    text "container · gateway for git & gh" @883,666.6295 #7c7566 JetBrains Mono 10
-    rect 646.5,682.0295 32x18 fill #23211c radius 9
-    rect 648.5,684.0295 14x14 fill #ece6d8 radius 7
-    text "Open network" @688.5,695.5766 #ece6d8 Inter 12.5
-    text "ask per new host when off" @925,694.6295 #7c7566 JetBrains Mono 10
+    text "RUNS IN" @646.5,597.1795 #7c7566 JetBrains Mono 9.5
+    rect 646.5,618.0295 32x18 fill #ffd23f radius 9
+    rect 662.5,620.0295 14x14 fill #ece6d8 radius 7
+    text "Sandbox" @688.5,631.5766 #ece6d8 Inter 12.5
+    text "container · gateway for git & gh" @883,630.6295 #7c7566 JetBrains Mono 10
+    rect 646.5,646.0295 32x18 fill #23211c radius 9
+    rect 648.5,648.0295 14x14 fill #ece6d8 radius 7
+    text "Open network" @688.5,659.5766 #ece6d8 Inter 12.5
+    text "ask per new host when off" @925,658.6295 #7c7566 JetBrains Mono 10
   pop
   rect 1099,158 1x676 fill #24221d
   text "RECENT PROMPTS" @1116,183.69 #7c7566 JetBrains Mono 9.5

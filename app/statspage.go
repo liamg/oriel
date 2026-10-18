@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -17,7 +16,7 @@ import (
 	"github.com/liamg/oriel/worker/stats"
 )
 
-// The global Stats page (43's panels 2 and 3): every session on every worker, grouped by repo by default, over the
+// The global Stats page (43's panels 2 and 3): every session, grouped by repo by default, over the
 // main area beside the sidebar.
 
 // mainArea is the root view's node, which the pages cover: the main area, beside the sidebar and under the tabs.
@@ -72,8 +71,6 @@ func (x *statsPlugin) page(c *ui.Ctx) {
 		})
 }
 
-func (x *statsPlugin) workerName(id core.WorkerID) string { return x.h.State().WorkerName(id) }
-
 func (x *statsPlugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMeta) {
 	th := c.Theme()
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tStatsHead)}, func(c *ui.Ctx) {
@@ -91,11 +88,7 @@ func (x *statsPlugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta repo
 				scope = strings.Join(parts, " · ")
 			}
 		}
-		meta2 := []string{scope}
-		if n := len(meta.workers); n > 0 {
-			meta2 = append(meta2, counted(n, "worker"))
-		}
-		meta2 = append(meta2, counted(r.Totals.Sessions, "session"), q.From.Format("Jan 2")+" – "+q.To.AddDate(0, 0, -1).Format("Jan 2"))
+		meta2 := []string{scope, counted(r.Totals.Sessions, "session"), q.From.Format("Jan 2") + " – " + q.To.AddDate(0, 0, -1).Format("Jan 2")}
 		c.Text("m", strings.Join(meta2, " · "), monoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		var origins []string
@@ -115,18 +108,9 @@ func (x *statsPlugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta repo
 			if ago(x.now(), meta.at) == "now" {
 				read = "scanned just now"
 			}
-			for _, id := range meta.stale {
-				read += " · " + x.workerName(id) + " offline, its last report"
-			}
-			tone := th.C(theme.FgFaint)
-			if len(meta.stale) > 0 {
-				tone = th.C(theme.Warn)
-			}
-			c.Text("scanned", read, monoFont(11, tone))
+			c.Text("scanned", read, monoFont(11, th.C(theme.FgFaint)))
 		case meta.loading:
 			c.Text("scanned", "scanning…", monoFont(11, th.C(theme.FgFaint)))
-		case len(x.clients()) == 0:
-			c.Text("scanned", "no worker connected", monoFont(11, th.C(theme.FgFaint)))
 		}
 		if one := q.Filters["session"]; len(one) == 1 && widget.Button(c, "tab", "Session stats", widget.ButtonOpts{Help: "agent/stats#session"}) {
 			x.run("stats.session", registry.Args{"id": one[0]})
@@ -195,7 +179,7 @@ func (x *statsPlugin) toolbar(c *ui.Ctx) {
 		if widget.Segmented(c, "group", groups, &g, widget.SegmentedOpts{Label: "Group by", Help: "agent/stats#group-by"}) {
 			x.q.group, x.sel = keys[g], 0
 		}
-		for _, k := range []string{"repo", "worker", "provider", "account", "session", "kind", "model"} {
+		for _, k := range []string{"repo", "provider", "account", "session", "kind", "model"} {
 			x.filterChips(c, k)
 		}
 		if opts := x.moreFilters(); len(opts) > 0 {
@@ -225,10 +209,7 @@ func (x *statsPlugin) filterChips(c *ui.Ctx, key string) {
 	vals := x.q.filters[key]
 	for i, v := range vals {
 		label := v
-		switch key {
-		case "worker":
-			label = x.workerName(core.WorkerID(v))
-		case "account":
+		if key == "account" {
 			label = x.accountLabel(v, "")
 		}
 		if widget.Clickable(c, key+fmt.Sprint(i), ui.Style{Dir: ui.Row, H: ui.Px(22), Pad: ui.PadXY(8, 0), Gap: 5, Cross: ui.Center, Radius: 11,
@@ -245,7 +226,7 @@ func (x *statsPlugin) filterChips(c *ui.Ctx, key string) {
 			return
 		}
 	}
-	if len(vals) > 0 || key != "repo" && key != "worker" && key != "provider" && key != "account" {
+	if len(vals) > 0 || key != "repo" && key != "provider" && key != "account" {
 		return
 	}
 	opts := x.values(key)
@@ -254,7 +235,7 @@ func (x *statsPlugin) filterChips(c *ui.Ctx, key string) {
 	}
 }
 
-// values are what a filter can be: the repos, workers and providers the app knows of; sessions, kinds and models.
+// values are what a filter can be: the repos and providers the app knows of; sessions, kinds and models.
 func (x *statsPlugin) values(key string) []string {
 	st := x.h.State()
 	var out []string
@@ -264,10 +245,6 @@ func (x *statsPlugin) values(key string) []string {
 		}
 	}
 	switch key {
-	case "worker":
-		for _, w := range st.Workers {
-			add(w.Title())
-		}
 	case "account":
 		for _, u := range st.Usage {
 			add(x.accountLabel(u.Account, u.AccountName))
@@ -297,16 +274,10 @@ func (x *statsPlugin) values(key string) []string {
 	return out
 }
 
-// filterValue is what a filter's menu shows as what the query wants: a worker's or session's ID for its name.
+// filterValue is what a filter's menu shows as what the query wants: an account's or session's ID for its name.
 func (x *statsPlugin) filterValue(key, v string) string {
 	st := x.h.State()
 	switch key {
-	case "worker":
-		for _, w := range st.Workers {
-			if w.Title() == v {
-				return string(w.ID)
-			}
-		}
 	case "account":
 		for _, u := range st.Usage {
 			if x.accountLabel(u.Account, u.AccountName) == v {

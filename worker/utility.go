@@ -14,19 +14,13 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/wire"
 )
 
 // Utility agents (agents.md, "Nothing else may call claude -p either"): an agent with no session, started through
 // its provider like any other (Claude in its PTY with the mod), in a folder of Oriel's, on a small model, offered
 // only the app's tools for it. It reads; every permission it asks for is refused but the provider tools it's
-// allowed, and nobody answers its questions. The caller holds a stream while it wants it: the agent stops when the
-// stream ends.
-const (
-	MethodUtility          = "utility.run" // a stream: starts the agent, then its events until it ends
-	MethodUtilitySend      = "utility.send"
-	MethodUtilityInterrupt = "utility.interrupt"
-)
+// allowed, and nobody answers its questions. The caller holds a *Utility while it wants it: the agent stops at
+// its Close.
 
 // UtilitySpec is a utility agent to start.
 type UtilitySpec struct {
@@ -39,7 +33,7 @@ type UtilitySpec struct {
 	Allow []string `json:"allow,omitempty"`
 }
 
-// UtilityEvent is what a utility agent did, as its stream sends it.
+// UtilityEvent is what a utility agent did.
 type UtilityEvent struct {
 	Type     string          `json:"type"`               // ready, turn-start, message, tool-call, tool-result, turn-end, failure, exited
 	ID       string          `json:"id,omitempty"`       // ready: the agent's, for send; a tool call's
@@ -76,8 +70,8 @@ func (u *utilities) get(id string) (agent.Session, error) {
 	return nil, fmt.Errorf("no utility agent %q: it has stopped", id)
 }
 
-// RunUtility starts a utility agent and sends its events until it exits, ctx ends or the worker stops.
-func (w *Worker) RunUtility(ctx context.Context, spec UtilitySpec, send func(any) error) error {
+// runUtility starts a utility agent and sends its events until it exits, ctx ends or the host closes.
+func (w *Worker) runUtility(ctx context.Context, spec UtilitySpec, send func(UtilityEvent) error) error {
 	if !utilityName.MatchString(spec.Name) {
 		return fmt.Errorf("%q is not a utility agent's name: lower-case letters, digits, - and _", spec.Name)
 	}
@@ -211,8 +205,8 @@ func (w *Worker) utilityProvider(ctx context.Context, spec UtilitySpec) (agent.P
 	return p, defaultModel(ctx, p), nil
 }
 
-// SendUtility gives a utility agent a turn.
-func (w *Worker) SendUtility(ctx context.Context, r UtilityReq) error {
+// sendUtility gives a utility agent a turn.
+func (w *Worker) sendUtility(ctx context.Context, r UtilityReq) error {
 	s, err := w.utility.get(r.ID)
 	if err != nil {
 		return err
@@ -223,8 +217,8 @@ func (w *Worker) SendUtility(ctx context.Context, r UtilityReq) error {
 	return s.Send(ctx, agent.Input{Text: r.Text})
 }
 
-// InterruptUtility stops a utility agent's turn.
-func (w *Worker) InterruptUtility(ctx context.Context, r UtilityReq) error {
+// interruptUtility stops a utility agent's turn.
+func (w *Worker) interruptUtility(ctx context.Context, r UtilityReq) error {
 	s, err := w.utility.get(r.ID)
 	if err != nil {
 		return err
@@ -232,60 +226,79 @@ func (w *Worker) InterruptUtility(ctx context.Context, r UtilityReq) error {
 	return s.Interrupt(ctx)
 }
 
-func (w *Worker) serveUtility(conn wire.Conn) {
-	conn.HandleStream(MethodUtility, wire.StreamFunc(w.RunUtility))
-	conn.Handle(MethodUtilitySend, wire.Func(func(ctx context.Context, r UtilityReq) (any, error) { return nil, w.SendUtility(ctx, r) }))
-	conn.Handle(MethodUtilityInterrupt, wire.Func(func(ctx context.Context, r UtilityReq) (any, error) {
-		return nil, w.InterruptUtility(ctx, r)
-	}))
-}
-
 // Utility is a utility agent as the app holds it.
 type Utility struct {
-	c      Client
-	stream wire.Stream
+	w      *Worker
+	cancel context.CancelFunc
 	ready  UtilityEvent
 	events chan UtilityEvent
 }
 
-// StartUtility starts a utility agent on the worker; it runs until Close.
-func (c Client) StartUtility(ctx context.Context, spec UtilitySpec) (*Utility, error) {
-	s, err := c.Conn.Stream(ctx, MethodUtility, spec)
-	if err != nil {
-		return nil, err
-	}
-	var ready UtilityEvent
-	if err := s.Recv(&ready); err != nil {
-		s.Close()
-		return nil, err
-	}
-	u := &Utility{c: c, stream: s, ready: ready, events: make(chan UtilityEvent, 64)}
-	go func() {
-		defer close(u.events)
-		for {
-			var ev UtilityEvent
-			if err := s.Recv(&ev); err != nil {
-				return
+// StartUtility starts a utility agent; it runs until Close.
+func (w *Worker) StartUtility(ctx context.Context, spec UtilitySpec) (_ *Utility, err error) {
+	defer w.recover("StartUtility", &err)
+	run, cancel := context.WithCancel(context.Background())
+	events := make(chan UtilityEvent, 64)
+	started := make(chan error, 1)
+	w.goSafe("a utility agent", func() {
+		defer close(events)
+		first := true
+		err := w.runUtility(run, spec, func(ev UtilityEvent) error {
+			if first {
+				first = false
+				events <- ev
+				started <- nil
+				return nil
 			}
-			u.events <- ev
+			select {
+			case events <- ev:
+				return nil
+			case <-run.Done():
+				return run.Err()
+			}
+		})
+		if first {
+			started <- cmpErr(err, errors.New("the utility agent ended before it started"))
 		}
-	}()
-	return u, nil
+	})
+	select {
+	case err := <-started:
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+	case <-ctx.Done():
+		cancel()
+		return nil, ctx.Err()
+	}
+	return &Utility{w: w, cancel: cancel, ready: <-events, events: events}, nil
 }
 
-// Ready is what the worker said as it started: the agent's id, provider and model.
+func cmpErr(err, or error) error {
+	if err != nil {
+		return err
+	}
+	return or
+}
+
+// Ready is what the agent said as it started: its id, provider and model.
 func (u *Utility) Ready() UtilityEvent { return u.ready }
 
 // Events are what it does, until it's gone.
 func (u *Utility) Events() <-chan UtilityEvent { return u.events }
 
-func (u *Utility) Send(ctx context.Context, text string) error {
-	return u.c.Conn.Call(ctx, MethodUtilitySend, UtilityReq{ID: u.ready.ID, Text: text}, nil)
+func (u *Utility) Send(ctx context.Context, text string) (err error) {
+	defer u.w.recover("Utility.Send", &err)
+	return u.w.sendUtility(ctx, UtilityReq{ID: u.ready.ID, Text: text})
 }
 
-func (u *Utility) Interrupt(ctx context.Context) error {
-	return u.c.Conn.Call(ctx, MethodUtilityInterrupt, UtilityReq{ID: u.ready.ID}, nil)
+func (u *Utility) Interrupt(ctx context.Context) (err error) {
+	defer u.w.recover("Utility.Interrupt", &err)
+	return u.w.interruptUtility(ctx, UtilityReq{ID: u.ready.ID})
 }
 
 // Close stops the agent.
-func (u *Utility) Close() error { return u.stream.Close() }
+func (u *Utility) Close() error {
+	u.cancel()
+	return nil
+}

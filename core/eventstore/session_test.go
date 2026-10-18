@@ -12,7 +12,7 @@ var when = time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)
 
 func sessionEvents() []core.Event {
 	return []core.Event{
-		core.SessionSynced{Session: core.SessionState{ID: "pricing", Kind: core.KindWork, Status: core.StatusQuiet, Worker: core.LocalWorker,
+		core.SessionSynced{Session: core.SessionState{ID: "pricing", Kind: core.KindWork, Status: core.StatusQuiet,
 			Dir: "/w/pricing", Branch: "liam/rounding", Created: when,
 			Projects: []core.Project{{Name: "pricing", Repo: "/src/pricing", Dir: "/w/pricing/repos/pricing", Branch: "liam/rounding", Base: "main", Primary: true}}}},
 		core.AgentChanged{ID: "pricing", Agent: core.AgentState{Provider: "claude", Model: "opus", Running: true}},
@@ -29,7 +29,7 @@ func sessionEvents() []core.Event {
 		core.TranscriptAppended{Session: "pricing", Items: []core.Item{{ID: "i1", Kind: core.ItemTool, Tool: "Bash", Title: "go test", Done: true, Output: "ok"}}},
 		core.TestRunRecorded{Session: "pricing", Run: core.TestRun{ID: "r1", Command: "go test ./...", Passed: 12, OK: true}},
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Windows: []core.UsageWindow{{Name: "5h", Used: 0.38}}}},
-		core.WorkerChanged{Worker: core.WorkerState{ID: core.LocalWorker, Name: "mbp", Connected: true}},
+		core.MachineChanged{Machine: core.MachineState{Host: "mbp", Cores: 10}},
 		core.SessionRenamed{ID: "pricing", Name: "pricing-rounding"},
 		core.ProjectsChanged{ID: "pricing", Branch: "liam/rounding-2", Projects: []core.Project{{Name: "pricing", Dir: "/w/pricing/repos/pricing", Branch: "liam/rounding-2"}},
 			Past: []core.PastPR{{Project: "pricing", Branch: "liam/rounding", Number: 12}}},
@@ -77,85 +77,6 @@ func TestCopiesDontSeeLaterEvents(t *testing.T) {
 	}
 }
 
-func TestWorkerGoneTakesItsSessions(t *testing.T) {
-	s := New()
-	s.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Connected: true}})
-	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "a", Kind: core.KindWork, Worker: "devbox"}})
-	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "b", Kind: core.KindWork, Worker: core.LocalWorker}})
-	s.Apply(core.SessionFocused{ID: "a"})
-	if err := s.Apply(core.WorkerGone{ID: "devbox"}); err != nil {
-		t.Fatal(err)
-	}
-	st := s.State()
-	if len(st.Sessions) != 1 || st.Sessions[0].ID != "b" || st.Focus != "" || st.Workers[0].Connected {
-		t.Errorf("state after the worker went: %+v", st)
-	}
-}
-
-// AI-15: a worker keeps the app's name for it and when it came or went; Forget takes an offline one off.
-func TestWorkerLabelSinceAndForget(t *testing.T) {
-	s := New()
-	at := func(m int) time.Time { return when.Add(time.Duration(m) * time.Minute) }
-	s.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Connected: true, Sampled: at(0)}})
-	if err := s.Apply(core.WorkerRenamed{ID: "devbox", Label: "Build box"}); err != nil {
-		t.Fatal(err)
-	}
-	s.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Connected: true, Sampled: at(5)}})
-	w := s.State().Workers[0]
-	if w.Title() != "Build box" || !w.Since.Equal(at(0)) || s.State().WorkerName("devbox") != "Build box" {
-		t.Fatalf("after a reading: %+v", w)
-	}
-	if err := s.Apply(core.WorkerForgotten{ID: "devbox"}); err == nil {
-		t.Fatal("a connected worker was forgotten")
-	}
-	s.Apply(core.WorkerGone{ID: "devbox", At: at(9)})
-	if w := s.State().Workers[0]; w.Connected || !w.Since.Equal(at(9)) || w.Label != "Build box" {
-		t.Fatalf("gone: %+v", w)
-	}
-	s.Apply(core.WorkerChanged{Worker: core.WorkerState{ID: "devbox", Name: "devbox", Connected: true, Sampled: at(20)}})
-	if w := s.State().Workers[0]; !w.Connected || !w.Since.Equal(at(20)) {
-		t.Fatalf("back: %+v", w)
-	}
-	s.Apply(core.WorkerGone{ID: "devbox", At: at(30)})
-	if err := s.Apply(core.WorkerForgotten{ID: "devbox"}); err != nil || len(s.State().Workers) != 0 {
-		t.Fatalf("forget: %v, %+v", err, s.State().Workers)
-	}
-}
-
-// AI-15: a worker speaks only for itself and its own sessions.
-func TestFromWorker(t *testing.T) {
-	s := New()
-	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "mine", Kind: core.KindWork, Worker: "devbox"}})
-	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "local", Kind: core.KindWork, Worker: core.LocalWorker}})
-	st := s.State()
-	for _, c := range []struct {
-		ev   core.Event
-		want bool
-	}{
-		{core.WorkerChanged{Worker: core.WorkerState{ID: "devbox"}}, true},
-		{core.WorkerChanged{Worker: core.WorkerState{ID: core.LocalWorker}}, false},
-		{core.WorkerGone{ID: core.LocalWorker}, false},
-		{core.WorkerRenamed{ID: core.LocalWorker, Label: "x"}, false},
-		{core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Workers: []core.WorkerID{"devbox"}}}, true},
-		{core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Workers: []core.WorkerID{core.LocalWorker}}}, false},
-		{core.SessionSynced{Session: core.SessionState{ID: "new", Worker: "devbox"}}, true},
-		{core.SessionSynced{Session: core.SessionState{ID: "new", Worker: core.LocalWorker}}, false},
-		{core.SessionSynced{Session: core.SessionState{ID: "local", Worker: "devbox"}}, false},
-		{core.AgentChanged{ID: "mine"}, true},
-		{core.AgentChanged{ID: "local"}, false},
-		{core.AgentChanged{ID: "unknown"}, false},
-		{core.SessionFocused{ID: "local"}, false},
-		{core.Notified{Notice: core.Notice{ID: "n"}}, true},
-	} {
-		if got := st.FromWorker("devbox", c.ev); got != c.want {
-			t.Errorf("%T %+v from devbox: %v, want %v", c.ev, c.ev, got, c.want)
-		}
-	}
-	if !st.FromWorker(core.LocalWorker, core.AgentChanged{ID: "local"}) {
-		t.Error("this machine's worker can't speak for its own session")
-	}
-}
-
 func TestDeriveStatus(t *testing.T) {
 	agent := core.AgentState{Provider: "claude", Running: true}
 	you := core.Comment{Author: core.AuthorYou, Body: "x"}
@@ -190,13 +111,12 @@ func TestDeriveStatus(t *testing.T) {
 	}
 }
 
-// AI-13: a worker's signed-out logins are the ones of an account's plan, by provider and account, on any worker.
+// AI-13: the signed-out logins are the ones of an account's plan, by provider and account.
 func TestSignedOut(t *testing.T) {
-	st := core.State{Workers: []core.WorkerState{
-		{ID: "local", SignedOut: []core.Login{{Provider: "claude", Account: "u1/o1", Worker: "local"}}},
-		{ID: "devbox", Name: "devbox", SignedOut: []core.Login{{Provider: "claude", Account: "u1/o1", Worker: "devbox"}, {Provider: "codex", Worker: "devbox"}}},
+	st := core.State{Machine: core.MachineState{
+		SignedOut: []core.Login{{Provider: "claude", Account: "u1/o1", Detail: "revoked"}, {Provider: "codex"}},
 	}}
-	if got := st.SignedOut(core.ProviderUsage{Provider: "claude", Account: "u1/o1"}); len(got) != 2 || got[1].Worker != "devbox" {
+	if got := st.SignedOut(core.ProviderUsage{Provider: "claude", Account: "u1/o1"}); len(got) != 1 || got[0].Detail != "revoked" {
 		t.Errorf("claude u1/o1: %+v", got)
 	}
 	if got := st.SignedOut(core.ProviderUsage{Provider: "claude", Account: "u2"}); len(got) != 0 {

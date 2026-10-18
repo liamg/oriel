@@ -12,6 +12,8 @@ depends_on: [AI-1, AI-2, AI-3, AI-9, SH-17]
 
 **Phase** 5 · AI (follow-up) · **After** [AI-1](AI-1-worker-wire-sessions-workspaces-with-multi-repo-.md), [AI-2](AI-2-claude-provider-interactive-pty-plus-mod-hooks-n.md), [AI-3](AI-3-codex-provider-app-server-billing-checked-in-p0.md), [AI-9](AI-9-tasks-rail-session-tally-usage-windows.md), [SH-17](SH-17-project-sidebar-per-project-panels-and-shared-tabs.md) · **Unblocks** [SE-4](SE-4-jobs-page-saved-prompts-runs-and-schedules.md)
 
+**Note:** workers are gone (one Oriel per machine, see [AI-15](AI-15-workers-page-remote-workers-pairing.md)): stats are this machine's, with no merge, worker filter or stale offline report; usage is still per account.
+
 Added after P5 from review: crit's stats, but grouped by **repo** rather than by working directory (which came out as
 session names), plus a Usage page for the plan windows. Mockup 43 was signed off.
 

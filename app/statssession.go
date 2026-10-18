@@ -17,8 +17,7 @@ import (
 	"github.com/liamg/oriel/worker/stats"
 )
 
-// The session stats tab (43's panel 1): one session's stats as a main tab, its instance the session's ID; for one
-// outside Oriel, id@worker.
+// The session stats tab (43's panel 1): one session's stats as a main tab, its instance the session's ID.
 
 type sessionStatsView struct{ x *statsPlugin }
 
@@ -26,7 +25,7 @@ func (v sessionStatsView) Title(instance string) string {
 	if se, ok := v.x.h.Session(core.SessionID(instance)); ok {
 		return "Stats · " + se.Name()
 	}
-	id, _ := v.x.target(instance)
+	id := core.SessionID(instance)
 	if g, ok := v.x.found(id); ok {
 		return "Stats · " + g.Label
 	}
@@ -97,9 +96,8 @@ func (x *statsPlugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *t
 			Color: th.C(theme.Fg)})
 		name := cmpOr(d.Name, d.Session)
 		a := core.AgentState{Provider: d.Provider, Model: d.Model, Effort: d.Effort}
-		wid := core.WorkerID(d.Worker)
 		if se != nil {
-			name, a, wid = se.Name(), se.Agent(), se.Snapshot().Worker
+			name, a = se.Name(), se.Agent()
 		}
 		c.Text("n", name, mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		var meta []string
@@ -115,10 +113,6 @@ func (x *statsPlugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *t
 		if m := strings.TrimSpace(a.Model + " " + a.Effort); m != "" {
 			meta = append(meta, m)
 		}
-		if wid == "" {
-			wid = core.LocalWorker
-		}
-		meta = append(meta, x.workerName(wid))
 		if !d.First.IsZero() {
 			first, last := d.First.In(x.loc), d.Last.In(x.loc)
 			day := first.Format("Jan 2")

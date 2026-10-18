@@ -90,9 +90,9 @@ They are design sketches, not the implementation: the app draws natively (see `s
   source. The status line's mode reads the presenter's label (PREVIEW). Each window has its own: one window can preview
   a file while another edits it, the preview following the edits. The window's top line follows the preview's scroll,
   so Edit comes back where you were reading, and the presenter comes back after a restart.
-- Statusline: vim mode, branch, diagnostics, macro recording, worker CPU/mem indicators. Built in SH-8: the
-  status line's and the title bar's slots draw the indicators in them (`statusline.right.70-workers.status`: WKR
-  and each connected worker's CPU, amber with a dot from 80%) beside the views named for the slot.
+- Statusline: vim mode, branch, diagnostics, macro recording, this machine's CPU. Built in SH-8: the
+  status line's and the title bar's slots draw the indicators in them (`statusline.right.70-machine.status`: CPU
+  and this machine's load, amber with a dot from 80%) beside the views named for the slot.
 
 ## 01b · Requests: the main conversation view
 
@@ -120,7 +120,7 @@ They are design sketches, not the implementation: the app draws natively (see `s
   toggle, `⏎` sends, `⌘⏎` sends urgent. Right: this request, what it changed (`Thread.Touched`), spawned (tasks whose
   `Thread` it is, threads whose `Origin` it is) and related (the same file). Keys in mode `requests` (list and
   conversation): `j`/`k`, `⏎` the composer, `o` the anchor, `R` resolve, `⌘N` new request. Commands: `request.comment`
-  (fires `CommentSend`, then `worker.Client.Comment`), `request.resolve`, `request.reopen`, `request.new {text, context,
+  (fires `CommentSend`, then `host.Host.Comment`), `request.resolve`, `request.reopen`, `request.new {text, context,
   file, line}` (the tests' "ask agent to fix"), `request.open {thread}`, `request.attach {items | text, title}` (the
   pickers' `⌃a`, the terminal's "send last output"), `request.send`, `request.next`/`prev`/`compose`/`anchor`.
 - Threads between the editor's lines are a decoration provider (`threads`): each open thread anchored in the buffer's
@@ -150,7 +150,7 @@ What the window shows with no directory and no session open: at launch (plain `o
 - Two columns. **Start**: New Session (`⌘N`), Resume a Session (`⌘O`), Open Directory (`⌘⇧O`), Settings (`⌘,`), each
   with a description and the key bound now. **Recent**: sessions, then directories, newest first; with none, the big `o▌`.
 - Entries are a contribution point. An entry whose command isn't available is dimmed with a `soon` tag; New Session and
-  Resume a Session are, while no worker is connected.
+  Resume a Session are, while the app has no session host.
 - Recent lists the sessions first (not archived, newest first: kind, projects, branch, a diamond in the status
   colour), and opening one runs `session.open`. Since SH-7 the app opens on mission control over it once there's a
   session to show (03).
@@ -163,7 +163,7 @@ What the window shows with no directory and no session open: at launch (plain `o
   plugin starts again there. `oriel <dir>` does the same. With sessions, this becomes the **direct** kind (`sessions.md`).
 - Keys: the empty main area has its own keymap mode, `empty`, before `n` and `global`. Over a directory's overview
   `␣␣` and the rest still work. The start view keeps to its own keys (the user's decision): its rows' `j`/`k`/`⏎`/`⌫`
-  and the keys of its entries and links (⌘N, ⌘O, ⇧⌘O, ⌘,, and Stats', Usage's, Jobs' and Workers' own); ⌘K, `:`, `␣␣`
+  and the keys of its entries and links (⌘N, ⌘O, ⇧⌘O, ⌘,, and Stats', Usage's and Jobs' own); ⌘K, `:`, `␣␣`
   and other global or editor keys do nothing there, as they've nothing to act on yet (`registry.ExclusiveKeys`). No
   footer advertises them.
 
@@ -215,9 +215,9 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   pages every session shares (AI-12, 43): Stats, Usage, Jobs and Settings, each with a live figure. Past ~8 projects the
   list scrolls and these stay pinned.
 - **Adding a project.** A `+` in the PROJECTS header (in the narrow form, under the project initials) opens a picker
-  of the worker's registered repos the session hasn't got, and the checkout path typed. Choosing one adds it to the
-  session (`session.add-repo`), and it opens. There's no `+` for a directory (a direct session), or while no worker is
-  connected.
+  of the registered repos the session hasn't got, and the checkout path typed. Choosing one adds it to the
+  session (`session.add-repo`), and it opens. There's no `+` for a directory (a direct session), or while the app has
+  no session host.
 - **Wide and narrow.** `«`/`»` at the top switch forms, remembered per window. Wide is ~225px. Narrow is an icon
   strip at the rail's width: each project is a two-letter initial in its colour with a status dot, the open project's
   panel icons sit under it, and the session's entries follow. Hovering an initial shows its header line.
@@ -366,7 +366,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   | Key | Source |
   |---|---|
   | `␣␣` | files (the quick jump) |
-  | `␣/` | live grep (ripgrep on the worker, regex, streamed as you type) |
+  | `␣/` | live grep (ripgrep in the session host, regex, streamed as you type) |
   | `␣*` | grep the word under the cursor |
   | `␣,` | open buffers |
   | `␣s` / `␣S` | symbols in this file / workspace (LSP) |
@@ -384,7 +384,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - **Scope** follows the session: every project in the workspace, or narrowed with `@project`.
 - **The omnibox (`⌘K`) is the same engine with every source merged.** Pickers are one source, centred, with preview.
 - **The matcher is our own**, a Go implementation of fzf-style scoring (per `deps.md`), and runs on the app for
-  file and buffer lists. Grep and workspace symbols stream from the worker.
+  file and buffer lists. Grep and workspace symbols stream from the session host.
 - **Pickers are a plugin API**: `oriel.picker.source{ name, items = fn, preview = fn, actions = {…} }`.
   Tickets, PRs, sessions and themes are all sources. The themes picker (`␣T`, `:Themes`) shows each theme in the
   whole window as it's highlighted; `↵` keeps it in settings.toml, `esc` puts the old one back (a source's `Hover`
@@ -424,17 +424,17 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 ![03-switcher](mockups/03-switcher.png)
 
-- Every session as a card, grouped by worker. The border colour is the status.
+- Every session as a card, grouped by status or repo. The border colour is the status.
 - **Working** cards show the agent's live terminal. Every other status shows a
   structured "ask": permission with Allow/Deny inline, the CI failure, the
   question it's waiting on.
 - Left: the **needs you** queue, oldest first, plus agentbus questions with their auto-answer countdowns.
-- Bottom strip: usage per provider, worker CPU sparklines, agentbus presence.
+- Bottom strip: usage per provider, this machine's CPU sparkline, agentbus presence.
 - Fully keyboard-driven: `hjkl`, `⏎` opens, `a` allows, `x` stops.
 - Built in SH-7 (`app/mission.go`, `app/missionview.go`): `⌘⇧K` or `mission.toggle` shows it under the title bar
   (`widget.Page`, key mode `mission`; Escape goes back); the start view links to it. Header: the counts by status, BY
-  WORKER / BY STATUS / BY REPO, a filter (`/`). Cards are grouped by worker (its load in the heading; the last card of
-  a connected worker's group starts a session there, `n`), most urgent first, as many to a row as fit; the border is
+  STATUS / BY REPO (`mission.group {by}`, status by default), a filter (`/`). Cards are grouped, most urgent first, as
+  many to a row as fit; the border is
   the status colour, the selected card's the accent; heading: name (a click opens it), kind, PR, provider; foot:
   tasks, context, the change, how long. A **working** card's body is a terminal: the agent's recent activity (each
   tool call with a dot, cyan running, red failed, and the end of its output with its colours; prose in cyan) written
@@ -443,15 +443,15 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   (`ask.answer`); while mission control is up those cards aren't stacked over the window too. Otherwise a box says
   what the status is about (replied and awaiting you, with a reviewer, CI running, stopped). Left: the queue,
   every waiting card and every session needing you with none (its last words), oldest first; agentbus's apart with
-  their auto-answer countdowns. Bottom: the `mission` indicator slot (usage per account, each worker's CPU over 15
-  minutes), then the keys and where Escape goes. Keys: `hjkl`/arrows, `⏎` (`session.open`), `a` (allows the
-  selected card's first ask), `x` (`session.stop`), `r` (renames on the card), `n`, `/`. Every action is a
+  their auto-answer countdowns. Bottom: the `mission` indicator slot (usage per account, this machine's CPU over 15
+  minutes, `machine.mission`), then the keys and where Escape goes. Keys: `hjkl`/arrows, `⏎` (`session.open`), `a` (allows the
+  selected card's first ask), `x` (`session.stop`), `r` (renames on the card), `n` (`mission.new`: the launcher), `/`. Every action is a
   `mission.*` command, and the assistant reads or opens it with `mission_control`. The app opens on it at launch
   (`mission.at_launch`) once a session is known, if it started with nothing open.
 - Decided in SH-7 (the design was silent): the live terminal shows the agent's activity from its transcript rather
   than mirroring the raw PTY (Claude's full-screen TUI doesn't read at a card's size, and Codex has none), with
   `agent.terminal` a command away; a tool's cursor moves and clears are dropped so it can't wipe the card. Cards sort
-  by urgency within a group. Opening at launch waits for the first session, since sessions arrive from the worker
+  by urgency within a group. Opening at launch waits for the first session, since the session host loads them
   after the window opens; with none the start view stays.
 - Not yet: the title bar's `⌘⇧K` chip, CI check rows on a CI card. Since PL-5 the strip has agentbus's presence, from the agentbus plugin's `mission` indicator.
 
@@ -461,20 +461,19 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - Prompt first. A pasted ticket ID expands into a card.
 - Mode: Plan · Work · Review PR · Tour · Job · **New repo** (`sessions.md`). Provider: Claude or Codex, with model, effort and remaining usage.
-- Repos on one shared branch, a worker, sandbox and network policy.
+- Repos on one shared branch, a sandbox and network policy.
 - Pre-flight: what will be fetched and built, and which LSPs will start.
-- As built (AI-4): `⌘N` or `session.new` (whose args fill it in: kind, prompt, ticket, pr, dir, repos, provider,
-  worker) opens it over a scrim; `⌘↵` or **Start** runs `session.start`, `esc`, the close button or a click outside
-  closes it. The modes are the worker's kinds (`widget.Choices`), so Direct and Scratch are there too, and a plugin's
+- As built (AI-4): `⌘N` or `session.new` (whose args fill it in: kind, prompt, ticket, pr, dir, repos, provider)
+  opens it over a scrim; `⌘↵` or **Start** runs `session.start`, `esc`, the close button or a click outside
+  closes it. The modes are the session host's kinds (`widget.Choices`), so Direct and Scratch are there too, and a plugin's
   kind joins them. A mode asks for what its kind starts from: a PR URL, a new repo's name, template and parent, or a
   directory. The right column is recent prompts (choosing one fills it in again) and the pre-flight: when worktrees
-  are made, repos to fetch (and to clone), the agent and its prompt pack, where it runs and its network. The Sandbox
-  toggle starts from `sandbox.default`, on unless it says `host`; under it, when the worker offers more than one
-  sandbox backend (`WorkerState.Sandboxes`), a Sandbox type picker that starts at `sandbox.backend` and goes to
+  are made, repos to fetch, the agent and its prompt pack, where it runs (**Runs in**) and its network. The Sandbox
+  toggle starts from `sandbox.default`, on unless it says `host`; under it, when this machine offers more than one
+  sandbox backend (`MachineState.Sandboxes`), a Sandbox type picker that starts at `sandbox.backend` and goes to
   `session.start` as `{backend}`. Start closes the launcher as soon as the session exists, and the window comes up
   on its first request while the agent starts (sessions.md, "Starting one"); there `⌘N` is a new request, as in
-  Requests. A repo the chosen worker lacks says "not on
-  <worker>: Clone" on its chip (sessions.md, "Repos on a worker"). **Save as job** (SE-4) hands the
+  Requests. **Save as job** (SE-4) hands the
   prompt, agent and sandbox to the New job dialog (`jobs.new`) and closes the launcher. The prompt takes several
   lines (SE-5, `widget.Input` with `Lines`): ⏎ a new line, ⌘↵ starts. Since PL-8 a ticket expands into a card (plugins.md, "As built (PL-8)"), from whichever tracker takes its key
   ("As built (tickets)"); a ticket that already has a session says "Continue · <session name>", and Start continues it. Not yet:
@@ -547,14 +546,14 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   (`thread.new`), `?` runs `explain.unit {path, line}` (RV-5's; the `?` is dimmed until it's registered), `o` opens
   the line in the editor, `⏎` shows or folds the file, `q` closes. A mark is per change (`gitx.Hunk.ID`, a hash of
   what it removes and adds), so it survives edits to other hunks; a hunk is reviewed when all its changes are. In a
-  session they're `core.HunksReviewed` events the worker keeps (`review.set`, `SessionState.Reviews`); outside one
+  session they're `core.HunksReviewed` events the session host keeps (`review.set`, `SessionState.Reviews`); outside one
   they last as long as the window. Not yet: more context between hunks, and per-line marks inside a hunk.
 - Built in RV-2 (`app/ledger.go`, `app/commit.go`): the REVIEW LEDGER bar is the `diff.header.10-ledger` view: "You
   have read 142 / 310 agent-written lines", a stacked `widget.Meter` (read, then skimmed; `MeterOpts.Then`), "28
   skimmed", the gate's chip (⏻ COMMIT GATED UNTIL 100% for hard, COMMIT ASKS FIRST for soft, ✓ ALL READ) and
   **Commit**. A folded file shows UNREAD · n LINES. Lines on screen count as skimmed, then read (agents.md,
   "Guardrails"). Not yet: the status line's read/skimmed/unread counts in REVIEW mode.
-- Built in RV-3 (`app/aireview.go`, `worker/aireview.go`, `core/aireview.go`): the right column is the AI review
+- Built in RV-3 (`app/aireview.go`, `host/aireview.go`, `core/aireview.go`): the right column is the AI review
   (`diff.right.50-ai-review`, the session whose project the diff's repo is). Its header names the reviewer
   (provider · model) and the commit the change was read from ("since a3f9e1"); a toned chip per severity counts the
   findings not dismissed (critical, high, med, low, nit), and a click shows only those; "n dismissed" shows the
@@ -569,7 +568,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   review runs the column says so and the button waits. Not yet: the status line's GH and review counts; findings as
   decorations between the diff's lines (they're in the column only). The "before this ships" row "AI review" is the
   `ai-review` ship gate, from `SessionState.AIReviewGate`.
-- Built in RV-4 (`gh/review.go`, `gh/guard.go`, `worker/github.go`, `app/github.go`): the session's worker mirrors each
+- Built in RV-4 (`gh/review.go`, `gh/guard.go`, `host/github.go`, `app/github.go`): the session host mirrors each
   project's PR (`github.sync`, every 30 s for the session in front and on demand) into threads with `Origin: github`
   and `Thread.GitHub` (repo, PR, the review thread's first comment, the reviewer and where their review stands,
   resolved on GitHub, outdated): one per review comment thread, anchored to its file and line (the old side for a
@@ -578,14 +577,14 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   editor's) lines and the request show them through the `github` `registry.ThreadSource`: **GitHub review · L80 ·
   @reviewer · changes requested · synced 30s ago**, avatars of the login's initials, the agent's reply as a
   `Comment.Draft` in a violet box ("draft · not sent") with **↗ Forward to GitHub** (`github.forward`, posted from
-  the worker with the user's gh, once; then "sent to github") and **Edit** (`github.edit`, then **Save draft** or
+  the session host with the user's gh, once; then "sent to github") and **Edit** (`github.edit`, then **Save draft** or
   ⌘⏎: `github.draft.save`), and "<agent> never posts to GitHub. You do." Echoes are matched by GitHub ID; an edit on
   GitHub changes the comment (marked edited, given to the agent again), a deleted one goes, a resolution on GitHub
   resolves the thread and an unresolve reopens it; a review thread whose first comment is gone is dismissed. The status
   line's `statusline.left.70-github` says "GH 1 changes requested" (and approvals). Text by authors outside
   `github.trusted_orgs` (the repo's owner when empty) and `github.trusted_users` is withheld from the agent
   (`Comment.Redacted`, "hidden from the agent"). Not yet: the PR's body isn't mirrored (so isn't redacted); the
-  worker syncs only while a window asks; review comments past GitHub's first 100 aren't read; a draft's border is
+  host syncs only while a window asks; review comments past GitHub's first 100 aren't read; a draft's border is
   solid, not dashed.
 
 ## 07 · Explain this change
@@ -682,7 +681,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 ![10-hud](mockups/10-hud.png)
 
 - The control room as an instrument cluster: usage with **burn-rate projection**,
-  workers, sessions by status, today's stats, the log tail, agentbus, the CI queue.
+  this machine, sessions by status, today's stats, the log tail, agentbus, the CI queue.
 - Release to hide, click to pin. Nothing here is a separate screen.
 - Built in SH-8 (`app/hud.go`, `app/hudpanels.go`, `ui/widget/hud.go`): the backend sends `render.ModsEvent` (the
   modifiers held, as one goes down or up, none when the window loses focus); `ui.Ctx.HeldAlone` is a modifier held
@@ -694,12 +693,13 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Its panels are indicators in the `hud` slot (`registry.Indicator` with `Title`, `Note`, `Span`), four columns to a
   row, each contributed by the plugin that owns the data and drawn in `widget.Panel`: Plan usage (stats: each
   account's 5-hour and weekly windows, the meter hatched on to the share at the reset with a tick, `MeterOpts.To`),
-  Workers (each worker's sessions, CPU and memory, its CPU over 15 minutes from its `WorkerChanged` events), Sessions
+  This machine (`machine`: the host name, cores, CPU and MEM meters, its CPU over 15 minutes from the
+  `MachineChanged` events, the session count), Sessions
   (open and need-you counts, the status strip, the five most urgent with why; a click focuses one), Today (since
   midnight: tokens, cost, cache share, requests opened, ledger reviewed and unread, then the `hud.today` slot), Logs
   (span 2: the log ring's tail, info and up, newest first; **Open the log**) and CI queue (ship: the PRs the Ship
   page has read, failing first). Panels read the store as they're drawn and redraw on its events; what the store
-  doesn't keep, owners gather from events: a worker's load, plan readings since the history was fetched
+  doesn't keep, owners gather from events: the machine's load, plan readings since the history was fetched
   (`UsageSampled`), and today's totals, asked again 10 s after an agent event.
 - The next meeting under Today isn't built: the calendar isn't carried over (crit-reference.md). A plugin can put a
   line there through the `hud.today` slot.
@@ -764,8 +764,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   `y`, Always in this workspace `a` (the rule it makes at the right), Deny `n`, Deny with note… `⇧n` (an input; the
   note goes to the agent). Network: Allow host, Allow \*.domain (as `scope`), Once, Deny. Gateway: Allow, Always (when
   it has a rule), Deny. Question: options as buttons (one click answers a single question; several, or multi-select,
-  are picked then answered), and a typed answer. Login (AI-13): "Claude on devbox needs you to log in", Log in `l` on
-  this machine (`agent.login`: the agent's terminal with `/login` typed) or what to run on the worker, and Check again
+  are picked then answered), and a typed answer. Login (AI-13): "Claude needs you to log in", Log in `l`
+  (`agent.login {provider}`: the agent's terminal with `/login` typed) or, with no login in its terminal, what to run
+  in one ("run codex login in a terminal"), and Check again
   `c` (`decision: recheck`). All answer through `ask.answer {id, ask, decision, note, scope,
   answers}`; `ask.deny-note` opens the note. Session tabs count their asks. The Inbox panel and its history, the
   countdown ring, review requests and the security-key card came with SH-9 (below). Since RV-2 a gateway card for
@@ -776,10 +777,10 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   then "+N more waiting" and **Open the inbox**) sits beside the Inbox panel while that's open. Each card has a ✕, and
   Escape while it has focus, that dismisses it: off the stack, it waits on in the panel and on its tab's badge. A card
   that `Expires` shows a countdown ring (m:ss) at its top right. **Security key** (crit's touch prompt): a commit,
-  push, pull, fetch or rebase the worker runs for a session (the Ship page's and the gateway's) that has run five
-  seconds (`worker.KeyWait`, `worker.Options.KeyWait`) asks the session with a `core.AskKey` ask until it ends, drawn
+  push, pull, fetch or rebase the session host runs for a session (the Ship page's and the gateway's) that has run
+  five seconds (`host.KeyWait`, `host.Options.KeyWait`) asks the session with a `core.AskKey` ask until it ends, drawn
   as a banner at the window's top centre ("Touch your security key", what's waiting, the session) with **Cancel**
-  `c`, which stops the operation (`worker.ErrKeyCancelled`); it makes the session needs-you. The Inbox panel (`inbox`,
+  `c`, which stops the operation (`host.ErrKeyCancelled`); it makes the session needs-you. The Inbox panel (`inbox`,
   docked right, ⌘⇧I or `<Leader>i`, or the title bar's **INBOX** with its count): "N waiting", the filters **All**,
   **Me**, **Agents**, **Bus**, **GitHub**, **Sandbox**, then a row per card (icon, title, what it's about, how long
   ago), those waiting first, then those answered (dimmed, ✓), each newest first; a click (or `j`/`k`) on a waiting
@@ -788,7 +789,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Decided in SH-9 (the design was silent): the panel's count says "N waiting" rather than the mockup's "6 NEW",
   since nothing tracks which cards were seen; the Inbox opens with ⌘⇧I and `<Leader>i`, not the mockup's `g i`,
   which is vim's (insert where insert last stopped); a security-key card's only action is Cancel (crit's modal had
-  none); the key wait covers the worker's git operations for a session, not a worktree cut before the session exists.
+  none); the key wait covers the host's git operations for a session, not a worktree cut before the session exists.
 - Built in PL-5 (plugins.md, "As built (PL-5)"), drawn by the agentbus plugin (`github.com/liamg/oriel-agentbus`): its question and review-request cards, and at the panel's
   foot (`inbox.foot`) presence, **ACTIVE**, **IDLE**, **DND**, and the bus's name. A question's options are its
   numbered actions rather than the mockup's rows, and its row's second line has no "auto in" (a row's text isn't
@@ -826,7 +827,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 - Prose, quoted code (real files, real line numbers) and pinned notes. The note numbers recur in the diagram.
 - Ask about any step. Export to a single HTML file.
-- Built in RV-8 (`app/tour*.go`, the `tour` built-in; `worker/tour`, crit's `internal/tour`): the reader opens by
+- Built in RV-8 (`app/tour*.go`, the `tour` built-in; `host/tour`, crit's `internal/tour`): the reader opens by
   itself when a tour session comes to the front (`tour.open`). Steps are the `NN-slug.md` files at the workspace
   root, read again each second or when the agent does something, so they appear as they land. At the left: TOUR ·
   KIND, the question, the repos' chips, PINNED @ the first repo's commit, a bar of how many steps have been read, the
@@ -850,7 +851,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Decided in RV-8 (the design was silent): diagrams show as their mermaid source in the reader and the export
   (crit inlined mermaid.js, which isn't an approved dependency); the reader reads the session's directory on this
   machine, as the plan view does.
-- Not yet: drawing mermaid diagrams; the reader for a session on another machine's worker; changing the kind from
+- Not yet: drawing mermaid diagrams; changing the kind from
   the reader; zooming a screenshot.
 
 ## 15 · Agent console (Codex here)
@@ -861,9 +862,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Subagents box, permission card (and the rule "Always" would create), network approval.
 - Composer with `@file`, model and effort chips, queued messages.
 - Built in AI-6: the `agent.console` view (bottom dock by default, any placement; `⌘⇧A`, command `agent.console`,
-  and a rail entry `❯` while a worker is connected, badged with the asks waiting). Header: provider, model, effort, a
+  and a rail entry `❯` while there's a session host, badged with the asks waiting). Header: provider, model, effort, a
   status chip, ticket · session · branch, Fork (a btw side question to a tool-less fork; its answer shows as a block),
-  Interrupt (`session.interrupt`), Raw terminal (the agent's PTY from its worker, through `term.open {source}`).
+  Interrupt (`session.interrupt`), Raw terminal (the agent's PTY from the session host, through `term.open {source}`).
   Transcript from `SessionState.Transcript`, with the busy thread's anchor and your comment pinned above it: prose as
   markdown, prompts (long ones folded), thinking dimmed and folded, tool calls with a status dot, title and summary
   (lines, hits, duration), edits as mini-diffs with "view in diff" (`diff.open`, else the file), shell output folded,
@@ -907,7 +908,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - A flight checklist per project: uncommitted → behind base → unpushed → PR → checks → merge.
 - Multiple projects side by side, with cross-linked PRs and a merge order.
 - "Before this ships" lists the gates: plan, threads, ledger, tests, verify, AI review.
-- Built in FG-6 (`app/ship.go`, `app/shipview.go`, `app/prtab.go`; `worker/ship.go`, `gitx/flight.go`, `gh`): the
+- Built in FG-6 (`app/ship.go`, `app/shipview.go`, `app/prtab.go`; `host/ship.go`, `gitx/flight.go`, `gh`): the
   `ship` view is the page (the sidebar's Ship, `ship.open`), one column per project in the session's order: its colour,
   name, `branch ← base` and a chip (needs you, CI running, CI failing, ready, merged); then four numbered steps on a
   rail, the first not done open and amber, done ones ticked and folded to a line. **Uncommitted**: each file with a
@@ -923,12 +924,12 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   TR-6), Edit PR, Open on GitHub ↗. At the right: "before
   this ships" (`registry.ShipGates`), MERGE ORDER (the session's project order, with each PR's number) and the
   ticket. The header has Sync all, Commit all and Push + raise both PRs (`ship.raise-all`: push and raise each in
-  merge order). The session is read from its worker (`ship.read`) when it comes to the front, every 10 s while it's
+  merge order). The session is read from the session host (`ship.read`) when it comes to the front, every 10 s while it's
   there, and fresh (fetching, and asking GitHub again) after each step and on `ship.refresh`.
 - Built in AI-10: drafts appear without asking (agents.md, "Drafts when the agent goes idle"). The commit box's and the
   Raise PR tab's chip says who wrote the draft and whether the code moved on since: "drafted by codex", "drafted by
-  codex · stale" (warn), "written by you"; the PR step's note says "draft stale". Typing into either keeps the text on
-  the worker as the user's draft (`ship.draft.save`'s `DraftReq`, By "you"): at once on the first key, then a second
+  codex · stale" (warn), "written by you"; the PR step's note says "draft stale". Typing into either keeps the text in
+  the session host as the user's draft (`ship.draft.save`'s `DraftReq`, By "you"): at once on the first key, then a second
   after the typing rests. Redraft drops the user's draft (`DraftReq.Drop`) before asking the agent.
 - Decided in FG-6: the merge order is the session's project order; a cross-linked PR's description gets a block
   between `<!-- oriel:linked-prs -->` markers listing every PR of the session in that order, rewritten as each is
@@ -946,7 +947,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Built in PL-9: plugins' PR actions (`registry.PRAction`) sit after Edit PR on a raised PR and on the Pull request
   panel; the Slack plugin's **Slack** (PTAL; then **Bump Slack**, **Bump 2**…) is one (plugins.md, "As built (PL-9)").
 - Not yet: the ticket's state moving (Linear), the status bar's
-  CI chip, merging, and a project's Git panel (still dim: it needs the flow without a worker, for a plain directory).
+  CI chip, merging, and a project's Git panel (still dim: it needs the flow without a session, for a plain directory).
 
 ## 19 · Your config, live
 
@@ -981,7 +982,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 ![43-stats](mockups/43-stats.png)
 
-Built in AI-12 (`app/stats*.go`, `app/usage.go`, `worker/stats`). Every cost is **est.**: tokens × the price table
+Built in AI-12 (`app/stats*.go`, `app/usage.go`, `host/stats`). Every cost is **est.**: tokens × the price table
 (`agent/price`). Repos, not working directories, are the unit; a repo keeps its project colour from the session in
 front (42), and the other repos take the palette's colours it leaves, by name.
 
@@ -992,11 +993,11 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   five minutes by token kind, with idle stretches of 20 minutes or more hatched, compactions marked and a strip of
   turns; cost per repo with **count whole session in each**; models; tools (calls, errors, a strip of timings
   `.1s 1s 10s 1m 1m+`, p50); hours of the day; effort. The header names its account (a session runs on one). A long session's steps widen to keep 150 at most.
-- **Stats** (`:Stats`, `⌘⇧S`, `stats.open {group, range, repo, worker, provider, session, kind, model, origin}`) is a page over
+- **Stats** (`:Stats`, `⌘⇧S`, `stats.open {group, range, repo, provider, account, session, kind, model, origin}`) is a page over
   the main area beside the sidebar (`widget.Page` with `Over`), key mode `stats`: 7/30/90 days or custom (AI-14:
   CUSTOM, `c` or `stats.custom` opens a `widget.DatePicker` under the range, which opens on the range shown; once
   custom, a ▾ beside it opens it again; `:Stats 2026-09-01..2026-09-30` and `stats.custom {range}` set one); group by
-  repo (default), session, kind, model, provider, account or day (`g` then `r s k m p a d`); filter chips (repo, worker,
+  repo (default), session, kind, model, provider, account or day (`g` then `r s k m p a d`); filter chips (repo,
   provider, account with menus, all accounts by default since cost adds up; session, kind, model through **+ filter**; `✕` takes one off); the split toggle; tiles
   against the period before; cost per group per day stacked (the top 6, the rest as other); the group table with
   share bars, last active and a 30-day sparkline (grouped by session: its repos and days, chart and table side by
@@ -1006,24 +1007,24 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   passes 24h per session-day).
   Hovering a row or a bar picks its series out; `j`/`k`, `⏎` or a click drills in (the row's filter chip, regrouped:
   repo → session → model; a day becomes the range), `⌫` backs out, `[`/`]` step the range, **Copy as CSV**. The
-  header says when it was scanned and names an offline worker whose last answer it shows.
-- **Oriel and outside it.** The stats count every transcript the providers keep on each worker's machine, so Claude
+  header says when it was scanned.
+- **Oriel and outside it.** The stats count every transcript the providers keep on this machine, so Claude
   Code or Codex run in a terminal or another tool count too (`agents.md`, Stats). The header's **ALL / ORIEL /
   OUTSIDE** strip (`stats.origin`, `:Stats origin=outside`) keeps the page to one side, beside the scan time: the
   toolbar has no room left. `g o` (`stats.group {by=origin}`) stacks Oriel against outside day by day, Oriel in the
   accent and outside in the "other" grey; ORIGIN shows in the group strip only while it's the grouping, for the same
   reason. The Tokens tile adds "N% outside" when there is any. Grouped by session, an outside session reads by its
   first prompt and is marked **outside**. With the page filtered to one session, **Session stats** in the header opens
-  its tab, an outside one's too (instance `id@worker`; the header says "outside Oriel" and names its provider and
-  worker from the stats). The start view's and the sidebar's figures count everything.
+  its tab, an outside one's too (the header says "outside Oriel" and names its provider and account from the
+  stats). The start view's and the sidebar's figures count everything.
 - **Plan usage is per account** (the user's decision after 43): a plan belongs to an account (provider and login:
-  Claude's account and organisation, Codex's email), not to a provider or a worker. A work laptop on a company Claude
-  subscription and a personal one on Claude Max are separate limits and are never added up; two workers on one account
-  are one plan (`State.Usage` keys by provider and account, `ProviderUsage.Workers` the workers reporting it). Accounts
+  Claude's account and organisation, Codex's email), not to a provider. A work login on a company Claude
+  subscription and a personal one on Claude Max are separate limits and are never added up (`State.Usage` keys by
+  provider and account). Accounts
   are named in `usage.accounts`, else shown by email or organisation.
 - **Usage** (`:Usage`, `⌘⇧U`, `usage.open`, key mode `usage`, `r` or **Refresh** runs `usage.refresh`): an
-  **account switcher** at the top ("Work · Claude Max · mbp-work", "ada@example.com · ChatGPT Pro · mbp"; no "all"),
-  each with its plan's tier as a badge, starting on the session in front's account, else the local worker's; the
+  **account switcher** at the top ("Work · Claude Max", "ada@example.com · ChatGPT Pro": label · plan; no "all"),
+  each with its plan's tier as a badge, starting on the session in front's account, else the first; the
   account's header names its plan with the tier as a chip after it ("Claude Max MAX 20×"; AI-14,
   `ProviderUsage.Tier`), and an account whose tier isn't known shows none; then that account's windows, each as a card (share used, when it opened, the reset, a meter hatched on to where the burn takes it, the burn
   over the last 30 minutes for a 5-hour window or 24 hours for a weekly one, and the verdict: "≈ 71% at the reset ·
@@ -1036,10 +1037,10 @@ front (42), and the other repos take the palette's colours it leaves, by name.
 - **Entry points.** The sidebar's global group (Stats with today's cost, Usage with the weekly window, Jobs with its
   runs going (SE-4), Settings), below a second divider, at the foot in the narrow form, the figure in the tooltip there; the
   title bar's indicators as one button opening Usage, showing the account the session in front runs on (the
-  local worker's with no session), with a hover card of every account's windows, resets, burn and
+  first with no session), with a hover card of every account's windows, resets, burn and
   a red line for one that runs out; the session stats cost; the start view's links (Stats with this week's cost,
   Usage); the omnibox's **Pages** (every global sidebar entry, with its figure and key).
-- A session's history stays with the account it ran on at the time (AI-14): a later login on its worker moves only
+- A session's history stays with the account it ran on at the time (AI-14): a later login moves only
   what comes after, in Stats' account group and filter and in Usage's "what burned the window".
 
 
@@ -1047,22 +1048,22 @@ front (42), and the other repos take the palette's colours it leaves, by name.
 
 ![44-jobs](mockups/44-jobs.png)
 
-Built in SE-4 (`worker/jobs.go`, `app/jobs.go`, `app/jobspage.go`, `app/jobform.go`). A job is a saved prompt with
+Built in SE-4 (`host/jobs.go`, `app/jobs.go`, `app/jobspage.go`, `app/jobform.go`). A job is a saved prompt with
 pins; each run is a session of kind job (`sessions.md` → Jobs).
 
 - **The Jobs page** (`:Jobs {job}`, `⌘⇧J`, `jobs.open {job}`, the sidebar's Jobs with "1 running", the start view's
   link with the job count, the omnibox's Pages) is a page over the main area (`widget.Page` with `Over`), key mode
-  `jobs`. The header counts jobs, runs going and runs, and names the workers; **+ New job** (`n`), **Stats**
+  `jobs`. The header counts jobs, runs going and runs; **+ New job** (`n`), **Stats**
   (`kind=job`: `stats.open {kind = "job"}`) and **Close** (`esc`).
-- **The list** (`widget.Rows`, `j`/`k`): every connected worker's jobs, the one that ran last first and the never-run
+- **The list** (`widget.Rows`, `j`/`k`): every job (its key is its name), the one that ran last first and the never-run
   ones last, each with its last run's status chip and when ("started 4m ago", "today 07:14", "Oct 11 · 3d ago",
   "never run · saved Oct 12"), its pin (sandbox, host or default) and its schedule; a filter over title and prompt;
-  the foot says where they live.
+  the foot says where they live ("~/.oriel/jobs · one file per job").
 - **The selected job**: its title and slug, **Edit** (`e`), **Duplicate**, **Delete** (asks "Sure?" once; its runs
-  stay), **▶ Run** (`⌘↵`); a meta line (pin, agent, worker, runs by status, total cost, average time of the done ones);
-  the prompt (`JOB.md for each run`) with the worker's registered repos it names picked out in their colours
+  stay), **▶ Run** (`⌘↵`); a meta line (pin, agent, runs by status, total cost, average time of the done ones);
+  the prompt (`JOB.md for each run`) with the registered repos it names picked out in their colours
   (`widget.Span.Tone`) and listed at the card's right; the schedule as a strip (MANUAL, EVERY WEEKDAY 07:00, WEEKLY MON
-  07:00, CUSTOM… which opens the dialog) that saves at once; the runs card.
+  07:00, CUSTOM… which opens the dialog; "runs while Oriel is open") that saves at once; the runs card.
 - **Runs**: newest first, filtered ALL, RUNNING, DONE, BLOCKED, STOPPED; status chips in `jobs.run.running` (the
   working colour), `jobs.run.done`, `jobs.run.blocked` and `jobs.run.stopped`; started, repos in their colours, the
   agent's summary (its progress note while it runs; "Stopped after 3m"), cost est. over a strip of its split by repo
@@ -1070,9 +1071,9 @@ pins; each run is a session of kind job (`sessions.md` → Jobs).
   **Resume** (`session.open`, which resumes), **Delete** (`session.delete`, asks once, not while it runs). Past six,
   "N more · since Aug 26 · 5 done, 1 blocked · $13.60". `⏎` or a click on a row opens it.
 - **New job** (`jobs.new`, `n`; Edit and Duplicate open it on a job): title (the prompt's first line when empty),
-  prompt, runs in (Sandbox, Host, Default), worker, agent (the worker's providers as `widget.Choices`, model and
+  prompt, runs in (Sandbox, Host, Default), agent (this machine's providers as `widget.Choices`, model and
   effort), schedule (manual, weekdays, weekly on a day, custom days by `widget.MultiSelect`, at a time checked as
-  HH:MM), the file it'll be; **Cancel**, **Save**, **Save and run** (`⌘↵`). It goes through `jobs.save`.
+  HH:MM; "runs while Oriel is open"), the file it'll be; **Cancel**, **Save**, **Save and run** (`⌘↵`). It goes through `jobs.save`.
 - **A run's console** (panel 3) has the job beside it: a `agent.console.side.10-job` section with the job and **Jobs ›**,
   the run's status, start and time, the last run's outcome; the repos touched with their cost so far and the ones the
   prompt names but the agent hasn't added ("not yet"); and what happens when it ends.
@@ -1081,51 +1082,6 @@ pins; each run is a session of kind job (`sessions.md` → Jobs).
   selects it (`widget.Rows` with `ClickSelects`); **Open** or **Resume** opens it, as `⏎` does: `session.open` with
   `then` (sessions.md) opens the console as the main tab and makes the sidebar narrow (`sidebar.form`, kept for that
   run's directory), panel 3. Run tabs read "job: sweep stale deps" (`SessionSpec.Title`, the job's first three words).
-  A stopped run says who stopped it: "Stopped by you after 3m", "by the agent", "as the worker shut down"
-  (`AgentState.StoppedBy`). A scheduled run that was skipped is a row of its own, status `skipped` (`jobs.run.skipped`,
-  dimmed, nothing to open): "skipped (last run still going)". The dialog's worker can be changed on a saved job:
-  Save moves it there (`jobs.save {to}`: saved on the new worker, then deleted from the old; its runs stay where they
-  ran).
-
-
-## 45 · Workers
-
-No mockup: it's drawn in 43's and 44's style. A worker is one per machine (`architecture.md`): this machine's, which
-the app starts, and remote ones, which dial the app over pinned TLS (`sessions.md`, `security.md` → Remote workers).
-
-- **The Workers page** (`:Workers {name}`, `workers.open {name}`, the sidebar's global **Workers** with its figure,
-  "2 online", the start view's **Workers** link with nothing open, the omnibox's Pages) is a page over the main area (`widget.Page` with `Over`), one of the pages that
-  replace each other, key mode `workers`. The header reads WORKERS, then "2 online · 1 offline", then whether Oriel
-  listens for workers ("listening on :7437" or "not listening for workers elsewhere") with the certificate's
-  fingerprint as words; **+ Add a worker** (`a`) and **Close** (`esc`).
-- **The list** (`widget.Rows`, `j`/`k`): this machine's worker first, then the others by name; known workers that
-  aren't connected (keys in the file, or ones seen this run) are listed too. Each row: a status dot (online in the
-  quiet colour, offline faint, revoked in red), its name ("this machine" after this one's), and under it its host,
-  OS/arch and "online 2h" / "offline since 14:02" / "never connected" / "revoked". The foot says where the keys live.
-- **The selected worker**: its name (its own name in grey after it once renamed), **Rename** (`r`), **Restart** (this
-  machine's), **Revoke** (a remote one; asks "Sure?" once), **Forget** (an offline one; asks once). A meta line: host,
-  OS/arch, version and build, online or offline and since, the address it last came from. Then cards:
-  - **LOAD**: CPU of the whole machine and its cores, memory used of the total, as meters, and when sampled (the
-    worker's `sysload` readings); "no reading" while offline.
-  - **AGENTS**: each provider the worker has, with its account and plan tier from the usage it reports, or "signed out"
-    in red with what the provider said.
-  - **SESSIONS**: how many sessions and how many agents running, and the sessions by name with their status dot.
-  - **CONNECTION**: this machine's "on ~/.oriel/worker.sock (owner only)"; a remote one's "dials Oriel with its key ·
-    added Oct 12", and the last address.
-- **Add a worker** (`workers.add {name, listen}`, a `widget.Modal`, key mode `workers.add`): a name (letters, digits,
-  `-`, `_`, `.`; not one in use, not `local`), and, while `workers.listen` is empty, the address to listen on,
-  `:7437` by default, saved to `workers.listen`. **Add** (`⌘↵`) makes the key and shows the next step: "Run this on
-  devbox:" and the one-line command (`oriel worker --connect host:7437 --fingerprint … --key … --name devbox`) with
-  **Copy**; "The worker checks Oriel's certificate. It prints these words as it connects: amber-…"; the key is shown
-  this once. Under them a status line waits ("Waiting for devbox to connect…") and turns to "devbox connected ·
-  linux/arm64 · v0.4.2" when it does. **Done** closes it.
-- **Rename** is a small dialog of one field, the worker's name in Oriel: it renames it wherever a worker is named.
-- Built in AI-15 (`app/workers.go`, `app/workerspage.go`): as above. Decided where the design was silent: workers
-  known only from the keys file (added, never connected or offline since Oriel opened) are listed too, with the file's
-  last-seen time; a name is the worker's ID, so Rename is a label of the app's (kept in `workers.json`) and the
-  worker keeps its own; Revoke keeps the worker listed as revoked until Forget; the command's host is the listen
-  address's, or this machine's name when it listens on every address; this machine's worker can't be revoked or
-  forgotten, and Restart is only offered while Oriel starts it (`Config.LocalWorker`). The sidebar's Workers comes
-  after Jobs (order 40), with the `workers` icon. No global key.
-- Not yet: a mockup; editing a remote session's files (the buffer replica, sessions.md); a worker's own log or
-  terminal from the page; restarting or updating a remote worker from here (PL-6); rotating the certificate.
+  A stopped run says who stopped it: "Stopped by you after 3m", "by the agent", "as Oriel quit" (a
+  hand-over), "when Oriel ended" (a crash) (`AgentState.StoppedBy`). A scheduled run that was skipped is a row of its own, status `skipped` (`jobs.run.skipped`,
+  dimmed, nothing to open): "skipped (last run still going)".

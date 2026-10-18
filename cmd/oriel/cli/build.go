@@ -63,3 +63,8 @@ func cmpOr(a, b string) string {
 	}
 	return b
 }
+
+type multi []string
+
+func (m *multi) String() string     { return strings.Join(*m, ",") }
+func (m *multi) Set(s string) error { *m = append(*m, s); return nil }

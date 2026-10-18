@@ -13,9 +13,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/sandbox"
-	"github.com/liamg/oriel/worker"
 )
 
 // settings.md, "sandbox.*": the sandbox's settings are options of the right types, with the project layer only
@@ -323,39 +321,6 @@ func TestMapOptionLayers(t *testing.T) {
 	}
 	if got := formatValue(map[string]string{"cache 1": "a", "db": "b"}); got != `{ "cache 1" = "a", db = "b" }` {
 		t.Errorf("as TOML: %s", got)
-	}
-}
-
-// agents.md, "Sandbox settings": a worker elsewhere gets your values and reads its own repos' project files; the
-// app's are of paths on this machine.
-func TestRemoteWorkersReadTheirOwnProjects(t *testing.T) {
-	cfg := sandbox.Config{Memory: "4g", Projects: map[string]sandbox.ProjectConfig{"/src/pricing": {Image: "x"}}}
-	if got := forWorker(cfg, core.LocalWorker); !reflect.DeepEqual(got, cfg) {
-		t.Errorf("this machine's worker gets %+v", got)
-	}
-	if got := forWorker(cfg, "devbox"); got.Projects != nil || !got.ReadProjects || got.Memory != "4g" {
-		t.Errorf("a worker elsewhere gets %+v", got)
-	}
-}
-
-// A worker elsewhere is told to read its own project files, and a notice of its offers Trust, which trusts the file
-// on that worker's machine.
-func TestTrustOnAWorkerElsewhere(t *testing.T) {
-	trusted := filepath.Join(t.TempDir(), "trusted.toml")
-	devbox := newWorkerWith(t, worker.Options{ID: "devbox", Name: "devbox", TrustPath: trusted})
-	file := filepath.Join(devbox.repo, ".oriel", "settings.toml")
-	writeFile(t, file, "[sandbox]\nimage = \"billing:dev\"\n")
-	ctx := context.Background()
-	if _, err := devbox.client(t).AddRepoPath(ctx, devbox.repo); err != nil {
-		t.Fatal(err)
-	}
-	s := newSceneWith(t, "", t.TempDir(), mockupSize, devbox.connect(t))
-	waitSandbox(t, devbox, "the settings, to read its projects with", func(c sandbox.Config) bool { return c.ReadProjects && c.Default == "sandbox" })
-	if err := s.reg.Run(ctx, "settings.trust", registry.Args{"path": file, "worker": "devbox"}); err != nil {
-		t.Fatal(err)
-	}
-	if !(settingsfile.Trust{Path: trusted}).Trusted(file, []byte(readFile(t, file))) {
-		t.Error("the file isn't trusted on the worker")
 	}
 }
 

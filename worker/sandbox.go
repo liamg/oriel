@@ -72,7 +72,7 @@ func (s *Sandboxes) config(se core.SessionState) sandbox.Config {
 		return s.Config()
 	}
 	if w := s.worker(); w != nil {
-		return w.sandboxConfigFor(se)
+		return w.SandboxConfig()
 	}
 	return sandbox.Config{}
 }
@@ -105,7 +105,7 @@ type box struct {
 func (s *Sandboxes) Open(ctx context.Context, se core.SessionState, approve Approve) (Sandbox, error) {
 	w := s.worker()
 	if w == nil {
-		return nil, errors.New("the sandbox factory has no worker")
+		return nil, errors.New("the sandbox factory has no session host")
 	}
 	root := agentDir(se)
 	if root == "" {
@@ -233,7 +233,12 @@ func (b *box) serve(run func(ctx context.Context) error) error {
 	b.served.Add(1)
 	go func() {
 		defer b.served.Done()
-		errc <- run(b.ctx)
+		var err error
+		func() {
+			defer b.w.recover("a sandbox", &err)
+			err = run(b.ctx)
+		}()
+		errc <- err
 	}()
 	select {
 	case err := <-errc:
@@ -400,6 +405,7 @@ func (b *box) logCall(e gateway.Entry) {
 // restartWhenIdle restarts the agent once its turn ends, resumed, to pick up a changed sandbox.
 func (b *box) restartWhenIdle(why string) {
 	go func() {
+		defer b.w.recover("a sandbox restart", nil)
 		for {
 			se, err := b.session()
 			if err != nil {

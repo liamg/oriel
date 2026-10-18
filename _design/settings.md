@@ -156,7 +156,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `ui.theme` | `oriel` | app | | FW-7 |
 | `ui.variant` | `system`: follows the OS; or `dark`, `light` | app | | FW-7, SH-11 |
 | `whichkey.enabled` | true | app | | SH-6 |
-| `sandbox.default` | `sandbox`: a new session's agent runs in a container; or `host`, on the worker | app | | AI-11 |
+| `sandbox.default` | `sandbox`: a new session's agent runs in a container; or `host`, on this machine | app | | AI-11 |
 | `sandbox.backend` | `docker`: each agent runs in a container; or `seatbelt`, macOS's own sandbox with the host's toolchains | app | | AI-11 |
 | `sandbox.loopback` | `all`: the host's loopback ports a `seatbelt` sandbox may connect to; `ephemeral`, only 49152–65535 (servers on port 0, not services on fixed ports); or `none`, only its proxy | app | | AI-11 |
 | `sandbox.image` | empty: Oriel's base image; a project's applies to its repo | app | | AI-11 |
@@ -176,8 +176,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `hud.hold` | alt: the modifier that pulls the HUD down while held on its own (alt, ctrl, shift, super, off) | app | | SH-8 |
 | `hud.hold_delay` | 250: milliseconds the hold key is held alone before the HUD comes down, so a chord doesn't flash it | app | | SH-8 |
 | `mission.at_launch` | true: open on mission control when Oriel starts with nothing open, once there's a session to show | app | | SH-7 |
-| `workers.listen` | empty: Oriel doesn't listen for workers on other machines; an address, `:7437` or `10.0.0.2:7437`, listens there (pinned TLS, keys in `workers.json`; security.md, Remote workers). Add a worker sets it | app | | AI-15 |
-| `updates.mode` | `ask`: a new release is offered in a notice; `automatic` installs it, and its workers', as it comes out; `manual` only checks on `:UpdateCheck` (distribution.md) | app | | PL-6 |
+| `updates.mode` | `ask`: a new release is offered in a notice; `automatic` installs it as it comes out; `manual` only checks on `:UpdateCheck` (distribution.md) | app | | PL-6 |
 | `updates.channel` | `stable`; or `nightly`, pre-releases too | app | | PL-6 |
 | `voice.dictation` | true: ⌃⇧Space dictates into the focused text field (a recorder and whisper-server, or `voice.url`, needed); false turns it off | app | | PL-11 |
 | `voice.model` | the Whisper model: `base.en`, `small.en`, `medium.en` or a path to a ggml model; empty picks one for the machine (`small.en` on Apple silicon, else `base.en`) | app | | PL-11 |
@@ -248,9 +247,8 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
   row that adds one. Each entry is checked by `Validate` alone (and for a repeated or missing key) and says why under
   it; Save waits until none is wrong. Escape, Cancel or a click outside discards; Save writes the inline table,
   replacing a hand-written `[table]`.
-- The shared parts of reading settings files live in `registry/settingsfile`, so a worker reads them as the app
-  does: `Trust` (trusted.toml), `Keys` (a file's keys as option names) and `Strings`/`StringMap`.
-- Project files are read for the window's project and for every repo a session on this machine's worker works in
+- The shared parts of reading settings files live in `registry/settingsfile`: `Trust` (trusted.toml), `Keys` (a file's keys as option names) and `Strings`/`StringMap`.
+- Project files are read for the window's project and for every repo a session works in
   (its `Project.Repo`), each trusted on its own, so a session's repo brings its project values even when the window
   is elsewhere. Only the window's project is edited from the page.
 - Not yet: colour and key types; adding a value a multi-select doesn't offer (set it in the file or Lua);
@@ -287,14 +285,11 @@ servers = { docs = "https://docs.example.com/mcp", linear = "npx -y @linear/mcp 
 - On the page, `sandbox.env` offers the host's environment variables by name and `sandbox.hidden_servers` the servers
   the gateway finds on this machine, `sandbox.servers` among them; `sandbox.egress` and `sandbox.rules` are list
   editors that check each rule as it's typed.
-- The worker is another process, so the app sends it the resolved `sandbox.Config` (`sandbox.config`, agents.md
-  "Sandbox settings"): when it connects, and whenever a `sandbox.*` option changes at any layer.
-- A worker on another machine has its repos at paths there, which the app can't read, so it gets your values with
-  `Config.ReadProjects` and no `Projects`, and reads the project layer itself: as a session's sandbox opens, each of
-  its repos' `.oriel/settings.toml` that's trusted on that machine (`registry/settingsfile.Trust`, the same rule as
-  the app's: its SHA-256 in that machine's `~/.config/oriel/trusted.toml`) adds its `egress`, `rules` and `image`
-  under your values. An untrusted one is left out, with a notice in the session whose Trust runs `settings.trust
-  {path, worker}`, which trusts it on that worker (`settings.trust` there, for a registered repo's file only).
+- The app resolves `sandbox.Config` and hands it to the host (`SetSandboxConfig`, agents.md "Sandbox settings"): at
+  start, and whenever a `sandbox.*` option changes at any layer. The host doesn't read settings files: the app reads
+  each registered repo's `.oriel/settings.toml` that's trusted (`registry/settingsfile.Trust`) and sends its
+  `egress`, `rules` and `image` as `Config.Projects`, keyed by the repo's path. An untrusted one is left out, with a
+  notice whose Trust runs `settings.trust {path}`.
 
 ## As built (ED-9)
 

@@ -20,15 +20,14 @@ type Job struct {
 	Name     string `json:"name"` // its slug: the file, and what its runs are named after
 	Title    string `json:"title"`
 	Prompt   string `json:"prompt"`
-	Sandbox  string `json:"sandbox,omitempty"` // "sandbox", "host", or "" for the worker's default
+	Sandbox  string `json:"sandbox,omitempty"` // "sandbox", "host", or "" for sandbox.default
 	Provider string `json:"provider,omitempty"`
 	Model    string `json:"model,omitempty"`
 	Effort   string `json:"effort,omitempty"`
 	// Schedule runs it by itself; the zero one is manual.
-	Schedule  Schedule      `json:"schedule,omitzero"`
-	Worker    core.WorkerID `json:"worker,omitempty"` // filled in as it's listed
-	CreatedAt time.Time     `json:"createdAt"`
-	UpdatedAt time.Time     `json:"updatedAt"`
+	Schedule  Schedule  `json:"schedule,omitzero"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 	// Due is the occurrence of its schedule it last ran, or skipped.
 	Due time.Time `json:"due,omitzero"`
 	// Skips are the occurrences skipped while its last run was still going, the latest maxSkips, oldest first.
@@ -143,7 +142,6 @@ func (w *Worker) loadJob(name string) (Job, bool) {
 	if json.Unmarshal(b, &j) != nil || j.Prompt == "" {
 		return Job{}, false
 	}
-	j.Worker = w.opts.ID
 	return j, true
 }
 
@@ -151,7 +149,6 @@ func (w *Worker) writeJob(j Job) error {
 	if err := os.MkdirAll(w.jobsDir(), 0o700); err != nil {
 		return err
 	}
-	j.Worker = ""
 	b, err := json.MarshalIndent(j, "", "  ")
 	if err != nil {
 		return err
@@ -165,6 +162,7 @@ func (w *Worker) writeJob(j Job) error {
 
 // Jobs is every job, the most recently changed first.
 func (w *Worker) Jobs() []Job {
+	defer w.recover("Jobs", nil)
 	w.jobsMu.Lock()
 	defer w.jobsMu.Unlock()
 	return w.jobs()
@@ -194,7 +192,8 @@ func (w *Worker) jobs() []Job {
 
 // SaveJob writes a job: a new one when j has no Name (named from its title, stepping aside from a name in use), else
 // the job of that name, rewritten.
-func (w *Worker) SaveJob(j Job) (Job, error) {
+func (w *Worker) SaveJob(j Job) (_ Job, err error) {
+	defer w.recover("SaveJob", &err)
 	j.Prompt, j.Title = strings.TrimSpace(j.Prompt), strings.TrimSpace(j.Title)
 	if j.Prompt == "" {
 		return Job{}, errors.New("a job is a prompt: say what it should do")
@@ -236,12 +235,12 @@ func (w *Worker) SaveJob(j Job) (Job, error) {
 	if err := w.writeJob(j); err != nil {
 		return Job{}, err
 	}
-	j.Worker = w.opts.ID
 	return j, nil
 }
 
 // DeleteJob forgets a job. Its runs are sessions of their own, and stay.
-func (w *Worker) DeleteJob(name string) error {
+func (w *Worker) DeleteJob(name string) (err error) {
+	defer w.recover("DeleteJob", &err)
 	w.jobsMu.Lock()
 	defer w.jobsMu.Unlock()
 	name = Sanitise(name)
@@ -261,7 +260,8 @@ func promptTitle(prompt string) string {
 }
 
 // RunJob starts a run of a job: a session of kind job on its pins.
-func (w *Worker) RunJob(ctx context.Context, name string) (core.SessionID, error) {
+func (w *Worker) RunJob(ctx context.Context, name string) (_ core.SessionID, err error) {
+	defer w.recover("RunJob", &err)
 	w.jobsMu.Lock()
 	j, ok := w.loadJob(Sanitise(name))
 	w.jobsMu.Unlock()
@@ -293,6 +293,7 @@ func (w *Worker) runJob(ctx context.Context, j Job) (core.SessionID, error) {
 // RunDue starts every scheduled job due since its last occurrence (or since it was saved), once however many it
 // missed while the worker was off, skipping one whose last run is still going.
 func (w *Worker) RunDue(ctx context.Context) {
+	defer w.recover("RunDue", nil)
 	w.jobsMu.Lock()
 	now := w.opts.Now()
 	var due []Job
@@ -334,6 +335,7 @@ func (w *Worker) running(job string) bool {
 
 // RunSchedules runs the jobs' schedules every interval until ctx ends: while the worker is awake.
 func (w *Worker) RunSchedules(ctx context.Context, every time.Duration) {
+	defer w.recover("RunSchedules", nil)
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {

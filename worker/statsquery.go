@@ -80,7 +80,7 @@ func (w *Worker) statsSessions(only core.SessionID, since time.Time) []stats.Ses
 			continue
 		}
 		s := stats.Session{ID: string(se.ID), Name: se.Name, Kind: string(se.Kind), Provider: se.Agent.Provider, Model: se.Agent.Model,
-			Effort: se.Agent.Effort, Worker: string(w.opts.ID), Live: se.Agent.Running, Scans: w.statsStore().Scan(string(se.ID), logs),
+			Effort: se.Agent.Effort, Live: se.Agent.Running, Scans: w.statsStore().Scan(string(se.ID), logs),
 			Origin: stats.OriginOriel}
 		for _, a := range se.Agent.Accounts {
 			s.Accounts = append(s.Accounts, stats.Account{At: a.At, ID: a.Account, Name: a.Name})
@@ -118,16 +118,18 @@ func (w *Worker) accountOf(provider string) (string, string) {
 
 // StatsQuery answers a stats query over every session the worker has.
 func (w *Worker) StatsQuery(q stats.Query) stats.Report {
+	defer w.recover("StatsQuery", nil)
 	w.statsMu.Lock()
 	defer w.statsMu.Unlock()
 	// A log last written before the period the query compares with has nothing in it.
 	r := stats.Run(q, w.statsSessions("", q.From.Add(-q.To.Sub(q.From))))
-	r.Worker, r.Scanned = string(w.opts.ID), w.opts.Now().UTC()
+	r.Scanned = w.opts.Now().UTC()
 	return r
 }
 
 // SessionStats is one session's stats.
-func (w *Worker) SessionStats(r StatsSessionReq) (stats.Detail, error) {
+func (w *Worker) SessionStats(r StatsSessionReq) (_ stats.Detail, err error) {
+	defer w.recover("SessionStats", &err)
 	w.statsMu.Lock()
 	defer w.statsMu.Unlock()
 	ss := w.statsSessions(r.Session, time.Time{})
@@ -228,20 +230,21 @@ func (w *Worker) restoreUsage() {
 		if cur := w.store.State().Usage; slices.ContainsFunc(cur, func(o core.ProviderUsage) bool { return o.Same(u) && o.Sampled.After(u.Sampled) }) {
 			continue
 		}
-		u.Workers = []core.WorkerID{w.opts.ID}
 		_ = w.emit(core.UsageSampled{Usage: u})
 	}
 }
 
 // UsageHistory is the plan readings the worker has kept, oldest first.
 func (w *Worker) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
+	defer w.recover("UsageHistory", nil)
 	w.usageMu.Lock()
 	defer w.usageMu.Unlock()
 	return w.readUsage(filepath.Join(w.opts.Home, "usage.jsonl"), r.Provider, r.Since)
 }
 
 // ReadUsage asks every provider for its plan's windows now, and reports each that's newer than the one held.
-func (w *Worker) ReadUsage(ctx context.Context) error {
+func (w *Worker) ReadUsage(ctx context.Context) (err error) {
+	defer w.recover("ReadUsage", &err)
 	var errs []error
 	for _, p := range w.opts.Providers.List() {
 		cctx, cancel := context.WithTimeout(ctx, time.Minute)
@@ -267,9 +270,8 @@ func (w *Worker) ReadUsage(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-// usageSampled reports a plan reading, as this worker's, and keeps it.
+// usageSampled reports a plan reading, and keeps it.
 func (w *Worker) usageSampled(u core.ProviderUsage) {
-	u.Workers = []core.WorkerID{w.opts.ID}
 	if err := w.emit(core.UsageSampled{Usage: u}); err == nil {
 		w.recordUsage(u)
 	}

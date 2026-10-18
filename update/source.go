@@ -178,8 +178,7 @@ func (g *GitHub) get(ctx context.Context, url, accept string) (io.ReadCloser, er
 	return resp.Body, nil
 }
 
-// Cache keeps each artifact the app downloads, checked against the manifest, so one download serves this machine
-// and every worker on its platform.
+// Cache keeps each artifact the app downloads, checked against the manifest.
 type Cache struct {
 	Dir    string
 	Source Source
@@ -217,11 +216,6 @@ func (c Cache) Open(ctx context.Context, m Manifest, a Artifact) (io.ReadCloser,
 		return nil, err
 	}
 	return os.Open(path)
-}
-
-// Opener is c as a Publisher's Opener for m.
-func (c Cache) Opener(m Manifest) Opener {
-	return func(ctx context.Context, a Artifact) (io.ReadCloser, error) { return c.Open(ctx, m, a) }
 }
 
 // ErrUpToDate is Check finding nothing newer.

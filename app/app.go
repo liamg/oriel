@@ -49,26 +49,25 @@ const (
 )
 
 type Config struct {
-	Store      core.Store        // the materialised state the worker feeds; in-memory if nil
+	Store      core.Store        // the materialised state, shared with the session host; Worker's, else in-memory, if nil
 	Registry   registry.Registry // a fresh one if nil
 	Plugins    []plugin.Plugin   // activated in order, after the built-ins
 	Logs       *Logs             // where log records go; a ring in memory if nil
 	ConfigDir  string            // ~/.config/oriel unless set; user themes live in its themes/
 	CrashDir   string            // crash reports are written to and offered from here; none if ""
 	Version    string
-	Desktop    Desktop         // the clipboard and the browser; the window's, or the OS's, if nil
-	Debug      bool            // oriel --debug: the frame-time overlay
-	CPUProfile string          // oriel --cpuprofile: a CPU profile written here while the window is open
-	Trace      string          // oriel --trace: the execution trace of the seconds before a stall, written here
-	Files      []string        // open in the editor at start
-	WorkDir    string          // the directory open in the window, where relative paths are; none if "" (the start view shows)
-	StateDir   string          // state that isn't config, such as the recent directories; logs.StateDir() if ""
-	CacheDir   string          // compiled grammars and the like; the user's cache directory's oriel/ if ""
-	DataDir    string          // installed plugins, in its plugins/; DefaultDataDir() if ""
-	Workers    []worker.Client // the workers whose sessions the window shows: this machine's, and any others
-	// LocalWorker reaches this machine's worker, starting one: after one from another build hands over to this build's.
-	LocalWorker func(context.Context) (worker.Client, error)
-	// Updates is Oriel updating itself and its workers (distribution.md); nil in a build that doesn't.
+	Desktop    Desktop  // the clipboard and the browser; the window's, or the OS's, if nil
+	Debug      bool     // oriel --debug: the frame-time overlay
+	CPUProfile string   // oriel --cpuprofile: a CPU profile written here while the window is open
+	Trace      string   // oriel --trace: the execution trace of the seconds before a stall, written here
+	Files      []string // open in the editor at start
+	WorkDir    string   // the directory open in the window, where relative paths are; none if "" (the start view shows)
+	StateDir   string   // state that isn't config, such as the recent directories; logs.StateDir() if ""
+	CacheDir   string   // compiled grammars and the like; the user's cache directory's oriel/ if ""
+	DataDir    string   // installed plugins, in its plugins/; DefaultDataDir() if ""
+	// Worker is the session host, in this process; no sessions if nil.
+	Worker *worker.Worker
+	// Updates is Oriel updating itself (distribution.md); nil in a build that doesn't.
 	Updates *Updates
 	// Started is called once the window is open and every plugin active: what the updater's health check waits for.
 	Started func()
@@ -163,8 +162,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		}
 	}()
 	sh.closeWin = w.Close
-	if ch, ok := w.(render.CloseHolder); ok && cfg.LocalWorker != nil {
-		ch.HoldClose(true) // quitting drains this machine's worker first
+	if ch, ok := w.(render.CloseHolder); ok && cfg.Worker != nil {
+		ch.HoldClose(true) // quitting hands the agents over first
 	}
 	sh.desktop = cfg.Desktop
 	if sh.desktop == nil {
@@ -298,6 +297,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 
 // defaults fills in what Config says it makes when it's nil.
 func (cfg *Config) defaults() {
+	if cfg.Store == nil && cfg.Worker != nil {
+		cfg.Store = cfg.Worker.Store()
+	}
 	if cfg.Store == nil {
 		cfg.Store = eventstore.New()
 	}

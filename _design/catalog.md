@@ -141,7 +141,6 @@ net = { hosts = ["acme.atlassian.net"], why = "Fetch and update Jira tickets" }
 - **Binaries**: the author attaches `<name>-<version>-<os>-<arch>.tar.gz` to the GitHub release for the tag.
   Oriel downloads the archive for each platform it needs.
 - Plugins install to `~/.local/share/oriel/plugins/<id>/<commit>/`, read-only. The active commit is a symlink, so rollback is cheap.
-- Workers get their archive from the app over wire, as with self-update (`distribution.md`). They never fetch from GitHub.
 
 ## The registry repo: `liamg/oriel-plugins`
 
@@ -365,7 +364,6 @@ sequenceDiagram
 - **Not yet:**
   - Lazy loading. Every plugin loads at start. A `lazy` override replaces the manifest's, which nothing reads yet
     (PL-22).
-  - Workers getting a plugin's archive over wire.
   - The audit log the consent footer mentions.
 
 ## As built (PL-16)

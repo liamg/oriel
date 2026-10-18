@@ -13,8 +13,7 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// SessionLogs keeps one log per session, which survives a restart of whatever holds it. Workers will hold
-// them (AI-1); until then the app keeps them on disk with Dir.
+// SessionLogs keeps one log per session, which survives a restart: on disk with Dir.
 type SessionLogs interface {
 	Open(id core.SessionID) (SessionLog, error)
 }

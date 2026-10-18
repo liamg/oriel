@@ -54,7 +54,7 @@ func (r *repoList) save() error {
 }
 
 // add registers the checkout at path, or returns it if it's already registered.
-func (r *repoList) add(ctx context.Context, worker core.WorkerID, path string) (core.Repo, error) {
+func (r *repoList) add(ctx context.Context, path string) (core.Repo, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return core.Repo{}, err
@@ -74,7 +74,7 @@ func (r *repoList) add(ctx context.Context, worker core.WorkerID, path string) (
 	for n := 2; slices.ContainsFunc(r.list, func(x core.Repo) bool { return x.ID == id }); n++ {
 		id = core.RepoID(fmt.Sprintf("%s-%d", Sanitise(filepath.Base(top)), n))
 	}
-	repo := core.Repo{ID: id, Worker: worker, Path: top, Remote: g.RemoteURL(ctx), BaseBranch: g.DefaultBranch(ctx)}
+	repo := core.Repo{ID: id, Path: top, Remote: g.RemoteURL(ctx), BaseBranch: g.DefaultBranch(ctx)}
 	r.list = append(r.list, repo)
 	return repo, r.save()
 }
@@ -97,9 +97,18 @@ func (w *Worker) resolveRepo(ctx context.Context, ref string) (core.Repo, error)
 		return r, nil
 	}
 	if filepath.IsAbs(ref) || ref == "." || filepath.Base(ref) != ref {
-		return w.repos.add(ctx, w.opts.ID, ref)
+		return w.repos.add(ctx, ref)
 	}
-	return core.Repo{}, fmt.Errorf("no repo %q on this worker: add its checkout (oriel repos add <path>) or clone it (oriel repos clone <url>)", ref)
+	return core.Repo{}, fmt.Errorf("no repo %q: add its checkout (repos.add {path}) or clone it (repos.clone {url})", ref)
+}
+
+// Repos is the registered checkouts.
+func (w *Worker) Repos() []core.Repo { return w.repos.all() }
+
+// AddRepoPath registers the checkout at path, or returns it if it's already registered.
+func (w *Worker) AddRepoPath(ctx context.Context, path string) (_ core.Repo, err error) {
+	defer w.recover("AddRepoPath", &err)
+	return w.repos.add(ctx, path)
 }
 
 // CloneReq is repos.clone: a URL, and the name its checkout gets in the repos directory (the URL's last part if "").
@@ -108,9 +117,10 @@ type CloneReq struct {
 	Name string `json:"name,omitempty"`
 }
 
-// CloneRepo clones a repo into the repos directory with the worker's own git and credentials, and registers it. A
+// CloneRepo clones a repo into the repos directory with the user's own git and credentials, and registers it. A
 // checkout already there of the same URL is registered as it is.
-func (w *Worker) CloneRepo(ctx context.Context, r CloneReq) (core.Repo, error) {
+func (w *Worker) CloneRepo(ctx context.Context, r CloneReq) (_ core.Repo, err error) {
+	defer w.recover("CloneRepo", &err)
 	url := strings.TrimSpace(r.URL)
 	if url == "" {
 		return core.Repo{}, errors.New("clone what? No URL")
@@ -125,18 +135,18 @@ func (w *Worker) CloneRepo(ctx context.Context, r CloneReq) (core.Repo, error) {
 	dir := filepath.Join(w.opts.ReposDir, name)
 	if _, err := os.Stat(dir); err == nil {
 		if gitx.IsRepo(dir) && (gitx.Repo{Dir: dir}).RemoteURL(ctx) == url {
-			return w.repos.add(ctx, w.opts.ID, dir)
+			return w.repos.add(ctx, dir)
 		}
 		return core.Repo{}, fmt.Errorf("%s is already there and isn't a clone of %s: give the clone another name", dir, url)
 	}
 	if err := gitx.Clone(ctx, url, dir); err != nil {
 		_ = os.RemoveAll(dir)
 		if needsCredentials(err.Error()) {
-			err = fmt.Errorf("%w (the worker clones with its own machine's credentials: set them up there)", err)
+			err = fmt.Errorf("%w (it clones with this machine's git credentials: set them up)", err)
 		}
 		return core.Repo{}, err
 	}
-	return w.repos.add(ctx, w.opts.ID, dir)
+	return w.repos.add(ctx, dir)
 }
 
 // needsCredentials says whether git's message is about credentials it didn't have.
