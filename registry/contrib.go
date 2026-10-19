@@ -176,6 +176,7 @@ type Font struct {
 // extension.
 type Icon struct {
 	Name, Path, Source string
+	Data               []byte // the file's contents in place of Path: a bundled plugin's
 }
 
 func (Font) ContributionKind() string   { return "font" }

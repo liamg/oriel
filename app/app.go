@@ -78,6 +78,10 @@ type Config struct {
 	GitHub *catalog.GitHub
 	// Secrets are the named secrets plugins' requests carry (security.md); secrets.json in StateDir if nil.
 	Secrets plugin.Secrets
+	// Bundled are the plugins shipped in the binary, loaded by the plugin manager unless turned off or installed.
+	Bundled []plugin.Bundled
+	// Self is the command that runs oriel itself, for bundled plugins' processes; os.Executable() if nil.
+	Self []string
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -321,6 +325,7 @@ func newShell(cfg Config, poke func()) (*shell, func()) {
 	tail := cfg.Store.Subscribe(core.Filter{}, events.add)
 	notices := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })
 	sh := &shell{cfg: cfg, events: events, poke: poke, reopen: make(chan reopenTo, 1)}
+	iconReg.Store(&cfg.Registry)
 	return sh, func() { tail(); notices() }
 }
 
@@ -441,11 +446,26 @@ func (h *pluginHost) Load(p plugin.Plugin) (registry.Disposable, error) {
 	if err := p.Activate(context.Background(), h.sh.host(p.Manifest().ID)); err != nil {
 		return nil, err
 	}
+	h.sh.loaded = append(h.sh.loaded, p)
 	return disposeFn(func() {
+		h.sh.loaded = slices.DeleteFunc(h.sh.loaded, func(q plugin.Plugin) bool { return q == p })
 		if err := p.Deactivate(context.Background()); err != nil {
 			h.log.Warn("stopping a plugin", "plugin", p.Manifest().ID, "err", err)
 		}
 	}), nil
+}
+
+func (h *pluginHost) Plugins() []plugin.Manifest {
+	var out []plugin.Manifest
+	if h.sh.active != nil {
+		for _, p := range *h.sh.active {
+			out = append(out, p.Manifest())
+		}
+	}
+	for _, p := range h.sh.loaded {
+		out = append(out, p.Manifest())
+	}
+	return out
 }
 
 func (h *pluginHost) Shot(th *theme.Resolved) *image.RGBA {

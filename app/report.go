@@ -49,6 +49,7 @@ type shell struct {
 	secrets     plugin.Secrets   // the store plugins' requests take secrets from, each one handed out redacted from the logs
 	git         *gitPlugin       // the work tree's git status
 	active      *[]plugin.Plugin // the built-ins and the config's plugins, as they started
+	loaded      []plugin.Plugin  // the plugins started since by Host.Load, still running
 	editor      *editorPlugin
 	search      *projectSearch
 	tests       *testsPlugin

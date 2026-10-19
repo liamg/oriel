@@ -58,6 +58,9 @@ type Host interface {
 	// Load starts p as a plugin of its own, on a host whose source is its id, as a plugin manager does; Dispose
 	// stops it. Call it on the loop.
 	Load(p Plugin) (registry.Disposable, error)
+	// Plugins are the manifests of the plugins running now: the built-ins, then the ones started since. Call it on
+	// the loop.
+	Plugins() []Manifest
 	// Shot is the window as it is now, built and drawn again on the CPU in th (its own theme when nil), in logical
 	// pixels. A probe theme (theme.Probe) makes it a map of which token painted each pixel. Call it on the loop.
 	Shot(th *theme.Resolved) *image.RGBA

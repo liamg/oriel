@@ -73,7 +73,7 @@ func (p Picker) Source(spec script.Table, where string) error {
 //oriel:api name=ticket cap=agent.prompt
 type TicketAPI struct{ a *APIs }
 
-//oriel:api doc="A ticket tracker (Linear, Jira…): Oriel builds the rest on it, the omnibox's tickets (!), the launcher's card, the moves as a session starts from a ticket and its PR is seen and merged, and the assistant's my_tickets. { name, title, order (50), keys = a regular expression its keys match ('^[A-Z][A-Z0-9]*-[0-9]+$'; every key when nil), secret = the secret it needs set first, which Oriel asks for while it isn't, and the functions, each answering with done(value) or done(nil, err), now or later: lookup = fn(key, done) with a ticket; assigned = fn(done) with the open tickets assigned to you, in any order; start = fn(key, done), review = fn(key, done) and done = fn(key, done) moving it into progress, into review (its PR is open) or to done (the session's PRs are merged), with { moved, state }; link = fn(key, pr, done) attaching pr = { number, url, repo, title } }. Only lookup is required. A ticket is { key, title, url, state, stage ('todo', 'started' or 'review'), project, priority (1 the most urgent; 0 none), priority_label, blocked, blocked_by = { keys }, pr = { number, url, repo }, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt."
+//oriel:api doc="A ticket tracker (Linear, Jira…): Oriel builds the rest on it, the omnibox's tickets (!), the launcher's card, the moves as a session starts from a ticket and its PR is seen and merged, and the assistant's my_tickets. { name, title, icon (an icon's name, shown beside its tickets where more than one tracker's are listed), order (50), keys = a regular expression its keys match ('^[A-Z][A-Z0-9]*-[0-9]+$'; every key when nil), secret = the secret it needs set first, which Oriel asks for while it isn't, and the functions, each answering with done(value) or done(nil, err), now or later: lookup = fn(key, done) with a ticket; assigned = fn(done) with the open tickets assigned to you, in any order; start = fn(key, done), review = fn(key, done) and done = fn(key, done) moving it into progress, into review (its PR is open) or to done (the session's PRs are merged), with { moved, state }; link = fn(key, pr, done) attaching pr = { number, url, repo, title } }. Only lookup is required. A ticket is { key, title, url, state, stage ('todo', 'started' or 'review'), project, priority (1 the most urgent; 0 none), priority_label, blocked, blocked_by = { keys }, pr = { number, url, repo }, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt."
 func (t TicketAPI) Tracker(spec script.Table, where string) error {
 	a := t.a
 	name := str(spec, "name")
@@ -81,7 +81,7 @@ func (t TicketAPI) Tracker(spec script.Table, where string) error {
 	if name == "" || lookup == nil {
 		return errors.New("a ticket tracker needs a name and lookup")
 	}
-	tr := registry.TicketTracker{Name: name, Title: str(spec, "title"), Order: 50, Secret: str(spec, "secret"), Source: where}
+	tr := registry.TicketTracker{Name: name, Title: str(spec, "title"), Icon: str(spec, "icon"), Order: 50, Secret: str(spec, "secret"), Source: where}
 	if o, ok := spec["order"].(float64); ok {
 		tr.Order = int(o)
 	}

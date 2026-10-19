@@ -24,6 +24,9 @@ type Caller struct {
 	// Data is the plugin's own directory for what it keeps (a log, a cache): its processes may write there, and
 	// find it in $ORIEL_PLUGIN_DATA. None if empty.
 	Data string
+	// Programs run its binaries as other programs, by the name it spawns them by: a bundled plugin's
+	// bin/oriel-linear is oriel itself, run as `oriel plugin-process linear` (Bundled).
+	Programs map[string][]string
 }
 
 // EnvData names the plugin's data directory in its processes' environment.

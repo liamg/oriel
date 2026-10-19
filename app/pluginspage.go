@@ -73,6 +73,12 @@ func (x *catalogPlugin) pageCommands(h plugin.Host) {
 			open(a.String("tab"))
 			return nil
 		}},
+		{ID: "plugins.disable", Title: "Turn off {id}, a plugin bundled with Oriel", Run: func(ctx registry.Ctx, a registry.Args) error {
+			return x.turnBundled(ctx, a.String("id"), false)
+		}},
+		{ID: "plugins.enable", Title: "Turn {id}, a plugin bundled with Oriel, back on", Run: func(ctx registry.Ctx, a registry.Args) error {
+			return x.turnBundled(ctx, a.String("id"), true)
+		}},
 	} {
 		x.add(h.Command(c))
 	}
@@ -83,7 +89,21 @@ func (x *catalogPlugin) pageCommands(h plugin.Host) {
 	})))
 }
 
-// rows are what's installed: the built-ins, then every [plugins] entry.
+// turnBundled turns a bundled plugin on or off, in your settings' bundled.disabled.
+func (x *catalogPlugin) turnBundled(ctx registry.Ctx, id string, on bool) error {
+	if x.bundled[id] == nil {
+		return fmt.Errorf("%q isn't bundled with Oriel: uninstall it instead", id)
+	}
+	v, _, _ := x.h.Options().Get(BundledDisabledOption, registry.At{})
+	off, _ := v.([]string)
+	off = slices.DeleteFunc(slices.Clone(off), func(s string) bool { return s == id })
+	if !on {
+		off = append(off, id)
+	}
+	return x.h.Run(ctx, "settings.set", registry.Args{"name": BundledDisabledOption, "value": off, "scope": "user"})
+}
+
+// rows are what's installed: the built-ins, the bundled plugins, then every [plugins] entry.
 func (x *catalogPlugin) rows() []pluginRow {
 	var out []pluginRow
 	if x.sh.active != nil {
@@ -101,6 +121,19 @@ func (x *catalogPlugin) rows() []pluginRow {
 		}
 	}
 	slices.SortFunc(out, func(a, b pluginRow) int { return strings.Compare(a.id, b.id) })
+	for _, id := range x.bundledIDs {
+		bp := x.bundled[id]
+		runs := "LUA"
+		if len(bp.b.Processes) > 0 {
+			runs = "PROCESS"
+		}
+		state := bp.state
+		if state == "replaced" {
+			state = "replaced by its install"
+		}
+		out = append(out, pluginRow{id: id, name: pluginName(id), version: bp.m.Version, badge: catalog.BadgeBundled, source: "bundled with Oriel",
+			runs: runs, state: state, m: bp.m})
+	}
 	for _, st := range x.Statuses() {
 		st := st
 		r := pluginRow{id: st.Entry.ID, name: pluginName(st.Entry.ID), version: st.Manifest.Version, badge: st.Locked.Badge, source: st.Locked.Source,
@@ -408,6 +441,19 @@ func (x *catalogPlugin) detail(c *ui.Ctx, r pluginRow) {
 		granted = [][2]string{{"ui, themes, notifications", "always"}}
 	}
 	section("granted", "GRANTED", granted)
+	if r.badge == catalog.BadgeBundled {
+		c.Row("acts", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
+			cmd, label := "plugins.disable", "Disable"
+			if r.state == "disabled" {
+				cmd, label = "plugins.enable", "Enable"
+			}
+			if widget.Button(c, "turn", label, widget.ButtonOpts{Help: pluginsHelp + "#bundled"}) {
+				if err := x.h.Run(context.Background(), cmd, registry.Args{"id": r.id}); err != nil {
+					x.h.Notify(noticeErr("plugins", "Plugins", err))
+				}
+			}
+		})
+	}
 	if r.st != nil {
 		var prov [][2]string
 		for _, f := range r.st.Facts {

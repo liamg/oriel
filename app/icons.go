@@ -1,11 +1,17 @@
 package app
 
 import (
+	"fmt"
+	"image"
 	"math"
+	"os"
+	"sync/atomic"
 
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // icons are the built-in icon set, drawn as strokes in a 16-unit square, so they don't depend on a font having
@@ -199,7 +205,69 @@ func icon(c *ui.Ctx, key any, name string, size float32, col render.Color) {
 		})
 		return
 	}
+	if img := contributedIcon(name, col); img != nil {
+		widget.Image(c, key, img, size, widget.ImageOpts{Label: name})
+		return
+	}
 	c.Box(key, ui.Style{W: ui.Px(size), H: ui.Px(size), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("glyph", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size * .85, Weight: typeset.SemiBold}, Color: col})
 	})
+}
+
+// iconReg is the registry contributed icons are found in: the window's.
+var iconReg atomic.Pointer[registry.Registry]
+
+// contributedIcon is the icon a plugin's [contributes] icons brings by name, as its shape in col: the image's own
+// alpha, so a monochrome icon takes the tone around it. Nil when there's none, or it isn't a raster image.
+func contributedIcon(name string, col render.Color) image.Image {
+	r := iconReg.Load()
+	if r == nil || *r == nil {
+		return nil
+	}
+	var ic registry.Icon
+	found := false
+	for _, c := range (*r).Contributions("icon") {
+		if i := c.(registry.Icon); i.Name == name {
+			ic, found = i, true
+		}
+	}
+	if !found {
+		return nil
+	}
+	key := fmt.Sprintf("icon:%s/%s:%v", ic.Source, ic.Name, col)
+	pictures.mu.Lock()
+	pc, ok := pictures.m[key]
+	pictures.mu.Unlock()
+	if !ok {
+		pc = &picture{}
+		b := ic.Data
+		if b == nil {
+			b, pc.err = os.ReadFile(ic.Path)
+		}
+		if pc.err == nil {
+			var src image.Image
+			if src, pc.format, pc.err = decodeImage(b); pc.err == nil {
+				pc.img = tinted(src, col)
+			}
+		}
+		pictures.put(key, pc)
+	}
+	if pc.err != nil {
+		return nil
+	}
+	return pc.img
+}
+
+// tinted is src's shape in col: col at each pixel, as opaque as src is there.
+func tinted(src image.Image, col render.Color) image.Image {
+	b := src.Bounds()
+	out := image.NewNRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			_, _, _, a := src.At(x, y).RGBA()
+			i := out.PixOffset(x-b.Min.X, y-b.Min.Y)
+			out.Pix[i], out.Pix[i+1], out.Pix[i+2], out.Pix[i+3] = col.R, col.G, col.B, uint8(a>>8*uint32(col.A)/255)
+		}
+	}
+	return out
 }

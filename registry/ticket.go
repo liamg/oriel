@@ -61,6 +61,7 @@ type TicketMove struct {
 type TicketTracker struct {
 	Name  string // "linear"
 	Title string // "Linear"
+	Icon  string // an icon's name, beside its tickets where more than one tracker's are listed
 	Order int
 	Keys  *regexp.Regexp // the keys it takes (ENG-2231); nil takes every key
 	// Secret is the secret it needs set before it can answer (LINEAR_TOKEN): until it is, the app asks for it.

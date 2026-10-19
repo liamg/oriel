@@ -34,7 +34,7 @@ One that asks for more stays off, with a card in the inbox that opens this scree
 
 ## The Plugins page {#page}
 
-`:Plugins` lists what's installed: the built-ins and everything in `[plugins]`, with what each contributes, the
+`:Plugins` lists what's installed: the built-ins, the plugins bundled with Oriel, and everything in `[plugins]`, with what each contributes, the
 capabilities it holds and how it runs. **Updates** lists what has a newer version or waits for your consent.
 **Registry** browses the plugin registries; Install adds the plugin's line to `[plugins]`.
 
@@ -134,3 +134,10 @@ Commit, push and open PRs through the gateway, still subject to its approvals. H
 ## clipboard {#clipboard}
 
 Read the clipboard. Medium risk.
+
+## Bundled plugins {#bundled}
+
+Some plugins ship inside Oriel (Linear, Slack): they load at start with what their manifest declares, without
+asking, because they come with Oriel. The page marks them **bundled**. **Disable** turns one off (it's listed in
+`bundled.disabled`) and **Enable** turns it back on; they can't be uninstalled. Installing the same id from a
+registry replaces the bundled copy while it's installed.

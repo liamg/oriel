@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/catalog/registrycmd"
+	"github.com/liamg/oriel/integ"
 )
 
 const pluginUsage = `oriel plugin pack [-o OUT] [DIR]          check the plugin in DIR (here by default) and build its release archives
@@ -107,4 +109,16 @@ func guessID(dir string) string {
 		}
 	}
 	return owner + "/" + name
+}
+
+// runPluginProcess runs a bundled plugin's process (plugin.Bundled): its main, by name, over stdin and stdout.
+func runPluginProcess(args []string, stdin io.Reader, stdout io.Writer) error {
+	if len(args) != 1 {
+		return errors.New("usage: oriel plugin-process NAME")
+	}
+	main, ok := integ.Mains[args[0]]
+	if !ok {
+		return fmt.Errorf("no bundled process %q", args[0])
+	}
+	return main(stdin, stdout)
 }

@@ -19,7 +19,7 @@ local function call(method, params, done)
   end)
 end
 
-L.ticket.tracker{ name = "linear", title = "Linear", order = 10, keys = "^[A-Z][A-Z0-9]*-[0-9]+$", secret = "LINEAR_TOKEN",
+L.ticket.tracker{ name = "linear", title = "Linear", icon = "linear", order = 10, keys = "^[A-Z][A-Z0-9]*-[0-9]+$", secret = "LINEAR_TOKEN",
   assigned = function(done)
     call("assigned", {}, function(res, err) done(res and res.tickets, err) end)
   end,
@@ -30,3 +30,11 @@ L.ticket.tracker{ name = "linear", title = "Linear", order = 10, keys = "^[A-Z][
   link = function(key, pr, done)
     call("link", { key = key, url = pr.url, number = pr.number, title = pr.title }, done)
   end }
+
+-- Its entry points stay hidden until the key is set.
+local function keyed() return L.secret.has("LINEAR_TOKEN") end
+
+L.rail.add{ name = "linear", scope = "global", icon = "linear", title = "Linear tickets", order = 25,
+  command = "tickets.open", args = { tracker = "linear" }, shown = keyed }
+L.start.add{ name = "linear", icon = "linear", title = "Linear tickets", desc = "Your assigned tickets: pick one to plan",
+  order = 25, command = "tickets.open", args = { tracker = "linear" }, shown = keyed }

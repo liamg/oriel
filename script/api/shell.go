@@ -11,7 +11,7 @@ import (
 //oriel:api name=rail cap=ui
 type Rail struct{ a *APIs }
 
-//oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available."
+//oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note, shown }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph, or one a plugin's [contributes] icons brings. It's dimmed while the command isn't available, and listed only while shown = fn(project) returns true, when there's a shown: oriel.secret.has('NAME') keeps a plugin's entry hidden until its secret is set."
 func (r Rail) Add(spec script.Table, where string) error {
 	e := registry.RailEntry{Name: str(spec, "name"), Icon: str(spec, "icon"), Title: str(spec, "title"), Command: str(spec, "command"),
 		Order: 50, Source: where}
@@ -31,6 +31,9 @@ func (r Rail) Add(spec script.Table, where string) error {
 	default:
 		return fmt.Errorf("a rail entry's scope is project, session or global, not %q", sc)
 	}
+	if fn, ok := spec["shown"].(*script.Fn); ok {
+		e.Shown = func(project string) bool { return r.a.truthy(fn, project) }
+	}
 	if fn, ok := spec["note"].(*script.Fn); ok {
 		e.Note = func(project string) string {
 			out, err := r.a.VM.Call(fn, project)
@@ -47,7 +50,7 @@ func (r Rail) Add(spec script.Table, where string) error {
 //oriel:api name=start cap=ui
 type Start struct{ a *APIs }
 
-//oriel:api doc="Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure."
+//oriel:api doc="Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note, shown }. It's dimmed while the command isn't available, and listed only while shown = fn() returns true, when there's a shown. link = true makes it a small link under the actions, with note = fn() its figure."
 func (s Start) Add(spec script.Table, where string) error {
 	e := registry.StartEntry{Name: str(spec, "name"), Icon: str(spec, "icon"), Title: str(spec, "title"), Desc: str(spec, "desc"),
 		Command: str(spec, "command"), Order: 50, Source: where}
@@ -61,6 +64,9 @@ func (s Start) Add(spec script.Table, where string) error {
 		e.Order = int(o)
 	}
 	e.Link, _ = spec["link"].(bool)
+	if fn, ok := spec["shown"].(*script.Fn); ok {
+		e.Shown = func() bool { return s.a.truthy(fn) }
+	}
 	if fn, ok := spec["note"].(*script.Fn); ok {
 		e.Note = func() string {
 			out, err := s.a.VM.Call(fn)

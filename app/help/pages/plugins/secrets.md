@@ -18,3 +18,10 @@ plugin gets shows it, and the log masks it.
 (⌘↵) keeps it in Oriel's secrets file in the state directory, readable only by you, replacing one already set.
 `secrets.delete {name}` removes it. A plugin's own command often opens the dialog for you: `slack.webhook` for the
 Slack webhook.
+
+## In Settings {#settings}
+
+**Settings › Secrets** lists every secret a plugin you run declares: its name, the plugin, the author's reason and
+the host it's sent to. One that isn't set has a field to paste it into and **Save**. One that is shows "set" and
+dots, never its value, with **Replace** and **Clear**; Clear asks once more. A plugin can keep its sidebar and
+start view entries hidden until its secret is set (`oriel.secret.has`): Linear's appear as soon as its key is saved.

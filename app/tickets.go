@@ -18,14 +18,16 @@ import (
 const ticketsStale = 10 * time.Minute
 
 // ticketsPlugin is everything about tickets that isn't a tracker's own, built once on every registry.TicketTracker:
-// the omnibox's tickets (`!`), Continue on a ticket that has a session, the ask for a tracker's key, the moves and
-// the PR link as a session started from a ticket goes on, and the assistant's my_tickets.
+// the tickets page, the omnibox's tickets (`!`), Continue on a ticket that has a session, the ask for a tracker's
+// key, the moves and the PR link as a session started from a ticket goes on, and the assistant's my_tickets.
 type ticketsPlugin struct {
 	disposer
 	h plugin.Host
 
-	mu    sync.Mutex
-	lists map[string]*ticketList // by tracker
+	mu      sync.Mutex
+	lists   map[string]*ticketList   // by tracker
+	details map[string]*ticketDetail // by key, as the page asked
+	page    ticketsPage
 }
 
 // ticketList is what a tracker last said of the tickets assigned to you.
@@ -48,17 +50,29 @@ type ticketRow struct {
 func (x *ticketsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "tickets"} }
 
 func (x *ticketsPlugin) Activate(_ context.Context, h plugin.Host) error {
-	x.h, x.lists = h, map[string]*ticketList{}
+	x.h, x.lists, x.details = h, map[string]*ticketList{}, map[string]*ticketDetail{}
 	x.add(h.Picker(x.source()))
 	has := func(registry.Args) bool { return x.any() }
+	open := func(registry.Args) bool { return x.page.open }
 	for _, c := range []registry.Command{
-		{ID: "Tickets", Title: "Your tickets from every tracker, in the omnibox", Run: func(ctx registry.Ctx, _ registry.Args) error {
-			return h.Run(ctx, "omnibox.open", registry.Args{"scope": "tickets"})
+		{ID: "Tickets", Title: "The tickets page: your tickets from every tracker; :Tickets linear for one's", Run: func(_ registry.Ctx, a registry.Args) error {
+			return x.openPage(a.String("args"))
+		}},
+		{ID: "tickets.open", Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Run: func(_ registry.Ctx, a registry.Args) error {
+			return x.openPage(a.String("tracker"))
 		}},
 		{ID: "tickets.refresh", Title: "Ask every tracker for your tickets again now", Run: func(registry.Ctx, registry.Args) error {
 			x.refreshAll()
 			return nil
 		}},
+		{ID: "tickets.plan", Title: "Plan the ticket selected on the tickets page, or continue its session", Available: open,
+			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("plan") }},
+		{ID: "tickets.work", Title: "Start work on the ticket selected on the tickets page, with no plan", Available: open,
+			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("work") }},
+		{ID: "tickets.browse", Title: "Open the ticket selected on the tickets page in its tracker, in the browser", Available: open,
+			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("browse") }},
+		{ID: "tickets.filter", Title: "Filter the tickets page's list", Available: open,
+			Run: func(registry.Ctx, registry.Args) error { x.page.focusFilter = true; return nil }},
 		{ID: "tickets.key", Title: "Set a ticket tracker's API key: {tracker}, else the first still without one", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.askKey(ctx, a.String("tracker"))
 		}},
@@ -66,9 +80,23 @@ func (x *ticketsPlugin) Activate(_ context.Context, h plugin.Host) error {
 			return x.askKey(ctx, strings.TrimSpace(a.String("args")))
 		}},
 	} {
-		c.Source, c.Available = "builtin:tickets", has
+		c.Source = "builtin:tickets"
+		if c.Available == nil {
+			c.Available = has
+		}
 		x.add(h.Command(c))
 	}
+	for _, k := range []registry.Keymap{
+		{Keys: "<CR>", Command: "tickets.plan", Desc: "Plan, or continue"},
+		{Keys: "w", Command: "tickets.work", Desc: "Work, with no plan"},
+		{Keys: "o", Command: "tickets.browse", Desc: "Open in the browser"},
+		{Keys: "r", Command: "tickets.refresh", Desc: "Refresh"},
+		{Keys: "/", Command: "tickets.filter", Desc: "Filter"},
+	} {
+		k.Mode = TicketsKeyMode
+		x.add(h.Keymap(k))
+	}
+	x.add(h.View(OverlayPrefix+"tickets", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "tickets", Fn: x.pageView} })))
 	x.add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker moves it into progress"}, func(_ registry.Ctx, ev *SessionStart) (registry.Verdict, error) {
 		x.started(*ev)
 		return registry.Verdict{}, nil
@@ -187,6 +215,16 @@ func (x *ticketsPlugin) refreshAll() {
 		x.stale(tr.Name)
 		x.fresh(tr)
 	}
+}
+
+// listAt is when a tracker last answered; zero if it hasn't.
+func (x *ticketsPlugin) listAt(name string) time.Time {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if l := x.lists[name]; l != nil && l.answered {
+		return l.at
+	}
+	return time.Time{}
 }
 
 // list is a tracker's tickets as last told, and why there are none.

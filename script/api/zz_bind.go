@@ -370,6 +370,15 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Secret{a: a}
+		vm.Bind("secret", map[string]script.GoFunc{
+			"has": func(c *script.Args) ([]any, error) {
+				v, err := x.Has(c.String(0))
+				return []any{v}, err
+			},
+		})
+	}
+	{
 		x := Session{a: a}
 		vm.Bind("session", map[string]script.GoFunc{
 			"kind": func(c *script.Args) ([]any, error) {

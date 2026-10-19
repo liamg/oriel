@@ -651,6 +651,12 @@ func (s *settingsPlugin) show(arg string) {
 			return
 		}
 	}
+	for _, sec := range registry.SettingsSections(s.h) {
+		if sec.Name == arg {
+			s.section, s.query = arg, ""
+			return
+		}
+	}
 	s.query = arg
 }
 
@@ -754,10 +760,21 @@ func (s *settingsPlugin) build(c *ui.Ctx) {
 			sections[sectionOf(sp)]++
 		}
 	}
+	own := map[string]registry.SettingsSection{}
+	for _, sec := range registry.SettingsSections(s.h) {
+		own[sec.Name] = sec
+		n := 0
+		if sec.Count != nil {
+			registry.Call(func() error { n = sec.Count(); return nil })
+		}
+		sections[sec.Name] += n
+	}
 	names := slices.Sorted(maps.Keys(sections))
 	if s.section == "" && len(names) > 0 {
 		s.section = names[0]
 	}
+	sec, isOwn := own[s.section]
+	isOwn = isOwn && s.query == ""
 	var rows []registry.OptionSpec
 	for _, sp := range specs {
 		if s.query != "" && s.matches(sp, at) || s.query == "" && sectionOf(sp) == s.section {
@@ -798,10 +815,13 @@ func (s *settingsPlugin) build(c *ui.Ctx) {
 				c.Row("title", ui.Style{W: ui.Flex(1), H: ui.Px(36), Cross: ui.Center, Gap: 12}, func(c *ui.Ctx) {
 					c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 18, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-					if s.query == "" && widget.Button(c, "resetsec", "Reset section", widget.ButtonOpts{Ghost: true, Help: "shell/settings#reset"}) {
+					if s.query == "" && !isOwn && widget.Button(c, "resetsec", "Reset section", widget.ButtonOpts{Ghost: true, Help: "shell/settings#reset"}) {
 						s.fail(s.resetWhere(func(sp registry.OptionSpec) bool { return sectionOf(sp) == s.section }, s.scope))
 					}
 				})
+				if isOwn {
+					c.Column("own", ui.Style{W: ui.Flex(1), Gap: 4}, sec.Build)
+				}
 				for _, sp := range rows {
 					s.row(c, th, sp, at)
 				}

@@ -449,3 +449,134 @@ func calledTimes(list []string, s string) int {
 	}
 	return n
 }
+
+// page.md → The selected ticket: "Plan" opens the launcher with the ticket's card, and Start gives the agent its
+// context; a ticket with a session shows "Continue · <name>" in place of Plan, which brings that session to the front.
+func TestTicketsPagePlanAndContinue(t *testing.T) {
+	s, lw, _, _ := ticketScene(t)
+	s.run("tickets.open", registry.Args{"tracker": "linear"})
+	s.until(t, "the tickets", func() bool { return strings.Contains(s.frameText(), "ENG-2231") })
+	s.clickText(t, "Search API returns stale results after a reindex")
+	s.click(centre(s.within("Linear tickets page", "Plan").Bounds))
+	s.frame()
+	s.until(t, "the card", func() bool { return strings.Contains(s.frameText(), "linked PR #4398") })
+	for _, want := range []string{"NEW SESSION", "from ticket", "ENG-2231", "Start Plan"} {
+		if !strings.Contains(s.frameText(), want) {
+			t.Errorf("the launcher lacks %q:\n%s", want, s.frameText())
+		}
+	}
+	s.run("session.launch", nil)
+	sent := lw.fake.WaitStarted(t).WaitSent(t)
+	if !strings.Contains(sent.Text, "Linear ticket ENG-2231: Search API returns stale results after a reindex") {
+		t.Errorf("the agent wasn't given the ticket:\n%s", sent.Text)
+	}
+	st := waitState(t, s.store, "the session in front", func(st core.State) bool {
+		se, ok := st.Session(st.Focus)
+		return ok && se.Snapshot().Ticket == "ENG-2231"
+	})
+	se, _ := st.Session(st.Focus)
+	other := startTicketSession(t, s, lw, "Something else.", "")
+
+	sessions := len(s.store.State().Sessions)
+	s.run("Tickets", registry.Args{"args": "linear"})
+	label := continueLabel(se)
+	s.until(t, "Continue", func() bool { return strings.Contains(s.frameText(), label) })
+	s.clickText(t, "Search API returns stale results after a reindex")
+	s.click(centre(s.within("Linear tickets page", label).Bounds))
+	s.frame()
+	waitState(t, s.store, "the ticket's session in front", func(st core.State) bool { return st.Focus == se.ID() && st.Focus != other.ID })
+	if n := len(s.store.State().Sessions); n != sessions {
+		t.Errorf("%d sessions, %d before", n, sessions)
+	}
+	if s.tickets().page.open {
+		t.Error("the page stayed open over the session")
+	}
+}
+
+// AGENTS.md → "Any closable surface gets both an Escape path and a visible close": the tickets page closes with
+// Escape and its ✕, opened alone, over Settings and over the omnibox.
+func TestTicketsPageCloses(t *testing.T) {
+	s, _, _, _ := ticketScene(t)
+	x := s.tickets()
+	for _, over := range []string{"", "Settings", "omnibox"} {
+		for _, how := range []string{"Esc", "✕"} {
+			switch over {
+			case "Settings":
+				s.run("Settings", nil)
+			case "omnibox":
+				s.run("omnibox.open", nil)
+			}
+			s.frame()
+			s.run("tickets.open", nil)
+			s.until(t, "the page", func() bool { return strings.Contains(s.frameText(), "OPS-7") })
+			close := func() {
+				if how == "Esc" {
+					s.typeKeys("Esc")
+				} else {
+					s.click(centre(s.within("Tickets page", "✕").Bounds))
+				}
+				s.frame()
+			}
+			close()
+			if over == "omnibox" {
+				// The omnibox is over the page: it goes first, then the page.
+				if s.omni().open || !x.page.open {
+					t.Errorf("%s over the omnibox: omnibox open %v, page open %v", how, s.omni().open, x.page.open)
+				}
+				close()
+			}
+			if x.page.open {
+				t.Errorf("opened over %q, %s didn't close it", over, how)
+				x.page.open = false
+			}
+		}
+	}
+}
+
+// page.md → Opening it: with no tracker the page is "Tickets", every tracker's beside each other in one order; with
+// one it's that tracker's alone. The filter matches key, title and project.
+func TestTicketsPageEveryTracker(t *testing.T) {
+	s, _, _, _ := ticketScene(t)
+	s.run("tickets.open", nil)
+	s.until(t, "both trackers' tickets", func() bool {
+		text := s.frameText()
+		return strings.Contains(text, "OPS-12") && strings.Contains(text, "ENG-2219")
+	})
+	text := strings.ReplaceAll(s.frameText(), "\n", " ")
+	if !strings.Contains(text, "TICKETS") || strings.Contains(text, "LINEAR TICKETS") || !strings.Contains(text, "6 assigned") {
+		t.Errorf("the page's head:\n%s", text)
+	}
+	order := []string{"OPS-7", "ENG-2231", "ENG-2240", "ENG-2219", "OPS-12", "ENG-2252"}
+	at := -1
+	for _, want := range order {
+		i := strings.Index(text, want)
+		if i < at {
+			t.Errorf("%q isn't in order:\n%s", want, text)
+		}
+		at = i
+	}
+	s.keyCommand(t, "/")
+	for _, r := range "platform" {
+		s.typeKeys(string(r))
+	}
+	text = s.frameText()
+	if !strings.Contains(text, "OPS-7") || !strings.Contains(text, "OPS-12") || strings.Contains(text, "ENG-2231") {
+		t.Errorf("filtered by project:\n%s", text)
+	}
+	s.typeKeys("Esc")
+	s.run("tickets.open", registry.Args{"tracker": "jira"})
+	s.frame()
+	text = s.frameText()
+	if !strings.Contains(text, "JIRA TICKETS") || strings.Contains(text, "ENG-2231") || !strings.Contains(text, "OPS-7") {
+		t.Errorf("Jira's alone:\n%s", text)
+	}
+}
+
+func (s *errScene) tickets() *ticketsPlugin {
+	for _, e := range s.plugins {
+		if x, ok := e.(*ticketsPlugin); ok {
+			return x
+		}
+	}
+	return nil
+}

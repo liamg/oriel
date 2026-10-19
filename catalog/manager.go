@@ -14,6 +14,7 @@ import (
 // Badges say who looked at a plugin's code (catalog.md, Badges). Consent is the same whatever the badge.
 const (
 	BadgeBuiltin    = "builtin"
+	BadgeBundled    = "bundled" // shipped in oriel's binary, as a plugin of its own
 	BadgeReviewed   = "reviewed"
 	BadgeTrusted    = "trusted"
 	BadgeUnverified = "unverified"

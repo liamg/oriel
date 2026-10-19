@@ -64,10 +64,11 @@ type Process struct {
 
 // Spawn starts name, the plugin's own binary (relative to its directory) or a program its exec grant names.
 func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error) {
-	path, err := ps.program(p, name)
+	path, pre, err := ps.program(p, name)
 	if err != nil {
 		return nil, err
 	}
+	args := append(pre, o.Args...)
 	var cmd *exec.Cmd
 	tmp := ""
 	var data []string
@@ -78,7 +79,7 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 		data = []string{EnvData + "=" + p.Data}
 	}
 	if p.Trusted() {
-		cmd = exec.Command(path, o.Args...)
+		cmd = exec.Command(path, args...)
 		cmd.Env = append(append(os.Environ(), data...), o.Env...)
 	} else {
 		if tmp, err = os.MkdirTemp("", "oriel-plugin-"); err != nil {
@@ -89,7 +90,7 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 		if p.Data != "" {
 			prof.Write = append(prof.Write, RealPath(p.Data))
 		}
-		if cmd, err = ossandbox.Command(prof, path, o.Args...); err != nil {
+		if cmd, err = ossandbox.Command(prof, path, args...); err != nil {
 			os.RemoveAll(tmp)
 			return nil, fmt.Errorf("%s: can't sandbox its process: %w", p.ID, err)
 		}
@@ -173,11 +174,20 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 	return pr, nil
 }
 
-// program is the path of what p asked to run: its own file needs no grant, anything else its exec grant.
-func (ps *Processes) program(p Caller, name string) (string, error) {
+// program is the path of what p asked to run, and the arguments it goes before p's: its own file or one of its
+// Programs needs no grant, anything else its exec grant.
+func (ps *Processes) program(p Caller, name string) (string, []string, error) {
 	if name == "" {
-		return "", errors.New("no program")
+		return "", nil, errors.New("no program")
 	}
+	if argv, ok := p.Programs[name]; ok && len(argv) > 0 {
+		return argv[0], slices.Clone(argv[1:]), nil
+	}
+	path, err := ps.file(p, name)
+	return path, nil, err
+}
+
+func (ps *Processes) file(p Caller, name string) (string, error) {
 	var path string
 	if own := p.Path(name); p.Dir != "" && !filepath.IsAbs(Expand(name)) && fileExists(own) {
 		if p.Own(own) {

@@ -16,7 +16,7 @@ import (
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/cmd/oriel/dev"
-	"github.com/liamg/oriel/integ/slack"
+	"github.com/liamg/oriel/integ"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/render/gio"
@@ -49,7 +49,7 @@ func runApp(args []string) {
 		os.Exit(2)
 	}
 	stopProfile := cpuProfile(cfg.CPUProfile)
-	cfg.Plugins = append(cfg.Plugins, app.ScriptPlugin(slack.Files))
+	cfg.Bundled = integ.Bundled()
 	cfg.Plugins = append(cfg.Plugins, plugin.Native()...)
 	appUpdates(&cfg)
 	home := orielHome()
@@ -123,7 +123,8 @@ func cpuProfile(path string) func() {
 }
 
 // subcommands are the first arguments that aren't files to open.
-var subcommands = map[string]bool{"version": true, "dev": true, "hook": true, "build": true, "update": true, "plugin": true}
+var subcommands = map[string]bool{"version": true, "dev": true, "hook": true, "build": true, "update": true, "plugin": true,
+	"plugin-process": true}
 
 func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
@@ -153,6 +154,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "hook":
 		return runHook(args[1:], os.Stdin, stdout, stderr)
+	case "plugin-process":
+		if err := runPluginProcess(args[1:], os.Stdin, stdout); err != nil {
+			fmt.Fprintln(stderr, "oriel plugin-process:", err)
+			return 1
+		}
+		return 0
 	case "dev":
 		if err := runDev(args[1:], stdout); err != nil {
 			fmt.Fprintln(stderr, "oriel dev:", err)

@@ -11,10 +11,12 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/integ/linear"
 	"github.com/liamg/oriel/integ/linear/lineartest"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/hosttest"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/script"
 )
 
@@ -38,10 +40,19 @@ func linearConfig(t *testing.T, l *lineartest.Linear) (func(*Config), *plugin.Se
 	return func(cfg *Config) { cfg.Net, cfg.Secrets = l.Client(), secrets }, secrets
 }
 
-// loadLinear runs the plugin's init.lua in a VM of its own, as an installed plugin's.
+// loadLinear runs the plugin's init.lua in a VM of its own, as an installed plugin's, after its [contributes].
 func loadLinear(t *testing.T, s *errScene) *script.VM {
 	t.Helper()
 	p := linearPlugin(t)
+	m, err := plugin.LoadManifest(p.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := plugin.Contribute(s.reg, p.Dir, m.ID, m.Contributes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(d.Dispose)
 	vm := s.pluginVM(t, p)
 	src, err := os.ReadFile(filepath.Join(p.Dir, "init.lua"))
 	if err != nil {
@@ -308,4 +319,174 @@ func TestLinearTicketsForTheAssistant(t *testing.T) {
 			t.Errorf("my_tickets lacks %q: %s", want, out)
 		}
 	}
+}
+
+// bundledLinear is the app on workDir (the start view if "") with the Linear plugin bundled as oriel ships it
+// (linear.Plugin), its process built for the test as Self in place of oriel's own `plugin-process linear`.
+func bundledLinear(t *testing.T, l *lineartest.Linear, workDir string) (*errScene, *plugin.SecretFile) {
+	t.Helper()
+	dir := hosttest.Install(t, "../integ/linear/plugin", "../integ/linear/cmd/oriel-linear")
+	change, secrets := linearConfig(t, l)
+	s := newSceneWith(t, "", workDir, mockupSize, func(cfg *Config) {
+		change(cfg)
+		cfg.Bundled = []plugin.Bundled{linear.Plugin}
+		cfg.Self = []string{filepath.Join(dir, "bin", "oriel-linear")}
+	})
+	s.frame()
+	return s, secrets
+}
+
+// PLAN (tickets page) → Dormant until keyed: the bundled Linear plugin shows no rail or home entry until its key is
+// set in Settings › Secrets, where the field shows dots and then "set", never the value. Cleared, they go again.
+func TestLinearDormantUntilKeyed(t *testing.T) {
+	l := lineartest.New(t)
+	s, secrets := bundledLinear(t, l, "")
+	if bp := s.catalog().bundled["liamg/linear"]; bp == nil || bp.state != "loaded" {
+		t.Fatalf("the bundled plugin: %+v", bp)
+	}
+	if n := s.countAccess("Linear tickets"); n != 0 {
+		t.Fatalf("%d Linear entries before the key", n)
+	}
+
+	s.run("Settings", registry.Args{"args": "secrets"})
+	s.frame()
+	if n := s.countAccess("Linear tickets"); n != 0 {
+		t.Fatalf("%d Linear entries in the rail before the key", n)
+	}
+	for _, want := range []string{"LINEAR_TOKEN", "liamg/linear", "Your Linear API key, sent only to api.linear.app", "sent only to api.linear.app"} {
+		if !strings.Contains(s.frameText(), want) {
+			t.Errorf("Settings › Secrets lacks %q:\n%s", want, s.frameText())
+		}
+	}
+	s.typeKeysIn(t, lineartest.Key, "paste it here")
+	if strings.Contains(s.fullText(), lineartest.Key) || !strings.Contains(s.frameText(), strings.Repeat("•", len(lineartest.Key))) {
+		t.Errorf("the key shows as typed:\n%s", s.frameText())
+	}
+	s.clickAccess(t, "Save")
+	if v, ok := secrets.Secret("LINEAR_TOKEN"); v != lineartest.Key || !ok {
+		t.Fatalf("the secret kept: %q, %v", v, ok)
+	}
+	text := s.frameText()
+	if strings.Contains(s.fullText(), lineartest.Key) || !strings.Contains(text, "SET") || !strings.Contains(text, "••••••••") {
+		t.Errorf("the set secret:\n%s", text)
+	}
+	s.railEntry(t, "Linear tickets")
+	s.lint("Settings › Secrets")
+	s.typeKeys("Esc")
+	s.frame()
+	if s.startCard("Linear tickets") == nil {
+		t.Errorf("no Linear entry on the start view once keyed:\n%s", s.frameText())
+	}
+
+	s.run("Settings", registry.Args{"args": "secrets"})
+	s.frame()
+	s.clickAccess(t, "Clear")
+	if _, ok := secrets.Secret("LINEAR_TOKEN"); !ok {
+		t.Fatal("Clear cleared it without asking")
+	}
+	s.clickAccess(t, "Sure?")
+	if _, ok := secrets.Secret("LINEAR_TOKEN"); ok {
+		t.Fatal("the secret outlived Clear")
+	}
+	if n := s.countAccess("Linear tickets"); n != 0 {
+		t.Errorf("%d Linear entries in the rail once cleared", n)
+	}
+	s.typeKeys("Esc")
+	s.frame()
+	if n := s.countAccess("Linear tickets"); n != 0 {
+		t.Errorf("%d Linear entries once cleared", n)
+	}
+}
+
+// PLAN (tickets page): the rail's Linear entry opens the page on Linear's tickets, in crit's order with their state,
+// priority, project, PR and blocked; selecting one asks Linear for the rest of it.
+func TestLinearTicketsPage(t *testing.T) {
+	l := lineartest.New(t)
+	s, secrets := bundledLinear(t, l, t.TempDir())
+	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	s.frame()
+	s.click(centre(s.railEntry(t, "Linear tickets").Bounds))
+	s.until(t, "the tickets", func() bool { return strings.Contains(s.frameText(), "ENG-2252") })
+	text := strings.ReplaceAll(s.frameText(), "\n", " ")
+	order := []string{"ENG-2231", "ENG-2240", "ENG-2219", "ENG-2252"}
+	at := -1
+	for _, want := range order {
+		i := strings.Index(text, want)
+		if i < at {
+			t.Errorf("%q isn't in crit's order:\n%s", want, text)
+		}
+		at = i
+	}
+	for _, want := range []string{"LINEAR TICKETS", "4 assigned", "TODO", "IN PROGRESS", "BACKLOG", "high · Usage · PR #4398", "Pricing API", "blocked",
+		"Search API returns stale results after a reindex"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the page lacks %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "ENG-2260") {
+		t.Error("the duplicate is listed")
+	}
+	s.clickText(t, "Prime the result cache after a reindex")
+	s.until(t, "the ticket's detail", func() bool {
+		return strings.Contains(s.frameText(), "Evict the org's cached results when its index is rebuilt")
+	})
+	s.lint("the tickets page")
+	s.golden("tickets-page")
+}
+
+// railEntry is the rail's entry labelled label: the narrow sidebar's icon.
+func (s *errScene) railEntry(t *testing.T, label string) *render.AccessNode {
+	t.Helper()
+	var found *render.AccessNode
+	var find func(n *render.AccessNode)
+	find = func(n *render.AccessNode) {
+		if n.Name == label && found == nil && n.Bounds.Max.X > 0 && n.Bounds.Min.X < 80 {
+			found = n
+		}
+		for _, k := range n.Children {
+			find(k)
+		}
+	}
+	find(s.ui.AccessTree())
+	if found == nil {
+		t.Fatalf("no rail entry %q:\n%s", label, s.frameText())
+	}
+	return found
+}
+
+// catalog.md → Bundled plugins: the Plugins page lists the bundled Linear as BUNDLED; Disable turns it off (its
+// tracker goes) and Enable back on; installing the same id from [plugins] replaces it while it's listed.
+func TestBundledPluginOffAndReplaced(t *testing.T) {
+	l := lineartest.New(t)
+	s, _ := bundledLinear(t, l, "")
+	x := s.catalog()
+	tracker := func() bool { _, ok := registry.TrackerFor(s.reg, "ENG-1"); return ok }
+	if !tracker() {
+		t.Fatal("the bundled tracker isn't registered")
+	}
+	s.run("plugins.open", nil)
+	s.frame()
+	s.typeInto(t, "Filter plugins", "linear")
+	s.frame()
+	if text := s.frameText(); !strings.Contains(text, "BUNDLED") || !strings.Contains(text, "liamg/linear · loaded") {
+		t.Errorf("the Plugins page:\n%s", text)
+	}
+	s.clickText(t, "liamg/linear · loaded")
+	s.clickAccess(t, "Disable")
+	s.until(t, "it off", func() bool { return x.bundled["liamg/linear"].state == "disabled" })
+	if tracker() {
+		t.Error("the tracker outlived Disable")
+	}
+	s.clickAccess(t, "Enable")
+	s.until(t, "it on", func() bool { return x.bundled["liamg/linear"].state == "loaded" })
+	if !tracker() {
+		t.Error("Enable didn't bring the tracker back")
+	}
+
+	s.run("plugins.install", registry.Args{"id": "liamg/linear", "path": filepath.Join("..", "integ", "linear", "plugin")})
+	s.syncPlugins(t)
+	s.until(t, "it replaced", func() bool { return x.bundled["liamg/linear"].state == "replaced" })
+	s.run("plugins.uninstall", registry.Args{"id": "liamg/linear"})
+	s.syncPlugins(t)
+	s.until(t, "it back", func() bool { return x.bundled["liamg/linear"].state == "loaded" })
 }
