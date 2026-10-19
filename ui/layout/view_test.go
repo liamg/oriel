@@ -123,6 +123,7 @@ func TestDragToEveryTarget(t *testing.T) {
 				fmt.Fprintf(&b, "lit %s\n", strings.TrimPrefix(snapshot.List(&render.List{Ops: []render.Op{op}}), "rect "))
 			}
 		}
+		fmt.Fprintf(&b, "label %q\n", h.dropLabel())
 		h.held = false
 		h.ptr(render.PointerRelease, to)
 		b.WriteString(h.r.Dump())
@@ -437,4 +438,132 @@ func (h *harness) tabShown(v ViewRef) bool {
 		}
 	}
 	return false
+}
+
+// A view split off main and dragged back into the middle of another leaf joins that leaf's tabs, from either side.
+func TestDragSplitIntoTabs(t *testing.T) {
+	for _, side := range []Side{SideLeft, SideRight, SideUp, SideDown} {
+		t.Run(string(side), func(t *testing.T) {
+			h := newHarness(t)
+			if err := h.r.Move(term, Split, Opts{Side: side, Beside: &code}); err != nil {
+				t.Fatal(err)
+			}
+			h.frame()
+			h.frame()
+			from := h.tabAt(term)
+			rc := h.panes.Rects(h.u)[h.r.leafIn(h.r.Main, code)]
+			to := render.Point{X: rc.Min.X + rc.Dx()/2, Y: rc.Min.Y + rc.Dy()/2}
+			h.held = true
+			h.ptr(render.PointerMove, from)
+			h.ptr(render.PointerPress, from)
+			h.ptr(render.PointerMove, render.Point{X: from.X + 10, Y: from.Y - 10})
+			h.ptr(render.PointerMove, to)
+			h.ptr(render.PointerMove, to)
+			h.held = false
+			h.ptr(render.PointerRelease, to)
+			h.frame()
+			if w := h.r.Find(term); w == nil || w.Leaf != h.r.Main || !slices.Contains(w.Leaf.Tabs, code) {
+				t.Errorf("the terminal didn't join the editor's tabs:\n%s", h.r.Dump())
+			}
+		})
+	}
+}
+
+// Closing a split's only tab by its ✕ takes the split away, from either side.
+func TestCloseSplitByItsX(t *testing.T) {
+	for _, side := range []Side{SideLeft, SideRight} {
+		t.Run(string(side), func(t *testing.T) {
+			h := newHarness(t)
+			if err := h.r.Move(term, Split, Opts{Side: side, Beside: &code}); err != nil {
+				t.Fatal(err)
+			}
+			h.frame()
+			h.frame()
+			x := h.access("Close " + term.String())
+			if x == nil {
+				t.Fatal("no ✕ on the terminal's tab")
+			}
+			at := render.Point{X: (x.Bounds.Min.X + x.Bounds.Max.X) / 2, Y: (x.Bounds.Min.Y + x.Bounds.Max.Y) / 2}
+			h.ptr(render.PointerMove, at)
+			h.ptr(render.PointerPress, at)
+			h.ptr(render.PointerRelease, at)
+			h.frame()
+			if h.r.Find(term) != nil || !h.r.Main.leaf() {
+				t.Errorf("the split didn't close:\n%s", h.r.Dump())
+			}
+		})
+	}
+}
+
+func (h *harness) access(name string) *render.AccessNode {
+	var find func(n *render.AccessNode) *render.AccessNode
+	find = func(n *render.AccessNode) *render.AccessNode {
+		if n == nil || n.Name == name {
+			return n
+		}
+		for _, k := range n.Children {
+			if f := find(k); f != nil {
+				return f
+			}
+		}
+		return nil
+	}
+	return find(h.u.AccessTree())
+}
+
+// dropLabel is the label naming what a drop does, from the latest frame.
+func (h *harness) dropLabel() string {
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Font.Weight == typeset.SemiBold && op.Run.Font.Size == 12 {
+			return op.Run.Text
+		}
+	}
+	return ""
+}
+
+// A tab dragged into the middle of a group lights its tab strip, with a slot for the new tab after the last.
+func TestDragIntoTabsShowsTheSlot(t *testing.T) {
+	h := newHarness(t)
+	main := h.panes.Rects(h.u)[h.r.Main]
+	from := h.tabAt(term)
+	h.held = true
+	h.ptr(render.PointerMove, from)
+	h.ptr(render.PointerPress, from)
+	h.ptr(render.PointerMove, render.Point{X: from.X + 10, Y: from.Y - 10})
+	to := render.Point{X: main.Min.X + main.Dx()/2, Y: main.Min.Y + main.Dy()/2}
+	h.ptr(render.PointerMove, to)
+	h.ptr(render.PointerMove, to)
+	if got := h.dropLabel(); got != "Tab with editor#round.go" {
+		t.Errorf("label %q", got)
+	}
+	bg := h.u.Theme().C(theme.BgBase)
+	snapshot.GoldenPNG(t, "testdata/drag-tab.png", raster.Render(h.list, screen, 1, bg), 0.02, 0.001)
+}
+
+// Over a floating pane, a drop floats: the target is only outlined, dashed, with no glow.
+func TestDragToFloatIsDashed(t *testing.T) {
+	h := newHarness(t)
+	if err := h.r.Move(probs, Floating, Opts{Rect: render.XYWH(400, 150, 500, 300)}); err != nil {
+		t.Fatal(err)
+	}
+	h.frame()
+	h.frame()
+	from := h.tabAt(test)
+	h.held = true
+	h.ptr(render.PointerMove, from)
+	h.ptr(render.PointerPress, from)
+	h.ptr(render.PointerMove, render.Point{X: from.X + 10, Y: from.Y - 10})
+	to := render.Point{X: 650, Y: 300}
+	h.ptr(render.PointerMove, to)
+	h.ptr(render.PointerMove, to)
+	if got := h.dropLabel(); got != "Float" {
+		t.Errorf("label %q", got)
+	}
+	bg := h.u.Theme().C(theme.BgBase)
+	snapshot.GoldenPNG(t, "testdata/drag-float.png", raster.Render(h.list, screen, 1, bg), 0.02, 0.001)
+	h.held = false
+	h.ptr(render.PointerRelease, to)
+	if w := h.r.Find(test); w == nil || w.Placement != Floating {
+		t.Errorf("the drop didn't float:\n%s", h.r.Dump())
+	}
 }

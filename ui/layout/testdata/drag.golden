@@ -1,6 +1,7 @@
 === main, left edge at 345,300
 lit 250,0 475x600 fill #241f0d radius 6 stroke 1.5 #ffd23f
 
+label "Split left"
 main
   split h [1 1]
     leaf [*terminal#1]
@@ -11,6 +12,7 @@ focus terminal#1
 === main, right edge at 1105,300
 lit 725,0 475x600 fill #241f0d radius 6 stroke 1.5 #ffd23f
 
+label "Split right"
 main
   split h [1 1]
     leaf [*editor#round.go editor#round_test.go]
@@ -21,6 +23,7 @@ focus terminal#1
 === main, top edge at 725,60
 lit 250,0 950x300 fill #241f0d radius 6 stroke 1.5 #ffd23f
 
+label "Split above"
 main
   split v [1 1]
     leaf [*terminal#1]
@@ -31,6 +34,7 @@ focus terminal#1
 === main, bottom edge at 725,540
 lit 250,300 950x300 fill #241f0d radius 6 stroke 1.5 #ffd23f
 
+label "Split below"
 main
   split v [1 1]
     leaf [*editor#round.go editor#round_test.go]
@@ -39,8 +43,9 @@ dock left open=true [*explorer]
 dock bottom open=true [*problems]
 focus terminal#1
 === main, middle at 725,300
-lit 250,0 950x600 fill #241f0d radius 6 stroke 1.5 #ffd23f
+lit 250,0 950x30 radius 6 stroke 1.5 #ffd23f
 
+label "Tab with editor#round.go"
 main
   leaf [editor#round.go editor#round_test.go *terminal#1]
 dock left open=true [*explorer]
@@ -49,6 +54,7 @@ focus terminal#1
 === the left window edge at 5,300
 lit 0,0 250x800 fill #241f0d radius 6 stroke 1.5 #ffd23f
 
+label "Dock left"
 main
   leaf [*editor#round.go editor#round_test.go]
 dock left open=true [explorer *terminal#1]
@@ -57,6 +63,7 @@ focus terminal#1
 === the right window edge at 1195,300
 lit 820,0 380x800 fill #241f0d radius 6 stroke 1.5 #ffd23f
 
+label "Dock right"
 main
   leaf [*editor#round.go editor#round_test.go]
 dock left open=true [*explorer]
@@ -66,6 +73,7 @@ focus terminal#1
 === the bottom window edge at 600,795
 lit 0,600 1200x200 fill #241f0d radius 6 stroke 1.5 #ffd23f
 
+label "Dock bottom"
 main
   leaf [*editor#round.go editor#round_test.go]
 dock left open=true [*explorer]
@@ -74,6 +82,7 @@ focus terminal#1
 === the left dock at 120,300
 lit 0,0 250x800 fill #241f0d radius 6 stroke 1.5 #ffd23f
 
+label "Dock left"
 main
   leaf [*editor#round.go editor#round_test.go]
 dock left open=true [explorer *terminal#1]

@@ -387,6 +387,14 @@ func (r *Root) split(target *Node, side Side, add *Node) {
 	*target = Node{Split: axis, Kids: kids, Weights: []float32{1, 1}}
 }
 
+func (r *Root) inMain(l *Node) bool {
+	if l == r.Main {
+		return true
+	}
+	p, _ := r.parentOf(r.Main, l)
+	return p != nil
+}
+
 func (r *Root) parentOf(n, target *Node) (*Node, int) {
 	if n.leaf() {
 		return nil, -1

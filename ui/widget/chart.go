@@ -379,7 +379,7 @@ func chartPlot(c *ui.Ctx, series []ChartSeries, o ChartOpts) ChartResult {
 					tone = markFg
 				}
 				if m.Dashed {
-					f.Path(dashed([]render.Point{{X: x, Y: gm.r.Min.Y}, {X: x, Y: gm.r.Max.Y}}, 3*k, 3*k), render.Style{Stroke: tone, Width: 1})
+					f.Path(render.Dashed([]render.Point{{X: x, Y: gm.r.Min.Y}, {X: x, Y: gm.r.Max.Y}}, 3*k, 3*k), render.Style{Stroke: tone, Width: 1})
 				} else {
 					f.Rect(render.XYWH(x-.5, gm.r.Min.Y, 1, gm.r.Dy()), render.Style{Fill: tone})
 				}
@@ -517,7 +517,7 @@ func drawSeries(f render.Frame, g chartGeom, series []ChartSeries, o ChartOpts, 
 			flush := func() {
 				if len(run) > 1 {
 					if s.Dashed {
-						f.Path(dashed(run, 4, 3), render.Style{Stroke: tone, Width: 1.5})
+						f.Path(render.Dashed(run, 4, 3), render.Style{Stroke: tone, Width: 1.5})
 					} else {
 						f.Path(polyline(run), render.Style{Stroke: tone, Width: 1.5})
 					}
@@ -543,35 +543,6 @@ func polyline(pts []render.Point) *render.Path {
 			p.MoveTo(pt)
 		} else {
 			p.LineTo(pt)
-		}
-	}
-	return &p
-}
-
-// dashed is the polyline through pts as dashes on and off long.
-func dashed(pts []render.Point, on, off float32) *render.Path {
-	var p render.Path
-	draw, left := true, on
-	for i := 1; i < len(pts); i++ {
-		a, b := pts[i-1], pts[i]
-		l := float32(math.Hypot(float64(b.X-a.X), float64(b.Y-a.Y)))
-		at := float32(0)
-		for at < l {
-			step := min(left, l-at)
-			t0, t1 := at/l, (at+step)/l
-			if draw {
-				p.MoveTo(render.Point{X: a.X + (b.X-a.X)*t0, Y: a.Y + (b.Y-a.Y)*t0})
-				p.LineTo(render.Point{X: a.X + (b.X-a.X)*t1, Y: a.Y + (b.Y-a.Y)*t1})
-			}
-			at += step
-			left -= step
-			if left <= 0 {
-				draw = !draw
-				left = on
-				if !draw {
-					left = off
-				}
-			}
 		}
 	}
 	return &p
