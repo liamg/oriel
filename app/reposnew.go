@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
@@ -21,8 +22,12 @@ import (
 
 var repoNewModes = []string{"Existing directory", "Clone from URL"}
 
-// probeWait is how long a field rests before what it names is checked.
-const probeWait = 250 * time.Millisecond
+// probeWait is how long a field rests before what it names is checked; probeShow, how long a check runs before it
+// says so.
+const (
+	probeWait = 250 * time.Millisecond
+	probeShow = 150 * time.Millisecond
+)
 
 type addRepo struct {
 	mode                    int // into repoNewModes
@@ -35,11 +40,13 @@ type addRepo struct {
 	keyAt    time.Time // when
 	probed   string    // the key last checked
 	probing  bool
+	probeAt  time.Time // when the check running started
 	check    host.RepoCheck
 	target   host.CloneTarget
 	probeErr string
 
 	busy     bool
+	since    time.Time // when the add started
 	progress string
 	cancel   context.CancelFunc
 	err      string
@@ -126,6 +133,9 @@ func (f *addRepo) probeKey() string {
 // probe checks what the fields name, once they've rested.
 func (x *reposPlugin) probe(c *ui.Ctx, f *addRepo) {
 	now := c.Now()
+	if n := host.CloneName(f.url); f.mode == 1 && f.name == f.urlName && n != f.urlName {
+		f.name, f.urlName = n, n
+	}
 	if k := f.probeKey(); k != f.key {
 		f.key, f.keyAt = k, now
 	}
@@ -143,7 +153,7 @@ func (x *reposPlugin) probe(c *ui.Ctx, f *addRepo) {
 		f.probed, f.check, f.target, f.probeErr = key, host.RepoCheck{}, host.CloneTarget{}, ""
 		return
 	}
-	f.probing = true
+	f.probing, f.probeAt = true, now
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -183,17 +193,30 @@ func (x *reposPlugin) dialogBody(c *ui.Ctx, f *addRepo) {
 	}
 	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+		phase, frac, parsed := gitx.ParseProgress(f.progress)
 		switch {
 		case f.err != "":
 			c.Text("err", truncate(firstLine(f.err), 80), monoFont(11, th.C(theme.Error)))
-		case f.busy && f.progress != "":
-			c.Text("progress", truncate(f.progress, 80), monoFont(10.5, th.C(theme.FgFaint)))
+		case f.busy && parsed:
+			widget.ProgressBar(c, "progress", widget.ProgressOpts{Frac: frac, Height: 6, Label: phase, Help: "agent/repos#add"})
+		case f.busy && f.mode == 1:
+			widget.Busy(c, "progress", widget.LoadState{Phase: widget.Pending, Since: f.since}, widget.BusyOpts{Label: "Cloning", Help: "agent/repos#add"})
 		case f.busy:
-			c.Text("progress", "working…", monoFont(10.5, th.C(theme.FgFaint)))
+			widget.Busy(c, "progress", widget.LoadState{Phase: widget.Pending, Since: f.since}, widget.BusyOpts{Label: "Adding", Help: "agent/repos#add"})
+		case f.probing && c.Now().Sub(f.probeAt) >= probeShow:
+			label := "Checking the path"
+			if f.mode == 1 {
+				label = "Checking the URL"
+			}
+			widget.Busy(c, "checking", widget.LoadState{Phase: widget.Pending, Since: f.probeAt}, widget.BusyOpts{Label: label, Help: "agent/repos#add"})
+		case f.probing:
+			c.WakeAt(f.probeAt.Add(probeShow))
 		case f.mode == 1:
 			note(c, "creds", "clones with this machine's git credentials")
 		}
-		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		if !f.busy || !parsed {
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		}
 		cancel := "Cancel"
 		if f.busy && f.mode == 1 {
 			cancel = "Stop"
@@ -206,11 +229,15 @@ func (x *reposPlugin) dialogBody(c *ui.Ctx, f *addRepo) {
 				return
 			}
 		}
-		label := "Add"
+		label, busyLabel := "Add", "Adding"
 		if f.mode == 1 {
-			label = "Clone"
+			label, busyLabel = "Clone", "Cloning"
 		}
-		if widget.Button(c, "submit", label, widget.ButtonOpts{Primary: true, Key: "⌘↵", Disabled: f.busy || f.blocked() != "", Help: "agent/repos#add"}) {
+		if f.probing && !f.busy {
+			busyLabel = "Checking"
+		}
+		if widget.Button(c, "submit", label, widget.ButtonOpts{Primary: true, Key: "⌘↵", Busy: f.busy || f.probing, BusyLabel: busyLabel,
+			Disabled: f.blocked() != "", Help: "agent/repos#add"}) {
 			x.submitDialog()
 		}
 	})
@@ -238,7 +265,7 @@ func (x *reposPlugin) dirMode(c *ui.Ctx, f *addRepo, focus bool) {
 		x.completions(c, f)
 		ok, bad := th.C(theme.OK), th.C(theme.Error)
 		switch ch := f.check; {
-		case strings.TrimSpace(f.path) == "" || f.probed != f.key:
+		case strings.TrimSpace(f.path) == "" || f.checking():
 		case ch.Error != "":
 			c.Text("check", "✗ "+ch.Error, monoFont(11, bad))
 		case ch.Known != "":
@@ -254,7 +281,7 @@ func (x *reposPlugin) dirMode(c *ui.Ctx, f *addRepo, focus bool) {
 // completions are the directories the typed path could go on to, as Open Directory offers them.
 func (x *reposPlugin) completions(c *ui.Ctx, f *addRepo) {
 	q := strings.TrimSpace(f.path)
-	if q == "" || f.probed == f.key && f.check.Error == "" {
+	if q == "" || !f.checking() && f.check.Error == "" {
 		return
 	}
 	home, _ := os.UserHomeDir()
@@ -282,9 +309,6 @@ func (x *reposPlugin) completions(c *ui.Ctx, f *addRepo) {
 // cloneMode is the Clone from URL form: the URL, the folder it goes in and its name there, and where that makes it.
 func (x *reposPlugin) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 	th := c.Theme()
-	if n := host.CloneName(f.url); f.name == f.urlName && n != f.urlName {
-		f.name, f.urlName = n, n
-	}
 	labelled := func(c *ui.Ctx, key, label string, body func(c *ui.Ctx)) {
 		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Row("l", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) { c.Text("t", label, uiFont(12.5, th.C(theme.FgMuted))) })
@@ -348,7 +372,7 @@ func (f *addRepo) parentHint() string {
 
 func (f *addRepo) cloneStatus() (string, theme.TokenID) {
 	switch {
-	case strings.TrimSpace(f.url) == "" || f.probed != f.key:
+	case strings.TrimSpace(f.url) == "" || f.checking():
 		return "", theme.FgFaint
 	case f.probeErr != "":
 		return "✗ " + f.probeErr, theme.Error
@@ -360,13 +384,22 @@ func (f *addRepo) cloneStatus() (string, theme.TokenID) {
 	return "new folder", theme.FgFaint
 }
 
+// checking reports whether what the fields name hasn't been checked yet.
+func (f *addRepo) checking() bool { return f.probing || f.probed != f.probeKey() }
+
 // blocked is why the dialog can't add what it holds yet, or "".
 func (f *addRepo) blocked() string {
+	if f.mode == 0 && strings.TrimSpace(f.path) != "" && f.checking() {
+		return "a moment: checking the path"
+	}
+	if f.mode == 1 && strings.TrimSpace(f.url) != "" && f.checking() {
+		return "a moment: checking the URL"
+	}
 	if f.mode == 0 {
 		switch {
 		case strings.TrimSpace(f.path) == "":
 			return "pick a directory"
-		case f.probed == f.key && f.check.Error != "":
+		case !f.checking() && f.check.Error != "":
 			return f.check.Error
 		}
 		return ""
@@ -374,7 +407,7 @@ func (f *addRepo) blocked() string {
 	switch {
 	case strings.TrimSpace(f.url) == "":
 		return "paste the URL"
-	case f.probed == f.key && (f.probeErr != "" || f.target.Exists && !f.target.Same):
+	case !f.checking() && (f.probeErr != "" || f.target.Exists && !f.target.Same):
 		return "pick another name"
 	}
 	return ""
@@ -391,7 +424,7 @@ func (x *reposPlugin) submitDialog() {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	f.busy, f.err, f.progress, f.cancel = true, "", "", cancel
+	f.busy, f.err, f.progress, f.cancel, f.since = true, "", "", cancel, x.h.UI().Now()
 	mode, path := f.mode, expandTilde(f.path)
 	req := host.CloneReq{URL: strings.TrimSpace(f.url), Parent: expandTilde(f.parent), Name: f.name,
 		Progress: func(line string) {

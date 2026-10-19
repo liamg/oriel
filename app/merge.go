@@ -49,8 +49,21 @@ type mergeAsk struct {
 	blockers []registry.MergeBlocker
 	deleteBr bool
 	loading  bool
+	since    time.Time // when the read started
 	err      string
 	focus    bool
+	host     registry.CodeHost
+}
+
+// state is the dialog's read as the loading widgets take it.
+func (a *mergeAsk) state() widget.LoadState {
+	switch {
+	case a.loading:
+		return widget.LoadState{Phase: widget.Pending, Since: a.since}
+	case a.err != "":
+		return widget.LoadState{Phase: widget.Failed, Err: errors.New(a.err)}
+	}
+	return widget.LoadState{Phase: widget.Ready}
 }
 
 // hard are the blockers the host would refuse the merge over.
@@ -117,8 +130,19 @@ func (x *shipPlugin) openMerge(se core.SessionState, p string) error {
 	if !s.PR.Open() {
 		return fmt.Errorf("%s has no open %s", p, h.Said().Long)
 	}
-	a := &mergeAsk{se: se, s: s, pr: *s.PR, loading: true, focus: true}
+	a := &mergeAsk{se: se, s: s, pr: *s.PR, focus: true, host: h}
 	x.merging = a
+	x.readMerge(a)
+	return nil
+}
+
+// readMerge reads, off the loop, the PR as it is now and what stands in its way.
+func (x *shipPlugin) readMerge(a *mergeAsk) {
+	se, s, h, p := a.se, a.s, a.host, a.s.Project
+	a.loading, a.err, a.since = true, "", time.Now()
+	if u := x.h.UI(); u != nil {
+		a.since = u.Now()
+	}
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
@@ -146,7 +170,6 @@ func (x *shipPlugin) openMerge(se core.SessionState, p string) error {
 		})
 		x.h.Redraw()
 	}()
-	return nil
 }
 
 // mergeRead is the PR now, the methods its repo allows, and every blocker: the host's, then the session's.
@@ -253,7 +276,7 @@ func (x *shipPlugin) confirmMerge() error {
 	if a.method < len(a.methods) {
 		o.Method = a.methods[a.method]
 	}
-	return x.step(a.se.ID, a.s.Project, "Merging…", func(ctx context.Context, _ *host.Host) error {
+	return x.step(a.se.ID, a.s.Project, "Merging", func(ctx context.Context, _ *host.Host) error {
 		return registry.Call(func() error { return h.Merge(ctx, repo, pr, o) })
 	})
 }
@@ -315,15 +338,13 @@ func (x *shipPlugin) mergeView(c *ui.Ctx) {
 }
 
 func (x *shipPlugin) mergeBody(c *ui.Ctx, a *mergeAsk, width float32) {
+	widget.Async(c, "read", a.state(), widget.AsyncOpts{Policy: widget.Gate, Label: "Reading what stands in the way",
+		Retry: func() { x.readMerge(a) }, Help: mergeHelp}, func(c *ui.Ctx) { x.mergeBlockers(c, a, width) })
+}
+
+// mergeBlockers are what stands in the way, the method and whether to delete the branch, once read.
+func (x *shipPlugin) mergeBlockers(c *ui.Ctx, a *mergeAsk, width float32) {
 	th := c.Theme()
-	switch {
-	case a.loading:
-		c.Text("loading", "Reading what stands in the way…", uiFont(12.5, th.C(theme.FgMuted)))
-		return
-	case a.err != "":
-		widget.Wrap(c, "err", a.err, width, uiFont(12.5, th.C(theme.Error)))
-		return
-	}
 	lead := th.C(theme.Fg)
 	if len(a.blockers) > 0 {
 		lead = th.C(theme.Warn)

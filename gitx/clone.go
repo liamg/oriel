@@ -73,3 +73,19 @@ func scanProgress(data []byte, atEOF bool) (int, []byte, error) {
 	}
 	return 0, nil, nil
 }
+
+// ParseProgress reads one of git's progress lines, "Receiving objects:  45% (450/1000), 1.2 MiB": the phase, and
+// how far through it (0..1). ok is false for a line with no percentage.
+func ParseProgress(line string) (phase string, frac float64, ok bool) {
+	line = strings.TrimPrefix(strings.TrimSpace(line), "remote: ")
+	colon := strings.Index(line, ":")
+	pct := strings.Index(line, "%")
+	if colon < 0 || pct < colon {
+		return "", 0, false
+	}
+	var n float64
+	if _, err := fmt.Sscan(strings.TrimSpace(line[colon+1:pct]), &n); err != nil {
+		return "", 0, false
+	}
+	return line[:colon], min(max(n/100, 0), 1), true
+}

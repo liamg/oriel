@@ -41,17 +41,18 @@ type testsPlugin struct {
 	set     *testrun.Set
 	history *testrun.History
 
-	mu      sync.Mutex
-	live    *testrun.Run
-	exec    *testrun.Exec
-	last    *testrun.Request
-	watch   bool
-	showCov bool
-	found   map[*text.Buffer]*discovery
-	scanned map[string][]testrun.Item // every test found in the workspace, by file
-	byKey   map[string]testrun.Item   // scanned by key, made when asked for
-	pkgs    map[string]bool
-	busy    sync.WaitGroup
+	mu       sync.Mutex
+	live     *testrun.Run
+	exec     *testrun.Exec
+	last     *testrun.Request
+	watch    bool
+	showCov  bool
+	found    map[*text.Buffer]*discovery
+	scanned  map[string][]testrun.Item // every test found in the workspace, by file
+	scanFrom time.Time                 // when the workspace scan began
+	byKey    map[string]testrun.Item   // scanned by key, made when asked for
+	pkgs     map[string]bool
+	busy     sync.WaitGroup
 
 	panel testsPanel
 }

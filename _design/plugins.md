@@ -887,6 +887,19 @@ type Host interface {
   (tokens `spinner.track`, `spinner.arc`), a quarter arc going round in twelve ticks a turn, a frame a tick, still
   with reduced motion.
 
+## As built (FW-14)
+
+- `plugin.Load[T]` (`NewLoad(h, fetch, LoadOpts{Timeout})`, `Start`, `Reload`, `Reset`, `Set`, `Value`, `State`) is how
+  a view, built-in or not, loads off the loop; `widget.Busy`, `ProgressBar`, `Skeleton`, `Async`, `Waiting` and
+  `ButtonOpts.Busy` draw it (rendering.md, "Loading"). Lua has the same through `oriel.load` and `oriel.ui.async`,
+  `busy`, `progress` and `skeleton` (scripting.md).
+- `registry.PickerSource.Loading func() bool` says a source's items are still coming (a walk, a search, a server's
+  answer): the picker and the omnibox show a "still loading" row and say "No matches" only once nothing is loading.
+  The files, grep, symbols, tickets and reviews sources report it; Lua's is `oriel.picker.source{ loading = fn }`.
+- A view whose data sits in a keyed cache feeds `widget.Async` a `LoadState` made from the cache entry (stats,
+  tickets, reviews, Ship), rather than a `plugin.Load` per key.
+- `gitx.ParseProgress` reads git's progress lines (phase and percentage) for a `widget.ProgressBar`: Add repo's clone.
+
 ## As built (PL-9)
 
 - **PR actions** (`registry.PRAction{Name, Order, Label(PullRequest) string, Help, Command, Args}`, kind

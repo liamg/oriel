@@ -104,11 +104,16 @@ func (x *testsPlugin) panelView(c *ui.Ctx) {
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				c.Column("tree", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 					items := x.treeItems(known, latest, p.filter)
+					if known == nil && len(items) == 0 {
+						c.Column("wait", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+							widget.Async(c, "scan", widget.LoadState{Phase: widget.Pending, Since: x.scanFrom}, widget.AsyncOpts{Label: "Finding tests",
+								Help: "editor/pane#tests"}, nil)
+						})
+						return
+					}
 					if len(items) == 0 {
 						msg := "No tests found."
-						if known == nil {
-							msg = "Finding tests…"
-						} else if p.filter != 0 {
+						if p.filter != 0 {
 							msg = "No tests run yet: ␣tt runs the one at the cursor, ␣tf the file's."
 						}
 						c.Text("none", msg, mono(11, theme.FgGhost))

@@ -49,7 +49,8 @@ type updatePlugin struct {
 	h  plugin.Host
 
 	mu     sync.Mutex
-	busy   string // what it's doing now: "Checking for updates", "Updating"
+	busy   string    // what it's doing now: "Checking for updates", "Updating"
+	since  time.Time // when it started
 	card   bool
 	failed string // the last check's or install's error, for the card
 	stop   chan struct{}
@@ -162,20 +163,29 @@ func (x *updatePlugin) watch(stop chan struct{}, first, every time.Duration) {
 	}
 }
 
+// checkNow checks off the loop. One the user asked for opens the card, already busy; while a check is running it
+// shows that one's answer.
 func (x *updatePlugin) checkNow(asked bool) {
+	began := x.begin("Checking for updates")
 	if asked {
 		x.setCard(true)
 	}
-	go x.check(asked)
+	if began {
+		go x.checked(asked)
+	}
 }
 
-// check asks for a newer release. One the user asked for opens the card whatever it finds; one on the timer offers
-// a release (ask), installs it (automatic), or says nothing.
+// check asks for a newer release, unless a check or install is running.
 func (x *updatePlugin) check(asked bool) {
-	u := x.updater()
-	if !x.begin("Checking for updates") {
-		return
+	if x.begin("Checking for updates") {
+		x.checked(asked)
 	}
+}
+
+// checked runs a check begun. One the user asked for opens the card whatever it finds; one on the timer offers a
+// release (ask), installs it (automatic), or says nothing.
+func (x *updatePlugin) checked(asked bool) {
+	u := x.updater()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	m, err := u.Check(ctx, x.channel())
 	cancel()
@@ -215,7 +225,7 @@ func (x *updatePlugin) begin(what string) bool {
 	if x.busy != "" {
 		return false
 	}
-	x.busy = what
+	x.busy, x.since = what, time.Now()
 	x.refresh()
 	return true
 }
@@ -323,7 +333,7 @@ func (x *updatePlugin) statusSegment(c *ui.Ctx) {
 // and Update, or Restart once it's installed.
 func (x *updatePlugin) cardView(c *ui.Ctx) {
 	x.mu.Lock()
-	open, busy, failed := x.card, x.busy, x.failed
+	open, busy, since, failed := x.card, x.busy, x.since, x.failed
 	x.mu.Unlock()
 	if !open {
 		return
@@ -359,7 +369,7 @@ func (x *updatePlugin) cardView(c *ui.Ctx) {
 				uiFont(12.5, th.C(theme.Fg)))
 		}
 		if busy != "" {
-			note(c, "busy", busy+" …")
+			widget.Busy(c, "busy", widget.LoadState{Phase: widget.Pending, Since: since}, widget.BusyOpts{Label: busy, Help: updateHelp + "#check"})
 		}
 		if failed != "" {
 			widget.Wrap(c, "err", failed, 570, monoFont(11, th.C(theme.Error)))
@@ -379,11 +389,13 @@ func (x *updatePlugin) cardView(c *ui.Ctx) {
 					x.run("update.restart")
 				}
 			case found:
-				if widget.Button(c, "install", "Update", widget.ButtonOpts{Primary: true, Disabled: busy != "", Help: updateHelp + "#install"}) {
+				if widget.Button(c, "install", "Update", widget.ButtonOpts{Primary: true, Disabled: busy != "", Busy: strings.HasPrefix(busy, "Updating"),
+					BusyLabel: "Updating", Help: updateHelp + "#install"}) {
 					x.run("update.install")
 				}
 			case u != nil:
-				if widget.Button(c, "check", "Check again", widget.ButtonOpts{Disabled: busy != "", Help: updateHelp + "#check"}) {
+				if widget.Button(c, "check", "Check again", widget.ButtonOpts{Disabled: busy != "", Busy: strings.HasPrefix(busy, "Checking"),
+					BusyLabel: "Checking", Help: updateHelp + "#check"}) {
 					x.run("update.check")
 				}
 			}

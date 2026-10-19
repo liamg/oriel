@@ -372,23 +372,58 @@ func (x *sessions) addSource(h plugin.Host) registry.PickerSource {
 					repo = filepath.Join(home, repo[1:])
 				}
 			}
-			if err := h.Run(ctx, "session.add-repo", registry.Args{"repo": repo}); err != nil {
-				return err
-			}
-			// The host's events bring the project; open it once it's here.
-			deadline := time.Now().Add(5 * time.Second)
-			for time.Now().Before(deadline) {
-				if se, ok := x.sh.cfg.Store.Session(id); ok {
-					for _, p := range se.Projects() {
-						if !slices.ContainsFunc(before, func(b core.Project) bool { return b.Name == p.Name }) {
-							return h.Run(ctx, "project.open", registry.Args{"project": p.Name})
-						}
-					}
-				}
-				time.Sleep(10 * time.Millisecond)
-			}
+			x.addProject(id, repo, before)
 			return nil
 		}}
+}
+
+// addProject adds repo to session id off the loop, a notice up while it works, and opens the project once the host's
+// events bring it.
+func (x *sessions) addProject(id core.SessionID, repo string, before []core.Project) {
+	h := x.h
+	const notice = "projects.add"
+	h.Notify(core.Notice{ID: notice, Severity: core.SevInfo, Source: "sessions", Title: "Add a project", Text: "Adding " + repo + " to the session"})
+	added := func() (string, bool) {
+		se, ok := x.sh.cfg.Store.Session(id)
+		if !ok {
+			return "", false
+		}
+		for _, p := range se.Projects() {
+			if !slices.ContainsFunc(before, func(b core.Project) bool { return b.Name == p.Name }) {
+				return p.Name, true
+			}
+		}
+		return "", false
+	}
+	go func() {
+		arrived := make(chan struct{}, 1)
+		stop := h.Subscribe(core.Filter{Session: id}, func(core.Event) {
+			select {
+			case arrived <- struct{}{}:
+			default:
+			}
+		})
+		defer stop()
+		err := h.Run(context.Background(), "session.add-repo", registry.Args{"repo": repo})
+		name, ok := added()
+		for timeout := time.After(30 * time.Second); err == nil && !ok; name, ok = added() {
+			select {
+			case <-arrived:
+			case <-timeout:
+				err = fmt.Errorf("%s was added, but its project never arrived", repo)
+			}
+		}
+		h.Do(func() {
+			h.Dismiss(notice)
+			if err == nil {
+				err = h.Run(context.Background(), "project.open", registry.Args{"project": name})
+			}
+			if err != nil {
+				h.Notify(core.Notice{ID: notice, Severity: core.SevError, Source: "sessions", Key: true, Text: err.Error()})
+			}
+		})
+		h.Redraw()
+	}()
 }
 
 // spec is a session spec from a command's args.

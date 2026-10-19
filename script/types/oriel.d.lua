@@ -66,6 +66,12 @@ function oriel.exec(argv, opts) end
 ---@return any
 function oriel.json(v) end
 
+--- A load for oriel.ui.async and busy: fn(done) starts the work on the loop and calls done(value) when it has it, or done(nil, err) when it failed (from an oriel.http.request answer, say). opts: timeout (seconds; a load still running then fails). Returns a handle: h:start() (once; does nothing while loading or loaded), h:reload() (keeps the value on show), h:reset(), h:value(), h:state() ({ phase = idle|pending|ready|failed, error, stale, note, elapsed }).
+---@param fn function
+---@param opts? table
+---@return table
+function oriel.load(fn, opts) end
+
 --- Write to Oriel's log: level is debug, info, warn or error.
 ---@param msg string
 ---@param lvl string
@@ -274,7 +280,7 @@ function oriel.overview.add(spec) end
 ---@class oriel.picker
 oriel.picker = {}
 
---- A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item) }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background. preview returns oriel.ui nodes.
+--- A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes.
 ---@param spec table
 function oriel.picker.source(spec) end
 
@@ -403,7 +409,17 @@ function oriel.ticket.tracker(spec) end
 ---@class oriel.ui
 oriel.ui = {}
 
---- A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
+--- A section drawn by its load's state (widget.Async): { load (an oriel.load handle; started for you), body = fn(value) (returns the loaded section's nodes), policy = inline|block|gate|optional, label (what's loading), loading (nodes to show while it loads; a busy line by default), empty (text shown once loaded when is_empty = fn(value) says so), retry (true shows Retry on a failure), fallback (optional: what's used if the user goes on now), id }.
+---@param spec table
+---@return table
+function oriel.ui.async(spec) end
+
+--- An inline loading line (widget.Busy): a spinner, { label (what's loading; the … is added), load (an oriel.load handle: adds what it's doing and, after clock seconds, how long it's run), clock (3 by default; -1 never), size, color, id }.
+---@param spec table
+---@return table
+function oriel.ui.busy(spec) end
+
+--- A button: { label, on_click = fn(), primary, busy (shows a spinner and can't be pressed: its work is running), busy_label, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
 ---@param spec table
 ---@return table
 function oriel.ui.button(spec) end
@@ -443,6 +459,11 @@ function oriel.ui.list(items, row) end
 ---@return table
 function oriel.ui.mode() end
 
+--- A loading bar (widget.ProgressBar): { value (0 to 1; nil slides back and forth with no known end), height (px, 4 by default; 6 or more shows the label above it), label, color, id }.
+---@param spec table
+---@return table
+function oriel.ui.progress(spec) end
+
 --- A dial (widget.Ring): { value (0 to 1 of the ring lit, clockwise from twelve o'clock), label (in the middle: '18m'), color (a theme token or #rrggbb; the accent by default), size (px across, 44 by default), name (what it measures, read out with the label), id }.
 ---@param spec table
 ---@return table
@@ -457,6 +478,11 @@ function oriel.ui.row(children) end
 ---@param spec table
 ---@return table
 function oriel.ui.select(spec) end
+
+--- Grey placeholders in the shape of what's coming (widget.Skeleton): { rows (text-like bars), widths = { 1, 0.8, 0.6 } (each row's share of the width, repeating), block = { w, h } (a card-shaped block in place of rows), count (how many blocks), direction = row|column, label, id }.
+---@param spec table
+---@return table
+function oriel.ui.skeleton(spec) end
 
 --- Space that takes what's left.
 ---@return table

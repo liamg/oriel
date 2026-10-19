@@ -40,9 +40,10 @@ type reviewsPage struct {
 
 // reviewDetail is a request as its source's lookup told it.
 type reviewDetail struct {
-	d    registry.ReviewDetail
-	err  string
-	done bool
+	d     registry.ReviewDetail
+	err   string
+	done  bool
+	since time.Time
 }
 
 func (x *reviewsPlugin) openPage(source string) error {
@@ -120,7 +121,7 @@ func (x *reviewsPlugin) detail(s registry.HostSite, url string) *reviewDetail {
 	if d := x.details[url]; d != nil {
 		return d
 	}
-	d := &reviewDetail{}
+	d := &reviewDetail{since: windowNow(x.h)}
 	x.details[url] = d
 	if s.Lookup == nil {
 		d.done = true
@@ -267,7 +268,8 @@ func (x *reviewsPlugin) pageHeader(c *ui.Ctx, rows []reviewRow) {
 		}
 		widget.Segmented(c, "scope", []string{"all", "to me", "my teams"}, &x.page.scope, widget.SegmentedOpts{Label: "Whose asks", Badges: counts,
 			Help: reviewsHelp + "#page"})
-		if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Help: reviewsHelp + "#page"}) {
+		if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Busy: x.pageState().Phase == widget.Pending, BusyLabel: "Refreshing",
+			Help: reviewsHelp + "#page"}) {
 			x.refreshAll()
 		}
 		if widget.Button(c, "close", "✕", widget.ButtonOpts{Key: "esc", Help: reviewsHelp + "#page"}) {
@@ -298,38 +300,85 @@ func (x *reviewsPlugin) pageList(c *ui.Ctx, rows []reviewRow) {
 				x.page.filter = ""
 			}
 		})
-		c.Column("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true}, func(c *ui.Ctx) {
-			if !slices.ContainsFunc(rows, func(r reviewRow) bool { return r.req != nil }) {
-				c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12)}, func(c *ui.Ctx) {
-					widget.Wrap(c, "t", x.emptyText(), 400, uiFont(12, th.C(theme.FgFaint)))
-				})
-			}
-			if len(rows) == 0 {
-				return
-			}
-			sel := 0
-			if r, ok := x.selectedRow(rows); ok {
-				sel = slices.IndexFunc(rows, func(o reviewRow) bool { return o.req == r.req })
-			}
-			many := len(x.pageSources()) > 1
-			res := widget.Rows(c, "reviews", len(rows), &sel, widget.RowsOpts{Label: "Reviews", KeyMode: ReviewsKeyMode, Help: reviewsHelp + "#list",
-				ClickSelects: true, Static: func(i int) bool { return rows[i].req == nil }, RowLabel: func(i int) string { return reviewRowLabel(rows[i]) }},
-				func(c *ui.Ctx, i int, _ bool) {
-					c.Column("item", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-						if h := groupHead(rows, i); h != "" {
-							x.groupView(c, rows, h)
-						}
-						x.reviewRowView(c, rows[i], many)
-					})
-				})
-			if sel >= 0 && sel < len(rows) && rows[sel].req != nil && (res.Changed || x.page.sel == "") {
-				x.page.sel = rows[sel].req.URL
-			}
-			if res.Activated >= 0 {
-				x.act(rows[res.Activated])
-			}
-		})
+		c.Column("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true}, func(c *ui.Ctx) { x.pageRowsView(c, rows) })
 	})
+}
+
+// pageRowsView is the list's rows: skeleton rows while the code hosts first answer, then the requests, or why
+// there are none above what a source needs first; a refresh bar runs along the top while they're asked again.
+func (x *reviewsPlugin) pageRowsView(c *ui.Ctx, rows []reviewRow) {
+	st := x.pageState()
+	none := !slices.ContainsFunc(rows, func(r reviewRow) bool { return r.req != nil })
+	draw := func(c *ui.Ctx) {
+		if len(rows) == 0 {
+			return
+		}
+		sel := 0
+		if r, ok := x.selectedRow(rows); ok {
+			sel = slices.IndexFunc(rows, func(o reviewRow) bool { return o.req == r.req })
+		}
+		many := len(x.pageSources()) > 1
+		res := widget.Rows(c, "reviews", len(rows), &sel, widget.RowsOpts{Label: "Reviews", KeyMode: ReviewsKeyMode, Help: reviewsHelp + "#list",
+			ClickSelects: true, Static: func(i int) bool { return rows[i].req == nil }, RowLabel: func(i int) string { return reviewRowLabel(rows[i]) }},
+			func(c *ui.Ctx, i int, _ bool) {
+				c.Column("item", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+					if h := groupHead(rows, i); h != "" {
+						x.groupView(c, rows, h)
+					}
+					x.reviewRowView(c, rows[i], many)
+				})
+			})
+		if sel >= 0 && sel < len(rows) && rows[sel].req != nil && (res.Changed || x.page.sel == "") {
+			x.page.sel = rows[sel].req.URL
+		}
+		if res.Activated >= 0 {
+			x.act(rows[res.Activated])
+		}
+	}
+	pad := ui.Insets{}
+	if none || st.Loading() {
+		pad = ui.PadXY(14, 12)
+	}
+	c.Column("load", ui.Style{W: ui.Flex(1), Pad: pad}, func(c *ui.Ctx) {
+		widget.Async(c, "load", st, widget.AsyncOpts{Label: "Asking " + x.sourceNames() + " for your reviews", Empty: x.emptyText(), IsEmpty: none,
+			Width: 400, Help: reviewsHelp + "#list", Loading: func(c *ui.Ctx) {
+				widget.Skeleton(c, "rows", widget.SkeletonOpts{Rows: 5, RowH: 14, Gap: 16, Widths: []float32{.9, .6, .8}, Label: "Reviews",
+					Help: reviewsHelp + "#list"})
+			}}, draw)
+	})
+	if none && !st.Loading() {
+		draw(c)
+	}
+}
+
+// pageState is the page's sources' lists read together: loading while any hasn't answered yet, refreshing while
+// any is asked again. A source that failed is a row of its own, with Retry.
+func (x *reviewsPlugin) pageState() widget.LoadState {
+	out := widget.LoadState{Phase: widget.Ready}
+	for _, s := range x.pageSources() {
+		if x.needsKey(s) || s.Requested == nil {
+			continue
+		}
+		st := x.listState(s.Key())
+		switch {
+		case st.Phase == widget.Idle || st.Loading():
+			if out.Phase != widget.Pending || out.Stale || st.Since.Before(out.Since) {
+				out = widget.LoadState{Phase: widget.Pending, Since: st.Since}
+			}
+		case st.Phase == widget.Pending && out.Phase == widget.Ready:
+			out = widget.LoadState{Phase: widget.Pending, Since: st.Since, Stale: true}
+		}
+	}
+	return out
+}
+
+// sourceNames are the page's code hosts by name: "GitHub or GitLab".
+func (x *reviewsPlugin) sourceNames() string {
+	var names []string
+	for _, s := range x.pageSources() {
+		names = append(names, s.Label())
+	}
+	return cmpOr(strings.Join(names, " or "), "any code host")
 }
 
 // groupHead is the heading above row i, when it starts a group: "waiting" or "progress".
@@ -367,24 +416,12 @@ func (x *reviewsPlugin) groupView(c *ui.Ctx, rows []reviewRow, g string) {
 	})
 }
 
-// emptyText is what the list says with no requests: still asking, or nothing waiting.
+// emptyText is what the list says once the code hosts have answered with nothing.
 func (x *reviewsPlugin) emptyText() string {
-	var names []string
-	asking := false
-	for _, s := range x.pageSources() {
-		names = append(names, s.Label())
-		if _, _, ok := x.list(s.Key()); !ok && !x.needsKey(s) {
-			asking = true
-		}
-	}
-	who := cmpOr(strings.Join(names, " or "), "any code host")
-	switch {
-	case strings.TrimSpace(x.page.filter) != "":
+	if strings.TrimSpace(x.page.filter) != "" {
 		return "No pull request matches."
-	case asking:
-		return "Asking " + who + "…"
 	}
-	return "Nothing waiting on your review in " + who + "."
+	return "Nothing waiting on your review in " + x.sourceNames() + "."
 }
 
 // reviewRowLabel is a row's accessible name.
@@ -580,7 +617,8 @@ func (x *reviewsPlugin) pageDetail(c *ui.Ctx, r reviewRow) {
 	})
 	switch {
 	case !done:
-		note(c, "asking", "Asking "+r.src.Label()+" for the rest…")
+		widget.Busy(c, "asking", widget.LoadState{Phase: widget.Pending, Since: d.since}, widget.BusyOpts{Label: "Asking " + r.src.Label() + " for the rest",
+			Size: 11, Help: help})
 	case failed != "":
 		widget.Wrap(c, "err", failed, 640, monoFont(11, th.C(theme.Error)))
 	default:

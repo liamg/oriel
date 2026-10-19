@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
@@ -53,12 +54,22 @@ func (x *diffPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 			tree = x.sh.git.tree(st.root)
 		}
 		gs := tree.state()
-		if gs == nil {
-			c.Column("none", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("t", "Reading "+filepath.Base(st.root)+"'s changes…", uiFont(13, th.C(theme.FgFaint)))
-			})
-			return
-		}
+		widget.Async(c, "load", tree.load(), widget.AsyncOpts{Policy: widget.Block, Label: "Reading " + filepath.Base(st.root) + "'s changes",
+			Empty: filepath.Base(st.root) + " isn't in a git repository: there are no changes to show.", IsEmpty: gs == nil,
+			Retry: x.sh.git.reload, Help: "files/diff"}, func(c *ui.Ctx) { x.loaded(c, vc, st, tree, gs, root) })
+	})
+	if st.seekLine() {
+		c.WakeAt(c.Now())
+	}
+	if c.FocusWithin(root) || x.focus == nil {
+		x.focus = st
+	}
+}
+
+// loaded is the diff of a work tree whose status has been read.
+func (x *diffPlugin) loaded(c *ui.Ctx, vc registry.ViewCtx, st *diffState, tree *gitTree, gs *gitx.State, root ui.ID) {
+	th := c.Theme()
+	c.Row("loaded", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		files := gs.Files(gitx.Changed)
 		if st.sel.file != "" && !slices.ContainsFunc(files, func(f gitx.FileState) bool { return f.Path == st.sel.file }) {
 			files = append(slices.Clone(files), gitx.FileState{Path: st.sel.file}) // asked for, and unchanged
@@ -92,12 +103,6 @@ func (x *diffPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 			})
 		}
 	})
-	if st.seekLine() {
-		c.WakeAt(c.Now())
-	}
-	if c.FocusWithin(root) || x.focus == nil {
-		x.focus = st
-	}
 }
 
 // seekLine selects the line diff.open asked for once its file's hunks are drawn: the new side's line, else the
@@ -375,10 +380,22 @@ func (x *diffPlugin) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, lay
 			x.imageDiff(c, st, f.Path, d.images)
 			return
 		}
+		if d == nil {
+			if st.waiting == nil {
+				st.waiting = map[string]time.Time{}
+			}
+			if _, ok := st.waiting[f.Path]; !ok {
+				st.waiting[f.Path] = c.Now()
+			}
+			c.Row("wait", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(62, 10)}, func(c *ui.Ctx) {
+				widget.Async(c, "diff", widget.LoadState{Phase: widget.Pending, Since: st.waiting[f.Path]}, widget.AsyncOpts{
+					Label: "Reading the diff", Help: "files/diff#hunks"}, nil)
+			})
+			return
+		}
+		delete(st.waiting, f.Path)
 		note := ""
 		switch {
-		case d == nil:
-			note = "Reading…"
 		case d.err != nil:
 			note = d.err.Error()
 		case d.binary:

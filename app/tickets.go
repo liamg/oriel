@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // ticketsStale is how long a tracker's list is kept before it's asked again (crit's refresh).
@@ -37,6 +39,7 @@ type ticketList struct {
 	answered bool
 	at       time.Time     // when it answered; zero to ask again
 	busy     chan struct{} // closed when the ask under way answers
+	since    time.Time     // when the ask under way started
 }
 
 // ticketRow is a row of the omnibox's tickets: a ticket, or what a tracker needs first.
@@ -186,7 +189,7 @@ func (x *ticketsPlugin) fresh(tr registry.TicketTracker) <-chan struct{} {
 		return nil
 	}
 	done := make(chan struct{})
-	l.busy = done
+	l.busy, l.since = done, windowNow(x.h)
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
@@ -229,6 +232,25 @@ func (x *ticketsPlugin) listAt(name string) time.Time {
 		return l.at
 	}
 	return time.Time{}
+}
+
+// pendingFirst reports a list's first fetch running; one never asked for isn't loading.
+func pendingFirst(s widget.LoadState) bool { return s.Phase == widget.Pending && !s.Stale }
+
+// listState is a tracker's list as the loading widgets read it.
+func (x *ticketsPlugin) listState(name string) widget.LoadState {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	l := x.lists[name]
+	switch {
+	case l == nil:
+		return widget.LoadState{}
+	case l.busy != nil:
+		return widget.LoadState{Phase: widget.Pending, Since: l.since, Stale: l.answered}
+	case l.err != "" && l.tickets == nil:
+		return widget.LoadState{Phase: widget.Failed, Err: errors.New(l.err)}
+	}
+	return widget.LoadState{Phase: widget.Ready}
 }
 
 // list is a tracker's tickets as last told, and why there are none.
@@ -298,6 +320,14 @@ func ticketNote(t registry.Ticket) string {
 
 func (x *ticketsPlugin) source() registry.PickerSource {
 	return registry.PickerSource{ID: "tickets", Title: "Tickets", Prefix: "!", Order: 40, Available: x.any,
+		Loading: func() bool {
+			for _, tr := range registry.TicketTrackers(x.h) {
+				if tr.Assigned != nil && !x.needsKey(tr) && pendingFirst(x.listState(tr.Name)) {
+					return true
+				}
+			}
+			return false
+		},
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem
 			for _, r := range x.rows() {

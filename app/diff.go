@@ -77,25 +77,26 @@ type diffKey struct{ repo, path string }
 
 // diffState is one diff view's place: the files open, the selection, and what to do next frame.
 type diffState struct {
-	root   string
-	open   map[string]bool
-	sel    diffSel
-	reveal bool
-	focus  bool
-	goLine int // a line of the selected file's new side to select once it's drawn
-	scroll scrollState
-	order  []diffSel                  // every hunk drawn, in order
-	lines  map[diffSel]int            // lines each hunk has, as drawn
-	bufs   map[string]diffBuf         // the new side of files not open in the editor
-	ids    map[diffSel]ui.ID          // hunks and lines as last drawn
-	hunks  map[string][]diffHunk      // each file's hunks as last drawn
-	drawn  map[string]*diffFile       // each file's diff as last drawn
-	files  []gitx.FileState           // the files listed, as last drawn
-	marks  map[string]map[string]bool // each file's marks as last drawn
-	ledger registry.Ledger            // as last drawn
-	seen   map[string]time.Time       // agent-written lines on screen, by file and key, since when
-	sent   map[string]core.LineState  // what's been recorded of them
-	slider map[string]bool            // image files shown as a slider, not side by side
+	root    string
+	open    map[string]bool
+	sel     diffSel
+	reveal  bool
+	focus   bool
+	goLine  int // a line of the selected file's new side to select once it's drawn
+	scroll  scrollState
+	order   []diffSel                  // every hunk drawn, in order
+	lines   map[diffSel]int            // lines each hunk has, as drawn
+	bufs    map[string]diffBuf         // the new side of files not open in the editor
+	ids     map[diffSel]ui.ID          // hunks and lines as last drawn
+	hunks   map[string][]diffHunk      // each file's hunks as last drawn
+	drawn   map[string]*diffFile       // each file's diff as last drawn
+	files   []gitx.FileState           // the files listed, as last drawn
+	marks   map[string]map[string]bool // each file's marks as last drawn
+	ledger  registry.Ledger            // as last drawn
+	seen    map[string]time.Time       // agent-written lines on screen, by file and key, since when
+	sent    map[string]core.LineState  // what's been recorded of them
+	slider  map[string]bool            // image files shown as a slider, not side by side
+	waiting map[string]time.Time       // files whose diff is being made, since when
 }
 
 // diffSel is a place in the diff: a file, a hunk of it, a line of the hunk (-1 for the hunk as a whole).

@@ -33,6 +33,7 @@ func omniScene(t *testing.T, query string) *errScene {
 	s.run("editor.open", registry.Args{"path": "internal/pricing/tiers.go"})
 	s.reg.Command(registry.Command{ID: "plan.new", Title: "New plan from price…", Run: func(registry.Ctx, registry.Args) error { return nil }})
 	s.reg.Command(registry.Command{ID: "job.run", Title: "Run job: pricing test sweep", Run: func(registry.Ctx, registry.Args) error { return nil }})
+	s.sourcesLoaded()
 	s.run("omnibox.open", registry.Args{"query": query})
 	s.frame()
 	s.frame()
@@ -60,7 +61,7 @@ func TestOmniboxSnapshot(t *testing.T) {
 		}
 	}
 	// The session that needs you comes first, as 02-omnibox has it.
-	groups := s.omni().results()
+	groups, _ := s.omni().results()
 	if groups[0].src.ID != "sessions" || groups[0].hits[0].item.Label != "pricing api usage" {
 		t.Errorf("first result: %s %q", groups[0].src.ID, groups[0].hits[0].item.Label)
 	}
@@ -85,7 +86,7 @@ func TestOmniboxPreviewEverySource(t *testing.T) {
 func TestOmniboxPrefixes(t *testing.T) {
 	for q, src := range map[string]string{"@round": "files", "#Price": "symbols", ">plan": "commands"} {
 		s := omniScene(t, q)
-		groups := s.omni().results()
+		groups, _ := s.omni().results()
 		if len(groups) != 1 || groups[0].src.ID != src {
 			var ids []string
 			for _, g := range groups {

@@ -15,6 +15,7 @@ func (x *testsPlugin) scan() {
 		x.setFound("", nil)
 		return
 	}
+	x.scanFrom = windowNow(x.h)
 	ctx, cancel := context.WithCancel(context.Background())
 	x.add(disposeFn(cancel))
 	x.busy.Add(1)

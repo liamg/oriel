@@ -106,7 +106,9 @@ type debugSession struct {
 	vars   map[int][]dap.Variable // fetched children, by reference
 	hits   map[int]int            // breakpoint id → times hit
 	exit   *int
-	gen    int // moves on each stop and resume, so an answer about an old stop is dropped
+	gen    int       // moves on each stop and resume, so an answer about an old stop is dropped
+	since  time.Time // when it last stopped, or its frame changed: what the stack and scopes load from
+	failed error     // why reading the stop's stack or scopes failed
 }
 
 func (s *debugSession) live() bool { return s != nil && s.state != debugEnded }
@@ -700,7 +702,7 @@ func (x *debugPlugin) event(s *debugSession, e dap.Event) {
 			s.hits[id]++
 		}
 		s.frame, s.frames, s.scopes = 0, nil, nil
-		s.vars = map[int][]dap.Variable{}
+		s.vars, s.since, s.failed = map[int][]dap.Variable{}, windowNow(x.h), nil
 		s.gen++
 		if s.client != nil {
 			x.fetch(s)
@@ -729,6 +731,7 @@ func (x *debugPlugin) fetch(s *debugSession) {
 	x.async(func(ctx context.Context) error {
 		frames, err := c.Stack(ctx, thread)
 		if err != nil {
+			x.failed(s, gen, err)
 			return err
 		}
 		x.h.Do(func() {
@@ -746,6 +749,15 @@ func (x *debugPlugin) fetch(s *debugSession) {
 	}, nil)
 }
 
+// failed keeps why a stop's stack or scopes couldn't be read, while it's still that stop.
+func (x *debugPlugin) failed(s *debugSession, gen int, err error) {
+	x.h.Do(func() {
+		if s.gen == gen {
+			s.failed = err
+		}
+	})
+}
+
 // frameChanged shows the selected frame: its scopes and their variables, the watches, and its line in the editor.
 func (x *debugPlugin) frameChanged(s *debugSession) {
 	f, ok := s.top()
@@ -759,6 +771,7 @@ func (x *debugPlugin) frameChanged(s *debugSession) {
 	x.async(func(ctx context.Context) error {
 		scopes, err := c.Scopes(ctx, f.ID)
 		if err != nil {
+			x.failed(s, gen, err)
 			return err
 		}
 		vars := map[int][]dap.Variable{}
@@ -850,7 +863,7 @@ func (x *debugPlugin) selectFrame(i int) error {
 		return fmt.Errorf("no frame %d", i)
 	}
 	s.frame = i
-	s.scopes = nil
+	s.scopes, s.since, s.failed = nil, windowNow(x.h), nil
 	x.panel.watchVals = nil
 	x.frameChanged(s)
 	return nil

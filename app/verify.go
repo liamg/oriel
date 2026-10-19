@@ -60,8 +60,9 @@ type quiz struct {
 	projects []string
 	by       string
 	qs       []core.QuizQuestion
-	at       int  // the question being asked; those before it are graded
-	asking   bool // waiting on the fork
+	at       int       // the question being asked; those before it are graded
+	asking   bool      // waiting on the fork
+	since    time.Time // when it was asked
 	err      string
 	answer   string // the composer
 	notes    bool   // the answers go in the PR as reviewer notes
@@ -214,7 +215,7 @@ func (x *verifyPlugin) start(q *quiz, se core.SessionState) {
 func (x *verifyPlugin) ask(q *quiz, prompt string, got func(out string) error) {
 	q.gen++
 	gen := q.gen
-	q.asking, q.err = true, ""
+	q.asking, q.err, q.since = true, "", windowNow(x.h)
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()

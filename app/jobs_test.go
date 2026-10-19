@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/ui/widget"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -94,7 +95,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	if x.form == nil {
 		t.Fatal("n didn't open the New job dialog")
 	}
-	s.until(t, "the agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
+	s.until(t, "the agents", func() bool { return x.form != nil && x.form.agents.State().Phase == widget.Ready })
 	s.typeInto(t, "Title", "Sweep stale deps")
 	s.typeInto(t, "Prompt", "Bump every dependency in pricing that's behind.")
 	s.click(centre(s.within("New job", "Save and run").Bounds))
@@ -195,6 +196,7 @@ func TestSaveAsJobFromTheLauncher(t *testing.T) {
 	if x.form.prompt != "Draft this week's changelog from the PRs merged since Monday." || x.form.agent != "fake" {
 		t.Errorf("the dialog holds %q on %q", x.form.prompt, x.form.agent)
 	}
+	s.until(t, "the dialog's agents", func() bool { return x.form.agents.State().Phase == widget.Ready })
 	s.frame()
 	s.typeInto(t, "Title", "Weekly changelog draft")
 	s.click(centre(s.within("New job", "Save").Bounds))
@@ -526,7 +528,7 @@ func TestJobsPageSnapshots(t *testing.T) {
 
 	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 5, Y: 990}})
 	s.keyCommand(t, "n")
-	s.until(t, "the agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
+	s.until(t, "the agents", func() bool { return x.form != nil && x.form.agents.State().Phase == widget.Ready })
 	s.typeInto(t, "Title", "Weekly changelog draft")
 	s.typeInto(t, "Prompt", "Draft this week's changelog for api and web from the PRs merged since last Monday.")
 	s.lint("the new job dialog")
@@ -653,7 +655,7 @@ func TestTheJobPromptTakesLines(t *testing.T) {
 	x := s.jobs()
 	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.run("jobs.new", nil)
-	s.until(t, "the agents", func() bool { return x.form != nil && len(x.form.agents) > 0 })
+	s.until(t, "the agents", func() bool { return x.form != nil && x.form.agents.State().Phase == widget.Ready })
 	s.typeInto(t, "Prompt", "Sweep stale deps.")
 	s.typeKeys("CR")
 	for _, r := range "Keep majors." {

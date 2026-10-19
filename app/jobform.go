@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -24,23 +25,22 @@ var (
 )
 
 type jobForm struct {
-	name    string // the job edited; "" for a new one
-	title   string
-	prompt  string
-	runsIn  int
-	agent   string // the provider
-	model   string
-	effort  string
-	every   int
-	day     int // a weekly schedule's, into days
-	custom  []string
-	at      string
-	focus   bool
-	busy    bool
-	err     string
-	gen     int
-	agents  []host.ProviderInfo
-	loading bool
+	name   string // the job edited; "" for a new one
+	title  string
+	prompt string
+	runsIn int
+	agent  string // the provider
+	model  string
+	effort string
+	every  int
+	day    int // a weekly schedule's, into days
+	custom []string
+	at     string
+	focus  bool
+	busy   bool
+	err    string
+	agents *plugin.Load[[]host.ProviderInfo]
+	picked bool // the agent was given, or picked once the providers arrived
 }
 
 func (f *jobForm) job() host.Job {
@@ -105,48 +105,50 @@ func (x *jobsPlugin) editForm(a registry.Args, copy bool) error {
 }
 
 func (x *jobsPlugin) show(f *jobForm) {
-	if x.form != nil {
-		f.gen = x.form.gen + 1
-	}
+	x.closeForm()
+	f.picked = f.agent != ""
+	f.agents = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
+		c, err := x.client()
+		if err != nil {
+			return nil, err
+		}
+		return c.ProviderInfo(ctx), nil
+	}, plugin.LoadOpts{Timeout: 20 * time.Second})
+	f.agents.Start()
 	x.form = f
-	x.loadAgents()
 }
 
-// loadAgents reads the providers.
-func (x *jobsPlugin) loadAgents() {
-	f := x.form
-	c, err := x.client()
-	if err != nil {
-		f.err = err.Error()
+func (x *jobsPlugin) closeForm() {
+	if x.form != nil && x.form.agents != nil {
+		x.form.agents.Reset()
+	}
+	x.form = nil
+}
+
+// settle picks the default agent once the providers arrive, unless the job names one.
+func (f *jobForm) settle() {
+	ps, ok := f.agents.Value()
+	if !ok || f.picked {
 		return
 	}
-	f.loading = true
-	gen := f.gen
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		ps := c.ProviderInfo(ctx)
-		x.h.Do(func() {
-			if x.form == nil || x.form.gen != gen {
-				return
+	f.picked = true
+	if id := defaultProvider(ps); id != "" {
+		for _, p := range ps {
+			if p.ID == id {
+				f.agent, f.model = p.ID, cmpOr(f.model, defaultModel(p))
 			}
-			x.form.loading, x.form.agents = false, ps
-			if x.form.agent == "" {
-				for _, p := range ps {
-					if p.ID == defaultProvider(ps) {
-						x.form.agent, x.form.model = p.ID, cmpOr(x.form.model, defaultModel(p))
-					}
-				}
-			}
-		})
-		x.h.Redraw()
-	}()
+		}
+	}
 }
 
 // submit saves the dialog's job, running it too when run; the dialog closes and the page shows it once it's saved.
 func (x *jobsPlugin) submit(run bool) {
 	f := x.form
 	if f == nil || f.busy {
+		return
+	}
+	if reason := widget.Waiting(f.agents.State()).Reason(); reason != "" {
+		f.err = "To save: " + reason + "."
 		return
 	}
 	j := f.job()
@@ -175,7 +177,8 @@ func (x *jobsPlugin) submit(run bool) {
 				f.err = err.Error()
 				return
 			}
-			x.form, x.open, x.selKey = nil, true, jobKey(saved)
+			x.closeForm()
+			x.open, x.selKey = true, jobKey(saved)
 		})
 		x.h.Redraw()
 	}()
@@ -193,7 +196,7 @@ func (x *jobsPlugin) dialog(c *ui.Ctx) {
 	}
 	widget.Modal(c, "jobform", &open, title, widget.ModalOpts{Width: 620, Help: "agent/jobs#new"}, func(c *ui.Ctx) { x.formBody(c, f) })
 	if !open {
-		x.form = nil
+		x.closeForm()
 	}
 }
 
@@ -204,7 +207,7 @@ func (x *jobsPlugin) field(c *ui.Ctx, key string, text *string, label, placehold
 	}
 	o.Label, o.Placeholder, o.Help, o.TabMoves, o.KeyMode = label, placeholder, "agent/jobs#new", true, JobFormKeyMode
 	if widget.Input(c, key, text, o).Cancelled {
-		x.form = nil
+		x.closeForm()
 	}
 }
 
@@ -212,6 +215,7 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 	th := c.Theme()
 	focus := f.focus
 	f.focus = false
+	f.settle()
 	c.Column("title", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		heading(c, "h", "Title", "from the prompt's first line when empty")
 		x.field(c, "title", &f.title, "Title", "a name for the list", focus, widget.InputOpts{})
@@ -230,30 +234,12 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		heading(c, "h", "Agent", "provider · model · effort")
-		if len(f.agents) == 0 {
-			msg := "the first agent installed"
-			if f.loading {
-				msg = "Looking for agents…"
-			}
-			c.Text("wait", msg, uiFont(12, th.C(theme.FgFaint)))
-			return
-		}
-		items := make([]widget.Choice, len(f.agents))
-		cur := 0
-		for i, p := range f.agents {
-			items[i] = widget.Choice{Title: providerName(p.ID), Desc: providerNote(p, x.h.State().Usage)}
-			if p.ID == f.agent {
-				cur = i
-			}
-		}
-		if widget.Choices(c, "provider", items, &cur, widget.ChoicesOpts{Label: "Agent", Help: "agent/jobs#new"}) {
-			f.agent, f.model, f.effort = f.agents[cur].ID, defaultModel(f.agents[cur]), ""
-		}
-		if p := f.agents[cur]; len(p.Models) > 0 {
-			if m, e, ok := modelSelects(c, p, cmpOr(f.model, defaultModel(p)), f.effort, "agent/jobs#new"); ok {
-				f.agent, f.model, f.effort = p.ID, m, e
-			}
-		}
+		agents, _ := f.agents.Value()
+		widget.Async(c, "agents", f.agents.State(), widget.AsyncOpts{Policy: widget.Gate, Label: "Looking for agents", Retry: f.agents.Reload,
+			Empty: "No agents installed. Each run uses the first agent installed on this machine when it runs.", IsEmpty: len(agents) == 0,
+			Width: 560, Help: "agent/jobs#new"}, func(c *ui.Ctx) {
+			c.Column("choices", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) { x.agentChoices(c, f, agents) })
+		})
 	})
 	c.Column("schedule", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		heading(c, "h", "Schedule", "runs while Oriel is open · skips while the last run is going")
@@ -300,16 +286,42 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Help: "agent/jobs#new"}) {
-			x.form = nil
+			x.closeForm()
 			return
 		}
-		if widget.Button(c, "save", "Save", widget.ButtonOpts{Disabled: f.busy, Help: "agent/jobs#new"}) {
+		wait := widget.Waiting(f.agents.State())
+		busyLabel := "Saving"
+		if wait.Pending() {
+			busyLabel = "Looking for agents"
+		}
+		if widget.Button(c, "save", "Save", widget.ButtonOpts{Busy: f.busy || wait.Pending(), BusyLabel: busyLabel, Disabled: wait.Failed(), Help: "agent/jobs#new"}) {
 			x.submit(false)
 		}
-		if widget.Button(c, "saverun", "Save and run", widget.ButtonOpts{Primary: true, Key: "⌘↵", Disabled: f.busy, Help: "agent/jobs#new"}) {
+		if widget.Button(c, "saverun", "Save and run", widget.ButtonOpts{Primary: true, Key: "⌘↵", Busy: f.busy || wait.Pending(), BusyLabel: busyLabel,
+			Disabled: wait.Failed(), Help: "agent/jobs#new"}) {
 			x.submit(true)
 		}
 	})
+}
+
+// agentChoices are the agents read, the job's picked, with its model and effort.
+func (x *jobsPlugin) agentChoices(c *ui.Ctx, f *jobForm, agents []host.ProviderInfo) {
+	items := make([]widget.Choice, len(agents))
+	cur := 0
+	for i, p := range agents {
+		items[i] = widget.Choice{Title: providerName(p.ID), Desc: providerNote(p, x.h.State().Usage)}
+		if p.ID == f.agent {
+			cur = i
+		}
+	}
+	if widget.Choices(c, "provider", items, &cur, widget.ChoicesOpts{Label: "Agent", Help: "agent/jobs#new"}) {
+		f.agent, f.model, f.effort = agents[cur].ID, defaultModel(agents[cur]), ""
+	}
+	if p := agents[cur]; len(p.Models) > 0 {
+		if m, e, ok := modelSelects(c, p, cmpOr(f.model, defaultModel(p)), f.effort, "agent/jobs#new"); ok {
+			f.agent, f.model, f.effort = p.ID, m, e
+		}
+	}
 }
 
 // trimSlug is a slug's first six words, as the session host names a new job.

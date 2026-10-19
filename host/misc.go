@@ -5,40 +5,50 @@ import (
 	"errors"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/core"
 )
 
-// ProviderInfo is each provider as the launcher shows it: installed, logged in, its models, its usage.
-func (w *Host) ProviderInfo(ctx context.Context) (out []ProviderInfo) {
+// ProviderInfo is each provider as the launcher shows it: installed, logged in, its models, its usage. The
+// providers are asked at once, so it takes as long as the slowest.
+func (w *Host) ProviderInfo(ctx context.Context) []ProviderInfo {
 	defer w.recover("ProviderInfo", nil)
 	st := w.store.State()
-	for _, p := range w.opts.Providers.List() {
-		info := ProviderInfo{ID: p.ID()}
-		dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		inst, err := p.Detect(dctx)
-		cancel()
-		info.Install = inst
-		if err != nil {
-			info.Error = err.Error()
-		}
-		for _, l := range w.lostLogins() {
-			if l.Provider == p.ID() {
-				info.Install.LoggedIn = false
-				info.Install.Note = "Signed out: " + l.Detail
+	lost := w.lostLogins()
+	ps := w.opts.Providers.List()
+	out := make([]ProviderInfo, len(ps))
+	var wg sync.WaitGroup
+	for i, p := range ps {
+		wg.Go(func() {
+			defer w.recover("ProviderInfo", nil)
+			info := ProviderInfo{ID: p.ID()}
+			dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			inst, err := p.Detect(dctx)
+			cancel()
+			info.Install = inst
+			if err != nil {
+				info.Error = err.Error()
 			}
-		}
-		if ms, err := p.Models(ctx); err == nil {
-			info.Models = ms
-		}
-		for _, u := range st.Usage {
-			if u.Provider == p.ID() {
-				info.Usage = u
+			for _, l := range lost {
+				if l.Provider == p.ID() {
+					info.Install.LoggedIn = false
+					info.Install.Note = "Signed out: " + l.Detail
+				}
 			}
-		}
-		out = append(out, info)
+			if ms, err := p.Models(ctx); err == nil {
+				info.Models = ms
+			}
+			for _, u := range st.Usage {
+				if u.Provider == p.ID() {
+					info.Usage = u
+				}
+			}
+			out[i] = info
+		})
 	}
+	wg.Wait()
 	return out
 }
 

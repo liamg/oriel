@@ -57,32 +57,29 @@ const maxSteps = 150
 
 func (x *statsPlugin) sessionTab(c *ui.Ctx, id core.SessionID) {
 	th := c.Theme()
-	d, ok := x.detail(id)
+	d, load := x.detailLoad(id)
 	se, _ := x.h.Session(id)
 	st := ui.State[tabState](c, c.Next("tab"))
 	c.Column("tab", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase), Role: ui.RoleRegion, Label: "Session stats",
 		Help: "agent/stats#session"}, func(c *ui.Ctx) {
 		x.tabHeader(c, se, d, st)
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-		if !ok {
-			c.Column("wait", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("t", "Reading the session's transcript…", uiFont(12.5, th.C(theme.FgFaint)))
-			})
-			return
-		}
-		c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 12}, func(c *ui.Ctx) {
-			sessionTiles(c, d)
-			c.Row("mid", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-				x.overTime(c, d, st.tokens == 1)
-				x.repoCard(c, d)
-			})
-			c.Row("low", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-				toolsCard(c, d.Tools, d.Totals)
-				c.Column("side", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-					statsCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { note(c, "n", "cost by hour started") }, func(c *ui.Ctx) {
-						hoursChart(c, "chart", d.Hours, 70)
+		widget.Async(c, "load", load, widget.AsyncOpts{Policy: widget.Block, Label: "Reading the session's transcript",
+			Retry: func() { x.retryDetail(id) }, Help: "agent/stats#session"}, func(c *ui.Ctx) {
+			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 12}, func(c *ui.Ctx) {
+				sessionTiles(c, d)
+				c.Row("mid", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+					x.overTime(c, d, st.tokens == 1)
+					x.repoCard(c, d)
+				})
+				c.Row("low", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+					toolsCard(c, d.Tools, d.Totals)
+					c.Column("side", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+						statsCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { note(c, "n", "cost by hour started") }, func(c *ui.Ctx) {
+							hoursChart(c, "chart", d.Hours, 70)
+						})
+						effortCard(c, d.Efforts)
 					})
-					effortCard(c, d.Efforts)
 				})
 			})
 		})

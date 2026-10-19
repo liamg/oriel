@@ -17,7 +17,7 @@ import (
 //oriel:api name=picker cap=ui
 type Picker struct{ a *APIs }
 
-//oriel:api doc="A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item) }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background. preview returns oriel.ui nodes."
+//oriel:api doc="A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes."
 func (p Picker) Source(spec script.Table, where string) error {
 	a := p.a
 	id := str(spec, "id")
@@ -49,6 +49,17 @@ func (p Picker) Source(spec script.Table, where string) error {
 			res = append(res, it)
 		}
 		return res
+	}
+	if loading, ok := spec["loading"].(*script.Fn); ok {
+		s.Loading = func() bool {
+			out, err := a.VM.Call(loading)
+			if err != nil {
+				a.Host.Report("picker", id, err)
+				return false
+			}
+			busy, _ := first(out).(bool)
+			return busy
+		}
 	}
 	if run, ok := spec["run"].(*script.Fn); ok {
 		s.Run = func(_ registry.Ctx, it registry.PickerItem) error {

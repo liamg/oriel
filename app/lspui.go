@@ -365,10 +365,15 @@ func (x *lspPlugin) statusSegment(c *ui.Ctx) {
 		return
 	}
 	_, _, d := x.current()
-	if d == nil || d.client == nil {
+	if d == nil || d.client == nil && !d.opening {
 		return
 	}
-	st := d.client.Status()
+	var st lsp.Status
+	if d.client != nil {
+		st = d.client.Status()
+	} else {
+		st = lsp.Status{Server: d.lang, State: lsp.Starting}
+	}
 	dot, tok := "●", theme.OK
 	state := "ready"
 	switch st.State {

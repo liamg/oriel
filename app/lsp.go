@@ -713,6 +713,9 @@ func (x *lspPlugin) codeActions(ctx registry.Ctx) error {
 	if path == "" {
 		return fmt.Errorf("the editor has no file here")
 	}
+	if x.whenStarted(d, "code_actions", func() error { return x.codeActions(ctx) }) {
+		return nil
+	}
 	pos := p.Cursor()
 	agent := x.agentActions(path, p.Buf(), pos.Line)
 	if d == nil || d.client == nil {
@@ -733,8 +736,10 @@ func (x *lspPlugin) codeActions(ctx registry.Ctx) error {
 		r = diags[0].Range
 	}
 	c := d.client
+	answered := x.waiting(c)
 	async(x, func(ctx context.Context) ([]lsp.Action, error) { return c.CodeActions(ctx, path, r, diags) },
 		func(as []lsp.Action, err error) {
+			answered()
 			if err != nil {
 				x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevWarning, Key: true, Text: err.Error()})
 				as = nil

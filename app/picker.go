@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -31,6 +32,45 @@ type picker struct {
 	picked  map[string]bool // multi-selected, by item id
 	resumed bool
 	hovered string // the source and item last given to Hover
+	wait    sourceWait
+}
+
+// sourceWait is how long the sources shown have been loading, for their Busy row.
+type sourceWait struct {
+	on    bool
+	since time.Time
+}
+
+// state is the sources' load: pending since they started loading, or ready.
+func (w *sourceWait) state(now time.Time, loading bool) widget.LoadState {
+	if !loading {
+		w.on = false
+		return widget.LoadState{Phase: widget.Ready}
+	}
+	if !w.on {
+		w.on, w.since = true, now
+	}
+	return widget.LoadState{Phase: widget.Pending, Since: w.since}
+}
+
+// sourceLoading says a source's items are still coming.
+func sourceLoading(s registry.PickerSource) bool {
+	if s.Loading == nil {
+		return false
+	}
+	busy := false
+	registry.Call(func() error { busy = s.Loading(); return nil })
+	return busy
+}
+
+// pickerWaitRow is the list's last row while its sources load, and "No matches" once they're done with none.
+func pickerWaitRow(c *ui.Ctx, s widget.LoadState, label string, none bool, help string) {
+	if s.Phase == widget.Ready && !none {
+		return
+	}
+	c.Row("wait", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8)}, func(c *ui.Ctx) {
+		widget.Async(c, "rows", s, widget.AsyncOpts{Label: label, Empty: "No matches", IsEmpty: none, Help: help}, func(*ui.Ctx) {})
+	})
 }
 
 func (p *picker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "picker"} }
@@ -162,6 +202,8 @@ func (p *picker) build(c *ui.Ctx) {
 									p.run(s, h)
 								}
 							}
+							pickerWaitRow(c, p.wait.state(c.Now(), sourceLoading(s)), s.Title+" still loading", len(g.hits) == 0 && p.query != "",
+								"shell/pickers")
 						})
 					})
 					c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)

@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // The Ship page and its panels (ui.md 18, 01h): each project's way from uncommitted work to a merged PR, read from
@@ -114,8 +115,9 @@ type shipReport struct {
 	ships   []shipRead
 	read    time.Time
 	loading bool
+	since   time.Time // when the read running started, on the window's clock; set by the first frame that sees it
 	err     string
-	doing   map[string]string // project → the step running: "Pushing…"
+	doing   map[string]string // project → the step running: "Pushing"
 	failed  map[string]string // project → why its last step failed
 }
 
@@ -289,6 +291,54 @@ func (x *shipPlugin) report(id core.SessionID) shipReport {
 	out := *r
 	out.ships = slices.Clone(r.ships)
 	return out
+}
+
+// loadState is a project's reading as the loading widgets take it: pending until its first read, refreshing while
+// a later one runs, failed (or ready with the error) when the read failed. Call it on the loop.
+func (x *shipPlugin) loadState(c *ui.Ctx, id core.SessionID, project string) widget.LoadState {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	r := x.reports[id]
+	if r == nil {
+		return widget.LoadState{}
+	}
+	now := c.Now()
+	switch {
+	case !r.loading:
+		r.since = time.Time{}
+	case r.since.IsZero():
+		r.since = now
+	}
+	var err error
+	if r.err != "" {
+		err = errors.New(r.err)
+	}
+	s := widget.LoadState{Since: r.since, Err: err, Progress: -1}
+	switch {
+	case !slices.ContainsFunc(r.ships, func(s shipRead) bool { return s.Project == project }):
+		s.Phase = widget.Pending
+		if !r.loading && err != nil {
+			s.Phase = widget.Failed
+		}
+	case r.loading:
+		s.Phase, s.Stale = widget.Pending, true
+	default:
+		s.Phase = widget.Ready
+	}
+	return s
+}
+
+// stepOpts are a step's button options while the project's steps run: busy, labelled as the step, while it's this
+// one's step; off while another runs.
+func (x *shipPlugin) stepOpts(id core.SessionID, project, step string, o widget.ButtonOpts) widget.ButtonOpts {
+	switch d := x.doing(id, project); d {
+	case "":
+	case step:
+		o.Busy, o.BusyLabel = true, step
+	default:
+		o.Disabled = true
+	}
+	return o
 }
 
 // ship is a project's last reading.
@@ -716,7 +766,7 @@ func (x *shipPlugin) commands() {
 			}},
 		{ID: "ship.push", Title: "Push a project's branch to origin: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Pushing…", func(ctx context.Context, c *host.Host) error {
+				return x.step(se.ID, p, "Pushing", func(ctx context.Context, c *host.Host) error {
 					return c.ShipPush(ctx, host.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
@@ -751,7 +801,7 @@ func (x *shipPlugin) commands() {
 				}
 				delete(x.renaming, formKey(se.ID, p))
 				s, _ := x.ship(se.ID, p)
-				return x.step(se.ID, p, "Renaming…", func(ctx context.Context, c *host.Host) error {
+				return x.step(se.ID, p, "Renaming", func(ctx context.Context, c *host.Host) error {
 					if err := x.renameGuard(ctx, se, s); err != nil {
 						return err
 					}
@@ -761,7 +811,7 @@ func (x *shipPlugin) commands() {
 		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
-				return x.step(se.ID, p, "Marking ready…", func(ctx context.Context, _ *host.Host) error {
+				return x.step(se.ID, p, "Marking ready", func(ctx context.Context, _ *host.Host) error {
 					return x.markReady(ctx, se, s)
 				})
 			})},
@@ -822,7 +872,7 @@ func (x *shipPlugin) commands() {
 				default:
 					return fmt.Errorf("a draft is a commit or a pr, not %q", kind)
 				}
-				return x.step(se.ID, p, "Saving…", func(ctx context.Context, c *host.Host) error { return c.ShipDraft(ctx, req) })
+				return x.step(se.ID, p, "Saving", func(ctx context.Context, c *host.Host) error { return c.ShipDraft(ctx, req) })
 			})},
 		{ID: "ship.browse", Title: "Open a project's PR on its code host, in the browser: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
@@ -889,7 +939,7 @@ func (x *shipPlugin) commit(ctx registry.Ctx, se core.SessionState, p string, a 
 		return fmt.Errorf("%w: %s", errStopped, v.Reason)
 	}
 	f.veto = ""
-	return x.step(se.ID, p, "Committing…", func(cx context.Context, c *host.Host) error {
+	return x.step(se.ID, p, "Committing", func(cx context.Context, c *host.Host) error {
 		x.saving.Wait()
 		hash, err := c.ShipCommit(cx, host.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files, Trailers: trailers})
 		if err != nil {
@@ -980,7 +1030,7 @@ func paths(v any) []string {
 }
 
 func (x *shipPlugin) sync(se core.SessionState, p string) error {
-	return x.step(se.ID, p, "Rebasing…", func(ctx context.Context, c *host.Host) error {
+	return x.step(se.ID, p, "Rebasing", func(ctx context.Context, c *host.Host) error {
 		return c.ShipSync(ctx, host.ShipRef{Session: se.ID, Project: p})
 	})
 }
@@ -1018,9 +1068,9 @@ func (x *shipPlugin) raise(ctx registry.Ctx, se core.SessionState, p string, a r
 	if x.setupFirst(ctx, s) {
 		return nil
 	}
-	label := "Raising…"
+	label := "Raising"
 	if s.PR.Open() {
-		label = "Updating…"
+		label = "Updating"
 	}
 	return x.step(se.ID, p, label, func(cx context.Context, c *host.Host) error {
 		if len(s.Unpushed) > 0 || !s.Pushed {
@@ -1057,7 +1107,7 @@ func (x *shipPlugin) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 		for _, req := range reqs {
 			done := make(chan struct{})
 			s, _ := x.ship(se.ID, req.Project)
-			err := x.step(se.ID, req.Project, "Raising…", func(cx context.Context, c *host.Host) error {
+			err := x.step(se.ID, req.Project, "Raising", func(cx context.Context, c *host.Host) error {
 				defer close(done)
 				if err := c.ShipPush(cx, host.ShipRef{Session: se.ID, Project: req.Project}); err != nil {
 					return err

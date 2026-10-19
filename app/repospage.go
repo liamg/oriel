@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -31,17 +33,17 @@ var (
 
 // repoDetail is what the page has read of one repo.
 type repoDetail struct {
-	facts     fetched[host.RepoFacts]
-	factsBusy bool
-	busy      string // the action running: "fetch", "clean"
-	note      string // how the last action went
+	facts *plugin.Load[host.RepoFacts]
+	busy  string // the action running: "fetch", "clean", "push"
+	note  string // how the last action went
 
-	plan     *host.HousekeepPlan
-	planBusy bool
-	planErr  string
-	ticked   map[string]bool
-	prune    bool
-	results  map[string]string // a branch's error after a clean up; "" when it went
+	plan      *host.HousekeepPlan
+	planBusy  bool
+	planSince time.Time
+	planErr   string
+	ticked    map[string]bool
+	prune     bool
+	results   map[string]string // a branch's error after a clean up; "" when it went
 
 	tag *tagForm
 }
@@ -49,27 +51,20 @@ type repoDetail struct {
 func (x *reposPlugin) detail(id core.RepoID) *repoDetail {
 	d := x.details[id]
 	if d == nil {
-		d = &repoDetail{}
+		w := x.sh.cfg.Host
+		d = &repoDetail{facts: plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.RepoFacts, error) {
+			if w == nil {
+				return host.RepoFacts{}, errors.New("there are no repos in this window")
+			}
+			return w.RepoFacts(ctx, id)
+		}, plugin.LoadOpts{Timeout: 20 * time.Second})}
 		x.details[id] = d
 	}
 	return d
 }
 
-// readFacts reads a repo's facts again, off the loop.
-func (x *reposPlugin) readFacts(id core.RepoID) {
-	d, w := x.detail(id), x.sh.cfg.Host
-	if d.factsBusy || w == nil {
-		return
-	}
-	d.factsBusy = true
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		f, err := w.RepoFacts(ctx, id)
-		x.h.Do(func() { d.facts, d.factsBusy = fetched[host.RepoFacts]{v: f, at: time.Now(), err: err}, false })
-		x.h.Redraw()
-	}()
-}
+// readFacts reads a repo's facts again, off the loop, keeping the old ones on show.
+func (x *reposPlugin) readFacts(id core.RepoID) { x.detail(id).facts.Reload() }
 
 // readPlan reads what housekeeping would clean, fetching first if asked.
 func (x *reposPlugin) readPlan(id core.RepoID, fetch bool) {
@@ -77,7 +72,7 @@ func (x *reposPlugin) readPlan(id core.RepoID, fetch bool) {
 	if d.planBusy || w == nil {
 		return
 	}
-	d.planBusy, d.planErr = true, ""
+	d.planBusy, d.planErr, d.planSince = true, "", x.h.UI().Now()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -187,7 +182,7 @@ func (x *reposPlugin) header(c *ui.Ctx) {
 		if widget.Button(c, "add", "+ Add repo", widget.ButtonOpts{Key: "a", Help: "agent/repos#add"}) {
 			x.run("repos.new", nil)
 		}
-		if widget.Button(c, "scan", "Scan for repos", widget.ButtonOpts{Help: "agent/repos#discovery"}) {
+		if widget.Button(c, "scan", "Scan for repos", widget.ButtonOpts{Busy: x.scanning, BusyLabel: "Scanning", Help: "agent/repos#discovery"}) {
 			x.run("repos.scan", nil)
 		}
 		if widget.Button(c, "close", "Close", widget.ButtonOpts{Key: "esc", Help: "agent/repos#page"}) {
@@ -289,9 +284,7 @@ func (x *reposPlugin) emptyPage(c *ui.Ctx) {
 
 func (x *reposPlugin) repoView(c *ui.Ctx, r core.Repo) {
 	d := x.detail(r.ID)
-	if d.facts.at.IsZero() {
-		x.readFacts(r.ID)
-	}
+	d.facts.Start()
 	if d.plan == nil && !d.planBusy && d.planErr == "" {
 		x.readPlan(r.ID, false)
 	}
@@ -313,7 +306,8 @@ func (x *reposPlugin) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			c.Text("meta", strings.Join(meta, " · "), monoFont(11, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			busy := d.busy != ""
-			if r.Remote != "" && widget.Button(c, "fetch", "Fetch", widget.ButtonOpts{Key: "f", Disabled: busy, Help: "agent/repos#detail"}) {
+			if r.Remote != "" && widget.Button(c, "fetch", "Fetch", widget.ButtonOpts{Key: "f", Disabled: busy, Busy: d.busy == "fetch", BusyLabel: "Fetching",
+				Help: "agent/repos#detail"}) {
 				x.act(r.ID, "fetch", func(ctx context.Context, w *host.Host) (string, error) {
 					return "fetched", w.FetchRepo(ctx, r.ID)
 				})
@@ -336,7 +330,7 @@ func (x *reposPlugin) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 				x.run("session.new", registry.Args{"repos": []string{string(r.ID)}})
 			}
 		})
-		f := d.facts.v
+		f, _ := d.facts.Value()
 		var line []string
 		if f.Branch != "" {
 			on := "on " + f.Branch
@@ -359,9 +353,7 @@ func (x *reposPlugin) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 		if !r.Used.IsZero() {
 			line = append(line, "used "+agoText(time.Now(), r.Used))
 		}
-		if d.busy != "" {
-			line = append(line, d.busy+"ing…")
-		} else if d.note != "" {
+		if d.busy == "" && d.note != "" {
 			line = append(line, d.note)
 		}
 		c.Text("l2", strings.Join(line, " · "), monoFont(10.5, th.C(theme.FgMuted)))
@@ -389,28 +381,27 @@ func repoCard(c *ui.Ctx, key, title, note string, right func(c *ui.Ctx), body fu
 func (x *reposPlugin) statsCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 	th := c.Theme()
 	repoCard(c, "stats", "Stats", "the overview's panels, cached by HEAD", nil, func(c *ui.Ctx) {
-		f := d.facts.v
-		if d.facts.err != nil {
-			c.Text("err", firstLine(d.facts.err.Error()), monoFont(10.5, th.C(theme.Warn)))
-		}
+		f, _ := d.facts.Value()
 		tag := "tags"
 		if f.LatestTag != "" {
 			tag = "tags · " + f.LatestTag
 		}
-		c.Row("facts", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-			for i, t := range [][2]string{
-				{fmt.Sprint(f.Branches), "branches"}, {fmt.Sprint(f.Worktrees), "worktrees"}, {fmt.Sprint(f.Tags), tag},
-				{sizeText(f.SizeKiB), "on disk"},
-			} {
-				if d.facts.at.IsZero() {
-					t[0] = "…"
+		widget.Async(c, "facts", d.facts.State(), widget.AsyncOpts{Label: "Reading the repo", Retry: d.facts.Reload, Help: "agent/repos#detail",
+			Loading: func(c *ui.Ctx) {
+				widget.Skeleton(c, "tiles", widget.SkeletonOpts{Rows: 1, RowH: 46, Widths: []float32{1}, Label: "Reading the repo", Help: "agent/repos#detail"})
+			}}, func(c *ui.Ctx) {
+			c.Row("facts", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
+				for i, t := range [][2]string{
+					{fmt.Sprint(f.Branches), "branches"}, {fmt.Sprint(f.Worktrees), "worktrees"}, {fmt.Sprint(f.Tags), tag},
+					{sizeText(f.SizeKiB), "on disk"},
+				} {
+					c.Column(i, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 7), Gap: 2, Stroke: th.C(theme.Line), Border: 1, Radius: 6, Clip: true,
+						Role: ui.RoleText, Label: t[0] + " " + t[1]}, func(c *ui.Ctx) {
+						c.Text("v", t[0], ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 16, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+						c.Text("l", strings.ToUpper(t[1]), monoFont(9, th.C(theme.FgFaint)))
+					})
 				}
-				c.Column(i, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 7), Gap: 2, Stroke: th.C(theme.Line), Border: 1, Radius: 6, Clip: true,
-					Role: ui.RoleText, Label: t[0] + " " + t[1]}, func(c *ui.Ctx) {
-					c.Text("v", t[0], ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 16, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-					c.Text("l", strings.ToUpper(t[1]), monoFont(9, th.C(theme.FgFaint)))
-				})
-			}
+			})
 		})
 		if v, ok := x.h.ViewByID(OverviewPanelsView); ok {
 			c.Column("panels", ui.Style{W: ui.Flex(1), Stroke: th.C(theme.Line), Border: 1, Radius: 6, Clip: true}, func(c *ui.Ctx) {
@@ -434,7 +425,7 @@ func sizeText(kib int64) string {
 func (x *reposPlugin) housekeepCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 	th := c.Theme()
 	p := d.plan
-	summary := "reading…"
+	summary := ""
 	switch {
 	case d.planErr != "":
 		summary = firstLine(d.planErr)
@@ -467,6 +458,12 @@ func (x *reposPlugin) housekeepCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 	}
 	repoCard(c, "housekeeping", "Housekeeping", summary, right, func(c *ui.Ctx) {
 		if p == nil {
+			st := widget.LoadState{Phase: widget.Pending, Since: d.planSince}
+			if d.planErr != "" {
+				st = widget.LoadState{Phase: widget.Failed, Err: errors.New(d.planErr)}
+			}
+			widget.Async(c, "plan", st, widget.AsyncOpts{Label: "Reading what could be cleaned up", Help: "agent/repos#housekeeping",
+				Retry: func() { x.readPlan(r.ID, false) }}, func(*ui.Ctx) {})
 			return
 		}
 		for _, b := range slices.Sorted(maps.Keys(d.results)) {
@@ -568,7 +565,8 @@ func (x *reposPlugin) housekeepCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			if x.confirm == "clean" {
 				label = fmt.Sprintf("Sure? Delete %d", n)
 			}
-			if widget.Button(c, "clean", label, widget.ButtonOpts{Primary: true, Disabled: n == 0 || d.busy != "", Help: "agent/repos#housekeeping"}) {
+			if widget.Button(c, "clean", label, widget.ButtonOpts{Primary: true, Disabled: n == 0 || d.busy != "", Busy: d.busy == "clean", BusyLabel: "Cleaning up",
+				Help: "agent/repos#housekeeping"}) {
 				if x.confirm != "clean" {
 					x.confirm = "clean"
 				} else {
@@ -643,6 +641,7 @@ type tagForm struct {
 	preview host.TagPreview
 	loaded  bool
 	loading bool
+	since   time.Time // when the preview's read started
 	branch  string
 	name    string
 	nameFor string // the name the bump made: it follows the bump while it's this
@@ -662,7 +661,7 @@ func (x *reposPlugin) loadTag(id core.RepoID, t *tagForm) {
 	if t.loading || w == nil {
 		return
 	}
-	t.loading = true
+	t.loading, t.since = true, x.h.UI().Now()
 	branch := t.branch
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -689,7 +688,6 @@ func (x *reposPlugin) loadTag(id core.RepoID, t *tagForm) {
 }
 
 func (x *reposPlugin) tagCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
-	th := c.Theme()
 	if d.tag == nil {
 		d.tag = &tagForm{}
 	}
@@ -715,7 +713,12 @@ func (x *reposPlugin) tagCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			note(c, "how", "an annotated tag on a branch, pulled first; only the new tag is pushed")
 			return
 		case !t.loaded:
-			c.Text("wait", cmpOr(t.err, "reading the branches and tags…"), monoFont(10.5, th.C(theme.FgFaint)))
+			st := widget.LoadState{Phase: widget.Pending, Since: t.since}
+			if t.err != "" && !t.loading {
+				st = widget.LoadState{Phase: widget.Failed, Err: errors.New(t.err)}
+			}
+			widget.Async(c, "preview", st, widget.AsyncOpts{Label: "Reading the branches and tags", Help: "agent/repos#tags",
+				Retry: func() { t.err = ""; x.loadTag(r.ID, t) }}, func(*ui.Ctx) {})
 			return
 		}
 		x.tagFormView(c, r, t)
@@ -799,7 +802,8 @@ func (x *reposPlugin) tagFormView(c *ui.Ctx, r core.Repo, t *tagForm) {
 			t.open, t.err = false, ""
 		}
 		name := strings.TrimSpace(t.name)
-		if widget.Button(c, "create", "Create tag "+name, widget.ButtonOpts{Primary: true, Disabled: t.busy || name == "", Help: "agent/repos#tags"}) {
+		if widget.Button(c, "create", "Create tag "+name, widget.ButtonOpts{Primary: true, Disabled: name == "", Busy: t.busy, BusyLabel: "Tagging",
+			Help: "agent/repos#tags"}) {
 			x.createTag(r.ID, t)
 		}
 	})
@@ -861,7 +865,7 @@ func (x *reposPlugin) tagDone(c *ui.Ctx, r core.Repo, t *tagForm) {
 			c.Text("p", "pushed", monoFont(10.5, th.C(theme.FgFaint)))
 		case res.PushErr != "":
 			c.Text("p", "push failed: "+truncate(firstLine(res.PushErr), 60), monoFont(10.5, th.C(theme.Error)))
-			if widget.Button(c, "again", "Push again", widget.ButtonOpts{Help: "agent/repos#tags"}) {
+			if widget.Button(c, "again", "Push again", widget.ButtonOpts{Busy: x.detail(r.ID).busy == "push", BusyLabel: "Pushing", Help: "agent/repos#tags"}) {
 				name := res.Name
 				x.act(r.ID, "push", func(ctx context.Context, w *host.Host) (string, error) {
 					err := w.PushTag(ctx, r.ID, name)

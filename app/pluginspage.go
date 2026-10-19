@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/core"
@@ -49,6 +50,42 @@ type pluginsPage struct {
 	sel    int
 	filter string
 	asked  bool // the Registry tab asked for the indexes
+
+	fetching   bool              // the registries' indexes are being fetched for the page
+	fetchSince time.Time         // since when
+	running    map[string]string // plugin id → the command running for it
+}
+
+// fetch fetches the registries' indexes for the page, once at a time.
+func (x *catalogPlugin) fetch() {
+	if x.page.fetching {
+		return
+	}
+	x.page.fetching, x.page.fetchSince = true, x.h.UI().Now()
+	go func() {
+		x.refresh()
+		x.h.Do(func() { x.page.fetching = false })
+		x.h.Redraw()
+	}()
+}
+
+// act runs a plugin's command off the loop, its button busy until it answers.
+func (x *catalogPlugin) act(id, cmd, title string, a registry.Args) {
+	if x.page.running[id] != "" {
+		return
+	}
+	if x.page.running == nil {
+		x.page.running = map[string]string{}
+	}
+	x.page.running[id] = cmd
+	go func() {
+		err := x.h.Run(context.Background(), cmd, a)
+		x.h.Do(func() { delete(x.page.running, id) })
+		if err != nil {
+			x.h.Notify(noticeErr("plugins", title, err))
+		}
+		x.h.Redraw()
+	}()
 }
 
 // pageCommands are the page's commands and its view.
@@ -239,7 +276,7 @@ func (x *catalogPlugin) pageView(c *ui.Ctx) {
 		fetched := x.client != nil
 		x.mu.Unlock()
 		if !fetched {
-			go x.refresh()
+			x.fetch()
 		}
 	}
 	widget.Page(c, "plugins", &x.page.open, widget.PageOpts{Over: mainArea(), KeyMode: PluginsKeyMode, Label: "Plugins page", Help: pluginsHelp},
@@ -473,21 +510,26 @@ func (x *catalogPlugin) detail(c *ui.Ctx, r pluginRow) {
 		}
 		c.Row("acts", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			id, scope := r.id, scopeOf(r.st.Entry)
-			run := func(cmd string, a registry.Args) {
-				go func() {
-					if err := x.h.Run(context.Background(), cmd, a); err != nil {
-						x.h.Notify(noticeErr("plugins", "Plugins", err))
-					}
-				}()
+			running := x.page.running[id]
+			busy := func(cmd, label string) widget.ButtonOpts {
+				return widget.ButtonOpts{Busy: running == cmd, BusyLabel: label, Disabled: running != "", Help: pluginsHelp}
 			}
-			if r.st.State == catalog.Consent && widget.Button(c, "review", "Review", widget.ButtonOpts{Primary: true, Help: pluginsHelp}) {
-				run("plugins.review", registry.Args{"id": id})
+			if r.st.State == catalog.Consent {
+				o := busy("plugins.review", "")
+				o.Primary = true
+				if widget.Button(c, "review", "Review", o) {
+					x.act(id, "plugins.review", "Plugins", registry.Args{"id": id})
+				}
 			}
-			if r.st.Update != "" && widget.Button(c, "update", "Update to "+r.st.Update, widget.ButtonOpts{Primary: true, Help: pluginsHelp}) {
-				run("plugins.update", registry.Args{"id": id})
+			if r.st.Update != "" {
+				o := busy("plugins.update", "Updating")
+				o.Primary = true
+				if widget.Button(c, "update", "Update to "+r.st.Update, o) {
+					x.act(id, "plugins.update", "Plugins", registry.Args{"id": id})
+				}
 			}
-			if widget.Button(c, "uninstall", "Uninstall", widget.ButtonOpts{Help: pluginsHelp}) {
-				run("plugins.uninstall", registry.Args{"id": id, "scope": scope})
+			if widget.Button(c, "uninstall", "Uninstall", busy("plugins.uninstall", "Uninstalling")) {
+				x.act(id, "plugins.uninstall", "Plugins", registry.Args{"id": id, "scope": scope})
 			}
 		})
 	}
@@ -499,27 +541,50 @@ func (x *catalogPlugin) registryTab(c *ui.Ctx, installed []pluginRow) {
 	x.mu.Lock()
 	client := x.client
 	x.mu.Unlock()
+	st := widget.LoadState{Phase: widget.Ready}
+	switch {
+	case client == nil && !x.page.fetching:
+		x.fetch()
+		fallthrough
+	case client == nil:
+		st = widget.LoadState{Phase: widget.Pending, Since: x.page.fetchSince}
+	case x.page.fetching:
+		st = widget.LoadState{Phase: widget.Pending, Since: x.page.fetchSince, Stale: true}
+	}
+	var all []catalog.Found
+	if client != nil {
+		all = client.All()
+	}
+	q := strings.ToLower(strings.TrimSpace(x.page.filter))
+	all = slices.DeleteFunc(all, func(f catalog.Found) bool {
+		return q != "" && !strings.Contains(strings.ToLower(f.ID+" "+f.Description), q)
+	})
+	empty := "The registries list no plugins."
+	if q != "" {
+		empty = "No plugin in the registries matches."
+	}
 	c.Column("registry", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.PadXY(18, 12), Gap: 4}, func(c *ui.Ctx) {
-		if client == nil {
-			note(c, "wait", "Fetching the registries…")
-			return
-		}
-		for _, s := range client.Sources {
-			if err := client.Err(s.Repo); err != nil {
-				widget.Wrap(c, "err"+s.Repo, s.Repo+": "+err.Error(), 900, uiFont(12, th.C(theme.Error)))
+		widget.Async(c, "list", st, widget.AsyncOpts{Label: "Fetching the registries", Empty: empty, IsEmpty: len(all) == 0, Width: 900, Help: pluginsHelp,
+			Loading: func(c *ui.Ctx) {
+				widget.Skeleton(c, "rows", widget.SkeletonOpts{Rows: 6, RowH: 30, Gap: 14, Widths: []float32{1, .85, .7}, Label: "Fetching the registries",
+					Help: pluginsHelp})
+			}}, func(c *ui.Ctx) {
+			for _, s := range client.Sources {
+				if err := client.Err(s.Repo); err != nil {
+					c.Row("err"+s.Repo, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+						c.Column("t", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+							widget.Wrap(c, "t", s.Repo+": "+err.Error(), 760, uiFont(12, th.C(theme.Error)))
+						})
+						if widget.Button(c, "retry", "Retry", widget.ButtonOpts{Busy: x.page.fetching, BusyLabel: "Fetching", Help: pluginsHelp}) {
+							x.fetch()
+						}
+					})
+				}
 			}
-		}
-		all := client.All()
-		q := strings.ToLower(strings.TrimSpace(x.page.filter))
-		all = slices.DeleteFunc(all, func(f catalog.Found) bool {
-			return q != "" && !strings.Contains(strings.ToLower(f.ID+" "+f.Description), q)
+			for _, f := range all {
+				x.registryRow(c, f, slices.ContainsFunc(installed, func(r pluginRow) bool { return r.id == f.ID }))
+			}
 		})
-		if len(all) == 0 {
-			note(c, "none", "The registries list no plugins.")
-		}
-		for _, f := range all {
-			x.registryRow(c, f, slices.ContainsFunc(installed, func(r pluginRow) bool { return r.id == f.ID }))
-		}
 	})
 }
 
@@ -558,13 +623,8 @@ func (x *catalogPlugin) registryRow(c *ui.Ctx, f catalog.Found, installed bool) 
 			c.Text("in", "installed", capText(th.C(theme.FgFaint)))
 			return
 		}
-		if widget.Button(c, "install", "Install", widget.ButtonOpts{Help: pluginsHelp}) {
-			id := f.ID
-			go func() {
-				if err := x.h.Run(context.Background(), "plugins.install", registry.Args{"id": id}); err != nil {
-					x.h.Notify(noticeErr("plugins", "Install "+id, err))
-				}
-			}()
+		if widget.Button(c, "install", "Install", widget.ButtonOpts{Busy: x.page.running[f.ID] != "", BusyLabel: "Installing", Help: pluginsHelp}) {
+			x.act(f.ID, "plugins.install", "Install "+f.ID, registry.Args{"id": f.ID})
 		}
 	})
 }

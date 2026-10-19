@@ -58,6 +58,8 @@ type walkthroughPlugin struct {
 // walkthrough is one walkthrough: being asked for, failed, or its steps and the one shown.
 type walkthrough struct {
 	loading bool
+	since   time.Time          // when it was asked for
+	cancel  context.CancelFunc // stops the asking
 	err     error
 	subject string
 	files   int
@@ -220,12 +222,12 @@ func (x *walkthroughPlugin) start() error {
 			}
 		}
 	}
-	w := &walkthrough{loading: true, srcs: map[string]*walkSrc{}, cardH: map[int]float32{}}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	w := &walkthrough{loading: true, since: windowNow(x.h), cancel: cancel, srcs: map[string]*walkSrc{}, cardH: map[int]float32{}}
 	x.w = w
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		ch, err := gatherChange(ctx, ps, open)
 		var steps []walkStep
@@ -432,12 +434,24 @@ func (x *walkthroughPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 		case w == nil:
 			x.message(c, "No walkthrough: Explain this change (␣E) asks for one.", false)
 		case w.loading:
-			x.message(c, "Asking for a walkthrough of the change…", false)
+			x.asking(c, w)
 		case w.err != nil:
 			x.message(c, w.err.Error(), true)
 		default:
 			x.stage(c, w)
 			x.dock(c, w)
+		}
+	})
+}
+
+// asking stands in for the stage while the walkthrough is asked for: how long it's taken, and Cancel.
+func (x *walkthroughPlugin) asking(c *ui.Ctx, w *walkthrough) {
+	c.Column("msg", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 12}, func(c *ui.Ctx) {
+		widget.Busy(c, "busy", widget.LoadState{Phase: widget.Pending, Since: w.since}, widget.BusyOpts{Label: "Asking for a walkthrough of the change",
+			Size: 13, Clock: time.Second, Help: walkHelp})
+		if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Help: walkHelp}) {
+			w.cancel()
+			x.w = nil
 		}
 	})
 }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
@@ -231,6 +232,7 @@ type panelState struct {
 	key     string
 	files   []changedFile
 	loading bool
+	since   time.Time // when the loading began
 }
 
 // changedFiles are the branch's changed files' units, worked out off the loop when the status or an open buffer
@@ -260,7 +262,7 @@ func (x *explainPlugin) changedFiles() ([]changedFile, bool) {
 	if x.panel.key == key || x.panel.loading {
 		return x.panel.files, x.panel.loading
 	}
-	x.panel.loading = true
+	x.panel.loading, x.panel.since = true, windowNow(x.h)
 	rev, repo, root := st.BaseHash, g.status.Repo(), g.root()
 	srcs, writes := map[string][]byte{}, map[string][]byte{}
 	for _, p := range paths {
@@ -414,21 +416,23 @@ func (x *explainPlugin) panelView(c *ui.Ctx) {
 				}
 			})
 		}
-		if len(roots) == 0 {
-			msg := "The branch changes no code units."
-			switch {
-			case x.sh.git.state() == nil:
-				msg = "Not in a git repository: there's no branch to compare with."
-			case loading:
-				msg = "Reading the changes…"
-			}
-			c.Box("none", ui.Style{Pad: ui.PadXY(12, 6)}, func(c *ui.Ctx) { c.Text("t", msg, monoTok(c, 11, theme.FgGhost)) })
-			return
+		s := x.sh.git.load()
+		empty := "The branch changes no code units."
+		switch {
+		case s.Phase == widget.Ready && x.sh.git.state() == nil:
+			empty = "Not in a git repository: there's no branch to compare with."
+		case s.Phase == widget.Ready && loading:
+			s = widget.LoadState{Phase: widget.Pending, Since: x.panel.since, Stale: len(roots) > 0}
 		}
-		res := widget.Tree(c, "tree", roots, widget.TreeOpts{Help: "editor/pane#changed-units", Label: "Changed units"})
-		if res.Activated != "" {
-			x.openRow(res.Activated)
-		}
+		c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 6)}, func(c *ui.Ctx) {
+			widget.Async(c, "units", s, widget.AsyncOpts{Label: "Reading the changes", Empty: empty, IsEmpty: len(roots) == 0, Retry: x.sh.git.reload,
+				Help: "editor/pane#changed-units"}, func(c *ui.Ctx) {
+				res := widget.Tree(c, "tree", roots, widget.TreeOpts{Help: "editor/pane#changed-units", Label: "Changed units"})
+				if res.Activated != "" {
+					x.openRow(res.Activated)
+				}
+			})
+		})
 	})
 }
 
