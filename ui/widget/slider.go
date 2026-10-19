@@ -3,6 +3,8 @@ package widget
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
@@ -27,9 +29,6 @@ func Slider(c *ui.Ctx, key any, v *float64, o SliderOpts) bool {
 	if r, ok := c.Rect(id); ok && in.Held && r.Dx() > 0 {
 		t := float64((in.Pointer().X - r.Min.X) / r.Dx())
 		*v = o.Min + math.Max(0, math.Min(1, t))*span
-		if o.Step > 0 {
-			*v = math.Round(*v/o.Step) * o.Step
-		}
 	}
 	for _, k := range in.Keys {
 		step := o.Step
@@ -46,6 +45,9 @@ func Slider(c *ui.Ctx, key any, v *float64, o SliderOpts) bool {
 			*v += step
 		}
 	}
+	if o.Step > 0 && *v != old {
+		*v = snap(*v, o.Step)
+	}
 	*v = math.Max(o.Min, math.Min(o.Max, *v))
 	t := float32(0)
 	if span > 0 {
@@ -60,6 +62,16 @@ func Slider(c *ui.Ctx, key any, v *float64, o SliderOpts) bool {
 		c.Paint("track", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) { paintSlider(f, r, t, o.Track, bg, fg, border) })
 	})
 	return *v != old
+}
+
+// snap rounds v to a multiple of step, to step's decimal places.
+func snap(v, step float64) float64 {
+	places := 0
+	if s := strconv.FormatFloat(step, 'f', -1, 64); strings.Contains(s, ".") {
+		places = len(s) - strings.Index(s, ".") - 1
+	}
+	f, _ := strconv.ParseFloat(strconv.FormatFloat(math.Round(v/step)*step, 'f', places, 64), 64)
+	return f
 }
 
 func paintSlider(f render.Frame, r render.Rect, t float32, track func(float64) render.Color, bg, fg, border render.Color) {

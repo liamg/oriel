@@ -194,7 +194,8 @@ One mechanism scales the whole UI, so no view handles font size itself and nothi
   code's own, inside the zoom: the editor's rows, gutter and character cells are measured from them, so the code can be
   larger or smaller than the UI around it. Code shown outside the editor (help, search) stays at the default size.
 - **Parts with their own size**: `ui.statusline.font_size`, `ui.hover.font_size` (hovers and signature help),
-  `ui.completion.font_size` and `ui.tooltip.font_size`, each 0 to follow `ui.font_size`. A part is drawn at its
+  `ui.completion.font_size` and `ui.tooltip.font_size` (6–32), each following `ui.font_size` until it's set
+  (`OptionSpec.Follows`): it reads as the UI's size, and zooming still grows the part with the window. A part is drawn at its
   size over the UI's with `ui.Style.Scale`, which scales a box's whole subtree (sizes, padding, gaps, radii, text) as
   the zoom does the window, so a bigger part holds its text too. Another part is one option and one `Scale`.
 - The 1.5× goldens (`ide-zoom`) check the main screen holds at a large size.

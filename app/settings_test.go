@@ -277,30 +277,90 @@ func TestSettingsEscapeAfterAToggle(t *testing.T) {
 	}
 }
 
+// settings.md: a field "sets on Enter, when it loses focus, or once typing pauses", and only a value that's right.
 func TestSettingsNumberField(t *testing.T) {
 	s := settingsAt(t, "editor.max_line_length")
+	get := func() any { v, _, _ := s.reg.Options().Get("editor.max_line_length", registry.At{}); return v }
 	s.click(centre(s.access("editor.max_line_length").Bounds))
 	s.typeKeys("End", "1", "x", "2")
 	if v := s.access("editor.max_line_length").Value; v != "012" {
 		t.Errorf("typing 1 x 2 into a whole number's field: %q, want 012", v)
 	}
-	s.typeKeys("CR")
-	if v, _, _ := s.reg.Options().Get("editor.max_line_length", registry.At{}); v != 12 {
-		t.Errorf("after Enter, editor.max_line_length = %v", v)
+	if v := get(); v != 0 {
+		t.Errorf("set to %v while still typing", v)
+	}
+	s.now = s.now.Add(settingsTypingPause)
+	s.frame()
+	if v := get(); v != 12 {
+		t.Errorf("after a pause, editor.max_line_length = %v", v)
+	}
+	s.frame()
+	if !strings.Contains(s.frameText(), "✓ saved") {
+		t.Error("the row doesn't say it was saved")
 	}
 	s.typeKeys("0", "0", "0", "0")
 	s.frame()
 	if !strings.Contains(s.frameText(), "is between") {
 		t.Error("an out-of-range value doesn't say why under the field")
 	}
+	s.now = s.now.Add(settingsTypingPause)
+	s.frame()
 	s.typeKeys("CR")
-	if v, _, _ := s.reg.Options().Get("editor.max_line_length", registry.At{}); v != 12 {
-		t.Errorf("Enter on an out-of-range value set it: %v", v)
+	if v := get(); v != 12 {
+		t.Errorf("an out-of-range value was set: %v", v)
 	}
 	s.typeKeys("Esc")
 	s.frame()
 	if v := s.access("editor.max_line_length").Value; v != "12" {
 		t.Errorf("Escape leaves %q in the field, want it back to 12", v)
+	}
+	s.click(centre(s.access("editor.max_line_length").Bounds))
+	s.typeKeys("End", "BS", "3", "CR")
+	if v := get(); v != 13 {
+		t.Errorf("after Enter, editor.max_line_length = %v", v)
+	}
+}
+
+// A number with a range and a step has a slider, set when it's let go; the field beside it shows where it is.
+func TestSettingsSlider(t *testing.T) {
+	s := settingsAt(t, "editor.font_size")
+	get := func() any { v, _, _ := s.reg.Options().Get("editor.font_size", registry.At{}); return v }
+	r := s.access("editor.font_size 13.5").Bounds
+	y := (r.Min.Y + r.Max.Y) / 2
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: r.Min.X + 1, Y: y}})
+	s.frame()
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: r.Min.X + 1, Y: y}, Buttons: render.ButtonPrimary})
+	s.frame()
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: r.Max.X + 40, Y: y}, Buttons: render.ButtonPrimary})
+	s.frame()
+	if v := s.access("editor.font_size").Value; v != "48" {
+		t.Errorf("dragged past the end, the field shows %q", v)
+	}
+	if v := get(); v != 13.5 {
+		t.Errorf("set to %v while still dragging", v)
+	}
+	s.ui.Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: r.Max.X + 40, Y: y}, Buttons: render.ButtonPrimary})
+	s.frame()
+	if v := get(); v != 48.0 {
+		t.Errorf("let go at the end: editor.font_size = %v", v)
+	}
+	s.typeKeys("h")
+	if v := get(); v != 47.5 {
+		t.Errorf("a step down from the keyboard: %v", v)
+	}
+}
+
+// A part's font size shows the UI's while it follows it, and says so.
+func TestSettingsFollows(t *testing.T) {
+	s := settingsAt(t, "ui.tooltip.font_size")
+	s.reg.Options().Set("ui.font_size", registry.LayerUser, registry.At{}, 15.0)
+	s.frame()
+	s.frame()
+	if v := s.access("ui.tooltip.font_size").Value; v != "15" {
+		t.Errorf("following ui.font_size at 15, the field shows %q", v)
+	}
+	if !strings.Contains(s.frameText(), "follows ui.font_size") {
+		t.Error("the row doesn't say it follows ui.font_size")
 	}
 }
 

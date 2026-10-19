@@ -105,9 +105,9 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 	for _, s := range conventionOptions() {
 		x.add(h.Option(s))
 	}
-	x.add(h.Option(registry.OptionSpec{Name: "editor.font_size", Type: registry.Float, Default: float64(codeSize), Min: 6, Max: 48,
+	x.add(h.Option(registry.OptionSpec{Name: "editor.font_size", Type: registry.Float, Default: float64(codeSize), Min: 6, Max: 48, Step: 0.5,
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The code's text size, inside the UI's zoom (ui.font_size)."}))
-	x.add(h.Option(registry.OptionSpec{Name: "editor.line_height", Type: registry.Float, Default: 1.55, Min: 1, Max: 3,
+	x.add(h.Option(registry.OptionSpec{Name: "editor.line_height", Type: registry.Float, Default: 1.55, Min: 1, Max: 3, Step: 0.05,
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The space between lines of code, as a multiple of editor.font_size."}))
 	for _, s := range x.inspectSections() {
 		x.add(h.Contribute(s))
