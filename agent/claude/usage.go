@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -37,9 +38,9 @@ func remember(u core.ProviderUsage) {
 	}
 }
 
-// readUsage probes /usage when Claude's files record a subscription login and no probe is running.
+// readUsage probes /usage when claude is installed and no probe is running. Signed out, there's no reading and no error.
 func (p Provider) readUsage(ctx context.Context) error {
-	if _, _, _, ok := subscription(nil); !ok {
+	if _, err := exec.LookPath(p.bin()); err != nil {
 		return nil
 	}
 	usage.mu.Lock()
@@ -55,6 +56,9 @@ func (p Provider) readUsage(ctx context.Context) error {
 		usage.mu.Unlock()
 	}()
 	_, err := p.probe(ctx)
+	if errors.As(err, new(agent.AuthExpired)) {
+		return nil
+	}
 	return err
 }
 

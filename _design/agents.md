@@ -51,8 +51,8 @@ Each provider is driven the way its **subscription** allows.
   from tailing `<config>/projects/<slug(cwd)>/<id>.jsonl` and `<id>/subagents/agent-*.jsonl`. A turn's end waits
   briefly for the log to hold the turn's answer, so its messages always come before `TurnEnd`.
 - `Usage` is the newest reading of the plan's windows: a session's mod's, through `$.session.usage()` at each turn's
-  end, or the `/usage` probe's (below), which `Usage` runs unless one is running already or Claude's files record no
-  subscription login.
+  end, or the `/usage` probe's (below), which `Usage` runs when `claude` is on PATH and no probe is running already. Claude's
+  files aren't asked whether it's signed in: on macOS the token is in the Keychain, and the probe finds out itself.
 
 ### The `/usage` probe (`agent/claude/usage.go`)
 
@@ -67,7 +67,7 @@ that only types a slash command, which Claude Code runs itself, so nothing reach
   every 500 ms it answers the mod's `wait` with `usage`, and the mod reports `$.session.usage()` as an `event` of kind
   `usage` with its `rateLimits`, mapped by `usageOf` as a turn's are. The first report with windows ends it: Escape,
   `/exit`, and `Close` kills it if it hasn't gone in 3 s. A turn starting, a lost login, the process exiting, or 40 s
-  passing fails it.
+  passing fails it. Signed out, its screen says so (AI-13) and the probe ends with no reading and no error.
 - What it reads is what a session's mod reads: the 5-hour and weekly (all models) windows; Claude Code's per-model
   weeks ("Current week (Fable)") aren't in `$.session.usage()`, so they aren't shown.
 - Checked against Claude Code 2.1.299: `$.session.usage()` has its windows about 1.5 s after `/usage` is typed, no
