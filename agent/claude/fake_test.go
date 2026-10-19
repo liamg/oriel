@@ -184,9 +184,13 @@ func (f *fake) poll(turns chan<- string) {
 }
 
 // terminal answers what's typed into it: /login signs in, as claude's does once you're through its steps; /usage
-// reads the plan's windows; /exit quits. ORIEL_FAKE_RUNS gets a line as it starts and as it quits.
+// reads the plan's windows; /exit quits. ORIEL_FAKE_RUNS gets a line as it starts and as it quits; with
+// ORIEL_FAKE_SIGNED_OUT=1 it starts on the signed-out screen.
 func (f *fake) terminal() {
 	note("run")
+	if os.Getenv("ORIEL_FAKE_SIGNED_OUT") == "1" {
+		os.Stdout.Write(recordedSignedOut)
+	}
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
 		switch strings.Trim(sc.Text(), " \x1b") {

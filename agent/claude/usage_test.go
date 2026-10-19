@@ -122,12 +122,27 @@ func TestTheNewestReadingWins(t *testing.T) {
 	checkProbed(t, u)
 }
 
-// Signed out, or on an API key, there's no plan to read: no claude is started.
-func TestUsageSignedOutStartsNothing(t *testing.T) {
+// Signed out, the probe's claude shows its login screen: the probe ends there, with no reading and no error.
+func TestUsageSignedOutEndsTheProbe(t *testing.T) {
 	p, runs := usageProbe(t)
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	t.Setenv("ORIEL_FAKE_SIGNED_OUT", "1")
+	start := time.Now()
+	u, err := p.Usage(context.Background())
+	if started, _ := runs(); err != nil || len(u.Windows) != 0 || started != 1 {
+		t.Errorf("signed out: %+v, %v; %d claudes started", u, err, started)
+	}
+	if d := time.Since(start); d > probeTimeout/2 {
+		t.Errorf("the probe took %s to see the login screen", d)
+	}
+}
+
+// With claude not installed, no probe starts.
+func TestUsageWithoutClaudeStartsNothing(t *testing.T) {
+	p, runs := usageProbe(t)
+	p.Bin = filepath.Join(t.TempDir(), "claude")
 	u, err := p.Usage(context.Background())
 	if started, _ := runs(); err != nil || len(u.Windows) != 0 || started != 0 {
-		t.Errorf("signed out: %+v, %v; %d claudes started", u, err, started)
+		t.Errorf("no claude: %+v, %v; %d claudes started", u, err, started)
 	}
 }
