@@ -335,7 +335,9 @@ Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
 - **Zoom** is separate from placement: `⌃W Z` makes the focused pane fill the window, and
   pressing it again restores the exact layout (tmux's `prefix z`). It works from any placement.
 - **Moving a pane**: `⌃W M` opens the move menu, or use the direct keys: `⌃W J` dock bottom, `⌃W L` split right,
-  `⌃W T` tab in main, `⌃W F` float. Dragging a tab onto any edge works too, and the drop targets glow.
+  `⌃W T` tab in main, `⌃W F` float. Dragging a tab onto any edge works too, and the drop targets glow,
+  labelled with what the drop does ("Split right", "Tab with main.go", "Dock bottom", "Float"). A drop into a pane's
+  middle lights its tab strip with a slot for the new tab; a float is a dashed outline, since it snaps to nothing.
 - **Docks are the edges of the same window tree**, not a separate system. So `⌃W h/j/k/l` moves
   focus between code, a split terminal and the dock without thinking about which is which.
 - **Terminals behave like nvim's**: insert mode types into the shell. `⌃\ ⌃N` switches to terminal-normal

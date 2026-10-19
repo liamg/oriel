@@ -1,5 +1,7 @@
 package render
 
+import "math"
+
 // Path is an outline in logical pixels.
 type Path struct {
 	Segs []Seg
@@ -50,4 +52,33 @@ func Ellipse(r Rect) *Path {
 	p.CubeTo(Point{cx - rx, cy - ry*k}, Point{cx - rx*k, cy - ry}, Point{cx, cy - ry})
 	p.CubeTo(Point{cx + rx*k, cy - ry}, Point{cx + rx, cy - ry*k}, Point{cx + rx, cy})
 	return p.Close()
+}
+
+// Dashed is the polyline through pts as dashes on and off long.
+func Dashed(pts []Point, on, off float32) *Path {
+	var p Path
+	draw, left := true, on
+	for i := 1; i < len(pts); i++ {
+		a, b := pts[i-1], pts[i]
+		l := float32(math.Hypot(float64(b.X-a.X), float64(b.Y-a.Y)))
+		at := float32(0)
+		for at < l {
+			step := min(left, l-at)
+			t0, t1 := at/l, (at+step)/l
+			if draw {
+				p.MoveTo(Point{X: a.X + (b.X-a.X)*t0, Y: a.Y + (b.Y-a.Y)*t0})
+				p.LineTo(Point{X: a.X + (b.X-a.X)*t1, Y: a.Y + (b.Y-a.Y)*t1})
+			}
+			at += step
+			left -= step
+			if left <= 0 {
+				draw = !draw
+				left = on
+				if !draw {
+					left = off
+				}
+			}
+		}
+	}
+	return &p
 }

@@ -47,19 +47,32 @@ const edgeBand = 24 // px from a window edge that docks a dropped view
 
 // drag is a tab being dragged.
 type drag struct {
-	view    ViewRef
-	from    render.Point
-	moving  bool
-	at      render.Point
-	target  Target
-	targetR render.Rect
-	ok      bool
+	view   ViewRef
+	from   render.Point
+	moving bool
+	at     render.Point
+	spot   spot
 }
+
+// spot is where a drag would drop and how it's shown: the rect lit, the slot a new tab would take, and the area
+// the label names it in.
+type spot struct {
+	ok     bool
+	target Target
+	lit    render.Rect
+	slot   render.Rect
+	area   render.Rect
+	label  string
+}
+
+// tabRow is a leaf's tab strip and the last tab in it.
+type tabRow struct{ id, last ui.ID }
 
 // viewState is what View keeps between frames.
 type viewState struct {
 	drag   *drag
 	leaves map[*Node]ui.ID // this frame's leaves, for drop targets and ⌃W h/j/k/l
+	strips map[*Node]tabRow
 	tabs   map[ui.ID]ViewRef
 	docks  map[Edge]ui.ID
 	resize *resize
@@ -68,6 +81,7 @@ type viewState struct {
 	mark   func(ViewRef) (string, render.Color)
 	lead   func(ViewRef) (render.Color, bool)
 	tip    func(ViewRef) string
+	edits  []func() // changes to the tree, made once it's drawn
 }
 
 // dockResize is a dock's edge being dragged.
@@ -91,7 +105,7 @@ type resize struct {
 func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 	id := c.Next(key)
 	st := ui.State[viewState](c, id)
-	st.leaves, st.tabs, st.docks = map[*Node]ui.ID{}, map[ui.ID]ViewRef{}, map[Edge]ui.ID{}
+	st.leaves, st.strips, st.tabs, st.docks = map[*Node]ui.ID{}, map[*Node]tabRow{}, map[ui.ID]ViewRef{}, map[Edge]ui.ID{}
 	st.title, st.mark, st.lead, st.tip = nil, nil, nil, nil
 	if panes != nil {
 		panes.leaves, panes.tabs = st.leaves, st.tabs
@@ -136,10 +150,21 @@ func View(c *ui.Ctx, key any, r *Root, panes *Panes, content Content) bool {
 				changed = leaf(c, r, st, r.DropDown.Leaf, content, false) || changed
 			})
 		}
-		if st.drag != nil && st.drag.moving && st.drag.ok {
-			indicator(c, st.drag)
+		if st.drag != nil && r.Find(st.drag.view) == nil {
+			st.drag = nil
+		}
+		if d := st.drag; d != nil && d.moving {
+			d.spot = target(c, r, st, d.at)
+			if d.spot.ok {
+				indicator(c, st, d)
+			}
 		}
 	})
+	for _, edit := range st.edits {
+		edit()
+		changed = true
+	}
+	st.edits = nil
 	return changed
 }
 
@@ -330,8 +355,9 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content, docked bo
 				}
 			}
 		}
+		var sid ui.ID
 		if head {
-			c.Row("tabs", strip, tabs)
+			sid = c.Row("tabs", strip, tabs)
 		} else {
 			// More tabs than fit scroll sideways, the active one brought into view when it changes.
 			o := widget.StripOpts{Items: make([]any, len(l.Tabs)), Help: HelpTab}
@@ -341,8 +367,11 @@ func leaf(c *ui.Ctx, r *Root, st *viewState, l *Node, content Content, docked bo
 			if l.Active < len(l.Tabs) {
 				o.Active = l.Tabs[l.Active]
 			}
-			widget.Strip(c, "tabs", strip, o, tabs)
+			sid = widget.Strip(c, "tabs", strip, o, tabs)
 		}
+		s := st.strips[l]
+		s.id = sid
+		st.strips[l] = s
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tDivider)}, nil)
 		if len(l.Tabs) > 0 {
 			v := l.Tabs[l.Active]
@@ -370,6 +399,9 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool
 	th := c.Theme()
 	id := c.Next(v)
 	st.tabs[id] = v
+	s := st.strips[l]
+	s.last = id
+	st.strips[l] = s
 	in := c.Interaction(id)
 	changed := false
 	switch {
@@ -386,9 +418,9 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool
 	case st.drag != nil && st.drag.view == v:
 		d := st.drag
 		st.drag = nil
-		if d.moving && d.ok {
-			r.Drop(v, d.target)
-			return true
+		if d.moving && d.spot.ok {
+			st.edits = append(st.edits, func() { r.Drop(v, d.spot.target) })
+			return false
 		}
 		if in.Clicked {
 			l.Active, r.Focus = i, &v
@@ -406,15 +438,7 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool
 			edge = th.C(tTabEdge)
 		}
 	}
-	title := v.Title
-	if st.title != nil {
-		if t := st.title(v); t != "" {
-			title = t
-		}
-	}
-	if title == "" {
-		title = ViewRef{ID: v.ID, Instance: v.Instance}.String()
-	}
+	title := tabName(st, v)
 	name := title
 	if v.Project != "" {
 		title = v.Project + " · " + title
@@ -474,34 +498,44 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool
 		})
 	})
 	if closed {
-		r.Close(v)
-		return true
-	}
-	if st.drag != nil && st.drag.view == v && st.drag.moving {
-		st.drag.ok, st.drag.target, st.drag.targetR = target(c, r, st, st.drag.at)
+		st.edits = append(st.edits, func() { r.Close(v) })
+		return false
 	}
 	return changed
 }
 
-// target is where a drop at p would land, and the rect to light up for it.
-func target(c *ui.Ctx, r *Root, st *viewState, p render.Point) (bool, Target, render.Rect) {
+// target is where a drop at p would land, and how to show it.
+func target(c *ui.Ctx, r *Root, st *viewState, p render.Point) spot {
 	size := c.Size()
+	dock := func(e Edge, rc render.Rect) spot {
+		return spot{ok: true, target: Target{Dock: e}, lit: rc, area: rc, label: "Dock " + string(e)}
+	}
 	switch {
 	case p.X < edgeBand:
-		return true, Target{Dock: Left}, render.XYWH(0, 0, r.Docks[Left].Size, size.Y)
+		return dock(Left, render.XYWH(0, 0, r.Docks[Left].Size, size.Y))
 	case p.X > size.X-edgeBand:
-		return true, Target{Dock: Right}, render.XYWH(size.X-r.Docks[Right].Size, 0, r.Docks[Right].Size, size.Y)
+		return dock(Right, render.XYWH(size.X-r.Docks[Right].Size, 0, r.Docks[Right].Size, size.Y))
 	case p.Y > size.Y-edgeBand:
-		return true, Target{Dock: Bottom}, render.XYWH(0, size.Y-r.Docks[Bottom].Size, size.X, r.Docks[Bottom].Size)
+		return dock(Bottom, render.XYWH(0, size.Y-r.Docks[Bottom].Size, size.X, r.Docks[Bottom].Size))
 	}
 	for e, id := range st.docks {
 		if rc, ok := c.Rect(id); ok && in(p, rc) {
-			return true, Target{Dock: e}, rc
+			return dock(e, rc)
+		}
+	}
+	float := func() spot {
+		f := render.XYWH(p.X-200, p.Y-15, 640, 400)
+		return spot{ok: true, target: Target{Float: &f}, lit: f, area: f, label: "Float"}
+	}
+	// A float or the drop-down sits over main.
+	for l, id := range st.leaves {
+		if rc, ok := c.Rect(id); ok && in(p, rc) && !r.inMain(l) {
+			return float()
 		}
 	}
 	for l, id := range st.leaves {
 		rc, ok := c.Rect(id)
-		if !ok || !in(p, rc) || r.leafIn(r.Main, firstTab(l)) == nil {
+		if !ok || !in(p, rc) {
 			continue
 		}
 		var beside *ViewRef
@@ -509,59 +543,113 @@ func target(c *ui.Ctx, r *Root, st *viewState, p render.Point) (bool, Target, re
 			b := l.Tabs[l.Active]
 			beside = &b
 		}
+		split := func(z Zone, label string, lit render.Rect) spot {
+			return spot{ok: true, target: Target{Beside: beside, Zone: z}, lit: lit, area: lit, label: label}
+		}
 		fx, fy := (p.X-rc.Min.X)/rc.Dx(), (p.Y-rc.Min.Y)/rc.Dy()
 		w, h := rc.Dx(), rc.Dy()
 		switch {
 		case fx < .25:
-			return true, Target{Beside: beside, Zone: ZoneLeft}, render.XYWH(rc.Min.X, rc.Min.Y, w/2, h)
+			return split(ZoneLeft, "Split left", render.XYWH(rc.Min.X, rc.Min.Y, w/2, h))
 		case fx > .75:
-			return true, Target{Beside: beside, Zone: ZoneRight}, render.XYWH(rc.Min.X+w/2, rc.Min.Y, w/2, h)
+			return split(ZoneRight, "Split right", render.XYWH(rc.Min.X+w/2, rc.Min.Y, w/2, h))
 		case fy < .25:
-			return true, Target{Beside: beside, Zone: ZoneTop}, render.XYWH(rc.Min.X, rc.Min.Y, w, h/2)
+			return split(ZoneTop, "Split above", render.XYWH(rc.Min.X, rc.Min.Y, w, h/2))
 		case fy > .75:
-			return true, Target{Beside: beside, Zone: ZoneBottom}, render.XYWH(rc.Min.X, rc.Min.Y+h/2, w, h/2)
+			return split(ZoneBottom, "Split below", render.XYWH(rc.Min.X, rc.Min.Y+h/2, w, h/2))
 		}
-		return true, Target{Beside: beside, Zone: ZoneCenter}, rc
+		s := split(ZoneCenter, "Tab", rc)
+		s.area = rc
+		if beside != nil {
+			s.label = "Tab with " + tabName(st, *beside)
+		}
+		// A new tab goes on the end of the strip: light the strip, and the slot it would take.
+		if row, ok := st.strips[l]; ok {
+			if sr, ok := c.Rect(row.id); ok {
+				s.lit = sr
+				x := sr.Min.X
+				if last, ok := c.Rect(row.last); ok && len(l.Tabs) > 0 {
+					x = min(last.Max.X, sr.Max.X-slotW)
+				}
+				s.slot = render.XYWH(max(x, sr.Min.X), sr.Min.Y, min(slotW, sr.Dx()), sr.Dy())
+			}
+		}
+		return s
 	}
-	f := render.XYWH(p.X-200, p.Y-15, 640, 400)
-	return true, Target{Float: &f}, f
+	return float()
 }
 
-func firstTab(l *Node) ViewRef {
-	if len(l.Tabs) == 0 {
-		return ViewRef{}
+// slotW is the width of the slot a tab dropped on a strip would take.
+const slotW = 140
+
+func tabName(st *viewState, v ViewRef) string {
+	if st.title != nil {
+		if t := st.title(v); t != "" {
+			return t
+		}
 	}
-	return l.Tabs[0]
+	if v.Title != "" {
+		return v.Title
+	}
+	return ViewRef{ID: v.ID, Instance: v.Instance}.String()
 }
 
 func in(p render.Point, r render.Rect) bool {
 	return p.X >= r.Min.X && p.X < r.Max.X && p.Y >= r.Min.Y && p.Y < r.Max.Y
 }
 
-// indicator lights up a drag's drop target, gliding between targets on springs.
-func indicator(c *ui.Ctx, d *drag) {
+// indicator lights up a drag's drop target, gliding between targets on springs, and names what a drop there does. A
+// float is only outlined, dashed: it snaps to nothing.
+func indicator(c *ui.Ctx, st *viewState, d *drag) {
 	th := c.Theme()
-	x := c.Anim("x", d.targetR.Min.X)
-	y := c.Anim("y", d.targetR.Min.Y)
-	w := c.Anim("w", d.targetR.Dx())
-	h := c.Anim("h", d.targetR.Dy())
+	s := d.spot
+	x := c.Anim("x", s.lit.Min.X)
+	y := c.Anim("y", s.lit.Min.Y)
+	w := c.Anim("w", s.lit.Dx())
+	h := c.Anim("h", s.lit.Dy())
 	at := render.Point{X: x, Y: y}
-	// The glow sits behind the target, as a box-shadow does; the target's fill covers its inside.
-	c.Box("glow", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
-		c.Paint("fx", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
-			f.Effect(render.Glow, r, 12, theme.WithAlpha(th.C(tDropEdge), 0.35*th.Effect("glow")))
+	edge := th.C(tDropEdge)
+	if s.target.Float != nil {
+		c.Box("drop", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Float: &ui.Float{Point: &at}, Help: HelpDrop}, func(c *ui.Ctx) {
+			c.Paint("dash", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
+				r = render.Rect{Min: render.Point{X: r.Min.X + 1, Y: r.Min.Y + 1}, Max: render.Point{X: r.Max.X - 1, Y: r.Max.Y - 1}}
+				corners := []render.Point{r.Min, {X: r.Max.X, Y: r.Min.Y}, r.Max, {X: r.Min.X, Y: r.Max.Y}, r.Min}
+				f.Path(render.Dashed(corners, 6, 4), render.Style{Stroke: edge, Width: 1.5})
+			})
+		})
+	} else {
+		// The glow sits behind the target, as a box-shadow does; the target's fill covers its inside.
+		c.Box("glow", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+			c.Paint("fx", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
+				f.Effect(render.Glow, r, 12, theme.WithAlpha(edge, 0.35*th.Effect("glow")))
+			})
+		})
+		// A lit tab strip is only outlined, so its tabs still show beside the slot.
+		fill := th.C(tDrop)
+		if s.slot != (render.Rect{}) {
+			fill = render.Color{}
+		}
+		c.Box("drop", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Fill: fill, Stroke: edge, Border: 1.5, Radius: 6,
+			Float: &ui.Float{Point: &at}, Help: HelpDrop}, nil)
+	}
+	font := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: th.C(tTabFgOn)}
+	name := strings.TrimSpace(tabName(st, d.view))
+	if s.slot != (render.Rect{}) {
+		c.Row("slot", ui.Style{W: ui.Px(s.slot.Dx()), H: ui.Px(s.slot.Dy()), Pad: ui.Insets{L: 14, R: 6}, Z: ui.LayerDrag + 1, Fill: th.C(tTabActive),
+			Stroke: edge, Border: 1, Radius: 4, Cross: ui.Center, Float: &ui.Float{Point: &s.slot.Min}}, func(c *ui.Ctx) {
+			c.Text("t", name, font)
+		})
+	}
+	c.Box("label", ui.Style{W: ui.Px(s.area.Dx()), H: ui.Px(s.area.Dy()), Z: ui.LayerDrag + 1, Main: ui.Center, Cross: ui.Center,
+		Float: &ui.Float{Point: &s.area.Min}}, func(c *ui.Ctx) {
+		c.Row("pill", ui.Style{Pad: ui.PadXY(12, 6), Fill: th.C(tTabActive), Stroke: edge, Border: 1, Radius: 6}, func(c *ui.Ctx) {
+			c.Text("t", s.label, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold}, Color: th.C(tTabFgOn)})
 		})
 	})
-	c.Box("drop", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Fill: th.C(tDrop), Stroke: th.C(tDropEdge), Border: 1.5, Radius: 6,
-		Float: &ui.Float{Point: &at}, Help: HelpDrop}, nil)
 	ghost := render.Point{X: d.at.X + 10, Y: d.at.Y + 10}
-	c.Row("ghost", ui.Style{Pad: ui.PadXY(10, 4), Z: ui.LayerDrag + 1, Fill: th.C(tTabActive), Stroke: th.C(tDropEdge), Border: 1, Radius: 4,
+	c.Row("ghost", ui.Style{Pad: ui.PadXY(10, 4), Z: ui.LayerDrag + 1, Fill: th.C(tTabActive), Stroke: edge, Border: 1, Radius: 4,
 		Float: &ui.Float{Point: &ghost}}, func(c *ui.Ctx) {
-		title := d.view.Title
-		if title == "" {
-			title = d.view.String()
-		}
-		c.Text("t", strings.TrimSpace(title), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: th.C(tTabFgOn)})
+		c.Text("t", name, font)
 	})
 }
 
