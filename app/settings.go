@@ -144,8 +144,9 @@ func (s *settingsPlugin) Activate(_ context.Context, h plugin.Host) error {
 		return &ui.Func{Key: "settings", Fn: s.build}
 	})))
 	s.loadAll()
-	stop := make(chan struct{})
+	stop, done := make(chan struct{}), make(chan struct{})
 	go func() {
+		defer close(done)
 		t := time.NewTicker(SettingsPoll)
 		defer t.Stop()
 		for {
@@ -159,7 +160,7 @@ func (s *settingsPlugin) Activate(_ context.Context, h plugin.Host) error {
 			}
 		}
 	}()
-	s.add(disposeFn(func() { close(stop) }))
+	s.add(disposeFn(func() { close(stop); <-done }))
 	return nil
 }
 

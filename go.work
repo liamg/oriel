@@ -22,6 +22,7 @@ use (
 	./render/gio
 	./sandbox
 	./script
+	./semver
 	./syntax
 	./term
 	./testrun

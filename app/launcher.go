@@ -55,15 +55,16 @@ type launcher struct {
 
 	kinds     []host.KindSpec
 	providers []host.ProviderInfo
-	repos     []core.Repo
 	loadErr   string
 	wantKind  core.Kind // asked for before the kinds arrived
 
 	kind                                          int
 	prompt, ticket, pr, dir, name, parent, branch string
-	template, repoPath, variant                   string
+	template, variant                             string
 	provider, model, effort                       string
 	chosen                                        []core.RepoID
+	repoFilter                                    string
+	justAdded                                     core.RepoID // the repo Add repo just brought back ticked
 	sandbox, openNet                              bool
 	backend                                       string // the sandbox backend picked; "" is sandbox.backend
 	busy                                          bool
@@ -96,6 +97,16 @@ func (x *launcher) Activate(_ context.Context, h plugin.Host) error {
 		Available: has, Run: func(_ registry.Ctx, a registry.Args) error { x.openWith(a); return nil }}))
 	x.add(h.Command(registry.Command{ID: "session.launch", Title: "Start the session the launcher holds",
 		Available: func(registry.Args) bool { return x.open }, Run: func(registry.Ctx, registry.Args) error { return x.start() }}))
+	x.add(h.Command(registry.Command{ID: "launcher.pick-repo", Title: "Tick {repo} in the open launcher",
+		Available: func(registry.Args) bool { return x.open }, Run: func(_ registry.Ctx, a registry.Args) error {
+			r := core.RepoID(a.String("repo"))
+			if r == "" {
+				return errors.New("pick which repo? Give its {repo}")
+			}
+			x.addRepo(r)
+			x.justAdded = r
+			return nil
+		}}))
 	x.add(h.Keymap(registry.Keymap{Mode: LauncherKeyMode, Keys: "<D-CR>", Command: "session.launch", Desc: "Start the session"}))
 	x.add(h.View(OverlayPrefix+"launcher", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "launcher", Fn: x.build}
@@ -122,28 +133,27 @@ func (x *launcher) openWith(a registry.Args) {
 }
 
 func (x *launcher) load(providerGiven bool) {
-	gen := x.gen
+	gen, sessions, h := x.gen, x.sh.sessions, x.h // openWith resets x, and closing the window the shell, while this runs
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		var (
 			kinds     []host.KindSpec
 			providers []host.ProviderInfo
-			repos     []core.Repo
 			err       error
 		)
-		if x.sh.sessions == nil {
+		if sessions == nil {
 			err = errors.New("there are no sessions in this window")
-		} else if c, e := x.sh.sessions.host(); e != nil {
+		} else if c, e := sessions.host(); e != nil {
 			err = e
 		} else {
-			kinds, providers, repos = c.Kinds().All(), c.ProviderInfo(ctx), c.Repos()
+			kinds, providers = c.Kinds().All(), c.ProviderInfo(ctx)
 		}
-		x.h.Do(func() {
+		h.Do(func() {
 			if gen != x.gen {
 				return
 			}
-			x.kinds, x.providers, x.repos = kinds, providers, repos
+			x.kinds, x.providers = kinds, providers
 			if err != nil {
 				x.loadErr = err.Error()
 			}
@@ -154,7 +164,7 @@ func (x *launcher) load(providerGiven bool) {
 				x.pickProvider(defaultProvider(providers))
 			}
 		})
-		x.h.Redraw()
+		h.Redraw()
 	}()
 }
 
@@ -328,10 +338,10 @@ func (x *launcher) start() error {
 // launch runs command off the loop, the launcher busy until it answers, and closes the launcher once it has.
 func (x *launcher) launch(command string, a registry.Args) error {
 	x.busy, x.err = true, ""
-	gen := x.gen
+	gen, h := x.gen, x.h
 	go func() {
-		err := x.h.Run(context.Background(), command, a)
-		x.h.Do(func() {
+		err := h.Run(context.Background(), command, a)
+		h.Do(func() {
 			if gen != x.gen {
 				return
 			}
@@ -342,7 +352,7 @@ func (x *launcher) launch(command string, a registry.Args) error {
 			}
 			x.open = false
 		})
-		x.h.Redraw()
+		h.Redraw()
 	}()
 	return nil
 }
@@ -449,12 +459,8 @@ func (x *launcher) field(c *ui.Ctx, key any, text *string, label, placeholder st
 	}
 	r := widget.Input(c, key, text, widget.InputOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true,
 		KeyMode: LauncherKeyMode, Width: w, Lines: lines, MinLines: 2})
-	switch {
-	case r.Cancelled:
+	if r.Cancelled {
 		x.close()
-	case r.Submitted && key == "repo-path":
-		x.addRepo(core.RepoID(x.home(x.repoPath)))
-		x.repoPath = ""
 	}
 }
 
@@ -565,12 +571,12 @@ func (x *launcher) lookTicket(c *ui.Ctx) {
 		return
 	}
 	x.card.busy, x.card.source = true, src.Label()
-	gen := x.gen
+	gen, h := x.gen, x.h
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		t, err := registry.LookupTicket(ctx, src, key)
-		x.h.Do(func() {
+		h.Do(func() {
 			if gen != x.gen || x.card.key != key {
 				return
 			}
@@ -581,7 +587,7 @@ func (x *launcher) lookTicket(c *ui.Ctx) {
 			}
 			x.card.t = &t
 		})
-		x.h.Redraw()
+		h.Redraw()
 	}()
 }
 
@@ -760,39 +766,106 @@ func (x *launcher) noAgentCard(c *ui.Ctx, k host.KindSpec) {
 	}
 }
 
+// repoRowsShown is how many repo rows the launcher shows before its list scrolls; repoFilterAfter, how many repos
+// there are before it has a filter.
+const (
+	repoRowsShown   = 6
+	repoFilterAfter = 8
+	repoRowHeight   = 28
+)
+
+// repoChoices are the repos the launcher lists: ticked first, then the most recently used, then by name. A path
+// ticked that isn't registered is listed as it is.
+func (x *launcher) repoChoices() []core.Repo {
+	repos := slices.Clone(x.h.State().Repos)
+	for _, id := range x.chosen {
+		if !slices.ContainsFunc(repos, func(r core.Repo) bool { return r.ID == id || r.Path == string(id) }) {
+			repos = append(repos, core.Repo{ID: id, Path: string(id)})
+		}
+	}
+	ticked := func(r core.Repo) bool { return x.ticked(r) }
+	slices.SortStableFunc(repos, func(a, b core.Repo) int {
+		if ta, tb := ticked(a), ticked(b); ta != tb {
+			if ta {
+				return -1
+			}
+			return 1
+		}
+		if c := b.Used.Compare(a.Used); c != 0 {
+			return c
+		}
+		return strings.Compare(string(a.ID), string(b.ID))
+	})
+	return repos
+}
+
+func (x *launcher) ticked(r core.Repo) bool {
+	return slices.ContainsFunc(x.chosen, func(id core.RepoID) bool { return id == r.ID || string(id) == r.Path })
+}
+
+func (x *launcher) toggleRepo(r core.Repo) {
+	if x.ticked(r) {
+		x.chosen = slices.DeleteFunc(x.chosen, func(id core.RepoID) bool { return id == r.ID || string(id) == r.Path })
+		return
+	}
+	x.addRepo(r.ID)
+}
+
 func (x *launcher) reposSection(c *ui.Ctx, k host.KindSpec) {
 	th := c.Theme()
-	note := "one worktree each · same branch"
+	about := "one worktree each · same branch"
 	if startsFrom(k) == host.FromPR {
-		note = "the PR's repo, found by its remote if none"
+		about = "the PR's repo, found by its remote if none"
 	}
-	heading(c, "head", "Repositories", note)
-	c.Row("chips", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-		for _, r := range slices.Clone(x.chosen) {
-			name := x.repoName(r)
-			tone := th.C(tLaunchRepo)
-			c.Row("repo."+string(r), ui.Style{Pad: ui.Insets{L: 10, R: 4, T: 3, B: 3}, Gap: 6, Cross: ui.Center, Radius: 12, Stroke: tone,
-				Border: 1, Role: ui.RoleGroup, Label: name}, func(c *ui.Ctx) {
-				c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: tone}, nil)
-				c.Text("name", name, monoFont(11.5, th.C(theme.Fg)))
-				if widget.IconButton(c, "remove", "✕", widget.IconButtonOpts{Label: "Remove " + name, Help: "agent/launcher#repositories", Size: 18}) {
-					x.chosen = slices.DeleteFunc(x.chosen, func(id core.RepoID) bool { return id == r })
+	heading(c, "head", "Repositories", about)
+	all := x.repoChoices()
+	addNew := func(c *ui.Ctx) {
+		if widget.Button(c, "addrepo", "+ Add repo", widget.ButtonOpts{Help: "agent/launcher#repositories"}) {
+			if err := x.h.Run(context.Background(), "repos.new", registry.Args{"then": []any{map[string]any{"command": "launcher.pick-repo"}}}); err != nil {
+				x.err = err.Error()
+			}
+		}
+	}
+	if len(all) == 0 {
+		c.Row("none", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Text("t", "No repos yet.", uiFont(12.5, th.C(theme.FgFaint)))
+			addNew(c)
+		})
+	} else {
+		c.Row("tools", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+			if len(all) > repoFilterAfter {
+				if r := widget.Input(c, "repofilter", &x.repoFilter, widget.InputOpts{Label: "Filter repos", Placeholder: "⌕ filter repos",
+					Help: "agent/launcher#repositories", KeyMode: LauncherKeyMode, TabMoves: true}); r.Cancelled {
+					x.repoFilter = ""
 				}
-			})
-		}
-		var options []string
-		for _, r := range x.repos {
-			if !slices.Contains(x.chosen, r.ID) {
-				options = append(options, string(r.ID))
+			} else {
+				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			}
+			addNew(c)
+		})
+		q := strings.ToLower(strings.TrimSpace(x.repoFilter))
+		shown := slices.DeleteFunc(slices.Clone(all), func(r core.Repo) bool {
+			return q != "" && !x.ticked(r) && !strings.Contains(strings.ToLower(string(r.ID)+" "+r.Path), q)
+		})
+		h := ui.Size{}
+		if len(shown) > repoRowsShown {
+			h = ui.Px(repoRowsShown * repoRowHeight)
 		}
-		if len(options) > 0 {
-			if v, ok := widget.Select(c, "add", "+ add", options, widget.SelectOpts{Label: "Add a repo", Help: "agent/launcher#repositories"}); ok {
-				x.addRepo(core.RepoID(v))
+		c.Column("repolist", ui.Style{W: ui.Flex(1), H: h, ScrollY: len(shown) > repoRowsShown, Stroke: th.C(theme.Line), Border: 1, Radius: 6,
+			Clip: true, Role: ui.RoleList, Label: "Repositories"}, func(c *ui.Ctx) {
+			for _, r := range shown {
+				x.repoRow(c, r)
 			}
+			if len(shown) == 0 {
+				c.Row("nomatch", ui.Style{W: ui.Flex(1), H: ui.Px(repoRowHeight), Pad: ui.PadXY(10, 0), Cross: ui.Center}, func(c *ui.Ctx) {
+					c.Text("t", "No repo matches.", uiFont(12, th.C(theme.FgFaint)))
+				})
+			}
+		})
+		if n := len(x.chosen); n > 0 {
+			note(c, "selected", fmt.Sprintf("%d selected", n))
 		}
-	})
-	x.field(c, "repo-path", &x.repoPath, "Add a repo by its path", "or a checkout's path, ⏎ adds it", false, ui.Flex(1), 1)
+	}
 	if k.Worktrees == host.WorktreesNow || k.Worktrees == host.WorktreesStartWork {
 		c.Row("branch", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("l", "Branch", uiFont(12.5, th.C(theme.FgMuted)))
@@ -801,14 +874,39 @@ func (x *launcher) reposSection(c *ui.Ctx, k host.KindSpec) {
 	}
 }
 
-// repoName is a repo as the launcher shows it: its ID, or a path's last part.
-func (x *launcher) repoName(r core.RepoID) string {
-	for _, x := range x.repos {
-		if x.ID == r || x.Path == string(r) {
-			return string(x.ID)
-		}
+// repoRow is a repo in the launcher's checklist: its box and name, path, default branch, and when it was last used.
+func (x *launcher) repoRow(c *ui.Ctx, r core.Repo) {
+	th := c.Theme()
+	on := x.ticked(r)
+	fill := render.Color{}
+	if on {
+		fill = th.C(tLaunchCardOn)
 	}
-	return filepath.Base(string(r))
+	c.Row("r."+string(r.ID), ui.Style{W: ui.Flex(1), H: ui.Px(repoRowHeight), Pad: ui.PadXY(10, 0), Gap: 12, Cross: ui.Center, Fill: fill}, func(c *ui.Ctx) {
+		st := widget.CheckOff
+		if on {
+			st = widget.CheckOn
+		}
+		c.Row("name", ui.Style{W: ui.Px(170), Clip: true}, func(c *ui.Ctx) {
+			if widget.Check(c, "check", st, widget.CheckOpts{Text: string(r.ID), Plain: true, Label: string(r.ID), Help: "agent/launcher#repositories"}) {
+				x.toggleRepo(r)
+			}
+		})
+		c.Row("path", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+			c.Text("t", tildePath(r.Path), monoFont(11, th.C(theme.FgFaint)))
+		})
+		c.Text("branch", strings.TrimPrefix(r.BaseBranch, "origin/"), monoFont(10.5, th.C(theme.FgFaint)))
+		c.Row("when", ui.Style{W: ui.Px(110), Main: ui.End}, func(c *ui.Ctx) {
+			switch {
+			case r.ID == x.justAdded:
+				widget.Chip(c, "chip", "just added", th.C(theme.OK), "agent/launcher#repositories")
+			case isFound(r):
+				widget.Chip(c, "chip", "found", th.C(tRepoFound), "agent/launcher#repositories")
+			case !r.Used.IsZero():
+				c.Text("t", "used "+agoText(time.Now(), r.Used), monoFont(10, th.C(theme.FgGhost)))
+			}
+		})
+	})
 }
 
 // runsIn is where the session runs: in a sandbox or not, which backend, and its network.

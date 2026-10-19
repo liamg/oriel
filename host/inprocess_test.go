@@ -39,7 +39,7 @@ func TestSessionLogsSurviveARestart(t *testing.T) {
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindScratch})
 	router := &logs.Router{Sessions: r.w.Logs()}
-	router.Write(logs.Record{Time: r.now, Level: slog.LevelWarn, Source: "lsp:gopls", Session: id, Msg: "gopls restarted"})
+	router.Write(logs.Record{Time: r.now(), Level: slog.LevelWarn, Source: "lsp:gopls", Session: id, Msg: "gopls restarted"})
 	if err := router.Err(); err != nil {
 		t.Fatal(err)
 	}

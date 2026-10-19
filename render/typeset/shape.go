@@ -57,6 +57,9 @@ func NewBundled() (*Typesetter, error) {
 	return t, nil
 }
 
+// Close stops loading fallback faces. The typesetter still shapes with what it has.
+func (t *Typesetter) Close() { t.fb.close() }
+
 // Fallbacks lists the system faces loaded so far, and the runes no face covered.
 func (t *Typesetter) Fallbacks() (names []string, missing []rune) { return t.fb.list() }
 

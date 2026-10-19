@@ -72,7 +72,7 @@ func TestStatsReadEveryTranscript(t *testing.T) {
 	cl, cx := claudeLike{agenttest.NewFake()}, codexLike{agenttest.NewFake()}
 	cl.Name, cx.Name = "claude", "codex"
 	r := newRig(t, cl, cx)
-	at := r.now.Add(-24 * time.Hour)
+	at := r.now().Add(-24 * time.Hour)
 
 	in := r.start(core.SessionSpec{Kind: core.KindWork, Name: "pricing-rounding", Provider: "claude", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	cl.WaitStarted(t)
@@ -92,10 +92,10 @@ func TestStatsReadEveryTranscript(t *testing.T) {
 	elsewhere := filepath.Join(t.TempDir(), "scratch")
 	writeLines(t, rolloutPath(codexHome, at, "0199a213-81c0-7800-8aa1-bbab2a035a53"), codexRollout(at, elsewhere, "")...)
 	old := filepath.Join(config, "projects", "-w-old", "old.jsonl")
-	writeLines(t, old, claudeLog(r.now.AddDate(0, 0, -200), "/w/old", "long ago")...)
-	os.Chtimes(old, r.now.AddDate(0, 0, -200), r.now.AddDate(0, 0, -200))
+	writeLines(t, old, claudeLog(r.now().AddDate(0, 0, -200), "/w/old", "long ago")...)
+	os.Chtimes(old, r.now().AddDate(0, 0, -200), r.now().AddDate(0, 0, -200))
 
-	q := stats.Query{Group: stats.BySession, From: r.now.AddDate(0, 0, -7), To: r.now.Add(time.Hour)}
+	q := stats.Query{Group: stats.BySession, From: r.now().AddDate(0, 0, -7), To: r.now().Add(time.Hour)}
 	rep := r.w.StatsQuery(q)
 	got := map[string]stats.Group{}
 	for _, g := range rep.Groups {

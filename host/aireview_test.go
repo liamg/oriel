@@ -281,7 +281,7 @@ func TestReviewSessionsReviewThemselves(t *testing.T) {
 	origin.Git("checkout", "-q", "main")
 	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
 	clone.Git("clone", "-q", origin.Dir, ".")
-	if _, err := r.w.repos.add(ctx, clone.Dir); err != nil {
+	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
 	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", Provider: "fake",

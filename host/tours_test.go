@@ -123,7 +123,7 @@ func TestTourTools(t *testing.T) {
 	if got := a.Call(t, "tour_share", map[string]any{"url": "https://claude.ai/artifact/abc"}); got != "Shared: https://claude.ai/artifact/abc" {
 		t.Errorf("tour_share = %q", got)
 	}
-	if info, _ := TourOf(dir); info.ShareURL != "https://claude.ai/artifact/abc" || !info.SharedAt.Equal(r.now) {
+	if info, _ := TourOf(dir); info.ShareURL != "https://claude.ai/artifact/abc" || !info.SharedAt.Equal(r.now()) {
 		t.Errorf("shared = %+v", info)
 	}
 	if e := toolErr(t, a, "tour_share", map[string]any{"url": "javascript:alert(1)"}); !strings.Contains(e, "web address") {

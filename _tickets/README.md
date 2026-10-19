@@ -123,6 +123,9 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 62. [AI-13](AI-13-detect-an-expired-agent-login.md): Detect an expired agent login, flag it on its worker, and fix it from Oriel · after AI-2, AI-3, AI-12 (P5 follow-up)
 63. [AI-14](AI-14-stats-and-usage-follow-ups.md): Stats and Usage follow-ups: custom ranges, exact per-range tools, plan tiers, active span, accounts at the time · after AI-12 (P5 follow-up)
 64. [SE-5](SE-5-jobs-and-login-follow-ups.md): Jobs and login follow-ups: multi-line prompts, pages that replace each other, run tabs, schedules, remote log in · after SE-4, AI-13 (P5 follow-up)
+64. [SE-6](SE-6-repos-list-discovery-add-repo-dialog-launcher-checklist.md): Repos as a list: ReposChanged, sibling discovery, remove and ignore, the Add repo dialog, the launcher's checklist · after SE-1 (P5 follow-up)
+64. [SE-7](SE-7-repos-page-stats-housekeeping.md): The Repos page: list, detail, stats, housekeeping · after SE-6, FG-7 (P5 follow-up)
+64. [SE-8](SE-8-tags-from-the-repos-page.md): Tags from the Repos page · after SE-7 (P5 follow-up)
 
 ### Phase 6 · review
 

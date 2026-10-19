@@ -90,6 +90,14 @@ var icons = map[string]func(p *iconPen){
 		p.curve(8, 4, 10.5, 4, 13.5, 6.5, 13.5, 12)
 		p.line(8, 11.5, 11, 7)
 	},
+	"repos": func(p *iconPen) {
+		p.line(3, 4, 13, 4)
+		p.line(3, 4, 3, 7)
+		p.line(13, 4, 13, 7)
+		p.line(3, 7, 13, 7)
+		p.line(3, 9.5, 13, 9.5)
+		p.line(3, 12, 13, 12)
+	},
 	"jobs": func(p *iconPen) {
 		p.line(2.5, 4, 10, 4)
 		p.line(2.5, 8, 8, 8)

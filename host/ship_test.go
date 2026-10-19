@@ -124,7 +124,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if err := r.w.ShipSync(ctx, ShipRef{Session: id, Project: "api"}); err != nil {
 		t.Fatal(err)
 	}
-	if a = r.ship(id, false)["api"]; a.Behind != 0 || a.Commits != 2 || !a.Synced.Equal(r.now) {
+	if a = r.ship(id, false)["api"]; a.Behind != 0 || a.Commits != 2 || !a.Synced.Equal(r.now()) {
 		t.Fatalf("after Sync: %+v", a)
 	}
 
@@ -181,7 +181,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 
 	// Checks: a failing Actions job's log line comes with them.
 	r.ship(id, false)
-	t0 := r.now.Add(-3 * time.Minute)
+	t0 := r.now().Add(-3 * time.Minute)
 	hub.SetChecks("acme/api", se.Branch,
 		gh.Check{ID: 11, Name: "lint", Status: "completed", Conclusion: "success", Actions: true, Started: t0, Completed: t0.Add(38 * time.Second)},
 		gh.Check{ID: 12, Name: "unit", Status: "completed", Conclusion: "failure", Actions: true, Started: t0, Completed: t0.Add(time.Minute)},

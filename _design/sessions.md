@@ -69,13 +69,26 @@ flowchart LR
 
 ### Repos
 
-- A session only works on repos Oriel has registered. A path registers as the session starts; naming a repo by an
-  ID it doesn't know fails with how to get it: `repos.add {path}` for a checkout, or `repos.clone {url}`.
-- `repos.clone {url, name}` (`host.CloneRepo`) clones into the repos directory (`Options.ReposDir`, `~/src` by
-  default, where new repos go too) as `name` (the URL's last part if none) with `gitx.Clone`, and registers it. A
-  checkout of the same URL already there is registered as it is; anything else there is an error. Git never prompts:
-  a clone that needs credentials fails with git's own message and says it clones with this machine's git
-  credentials.
+- A session only works on repos Oriel has registered (`~/.oriel/repos.json`: `{repos, ignored}`; a bare array, the
+  old form, still reads). A path registers as the session starts; naming a repo by an ID it doesn't know fails with
+  how to get it: `repos.add {path}` for a checkout, or `repos.clone {url}`.
+- `core.Repo` carries how it came (`Source`: added, cloned, discovered, session), when (`Added`) and the last
+  session started on it (`Used`). The store holds the list (`core.State.Repos`), set by `core.ReposChanged {repos,
+  added}` on every add, remove and scan, so the launcher, the sidebar's `+` and the Repos page follow it live.
+- Oriel's sessions never write to a repo, but for a direct session; the Repos page does (housekeeping, tags), and
+  only when you press the button and confirm.
+- **Adding** is its own flow, `repos.new` (the Add repo dialog, `ui.md` 45): an existing directory, or a clone of
+  a URL into a parent folder and folder name you can see before it's made. `repos.clone {url, parent, name}`
+  (`host.CloneRepo`) clones with `gitx.CloneProgress`; with no parent, it goes where most of your repos are
+  (`host.CloneParent`), else `repos.dir` (`~/src`). A checkout of the same URL already there is registered as it
+  is; anything else there is an error. Git never prompts: a clone that needs credentials fails with git's own
+  message and says it clones with this machine's git credentials. Cancelling a clone takes away what it made.
+- **Discovery** (`host.ScanRepos`, `repos.scan`): on start, and when a repo is added by hand, every folder a known
+  repo sits in is read one level deep, and each git repo there that is its own main clone (not a worktree) is
+  registered as `discovered`. Never `/` or your home folder itself, nothing under `~/.oriel`, no dot-folders, at most
+  200 a scan; a folder read once isn't read again until `repos.scan`. `repos.discover` turns it off.
+- **Removing** (`repos.remove`) unregisters a repo and ignores its path from then on: discovery never adds it back,
+  adding it by hand does. Its files stay. A live session with a worktree of it refuses, naming the session.
 
 ## Lifecycle
 
@@ -102,7 +115,10 @@ stateDiagram-v2
 - **Sessions survive restarts**: the agent resumes by session id, and the layout, open buffers and cursor positions come back.
   Built (SE-2): the layout is kept per directory as it changes, and views revive their instances through
   `registry.Persisted` (plugins.md); switching to a session reopens its directory, so its layout comes back too.
-- **Housekeeping**: stale worktrees and branches are listed per repo, and cleaned with a confirmation.
+- **Housekeeping** (the Repos page, `repos.housekeep`): per repo, local branches merged into the default branch
+  (`origin/<default>` when there is one) or whose upstream was deleted (a squash-merged PR), with their worktrees,
+  and worktrees whose directory went; never the default or checked-out branch, and a live session's branch is shown
+  but locked. A dirty worktree goes only when ticked. Cleaned with a confirmation, each with its own result.
 
 ## In the editor
 

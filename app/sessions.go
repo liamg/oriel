@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/liamg/oriel/agent"
@@ -29,9 +28,6 @@ type sessions struct {
 	h      plugin.Host
 	ctx    context.Context
 	cancel context.CancelFunc
-
-	mu    sync.Mutex
-	repos []core.Repo // the registered repos, for adding one
 
 	sandboxKick chan struct{} // the sandbox settings are to go to the host
 	promptsKick chan struct{} // the user's prompts are to go to the host
@@ -145,19 +141,6 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range []registry.Command{
 		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {sandbox}…; {background} leaves it behind the one in front; {then} is a list of {command, args} run once the window is on it",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.start(ctx, a); return err }},
-		{ID: "repos.add", Title: "Register the checkout at {path}", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
-				if a.String("path") == "" {
-					return errors.New("add which checkout? Give its {path}")
-				}
-				_, err := x.sh.cfg.Host.AddRepoPath(ctx, a.String("path"))
-				return err
-			}},
-		{ID: "repos.clone", Title: "Clone {url} as {name}, and register it", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
-				_, err := x.sh.cfg.Host.CloneRepo(ctx, host.CloneReq{URL: a.String("url"), Name: a.String("name")})
-				return err
-			}},
 		{ID: "session.open", Title: "Bring a session to the front: {id}, resuming it if it's stopped or archived; {then} is a list of {command, args} run once the window is on it",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
 				then, err := callsOf(a["then"])
@@ -211,7 +194,6 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 				return focused(nil) && ok && se.Kind() != core.KindDirect
 			},
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
-				x.loadRepos()
 				return h.Run(ctx, "picker.open", registry.Args{"source": "projects.add"})
 			}},
 	} {
@@ -345,20 +327,8 @@ func (x *sessions) anchor(id core.SessionID, file string, line, end int, text st
 	return an
 }
 
-// loadRepos reads the registered repos.
-func (x *sessions) loadRepos() {
-	w, err := x.host()
-	if err != nil {
-		return
-	}
-	go func() {
-		repos := w.Repos()
-		x.mu.Lock()
-		x.repos = repos
-		x.mu.Unlock()
-		x.h.Redraw()
-	}()
-}
+// addNewRepo is the sidebar picker's last item: the Add repo dialog, the repo it adds then added to the session.
+const addNewRepo = "\x00repos.new"
 
 // addSource is the picker + in the sidebar opens (ui.md 01h): the registered repos the session hasn't got, and the
 // path typed. Choosing one adds it with session.add-repo, then opens it.
@@ -378,22 +348,22 @@ func (x *sessions) addSource(h plugin.Host) registry.PickerSource {
 					return p.Repo == r.Path || p.Dir == r.Path || p.Name == string(r.ID)
 				})
 			}
-			x.mu.Lock()
-			repos := slices.Clone(x.repos)
-			x.mu.Unlock()
-			for _, r := range repos {
+			for _, r := range x.h.State().Repos {
 				if has(r) || !strings.Contains(strings.ToLower(string(r.ID)+" "+r.Path), strings.ToLower(strings.TrimSpace(query))) {
 					continue
 				}
 				out = append(out, registry.PickerItem{ID: string(r.ID), Label: string(r.ID), Detail: tildePath(r.Path)})
 			}
-			return out
+			return append(out, registry.PickerItem{ID: addNewRepo, Label: "Add a new repo…", Detail: "a checkout, or a clone", Icon: "+"})
 		},
 		Run: func(ctx registry.Ctx, it registry.PickerItem) error {
 			id := x.focused()
 			se, ok := x.sh.cfg.Store.Session(id)
 			if !ok {
 				return errors.New("no session is in front")
+			}
+			if it.ID == addNewRepo {
+				return h.Run(ctx, "repos.new", registry.Args{"then": []any{map[string]any{"command": "session.add-repo"}}})
 			}
 			before := se.Projects()
 			repo := it.ID
@@ -431,23 +401,8 @@ func specFrom(a registry.Args) core.SessionSpec {
 	if s.Kind == "" {
 		s.Kind = core.KindWork
 	}
-	switch r := a["repos"].(type) {
-	case []string:
-		for _, x := range r {
-			s.Repos = append(s.Repos, core.RepoID(x))
-		}
-	case []any:
-		for _, x := range r {
-			if v, ok := x.(string); ok {
-				s.Repos = append(s.Repos, core.RepoID(v))
-			}
-		}
-	case string:
-		for _, x := range strings.Split(r, ",") {
-			if x = strings.TrimSpace(x); x != "" {
-				s.Repos = append(s.Repos, core.RepoID(x))
-			}
-		}
+	for _, r := range a.Strings("repos") {
+		s.Repos = append(s.Repos, core.RepoID(r))
 	}
 	return s
 }

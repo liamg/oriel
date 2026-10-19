@@ -68,9 +68,8 @@ func TestLauncherClosesWhileTheAgentStarts(t *testing.T) {
 	r.latest("Work picked", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Work") })
 	r.clickTop(promptPlaceholder)
 	r.typeText("Fix stale search results")
-	r.clickTop("+ add ▾")
 	r.clickTop("pricing")
-	r.latest("the repo's chip", func(f headless.Frame) bool { return strings.Contains(f.Text(), "pricing\n✕") })
+	r.latest("the repo ticked", func(f headless.Frame) bool { return strings.Contains(f.Text(), "1 selected") })
 	r.clickTop("Start Work")
 
 	r.waitGone("NEW SESSION")

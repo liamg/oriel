@@ -385,6 +385,16 @@ flowchart TB
   `jobs.save`, `jobs.run`, `jobs.delete`, `session.delete`, `jobs.form.save`; key modes `jobs` and `jobs.form`; theme
   tokens `jobs.run.running`, `jobs.run.done`, `jobs.run.blocked`, `jobs.run.stopped`. A kind's `PromptFile` writes its
   prompt into the workspace as the session starts (the job kind's `JOB.md`).
+- repos (SE-6–8): `core.State.Repos`, set by `core.ReposChanged {repos, added}`; `core.Repo` has `Source`, `Added`,
+  `Used`. The host: `Repos`, `AddRepoPath`, `CloneRepo` (`CloneReq.Parent`, `Progress`), `CloneTarget`,
+  `CloneParent`, `CheckRepoPath`, `RemoveRepo`, `ScanRepos`, `SetReposDir`, `RepoFacts`, `FetchRepo`,
+  `Housekeeping`, `Housekeep`, `TagPreview`, `Tag`, `PushTag`. Commands: `repos.open`, `:Repos`, `repos.new`,
+  `repos.add`, `repos.clone`, `repos.remove`, `repos.scan`, `repos.fetch`, `repos.housekeep`, `repos.tag`,
+  `repos.new.submit`, `launcher.pick-repo`; `{then}` on `repos.new`, `repos.add` and `repos.clone` runs with
+  `{repo}`. Options `repos.dir`, `repos.discover`, `repos.tag.pull`, `repos.tag.sign`, `repos.tag.message`,
+  `repos.tag.push`; key modes `repos` and `repos.new`; theme tokens `repos.tidy`, `repos.merged`, `repos.gone`,
+  `repos.found`. The view `app.overview.panels` (`OverviewPanelsView`) draws a directory's overview panels, the
+  directory its instance. `registry.Args.Strings` reads a list argument.
 - this machine: `core.State.Machine` (`core.MachineState`: host name, OS, arch, version, providers, sandboxes,
   cores, CPU, memory, when it was sampled, signed-out logins), set by `core.MachineChanged`. The HUD's `machine`
   panel, the mission strip's `machine.mission` and the status indicator `machine.status` draw it.

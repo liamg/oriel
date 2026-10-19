@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,7 +21,8 @@ type rig struct {
 	home  string
 	fake  *agenttest.Fake
 	repo  *gittest.Repo
-	now   time.Time
+	mu    sync.Mutex
+	at    time.Time        // the host's clock: read through now, set through setNow
 	more  []agent.Provider // beside the fake
 	tools []string         // the packs' tools
 }
@@ -34,7 +36,7 @@ func newRig(t *testing.T, more ...agent.Provider) *rig {
 	t.Setenv("GIT_COMMITTER_NAME", "Fixture")
 	t.Setenv("GIT_COMMITTER_EMAIL", "fixture@example.com")
 	t.Setenv("USER", "tester")
-	r := &rig{t: t, home: t.TempDir(), fake: agenttest.NewFake(), now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC),
+	r := &rig{t: t, home: t.TempDir(), fake: agenttest.NewFake(), at: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC),
 		more: more}
 	r.repo = gittest.New(t)
 	r.repo.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
@@ -50,7 +52,7 @@ func (r *rig) open() {
 	for _, p := range r.more {
 		providers.Register(p)
 	}
-	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Now: func() time.Time { return r.now },
+	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Now: r.now,
 		Packs: func(name string) (agent.Pack, bool) {
 			return agent.Pack{Name: name, Skill: name, Text: "pack " + name, Tools: r.tools}, true
 		}})
@@ -59,6 +61,18 @@ func (r *rig) open() {
 	}
 	r.w = w
 	r.t.Cleanup(func() { w.Close() })
+}
+
+func (r *rig) now() time.Time {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.at
+}
+
+func (r *rig) setNow(t time.Time) {
+	r.mu.Lock()
+	r.at = t
+	r.mu.Unlock()
 }
 
 // restart closes the host and starts another on the same home.

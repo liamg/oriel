@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -127,20 +126,7 @@ func (r Repo) HasRemote(ctx context.Context, name string) bool {
 // Clone clones url into dir, making its parents. Git doesn't prompt for a password here: a clone that needs one
 // fails, saying what git said.
 func Clone(ctx context.Context, url, dir string) error {
-	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
-		return err
-	}
-	cmd := exec.CommandContext(ctx, "git", "clone", "--quiet", "--", url, dir)
-	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		msg := strings.TrimSpace(string(out))
-		if msg == "" {
-			msg = err.Error()
-		}
-		return fmt.Errorf("cloning %s: %s", url, msg)
-	}
-	return nil
+	return CloneProgress(ctx, url, dir, nil)
 }
 
 // RemoteURL is the URL of origin as it's configured (before any url.insteadOf), or "".
@@ -154,21 +140,59 @@ func (r Repo) RemoteURL(ctx context.Context) string {
 
 // BranchWorktree is the work tree that has branch checked out, or "".
 func (r Repo) BranchWorktree(ctx context.Context, branch string) string {
-	out, err := r.git(ctx, "worktree", "list", "--porcelain")
-	if err != nil {
-		return ""
-	}
-	current := ""
-	for line := range strings.SplitSeq(string(out), "\n") {
-		if p, ok := strings.CutPrefix(line, "worktree "); ok {
-			current = strings.TrimSpace(p)
-			continue
-		}
-		if b, ok := strings.CutPrefix(line, "branch "); ok && strings.TrimSpace(b) == "refs/heads/"+branch {
-			return current
+	wts, _ := r.Worktrees(ctx)
+	for _, w := range wts {
+		if w.Branch == branch && !w.Detached && !w.Bare {
+			return w.Dir
 		}
 	}
 	return ""
+}
+
+// Worktree is one of a repo's work trees. Branch is its short name, "" when detached; Prunable means its directory
+// is gone.
+type Worktree struct {
+	Dir, Branch, Head        string
+	Prunable, Bare, Detached bool
+}
+
+// Worktrees are the repo's work trees, the main one first.
+func (r Repo) Worktrees(ctx context.Context) ([]Worktree, error) {
+	out, err := r.git(ctx, "worktree", "list", "--porcelain")
+	if err != nil {
+		return nil, err
+	}
+	var wts []Worktree
+	for line := range strings.SplitSeq(string(out), "\n") {
+		key, val, _ := strings.Cut(line, " ")
+		if key == "worktree" {
+			wts = append(wts, Worktree{Dir: val})
+			continue
+		}
+		if len(wts) == 0 {
+			continue
+		}
+		w := &wts[len(wts)-1]
+		switch key {
+		case "HEAD":
+			w.Head = val
+		case "branch":
+			w.Branch = strings.TrimPrefix(val, "refs/heads/")
+		case "bare":
+			w.Bare = true
+		case "detached":
+			w.Detached = true
+		case "prunable":
+			w.Prunable = true
+		}
+	}
+	return wts, nil
+}
+
+// PruneWorktrees forgets work trees whose directories are gone.
+func (r Repo) PruneWorktrees(ctx context.Context) error {
+	_, err := r.git(ctx, "worktree", "prune")
+	return err
 }
 
 // FreshBranch is name, or name-2, name-3…: the first the repo has no branch called. An existing branch of the

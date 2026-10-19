@@ -1,17 +1,34 @@
 package core
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // RepoID names a registered checkout.
 type RepoID string
 
-// Repo is a registered checkout. It is never written to, except in a direct session.
+// Repo is a registered checkout. Oriel's sessions never write to it, but for a direct session; the Repos page
+// does (housekeeping, tags), on the user's say.
 type Repo struct {
-	ID         RepoID `json:"id"`
-	Path       string `json:"path"`
-	Remote     string `json:"remote,omitempty"`
-	BaseBranch string `json:"baseBranch,omitempty"`
+	ID         RepoID     `json:"id"`
+	Path       string     `json:"path"`
+	Remote     string     `json:"remote,omitempty"`
+	BaseBranch string     `json:"baseBranch,omitempty"`
+	Source     RepoSource `json:"source,omitempty"`
+	Added      time.Time  `json:"added,omitzero"`
+	Used       time.Time  `json:"used,omitzero"` // the last session started on it
 }
+
+// RepoSource is how a repo came to be registered.
+type RepoSource string
+
+const (
+	RepoAdded      RepoSource = "added"      // by hand: repos.add
+	RepoCloned     RepoSource = "cloned"     // repos.clone
+	RepoDiscovered RepoSource = "discovered" // a sibling of a known repo
+	RepoSession    RepoSource = "session"    // a session started on its path
+)
 
 // SandboxPolicy is where a session's agent runs and what it may reach.
 type SandboxPolicy struct {

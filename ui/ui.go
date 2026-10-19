@@ -698,6 +698,32 @@ func (u *UI) placeFloat(e *elem) {
 	u.place(e, x, y)
 }
 
+// paintOrder is the floats by layer; within a layer, in the order of the outermost floats holding them, so a float
+// nested in another (a dialog's box in its scrim) stays under the floats built after its holder.
+func (u *UI) paintOrder() []*elem {
+	at := make(map[*elem]int, len(u.floats))
+	for i, e := range u.floats {
+		at[e] = i
+	}
+	outer := func(e *elem) int {
+		top := e
+		for p := e.parent; p != nil; p = p.parent {
+			if p.style.Float != nil {
+				top = p
+			}
+		}
+		return at[top]
+	}
+	floats := slices.Clone(u.floats)
+	slices.SortStableFunc(floats, func(a, b *elem) int {
+		if a.style.Z != b.style.Z {
+			return a.style.Z - b.style.Z
+		}
+		return outer(a) - outer(b)
+	})
+	return floats
+}
+
 // overTrap says whether id is in a float layered over the trap t.
 func (u *UI) overTrap(id, t ID) bool {
 	e, ok := u.byID[id]
@@ -725,8 +751,7 @@ func (u *UI) Paint(f render.Frame) {
 		f.Backdrop(u.theme.C(theme.BgBase))
 	}
 	u.paint(f, u.root, full)
-	floats := slices.Clone(u.floats)
-	slices.SortStableFunc(floats, func(a, b *elem) int { return a.style.Z - b.style.Z })
+	floats := u.paintOrder()
 	for _, e := range floats {
 		if e.style.Z >= 0 {
 			u.paint(f, e, full)

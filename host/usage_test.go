@@ -57,12 +57,12 @@ func usedNow(w *Host, provider string) float64 {
 func TestReadUsageKeepsTheNewestReading(t *testing.T) {
 	claude := newUsageStub("claude")
 	r := newRig(t, claude)
-	probed := core.ProviderUsage{Provider: "claude", Account: "u1", Sampled: r.now.Add(-time.Hour), Windows: []core.UsageWindow{{Name: "weekly", Used: .3}}}
+	probed := core.ProviderUsage{Provider: "claude", Account: "u1", Sampled: r.now().Add(-time.Hour), Windows: []core.UsageWindow{{Name: "weekly", Used: .3}}}
 	claude.set(probed)
 	if err := r.w.ReadUsage(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1", Sampled: r.now, Windows: []core.UsageWindow{{Name: "weekly", Used: .5}}})
+	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1", Sampled: r.now(), Windows: []core.UsageWindow{{Name: "weekly", Used: .5}}})
 	if err := r.w.ReadUsage(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestReadUsageKeepsTheNewestReading(t *testing.T) {
 	if h := r.w.UsageHistory(UsageHistoryReq{Provider: "claude"}); len(h) != 2 {
 		t.Errorf("history = %+v", h)
 	}
-	probed.Sampled, probed.Windows = r.now.Add(time.Minute), []core.UsageWindow{{Name: "weekly", Used: .6}}
+	probed.Sampled, probed.Windows = r.now().Add(time.Minute), []core.UsageWindow{{Name: "weekly", Used: .6}}
 	claude.set(probed)
 	if err := r.w.ReadUsage(context.Background()); err != nil {
 		t.Fatal(err)

@@ -72,22 +72,9 @@ type Tracking struct {
 	Ahead, Behind int
 }
 
+// AheadBehind is the checked-out branch's Tracking.
 func (r Repo) AheadBehind(ctx context.Context) (Tracking, error) {
-	up, err := r.git(ctx, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
-	if err != nil {
-		return Tracking{}, nil
-	}
-	out, err := r.git(ctx, "rev-list", "--left-right", "--count", "HEAD...@{upstream}")
-	if err != nil {
-		return Tracking{}, err
-	}
-	var t Tracking
-	t.Upstream = strings.TrimSpace(string(up))
-	if f := strings.Fields(string(out)); len(f) == 2 {
-		t.Ahead, _ = strconv.Atoi(f[0])
-		t.Behind, _ = strconv.Atoi(f[1])
-	}
-	return t, nil
+	return r.BranchTracking(ctx, "HEAD")
 }
 
 // CommitTimes are when each commit reachable from HEAD since then was made, newest first.

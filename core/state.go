@@ -17,6 +17,7 @@ type State struct {
 	Notifications []Notification  `json:"notifications"`   // oldest first
 	Machine       MachineState    `json:"machine,omitzero"`
 	Usage         []ProviderUsage `json:"usage,omitempty"` // each provider's plan windows
+	Repos         []Repo          `json:"repos,omitempty"` // the registered checkouts
 }
 
 type SessionState struct {
@@ -141,6 +142,7 @@ func (s State) Clone() State {
 	}
 	s.Machine.SignedOut = slices.Clone(s.Machine.SignedOut)
 	s.Usage = slices.Clone(s.Usage)
+	s.Repos = slices.Clone(s.Repos)
 	return s
 }
 

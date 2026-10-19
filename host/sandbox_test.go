@@ -92,11 +92,25 @@ func (s *sandboxRig) sandboxed() (core.SessionID, *agent.StartSpec, *box) {
 	id := s.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
 		Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
 	a := s.agent()
-	h, _ := s.w.sessionFor(id, false)
-	h.mu.Lock()
-	b := h.box.(*box)
-	h.mu.Unlock()
-	return id, &a.Spec, b
+	return id, &a.Spec, s.keptBox(id)
+}
+
+// keptBox is the sandbox a session keeps for its agent, once start has kept it: the fake agent starts inside launch,
+// before then.
+func (r *rig) keptBox(id core.SessionID) *box {
+	r.t.Helper()
+	h, _ := r.w.sessionFor(id, false)
+	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(time.Millisecond) {
+		h.mu.Lock()
+		b, ok := h.box.(*box)
+		h.mu.Unlock()
+		if ok {
+			return b
+		}
+		if time.Now().After(deadline) {
+			r.t.Fatal("the session never kept its sandbox")
+		}
+	}
 }
 
 // waitAsk waits for the session's one ask of kind.
@@ -497,7 +511,7 @@ func TestReposListsWhatCouldJoin(t *testing.T) {
 	_, _, b := s.sandboxed()
 	other := t.TempDir()
 	exec.Command("git", "init", "-q", other).Run()
-	if _, err := s.w.repos.add(context.Background(), other); err != nil {
+	if _, err := s.w.addRepo(context.Background(), other, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
 	r := gatewayCall(t, b.root, "oriel__repos", map[string]any{})

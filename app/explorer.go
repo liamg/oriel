@@ -200,13 +200,13 @@ func (e *explorer) Activate(_ context.Context, h plugin.Host) error {
 		}},
 		{ID: "explorer.stage", Title: "Stage the selected file or hunk, or unstage it if it's staged", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if h, staged, ok := e.selectedHunk(); ok {
-				path := e.hunks.path
+				path, t := e.hunks.path, e.git()
 				e.sh.git.async(func(ctx context.Context) error {
-					repo := e.git().status.Repo()
+					repo := t.status.Repo()
 					if staged {
 						return repo.UnstageHunk(ctx, path, h)
 					}
-					work, err := os.ReadFile(e.git().abs(path))
+					work, err := os.ReadFile(t.abs(path))
 					if err != nil {
 						return err
 					}
@@ -296,9 +296,9 @@ func (e *explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 	if !x.loaded && !x.loading {
 		x.loading = true
 		x.busy.Add(1)
+		t := e.git()
 		go func() {
 			defer x.busy.Done()
-			t := e.git()
 			ctx, repo := context.Background(), t.status.Repo()
 			st, _ := repo.StagedHunks(ctx, path)
 			work, _ := os.ReadFile(t.abs(path))
@@ -562,7 +562,9 @@ func (e *explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 			}
 		}
 		if f, ok := e.selectedFile(); ok && f.Area != gitx.Untracked && f.Code != 'D' {
+			e.hunks.mu.Lock()
 			e.hunks.path = f.Path
+			e.hunks.mu.Unlock()
 		}
 		if p := e.hunks.path; p != "" && slices.ContainsFunc(files, func(f gitx.FileState) bool { return f.Path == p }) {
 			if sec, ok := e.hunkSection(th, p); ok {

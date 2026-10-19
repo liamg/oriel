@@ -32,6 +32,17 @@ func Env() []string {
 		"GIT_AUTHOR_NAME=Fixture", "GIT_AUTHOR_EMAIL=fixture@example.com", "GIT_COMMITTER_NAME=Fixture", "GIT_COMMITTER_EMAIL=fixture@example.com")
 }
 
+// Isolate keeps git's global and system config out of every git the test runs, the code under test's included,
+// and gives it a fixed identity.
+func Isolate(t testing.TB) {
+	t.Helper()
+	for _, kv := range [][2]string{{"GIT_CONFIG_GLOBAL", "/dev/null"}, {"GIT_CONFIG_SYSTEM", "/dev/null"},
+		{"GIT_AUTHOR_NAME", "Fixture"}, {"GIT_AUTHOR_EMAIL", "fixture@example.com"},
+		{"GIT_COMMITTER_NAME", "Fixture"}, {"GIT_COMMITTER_EMAIL", "fixture@example.com"}} {
+		t.Setenv(kv[0], kv[1])
+	}
+}
+
 // Git runs git in the repo and returns its output; a failure fails the test.
 func (r *Repo) Git(args ...string) string {
 	r.T.Helper()

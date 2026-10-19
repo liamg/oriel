@@ -54,6 +54,7 @@ type fallbacks struct {
 	mu        sync.Mutex
 	requested map[rune]bool
 	work      chan rune
+	closed    bool
 	landed    []*Face
 	names     []string
 	missing   []rune
@@ -67,7 +68,7 @@ func newFallbacks(onLoad func()) *fallbacks {
 func (f *fallbacks) request(r rune) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if f.requested[r] || len(f.names) >= maxFallbacks {
+	if f.closed || f.requested[r] || len(f.names) >= maxFallbacks {
 		return
 	}
 	f.requested[r] = true
@@ -79,6 +80,16 @@ func (f *fallbacks) request(r rune) {
 	case f.work <- r:
 	default: // the queue is full; the rune stays tofu
 	}
+}
+
+// close stops the worker; runes asked for after it stay tofu.
+func (f *fallbacks) close() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if !f.closed && f.work != nil {
+		close(f.work)
+	}
+	f.closed = true
 }
 
 // take returns the faces that have landed since the last call.

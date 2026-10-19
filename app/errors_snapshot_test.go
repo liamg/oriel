@@ -68,6 +68,11 @@ func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, cha
 		t.Fatal(err)
 	}
 	s.Headless = h
+	t.Cleanup(func() {
+		if err := h.Close(); err != nil {
+			t.Errorf("closing the scene: %v", err)
+		}
+	})
 	s.overviewOff = s.reg.View(OverviewView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.ColumnNode() }))
 	return s
 }

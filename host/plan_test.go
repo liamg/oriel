@@ -246,11 +246,7 @@ func TestStartWorkSandboxAndNetwork(t *testing.T) {
 	if ag := s.session(id).Agent; !ag.Sandboxed || ag.Network != "open" || ag.Policy != "light" {
 		t.Errorf("the agent after Start work: %+v", ag)
 	}
-	h, _ := s.w.sessionFor(id, false)
-	h.mu.Lock()
-	box := h.box.(*box)
-	h.mu.Unlock()
-	if !box.cfg.NoEgressProxy {
+	if box := s.keptBox(id); !box.cfg.NoEgressProxy {
 		t.Error("the open network still goes through the egress proxy")
 	}
 }

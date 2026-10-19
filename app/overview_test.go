@@ -54,9 +54,8 @@ func lines(n int, line string) string { return strings.Repeat(line+"\n", n) }
 // overviewScene is the window with the directory make makes in home open, and the overview's panels all computed.
 func overviewScene(t *testing.T, make func(home string) string) *errScene {
 	t.Helper()
-	s := newScene(t, "", "", mockupSize)
+	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { cfg.WorkDir = make(os.Getenv("HOME")) })
 	s.overviewOff.Dispose()
-	s.sh.cfg.WorkDir = make(os.Getenv("HOME"))
 	for _, e := range s.plugins {
 		if o, ok := e.(*overview); ok {
 			o.now = func() time.Time { return overviewNow }
