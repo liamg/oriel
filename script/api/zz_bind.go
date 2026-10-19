@@ -41,6 +41,13 @@ func (a *APIs) bind(vm *script.VM) {
 				v, err := x.JSON(c.Any(0))
 				return []any{v}, err
 			},
+			"load": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				v, err := x.Load(c.Fn(0), c.Table(1))
+				return []any{v}, err
+			},
 			"log": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
@@ -488,6 +495,18 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := UI{a: a}
 		vm.Bind("ui", map[string]script.GoFunc{
+			"async": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Async(c.Table(0))}, nil
+			},
+			"busy": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Busy(c.Table(0))}, nil
+			},
 			"button": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
@@ -536,6 +555,12 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return []any{x.Mode()}, nil
 			},
+			"progress": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Progress(c.Table(0))}, nil
+			},
 			"ring": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
@@ -553,6 +578,12 @@ func (a *APIs) bind(vm *script.VM) {
 					return nil, err
 				}
 				return []any{x.Select(c.Table(0))}, nil
+			},
+			"skeleton": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Skeleton(c.Table(0))}, nil
 			},
 			"spacer": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {

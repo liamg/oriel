@@ -9,12 +9,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // clickTop clicks the middle of the last run of text drawn in the frame on screen: the one on top.
@@ -257,9 +259,9 @@ func TestLauncherSnapshot(t *testing.T) {
 			l = x
 		}
 	}
-	for deadline := time.Now().Add(10 * time.Second); len(l.kinds) == 0; time.Sleep(10 * time.Millisecond) {
+	for deadline := time.Now().Add(10 * time.Second); l.providersState().Phase != widget.Ready; time.Sleep(10 * time.Millisecond) {
 		if time.Now().After(deadline) {
-			t.Fatalf("the launcher never read the kinds: %s", l.loadErr)
+			t.Fatalf("the launcher never read the providers: %+v", l.providersState())
 		}
 		s.frame()
 		s.sh.runTodo()
@@ -319,4 +321,60 @@ func TestLauncherPicksSandboxBackend(t *testing.T) {
 		}
 		return false
 	})
+}
+
+// While the providers' probe runs, the launcher shows skeleton cards and how long it's taken, picks no agent, and
+// Start waits with the reason; ⌘↵ says the same. Once the probe answers, the default agent is picked and Start goes.
+func TestLauncherWaitsForTheProbe(t *testing.T) {
+	fake := agenttest.NewFake()
+	fake.Hold = make(chan struct{})
+	lw := newLocalHost(t, fake)
+	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
+	s.now = at(14, 30, 0)
+	s.run("session.new", registry.Args{"prompt": "Fix stale search results"})
+	s.frame()
+	s.wantFrame(t, "NEW SESSION", "Plan") // the kinds are there at once
+	s.now = s.now.Add(4 * time.Second)
+	s.frame()
+	s.wantFrame(t, "Checking which agents are installed…", "· 4s", "Checking agents…")
+	if n := s.access("No agent"); n.Selected {
+		t.Error("No agent is picked while the probe runs")
+	}
+	if err := s.reg.Run(context.Background(), "session.launch", nil); err == nil || err.Error() != "To start: a moment: checking which agents are installed." {
+		t.Errorf("⌘↵: %v", err)
+	}
+	s.frame()
+	s.wantFrame(t, "To start: a moment: checking which agents are installed.")
+
+	close(fake.Hold)
+	s.until(t, "the probe", func() bool { return strings.Contains(s.frameText(), "Fake") })
+	s.now = s.now.Add(time.Second)
+	s.frame()
+	if n := s.access("Fake"); !n.Selected {
+		t.Error("the logged-in provider isn't picked once the probe answers")
+	}
+	if text := s.frameText(); strings.Contains(text, "Checking agents…") || strings.Contains(text, "To start:") {
+		t.Errorf("Start still waits after the probe:\n%s", text)
+	}
+}
+
+// A probe that finds no agents says so, with Retry; No agent is there to pick, but not picked.
+func TestLauncherProbeFails(t *testing.T) {
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: nopExec{}, Load: steadyLoad})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { w.Close() })
+	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { cfg.Host, cfg.Store = w, w.Store() })
+	s.run("session.new", registry.Args{"prompt": "notes"})
+	s.until(t, "the failure", func() bool { return strings.Contains(s.frameText(), "no agents are set up on this machine") })
+	s.wantFrame(t, "Retry")
+	if n := s.access("No agent"); n.Selected {
+		t.Error("No agent is picked by default")
+	}
+	if err := s.reg.Run(context.Background(), "session.launch", nil); err == nil || err.Error() != "To start: pick an agent, or No agent." {
+		t.Errorf("⌘↵: %v", err)
+	}
+	s.frame()
+	s.wantFrame(t, "To start: pick an agent, or No agent.")
 }

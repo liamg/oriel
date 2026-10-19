@@ -137,6 +137,24 @@ func (x *debugPlugin) run(cmd string, args registry.Args) {
 	}
 }
 
+// loading is the stop's stack and scopes as a load.
+func (s *debugSession) loading() widget.LoadState {
+	if s.failed != nil {
+		return widget.LoadState{Phase: widget.Failed, Err: s.failed}
+	}
+	return widget.LoadState{Phase: widget.Pending, Since: s.since}
+}
+
+// retry reads the stop's stack, or the frame's scopes, again.
+func (x *debugPlugin) retry(s *debugSession) {
+	s.failed, s.since = nil, windowNow(x.h)
+	if len(s.frames) == 0 {
+		x.fetch(s)
+		return
+	}
+	x.frameChanged(s)
+}
+
 func (x *debugPlugin) stackList(c *ui.Ctx) {
 	s := x.sess
 	var frames []dap.Frame
@@ -148,6 +166,10 @@ func (x *debugPlugin) stackList(c *ui.Ctx) {
 	}
 	c.Column("stack", ui.Style{W: ui.Flex(1), H: ui.Flex(1.4)}, func(c *ui.Ctx) {
 		debugHeading(c, "h", "CALL STACK", thread)
+		if s != nil && s.state == debugPaused && len(frames) == 0 {
+			widget.Async(c, "wait", s.loading(), widget.AsyncOpts{Label: "Reading the stack", Retry: func() { x.retry(s) }, Help: debugHelp}, nil)
+			return
+		}
 		if len(frames) == 0 {
 			c.Text("none", "Not paused.", debugMono(c, 11, theme.FgGhost))
 			return
@@ -283,6 +305,10 @@ func (x *debugPlugin) variables(c *ui.Ctx) {
 			}
 		}
 		debugHeading(c, "h", "VARIABLES", note)
+		if s != nil && s.state == debugPaused && s.scopes == nil {
+			widget.Async(c, "wait", s.loading(), widget.AsyncOpts{Label: "Reading the variables", Retry: func() { x.retry(s) }, Help: debugHelp}, nil)
+			return
+		}
 		if len(items) == 0 {
 			c.Text("none", "Not paused.", debugMono(c, 11, theme.FgGhost))
 			return

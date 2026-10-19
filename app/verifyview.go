@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/render"
@@ -223,18 +224,27 @@ func (x *verifyPlugin) verdict(c *ui.Ctx, qq core.QuizQuestion, width float32) {
 // typing is the fork thinking: three dots in a bubble.
 func (x *verifyPlugin) typing(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
+	st := widget.LoadState{Phase: widget.Pending, Since: q.since}
 	c.Column("typing", ui.Style{Gap: 6}, func(c *ui.Ctx) {
 		if len(q.qs) == 0 {
-			c.Text("t", "Writing the questions…", uiFont(12, th.C(theme.FgFaint)))
+			widget.Busy(c, "t", st, widget.BusyOpts{Label: "Writing the questions", Help: verifyHelp})
 		}
-		c.Row("dots", ui.Style{Pad: ui.Insets{L: 30}}, func(c *ui.Ctx) {
-			c.Row("b", ui.Style{Pad: ui.PadXY(12, 10), Radius: 12, Gap: 3, Fill: th.C(tVerifyTheirs), Role: ui.RoleStatus, Label: "Thinking…"}, func(c *ui.Ctx) {
+		c.Row("dots", ui.Style{Pad: ui.Insets{L: 30}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Row("b", ui.Style{Pad: ui.PadXY(12, 10), Radius: 12, Gap: 3, Fill: th.C(tVerifyTheirs), Role: ui.RoleStatus, Label: "Thinking"}, func(c *ui.Ctx) {
 				for i, a := range []float32{1, .6, .3} {
 					fg := th.C(theme.FgFaint)
 					fg.A = uint8(float32(fg.A) * a)
 					c.Box(i, ui.Style{W: ui.Px(5), H: ui.Px(5), Radius: 2.5, Fill: fg}, nil)
 				}
 			})
+			if now := c.Now(); len(q.qs) > 0 && !q.since.IsZero() {
+				if now.Sub(q.since) >= 3*time.Second {
+					c.Text("clock", widget.Elapsed(now, q.since), monoFont(10, th.C(theme.FgGhost)))
+					c.WakeAt(now.Truncate(time.Second).Add(time.Second))
+				} else {
+					c.WakeAt(q.since.Add(3 * time.Second))
+				}
+			}
 		})
 	})
 }

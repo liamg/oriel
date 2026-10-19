@@ -98,7 +98,7 @@ func TestShipMergeHardBlockerAndMethod(t *testing.T) {
 	s.until(t, "the confirm", func() bool {
 		s.shipIdle()
 		f := s.frameText()
-		return strings.Contains(f, "MERGE #") && !strings.Contains(f, "Reading what stands")
+		return strings.Contains(f, "MERGE #") && strings.Contains(f, "Method")
 	})
 	if strings.Contains(s.frameText(), "won't merge it") {
 		t.Fatal("a clean PR still refused")

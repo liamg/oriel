@@ -79,7 +79,28 @@ func TestPickerSources(t *testing.T) {
 
 func (s *errScene) h() *pluginHost { return s.sh.host("test") }
 
+// sourcesLoaded asks every picker source for its items, then draws frames until none is still loading.
+func (s *errScene) sourcesLoaded() {
+	s.t.Helper()
+	for _, src := range s.reg.Pickers() {
+		if src.Items != nil && src.Loading != nil {
+			src.Items(nil, "")
+		}
+	}
+	if !s.Until(15*time.Second, func() bool {
+		for _, src := range s.reg.Pickers() {
+			if sourceLoading(src) {
+				return false
+			}
+		}
+		return true
+	}) {
+		s.t.Fatal("the picker sources never finished loading")
+	}
+}
+
 func mustSource(t *testing.T, s *errScene, id string) registry.PickerSource {
+	s.sourcesLoaded()
 	for _, src := range s.reg.Pickers() {
 		if src.ID == id {
 			return src

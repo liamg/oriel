@@ -24,6 +24,7 @@ type Fake struct {
 	Offers  []agent.Model     // the models it offers; one, "m1", if nil
 	Started chan *FakeSession // each session as it starts
 	Launch  bool              // a session starts a process through the spec's Exec first, as a real provider's does
+	Hold    chan struct{}     // Detect waits for it to close: a slow probe
 
 	mu        sync.Mutex
 	resumed   []string
@@ -41,7 +42,14 @@ func (f *Fake) ID() string {
 	return f.Name
 }
 
-func (f *Fake) Detect(context.Context) (agent.Install, error) {
+func (f *Fake) Detect(ctx context.Context) (agent.Install, error) {
+	if f.Hold != nil {
+		select {
+		case <-f.Hold:
+		case <-ctx.Done():
+			return agent.Install{}, ctx.Err()
+		}
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	in := agent.Install{Bin: "fake", Version: "1", LoggedIn: true, Login: fmt.Sprintf("login-%d", f.logins)}

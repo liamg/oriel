@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -102,9 +103,10 @@ type statsPlugin struct {
 	reports  map[string]fetched[stats.Report] // by query
 	details  map[string]fetched[stats.Detail] // by session and split
 	history  fetched[[]core.ProviderUsage]
-	inflight map[string]bool
-	live     []core.ProviderUsage // readings since the history was fetched, from UsageSampled
-	changed  time.Time            // when an agent last did something that costs: answers fetched before are stale
+	inflight map[string]time.Time   // when each fetch running started
+	live     []core.ProviderUsage   // readings since the history was fetched, from UsageSampled
+	reading  *plugin.Load[struct{}] // Refresh's read of every provider's windows
+	changed  time.Time              // when an agent last did something that costs: answers fetched before are stale
 }
 
 // liveAfter is how soon a report is asked for again once the agents it counts have moved on.
@@ -125,7 +127,20 @@ func (x *statsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.burnWin = map[string]int{}
 	x.reports = map[string]fetched[stats.Report]{}
 	x.details = map[string]fetched[stats.Detail]{}
-	x.inflight = map[string]bool{}
+	x.inflight = map[string]time.Time{}
+	x.reading = plugin.NewLoad(h, func(ctx context.Context, _ func(string, float64)) (struct{}, error) {
+		w := x.sh.cfg.Host
+		if w == nil {
+			return struct{}{}, errors.New("there are no sessions in this window")
+		}
+		err := w.ReadUsage(ctx)
+		x.h.Do(func() {
+			x.mu.Lock()
+			x.history = fetched[[]core.ProviderUsage]{}
+			x.mu.Unlock()
+		})
+		return struct{}{}, err
+	}, plugin.LoadOpts{Timeout: 2 * time.Minute, Now: func() time.Time { return x.now() }})
 	x.add(h.Option(registry.OptionSpec{Name: SplitOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Split a multi-repo session's cost over its repos by each one's share of edits and file tool calls. Off, each repo is charged the whole session. The Stats page's toggle and the session tab's \"count whole session in each\" set it."}))
 	x.add(h.Option(registry.OptionSpec{Name: AccountsOption, Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser,
@@ -423,10 +438,24 @@ func queryKey(q stats.Query) string {
 	return string(b)
 }
 
-// reportMeta is when an answer was read.
+// reportMeta is when an answer was read, and the load's state for the widgets.
 type reportMeta struct {
-	at      time.Time
-	loading bool
+	at    time.Time
+	state widget.LoadState
+}
+
+// fetchState is a cached answer's load state: Pending while a fetch runs (Stale when there's an answer to show),
+// Failed when the last fetch failed with nothing to show.
+func fetchState(since time.Time, have bool, err error) widget.LoadState {
+	switch {
+	case !since.IsZero():
+		return widget.LoadState{Phase: widget.Pending, Since: since, Stale: have, Err: err}
+	case !have && err != nil:
+		return widget.LoadState{Phase: widget.Failed, Err: err}
+	case !have:
+		return widget.LoadState{Phase: widget.Idle}
+	}
+	return widget.LoadState{Phase: widget.Ready, Err: err}
 }
 
 // report is q's answer as last read, asking again when it's old or missing.
@@ -435,29 +464,40 @@ func (x *statsPlugin) report(q stats.Query) (stats.Report, reportMeta) {
 	w := x.sh.cfg.Host
 	x.mu.Lock()
 	f, ok := x.reports[key]
-	meta := reportMeta{loading: x.inflight[key]}
+	since := x.inflight[key]
+	var meta reportMeta
 	if ok && f.err == nil {
 		meta.at = f.at
 	}
 	old := !ok || x.now().Sub(f.at) > refetchAfter || f.at.Before(x.changed) && x.now().Sub(f.at) > liveAfter
 	x.mu.Unlock()
-	if old && w != nil && !meta.loading {
-		x.fetch(key, func() (any, error) { return w.StatsQuery(q), nil }, func(v any, err error, at time.Time) {
+	if old && w != nil && since.IsZero() {
+		since = x.fetch(key, func() (any, error) { return w.StatsQuery(q), nil }, func(v any, err error, at time.Time) {
 			r, _ := v.(stats.Report)
 			x.reports[key] = fetched[stats.Report]{v: r, at: at, err: err}
 		})
-		meta.loading = true
 	}
+	meta.state = fetchState(since, ok && f.err == nil, f.err)
 	if !ok || f.err != nil {
 		return stats.Report{Points: q.Points()}, meta
 	}
 	return f.v, meta
 }
 
-// fetch asks the session host in the background, and stores its answer on the app's loop.
-func (x *statsPlugin) fetch(key string, ask func() (any, error), store func(any, error, time.Time)) {
+// retryReport forgets q's answer, so the next frame asks again.
+func (x *statsPlugin) retryReport(q stats.Query) {
 	x.mu.Lock()
-	x.inflight[key] = true
+	delete(x.reports, queryKey(q))
+	x.mu.Unlock()
+	x.h.Redraw()
+}
+
+// fetch asks the session host in the background, and stores its answer on the app's loop. It returns when it
+// started.
+func (x *statsPlugin) fetch(key string, ask func() (any, error), store func(any, error, time.Time)) time.Time {
+	since := x.now()
+	x.mu.Lock()
+	x.inflight[key] = since
 	x.mu.Unlock()
 	go func() {
 		v, err := ask()
@@ -470,26 +510,42 @@ func (x *statsPlugin) fetch(key string, ask func() (any, error), store func(any,
 		})
 		x.h.Redraw()
 	}()
+	return since
 }
 
-// detail is a session's stats, asked for again when old: an Oriel session's, or one outside Oriel.
+// detail is a session's stats once read.
 func (x *statsPlugin) detail(id core.SessionID) (stats.Detail, bool) {
-	split := x.split()
-	key := fmt.Sprintf("%s|%v", id, split)
+	d, s := x.detailLoad(id)
+	return d, s.Phase == widget.Ready || s.Stale
+}
+
+// detailLoad is a session's stats, asked for again when old (an Oriel session's, or one outside Oriel), and its load.
+func (x *statsPlugin) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) {
+	key := x.detailKey(id)
 	x.mu.Lock()
 	f, ok := x.details[key]
-	busy := x.inflight[key]
+	since := x.inflight[key]
 	x.mu.Unlock()
-	if w := x.sh.cfg.Host; (!ok || x.now().Sub(f.at) > refetchAfter) && !busy && w != nil {
-		req := host.StatsSessionReq{Session: id, Split: split, Offset: x.offset()}
-		x.fetch(key, func() (any, error) { return w.SessionStats(req) }, func(v any, err error, at time.Time) {
+	if w := x.sh.cfg.Host; (!ok || x.now().Sub(f.at) > refetchAfter) && since.IsZero() && w != nil {
+		req := host.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
+		since = x.fetch(key, func() (any, error) { return w.SessionStats(req) }, func(v any, err error, at time.Time) {
 			d, _ := v.(stats.Detail)
 			if err == nil || !ok {
 				x.details[key] = fetched[stats.Detail]{v: d, at: at, err: err}
 			}
 		})
 	}
-	return f.v, ok && f.err == nil
+	return f.v, fetchState(since, ok && f.err == nil, f.err)
+}
+
+func (x *statsPlugin) detailKey(id core.SessionID) string { return fmt.Sprintf("%s|%v", id, x.split()) }
+
+// retryDetail forgets a session's failed answer, so the next frame asks again.
+func (x *statsPlugin) retryDetail(id core.SessionID) {
+	x.mu.Lock()
+	delete(x.details, x.detailKey(id))
+	x.mu.Unlock()
+	x.h.Redraw()
 }
 
 // usageHistory is the readings of an account's plan over the last week, oldest first.
@@ -512,7 +568,7 @@ func (x *statsPlugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage
 			out = append(out, u)
 		}
 	}
-	busy := x.inflight["usage.history"]
+	busy := !x.inflight["usage.history"].IsZero()
 	x.mu.Unlock()
 	if old && !busy && w != nil {
 		since := x.now().Add(-8 * 24 * time.Hour)
@@ -526,16 +582,11 @@ func (x *statsPlugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage
 	return out
 }
 
-func (x *statsPlugin) refreshUsage(ctx registry.Ctx) error {
-	if w := x.sh.cfg.Host; w != nil {
-		if err := w.ReadUsage(ctx); err != nil {
-			x.h.Log().Warn("usage", "err", err)
-		}
+// refreshUsage reads every provider's windows again, off the loop.
+func (x *statsPlugin) refreshUsage(registry.Ctx) error {
+	if x.reading.State().Phase != widget.Pending {
+		x.reading.Reload()
 	}
-	x.mu.Lock()
-	x.history = fetched[[]core.ProviderUsage]{}
-	x.mu.Unlock()
-	x.h.Redraw()
 	return nil
 }
 

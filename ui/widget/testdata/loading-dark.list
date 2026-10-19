@@ -1,0 +1,96 @@
+backdrop #060606
+rect 0,0 900x560 fill #060606
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #ffd23f
+text "Reading the stack…" @39,31.625 #7c7566 Inter 12
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #ffd23f
+text "Checking which agents are installed… probing codex" @39,60.14453 #7c7566 Inter 12
+text "· 12s" @346.625,59.559296 #4f4a40 JetBrains Mono 10.5
+text "cloning liamg/oriel" @20,87.69531 #7c7566 Inter 11
+text "62%" @262,87.23906 #4f4a40 JetBrains Mono 10
+rect 20,94.34863 260x6 fill #232220 radius 3
+rect 20,94.34863 161.2x6 fill #ffd23f radius 3
+text "downloading the model" @300,87.69531 #7c7566 Inter 11
+rect 300,94.34863 260x6 fill #232220 radius 3
+clip 300,94.34863 260x6 r 3
+  rect 300,94.34863 6x6 fill #ffd23f8c
+  rect 312,94.34863 6x6 fill #ffd23f8c
+  rect 324,94.34863 6x6 fill #ffd23f8c
+  rect 336,94.34863 6x6 fill #ffd23f8c
+  rect 348,94.34863 6x6 fill #ffd23f8c
+  rect 360,94.34863 6x6 fill #ffd23f8c
+  rect 372,94.34863 6x6 fill #ffd23f8c
+  rect 384,94.34863 6x6 fill #ffd23f8c
+  rect 396,94.34863 6x6 fill #ffd23f8c
+  rect 408,94.34863 6x6 fill #ffd23f8c
+  rect 420,94.34863 6x6 fill #ffd23f8c
+  rect 432,94.34863 6x6 fill #ffd23f8c
+  rect 444,94.34863 6x6 fill #ffd23f8c
+  rect 456,94.34863 6x6 fill #ffd23f8c
+  rect 468,94.34863 6x6 fill #ffd23f8c
+  rect 480,94.34863 6x6 fill #ffd23f8c
+  rect 492,94.34863 6x6 fill #ffd23f8c
+  rect 504,94.34863 6x6 fill #ffd23f8c
+  rect 516,94.34863 6x6 fill #ffd23f8c
+  rect 528,94.34863 6x6 fill #ffd23f8c
+  rect 540,94.34863 6x6 fill #ffd23f8c
+  rect 552,94.34863 6x6 fill #ffd23f8c
+pop
+rect 580,77.03906 260x2 fill #232220 radius 1
+rect 580,77.03906 78x2 fill #ffd23f radius 1
+rect 20,114.34863 260x12 fill #1c1b19 radius 4
+rect 20,134.34863 208x12 fill #1c1b19 radius 4
+rect 20,154.34863 156x12 fill #1c1b19 radius 4
+rect 20,174.34863 260x12 fill #1c1b19 radius 4
+rect 300,114.34863 150x70 fill #1c1b19 radius 8
+rect 460,114.34863 150x70 fill #1c1b19 radius 8
+rect 620,114.34863 150x70 fill #1c1b19 radius 8
+rect 20,200.34863 146.23438x26 fill #191815 radius 6 stroke 1 #332f27
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #b3ab99
+text "Checking agents…" @47,217.71387 #b3ab99 Inter 12
+rect 176.23438,200.34863 70.90625x26 fill #191815 radius 6 stroke 1 #332f27
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #b3ab99
+text "Install" @203.23438,217.71387 #b3ab99 Inter 12
+rect 257.14062,200.34863 77.890625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+text "Start" @267.14062,217.71387 #141006 Inter 12
+rect 301.07812,205.84863 23.953125x15 radius 3 stroke 1 #14100666
+text "⌘↵" @305.07812,216.76863 #141006cc JetBrains Mono 9.5
+rect 20,240.34863 860x90.61914 fill #0c0c0b radius 6
+text "Block" @30,256.03613 #7c7566 Inter 10
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #ffd23f
+text "Reading models… probing codex" @346.1797,298.07324 #7c7566 Inter 12
+text "· 12s" @539.85156,297.488 #4f4a40 JetBrains Mono 10.5
+rect 20,344.96777 860x42.61914 fill #0c0c0b radius 6
+text "Gate" @30,360.65527 #7c7566 Inter 10
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #ffd23f
+text "Reading models… probing codex" @49,378.69238 #7c7566 Inter 12
+text "· 12s" @242.67188,378.10715 #4f4a40 JetBrains Mono 10.5
+rect 20,401.5869 860x59.92871 fill #0c0c0b radius 6
+text "Optional" @30,417.2744 #7c7566 Inter 10
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #ffd23f
+text "Reading models… probing codex" @49,435.31152 #7c7566 Inter 12
+text "· 12s" @242.67188,434.7263 #4f4a40 JetBrains Mono 10.5
+text "Will use the session's model if you go on now" @30,452.8623 #4f4a40 Inter 11
+rect 20,475.51562 860x42.61914 fill #0c0c0b radius 6
+text "Inline" @30,491.20312 #7c7566 Inter 10
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #ffd23f
+text "Reading models… probing codex" @49,509.24023 #7c7566 Inter 12
+text "· 12s" @242.67188,508.655 #4f4a40 JetBrains Mono 10.5
+rect 20,532.13477 273.33334x38 fill #0c0c0b radius 6
+text "⚠" @30,555.5 #ff9b45 Inter 12
+text "codex: exec: not found" @52.3125,555.5 #ff9b45 Inter 12
+rect 232.88022,538.13477 50.453125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Retry" @242.88022,555.5 #ece6d8 Inter 12
+rect 313.33334,532.13477 273.33334x26.519531 fill #0c0c0b radius 6
+text "No jobs yet" @323.33334,549.75977 #7c7566 Inter 12
+rect 606.6667,532.13477 273.3333x26.519531 fill #0c0c0b radius 6
+text "3 jobs, refreshing" @616.6667,549.75977 #ece6d8 Inter 12
+rect 616.6667,538.13477 253.33331x2 fill #232220 radius 1
+rect 616.6667,538.13477 101.33331x2 fill #ffd23f radius 1

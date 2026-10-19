@@ -92,6 +92,7 @@ type grep struct {
 	query   string
 	results []registry.PickerItem
 	cancel  context.CancelFunc
+	running bool // the query's search hasn't finished
 }
 
 const maxGrep = 1000
@@ -101,30 +102,8 @@ const maxGrep = 1000
 // when it isn't one.
 func (x *editorPlugin) grepSource() registry.PickerSource {
 	g := &grep{}
-	run := func(q string) {
-		g.mu.Lock()
-		defer g.mu.Unlock()
-		if g.query == q {
-			return
-		}
-		if g.cancel != nil {
-			g.cancel()
-		}
-		g.query, g.results = q, nil
-		if q == "" {
-			return
-		}
-		pat, all := strings.CutPrefix(q, "@all ")
-		if _, err := regex.Compile(pat, regex.Flags{}); err != nil {
-			pat = `\Q` + pat + `\E`
-		}
-		sq := search.Query{Pattern: pat, Dir: x.dir, Max: maxGrep}
-		if !all {
-			sq.Exclude = x.unsearchable()
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		g.cancel = cancel
-		go search.Run(ctx, sq, func(ms []search.Match) {
+	emit := func(q string) func([]search.Match) {
+		return func(ms []search.Match) {
 			g.mu.Lock()
 			if g.query == q {
 				for _, m := range ms {
@@ -138,7 +117,40 @@ func (x *editorPlugin) grepSource() registry.PickerSource {
 			}
 			g.mu.Unlock()
 			x.h.Redraw()
-		})
+		}
+	}
+	run := func(q string) {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		if g.query == q {
+			return
+		}
+		if g.cancel != nil {
+			g.cancel()
+		}
+		g.query, g.results, g.running = q, nil, false
+		if q == "" {
+			return
+		}
+		pat, all := strings.CutPrefix(q, "@all ")
+		if _, err := regex.Compile(pat, regex.Flags{}); err != nil {
+			pat = `\Q` + pat + `\E`
+		}
+		sq := search.Query{Pattern: pat, Dir: x.dir, Max: maxGrep}
+		ctx, cancel := context.WithCancel(context.Background())
+		g.cancel, g.running = cancel, true
+		go func() {
+			if !all {
+				sq.Exclude = x.unsearchable()
+			}
+			search.Run(ctx, sq, emit(q))
+			g.mu.Lock()
+			if g.query == q {
+				g.running = false
+			}
+			g.mu.Unlock()
+			x.h.Redraw()
+		}()
 	}
 	return registry.PickerSource{ID: "grep", Title: "Grep", Order: 31, Live: true, PickerOnly: true,
 		Items: func(_ registry.Ctx, q string) []registry.PickerItem {
@@ -146,6 +158,11 @@ func (x *editorPlugin) grepSource() registry.PickerSource {
 			g.mu.Lock()
 			defer g.mu.Unlock()
 			return slices.Clone(g.results)
+		},
+		Loading: func() bool {
+			g.mu.Lock()
+			defer g.mu.Unlock()
+			return g.running
 		},
 		Preview: func(it registry.PickerItem) ui.Node { return x.filePreview(it.Path, it.Line-1) },
 	}

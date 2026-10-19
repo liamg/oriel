@@ -10,6 +10,7 @@ Version 0.4.0.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
 - `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
 - `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode a value as JSON text.
+- `oriel.load(fn, opts?)` (`ui`): A load for oriel.ui.async and busy: fn(done) starts the work on the loop and calls done(value) when it has it, or done(nil, err) when it failed (from an oriel.http.request answer, say). opts: timeout (seconds; a load still running then fails). Returns a handle: h:start() (once; does nothing while loading or loaded), h:reload() (keeps the value on show), h:reset(), h:value(), h:state() ({ phase = idle|pending|ready|failed, error, stale, note, elapsed }).
 - `oriel.log(msg, lvl)` (`ui`): Write to Oriel's log: level is debug, info, warn or error.
 - `oriel.notify(msg, lvl)` (`ui`): Tell the user something, through the one path every notice takes: level is info, warn or error.
 - `oriel.now()` (`ui`): The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown.
@@ -92,7 +93,7 @@ Version 0.4.0.
 
 ## oriel.picker
 
-- `oriel.picker.source(spec)` (`ui`): A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item) }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background. preview returns oriel.ui nodes.
+- `oriel.picker.source(spec)` (`ui`): A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes.
 
 ## oriel.process
 
@@ -144,7 +145,9 @@ Version 0.4.0.
 
 ## oriel.ui
 
-- `oriel.ui.button(spec)` (`ui`): A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
+- `oriel.ui.async(spec)` (`ui`): A section drawn by its load's state (widget.Async): { load (an oriel.load handle; started for you), body = fn(value) (returns the loaded section's nodes), policy = inline|block|gate|optional, label (what's loading), loading (nodes to show while it loads; a busy line by default), empty (text shown once loaded when is_empty = fn(value) says so), retry (true shows Retry on a failure), fallback (optional: what's used if the user goes on now), id }.
+- `oriel.ui.busy(spec)` (`ui`): An inline loading line (widget.Busy): a spinner, { label (what's loading; the … is added), load (an oriel.load handle: adds what it's doing and, after clock seconds, how long it's run), clock (3 by default; -1 never), size, color, id }.
+- `oriel.ui.button(spec)` (`ui`): A button: { label, on_click = fn(), primary, busy (shows a spinner and can't be pressed: its work is running), busy_label, id }. The id keeps it the same button as the view redraws, where labels repeat or change.
 - `oriel.ui.chart(spec)` (`ui`): A chart (widget.Chart): { kind = bars|area|line|spark|strip, series = { { name, values = { … }, color, kind, dashed, from } }, labels, height, max, y_ticks, format = money|percent|count, legend, hover, marks = { { at, label, color, dashed } }, bands = { { from, to, label } }, on_click = fn(series, point), id, label }. color is a theme token (cyan, accent, stats.kind.output) or #rrggbb; series and points count from 1.
 - `oriel.ui.column(children)` (`ui`): A column of nodes; options beside them: gap, pad (px).
 - `oriel.ui.date_picker(spec)` (`ui`): A range of days (widget.DatePicker): { from, to, on_change = fn(from, to), placeholder, id, label }. Days are YYYY-MM-DD; a button showing the range opens a calendar under it, where arrows move, Enter picks one end then the other, Esc cancels, and a range can be typed as 2026-09-01..2026-09-30.
@@ -152,9 +155,11 @@ Version 0.4.0.
 - `oriel.ui.input(spec)` (`ui`): A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value.
 - `oriel.ui.list(items, row)` (`ui`): A list: each of items through row(item), which returns a node.
 - `oriel.ui.mode()` (`ui`): The editor's mode, as the built-in status line shows it.
+- `oriel.ui.progress(spec)` (`ui`): A loading bar (widget.ProgressBar): { value (0 to 1; nil slides back and forth with no known end), height (px, 4 by default; 6 or more shows the label above it), label, color, id }.
 - `oriel.ui.ring(spec)` (`ui`): A dial (widget.Ring): { value (0 to 1 of the ring lit, clockwise from twelve o'clock), label (in the middle: '18m'), color (a theme token or #rrggbb; the accent by default), size (px across, 44 by default), name (what it measures, read out with the label), id }.
 - `oriel.ui.row(children)` (`ui`): A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths).
 - `oriel.ui.select(spec)` (`ui`): A menu of choices: { value, options = { … }, on_change = fn(value), id, label }.
+- `oriel.ui.skeleton(spec)` (`ui`): Grey placeholders in the shape of what's coming (widget.Skeleton): { rows (text-like bars), widths = { 1, 0.8, 0.6 } (each row's share of the width, repeating), block = { w, h } (a card-shaped block in place of rows), count (how many blocks), direction = row|column, label, id }.
 - `oriel.ui.spacer()` (`ui`): Space that takes what's left.
 - `oriel.ui.spinner(spec)` (`ui`): Something in progress with no known end (widget.Spinner): { name (what's in progress, read out), color (a theme token or #rrggbb; the accent by default), size (px across, 14 by default), id }. It holds still with reduced motion.
 - `oriel.ui.state(key, initial?)` (`ui`): A table kept by key across redraws and calls, made from initial the first time: a view's own state. Include ctx.instance in the key for one per instance.

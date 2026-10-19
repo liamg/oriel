@@ -16,6 +16,9 @@ type ButtonOpts struct {
 	Disabled bool
 	Help     string
 	Key      string // a key cap after the label: the key that does the same, "y"
+	// Busy shows a spinner in place of the key cap and disables the button, keeping its width, while its work runs.
+	Busy      bool
+	BusyLabel string // the label while Busy: "Starting"; the "…" is added
 	// Tone is a primary button's colour in place of the accent: a GitHub action's violet.
 	Tone color.NRGBA
 }
@@ -26,6 +29,17 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 	id := c.Next(key)
 	in := c.Interaction(id)
 	passOn(c, id, in.Keys, activates)
+	wide := ui.State[float32](c, id)
+	w := ui.Size{}
+	if o.Busy {
+		o.Disabled = true
+		w.Min = *wide
+		if o.BusyLabel != "" {
+			label = strings.TrimSuffix(o.BusyLabel, "…") + "…"
+		}
+	} else if r, ok := c.Rect(id); ok {
+		*wide = r.Dx()
+	}
 	bg, hover, pressed, fg, border := col(c, tButtonBg), col(c, tButtonHover), col(c, tButtonPressed), col(c, tButtonFg), col(c, tButtonBorder)
 	if o.Primary && !o.Disabled {
 		bg, hover, pressed, fg = col(c, tPrimaryBg), col(c, tPrimaryHover), col(c, tPrimaryPressed), col(c, tPrimaryFg)
@@ -35,6 +49,8 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 		border = bg
 	}
 	switch {
+	case o.Busy:
+		fg = col(c, tButtonBusyFg)
 	case o.Disabled:
 		fg = col(c, tDisabledFg)
 	case in.Pressed:
@@ -48,10 +64,13 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 	if o.Primary {
 		weight = typeset.SemiBold
 	}
-	c.Row(key, ui.Style{H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 6, Cross: ui.Center, Fill: bg, EaseFill: true, Stroke: border, Border: 1, Radius: 6,
+	c.Row(key, ui.Style{W: w, H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 6, Cross: ui.Center, Fill: bg, EaseFill: true, Stroke: border, Border: 1, Radius: 6,
 		Focusable: true, Disabled: o.Disabled, NoHover: true, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button", Role: ui.RoleButton}, func(c *ui.Ctx) {
+		if o.Busy {
+			Spinner(c, "busy", SpinnerOpts{Size: 11, Tone: fg, Name: label})
+		}
 		c.Text(nil, label, uiText(c, 12, weight, fg))
-		if o.Key != "" {
+		if o.Key != "" && !o.Busy {
 			keyCap(c, o.Key, fg)
 		}
 	})

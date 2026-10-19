@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -33,6 +34,7 @@ type startWork struct {
 	shown            [2]string         // the model and effort it opened on: only a change is sent
 	shownRun         [2]bool           // and the sandbox and open network
 	provider         host.ProviderInfo // the session's provider, once the host says
+	providers        *plugin.Load[host.ProviderInfo]
 	branches         []startBranch
 	focus            bool // focus the dialog next frame
 	busy             bool
@@ -60,34 +62,45 @@ func (x *planPlugin) openStartWork() error {
 	}
 	x.startGen++
 	x.dialog = d
-	gen := x.startGen
 	if se.Agent.Provider != "" && x.sh.sessions != nil {
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			defer cancel()
-			c, err := x.sh.sessions.host()
+		sessions, id := x.sh.sessions, se.Agent.Provider
+		d.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.ProviderInfo, error) {
+			c, err := sessions.host()
 			if err != nil {
-				return
+				return host.ProviderInfo{}, err
 			}
-			ps := c.ProviderInfo(ctx)
-			x.h.Do(func() {
-				for _, p := range ps {
-					if gen == x.startGen && x.dialog != nil && p.ID == se.Agent.Provider {
-						x.dialog.provider = p
-						if x.dialog.model == "" && x.dialog.shown[0] == "" {
-							x.dialog.model = defaultModel(p)
-							x.dialog.shown[0] = x.dialog.model
-						}
-					}
+			for _, p := range c.ProviderInfo(ctx) {
+				if p.ID == id {
+					return p, nil
 				}
-			})
-			x.h.Redraw()
-		}()
+			}
+			return host.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", providerName(id))
+		}, plugin.LoadOpts{Timeout: 20 * time.Second})
+		d.providers.Start()
 	}
 	return nil
 }
 
+// settle takes the provider's models once they arrive, and its default model when the session has none.
+func (d *startWork) settle() {
+	if d.providers == nil {
+		return
+	}
+	p, ok := d.providers.Value()
+	if !ok || len(d.provider.Models) > 0 {
+		return
+	}
+	d.provider = p
+	if d.model == "" && d.shown[0] == "" {
+		d.model = defaultModel(p)
+		d.shown[0] = d.model
+	}
+}
+
 func (x *planPlugin) closeStartWork() {
+	if x.dialog != nil && x.dialog.providers != nil {
+		x.dialog.providers.Reset()
+	}
 	x.dialog = nil
 	x.startGen++
 }
@@ -157,6 +170,7 @@ func (x *planPlugin) startWorkView(c *ui.Ctx) {
 		x.closeStartWork()
 		return
 	}
+	d.settle()
 	th := c.Theme()
 	size := c.Size()
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}
@@ -230,15 +244,24 @@ func (x *planPlugin) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState
 			note = "keeps the plan's conversation"
 		}
 		toggleRow(c, "fresh", "Restart the agent with a fresh context", note, &d.fresh, se.Agent.Provider == "", startWorkHelp)
-		p := d.provider
-		if len(p.Models) == 0 && d.model != "" {
-			p.Models = []agent.Model{{ID: d.model}}
-		}
-		if len(p.Models) > 0 {
-			if m, e, ok := modelSelects(c, p, d.model, d.effort, startWorkHelp); ok {
-				d.model, d.effort = m, e
+		models := func(c *ui.Ctx) {
+			p := d.provider
+			if len(p.Models) == 0 && d.model != "" {
+				p.Models = []agent.Model{{ID: d.model}}
+			}
+			if len(p.Models) > 0 {
+				if m, e, ok := modelSelects(c, p, d.model, d.effort, startWorkHelp); ok {
+					d.model, d.effort = m, e
+				}
 			}
 		}
+		c.Column("models", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+			models(c) // the session's model until its provider's list arrives
+			if d.providers != nil {
+				widget.Async(c, "load", d.providers.State(), widget.AsyncOpts{Policy: widget.Optional, Label: "Reading models",
+					Fallback: "the session's model", Retry: d.providers.Reload, Help: startWorkHelp}, func(*ui.Ctx) {})
+			}
+		})
 	})
 	if len(d.branches) > 0 {
 		c.Column("branches", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
@@ -277,8 +300,8 @@ func (x *planPlugin) startWorkFooter(c *ui.Ctx, d *startWork) {
 		if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Key: "esc", Help: startWorkHelp}) {
 			x.closeStartWork()
 		}
-		if widget.Button(c, "start", "Start work", widget.ButtonOpts{Primary: true, Key: "⌘↵", Disabled: d.busy || !x.h.Available("session.start-work", nil),
-			Help: startWorkHelp}) {
+		if widget.Button(c, "start", "Start work", widget.ButtonOpts{Primary: true, Key: "⌘↵", Busy: d.busy, BusyLabel: "Starting",
+			Disabled: !x.h.Available("session.start-work", nil), Help: startWorkHelp}) {
 			_ = x.runStartWork()
 		}
 	})

@@ -48,27 +48,45 @@ func (x *statsPlugin) page(c *ui.Ctx) {
 			x.toolbar(c)
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 12,
 				Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
-				x.tiles(c, q, r)
-				tones := x.groupTones(c, r)
-				if q.Group == stats.BySession {
-					c.Row("pair", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-						x.chart(c, q, r, tones, ui.Flex(1))
-						x.table(c, q, r, tones, ui.Flex(1))
-					})
-				} else {
-					x.chart(c, q, r, tones, ui.Flex(1))
-					x.table(c, q, r, tones, ui.Flex(1))
-				}
-				c.Row("small", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-					tokensByKind(c, r.Tokens, r.Costs)
-					modelsCard(c, r.Models)
-					toolsByErrors(c, r.Tools)
-					statsCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { note(c, "n", "cost by hour · local") }, func(c *ui.Ctx) {
-						hoursChart(c, "chart", r.Hours, 88)
-					})
-				})
+				widget.Async(c, "load", meta.state, widget.AsyncOpts{Label: "Scanning the sessions", Retry: func() { x.retryReport(q) },
+					Loading: statsSkeleton, Help: "agent/stats#page"}, func(c *ui.Ctx) { x.reportBody(c, q, r) })
 			})
 		})
+}
+
+// statsSkeleton stands in for the tiles and charts until the first answer.
+func statsSkeleton(c *ui.Ctx) {
+	const help = "agent/stats#page"
+	c.Column("skeleton", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+		widget.Skeleton(c, "tiles", widget.SkeletonOpts{Block: render.Point{X: 180, Y: 64}, Count: 5, Dir: ui.Row, Gap: 12, Label: "Stats", Help: help})
+		widget.Skeleton(c, "chart", widget.SkeletonOpts{Block: render.Point{X: 760, Y: 220}, Label: "Chart", Help: help})
+		widget.Skeleton(c, "rows", widget.SkeletonOpts{Rows: 6, RowH: 14, Widths: []float32{1, .9, .75}, Label: "Table", Help: help})
+	})
+}
+
+// reportBody is the page's loaded body: the tiles, the chart and table, and the small cards.
+func (x *statsPlugin) reportBody(c *ui.Ctx, q stats.Query, r stats.Report) {
+	c.Column("report", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+		x.tiles(c, q, r)
+		tones := x.groupTones(c, r)
+		if q.Group == stats.BySession {
+			c.Row("pair", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+				x.chart(c, q, r, tones, ui.Flex(1))
+				x.table(c, q, r, tones, ui.Flex(1))
+			})
+		} else {
+			x.chart(c, q, r, tones, ui.Flex(1))
+			x.table(c, q, r, tones, ui.Flex(1))
+		}
+		c.Row("small", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+			tokensByKind(c, r.Tokens, r.Costs)
+			modelsCard(c, r.Models)
+			toolsByErrors(c, r.Tools)
+			statsCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { note(c, "n", "cost by hour · local") }, func(c *ui.Ctx) {
+				hoursChart(c, "chart", r.Hours, 88)
+			})
+		})
+	})
 }
 
 func (x *statsPlugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMeta) {
@@ -103,14 +121,14 @@ func (x *statsPlugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta repo
 			x.run("stats.origin", registry.Args{"origin": statsOrigins[o].value})
 		}
 		switch {
+		case meta.state.Phase == widget.Pending:
+			widget.Busy(c, "scanned", meta.state, widget.BusyOpts{Label: "Scanning", Size: 11, Help: "agent/stats#page"})
 		case !meta.at.IsZero():
 			read := "scanned " + ago(x.now(), meta.at) + " ago"
 			if ago(x.now(), meta.at) == "now" {
 				read = "scanned just now"
 			}
 			c.Text("scanned", read, monoFont(11, th.C(theme.FgFaint)))
-		case meta.loading:
-			c.Text("scanned", "scanning…", monoFont(11, th.C(theme.FgFaint)))
 		}
 		if one := q.Filters["session"]; len(one) == 1 && widget.Button(c, "tab", "Session stats", widget.ButtonOpts{Help: "agent/stats#session"}) {
 			x.run("stats.session", registry.Args{"id": one[0]})

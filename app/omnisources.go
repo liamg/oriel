@@ -5,7 +5,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -127,48 +129,96 @@ func commandsSource(h plugin.Host) registry.PickerSource {
 	}
 }
 
-// fileList is the files under a directory, listed again when it's older than a few seconds.
+// fileList is the files under a directory, walked off the loop: the first walk's files show as they're found, and
+// a list older than fileFresh is walked again in the background, the old one shown until the new is done.
 type fileList struct {
-	dir   string
-	at    time.Time
-	files []string
+	dir    string
+	redraw func()
+
+	mu      sync.Mutex
+	at      time.Time // when the last walk finished
+	files   []string
+	walking bool
+	done    bool // a walk has finished
+	busy    sync.WaitGroup
 }
 
 // skipDirs are directories the files source doesn't walk into.
 var skipDirs = map[string]bool{".git": true, "node_modules": true, "vendor": true}
 
-const maxFiles = 50000
+const (
+	maxFiles  = 50000
+	fileFresh = 5 * time.Second
+)
 
-func (l *fileList) list() []string {
-	if time.Since(l.at) < 5*time.Second && l.files != nil {
-		return l.files
+// list is the files found so far, and whether the first walk is still going.
+func (l *fileList) list() (files []string, loading bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !l.walking && (!l.done || time.Since(l.at) >= fileFresh) {
+		l.walking = true
+		l.busy.Add(1)
+		go l.walk(!l.done)
 	}
-	l.at, l.files = time.Now(), l.files[:0]
-	filepath.WalkDir(l.dir, func(p string, d fs.DirEntry, err error) error {
+	return l.files, !l.done
+}
+
+func (l *fileList) loading() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return !l.done
+}
+
+func (l *fileList) walk(first bool) {
+	defer l.busy.Done()
+	shown := time.Now()
+	found := walkFiles(l.dir, func(found []string) {
+		if first && time.Since(shown) > 100*time.Millisecond {
+			shown = time.Now()
+			l.mu.Lock()
+			l.files = slices.Clone(found)
+			l.mu.Unlock()
+			l.redraw()
+		}
+	})
+	l.mu.Lock()
+	l.files, l.at, l.done, l.walking = found, time.Now(), true, false
+	l.mu.Unlock()
+	l.redraw()
+}
+
+// walkFiles is the files under dir, relative to it, at most maxFiles; each, when not nil, sees them as they're found.
+func walkFiles(dir string, each func(found []string)) []string {
+	var found []string
+	filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
 		if d.IsDir() {
-			if p != l.dir && (skipDirs[d.Name()] || strings.HasPrefix(d.Name(), ".")) {
+			if p != dir && (skipDirs[d.Name()] || strings.HasPrefix(d.Name(), ".")) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if rel, err := filepath.Rel(l.dir, p); err == nil {
-			l.files = append(l.files, filepath.ToSlash(rel))
+		if rel, err := filepath.Rel(dir, p); err == nil {
+			found = append(found, filepath.ToSlash(rel))
 		}
-		if len(l.files) >= maxFiles {
+		if each != nil {
+			each(found)
+		}
+		if len(found) >= maxFiles {
 			return filepath.SkipAll
 		}
 		return nil
 	})
-	return l.files
+	return found
 }
 
 // filesSource is the files of the editor's directory; open ones and shallower paths rank higher.
 func (x *editorPlugin) filesSource() registry.PickerSource {
-	files := &fileList{dir: x.dir}
-	return registry.PickerSource{ID: "files", Title: "Files", Prefix: "@", Order: 30,
+	files := &fileList{dir: x.dir, redraw: x.h.Redraw}
+	x.add(disposeFn(files.busy.Wait))
+	return registry.PickerSource{ID: "files", Title: "Files", Prefix: "@", Order: 30, Loading: files.loading,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			open := map[string]bool{}
 			for _, b := range x.e.BufferList() {
@@ -176,7 +226,8 @@ func (x *editorPlugin) filesSource() registry.PickerSource {
 			}
 			st := x.sh.git.state()
 			var out []registry.PickerItem
-			for _, f := range files.list() {
+			list, _ := files.list()
+			for _, f := range list {
 				it := registry.PickerItem{ID: f, Label: f, IconStyle: "status.working", Boost: -strings.Count(f, "/"), Path: f}
 				var notes []string
 				if fs, ok := st.File(x.sh.git.rel(f)); ok && fs.Code != 0 {

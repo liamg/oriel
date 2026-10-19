@@ -30,7 +30,7 @@ func (x *explainPlugin) fix(ctx registry.Ctx, a registry.Args) error {
 
 // keep asks about req off the loop, its answer kept under key for explainKept to show where it was asked.
 func (x *explainPlugin) keep(key string, req registry.ExplainRequest) {
-	a := &answer{loading: true}
+	a := &answer{loading: true, since: windowNow(x.h)}
 	x.mu.Lock()
 	x.kept[key] = a
 	x.mu.Unlock()
@@ -112,7 +112,7 @@ func explainKept(c *ui.Ctx, sh *shell, key, help string) {
 			Tracking: .14}, Color: th.C(theme.FgFaint)})
 		switch {
 		case a.loading:
-			c.Text("wait", "Asking…", mono(11, theme.FgFaint))
+			widget.Busy(c, "wait", a.state(), widget.BusyOpts{Label: "Asking", Size: 11, Help: help})
 		case a.err != nil:
 			c.Text("err", a.err.Error(), mono(11, theme.Error))
 		default:

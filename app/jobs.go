@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // Jobs (SE-4, mockup 44): saved prompts, each run a session of kind job; the Jobs page lists them with their runs and
@@ -67,11 +68,16 @@ type jobsPlugin struct {
 
 	form *jobForm // the New job and Edit dialog, while it's open
 
-	mu       sync.Mutex
-	jobs     fetched[[]host.Job]
-	repos    []core.Repo
-	inflight bool
-	stale    bool
+	loads *plugin.Load[jobsData]
+	mu    sync.Mutex
+	stale bool // asked for again, from any goroutine
+}
+
+// jobsData is the jobs and repos as the session host last told them.
+type jobsData struct {
+	jobs  []host.Job
+	repos []core.Repo
+	at    time.Time
 }
 
 // jobRow is a job with its runs, newest first.
@@ -124,6 +130,13 @@ func (x *jobsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	if x.loc == nil {
 		x.loc = time.Local
 	}
+	x.loads = plugin.NewLoad(h, func(context.Context, func(string, float64)) (jobsData, error) {
+		w := x.sh.cfg.Host
+		if w == nil {
+			return jobsData{}, errors.New("there are no sessions in this window")
+		}
+		return jobsData{jobs: w.Jobs(), repos: w.Repos(), at: x.now()}, nil
+	}, plugin.LoadOpts{Timeout: 20 * time.Second})
 	has := func(registry.Args) bool { return x.sh.sessions != nil && x.sh.cfg.Host != nil }
 	formOpen := func(registry.Args) bool { return x.form != nil }
 	for _, c := range []registry.Command{
@@ -208,35 +221,30 @@ func (x *jobsPlugin) refresh() {
 	x.h.Redraw()
 }
 
-// load is the jobs and repos as last read, reading them again when they're old or missing.
+// load is the jobs and repos as last read, reading them again when they're old or missing. Call it on the loop.
 func (x *jobsPlugin) load() ([]host.Job, []core.Repo) {
-	w := x.sh.cfg.Host
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	old := x.stale || x.jobs.at.IsZero() || x.now().Sub(x.jobs.at) > refetchAfter
-	if old && !x.inflight && w != nil {
-		x.inflight, x.stale = true, false
-		go x.fetch(w)
+	if x.sh.cfg.Host == nil {
+		return nil, nil
 	}
-	return x.jobs.v, x.repos
-}
-
-func (x *jobsPlugin) fetch(w *host.Host) {
-	jobs, repos := w.Jobs(), w.Repos()
-	x.h.Do(func() {
-		x.mu.Lock()
-		x.jobs, x.repos = fetched[[]host.Job]{v: jobs, at: x.now()}, repos
-		x.inflight = false
-		x.mu.Unlock()
-	})
-	x.h.Redraw()
+	x.mu.Lock()
+	stale := x.stale
+	x.stale = false
+	x.mu.Unlock()
+	d, ok := x.loads.Value()
+	switch st := x.loads.State(); {
+	case st.Phase == widget.Idle:
+		x.loads.Start()
+	case stale, ok && st.Phase == widget.Ready && x.now().Sub(d.at) > refetchAfter:
+		x.loads.Reload()
+	}
+	return d.jobs, d.repos
 }
 
 // busy says whether an answer is on its way.
 func (x *jobsPlugin) busy() bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	return x.inflight || x.stale
+	return x.stale || x.loads.State().Phase != widget.Ready && x.loads.State().Phase != widget.Failed
 }
 
 // rows are the jobs with their runs, the one that ran last first and those never run last.

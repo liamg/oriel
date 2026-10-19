@@ -1034,7 +1034,7 @@ func keyMode(m string) string {
 
 // unsearchable are the work dir's files .gitattributes marks generated or vendored, which search leaves out.
 func (x *editorPlugin) unsearchable() []string {
-	all := (&fileList{dir: x.dir}).list()
+	all := walkFiles(x.dir, nil)
 	keep := map[string]bool{}
 	for _, f := range x.conv.searchable(all) {
 		keep[f] = true

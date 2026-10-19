@@ -18,7 +18,7 @@ import (
 )
 
 // Version is oriel.api.version: a breaking change bumps its major (scripting.md, "Stability").
-const Version = "0.4.0"
+const Version = "0.5.0"
 
 // futures are namespaces, or the rest of one, for features that aren't built yet: calling into one says which
 // ticket brings it, so a config written for them loads (PL-1).
@@ -45,6 +45,7 @@ type APIs struct {
 	shown   map[string]any           // oriel.hud.set's nodes, by indicator
 	inbox   *luaInbox                // oriel.inbox's cards
 	waiting map[int]chan error       // awaited calls not answered yet, failed by an error in a later callback
+	loading *luaLoads                // oriel.load's handles
 }
 
 // Install puts the API in vm, for your own config: trusted, its files in dir.

@@ -45,6 +45,7 @@ type aiReviewPlugin struct {
 	filter    string // a severity the cards are narrowed to, or ""
 	dismissed bool   // dismissed findings are shown too
 	busy      sync.WaitGroup
+	asked     map[core.SessionID]bool // a review asked for and not answered yet
 }
 
 func (x *aiReviewPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ai-review"} }
@@ -200,6 +201,9 @@ func (x *aiReviewPlugin) run(a registry.Args) error {
 		s, _ := v.(string)
 		return s
 	}
+	if x.asked[se.ID] {
+		return nil
+	}
 	req := host.AIReviewReq{Session: se.ID, Provider: opt("review.ai.provider"), Model: opt("review.ai.model"), Full: a.Bool("full")}
 	if b, err := os.ReadFile(x.promptPath()); err == nil {
 		p, err := packs.FromText(string(b), host.AIReviewPack)
@@ -208,10 +212,17 @@ func (x *aiReviewPlugin) run(a registry.Args) error {
 		}
 		req.Pack = p.Text
 	}
+	if x.asked == nil {
+		x.asked = map[core.SessionID]bool{}
+	}
+	x.asked[se.ID] = true
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		if _, err := c.AIReview(context.Background(), req); err != nil {
+		_, err := c.AIReview(context.Background(), req)
+		x.h.Do(func() { delete(x.asked, se.ID) })
+		x.h.Redraw()
+		if err != nil {
 			x.h.Notify(core.Notice{ID: "review.ai", Severity: core.SevError, Key: true, Text: "AI review: " + err.Error()})
 		}
 	}()
@@ -420,12 +431,9 @@ func (x *aiReviewPlugin) view(c *ui.Ctx, root string, width float32) {
 				if reviewed {
 					label = "Re-review changes"
 				}
-				if last.Running {
-					label = "Reviewing…"
-				}
 				args := registry.Args{"id": string(se.ID)}
-				if widget.Button(c, "run", label, widget.ButtonOpts{Help: findHelp + "#reviewer", Disabled: !inSession || last.Running ||
-					!x.h.Available("review.ai.run", args)}) {
+				if widget.Button(c, "run", label, widget.ButtonOpts{Help: findHelp + "#reviewer", Busy: last.Running || x.asked[se.ID], BusyLabel: "Reviewing",
+					Disabled: !inSession || !x.h.Available("review.ai.run", args)}) {
 					if err := x.h.Run(context.Background(), "review.ai.run", args); err != nil {
 						x.h.Log().Warn("ai review", "err", err)
 					}

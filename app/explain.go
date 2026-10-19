@@ -68,7 +68,21 @@ type answer struct {
 	text    string
 	err     error
 	loading bool
+	since   time.Time // when it was asked
 	by      string
+}
+
+// state is a's load state for the widgets; nil is one not asked yet.
+func (a *answer) state() widget.LoadState {
+	switch {
+	case a == nil:
+		return widget.LoadState{Phase: widget.Idle}
+	case a.loading:
+		return widget.LoadState{Phase: widget.Pending, Since: a.since}
+	case a.err != nil:
+		return widget.LoadState{Phase: widget.Failed, Err: a.err}
+	}
+	return widget.LoadState{Phase: widget.Ready}
 }
 
 // explainMark is a unit that was explained, followed through its buffer's edits, so that once its text changes its
@@ -601,7 +615,7 @@ func (x *explainPlugin) request(cd *explainCard, i int) {
 	if depth == registry.ExplainWhy {
 		threads = x.threadsOn(cd.path, first, last)
 	}
-	a := &answer{loading: true}
+	a := &answer{loading: true, since: windowNow(x.h)}
 	x.mu.Lock()
 	x.answers[key] = a
 	x.mu.Unlock()
@@ -710,6 +724,9 @@ func (x *explainPlugin) threadsOn(path string, a, z int) string {
 
 // ask is explain.ask: kept under {key} for where it was asked, a card on {file}'s lines, or {text} answered in a
 // notice.
+// explainAsking is the notice explain.ask shows while it waits for an answer.
+const explainAsking = "explain.asking"
+
 func (x *explainPlugin) ask(a registry.Args) error {
 	depth := cmpOr(a.String("depth"), registry.ExplainBrief)
 	if !slices.Contains(explainDepths, depth) {
@@ -753,6 +770,8 @@ func (x *explainPlugin) ask(a registry.Args) error {
 		x.keep(key, req)
 		return nil
 	}
+	x.h.Notify(core.Notice{ID: explainAsking, Severity: core.SevInfo, Source: "explain", Title: "Explain: " + req.Subject,
+		Text: "Asking the explainer; its answer comes here."})
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
@@ -760,6 +779,7 @@ func (x *explainPlugin) ask(a registry.Args) error {
 		defer cancel()
 		md, _, err := registry.Explain(ctx, x.h, req)
 		x.h.Do(func() {
+			x.h.Dismiss(explainAsking)
 			if err != nil {
 				x.notify(err)
 				return
@@ -935,14 +955,12 @@ func (x *explainPlugin) cardView(c *ui.Ctx, cd *explainCard) {
 			c.Box("rule1", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tExplainCardBd)}, nil)
 			c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 14, R: 14, T: 9, B: 10}, Gap: 8}, func(c *ui.Ctx) {
 				a := x.shown(cd)
-				switch {
-				case a == nil || a.loading:
-					c.Text("wait", "Asking…", monoFont(11, th.C(theme.FgFaint)))
-				case a.err != nil:
-					c.Text("err", a.err.Error(), monoFont(11, th.C(theme.Error)))
-				default:
-					markdownText(c, "md", a.text, width-28, uiFont(13, th.C(theme.FgMuted)))
+				st := a.state()
+				if st.Phase == widget.Idle {
+					st = widget.LoadState{Phase: widget.Pending, Since: c.Now()}
 				}
+				widget.Async(c, "answer", st, widget.AsyncOpts{Label: "Asking", Retry: func() { run("explain.refresh", nil) }, Help: help},
+					func(c *ui.Ctx) { markdownText(c, "md", a.text, width-28, uiFont(13, th.C(theme.FgMuted))) })
 				if x.changed(cd) {
 					c.Row("changed", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 						c.Text("t", "changed since it was explained", monoFont(10.5, th.C(tUnitsChanged)))

@@ -24,24 +24,29 @@ func (x *shipPlugin) prTab(c *ui.Ctx, project string) {
 			shipEmpty(c, "Raise PR is a session's project's: open the session.")
 			return
 		}
-		s, read := x.ship(se.ID, p)
-		if !read {
-			shipEmpty(c, "Reading "+p+"…")
-			return
-		}
-		f := x.prForm(se.ID, s)
-		x.prHeader(c, se, s, f)
-		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-			c.Column("form", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 8}, func(c *ui.Ctx) {
-				x.prFields(c, se, s, f)
-			})
-			c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
-			c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(tShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
-				x.gatesList(c, se)
-				x.ticket(c, se)
-				c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
-				widget.Wrap(c, "note", "Across projects, the merge order and \"raise all\" live in Ship.", 226, uiFont(11, th.C(theme.FgFaint)))
-			})
+		widget.Async(c, "load", x.loadState(c, se.ID, p), widget.AsyncOpts{Policy: widget.Block, Label: "Reading " + p, Retry: func() { x.refresh(se.ID, true) },
+			Help: "git/ship#raise"}, func(c *ui.Ctx) {
+			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) { x.prTabBody(c, se, p) })
+		})
+	})
+}
+
+// prTabBody is the tab once the project's been read.
+func (x *shipPlugin) prTabBody(c *ui.Ctx, se core.SessionState, p string) {
+	th := c.Theme()
+	s, _ := x.ship(se.ID, p)
+	f := x.prForm(se.ID, s)
+	x.prHeader(c, se, s, f)
+	c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+		c.Column("form", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 8}, func(c *ui.Ctx) {
+			x.prFields(c, se, s, f)
+		})
+		c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+		c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(tShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
+			x.gatesList(c, se)
+			x.ticket(c, se)
+			c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
+			widget.Wrap(c, "note", "Across projects, the merge order and \"raise all\" live in Ship.", 226, uiFont(11, th.C(theme.FgFaint)))
 		})
 	})
 }
@@ -49,7 +54,6 @@ func (x *shipPlugin) prTab(c *ui.Ctx, project string) {
 func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) {
 	th := c.Theme()
 	edit, w := s.PR.Open(), s.words()
-	busy := x.doing(se.ID, s.Project)
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(tShipHead)}, func(c *ui.Ctx) {
 		title := "RAISE " + strings.ToUpper(w.Short)
 		if edit {
@@ -66,22 +70,20 @@ func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *pr
 		c.Row("meta", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			c.Text("m", fmt.Sprintf("%s → %s · %s", s.Branch, cmpOr(s.Base, "?"), counted(s.Commits, "commit")), monoFont(11, th.C(theme.FgFaint)))
 		})
-		if busy != "" {
-			c.Text("busy", busy, monoFont(11, th.C(tShipTodo)))
-		}
-		if widget.Button(c, "save", "Save draft", widget.ButtonOpts{Help: "git/ship#raise", Disabled: busy != ""}) {
+		step := func(step string, o widget.ButtonOpts) widget.ButtonOpts { return x.stepOpts(se.ID, s.Project, step, o) }
+		if widget.Button(c, "save", "Save draft", step("Saving", widget.ButtonOpts{Help: "git/ship#raise"})) {
 			x.run("ship.draft.save", registry.Args{"project": s.Project})
 		}
 		if edit {
-			if widget.Button(c, "update", "Update "+w.Short, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: busy != ""}) {
+			if widget.Button(c, "update", "Update "+w.Short, step("Updating", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"})) {
 				x.run("ship.raise", registry.Args{"project": s.Project})
 			}
 			return
 		}
-		if widget.Button(c, "draft", "Raise as draft", widget.ButtonOpts{Help: "git/ship#raise", Disabled: busy != ""}) {
+		if widget.Button(c, "draft", "Raise as draft", step("Raising", widget.ButtonOpts{Help: "git/ship#raise"})) {
 			x.run("ship.raise", registry.Args{"project": s.Project, "draft": true})
 		}
-		if widget.Button(c, "raise", "Push + raise "+w.Short, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: busy != ""}) {
+		if widget.Button(c, "raise", "Push + raise "+w.Short, step("Raising", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"})) {
 			x.run("ship.raise", registry.Args{"project": s.Project})
 		}
 	})

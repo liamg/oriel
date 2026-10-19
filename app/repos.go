@@ -33,7 +33,8 @@ type reposPlugin struct {
 	err     string
 	details map[core.RepoID]*repoDetail
 
-	dialog *addRepo // the Add repo dialog, while it's open
+	dialog   *addRepo // the Add repo dialog, while it's open
+	scanning bool     // Scan for repos is running
 }
 
 func (x *reposPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "repos"} }
@@ -189,9 +190,19 @@ func (x *reposPlugin) discover(all bool) {
 	if w == nil || !all && !x.optBool("repos.discover") {
 		return
 	}
+	if all {
+		if x.scanning {
+			return
+		}
+		x.scanning = true
+	}
 	go func() {
 		if _, err := w.ScanRepos(context.Background(), all); err != nil {
 			x.h.Log().Warn("repo discovery", "err", err)
+		}
+		if all {
+			x.h.Do(func() { x.scanning = false })
+			x.h.Redraw()
 		}
 	}()
 }

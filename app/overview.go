@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -22,6 +23,7 @@ import (
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 var (
@@ -64,6 +66,7 @@ type card struct {
 	git     bool
 	header  *cardHeader
 	panels  map[string]*panelResult
+	since   time.Time // when its header was asked for
 }
 
 type cardHeader struct {
@@ -72,9 +75,20 @@ type cardHeader struct {
 }
 
 type panelResult struct {
-	node ui.Node
-	err  error
-	done bool
+	node  ui.Node
+	err   error
+	done  bool
+	since time.Time
+}
+
+func (r *panelResult) state() widget.LoadState {
+	switch {
+	case !r.done:
+		return widget.LoadState{Phase: widget.Pending, Since: r.since}
+	case r.err != nil:
+		return widget.LoadState{Phase: widget.Failed, Err: errors.New(firstLine(r.err.Error()))}
+	}
+	return widget.LoadState{Phase: widget.Ready}
 }
 
 func (o *overview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "overview"} }
@@ -146,7 +160,7 @@ func (o *overview) card(dir string) *card {
 		o.computeNew(dir, cd) // a panel registered since
 		return cd
 	}
-	cd = &card{head: head, checked: time.Now(), git: gitx.IsRepo(dir), panels: map[string]*panelResult{}}
+	cd = &card{head: head, checked: time.Now(), git: gitx.IsRepo(dir), panels: map[string]*panelResult{}, since: windowNow(o.h)}
 	o.cards[dir] = cd
 	delete(o.scans, dir)
 	o.computeNew(dir, cd)
@@ -174,7 +188,7 @@ func (o *overview) computeNew(dir string, cd *card) {
 }
 
 func (o *overview) compute(dir string, cd *card, p registry.OverviewPanel) {
-	res := &panelResult{}
+	res := &panelResult{since: windowNow(o.h)}
 	cd.panels[p.Name] = res
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), panelBudget)
@@ -234,14 +248,13 @@ func (o *overview) panels(c *ui.Ctx, dir string, cd *card) {
 			c.Column(p.Name, ui.Style{W: w, Pad: ui.PadXY(18, 14), Gap: 10, Clip: true, Role: ui.RoleRegion, Label: p.Title}, func(c *ui.Ctx) {
 				caption(c, "title", p.Title)
 				res := cd.panels[p.Name]
-				switch {
-				case !res.done:
-					c.Text("busy", "counting…", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgGhost)})
-				case res.err != nil:
-					c.Text("err", firstLine(res.err.Error()), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.Warn)})
-				case res.node != nil:
-					c.Node(res.node)
-				}
+				widget.Async(c, "load", res.state(), widget.AsyncOpts{Help: "shell/overview", Loading: func(c *ui.Ctx) {
+					widget.Busy(c, "busy", res.state(), widget.BusyOpts{Label: "Counting", Size: 10, Help: "shell/overview"})
+				}}, func(c *ui.Ctx) {
+					if res.node != nil {
+						c.Node(res.node)
+					}
+				})
 			})
 		}
 	})
@@ -250,6 +263,13 @@ func (o *overview) panels(c *ui.Ctx, dir string, cd *card) {
 func (o *overview) branch(c *ui.Ctx, cd *card) {
 	th := c.Theme()
 	hd := cd.header
+	if hd == nil && cd.git {
+		widget.Async(c, "branch-load", widget.LoadState{Phase: widget.Pending, Since: cd.since}, widget.AsyncOpts{Help: "shell/overview",
+			Loading: func(c *ui.Ctx) {
+				widget.Skeleton(c, "branch", widget.SkeletonOpts{Block: render.Point{X: 160, Y: 14}, Label: "Branch", Help: "shell/overview"})
+			}}, func(*ui.Ctx) {})
+		return
+	}
 	if hd == nil || hd.branch == "" {
 		return
 	}

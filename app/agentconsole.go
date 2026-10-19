@@ -82,9 +82,10 @@ type consoleState struct {
 }
 
 type forkAnswer struct {
-	q, a string
-	err  error
-	done bool
+	q, a  string
+	err   error
+	done  bool
+	since time.Time
 }
 
 func (x *agentConsole) Manifest() plugin.Manifest { return plugin.Manifest{ID: "agentconsole"} }
@@ -354,7 +355,7 @@ func (x *agentConsole) fork(id core.SessionID, prompt string) error {
 		return err
 	}
 	st := x.state(id)
-	st.forks = append(st.forks, forkAnswer{q: prompt})
+	st.forks = append(st.forks, forkAnswer{q: prompt, since: windowNow(x.h)})
 	n := len(st.forks) - 1
 	go func() {
 		out, err := c.Fork(id, prompt)
@@ -952,7 +953,8 @@ func (x *agentConsole) forkCard(c *ui.Ctx, k string, f forkAnswer, width float32
 		})
 		switch {
 		case !f.done:
-			c.Text("wait", "asking a fork…", monoFont(11, th.C(theme.FgFaint)))
+			widget.Busy(c, "wait", widget.LoadState{Phase: widget.Pending, Since: f.since}, widget.BusyOpts{Label: "Asking a fork", Size: 11,
+				Help: "agent/console#fork"})
 		case f.err != nil:
 			c.Text("err", f.err.Error(), uiFont(12, th.C(theme.Error)))
 		default:

@@ -103,6 +103,31 @@ flowchart TB
   costs no more than the window. `ImageOpts.Group` names the group (a document's images); an image with none is
   alone. Tokens: `lightbox.scrim`, `lightbox.fg`, `lightbox.fg.muted`, `lightbox.chrome`, `image.hover.border`.
 
+- **Loading** (FW-14). A view never says it's loading in its own words; it uses the toolkit, so every wait looks and
+  behaves the same (`TestViewsUseTheLoadingToolkit` fails on a view drawing its own "Reading…").
+  - `plugin.Load[T]` runs a fetch off the loop and tracks it as Idle → Pending → Ready / Failed. A result from a
+    fetch started before the latest `Reload` or `Reset` is dropped; a timeout or a panic in the fetch fails it; a
+    `Reload` keeps the last value on show (`Stale`) and a failed reload keeps it too, with the error. The fetch's
+    `report(note, frac)` fills in what it's doing and how far along it is. `Start` does nothing once started, so a
+    view may call it every frame. It lives in `plugin` (it needs `Host.Do`); widgets read a plain
+    `widget.LoadState`.
+  - `widget.Busy` is the one loading line: a spinner, the label (the "…" added), the load's note, and after 3 s the
+    elapsed time ("· 12s", "· 1m 05s"); read out as a status. `widget.ProgressBar` fills to a known fraction or
+    slides with no known end (a still, striped bar with reduced motion). `widget.Skeleton` is placeholder rows or
+    blocks in the shape of what's coming, pulsing gently, still with reduced motion. `ButtonOpts.Busy` puts a spinner
+    in place of the key cap, swaps in `BusyLabel`, disables the button and keeps its width.
+  - `widget.Async` draws a section by its load's state and a policy (ui.md, "Loading"): nothing for the first
+    150 ms (`Delay`), then the loading view, which stays at least 300 ms (`MinShow`) so a load just past the delay
+    doesn't flash; a failure is a warning-coloured line with **Retry**; `Empty` only once Ready; a reload keeps the
+    body with a 2 px bar along its top edge. `widget.Waiting(states…)` tells a submit button whether to wait
+    (`Pending`, `Failed`, `Reason`).
+  - Tokens: `busy.fg`, `busy.clock`, `progress.track`, `progress.bar`, `skeleton.fill`, `async.error`,
+    `async.empty`, `button.busy.fg`. Snapshots: `ui/widget/testdata/loading-*.png`.
+  - With a test's fixed clock nothing loading shows until the test moves the clock past the delay. A load with a
+    zero start time (started before there's a window) counts as past the delay, with no elapsed time.
+  - A busy button shows at once, with no delay: a gated submit says why it waits straight away. Waits of minutes
+    (a walkthrough) show the elapsed time from 1 s.
+
 ## Performance budgets
 
 | Thing | Budget |

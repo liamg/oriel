@@ -281,3 +281,60 @@ func TestLuaSpinner(t *testing.T) {
 		t.Errorf("the spinner reads as %+v", n)
 	}
 }
+
+// oriel.load and oriel.ui.async: the section shows its busy line while the work runs, then what body draws from the
+// value done handed back; a failure shows Retry, which runs the work again.
+func TestLuaLoadAsync(t *testing.T) {
+	s := luaScene(t, `finish = nil
+runs = 0
+wiki = oriel.load(function(done) runs = runs + 1; finish = done end)
+oriel.statusline(function(w)
+  return oriel.ui.async{ load = wiki, label = "Reading the wiki", retry = true,
+    body = function(v) return oriel.ui.text(v .. " pages") end }
+end)`)
+	s.frame()
+	s.until(t, "the load to start", func() bool { return global(s.lua().vm, "runs") == float64(1) })
+	s.now = s.now.Add(time.Second)
+	s.frame()
+	s.wantFrame(t, "Reading the wiki…")
+	if n := s.access("Reading the wiki…"); n == nil || n.Role != "status" {
+		t.Errorf("the busy line reads as %+v", n)
+	}
+	s.eval(t, `finish(nil, "the wiki is down")`)
+	s.now = s.now.Add(time.Second) // past the loading line's minimum show
+	s.until(t, "the failure", func() bool { return strings.Contains(s.frameText(), "the wiki is down") })
+	s.clickAccess(t, "Retry")
+	s.until(t, "the retry", func() bool { return global(s.lua().vm, "runs") == float64(2) })
+	s.eval(t, `finish("12")`)
+	s.until(t, "the value", func() bool { return strings.Contains(s.frameText(), "12 pages") })
+	st := s.eval(t, `wiki:state().phase`)
+	if len(st) != 1 || st[0] != "ready" {
+		t.Errorf("h:state().phase = %v", st)
+	}
+}
+
+// oriel.ui.busy, progress, skeleton and a busy button read out as what's in progress, and the busy button can't be
+// pressed.
+func TestLuaLoadingWidgets(t *testing.T) {
+	s := luaScene(t, `pressed = 0
+oriel.statusline(function(w)
+  return oriel.ui.row{
+    oriel.ui.busy{ label = "Syncing the wiki" },
+    oriel.ui.progress{ value = 0.5, label = "uploading" },
+    oriel.ui.skeleton{ rows = 1, label = "pages" },
+    oriel.ui.button{ label = "Sync", busy = true, busy_label = "Syncing", on_click = function() pressed = pressed + 1 end },
+  }
+end)`)
+	s.frame()
+	s.frame()
+	for _, name := range []string{"Syncing the wiki…", "uploading 50%", "pages"} {
+		if n := s.access(name); n == nil || n.Role != "status" {
+			t.Errorf("%q reads as %+v", name, n)
+		}
+	}
+	s.wantFrame(t, "Syncing…")
+	s.clickAccess(t, "Syncing…")
+	if global(s.lua().vm, "pressed") != float64(0) {
+		t.Error("a busy button was pressed")
+	}
+}

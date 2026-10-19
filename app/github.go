@@ -436,11 +436,8 @@ func (x *githubPlugin) comment(c *ui.Ctx, session, thread, comment string, width
 	busy := x.forwarding[comment]
 	x.mu.Unlock()
 	c.Row("acts", ui.Style{Gap: 8, Cross: ui.Center, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
-		label := "↗ Forward to " + hostLabel(x.h, t.Hosted)
-		if busy {
-			label = "Forwarding…"
-		}
-		if widget.Button(c, "forward", label, widget.ButtonOpts{Primary: true, Tone: th.C(tGitHub), Disabled: busy, Help: "git/github#forward"}) {
+		if widget.Button(c, "forward", "↗ Forward to "+hostLabel(x.h, t.Hosted), widget.ButtonOpts{Primary: true, Tone: th.C(tGitHub), Busy: busy,
+			BusyLabel: "Forwarding", Help: "git/github#forward"}) {
 			x.run("github.forward", args)
 		}
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Ghost: true, Disabled: busy, Help: "git/github#forward"}) {

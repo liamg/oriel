@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // reviewsSoon is how old a source's list may be when the Reviews page opens before it's asked again.
@@ -44,6 +46,7 @@ type reviewList struct {
 	answered bool
 	at       time.Time     // when it answered; zero to ask again
 	busy     chan struct{} // closed when the ask under way answers
+	since    time.Time     // when the ask under way started
 }
 
 // reviewRow is a row of the page and the omnibox: a request, or what a source needs first.
@@ -210,7 +213,7 @@ func (x *reviewsPlugin) fresh(s registry.HostSite, stale time.Duration) <-chan s
 		return nil
 	}
 	done := make(chan struct{})
-	l.busy = done
+	l.busy, l.since = done, windowNow(x.h)
 	go func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
 		defer cancel()
@@ -301,6 +304,22 @@ func (x *reviewsPlugin) refreshAll() {
 		x.stale(s.Key())
 		x.fresh(s, 0)
 	}
+}
+
+// listState is a source's list as the loading widgets read it.
+func (x *reviewsPlugin) listState(name string) widget.LoadState {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	l := x.lists[name]
+	switch {
+	case l == nil:
+		return widget.LoadState{}
+	case l.busy != nil:
+		return widget.LoadState{Phase: widget.Pending, Since: l.since, Stale: l.answered}
+	case l.err != "" && l.reqs == nil:
+		return widget.LoadState{Phase: widget.Failed, Err: errors.New(l.err)}
+	}
+	return widget.LoadState{Phase: widget.Ready}
 }
 
 // list is a source's requests as last told, why there are none, and whether it has answered.
@@ -455,6 +474,14 @@ func (x *reviewsPlugin) start(ctx context.Context, r reviewRow) error {
 
 func (x *reviewsPlugin) source() registry.PickerSource {
 	return registry.PickerSource{ID: "reviews", Title: "Reviews", Order: 42, Available: x.any, Source: "builtin:reviews",
+		Loading: func() bool {
+			for _, s := range x.sh.sites.reviewSources() {
+				if pendingFirst(x.listState(s.Key())) {
+					return true
+				}
+			}
+			return false
+		},
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem
 			for _, s := range x.sh.sites.reviewSources() {

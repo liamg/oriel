@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // gitPoll is how often the work tree's status is read again while nothing else asks.
@@ -39,7 +40,11 @@ type gitTree struct {
 	status *gitx.Status
 	work   string // the directory paths not absolute are relative to
 	remote string
-	ready  bool // its root and remote have been looked for
+	ready  bool      // its root and remote have been looked for
+	asked  time.Time // when it was first asked for
+
+	mu     sync.Mutex
+	failed error // why the last read failed, while there's none to show
 }
 
 func (g *gitPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "git"} }
@@ -47,7 +52,7 @@ func (g *gitPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "git
 func (g *gitPlugin) Activate(ctx context.Context, h plugin.Host) error {
 	g.h, g.sh.git = h, g
 	g.others = map[string]*gitTree{}
-	g.work, g.ready = g.sh.cfg.WorkDir, true
+	g.work, g.ready, g.asked = g.sh.cfg.WorkDir, true, g.now()
 	if dir := g.sh.cfg.WorkDir; dir != "" {
 		if root, ok := gitx.Root(ctx, dir); ok {
 			g.status = gitx.NewStatus(gitx.Repo{Dir: root})
@@ -147,11 +152,11 @@ func (g *gitPlugin) poll(ctx context.Context) {
 			return
 		case <-t.C:
 			if g.status != nil {
-				g.status.Refresh(ctx)
+				g.gitTree.read(ctx)
 			}
 			for _, o := range g.trees() {
 				if o.status != nil {
-					o.status.Refresh(ctx)
+					o.read(ctx)
 				}
 			}
 		}
@@ -179,16 +184,16 @@ func (g *gitPlugin) tree(dir string) *gitTree {
 	if t, ok := g.others[dir]; ok {
 		return t
 	}
-	t := &gitTree{work: dir}
+	t := &gitTree{work: dir, asked: g.now()}
 	g.others[dir] = t
 	g.busy.Add(1)
 	go func() {
 		defer g.busy.Done()
 		ctx := context.Background()
-		found := &gitTree{work: dir, ready: true}
+		found := &gitTree{work: dir, ready: true, asked: t.asked}
 		if root, ok := gitx.Root(ctx, dir); ok {
 			found.status = gitx.NewStatus(gitx.Repo{Dir: root})
-			found.status.Refresh(ctx)
+			found.read(ctx)
 			found.remote = found.status.Repo().RemoteURL(ctx)
 			found.status.Watch(func([]string) { g.h.Redraw() })
 		}
@@ -245,7 +250,7 @@ func (g *gitPlugin) async(fn func(ctx context.Context) error) {
 			if t.status == nil {
 				continue
 			}
-			if err := t.status.Refresh(ctx); err != nil {
+			if err := t.read(ctx); err != nil {
 				g.h.Log().Warn("git status", "err", err)
 			}
 		}
@@ -263,6 +268,13 @@ func (g *gitPlugin) state() *gitx.State {
 	return g.gitTree.state()
 }
 
+func (g *gitPlugin) load() widget.LoadState {
+	if g == nil {
+		return widget.LoadState{Phase: widget.Ready}
+	}
+	return g.gitTree.load()
+}
+
 func (g *gitPlugin) root() string {
 	if g == nil {
 		return ""
@@ -275,6 +287,47 @@ func (g *gitPlugin) rel(p string) string {
 		return p
 	}
 	return g.gitTree.rel(p)
+}
+
+func (g *gitPlugin) now() time.Time { return windowNow(g.h) }
+
+// windowNow is the window's clock, a test's fixed one; zero before there's a window, so a wait begun then shows at
+// once.
+func windowNow(h plugin.Host) time.Time {
+	if u := h.UI(); u != nil {
+		return u.Now()
+	}
+	return time.Time{}
+}
+
+// reload reads every work tree's status again, for a Retry.
+func (g *gitPlugin) reload() { g.async(func(context.Context) error { return nil }) }
+
+// read reads the status again, keeping why it failed.
+func (t *gitTree) read(ctx context.Context) error {
+	err := t.status.Refresh(ctx)
+	t.mu.Lock()
+	t.failed = err
+	t.mu.Unlock()
+	return err
+}
+
+// load is the tree's status as a load: pending until its root is found and first read, failed while that read
+// fails, and ready after; outside a repo it's ready with no state.
+func (t *gitTree) load() widget.LoadState {
+	if t == nil {
+		return widget.LoadState{Phase: widget.Ready}
+	}
+	if !t.ready || t.status != nil && t.status.State() == nil {
+		t.mu.Lock()
+		err := t.failed
+		t.mu.Unlock()
+		if err != nil {
+			return widget.LoadState{Phase: widget.Failed, Err: err}
+		}
+		return widget.LoadState{Phase: widget.Pending, Since: t.asked}
+	}
+	return widget.LoadState{Phase: widget.Ready}
 }
 
 // state is the last status read, nil outside a repo or before the first.

@@ -23,6 +23,27 @@ They are design sketches, not the implementation: the app draws natively (see `s
 - **Annotation house style** (explain, tours, `:Inspect`): numbered diamond,
   angled leader line, clipped-corner card.
 
+## Loading (FW-14)
+
+No screen looks empty, broken or finished while its data is on the way. Each waiting section picks a policy by asking
+what goes wrong if the user acts before the data arrives (rendering.md, "Loading", has the toolkit):
+
+| Policy | When | What shows | Can the user act? |
+|---|---|---|---|
+| **Block** | the form means nothing without the data | a centred loading panel in its place | only Cancel / Esc |
+| **Gate** | other fields can be filled in, but submitting early would be wrong | the form, the section loading, submit busy with the reason | fill in, not submit |
+| **Optional** | missing data falls back to a sensible default | the section says what's used if they go on now | yes |
+| **Inline** | a page or panel, not a submit flow | skeleton rows or a busy line in that section | yes |
+
+- No indicator for the first 150 ms; once shown it stays 300 ms. After 3 s the elapsed time shows.
+- A failure shows the error and **Retry**; nothing sits on "Reading…" forever. Empty ("No jobs yet") only once loaded.
+- A refresh keeps the old data, with a thin moving bar along the section's top edge.
+- Which screen uses which: the launcher's agents, the Add repo check, the Job form's agent, the Merge dialog and
+  Ship's step actions are **Gate**; Start work's models are **Optional**; the diff view, the Raise PR tab and the
+  stats session tab are **Block** within their pane; pages and panels (Ship columns, Git and PR panels, Jobs,
+  Tickets, Reviews, Stats, Repos, Plugins' registry, the diff view, changed units, explorer, tests) are **Inline**.
+  Waits of minutes (explain, walkthrough, verify) are Inline with the elapsed time always shown.
+
 ## Logo: **o▌** (decided): a yellow o with an orange block cursor, in the default theme
 
 ![35-o12](mockups/35-o12.png)
@@ -464,6 +485,11 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Not yet: the title bar's `⌘⇧K` chip, CI check rows on a CI card. Since PL-5 the strip has agentbus's presence, from the agentbus plugin's `mission` indicator.
 
 ## 04 · New session
+
+- Loading (FW-14): the kinds are local and show at once; the agent cards wait on the providers' probe (each provider
+  asked at once), as skeleton cards with "Checking which agents are installed…" and the elapsed time. Nothing is
+  picked while it runs: No agent is a choice, never a default. Start is busy ("Checking agents…") until the probe
+  answers, and ⌘↵ says why; a probe that finds none says so, with Retry.
 
 ![04-launch](mockups/04-launch.png)
 

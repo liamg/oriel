@@ -43,7 +43,7 @@ func (x *lspPlugin) inspectRows() []registry.InspectRow {
 			})
 	}
 	if d.tokensVersion != snap.Version()+1 {
-		return append(rows, registry.InspectRow{Key: "token", Value: "asking…", Faded: true})
+		return append(rows, registry.InspectRow{Key: "token", Value: "waiting for " + st.Server, Faded: true})
 	}
 	cur := p.Cursor()
 	for _, t := range d.tokens {

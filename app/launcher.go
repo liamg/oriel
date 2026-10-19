@@ -53,9 +53,10 @@ type launcher struct {
 	gen        int  // which opening the host's answers are for
 
 	kinds     []host.KindSpec
-	providers []host.ProviderInfo
+	providers *plugin.Load[[]host.ProviderInfo]
 	loadErr   string
-	wantKind  core.Kind // asked for before the kinds arrived
+	noAgent   bool // No agent was picked: never by default
+	picked    bool // the agent was picked, by the user or once the providers arrived
 
 	kind                                          int
 	prompt, ticket, pr, dir, name, parent, branch string
@@ -82,6 +83,7 @@ type ticketCard struct {
 	asked   string    // the key looked up
 	source  string    // who it was asked of: "Linear"
 	busy    bool
+	since   time.Time // when the lookup started
 	t       *registry.Ticket
 	err     string
 }
@@ -116,8 +118,11 @@ func (x *launcher) Activate(_ context.Context, h plugin.Host) error {
 // openWith opens the launcher afresh, with what a command gave filled in, and reads the kinds, providers and repos.
 func (x *launcher) openWith(a registry.Args) {
 	spec := specFrom(a)
+	if x.providers != nil {
+		x.providers.Reset()
+	}
 	*x = launcher{disposer: x.disposer, sh: x.sh, h: x.h, gen: x.gen + 1, open: true, focusField: true,
-		wantKind: core.Kind(a.String("kind")), prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
+		prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
 		name: spec.Name, template: spec.Template, variant: spec.Variant, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
 		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", backend: spec.Sandbox.Backend, branch: spec.Branch,
 		card: ticketCard{key: strings.TrimSpace(spec.Ticket)}}
@@ -128,43 +133,59 @@ func (x *launcher) openWith(a registry.Args) {
 		v, _, _ := x.h.Options().Get("sandbox.default", registry.At{})
 		x.sandbox = v == "sandbox"
 	}
-	x.load(a.String("provider") != "")
+	x.picked = x.provider != ""
+	x.load(core.Kind(a.String("kind")))
 }
 
-func (x *launcher) load(providerGiven bool) {
-	gen, sessions, h := x.gen, x.sh.sessions, x.h // openWith resets x, and closing the window the shell, while this runs
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		var (
-			kinds     []host.KindSpec
-			providers []host.ProviderInfo
-			err       error
-		)
-		if sessions == nil {
-			err = errors.New("there are no sessions in this window")
-		} else if c, e := sessions.host(); e != nil {
-			err = e
-		} else {
-			kinds, providers = c.Kinds().All(), c.ProviderInfo(ctx)
+// load reads the kinds, which are local, at once; the providers' probe runs off the loop.
+func (x *launcher) load(want core.Kind) {
+	sessions := x.sh.sessions
+	if sessions == nil {
+		x.loadErr = "there are no sessions in this window"
+		return
+	}
+	c, err := sessions.host()
+	if err != nil {
+		x.loadErr = err.Error()
+		return
+	}
+	x.kinds = c.Kinds().All()
+	if i := slices.IndexFunc(x.kinds, func(k host.KindSpec) bool { return k.Kind == want }); i >= 0 {
+		x.kind = i
+	}
+	x.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
+		ps := c.ProviderInfo(ctx)
+		if len(ps) == 0 {
+			return nil, errors.New("no agents are set up on this machine")
 		}
-		h.Do(func() {
-			if gen != x.gen {
-				return
-			}
-			x.kinds, x.providers = kinds, providers
-			if err != nil {
-				x.loadErr = err.Error()
-			}
-			if i := slices.IndexFunc(kinds, func(k host.KindSpec) bool { return k.Kind == x.wantKind }); i >= 0 {
-				x.kind = i
-			}
-			if !providerGiven {
-				x.pickProvider(defaultProvider(providers))
-			}
-		})
-		h.Redraw()
-	}()
+		return ps, nil
+	}, plugin.LoadOpts{Timeout: 20 * time.Second})
+	x.providers.Start()
+}
+
+// providerList is the providers the probe found; none while it runs.
+func (x *launcher) providerList() []host.ProviderInfo {
+	if x.providers == nil {
+		return nil
+	}
+	ps, _ := x.providers.Value()
+	return ps
+}
+
+// providersState is the probe's state; Ready with none when there's no session host to ask.
+func (x *launcher) providersState() widget.LoadState {
+	if x.providers == nil {
+		return widget.LoadState{Phase: widget.Ready}
+	}
+	return x.providers.State()
+}
+
+// settle picks the default agent once the providers arrive, unless one was given or picked.
+func (x *launcher) settle() {
+	if ps := x.providerList(); !x.picked && len(ps) > 0 {
+		x.picked, x.err = true, ""
+		x.pickProvider(defaultProvider(ps))
+	}
 }
 
 // defaultProvider is the first provider that's logged in, else the first.
@@ -186,7 +207,8 @@ func (x *launcher) pickProvider(id string) {
 		return
 	}
 	x.provider, x.model, x.effort = id, "", ""
-	for _, p := range x.providers {
+	x.noAgent = id == ""
+	for _, p := range x.providerList() {
 		if p.ID == id {
 			x.model = defaultModel(p)
 		}
@@ -217,8 +239,14 @@ func takesRepos(k host.KindSpec) bool {
 func (x *launcher) missing() string {
 	k, ok := x.current()
 	switch {
+	case !ok && x.loadErr != "":
+		return x.loadErr
 	case !ok:
 		return "a moment: reading the kinds of session"
+	case x.provider == "" && !x.noAgent && x.providersState().Loading():
+		return "a moment: checking which agents are installed"
+	case x.provider == "" && !x.noAgent:
+		return "pick an agent, or No agent"
 	case k.NeedsRepo && len(x.chosen) == 0:
 		return "pick a repo"
 	case startsFrom(k) == host.FromPrompt && x.card.busy:
@@ -375,12 +403,18 @@ func (x *launcher) saveAsJob() {
 	}
 }
 
-func (x *launcher) close() { x.open, x.gen = false, x.gen+1 }
+func (x *launcher) close() {
+	x.open, x.gen = false, x.gen+1
+	if x.providers != nil {
+		x.providers.Reset()
+	}
+}
 
 func (x *launcher) build(c *ui.Ctx) {
 	if !x.open {
 		return
 	}
+	x.settle()
 	th := c.Theme()
 	size := c.Size()
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}
@@ -511,11 +545,7 @@ func (x *launcher) form(c *ui.Ctx) {
 	c.Column("mode", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		heading(c, "head", "Mode", "")
 		if !loaded {
-			msg := "Reading the kinds of session…"
-			if x.loadErr != "" {
-				msg = x.loadErr
-			}
-			c.Text("wait", msg, uiFont(12, th.C(theme.FgFaint)))
+			c.Text("wait", cmpOr(x.loadErr, "No kinds of session"), uiFont(12, th.C(theme.Warn)))
 			return
 		}
 		items := make([]widget.Choice, len(x.kinds))
@@ -528,12 +558,28 @@ func (x *launcher) form(c *ui.Ctx) {
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		heading(c, "head", "Agent", "provider · model · effort")
-		c.Row("cards", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
-			for _, p := range x.providers {
-				x.providerCard(c, p)
-			}
-			x.noAgentCard(c, k)
+		ps := x.providerList()
+		widget.Async(c, "probe", x.providersState(), widget.AsyncOpts{Policy: widget.Gate, Label: "Checking which agents are installed",
+			Retry: x.providers.Reload, Help: "agent/launcher#agent", Loading: func(c *ui.Ctx) {
+				c.Column("loading", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+					c.Row("cards", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+						widget.Skeleton(c, "skeleton", widget.SkeletonOpts{Block: render.Point{X: 260, Y: 96}, Count: 2, Dir: ui.Row, Gap: 10,
+							Label: "Agents", Help: "agent/launcher#agent"})
+						x.noAgentCard(c, k)
+					})
+					widget.Busy(c, "busy", x.providersState(), widget.BusyOpts{Label: "Checking which agents are installed", Help: "agent/launcher#agent"})
+				})
+			}}, func(c *ui.Ctx) {
+			c.Row("cards", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+				for _, p := range ps {
+					x.providerCard(c, p)
+				}
+				x.noAgentCard(c, k)
+			})
 		})
+		if x.providersState().Phase == widget.Failed {
+			c.Row("cards", ui.Style{W: ui.Flex(1), Gap: 10, Pad: ui.Insets{T: 10}}, func(c *ui.Ctx) { x.noAgentCard(c, k) })
+		}
 	})
 	c.Row("where", ui.Style{W: ui.Flex(1), Gap: 24}, func(c *ui.Ctx) {
 		if takesRepos(k) {
@@ -569,7 +615,7 @@ func (x *launcher) lookTicket(c *ui.Ctx) {
 	if !ok {
 		return
 	}
-	x.card.busy, x.card.source = true, src.Label()
+	x.card.busy, x.card.source, x.card.since = true, src.Label(), c.Now()
 	gen, h := x.gen, x.h
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -601,7 +647,8 @@ func (x *launcher) ticketCard(c *ui.Ctx) {
 		c.Text("ticket-continue", continueLabel(se), monoFont(10.5, th.C(theme.Accent)))
 		return
 	case x.card.busy:
-		c.Text("ticket-wait", "Looking up "+x.card.asked+" in "+x.card.source+"…", monoFont(10.5, th.C(theme.FgFaint)))
+		widget.Busy(c, "ticket-wait", widget.LoadState{Phase: widget.Pending, Since: x.card.since},
+			widget.BusyOpts{Label: "Looking up " + x.card.asked + " in " + x.card.source, Size: 11, Help: help})
 		return
 	case x.card.err != "" && x.card.key == strings.TrimSpace(x.ticket):
 		c.Text("ticket-err", x.card.asked+": "+x.card.err, monoFont(10.5, th.C(theme.Warn)))
@@ -654,7 +701,7 @@ func (x *launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 			})
 			c.Text("name", name, uiFont(13, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			if p.ID == defaultProvider(x.providers) {
+			if p.ID == defaultProvider(x.providerList()) {
 				widget.Chip(c, "default", "default", th.C(theme.Accent), "agent/launcher#agent")
 			}
 		})
@@ -747,7 +794,7 @@ func providerNote(p host.ProviderInfo, usage []core.ProviderUsage) string {
 // noAgentCard starts the session with no agent.
 func (x *launcher) noAgentCard(c *ui.Ctx, k host.KindSpec) {
 	th := c.Theme()
-	on := x.provider == ""
+	on := x.provider == "" && x.noAgent
 	fill, line := render.Color{}, th.C(tLaunchCardLine)
 	if on {
 		fill, line = th.C(tLaunchCardOn), th.C(tLaunchLineOn)
@@ -761,6 +808,7 @@ func (x *launcher) noAgentCard(c *ui.Ctx, k host.KindSpec) {
 		c.Text("name", "No agent", uiFont(13, th.C(theme.Fg)))
 		c.Text("note", note, monoFont(10, th.C(theme.FgFaint)))
 	}).Clicked {
+		x.picked = true
 		x.pickProvider("")
 	}
 }
@@ -1041,7 +1089,7 @@ func (x *launcher) reuse(se core.SessionState) {
 func (x *launcher) preflight() [][2]string {
 	k, ok := x.current()
 	if !ok {
-		return [][2]string{{"kinds", "reading…"}}
+		return [][2]string{{"kinds", "none"}}
 	}
 	worktrees := map[host.Worktrees]string{host.WorktreesNow: "now, from a fetched base", host.WorktreesStartWork: "at Start work",
 		host.WorktreesPR: "the PR's head, read-only", host.WorktreesPinned: "pinned, read-only", host.WorktreesInit: "a new repo",
@@ -1054,8 +1102,13 @@ func (x *launcher) preflight() [][2]string {
 		rows = append(rows, [2]string{"repos to fetch", fmt.Sprint(len(x.chosen))})
 	}
 	agent := "none"
-	if x.provider != "" {
+	switch {
+	case x.provider != "":
 		agent = strings.TrimSpace(providerName(x.provider) + " " + x.model)
+	case !x.noAgent && x.providersState().Loading():
+		agent = "waiting on the probe"
+	case !x.noAgent:
+		agent = "not picked"
 	}
 	rows = append(rows, [2]string{"agent", agent}, [2]string{"prompt pack", cmpOr(k.Pack, "none")})
 	runs, network := "on this machine", "this machine's"
@@ -1090,8 +1143,13 @@ func (x *launcher) footer(c *ui.Ctx) {
 		if _, ok := x.continues(); ok {
 			label = "Continue"
 		}
-		if widget.Button(c, "start", label, widget.ButtonOpts{Primary: true, Key: "⌘↵", Disabled: x.busy || k.Kind == "",
-			Help: "agent/launcher"}) {
+		probing := x.provider == "" && !x.noAgent && x.providersState().Loading()
+		busyLabel := "Starting"
+		if probing {
+			busyLabel = "Checking agents"
+		}
+		if widget.Button(c, "start", label, widget.ButtonOpts{Primary: true, Key: "⌘↵", Disabled: k.Kind == "" || x.provider == "" && !x.noAgent, Busy: x.busy || probing,
+			BusyLabel: busyLabel, Help: "agent/launcher"}) {
 			_ = x.start()
 		}
 	})

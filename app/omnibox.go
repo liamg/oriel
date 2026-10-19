@@ -42,6 +42,7 @@ type omnibox struct {
 	query string
 	scope string // a source's id, or "" for all
 	sel   int
+	wait  sourceWait
 }
 
 func (o *omnibox) Manifest() plugin.Manifest { return plugin.Manifest{ID: "omnibox"} }
@@ -78,7 +79,7 @@ type group struct {
 
 // results ranks every source's items against the query: the fuzzy score plus the item's boost, best first, each
 // source in its order. A source's prefix at the start of the query narrows to it.
-func (o *omnibox) results() []group {
+func (o *omnibox) results() (out []group, busy []string) {
 	q, scope := o.query, o.scope
 	srcs := o.h.Pickers()
 	for _, s := range srcs {
@@ -91,7 +92,6 @@ func (o *omnibox) results() []group {
 	if scope != "" {
 		limit = omniScopeMax
 	}
-	var out []group
 	for _, s := range srcs {
 		if scope != "" && s.ID != scope || scope == "" && s.PickerOnly {
 			continue
@@ -99,8 +99,11 @@ func (o *omnibox) results() []group {
 		if g, ok := rankSource(o.h, s, q, limit); ok {
 			out = append(out, g)
 		}
+		if sourceLoading(s) {
+			busy = append(busy, s.Title)
+		}
 	}
-	return out
+	return out, busy
 }
 
 // rankSource is a source's items for query, best first, at most limit of them. A live source's items are its
@@ -145,7 +148,7 @@ func (o *omnibox) build(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	groups := o.results()
+	groups, busy := o.results()
 	var flat []hit
 	for _, g := range groups {
 		flat = append(flat, g.hits...)
@@ -190,6 +193,7 @@ func (o *omnibox) build(c *ui.Ctx) {
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				c.Column("list", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 8, R: 8, T: 12}, ScrollY: true}, func(c *ui.Ctx) {
 					o.list(c, groups)
+					pickerWaitRow(c, o.wait.state(c.Now(), len(busy) > 0), strings.Join(busy, " and ")+" still loading", len(groups) == 0, "shell/omnibox")
 				})
 				c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
 				c.Column("preview", ui.Style{W: ui.Px(400), H: ui.Flex(1), Pad: ui.Pad(18), Clip: true, Role: ui.RoleRegion, Label: "Preview"}, func(c *ui.Ctx) {
@@ -289,7 +293,6 @@ func (o *omnibox) run(h hit) {
 func (o *omnibox) list(c *ui.Ctx, groups []group) {
 	th := c.Theme()
 	if len(groups) == 0 {
-		c.Text("none", "No matches", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13}, Color: th.C(theme.FgFaint)})
 		return
 	}
 	n := 0

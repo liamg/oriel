@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -353,7 +354,9 @@ func TestExplorerBeforeTheStatusLoads(t *testing.T) {
 	if off := s.reg.TurnedOff(); len(off) > 0 {
 		t.Fatalf("turned off: %+v", off)
 	}
-	if text := s.frameText(); !strings.Contains(text, "Reading the work tree") {
+	s.now = s.now.Add(time.Second) // past the loading line's delay
+	s.frame()
+	if text := s.frameText(); !strings.Contains(text, "Reading the work tree…") {
 		t.Errorf("no loading note:\n%s", text)
 	}
 }

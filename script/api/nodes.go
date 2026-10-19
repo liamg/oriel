@@ -84,7 +84,19 @@ func (UI) Ring(spec script.Table) script.Table { return node("ring", spec) }
 //oriel:api doc="Something in progress with no known end (widget.Spinner): { name (what's in progress, read out), color (a theme token or #rrggbb; the accent by default), size (px across, 14 by default), id }. It holds still with reduced motion." returns=table
 func (UI) Spinner(spec script.Table) script.Table { return node("spinner", spec) }
 
-//oriel:api doc="A button: { label, on_click = fn(), primary, id }. The id keeps it the same button as the view redraws, where labels repeat or change." returns=table
+//oriel:api doc="An inline loading line (widget.Busy): a spinner, { label (what's loading; the … is added), load (an oriel.load handle: adds what it's doing and, after clock seconds, how long it's run), clock (3 by default; -1 never), size, color, id }." returns=table
+func (UI) Busy(spec script.Table) script.Table { return node("busy", spec) }
+
+//oriel:api doc="A loading bar (widget.ProgressBar): { value (0 to 1; nil slides back and forth with no known end), height (px, 4 by default; 6 or more shows the label above it), label, color, id }." returns=table
+func (UI) Progress(spec script.Table) script.Table { return node("progress", spec) }
+
+//oriel:api doc="Grey placeholders in the shape of what's coming (widget.Skeleton): { rows (text-like bars), widths = { 1, 0.8, 0.6 } (each row's share of the width, repeating), block = { w, h } (a card-shaped block in place of rows), count (how many blocks), direction = row|column, label, id }." returns=table
+func (UI) Skeleton(spec script.Table) script.Table { return node("skeleton", spec) }
+
+//oriel:api doc="A section drawn by its load's state (widget.Async): { load (an oriel.load handle; started for you), body = fn(value) (returns the loaded section's nodes), policy = inline|block|gate|optional, label (what's loading), loading (nodes to show while it loads; a busy line by default), empty (text shown once loaded when is_empty = fn(value) says so), retry (true shows Retry on a failure), fallback (optional: what's used if the user goes on now), id }." returns=table
+func (UI) Async(spec script.Table) script.Table { return node("async", spec) }
+
+//oriel:api doc="A button: { label, on_click = fn(), primary, busy (shows a spinner and can't be pressed: its work is running), busy_label, id }. The id keeps it the same button as the view redraws, where labels repeat or change." returns=table
 func (UI) Button(spec script.Table) script.Table {
 	t := script.Table{"type": "button"}
 	for k, v := range spec {
@@ -190,6 +202,29 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			size, _ := n["size"].(float64)
 			widget.Spinner(c, cmpOr(str(n, "id"), str(n, "name"), "spinner"), widget.SpinnerOpts{Tone: tone(th, str(n, "color"), render.Color{}),
 				Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
+		case "busy":
+			size, _ := n["size"].(float64)
+			s, _ := a.loads().state(n)
+			o := widget.BusyOpts{Label: str(n, "label"), Size: float32(size), Tone: tone(th, str(n, "color"), render.Color{}), Help: "plugins/lua#ui"}
+			if v, ok := n["clock"].(float64); ok {
+				o.Clock = time.Duration(v * float64(time.Second))
+				if v < 0 {
+					o.Clock = -1
+				}
+			}
+			widget.Busy(c, cmpOr(str(n, "id"), str(n, "label"), "busy"), s, o)
+		case "progress":
+			h, _ := n["height"].(float64)
+			frac := -1.0
+			if v, ok := n["value"].(float64); ok {
+				frac = max(0, min(1, v))
+			}
+			widget.ProgressBar(c, cmpOr(str(n, "id"), str(n, "label"), "progress"), widget.ProgressOpts{Frac: frac, Height: float32(h), Label: str(n, "label"),
+				Tone: tone(th, str(n, "color"), render.Color{}), Help: "plugins/lua#ui"})
+		case "skeleton":
+			skeleton(c, n)
+		case "async":
+			async(c, n, a)
 		case "spacer":
 			c.Box(nil, ui.Style{W: ui.Flex(1)}, nil)
 		case "view":
@@ -201,7 +236,8 @@ func build(c *ui.Ctx, v any, a *APIs) {
 		case "button":
 			key := cmpOr(str(n, "id"), str(n, "label"))
 			primary, _ := n["primary"].(bool)
-			if widget.Button(c, key, str(n, "label"), widget.ButtonOpts{Primary: primary, Help: "plugins/lua#ui"}) {
+			busy, _ := n["busy"].(bool)
+			if widget.Button(c, key, str(n, "label"), widget.ButtonOpts{Primary: primary, Busy: busy, BusyLabel: str(n, "busy_label"), Help: "plugins/lua#ui"}) {
 				a.callback(n, "on_click")
 			}
 		case "input":
@@ -264,6 +300,65 @@ func build(c *ui.Ctx, v any, a *APIs) {
 	default:
 		c.Text(nil, fmt.Sprint(v), ui.TextStyle{})
 	}
+}
+
+func skeleton(c *ui.Ctx, n script.Table) {
+	rows, _ := n["rows"].(float64)
+	count, _ := n["count"].(float64)
+	o := widget.SkeletonOpts{Rows: int(rows), Count: int(count), Label: str(n, "label"), Help: "plugins/lua#ui"}
+	for _, w := range nums(n["widths"]) {
+		o.Widths = append(o.Widths, float32(w))
+	}
+	if b, ok := n["block"].(script.Table); ok {
+		w, _ := b["w"].(float64)
+		h, _ := b["h"].(float64)
+		o.Block = render.Point{X: float32(w), Y: float32(h)}
+	}
+	if str(n, "direction") != "column" {
+		o.Dir = ui.Row
+	}
+	widget.Skeleton(c, cmpOr(str(n, "id"), str(n, "label"), "skeleton"), o)
+}
+
+var policies = map[string]widget.Policy{"inline": widget.Inline, "block": widget.Block, "gate": widget.Gate, "optional": widget.Optional}
+
+// async draws a section by its oriel.load handle's state, starting the load.
+func async(c *ui.Ctx, n script.Table, a *APIs) {
+	h, _ := n["load"].(script.Table)
+	ls := a.loads()
+	ls.mu.Lock()
+	l := ls.byID[str(h, "id")]
+	ls.mu.Unlock()
+	if l == nil {
+		c.Text(nil, "oriel.ui.async needs load = an oriel.load handle", ui.TextStyle{Color: c.Theme().C(theme.Error)})
+		return
+	}
+	l.Start()
+	v, _ := l.Value()
+	o := widget.AsyncOpts{Policy: policies[str(n, "policy")], Label: str(n, "label"), Empty: str(n, "empty"), Fallback: str(n, "fallback"), Help: "plugins/lua#ui"}
+	if loading, ok := n["loading"]; ok {
+		o.Loading = func(c *ui.Ctx) { build(c, loading, a) }
+	}
+	if retry, _ := n["retry"].(bool); retry {
+		o.Retry = func() { l.Reload(); a.Host.Redraw() }
+	}
+	if fn, ok := n["is_empty"].(*script.Fn); ok && l.State().Phase == widget.Ready {
+		out, err := a.VM.Call(fn, v)
+		o.IsEmpty = err == nil && len(out) > 0 && out[0] == true
+	}
+	widget.Async(c, cmpOr(str(n, "id"), str(n, "label"), "async"), l.State(), o, func(c *ui.Ctx) {
+		fn, ok := n["body"].(*script.Fn)
+		if !ok {
+			return
+		}
+		out, err := a.VM.Call(fn, v)
+		if err != nil {
+			panic(err)
+		}
+		if len(out) > 0 {
+			build(c, out[0], a)
+		}
+	})
 }
 
 // dnd builds a node that's a drag source (drag = { kind, data, label }) or a drop target (accepts = { kinds },
@@ -425,6 +520,17 @@ func items(v any) []any {
 		}
 	}
 	return nil
+}
+
+func nums(v any) []float64 {
+	var out []float64
+	xs, _ := v.([]any)
+	for _, x := range xs {
+		if f, ok := x.(float64); ok {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 func num(v any) float64 {

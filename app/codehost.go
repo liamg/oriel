@@ -408,7 +408,7 @@ func (x *shipPlugin) forwardHost(se core.SessionState, thread core.ThreadID, com
 	if a := t.Anchor; a != nil && rt.ID != "" {
 		rt.Path, rt.Line, rt.Old = a.File, a.Line, a.Side == "old"
 	}
-	return x.step(se.ID, s.Project, "Forwarding…", func(ctx context.Context, c *host.Host) error {
+	return x.step(se.ID, s.Project, "Forwarding", func(ctx context.Context, c *host.Host) error {
 		var posted string
 		if err := registry.Call(func() (err error) { posted, err = h.Reply(ctx, repo, pr, rt, body); return err }); err != nil {
 			return err

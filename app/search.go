@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -50,6 +51,7 @@ type projectSearch struct {
 	ran     searchRun // the search last started
 	matches []search.Match
 	done    bool
+	since   time.Time // when the search running began
 	err     error
 	cancel  context.CancelFunc
 	busy    sync.WaitGroup
@@ -189,7 +191,7 @@ func (p *projectSearch) run() {
 	if p.cancel != nil {
 		p.cancel()
 	}
-	p.ran, p.matches, p.done, p.err, p.sel = r, nil, r.pattern == "", nil, 0
+	p.ran, p.matches, p.done, p.err, p.sel, p.since = r, nil, r.pattern == "", nil, 0, windowNow(p.h)
 	if r.pattern == "" {
 		p.mu.Unlock()
 		return
@@ -319,7 +321,9 @@ func (p *projectSearch) build(c *ui.Ctx) {
 					status = firstLine(err.Error())
 				case p.ran.pattern == "":
 				case !done:
-					status = fmt.Sprintf("%s · %d…", engine, n)
+					widget.Busy(c, "busy", widget.LoadState{Phase: widget.Pending, Since: p.since, Note: fmt.Sprintf("%d so far", n)},
+						widget.BusyOpts{Label: "Searching with " + engine, Size: 10.5, Help: "files/search"})
+					return
 				default:
 					status = fmt.Sprintf("%s · %d in %d %s", engine, n, files, plural(files, "file", "files"))
 				}

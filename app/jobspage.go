@@ -40,7 +40,9 @@ func (x *jobsPlugin) page(c *ui.Ctx) {
 				Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 				r, _, ok := x.selected(rows)
 				if !ok {
-					x.empty(c)
+					if !x.loads.State().Loading() {
+						x.empty(c)
+					}
 					return
 				}
 				x.detail(c, r)
@@ -103,12 +105,15 @@ func (x *jobsPlugin) list(c *ui.Ctx, rows []jobRow) {
 		})
 		c.Column("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true}, func(c *ui.Ctx) {
 			if len(shown) == 0 {
+				msg := "No jobs yet. A job is a prompt you run more than once: n writes one."
+				if q != "" {
+					msg = "No job matches."
+				}
 				c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12)}, func(c *ui.Ctx) {
-					msg := "No jobs yet. A job is a prompt you run more than once: n writes one."
-					if q != "" {
-						msg = "No job matches."
-					}
-					widget.Wrap(c, "t", msg, 300, uiFont(12, th.C(theme.FgFaint)))
+					widget.Async(c, "load", x.loads.State(), widget.AsyncOpts{Label: "Reading the jobs", Empty: msg, IsEmpty: true, Width: 300,
+						Retry: x.loads.Reload, Help: "agent/jobs#list", Loading: func(c *ui.Ctx) {
+							widget.Skeleton(c, "rows", widget.SkeletonOpts{Rows: 4, RowH: 14, Gap: 14, Label: "Jobs", Help: "agent/jobs#list"})
+						}}, func(*ui.Ctx) {})
 				})
 				return
 			}

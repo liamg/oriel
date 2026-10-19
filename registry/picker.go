@@ -53,7 +53,10 @@ type PickerSource struct {
 	Unlisted   bool // opened by its command only, not in the pickers' strip or ⇥: a result list, such as callers
 	// Available says whether it has anything to offer now; one that hasn't is left out of Pickers. Nil is always.
 	Available func() bool
-	Source    string
+	// Loading says its items are still coming (a walk, a search, a server's answer): the picker shows it's busy,
+	// and says there are no matches only once it isn't. Nil is never.
+	Loading func() bool
+	Source  string
 }
 
 func (r *reg) Picker(s PickerSource) Disposable {

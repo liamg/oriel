@@ -258,6 +258,18 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - `oriel.ui.ring{ value, label, color, size, name, id }` is a dial (`widget.Ring`); `oriel.ui.text(s, "title")` is a
   heading. `oriel.ui.spinner{ name, color, size, id }` says something is in progress (`widget.Spinner`).
 
+## As built (FW-14)
+
+- `oriel.load(fn, { timeout })` is a load (`plugin.Load`): `fn(done)` starts the work on the loop and calls
+  `done(value)` or `done(nil, err)` when it has an answer (from an `oriel.http.request` callback, say). Its handle has
+  `h:start()`, `h:reload()`, `h:reset()`, `h:value()` and `h:state()` (`{ phase, error, stale, note, elapsed }`).
+- `oriel.ui.async{ load, body = fn(value), policy, label, loading, empty, is_empty = fn(value), retry, fallback, id }`
+  draws a section by its load, as `widget.Async` (ui.md, "Loading"); it starts the load.
+- `oriel.ui.busy{ label, load, clock, size, color, id }`, `oriel.ui.progress{ value, height, label, color, id }` and
+  `oriel.ui.skeleton{ rows, widths, block = { w, h }, count, direction, label, id }`; `busy = true, busy_label` on
+  `oriel.ui.button`. `oriel.api.version` is 0.5.0.
+- `oriel.picker.source{ …, loading = fn() }`: true while the source's items are still coming; the picker shows it.
+
 ## As built (PL-12)
 
 - `script.Error` has `Where()` (a syntax error's line, the message's, or the innermost Lua frame's), `Frames()` and

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -162,6 +163,7 @@ type explorerHunks struct {
 	path     string
 	loaded   bool
 	loading  bool
+	since    time.Time // when the loading began
 	staged   []gitx.Hunk
 	unstaged []gitx.Hunk
 	busy     sync.WaitGroup
@@ -294,7 +296,7 @@ func (e *explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 		x.path, x.loaded, x.staged, x.unstaged = path, false, nil, nil
 	}
 	if !x.loaded && !x.loading {
-		x.loading = true
+		x.loading, x.since = true, windowNow(e.h)
 		x.busy.Add(1)
 		t := e.git()
 		go func() {
@@ -313,6 +315,17 @@ func (e *explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 		}()
 	}
 	return x.staged, x.unstaged, x.loaded
+}
+
+// hunksLoading is the selected file's hunks as a load, while Uncommitted waits on them.
+func (e *explorer) hunksLoading(sc gitx.Scope) (widget.LoadState, bool) {
+	x := &e.hunks
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if sc != gitx.Uncommitted || x.path == "" || x.loaded || !x.loading {
+		return widget.LoadState{}, false
+	}
+	return widget.LoadState{Phase: widget.Pending, Since: x.since}, true
 }
 
 // hunkRow is a hunk row's id: its side and index.
@@ -405,7 +418,11 @@ func (e *explorer) build(c *ui.Ctx) {
 		}
 		if st == nil {
 			c.Column("loading", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12)}, func(c *ui.Ctx) {
-				c.Text("t", "Reading the work tree…", monoTok(c, 11.5, theme.FgFaint))
+				s := e.git().load()
+				if s.Phase == widget.Ready {
+					s = widget.LoadState{Phase: widget.Pending, Since: e.git().asked}
+				}
+				widget.Async(c, "tree", s, widget.AsyncOpts{Label: "Reading the work tree", Retry: e.sh.git.reload, Help: "files/explorer"}, nil)
 			})
 			return
 		}
@@ -427,6 +444,11 @@ func (e *explorer) build(c *ui.Ctx) {
 		e.selected = res.Selected
 		if res.Activated != "" {
 			e.activate(res.Activated, sc)
+		}
+		if s, ok := e.hunksLoading(sc); ok {
+			c.Row("hunks", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 6)}, func(c *ui.Ctx) {
+				widget.Async(c, "wait", s, widget.AsyncOpts{Label: "Reading " + filepath.Base(e.hunks.path) + "'s hunks", Help: "files/explorer#keys"}, nil)
+			})
 		}
 		e.footer(c, sc)
 	})

@@ -36,9 +36,10 @@ type ticketsPage struct {
 
 // ticketDetail is a ticket as its tracker's lookup told it.
 type ticketDetail struct {
-	t    registry.Ticket
-	err  string
-	done bool
+	t     registry.Ticket
+	err   string
+	done  bool
+	since time.Time
 }
 
 func (x *ticketsPlugin) openPage(tracker string) error {
@@ -87,7 +88,7 @@ func (x *ticketsPlugin) detail(tr registry.TicketTracker, key string) *ticketDet
 	if d := x.details[key]; d != nil {
 		return d
 	}
-	d := &ticketDetail{}
+	d := &ticketDetail{since: windowNow(x.h)}
 	x.details[key] = d
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -228,7 +229,8 @@ func (x *ticketsPlugin) pageHeader(c *ui.Ctx) {
 		if x.page.err != "" {
 			c.Text("err", truncate(x.page.err, 90), monoFont(11, th.C(theme.Error)))
 		}
-		if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Help: ticketsHelp + "#page"}) {
+		if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Busy: x.pageState().Phase == widget.Pending, BusyLabel: "Refreshing",
+			Help: ticketsHelp + "#page"}) {
 			x.refreshAll()
 		}
 		if widget.Button(c, "close", "✕", widget.ButtonOpts{Key: "esc", Help: ticketsHelp + "#page"}) {
@@ -254,12 +256,25 @@ func (x *ticketsPlugin) pageList(c *ui.Ctx, rows []ticketRow) {
 			}
 		})
 		c.Column("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true}, func(c *ui.Ctx) {
-			if len(rows) == 0 {
-				c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12)}, func(c *ui.Ctx) {
-					widget.Wrap(c, "t", x.emptyText(), 380, uiFont(12, th.C(theme.FgFaint)))
-				})
-				return
-			}
+			x.pageRowsView(c, rows)
+		})
+	})
+}
+
+// pageRowsView is the list's rows: skeleton rows while the trackers first answer, then the tickets or why there are
+// none, with a refresh bar while they're asked again.
+func (x *ticketsPlugin) pageRowsView(c *ui.Ctx, rows []ticketRow) {
+	empty := len(rows) == 0
+	pad := ui.Insets{}
+	if empty || x.pageState().Loading() {
+		pad = ui.PadXY(14, 12)
+	}
+	c.Column("load", ui.Style{W: ui.Flex(1), Pad: pad}, func(c *ui.Ctx) {
+		widget.Async(c, "load", x.pageState(), widget.AsyncOpts{Label: "Asking " + x.trackerNames() + " for your tickets", Empty: x.emptyText(),
+			IsEmpty: empty, Width: 380, Help: ticketsHelp + "#list", Loading: func(c *ui.Ctx) {
+				widget.Skeleton(c, "rows", widget.SkeletonOpts{Rows: 5, RowH: 14, Gap: 16, Widths: []float32{.9, .6, .8}, Label: "Tickets",
+					Help: ticketsHelp + "#list"})
+			}}, func(c *ui.Ctx) {
 			sel := 0
 			if r, ok := x.selectedRow(rows); ok {
 				sel = slices.IndexFunc(rows, func(o ticketRow) bool { return o.ticket == r.ticket })
@@ -278,24 +293,42 @@ func (x *ticketsPlugin) pageList(c *ui.Ctx, rows []ticketRow) {
 	})
 }
 
-// emptyText is what the list says with no rows: still asking, or nothing assigned.
-func (x *ticketsPlugin) emptyText() string {
-	var names []string
-	asking := false
+// pageState is the page's trackers' lists read together: loading while any hasn't answered yet, refreshing while
+// any is asked again. A tracker that failed is a row of its own, with Retry.
+func (x *ticketsPlugin) pageState() widget.LoadState {
+	out := widget.LoadState{Phase: widget.Ready}
 	for _, tr := range x.pageTrackers() {
-		names = append(names, tr.Label())
-		if _, _, ok := x.list(tr.Name); !ok {
-			asking = true
+		if x.needsKey(tr) {
+			continue
+		}
+		s := x.listState(tr.Name)
+		switch {
+		case s.Phase == widget.Idle || s.Loading():
+			if out.Phase != widget.Pending || out.Stale || s.Since.Before(out.Since) {
+				out = widget.LoadState{Phase: widget.Pending, Since: s.Since}
+			}
+		case s.Phase == widget.Pending && out.Phase == widget.Ready:
+			out = widget.LoadState{Phase: widget.Pending, Since: s.Since, Stale: true}
 		}
 	}
-	who := cmpOr(strings.Join(names, " or "), "any tracker")
-	switch {
-	case strings.TrimSpace(x.page.filter) != "":
-		return "No ticket matches."
-	case asking:
-		return "Asking " + who + "…"
+	return out
+}
+
+// trackerNames are the page's trackers by name: "Linear or Jira".
+func (x *ticketsPlugin) trackerNames() string {
+	var names []string
+	for _, tr := range x.pageTrackers() {
+		names = append(names, tr.Label())
 	}
-	return "Nothing assigned to you in " + who
+	return cmpOr(strings.Join(names, " or "), "any tracker")
+}
+
+// emptyText is what the list says once the trackers have answered with nothing.
+func (x *ticketsPlugin) emptyText() string {
+	if strings.TrimSpace(x.page.filter) != "" {
+		return "No ticket matches."
+	}
+	return "Nothing assigned to you in " + x.trackerNames()
 }
 
 // rowLabel is a row's accessible name: the ticket's key and title, or what the tracker needs.
@@ -426,7 +459,8 @@ func (x *ticketsPlugin) pageDetail(c *ui.Ctx, r ticketRow) {
 	})
 	switch {
 	case !done:
-		note(c, "asking", "Asking "+r.tracker.Label()+" for the rest…")
+		widget.Busy(c, "asking", widget.LoadState{Phase: widget.Pending, Since: d.since}, widget.BusyOpts{Label: "Asking " + r.tracker.Label() + " for the rest",
+			Size: 11, Help: help})
 	case failed != "":
 		widget.Wrap(c, "err", failed, 640, monoFont(11, th.C(theme.Error)))
 	default:

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -59,19 +60,7 @@ func (x *lspPlugin) navigation(h plugin.Host) {
 		var run func(ctx registry.Ctx, _ registry.Args) error
 		run = func(ctx registry.Ctx, args registry.Args) error {
 			p, path, d := x.current()
-			if d != nil && d.opening {
-				id := "lsp.starting"
-				h.Notify(core.Notice{ID: id, Severity: core.SevInfo, Key: true, Text: "Starting the " + d.lang + " language server…"})
-				d.ready = append(d.ready, func() {
-					h.Dismiss(id)
-					if d.client == nil {
-						h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: "The " + d.lang + " language server didn't start: :LspInfo says why"})
-						return
-					}
-					if err := run(ctx, args); err != nil {
-						h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: err.Error()})
-					}
-				})
+			if x.whenStarted(d, what, func() error { return run(ctx, args) }) {
 				return nil
 			}
 			if d == nil || d.client == nil {
@@ -81,13 +70,9 @@ func (x *lspPlugin) navigation(h plugin.Host) {
 				return fmt.Errorf("no language server for this file")
 			}
 			at, c := lsp.Loc{Path: path, Pos: text.Pos(p.Cursor())}, d.client
-			slow := time.AfterFunc(slowAnswer, func() {
-				h.Notify(core.Notice{ID: "lsp.waiting", Severity: core.SevInfo, Key: true, Text: "Waiting for " + c.Status().Server + " (" + c.Status().State.String() + ")…"})
-			})
+			answered := x.waiting(c)
 			async(x, func(ctx context.Context) ([]lsp.Location, error) { return find(c, ctx, at) }, func(ls []lsp.Location, err error) {
-				if !slow.Stop() {
-					h.Dismiss("lsp.waiting")
-				}
+				answered()
 				switch {
 				case err != nil:
 					h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: err.Error()})
@@ -160,6 +145,38 @@ func (x *lspPlugin) navigation(h plugin.Host) {
 	x.substituteHints(h)
 }
 
+// whenStarted runs again once d's server has started, saying it's starting meanwhile; it reports whether it waits.
+func (x *lspPlugin) whenStarted(d *lspDoc, what string, again func() error) bool {
+	if d == nil || !d.opening {
+		return false
+	}
+	const id = "lsp.starting"
+	x.h.Notify(core.Notice{ID: id, Severity: core.SevInfo, Key: true, Text: "Starting the " + d.lang + " language server…"})
+	d.ready = append(d.ready, func() {
+		x.h.Dismiss(id)
+		if d.client == nil {
+			x.h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: "The " + d.lang + " language server didn't start: :LspInfo says why"})
+			return
+		}
+		if err := again(); err != nil {
+			x.h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: err.Error()})
+		}
+	})
+	return true
+}
+
+// waiting says a request is waiting on c once it has gone slowAnswer unanswered; call what it returns with the answer.
+func (x *lspPlugin) waiting(c *lsp.Client) (answered func()) {
+	slow := time.AfterFunc(slowAnswer, func() {
+		x.h.Notify(core.Notice{ID: "lsp.waiting", Severity: core.SevInfo, Key: true, Text: "Waiting for " + c.Status().Server + " (" + c.Status().State.String() + ")…"})
+	})
+	return func() {
+		if !slow.Stop() {
+			x.h.Dismiss("lsp.waiting")
+		}
+	}
+}
+
 // jump goes to a location as a vim jump in the current window, so ⌃O comes back.
 func (x *lspPlugin) jump(l lsp.Location) {
 	r := l.Range
@@ -209,6 +226,9 @@ func lineOf(x *lspPlugin, l lsp.Location) string {
 
 func (x *lspPlugin) references() error {
 	p, path, d := x.current()
+	if x.whenStarted(d, "references", x.references) {
+		return nil
+	}
 	if d == nil || d.client == nil {
 		return fmt.Errorf("no language server for this file")
 	}
@@ -219,7 +239,9 @@ func (x *lspPlugin) references() error {
 		name = name[:i]
 	}
 	at, c := lsp.Loc{Path: path, Pos: text.Pos(pos)}, d.client
+	answered := x.waiting(c)
 	async(x, func(ctx context.Context) ([]lsp.Location, error) { return c.References(ctx, at, true) }, func(ls []lsp.Location, err error) {
+		answered()
 		if err != nil || len(ls) == 0 {
 			text := "No references found"
 			if err != nil {
@@ -325,6 +347,9 @@ func (x *lspPlugin) peekView(c *ui.Ctx, pk *refPeek) {
 
 func (x *lspPlugin) startRename() error {
 	p, path, d := x.current()
+	if x.whenStarted(d, "rename", x.startRename) {
+		return nil
+	}
 	if d == nil || d.client == nil {
 		return fmt.Errorf("no language server for this file")
 	}
@@ -335,9 +360,21 @@ func (x *lspPlugin) startRename() error {
 	if i := strings.IndexFunc(word, func(r rune) bool { return !isWordRune(r) }); i >= 0 {
 		word = word[:i]
 	}
+	answered := x.waiting(c)
 	async(x, func(ctx context.Context) (*lsp.PrepareRename, error) { return c.PrepareRename(ctx, at) }, func(pr *lsp.PrepareRename, err error) {
+		answered()
+		switch {
+		case errors.Is(err, lsp.ErrNotSupported):
+			err = fmt.Errorf("%s can't rename", c.Status().Server)
+		case err == nil && pr == nil:
+			err = fmt.Errorf("%s can't rename what's under the cursor", c.Status().Server)
+		}
+		if err != nil {
+			x.h.Notify(core.Notice{ID: "lsp.rename", Severity: core.SevWarning, Key: true, Text: err.Error()})
+			return
+		}
 		old := word
-		if err == nil && pr != nil && pr.Placeholder != "" {
+		if pr.Placeholder != "" {
 			old = pr.Placeholder
 		}
 		x.rename = &renamePrompt{path: path, at: at.Pos, old: old, value: old, c: c}
@@ -450,19 +487,39 @@ func (x *lspPlugin) symbolSources(h plugin.Host) {
 		}
 	}
 	if file.ID != "" {
+		type answer struct {
+			path    string
+			version uint64
+			items   []registry.PickerItem
+			ok      bool // the server answered with symbols
+		}
+		var got answer
+		asking := false
 		mine := file
 		mine.Items = func(ctx registry.Ctx, q string) []registry.PickerItem {
-			_, path, d := x.current()
+			p, path, d := x.current()
 			if d == nil || d.client == nil {
 				return file.Items(ctx, q)
 			}
-			c := d.client
-			syms, err := c.DocumentSymbols(lspCtx(ctx), path)
-			if err != nil || len(syms) == 0 {
+			version := p.Buf().Version()
+			if got.path != path || got.version != version {
+				if !asking {
+					asking = true
+					c := d.client
+					async(x, func(ctx context.Context) ([]lsp.Symbol, error) { return c.DocumentSymbols(ctx, path) }, func(syms []lsp.Symbol, err error) {
+						asking = false
+						got = answer{path: path, version: version, items: x.symbolItems(syms), ok: err == nil && len(syms) > 0}
+						x.h.Redraw()
+					})
+				}
 				return file.Items(ctx, q)
 			}
-			return x.symbolItems(syms)
+			if !got.ok {
+				return file.Items(ctx, q)
+			}
+			return got.items
 		}
+		mine.Loading = func() bool { return asking }
 		mine.Source = "builtin:lsp"
 		x.add(h.Picker(mine))
 	}
@@ -472,6 +529,7 @@ func (x *lspPlugin) symbolSources(h plugin.Host) {
 			items []registry.PickerItem
 		}
 		var last result
+		asked := ""
 		mine := all
 		mine.Live = true
 		mine.Items = func(ctx registry.Ctx, q string) []registry.PickerItem {
@@ -482,26 +540,29 @@ func (x *lspPlugin) symbolSources(h plugin.Host) {
 			if last.q == q {
 				return last.items
 			}
-			var syms []lsp.Symbol
-			for _, c := range clients {
-				if s, err := c.WorkspaceSymbols(lspCtx(ctx), q); err == nil {
-					syms = append(syms, s...)
-				}
+			if asked != q {
+				asked = q
+				async(x, func(ctx context.Context) ([]lsp.Symbol, error) {
+					var syms []lsp.Symbol
+					for _, c := range clients {
+						if s, err := c.WorkspaceSymbols(ctx, q); err == nil {
+							syms = append(syms, s...)
+						}
+					}
+					return syms, nil
+				}, func(syms []lsp.Symbol, _ error) {
+					if asked == q {
+						last, asked = result{q, x.symbolItems(syms)}, ""
+					}
+					x.h.Redraw()
+				})
 			}
-			last = result{q, x.symbolItems(syms)}
-			return last.items
+			return all.Items(ctx, q)
 		}
+		mine.Loading = func() bool { return asked != "" }
 		mine.Source = "builtin:lsp"
 		x.add(h.Picker(mine))
 	}
-}
-
-// lspCtx is a picker's context, or a fresh one in tests that call a source without one.
-func lspCtx(ctx registry.Ctx) context.Context {
-	if ctx == nil {
-		return context.Background()
-	}
-	return ctx
 }
 
 func (x *lspPlugin) symbolItems(syms []lsp.Symbol) []registry.PickerItem {
@@ -529,10 +590,14 @@ func (x *lspPlugin) symbolItems(syms []lsp.Symbol) []registry.PickerItem {
 // calls lists the incoming or outgoing calls of the function under the cursor in the lsp.calls picker.
 func (x *lspPlugin) calls(ctx registry.Ctx, incoming bool) error {
 	p, path, d := x.current()
+	if x.whenStarted(d, "calls", func() error { return x.calls(ctx, incoming) }) {
+		return nil
+	}
 	if d == nil || d.client == nil {
 		return fmt.Errorf("no language server for this file")
 	}
 	at, c := lsp.Loc{Path: path, Pos: text.Pos(p.Cursor())}, d.client
+	answered := x.waiting(c)
 	async(x, func(ctx context.Context) ([]registry.PickerItem, error) {
 		items, err := c.PrepareCallHierarchy(ctx, at)
 		if err != nil || len(items) == 0 {
@@ -556,6 +621,7 @@ func (x *lspPlugin) calls(ctx registry.Ctx, incoming bool) error {
 		}
 		return out, err
 	}, func(items []registry.PickerItem, err error) {
+		answered()
 		if err != nil {
 			x.h.Notify(core.Notice{ID: "lsp.calls", Severity: core.SevWarning, Key: true, Text: err.Error()})
 			return

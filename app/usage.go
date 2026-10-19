@@ -354,7 +354,9 @@ func (x *statsPlugin) usagePage(c *ui.Ctx) {
 				if !read.IsZero() {
 					c.Text("read", "read "+agoText(now, read), monoFont(11, th.C(theme.FgFaint)))
 				}
-				if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Help: "agent/usage#burned"}) {
+				reading := x.reading.State()
+				if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Busy: reading.Phase == widget.Pending, BusyLabel: "Refreshing",
+					Help: "agent/usage#burned"}) {
 					x.run("usage.refresh", nil)
 				}
 				if widget.Button(c, "stats", "Stats", widget.ButtonOpts{Help: "agent/stats#page"}) {
@@ -366,7 +368,10 @@ func (x *statsPlugin) usagePage(c *ui.Ctx) {
 			})
 			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
-				if len(st.Usage) == 0 {
+				if err := x.reading.State().Err; err != nil {
+					c.Text("err", "Couldn't read every provider's windows: "+err.Error(), monoFont(11, th.C(theme.Warn)))
+				}
+				if len(st.Usage) == 0 && x.reading.State().Phase != widget.Pending {
 					note(c, "none", "No plan windows read yet: they're read at start and with each session's turns, or Refresh.")
 				}
 				if u, ok := x.usageAccount(); ok {
