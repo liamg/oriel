@@ -2,6 +2,7 @@ package gh_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/liamg/oriel/gh"
@@ -26,8 +27,8 @@ func TestReviewRequestReads(t *testing.T) {
 			}
 			d, err := api.PRDetails(ctx, acme, pr.Number)
 			want := gh.PRDetails{Title: "chore: bump deps", State: "open", Author: "priya", Base: "main", HeadSHA: "abc123", Additions: 12, Deletions: 4,
-				ChangedFiles: 2}
-			if err != nil || d != want {
+				ChangedFiles: 2, Head: "deps", URL: pr.URL}
+			if err != nil || !reflect.DeepEqual(d, want) {
 				t.Fatalf("PRDetails: %+v %v", d, err)
 			}
 			files, err := api.PRFiles(ctx, acme, pr.Number)

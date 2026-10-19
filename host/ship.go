@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -17,9 +18,10 @@ import (
 	"github.com/liamg/oriel/sandbox"
 )
 
-// The Ship page's side on the host (ui.md 18): each project's way from uncommitted work to a merged PR, read from
-// its worktree and GitHub, and the steps along it the user takes from the app. They run here, where the checkout and
-// the user's credentials are, with the sandbox's git guard in a sandboxed workspace.
+// The Ship page's side on the host (ui.md 18): each project's way from uncommitted work to a pushed branch, read from
+// its worktree, and the git steps along it the user takes from the app. They run here, where the checkout and the
+// user's credentials are, with the sandbox's git guard in a sandboxed workspace. The pull request is the app's, through
+// its code host (registry.CodeHost).
 
 // Ship is a project on its way to a merged pull request.
 type Ship struct {
@@ -27,7 +29,7 @@ type Ship struct {
 	Branch    string       `json:"branch,omitempty"`
 	Base      string       `json:"base,omitempty"`     // the branch it merges into: main
 	Remote    bool         `json:"remote,omitempty"`   // it has an origin to push to
-	GitHub    string       `json:"github,omitempty"`   // owner/name, when origin is on GitHub
+	Origin    string       `json:"origin,omitempty"`   // origin's URL
 	ReadOnly  bool         `json:"readOnly,omitempty"` // a pinned or read-only worktree, with nothing to ship
 	Files     []ShipFile   `json:"files,omitempty"`    // uncommitted
 	Behind    int          `json:"behind,omitempty"`   // commits on the base it lacks
@@ -36,9 +38,6 @@ type Ship struct {
 	Unpushed  []ShipCommit `json:"unpushed,omitempty"`
 	Pushed    bool         `json:"pushed,omitempty"`
 	Synced    time.Time    `json:"synced,omitzero"` // when it was last rebased onto its base from here
-	PR        *gh.PR       `json:"pr,omitempty"`
-	Checks    []gh.Check   `json:"checks,omitempty"`
-	FailLine  string       `json:"failLine,omitempty"` // what the first failing check's log says
 	// CommitDraft is the commit message drafted for it (Body), PRDraft the pull request's.
 	CommitDraft  Draft    `json:"commitDraft,omitzero"`
 	PRDraft      Draft    `json:"prDraft,omitzero"`
@@ -46,7 +45,6 @@ type Ship struct {
 	TemplateFile string   `json:"templateFile,omitempty"`
 	Owners       []string `json:"owners,omitempty"` // CODEOWNERS of what the branch changes
 	GitError     string   `json:"gitError,omitempty"`
-	GitHubError  string   `json:"githubError,omitempty"`
 }
 
 // ShipFile is an uncommitted file.
@@ -82,7 +80,7 @@ const DraftByYou = "you"
 // Empty says nothing was drafted.
 func (d Draft) Empty() bool { return strings.TrimSpace(d.Title+d.Body) == "" }
 
-// ShipReq reads a session's projects; Fresh asks GitHub again rather than answering from the last minute's.
+// ShipReq reads a session's projects; Fresh fetches first.
 type ShipReq struct {
 	Session core.SessionID `json:"session"`
 	Fresh   bool           `json:"fresh,omitempty"`
@@ -103,16 +101,6 @@ type ShipCommitReq struct {
 	Trailers []string       `json:"trailers,omitempty"` // a commit gate's, when committed past it
 }
 
-// PRReq raises a project's pull request, or edits the open one: its title and body, as a draft, the reviewers asked.
-type PRReq struct {
-	Session   core.SessionID `json:"session"`
-	Project   string         `json:"project"`
-	Title     string         `json:"title"`
-	Body      string         `json:"body"`
-	Draft     bool           `json:"draft,omitempty"`
-	Reviewers []string       `json:"reviewers,omitempty"`
-}
-
 // DraftReq saves a project's commit message (Kind "commit": Body) or PR draft (Kind "pr") as the user wrote it, or
 // with Drop clears it, so the agent drafts it again.
 type DraftReq struct {
@@ -124,10 +112,8 @@ type DraftReq struct {
 	Drop    bool           `json:"drop,omitempty"`
 }
 
-// shipTTL is how long a project's GitHub reading answers before it's asked again.
-const shipTTL = 30 * time.Second
-
-// shipState is what the host keeps between reads: GitHub's answers, and when each project was last synced.
+// shipState is what the host keeps between reads: each branch's PR on GitHub, for review mirroring, and when each
+// project was last synced.
 type shipState struct {
 	mu     sync.Mutex
 	github map[string]githubRead // by session/project/branch
@@ -135,12 +121,13 @@ type shipState struct {
 }
 
 type githubRead struct {
-	at       time.Time
-	pr       *gh.PR
-	checks   []gh.Check
-	failLine string
-	err      string
+	at  time.Time
+	pr  *gh.PR
+	err string
 }
+
+// githubTTL is how long a branch's PR answers before GitHub is asked again.
+const githubTTL = 30 * time.Second
 
 func shipKey(id core.SessionID, project string) string { return string(id) + "/" + project }
 
@@ -177,11 +164,37 @@ func directBranch(ctx context.Context, p core.Project, repo gitx.Repo) core.Proj
 }
 
 // github is the GitHub client for a checkout.
-func (w *Host) github(r gitx.Repo) gh.Client {
+func (w *Host) github(r gitx.Repo) gh.Client { return w.githubOn(r, "", "") }
+
+// githubOn is the GitHub client for a checkout, on a GitHub Enterprise server's hostname when given: the user's gh,
+// with token as its GH_TOKEN when one was found; without gh, GitHub's API with the token.
+func (w *Host) githubOn(r gitx.Repo, hostname, token string) gh.Client {
 	if w.opts.GitHub != nil {
 		return w.opts.GitHub(r.Dir, r.Env)
 	}
-	return gh.API{T: gh.CLI{Dir: r.Dir, Env: r.Env}}
+	enterprise := hostname != "" && !strings.EqualFold(hostname, "github.com")
+	if _, err := exec.LookPath("gh"); err == nil {
+		env := r.Env
+		if token != "" {
+			env = append(slices.Clone(env), map[bool]string{false: "GH_TOKEN=", true: "GH_ENTERPRISE_TOKEN="}[enterprise]+token)
+		}
+		return gh.API{T: gh.CLI{Dir: r.Dir, Env: env, Host: hostname}}
+	}
+	base := "https://api.github.com"
+	if enterprise {
+		base = "https://" + hostname + "/api/v3"
+	}
+	if token == "" {
+		return gh.API{T: noToken{}}
+	}
+	return gh.API{T: gh.HTTP{Base: base, Token: token}}
+}
+
+// noToken is GitHub with neither gh nor a token: every call is refused, as GitHub would refuse it.
+type noToken struct{}
+
+func (noToken) Do(context.Context, string, string, any, any) error {
+	return &gh.Error{Status: 401, Message: "gh isn't installed and no GitHub token is set"}
 }
 
 // ShipRead is every project of a session on its way to a PR.
@@ -218,12 +231,8 @@ func (w *Host) shipProject(ctx context.Context, se core.SessionState, p core.Pro
 	if se.Kind == core.KindDirect {
 		s.Branch = directBranch(ctx, p, repo).Branch
 	}
-	remote := repo.RemoteURL(ctx)
-	s.Remote = remote != ""
-	ghRepo, onGitHub := gh.ParseRepo(remote)
-	if onGitHub {
-		s.GitHub = ghRepo.String()
-	}
+	s.Origin = repo.RemoteURL(ctx)
+	s.Remote = s.Origin != ""
 	if s.ReadOnly {
 		return s
 	}
@@ -263,10 +272,6 @@ func (w *Host) shipProject(ctx context.Context, se core.SessionState, p core.Pro
 	st.mu.Lock()
 	s.Synced = st.synced[shipKey(se.ID, p.Name)]
 	st.mu.Unlock()
-	if onGitHub && s.Branch != "" {
-		g := w.githubFor(ctx, se.ID, p.Name, repo, ghRepo, s.Branch, fresh)
-		s.PR, s.Checks, s.FailLine, s.GitHubError = g.pr, g.checks, g.failLine, g.err
-	}
 	return s
 }
 
@@ -274,55 +279,6 @@ func (w *Host) shipProject(ctx context.Context, se core.SessionState, p core.Pro
 func (w *Host) shipMu() *shipState {
 	w.shipOnce.Do(func() { w.ship = &shipState{github: map[string]githubRead{}, synced: map[string]time.Time{}} })
 	return w.ship
-}
-
-// githubFor is a branch's PR and checks: the last minute's reading unless fresh.
-func (w *Host) githubFor(ctx context.Context, id core.SessionID, project string, repo gitx.Repo, ghRepo gh.Repo, branch string, fresh bool) githubRead {
-	st := w.shipMu()
-	key := shipKey(id, project) + "/" + branch
-	st.mu.Lock()
-	g, ok := st.github[key]
-	st.mu.Unlock()
-	if ok && !fresh && w.opts.Now().Sub(g.at) < shipTTL {
-		return g
-	}
-	g = githubRead{at: w.opts.Now()}
-	c := w.github(repo)
-	pr, err := c.PRForBranch(ctx, ghRepo, branch)
-	if err != nil {
-		g.err = err.Error()
-	} else {
-		g.pr = pr
-		if pr != nil {
-			if g.checks, err = c.Checks(ctx, ghRepo, branch); err != nil {
-				g.err = err.Error()
-			}
-			for _, ch := range g.checks {
-				if ch.State() == gh.CheckFail && ch.Actions {
-					if log, err := c.Log(ctx, ghRepo, ch); err == nil {
-						g.failLine = gh.FailLine(log)
-					}
-					break
-				}
-			}
-		}
-	}
-	st.mu.Lock()
-	st.github[key] = g
-	st.mu.Unlock()
-	return g
-}
-
-// forget drops a project's GitHub reading, so the next read asks again.
-func (w *Host) forget(id core.SessionID, project string) {
-	st := w.shipMu()
-	st.mu.Lock()
-	defer st.mu.Unlock()
-	for k := range st.github {
-		if strings.HasPrefix(k, shipKey(id, project)+"/") {
-			delete(st.github, k)
-		}
-	}
 }
 
 // ShipCommit commits a project's files with the user's git identity, drops the commit draft it used, and returns the
@@ -359,7 +315,6 @@ func (w *Host) ShipPush(ctx context.Context, r ShipRef) (err error) {
 	if err != nil {
 		return err
 	}
-	defer w.forget(r.Session, p.Name)
 	return w.keyed(ctx, r.Session, "git push", p.Name, func(ctx context.Context) error { return repo.Push(ctx, branch) })
 }
 
@@ -391,52 +346,6 @@ func (w *Host) ShipSync(ctx context.Context, r ShipRef) (err error) {
 	return nil
 }
 
-// ShipPR raises a project's pull request from its pushed branch, or edits the open one, asks its reviewers, and
-// cross-links every PR of the session in their merge order (the session's project order).
-func (w *Host) ShipPR(ctx context.Context, r PRReq) (_ *gh.PR, err error) {
-	defer w.recover("ShipPR", &err)
-	se, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
-	if err != nil {
-		return nil, err
-	}
-	branch, err := ownBranch(p)
-	if err != nil {
-		return nil, err
-	}
-	ghRepo, ok := gh.ParseRepo(repo.RemoteURL(ctx))
-	if !ok {
-		return nil, fmt.Errorf("%s's origin isn't on GitHub", p.Name)
-	}
-	if strings.TrimSpace(r.Title) == "" {
-		return nil, errors.New("a pull request needs a title")
-	}
-	c := w.github(repo)
-	defer w.forget(r.Session, p.Name)
-	pr, err := c.PRForBranch(ctx, ghRepo, branch)
-	if err != nil {
-		return nil, err
-	}
-	if pr.Open() {
-		if pr, err = c.EditPR(ctx, ghRepo, pr.Number, r.Title, r.Body); err != nil {
-			return nil, err
-		}
-	} else {
-		base := strings.TrimPrefix(repo.FlightBase(ctx, p.Base), "origin/")
-		if base == "" {
-			return nil, fmt.Errorf("%s has no base branch for the PR", p.Name)
-		}
-		if pr, err = c.CreatePR(ctx, ghRepo, gh.NewPR{Title: r.Title, Body: r.Body, Head: branch, Base: base, Draft: r.Draft}); err != nil {
-			return nil, err
-		}
-	}
-	if len(r.Reviewers) > 0 {
-		if err := c.RequestReviewers(ctx, ghRepo, pr.Number, r.Reviewers); err != nil {
-			return pr, err
-		}
-	}
-	return pr, w.crossLink(ctx, se)
-}
-
 // RenameReq renames a project's branch.
 type RenameReq struct {
 	Session core.SessionID `json:"session"`
@@ -444,7 +353,7 @@ type RenameReq struct {
 	Name    string         `json:"name"`
 }
 
-// ShipRename renames a project's branch, unless its PR is open on it: the PR would be left on the old one.
+// ShipRename renames a project's branch. The app refuses first when its PR is open on it.
 func (w *Host) ShipRename(ctx context.Context, r RenameReq) (err error) {
 	defer w.recover("ShipRename", &err)
 	se, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
@@ -459,17 +368,11 @@ func (w *Host) ShipRename(ctx context.Context, r RenameReq) (err error) {
 	if name == old {
 		return nil
 	}
-	if ghRepo, ok := gh.ParseRepo(repo.RemoteURL(ctx)); ok {
-		if g := w.githubFor(ctx, se.ID, p.Name, repo, ghRepo, old, true); g.pr.Open() {
-			return fmt.Errorf("%s's PR #%d is open on %s: renaming would leave it behind", p.Name, g.pr.Number, old)
-		}
-	}
 	if err := w.keyed(ctx, r.Session, "git branch -m "+old+" "+name, p.Name, func(ctx context.Context) error {
 		return repo.RenameBranch(ctx, old, name)
 	}); err != nil {
 		return err
 	}
-	defer w.forget(r.Session, p.Name)
 	if se.Kind == core.KindDirect {
 		return nil
 	}
@@ -494,103 +397,6 @@ func (w *Host) ShipRename(ctx context.Context, r RenameReq) (err error) {
 		branch = name
 	}
 	return w.emit(core.ProjectsChanged{ID: se.ID, Branch: branch, Projects: projects, Past: se.Past, Started: se.Started})
-}
-
-// ShipReady takes a project's draft PR out of draft.
-func (w *Host) ShipReady(ctx context.Context, r ShipRef) (err error) {
-	defer w.recover("ShipReady", &err)
-	_, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
-	if err != nil {
-		return err
-	}
-	ghRepo, ok := gh.ParseRepo(repo.RemoteURL(ctx))
-	if !ok {
-		return fmt.Errorf("%s's origin isn't on GitHub", p.Name)
-	}
-	c := w.github(repo)
-	defer w.forget(r.Session, p.Name)
-	pr, err := c.PRForBranch(ctx, ghRepo, p.Branch)
-	if err != nil {
-		return err
-	}
-	if !pr.Open() {
-		return fmt.Errorf("%s has no open pull request", p.Name)
-	}
-	return c.MarkReady(ctx, ghRepo, pr)
-}
-
-// Cross-linked PRs carry a block naming each other, between these markers, kept up to date as each is raised.
-const (
-	linkStart = "<!-- oriel:linked-prs -->"
-	linkEnd   = "<!-- /oriel:linked-prs -->"
-)
-
-// crossLink writes the block into every open PR of a session with more than one, in the projects' order.
-func (w *Host) crossLink(ctx context.Context, se core.SessionState) error {
-	type linked struct {
-		c    gh.Client
-		repo gh.Repo
-		pr   *gh.PR
-	}
-	var prs []linked
-	for _, p := range se.Projects {
-		if p.ReadOnly || p.Detached || p.Branch == "" {
-			continue
-		}
-		env, err := sandbox.GitEnv(p.Dir)
-		if err != nil {
-			continue
-		}
-		repo := gitx.Repo{Dir: p.Dir, Env: env}
-		ghRepo, ok := gh.ParseRepo(repo.RemoteURL(ctx))
-		if !ok {
-			continue
-		}
-		c := w.github(repo)
-		pr, err := c.PRForBranch(ctx, ghRepo, p.Branch)
-		if err != nil {
-			return err
-		}
-		if pr.Open() {
-			prs = append(prs, linked{c, ghRepo, pr})
-		}
-	}
-	if len(prs) < 2 {
-		return nil
-	}
-	for i, l := range prs {
-		var b strings.Builder
-		b.WriteString(linkStart + "\n**Ships with** (merge in this order):\n")
-		for j, o := range prs {
-			fmt.Fprintf(&b, "%d. %s#%d", j+1, o.repo, o.pr.Number)
-			if j == i {
-				b.WriteString(" (this PR)")
-			}
-			b.WriteString("\n")
-		}
-		b.WriteString(linkEnd)
-		body := WithLinks(l.pr.Body, b.String())
-		if body == l.pr.Body {
-			continue
-		}
-		if _, err := l.c.EditPR(ctx, l.repo, l.pr.Number, l.pr.Title, body); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// WithLinks is body with its cross-linked PRs block replaced by block, or block added at its end.
-func WithLinks(body, block string) string {
-	if i := strings.Index(body, linkStart); i >= 0 {
-		if j := strings.Index(body[i:], linkEnd); j >= 0 {
-			return body[:i] + block + body[i+j+len(linkEnd):]
-		}
-	}
-	if strings.TrimSpace(body) == "" {
-		return block
-	}
-	return strings.TrimRight(body, "\n") + "\n\n" + block
 }
 
 // draftPath is where a project's commit message or PR draft is kept: "# title\n\nbody" for a PR.

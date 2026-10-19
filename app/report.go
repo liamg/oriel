@@ -29,6 +29,7 @@ type shell struct {
 	cfg     Config
 	events  *eventTail
 	desktop Desktop
+	sites   *codeSites // where remotes and pull requests are hosted
 	layout  *layoutPlugin
 	poke    func() // asks the loop for a frame
 	keys    *registry.Resolver
@@ -55,6 +56,7 @@ type shell struct {
 	tests       *testsPlugin
 	explain     *explainPlugin
 	sessions    *sessions                    // the sessions; nil while it isn't active
+	ship        *shipPlugin                  // the Ship page; nil while it isn't active
 	stats       *statsPlugin                 // what the sessions cost
 	hud         *hudPlugin                   // the HUD, and what every slot's indicators last built
 	inbox       *inboxPlugin                 // every card waiting on you, and those answered

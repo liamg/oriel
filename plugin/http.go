@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,7 +29,8 @@ type HTTPRequest struct {
 	Headers map[string]string `json:"headers"`
 	Body    string            `json:"body"`
 	Auth    string            `json:"auth"`
-	// AuthScheme goes before Auth's value: "Bearer" when "", none when "none" (Linear's personal API keys).
+	// AuthScheme goes before Auth's value: "Bearer" when "", none when "none" (Linear's personal API keys), "token" for Gitea; "basic" is
+	// HTTP Basic with the secret as the password (Azure DevOps' personal access tokens).
 	AuthScheme string  `json:"auth_scheme"`
 	URLSecret  string  `json:"url_secret"`
 	Timeout    float64 `json:"timeout"` // seconds; 30 by default
@@ -140,6 +142,8 @@ func Fetch(ctx context.Context, n Network, p Caller, r HTTPRequest) (*HTTPRespon
 		case "":
 			v = "Bearer " + v
 		case "none":
+		case "basic":
+			v = "Basic " + base64.StdEncoding.EncodeToString([]byte(":"+v))
 		default:
 			v = r.AuthScheme + " " + v
 		}

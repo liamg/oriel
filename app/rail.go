@@ -665,7 +665,7 @@ func (r *rail) header(c *ui.Ctx, w here, row sideRow) {
 func (r *rail) entryNote(c *ui.Ctx, row sideRow, size float32) {
 	th := c.Theme()
 	if n := badge(row.entry); n > 0 {
-		widget.Badge(c, "badge", n, widget.BadgeOpts{Fill: th.C(tRailBadge), Ink: th.C(tRailBadgeF), Size: size})
+		widget.Badge(c, "badge", n, widget.BadgeOpts{Fill: badgeFill(th, row.entry), Ink: th.C(tRailBadgeF), Size: size})
 		return
 	}
 	if note := noteOf(row); note != "" {
@@ -750,7 +750,7 @@ func (r *rail) narrowRow(c *ui.Ctx, w here, row sideRow) {
 				entryIcon(c, row.entry, 16, col)
 				if n := badge(row.entry); n > 0 {
 					c.Box("badge", ui.Style{Float: &ui.Float{At: render.Point{X: 1}, Self: render.Point{X: 1}, Offset: render.Point{X: -2, Y: 3}}}, func(c *ui.Ctx) {
-						widget.Badge(c, "pill", n, widget.BadgeOpts{Fill: th.C(tRailBadge), Ink: th.C(tRailBadgeF), Size: 8.5})
+						widget.Badge(c, "pill", n, widget.BadgeOpts{Fill: badgeFill(th, row.entry), Ink: th.C(tRailBadgeF), Size: 8.5})
 					})
 				}
 			})
@@ -784,6 +784,11 @@ func entryIcon(c *ui.Ctx, e registry.RailEntry, size float32, tone render.Color)
 		return
 	}
 	icon(c, "icon", e.Icon, size, tone)
+}
+
+// badgeFill is the colour of an entry's pill: its BadgeTone, else rail.badge.
+func badgeFill(th *theme.Resolved, e registry.RailEntry) render.Color {
+	return tokenColour(th, e.BadgeTone, th.C(tRailBadge))
 }
 
 func badge(e registry.RailEntry) int {

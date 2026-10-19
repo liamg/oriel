@@ -10,7 +10,6 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -222,14 +221,14 @@ L.hud.indicator("next-meeting", { slot = "hud.today" }, L.ui.row{
 	sh := s.ship()
 	t0 := statsNow.Add(-4 * time.Minute)
 	sh.mu.Lock()
-	sh.reports[r.ids["pricing-rounding"]] = &shipReport{ships: []host.Ship{
-		{Project: "pricing", GitHub: "acme/pricing", PR: &gh.PR{Number: 4421, State: "open"},
-			Checks: []gh.Check{{Name: "lint", Status: "completed", Conclusion: "success", Started: t0, Completed: t0.Add(time.Minute)},
-				{Name: "e2e", Status: "in_progress", Started: t0}}},
-		{Project: "billing-export", GitHub: "acme/billing-export", PR: &gh.PR{Number: 4419, State: "open"},
-			Checks: []gh.Check{{Name: "e2e", Status: "completed", Conclusion: "failure", Started: t0, Completed: t0.Add(time.Minute)}}},
-		{Project: "dash-filters", GitHub: "acme/dash-filters", PR: &gh.PR{Number: 4417, State: "open"},
-			Checks: []gh.Check{{Name: "build", Status: "completed", Conclusion: "success", Started: t0, Completed: t0.Add(time.Minute)}}},
+	sh.reports[r.ids["pricing-rounding"]] = &shipReport{ships: []shipRead{
+		{Ship: host.Ship{Project: "pricing"}, Code: githubCode(t, sh.h), Repo: "acme/pricing", PR: &registry.PR{Number: 4421, State: "open"},
+			Checks: []registry.Check{{Name: "lint", State: registry.CheckOK, Started: t0, Completed: t0.Add(time.Minute)},
+				{Name: "e2e", State: registry.CheckRunning, Started: t0}}},
+		{Ship: host.Ship{Project: "billing-export"}, Code: githubCode(t, sh.h), Repo: "acme/billing-export", PR: &registry.PR{Number: 4419, State: "open"},
+			Checks: []registry.Check{{Name: "e2e", State: registry.CheckFailed, Started: t0, Completed: t0.Add(time.Minute)}}},
+		{Ship: host.Ship{Project: "dash-filters"}, Code: githubCode(t, sh.h), Repo: "acme/dash-filters", PR: &registry.PR{Number: 4417, State: "open"},
+			Checks: []registry.Check{{Name: "build", State: registry.CheckOK, Started: t0, Completed: t0.Add(time.Minute)}}},
 	}}
 	sh.mu.Unlock()
 	s.hold(render.ModAlt, 300*time.Millisecond)

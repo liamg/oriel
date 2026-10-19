@@ -195,7 +195,7 @@ func TestShowcaseP6GitHub(t *testing.T) {
 		st := s.store.State()
 		sess, _ := st.Session(se.ID)
 		for _, th := range sess.Snapshot().Threads {
-			if th.Origin == core.OriginGitHub && th.GitHub.Root == root.ID {
+			if th.Origin == core.OriginGitHub && th.Hosted.Root == root.ID {
 				tid = th.ID
 			}
 		}

@@ -156,6 +156,11 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 78. [PL-10](PL-10-calendar-next-meeting-tat-ical-url-or-macos-even.md): Calendar: next meeting indicator (iCal URL or macOS EventKit) · after PL-2
 79. [PL-11](PL-11-prompts-page-editable-prompt-packs-coding-style-.md): Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation · after AI-2
 80. [RV-8](RV-8-tours-reader-7-kinds-export.md): Tours: reader, 7 kinds, export · after RV-5
+- [RV-9](RV-9-reviews-page-prs-waiting-on-your-review.md): Reviews page: PRs waiting on your review, GitHub built in · after RV-4, PL-8
+- [RV-10](RV-10-review-kind-made-host-agnostic.md): Review kind made host-agnostic: the source says where to fetch · after RV-9
+- [RV-11](RV-11-gitlab-review-source-plugin.md): GitLab code host plugin: review, raise and merge · after RV-13, PL-2
+- [RV-12](RV-12-azure-devops-review-source-plugin.md): Azure DevOps code host plugin: review, raise and merge · after RV-13, PL-2
+- [RV-13](RV-13-code-hosts-raise-and-merge-with-a-guard.md): Code hosts: raise and merge on any host, Merge with a guard · after RV-9, FG-6
 81. [SH-7](SH-7-mission-control-k-with-live-terminals-and-inline.md): Mission control (⌘⇧K) with live terminals and inline asks · after SH-2, AI-1
 82. [SH-8](SH-8-hud-drawer-hold-and-tats-in-slots.md): HUD drawer (hold ⌥) and indicators in slots · after FW-6, FW-2
 83. [SH-9](SH-9-inbox-and-interrupt-cards-agentbus-network-gatew.md): Inbox and interrupt cards (agentbus, network, gateway, security key) · after FW-6

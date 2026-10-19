@@ -1,6 +1,6 @@
 ---
 id: git/ship
-covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename]
+covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename, ship.merge, ship.browse, ship.merge_method, code.setup, code.hosts, code.api]
 related: [shell/rail, agent/requests, files/explorer]
 ---
 
@@ -9,7 +9,8 @@ related: [shell/rail, agent/requests, files/explorer]
 Each project's way from uncommitted work to a merged pull request: **uncommitted → behind its base → unpushed → PR →
 checks**. **Ship** in the sidebar is the session's page, every project side by side; a project's **Pull request**
 panel is the same checklist, a line a step, in the dock. Every step runs with your own
-git and gh: the agent can draft a commit or a PR, never send one.
+git and your code host's account: the agent can draft a commit or a PR, never send one. The PR's steps work on any code
+host a plugin brings (GitHub is built in; GitLab and Azure DevOps are bundled), in its own words: **Raise MR** on GitLab.
 
 ## The page {#page}
 
@@ -73,8 +74,30 @@ order, and each PR's description lists the others.
 
 ## The PR {#pr}
 
-The PR's number, title and state, its reviewers, **Ready for review** for a draft, and **Open on GitHub ↗**. Plugins add
-buttons beside them (`oriel.ship.action`), such as one that asks your team's chat to take a look.
+The PR's number, title and state, its reviewers, **Ready for review** for a draft, **Merge…**, and **Open on GitHub ↗**
+(or the project's code host). Plugins add buttons beside them (`oriel.ship.action`), such as one that asks your team's
+chat to take a look.
+
+## Merge {#merge}
+
+**Merge…** first shows what stands in the way: review comments not resolved and the session's own open threads, each
+counted ("2 reviewer comments, 1 Oriel thread unresolved"), changes still asked for, failing or running checks, a draft,
+conflicts, behind its base, missing required reviews, and a PR before it in the merge order. **Show** opens one.
+**Continue** merges anyway, **Cancel** doesn't; where the host would refuse (a conflict, a draft, required reviews),
+Continue is off. With nothing in the way it's **Merge**. The method is `ship.merge_method` when the repo allows it, else
+the repo's own default, else squash, and can be changed for this merge; **Delete the branch** deletes it on the host
+after. It merges the commit the dialog showed: a push since makes the host refuse it. Plugins add reasons with the
+`PrMerge` hook. The agent can't merge.
+
+## Code hosts {#hosts}
+
+A project's PR goes to the code host its origin is on. github.com, gitlab.com and dev.azure.com are known by name. For
+a server of your own, Oriel looks in turn at `code.hosts` (hostname → host), the servers gh and glab are logged into,
+the URL's shape (`/_git/` is Azure DevOps), and then asks the server itself, once and without a token. If none of those
+tells, **Set up…** on the PR step asks you. **Set up…** (`code.setup`) is also where a server's token goes: the API URL
+(`code.api` when it isn't the usual one), the token with the host's instructions and **Create a token ↗**, kept as
+its own secret (`GITLAB_TOKEN:git.acme.corp`) and sent only to that server, by that host's plugin. It's asked once per
+server and used for every repo on it. **None of these** leaves the server's PR steps off.
 
 ## Checks {#checks}
 

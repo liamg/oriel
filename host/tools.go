@@ -126,7 +126,7 @@ func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, err
 	}
 	h.mu.Unlock()
 	c := core.Comment{ID: newID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body, Time: h.w.opts.Now().UTC(),
-		Progress: working, Model: modelLabel(se.Agent), Draft: t.Origin == core.OriginGitHub && !working}
+		Progress: working, Model: modelLabel(se.Agent), Draft: t.Hosted != nil && !working}
 	if !working {
 		c.Activity = activity
 		c.Evidence, c.Unbacked = evidence(se, body, runs)

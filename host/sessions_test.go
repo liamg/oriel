@@ -183,6 +183,36 @@ func TestReviewChecksOutThePRHead(t *testing.T) {
 	}
 }
 
+// api.md, "Checkout": a source that isn't GitHub names the repo by a substring of its remote and the refspec to fetch;
+// the host fetches what it's given ("Keeps host free of any provider").
+func TestReviewChecksOutTheSourcesRef(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	origin := r.repo
+	origin.Git("checkout", "-q", "-b", "feature")
+	origin.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() { /* mr */ }\n"})
+	origin.Commit("Bob", "the MR")
+	head := strings.TrimSpace(origin.Git("rev-parse", "HEAD"))
+	origin.Git("update-ref", "refs/merge-requests/57/head", head)
+	origin.Git("checkout", "-q", "main")
+	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
+	clone.Git("clone", "-q", origin.Dir, ".")
+	if _, _, err := r.w.repos.add(ctx, clone.Dir, core.RepoAdded); err != nil {
+		t.Fatal(err)
+	}
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://gitlab.com/group/gateway/-/merge_requests/57",
+		PRRemote: filepath.Base(origin.Dir), PRRef: "merge-requests/57/head"})
+	se := r.session(id)
+	p := se.Projects[0]
+	if !p.ReadOnly || !p.Detached || p.Commit != head || p.Repo != clone.Dir {
+		t.Fatalf("review project = %+v, want detached at %s in %s", p, head, clone.Dir)
+	}
+	if _, err := r.w.Start(ctx, core.SessionSpec{Kind: core.KindReview, PR: "https://gitlab.com/group/other/-/merge_requests/1",
+		PRRemote: "group/other", PRRef: "merge-requests/1/head"}); err == nil || !strings.Contains(err.Error(), "group/other") {
+		t.Errorf("a remote no repo has: %v", err)
+	}
+}
+
 func TestNewRepoInitsAndRegisters(t *testing.T) {
 	r := newRig(t)
 	parent := t.TempDir()

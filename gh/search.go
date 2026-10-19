@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	prURL = regexp.MustCompile(`github\.com[/:]([^/]+)/([^/]+?)(?:\.git)?/pull/(\d+)`)
+	prURL = regexp.MustCompile(`^(?:https?://)?(?:[^@/]+@)?[^/:]+[/:]([^/]+)/([^/]+?)(?:\.git)?/pull/(\d+)`)
 	prKey = regexp.MustCompile(`^([\w.-]+)/([\w.-]+)#(\d+)$`)
 )
 

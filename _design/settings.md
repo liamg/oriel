@@ -134,6 +134,13 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `review.ai.model` | the model AI reviews run on; empty: the reviewer's default | app | | RV-3 |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | | RV-4 |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | | RV-4 |
+| `reviews.poll` | `5m`: how often every review source is asked for the pull requests waiting on your review | app | | RV-9 |
+| `reviews.count_teams` | `true`: a review asked of a team you're on counts toward the Reviews pill | app | | RV-9 |
+| `reviews.notify` | `true`: a notice when someone asks for your review | app | | RV-9 |
+| `code.hosts` | `{}`: which code host a self-hosted server is, by hostname (`gitlab`, `github`, `azure`, `none`); filled in as Oriel finds out or asks; user and project | app | | RV-13 |
+| `code.trusted_users` | `[]`: logins on a code host other than GitHub whose review comments the agent may read, beside the repo's members | app | | RV-13 |
+| `code.api` | `{}`: a self-hosted server's API URL, by hostname, where it isn't the host's usual one | app | | RV-13 |
+| `ship.merge_method` | empty: how Merge… merges, `squash`, `merge` or `rebase` when the repo allows it; empty is the repo's own default, else squash; user and project | app | | RV-13 |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |
 | `plugins` | `{}`: the installed plugins by id, a table (catalog.md, `[plugins]`); user and project | app | | PL-20 |
 | `registry.sources` | `["liamg/oriel-plugins"]`: the plugin registries in order; an id in more than one comes from the first | app | | PL-21 |

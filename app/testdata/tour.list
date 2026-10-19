@@ -74,27 +74,34 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #4f4a40
   path 2 segments stroke 1.25 #4f4a40
   text "Repos" @33,326.30524 #4f4a40 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  text "Reviews" @33,349.30524 #b3ab99 Inter 12
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Stats" @33,349.30524 #b3ab99 Inter 12
+  text "Stats" @33,372.30524 #b3ab99 Inter 12
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Usage" @33,372.30524 #b3ab99 Inter 12
+  text "Usage" @33,395.30524 #b3ab99 Inter 12
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 3 segments stroke 1.25 #7c7566
-  text "Jobs" @33,395.30524 #b3ab99 Inter 12
+  text "Jobs" @33,418.30524 #b3ab99 Inter 12
   path 6 segments fill #060606
   path 6 segments stroke 1.1374999 #ffd23f
-  effect glow 16.3875,412.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
+  effect glow 16.3875,435.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 19.55625,412.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
+  effect glow 19.55625,435.23376 1.0562496x2.9249878 blur 1.625 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
-  text "Ori" @33,418.30524 #b3ab99 Inter 12
+  text "Ori" @33,441.30524 #b3ab99 Inter 12
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -105,7 +112,7 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  text "Settings" @33,441.30524 #b3ab99 Inter 12
+  text "Settings" @33,464.30524 #b3ab99 Inter 12
 pop
 rect 223,38 1x936 fill #24221d
 rect 224,38 1376x936 fill #060606

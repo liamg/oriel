@@ -69,14 +69,14 @@ func TestGitHubReviewMirror(t *testing.T) {
 	if len(ts) != 2 {
 		t.Fatalf("%d GitHub threads: %+v", len(ts), ts)
 	}
-	review := ts[slices.IndexFunc(ts, func(t core.Thread) bool { return t.GitHub.Root != 0 })]
+	review := ts[slices.IndexFunc(ts, func(t core.Thread) bool { return t.Hosted.Root != 0 })]
 	if a := review.Anchor; a == nil || a.File != "round.go" || a.Line != 4 || a.Project != "pricing" || a.Text != "\treturn 2" {
 		t.Errorf("anchor %+v", review.Anchor)
 	}
-	if g := review.GitHub; g.Reviewer != "priya-k" || g.State != gh.ReviewChangesRequested || g.Root != root.ID || g.PR != pr.Number {
+	if g := review.Hosted; g.Reviewer != "priya-k" || g.State != gh.ReviewChangesRequested || g.Root != root.ID || g.PR != pr.Number {
 		t.Errorf("github %+v", g)
 	}
-	if c := review.Comments[0]; c.Author != core.AuthorGitHub || c.Name != "priya-k" || c.GitHubID != root.ID || c.Redacted {
+	if c := review.Comments[0]; c.Author != core.AuthorHost || c.Name != "priya-k" || c.GitHubID != root.ID || c.Redacted {
 		t.Errorf("reviewer's comment %+v", c)
 	}
 

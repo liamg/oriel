@@ -139,18 +139,22 @@ func (x *ticketsPlugin) askKey(ctx registry.Ctx, name string) error {
 	return fmt.Errorf("no ticket tracker %q takes a key", name)
 }
 
-// ticketSession is the session to continue a ticket in, rather than start another: one whose ticket is key, a live
-// one before an archived one, then the newest.
+// ticketSession is the session to continue a ticket in, rather than start another: one whose ticket is key.
 func ticketSession(h plugin.Host, key string) (core.Session, bool) {
 	key = strings.TrimSpace(key)
 	if key == "" {
 		return nil, false
 	}
+	return newestSession(h, func(st core.SessionState) bool { return strings.EqualFold(strings.TrimSpace(st.Ticket), key) })
+}
+
+// newestSession is, of the sessions match takes, a live one before an archived one, then the newest.
+func newestSession(h plugin.Host, match func(core.SessionState) bool) (core.Session, bool) {
 	var best core.Session
 	var bestSt core.SessionState
 	for _, se := range h.Sessions() {
 		st := se.Snapshot()
-		if !strings.EqualFold(strings.TrimSpace(st.Ticket), key) {
+		if !match(st) {
 			continue
 		}
 		if best == nil || bestSt.Archived && !st.Archived || bestSt.Archived == st.Archived && !st.Created.Before(bestSt.Created) {

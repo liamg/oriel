@@ -13,6 +13,8 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -58,6 +60,10 @@ func newHostWith(t *testing.T, o host.Options, fakes ...*agenttest.Fake) *localH
 	o.Packs = func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }
 	if o.Load == nil {
 		o.Load = steadyLoad
+	}
+	if o.GitHub == nil {
+		hub := ghtest.New(t) // never the user's own gh
+		o.GitHub = func(string, []string) gh.Client { return hub.Client() }
 	}
 	w, err := host.New(o)
 	if err != nil {

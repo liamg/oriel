@@ -194,7 +194,7 @@ func (r Root) Exec(argv []string, opts script.Table) (any, error) {
 		if err != nil {
 			msg = err.Error()
 		}
-		r.a.Host.Do(func() { r.a.VM.Call(done, out, msg) })
+		r.a.Host.Do(func() { r.a.later(done, out, msg) })
 	}()
 	return nil, nil
 }

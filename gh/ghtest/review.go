@@ -65,7 +65,7 @@ func (s *Server) AddReview(repo string, number int, r gh.Review) gh.Review {
 		r.Association = "NONE"
 	}
 	r.URL = fmt.Sprintf("https://github.com/%s/pull/%d#pullrequestreview-%d", repo, number, r.ID)
-	s.reviews[prKey(repo, number)] = append(s.reviews[prKey(repo, number)], r)
+	s.reviewed(repo, number, &r)
 	return r
 }
 
@@ -216,7 +216,7 @@ func (s *Server) listReviews(w http.ResponseWriter, r *http.Request) {
 	out := []map[string]any{}
 	for _, rv := range s.reviews[prKey(repoOf(r), num(r))] {
 		out = append(out, map[string]any{"id": rv.ID, "user": user(rv.User), "author_association": rv.Association, "state": rv.State, "body": rv.Body,
-			"html_url": rv.URL, "submitted_at": rv.Submitted})
+			"html_url": rv.URL, "submitted_at": rv.Submitted, "commit_id": rv.Commit})
 	}
 	reply(w, 200, out)
 }

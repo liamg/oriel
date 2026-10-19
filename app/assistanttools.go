@@ -71,8 +71,6 @@ func (x *assistantPlugin) tools() []registry.AgentTool {
 			Desc: "The registered repositories: name, path and remote."},
 		{Name: "my_prs", ReadOnly: true, Reads: "github", Run: x.toolPRs(gh.SearchMine),
 			Desc: "The user's open pull requests across GitHub: number, title, repo, url, draft, when last updated, and the session on it if there is one."},
-		{Name: "review_requests", ReadOnly: true, Reads: "github", Run: x.toolPRs(gh.SearchReview),
-			Desc: "Pull requests on GitHub waiting on the user's review: number, title, repo, url, author, when last updated, and the session on it if there is one."},
 		{Name: "usage", ReadOnly: true, Reads: "usage", Run: x.toolUsage,
 			Desc: "The user's plan usage for each agent and account: how much of each limit window is used and when it resets."},
 		{Name: "where", ReadOnly: true, Reads: "editor", Run: x.toolWhere,

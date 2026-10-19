@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -455,13 +454,13 @@ func (x *shipPlugin) ciRows(now time.Time) []ciRow {
 			done := 0
 			var started time.Time
 			for _, ch := range s.Checks {
-				switch ch.State() {
-				case gh.CheckFail:
+				switch ch.State {
+				case registry.CheckFailed:
 					if row.note == "" {
 						row.note = ch.Name + " ✕"
 					}
 					done++
-				case gh.CheckPending:
+				case registry.CheckRunning, registry.CheckQueued:
 					if !ch.Started.IsZero() && (started.IsZero() || ch.Started.Before(started)) {
 						started = ch.Started
 					}
@@ -470,12 +469,12 @@ func (x *shipPlugin) ciRows(now time.Time) []ciRow {
 				}
 			}
 			switch row.state {
-			case gh.CheckPending:
+			case registry.CheckRunning:
 				row.note = fmt.Sprintf("%d/%d", done, len(s.Checks))
 				if !started.IsZero() {
 					row.note += " · " + strings.ReplaceAll(hm(now.Sub(started)), " ", "")
 				}
-			case gh.CheckPass:
+			case registry.CheckOK:
 				row.note = "passed"
 			case "":
 				row.note = "no checks"
@@ -484,7 +483,7 @@ func (x *shipPlugin) ciRows(now time.Time) []ciRow {
 		}
 	}
 	x.mu.Unlock()
-	rank := map[string]int{gh.CheckFail: 0, gh.CheckPending: 1, gh.CheckPass: 2}
+	rank := map[string]int{registry.CheckFailed: 0, registry.CheckRunning: 1, registry.CheckOK: 2}
 	slices.SortStableFunc(out, func(a, b ciRow) int {
 		if d := rank[a.state] - rank[b.state]; d != 0 {
 			return d
@@ -501,7 +500,7 @@ func (x *shipPlugin) ciPanel(c *ui.Ctx) {
 		c.Text("none", "no pull requests read", monoFont(10.5, th.C(theme.FgGhost)))
 		return
 	}
-	tone := map[string]theme.TokenID{gh.CheckFail: theme.StatusNeedsYou, gh.CheckPending: theme.StatusCI, gh.CheckPass: theme.StatusQuiet}
+	tone := map[string]theme.TokenID{registry.CheckFailed: theme.StatusNeedsYou, registry.CheckRunning: theme.StatusCI, registry.CheckOK: theme.StatusQuiet}
 	for i, r := range rows {
 		t, ok := tone[r.state]
 		if !ok {

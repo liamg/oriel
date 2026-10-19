@@ -44,6 +44,7 @@ type APIs struct {
 	touched map[optKey]optPrev       // options the config set, and what they held before
 	shown   map[string]any           // oriel.hud.set's nodes, by indicator
 	inbox   *luaInbox                // oriel.inbox's cards
+	waiting map[int]chan error       // awaited calls not answered yet, failed by an error in a later callback
 }
 
 // Install puts the API in vm, for your own config: trusted, its files in dir.

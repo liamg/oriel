@@ -394,7 +394,7 @@ func (x *sessions) addSource(h plugin.Host) registry.PickerSource {
 // spec is a session spec from a command's args.
 func specFrom(a registry.Args) core.SessionSpec {
 	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"), Context: a.String("context"),
-		PR: a.String("pr"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
+		PR: a.String("pr"), PRRemote: a.String("pr_remote"), PRRef: a.String("pr_ref"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
 		Model: a.String("model"), Effort: a.String("effort"), Template: a.String("template"),
 		Variant: a.String("variant"), Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate"),
 			Backend: a.String("backend")}}
@@ -407,6 +407,25 @@ func specFrom(a registry.Args) core.SessionSpec {
 	return s
 }
 
+// prCheckout asks a review's source where its PR is fetched from, unless the spec says already.
+func (x *sessions) prCheckout(ctx context.Context, spec *core.SessionSpec) error {
+	if spec.PR == "" || spec.PRRef != "" {
+		return nil
+	}
+	src, ok := x.sh.sites.url(spec.PR)
+	if !ok || src.Checkout == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	c, err := registry.CheckoutFor(ctx, src, spec.PR)
+	if err != nil {
+		return fmt.Errorf("%s couldn't say where to fetch %s from: %w", src.Label(), spec.PR, err)
+	}
+	spec.PRRemote, spec.PRRef = c.Remote, c.Ref
+	return nil
+}
+
 // start starts a session and brings it to the front, unless {background}.
 func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {
 	then, err := callsOf(a["then"])
@@ -416,6 +435,9 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 	spec := specFrom(a)
 	w, err := x.host()
 	if err != nil {
+		return "", err
+	}
+	if err := x.prCheckout(ctx, &spec); err != nil {
 		return "", err
 	}
 	id, err := w.Start(ctx, spec)

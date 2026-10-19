@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -61,7 +60,7 @@ func (x *shipPlugin) gitPanel(c *ui.Ctx, project string) {
 }
 
 // gitBranch is the branch, where it stands against its base, and the steps on it: rename, rebase, push.
-func (x *shipPlugin) gitBranch(c *ui.Ctx, se core.SessionState, s host.Ship) {
+func (x *shipPlugin) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 	th := c.Theme()
 	key := formKey(se.ID, s.Project)
 	if rf := x.renaming[key]; rf != nil {

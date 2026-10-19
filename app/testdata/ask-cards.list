@@ -100,36 +100,38 @@ clip 0,38 1600x936 r 0
   rect 741.8125,638.01 27.1875x18.52002 fill #121210 radius 4 stroke 1 #332f27
   text "⌘," @748.8125,651.23 #b3ab99 JetBrains Mono 11
   clip 265,690.27 520x28 r 0
-    rect 265,692.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    rect 265,692.27 86.53125x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    path 6 segments stroke 1.25 #ffd23f
+    path 6 segments stroke 1.25 #ffd23f
+    path 6 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 3 segments stroke 1.25 #ffd23f
+    path 3 segments stroke 1.25 #ffd23f
+    text "Reviews" @294,709.63525 #ece6d8 Inter 12
+    rect 359.53125,692.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
-    text "Stats" @294,709.63525 #ece6d8 Inter 12
-    rect 340.60938,692.27 118.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "Stats" @388.53125,709.63525 #ece6d8 Inter 12
+    rect 435.14062,692.27 118.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
-    text "Usage" @369.60938,709.63525 #ece6d8 Inter 12
-    text "wk 48%" @412.96875,708.87006 #7c7566 JetBrains Mono 10
-    rect 466.96875,692.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "Usage" @464.14062,709.63525 #ece6d8 Inter 12
+    text "wk 48%" @507.5,708.87006 #7c7566 JetBrains Mono 10
+    rect 561.5,692.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 3 segments stroke 1.25 #ffd23f
-    text "Jobs" @495.96875,709.63525 #ece6d8 Inter 12
-    rect 541.6875,692.27 192.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "Jobs" @590.5,709.63525 #ece6d8 Inter 12
+    rect 636.21875,692.27 192.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
-    text "Mission control" @570.6875,709.63525 #ece6d8 Inter 12
-    text "2 need you" @664.375,708.87006 #7c7566 JetBrains Mono 10
-    rect 742.375,692.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
-    path 6 segments stroke 1.25 #ffd23f
-    path 2 segments stroke 1.25 #ffd23f
-    path 2 segments stroke 1.25 #ffd23f
-    path 2 segments stroke 1.25 #ffd23f
-    text "Prompts" @771.375,709.63525 #ece6d8 Inter 12
+    text "Mission control" @665.21875,709.63525 #ece6d8 Inter 12
+    text "2 need you" @758.90625,708.87006 #7c7566 JetBrains Mono 10
   pop
   text "RECENT" @875,373.41998 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1229.0469,373.93 #7c7566 JetBrains Mono 10

@@ -83,11 +83,26 @@ func (s *errScene) ship() *shipPlugin {
 func (s *errScene) shipSettle(t *testing.T, what string, ok func() bool) {
 	t.Helper()
 	s.until(t, what, func() bool {
-		s.ship().wait()
+		s.shipIdle()
 		s.sh.runTodo()
 		s.frame()
 		return ok()
 	})
+}
+
+// shipIdle waits for the ship plugin's reads and steps, framing meanwhile: a Lua code host answers on the loop.
+func (s *errScene) shipIdle() {
+	done := make(chan struct{})
+	go func() { s.ship().wait(); close(done) }()
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			s.sh.runTodo()
+			s.frame()
+		}
+	}
 }
 
 func shipDir(se core.SessionState, name string) string {
@@ -460,4 +475,14 @@ func TestGitPanelInAnOpenedDirectory(t *testing.T) {
 	if out := git(t, up, "ls-remote", "origin", "two"); !strings.Contains(out, "refs/heads/two") {
 		t.Errorf("origin hasn't got two: %q", out)
 	}
+}
+
+// githubCode is the built-in GitHub code host, for a ship reading made by hand.
+func githubCode(t *testing.T, r registry.Registry) *registry.CodeHost {
+	t.Helper()
+	h, ok := registry.HostByName(r, "github")
+	if !ok {
+		t.Fatal("GitHub isn't a code host")
+	}
+	return &h
 }

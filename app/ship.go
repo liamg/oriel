@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -19,7 +18,7 @@ import (
 )
 
 // The Ship page and its panels (ui.md 18, 01h): each project's way from uncommitted work to a merged PR, read from
-// the session host (host.ShipRead), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
+// the session host (host.ShipRead) and its code host (codehost.go), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
 // the same way; the gates are ShipGate contributions, and ShipCommit and ShipRaise hooks can stop a step.
 
 // The views.
@@ -96,20 +95,23 @@ type shipPlugin struct {
 	saving sync.WaitGroup // drafts the user typed, on their way to the session host
 	poller sync.WaitGroup
 
-	mu      sync.Mutex
-	reports map[core.SessionID]*shipReport
-	seenPRs map[string]bool // the PRs PrSeen has fired for, by URL
-	merged  map[string]bool // the PRs PrMerged has fired for, by URL
+	mu       sync.Mutex
+	reports  map[core.SessionID]*shipReport
+	seenPRs  map[string]bool // the PRs PrSeen has fired for, by URL
+	merged   map[string]bool // the PRs PrMerged has fired for, by URL
+	cache    prCache
+	mirrored map[core.SessionID]time.Time // when each session's reviews were last mirrored from a code host
 
 	// On the loop: what's typed, by session/project.
 	commits  map[string]*commitForm
 	prs      map[string]*prForm
 	renaming map[string]*renameForm // the Git panel's branch names being typed
+	merging  *mergeAsk
 }
 
 // shipReport is a session's projects as last read, and the steps running on them.
 type shipReport struct {
-	ships   []host.Ship
+	ships   []shipRead
 	read    time.Time
 	loading bool
 	err     string
@@ -187,6 +189,7 @@ func (x *shipPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sh
 
 func (x *shipPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
+	x.sh.ship = x
 	if x.now == nil {
 		x.now = time.Now
 	}
@@ -205,6 +208,7 @@ func (x *shipPlugin) Activate(_ context.Context, h plugin.Host) error {
 		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "ci", Fn: x.ciPanel}, nil }}))
 	x.add(h.Contribute(registry.ProjectState{Name: "ship", Order: 10, State: x.projectState}))
 	x.gates()
+	x.activateMerge(h)
 	x.shadowEntries()
 	x.commands()
 	x.views()
@@ -227,6 +231,7 @@ func (x *shipPlugin) Activate(_ context.Context, h plugin.Host) error {
 }
 
 func (x *shipPlugin) Deactivate(ctx context.Context) error {
+	x.sh.ship = nil
 	x.cancel()
 	x.poller.Wait()
 	x.busy.Wait()
@@ -287,16 +292,16 @@ func (x *shipPlugin) report(id core.SessionID) shipReport {
 }
 
 // ship is a project's last reading.
-func (x *shipPlugin) ship(id core.SessionID, project string) (host.Ship, bool) {
+func (x *shipPlugin) ship(id core.SessionID, project string) (shipRead, bool) {
 	for _, s := range x.report(id).ships {
 		if s.Project == project {
 			return s, true
 		}
 	}
-	return host.Ship{}, false
+	return shipRead{}, false
 }
 
-// refresh reads a session's projects, off the loop; fresh asks GitHub (and fetches) again.
+// refresh reads a session's projects, off the loop; fresh fetches and asks their code hosts again.
 func (x *shipPlugin) refresh(id core.SessionID, fresh bool) {
 	x.mu.Lock()
 	r := x.reports[id]
@@ -313,11 +318,15 @@ func (x *shipPlugin) refresh(id core.SessionID, fresh bool) {
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		var ships []host.Ship
+		var ships []shipRead
 		c, err := x.client(id)
 		if err == nil {
 			ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-			ships, err = c.ShipRead(ctx, host.ShipReq{Session: id, Fresh: fresh})
+			var read []host.Ship
+			if read, err = c.ShipRead(ctx, host.ShipReq{Session: id, Fresh: fresh}); err == nil {
+				ships = x.withPRs(ctx, id, read, fresh)
+				x.mirrorReviews(ctx, id, ships, fresh)
+			}
 			cancel()
 		}
 		x.mu.Lock()
@@ -345,7 +354,7 @@ func (x *shipPlugin) refresh(id core.SessionID, fresh bool) {
 
 // newPRs are the PRs in ships not seen before, as PrSeen events, and those not seen merged before, as PrMerged
 // events; x.mu is held.
-func (x *shipPlugin) newPRs(id core.SessionID, ships []host.Ship) (seen []PrSeen, merged []PrMerged) {
+func (x *shipPlugin) newPRs(id core.SessionID, ships []shipRead) (seen []PrSeen, merged []PrMerged) {
 	if x.seenPRs == nil {
 		x.seenPRs, x.merged = map[string]bool{}, map[string]bool{}
 	}
@@ -353,9 +362,9 @@ func (x *shipPlugin) newPRs(id core.SessionID, ships []host.Ship) (seen []PrSeen
 	if se, ok := x.h.Session(id); ok {
 		ticket = se.Snapshot().Ticket
 	}
-	open := 0 // a project GitHub didn't answer for counts as open
+	open := 0 // a project its code host didn't answer for counts as open
 	for _, s := range ships {
-		if s.PR.Open() || s.PR == nil && s.GitHubError != "" {
+		if s.PR.Open() || s.PR == nil && s.HostError != "" {
 			open++
 		}
 	}
@@ -453,7 +462,7 @@ func (x *shipPlugin) commitForm(id core.SessionID, project string) *commitForm {
 }
 
 // message is what a project's commit uses: what's typed, else the draft.
-func (f *commitForm) messageFor(s host.Ship) string {
+func (f *commitForm) messageFor(s shipRead) string {
 	if f.edited {
 		return f.message
 	}
@@ -461,7 +470,7 @@ func (f *commitForm) messageFor(s host.Ship) string {
 }
 
 // files are the files a project's commit takes: every uncommitted one not left out.
-func (f *commitForm) files(s host.Ship) []string {
+func (f *commitForm) files(s shipRead) []string {
 	var out []string
 	for _, fl := range s.Files {
 		if !f.skip[fl.Path] {
@@ -472,7 +481,7 @@ func (f *commitForm) files(s host.Ship) []string {
 }
 
 // prForm is a project's Raise PR tab, made on first use and filled from the PR, the draft or the template.
-func (x *shipPlugin) prForm(id core.SessionID, s host.Ship) *prForm {
+func (x *shipPlugin) prForm(id core.SessionID, s shipRead) *prForm {
 	k := formKey(id, s.Project)
 	f := x.prs[k]
 	if f == nil {
@@ -487,7 +496,7 @@ func (x *shipPlugin) prForm(id core.SessionID, s host.Ship) *prForm {
 
 // prDefaults are a PR's title and body before anything's typed: the open PR's, else the agent's draft, else the first
 // commit's subject and the repo's template.
-func prDefaults(s host.Ship) (title, body string) {
+func prDefaults(s shipRead) (title, body string) {
 	switch {
 	case s.PR.Open():
 		return s.PR.Title, s.PR.Body
@@ -501,7 +510,7 @@ func prDefaults(s host.Ship) (title, body string) {
 }
 
 // reviewersOf are who a project's PR asks: the CODEOWNERS of its change and those added, less those taken off.
-func (f *prForm) reviewersOf(s host.Ship) []string {
+func (f *prForm) reviewersOf(s shipRead) []string {
 	var out []string
 	for _, r := range append(slices.Clone(s.Owners), f.reviewers...) {
 		if !slices.Contains(out, r) && !slices.Contains(f.removed, r) {
@@ -518,7 +527,7 @@ func (x *shipPlugin) projectState(project, _ string) []registry.StatePart {
 		return nil
 	}
 	s, ok := x.ship(id, project)
-	if !ok || s.ReadOnly || s.GitHub == "" {
+	if !ok || s.ReadOnly || s.Code == nil {
 		return nil
 	}
 	if s.PR == nil {
@@ -532,28 +541,28 @@ func (x *shipPlugin) projectState(project, _ string) []registry.StatePart {
 		return append(out, registry.StatePart{Text: "merged", Style: "violet", Dot: true})
 	}
 	switch ci := ciOf(s.Checks); ci {
-	case gh.CheckFail:
+	case registry.CheckFailed:
 		out = append(out, registry.StatePart{Text: "CI failing", Style: "error", Dot: true})
-	case gh.CheckPending:
+	case registry.CheckRunning:
 		out = append(out, registry.StatePart{Text: "CI running", Style: "cyan", Dot: true})
-	case gh.CheckPass:
+	case registry.CheckOK:
 		out = append(out, registry.StatePart{Text: "CI passing", Style: "ok", Dot: true})
 	}
 	return out
 }
 
 // ciOf is the checks in one word: fail if any failed, else pending if any are running, else pass; "" for none.
-func ciOf(cs []gh.Check) string {
+func ciOf(cs []registry.Check) string {
 	if len(cs) == 0 {
 		return ""
 	}
-	out := gh.CheckPass
+	out := registry.CheckOK
 	for _, c := range cs {
-		switch c.State() {
-		case gh.CheckFail:
-			return gh.CheckFail
-		case gh.CheckPending:
-			out = gh.CheckPending
+		switch {
+		case c.State == registry.CheckFailed:
+			return registry.CheckFailed
+		case c.Pending():
+			out = registry.CheckRunning
 		}
 	}
 	return out
@@ -741,21 +750,27 @@ func (x *shipPlugin) commands() {
 					return nil
 				}
 				delete(x.renaming, formKey(se.ID, p))
+				s, _ := x.ship(se.ID, p)
 				return x.step(se.ID, p, "Renaming…", func(ctx context.Context, c *host.Host) error {
+					if err := x.renameGuard(ctx, se, s); err != nil {
+						return err
+					}
 					return c.ShipRename(ctx, host.RenameReq{Session: se.ID, Project: p, Name: name})
 				})
 			})},
 		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Marking ready…", func(ctx context.Context, c *host.Host) error {
-					return c.ShipReady(ctx, host.ShipRef{Session: se.ID, Project: p})
+				s, _ := x.ship(se.ID, p)
+				return x.step(se.ID, p, "Marking ready…", func(ctx context.Context, _ *host.Host) error {
+					return x.markReady(ctx, se, s)
 				})
 			})},
 		{ID: "ship.pr.open", Title: "Open a project's Raise PR tab, or Edit PR once it's raised: {project}", Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				title := "Raise PR · " + p
-				if s, ok := x.ship(se.ID, p); ok && s.PR.Open() {
-					title = "Edit PR · " + p
+				s, _ := x.ship(se.ID, p)
+				title := "Raise " + s.words().Short + " · " + p
+				if s.PR.Open() {
+					title = "Edit " + s.words().Short + " · " + p
 				}
 				return x.h.Run(ctx, "view.open", registry.Args{"id": PRView, "instance": p, "place": "tab", "title": title})
 			})},
@@ -809,7 +824,7 @@ func (x *shipPlugin) commands() {
 				}
 				return x.step(se.ID, p, "Saving…", func(ctx context.Context, c *host.Host) error { return c.ShipDraft(ctx, req) })
 			})},
-		{ID: "ship.github", Title: "Open a project's PR on GitHub: {project}", Available: inFront,
+		{ID: "ship.browse", Title: "Open a project's PR on its code host, in the browser: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
 				if s.PR == nil || s.PR.URL == "" {
@@ -971,10 +986,10 @@ func (x *shipPlugin) sync(se core.SessionState, p string) error {
 }
 
 // raiseReq is the PR a project's raise sends: the args', else the tab's, else its defaults, through ShipRaise.
-func (x *shipPlugin) raiseReq(ctx registry.Ctx, se core.SessionState, p string, a registry.Args, all bool) (host.PRReq, error) {
+func (x *shipPlugin) raiseReq(ctx registry.Ctx, se core.SessionState, p string, a registry.Args, all bool) (prReq, error) {
 	s, ok := x.ship(se.ID, p)
 	if !ok {
-		return host.PRReq{}, fmt.Errorf("%s hasn't been read yet", p)
+		return prReq{}, fmt.Errorf("%s hasn't been read yet", p)
 	}
 	f := x.prForm(se.ID, s)
 	ev := &ShipRaise{Session: string(se.ID), Project: p, Title: cmpOr(a.String("title"), f.title), Body: cmpOr(a.String("body"), f.body),
@@ -983,14 +998,14 @@ func (x *shipPlugin) raiseReq(ctx registry.Ctx, se core.SessionState, p string, 
 		ev.Reviewers = rs
 	}
 	if strings.TrimSpace(ev.Title) == "" {
-		return host.PRReq{}, fmt.Errorf("%s's PR needs a title", p)
+		return prReq{}, fmt.Errorf("%s's %s needs a title", p, s.words().Short)
 	}
 	if v, _ := x.h.Fire(ctx, "ShipRaise", p, ev); v.Veto {
 		f.veto = v.Reason
-		return host.PRReq{}, fmt.Errorf("%w: %s", errStopped, v.Reason)
+		return prReq{}, fmt.Errorf("%w: %s", errStopped, v.Reason)
 	}
 	f.veto = ""
-	return host.PRReq{Session: se.ID, Project: p, Title: ev.Title, Body: ev.Body, Draft: ev.Draft, Reviewers: ev.Reviewers}, nil
+	return prReq{Project: p, Title: ev.Title, Body: ev.Body, Draft: ev.Draft, Reviewers: ev.Reviewers}, nil
 }
 
 // raise pushes what's unpushed, then raises the PR or edits it.
@@ -1000,6 +1015,9 @@ func (x *shipPlugin) raise(ctx registry.Ctx, se core.SessionState, p string, a r
 		return err
 	}
 	s, _ := x.ship(se.ID, p)
+	if x.setupFirst(ctx, s) {
+		return nil
+	}
 	label := "Raising…"
 	if s.PR.Open() {
 		label = "Updating…"
@@ -1010,16 +1028,15 @@ func (x *shipPlugin) raise(ctx registry.Ctx, se core.SessionState, p string, a r
 				return err
 			}
 		}
-		_, err := c.ShipPR(cx, req)
-		return err
+		return x.raisePR(cx, se, s, req)
 	})
 }
 
 // raiseAll raises each project with commits, one after another in merge order, so each PR links the ones before it.
 func (x *shipPlugin) raiseAll(ctx registry.Ctx, se core.SessionState) error {
-	var reqs []host.PRReq
+	var reqs []prReq
 	for _, s := range x.report(se.ID).ships {
-		if s.ReadOnly || s.GitHub == "" || s.Commits == 0 && s.PR == nil {
+		if s.ReadOnly || s.Code == nil || s.Commits == 0 && s.PR == nil {
 			continue
 		}
 		req, err := x.raiseReq(ctx, se, s.Project, registry.Args{}, true)
@@ -1039,13 +1056,13 @@ func (x *shipPlugin) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 		defer x.busy.Done()
 		for _, req := range reqs {
 			done := make(chan struct{})
+			s, _ := x.ship(se.ID, req.Project)
 			err := x.step(se.ID, req.Project, "Raising…", func(cx context.Context, c *host.Host) error {
 				defer close(done)
 				if err := c.ShipPush(cx, host.ShipRef{Session: se.ID, Project: req.Project}); err != nil {
 					return err
 				}
-				_, err := c.ShipPR(cx, req)
-				return err
+				return x.raisePR(cx, se, s, req)
 			})
 			if err != nil {
 				x.h.Notify(core.Notice{ID: "ship." + req.Project, Severity: core.SevError, Key: true, Title: req.Project, Text: err.Error()})
@@ -1058,25 +1075,25 @@ func (x *shipPlugin) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 }
 
 // sessionShips is the session's projects as read, with a placeholder for one not read yet.
-func (x *shipPlugin) sessionShips(se core.SessionState) ([]host.Ship, shipReport) {
+func (x *shipPlugin) sessionShips(se core.SessionState) ([]shipRead, shipReport) {
 	r := x.report(se.ID)
-	var out []host.Ship
+	var out []shipRead
 	for _, p := range se.Projects {
-		i := slices.IndexFunc(r.ships, func(s host.Ship) bool { return s.Project == p.Name })
+		i := slices.IndexFunc(r.ships, func(s shipRead) bool { return s.Project == p.Name })
 		if i >= 0 {
 			out = append(out, r.ships[i])
 		} else {
-			out = append(out, host.Ship{Project: p.Name, Branch: p.Branch, Base: p.Base})
+			out = append(out, shipRead{Ship: host.Ship{Project: p.Name, Branch: p.Branch, Base: p.Base}})
 		}
 	}
 	return out, r
 }
 
 // ciTrouble is a project's failing checks as something to fix or explain, with the log's failing line.
-func ciTrouble(s host.Ship) (registry.Trouble, bool) {
+func ciTrouble(s shipRead) (registry.Trouble, bool) {
 	var failing []string
 	for _, c := range s.Checks {
-		if c.State() == gh.CheckFail {
+		if c.State == registry.CheckFailed {
 			failing = append(failing, c.Name)
 		}
 	}
@@ -1093,7 +1110,7 @@ func ciTrouble(s host.Ship) (registry.Trouble, bool) {
 }
 
 // conflictTrouble is the conflicts a rebase onto the base would stop on, as something to fix or explain.
-func conflictTrouble(s host.Ship) (registry.Trouble, bool) {
+func conflictTrouble(s shipRead) (registry.Trouble, bool) {
 	if len(s.Conflicts) == 0 {
 		return registry.Trouble{}, false
 	}

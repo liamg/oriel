@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -75,7 +74,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 
 	s := r.ship(id, true)
 	a := s["api"]
-	if a.GitHub != "acme/api" || !a.Remote || a.Base != "main" || a.Branch != se.Branch || len(a.Files) != 0 || a.Commits != 0 || a.PR != nil {
+	if a.Origin != "https://github.com/acme/api.git" || !a.Remote || a.Base != "main" || a.Branch != se.Branch || len(a.Files) != 0 || a.Commits != 0 {
 		t.Fatalf("a fresh project: %+v", a)
 	}
 	if a.Template != "## What\n\n## Why\n" || a.TemplateFile != ".github/pull_request_template.md" {
@@ -138,65 +137,41 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if out := apiUp.Git("ls-remote", "origin", se.Branch); !strings.Contains(out, se.Branch) {
 		t.Fatalf("origin hasn't got %s: %q", se.Branch, out)
 	}
-	pr, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: "api", Title: "feat(search): back off on 429", Body: "## What\nRetry-After.\n",
-		Draft: true, Reviewers: []string{"acme/platform-team", "jkowalski"}})
+	// The app's GitHub code host raises it with the checkout's gh, from the session's branch only.
+	req := GitHubReq{Session: id, Project: "api", New: gh.NewPR{Title: "feat(search): back off on 429", Body: "## What\nRetry-After.\n",
+		Head: se.Branch, Base: "main", Draft: true}}
+	pr, err := r.w.GitHubCreate(ctx, req)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.w.GitHubCreate(ctx, GitHubReq{Session: id, Project: "api", New: gh.NewPR{Title: "x", Head: "main", Base: "main"}}); err == nil {
+		t.Error("raised a PR from a branch that isn't the session's")
+	}
+	if err := r.w.GitHubReviewers(ctx, GitHubReq{Session: id, Project: "api", PR: pr, Reviewers: []string{"acme/platform-team", "jkowalski"}}); err != nil {
 		t.Fatal(err)
 	}
 	if got := hub.PRs("acme/api"); len(got) != 1 || !got[0].Draft || got[0].Head != se.Branch || got[0].Base != "main" ||
 		!slices.Equal(got[0].Reviewers, []string{"jkowalski", "acme/platform-team"}) || got[0].Number != pr.Number {
 		t.Fatalf("the PR on GitHub: %+v", got)
 	}
-
-	// web's PR cross-links both, in the session's order.
-	os.WriteFile(filepath.Join(dirs["web"], "index.html"), []byte("<html>429</html>\n"), 0o644)
-	r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: "web", Message: "feat(web): show the wait"})
-	r.w.ShipPush(ctx, ShipRef{Session: id, Project: "web"})
-	webPR, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: "web", Title: "feat(web): show the wait", Body: "Shows it."})
-	if err != nil {
-		t.Fatal(err)
-	}
-	apiBody, webBody := hub.PRs("acme/api")[0].Body, hub.PRs("acme/web")[0].Body
-	wantLinks := func(body, self string) {
-		t.Helper()
-		block := linkStart + "\n**Ships with** (merge in this order):\n1. acme/api#" + strconv.Itoa(pr.Number) + map[bool]string{true: " (this PR)"}[self == "api"] +
-			"\n2. acme/web#" + strconv.Itoa(webPR.Number) + map[bool]string{true: " (this PR)"}[self == "web"] + "\n" + linkEnd
-		if !strings.HasSuffix(body, block) {
-			t.Errorf("%s's body doesn't end with the links:\n%s", self, body)
-		}
-	}
-	wantLinks(apiBody, "api")
-	wantLinks(webBody, "web")
-	if !strings.HasPrefix(apiBody, "## What\nRetry-After.\n\n"+linkStart) {
-		t.Errorf("api's body lost its text:\n%s", apiBody)
-	}
-
-	// Editing the PR keeps one block.
-	if _, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: "api", Title: "feat(search): back off on 429s", Body: apiBody}); err != nil {
-		t.Fatal(err)
-	}
-	if got := hub.PRs("acme/api"); len(got) != 1 || got[0].Title != "feat(search): back off on 429s" || strings.Count(got[0].Body, linkStart) != 1 {
-		t.Fatalf("after editing: %+v", got)
+	if got, err := r.w.GitHubPRFor(ctx, GitHubReq{Session: id, Project: "api", Branch: se.Branch}); err != nil || got == nil || got.Number != pr.Number {
+		t.Fatalf("the branch's PR: %+v, %v", got, err)
 	}
 
 	// Checks: a failing Actions job's log line comes with them.
-	r.ship(id, false)
 	t0 := r.now().Add(-3 * time.Minute)
 	hub.SetChecks("acme/api", se.Branch,
 		gh.Check{ID: 11, Name: "lint", Status: "completed", Conclusion: "success", Actions: true, Started: t0, Completed: t0.Add(38 * time.Second)},
 		gh.Check{ID: 12, Name: "unit", Status: "completed", Conclusion: "failure", Actions: true, Started: t0, Completed: t0.Add(time.Minute)},
 		gh.Check{ID: 13, Name: "e2e · chromium", Status: "in_progress", Actions: true, Started: t0})
 	hub.SetLog(12, "2026-10-14T09:00:00.0000000Z go test ./limiter/...\n2026-10-14T09:00:01.0000000Z --- FAIL: TestBurst (0.02s)\n")
-	if a = r.ship(id, false)["api"]; len(a.Checks) != 0 {
-		t.Errorf("a read within the minute answered from GitHub again: %+v", a.Checks)
-	}
-	a = r.ship(id, true)["api"]
-	if len(a.Checks) != 3 || a.FailLine != "--- FAIL: TestBurst (0.02s)" || a.PR == nil || a.PR.Number != pr.Number {
-		t.Fatalf("checks %+v, fail line %q, PR %+v", a.Checks, a.FailLine, a.PR)
+	cs, err := r.w.GitHubChecks(ctx, GitHubReq{Session: id, Project: "api", Branch: se.Branch})
+	if err != nil || len(cs.Checks) != 3 || cs.FailLine != "--- FAIL: TestBurst (0.02s)" {
+		t.Fatalf("checks %+v, %v", cs, err)
 	}
 
 	// Ready for review.
-	if err := r.w.ShipReady(ctx, ShipRef{Session: id, Project: "api"}); err != nil {
+	if err := r.w.GitHubReady(ctx, GitHubReq{Session: id, Project: "api", PR: pr}); err != nil {
 		t.Fatal(err)
 	}
 	if hub.PRs("acme/api")[0].Draft {
@@ -269,7 +244,7 @@ func TestShipDirectFollowsTheCheckout(t *testing.T) {
 	if out := up.Git("ls-remote", "origin", "two"); !strings.Contains(out, "refs/heads/two") {
 		t.Fatalf("origin hasn't got two: %q", out)
 	}
-	pr, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: p.Name, Title: "docs: two"})
+	pr, err := r.w.GitHubCreate(ctx, GitHubReq{Session: id, Project: p.Name, New: gh.NewPR{Title: "docs: two", Head: "two", Base: "main"}})
 	if err != nil {
 		t.Fatal(err)
 	}

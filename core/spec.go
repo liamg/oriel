@@ -46,8 +46,12 @@ type SessionSpec struct {
 	Prompt string `json:"prompt,omitempty"`
 	Ticket string `json:"ticket,omitempty"`
 	// Context comes with the prompt to the agent but isn't part of it: the ticket's text, comments and attachments.
-	Context  string        `json:"context,omitempty"`
-	PR       string        `json:"pr,omitempty"`    // review kind: the PR's URL
+	Context string `json:"context,omitempty"`
+	PR      string `json:"pr,omitempty"` // review kind: the PR's URL
+	// PRRemote and PRRef are where a review fetches the PR from, as its review source says: the registered repo whose
+	// remote contains PRRemote, and the refspec PRRef. A GitHub URL needs neither.
+	PRRemote string        `json:"prRemote,omitempty"`
+	PRRef    string        `json:"prRef,omitempty"`
 	Repos    []RepoID      `json:"repos,omitempty"` // 0..n
 	Dir      string        `json:"dir,omitempty"`   // direct kind: the directory itself; new repo: where it goes
 	Branch   string        `json:"branch,omitempty"`

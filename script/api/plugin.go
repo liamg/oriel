@@ -164,10 +164,10 @@ func (p Process) Spawn(path string, opts script.Table) (script.Table, error) {
 				raw, err := proc.Call(ctx, method, params)
 				a.Host.Do(func() {
 					if err != nil {
-						a.VM.Call(fn, nil, err.Error())
+						a.later(fn, nil, err.Error())
 						return
 					}
-					a.VM.Call(fn, decode(raw))
+					a.later(fn, decode(raw))
 				})
 			}()
 			return nil, nil
