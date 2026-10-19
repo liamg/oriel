@@ -142,7 +142,7 @@ clip 0,38 1600x962 r 0
     rect 1540.5469,222 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,239.36523 #4f4a40 Inter 12
     text "sandbox.backend" @288,289.93774 #ece6d8 JetBrains Mono 12.5
-    text "What confines the agent: docker, a container; or seatbelt, macOS's own sandbox." @288,309.79712 #7c7566 Inter 12.5
+    text "What confines the agent: a container engine; or seatbelt, macOS's own sandbox." @288,309.79712 #7c7566 Inter 12.5
     text "default" @1202.3906,298.78 #7c7566 JetBrains Mono 10.5
     clip 1387.2468,283 137.30005x24 r 5
       rect 1387.2468,283 61.69995x24 fill #1f1c0f

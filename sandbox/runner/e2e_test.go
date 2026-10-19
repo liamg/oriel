@@ -91,7 +91,7 @@ func standInSession(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 	network, addr := "unix", sandbox.SocketPath(root)
-	if !SocketsMount() {
+	if !SocketsMount(container.Docker) {
 		network, addr = "tcp", "127.0.0.1:0"
 	}
 	ln, err := net.Listen(network, addr)
@@ -100,7 +100,7 @@ func standInSession(t *testing.T, root string) {
 	}
 	t.Cleanup(func() { _ = ln.Close() })
 	go func() { _ = http.Serve(ln, http.NotFoundHandler()) }()
-	if !SocketsMount() {
+	if !SocketsMount(container.Docker) {
 		port := strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)
 		mustWrite(t, sandbox.PortPath(root), port)
 	}

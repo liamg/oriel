@@ -1,4 +1,4 @@
-// Package container runs oriel's sandboxes with the docker CLI: one long-lived
+// Package container runs oriel's sandboxes with a docker-compatible CLI: one long-lived
 // container per workspace, which each agent launch execs into.
 package container
 
@@ -12,22 +12,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
-
-// Bin is the docker CLI; ORIEL_DOCKER=podman swaps in Podman, which answers
-// to the same commands.
-var Bin = func() string {
-	if b := os.Getenv("ORIEL_DOCKER"); b != "" {
-		return b
-	}
-	return "docker"
-}()
 
 // Mount binds a host path into the container.
 type Mount struct {
@@ -87,22 +77,22 @@ func (s Spec) runArgs() []string { return s.args("-d") }
 
 // InteractiveArgv is the command that runs s in the foreground on the
 // caller's terminal, removed when it exits. Signals reach the process inside.
-func (s Spec) InteractiveArgv(envFile string) []string {
+func (s Spec) InteractiveArgv(e Engine, envFile string) []string {
 	mode := []string{"--rm", "-i", "-t"}
 	if envFile != "" {
 		mode = append(mode, "--env-file", envFile)
 	}
-	return append([]string{Bin}, s.args(mode...)...)
+	return e.Command(s.args(mode...)...)
 }
 
 // OnceArgv is the command that runs the container to completion with no
 // terminal, for a step whose output goes to a log.
-func (s Spec) OnceArgv(envFile string) []string {
+func (s Spec) OnceArgv(e Engine, envFile string) []string {
 	mode := []string{"--rm"}
 	if envFile != "" {
 		mode = append(mode, "--env-file", envFile)
 	}
-	return append([]string{Bin}, s.args(mode...)...)
+	return e.Command(s.args(mode...)...)
 }
 
 func (s Spec) args(mode ...string) []string {
@@ -169,9 +159,10 @@ func (s Spec) args(mode ...string) []string {
 	return append(args, cmd...)
 }
 
-// Run runs a docker command, returning stdout.
+// Run runs a command of ctx's engine, returning stdout.
 func Run(ctx context.Context, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, Bin, args...)
+	e := EngineOf(ctx)
+	cmd := e.cmd(ctx, args...)
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	if err := cmd.Run(); err != nil {
@@ -179,7 +170,7 @@ func Run(ctx context.Context, args ...string) (string, error) {
 		if msg == "" {
 			msg = err.Error()
 		}
-		return out.String(), fmt.Errorf("%s %s: %s", Bin, firstArg(args), msg)
+		return out.String(), fmt.Errorf("%s %s: %s", e.Bin, firstArg(args), msg)
 	}
 	return out.String(), nil
 }
@@ -199,8 +190,9 @@ type Info struct {
 
 // Ping reports whether the CLI is installed and the daemon answers.
 func Ping(ctx context.Context) (Info, error) {
-	if _, err := exec.LookPath(Bin); err != nil {
-		return Info{}, fmt.Errorf("%s is not installed", Bin)
+	e := EngineOf(ctx)
+	if !e.Installed() {
+		return Info{}, fmt.Errorf("%s is not installed", e.Bin)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -210,7 +202,7 @@ func Ping(ctx context.Context) (Info, error) {
 		if err == nil {
 			err = errors.New("no answer from the daemon")
 		}
-		return Info{}, fmt.Errorf("%s is not running: %w", Bin, err)
+		return Info{}, fmt.Errorf("%s is not running: %w", e.Bin, err)
 	}
 	return Info{Client: f[0], Server: f[1]}, nil
 }
@@ -288,12 +280,13 @@ func ImageID(ctx context.Context, image string) (string, error) {
 
 // Build builds dockerfile (its text) as tag, with an empty context.
 func Build(ctx context.Context, tag, dockerfile string) error {
-	cmd := exec.CommandContext(ctx, Bin, "build", "-t", tag, "-")
+	e := EngineOf(ctx)
+	cmd := e.cmd(ctx, "build", "-t", tag, "-")
 	cmd.Stdin = strings.NewReader(dockerfile)
 	var errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &errb, &errb
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s build %s: %w: %s", Bin, tag, err, tail(errb.String(), 800))
+		return fmt.Errorf("%s build %s: %w: %s", e.Bin, tag, err, tail(errb.String(), 800))
 	}
 	return nil
 }
@@ -324,15 +317,16 @@ func BuildFiles(ctx context.Context, tag, dockerfile string, files map[string][]
 		return err
 	}
 	args := []string{"build", "-t", tag}
-	if filepath.Base(Bin) != "podman" {
+	e := EngineOf(ctx)
+	if !e.Podman() {
 		args = append(args, "--progress", "plain")
 	}
-	cmd := exec.CommandContext(ctx, Bin, append(args, dir)...)
+	cmd := e.cmd(ctx, append(args, dir)...)
 	var errb bytes.Buffer
 	w := io.MultiWriter(out, &errb)
 	cmd.Stdout, cmd.Stderr = w, w
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%s build %s: %w: %s", Bin, tag, err, tail(errb.String(), 800))
+		return fmt.Errorf("%s build %s: %w: %s", e.Bin, tag, err, tail(errb.String(), 800))
 	}
 	return nil
 }

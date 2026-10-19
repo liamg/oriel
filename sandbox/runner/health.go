@@ -23,19 +23,21 @@ var (
 	buildErr error
 )
 
-// Health checks this machine can run sandboxed agents, starting the base
-// image build in the background if it is missing.
-func Health(ctx context.Context, cfg sandbox.Config) []sandbox.Problem {
+// Health checks this machine can run sandboxed agents on ctx's engine, starting
+// the base image build in the background if it is missing. fix says how to
+// install or start the engine.
+func Health(ctx context.Context, cfg sandbox.Config, fix string) []sandbox.Problem {
 	var out []sandbox.Problem
 	info, err := container.Ping(ctx)
 	if err != nil {
-		code, fix := "docker-down", "Start Docker (Docker Desktop, or `systemctl start docker`)."
+		code := "engine-down"
 		if strings.Contains(err.Error(), "not installed") {
-			code, fix = "docker-missing", "Install Docker, or Podman with `ORIEL_DOCKER=podman`."
+			code = "engine-missing"
 		}
 		return append(out, sandbox.Problem{Code: code, Message: err.Error(), Fix: fix, Blocking: true})
 	}
-	if major, _ := strconv.Atoi(strings.SplitN(info.Server, ".", 2)[0]); major > 0 && major < minDocker {
+	major, _ := strconv.Atoi(strings.SplitN(info.Server, ".", 2)[0])
+	if !container.EngineOf(ctx).Podman() && major > 0 && major < minDocker {
 		out = append(out, sandbox.Problem{Code: "docker-old", Blocking: true,
 			Message: fmt.Sprintf("Docker %s is too old for sandboxes", info.Server),
 			Fix:     fmt.Sprintf("Upgrade to Docker %d or newer.", minDocker)})

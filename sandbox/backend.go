@@ -3,13 +3,15 @@ package sandbox
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
 )
 
-// Backend confines an agent to its workspace: a container (docker), or the
-// OS's own sandbox (seatbelt on macOS). Every backend gets the same egress
+// Backend confines an agent to its workspace: a container (docker, or an
+// alternative engine such as orbstack), or the OS's own sandbox (seatbelt on
+// macOS). Every backend gets the same egress
 // proxy, gateway and session sockets; it decides only how the agent's
 // process is fenced in.
 type Backend interface {
@@ -85,8 +87,18 @@ func Blocking(ps []Problem) (Problem, bool) {
 	return Problem{}, false
 }
 
-// DefaultBackend runs sandboxes when sandbox.backend names none.
-const DefaultBackend = "docker"
+// Preference orders the backends for DefaultBackend; those it leaves out
+// come after, by name.
+var Preference = []string{"docker", "orbstack", "colima", "podman", "seatbelt"}
+
+// DefaultBackend runs sandboxes when sandbox.backend names none: the first
+// this machine can run, or docker when it can run none.
+func DefaultBackend() string {
+	if a := AvailableBackends(); len(a) > 0 {
+		return a[0]
+	}
+	return "docker"
+}
 
 var (
 	backendsMu sync.Mutex
@@ -113,10 +125,11 @@ func Backends() []string {
 	return out
 }
 
-// AvailableBackends are the names of the registered backends this machine can run, sorted.
+// AvailableBackends are the names of the registered backends this machine
+// can run, in Preference order.
 func AvailableBackends() []string {
 	var out []string
-	for _, name := range Backends() {
+	for _, name := range byPreference(Backends()) {
 		backendsMu.Lock()
 		b := backends[name]
 		backendsMu.Unlock()
@@ -127,11 +140,22 @@ func AvailableBackends() []string {
 	return out
 }
 
+func byPreference(names []string) []string {
+	rank := func(n string) int {
+		if i := slices.Index(Preference, n); i >= 0 {
+			return i
+		}
+		return len(Preference)
+	}
+	slices.SortStableFunc(names, func(a, b string) int { return rank(a) - rank(b) })
+	return names
+}
+
 // BackendFor is the backend cfg names, or DefaultBackend.
 func BackendFor(cfg Config) (Backend, error) {
 	name := cfg.Backend
 	if name == "" {
-		name = DefaultBackend
+		name = DefaultBackend()
 	}
 	backendsMu.Lock()
 	b, ok := backends[name]

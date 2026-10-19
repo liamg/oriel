@@ -527,7 +527,7 @@ sequenceDiagram
   `Exec` turns the provider's command into the backend's (`sandbox.Backend.Launch`): the env the provider added
   goes in, `ORIEL_BIN` becomes the sandbox's `oriel`.
 - **Backends.** What fences the agent in is a `sandbox.Backend`, chosen by `sandbox.backend` (`Config.Backend`,
-  default `docker`) from those registered with `sandbox.Register`, or by the session's own
+  default `sandbox.DefaultBackend()`: the first in `sandbox.Preference` this machine can run) from those registered with `sandbox.Register`, or by the session's own
   (`SandboxPolicy.Backend`, kept as `AgentState.Backend`), one of those this machine can run (`Backend.Available`,
   reported as `MachineState.Sandboxes`, the launcher's Sandbox type); everything else (session socket, gateway,
   egress decisions, approvals) is the same for all of them. A backend launches (`Launch` → a `Command`: argv, env,
@@ -537,7 +537,11 @@ sequenceDiagram
   own files read-only), `Prepare` (Claude settings and login, the home's ssh config, shims, git config), `AgentEnv`
   and `LoginProblems`.
   - `docker` (`sandbox/runner`): a container per run, binds as mounts, the egress sidecar on an internal network,
-    the project's image and toolchains, memory and process caps.
+    the project's image and toolchains, memory and process caps. The same backend runs on any docker-compatible
+    engine (`runner.Engine`, a `container.Engine`: CLI, socket, whether the daemon is in a VM): `docker` (the
+    CLI's current context; offered when a Docker daemon is set up, not another engine's socket), `orbstack` and
+    `colima` (the docker CLI pinned to their own socket; OrbStack's bundled CLI when Docker's is missing), and
+    `podman`. Each is offered only when installed.
   - `seatbelt` (`sandbox/seatbelt`, macOS): `sandbox-exec` with a generated profile, no container. The agent
     reads the system but not `/Users`, `/Volumes` or the home directory, beyond toolchain directories (managers'
     installs, `PATH` entries under home) and its binds; writes only its binds (later binds override earlier

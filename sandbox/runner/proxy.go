@@ -30,7 +30,7 @@ func ensureProxy(ctx context.Context, root, image, orielBin string, id sandbox.I
 	}
 	env := []string{"ORIEL_SOCKET=" + ContainerSocket, "ORIEL_TOKEN=" + mustToken(root), HostPortsEnv + "=" + strings.Join(ports, ",")}
 	cmd := []string{"egress-proxy", "--listen", ":" + strconv.Itoa(ProxyPort)}
-	if !SocketsMount() {
+	if !SocketsMount(container.EngineOf(ctx)) {
 		env = append(env, "ORIEL_PORT_FILE="+hostRunDir+"/port")
 		cmd = append(cmd, "--relay", ContainerRunDir)
 	}

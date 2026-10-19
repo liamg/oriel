@@ -40,3 +40,22 @@ func TestBackendRegistry(t *testing.T) {
 		t.Errorf("BackendFor(nope) = %v", err)
 	}
 }
+
+// The default is the most preferred backend this machine can run: orbstack when docker isn't set up.
+func TestDefaultBackendPrefersAvailable(t *testing.T) {
+	old := Preference
+	t.Cleanup(func() { Preference = old })
+	Preference = []string{"test-docker", "test-orbstack", "test-podman"}
+	Register(testBackend{name: "test-docker", err: errors.New("no daemon")})
+	Register(testBackend{name: "test-podman"})
+	Register(testBackend{name: "test-orbstack"})
+	if got := DefaultBackend(); got != "test-orbstack" {
+		t.Errorf("default = %q, want test-orbstack", got)
+	}
+	if got := AvailableBackends(); len(got) < 2 || got[0] != "test-orbstack" || got[1] != "test-podman" {
+		t.Errorf("available = %v, want the preferred first", got)
+	}
+	if b, err := BackendFor(Config{}); err != nil || b.Name() != "test-orbstack" {
+		t.Errorf("BackendFor(no backend) = %v, %v", b, err)
+	}
+}

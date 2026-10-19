@@ -38,50 +38,16 @@ const ContainerRunDir = "/run/oriel"
 // ContainerSocket is the session socket as the container sees it.
 const ContainerSocket = ContainerRunDir + "/oriel.sock"
 
-// SocketsMount reports whether RunDir can be mounted into a container. Off
-// Linux, Docker Desktop cannot connect to a socket in a mounted directory,
-// and a socket mounted on its own stops working when any container stops.
-func SocketsMount() bool { return runtime.GOOS == "linux" }
-
-// Docker is the sandbox.Backend that runs each agent in a container.
-type Docker struct{}
-
-func init() { sandbox.Register(Docker{}) }
-
-func (Docker) Name() string { return "docker" }
-
-func (Docker) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
-	docker, err := Launch(ctx, root, cwd, argv, o)
-	if err != nil {
-		return sandbox.Command{}, err
-	}
-	return sandbox.Command{Argv: docker, Env: os.Environ()}, nil
-}
-
-func (Docker) Available() error {
-	if _, err := exec.LookPath(container.Bin); err != nil {
-		return fmt.Errorf("%s is not installed", container.Bin)
-	}
-	return nil
-}
-
-func (Docker) Stop(ctx context.Context, root string) error { return Stop(ctx, root) }
-
-func (Docker) Health(ctx context.Context, cfg sandbox.Config) []sandbox.Problem {
-	return Health(ctx, cfg)
-}
-
-func (Docker) Sweep(ctx context.Context, attached func(root string) bool) []string {
-	return Sweep(ctx, attached)
-}
-
-func (Docker) AgentRunDir(string) string { return ContainerRunDir }
-
-func (Docker) ServesPort() bool { return !SocketsMount() }
+// SocketsMount reports whether RunDir can be mounted into a container of e.
+// A daemon in a VM (Docker Desktop, OrbStack, Colima) cannot connect to a
+// socket in a mounted directory, and a socket mounted on its own stops
+// working when any container stops.
+func SocketsMount(e container.Engine) bool { return runtime.GOOS == "linux" && !e.VM }
 
 // Launch readies root's sandbox for an agent in cwd running argv, and returns
 // the command to run under the PTY in its place.
 func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) ([]string, error) {
+	engine := container.EngineOf(ctx)
 	rec, ok := sandbox.Load(root)
 	if !ok || !rec.Sandboxed() {
 		return nil, errors.New("this workspace is not sandboxed")
@@ -153,7 +119,7 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 	}
 	// Off Linux the sidecar also carries the session sockets, so it runs
 	// even when nothing is filtered.
-	if !cfg.NoEgressProxy || !SocketsMount() {
+	if !cfg.NoEgressProxy || !SocketsMount(engine) {
 		hostPorts := sandbox.HostPorts(sandbox.EndpointEnv(o.Environ, cfg.Env, sandbox.ClaudeSettings()))
 		if err := ensureProxy(ctx, root, image, orielBin, id, hostPorts); err != nil {
 			return nil, err
@@ -179,7 +145,7 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 	}
 	spec.Workdir = cwd
 	spec.Entrypoint, spec.Command = argv[0], argv[1:]
-	return spec.InteractiveArgv(envFile), nil
+	return spec.InteractiveArgv(engine, envFile), nil
 }
 
 // Stop removes root's containers and network. The workspace is untouched.

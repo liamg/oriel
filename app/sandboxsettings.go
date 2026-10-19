@@ -78,12 +78,23 @@ func sandboxOptions(o registry.Options) []registry.OptionSpec {
 			Help: `Each container's memory cap in docker's units ("8g"); empty is 8g, "none" no cap.`},
 		{Name: "sandbox.pids_limit", Type: registry.Int, Default: 0, Min: -1, Max: 1 << 20, Scopes: user,
 			Help: "Each container's process cap; 0 is 4096, -1 no cap."},
-		{Name: "sandbox.backend", Type: registry.Enum, Values: sandbox.Backends(), Default: sandbox.DefaultBackend, Scopes: user,
-			Help: "What confines the agent: docker, a container; or seatbelt, macOS's own sandbox."},
+		{Name: "sandbox.backend", Type: registry.Enum, Values: offeredBackends(), Default: offeredBackends()[0], Scopes: user,
+			Help: "What confines the agent: a container engine; or seatbelt, macOS's own sandbox."},
 		{Name: "sandbox.loopback", Type: registry.Enum, Values: []string{sandbox.LoopbackAll, sandbox.LoopbackEphemeral, sandbox.LoopbackNone},
 			Default: sandbox.LoopbackAll, Scopes: user,
 			Help: "The host's loopback ports a seatbelt sandbox may connect to: all; ephemeral, not services on fixed ports; or none."},
 	}
+}
+
+// availableBackends are the sandbox backends this machine can run, the default first.
+var availableBackends = sandbox.AvailableBackends
+
+// offeredBackends are the sandbox backends this machine can run; docker and the rest when it can run none.
+func offeredBackends() []string {
+	if a := availableBackends(); len(a) > 0 {
+		return a
+	}
+	return append([]string{"docker"}, slices.DeleteFunc(sandbox.Backends(), func(b string) bool { return b == "docker" })...)
 }
 
 // envNames are the host's environment variables, by name.

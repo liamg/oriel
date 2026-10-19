@@ -22,12 +22,12 @@ const hostRunDir = "/run/oriel-host"
 // sockets off Linux: the sidecar relays them to the session's port.
 func RunVolumeName(root string) string { return Name(root) + "-run" }
 
-// runMounts give a container root's session sockets at ContainerRunDir. On
-// Linux that is RunDir itself. Elsewhere it is a volume the sidecar fills,
+// runMounts give a container root's session sockets at ContainerRunDir. Where
+// sockets mount (SocketsMount) that is RunDir itself; elsewhere a volume the sidecar fills,
 // and the sidecar also gets RunDir for the session's port.
 func runMounts(ctx context.Context, root string, id sandbox.Identity, sidecar bool) ([]container.Mount, error) {
 	dir := sandbox.RunDir(root)
-	if SocketsMount() {
+	if SocketsMount(container.EngineOf(ctx)) {
 		if err := waitFor(filepath.Join(dir, "oriel.sock"), sessionWait); err != nil {
 			return nil, err
 		}
