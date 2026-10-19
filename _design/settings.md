@@ -146,10 +146,10 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `keymap.timeout` | true | app | `timeout`, `to` | FW-3 |
 | `keymap.timeoutlen` | 1s | app | `timeoutlen`, `tm` | FW-3 |
 | `ui.font_size` | 13: the UI's text size, which zooms the window (theming.md, "Sizes") | app | | – |
-| `ui.statusline.font_size` | 0: follows `ui.font_size` | app | | – |
-| `ui.hover.font_size` | 0: follows `ui.font_size`; hovers and signature help | app | | – |
-| `ui.completion.font_size` | 0: follows `ui.font_size` | app | | – |
-| `ui.tooltip.font_size` | 0: follows `ui.font_size` | app | | – |
+| `ui.statusline.font_size` | follows `ui.font_size` until set | app | | – |
+| `ui.hover.font_size` | follows `ui.font_size` until set; hovers and signature help | app | | – |
+| `ui.completion.font_size` | follows `ui.font_size` until set | app | | – |
+| `ui.tooltip.font_size` | follows `ui.font_size` until set | app | | – |
 | `sidebar.form` | auto: how a window's project sidebar starts, `wide`, `narrow`, or wide with 2+ projects; `«`/`»` set a window's own, kept with its layout (ui.md 01h) | app | | – |
 | `ui.reduced_motion` | false | app | | FW-5 |
 | `ui.scrollbars` | auto | app | | – |
@@ -231,7 +231,11 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 - Controls: a toggle, choices (four or fewer inline, else a menu), a menu for a string with `Choices` (`ui.theme`:
   the registered themes; `editor.input`: the registered input engines), and a field for numbers, durations and other
   strings. A number's field takes only what a number is typed with; a field is checked as it's typed (its type, then
-  `OptionSpec.Check`'s range), says why under it while it's wrong, sets on Enter, and Escape puts it back. "TOML" shows each row's line and its Lua. Undo is per change.
+  `OptionSpec.Check`'s range), says why under it while it's wrong, and sets when it's right on Enter, when it loses focus, or once typing pauses
+  (800 ms); Escape puts it back. A number with a range and a `Step` has a slider beside its field, set when it's let
+  go (so dragging `ui.font_size` doesn't zoom the page under the pointer) or at once from h/l and the arrows. A row
+  says "✓ saved" for a moment after the page sets it, and an option that `Follows` another shows that value with
+  "follows <option>" as its source. "TOML" shows each row's line and its Lua. Undo is per change.
 - A list (`registry.List`, held as `[]string`) is a TOML array of strings and a Lua table. `OptionSpec.Validate`
   refuses what the type allows but the option doesn't (a rule that doesn't parse); `Check` asks it, so the page,
   `:set`, Lua and the files all do. On the page, a list with `Choices` is a multi-select (`widget.MultiSelect`: a

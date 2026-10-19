@@ -222,3 +222,27 @@ func TestOptionMapAndItemValidation(t *testing.T) {
 		t.Errorf("a list's choices are suggestions, but %v", err)
 	}
 }
+
+// An option that follows another takes its value while unset anywhere, still as a default, and its watchers hear
+// the other change.
+func TestOptionFollows(t *testing.T) {
+	r := registry.New()
+	r.Option(registry.OptionSpec{Name: "ui.font_size", Type: registry.Float, Default: 13.0, Min: 8, Max: 32, Scopes: registry.ScopeUser})
+	r.Option(registry.OptionSpec{Name: "ui.tooltip.font_size", Type: registry.Float, Default: 13.0, Min: 6, Max: 32, Follows: "ui.font_size",
+		Scopes: registry.ScopeUser})
+	o := r.Options()
+	heard := 0
+	defer o.Watch("ui.tooltip.font_size", func() { heard++ })()
+	o.Set("ui.font_size", registry.LayerUser, registry.At{}, 16.0)
+	if v, l, _ := o.Get("ui.tooltip.font_size", registry.At{}); v != 16.0 || l != registry.LayerDefault {
+		t.Errorf("following ui.font_size at 16: %v from %v", v, l)
+	}
+	if heard != 1 {
+		t.Errorf("setting the option it follows ran its watchers %d times", heard)
+	}
+	o.Set("ui.tooltip.font_size", registry.LayerUser, registry.At{}, 11.0)
+	o.Set("ui.font_size", registry.LayerUser, registry.At{}, 20.0)
+	if v, l, _ := o.Get("ui.tooltip.font_size", registry.At{}); v != 11.0 || l != registry.LayerUser {
+		t.Errorf("set to 11, then ui.font_size to 20: %v from %v", v, l)
+	}
+}

@@ -248,8 +248,9 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 
 ## As built (PL-10)
 
-- `oriel.option{ name, type, default, help, values, min, max, section }` declares an option: type is bool, int, float,
-  string, enum (its first value the default), duration, key, list or map. A plugin's must be named
+- `oriel.option{ name, type, default, help, values, min, max, step, follows, section }` declares an option: type is bool,
+  int, float, string, enum (its first value the default), duration, key, list or map. `step` gives a ranged number a
+  slider on the settings page; `follows` names an option whose value it takes until it's set. A plugin's must be named
   `plugin.<name>.<option>` (its id's name) and go in its own section of the settings page; the config may name any.
   They're disposed with what declared them. `oriel.option[...]` still reads and sets them; `{}` is an empty list.
 - `oriel.now()` is the window's clock in seconds (a test's fixed time), `oriel.platform` the OS (`darwin`, `linux`).

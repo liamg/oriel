@@ -67,7 +67,7 @@ func (x *hudPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.cache = map[string]*builtIndicator{}
 	x.add(h.Option(registry.OptionSpec{Name: HoldOption, Type: registry.Enum, Values: []string{"alt", "ctrl", "shift", "super", "off"}, Default: "alt",
 		Scopes: registry.ScopeUser, Help: "The modifier key that pulls the HUD down while it's held on its own; off for none."}))
-	x.add(h.Option(registry.OptionSpec{Name: HoldDelayOption, Type: registry.Int, Min: 0, Max: 2000, Default: 250, Scopes: registry.ScopeUser,
+	x.add(h.Option(registry.OptionSpec{Name: HoldDelayOption, Type: registry.Int, Min: 0, Max: 2000, Step: 50, Default: 250, Scopes: registry.ScopeUser,
 		Help: "How long, in milliseconds, the hold key is held on its own before the HUD comes down, so a chord (⌥O) doesn't flash it."}))
 	for _, c := range []registry.Command{
 		{ID: "hud.toggle", Title: "Pin the HUD down, or put it away", Run: func(registry.Ctx, registry.Args) error {

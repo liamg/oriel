@@ -108,7 +108,11 @@ type OptionSpec struct {
 	// now); other values are still allowed, as a theme file can come later.
 	Choices  func() []string
 	Min, Max float64 // an Int's or Float's range, when Max > Min
+	Step     float64 // what a slider over the range moves by; the settings page shows one for a range with a step
 	Default  any
+	// Follows is the option whose value this one takes while it's set nowhere: a part's font size follows
+	// ui.font_size. Default stands in while that option isn't registered.
+	Follows string
 	// Validate refuses a value of the right type that's still wrong: a malformed rule in a list. ListOf and MapOf
 	// make one that an editor can also ask about a single item or entry.
 	Validate func(v any) error
@@ -253,11 +257,19 @@ func (o *options) Get(name string, at At) (any, Layer, error) {
 	if !ok {
 		return nil, 0, fmt.Errorf("no option %q", name)
 	}
+	return o.resolve(s, at, 0)
+}
+
+func (o *options) resolve(s OptionSpec, at At, depth int) (any, Layer, error) {
 	v, l := o.winner(s, at)
-	if l == LayerDefault {
-		return s.Default, l, nil
+	if l != LayerDefault {
+		return v.v, l, nil
 	}
-	return v.v, l, nil
+	if f, ok := o.spec(s.Follows); ok && f.Type == s.Type && depth < 8 {
+		v, _, err := o.resolve(f, at, depth+1)
+		return v, LayerDefault, err
+	}
+	return s.Default, l, nil
 }
 
 func (o *options) winner(s OptionSpec, at At) (value, Layer) {
@@ -349,7 +361,11 @@ func (o *options) Unset(name string, l Layer, at At) {
 	}
 }
 
-func (o *options) watchers(name string) []func() {
+// watchers are the watches on name and on the options that follow it.
+func (o *options) watchers(name string) []func() { return o.watchersOf(name, map[string]bool{}) }
+
+func (o *options) watchersOf(name string, seen map[string]bool) []func() {
+	seen[name] = true
 	ids := make([]int, 0, len(o.watches[name]))
 	for id := range o.watches[name] {
 		ids = append(ids, id)
@@ -358,6 +374,11 @@ func (o *options) watchers(name string) []func() {
 	fns := make([]func(), len(ids))
 	for i, id := range ids {
 		fns[i] = o.watches[name][id]
+	}
+	for n := range o.specs {
+		if s, ok := o.specs.top(n); ok && s.Follows == name && !seen[n] {
+			fns = append(fns, o.watchersOf(n, seen)...)
+		}
 	}
 	return fns
 }

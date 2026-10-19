@@ -801,6 +801,9 @@ type Host interface {
   source or target is focusable, in the `dnd` key mode where Space picks up and drops (`ui.drag`), Esc puts down and
   Tab moves on. Files dropped on the window are a `render.DropEvent`: the target under them that takes `"file"` gets
   their paths, else they open in the editor. Lua nodes take `drag = {…}`, `accepts = {…}` and `on_drop`.
+- A ranged number (`OptionSpec.Min`/`Max`) with a `Step` gets a slider on the settings page. `OptionSpec.Follows`
+  names another option of the same type whose value it reads while it's set nowhere (still as `LayerDefault`), and its
+  watchers hear that option change: a part's font size follows `ui.font_size`.
 - Picker sources can show an item live as it's highlighted (`PickerSource.Hover`) and undo that when the picker
   closes without picking (`Cancel`); `PickerItem.Current` is where the list opens. The themes picker is built on
   them. A String option can offer `OptionSpec.Choices`, worked out when asked; the settings page makes it a menu

@@ -375,16 +375,16 @@ const uiFontSize = 13.0
 
 // partSizes are the parts with their own text size: each option scales its part over ui.font_size.
 var partSizes = []struct{ name, help string }{
-	{"ui.statusline.font_size", "The status line's text size; 0 follows ui.font_size."},
-	{"ui.hover.font_size", "The text size of hovers and signature help; 0 follows ui.font_size."},
-	{"ui.completion.font_size", "The completion menu's text size; 0 follows ui.font_size."},
-	{"ui.tooltip.font_size", "Tooltips' text size; 0 follows ui.font_size."},
+	{"ui.statusline.font_size", "The status line's text size; it follows ui.font_size until it's set."},
+	{"ui.hover.font_size", "The text size of hovers and signature help; it follows ui.font_size until it's set."},
+	{"ui.completion.font_size", "The completion menu's text size; it follows ui.font_size until it's set."},
+	{"ui.tooltip.font_size", "Tooltips' text size; it follows ui.font_size until it's set."},
 }
 
 // partScale is what a part with its own size option is drawn at over the UI; 0 when it follows the UI.
 func partScale(o registry.Options, name string) float32 {
-	v, _, err := o.Get(name, registry.At{})
-	if err != nil || v.(float64) <= 0 {
+	v, l, err := o.Get(name, registry.At{})
+	if err != nil || l == registry.LayerDefault {
 		return 0
 	}
 	if ui, _, err := o.Get("ui.font_size", registry.At{}); err == nil && ui.(float64) > 0 {
@@ -432,10 +432,11 @@ func (o *uiOptions) Activate(_ context.Context, h plugin.Host) error {
 	}
 	o.add(h.Keymap(registry.Keymap{Mode: ui.DragKeyMode, Keys: "<Space>", Command: "ui.drag", Desc: "Pick up or drop"}))
 	o.add(h.Keymap(registry.Keymap{Mode: ui.DragKeyMode, Keys: "<Esc>", Command: "ui.drag.cancel", Desc: "Put down"}))
-	o.add(h.Option(registry.OptionSpec{Name: "ui.font_size", Type: registry.Float, Default: uiFontSize, Min: 8, Max: 32,
+	o.add(h.Option(registry.OptionSpec{Name: "ui.font_size", Type: registry.Float, Default: uiFontSize, Min: 8, Max: 32, Step: 0.5,
 		Scopes: registry.ScopeUser, Help: "The UI's text size. It zooms the whole window, so panels grow with their text; ⌘= and ⌘- step it, ⌘0 resets it."}))
 	for _, p := range partSizes {
-		o.add(h.Option(registry.OptionSpec{Name: p.name, Type: registry.Float, Default: 0.0, Min: 0, Max: 32, Scopes: registry.ScopeUser, Help: p.help}))
+		o.add(h.Option(registry.OptionSpec{Name: p.name, Type: registry.Float, Default: uiFontSize, Min: 6, Max: 32, Step: 0.5, Follows: "ui.font_size",
+			Scopes: registry.ScopeUser, Help: p.help}))
 	}
 	step := func(by float64) func(registry.Ctx, registry.Args) error {
 		return func(registry.Ctx, registry.Args) error {

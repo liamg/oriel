@@ -118,34 +118,40 @@ clip 0,38 1600x962 r 0
     rect 1474.3594,112 97.640625x26 radius 6 stroke 1 #332f27
     text "Reset section" @1484.3594,129.36523 #ece6d8 Inter 12
     text "ui.completion.font_size" @288,169.93774 #ece6d8 JetBrains Mono 12.5
-    text "The completion menu's text size; 0 follows ui.font_size." @288,189.79712 #7c7566 Inter 12.5
-    text "default" @1202.3906,178.78001 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,160 200x30 fill #060606 radius 6
-    clip 1324.5469,160 200x30 r 6
-      text "0" @1334.5469,179.54712 #ece6d8 Inter 12.5
+    text "The completion menu's text size; it follows ui.font_size until it's set." @288,189.79712 #7c7566 Inter 12.5
+    text "follows ui.font_size" @1116.6719,178.78001 #7c7566 JetBrains Mono 10.5
+    rect 1264.5469,173 186x4 fill #060606 radius 2 stroke 1 #332f27
+    path 6 segments fill #ece6d8 stroke 1.5 #332f27
+    rect 1460.5469,160 64x30 fill #060606 radius 6
+    clip 1460.5469,160 64x30 r 6
+      text "13" @1470.5469,179.54712 #ece6d8 Inter 12.5
     pop
-    rect 1324.5469,160 200x30 radius 6 stroke 1 #332f27
+    rect 1460.5469,160 64x30 radius 6 stroke 1 #332f27
     rect 1540.5469,162 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,179.36523 #4f4a40 Inter 12
     text "ui.font_size" @288,229.75 #ece6d8 JetBrains Mono 12.5
     text "The UI's text size. It zooms the whole window, so panels grow with their text; ⌘= and ⌘-" @288,249.60938 #7c7566 Inter 12.5
     text "step it, ⌘0 resets it." @288,267.7339 #7c7566 Inter 12.5
     text "default" @1202.3906,247.65453 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,228.87451 200x30 fill #060606 radius 6
-    clip 1324.5469,228.87451 200x30 r 6
-      text "13" @1334.5469,248.42163 #ece6d8 Inter 12.5
+    rect 1264.5469,241.87451 186x4 fill #060606 radius 2 stroke 1 #332f27
+    path 6 segments fill #ece6d8 stroke 1.5 #332f27
+    rect 1460.5469,228.87451 64x30 fill #060606 radius 6
+    clip 1460.5469,228.87451 64x30 r 6
+      text "13" @1470.5469,248.42163 #ece6d8 Inter 12.5
     pop
-    rect 1324.5469,228.87451 200x30 radius 6 stroke 1 #332f27
+    rect 1460.5469,228.87451 64x30 radius 6 stroke 1 #332f27
     rect 1540.5469,230.87451 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,248.23975 #4f4a40 Inter 12
     text "ui.hover.font_size" @288,307.68677 #ece6d8 JetBrains Mono 12.5
-    text "The text size of hovers and signature help; 0 follows ui.font_size." @288,327.54614 #7c7566 Inter 12.5
-    text "default" @1202.3906,316.52902 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,297.74902 200x30 fill #060606 radius 6
-    clip 1324.5469,297.74902 200x30 r 6
-      text "0" @1334.5469,317.29614 #ece6d8 Inter 12.5
+    text "The text size of hovers and signature help; it follows ui.font_size until it's set." @288,327.54614 #7c7566 Inter 12.5
+    text "follows ui.font_size" @1116.6719,316.52902 #7c7566 JetBrains Mono 10.5
+    rect 1264.5469,310.74902 186x4 fill #060606 radius 2 stroke 1 #332f27
+    path 6 segments fill #ece6d8 stroke 1.5 #332f27
+    rect 1460.5469,297.74902 64x30 fill #060606 radius 6
+    clip 1460.5469,297.74902 64x30 r 6
+      text "13" @1470.5469,317.29614 #ece6d8 Inter 12.5
     pop
-    rect 1324.5469,297.74902 200x30 radius 6 stroke 1 #332f27
+    rect 1460.5469,297.74902 64x30 radius 6 stroke 1 #332f27
     rect 1540.5469,299.74902 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,317.11426 #4f4a40 Inter 12
     rect 269,363.49127 3x36 fill #ffd23f radius 2
@@ -173,13 +179,15 @@ clip 0,38 1600x962 r 0
     rect 1540.5469,446.10803 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,463.47327 #4f4a40 Inter 12
     text "ui.statusline.font_size" @288,522.9203 #ece6d8 JetBrains Mono 12.5
-    text "The status line's text size; 0 follows ui.font_size." @288,542.77966 #7c7566 Inter 12.5
-    text "default" @1202.3906,531.7626 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,512.98254 200x30 fill #060606 radius 6
-    clip 1324.5469,512.98254 200x30 r 6
-      text "0" @1334.5469,532.52966 #ece6d8 Inter 12.5
+    text "The status line's text size; it follows ui.font_size until it's set." @288,542.77966 #7c7566 Inter 12.5
+    text "follows ui.font_size" @1116.6719,531.7626 #7c7566 JetBrains Mono 10.5
+    rect 1264.5469,525.98254 186x4 fill #060606 radius 2 stroke 1 #332f27
+    path 6 segments fill #ece6d8 stroke 1.5 #332f27
+    rect 1460.5469,512.98254 64x30 fill #060606 radius 6
+    clip 1460.5469,512.98254 64x30 r 6
+      text "13" @1470.5469,532.52966 #ece6d8 Inter 12.5
     pop
-    rect 1324.5469,512.98254 200x30 radius 6 stroke 1 #332f27
+    rect 1460.5469,512.98254 64x30 radius 6 stroke 1 #332f27
     rect 1540.5469,514.98254 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,532.3478 #4f4a40 Inter 12
     rect 269,569.98254 3x36 fill #ffd23f radius 2
@@ -191,13 +199,15 @@ clip 0,38 1600x962 r 0
     rect 1540.5469,574.98254 31.453125x26 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,592.3478 #ece6d8 Inter 12
     text "ui.tooltip.font_size" @288,642.9203 #ece6d8 JetBrains Mono 12.5
-    text "Tooltips' text size; 0 follows ui.font_size." @288,662.77966 #7c7566 Inter 12.5
-    text "default" @1202.3906,651.7626 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,632.98254 200x30 fill #060606 radius 6
-    clip 1324.5469,632.98254 200x30 r 6
-      text "0" @1334.5469,652.52966 #ece6d8 Inter 12.5
+    text "Tooltips' text size; it follows ui.font_size until it's set." @288,662.77966 #7c7566 Inter 12.5
+    text "follows ui.font_size" @1116.6719,651.7626 #7c7566 JetBrains Mono 10.5
+    rect 1264.5469,645.98254 186x4 fill #060606 radius 2 stroke 1 #332f27
+    path 6 segments fill #ece6d8 stroke 1.5 #332f27
+    rect 1460.5469,632.98254 64x30 fill #060606 radius 6
+    clip 1460.5469,632.98254 64x30 r 6
+      text "13" @1470.5469,652.52966 #ece6d8 Inter 12.5
     pop
-    rect 1324.5469,632.98254 200x30 radius 6 stroke 1 #332f27
+    rect 1460.5469,632.98254 64x30 radius 6 stroke 1 #332f27
     rect 1540.5469,634.98254 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,652.3478 #4f4a40 Inter 12
     text "ui.variant" @288,702.9203 #ece6d8 JetBrains Mono 12.5

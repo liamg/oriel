@@ -83,9 +83,15 @@ func TestZoomedIDESnapshot(t *testing.T) {
 }
 
 // theming.md, "Sizes": a part with its own size (ui.statusline.font_size) is drawn at it over the UI's, bar and
-// text alike; 0 follows ui.font_size.
+// text alike; unset, it follows ui.font_size.
 func TestPartFontSizes(t *testing.T) {
 	s := editorScene(t)
+	o := s.reg.Options()
+	o.Set("ui.font_size", registry.LayerUser, registry.At{}, 16.0)
+	if v, _, _ := o.Get("ui.statusline.font_size", registry.At{}); v != 16.0 || partScale(o, "ui.statusline.font_size") != 0 {
+		t.Errorf("unset under ui.font_size 16: reads %v, scale %v; want 16, following", v, partScale(o, "ui.statusline.font_size"))
+	}
+	o.Unset("ui.font_size", registry.LayerUser, registry.At{})
 	normal := func() (size float32, bar render.Rect) {
 		s.frame()
 		for _, op := range s.list.Ops {

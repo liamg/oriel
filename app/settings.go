@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -75,7 +76,11 @@ type settingsPlugin struct {
 	scope   int // the layer the page edits: user, project, session
 	asTOML  bool
 	undo    []settingsUndo
+	saved   map[string]time.Time // when the page last set each option
 }
+
+// settingsSavedFor is how long a row says it was saved.
+const settingsSavedFor = 1500 * time.Millisecond
 
 type settingsUndo struct {
 	path string
@@ -845,6 +850,9 @@ func (s *settingsPlugin) header(c *ui.Ctx, th *theme.Resolved) {
 func (s *settingsPlugin) sourceLabel(name string, l registry.Layer, at registry.At) string {
 	switch l {
 	case registry.LayerDefault:
+		if sp, ok := s.h.Options().Spec(name); ok && sp.Follows != "" {
+			return "follows " + sp.Follows
+		}
 		return "default"
 	case registry.LayerLua:
 		return "set in " + s.h.Options().Source(name, at)
@@ -888,11 +896,15 @@ func (s *settingsPlugin) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSp
 				s.shadowNote(c, th, shadowL, shadowSrc)
 			}
 		})
-		srcTok := tSetSource
+		srcTok, src := tSetSource, s.sourceLabel(sp.Name, l, at)
 		if lua {
 			srcTok = tSetLua
 		}
-		c.Text("src", s.sourceLabel(sp.Name, l, at), monoAt(th, 10.5, srcTok))
+		if t, ok := s.saved[sp.Name]; ok && c.Now().Before(t.Add(settingsSavedFor)) {
+			srcTok, src = tSetModified, "✓ saved"
+			c.WakeAt(t.Add(settingsSavedFor))
+		}
+		c.Text("src", src, monoAt(th, 10.5, srcTok))
 		fade := float32(0)
 		if disabled {
 			fade = .55
@@ -940,20 +952,20 @@ func (s *settingsPlugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.Opti
 		items, _ := v.([]string)
 		if sp.Choices != nil {
 			if l, ok := widget.MultiSelect(c, "multi", items, sp.Choices, widget.MultiSelectOpts{Label: sp.Name, Disabled: disabled, Help: help}); ok {
-				s.fail(s.set(sp.Name, l, s.scope))
+				s.save(sp.Name, l)
 			}
 			return
 		}
 		if l, ok := widget.ListEditor(c, "list", items, widget.ListEditorOpts{Label: sp.Name, Disabled: disabled, Help: help, Width: 340,
 			Placeholder: "add one, ⏎", Validate: itemCheck(sp)}); ok {
-			s.fail(s.set(sp.Name, l, s.scope))
+			s.save(sp.Name, l)
 		}
 		return
 	case registry.Map:
 		m, _ := v.(map[string]string)
 		if nm, ok := widget.MapField(c, "map", m, widget.MapEditorOpts{Title: sp.Name, KeyLabel: sp.KeyLabel, ValueLabel: sp.ValueLabel,
 			Disabled: disabled, Help: help, Validate: entryCheck(sp)}); ok {
-			s.fail(s.set(sp.Name, nm, s.scope))
+			s.save(sp.Name, nm)
 		}
 		return
 	case registry.Table:
@@ -963,14 +975,14 @@ func (s *settingsPlugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.Opti
 	case registry.Bool:
 		on, _ := v.(bool)
 		if widget.Toggle(c, "toggle", on, widget.ToggleOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}) {
-			s.fail(s.set(sp.Name, !on, s.scope))
+			s.save(sp.Name, !on)
 		}
 	case registry.Enum:
 		cur, _ := v.(string)
 		if len(sp.Values) <= 4 {
 			i := slices.Index(sp.Values, cur)
 			if widget.Segmented(c, "choices", upper(sp.Values), &i, widget.SegmentedOpts{Help: "shell/settings#rows"}) && !disabled {
-				s.fail(s.set(sp.Name, sp.Values[i], s.scope))
+				s.save(sp.Name, sp.Values[i])
 			}
 			return
 		}
@@ -984,6 +996,20 @@ func (s *settingsPlugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.Opti
 		s.field(c, sp, v, disabled)
 	default:
 		s.field(c, sp, v, disabled)
+	}
+}
+
+// save sets an option from the page at the scope it edits, and marks its row saved.
+func (s *settingsPlugin) save(name string, v any) {
+	if err := s.set(name, v, s.scope); err != nil {
+		s.fail(err)
+		return
+	}
+	if s.saved == nil {
+		s.saved = map[string]time.Time{}
+	}
+	if u := s.h.UI(); u != nil {
+		s.saved[name] = u.Now()
 	}
 }
 
@@ -1006,17 +1032,20 @@ func entryCheck(sp registry.OptionSpec) func(k, v string) error {
 // dropdown is a menu of values for a row.
 func (s *settingsPlugin) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, values []string, disabled bool) {
 	if v, ok := widget.Select(c, "drop", cur, values, widget.SelectOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}); ok {
-		s.fail(s.set(sp.Name, v, s.scope))
+		s.save(sp.Name, v)
 	}
 }
 
-// field is a text field for a value, checked as it's typed and set when entered.
+// field is a text field for a value, checked as it's typed and set when entered, when it loses focus or once
+// typing pauses. A number with a range and a step has a slider beside it too, set when it's let go.
 func (s *settingsPlugin) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled bool) {
 	text := fieldText(v)
 	fid := c.Next("field")
 	st := ui.State[fieldState](c, fid)
-	if !c.Interaction(ui.Child(fid, "in")).Focused && st.from != text {
-		st.text, st.from = text, text
+	line := ui.Child(fid, "line")
+	in := c.Interaction(ui.Child(line, "in"))
+	if !in.Focused && !st.sliding && st.from != text {
+		st.text, st.from, st.typing = text, text, false
 	}
 	var accept func(rune) bool
 	switch sp.Type {
@@ -1025,22 +1054,63 @@ func (s *settingsPlugin) field(c *ui.Ctx, sp registry.OptionSpec, v any, disable
 	case registry.Float:
 		accept = widget.Decimal
 	}
-	val, bad := parseField(sp, st.text)
-	if bad == nil {
-		bad = sp.Check(val)
+	slider := sp.Step > 0 && sp.Max > sp.Min
+	w := float32(200)
+	if slider {
+		w = 260
 	}
-	const w = 200
 	c.Column("field", ui.Style{W: ui.Px(w), Gap: 4}, func(c *ui.Ctx) {
-		res := widget.Input(c, "in", &st.text, widget.InputOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows", Accept: accept,
-			Invalid: bad != nil})
+		var res widget.InputResult
+		c.Row("line", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+			if slider {
+				sid := c.Next("slide")
+				if !st.sliding {
+					st.slide, _ = toFloat(v)
+				}
+				if widget.Slider(c, "slide", &st.slide, widget.SliderOpts{Min: sp.Min, Max: sp.Max, Step: sp.Step, Width: ui.Flex(1),
+					Label: sp.Name, Help: "shell/settings#rows"}) && !disabled {
+					st.sliding, st.text = true, fieldText(numberAs(sp, st.slide))
+				}
+				if st.sliding && !c.Interaction(sid).Held {
+					st.sliding = false
+					s.save(sp.Name, numberAs(sp, st.slide))
+				}
+			}
+			iw := ui.Flex(1)
+			if slider {
+				iw = ui.Px(64)
+			}
+			before := st.text
+			res = widget.Input(c, "in", &st.text, widget.InputOpts{Label: sp.Name, Width: iw, Disabled: disabled, Help: "shell/settings#rows",
+				Accept: accept, Invalid: st.bad != nil})
+			if st.text != before {
+				st.typing, st.typed = true, c.Now()
+			}
+		})
+		val, bad := parseField(sp, st.text)
+		if bad == nil {
+			bad = sp.Check(val)
+		}
+		st.bad = bad
+		blurred := st.focused && !in.Focused
+		st.focused = in.Focused
 		switch {
 		case res.Cancelled:
-			st.text = text
+			st.text, st.typing = text, false
 		case res.Submitted:
-			if bad == nil {
-				bad = s.set(sp.Name, val, s.scope)
+			st.typing = false
+			if bad != nil {
+				s.fail(bad)
+			} else if st.text != text {
+				s.save(sp.Name, val)
 			}
-			s.fail(bad)
+		case st.typing && (blurred || !c.Now().Before(st.typed.Add(settingsTypingPause))):
+			st.typing = false
+			if bad == nil && st.text != text {
+				s.save(sp.Name, val)
+			}
+		case st.typing:
+			c.WakeAt(st.typed.Add(settingsTypingPause))
 		}
 		if bad != nil && st.text != text {
 			widget.Wrap(c, "bad", bad.Error(), w, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11}, Color: c.Theme().C(theme.Error)})
@@ -1048,8 +1118,38 @@ func (s *settingsPlugin) field(c *ui.Ctx, sp registry.OptionSpec, v any, disable
 	})
 }
 
-// fieldState is a field's text, and the value it was last filled from.
-type fieldState struct{ text, from string }
+// settingsTypingPause is how long a field waits after the last key before it sets what was typed.
+const settingsTypingPause = 800 * time.Millisecond
+
+// fieldState is a field's text, the value it was last filled from, and its slider's value while it's moved.
+type fieldState struct {
+	text, from string
+	typing     bool      // text was typed and isn't set yet
+	typed      time.Time // the last key that changed it
+	focused    bool
+	bad        error
+	slide      float64
+	sliding    bool
+}
+
+// toFloat is an Int's or a Float's value as a float64.
+func toFloat(v any) (float64, bool) {
+	switch n := v.(type) {
+	case int:
+		return float64(n), true
+	case float64:
+		return n, true
+	}
+	return 0, false
+}
+
+// numberAs is f as sp's type: an Int rounds.
+func numberAs(sp registry.OptionSpec, f float64) any {
+	if sp.Type == registry.Int {
+		return int(math.Round(f))
+	}
+	return f
+}
 
 func upper(ss []string) []string {
 	out := make([]string, len(ss))
