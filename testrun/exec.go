@@ -105,7 +105,7 @@ func Start(ctx context.Context, req Request, emit func(Event)) (*Exec, error) {
 	x := &Exec{run: run, cancel: cancel, done: make(chan struct{})}
 	var mu sync.Mutex
 	send := func(e Event) {
-		resolveLoc(cmd.Dir, req.Items, &e)
+		resolveLoc(req, cmd.Dir, &e)
 		mu.Lock()
 		run.Apply(e)
 		mu.Unlock()
@@ -173,18 +173,26 @@ func (x *Exec) Wait() (*Run, error) {
 	return x.run, x.err
 }
 
-// resolveLoc makes a failure's relative location absolute: against the run's directory, or the directory of the
-// test it's for (Go prints names relative to the package).
-func resolveLoc(dir string, items []Item, e *Event) {
+// resolveLoc makes a failure's relative location absolute: against its package's directory (PackageDirer), the
+// run's, or the directory of the test it's for (Go prints names relative to the package).
+func resolveLoc(req Request, dir string, e *Event) {
 	if e.Failure == nil || e.Failure.Loc == nil || filepath.IsAbs(e.Failure.Loc.File) {
 		return
 	}
 	f := filepath.FromSlash(e.Failure.Loc.File)
+	if pd, ok := req.Adapter.(PackageDirer); ok {
+		if d, ok := pd.PackageDir(req.Workspace, e.Package); ok {
+			if p := filepath.Join(d, f); fileExists(p) {
+				e.Failure.Loc.File = p
+				return
+			}
+		}
+	}
 	if p := filepath.Join(dir, f); fileExists(p) {
 		e.Failure.Loc.File = p
 		return
 	}
-	for _, it := range items {
+	for _, it := range req.Items {
 		if it.Package != e.Package || it.File == "" {
 			continue
 		}

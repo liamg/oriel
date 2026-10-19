@@ -300,6 +300,9 @@ func (g *Go) Command(ws Workspace, items []Item, mode Mode) (Cmd, error) {
 		} else {
 			whole = true
 		}
+		if d, ok := g.PackageDir(ws, it.Package); ok && it.File == "" {
+			dir = d
+		}
 		p := "./" + relTo(ws.Root, dir)
 		if p == "./." {
 			p = "."
@@ -582,3 +585,17 @@ func fileExists(p string) bool {
 }
 
 func (*Go) TestFile(path string) bool { return strings.HasSuffix(path, "_test.go") }
+
+func (g *Go) PackageDir(ws Workspace, pkg string) (string, bool) {
+	m, ok := g.module(ws.Root)
+	if !ok {
+		return "", false
+	}
+	if pkg == m.path {
+		return m.root, true
+	}
+	if rel, ok := strings.CutPrefix(pkg, m.path+"/"); ok {
+		return filepath.Join(m.root, filepath.FromSlash(rel)), true
+	}
+	return "", false
+}

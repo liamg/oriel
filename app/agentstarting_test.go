@@ -10,10 +10,10 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/agent/hostexec"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/sandbox"
-	"github.com/liamg/oriel/worker"
 )
 
 const oneOff = "This happens once: later sessions reuse the image and start in seconds."
@@ -43,9 +43,9 @@ func TestLauncherClosesWhileTheAgentStarts(t *testing.T) {
 	hold := make(chan struct{})
 	fake := agenttest.NewFake()
 	fake.Launch = true
-	lw := newWorkerWith(t, worker.Options{Exec: holdExec{hold: hold}}, fake)
+	lw := newHostWith(t, host.Options{Exec: holdExec{hold: hold}}, fake)
 	lw.fake = fake
-	if _, err := lw.client(t).AddRepoPath(context.Background(), lw.repo); err != nil {
+	if _, err := lw.w.AddRepoPath(context.Background(), lw.repo); err != nil {
 		t.Fatal(err)
 	}
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
@@ -56,7 +56,7 @@ func TestLauncherClosesWhileTheAgentStarts(t *testing.T) {
 			close(hold)
 		}
 	}()
-	waitState(t, r.store, "the worker", func(st core.State) bool { return len(st.Workers) == 1 })
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.waitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
 	r.do(func() error {
 		return r.host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host")

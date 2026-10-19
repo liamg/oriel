@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 
@@ -42,12 +43,14 @@ func (v testsView) Build(registry.ViewCtx) ui.Node {
 	return &ui.Func{Key: "tests", Fn: v.x.panelView}
 }
 
-// latest is each test's latest result, by key, from the run in progress and the runs kept.
+// latest is each test's latest result, by key, from the run in progress and the runs kept; not those of tests that
+// are gone.
 func (x *testsPlugin) latest() map[string]*testrun.Result {
+	known, pkgs := x.known()
 	out := map[string]*testrun.Result{}
 	for _, r := range x.history.Runs() {
 		for _, res := range r.Tests {
-			if res.Status != testrun.StatusCanceled {
+			if res.Status != testrun.StatusCanceled && current(known, pkgs, res) {
 				out[res.Key()] = res
 			}
 		}
@@ -67,6 +70,7 @@ func (x *testsPlugin) latest() map[string]*testrun.Result {
 func (x *testsPlugin) panelView(c *ui.Ctx) {
 	th := c.Theme()
 	latest := x.latest()
+	known, _ := x.known()
 	failed := 0
 	for _, r := range latest {
 		if r.Status.Failing() {
@@ -82,7 +86,7 @@ func (x *testsPlugin) panelView(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
 				c.Text("t", "TESTS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold, Tracking: .12},
 					Color: th.C(theme.Accent)})
-				for i, f := range []struct{ label, name string }{{fmt.Sprintf("all %d", len(latest)), "All tests"},
+				for i, f := range []struct{ label, name string }{{fmt.Sprintf("all %d", x.testCount(known, latest)), "All tests"},
 					{fmt.Sprintf("✕ %d", failed), "Failed only"}, {"slowest", "Slowest"}} {
 					if widget.ToggleChip(c, i, f.label, p.filter == i, widget.ToggleChipOpts{Label: f.name, Help: "editor/pane#tests"}) != (p.filter == i) {
 						p.filter = i
@@ -99,9 +103,15 @@ func (x *testsPlugin) panelView(c *ui.Ctx) {
 			})
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				c.Column("tree", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-					items := x.treeItems(latest, p.filter)
+					items := x.treeItems(known, latest, p.filter)
 					if len(items) == 0 {
-						c.Text("none", "No tests run yet: ␣tt runs the one at the cursor, ␣tf the file's.", mono(11, theme.FgGhost))
+						msg := "No tests found."
+						if known == nil {
+							msg = "Finding tests…"
+						} else if p.filter != 0 {
+							msg = "No tests run yet: ␣tt runs the one at the cursor, ␣tf the file's."
+						}
+						c.Text("none", msg, mono(11, theme.FgGhost))
 						return
 					}
 					res := widget.Tree(c, fmt.Sprint("tree", p.filter), items, widget.TreeOpts{Help: "editor/pane#tests", Label: "Tests", KeyMode: "tests",
@@ -110,7 +120,9 @@ func (x *testsPlugin) panelView(c *ui.Ctx) {
 						p.sel = res.Selected
 					}
 					if res.Activated != "" {
-						x.openResult(latest[res.Activated])
+						if err := x.openTest(known, latest, res.Activated); err != nil {
+							x.h.Notify(core.Notice{ID: "tests.open", Severity: core.SevWarning, Text: err.Error()})
+						}
 					}
 				})
 				c.Box("edge", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
@@ -177,38 +189,65 @@ func (x *testsPlugin) lastRunLine(c *ui.Ctx) {
 	c.Text("p", fmt.Sprintf("%d ✓", pass), st)
 }
 
-// treeItems are packages, then tests, then their cases; with a filter, the failing ones (and what holds them) or the
-// slowest ten.
-func (x *testsPlugin) treeItems(latest map[string]*testrun.Result, filter int) []widget.TreeItem {
-	keys := make([]string, 0, len(latest))
-	for k := range latest {
+// testCount is how many tests the tree shows: every one found, and any that ran but weren't.
+func (x *testsPlugin) testCount(known map[string]testrun.Item, latest map[string]*testrun.Result) int {
+	n := len(known)
+	for k, r := range latest {
+		if _, ok := known[k]; !ok && r.Test != "" {
+			n++
+		}
+	}
+	return n
+}
+
+// treeItems are packages, then tests, then their cases: every test found and every result; with a filter, the
+// failing ones (and what holds them) or the slowest ten.
+func (x *testsPlugin) treeItems(known map[string]testrun.Item, latest map[string]*testrun.Result, filter int) []widget.TreeItem {
+	type test struct{ pkg, name string }
+	all := map[string]test{}
+	if filter == 0 {
+		for k, it := range known {
+			all[k] = test{it.Package, it.Name}
+		}
+	}
+	for k, r := range latest {
+		if r.Test != "" {
+			all[k] = test{r.Package, r.Test}
+		}
+	}
+	keys := make([]string, 0, len(all))
+	for k := range all {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
 	th := x.h.CurrentTheme()
-	item := func(r *testrun.Result, label string) widget.TreeItem {
+	item := func(key, label string) widget.TreeItem {
 		glyph, tok := "○", theme.FgFaint
+		r := latest[key]
 		switch {
+		case r == nil:
 		case r.Status == testrun.StatusRunning:
 			glyph, tok = "◌", theme.FgMuted
 		case r.Status.Failing():
 			glyph, tok = "✕", tTestFailed
-		case r.Status == testrun.StatusPassed && x.history.Flaky(r.Key()):
+		case r.Status == testrun.StatusPassed && x.history.Flaky(key):
 			glyph, tok = "◌", tTestFlaky
 		case r.Status == testrun.StatusPassed:
 			glyph, tok = "✓", tTestPassed
 		}
-		return widget.TreeItem{ID: r.Key(), Label: label, Glyph: glyph, GlyphTone: th.C(tok), Open: r.Status.Failing(), Help: "editor/pane#tests"}
+		return widget.TreeItem{ID: key, Label: label, Glyph: glyph, GlyphTone: th.C(tok), Open: r != nil && r.Status.Failing(), Help: "editor/pane#tests"}
 	}
 	if filter == 2 {
 		var rs []*testrun.Result
 		for _, r := range latest {
-			rs = append(rs, r)
+			if r.Test != "" {
+				rs = append(rs, r)
+			}
 		}
 		slices.SortFunc(rs, func(a, b *testrun.Result) int { return int(b.Duration - a.Duration) })
 		var out []widget.TreeItem
 		for _, r := range rs[:min(10, len(rs))] {
-			out = append(out, item(r, r.Test))
+			out = append(out, item(r.Key(), r.Test))
 		}
 		return out
 	}
@@ -224,18 +263,24 @@ func (x *testsPlugin) treeItems(latest map[string]*testrun.Result, filter int) [
 	var order []string
 	nodes := map[string]*widget.TreeItem{}
 	for _, k := range keys {
-		r := latest[k]
+		t := all[k]
 		if filter == 1 && !failingUnder(k) {
 			continue
 		}
-		pkg := pkgs[r.Package]
+		pkg := pkgs[t.pkg]
 		if pkg == nil {
-			pkg = &widget.TreeItem{ID: "\x01" + r.Package, Label: r.Package, Open: true, Help: "editor/pane#tests"}
-			pkgs[r.Package] = pkg
-			order = append(order, r.Package)
+			pkg = &widget.TreeItem{ID: "\x01" + t.pkg, Label: t.pkg, Open: filter == 1, Help: "editor/pane#tests"}
+			if r := latest[testrun.Key(t.pkg, "")]; r != nil && r.Status.Failing() {
+				pkg.Glyph, pkg.GlyphTone, pkg.Open = "✕", th.C(tTestFailed), true
+			}
+			pkgs[t.pkg] = pkg
+			order = append(order, t.pkg)
 		}
-		parts := strings.Split(r.Test, "/")
-		it := item(r, parts[len(parts)-1])
+		parts := strings.Split(t.name, "/")
+		it := item(k, parts[len(parts)-1])
+		if it.Open {
+			pkg.Open = true
+		}
 		nodes[k] = &it
 	}
 	// Each test under its parent (TestX/case under TestX), the top ones under their package; children first, so a
@@ -246,20 +291,27 @@ func (x *testsPlugin) treeItems(latest map[string]*testrun.Result, filter int) [
 		if n == nil {
 			continue
 		}
-		r := latest[k]
+		t := all[k]
 		parent := ""
-		if i := strings.LastIndex(r.Test, "/"); i >= 0 {
-			parent = testrun.Key(r.Package, r.Test[:i])
+		if i := strings.LastIndex(t.name, "/"); i >= 0 {
+			parent = testrun.Key(t.pkg, t.name[:i])
 		}
 		if p := nodes[parent]; parent != "" && p != nil {
 			p.Children = append([]widget.TreeItem{*n}, p.Children...)
 			continue
 		}
-		pkgs[r.Package].Children = append([]widget.TreeItem{*n}, pkgs[r.Package].Children...)
+		pkgs[t.pkg].Children = append([]widget.TreeItem{*n}, pkgs[t.pkg].Children...)
+	}
+	var sortTree func(its []widget.TreeItem)
+	sortTree = func(its []widget.TreeItem) {
+		slices.SortStableFunc(its, func(a, b widget.TreeItem) int { return strings.Compare(a.ID, b.ID) })
+		for _, it := range its {
+			sortTree(it.Children)
+		}
 	}
 	var out []widget.TreeItem
 	for _, p := range order {
-		slices.SortStableFunc(pkgs[p].Children, func(a, b widget.TreeItem) int { return strings.Compare(a.ID, b.ID) })
+		sortTree(pkgs[p].Children)
 		out = append(out, *pkgs[p])
 	}
 	return out
@@ -345,10 +397,19 @@ func (x *testsPlugin) outputLines(r *testrun.Result, which int) []string {
 	return out
 }
 
-// openResult goes to a test's failure, or its name.
-func (x *testsPlugin) openResult(r *testrun.Result) {
-	if r == nil || r.Failure == nil || r.Failure.Loc == nil {
-		return
+// openTest goes to a test's failure, or where it's defined.
+func (x *testsPlugin) openTest(known map[string]testrun.Item, latest map[string]*testrun.Result, key string) error {
+	file, line := "", 0
+	if r := latest[key]; r != nil && r.Failure != nil && r.Failure.Loc != nil {
+		file, line = r.Failure.Loc.File, r.Failure.Loc.Line
+	} else if it, ok := known[key]; ok {
+		file, line = it.File, it.Line
 	}
-	x.h.Run(context.Background(), "editor.open", registry.Args{"path": r.Failure.Loc.File, "line": r.Failure.Loc.Line + 1})
+	if file == "" {
+		return nil
+	}
+	if _, err := os.Stat(file); err != nil {
+		return fmt.Errorf("can't open %s: %w", file, err)
+	}
+	return x.h.Run(context.Background(), "editor.open", registry.Args{"path": file, "line": line + 1})
 }

@@ -101,8 +101,9 @@ flowchart TB
   `syntax.Parser.Query(kind)` and `syntax.Document.Query(kind)` run a language's `<kind>.scm` and return its matches
   with named captures and `#set!` properties. Built-in kinds: `highlights`, `folds`, `injections`, `units`, and
   `tests` (test discovery, below); a plugin's language brings its own the same way.
-- **test adapters** (`testrun.Adapter`: Detect, Discover, Command, Parse; optionally `Coverer`, `Watcher` and `TestFiler`,
-  which tells a test file by its path for `Set.TestFile`), as a
+- **test adapters** (`testrun.Adapter`: Detect, Discover, Command, Parse; optionally `Coverer`, `Watcher`, `TestFiler`,
+  which tells a test file by its path for `Set.TestFile` and `Set.Scan`, and `PackageDirer`, which maps a package to
+  its directory for failure locations printed relative to it), as a
   `testrun.Contribution{Adapter}` of kind `testrun.adapter` (`Registry.Contribute`). The app adds every one to its
   `testrun.Set` with `testrun.Contribute(set, reg.Contributions("testrun.adapter"))`; a later adapter of the same
   name shadows the built-in until disposed. An adapter for a language with a grammar usually finds tests with that

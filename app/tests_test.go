@@ -286,7 +286,8 @@ func TestTestsPanel(t *testing.T) {
 			walk(it.Children)
 		}
 	}
-	walk(s.tests().treeItems(s.tests().latest(), s.tests().panel.filter))
+	known, _ := s.tests().known()
+	walk(s.tests().treeItems(known, s.tests().latest(), s.tests().panel.filter))
 	if got := strings.Join(rows, " "); got != "example.com/pricing TestRoundHalfEven -3.5" {
 		t.Errorf("failed-only rows: %q", got)
 	}
@@ -296,6 +297,46 @@ func TestTestsPanel(t *testing.T) {
 	r, _ := s.tests().history.Last(testrun.ByUser)
 	if !s.tests().history.Flaky(testrun.Key(r.Tests[0].Package, "TestFlaky")) {
 		t.Error("TestFlaky isn't flaky")
+	}
+}
+
+// The Tests panel lists every test in the workspace before any has run, and drops a result whose test file is gone.
+func TestTestsPanelFindsTests(t *testing.T) {
+	s, dir := testsScene(t)
+	other := filepath.Join(dir, "other", "other_test.go")
+	os.MkdirAll(filepath.Dir(other), 0o755)
+	os.WriteFile(other, []byte("package other\n\nimport \"testing\"\n\nfunc TestOther(t *testing.T) { t.Fatal(\"no\") }\n"), 0o644)
+	s.tests().rescan(other)
+	rows := func() string {
+		known, _ := s.tests().known()
+		var out []string
+		var walk func(its []widget.TreeItem)
+		walk = func(its []widget.TreeItem) {
+			for _, it := range its {
+				out = append(out, it.Label+it.Glyph)
+				walk(it.Children)
+			}
+		}
+		walk(s.tests().treeItems(known, s.tests().latest(), 0))
+		return strings.Join(out, " ")
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for !strings.Contains(rows(), "TestRoundMinor") && time.Now().Before(deadline) {
+		s.sh.runTodo()
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got := rows(); got != "example.com/pricing TestFlaky○ TestRoundHalfEven○ -3.5○ 2.5○ TestRoundMinor○ example.com/pricing/other TestOther○" {
+		t.Fatalf("rows before a run: %q", got)
+	}
+	s.run("test.run.all", nil)
+	s.runDone(t)
+	if got := rows(); !strings.Contains(got, "TestOther✕") {
+		t.Fatalf("rows after the run: %q", got)
+	}
+	os.Remove(other)
+	s.tests().rescan(other)
+	if got := rows(); strings.Contains(got, "other") {
+		t.Errorf("a deleted file's test is still listed: %q", got)
 	}
 }
 
