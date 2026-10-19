@@ -313,7 +313,7 @@ func (x *shipPlugin) uncommitted(c *ui.Ctx, se core.SessionState, s host.Ship, o
 				if fl.Code == "?" {
 					c.Text("new", "new", monoFont(10, th.C(theme.FgFaint)))
 				}
-				widget.DiffStat(c, "ds", fl.Add, fl.Del, widget.DiffStatOpts{})
+				widget.DiffStat(c, "ds", fl.Add, fl.Del, widget.DiffStatOpts{Binary: fl.Binary})
 				if lf, ok := led.File(fl.Path); ledOK && ok && lf.Uncommitted.Total() > 0 {
 					c.Row("read", ui.Style{W: ui.Px(64), Main: ui.End}, func(c *ui.Ctx) {
 						if n := lf.Uncommitted; n.NotRead() == 0 {

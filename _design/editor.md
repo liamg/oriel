@@ -268,6 +268,30 @@ backgrounds with their gutter edge, highlights and wavy underlines over columns,
 blocks between lines, which push the lines below them down. Blocks at anchors stay with their text through edits.
 The engine's scrolling counts lines, not the rows blocks take, so a tall block can push the last lines out of view.
 
+## Images
+
+- **In markdown** (the preview, threads, tours, notes: `mdParse`): `![alt](src)` (inside a link too) and the HTML
+  GitHub renders in a README. A line starting with a block tag (`<p>`, `<div>`, `<h1>`…`<h6>`, `<details>`,
+  `<summary>`, `<picture>`, `<br>`, `<hr>`…) or a comment starts an HTML block, up to a blank line: its headings,
+  paragraphs and list items become blocks, `align="center"` or `"right"` aligns them and their images, `<img src alt
+  width height>` is an image (a `<picture>`'s `<img>` stands for its `<source>`s), `<br>` breaks the paragraph, and a
+  `<summary>` is a bold "▸" line over its body. Inline, `<b>`/`<strong>` are bold, `<code>`/`<kbd>` code, `<a>`,
+  `<sub>`, `<sup>`, `<i>` and tags it doesn't know are their text, and comments are hidden. Entities are decoded.
+- A block's images are drawn in rows that wrap at the column, at their `width`/`height` (a percentage is of the
+  column), never wider than it; each is zoomable, and a document's images are one lightbox group. A relative `src` is
+  found from the markdown file's folder (a thread's: its project's), and a `data:` URI is decoded. Oriel fetches
+  nothing: a remote (`http(s)`) image, an SVG (nothing here rasterizes one) or a missing file is a chip with its alt
+  text and source, its tooltip saying why.
+- PNG, JPEG, GIF, WebP, BMP and ICO are decoded (the stdlib and `golang.org/x/image`), once per file while its time
+  and size stay the same (`pictures` in `app/images.go`, shared by markdown, tours, image tabs and image diffs).
+- **In a tab**: a file a `registry.FileViewer` claims opens in that viewer's view instead of a buffer
+  (`plugins.md`). The built-in `image` viewer shows an image centred and fit to the tab, with its dimensions, size
+  and format under it, zoomable, and reloads it when the file changes; an SVG, a video, audio, a PDF or another binary
+  file is a card with its name, type and size and "Open in default app" (`open` on macOS, `xdg-open` on Linux).
+- **In the branch diff**: a changed image is drawn old and new, Side by side (each labelled with its dimensions and
+  size) or as a Slider (the two overlaid, a draggable divider with the old left of it and the new right); an added or
+  deleted image shows its one side. Both are one lightbox group.
+
 ## Options (ED-13)
 
 - The engine's options are `vim.OptionDefs()`: vim's name and short name, kind, nvim's default, and whether it lives

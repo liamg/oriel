@@ -49,6 +49,7 @@ func (x *markdownPlugin) Activate(_ context.Context, h plugin.Host) error {
 // markdownBlocks maps each markdown block to its source lines.
 func markdownBlocks(ctx *registry.PresentCtx) {
 	md := mdParse(strings.Join(ctx.Lines, "\n"))
+	o := mdOpts{Dir: filepath.Dir(ctx.Path), Group: "md:" + ctx.Path, Help: "editor/pane#present"}
 	first := slices.IndexFunc(md, func(b mdBlock) bool { return b.Kind == mdHeading && b.Level == 1 })
 	var toc []string
 	for _, b := range md {
@@ -62,9 +63,12 @@ func markdownBlocks(ctx *registry.PresentCtx) {
 			line = ctx.Lines[b.Line-1]
 		}
 		pb := ctx.Block(b.Line-1, b.End-1, func(c *ui.Ctx, d registry.PresentDraw) {
-			markdownBlock(c, b, line, i == first, toc, d)
+			markdownBlock(c, b, line, i == first, toc, d, o)
 		})
 		pb.Space, pb.Label = 6, plainMarkdown(b.Text)
+		if pb.Label == "" && len(b.Images) > 0 {
+			pb.Label = cmpOr(b.Images[0].Alt, b.Images[0].Src)
+		}
 		if b.Kind == mdHeading && b.Level > 1 {
 			pb.Space = 22
 		}
@@ -73,7 +77,21 @@ func markdownBlocks(ctx *registry.PresentCtx) {
 
 // markdownBlock draws a block as a document does: headings large (the first title with the document's label over
 // it and its sections under it), a fence in a box, a one-line block that changed as what it was and what it is.
-func markdownBlock(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d registry.PresentDraw) {
+func markdownBlock(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d registry.PresentDraw, o mdOpts) {
+	if len(b.Images) == 0 {
+		markdownBody(c, b, line, title, toc, d)
+		return
+	}
+	c.Column("pics", ui.Style{W: ui.Px(d.Width), Gap: 10}, func(c *ui.Ctx) {
+		mdPictures(c, "img", b.Images, b.Align, d.Width, o)
+		if b.Text != "" || b.Kind == mdItem {
+			markdownBody(c, b, line, title, toc, d)
+		}
+	})
+}
+
+// markdownBody is a block's text.
+func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d registry.PresentDraw) {
 	th := c.Theme()
 	width := d.Width
 	body := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14.5}, Color: th.C(theme.Fg)}
@@ -89,12 +107,18 @@ func markdownBlock(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, 
 	switch b.Kind {
 	case mdHeading:
 		if b.Level == 1 {
-			c.Column("h", ui.Style{Gap: 10, Pad: ui.Insets{B: 8}}, func(c *ui.Ctx) {
+			cross := ui.Start
+			if b.Align == "center" {
+				cross = ui.Center
+			}
+			c.Column("h", ui.Style{W: ui.Px(width), Gap: 10, Pad: ui.Insets{B: 8}, Cross: cross}, func(c *ui.Ctx) {
 				if title && d.Kicker != "" {
 					c.Text("k", strings.ToUpper(d.Kicker), kickerFont(th.C(tMdMark)))
 				}
-				widget.Rich(c, "t", spans, width, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 28, Weight: typeset.Medium},
-					Color: th.C(theme.Fg)}, widget.RichOpts{})
+				mdAligned(c, "t", b.Align, width, func(c *ui.Ctx, key any) {
+					widget.Rich(c, key, spans, width, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 28, Weight: typeset.Medium},
+						Color: th.C(theme.Fg)}, widget.RichOpts{})
+				})
 				if len(toc) > 0 && title {
 					c.Text("toc", strings.Join(toc, " · "), monoFont(10.5, th.C(theme.FgFaint)))
 				}
@@ -125,7 +149,7 @@ func markdownBlock(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, 
 	case mdRule:
 		c.Box("hr", ui.Style{W: ui.Px(width), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 	default:
-		widget.Rich(c, "p", spans, width, body, widget.RichOpts{})
+		mdAligned(c, "p", b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, spans, width, body, widget.RichOpts{}) })
 	}
 }
 

@@ -84,40 +84,38 @@ clip 150,38 300x356 r 0
   rect 150,68 300x1 fill #24221d
   clip 150,69 300x325 r 0
     rect 150,69 300x325 fill #0c0c0b
-    clip 160,79 280x24 r 5
-      text "CHANGED 0" @171.1375,94.420006 #7c7566 JetBrains Mono 9.5
-      text "UNCOMMITTED 0" @254.82501,94.420006 #7c7566 JetBrains Mono 9.5
-      rect 355.175,79 84.82501x24 fill #1f1c0f
-      text "ALL 2" @380.2125,94.420006 #ffd23f JetBrains Mono 9.5
+    clip 160,79 254x24 r 5
+      text "CHANGED 0" @170,94.420006 #7c7566 JetBrains Mono 9.5
+      text "UNCOMMITTED 0" @252.55,94.420006 #7c7566 JetBrains Mono 9.5
+      rect 352.9,79 61.100006x24 fill #1f1c0f
+      text "ALL 2" @366.07498,94.420006 #ffd23f JetBrains Mono 9.5
     pop
-    rect 160,79 280x24 radius 5 stroke 1 #332f27
-    clip 162,113 276x18 r 0
-      rect 162,113 48x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "status" @168,125.6 #ffd23f JetBrains Mono 10
-      rect 216,113 54x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "± lines" @222,125.6 #ffd23f JetBrains Mono 10
-      rect 276,113 42x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "agent" @282,125.6 #ffd23f JetBrains Mono 10
-      rect 324,113 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "diag" @330,125.6 #ffd23f JetBrains Mono 10
-      rect 366,113 72x18 radius 4 stroke 1 #332f27
-      text "⌥C change…" @372,125.6 #7c7566 JetBrains Mono 10
-    pop
-    clip 150,135 300x231 r 0
-      rect 150,135 300x22 fill #1f1c0f
-      rect 150,135 2x22 fill #ffd23f
-      text "▾" @162,150.54712 #ece6d8 Inter 12.5
-      rect 176,141 10x10 fill #ffd23fd9 radius 2
-      clip 192,138.43774 242x15.124512 r 0
-        text "blog" @192,150.54712 #ece6d8 Inter 12.5
-        text "main" @224.875,149.78001 #7c7566 JetBrains Mono 10.5
+    rect 160,79 254x24 radius 5 stroke 1 #332f27
+    path 6 segments stroke 1.25 #7c7566
+    path 6 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    clip 150,109 300x257 r 0
+      rect 150,109 300x22 fill #1f1c0f
+      rect 150,109 2x22 fill #ffd23f
+      text "▾" @162,124.54712 #ece6d8 Inter 12.5
+      rect 176,115 10x10 fill #ffd23fd9 radius 2
+      clip 192,112.437744 242x15.124512 r 0
+        text "blog" @192,124.54712 #ece6d8 Inter 12.5
+        text "main" @224.875,123.78 #7c7566 JetBrains Mono 10.5
       pop
-      text "▸" @176,172.54712 #b3ab99 Inter 12.5
-      clip 190,160.43774 244x15.124512 r 0
-        text "posts" @190,172.54712 #b3ab99 Inter 12.5
+      text "▸" @176,146.54712 #b3ab99 Inter 12.5
+      clip 190,134.43774 244x15.124512 r 0
+        text "posts" @190,146.54712 #b3ab99 Inter 12.5
       pop
-      clip 176,182.43774 258x15.124512 r 0
-        text "config.toml" @176,194.54712 #b3ab99 Inter 12.5
+      clip 176,156.43774 258x15.124512 r 0
+        text "config.toml" @176,168.54712 #b3ab99 Inter 12.5
       pop
     pop
     text "⌥1 changed · ⌥2 uncommitted · ⌥3 all" @162,383.6 #7c7566 JetBrains Mono 10

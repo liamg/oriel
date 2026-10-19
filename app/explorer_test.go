@@ -65,7 +65,7 @@ func TestExplorerScopes(t *testing.T) {
 		t.Fatal("⌥3 didn't open the Explorer")
 	}
 	all := s.frameText()
-	for _, want := range []string{"CHANGED 5", "UNCOMMITTED 3", "ALL 8", "rethink/rounding", "status", "± lines", "diag",
+	for _, want := range []string{"CHANGED 5", "UNCOMMITTED 3", "ALL 8", "rethink/rounding",
 		"money.go", "← amount.go", "legacy_round.go", "currency.go", "round_test.go", "scratch.sql", "vendor", "ignored"} {
 		if !strings.Contains(all, want) {
 			t.Errorf("All lacks %q:\n%s", want, all)
@@ -115,8 +115,9 @@ func TestExplorerMarkers(t *testing.T) {
 	if got := after("pricing"); !strings.HasPrefix(got, "● 4") {
 		t.Errorf("pricing is followed by %q, want its 4 changed files", got)
 	}
+	s.click(centre(s.access("Explorer options").Bounds))
 	s.click(centre(s.access("± lines").Bounds))
-	s.click(centre(s.access("status").Bounds))
+	s.click(centre(s.access("Status").Bounds))
 	if got := after("round.go"); strings.HasPrefix(got, "+4") || strings.HasPrefix(got, "M") {
 		t.Errorf("with ± lines and status off, round.go is followed by %q", got)
 	}
@@ -140,6 +141,30 @@ func TestExplorerChangedOnly(t *testing.T) {
 	s.frame()
 	if !strings.Contains(s.frameText(), "go.mod") {
 		t.Error("turning changed-only off didn't bring go.mod back")
+	}
+}
+
+// All leaves out dot files that haven't changed until the options menu's Hidden files shows them.
+func TestExplorerHiddenFiles(t *testing.T) {
+	r := explorerRepo(t)
+	r.Write(map[string]string{".env.example": "KEY=\n"})
+	s := newScene(t, "", r.Dir, mockupSize)
+	s.sh.git.wait()
+	s.run("explorer.scope", registry.Args{"scope": "all"})
+	s.frame()
+	s.frame()
+	all := s.frameText()
+	if strings.Contains(all, ".gitignore") {
+		t.Errorf("All lists the unchanged .gitignore before Hidden files is on:\n%s", all)
+	}
+	if !strings.Contains(all, ".env.example") {
+		t.Errorf("All hides the untracked .env.example:\n%s", all)
+	}
+	s.click(centre(s.access("Explorer options").Bounds))
+	s.click(centre(s.access("Hidden files").Bounds))
+	s.frame()
+	if !strings.Contains(s.frameText(), ".gitignore") {
+		t.Error("Hidden files didn't bring .gitignore in")
 	}
 }
 

@@ -12,12 +12,15 @@ var (
 	tDiffAddFg = theme.Declare("diffstat.add", "ok")
 	tDiffDelFg = theme.Declare("diffstat.del", "error")
 	tDiffTrack = theme.Declare("diffstat.track", "line.strong")
+	tDiffBinFg = theme.Declare("diffstat.binary", "fg.muted")
 )
 
 type DiffStatOpts struct {
 	Bar   bool // a bar after the counts, as long as the change is big next to Scale
 	Scale int  // lines that fill the bar; 100 if 0
 	Width float32
+	// Binary marks a change git counts no lines in: "bin" in place of the counts, and no bar.
+	Binary bool
 }
 
 // DiffStat is a change's size: "+31 -9" in add and delete colours, a zero side left out, and optionally a bar split
@@ -25,6 +28,13 @@ type DiffStatOpts struct {
 func DiffStat(c *ui.Ctx, key any, add, del int, o DiffStatOpts) {
 	th := c.Theme()
 	t := monoText(10.5, typeset.Medium, col(c, tDiffAddFg), 0)
+	if o.Binary {
+		c.Row(key, ui.Style{Pad: ui.PadXY(4, 0), Radius: 3, Stroke: col(c, tDiffTrack), Border: 1, Role: ui.RoleText, Label: "binary",
+			Tooltip: "A binary file: no lines to count"}, func(c *ui.Ctx) {
+			c.Text("bin", "bin", monoText(9.5, typeset.Medium, col(c, tDiffBinFg), 0))
+		})
+		return
+	}
 	label := fmt.Sprintf("+%d -%d", add, del)
 	c.Row(key, ui.Style{Gap: 6, Cross: ui.Center, Role: ui.RoleText, Label: label}, func(c *ui.Ctx) {
 		if add > 0 || del == 0 {

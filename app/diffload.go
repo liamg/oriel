@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"context"
+	"image"
 	"os"
 	"strings"
 
@@ -36,6 +37,7 @@ type diffFile struct {
 	styled  bool
 	blamed  bool // who wrote each added line is known
 	binary  bool
+	images  *imageDiff // a changed image's old and new versions, decoded
 	newText []byte
 	hunks   []diffHunk
 	authors map[string]int // added lines by who wrote them
@@ -82,6 +84,7 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 	f.newText = newText
 	if isBinary(old) || isBinary(newText) {
 		f.binary = true
+		f.images = decodeImageDiff(in.path, old, newText, in.code)
 		return f
 	}
 	hs := gitx.Unified(old, newText, diffContext)
@@ -132,6 +135,30 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 		f.authors = authorship(ctx, repo, in.path, newText, f.hunks, snap)
 	}
 	return f
+}
+
+// imageDiff is an image file's two versions: either is nil when the change adds or deletes the file.
+type imageDiff struct {
+	old, new         image.Image
+	oldSize, newSize int
+}
+
+// decodeImageDiff decodes the versions of a changed image; nil when path isn't an image or neither decodes.
+func decodeImageDiff(path string, old, new []byte, code byte) *imageDiff {
+	if !isImage(path) {
+		return nil
+	}
+	d := &imageDiff{oldSize: len(old), newSize: len(new)}
+	if len(old) > 0 {
+		d.old, _, _ = decodeImage(old)
+	}
+	if len(new) > 0 && code != 'D' {
+		d.new, _, _ = decodeImage(new)
+	}
+	if d.old == nil && d.new == nil {
+		return nil
+	}
+	return d
 }
 
 func isBinary(b []byte) bool { return bytes.IndexByte(b[:min(len(b), 8000)], 0) >= 0 }

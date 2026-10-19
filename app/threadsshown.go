@@ -160,7 +160,7 @@ func threadsPopover(c *ui.Ctx, se core.SessionState, line int, ts []core.Thread)
 					}
 					c.Column(j, ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 						c.Text("who", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11.5, Weight: typeset.SemiBold}, Color: th.C(theme.FgMuted)})
-						markdownText(c, "body", cm.Body, 340, uiFont(12, th.C(theme.FgMuted)))
+						markdownTextIn(c, "body", cm.Body, 340, uiFont(12, th.C(theme.FgMuted)), threadMarkdown(se, t))
 					})
 				}
 			})

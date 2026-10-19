@@ -4,10 +4,11 @@ import "github.com/liamg/oriel/ui"
 
 // ToolItem is a toggle on a Toolbar.
 type ToolItem struct {
-	Key   string
-	Label string
-	On    *bool
-	Help  string
+	Key      string
+	Label    string
+	On       *bool
+	Help     string
+	Shortcut string // shown when it's in a menu
 }
 
 type ToolbarOpts struct {
@@ -17,7 +18,6 @@ type ToolbarOpts struct {
 
 type toolbarState struct {
 	widths map[string]float32 // each chip's width when it last showed
-	open   bool
 }
 
 const toolGap = 6
@@ -54,7 +54,6 @@ func Toolbar(c *ui.Ctx, key any, items []ToolItem, o ToolbarOpts) bool {
 		}
 	}
 	changed := false
-	var moreID ui.ID
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: toolGap, Cross: ui.Center, Clip: true, Role: ui.RoleToolbar, Label: o.Label}, func(c *ui.Ctx) {
 		for _, it := range items[:fit] {
 			cid := c.Next(it.Key)
@@ -67,31 +66,10 @@ func Toolbar(c *ui.Ctx, key any, items []ToolItem, o ToolbarOpts) bool {
 		}
 		if fit < len(items) {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			moreID = c.Next("more")
-			if IconButton(c, "more", "…", IconButtonOpts{Label: "More", Help: o.Help, Size: 22}) {
-				st.open = !st.open
+			if ToggleMenu(c, "more", items[fit:], MenuButtonOpts{Label: "More", Glyph: "…", Size: 22, Width: 200, Help: o.Help}) {
+				changed = true
 			}
-		} else {
-			st.open = false
 		}
 	})
-	if fit < len(items) && st.open {
-		rest := items[fit:]
-		Popover(c, struct{ k any }{key}, moreID, &st.open, PopoverOpts{Label: "More", Help: o.Help}, func(c *ui.Ctx) {
-			menu := make([]MenuItem, len(rest))
-			for i, it := range rest {
-				mark := "  "
-				if *it.On {
-					mark = "✓ "
-				}
-				menu[i] = MenuItem{Label: mark + it.Label, Help: it.Help}
-			}
-			if chosen, closed := Menu(c, "menu", menu, MenuOpts{Width: 200, Help: o.Help}); chosen >= 0 {
-				*rest[chosen].On, changed = !*rest[chosen].On, true
-			} else if closed {
-				st.open = false
-			}
-		})
-	}
 	return changed
 }

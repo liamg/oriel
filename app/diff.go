@@ -95,6 +95,7 @@ type diffState struct {
 	ledger registry.Ledger            // as last drawn
 	seen   map[string]time.Time       // agent-written lines on screen, by file and key, since when
 	sent   map[string]core.LineState  // what's been recorded of them
+	slider map[string]bool            // image files shown as a slider, not side by side
 }
 
 // diffSel is a place in the diff: a file, a hunk of it, a line of the hunk (-1 for the hunk as a whole).

@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/edit"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/script"
@@ -193,6 +194,32 @@ type Desktop interface {
 	SetClipboard(text string)
 	ReadClipboard() (string, bool)
 	OpenURL(url string) error
+}
+
+// desktopPlugin is the OS's side of the IDE as commands: system.open opens a file or URL in its default app.
+type desktopPlugin struct {
+	disposer
+	sh *shell
+}
+
+func (x *desktopPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "desktop"} }
+
+func (x *desktopPlugin) Activate(_ context.Context, h plugin.Host) error {
+	x.add(h.Command(registry.Command{ID: "system.open", Title: "Open a file {path} (relative to the work dir) or a {url} in the OS's default app for it",
+		Run: func(_ registry.Ctx, a registry.Args) error {
+			target := cmpOr(a.String("url"), a.String("path"))
+			if target == "" {
+				return errors.New("system.open needs a path or a url")
+			}
+			if a.String("url") == "" && !filepath.IsAbs(target) {
+				target = filepath.Join(x.sh.cfg.WorkDir, target)
+			}
+			if x.sh.desktop == nil {
+				return errors.New("there's no desktop to open it on")
+			}
+			return x.sh.desktop.OpenURL(target)
+		}}))
+	return nil
 }
 
 type osDesktop struct{ clip render.Clipboard }

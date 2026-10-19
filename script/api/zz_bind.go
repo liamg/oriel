@@ -179,6 +179,12 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return nil, x.Presenter(c.Table(0), c.Where())
 			},
+			"viewer": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Viewer(c.Table(0), c.Where())
+			},
 		})
 	}
 	{

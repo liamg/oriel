@@ -287,13 +287,16 @@ Superseded alternatives (41-project-context.png):
   - Each file has a **read bar** (the review ledger per file). Sort by tree, flat, or "by review" (unread first).
 - **Uncommitted**: working tree against HEAD, split into Staged, Unstaged and Untracked.
   - Stage or unstage whole files or single hunks with fugitive-style keys (`s`, `u`, `x`, `=`). Commit from here.
-- **All**: the whole worktree, like any IDE. Changes are marked by columns you can toggle:
+- **All**: the whole worktree, like any IDE. Changes are marked by columns you can toggle from the cog at the top right of
+  the Explorer (a `widget.ToggleMenu`, beside the scopes), which also holds changed-only and **Hidden files**:
   - **status** letter (M A D R ? and U for conflicts), and the filename tinted to match.
   - **± lines**, with a tiny add/delete bar for the size of the change.
   - **agent**: an orange diamond where agent-written lines are unread, hollow once you've read them.
   - **threads**: the open-thread count, coloured by status. **diag**: error and warning counts.
   - Folders roll up (a dot plus the count of changed files beneath). Ignored files are dimmed; clean files show nothing.
   - `⌥C` toggles "changed only", which filters All down to Changed without leaving the tree.
+  - Dot files and what's under dot directories are left out of All unless they've changed, until **Hidden files**
+    (`explorer.hidden`) shows them.
 - Multi-project sessions: each project has its own Explorer, opened from the project sidebar (01h) with the project's
   branch and ahead/behind on its root; there's no Explorer of every project at once.
 - The same markers appear on editor tabs and in the omnibox file results.

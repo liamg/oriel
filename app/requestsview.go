@@ -424,7 +424,7 @@ func (x *requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					widget.Chip(c, "queued", queuedLabel(se), th.C(tQueued), "agent/requests#request")
 				}
 			})
-			markdownText(c, "body", cm.Body, inner, uiFont(13, th.C(theme.Fg)))
+			markdownTextIn(c, "body", cm.Body, inner, uiFont(13, th.C(theme.Fg)), threadMarkdown(se, t))
 			if sourced && src.Comment != nil {
 				src.Comment(c, string(se.ID), string(t.ID), cm.ID, inner)
 			}
