@@ -36,12 +36,18 @@ type HeadlessOpts struct {
 	Clock func() time.Time // the window's clock (oriel.now, countdowns); time.Now if nil
 }
 
-// memDesktop is a clipboard in memory, and a browser that opens nothing.
-type memDesktop struct{ text string }
+// memDesktop is a clipboard in memory, and a browser that opens nothing but notes what it was asked to.
+type memDesktop struct {
+	text   string
+	opened []string
+}
 
 func (c *memDesktop) SetClipboard(s string)         { c.text = s }
 func (c *memDesktop) ReadClipboard() (string, bool) { return c.text, c.text != "" }
-func (c *memDesktop) OpenURL(string) error          { return nil }
+func (c *memDesktop) OpenURL(u string) error {
+	c.opened = append(c.opened, u)
+	return nil
+}
 
 // NewHeadless starts the built-ins and cfg.Plugins over cfg, drawn in the dark oriel theme with motion reduced,
 // so frames are of the settled UI.

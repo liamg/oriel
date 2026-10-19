@@ -330,6 +330,9 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   place of `fn`). The file's threads sit in the margin beside the block holding their line, and with `comments` a click
   on a block opens a thread on its lines. `oriel.editor.present(name)` shows the focused window with it, and again
   shows its text (`editor.present`).
+- `oriel.editor.viewer{ name, view, when = fn(path), order, help }` adds a file viewer (a `registry.FileViewer`):
+  `editor.open` opens a file `when(path)` takes as a tab of `view`, its instance the file's absolute path, in place of a
+  buffer. The first viewer by `order`, then name, that takes a file shows it.
 
 ```lua
 oriel.editor.presenter{ name = "csv", label = "Table", comments = true,

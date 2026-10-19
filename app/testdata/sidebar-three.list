@@ -143,105 +143,109 @@ clip 224,38 300x356 r 0
   rect 224,68 300x1 fill #24221d
   clip 224,69 300x325 r 0
     rect 224,69 300x325 fill #0c0c0b
-    clip 234,79 280x24 r 5
-      text "CHANGED 4" @245.1375,94.420006 #7c7566 JetBrains Mono 9.5
-      text "UNCOMMITTED 4" @328.825,94.420006 #7c7566 JetBrains Mono 9.5
-      rect 429.175,79 84.82501x24 fill #1f1c0f
-      text "ALL 9" @454.2125,94.420006 #ffd23f JetBrains Mono 9.5
+    clip 234,79 254x24 r 5
+      text "CHANGED 4" @244,94.420006 #7c7566 JetBrains Mono 9.5
+      text "UNCOMMITTED 4" @326.55,94.420006 #7c7566 JetBrains Mono 9.5
+      rect 426.9,79 61.100006x24 fill #1f1c0f
+      text "ALL 9" @440.07498,94.420006 #ffd23f JetBrains Mono 9.5
     pop
-    rect 234,79 280x24 radius 5 stroke 1 #332f27
-    clip 236,113 276x18 r 0
-      rect 236,113 48x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "status" @242,125.6 #ffd23f JetBrains Mono 10
-      rect 290,113 54x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "± lines" @296,125.6 #ffd23f JetBrains Mono 10
-      rect 350,113 42x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "agent" @356,125.6 #ffd23f JetBrains Mono 10
-      rect 398,113 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "diag" @404,125.6 #ffd23f JetBrains Mono 10
-      rect 440,113 72x18 radius 4 stroke 1 #332f27
-      text "⌥C change…" @446,125.6 #7c7566 JetBrains Mono 10
-    pop
-    clip 224,135 300x231 r 0
-      rect 224,113 300x22 fill #1f1c0f
-      rect 224,113 2x22 fill #ffd23f
-      text "▾" @250,150.54712 #b3ab99 Inter 12.5
-      clip 264,138.43774 225.20312x15.124512 r 0
-        text "src" @264,150.54712 #b3ab99 Inter 12.5
+    rect 234,79 254x24 radius 5 stroke 1 #332f27
+    path 6 segments stroke 1.25 #7c7566
+    path 6 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    clip 224,109 300x257 r 0
+      rect 224,102 300x22 fill #1f1c0f
+      rect 224,102 2x22 fill #ffd23f
+      text "▾" @236,117.54712 #ece6d8 Inter 12.5
+      rect 250,108 10x10 fill #ffd23fd9 radius 2
+      clip 266,105.437744 242x15.124512 r 0
+        text "admin-ui" @266,117.54712 #ece6d8 Inter 12.5
+        text "eng-2310 · ↑2" @326.3125,116.78 #7c7566 JetBrains Mono 10.5
       pop
-      text "●" @495.20312,148.87999 #ff9b45 JetBrains Mono 8
-      text "4" @508,149.59999 #7c7566 JetBrains Mono 10
-      text "▾" @264,172.54712 #b3ab99 Inter 12.5
-      clip 278,160.43774 211.20312x15.124512 r 0
-        text "components" @278,172.54712 #b3ab99 Inter 12.5
+      text "▾" @250,139.54712 #b3ab99 Inter 12.5
+      clip 264,127.437744 225.20312x15.124512 r 0
+        text "src" @264,139.54712 #b3ab99 Inter 12.5
       pop
-      text "●" @495.20312,170.87999 #ff9b45 JetBrains Mono 8
-      text "2" @508,171.59999 #7c7566 JetBrains Mono 10
-      clip 278,182.43774 149.625x15.124512 r 0
-        text "FilterBar.tsx" @278,194.54712 #ffd23f Inter 12.5
+      text "●" @495.20312,137.87999 #ff9b45 JetBrains Mono 8
+      text "4" @508,138.59999 #7c7566 JetBrains Mono 10
+      text "▾" @264,161.54712 #b3ab99 Inter 12.5
+      clip 278,149.43774 211.20312x15.124512 r 0
+        text "components" @278,161.54712 #b3ab99 Inter 12.5
       pop
-      text "+1" @433.625,193.78001 #4fe0a0 JetBrains Mono 10.5
-      text "-1" @452.8125,193.78001 #ff5f6d JetBrains Mono 10.5
-      rect 472,188 28x4 fill #332f2780 radius 2
-      clip 472,188 28x4 r 2
-        rect 472,188 2.100006x4 fill #4fe0a0
-        rect 474.1,188 2.100006x4 fill #ff5f6d
+      text "●" @495.20312,159.87999 #ff9b45 JetBrains Mono 8
+      text "2" @508,160.59999 #7c7566 JetBrains Mono 10
+      clip 278,171.43774 149.625x15.124512 r 0
+        text "FilterBar.tsx" @278,183.54712 #ffd23f Inter 12.5
       pop
-      text "M" @508,193.6 #ff9b45 JetBrains Mono 10
-      clip 278,204.43774 168.8125x15.124512 r 0
-        text "FilterChip.tsx" @278,216.54712 #7c7566 Inter 12.5
+      text "+1" @433.625,182.78001 #4fe0a0 JetBrains Mono 10.5
+      text "-1" @452.8125,182.78001 #ff5f6d JetBrains Mono 10.5
+      rect 472,177 28x4 fill #332f2780 radius 2
+      clip 472,177 28x4 r 2
+        rect 472,177 2.100006x4 fill #4fe0a0
+        rect 474.1,177 2.100006x4 fill #ff5f6d
       pop
-      text "+1" @452.8125,215.78001 #4fe0a0 JetBrains Mono 10.5
-      rect 472,210 28x4 fill #332f2780 radius 2
-      clip 472,210 28x4 r 2
-        rect 472,210 4.200012x4 fill #4fe0a0
-        rect 476.2,210 0x4 fill #ff5f6d
+      text "M" @508,182.6 #ff9b45 JetBrains Mono 10
+      clip 278,193.43774 168.8125x15.124512 r 0
+        text "FilterChip.tsx" @278,205.54712 #7c7566 Inter 12.5
       pop
-      text "?" @508,215.6 #7c7566 JetBrains Mono 10
-      clip 278,226.43774 230x15.124512 r 0
-        text "Table.tsx" @278,238.54712 #b3ab99 Inter 12.5
+      text "+1" @452.8125,204.78001 #4fe0a0 JetBrains Mono 10.5
+      rect 472,199 28x4 fill #332f2780 radius 2
+      clip 472,199 28x4 r 2
+        rect 472,199 4.200012x4 fill #4fe0a0
+        rect 476.2,199 0x4 fill #ff5f6d
       pop
-      text "▸" @264,260.54712 #b3ab99 Inter 12.5
-      clip 278,248.43774 230x15.124512 r 0
-        text "hooks" @278,260.54712 #b3ab99 Inter 12.5
+      text "?" @508,204.6 #7c7566 JetBrains Mono 10
+      clip 278,215.43774 230x15.124512 r 0
+        text "Table.tsx" @278,227.54712 #b3ab99 Inter 12.5
       pop
-      clip 264,270.43774 163.625x15.124512 r 0
-        text "api.ts" @264,282.54712 #ffd23f Inter 12.5
+      text "▸" @264,249.54712 #b3ab99 Inter 12.5
+      clip 278,237.43774 230x15.124512 r 0
+        text "hooks" @278,249.54712 #b3ab99 Inter 12.5
       pop
-      text "+1" @433.625,281.78 #4fe0a0 JetBrains Mono 10.5
-      text "-1" @452.8125,281.78 #ff5f6d JetBrains Mono 10.5
-      rect 472,276 28x4 fill #332f2780 radius 2
-      clip 472,276 28x4 r 2
-        rect 472,276 2.100006x4 fill #4fe0a0
-        rect 474.1,276 2.100006x4 fill #ff5f6d
+      clip 264,259.43774 163.625x15.124512 r 0
+        text "api.ts" @264,271.54712 #ffd23f Inter 12.5
       pop
-      text "M" @508,281.6 #ff9b45 JetBrains Mono 10
-      clip 264,292.43774 163.625x15.124512 r 0
-        text "routes.ts" @264,304.54712 #ffd23f Inter 12.5
+      text "+1" @433.625,270.78 #4fe0a0 JetBrains Mono 10.5
+      text "-1" @452.8125,270.78 #ff5f6d JetBrains Mono 10.5
+      rect 472,265 28x4 fill #332f2780 radius 2
+      clip 472,265 28x4 r 2
+        rect 472,265 2.100006x4 fill #4fe0a0
+        rect 474.1,265 2.100006x4 fill #ff5f6d
       pop
-      text "+1" @433.625,303.78 #4fe0a0 JetBrains Mono 10.5
-      text "-1" @452.8125,303.78 #ff5f6d JetBrains Mono 10.5
-      rect 472,298 28x4 fill #332f2780 radius 2
-      clip 472,298 28x4 r 2
-        rect 472,298 2.100006x4 fill #4fe0a0
-        rect 474.1,298 2.100006x4 fill #ff5f6d
+      text "M" @508,270.6 #ff9b45 JetBrains Mono 10
+      clip 264,281.43774 163.625x15.124512 r 0
+        text "routes.ts" @264,293.54712 #ffd23f Inter 12.5
       pop
-      text "M" @508,303.6 #ff9b45 JetBrains Mono 10
-      clip 250,314.43774 196.8125x15.124512 r 0
-        text "NOTES" @250,326.54712 #4fe0a0 Inter 12.5
+      text "+1" @433.625,292.78 #4fe0a0 JetBrains Mono 10.5
+      text "-1" @452.8125,292.78 #ff5f6d JetBrains Mono 10.5
+      rect 472,287 28x4 fill #332f2780 radius 2
+      clip 472,287 28x4 r 2
+        rect 472,287 2.100006x4 fill #4fe0a0
+        rect 474.1,287 2.100006x4 fill #ff5f6d
       pop
-      text "+2" @452.8125,325.78 #4fe0a0 JetBrains Mono 10.5
-      rect 472,320 28x4 fill #332f2780 radius 2
-      clip 472,320 28x4 r 2
-        rect 472,320 4.200012x4 fill #4fe0a0
-        rect 476.2,320 0x4 fill #ff5f6d
+      text "M" @508,292.6 #ff9b45 JetBrains Mono 10
+      clip 250,303.43774 196.8125x15.124512 r 0
+        text "NOTES" @250,315.54712 #4fe0a0 Inter 12.5
       pop
-      text "A" @508,325.6 #4fe0a0 JetBrains Mono 10
-      clip 250,336.43774 258x15.124512 r 0
-        text "package.json" @250,348.54712 #b3ab99 Inter 12.5
+      text "+2" @452.8125,314.78 #4fe0a0 JetBrains Mono 10.5
+      rect 472,309 28x4 fill #332f2780 radius 2
+      clip 472,309 28x4 r 2
+        rect 472,309 4.200012x4 fill #4fe0a0
+        rect 476.2,309 0x4 fill #ff5f6d
       pop
-      clip 250,358.43774 258x15.124512 r 0
-        text "vite.config.ts" @250,370.54712 #b3ab99 Inter 12.5
+      text "A" @508,314.6 #4fe0a0 JetBrains Mono 10
+      clip 250,325.43774 258x15.124512 r 0
+        text "package.json" @250,337.54712 #b3ab99 Inter 12.5
+      pop
+      clip 250,347.43774 258x15.124512 r 0
+        text "vite.config.ts" @250,359.54712 #b3ab99 Inter 12.5
       pop
     pop
     text "⌥1 changed · ⌥2 uncommitted · ⌥3 all" @236,383.6 #7c7566 JetBrains Mono 10

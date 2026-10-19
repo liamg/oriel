@@ -170,6 +170,10 @@ function oriel.editor.present(name) end
 ---@param spec table
 function oriel.editor.presenter(spec) end
 
+--- Show the files when(path) takes in a view instead of a buffer: { name, view, when = fn(path), order (50 by default), help }. editor.open opens such a file as a tab of the view, its instance the file's absolute path; the first viewer by order, then name, that takes a file shows it.
+---@param spec table
+function oriel.editor.viewer(spec) end
+
 ---@class oriel.http
 oriel.http = {}
 

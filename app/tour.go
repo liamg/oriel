@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"image"
 	"os"
 	"path/filepath"
 	"slices"
@@ -55,13 +54,6 @@ type tourState struct {
 	expanded map[*tour.QuoteText]bool // collapsed quotes shown whole, by the quote as last read
 	open     map[string]bool          // the same, by step file and quote number, kept across reads
 	hl       map[string]*sourceFile
-	images   map[string]tourImage
-}
-
-type tourImage struct {
-	img  image.Image
-	mod  time.Time
-	size int64
 }
 
 func (x *tourPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "tour"} }
@@ -138,7 +130,7 @@ func (x *tourPlugin) state(id core.SessionID) *tourState {
 	st := x.by[id]
 	if st == nil {
 		st = &tourState{visited: map[string]bool{}, replies: map[core.ThreadID]*string{}, expanded: map[*tour.QuoteText]bool{},
-			open: map[string]bool{}, hl: map[string]*sourceFile{}, images: map[string]tourImage{}}
+			open: map[string]bool{}, hl: map[string]*sourceFile{}}
 		x.by[id] = st
 	}
 	return st

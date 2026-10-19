@@ -88,6 +88,15 @@ flowchart TB
   (and a presentation opens where Edit was). A window's presenter is kept across restarts with its file. The built-in
   `markdown` plugin (`app/mdpreview.go`) is one, with comments on, drawing with the shared markdown renderer's blocks
   (`mdParse`), its **Preview / Edit** action and `:MarkdownPreview`; plan mode's doc is the same presenter.
+- file viewers (`registry.FileViewer{Name, When(path), View, Order}`): a way to show a file that isn't text, as a
+  tab of a view instead of a buffer. `editor.open` asks `registry.ViewerFor(path)` first: the first viewer by
+  `Order`, then name, whose `When` claims a file shows it, opened with `view.open {id = View, instance = <absolute
+  path>, place = "tab"}` (beside the focused editor, or shown again if it's open), so the view draws the file named by
+  its instance (`ViewCtx.Instance`) and titles its tab. Lua adds one with `oriel.editor.viewer{ name, view, when,
+  order }`. The built-in `image` plugin (`app/imageview.go`) is one: images (PNG, JPEG, GIF, WebP, BMP, ICO) centred
+  and fit to the tab with their dimensions, size and format, zoomable into the lightbox and reloaded when the file
+  changes; SVG, video, audio, PDF and other binary files as a card with "Open in default app" (`os.open {path}`,
+  `open` on macOS, `xdg-open` on Linux).
 - filetypes and ftplugins, grammars, queries, formatters, linters, LSP and DAP specs. A query kind is any name:
   `syntax.Parser.Query(kind)` and `syntax.Document.Query(kind)` run a language's `<kind>.scm` and return its matches
   with named captures and `#set!` properties. Built-in kinds: `highlights`, `folds`, `injections`, `units`, and

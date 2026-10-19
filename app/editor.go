@@ -157,10 +157,11 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range []registry.Command{
 		{ID: "editor.open", Title: "Open a file in the editor, at {line} if given, in a {place}: tab, split or vsplit",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				if err := x.open(ctx, str(a, "path"), str(a, "place")); err != nil {
+				viewed, err := x.open(ctx, str(a, "path"), str(a, "place"))
+				if err != nil {
 					return err
 				}
-				if n := argInt(a["line"]); n > 0 {
+				if n := argInt(a["line"]); n > 0 && !viewed {
 					x.e.Run(fmt.Sprint(n))
 				}
 				return nil
@@ -269,7 +270,7 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 		return &ui.Func{Key: "position", Fn: x.positionSegment}
 	})))
 	for _, f := range x.sh.cfg.Files {
-		if err := x.open(context.Background(), f, ""); err != nil {
+		if _, err := x.open(context.Background(), f, ""); err != nil {
 			return err
 		}
 	}
@@ -300,34 +301,47 @@ func windowOf(v layout.ViewRef) (vim.WindowID, bool) {
 }
 
 // open opens path in a new editor tab beside the focused editor, or shows the tab that has it. place "split" or
-// "vsplit" opens a new window on it beside the focused editor instead.
-func (x *editorPlugin) open(ctx registry.Ctx, path, place string) error {
+// "vsplit" opens a new window on it beside the focused editor instead. A file a viewer claims (registry.FileViewer)
+// opens in its view instead, and viewed says so.
+func (x *editorPlugin) open(ctx registry.Ctx, path, place string) (viewed bool, err error) {
 	name := x.relName(path)
 	root := x.h.Layout()
+	abs := path
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(x.dir, abs)
+	}
+	if v, ok := registry.ViewerFor(x.h, abs); ok {
+		return true, x.h.Run(ctx, "view.open", x.placed(registry.Args{"id": v.View, "instance": abs}, place))
+	}
 	for _, id := range x.e.WindowIDs() {
 		if p, ok := x.e.Pane(id); ok && p.Name() == name && root.Find(windowRef(id)) != nil && place != "split" && place != "vsplit" {
 			root.Show(windowRef(id))
 			x.e.EnterWindow(id)
 			x.conv.refresh()
-			return nil
+			return false, nil
 		}
 	}
 	id, err := x.window(name)
 	if err != nil {
-		return err
+		return false, err
 	}
 	x.conv.refresh()
-	args := registry.Args{"id": EditorView, "instance": strconv.Itoa(int(id)), "place": "tab"}
+	return false, x.h.Run(ctx, "view.open", x.placed(registry.Args{"id": EditorView, "instance": strconv.Itoa(int(id))}, place))
+}
+
+// placed is view.open's args for a view opened in place (a tab, a split or a vsplit) beside the focused editor.
+func (x *editorPlugin) placed(args registry.Args, place string) registry.Args {
+	args["place"] = "tab"
 	switch place {
 	case "split":
 		args["place"], args["side"] = "split", "down"
 	case "vsplit":
 		args["place"], args["side"] = "split", "right"
 	}
-	if f := root.Focus; f != nil && f.ID == EditorView {
+	if f := x.h.Layout().Focus; f != nil && f.ID == EditorView {
 		args["beside"] = f.ID + "#" + f.Instance
 	}
-	return x.h.Run(ctx, "view.open", args)
+	return args
 }
 
 // window is a new window on name: the engine's first window while it isn't on screen yet, or another.

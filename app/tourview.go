@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"image"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -250,8 +249,8 @@ func (x *tourPlugin) prose(c *ui.Ctx, key any, text string, width float32) {
 				continue
 			}
 			flush()
-			if img, ok := x.image(st, st.t.Root, m[2]); ok {
-				widget.Image(c, k, img, min(width, float32(img.Bounds().Dx())), widget.ImageOpts{Label: m[1], Help: tourHelp})
+			if img, ok := x.image(st.t.Root, m[2]); ok {
+				widget.Image(c, k, img, min(width, float32(img.Bounds().Dx())), widget.ImageOpts{Label: m[1], Help: tourHelp, Zoom: true, Group: "tour:" + st.t.Root})
 			} else {
 				c.Text(k, m[2]+" isn't in the tour", monoFont(11, th.C(theme.Warn)))
 			}
@@ -262,25 +261,13 @@ func (x *tourPlugin) prose(c *ui.Ctx, key any, text string, width float32) {
 }
 
 // image is a picture in the tour, decoded once while its file stays the same.
-func (x *tourPlugin) image(st *tourState, root, src string) (image.Image, bool) {
+func (x *tourPlugin) image(root, src string) (image.Image, bool) {
 	p, err := tour.AssetPath(root, src)
 	if err != nil {
 		return nil, false
 	}
-	fi, err := os.Stat(p)
-	if err != nil {
-		return nil, false
-	}
-	if im, ok := st.images[p]; ok && im.mod.Equal(fi.ModTime()) && im.size == fi.Size() {
-		return im.img, im.img != nil
-	}
-	var img image.Image
-	if f, err := os.Open(p); err == nil {
-		img, _, _ = image.Decode(f)
-		_ = f.Close()
-	}
-	st.images[p] = tourImage{img: img, mod: fi.ModTime(), size: fi.Size()}
-	return img, img != nil
+	img, _, err := pictures.file(p)
+	return img, err == nil
 }
 
 // quote is real code from its repo: a header naming where, its lines numbered as the file's with the marked ones lit,
@@ -450,7 +437,7 @@ func (x *tourPlugin) codeBox(c *ui.Ctx, key any, head, tag, lang, text string, w
 func (x *tourPlugin) shot(c *ui.Ctx, key any, st *tourState, it tour.Item, width float32) {
 	th := c.Theme()
 	s := it.Shot
-	img, ok := x.image(st, st.t.Root, s.Src)
+	img, ok := x.image(st.t.Root, s.Src)
 	c.Column(key, ui.Style{W: ui.Px(width), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		if !ok {
 			c.Row("missing", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Stroke: th.C(theme.LineStrong), Border: 1, Radius: 4}, func(c *ui.Ctx) {
@@ -462,7 +449,7 @@ func (x *tourPlugin) shot(c *ui.Ctx, key any, st *tourState, it tour.Item, width
 		h := w * float32(img.Bounds().Dy()) / float32(img.Bounds().Dx())
 		accent := th.C(tTourAccent)
 		c.Box("wrap", ui.Style{W: ui.Px(w), H: ui.Px(h), Radius: 4, Clip: true, Stroke: th.C(theme.Line), Border: 1}, func(c *ui.Ctx) {
-			widget.Image(c, "img", img, w, widget.ImageOpts{Label: cmpOr(s.Alt, s.Src), Help: tourHelp})
+			widget.Image(c, "img", img, w, widget.ImageOpts{Label: cmpOr(s.Alt, s.Src), Help: tourHelp, Zoom: true, Group: "tour:" + st.t.Root})
 			c.Box("marks", ui.Style{Float: &ui.Float{}, Z: ui.LayerContent}, func(c *ui.Ctx) {
 				c.Paint("lines", ui.Px(w), ui.Px(h), func(f render.Frame, r render.Rect) {
 					for _, m := range s.Mark {

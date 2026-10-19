@@ -340,6 +340,9 @@ type noClipboard struct{}
 func (noClipboard) SetClipboard(string)           {}
 func (noClipboard) ReadClipboard() (string, bool) { return "", false }
 
+// Frame is the number of the frame being built: it counts up by one a frame.
+func (c *Ctx) Frame() int { return c.u.frame }
+
 // Now is the UI's clock.
 func (c *Ctx) Now() time.Time { return c.u.now() }
 

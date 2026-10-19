@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -73,6 +74,7 @@ type explorer struct {
 	scopes      map[core.SessionID]gitx.Scope // remembered per session
 	cols        struct{ status, lines, diag, agent bool }
 	changedOnly bool
+	hidden      bool // All shows dot files that haven't changed
 	flat        bool
 	byReview    bool            // Changed flat, the files with the most unread agent lines first
 	ledger      registry.Ledger // the review ledger, as last drawn
@@ -88,12 +90,12 @@ type explorer struct {
 
 // explorerRowsKey is what a scope's rows are built from, so they're built again only when it changes.
 type explorerRowsKey struct {
-	st                           *gitx.State
-	sc                           gitx.Scope
-	th                           *theme.Resolved
-	root                         string
-	changedOnly, flat, statusCol bool
-	order                        string // Changed's files by review, when sorted so
+	st                                   *gitx.State
+	sc                                   gitx.Scope
+	th                                   *theme.Resolved
+	root                                 string
+	changedOnly, hidden, flat, statusCol bool
+	order                                string // Changed's files by review, when sorted so
 }
 
 // explorerIndex is what rows look up in a git state, built once per state.
@@ -190,6 +192,10 @@ func (e *explorer) Activate(_ context.Context, h plugin.Host) error {
 		}},
 		{ID: "explorer.changed-only", Title: "Show only changed files in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
 			e.changedOnly = !e.changedOnly
+			return nil
+		}},
+		{ID: "explorer.hidden", Title: "Show hidden files (dot files) in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
+			e.hidden = !e.hidden
 			return nil
 		}},
 		{ID: "explorer.stage", Title: "Stage the selected file or hunk, or unstage it if it's staged", Run: func(ctx registry.Ctx, _ registry.Args) error {
@@ -403,7 +409,7 @@ func (e *explorer) build(c *ui.Ctx) {
 			})
 			return
 		}
-		c.Row("scopes", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 10, T: 10, B: 6}}, func(c *ui.Ctx) {
+		c.Row("scopes", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 8, T: 10, B: 6}, Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			chg, unc, all := x.scope(gitx.Changed).count, x.uncommitted, x.scope(gitx.All).count
 			labels := []string{fmt.Sprintf("CHANGED %d", chg), fmt.Sprintf("UNCOMMITTED %d", unc), fmt.Sprintf("ALL %d", all)}
 			i := int(sc)
@@ -412,6 +418,7 @@ func (e *explorer) build(c *ui.Ctx) {
 				e.scopes[e.session()] = gitx.Scope(i)
 				sc = gitx.Scope(i)
 			}
+			e.options(c)
 		})
 		e.subheader(c, st, sc)
 		items := e.items(c, st, sc)
@@ -433,16 +440,27 @@ func uncommittedCount(st *gitx.State) int {
 	return len(seen)
 }
 
-// subheader is the line under the scopes: the columns All shows, or what Changed and Uncommitted compare with.
+// options is the cog at the scopes' right: a menu of All's columns and filters.
+func (e *explorer) options(c *ui.Ctx) {
+	const help = "files/explorer#columns"
+	widget.ToggleMenu(c, "options", []widget.ToolItem{
+		{Key: "status", Label: "Status", On: &e.cols.status, Help: help},
+		{Key: "lines", Label: "± lines", On: &e.cols.lines, Help: help},
+		{Key: "agent", Label: "Agent", On: &e.cols.agent, Help: help},
+		{Key: "diag", Label: "Diagnostics", On: &e.cols.diag, Help: help},
+		{Key: "only", Label: "Changed only", On: &e.changedOnly, Help: help, Shortcut: "⌥C"},
+		{Key: "hidden", Label: "Hidden files", On: &e.hidden, Help: help},
+	}, widget.MenuButtonOpts{Label: "Explorer options", Size: 22, Help: help,
+		Icon: func(c *ui.Ctx, fg render.Color) { icon(c, "icon", "settings", 13, fg) }})
+}
+
+// subheader is the line under the scopes: what Changed and Uncommitted compare with.
 func (e *explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
+	if sc == gitx.All {
+		return
+	}
 	c.Row("sub", ui.Style{W: ui.Flex(1), H: ui.Px(26), Pad: ui.PadXY(12, 0), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 		switch sc {
-		case gitx.All:
-			const help = "files/explorer#columns"
-			widget.Toolbar(c, "cols", []widget.ToolItem{{Key: "status", Label: "status", On: &e.cols.status, Help: help},
-				{Key: "lines", Label: "± lines", On: &e.cols.lines, Help: help}, {Key: "agent", Label: "agent", On: &e.cols.agent, Help: help},
-				{Key: "diag", Label: "diag", On: &e.cols.diag, Help: help},
-				{Key: "only", Label: "⌥C changed-only", On: &e.changedOnly, Help: help}}, widget.ToolbarOpts{Help: help, Label: "Columns"})
 		case gitx.Changed:
 			base := st.Base
 			if base == "" {
@@ -516,7 +534,8 @@ func (e *explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.Tree
 	if sc == gitx.Uncommitted {
 		return e.buildItems(c.Theme(), st, sc)
 	}
-	key := explorerRowsKey{st: st, sc: sc, th: c.Theme(), root: e.git().root(), changedOnly: e.changedOnly, flat: e.flat, statusCol: e.cols.status}
+	key := explorerRowsKey{st: st, sc: sc, th: c.Theme(), root: e.git().root(), changedOnly: e.changedOnly, hidden: e.hidden, flat: e.flat,
+		statusCol: e.cols.status}
 	if sc == gitx.Changed && e.byReview {
 		key.order = strings.Join(e.reviewOrder(st), "\x00")
 	}
@@ -572,8 +591,8 @@ func (e *explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 		}
 		return e.tree(th, files, sc)
 	}
-	if e.changedOnly {
-		files = slices.DeleteFunc(slices.Clone(files), func(f gitx.FileState) bool { return f.Code == 0 })
+	if e.changedOnly || !e.hidden {
+		files = slices.DeleteFunc(slices.Clone(files), func(f gitx.FileState) bool { return f.Code == 0 && (e.changedOnly || isHidden(f.Path)) })
 	}
 	root := filepath.Base(e.git().root())
 	note := st.Branch
@@ -585,6 +604,11 @@ func (e *explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 	}
 	return []widget.TreeItem{{ID: "\x02", Label: root, Note: note, Swatch: th.C(theme.Accent), Open: true, Children: e.tree(th, files, sc),
 		Help: "files/explorer"}}
+}
+
+// isHidden reports whether a repo path is a dot file or under a dot directory.
+func isHidden(p string) bool {
+	return strings.HasPrefix(p, ".") || strings.Contains(p, "/.")
 }
 
 // reviewOrder is Changed's files by review: the most agent-written lines not read first, then by path.
@@ -766,8 +790,8 @@ func (e *explorer) trailing(c *ui.Ctx, x *scopeIndex, sc gitx.Scope, it widget.T
 			})
 		}
 	}
-	if (e.cols.lines || sc != gitx.All) && (f.Add > 0 || f.Del > 0) {
-		widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Bar: sc != gitx.Uncommitted, Scale: 80})
+	if (e.cols.lines || sc != gitx.All) && (f.Add > 0 || f.Del > 0 || f.Binary && f.Code != 0) {
+		widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Bar: sc != gitx.Uncommitted, Scale: 80, Binary: f.Binary})
 	}
 	if letter, _ := gitCodeTokens(f.Code); letter != 0 && (e.cols.status || sc != gitx.All) {
 		c.Text("code", string(f.Code), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(letter)})

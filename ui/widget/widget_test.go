@@ -608,6 +608,17 @@ func TestDiffStat(t *testing.T) {
 	}
 }
 
+// A binary change has no lines to count: it's marked "bin", not "+0".
+func TestDiffStatBinary(t *testing.T) {
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		DiffStat(c, "ds", 0, 0, DiffStatOpts{Bar: true, Binary: true})
+	})
+	h.frame()
+	if h.drew("+0") || !h.drew("bin") {
+		t.Errorf("a binary change drew %q", h.texts())
+	}
+}
+
 // A toggle chip flips on a click and on Space while focused.
 func TestToggleChip(t *testing.T) {
 	var id ui.ID
@@ -812,7 +823,7 @@ func TestToolbarOverflows(t *testing.T) {
 	if got := text(); !strings.Contains(got, "changed-only") {
 		t.Fatalf("the menu doesn't list what's hidden:\n%s", got)
 	}
-	item := h.find("  ⌥C changed-only")
+	item := h.find("⌥C changed-only")
 	if item == nil {
 		t.Fatalf("no menu item for changed-only:\n%s", text())
 	}

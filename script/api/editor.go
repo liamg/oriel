@@ -117,6 +117,21 @@ func (e Editor) Presenter(spec script.Table, where string) error {
 	return nil
 }
 
+//oriel:api doc="Show the files when(path) takes in a view instead of a buffer: { name, view, when = fn(path), order (50 by default), help }. editor.open opens such a file as a tab of the view, its instance the file's absolute path; the first viewer by order, then name, that takes a file shows it."
+func (e Editor) Viewer(spec script.Table, where string) error {
+	v := registry.FileViewer{Name: str(spec, "name"), View: str(spec, "view"), Order: 50, Help: str(spec, "help"), Source: where}
+	when, ok := spec["when"].(*script.Fn)
+	if v.Name == "" || v.View == "" || !ok {
+		return fmt.Errorf("a file viewer needs a name, a view and a when function")
+	}
+	v.When = func(path string) bool { return e.truthy(when, path) }
+	if o, ok := spec["order"].(float64); ok {
+		v.Order = int(o)
+	}
+	e.a.own(e.a.Host.Contribute(v))
+	return nil
+}
+
 //oriel:api doc="Show the focused editor window with the presenter name, or as text again when it shows it already."
 func (e Editor) Present(name string) error {
 	return e.a.Host.Run(context.Background(), "editor.present", registry.Args{"name": name})

@@ -265,7 +265,7 @@ func (x *diffPlugin) changeRow(c *ui.Ctx, st *diffState, f gitx.FileState) {
 				Tooltip: f.Path, Help: "files/diff#changes"}, func(c *ui.Ctx) {
 				c.Text("n", filepath.Base(f.Path), uiFont(12, fg))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{})
+				widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Binary: f.Binary})
 			}).Clicked {
 				st.open[f.Path] = true
 				st.sel = diffSel{file: f.Path, hunk: -1, line: -1}
@@ -339,7 +339,7 @@ func (x *diffPlugin) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, lay
 				if f.Old != "" {
 					c.Text("old", "← "+f.Old, monoFont(11, th.C(theme.FgFaint)))
 				}
-				widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{})
+				widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Binary: f.Binary})
 				if check, n := fileCheck(d, st.marks[f.Path]); check == widget.CheckOn {
 					widget.Chip(c, "rv", "reviewed", th.C(tDiffReviewed), "files/diff#review")
 				} else if d != nil && len(d.hunks) > 0 {
@@ -357,7 +357,7 @@ func (x *diffPlugin) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, lay
 				st.open[f.Path] = !open
 				st.sel = diffSel{file: f.Path, hunk: -1, line: -1}
 			}
-			if open {
+			if open && (d == nil || d.images == nil) {
 				active := 0
 				if layout == "unified" {
 					active = 1
@@ -369,6 +369,10 @@ func (x *diffPlugin) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, lay
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		if !open {
+			return
+		}
+		if d != nil && d.binary && d.images != nil {
+			x.imageDiff(c, st, f.Path, d.images)
 			return
 		}
 		note := ""

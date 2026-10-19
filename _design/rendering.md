@@ -94,6 +94,14 @@ flowchart TB
     that implements `render.Accessible` gets an update after each frame and reports a screen reader's actions, which
     the app runs through `UI.Act` (a click is a click, focus is focus). The headless window implements it for tests.
   - The platform bridges (NSAccessibility on macOS, AT-SPI on Linux) are FW-12; Gio has none.
+- **Images** (`widget.Image`): an image is drawn at the width it's given, in the device's pixels, scaled once per
+  size and kept. With `ImageOpts.Zoom` it takes the pointer cursor and an edge while hovered, and a click on it shows
+  it in the lightbox (`widget.Lightbox`, at `LayerDialog`): large over a scrim, fit to the window. Escape, a click on
+  the scrim or on the fitted image, or its ✕ closes it; ← and → move between the images of its group, counted n / m
+  under it with its caption. The wheel zooms around the pointer, a drag pans the zoomed image, a double-click or 0
+  fits it again and 1 shows it at its own size. Only the part in view is scaled, so zooming far into a large image
+  costs no more than the window. `ImageOpts.Group` names the group (a document's images); an image with none is
+  alone. Tokens: `lightbox.scrim`, `lightbox.fg`, `lightbox.fg.muted`, `lightbox.chrome`, `image.hover.border`.
 
 ## Performance budgets
 
@@ -290,7 +298,8 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   those stalls (or a loop turn held up past 50 ms) writes its last ~10 s to the file, later ones numbered beside it, at
   most one every 10 s, for `go tool trace`: what the loop and the main thread were doing while the frame was late.
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
-  selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,
+  selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `MenuButton` (an icon button with a menu under it, right-aligned; a
+  `Checkable` item chosen leaves it open) and `ToggleMenu` (a `MenuButton` of on/off `ToolItem`s, ticked while on), `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,
   Escape closes it; one is up at a time, so opening one closes whichever was, SE-5), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with
   an `input.border.invalid` border. With `Lines` (SE-5) it takes several lines: the text wraps at the field's width, the
   field grows from `MinLines` to `Lines` and then scrolls, ⏎ is a new line and ⌘⏎ (Ctrl⏎ elsewhere) submits; ↑/↓ move

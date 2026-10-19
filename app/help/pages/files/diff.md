@@ -64,3 +64,10 @@ The `?` at a hunk's left, or `?` on a selected line, asks for the code there to 
 line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file.
 
 {{keys "diff.*"}}
+
+## Images {#images}
+
+A changed image is drawn rather than listed as binary: **Side by side**, the old version beside the new with each
+one's dimensions and size, or **Slider**, the two overlaid with a divider you drag (or move with `h`/`l`): the old
+left of it, the new right. An added or deleted image shows its one side. Click an image, or ⤢ on the slider, to see
+the two large in the lightbox.

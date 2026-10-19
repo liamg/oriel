@@ -1,8 +1,10 @@
 package widget
 
 import (
+	"fmt"
 	"image"
 	"image/draw"
+	"math"
 	"sync"
 
 	"github.com/liamg/oriel/render"
@@ -11,8 +13,10 @@ import (
 
 // ImageOpts is how an image is shown.
 type ImageOpts struct {
-	Label string // its accessible name: what it shows
+	Label string // its accessible name: what it shows, and its caption in the lightbox
 	Help  string
+	Zoom  bool   // a click opens it in the lightbox, large over the window
+	Group string // the images the lightbox's ← and → move between, as one document's; alone if ""
 }
 
 // Image draws img w wide, its height kept to its shape, in the device's own pixels: it's scaled once per size and kept.
@@ -23,45 +27,201 @@ func Image(c *ui.Ctx, key any, img image.Image, w float32, o ImageOpts) ui.ID {
 		return c.Box(key, ui.Style{W: ui.Px(w)}, nil)
 	}
 	h := w * float32(b.Dy()) / float32(b.Dx())
-	return c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Role: ui.RoleImage, Label: o.Label, Help: o.Help}, func(c *ui.Ctx) {
-		c.Paint("px", ui.Px(w), ui.Px(h), func(f render.Frame, r render.Rect) {
-			s := f.Scale()
-			f.Image(scaled(img, int(r.Dx()*s+.5), int(r.Dy()*s+.5)), r.Min)
-		})
+	pixels := func(c *ui.Ctx) {
+		c.Paint("px", ui.Px(w), ui.Px(h), func(f render.Frame, r render.Rect) { paintImage(f, img, r, r) })
+	}
+	if !o.Zoom {
+		return c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Role: ui.RoleImage, Label: o.Label, Help: o.Help}, pixels)
+	}
+	id := c.Next(key)
+	in := c.Interaction(id)
+	lightbox := groupImageBuilt(c, id, img, o)
+	Clickable(c, key, ui.Style{W: ui.Px(w), H: ui.Px(h), NoHover: true, Role: ui.RoleImage, Label: o.Label, Help: o.Help}, func(c *ui.Ctx) {
+		pixels(c)
+		if in.Hovered {
+			edge := col(c, tImageHover)
+			c.Box("hover", ui.Style{Float: &ui.Float{}, Z: ui.LayerContent}, func(c *ui.Ctx) {
+				c.Paint("edge", ui.Px(w), ui.Px(h), func(f render.Frame, r render.Rect) {
+					f.Rect(r, render.Style{Stroke: edge, Width: 1.5})
+				})
+			})
+		}
+		if lightbox != nil {
+			lightbox(c)
+		}
 	})
+	return id
+}
+
+// imageGroups are the zoomable images built in the window, by group, and which one the lightbox shows.
+type imageGroups struct {
+	frame  int
+	groups map[string]*imageGroup
+	open   string // the group the lightbox shows; "" while it's closed
+	at     ui.ID  // the image it shows
+	seen   int    // the frame it was last drawn or opened in
+}
+
+// imageGroup is a group's images built this frame, and those built the frame before.
+type imageGroup struct {
+	frame       int
+	built, last []groupImage
+}
+
+type groupImage struct {
+	id    ui.ID
+	img   image.Image
+	label string
+}
+
+type imagesKey struct{}
+
+// groupImageBuilt adds a zoomable image to its group, opens the lightbox on it when it's clicked, and returns what
+// draws the lightbox when this is the group's first image this frame and the lightbox shows the group.
+func groupImageBuilt(c *ui.Ctx, id ui.ID, img image.Image, o ImageOpts) func(c *ui.Ctx) {
+	gs := ui.State[imageGroups](c, ui.Child(0, imagesKey{}))
+	frame := c.Frame()
+	if gs.groups == nil {
+		gs.groups = map[string]*imageGroup{}
+	}
+	if gs.frame != frame {
+		gs.frame = frame
+		for k, g := range gs.groups {
+			if g.frame < frame-1 {
+				delete(gs.groups, k)
+			}
+		}
+		if gs.open != "" && gs.seen < frame-1 {
+			gs.open = ""
+		}
+	}
+	name := o.Group
+	if name == "" {
+		name = fmt.Sprint(uint64(id))
+	}
+	g := gs.groups[name]
+	if g == nil {
+		g = &imageGroup{}
+		gs.groups[name] = g
+	}
+	if g.frame != frame {
+		g.frame, g.last, g.built = frame, g.built, nil
+	}
+	g.built = append(g.built, groupImage{id, img, o.Label})
+	if c.Interaction(id).Clicked {
+		gs.open, gs.at, gs.seen = name, id, frame
+	}
+	if gs.open != name || len(g.built) != 1 {
+		return nil
+	}
+	return func(c *ui.Ctx) {
+		list := g.last
+		at := groupIndex(list, gs.at)
+		if at < 0 {
+			list = g.built
+			at = groupIndex(list, gs.at)
+		}
+		if at < 0 {
+			gs.open = ""
+			return
+		}
+		items := make([]LightboxItem, len(list))
+		for i, gi := range list {
+			items[i] = LightboxItem{Image: gi.img, Caption: gi.label}
+		}
+		open := true
+		Lightbox(c, imagesKey{}, &open, items, &at, LightboxOpts{Help: o.Help})
+		gs.seen = frame
+		if !open {
+			gs.open = ""
+			return
+		}
+		gs.at = list[at].id
+	}
+}
+
+func groupIndex(list []groupImage, id ui.ID) int {
+	for i, gi := range list {
+		if gi.id == id {
+			return i
+		}
+	}
+	return -1
+}
+
+// paintImage draws img into d, a rect in the frame's logical pixels, as far as it shows in view: only the part in
+// view is scaled, so a large image zoomed far in costs no more than the view.
+func paintImage(f render.Frame, img image.Image, d, view render.Rect) {
+	vis := render.Rect{
+		Min: render.Point{X: max(d.Min.X, view.Min.X), Y: max(d.Min.Y, view.Min.Y)},
+		Max: render.Point{X: min(d.Max.X, view.Max.X), Y: min(d.Max.Y, view.Max.Y)},
+	}
+	if vis.Dx() <= 0 || vis.Dy() <= 0 {
+		return
+	}
+	s := f.Scale()
+	w, h := int(d.Dx()*s+.5), int(d.Dy()*s+.5)
+	if vis == d {
+		f.Image(scaled(img, w, h), d.Min)
+		return
+	}
+	part := image.Rect(int(math.Floor(float64((vis.Min.X-d.Min.X)*s))), int(math.Floor(float64((vis.Min.Y-d.Min.Y)*s))),
+		int(math.Ceil(float64((vis.Max.X-d.Min.X)*s))), int(math.Ceil(float64((vis.Max.Y-d.Min.Y)*s))))
+	if out := scaledPart(img, w, h, part); out != nil {
+		f.Image(out, render.Point{X: d.Min.X + float32(part.Min.X)/s, Y: d.Min.Y + float32(part.Min.Y)/s})
+	}
 }
 
 type scaleKey struct {
 	img  image.Image
 	w, h int
+	part image.Rectangle
 }
 
-var scales = struct {
+// scales keeps whole images at the sizes they're drawn at; parts keeps the few parts of images drawn zoomed in.
+var scales, parts = newScaleCache(64), newScaleCache(4)
+
+type scaleCache struct {
 	sync.Mutex
-	m map[scaleKey]*image.RGBA
-}{m: map[scaleKey]*image.RGBA{}}
+	m    map[scaleKey]*image.RGBA
+	size int
+}
+
+func newScaleCache(n int) *scaleCache { return &scaleCache{m: map[scaleKey]*image.RGBA{}, size: n} }
+
+// maxPart is the most pixels a scaled image or part may have.
+const maxPart = 8192 * 8192
 
 // scaled is img at w×h pixels, premultiplied: each pixel the average of the source pixels under it (the nearest one
 // when it's being enlarged). The same image at the same size is the same pointer, frame after frame.
 func scaled(img image.Image, w, h int) *image.RGBA {
 	w, h = max(w, 1), max(h, 1)
-	k := scaleKey{img, w, h}
-	scales.Lock()
-	defer scales.Unlock()
-	if out, ok := scales.m[k]; ok {
+	return scaledPart(img, w, h, image.Rect(0, 0, w, h))
+}
+
+// scaledPart is the part of img scaled to w×h that's in part, as scaled draws it; nil when part is empty or too big.
+func scaledPart(img image.Image, w, h int, part image.Rectangle) *image.RGBA {
+	w, h = max(w, 1), max(h, 1)
+	part = part.Intersect(image.Rect(0, 0, w, h))
+	if part.Empty() || part.Dx()*part.Dy() > maxPart {
+		return nil
+	}
+	cache := scales
+	if part != image.Rect(0, 0, w, h) {
+		cache = parts
+	}
+	k := scaleKey{img, w, h, part}
+	cache.Lock()
+	defer cache.Unlock()
+	if out, ok := cache.m[k]; ok {
 		return out
 	}
-	b := img.Bounds()
-	src, ok := img.(*image.RGBA)
-	if !ok || b.Min != (image.Point{}) {
-		src = image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
-		draw.Draw(src, src.Rect, img, b.Min, draw.Src)
-	}
+	src := rgbaOf(img)
 	sw, sh := src.Rect.Dx(), src.Rect.Dy()
-	out := image.NewRGBA(image.Rect(0, 0, w, h))
-	for y := range h {
+	out := image.NewRGBA(image.Rect(0, 0, part.Dx(), part.Dy()))
+	for y := part.Min.Y; y < part.Max.Y; y++ {
 		y0, y1 := y*sh/h, max((y+1)*sh/h, y*sh/h+1)
-		for x := range w {
+		for x := part.Min.X; x < part.Max.X; x++ {
 			x0, x1 := x*sw/w, max((x+1)*sw/w, x*sw/w+1)
 			var sum [4]int
 			for sy := y0; sy < y1; sy++ {
@@ -72,13 +232,38 @@ func scaled(img image.Image, w, h int) *image.RGBA {
 				}
 			}
 			n := (y1 - y0) * (x1 - x0)
-			d := out.Pix[y*out.Stride+x*4:]
+			d := out.Pix[(y-part.Min.Y)*out.Stride+(x-part.Min.X)*4:]
 			d[0], d[1], d[2], d[3] = uint8(sum[0]/n), uint8(sum[1]/n), uint8(sum[2]/n), uint8(sum[3]/n)
 		}
 	}
-	if len(scales.m) >= 64 {
-		clear(scales.m)
+	if len(cache.m) >= cache.size {
+		clear(cache.m)
 	}
-	scales.m[k] = out
+	cache.m[k] = out
 	return out
+}
+
+// sources are images converted to premultiplied RGBA at their own size, once each.
+var sources = struct {
+	sync.Mutex
+	m map[image.Image]*image.RGBA
+}{m: map[image.Image]*image.RGBA{}}
+
+func rgbaOf(img image.Image) *image.RGBA {
+	b := img.Bounds()
+	if r, ok := img.(*image.RGBA); ok && b.Min == (image.Point{}) {
+		return r
+	}
+	sources.Lock()
+	defer sources.Unlock()
+	if r, ok := sources.m[img]; ok {
+		return r
+	}
+	r := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	draw.Draw(r, r.Rect, img, b.Min, draw.Src)
+	if len(sources.m) >= 16 {
+		clear(sources.m)
+	}
+	sources.m[img] = r
+	return r
 }
