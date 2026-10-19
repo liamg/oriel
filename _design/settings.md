@@ -158,6 +158,12 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `ui.variant` | `system`: follows the OS; or `dark`, `light` | app | | FW-7, SH-11 |
 | `whichkey.enabled` | true | app | | SH-6 |
 | `sandbox.default` | `sandbox`: a new session's agent runs in a container; or `host`, on this machine | app | | AI-11 |
+| `repos.dir` | `~/src`: where clones and new repos go when nothing else says | app | | SE-6 |
+| `repos.discover` | `true`: register the repos beside the ones you have, on start and when one is added | app | | SE-6 |
+| `repos.tag.pull` | `true`: New tag pulls the branch first, fast-forward only | app | | SE-8 |
+| `repos.tag.sign` | `auto`: sign new tags when a signing key is set up; or `always`, `never` | app | | SE-8 |
+| `repos.tag.message` | `{tag}`: a new tag's message; `{tag}`, `{branch}`, `{repo}` expand | app | | SE-8 |
+| `repos.tag.push` | `true`: New tag pushes the tag, and only it | app | | SE-8 |
 | `sandbox.backend` | `docker`: each agent runs in a container; or `seatbelt`, macOS's own sandbox with the host's toolchains | app | | AI-11 |
 | `sandbox.loopback` | `all`: the host's loopback ports a `seatbelt` sandbox may connect to; `ephemeral`, only 49152–65535 (servers on port 0, not services on fixed ports); or `none`, only its proxy | app | | AI-11 |
 | `sandbox.image` | empty: Oriel's base image; a project's applies to its repo | app | | AI-11 |

@@ -28,7 +28,7 @@ func TestJobsAreOneFileEach(t *testing.T) {
 		t.Fatal(err)
 	}
 	var onDisk Job
-	if err := json.Unmarshal(b, &onDisk); err != nil || onDisk.Prompt != j.Prompt || !onDisk.CreatedAt.Equal(r.now) {
+	if err := json.Unmarshal(b, &onDisk); err != nil || onDisk.Prompt != j.Prompt || !onDisk.CreatedAt.Equal(r.now()) {
 		t.Errorf("on disk: %s (%v)", b, err)
 	}
 	// A new job whose name is taken steps aside; an edit names its job and rewrites it.
@@ -36,10 +36,10 @@ func TestJobsAreOneFileEach(t *testing.T) {
 	if again.Name != j.Name+"-2" {
 		t.Errorf("second job = %q", again.Name)
 	}
-	r.now = r.now.Add(time.Hour)
+	r.setNow(r.now().Add(time.Hour))
 	j.Prompt, j.Schedule = "Bump the deps.", Schedule{Every: EveryWeekday, At: "07:00"}
 	edited, err := r.w.SaveJob(j)
-	if err != nil || edited.Name != j.Name || edited.Prompt != "Bump the deps." || !edited.CreatedAt.Equal(onDisk.CreatedAt) || !edited.UpdatedAt.Equal(r.now) {
+	if err != nil || edited.Name != j.Name || edited.Prompt != "Bump the deps." || !edited.CreatedAt.Equal(onDisk.CreatedAt) || !edited.UpdatedAt.Equal(r.now()) {
 		t.Errorf("edited = %+v (%v)", edited, err)
 	}
 	if _, err := r.w.SaveJob(Job{Title: "nothing to do"}); err == nil {
@@ -109,7 +109,7 @@ func TestRunStatuses(t *testing.T) {
 	if err := r.w.AddRepo(ctx, id, core.RepoID(r.repo.Dir)); err != nil {
 		t.Fatal(err)
 	}
-	r.now = r.now.Add(22 * time.Minute)
+	r.setNow(r.now().Add(22 * time.Minute))
 	h, _ := r.w.sessionFor(id, false)
 	reply := func(h *session, body string, resolve bool) {
 		t.Helper()
@@ -173,7 +173,7 @@ func TestAStopSaysWho(t *testing.T) {
 // SE-5: "occurrences missed while the worker was off are run once when it starts (one per job, not a backlog)".
 func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 	r := newRig(t)
-	r.now = time.Date(2026, 10, 12, 6, 0, 0, 0, time.UTC) // Monday
+	r.setNow(time.Date(2026, 10, 12, 6, 0, 0, 0, time.UTC)) // Monday
 	r.restart()
 	j, err := r.w.SaveJob(Job{Prompt: "Triage CI on my open PRs", Schedule: Schedule{Every: EveryWeekday, At: "07:00"}})
 	if err != nil {
@@ -190,7 +190,7 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 		return n
 	}
 	r.w.Close()
-	r.now = time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC) // Wednesday: Monday's, Tuesday's and Wednesday's 07:00 missed
+	r.setNow(time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)) // Wednesday: Monday's, Tuesday's and Wednesday's 07:00 missed
 	r.open()
 	r.w.RunDue(context.Background())
 	if n := runs(j.Name); n != 1 {
@@ -199,7 +199,7 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 	if n := runs(other.Name); n != 0 {
 		t.Errorf("a job with nothing missed ran %d times", n)
 	}
-	r.now = r.now.Add(time.Minute)
+	r.setNow(r.now().Add(time.Minute))
 	r.w.RunDue(context.Background())
 	if n := runs(j.Name); n != 1 {
 		t.Errorf("the next look ran it again: %d runs", n)
@@ -209,14 +209,14 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 // SE-5: "a skipped run is kept in the run list as "skipped (last run still going)"": the job keeps each one.
 func TestSkippedRunsAreKept(t *testing.T) {
 	r := newRig(t)
-	r.now = time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC)
+	r.setNow(time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC))
 	r.restart()
 	j, _ := r.w.SaveJob(Job{Prompt: "Triage CI", Schedule: Schedule{Every: EveryWeekday, At: "07:00"}})
-	r.now = time.Date(2026, 10, 14, 7, 0, 30, 0, time.UTC)
+	r.setNow(time.Date(2026, 10, 14, 7, 0, 30, 0, time.UTC))
 	r.w.RunDue(context.Background())
 	r.agent()
 	for _, day := range []int{15, 16} {
-		r.now = time.Date(2026, 10, day, 7, 0, 30, 0, time.UTC)
+		r.setNow(time.Date(2026, 10, day, 7, 0, 30, 0, time.UTC))
 		r.w.RunDue(context.Background())
 	}
 	got := r.w.Jobs()[0].Skips
@@ -302,7 +302,7 @@ func TestScheduleNext(t *testing.T) {
 // SE-4 done when: "A schedule fires a run at its time on a fake clock and skips while one is running."
 func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 	r := newRig(t)
-	r.now = time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC)
+	r.setNow(time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC))
 	r.restart()
 	j, err := r.w.SaveJob(Job{Prompt: "Triage CI on my open PRs", Schedule: Schedule{Every: EveryWeekday, At: "07:00"}})
 	if err != nil {
@@ -321,7 +321,7 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 	if n := len(runs()); n != 0 {
 		t.Fatalf("%d runs before 07:00", n)
 	}
-	r.now = time.Date(2026, 10, 14, 7, 0, 20, 0, time.UTC)
+	r.setNow(time.Date(2026, 10, 14, 7, 0, 20, 0, time.UTC))
 	r.w.RunDue(context.Background())
 	if n := len(runs()); n != 1 {
 		t.Fatalf("%d runs at 07:00, want 1", n)
@@ -332,7 +332,7 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 		t.Fatalf("a second run in the same minute: %d", n)
 	}
 	// Thursday 07:00, and Wednesday's run is still going: skipped.
-	r.now = time.Date(2026, 10, 15, 7, 0, 5, 0, time.UTC)
+	r.setNow(time.Date(2026, 10, 15, 7, 0, 5, 0, time.UTC))
 	r.w.RunDue(context.Background())
 	if n := len(runs()); n != 1 {
 		t.Fatalf("a run started while the last was still going: %d", n)
@@ -342,7 +342,7 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 	}
 	tid := string(runs()[0].Threads[0].ID)
 	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Nothing failing.", "resolve": true})
-	r.now = time.Date(2026, 10, 16, 7, 1, 0, 0, time.UTC)
+	r.setNow(time.Date(2026, 10, 16, 7, 1, 0, 0, time.UTC))
 	r.w.RunDue(context.Background())
 	if n := len(runs()); n != 2 {
 		t.Fatalf("Friday's run didn't start: %d runs", n)

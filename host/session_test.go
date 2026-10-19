@@ -189,8 +189,10 @@ func TestPermissionLayers(t *testing.T) {
 	a.WaitSent(t)
 	cmd, _ := json.Marshal(map[string]string{"command": "go test ./internal/api/... -run TestUsage"})
 	ans := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Summary: "go test ./internal/api/...", Input: cmd})
-	se := r.eventually(id, "the permission card", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	if se.Status != core.StatusPermission || se.Asks[0].Rule != "Bash(go test:*)" {
+	se := r.eventually(id, "the permission card", func(se core.SessionState) bool {
+		return len(se.Asks) == 1 && se.Status == core.StatusPermission
+	})
+	if se.Asks[0].Rule != "Bash(go test:*)" {
 		t.Fatalf("ask = %+v, status %s", se.Asks, se.Status)
 	}
 	if err := r.w.Answer(AnswerReq{Session: id, Ask: "p1", Decision: "always"}); err != nil {
@@ -278,8 +280,9 @@ func TestQuestionsWaitForTheUser(t *testing.T) {
 	a.WaitSent(t)
 	ch := a.Expect("q1")
 	a.Emit(agent.Question{ID: "q1", Questions: []core.Question{{Question: "Which colour?", Options: []string{"red", "blue"}}}})
-	se := r.eventually(id, "the question", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	if se.Status != core.StatusNeedsYou || se.Asks[0].Kind != core.AskQuestion {
+	// The status follows the ask in an event of its own.
+	se := r.eventually(id, "the question", func(se core.SessionState) bool { return len(se.Asks) == 1 && se.Status == core.StatusNeedsYou })
+	if se.Asks[0].Kind != core.AskQuestion {
 		t.Fatalf("status %s, asks %+v", se.Status, se.Asks)
 	}
 	r.w.Answer(AnswerReq{Session: id, Ask: "q1", Decision: "answer", Answers: map[string]string{"Which colour?": "blue"}})

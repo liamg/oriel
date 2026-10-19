@@ -179,12 +179,21 @@ func (r Repo) RenameBranch(ctx context.Context, old, name string) error {
 
 // Fetch brings origin's branches up to date.
 func (r Repo) Fetch(ctx context.Context) error {
+	return r.fetchOrigin(ctx)
+}
+
+// FetchPrune is Fetch that also drops origin's branches that are gone from it.
+func (r Repo) FetchPrune(ctx context.Context) error {
+	return r.fetchOrigin(ctx, "--prune")
+}
+
+func (r Repo) fetchOrigin(ctx context.Context, flags ...string) error {
 	if !r.HasRemote(ctx, "origin") {
 		return errors.New("no remote called origin")
 	}
 	ctx, cancel := context.WithTimeout(ctx, FetchTimeout)
 	defer cancel()
-	_, err := r.git(ctx, "fetch", "--quiet", "origin")
+	_, err := r.git(ctx, append(append([]string{"fetch", "--quiet"}, flags...), "origin")...)
 	return err
 }
 

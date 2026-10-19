@@ -96,6 +96,13 @@ func (o *overview) Activate(_ context.Context, h plugin.Host) error {
 	o.add(h.View(OverviewView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "overview", Fn: o.build}
 	})))
+	o.add(h.View(OverviewPanelsView, registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
+		return &ui.Func{Key: "panels", Fn: func(c *ui.Ctx) {
+			if vc.Instance != "" {
+				o.panels(c, vc.Instance, o.card(vc.Instance))
+			}
+		}}
+	})))
 	return nil
 }
 
@@ -205,32 +212,38 @@ func (o *overview) cardView(c *ui.Ctx, dir string) {
 			o.branch(c, cd)
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-		c.Row("panels", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-			ps := slices.DeleteFunc(registry.OverviewPanels(o.h), func(p registry.OverviewPanel) bool {
-				return cd.panels[p.Name] == nil
-			})
-			for i, p := range ps {
-				if i > 0 {
-					c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
-				}
-				w := ui.Flex(1)
-				if p.Width > 0 {
-					w = ui.Px(p.Width)
-				}
-				c.Column(p.Name, ui.Style{W: w, Pad: ui.PadXY(18, 14), Gap: 10, Clip: true, Role: ui.RoleRegion, Label: p.Title}, func(c *ui.Ctx) {
-					caption(c, "title", p.Title)
-					res := cd.panels[p.Name]
-					switch {
-					case !res.done:
-						c.Text("busy", "counting…", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgGhost)})
-					case res.err != nil:
-						c.Text("err", firstLine(res.err.Error()), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.Warn)})
-					case res.node != nil:
-						c.Node(res.node)
-					}
-				})
-			}
+		o.panels(c, dir, cd)
+	})
+}
+
+// panels are dir's card's panels, side by side.
+func (o *overview) panels(c *ui.Ctx, dir string, cd *card) {
+	th := c.Theme()
+	c.Row("panels", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+		ps := slices.DeleteFunc(registry.OverviewPanels(o.h), func(p registry.OverviewPanel) bool {
+			return cd.panels[p.Name] == nil
 		})
+		for i, p := range ps {
+			if i > 0 {
+				c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			}
+			w := ui.Flex(1)
+			if p.Width > 0 {
+				w = ui.Px(p.Width)
+			}
+			c.Column(p.Name, ui.Style{W: w, Pad: ui.PadXY(18, 14), Gap: 10, Clip: true, Role: ui.RoleRegion, Label: p.Title}, func(c *ui.Ctx) {
+				caption(c, "title", p.Title)
+				res := cd.panels[p.Name]
+				switch {
+				case !res.done:
+					c.Text("busy", "counting…", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgGhost)})
+				case res.err != nil:
+					c.Text("err", firstLine(res.err.Error()), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.Warn)})
+				case res.node != nil:
+					c.Node(res.node)
+				}
+			})
+		}
 	})
 }
 

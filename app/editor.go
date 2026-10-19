@@ -35,15 +35,18 @@ const EditorView = "editor"
 // whose notices are the IDE's and whose "+ and "* are the system clipboard (editor.md, "Part of the IDE").
 type editorPlugin struct {
 	disposer
-	sh   *shell
-	h    plugin.Host
-	ed   *edit.Editor
-	e    *vim.Engine
-	conv *conventions
-	dir  string
-	docs map[*text.Buffer]*highlighter
-	busy sync.WaitGroup // parsers being made, off the loop
-	rows map[vim.WindowID]int
+	sh      *shell
+	h       plugin.Host
+	ed      *edit.Editor
+	e       *vim.Engine
+	conv    *conventions
+	dir     string
+	docs    map[*text.Buffer]*highlighter
+	busy    sync.WaitGroup // parsers being made, off the loop
+	madeMu  sync.Mutex
+	made    map[*syntax.Document]bool // made, not yet handed to the loop
+	stopped bool                      // deactivated: a document made since is closed where it's made
+	rows    map[vim.WindowID]int
 	// blockPx is how tall the blocks between a window's lines were last frame: rows it doesn't have for text.
 	blockPx map[vim.WindowID]float32
 	pane    paneMetrics
@@ -278,6 +281,14 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 }
 
 func (x *editorPlugin) Deactivate(ctx context.Context) error {
+	x.madeMu.Lock()
+	x.stopped = true
+	x.madeMu.Unlock()
+	x.busy.Wait()
+	for doc := range x.made {
+		doc.Close()
+	}
+	x.made = nil
 	for _, d := range x.docs {
 		d.close()
 	}
@@ -817,11 +828,27 @@ func (x *editorPlugin) highlights(p vim.Pane) *highlighter {
 	go func() {
 		defer x.busy.Done()
 		doc, err := syntax.NewDocument(lang, snap)
+		if err == nil {
+			x.madeMu.Lock()
+			if x.stopped {
+				x.madeMu.Unlock()
+				doc.Close()
+				return
+			}
+			if x.made == nil {
+				x.made = map[*syntax.Document]bool{}
+			}
+			x.made[doc] = true
+			x.madeMu.Unlock()
+		}
 		x.h.Do(func() {
 			if err != nil {
 				x.h.Log().Warn("syntax", "file", name, "err", err)
 				return
 			}
+			x.madeMu.Lock()
+			delete(x.made, doc)
+			x.madeMu.Unlock()
 			if h.closed {
 				doc.Close()
 				return

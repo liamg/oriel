@@ -49,7 +49,8 @@ type githubPlugin struct {
 	mu         sync.Mutex
 	mirrors    map[core.SessionID]githubMirror
 	syncing    map[core.SessionID]bool
-	forwarding map[string]bool // comment IDs being posted
+	again      map[core.SessionID]bool // a sync asked for while one ran: fresh or not
+	forwarding map[string]bool         // comment IDs being posted
 
 	editing map[string]*string // drafts being edited, by comment; on the loop
 }
@@ -69,6 +70,7 @@ func (x *githubPlugin) Activate(_ context.Context, h plugin.Host) error {
 		x.now = time.Now
 	}
 	x.mirrors, x.syncing, x.forwarding, x.editing = map[core.SessionID]githubMirror{}, map[core.SessionID]bool{}, map[string]bool{}, map[string]*string{}
+	x.again = map[core.SessionID]bool{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.add(h.Option(registry.OptionSpec{Name: "github.trusted_orgs", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
 		Help: "GitHub orgs whose members' review comments the agent may read. Text from anyone else is hidden from it. Empty: the repository's owner."}))
@@ -164,6 +166,7 @@ func (x *githubPlugin) trust() host.Trust {
 func (x *githubPlugin) sync(id core.SessionID, fresh bool) {
 	x.mu.Lock()
 	if x.syncing[id] {
+		x.again[id] = x.again[id] || fresh
 		x.mu.Unlock()
 		return
 	}
@@ -188,8 +191,13 @@ func (x *githubPlugin) sync(id core.SessionID, fresh bool) {
 			g.err = err.Error()
 		}
 		x.mirrors[id] = g
+		again, queued := x.again[id]
+		delete(x.again, id)
 		x.mu.Unlock()
 		x.h.Redraw()
+		if queued {
+			x.sync(id, again)
+		}
 	}()
 }
 

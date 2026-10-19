@@ -6,7 +6,9 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -166,4 +168,18 @@ func TestShowcaseTerminal(t *testing.T) {
 	b.frame()
 	b.waitTerm(t, "second terminal")
 	b.shot(t, "22-terminal-placements")
+}
+
+func TestShowcaseRepos(t *testing.T) {
+	s := reposScene(t)
+	s.shot(t, "45-repos-page")
+	s.clickText(t, "New tag…")
+	s.until(t, "the tag form", func() bool { return strings.Contains(s.frameText(), "Create tag v0.4.3") })
+	s.shot(t, "45-repos-tag")
+	s.run("repos.new", registry.Args{"mode": "clone", "url": "https://github.com/example/my-project"})
+	s.until(t, "the clone target", func() bool {
+		s.now = s.now.Add(100 * time.Millisecond) // past the fields' rest
+		return strings.Contains(s.frameText(), "new folder")
+	})
+	s.shot(t, "45-repos-add")
 }

@@ -58,6 +58,18 @@ func lagAppWith(t *testing.T, change func(*Config)) *running {
 	return r
 }
 
+// clearOfBlinks waits until Ori, in the sidebar, won't blink for d: its blinks draw frames of their own.
+func clearOfBlinks(d time.Duration) {
+	for {
+		now := time.Now()
+		shut, next := oriBlink(now)
+		if !shut && next.Sub(now) >= d {
+			return
+		}
+		time.Sleep(next.Sub(now) + oriBlinkFor)
+	}
+}
+
 // settle waits until no frame has been drawn for a moment.
 func (r *running) settle() {
 	for n := -1; ; {
@@ -214,6 +226,7 @@ func TestHoverLagAfterDragBudget(t *testing.T) {
 	along := func() int {
 		r.moves([]render.Point{row}, 0)
 		r.settle()
+		clearOfBlinks(2 * time.Second)
 		n := len(r.win.Frames())
 		r.moves(sweep(row, render.Point{X: row.X + 30, Y: row.Y}, 200), 0)
 		r.settle()

@@ -22,6 +22,7 @@ import (
 type Headless struct {
 	sh      *shell
 	ui      *ui.UI
+	ts      *typeset.Typesetter
 	plugins []plugin.Plugin
 	host    plugin.Host // the last built-in's
 	size    render.Point
@@ -77,6 +78,7 @@ func NewHeadless(cfg Config, o HeadlessOpts) (*Headless, error) {
 		h.Close()
 		return nil, err
 	}
+	h.ts = ts
 	h.ui = ui.New(ts, textStyle)
 	h.ui.SetClipboard(cfg.Desktop)
 	st, _ := theme.Stack(theme.Builtins(), "oriel")
@@ -122,6 +124,10 @@ func (h *Headless) Close() error {
 		err = errors.Join(err, e.Deactivate(context.Background()))
 	}
 	h.plugins = nil
+	forgetLanguages(h.sh.cfg.Registry)
+	if h.ts != nil {
+		h.ts.Close()
+	}
 	if h.cancel != nil {
 		h.cancel()
 		h.cancel = nil

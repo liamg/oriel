@@ -92,7 +92,7 @@ func TestUpdateCardInstallsAndRestarts(t *testing.T) {
 		t.Fatalf("this copy is %q", b)
 	}
 	s.until(t, "Restart on the card", func() bool { return strings.Contains(s.frameText(), "Oriel 2.0.0 is installed") })
-	s.wantFrame(t, "update ready · restart")
+	s.until(t, "the status line saying so", func() bool { return strings.Contains(s.frameText(), "update ready · restart") })
 	s.lint("an update ready")
 	if !hasNotice(s.store.State(), "update.ready") {
 		t.Error("no notice says the update is ready")

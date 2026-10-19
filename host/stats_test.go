@@ -177,10 +177,10 @@ func TestStatsFromRecordedEvents(t *testing.T) {
 func TestUsageHistory(t *testing.T) {
 	r := newRig(t)
 	for i, used := range []float64{.1, .2} {
-		r.w.usageSampled(core.ProviderUsage{Provider: "claude", Sampled: r.now.Add(time.Duration(i) * time.Hour),
+		r.w.usageSampled(core.ProviderUsage{Provider: "claude", Sampled: r.now().Add(time.Duration(i) * time.Hour),
 			Windows: []core.UsageWindow{{Name: "weekly", Used: used}}})
 	}
-	r.w.usageSampled(core.ProviderUsage{Provider: "codex", Sampled: r.now, Windows: []core.UsageWindow{{Name: "5h", Used: .5}}})
+	r.w.usageSampled(core.ProviderUsage{Provider: "codex", Sampled: r.now(), Windows: []core.UsageWindow{{Name: "5h", Used: .5}}})
 	h := r.w.UsageHistory(UsageHistoryReq{Provider: "claude"})
 	if len(h) != 2 || h[1].Windows[0].Used != .2 {
 		t.Errorf("history = %+v", h)
@@ -194,14 +194,14 @@ func TestUsageHistory(t *testing.T) {
 // restart, from the readings kept in usage.jsonl.
 func TestUsageSurvivesRestart(t *testing.T) {
 	r := newRig(t)
-	work := core.ProviderUsage{Provider: "claude", Account: "u1/o-work", Sampled: r.now, Windows: []core.UsageWindow{{Name: "weekly", Used: .1}}}
+	work := core.ProviderUsage{Provider: "claude", Account: "u1/o-work", Sampled: r.now(), Windows: []core.UsageWindow{{Name: "weekly", Used: .1}}}
 	r.w.usageSampled(work)
-	work.Sampled, work.Windows = r.now.Add(time.Hour), []core.UsageWindow{{Name: "weekly", Used: .3}}
+	work.Sampled, work.Windows = r.now().Add(time.Hour), []core.UsageWindow{{Name: "weekly", Used: .3}}
 	r.w.usageSampled(work)
-	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-home", Sampled: r.now, Windows: []core.UsageWindow{{Name: "weekly", Used: .7}}})
-	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-old", Sampled: r.now.Add(-usageKeep - time.Hour),
+	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-home", Sampled: r.now(), Windows: []core.UsageWindow{{Name: "weekly", Used: .7}}})
+	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-old", Sampled: r.now().Add(-usageKeep - time.Hour),
 		Windows: []core.UsageWindow{{Name: "weekly", Used: .9}}})
-	r.now = r.now.Add(2 * time.Hour)
+	r.setNow(r.now().Add(2 * time.Hour))
 	r.restart()
 
 	got := map[string]float64{}
@@ -212,7 +212,7 @@ func TestUsageSurvivesRestart(t *testing.T) {
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("usage after restart = %v, want %v", got, want)
 	}
-	if h := r.w.UsageHistory(UsageHistoryReq{Provider: "claude", Since: r.now.Add(-usageKeep)}); len(h) != 3 {
+	if h := r.w.UsageHistory(UsageHistoryReq{Provider: "claude", Since: r.now().Add(-usageKeep)}); len(h) != 3 {
 		t.Errorf("restoring wrote the readings again: %d kept", len(h))
 	}
 }
@@ -221,7 +221,7 @@ func TestUsageSurvivesRestart(t *testing.T) {
 // doesn't move its history to the new account, and a session started after it is the new account's.
 func TestSessionKeepsTheAccountItRanOn(t *testing.T) {
 	r := newRig(t)
-	r.w.usageSampled(core.ProviderUsage{Provider: "fake", Account: "u1/o-work", AccountName: "ada@work.example", Sampled: r.now,
+	r.w.usageSampled(core.ProviderUsage{Provider: "fake", Account: "u1/o-work", AccountName: "ada@work.example", Sampled: r.now(),
 		Windows: []core.UsageWindow{{Name: "weekly", Used: .1}}})
 	first, fs := r.workSession("Round invoice lines")
 	r.eventually(first, "its account", func(se core.SessionState) bool { return len(se.Agent.Accounts) == 1 })
@@ -231,10 +231,10 @@ func TestSessionKeepsTheAccountItRanOn(t *testing.T) {
 	r.eventually(first, "the turn", func(se core.SessionState) bool { return se.Agent.Stats.ToolCalls == 1 })
 
 	// Signed in to another account: a reading of it, not from the session.
-	r.now = r.now.Add(2 * time.Hour)
-	r.w.usageSampled(core.ProviderUsage{Provider: "fake", Account: "u1/o-home", AccountName: "ada@home.example", Sampled: r.now,
+	r.setNow(r.now().Add(2 * time.Hour))
+	r.w.usageSampled(core.ProviderUsage{Provider: "fake", Account: "u1/o-home", AccountName: "ada@home.example", Sampled: r.now(),
 		Windows: []core.UsageWindow{{Name: "weekly", Used: .2}}})
-	if a := r.session(first).Agent.Accounts; len(a) != 1 || a[0].Account != "u1/o-work" || !a[0].At.Equal(r.now.Add(-2*time.Hour)) {
+	if a := r.session(first).Agent.Accounts; len(a) != 1 || a[0].Account != "u1/o-work" || !a[0].At.Equal(r.now().Add(-2*time.Hour)) {
 		t.Errorf("the first session's accounts = %+v, want only the work account, from its start", a)
 	}
 	ss := r.w.statsSessions(first, time.Time{})
@@ -246,7 +246,7 @@ func TestSessionKeepsTheAccountItRanOn(t *testing.T) {
 	fs.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "fake", Account: "u1/o-home", AccountName: "ada@home.example",
 		Windows: []core.UsageWindow{{Name: "weekly", Used: .2}}}})
 	got := r.eventually(first, "the login change", func(se core.SessionState) bool { return len(se.Agent.Accounts) == 2 })
-	if a := got.Agent.Accounts[1]; a.Account != "u1/o-home" || !a.At.Equal(r.now) {
+	if a := got.Agent.Accounts[1]; a.Account != "u1/o-home" || !a.At.Equal(r.now()) {
 		t.Errorf("after the login change: %+v", got.Agent.Accounts)
 	}
 	fs.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "fake", Account: "u1/o-home", Windows: []core.UsageWindow{{Name: "weekly", Used: .3}}}})

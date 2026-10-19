@@ -145,7 +145,10 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		active = nil
 		return err
 	}
-	defer func() { err = errors.Join(err, deactivate()) }()
+	defer func() {
+		err = errors.Join(err, deactivate())
+		forgetLanguages(cfg.Registry)
+	}()
 	activate := func() error {
 		_, err := sh.activate(ctx, &active)
 		return err

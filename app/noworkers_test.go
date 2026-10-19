@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ func TestNoWorkerInAnyUI(t *testing.T) {
 	waitState(t, s.store, "the session", func(st core.State) bool { _, ok := st.Session("rounding"); return ok })
 	check := func(where, text string) {
 		t.Helper()
+		text = strings.ReplaceAll(text, filepath.Dir(lw.repo), "") // the test's own directory, as the launcher lists the repo
 		if strings.Contains(strings.ToLower(text), "worker") {
 			t.Errorf("%s says worker: %q", where, text)
 		}

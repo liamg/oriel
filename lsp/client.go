@@ -627,13 +627,14 @@ func (v *converter) snap(path string) *text.Snapshot {
 	if s, ok := v.snaps[path]; ok {
 		return s
 	}
-	v.c.mu.Lock()
-	d := v.c.docs[path]
-	v.c.mu.Unlock()
 	var s *text.Snapshot
-	if d != nil {
-		s = &d.snap
-	} else {
+	v.c.mu.Lock()
+	if d := v.c.docs[path]; d != nil {
+		snap := d.snap
+		s = &snap
+	}
+	v.c.mu.Unlock()
+	if s == nil {
 		read := v.c.opts.ReadFile
 		if read == nil {
 			read = os.ReadFile

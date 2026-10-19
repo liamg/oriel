@@ -106,6 +106,28 @@ func (a Args) Int(k string) int {
 // Bool is the boolean argument k.
 func (a Args) Bool(k string) bool { b, _ := a[k].(bool); return b }
 
+// Strings is the list argument k: a list of strings from Go or Lua, or one string of comma-separated items.
+func (a Args) Strings(k string) []string {
+	var out []string
+	switch v := a[k].(type) {
+	case []string:
+		out = append(out, v...)
+	case []any:
+		for _, x := range v {
+			if s, ok := x.(string); ok {
+				out = append(out, s)
+			}
+		}
+	case string:
+		for _, s := range strings.Split(v, ",") {
+			if s = strings.TrimSpace(s); s != "" {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
+}
+
 type Command struct {
 	ID    string // "git.commit"
 	Title string

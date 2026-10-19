@@ -153,7 +153,6 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 			t.Errorf("the launcher lacks %q:\n%s", want, text)
 		}
 	}
-	s.clickText(t, "+ add ▾")
 	s.clickText(t, "pricing")
 	s.typeKeysIn(t, "Confirm the cache is keyed by org first.", promptPlaceholder)
 	s.lint("the launcher with a ticket")

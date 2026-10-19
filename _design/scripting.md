@@ -371,6 +371,14 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   range it opens the date picker.
 
 
+## As built (SE-6–8)
+
+- Repos are commands: `oriel.cmd("repos.clone", { url = "https://github.com/acme/billing", parent = "~/code" })`,
+  `oriel.cmd("repos.remove", { repo = "billing" })`, `oriel.cmd("repos.housekeep", { repo = "oriel", apply = {
+  "liam/old" }, prune = true })`, `oriel.cmd("repos.tag", { repo = "oriel", name = "v0.4.3", push = true })` (`pull`,
+  `sign`, `push` and the message default to the `repos.tag.*` options). A command returns no value, so the facts and
+  the housekeeping plan stay on the Repos page.
+
 ## As built (SE-4)
 
 - Jobs are commands too: `oriel.cmd("jobs.open", { job = "sweep-stale-deps" })`, `oriel.cmd("jobs.run", { name = … })` (a job's key is its name),

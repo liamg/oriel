@@ -134,7 +134,7 @@ func New(opts Options) (*Host, error) {
 	}
 	w := &Host{opts: opts, store: eventstore.New(), log: opts.Log, kinds: builtinKinds(),
 		recs: map[core.SessionID]*sessionLog{}, live: map[core.SessionID]*session{}, open: map[core.SessionID]logs.SessionLog{},
-		repos: &repoList{path: filepath.Join(opts.Home, "repos.json")}, sessLogs: logs.Dirs{Root: filepath.Join(opts.Home, "sessions")},
+		repos: &repoList{path: filepath.Join(opts.Home, "repos.json"), now: opts.Now, scanned: map[string]bool{}}, sessLogs: logs.Dirs{Root: filepath.Join(opts.Home, "sessions")},
 		closed: make(chan struct{})}
 	if err := w.repos.load(); err != nil {
 		return nil, err
@@ -150,6 +150,7 @@ func New(opts Options) (*Host, error) {
 	w.store.Subscribe(core.Filter{}, w.record)
 	w.settle()
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
+	w.reposChanged()
 	w.resumeHandedOver()
 	return w, nil
 }

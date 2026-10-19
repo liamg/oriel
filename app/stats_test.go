@@ -379,7 +379,11 @@ func statsScene(t *testing.T) (*errScene, *statsRig, *statsPlugin) {
 	r := newStatsRig(t)
 	r.build()
 	r.readings(t)
-	s := newSceneWith(t, "", "", mockupSize, r.connect(t))
+	work := ""
+	if se, ok := r.w.Store().Session(r.ids["pricing-rounding"]); ok {
+		work = sessionDir(se.Snapshot()) // the window a session in front opens on
+	}
+	s := newSceneWith(t, "", "", mockupSize, func(cfg *Config) { r.connect(t)(cfg); cfg.WorkDir = work })
 	s.now = statsNow
 	var x *statsPlugin
 	for _, e := range s.plugins {
@@ -393,9 +397,6 @@ func statsScene(t *testing.T) (*errScene, *statsRig, *statsPlugin) {
 	})
 	if err := s.store.Apply(core.SessionFocused{ID: r.ids["pricing-rounding"]}); err != nil {
 		t.Fatal(err)
-	}
-	if se, ok := s.store.Session(r.ids["pricing-rounding"]); ok {
-		s.sh.cfg.WorkDir = sessionDir(se.Snapshot()) // the window a session in front opens on
 	}
 	if err := s.reg.Options().Set(AccountsOption, registry.LayerUser, registry.At{}, map[string]string{workAccount: "Work"}); err != nil {
 		t.Fatal(err)

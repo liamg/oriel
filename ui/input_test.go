@@ -567,3 +567,25 @@ func TestPointerMovesThatChangeNothing(t *testing.T) {
 		t.Error("a move into a scrolling box, whose scrollbar shows on hover, doesn't ask for a frame")
 	}
 }
+
+// A dialog opened over another on the same layer holds focus, though the first one's box is a float nested in its
+// scrim: within a layer, floats paint (and trap) in the order they were built.
+func TestDialogOverANestedDialogHoldsFocus(t *testing.T) {
+	u := newUI()
+	var field ID
+	build := func(c *Ctx) {
+		c.Box("first.scrim", Style{W: Px(200), H: Px(200), Z: LayerDialog, Float: &Float{Point: &render.Point{}}}, func(c *Ctx) {
+			c.Column("first", Style{W: Px(100), H: Px(100), Z: LayerDialog, Trap: true, Focusable: true, Float: &Float{Point: &render.Point{}}}, nil)
+		})
+		c.Column("second", Style{W: Px(80), H: Px(80), Z: LayerDialog, Trap: true, Focusable: true, Float: &Float{Point: &render.Point{X: 10, Y: 10}}},
+			func(c *Ctx) {
+				field = c.Box("field", Style{W: Px(20), H: Px(20), Focusable: true}, nil)
+			})
+	}
+	paintOps(u, render.Point{X: 300, Y: 300}, build)
+	u.Focus(field)
+	paintOps(u, render.Point{X: 300, Y: 300}, build)
+	if u.Focused() != field {
+		t.Errorf("focus = %v, want the second dialog's field %v", u.Focused(), field)
+	}
+}

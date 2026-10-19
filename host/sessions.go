@@ -291,7 +291,7 @@ func (w *Host) addPRProject(ctx context.Context, root string, m *Manifest, r cor
 func (w *Host) startNewRepo(ctx context.Context, se *core.SessionState, spec core.SessionSpec, branch string) error {
 	parent := spec.Dir
 	if parent == "" {
-		parent = w.opts.ReposDir
+		parent = w.reposDir()
 	}
 	dir := filepath.Join(parent, string(se.ID))
 	if spec.Name != "" {
@@ -304,7 +304,7 @@ func (w *Host) startNewRepo(ctx context.Context, se *core.SessionState, spec cor
 		_ = os.RemoveAll(dir)
 		return err
 	}
-	r, err := w.repos.add(ctx, dir)
+	r, err := w.addRepo(ctx, dir, core.RepoSession)
 	if err != nil {
 		return err
 	}

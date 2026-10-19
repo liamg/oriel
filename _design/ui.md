@@ -470,6 +470,10 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Prompt first. A pasted ticket ID expands into a card.
 - Mode: Plan · Work · Review PR · Tour · Job · **New repo** (`sessions.md`). Provider: Claude or Codex, with model, effort and remaining usage.
 - Repos on one shared branch, a sandbox and network policy.
+- **Repositories** is a checklist of the registered repos (zero or more ticked; ticked first, then the most recently
+  used, then by name), with a filter past 8 and a list that scrolls past 6, each row its path, default branch and
+  when it was used (`found` for one discovery added, `just added`). **+ Add repo** opens the Add repo dialog over the
+  launcher, and the repo it adds comes back ticked (`launcher.pick-repo`). `session.new {repos}` still takes paths.
 - Pre-flight: what will be fetched and built, and which LSPs will start.
 - As built (AI-4): `⌘N` or `session.new` (whose args fill it in: kind, prompt, ticket, pr, dir, repos, provider)
   opens it over a scrim; `⌘↵` or **Start** runs `session.start`, `esc`, the close button or a click outside
@@ -1119,3 +1123,34 @@ Laid out as Jobs (mockup 44's panel 1), with no mockup of its own. Built in `app
   Linear** (`o`: `system.open {url}`); tracker, project, priority, PR, blocked by, session; then, from the tracker's
   `Lookup` (off the loop, once per key), the facts ("4 comments · 2 attachments") and the summary. Plan, Work and
   Continue close the page as the launcher or the session comes up.
+
+## 45 · Repos
+
+![45-repos](mockups/45-repos.png)
+
+Built in SE-6 to SE-8 (`app/repos.go`, `app/repospage.go`, `app/reposnew.go`, `host/repos.go`, `host/repoops.go`,
+`host/repodiscover.go`).
+
+- **The Repos page** (`:Repos {repo}`, `repos.open {repo}`, the sidebar's Repos, the start view's link with the
+  count) is a page over the main area, key mode `repos`. The header counts repos, the ones found and the ones to
+  tidy; **+ Add repo** (`a`), **Scan for repos** and **Close** (`esc`).
+- **The list**: name, default branch, path, a `found` chip until a session uses it, a dot and "N to tidy" once
+  housekeeping has read something to clean; found ones last; a filter over name and path.
+- **The selected repo**: name, path, remote and default branch; **Fetch** (`f`, `fetch --prune`), **Reveal** (the
+  OS file manager), **Remove** (asks once), **New session** (`session.new {repos}`); a line with the branch,
+  ahead/behind, the last commit, when it was added and used.
+- **Stats**: branches, worktrees, tags with the latest, size on disk (`host.RepoFacts`), over the overview's panels
+  (`OverviewPanelsView`, the same cache by HEAD).
+- **Housekeeping** (`sessions.md`): a table of branch, why (`merged`, `upstream gone`), worktree, last commit and a
+  note (`dirty · tick to force`, `in session … · archive it`), stale worktrees as `stale` rows; **Fetch and read
+  again**, **Select all**, **Clean up N…** which asks once more. Results show per branch.
+- **Tags** (**New tag…**): branch (the default), the tag (the latest semver tag's next patch; **patch · minor ·
+  major** bump it), the message (`repos.tag.message`), **Pull latest first**, **Signed** (off and disabled with "no
+  signing key configured" unless `repos.tag.sign` is `always`), **Push this tag** (only `refs/tags/<tag>`); a card
+  with the commit it will tag. Always annotated. A failed push keeps the tag and offers **Push again**.
+- **Add repo** (`repos.new {mode, path, url, parent, name, then}`, key mode `repos.new`, `⌘↵` adds): Existing
+  directory (completed as Open Directory, **Browse…**, a live check: a repo, a worktree and the clone it adds, already
+  added, not a repo) or Clone from URL (URL; parent folder, where most of your repos are; folder name from the URL;
+  **Clones into**, read only, with new folder / already a clone / taken; a hint when the parent looks like a URL or
+  already ends in the name). A clone shows git's progress; `esc` stops it and takes away what it made. Once added,
+  `{then}` runs with `{repo}`. The sidebar's `+` picker ends with "Add a new repo…".

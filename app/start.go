@@ -24,6 +24,8 @@ import (
 const (
 	StartView    = "app.start"
 	OverviewView = "app.overview"
+	// OverviewPanelsView is a directory's overview panels alone, the directory its instance: the Repos page's stats.
+	OverviewPanelsView = "app.overview.panels"
 )
 
 var (

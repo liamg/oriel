@@ -99,9 +99,18 @@ type langSet struct {
 	set *syntax.Set
 }
 
-// languages is the set of languages r has now.
+// windowRegistry is the registry r stands for: a plugin's host is a view of its window's.
+func windowRegistry(r registry.Registry) registry.Registry {
+	if h, ok := r.(*pluginHost); ok && h.sh != nil && h.sh.cfg.Registry != nil {
+		return h.sh.cfg.Registry
+	}
+	return r
+}
+
+// languages is the set of languages r has now, one set a window.
 func languages(r registry.Registry) *syntax.Set {
 	ls, gen := r.Languages()
+	r = windowRegistry(r)
 	langSets.Lock()
 	defer langSets.Unlock()
 	if langSets.by == nil {
@@ -118,6 +127,13 @@ func languages(r registry.Registry) *syntax.Set {
 	s := &langSet{gen: gen, set: syntax.NewSet(out...)}
 	langSets.by[r] = s
 	return s.set
+}
+
+// forgetLanguages drops r's set, once the window it belongs to has closed.
+func forgetLanguages(r registry.Registry) {
+	langSets.Lock()
+	defer langSets.Unlock()
+	delete(langSets.by, windowRegistry(r))
 }
 
 // languageFor is the language of the file at path, by its name or the first line of src.

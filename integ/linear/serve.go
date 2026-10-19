@@ -97,13 +97,17 @@ func Serve(r io.Reader, w io.Writer) error {
 			"auth":    Secret, "auth_scheme": "none"}, &res)
 		return res.Status, []byte(res.Body), err
 	}}
+	// The conn starts reading as it's made, so a request waits for conn to be set before it can call back.
+	ready := make(chan struct{})
 	conn = jsonrpc.NewConn(r, w, jsonrpc.Handlers{Request: func(req *jsonrpc.Request) {
 		go func() {
+			<-ready
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
 			req.Reply(s.Handle(ctx, req.Method, req.Params))
 		}()
 	}}, jsonrpc.Options{Version: "2.0"})
+	close(ready)
 	<-conn.Done()
 	if err := conn.Err(); err != nil && !errors.Is(err, jsonrpc.ErrClosed) {
 		return err

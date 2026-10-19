@@ -70,9 +70,8 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 		r.typeText(text)
 	}
 	addRepo := func() {
-		r.clickTop("+ add ▾")
 		r.clickTop("pricing")
-		r.latest("the repo's chip", func(f headless.Frame) bool { return strings.Contains(f.Text(), "pricing\n✕") })
+		r.latest("the repo ticked", func(f headless.Frame) bool { return strings.Contains(f.Text(), "1 selected") })
 	}
 	for _, tc := range []struct {
 		mode, pack string
@@ -309,9 +308,8 @@ func TestLauncherPicksSandboxBackend(t *testing.T) {
 	r.waitText("seatbelt sandbox · gateway for git & gh")
 	r.clickTop(promptPlaceholder)
 	r.typeText("Fix stale search results")
-	r.clickTop("+ add ▾")
 	r.clickTop("pricing")
-	r.latest("the repo's chip", func(f headless.Frame) bool { return strings.Contains(f.Text(), "pricing\n✕") })
+	r.latest("the repo ticked", func(f headless.Frame) bool { return strings.Contains(f.Text(), "1 selected") })
 	r.clickTop("Start Work")
 	waitState(t, r.store, "a session in seatbelt", func(st core.State) bool {
 		for _, se := range st.Sessions {

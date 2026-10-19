@@ -39,6 +39,11 @@ func (s *Set) Scan(ctx context.Context, ws Workspace) []Item {
 		go func() {
 			defer wg.Done()
 			ps := map[*syntax.Language]*syntax.Parser{}
+			defer func() {
+				for _, p := range ps {
+					p.Release()
+				}
+			}()
 			for path := range paths {
 				items := scanFile(path, as, ps)
 				mu.Lock()
@@ -74,7 +79,7 @@ func (s *Set) ScanFile(ws Workspace, path string) []Item {
 	return scanFile(path, s.Detect(ws), nil)
 }
 
-// scanFile discovers path's tests, parsing it with parsers of its own when ps isn't nil.
+// scanFile discovers path's tests, parsing it with the parsers in ps, borrowed as they're needed, when ps isn't nil.
 func scanFile(path string, as []Adapter, ps map[*syntax.Language]*syntax.Parser) []Item {
 	for _, a := range as {
 		if f, ok := a.(TestFiler); !ok || !f.TestFile(path) {
@@ -88,7 +93,7 @@ func scanFile(path string, as []Adapter, ps map[*syntax.Language]*syntax.Parser)
 		if l, ok := Languages().ForFile(path, firstLine(src.Text)); ok && ps != nil {
 			p := ps[l]
 			if p == nil {
-				if p, err = syntax.NewParser(l); err != nil {
+				if p, err = syntax.Borrow(l); err != nil {
 					return nil
 				}
 				ps[l] = p
