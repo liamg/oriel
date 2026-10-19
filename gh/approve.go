@@ -22,12 +22,23 @@ type PRDetails struct {
 	Additions    int    `json:"additions"`
 	Deletions    int    `json:"deletions"`
 	ChangedFiles int    `json:"changedFiles"`
+	Body         string `json:"body,omitempty"`
+	Head         string `json:"head,omitempty"` // its branch
+	URL          string `json:"url,omitempty"`
+	Draft        bool   `json:"draft,omitempty"`
+	// Mergeable is nil until GitHub has worked it out; MergeState is its mergeable_state: clean, behind, dirty…
+	Mergeable  *bool    `json:"mergeable,omitempty"`
+	MergeState string   `json:"mergeState,omitempty"`
+	Labels     []string `json:"labels,omitempty"`
+	Reviewers  []string `json:"reviewers,omitempty"` // asked for and not yet answered: logins, and org/team for a team
 }
 
 // PRFile is one changed file; Previous is the old path of a rename.
 type PRFile struct {
-	Path     string `json:"filename"`
-	Previous string `json:"previous_filename,omitempty"`
+	Path      string `json:"filename"`
+	Previous  string `json:"previous_filename,omitempty"`
+	Additions int    `json:"additions,omitempty"`
+	Deletions int    `json:"deletions,omitempty"`
 }
 
 // ParsePRURL reads https://github.com/owner/name/pull/123.
@@ -58,24 +69,31 @@ func (a API) Me(ctx context.Context) (string, error) {
 
 func (a API) PRDetails(ctx context.Context, repo Repo, number int) (PRDetails, error) {
 	var p struct {
-		Title string   `json:"title"`
-		State string   `json:"state"`
-		User  restUser `json:"user"`
-		Head  struct {
+		restPR
+		Head struct {
+			Ref string `json:"ref"`
 			SHA string `json:"sha"`
 		} `json:"head"`
-		Base struct {
-			Ref string `json:"ref"`
-		} `json:"base"`
-		Additions    int `json:"additions"`
-		Deletions    int `json:"deletions"`
-		ChangedFiles int `json:"changed_files"`
+		Additions    int    `json:"additions"`
+		Deletions    int    `json:"deletions"`
+		ChangedFiles int    `json:"changed_files"`
+		Mergeable    *bool  `json:"mergeable"`
+		MergeState   string `json:"mergeable_state"`
+		Labels       []struct {
+			Name string `json:"name"`
+		} `json:"labels"`
 	}
 	if err := a.T.Do(ctx, "GET", repoPath(repo, fmt.Sprintf("pulls/%d", number)), nil, &p); err != nil {
 		return PRDetails{}, err
 	}
-	return PRDetails{Title: p.Title, State: p.State, Author: p.User.Login, Base: p.Base.Ref, HeadSHA: p.Head.SHA, Additions: p.Additions,
-		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles}, nil
+	pr := p.pr(repo.Owner)
+	out := PRDetails{Title: p.Title, State: p.State, Author: p.User.Login, Base: p.Base.Ref, HeadSHA: p.Head.SHA, Additions: p.Additions,
+		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, Body: p.Body, Head: p.Head.Ref, URL: p.HTMLURL, Draft: p.Draft,
+		Mergeable: p.Mergeable, MergeState: p.MergeState, Reviewers: pr.Reviewers}
+	for _, l := range p.Labels {
+		out.Labels = append(out.Labels, l.Name)
+	}
+	return out, nil
 }
 
 // PRFiles are the files a pull request changes: GitHub's first 100.

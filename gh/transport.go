@@ -85,9 +85,10 @@ func decode(b []byte, out any) error {
 // CLI calls the API through the gh command (`gh api`), with the user's own login, in Dir with Env added: a
 // sandboxed workspace's git guard.
 type CLI struct {
-	Bin string // "gh" if ""
-	Dir string
-	Env []string
+	Bin  string // "gh" if ""
+	Dir  string
+	Env  []string
+	Host string // a GitHub Enterprise server's hostname; github.com if ""
 }
 
 var ghStatus = regexp.MustCompile(`\(HTTP (\d{3})\)`)
@@ -100,6 +101,9 @@ func (c CLI) Do(ctx context.Context, method, path string, in, out any) error {
 		bin = "gh"
 	}
 	args := []string{"api", "--method", method, "-H", "Accept: application/vnd.github+json", path}
+	if c.Host != "" && !strings.EqualFold(c.Host, "github.com") {
+		args = append(args, "--hostname", c.Host)
+	}
 	cmd := exec.CommandContext(ctx, bin, args...)
 	if in != nil {
 		b, err := json.Marshal(in)

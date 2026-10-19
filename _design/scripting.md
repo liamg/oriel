@@ -486,6 +486,38 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 - `oriel.hud.indicator` takes `slot = "inbox.foot"` (the Inbox panel's foot) and, since SH-7, `"mission"`.
 
 
+## As built (reviews)
+
+- `oriel.code.host{ name, title, icon, order, words, takes, remotes, secret, requested = fn(done), lookup = fn(url,
+  done), checkout = fn(url, done), … }` (cap `ui`) makes a code host (plugins.md, "As built (code hosts)"): Oriel
+  builds the Reviews page, the pill, the notices, the omnibox rows and the assistant's `review_requests` on its review
+  functions. `takes` is a regular expression its PRs' URLs match. A request is `{ url, repo, number, title, author,
+  draft, asked, via, state, since, adds, dels, files, ci }` (`asked` RFC 3339 or seconds); a detail `{ request, base,
+  head, mergeable, labels, reviewers = { { login, state } }, body, files = { { path, adds, dels } }, checks, clone }`;
+  `checkout` answers `{ remote, ref }`.
+- `oriel.rail.add` takes `badge = fn()` (a count shown as a pill, 0 for none) and `badge_tone` (a theme token).
+
+## As built (code hosts)
+
+- `oriel.code.host` also takes `words = { short, long, sigil }`, `sites = { { host, api, secret } }`, `path` (a
+  regular expression over a remote's path, its first group the repo's name), `takes` (over a PR URL's path), `shape`
+  (over a whole remote), `setup = { api, secret, token_url, token_help, probe = fn(host, done) }`, `tokens = { env,
+  hosted_env, command, optional }` (where a site's token is found before the user is asked: env vars must be secrets
+  the manifest declares, the command needs `exec`); its review
+  functions get the site first (`requested(site, done)`, `lookup(site, url, done)`, `checkout(site, url, done)`), and
+  Ship's functions, each given `repo = { session, project, remote, repo, site }` and
+  answering through `done`: `for_branch(repo, branch)`, `create(repo, { title, body, branch, base, draft })`,
+  `edit(repo, pr, title, body)`, `ready(repo, pr)`, `request_reviewers(repo, pr, logins)`, `checks(repo, pr)`,
+  `merge_methods(repo, pr)` (`{ allowed, default }`), `blockers(repo, pr)` (`{ { kind, count, text, hard, url } }`),
+  `merge(repo, pr, { method, head, title, body, delete_branch })`, and for review mirroring `threads(repo, pr)`
+  (`{ { id, path, line, old, outdated, resolved, reviewer, state, url, comments = { { id, author, body, at, member } } } }`,
+  no id for the conversation) and `reply(repo, pr, thread, body)` (`thread = { id, path, line, old, url }`; the new
+  comment's id). Answers cross as JSON, where an empty table is an empty list or object. A Lua error in a later
+  callback (an `http.request`'s) fails the call awaiting it. `docs/examples/gitea` is a worked host. A pull request is `{ number, id, title, body, url,
+  author, state, draft, merged, branch, base, head, reviewers }`. Values cross as their JSON. It replaces
+  `oriel.review.source`.
+- `oriel.http.request`'s `auth_scheme = "basic"` sends the secret as HTTP Basic's password.
+
 ## As built (tickets page)
 
 - `oriel.rail.add` and `oriel.start.add` take `shown`: `fn(project)` and `fn()`, asked as each frame is built; the

@@ -35,6 +35,7 @@ type restPR struct {
 	CreatedAt time.Time  `json:"created_at"`
 	Head      struct {
 		Ref string `json:"ref"`
+		SHA string `json:"sha"`
 	} `json:"head"`
 	Base struct {
 		Ref string `json:"ref"`
@@ -49,7 +50,7 @@ type restPR struct {
 
 func (p restPR) pr(owner string) *PR {
 	out := &PR{Number: p.Number, NodeID: p.NodeID, Title: p.Title, Author: p.User.Login, Body: p.Body, URL: p.HTMLURL, State: p.State, Draft: p.Draft,
-		Merged: p.MergedAt != nil, Head: p.Head.Ref, Base: p.Base.Ref, Created: p.CreatedAt}
+		Merged: p.MergedAt != nil, Head: p.Head.Ref, SHA: p.Head.SHA, Base: p.Base.Ref, Created: p.CreatedAt}
 	for _, r := range p.Reviewers {
 		out.Reviewers = append(out.Reviewers, r.Login)
 	}

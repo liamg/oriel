@@ -51,6 +51,7 @@ type PR struct {
 	Draft     bool      `json:"draft,omitempty"`
 	Merged    bool      `json:"merged,omitempty"`
 	Head      string    `json:"head,omitempty"` // its branch
+	SHA       string    `json:"sha,omitempty"`  // the commit its branch is at
 	Base      string    `json:"base,omitempty"`
 	Reviewers []string  `json:"reviewers,omitempty"` // asked for: logins, and org/team for a team
 	Created   time.Time `json:"created,omitzero"`
@@ -144,6 +145,15 @@ type Client interface {
 	OrgMember(ctx context.Context, org, login string) (bool, error)
 	// SearchPRs finds pull requests across GitHub: SearchMine, SearchReview.
 	SearchPRs(ctx context.Context, query string) ([]Found, error)
+	// ReviewQueue is the user's review queue: what asks for their review, then what they reviewed that's still open.
+	ReviewQueue(ctx context.Context) ([]Asked, error)
+	// PRDetails is a pull request in full; PRFiles, the files it changes.
+	PRDetails(ctx context.Context, repo Repo, number int) (PRDetails, error)
+	PRFiles(ctx context.Context, repo Repo, number int) ([]PRFile, error)
+	// MergeState is what merging a PR now would meet; MergePR merges it, DeleteBranch deletes a branch.
+	MergeState(ctx context.Context, repo Repo, number int) (MergeState, error)
+	MergePR(ctx context.Context, repo Repo, number int, m Merge) error
+	DeleteBranch(ctx context.Context, repo Repo, branch string) error
 }
 
 // Error is GitHub saying no: its HTTP status and message.

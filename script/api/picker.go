@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -169,6 +170,20 @@ func (a *APIs) await(ctx context.Context, fn *script.Fn, args ...any) (any, erro
 		})
 		return nil, nil
 	})
+	failed := make(chan error, 1)
+	a.mu.Lock()
+	if a.waiting == nil {
+		a.waiting = map[int]chan error{}
+	}
+	a.n++
+	key := a.n
+	a.waiting[key] = failed
+	a.mu.Unlock()
+	defer func() {
+		a.mu.Lock()
+		delete(a.waiting, key)
+		a.mu.Unlock()
+	}()
 	a.Host.Do(func() {
 		if _, err := a.VM.Call(fn, append(args, done)...); err != nil {
 			once.Do(func() { ch <- answer{err: err} })
@@ -178,8 +193,32 @@ func (a *APIs) await(ctx context.Context, fn *script.Fn, args ...any) (any, erro
 	select {
 	case r := <-ch:
 		return r.v, r.err
+	case err := <-failed:
+		return nil, err
 	case <-ctx.Done():
 		return nil, ctx.Err()
+	}
+}
+
+// later calls fn, a callback the plugin gave an earlier call (an http.request's, a process request's), on the loop.
+// An error in it is shown, and fails the calls still awaiting the plugin: their answer would have come from it.
+func (a *APIs) later(fn *script.Fn, args ...any) {
+	_, err := a.VM.Call(fn, args...)
+	if err == nil {
+		return
+	}
+	nt := core.Notice{ID: "lua.callback." + fn.Source, Severity: core.SevError, Source: fn.Source, Title: "Lua", Text: err.Error()}
+	if e, ok := err.(*script.Error); ok {
+		nt.Location, nt.Detail = e.Where(), e.Trace()
+	}
+	a.Host.Notify(nt)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, ch := range a.waiting {
+		select {
+		case ch <- err:
+		default:
+		}
 	}
 }
 

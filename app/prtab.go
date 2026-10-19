@@ -46,14 +46,14 @@ func (x *shipPlugin) prTab(c *ui.Ctx, project string) {
 	})
 }
 
-func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s host.Ship, f *prForm) {
+func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) {
 	th := c.Theme()
-	edit := s.PR.Open()
+	edit, w := s.PR.Open(), s.words()
 	busy := x.doing(se.ID, s.Project)
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(tShipHead)}, func(c *ui.Ctx) {
-		title := "RAISE PR"
+		title := "RAISE " + strings.ToUpper(w.Short)
 		if edit {
-			title = fmt.Sprintf("EDIT PR #%d", s.PR.Number)
+			title = fmt.Sprintf("EDIT %s %s%d", strings.ToUpper(w.Short), w.Sigil, s.PR.Number)
 		}
 		c.Text("h", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06},
 			Color: th.C(theme.Fg)})
@@ -73,7 +73,7 @@ func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s host.Ship, f *p
 			x.run("ship.draft.save", registry.Args{"project": s.Project})
 		}
 		if edit {
-			if widget.Button(c, "update", "Update PR", widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: busy != ""}) {
+			if widget.Button(c, "update", "Update "+w.Short, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: busy != ""}) {
 				x.run("ship.raise", registry.Args{"project": s.Project})
 			}
 			return
@@ -81,7 +81,7 @@ func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s host.Ship, f *p
 		if widget.Button(c, "draft", "Raise as draft", widget.ButtonOpts{Help: "git/ship#raise", Disabled: busy != ""}) {
 			x.run("ship.raise", registry.Args{"project": s.Project, "draft": true})
 		}
-		if widget.Button(c, "raise", "Push + raise PR", widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: busy != ""}) {
+		if widget.Button(c, "raise", "Push + raise "+w.Short, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: busy != ""}) {
 			x.run("ship.raise", registry.Args{"project": s.Project})
 		}
 	})
@@ -89,7 +89,7 @@ func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s host.Ship, f *p
 }
 
 // prFields is the tab's form: title, body (write or preview), reviewers and cross-linked PRs.
-func (x *shipPlugin) prFields(c *ui.Ctx, se core.SessionState, s host.Ship, f *prForm) {
+func (x *shipPlugin) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) {
 	th := c.Theme()
 	if f.veto != "" {
 		widget.Wrap(c, "veto", f.veto, 600, monoFont(11, th.C(theme.Warn)))
@@ -159,7 +159,7 @@ func (x *shipPlugin) prFields(c *ui.Ctx, se core.SessionState, s host.Ship, f *p
 }
 
 // reviewerRows are the PR's reviewers, each removable, and a field to add one: CODEOWNERS' first.
-func (x *shipPlugin) reviewerRows(c *ui.Ctx, s host.Ship, f *prForm) {
+func (x *shipPlugin) reviewerRows(c *ui.Ctx, s shipRead, f *prForm) {
 	th := c.Theme()
 	rs := f.reviewersOf(s)
 	if s.PR != nil {

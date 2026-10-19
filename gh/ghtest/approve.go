@@ -56,7 +56,7 @@ func (s *Server) prDetails(w http.ResponseWriter, r *http.Request) {
 		notFound(w)
 		return
 	}
-	out := restPR(repo, p)
+	out := s.restPR(repo, p)
 	z := s.sizes[prKey(repo, p.Number)]
 	out["user"] = user(z.Author)
 	out["head"] = map[string]string{"ref": p.Head, "sha": z.HeadSHA}
@@ -97,8 +97,8 @@ func (s *Server) submitReview(w http.ResponseWriter, r *http.Request) {
 		reply(w, 422, map[string]string{"message": "commit_id is not the pull request's head"})
 		return
 	}
-	rv := gh.Review{ID: s.id(), User: s.login, Association: "MEMBER", State: state, Body: in.Body, Submitted: s.tick()}
+	rv := gh.Review{ID: s.id(), User: s.login, Association: "MEMBER", State: state, Body: in.Body, Submitted: s.tick(), Commit: in.CommitID}
 	rv.URL = fmt.Sprintf("https://github.com/%s/pull/%d#pullrequestreview-%d", repoOf(r), num(r), rv.ID)
-	s.reviews[key] = append(s.reviews[key], rv)
+	s.reviewed(repoOf(r), num(r), &rv)
 	reply(w, 200, map[string]any{"id": rv.ID, "state": state, "html_url": rv.URL})
 }

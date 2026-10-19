@@ -86,7 +86,7 @@ func (x *githubPlugin) Activate(_ context.Context, h plugin.Host) error {
 			x.sync(se.ID, true)
 			return nil
 		}},
-		{ID: "github.forward", Title: "Forward the agent's draft reply on a GitHub thread to GitHub, as you: {thread, comment}", Available: inFront,
+		{ID: "github.forward", Title: "Forward the agent's draft reply on a review thread to its code host, as you: {thread, comment}", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.forward(a) }},
 		{ID: "github.edit", Title: "Edit the agent's draft reply on a GitHub thread before forwarding it: {thread, comment}", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.edit(a) }},
@@ -96,6 +96,7 @@ func (x *githubPlugin) Activate(_ context.Context, h plugin.Host) error {
 		x.add(h.Command(c))
 	}
 	x.add(h.Contribute(registry.ThreadSource{Origin: core.OriginGitHub, Title: "GitHub review", Head: x.head, Comment: x.comment}))
+	x.add(h.Contribute(registry.ThreadSource{Origin: core.OriginCodeHost, Title: "Review", Head: x.head, Comment: x.comment}))
 	x.add(h.View(GitHubStatusView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "github", Fn: x.statusSegment} })))
 	x.add(onDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if ev, ok := ev.(core.SessionFocused); ok && ev.ID != "" {
@@ -230,11 +231,19 @@ func (x *githubPlugin) draft(a registry.Args) (core.SessionState, core.Thread, c
 	return se, t, core.Comment{}, errors.New("no draft reply in the thread")
 }
 
-// forward posts a draft to GitHub, as the user, off the loop.
+// forward posts a draft to its thread's code host, as the user, off the loop: GitHub through the session host, another
+// through its plugin (the Ship page's).
 func (x *githubPlugin) forward(a registry.Args) error {
 	se, t, cm, err := x.draft(a)
 	if err != nil {
 		return err
+	}
+	if t.Hosted != nil && t.Hosted.Host != "" {
+		if x.sh.ship == nil {
+			return errors.New("the Ship page isn't running")
+		}
+		delete(x.editing, cm.ID)
+		return x.sh.ship.forwardHost(se, t.ID, cm.ID)
 	}
 	c, err := x.client(se.ID)
 	if err != nil {
@@ -318,11 +327,11 @@ func (x *githubPlugin) head(c *ui.Ctx, session, thread string) {
 		return
 	}
 	t, ok := se.Snapshot().Thread(core.ThreadID(thread))
-	if !ok || t.GitHub == nil {
+	if !ok || t.Hosted == nil {
 		return
 	}
-	g := t.GitHub
-	place := fmt.Sprintf("· #%d ·", g.PR)
+	g := t.Hosted
+	place := fmt.Sprintf("· %s%d ·", hostWords(x.h, g.Host).Sigil, g.PR)
 	if t.Anchor != nil {
 		place = fmt.Sprintf("· L%d ·", t.Anchor.Line)
 	}
@@ -345,16 +354,35 @@ func (x *githubPlugin) head(c *ui.Ctx, session, thread string) {
 	}
 }
 
+// githubReviewWord is a reviewer's state, GitHub's or another code host's (registry.ReviewChanges…), in words.
 func githubReviewWord(s string) (string, theme.TokenID) {
 	switch s {
-	case gh.ReviewChangesRequested:
+	case gh.ReviewChangesRequested, registry.ReviewChanges:
 		return "changes requested", tGitHubDanger
-	case gh.ReviewApproved:
+	case gh.ReviewApproved, registry.ReviewApproved:
 		return "approved", tGitHubOK
-	case gh.ReviewCommented:
+	case gh.ReviewCommented, registry.ReviewCommented:
 		return "commented", theme.FgFaint
 	}
 	return "", theme.FgFaint
+}
+
+// hostWords are how a mirrored thread's code host names a PR; GitHub's when host is "".
+func hostWords(r registry.Registry, host string) registry.Words {
+	h, _ := registry.HostByName(r, cmpOr(host, "github"))
+	return h.Said()
+}
+
+// hostLabel is a mirrored thread's code host's name: "GitHub", "GitLab".
+func hostLabel(r registry.Registry, g *core.HostThread) string {
+	name := "github"
+	if g != nil && g.Host != "" {
+		name = g.Host
+	}
+	if h, ok := registry.HostByName(r, name); ok {
+		return h.Label()
+	}
+	return "GitHub"
 }
 
 func syncedAgo(now, t time.Time) string {
@@ -408,7 +436,7 @@ func (x *githubPlugin) comment(c *ui.Ctx, session, thread, comment string, width
 	busy := x.forwarding[comment]
 	x.mu.Unlock()
 	c.Row("acts", ui.Style{Gap: 8, Cross: ui.Center, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
-		label := "↗ Forward to GitHub"
+		label := "↗ Forward to " + hostLabel(x.h, t.Hosted)
 		if busy {
 			label = "Forwarding…"
 		}
@@ -418,7 +446,8 @@ func (x *githubPlugin) comment(c *ui.Ctx, session, thread, comment string, width
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Ghost: true, Disabled: busy, Help: "git/github#forward"}) {
 			x.run("github.edit", args)
 		}
-		c.Text("never", providerName(cmpOr(cm.Name, se.Snapshot().Agent.Provider))+" never posts to GitHub. You do.", uiFont(11, th.C(theme.FgFaint)))
+		c.Text("never", providerName(cmpOr(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
+			uiFont(11, th.C(theme.FgFaint)))
 	})
 }
 

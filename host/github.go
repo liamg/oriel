@@ -36,6 +36,57 @@ func (w *Host) SearchPRs(ctx context.Context, r PRsReq) (_ []gh.Found, err error
 	return w.github(gitx.Repo{}).SearchPRs(ctx, r.Query)
 }
 
+// ReviewQueue is the user's review queue on GitHub, as their gh is signed in (gh.API.ReviewQueue).
+func (w *Host) ReviewQueue(ctx context.Context, r ReviewQueueReq) (_ []gh.Asked, err error) {
+	defer w.recover("ReviewQueue", &err)
+	return w.githubOn(gitx.Repo{}, r.Host, r.Token).ReviewQueue(ctx)
+}
+
+// ReviewQueueReq names the GitHub server: github.com if Host is "".
+type ReviewQueueReq struct {
+	Host  string `json:"host,omitempty"`
+	Token string `json:"-"`
+}
+
+// PRReview is a pull request in full, as the Reviews page shows it.
+type PRReview struct {
+	gh.PRDetails
+	Files   []gh.PRFile `json:"files,omitempty"`
+	Reviews []gh.Review `json:"reviews,omitempty"`
+	Checks  []gh.Check  `json:"checks,omitempty"`
+}
+
+// PRReviewReq names a pull request by its URL, and its GitHub server's hostname.
+type PRReviewReq struct {
+	URL   string `json:"url"`
+	Host  string `json:"host,omitempty"`
+	Token string `json:"-"`
+}
+
+// PRReview reads a pull request in full: its details, files, reviews and the checks on its head.
+func (w *Host) PRReview(ctx context.Context, r PRReviewReq) (_ PRReview, err error) {
+	defer w.recover("PRReview", &err)
+	repo, n, err := gh.ParsePR(r.URL)
+	if err != nil {
+		return PRReview{}, err
+	}
+	c := w.githubOn(gitx.Repo{}, r.Host, r.Token)
+	var out PRReview
+	if out.PRDetails, err = c.PRDetails(ctx, repo, n); err != nil {
+		return PRReview{}, err
+	}
+	if out.Files, err = c.PRFiles(ctx, repo, n); err != nil {
+		return PRReview{}, err
+	}
+	if out.Reviews, err = c.Reviews(ctx, repo, n); err != nil {
+		return PRReview{}, err
+	}
+	if out.HeadSHA != "" {
+		out.Checks, _ = c.Checks(ctx, repo, out.HeadSHA)
+	}
+	return out, nil
+}
+
 // NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
 const NoPosting = "Oriel: agents never post to GitHub reviews. Answer the thread with mcp__oriel__reply: on a GitHub " +
 	"thread your reply is a draft, and the user forwards it."
@@ -103,14 +154,6 @@ func postsReview(tool string, input json.RawMessage) bool {
 	return in.Command != "" && gh.PostsReview(in.Command)
 }
 
-// ghMsg is a comment from GitHub, of whichever kind.
-type ghMsg struct {
-	id          int64
-	user, assoc string
-	body        string
-	at          time.Time
-}
-
 // SyncGitHub mirrors the review of each of a session's projects' PRs into its threads.
 func (w *Host) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error) {
 	defer w.recover("SyncGitHub", &err)
@@ -135,7 +178,7 @@ func (w *Host) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error
 		if !ok {
 			continue
 		}
-		g := w.githubFor(ctx, se.ID, p.Name, repo, ghRepo, p.Branch, r.Fresh)
+		g := w.githubFor(ctx, se.ID, p.Name, repo, ghRepo, "", "", p.Branch, r.Fresh)
 		if g.err != "" {
 			out.Errors = append(out.Errors, p.Name+": "+g.err)
 			continue
@@ -185,71 +228,33 @@ func (w *Host) mirrorPR(ctx context.Context, id core.SessionID, p core.Project, 
 	states := gh.ReviewStates(reviews)
 	mp := MirrorPR{Project: p.Name, Repo: ghRepo.String(), Number: pr.Number, URL: pr.URL, Reviews: states}
 	trusted := w.truster(ctx, c, ghRepo, trust)
-
+	msg := func(id int64, user, assoc, body string, at time.Time) mirrorMsg {
+		return mirrorMsg{num: id, user: user, body: body, at: at, trusted: trusted(user, assoc)}
+	}
 	se, err := w.session(id)
 	if err != nil {
 		return mp, false, err
 	}
-	now := w.opts.Now().UTC()
-	kick := false
-	apply := func(root int64, ref core.GitHubThread, anchor *core.Anchor, msgs []ghMsg, res *bool) {
-		i := slices.IndexFunc(se.Threads, func(t core.Thread) bool {
-			return t.GitHub != nil && t.GitHub.Repo == ref.Repo && t.GitHub.PR == ref.PR && t.GitHub.Root == root
-		})
-		var t core.Thread
-		fresh := i < 0
-		if fresh {
-			if len(msgs) == 0 {
-				return
-			}
-			t = core.Thread{ID: core.ThreadID(newID(8)), Origin: core.OriginGitHub, Status: core.ThreadOpen, Anchor: anchor, Created: now}
-		} else {
-			t = se.Threads[i]
-			t.Comments = slices.Clone(t.Comments)
-			g := *t.GitHub
-			t.GitHub = &g
-		}
-		before, _ := json.Marshal(t)
-		was := t.GitHub != nil && t.GitHub.Resolved
-		ref.Resolved = was
-		if res != nil {
-			ref.Resolved = *res
-		}
-		t.GitHub = &ref
-		mergeMsgs(&t, msgs, trusted)
-		switch {
-		case ref.Resolved && (fresh || !was) && t.Open():
-			t.Status, t.Busy = core.ThreadResolved, false
-		case !ref.Resolved && was && t.Status == core.ThreadResolved:
-			t.Status = core.ThreadOpen
-		}
-		if after, _ := json.Marshal(t); string(after) == string(before) {
-			return
-		}
-		t.Updated = now
-		if err := w.emit(core.ThreadUpdated{Session: id, Thread: t}); err == nil && t.Open() && len(t.Undelivered()) > 0 {
-			kick = true
-		}
-	}
 
-	threads := map[int64][]gh.ReviewComment{}
+	byRoot := map[int64][]gh.ReviewComment{}
 	var roots []int64
 	for _, rc := range comments {
 		root := cmp.Or(rc.InReplyTo, rc.ID)
-		if threads[root] == nil {
+		if byRoot[root] == nil {
 			roots = append(roots, root)
 		}
-		threads[root] = append(threads[root], rc)
+		byRoot[root] = append(byRoot[root], rc)
 	}
+	var threads []mirrored
 	for _, root := range roots {
-		cs := threads[root]
+		cs := byRoot[root]
 		first := cs[0]
 		if first.ID != root {
 			continue // its first comment was deleted
 		}
-		var msgs []ghMsg
+		var msgs []mirrorMsg
 		for _, rc := range cs {
-			msgs = append(msgs, ghMsg{id: rc.ID, user: rc.User, assoc: rc.Association, body: rc.Body, at: rc.Created})
+			msgs = append(msgs, msg(rc.ID, rc.User, rc.Association, rc.Body, rc.Created))
 		}
 		line, side := first.Line, ""
 		if line == 0 {
@@ -267,58 +272,28 @@ func (w *Host) mirrorPR(ctx context.Context, id core.SessionID, p core.Project, 
 			v := resolved[root]
 			res = &v
 		}
-		apply(root, core.GitHubThread{Project: p.Name, Repo: mp.Repo, PR: pr.Number, Root: root, Reviewer: first.User, State: states[first.User],
-			URL: first.URL, Outdated: first.Line == 0}, a, msgs, res)
-	}
-	// A mirrored review thread whose first comment is gone from GitHub is dismissed.
-	for _, t := range se.Threads {
-		if g := t.GitHub; g != nil && g.Repo == mp.Repo && g.PR == pr.Number && g.Root != 0 && threads[g.Root] == nil && t.Status != core.ThreadDismissed {
-			t.Status, t.Busy, t.Updated = core.ThreadDismissed, false, now
-			_ = w.emit(core.ThreadUpdated{Session: id, Thread: t})
-		}
+		threads = append(threads, mirrored{ref: core.HostThread{Project: p.Name, Repo: mp.Repo, PR: pr.Number, Root: root, Reviewer: first.User,
+			State: states[first.User], URL: first.URL, Outdated: first.Line == 0}, anchor: a, msgs: msgs, res: res})
 	}
 
-	var convo []ghMsg
+	var convo []mirrorMsg
 	for _, ic := range issue {
-		convo = append(convo, ghMsg{id: ic.ID, user: ic.User, assoc: ic.Association, body: ic.Body, at: ic.Created})
+		convo = append(convo, msg(ic.ID, ic.User, ic.Association, ic.Body, ic.Created))
 	}
 	for _, rv := range reviews {
 		if strings.TrimSpace(rv.Body) != "" {
-			convo = append(convo, ghMsg{id: rv.ID, user: rv.User, assoc: rv.Association, body: rv.Body, at: rv.Submitted})
+			convo = append(convo, msg(rv.ID, rv.User, rv.Association, rv.Body, rv.Submitted))
 		}
 	}
-	slices.SortStableFunc(convo, func(a, b ghMsg) int { return a.at.Compare(b.at) })
-	ref := core.GitHubThread{Project: p.Name, Repo: mp.Repo, PR: pr.Number, URL: pr.URL}
+	slices.SortStableFunc(convo, func(a, b mirrorMsg) int { return a.at.Compare(b.at) })
+	ref := core.HostThread{Project: p.Name, Repo: mp.Repo, PR: pr.Number, URL: pr.URL}
 	if len(convo) > 0 {
 		ref.Reviewer = convo[0].user
 		ref.State = states[ref.Reviewer]
 	}
-	apply(0, ref, nil, convo, nil)
-	return mp, kick, nil
-}
-
-// mergeMsgs brings a thread's comments in line with GitHub's: new ones added, edited ones changed (and given to the
-// agent again), deleted ones taken out. A comment of Oriel's (a forwarded draft) is matched by its GitHub ID, so it
-// isn't added again.
-func mergeMsgs(t *core.Thread, msgs []ghMsg, trusted func(user, assoc string) bool) {
-	seen := map[int64]bool{}
-	for _, m := range msgs {
-		seen[m.id] = true
-		i := slices.IndexFunc(t.Comments, func(c core.Comment) bool { return c.GitHubID == m.id })
-		if i < 0 {
-			t.Comments = append(t.Comments, core.Comment{ID: newID(6), Author: core.AuthorGitHub, Name: m.user, Body: m.body, Time: m.at.UTC(),
-				GitHubID: m.id, Redacted: !trusted(m.user, m.assoc)})
-			continue
-		}
-		c := &t.Comments[i]
-		if c.Author == core.AuthorGitHub && c.Body != m.body {
-			c.Body, c.Edited, c.Delivered = m.body, true, false
-			c.Redacted = !trusted(m.user, m.assoc)
-		}
-	}
-	t.Comments = slices.DeleteFunc(t.Comments, func(c core.Comment) bool {
-		return c.Author == core.AuthorGitHub && c.GitHubID != 0 && !seen[c.GitHubID]
-	})
+	threads = append(threads, mirrored{ref: ref, msgs: convo})
+	kick, err := w.applyMirror(id, "", mp.Repo, pr.Number, threads)
+	return mp, kick, err
 }
 
 // truster says whose text the agent may read: a trusted user, or a member of a trusted org (the repo's owner when
@@ -361,62 +336,34 @@ func (w *Host) ForwardGitHub(ctx context.Context, r ForwardReq) (_ core.Comment,
 	defer w.recover("ForwardGitHub", &err)
 	w.mirror.mu.Lock()
 	defer w.mirror.mu.Unlock()
-	se, err := w.session(r.Session)
+	t, body, err := w.DraftOf(r)
 	if err != nil {
 		return core.Comment{}, err
 	}
-	t, err := findThread(se, string(r.Thread))
-	if err != nil {
-		return core.Comment{}, err
-	}
-	if t.GitHub == nil {
+	if t.Hosted.Host != "" {
 		return core.Comment{}, errors.New("this thread isn't from GitHub")
 	}
-	i := slices.IndexFunc(t.Comments, func(c core.Comment) bool { return c.ID == r.Comment })
-	switch {
-	case i < 0:
-		return core.Comment{}, fmt.Errorf("no comment %s in the thread", r.Comment)
-	case t.Comments[i].GitHubID != 0:
-		return core.Comment{}, errors.New("this reply is already on GitHub")
-	case !t.Comments[i].Draft:
-		return core.Comment{}, errors.New("only a draft reply can be forwarded")
-	}
-	body := strings.TrimSpace(t.Comments[i].Body)
-	if body == "" {
-		return core.Comment{}, errors.New("the draft is empty")
-	}
-	_, _, repo, err := w.projectRepo(ctx, r.Session, t.GitHub.Project)
+	_, _, repo, err := w.projectRepo(ctx, r.Session, t.Hosted.Project)
 	if err != nil {
 		return core.Comment{}, err
 	}
-	owner, name, _ := strings.Cut(t.GitHub.Repo, "/")
+	owner, name, _ := strings.Cut(t.Hosted.Repo, "/")
 	ghRepo, c := gh.Repo{Owner: owner, Name: name}, w.github(repo)
 	var posted int64
-	if t.GitHub.Root != 0 {
-		rc, err := c.ReplyReview(ctx, ghRepo, t.GitHub.PR, t.GitHub.Root, body)
+	if t.Hosted.Root != 0 {
+		rc, err := c.ReplyReview(ctx, ghRepo, t.Hosted.PR, t.Hosted.Root, body)
 		if err != nil {
 			return core.Comment{}, err
 		}
 		posted = rc.ID
 	} else {
-		ic, err := c.Comment(ctx, ghRepo, t.GitHub.PR, body)
+		ic, err := c.Comment(ctx, ghRepo, t.Hosted.PR, body)
 		if err != nil {
 			return core.Comment{}, err
 		}
 		posted = ic.ID
 	}
-	var sent core.Comment
-	_, err = w.mutateThread(r.Session, t.ID, func(t *core.Thread) error {
-		for i := range t.Comments {
-			if t.Comments[i].ID == r.Comment {
-				t.Comments[i].Draft, t.Comments[i].GitHubID, t.Comments[i].Sent = false, posted, w.opts.Now().UTC()
-				sent = t.Comments[i]
-			}
-		}
-		return nil
-	})
-	w.restatus(r.Session)
-	return sent, err
+	return w.forwarded(r.Session, t.ID, r.Comment, posted, "")
 }
 
 // EditDraft rewrites a draft reply before it's forwarded.

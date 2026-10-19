@@ -40,6 +40,12 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -52,9 +58,9 @@ clip 0,38 43x936 r 0
   path 3 segments stroke 1.4545455 #7c7566
   path 6 segments fill #060606
   path 6 segments stroke 1.4 #ffd23f
-  effect glow 18.9,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 18.9,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 22.8,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 22.8,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
@@ -140,26 +146,28 @@ rect 0,0 1600x1000 fill #03050899
 rect 250,92 1100x660 fill #0c0c0b radius 10
 clip 250,92 1100x660 r 10
   text "⌘" @268,127.54785 #ffd23f Inter 18
-  rect 296.01562,106 546.0544x30 fill #060606 radius 6
-  clip 296.01562,106 546.0544x30 r 6
+  rect 296.01562,106 476.0644x30 fill #060606 radius 6
+  clip 296.01562,106 476.0644x30 r 6
     text "pri" @306.01562,125.54712 #ece6d8 Inter 12.5
     rect 306.01562,113 1x16 fill #ffd23f
   pop
-  rect 296.01562,106 546.0544x30 radius 6 stroke 1 #ffd23f
-  rect 852.07,112.729996 33.710022x16.539993 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
-  text "ALL" @859.07,124.42 #ffd23f JetBrains Mono 9.5
-  rect 895.78,112.729996 66.56x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-  text "SESSIONS" @902.78,124.42 #b3ab99 JetBrains Mono 9.5
-  rect 972.34,112.729996 46.849976x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-  text "PAGES" @979.34,124.42 #b3ab99 JetBrains Mono 9.5
-  rect 1029.19,112.729996 79.69995x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-  text "COMMANDS >" @1036.19,124.42 #b3ab99 JetBrains Mono 9.5
+  rect 296.01562,106 476.0644x30 radius 6 stroke 1 #ffd23f
+  rect 782.08,112.729996 33.710022x16.539993 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
+  text "ALL" @789.08,124.42 #ffd23f JetBrains Mono 9.5
+  rect 825.79004,112.729996 66.56x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+  text "SESSIONS" @832.79004,124.42 #b3ab99 JetBrains Mono 9.5
+  rect 902.35004,112.729996 46.849976x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+  text "PAGES" @909.35004,124.42 #b3ab99 JetBrains Mono 9.5
+  rect 959.2,112.729996 79.70001x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+  text "COMMANDS >" @966.2,124.42 #b3ab99 JetBrains Mono 9.5
+  rect 1048.9,112.729996 59.98999x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+  text "FILES @" @1055.9,124.42 #b3ab99 JetBrains Mono 9.5
   rect 1118.89,112.729996 59.98999x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-  text "FILES @" @1125.89,124.42 #b3ab99 JetBrains Mono 9.5
-  rect 1188.88,112.729996 59.98999x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-  text "THREADS" @1195.88,124.42 #b3ab99 JetBrains Mono 9.5
-  rect 1258.87,112.729996 73.130005x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-  text "SYMBOLS #" @1265.87,124.42 #b3ab99 JetBrains Mono 9.5
+  text "THREADS" @1125.89,124.42 #b3ab99 JetBrains Mono 9.5
+  rect 1188.88,112.729996 73.130005x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+  text "SYMBOLS #" @1195.88,124.42 #b3ab99 JetBrains Mono 9.5
+  rect 1272.01,112.729996 59.98999x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+  text "REVIEWS" @1279.01,124.42 #b3ab99 JetBrains Mono 9.5
   rect 250,150 1100x1 fill #24221d
   clip 250,151 699x566 r 0
     text "SESSIONS" @268,179.42 #7c7566 JetBrains Mono 9.5
@@ -183,7 +191,7 @@ clip 250,92 1100x660 r 10
     text "job" @419.32812,272.78 #7c7566 JetBrains Mono 10.5
     text "off" @913,272.6 #4f4a40 JetBrains Mono 10
     text "COMMANDS" @268,301.42 #7c7566 JetBrains Mono 9.5
-    text "4 of 139" @883,301.42 #7c7566 JetBrains Mono 9.5
+    text "4 of 144" @883,301.42 #7c7566 JetBrains Mono 9.5
     text "›" @275.6953,331.36523 #7c7566 Inter 12
     text "Run job: " @296,331.729 #ece6d8 Inter 13
     text "pri" @349.70312,331.729 #ffd23f Inter 13
@@ -202,12 +210,12 @@ clip 250,92 1100x660 r 10
     text "n merge order" @513.6875,395.729 #ece6d8 Inter 13
     text "ship.raise-all" @611.2031,394.78 #7c7566 JetBrains Mono 10.5
     text "›" @275.6953,427.36523 #7c7566 Inter 12
-    text "Open a project's Raise PR tab, or Edit " @296,427.729 #ece6d8 Inter 13
-    text "PR" @528.5156,427.729 #ffd23f Inter 13
-    text " once " @545.3906,427.729 #ece6d8 Inter 13
-    text "i" @583.1875,427.729 #ffd23f Inter 13
-    text "t's raised: {project}" @586.59375,427.729 #ece6d8 Inter 13
-    text "ship.pr.open" @714.53125,426.78 #7c7566 JetBrains Mono 10.5
+    text "Open a project's " @296,427.729 #ece6d8 Inter 13
+    text "PR" @401.21875,427.729 #ffd23f Inter 13
+    text " on " @418.09375,427.729 #ece6d8 Inter 13
+    text "i" @440.89062,427.729 #ffd23f Inter 13
+    text "ts code host, in the browser: {project}" @444.29688,427.729 #ece6d8 Inter 13
+    text "ship.browse" @687.2969,426.78 #7c7566 JetBrains Mono 10.5
     text "FILES" @268,455.42 #7c7566 JetBrains Mono 9.5
     rect 274.5,477.5 7x7 fill #4cc9f0 radius 3.5
     text "internal/" @296,485.729 #ece6d8 Inter 13

@@ -109,7 +109,14 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	if a := got[n0+1].Header.Get("Authorization"); a != "tok-XXXXSECRET" {
 		t.Errorf("the header with no scheme: %q", a)
 	}
-	n0++
+	// Azure DevOps' tokens are HTTP Basic's password (auth_scheme = "basic").
+	if _, err := call(map[string]any{"url": "https://api.linear.app/graphql", "auth": "TOKEN", "auth_scheme": "basic"}); err != nil {
+		t.Fatal(err)
+	}
+	if a := got[n0+2].Header.Get("Authorization"); a != "Basic OnRvay1YWFhYU0VDUkVU" {
+		t.Errorf("the header as Basic: %q", a)
+	}
+	n0 += 2
 
 	// A request carrying a secret doesn't follow a redirect.
 	secrets.SetSecret("SLACK_WEBHOOK", "https://hooks.slack.com/redirect?k=XXXXSECRET")

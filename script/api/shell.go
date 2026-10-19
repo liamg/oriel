@@ -11,7 +11,7 @@ import (
 //oriel:api name=rail cap=ui
 type Rail struct{ a *APIs }
 
-//oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note, shown }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph, or one a plugin's [contributes] icons brings. It's dimmed while the command isn't available, and listed only while shown = fn(project) returns true, when there's a shown: oriel.secret.has('NAME') keeps a plugin's entry hidden until its secret is set."
+//oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note, badge, badge_tone, shown }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. badge = fn() returns a count shown as a pill in its place (0 for none), in badge_tone, a theme token (rail.badge by default). icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph, or one a plugin's [contributes] icons brings. It's dimmed while the command isn't available, and listed only while shown = fn(project) returns true, when there's a shown: oriel.secret.has('NAME') keeps a plugin's entry hidden until its secret is set."
 func (r Rail) Add(spec script.Table, where string) error {
 	e := registry.RailEntry{Name: str(spec, "name"), Icon: str(spec, "icon"), Title: str(spec, "title"), Command: str(spec, "command"),
 		Order: 50, Source: where}
@@ -25,6 +25,16 @@ func (r Rail) Add(spec script.Table, where string) error {
 		e.Order = int(o)
 	}
 	e.Bottom, _ = spec["bottom"].(bool)
+	e.BadgeTone = str(spec, "badge_tone")
+	if fn, ok := spec["badge"].(*script.Fn); ok {
+		e.Badge = func() int {
+			out, err := r.a.VM.Call(fn)
+			if err != nil || len(out) == 0 {
+				return 0
+			}
+			return int(num(out[0]))
+		}
+	}
 	switch sc := str(spec, "scope"); sc {
 	case "", registry.ScopeSessionEntry, registry.ScopeProjectEntry, registry.ScopeGlobalEntry:
 		e.Scope = sc

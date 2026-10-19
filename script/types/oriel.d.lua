@@ -4,6 +4,7 @@
 
 ---@class oriel
 ---@field agent oriel.agent
+---@field code oriel.code
 ---@field coverage oriel.coverage
 ---@field decor oriel.decor
 ---@field diagnostics oriel.diagnostics
@@ -119,6 +120,13 @@ function oriel.agent.pack(name, spec) end
 ---@param spec table
 function oriel.agent.tool(spec) end
 
+---@class oriel.code
+oriel.code = {}
+
+--- A code host (GitLab, Azure DevOps…): where pull requests live. Oriel builds the Reviews page, the sidebar's pill, the notices and the assistant's review_requests on its review functions, and the Ship page's pull request step (raise, edit, ready, checks, merge) on the rest. { name, title, icon, order (50), words = { short ('PR', 'MR'), long ('pull request'), sigil ('#', '!') }, sites = { { host, api, secret } } its public servers, path = a regular expression over a git remote's path whose first group is the repo's name, takes = one over a pull request URL's path, shape = one over a whole remote URL that alone says a server is this host's (Azure DevOps' '/_git/'), setup = { api = 'https://{host}/api/v4', secret = 'GITLAB_TOKEN', token_url, token_help, probe = fn(host, done) answering true for a server of this host's, from a request that sends no token } for a server of your own, and the functions, each answering with done(value) or done(nil, err), now or later. A site is { host, api, secret }: a server you set up has its own secret, 'GITLAB_TOKEN:git.acme.corp', and the plugin is let reach it. Reviews, per site: requested = fn(site, done) with the open pull requests asking you, and those you're part way through; lookup = fn(site, url, done) with one in full; checkout = fn(site, url, done) with { remote, ref }: a substring of the registered repo's remote, and the refspec a review session fetches. Ship, each given repo = { session, project, remote, repo, site }: for_branch = fn(repo, branch, done) with the branch's pull request, open first, or nil; create = fn(repo, { title, body, branch, base, draft }, done); edit = fn(repo, pr, title, body, done); ready = fn(repo, pr, done); request_reviewers = fn(repo, pr, { logins }, done); checks = fn(repo, pr, done) with { { name, state ('ok', 'failed', 'running', 'queued', 'skipped'), url, started, completed, detail = a failing one's log line } }; merge_methods = fn(repo, pr, done) with { allowed = { 'merge', 'squash', 'rebase' }, default }; blockers = fn(repo, pr, done) with { { kind, count, text, hard = the host would refuse, url } }; merge = fn(repo, pr, { method, head, title, body, delete_branch }, done). Review mirroring: threads = fn(repo, pr, done) with { { id ('' or nil for the conversation), path, line, old, outdated, resolved, reviewer, state ('changes', 'approved', 'commented'), url, comments = { { id, author, body, at, member = the author belongs to the repo, so the agent may read it } } } }; reply = fn(repo, pr, thread = { id, path, line, old, url }, body, done) with the new comment's id, posting the draft the user forwards (thread.id empty: the conversation). Every answer crosses as JSON: an empty table is an empty list or object. A pull request is { number, id, title, body, url, author, state ('open', 'closed'), draft, merged, branch, base, head = its commit, reviewers }. A missing function's part isn't offered. A request is { url, repo, number, title, author, draft, asked (RFC 3339, or seconds since 1970), via (the team asked, '' for you), state ('new', 're-requested', 'changes', 'commented', 'approved'), since (commits since your review), adds, dels, files, ci ('ok', 'failed', 'running') }. A detail is { request, base, head, mergeable, labels = { names }, reviewers = { { login, state } }, body, files = { { path, adds, dels } }, checks, clone = the repo's clone URL, for Add repo… }.
+---@param spec table
+function oriel.code.host(spec) end
+
 ---@class oriel.coverage
 oriel.coverage = {}
 
@@ -178,7 +186,7 @@ function oriel.editor.viewer(spec) end
 ---@class oriel.http
 oriel.http = {}
 
---- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another ('none': as it is), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
+--- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another: 'none' sends it as it is, 'basic' as HTTP Basic's password, and any other word goes before it ('token' for Gitea: 'token <secret>'), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
 ---@param spec table
 ---@param fn function
 function oriel.http.request(spec, fn) end
@@ -282,7 +290,7 @@ function oriel.process.spawn(path, opts) end
 ---@class oriel.rail
 oriel.rail = {}
 
---- Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note, shown }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph, or one a plugin's [contributes] icons brings. It's dimmed while the command isn't available, and listed only while shown = fn(project) returns true, when there's a shown: oriel.secret.has('NAME') keeps a plugin's entry hidden until its secret is set.
+--- Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note, badge, badge_tone, shown }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. badge = fn() returns a count shown as a pill in its place (0 for none), in badge_tone, a theme token (rail.badge by default). icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph, or one a plugin's [contributes] icons brings. It's dimmed while the command isn't available, and listed only while shown = fn(project) returns true, when there's a shown: oriel.secret.has('NAME') keeps a plugin's entry hidden until its secret is set.
 ---@param spec table
 function oriel.rail.add(spec) end
 

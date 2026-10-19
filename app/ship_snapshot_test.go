@@ -41,7 +41,7 @@ func mockup18(t *testing.T) (*errScene, core.SessionState) {
 	x := s.ship()
 	x.now = func() time.Time { return s.now }
 	t0 := s.now.Add(-4 * time.Minute)
-	check := func(name, status, conclusion string, took time.Duration) gh.Check {
+	check := func(name, status, conclusion string, took time.Duration) registry.Check {
 		c := gh.Check{Name: name, Status: status, Conclusion: conclusion, Started: t0}
 		if status == "completed" {
 			c.Completed = t0.Add(took)
@@ -49,10 +49,12 @@ func mockup18(t *testing.T) (*errScene, core.SessionState) {
 		if status == "in_progress" {
 			c.Started = s.now.Add(-3 * time.Minute)
 		}
-		return c
+		return checkOf(c)
 	}
-	x.reports[se.ID] = &shipReport{doing: map[string]string{}, failed: map[string]string{}, ships: []host.Ship{
-		{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", Remote: true, GitHub: "acme/search-api",
+	github := *githubCode(t, x.h)
+	x.reports[se.ID] = &shipReport{doing: map[string]string{}, failed: map[string]string{}, ships: []shipRead{
+		{Code: &github, Repo: "acme/search-api", Ship: host.Ship{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", Remote: true,
+			Origin: "https://github.com/acme/search-api.git",
 			Files: []host.ShipFile{{Path: "internal/api/usage/handler.go", Code: "M", Add: 3, Del: 1},
 				{Path: "internal/api/usage/handler_test.go", Code: "M", Add: 18}, {Path: "internal/api/usage/routes.go", Code: "M", Add: 20, Del: 5}},
 			Behind: 4, Commits: 2,
@@ -61,11 +63,11 @@ func mockup18(t *testing.T) (*errScene, core.SessionState) {
 			CommitDraft: host.Draft{By: "codex", Body: "feat(api): set Retry-After on rate-limited usage responses\n\n" +
 				"Both the single and batch usage endpoints now return Retry-After\nfrom the limiter's reset time, rounded up to whole seconds.\n\nRefs ENG-2231"},
 			PRDraft:  host.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"},
-			Template: "## What\n\n## Why\n", TemplateFile: ".github/pull_request_template.md", Owners: []string{"acme/platform-team", "jkowalski"}},
-		{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", Remote: true, GitHub: "acme/web-dashboard",
-			Commits: 3, Pushed: true, Synced: s.now.Add(-6 * time.Minute),
-			PR: &gh.PR{Number: 812, Title: "feat(search): back off on 429 using Retry-After", State: "open", Draft: true, Head: "rethink/search-endpoint", Base: "main"},
-			Checks: []gh.Check{check("lint", "completed", "success", 38*time.Second), check("typecheck", "completed", "success", 51*time.Second),
+			Template: "## What\n\n## Why\n", TemplateFile: ".github/pull_request_template.md", Owners: []string{"acme/platform-team", "jkowalski"}}},
+		{Code: &github, Repo: "acme/web-dashboard", Ship: host.Ship{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", Remote: true,
+			Origin: "https://github.com/acme/web-dashboard.git", Commits: 3, Pushed: true, Synced: s.now.Add(-6 * time.Minute)},
+			PR: &registry.PR{Number: 812, Title: "feat(search): back off on 429 using Retry-After", State: "open", Draft: true, Branch: "rethink/search-endpoint", Base: "main"},
+			Checks: []registry.Check{check("lint", "completed", "success", 38*time.Second), check("typecheck", "completed", "success", 51*time.Second),
 				check("unit (shard 1/2)", "completed", "success", 102*time.Second), check("unit (shard 2/2)", "completed", "success", 99*time.Second),
 				check("build", "completed", "success", 125*time.Second), check("e2e · chromium", "in_progress", "", 0),
 				check("preview deploy", "queued", "", 0)}},

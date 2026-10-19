@@ -114,6 +114,17 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := CodeAPI{a: a}
+		vm.Bind("code", map[string]script.GoFunc{
+			"host": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Host(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := Coverage{a: a}
 		vm.Bind("coverage", map[string]script.GoFunc{
 			"lines": func(c *script.Args) ([]any, error) {

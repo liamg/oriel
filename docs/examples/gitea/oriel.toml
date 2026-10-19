@@ -1,0 +1,9 @@
+id          = "example/gitea"
+version     = "0.1.0"
+oriel       = ">=0.4"
+description = "Gitea as a code host, in plain Lua: reviews waiting on you, and a project's pull request raised, checked and merged from the Ship page"
+license     = "MIT"
+
+[permissions]
+net     = { hosts = ["gitea.com"], why = "Read and raise your pull requests, through Gitea's API" }
+secrets = { GITEA_TOKEN = "gitea.com", why = "Your Gitea access token, sent only to gitea.com (and to a server of yours you set up)" }

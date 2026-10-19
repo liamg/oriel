@@ -974,6 +974,110 @@ type Host interface {
   `app/tickets_test.go`, all Lua) shows beside it in the omnibox, the launcher, Continue, the moves (done on merge
   too), the PR link and `my_tickets`.
 
+## As built (reviews)
+
+- **Code hosts** (`registry.CodeHost`, kind `code.host`; `registry/codehost.go`): where pull requests live, one
+  contribution per host for reviewing, raising and merging (see "As built (code hosts)"). Its review side: `Requested`
+  gives `[]ReviewRequest`: the open PRs asking you and those you're part way
+  through, each with its state (`new`, `re-requested`, `changes`, `commented`, `approved`), the team asked (`Via`),
+  when, commits since your review, size and CI. `Lookup` gives a `ReviewDetail` (branches, mergeable, labels,
+  reviewers, body, files, checks, the clone URL for Add repo…); `Checkout` a `PRCheckout{Remote, Ref}`. `Takes` is the
+  URLs it owns, `Secret` the one it needs first. Helpers: `ReviewSources` (the hosts with `Requested`),
+  `CodeHostFor`, `RequestedReviews`, `LookupReview`, `CheckoutFor`, `SortReviews`; `ReviewRequest.Counts(teams)` is
+  the pill's rule.
+- **The app's reviews plugin** (`app/reviews.go`) builds the rest on every source: the cache and poll
+  (`reviews.poll`), the Reviews page (ui.md), the global rail entry with its pill, a start view link, the notices
+  (`reviews.notify`, `reviews.count_teams`), the omnibox source `reviews`, and the assistant's `review_requests`
+  (which used to search GitHub alone). Commands: `Reviews`, `reviews.open {source}`, `reviews.refresh`,
+  `reviews.start`, `reviews.browse`, `reviews.filter`, `reviews.scope {scope}`; keys in mode `reviews`: `<CR>`, `o`,
+  `r`, `/`, `t`; global `<D-V>`.
+- **GitHub is a code host like any other** (`app/codehost_github.go`, `builtin:github`), on the user's gh through the
+  host: `host.ReviewQueue` runs `gh.API.ReviewQueue`, one GraphQL search for `review-requested:@me` and one for
+  `reviewed-by:@me -review-requested:@me -author:@me`, each PR with its review requests, request events, latest
+  reviews and their commits, the last 100 commits and the head's `statusCheckRollup`. Requested now with a review of
+  yours is re-requested. `host.PRReview` is the detail (`PRDetails`, `PRFiles`, `Reviews`, `Checks`). `ghtest` answers
+  the search, with teams (`AddTeam`), commits (`AddCommit`), when each reviewer was asked, and a review taking the
+  reviewer's request off, as GitHub does.
+- **The review kind is host-agnostic**: `SessionSpec.PRRemote` and `PRRef` say where to fetch; `session.start` asks
+  the URL's source's `Checkout` (off the loop) when they aren't given (args `pr_remote`, `pr_ref`). The host fetches
+  `PRRef` from the registered repo whose remote contains `PRRemote`, falling back to `gh.ParsePR` for a bare GitHub
+  URL, so it needs no provider and can run where the plugins don't.
+- **Rail pills take a colour**: `RailEntry.BadgeTone`, a theme token (`rail.badge` when ""). Lua: `badge = fn()` and
+  `badge_tone` on `oriel.rail.add`, which had no badge before.
+- Lua: `oriel.code.host{…}` (scripting.md, "As built (code hosts)"). GitLab and Azure DevOps come as bundled plugins on
+  it (RV-11, RV-12).
+
+## As built (code hosts)
+
+- **`registry.CodeHost`** (kind `code.host`) is a host's whole PR side; any func but the name may be nil, and what it
+  would do isn't offered. `Sites` are its public servers (`Site{Host, API, Secret}`); `Path` matches a remote's path
+  on any of them (first group: the repo's name, `RepoAt`), `Takes` a PR URL's path (`TakesPath`), `Shape` a whole
+  remote that alone says it's this host's. `Setup` (`SiteSetup{API, Secret, TokenURL, TokenHelp, Probe}`, `{host}`
+  replaced) makes a self-hosted site, `Allow(host, secret)` lets its plugin reach one. The review funcs take the
+  `Site`; `HostSite` is a host at a site (`Key`, `Label`). `Words{Short, Long, Sigil}` is how it names one ("MR", "merge request", "!"); `Said()` fills
+  GitHub's. `Ref(repo, n)` is "acme/api#812". Ship's side, each given a `CodeRepo{Session, Project, Remote, Repo}`:
+  `ForBranch`, `Create(NewPR)`, `Edit`, `Ready`, `RequestReviewers`, `Checks` (`[]Check`: `ok`, `failed`, `running`,
+  `queued`, `skipped`, a failing one's `Detail` its log line). Merging: `MergeMethods` (allowed, the repo's default;
+  `Pick(want)` is want, else the default, else squash, else the first), `Blockers` (`[]MergeBlocker{Kind, Count, Text,
+  Hard, URL}`: `threads`, `changes`, `checks`, `draft`, `conflicts`, `behind`, `reviews`, `order`, `oriel-threads`),
+  `Merge(MergeOpts{Method, Head, Title, Body, DeleteBranch})`. Helpers: `CodeHosts`, `HostByName`, `ParseRemote`.
+- **Which host and site** (`app/codesites.go`, `shell.sites`): a public site by hostname; else `code.hosts` names it,
+  or gh's `hosts.yml` or glab's `config.yml` lists it; else a host's `Shape` matches; else, off the loop, each host's
+  `Probe` (once a hostname, kept in `code.hosts`). A self-hosted site's API is `code.api`'s, else `Setup.API`; its
+  secret `Setup.Secret + ":" + hostname`, and using it calls `Allow`, which for a Lua host adds a `net` and a
+  `secrets` grant for the hostname (`plugin.Grants.Add`). Ship marks a project `Unknown` (no host found) or `Unkeyed`
+  (the site's token isn't set) and offers **Set up…**; Raise and Merge open it first. The Reviews page lists each
+  host's every site (`reviewSources`), keyed `name@host`.
+- **A site's token** (`codeSites.token`, behind the app's secret store, so plugins' `http.request` gets it the same
+  way): the secret set, then the host's `Tokens.Env` (`HostedEnv` for a self-hosted site), then `Tokens.Command`'s
+  output (run off the loop, once, by `warm`). Env and command tokens are held in memory only. A 401 (`refuse`) skips
+  that source for the session; with none left the project is `Unkeyed`. `Tokens.Optional` (GitHub) works without one.
+  A Lua host's env vars must be secrets its manifest declares, and its command needs its `exec` grant. GitHub's:
+  `GH_TOKEN`, `GITHUB_TOKEN` (`GH_ENTERPRISE_TOKEN`, `GITHUB_ENTERPRISE_TOKEN` on a server), `gh auth token
+  --hostname`; the host passes a found token to gh as its `GH_TOKEN`, and without gh calls the API with it.
+- **The setup dialog** (`app/codesetup.go`, `code.setup {hostname, code_host}`, `code.setup.save`,
+  `code.setup.cancel`): which host the server is when nothing told (or **None of these**, kept as `none`), the API
+  URL, the token with the host's help and **Create a token ↗**; saved by hostname. GitHub's sites need no token: GHE
+  goes through gh with `--hostname` (`gh.CLI.Host`, `host.GitHubReq.Host`, `ReviewQueueReq`, `PRReviewReq.Host`), and
+  its probe reads `/api/v3/meta`.
+- **The PR moved from the session host to the app.** `host.ShipRead` reads git only, with origin's URL (`Ship.Origin`);
+  the Ship plugin finds the project's code host by it and reads the branch's PR and checks through it, off the loop,
+  for 30s unless fresh (`app/codehost.go`). Raising, editing, the cross-linked block (`Ref` per host), Ready and the
+  rename guard are the app's, on any host. `ship.github` is `ship.browse`. GitHub's provider calls the host's
+  per-project primitives (`host.GitHubPRFor`, `GitHubCreate`, `GitHubEdit`, `GitHubReady`, `GitHubReviewers`,
+  `GitHubChecks`, `GitHubMergeState`, `GitHubMerge`, `GitHubDeleteBranch`), still the user's gh with the checkout's
+  env. Review mirroring (`SyncGitHub`) stays GitHub's, in the host.
+- **Merge** (`app/merge.go`, ui.md 18 "Merge"): `ship.merge {project}` opens a dialog with the host's blockers, the
+  session's own (checks, merge order, open Oriel threads) and the `PrMerge` hook's (a veto adds its reason); the lead
+  counts reviewer comments and Oriel threads apart. `ship.merge.confirm` merges at the head read, refused while a hard
+  blocker stands; `ship.merge.cancel`. Keys in mode `ship.merge`: `<CR>`, `<Esc>`. Option `ship.merge_method`.
+  GitHub's blockers and methods come from one GraphQL read (`gh.API.MergeState`: allowed methods,
+  `viewerDefaultMergeMethod`, unresolved review threads, changes requested, `mergeable`, `mergeStateStatus`); its
+  merge is `PUT …/pulls/N/merge` with `sha`, and the branch `DELETE …/git/refs/heads/…`. `ghtest` merges with the same
+  refusals.
+- **Review mirroring for any host**: `CodeHost.Threads` (`[]ReviewThread{ID, Path, Line, Old, Outdated, Resolved,
+  Reviewer, State, URL, Comments []ReviewNote{ID, Author, Body, At, Member}}`, no ID for the conversation) and
+  `Reply(thread, body)`. The Ship page's read mirrors them every 30s (`mirrorReviews`) through `host.MirrorReview`,
+  the same merge as GitHub's (`host/mirror.go`: `applyMirror`, `mergeMsgs`): new, edited (handed over again) and
+  deleted comments, resolved there, dismissed when gone. Threads have origin `codehost`, `Thread.Hosted`
+  (`core.HostThread`, which GitHub's use too, `Host` "" for GitHub) and comments `AuthorHost` with `HostID`. An
+  author the host calls a member, or `code.trusted_users` names, is read by the agent; anyone else's text is hidden.
+  The agent's reply is a draft; `github.forward` sends another host's through its `Reply` (`shipPlugin.forwardHost`)
+  and `host.Forwarded` marks it sent. GitHub's mirroring stays `SyncGitHub`, now on the shared merge.
+- **A worked example** (`docs/examples/gitea`): Gitea as a code host in plain Lua, the whole `oriel.code.host` surface
+  over `oriel.http.request` (`auth_scheme = "token"`), with a README mapping each function to its endpoint.
+  `app/gitea_example_test.go` loads it as an installed plugin against a fake Gitea and runs raise, mirroring and
+  forward, merge and the Reviews page, so a change to the interface breaks the build until the example follows.
+- **What the example found, fixed**: an error in a callback a plugin gave a later call (an `http.request`'s, a
+  process request's, an `exec`'s `on_done`) fails the code-host calls awaiting that plugin with it (`APIs.later`)
+  instead of leaving them to time out; an empty table anywhere in an answer decodes as an empty list or object; and
+  `reply` is given the whole thread (`{ id, path, line, old, url }`), so a host without reply chains can quote the line.
+- **Plugins' auth schemes**: `http.request`'s `auth_scheme` is `Bearer` by default; `"none"` sends the secret as it is,
+  `"basic"` as HTTP Basic's password (Azure DevOps' tokens), and any other word goes before it (`"token"`: Gitea).
+- **Plugins' own settings** are `oriel.option{ name = "plugin.<plugin>.…" }` (already there, catalog.md "Plugin
+  options"): Azure DevOps declares `plugin.azure-devops.organizations`, the organizations on dev.azure.com it lists
+  reviews in beside those it learns from your repos.
+
 ## As built (tickets page)
 
 - **The tickets page** (`app/ticketspage.go`, ui.md "Tickets page") is the app's, on every tracker: `tickets.open

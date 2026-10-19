@@ -33,6 +33,12 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -45,9 +51,9 @@ clip 0,38 43x936 r 0
   path 3 segments stroke 1.4545455 #7c7566
   path 6 segments fill #060606
   path 6 segments stroke 1.4 #ffd23f
-  effect glow 18.9,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 18.9,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 22.8,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 22.8,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
@@ -125,37 +131,42 @@ clip 44,38 1556x936 r 0
   rect 763.8125,603.01 27.1875x18.52002 fill #121210 radius 4 stroke 1 #332f27
   text "⌘," @770.8125,616.23 #b3ab99 JetBrains Mono 11
   clip 287,655.27 520x28 r 0
-    rect 287,657.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    rect 287,657.27 86.53125x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    path 6 segments stroke 1.25 #ffd23f
+    path 6 segments stroke 1.25 #ffd23f
+    path 6 segments stroke 1.25 #ffd23f
+    path 2 segments stroke 1.25 #ffd23f
+    path 3 segments stroke 1.25 #ffd23f
+    path 3 segments stroke 1.25 #ffd23f
+    text "Reviews" @316,674.63525 #ece6d8 Inter 12
+    rect 381.53125,657.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
-    text "Stats" @316,674.63525 #ece6d8 Inter 12
-    rect 362.60938,657.27 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "Stats" @410.53125,674.63525 #ece6d8 Inter 12
+    rect 457.14062,657.27 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
-    text "Usage" @391.60938,674.63525 #ece6d8 Inter 12
-    rect 445.96875,657.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "Usage" @486.14062,674.63525 #ece6d8 Inter 12
+    rect 540.5,657.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 3 segments stroke 1.25 #ffd23f
-    text "Jobs" @474.96875,674.63525 #ece6d8 Inter 12
-    rect 520.6875,657.27 125.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "Jobs" @569.5,674.63525 #ece6d8 Inter 12
+    rect 615.21875,657.27 125.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
     path 5 segments stroke 1.25 #ffd23f
-    text "Mission control" @549.6875,674.63525 #ece6d8 Inter 12
-    rect 654.375,657.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
+    text "Mission control" @644.21875,674.63525 #ece6d8 Inter 12
+    rect 748.90625,657.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
     path 6 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
     path 2 segments stroke 1.25 #ffd23f
-    text "Prompts" @683.375,674.63525 #ece6d8 Inter 12
-    rect 748.875,657.27 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-    text "…" @758.875,673.942 #ffd23f JetBrains Mono 10.200001
-    text "Plugins" @777.875,674.63525 #ece6d8 Inter 12
+    text "Prompts" @777.90625,674.63525 #ece6d8 Inter 12
   pop
   effect glow 1181,427.72998 39x150 blur 4 #ff8a1f4d
   path 6 segments stroke 24 #ffd23f
@@ -170,7 +181,7 @@ rect 44,38 1556x936 fill #060606
 clip 44,38 1556x936 r 0
   text "Plugins" @62,70.228 #ece6d8 Space Grotesk 18
   rect 139.15625,50 259x28 fill #0c0c0b
-  text "INSTALLED 62" @151.15625,66.6 #ece6d8 JetBrains Mono 10
+  text "INSTALLED 65" @151.15625,66.6 #ece6d8 JetBrains Mono 10
   text "UPDATES 0" @251.15625,66.6 #7c7566 JetBrains Mono 10
   text "REGISTRY" @330.15625,66.6 #7c7566 JetBrains Mono 10
   rect 1183.4062,49 300x30 fill #060606 radius 6
@@ -282,7 +293,7 @@ clip 44,38 1556x936 r 0
     text "Uninstall" @1208,394.88412 #ece6d8 Inter 12
   pop
   rect 44,945 1556x1 fill #24221d
-  text "62 installed · 62 running · 0 updates" @62,963.78 #7c7566 JetBrains Mono 10.5
+  text "65 installed · 65 running · 0 updates" @62,963.78 #7c7566 JetBrains Mono 10.5
   text "~/.config/oriel/settings.toml" @1390.7812,963.78 #7c7566 JetBrains Mono 10.5
 pop
 rect 151.15625,76 84x2 fill #ffd23f

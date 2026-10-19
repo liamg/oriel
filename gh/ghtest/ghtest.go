@@ -33,16 +33,26 @@ type Server struct {
 	review   map[string][]*gh.ReviewComment // by owner/name#number
 	reviews  map[string][]gh.Review
 	issue    map[string][]*gh.IssueComment
-	resolved map[int64]bool      // review threads resolved, by their first comment
-	members  map[string][]string // org → logins
-	sizes    map[string]PRSize   // by owner/name#number
+	resolved map[int64]bool                  // review threads resolved, by their first comment
+	members  map[string][]string             // org → logins
+	sizes    map[string]PRSize               // by owner/name#number
+	teams    map[string][]string             // org/team → logins
+	commits  map[string][]string             // by owner/name#number, oldest first
+	asked    map[string]map[string]time.Time // by owner/name#number: when each reviewer was last asked
+
+	mergeRepo  map[string]MergeRepo // by owner/name
+	mergeable  map[string][2]string // by owner/name#number: mergeable, mergeStateStatus
+	mergedWith map[string]string    // by owner/name#number
+	deleted    []string
 }
 
 // New starts a fake GitHub that closes with the test.
 func New(t testing.TB) *Server {
 	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{},
 		logs: map[int64]string{}, fail: map[string]*gh.Error{}, login: "you", review: map[string][]*gh.ReviewComment{}, reviews: map[string][]gh.Review{},
-		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{}}
+		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{},
+		teams: map[string][]string{}, commits: map[string][]string{}, asked: map[string]map[string]time.Time{},
+		mergeRepo: map[string]MergeRepo{}, mergeable: map[string][2]string{}, mergedWith: map[string]string{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls", s.listPRs)
 	mux.HandleFunc("POST /repos/{owner}/{name}/pulls", s.createPR)
@@ -63,6 +73,8 @@ func New(t testing.TB) *Server {
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls/{num}", s.prDetails)
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls/{num}/files", s.prFiles)
 	mux.HandleFunc("POST /repos/{owner}/{name}/pulls/{num}/reviews", s.submitReview)
+	mux.HandleFunc("PUT /repos/{owner}/{name}/pulls/{num}/merge", s.merge)
+	mux.HandleFunc("DELETE /repos/{owner}/{name}/git/refs/heads/{ref...}", s.deleteRef)
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		s.calls = append(s.calls, r.Method+" "+r.URL.Path)
@@ -107,6 +119,9 @@ func (s *Server) AddPR(repo string, p gh.PR) gh.PR {
 	p.URL = fmt.Sprintf("https://github.com/%s/pull/%d", repo, p.Number)
 	p.Created = s.tick()
 	s.prs[repo] = append(s.prs[repo], &p)
+	for _, who := range p.Reviewers {
+		s.ask(repo, p.Number, who)
+	}
 	return p
 }
 
@@ -167,7 +182,7 @@ func reply(w http.ResponseWriter, status int, v any) {
 func notFound(w http.ResponseWriter) { reply(w, 404, map[string]string{"message": "Not Found"}) }
 
 // restPR is a PR as GitHub's REST API writes it.
-func restPR(repo string, p *gh.PR) map[string]any {
+func (s *Server) restPR(repo string, p *gh.PR) map[string]any {
 	owner, _, _ := strings.Cut(repo, "/")
 	var users, teams []map[string]string
 	for _, r := range p.Reviewers {
@@ -186,7 +201,7 @@ func restPR(repo string, p *gh.PR) map[string]any {
 		user = map[string]string{"login": p.Author}
 	}
 	return map[string]any{"number": p.Number, "node_id": p.NodeID, "title": p.Title, "user": user, "body": p.Body, "html_url": p.URL, "state": p.State,
-		"draft": p.Draft, "merged_at": merged, "created_at": p.Created, "head": map[string]string{"ref": p.Head}, "base": map[string]string{"ref": p.Base},
+		"draft": p.Draft, "merged_at": merged, "created_at": p.Created, "head": map[string]string{"ref": p.Head, "sha": s.sha(repo, p)}, "base": map[string]string{"ref": p.Base},
 		"requested_reviewers": users, "requested_teams": teams}
 }
 
@@ -207,7 +222,7 @@ func (s *Server) listPRs(w http.ResponseWriter, r *http.Request) {
 		if head != "" && p.Head != head || state != "all" && p.State != cmpOr(state, "open") {
 			continue
 		}
-		out = append(out, restPR(repo, p))
+		out = append(out, s.restPR(repo, p))
 	}
 	reply(w, 200, out)
 }
@@ -242,7 +257,7 @@ func (s *Server) createPR(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	_, found := s.findNum(repo, p.Number)
-	reply(w, 201, restPR(repo, found))
+	reply(w, 201, s.restPR(repo, found))
 }
 
 func (s *Server) findNum(repo string, n int) (string, *gh.PR) {
@@ -270,7 +285,7 @@ func (s *Server) editPR(w http.ResponseWriter, r *http.Request) {
 	if b, ok := in["body"].(string); ok {
 		p.Body = b
 	}
-	reply(w, 200, restPR(repo, p))
+	reply(w, 200, s.restPR(repo, p))
 }
 
 func (s *Server) reviewers(w http.ResponseWriter, r *http.Request) {
@@ -294,8 +309,9 @@ func (s *Server) reviewers(w http.ResponseWriter, r *http.Request) {
 		if !slices.Contains(p.Reviewers, u) {
 			p.Reviewers = append(p.Reviewers, u)
 		}
+		s.ask(repo, p.Number, u)
 	}
-	reply(w, 201, restPR(repo, p))
+	reply(w, 201, s.restPR(repo, p))
 }
 
 func (s *Server) checkRuns(w http.ResponseWriter, r *http.Request) {
@@ -363,12 +379,20 @@ func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
 		Variables map[string]any `json:"variables"`
 	}
 	json.NewDecoder(r.Body).Decode(&in)
+	if strings.Contains(in.Query, "mergeStateStatus") {
+		s.mergeState(w, in.Variables)
+		return
+	}
 	if strings.Contains(in.Query, "reviewThreads") {
 		s.reviewThreads(w, in.Variables)
 		return
 	}
+	if strings.Contains(in.Query, "search(") {
+		s.queue(w, in.Variables)
+		return
+	}
 	if !strings.Contains(in.Query, "markPullRequestReadyForReview") {
-		reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "the fake knows only markPullRequestReadyForReview and reviewThreads"}}})
+		reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "the fake knows only markPullRequestReadyForReview, reviewThreads and search"}}})
 		return
 	}
 	s.mu.Lock()
@@ -385,44 +409,12 @@ func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
 	reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "Could not resolve to a node"}}})
 }
 
-// search is GitHub's issue search over the fake's pull requests, for the terms gh.SearchMine and gh.SearchReview
-// use: is:pr, is:open, author: and review-requested:, with @me the fake's login. A PR with no author is the login's.
+// search is GitHub's issue search over the fake's pull requests (match).
 func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	type hit struct {
-		repo string
-		p    *gh.PR
-	}
-	var hits []hit
-	for repo, prs := range s.prs {
-		for _, p := range prs {
-			hits = append(hits, hit{repo, p})
-		}
-	}
-	me := func(v string) string {
-		if v == "@me" {
-			return s.login
-		}
-		return v
-	}
-	for _, term := range strings.Fields(r.URL.Query().Get("q")) {
-		k, v, _ := strings.Cut(term, ":")
-		hits = slices.DeleteFunc(hits, func(h hit) bool {
-			switch k {
-			case "is":
-				return v == "open" && !h.p.Open() || v == "closed" && h.p.Open()
-			case "author":
-				return cmpOr(h.p.Author, s.login) != me(v)
-			case "review-requested":
-				return !slices.Contains(h.p.Reviewers, me(v))
-			}
-			return false
-		})
-	}
-	slices.SortFunc(hits, func(a, b hit) int { return b.p.Created.Compare(a.p.Created) })
 	items := []map[string]any{}
-	for _, h := range hits {
+	for _, h := range s.match(r.URL.Query().Get("q")) {
 		items = append(items, map[string]any{"number": h.p.Number, "title": h.p.Title, "html_url": h.p.URL, "state": h.p.State,
 			"draft": h.p.Draft, "created_at": h.p.Created, "updated_at": h.p.Created, "user": map[string]string{"login": cmpOr(h.p.Author, s.login)},
 			"repository_url": s.URL + "/repos/" + h.repo, "pull_request": map[string]any{"html_url": h.p.URL}})

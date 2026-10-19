@@ -207,7 +207,7 @@ func (w *Host) startWorkspace(ctx context.Context, se *core.SessionState, spec c
 				Primary: len(se.Projects) == 0, ReadOnly: true, Branch: branch})
 			m.Projects = append(m.Projects, ManifestEntry{Name: se.Projects[len(se.Projects)-1].Name, Repo: r.Path, Dir: r.Path, Primary: len(m.Projects) == 0})
 		case WorktreesPR:
-			if _, err := w.addPRProject(ctx, root, &m, r, spec.PR); err != nil {
+			if _, err := w.addPRProject(ctx, root, &m, r, spec); err != nil {
 				return w.undo(root, err)
 			}
 		case WorktreesPinned:
@@ -245,16 +245,20 @@ func (w *Host) undo(root string, err error) error {
 	return err
 }
 
-// prRepo is the registered repo whose remote is the PR's.
+// prRepo is the registered repo whose remote is the PR's: spec.PRRemote, else the GitHub repo its URL names.
 func (w *Host) prRepo(ctx context.Context, spec core.SessionSpec) (core.Repo, error) {
-	pr, _, err := gh.ParsePR(spec.PR)
-	if err != nil {
-		return core.Repo{}, err
+	want := strings.TrimSpace(spec.PRRemote)
+	if want == "" {
+		pr, _, err := gh.ParsePR(spec.PR)
+		if err != nil {
+			return core.Repo{}, err
+		}
+		want = pr.String()
 	}
 	if len(spec.Repos) > 0 {
 		return w.resolveRepo(ctx, string(spec.Repos[0]))
 	}
-	want := strings.ToLower(pr.String())
+	want = strings.ToLower(want)
 	for _, r := range w.repos.all() {
 		if strings.Contains(strings.ToLower(remotePath(r.Remote)), want) {
 			return r, nil
@@ -273,16 +277,19 @@ func remotePath(remote string) string {
 	return remote
 }
 
-// addPRProject fetches the PR's head and pins a worktree there.
-func (w *Host) addPRProject(ctx context.Context, root string, m *Manifest, r core.Repo, pr string) (ManifestEntry, error) {
-	_, n, err := gh.ParsePR(pr)
-	if err != nil {
-		return ManifestEntry{}, err
+// addPRProject fetches the PR's head (spec.PRRef, else GitHub's pull/N/head) and pins a worktree there.
+func (w *Host) addPRProject(ctx context.Context, root string, m *Manifest, r core.Repo, spec core.SessionSpec) (ManifestEntry, error) {
+	from, ref := strings.TrimSpace(spec.PRRef), "refs/oriel/pr/"+filepath.Base(root)
+	if from == "" {
+		_, n, err := gh.ParsePR(spec.PR)
+		if err != nil {
+			return ManifestEntry{}, err
+		}
+		from, ref = fmt.Sprintf("pull/%d/head", n), fmt.Sprintf("refs/oriel/pr/%d", n)
 	}
-	ref := fmt.Sprintf("refs/oriel/pr/%d", n)
 	g := gitx.Repo{Dir: r.Path}
-	if _, err := g.Run(ctx, "fetch", "--quiet", "origin", fmt.Sprintf("+pull/%d/head:%s", n, ref)); err != nil {
-		return ManifestEntry{}, fmt.Errorf("fetching #%d: %w", n, err)
+	if _, err := g.Run(ctx, "fetch", "--quiet", "origin", "+"+from+":"+ref); err != nil {
+		return ManifestEntry{}, fmt.Errorf("fetching %s: %w", from, err)
 	}
 	return addProject(ctx, root, m, r.Path, "", ref, true)
 }

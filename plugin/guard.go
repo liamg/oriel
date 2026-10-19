@@ -77,6 +77,13 @@ func (g *Grants) Grant(plugin string, gs []Grant) {
 	g.grants[plugin] = gs
 }
 
+// Add grants plugin more, at runtime: a self-hosted code host's server, once the user sets it up.
+func (g *Grants) Add(plugin string, gs ...Grant) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.grants[plugin] = append(g.grants[plugin], gs...)
+}
+
 // Revoke takes everything from plugin.
 func (g *Grants) Revoke(plugin string) {
 	g.mu.Lock()

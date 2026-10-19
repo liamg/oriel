@@ -47,7 +47,7 @@ func (sh *shell) secretStore() plugin.Secrets {
 		if sh.cfg.Logs != nil {
 			r = sh.cfg.Logs.Redact
 		}
-		sh.secrets = redacted{s, r}
+		sh.secrets = redacted{siteSecrets{s, sh}, r}
 	})
 	return sh.secrets
 }

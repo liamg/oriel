@@ -72,8 +72,12 @@ func renderThread(b *strings.Builder, se core.SessionState, t core.Thread, fresh
 	if t.Urgent {
 		attrs = append(attrs, [2]string{"urgent", "true"})
 	}
-	if t.Origin != "" {
-		attrs = append(attrs, [2]string{"origin", t.Origin})
+	origin := t.Origin
+	if t.Hosted != nil && t.Hosted.Host != "" {
+		origin = t.Hosted.Host
+	}
+	if origin != "" {
+		attrs = append(attrs, [2]string{"origin", origin})
 	}
 	b.WriteString(openTag("thread", attrs) + "\n")
 	if t.Anchor != nil && strings.TrimSpace(t.Anchor.Text) != "" {
@@ -83,21 +87,21 @@ func renderThread(b *strings.Builder, se core.SessionState, t core.Thread, fresh
 		if c.Btw {
 			continue
 		}
-		renderComment(b, c, fresh[c.ID], full)
+		renderComment(b, c, origin, fresh[c.ID], full)
 	}
 	b.WriteString("</thread>\n")
 }
 
-func renderComment(b *strings.Builder, c core.Comment, isNew, full bool) {
+func renderComment(b *strings.Builder, c core.Comment, origin string, isNew, full bool) {
 	by := "user"
 	if c.Author == core.AuthorAgent {
 		by = "you"
-	} else if c.Author == core.AuthorGitHub {
+	} else if c.Author == core.AuthorHost {
 		by = c.Name
 	}
 	attrs := [][2]string{{"by", by}}
-	if c.Author == core.AuthorGitHub {
-		attrs = append(attrs, [2]string{"origin", "github"})
+	if c.Author == core.AuthorHost {
+		attrs = append(attrs, [2]string{"origin", origin})
 	}
 	if c.Draft {
 		attrs = append(attrs, [2]string{"draft", "true"})

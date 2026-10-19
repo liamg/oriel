@@ -40,6 +40,12 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -52,9 +58,9 @@ clip 0,38 43x936 r 0
   path 3 segments stroke 1.4545455 #7c7566
   path 6 segments fill #060606
   path 6 segments stroke 1.4 #ffd23f
-  effect glow 18.9,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 18.9,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 22.8,431.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 22.8,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
@@ -152,9 +158,9 @@ clip 180,108 1240x720 r 10
     text "THREADS ␣r" @815.39996,130.42 #7c7566 JetBrains Mono 9.5
     text "SYMBOLS ␣S" @908.8,130.42 #7c7566 JetBrains Mono 9.5
     text "SYMBOLS HERE ␣s" @1002.2,130.42 #7c7566 JetBrains Mono 9.5
-    text "KEYMAPS ␣k" @1131.3,130.42 #7c7566 JetBrains Mono 9.5
-    text "QUICKFIX" @1224.7,130.42 #7c7566 JetBrains Mono 9.5
-    text "HELP ␣h" @1303.8201,130.42 #7c7566 JetBrains Mono 9.5
+    text "REVIEWS" @1131.3,130.42 #7c7566 JetBrains Mono 9.5
+    text "KEYMAPS ␣k" @1203.28,130.42 #7c7566 JetBrains Mono 9.5
+    text "QUICKFIX" @1296.6799,130.42 #7c7566 JetBrains Mono 9.5
   pop
   text "⇥ next source" @1313.1799,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
@@ -617,4 +623,4 @@ clip 180,108 1240x720 r 10
 pop
 rect 180,108 1240x720 radius 10 stroke 1 #332f27
 rect 1271.3987,118.73 33.78125x16.54 fill #121210
-text "2 ›" @1278.3987,130.78001 #b3ab99 JetBrains Mono 10.5
+text "3 ›" @1278.3987,130.78001 #b3ab99 JetBrains Mono 10.5

@@ -609,7 +609,7 @@ func avatar(c *ui.Ctx, key any, cm core.Comment) {
 	switch cm.Author {
 	case core.AuthorAgent:
 		tone, label = th.C(tReqAvatarAI), strings.ToUpper(providerName(cm.Name)[:1])
-	case core.AuthorGitHub:
+	case core.AuthorHost:
 		tone, label = th.C(tReqAvatarGH), cmpOr(initials(strings.NewReplacer("-", " ", "_", " ", ".", " ").Replace(cm.Name)), "GH")
 	}
 	c.Box(key, ui.Style{W: ui.Px(28), H: ui.Px(28), Radius: 6, Fill: tone, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {

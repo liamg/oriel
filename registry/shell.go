@@ -22,6 +22,8 @@ type RailEntry struct {
 	Args    Args
 	Scope   string     // ScopeProjectEntry, ScopeSessionEntry or ScopeGlobalEntry; "" is the session's
 	Badge   func() int // a count shown as a pill; nil or 0 for none
+	// BadgeTone is the pill's colour, a theme token; "" is rail.badge.
+	BadgeTone string
 	// Note is dim text at the entry's right, for a project ("" for a session or global entry): "4", "48 ✓", "$18.40 today".
 	Note func(project string) string
 	// Active says the entry's panel is showing, for a project ("" for a session entry).

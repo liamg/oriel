@@ -374,7 +374,7 @@ func commentWhen(now time.Time, cm core.Comment, origin string) string {
 		parts = append(parts, ago(now, cm.Time))
 	}
 	switch {
-	case cm.Author == core.AuthorGitHub:
+	case cm.Author == core.AuthorHost:
 		parts = append(parts, origin)
 	case !cm.Sent.IsZero():
 		parts = append(parts, "sent to "+origin)

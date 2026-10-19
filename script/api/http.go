@@ -13,7 +13,7 @@ import (
 //oriel:api name=http cap=target
 type HTTP struct{ a *APIs }
 
-//oriel:api doc="Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another ('none': as it is), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it."
+//oriel:api doc="Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another: 'none' sends it as it is, 'basic' as HTTP Basic's password, and any other word goes before it ('token' for Gitea: 'token <secret>'), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it."
 func (h HTTP) Request(spec script.Table, fn *script.Fn) error {
 	a := h.a
 	if fn == nil {
@@ -36,7 +36,7 @@ func (h HTTP) Request(spec script.Table, fn *script.Fn) error {
 		v, err := ms.Call(context.Background(), a.Plugin, "http.request", raw)
 		a.Host.Do(func() {
 			if err != nil {
-				a.VM.Call(fn, nil, err.Error())
+				a.later(fn, nil, err.Error())
 				return
 			}
 			res := v.(*plugin.HTTPResponse)
@@ -44,7 +44,7 @@ func (h HTTP) Request(spec script.Table, fn *script.Fn) error {
 			for k, v := range res.Headers {
 				headers[k] = v
 			}
-			a.VM.Call(fn, script.Table{"status": float64(res.Status), "body": res.Body, "headers": headers})
+			a.later(fn, script.Table{"status": float64(res.Status), "body": res.Body, "headers": headers})
 		})
 	}()
 	return nil

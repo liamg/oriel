@@ -963,7 +963,17 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   -m`, its upstream unset so the next push makes the new name; refused while the branch's PR is open), ↻
   (`ship.refresh`); then CHANGES, the Uncommitted step's files (each with ↺, `git.discard`) and commit box; then TO
   PUSH. **Redraft** shows only where the session has an agent.
-- Not yet: the ticket's state moving (Linear), the status bar's CI chip, and merging.
+- Built in RV-13: the PR step is the project's code host's (`registry.CodeHost`, found by origin's URL), in its words:
+  **Raise MR…**, **Edit MR**, "!57", **Open on GitLab ↗** (`ship.browse`). A project whose origin is on no known host
+  says so in place of the step.
+- Built in RV-13: **Merge…** on an open PR (`ship.merge`) is a dialog, "MERGE #790" and the title: a lead line
+  counting what's unresolved by whose ("2 reviewer comments, 1 Oriel thread unresolved", else "Nothing stands in the
+  way."), a row per blocker (warn `!`, or error `✗` where the host would refuse, with "GitHub won't merge it until
+  that's fixed."), **Show** on those with somewhere to look (the PR's page; the threads picker for Oriel's), the
+  method as a segmented strip (preselected by `ship.merge_method`, else the repo's default, else squash), **Delete
+  <branch> after merging**, then **Cancel** (`esc`) and **Continue** (`↵`), or **Merge** with nothing in the way.
+  Continue is off while a hard blocker stands. Agents get no merge tool.
+- Not yet: the ticket's state moving (Linear), the status bar's CI chip.
 
 ## 19 · Your config, live
 
@@ -1154,3 +1164,37 @@ Built in SE-6 to SE-8 (`app/repos.go`, `app/repospage.go`, `app/reposnew.go`, `h
   **Clones into**, read only, with new folder / already a clone / taken; a hint when the parent looks like a URL or
   already ends in the name). A clone shows git's progress; `esc` stops it and takes away what it made. Once added,
   `{then}` runs with `{repo}`. The sidebar's `+` picker ends with "Add a new repo…".
+## 46 · Reviews
+
+![46-reviews](mockups/46-reviews.png)
+
+Built in `app/reviewspage.go`, on every `registry.ReviewSource` (plugins.md, "As built (reviews)"), laid
+out as the Tickets page.
+
+- **Opening it**: `reviews.open {source}`, `:Reviews [source]`, `⌘⇧V`, the sidebar's **Reviews** (a global entry,
+  after Repos) and the start view's Reviews link. "<Source> reviews" for one source, else "Reviews". A page
+  over the main area, key mode `reviews`. It asks each source again as it opens if its list is a minute old.
+- **The header**: the title, "4 waiting on you · 2 in progress · updated 1m ago", **all / to me / my teams** (`t`,
+  `reviews.scope`), **Refresh** (`r`) and **✕** (`esc`).
+- **The list**: **Waiting on you** (oldest ask first), then **In progress** (a session of yours has it, or it's their
+  move), drafts last in each. A row: the author's initials, title, the ask's age; the state chip, `repo#n` · author ·
+  +/− · commits since, CI, the team asked, the source when more than one is listed, "Continue · session". `/`
+  filters over title, repo and author. A source without its token is a row at the foot with **Set token**
+  (`secrets.set`); one that failed, its error with **Retry**.
+- **States and the pill**: `new` (asked, no review from you) and `re-requested` (you reviewed, they asked again)
+  count; a team's ask counts unless `reviews.count_teams` is off; `reviewing` (a session has it), `changes
+  requested` and `commented` (their move) and drafts don't. Approved ones aren't listed. The pill is violet
+  (`rail.badge.review`), so it doesn't read as Requests' amber.
+- **The selected PR**: title, **Open in <source>** (`o`), **Start review…** (`↵`: `session.new {kind = "review",
+  pr}`) or **Continue review…** (`session.open`, the session whose PR is this URL: live first, then newest); the
+  state, `repo#n`, "author wants to merge head → base", who was asked and when. Status (checks, size, mergeable,
+  labels, the registered checkout or that there's none), reviewers and their states, the description (shown to the
+  user only) and the files, from the source's `Lookup`, off the loop, once per URL until the list is asked again.
+  Start and Continue close the page as the launcher or session comes up.
+- **Refresh**: each source every `reviews.poll` (5m) while Oriel is open, as the page opens (a minute), and on `r`.
+  A request that counts and wasn't in the source's last answer, or came back re-requested, is a notice ("mkhan asked
+  you to review api#812"), unless `reviews.notify` is off.
+- **Elsewhere**: the omnibox lists the same rows (source `reviews`); the assistant's `review_requests` reads them.
+- **No checkout**: the detail says so, and **Add repo…** opens the Add repo dialog (`repos.new`) on the detail's clone
+  URL; Start review still works, the launcher picking the repo.
+- **Not built** from the mockup: refresh on window focus (there's no window-focus event yet).

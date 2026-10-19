@@ -1,0 +1,13 @@
+id          = "liamg/azure-devops"
+version     = "0.1.0"
+oriel       = ">=0.4"
+description = "Azure DevOps as a code host: pull requests waiting on your review, and a project's own raised, read and merged from the Ship page"
+license     = "MIT"
+binaries    = ["darwin/arm64", "darwin/amd64", "linux/amd64", "linux/arm64"]
+
+[contributes]
+icons = "icons/"
+
+[permissions]
+net     = { hosts = ["dev.azure.com", "vssps.dev.azure.com"], why = "Read and raise your pull requests, through Azure DevOps' API" }
+secrets = { AZURE_DEVOPS_TOKEN = "*.azure.com", AZURE_DEVOPS_EXT_PAT = "*.azure.com", why = "Your Azure DevOps personal access token (yours, or az devops' $AZURE_DEVOPS_EXT_PAT), sent only to Azure DevOps (dev.azure.com, and vssps.dev.azure.com to look reviewers up)" }

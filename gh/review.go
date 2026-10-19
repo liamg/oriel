@@ -45,6 +45,7 @@ type Review struct {
 	Body        string    `json:"body,omitempty"`
 	URL         string    `json:"url,omitempty"`
 	Submitted   time.Time `json:"submitted,omitzero"`
+	Commit      string    `json:"commit,omitempty"` // the head it reviewed
 }
 
 // IssueComment is a comment in a pull request's conversation.
@@ -144,13 +145,15 @@ func (a API) Reviews(ctx context.Context, repo Repo, number int) ([]Review, erro
 		Body        string    `json:"body"`
 		HTMLURL     string    `json:"html_url"`
 		SubmittedAt time.Time `json:"submitted_at"`
+		CommitID    string    `json:"commit_id"`
 	}
 	if err := a.T.Do(ctx, "GET", repoPath(repo, fmt.Sprintf("pulls/%d/reviews?per_page=100", number)), nil, &list); err != nil {
 		return nil, err
 	}
 	out := make([]Review, 0, len(list))
 	for _, r := range list {
-		out = append(out, Review{ID: r.ID, User: r.User.Login, Association: r.Association, State: r.State, Body: r.Body, URL: r.HTMLURL, Submitted: r.SubmittedAt})
+		out = append(out, Review{ID: r.ID, User: r.User.Login, Association: r.Association, State: r.State, Body: r.Body, URL: r.HTMLURL,
+			Submitted: r.SubmittedAt, Commit: r.CommitID})
 	}
 	return out, nil
 }
