@@ -276,7 +276,7 @@ flowchart TB
   dimmed while their command isn't available: a command's optional `Available(args)` says so, and
   `Registry.Available(id, args)` asks (registered, not turned off, and `Available` agrees). The omnibox leaves
   unavailable commands out, and a key bound to one doesn't run it: one with a `Desc` says "… isn't available yet".
-- PR actions (PL-9): `registry.PRAction` buttons on a raised PR (`oriel.ship.action`), as the Slack plugin's PTAL.
+- PR actions (PL-9): `registry.PRAction` buttons on a raised PR (`oriel.ship.action`), such as an external Slack PTAL plugin.
 - ship (FG-6; ui.md 18): "before this ships" gates are `registry.ShipGate{Name, Title, Order, Check(session) Gate}`
   (`Gate{State, Note, Action, Command, Args}`, State pass, warn, fail, pending or optional, "" to leave it out; an
   `Action` is a button under the gate's row running `Command` with `Args`, as the verify quiz's **Verify…** and AI
@@ -902,16 +902,7 @@ type Host interface {
   too; Lua's is `oriel.http.request`. `plugin/hosttest.Net(srv)` is a client whose every host is a TLS test server.
 - **Lua plugins shipped in the build**: `app.ScriptPlugin(fsys)` runs the oriel.toml and init.lua at an `fs.FS`'s root
   as a plugin, in a VM of its own under a guard granting what the manifest declares (the build is the consent
-  until PL-20's lock file); one that fails to load is a notice, not a failed start. `cmd/oriel` runs `integ/slack`'s
-  this way.
-- **Slack PTAL** (`integ/slack`, ui.md 18): a Lua plugin (`plugin/oriel.toml`, `plugin/init.lua`, embedded as
-  `slack.Files`) with `net = hooks.slack.com` and `secrets = { SLACK_WEBHOOK = "hooks.slack.com" }`. It adds the
-  `slack` PR action on open PRs ("Slack", then "Bump Slack", "Bump 2"…, "Sending…" while it posts) running
-  `slack.ptal {url, title; channel, username, emoji}`, which posts crit's message (`internal/slack`: "PTAL:
-  *title* — <url|owner/name#n>", the title escaped and cut to 160 characters, "Bump! "/"2nd Bump! " before a repeat)
-  with `url_secret = "SLACK_WEBHOOK"` and says "Posted to Slack", "Bump 1 posted", or Slack's own reason for refusing.
-  `slack.webhook` opens the secret's dialog. Post counts are the plugin's memory, so they start again with the app
-  (crit kept them in its config): plugins have no store of their own yet.
+  until PL-20's lock file); one that fails to load is a notice, not a failed start.
 
 ## As built (PL-19)
 
@@ -1005,7 +996,7 @@ type Host interface {
   `[contributes] icons` brings when no built-in has the name: a raster image (PNG…), in the tone around it, by its
   alpha. `registry.Icon.Data` holds the file for a plugin with no directory. SVG still isn't drawn.
 - **Bundled plugins** (catalog.md, "Bundled plugins"): `plugin.Bundled{FS, Processes}` is a plugin inside the binary:
-  its files (each package embeds its own, `go:embed` can't reach out of it: `linear.Plugin`, `slack.Files`), and the
+  its files (each package embeds its own, `go:embed` can't reach out of it: `linear.Plugin`), and the
   main each process binary runs as (`"bin/oriel-linear": "linear"`). `integ.Bundled()` is the list oriel ships
   (`app.Config.Bundled`), and `integ.Mains` the mains by name. The plugin manager (`builtin:catalog`) loads each at
   start with `ScriptPluginWith(fsys, PluginOpts{Programs})`, granted its manifest, with no consent; unless its id is

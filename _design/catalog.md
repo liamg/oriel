@@ -144,7 +144,7 @@ net = { hosts = ["acme.atlassian.net"], why = "Fetch and update Jira tickets" }
 
 ### Bundled plugins
 
-- A few plugins ship inside the oriel binary (`plugin.Bundled`: Linear, Slack), each embedded by its own package.
+- A few plugins ship inside the oriel binary (`plugin.Bundled`: Linear), each embedded by its own package.
   They load at start with what their manifest declares, without consent: they come with Oriel.
 - The Plugins page shows them as **bundled**. They can be turned off (`bundled.disabled`), not uninstalled.
 - `[plugins]` installing the same id replaces the bundled copy while it's listed.
@@ -220,7 +220,7 @@ trusted_hold = "24h"          # how long a trusted plugin's new tag waits before
 | Badge | Meaning | The install screen shows |
 |---|---|---|
 | builtin | ships in the binary | n/a |
-| bundled | a plugin of its own, shipped in the binary (Linear, Slack) | n/a: it loads without asking |
+| bundled | a plugin of its own, shipped in the binary (Linear) | n/a: it loads without asking |
 | reviewed | this exact commit was reviewed in a registry PR | commit, sha256, "reviewed in #123", deps check |
 | trusted | in the registry, author trusted; this version wasn't reviewed | tag, commit, sha256, "author trusted since …" |
 | unverified | a `git` or `path` source | **warning**: "Not in any registry. Nobody has reviewed this code." |

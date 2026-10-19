@@ -957,7 +957,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   **Resume** while it's going, "3/4 right" passed, "1 wrong" (warn) with **Again**. A gate's `Action` is a button
   under its row; AI review's is **Review** until one has run.
 - Built in PL-9: plugins' PR actions (`registry.PRAction`) sit after Edit PR on a raised PR and on the Pull request
-  panel; the Slack plugin's **Slack** (PTAL; then **Bump Slack**, **Bump 2**…) is one (plugins.md, "As built (PL-9)").
+  panel.
 - A project's **Git** panel (the `git` view, in the dock) is the same reading as the Ship page: the branch with
   `→ base · n commits · n behind`, **Rebase on main** (`ship.sync`), **Push**, **Rename…** (`ship.rename`: `git branch
   -m`, its upstream unset so the next push makes the new name; refused while the branch's PR is open), ↻

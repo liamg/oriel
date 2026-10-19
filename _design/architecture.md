@@ -73,7 +73,7 @@ flowchart LR
 | `host` | the session host, in the app's process: sessions, pty, worktrees, launches providers, jobs; `host/search` (project search on ripgrep); `host/stats` (session stats); `host/sysload` (CPU and memory); `host/tour` (tours) | core, agent, gitx, gh, testrun (test runs as evidence), sandbox |
 | `sandbox` | sandbox backends (docker containers, macOS seatbelt), gateway, egress (ported from crit) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
-| `integ/*` | linear, slack (agentbus is company-specific, so it's an external plugin, `github.com/liamg/oriel-agentbus`, with its `oriel-agentbus` helper process) | core; their processes `agent/jsonrpc`, `gh` |
+| `integ/*` | linear (agentbus and Slack PTAL are company-specific, so they're external plugins: agentbus is `github.com/liamg/oriel-agentbus`, with its `oriel-agentbus` helper process) | core; their processes `agent/jsonrpc`, `gh` |
 | `render` | GPU surface interface and display lists; `render/typeset` (shaping, fonts, rasterising, atlas); `render/raster` (draws display lists on the CPU); `render/bake` (glows and rounded rects as images); `render/headless` (keeps display lists and shoots them, for tests); `render/snapshot` (golden lists and perceptual PNG diffs); `render/scenes` (01-ide and the budget scenes) | go-text, x/image, theme |
 | `render/gio` | the Gio backend: windows, input, offscreen rendering, the glyph atlas and baked shapes | render, gioui.org |
 | `ui` | widgets, layout, theme, animation, input routing | render |

@@ -1,9 +1,0 @@
-id          = "oriel/slack"
-version     = "0.1.0"
-description = "PTAL: post a pull request to your Slack channel through an incoming webhook"
-license     = "MIT"
-runs        = "app"
-
-[permissions]
-net     = { hosts = ["hooks.slack.com"], why = "Post to your channel's incoming webhook" }
-secrets = { SLACK_WEBHOOK = "hooks.slack.com", why = "The webhook's URL, which is all it takes to post to your channel" }
