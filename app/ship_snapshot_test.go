@@ -26,7 +26,7 @@ func mockup18(t *testing.T) (*errScene, core.SessionState) {
 	s := newScene(t, "", "", mockupSize)
 	s.now = at(9, 0, 0)
 	se := core.SessionState{ID: "eng-2231", Name: "search API rate-limit headers", Kind: core.KindWork, Status: core.StatusNeedsYou,
-		Ticket: "ENG-2231", Branch: "rethink/search-endpoint", StartWork: true, Started: true,
+		Ticket: "ENG-2231", Branch: "rethink/search-endpoint", StartWork: true, Started: true, Agent: core.AgentState{Provider: "codex"},
 		Projects: []core.Project{{Name: "search-api", Dir: dirs["search-api"], Branch: "rethink/search-endpoint", Base: "main", Primary: true},
 			{Name: "web-dashboard", Dir: dirs["web-dashboard"], Branch: "rethink/search-endpoint", Base: "main"}},
 		Runs: []core.TestRun{{ID: "r1", Command: "go test ./...", OK: true, Passed: 12, Ended: s.now.Add(-2 * time.Minute)}}}

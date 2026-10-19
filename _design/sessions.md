@@ -41,6 +41,8 @@ flowchart LR
   registers it, and continues as a plan session ("what are we building?").
 - **Direct** is "classic" editing: it opens any directory in place, git repo or not, with no worktree and no new
   branch. It's a first-class choice in the launcher. The tab is marked `direct`, and an agent there gets a warning first because it would be editing your real checkout.
+  Open Directory (and `oriel <dir>`) is a direct session with no agent, reused for that directory. A direct session
+  ships from the branch its checkout is on now (`host.directBranch`), since it's the user's own and they switch it.
 - **Scratch** holds notes, the assistant, and terminals with no repo.
 
 ## Starting one

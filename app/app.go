@@ -153,6 +153,11 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	if err := activate(); err != nil {
 		return err
 	}
+	if x := sh.sessions; x != nil && cfg.Host != nil && cfg.WorkDir != "" && !x.holds(cfg.WorkDir) {
+		if err := x.openDirect(ctx, cfg.WorkDir); err != nil {
+			log.Error("direct session", "dir", cfg.WorkDir, "err", err)
+		}
+	}
 
 	place := windowPlace{path: filepath.Join(cfg.StateDir, "window.json")}
 	w, err := be.NewWindow(render.WindowOpts{Title: "Oriel", Width: 1280, Height: 800, Frame: place.load()})

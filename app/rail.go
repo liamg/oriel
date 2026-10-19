@@ -81,8 +81,8 @@ var projectPanels = []struct {
 }{
 	{"explorer", "files", "Explorer", ExplorerView, "<D-E>", 10, 300},
 	{"search", "search", "Search", SearchView, "<D-F>", 20, 380},
-	{"git", "git", "Git", "git", "<D-G>", 30, 0},
-	{"pull-request", "pullrequest", "Pull request", "pull-request", "", 40, 0},
+	{"git", "git", "Git", GitView, "<D-G>", 30, 0},
+	{"pull-request", "pullrequest", "Pull request", PullRequestView, "", 40, 0},
 	{"tests", "tests", "Tests", TestsView, "<D-T>", 50, 0},
 }
 

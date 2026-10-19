@@ -409,3 +409,55 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	s.shipSettle(t, "the redraft", func() bool { return strings.Contains(s.frameText(), "feat(api): three routes") })
 	s.wantFrame(t, "DRAFTED BY FAKE")
 }
+
+// 01h: a project's Git panel, in a directory opened directly: its branch, the commit box, rename and push, with no
+// agent to draft or redraft.
+func TestGitPanelInAnOpenedDirectory(t *testing.T) {
+	t.Setenv("GIT_AUTHOR_NAME", "You")
+	t.Setenv("GIT_AUTHOR_EMAIL", "you@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "You")
+	t.Setenv("GIT_COMMITTER_EMAIL", "you@example.com")
+	hub := ghtest.New(t)
+	lw := newHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
+	blog, up := shipRepo(t, "blog", map[string]string{"post.md": "# One\n"})
+	s := newSceneWith(t, "", "", mockupSize, lw.connect(t))
+	waitState(t, s.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.run("directory.open", registry.Args{"path": blog})
+	st := waitState(t, s.store, "the directory's session in front", func(st core.State) bool {
+		se, ok := st.Session(st.Focus)
+		return ok && se.Snapshot().Kind == core.KindDirect
+	})
+	id := st.Focus
+	s.until(t, "the window on the directory", func() bool { s.sh.runTodo(); return s.reopen() })
+	x := s.ship()
+
+	s.run("project.panel", registry.Args{"name": "git"})
+	s.shipSettle(t, "the Git panel", func() bool { return strings.Contains(s.frameText(), "Nothing uncommitted.") })
+	s.wantFrame(t, "main", "→ main", "Rebase on main", "Push", "Rename…")
+
+	writeFiles(t, blog, map[string]string{"post.md": "# Two\n"})
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the change", func() bool { return strings.Contains(s.frameText(), "CHANGES · 1") })
+	if strings.Contains(s.frameText(), "Redraft") {
+		t.Error("Redraft shows with no agent to ask")
+	}
+	s.typeInto(t, "Commit message", "docs: two")
+	s.click(centre(s.access("Commit").Bounds))
+	s.shipSettle(t, "the commit", func() bool { sh, _ := x.ship(id, "blog"); return len(sh.Files) == 0 && len(sh.Unpushed) == 1 })
+	s.wantFrame(t, "TO PUSH · 1", "docs: two")
+
+	s.click(centre(s.access("Rename…").Bounds))
+	s.frame()
+	s.typeInto(t, "Branch name", "two")
+	s.click(centre(s.access("Rename").Bounds))
+	s.shipSettle(t, "the rename", func() bool { sh, _ := x.ship(id, "blog"); return sh.Branch == "two" })
+	if got := strings.TrimSpace(git(t, blog, "rev-parse", "--abbrev-ref", "HEAD")); got != "two" {
+		t.Fatalf("the checkout is on %q", got)
+	}
+
+	s.click(centre(s.access("Push").Bounds))
+	s.shipSettle(t, "the push", func() bool { sh, _ := x.ship(id, "blog"); return sh.Pushed && len(sh.Unpushed) == 0 })
+	if out := git(t, up, "ls-remote", "origin", "two"); !strings.Contains(out, "refs/heads/two") {
+		t.Errorf("origin hasn't got two: %q", out)
+	}
+}

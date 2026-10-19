@@ -370,7 +370,7 @@ func (h *session) toolDraft(kind string) func(context.Context, json.RawMessage) 
 				project = p.Name
 			}
 		}
-		_, p, repo, err := h.w.projectRepo(h.id, project)
+		_, p, repo, err := h.w.projectRepo(ctx, h.id, project)
 		if err != nil {
 			return "", err
 		}

@@ -543,6 +543,27 @@ func (x *sessions) open(ctx context.Context, id core.SessionID, then []call) err
 	return x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
 }
 
+// openDirect brings dir's direct session with no agent to the front, starting one if it hasn't one.
+func (x *sessions) openDirect(ctx context.Context, dir string) error {
+	for _, se := range x.h.State().Sessions {
+		if se.Kind == core.KindDirect && se.Agent.Provider == "" && filepath.Clean(se.Dir) == filepath.Clean(dir) {
+			return x.open(ctx, se.ID, nil)
+		}
+	}
+	_, err := x.start(ctx, registry.Args{"kind": string(core.KindDirect), "dir": dir})
+	return err
+}
+
+// holds says whether the session in front has dir: its own directory, or one of its projects'.
+func (x *sessions) holds(dir string) bool {
+	se, ok := x.sh.cfg.Store.Session(x.focused())
+	if !ok {
+		return false
+	}
+	st := se.Snapshot()
+	return slices.ContainsFunc(append([]string{st.Dir}, dirsOf(st.Projects)...), func(d string) bool { return d != "" && inside(dir, d) })
+}
+
 // after runs then once the window is on session id: after it opens again on the session's directory, if it does.
 func (x *sessions) after(id core.SessionID, then []call) {
 	if len(then) == 0 {

@@ -143,6 +143,9 @@ func (sh *shell) openDir(dir string) error {
 	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
 		return fmt.Errorf("%s isn't a directory", tildePath(dir))
 	}
+	if sh.sessions != nil && sh.cfg.Host != nil {
+		return sh.sessions.openDirect(context.Background(), dir)
+	}
 	return sh.reopenOn(reopenTo{dir: dir})
 }
 
@@ -200,6 +203,11 @@ func (s *start) rows(h plugin.Host) (actions, recent []startRow) {
 	}
 	for _, d := range s.sh.recents.list() {
 		d := d
+		if slices.ContainsFunc(sessions, func(se core.SessionState) bool {
+			return se.Kind == core.KindDirect && filepath.Clean(se.Dir) == filepath.Clean(d.Path)
+		}) {
+			continue
+		}
 		recent = append(recent, startRow{dir: d.Path, ok: true,
 			run:    func() { s.sh.openDir(d.Path) },
 			forget: func() { s.sh.recents.forget(d.Path) }})

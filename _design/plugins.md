@@ -288,11 +288,11 @@ flowchart TB
   project, title, body, draft, reviewers, edit, all}` before a raise or edit (a veto shows on the Raise PR tab; a rewrite can change
   the body, as a passed verify quiz's reviewer notes; `all` is one of `ship.raise-all`'s). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
   `ship.commit-all`, `ship.sync {project}`, `ship.sync-all`, `ship.push {project}`, `ship.raise {project, title,
-  body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.pr.open`, `ship.fix-ci`, `ship.redraft {project,
-  kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `pr` (instance = project). The host answers
+  body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.rename {project, name}`, `ship.pr.open`, `ship.fix-ci`, `ship.redraft {project,
+  kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `git`, `pr` (instance = project). The host answers
   `ShipRead` (`host.ShipReq` → `[]host.Ship`: files, behind and predicted conflicts, unpushed commits, the PR,
   checks and a failing job's log line, the drafts and who wrote them, the PR template, CODEOWNERS), `ShipCommit`,
-  `ShipPush`, `ShipSync`, `ShipPR` (raise or edit, ask reviewers, cross-link the session's PRs), `ShipReady` and
+  `ShipPush`, `ShipSync`, `ShipRename`, `ShipPR` (raise or edit, ask reviewers, cross-link the session's PRs), `ShipReady` and
   `ShipDraft` (AI-10: a `DraftReq` with `Drop` clears the user's draft, and a `Draft` read
   says `Stale` once the code moved on; `ship.draft.save {project, kind, title, body}` saves the commit box's or the
   PR tab's as the user's); its GitHub client is `host.Options.GitHub` (the user's gh by default).

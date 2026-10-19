@@ -145,7 +145,7 @@ type githubRead struct {
 func shipKey(id core.SessionID, project string) string { return string(id) + "/" + project }
 
 // projectRepo is a session's project and its git, guarded in a sandboxed workspace.
-func (w *Host) projectRepo(id core.SessionID, project string) (core.SessionState, core.Project, gitx.Repo, error) {
+func (w *Host) projectRepo(ctx context.Context, id core.SessionID, project string) (core.SessionState, core.Project, gitx.Repo, error) {
 	se, err := w.session(id)
 	if err != nil {
 		return se, core.Project{}, gitx.Repo{}, err
@@ -159,7 +159,21 @@ func (w *Host) projectRepo(id core.SessionID, project string) (core.SessionState
 	if err != nil {
 		return se, p, gitx.Repo{}, err
 	}
-	return se, p, gitx.Repo{Dir: p.Dir, Env: env}, nil
+	repo := gitx.Repo{Dir: p.Dir, Env: env}
+	if se.Kind == core.KindDirect {
+		p = directBranch(ctx, p, repo)
+	}
+	return se, p, repo, nil
+}
+
+// directBranch is a direct session's project on the branch its checkout is on now: it's the user's own, and they
+// switch it. A detached HEAD has none.
+func directBranch(ctx context.Context, p core.Project, repo gitx.Repo) core.Project {
+	p.Branch = ""
+	if b, err := repo.Branch(ctx); err == nil && b != "HEAD" {
+		p.Branch = b
+	}
+	return p
 }
 
 // github is the GitHub client for a checkout.
@@ -201,6 +215,9 @@ func (w *Host) shipProject(ctx context.Context, se core.SessionState, p core.Pro
 		return s
 	}
 	repo := gitx.Repo{Dir: p.Dir, Env: env}
+	if se.Kind == core.KindDirect {
+		s.Branch = directBranch(ctx, p, repo).Branch
+	}
 	remote := repo.RemoteURL(ctx)
 	s.Remote = remote != ""
 	ghRepo, onGitHub := gh.ParseRepo(remote)
@@ -312,7 +329,7 @@ func (w *Host) forget(id core.SessionID, project string) {
 // commit's hash.
 func (w *Host) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err error) {
 	defer w.recover("ShipCommit", &err)
-	_, p, repo, err := w.projectRepo(r.Session, r.Project)
+	_, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
 	if err != nil {
 		return "", err
 	}
@@ -334,7 +351,7 @@ func (w *Host) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err e
 // ShipPush pushes a project's branch to origin: the session's own branch only.
 func (w *Host) ShipPush(ctx context.Context, r ShipRef) (err error) {
 	defer w.recover("ShipPush", &err)
-	_, p, repo, err := w.projectRepo(r.Session, r.Project)
+	_, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
 	if err != nil {
 		return err
 	}
@@ -350,7 +367,7 @@ func (w *Host) ShipPush(ctx context.Context, r ShipRef) (err error) {
 // conflicts is undone and says where.
 func (w *Host) ShipSync(ctx context.Context, r ShipRef) (err error) {
 	defer w.recover("ShipSync", &err)
-	_, p, repo, err := w.projectRepo(r.Session, r.Project)
+	_, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
 	if err != nil {
 		return err
 	}
@@ -378,7 +395,7 @@ func (w *Host) ShipSync(ctx context.Context, r ShipRef) (err error) {
 // cross-links every PR of the session in their merge order (the session's project order).
 func (w *Host) ShipPR(ctx context.Context, r PRReq) (_ *gh.PR, err error) {
 	defer w.recover("ShipPR", &err)
-	se, p, repo, err := w.projectRepo(r.Session, r.Project)
+	se, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
 	if err != nil {
 		return nil, err
 	}
@@ -420,10 +437,69 @@ func (w *Host) ShipPR(ctx context.Context, r PRReq) (_ *gh.PR, err error) {
 	return pr, w.crossLink(ctx, se)
 }
 
+// RenameReq renames a project's branch.
+type RenameReq struct {
+	Session core.SessionID `json:"session"`
+	Project string         `json:"project"`
+	Name    string         `json:"name"`
+}
+
+// ShipRename renames a project's branch, unless its PR is open on it: the PR would be left on the old one.
+func (w *Host) ShipRename(ctx context.Context, r RenameReq) (err error) {
+	defer w.recover("ShipRename", &err)
+	se, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
+	if err != nil {
+		return err
+	}
+	name := strings.TrimSpace(r.Name)
+	old, err := ownBranch(p)
+	if err != nil {
+		return err
+	}
+	if name == old {
+		return nil
+	}
+	if ghRepo, ok := gh.ParseRepo(repo.RemoteURL(ctx)); ok {
+		if g := w.githubFor(ctx, se.ID, p.Name, repo, ghRepo, old, true); g.pr.Open() {
+			return fmt.Errorf("%s's PR #%d is open on %s: renaming would leave it behind", p.Name, g.pr.Number, old)
+		}
+	}
+	if err := w.keyed(ctx, r.Session, "git branch -m "+old+" "+name, p.Name, func(ctx context.Context) error {
+		return repo.RenameBranch(ctx, old, name)
+	}); err != nil {
+		return err
+	}
+	defer w.forget(r.Session, p.Name)
+	if se.Kind == core.KindDirect {
+		return nil
+	}
+	projects := slices.Clone(se.Projects)
+	for i := range projects {
+		if projects[i].Name == p.Name {
+			projects[i].Branch = name
+		}
+	}
+	if m, ok := LoadManifest(se.Dir); ok {
+		for i := range m.Projects {
+			if m.Projects[i].Name == p.Name {
+				m.Projects[i].Branch = name
+			}
+		}
+		if err := saveManifest(se.Dir, m); err != nil {
+			return err
+		}
+	}
+	branch := se.Branch
+	if branch == old && !slices.ContainsFunc(projects, func(q core.Project) bool { return q.Branch == old }) {
+		branch = name
+	}
+	return w.emit(core.ProjectsChanged{ID: se.ID, Branch: branch, Projects: projects, Past: se.Past, Started: se.Started})
+}
+
 // ShipReady takes a project's draft PR out of draft.
 func (w *Host) ShipReady(ctx context.Context, r ShipRef) (err error) {
 	defer w.recover("ShipReady", &err)
-	_, p, repo, err := w.projectRepo(r.Session, r.Project)
+	_, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
 	if err != nil {
 		return err
 	}
@@ -578,7 +654,7 @@ func (w *Host) dropDraft(id core.SessionID, project, kind string) {
 // ShipDraft saves a draft the user wrote, or drops it.
 func (w *Host) ShipDraft(ctx context.Context, r DraftReq) (err error) {
 	defer w.recover("ShipDraft", &err)
-	_, p, repo, err := w.projectRepo(r.Session, r.Project)
+	_, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
 	if err != nil {
 		return err
 	}

@@ -147,6 +147,60 @@ func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 	}
 }
 
+// sessions.md, "direct": with a session host, Open Directory is a direct session with no agent, the same one each
+// time, so committing and raising a PR work there as in any session.
+func TestOpenDirectoryIsADirectSession(t *testing.T) {
+	lw := newLocalHost(t)
+	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	open := func() core.SessionState {
+		if err := r.do(func() error {
+			return r.host.Run(context.Background(), "directory.open", registry.Args{"path": lw.repo})
+		}); err != nil {
+			t.Fatal(err)
+		}
+		st := waitState(t, r.store, "a direct session in front", func(st core.State) bool {
+			se, ok := st.Session(st.Focus)
+			return ok && se.Snapshot().Kind == core.KindDirect
+		})
+		se, _ := st.Session(st.Focus)
+		return se.Snapshot()
+	}
+	first := open()
+	if first.Dir != lw.repo || first.Agent.Provider != "" || len(first.Projects) != 1 || first.Projects[0].Branch != "main" {
+		t.Fatalf("direct session = %+v, want the repo itself on main, with no agent", first)
+	}
+	for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(5 * time.Millisecond) {
+		var dir string
+		r.do(func() error { dir = r.host.Here().Project; return nil })
+		if dir == lw.repo {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the window is on %q, want %q", dir, lw.repo)
+		}
+	}
+	if again := open(); again.ID != first.ID {
+		t.Errorf("opening it again started %s, want %s again", again.ID, first.ID)
+	}
+	if n := len(r.store.State().Sessions); n != 1 {
+		t.Errorf("%d sessions, want the one", n)
+	}
+}
+
+// oriel <dir> opens on the directory's direct session too.
+func TestLaunchOnADirectoryIsADirectSession(t *testing.T) {
+	lw := newLocalHost(t)
+	r := startAppWith(t, t.TempDir(), lw.repo, nil, lw.connect(t))
+	st := waitState(t, r.store, "a direct session in front", func(st core.State) bool {
+		se, ok := st.Session(st.Focus)
+		return ok && se.Snapshot().Kind == core.KindDirect && se.Snapshot().Dir == lw.repo
+	})
+	if len(st.Sessions) != 1 {
+		t.Errorf("sessions = %+v, want the direct one", st.Sessions)
+	}
+}
+
 // AI-7 layer 2: a Permission hook answers before the user is asked.
 func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 	lw := newLocalHost(t)

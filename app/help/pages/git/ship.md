@@ -1,6 +1,6 @@
 ---
 id: git/ship
-covers: [ship, pull-request, pr, slack.ptal, slack.webhook, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open]
+covers: [ship, git, pull-request, pr, slack.ptal, slack.webhook, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename]
 related: [shell/rail, agent/requests, files/explorer]
 ---
 
@@ -17,6 +17,18 @@ One column per project, its steps numbered down the left: a step that's done is 
 one to do is open. The chip by a project's name says where it stands: needs you (uncommitted work or conflicts), CI
 running, CI failing, ready, merged. At the right: what has to happen before it ships, the order the PRs merge in, and
 the ticket. `ship.refresh` reads every project again, fetching and asking GitHub.
+
+## The Git panel {#git}
+
+A project's **Git** panel, in the dock: its branch and how far it is from its base, **Rebase on main**, **Push** and
+**Rename…**, then what's uncommitted with the commit box, and the commits left to push. **↺** on a file throws its
+changes away, after asking. An opened directory is a session too (a direct one, with no agent), so the panel, Pull
+request and Ship work there as they do in any session.
+
+## Branch {#branch}
+
+**Rename…** renames the branch (`ship.rename`). It stops tracking the old name on origin, so the next push makes the
+new one there. A branch whose PR is open isn't renamed: the PR would stay on the old one.
 
 ## Commit {#commit}
 
@@ -48,7 +60,8 @@ and says where.
 
 ## Push {#push}
 
-The commits origin hasn't got. **Push** pushes the session's branch, and only it.
+The commits origin hasn't got. **Push** pushes the session's branch, and only it. In an opened directory that's the
+branch it's on now.
 
 ## Raise PR {#raise}
 
