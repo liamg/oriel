@@ -26,6 +26,7 @@ import (
 const (
 	ShipView        = "ship"         // the session's page: every project side by side
 	PullRequestView = "pull-request" // a project's compact checklist, in the dock
+	GitView         = "git"          // a project's branch, changes and commit box, in the dock
 	PRView          = "pr"           // Raise PR / Edit PR, a main tab; its instance is the project
 )
 
@@ -101,8 +102,9 @@ type shipPlugin struct {
 	merged  map[string]bool // the PRs PrMerged has fired for, by URL
 
 	// On the loop: what's typed, by session/project.
-	commits map[string]*commitForm
-	prs     map[string]*prForm
+	commits  map[string]*commitForm
+	prs      map[string]*prForm
+	renaming map[string]*renameForm // the Git panel's branch names being typed
 }
 
 // shipReport is a session's projects as last read, and the steps running on them.
@@ -124,6 +126,9 @@ type commitForm struct {
 	held    []registry.GateCheck
 	save    autosave
 }
+
+// renameForm is the branch's new name, typed into the Git panel.
+type renameForm struct{ name string }
 
 // prForm is a project's Raise PR tab.
 type prForm struct {
@@ -186,7 +191,7 @@ func (x *shipPlugin) Activate(_ context.Context, h plugin.Host) error {
 		x.now = time.Now
 	}
 	x.reports = map[core.SessionID]*shipReport{}
-	x.commits, x.prs = map[string]*commitForm{}, map[string]*prForm{}
+	x.commits, x.prs, x.renaming = map[string]*commitForm{}, map[string]*prForm{}, map[string]*renameForm{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.add(h.DeclareEvent(registry.EventInfo{Name: "ShipCommit", Fired: true, Payload: ShipCommit{},
 		Doc: "A commit about to be made from the Ship page; a veto stops it (its reason shows in the commit box) unless force, a rewrite changes it. { session, project, message, files, force }"}))
@@ -213,6 +218,9 @@ func (x *shipPlugin) Activate(_ context.Context, h plugin.Host) error {
 			x.refresh(ev.ID, false)
 		}
 	})))
+	if id := x.focused(); id != "" {
+		x.refresh(id, false)
+	}
 	x.poller.Add(1)
 	go x.poll()
 	return nil
@@ -725,6 +733,18 @@ func (x *shipPlugin) commands() {
 				se, _ := x.session(a)
 				return x.raiseAll(ctx, se)
 			}},
+		{ID: "ship.rename", Title: "Rename a project's branch: {project}, {name}; with no name, ask for one", Available: inFront,
+			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
+				name := strings.TrimSpace(a.String("name"))
+				if name == "" {
+					x.renaming[formKey(se.ID, p)] = &renameForm{}
+					return nil
+				}
+				delete(x.renaming, formKey(se.ID, p))
+				return x.step(se.ID, p, "Renaming…", func(ctx context.Context, c *host.Host) error {
+					return c.ShipRename(ctx, host.RenameReq{Session: se.ID, Project: p, Name: name})
+				})
+			})},
 		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.step(se.ID, p, "Marking ready…", func(ctx context.Context, c *host.Host) error {

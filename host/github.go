@@ -385,7 +385,7 @@ func (w *Host) ForwardGitHub(ctx context.Context, r ForwardReq) (_ core.Comment,
 	if body == "" {
 		return core.Comment{}, errors.New("the draft is empty")
 	}
-	_, _, repo, err := w.projectRepo(r.Session, t.GitHub.Project)
+	_, _, repo, err := w.projectRepo(ctx, r.Session, t.GitHub.Project)
 	if err != nil {
 		return core.Comment{}, err
 	}

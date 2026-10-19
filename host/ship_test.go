@@ -242,3 +242,42 @@ func TestShipSyncConflicts(t *testing.T) {
 		t.Fatalf("a conflicting sync wasn't undone: %+v", a)
 	}
 }
+
+// A direct session is the user's own checkout: it ships from the branch it's on now, whichever they switched to.
+func TestShipDirectFollowsTheCheckout(t *testing.T) {
+	r := newRig(t)
+	hub := ghtest.New(t)
+	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
+	blog, up := githubRepo(t, "blog", map[string]string{"post.md": "# One\n"})
+	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: blog.Dir})
+	p, _ := r.session(id).Primary()
+	if p.Branch != "main" {
+		t.Fatalf("started on %q", p.Branch)
+	}
+	blog.Git("switch", "-q", "-c", "two")
+	os.WriteFile(filepath.Join(blog.Dir, "post.md"), []byte("# Two\n"), 0o644)
+	ctx := context.Background()
+	if _, err := r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: p.Name, Message: "docs: two"}); err != nil {
+		t.Fatal(err)
+	}
+	if s := r.ship(id, false)[p.Name]; s.Branch != "two" || s.Base != "main" || s.Commits != 1 {
+		t.Fatalf("after switching: %+v", s)
+	}
+	if err := r.w.ShipPush(ctx, ShipRef{Session: id, Project: p.Name}); err != nil {
+		t.Fatal(err)
+	}
+	if out := up.Git("ls-remote", "origin", "two"); !strings.Contains(out, "refs/heads/two") {
+		t.Fatalf("origin hasn't got two: %q", out)
+	}
+	pr, err := r.w.ShipPR(ctx, PRReq{Session: id, Project: p.Name, Title: "docs: two"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pr.Head != "two" || pr.Base != "main" {
+		t.Errorf("PR %+v, want two → main", pr)
+	}
+	blog.Git("switch", "-q", "--detach")
+	if err := r.w.ShipPush(ctx, ShipRef{Session: id, Project: p.Name}); err == nil {
+		t.Error("pushed a detached HEAD")
+	}
+}

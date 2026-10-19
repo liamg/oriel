@@ -160,7 +160,10 @@ What the window shows with no directory and no session open: at launch (plain `o
   scrolls from the top.
 - **Open Directory** opens a directory as it is, git repo or not: no worktree, no branch. It's a picker over typed paths
   and directories under `~`, with a **Browse…** row for the OS's folder chooser. The window reopens on it: every
-  plugin starts again there. `oriel <dir>` does the same. With sessions, this becomes the **direct** kind (`sessions.md`).
+  plugin starts again there. `oriel <dir>` does the same. With a session host it's the directory's **direct** session
+  with no agent (`sessions.md`), the same one each time it's opened, so the Git panel, Pull request and Ship work there
+  as in any session; Recent lists it as that session, not as the directory too. With no session host it's the
+  directory alone.
 - Keys: the empty main area has its own keymap mode, `empty`, before `n` and `global`. Over a directory's overview
   `␣␣` and the rest still work. The start view keeps to its own keys (the user's decision): its rows' `j`/`k`/`⏎`/`⌫`
   and the keys of its entries and links (⌘N, ⌘O, ⇧⌘O, ⌘,, and Stats', Usage's and Jobs' own); ⌘K, `:`, `␣␣`
@@ -949,8 +952,12 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   under its row; AI review's is **Review** until one has run.
 - Built in PL-9: plugins' PR actions (`registry.PRAction`) sit after Edit PR on a raised PR and on the Pull request
   panel; the Slack plugin's **Slack** (PTAL; then **Bump Slack**, **Bump 2**…) is one (plugins.md, "As built (PL-9)").
-- Not yet: the ticket's state moving (Linear), the status bar's
-  CI chip, merging, and a project's Git panel (still dim: it needs the flow without a session, for a plain directory).
+- A project's **Git** panel (the `git` view, in the dock) is the same reading as the Ship page: the branch with
+  `→ base · n commits · n behind`, **Rebase on main** (`ship.sync`), **Push**, **Rename…** (`ship.rename`: `git branch
+  -m`, its upstream unset so the next push makes the new name; refused while the branch's PR is open), ↻
+  (`ship.refresh`); then CHANGES, the Uncommitted step's files (each with ↺, `git.discard`) and commit box; then TO
+  PUSH. **Redraft** shows only where the session has an agent.
+- Not yet: the ticket's state moving (Linear), the status bar's CI chip, and merging.
 
 ## 19 · Your config, live
 

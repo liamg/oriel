@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
@@ -62,25 +63,30 @@ func TestRailSnapshot(t *testing.T) {
 	}
 }
 
+// laterEntry is a project's panel whose view isn't registered.
+var laterEntry = registry.RailEntry{Name: "later", Icon: "git", Title: "Later", Command: "view.toggle", Args: viewArgs("later", "Later", 0),
+	Scope: registry.ScopeProjectEntry, Order: 35}
+
 // SH-16: an entry lights once its view is registered, and toggles the view in the left dock.
 func TestRailTogglesAView(t *testing.T) {
 	s := newScene(t, "", t.TempDir(), mockupSize)
+	s.host.Contribute(laterEntry)
 	s.frame()
-	git := railAt(2)
-	s.click(git)
+	later := centre(s.access("Later").Bounds)
+	s.click(later)
 	if len(s.sh.layout.root.Visible()) != 0 {
 		t.Fatal("an unavailable entry opened something")
 	}
-	s.reg.View("git", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("the git view") }))
+	s.reg.View("later", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("the later view") }))
 	s.frame()
-	s.click(git)
-	if v := s.sh.layout.root.Visible(); len(v) != 1 || v[0].ID != "git" {
+	s.click(later)
+	if v := s.sh.layout.root.Visible(); len(v) != 1 || v[0].ID != "later" {
 		t.Fatalf("after a click the layout shows %v", v)
 	}
 	if w := s.sh.layout.root.Find(s.sh.layout.root.Visible()[0]); w == nil || w.Edge != layout.Left {
-		t.Errorf("the git view isn't in the left dock: %+v", w)
+		t.Errorf("the later view isn't in the left dock: %+v", w)
 	}
-	s.click(git)
+	s.click(later)
 	if v := s.sh.layout.root.Visible(); len(v) != 0 {
 		t.Errorf("a second click left %v showing", v)
 	}
@@ -114,10 +120,13 @@ func TestRailPluginEntries(t *testing.T) {
 
 // SH-16: the key of an entry that isn't available yet says so, rather than failing.
 func TestRailKeyUnavailable(t *testing.T) {
-	r := startApp(t, t.TempDir(), t.TempDir(), nil)
+	r := startApp(t, t.TempDir(), t.TempDir(), func(h plugin.Host) {
+		h.Contribute(laterEntry)
+		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-L>", Command: "project.panel", Args: registry.Args{"name": "later"}, Desc: "Later"})
+	})
 	r.waitText("ORIEL")
-	r.typeKeys("<D-G>")
-	r.waitText("Git isn't available yet")
+	r.typeKeys("<D-L>")
+	r.waitText("Later isn't available yet")
 	for _, n := range r.store.State().Notifications {
 		if n.Severity == core.SevError {
 			t.Errorf("an error: %s", n.Text)

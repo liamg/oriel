@@ -162,6 +162,21 @@ func (r Repo) Push(ctx context.Context, branch string) error {
 	return err
 }
 
+// RenameBranch renames branch old to name, and stops it tracking old's upstream: its next push makes name on origin.
+func (r Repo) RenameBranch(ctx context.Context, old, name string) error {
+	if _, err := r.git(ctx, "check-ref-format", "--branch", name); err != nil {
+		return fmt.Errorf("%q isn't a branch name git takes", name)
+	}
+	if r.verify(ctx, "refs/heads/"+name) {
+		return fmt.Errorf("there's a branch %s already", name)
+	}
+	if _, err := r.git(ctx, "branch", "-m", old, name); err != nil {
+		return err
+	}
+	_, _ = r.git(ctx, "branch", "--unset-upstream", name)
+	return nil
+}
+
 // Fetch brings origin's branches up to date.
 func (r Repo) Fetch(ctx context.Context) error {
 	if !r.HasRemote(ctx, "origin") {

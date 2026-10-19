@@ -40,12 +40,12 @@ clip 0,38 223x936 r 0
   path 6 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   text "Search" @54,149.58524 #b3ab99 Inter 12
-  path 6 segments stroke 1.25 #4f4a40
-  path 6 segments stroke 1.25 #4f4a40
-  path 6 segments stroke 1.25 #4f4a40
-  path 2 segments stroke 1.25 #4f4a40
-  path 2 segments stroke 1.25 #4f4a40
-  text "Git" @54,172.58524 #4f4a40 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Git" @54,172.58524 #b3ab99 Inter 12
   text "2" @207,171.81999 #7c7566 JetBrains Mono 10
   path 3 segments stroke 1.25 #7c7566
   text "Tests" @54,195.58524 #b3ab99 Inter 12
