@@ -1,2 +1,2 @@
-// Package integ holds integrations: Linear and Slack.
+// Package integ holds integrations: Linear.
 package integ

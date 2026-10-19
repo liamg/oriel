@@ -1,6 +1,6 @@
 ---
 id: git/ship
-covers: [ship, git, pull-request, pr, slack.ptal, slack.webhook, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename]
+covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename]
 related: [shell/rail, agent/requests, files/explorer]
 ---
 
@@ -74,9 +74,7 @@ order, and each PR's description lists the others.
 ## The PR {#pr}
 
 The PR's number, title and state, its reviewers, **Ready for review** for a draft, and **Open on GitHub ↗**. Plugins add
-buttons beside them (`oriel.ship.action`): the Slack plugin's **Slack** posts "PTAL", the PR's title and its link to
-your channel through its incoming webhook, and then reads **Bump Slack**, **Bump 2**… for a nudge. Its webhook is the
-secret `SLACK_WEBHOOK`: `slack.webhook` (or `:Secret SLACK_WEBHOOK`) sets it (`plugins/secrets`).
+buttons beside them (`oriel.ship.action`), such as one that asks your team's chat to take a look.
 
 ## Checks {#checks}
 

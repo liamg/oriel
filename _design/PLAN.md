@@ -59,7 +59,7 @@ none of the room.
 - Verify (an optional quiz about the change; a PR never waits for it), the slop gate, trusted-orgs redaction.
 - Tasks rail, subagents box, permission and question cards.
 - Sandbox, gateway MCP, egress approvals, ssh-agent grants.
-- agentbus (questions, review requests, auto-answer), Linear, Slack PTAL.
+- agentbus (questions, review requests, auto-answer), Linear. Slack PTAL is company-specific: an external plugin, not in oriel.
 - The assistant: it moves from the room into a drawer.
 - Usage windows, session stats, stats, this machine's CPU/mem, logs, agentbus log.
 - Editable prompts page and coding style. Voice dictation.

@@ -16,8 +16,7 @@ plugin gets shows it, and the log masks it.
 
 `:Secret NAME` (or `secrets.set {name}`) opens a dialog to paste its value into; the field shows dots. **Save**
 (⌘↵) keeps it in Oriel's secrets file in the state directory, readable only by you, replacing one already set.
-`secrets.delete {name}` removes it. A plugin's own command often opens the dialog for you: `slack.webhook` for the
-Slack webhook.
+`secrets.delete {name}` removes it.
 
 ## In Settings {#settings}
 
