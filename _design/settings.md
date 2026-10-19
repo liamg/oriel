@@ -140,6 +140,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `registry.keys` | `{}`: each registry's `ed25519:<hex>` key; the default registry's is built in | app | | PL-21 |
 | `registry.updates` | `ask`: plugin updates that ask for no more; `auto` takes them, `manual` leaves them on the Plugins page | app | | PL-21 |
 | `registry.trusted_hold` | 24h: how long a trusted plugin's new tag waits before it's offered | app | | PL-21 |
+| `bundled.disabled` | `[]`: the plugins bundled with Oriel that are turned off, by id (catalog.md, bundled plugins) | app | | – |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | | ED-5 |
 | `lsp.start` | `project`: a project's servers start when it opens; `file`: when one of their files does | app | | – |
 | `keymap.leader` | Space | app | | FW-3 |

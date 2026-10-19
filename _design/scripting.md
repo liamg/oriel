@@ -477,3 +477,12 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 - `oriel.option{ …, on_change = fn(value) }` hears the option change, from wherever it's set.
 - `oriel.hud.indicator` takes `slot = "inbox.foot"` (the Inbox panel's foot) and, since SH-7, `"mission"`.
 
+
+## As built (tickets page)
+
+- `oriel.rail.add` and `oriel.start.add` take `shown`: `fn(project)` and `fn()`, asked as each frame is built; the
+  entry is listed only while it returns true (plugins.md, "As built (tickets page)").
+- `oriel.secret.has(name)` says whether a secret the plugin declares is set: a bool, never its value. With `shown`, it
+  keeps a plugin's entries hidden until its key is set: `shown = function() return oriel.secret.has("LINEAR_TOKEN") end`.
+- `oriel.ticket.tracker` takes `icon`, an icon's name drawn beside its tickets where more than one tracker's are listed.
+- An `icon` may name one a plugin's `[contributes] icons` brings (a raster image), as well as the built-in set.

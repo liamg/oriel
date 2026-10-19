@@ -200,6 +200,76 @@ func Contribute(r registry.Registry, dir, source string, c Contributes) (registr
 	return ds, nil
 }
 
+// ContributeFS is Contribute for a plugin with no directory, its files in fsys (a bundled plugin's): its prompt
+// packs, help pages and icons. Themes, grammar packs and fonts are read from a directory, so they need one.
+func ContributeFS(r registry.Registry, fsys fs.FS, source string, c Contributes) (registry.Disposable, error) {
+	if len(c.Themes)+len(c.Languages)+len(c.Fonts) > 0 {
+		return nil, errors.New("[contributes] themes, languages and fonts need the plugin's directory")
+	}
+	var ds disposables
+	fail := func(err error) (registry.Disposable, error) {
+		ds.Dispose()
+		return nil, err
+	}
+	files := func(key, pattern string) ([]string, error) {
+		ms, err := fs.Glob(fsys, strings.TrimSuffix(pattern, "/"))
+		if err == nil && len(ms) == 0 {
+			err = fmt.Errorf("[contributes] %s: %q matches nothing", key, pattern)
+		}
+		return ms, err
+	}
+	for _, p := range c.Prompts {
+		ms, err := files("prompts", p)
+		if err != nil {
+			return fail(err)
+		}
+		for _, f := range ms {
+			b, err := fs.ReadFile(fsys, f)
+			if err != nil {
+				return fail(err)
+			}
+			name := strings.TrimSuffix(path.Base(f), path.Ext(f))
+			ds = append(ds, r.Contribute(registry.PromptPack{Name: name, Prompt: string(b), Source: source}))
+		}
+	}
+	if len(c.Help) > 0 {
+		pages := fstest.MapFS{}
+		for _, p := range c.Help {
+			ms, err := files("help", p)
+			if err != nil {
+				return fail(err)
+			}
+			for _, f := range ms {
+				b, err := fs.ReadFile(fsys, f)
+				if err != nil {
+					return fail(err)
+				}
+				pages[path.Base(f)] = &fstest.MapFile{Data: b, Mode: 0o444}
+			}
+		}
+		ds = append(ds, r.HelpPages(registry.HelpSource{FS: pages, Source: source}))
+	}
+	if c.Icons != "" {
+		dir := strings.TrimSuffix(c.Icons, "/")
+		es, err := fs.ReadDir(fsys, dir)
+		if err != nil {
+			return fail(fmt.Errorf("[contributes] icons: %w", err))
+		}
+		for _, e := range es {
+			if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+				continue
+			}
+			b, err := fs.ReadFile(fsys, path.Join(dir, e.Name()))
+			if err != nil {
+				return fail(err)
+			}
+			name := strings.TrimSuffix(e.Name(), path.Ext(e.Name()))
+			ds = append(ds, r.Contribute(registry.Icon{Name: name, Data: b, Source: source}))
+		}
+	}
+	return ds, nil
+}
+
 type disposables []registry.Disposable
 
 func (ds disposables) Dispose() {

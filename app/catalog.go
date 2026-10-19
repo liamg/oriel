@@ -44,6 +44,9 @@ type catalogPlugin struct {
 	offers   map[string]catalog.Status // updates waiting to be asked for: [registry] updates = ask
 	synced   chan struct{}             // closed and made again after each sync, for tests
 	page     pluginsPage
+
+	bundled    map[string]*bundledPlugin // the plugins shipped in the binary, by id
+	bundledIDs []string                  // in the order they're bundled
 }
 
 // registryEvery is how often the registries' indexes are fetched again (catalog.md, The index).
@@ -163,6 +166,8 @@ func (x *catalogPlugin) Activate(_ context.Context, h plugin.Host) error {
 			Scopes: registry.ScopeUser, Help: "Plugin updates that ask for no more: auto takes them, ask offers them in the inbox, manual on the Plugins page only"},
 		{Name: "registry.trusted_hold", Type: registry.Duration, Default: 24 * time.Hour, Section: "plugins", Scopes: registry.ScopeUser,
 			Help: "How long a trusted plugin's new tag waits before it's offered"},
+		{Name: BundledDisabledOption, Type: registry.List, Default: []string{}, Section: "plugins", Scopes: registry.ScopeUser,
+			Help: "The plugins built into Oriel that are turned off, by id"},
 	} {
 		x.add(h.Option(o))
 	}
@@ -246,9 +251,32 @@ func (x *catalogPlugin) Activate(_ context.Context, h plugin.Host) error {
 		for _, l := range loaded {
 			l.stop.Dispose()
 		}
+		x.stopBundled()
 	}))
+	x.readBundled()
+	listed := func(id string) bool { return x.listed()[id] }
+	x.syncBundled(listed)
+	x.add(disposeFn(h.Options().Watch(BundledDisabledOption, func() { x.syncBundled(listed) })))
 	x.kick()
 	return nil
+}
+
+// listed are the ids [plugins] installs, in your settings and the trusted project's.
+func (x *catalogPlugin) listed() map[string]bool {
+	out := map[string]bool{}
+	o := x.h.Options()
+	for _, l := range []struct {
+		layer registry.Layer
+		at    registry.At
+	}{{registry.LayerUser, registry.At{}}, {registry.LayerProject, registry.At{Project: x.sh.cfg.WorkDir}}} {
+		v, _ := o.Lookup(PluginsOption, l.layer, l.at)
+		t, _ := v.(map[string]any)
+		es, _ := catalog.ParseEntries(t)
+		for _, e := range es {
+			out[e.ID] = true
+		}
+	}
+	return out
 }
 
 // kick syncs off the loop, once at a time: a change while it runs syncs again after.
@@ -383,8 +411,11 @@ func (x *catalogPlugin) apply(sts []catalog.Status) {
 		ask = true
 	}
 	for _, st := range sts {
+		listed[st.Entry.ID] = true
+	}
+	x.syncBundled(func(id string) bool { return listed[id] })
+	for _, st := range sts {
 		id := st.Entry.ID
-		listed[id] = true
 		switch st.State {
 		case catalog.Ready:
 			delete(x.failed, id)

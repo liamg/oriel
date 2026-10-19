@@ -21,6 +21,7 @@
 ---@field process oriel.process
 ---@field rail oriel.rail
 ---@field regex oriel.regex
+---@field secret oriel.secret
 ---@field session oriel.session
 ---@field ship oriel.ship
 ---@field start oriel.start
@@ -281,7 +282,7 @@ function oriel.process.spawn(path, opts) end
 ---@class oriel.rail
 oriel.rail = {}
 
---- Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph. It's dimmed while the command isn't available.
+--- Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note, shown }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph, or one a plugin's [contributes] icons brings. It's dimmed while the command isn't available, and listed only while shown = fn(project) returns true, when there's a shown: oriel.secret.has('NAME') keeps a plugin's entry hidden until its secret is set.
 ---@param spec table
 function oriel.rail.add(spec) end
 
@@ -317,6 +318,14 @@ function oriel.regex.match(pat, s, flags) end
 ---@return string,integer
 function oriel.regex.replace(pat, s, repl, flags) end
 
+---@class oriel.secret
+oriel.secret = {}
+
+--- Whether a secret the plugin declares (permissions.secrets) is set: a bool, never its value. Use it to keep the plugin's entries hidden until its key is set: shown = function() return oriel.secret.has('LINEAR_TOKEN') end.
+---@param name string
+---@return boolean
+function oriel.secret.has(name) end
+
 ---@class oriel.session
 oriel.session = {}
 
@@ -339,7 +348,7 @@ function oriel.ship.gate(spec) end
 ---@class oriel.start
 oriel.start = {}
 
---- Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note }. It's dimmed while the command isn't available. link = true makes it a small link under the actions, with note = fn() its figure.
+--- Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note, shown }. It's dimmed while the command isn't available, and listed only while shown = fn() returns true, when there's a shown. link = true makes it a small link under the actions, with note = fn() its figure.
 ---@param spec table
 function oriel.start.add(spec) end
 
@@ -379,7 +388,7 @@ function oriel.thread.resolve(id, status) end
 ---@class oriel.ticket
 oriel.ticket = {}
 
---- A ticket tracker (Linear, Jira…): Oriel builds the rest on it, the omnibox's tickets (!), the launcher's card, the moves as a session starts from a ticket and its PR is seen and merged, and the assistant's my_tickets. { name, title, order (50), keys = a regular expression its keys match ('^[A-Z][A-Z0-9]*-[0-9]+$'; every key when nil), secret = the secret it needs set first, which Oriel asks for while it isn't, and the functions, each answering with done(value) or done(nil, err), now or later: lookup = fn(key, done) with a ticket; assigned = fn(done) with the open tickets assigned to you, in any order; start = fn(key, done), review = fn(key, done) and done = fn(key, done) moving it into progress, into review (its PR is open) or to done (the session's PRs are merged), with { moved, state }; link = fn(key, pr, done) attaching pr = { number, url, repo, title } }. Only lookup is required. A ticket is { key, title, url, state, stage ('todo', 'started' or 'review'), project, priority (1 the most urgent; 0 none), priority_label, blocked, blocked_by = { keys }, pr = { number, url, repo }, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt.
+--- A ticket tracker (Linear, Jira…): Oriel builds the rest on it, the omnibox's tickets (!), the launcher's card, the moves as a session starts from a ticket and its PR is seen and merged, and the assistant's my_tickets. { name, title, icon (an icon's name, shown beside its tickets where more than one tracker's are listed), order (50), keys = a regular expression its keys match ('^[A-Z][A-Z0-9]*-[0-9]+$'; every key when nil), secret = the secret it needs set first, which Oriel asks for while it isn't, and the functions, each answering with done(value) or done(nil, err), now or later: lookup = fn(key, done) with a ticket; assigned = fn(done) with the open tickets assigned to you, in any order; start = fn(key, done), review = fn(key, done) and done = fn(key, done) moving it into progress, into review (its PR is open) or to done (the session's PRs are merged), with { moved, state }; link = fn(key, pr, done) attaching pr = { number, url, repo, title } }. Only lookup is required. A ticket is { key, title, url, state, stage ('todo', 'started' or 'review'), project, priority (1 the most urgent; 0 none), priority_label, blocked, blocked_by = { keys }, pr = { number, url, repo }, summary, facts = { '2 attachments', … }, context }. context is markdown, the ticket with its comments and attachments, and goes to the agent with the prompt when a session starts from the ticket: hence agent.prompt.
 ---@param spec table
 function oriel.ticket.tracker(spec) end
 

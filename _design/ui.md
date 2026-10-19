@@ -1088,3 +1088,25 @@ pins; each run is a session of kind job (`sessions.md` → Jobs).
   A stopped run says who stopped it: "Stopped by you after 3m", "by the agent", "as Oriel quit" (a
   hand-over), "when Oriel ended" (a crash) (`AgentState.StoppedBy`). A scheduled run that was skipped is a row of its own, status `skipped` (`jobs.run.skipped`,
   dimmed, nothing to open): "skipped (last run still going)".
+
+## Tickets page
+
+Laid out as Jobs (mockup 44's panel 1), with no mockup of its own. Built in `app/ticketspage.go`, on every
+`registry.TicketTracker` (plugins.md, "As built (tickets page)").
+
+- **Opening it**: `tickets.open {tracker}`, `:Tickets [tracker]`, a tracker's own rail and start view entries
+  (Linear's "Linear tickets", shown once its key is set). Its title is "<Tracker> tickets" for one tracker, else
+  "Tickets". It's a page over the main area (`widget.Page` with `Over`), key mode `tickets`, one of the pages that
+  replace each other.
+- **The header**: the title, "12 assigned · updated 3m ago", **Refresh** (`r`) and **✕** (`esc`).
+- **The list** (`widget.Rows`, `j`/`k`; a click selects): the omnibox's rows (`ticketsPlugin.rows`), so the cache,
+  refresh and order are shared. A tracker without its key is a row "Set your Linear API key" with **Set key**
+  (`secrets.set`); one that failed is its error with **Retry**. A ticket's row: key (mono), title, state chip (by
+  stage), then priority · project · PR #n, "blocked", "Continue · session"; with more than one tracker listed, the
+  tracker's icon first. `/` focuses the filter, over key, title and project. "Asking Linear…" while it hasn't
+  answered; "Nothing assigned to you in Linear" when it has, with nothing.
+- **The selected ticket**: key and state, title, **Plan** (`↵`: `session.new {kind = "plan", ticket}`; "Continue ·
+  session" when it has one: `session.open`), **Work** (`w`: `session.new {kind = "work", ticket}`), **Open in
+  Linear** (`o`: `system.open {url}`); tracker, project, priority, PR, blocked by, session; then, from the tracker's
+  `Lookup` (off the loop, once per key), the facts ("4 comments · 2 attachments") and the summary. Plan, Work and
+  Continue close the page as the launcher or the session comes up.

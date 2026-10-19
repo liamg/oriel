@@ -35,10 +35,10 @@ func (e Editor) Action(spec script.Table, where string) error {
 		a.Order = int(o)
 	}
 	if fn, ok := spec["when"].(*script.Fn); ok {
-		a.When = func(path string) bool { return e.truthy(fn, path) }
+		a.When = func(path string) bool { return e.a.truthy(fn, path) }
 	}
 	if fn, ok := spec["on"].(*script.Fn); ok {
-		a.On = func(w registry.EditorWindow) bool { return e.truthy(fn, windowTable(w)) }
+		a.On = func(w registry.EditorWindow) bool { return e.a.truthy(fn, windowTable(w)) }
 	}
 	if fn, ok := spec["note"].(*script.Fn); ok {
 		a.Note = func(w registry.EditorWindow) string {
@@ -54,8 +54,8 @@ func (e Editor) Action(spec script.Table, where string) error {
 }
 
 // truthy calls fn and reports whether it returned something other than nil or false.
-func (e Editor) truthy(fn *script.Fn, args ...any) bool {
-	out, err := e.a.VM.Call(fn, args...)
+func (a *APIs) truthy(fn *script.Fn, args ...any) bool {
+	out, err := a.VM.Call(fn, args...)
 	if err != nil || len(out) == 0 {
 		return false
 	}
@@ -75,7 +75,7 @@ func (e Editor) Presenter(spec script.Table, where string) error {
 		p.Order = int(o)
 	}
 	if fn, ok := spec["when"].(*script.Fn); ok {
-		p.When = func(path string) bool { return e.truthy(fn, path) }
+		p.When = func(path string) bool { return e.a.truthy(fn, path) }
 	}
 	id := "presenter." + p.Name
 	p.Build = func(ctx *registry.PresentCtx) {
@@ -124,7 +124,7 @@ func (e Editor) Viewer(spec script.Table, where string) error {
 	if v.Name == "" || v.View == "" || !ok {
 		return fmt.Errorf("a file viewer needs a name, a view and a when function")
 	}
-	v.When = func(path string) bool { return e.truthy(when, path) }
+	v.When = func(path string) bool { return e.a.truthy(when, path) }
 	if o, ok := spec["order"].(float64); ok {
 		v.Order = int(o)
 	}

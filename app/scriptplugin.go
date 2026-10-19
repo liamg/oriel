@@ -34,6 +34,8 @@ type PluginOpts struct {
 	Dir    string         // its directory, where its processes and modules are (bin/…); none if ""
 	Grants []plugin.Grant // what it may do; what its manifest declares if nil
 	Data   string         // its data directory; plugins/<id> in the state directory if ""
+	// Programs run its binaries as other programs: a bundled plugin's are oriel itself (plugin.BundledPrograms).
+	Programs map[string][]string
 }
 
 // ScriptPlugin is the Lua plugin whose oriel.toml and init.lua are at fsys's root, granted what its manifest
@@ -70,11 +72,13 @@ func (p *scriptPlugin) Activate(_ context.Context, h plugin.Host) error {
 		return nil
 	}
 	if !p.m.Contributes.Empty() {
+		var d registry.Disposable
+		var err error
 		if p.o.Dir == "" {
-			p.failed(h, errors.New("[contributes] needs the plugin's directory"))
-			return nil
+			d, err = plugin.ContributeFS(h, p.fsys, p.m.ID, p.m.Contributes)
+		} else {
+			d, err = plugin.Contribute(h, p.o.Dir, p.m.ID, p.m.Contributes)
 		}
-		d, err := plugin.Contribute(h, p.o.Dir, p.m.ID, p.m.Contributes)
 		if err != nil {
 			p.failed(h, err)
 			return nil
@@ -102,7 +106,7 @@ func (p *scriptPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	vm := script.New()
 	vm.OnSlow = func(src string, took time.Duration) { h.Log().Warn("slow Lua", "function", src, "took", took) }
-	apis := api.InstallPlugin(vm, h, plugin.Caller{ID: p.m.ID, Dir: p.o.Dir, Guard: g, Data: data})
+	apis := api.InstallPlugin(vm, h, plugin.Caller{ID: p.m.ID, Dir: p.o.Dir, Guard: g, Data: data, Programs: p.o.Programs})
 	if err := vm.Load(script.Chunk{Name: p.m.ID + "/" + plugin.EntryFile, Source: src}); err != nil {
 		apis.Dispose()
 		vm.Close()

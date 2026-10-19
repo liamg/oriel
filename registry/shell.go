@@ -117,6 +117,7 @@ type StartEntry struct {
 	Order   int
 	Link    bool
 	Note    func() string // a link's figure: "$96.40 this week"
+	Shown   func() bool   // whether it's listed at all; nil always is
 	Source  string
 }
 
@@ -158,11 +159,23 @@ func GlobalEntries(r Registry) []RailEntry {
 	return slices.DeleteFunc(RailEntries(r), func(e RailEntry) bool { return e.Scope != ScopeGlobalEntry })
 }
 
-// StartEntries are the start view's actions by Order.
+// Is says whether the entry is listed, asking its Shown.
+func (e StartEntry) Is() bool {
+	if e.Shown == nil {
+		return true
+	}
+	ok := false
+	Call(func() error { ok = e.Shown(); return nil })
+	return ok
+}
+
+// StartEntries are the start view's actions that are shown, by Order.
 func StartEntries(r Registry) []StartEntry {
 	var out []StartEntry
 	for _, c := range r.Contributions("start.entry") {
-		out = append(out, c.(StartEntry))
+		if e := c.(StartEntry); e.Is() {
+			out = append(out, e)
+		}
 	}
 	slices.SortFunc(out, func(a, b StartEntry) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
@@ -281,4 +294,26 @@ func IsRawKeyMode(r Registry, mode string) bool {
 		}
 	}
 	return false
+}
+
+// SettingsSection is a section of the settings page that isn't options (settings.md): listed with the options'
+// sections by Name, its rows drawn by Build.
+type SettingsSection struct {
+	Name   string     // "secrets"
+	Count  func() int // the figure beside its name: how many are set; nil for none
+	Build  func(c *ui.Ctx)
+	Source string
+}
+
+func (SettingsSection) ContributionKind() string   { return "settings.section" }
+func (s SettingsSection) ContributionName() string { return s.Name }
+
+// SettingsSections are the settings page's own sections, by name.
+func SettingsSections(r Registry) []SettingsSection {
+	var out []SettingsSection
+	for _, c := range r.Contributions("settings.section") {
+		out = append(out, c.(SettingsSection))
+	}
+	slices.SortFunc(out, func(a, b SettingsSection) int { return strings.Compare(a.Name, b.Name) })
+	return out
 }

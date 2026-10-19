@@ -972,6 +972,45 @@ type Host interface {
   `app/tickets_test.go`, all Lua) shows beside it in the omnibox, the launcher, Continue, the moves (done on merge
   too), the PR link and `my_tickets`.
 
+## As built (tickets page)
+
+- **The tickets page** (`app/ticketspage.go`, ui.md "Tickets page") is the app's, on every tracker: `tickets.open
+  {tracker}` and `:Tickets [tracker]` (which used to open the omnibox on them; the omnibox keeps `!`). It's described
+  in ui.md. Keys in mode `tickets`: `<CR>` `tickets.plan` (Plan, or Continue), `w` `tickets.work`, `o`
+  `tickets.browse` (`system.open {url}`), `r` `tickets.refresh`, `/` `tickets.filter`; `j`/`k` are the list's.
+  `registry.TicketTracker.Icon` (Lua `icon`) is drawn beside a tracker's tickets when more than one tracker's are listed.
+- **Hidden until keyed**, generally: `registry.StartEntry.Shown func() bool`, matching `RailEntry.Shown`, and
+  `registry.StartEntries` leaves out the ones not shown. Lua `shown = fn` on `oriel.rail.add` (`fn(project)`) and
+  `oriel.start.add` (`fn()`). `oriel.secret.has(name)` (cap: the plugin must declare the secret, checked by name)
+  answers whether it's set, a bool, never the value. A `shown` is asked as each frame is built, so an entry appears on
+  the frame after its secret is saved.
+- **Settings › Secrets**: `registry.SettingsSection{Name, Count, Build}` (kind `settings.section`) is a section of the
+  settings page that isn't options, listed with the options' sections by name (`:Settings secrets` opens it). The
+  secrets plugin's lists every secret a running plugin declares (`plugin.Host.Plugins()`, new: the manifests of the
+  built-ins and every plugin `Load`ed since): its name, the plugin, the manifest's `why` and host; "set" and dots
+  with **Replace** and **Clear** (asks once more), or a `widget.Input{Secret}` and **Save**. The value is never read
+  back into the UI. Help: `plugins/secrets#settings`. Clearing is `SetSecret(name, "")`, which already deleted.
+- **Contributed icons are drawn**: `icon()` (rail, start view, the tickets page) draws a `registry.Icon` a plugin's
+  `[contributes] icons` brings when no built-in has the name: a raster image (PNG…), in the tone around it, by its
+  alpha. `registry.Icon.Data` holds the file for a plugin with no directory. SVG still isn't drawn.
+- **Bundled plugins** (catalog.md, "Bundled plugins"): `plugin.Bundled{FS, Processes}` is a plugin inside the binary:
+  its files (each package embeds its own, `go:embed` can't reach out of it: `linear.Plugin`, `slack.Files`), and the
+  main each process binary runs as (`"bin/oriel-linear": "linear"`). `integ.Bundled()` is the list oriel ships
+  (`app.Config.Bundled`), and `integ.Mains` the mains by name. The plugin manager (`builtin:catalog`) loads each at
+  start with `ScriptPluginWith(fsys, PluginOpts{Programs})`, granted its manifest, with no consent; unless its id is
+  in `bundled.disabled`, or `[plugins]` installs the same id, which replaces it while it's listed. The Plugins page
+  lists them as BUNDLED, with Disable/Enable (`plugins.disable {id}`, `plugins.enable {id}`), no Uninstall.
+  `plugin.ContributeFS` reads `[contributes]` prompts, help and icons from the FS (themes, languages and fonts still
+  need a directory).
+- **A bundled process is oriel itself**: `plugin.Caller.Programs` maps a binary's name to another command line
+  (`plugin.BundledPrograms`: `oriel plugin-process linear`, oriel from `os.Executable()`, or `app.Config.Self` in
+  tests). It's still its own process, in the same OS sandbox, over the same JSON-RPC, with the host's `http.request`;
+  only the file it runs from differs. `oriel plugin-process NAME` runs `integ.Mains[NAME]` on stdin and stdout. The
+  standalone `bin/oriel-linear` and the manifest's `binaries` stay for a catalog install.
+- **Linear's own UI**: a Linear icon (`icons/linear.png`, `[contributes] icons`), a global rail entry and a start view
+  entry "Linear tickets", each running `tickets.open {tracker = "linear"}` and shown only while
+  `oriel.secret.has("LINEAR_TOKEN")`.
+
 ## As built (PL-8)
 
 - **Ticket sources**, since replaced by ticket trackers ("As built (tickets)") (`registry.TicketSource{Name, Title,
@@ -1008,8 +1047,7 @@ type Host interface {
   Linear last told them); commands
   `LinearTickets`, `LinearKey`, `linear.refresh`. `integ/linear/lineartest` is the recorded API (`testdata/*.json`,
   served as api.linear.app over TLS, mutations kept and applied).
-- Not yet: installing it (PL-19/20 bring the plugin manager; it isn't bundled: a plugin with a process loads from a
-  directory, `app.DirPlugin`, not from the binary's embedded files). Not carried over from crit (crit-reference.md): the company feed. "Continue" and
+- Bundled with Oriel since "As built (tickets page)": its process runs as `oriel plugin-process linear`. Not carried over from crit (crit-reference.md): the company feed. "Continue" and
   the done move on merge came later, on every tracker ("As built (tickets)").
 
 ## As built (PL-5)
