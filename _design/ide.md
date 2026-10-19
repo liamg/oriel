@@ -366,6 +366,9 @@ results, failure block and tests panel are still to build on it.
   times), so flaky detection needs no git. History (20 runs) persists per work dir in the state directory.
 - The Tests panel is the `tests` view (the rail's Tests lights up): a tree by package and test (subtests and rows
   under their test), all / failed / slowest, sparklines of recent runs, flaky marks, and output (case, run, raw JSON).
+  It lists every test `Set.Scan` finds in the work dir (each `TestFiler` file, discovered as a buffer is; open
+  buffers and the files git sees change keep it current), not only those that ran; a kept result whose test is
+  gone is dropped. Activating a row goes to its failure, or its definition.
   The status line shows `TESTS n ✕ n ✓`, also offered as a `hud.indicator` for the HUD (SH-8).
 - Watch (TR-4) is a `BufWritePost` hook running `Set.Affected`; coverage (`␣tc`) marks covered and uncovered lines with
   gutter edges until toggled off.

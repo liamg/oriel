@@ -48,6 +48,9 @@ type testsPlugin struct {
 	watch   bool
 	showCov bool
 	found   map[*text.Buffer]*discovery
+	scanned map[string][]testrun.Item // every test found in the workspace, by file
+	byKey   map[string]testrun.Item   // scanned by key, made when asked for
+	pkgs    map[string]bool
 	busy    sync.WaitGroup
 
 	panel testsPanel
@@ -181,6 +184,7 @@ func (x *testsPlugin) Activate(_ context.Context, h plugin.Host) error {
 		x.add(h.Contribute(a))
 	}
 	x.add(h.View(TestsView, testsView{x}))
+	x.scan()
 	for _, d := range x.evidence() {
 		x.add(d)
 	}
@@ -228,6 +232,9 @@ func (x *testsPlugin) discover(path string, buf *text.Buffer) *discovery {
 	x.mu.Lock()
 	x.found[buf] = d
 	x.mu.Unlock()
+	if within(path, x.sh.editor.dir) && x.set.TestFile(path) {
+		x.setFound(path, items)
+	}
 	return d
 }
 
