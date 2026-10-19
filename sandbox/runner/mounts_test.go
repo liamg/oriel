@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/container"
 )
 
 func TestMountsShareAttachments(t *testing.T) {
-	if !SocketsMount() {
+	if !SocketsMount(container.Docker) {
 		t.Skip("needs the session socket on the host")
 	}
 	t.Setenv("HOME", t.TempDir())
@@ -42,7 +43,7 @@ func TestMountsShareAttachments(t *testing.T) {
 }
 
 func TestMountsShareGoCache(t *testing.T) {
-	if !SocketsMount() {
+	if !SocketsMount(container.Docker) {
 		t.Skip("needs the session socket on the host")
 	}
 	t.Setenv("HOME", t.TempDir())

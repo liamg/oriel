@@ -26,15 +26,13 @@ esac
 	if err := os.WriteFile(fake, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	old := container.Bin
-	container.Bin = fake
-	t.Cleanup(func() { container.Bin = old })
+	engine := container.Engine{Bin: fake}
 	setID := func(id string) { _ = os.WriteFile(filepath.Join(dir, "id"), []byte(id+"\n"), 0o644) }
 	count := func() int { b, _ := os.ReadFile(runs); return strings.Count(string(b), "run") }
 
 	setID("sha256:aaa")
 	for range 3 {
-		p, g, err := imageUsers(context.Background(), "img")
+		p, g, err := imageUsers(container.WithEngine(context.Background(), engine), "img")
 		if err != nil || !strings.HasPrefix(p, "root:x:0:0") || !strings.HasPrefix(g, "root:x:0:") {
 			t.Fatalf("got %q %q %v", p, g, err)
 		}
@@ -43,7 +41,7 @@ esac
 		t.Fatalf("three launches on one image ran %d containers, want 1", n)
 	}
 	setID("sha256:bbb")
-	if _, _, err := imageUsers(context.Background(), "img"); err != nil {
+	if _, _, err := imageUsers(container.WithEngine(context.Background(), engine), "img"); err != nil {
 		t.Fatal(err)
 	}
 	if n := count(); n != 2 {

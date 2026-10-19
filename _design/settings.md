@@ -164,7 +164,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `repos.tag.sign` | `auto`: sign new tags when a signing key is set up; or `always`, `never` | app | | SE-8 |
 | `repos.tag.message` | `{tag}`: a new tag's message; `{tag}`, `{branch}`, `{repo}` expand | app | | SE-8 |
 | `repos.tag.push` | `true`: New tag pushes the tag, and only it | app | | SE-8 |
-| `sandbox.backend` | `docker`: each agent runs in a container; or `seatbelt`, macOS's own sandbox with the host's toolchains | app | | AI-11 |
+| `sandbox.backend` | `docker`, `orbstack`, `colima` or `podman`: each agent runs in a container on that engine; or `seatbelt`, macOS's own sandbox with the host's toolchains. Only those installed are offered; the default is the first of those, in that order | app | | AI-11 |
 | `sandbox.loopback` | `all`: the host's loopback ports a `seatbelt` sandbox may connect to; `ephemeral`, only 49152–65535 (servers on port 0, not services on fixed ports); or `none`, only its proxy | app | | AI-11 |
 | `sandbox.image` | empty: Oriel's base image; a project's applies to its repo | app | | AI-11 |
 | `sandbox.claude_version` | empty: the host's Claude Code | app | | AI-11 |

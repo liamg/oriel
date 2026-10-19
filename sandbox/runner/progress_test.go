@@ -24,12 +24,10 @@ esac
 	if err := os.WriteFile(fake, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	old := container.Bin
-	container.Bin = fake
-	t.Cleanup(func() { container.Bin = old })
+	engine := container.Engine{Bin: fake}
 
 	var got []sandbox.Progress
-	ctx := sandbox.WithProgress(context.Background(), func(p sandbox.Progress) { got = append(got, p) })
+	ctx := sandbox.WithProgress(container.WithEngine(context.Background(), engine), func(p sandbox.Progress) { got = append(got, p) })
 	if err := ensureImage(ctx, "img:1", "FROM scratch\n"); err != nil {
 		t.Fatal(err)
 	}

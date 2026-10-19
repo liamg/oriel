@@ -16,7 +16,6 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
-	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -978,7 +977,7 @@ func sandboxToggles(c *ui.Ctx, on, openNet *bool, pick backendPick, help string)
 
 // sandboxNoun is what a backend runs an agent in.
 func sandboxNoun(backend string) string {
-	if backend == "" || backend == sandbox.DefaultBackend {
+	if backend == "" || backend == "docker" {
 		return "container"
 	}
 	return backend + " sandbox"
