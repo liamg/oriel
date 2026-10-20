@@ -408,6 +408,7 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	// Redraft gives the box back to the agent.
 	agent.WaitSent(t) // the session's prompt
 	agent.Emit(agentpkg.TurnStart{})
+	answered(t, s.store, agent)
 	agent.Emit(agentpkg.TurnEnd{})
 	waitState(t, s.store, "the agent idle", func(st core.State) bool {
 		sess, _ := st.Session(se.ID)

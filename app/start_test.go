@@ -494,3 +494,20 @@ func TestDirectoriesWalkHomeOffTheLoop(t *testing.T) {
 		t.Errorf("~/src/notes: %q, %v; want listed, unmarked", n, ok)
 	}
 }
+
+// The window opens on the chosen theme's background, so it isn't white until the first frame.
+func TestWindowOpensOnTheThemesBackground(t *testing.T) {
+	for _, v := range []theme.Variant{theme.Dark, theme.Light} {
+		r := startApp(t, t.TempDir(), "", func(h plugin.Host) {
+			h.Options().Set("ui.variant", registry.LayerUser, registry.At{}, string(v))
+		})
+		want, err := resolveTheme(theme.Builtins(), "oriel", v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := r.win.Opts().Background; got != want.C(theme.BgBase) || got.A == 0 {
+			t.Errorf("%s: the window opened on %v, want %v", v, got, want.C(theme.BgBase))
+		}
+		r.stop()
+	}
+}

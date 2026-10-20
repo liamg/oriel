@@ -300,3 +300,19 @@ func TestAgentTurnEndFires(t *testing.T) {
 		t.Fatal("AgentTurnEnd never fired")
 	}
 }
+
+// answered has agent a reply on every thread of its session that waits on it, handing each back, as an agent that
+// handled its batch does, so it owes nothing.
+func answered(t *testing.T, store core.Store, a *agenttest.FakeSession) {
+	t.Helper()
+	for _, se := range store.State().Sessions {
+		if se.Agent.Session != a.ID() {
+			continue
+		}
+		for _, th := range se.Threads {
+			if th.WaitsOnAgent() {
+				a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Done."})
+			}
+		}
+	}
+}

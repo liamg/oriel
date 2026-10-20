@@ -123,6 +123,7 @@ type Style struct {
 	Keep    bool // keeps its width while its row is too narrow, as a control does; the text beside it is cut first
 	ScrollX bool // scroll offsets persist by id; scrolling clips
 	ScrollY bool
+	Follow  bool // a scrolling box at its end stays there as it grows, until scrolled away from it
 	Wheel   bool // takes the wheel itself: movement over it comes as Interaction.Scroll, for content it scrolls itself
 	// Sideways makes the wheel's up and down scroll it across, for a box that scrolls only that way: a strip of tabs.
 	Sideways bool

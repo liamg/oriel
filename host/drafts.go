@@ -93,13 +93,13 @@ func (w *Host) prOpen(id core.SessionID, project, branch string) bool {
 	return ok && g.pr.Open()
 }
 
-// idle runs when a turn ends with nothing for the agent: if a draft is due for code it hasn't been asked about, it's
-// asked, as a notice rather than a thread.
+// idle runs when a turn ends with nothing for the agent: told to carry on if it still owes work, else, if a draft is
+// due for code it hasn't been asked about, asked for it, as a notice rather than a thread.
 func (h *session) idle() {
 	h.mu.Lock()
-	ok := h.drafts && h.sess != nil && !h.working && !h.starting
+	ok, drafts := h.sess != nil && !h.working && !h.starting, h.drafts
 	h.mu.Unlock()
-	if !ok {
+	if !ok || h.carryOn("") || !drafts {
 		return
 	}
 	ctx, cancel := context.WithTimeout(h.ctx, 30*time.Second)

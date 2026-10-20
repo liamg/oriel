@@ -70,6 +70,8 @@ type session struct {
 	turnAt       time.Time
 	drafts       bool              // its pack fills the Ship page's drafts (commit_draft)
 	nudged       map[string]string // project/kind → the code it was last asked to draft for
+	carriedAt    string            // what it owed when last told to carry on
+	carried      int               // times told to carry on since the user last wrote
 }
 
 func (w *Host) sessionFor(id core.SessionID, start bool) (*session, error) {
@@ -168,6 +170,15 @@ func (h *session) start() error {
 	h.w.goSafe("an agent's events", func() { h.loop(sess) })
 	h.askLogins(h.snapshot().Agent.Provider)
 	h.kick()
+	if resumed {
+		h.mu.Lock()
+		idle := !h.working
+		h.carriedAt, h.carried = "", 0
+		h.mu.Unlock()
+		if idle {
+			h.carryOn(resumedLead)
+		}
+	}
 	return nil
 }
 
@@ -427,6 +438,9 @@ func (h *session) next(se core.SessionState) (handout, bool) {
 
 // give marks t as the agent's, in se as it is now, and the agent as working on it. Callers hold h.mu and w.edit.
 func (h *session) give(se core.SessionState, t handout) {
+	if t.queued || len(t.comments) > 0 {
+		h.carried = 0
+	}
 	if t.queued {
 		a := se.Agent
 		a.Queue = slices.Clone(a.Queue)

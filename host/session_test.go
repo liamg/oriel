@@ -29,6 +29,7 @@ func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
 		t.Fatalf("first batch = %q", first.Text)
 	}
 	a.Emit(agent.TurnStart{})
+	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return !se.Agent.Working && se.Agent.Stats.Turns == 1 })
 	start := time.Now()

@@ -21,7 +21,7 @@ const (
 const BatchLead = "New Oriel comments. Handle them as your skill says, answering with the mcp__oriel__* tools, then end your turn."
 
 // NoticeLead opens a batch of Oriel's notices alone, with no comments: nothing the user wrote.
-const NoticeLead = "A notice from Oriel. Act on it as your skill says, then end your turn."
+const NoticeLead = "A notice from Oriel. Act on it as your skill says."
 
 // renderBatch is the prompt for threads with comments the agent hasn't had: the new ones marked, the rest of
 // each thread for context.

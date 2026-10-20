@@ -99,6 +99,7 @@ func TestAzureShipAndReviews(t *testing.T) {
 	ag := lw.fake.WaitStarted(t)
 	ag.WaitSent(t)
 	ag.Emit(agent.TurnStart{})
+	answered(t, s.store, ag)
 	ag.Emit(agent.TurnEnd{})
 
 	writeFiles(t, shipDir(se, "dashboard"), map[string]string{"src/chart.ts": "export const chart = 1\n"})
@@ -143,6 +144,7 @@ func TestAzureShipAndReviews(t *testing.T) {
 	if out := ag.Call(t, "reply", map[string]any{"thread": string(tid), "body": "Done: chart(week) now."}); !strings.Contains(out, "drafted") {
 		t.Errorf("reply: %q", out)
 	}
+	answered(t, s.store, ag)
 	ag.Emit(agent.TurnEnd{})
 	if cs := az.Threads(prs[0].ID)[onLine-1].Comments; len(cs) != 1 {
 		t.Fatalf("Azure DevOps was written to before the forward: %+v", cs)

@@ -253,7 +253,7 @@ func (c *Ctx) Node(n Node)                        // a plugin's view tree: *Box,
 func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i int)) ID // builds only the rows in view
 func (c *Ctx) KeepInView(box, target ID) // scrolls to target when it changes; ScrollIntoView every frame fights the user
 func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i int)) ID // items of any height: only
-    // those in view are built, each as tall as when last built (o.Estimate before), o.End keeps it at its end (a log), o.Reveal scrolled to unbuilt
+    // those in view are built, each as tall as when last built (o.Estimate before), o.End follows its end (Follow), o.Reveal scrolled to unbuilt
 
 type Style struct {
     Dir         Dir                               // Row or Column
@@ -263,6 +263,7 @@ type Style struct {
     Main, Cross Align                             // Start, Center, End; SpaceBetween on the main axis
     Fill, Stroke render.Color; Border, Radius float32
     Clip, ScrollX, ScrollY bool                   // scroll offsets persist by id
+    Follow bool                                   // at its end, stays there as it grows (a log); scrolled away, stays put
     Sideways bool                                 // the wheel's up and down scroll it across: a strip of tabs
     Selectable bool                               // its text selects with the pointer (a drag across nodes, a double
                                                   // click a word) and copies with ⌘C / ⌃⇧C; controls keep their clicks

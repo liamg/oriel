@@ -61,6 +61,9 @@ type state struct {
 	data       any // a widget's own state: State[T]
 }
 
+// atEnd is whether the box is scrolled to its end along axis, as it was last laid out.
+func (st *state) atEnd(axis int) bool { return st.scroll[axis] >= st.ext[axis]-st.view[axis]-1 }
+
 // UI holds what lasts between frames.
 type UI struct {
 	Title string // the window's accessible name
@@ -646,6 +649,9 @@ func (u *UI) place(e *elem, x, y float32) {
 				for _, c := range kids {
 					ext = max(ext, c.size[axis])
 				}
+			}
+			if e.style.Follow && st.atEnd(axis) {
+				st.scroll[axis] = ext - inner[axis]
 			}
 			st.scroll[axis] = max(0, min(st.scroll[axis], ext-inner[axis]))
 			st.ext[axis], st.view[axis] = ext, inner[axis]

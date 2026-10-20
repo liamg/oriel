@@ -31,6 +31,7 @@ func TestGitHubReviewForward(t *testing.T) {
 	ag := lw.fake.WaitStarted(t)
 	ag.WaitSent(t)
 	ag.Emit(agent.TurnStart{})
+	answered(t, s.store, ag)
 	ag.Emit(agent.TurnEnd{})
 	apiDir := shipDir(se, "search-api")
 	file := filepath.Join(apiDir, "internal/api/usage/handler.go")
@@ -65,6 +66,7 @@ func TestGitHubReviewForward(t *testing.T) {
 	if out := ag.Call(t, "reply", map[string]any{"thread": string(tid), "body": "Agreed. `Handle` now returns an error."}); !strings.Contains(out, "drafted") {
 		t.Errorf("reply: %q", out)
 	}
+	answered(t, s.store, ag)
 	ag.Emit(agent.TurnEnd{})
 
 	s.run("diff.open", registry.Args{"path": file})

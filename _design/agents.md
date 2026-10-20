@@ -340,7 +340,7 @@ type Session interface {
 
 - Two halves. The prompt packs that offer `commit_draft` (work, plan, job, new repo; `parts/drafts.md`) tell the agent
   to fill each project's drafts before it ends a turn with nothing left to do, as crit's skill does. Behind that, the
-  host (`host/drafts.go`) checks when a turn ends with nothing queued: for each writable project, a commit message is
+  host (`host/drafts.go`) checks when a turn ends with nothing queued and the work quiet (below): for each writable project, a commit message is
   due for uncommitted work, a PR draft for a branch with commits of its own or uncommitted work and no open PR (as the
   last GitHub reading has it; no network call). One is due when it's missing or its fingerprint isn't the code's now;
   never when the user wrote it.
@@ -356,6 +356,20 @@ type Session interface {
 - Decided in AI-10: a session whose pack doesn't offer `commit_draft` (direct, review) is never asked.
 - Not yet: an option to turn the nudge off, and remembering what was asked across a restart of Oriel (one repeat ask
   after a restart).
+
+### Carrying on when a turn stops short
+
+- An agent can end a turn with work it owes: a "next step" described and not taken, or a turn a restart of Oriel cut
+  off. The pack says a turn ends only when each thread is resolved, handed back to the user, or waiting on background
+  work it started (`parts/comments.md`); the host (`host/carryon.go`) backs that up.
+- When a turn ends with nothing queued and nothing of the agent's still running (background work, a running subagent,
+  an ask), the host looks at what it owes: threads that wait on it (`Thread.WaitsOnAgent`), and tasks not done whose
+  thread isn't with the user. If it owes any, it gets a `<notice>` naming them and telling it to carry on, and the
+  drafts aren't asked for: the work isn't quiet.
+- It's told once for what it owes as it stands (each thread's comments and each task's status), so a turn that ends
+  again with nothing moved isn't told twice, and at most three times in a row before the user next writes to it.
+- An agent started again after a restart (a resume), with nothing new for it, gets the same notice, led by a line
+  saying Oriel restarted and the turn that was running was cut off. With nothing owed, it gets nothing.
 
 ### Claude and Codex, side by side
 

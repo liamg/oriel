@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -149,6 +150,7 @@ func TestUrgentInterruptsAndBtwAsksAFork(t *testing.T) {
 	if a.Interrupts() != 1 || !strings.Contains(got.Text, "negative cases first") || !strings.Contains(got.Text, `urgent="true"`) {
 		t.Errorf("interrupted %d times; sent %q", a.Interrupts(), got.Text)
 	}
+	answered(t, r.store, a)
 	a.Emit(agent.TurnEnd{})
 
 	r.clickText("BTW")
@@ -226,6 +228,7 @@ func TestLuaThreads(t *testing.T) {
 	r, a, _ := requestsSession(t)
 	newRequest(t, r, a, "Negative values round the wrong way")
 	th := threadWith(t, r, "Negative values round the wrong way")
+	answered(t, r.store, a)
 	a.Emit(agent.TurnEnd{})
 	lua := func(line string) {
 		t.Helper()
@@ -263,4 +266,25 @@ func TestTasksRailStatsAndUsage(t *testing.T) {
 	a.Emit(agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "fake", Plan: "Fake Max", Windows: []core.UsageWindow{
 		{Name: "5h window", Used: .38}, {Name: "weekly", Used: .71}}}})
 	r.waitFrame("the usage windows", func(s string) bool { return containsAll(s, "5H", "38%", "WK", "71%") })
+}
+
+// A request's conversation follows its replies, but the wheel scrolls it back, and it stays there as more arrive.
+func TestRequestScrollsBack(t *testing.T) {
+	r, a, _ := requestsSession(t)
+	newRequest(t, r, a, "Negative values round the wrong way")
+	th := threadWith(t, r, "Negative values round the wrong way")
+	for i := range 30 {
+		a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": fmt.Sprintf("Reply number %02d.", i)})
+	}
+	// The conversation draws every reply, clipped: one is in view when it's drawn inside the window.
+	inView := func(f headless.Frame, text string) bool {
+		op, ok := runIn(f, text)
+		return ok && op.At.Y > 0 && op.At.Y < r.win.Size().Y
+	}
+	r.latest("the last reply in view", func(f headless.Frame) bool { return inView(f, "Reply number 29.") })
+	r.scrollAt("Reply number 29.", -20000)
+	r.latest("the first reply scrolled into view", func(f headless.Frame) bool { return inView(f, "Reply number 00.") })
+	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Reply number 30."})
+	time.Sleep(200 * time.Millisecond)
+	r.latest("the first reply still in view", func(f headless.Frame) bool { return inView(f, "Reply number 00.") })
 }
