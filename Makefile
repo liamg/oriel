@@ -33,6 +33,8 @@ helper:
 # build is the desktop app, on the native libghostty-vt, with its sandbox helper; it needs native first. Without the
 # tag (or cgo) the emulator runs as wasm. GOARCH=amd64 on an Apple-silicon Mac builds the Intel app.
 build: helper
+	@test -f term/ghostty/native/include/ghostty/vt.h && test -f term/ghostty/native/lib/$(shell go env GOOS)_$(GOARCH)/libghostty-vt.a || \
+		{ echo "make build: libghostty-vt isn't built for $(shell go env GOOS)_$(GOARCH): run make native first (it needs zig 0.16.0)" >&2; exit 1; }
 	go build -tags ghostty_native -ldflags "$(LDFLAGS)" -o bin/oriel ./cmd/oriel
 
 # run builds the app and runs it: make run ARGS=~/src/project

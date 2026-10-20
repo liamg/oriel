@@ -42,7 +42,7 @@ zig_build() {
 		if out=$(cd "$work/src" && "$zig" build "$@" 2>&1); then
 			return 0
 		fi
-		url=$(printf '%s\n' "$out" | grep -A1 'bad HTTP response code\|unable to fetch\|error: .*connection' | grep -oE '"https?://[^"]+"' | head -1 | tr -d '"')
+		url=$(printf '%s\n' "$out" | grep -A1 'bad HTTP response code\|unable to fetch\|error: .*connection' | grep -oE '"https?://[^"]+"' | head -1 | tr -d '"' || true)
 		if [ -z "$url" ]; then
 			printf '%s\n' "$out" >&2
 			return 1
@@ -51,5 +51,7 @@ zig_build() {
 		curl -fsSL "$url" -o "$f"
 		(cd "$work/src" && "$zig" fetch "$f" >/dev/null)
 	done
+	printf '%s\n' "$out" >&2
+	echo "zig build still failing after fetching 40 packages" >&2
 	return 1
 }

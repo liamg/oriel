@@ -8,12 +8,22 @@ set -euo pipefail
 cd "$(dirname "$0")"
 . ../fetch.sh
 
-declare -A triples=([linux_amd64]=x86_64-linux-gnu [linux_arm64]=aarch64-linux-gnu [darwin_amd64]=x86_64-macos [darwin_arm64]=aarch64-macos)
+# triple is zig's target for a goos_goarch. A function, not an associative array: macOS's own bash is 3.2.
+triple() {
+	case "$1" in
+	linux_amd64) echo x86_64-linux-gnu ;;
+	linux_arm64) echo aarch64-linux-gnu ;;
+	darwin_amd64) echo x86_64-macos ;;
+	darwin_arm64) echo aarch64-macos ;;
+	*) echo "no target $1" >&2; exit 1 ;;
+	esac
+}
 targets=("$@")
 [ ${#targets[@]} -gt 0 ] || targets=(darwin_amd64 darwin_arm64 linux_amd64 linux_arm64)
 rm -rf include && cp -r "$work/src/include" include
 for t in "${targets[@]}"; do
-	rm -rf "$work/src/zig-out" && zig_build -Demit-lib-vt -Dtarget="${triples[$t]}" -Doptimize=ReleaseFast
+	# No xcframework: on a Mac it needs a full Xcode's xcodebuild, and only the static library is linked.
+	rm -rf "$work/src/zig-out" && zig_build -Demit-lib-vt -Demit-xcframework=false -Dtarget="$(triple "$t")" -Doptimize=ReleaseFast
 	mkdir -p "lib/$t"
 	cp "$work/src/zig-out/lib/libghostty-vt.a" "lib/$t/libghostty-vt.a"
 	echo "built lib/$t/libghostty-vt.a"
