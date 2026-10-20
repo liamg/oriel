@@ -158,5 +158,11 @@ clip 44,38 1556x936 r 0
     text "ENG-2231" @583,268.012 #ece6d8 JetBrains Mono 11
     text "linear.app/acme/issue/ENG-2240" @483,294.532 #7c7566 JetBrains Mono 11
     text "Evict the org's cached results when its index is rebuilt, rather than waiting for the nightly job." @483,322.42578 #b3ab99 Inter 13
+    text "Then warm the cache:" @483,346.15527 #b3ab99 Inter 13
+    text "•" @487,369.88477 #b3ab99 Inter 13
+    text "top queries" @502.3125,369.88477 #b3ab99 Inter 13
+    text "first" @577.0156,369.88477 #b3ab99 Inter 13
+    text "•" @487,393.61426 #b3ab99 Inter 13
+    text "the rest on demand" @502.3125,393.61426 #b3ab99 Inter 13
   pop
 pop

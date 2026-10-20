@@ -231,7 +231,7 @@ func optionValue(sp registry.OptionSpec, v any) (any, error) {
 	case registry.Duration:
 		switch d := v.(type) {
 		case string:
-			return time.ParseDuration(d)
+			return registry.ParseDuration(d)
 		case float64:
 			return time.Duration(d * float64(time.Millisecond)), nil
 		}

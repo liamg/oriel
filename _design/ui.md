@@ -95,7 +95,8 @@ what goes wrong if the user acts before the data arrives (rendering.md, "Loading
 
 ![01-ide](mockups/01-ide.png)
 
-- Session tabs across the top, each with a status dot, kind and `⌘N`. The status reads at a glance.
+- Session tabs across the top, each with a status dot, kind and `⌘N`. The status reads at a glance. A **+** after the
+  last tab starts a new session (`session.new`, ⌘N), so it's a click away with sessions open.
 - Threads open **between the lines** they belong to, with the agent's live state in the header.
 - Agent-written lines carry a gutter mark and an "agent · 2m" ghost until you've read them.
 - Right: a **summary** of requests (threads), the task rail, and the session stats (context, cache, cost, review ledger, tests).
@@ -176,8 +177,9 @@ What the window shows with no directory and no session open: at launch (plain `o
 - Entries are a contribution point. An entry whose command isn't available is dimmed with a `soon` tag; New Session and
   Resume a Session are, while the app has no session host.
 - Recent lists the sessions first (not archived, newest first: kind, projects, branch, a diamond in the status
-  colour), and opening one runs `session.open`. Since SH-7 the app opens on mission control over it once there's a
-  session to show (03).
+  colour), and opening one runs `session.open`. The start view shows only when there are no sessions: otherwise the app
+  lands on a session with mission control over it (03), so the start view has no link to mission control; `⌘⇧K` (an `Unlisted` start entry) and the
+  omnibox reach it.
 - `j`/`k` or arrows move, `⏎` runs, `⌫` (or the `✕` on a recent under the pointer) forgets a recent, until it's opened again. The same actions are commands, so they're in the omnibox too.
 - The pointer moving onto a row selects it, as `j`/`k` do.
 - It fits the window: the columns shrink to fit, and below 760 wide Start and Recent become tabs. Taller than the window, it
@@ -267,8 +269,8 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   order, and "push + raise all".
 - Built in SH-17 (`app/rail.go`, `app/projects.go`): the sidebar is the `app.rail` view over the rail entries
   (`registry.RailEntry` with a `Scope`, plugins.md), drawn with `widget.Rows` (rows of their own heights, `j`/`k`/`⏎`,
-  key mode `sidebar`). Explorer, Search, Git, Pull request and Tests are project entries; Requests, Debug, Ship and
-  Settings session entries; Pull request and Ship are dimmed until FG-6 registers the `pull-request` and `ship` views.
+  key mode `sidebar`). Explorer, Search, Git, Pull request and Tests are project entries; Requests, Plan docs (while the
+  session in front is planning), Debug, Ship and Settings session entries; Pull request and Ship are dimmed until FG-6 registers the `pull-request` and `ship` views.
   `⌃1–9` run `project.open {index}`; `⌘⇧E/F/G/T` run `project.panel {name}` for the open project; `⌘⇧R` and `⌘⇧D` stay
   `view.toggle`. Opening a project closes the docked panels of the others and reopens its last panel
   (`SessionState.ProjectUI`), or the one that was showing. A header's line is the branch, ahead/behind and changed files
@@ -351,7 +353,9 @@ Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
 - **Five placements** for any view:
   - **Docked**: bottom, left or right edges, each with its own tabs. `⌃J` toggles the bottom dock. A dock showing
     one view heads it instead of a strip of one tab: its project, its title in capitals and a ✕; a second view
-    there brings the tabs back. The sidebar's panels open alone (`view.open {alone}`), so its dock is never a tab group.
+    there brings the tabs back. The sidebar's panels open alone and fixed (`view.open {alone, fixed}`), so its dock is never a tab group
+    and a panel's header can't be dragged out of it: any rail entry whose `view.*` command docks on the left gets
+    both, Requests and Plan docs as much as a project's panels.
   - **Split in main**: a window in the vim window tree, next to your code.
   - **Tab in main**: a full main view among your file tabs.
   - **Float**: a movable overlay window.
@@ -486,10 +490,11 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Bottom strip: usage per provider, this machine's CPU sparkline, agentbus presence.
 - Fully keyboard-driven: `hjkl`, `⏎` opens, `a` allows, `x` stops.
 - Built in SH-7 (`app/mission.go`, `app/missionview.go`): `⌘⇧K` or `mission.toggle` shows it under the title bar
-  (`widget.Page`, key mode `mission`; Escape goes back); the start view links to it while there's something to watch (a session whose agent is running, starting or asking). Header: the counts by status, BY
+  (`widget.Page`, key mode `mission`; Escape goes back). Header: the counts by status, BY
   STATUS / BY REPO (`mission.group {by}`, status by default), a filter (`/`). Cards are grouped, most urgent first, as
   many to a row as fit; the border is
-  the status colour, the selected card's the accent; heading: name (a click opens it), kind, PR, provider; foot:
+  the status colour, the selected card's the accent; heading: name (a click opens it), kind, PR, provider, and while the pointer is on the card an Open button (Resume
+  while its agent is stopped); a click on a card selects it, a double-click (`ui.Interaction.DoubleClicked`) opens it; foot:
   tasks, context, the change, how long. A **working** card's body is a terminal: the agent's recent activity (each
   tool call with a dot, cyan running, red failed, and the end of its output with its colours; prose in cyan) written
   into a Ghostty VT the size of the box, so it streams as the transcript grows. A card with a waiting **inbox card**
@@ -501,12 +506,13 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   minutes, `machine.mission`), then the keys and where Escape goes. Keys: `hjkl`/arrows, `⏎` (`session.open`), `a` (allows the
   selected card's first ask), `x` (`session.stop`), `r` (renames on the card), `n` (`mission.new`: the launcher), `/`. Every action is a
   `mission.*` command, and the assistant reads or opens it with `mission_control`. The app opens on it at launch
-  (`mission.at_launch`) once a session is known, if it started with nothing open.
+  (`mission.at_launch`), over the session that was in front, if it started with nothing open and there are sessions.
 - Decided in SH-7 (the design was silent): the live terminal shows the agent's activity from its transcript rather
   than mirroring the raw PTY (Claude's full-screen TUI doesn't read at a card's size, and Codex has none), with
   `agent.terminal` a command away; a tool's cursor moves and clears are dropped so it can't wipe the card. Cards sort
-  by urgency within a group. Opening at launch waits for the first session, since the session host loads them
-  after the window opens; with none the start view stays.
+  by urgency within a group. Opening at launch waits for the sessions there were at launch, since the session host may
+  load them after the window opens; with none the start view stays, and a session started after launch
+  doesn't open it.
 - Not yet: the title bar's `⌘⇧K` chip, CI check rows on a CI card. Since PL-5 the strip has agentbus's presence, from the agentbus plugin's `mission` indicator.
 
 ## 04 · New session
@@ -898,7 +904,7 @@ Removed (the user's decision): there is no tour kind, reader or export.
 - Subagents box, permission card (and the rule "Always" would create), network approval.
 - Composer with `@file`, model and effort chips, queued messages.
 - Built in AI-6: the `agent.console` view (bottom dock by default, any placement; `⌘⇧A`, command `agent.console`,
-  and a rail entry `❯` while there's a session host, badged with the asks waiting). Header: provider, model, effort, a
+  and a rail entry `❯` while there's a session host, badged with the asks waiting). Header: provider, a
   status chip, ticket · session · branch, Fork (a btw side question to a tool-less fork; its answer shows as a block),
   Interrupt (`session.interrupt`), Raw terminal (the agent's PTY from the session host, through `term.open {source}`).
   Transcript from `SessionState.Transcript` (only the blocks in view are built, `Ctx.Items` following its end, so a
@@ -908,9 +914,12 @@ Removed (the user's decision): there is no tour kind, reader or export.
   errors red, the SUBAGENTS box, and asks' cards where they arose. Keys in mode `agent`: `j`/`k` between blocks, `⏎`
   folds, `i` the composer, `y`/`a`/`n`/`⇧n` answer the selected or first ask, `Esc` interrupts (closes when idle).
   Composer (mode `composer`): `⏎` sends with `agent.send` (queued as QUEUED while the agent works), `⌘⏎` sends now
-  (urgent). Right: session stats from `AgentState.Stats` (its cost opens the session stats tab, 43), plan usage from `State.Usage` (this provider first), this turn's
+  (urgent). Under it, the model and effort menus (the launcher's `modelSelects`) switch the agent with
+  `session.configure {id, model, effort}`, its conversation kept; they're off while it works ("switch when the agent is
+  idle"), since a restart would cut the turn off. Beside them, where it runs: `gate <policy>` outside a sandbox, and
+  inside one the sandbox and its network ("container · net ask"), since a sandboxed agent runs past the gate. Right: session stats from `AgentState.Stats` (its cost opens the session stats tab, 43), plan usage from `State.Usage` (this provider first), this turn's
   touched files, rules in force (the gate, the sandbox's, and `SessionState.Rules`). Not yet: `@file` completion (an
-  `@path` goes to the agent as written), a multi-line composer, and the model/effort chips as pickers.
+  `@path` goes to the agent as written), and a multi-line composer.
 - A card stacked away from its session's console (permission, network, gateway, question) has **Console** (`g`):
   `agent.console.show {id}` brings the session to the front and opens its console (`session.open` with `then`
   `view.open`), where the card waits with the transcript around it.
@@ -1261,7 +1270,8 @@ out as the Tickets page.
   Start and Continue close the page as the launcher or session comes up.
 - **Refresh**: each source every `reviews.poll` (5m) while Oriel is open, as the page opens (a minute), and on `r`.
   A request that counts and wasn't in the source's last answer, or came back re-requested, is a notice ("mkhan asked
-  you to review api#812"), unless `reviews.notify` is off.
+  you to review api#812"), unless `reviews.notify` is off. Requests asked longer ago than `reviews.max_age` (30d) are
+  left out everywhere.
 - **Elsewhere**: the omnibox lists the same rows (source `reviews`); the assistant's `review_requests` reads them.
 - **No checkout**: the detail says so, and **Add repo…** opens the Add repo dialog (`repos.new`) on the detail's clone
   URL; Start review still works, the launcher picking the repo.

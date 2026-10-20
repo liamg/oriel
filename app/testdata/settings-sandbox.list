@@ -74,14 +74,14 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-rect 0,38 1600x962 fill #060606
-clip 0,38 1600x962 r 0
-  text "SETTINGS" @16,67.96 #ffd23f JetBrains Mono 11
-  rect 95.07,49 420x30 fill #060606 radius 6
-  clip 95.07,49 420x30 r 6
-    text "search · @modified · @project · @plugin:id" @105.07,68.54712 #7c7566 Inter 12.5
+rect 44,38 1556x936 fill #060606
+clip 44,38 1556x936 r 0
+  text "SETTINGS" @60,67.96 #ffd23f JetBrains Mono 11
+  rect 139.07,49 420x30 fill #060606 radius 6
+  clip 139.07,49 420x30 r 6
+    text "search · @modified · @project · @plugin:id" @149.07,68.54712 #7c7566 Inter 12.5
   pop
-  rect 95.07,49 420x30 radius 6 stroke 1 #332f27
+  rect 139.07,49 420x30 radius 6 stroke 1 #332f27
   text "EDITING" @1196.19,67.42 #7c7566 JetBrains Mono 9.5
   clip 1261.5,52 185.09998x24 r 5
     rect 1261.5,52 47.80005x24 fill #1f1c0f
@@ -96,42 +96,42 @@ clip 0,38 1600x962 r 0
     text "TOML" @1546.2,67.42 #7c7566 JetBrains Mono 9.5
   pop
   rect 1460.6,52 123.400024x24 radius 5 stroke 1 #332f27
-  rect 0,90 1600x1 fill #24221d
-  rect 0,91 240x879 fill #0c0c0b
-  clip 0,91 240x879 r 0
-    text "SECTIONS" @8,112.69 #7c7566 JetBrains Mono 9.5
-    text "assistant" @18,144.26901 #b3ab99 Inter 13
-    text "debug" @18,174.26901 #b3ab99 Inter 13
-    text "editor" @18,204.26901 #b3ab99 Inter 13
-    text "files" @18,234.26901 #b3ab99 Inter 13
-    text "git" @18,264.269 #b3ab99 Inter 13
-    text "hud" @18,294.269 #b3ab99 Inter 13
-    text "keymap" @18,324.269 #b3ab99 Inter 13
-    text "lsp" @18,354.269 #b3ab99 Inter 13
-    text "mission" @18,384.269 #b3ab99 Inter 13
-    text "plugins" @18,414.269 #b3ab99 Inter 13
-    text "repos" @18,444.269 #b3ab99 Inter 13
-    text "review" @18,474.269 #b3ab99 Inter 13
-    rect 8,485.54 224x28.00003 fill #1f1c0f radius 5
-    text "sandbox" @18,504.269 #ece6d8 Inter 13
-    text "● 3" @204,503.14 #ffd23f JetBrains Mono 10
-    text "secrets" @18,534.26904 #b3ab99 Inter 13
-    text "sidebar" @18,564.26904 #b3ab99 Inter 13
-    text "stats" @18,594.26904 #b3ab99 Inter 13
-    text "terminal" @18,624.26904 #b3ab99 Inter 13
-    text "ui" @18,654.26904 #b3ab99 Inter 13
-    text "updates" @18,684.26904 #b3ab99 Inter 13
-    text "usage" @18,714.26904 #b3ab99 Inter 13
-    text "voice" @18,744.26904 #b3ab99 Inter 13
-    text "whichkey" @18,774.26904 #b3ab99 Inter 13
+  rect 44,90 1556x1 fill #24221d
+  rect 44,91 240x853 fill #0c0c0b
+  clip 44,91 240x853 r 0
+    text "SECTIONS" @52,112.69 #7c7566 JetBrains Mono 9.5
+    text "assistant" @62,144.26901 #b3ab99 Inter 13
+    text "debug" @62,174.26901 #b3ab99 Inter 13
+    text "editor" @62,204.26901 #b3ab99 Inter 13
+    text "files" @62,234.26901 #b3ab99 Inter 13
+    text "git" @62,264.269 #b3ab99 Inter 13
+    text "hud" @62,294.269 #b3ab99 Inter 13
+    text "keymap" @62,324.269 #b3ab99 Inter 13
+    text "lsp" @62,354.269 #b3ab99 Inter 13
+    text "mission" @62,384.269 #b3ab99 Inter 13
+    text "plugins" @62,414.269 #b3ab99 Inter 13
+    text "repos" @62,444.269 #b3ab99 Inter 13
+    text "review" @62,474.269 #b3ab99 Inter 13
+    rect 52,485.54 224x28.00003 fill #1f1c0f radius 5
+    text "sandbox" @62,504.269 #ece6d8 Inter 13
+    text "● 3" @248,503.14 #ffd23f JetBrains Mono 10
+    text "secrets" @62,534.26904 #b3ab99 Inter 13
+    text "sidebar" @62,564.26904 #b3ab99 Inter 13
+    text "stats" @62,594.26904 #b3ab99 Inter 13
+    text "terminal" @62,624.26904 #b3ab99 Inter 13
+    text "ui" @62,654.26904 #b3ab99 Inter 13
+    text "updates" @62,684.26904 #b3ab99 Inter 13
+    text "usage" @62,714.26904 #b3ab99 Inter 13
+    text "voice" @62,744.26904 #b3ab99 Inter 13
+    text "whichkey" @62,774.26904 #b3ab99 Inter 13
   pop
-  rect 240,91 1x879 fill #24221d
-  clip 241,91 1359x879 r 0
-    text "sandbox" @269,131.54785 #ece6d8 Inter 18
+  rect 284,91 1x853 fill #24221d
+  clip 285,91 1315x853 r 0
+    text "sandbox" @313,131.54785 #ece6d8 Inter 18
     rect 1474.3594,112 97.640625x26 radius 6 stroke 1 #332f27
     text "Reset section" @1484.3594,129.36523 #ece6d8 Inter 12
-    text "sandbox.approval_timeout" @288,169.93774 #ece6d8 JetBrains Mono 12.5
-    text "How long a held gateway call waits for you; 0 is ten minutes." @288,189.79712 #7c7566 Inter 12.5
+    text "sandbox.approval_timeout" @332,169.93774 #ece6d8 JetBrains Mono 12.5
+    text "How long a held gateway call waits for you; 0 is ten minutes." @332,189.79712 #7c7566 Inter 12.5
     text "default" @1202.3906,178.78001 #7c7566 JetBrains Mono 10.5
     rect 1324.5469,160 200x30 fill #060606 radius 6
     clip 1324.5469,160 200x30 r 6
@@ -140,15 +140,15 @@ clip 0,38 1600x962 r 0
     rect 1324.5469,160 200x30 radius 6 stroke 1 #332f27
     rect 1540.5469,162 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,179.36523 #4f4a40 Inter 12
-    text "sandbox.auto_allow_read_only" @288,229.93774 #ece6d8 JetBrains Mono 12.5
-    text "Allow the upstream MCP tools that say they only read, without asking." @288,249.79712 #7c7566 Inter 12.5
+    text "sandbox.auto_allow_read_only" @332,229.93774 #ece6d8 JetBrains Mono 12.5
+    text "Allow the upstream MCP tools that say they only read, without asking." @332,249.79712 #7c7566 Inter 12.5
     text "default" @1202.3906,238.78001 #7c7566 JetBrains Mono 10.5
     rect 1492.5469,226 32x18 fill #23211c radius 9
     rect 1494.5469,228 14x14 fill #ece6d8 radius 7
     rect 1540.5469,222 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,239.36523 #4f4a40 Inter 12
-    text "sandbox.backend" @288,289.93774 #ece6d8 JetBrains Mono 12.5
-    text "What confines the agent: a container engine; or seatbelt, macOS's own sandbox." @288,309.79712 #7c7566 Inter 12.5
+    text "sandbox.backend" @332,289.93774 #ece6d8 JetBrains Mono 12.5
+    text "What confines the agent: a container engine; or seatbelt, macOS's own sandbox." @332,309.79712 #7c7566 Inter 12.5
     text "default" @1202.3906,298.78 #7c7566 JetBrains Mono 10.5
     clip 1387.2468,283 137.30005x24 r 5
       rect 1387.2468,283 61.69995x24 fill #1f1c0f
@@ -158,8 +158,8 @@ clip 0,38 1600x962 r 0
     rect 1387.2468,283 137.30005x24 radius 5 stroke 1 #332f27
     rect 1540.5469,282 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,299.36523 #4f4a40 Inter 12
-    text "sandbox.claude_version" @288,349.93774 #ece6d8 JetBrains Mono 12.5
-    text "The Claude Code version a sandbox runs; empty runs the host's." @288,369.79712 #7c7566 Inter 12.5
+    text "sandbox.claude_version" @332,349.93774 #ece6d8 JetBrains Mono 12.5
+    text "The Claude Code version a sandbox runs; empty runs the host's." @332,369.79712 #7c7566 Inter 12.5
     text "default" @1202.3906,358.78 #7c7566 JetBrains Mono 10.5
     rect 1324.5469,340 200x30 fill #060606 radius 6
     clip 1324.5469,340 200x30 r 6
@@ -167,9 +167,9 @@ clip 0,38 1600x962 r 0
     rect 1324.5469,340 200x30 radius 6 stroke 1 #332f27
     rect 1540.5469,342 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,359.36523 #4f4a40 Inter 12
-    text "sandbox.default" @288,409.75 #ece6d8 JetBrains Mono 12.5
-    text "Where a new session's agent runs: on this machine (host) or in a container (sandbox). The" @288,429.60938 #7c7566 Inter 12.5
-    text "launcher's Sandbox toggle starts here." @288,447.7339 #7c7566 Inter 12.5
+    text "sandbox.default" @332,409.75 #ece6d8 JetBrains Mono 12.5
+    text "Where a new session's agent runs: on this machine (host) or in a container (sandbox). The" @332,429.60938 #7c7566 Inter 12.5
+    text "launcher's Sandbox toggle starts here." @332,447.7339 #7c7566 Inter 12.5
     text "default" @1202.3906,427.6545 #7c7566 JetBrains Mono 10.5
     clip 1408.0969,411.8745 116.44995x24 r 5
       text "HOST" @1418.0969,427.29453 #7c7566 JetBrains Mono 9.5
@@ -179,10 +179,10 @@ clip 0,38 1600x962 r 0
     rect 1408.0969,411.8745 116.44995x24 radius 5 stroke 1 #332f27
     rect 1540.5469,410.8745 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,428.23975 #4f4a40 Inter 12
-    rect 269,507.74902 3x36 fill #ffd23f radius 2
-    text "sandbox.egress" @288,511.6245 #ece6d8 JetBrains Mono 12.5
-    text "Network rules over the preset allowlist, each \"allow|deny host[:port] [private]\": \"allow" @288,531.4839 #7c7566 Inter 12.5
-    text "*.golang.org:443\". A project's apply to its sessions." @288,549.6084 #7c7566 Inter 12.5
+    rect 313,507.74902 3x36 fill #ffd23f radius 2
+    text "sandbox.egress" @332,511.6245 #ece6d8 JetBrains Mono 12.5
+    text "Network rules over the preset allowlist, each \"allow|deny host[:port] [private]\": \"allow" @332,531.4839 #7c7566 Inter 12.5
+    text "*.golang.org:443\". A project's apply to its sessions." @332,549.6084 #7c7566 Inter 12.5
     text "user" @1142.1719,529.52905 #7c7566 JetBrains Mono 10.5
     rect 1184.5469,474.74902 314x30 fill #060606 radius 6
     clip 1184.5469,474.74902 314x30 r 6
@@ -203,29 +203,29 @@ clip 0,38 1600x962 r 0
     rect 1184.5469,546.749 340x30 radius 6 stroke 1 #332f27
     rect 1540.5469,512.749 31.453125x26 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,530.11426 #ece6d8 Inter 12
-    text "sandbox.egress_proxy" @288,613.68677 #ece6d8 JetBrains Mono 12.5
-    text "Filter a container's network through the egress proxy; off allows every connection." @288,633.54614 #7c7566 Inter 12.5
+    text "sandbox.egress_proxy" @332,613.68677 #ece6d8 JetBrains Mono 12.5
+    text "Filter a container's network through the egress proxy; off allows every connection." @332,633.54614 #7c7566 Inter 12.5
     text "default" @1202.3906,622.52905 #7c7566 JetBrains Mono 10.5
     rect 1492.5469,609.749 32x18 fill #ffd23f radius 9
     rect 1508.5469,611.749 14x14 fill #ece6d8 radius 7
     rect 1540.5469,605.749 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,623.11426 #4f4a40 Inter 12
-    text "sandbox.env" @288,673.68677 #ece6d8 JetBrains Mono 12.5
-    text "The host's environment variables a sandbox inherits, by name; empty means the defaults." @288,693.54614 #7c7566 Inter 12.5
+    text "sandbox.env" @332,673.68677 #ece6d8 JetBrains Mono 12.5
+    text "The host's environment variables a sandbox inherits, by name; empty means the defaults." @332,693.54614 #7c7566 Inter 12.5
     text "default" @1202.3906,682.52905 #7c7566 JetBrains Mono 10.5
     rect 1465.4062,665.749 59.140625x26 fill #191815 radius 6 stroke 1 #332f27
     text "none ▾" @1475.4062,683.11426 #ece6d8 Inter 12
     rect 1540.5469,665.749 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,683.11426 #4f4a40 Inter 12
-    text "sandbox.hidden_servers" @288,733.68677 #ece6d8 JetBrains Mono 12.5
-    text "Upstream MCP servers a sandbox never sees, by name." @288,753.54614 #7c7566 Inter 12.5
+    text "sandbox.hidden_servers" @332,733.68677 #ece6d8 JetBrains Mono 12.5
+    text "Upstream MCP servers a sandbox never sees, by name." @332,753.54614 #7c7566 Inter 12.5
     text "default" @1202.3906,742.52905 #7c7566 JetBrains Mono 10.5
     rect 1465.4062,725.749 59.140625x26 fill #191815 radius 6 stroke 1 #332f27
     text "none ▾" @1475.4062,743.11426 #ece6d8 Inter 12
     rect 1540.5469,725.749 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,743.11426 #4f4a40 Inter 12
-    text "sandbox.image" @288,793.68677 #ece6d8 JetBrains Mono 12.5
-    text "The image sandboxes run; empty builds Oriel's base image. A project's applies to its repo." @288,813.54614 #7c7566 Inter 12.5
+    text "sandbox.image" @332,793.68677 #ece6d8 JetBrains Mono 12.5
+    text "The image sandboxes run; empty builds Oriel's base image. A project's applies to its repo." @332,813.54614 #7c7566 Inter 12.5
     text "default" @1202.3906,802.52905 #7c7566 JetBrains Mono 10.5
     rect 1324.5469,783.749 200x30 fill #060606 radius 6
     clip 1324.5469,783.749 200x30 r 6
@@ -233,9 +233,9 @@ clip 0,38 1600x962 r 0
     rect 1324.5469,783.749 200x30 radius 6 stroke 1 #332f27
     rect 1540.5469,785.749 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,803.11426 #4f4a40 Inter 12
-    text "sandbox.loopback" @288,853.499 #ece6d8 JetBrains Mono 12.5
-    text "The host's loopback ports a seatbelt sandbox may connect to: all; ephemeral, not services" @288,873.3584 #7c7566 Inter 12.5
-    text "on fixed ports; or none." @288,891.4829 #7c7566 Inter 12.5
+    text "sandbox.loopback" @332,853.499 #ece6d8 JetBrains Mono 12.5
+    text "The host's loopback ports a seatbelt sandbox may connect to: all; ephemeral, not services" @332,873.3584 #7c7566 Inter 12.5
+    text "on fixed ports; or none." @332,891.4829 #7c7566 Inter 12.5
     text "default" @1202.3906,871.40356 #7c7566 JetBrains Mono 10.5
     clip 1353.3469,855.62354 171.19995x24 r 5
       rect 1353.3469,855.62354 40.849976x24 fill #1f1c0f
@@ -246,9 +246,9 @@ clip 0,38 1600x962 r 0
     rect 1353.3469,855.62354 171.19995x24 radius 5 stroke 1 #332f27
     rect 1540.5469,854.62354 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,871.9888 #4f4a40 Inter 12
-    rect 269,918.49805 3x36 fill #ffd23f radius 2
-    text "sandbox.memory" @288,931.4358 #ece6d8 JetBrains Mono 12.5
-    text "Each container's memory cap in docker's units (\"8g\"); empty is 8g, \"none\" no cap." @288,951.29517 #7c7566 Inter 12.5
+    rect 313,918.49805 3x36 fill #ffd23f radius 2
+    text "sandbox.memory" @332,931.4358 #ece6d8 JetBrains Mono 12.5
+    text "Each container's memory cap in docker's units (\"8g\"); empty is 8g, \"none\" no cap." @332,951.29517 #7c7566 Inter 12.5
     text "user" @1222.1719,940.2781 #7c7566 JetBrains Mono 10.5
     rect 1324.5469,921.49805 200x30 fill #060606 radius 6
     clip 1324.5469,921.49805 200x30 r 6
@@ -257,21 +257,12 @@ clip 0,38 1600x962 r 0
     rect 1324.5469,921.49805 200x30 radius 6 stroke 1 #332f27
     rect 1540.5469,923.49805 31.453125x26 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,940.8633 #ece6d8 Inter 12
-    text "sandbox.pids_limit" @288,991.4358 #ece6d8 JetBrains Mono 12.5
-    text "Each container's process cap; 0 is 4096, -1 no cap." @288,1011.29517 #7c7566 Inter 12.5
-    text "default" @1202.3906,1000.2781 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,981.49805 200x30 fill #060606 radius 6
-    clip 1324.5469,981.49805 200x30 r 6
-    pop
-    rect 1324.5469,981.49805 200x30 radius 6 stroke 1 #332f27
-    rect 1540.5469,983.49805 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,1000.8633 #4f4a40 Inter 12
   pop
-  rect 0,970 1600x30 fill #0c0c0b stroke 1 #24221d
-  text "writing to ~/.config/oriel/settings.toml" @16,988.78 #7c7566 JetBrains Mono 10.5
-  rect 1381.375,972 50.78125x26 fill #191815 radius 6 stroke 1 #332f27
-  text "Undo" @1391.375,989.36523 #4f4a40 Inter 12
-  rect 1444.1562,972 68.5x26 radius 6 stroke 1 #332f27
-  text "Reset all" @1454.1562,989.36523 #ece6d8 Inter 12
-  text "esc close" @1524.6562,988.78 #7c7566 JetBrains Mono 10.5
+  rect 44,944 1556x30 fill #0c0c0b stroke 1 #24221d
+  text "writing to ~/.config/oriel/settings.toml" @60,962.78 #7c7566 JetBrains Mono 10.5
+  rect 1381.375,946 50.78125x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Undo" @1391.375,963.36523 #4f4a40 Inter 12
+  rect 1444.1562,946 68.5x26 radius 6 stroke 1 #332f27
+  text "Reset all" @1454.1562,963.36523 #ece6d8 Inter 12
+  text "esc close" @1524.6562,962.78 #7c7566 JetBrains Mono 10.5
 pop

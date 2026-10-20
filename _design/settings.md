@@ -85,7 +85,7 @@ help and validation are all generated from the spec.
 |---|---|
 | `Name` | `editor.line_numbers`. The section is the prefix. |
 | `Section` | title and order on the page, when it differs from the prefix |
-| `Type` | bool, enum (with values), int or float (with range), string, colour, duration, key, list (of strings), map (strings by name), table (any values by name, which its owner reads: `[plugins]`) |
+| `Type` | bool, enum (with values), int or float (with range), string, colour, duration, key, list (of strings), map (strings by name), table (any values by name, which its owner reads: `[plugins]`). A duration is Go's units with whole days before them (`30d`, `1d12h`), and a whole number of days is written back as days (`registry.ParseDuration`, `FormatDuration`) |
 | `Choices` | the values a string or a list's items suggest, worked out when asked; others are still allowed |
 | `Validate` | refuses a value of the right type that's still wrong: a malformed rule in a list. `registry.ListOf` and `MapOf` make one an editor can ask about a single item or entry |
 | `KeyLabel`, `ValueLabel` | a map's two sides, as the page names them: `name` and `server` |
@@ -140,6 +140,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `reviews.poll` | `5m`: how often every review source is asked for the pull requests waiting on your review | app | | RV-9 |
 | `reviews.count_teams` | `true`: a review asked of a team you're on counts toward the Reviews pill | app | | RV-9 |
 | `reviews.notify` | `true`: a notice when someone asks for your review | app | | RV-9 |
+| `reviews.max_age` | `30d`: review requests asked longer ago are left out of the page, the pill, the picker, the assistant's `review_requests` and the notices; `0` shows them all, and one with no time asked always shows | app | | RV-9 |
 | `code.hosts` | `{}`: which code host a self-hosted server is, by hostname (`gitlab`, `github`, `azure`, `none`); filled in as Oriel finds out or asks; user and project | app | | RV-13 |
 | `code.trusted_users` | `[]`: logins on a code host other than GitHub whose review comments the agent may read, beside the repo's members | app | | RV-13 |
 | `code.api` | `{}`: a self-hosted server's API URL, by hostname, where it isn't the host's usual one | app | | RV-13 |
@@ -192,7 +193,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `stats.split_sessions` | true: a multi-repo session's cost splits over its repos by their share of its file work; off, each repo is charged the whole session. The Stats page's toggle and the session tab's "count whole session in each" both set it | app | | AI-12 |
 | `hud.hold` | alt: the modifier that pulls the HUD down while held on its own (alt, ctrl, shift, super, off) | app | | SH-8 |
 | `hud.hold_delay` | 250: milliseconds the hold key is held alone before the HUD comes down, so a chord doesn't flash it | app | | SH-8 |
-| `mission.at_launch` | true: open on mission control when Oriel starts with nothing open, once there's a session to show | app | | SH-7 |
+| `mission.at_launch` | true: started with nothing open and sessions there, open mission control over the session that was in front | app | | SH-7 |
 | `updates.mode` | `automatic`: updates as Oriel starts, and installs a release that comes out while it runs for the next restart; `ask` downloads it and offers it in a notice; `manual` only checks on `:UpdateCheck` (distribution.md) | app | | PL-6 |
 | `updates.channel` | `stable`; or `nightly`, pre-releases too | app | | PL-6 |
 | `voice.dictation` | true: ⌃⇧Space dictates into the focused text field (a recorder and whisper-server, or `voice.url`, needed); false turns it off | app | | PL-11 |
@@ -215,6 +216,8 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 
 ## The settings page (`:Settings`, ⌘,)
 
+- **Where it sits**: over the main area beside the sidebar (`widget.Page` with `Over`), like Stats and Tickets. Opened
+  from the start view, which has no sidebar, it covers the window under the title bar. Which one is decided as it opens.
 - **Sections** down the left, from the registry. Plugin options get their plugin's section.
 - **Search** across names, help text, aliases and values. `@modified`, `@project` and `@plugin:linear` filter.
 - **Typed controls**: toggle, dropdown, number with range, colour picker, key recorder, list editor.

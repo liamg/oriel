@@ -242,8 +242,10 @@ type Sessions interface {
   starts with its kind's prompt pack. A pull request's link pasted alone into the prompt picks the first listed kind
   that starts from a PR (`FromPR`), with the link in its field; a code host's plugin decides what a link is
   (`registry.CodeHost.Takes`).
-- **The app opens on mission control** (SH-7) once there's a session to show, when it starts with nothing open
-  (`mission.at_launch`); with no session it stays on the start view, whose Recent lists the sessions first.
+- **The start view shows only when there are no sessions.** Started with nothing open and sessions there, the
+  window lands on the one in front last time, else the newest, without resuming its agent, and opens mission control
+  over it (SH-7, `mission.at_launch`); Escape from mission control is in that session. A session started after
+  launch doesn't count. With `mission.at_launch` off the window lands on the session alone.
 - **Files outside the session** open read-only: the sessions plugin's `BufRead` rewrite hook marks a file outside
   every project and the session's own directory "outside the session", and one in a project the session only reads
   (a plan's checkouts before Start work, a review) "the session only reads it". It applies while the window

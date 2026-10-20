@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -263,58 +262,6 @@ func TestMenuHoverLagBudget(t *testing.T) {
 	r.settle()
 	first, second, third := r.textPoint("Move pane…"), r.textPoint("Close"), r.textPoint("? Help")
 	r.lag("menu", sweep(first, render.Point{X: first.X + 60, Y: first.Y}, 200), []render.Point{second, third}, 40)
-}
-
-// A move that reaches the loop long after it happened is logged with how far behind it was, so lag on a machine
-// tests can't reproduce says where it is.
-func TestPointerFallingBehindIsLogged(t *testing.T) {
-	logs := NewLogs(LogOpts{})
-	r := lagAppWith(t, func(c *Config) { c.Logs = logs })
-	warned := func() (string, bool) {
-		for _, rec := range logs.Ring.Tail(50) {
-			if rec.Msg == "the pointer fell behind" {
-				return rec.Text(), true
-			}
-		}
-		return "", false
-	}
-	r.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: r.textPoint("f00.go"), At: time.Now()})
-	r.settle()
-	if got, ok := warned(); ok {
-		t.Fatalf("a move on time was logged: %s", got)
-	}
-	r.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: r.textPoint("f20.go"), At: time.Now().Add(-300 * time.Millisecond)})
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if got, ok := warned(); ok {
-			if !strings.Contains(got, "drawn after") {
-				t.Errorf("the log doesn't say how far behind: %s", got)
-			}
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("a move 300 ms late wasn't logged: %v", logs.Ring.Tail(10))
-}
-
-// A frame the window was slow to put on screen is logged with where the time went.
-func TestSlowFrameIsLogged(t *testing.T) {
-	logs := NewLogs(LogOpts{})
-	r := startAppWith(t, t.TempDir(), t.TempDir(), nil, func(c *Config) { c.Logs = logs })
-	r.win.Send(render.SlowFrameEvent{Waited: 900 * time.Millisecond, Took: 20 * time.Millisecond})
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		for _, rec := range logs.Ring.Tail(50) {
-			if rec.Msg == "the window was slow to show a frame" {
-				if !strings.Contains(rec.Text(), "900ms") {
-					t.Errorf("the log doesn't say how long it waited: %s", rec.Text())
-				}
-				return
-			}
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("no log of the slow frame: %v", logs.Ring.Tail(10))
 }
 
 // explorerFrame is the average frame with the Explorer open on dir's Changed scope, once every diff is made.

@@ -232,18 +232,18 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		quiet = (due.IsZero() || now.Before(due)) && (next.IsZero() || now.Before(next))
 	}
 	for {
-		l.timed(func() string { return "work queued for the loop (Host.Do)" }, sh.runTodo)
+		l.timed(sh.runTodo)
 		framed := !quiet
 		quiet = false
 		if framed {
 			sh.seeNav(l.reg, l.ui.Now())
 			var derr error
-			l.timed(func() string { return "building a frame" }, func() { derr = l.draw() })
+			l.timed(func() { derr = l.draw() })
 			if derr != nil {
 				return derr
 			}
 			drawn, due = time.Now(), time.Time{}
-			if l.input.built(l.log) {
+			if l.input.built() {
 				l.stalls.stalled()
 			}
 		}
@@ -271,7 +271,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			ev := held
 			held = nil
 			var changed bool
-			l.timed(func() string { return describeEvent(ev) }, func() { changed = l.handle(ctx, ev) })
+			l.timed(func() { changed = l.handle(ctx, ev) })
 			pointed(ev, changed)
 			continue
 		}
@@ -303,7 +303,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 			}
 			ev, held = lastMove(ev, w.Events())
 			var changed bool
-			l.timed(func() string { return describeEvent(ev) }, func() { changed = l.handle(ctx, ev) })
+			l.timed(func() { changed = l.handle(ctx, ev) })
 			pointed(ev, changed)
 		}
 	}
@@ -565,20 +565,17 @@ type loop struct {
 	ui    *ui.UI
 	log   *slog.Logger
 
-	slowLogged time.Time // the last slow loop logged, so a slow stretch logs once a second
-	input      inputLag
-	stalls     *stallTrace
+	input  inputLag
+	stalls *stallTrace
 }
 
-// lagWarn is how far behind the pointer may fall, from when it moved to a frame built with it, before it's logged.
+// lagWarn is how far behind the pointer may fall, from when it moved to a frame built with it, before it's a stall.
 const lagWarn = 100 * time.Millisecond
 
-// inputLag times the pointer's moves through the loop: when each reached it, and when a frame was built with it.
+// inputLag times the pointer's moves through the loop, from when each happened to a frame built with it.
 type inputLag struct {
-	oldest  time.Time     // the earliest move not yet in a frame
-	reached time.Duration // the longest a move took to reach the loop since the last frame
-	drawn   time.Duration // the last frame's: from its oldest move to built, for the debug overlay
-	logged  time.Time
+	oldest time.Time     // the earliest move not yet in a frame
+	drawn  time.Duration // the last frame's: from its oldest move to built, for the debug overlay
 }
 
 // arrived notes a move that happened at at, reaching the loop now; one that changed nothing needs no frame.
@@ -586,42 +583,29 @@ func (in *inputLag) arrived(at time.Time, changed bool) {
 	if at.IsZero() || !changed {
 		return
 	}
-	in.reached = max(in.reached, time.Since(at))
 	if in.oldest.IsZero() || at.Before(in.oldest) {
 		in.oldest = at
 	}
 }
 
-// built ends a frame, and logs, once a second at most, when the moves in it had fallen behind. It reports whether
-// they had.
-func (in *inputLag) built(log *slog.Logger) bool {
+// built ends a frame. It reports whether the moves in it had fallen behind.
+func (in *inputLag) built() bool {
 	if in.oldest.IsZero() {
 		return false
 	}
 	in.drawn = time.Since(in.oldest)
-	reached := in.reached
-	in.oldest, in.reached = time.Time{}, 0
-	if in.drawn <= lagWarn {
-		return false
-	}
-	if time.Since(in.logged) > time.Second {
-		in.logged = time.Now()
-		log.Warn("the pointer fell behind", "reached the loop after", reached.Round(time.Millisecond),
-			"drawn after", in.drawn.Round(time.Millisecond))
-	}
-	return true
+	in.oldest = time.Time{}
+	return in.drawn > lagWarn
 }
 
-// slowLoop is how long one turn of the loop may take before it's logged: keys typed meanwhile wait behind it.
+// slowLoop is how long one turn of the loop may take before it's a stall: keys typed meanwhile wait behind it.
 const slowLoop = 50 * time.Millisecond
 
-// timed runs fn, and logs it when it holds the loop up past slowLoop, naming what it was.
-func (l *loop) timed(what func() string, fn func()) {
+// timed runs fn, and traces a stall when it holds the loop up past slowLoop.
+func (l *loop) timed(fn func()) {
 	start := time.Now()
 	fn()
-	if d := time.Since(start); d > slowLoop && time.Since(l.slowLogged) > time.Second {
-		l.slowLogged = time.Now()
-		l.log.Warn("the window was held up", "by", what(), "took", d.Round(time.Millisecond))
+	if time.Since(start) > slowLoop {
 		l.stalls.stalled()
 	}
 }
@@ -714,7 +698,6 @@ func (l *loop) handle(ctx context.Context, ev render.Event) bool {
 		l.win.SetCursor(l.ui.Cursor())
 		return changed
 	case render.SlowFrameEvent:
-		l.log.Warn("the window was slow to show a frame", "waited", ev.Waited.Round(time.Millisecond), "took", ev.Took.Round(time.Millisecond))
 		l.stalls.stalled()
 		return false
 	case render.AppearanceEvent:
@@ -794,17 +777,6 @@ func (sh *shell) baseKeyModes() []string {
 }
 
 // run runs mapped commands, and gives unmapped keys to the focused widget.
-// describeEvent names an input event for the log.
-func describeEvent(ev render.Event) string {
-	switch ev := ev.(type) {
-	case render.KeyEvent:
-		return "the key " + notation(ev)
-	case render.PointerEvent:
-		return "a pointer event"
-	}
-	return fmt.Sprintf("%T", ev)
-}
-
 func (l *loop) run(ctx context.Context, acts []registry.Action) {
 	for _, a := range acts {
 		if a.Keymap == nil {
@@ -821,7 +793,7 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 			continue
 		}
 		var err error
-		l.timed(func() string { return "the command " + a.Keymap.Command }, func() { err = l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args) })
+		l.timed(func() { err = l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args) })
 		if err != nil {
 			if _, ok := err.(*registry.Panic); !ok {
 				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir)})

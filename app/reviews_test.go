@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -277,6 +278,55 @@ oriel.code.host{ name = "gitlab", title = "GitLab", order = 20, takes = [[/-/mer
   end,
   checkout = function(site, url, done) done({ remote = "acme/gateway", ref = "merge-requests/57/head" }) end }
 `
+
+// reviews.max_age leaves out requests asked longer ago, on the page and in the pill alike; 0 shows them all, and a
+// request with no time asked is always shown.
+func TestOldReviewRequestsLeftOut(t *testing.T) {
+	s, _, _, _ := reviewScene(t)
+	s.now = at(12, 0, 0)
+	m, err := plugin.ParseManifest([]byte("id = \"acme/gitlab\"\nversion = \"0.1.0\"\ndescription = \"A GitLab-like source\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := plugin.NewGrants()
+	g.Grant(m.ID, m.Permissions)
+	vm := s.pluginVM(t, plugin.Caller{ID: m.ID, Dir: t.TempDir(), Guard: g})
+	ask := func(n int, title, asked string) string {
+		return fmt.Sprintf(`{ url = "https://gitlab.com/acme/gateway/-/merge_requests/%d", repo = "acme/gateway", number = %d, title = %q, author = "rlopez"%s }`,
+			n, n, title, asked)
+	}
+	src := `oriel.code.host{ name = "gitlab", title = "GitLab", order = 20, takes = [[/-/merge_requests/\d+]],
+  sites = { { host = "gitlab.com", api = "https://gitlab.com/api/v4" } }, path = [[^/?(.+?)(?:\.git)?/?$]],
+  requested = function(site, done) done({ ` + ask(1, "Recent ask", `, asked = "2026-10-11T09:00:00Z"`) + `, ` +
+		ask(2, "Ancient ask", `, asked = "2026-08-01T09:00:00Z"`) + `, ` + ask(3, "Undated ask", "") + ` }) end }`
+	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(src)}); err != nil {
+		t.Fatal(err)
+	}
+	s.frame()
+	s.run("reviews.open", nil)
+	s.until(t, "GitLab's", func() bool { return strings.Contains(s.frameText(), "Recent ask") })
+	titles := func() (out []string) {
+		for _, r := range s.reviews().rows() {
+			if r.req != nil && strings.Contains(r.req.URL, "gitlab.com") {
+				out = append(out, r.req.Title)
+			}
+		}
+		slices.Sort(out)
+		return out
+	}
+	if got := titles(); !slices.Equal(got, []string{"Recent ask", "Undated ask"}) {
+		t.Errorf("with reviews.max_age 30d: %v", got)
+	}
+	if strings.Contains(s.frameText(), "Ancient ask") {
+		t.Error("the page lists a request asked 73 days ago")
+	}
+	if err := s.reg.Options().Set("reviews.max_age", registry.LayerUser, registry.At{}, time.Duration(0)); err != nil {
+		t.Fatal(err)
+	}
+	if got := titles(); len(got) != 3 {
+		t.Errorf("with reviews.max_age 0: %v", got)
+	}
+}
 
 // api.md, "Lua": oriel.code.host brings a code host; its requests list beside GitHub's with a source chip, and
 // a review of one fetches what its checkout says (Phase 2: "the source resolves checkout").

@@ -429,6 +429,10 @@ func TestLinearTicketsPage(t *testing.T) {
 	s.until(t, "the ticket's detail", func() bool {
 		return strings.Contains(s.frameText(), "Evict the org's cached results when its index is rebuilt")
 	})
+	// The whole description, as markdown: past its first paragraph, a list's bold drawn without its stars.
+	if text := s.frameText(); !strings.Contains(text, "Then warm the cache:") || !strings.Contains(text, "top queries") || strings.Contains(text, "**") {
+		t.Errorf("the detail doesn't show the whole description as markdown:\n%s", text)
+	}
 	s.lint("the tickets page")
 	s.golden("tickets-page")
 }

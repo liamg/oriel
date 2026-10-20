@@ -467,7 +467,10 @@ func (x *ticketsPlugin) pageDetail(c *ui.Ctx, r ticketRow) {
 		if len(full.Facts) > 0 {
 			c.Text("facts", strings.Join(full.Facts, " · "), monoFont(11, th.C(theme.FgFaint)))
 		}
-		if full.Summary != "" {
+		switch {
+		case full.Description != "":
+			markdownText(c, "description", full.Description, 640, uiFont(13, th.C(theme.FgMuted)))
+		case full.Summary != "":
 			widget.Wrap(c, "summary", full.Summary, 640, uiFont(13, th.C(theme.FgMuted)))
 		}
 	}

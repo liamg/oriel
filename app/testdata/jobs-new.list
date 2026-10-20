@@ -14,6 +14,7 @@ clip 102.9375,0 1353.2438x38 r 0
   text "job" @260.375,23.599998 #7c7566 JetBrains Mono 10
   text "⌘1" @285.375,23.42 #4f4a40 JetBrains Mono 9.5
   rect 309.375,0 1x38 fill #24221d
+  text "+" @325.47656,23.355999 #7c7566 JetBrains Mono 12.1
 pop
 text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
 rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
@@ -222,22 +223,15 @@ clip 224,38 1376x936 r 0
   path 3 segments stroke 1.25 #ffd23f
   text "Jobs" @406,574.49835 #ece6d8 Inter 12
   text "6 jobs" @440.71875,573.73315 #7c7566 JetBrains Mono 10
-  rect 494.71875,557.1331 192.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 5 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  text "Mission control" @523.71875,574.49835 #ece6d8 Inter 12
-  text "2 need you" @617.40625,573.73315 #7c7566 JetBrains Mono 10
-  rect 695.40625,557.1331 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  rect 494.71875,557.1331 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
   path 6 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
-  text "Prompts" @724.40625,574.49835 #ece6d8 Inter 12
-  rect 789.90625,557.1331 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  text "…" @799.90625,573.8051 #ffd23f JetBrains Mono 10.200001
-  text "Plugins" @818.90625,574.49835 #ece6d8 Inter 12
+  text "Prompts" @523.71875,574.49835 #ece6d8 Inter 12
+  rect 589.21875,557.1331 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  text "…" @599.21875,573.8051 #ffd23f JetBrains Mono 10.200001
+  text "Plugins" @618.21875,574.49835 #ece6d8 Inter 12
   text "RECENT" @987,204.28311 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1341.0469,204.7931 #7c7566 JetBrains Mono 10
   text "SESSIONS" @999,235.48311 #7c7566 JetBrains Mono 9.5

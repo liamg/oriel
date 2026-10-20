@@ -14,6 +14,7 @@ clip 102.9375,0 1353.2438x38 r 0
   text "job" @260.375,23.599998 #7c7566 JetBrains Mono 10
   text "⌘1" @285.375,23.42 #4f4a40 JetBrains Mono 9.5
   rect 309.375,0 1x38 fill #24221d
+  text "+" @325.47656,23.355999 #7c7566 JetBrains Mono 12.1
 pop
 text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
 rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
@@ -101,11 +102,9 @@ clip 44,38 1556x936 r 0
     rect 60,80 22x22 fill #191815 radius 5
     text "CL" @65.59375,94.24 #ece6d8 JetBrains Mono 9
     text "Claude" @92,95.729004 #ece6d8 Inter 13
-    text "claude-opus-4-1" @146.20312,94.96 #7c7566 JetBrains Mono 11
-    text "high" @255.10938,94.96 #7c7566 JetBrains Mono 11
-    rect 291.48438,82.73 40.28x16.54 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
-    text "IDLE" @298.48438,94.420006 #4fe0a0 JetBrains Mono 9.5
-    text "job: sweep stale deps · tester/sweep-stale-deps-8" @341.76437,94.96 #7c7566 JetBrains Mono 11
+    rect 146.20312,82.73 40.28x16.54 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
+    text "IDLE" @153.20312,94.420006 #4fe0a0 JetBrains Mono 9.5
+    text "job: sweep stale deps · tester/sweep-stale-deps-8" @196.48312,94.96 #7c7566 JetBrains Mono 11
     rect 1322.875,78 45.25x26 fill #191815 radius 6 stroke 1 #332f27
     text "Fork" @1332.875,95.365234 #ece6d8 Inter 12
     rect 1378.125,78 101.609375x26 fill #191815 radius 6 stroke 1 #332f27
@@ -118,22 +117,20 @@ clip 44,38 1556x936 r 0
     rect 206.5,126 900x35.12451 fill #0c0c0b radius 6 stroke 1 #24221d
     text "THREAD · IN API, WEB AND PRICING, BUMP EVERY DEPEND…" @220.5,146.98225 #ff9b45 JetBrains Mono 9.5
     text "In api, web and pricing, bump every dependency that's behind on a minor or…" @611.6598,148.10938 #ece6d8 Inter 12.5
-    clip 44,161.12451 1225x737.3355 r 0
+    clip 44,161.12451 1225x727.8755 r 0
       text "Nothing yet: the agent's turns show here as they happen." @480.41406,185.23389 #4f4a40 Inter 12.5
     pop
-    rect 44,898.46 1225x1 fill #24221d
-    rect 68,909.46 1177x30 fill #060606 radius 6
-    clip 68,909.46 1177x30 r 6
-      text "Write to the agent: ⏎ sends" @78,929.00714 #7c7566 Inter 12.5
+    rect 44,889 1225x1 fill #24221d
+    rect 68,900 1177x30 fill #060606 radius 6
+    clip 68,900 1177x30 r 6
+      text "Write to the agent: ⏎ sends" @78,919.5471 #7c7566 Inter 12.5
     pop
-    rect 68,909.46 1177x30 radius 6 stroke 1 #332f27
-    rect 68,947.46 112.54999x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-    text "CLAUDE-OPUS-4-1" @75,959.15 #b3ab99 JetBrains Mono 9.5
-    rect 188.54999,947.46 86.26999x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-    text "EFFORT HIGH" @195.54999,959.15 #b3ab99 JetBrains Mono 9.5
-    rect 282.82,947.46 79.70001x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-    text "GATE LIGHT" @289.82,959.15 #b3ab99 JetBrains Mono 9.5
-    text "@path names a file · ⏎ send · ⌘⏎ send now" @998.9999,959.33 #4f4a40 JetBrains Mono 10
+    rect 68,900 1177x30 radius 6 stroke 1 #332f27
+    rect 68,938 126.71875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "claude-opus-4-1 ▾" @78,955.36523 #ece6d8 Inter 12
+    rect 492.935,942.73 73.130005x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+    text "CONTAINER" @499.935,954.42 #b3ab99 JetBrains Mono 9.5
+    text "@path names a file · ⏎ send · ⌘⏎ send now" @999,954.60004 #4f4a40 JetBrains Mono 10
     rect 1269,114 1x860 fill #24221d
     rect 1270,114 330x860 fill #0c0c0b
     clip 1270,114 330x860 r 0

@@ -460,6 +460,7 @@ func TestHeldAlone(t *testing.T) {
 	if m, _ := alone(); m != 0 {
 		t.Fatalf("held alone before anything's down: %v", m)
 	}
+	h.u.Chord() // a key typed with nothing held
 	h.u.Mods(render.ModAlt)
 	t0 := h.clk.t
 	h.clk.advance(300 * time.Millisecond)
@@ -587,5 +588,50 @@ func TestDialogOverANestedDialogHoldsFocus(t *testing.T) {
 	paintOps(u, render.Point{X: 300, Y: 300}, build)
 	if u.Focused() != field {
 		t.Errorf("focus = %v, want the second dialog's field %v", u.Focused(), field)
+	}
+}
+
+// A second click on the same node within DoubleClick is a double-click; two slow ones, or on different nodes, aren't.
+func TestDoubleClick(t *testing.T) {
+	h := newHarness()
+	var save, quit Interaction
+	build := func() {
+		paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) {
+			c.Row("bar", Style{Pad: Pad(10), Gap: 10}, func(c *Ctx) {
+				save = button(c, "save", false)
+				quit = button(c, "quit", false)
+			})
+		})
+	}
+	click := func(x float32) {
+		h.pointer(render.PointerMove, x, 20)
+		h.pointer(render.PointerPress, x, 20)
+		h.pointer(render.PointerRelease, x, 20)
+		build()
+	}
+	build()
+	click(20)
+	if !save.Clicked || save.DoubleClicked {
+		t.Fatalf("one click: clicked %v, double %v", save.Clicked, save.DoubleClicked)
+	}
+	h.clk.advance(DoubleClick / 2)
+	click(20)
+	if !save.Clicked || !save.DoubleClicked {
+		t.Errorf("a second click soon after: clicked %v, double %v", save.Clicked, save.DoubleClicked)
+	}
+	h.clk.advance(DoubleClick / 2)
+	click(20)
+	if save.DoubleClicked {
+		t.Error("a third click made a second double-click")
+	}
+	h.clk.advance(DoubleClick * 2)
+	click(20)
+	if save.DoubleClicked {
+		t.Error("two slow clicks made a double-click")
+	}
+	h.clk.advance(DoubleClick / 4)
+	click(110)
+	if quit.DoubleClicked || !quit.Clicked {
+		t.Errorf("a click on another node after one on save: double %v", quit.DoubleClicked)
 	}
 }

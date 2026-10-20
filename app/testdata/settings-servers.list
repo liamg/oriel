@@ -74,14 +74,14 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-rect 0,38 1600x962 fill #060606
-clip 0,38 1600x962 r 0
-  text "SETTINGS" @16,67.96 #ffd23f JetBrains Mono 11
-  rect 95.07,49 420x30 fill #060606 radius 6
-  clip 95.07,49 420x30 r 6
-    text "sandbox.servers" @105.07,68.54712 #ece6d8 Inter 12.5
+rect 44,38 1556x936 fill #060606
+clip 44,38 1556x936 r 0
+  text "SETTINGS" @60,67.96 #ffd23f JetBrains Mono 11
+  rect 139.07,49 420x30 fill #060606 radius 6
+  clip 139.07,49 420x30 r 6
+    text "sandbox.servers" @149.07,68.54712 #ece6d8 Inter 12.5
   pop
-  rect 95.07,49 420x30 radius 6 stroke 1 #332f27
+  rect 139.07,49 420x30 radius 6 stroke 1 #332f27
   text "EDITING" @1196.19,67.42 #7c7566 JetBrains Mono 9.5
   clip 1261.5,52 185.09998x24 r 5
     rect 1261.5,52 47.80005x24 fill #1f1c0f
@@ -96,41 +96,41 @@ clip 0,38 1600x962 r 0
     text "TOML" @1546.2,67.42 #7c7566 JetBrains Mono 9.5
   pop
   rect 1460.6,52 123.400024x24 radius 5 stroke 1 #332f27
-  rect 0,90 1600x1 fill #24221d
-  rect 0,91 240x879 fill #0c0c0b
-  clip 0,91 240x879 r 0
-    text "SECTIONS" @8,112.69 #7c7566 JetBrains Mono 9.5
-    text "assistant" @18,144.26901 #b3ab99 Inter 13
-    text "debug" @18,174.26901 #b3ab99 Inter 13
-    text "editor" @18,204.26901 #b3ab99 Inter 13
-    text "files" @18,234.26901 #b3ab99 Inter 13
-    text "git" @18,264.269 #b3ab99 Inter 13
-    text "hud" @18,294.269 #b3ab99 Inter 13
-    text "keymap" @18,324.269 #b3ab99 Inter 13
-    text "lsp" @18,354.269 #b3ab99 Inter 13
-    text "mission" @18,384.269 #b3ab99 Inter 13
-    text "plugins" @18,414.269 #b3ab99 Inter 13
-    text "repos" @18,444.269 #b3ab99 Inter 13
-    text "review" @18,474.269 #b3ab99 Inter 13
-    text "sandbox" @18,504.269 #b3ab99 Inter 13
-    text "● 1" @204,503.14 #ffd23f JetBrains Mono 10
-    text "secrets" @18,534.26904 #b3ab99 Inter 13
-    text "sidebar" @18,564.26904 #b3ab99 Inter 13
-    text "stats" @18,594.26904 #b3ab99 Inter 13
-    text "terminal" @18,624.26904 #b3ab99 Inter 13
-    text "ui" @18,654.26904 #b3ab99 Inter 13
-    text "updates" @18,684.26904 #b3ab99 Inter 13
-    text "usage" @18,714.26904 #b3ab99 Inter 13
-    text "voice" @18,744.26904 #b3ab99 Inter 13
-    text "whichkey" @18,774.26904 #b3ab99 Inter 13
+  rect 44,90 1556x1 fill #24221d
+  rect 44,91 240x853 fill #0c0c0b
+  clip 44,91 240x853 r 0
+    text "SECTIONS" @52,112.69 #7c7566 JetBrains Mono 9.5
+    text "assistant" @62,144.26901 #b3ab99 Inter 13
+    text "debug" @62,174.26901 #b3ab99 Inter 13
+    text "editor" @62,204.26901 #b3ab99 Inter 13
+    text "files" @62,234.26901 #b3ab99 Inter 13
+    text "git" @62,264.269 #b3ab99 Inter 13
+    text "hud" @62,294.269 #b3ab99 Inter 13
+    text "keymap" @62,324.269 #b3ab99 Inter 13
+    text "lsp" @62,354.269 #b3ab99 Inter 13
+    text "mission" @62,384.269 #b3ab99 Inter 13
+    text "plugins" @62,414.269 #b3ab99 Inter 13
+    text "repos" @62,444.269 #b3ab99 Inter 13
+    text "review" @62,474.269 #b3ab99 Inter 13
+    text "sandbox" @62,504.269 #b3ab99 Inter 13
+    text "● 1" @248,503.14 #ffd23f JetBrains Mono 10
+    text "secrets" @62,534.26904 #b3ab99 Inter 13
+    text "sidebar" @62,564.26904 #b3ab99 Inter 13
+    text "stats" @62,594.26904 #b3ab99 Inter 13
+    text "terminal" @62,624.26904 #b3ab99 Inter 13
+    text "ui" @62,654.26904 #b3ab99 Inter 13
+    text "updates" @62,684.26904 #b3ab99 Inter 13
+    text "usage" @62,714.26904 #b3ab99 Inter 13
+    text "voice" @62,744.26904 #b3ab99 Inter 13
+    text "whichkey" @62,774.26904 #b3ab99 Inter 13
   pop
-  rect 240,91 1x879 fill #24221d
-  clip 241,91 1359x879 r 0
-    text "1 matching \"sandbox.servers\"" @269,131.54785 #ece6d8 Inter 18
-    rect 269,165.87451 3x36 fill #ffd23f radius 2
-    text "sandbox.servers" @288,169.75 #ece6d8 JetBrains Mono 12.5
-    text "Extra MCP servers for the gateway, by name: an https URL, or a command line (\"npx -y" @288,189.60938 #7c7566 Inter 12.5
-    text "@foo/mcp\")." @288,207.73389 #7c7566 Inter 12.5
+  rect 284,91 1x853 fill #24221d
+  clip 285,91 1315x853 r 0
+    text "1 matching \"sandbox.servers\"" @313,131.54785 #ece6d8 Inter 18
+    rect 313,165.87451 3x36 fill #ffd23f radius 2
+    text "sandbox.servers" @332,169.75 #ece6d8 JetBrains Mono 12.5
+    text "Extra MCP servers for the gateway, by name: an https URL, or a command line (\"npx -y" @332,189.60938 #7c7566 Inter 12.5
+    text "@foo/mcp\")." @332,207.73389 #7c7566 Inter 12.5
     text "user" @1222.1719,187.65453 #7c7566 JetBrains Mono 10.5
     text "2 servers" @1404.3125,188.42163 #b3ab99 Inter 12.5
     rect 1471.8594,170.87451 52.6875x26 fill #191815 radius 6 stroke 1 #332f27
@@ -138,13 +138,13 @@ clip 0,38 1600x962 r 0
     rect 1540.5469,170.87451 31.453125x26 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,188.23975 #ece6d8 Inter 12
   pop
-  rect 0,970 1600x30 fill #0c0c0b stroke 1 #24221d
-  text "writing to ~/.config/oriel/settings.toml" @16,988.78 #7c7566 JetBrains Mono 10.5
-  rect 1381.375,972 50.78125x26 fill #191815 radius 6 stroke 1 #332f27
-  text "Undo" @1391.375,989.36523 #4f4a40 Inter 12
-  rect 1444.1562,972 68.5x26 radius 6 stroke 1 #332f27
-  text "Reset all" @1454.1562,989.36523 #ece6d8 Inter 12
-  text "esc close" @1524.6562,988.78 #7c7566 JetBrains Mono 10.5
+  rect 44,944 1556x30 fill #0c0c0b stroke 1 #24221d
+  text "writing to ~/.config/oriel/settings.toml" @60,962.78 #7c7566 JetBrains Mono 10.5
+  rect 1381.375,946 50.78125x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Undo" @1391.375,963.36523 #4f4a40 Inter 12
+  rect 1444.1562,946 68.5x26 radius 6 stroke 1 #332f27
+  text "Reset all" @1454.1562,963.36523 #ece6d8 Inter 12
+  text "esc close" @1524.6562,962.78 #7c7566 JetBrains Mono 10.5
 pop
 rect 0,0 1600x1000 fill #030508b8
 rect 480,364.5752 640x270.8496 fill #0c0c0b radius 10

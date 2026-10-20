@@ -250,7 +250,7 @@ func (x *planPlugin) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState
 				p.Models = []agent.Model{{ID: d.model}}
 			}
 			if len(p.Models) > 0 {
-				if m, e, ok := modelSelects(c, p, d.model, d.effort, startWorkHelp); ok {
+				if m, e, ok := modelSelects(c, p, d.model, d.effort, false, startWorkHelp); ok {
 					d.model, d.effort = m, e
 				}
 			}

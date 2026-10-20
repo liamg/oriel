@@ -157,9 +157,6 @@ func (x *editorPlugin) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	})
 }
 
-// mouseTime is how close together clicks must come to count as a double or triple click.
-const mouseTime = 400 * time.Millisecond
-
 // paneDrag is a press in a window: where it started, how many clicks it is, and whether it's on the gutter.
 type paneDrag struct {
 	held, gutter bool
@@ -197,7 +194,7 @@ func (x *editorPlugin) pointer(c *ui.Ctx, p vim.Pane, st input.State, in ui.Inte
 			return
 		}
 		now := c.Now()
-		if now.Sub(d.last) < mouseTime && pos == d.lastAt {
+		if now.Sub(d.last) < ui.DoubleClick && pos == d.lastAt {
 			d.clicks++
 		} else {
 			d.clicks = 1

@@ -484,7 +484,7 @@ func (w *Host) StartWork(ctx context.Context, r StartWorkReq) (err error) {
 		}
 		prompt += note
 	}
-	if err := w.workAgent(id, r); err != nil {
+	if err := w.workAgent(id, r, "start work"); err != nil {
 		return err
 	}
 	_, err = w.Comment(ctx, CommentReq{Session: id, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
@@ -534,9 +534,33 @@ func threadPlace(t core.Thread) string {
 
 func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
-// workAgent readies the session's agent for the work: on the model, effort, sandbox and network r gives, restarted
-// fresh on the work pack unless its conversation is kept, and restarted by its own id when only those changed.
-func (w *Host) workAgent(id core.SessionID, r StartWorkReq) error {
+// Configure restarts the session's agent on another model or effort, its conversation kept. It refuses mid-turn,
+// which a restart would cut off.
+func (w *Host) Configure(ctx context.Context, r ConfigureReq) (err error) {
+	defer w.recover("Configure", &err)
+	se, err := w.session(r.Session)
+	if err != nil {
+		return err
+	}
+	switch {
+	case se.Agent.Provider == "":
+		return errors.New("this session has no agent")
+	case se.Agent.Working:
+		return errors.New("switch when the agent is idle")
+	}
+	running := se.Agent.Live()
+	if err := w.workAgent(r.Session, StartWorkReq{Model: r.Model, Effort: r.Effort, KeepConversation: true}, "switching model"); err != nil {
+		return err
+	}
+	if !running {
+		return nil
+	}
+	return w.Resume(ctx, r.Session)
+}
+
+// workAgent readies the session's agent: on the model, effort, sandbox and network r gives, restarted fresh on the
+// work pack unless its conversation is kept, and restarted by its own id when only those changed; why is the stop's.
+func (w *Host) workAgent(id core.SessionID, r StartWorkReq, why string) error {
 	se, err := w.session(id)
 	if err != nil {
 		return err
@@ -569,7 +593,7 @@ func (w *Host) workAgent(id core.SessionID, r StartWorkReq) error {
 		return nil
 	}
 	if h, _ := w.sessionFor(id, false); h != nil {
-		h.stop("start work", "")
+		h.stop(why, "")
 	}
 	w.edit.Lock()
 	defer w.edit.Unlock()

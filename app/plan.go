@@ -87,6 +87,8 @@ func (x *planPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.View(OverlayPrefix+"plan.start-work", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "startwork", Fn: x.startWorkView}
 	})))
+	x.add(h.Contribute(registry.RailEntry{Name: "plan-docs", Icon: "doc", Title: "Plan docs", Command: "view.toggle", Args: planDocsArgs(),
+		Order: 45, Shown: func(string) bool { se, ok := x.front(); return ok && se.Planning() }}))
 	x.add(h.View(PlanView, planView{x}))
 	x.add(h.View(PlanDocsView, planDocsView{x}))
 	x.add(onDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
@@ -141,7 +143,7 @@ func (x *planPlugin) open(ctx context.Context, doc string) error {
 		shown[v.ID] = true
 	}
 	if !shown[PlanDocsView] {
-		if err := x.h.Run(ctx, "view.open", registry.Args{"id": PlanDocsView, "place": "dock", "edge": "left", "size": 260, "title": "Plan docs"}); err != nil {
+		if err := x.h.Run(ctx, "view.open", planDocsArgs()); err != nil {
 			return err
 		}
 	}
@@ -553,4 +555,9 @@ func editedAgo(now, t time.Time) string {
 		return fmt.Sprintf("%ds ago", max(int(d.Seconds()), 0))
 	}
 	return ago(now, t) + " ago"
+}
+
+// planDocsArgs are view.open's args for the Plan docs panel: in the sidebar, alone and fixed.
+func planDocsArgs() registry.Args {
+	return sidebarArgs("view.open", registry.Args{"id": PlanDocsView, "place": "dock", "edge": "left", "size": 260, "title": "Plan docs"})
 }

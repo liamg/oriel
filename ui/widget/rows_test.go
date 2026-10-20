@@ -91,3 +91,29 @@ func TestRowsClickSelects(t *testing.T) {
 		t.Errorf("Enter on the selected row opened %d", opened)
 	}
 }
+
+// Rows hands up the keys it doesn't use: Escape after ↓ reaches the page the rows are on.
+func TestRowsPassKeysOn(t *testing.T) {
+	open, sel := true, 0
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		Page(c, "page", &open, PageOpts{KeyMode: "page", Help: "test/page"}, func(c *ui.Ctx) {
+			id = c.Next("rows")
+			Rows(c, "rows", 3, &sel, RowsOpts{Help: "test/rows", Label: "Rows"}, func(c *ui.Ctx, i int, selected bool) {
+				c.Box("h", ui.Style{W: ui.Flex(1), H: ui.Px(20)}, nil)
+			})
+		})
+	})
+	h.frame()
+	r := h.rect(id)
+	h.click(r.Min.X+20, r.Min.Y+5)
+	h.keys("Down")
+	if sel != 1 {
+		t.Fatalf("Down: sel %d", sel)
+	}
+	h.keys("Esc")
+	h.frame()
+	if open {
+		t.Error("Escape on the rows didn't close the page")
+	}
+}

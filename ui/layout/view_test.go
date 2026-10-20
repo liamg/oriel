@@ -567,3 +567,35 @@ func TestDragToFloatIsDashed(t *testing.T) {
 		t.Errorf("the drop didn't float:\n%s", h.r.Dump())
 	}
 }
+
+// A view opened Fixed stays in its dock: dragging its header doesn't move it, and Drop refuses it.
+func TestFixedViewDoesNotMove(t *testing.T) {
+	h := newHarness(t)
+	if err := h.r.Open(tree, Docked, Opts{Edge: Left, Fixed: true}); err != nil {
+		t.Fatal(err)
+	}
+	h.frame()
+	left, ok := h.dockRect(Left)
+	if !ok {
+		t.Fatal("no left dock")
+	}
+	from := render.Point{X: left.Min.X + 40, Y: left.Min.Y + 15}
+	main := h.panes.Rects(h.u)[h.r.Main]
+	to := render.Point{X: main.Min.X + main.Dx()/2, Y: main.Min.Y + main.Dy()/2}
+	h.held = true
+	h.ptr(render.PointerMove, from)
+	h.ptr(render.PointerPress, from)
+	h.ptr(render.PointerMove, render.Point{X: from.X + 10, Y: from.Y + 10})
+	h.ptr(render.PointerMove, to)
+	h.held = false
+	h.ptr(render.PointerRelease, to)
+	if w := h.r.Find(tree); w == nil || w.Placement != Docked || w.Edge != Left {
+		t.Errorf("dragging a fixed view's header moved it:\n%s", h.r.Dump())
+	}
+	if err := h.r.Drop(tree, Target{Zone: ZoneCenter}); err == nil {
+		t.Error("Drop moved a fixed view")
+	}
+	if w := h.r.Find(tree); w == nil || w.Placement != Docked {
+		t.Errorf("after Drop:\n%s", h.r.Dump())
+	}
+}

@@ -41,16 +41,17 @@ var missionTermFont = typeset.FontSpec{Family: typeset.Mono, Size: 11}
 // page is mission control while it's open, under the title bar: the header, the needs-you queue beside the cards,
 // the strip of indicators and the keys along its foot.
 func (x *missionPlugin) page(c *ui.Ctx) {
+	if x.launch.IsZero() {
+		x.launch = c.Now()
+	}
 	if x.pending {
-		st := x.h.State()
+		id, known := x.atLaunch(x.h.State())
 		switch {
-		case x.sh.cfg.WorkDir != "" || st.Focus != "":
+		case x.sh.cfg.WorkDir != "":
 			x.pending = false
-		case len(x.live(st)) > 0:
+		case known:
 			x.pending = false
-			if v, _, err := x.h.Options().Get(AtLaunchOption, registry.At{}); err == nil && v == true {
-				x.show()
-			}
+			x.landOn(id)
 		}
 	}
 	if !x.open || c.Theme().IsProbe() {
@@ -351,17 +352,21 @@ func (x *missionPlugin) card(c *ui.Ctx, st core.State, se core.SessionState, on 
 	in := widget.Clickable(c, se.ID, ui.Style{Dir: ui.Column, W: ui.Flex(1), Fill: th.C(tMissionCard), Stroke: line,
 		Border: border, Radius: 8, Pad: ui.Pad(12), Gap: 10, NoHover: true, Cursor: render.CursorDefault, Role: ui.RoleListItem, Label: name,
 		Selected: on, Help: missionHelp + "#cards"}, func(c *ui.Ctx) {
-		x.cardHead(c, st, se, tone)
+		x.cardHead(c, st, se, tone, widget.PointerIn(c))
 		c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Size{Min: missionBodyH}}, func(c *ui.Ctx) { x.cardBody(c, se, tone, waiting) })
 		x.cardFoot(c, se)
 	})
 	if in.Clicked {
 		x.sel = se.ID
 	}
+	if in.DoubleClicked {
+		x.run("mission.open-card", registry.Args{"id": string(se.ID)})
+	}
 	return id
 }
 
-func (x *missionPlugin) cardHead(c *ui.Ctx, st core.State, se core.SessionState, tone render.Color) {
+// cardHead is a card's name, kind and chips; hovered, an Open button (Resume while its agent is stopped).
+func (x *missionPlugin) cardHead(c *ui.Ctx, st core.State, se core.SessionState, tone render.Color, hovered bool) {
 	th := c.Theme()
 	name := cmpOr(se.Name, string(se.ID))
 	c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -400,6 +405,15 @@ func (x *missionPlugin) cardHead(c *ui.Ctx, st core.State, se core.SessionState,
 		}
 		if p := se.Agent.Provider; p != "" {
 			widget.Chip(c, "prov", providerName(p), th.C(theme.FgMuted), missionHelp+"#cards")
+		}
+		if hovered {
+			label := "Open"
+			if !se.Agent.Live() {
+				label = "Resume"
+			}
+			if widget.Button(c, "open", label, widget.ButtonOpts{Help: missionHelp + "#open"}) {
+				x.run("mission.open-card", registry.Args{"id": string(se.ID)})
+			}
 		}
 	})
 }

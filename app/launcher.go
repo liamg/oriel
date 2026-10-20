@@ -706,7 +706,7 @@ func (x *launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 			if on {
 				effort = x.effort
 			}
-			if m, e, ok := modelSelects(c, p, model, effort, "agent/launcher#agent"); ok {
+			if m, e, ok := modelSelects(c, p, model, effort, false, "agent/launcher#agent"); ok {
 				x.pickProvider(p.ID)
 				x.model, x.effort = m, e
 			}
@@ -720,7 +720,7 @@ func (x *launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 
 // modelSelects are a provider's model and effort menus, at model and effort ("" is the default effort). It reports
 // a pick, with what's picked: a new model's effort is its default.
-func modelSelects(c *ui.Ctx, p host.ProviderInfo, model, effort, help string) (string, string, bool) {
+func modelSelects(c *ui.Ctx, p host.ProviderInfo, model, effort string, disabled bool, help string) (string, string, bool) {
 	name := providerName(p.ID)
 	picked := false
 	c.Row("model", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -731,12 +731,12 @@ func modelSelects(c *ui.Ctx, p host.ProviderInfo, model, effort, help string) (s
 				efforts = m.Efforts
 			}
 		}
-		if v, ok := widget.Select(c, "m", model, ids, widget.SelectOpts{Label: name + " model", Help: help}); ok {
+		if v, ok := widget.Select(c, "m", model, ids, widget.SelectOpts{Label: name + " model", Disabled: disabled, Help: help}); ok {
 			model, effort, picked = v, "", true
 		}
 		if len(efforts) > 0 {
 			label := cmpOr(effort, "default effort")
-			if v, ok := widget.Select(c, "e", label, efforts, widget.SelectOpts{Label: name + " effort", Help: help}); ok {
+			if v, ok := widget.Select(c, "e", label, efforts, widget.SelectOpts{Label: name + " effort", Disabled: disabled, Help: help}); ok {
 				effort, picked = v, true
 			}
 		}

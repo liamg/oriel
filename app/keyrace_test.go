@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/plugin"
-	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 )
@@ -49,26 +47,6 @@ func TestGGGoesToTheTop(t *testing.T) {
 		r.typeKeys("g")
 		r.waitAfter(fmt.Sprintf("the top, with %v between the g's", pause), mark, cursorIs("1:1"))
 	}
-}
-
-// A command that holds the loop up is logged by name, so a stall says what caused it.
-func TestSlowLoopIsLogged(t *testing.T) {
-	logs := NewLogs(LogOpts{})
-	r := startAppWith(t, t.TempDir(), t.TempDir(), func(h plugin.Host) {
-		h.Command(registry.Command{ID: "test.slow", Run: func(registry.Ctx, registry.Args) error { time.Sleep(80 * time.Millisecond); return nil }})
-		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-y>", Command: "test.slow"})
-	}, func(c *Config) { c.Logs = logs })
-	r.typeKeys("<D-y>")
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		for _, rec := range logs.Ring.Tail(50) {
-			if rec.Msg == "the window was held up" && strings.Contains(rec.Text(), "test.slow") {
-				return
-			}
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("no log of the slow command: %v", logs.Ring.Tail(10))
 }
 
 // A run of waiting pointer moves is handled as its last, and what follows it isn't lost.

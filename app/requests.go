@@ -616,3 +616,8 @@ func avatar(c *ui.Ctx, key any, cm core.Comment) {
 		c.Text("t", label, ui.TextStyle{Font: kickerFont(render.Color{}).Font, Color: th.C(theme.AccentInk)})
 	})
 }
+
+// requestsArgs are view.toggle's args for the Requests panel, as the rail and its key run it.
+func requestsArgs() registry.Args {
+	return sidebarArgs("view.toggle", registry.Args{"id": RequestsView, "place": "dock", "edge": "left", "title": "Requests"})
+}

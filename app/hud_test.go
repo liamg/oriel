@@ -103,6 +103,19 @@ func TestHUDHoldReleasePin(t *testing.T) {
 	}
 }
 
+// A key or click with no modifier held isn't a chord: the next ⌥ held brings the HUD down.
+func TestHUDAfterTyping(t *testing.T) {
+	s := newErrScene(t, "")
+	s.now = at(14, 0, 0)
+	s.frame()
+	s.ui.Chord() // a key typed, as the window's loop does
+	s.click(render.Point{X: 800, Y: 200})
+	s.hold(render.ModAlt, 300*time.Millisecond)
+	if !s.hudDown() {
+		t.Fatalf("⌥ held after typing didn't bring the HUD down:\n%s", s.frameText())
+	}
+}
+
 // "Pull the full HUD down over anything": over the settings page, and under an omnibox opened over it.
 func TestHUDOverOtherOverlays(t *testing.T) {
 	s := newErrScene(t, "")

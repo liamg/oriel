@@ -386,3 +386,41 @@ func TestAgentConsoleListsBackgroundWork(t *testing.T) {
 	a.Emit(agent.TurnEnd{})
 	r.waitFrame("the work done", func(s string) bool { return !strings.Contains(s, "IN THE BACKGROUND") && strings.Contains(s, "IDLE") })
 }
+
+// The composer's model menu switches the agent while it's idle, its conversation kept; mid-turn the menus are off.
+func TestComposerSwitchesTheModel(t *testing.T) {
+	lw := newLocalHost(t)
+	lw.fake.Offers = []agent.Model{{ID: "m1", Efforts: []string{"low", "high"}, Default: true}, {ID: "m2", Efforts: []string{"low", "high"}}}
+	r, a, _ := agentSessionOn(t, lw)
+	r.typeKeys("<D-A>")
+	r.waitText("SESSION STATS")
+	a.Emit(agent.TurnStart{})
+	r.waitText("switch when the agent is idle")
+	a.Emit(agent.TurnEnd{})
+	r.waitGone("switch when the agent is idle")
+	r.clickText("m1 ▾")
+	r.clickTop("m2")
+	b := lw.fake.WaitStarted(t)
+	if b.Spec.Model != "m2" {
+		t.Errorf("the agent came back on %q", b.Spec.Model)
+	}
+	if got := lw.fake.Resumed(); len(got) != 1 || got[0] != a.ID() {
+		t.Errorf("resumed %v, want %s: the conversation wasn't kept", got, a.ID())
+	}
+	r.waitText("m2 ▾")
+}
+
+// A sandboxed session's composer says where it runs, not the gate's policy, which a sandboxed agent doesn't use.
+func TestComposerShowsTheSandbox(t *testing.T) {
+	r, _, _ := consoleSession(t)
+	r.waitText("GATE ASK")
+	st, _ := r.store.State().Session("w")
+	se := st.Snapshot()
+	se.Agent.Sandboxed, se.Agent.Network = true, "ask"
+	if err := r.store.Apply(core.SessionSynced{Session: se}); err != nil {
+		t.Fatal(err)
+	}
+	if text := r.waitText("CONTAINER · NET ASK"); strings.Contains(text, "GATE ASK") {
+		t.Errorf("a sandboxed session's composer shows the gate:\n%s", text)
+	}
+}

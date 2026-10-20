@@ -34,7 +34,6 @@ type LightboxOpts struct {
 const (
 	lbTop, lbSide, lbBottom = 60, 64, 64
 	lbMaxZoom               = 32
-	lbDoubleClick           = 400 * time.Millisecond
 )
 
 type lightboxState struct {
@@ -139,7 +138,7 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 		case !onImage || st.zoom == 0:
 			closeIt()
 			return
-		case c.Now().Sub(st.clicked) < lbDoubleClick:
+		case c.Now().Sub(st.clicked) < ui.DoubleClick:
 			st.zoom, st.off, st.clicked = 0, render.Point{}, time.Time{}
 		default:
 			st.clicked = c.Now()

@@ -442,3 +442,31 @@ func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {
 		t.Errorf("after the background work: busy %v, background %q", th.Busy, se.Agent.Background)
 	}
 }
+
+// Configure switches an idle agent's model and effort: it comes back on them with its conversation kept. Mid-turn
+// it refuses, so the turn isn't cut off.
+func TestConfigureSwitchesTheModel(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Negative values round the wrong way")
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	r.eventually(id, "the turn to start", func(se core.SessionState) bool { return se.Agent.Working })
+	if err := r.w.Configure(context.Background(), ConfigureReq{Session: id, Model: "m2"}); err == nil {
+		t.Error("Configure switched the model mid-turn")
+	}
+	a.Emit(agent.TurnEnd{})
+	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return !se.Agent.Working })
+	if err := r.w.Configure(context.Background(), ConfigureReq{Session: id, Model: "m2", Effort: "low"}); err != nil {
+		t.Fatal(err)
+	}
+	b := r.agent()
+	if !a.Closed() || b.Spec.Model != "m2" || b.Spec.Effort != "low" {
+		t.Errorf("the agent came back on %q %q; the old one closed %v", b.Spec.Model, b.Spec.Effort, a.Closed())
+	}
+	if got := r.fake.Resumed(); len(got) != 1 || got[0] != a.ID() {
+		t.Errorf("resumed %v, want %s", got, a.ID())
+	}
+	if se := r.session(id); se.Agent.Model != "m2" || se.Agent.Effort != "low" {
+		t.Errorf("the session's agent: %+v", se.Agent)
+	}
+}

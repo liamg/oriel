@@ -70,13 +70,15 @@ type settingsPlugin struct {
 	loadMu        sync.Mutex
 	specs         int // how many options there were at the last read
 
-	open    bool
-	query   string
-	section string
-	scope   int // the layer the page edits: user, project, session
-	asTOML  bool
-	undo    []settingsUndo
-	saved   map[string]time.Time // when the page last set each option
+	open      bool
+	shown     bool // open at the last build
+	overStart bool // opened over the start view, so it covers the sidebar too
+	query     string
+	section   string
+	scope     int // the layer the page edits: user, project, session
+	asTOML    bool
+	undo      []settingsUndo
+	saved     map[string]time.Time // when the page last set each option
 }
 
 // settingsSavedFor is how long a row says it was saved.
@@ -323,7 +325,7 @@ func fromTOML(sp registry.OptionSpec, v any) (any, error) {
 		}
 	case registry.Duration:
 		if d, ok := v.(string); ok {
-			return time.ParseDuration(d)
+			return registry.ParseDuration(d)
 		}
 	case registry.List:
 		if l, ok := settingsfile.Strings(v); ok {
@@ -345,7 +347,7 @@ func fromTOML(sp registry.OptionSpec, v any) (any, error) {
 
 func toTOML(sp registry.OptionSpec, v any) any {
 	if d, ok := v.(time.Duration); ok {
-		return d.String()
+		return registry.FormatDuration(d)
 	}
 	return v
 }
@@ -667,7 +669,7 @@ func formatValue(v any) string {
 	case string:
 		return strconv.Quote(v)
 	case time.Duration:
-		return strconv.Quote(v.String())
+		return strconv.Quote(registry.FormatDuration(v))
 	case []string:
 		q := make([]string, len(v))
 		for i, s := range v {
@@ -748,8 +750,14 @@ func (s *settingsPlugin) matches(sp registry.OptionSpec, at registry.At) bool {
 }
 
 func (s *settingsPlugin) build(c *ui.Ctx) {
+	if !s.open {
+		s.shown = false
+	}
 	if !s.open || c.Theme().IsProbe() {
 		return
+	}
+	if !s.shown {
+		s.shown, s.overStart = true, onStart(s.h)
 	}
 	th := c.Theme()
 	o := s.h.Options()
@@ -783,7 +791,11 @@ func (s *settingsPlugin) build(c *ui.Ctx) {
 			rows = append(rows, sp)
 		}
 	}
-	widget.Page(c, "settings", &s.open, widget.PageOpts{Top: titleH, KeyMode: "settings", Label: "Settings", Help: "shell/settings"}, func(c *ui.Ctx) {
+	po := widget.PageOpts{Over: mainArea(), KeyMode: "settings", Label: "Settings", Help: "shell/settings"}
+	if s.overStart {
+		po.Over, po.Top = 0, titleH
+	}
+	widget.Page(c, "settings", &s.open, po, func(c *ui.Ctx) {
 		s.header(c, th)
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
@@ -1183,8 +1195,11 @@ func upper(ss []string) []string {
 
 // fieldText is a value as its field shows it.
 func fieldText(v any) string {
-	if s, ok := v.(string); ok {
-		return s
+	switch v := v.(type) {
+	case string:
+		return v
+	case time.Duration:
+		return registry.FormatDuration(v)
 	}
 	return fmt.Sprint(v)
 }
@@ -1205,7 +1220,7 @@ func parseField(sp registry.OptionSpec, s string) (any, error) {
 		}
 		return f, nil
 	case registry.Duration:
-		return time.ParseDuration(strings.TrimSpace(s))
+		return registry.ParseDuration(s)
 	}
 	return s, nil
 }

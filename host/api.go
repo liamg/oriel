@@ -22,6 +22,13 @@ type StartWorkReq struct {
 	Effort           string            `json:"effort,omitempty"`
 }
 
+// ConfigureReq switches a session's agent to another model or effort, keeping its conversation.
+type ConfigureReq struct {
+	Session core.SessionID `json:"session"`
+	Model   string         `json:"model,omitempty"`  // "" keeps the agent's; a new model runs at Effort, or its default
+	Effort  string         `json:"effort,omitempty"` // "" keeps the agent's, or a new model's default
+}
+
 // CommentReq is a comment from the user: on a thread, or opening one (with Anchor, or none for the whole change).
 type CommentReq struct {
 	Session core.SessionID `json:"session"`

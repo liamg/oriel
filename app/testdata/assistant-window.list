@@ -20,6 +20,7 @@ clip 102.9375,0 1331.8375x38 r 0
   text "other" @328.95312,24.365234 #ece6d8 Inter 12
   text "⌘2" @365.6875,23.42 #4f4a40 JetBrains Mono 9.5
   rect 389.6875,0 1x38 fill #24221d
+  text "+" @405.78906,23.355999 #7c7566 JetBrains Mono 12.1
 pop
 text "INBOX" @1466.775,14.280001 #b3ab99 JetBrains Mono 10.5
 rect 1505.7438,3 15.40625x15 fill #b98aff radius 7.5
