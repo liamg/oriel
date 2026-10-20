@@ -222,8 +222,9 @@ func TestEventsFormat(t *testing.T) {
 	}
 }
 
-// fixture is a multi-repo session over pricing and billing-ui: 3 file calls in pricing, 1 in billing-ui; two
-// requests a day apart, $5 and $3 of opus output.
+// fixture is a multi-repo session over pricing and billing-ui: 3 file calls in pricing, 1 in billing-ui. The request
+// working in pricing is $5 of opus output on Oct 1; on Oct 2 the one writing in billing-ui is $1, and the one after it,
+// touching no file, $2.
 func fixture(t *testing.T, id, workspace string) Session {
 	t.Helper()
 	pr, bu := filepath.Join(workspace, "pricing"), filepath.Join(workspace, "billing-ui")
@@ -233,11 +234,12 @@ func fixture(t *testing.T, id, workspace string) Session {
 			fmt.Sprintf(`{"type":"tool_use","id":"1","name":"Read","input":{"file_path":%q}},`+
 				`{"type":"tool_use","id":"2","name":"Edit","input":{"file_path":%q}},`+
 				`{"type":"tool_use","id":"3","name":"Grep","input":{"path":%q}},`+
-				`{"type":"tool_use","id":"4","name":"Write","input":{"file_path":%q}},`+
-				`{"type":"tool_use","id":"5","name":"Bash","input":{"command":"go test"}}`,
-				pr+"/round.go", pr+"/round.go", pr, bu+"/Invoice.tsx"),
+				`{"type":"tool_use","id":"4","name":"Bash","input":{"command":"go test"}}`,
+				pr+"/round.go", pr+"/round.go", pr),
 			0, 200_000, 0, 0, 0),
-		asst("2026-10-02T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"done"}`, 0, 120_000, 0, 0, 0),
+		asst("2026-10-02T09:00:00Z", "claude-opus-5", "high",
+			fmt.Sprintf(`{"type":"tool_use","id":"5","name":"Write","input":{"file_path":%q}}`, bu+"/Invoice.tsx"), 0, 40_000, 0, 0, 0),
+		asst("2026-10-02T09:01:00Z", "claude-opus-5", "high", `{"type":"text","text":"done"}`, 0, 80_000, 0, 0, 0),
 	)
 	return Session{ID: id, Name: id, Kind: "work", Provider: "claude", Repos: []Repo{{Name: "pricing", Dir: pr}, {Name: "billing-ui", Dir: bu}},
 		Scans: []*Scan{readNew(p)}}
@@ -251,22 +253,22 @@ func readNew(p string) *Scan {
 
 var october = Query{From: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), To: time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC), Split: true}
 
-// AI-12: a multi-repo session splits by each repo's share of its edits and file tool calls (Read, Edit, Write, Grep,
-// Glob); the requests that touch no file follow the same split; the total stays the real one.
+// A multi-repo session charges each request to the repo it worked in: that of its own last file call (Read, Edit,
+// Write, Grep, Glob), else of the latest before it. The total stays the real one.
 func TestGroupByRepoSplitsMultiRepoSessions(t *testing.T) {
 	s := fixture(t, "pricing-rounding", "/ws/a")
 	r := Run(october, []Session{s})
 	if len(r.Groups) != 2 || r.Groups[0].Key != "pricing" || r.Groups[1].Key != "billing-ui" {
 		t.Fatalf("groups = %+v", r.Groups)
 	}
-	if !near(r.Groups[0].Cost, 8*.75) || !near(r.Groups[1].Cost, 8*.25) {
-		t.Errorf("costs = %v and %v, want $6 and $2: 3 of 4 file calls in pricing", r.Groups[0].Cost, r.Groups[1].Cost)
+	if !near(r.Groups[0].Cost, 5) || !near(r.Groups[1].Cost, 3) {
+		t.Errorf("costs = %v and %v, want $5 in pricing and $3 in billing-ui", r.Groups[0].Cost, r.Groups[1].Cost)
 	}
 	if !near(r.Totals.Cost, 8) || r.Totals.Sessions != 1 || r.Totals.MultiRepo != 1 || r.Totals.Pairs != 2 {
 		t.Errorf("totals = %+v", r.Totals)
 	}
-	if len(r.Points) != 7 || !near(r.Groups[0].Series[0], 3.75) || !near(r.Groups[0].Series[1], 2.25) {
-		t.Errorf("pricing by day = %v over %d days", r.Groups[0].Series, len(r.Points))
+	if len(r.Points) != 7 || !near(r.Groups[0].Series[0], 5) || !near(r.Groups[0].Series[1], 0) || !near(r.Groups[1].Series[1], 3) {
+		t.Errorf("by day: pricing %v, billing-ui %v over %d days", r.Groups[0].Series, r.Groups[1].Series, len(r.Points))
 	}
 	whole := october
 	whole.Split = false
@@ -274,6 +276,32 @@ func TestGroupByRepoSplitsMultiRepoSessions(t *testing.T) {
 	if !near(r.Groups[0].Cost, 8) || !near(r.Groups[1].Cost, 8) || !near(r.Totals.Cost, 8) {
 		t.Errorf("unsplit: %v and %v, total %v; want each charged the whole $8, the total still $8", r.Groups[0].Cost, r.Groups[1].Cost,
 			r.Totals.Cost)
+	}
+}
+
+// Requests before any file work, or working outside every repo, split by each repo's share of the file calls.
+func TestUnplacedRequestsSplitByFileCalls(t *testing.T) {
+	p := write(t,
+		asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"thinking"}`, 0, 40_000, 0, 0, 0),
+		asst("2026-10-01T09:01:00Z", "claude-opus-5", "high",
+			`{"type":"tool_use","id":"1","name":"Read","input":{"file_path":"/x/a/1.go"}},`+
+				`{"type":"tool_use","id":"2","name":"Read","input":{"file_path":"/x/a/2.go"}},`+
+				`{"type":"tool_use","id":"3","name":"Read","input":{"file_path":"/x/b/3.go"}}`, 0, 40_000, 0, 0, 0),
+		asst("2026-10-01T09:02:00Z", "claude-opus-5", "high",
+			`{"type":"tool_use","id":"4","name":"Read","input":{"file_path":"/x/a/1.go"}}`, 0, 40_000, 0, 0, 0),
+		asst("2026-10-01T09:03:00Z", "claude-opus-5", "high",
+			`{"type":"tool_use","id":"5","name":"Read","input":{"file_path":"/tmp/notes.md"}}`, 0, 40_000, 0, 0, 0),
+	)
+	s := Session{ID: "s", Repos: []Repo{{Name: "a", Dir: "/x/a"}, {Name: "b", Dir: "/x/b"}}, Scans: []*Scan{readNew(p)}}
+	r := Run(october, []Session{s})
+	// $1 each: the first and last split 3:1, the second is b's (its last call), the third a's.
+	if len(r.Groups) != 2 || r.Groups[0].Key != "a" || !near(r.Groups[0].Cost, 1+.75+.75) || !near(r.Groups[1].Cost, 1+.25+.25) {
+		t.Errorf("groups = %+v, want a $2.50 and b $1.50", r.Groups)
+	}
+	q := october
+	q.Filters = map[string][]string{"repo": {"b"}}
+	if r := Run(q, []Session{s}); !near(r.Totals.Cost, 1.5) {
+		t.Errorf("b alone = $%v, want $1.50", r.Totals.Cost)
 	}
 }
 
@@ -296,15 +324,15 @@ func TestGroupBySessionAndFilters(t *testing.T) {
 	}
 	q := Query{Group: BySession, From: october.From, To: october.To, Split: true, Filters: map[string][]string{"repo": {"billing-ui"}}}
 	r = Run(q, []Session{a, b})
-	if len(r.Groups) != 1 || r.Groups[0].Key != "a" || !near(r.Groups[0].Cost, 2) || !near(r.Totals.Cost, 2) {
-		t.Errorf("billing-ui by session = %+v, total %v; want a's $2", r.Groups, r.Totals.Cost)
+	if len(r.Groups) != 1 || r.Groups[0].Key != "a" || !near(r.Groups[0].Cost, 3) || !near(r.Totals.Cost, 3) {
+		t.Errorf("billing-ui by session = %+v, total %v; want a's $3", r.Groups, r.Totals.Cost)
 	}
 	r = Run(Query{Group: ByModel, From: october.From, To: october.To}, []Session{a, b})
-	if len(r.Models) != 1 || r.Models[0].Requests != 4 || len(r.Groups) != 1 || r.Groups[0].Key != "claude-opus-5" {
+	if len(r.Models) != 1 || r.Models[0].Requests != 6 || len(r.Groups) != 1 || r.Groups[0].Key != "claude-opus-5" {
 		t.Errorf("models = %+v, groups %+v", r.Models, r.Groups)
 	}
 	prev := Query{From: october.To, To: october.To.Add(7 * 24 * time.Hour)}
-	if r := Run(prev, []Session{a}); r.Prev.Requests != 2 || r.Totals.Requests != 0 {
+	if r := Run(prev, []Session{a}); r.Prev.Requests != 3 || r.Totals.Requests != 0 {
 		t.Errorf("the period before = %+v, this one %+v", r.Prev, r.Totals)
 	}
 }
@@ -332,16 +360,16 @@ func TestStoreRescansOnlyWhatWasAppended(t *testing.T) {
 func TestDetail(t *testing.T) {
 	s := fixture(t, "pricing-rounding", "/ws/a")
 	d := Detailed(s, true, 0)
-	if len(d.Repos) != 2 || d.Repos[0].Repo != "pricing" || !near(d.Repos[0].Share, .75) || !near(d.Repos[0].Cost, 6) || d.Repos[0].Files != 3 {
+	if len(d.Repos) != 2 || d.Repos[0].Repo != "pricing" || !near(d.Repos[0].Share, 5./8) || !near(d.Repos[0].Cost, 5) || d.Repos[0].Files != 3 {
 		t.Errorf("repos = %+v", d.Repos)
 	}
 	if !near(Detailed(s, false, 0).Repos[1].Cost, 8) {
 		t.Errorf("counted whole, billing-ui is charged the session")
 	}
-	if len(d.Buckets) != 2 || d.Buckets[0].Turns != 1 || d.Totals.Turns != 1 || d.Totals.Requests != 2 {
+	if len(d.Buckets) != 2 || d.Buckets[0].Turns != 1 || d.Totals.Turns != 1 || d.Totals.Requests != 3 {
 		t.Errorf("buckets = %+v, totals %+v", d.Buckets, d.Totals)
 	}
-	if len(d.Efforts) != 1 || d.Efforts[0].Name != "high" || d.Efforts[0].Requests != 2 {
+	if len(d.Efforts) != 1 || d.Efforts[0].Name != "high" || d.Efforts[0].Requests != 3 {
 		t.Errorf("efforts = %+v", d.Efforts)
 	}
 }

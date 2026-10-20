@@ -34,8 +34,9 @@ session names), plus a Usage page for the plan windows. Mockup 43 was signed off
   Codex's events; the price table) per session, kept in a stats file; `stats.query {group, from, to, filters, split}`
   answers by repo (default), session, kind, model, provider or day. The app merges every worker's answer; an offline
   worker's last report shows marked stale.
-- **Multi-repo sessions split** by each repo's share of edits and file tool calls (Read, Edit, Write, Grep, Glob);
-  requests touching no file follow the same split; one with no file work splits evenly. One setting,
+- **Multi-repo sessions split** request by request: each is charged to the repo of its own last file tool call (Read,
+  Edit, Write, Grep, Glob), else of the latest before it; requests before any file work, or outside every repo,
+  split by each repo's share of the file calls; one with no file work splits evenly. One setting,
   `stats.split_sessions` (default on), drives both the global toggle and the session tab's "count whole session in each".
 - **Session stats** (a main tab, from the session stats box's cost, the summary, `:Stats session`): totals, cost over
   the session by token kind (idle gaps, turns, compactions), cost per repo, models, tools (calls, errors, timing

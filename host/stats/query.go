@@ -70,7 +70,7 @@ type Repo struct {
 	Dir  string `json:"dir"`
 }
 
-// Share is a repo's part of a session: its share of the file tool calls that fell in a repo, and their count.
+// Share is a repo's part of a session: its share, the file tool calls that fell in it, and its cost.
 type Share struct {
 	Repo  string  `json:"repo"`
 	Share float64 `json:"share"`
@@ -78,8 +78,8 @@ type Share struct {
 	Cost  float64 `json:"cost"`
 }
 
-// Shares are each repo's share of the session, by its edits and file tool calls (FileTools); a session with no file
-// work splits evenly. A session with no repo has none.
+// Shares are each repo's share of the session by its edits and file tool calls (FileTools): how what wasn't worked in
+// any repo is split. A session with no file work splits evenly; one with no repo has none.
 func (s Session) Shares() []Share {
 	if len(s.Repos) == 0 {
 		return nil
@@ -91,14 +91,8 @@ func (s Session) Shares() []Share {
 	}
 	for _, sc := range s.Scans {
 		for p, n := range sc.Paths {
-			best := -1
-			for i, r := range s.Repos {
-				if r.Dir != "" && within(p, r.Dir) && (best < 0 || len(r.Dir) > len(s.Repos[best].Dir)) {
-					best = i
-				}
-			}
-			if best >= 0 {
-				out[best].Files += n
+			if i := s.repoOf(p); i >= 0 {
+				out[i].Files += n
 				total += n
 			}
 		}
@@ -111,6 +105,36 @@ func (s Session) Shares() []Share {
 		}
 	}
 	return out
+}
+
+// repoOf is the index of the repo path is in, the innermost when they nest, or -1.
+func (s Session) repoOf(path string) int {
+	best := -1
+	if path == "" {
+		return best
+	}
+	for i, r := range s.Repos {
+		if r.Dir != "" && within(path, r.Dir) && (best < 0 || len(r.Dir) > len(s.Repos[best].Dir)) {
+			best = i
+		}
+	}
+	return best
+}
+
+// charged are the repos slot sl is charged to: the one it was worked in, else the session's shares. Unsplit, each repo
+// is charged all of it.
+func (s Session) charged(sl *Slot, shares []Share, split bool) []Share {
+	if !split {
+		out := make([]Share, len(shares))
+		for i, sh := range shares {
+			out[i] = Share{Repo: sh.Repo, Share: 1}
+		}
+		return out
+	}
+	if i := s.repoOf(sl.Place); i >= 0 {
+		return []Share{{Repo: s.Repos[i].Name, Share: 1}}
+	}
+	return shares
 }
 
 func within(path, dir string) bool {
@@ -140,7 +164,8 @@ type Query struct {
 	Offset int `json:"offset,omitempty"`
 	// Filters keep what matches any of a key's values: repo, session, kind, model, provider, account, origin.
 	Filters map[string][]string `json:"filters,omitempty"`
-	// Split charges a multi-repo session to each repo by its share (Shares); otherwise each repo is charged the whole.
+	// Split charges each of a multi-repo session's requests to the repo it worked in (Session.charged); otherwise each
+	// repo is charged the whole session.
 	Split bool `json:"split,omitempty"`
 }
 
@@ -272,7 +297,8 @@ func (q Query) has(key string, vals ...string) bool {
 }
 
 // weight is how much of session s a query counts: 0 when a filter leaves it out; with a repo filter, the share of
-// the repos it keeps (or all of it, unsplit). The account filter is the hour's (keeps).
+// the repos it keeps (or all of it, unsplit). The account filter is the hour's (keeps), and a slot's own repo its
+// (slotWeight).
 func (q Query) weight(s Session, shares []Share) float64 {
 	if !q.has("session", s.ID) || !q.has("kind", s.Kind) || !q.has("provider", s.Provider) ||
 		!q.has("origin", originOf(s)) {
@@ -291,6 +317,21 @@ func (q Query) weight(s Session, shares []Share) float64 {
 		}
 	}
 	return w
+}
+
+// slotWeight is how much of slot sl a query counts, w being its session's: with a repo filter and split, the part
+// charged to the repos it keeps.
+func (q Query) slotWeight(s Session, sl *Slot, shares []Share, w float64) float64 {
+	if len(q.Filters["repo"]) == 0 || !q.Split {
+		return w
+	}
+	x := 0.0
+	for _, sh := range s.charged(sl, shares, true) {
+		if q.has("repo", sh.Repo) {
+			x += sh.Share
+		}
+	}
+	return x
 }
 
 type part struct {
@@ -323,20 +364,15 @@ func Run(q Query, sessions []Session) Report {
 		if w == 0 {
 			continue
 		}
-		var parts func(model string, at int64) []part
+		var parts func(sl *Slot, w float64) []part
 		switch q.Group {
 		case ByRepo:
-			parts = func(string, int64) []part {
+			parts = func(sl *Slot, _ float64) []part {
 				var out []part
-				for _, sh := range shares {
-					if !q.has("repo", sh.Repo) {
-						continue
+				for _, sh := range s.charged(sl, shares, q.Split) {
+					if q.has("repo", sh.Repo) {
+						out = append(out, part{key: sh.Repo, label: sh.Repo, w: sh.Share})
 					}
-					pw := 1.0
-					if q.Split {
-						pw = sh.Share
-					}
-					out = append(out, part{key: sh.Repo, label: sh.Repo, w: pw})
 				}
 				if len(shares) == 0 && len(q.Filters["repo"]) == 0 {
 					out = append(out, part{key: "", label: "no repo", w: 1})
@@ -348,30 +384,34 @@ func Run(q Query, sessions []Session) Report {
 			for _, rp := range s.Repos {
 				repos = append(repos, rp.Name)
 			}
-			parts = func(string, int64) []part {
+			parts = func(_ *Slot, w float64) []part {
 				return []part{{key: s.ID, label: cmpOr(s.Name, s.ID), repos: repos, origin: originOf(s), w: w}}
 			}
 		case ByOrigin:
-			parts = func(string, int64) []part { return []part{{key: originOf(s), label: originLabel(originOf(s)), w: w}} }
+			parts = func(_ *Slot, w float64) []part {
+				return []part{{key: originOf(s), label: originLabel(originOf(s)), w: w}}
+			}
 		case ByKind:
-			parts = func(string, int64) []part { return []part{{key: s.Kind, label: cmpOr(s.Kind, "none"), w: w}} }
+			parts = func(_ *Slot, w float64) []part { return []part{{key: s.Kind, label: cmpOr(s.Kind, "none"), w: w}} }
 		case ByProvider:
-			parts = func(string, int64) []part { return []part{{key: s.Provider, label: cmpOr(s.Provider, "none"), w: w}} }
+			parts = func(_ *Slot, w float64) []part {
+				return []part{{key: s.Provider, label: cmpOr(s.Provider, "none"), w: w}}
+			}
 		case ByAccount:
-			parts = func(_ string, hour int64) []part {
-				a := s.accountAt(hour)
+			parts = func(sl *Slot, w float64) []part {
+				a := s.accountAt(sl.Hour)
 				return []part{{key: a.ID, label: cmpOr(a.Name, a.ID, "unknown account"), w: w}}
 			}
 		case ByModel:
-			parts = func(model string, _ int64) []part {
-				if model == "" {
+			parts = func(sl *Slot, w float64) []part {
+				if sl.Model == "" {
 					return nil
 				}
-				return []part{{key: model, label: model, w: w}}
+				return []part{{key: sl.Model, label: sl.Model, w: w}}
 			}
 		case ByDay:
-			parts = func(_ string, hour int64) []part {
-				d := time.Unix(hour*3600, 0).In(zone).Format("2006-01-02")
+			parts = func(sl *Slot, w float64) []part {
+				d := time.Unix(sl.Hour*3600, 0).In(zone).Format("2006-01-02")
 				return []part{{key: d, label: d, w: w}}
 			}
 		}
@@ -385,6 +425,10 @@ func Run(q Query, sessions []Session) Report {
 		for _, sc := range s.Scans {
 			for _, sl := range sc.Slots {
 				if !q.keeps(s, sl.Hour, sl.Model) {
+					continue
+				}
+				w := q.slotWeight(s, sl, shares, w)
+				if w == 0 {
 					continue
 				}
 				if sl.Hour >= pfrom && sl.Hour < pto {
@@ -434,7 +478,7 @@ func Run(q Query, sessions []Session) Report {
 					r.Hours[time.Unix(sl.Hour*3600, 0).In(zone).Hour()] += cost * w
 				}
 				i := q.index(sl.Hour*3600) - q.index(q.From.Unix())
-				for _, p := range parts(sl.Model, sl.Hour) {
+				for _, p := range parts(sl, w) {
 					g := groups[p.key]
 					if g == nil {
 						g = &Group{Key: p.key, Label: p.label, Repos: p.repos, Origin: p.origin, Series: make([]float64, n),
@@ -648,10 +692,16 @@ type Detail struct {
 	Costs       Costs        `json:"costs"`
 }
 
-// Detailed is s's stats, its days and hours in the zone offset seconds east of UTC. split charges each repo its share;
-// otherwise each is charged the whole session.
+// Detailed is s's stats, its days and hours in the zone offset seconds east of UTC. Each repo's share is of the cost
+// charged to it (Session.charged); split charges it that, otherwise the whole session.
 func Detailed(s Session, split bool, offset int) Detail {
-	sum := Run(Query{Group: ByModel, From: earliest(s), To: latest(s).Add(time.Hour), Offset: offset}, []Session{s})
+	q := Query{Group: ByModel, From: earliest(s), To: latest(s).Add(time.Hour), Offset: offset}
+	sum := Run(q, []Session{s})
+	q.Group, q.Split = ByRepo, true
+	repos := map[string]float64{}
+	for _, g := range Run(q, []Session{s}).Groups {
+		repos[g.Key] = g.Cost
+	}
 	var acct Account
 	if n := len(s.Accounts); n > 0 {
 		acct = s.Accounts[n-1]
@@ -690,9 +740,12 @@ func Detailed(s Session, split bool, offset int) Detail {
 	slices.SortFunc(d.Buckets, func(a, b Bucket) int { return cmp.Compare(a.At, b.At) })
 	slices.SortFunc(d.Compactions, func(a, b Compaction) int { return a.At.Compare(b.At) })
 	for _, sh := range s.Shares() {
+		if sum.Totals.Cost > 0 {
+			sh.Share = repos[sh.Repo] / sum.Totals.Cost
+		}
 		sh.Cost = sum.Totals.Cost
 		if split {
-			sh.Cost *= sh.Share
+			sh.Cost = repos[sh.Repo]
 		}
 		d.Repos = append(d.Repos, sh)
 	}

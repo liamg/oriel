@@ -142,7 +142,7 @@ func (x *statsPlugin) Activate(_ context.Context, h plugin.Host) error {
 		return struct{}{}, err
 	}, plugin.LoadOpts{Timeout: 2 * time.Minute, Now: func() time.Time { return x.now() }})
 	x.add(h.Option(registry.OptionSpec{Name: SplitOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
-		Help: "Split a multi-repo session's cost over its repos by each one's share of edits and file tool calls. Off, each repo is charged the whole session. The Stats page's toggle and the session tab's \"count whole session in each\" set it."}))
+		Help: "Split a multi-repo session's cost over its repos, each request charged to the repo its file tool calls worked in. Off, each repo is charged the whole session. The Stats page's toggle and the session tab's \"count whole session in each\" set it."}))
 	x.add(h.Option(registry.OptionSpec{Name: AccountsOption, Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser,
 		KeyLabel: "account", ValueLabel: "label",
 		Help: "Names for the accounts plans belong to, by identity: \"Work\", \"Personal\". Usage and Stats show them in place of the account's email or organisation."}))

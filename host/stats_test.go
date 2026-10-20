@@ -46,16 +46,16 @@ func namedRepo(t *testing.T, name string) string {
 	return r.Dir
 }
 
-// transcript is Claude Code's log of a session that read files in each of dirs (n calls in dirs[i] for counts[i]),
-// spent $5 of opus output on Oct 1 and $3 on Oct 2.
+// transcript is Claude Code's log of a session that read files in two dirs (counts[i] calls in dirs[i]): $5 of opus
+// output on Oct 1 reading in the first, $3 on Oct 2 reading in the second.
 func fixtureLog(t *testing.T, dirs []string, counts []int) string {
 	t.Helper()
-	var calls []string
+	calls := make([][]string, 2)
 	k := 0
 	for i, d := range dirs {
 		for range counts[i] {
 			k++
-			calls = append(calls, fmt.Sprintf(`{"type":"tool_use","id":"c%d","name":"Read","input":{"file_path":%q}}`, k, d+"/README"))
+			calls[i] = append(calls[i], fmt.Sprintf(`{"type":"tool_use","id":"c%d","name":"Read","input":{"file_path":%q}}`, k, d+"/README"))
 		}
 	}
 	line := func(at, content string, out int) string {
@@ -63,7 +63,8 @@ func fixtureLog(t *testing.T, dirs []string, counts []int) string {
 			`"usage":{"input_tokens":0,"output_tokens":%d}}}`, at, at, content, out)
 	}
 	p := filepath.Join(t.TempDir(), "log.jsonl")
-	body := line("2026-10-01T09:00:00Z", strings.Join(calls, ","), 200_000) + "\n" + line("2026-10-02T09:00:00Z", "", 120_000) + "\n"
+	body := line("2026-10-01T09:00:00Z", strings.Join(calls[0], ","), 200_000) + "\n" +
+		line("2026-10-02T09:00:00Z", strings.Join(calls[1], ","), 120_000) + "\n"
 	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -118,8 +119,8 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 	for _, g := range r.Groups {
 		cost[g.Key] = g.Cost
 	}
-	// $8 each: a splits 6/2, b 4/4.
-	if want := map[string]float64{"pricing": 6, "billing-ui": 6, "api": 4}; len(cost) != 3 || !near(cost["pricing"], want["pricing"]) ||
+	// $8 each: a's $5 in pricing and $3 in billing-ui, b's $5 in api and $3 in billing-ui.
+	if want := map[string]float64{"pricing": 5, "billing-ui": 6, "api": 5}; len(cost) != 3 || !near(cost["pricing"], want["pricing"]) ||
 		!near(cost["billing-ui"], want["billing-ui"]) || !near(cost["api"], want["api"]) {
 		t.Errorf("by repo = %v, want %v", cost, want)
 	}
@@ -148,7 +149,7 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(d.Repos) != 2 || d.Repos[0].Repo != "pricing" || !near(d.Repos[0].Share, .75) || d.Totals.Requests != 3 {
+	if len(d.Repos) != 2 || d.Repos[0].Repo != "pricing" || !near(d.Repos[0].Share, 5./9) || d.Totals.Requests != 3 {
 		t.Errorf("session stats = %+v", d)
 	}
 }

@@ -158,8 +158,9 @@ only the files to come back, as before.
   (`origin` filter, `stats.ByOrigin`), each report carries `Origins` (sessions, requests, tokens and cost of each),
   and a session's group carries its `Origin`. A message
   Claude writes over several records counts once. Per request: tokens by kind and their cost, model, effort, and
-  the hour and five minutes it's in; per tool call: name, error, duration, and the files it names, which decide a
-  multi-repo session's split (`stats.Session.Shares`). A compaction is the main loop's context falling to under half
+  the hour and five minutes it's in, and the directory of the latest file tool call (`Slot.Place`); per tool call:
+  name, error, duration, and the files it names. A multi-repo session charges each request to the repo its place is
+  in, and splits what has none by the file calls (`stats.Session.charged`, `Shares`). A compaction is the main loop's context falling to under half
   from over 40k.
 - Tool calls are kept by the hour they were made, per tool and model (`stats.ToolSlot`: calls, errors, timing
   buckets), the result's error and timing going to the call's hour, so a range's tool rows count only its calls

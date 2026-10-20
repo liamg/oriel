@@ -721,7 +721,7 @@ svg text{font-family:var(--mono)}
   <div class="nc">
     <div class="nh">Grouped by repo</div>
     <div><b>Repo is the default group</b>, not the session or its working directory. Repos keep their project colour from the sidebar (42) in every chart, on Usage too.</div>
-    <div>A <b>multi-repo session splits</b> by its share of edits and file tool calls per repo; requests that touch no file follow the same split. Totals stay exact.</div>
+    <div>A <b>multi-repo session splits</b> request by request: each is charged to the repo its file tool calls worked in; requests before any file work split by the file calls per repo. Totals stay exact.</div>
     <div><b>Split off</b> (global) or <b>count whole session</b> (session tab): each repo is charged the full session, the table says the rows overlap, and the total stays the real one.</div>
     <div><b>Burned the window</b> spreads a window's points over repos by their share of its tokens; use outside Oriel (claude.ai, another machine) is its own row.</div>
   </div>

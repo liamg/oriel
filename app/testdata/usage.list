@@ -476,38 +476,38 @@ clip 224,38 1376x936 r 0
     rect 1454.4,371.168 115.599976x24 radius 5 stroke 1 #332f27
     text "since Fri 09:00 · by repo, multi-repo sessions split as in Stats" @1145.2656,413.368 #4f4a40 JetBrains Mono 10
     clip 1145.2656,424.368 424.73438x14 r 3
-      rect 1145.2656,424.368 32.39868x14 fill #ff9b45
-      rect 1179.6643,424.368 16.444214x14 fill #4cc9f0
-      rect 1198.1085,424.368 16.692749x14 fill #b98aff
-      rect 1216.8013,424.368 12.947266x14 fill #5c8dff
-      rect 1231.7485,424.368 10.939331x14 fill #4fe0a0
+      rect 1145.2656,424.368 34.740723x14 fill #ff9b45
+      rect 1182.0063,424.368 15.573975x14 fill #4cc9f0
+      rect 1199.5803,424.368 17.562988x14 fill #b98aff
+      rect 1219.1433,424.368 12.095947x14 fill #5c8dff
+      rect 1233.2393,424.368 9.44873x14 fill #4fe0a0
       rect 1244.6879,424.368 325.31213x14 fill #504e49
     pop
     rect 1145.2656,452.36798 8x8 fill #ff9b45 radius 2
     text "api" @1161.2656,460.32797 #ece6d8 JetBrains Mono 11
     text "2 sess" @1412.4375,460.32797 #b3ab99 JetBrains Mono 11
     text "6pt" @1484.2188,460.32797 #b3ab99 JetBrains Mono 11
-    text "$24.96" @1530.4375,460.32797 #ece6d8 JetBrains Mono 11
+    text "$24.60" @1530.4375,460.32797 #ece6d8 JetBrains Mono 11
     rect 1145.2656,480.36798 8x8 fill #4cc9f0 radius 2
     text "pricing" @1161.2656,488.32797 #ece6d8 JetBrains Mono 11
     text "1 sess" @1412.4375,488.32797 #b3ab99 JetBrains Mono 11
     text "3pt" @1484.2188,488.32797 #b3ab99 JetBrains Mono 11
-    text "$23.15" @1530.4375,488.32797 #ece6d8 JetBrains Mono 11
+    text "$22.19" @1530.4375,488.32797 #ece6d8 JetBrains Mono 11
     rect 1145.2656,508.36798 8x8 fill #b98aff radius 2
     text "billing-ui" @1161.2656,516.32794 #ece6d8 JetBrains Mono 11
     text "2 sess" @1412.4375,516.32794 #b3ab99 JetBrains Mono 11
     text "3pt" @1484.2188,516.32794 #b3ab99 JetBrains Mono 11
-    text "$13.37" @1530.4375,516.32794 #ece6d8 JetBrains Mono 11
+    text "$14.33" @1530.4375,516.32794 #ece6d8 JetBrains Mono 11
     rect 1145.2656,536.368 8x8 fill #5c8dff radius 2
     text "web" @1161.2656,544.32794 #ece6d8 JetBrains Mono 11
     text "2 sess" @1412.4375,544.32794 #b3ab99 JetBrains Mono 11
     text "2pt" @1484.2188,544.32794 #b3ab99 JetBrains Mono 11
-    text "$9.92" @1537.0312,544.32794 #ece6d8 JetBrains Mono 11
+    text "$9.77" @1537.0312,544.32794 #ece6d8 JetBrains Mono 11
     rect 1145.2656,564.368 8x8 fill #4fe0a0 radius 2
     text "admin-ui" @1161.2656,572.32794 #ece6d8 JetBrains Mono 11
     text "1 sess" @1412.4375,572.32794 #b3ab99 JetBrains Mono 11
     text "2pt" @1484.2188,572.32794 #b3ab99 JetBrains Mono 11
-    text "$7.74" @1537.0312,572.32794 #ece6d8 JetBrains Mono 11
+    text "$8.26" @1537.0312,572.32794 #ece6d8 JetBrains Mono 11
     rect 1145.2656,592.368 8x8 fill #504e49 radius 2
     text "outside Oriel" @1161.2656,600.32794 #ece6d8 JetBrains Mono 11
     text "" @1452,600.32794 #b3ab99 JetBrains Mono 11

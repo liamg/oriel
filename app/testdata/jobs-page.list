@@ -561,9 +561,9 @@ clip 224,38 1376x936 r 0
     clip 1284,438.0781 78x21.179993 r 0
       text "$5.57" @1319.9844,449.8081 #ece6d8 JetBrains Mono 11.5
       clip 1296,456.2581 60x3 r 3
-        rect 1296,456.2581 23.57898x3 fill #4cc9f0
-        rect 1321.579,456.2581 20.631592x3 fill #b98aff
-        rect 1344.2106,456.2581 11.789429x3 fill #4fe0a0
+        rect 1296,456.2581 25.207275x3 fill #4cc9f0
+        rect 1323.2073,456.2581 15.755859x3 fill #b98aff
+        rect 1340.9631,456.2581 15.036865x3 fill #4fe0a0
       pop
     pop
     clip 1362,441.40808 48x14.519989 r 0
@@ -624,8 +624,8 @@ clip 224,38 1376x936 r 0
     clip 1284,519.13666 78x21.179993 r 0
       text "$4.45" @1319.9844,530.86664 #ece6d8 JetBrains Mono 11.5
       clip 1296,537.31665 60x3 r 3
-        rect 1296,537.31665 30.851074x3 fill #4cc9f0
-        rect 1328.8511,537.31665 27.148926x3 fill #4fe0a0
+        rect 1296,537.31665 33.68091x3 fill #4cc9f0
+        rect 1331.6809,537.31665 24.319092x3 fill #4fe0a0
       pop
     pop
     clip 1362,522.4667 48x14.52002 r 0
@@ -688,9 +688,9 @@ clip 224,38 1376x936 r 0
     clip 1284,594.1562 78x21.179993 r 0
       text "$4.88" @1319.9844,605.88617 #ece6d8 JetBrains Mono 11.5
       clip 1296,612.3362 60x3 r 3
-        rect 1296,612.3362 26x3 fill #4cc9f0
-        rect 1324,612.3362 18x3 fill #b98aff
-        rect 1344,612.3362 12x3 fill #4fe0a0
+        rect 1296,612.3362 23.960571x3 fill #4cc9f0
+        rect 1321.9606,612.3362 23.41748x3 fill #b98aff
+        rect 1347.378,612.3362 8.621948x3 fill #4fe0a0
       pop
     pop
     clip 1362,597.4862 48x14.52002 r 0
@@ -729,11 +729,11 @@ rect 1360,432.0781 190x144.38004 fill #121210 radius 8 stroke 1 #332f27
 text "Oct 7 run · $5.57 est." @1372,455.2981 #ece6d8 JetBrains Mono 11
 rect 1372,472.59808 8x8 fill #4cc9f0 radius 2
 text "api" @1388,480.55807 #ece6d8 JetBrains Mono 11
-text "$2.35" @1505.0312,480.55807 #ece6d8 JetBrains Mono 11
+text "$2.51" @1505.0312,480.55807 #ece6d8 JetBrains Mono 11
 rect 1372,500.59808 8x8 fill #b98aff radius 2
 text "web" @1388,508.55807 #ece6d8 JetBrains Mono 11
-text "$2.05" @1505.0312,508.55807 #ece6d8 JetBrains Mono 11
+text "$1.57" @1505.0312,508.55807 #ece6d8 JetBrains Mono 11
 rect 1372,528.5981 8x8 fill #4fe0a0 radius 2
 text "pricing" @1388,536.55804 #ece6d8 JetBrains Mono 11
-text "$1.17" @1505.0312,536.55804 #ece6d8 JetBrains Mono 11
+text "$1.50" @1505.0312,536.55804 #ece6d8 JetBrains Mono 11
 text "session stats ›" @1372,561.3081 #ffd23f JetBrains Mono 10.5

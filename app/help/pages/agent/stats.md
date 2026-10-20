@@ -52,8 +52,9 @@ takes it off.
 
 ## Splitting multi-repo sessions {#split}
 
-A session over several repos is charged to each by its share of edits and file tool calls (Read, Edit, Write, Grep,
-Glob); requests touching no file follow the same split, and a session with no file work splits evenly. Off, each repo
+A session over several repos charges each request to the repo it worked in: that of its own last file tool call
+(Read, Edit, Write, Grep, Glob), else of the latest one before it. Requests before any file work, or working outside
+every repo, split by each repo's share of the file tool calls; a session with no file work splits evenly. Off, each repo
 is charged the whole session: the rows overlap, and the total stays the real one. One setting,
 `stats.split_sessions`, drives this and the session tab's **count whole session in each**.
 

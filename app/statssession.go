@@ -276,17 +276,14 @@ func (x *statsPlugin) repoCard(c *ui.Ctx, d stats.Detail) {
 		if len(strip) > 0 {
 			widget.Chart(c, "strip", strip, widget.ChartOpts{Kind: widget.ChartStrip, Highlight: -1, Label: "Cost per repo", Help: "agent/stats#split"})
 		}
-		var files []string
 		for i, r := range d.Repos {
 			kv(c, i, repoTone(th, st, r.Repo, i), r.Repo, "", fmt.Sprintf("%d%%", pct(r.Share)), money(r.Cost))
-			files = append(files, fmt.Sprintf("%d in %s", r.Files, r.Repo))
 		}
 		switch {
 		case len(d.Repos) > 1 && whole:
 			note(c, "n", "each repo is charged the whole session: the rows overlap")
 		case len(d.Repos) > 1:
-			note(c, "n", "split by each repo's share of edits and file tool calls")
-			note(c, "n2", "(Read, Edit, Write, Grep, Glob): "+strings.Join(files, ", "))
+			note(c, "n", "each request charged to the repo its file tool calls worked in")
 		}
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		c.Row("mh", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {

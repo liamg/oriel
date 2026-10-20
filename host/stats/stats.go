@@ -51,7 +51,7 @@ func bucketOf(ms int64) int {
 	return len(bucketEdges)
 }
 
-// FileTools are the tools whose calls say where a session worked: a multi-repo session's cost splits by them.
+// FileTools are the tools whose calls say where a session worked: a multi-repo session's cost is charged by them.
 var FileTools = map[string]bool{"Read": true, "Edit": true, "MultiEdit": true, "Write": true, "NotebookEdit": true, "Grep": true,
 	"Glob": true}
 
@@ -65,6 +65,7 @@ type Slot struct {
 	Hour       int64  `json:"hour"` // unix hours
 	Model      string `json:"model,omitempty"`
 	Effort     string `json:"effort,omitempty"`
+	Place      string `json:"place,omitempty"` // the directory the agent was working in (Scan.Place)
 	Requests   int64  `json:"requests,omitempty"`
 	Sidechain  int64  `json:"sidechain,omitempty"`
 	Tokens     Tokens `json:"tokens,omitzero"`
@@ -152,6 +153,14 @@ func slotKey(hour int64, model, effort string) string {
 	return strconv.FormatInt(hour, 10) + "|" + model + "|" + effort
 }
 
+// placeKey is a slot's key: slotKey, then its place if it has one.
+func placeKey(hour int64, model, effort, place string) string {
+	if place == "" {
+		return slotKey(hour, model, effort)
+	}
+	return slotKey(hour, model, effort) + "|" + place
+}
+
 // Scan is the incremental state of reading one log: keep it and Read again for what's been appended.
 type Scan struct {
 	Path   string `json:"path"`
@@ -160,6 +169,8 @@ type Scan struct {
 	Size   int64  `json:"size"`
 	Cwd    string `json:"cwd,omitempty"`
 	Title  string `json:"title,omitempty"` // its first prompt
+	// Place is the directory of the latest file tool call: where the requests from then on are charged.
+	Place string `json:"place,omitempty"`
 	Stats
 
 	// What a read in progress carries to the next: calls awaiting their results, and the message whose usage was
@@ -184,6 +195,7 @@ type request struct {
 	At        time.Time `json:"at"`
 	Model     string    `json:"model"`
 	Effort    string    `json:"effort,omitempty"`
+	Place     string    `json:"place,omitempty"`
 	Tokens    Tokens    `json:"tokens"`
 	Costs     Costs     `json:"costs"`
 	Sidechain bool      `json:"sidechain,omitempty"`
@@ -347,6 +359,11 @@ func (s *Scan) claude(r *record) {
 	if r.Type == "user" && !r.IsMeta && agent == "" && len(blocks) > 0 && blocks[0].Type == "text" && prompt(blocks[0].Text) {
 		s.prompted(r.Timestamp, blocks[0].Text)
 	}
+	for _, b := range blocks {
+		if b.Type == "tool_use" {
+			s.moved(b.Name, b.Input)
+		}
+	}
 	if r.Type == "assistant" && r.Message.Usage != nil {
 		g := r.Message.Usage
 		rate := price.RateFor(model, g.Speed == "fast")
@@ -436,7 +453,7 @@ func (s *Scan) clock(at time.Time) {
 	if s.First.IsZero() || at.Before(s.First) {
 		s.First = at
 	}
-	sl := s.slot(hourOf(at), "", "")
+	sl := s.slot(hourOf(at), "", "", "")
 	if u := at.Unix(); sl.First == 0 || u < sl.First {
 		sl.First = u
 	}
@@ -456,11 +473,11 @@ func (s *Scan) clock(at time.Time) {
 
 func hourOf(at time.Time) int64 { return at.Unix() / 3600 }
 
-func (s *Scan) slot(hour int64, model, effort string) *Slot {
-	k := slotKey(hour, model, effort)
+func (s *Scan) slot(hour int64, model, effort, place string) *Slot {
+	k := placeKey(hour, model, effort, place)
 	sl := s.Slots[k]
 	if sl == nil {
-		sl = &Slot{Hour: hour, Model: model, Effort: effort}
+		sl = &Slot{Hour: hour, Model: model, Effort: effort, Place: place}
 		s.Slots[k] = sl
 	}
 	return sl
@@ -481,25 +498,26 @@ func (s *Scan) turn(at time.Time) {
 		return
 	}
 	s.Turns++
-	s.slot(hourOf(at), "", "").Turns++
+	s.slot(hourOf(at), "", "", "").Turns++
 	s.bucket(at).Turns++
 }
 
-// request counts a request. One with the id of the request counted last replaces it: a later record of the same
-// message, with its usage as it then stood.
+// request counts a request, charged to the scan's place. One with the id of the request counted last replaces it: a
+// later record of the same message, with its usage as it then stood.
 func (s *Scan) request(id string, q request, agent string, window int64) {
 	if q.At.IsZero() {
 		return
 	}
+	q.Place = s.Place
 	if id != "" && id == s.LastMsg && s.LastReq != nil {
 		s.apply(*s.LastReq, -1)
 	} else {
 		s.Requests++
-		s.slot(hourOf(q.At), q.Model, q.Effort).Requests++
+		s.slot(hourOf(q.At), q.Model, q.Effort, q.Place).Requests++
 		s.bucket(q.At).Requests++
 		if q.Sidechain {
 			s.Sidechain++
-			s.slot(hourOf(q.At), q.Model, q.Effort).Sidechain++
+			s.slot(hourOf(q.At), q.Model, q.Effort, q.Place).Sidechain++
 		}
 	}
 	s.LastMsg, s.LastReq = id, &q
@@ -525,7 +543,7 @@ func (s *Scan) request(id string, q request, agent string, window int64) {
 func (s *Scan) apply(q request, k int64) {
 	s.Tokens = s.Tokens.Add(q.Tokens, k)
 	s.Costs = s.Costs.Add(q.Costs, float64(k))
-	sl := s.slot(hourOf(q.At), q.Model, q.Effort)
+	sl := s.slot(hourOf(q.At), q.Model, q.Effort, q.Place)
 	sl.Tokens = sl.Tokens.Add(q.Tokens, k)
 	sl.Costs = sl.Costs.Add(q.Costs, float64(k))
 	b := s.bucket(q.At)
@@ -549,11 +567,17 @@ func (s *Scan) call(id, name string, input json.RawMessage, at time.Time, model,
 	s.ToolCalls++
 	t := s.tool(name)
 	t.Calls++
+	if FileTools[name] {
+		for _, p := range paths(input, s.Cwd) {
+			s.Paths[p]++
+		}
+	}
+	s.moved(name, input)
 	key, tkey := "", ""
 	if !at.IsZero() {
-		sl := s.slot(hourOf(at), model, effort)
+		sl := s.slot(hourOf(at), model, effort, s.Place)
 		sl.ToolCalls++
-		key = slotKey(sl.Hour, model, effort)
+		key = placeKey(sl.Hour, model, effort, s.Place)
 		tkey = slotKey(sl.Hour, model, name)
 		ts := s.ToolSlots[tkey]
 		if ts == nil {
@@ -565,10 +589,15 @@ func (s *Scan) call(id, name string, input json.RawMessage, at time.Time, model,
 	if id != "" {
 		s.Pending[id] = Pending{Name: name, At: at, Model: model, Key: key, Tool: tkey}
 	}
-	if FileTools[name] {
-		for _, p := range paths(input, s.Cwd) {
-			s.Paths[p]++
-		}
+}
+
+// moved sets the scan's place from a file tool call: the directory of the file it names, or the one it searches.
+func (s *Scan) moved(name string, input json.RawMessage) {
+	if !FileTools[name] {
+		return
+	}
+	if p := place(input, s.Cwd); p != "" {
+		s.Place = p
 	}
 }
 
@@ -636,31 +665,38 @@ func (s *Scan) tool(name string) *Tool {
 	return t
 }
 
+// fileInput is what a file tool call's input names.
+type fileInput struct {
+	FilePath     string `json:"file_path"`
+	NotebookPath string `json:"notebook_path"`
+	Path         string `json:"path"` // a directory searched
+	Files        []struct {
+		Path string `json:"path"`
+	} `json:"files"`
+}
+
+// abs is p made absolute against cwd, or "" when it can't be.
+func abs(p, cwd string) string {
+	if p == "" || !filepath.IsAbs(p) && cwd == "" {
+		return ""
+	}
+	if !filepath.IsAbs(p) {
+		p = filepath.Join(cwd, p)
+	}
+	return filepath.Clean(p)
+}
+
 // paths are the files a tool call's input names, made absolute against cwd.
 func paths(input json.RawMessage, cwd string) []string {
-	var in struct {
-		FilePath     string `json:"file_path"`
-		NotebookPath string `json:"notebook_path"`
-		Path         string `json:"path"`
-		Files        []struct {
-			Path string `json:"path"`
-		} `json:"files"`
-	}
+	var in fileInput
 	if json.Unmarshal(input, &in) != nil {
 		return nil
 	}
 	var out []string
 	add := func(p string) {
-		if p == "" {
-			return
+		if p = abs(p, cwd); p != "" {
+			out = append(out, p)
 		}
-		if !filepath.IsAbs(p) {
-			if cwd == "" {
-				return
-			}
-			p = filepath.Join(cwd, p)
-		}
-		out = append(out, filepath.Clean(p))
 	}
 	add(in.FilePath)
 	add(in.NotebookPath)
@@ -672,6 +708,21 @@ func paths(input json.RawMessage, cwd string) []string {
 		out = append(out, filepath.Clean(cwd)) // a search with no path is of where the agent works
 	}
 	return out
+}
+
+// place is the directory a tool call's input works in: its first file's, else the one it searches, else cwd.
+func place(input json.RawMessage, cwd string) string {
+	var in fileInput
+	if json.Unmarshal(input, &in) != nil {
+		return ""
+	}
+	for _, f := range in.Files {
+		in.FilePath = cmpOr(in.FilePath, f.Path)
+	}
+	if p := abs(cmpOr(in.FilePath, in.NotebookPath), cwd); p != "" {
+		return filepath.Dir(p)
+	}
+	return cmpOr(abs(in.Path, cwd), abs(cwd, cwd))
 }
 
 // ModelName is the model id with any deployment suffix cut off: the million-token variant is the same model.
