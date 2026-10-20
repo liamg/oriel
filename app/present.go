@@ -20,11 +20,16 @@ import (
 // PresentKeyMode is a presentation's keys: j/k between blocks, c or ⏎ to comment on one, o to go to its source.
 const PresentKeyMode = "present"
 
-var tPresentSel = theme.DeclareOn("present.block.selected", "alpha(accent, 6%)", "bg.base")
+var (
+	tPresentSel   = theme.DeclareOn("present.block.selected", "alpha(accent, 6%)", "bg.base")
+	tPresentHover = theme.DeclareOn("present.part.hover", "alpha(fg, 4%)", "bg.base")
+)
 
 // presentState is a presentation's place: the selected block, the scroll, and what to do next frame.
 type presentState struct {
-	sel    int // the selected block, or -1
+	sel    int                   // the selected block, or -1
+	part   int                   // the selected block's selected part, or -1 for the whole block
+	parts  map[int][]presentPart // each block's parts (PresentDraw.Part), as last drawn
 	scroll scrollState
 	gaps   map[string]float32 // the space above each margin card, as last laid out
 	focus  bool               // take focus next frame
@@ -39,6 +44,30 @@ type presentState struct {
 	height []float32     // each block's box, as last laid out; 0 before it's been
 	drawn  map[int]ui.ID // the blocks built this frame, by their boxes
 	laid   map[int]ui.ID // and last frame
+}
+
+// presentPart is a part of a block on its own source lines, 0-based, and the node its body drew it in.
+type presentPart struct {
+	from, to int
+	id       ui.ID
+}
+
+// partAt is the part of block i holding a 0-based line, or -1.
+func (st *presentState) partAt(i, line int) int {
+	for k, p := range st.parts[i] {
+		if p.from <= line && line <= p.to {
+			return k
+		}
+	}
+	return -1
+}
+
+// selected is the selected part of the selected block, if one is.
+func (st *presentState) selected() (presentPart, bool) {
+	if ps := st.parts[st.sel]; st.part >= 0 && st.part < len(ps) {
+		return ps[st.part], true
+	}
+	return presentPart{}, false
 }
 
 // blockGuess is a block's height before it's been laid out.
@@ -91,13 +120,14 @@ func (st *presentState) build(h plugin.Host, p presentation, snap text.Snapshot,
 	if err != nil {
 		h.Report(registry.KindView, "presenter."+p.presenter.Name, err)
 	}
+	clear(st.parts)
 	*b = presentBuild{buf: p.buf, version: snap.Version(), path: p.path, presenter: p.presenter.Name, width: width, gen: gen, ctx: ctx,
 		at: ctx.LineBlocks(snap.Lines()), err: err}
 	return b
 }
 
 func newPresentState() *presentState {
-	return &presentState{sel: -1, top: -1, gaps: map[string]float32{}, drawn: map[int]ui.ID{}, laid: map[int]ui.ID{}}
+	return &presentState{sel: -1, part: -1, parts: map[int][]presentPart{}, top: -1, gaps: map[string]float32{}, drawn: map[int]ui.ID{}, laid: map[int]ui.ID{}}
 }
 
 // presentation is a presenter drawing a buffer: in an editor window, or a view of its own (plan mode).
@@ -135,7 +165,7 @@ func presentCommands(sh *shell, h plugin.Host) []registry.Command {
 		{ID: "present.next", Title: "Presentation: the next block", Available: has, Run: on(func(f *presentFocus) { f.move(1) })},
 		{ID: "present.prev", Title: "Presentation: the block before", Available: has, Run: on(func(f *presentFocus) { f.move(-1) })},
 		{ID: "present.comment", Title: "Presentation: open a thread on the selected block's lines", Available: has,
-			Run: on(func(f *presentFocus) { f.comment(max(f.st.sel, 0)) })},
+			Run: on(func(f *presentFocus) { f.comment(max(f.st.sel, 0), f.st.part) })},
 		{ID: "present.source", Title: "Presentation: go to the selected block's source", Available: has, Run: on(func(f *presentFocus) {
 			if f.p.source == nil || len(f.st.blocks) == 0 {
 				return
@@ -143,6 +173,9 @@ func presentCommands(sh *shell, h plugin.Host) []registry.Command {
 			line := f.st.shown
 			if f.st.sel >= 0 && f.st.sel < len(f.st.blocks) {
 				line = f.st.blocks[f.st.sel].From
+			}
+			if pt, ok := f.st.selected(); ok {
+				line = pt.from
 			}
 			f.p.source(line)
 		})},
@@ -166,24 +199,45 @@ func presentKeys() []registry.Keymap {
 	return out
 }
 
+// move selects the next block, or the one before: through a block's parts one at a time.
 func (f *presentFocus) move(d int) {
-	if len(f.st.blocks) == 0 {
+	st := f.st
+	if len(st.blocks) == 0 {
 		return
 	}
-	f.st.sel = min(max(f.st.sel+d, 0), len(f.st.blocks)-1)
-	f.st.reveal = true
+	if n := len(st.parts[st.sel]); st.sel >= 0 && st.part+d >= 0 && st.part+d < n {
+		st.part += d
+		st.reveal = true
+		return
+	}
+	next := min(max(st.sel+d, 0), len(st.blocks)-1)
+	if next == st.sel {
+		return
+	}
+	st.sel, st.part = next, -1
+	if n := len(st.parts[next]); n > 0 {
+		st.part = 0
+		if d < 0 {
+			st.part = n - 1
+		}
+	}
+	st.reveal = true
 }
 
-// comment opens a thread on block i's lines, when the presenter takes comments.
-func (f *presentFocus) comment(i int) {
+// comment opens a thread on block i's lines, or its part's (-1 for the whole block), when the presenter takes
+// comments.
+func (f *presentFocus) comment(i, part int) {
 	if !f.p.presenter.Comments || i >= len(f.st.blocks) {
 		return
 	}
-	f.st.sel = i
-	b := f.st.blocks[i]
-	a := registry.Args{"file": f.p.path, "line": b.From + 1, "window": f.p.window}
-	if b.To > b.From {
-		a["end_line"] = b.To + 1
+	f.st.sel, f.st.part = i, part
+	from, to := f.st.blocks[i].From, f.st.blocks[i].To
+	if pt, ok := f.st.selected(); ok {
+		from, to = pt.from, pt.to
+	}
+	a := registry.Args{"file": f.p.path, "line": from + 1, "window": f.p.window}
+	if to > from {
+		a["end_line"] = to + 1
 	}
 	f.opened = true
 	if err := f.h.Run(context.Background(), "thread.new", a); err != nil {
@@ -324,7 +378,16 @@ func drawPresentation(c *ui.Ctx, h plugin.Host, sh *shell, st *presentState, p p
 			if focus.opened {
 				decor = blockDecorations(h, dctx, built) // with the thread a click just opened, so it takes the keys typed next
 			}
-			cards = presentMargin(c, st, p, decor, span, margin)
+			cardTop := func(i, line int) (float32, bool) {
+				if k := st.partAt(i, line); k >= 0 {
+					if r, ok := c.Rect(st.parts[i][k].id); ok {
+						return r.Min.Y, true
+					}
+				}
+				top, _, ok := span(i)
+				return top, ok
+			}
+			cards = presentMargin(c, st, p, decor, cardTop, margin)
 		})
 	})
 	st.frames++
@@ -346,7 +409,11 @@ func drawPresentation(c *ui.Ctx, h plugin.Host, sh *shell, st *presentState, p p
 				c.WakeAt(c.Now()) // built this frame for the first time: shown once it's laid out
 				break
 			}
-			c.ScrollIntoView(body, ids[st.sel])
+			target := ids[st.sel]
+			if pt, ok := st.selected(); ok {
+				target = pt.id
+			}
+			c.ScrollIntoView(body, target)
 		}
 		st.reveal = false
 	}
@@ -379,39 +446,76 @@ func scrolledBox(c *ui.Ctx, key any, st *scrollState, s ui.Style, body func(c *u
 }
 
 // presentBlock is one block: its number where a card is (or where it's selected), an edge in its card's or
-// decoration's colour, its body, and a label at its top right. A click selects it and comments on it. It returns
-// the ID of what's clicked, whose top a card for it is level with.
+// decoration's colour, its body, and a label at its top right. A click selects it and comments on it. A block whose
+// body marks parts has these for each part, where it was last laid out, and a click on one is on it. It returns the
+// ID of what's clicked, whose top a card for it is level with.
 func presentBlock(c *ui.Ctx, h plugin.Host, f *presentFocus, i int, b *registry.PresentBlock, bd blockDecor, width float32, kicker string) ui.ID {
 	th := c.Theme()
 	st := f.st
+	parts := st.parts[i]
+	type mark struct {
+		line int
+		tone render.Color
+	}
+	marks := make([]mark, len(parts))
 	line, tone := 0, render.Color{}
 	for _, d := range bd.cards {
-		if line == 0 {
-			line = d.Line + 1
+		m := &mark{line, tone}
+		k := st.partAt(i, d.Line)
+		if k >= 0 {
+			m = &marks[k]
 		}
-		if d.Style != "" && tone == (render.Color{}) {
-			tone = tokenColour(th, d.Style, tone)
+		if m.line == 0 {
+			m.line = d.Line + 1
+		}
+		if d.Style != "" && m.tone == (render.Color{}) {
+			m.tone = tokenColour(th, d.Style, m.tone)
+		}
+		if k < 0 {
+			line, tone = m.line, m.tone
 		}
 	}
 	if tone == (render.Color{}) && bd.mark != "" {
 		tone = tokenColour(th, bd.mark, tone)
 	}
 	sel := st.sel == i
+	selPart := -1
+	if sel && st.part < len(parts) {
+		selPart = st.part
+	}
 	fill := render.Color{}
 	switch {
 	case bd.bg != nil:
 		fill, tone = tokenColour(th, bd.bg.Style, fill), tokenColour(th, bd.bg.Edge, tone)
-	case sel:
+	case sel && selPart < 0:
 		fill = th.C(tPresentSel)
 	}
-	if sel && line == 0 {
+	if sel && selPart < 0 && line == 0 {
 		line = b.From + 1
 	}
+	if selPart >= 0 && marks[selPart].line == 0 {
+		marks[selPart].line = parts[selPart].from + 1
+	}
 	var id ui.ID
+	var drawn []presentPart
 	c.Box(fmt.Sprint("b", i), ui.Style{W: ui.Flex(1), Pad: ui.Insets{T: b.Space}}, func(c *ui.Ctx) {
 		id = c.Next("click")
-		if widget.Clickable(c, "click", ui.Style{Dir: ui.Row, W: ui.Flex(1), Fill: fill, Selected: sel, Role: ui.RoleListItem, Label: b.Label,
-			Help: cmpOr(f.p.presenter.Help, "editor/pane#present")}, func(c *ui.Ctx) {
+		box, laid := c.Rect(id)
+		// the part under the pointer, or at it
+		under := func(at render.Point) int {
+			for k, pt := range parts {
+				if r, ok := c.Rect(pt.id); ok && at.X >= box.Min.X && at.X < box.Max.X && at.Y >= r.Min.Y && at.Y < r.Max.Y {
+					return k
+				}
+			}
+			return -1
+		}
+		hover := -1
+		if in := c.Interaction(id); len(parts) > 0 && in.Hovered {
+			hover = under(in.Pointer())
+		}
+		res := widget.Clickable(c, "click", ui.Style{Dir: ui.Row, W: ui.Flex(1), Fill: fill, Selected: sel, Role: ui.RoleListItem, Label: b.Label,
+			NoHover: len(parts) > 0, Help: cmpOr(f.p.presenter.Help, "editor/pane#present")}, func(c *ui.Ctx) {
 			c.Box("n", ui.Style{W: ui.Px(40), Pad: ui.Insets{R: 10, T: 4}, Main: ui.End, Dir: ui.Row}, func(c *ui.Ctx) {
 				if len(bd.signs) > 0 {
 					c.Row("signs", ui.Style{Gap: 2, Cross: ui.Center, Float: &ui.Float{Offset: render.Point{X: 2, Y: 3}}}, func(c *ui.Ctx) {
@@ -431,12 +535,45 @@ func presentBlock(c *ui.Ctx, h plugin.Host, f *presentFocus, i int, b *registry.
 			}
 			c.Box("in", ui.Style{W: ui.Px(width + 24), Pad: pad}, func(c *ui.Ctx) {
 				if b.Body != nil {
-					b.Body(c, registry.PresentDraw{Width: width, Decorations: bd.all, Kicker: kicker})
+					b.Body(c, registry.PresentDraw{Width: width, Decorations: bd.all, Kicker: kicker,
+						Part: func(from, to int, id ui.ID) {
+							drawn = append(drawn, presentPart{from: from, to: max(to, from), id: id})
+						}})
 				}
 			})
-		}).Clicked {
-			st.sel = i
-			f.comment(i)
+			for k, pt := range parts {
+				r, ok := c.Rect(pt.id)
+				if !ok || !laid {
+					continue
+				}
+				at := func(x float32) *ui.Float { return &ui.Float{Offset: render.Point{X: x, Y: r.Min.Y - box.Min.Y}} }
+				wash := render.Color{}
+				switch {
+				case k == selPart:
+					wash = th.C(tPresentSel)
+				case k == hover:
+					wash = th.C(tPresentHover)
+				}
+				if wash.A > 0 {
+					c.Box(fmt.Sprint("wash", k), ui.Style{W: ui.Px(box.Dx()), H: ui.Px(r.Dy()), Fill: wash, Float: at(0), Z: ui.LayerUnder}, nil)
+				}
+				if m := marks[k]; m.line > 0 {
+					c.Row(fmt.Sprint("n", k), ui.Style{W: ui.Px(40), Pad: ui.Insets{R: 10, T: 6}, Main: ui.End, Float: at(0)}, func(c *ui.Ctx) {
+						c.Text("t", fmt.Sprint(m.line), monoFont(10.5, th.C(theme.FgGhost)))
+					})
+				}
+				if m := marks[k]; m.tone != (render.Color{}) {
+					c.Box(fmt.Sprint("edge", k), ui.Style{W: ui.Px(2), H: ui.Px(r.Dy()), Fill: m.tone, Float: at(40)}, nil)
+				}
+			}
+		})
+		if res.Clicked {
+			k := -1
+			if len(parts) > 0 {
+				k = under(res.Pointer())
+			}
+			st.sel, st.part = i, k
+			f.comment(i, k)
 		}
 		if l := bd.label; l != nil {
 			edge := tokenColour(th, l.Style, th.C(theme.FgFaint))
@@ -450,12 +587,17 @@ func presentBlock(c *ui.Ctx, h plugin.Host, f *presentFocus, i int, b *registry.
 				})
 		}
 	})
+	if len(drawn) > 0 {
+		st.parts[i] = drawn
+	} else {
+		delete(st.parts, i)
+	}
 	return id
 }
 
-// presentMargin is the blocks' cards, each level with its block (or under the card before it), where span says it
-// was laid out. It returns the cards that want revealing.
-func presentMargin(c *ui.Ctx, st *presentState, p presentation, decor []blockDecor, span func(int) (float32, float32, bool), width float32) (reveal []ui.ID) {
+// presentMargin is the blocks' cards, each level with its block or its line's part (or under the card before it),
+// where cardTop says that was laid out. It returns the cards that want revealing.
+func presentMargin(c *ui.Ctx, st *presentState, p presentation, decor []blockDecor, cardTop func(block, line int) (float32, bool), width float32) (reveal []ui.ID) {
 	th := c.Theme()
 	type entry struct {
 		key   string
@@ -478,7 +620,7 @@ func presentMargin(c *ui.Ctx, st *presentState, p presentation, decor []blockDec
 		y := col.Min.Y + 28
 		for _, e := range entries {
 			gap := float32(0)
-			if top, _, okB := span(e.block); ok && okB {
+			if top, okB := cardTop(e.block, e.d.Line); ok && okB {
 				gap = max(top-y, 0)
 			}
 			gap = float32(int(gap))

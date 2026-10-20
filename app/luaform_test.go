@@ -169,3 +169,28 @@ end)
 		t.Fatalf("⏎ in a Lua input with lines didn't make a new line:\n%s", s.frameText())
 	}
 }
+
+// A Lua input with enter_submits is a message's field: ⇧⏎ a new line, ⏎ submits.
+func TestLuaMessageInput(t *testing.T) {
+	s := luaScene(t, `local s = oriel.ui.state("reply-form", { text = "" })
+oriel.view.override("reply-form", function(ctx)
+  return oriel.ui.column{ pad = 14, gap = 10,
+    oriel.ui.input{ id = "reply", label = "Reply", value = s.text, lines = 4, enter_submits = true,
+      on_change = function(t) s.text = t end, on_submit = function(t) s.sent = t:gsub("\n", "|") end },
+    oriel.ui.text("sent=" .. (s.sent or "")),
+  }
+end)
+`)
+	s.run("view.open", registry.Args{"id": "reply-form", "place": "dock", "edge": "right", "title": "Jot", "size": 420})
+	s.frame()
+	s.frame()
+	s.click(centre(s.access("Reply").Bounds))
+	s.typeKeys("a")
+	s.keyCommand(t, "<S-CR>")
+	s.typeKeys("b")
+	s.keyCommand(t, "<CR>")
+	s.frame()
+	if !strings.Contains(s.frameText(), "sent=a|b") {
+		t.Fatalf("⇧⏎ then ⏎ in a Lua input with enter_submits didn't send two lines:\n%s", s.frameText())
+	}
+}

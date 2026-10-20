@@ -128,8 +128,14 @@ func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 		case "pull-request":
 			e.Shown = remote
 		case "git":
+			// The session's uncommitted files; a project it only reads has none of its own.
 			e.Note = func(project string) string {
-				if n := r.uncommitted(r.sh.git.tree(projectsHere(h).dir(project)).state()); n > 0 {
+				w := projectsHere(h)
+				p, _ := w.project(cmpOr(project, w.open))
+				if p.ReadOnly {
+					return ""
+				}
+				if n := r.uncommitted(r.sh.git.tree(p.Dir).state()); n > 0 {
 					return fmt.Sprint(n)
 				}
 				return ""
@@ -576,7 +582,8 @@ func (l stateLine) texts() []string {
 	return out
 }
 
-// stateLine is a project's header line: branch and ahead/behind, its changes, then what plugins add (a PR, CI).
+// stateLine is a project's header line: branch and ahead/behind, its changes ("read-only" for a project the session
+// only reads), then what plugins add (a PR, CI).
 func (r *rail) stateLine(w here, p core.Project) stateLine {
 	th := r.h.CurrentTheme()
 	if th == nil {
@@ -599,7 +606,9 @@ func (r *rail) stateLine(w here, p core.Project) stateLine {
 		if st.Behind > 0 {
 			out = append(out, statePart{text: fmt.Sprintf("↓%d", st.Behind), tone: th.C(tSideAhead)})
 		}
-		if n := uncommittedCount(st); n > 0 {
+		if p.ReadOnly {
+			out = append(out, statePart{text: "read-only", tone: faint})
+		} else if n := uncommittedCount(st); n > 0 {
 			out = append(out, statePart{text: fmt.Sprintf("%d changed", n), tone: th.C(tSideChanged)})
 		}
 	}
@@ -607,7 +616,7 @@ func (r *rail) stateLine(w here, p core.Project) stateLine {
 	for _, s := range parts {
 		out = append(out, statePart{text: s.Text, tone: tokenColour(th, s.Style, faint), dot: s.Dot})
 	}
-	if st != nil && uncommittedCount(st) == 0 && len(parts) == 0 {
+	if st != nil && !p.ReadOnly && uncommittedCount(st) == 0 && len(parts) == 0 {
 		out = append(out, statePart{text: "clean", tone: faint})
 	}
 	return out

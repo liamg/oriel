@@ -25,6 +25,7 @@ const (
 	mdItem
 	mdCode
 	mdRule
+	mdTable
 )
 
 // mdBlock is one block of markdown and the source lines it came from, so a thread can be anchored to it.
@@ -37,13 +38,15 @@ type mdBlock struct {
 	Code      []string // a fence's lines
 	Line, End int      // 1-based, in the source
 	Images    []mdImage
-	Align     string // "center" or "right" from its HTML, or ""
+	Align     string     // "center" or "right" from its HTML, or ""
+	Rows      [][]string // a table's cells' inline markdown, its header first, each row as wide as the header
+	Aligns    []string   // a table's columns' alignment: "left", "center", "right" or ""
 }
 
 var listItem = regexp.MustCompile(`^(\s*)([-*+]|\d+[.)])\s+(.*)$`)
 
 // mdParse splits markdown into blocks: headings, paragraphs, list items (with their continuation lines), fenced
-// code, rules, and HTML blocks as the blocks they mean. Images come out of the text into each block's Images.
+// code, rules, GFM tables, and HTML blocks as the blocks they mean. Images come out of the text into each block's Images.
 func mdParse(src string) []mdBlock {
 	return mdImagesOut(mdBlocks(src))
 }
@@ -55,7 +58,7 @@ func mdBlocks(src string) []mdBlock {
 	for i := 0; i < len(lines); i++ {
 		l := strings.TrimRight(lines[i], "\r")
 		t := strings.TrimSpace(l)
-		if t != "" && para >= 0 && !strings.HasPrefix(t, "```") && t != "---" && t != "***" && !strings.HasPrefix(t, "#") && !listItem.MatchString(l) && !startsHTMLBlock(l) {
+		if t != "" && para >= 0 && !strings.HasPrefix(t, "```") && t != "---" && t != "***" && !strings.HasPrefix(t, "#") && !listItem.MatchString(l) && !startsHTMLBlock(l) && mdTableAt(lines, i) == nil {
 			out[para].Text += " " + t
 			out[para].End = i + 1
 			continue
@@ -94,12 +97,92 @@ func mdBlocks(src string) []mdBlock {
 				b.End = i + 1
 			}
 			out = append(out, b)
+		case mdTableAt(lines, i) != nil:
+			b := mdBlock{Kind: mdTable, Rows: [][]string{mdRow(t)}, Aligns: mdTableAt(lines, i), Line: i + 1}
+			for i += 2; i < len(lines) && !mdEndsTable(lines[i]); i++ {
+				row := mdRow(strings.TrimSpace(lines[i]))
+				b.Rows = append(b.Rows, append(row, make([]string, len(b.Aligns))...)[:len(b.Aligns)])
+			}
+			i--
+			b.End = i + 1
+			out = append(out, b)
 		default:
 			out = append(out, mdBlock{Kind: mdPara, Text: t, Line: i + 1, End: i + 1})
 			para = len(out) - 1
 		}
 	}
 	return out
+}
+
+var tableDelim = regexp.MustCompile(`^:?-+:?$`)
+
+// mdTableAt is the alignment of each column of the table starting at line i, or nil if none does: a row of cells with
+// a delimiter row of as many under it.
+func mdTableAt(lines []string, i int) []string {
+	if i+1 >= len(lines) || !mdHasPipe(lines[i]) || !mdHasPipe(lines[i+1]) {
+		return nil
+	}
+	delim := mdRow(strings.TrimSpace(lines[i+1]))
+	if len(delim) != len(mdRow(strings.TrimSpace(lines[i]))) {
+		return nil
+	}
+	aligns := make([]string, len(delim))
+	for j, d := range delim {
+		if !tableDelim.MatchString(d) {
+			return nil
+		}
+		switch l, r := d[0] == ':', d[len(d)-1] == ':'; {
+		case l && r:
+			aligns[j] = "center"
+		case r:
+			aligns[j] = "right"
+		case l:
+			aligns[j] = "left"
+		}
+	}
+	return aligns
+}
+
+// mdEndsTable is whether a line ends a table: it's blank or starts another block.
+func mdEndsTable(l string) bool {
+	t := strings.TrimSpace(l)
+	return t == "" || strings.HasPrefix(t, "```") || t == "---" || t == "***" || strings.HasPrefix(t, "#") || strings.HasPrefix(t, ">") ||
+		listItem.MatchString(l) || startsHTMLBlock(l)
+}
+
+func mdHasPipe(l string) bool { return len(mdPipes(l)) > 0 }
+
+// mdPipes are where l's unescaped pipes are.
+func mdPipes(l string) []int {
+	var at []int
+	for i := 0; i < len(l); i++ {
+		switch l[i] {
+		case '\\':
+			i++
+		case '|':
+			at = append(at, i)
+		}
+	}
+	return at
+}
+
+// mdRow is a table row's cells, split at its unescaped pipes (a leading and a trailing one are optional), trimmed,
+// with their escaped pipes unescaped.
+func mdRow(t string) []string {
+	pipes := mdPipes(t)
+	from, to := 0, len(t)
+	if len(pipes) > 0 && pipes[0] == 0 {
+		from, pipes = 1, pipes[1:]
+	}
+	if len(pipes) > 0 && pipes[len(pipes)-1] == len(t)-1 && len(t)-1 >= from {
+		to, pipes = len(t)-1, pipes[:len(pipes)-1]
+	}
+	var cells []string
+	for _, p := range append(pipes, to) {
+		cells = append(cells, strings.ReplaceAll(strings.TrimSpace(t[from:p]), `\|`, "|"))
+		from = p + 1
+	}
+	return cells
 }
 
 // mdImagesOut takes each block's images out of its text, makes its inline HTML markdown, and drops what's left empty.
@@ -111,6 +194,15 @@ func mdImagesOut(bs []mdBlock) []mdBlock {
 			b.Text, b.Images = mdInlineHTML(text), append(b.Images, imgs...)
 			if b.Text == "" && len(b.Images) == 0 && b.Kind != mdItem {
 				continue
+			}
+		}
+		for _, row := range b.Rows {
+			for j, cell := range row {
+				text, imgs := mdTakeImages(cell)
+				if text == "" && len(imgs) > 0 {
+					text = imgs[0].Alt
+				}
+				row[j] = mdInlineHTML(text)
 			}
 		}
 		out = append(out, b)
@@ -150,6 +242,9 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 			}
 			switch b.Kind {
 			case mdCode:
+				if mdDiagramBox(c, fmt.Sprint("code", k), b, width, o, false) {
+					continue
+				}
 				c.Column(fmt.Sprint("code", k), ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 6), Radius: 4, Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 					for j, l := range b.Code {
 						c.Text(j, strings.ReplaceAll(l, "\t", "    "), code)
@@ -157,6 +252,8 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 				})
 			case mdRule:
 				c.Box(fmt.Sprint("hr", k), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			case mdTable:
+				markdownTable(c, fmt.Sprint("table", k), b, width, body, nil)
 			case mdHeading:
 				mdAligned(c, fmt.Sprint("h", k), b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, mdSpans(b.Text), width, head, widget.RichOpts{}) })
 			case mdItem:
@@ -170,6 +267,38 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 			}
 		}
 	})
+}
+
+// markdownTable draws a table block: its cells' inline markdown in body, its header row semibold, each column aligned
+// as its delimiter row says. part, if not nil, is told each row's node and its 0-based source line.
+func markdownTable(c *ui.Ctx, key any, b mdBlock, width float32, body ui.TextStyle, part func(line int, id ui.ID)) {
+	rows := make([][][]widget.Span, len(b.Rows))
+	for r, row := range b.Rows {
+		for _, cell := range row {
+			rows[r] = append(rows[r], mdSpans(cell))
+		}
+	}
+	o := widget.TableOpts{Head: true, Label: "table"}
+	if part != nil {
+		o.Row = func(r int, id ui.ID) {
+			line := b.Line - 1 // the header's; the delimiter row's is under it
+			if r > 0 {
+				line = b.Line + r
+			}
+			part(line, id)
+		}
+	}
+	for _, a := range b.Aligns {
+		al := ui.Start
+		switch a {
+		case "center":
+			al = ui.Center
+		case "right":
+			al = ui.End
+		}
+		o.Align = append(o.Align, al)
+	}
+	widget.Table(c, key, rows, width, body, o)
 }
 
 // threadMarkdown is how a thread's comments draw their markdown: images found from its project's folder (the primary

@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
@@ -260,5 +261,96 @@ func TestLightboxOverAPage(t *testing.T) {
 	}
 	if !open {
 		t.Fatal("Escape at the lightbox closed the page under it")
+	}
+}
+
+// rendering.md, "Images": a vector (a diagram) is zoomable like an image, in its document's group, and draws itself at
+// the size the lightbox shows it, so it stays sharp however far it's zoomed.
+func TestLightboxVector(t *testing.T) {
+	var drawn []render.Rect
+	v := Vector{Size: render.Point{X: 200, Y: 100}, Fill: color.NRGBA{R: 0x20, G: 0x20, B: 0x20, A: 0xff},
+		Draw: func(f render.Frame, r render.Rect) {
+			drawn = append(drawn, r)
+			f.Rect(r, render.Style{Fill: color.NRGBA{R: 0xff, A: 0xff}})
+		}}
+	var ids [3]ui.ID
+	h := newHarness(t, theme.Dark, lightboxWindow, func(c *ui.Ctx) {
+		c.Row("row", ui.Style{Pad: ui.Pad(20), Gap: 20}, func(c *ui.Ctx) {
+			ids[0] = Image(c, "a", gradient(40, 40), 100, ImageOpts{Label: "the first", Zoom: true, Group: "doc"})
+			ids[1] = VectorImage(c, "v", v, 120, ImageOpts{Label: "the diagram", Zoom: true, Group: "doc"})
+			ids[2] = Image(c, "b", gradient(40, 40), 100, ImageOpts{Label: "the last", Zoom: true, Group: "doc"})
+		})
+	})
+	if r := h.rect(ids[1]); r.Dx() != 120 || r.Dy() != 60 {
+		t.Errorf("the vector is drawn at %v, want 120×60", r)
+	}
+	if !slices.Contains(drawn, h.rect(ids[1])) {
+		t.Errorf("the vector draws into %v, not its box %v", drawn, h.rect(ids[1]))
+	}
+	h.clickImage(ids[1])
+	if n := h.dialog(); n.Name != "the diagram" || !h.drew("2 / 3") {
+		t.Errorf("the lightbox shows %q: %q", n.Name, h.texts())
+	}
+	// 200×100 fits the room at twice its size: a vector isn't held to its own size as pixels are.
+	drawn = nil
+	h.frame()
+	if !h.drew("200×100 · 200%") || len(drawn) == 0 || drawn[len(drawn)-1].Dx() != 400 {
+		t.Errorf("fitted: %q, drawn into %v", h.texts(), drawn)
+	}
+	p := render.Point{X: 400, Y: 300}
+	h.wheel(p, -240)
+	drawn = nil
+	h.frame()
+	if len(drawn) == 0 || drawn[len(drawn)-1].Dx() <= 400 {
+		t.Errorf("zoomed in, it's drawn into %v", drawn)
+	}
+	h.keys("Left")
+	if !h.drew("the first") || !h.drew("1 / 3") {
+		t.Errorf("← from the vector: %q", h.texts())
+	}
+	h.keys("Right", "Right")
+	if !h.drew("the last") {
+		t.Errorf("→ past the vector: %q", h.texts())
+	}
+}
+
+// A vector's tips are tooltips over its parts, drawn at whatever size it's shown: text a diagram cut short shows in
+// full under the pointer, inline and in the lightbox.
+func TestVectorTips(t *testing.T) {
+	v := Vector{Size: render.Point{X: 200, Y: 100}, Draw: func(f render.Frame, r render.Rect) {},
+		Tips: []VectorTip{{Rect: render.XYWH(100, 0, 100, 50), Text: "the whole label"}}}
+	for _, zoom := range []bool{false, true} {
+		var id ui.ID
+		h := newHarness(t, theme.Dark, lightboxWindow, func(c *ui.Ctx) {
+			c.Box("at", ui.Style{Pad: ui.Pad(20)}, func(c *ui.Ctx) {
+				id = VectorImage(c, "v", v, 100, ImageOpts{Label: "a diagram", Zoom: zoom, Help: "test/image"})
+			})
+		})
+		rest := func(x, y float32) {
+			h.pointer(render.PointerMove, 0, x, y)
+			h.frame()
+			h.now = h.now.Add(time.Second)
+			h.frame()
+			h.frame()
+		}
+		r := h.rect(id) // 100×50: the tip is its top right quarter
+		rest(r.Min.X+75, r.Min.Y+10)
+		if !h.drew("the whole label") {
+			t.Errorf("zoom %v: no tooltip over the tip: %q", zoom, h.texts())
+		}
+		rest(r.Min.X+25, r.Min.Y+40)
+		if h.drew("the whole label") {
+			t.Errorf("zoom %v: the tooltip shows away from its part", zoom)
+		}
+		if !zoom {
+			continue
+		}
+		h.clickImage(id)
+		// fitted at twice its size, 400×200 centred in the room: the tip is its top right quarter
+		cx, cy := lightboxWindow.X/2, float32(lbTop+(lightboxWindow.Y-lbBottom-lbTop)/2)
+		rest(cx+100, cy-50)
+		if !h.drew("the whole label") {
+			t.Errorf("no tooltip over the tip in the lightbox: %q", h.texts())
+		}
 	}
 }

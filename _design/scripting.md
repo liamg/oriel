@@ -306,7 +306,8 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   new value and the view redraws. `oriel.ui.state(key, initial)` is a table the VM keeps by key (`VM.State`). A
   callback's error is a notice at its line. Tab moves focus: controls in the `button` key mode map Tab and ⇧Tab to
   `ui.focus.next`/`prev` (`UIView.FocusNext`), and a Lua input sets `InputOpts.TabMoves`. `lines = n` makes an input
-  take several lines (`InputOpts.Lines`, SE-5): ⏎ a new line, ⌘⏎ submits.
+  take several lines (`InputOpts.Lines`, SE-5): ⏎ a new line, ⌘⏎ submits; `enter_submits = true` makes it a message's
+  field (`InputOpts.EnterSubmits`): ⏎ submits, ⇧⏎ a new line.
 - Drag and drop (PL-15): any `oriel.ui` node can be dragged (`drag = { kind, data, label }`) or take drops
   (`accepts = { kinds }`, `on_drop = function(kind, data)`); a `"file"` drop's data is its paths.
 
@@ -341,7 +342,8 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
   `registry.BufferPresenter`). `ctx` has `path`, `name`, `lines` and `width`; `ctx.block(from_line, to_line, fn)` adds
   a block made from those source lines (1-based), drawn by `fn(width)`, which returns `oriel.ui` nodes (or the nodes in
   place of `fn`). The file's threads sit in the margin beside the block holding their line, and with `comments` a click
-  on a block opens a thread on its lines. `oriel.editor.present(name)` shows the focused window with it, and again
+  on a block opens a thread on its lines. A `row` or `column` node in a block's body with `lines = { from, to }` is a
+  part of the block on those lines (`PresentDraw.Part`): its threads sit beside it and a click on it comments on them. `oriel.editor.present(name)` shows the focused window with it, and again
   shows its text (`editor.present`).
 - `oriel.editor.viewer{ name, view, when = fn(path), order, help }` adds a file viewer (a `registry.FileViewer`):
   `editor.open` opens a file `when(path)` takes as a tab of `view`, its instance the file's absolute path, in place of a
@@ -513,7 +515,7 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 
 ## As built (code hosts)
 
-- `oriel.code.host` also takes `words = { short, long, sigil }`, `sites = { { host, api, secret } }`, `path` (a
+- `oriel.code.host` also takes `words = { short, long, sigil }`, `sites = { { host, api, secret, aliases } }` (`aliases`: other hostnames its remotes use for the site), `path` (a
   regular expression over a remote's path, its first group the repo's name), `takes` (over a PR URL's path), `shape`
   (over a whole remote), `setup = { api, secret, token_url, token_help, probe = fn(host, done) }`, `tokens = { env,
   hosted_env, command, optional }` (where a site's token is found before the user is asked: env vars must be secrets

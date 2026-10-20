@@ -344,6 +344,9 @@ func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 	}
 	a = append(a, "--session-id", id)
 	first := strings.TrimSpace(s.Prompt)
+	if submitsFirst(s, resume) {
+		first = ""
+	}
 	if s.Pack.Skill != "" {
 		first = strings.TrimSpace("/oriel:" + s.Pack.Skill + " " + first)
 	}
@@ -354,6 +357,16 @@ func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 		a = append(a, first)
 	}
 	return a, nil
+}
+
+// maxArgPrompt is the longest first prompt claude's command line carries, under Linux's 128 KiB an argument.
+const maxArgPrompt = 96 << 10
+
+// submitsFirst says the first prompt is submitted through the mod once claude is up, not on its command line: a
+// resumed session's, or one too long for it.
+func submitsFirst(s agent.StartSpec, resume string) bool {
+	p := strings.TrimSpace(s.Prompt)
+	return p != "" && (resume != "" || len(p) > maxArgPrompt)
 }
 
 func newUUID() string {
@@ -467,7 +480,7 @@ func (p Provider) start(ctx context.Context, spec agent.StartSpec, resume string
 		asks:   map[string]chan agent.Decision{},
 		forks:  map[string]chan forkAnswerIn{},
 	}
-	if resume != "" && strings.TrimSpace(spec.Prompt) != "" {
+	if submitsFirst(spec, resume) {
 		s.cmds = append(s.cmds, waitOut{Kind: "submit", Text: strings.TrimSpace(spec.Prompt)})
 	}
 	s.term.watch = s.watchScreen

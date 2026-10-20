@@ -27,16 +27,63 @@ func Image(c *ui.Ctx, key any, img image.Image, w float32, o ImageOpts) ui.ID {
 		return c.Box(key, ui.Style{W: ui.Px(w)}, nil)
 	}
 	h := w * float32(b.Dy()) / float32(b.Dx())
-	pixels := func(c *ui.Ctx) {
-		c.Paint("px", ui.Px(w), ui.Px(h), func(f render.Frame, r render.Rect) { paintImage(f, img, r, r) })
+	return picture(c, key, w, h, func(f render.Frame, r render.Rect) { paintImage(f, img, r, r) }, LightboxItem{Image: img, Caption: o.Label}, o)
+}
+
+// Vector is a picture that draws itself at any size, as a diagram does: crisp however far the lightbox zooms it.
+type Vector struct {
+	Size render.Point                        // its own size, in logical pixels
+	Draw func(f render.Frame, r render.Rect) // paints it scaled into r
+	Fill render.Color                        // laid under it in the lightbox, as an image's own pixels would be
+	Tips []VectorTip                         // tooltips over parts of it, such as text it draws cut short
+}
+
+// VectorTip is a tooltip over part of a Vector: Rect is in the vector's own logical pixels.
+type VectorTip struct {
+	Rect render.Rect
+	Text string
+}
+
+// tipAt is the tooltip of v's part under p, v drawn into r; "" over none.
+func (v *Vector) tipAt(r render.Rect, p render.Point) string {
+	if v == nil || v.Size.X <= 0 {
+		return ""
 	}
-	if !o.Zoom {
-		return c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Role: ui.RoleImage, Label: o.Label, Help: o.Help}, pixels)
+	k := r.Dx() / v.Size.X
+	for _, t := range v.Tips {
+		if p.X >= r.Min.X+t.Rect.Min.X*k && p.X < r.Min.X+t.Rect.Max.X*k && p.Y >= r.Min.Y+t.Rect.Min.Y*k && p.Y < r.Min.Y+t.Rect.Max.Y*k {
+			return t.Text
+		}
 	}
+	return ""
+}
+
+// VectorImage draws v w wide, its height kept to its shape, and is otherwise an Image: zoomable into the lightbox,
+// in a group with the document's images.
+func VectorImage(c *ui.Ctx, key any, v Vector, w float32, o ImageOpts) ui.ID {
+	if v.Size.X <= 0 || v.Size.Y <= 0 || w <= 0 || v.Draw == nil {
+		return c.Box(key, ui.Style{W: ui.Px(w)}, nil)
+	}
+	h := w * v.Size.Y / v.Size.X
+	return picture(c, key, w, h, v.Draw, LightboxItem{Vector: &v, Caption: o.Label}, o)
+}
+
+// picture is an image or a vector w×h, drawn by paint, with its edge while hovered and a click into the lightbox. A
+// vector's tooltip is that of its part under the pointer.
+func picture(c *ui.Ctx, key any, w, h float32, paint func(f render.Frame, r render.Rect), item LightboxItem, o ImageOpts) ui.ID {
+	pixels := func(c *ui.Ctx) { c.Paint("px", ui.Px(w), ui.Px(h), paint) }
 	id := c.Next(key)
 	in := c.Interaction(id)
-	lightbox := groupImageBuilt(c, id, img, o)
-	Clickable(c, key, ui.Style{W: ui.Px(w), H: ui.Px(h), NoHover: true, Role: ui.RoleImage, Label: o.Label, Help: o.Help}, func(c *ui.Ctx) {
+	tip := ""
+	if r, ok := c.Rect(id); ok && in.Hovered {
+		tip = item.Vector.tipAt(r, in.Pointer())
+	}
+	if !o.Zoom {
+		tips := item.Vector != nil && len(item.Vector.Tips) > 0
+		return c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Role: ui.RoleImage, Label: o.Label, Help: o.Help, Tooltip: tip, Interactive: tips}, pixels)
+	}
+	lightbox := groupImageBuilt(c, id, item, o)
+	Clickable(c, key, ui.Style{W: ui.Px(w), H: ui.Px(h), NoHover: true, Role: ui.RoleImage, Label: o.Label, Help: o.Help, Tooltip: tip}, func(c *ui.Ctx) {
 		pixels(c)
 		if in.Hovered {
 			edge := col(c, tImageHover)
@@ -69,16 +116,15 @@ type imageGroup struct {
 }
 
 type groupImage struct {
-	id    ui.ID
-	img   image.Image
-	label string
+	id   ui.ID
+	item LightboxItem
 }
 
 type imagesKey struct{}
 
-// groupImageBuilt adds a zoomable image to its group, opens the lightbox on it when it's clicked, and returns what
-// draws the lightbox when this is the group's first image this frame and the lightbox shows the group.
-func groupImageBuilt(c *ui.Ctx, id ui.ID, img image.Image, o ImageOpts) func(c *ui.Ctx) {
+// groupImageBuilt adds a zoomable image or vector to its group, opens the lightbox on it when it's clicked, and
+// returns what draws the lightbox when this is the group's first one this frame and the lightbox shows the group.
+func groupImageBuilt(c *ui.Ctx, id ui.ID, item LightboxItem, o ImageOpts) func(c *ui.Ctx) {
 	gs := ui.State[imageGroups](c, ui.Child(0, imagesKey{}))
 	frame := c.Frame()
 	if gs.groups == nil {
@@ -107,7 +153,7 @@ func groupImageBuilt(c *ui.Ctx, id ui.ID, img image.Image, o ImageOpts) func(c *
 	if g.frame != frame {
 		g.frame, g.last, g.built = frame, g.built, nil
 	}
-	g.built = append(g.built, groupImage{id, img, o.Label})
+	g.built = append(g.built, groupImage{id, item})
 	if c.Interaction(id).Clicked {
 		gs.open, gs.at, gs.seen = name, id, frame
 	}
@@ -127,7 +173,7 @@ func groupImageBuilt(c *ui.Ctx, id ui.ID, img image.Image, o ImageOpts) func(c *
 		}
 		items := make([]LightboxItem, len(list))
 		for i, gi := range list {
-			items[i] = LightboxItem{Image: gi.img, Caption: gi.label}
+			items[i] = gi.item
 		}
 		open := true
 		Lightbox(c, imagesKey{}, &open, items, &at, LightboxOpts{Help: o.Help})

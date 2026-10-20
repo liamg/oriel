@@ -91,7 +91,7 @@ var (
 	DiffAdd = DeclareOn("diff.add", "alpha(green, 7%)", "bg.base")
 	DiffDel = DeclareOn("diff.del", "alpha(red, 7%)", "bg.base")
 
-	Selection = DeclareOn("selection", "alpha(accent, 20%)", "bg.base")
+	Selection = DeclareOn("selection", "alpha(accent, 28%)", "bg.base")
 	FocusRing = Declare("focus.ring", "accent")
 	// Scrollbars, drawn over a scrolling box's content.
 	ScrollThumb    = Declare("scrollbar.thumb", "alpha(fg, 22%)")

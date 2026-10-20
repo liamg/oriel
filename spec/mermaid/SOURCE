@@ -1,0 +1,4 @@
+source: https://github.com/mermaid-js/mermaid
+ref: v11.0.0 (2cfdd1620a8ceef37c0b738569dfb8bcc0005547), fetched 2026-10-20
+path: packages/mermaid/src/docs/syntax/flowchart.md, packages/mermaid/src/docs/syntax/sequenceDiagram.md
+license: MIT (LICENSE)

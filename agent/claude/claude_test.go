@@ -100,6 +100,14 @@ func TestArgs(t *testing.T) {
 	if a[len(a)-2] != "--" {
 		t.Errorf("a prompt like a flag = %q", a)
 	}
+	// Linux takes no argument over 128 KiB (MAX_ARG_STRLEN): a longer first prompt is submitted once claude is up.
+	a, _ = args(agent.StartSpec{Pack: agent.Pack{Skill: "work"}, Prompt: strings.Repeat("x", maxArgPrompt+1)}, "/m", "s1", "")
+	if a[len(a)-1] != "/oriel:work" {
+		t.Errorf("a long first prompt = …%q", a[len(a)-1][:min(40, len(a[len(a)-1]))])
+	}
+	if !submitsFirst(agent.StartSpec{Prompt: strings.Repeat("x", maxArgPrompt+1)}, "") || submitsFirst(spec, "") || !submitsFirst(spec, "s1") {
+		t.Error("submitsFirst: a long or resumed first prompt is submitted, a short fresh one goes on the command line")
+	}
 	// AGENTS.md: "Claude is driven through its interactive CLI in a PTY with hooks, never claude -p". A utility
 	// agent (the assistant) is no exception: its turn goes in as the skill's prompt.
 	a, _ = args(agent.StartSpec{Model: "haiku", Pack: agent.Pack{Skill: "assistant"}, Prompt: "what needs me?"}, "/m", "s1", "")

@@ -514,7 +514,7 @@ func (x *requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			placeholder = "Reply, or ask more"
 		}
 		r := widget.Input(c, "input", &d.text, widget.InputOpts{Label: "Write to the request", Placeholder: placeholder, KeyMode: RequestComposerKeyMode,
-			Help: "agent/requests#composer"})
+			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer"})
 		switch {
 		case r.Submitted:
 			if err := x.send(context.Background(), st, id, false); err != nil {

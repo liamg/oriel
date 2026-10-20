@@ -100,6 +100,9 @@ func (e Editor) Presenter(spec script.Table, where string) error {
 							node = out[0]
 						}
 					}
+					prev := e.a.part
+					e.a.part = d.Part
+					defer func() { e.a.part = prev }()
 					build(c, node, e.a)
 				})
 				b.Space = 6

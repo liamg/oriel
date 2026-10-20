@@ -50,6 +50,10 @@ type PresentDraw struct {
 	Width       float32
 	Decorations []Decoration
 	Kicker      string // what the host labels the document with, for a body that draws a title: its name by default
+	// Part marks a node the body drew (by its id) as a part of the block on source lines [from, to] of its own,
+	// 0-based: a table's row. The host selects each part, comments on it and puts its threads beside it on its own.
+	// Nil where the host takes no parts.
+	Part func(from, to int, id ui.ID)
 }
 
 // Block adds a block made from source lines [from, to], 0-based.

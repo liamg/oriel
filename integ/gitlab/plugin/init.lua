@@ -24,7 +24,7 @@ end
 
 L.code.host{ name = "gitlab", title = "GitLab", icon = "gitlab", order = 20, secret = "GITLAB_TOKEN",
   words = { short = "MR", long = "merge request", sigil = "!" },
-  sites = { { host = "gitlab.com", api = "https://gitlab.com/api/v4", secret = "GITLAB_TOKEN" } },
+  sites = { { host = "gitlab.com", api = "https://gitlab.com/api/v4", secret = "GITLAB_TOKEN", aliases = { "altssh.gitlab.com" } } },
   tokens = { env = { "GITLAB_TOKEN" }, command = { "glab", "config", "get", "token", "--host", "{host}" } },
   path = [[^/?(.+?)(?:\.git)?/?$]],
   takes = [[/-/merge_requests/\d+]],

@@ -96,10 +96,10 @@ func (h CodeHost) RepoAt(path string) (string, bool) {
 	return strings.Trim(path, "/"), true
 }
 
-// PublicSite is the host's own site at hostname.
+// PublicSite is the host's own site at hostname, or one of its Aliases.
 func (h CodeHost) PublicSite(hostname string) (Site, bool) {
 	for _, s := range h.Sites {
-		if strings.EqualFold(s.Host, hostname) {
+		if strings.EqualFold(s.Host, hostname) || slices.ContainsFunc(s.Aliases, func(a string) bool { return strings.EqualFold(a, hostname) }) {
 			return s, true
 		}
 	}
@@ -107,10 +107,12 @@ func (h CodeHost) PublicSite(hostname string) (Site, bool) {
 }
 
 // Site is one server of a code host: its public one, or one you host. Secret is the token it needs, "" for none.
+// Aliases are other hostnames its remotes use for it, its ssh hosts.
 type Site struct {
-	Host   string `json:"host"`             // "gitlab.com", "git.acme.corp"
-	API    string `json:"api,omitempty"`    // "https://git.acme.corp/api/v4"
-	Secret string `json:"secret,omitempty"` // "GITLAB_TOKEN", "GITLAB_TOKEN:git.acme.corp"
+	Host    string   `json:"host"`              // "gitlab.com", "git.acme.corp"
+	API     string   `json:"api,omitempty"`     // "https://git.acme.corp/api/v4"
+	Secret  string   `json:"secret,omitempty"`  // "GITLAB_TOKEN", "GITLAB_TOKEN:git.acme.corp"
+	Aliases []string `json:"aliases,omitempty"` // "ssh.dev.azure.com"
 }
 
 // SiteSetup is how a self-hosted site of a host is set up: its API's URL and its token's secret, "{host}" replaced

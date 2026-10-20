@@ -49,6 +49,11 @@ Each provider is driven the way its **subscription** allows.
   poll → `submit` | `abort` | `fork` | `usage` | `timeout`), `event` (`turn-start`, `turn-complete` with usage and rate limits, `usage` with rate limits,
   `subagent-start/run/end`, `api-error`, `end`), `check` (tool.check: the guard rails), `permission`, `question`,
   `tool`, `fork-answer`. Prompts are submitted `asUser`, so the agent reads them as the user's.
+- A fresh session's first turn is `/oriel:<skill> <prompt>` on the command line: the host gives what's waiting for
+  the agent (the first request, Start work's prompt) as `StartSpec.Prompt`, and marks it given once the agent is up.
+  A prompt the mod submits is "a turn of its own, once the session is idle" (`$.prompt.submit`), so sent after the
+  start it would wait out a turn of the bare skill. A resumed session's prompt, and one over 96 KiB (Linux takes no
+  argument over 128 KiB), are submitted at the mod's first `wait` instead.
 - Messages, tool calls and results (with `core.FileDiff` from the edit's `structuredPatch`, else its input) come
   from tailing `<config>/projects/<slug(cwd)>/<id>.jsonl` and `<id>/subagents/agent-*.jsonl`. A turn's end waits
   briefly for the log to hold the turn's answer, so its messages always come before `TurnEnd`.

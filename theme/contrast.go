@@ -19,8 +19,11 @@ func Luminance(c Color) float64 {
 	return 0.2126*ch(c.R) + 0.7152*ch(c.G) + 0.0722*ch(c.B)
 }
 
-// ContrastRatio is WCAG 2's contrast ratio of two opaque colours, 1 to 21.
+// ContrastRatio is WCAG 2's contrast ratio of two colours, 1 to 21: b opaque, and a translucent a as it shows over b.
 func ContrastRatio(a, b Color) float64 {
+	if a.A < 255 {
+		a = Over(a, b)
+	}
 	l1, l2 := Luminance(a), Luminance(b)
 	if l2 > l1 {
 		l1, l2 = l2, l1
@@ -29,7 +32,8 @@ func ContrastRatio(a, b Color) float64 {
 }
 
 // Pair is a token drawn on another that has to stay readable: Min is the WCAG ratio it needs, 4.5 for text and 3
-// for large text and non-text marks.
+// for large text and non-text marks; 1.5 for a highlight read through, a selection. A translucent token is judged
+// over what it's on.
 type Pair struct {
 	FG, On string
 	Min    float64
@@ -67,6 +71,8 @@ func init() {
 		Readable("fg.faint", on, 3)
 	}
 	Readable("accent.ink", "accent", 4.5)
+	Readable("selection", "bg.base", 1.5)
+	Readable("fg", "selection", 4.5)
 	for _, s := range statusTokens {
 		Readable(s, "bg.surface", 3)
 	}

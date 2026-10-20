@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
+	"github.com/liamg/oriel/ui"
 )
 
 // Version is oriel.api.version: a breaking change bumps its major (scripting.md, "Stability").
@@ -40,12 +41,13 @@ type APIs struct {
 	mu      sync.Mutex
 	owned   []registry.Disposable
 	n       int
-	pending map[string]pendingOption // options set before anything registered them
-	touched map[optKey]optPrev       // options the config set, and what they held before
-	shown   map[string]any           // oriel.hud.set's nodes, by indicator
-	inbox   *luaInbox                // oriel.inbox's cards
-	waiting map[int]chan error       // awaited calls not answered yet, failed by an error in a later callback
-	loading *luaLoads                // oriel.load's handles
+	pending map[string]pendingOption     // options set before anything registered them
+	touched map[optKey]optPrev           // options the config set, and what they held before
+	shown   map[string]any               // oriel.hud.set's nodes, by indicator
+	inbox   *luaInbox                    // oriel.inbox's cards
+	waiting map[int]chan error           // awaited calls not answered yet, failed by an error in a later callback
+	loading *luaLoads                    // oriel.load's handles
+	part    func(from, to int, id ui.ID) // the presenter block being drawn's PresentDraw.Part, while it's drawn
 }
 
 // Install puts the API in vm, for your own config: trusted, its files in dir.

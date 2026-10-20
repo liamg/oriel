@@ -154,7 +154,9 @@ A file can be shown as something other than its text: a markdown file as a docum
 `:MarkdownPreview`), or as a plugin's presenter draws it (`editor.present`). The file stays open and editable, and
 the presentation follows its text, so two windows on one file can show it both ways at once. The file's threads sit
 in the margin beside the blocks they're about. `j`/`k` move between blocks, `c` or `⏎` (or a click) opens a thread on a
-block's lines, and `o` goes to its source. **Edit** shows the text again, where you were.
+block's lines, and `o` goes to its source. A table's rows are blocks of their own here: a thread on a row's line
+sits beside that row. A `mermaid` fence (a flowchart or a sequence diagram) is drawn as its diagram, scaled
+to the column; click it to zoom it, with the document's images. **Edit** shows the text again, where you were.
 
 ## Threads in a file {#threads}
 

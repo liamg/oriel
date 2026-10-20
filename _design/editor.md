@@ -267,7 +267,7 @@ engine never feels like another binary running in a pane.
 - Diagnostics as virtual text, or as a full block for long messages.
 - Inlay hints, code lenses, and test results next to the test function.
 - Debugger values inline while stopped.
-- Images and mermaid diagrams in markdown, drawn in place.
+- Images and mermaid diagrams in markdown, drawn in place ("Images" and "Diagrams" below).
 
 ![09-lsp](mockups/09-lsp.png)
 
@@ -276,6 +276,19 @@ same way. The editor asks every provider for the lines in view each frame and dr
 backgrounds with their gutter edge, highlights and wavy underlines over columns, virtual text after the line, and
 blocks between lines, which push the lines below them down. Blocks at anchors stay with their text through edits.
 The engine's scrolling counts lines, not the rows blocks take, so a tall block can push the last lines out of view.
+
+## Tables in markdown
+
+- `mdParse` reads GFM tables (`spec/gfm`, "Tables (extension)"): a header row, a delimiter row of as many cells
+  (`---`, `:--`, `:-:`, `--:` for each column's alignment), then rows up to a blank line or another block; `\|`
+  escapes a pipe, inside a code span too, and a row's missing cells are empty, its extra ones dropped. A table may
+  follow a paragraph's line directly. Its cells are inline markdown, as a paragraph's.
+- `widget.Table` draws it everywhere markdown is drawn: a bordered grid, the header semibold on a fill, rules between
+  rows and columns, columns as wide as their content when they fit and otherwise the widest capped (wrapping) so the
+  short ones stay whole; one whose longest words can't fit scrolls sideways (`ScrollX`). In the markdown preview the
+  table is one block on its lines with a part per row (`PresentDraw.Part`, `TableOpts.Row`): the header on its line,
+  each row on its own (the delimiter row is none), so a click on a row, or `j`/`k` to it and `c`, comments on that row's
+  line, and a thread on a row's line sits beside that row with its line number and edge.
 
 ## Images
 
@@ -300,6 +313,36 @@ The engine's scrolling counts lines, not the rows blocks take, so a tall block c
 - **In the branch diff**: a changed image is drawn old and new, Side by side (each labelled with its dimensions and
   size) or as a Slider (the two overlaid, a draggable divider with the old left of it and the new right); an added or
   deleted image shows its one side. Both are one lightbox group.
+
+## Diagrams
+
+- A ```` ```mermaid ```` fence is drawn as its diagram wherever markdown is drawn: in a document (the preview, plan
+  docs) in the fence's box under a "MERMAID · FLOWCHART" kicker, as 05-plan has it, and compactly in threads,
+  requests and tickets. It's scaled down to the column, never wider, centred; zoomable like an image, and in the
+  document's lightbox group with its images. In a document it's one commentable block over the fence's lines.
+- Drawn natively by `render/diagram` (no browser, no mermaid.js), following mermaid's own syntax docs
+  (`spec/mermaid`, v11.0.0): `flowchart`/`graph` in any direction (TB/TD, BT, LR, RL) with every node shape, `-->`,
+  `---`, `-.->`, `==>`, `~~~`, `--o`, `--x` and `<-->` links with `|labels|` or `-- text -->`, extra dashes for longer
+  links, chains, `a & b`, nested `subgraph`s (with edges to and from them), quoted and markdown-string labels, `<br>`,
+  entity codes and `%%` comments; `classDef`, `class`, `style`, `linkStyle`, `click` and `direction` are read and
+  ignored. `sequenceDiagram`: participants and actors (with `as` aliases), the ten arrows, `+`/`-` and
+  `activate`/`deactivate` activations, notes left of, right of and over one or two participants, `loop`, `alt`/`else`,
+  `opt`, `par`/`and`, `critical`/`option`, `break` and `rect` blocks, and `autonumber`.
+- Any other type (gantt, pie, class, state, ER…) stays a code box, its kicker saying "MERMAID · GANTT ISN'T DRAWN";
+  a fence that doesn't parse says which line ("CAN'T READ LINE 3").
+- Flowcharts are laid out in layers (Sugiyama): cycles broken by reversing the edges a depth-first walk finds going
+  back, ranks by longest path with sources pulled down to what they feed, in half-ranks so every edge label gets a
+  slot of its own between ranks; crossings reduced with barycentre sweeps that keep each subgraph's nodes together in
+  every rank; positions along each rank by weighted least squares under the spacing constraints (pool adjacent
+  violators), with each subgraph's border nodes lined up so its box is a rectangle nothing else is in. Edges are
+  smooth splines from border to border, leaving and entering along the ranks, spread along a box's side when several
+  meet it, with arrowheads; labels on a pill. Text is measured with the real shaper, and long labels wrap.
+- Text wraps rather than cuts: a word may run to twice the wrap width and a label to six lines. Past that (or a
+  subgraph title wider than its box) it's cut with "…" (`typeset.Elide`), and hovering it shows it whole in a
+  tooltip (`Layout.Truncated`, drawn as the vector's tips), inline and in the lightbox.
+- Parsed and laid out once per fence text (`mdDiagramOf`), drawn each frame from the layout at whatever size it's
+  shown, so the lightbox zooms it sharp. Colours are theme tokens `diagram.*` (`render/diagram/theme.go`), defaulting
+  to the palette's, so every theme draws them.
 
 ## Options (ED-13)
 

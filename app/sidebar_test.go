@@ -505,3 +505,21 @@ func TestSidebarAddsAProject(t *testing.T) {
 	})
 	r.waitFrame("both projects' headers", func(s string) bool { return containsAll(s, "pricing", "billing", "⌃2") })
 }
+
+// A plan reads the user's checkouts (sessions.md, "Plan": "the agent reads the user's checkouts (protected from
+// edits)"): their uncommitted work isn't the session's, so neither Git's count nor the header counts it.
+func TestSidebarReadOnlyProjectCountsNoChanges(t *testing.T) {
+	ps := sidebarFixture(t)
+	ps[0].ReadOnly = true
+	s := sessionScene(t, core.KindPlan, ps, sidebarSize)
+	planning(t, s)
+	if n := railEntry(t, s, "git").Note("admin-ui"); n != "" {
+		t.Errorf("Git's count on a read-only project: %q", n)
+	}
+	if got := s.frameText(); strings.Contains(got, "4 changed") || !strings.Contains(got, "read-only") {
+		t.Errorf("the read-only project's header:\n%s", got)
+	}
+	if n := railEntry(t, s, "git").Note("api"); n != "" {
+		t.Errorf("Git's count on a clean project: %q", n)
+	}
+}

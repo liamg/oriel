@@ -31,7 +31,9 @@ like this" isn't a source.
 | colour | CSS Color 4 (OKLCH), WCAG 2 (contrast ratio) | commit |
 | git | the `git` binary as the oracle (`git check-attr`, porcelain output); docs linked, not vendored | git version |
 | versions | Semantic Versioning 2.0.0 (`spec/semver`) for precedence; node-semver's README (`spec/node-semver`) for ranges: caret, tilde, X-ranges, `||` and prerelease tags | fetch date (no tags) |
+| markdown | the GitHub Flavored Markdown spec (`spec/gfm`, cmark-gfm's `test/spec.txt`) for tables | commit |
 | editor conventions | the EditorConfig specification and its core-test suite | commit |
+| diagrams | mermaid's syntax docs for flowcharts and sequence diagrams (`spec/mermaid`) | tag (`v11.0.0`) |
 
 - `spec/` is data: no code from it is linked. Updating a pin is a PR that re-runs every referencing test.
 - Only what a test reads is vendored: the files a `ref` quotes, a suite a test runs (PCRE2's, toml-test,

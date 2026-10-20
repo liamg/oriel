@@ -17,8 +17,8 @@ shows the docs as a diff when something offers one. **Start work** is lit once t
 
 ## Doc
 
-The doc rendered: headings, paragraphs, lists and fenced code. A line number shows beside a line with a thread on
-it, and its edge takes the thread's colour. The agent's latest edit shows in green for a few minutes, what it took
+The doc rendered: headings, paragraphs, lists, tables, fenced code and mermaid diagrams (click one to zoom it). A
+line number shows beside a line with a thread on it, and its edge takes the thread's colour. The agent's latest edit shows in green for a few minutes, what it took
 out struck through. Click a line, or move with `j` and `k` and press `c` or `⏎`, to comment on it.
 
 ## Docs
@@ -31,7 +31,8 @@ their branch.
 
 Threads sit in the margin beside the lines they're about. A comment goes to the agent at once, anchored to its line
 (it follows the line as the doc is edited). Reply in the card; **resolve** closes the thread, and **defer** puts it
-off without holding up Start work. A closed thread folds to one line; **reopen** brings it back.
+off without holding up Start work. A closed thread folds to one line: click it to read the thread while it stays closed (its chevron collapses it again), or
+**reopen** it.
 
 ## Readiness
 

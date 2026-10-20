@@ -102,6 +102,15 @@ flowchart TB
   fits it again and 1 shows it at its own size. Only the part in view is scaled, so zooming far into a large image
   costs no more than the window. `ImageOpts.Group` names the group (a document's images); an image with none is
   alone. Tokens: `lightbox.scrim`, `lightbox.fg`, `lightbox.fg.muted`, `lightbox.chrome`, `image.hover.border`.
+  - A `widget.Vector` (its own size, a `Draw(frame, rect)`, a `Fill` laid under it in the lightbox, and `Tips`:
+    tooltips over parts of it, in its own pixels, shown for the part under the pointer at any size) is a picture
+    that draws itself at any size, a diagram: `widget.VectorImage` shows one as `Image` shows pixels, zoomable into
+    the same lightbox and group (`LightboxItem.Vector`). The lightbox draws it at the size it shows it, so it stays
+    sharp however far it's zoomed, and fits it at up to twice its own size, where an image stops at its own.
+- **Diagrams** (`render/diagram`): mermaid flowcharts and sequence diagrams parsed, laid out with the real shaper and
+  kept as a display list of their own (rects, paths, dashed lines, text) in logical pixels. `Layout.Draw(frame, rect,
+  palette)` scales it into rect: coordinates and stroke widths by the ratio, text reshaped at the scaled size (to a
+  quarter pixel), so nothing is rasterised ahead. The parser and layout import no `ui`. See editor.md, "Diagrams".
 
 - **Loading** (FW-14). A view never says it's loading in its own words; it uses the toolkit, so every wait looks and
   behaves the same (`TestViewsUseTheLoadingToolkit` fails on a view drawing its own "Reading…").
@@ -333,7 +342,10 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   50 ms (p90), no slower at the end of a run than at its start, and the loop never falls more than 30 ms behind the moves.
 - `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer. A
   `PointerEvent`'s `At` is when it happened, from the OS's timestamp (Gio's, read against the earliest epoch any event
-  gives), or zero. The loop times each move that changes a frame from `At` to the frame built with it; past 100 ms
+  gives), or zero. A move reaches the app only while the window is the one under the pointer: AppKit sends moves to
+  the key window wherever the pointer is, so on macOS `render/gio` turns the first move over another window (a
+  non-activating panel such as the screenshot preview) into a leave and drops the rest, and nothing behind that window
+  hovers or sets the cursor. X11 and Wayland send moves only to the window under the pointer. The loop times each move that changes a frame from `At` to the frame built with it; past 100 ms
   that's a stall, and `--debug`'s overlay shows it beside the frame time. The Gio window sends a
   `render.SlowFrameEvent` when a frame waits past 100 ms for it to start on it, or takes past 100 ms to draw and
   present (once a second at most), another stall. Stalls go to the trace, not the log: `oriel --trace <file>` keeps a
@@ -349,7 +361,9 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   shut), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with
   an `input.border.invalid` border. With `Lines` (SE-5) it takes several lines: the text wraps at the field's width, the
   field grows from `MinLines` to `Lines` and then scrolls, ⏎ is a new line and ⌘⏎ (Ctrl⏎ elsewhere) submits; ↑/↓ move
-  by line, keeping the column, and ⌘↑/⌘↓ go to the start and end of the text. `Rows` takes `ClickSelects` for rows
+  by line, keeping the column, and ⌘↑/⌘↓ go to the start and end of the text. `EnterSubmits` makes it a message's field
+  (a comment, a reply): ⏎ submits and ⇧⏎ is a new line. Its selection is painted in `input.selection` (`text.selection`
+  by default), which the theme lint keeps at 1.5:1 or more on `input.bg`. `Rows` takes `ClickSelects` for rows
   whose own buttons open them: a click only selects, ⏎ still opens. It hands up the keys it doesn't move or open
   with, so Escape on a list page closes the page. It edits with the platform's keys: on macOS ⌘←/→ (line), ⌥←/→ (word), ⌘⌫, ⌥⌫,
   ⌘A/C/X/V; elsewhere Home/End, Ctrl+←/→, Ctrl+⌫/Del, Ctrl+A/C/X/V. The clipboard is the UI's (`UI.SetClipboard`,
