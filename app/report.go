@@ -33,7 +33,7 @@ type shell struct {
 	layout  *layoutPlugin
 	poke    func() // asks the loop for a frame
 	keys    *registry.Resolver
-	ui      *ui.UI
+	ui      atomic.Pointer[ui.UI] // set as the window opens; read by plugins' goroutines too
 	modes   func() []string
 	// enginePending is the focused editor's pending keys, when the editor is in front.
 	enginePending func() plugin.Pending

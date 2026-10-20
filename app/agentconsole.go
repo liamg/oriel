@@ -80,6 +80,7 @@ type consoleState struct {
 	focusNow string // an input to focus next frame: "note", "fork"
 	chosen   map[string]map[int][]string
 	typed    map[string]string
+	layout   consoleBlocks // the transcript's blocks, as last laid out
 }
 
 type forkAnswer struct {
@@ -653,60 +654,30 @@ func (x *agentConsole) transcript(c *ui.Ctx, se core.SessionState, st *consoleSt
 	if st.sel == "" {
 		st.scroll.follow = true
 	}
-	// The blocks first, as keys and how to draw each: only those in view are drawn, so a long session's transcript
-	// costs what its screenful does.
-	type entry struct {
-		key  string
-		draw func(c *ui.Ctx)
-	}
-	var entries []entry
-	add := func(k string, draw func(c *ui.Ctx)) { entries = append(entries, entry{k, draw}) }
-	asks := slices.Clone(se.Asks)
-	emitAsks := func(before time.Time) {
-		for len(asks) > 0 && (before.IsZero() || !asks[0].Created.IsZero() && asks[0].Created.Before(before)) {
-			a := asks[0]
-			asks = asks[1:]
-			k := "ask:" + a.ID
-			add(k, func(c *ui.Ctx) {
-				c.Box(k, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, a, false, st.sel == k, nil) })
-			})
+	// The blocks first, as keys and what each draws: only those in view are drawn, so a long session's transcript
+	// costs what its screenful does. They're laid out again only when the transcript, the asks or the rest change.
+	blocks := st.layout.of(se, len(st.forks))
+	draw := func(c *ui.Ctx, b consoleBlock) {
+		switch b.kind {
+		case blockLead:
+			if se.Agent.Starting != nil {
+				startingCard(c, "starting", se, width)
+			} else {
+				c.Text("empty", "Nothing yet: the agent's turns show here as they happen.", uiFont(12.5, th.C(theme.FgGhost)))
+			}
+		case blockAsk:
+			c.Box(b.key, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, se.Asks[b.at], false, st.sel == b.key, nil) })
+		case blockItem:
+			x.item(c, b.key, se, se.Transcript[b.at], st, width)
+		case blockSubagents:
+			x.subagents(c, se, width, st.sel == "subagents")
+		case blockBackground:
+			x.background(c, se, width, st.sel == "background")
+		case blockFork:
+			x.forkCard(c, b.key, st.forks[b.at], width, st.sel == b.key)
 		}
 	}
-	var lead func(c *ui.Ctx)
-	if se.Agent.Starting != nil {
-		lead = func(c *ui.Ctx) { startingCard(c, "starting", se, width) }
-	} else if len(se.Transcript) == 0 && len(asks) == 0 {
-		lead = func(c *ui.Ctx) {
-			c.Text("empty", "Nothing yet: the agent's turns show here as they happen.", uiFont(12.5, th.C(theme.FgGhost)))
-		}
-	}
-	for _, it := range se.Transcript {
-		if it.Agent != "" {
-			continue
-		}
-		emitAsks(it.Time)
-		k := "item:" + it.ID
-		add(k, func(c *ui.Ctx) { x.item(c, k, se, it, st, width) })
-	}
-	if len(se.Subagents) > 0 {
-		add("subagents", func(c *ui.Ctx) { x.subagents(c, se, width, st.sel == "subagents") })
-	}
-	if len(se.Agent.Background) > 0 {
-		add("background", func(c *ui.Ctx) { x.background(c, se, width, st.sel == "background") })
-	}
-	emitAsks(time.Time{})
-	for i, f := range st.forks {
-		k := fmt.Sprint("fork:", i)
-		add(k, func(c *ui.Ctx) { x.forkCard(c, k, f, width, st.sel == k) })
-	}
-	keys := make([]string, len(entries))
-	for i, e := range entries {
-		keys[i] = e.key
-	}
-	if lead != nil {
-		entries = append([]entry{{"\x00lead", lead}}, entries...)
-	}
-
+	keys := st.layout.keys
 	bodyID := c.Next("transcript")
 	if focus || st.focus {
 		c.Focus(bodyID)
@@ -714,25 +685,111 @@ func (x *agentConsole) transcript(c *ui.Ctx, se core.SessionState, st *consoleSt
 	}
 	reveal := -1
 	if k := st.scroll.reveal; k != "" {
-		reveal = slices.IndexFunc(entries, func(e entry) bool { return e.key == k })
+		reveal = slices.IndexFunc(blocks, func(b consoleBlock) bool { return b.key == k })
 		st.scroll.follow, st.scroll.reveal = false, ""
 	}
 	c.Items("transcript", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, KeyMode: AgentKeyMode, Help: "agent/console#transcript",
-		Role: ui.RoleList, Label: "Transcript", Selectable: true}, len(entries),
-		ui.ItemsOpts{Estimate: 60, Reveal: reveal, End: st.scroll.follow, Key: func(i int) any { return entries[i].key }}, func(c *ui.Ctx, i int) {
+		Role: ui.RoleList, Label: "Transcript", Selectable: true}, len(blocks),
+		ui.ItemsOpts{Estimate: 60, Reveal: reveal, End: st.scroll.follow, Key: func(i int) any { return blocks[i].key }}, func(c *ui.Ctx, i int) {
 			pad := ui.Insets{B: 10}
 			if i == 0 {
 				pad.T = 12
 			}
-			if i == len(entries)-1 {
+			if i == len(blocks)-1 {
 				pad.B = 16
 			}
-			c.Column("block", ui.Style{W: ui.Flex(1), Pad: pad, Cross: ui.Center}, entries[i].draw)
+			c.Column("block", ui.Style{W: ui.Flex(1), Pad: pad, Cross: ui.Center}, func(c *ui.Ctx) { draw(c, blocks[i]) })
 		})
 	st.blocks = keys
 	if st.sel != "" && !slices.Contains(keys, st.sel) {
 		st.sel = ""
 	}
+}
+
+// Transcript blocks' kinds.
+const (
+	blockLead = iota
+	blockAsk
+	blockItem
+	blockSubagents
+	blockBackground
+	blockFork
+)
+
+// consoleBlock is a transcript block: its key, its kind, and its ask's, item's or fork's index.
+type consoleBlock struct {
+	key      string
+	kind, at int
+}
+
+// blocksKey is what a transcript's blocks are laid out from: a transcript or asks changed are new slices.
+type blocksKey struct {
+	items                           *core.Item
+	nItems                          int
+	asks                            *core.Ask
+	nAsks                           int
+	starting, subagents, background bool
+	forks                           int
+}
+
+// consoleBlocks are a transcript's blocks as last laid out.
+type consoleBlocks struct {
+	made   bool
+	key    blocksKey
+	blocks []consoleBlock
+	keys   []string // the blocks' keys, the lead's left out
+}
+
+// of are the blocks of se and of forks side answers: its items, its asks where they arose, its subagents and background
+// tasks, and the lead when there's nothing yet or it's starting.
+func (l *consoleBlocks) of(se core.SessionState, forks int) []consoleBlock {
+	k := blocksKey{nItems: len(se.Transcript), nAsks: len(se.Asks), starting: se.Agent.Starting != nil, subagents: len(se.Subagents) > 0,
+		background: len(se.Agent.Background) > 0, forks: forks}
+	if k.nItems > 0 {
+		k.items = &se.Transcript[0]
+	}
+	if k.nAsks > 0 {
+		k.asks = &se.Asks[0]
+	}
+	if l.made && l.key == k {
+		return l.blocks
+	}
+	var bs []consoleBlock
+	ask := 0
+	emitAsks := func(before time.Time) {
+		for ; ask < len(se.Asks); ask++ {
+			if a := se.Asks[ask]; !before.IsZero() && (a.Created.IsZero() || !a.Created.Before(before)) {
+				return
+			}
+			bs = append(bs, consoleBlock{key: "ask:" + se.Asks[ask].ID, kind: blockAsk, at: ask})
+		}
+	}
+	for i, it := range se.Transcript {
+		if it.Agent != "" {
+			continue
+		}
+		emitAsks(it.Time)
+		bs = append(bs, consoleBlock{key: "item:" + it.ID, kind: blockItem, at: i})
+	}
+	if k.subagents {
+		bs = append(bs, consoleBlock{key: "subagents", kind: blockSubagents})
+	}
+	if k.background {
+		bs = append(bs, consoleBlock{key: "background", kind: blockBackground})
+	}
+	emitAsks(time.Time{})
+	for i := range forks {
+		bs = append(bs, consoleBlock{key: fmt.Sprint("fork:", i), kind: blockFork, at: i})
+	}
+	keys := make([]string, len(bs))
+	for i, b := range bs {
+		keys[i] = b.key
+	}
+	if k.starting || k.nItems == 0 && k.nAsks == 0 {
+		bs = append([]consoleBlock{{key: "\x00lead", kind: blockLead}}, bs...)
+	}
+	*l = consoleBlocks{made: true, key: k, blocks: bs, keys: keys}
+	return bs
 }
 
 // open is whether a block shows its body: its default, flipped by ⏎ or a click.

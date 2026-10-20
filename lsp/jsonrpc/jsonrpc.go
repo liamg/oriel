@@ -161,12 +161,15 @@ type Handlers struct {
 	Notify  func(method string, params json.RawMessage)
 }
 
-// Conn is one JSON-RPC connection. It is safe for concurrent use.
+// Conn is one JSON-RPC connection. It is safe for concurrent use. What it sends is queued and written in order by a
+// goroutine of its own, so a send never waits on the other side reading.
 type Conn struct {
 	rwc io.ReadWriteCloser
 	h   Handlers
 
-	wmu sync.Mutex
+	qmu   sync.Mutex
+	queue []outgoing    // to write, in the order sent
+	wake  chan struct{} // the writer has something to write
 
 	mu      sync.Mutex
 	next    int64
@@ -183,10 +186,17 @@ type Conn struct {
 func NewConn(rwc io.ReadWriteCloser, h Handlers) *Conn {
 	ctx, stop := context.WithCancel(context.Background())
 	c := &Conn{rwc: rwc, h: h, pending: map[int64]chan *Message{}, inbox: make(chan *Message, 64),
-		done: make(chan struct{}), ctx: ctx, stop: stop}
+		done: make(chan struct{}), ctx: ctx, stop: stop, wake: make(chan struct{}, 1)}
 	go c.read()
 	go c.dispatch()
+	go c.write()
 	return c
+}
+
+// outgoing is a message queued to send, with its params still to marshal when they're given as a value.
+type outgoing struct {
+	m      *Message
+	params any
 }
 
 // Done is closed once the connection has stopped reading.
@@ -306,24 +316,57 @@ func (c *Conn) handle(m *Message) {
 	} else if resp.Result, err = json.Marshal(res); err != nil {
 		resp.Result, resp.Error = nil, &Error{Code: InternalError, Message: err.Error()}
 	}
-	c.send(resp)
+	c.send(resp, nil)
 }
 
-func (c *Conn) send(m *Message) error {
-	b, err := json.Marshal(m)
-	if err != nil {
-		return err
-	}
-	c.wmu.Lock()
-	defer c.wmu.Unlock()
+// send queues m, its params marshalled from params unless that's nil, behind everything sent before it.
+func (c *Conn) send(m *Message, params any) error {
 	if err := c.Err(); err != nil {
 		return err
 	}
-	if err := WriteFrame(c.rwc, b); err != nil {
-		c.fail(fmt.Errorf("%w: %v", ErrClosed, err))
-		return c.Err()
+	c.qmu.Lock()
+	c.queue = append(c.queue, outgoing{m, params})
+	c.qmu.Unlock()
+	select {
+	case c.wake <- struct{}{}:
+	default:
 	}
 	return nil
+}
+
+// write writes what's queued, in order, until the connection fails.
+func (c *Conn) write() {
+	for {
+		select {
+		case <-c.wake:
+		case <-c.ctx.Done():
+			return
+		}
+		c.qmu.Lock()
+		q := c.queue
+		c.queue = nil
+		c.qmu.Unlock()
+		for _, o := range q {
+			if o.params != nil {
+				p, err := marshalParams(o.params)
+				if err != nil {
+					continue
+				}
+				o.m.Params = p
+			}
+			b, err := json.Marshal(o.m)
+			if err != nil {
+				continue
+			}
+			if c.Err() != nil {
+				return
+			}
+			if err := WriteFrame(c.rwc, b); err != nil {
+				c.fail(fmt.Errorf("%w: %v", ErrClosed, err))
+				return
+			}
+		}
+	}
 }
 
 func marshalParams(params any) (json.RawMessage, error) {
@@ -336,13 +379,9 @@ func marshalParams(params any) (json.RawMessage, error) {
 	return json.Marshal(params)
 }
 
-// Notify sends a notification.
+// Notify sends a notification. It's queued, its params marshalled when it's written.
 func (c *Conn) Notify(method string, params any) error {
-	p, err := marshalParams(params)
-	if err != nil {
-		return err
-	}
-	return c.send(&Message{JSONRPC: "2.0", Method: method, Params: p})
+	return c.send(&Message{JSONRPC: "2.0", Method: method}, params)
 }
 
 // Call sends a request and decodes its result into result, if it isn't nil. If ctx ends first, Call sends
@@ -375,7 +414,7 @@ func (c *Conn) CallRaw(ctx context.Context, method string, params any) (json.Raw
 	id := c.next
 	c.pending[id] = ch
 	c.mu.Unlock()
-	if err := c.send(&Message{JSONRPC: "2.0", ID: &ID{Num: id}, Method: method, Params: p}); err != nil {
+	if err := c.send(&Message{JSONRPC: "2.0", ID: &ID{Num: id}, Method: method, Params: p}, nil); err != nil {
 		c.forget(id)
 		return nil, err
 	}

@@ -107,6 +107,7 @@ func (x *testsPlugin) Activate(_ context.Context, h plugin.Host) error {
 		}},
 		{ID: "test.coverage.toggle", Title: "Show or hide the coverage gutter", Run: func(registry.Ctx, registry.Args) error {
 			x.showCov = !x.showCov
+			x.h.DecorationsChanged("tests")
 			return nil
 		}},
 		{ID: "test.watch", Title: "Re-run the tests a save affects (toggle)", Run: func(registry.Ctx, registry.Args) error {
@@ -484,6 +485,7 @@ func (x *testsPlugin) start(req testrun.Request) error {
 		live.Scope = append(live.Scope, it.Key())
 	}
 	x.live = live
+	defer x.h.DecorationsChanged("tests")
 	if req.By == testrun.ByUser {
 		r := req
 		x.last = &r
@@ -495,7 +497,7 @@ func (x *testsPlugin) start(req testrun.Request) error {
 			live.Apply(e)
 		}
 		x.mu.Unlock()
-		x.h.Redraw()
+		x.h.DecorationsChanged("tests")
 	})
 	if err != nil {
 		x.mu.Lock()
@@ -516,6 +518,7 @@ func (x *testsPlugin) start(req testrun.Request) error {
 				x.exec, x.live = nil, nil
 			}
 			x.mu.Unlock()
+			x.h.DecorationsChanged("tests")
 			if run == nil {
 				if err != nil {
 					x.h.Notify(core.Notice{ID: "tests.run", Severity: core.SevError, Text: err.Error()})
@@ -534,7 +537,7 @@ func (x *testsPlugin) start(req testrun.Request) error {
 				x.showCov = true
 			}
 			x.saveHistory()
-			x.h.Redraw()
+			x.h.DecorationsChanged("tests")
 		})
 	}()
 	return nil

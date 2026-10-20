@@ -80,7 +80,7 @@ func (a *APIs) viewCtx(vc registry.ViewCtx) script.Table {
 //oriel:api name=decor cap=ui
 type Decor struct{ a *APIs }
 
-//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour)."
+//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name)."
 func (d Decor) Provider(name string, fn *script.Fn) error {
 	d.a.own(d.a.Host.Decorations(name, registry.DecorationFunc(func(ctx registry.DecorationCtx) []registry.Decoration {
 		out, err := d.a.VM.Call(fn, ctx.Name, ctx.Top+1, ctx.Bottom+1)
@@ -109,6 +109,11 @@ func (d Decor) Provider(name string, fn *script.Fn) error {
 		return ds
 	})))
 	return nil
+}
+
+//oriel:api doc="Says the decorations provider name gives have changed, so it's asked again: what they're made from moved."
+func (d Decor) Changed(name string) {
+	d.a.Host.DecorationsChanged(name)
 }
 
 //oriel:api name=agent cap=agent.tools

@@ -410,8 +410,9 @@ func (x *diffPlugin) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, lay
 		st.hunks[f.Path] = d.hunks
 		buf := x.newBuffer(st, f.Path, d)
 		snap := buf.Snapshot()
-		decor := decorate(x.h, registry.DecorationCtx{Window: DiffView + ":" + st.root, Presenter: diffPresenter, Now: c.Now(), Name: f.Path,
-			Path: filepath.Join(st.root, filepath.FromSlash(f.Path)), Buffer: buf, Snap: snap, Top: 0, Bottom: snap.Lines(), FileBytes: snap.Bytes})
+		decor := x.h.Decorate(registry.DecorationCtx{Window: DiffView + ":" + st.root, Presenter: diffPresenter, Now: c.Now(), Name: f.Path,
+			Path: filepath.Join(st.root, filepath.FromSlash(f.Path)), Buffer: buf, Snap: snap, Top: 0, Bottom: snap.Lines(), FileBytes: snap.Bytes,
+			Wake: c.WakeAt})
 		for i, h := range d.hunks {
 			reveal = append(reveal, x.hunk(c, st, f.Path, i, h, layout, decor)...)
 		}

@@ -584,3 +584,32 @@ func TestIncrementalOrders(t *testing.T) {
 		})
 	}
 }
+
+// ref: lsp/textDocument/didChange.md#textDocument_didChange
+// quote: "c1 moves the document from S to S' and c2 from S' to"
+func TestChangesReachTheServerBeforeALaterRequest(t *testing.T) {
+	c, s, buf, path := open(t, `{"textDocumentSync":1,"hoverProvider":true}`, "abc")
+	for _, r := range []string{"1", "2", "3"} {
+		if err := c.DidChange(path, change(t, buf, text.Replace{Range: text.Range{Start: 0, End: 0}, Text: []byte(r)})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := c.Hover(context.Background(), Loc{Path: path}); err != nil {
+		t.Fatal(err)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var versions []int32
+	for _, m := range s.got {
+		switch m.Method {
+		case "textDocument/didChange":
+			versions = append(versions, decode[protocol.DidChangeTextDocumentParams](t, m.Params).TextDocument.Version)
+		case "textDocument/hover":
+			if !reflect.DeepEqual(versions, []int32{2, 3, 4}) {
+				t.Errorf("the hover reached the server after changes %v, want [2 3 4]", versions)
+			}
+			return
+		}
+	}
+	t.Error("the server never saw the hover")
+}

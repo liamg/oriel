@@ -52,6 +52,7 @@ type missionPlugin struct {
 
 	terms map[core.SessionID]*liveTerm
 	seen  map[core.SessionID]bool
+	diffs map[core.SessionID]diffTotal // each card's change, as last summed
 }
 
 // liveTerm is a working card's terminal: the agent's activity written into a VT the size of its box.

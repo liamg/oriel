@@ -304,3 +304,40 @@ func TestChangedAgainstTheLaterBase(t *testing.T) {
 		t.Errorf("with origin ahead of main, the base is %q", st.Base)
 	}
 }
+
+// File and Ignored answer from the reading's lists: a path's Changed state, else its untracked one; and whether it,
+// or a directory it's in, is ignored.
+func TestStateFileAndIgnored(t *testing.T) {
+	r := statusFixture(t)
+	st, err := Repo{Dir: r.Dir}.Status(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for path, want := range map[string]string{
+		"internal/pricing/round.go":    row(mustFind(t, st.Files(Changed), "internal/pricing/round.go")),
+		"scratch.sql":                  row(mustFind(t, st.Files(Uncommitted), "scratch.sql")),
+		"internal/pricing/currency.go": row(mustFind(t, st.Files(Changed), "internal/pricing/currency.go")),
+		"go.mod":                       "",
+	} {
+		f, ok := st.File(path)
+		if got := map[bool]string{true: row(f)}[ok]; got != want {
+			t.Errorf("File(%q) = %q, want %q", path, got, want)
+		}
+	}
+	for path, want := range map[string]bool{"vendor/dep.go": true, "vendor/": true, "vendored.go": false, "go.mod": false} {
+		if got := st.Ignored(path); got != want {
+			t.Errorf("Ignored(%q) = %v, want %v", path, got, want)
+		}
+	}
+}
+
+func mustFind(t *testing.T, fs []FileState, path string) FileState {
+	t.Helper()
+	for _, f := range fs {
+		if f.Path == path {
+			return f
+		}
+	}
+	t.Fatalf("no %s in %s", path, rows(fs))
+	return FileState{}
+}

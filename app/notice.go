@@ -179,7 +179,7 @@ func failingFrame(fs []Frame) (Frame, bool) {
 
 // dropped is files dropped on the window: to the node under them that takes files, else opened in the editor.
 func (sh *shell) dropped(ev render.DropEvent) {
-	if sh.ui != nil && sh.ui.DropFiles(ev.Pos, ev.Paths) {
+	if u := sh.ui.Load(); u != nil && u.DropFiles(ev.Pos, ev.Paths) {
 		return
 	}
 	for _, p := range ev.Paths {

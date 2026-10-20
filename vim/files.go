@@ -396,6 +396,15 @@ func (e *Engine) ReloadBuffer(num int) error {
 	if err != nil {
 		return errReadFailed.with(b.name, err)
 	}
+	return e.ReloadBufferFrom(num, data, f)
+}
+
+// ReloadBufferFrom is ReloadBuffer with the file already read: data as f is now.
+func (e *Engine) ReloadBufferFrom(num int, data []byte, f *edit.File) error {
+	b := e.bufferByNum(num)
+	if b == nil || b.name == "" {
+		return errNoBuffer.with(num)
+	}
 	g := b.text.NewGroup()
 	if _, err := b.text.Apply(text.Edit{Ranges: []text.Replace{{Range: text.Range{End: b.text.Snapshot().Len()}, Text: data}},
 		Author: text.Author{Kind: text.File}, Group: g}); err != nil {

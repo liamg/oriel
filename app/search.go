@@ -49,6 +49,7 @@ type projectSearch struct {
 
 	mu      sync.Mutex
 	ran     searchRun // the search last started
+	runs    int       // how many have started
 	matches []search.Match
 	done    bool
 	since   time.Time // when the search running began
@@ -57,6 +58,21 @@ type projectSearch struct {
 	busy    sync.WaitGroup
 
 	plan *editPlan // the edits being previewed
+
+	shown searchShown // on the loop only
+}
+
+// searchShown is the results as last drawn, made again only when a match comes in or the grouping changes.
+type searchShown struct {
+	key      searchShownKey
+	rows     []searchRow
+	n, files int
+}
+
+type searchShownKey struct {
+	run      int
+	matches  int
+	projects string // the projects the rows are grouped under, by name and directory; "" ungrouped
 }
 
 // editPlan is a change to files shown as a diff before it's made: a replace, a rename.
@@ -192,6 +208,7 @@ func (p *projectSearch) run() {
 		p.cancel()
 	}
 	p.ran, p.matches, p.done, p.err, p.sel, p.since = r, nil, r.pattern == "", nil, 0, windowNow(p.h)
+	p.runs++
 	if r.pattern == "" {
 		p.mu.Unlock()
 		return
@@ -283,21 +300,26 @@ func (v searchView) Build(vc registry.ViewCtx) ui.Node {
 	}}
 }
 
-func (p *projectSearch) build(c *ui.Ctx) {
-	th := c.Theme()
-	p.run()
-	ms := p.results()
-	w := projectsHere(p.h)
-	grouped := p.allProjects && w.many()
-	rows := rowsOf(ms, func(path string) string {
-		if pr, ok := w.of(path); ok && grouped {
+// rows are the results' rows, and how many matches and files they hold.
+func (p *projectSearch) rows(w here) ([]searchRow, int, int) {
+	key := searchShownKey{}
+	if p.allProjects && w.many() {
+		for _, pr := range w.projects {
+			key.projects += pr.Name + "\x00" + pr.Dir + "\x00"
+		}
+	}
+	p.mu.Lock()
+	key.run, key.matches = p.runs, len(p.matches)
+	p.mu.Unlock()
+	if p.shown.rows != nil && p.shown.key == key {
+		return p.shown.rows, p.shown.n, p.shown.files
+	}
+	rows := rowsOf(p.results(), func(path string) string {
+		if pr, ok := w.of(path); ok && key.projects != "" {
 			return pr.Name
 		}
 		return ""
 	})
-	p.mu.Lock()
-	done, err := p.done, p.err
-	p.mu.Unlock()
 	n, files := 0, 0
 	for _, r := range rows {
 		if r.match == nil && r.project == "" {
@@ -305,6 +327,21 @@ func (p *projectSearch) build(c *ui.Ctx) {
 			n += r.count
 		}
 	}
+	if rows == nil {
+		rows = []searchRow{}
+	}
+	p.shown = searchShown{key: key, rows: rows, n: n, files: files}
+	return rows, n, files
+}
+
+func (p *projectSearch) build(c *ui.Ctx) {
+	th := c.Theme()
+	p.run()
+	w := projectsHere(p.h)
+	rows, n, files := p.rows(w)
+	p.mu.Lock()
+	done, err := p.done, p.err
+	p.mu.Unlock()
 	c.Column("search", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tExplorerBg), Help: "files/search", Role: ui.RoleRegion, Label: "Search"}, func(c *ui.Ctx) {
 		c.Column("form", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, T: 10, B: 8}, Gap: 6}, func(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {

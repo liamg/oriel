@@ -464,3 +464,33 @@ func TestStartHasNoMissionControlLink(t *testing.T) {
 		t.Errorf("the start view links mission control:\n%s", s.frameText())
 	}
 }
+
+// SH-15: Open Directory's picker walks home off the loop, busy until the walk lands, then lists what's under home with
+// its git repos marked.
+func TestDirectoriesWalkHomeOffTheLoop(t *testing.T) {
+	s := newErrScene(t, "")
+	home, _ := os.UserHomeDir()
+	for _, d := range []string{"src/oriel/.git", "src/notes"} {
+		os.MkdirAll(filepath.Join(home, d), 0o755)
+	}
+	src, walks := directoriesSource(s.host, s.sh)
+	defer walks.Dispose()
+	var items []registry.PickerItem
+	if !s.Until(5*time.Second, func() bool {
+		items = src.Items(context.Background(), "")
+		return !src.Loading()
+	}) {
+		t.Fatal("the walk never landed")
+	}
+	items = src.Items(context.Background(), "")
+	notes := map[string]string{}
+	for _, it := range items {
+		notes[it.Label] = it.Note
+	}
+	if n, ok := notes["~/src/oriel"]; !ok || n != "git" {
+		t.Errorf("~/src/oriel: %q, %v; want marked git", n, ok)
+	}
+	if n, ok := notes["~/src/notes"]; !ok || n != "" {
+		t.Errorf("~/src/notes: %q, %v; want listed, unmarked", n, ok)
+	}
+}

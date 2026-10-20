@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"time"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/core"
@@ -21,18 +22,14 @@ import (
 )
 
 // decorations are the decorations of the lines [top, bottom) of a pane's buffer, by line, each line's in priority
-// order.
-func (x *editorPlugin) decorations(p vim.Pane, top, bottom int) map[int][]registry.Decoration {
+// order; wake, if not nil, is asked for a frame when a provider wants to be asked again.
+func (x *editorPlugin) decorations(p vim.Pane, top, bottom int, wake func(time.Time)) map[int][]registry.Decoration {
 	path := p.Name()
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(x.dir, path)
 	}
-	return decorate(x.h, registry.DecorationCtx{Window: strconv.Itoa(int(p.ID())), Now: x.now, Name: p.Name(), Path: path, Buffer: p.Buffer(),
-		Snap: p.Buf(), Top: top, Bottom: bottom, FileBytes: p.FileBytes})
-}
-
-func sortDecorations(ds []registry.Decoration) {
-	slices.SortStableFunc(ds, func(a, b registry.Decoration) int { return a.Priority - b.Priority })
+	return x.h.Decorate(registry.DecorationCtx{Window: strconv.Itoa(int(p.ID())), Now: x.now, Name: p.Name(), Path: path, Buffer: p.Buffer(),
+		Snap: p.Buf(), Top: top, Bottom: bottom, FileBytes: p.FileBytes, Wake: wake})
 }
 
 // tokenColour is a decoration's Style as a colour: a theme token or palette colour, or a syntax group.

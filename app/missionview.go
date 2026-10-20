@@ -529,12 +529,7 @@ func (x *missionPlugin) cardFoot(c *ui.Ctx, se core.SessionState) {
 		if s := se.Agent.Stats; s.ContextMax > 0 {
 			c.Text("ctx", fmt.Sprintf("ctx %d%%", pct(float64(s.Context)/float64(s.ContextMax))), monoFont(10, th.C(theme.FgFaint)))
 		}
-		add, del := 0, 0
-		for _, it := range se.Transcript {
-			if it.Diff != nil {
-				add, del = add+it.Diff.Added, del+it.Diff.Removed
-			}
-		}
+		add, del := x.transcriptDiff(se)
 		if add+del > 0 {
 			widget.DiffStat(c, "diff", add, del, widget.DiffStatOpts{})
 		}
@@ -558,6 +553,36 @@ func (x *missionPlugin) cardFoot(c *ui.Ctx, se core.SessionState) {
 		}
 		c.Text("when", when, monoFont(10, th.C(theme.FgGhost)))
 	})
+}
+
+// diffTotal is the lines a session's transcript added and removed, and the transcript they were summed over.
+type diffTotal struct {
+	items    *core.Item
+	n        int
+	add, del int
+}
+
+// transcriptDiff is the lines se's transcript added and removed, summed again only when it changes: a changed
+// transcript is a new slice.
+func (x *missionPlugin) transcriptDiff(se core.SessionState) (add, del int) {
+	var first *core.Item
+	if len(se.Transcript) > 0 {
+		first = &se.Transcript[0]
+	}
+	if d, ok := x.diffs[se.ID]; ok && d.items == first && d.n == len(se.Transcript) {
+		return d.add, d.del
+	}
+	d := diffTotal{items: first, n: len(se.Transcript)}
+	for _, it := range se.Transcript {
+		if it.Diff != nil {
+			d.add, d.del = d.add+it.Diff.Added, d.del+it.Diff.Removed
+		}
+	}
+	if x.diffs == nil {
+		x.diffs = map[core.SessionID]diffTotal{}
+	}
+	x.diffs[se.ID] = d
+	return d.add, d.del
 }
 
 // modeKey is the key bound to command in mode, as the keyboard shows it.

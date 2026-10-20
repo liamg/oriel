@@ -4,6 +4,7 @@ import (
 	"image"
 	"math"
 	"slices"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -184,11 +185,32 @@ func TestFallbackLandsOffTheFramePath(t *testing.T) {
 
 func TestRunCacheIsBounded(t *testing.T) {
 	ts := newTS(t, nil)
-	for i := range maxRuns + 10 {
+	for i := range 3*maxRuns + 10 {
 		ts.Shape(string(rune('a'+i%26))+string(rune(i)), FontSpec{Family: Mono, Size: 13})
 	}
-	if n := len(ts.runs); n > maxRuns {
-		t.Errorf("%d runs cached, cap %d", n, maxRuns)
+	if n := len(ts.runs) + len(ts.old); n > 2*maxRuns {
+		t.Errorf("%d runs cached, cap %d", n, 2*maxRuns)
+	}
+}
+
+// Filling the cache keeps the runs shaped just before: a frame that shapes more runs than a generation holds still
+// finds the ones it drew last.
+func TestRunCacheKeepsRecentRunsWhenFull(t *testing.T) {
+	ts := newTS(t, nil)
+	spec := FontSpec{Family: Mono, Size: 13}
+	key := func(i int) string { return "run " + strconv.Itoa(i) }
+	recent := map[string]*Run{}
+	for i := range maxRuns {
+		r := ts.Shape(key(i), spec)
+		if i >= maxRuns-100 {
+			recent[key(i)] = r
+		}
+	}
+	ts.Shape("one past full", spec)
+	for k, r := range recent {
+		if ts.Shape(k, spec) != r {
+			t.Fatalf("%q was shaped again after the cache filled", k)
+		}
 	}
 }
 

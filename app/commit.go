@@ -71,7 +71,11 @@ func (g *gitPlugin) activateCommit(h plugin.Host) {
 	held := func(registry.Args) bool { return g.ask != nil && !g.ask.writing() }
 	for _, c := range []registry.Command{
 		{ID: "git.commit", Title: "Commit what's staged in {path}'s repo ({all}: everything uncommitted) with {message}, asking for one if none, once the commit gates pass; {anyway} commits past a hard gate with its trailer, {confirm} past a soft one",
-			Run: func(_ registry.Ctx, a registry.Args) error { return g.commit(a, time.Now()) }},
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				return atTarget(ctx, g.sh, g.h, cmpOr(a.String("path"), g.h.Here().Project), func(root, _ string) error {
+					return g.commit(root, a, time.Now())
+				})
+			}},
 		{ID: "git.commit.anyway", Title: "Commit anyway, past the gates holding the commit, recording it in a trailer and the session log", Available: held,
 			Run: func(registry.Ctx, registry.Args) error { return g.resume(registry.Args{"anyway": true}) }},
 		{ID: "git.commit.confirm", Title: "Commit: the message written, or past a soft gate", Available: open, Run: func(registry.Ctx, registry.Args) error {
@@ -119,7 +123,7 @@ func (g *gitPlugin) resume(more registry.Args) error {
 	for k, v := range more {
 		args[k] = v
 	}
-	return g.commit(args, time.Now())
+	return g.commit(a.root, args, time.Now())
 }
 
 // commitFiles are the files a commit takes: what's staged, or with all every uncommitted file.
@@ -133,14 +137,10 @@ func commitFiles(st *gitx.State, all bool) []string {
 	return out
 }
 
-// commit runs the commit gates and the Commit hooks, then commits off the loop. Without a message it asks for one;
-// a hard gate holds it until anyway, a soft one until confirm, and either shows the dialog. A gate still counting is
-// asked again, until commitWait from started.
-func (g *gitPlugin) commit(a registry.Args, started time.Time) error {
-	root, _, err := repoTarget(g.sh, g.h, cmpOr(a.String("path"), g.h.Here().Project))
-	if err != nil {
-		return err
-	}
+// commit runs the commit gates and the Commit hooks in the work tree root, then commits off the loop. Without a
+// message it asks for one; a hard gate holds it until anyway, a soft one until confirm, and either shows the dialog.
+// A gate still counting is asked again, until commitWait from started.
+func (g *gitPlugin) commit(root string, a registry.Args, started time.Time) error {
 	t := g.tree(root)
 	st := t.state()
 	later := func() error {
@@ -152,7 +152,7 @@ func (g *gitPlugin) commit(a registry.Args, started time.Time) error {
 			defer g.busy.Done()
 			time.Sleep(commitPoll)
 			g.h.Do(func() {
-				if err := g.commit(a, started); err != nil {
+				if err := g.commit(root, a, started); err != nil {
 					g.h.Notify(core.Notice{ID: "git.commit", Severity: core.SevError, Text: err.Error()})
 				}
 			})

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -370,5 +371,69 @@ func TestDiffViewWithManyChangesBudget(t *testing.T) {
 	t.Logf("the diff's frame over 5 changed files: %v; over 4000: %v", few, many)
 	if many > 2*few+2*time.Millisecond {
 		t.Errorf("4000 changed files make the diff's frame %v, against %v over 5", many, few)
+	}
+}
+
+// omniboxDownFrame is the average frame that shows ↓ moving the omnibox's selection, over dir's n files.
+func omniboxDownFrame(t *testing.T, dir string, n int) time.Duration {
+	s := newScene(t, "", dir, mockupSize)
+	s.sh.git.wait()
+	s.sourcesLoaded()
+	s.run("omnibox.open", registry.Args{"query": "pkg"})
+	for range 10 {
+		s.frame()
+	}
+	start := time.Now()
+	for range 100 {
+		s.Key("Down")
+		s.frame()
+	}
+	if got := s.omni().sel; got == 0 {
+		t.Fatalf("↓ over %d files never moved the selection", n)
+	}
+	return time.Since(start) / 100
+}
+
+// ↓ in the omnibox doesn't grow with the files it searches: the ranking is kept while the selection moves.
+func TestOmniboxDownWithManyFilesBudget(t *testing.T) {
+	perf.Timed(t)
+	few, many := omniboxDownFrame(t, changedRepo(t, 5), 5), omniboxDownFrame(t, changedRepo(t, 4000), 4000)
+	t.Logf("↓ in the omnibox over 5 files: %v; over 4000: %v", few, many)
+	if many > 2*few+2*time.Millisecond {
+		t.Errorf("4000 files make ↓ in the omnibox take %v, against %v over 5", many, few)
+	}
+}
+
+// omniboxTypingFrame is the average frame that shows a key typed into the omnibox's query, over dir's n files, and
+// how long until the files matching the whole query show.
+func omniboxTypingFrame(t *testing.T, dir string, n int) (frame, shown time.Duration) {
+	s := newScene(t, "", dir, mockupSize)
+	s.sh.git.wait()
+	s.sourcesLoaded()
+	s.run("omnibox.open", nil)
+	for range 10 {
+		s.frame()
+	}
+	start := time.Now()
+	for _, k := range strings.Split("pkg1f099", "") {
+		s.typeKeys(k)
+		s.frame()
+	}
+	frame = time.Since(start) / 8
+	if !s.Until(10*time.Second, func() bool { return strings.Contains(s.frameText(), "pkg19/f099.txt") }) {
+		t.Fatalf("over %d files, the omnibox never showed pkg19/f099.txt:\n%s", n, s.frameText())
+	}
+	return frame, time.Since(start)
+}
+
+// Typing into the omnibox doesn't wait on ranking its files: they're matched off the loop, and the files matching
+// the query show soon after.
+func TestOmniboxTypingWithManyFilesBudget(t *testing.T) {
+	perf.Timed(t)
+	few, _ := omniboxTypingFrame(t, changedRepo(t, 100), 100)
+	many, shown := omniboxTypingFrame(t, changedRepo(t, 20000), 20000)
+	t.Logf("a key typed into the omnibox over 100 files: %v; over 20000: %v, the matches shown after %v", few, many, shown)
+	if many > 2*few+2*time.Millisecond {
+		t.Errorf("20000 files make a key typed into the omnibox take %v, against %v over 100", many, few)
 	}
 }

@@ -131,7 +131,7 @@ type Store interface {
     Session(id SessionID) (Session, bool)
     Apply(ev Event) error                          // the only mutation path; the host applies events
     Subscribe(filter Filter, fn func(Event)) (cancel func())
-    State() State                                  // a copy of the materialised state
+    State() State                                  // the materialised state, read-only: Apply makes a new one
 }
 
 type Session interface {

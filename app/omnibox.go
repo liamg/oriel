@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/liamg/oriel/app/fuzzy"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -43,14 +42,18 @@ type omnibox struct {
 	scope string // a source's id, or "" for all
 	sel   int
 	wait  sourceWait
+	ranks *rankings
 }
 
 func (o *omnibox) Manifest() plugin.Manifest { return plugin.Manifest{ID: "omnibox"} }
 
 func (o *omnibox) Activate(_ context.Context, h plugin.Host) error {
 	o.h = h
+	o.ranks = newRankings(h)
+	o.add(onDispose(o.ranks.reset))
 	o.add(h.Command(registry.Command{ID: "omnibox.open", Title: "Search everything", Run: func(_ registry.Ctx, a registry.Args) error {
 		o.open, o.sel = true, 0
+		o.ranks.reset()
 		o.query, _ = a["query"].(string)
 		o.scope, _ = a["scope"].(string)
 		return nil
@@ -62,12 +65,13 @@ func (o *omnibox) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-// hit is a ranked result.
+// hit is a ranked result: items[idx] of its source's items.
 type hit struct {
 	src   registry.PickerSource
 	item  registry.PickerItem
 	score int
 	pos   []int
+	idx   int
 }
 
 // group is a source's results, best first, and how many it had.
@@ -79,7 +83,7 @@ type group struct {
 
 // results ranks every source's items against the query: the fuzzy score plus the item's boost, best first, each
 // source in its order. A source's prefix at the start of the query narrows to it.
-func (o *omnibox) results() (out []group, busy []string) {
+func (o *omnibox) results(moving bool) (out []group, busy []string) {
 	q, scope := o.query, o.scope
 	srcs := o.h.Pickers()
 	for _, s := range srcs {
@@ -96,51 +100,24 @@ func (o *omnibox) results() (out []group, busy []string) {
 		if scope != "" && s.ID != scope || scope == "" && s.PickerOnly {
 			continue
 		}
-		if g, ok := rankSource(o.h, s, q, limit); ok {
+		if g, ok := o.ranks.rank(s, q, limit, moving); ok {
 			out = append(out, g)
 		}
-		if sourceLoading(s) {
+		if sourceLoading(s) || o.ranks.pending(s.ID) {
 			busy = append(busy, s.Title)
 		}
 	}
 	return out, busy
 }
 
-// rankSource is a source's items for query, best first, at most limit of them. A live source's items are its
-// results already, in its order.
+// rankSource is a source's items for query, best first, at most limit of them, ranked here and now.
 func rankSource(h plugin.Host, s registry.PickerSource, q string, limit int) (group, bool) {
-	if s.Items == nil {
+	items, ok := sourceItems(h, s, q)
+	if !ok {
 		return group{}, false
 	}
-	var items []registry.PickerItem
-	if err := registry.Call(func() error { items = s.Items(context.Background(), q); return nil }); err != nil {
-		h.TurnOff("picker", s.ID, err)
-		return group{}, false
-	}
-	terms := fuzzy.Parse(q)
-	var hits []hit
-	for _, it := range items {
-		if s.Live {
-			hits = append(hits, hit{s, it, it.Boost, nil})
-			continue
-		}
-		text := it.Label
-		if it.Detail != "" {
-			text += "  " + it.Detail // matched too, as fzf matches the whole line; only the label's matches light
-		}
-		score, pos, ok := fuzzy.MatchQuery(terms, text)
-		if !ok {
-			continue
-		}
-		hits = append(hits, hit{s, it, score + it.Boost, pos})
-	}
-	if !s.Live {
-		slices.SortStableFunc(hits, func(a, b hit) int { return b.score - a.score })
-	}
-	if len(hits) == 0 {
-		return group{src: s}, false
-	}
-	return group{src: s, hits: hits[:min(len(hits), limit)], total: len(hits)}, true
+	g, _ := rankItems(context.Background(), s, items, q, limit)
+	return g, len(g.hits) > 0
 }
 
 func (o *omnibox) build(c *ui.Ctx) {
@@ -148,13 +125,13 @@ func (o *omnibox) build(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	groups, busy := o.results()
+	inputID := ui.Child(ui.Child(ui.Child(c.Next("omni"), "box"), "head"), "input")
+	in := c.Interaction(inputID)
+	groups, busy := o.results(len(in.Keys) > 0)
 	var flat []hit
 	for _, g := range groups {
 		flat = append(flat, g.hits...)
 	}
-	inputID := ui.Child(ui.Child(ui.Child(c.Next("omni"), "box"), "head"), "input")
-	in := c.Interaction(inputID)
 	for _, k := range in.Keys {
 		switch {
 		case k.Key == "Down" || k.Key == "n" && k.Mods == render.ModCtrl:

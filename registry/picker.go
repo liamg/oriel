@@ -53,6 +53,10 @@ type PickerSource struct {
 	Unlisted   bool // opened by its command only, not in the pickers' strip or ⇥: a result list, such as callers
 	// Available says whether it has anything to offer now; one that hasn't is left out of Pickers. Nil is always.
 	Available func() bool
+	// Key, when set, says what Items are made from, cheaply and comparably (a generation, a pointer): its items are
+	// asked for again only when it changes. A source whose items depend on the query, or on what it can't key,
+	// leaves it nil and is asked again as the query changes, and every so often.
+	Key func() any
 	// Loading says its items are still coming (a walk, a search, a server's answer): the picker shows it's busy,
 	// and says there are no matches only once it isn't. Nil is never.
 	Loading func() bool
@@ -63,22 +67,29 @@ func (r *reg) Picker(s PickerSource) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	tok := r.pickers.push(s.ID, s)
+	r.pickerList = nil
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.pickers.remove(s.ID, tok)
+		r.pickerList = nil
 	})
 }
 
 func (r *reg) Pickers() []PickerSource {
 	r.mu.Lock()
-	all := make([]PickerSource, 0, len(r.pickers))
-	for id := range r.pickers {
-		s, _ := r.pickers.top(id)
-		all = append(all, s)
+	if r.pickerList == nil {
+		all := make([]PickerSource, 0, len(r.pickers))
+		for id := range r.pickers {
+			s, _ := r.pickers.top(id)
+			all = append(all, s)
+		}
+		slices.SortFunc(all, func(a, b PickerSource) int { return cmp.Or(cmp.Compare(a.Order, b.Order), cmp.Compare(a.ID, b.ID)) })
+		r.pickerList = all
 	}
+	all := r.pickerList
 	r.mu.Unlock()
-	out := all[:0]
+	out := make([]PickerSource, 0, len(all))
 	for _, s := range all {
 		ok := s.Available == nil
 		if !ok {
@@ -88,6 +99,5 @@ func (r *reg) Pickers() []PickerSource {
 			out = append(out, s)
 		}
 	}
-	slices.SortFunc(out, func(a, b PickerSource) int { return cmp.Or(cmp.Compare(a.Order, b.Order), cmp.Compare(a.ID, b.ID)) })
 	return out
 }

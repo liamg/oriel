@@ -153,7 +153,11 @@ function oriel.coverage.set(owner, file, hits) end
 ---@class oriel.decor
 oriel.decor = {}
 
---- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour).
+--- Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.
+---@param name string
+function oriel.decor.changed(name) end
+
+--- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name).
 ---@param name string
 ---@param fn function
 function oriel.decor.provider(name, fn) end

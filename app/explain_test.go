@@ -138,7 +138,7 @@ func (s *errScene) unitMarks() map[int]string {
 	x := s.editor()
 	p := x.current()
 	out := map[int]string{}
-	for line, ds := range x.decorations(p, 0, p.Buf().Lines()) {
+	for line, ds := range x.decorations(p, 0, p.Buf().Lines(), nil) {
 		for _, d := range ds {
 			if d.Kind == registry.Sign && d.Text == "?" {
 				out[line+1] = d.Style

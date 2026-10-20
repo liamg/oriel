@@ -33,6 +33,7 @@ type picker struct {
 	resumed bool
 	hovered string // the source and item last given to Hover
 	wait    sourceWait
+	ranks   *rankings
 }
 
 // sourceWait is how long the sources shown have been loading, for their Busy row.
@@ -76,7 +77,8 @@ func pickerWaitRow(c *ui.Ctx, s widget.LoadState, label string, none bool, help 
 func (p *picker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "picker"} }
 
 func (p *picker) Activate(_ context.Context, h plugin.Host) error {
-	p.h, p.picked = h, map[string]bool{}
+	p.h, p.picked, p.ranks = h, map[string]bool{}, newRankings(h)
+	p.add(onDispose(p.ranks.reset))
 	p.add(h.Command(registry.Command{ID: "picker.open", Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
 		src, _ := a["source"].(string)
 		return src == "" || slices.ContainsFunc(h.Pickers(), func(s registry.PickerSource) bool { return s.ID == src })
@@ -86,6 +88,7 @@ func (p *picker) Activate(_ context.Context, h plugin.Host) error {
 			return fmt.Errorf("no picker source %q", src)
 		}
 		p.open, p.source, p.sel, p.picked, p.hovered = true, src, 0, map[string]bool{}, ""
+		p.ranks.reset()
 		p.query, _ = a["query"].(string)
 		if s, ok := p.src(); ok {
 			p.sel = startAt(s, p.query, h)
@@ -97,6 +100,7 @@ func (p *picker) Activate(_ context.Context, h plugin.Host) error {
 			return fmt.Errorf("no picker yet")
 		}
 		p.open, p.hovered = true, ""
+		p.ranks.reset()
 		return nil
 	}}))
 	p.add(h.View(OverlayPrefix+"picker", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
@@ -170,9 +174,10 @@ func (p *picker) build(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	g, _ := rankSource(p.h, s, p.query, pickerMax)
 	inputID := ui.Child(ui.Child(ui.Child(ui.Child(ui.Child(c.Next("picker"), "box"), "body"), "left"), "head"), "input")
-	p.keys(c, s, g, c.Interaction(inputID).Keys)
+	keys := c.Interaction(inputID).Keys
+	g, _ := p.ranks.rank(s, p.query, pickerMax, len(keys) > 0)
+	p.keys(c, s, g, keys)
 	p.sel = min(max(p.sel, 0), max(len(g.hits)-1, 0))
 	if p.open && len(g.hits) > 0 && s.Hover != nil {
 		if key := s.ID + "\x00" + g.hits[p.sel].item.ID; key != p.hovered {
@@ -202,7 +207,7 @@ func (p *picker) build(c *ui.Ctx) {
 									p.run(s, h)
 								}
 							}
-							pickerWaitRow(c, p.wait.state(c.Now(), sourceLoading(s)), s.Title+" still loading", len(g.hits) == 0 && p.query != "",
+							pickerWaitRow(c, p.wait.state(c.Now(), sourceLoading(s) || p.ranks.pending(s.ID)), s.Title+" still loading", len(g.hits) == 0 && p.query != "",
 								"shell/pickers")
 						})
 					})

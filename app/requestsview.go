@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -320,21 +319,16 @@ func (x *requests) newRequestNote(c *ui.Ctx, st *requestsState, width float32) {
 	})
 }
 
-// fileLines are a file's lines as the editor has them, else as they are on disk.
+// fileLines are a file's lines as the editor has them, else as they are on disk; nil for no file.
 func (x *requests) fileLines(path string) []string {
-	var b []byte
-	if x.sh.editor != nil && x.sh.editor.e != nil {
-		if f, ok := x.sh.editor.openBuffer(path); ok {
-			b = f.Bytes()
-		}
+	if x.files == nil {
+		x.files = fileSrcs{}
 	}
-	if b == nil {
-		b, _ = os.ReadFile(path)
-	}
-	if b == nil {
+	f := x.files.of(x.sh.editor, path, true)
+	if f.missing() {
 		return nil
 	}
-	return strings.Split(strings.TrimSuffix(string(b), "\n"), "\n")
+	return f.lines()
 }
 
 // anchorCard is the request's anchored code, where it is now.

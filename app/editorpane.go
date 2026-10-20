@@ -409,7 +409,7 @@ func (x *editorPlugin) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 		}
 		hl, _ = h.doc.Highlights(snap.LineStart(min(line, snap.Lines()-1)), end)
 	}
-	decor := x.decorations(p, line, last)
+	decor := x.decorations(p, line, last, c.WakeAt)
 	cur := p.Cursor()
 	gw := gutterWidth(snap.Lines(), m)
 	numStyle := ui.TextStyle{Font: x.pane.font, Color: th.C(tGutterFg)}

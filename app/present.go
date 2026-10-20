@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/core"
@@ -33,10 +35,69 @@ type presentState struct {
 	settle int                // frames to wait before a change in the scroll is the user's
 	frames int                // how many it's been drawn
 	blocks []*registry.PresentBlock
+	built  presentBuild
+	height []float32     // each block's box, as last laid out; 0 before it's been
+	drawn  map[int]ui.ID // the blocks built this frame, by their boxes
+	laid   map[int]ui.ID // and last frame
+}
+
+// blockGuess is a block's height before it's been laid out.
+const blockGuess = 40
+
+// place is where each of n blocks' boxes starts in the content, and where the last ends: each as tall as it was last
+// laid out, or blockGuess before it has been.
+func (st *presentState) place(c *ui.Ctx, n int) []float32 {
+	st.drawn, st.laid = st.laid, st.drawn
+	clear(st.drawn)
+	for i, id := range st.laid {
+		if r, ok := c.Rect(id); ok && i < len(st.height) {
+			st.height[i] = r.Dy()
+		}
+	}
+	st.height = slices.Grow(st.height[:min(len(st.height), n)], n)[:n]
+	tops := make([]float32, n+1)
+	tops[0] = 28 // the doc's top padding
+	for i, h := range st.height {
+		if h <= 0 {
+			h = blockGuess
+		}
+		tops[i+1] = tops[i] + h
+	}
+	return tops
+}
+
+// presentBuild is what a presenter built from a buffer, kept until the text, the width or the contributions change.
+type presentBuild struct {
+	buf       *text.Buffer
+	version   uint64
+	path      string
+	presenter string
+	width     float32
+	gen       int
+	ctx       *registry.PresentCtx
+	at        []int // each line's block
+	err       error
+}
+
+// build is the presentation's blocks, built again only when what they're built from has changed.
+func (st *presentState) build(h plugin.Host, p presentation, snap text.Snapshot, width float32) *presentBuild {
+	b, gen := &st.built, h.ContributionsGen()
+	if b.ctx != nil && b.buf == p.buf && b.version == snap.Version() && b.path == p.path && b.presenter == p.presenter.Name && b.width == width &&
+		b.gen == gen {
+		return b
+	}
+	ctx := &registry.PresentCtx{Path: p.path, Name: p.name, Lines: strings.Split(strings.TrimSuffix(snap.String(), "\n"), "\n"), Width: width}
+	err := registry.Call(func() error { p.presenter.Build(ctx); return nil })
+	if err != nil {
+		h.Report(registry.KindView, "presenter."+p.presenter.Name, err)
+	}
+	*b = presentBuild{buf: p.buf, version: snap.Version(), path: p.path, presenter: p.presenter.Name, width: width, gen: gen, ctx: ctx,
+		at: ctx.LineBlocks(snap.Lines()), err: err}
+	return b
 }
 
 func newPresentState() *presentState {
-	return &presentState{sel: -1, top: -1, gaps: map[string]float32{}}
+	return &presentState{sel: -1, top: -1, gaps: map[string]float32{}, drawn: map[int]ui.ID{}, laid: map[int]ui.ID{}}
 }
 
 // presentation is a presenter drawing a buffer: in an editor window, or a view of its own (plan mode).
@@ -130,44 +191,6 @@ func (f *presentFocus) comment(i int) {
 	}
 }
 
-// decorate is every provider's decorations of ctx's lines [Top, Bottom), by line, each line's in priority order. A
-// provider that panics is turned off, as any contribution is.
-func decorate(h plugin.Host, ctx registry.DecorationCtx) map[int][]registry.Decoration {
-	off := map[string]bool{}
-	for _, o := range h.TurnedOff() {
-		if o.Kind == registry.KindDecoration {
-			off[o.ID] = true
-		}
-	}
-	out := map[int][]registry.Decoration{}
-	for _, prov := range h.DecorationProviders() {
-		if off[prov.ID] {
-			continue
-		}
-		var ds []registry.Decoration
-		if err := registry.Call(func() error { ds = prov.Decorations(ctx); return nil }); err != nil {
-			h.TurnOff(registry.KindDecoration, prov.ID, err)
-			continue
-		}
-		for _, d := range ds {
-			if d.Anchor != 0 {
-				o, ok := ctx.Buffer.Resolve(d.Anchor)
-				if !ok {
-					continue
-				}
-				d.Line = ctx.Snap.PosAt(min(o, ctx.Snap.Len())).Line
-			}
-			if d.Line >= ctx.Top && d.Line < ctx.Bottom {
-				out[d.Line] = append(out[d.Line], d)
-			}
-		}
-	}
-	for _, ds := range out {
-		sortDecorations(ds)
-	}
-	return out
-}
-
 // blockDecor is what a presentation's decorations put on one block.
 type blockDecor struct {
 	all   []registry.Decoration
@@ -179,13 +202,16 @@ type blockDecor struct {
 }
 
 // blockDecorations are the decorations of a presentation's buffer, put on the blocks holding their lines.
-func blockDecorations(h plugin.Host, dctx registry.DecorationCtx, ctx *registry.PresentCtx) []blockDecor {
-	decor := make([]blockDecor, len(ctx.Blocks()))
-	ds := decorate(h, dctx)
-	for line := range dctx.Snap.Lines() {
-		i := ctx.BlockAt(line)
+func blockDecorations(h plugin.Host, dctx registry.DecorationCtx, b *presentBuild) []blockDecor {
+	decor := make([]blockDecor, len(b.ctx.Blocks()))
+	ds := h.Decorate(dctx)
+	for _, line := range slices.Sorted(maps.Keys(ds)) {
+		i := -1
+		if line < len(b.at) {
+			i = b.at[line]
+		}
 		if i < 0 {
-			break
+			continue
 		}
 		bd := &decor[i]
 		for _, d := range ds[line] {
@@ -228,18 +254,18 @@ func drawPresentation(c *ui.Ctx, h plugin.Host, sh *shell, st *presentState, p p
 	}
 	margin := min(max(width*.38, 300), 520)
 	docW := min(max(width-margin-120, 280), 760)
-	ctx := &registry.PresentCtx{Path: p.path, Name: p.name, Lines: strings.Split(strings.TrimSuffix(snap.String(), "\n"), "\n"), Width: docW}
-	if err := registry.Call(func() error { p.presenter.Build(ctx); return nil }); err != nil {
-		h.Report(registry.KindView, "presenter."+p.presenter.Name, err)
-		c.Text("error", p.presenter.Name+": "+err.Error(), ui.TextStyle{Color: th.C(theme.Error)})
+	built := st.build(h, p, snap, docW)
+	if built.err != nil {
+		c.Text("error", p.presenter.Name+": "+built.err.Error(), ui.TextStyle{Color: th.C(theme.Error)})
 		return st.shown, false
 	}
+	ctx := built.ctx
 	blocks := ctx.Blocks()
 	st.blocks = blocks
 	st.sel = min(st.sel, len(blocks)-1)
 	dctx := registry.DecorationCtx{Window: p.window, Presenter: p.presenter.Name, Now: c.Now(), Name: p.name, Path: p.path,
-		Buffer: p.buf, Snap: snap, Top: 0, Bottom: snap.Lines(), FileBytes: snap.Bytes}
-	decor := blockDecorations(h, dctx, ctx)
+		Buffer: p.buf, Snap: snap, Top: 0, Bottom: snap.Lines(), FileBytes: snap.Bytes, Wake: c.WakeAt}
+	decor := blockDecorations(h, dctx, built)
 	focus := &presentFocus{st: st, p: p, h: h}
 	asked := false
 	if p.focused && !c.FocusWithin(p.root) || st.focus {
@@ -253,32 +279,62 @@ func drawPresentation(c *ui.Ctx, h plugin.Host, sh *shell, st *presentState, p p
 	}
 	ids := make([]ui.ID, len(blocks))
 	var cards []ui.ID
+	view, okV := c.Rect(body)
+	content, okC := c.Rect(ui.Child(body, "content"))
+	okV, okC = okV && st.frames > 0, okC && st.frames > 0 // laid out once at least: not what was here before
+	tops := st.place(c, len(blocks))
+	// where block i's clickable top and bottom were last laid out; only the blocks near the view are built
+	span := func(i int) (float32, float32, bool) {
+		if _, laid := st.laid[i]; laid && ids[i] != 0 {
+			r, _ := c.Rect(ids[i])
+			return r.Min.Y, r.Max.Y, true
+		}
+		y := content.Min.Y + tops[i]
+		return y + blocks[i].Space, y + tops[i+1] - tops[i], okC
+	}
+	near := func(i int) bool {
+		if !okV || !okC || i == st.sel {
+			return true
+		}
+		at := max(min(c.Scroll(body).Y, tops[len(blocks)]-view.Dy()), 0)
+		return tops[i+1] >= at-view.Dy() && tops[i] <= at+2*view.Dy()
+	}
 	scrolledBox(c, "body", &st.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, KeyMode: PresentKeyMode, Role: ui.RoleList, Label: p.name,
 		Help: "editor/pane#present"}, func(c *ui.Ctx) {
 		c.Row("page", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 			c.Column("doc", ui.Style{W: ui.Px(docW + 76), Pad: ui.Insets{L: 16, T: 28, B: 48}}, func(c *ui.Ctx) {
+				gap := float32(0)
 				for i, b := range blocks {
+					if !near(i) {
+						gap += tops[i+1] - tops[i]
+						continue
+					}
+					if gap > 0 {
+						c.Box(fmt.Sprint("gap", i), ui.Style{H: ui.Px(gap)}, nil)
+						gap = 0
+					}
+					st.drawn[i] = c.Next(fmt.Sprint("b", i))
 					ids[i] = presentBlock(c, h, focus, i, b, decor[i], docW, p.kicker)
+				}
+				if gap > 0 {
+					c.Box("gap", ui.Style{H: ui.Px(gap)}, nil)
 				}
 			})
 			c.Box("rule", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
 			if focus.opened {
-				decor = blockDecorations(h, dctx, ctx) // with the thread a click just opened, so it takes the keys typed next
+				decor = blockDecorations(h, dctx, built) // with the thread a click just opened, so it takes the keys typed next
 			}
-			cards = presentMargin(c, st, p, decor, ids, margin)
+			cards = presentMargin(c, st, p, decor, span, margin)
 		})
 	})
 	st.frames++
-	view, okV := c.Rect(body)
-	content, okC := c.Rect(ui.Child(body, "content"))
-	okV, okC = okV && st.frames > 1, okC && st.frames > 1 // laid out once at least: not what was here before
 	switch {
 	case st.top >= 0 && okV && okC:
 		if i := ctx.BlockAt(st.top); i >= 0 {
-			if r, ok := c.Rect(ids[i]); ok {
+			if top, _, ok := span(i); ok {
 				st.at = 0
 				if i > 0 {
-					st.at = max(r.Min.Y-content.Min.Y-28, 0) // as far below the top as the first block is
+					st.at = max(top-content.Min.Y-28, 0) // as far below the top as the first block is
 				}
 				c.ScrollTo(body, render.Point{Y: st.at})
 				st.top, st.settle = -1, 2
@@ -286,6 +342,10 @@ func drawPresentation(c *ui.Ctx, h plugin.Host, sh *shell, st *presentState, p p
 		}
 	case st.reveal:
 		if st.sel >= 0 && st.sel < len(ids) {
+			if _, laid := st.laid[st.sel]; !laid {
+				c.WakeAt(c.Now()) // built this frame for the first time: shown once it's laid out
+				break
+			}
 			c.ScrollIntoView(body, ids[st.sel])
 		}
 		st.reveal = false
@@ -295,8 +355,8 @@ func drawPresentation(c *ui.Ctx, h plugin.Host, sh *shell, st *presentState, p p
 	}
 	st.shown = p.buf.Snapshot().Lines() - 1
 	if okV {
-		for i, id := range ids {
-			if r, ok := c.Rect(id); ok && r.Max.Y > view.Min.Y+1 {
+		for i := range blocks {
+			if _, bottom, ok := span(i); ok && bottom > view.Min.Y+1 {
 				st.shown = blocks[i].From
 				break
 			}
@@ -393,9 +453,9 @@ func presentBlock(c *ui.Ctx, h plugin.Host, f *presentFocus, i int, b *registry.
 	return id
 }
 
-// presentMargin is the blocks' cards, each level with its block (or under the card before it). It returns the cards
-// that want revealing.
-func presentMargin(c *ui.Ctx, st *presentState, p presentation, decor []blockDecor, blocks []ui.ID, width float32) (reveal []ui.ID) {
+// presentMargin is the blocks' cards, each level with its block (or under the card before it), where span says it
+// was laid out. It returns the cards that want revealing.
+func presentMargin(c *ui.Ctx, st *presentState, p presentation, decor []blockDecor, span func(int) (float32, float32, bool), width float32) (reveal []ui.ID) {
 	th := c.Theme()
 	type entry struct {
 		key   string
@@ -418,8 +478,8 @@ func presentMargin(c *ui.Ctx, st *presentState, p presentation, decor []blockDec
 		y := col.Min.Y + 28
 		for _, e := range entries {
 			gap := float32(0)
-			if r, okB := c.Rect(blocks[e.block]); ok && okB {
-				gap = max(r.Min.Y-y, 0)
+			if top, _, okB := span(e.block); ok && okB {
+				gap = max(top-y, 0)
 			}
 			gap = float32(int(gap))
 			if old, seen := st.gaps[e.key]; !seen || old != gap {

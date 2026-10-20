@@ -87,6 +87,9 @@ type requests struct {
 	lineNow    map[core.ThreadID]int            // where each thread was last decorated, 0-based
 	reveal     core.ThreadID                    // a thread to bring into view
 	focusReply core.ThreadID                    // a thread whose reply field takes focus
+
+	edits map[string]*agentEdit // the agent's latest edit to each file decorated, by path
+	files fileSrcs              // the anchored files' text, by path
 }
 
 // draft is what's being written to a request: its text, how it goes, and what's attached.
@@ -228,8 +231,14 @@ func (x *requests) Activate(_ context.Context, h plugin.Host) error {
 		Command: "thread.new"}))
 	x.add(h.Picker(x.threadsSource()))
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>r", Command: "picker.open", Args: registry.Args{"source": "threads"}, Desc: "Threads"}))
-	x.add(h.Decorations("threads", registry.DecorationFunc(x.decorations)))
-	x.add(h.Decorations("agent.edits", registry.DecorationFunc(x.agentEdits)))
+	x.add(h.Decorations("threads", registry.KeyedDecorations{Key: x.threadsKey, Make: x.decorations}))
+	x.add(h.Decorations("agent.edits", registry.KeyedDecorations{Key: func(registry.DecorationCtx) any {
+		se, ok := x.front()
+		if !ok {
+			return nil
+		}
+		return transcriptOf(se)
+	}, Make: x.agentEdits}))
 	for _, o := range threadsOptions() {
 		x.add(h.Option(o))
 	}

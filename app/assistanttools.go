@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/testrun"
 )
@@ -97,13 +98,11 @@ func pstr(p map[string]any, k string) string {
 	return ""
 }
 
-// run runs a command on the app's loop, as a key would.
+// run runs a command on the app's loop, as a key would, and waits until it has finished.
 func (x *assistantPlugin) run(ctx context.Context, id string, args registry.Args) error {
-	var err error
-	if lerr := onLoop(ctx, x.h, func() { err = x.h.Run(ctx, id, args) }); lerr != nil {
-		return lerr
-	}
-	return err
+	return plugin.Await(ctx, func(rctx registry.Ctx) error {
+		return onLoop(ctx, x.h, func() { x.h.Run(rctx, id, args) })
+	})
 }
 
 func (x *assistantPlugin) toolReply(_ registry.Ctx, p map[string]any) (any, error) {

@@ -3,8 +3,10 @@ package app
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"slices"
@@ -18,6 +20,7 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/vim"
 )
 
 // ChangedUnitsView is the Changed units panel: every unit the branch touched, with its explain status.
@@ -227,46 +230,112 @@ type changedFile struct {
 	units     []changedUnit
 }
 
-// panelState is the Changed units panel's: its rows, and what they were worked out from.
-type panelState struct {
-	key     string
-	files   []changedFile
-	loading bool
-	since   time.Time // when the loading began
+// panelKey is what the Changed units panel's rows are worked out from: the status, the versions of the changed files
+// open in buffers, and how many times the others were found changed on disk.
+type panelKey struct {
+	st   *gitx.State
+	open uint64
+	disk int
 }
 
-// changedFiles are the branch's changed files' units, worked out off the loop when the status or an open buffer
-// changes.
+// panelState is the Changed units panel's: its rows, and what they were worked out from.
+type panelState struct {
+	key      panelKey
+	gen      int // moves each time files does
+	files    []changedFile
+	stats    map[string]fileStat // the files read from disk, as they were when read; never changed once kept
+	loading  bool
+	since    time.Time // when the loading began
+	statting bool
+	statted  time.Time // when stats were last checked against the disk
+	disk     int
+	items    panelItems // on the loop only
+}
+
+// openChanged hashes the paths and versions of the open buffers holding files st lists as changed.
+func (x *explainPlugin) openChanged(st *gitx.State) uint64 {
+	h := fnv.New64a()
+	var v [8]byte
+	for _, f := range x.sh.editor.e.Files() {
+		if f.File == nil {
+			continue
+		}
+		if fs, ok := st.File(x.sh.git.rel(f.File.Path)); !ok || fs.Code == 'D' || fs.Binary {
+			continue
+		}
+		h.Write([]byte(filepath.Clean(f.File.Path)))
+		binary.LittleEndian.PutUint64(v[:], f.Text.Snapshot().Version())
+		h.Write(v[:])
+	}
+	return h.Sum64()
+}
+
+// restatPanel checks, off the loop and at most every statFresh, whether the files the panel read from disk have
+// changed since; the panel is worked out again when one has. x.mu is held.
+func (x *explainPlugin) restatPanel() {
+	p := &x.panel
+	if p.statting || p.loading || len(p.stats) == 0 || time.Since(p.statted) < statFresh {
+		return
+	}
+	p.statting = true
+	stats := p.stats
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		changed := false
+		for path, was := range stats {
+			if now := statNow(path); now.size != was.size || now.mtime != was.mtime {
+				changed = true
+				break
+			}
+		}
+		x.h.Do(func() {
+			x.mu.Lock()
+			x.panel.statting, x.panel.statted = false, time.Now()
+			if changed {
+				x.panel.disk++
+			}
+			x.mu.Unlock()
+			if changed {
+				x.h.Redraw()
+			}
+		})
+	}()
+}
+
+// changedFiles are the branch's changed files' units, worked out off the loop when the status, an open buffer or a
+// file on disk changes.
 func (x *explainPlugin) changedFiles() ([]changedFile, bool) {
 	g := x.sh.git
 	st := g.state()
 	if st == nil {
 		return nil, false
 	}
-	var paths []string
-	key := st.BaseHash
-	for _, f := range st.Files(gitx.Changed) {
-		if f.Code == 'D' || f.Binary || strings.HasSuffix(f.Path, "/") {
-			continue
-		}
-		abs := filepath.Join(g.root(), filepath.FromSlash(f.Path))
-		paths = append(paths, abs)
-		if b, ok := x.sh.editor.openBuffer(abs); ok {
-			key += fmt.Sprintf("|%s@%d", f.Path, b.Text.Snapshot().Version())
-		} else if fi, err := os.Stat(abs); err == nil {
-			key += fmt.Sprintf("|%s:%d:%d", f.Path, fi.Size(), fi.ModTime().UnixNano())
-		}
-	}
+	open := x.openChanged(st)
 	x.mu.Lock()
 	defer x.mu.Unlock()
+	x.restatPanel()
+	key := panelKey{st: st, open: open, disk: x.panel.disk}
 	if x.panel.key == key || x.panel.loading {
 		return x.panel.files, x.panel.loading
 	}
 	x.panel.loading, x.panel.since = true, windowNow(x.h)
 	rev, repo, root := st.BaseHash, g.status.Repo(), g.root()
+	bufs := map[string]vim.FileState{}
+	for _, f := range x.sh.editor.e.Files() {
+		if f.File != nil {
+			bufs[filepath.Clean(f.File.Path)] = f
+		}
+	}
+	var paths []string
 	srcs, writes := map[string][]byte{}, map[string][]byte{}
-	for _, p := range paths {
-		if b, ok := x.sh.editor.openBuffer(p); ok {
+	for _, f := range st.Files(gitx.Changed) {
+		if f.Code == 'D' || f.Binary || strings.HasSuffix(f.Path, "/") {
+			continue
+		}
+		p := filepath.Join(root, filepath.FromSlash(f.Path))
+		paths = append(paths, p)
+		if b, ok := bufs[p]; ok {
 			srcs[p], writes[p] = b.Text.Snapshot().Bytes(), b.Bytes()
 		}
 	}
@@ -274,10 +343,12 @@ func (x *explainPlugin) changedFiles() ([]changedFile, bool) {
 	go func() {
 		defer x.busy.Done()
 		var files []changedFile
+		stats := map[string]fileStat{}
 		for _, p := range paths {
 			src, ok := srcs[p]
 			file := writes[p]
 			if !ok {
+				stats[p] = statNow(p)
 				var err error
 				if src, err = os.ReadFile(p); err != nil {
 					continue
@@ -296,7 +367,9 @@ func (x *explainPlugin) changedFiles() ([]changedFile, bool) {
 		}
 		x.h.Do(func() {
 			x.mu.Lock()
-			x.panel = panelState{key: key, files: files}
+			p := &x.panel
+			p.key, p.files, p.stats, p.loading, p.statted = key, files, stats, false, time.Now()
+			p.gen++
 			x.mu.Unlock()
 			x.h.Redraw()
 		})
@@ -383,23 +456,28 @@ func (v changedUnitsView) Build(registry.ViewCtx) ui.Node {
 func (x *explainPlugin) panelView(c *ui.Ctx) {
 	th := c.Theme()
 	files, loading := x.changedFiles()
-	n := 0
-	var roots []widget.TreeItem
-	for _, f := range files {
-		file := widget.TreeItem{ID: f.path, Label: f.rel, Section: true, Open: true, Help: "editor/pane#changed-units"}
-		for _, u := range f.units {
-			if u.owner {
-				n++
+	x.mu.Lock()
+	key := panelItemsKey{gen: x.panel.gen, status: x.statusPrint(), th: th}
+	x.mu.Unlock()
+	if x.panel.items.key != key {
+		x.panel.items.key, x.panel.items.roots, x.panel.items.n = key, nil, 0
+		for _, f := range files {
+			file := widget.TreeItem{ID: f.path, Label: f.rel, Section: true, Open: true, Help: "editor/pane#changed-units"}
+			for _, u := range f.units {
+				if u.owner {
+					x.panel.items.n++
+				}
 			}
+			i := 0
+			file.Children = unitTree(f.units, &i, 0, func(u changedUnit) widget.TreeItem {
+				word, tok := unitStatusWord(x.unitStatus(f.path, u.unit, u.hash))
+				return widget.TreeItem{ID: fmt.Sprintf("%s:%d:%d", f.path, u.line+1, u.unit.Range.Start), Label: u.label, Note: strings.ToUpper(u.unit.Kind),
+					Mark: word, MarkTone: th.C(tok), Open: true, Help: "editor/pane#changed-units"}
+			})
+			x.panel.items.roots = append(x.panel.items.roots, file)
 		}
-		i := 0
-		file.Children = unitTree(f.units, &i, 0, func(u changedUnit) widget.TreeItem {
-			word, tok := unitStatusWord(x.unitStatus(f.path, u.unit, u.hash))
-			return widget.TreeItem{ID: fmt.Sprintf("%s:%d:%d", f.path, u.line+1, u.unit.Range.Start), Label: u.label, Note: strings.ToUpper(u.unit.Kind),
-				Mark: word, MarkTone: th.C(tok), Open: true, Help: "editor/pane#changed-units"}
-		})
-		roots = append(roots, file)
 	}
+	roots, n := x.panel.items.roots, x.panel.items.n
 	c.Column("units", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tExplorerBg), Help: "editor/pane#changed-units", Role: ui.RoleRegion,
 		Label: "Changed units"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -434,6 +512,57 @@ func (x *explainPlugin) panelView(c *ui.Ctx) {
 			})
 		})
 	})
+}
+
+// panelItemsKey is what the panel's tree is built from: its rows, and everything unitStatus reads.
+type panelItemsKey struct {
+	gen    int
+	status uint64
+	th     *theme.Resolved
+}
+
+// panelItems is the panel's tree as last built.
+type panelItems struct {
+	key   panelItemsKey
+	roots []widget.TreeItem
+	n     int // the units owning a change
+}
+
+// statusPrint hashes what unitStatus reads: the card's unit, the units explained, and where the explained ones are
+// now. x.mu is held.
+func (x *explainPlugin) statusPrint() uint64 {
+	h := fnv.New64a()
+	var v [8]byte
+	num := func(n int) {
+		binary.LittleEndian.PutUint64(v[:], uint64(n))
+		h.Write(v[:])
+	}
+	if cd := x.card; cd != nil {
+		r, ok := cd.rangeOf(cd.sel)
+		h.Write([]byte(cd.path))
+		num(r.Start)
+		if ok && !cd.crumbs[cd.sel].selection {
+			num(1)
+		}
+	}
+	var explained uint64
+	for k, a := range x.answers {
+		if a.text != "" {
+			e := fnv.New64a()
+			e.Write([]byte(k.hash))
+			explained += e.Sum64()
+		}
+	}
+	num(int(explained))
+	for _, m := range x.marks {
+		h.Write([]byte(m.path + "\x00" + m.kind))
+		off, ok := m.buf.Resolve(m.start)
+		if !ok {
+			off = -1
+		}
+		num(off)
+	}
+	return h.Sum64()
 }
 
 // unitTree nests rows by depth, from row *i while they're at least depth deep.

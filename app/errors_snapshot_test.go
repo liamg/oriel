@@ -120,9 +120,16 @@ func (s *errScene) zoom(z float32) {
 	s.frame()
 }
 
+// run runs a command and waits until it has finished, running frames while its slow part is off the loop.
 func (s *errScene) run(id string, args registry.Args) {
 	s.t.Helper()
-	if err := s.reg.Run(context.Background(), id, args); err != nil {
+	var err error
+	done := false
+	s.reg.Run(registry.OnDone(context.Background(), func(e error) { err, done = e, true }), id, args)
+	if !done && !s.Until(15*time.Second, func() bool { return done }) {
+		s.t.Fatalf("%s never finished", id)
+	}
+	if err != nil {
 		s.t.Fatal(err)
 	}
 }

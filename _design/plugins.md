@@ -66,7 +66,11 @@ flowchart TB
 - decorations: highlights, signs, virtual text, virtual lines, inline blocks, conceal. A provider gets the buffer, the
   lines in view and `FileBytes` (the buffer as it would be written), for diffing against a file's other versions, and
   where it's drawn: `Window` (the editor window's id), `Presenter` (the presenter drawing the buffer, "" for its text)
-  and `Now` (the frame's time). A `Sign` can be a built-in icon (`Icon`, its `Text` small beside it: a count) and have a
+  and `Now` (the frame's time). Decorations are kept between frames (`Registry.Decorate`): a provider is asked again
+  only when the buffer's text, the lines in view or where they're drawn change, when it says its decorations have
+  (`Registry.DecorationsChanged(id)`, Lua `decor.changed(name)`), when the key it gives changes (a provider that's a
+  `DecorationKeyer`, or `KeyedDecorations{Key, Make}`: a generation or pointer its decorations are made from), or at a
+  time it asked for (`ctx.RefreshAt`, "edited 4s ago"). A `Sign` can be a built-in icon (`Icon`, its `Text` small beside it: a count) and have a
   `Hover` card, shown while the pointer is on the sign or the card and never taking focus (`widget.HoverCard`). A
   `LineBg` on a changed line can say what the line read before (`Was`), for a presenter that shows the change. The
   agent's latest edit to a file is a built-in provider (`agent.edits`): its lines lit green for ten minutes, a one-line
@@ -74,8 +78,9 @@ flowchart TB
 - buffer presenters (`registry.BufferPresenter{Name, Label, When(path), Comments, Build(ctx)}`, ED-15): a way to draw a
   buffer other than as its text, per window. `editor.present {name, window}` shows a window (the focused one by
   default) with it, and again shows the text; the buffer stays open and editable, and the presentation is built again
-  each frame from its text, so two windows on one file can be in Edit and a presentation at once. `Build` maps each
-  block it makes to the source lines it came from: `ctx.Block(from, to, body)` (0-based, inclusive; `Space` above it,
+  from its text whenever the text (or the width) changes, so two windows on one file can be in Edit and a presentation
+  at once. Only the blocks near the view are drawn each frame. `Build` maps each block it makes to the source lines
+  it came from: `ctx.Block(from, to, body)` (0-based, inclusive; `Space` above it,
   `Label` its accessible name), whose body is drawn with `PresentDraw{Width, Decorations, Kicker}`. From that map the
   host (`app/present.go`) gives every presenter the same: the decorations of the file (every provider's, all its lines)
   on the block holding their line (a line no block maps belongs to the nearest block before it): `Block`s are cards
@@ -598,7 +603,7 @@ func TestCards(t *testing.T) {
   the OS sandbox isn't there; `Manifest(t, dir)`. `Load(dir, grants)` starts the Lua plugin in `dir` with a data
   directory of the test's (`Plugin{ID, Dir, Data}`); a load error fails the test.
 - `Apply(events…)` applies core events, as the host's; `SetOption(name, v)` sets one as `settings.toml` would;
-  `Run(id, args)` runs a command; `Registry()` and `Store()` for anything else (a stand-in `session.start`, a
+  `Run(id, args)` runs a command and waits until it has finished, a slow part (`plugin.RunSlow`) too; `Registry()` and `Store()` for anything else (a stand-in `session.start`, a
   `Forker`, an `AgentOwner` that answers an act's confirmation).
 - `Frame()`, `Text()` (the frame's runs of text, a line each), `Has`, `WantText`, `Access()` and `Find(name)` (the
   accessibility tree); `ClickText(text)` (the run painted last), `Click(p, mods)`, `Type(keys…)` (a character or a
@@ -625,6 +630,8 @@ type Registry interface {
     Option(o OptionSpec) Disposable               // fields and the settings page: settings.md
     View(id string, v View) Disposable            // override = register the same id later; disposing it restores the one beneath
     Decorations(id string, p DecorationProvider) Disposable
+    DecorationsChanged(id string)                 // the provider's decorations moved: Decorate asks it again
+    Decorate(ctx DecorationCtx) map[int][]Decoration // every provider's, by line, kept until their inputs change
     Input(e input.Engine) Disposable              // InputByID(id) and Inputs() find them; editor.input picks one
     Provider(p agent.Provider) Disposable
     AgentTool(t AgentTool) Disposable
@@ -640,7 +647,7 @@ type Registry interface {
 
     SetDiagnostics(owner, file string, ds []Diagnostic) // replaces owner's for file; Problems and the editor show them
     Diagnostics() ([]Diagnostic, int)                    // every one, by file and line, and a generation
-    DiagnosticsFor(file string) []Diagnostic
+    DiagnosticsFor(file string) []Diagnostic             // a file's; both shared until they change: read, don't write
     SetCoverage(owner, file string, hits map[int]int) // line coverage by 0-based line; the tests gutter shows it
     ClearCoverage(owner string)
     CoverageFor(file string) map[int]int // every owner's, a line keeping its largest count
@@ -718,7 +725,7 @@ type Host interface {
     Net() *http.Client                            // egress filtered to declared hosts
     Log() *slog.Logger                            // redacted, with the plugin as its source
     Notify(n core.Notice)                         // the one path every notice takes (errors.md)
-    State() core.State                            // a copy: the notification history, focus, sessions
+    State() core.State                            // read-only: the notification history, focus, sessions
 }
 
 // core.Notice: ID ("lsp.crashed"), Severity (info, warning, error, question), Source (defaults to the
@@ -736,7 +743,8 @@ type Host interface {
 - Picker sources: `Registry.Picker(PickerSource{ID, Title, Prefix, Order, Items, Preview, Run})`. `Items(ctx, query)`
   gives `PickerItem`s (label, detail, note, icon, badge, key, a ranking boost); the omnibox and the pickers match the
   query against each label (`app/fuzzy`, fzf-style), add the boost, and show the source's `Preview` of the
-  selection. Sessions, commands, files, symbols and tickets (every tracker's, "As built (tickets)") are built-in
+  selection. A ranking is kept while its query is the same, for half a second, or as long as keys move the
+  selection through it. Sessions, commands, files, symbols and tickets (every tracker's, "As built (tickets)") are built-in
   sources; PRs come from their plugin.
 - `Host.Pending()` is the keys typed towards a longer mapping or engine command, with the engine's next keys, for
   which-key. A keymap with no command is a group's label, never run. `Host.HoldPending()` keeps the pending mapping
@@ -901,6 +909,16 @@ type Host interface {
 - A view whose data sits in a keyed cache feeds `widget.Async` a `LoadState` made from the cache entry (stats,
   tickets, reviews, Ship), rather than a `plugin.Load` per key.
 - `gitx.ParseProgress` reads git's progress lines (phase and percentage) for a `widget.ProgressBar`: Add repo's clone.
+- A command whose work is slow (a fetch, a clone, a worktree made or removed, the agent resumed) runs it off the loop
+  with `plugin.RunSlow(ctx, h, plugin.Slow{ID, Doing}, work, land)`: `work` runs on a goroutine, `land` on the loop
+  with what it made, and the command returns at once. A notice saying what it's doing ("Fetching oriel…") is up
+  meanwhile and becomes the error if it fails; the same `ID` running again is refused. Under it,
+  `registry.Later(ctx)` is how any command says it finishes after `Run` returns, and `registry.OnDone(ctx, fn)` is a
+  caller asking to hear how one `Run` ended, then or later; `plugin.Await(ctx, run)` waits for it off the loop (the
+  launcher, Start work, Ori's tools). A caller that waits shows its own busy state, so no notice goes up for it.
+  `repos.add`, `repos.clone`, `repos.fetch`, `session.stop`, `session.archive`, `session.next-pr`,
+  `session.start-work`, `session.add-repo`, `session.open` (resuming), and `diff.open` and `git.commit` on a path
+  in no work tree the app knows are built on it.
 
 ## As built (PL-9)
 

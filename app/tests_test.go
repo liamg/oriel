@@ -124,7 +124,7 @@ func (s *errScene) runDone(t *testing.T) {
 func (s *errScene) testDecor(line int) []registry.Decoration {
 	x := s.editor()
 	p := x.current()
-	return x.decorations(p, 0, p.Buf().Lines())[line-1]
+	return x.decorations(p, 0, p.Buf().Lines(), nil)[line-1]
 }
 
 func hasDecor(ds []registry.Decoration, kind registry.DecorationKind, text string) bool {

@@ -513,14 +513,45 @@ func (t *themes) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
+// themePreviews are the theme picker's resolved themes and highlighted sample, kept until the themes or languages
+// change or the picker closes.
+type themePreviews struct {
+	themes, langs int
+	by            map[string]themePreview // by name and variant
+	sample        *sourceFile
+}
+
+type themePreview struct {
+	r   *theme.Resolved
+	err error
+}
+
+func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.Resolved, error, sourceFile) {
+	srcs, themes := h.Themes()
+	_, langs := h.Languages()
+	if p.by == nil || p.themes != themes || p.langs != langs {
+		*p = themePreviews{themes: themes, langs: langs, by: map[string]themePreview{}}
+	}
+	k := name + "\x00" + string(v)
+	t, ok := p.by[k]
+	if !ok {
+		t.r, t.err = resolveTheme(srcs, name, v)
+		p.by[k] = t
+	}
+	if p.sample == nil {
+		sample := strings.TrimRight(themeSample, "\n")
+		p.sample = highlightAround(h, "sample.go", []byte(sample), 1, 0, strings.Count(sample, "\n"))
+	}
+	return t.r, t.err, *p.sample
+}
+
 // themeSwatches are a theme's main colours, in the variant in use, for the picker's preview.
-func themeSwatches(h plugin.Host, name string) ui.Node {
+func themeSwatches(h plugin.Host, p *themePreviews, name string) ui.Node {
 	variant := theme.Dark
 	if cur := h.CurrentTheme(); cur != nil {
 		variant = cur.Variant
 	}
-	srcs, _ := h.Themes()
-	r, err := resolveTheme(srcs, name, variant)
+	r, err, code := p.of(h, name, variant)
 	return &ui.Func{Key: "swatches", Fn: func(c *ui.Ctx) {
 		th := c.Theme()
 		mono := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgMuted)}
@@ -530,8 +561,6 @@ func themeSwatches(h plugin.Host, name string) ui.Node {
 				c.Text("err", err.Error(), ui.TextStyle{Font: mono.Font, Color: th.C(theme.Error)})
 				return
 			}
-			sample := strings.TrimRight(themeSample, "\n")
-			code := highlightAround(h, "sample.go", []byte(sample), 1, 0, strings.Count(sample, "\n"))
 			code.title, code.theme, code.size, code.fill = "sample.go", r, 13.5, true
 			code.build(c, nil)
 			swatches := []struct {
@@ -614,8 +643,10 @@ func themePicker(h plugin.Host) registry.PickerSource {
 		cur    any // what was in use
 	}
 	var before *prev // the user layer's ui.theme before the first preview
+	previews := &themePreviews{}
 	o := h.Options()
 	restore := func() {
+		*previews = themePreviews{}
 		if before == nil {
 			return
 		}
@@ -655,7 +686,7 @@ func themePicker(h plugin.Host) registry.PickerSource {
 			o.Set("ui.theme", registry.LayerUser, registry.At{}, it.ID)
 		},
 		Cancel:  restore,
-		Preview: func(it registry.PickerItem) ui.Node { return themeSwatches(h, it.ID) },
+		Preview: func(it registry.PickerItem) ui.Node { return themeSwatches(h, previews, it.ID) },
 		Run: func(ctx registry.Ctx, it registry.PickerItem) error {
 			restore()
 			return h.Run(ctx, "settings.set", registry.Args{"name": "ui.theme", "value": it.ID, "scope": "user"})

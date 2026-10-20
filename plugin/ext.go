@@ -37,7 +37,7 @@ type Host interface {
 	Notify(n core.Notice)
 	// Dismiss takes down the toasts of the notices with id: a problem that's gone. Their rows stay in the history.
 	Dismiss(id string)
-	State() core.State // a copy: notification history, focus, sessions
+	State() core.State // as it stands, read-only: notification history, focus, sessions
 	// Subscribe calls fn with every event the filter matches, from whichever goroutine applied it; Do gets back
 	// to the loop. cancel stops it.
 	Subscribe(f core.Filter, fn func(core.Event)) (cancel func())

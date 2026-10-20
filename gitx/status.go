@@ -65,6 +65,8 @@ type State struct {
 	Ahead    int
 	Behind   int
 	files    [3][]FileState
+	byPath   map[string]FileState // what File answers
+	ignored  map[string]bool      // All's ignored paths, directories with their "/"
 }
 
 // sameRefs reports whether two readings agree on everything but their files.
@@ -94,17 +96,51 @@ func (s *State) Count(sc Scope) int {
 
 // File is a path's state in Changed, and whether it has one.
 func (s *State) File(path string) (FileState, bool) {
-	for _, f := range s.Files(Changed) {
-		if f.Path == path {
-			return f, true
+	if s == nil {
+		return FileState{}, false
+	}
+	f, ok := s.byPath[path]
+	return f, ok
+}
+
+// index fills byPath: a path's first state in Changed, else its untracked one.
+func (s *State) index() {
+	s.byPath = map[string]FileState{}
+	add := func(f FileState) {
+		if _, ok := s.byPath[f.Path]; !ok {
+			s.byPath[f.Path] = f
 		}
 	}
-	for _, f := range s.Files(Uncommitted) {
-		if f.Path == path && f.Area == Untracked {
-			return f, true
+	for _, f := range s.files[Changed] {
+		add(f)
+	}
+	for _, f := range s.files[Uncommitted] {
+		if f.Area == Untracked {
+			add(f)
 		}
 	}
-	return FileState{}, false
+	s.ignored = map[string]bool{}
+	for _, f := range s.files[All] {
+		if f.Ignored {
+			s.ignored[f.Path] = true
+		}
+	}
+}
+
+// Ignored says git ignores path: it, or a directory it's in, is listed in All as ignored.
+func (s *State) Ignored(path string) bool {
+	if s == nil || len(s.ignored) == 0 {
+		return false
+	}
+	if s.ignored[path] {
+		return true
+	}
+	for i := range len(path) {
+		if path[i] == '/' && s.ignored[path[:i+1]] {
+			return true
+		}
+	}
+	return false
 }
 
 // BaseRef is the branch Changed compares with: origin's default branch, else main or master if they're not
@@ -364,6 +400,7 @@ func (r Repo) Status(ctx context.Context) (*State, error) {
 	}
 	slices.SortFunc(list, func(a, b FileState) int { return strings.Compare(a.Path, b.Path) })
 	st.files[All] = list
+	st.index()
 	return st, nil
 }
 
@@ -535,9 +572,11 @@ func (s *Status) Refresh(ctx context.Context) error {
 		return err
 	}
 	s.mu.Lock()
-	changed := diffStates(s.st, st)
-	first := !s.seen
-	same := !first && len(changed) == 0 && s.st.sameRefs(st)
+	last, first := s.st, !s.seen
+	s.mu.Unlock()
+	changed := diffStates(last, st) // refreshes are one at a time, so last is still the one kept
+	s.mu.Lock()
+	same := !first && len(changed) == 0 && last.sameRefs(st)
 	if !same {
 		s.st = st // a reading that changed nothing keeps the last, so what's cached on it stays good
 	}
@@ -559,11 +598,11 @@ func (s *Status) Refresh(ctx context.Context) error {
 func diffStates(a, b *State) []string {
 	var out []string
 	for sc := Changed; sc <= All; sc++ {
-		was := map[string][]FileState{}
+		was := make(map[string][]FileState, len(a.Files(sc)))
 		for _, f := range a.Files(sc) {
 			was[f.Path] = append(was[f.Path], f)
 		}
-		now := map[string][]FileState{}
+		now := make(map[string][]FileState, len(b.Files(sc)))
 		for _, f := range b.Files(sc) {
 			now[f.Path] = append(now[f.Path], f)
 		}

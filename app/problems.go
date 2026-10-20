@@ -39,7 +39,10 @@ func (p *problems) Activate(_ context.Context, h plugin.Host) error {
 		return h.Run(ctx, "view.open", registry.Args{"id": "problems", "place": "dock", "edge": "bottom", "title": "Problems", "size": 260})
 	}}))
 	p.add(h.View("problems", problemsView{p}))
-	p.add(h.Decorations("diagnostics", registry.DecorationFunc(p.decorations)))
+	p.add(h.Decorations("diagnostics", registry.KeyedDecorations{Key: func(registry.DecorationCtx) any {
+		_, gen := h.Diagnostics()
+		return gen
+	}, Make: p.decorations}))
 	return nil
 }
 
@@ -98,17 +101,19 @@ func (p *problems) view(c *ui.Ctx) {
 	mono := func(size float32, col theme.TokenID) ui.TextStyle {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size}, Color: th.C(col)}
 	}
-	c.Column("problems", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 4, ScrollY: true, Help: "errors#problems"}, func(c *ui.Ctx) {
+	c.Column("problems", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 4, Help: "errors#problems"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 			c.Text("t", "PROBLEMS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.Accent)})
 			c.Text("n", fmt.Sprintf("%d", len(ds)), mono(10.5, theme.FgFaint))
 		})
 		if len(ds) == 0 {
 			c.Text("none", "No problems.", mono(11.5, theme.FgGhost))
+			return
 		}
-		for i, d := range ds {
+		c.List("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, len(ds), 26, func(c *ui.Ctx, i int) {
+			d := ds[i]
 			glyph := map[string]string{registry.SevError: "✕", registry.SevWarning: "⚠"}[d.Severity]
-			in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(22), Gap: 10, Cross: ui.Center, Label: d.Message,
+			in := widget.Clickable(c, "row", ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(22), Gap: 10, Cross: ui.Center, Label: d.Message,
 				Help: "errors#problems"}, func(c *ui.Ctx) {
 				c.Box("sev", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", cmpOr(glyph, "ℹ"), mono(11, diagToken(d.Severity))) })
 				c.Box("loc", ui.Style{W: ui.Px(220), Clip: true}, func(c *ui.Ctx) {
@@ -122,7 +127,7 @@ func (p *problems) view(c *ui.Ctx) {
 					p.h.Notify(core.Notice{ID: "problems.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
 				}
 			}
-		}
+		})
 	})
 }
 

@@ -265,3 +265,38 @@ func TestConcurrentCalls(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+// Sends are queued: a notification returns while the other side isn't reading, and everything arrives in the order
+// it was sent, a request behind the notifications before it.
+func TestSendsQueueInOrder(t *testing.T) {
+	c, p := newPair(t, Handlers{})
+	big := strings.Repeat("x", 1<<20)
+	sent := make(chan struct{})
+	go func() {
+		for i := range 3 {
+			c.Notify("textDocument/didChange", map[string]any{"version": i + 2, "text": big})
+		}
+		close(sent)
+	}()
+	select {
+	case <-sent:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Notify waited for the other side to read")
+	}
+	done := make(chan error, 1)
+	go func() { done <- c.Call(context.Background(), "textDocument/hover", nil, nil) }()
+	for i := range 3 {
+		m := p.read()
+		if m["method"] != "textDocument/didChange" || m["params"].(map[string]any)["version"] != float64(i+2) {
+			t.Fatalf("message %d = %v, want didChange version %d", i, m["method"], i+2)
+		}
+	}
+	m := p.read()
+	if m["method"] != "textDocument/hover" {
+		t.Fatalf("after the changes = %v", m["method"])
+	}
+	p.write(fmt.Sprintf(`{"jsonrpc":"2.0","id":%v,"result":null}`, m["id"]))
+	if err := <-done; err != nil {
+		t.Errorf("Call = %v", err)
+	}
+}

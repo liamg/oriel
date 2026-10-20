@@ -153,10 +153,16 @@ func (a *App) SetOption(name string, v any) {
 	}
 }
 
-// Run runs a command.
+// Run runs a command and waits until it has finished, its slow part off the loop (plugin.RunSlow) too.
 func (a *App) Run(id string, args registry.Args) {
 	a.t.Helper()
-	if err := a.Registry().Run(context.Background(), id, args); err != nil {
+	var err error
+	done := false
+	a.Registry().Run(registry.OnDone(context.Background(), func(e error) { err, done = e, true }), id, args)
+	if !done {
+		a.Until(id+" to finish", func() bool { return done })
+	}
+	if err != nil {
 		a.t.Fatal(err)
 	}
 	a.Frame()

@@ -61,10 +61,27 @@ type wsState struct {
 	log        *plugin.Load[string]
 	read       time.Time
 	logRead    time.Time
-	dir        int                      // the files tab's directory, of wsBrowsable
-	entries    map[string][]os.DirEntry // the directories read so far
+	dir        int                  // the files tab's directory, of wsBrowsable
+	entries    map[string][]wsEntry // the directories read so far
+	reads      int                  // moves each time entries does
+	tree       wsTree               // the files tab's rows, as last built
 	rebuilding bool
 	logSel     int
+}
+
+// wsEntry is a directory entry as the files tab shows it.
+type wsEntry struct {
+	name string
+	dir  bool
+	size int64 // -1 when it couldn't be read
+}
+
+// wsTree is the files tab's rows, and what they were built from.
+type wsTree struct {
+	root  string
+	reads int
+	th    *theme.Resolved
+	items []widget.TreeItem
 }
 
 func (x *workspacePlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "workspace"} }
@@ -122,7 +139,7 @@ func (x *workspacePlugin) state(id core.SessionID) *wsState {
 	if st != nil {
 		return st
 	}
-	st = &wsState{entries: map[string][]os.DirEntry{}}
+	st = &wsState{entries: map[string][]wsEntry{}}
 	st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.Workspace, error) {
 		w := x.sh.cfg.Host
 		if w == nil {
@@ -437,9 +454,14 @@ func (x *workspacePlugin) files(c *ui.Ctx, st *wsState, ws host.Workspace) {
 		c.Row("path", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", tildePath(root.Host), monoFont(11, th.C(theme.FgFaint))) })
 		if widget.Button(c, "reload", "Refresh", widget.ButtonOpts{Ghost: true, Help: workspaceHelp}) {
 			clear(st.entries)
+			st.reads++
 		}
 	})
-	items := x.dirItems(st, root.Host, 0)
+	if t, cur := st.tree, x.h.CurrentTheme(); t.items == nil || t.root != root.Host || t.reads != st.reads || t.th != cur {
+		st.tree = wsTree{root: root.Host, th: cur, items: x.dirItems(st, root.Host, 0)}
+		st.tree.reads = st.reads // dirItems reads the root if it hasn't been
+	}
+	items := st.tree.items
 	if len(items) == 0 {
 		permsNote(c, "empty", "Nothing here yet.")
 		return
@@ -474,17 +496,17 @@ func (x *workspacePlugin) dirItems(st *wsState, dir string, depth int) []widget.
 			out = append(out, widget.TreeItem{ID: dir + wsMore, Label: fmt.Sprintf("%d more", len(es)-wsDirMax)})
 			break
 		}
-		p := filepath.Join(dir, e.Name())
-		it := widget.TreeItem{ID: p, Label: e.Name()}
-		if e.IsDir() {
+		p := filepath.Join(dir, e.name)
+		it := widget.TreeItem{ID: p, Label: e.name}
+		if e.dir {
 			it.Children = x.dirItems(st, p, depth+1)
 			if len(it.Children) == 0 {
 				it.Note = "empty"
 			}
-		} else if fi, err := e.Info(); err == nil {
-			it.Note = humanBytes(fi.Size())
+		} else if e.size >= 0 {
+			it.Note = humanBytes(e.size)
 		}
-		if th != nil && strings.HasPrefix(e.Name(), ".") {
+		if th != nil && strings.HasPrefix(e.name, ".") {
 			it.Tone = th.C(theme.FgFaint)
 		}
 		out = append(out, it)
@@ -492,9 +514,10 @@ func (x *workspacePlugin) dirItems(st *wsState, dir string, depth int) []widget.
 	return out
 }
 
-func (x *workspacePlugin) readDir(st *wsState, dir string) []os.DirEntry {
-	es, _ := os.ReadDir(dir)
-	slices.SortStableFunc(es, func(a, b os.DirEntry) int {
+// readDir reads dir's entries, folders first, the sizes of the first wsDirMax with them.
+func (x *workspacePlugin) readDir(st *wsState, dir string) []wsEntry {
+	des, _ := os.ReadDir(dir)
+	slices.SortStableFunc(des, func(a, b os.DirEntry) int {
 		if a.IsDir() != b.IsDir() {
 			if a.IsDir() {
 				return -1
@@ -503,7 +526,15 @@ func (x *workspacePlugin) readDir(st *wsState, dir string) []os.DirEntry {
 		}
 		return strings.Compare(a.Name(), b.Name())
 	})
+	es := make([]wsEntry, len(des))
+	for i, d := range des {
+		es[i] = wsEntry{name: d.Name(), dir: d.IsDir(), size: -1}
+		if fi, err := d.Info(); err == nil && !d.IsDir() && i < wsDirMax {
+			es[i].size = fi.Size()
+		}
+	}
 	st.entries[dir] = es
+	st.reads++
 	return es
 }
 

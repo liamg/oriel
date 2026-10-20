@@ -219,7 +219,7 @@ end)
 	s.run("editor.open", registry.Args{"path": file})
 	s.frame()
 	s.frame()
-	ds := s.editor().decorations(mustPane(t, s), 0, 3)
+	ds := s.editor().decorations(mustPane(t, s), 0, 3, nil)
 	if len(ds[1]) != 2 || ds[1][0].Text != "T" || ds[1][1].Text != "todo here" {
 		t.Errorf("line 2's decorations: %+v", ds)
 	}

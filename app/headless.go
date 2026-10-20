@@ -92,7 +92,7 @@ func NewHeadless(cfg Config, o HeadlessOpts) (*Headless, error) {
 	uo.ReducedMotion = true
 	h.ui.SetOptions(uo)
 	h.ui.SetClock(o.Clock)
-	sh.ui = h.ui
+	sh.ui.Store(h.ui)
 	sh.theme = h.ui.Theme
 	sh.shot = func(th *theme.Resolved) *image.RGBA {
 		if th == nil {

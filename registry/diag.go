@@ -49,28 +49,46 @@ func (r *reg) SetDiagnostics(owner, file string, ds []Diagnostic) {
 	r.diagGen++
 }
 
+// diagIndex is every diagnostic sorted, and by file, as of a generation.
+type diagIndex struct {
+	gen    int
+	all    []Diagnostic
+	byFile map[string][]Diagnostic
+}
+
+// index is the diagnostics' index, made again when they've changed. r.mu is held.
+func (r *reg) index() *diagIndex {
+	if x := r.diagIdx; x != nil && x.gen == r.diagGen {
+		return x
+	}
+	x := &diagIndex{gen: r.diagGen, byFile: map[string][]Diagnostic{}}
+	for _, ds := range r.diags {
+		x.all = append(x.all, ds...)
+	}
+	sortDiagnostics(x.all)
+	x.all = slices.Clip(x.all)
+	for i := 0; i < len(x.all); {
+		j := i + 1
+		for j < len(x.all) && x.all[j].File == x.all[i].File {
+			j++
+		}
+		x.byFile[x.all[i].File] = x.all[i:j:j]
+		i = j
+	}
+	r.diagIdx = x
+	return x
+}
+
 func (r *reg) Diagnostics() ([]Diagnostic, int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	var out []Diagnostic
-	for _, ds := range r.diags {
-		out = append(out, ds...)
-	}
-	sortDiagnostics(out)
-	return out, r.diagGen
+	return r.index().all, r.diagGen
 }
 
 func (r *reg) DiagnosticsFor(file string) []Diagnostic {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	var out []Diagnostic
-	for k, ds := range r.diags {
-		if k.file == file {
-			out = append(out, ds...)
-		}
-	}
-	sortDiagnostics(out)
-	return out
+	return r.index().byFile[file]
 }
 
 func sortDiagnostics(ds []Diagnostic) {

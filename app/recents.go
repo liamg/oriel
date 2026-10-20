@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,16 @@ const maxRecents = 12
 // recents are the directories opened with Open Directory (or oriel <dir>), newest first, kept in the state directory.
 type recents struct {
 	path string
+
+	mu   sync.Mutex
+	read *recentRead // the file as last read or written
+}
+
+// recentRead is the recents file's directories, and the size and time it had then.
+type recentRead struct {
+	dirs []recentDir
+	size int64
+	mod  time.Time
 }
 
 type recentDir struct {
@@ -24,15 +35,26 @@ type recentFile struct {
 	Directories []recentDir `json:"directories"`
 }
 
+// list is the recent directories, read again only when the file has changed.
 func (r *recents) list() []recentDir {
 	if r == nil {
 		return nil
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	st, err := os.Stat(r.path)
+	if err != nil {
+		return nil
+	}
+	if c := r.read; c != nil && c.size == st.Size() && c.mod.Equal(st.ModTime()) {
+		return slices.Clone(c.dirs)
 	}
 	var f recentFile
 	if b, err := os.ReadFile(r.path); err == nil {
 		json.Unmarshal(b, &f)
 	}
-	return f.Directories
+	r.read = &recentRead{dirs: f.Directories, size: st.Size(), mod: st.ModTime()}
+	return slices.Clone(f.Directories)
 }
 
 func (r *recents) add(dir string, at time.Time) error {
@@ -60,5 +82,8 @@ func (r *recents) save(ds []recentDir) error {
 	if err := os.WriteFile(tmp, b, 0o644); err != nil {
 		return err
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.read = nil
 	return os.Rename(tmp, r.path)
 }

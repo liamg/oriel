@@ -389,7 +389,9 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `oriel.cmd("repos.remove", { repo = "billing" })`, `oriel.cmd("repos.housekeep", { repo = "oriel", apply = {
   "liam/old" }, prune = true })`, `oriel.cmd("repos.tag", { repo = "oriel", name = "v0.4.3", push = true })` (`pull`,
   `sign`, `push` and the message default to the `repos.tag.*` options). A command returns no value, so the facts and
-  the housekeeping plan stay on the Repos page.
+  the housekeeping plan stay on the Repos page. A command with a slow part (`repos.clone`, `repos.fetch`,
+  `session.archive`…; plugins.md, `plugin.RunSlow`) returns once it has started it, a notice up while it works; a
+  failure after that is the notice, not `oriel.cmd`'s error.
 
 ## As built (SE-4)
 

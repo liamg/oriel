@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
@@ -45,6 +46,7 @@ func previewField(c *ui.Ctx, label, value string) {
 func sessionsSource(h plugin.Host) registry.PickerSource {
 	boost := map[core.Status]int{core.StatusNeedsYou: 40, core.StatusPermission: 30, core.StatusReviewer: 10}
 	return registry.PickerSource{ID: "sessions", Title: "Sessions", Order: 10,
+		Key: func() any { return h.State().Seq },
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem
 			tabs := map[core.SessionID]int{}
@@ -95,6 +97,12 @@ func commandsSource(h plugin.Host) registry.PickerSource {
 	}
 	return registry.PickerSource{ID: "commands", Title: "Commands", Prefix: ">", Order: 20,
 		Items: func(registry.Ctx, string) []registry.PickerItem {
+			keys := map[string]string{}
+			for _, k := range h.Keymaps() {
+				if _, ok := keys[k.Command]; !ok {
+					keys[k.Command] = k.Keys
+				}
+			}
 			var out []registry.PickerItem
 			for _, c := range h.Commands() {
 				if !h.Available(c.ID, nil) {
@@ -105,9 +113,7 @@ func commandsSource(h plugin.Host) registry.PickerSource {
 					label = c.ID
 				}
 				it := registry.PickerItem{ID: c.ID, Label: label, Detail: c.ID, Icon: "›", Data: c}
-				if ks := keysFor(c.ID); len(ks) > 0 {
-					it.Key = ks[0].Keys
-				}
+				it.Key = keys[c.ID]
 				out = append(out, it)
 			}
 			return out
@@ -214,19 +220,39 @@ func walkFiles(dir string, each func(found []string)) []string {
 	return found
 }
 
+// filesKey is what the files source's items are made from: the files found, the status, and the buffers open.
+type filesKey struct {
+	first *string
+	n     int
+	st    *gitx.State
+	open  string
+}
+
 // filesSource is the files of the editor's directory; open ones and shallower paths rank higher.
 func (x *editorPlugin) filesSource() registry.PickerSource {
 	files := &fileList{dir: x.dir, redraw: x.h.Redraw}
 	x.add(disposeFn(files.busy.Wait))
+	openNames := func() []string {
+		var open []string
+		for _, b := range x.e.BufferList() {
+			open = append(open, b.Name)
+		}
+		return open
+	}
 	return registry.PickerSource{ID: "files", Title: "Files", Prefix: "@", Order: 30, Loading: files.loading,
-		Items: func(registry.Ctx, string) []registry.PickerItem {
-			open := map[string]bool{}
-			for _, b := range x.e.BufferList() {
-				open[b.Name] = true
-			}
-			st := x.sh.git.state()
-			var out []registry.PickerItem
+		Key: func() any {
 			list, _ := files.list()
+			k := filesKey{n: len(list), st: x.sh.git.state(), open: strings.Join(openNames(), "\x00")}
+			if len(list) > 0 {
+				k.first = &list[0]
+			}
+			return k
+		},
+		Items: func(registry.Ctx, string) []registry.PickerItem {
+			open := openNames()
+			st := x.sh.git.state()
+			list, _ := files.list()
+			var out []registry.PickerItem
 			for _, f := range list {
 				it := registry.PickerItem{ID: f, Label: f, IconStyle: "status.working", Boost: -strings.Count(f, "/"), Path: f}
 				var notes []string
@@ -234,7 +260,7 @@ func (x *editorPlugin) filesSource() registry.PickerSource {
 					it.Boost += 5
 					notes = append(notes, string(fs.Code))
 				}
-				if open[f] {
+				if slices.Contains(open, f) {
 					it.Boost += 10
 					notes = append(notes, "open")
 				}
@@ -254,15 +280,25 @@ func (x *editorPlugin) filesSource() registry.PickerSource {
 func (x *editorPlugin) filePreview(name string, line int) ui.Node {
 	return &ui.Func{Key: "file", Fn: func(c *ui.Ctx) {
 		path := filepath.Join(x.dir, name)
-		src, err := os.ReadFile(path)
-		if err != nil {
-			c.Text("err", err.Error(), ui.TextStyle{Color: c.Theme().C(theme.FgFaint)})
+		if x.previewed == nil || x.previewed.path != path {
+			x.previewed = &previewSrc{path: path}
+		}
+		src := x.previewed.load(bufferOn(x, path), path, true)
+		if src.missing() {
+			_, err := os.Stat(path)
+			c.Text("err", fmt.Sprint(err), ui.TextStyle{Color: c.Theme().C(theme.FgFaint)})
 			return
 		}
-		f := highlightAround(x.h, path, src, line+1, 3, 30)
+		f := src.around(x.h, path, line+1, 3, 30)
 		f.mark, f.title = line > 0, name
 		f.build(c, nil)
 	}}
+}
+
+// previewSrc is the file a picker last previewed.
+type previewSrc struct {
+	path string
+	fileSrc
 }
 
 // symbols is the outline of a buffer's text, kept until the text changes.
@@ -299,6 +335,15 @@ func (x *editorPlugin) symbolsSource() registry.PickerSource {
 		line int
 	}
 	return registry.PickerSource{ID: "symbols", Title: "Symbols", Prefix: "#", Order: 40,
+		Key: func() any {
+			var k strings.Builder
+			for _, id := range x.e.WindowIDs() {
+				if p, ok := x.e.Pane(id); ok {
+					fmt.Fprintf(&k, "%s\x00%d\x00", p.Name(), p.Buf().Version())
+				}
+			}
+			return k.String()
+		},
 		Items: func(registry.Ctx, string) []registry.PickerItem {
 			var out []registry.PickerItem
 			for _, id := range x.e.WindowIDs() {

@@ -58,7 +58,7 @@ func (s *errScene) signsAt() string {
 	x := s.editor()
 	p := x.current()
 	var out []string
-	ds := x.decorations(p, 0, p.Buf().Lines())
+	ds := x.decorations(p, 0, p.Buf().Lines(), nil)
 	for line := range p.Buf().Lines() {
 		for _, d := range ds[line] {
 			if d.Kind == registry.Sign && strings.HasPrefix(d.Style, "git.") {

@@ -1,10 +1,12 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -61,7 +63,7 @@ func TestOmniboxSnapshot(t *testing.T) {
 		}
 	}
 	// The session that needs you comes first, as 02-omnibox has it.
-	groups, _ := s.omni().results()
+	groups, _ := s.omni().results(false)
 	if groups[0].src.ID != "sessions" || groups[0].hits[0].item.Label != "pricing api usage" {
 		t.Errorf("first result: %s %q", groups[0].src.ID, groups[0].hits[0].item.Label)
 	}
@@ -86,7 +88,7 @@ func TestOmniboxPreviewEverySource(t *testing.T) {
 func TestOmniboxPrefixes(t *testing.T) {
 	for q, src := range map[string]string{"@round": "files", "#Price": "symbols", ">plan": "commands"} {
 		s := omniScene(t, q)
-		groups, _ := s.omni().results()
+		groups, _ := s.omni().results(false)
 		if len(groups) != 1 || groups[0].src.ID != src {
 			var ids []string
 			for _, g := range groups {
@@ -94,5 +96,33 @@ func TestOmniboxPrefixes(t *testing.T) {
 			}
 			t.Errorf("%q: sources %v, want only %s", q, ids, src)
 		}
+	}
+}
+
+// Over more files than are ranked in the frame, the omnibox ranks them off the loop: typing shows the last ranking
+// until the new one is made, then the files matching what was typed.
+func TestOmniboxRanksManyFilesOffTheLoop(t *testing.T) {
+	dir := t.TempDir()
+	for i := range rankAway + 500 {
+		p := filepath.Join(dir, fmt.Sprintf("pkg%d", i%20), fmt.Sprintf("f%05d.go", i))
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, []byte("package p\n"), 0o644)
+	}
+	s := newScene(t, "", dir, render.Point{X: 1600, Y: 1000})
+	s.sourcesLoaded()
+	s.run("omnibox.open", nil)
+	s.frame()
+	for _, k := range strings.Split("@f02371", "") {
+		s.typeKeys(k)
+		s.frame()
+	}
+	if !s.Until(10*time.Second, func() bool { return strings.Contains(s.frameText(), "pkg11/f02371.go") }) {
+		t.Fatalf("the omnibox never showed pkg11/f02371.go:\n%s", s.frameText())
+	}
+	s.typeKeys("Down")
+	s.frame()
+	groups, _ := s.omni().results(true)
+	if len(groups) != 1 || groups[0].hits[0].item.Label != "pkg11/f02371.go" {
+		t.Errorf("results after the ranking: %+v", groups)
 	}
 }

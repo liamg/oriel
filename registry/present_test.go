@@ -52,6 +52,26 @@ func TestPresentCtxMapsLinesToBlocks(t *testing.T) {
 	}
 }
 
+// LineBlocks is BlockAt for every line at once, overlapping and out-of-order blocks included.
+func TestPresentCtxLineBlocksAgreesWithBlockAt(t *testing.T) {
+	body := func(*ui.Ctx, registry.PresentDraw) {}
+	ctx := &registry.PresentCtx{}
+	for _, b := range [][2]int{{3, 4}, {1, 1}, {6, 9}, {7, 7}, {2, 8}, {12, 12}, {-2, -1}, {20, 30}} {
+		ctx.Block(b[0], b[1], body)
+	}
+	got := ctx.LineBlocks(15)
+	for line := range 15 {
+		if want := ctx.BlockAt(line); got[line] != want {
+			t.Errorf("LineBlocks(15)[%d] = %d, BlockAt = %d", line, got[line], want)
+		}
+	}
+	for _, at := range (&registry.PresentCtx{}).LineBlocks(3) {
+		if at != -1 {
+			t.Errorf("LineBlocks with no blocks = %d", at)
+		}
+	}
+}
+
 // ED-15: an editor action shows LabelOn and IconOn while it's on, for the window it's drawn in.
 func TestEditorActionLabelFollowsOn(t *testing.T) {
 	a := registry.EditorAction{Name: "md", Label: "Preview", LabelOn: "Edit", Icon: "◱",

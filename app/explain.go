@@ -206,7 +206,7 @@ func (x *explainPlugin) Activate(_ context.Context, h plugin.Host) error {
 		x.add(h.Keymap(k))
 	}
 	x.add(h.Contribute(registry.KeyLayer{Name: "explain.card", Mode: ExplainKeyMode, Active: x.focused, Source: "builtin:explain"}))
-	x.add(h.Decorations("explain", registry.DecorationFunc(x.decorations)))
+	x.add(h.Decorations("explain", registry.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	for _, it := range []registry.MenuItem{
 		{Name: "explain.this", Label: "Explain this", Key: "␣ e", Group: "agent", Order: 5, Command: "explain.this"},
 		{Name: "request.review", Label: "Review this", Group: "agent", Order: 20, Command: "request.this", Args: registry.Args{"what": "review"}},
@@ -863,6 +863,27 @@ func (x *explainPlugin) requestThis(ctx registry.Ctx, what string) error {
 	}
 	return x.h.Run(ctx, "request.new", registry.Args{"text": fmt.Sprintf(prompt, name, where),
 		"context": fmt.Sprintf("%s\n```\n%s```", where, codeOf(snap, r)), "file": path, "line": start + 1})
+}
+
+// decorationKey is what the decorations of ctx are made from: the buffer's units as worked out last, the base they
+// were worked out against, what each unit's status reads, and the card.
+func (x *explainPlugin) decorationKey(ctx registry.DecorationCtx) any {
+	type made struct {
+		units  *fileUnits
+		base   int
+		status uint64
+		card   *explainCard
+		sel    int
+		reveal bool
+	}
+	_, base, _ := x.baseOf(ctx.Path)
+	x.mu.Lock()
+	k := made{units: x.bufs[ctx.Buffer], base: base, status: x.statusPrint(), card: x.card}
+	x.mu.Unlock()
+	if k.card != nil {
+		k.sel, k.reveal = k.card.sel, k.card.reveal
+	}
+	return k
 }
 
 // decorations put a ? beside each unit the branch changed, and the card between the lines under what it explains,

@@ -32,7 +32,7 @@ type Store interface {
 	Session(id SessionID) (Session, bool)
 	Apply(ev Event) error // the only mutation path; events come from the session host and the app
 	Subscribe(filter Filter, fn func(Event)) (cancel func())
-	State() State     // a copy; the store keeps changing
+	State() State     // as it stands, read-only: the store moves on to a new one, never changes this
 	Focus() SessionID // the session in front, without copying the state
 }
 

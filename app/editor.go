@@ -42,7 +42,7 @@ type editorPlugin struct {
 	conv    *conventions
 	dir     string
 	docs    map[*text.Buffer]*highlighter
-	busy    sync.WaitGroup // parsers being made, off the loop
+	busy    sync.WaitGroup // parsers being made and files read, off the loop
 	madeMu  sync.Mutex
 	made    map[*syntax.Document]bool // made, not yet handed to the loop
 	stopped bool                      // deactivated: a document made since is closed where it's made
@@ -56,6 +56,9 @@ type editorPlugin struct {
 	drags   map[vim.WindowID]*paneDrag      // a press in each window
 	present map[vim.WindowID]*windowPresent // the windows a presenter draws
 
+	fileHost  *editorHost
+	previewed *previewSrc // the file a picker last previewed
+
 	now          time.Time   // the frame's, for decorations
 	drawing      input.State // the engine of the pane being drawn
 	caret        ui.ID       // the current window's cursor, last frame: where popups at the cursor go
@@ -64,8 +67,22 @@ type editorPlugin struct {
 
 // diskWatch is how the editor notices files changing under it.
 type diskWatch struct {
-	next  time.Time
-	asked map[int]time.Time // buffers whose change on disk was asked about, with the change's time
+	next     time.Time
+	asked    map[int]time.Time // buffers whose change on disk was asked about, with the change's time
+	checking bool              // a look at the files is running, off the loop
+}
+
+// diskChange is an open buffer whose file changed on disk, as a look off the loop found it: read again when the
+// buffer had no changes of its own.
+type diskChange struct {
+	num      int
+	name     string
+	file     *edit.File // the buffer's file when it was looked at
+	modified bool
+	mod      time.Time
+	data     []byte
+	read     *edit.File
+	err      error
 }
 
 // diskInterval is how often the files of open buffers are looked at.
@@ -101,7 +118,8 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.ed.SetClipboard(desktopClipboard{x.sh})
 	x.ed.OnNotice(func(n edit.Notice) { h.Notify(FromEdit(n, "vim")) })
 	x.e = vim.New(x.ed)
-	x.e.SetHost(&editorHost{x: x, disk: vim.Disk{Dir: x.dir}})
+	x.fileHost = &editorHost{x: x, disk: vim.Disk{Dir: x.dir}}
+	x.e.SetHost(x.fileHost)
 	x.e.SetLayout(&editorLayout{x: x})
 	for _, d := range vimreg.Register(h) {
 		x.add(d)
@@ -449,6 +467,11 @@ type editorHost struct {
 
 func (h *editorHost) ReadFile(name string) ([]byte, *edit.File, error) {
 	b, f, err := h.disk.ReadFile(name)
+	return h.opened(name, b, f, err)
+}
+
+// opened is a file read from disk as the editor takes it: read-only where the conventions or a BufRead hook say.
+func (h *editorHost) opened(name string, b []byte, f *edit.File, err error) ([]byte, *edit.File, error) {
 	if err == nil && f.ReadOnly == "" && !f.New {
 		f.ReadOnly = h.x.conv.readOnly(f.Path)
 	}
@@ -926,7 +949,8 @@ func (x *editorPlugin) pending() plugin.Pending {
 	return p
 }
 
-// checkDisk reloads a buffer whose file changed on disk, or asks when the buffer has changes of its own.
+// checkDisk looks at the open buffers' files off the loop, then reloads a buffer whose file changed on disk, or asks
+// when the buffer has changes of its own.
 func (x *editorPlugin) checkDisk(c *ui.Ctx) {
 	now := c.Now()
 	if now.Before(x.disk.next) {
@@ -935,26 +959,79 @@ func (x *editorPlugin) checkDisk(c *ui.Ctx) {
 	}
 	x.disk.next = now.Add(diskInterval)
 	c.WakeAt(x.disk.next)
+	if x.disk.checking {
+		return
+	}
+	var looks []diskChange
 	for _, f := range x.e.Files() {
-		changed, err := f.File.ChangedOnDisk()
-		if err != nil || !changed {
+		looks = append(looks, diskChange{num: f.Num, name: f.Name, file: f.File, modified: f.Modified})
+	}
+	if len(looks) == 0 {
+		return
+	}
+	files := make([]edit.File, len(looks))
+	for i, l := range looks {
+		files[i] = *l.file
+	}
+	x.disk.checking = true
+	disk := x.fileHost.disk
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		var found []diskChange
+		for i, l := range looks {
+			if changed, err := files[i].ChangedOnDisk(); err != nil || !changed {
+				continue
+			}
+			if st, err := os.Stat(files[i].Path); err == nil {
+				l.mod = st.ModTime()
+			}
+			if !l.modified {
+				l.data, l.read, l.err = disk.ReadFile(l.name)
+			}
+			found = append(found, l)
+		}
+		x.h.Do(func() {
+			x.disk.checking = false
+			x.madeMu.Lock()
+			stopped := x.stopped
+			x.madeMu.Unlock()
+			if !stopped {
+				x.changedOnDisk(found)
+			}
+		})
+	}()
+}
+
+// changedOnDisk reloads or asks about the buffers a look off the loop found changed, unless they've been saved or
+// read again since.
+func (x *editorPlugin) changedOnDisk(found []diskChange) {
+	now := map[int]vim.FileState{}
+	for _, f := range x.e.Files() {
+		now[f.Num] = f
+	}
+	for _, ch := range found {
+		f, ok := now[ch.num]
+		if !ok || f.File != ch.file {
 			continue
 		}
-		st, _ := os.Stat(f.File.Path)
-		var mod time.Time
-		if st != nil {
-			mod = st.ModTime()
-		}
 		if !f.Modified {
-			if err := x.e.ReloadBuffer(f.Num); err != nil {
+			if ch.modified {
+				continue
+			}
+			data, read, err := x.fileHost.opened(ch.name, ch.data, ch.read, ch.err)
+			if err == nil {
+				err = x.e.ReloadBufferFrom(ch.num, data, read)
+			}
+			if err != nil {
 				x.h.Notify(core.Notice{ID: "editor.reload", Severity: core.SevError, Source: "editor", Text: err.Error()})
 			}
 			continue
 		}
-		if t, ok := x.disk.asked[f.Num]; ok && t.Equal(mod) {
+		if t, ok := x.disk.asked[f.Num]; ok && t.Equal(ch.mod) {
 			continue
 		}
-		x.disk.asked[f.Num] = mod
+		x.disk.asked[f.Num] = ch.mod
 		x.h.Notify(core.Notice{ID: "editor.changed-on-disk." + f.Name, Severity: core.SevQuestion, Source: "editor", Title: "Changed on disk",
 			Text: f.Name + " changed on disk, and has unsaved changes here.",
 			Actions: []core.Action{
