@@ -14,6 +14,8 @@ type State = {
   // Oriel's tools, by full name (mcp__oriel__echo) to the name Oriel knows them by.
   tools: Map<string, string>
   subagents: Set<string>
+  // background is the work the turn ending left running, from its Stop hook: it wakes the session again.
+  background: unknown[]
 }
 
 // clip bounds what an event carries: Oriel shows it, it doesn't need it whole.
@@ -96,7 +98,9 @@ async function reportTurnEnd($: EngineInterface, st: State, e: Args) {
     context: u?.context ? { tokens: u.context.tokens, window: u.context.window } : undefined,
     cost: u?.cost?.usd,
     rateLimits: u?.rateLimits ?? [],
+    background: st.background,
   })
+  st.background = []
 }
 
 // passOn leaves a call whose hook failed to the hooks beneath and the engine, as if this mod weren't here.
@@ -113,6 +117,7 @@ export function register(on: On): void {
     turnId: '',
     tools: new Map(),
     subagents: new Set(),
+    background: [],
   }
 
   on('session.start', async ($, e, next) => {
@@ -190,6 +195,12 @@ export function register(on: On): void {
     void reportTurnEnd($, st, e as unknown as Args)
     return r
   })
+
+  // Runs as the main loop stops, before its turn.complete.
+  on('classic.Stop', async ($, e, next) => {
+    if (st.active) st.background = e.background_tasks ?? []
+    return next(e)
+  }).catch(passOn)
 
   // A turn the API ended once Claude Code's own retries ran out.
   on('classic.StopFailure', async ($, e, next) => {

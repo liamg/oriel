@@ -9,17 +9,20 @@ import (
 
 // names are the registry's names for the engine's options.
 var names = map[string]string{
-	"shiftwidth": "editor.shift_width",
-	"tabstop":    "editor.tab_stop",
-	"expandtab":  "editor.expand_tab",
-	"ignorecase": "editor.ignore_case",
-	"smartcase":  "editor.smart_case",
-	"wrapscan":   "editor.wrap_scan",
-	"magic":      "editor.magic",
-	"report":     "editor.report",
-	"nrformats":  "editor.number_formats",
-	"hidden":     "editor.hidden",
-	"clipboard":  "editor.clipboard",
+	"shiftwidth":    "editor.shift_width",
+	"tabstop":       "editor.tab_stop",
+	"expandtab":     "editor.expand_tab",
+	"ignorecase":    "editor.ignore_case",
+	"smartcase":     "editor.smart_case",
+	"wrapscan":      "editor.wrap_scan",
+	"magic":         "editor.magic",
+	"report":        "editor.report",
+	"nrformats":     "editor.number_formats",
+	"hidden":        "editor.hidden",
+	"clipboard":     "editor.clipboard",
+	"wrap":          "editor.wrap",
+	"sidescroll":    "editor.side_scroll",
+	"sidescrolloff": "editor.side_scroll_off",
 }
 
 // Name is the registry's name for a vim option.

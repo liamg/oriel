@@ -853,7 +853,7 @@ func (h *harness) find(name string) *render.AccessNode {
 // Choices: a click picks a card and says so once; with the strip focused, l and h move; each card is a tab with its
 // title as its name, its description wrapped under it.
 func TestChoices(t *testing.T) {
-	items := []Choice{{Title: "Plan", Desc: "docs first, Start work later"}, {Title: "Work", Desc: "straight to the worktree"}, {Title: "Tour"}}
+	items := []Choice{{Title: "Plan", Desc: "docs first, Start work later"}, {Title: "Work", Desc: "straight to the worktree"}, {Title: "Review PR"}}
 	active, changes := 0, 0
 	var id ui.ID
 	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {

@@ -124,8 +124,8 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-text "CPU" @1506.4375,984.71 #7c7566 JetBrains Mono 10.5
-text "34%" @1532.2188,984.71 #ece6d8 JetBrains Mono 10.5
+text "CPU" @1538.4375,984.71 #7c7566 JetBrains Mono 10.5
+text "34%" @1564.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 0,0 1600x1000 fill #03050899
 rect 170,105 1260x790 fill #0c0c0b radius 10
 clip 170,105 1260x790 r 10
@@ -163,114 +163,80 @@ clip 170,105 1260x790 r 10
     rect 194,368.16855 220x30 radius 6 stroke 1 #332f27
     text "the ticket, comments and attachments go to the agent as context" @697,386.76855 #7c7566 JetBrains Mono 10
     text "MODE" @194,429.85855 #7c7566 JetBrains Mono 9.5
-    clip 194,440.70856 881x85.34949 r 6
-      rect 194,440.70856 109.25x85.34949 fill #1d1a0f
-      clip 194,440.70856 109.25x83.34949 r 0
-        text "Plan" @206,463.3023 #ffd23f Inter 13
-        text "docs first," @206,480.12805 #7c7566 JetBrains Mono 9.5
-        text "Start work" @206,495.66806 #7c7566 JetBrains Mono 9.5
-        text "later" @206,511.20804 #7c7566 JetBrains Mono 9.5
+    clip 194,440.70856 881x54.2695 r 6
+      clip 194,440.70856 293x54.2695 r 0
+        text "Work" @206,463.3023 #ece6d8 Inter 13
+        text "straight to the worktree" @206,480.12805 #7c7566 JetBrains Mono 9.5
       pop
-      rect 194,524.05804 109.25x2 fill #ffd23f
-      rect 303.25,440.70856 1x85.34949 fill #24221d
-      clip 304.25,440.70856 109.25x85.34949 r 0
-        text "Work" @316.25,463.3023 #ece6d8 Inter 13
-        text "straight to" @316.25,480.12805 #7c7566 JetBrains Mono 9.5
-        text "the worktree" @316.25,495.66806 #7c7566 JetBrains Mono 9.5
+      rect 487,440.70856 1x54.2695 fill #24221d
+      rect 488,440.70856 293x54.2695 fill #1d1a0f
+      clip 488,440.70856 293x52.2695 r 0
+        text "Plan" @500,463.3023 #ffd23f Inter 13
+        text "docs first, Start work later" @500,480.12805 #7c7566 JetBrains Mono 9.5
       pop
-      rect 413.5,440.70856 1x85.34949 fill #24221d
-      clip 414.5,440.70856 109.25x85.34949 r 0
-        text "Review PR" @426.5,463.3023 #ece6d8 Inter 13
-        text "someone else's" @426.5,480.12805 #7c7566 JetBrains Mono 9.5
-        text "change" @426.5,495.66806 #7c7566 JetBrains Mono 9.5
-      pop
-      rect 523.75,440.70856 1x85.34949 fill #24221d
-      clip 524.75,440.70856 109.25x85.34949 r 0
-        text "Tour" @536.75,463.3023 #ece6d8 Inter 13
-        text "explain how it" @536.75,480.12805 #7c7566 JetBrains Mono 9.5
-        text "works" @536.75,495.66806 #7c7566 JetBrains Mono 9.5
-      pop
-      rect 634,440.70856 1x85.34949 fill #24221d
-      clip 635,440.70856 109.25x85.34949 r 0
-        text "Job" @647,463.3023 #ece6d8 Inter 13
-        text "runs to done" @647,480.12805 #7c7566 JetBrains Mono 9.5
-        text "on its own" @647,495.66806 #7c7566 JetBrains Mono 9.5
-      pop
-      rect 744.25,440.70856 1x85.34949 fill #24221d
-      clip 745.25,440.70856 109.25x85.34949 r 0
-        text "New repo" @757.25,463.3023 #ece6d8 Inter 13
-        text "start from" @757.25,480.12805 #7c7566 JetBrains Mono 9.5
-        text "nothing" @757.25,495.66806 #7c7566 JetBrains Mono 9.5
-      pop
-      rect 854.5,440.70856 1x85.34949 fill #24221d
-      clip 855.5,440.70856 109.25x85.34949 r 0
-        text "Direct" @867.5,463.3023 #ece6d8 Inter 13
-        text "a directory as" @867.5,480.12805 #7c7566 JetBrains Mono 9.5
-        text "it is" @867.5,495.66806 #7c7566 JetBrains Mono 9.5
-      pop
-      rect 964.75,440.70856 1x85.34949 fill #24221d
-      clip 965.75,440.70856 109.25x85.34949 r 0
-        text "Scratch" @977.75,463.3023 #ece6d8 Inter 13
-        text "notes, no repo" @977.75,480.12805 #7c7566 JetBrains Mono 9.5
+      rect 488,492.97806 293x2 fill #ffd23f
+      rect 781,440.70856 1x54.2695 fill #24221d
+      clip 782,440.70856 293x54.2695 r 0
+        text "Review PR" @794,463.3023 #ece6d8 Inter 13
+        text "someone else's change" @794,480.12805 #7c7566 JetBrains Mono 9.5
       pop
     pop
-    rect 194,440.70856 881x85.34949 radius 6 stroke 1 #24221d
-    text "AGENT" @194,558.07806 #7c7566 JetBrains Mono 9.5
-    text "provider · model · effort" @925,558.25806 #7c7566 JetBrains Mono 10
-    rect 194,569.25806 671x101.20001 fill #1a180e radius 8 stroke 1 #ffd23f8c
-    rect 206,581.25806 18x18 fill #191815 radius 4
-    text "F" @212.29688,593.49805 #ece6d8 JetBrains Mono 9
-    text "Fake" @232,594.98706 #ece6d8 Inter 13
-    rect 793.01,581.98804 59.98999x16.539978 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
-    text "DEFAULT" @800.01,593.67804 #ffd23f JetBrains Mono 9.5
-    rect 206,609.25806 46.046875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "m1 ▾" @216,626.6233 #ece6d8 Inter 12
-    rect 260.04688,609.25806 105.875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "default effort ▾" @270.04688,626.6233 #ece6d8 Inter 12
-    text "1" @206,655.45807 #7c7566 JetBrains Mono 10
-    clip 875,569.25806 200x60.929504 r 8
-      text "No agent" @887,593.8518 #ece6d8 Inter 13
-      text "you and the editor" @887,615.18756 #7c7566 JetBrains Mono 10
+    rect 194,440.70856 881x54.2695 radius 6 stroke 1 #24221d
+    text "AGENT" @194,526.99805 #7c7566 JetBrains Mono 9.5
+    text "provider · model · effort" @925,527.17804 #7c7566 JetBrains Mono 10
+    rect 194,538.17804 671x101.20001 fill #1a180e radius 8 stroke 1 #ffd23f8c
+    rect 206,550.17804 18x18 fill #191815 radius 4
+    text "F" @212.29688,562.418 #ece6d8 JetBrains Mono 9
+    text "Fake" @232,563.90704 #ece6d8 Inter 13
+    rect 793.01,550.908 59.98999x16.539978 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
+    text "DEFAULT" @800.01,562.598 #ffd23f JetBrains Mono 9.5
+    rect 206,578.17804 46.046875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "m1 ▾" @216,595.5433 #ece6d8 Inter 12
+    rect 260.04688,578.17804 105.875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "default effort ▾" @270.04688,595.5433 #ece6d8 Inter 12
+    text "1" @206,624.37805 #7c7566 JetBrains Mono 10
+    clip 875,538.17804 200x60.929504 r 8
+      text "No agent" @887,562.7718 #ece6d8 Inter 13
+      text "you and the editor" @887,584.10754 #7c7566 JetBrains Mono 10
     pop
-    rect 875,569.25806 200x60.929504 radius 8 stroke 1 #24221d
-    text "REPOSITORIES" @194,702.478 #7c7566 JetBrains Mono 9.5
-    text "one worktree each · same branch" @436.5,702.658 #7c7566 JetBrains Mono 10
-    rect 538.4531,721.658 84.046875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "+ Add repo" @548.4531,739.02325 #ece6d8 Inter 12
-    clip 194,755.658 428.5x28 r 6
-      rect 194,755.658 428.5x28 fill #1a180e
-      clip 204,762.068 170x15.179993 r 0
-        rect 204,763.158 13x13 fill #4fe0a026 radius 3
-        clip 204,763.158 13x13 r 3
-          text "✓" @206.52344,772.93195 #4fe0a0 Inter 9
+    rect 875,538.17804 200x60.929504 radius 8 stroke 1 #24221d
+    text "REPOSITORIES" @194,671.3981 #7c7566 JetBrains Mono 9.5
+    text "one worktree each · same branch" @436.5,671.57806 #7c7566 JetBrains Mono 10
+    rect 538.4531,690.57806 84.046875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "+ Add repo" @548.4531,707.9433 #ece6d8 Inter 12
+    clip 194,724.57806 428.5x28 r 6
+      rect 194,724.57806 428.5x28 fill #1a180e
+      clip 204,730.98804 170x15.179993 r 0
+        rect 204,732.07806 13x13 fill #4fe0a026 radius 3
+        clip 204,732.07806 13x13 r 3
+          text "✓" @206.52344,741.852 #4fe0a0 Inter 9
         pop
-        rect 204,763.158 13x13 radius 3 stroke 1 #4fe0a0
-        text "pricing" @223,773.798 #ece6d8 JetBrains Mono 11.5
+        rect 204,732.07806 13x13 radius 3 stroke 1 #4fe0a0
+        text "pricing" @223,742.718 #ece6d8 JetBrains Mono 11.5
       pop
-      clip 386,762.398 66.125x14.52002 r 0
-        text "/tmp/Test…" @386,773.618 #7c7566 JetBrains Mono 11
+      clip 386,731.31805 66.125x14.52002 r 0
+        text "/tmp/Test…" @386,742.538 #7c7566 JetBrains Mono 11
       pop
-      text "main" @464.125,773.43805 #7c7566 JetBrains Mono 10.5
+      text "main" @464.125,742.3581 #7c7566 JetBrains Mono 10.5
     pop
-    rect 194,755.658 428.5x28 radius 6 stroke 1 #24221d
-    text "1 selected" @194,801.85803 #4f4a40 JetBrains Mono 10
-    text "Branch" @194,832.40515 #b3ab99 Inter 12.5
-    rect 247.48438,812.85803 375.01562x30 fill #060606 radius 6
-    clip 247.48438,812.85803 375.01562x30 r 6
-      text "named from the ticket and prompt" @257.48438,832.40515 #7c7566 Inter 12.5
+    rect 194,724.57806 428.5x28 radius 6 stroke 1 #24221d
+    text "1 selected" @194,770.7781 #4f4a40 JetBrains Mono 10
+    text "Branch" @194,801.3252 #b3ab99 Inter 12.5
+    rect 247.48438,781.7781 375.01562x30 fill #060606 radius 6
+    clip 247.48438,781.7781 375.01562x30 r 6
+      text "named from the ticket and prompt" @257.48438,801.3252 #7c7566 Inter 12.5
     pop
-    rect 247.48438,812.85803 375.01562x30 radius 6 stroke 1 #332f27
-    text "RUNS IN" @646.5,702.148 #7c7566 JetBrains Mono 9.5
-    rect 646.5,722.998 32x18 fill #23211c radius 9
-    rect 648.5,724.998 14x14 fill #ece6d8 radius 7
-    text "Sandbox" @688.5,736.5451 #ece6d8 Inter 12.5
-    text "container · gateway for git & gh" @883,735.598 #7c7566 JetBrains Mono 10
-    rect 646.5,750.998 32x18 fill #23211c radius 9
-    rect 648.5,752.998 14x14 fill #ece6d8 radius 7
-    text "Open network" @688.5,764.5451 #7c7566 Inter 12.5
-    text "ask per new host when off" @925,763.598 #7c7566 JetBrains Mono 10
+    rect 247.48438,781.7781 375.01562x30 radius 6 stroke 1 #332f27
+    text "RUNS IN" @646.5,671.06805 #7c7566 JetBrains Mono 9.5
+    rect 646.5,691.918 32x18 fill #23211c radius 9
+    rect 648.5,693.918 14x14 fill #ece6d8 radius 7
+    text "Sandbox" @688.5,705.46515 #ece6d8 Inter 12.5
+    text "container · gateway for git & gh" @883,704.51807 #7c7566 JetBrains Mono 10
+    rect 646.5,719.918 32x18 fill #23211c radius 9
+    rect 648.5,721.918 14x14 fill #ece6d8 radius 7
+    text "Open network" @688.5,733.46515 #7c7566 Inter 12.5
+    text "ask per new host when off" @925,732.51807 #7c7566 JetBrains Mono 10
   pop
-  rect 1091,160 6x642.832 fill #ece6d838 radius 3
   rect 1099,158 1x676 fill #24221d
   text "RECENT PROMPTS" @1116,183.69 #7c7566 JetBrains Mono 9.5
   text "Prompts you start sessions with show here." @1116,216.165 #7c7566 Inter 12

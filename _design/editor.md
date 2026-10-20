@@ -87,8 +87,11 @@ engine never feels like another binary running in a pane.
   - `:map` and its mode forms write to the registry keymap (mode `n`, `x`, `o`, `i` or `c`), each running
     `editor.keys` with the right-hand side, so they show in `:Keys`. `:abbreviate` stays the engine's: the keymap
     has no place for insert-mode text expansions yet.
-  - lines are drawn without wrapping, so the engine's scrolling counts one row per line (a closed fold is one
-    row); `'wrap'` comes with the display options.
+  - `'wrap'` is off by default, unlike nvim: code reads better unwrapped, and a window scrolls sideways. With it on,
+    the pane draws each line in rows of the window's width, and the engine's scrolling counts those rows (a closed
+    fold is one row) as nvim's `plines_win`; `gj`/`gk` (`nv_screengo`), `g0`, `g^`, `gm` and `g$` move by them.
+    `:set wrap!` and `:set invwrap` switch it, and so do `editor.wrap.toggle` and the status line's **wrap**
+    segment. The cases in `vim/testdata/scroll/wrap.vt` are checked against nvim.
   - files: UTF-8 with or without a BOM and LF or CRLF are kept as found; a file that isn't UTF-8, or holds a NUL,
     opens read-only. A buffer with no lines at all writes nothing, and one empty line writes its newline, as
     vim's `ML_EMPTY`. `modified` follows the undo state. A file changed on disk reloads when its buffer is
@@ -111,6 +114,12 @@ engine never feels like another binary running in a pane.
 - Quickfix and location lists parse the `file:line:col:message` and `file:line:message` parts of the
   default `'errorformat'`. `:cexpr` takes string literals only, since there is no expression language;
   `:vimgrep` searches buffers already open.
+- Horizontal scrolling (scroll.txt *scroll-horizontal*): with `'nowrap'` a window shows its lines from its left
+  column (`Pane.Left`), kept on the cursor as nvim's `curs_columns` (`'sidescroll'`, `'sidescrolloff'`) and moved by
+  `zl`, `zh`, `zL`, `zH`, `zs` and `ze`, the cursor following the screen as `leftcol_changed`; the IDE tells each window
+  its columns (`SetCols`) and the wheel's sideways scroll (`ScrollLeft`). The cases in `vim/testdata/scroll/horizontal.vt` are checked against
+  nvim, `left:` being its `winsaveview().leftcol`.
+- Mouse: `Select` and `Deselect` are what a drag and a click do (term.txt *mouse-overview*, 'mousemodel' popup).
 - `:map`, `:noremap` and `:abbreviate` and their mode forms are engine-local tables for now, so vim
   configs and tests work. They move onto the registry keymap (`plugins.md`) when Lua config lands.
 
@@ -270,7 +279,7 @@ The engine's scrolling counts lines, not the rows blocks take, so a tall block c
 
 ## Images
 
-- **In markdown** (the preview, threads, tours, notes: `mdParse`): `![alt](src)` (inside a link too) and the HTML
+- **In markdown** (the preview, threads, notes: `mdParse`): `![alt](src)` (inside a link too) and the HTML
   GitHub renders in a README. A line starting with a block tag (`<p>`, `<div>`, `<h1>`…`<h6>`, `<details>`,
   `<summary>`, `<picture>`, `<br>`, `<hr>`…) or a comment starts an HTML block, up to a blank line: its headings,
   paragraphs and list items become blocks, `align="center"` or `"right"` aligns them and their images, `<img src alt
@@ -283,7 +292,7 @@ The engine's scrolling counts lines, not the rows blocks take, so a tall block c
   nothing: a remote (`http(s)`) image, an SVG (nothing here rasterizes one) or a missing file is a chip with its alt
   text and source, its tooltip saying why.
 - PNG, JPEG, GIF, WebP, BMP and ICO are decoded (the stdlib and `golang.org/x/image`), once per file while its time
-  and size stay the same (`pictures` in `app/images.go`, shared by markdown, tours, image tabs and image diffs).
+  and size stay the same (`pictures` in `app/images.go`, shared by markdown, image tabs and image diffs).
 - **In a tab**: a file a `registry.FileViewer` claims opens in that viewer's view instead of a buffer
   (`plugins.md`). The built-in `image` viewer shows an image centred and fit to the tab, with its dimensions, size
   and format under it, zoomable, and reloads it when the file changes; an SVG, a video, audio, a PDF or another binary

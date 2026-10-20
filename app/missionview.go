@@ -488,7 +488,7 @@ func firstLines(s string, n int) string {
 	return strings.Join(lines[:min(len(lines), n)], "\n")
 }
 
-// cardFoot is the session's tasks, context, change and how long it's been.
+// cardFoot is the session's tasks, what's running in the background, context, change and how long it's been.
 func (x *missionPlugin) cardFoot(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	now := c.Now()
@@ -502,6 +502,15 @@ func (x *missionPlugin) cardFoot(c *ui.Ctx, se core.SessionState) {
 			}
 			c.Text("tasks", fmt.Sprintf("tasks %d/%d", done, n), monoFont(10, th.C(theme.FgFaint)))
 			widget.Meter(c, "tm", float64(done)/float64(n), widget.MeterOpts{Tone: th.C(theme.OK), Width: ui.Px(40), Height: 3, Label: "Tasks done"})
+		}
+		if bg := se.Agent.Background; len(bg) > 0 {
+			var what []string
+			for _, t := range bg {
+				what = append(what, cmpOr(t.Kind, "task")+": "+t.Description)
+			}
+			c.Box("bg", ui.Style{Tooltip: strings.Join(what, "\n"), Help: missionHelp + "#background"}, func(c *ui.Ctx) {
+				c.Text("t", fmt.Sprintf("+%d in background", len(bg)), monoFont(10, th.C(theme.StatusWorking)))
+			})
 		}
 		if s := se.Agent.Stats; s.ContextMax > 0 {
 			c.Text("ctx", fmt.Sprintf("ctx %d%%", pct(float64(s.Context)/float64(s.ContextMax))), monoFont(10, th.C(theme.FgFaint)))

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/agent/prompts"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,7 +168,7 @@ func TestExplainChangeWalkthrough(t *testing.T) {
 		t.Fatalf("asked %d times", len(reqs))
 	}
 	r := reqs[0]
-	if r.Kind != "change" || r.Format != walkFormat || r.Subject != "The branch's change: 3 files in 2 projects" || len(r.Files) != 3 {
+	if r.Kind != "change" || r.Format != walkFormatText() || r.Subject != "The branch's change: 3 files in 2 projects" || len(r.Files) != 3 {
 		t.Errorf("asked %+v", r)
 	}
 	for _, want := range []string{"## project pricing · round.go (modified)", "## project pricing · internal/billing/invoice.go (modified)",
@@ -405,7 +406,7 @@ func TestExplainChangeAskedOfTheSessionsFork(t *testing.T) {
 	}
 	// The fake fork echoes the end of its prompt, which is the format, and that isn't a walkthrough.
 	r.waitFrame("the fork's answer", func(s string) bool {
-		return containsAll(s, "EXPLAIN THIS CHANGE", "fork says:", walkFormat[len(walkFormat)-25:], "Try again")
+		return containsAll(s, "EXPLAIN THIS CHANGE", "fork says:", walkFormatText()[len(walkFormatText())-25:], "Try again")
 	})
 	a.NoneSent(t)
 }
@@ -448,4 +449,10 @@ L.agent.explainer{ name = "local", order = 5, byline = "written by a local model
 	if err != nil || md != "change: JSON steps" || e.WrittenBy() != "written by a local model" {
 		t.Errorf("answered %q by %q, %v", md, e.WrittenBy(), err)
 	}
+}
+
+// walkFormatText is the walkthrough format as Oriel ships it.
+func walkFormatText() string {
+	d, _ := prompts.Lookup(walkFormat)
+	return d.Default
 }

@@ -503,7 +503,11 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   opens the directory again.
 - The desktop app runs the native core (about 260 MB/s against the 200 MB/s budget); wasm (about 80 MB/s) is the
   fallback without cgo.
-- Not yet: mouse reporting, selection with the pointer, OSC 8 links, images, ligatures, terminal search outside
+- Selection with the pointer: a drag over the screen and scrollback (by cell from the top of the scrollback, so it
+  holds while the view scrolls; past the top or bottom it scrolls), a double click the word, a triple the row; ⌘C or
+  ⌃⇧C copies it (`Emulator.Text`) and clears it, and with nothing selected the key goes to the program. ⌃⇧ and a letter
+  keeps its shift in key notation (`<C-S-c>`), so ⌃⇧C and ⌃⇧V reach the terminal on Linux.
+- Not yet: mouse reporting, OSC 8 links, images, ligatures, terminal search outside
   terminal-normal mode, and the Explorer following the terminal's directory.
 ## Explorer scopes
 

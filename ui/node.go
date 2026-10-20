@@ -113,6 +113,9 @@ type Style struct {
 	Scale float32
 
 	Clip bool
+	// Selectable lets the text in it be selected with the pointer and copied with the platform's copy key: a drag
+	// across any of its text nodes, a double click a word, a triple a node's text. Controls in it keep their clicks.
+	Selectable bool
 	// Wrap puts a row's children that don't fit its width on the next line, Gap apart, each its own width (one wider
 	// than the row is cut to it): the row grows as tall as its lines. Give it a width (Flex, Px); its own content is
 	// only its widest child.

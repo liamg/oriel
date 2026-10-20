@@ -61,7 +61,6 @@ type SessionSpec struct {
 	Effort   string        `json:"effort,omitempty"`
 	Sandbox  SandboxPolicy `json:"sandbox,omitzero"`
 	Template string        `json:"template,omitempty"` // new repo kind
-	Variant  string        `json:"variant,omitempty"`  // which of its kind's variants: a tour's walkthrough, onboarding…
 	Job      string        `json:"job,omitempty"`      // the saved job this is a run of
 }
 

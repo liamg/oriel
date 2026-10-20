@@ -58,7 +58,6 @@ func (w *Host) tools(h *session) []agent.Tool {
 		{Name: "test_run", Description: "Run tests and record the run as evidence. Returns the run's id: cite it (run:<id>) when you say tests pass. dir: a directory in a project (the primary project if empty); filter: a test name pattern.",
 			Schema: schema(`"dir":` + str + `,"filter":` + str + `,"project":` + str), Call: h.toolTestRun},
 	}
-	own = append(own, w.tourTools(h)...)
 	kind := ""
 	if se, err := w.session(h.id); err == nil {
 		kind = string(se.Kind)

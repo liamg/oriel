@@ -106,10 +106,10 @@ func TestLinesSeenAndGateOverrides(t *testing.T) {
 	}
 }
 
-// RV-2: PLAN.md, "Commit gate: hard for work and plan sessions … soft for jobs, off for tours and scratch sessions".
+// RV-2: PLAN.md, "Commit gate: hard for work and plan sessions … soft for jobs, off for reviews and direct sessions".
 func TestDefaultGate(t *testing.T) {
-	for k, want := range map[core.Kind]string{core.KindWork: "hard", core.KindPlan: "hard", core.KindJob: "soft", core.KindTour: "off",
-		core.KindScratch: "off", core.KindReview: "off", core.KindDirect: "off"} {
+	for k, want := range map[core.Kind]string{core.KindWork: "hard", core.KindPlan: "hard", core.KindJob: "soft",
+		core.KindReview: "off", core.KindDirect: "off"} {
 		if got := core.DefaultGate(k); got != want {
 			t.Errorf("%s: %s, want %s", k, got, want)
 		}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -46,8 +47,9 @@ func git(t *testing.T, dir string, args ...string) string {
 	return string(out)
 }
 
-// AI-4 done when: "each mode starts the right prompt pack". SE-1: "each kind starts from the launcher"; "direct never
-// creates a worktree; new repo inits and registers". ui.md 04: "Mode: Plan · Work · Review PR · Tour · Job · New repo".
+// AI-4 done when: "each mode starts the right prompt pack". SE-1: "each kind starts from the launcher" or
+// session.start; "direct never creates a worktree; new repo inits and registers". ui.md 04: "Mode: Work · Plan ·
+// Review PR": the kinds marked Launcher, Work first and picked; Job, New repo and Direct start through session.start.
 func TestLauncherModesStartTheirPacks(t *testing.T) {
 	lw := newLocalHost(t)
 	ctx := context.Background()
@@ -75,64 +77,77 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 		r.clickTop("pricing")
 		r.latest("the repo ticked", func(f headless.Frame) bool { return strings.Contains(f.Text(), "1 selected") })
 	}
-	for _, tc := range []struct {
+	started := func(mode, pack string) {
+		t.Helper()
+		a := lw.fake.WaitStarted(t)
+		if a.Spec.Pack.Name != pack {
+			t.Errorf("%s started the %q pack, want %q", mode, a.Spec.Pack.Name, pack)
+		}
+		waitState(t, r.store, "the "+mode+" session in front", func(st core.State) bool {
+			se, ok := st.Session(st.Focus)
+			return ok && se.Snapshot().Kind == core.Kind(pack)
+		})
+	}
+	for i, tc := range []struct {
 		mode, pack string
 		fill       func()
 	}{
-		{"Plan", "plan", func() { prompt("Round invoice lines"); addRepo() }},
 		{"Work", "work", func() { prompt("Fix stale search results"); addRepo() }},
+		{"Work", "work", func() { prompt("Sketch an invoicing service") }},
+		{"Plan", "plan", func() { prompt("Round invoice lines"); addRepo() }},
 		{"Review PR", "review", func() {
 			r.clickTop(prPlaceholder)
 			r.typeText("https://github.com/acme/pricing/pull/7")
 			addRepo()
 		}},
-		{"Tour", "tour", func() {
-			prompt("How does rounding work?")
-			addRepo()
-			r.clickTop("tour: walkthrough · how the code works ▾")
-			r.clickTop("demo · built and run for real")
-			r.waitText("tour: demo · built and run for real")
-		}},
-		{"Job", "job", func() { prompt("Sweep stale deps"); addRepo() }},
-		{"New repo", "newrepo", func() {
-			r.clickTop(namePlaceholder)
-			r.typeText("invoicer")
-			r.clickTop(parentPlaceholder)
-			r.typeText(parent)
-		}},
-		{"Direct", "direct", func() {
-			r.clickTop(dirPlaceholder)
-			r.typeText(plain)
-		}},
-		{"Scratch", "scratch", func() { prompt("notes for the offsite") }},
 	} {
 		// Start lands on the session's first request, where ⌘N is a new request: the launcher opens by its command.
 		if err := r.do(func() error { return r.host.Run(context.Background(), "session.new", nil) }); err != nil {
 			t.Fatal(err)
 		}
-		r.latest("the launcher", func(f headless.Frame) bool { return strings.Contains(f.Text(), "NEW SESSION") })
+		f := r.latest("the launcher", func(f headless.Frame) bool { return strings.Contains(f.Text(), "NEW SESSION") })
+		if i == 0 {
+			if !strings.Contains(f.Text(), "Start Work") {
+				t.Errorf("the launcher doesn't open on Work:\n%s", f.Text())
+			}
+			modes := launcherModes(r.win.Access())
+			if want := []string{"Work", "Plan", "Review PR"}; strings.Join(modes, " · ") != strings.Join(want, " · ") {
+				t.Errorf("the launcher's modes are %v, want %v", modes, want)
+			}
+		}
 		r.clickTop(tc.mode)
 		r.latest(tc.mode+" picked", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start "+tc.mode) })
 		tc.fill()
 		r.clickTop("Start " + tc.mode)
-		a := lw.fake.WaitStarted(t)
-		if a.Spec.Pack.Name != tc.pack {
-			t.Errorf("%s started the %q pack, want %q", tc.mode, a.Spec.Pack.Name, tc.pack)
-		}
 		r.waitGone("NEW SESSION")
-		waitState(t, r.store, "the "+tc.mode+" session in front", func(st core.State) bool {
-			se, ok := st.Session(st.Focus)
-			return ok && se.Snapshot().Kind == core.Kind(tc.pack)
-		})
+		started(tc.mode, tc.pack)
+	}
+
+	// The kinds the launcher doesn't offer still start through session.start.
+	for _, tc := range []struct {
+		pack string
+		args registry.Args
+	}{
+		{"job", registry.Args{"kind": "job", "prompt": "Sweep stale deps", "repos": []string{lw.repo}}},
+		{"newrepo", registry.Args{"kind": "newrepo", "name": "invoicer", "dir": parent}},
+		{"direct", registry.Args{"kind": "direct", "dir": plain}},
+	} {
+		tc.args["provider"] = "fake"
+		if err := r.do(func() error { return r.host.Run(context.Background(), "session.start", tc.args) }); err != nil {
+			t.Fatalf("session.start %v: %v", tc.args, err)
+		}
+		started(tc.pack, tc.pack)
 	}
 
 	st := r.store.State()
 	kinds := map[core.Kind]core.SessionState{}
 	for _, se := range st.Sessions {
-		kinds[se.Kind] = se
+		if se.Kind != core.KindWork || len(se.Projects) == 0 {
+			kinds[se.Kind] = se
+		}
 	}
-	if m, _ := host.LoadManifest(kinds[core.KindTour].Dir); m.Tour == nil || m.Tour.Kind != "demo" {
-		t.Errorf("the tour is %+v, want the demo picked", m.Tour)
+	if w := kinds[core.KindWork]; w.Dir == "" || len(w.Projects) != 0 {
+		t.Errorf("the work session with no repo = %+v", w)
 	}
 	if d := kinds[core.KindDirect]; d.Dir != plain || len(d.Projects) != 1 || d.Projects[0].Dir != plain {
 		t.Errorf("direct = %+v, want the directory itself", d)
@@ -148,6 +163,48 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 	if !registered {
 		t.Errorf("the new repo isn't registered: %+v", repos)
 	}
+}
+
+// A pull request's link pasted into the prompt picks the kind that starts from a pull request, Review PR, with the
+// link in its field.
+func TestLauncherPastedPRPicksReview(t *testing.T) {
+	lw := newLocalHost(t)
+	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
+	waitState(t, r.store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	r.waitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
+	r.typeKeys("<D-n>")
+	r.latest("the launcher on Work", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Work") })
+	r.clickTop(promptPlaceholder)
+	const url = "https://github.com/acme/pricing/pull/7"
+	r.win.SetClipboard(url)
+	paste := render.ModCtrl
+	if runtime.GOOS == "darwin" {
+		paste = render.ModSuper
+	}
+	r.win.Send(render.KeyEvent{Key: "v", Mods: paste})
+	r.latest("Review PR picked, with the link", func(f headless.Frame) bool {
+		return strings.Contains(f.Text(), "Start Review PR") && strings.Contains(f.Text(), url)
+	})
+}
+
+// launcherModes are the titles of the launcher's Mode tabs, in the accessibility tree n.
+func launcherModes(n *render.AccessNode) []string {
+	var out []string
+	var walk func(n *render.AccessNode, in bool)
+	walk = func(n *render.AccessNode, in bool) {
+		if n == nil {
+			return
+		}
+		in = in || n.Role == render.RoleTabList && n.Name == "Mode"
+		if in && n.Role == render.RoleTab {
+			out = append(out, n.Name)
+		}
+		for _, k := range n.Children {
+			walk(k, in)
+		}
+	}
+	walk(n, false)
+	return out
 }
 
 // SE-1: "Register session.new and session.resume; the start view's greyed entries light up on their own". SE-3 and
@@ -244,7 +301,7 @@ func TestLauncherSnapshot(t *testing.T) {
 			Prompt: "Round minor units half-even, per currency, and keep the totals stable", Projects: []core.Project{{Name: "pricing", Dir: lw.repo}}}},
 		core.SessionSynced{Session: core.SessionState{ID: "deps", Name: "sweep-deps", Kind: core.KindJob, Status: core.StatusQuiet, Created: ago(26),
 			Prompt: "Sweep stale deps, keep major versions", Agent: core.AgentState{Provider: "codex"}}},
-		core.SessionSynced{Session: core.SessionState{ID: "auth", Name: "auth-tour", Kind: core.KindTour, Status: core.StatusQuiet, Created: ago(50),
+		core.SessionSynced{Session: core.SessionState{ID: "auth", Name: "auth-review", Kind: core.KindReview, Status: core.StatusQuiet, Created: ago(50),
 			Prompt: "Show me how auth works end to end"}},
 	} {
 		if err := s.store.Apply(ev); err != nil {
@@ -288,7 +345,7 @@ func TestLauncherCloses(t *testing.T) {
 		},
 	} {
 		r.typeKeys("<D-n>")
-		r.latest("the launcher, asked the host", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Plan") })
+		r.latest("the launcher, asked the host", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Work") })
 		close()
 		r.waitGone("NEW SESSION")
 	}

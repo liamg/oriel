@@ -2,6 +2,7 @@ package app
 
 import (
 	agentpkg "github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/prompts"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -413,8 +414,12 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 		a := sess.Snapshot().Agent
 		return a.Stats.Turns == 1 && !a.Working
 	})
+	// It sends the redraft prompt as the user has it on the Prompts page.
+	if err := (prompts.Store{Dir: s.sh.cfg.ConfigDir}).Set("drafts.commit.again", "Once more for {{project}}: mcp__oriel__commit_draft."); err != nil {
+		t.Fatal(err)
+	}
 	s.click(centre(s.access("Redraft").Bounds))
-	if got := agent.WaitSent(t); !strings.Contains(got.Text, "commit_draft") {
+	if got := agent.WaitSent(t); got.Text != "Once more for search-api: mcp__oriel__commit_draft." {
 		t.Errorf("Redraft sent %q", got.Text)
 	}
 	if out := agent.Call(t, "commit_draft", map[string]any{"project": "search-api", "message": "feat(api): three routes"}); out != "saved" {

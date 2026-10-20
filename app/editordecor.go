@@ -181,37 +181,40 @@ func virtualText(c *ui.Ctx, th *theme.Resolved, ds []registry.Decoration) {
 }
 
 // spans draws a line's Highlight and Underline decorations over its text, x0 being where the text starts.
-func spans(c *ui.Ctx, th *theme.Resolved, p vim.Pane, line int, ds []registry.Decoration, rowID ui.ID, x0 float32, m paneMetrics) {
+func spans(c *ui.Ctx, th *theme.Resolved, p vim.Pane, line int, ds []registry.Decoration, rowID ui.ID, x0 float32, m paneMetrics, segs []rowSeg) {
 	for i, d := range ds {
 		if d.Kind != registry.Highlight && d.Kind != registry.Underline {
 			continue
 		}
 		a, z := p.VCol(line, d.From)+inlayShift(ds, d.From, true), p.VCol(line, d.To)+inlayShift(ds, d.To, false)
-		if z <= a {
-			continue
-		}
 		col := tokenColour(th, d.Style, th.C(theme.Accent))
-		x, w := x0+float32(a)*m.charW, float32(z-a)*m.charW
-		if d.Kind == registry.Highlight {
-			c.Box(fmt.Sprint("hl", i), ui.Style{W: ui.Px(w), H: ui.Px(m.lineH), Fill: theme.WithAlpha(col, .22), Z: ui.LayerContent + 1,
-				Float: &ui.Float{To: rowID, Offset: render.Point{X: x}}}, nil)
-			continue
-		}
-		c.Box(fmt.Sprint("ul", i), ui.Style{W: ui.Px(w), H: ui.Px(4), Z: ui.LayerContent + 1, Float: &ui.Float{To: rowID,
-			Offset: render.Point{X: x, Y: m.lineH - 5}}}, func(c *ui.Ctx) {
-			c.Paint("wave", ui.Px(w), ui.Px(4), func(f render.Frame, r render.Rect) {
-				var path render.Path
-				path.MoveTo(render.Point{X: r.Min.X, Y: r.Min.Y + 3})
-				for px, up := r.Min.X, true; px < r.Max.X; px, up = px+2, !up {
-					y := r.Min.Y + 3
-					if up {
-						y = r.Min.Y + 1
+		for r, g := range segs {
+			dx, w, ok := g.clip(a, z, m)
+			if !ok {
+				continue
+			}
+			x := x0 + dx
+			if d.Kind == registry.Highlight {
+				c.Box(fmt.Sprint("hl", i, ".", r), ui.Style{W: ui.Px(w), H: ui.Px(m.lineH), Fill: theme.WithAlpha(col, .22), Z: ui.LayerContent + 1,
+					Float: &ui.Float{To: rowID, Offset: render.Point{X: x, Y: g.y}}}, nil)
+				continue
+			}
+			c.Box(fmt.Sprint("ul", i, ".", r), ui.Style{W: ui.Px(w), H: ui.Px(4), Z: ui.LayerContent + 1, Float: &ui.Float{To: rowID,
+				Offset: render.Point{X: x, Y: g.y + m.lineH - 5}}}, func(c *ui.Ctx) {
+				c.Paint("wave", ui.Px(w), ui.Px(4), func(f render.Frame, r render.Rect) {
+					var path render.Path
+					path.MoveTo(render.Point{X: r.Min.X, Y: r.Min.Y + 3})
+					for px, up := r.Min.X, true; px < r.Max.X; px, up = px+2, !up {
+						y := r.Min.Y + 3
+						if up {
+							y = r.Min.Y + 1
+						}
+						path.LineTo(render.Point{X: min(px+2, r.Max.X), Y: y})
 					}
-					path.LineTo(render.Point{X: min(px+2, r.Max.X), Y: y})
-				}
-				f.Path(&path, render.Style{Stroke: col, Width: 1})
+					f.Path(&path, render.Style{Stroke: col, Width: 1})
+				})
 			})
-		})
+		}
 	}
 }
 

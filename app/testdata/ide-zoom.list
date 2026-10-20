@@ -247,7 +247,8 @@ text "✕" @87.1225,657.62665 #b3ab99 JetBrains Mono 11
 text "0" @98.71625,657.62665 #b3ab99 JetBrains Mono 11
 text "⚠" @119.31,657.62665 #b3ab99 JetBrains Mono 11
 text "0" @130.90375,657.62665 #b3ab99 JetBrains Mono 11
-text "Go · utf-8 · LF" @867.0104,651.3767 #b3ab99 JetBrains Mono 10.5
+text "Go · utf-8 · LF" @824.6354,651.3767 #b3ab99 JetBrains Mono 10.5
+text "wrap" @939.5416,657.4467 #7c7566 JetBrains Mono 10.5
 text "1:1" @981.9166,651.3767 #b3ab99 JetBrains Mono 10.5
 text "≡ 14%" @1017.6979,651.3767 #b3ab99 JetBrains Mono 10.5
 rect 98,252 102.1875x1 fill #ff5f6d

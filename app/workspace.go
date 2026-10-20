@@ -247,7 +247,8 @@ func (x *workspacePlugin) page(c *ui.Ctx) {
 			ws, _ := st.load.Value()
 			widget.Async(c, "load", st.load.State(), widget.AsyncOpts{Label: "Reading the workspace", Retry: st.load.Reload, Height: ui.Flex(1),
 				Help: workspaceHelp}, func(c *ui.Ctx) {
-				c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(18, 14), Gap: 8, ScrollY: x.tab != wsFiles && x.tab != wsLog},
+				c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(18, 14), Gap: 8, ScrollY: x.tab != wsFiles && x.tab != wsLog,
+					Selectable: x.tab != wsFiles},
 					func(c *ui.Ctx) {
 						switch x.tab {
 						case wsOverview:

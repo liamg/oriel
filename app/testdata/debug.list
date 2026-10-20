@@ -396,7 +396,8 @@ text "⚠" @119.31,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @130.90375,990.95996 #b3ab99 JetBrains Mono 11
 text "● paused round.go:9" @185.4975,990.78 #4cc9f0 JetBrains Mono 10.5
 text "1 breakpoint" @320.77875,990.78 #b3ab99 JetBrains Mono 10.5
-text "Go · utf-8 · LF" @1400.3438,984.71 #b3ab99 JetBrains Mono 10.5
+text "Go · utf-8 · LF" @1357.9688,984.71 #b3ab99 JetBrains Mono 10.5
+text "wrap" @1472.875,990.78 #7c7566 JetBrains Mono 10.5
 text "9:1" @1515.25,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 45%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
 text "●" @92,282.77 #ff5f6d JetBrains Mono 13.5

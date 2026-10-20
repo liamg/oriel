@@ -8,7 +8,6 @@ import (
 const (
 	KindNewRepo Kind = "newrepo"
 	KindDirect  Kind = "direct"
-	KindScratch Kind = "scratch"
 )
 
 // Project is one repository taking part in a session: a worktree of a checkout, or the directory itself in a
@@ -20,7 +19,7 @@ type Project struct {
 	Branch   string `json:"branch,omitempty"`
 	Base     string `json:"base,omitempty"` // the branch it was cut from
 	Primary  bool   `json:"primary,omitempty"`
-	Detached bool   `json:"detached,omitempty"` // pinned at Commit: tours and reviews
+	Detached bool   `json:"detached,omitempty"` // pinned at Commit: reviews
 	Commit   string `json:"commit,omitempty"`
 	ReadOnly bool   `json:"readOnly,omitempty"`
 }
@@ -45,27 +44,34 @@ type AgentStart struct {
 
 // AgentState is a session's agent: who it is, and what it's doing.
 type AgentState struct {
-	Provider    string      `json:"provider,omitempty"` // "claude", "codex"; "" for none
-	Model       string      `json:"model,omitempty"`
-	Effort      string      `json:"effort,omitempty"`
-	Session     string      `json:"session,omitempty"`  // the provider's own id, to resume by
-	Running     bool        `json:"running,omitempty"`  // its process is up
-	Starting    *AgentStart `json:"starting,omitempty"` // what its start is doing, until it's up or has failed
-	Working     bool        `json:"working,omitempty"`  // a turn is running
-	TurnStarted time.Time   `json:"turnStarted,omitzero"`
-	Error       string      `json:"error,omitempty"`  // the last failure, until a turn succeeds
-	Policy      string      `json:"policy,omitempty"` // the agent's own gate: ask, light or bypass
-	Sandboxed   bool        `json:"sandboxed,omitempty"`
-	Network     string      `json:"network,omitempty"` // in a sandbox: ask or open
-	Backend     string      `json:"backend,omitempty"` // in a sandbox: what confines it; "" is sandbox.backend
-	Pack        string      `json:"pack,omitempty"`    // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
-	Queue       []string    `json:"queue,omitempty"`   // messages waiting for the turn to end
-	Stats       Stats       `json:"stats,omitzero"`
+	Provider    string           `json:"provider,omitempty"` // "claude", "codex"; "" for none
+	Model       string           `json:"model,omitempty"`
+	Effort      string           `json:"effort,omitempty"`
+	Session     string           `json:"session,omitempty"`  // the provider's own id, to resume by
+	Running     bool             `json:"running,omitempty"`  // its process is up
+	Starting    *AgentStart      `json:"starting,omitempty"` // what its start is doing, until it's up or has failed
+	Working     bool             `json:"working,omitempty"`  // a turn is running
+	TurnStarted time.Time        `json:"turnStarted,omitzero"`
+	Error       string           `json:"error,omitempty"`  // the last failure, until a turn succeeds
+	Policy      string           `json:"policy,omitempty"` // the agent's own gate: ask, light or bypass
+	Sandboxed   bool             `json:"sandboxed,omitempty"`
+	Network     string           `json:"network,omitempty"`    // in a sandbox: ask or open
+	Backend     string           `json:"backend,omitempty"`    // in a sandbox: what confines it; "" is sandbox.backend
+	Pack        string           `json:"pack,omitempty"`       // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
+	Queue       []string         `json:"queue,omitempty"`      // messages waiting for the turn to end
+	Background  []BackgroundTask `json:"background,omitempty"` // work the last turn left running, which will wake it again
+	Stats       Stats            `json:"stats,omitzero"`
 	// StoppedBy is who stopped it, while it's stopped: StoppedByYou, StoppedByAgent, StoppedByCrash or StoppedByHandOver.
 	StoppedBy string    `json:"stoppedBy,omitempty"`
 	StoppedAt time.Time `json:"stoppedAt,omitzero"`
 	// Accounts are the provider's accounts it ran on, oldest first: recorded when it starts and on a login change.
 	Accounts []AccountAt `json:"accounts,omitempty"`
+}
+
+// BackgroundTask is work a turn left running that will wake the agent again: a shell, subagent, monitor or workflow.
+type BackgroundTask struct {
+	Kind        string `json:"kind,omitempty"`
+	Description string `json:"description"`
 }
 
 // AccountAt is a provider's account (ProviderUsage.Account, and AccountName) a session ran on from At.
@@ -95,7 +101,7 @@ func (a *AgentState) Stopped(by string, t time.Time) {
 	if a.Running && by != "" {
 		a.StoppedBy, a.StoppedAt = by, t.UTC()
 	}
-	a.Running, a.Working, a.Starting = false, false, nil
+	a.Running, a.Working, a.Starting, a.Background = false, false, nil, nil
 }
 
 // Who stopped an agent.

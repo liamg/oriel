@@ -38,7 +38,7 @@ type SpawnOpts struct {
 
 // Processes runs process plugins (plugins.md, "Four tiers"): a child speaking JSON-RPC 2.0 over stdio, one
 // message per line, each call it makes to the host checked by the guard. A plugin's process is confined by
-// ossandbox to what its grants allow; your own config's runs as you.
+// ossandbox to what its grants allow; your own config's runs as you, and so does a bundled plugin's (oriel itself).
 type Processes struct {
 	Methods   *Methods                         // what the processes may call; none if nil
 	Log       func(plugin string) *slog.Logger // where stderr goes; discarded if nil
@@ -68,6 +68,9 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 	if err != nil {
 		return nil, err
 	}
+	// A bundled plugin's program is oriel itself, as trusted as oriel; a GUI binary can't start under macOS's
+	// deny-default profile either. Its calls to the host still meet the plugin's guard.
+	_, bundled := p.Programs[name]
 	args := append(pre, o.Args...)
 	var cmd *exec.Cmd
 	tmp := ""
@@ -78,7 +81,7 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 		}
 		data = []string{EnvData + "=" + p.Data}
 	}
-	if p.Trusted() {
+	if p.Trusted() || bundled {
 		cmd = exec.Command(path, args...)
 		cmd.Env = append(append(os.Environ(), data...), o.Env...)
 	} else {

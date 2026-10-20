@@ -201,7 +201,7 @@ func (x *verifyPlugin) start(q *quiz, se core.SessionState) {
 	}
 	q.by = cmpOr(registry.ForkLabel(x.h, string(se.ID)), "fork, no tools")
 	q.qs, q.at, q.result, q.err, q.answer = nil, 0, "", "", ""
-	x.ask(q, questionsPrompt(se), func(out string) error {
+	x.ask(q, x.questionsPrompt(se), func(out string) error {
 		qs := parseQuestions(out)
 		if len(qs) == 0 {
 			return errors.New("the agent's questions didn't come back in a form the quiz reads")
@@ -248,13 +248,12 @@ func (x *verifyPlugin) send(q *quiz, text string) error {
 	if text == "" {
 		return nil
 	}
-	sess, ok := x.h.Session(q.session)
-	if !ok {
+	if _, ok := x.h.Session(q.session); !ok {
 		return fmt.Errorf("no session %s", q.session)
 	}
 	i := q.at
 	q.qs[i].Answer, q.answer = text, ""
-	x.ask(q, gradePrompt(sess.Snapshot(), q.qs, i), func(out string) error {
+	x.ask(q, x.gradePrompt(q.qs, i), func(out string) error {
 		v := parseVerdict(out)
 		q.qs[i].Verdict, q.qs[i].Note, q.qs[i].File, q.qs[i].Line = v.Verdict, v.Note, v.File, v.Line
 		q.at = i + 1
@@ -435,33 +434,21 @@ func verdictGlyph(v string) string {
 }
 
 // questionsPrompt asks the fork for the quiz's questions.
-func questionsPrompt(se core.SessionState) string {
-	var b strings.Builder
-	b.WriteString("This is Oriel's verify quiz. The user is about to raise the pull request for this session's change and put their name on it; " +
-		"check they understand it. You have no tools here, and this exchange is not part of the main conversation.\n\nThe change:\n")
+func (x *verifyPlugin) questionsPrompt(se core.SessionState) string {
+	var change []string
 	for _, p := range raisable(se) {
-		fmt.Fprintf(&b, "- %s: branch %s against %s\n", p.Name, cmpOr(p.Branch, se.Branch), cmpOr(p.Base, "its base"))
+		change = append(change, fmt.Sprintf("- %s: branch %s against %s", p.Name, cmpOr(p.Branch, se.Branch), cmpOr(p.Base, "its base")))
 	}
-	fmt.Fprintf(&b, "\nWrite %d short questions about the diff, each answerable in a sentence or two by someone who has read it: what a case does now, "+
-		"which line decides it, what happens to existing data. Put names and values in `inline code`.\n\n"+
-		"Reply with JSON only: {\"questions\": [{\"question\": \"...\", \"file\": \"path/in/its/project\", \"line\": 42}]}. "+
-		"file and line are where the answer is, when one place has it.", quizLength)
-	return b.String()
+	return x.sh.prompt("verify.questions", map[string]string{"change": strings.Join(change, "\n"), "count": fmt.Sprint(quizLength)})
 }
 
 // gradePrompt asks the fork to grade the answer to question i.
-func gradePrompt(se core.SessionState, qs []core.QuizQuestion, i int) string {
-	var b strings.Builder
-	b.WriteString("This is Oriel's verify quiz, about the change this session is about to raise as a pull request. You have no tools here, " +
-		"and this exchange is not part of the main conversation. Grade the user's answer against the change as it is.\n\n")
-	fmt.Fprintf(&b, "Question %d: %s\n", i+1, qs[i].Question)
+func (x *verifyPlugin) gradePrompt(qs []core.QuizQuestion, i int) string {
+	where := ""
 	if qs[i].File != "" {
-		fmt.Fprintf(&b, "(the answer is in %s)\n", qs[i].File)
+		where = "\n(the answer is in " + qs[i].File + ")"
 	}
-	fmt.Fprintf(&b, "Their answer: %s\n\n", qs[i].Answer)
-	b.WriteString("Reply with JSON only: {\"verdict\": \"right\" | \"partly\" | \"wrong\", \"note\": \"a sentence or two: what they got right, or missed\", " +
-		"\"file\": \"where to read, for partly or wrong\", \"line\": 0}.")
-	return b.String()
+	return x.sh.prompt("verify.grade", map[string]string{"number": fmt.Sprint(i + 1), "question": qs[i].Question, "where": where, "answer": qs[i].Answer})
 }
 
 // jsonObject is the JSON object in a reply: inside a code fence, or from its first { to its last }.

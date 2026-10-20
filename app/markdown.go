@@ -140,7 +140,7 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 	if o.Group == "" {
 		o.Group = fmt.Sprint("md:", c.Next(key))
 	}
-	c.Column(key, ui.Style{W: ui.Px(width), Gap: 8}, func(c *ui.Ctx) {
+	c.Column(key, ui.Style{W: ui.Px(width), Gap: 8, Selectable: true}, func(c *ui.Ctx) {
 		for k, b := range mdParse(src) {
 			if len(b.Images) > 0 {
 				mdPictures(c, fmt.Sprint("img", k), b.Images, b.Align, width, o)

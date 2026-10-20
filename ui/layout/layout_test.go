@@ -163,3 +163,26 @@ func TestAllAndRename(t *testing.T) {
 		t.Errorf("after the rename:\n%s\nfocus %v zoomed %v", r.Dump(), r.Focus, r.Zoomed)
 	}
 }
+
+// OnShow hears of each view put in front, opened or shown, and keeps listening across a Load: what sits over the
+// layout (a page) can give way to it.
+func TestOnShow(t *testing.T) {
+	r := New()
+	var got []string
+	r.OnShow(func(v ViewRef) { got = append(got, v.ID) })
+	a, b := ViewRef{ID: "a"}, ViewRef{ID: "b"}
+	if err := r.Open(a, Tab, Opts{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Open(b, Docked, Opts{Edge: Left}); err != nil {
+		t.Fatal(err)
+	}
+	r.Show(a)
+	if err := r.Load(r.Save()); err != nil {
+		t.Fatal(err)
+	}
+	r.Show(b)
+	if strings.Join(got, " ") != "a b a b" {
+		t.Errorf("shown = %v, want a b a b", got)
+	}
+}

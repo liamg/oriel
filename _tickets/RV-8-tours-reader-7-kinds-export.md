@@ -2,7 +2,7 @@
 id: RV-8
 title: "Tours: reader, 7 kinds, export"
 phase: P7
-status: done
+status: dropped
 area: Review and explain
 module: tour
 depends_on: [RV-5]
@@ -20,7 +20,7 @@ depends_on: [RV-5]
 
 ## Mockups
 
-![14-tour](../_design/mockups/14-tour.png)
+(The 14-tour mockup was deleted with the feature.)
 
 ## Done when
 

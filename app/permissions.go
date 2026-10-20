@@ -199,7 +199,7 @@ func (x *permissionsPlugin) build(c *ui.Ctx) {
 			p, _ := st.load.Value()
 			widget.Async(c, "load", st.load.State(), widget.AsyncOpts{Label: "Reading the session's rules", Retry: st.load.Reload, Height: ui.Flex(1),
 				Help: "agent/permissions"}, func(c *ui.Ctx) {
-				c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(16, 12), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
+				c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(16, 12), Gap: 8, ScrollY: true, Selectable: true}, func(c *ui.Ctx) {
 					switch {
 					case !p.Sandboxed:
 						permsNote(c, "host", "This session's agent isn't running in a sandbox: it has your access, and none of these rules apply.")

@@ -153,6 +153,27 @@ func (x *navPlugin) reachable(s navStop) bool {
 	return true
 }
 
+// placeShown says a place (a page) is showing over the layout.
+func placeShown(r registry.Registry) bool {
+	name, ok := registry.ShownPlace(r)
+	return name != "" || !ok
+}
+
+// closePlaces puts away every place showing, as something else is put in front.
+func closePlaces(r registry.Registry) {
+	for _, c := range r.Contributions("place") {
+		p := c.(registry.Place)
+		if p.Shown == nil || p.Close == nil {
+			continue
+		}
+		shown := false
+		registry.Call(func() error { shown = p.Shown(); return nil })
+		if shown {
+			registry.Call(func() error { p.Close(); return nil })
+		}
+	}
+}
+
 // pagePlace is a page shown while *open, as a place in the window's history.
 func pagePlace(name, title, command string, open *bool) registry.Place {
 	return registry.Place{Name: name, Title: title, Command: command, Shown: func() bool { return *open }, Close: func() { *open = false }}

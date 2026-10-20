@@ -409,3 +409,36 @@ func TestAppToolsReachTheAgent(t *testing.T) {
 		t.Errorf("app tool = %q", got)
 	}
 }
+
+// A turn that ends with background work in flight (a Claude Code Stop hook's background_tasks) isn't the end of the
+// work: its threads stay busy and the session working until a turn ends with none, the one the work wakes.
+func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("start")
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{})
+	r.eventually(id, "the first turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 1 })
+	tid, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "run the suite"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{Background: []core.BackgroundTask{{Kind: "shell", Description: "go test ./..."}}})
+	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 2 })
+	se := r.session(id)
+	if th, _ := se.Thread(tid); !th.Busy {
+		t.Errorf("the thread stopped being busy with the suite still running")
+	}
+	if se.Status != core.StatusWorking || len(se.Agent.Background) != 1 {
+		t.Errorf("status %s, background %q", se.Status, se.Agent.Background)
+	}
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{})
+	r.eventually(id, "the woken turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 3 })
+	se = r.session(id)
+	if th, _ := se.Thread(tid); th.Busy || len(se.Agent.Background) != 0 {
+		t.Errorf("after the background work: busy %v, background %q", th.Busy, se.Agent.Background)
+	}
+}

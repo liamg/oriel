@@ -10,7 +10,6 @@ const (
 	KindPlan   Kind = "plan"
 	KindWork   Kind = "work"
 	KindReview Kind = "review"
-	KindTour   Kind = "tour"
 	KindJob    Kind = "job"
 )
 

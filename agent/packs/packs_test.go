@@ -13,8 +13,8 @@ import (
 )
 
 var kinds = []core.Kind{
-	core.KindPlan, core.KindWork, core.KindReview, core.KindTour,
-	core.KindJob, core.KindNewRepo, core.KindDirect, core.KindScratch,
+	core.KindWork, core.KindPlan, core.KindReview,
+	core.KindJob, core.KindNewRepo, core.KindDirect,
 }
 
 // builtins is how many packs are built in: a kind's each, and ai-review, which the AI review's reviewer runs on (RV-3).
@@ -82,7 +82,7 @@ func TestPacksNameOnlyTheirTools(t *testing.T) {
 }
 
 func TestReviewChangesNothing(t *testing.T) {
-	for _, name := range []string{"review", "tour", "scratch"} {
+	for _, name := range []string{"review"} {
 		p, _ := Get(name)
 		for _, tool := range []string{"commit_draft", "pr_draft", "test_run"} {
 			if slices.Contains(p.Tools, tool) {

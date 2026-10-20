@@ -1,0 +1,83 @@
+# Scrolling horizontally (scroll.txt *scroll-horizontal*, 'sidescroll', 'sidescrolloff') with 'nowrap'. The window
+# is nvim's default, 80 columns wide; the long line is 100 characters. `left:` is the first column shown, as
+# winsaveview().leftcol. Expected values were checked against nvim v0.11.7 (the oracle).
+
+=== The cursor moved past the right edge scrolls the text, by 'sidescroll'
+ref:    options.txt *'sidescroll'*
+quote:  "The minimal number of columns to scroll horizontally.  Used only when the 'wrap' option is off and the cursor is moved off of the screen."
+given:
+  |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+keys:   :set nowrap<CR>$
+expect:
+  012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678|9
+left:   20
+
+=== The cursor moved back to the start scrolls the text back
+ref:    options.txt *'sidescroll'*
+quote:  "The minimal number of columns to scroll horizontally.  Used only when the 'wrap' option is off and the cursor is moved off of the screen."
+given:
+  |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+keys:   :set nowrap<CR>$0
+expect:
+  |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+left:   0
+
+=== 'sidescrolloff' keeps columns to the right of the cursor
+ref:    options.txt *'sidescrolloff'*
+quote:  "The minimal number of screen columns to keep to the left and to the right of the cursor if 'nowrap' is set."
+given:
+  |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+keys:   :set nowrap siso=5<CR>85l
+expect:
+  0123456789012345678901234567890123456789012345678901234567890123456789012345678901234|567890123456789
+left:   11
+
+=== zl scrolls the text left and the cursor follows the screen
+ref:    scroll.txt *zl*
+quote:  "Move the view on the text [count] characters to the right, thus scroll the text [count] characters to the left.  This only works when 'wrap' is off."
+given:
+  |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+keys:   :set nowrap<CR>5zl
+expect:
+  01234|56789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+left:   5
+
+=== zh scrolls the text back right
+ref:    scroll.txt *zh*
+quote:  "Move the view on the text [count] characters to the left, thus scroll the text [count] characters to the right.  This only works when 'wrap' is off."
+given:
+  |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+keys:   :set nowrap<CR>10zl3zh
+expect:
+  0123456789|012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+left:   7
+
+=== zL scrolls half a screenwidth
+ref:    scroll.txt *zL*
+quote:  "Move the view on the text half a screenwidth to the right, thus scroll the text half a screenwidth to the left.  This only works when 'wrap' is off."
+given:
+  |0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+keys:   :set nowrap<CR>zL
+expect:
+  0123456789012345678901234567890123456789|012345678901234567890123456789012345678901234567890123456789
+left:   40
+
+=== zs puts the cursor at the left of the screen
+ref:    scroll.txt *zs*
+quote:  "Scroll the text horizontally to position the cursor at the start (left side) of the screen.  This only works when 'wrap' is off."
+given:
+  012345678901234567890123456789|0123456789012345678901234567890123456789012345678901234567890123456789
+keys:   :set nowrap<CR>zs
+expect:
+  012345678901234567890123456789|0123456789012345678901234567890123456789012345678901234567890123456789
+left:   30
+
+=== ze puts the cursor at the right of the screen
+ref:    scroll.txt *ze*
+quote:  "Scroll the text horizontally to position the cursor at the end (right side) of the screen.  This only works when 'wrap' is off."
+given:
+  012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789|0123456789
+keys:   :set nowrap<CR>ze
+expect:
+  012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789|0123456789
+left:   11

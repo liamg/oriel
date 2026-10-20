@@ -14,6 +14,10 @@ Keys go to the program, every ⌃ key included (`⌃W` deletes a word in the she
 the screen and its scrollback; `i` or `a` goes back. The status line says which mode you're in. To move to another
 pane from a terminal, `⌃Esc` then `⌃W h`/`j`/`k`/`l`.
 
+Drag to select text on the screen or in the scrollback (a double click selects a word, a triple the row), then ⌘C, or
+⌃⇧C on Linux, copies it. ⌘A selects the whole screen and scrollback. With nothing selected, ⌘C goes to the
+program. ⌘V (⌃⇧V) pastes.
+
 ## Shell integration {#shell}
 
 With a shell that marks its prompts (OSC 133) each command gets a dot by its prompt: green if it exited 0, red if not.

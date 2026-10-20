@@ -44,7 +44,7 @@ flowchart TB
   colour-free coverage cache. A backend with its own shaders samples one coverage atlas and tints in the shader.
 - Monospace fast path: shape a whole line once, cache it by content hash, and
   reuse it while the line is unchanged.
-- Proportional text (plan docs, threads, tours) goes through the same pipeline,
+- Proportional text (plan docs, threads) goes through the same pipeline,
   with paragraph layout and line breaking (UAX #14).
 - Gamma-correct blending and stem darkening. This is most of what makes the difference between "terminal" and
   "beautiful". Coverage is mapped so Gio's blending matches CSS: light text against black, dark text against white,
@@ -244,7 +244,7 @@ func (c *Ctx) Node(n Node)                        // a plugin's view tree: *Box,
 func (c *Ctx) List(key any, st Style, n int, rowH float32, row func(c *Ctx, i int)) ID // builds only the rows in view
 func (c *Ctx) KeepInView(box, target ID) // scrolls to target when it changes; ScrollIntoView every frame fights the user
 func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i int)) ID // items of any height: only
-    // those in view are built, each as tall as when last built (o.Estimate before), o.Reveal scrolled to unbuilt
+    // those in view are built, each as tall as when last built (o.Estimate before), o.End keeps it at its end (a log), o.Reveal scrolled to unbuilt
 
 type Style struct {
     Dir         Dir                               // Row or Column
@@ -255,6 +255,8 @@ type Style struct {
     Fill, Stroke render.Color; Border, Radius float32
     Clip, ScrollX, ScrollY bool                   // scroll offsets persist by id
     Sideways bool                                 // the wheel's up and down scroll it across: a strip of tabs
+    Selectable bool                               // its text selects with the pointer (a drag across nodes, a double
+                                                  // click a word) and copies with ⌘C / ⌃⇧C; controls keep their clicks
     Wrap bool                                     // a row puts what doesn't fit on the next line, Gap apart: a strip of
                                                   // chips plugins add to; its own content is its widest child
     Float *Float                                  // out of the flow, against another id's rect, a point, or the parent;
@@ -279,6 +281,16 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   the first widget that needs it.
 - Ids hash the parent's id with a key (the child's index when there's none; duplicates get `#n`). State not built
   in a frame is dropped. `Theme` joins the `Ctx` with FW-7.
+- **Text selection**: a `Selectable` box's text selects like a document's, one selection a window (`ui/textsel.go`).
+  A press on its text (not on a control in it: an interactive node, an input, a drag source) starts it at the nearest
+  character boundary of the nearest line, a drag extends it across text nodes in the order they were built (rows,
+  wrapped lines), a double press selects a word and a triple a node's text, ⇧ extends it; a press anywhere else ends
+  it, and a drag that selected isn't a click on what it started over. It's painted under the glyphs (`text.selection`);
+  ⌘C or ⌃⇧C copies it (`UI.SelectedText`: nodes on a line joined by what's between them, lines by newlines). The
+  markdown preview, markdown text everywhere, help pages, the agent console's transcript and the Workspace and
+  Permissions pages are selectable. ⌘A (⌃A too) selects all the text of the box last pressed in, while what has focus
+  holds it. A drag held past the top or bottom of the scrolling box the selection is in scrolls it, faster the further out,
+  and the selection follows; in a list that builds only what shows (`Items`), an end scrolled away holds at the edge.
 - **Interaction** (FW-5): boxes opt in with `Interactive`, `Focusable`, `Disabled`, `Cursor` and `Tooltip`.
   `u.Pointer(ev)` resolves hover and press against the latest painted frame (immediate mode's one frame of lag), and
   a widget asks `c.Interaction(c.Next(key))` for hovered, pressed, clicked, focused and focus-visible before it
@@ -328,7 +340,10 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
   selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `MenuButton` (an icon button with a menu under it, right-aligned; a
   `Checkable` item chosen leaves it open) and `ToggleMenu` (a `MenuButton` of on/off `ToolItem`s, ticked while on), `Popover`, `Modal`, `Page` (a full-window page such as settings: holds focus,
-  Escape closes it; one is up at a time, so opening one closes whichever was, SE-5), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with
+  Escape closes it; one is up at a time, so opening one closes whichever was, SE-5; and it gives way to what's put in
+  front: a view opened or shown, from the sidebar, a command or a file opened, closes the page, through the layout's
+  `Root.OnShow` and each page's `registry.Place.Close`, a view already open under the page being revealed, not toggled
+  shut), `Scrim` (a dialog's backdrop: a click on it closes the dialog) and `Toasts`. `Input` takes an `Accept` filter (`Digits`, `Decimal`) and draws `Invalid` text with
   an `input.border.invalid` border. With `Lines` (SE-5) it takes several lines: the text wraps at the field's width, the
   field grows from `MinLines` to `Lines` and then scrolls, ⏎ is a new line and ⌘⏎ (Ctrl⏎ elsewhere) submits; ↑/↓ move
   by line, keeping the column, and ⌘↑/⌘↓ go to the start and end of the text. `Rows` takes `ClickSelects` for rows

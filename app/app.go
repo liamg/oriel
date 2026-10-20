@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/catalog"
@@ -964,8 +965,14 @@ func fromNotation(tok string) render.KeyEvent {
 func notation(ev render.KeyEvent) string {
 	single := utf8.RuneCountInString(ev.Key) == 1
 	mods := ev.Mods
-	// A character's shift is in the character; Space's isn't, so ⌃⇧Space keeps it (⇧Space alone is still a space).
-	if single && (ev.Key != " " || mods&(render.ModCtrl|render.ModAlt|render.ModSuper) == 0) {
+	// A character's shift is in the character; Space's isn't, so ⌃⇧Space keeps it (⇧Space alone is still a space). A
+	// control-letter's case is folded (⌃C is ⌃c), so ⌃⇧ and a letter keeps its shift too: <C-S-c>, Linux's copy.
+	ctrlLetter := single && mods&render.ModShift != 0 && mods&(render.ModCtrl|render.ModAlt|render.ModSuper) == render.ModCtrl &&
+		unicode.IsLetter([]rune(ev.Key)[0])
+	if ctrlLetter {
+		ev.Key = strings.ToLower(ev.Key)
+	}
+	if single && !ctrlLetter && (ev.Key != " " || mods&(render.ModCtrl|render.ModAlt|render.ModSuper) == 0) {
 		mods &^= render.ModShift
 	}
 	if single && mods == 0 {

@@ -45,6 +45,11 @@ type promptsPlugin struct {
 
 func (x *promptsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "prompts"} }
 
+// prompt is one of agent/prompts as the user has it, its placeholders filled.
+func (sh *shell) prompt(id string, vars map[string]string) string {
+	return prompts.Store{Dir: sh.cfg.ConfigDir}.Load().Render(id, vars)
+}
+
 func (x *promptsPlugin) store() prompts.Store { return prompts.Store{Dir: x.sh.cfg.ConfigDir} }
 
 func (x *promptsPlugin) Activate(_ context.Context, h plugin.Host) error {

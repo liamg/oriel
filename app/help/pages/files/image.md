@@ -10,7 +10,7 @@ A file that isn't text opens in a tab of its own instead of the editor. An image
 is drawn centred and fit to the tab, with its width × height, file size and format under it. It's read again when the
 file changes on disk.
 
-Click an image, here or in a markdown preview, a thread, a tour or the diff, to see it large in the lightbox: scroll
+Click an image, here or in a markdown preview, a thread or the diff, to see it large in the lightbox: scroll
 to zoom around the pointer, drag to move about, double-click or press `0` to fit it again and `1` for its own size,
 `←` and `→` for the other images of the same document, and `Esc`, a click outside it or ✕ to close it.
 

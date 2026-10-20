@@ -83,7 +83,7 @@ func TestAddWorktreeDetached(t *testing.T) {
 	ctx := context.Background()
 	_, clone := upstream(t)
 	r := gitx.Repo{Dir: clone.Dir}
-	dir := filepath.Join(t.TempDir(), "tour")
+	dir := filepath.Join(t.TempDir(), "pinned")
 	if err := r.AddWorktree(ctx, dir, "", "main"); err != nil {
 		t.Fatal(err)
 	}

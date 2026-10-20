@@ -67,6 +67,9 @@ func TestPolicyToFlags(t *testing.T) {
 		{agent.StartSpec{Policy: agent.PolicyAsk}, "--permission-mode default"},
 		{agent.StartSpec{Policy: agent.PolicyLight}, "--permission-mode acceptEdits"},
 		{agent.StartSpec{Policy: agent.PolicyBypass, Sandbox: box}, "--permission-mode bypassPermissions --mcp-config /run/gw.json --strict-mcp-config"},
+		// In a sandbox the sandbox is the gate: Claude asks nothing in its own terminal, where nobody would see it.
+		{agent.StartSpec{Policy: agent.PolicyLight, Sandbox: box}, "--permission-mode bypassPermissions"},
+		{agent.StartSpec{Policy: agent.PolicyAsk, Sandbox: box}, "--permission-mode bypassPermissions"},
 	}
 	for _, c := range cases {
 		a, err := args(c.spec, "/m", "id", "")
@@ -406,6 +409,18 @@ func TestTurnUsageAndPlanWindows(t *testing.T) {
 	got, _ := Provider{}.Usage(context.Background())
 	if got.Provider != "claude" || len(got.Windows) != 1 || got.Windows[0].Resets.IsZero() {
 		t.Errorf("Usage = %+v", got)
+	}
+}
+
+// A turn that leaves background work running says what it is: the Stop hook's background_tasks.
+func TestTurnEndCarriesBackgroundWork(t *testing.T) {
+	h := fakeHarness(t)
+	s := agenttest.Start(t, h)
+	s.Wait("ready", func(ev agent.Event) bool { _, ok := ev.(agent.Ready); return ok })
+	s.Send("test in the background")
+	end := s.Wait("the turn's end", func(ev agent.Event) bool { _, ok := ev.(agent.TurnEnd); return ok }).(agent.TurnEnd)
+	if len(end.Background) != 1 || end.Background[0] != (core.BackgroundTask{Kind: "shell", Description: "Run the suite"}) {
+		t.Errorf("background = %q", end.Background)
 	}
 }
 

@@ -61,6 +61,7 @@ type session struct {
 	refused      bool // the agent couldn't start for a lost login: started once it's back
 	notes        []string
 	delivered    []core.ThreadID // the threads the turn now running was given
+	held         []core.ThreadID // threads given to turns that left background work running: busy until it's done
 	activity     []core.Activity // what the agent did since it last replied
 	runs         []string        // test runs since it last replied
 	calls        map[string]agent.ToolCall
@@ -696,14 +697,18 @@ func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 	h.mu.Lock()
 	h.working, h.interrupting = false, false
 	started := h.turnAt
-	delivered := h.delivered
-	h.delivered = nil
+	delivered := append(h.held, h.delivered...)
+	h.held, h.delivered = nil, nil
+	if len(ev.Background) > 0 {
+		h.held, delivered = delivered, nil
+	}
 	h.mu.Unlock()
 	for _, tid := range delivered {
 		_, _ = h.w.mutateThread(h.id, tid, func(t *core.Thread) error { t.Busy = false; return nil })
 	}
 	h.setAgent(func(a *core.AgentState) {
 		a.Working = false
+		a.Background = ev.Background
 		a.Stats.Turns++
 		u := ev.Usage
 		a.Stats.Input += u.Input
@@ -722,7 +727,9 @@ func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 		}
 	})
 	h.kick()
-	h.idle()
+	if len(ev.Background) == 0 {
+		h.idle()
+	}
 }
 
 // askUser opens an ask and waits for the user's answer, or for ctx.

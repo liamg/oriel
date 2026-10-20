@@ -93,7 +93,7 @@ func (x *editorPlugin) presenting(p vim.Pane) (*windowPresent, registry.BufferPr
 func (x *editorPlugin) presentPane(c *ui.Ctx, p vim.Pane, wp *windowPresent, pr registry.BufferPresenter, focused bool, width float32) {
 	id := p.ID()
 	root := c.Next("present")
-	c.Column("present", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+	c.Column("present", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Selectable: true}, func(c *ui.Ctx) {
 		top, moved := drawPresentation(c, x.h, x.sh, wp.st, presentation{presenter: pr, path: x.path(p), name: p.Name(), buf: p.Buffer(),
 			window: strconv.Itoa(int(id)), kicker: filepath.Base(p.Name()), focused: focused, root: root,
 			source: func(line int) {

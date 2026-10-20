@@ -11,9 +11,8 @@ The launcher starts a session: `⌘N`, **New Session** on the start view, or `se
 
 ## Prompt
 
-What the agent should do. A **ticket** names the branch and goes to the agent too. Some modes ask for more first:
-**Review PR** a pull request's URL, **New repo** a name, a template (empty, a Go module, a Go CLI, or a git URL) and
-where it goes, **Direct** the directory to open.
+What the agent should do. A **ticket** names the branch and goes to the agent too. **Review PR** asks for a pull
+request's URL instead; a pull request's link pasted into the prompt picks Review PR with the link filled in.
 
 ## Ticket
 
@@ -24,11 +23,14 @@ your own, the ticket is the request. **✕** takes it off. Start waits while the
 
 ## Mode
 
-The kind of session, and so the prompt pack its agent starts with: **Plan** drafts docs first and makes worktrees at
-Start work; **Work** goes straight to the worktrees; **Review PR** checks out someone else's change read-only;
-**Tour** explains how something works; **Job** runs to done on its own; **New repo** starts from nothing; **Direct**
-opens a directory as it is, with no worktree; **Scratch** has no repo. Plugins add kinds of their own, and they show
-here too. `h` and `l` move along the strip.
+The kind of session, and so the prompt pack its agent starts with: **Work** (the default) goes straight to the
+worktrees; **Plan** drafts docs first and makes worktrees at Start work; **Review PR** checks out someone else's change
+read-only. Work and Plan start with no repos too: a chat, or work whose repos come later. `h` and `l` move along the
+strip.
+
+The other kinds aren't modes here: a **job** runs from the Jobs page (`:help jobs`), and **New repo**, **Direct** or
+any kind starts with `session.start {kind}` (from Lua, the omnibox or Ori). `session.new {kind}` opens the launcher on
+any kind, and a plugin's kind is a mode here when it asks to be (`Launcher` on its kind).
 
 ## Agent
 

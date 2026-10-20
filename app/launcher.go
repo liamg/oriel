@@ -60,7 +60,7 @@ type launcher struct {
 
 	kind                                          int
 	prompt, ticket, pr, dir, name, parent, branch string
-	template, variant                             string
+	template                                      string
 	provider, model, effort                       string
 	chosen                                        []core.RepoID
 	repoFilter                                    string
@@ -123,7 +123,7 @@ func (x *launcher) openWith(a registry.Args) {
 	}
 	*x = launcher{disposer: x.disposer, sh: x.sh, h: x.h, gen: x.gen + 1, open: true, focusField: true,
 		prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
-		name: spec.Name, template: spec.Template, variant: spec.Variant, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
+		name: spec.Name, template: spec.Template, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
 		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", backend: spec.Sandbox.Backend, branch: spec.Branch,
 		card: ticketCard{key: strings.TrimSpace(spec.Ticket)}}
 	if x.template == "" {
@@ -149,7 +149,7 @@ func (x *launcher) load(want core.Kind) {
 		x.loadErr = err.Error()
 		return
 	}
-	x.kinds = c.Kinds().All()
+	x.kinds = launcherKinds(c.Kinds().All(), want)
 	if i := slices.IndexFunc(x.kinds, func(k host.KindSpec) bool { return k.Kind == want }); i >= 0 {
 		x.kind = i
 	}
@@ -215,6 +215,34 @@ func (x *launcher) pickProvider(id string) {
 	}
 }
 
+// launcherKinds are the kinds the launcher offers: those marked Launcher, and want when it was asked for by name.
+func launcherKinds(all []host.KindSpec, want core.Kind) []host.KindSpec {
+	var out []host.KindSpec
+	for _, k := range all {
+		if k.Launcher || k.Kind == want {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+// pastedPR moves a pull request's link pasted alone into the prompt to the PR field, and picks the kind that starts
+// from one.
+func (x *launcher) pastedPR(before string) {
+	url := strings.TrimSpace(x.prompt)
+	if len([]rune(x.prompt))-len([]rune(before)) < 2 || strings.ContainsAny(url, " \n") || x.sh.sites == nil {
+		return
+	}
+	if _, ok := x.sh.sites.url(url); !ok {
+		return
+	}
+	i := slices.IndexFunc(x.kinds, func(k host.KindSpec) bool { return startsFrom(k) == host.FromPR })
+	if i < 0 {
+		return
+	}
+	x.kind, x.pr, x.prompt, x.focusField, x.err = i, url, "", true, ""
+}
+
 func (x *launcher) current() (host.KindSpec, bool) {
 	if x.kind < len(x.kinds) {
 		return x.kinds[x.kind], true
@@ -261,37 +289,6 @@ func (x *launcher) missing() string {
 	return ""
 }
 
-// chosenVariant is the kind's variant the launcher holds: the one picked, else its first; "" for a kind with none.
-func (x *launcher) chosenVariant(k host.KindSpec) string {
-	for _, v := range k.Variants {
-		if v.ID == x.variant {
-			return v.ID
-		}
-	}
-	if len(k.Variants) > 0 {
-		return k.Variants[0].ID
-	}
-	return ""
-}
-
-// variantField picks the kind's variant (a tour's walkthrough, demo…).
-func (x *launcher) variantField(c *ui.Ctx, k host.KindSpec) {
-	cur := x.chosenVariant(k)
-	var opts []string
-	label := cur
-	for _, v := range k.Variants {
-		o := v.ID + " · " + v.Desc
-		opts = append(opts, o)
-		if v.ID == cur {
-			label = o
-		}
-	}
-	if o, ok := widget.Select(c, "variant", strings.ToLower(k.Title)+": "+label, opts, widget.SelectOpts{Label: k.Title + " kind", Help: "agent/launcher#prompt",
-		Width: 300}); ok {
-		x.variant, _, _ = strings.Cut(o, " · ")
-	}
-}
-
 // home expands a leading ~.
 func (x *launcher) home(p string) string {
 	p = strings.TrimSpace(p)
@@ -316,9 +313,6 @@ func (x *launcher) args() registry.Args {
 		if x.backend != "" {
 			a["backend"] = x.backend
 		}
-	}
-	if v := x.chosenVariant(k); v != "" {
-		a["variant"] = v
 	}
 	switch startsFrom(k) {
 	case host.FromPrompt:
@@ -524,15 +518,14 @@ func (x *launcher) form(c *ui.Ctx) {
 		case host.FromDir:
 			x.field(c, "dir", &x.dir, "Directory", dirPlaceholder, true, ui.Flex(1), 1)
 		}
-		x.field(c, "text", &x.prompt, "Prompt", promptPlaceholder, f == host.FromPrompt || f == host.FromNothing, ui.Flex(1), 8)
+		before := x.prompt
+		x.field(c, "text", &x.prompt, "Prompt", promptPlaceholder, f == host.FromPrompt, ui.Flex(1), 8)
 		if f == host.FromPrompt {
+			x.pastedPR(before)
 			x.lookTicket(c)
 			x.ticketCard(c)
 			c.Row("extra", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				x.field(c, "ticket", &x.ticket, "Ticket", "ticket: ENG-2231", false, ui.Px(220), 1)
-				if len(k.Variants) > 0 {
-					x.variantField(c, k)
-				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				note := "the ticket names the branch and goes to the agent"
 				if x.ticketHere() != nil {
@@ -1092,7 +1085,7 @@ func (x *launcher) preflight() [][2]string {
 		return [][2]string{{"kinds", "none"}}
 	}
 	worktrees := map[host.Worktrees]string{host.WorktreesNow: "now, from a fetched base", host.WorktreesStartWork: "at Start work",
-		host.WorktreesPR: "the PR's head, read-only", host.WorktreesPinned: "pinned, read-only", host.WorktreesInit: "a new repo",
+		host.WorktreesPR: "the PR's head, read-only", host.WorktreesInit: "a new repo",
 		host.WorktreesNone: "none"}[k.Worktrees]
 	if k.Kind == core.KindDirect {
 		worktrees = "none: the directory itself"

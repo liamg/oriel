@@ -28,8 +28,15 @@ func (p *Provider) Resume(ctx context.Context, id string, s agent.StartSpec) (ag
 	return p.start(ctx, s, id)
 }
 
-// gate is the approval policy and sandbox mode for a policy.
+// gate is the approval policy and sandbox mode for a policy. In a sandbox there's no approval: the sandbox and its
+// gateway are the gate.
 func gate(s agent.StartSpec) (approval, sandbox string, err error) {
+	if s.Sandbox != nil {
+		switch s.Policy {
+		case agent.PolicyAsk, agent.PolicyLight, agent.PolicyBypass, "":
+			return "never", "danger-full-access", nil
+		}
+	}
 	switch s.Policy {
 	case agent.PolicyAsk, "":
 		return "untrusted", "workspace-write", nil

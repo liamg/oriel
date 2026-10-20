@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"github.com/liamg/oriel/theme"
 	"io"
 	"path/filepath"
 	"strings"
@@ -146,7 +147,8 @@ func TestAgentConsoleShowsEachBlock(t *testing.T) {
 		a.Emit(ev)
 	}
 	r.waitFrame("every block", func(s string) bool {
-		return containsAll(s, "Reading the limiter to see what it exposes.", "Read", "internal/ratelimit/limiter.go", "3 lines",
+		// Only what's in view is drawn: the prose and the prompt at the top are checked once the keys reveal them.
+		return containsAll(s, "Read", "internal/ratelimit/limiter.go", "3 lines",
 			"Edit", "+1", "-1", "view in diff ↗", "secs := int(time.Until(res.ResetAt()).Seconds())", "Bash", "go test ./...", "SUBAGENTS", "1 running",
 			"explorer", "Find every 429 path", "the API is overloaded", "WORKING")
 	})
@@ -158,7 +160,9 @@ func TestAgentConsoleShowsEachBlock(t *testing.T) {
 	r.typeKeys("kkk<CR>") // from the shell call clicked: the read, the edit, then the thinking
 	r.waitText("The limiter has a ResetAt already.")
 	r.typeKeys("kk") // the prose, then the prompt, scrolled into view
-	r.waitFrame("the prompt", func(s string) bool { return containsAll(s, "YOU", "Add Retry-After to the 429 path") })
+	r.waitFrame("the prompt", func(s string) bool {
+		return containsAll(s, "YOU", "Add Retry-After to the 429 path", "Reading the limiter to see what it exposes.")
+	})
 }
 
 // AI-7: a permission's card answers the agent: Allow once on a click, Always on a, and ⇧n's note goes back with the
@@ -359,4 +363,26 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 	if got := a.WaitSent(t); !strings.Contains(got.Text, "signed in again") {
 		t.Errorf("the agent was told %q", got.Text)
 	}
+}
+
+// A turn that left background work running hasn't finished the work: the chip still says it's working.
+func TestConsoleStatusWithBackgroundWork(t *testing.T) {
+	se := core.SessionState{Agent: core.AgentState{Provider: "claude", Running: true, Background: []core.BackgroundTask{{Kind: "shell", Description: "go test ./..."}}}}
+	if got, tok := consoleStatus(se); got != "working in the background" || tok != theme.StatusWorking {
+		t.Errorf("chip = %q", got)
+	}
+}
+
+// A turn that ends with work left running lists it at the transcript's end, and the chip says it's still working.
+func TestAgentConsoleListsBackgroundWork(t *testing.T) {
+	r, a, _ := consoleSession(t)
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{Background: []core.BackgroundTask{{Kind: "shell", Description: "Run the whole suite"}, {Kind: "subagent", Description: "Review the diff"}}})
+	r.waitFrame("the background work", func(s string) bool {
+		return containsAll(s, "WORKING IN THE BACKGROUND", "IN THE BACKGROUND", "2 running · wakes the agent when done",
+			"shell", "Run the whole suite", "subagent", "Review the diff")
+	})
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{})
+	r.waitFrame("the work done", func(s string) bool { return !strings.Contains(s, "IN THE BACKGROUND") && strings.Contains(s, "IDLE") })
 }

@@ -10,8 +10,19 @@ A pane shows one window on a buffer. Keys go to the input engine (vim by default
 
 - The tab is the buffer's file, with a dot while it has changes not written.
 - `:w` writes, `:e file` opens, `:split` and `⌃W` move between panes, which are the layout's.
-- `y`, `d` and `p` use the system clipboard.
+- `y`, `d` and `p` use the system clipboard, and so do ⌘C, ⌘X and ⌘V (⌃⇧C, ⌃⇧X, ⌃⇧V on Linux) in any mode: copy
+  and cut the selection, paste at the cursor or over the selection.
+- The mouse selects as in gvim: drag to select, double-click for a word, triple-click for the line, ⇧-click to
+  extend, ⌥-drag for a block. Dragging past the top or bottom scrolls. ⌘A selects the whole buffer.
+- Long lines run past the edge: the window scrolls sideways to follow the cursor (`editor.side_scroll`,
+  `editor.side_scroll_off`), `zl`/`zh`/`zL`/`zH`/`zs`/`ze` scroll it, and so does a sideways wheel or trackpad.
 - A file that changes on disk reloads by itself, unless you've changed it too: then Oriel asks.
+
+## Wrapping {#wrap}
+
+`editor.wrap` is off by default. Turn it on with `:set wrap` (`:set wrap!` switches it), the
+*Wrap long lines* command, or **wrap** on the status line, which is bright while lines wrap. Wrapped, a long
+line continues on the rows below; `gj`, `gk`, `g0`, `g^`, `gm` and `g$` move by those rows, and `j`/`k` by lines.
 
 {{options "editor"}}
 {{keys "editor.*"}}

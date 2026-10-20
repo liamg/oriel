@@ -25,26 +25,27 @@ flowchart LR
 
 ## Kinds
 
-| Kind | Starts from | Worktree | Agent |
-|---|---|---|---|
-| **plan** | a prompt or a ticket | created at Start work | drafts docs, then implements |
-| **work** | a prompt, a ticket, or an existing branch | created immediately from an up-to-date base | yes |
-| **review** | a PR URL or an agentbus review request | the PR's head, read-only by default | AI review |
-| **tour** | a question | a pinned, read-only worktree | writes the tour |
-| **job** | a saved prompt | created by the agent as needed | runs to done or blocked |
-| **new repo** | a name and a template | a fresh repo | optional |
-| **direct** | a directory, from the launcher | **none: the directory itself**, git repo or not | optional, with a warning |
-| **scratch** | nothing | none | optional |
+| Kind | Starts from | Worktree | Agent | In the launcher |
+|---|---|---|---|---|
+| **work** | a prompt, a ticket, or an existing branch | created immediately from an up-to-date base | yes | yes, the default |
+| **plan** | a prompt or a ticket | created at Start work | drafts docs, then implements | yes |
+| **review** | a PR URL or an agentbus review request | the PR's head, read-only by default | AI review | yes |
+| **job** | a saved prompt | created by the agent as needed | runs to done or blocked | no: the Jobs page |
+| **new repo** | a name and a template | a fresh repo | optional | no: `session.start` |
+| **direct** | a directory | **none: the directory itself**, git repo or not | optional, with a warning | no: `session.start` |
+
+- **Work** and **plan** start on zero or more repos. With none, the workspace has no projects yet (a chat, or work
+  whose repos come later); a repo added later gets its worktree on the session's branch (`AddRepo`). There is no
+  scratch kind: a chat with no repo is Ori (the assistant), or a work or plan session with no repos.
+- **Tours**: removed (the user's decision).
 
 - **New repo**: pick a name and a template (empty, Go module, Go CLI, or any GitHub
   template repo). Oriel runs `git init`, optionally creates the GitHub repo (private by default, through the gateway with approval),
   registers it, and continues as a plan session ("what are we building?").
 - **Direct** is "classic" editing: it opens any directory in place, git repo or not, with no worktree and no new
-  branch. It's a first-class choice in the launcher. The tab is marked `direct`, and an agent there gets a warning first because it would be editing your real checkout.
+  branch. It starts with `session.start {kind = "direct", dir}`. The tab is marked `direct`, and an agent there gets a warning first because it would be editing your real checkout.
   Open Directory (and `oriel <dir>`) is a direct session with no agent, reused for that directory. A direct session
   ships from the branch its checkout is on now (`host.directBranch`), since it's the user's own and they switch it.
-- **Scratch** holds notes, the assistant, and terminals with no repo.
-
 ## Starting one
 
 - **The app opens on mission control** (`ui.md` 03), not a file dialog. `⌘N` opens the launcher (`ui.md` 04): prompt, mode,
@@ -52,7 +53,8 @@ flowchart LR
 - **From anywhere**: a ticket from any tracker, Linear or another (plan or work), a PR link (review), a branch in the Explorer (work on that branch), a failing CI run
   ("fix CI" opens a work session on the PR's branch), or an agentbus review request.
 - **Commands**: `session.start` takes the launcher's fields as args (`{kind, prompt, repos, ticket, …}`), so Lua and
-  the assistant start any kind without the launcher; `session.new` opens the launcher.
+  the assistant start any kind without the launcher, those it doesn't offer too; `session.new` opens the launcher
+  (on any kind given as `{kind}`).
 - **Starting doesn't wait for the agent.** `host.Start` returns once the session and its first request exist; the
   agent starts off the call (`startAside`, which `Host.Close` cancels and waits for), as does a comment to a
   session whose agent isn't up. A sandbox's first start can take minutes (the image, toolchains, Claude's binary),
@@ -110,7 +112,7 @@ stateDiagram-v2
 - **Worktrees** are created from a freshly fetched base on a branch named `<you>/<ticket>-<slug>`. All repos in the session
   share the branch. Repos can be added mid-session (by you, or by the agent asking).
 - **Start next PR** cuts a new branch from the updated base inside the same session. Earlier PRs stay readable under Previous.
-- **Archiving** (after merge, or by hand) removes the worktrees but keeps the threads, transcript, tours and test history, so
+- **Archiving** (after merge, or by hand) removes the worktrees but keeps the threads, transcript and test history, so
   past sessions stay searchable in the omnibox.
 - **Sessions survive restarts**: the agent resumes by session id, and the layout, open buffers and cursor positions come back.
   Built (SE-2): the layout is kept per directory as it changes, and views revive their instances through
@@ -142,7 +144,7 @@ type Repo struct {
     BaseBranch string
 }
 
-type Kind string // "plan" | "work" | "review" | "tour" | "job" | "newrepo" | "direct" | "scratch" | plugin-defined
+type Kind string // "work" | "plan" | "review" | "job" | "newrepo" | "direct" | plugin-defined
 
 type SessionSpec struct {
     Kind     Kind
@@ -154,7 +156,6 @@ type SessionSpec struct {
     Provider string            // "claude", "codex", "" for none
     Sandbox  SandboxPolicy
     Template string            // newrepo kind
-    Variant  string            // one of the kind's variants: a tour's walkthrough, onboarding…
     Context  string            // goes to the agent after the prompt, not kept as it: a ticket's text (PL-8)
 }
 
@@ -231,21 +232,21 @@ type Sessions interface {
     menus); a new model runs at its default effort unless one is picked. The dialog sends only what was changed.
   - A change of sandbox, network, model or effort with the conversation kept restarts the agent by its own id
     (`Resume`), so it carries on in the new place.
-- **Direct** never makes a worktree or a workspace: the directory itself, git repo or not. **Scratch** gets a
-  directory for notes and no repo. **New repo** makes the repo from a template (`empty`, `go-module`, `go-cli`, or a
+- **Direct** never makes a worktree or a workspace: the directory itself, git repo or not. **New repo** makes the repo from a template (`empty`, `go-module`, `go-cli`, or a
   git URL), commits it, registers it, and carries on as a plan for it. **Review** fetches `pull/<n>/head` from the
   registered repo whose remote matches the PR's URL, and pins a read-only worktree there. Since RV-3 it's AI-reviewed
   as it starts, by a model other than its agent's (`KindSpec.AutoReview`; `agents.md`, Guardrails).
-- **The launcher** (`ui.md` 04) lists the host's kinds (`host.Kinds`, `host.KindSpec`: title, `Desc`, `About`,
-  `From`), and starts the chosen one through `session.start`; each kind's agent starts with its kind's prompt pack.
-  A kind's `Variants` (RV-8: a tour's walkthrough, onboarding, archaeology, showcase, demo, incident and
-  feasibility) are a picker beside the ticket and `variant` on `session.start`; the first is the default, and one the kind
-  hasn't is refused. A tour's is its manifest's `tour.kind`.
+- **The launcher** (`ui.md` 04) lists the host's kinds marked `Launcher` (`host.Kinds`, `host.KindSpec`: title,
+  `Desc`, `About`, `From`, `Launcher`): Work, Plan and Review PR built in, in that order, Work first and picked. A
+  kind `session.new {kind}` names is listed too. It starts the chosen one through `session.start`; each kind's agent
+  starts with its kind's prompt pack. A pull request's link pasted alone into the prompt picks the first listed kind
+  that starts from a PR (`FromPR`), with the link in its field; a code host's plugin decides what a link is
+  (`registry.CodeHost.Takes`).
 - **The app opens on mission control** (SH-7) once there's a session to show, when it starts with nothing open
   (`mission.at_launch`); with no session it stays on the start view, whose Recent lists the sessions first.
 - **Files outside the session** open read-only: the sessions plugin's `BufRead` rewrite hook marks a file outside
   every project and the session's own directory "outside the session", and one in a project the session only reads
-  (a plan's checkouts before Start work, a tour, a review) "the session only reads it". It applies while the window
+  (a plan's checkouts before Start work, a review) "the session only reads it". It applies while the window
   is on the session in front. Go-to-definition and peek reach them as any file.
 - **Archive** refuses while a worktree has uncommitted work, then removes the worktrees and keeps the session's
   threads, transcript and test runs (`oriel` searches them: `session.search` over the whole log, not only what the

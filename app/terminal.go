@@ -73,6 +73,8 @@ type terminal struct {
 	done      bool
 	err       error
 
+	sel *termSel // what the mouse selected
+
 	normal  bool
 	ed      *edit.Editor
 	vim     *vim.Engine

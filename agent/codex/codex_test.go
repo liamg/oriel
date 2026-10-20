@@ -262,6 +262,8 @@ func TestGate(t *testing.T) {
 		{agent.PolicyLight, false, "on-request", "workspace-write", false},
 		{agent.PolicyBypass, false, "", "", true},
 		{agent.PolicyBypass, true, "never", "danger-full-access", false},
+		{agent.PolicyLight, true, "never", "danger-full-access", false},
+		{agent.PolicyAsk, true, "never", "danger-full-access", false},
 	} {
 		s := agent.StartSpec{Policy: tc.policy}
 		if tc.sandboxed {

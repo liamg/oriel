@@ -679,7 +679,7 @@ func TestTheLauncherPromptTakesLines(t *testing.T) {
 	if err := s.host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil { // no sandbox here
 		t.Fatal(err)
 	}
-	s.run("session.new", registry.Args{"kind": "scratch"})
+	s.run("session.new", registry.Args{"kind": "plan"})
 	var l *launcher
 	for _, e := range s.plugins {
 		if v, ok := e.(*launcher); ok {

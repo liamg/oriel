@@ -187,12 +187,10 @@ clip 44,38 1556x936 r 0
       text "0s" @1569.5938,699.36804 #ece6d8 JetBrains Mono 11.5
       rect 1270,716.81805 330x1 fill #24221d
       text "RULES IN FORCE" @1286,741.50806 #7c7566 JetBrains Mono 9.5
-      rect 1286,753.35803 86.27002x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
-      text "EDIT · AUTO" @1293,765.04803 #4fe0a0 JetBrains Mono 9.5
-      rect 1378.27,753.35803 79.69995x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
-      text "BASH · ASK" @1385.27,765.04803 #ff7ad6 JetBrains Mono 9.5
-      rect 1463.97,753.35803 73.130005x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
-      text "NET · ASK" @1470.97,765.04803 #ff7ad6 JetBrains Mono 9.5
+      rect 1286,753.35803 92.839966x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
+      text "TOOLS · AUTO" @1293,765.04803 #4fe0a0 JetBrains Mono 9.5
+      rect 1384.84,753.35803 73.130005x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
+      text "NET · ASK" @1391.84,765.04803 #ff7ad6 JetBrains Mono 9.5
       rect 1286,778.8981 132.26001x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
       text "GIT PUSH · GATEWAY" @1293,790.5881 #ff7ad6 JetBrains Mono 9.5
       text "Permissions and connections ›" @1286,816.06305 #ffd23f Inter 12
@@ -206,7 +204,7 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-text "CPU" @1506.4375,984.71 #7c7566 JetBrains Mono 10.5
-text "34%" @1532.2188,984.71 #ece6d8 JetBrains Mono 10.5
+text "CPU" @1538.4375,984.71 #7c7566 JetBrains Mono 10.5
+text "34%" @1564.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 22.09375,301 13.40625x13.5 fill #ff9b45 radius 6.75
 text "1" @26.09375,310.81003 #141006 JetBrains Mono 8.5

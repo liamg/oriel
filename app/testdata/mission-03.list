@@ -252,8 +252,8 @@ clip 44,38 1556x936 r 0
   rect 909,741.43317 26x26 fill #191815 radius 6
   path 5 segments fill #4fe0a0
   clip 947,738.6384 372.8125x31.589478 r 0
-    text "tour: auth flow" @947,751.2322 #ece6d8 Inter 13
-    text "tour" @947,767.07794 #7c7566 JetBrains Mono 10.5
+    text "auth flow" @947,751.2322 #ece6d8 Inter 13
+    text "plan" @947,767.07794 #7c7566 JetBrains Mono 10.5
   pop
   text "1d" @1331.8125,758.2132 #4f4a40 JetBrains Mono 10.5
 pop
@@ -262,8 +262,8 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-text "CPU" @1506.4375,984.71 #7c7566 JetBrains Mono 10.5
-text "34%" @1532.2188,984.71 #ece6d8 JetBrains Mono 10.5
+text "CPU" @1538.4375,984.71 #7c7566 JetBrains Mono 10.5
+text "34%" @1564.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 0,38 1600x962 fill #060606
 clip 0,38 1600x962 r 0
   rect 0,38 1600x52 fill #0c0c0b

@@ -3,8 +3,10 @@ package app
 import (
 	"encoding/json"
 	"image/color"
+	"math"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/registry"
@@ -22,6 +24,7 @@ var (
 	tTermDotOK  = theme.Declare("terminal.exit.ok", "ok")
 	tTermDotBad = theme.Declare("terminal.exit.failed", "error")
 	tTermMode   = theme.Declare("statusline.mode.terminal", "status.quiet")
+	tTermSel    = theme.DeclareOn("terminal.selection", "alpha(accent, 28%)", "terminal.bg")
 	// The 16 ANSI colours, which a theme's terminal palette sets (theming.md).
 	tTermANSI = func() [16]theme.TokenID {
 		defs := [16]string{"bg2", "red", "green", "amber", "blue", "violet", "cyan", "fg2",
@@ -154,6 +157,9 @@ func (x *terminals) draw(c *ui.Ctx, t *terminal, focused bool) {
 			t.emu.Resize(cols, rows)
 			t.src.Resize(cols, rows)
 		}
+		if !t.normal {
+			x.pointer(c, t, in, r, charW)
+		}
 	}
 	if focused && !in.Focused {
 		c.Focus(id)
@@ -174,8 +180,22 @@ func (x *terminals) draw(c *ui.Ctx, t *terminal, focused bool) {
 		dots := t.exitDots()
 		c.Paint("grid", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
 			x0 := r.Min.X + termGutter
+			from, to, selecting := t.selection()
 			for row, line := range grid.Lines {
 				y := r.Min.Y + 3 + float32(row)*termLineH
+				if at := sb.Offset + row; selecting && at >= from.Y && at <= to.Y {
+					lo, hi := 0, len(line.Cells)
+					if at == from.Y {
+						lo = from.X
+					}
+					if at == to.Y {
+						hi = to.X + 1
+					}
+					if hi > lo {
+						f.Rect(render.Rect{Min: render.Point{X: x0 + float32(lo)*charW, Y: y}, Max: render.Point{X: x0 + float32(hi)*charW, Y: y + termLineH}},
+							render.Style{Fill: th.C(tTermSel)})
+					}
+				}
 				if d, ok := dots[sb.Offset+row]; ok {
 					tok := tTermDotOK
 					if d == "failed" {
@@ -448,6 +468,19 @@ func (x *terminals) key(c *ui.Ctx, t *terminal, k render.KeyEvent) {
 	if t.done {
 		return
 	}
+	if n == "<D-a>" {
+		sb := t.emu.Scrollbar()
+		t.sel = &termSel{anchor: term.Point{}, end: term.Point{X: max(t.cols-1, 0), Y: max(sb.Total-1, 0)}, clicks: 2}
+		return
+	}
+	if n == "<D-c>" || n == "<C-S-c>" {
+		if from, to, ok := t.selection(); ok {
+			c.Clipboard().SetClipboard(t.emu.Text(from, to))
+			t.sel = nil
+			return
+		}
+	}
+	t.sel = nil
 	if n == "<D-v>" || n == "<C-S-v>" {
 		if s, ok := c.Clipboard().ReadClipboard(); ok {
 			t.src.Write(t.emu.Paste(s))
@@ -509,4 +542,83 @@ func termKey(k render.KeyEvent) term.KeyEvent {
 		ev.Text = k.Key
 	}
 	return ev
+}
+
+// termSel is a selection in a terminal, by cell from the top of its scrollback, so it holds while the view scrolls.
+type termSel struct {
+	anchor, end term.Point
+	held        bool
+	clicks      int
+	last        time.Time
+	lastAt      term.Point
+}
+
+// selection is t's selected cells, first to last, while it has some.
+func (t *terminal) selection() (from, to term.Point, ok bool) {
+	s := t.sel
+	if s == nil || s.anchor == s.end && s.clicks < 2 {
+		return term.Point{}, term.Point{}, false
+	}
+	from, to = s.anchor, s.end
+	if to.Y < from.Y || to.Y == from.Y && to.X < from.X {
+		from, to = to, from
+	}
+	return from, to, true
+}
+
+// pointer selects in t with the mouse: a drag from the press, a double click the word, a triple the row. Dragging past
+// the top or bottom scrolls.
+func (x *terminals) pointer(c *ui.Ctx, t *terminal, in ui.Interaction, r render.Rect, charW float32) {
+	if !in.Held && !in.Clicked {
+		if t.sel != nil {
+			t.sel.held = false
+		}
+		return
+	}
+	at := in.Pointer()
+	sb := t.emu.Scrollbar()
+	row := int(math.Floor(float64((at.Y - r.Min.Y - 3) / termLineH)))
+	switch {
+	case in.Held && row < 0:
+		t.emu.Scroll(term.Scroll{To: term.ScrollDelta, Delta: -1})
+		c.WakeAt(c.Now().Add(40 * time.Millisecond))
+	case in.Held && row >= t.rows:
+		t.emu.Scroll(term.Scroll{To: term.ScrollDelta, Delta: 1})
+		c.WakeAt(c.Now().Add(40 * time.Millisecond))
+	}
+	col := min(max(int(math.Floor(float64((at.X-r.Min.X-termGutter)/charW))), 0), t.cols-1)
+	p := term.Point{X: col, Y: sb.Offset + min(max(row, 0), t.rows-1)}
+	s := t.sel
+	if s != nil && s.held {
+		if s.clicks < 2 {
+			s.end = p
+		}
+		s.held = in.Held
+		return
+	}
+	now := c.Now()
+	clicks := 1
+	if s != nil && now.Sub(s.last) < mouseTime && p == s.lastAt {
+		clicks = s.clicks + 1
+	}
+	s = &termSel{anchor: p, end: p, held: in.Held, clicks: clicks, last: now, lastAt: p}
+	t.sel = s
+	if clicks == 1 {
+		return
+	}
+	line := t.emu.Grid().Lines[p.Y-sb.Offset].Cells
+	if clicks >= 3 {
+		s.anchor.X, s.end.X = 0, max(len(line)-1, 0)
+		return
+	}
+	blank := func(i int) bool { return i < 0 || i >= len(line) || strings.TrimSpace(line[i].Text) == "" }
+	if blank(p.X) {
+		return
+	}
+	for s.anchor.X > 0 && !blank(s.anchor.X-1) {
+		s.anchor.X--
+	}
+	for !blank(s.end.X + 1) {
+		s.end.X++
+	}
 }

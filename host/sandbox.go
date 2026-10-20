@@ -259,7 +259,12 @@ func manifestOf(root string, se core.SessionState) sandbox.Manifest {
 	var m sandbox.Manifest
 	for _, p := range se.Projects {
 		rel, err := filepath.Rel(root, p.Dir)
-		if err != nil || p.Repo == "" || rel == ".." || strings.HasPrefix(rel, "../") {
+		if err != nil || p.Repo == "" {
+			continue
+		}
+		if rel == ".." || strings.HasPrefix(rel, "../") {
+			// A checkout read in place, with no worktree here yet: the agent reads it, read-only.
+			m.Reads = append(m.Reads, p.Dir)
 			continue
 		}
 		m.Projects = append(m.Projects, sandbox.Project{Name: p.Name, Repo: p.Repo, Dir: rel, Branch: p.Branch, Primary: p.Primary})

@@ -56,3 +56,21 @@ keys:   :set ts=4 sw=8 noet<CR>>>
 expect:
   |		x
 mode:   normal
+
+=== :set et! inverts a toggle option
+ref:    nvim/options.txt *:set-!*
+quote:  Toggle option: Invert value.
+given:  |x
+keys:   :set sw=8 et<CR>:set et!<CR>>>
+expect:
+  |	x
+mode:   normal
+
+=== :set invet inverts it too
+ref:    nvim/options.txt *:set-inv*
+quote:  Toggle option: Invert value.
+given:  |x
+keys:   :set sw=8 ts=8 noet<CR>:set invet<CR>>>
+expect:
+  |        x
+mode:   normal

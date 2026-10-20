@@ -46,9 +46,9 @@ func (e *Engine) prevRow(line int) int { return e.foldStart(line - 1) }
 
 // botline is the first line below the window, as vim's w_botline: past the end when the end shows.
 func (e *Engine) botline(v *view) int {
-	l := e.top
-	for range e.Height() {
-		if l >= v.lines() {
+	l, used := e.top, 0
+	for l < v.lines() {
+		if used += e.rowsOf(v, l); used > e.Height() {
 			break
 		}
 		l = e.nextRow(l)
@@ -59,18 +59,19 @@ func (e *Engine) botline(v *view) int {
 // emptyRows is how many rows below the last line the window shows ("~" lines).
 func (e *Engine) emptyRows(v *view) int {
 	rows, l := 0, e.top
-	for l < v.lines() && rows < e.Height() {
+	for l < v.lines() && rows+e.rowsOf(v, l) <= e.Height() {
+		rows += e.rowsOf(v, l)
 		l = e.nextRow(l)
-		rows++
 	}
 	return e.Height() - rows
 }
 
 // rowsBetween counts the rows from line a up to but not including line b.
 func (e *Engine) rowsBetween(a, b int) int {
+	v := e.view()
 	n := 0
 	for l := a; l < b; l = e.nextRow(l) {
-		n++
+		n += e.rowsOf(v, l)
 	}
 	return n
 }
@@ -78,6 +79,7 @@ func (e *Engine) rowsBetween(a, b int) int {
 // updateTop scrolls so the cursor shows, as vim's update_topline: a little way off the window scrolls just enough,
 // further away centres the cursor.
 func (e *Engine) updateTop(v *view) {
+	defer e.updateLeft(v)
 	h := e.Height()
 	e.top = e.foldStart(min(max(e.top, 0), v.lines()-1))
 	cur := e.foldStart(e.cur.Line)
@@ -95,7 +97,7 @@ func (e *Engine) updateTop(v *view) {
 	}
 	n := 0
 	for l := e.cur.Line; l >= bot; l = e.prevRow(l) {
-		n++
+		n += e.rowsOf(v, l)
 		if n > h+1 {
 			break
 		}
@@ -113,9 +115,9 @@ func (e *Engine) cursorToBottom(v *view, minScroll int) {
 	h := e.Height()
 	bot := e.botline(v)
 	cln := e.foldStart(e.cur.Line)
-	used, scrolled := 1, 0
+	used, scrolled := e.rowsOf(v, cln), 0
 	if cln >= bot {
-		scrolled = 1
+		scrolled = used
 		if cln == bot {
 			scrolled -= e.emptyRows(v)
 		}
@@ -126,25 +128,25 @@ func (e *Engine) cursorToBottom(v *view, minScroll int) {
 			break
 		}
 		loff = e.prevRow(loff)
-		used++
+		used += e.rowsOf(v, loff)
 		if used > h {
 			break
 		}
 		if loff >= bot {
-			scrolled++
+			scrolled += e.rowsOf(v, loff)
 			if loff == bot {
 				scrolled -= e.emptyRows(v)
 			}
 		}
 		if boff < v.lines()-1 {
 			boff = e.foldEndOf(boff + 1)
-			used++
+			used += e.rowsOf(v, e.foldStart(boff))
 			if used > h {
 				break
 			}
 			if scrolled < minScroll {
 				if boff >= bot {
-					scrolled++
+					scrolled += e.rowsOf(v, e.foldStart(boff))
 					if e.foldStart(boff) == bot {
 						scrolled -= e.emptyRows(v)
 					}
@@ -160,7 +162,7 @@ func (e *Engine) cursorToBottom(v *view, minScroll int) {
 	default:
 		i := 0
 		for b := e.top; i < scrolled && b < bot; b = e.nextRow(b) {
-			i++
+			i += e.rowsOf(v, b)
 			count++
 		}
 		if i < scrolled {
@@ -176,9 +178,11 @@ func (e *Engine) cursorToBottom(v *view, minScroll int) {
 
 // scrollBot puts the cursor's line on the window's last row.
 func (e *Engine) scrollBot() {
+	v := e.view()
 	top := e.foldStart(e.cur.Line)
-	for used := 1; top > 0 && used < e.Height(); used++ {
+	for used := e.rowsOf(v, top); top > 0 && used+e.rowsOf(v, e.prevRow(top)) <= e.Height(); {
 		top = e.prevRow(top)
+		used += e.rowsOf(v, top)
 	}
 	e.top = top
 }
@@ -190,24 +194,29 @@ func (e *Engine) halfway(v *view, atend, preferAbove bool) {
 	h := e.Height()
 	top := e.foldStart(e.cur.Line)
 	below := e.foldEndOf(e.cur.Line)
-	used, above, belowRows := 1, 0, 0
+	used, above, belowRows := e.rowsOf(v, top), 0, 0
 	for top > 0 {
 		if belowRows < above || belowRows == above && !preferAbove {
 			if below < v.lines()-1 {
 				below = e.foldEndOf(below + 1)
-				if used++; used > h {
+				n := e.rowsOf(v, e.foldStart(below))
+				if used += n; used > h {
 					break
 				}
-			} else if atend {
-				used++
+				belowRows += n
+			} else {
+				if atend {
+					used++
+				}
+				belowRows++
 			}
-			belowRows++
 			continue
 		}
-		if used++; used > h {
+		n := e.rowsOf(v, e.prevRow(top))
+		if used += n; used > h {
 			break
 		}
-		above++
+		above += n
 		top = e.prevRow(top)
 	}
 	e.top = top
@@ -241,6 +250,9 @@ func (e *Engine) scrollRows(v *view, n int) bool {
 
 // scrollCmd runs the scrolling commands; false when key isn't one.
 func (e *Engine) scrollCmd(v *view, key string, count int) bool {
+	if e.sideScrollCmd(v, key, count) {
+		return true
+	}
 	switch key {
 	case "<C-e>", "<C-y>":
 		n := max(count, 1)

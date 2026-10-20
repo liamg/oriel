@@ -111,6 +111,9 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.ignore_case` | false | input | `ignorecase`, `ic` | ED-13 |
 | `editor.smart_case` | false | input | `smartcase`, `scs` | ED-13 |
 | `editor.wrap_scan` | true | input | `wrapscan`, `ws` | ED-13 |
+| `editor.wrap` | false: long lines run off the right and the window scrolls sideways (nvim's is on) | input | `wrap` | ED-13 |
+| `editor.side_scroll` | 1 | input | `sidescroll`, `ss` | ED-13 |
+| `editor.side_scroll_off` | 0 | input | `sidescrolloff`, `siso` | ED-13 |
 | `editor.magic` | true | input | `magic` | ED-13 |
 | `editor.report` | 2 | input | `report` | ED-13 |
 | `editor.number_formats` | `bin,hex` | input | `nrformats`, `nf` | ED-13 |

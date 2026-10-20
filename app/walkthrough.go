@@ -236,7 +236,7 @@ func (x *walkthroughPlugin) start() error {
 		if err == nil {
 			subject, files, repos = ch.subject(), len(ch.files), ch.projectCount()
 			req := registry.ExplainRequest{Kind: "change", Subject: "The branch's change: " + subject, Context: ch.context(),
-				Depth: registry.ExplainDetailed, Format: walkFormat}
+				Depth: registry.ExplainDetailed, Format: x.sh.prompt(walkFormat, nil)}
 			for _, f := range ch.files {
 				req.Files = append(req.Files, f.path)
 			}

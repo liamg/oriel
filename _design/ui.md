@@ -20,7 +20,7 @@ They are design sketches, not the implementation: the app draws natively (see `s
 - **Indicators**: tiny live readouts (label, bar or value, sparkline) placed in fixed
   slots: titlebar right, statusline, session footer, mission-control strip.
   Hold `⌥` to pull the full HUD down over anything.
-- **Annotation house style** (explain, tours, `:Inspect`): numbered diamond,
+- **Annotation house style** (explain, `:Inspect`): numbered diamond,
   angled leader line, clipped-corner card.
 
 ## Loading (FW-14)
@@ -519,7 +519,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 ![04-launch](mockups/04-launch.png)
 
 - Prompt first. A pasted ticket ID expands into a card.
-- Mode: Plan · Work · Review PR · Tour · Job · **New repo** (`sessions.md`). Provider: Claude or Codex, with model, effort and remaining usage.
+- Mode: **Work** (the default) · Plan · Review PR (`sessions.md`): the kinds marked `Launcher`. Provider: Claude or Codex, with model, effort and remaining usage.
 - Repos on one shared branch, a sandbox and network policy.
 - **Repositories** is a checklist of the registered repos (zero or more ticked; ticked first, then the most recently
   used, then by name), with a filter past 8 and a list that scrolls past 6, each row its path, default branch and
@@ -528,9 +528,11 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Pre-flight: what will be fetched and built, and which LSPs will start.
 - As built (AI-4): `⌘N` or `session.new` (whose args fill it in: kind, prompt, ticket, pr, dir, repos, provider)
   opens it over a scrim; `⌘↵` or **Start** runs `session.start`, `esc`, the close button or a click outside
-  closes it. The modes are the session host's kinds (`widget.Choices`), so Direct and Scratch are there too, and a plugin's
-  kind joins them. A mode asks for what its kind starts from: a PR URL, a new repo's name, template and parent, or a
-  directory. The right column is recent prompts (choosing one fills it in again) and the pre-flight: when worktrees
+  closes it. The modes are the session host's kinds marked `Launcher` (`widget.Choices`), and a plugin's kind that
+  sets it joins them; Job, New repo and Direct start from the Jobs page or `session.start`, and a kind
+  `session.new {kind}` names shows too. A mode asks for what its kind starts from: a PR URL, a new repo's name,
+  template and parent, or a directory. A pull request's link pasted alone into the prompt picks Review PR (the first
+  kind from a PR) with the link moved to its field. Work and Plan start with no repos ticked. The right column is recent prompts (choosing one fills it in again) and the pre-flight: when worktrees
   are made, repos to fetch, the agent and its prompt pack, where it runs (**Runs in**) and its network. The Sandbox
   toggle starts from `sandbox.default`, on unless it says `host`; under it, when this machine offers more than one
   sandbox backend (`MachineState.Sandboxes`), a Sandbox type picker that starts at `sandbox.backend` and goes to
@@ -886,36 +888,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 
 ## 14 · Tours
 
-![14-tour](mockups/14-tour.png)
-
-- Prose, quoted code (real files, real line numbers) and pinned notes. The note numbers recur in the diagram.
-- Ask about any step. Export to a single HTML file.
-- Built in RV-8 (`app/tour*.go`, the `tour` built-in; `host/tour`, crit's `internal/tour`): the reader opens by
-  itself when a tour session comes to the front (`tour.open`). Steps are the `NN-slug.md` files at the workspace
-  root, read again each second or when the agent does something, so they appear as they land. At the left: TOUR ·
-  KIND, the question, the repos' chips, PINNED @ the first repo's commit, a bar of how many steps have been read, the
-  steps (✓ once read, the one shown lit) and **↓ Export as HTML** with "self-contained · no fetches · share as
-  artifact" (and "shared ↗" once published). In the middle: STEP 4 OF 9, the title (the step's `# heading`), then
-  its prose (markdown, an image on a line of its own drawn), its quotes (the repo, path, lines, language and
-  **open ↗**; the lines read from the pinned worktree, or `rev=` another revision, numbered as the file's and in its
-  syntax colours, `mark=` lines lit with the accent at their edge, each `note` under its line in the annotation
-  house style, numbered; a quote over 60 lines with marks shows 4 lines around them and **… n more lines**; one that
-  can't be read says why), examples, recorded runs (`$ cmd`, exit, output) and screenshots with their numbered pins,
-  boxes and arrows (percentages of the picture). At the right: the step's diagrams, ASK ABOUT THIS STEP (the threads
-  on the step's file, and a field that asks in its open thread, else opens one on the file's line 1), and ← Prev,
-  "step 4 / 9", Next →. Keys (mode `tour`): `h`/`l` (← →) step, `j`/`k` scroll, `gd` opens the step's first quote in
-  the editor at its first marked line, `a` asks, `q`/Escape close. The status line: "auth flow walkthrough · 2
-  repos · 14 quotes" and "h/l step · j/k scroll · gd open quote in editor 4/9". Before any step: what the agent is
-  doing, the question's thread and a field. Export writes `tour.html` (one page a step at a time, ← → and dots,
-  Present for full screen, `#step=N`; the code coloured by the window's languages, the theme's dark and light
-  following the reader's preference or a host's `data-theme`; images inlined) and asks the agent in the tour's
-  thread to publish it and `tour_share` the link; `tour.export {format: md}` writes `tour.md`. The launcher's Tour
-  mode picks the kind (sessions.md, Variants).
-- Decided in RV-8 (the design was silent): diagrams show as their mermaid source in the reader and the export
-  (crit inlined mermaid.js, which isn't an approved dependency); the reader reads the session's directory on this
-  machine, as the plan view does.
-- Not yet: drawing mermaid diagrams; changing the kind from
-  the reader; zooming a screenshot.
+Removed (the user's decision): there is no tour kind, reader or export.
 
 ## 15 · Agent console (Codex here)
 
@@ -928,7 +901,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   and a rail entry `❯` while there's a session host, badged with the asks waiting). Header: provider, model, effort, a
   status chip, ticket · session · branch, Fork (a btw side question to a tool-less fork; its answer shows as a block),
   Interrupt (`session.interrupt`), Raw terminal (the agent's PTY from the session host, through `term.open {source}`).
-  Transcript from `SessionState.Transcript`, with the busy thread's anchor and your comment pinned above it: prose as
+  Transcript from `SessionState.Transcript` (only the blocks in view are built, `Ctx.Items` following its end, so a
+  long session costs what its screenful does), with the busy thread's anchor and your comment pinned above it: prose as
   markdown, prompts (long ones folded), thinking dimmed and folded, tool calls with a status dot, title and summary
   (lines, hits, duration), edits as mini-diffs with "view in diff" (`diff.open`, else the file), shell output folded,
   errors red, the SUBAGENTS box, and asks' cards where they arose. Keys in mode `agent`: `j`/`k` between blocks, `⏎`

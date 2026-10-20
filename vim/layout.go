@@ -184,6 +184,9 @@ func (fs *frames) geometry() map[WindowID]rect {
 
 func (fs *frames) Rows(w WindowID) int { return max(fs.geometry()[w].h, 1) }
 
+// Cols is how many screen columns window w has.
+func (fs *frames) Cols(w WindowID) int { return max(fs.geometry()[w].w, 1) }
+
 // Neighbour is the window across the edge in dir that holds the cursor's screen row or column.
 func (fs *frames) Neighbour(from WindowID, dir byte, row, col int) (WindowID, bool) {
 	g := fs.geometry()

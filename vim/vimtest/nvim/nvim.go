@@ -278,6 +278,15 @@ func (e *engine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 		r.Top = int(top)
 	}
 
+	if q.Left {
+		v, err := e.c.call("nvim_eval", "winsaveview().leftcol")
+		if err != nil {
+			return r, err
+		}
+		left, _ := v.(int64)
+		r.Left = int(left)
+	}
+
 	if q.Bufs {
 		v, err := e.c.call("nvim_eval", `join(map(getbufinfo({'buflisted': 1}), {_, b -> b.bufnr .. (b.bufnr == bufnr('%') ? '%' : b.bufnr == bufnr('#') ? '#' : '')}))`)
 		if err != nil {

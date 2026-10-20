@@ -38,7 +38,7 @@ func TestTheAppSharesTheHostsStore(t *testing.T) {
 
 func TestSessionLogsSurviveARestart(t *testing.T) {
 	r := newRig(t)
-	id := r.start(core.SessionSpec{Kind: core.KindScratch})
+	id := r.start(core.SessionSpec{Kind: core.KindPlan})
 	router := &logs.Router{Sessions: r.w.Logs()}
 	router.Write(logs.Record{Time: r.now(), Level: slog.LevelWarn, Source: "lsp:gopls", Session: id, Msg: "gopls restarted"})
 	if err := router.Err(); err != nil {
@@ -55,19 +55,25 @@ func TestSessionLogsSurviveARestart(t *testing.T) {
 	}
 }
 
-// AI-4: the launcher's modes are the host's kinds, built-ins in sessions.md's order and a plugin's after them,
-// each saying what it starts from.
+// AI-4: the host's kinds, built-ins in sessions.md's order and a plugin's after them, each saying what it starts
+// from; the launcher offers those marked Launcher: Work, Plan and Review PR, and a plugin's that asks to be there.
 func TestKindsReachTheLauncher(t *testing.T) {
 	r := newRig(t)
-	off := r.w.Kinds().Register(KindSpec{Kind: "incident", Title: "Incident", Pack: "work", Worktrees: WorktreesNow})
+	off := r.w.Kinds().Register(KindSpec{Kind: "incident", Title: "Incident", Pack: "work", Worktrees: WorktreesNow, Launcher: true})
 	defer off()
-	var got []string
+	var got, launcher []string
 	for _, k := range r.w.Kinds().All() {
 		got = append(got, string(k.Kind)+":"+string(k.From))
+		if k.Launcher {
+			launcher = append(launcher, string(k.Kind))
+		}
 	}
-	want := []string{"plan:prompt", "work:prompt", "review:pr", "tour:prompt", "job:prompt", "newrepo:name", "direct:dir", "scratch:nothing", "incident:"}
+	want := []string{"work:prompt", "plan:prompt", "review:pr", "job:prompt", "newrepo:name", "direct:dir", "incident:"}
 	if strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Errorf("kinds = %v, want %v", got, want)
+	}
+	if want := []string{"work", "plan", "review", "incident"}; strings.Join(launcher, " ") != strings.Join(want, " ") {
+		t.Errorf("launcher kinds = %v, want %v", launcher, want)
 	}
 }
 
@@ -115,7 +121,7 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 
 	now := r.w.opts.Now
 	r.w.opts.Now = func() time.Time { panic("the clock broke") }
-	_, err := r.w.Start(context.Background(), core.SessionSpec{Kind: core.KindScratch})
+	_, err := r.w.Start(context.Background(), core.SessionSpec{Kind: core.KindPlan})
 	r.w.opts.Now = now
 	if err == nil || !strings.Contains(err.Error(), "the clock broke") {
 		t.Errorf("Start = %v, want the panic as an error", err)
