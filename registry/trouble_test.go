@@ -55,3 +55,13 @@ func TestTroubleArgsRoundTrip(t *testing.T) {
 		t.Errorf("FixText %q", got)
 	}
 }
+
+func TestMenuWhenSubject(t *testing.T) {
+	it := registry.MenuItem{When: registry.MenuWhen{Subject: "session:"}}
+	if !it.Matches(registry.MenuCtx{Subject: "session:fix-login"}) {
+		t.Error("an item for sessions doesn't match a session")
+	}
+	if it.Matches(registry.MenuCtx{View: "editor"}) || it.Matches(registry.MenuCtx{Subject: "pr:12"}) {
+		t.Error("an item for sessions matches what isn't one")
+	}
+}

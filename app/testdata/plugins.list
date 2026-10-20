@@ -176,7 +176,7 @@ rect 44,38 1556x936 fill #060606
 clip 44,38 1556x936 r 0
   text "Plugins" @62,70.228 #ece6d8 Space Grotesk 18
   rect 139.15625,50 259x28 fill #0c0c0b
-  text "INSTALLED 67" @151.15625,66.6 #ece6d8 JetBrains Mono 10
+  text "INSTALLED 68" @151.15625,66.6 #ece6d8 JetBrains Mono 10
   text "UPDATES 0" @251.15625,66.6 #7c7566 JetBrains Mono 10
   text "REGISTRY" @330.15625,66.6 #7c7566 JetBrains Mono 10
   rect 1183.4062,49 300x30 fill #060606 radius 6
@@ -288,7 +288,7 @@ clip 44,38 1556x936 r 0
     text "Uninstall" @1208,394.88412 #ece6d8 Inter 12
   pop
   rect 44,945 1556x1 fill #24221d
-  text "67 installed · 67 running · 0 updates" @62,963.78 #7c7566 JetBrains Mono 10.5
+  text "68 installed · 68 running · 0 updates" @62,963.78 #7c7566 JetBrains Mono 10.5
   text "~/.config/oriel/settings.toml" @1390.7812,963.78 #7c7566 JetBrains Mono 10.5
 pop
 rect 151.15625,76 84x2 fill #ffd23f

@@ -446,11 +446,11 @@ flowchart TB
 - **mission control** (SH-7, ui.md 03): commands `mission.toggle` (`⌘⇧K`), `mission.open {by, filter, id}`,
   `mission.close`, `mission.group {by}` (status or repo), `mission.filter {text}`, `mission.find`,
   `mission.select {id}`, `mission.move {dir}`, `mission.open-card {id}`, `mission.allow {id}`, `mission.deny {id}`,
-  `mission.stop {id}`, `mission.rename {id, name}`, `mission.new` (the launcher); key mode `mission`; view
+  `mission.stop {id}`, `mission.end {id}` (the End session dialog), `mission.rename {id, name}`, `mission.new` (the launcher); key mode `mission`; view
   `app.overlay.mission`; option `mission.at_launch`; the `mission` indicator slot; a start-view link; the
   assistant's `mission_control` tool (`{show, by, filter, id}`: its state, opened first with `show`). Its cards'
   asks are the inbox's cards (`registry.InboxCard.Draw`), so any inbox source's card for a session shows on it; while
-  it's up those cards aren't stacked over the window. `session.stop`, `session.archive`, `session.interrupt` and
+  it's up those cards aren't stacked over the window. `session.stop`, `session.archive`, `session.end`, `session.interrupt` and
   `session.rename` take `{id}` with no session in front.
 - **the assistant** (PL-4, ui.md 11): its tools are agent tools `for = { "assistant" }`: the built-ins (`reply`,
   `sessions`, `past_sessions`, `open_session`, `rename_session`, `resume_session`, `new_session`, `start_session`,
@@ -819,11 +819,13 @@ type Host interface {
   click on an editor's line numbers runs the lowest-order one that applies to the file, with `{file, line}` (1-based)
   added to its args. The debugger's breakpoint toggle is one.
 - Right-click menus (PL-13): `registry.MenuItem` contributions (kind `menu.item`) with a `When` (view, file glob,
-  selection, help-id prefix); the window's one context menu gathers those that match what was clicked
+  selection, help-id prefix, subject prefix); the window's one context menu gathers those that match what was clicked
   (`registry.MenuItems`), by group, Help last. What was clicked is a `MenuCtx`: the view, instance and project of
   the tab clicked (`Host.PaneTab`) or else of the pane (`Root.Visible`), and the file and selection from a view that
-  implements `registry.Located` (the editor). The built-in entries (Copy path, Move pane…, Close; on a tab,
-  `When.Help` `layout.HelpTab`, Close Others, Close to the Left, Close to the Right, Close All) are menu items too. Lua: `oriel.menu.add`. An item running
+  implements `registry.Located` (the editor), and its `Subject`: what the clicked node, or the nearest node above it
+  with one, stands for (`ui.Style.Subject`, `"session:<id>"` on a session tab and a mission control card). A
+  command item gets it as `{subject}`. The built-in entries (Copy path, Move pane…, Close; on a tab,
+  `When.Help` `layout.HelpTab`, Close Others, Close to the Left, Close to the Right, Close All; on a session, Close tab and End session…) are menu items too. Lua: `oriel.menu.add`. An item running
   `agent.fix` comes with its explain twin (TR-6).
 - Drag and drop (PL-15): `ui.Style.Drag` (a `DragData`: kind, data, label) makes a node a drag source and
   `Style.Drop` (kinds) a target; the UI tracks the drag, lights the target under it that takes the kind and draws a
@@ -925,7 +927,7 @@ type Host interface {
   `registry.Later(ctx)` is how any command says it finishes after `Run` returns, and `registry.OnDone(ctx, fn)` is a
   caller asking to hear how one `Run` ended, then or later; `plugin.Await(ctx, run)` waits for it off the loop (the
   launcher, Start work, Ori's tools). A caller that waits shows its own busy state, so no notice goes up for it.
-  `repos.add`, `repos.clone`, `repos.fetch`, `session.stop`, `session.archive`, `session.next-pr`,
+  `repos.add`, `repos.clone`, `repos.fetch`, `session.stop`, `session.archive`, `session.end`, `session.next-pr`,
   `session.start-work`, `session.add-repo`, `session.open` (resuming), and `diff.open` and `git.commit` on a path
   in no work tree the app knows are built on it.
 

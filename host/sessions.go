@@ -312,6 +312,9 @@ func (w *Host) Resume(ctx context.Context, id core.SessionID) (err error) {
 		return err
 	}
 	if se.Archived {
+		if err := w.reopen(ctx, se); err != nil {
+			return err
+		}
 		if err := w.emit(core.SessionArchived{ID: id}); err != nil {
 			return err
 		}
@@ -338,15 +341,60 @@ func (w *Host) Stop(_ context.Context, id core.SessionID) (err error) {
 
 // Archive stops the agent and removes the worktrees, keeping threads, transcript and test runs. Worktrees with
 // uncommitted work are refused: removing them would lose it.
-func (w *Host) Archive(ctx context.Context, id core.SessionID) (err error) {
-	defer w.recover("Archive", &err)
-	se, err := w.session(id)
+func (w *Host) Archive(ctx context.Context, id core.SessionID) error {
+	return w.End(ctx, EndReq{Session: id})
+}
+
+// End archives or deletes a session, as r says.
+func (w *Host) End(ctx context.Context, r EndReq) (err error) {
+	defer w.recover("End", &err)
+	se, err := w.session(r.Session)
 	if err != nil {
 		return err
 	}
-	if se.Kind != core.KindDirect {
-		for _, p := range se.Projects {
-			if p.Repo != "" && p.Dir != p.Repo && (gitx.Repo{Dir: p.Dir}).Dirty(ctx) {
+	if r.Delete {
+		err = w.delete(ctx, se)
+	} else {
+		err = w.archive(ctx, se, r.Discard)
+	}
+	if err != nil || !r.DeleteBranch || se.Kind == core.KindDirect {
+		return err
+	}
+	var failed []string
+	for _, p := range worktrees(se) {
+		if p.Branch == "" || p.Detached {
+			continue
+		}
+		g := gitx.Repo{Dir: p.Repo}
+		if p.Branch == strings.TrimPrefix(g.DefaultBranch(ctx), "origin/") || !g.HasBranch(ctx, p.Branch) {
+			continue
+		}
+		if err := g.DeleteBranch(ctx, p.Branch, true); err != nil {
+			failed = append(failed, fmt.Sprintf("%s: %v", p.Name, err))
+		}
+	}
+	if len(failed) > 0 {
+		return fmt.Errorf("the branches stayed: %s", strings.Join(failed, "; "))
+	}
+	return nil
+}
+
+// worktrees are the session's projects that are worktrees Oriel made.
+func worktrees(se core.SessionState) []core.Project {
+	var out []core.Project
+	for _, p := range se.Projects {
+		if p.Repo != "" && p.Dir != p.Repo {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func (w *Host) archive(ctx context.Context, se core.SessionState, discard bool) error {
+	id := se.ID
+	if se.Kind != core.KindDirect && !discard {
+		for _, p := range worktrees(se) {
+			if (gitx.Repo{Dir: p.Dir}).Dirty(ctx) {
 				return fmt.Errorf("%s has uncommitted work: commit or discard it first", p.Name)
 			}
 		}
@@ -355,11 +403,8 @@ func (w *Host) Archive(ctx context.Context, id core.SessionID) (err error) {
 		h.stop("archived", core.StoppedByYou)
 	}
 	if se.Kind != core.KindDirect {
-		for _, p := range se.Projects {
-			if p.Repo == "" || p.Dir == p.Repo {
-				continue
-			}
-			if err := (gitx.Repo{Dir: p.Repo}).RemoveWorktree(ctx, p.Dir, false); err != nil && !errors.Is(err, os.ErrNotExist) {
+		for _, p := range worktrees(se) {
+			if err := (gitx.Repo{Dir: p.Repo}).RemoveWorktree(ctx, p.Dir, discard); err != nil && !errors.Is(err, os.ErrNotExist) {
 				if _, serr := os.Stat(p.Dir); serr == nil {
 					return err
 				}
@@ -370,6 +415,33 @@ func (w *Host) Archive(ctx context.Context, id core.SessionID) (err error) {
 		return err
 	}
 	w.restatus(id)
+	return nil
+}
+
+// reopen makes an archived session's worktrees again, on their branches, or pinned where they were.
+func (w *Host) reopen(ctx context.Context, se core.SessionState) error {
+	if se.Kind == core.KindDirect {
+		return nil
+	}
+	for _, p := range worktrees(se) {
+		if _, err := os.Stat(p.Dir); err == nil {
+			continue
+		}
+		g := gitx.Repo{Dir: p.Repo}
+		_ = g.PruneWorktrees(ctx)
+		var err error
+		switch {
+		case p.Detached:
+			err = g.AddWorktree(ctx, p.Dir, "", p.Commit)
+		case g.HasBranch(ctx, p.Branch):
+			err = g.CheckoutWorktree(ctx, p.Dir, p.Branch)
+		default:
+			err = fmt.Errorf("its branch %s is gone", p.Branch)
+		}
+		if err != nil {
+			return fmt.Errorf("%s: %w", p.Name, err)
+		}
+	}
 	return nil
 }
 
@@ -713,22 +785,19 @@ func (w *Host) Rename(id core.SessionID, name string) (err error) {
 // Delete throws a session away: its agent stops, its worktrees go with whatever is in them, then its workspace and
 // its log. The repos themselves are never touched. A direct session's directory isn't Oriel's to remove, so it's
 // refused.
-func (w *Host) Delete(ctx context.Context, id core.SessionID) (err error) {
-	defer w.recover("Delete", &err)
-	se, err := w.session(id)
-	if err != nil {
-		return err
-	}
+func (w *Host) Delete(ctx context.Context, id core.SessionID) error {
+	return w.End(ctx, EndReq{Session: id, Delete: true})
+}
+
+func (w *Host) delete(ctx context.Context, se core.SessionState) error {
+	id := se.ID
 	if se.Kind == core.KindDirect {
 		return fmt.Errorf("%s isn't Oriel's to delete: archive it instead", id)
 	}
 	if h, _ := w.sessionFor(id, false); h != nil {
 		h.stop("deleted", "")
 	}
-	for _, p := range se.Projects {
-		if p.Repo == "" || p.Dir == p.Repo {
-			continue
-		}
+	for _, p := range worktrees(se) {
 		if err := (gitx.Repo{Dir: p.Repo}).RemoveWorktree(ctx, p.Dir, true); err != nil {
 			if _, serr := os.Stat(p.Dir); serr == nil {
 				return fmt.Errorf("%s: %w", p.Name, err)

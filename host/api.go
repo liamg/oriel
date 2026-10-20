@@ -7,6 +7,14 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
+// EndReq ends a session: archived, or deleted.
+type EndReq struct {
+	Session      core.SessionID `json:"session"`
+	Delete       bool           `json:"delete,omitempty"`       // throw it all away; otherwise archive
+	Discard      bool           `json:"discard,omitempty"`      // archive over uncommitted work, which is lost
+	DeleteBranch bool           `json:"deleteBranch,omitempty"` // each project's local branch goes too
+}
+
 // StartWorkReq is Start work on a plan, and how; its zero value is the Start work dialog's defaults.
 type StartWorkReq struct {
 	Session core.SessionID `json:"session"`

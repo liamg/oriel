@@ -415,6 +415,17 @@ func (u *UI) Help(id ID) string {
 	return ""
 }
 
+// Subject is id's Style.Subject, or that of the nearest ancestor with one.
+func (u *UI) Subject(id ID) string {
+	for id != 0 {
+		if s := u.flags[id].subject; s != "" {
+			return s
+		}
+		id = u.parents[id]
+	}
+	return ""
+}
+
 // HelpNode is a node with a help id of its own, and where it was drawn.
 type HelpNode struct {
 	ID   ID

@@ -220,6 +220,15 @@ func (r Repo) AddWorktree(ctx context.Context, dir, branch, start string) error 
 	return err
 }
 
+// CheckoutWorktree makes a work tree at dir on branch, which already exists.
+func (r Repo) CheckoutWorktree(ctx context.Context, dir, branch string) error {
+	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+		return err
+	}
+	_, err := r.git(ctx, "worktree", "add", "--quiet", dir, branch)
+	return err
+}
+
 // RemoveWorktree takes a work tree away. Uncommitted work is refused unless force.
 func (r Repo) RemoveWorktree(ctx context.Context, dir string, force bool) error {
 	args := []string{"worktree", "remove", dir}

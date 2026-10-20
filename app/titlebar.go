@@ -160,7 +160,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 	}
 	dot := th.C(statusTokens[s.Status()])
 	in := widget.Clickable(c, s.ID(), ui.Style{Dir: ui.Row, H: ui.Flex(1), Fill: fill, Help: "shell/tabs", Role: ui.RoleTab, Selected: on,
-		Label: s.Name()}, func(c *ui.Ctx) {
+		Label: s.Name(), Subject: sessionSubject + string(s.ID())}, func(c *ui.Ctx) {
 		hover := widget.PointerIn(c)
 		c.Column("in", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
 			edge := color.NRGBA{}

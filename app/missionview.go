@@ -351,7 +351,7 @@ func (x *missionPlugin) card(c *ui.Ctx, st core.State, se core.SessionState, on 
 	id := c.Next(se.ID)
 	in := widget.Clickable(c, se.ID, ui.Style{Dir: ui.Column, W: ui.Flex(1), Fill: th.C(tMissionCard), Stroke: line,
 		Border: border, Radius: 8, Pad: ui.Pad(12), Gap: 10, NoHover: true, Cursor: render.CursorDefault, Role: ui.RoleListItem, Label: name,
-		Selected: on, Help: missionHelp + "#cards"}, func(c *ui.Ctx) {
+		Selected: on, Help: missionHelp + "#cards", Subject: sessionSubject + string(se.ID)}, func(c *ui.Ctx) {
 		x.cardHead(c, st, se, tone, widget.PointerIn(c))
 		c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Size{Min: missionBodyH}}, func(c *ui.Ctx) { x.cardBody(c, se, tone, waiting) })
 		x.cardFoot(c, se)
@@ -407,6 +407,9 @@ func (x *missionPlugin) cardHead(c *ui.Ctx, st core.State, se core.SessionState,
 			widget.Chip(c, "prov", providerName(p), th.C(theme.FgMuted), missionHelp+"#cards")
 		}
 		if hovered {
+			if widget.Button(c, "end", "End…", widget.ButtonOpts{Ghost: true, Help: missionHelp + "#keys"}) {
+				x.run("mission.end", registry.Args{"id": string(se.ID)})
+			}
 			label := "Open"
 			if !se.Agent.Live() {
 				label = "Resume"
@@ -825,7 +828,7 @@ func (x *missionPlugin) footer(c *ui.Ctx, st core.State) {
 			keyHint(c, "move", strings.Join(move, " "), "move")
 		}
 		for _, h := range []struct{ cmd, what string }{{"mission.open-card", "open"}, {"mission.allow", "allow"}, {"mission.stop", "stop"},
-			{"mission.rename", "rename"}, {"mission.new", "new session"}, {"mission.find", "filter"}} {
+			{"mission.end", "end"}, {"mission.rename", "rename"}, {"mission.new", "new session"}, {"mission.find", "filter"}} {
 			if k := keys(h.cmd, nil); k != "" {
 				keyHint(c, h.cmd, k, h.what)
 			}

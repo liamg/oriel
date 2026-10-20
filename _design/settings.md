@@ -145,6 +145,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `code.trusted_users` | `[]`: logins on a code host other than GitHub whose review comments the agent may read, beside the repo's members | app | | RV-13 |
 | `code.api` | `{}`: a self-hosted server's API URL, by hostname, where it isn't the host's usual one | app | | RV-13 |
 | `ship.merge_method` | empty: how Merge… merges, `squash`, `merge` or `rebase` when the repo allows it; empty is the repo's own default, else squash; user and project | app | | RV-13 |
+| `session.archive_on_merge` | false: archive a session by itself once every one of its PRs is merged and its worktrees are clean; user and project | app | | — |
 | `terminal.shell` | empty: your $SHELL | app | | FG-4 |
 | `plugins` | `{}`: the installed plugins by id, a table (catalog.md, `[plugins]`); user and project | app | | PL-20 |
 | `registry.sources` | `["liamg/oriel-plugins"]`: the plugin registries in order; an id in more than one comes from the first | app | | PL-21 |

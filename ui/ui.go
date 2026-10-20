@@ -108,7 +108,7 @@ type flags struct {
 	sideways                         bool
 	bars                             Bars
 	cursor                           render.Cursor
-	tooltip, help, keyMode           string
+	tooltip, help, keyMode, subject  string
 	trap, text                       bool
 	z                                int
 	parent                           ID
@@ -223,13 +223,13 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 		if s.Selectable && s.Cursor == 0 {
 			s.Cursor = render.CursorText
 		}
-		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" || s.Help != "" || s.Trap {
+		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" || s.Help != "" || s.Subject != "" || s.Trap {
 			var parent ID
 			if e.parent != nil {
 				parent = e.parent.id
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
-				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, keyMode: s.KeyMode,
+				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, subject: s.Subject, keyMode: s.KeyMode,
 				trap: s.Trap, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop}
 		}
 	}

@@ -113,7 +113,22 @@ stateDiagram-v2
   share the branch. Repos can be added mid-session (by you, or by the agent asking).
 - **Start next PR** cuts a new branch from the updated base inside the same session. Earlier PRs stay readable under Previous.
 - **Archiving** (after merge, or by hand) removes the worktrees but keeps the threads, transcript and test history, so
-  past sessions stay searchable in the omnibox.
+  past sessions stay searchable in the omnibox. Reopening one (`session.open`) makes its worktrees again on their
+  branches, or pinned at their commit; a branch that's gone is an error.
+- **Ending a session** is one dialog with several doors, never a rail entry: **End session…** on the session tab's
+  right-click menu, `e` on a mission control card, the Workspace page's Overview, and **Finish session** on Ship once
+  every PR is merged (`merged → archived: done`). The ✕ on a tab still only closes the tab.
+  - `session.end {id, how, discard, delete_branch}`: `how` is `archive` or `delete`; none opens the dialog
+    (`host.End`, `EndReq`). The tab closes first; an archive's notice offers **Undo** (`session.open`) unless its
+    branches went.
+  - The dialog (`app/sessionend.go`, keys in mode `session.end`: `⌘↵`, `Esc`) is a segmented Archive / Delete,
+    preselected Archive once anything was pushed or raised, else Delete; a direct session can only be archived. It
+    lists per project, from Ship's read, uncommitted files (count and the first three), commits not pushed, an open
+    PR (it stays open), then an agent mid-turn and a running sandbox. With uncommitted work Archive is **Discard
+    and archive** (`EndReq.Discard`).
+  - **Delete the branches too** deletes each project's local branch, never the default one; the remote's stays.
+  - `session.archive_on_merge` (off by default) archives by itself on `PrMerged` once every PR is merged and nothing
+    is uncommitted.
 - **Sessions survive restarts**: the agent resumes by session id, and the layout, open buffers and cursor positions come back.
   Built (SE-2): the layout is kept per directory as it changes, and views revive their instances through
   `registry.Persisted` (plugins.md); switching to a session reopens its directory, so its layout comes back too.
@@ -250,7 +265,7 @@ type Sessions interface {
   every project and the session's own directory "outside the session", and one in a project the session only reads
   (a plan's checkouts before Start work, a review) "the session only reads it". It applies while the window
   is on the session in front. Go-to-definition and peek reach them as any file.
-- **Archive** refuses while a worktree has uncommitted work, then removes the worktrees and keeps the session's
+- **Archive** refuses while a worktree has uncommitted work (unless `EndReq.Discard`), then removes the worktrees and keeps the session's
   threads, transcript and test runs (`oriel` searches them: `session.search` over the whole log, not only what the
   state keeps). **Restart**: the host replays every session's log; nothing runs until it's resumed, which resumes
   the agent by its own id.

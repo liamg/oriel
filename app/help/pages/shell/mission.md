@@ -70,8 +70,8 @@ minutes. A plugin adds its own with an indicator in that slot.
 
 ## Keys {#keys}
 
-`h` `j` `k` `l` (or the arrows) move between cards, `⏎` opens, `a` allows, `x` stops the agent, `r` renames the
-session on its card, `n` starts a new one, `/` filters.
+`h` `j` `k` `l` (or the arrows) move between cards, `⏎` opens, `a` allows, `x` stops the agent, `e` ends the
+session (archives or deletes it, after the End session dialog), `r` renames it on its card, `n` starts a new one, `/` filters.
 
 {{keys "mission.*"}}
 

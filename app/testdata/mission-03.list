@@ -508,14 +508,17 @@ clip 0,38 1600x962 r 0
     text "x" @251.125,988.42 #b3ab99 JetBrains Mono 9.5
     text "stop" @266.125,989.00146 #7c7566 Inter 11
     rect 304.85938,977.5 14x15 radius 3 stroke 1 #332f27
-    text "r" @308.85938,988.42 #b3ab99 JetBrains Mono 9.5
-    text "rename" @323.85938,989.00146 #7c7566 Inter 11
-    rect 379.125,977.5 14x15 radius 3 stroke 1 #332f27
-    text "n" @383.125,988.42 #b3ab99 JetBrains Mono 9.5
-    text "new session" @398.125,989.00146 #7c7566 Inter 11
-    rect 478.73438,977.5 14x15 radius 3 stroke 1 #332f27
-    text "/" @482.73438,988.42 #b3ab99 JetBrains Mono 9.5
-    text "filter" @497.73438,989.00146 #7c7566 Inter 11
+    text "e" @308.85938,988.42 #b3ab99 JetBrains Mono 9.5
+    text "end" @323.85938,989.00146 #7c7566 Inter 11
+    rect 359.5,977.5 14x15 radius 3 stroke 1 #332f27
+    text "r" @363.5,988.42 #b3ab99 JetBrains Mono 9.5
+    text "rename" @378.5,989.00146 #7c7566 Inter 11
+    rect 433.76562,977.5 14x15 radius 3 stroke 1 #332f27
+    text "n" @437.76562,988.42 #b3ab99 JetBrains Mono 9.5
+    text "new session" @452.76562,989.00146 #7c7566 Inter 11
+    rect 533.375,977.5 14x15 radius 3 stroke 1 #332f27
+    text "/" @537.375,988.42 #b3ab99 JetBrains Mono 9.5
+    text "filter" @552.375,989.00146 #7c7566 Inter 11
     rect 1437.1094,977.5 26x15 radius 3 stroke 1 #332f27
     text "esc" @1441.1094,988.42 #b3ab99 JetBrains Mono 9.5
     text "back to review #4410" @1468.1094,989.00146 #7c7566 Inter 11

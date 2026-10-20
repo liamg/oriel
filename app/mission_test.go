@@ -267,12 +267,12 @@ func TestMissionAllowDenyFromTheCard(t *testing.T) {
 	}
 }
 
-// SH-7 (ui.md 03): "Fully keyboard-driven: hjkl, ⏎ opens, a allows, x stops"; r renames on the card, n starts a
-// session, / filters.
+// SH-7 (ui.md 03): "Fully keyboard-driven: hjkl, ⏎ opens, a allows, x stops"; e ends, r renames on the card, n starts
+// a session, / filters.
 func TestMissionKeys(t *testing.T) {
 	s, _ := missionScene(t)
 	var ran []string
-	for _, id := range []string{"session.open", "session.stop", "session.rename", "session.new"} {
+	for _, id := range []string{"session.open", "session.stop", "session.end", "session.rename", "session.new"} {
 		s.reg.Command(registry.Command{ID: id, Run: func(_ registry.Ctx, a registry.Args) error {
 			ran = append(ran, id+" "+a.String("id")+a.String("name"))
 			return nil
@@ -301,6 +301,7 @@ func TestMissionKeys(t *testing.T) {
 		t.Errorf("k then h selected %s", got)
 	}
 	s.keyCommand(t, "x")
+	s.keyCommand(t, "e")
 	s.keyCommand(t, "n")
 	s.keyCommand(t, "r")
 	s.frame()
@@ -310,7 +311,7 @@ func TestMissionKeys(t *testing.T) {
 	s.typeKeys("CR")
 	s.frame()
 	s.keyCommand(t, "<CR>")
-	want := []string{"session.stop ci-lint", "session.new ", "session.rename ci-lintnightly", "session.open ci-lint"}
+	want := []string{"session.stop ci-lint", "session.end ci-lint", "session.new ", "session.rename ci-lintnightly", "session.open ci-lint"}
 	if strings.Join(ran, "|") != strings.Join(want, "|") {
 		t.Errorf("the keys ran %q, want %q", ran, want)
 	}

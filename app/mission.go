@@ -130,6 +130,10 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "session.stop", registry.Args{"id": string(selected(a))})
 			}},
+		{ID: "mission.end", Title: "End the selected card's session, or {id}: the End session dialog", Available: func(a registry.Args) bool { return selected(a) != "" },
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				return h.Run(ctx, "session.end", registry.Args{"id": string(selected(a))})
+			}},
 		{ID: "mission.rename", Title: "Rename the selected card's session, or {id}: {name}, or type it on the card",
 			Available: func(a registry.Args) bool { return selected(a) != "" },
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -162,6 +166,7 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 		{Mode: MissionKeyMode, Keys: "<CR>", Command: "mission.open-card", Desc: "Open"},
 		{Mode: MissionKeyMode, Keys: "a", Command: "mission.allow", Desc: "Allow"},
 		{Mode: MissionKeyMode, Keys: "x", Command: "mission.stop", Desc: "Stop"},
+		{Mode: MissionKeyMode, Keys: "e", Command: "mission.end", Desc: "End session"},
 		{Mode: MissionKeyMode, Keys: "r", Command: "mission.rename", Desc: "Rename"},
 		{Mode: MissionKeyMode, Keys: "n", Command: "mission.new", Desc: "New session"},
 		{Mode: MissionKeyMode, Keys: "/", Command: "mission.find", Desc: "Filter"},

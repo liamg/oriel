@@ -508,7 +508,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   every waiting card and every session needing you with none (its last words), oldest first; agentbus's apart with
   their auto-answer countdowns. Bottom: the `mission` indicator slot (usage per account, this machine's CPU over 15
   minutes, `machine.mission`), then the keys and where Escape goes. Keys: `hjkl`/arrows, `⏎` (`session.open`), `a` (allows the
-  selected card's first ask), `x` (`session.stop`), `r` (renames on the card), `n` (`mission.new`: the launcher), `/`. Every action is a
+  selected card's first ask), `x` (`session.stop`), `e` (`session.end`: the End session dialog), `r` (renames on the card), `n` (`mission.new`: the launcher), `/`. Every action is a
   `mission.*` command, and the assistant reads or opens it with `mission_control`. The app opens on it at launch
   (`mission.at_launch`), over the session that was in front, if it started with nothing open and there are sessions.
 - Decided in SH-7 (the design was silent): the live terminal shows the agent's activity from its transcript rather

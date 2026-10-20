@@ -168,7 +168,11 @@ func (x *shipPlugin) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRea
 		case raisable > 2:
 			label = fmt.Sprintf("Push + raise all %d %ss", raisable, w.Short)
 		}
-		if widget.Button(c, "raise", label, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: raisable == 0 || waiting}) {
+		if allMerged(ships) {
+			if widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: endHelp, Disabled: waiting}) {
+				x.run("session.end", registry.Args{"id": string(se.ID)})
+			}
+		} else if widget.Button(c, "raise", label, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: raisable == 0 || waiting}) {
 			x.run("ship.raise-all", nil)
 		}
 	})

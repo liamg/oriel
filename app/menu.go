@@ -86,8 +86,8 @@ func (m *contextMenus) closeTabs(name, label string, order int, close func(i, at
 
 // where is what node t at p is in: the view whose tab it is, or else the pane's view (the smallest pane holding
 // p), and what that view says is there.
-func (m *contextMenus) where(t ui.ID, p render.Point, help string) registry.MenuCtx {
-	at := registry.MenuCtx{Help: help}
+func (m *contextMenus) where(t ui.ID, p render.Point, help, subject string) registry.MenuCtx {
+	at := registry.MenuCtx{Help: help, Subject: subject}
 	if v, ok := m.h.PaneTab(t); ok {
 		at.View, at.Instance, at.Project = v.ID, v.Instance, v.Project
 	} else {
@@ -116,7 +116,7 @@ func (m *contextMenus) build(c *ui.Ctx) {
 		return
 	}
 	if t, p, ok := u.ContextClick(); ok {
-		at := m.where(t, p, u.Help(t))
+		at := m.where(t, p, u.Help(t), u.Subject(t))
 		if items := registry.MenuItems(m.h, at); len(items) > 0 || at.Help != "" {
 			m.target, m.at, m.items = t, at, items
 		}
@@ -148,7 +148,7 @@ func (m *contextMenus) run(it registry.MenuItem) {
 		if it.Run != nil {
 			return it.Run(ctx, at)
 		}
-		args := registry.Args{"view": at.View, "instance": at.Instance, "file": at.File}
+		args := registry.Args{"view": at.View, "instance": at.Instance, "file": at.File, "subject": at.Subject}
 		for k, v := range it.Args {
 			args[k] = v
 		}

@@ -107,7 +107,7 @@ clip 760,38 640x847.48 r 0
   clip 760,69 640x816.48 r 0
     clip 770,79 620x796.48 r 0
       text ":HOOKS" @784,99.2 #ffd23f JetBrains Mono 10
-      text "14 hooks · 12 events" @830,99.71 #7c7566 JetBrains Mono 10.5
+      text "15 hooks · 12 events" @830,99.71 #7c7566 JetBrains Mono 10.5
       text "EVENT" @784,118.55 #7c7566 JetBrains Mono 9.5
       text "HOOK" @932,118.55 #7c7566 JetBrains Mono 9.5
       text "KIND" @1110,118.55 #7c7566 JetBrains Mono 9.5
@@ -203,43 +203,52 @@ clip 760,38 640x847.48 r 0
         text "builtin:tickets" @1198,413.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,413.36 #4f4a40 JetBrains Mono 11
-      text "PrSeen" @784,443.54 #ece6d8 JetBrains Mono 11.5
+      text "PrMerged" @784,443.54 #ece6d8 JetBrains Mono 11.5
       clip 932,431.81 170x15.179993 r 0
-        text "the ticket's tracker l…" @932,443.54 #b3ab99 JetBrains Mono 11.5
+        text "archive the session on…" @932,443.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,442.82 #b98aff JetBrains Mono 9.5
       clip 1198,432.13998 200x14.519989 r 0
-        text "builtin:tickets" @1198,443.36 #ffd23f JetBrains Mono 11
+        text "builtin:sessionend" @1198,443.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,443.36 #4f4a40 JetBrains Mono 11
-      text "SessionStart" @784,473.54 #ece6d8 JetBrains Mono 11.5
+      text "PrSeen" @784,473.54 #ece6d8 JetBrains Mono 11.5
       clip 932,461.81 170x15.179993 r 0
-        text "the ticket's tracker m…" @932,473.54 #b3ab99 JetBrains Mono 11.5
+        text "the ticket's tracker l…" @932,473.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,472.82 #b98aff JetBrains Mono 9.5
       clip 1198,462.13998 200x14.519989 r 0
         text "builtin:tickets" @1198,473.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,473.36 #4f4a40 JetBrains Mono 11
-      text "ShipRaise" @784,503.54 #ece6d8 JetBrains Mono 11.5
+      text "SessionStart" @784,503.54 #ece6d8 JetBrains Mono 11.5
       clip 932,491.81 170x15.179993 r 0
-        text "verify notes" @932,503.54 #b3ab99 JetBrains Mono 11.5
+        text "the ticket's tracker m…" @932,503.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "REWRITE" @1110,502.82 #b98aff JetBrains Mono 9.5
+      text "OBSERVE" @1110,502.82 #b98aff JetBrains Mono 9.5
       clip 1198,492.13998 200x14.519989 r 0
-        text "builtin:verify" @1198,503.36 #ffd23f JetBrains Mono 11
+        text "builtin:tickets" @1198,503.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,503.36 #4f4a40 JetBrains Mono 11
-      text "VoiceWake" @784,533.54 #ece6d8 JetBrains Mono 11.5
+      text "ShipRaise" @784,533.54 #ece6d8 JetBrains Mono 11.5
       clip 932,521.81 170x15.179993 r 0
-        text "the assistant takes wh…" @932,533.54 #b3ab99 JetBrains Mono 11.5
+        text "verify notes" @932,533.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "DECIDE" @1110,532.82 #b98aff JetBrains Mono 9.5
+      text "REWRITE" @1110,532.82 #b98aff JetBrains Mono 9.5
       clip 1198,522.14 200x14.52002 r 0
-        text "builtin:assistant" @1198,533.36 #ffd23f JetBrains Mono 11
+        text "builtin:verify" @1198,533.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,533.36 #4f4a40 JetBrains Mono 11
-      text "set before anything registered them: agent (init.lua:6), relativenumber (init.lua:4)" @784,558.11005 #7c7566 JetBrains Mono 10.5
+      text "VoiceWake" @784,563.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,551.81 170x15.179993 r 0
+        text "the assistant takes wh…" @932,563.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "DECIDE" @1110,562.82 #b98aff JetBrains Mono 9.5
+      clip 1198,552.14 200x14.52002 r 0
+        text "builtin:assistant" @1198,563.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,563.36 #4f4a40 JetBrains Mono 11
+      text "set before anything registered them: agent (init.lua:6), relativenumber (init.lua:4)" @784,588.11005 #7c7566 JetBrains Mono 10.5
     pop
   pop
 pop

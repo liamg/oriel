@@ -146,6 +146,7 @@ type Style struct {
 	NoHover     bool      // draws its own hover and press, so a clickable box doesn't get the toolkit's wash
 	Tooltip     string    // shown after the pointer rests on it
 	Help        string    // its help page and anchor, "hud/usage#weekly-window" (help.md)
+	Subject     string    // what it stands for to a right-click menu: "session:fix-login"
 	KeyMode     string    // when focused, keymaps in this mode come first and unmapped keys come to it
 	Text        bool      // typed characters insert text here, so dictation may type into it (UI.TakesText)
 	Trap        bool      // keeps keyboard focus inside while it's up, as a modal does

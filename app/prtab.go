@@ -164,6 +164,10 @@ func (x *shipPlugin) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead)
 			if widget.Button(c, "again", "Raise a new "+w.Short+"…", widget.ButtonOpts{Help: "git/ship#raise"}) {
 				x.run("ship.pr.open", registry.Args{"project": s.Project, "edit": true})
 			}
+		default:
+			if ships, _ := x.sessionShips(se); allMerged(ships) && widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: endHelp}) {
+				x.run("session.end", registry.Args{"id": string(se.ID)})
+			}
 		}
 	})
 	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)

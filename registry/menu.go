@@ -31,15 +31,18 @@ type MenuWhen struct {
 	File      string // a glob over the file there (its base name or path): "*.go"
 	Selection bool   // only with a selection
 	Help      string // a prefix of the clicked node's help id: "shell/settings"
+	Subject   string // a prefix of what the clicked node stands for: "session:"
 }
 
-// MenuCtx is what was right-clicked: its view and instance, the file and selection there, and its help id.
+// MenuCtx is what was right-clicked: its view and instance, the file and selection there, its help id and what it
+// stands for (ui.Style.Subject).
 type MenuCtx struct {
 	View, Instance string
 	Project        string // the project the view was opened for, if any
 	File           string
 	Selection      bool
 	Help           string
+	Subject        string // "session:fix-login"
 }
 
 func (MenuItem) ContributionKind() string   { return "menu.item" }
@@ -61,6 +64,9 @@ func (m MenuItem) Matches(at MenuCtx) bool {
 		}
 	}
 	if w.Selection && !at.Selection {
+		return false
+	}
+	if w.Subject != "" && !strings.HasPrefix(at.Subject, w.Subject) {
 		return false
 	}
 	return w.Help == "" || strings.HasPrefix(at.Help, w.Help)

@@ -340,3 +340,49 @@ func TestAddRepoMidSession(t *testing.T) {
 		t.Error("the same repo was added twice")
 	}
 }
+
+// sessions.md, "Ending a session": Discard and archive takes uncommitted work with it, and reopening makes the
+// worktree again on its branch.
+func TestEndArchiveDiscardsThenReopens(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	p := r.session(id).Projects[0]
+	if err := os.WriteFile(filepath.Join(p.Dir, "dirty.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.w.End(ctx, EndReq{Session: id, Discard: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(p.Dir); err == nil {
+		t.Fatal("the worktree is still there")
+	}
+	if !(gitx.Repo{Dir: p.Repo}).HasBranch(ctx, p.Branch) {
+		t.Fatal("archiving took the branch")
+	}
+	if err := r.w.Resume(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if r.session(id).Archived || branchOf(t, p.Dir) != p.Branch {
+		t.Errorf("reopened: archived %v, worktree on %q", r.session(id).Archived, branchOf(t, p.Dir))
+	}
+	if _, err := os.Stat(filepath.Join(p.Dir, "dirty.txt")); err == nil {
+		t.Error("the discarded file came back")
+	}
+}
+
+func TestEndDeletesTheBranchToo(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	p := r.session(id).Projects[0]
+	if err := r.w.End(ctx, EndReq{Session: id, Delete: true, DeleteBranch: true}); err != nil {
+		t.Fatal(err)
+	}
+	if (gitx.Repo{Dir: p.Repo}).HasBranch(ctx, p.Branch) {
+		t.Errorf("%s is still there", p.Branch)
+	}
+	if _, err := r.w.session(id); err == nil {
+		t.Error("the session is still there")
+	}
+}

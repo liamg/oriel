@@ -387,6 +387,16 @@ func (x *workspacePlugin) overview(c *ui.Ctx, s core.SessionState, st *wsState, 
 			})
 		}
 	}
+	permsCap(c, "endcap", "END")
+	c.Row("end", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
+		c.Row("k", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+			c.Text("t", "Archive it to keep its history, or delete it.", uiFont(12, th.C(theme.FgMuted)))
+		})
+		if widget.Button(c, "end", "End session…", widget.ButtonOpts{Help: endHelp}) {
+			x.open = false
+			x.run("session.end", registry.Args{"id": string(s.ID)})
+		}
+	})
 }
 
 // name is the session's name with Rename…, which edits it in place: only the name changes, not its id or branches.
