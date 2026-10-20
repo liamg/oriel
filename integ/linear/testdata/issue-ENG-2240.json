@@ -8,7 +8,7 @@
    "identifier": "ENG-2240",
    "title": "Prime the result cache after a reindex",
    "url": "https://linear.app/acme/issue/ENG-2240/price-cache-invalidation-on-plan-change",
-   "description": "Evict the org's cached results when its index is rebuilt, rather than waiting for the nightly job.",
+   "description": "Evict the org's cached results when its index is rebuilt, rather than waiting for the nightly job.\n\nThen warm the cache:\n\n- **top queries** first\n- the rest on demand",
    "priorityLabel": "High",
    "state": {
     "name": "Todo",

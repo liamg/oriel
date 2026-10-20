@@ -103,11 +103,9 @@ clip 44,38 1556x936 r 0
     rect 60,80 22x22 fill #191815 radius 5
     text "CO" @65.59375,94.24 #ece6d8 JetBrains Mono 9
     text "Codex" @92,95.729004 #ece6d8 Inter 13
-    text "gpt-5.5-codex" @142.6875,94.96 #7c7566 JetBrains Mono 11
-    text "high" @238.40625,94.96 #7c7566 JetBrains Mono 11
-    rect 274.78125,82.73 119.119995x16.54 fill #b98aff12 radius 10 stroke 1 #b98aff59
-    text "WANTS PERMISSION" @281.78125,94.420006 #b98aff JetBrains Mono 9.5
-    text "ENG-2231 · ENG-2231 search api · rethink/search-endpoint" @403.90125,94.96 #7c7566 JetBrains Mono 11
+    rect 142.6875,82.73 119.119995x16.54 fill #b98aff12 radius 10 stroke 1 #b98aff59
+    text "WANTS PERMISSION" @149.6875,94.420006 #b98aff JetBrains Mono 9.5
+    text "ENG-2231 · ENG-2231 search api · rethink/search-endpoint" @271.8075,94.96 #7c7566 JetBrains Mono 11
     rect 1322.875,78 45.25x26 fill #191815 radius 6 stroke 1 #332f27
     text "Fork" @1332.875,95.365234 #ece6d8 Inter 12
     rect 1378.125,78 101.609375x26 fill #191815 radius 6 stroke 1 #332f27
@@ -275,9 +273,9 @@ clip 44,38 1556x936 r 0
     text "GPT-5.5-CODEX" @75,959.14996 #b3ab99 JetBrains Mono 9.5
     rect 175.41,947.45996 86.26999x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
     text "EFFORT HIGH" @182.41,959.14996 #b3ab99 JetBrains Mono 9.5
-    rect 269.68,947.45996 79.70001x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-    text "GATE LIGHT" @276.68,959.14996 #b3ab99 JetBrains Mono 9.5
-    text "@path names a file · ⏎ send · ⌘⏎ send now" @998.99994,959.32996 #4f4a40 JetBrains Mono 10
+    rect 269.68,947.45996 138.82999x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+    text "CONTAINER · NET ASK" @276.68,959.14996 #b3ab99 JetBrains Mono 9.5
+    text "@path names a file · ⏎ send · ⌘⏎ send now" @999,959.32996 #4f4a40 JetBrains Mono 10
     rect 1269,114 1x860 fill #24221d
     rect 1270,114 330x860 fill #0c0c0b
     clip 1270,114 330x860 r 0

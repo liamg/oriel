@@ -192,7 +192,8 @@ flowchart TB
 - plan (AI-8): `plan.open {doc}` shows a planning session's docs (the `plan` and `plan.docs` views), and its doc
   is the `markdown` presenter's, so a presentation's keys (`present.*`) move through it and comment on a block, and
   `session.start-work {clear, fresh, branches, sandbox, network, model, effort}` is available while the session in
-  front is planning; `plan.start-work` opens its dialog, and `plan.start-work.run` (⌘↵ in the `startwork` key
+  front is planning; `session.configure {id, model, effort}` switches a session's agent to another model or effort,
+  its conversation kept, while it's idle (`host.Configure`); `plan.start-work` opens its dialog, and `plan.start-work.run` (⌘↵ in the `startwork` key
   mode) runs what the dialog holds. `quit.now` quits without waiting for the agents'
   turns (⌘↵ in the `quit` key mode; `sessions.md` → Quitting). A comment on a file at the workspace root,
   outside every project, is anchored to the project `core.DocsProject` (`"__docs__"`) with the path relative to the
@@ -261,14 +262,16 @@ flowchart TB
   editor gives its file's git status letter), in a theme token's colour.
 - project sidebar entries (`RailEntry`, `oriel.rail.add`; ui.md 01h) and start view actions (`StartEntry`,
   `oriel.start.add`). A start entry with `Link` is a small link under the actions with its `Note()` figure (Stats,
-  Usage; AI-12); the links wrap onto as many lines as they need inside the Start column, so none is cut off. A rail entry has a `Scope`: `project` (`registry.ScopeProjectEntry`) is one of each project's
+  Usage; AI-12); the links wrap onto as many lines as they need inside the Start column, so none is cut off. One with
+  `Unlisted` (Lua `unlisted = true`) isn't drawn: its command's keys work on the start view, which keeps other keys
+  out (`⌘⇧K` for mission control). A rail entry has a `Scope`: `project` (`registry.ScopeProjectEntry`) is one of each project's
   panels, listed under the open project and run with `project` added to its args (`RailEntry.ArgsFor`); `session`
   (the default) is listed below the projects; `global` (`registry.ScopeGlobalEntry`, AI-12) is a page every session
   shares (Stats, Usage, Jobs, Settings), listed last below a second divider and at the foot of the narrow form, and in
   the omnibox's **Pages** with its note and key (`registry.GlobalEntries`). `Note(project)` is dim text at its right ("4", "48 ✓"), `Badge()` a
   pill (`widget.Badge`), `Draw(c, key, size, tone)` draws its icon itself in place of `Icon` (a live one: Ori's face;
-  Go only, a Lua entry names an `Icon`), `Active(project)` lights it (for an entry with neither, a `view.*` command's `id` showing for the project
-  does), and `Shown(project)` leaves it out (Pull request without a remote). `registry.ProjectEntries` and
+  Go only, a Lua entry names an `Icon`), `Active(project)` lights it (Lua `active = fn(project)`; for an entry with neither, a `view.*` command's `id` showing for the project
+  does; an entry whose `view.*` command docks on the left opens it alone and fixed, so there's one panel at a time), and `Shown(project)` leaves it out (Pull request without a remote). `registry.ProjectEntries` and
   `SessionEntries` list them. `ProjectState` contributions add to each project's header line after its branch and
   changes (`StatePart{Text, Style, Dot}`: a PR's number, a CI result with its dot); FG-6's `ship` adds the PR and CI. Both
   kinds of entry are
@@ -753,7 +756,7 @@ type Host interface {
   `Registry.Views()` lists every view id.
 - `Host.Layout()` is the layout tree, to change from commands and views (`Open`, `Close`, `Show`, `Swap`, `Row`,
   `Shown`, `OnClose`), `Host.PaneRect(v)` where a view's pane was drawn, `Host.PaneTab(id)` the view whose tab holds a node, and `Host.Redraw()` asks for a frame from
-  any goroutine. `view.open` takes `beside` (`"editor#3"`), `size`, `project` and `alone` (in a dock, by itself: what was there closes), and `view.toggle` and `view.close` an `id`,
+  any goroutine. `view.open` takes `beside` (`"editor#3"`), `size`, `project`, `alone` (in a dock, by itself: what was there closes) and `fixed` (it can't be dragged away: `layout.Opts.Fixed`; the sidebar's panels), and `view.toggle` and `view.close` an `id`,
   `instance` and `project`. `project.open {project | index}` opens a project of the session (`core.ProjectOpened`;
   the open project, each project's last panel (`ProjectPanelOpened`) and colour (`ProjectColoured`) are
   `SessionState.ProjectUI`), `project.panel {name, project}` runs a project entry for the open project, `project.add`
@@ -941,7 +944,8 @@ type Host interface {
   it), `LookupTicket`, `AssignedTickets` (each fills in `Ticket.Tracker`), and `SortTickets` / `CompareTickets` (crit's
   order across trackers: priority, blocked last, started, with a PR, then `CompareTicketKeys`).
 - A `registry.Ticket` is `{Key, Title, URL, State, Stage, Project, Priority, PriorityLabel, Blocked, BlockedBy, PR,
-  Summary, Facts, Context, Tracker}`. `Stage` is `todo`, `started` or `review` (`registry.TicketTodo`…), whatever the
+  Summary, Description, Facts, Context, Tracker}`. `Summary` is the description's start, for the launcher's card;
+  `Description` all of it, markdown, which the Tickets page's detail draws (falling back to `Summary`). `Stage` is `todo`, `started` or `review` (`registry.TicketTodo`…), whatever the
   tracker calls the state: it colours the state chip (violet, cyan, pink) and orders the list. `Priority` is 1 for the
   most urgent, 0 for none. A move answers `registry.TicketMove{Moved, State}`. Their JSON is the shape Lua and a
   plugin's process use (`priority_label`, `blocked_by`), so a tracker's process answers in it and its Lua passes it on.

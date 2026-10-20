@@ -12,9 +12,6 @@ import (
 
 var tSelection = theme.Declare("text.selection", "alpha(accent, 28%)")
 
-// selMultiClick is how close together presses come to count as a double or triple click.
-const selMultiClick = 400 * time.Millisecond
-
 // textSel is the window's text selection: a run of text inside one Selectable box, from the press to the pointer,
 // across as many text nodes as it passes, in the order they were built.
 type textSel struct {
@@ -138,7 +135,7 @@ func (u *UI) selPress(ev render.PointerEvent) {
 		return
 	}
 	clicks := 1
-	if s := u.sel; s != nil && s.scope == scope && now.Sub(s.last) < selMultiClick && s.lastAt == ev.Pos {
+	if s := u.sel; s != nil && s.scope == scope && now.Sub(s.last) < DoubleClick && s.lastAt == ev.Pos {
 		clicks = s.clicks + 1
 	}
 	s := &textSel{scope: scope, anchor: at, focus: at, held: true, clicks: clicks, last: now, lastAt: ev.Pos}

@@ -165,7 +165,7 @@ func (t Ticket) Facts() []string {
 // Detail is the ticket as Oriel's card and the agent get it.
 func (t Ticket) Detail() registry.Ticket {
 	out := registry.Ticket{Key: t.Key, Title: t.Title, URL: t.URL, State: t.State, Stage: stage(t.State, t.StateType),
-		Project: t.Project, PriorityLabel: t.PriorityLabel, Summary: t.Summary(), Facts: t.Facts(), Context: t.Context()}
+		Project: t.Project, PriorityLabel: t.PriorityLabel, Summary: t.Summary(), Description: t.Description, Facts: t.Facts(), Context: t.Context()}
 	if t.PR != nil {
 		out.PR = &registry.TicketPR{Number: t.PR.Number, URL: t.PR.URL, Repo: t.PR.Repo}
 	}

@@ -449,26 +449,18 @@ func TestStartLinksWrap(t *testing.T) {
 	}
 }
 
-// ui.md 01e: Mission control is linked from the start view only while there's something to watch: a session whose
-// agent is running, starting, or asking. Sessions that are only resumable don't count.
-func TestStartLinksMissionControlWhileAgentsRun(t *testing.T) {
+// The start view shows only while nothing runs, so it has no link to mission control; ⌘-key and the omnibox reach it.
+func TestStartHasNoMissionControlLink(t *testing.T) {
 	s := newScene(t, "", "", render.Point{X: 1400, Y: 900})
-	s.frame()
-	s.frame()
-	if strings.Contains(s.frameText(), "Mission control") {
-		t.Error("Mission control is linked with no sessions")
-	}
-	s.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusQuiet}})
-	s.frame()
-	s.frame()
-	if strings.Contains(s.frameText(), "Mission control") {
-		t.Error("Mission control is linked for a session whose agent isn't running")
-	}
 	s.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusWorking,
 		Agent: core.AgentState{Running: true}}})
 	s.frame()
 	s.frame()
-	if !strings.Contains(s.frameText(), "Mission control") {
-		t.Errorf("Mission control isn't linked while an agent runs:\n%s", s.frameText())
+	if s.mission().open {
+		s.run("mission.toggle", nil)
+		s.frame()
+	}
+	if strings.Contains(s.frameText(), "Mission control") {
+		t.Errorf("the start view links mission control:\n%s", s.frameText())
 	}
 }

@@ -44,56 +44,56 @@ rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
 text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
 rect 0,38 1600x936 fill #060606
 clip 0,38 1220x936 r 0
-  effect glow-disc 80.72,289.05 22x22 blur 4 #ff8a1f38
-  effect glow 104.92,289.05 5.720001x22 blur 4 #ff8a1f4d
+  effect glow-disc 80.72,306.05 22x22 blur 4 #ff8a1f38
+  effect glow 104.92,306.05 5.720001x22 blur 4 #ff8a1f4d
   path 6 segments stroke 3.52 #ffd23f
   path 5 segments fill #ff8a1f
-  text "ORIEL" @135,307.72595 #ece6d8 Space Grotesk 26
-  text "v0.4.2" @1105.4375,302.68997 #7c7566 JetBrains Mono 11
-  text "START" @75,356.41998 #7c7566 JetBrains Mono 9.5
+  text "ORIEL" @135,324.72595 #ece6d8 Space Grotesk 26
+  text "v0.4.2" @1105.4375,319.68997 #7c7566 JetBrains Mono 11
+  text "START" @75,373.41998 #7c7566 JetBrains Mono 9.5
   opacity 0.42000002
-    rect 75,369.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
-    rect 91,383.27 38x38 fill #1f1c0f radius 9
+    rect 75,386.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
+    rect 91,400.27 38x38 fill #1f1c0f radius 9
     path 2 segments stroke 1.6363636 #7c7566
     path 2 segments stroke 1.6363636 #7c7566
-    clip 145,385.0405 390.8125x34.458984 r 0
-      text "New Session" @145,398.603 #ece6d8 Inter 14
-      rect 240.71875,386.57022 37.225006x13.880005 radius 8 stroke 1 #332f27
-      text "SOON" @246.71875,396.7502 #7c7566 JetBrains Mono 9
-      text "A new session on a repository, with its own branch and worktree" @145,416.60495 #7c7566 Inter 12
+    clip 145,402.0405 390.8125x34.458984 r 0
+      text "New Session" @145,415.603 #ece6d8 Inter 14
+      rect 240.71875,403.57022 37.225006x13.880005 radius 8 stroke 1 #332f27
+      text "SOON" @246.71875,413.7502 #7c7566 JetBrains Mono 9
+      text "A new session on a repository, with its own branch and worktree" @145,433.60495 #7c7566 Inter 12
     pop
-    rect 551.8125,393.00998 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
-    text "⌘N" @558.8125,406.22998 #b3ab99 JetBrains Mono 11
+    rect 551.8125,410.00998 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
+    text "⌘N" @558.8125,423.22998 #b3ab99 JetBrains Mono 11
   pop
   opacity 0.42000002
-    rect 75,445.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
-    rect 91,459.27 38x38 fill #1f1c0f radius 9
+    rect 75,462.27 520x66.00003 fill #0c0c0b radius 10 stroke 1 #24221d
+    rect 91,476.27 38x38.00003 fill #1f1c0f radius 9
     path 2 segments stroke 1.6363636 #7c7566
     path 2 segments stroke 1.6363636 #7c7566
     path 2 segments stroke 1.6363636 #7c7566
     path 2 segments stroke 1.6363636 #7c7566
     path 3 segments stroke 1.6363636 #7c7566
-    clip 145,461.0405 390.8125x34.458984 r 0
-      text "Resume a Session" @145,474.603 #ece6d8 Inter 14
-      rect 276.21875,462.57022 37.225006x13.880005 radius 8 stroke 1 #332f27
-      text "SOON" @282.21875,472.7502 #7c7566 JetBrains Mono 9
-      text "Pick up an existing session where it was left" @145,492.60495 #7c7566 Inter 12
+    clip 145,478.0405 390.8125x34.459015 r 0
+      text "Resume a Session" @145,491.603 #ece6d8 Inter 14
+      rect 276.21875,479.57022 37.225006x13.880005 radius 8 stroke 1 #332f27
+      text "SOON" @282.21875,489.7502 #7c7566 JetBrains Mono 9
+      text "Pick up an existing session where it was left" @145,509.60495 #7c7566 Inter 12
     pop
-    rect 551.8125,469.00998 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
-    text "⌘O" @558.8125,482.22998 #b3ab99 JetBrains Mono 11
+    rect 551.8125,486.00998 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
+    text "⌘O" @558.8125,499.22998 #b3ab99 JetBrains Mono 11
   pop
-  rect 75,521.27 520x66 fill #1d1a0f radius 10 stroke 1 #ffd23f73
-  rect 91,535.27 38x38 fill #1f1c0f radius 9
+  rect 75,538.27 520x66 fill #1d1a0f radius 10 stroke 1 #ffd23f73
+  rect 91,552.27 38x38 fill #1f1c0f radius 9
   path 7 segments stroke 1.6363636 #ffd23f
   path 2 segments stroke 1.6363636 #ffd23f
-  clip 145,537.0405 384.21875x34.458984 r 0
-    text "Open Directory" @145,550.603 #ece6d8 Inter 14
-    text "Open a directory as it is: no worktree, no new branch" @145,568.605 #7c7566 Inter 12
+  clip 145,554.0405 384.21875x34.458984 r 0
+    text "Open Directory" @145,567.603 #ece6d8 Inter 14
+    text "Open a directory as it is: no worktree, no new branch" @145,585.605 #7c7566 Inter 12
   pop
-  rect 545.21875,545.01 33.78125x18.52002 fill #121210 radius 4 stroke 1 #332f27
-  text "⇧⌘O" @552.21875,558.23 #b3ab99 JetBrains Mono 11
-  rect 75,597.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
-  rect 91,611.27 38x38 fill #1f1c0f radius 9
+  rect 545.21875,562.01 33.78125x18.52002 fill #121210 radius 4 stroke 1 #332f27
+  text "⇧⌘O" @552.21875,575.23 #b3ab99 JetBrains Mono 11
+  rect 75,614.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
+  rect 91,628.27 38x38 fill #1f1c0f radius 9
   path 6 segments stroke 1.6363636 #ffd23f
   path 6 segments stroke 1.6363636 #ffd23f
   path 2 segments stroke 1.6363636 #ffd23f
@@ -104,78 +104,71 @@ clip 0,38 1220x936 r 0
   path 2 segments stroke 1.6363636 #ffd23f
   path 2 segments stroke 1.6363636 #ffd23f
   path 2 segments stroke 1.6363636 #ffd23f
-  clip 145,613.0405 390.8125x34.458984 r 0
-    text "Settings" @145,626.603 #ece6d8 Inter 14
-    text "Theme, keys, editor and everything else" @145,644.605 #7c7566 Inter 12
+  clip 145,630.0405 390.8125x34.458984 r 0
+    text "Settings" @145,643.603 #ece6d8 Inter 14
+    text "Theme, keys, editor and everything else" @145,661.605 #7c7566 Inter 12
   pop
-  rect 551.8125,621.01 27.1875x18.52002 fill #121210 radius 4 stroke 1 #332f27
-  text "⌘," @558.8125,634.23 #b3ab99 JetBrains Mono 11
-  rect 75,675.27 86.53125x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  rect 551.8125,638.01 27.1875x18.52002 fill #121210 radius 4 stroke 1 #332f27
+  text "⌘," @558.8125,651.23 #b3ab99 JetBrains Mono 11
+  rect 75,692.27 86.53125x26 fill #0c0c0b radius 13 stroke 1 #24221d
   path 6 segments stroke 1.25 #ffd23f
   path 6 segments stroke 1.25 #ffd23f
   path 6 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 3 segments stroke 1.25 #ffd23f
   path 3 segments stroke 1.25 #ffd23f
-  text "Reviews" @104,692.63525 #ece6d8 Inter 12
-  rect 169.53125,675.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  text "Reviews" @104,709.63525 #ece6d8 Inter 12
+  rect 169.53125,692.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
-  text "Stats" @198.53125,692.63525 #ece6d8 Inter 12
-  rect 245.14062,675.27 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  text "Stats" @198.53125,709.63525 #ece6d8 Inter 12
+  rect 245.14062,692.27 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
-  text "Usage" @274.14062,692.63525 #ece6d8 Inter 12
-  rect 328.5,675.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  text "Usage" @274.14062,709.63525 #ece6d8 Inter 12
+  rect 328.5,692.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 3 segments stroke 1.25 #ffd23f
-  text "Jobs" @357.5,692.63525 #ece6d8 Inter 12
-  rect 75,709.27 192.6875x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 5 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  text "Mission control" @104,726.63525 #ece6d8 Inter 12
-  text "3 need you" @197.6875,725.87006 #7c7566 JetBrains Mono 10
-  rect 275.6875,709.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  text "Jobs" @357.5,709.63525 #ece6d8 Inter 12
+  rect 403.21875,692.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
   path 6 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
-  text "Prompts" @304.6875,726.63525 #ece6d8 Inter 12
-  rect 370.1875,709.27 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  text "…" @380.1875,725.942 #ffd23f JetBrains Mono 10.200001
-  text "Plugins" @399.1875,726.63525 #ece6d8 Inter 12
-  text "RECENT" @685,356.41998 #7c7566 JetBrains Mono 9.5
-  text "↵ open · ⌫ forget" @1039.0469,356.93 #7c7566 JetBrains Mono 10
-  text "SESSIONS" @697,387.62 #7c7566 JetBrains Mono 9.5
-  rect 697,411.2647 26x26 fill #191815 radius 6
+  text "Prompts" @432.21875,709.63525 #ece6d8 Inter 12
+  rect 497.71875,692.27 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  text "…" @507.71875,708.942 #ffd23f JetBrains Mono 10.200001
+  text "Plugins" @526.71875,709.63525 #ece6d8 Inter 12
+  text "RECENT" @685,373.41998 #7c7566 JetBrains Mono 9.5
+  text "↵ open · ⌫ forget" @1039.0469,373.93 #7c7566 JetBrains Mono 10
+  text "SESSIONS" @697,404.62 #7c7566 JetBrains Mono 9.5
+  rect 697,428.2647 26x26 fill #191815 radius 6
   path 5 segments fill #4fe0a0
-  clip 735,408.46997 398x31.589478 r 0
-    text "search-service" @735,421.06372 #ece6d8 Inter 13
-    text "work" @735,436.90945 #7c7566 JetBrains Mono 10.5
+  clip 735,425.46997 398x31.589478 r 0
+    text "search-service" @735,438.06372 #ece6d8 Inter 13
+    text "work" @735,453.90945 #7c7566 JetBrains Mono 10.5
   pop
-  rect 697,464.85422 26x26 fill #191815 radius 6
+  rect 697,481.85422 26x26 fill #191815 radius 6
   path 5 segments fill #ff5f6d
-  clip 735,462.05948 398x31.589508 r 0
-    text "pricing-rounding" @735,474.65323 #ece6d8 Inter 13
-    text "plan" @735,490.49896 #7c7566 JetBrains Mono 10.5
+  clip 735,479.05948 398x31.589508 r 0
+    text "pricing-rounding" @735,491.65323 #ece6d8 Inter 13
+    text "plan" @735,507.49896 #7c7566 JetBrains Mono 10.5
   pop
-  rect 697,518.44366 26x26 fill #191815 radius 6
+  rect 697,535.44366 26x26 fill #191815 radius 6
   path 5 segments fill #b98aff
-  clip 735,515.6489 398x31.589478 r 0
-    text "ENG-2231 search api" @735,528.2427 #ece6d8 Inter 13
-    text "work" @735,544.08844 #7c7566 JetBrains Mono 10.5
+  clip 735,532.6489 398x31.589478 r 0
+    text "ENG-2231 search api" @735,545.2427 #ece6d8 Inter 13
+    text "work" @735,561.08844 #7c7566 JetBrains Mono 10.5
   pop
-  rect 697,572.0332 26x26 fill #191815 radius 6
+  rect 697,589.0332 26x26 fill #191815 radius 6
   path 5 segments fill #b98aff
-  clip 735,569.23846 398x31.589478 r 0
-    text "flaky e2e sweep" @735,581.8322 #ece6d8 Inter 13
-    text "job" @735,597.678 #7c7566 JetBrains Mono 10.5
+  clip 735,586.23846 398x31.589478 r 0
+    text "flaky e2e sweep" @735,598.8322 #ece6d8 Inter 13
+    text "job" @735,614.678 #7c7566 JetBrains Mono 10.5
   pop
 pop
 rect 1220,38 380x936 fill #0c0c0b

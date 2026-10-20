@@ -318,7 +318,7 @@ func (x *jobsPlugin) agentChoices(c *ui.Ctx, f *jobForm, agents []host.ProviderI
 		f.agent, f.model, f.effort = agents[cur].ID, defaultModel(agents[cur]), ""
 	}
 	if p := agents[cur]; len(p.Models) > 0 {
-		if m, e, ok := modelSelects(c, p, cmpOr(f.model, defaultModel(p)), f.effort, "agent/jobs#new"); ok {
+		if m, e, ok := modelSelects(c, p, cmpOr(f.model, defaultModel(p)), f.effort, false, "agent/jobs#new"); ok {
 			f.agent, f.model, f.effort = p.ID, m, e
 		}
 	}

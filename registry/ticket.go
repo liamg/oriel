@@ -32,6 +32,7 @@ type Ticket struct {
 	BlockedBy     []string  `json:"blocked_by,omitempty"`     // which, when the tracker says
 	PR            *TicketPR `json:"pr,omitempty"`             // the newest pull request on it
 	Summary       string    `json:"summary,omitempty"`        // the description's start
+	Description   string    `json:"description,omitempty"`    // the whole description, markdown
 	Facts         []string  `json:"facts,omitempty"`          // "2 attachments", "linked PR #4398", "4 comments"
 	// Context is markdown: the ticket, its comments and attachments, handed to the agent with the prompt.
 	Context string `json:"context,omitempty"`

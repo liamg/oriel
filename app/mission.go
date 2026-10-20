@@ -42,6 +42,7 @@ type missionPlugin struct {
 	rows    [][]core.SessionID // the cards as last laid out, a row at a time
 	reveal  bool               // bring the selected card into view next frame
 	pending bool               // opens once a session is known, while the window is still on the start view
+	launch  time.Time          // the first frame, for the sessions there were at launch
 
 	focusFilter bool
 	renaming    core.SessionID
@@ -70,7 +71,7 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 		x.pending = x.sh.cfg.WorkDir == "" && len(x.sh.cfg.Files) == 0
 	}
 	x.add(h.Option(registry.OptionSpec{Name: AtLaunchOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
-		Help: "Open on mission control when Oriel starts with nothing open, once there's a session to show."}))
+		Help: "Open on mission control, over the session that was in front, when Oriel starts with nothing open and there are sessions."}))
 	selected := func(a registry.Args) core.SessionID {
 		if id := a.String("id"); id != "" {
 			return core.SessionID(id)
@@ -172,8 +173,7 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 	mission := pagePlace("mission", "Mission control", "mission.open", &x.open)
 	mission.Close = x.close
 	x.add(h.Contribute(mission))
-	x.add(h.Contribute(registry.StartEntry{Name: "mission", Icon: "mission", Title: "Mission control", Desc: "Every session as a card, and what each waits on",
-		Command: "mission.toggle", Order: 95, Link: true, Note: x.needNote, Shown: x.watching}))
+	x.add(h.Contribute(registry.StartEntry{Name: "mission", Command: "mission.toggle", Unlisted: true}))
 	x.add(h.View(MissionView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "mission", Fn: x.page} })))
 	return nil
 }
@@ -293,20 +293,6 @@ func (x *missionPlugin) decide(ctx registry.Ctx, id core.SessionID, decision str
 	return fmt.Errorf("%s isn't asking for anything to %s", cmpOr(se.Name, string(id)), decision)
 }
 
-// needNote is the start view's link figure: how many sessions need you.
-func (x *missionPlugin) needNote() string {
-	n := 0
-	for _, s := range x.h.State().Sessions {
-		if !s.Archived && (s.Status == core.StatusNeedsYou || s.Status == core.StatusPermission) {
-			n++
-		}
-	}
-	if n == 0 {
-		return ""
-	}
-	return fmt.Sprintf("%d need you", n)
-}
-
 // missionGroup is a heading's cards: a status's or a repo's.
 type missionGroup struct {
 	key, title, meta string
@@ -314,12 +300,35 @@ type missionGroup struct {
 	cards            []core.SessionState
 }
 
-// watching says there's something for mission control to watch: a session whose agent is running, starting, or
-// asking. The start view links to it only then.
-func (x *missionPlugin) watching() bool {
-	return slices.ContainsFunc(x.h.State().Sessions, func(se core.SessionState) bool {
-		return !se.Archived && (se.Agent.Live() || len(se.Asks) > 0)
-	})
+// atLaunch is the session the window lands on at launch: the one in front last time, else the newest. ok is false
+// while the sessions there were at launch aren't known yet, or there are none.
+func (x *missionPlugin) atLaunch(st core.State) (id core.SessionID, ok bool) {
+	var newest core.SessionState
+	for _, se := range st.Sessions {
+		if se.Archived || se.Created.After(x.launch) {
+			continue
+		}
+		if se.ID == st.Focus {
+			return se.ID, true
+		}
+		if !ok || se.Created.After(newest.Created) {
+			newest, ok = se, true
+		}
+	}
+	return newest.ID, ok
+}
+
+// landOn brings session id to the front at launch, with mission control over it (mission.at_launch): the start
+// view shows only while there are no sessions, and Escape from mission control lands in this one.
+func (x *missionPlugin) landOn(id core.SessionID) {
+	if v, _, err := x.h.Options().Get(AtLaunchOption, registry.At{}); err == nil && v == true {
+		if x.sh.sessions != nil {
+			x.sh.sessions.after(id, []call{{command: "mission.open"}})
+		} else {
+			x.show()
+		}
+	}
+	x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
 }
 
 // live are the sessions mission control shows: not archived, and matching the filter.

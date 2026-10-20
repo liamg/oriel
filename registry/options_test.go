@@ -246,3 +246,29 @@ func TestOptionFollows(t *testing.T) {
 		t.Errorf("set to 11, then ui.font_size to 20: %v from %v", v, l)
 	}
 }
+
+// A duration option takes days as well as Go's units, and a whole number of days is written back in days.
+func TestDurationDays(t *testing.T) {
+	for _, c := range []struct {
+		in   string
+		want time.Duration
+		out  string
+	}{
+		{"30d", 30 * 24 * time.Hour, "30d"},
+		{"1d12h", 36 * time.Hour, "36h0m0s"},
+		{"720h", 30 * 24 * time.Hour, "30d"},
+		{"5m", 5 * time.Minute, "5m0s"},
+		{"0", 0, "0s"},
+	} {
+		d, err := registry.ParseDuration(c.in)
+		if err != nil || d != c.want {
+			t.Errorf("ParseDuration(%q) = %v, %v; want %v", c.in, d, err, c.want)
+		}
+		if got := registry.FormatDuration(d); got != c.out {
+			t.Errorf("FormatDuration(%v) = %q, want %q", d, got, c.out)
+		}
+	}
+	if _, err := registry.ParseDuration("1.5d"); err == nil {
+		t.Error("1.5d parsed")
+	}
+}

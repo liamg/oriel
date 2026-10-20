@@ -405,7 +405,7 @@ func tab(c *ui.Ctx, r *Root, st *viewState, l *Node, i int, v ViewRef, head bool
 	in := c.Interaction(id)
 	changed := false
 	switch {
-	case in.Held:
+	case in.Held && !r.IsFixed(v):
 		if st.drag == nil {
 			st.drag = &drag{view: v, from: in.Pointer()}
 		}

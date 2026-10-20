@@ -66,3 +66,24 @@ func TestAPartReachesANewSessionsAgent(t *testing.T) {
 		t.Error("a pack that doesn't build was saved")
 	}
 }
+
+// A list page's rows hand up the keys they don't use: Escape after ↓ closes the page.
+func TestEscapeLeavesAListPage(t *testing.T) {
+	s, _ := hostScene(t)
+	s.run("prompts.open", nil)
+	s.frame()
+	s.frame()
+	s.click(centre(s.within("Prompts list", "Coding style").Bounds))
+	s.frame()
+	was := s.promptsPage().sel
+	s.typeKeys("Down")
+	s.frame()
+	if s.promptsPage().sel == was {
+		t.Fatalf("↓ on the list didn't move from %q", was)
+	}
+	s.typeKeys("Esc")
+	s.frame()
+	if s.promptsPage().open {
+		t.Error("Escape after ↓ left the Prompts page up")
+	}
+}

@@ -598,7 +598,7 @@ func (x *terminals) pointer(c *ui.Ctx, t *terminal, in ui.Interaction, r render.
 	}
 	now := c.Now()
 	clicks := 1
-	if s != nil && now.Sub(s.last) < mouseTime && p == s.lastAt {
+	if s != nil && now.Sub(s.last) < ui.DoubleClick && p == s.lastAt {
 		clicks = s.clicks + 1
 	}
 	s = &termSel{anchor: p, end: p, held: in.Held, clicks: clicks, last: now, lastAt: p}

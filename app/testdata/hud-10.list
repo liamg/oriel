@@ -14,6 +14,7 @@ clip 102.9375,0 1143.3063x38 r 0
   text "work" @232.04688,23.599998 #7c7566 JetBrains Mono 10
   text "⌘1" @263.04688,23.42 #4f4a40 JetBrains Mono 9.5
   rect 287.04688,0 1x38 fill #24221d
+  text "+" @303.14844,23.355999 #7c7566 JetBrains Mono 12.1
 pop
 rect 1260.2438,0 209.9375x24 radius 5 stroke 1 #332f27
 text "5H" @1268.2438,15.780001 #7c7566 JetBrains Mono 10.5

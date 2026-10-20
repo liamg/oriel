@@ -142,7 +142,7 @@ func (u *UI) Fork() *UI {
 	f.flags = maps.Clone(u.flags)
 	f.glides, f.fills, f.exitable, f.exiting = maps.Clone(u.glides), maps.Clone(u.fills), maps.Clone(u.exitable), maps.Clone(u.exiting)
 	f.parents = maps.Clone(u.parents)
-	f.in.clicks, f.in.keys, f.in.context, f.in.wheel, f.in.claimed, f.in.help = nil, nil, nil, nil, nil, ""
+	f.in.clicks, f.in.doubles, f.in.keys, f.in.context, f.in.wheel, f.in.claimed, f.in.help = nil, nil, nil, nil, nil, nil, ""
 	return &f
 }
 
@@ -175,7 +175,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	if u.in.pending() {
 		u.wake = u.now() // what the input changed shows next frame
 	}
-	u.in.clicks, u.in.keys, u.in.context, u.in.wheel, u.in.claimed, u.in.dropped = nil, nil, nil, nil, nil, nil
+	u.in.clicks, u.in.doubles, u.in.keys, u.in.context, u.in.wheel, u.in.claimed, u.in.dropped = nil, nil, nil, nil, nil, nil, nil
 	u.bubble()
 	u.tooltip()
 	u.dragShown()
@@ -779,6 +779,9 @@ func (u *UI) placeFloat(e *elem) {
 	}
 	x := anchor.Min.X + fl.At.X*anchor.Dx() - fl.Self.X*e.size[0] + fl.Offset.X
 	y := anchor.Min.Y + fl.At.Y*anchor.Dy() - fl.Self.Y*e.size[1] + fl.Offset.Y
+	if fl.Flip && u.root != nil && y+e.size[1] > u.root.size[1] {
+		y = anchor.Min.Y + (1-fl.At.Y)*anchor.Dy() - (1-fl.Self.Y)*e.size[1] - fl.Offset.Y
+	}
 	u.place(e, x, y)
 }
 

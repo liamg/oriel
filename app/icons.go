@@ -115,6 +115,11 @@ var icons = map[string]func(p *iconPen){
 		p.line(5.5, 9.5, 10.5, 9.5)
 		p.line(5.5, 12, 8.5, 12)
 	},
+	"doc": func(p *iconPen) {
+		p.poly(true, 3, 1.5, 9.5, 1.5, 13, 5, 13, 14.5, 3, 14.5)
+		p.poly(false, 9.5, 1.5, 9.5, 5, 13, 5)
+		p.poly(false, 5.5, 9.5, 7, 11, 10.5, 7.5)
+	},
 	"mic": func(p *iconPen) {
 		p.poly(true, 6, 2, 10, 2, 10, 9, 6, 9)
 		p.curve(3.5, 7.5, 3.5, 11, 6, 12, 8, 12)

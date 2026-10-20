@@ -68,7 +68,7 @@ func (x *requests) listView(c *ui.Ctx, vc registry.ViewCtx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, T: 12, B: 10}, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("k", "REQUESTS", kickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			if k := boundKey(x.h, "view.toggle", registry.Args{"id": RequestsView, "place": "dock", "edge": "left"}); k != "" {
+			if k := boundKey(x.h, "view.toggle", requestsArgs()); k != "" {
 				c.Text("keys", k, monoFont(10, th.C(theme.FgGhost)))
 			}
 		})

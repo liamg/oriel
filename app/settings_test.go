@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
@@ -244,6 +245,25 @@ func TestSettingsSnapshot(t *testing.T) {
 	s.reg.Options().SetFrom("ui.reduced_motion", registry.LayerLua, registry.At{}, true, "init.lua:12")
 	s.run("Settings", registry.Args{"args": "ui"})
 	s.golden("settings")
+}
+
+// Settings keeps the sidebar over a project, and covers it opened from the start view.
+func TestSettingsKeepsTheSidebar(t *testing.T) {
+	left := func(s *errScene) float32 {
+		t.Helper()
+		s.run("settings.open", nil)
+		s.frame()
+		s.frame()
+		return s.accessRole(t, render.RoleDialog, "Settings").Bounds.Min.X
+	}
+	if x := left(newScene(t, "", "", mockupSize)); x != 0 {
+		t.Errorf("settings opened from the start view starts at x %v, beside the sidebar", x)
+	}
+	over := sessionScene(t, core.KindWork, sidebarFixture(t), sidebarSize)
+	explorer := over.access("Explorer").Bounds
+	if x := left(over); x < explorer.Max.X {
+		t.Errorf("settings over a project starts at x %v, over the sidebar (to %v)", x, explorer.Max.X)
+	}
 }
 
 // settingsAt is the settings page searched for query, drawn.

@@ -210,3 +210,28 @@ func TestWrappingRow(t *testing.T) {
 		t.Errorf("the row is %v, want 250×120: four lines and its padding", got)
 	}
 }
+
+// A Flip float that would run past the window's bottom opens above its anchor instead: a menu under a control at the
+// foot of the window.
+func TestFloatFlips(t *testing.T) {
+	for _, c := range []struct {
+		top, want float32
+	}{
+		{10, 10 + 20 + 4},   // room below: under it
+		{270, 270 - 4 - 60}, // none: above it
+	} {
+		u := newUI()
+		var menu ID
+		build := func(cx *Ctx) {
+			cx.Column("page", Style{W: Flex(1), H: Flex(1), Pad: Insets{T: c.top}}, func(cx *Ctx) {
+				anchor := cx.Box("btn", Style{W: Px(40), H: Px(20)}, nil)
+				menu = cx.Box("menu", Style{W: Px(80), H: Px(60), Z: LayerPopup, Float: &Float{To: anchor, At: render.Point{Y: 1}, Offset: render.Point{Y: 4}, Flip: true}}, nil)
+			})
+		}
+		u.Layout(render.Point{X: 400, Y: 300}, build)
+		u.Layout(render.Point{X: 400, Y: 300}, build)
+		if r, _ := u.Rect(menu); r.Min.Y != c.want {
+			t.Errorf("anchor at %v: the menu's top is %v, want %v", c.top, r.Min.Y, c.want)
+		}
+	}
+}

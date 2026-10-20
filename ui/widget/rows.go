@@ -62,6 +62,9 @@ func Rows(c *ui.Ctx, key any, n int, sel *int, o RowsOpts, row func(c *ui.Ctx, i
 			}
 		}
 	}
+	passOn(c, id, in.Keys, func(k render.KeyEvent) bool {
+		return k.Key == "CR" || hasKey([]render.KeyEvent{k}, "j", "k", "g", "G", "Down", "Up", "Home", "End")
+	})
 	focused := in.Focused
 	mode := o.KeyMode
 	if mode == "" {

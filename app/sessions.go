@@ -176,6 +176,13 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 					return w.StartWork(ctx, startWorkReq(id, a))
 				})(ctx, a)
 			}},
+		{ID: "session.configure", Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
+			Available: named,
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				return x.onSession(func(ctx context.Context, w *host.Host, id core.SessionID) error {
+					return w.Configure(ctx, host.ConfigureReq{Session: id, Model: a.String("model"), Effort: a.String("effort")})
+				})(ctx, a)
+			}},
 		{ID: "session.interrupt", Title: "Interrupt the agent's turn: {id}'s, or the session in front's", Available: named,
 			Run: x.onSession(func(_ context.Context, w *host.Host, id core.SessionID) error { return w.Interrupt(id) })},
 		{ID: "session.rename", Title: "Rename {id}, or the session in front: {name}", Available: named,

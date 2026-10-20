@@ -255,3 +255,20 @@ func TestSessionTabsOverflow(t *testing.T) {
 		t.Errorf("the session in front isn't in view: at %v, the right side at %v", last.At, right.At)
 	}
 }
+
+// A new session is a click away with sessions open: the + after the tabs opens the launcher.
+func TestNewSessionFromTheTabs(t *testing.T) {
+	s, _ := hostScene(t)
+	s.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "s1", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusQuiet}})
+	s.store.Apply(core.SessionFocused{ID: "s1"})
+	s.until(t, "the tab's status", func() bool { return strings.Contains(s.frameText(), "pricing-rounding\noff") })
+	s.frame()
+	b := s.accessRole(t, render.RoleButton, "New session")
+	if tab := s.access("pricing-rounding").Bounds; b.Bounds.Min.X < tab.Max.X {
+		t.Errorf("the + is at %v, not after the tab at %v", b.Bounds, tab)
+	}
+	s.click(centre(b.Bounds))
+	if !s.launcherPlugin().open {
+		t.Error("the + didn't open the launcher")
+	}
+}

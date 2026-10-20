@@ -73,6 +73,8 @@ func (x *reviewsPlugin) Activate(_ context.Context, h plugin.Host) error {
 			Help: "Count a review asked of a team you're on toward the Reviews pill, as well as those asked of you."},
 		{Name: "reviews.notify", Section: "git", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 			Help: "Tell you when someone asks for your review."},
+		{Name: "reviews.max_age", Section: "git", Type: registry.Duration, Default: 30 * 24 * time.Hour, Scopes: registry.ScopeUser,
+			Help: "Leave out review requests asked longer ago than this, everywhere they're listed or counted; 0 shows them all."},
 	} {
 		x.add(h.Option(o))
 	}
@@ -158,6 +160,20 @@ func (x *reviewsPlugin) poll() {
 		case <-t.C:
 		}
 	}
+}
+
+// tooOld says r was asked longer ago than reviews.max_age; one with no time asked never is.
+func (x *reviewsPlugin) tooOld(r registry.ReviewRequest) bool {
+	v, _, _ := x.h.Options().Get("reviews.max_age", registry.At{})
+	d, _ := v.(time.Duration)
+	if d <= 0 || r.Asked.IsZero() {
+		return false
+	}
+	now := time.Now()
+	if u := x.h.UI(); u != nil {
+		now = u.Now()
+	}
+	return now.Sub(r.Asked) > d
 }
 
 func (x *reviewsPlugin) pollEvery() time.Duration {
@@ -257,7 +273,7 @@ func (x *reviewsPlugin) notifyNew(s registry.HostSite, before, now []registry.Re
 		was[r.URL] = r.State
 	}
 	for _, r := range now {
-		if !r.Counts(teams) {
+		if !r.Counts(teams) || x.tooOld(r) {
 			continue
 		}
 		if st, ok := was[r.URL]; ok && (st == r.State || st == registry.ReviewNew) {
@@ -344,8 +360,8 @@ func (x *reviewsPlugin) listAt(name string) time.Time {
 	return time.Time{}
 }
 
-// rows are every source's requests in one order, those you've approved left out, then each source's key ask or
-// failure.
+// rows are every source's requests in one order, those you've approved and those older than reviews.max_age left
+// out, then each source's key ask or failure.
 func (x *reviewsPlugin) rows() []reviewRow {
 	var reqs []registry.ReviewRequest
 	var foot []reviewRow
@@ -364,7 +380,7 @@ func (x *reviewsPlugin) rows() []reviewRow {
 			foot = append(foot, reviewRow{src: s, action: "refresh", err: err})
 		}
 		for _, r := range rs {
-			if r.State != registry.ReviewApproved {
+			if r.State != registry.ReviewApproved && !x.tooOld(r) {
 				reqs = append(reqs, r)
 			}
 		}

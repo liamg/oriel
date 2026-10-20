@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -436,4 +437,35 @@ func (o *options) register(s OptionSpec) (Disposable, error) {
 			}
 		}
 	}), nil
+}
+
+// ParseDuration reads a duration option's value: Go's units (time.ParseDuration), and a whole number of days
+// before them ("30d", "1d12h").
+func ParseDuration(s string) (time.Duration, error) {
+	s = strings.TrimSpace(s)
+	days, rest, ok := strings.Cut(s, "d")
+	if !ok {
+		return time.ParseDuration(s)
+	}
+	n, err := strconv.Atoi(days)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("time: invalid duration %q", s)
+	}
+	d := time.Duration(n) * 24 * time.Hour
+	if rest == "" {
+		return d, nil
+	}
+	r, err := time.ParseDuration(rest)
+	if err != nil {
+		return 0, fmt.Errorf("time: invalid duration %q", s)
+	}
+	return d + r, nil
+}
+
+// FormatDuration writes a duration option's value: in days when it's a whole number of them, else as Go does.
+func FormatDuration(d time.Duration) string {
+	if day := 24 * time.Hour; d > 0 && d%day == 0 {
+		return strconv.Itoa(int(d/day)) + "d"
+	}
+	return d.String()
 }

@@ -77,6 +77,7 @@ type Root struct {
 	DropDown *Dock          `json:"dropdown"`
 	Zoomed   *ViewRef       `json:"zoomed,omitempty"`
 	Focus    *ViewRef       `json:"focus,omitempty"`
+	Fixed    []ViewRef      `json:"fixed,omitempty"` // views that can't be dragged out of where they are
 	prev     *ViewRef       // focus before the last FocusDir, which breaks its ties
 	onClose  []func(ViewRef)
 	onShow   []func(ViewRef)
@@ -279,6 +280,7 @@ type Opts struct {
 	Rect   render.Rect `json:"rect,omitzero"`
 	Size   float32     `json:"size,omitempty"`  // a closed dock opens at this size
 	Alone  bool        `json:"alone,omitempty"` // in a dock, by itself: what was there closes
+	Fixed  bool        `json:"fixed,omitempty"` // it can't be dragged away
 }
 
 // Open puts v at p and focuses it. A view already open is moved instead.
@@ -341,9 +343,15 @@ func (r *Root) open(v ViewRef, p Placement, o Opts) error {
 	default:
 		return fmt.Errorf("unknown placement %q", p)
 	}
+	if o.Fixed {
+		r.Fixed = append(r.Fixed, v)
+	}
 	r.Focus = &v
 	return nil
 }
+
+// IsFixed reports whether v was opened Fixed: it stays where it is.
+func (r *Root) IsFixed(v ViewRef) bool { return slices.Contains(r.Fixed, v) }
 
 func (n *Node) add(v ViewRef) {
 	n.Tabs = append(n.Tabs, v)
@@ -491,6 +499,7 @@ func (r *Root) Close(v ViewRef) {
 	if r.Zoomed != nil && *r.Zoomed == v {
 		r.Zoomed = nil
 	}
+	r.Fixed = slices.DeleteFunc(r.Fixed, func(f ViewRef) bool { return f == v })
 	if r.Focus != nil && *r.Focus == v {
 		r.Focus = nil
 		if len(l.Tabs) > 0 {
@@ -551,8 +560,11 @@ type Target struct {
 	Float  *render.Rect `json:"float,omitempty"`
 }
 
-// Drop moves v to t.
+// Drop moves v to t, unless it's fixed.
 func (r *Root) Drop(v ViewRef, t Target) error {
+	if r.IsFixed(v) {
+		return fmt.Errorf("%s is fixed", v)
+	}
 	switch {
 	case t.Dock != "":
 		return r.Move(v, Docked, Opts{Edge: t.Dock})

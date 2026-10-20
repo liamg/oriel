@@ -11,7 +11,7 @@ import (
 //oriel:api name=rail cap=ui
 type Rail struct{ a *APIs }
 
-//oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note, badge, badge_tone, shown }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. badge = fn() returns a count shown as a pill in its place (0 for none), in badge_tone, a theme token (rail.badge by default). icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph, or one a plugin's [contributes] icons brings. It's dimmed while the command isn't available, and listed only while shown = fn(project) returns true, when there's a shown: oriel.secret.has('NAME') keeps a plugin's entry hidden until its secret is set."
+//oriel:api doc="Add an entry to the project sidebar down the window's left edge: { name, icon, title, command, args, scope, order (50 by default), bottom, note, badge, badge_tone, shown, active }. scope is project (one of each project's panels: listed under the open project, its command run with args.project set to the project), session (below the projects; the default) or global (a page of every session's, below a second divider with Stats, Usage and Settings). note = fn(project) returns dim text for its right: a live figure. badge = fn() returns a count shown as a pill in its place (0 for none), in badge_tone, a theme token (rail.badge by default). icon is a built-in icon's name (files, search, git, pullrequest, tests, requests, ship, debug, settings, stats, usage, jobs) or a glyph, or one a plugin's [contributes] icons brings. It's dimmed while the command isn't available, and listed only while shown = fn(project) returns true, when there's a shown: oriel.secret.has('NAME') keeps a plugin's entry hidden until its secret is set. active = fn(project) lights it while its panel is showing; without it, a view.* command's view showing does. A view.* command docked on the left opens alone and fixed: the sidebar shows one panel at a time."
 func (r Rail) Add(spec script.Table, where string) error {
 	e := registry.RailEntry{Name: str(spec, "name"), Icon: str(spec, "icon"), Title: str(spec, "title"), Command: str(spec, "command"),
 		Order: 50, Source: where}
@@ -44,6 +44,9 @@ func (r Rail) Add(spec script.Table, where string) error {
 	if fn, ok := spec["shown"].(*script.Fn); ok {
 		e.Shown = func(project string) bool { return r.a.truthy(fn, project) }
 	}
+	if fn, ok := spec["active"].(*script.Fn); ok {
+		e.Active = func(project string) bool { return r.a.truthy(fn, project) }
+	}
 	if fn, ok := spec["note"].(*script.Fn); ok {
 		e.Note = func(project string) string {
 			out, err := r.a.VM.Call(fn, project)
@@ -60,7 +63,7 @@ func (r Rail) Add(spec script.Table, where string) error {
 //oriel:api name=start cap=ui
 type Start struct{ a *APIs }
 
-//oriel:api doc="Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note, shown }. It's dimmed while the command isn't available, and listed only while shown = fn() returns true, when there's a shown. link = true makes it a small link under the actions, with note = fn() its figure."
+//oriel:api doc="Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note, shown, unlisted }. It's dimmed while the command isn't available, and listed only while shown = fn() returns true, when there's a shown. link = true makes it a small link under the actions, with note = fn() its figure. unlisted = true draws nothing: only its command's keys work on the start view, which keeps other keys out."
 func (s Start) Add(spec script.Table, where string) error {
 	e := registry.StartEntry{Name: str(spec, "name"), Icon: str(spec, "icon"), Title: str(spec, "title"), Desc: str(spec, "desc"),
 		Command: str(spec, "command"), Order: 50, Source: where}
@@ -74,6 +77,7 @@ func (s Start) Add(spec script.Table, where string) error {
 		e.Order = int(o)
 	}
 	e.Link, _ = spec["link"].(bool)
+	e.Unlisted, _ = spec["unlisted"].(bool)
 	if fn, ok := spec["shown"].(*script.Fn); ok {
 		e.Shown = func() bool { return s.a.truthy(fn) }
 	}

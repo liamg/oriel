@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -130,12 +131,14 @@ func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 		{"debug", "debug", "Debug", "debug", "<D-D>", "dock", 50},
 		{"ship", "ship", "Ship", "ship", "", "tab", 60},
 	} {
-		args := registry.Args{"id": s.view, "place": s.place, "edge": "left", "title": s.title}
+		args := sidebarArgs("view.toggle", registry.Args{"id": s.view, "place": s.place, "edge": "left", "title": s.title})
 		switch {
 		case s.place == "tab":
 			args = registry.Args{"id": s.view, "place": "tab", "title": s.title}
 		case s.name == "debug":
 			args = debugViewArgs()
+		case s.name == "requests":
+			args = requestsArgs()
 		}
 		e := registry.RailEntry{Name: s.name, Icon: s.icon, Title: s.title, Command: "view.toggle", Args: args, Order: s.order}
 		if s.name == "requests" {
@@ -262,9 +265,20 @@ func active(h plugin.Host, e registry.RailEntry, project string) bool {
 	return false
 }
 
+// sidebarArgs are a command's args as the sidebar runs it: a view docked on the left opens alone and fixed, so the
+// dock shows one panel at a time.
+func sidebarArgs(command string, a registry.Args) registry.Args {
+	if !strings.HasPrefix(command, "view.") || a.String("place") != "dock" || a.String("edge") != "left" {
+		return a
+	}
+	a = maps.Clone(a)
+	a["alone"], a["fixed"] = true, true
+	return a
+}
+
 // run runs an entry for project, and remembers a project's panel once it's showing.
 func (r *rail) run(ctx registry.Ctx, e registry.RailEntry, project string) error {
-	if err := r.h.Run(ctx, e.Command, e.ArgsFor(project)); err != nil {
+	if err := r.h.Run(ctx, e.Command, sidebarArgs(e.Command, e.ArgsFor(project))); err != nil {
 		return err
 	}
 	w := projectsHere(r.h)
@@ -399,15 +413,17 @@ func (r *rail) rows(w here, wide bool) []sideRow {
 	return rows
 }
 
+// onStart says the start view is what's behind any page: no project, and nothing open.
+func onStart(h plugin.Host) bool { return h.Here().Project == "" && len(h.Layout().Shown()) == 0 }
+
 func (r *rail) layered(z int) bool {
 	u := r.h.UI()
 	return u != nil && u.Layered(z)
 }
 
 func (r *rail) build(c *ui.Ctx) {
-	// While the start view is what the window shows (no project, nothing open, no page over it), the sidebar has
-	// nothing to offer.
-	if r.h.Here().Project == "" && len(r.h.Layout().Shown()) == 0 && !r.layered(ui.LayerPage) {
+	// While the start view is what the window shows (no page over it), the sidebar has nothing to offer.
+	if onStart(r.h) && !r.layered(ui.LayerPage) {
 		return
 	}
 	w := projectsHere(r.h)

@@ -183,7 +183,7 @@ type startRow struct {
 func (s *start) rows(h plugin.Host) (actions, recent []startRow) {
 	for _, e := range registry.StartEntries(h) {
 		e := e
-		if e.Link {
+		if e.Link || e.Unlisted {
 			continue
 		}
 		ok := h.Available(e.Command, e.Args)
@@ -420,7 +420,7 @@ func startLinks(c *ui.Ctx, h plugin.Host) {
 	th := c.Theme()
 	var links []registry.StartEntry
 	for _, e := range registry.StartEntries(h) {
-		if e.Link && h.Available(e.Command, e.Args) {
+		if e.Link && !e.Unlisted && h.Available(e.Command, e.Args) {
 			links = append(links, e)
 		}
 	}

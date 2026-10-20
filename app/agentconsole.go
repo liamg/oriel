@@ -58,7 +58,8 @@ type agentConsole struct {
 	sh *shell
 	h  plugin.Host
 
-	by map[core.SessionID]*consoleState
+	by        map[core.SessionID]*consoleState
+	providers *plugin.Load[[]host.ProviderInfo] // the agents and their models, asked for once a composer shows
 }
 
 // consoleState is one session's console: what's selected, folded, typed.
@@ -268,6 +269,61 @@ func (x *agentConsole) shown() bool {
 		}
 	}
 	return false
+}
+
+// agentChips are the composer's model and effort menus, which switch the agent (session.configure) while it's
+// idle, and where it runs: the gate's policy outside a sandbox, the sandbox and its network inside one.
+func (x *agentConsole) agentChips(c *ui.Ctx, se core.SessionState) {
+	th := c.Theme()
+	a := se.Agent
+	const help = "agent/console#composer"
+	if p, ok := x.provider(se.ID, a.Provider); ok && len(p.Models) > 0 {
+		if m, e, picked := modelSelects(c, p, cmpOr(a.Model, defaultModel(p)), a.Effort, a.Working, help); picked {
+			x.run(context.Background(), "session.configure", registry.Args{"id": string(se.ID), "model": m, "effort": e})
+		}
+		if a.Working {
+			c.Text("idle", "switch when the agent is idle", monoFont(10, th.C(theme.FgGhost)))
+		}
+	} else {
+		if a.Model != "" {
+			widget.Chip(c, "model", a.Model, th.C(theme.FgMuted), help)
+		}
+		if a.Effort != "" {
+			widget.Chip(c, "effort", "effort "+a.Effort, th.C(theme.FgMuted), help)
+		}
+	}
+	switch {
+	case a.Sandboxed:
+		where := sandboxNoun(cmpOr(a.Backend, settingBackend(x.h)))
+		if a.Network != "" {
+			where += " · net " + a.Network
+		}
+		widget.Chip(c, "sandbox", where, th.C(theme.FgMuted), help)
+	case a.Policy != "":
+		widget.Chip(c, "policy", "gate "+a.Policy, th.C(theme.FgMuted), help)
+	}
+}
+
+// provider is what the session host says of the agent provider id: its models and their efforts. The first ask
+// starts the probe, and it's not ok until that answers.
+func (x *agentConsole) provider(session core.SessionID, id string) (host.ProviderInfo, bool) {
+	if x.providers == nil {
+		w, err := x.client(session)
+		if err != nil {
+			return host.ProviderInfo{}, false
+		}
+		x.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
+			return w.ProviderInfo(ctx), nil
+		}, plugin.LoadOpts{Timeout: 20 * time.Second})
+		x.providers.Start()
+	}
+	ps, _ := x.providers.Value()
+	for _, p := range ps {
+		if p.ID == id {
+			return p, true
+		}
+	}
+	return host.ProviderInfo{}, false
 }
 
 func (x *agentConsole) client(id core.SessionID) (*host.Host, error) {
@@ -486,12 +542,6 @@ func (x *agentConsole) header(c *ui.Ctx, se core.SessionState) {
 				Color: th.C(theme.Fg)})
 		})
 		c.Text("name", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-		if a.Model != "" {
-			c.Text("model", a.Model, monoFont(11, th.C(theme.FgFaint)))
-		}
-		if a.Effort != "" {
-			c.Text("effort", a.Effort, monoFont(11, th.C(theme.FgFaint)))
-		}
 		word, tok := consoleStatus(se)
 		widget.Chip(c, "status", word, th.C(tok), "agent/console#header")
 		var where []string
@@ -1066,15 +1116,7 @@ func (x *agentConsole) composer(c *ui.Ctx, se core.SessionState, st *consoleStat
 			st.focus = true
 		}
 		c.Row("chips", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			if m := se.Agent.Model; m != "" {
-				widget.Chip(c, "model", m, th.C(theme.FgMuted), "agent/console#composer")
-			}
-			if e := se.Agent.Effort; e != "" {
-				widget.Chip(c, "effort", "effort "+e, th.C(theme.FgMuted), "agent/console#composer")
-			}
-			if p := se.Agent.Policy; p != "" {
-				widget.Chip(c, "policy", "gate "+p, th.C(theme.FgMuted), "agent/console#composer")
-			}
+			x.agentChips(c, se)
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("keys", "@path names a file · ⏎ send · ⌘⏎ send now", monoFont(10, th.C(theme.FgGhost)))
 		})

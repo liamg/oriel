@@ -12,21 +12,26 @@ import (
 
 // Interaction is a node's state this frame, from input up to the latest event: the same frame's layout
 // can't be hit yet, so hover and press resolve against the previous frame's.
+// DoubleClick is how close together clicks come to count as a double (or triple) click.
+const DoubleClick = 400 * time.Millisecond
+
 type Interaction struct {
-	Hovered      bool // the pointer is over it, and it's the topmost interactive node there
-	Inside       bool // the pointer is over it or over something interactive inside it: a row with a button in it
-	Pressed      bool // the primary button went down on it and hasn't come up, and the pointer's still on it
-	Held         bool // the primary button went down on it and hasn't come up, wherever the pointer is: a drag
-	Clicked      bool // pressed and released on it since the last frame
-	Focused      bool
-	FocusVisible bool // focused from the keyboard, so it draws a focus ring
-	Disabled     bool
-	Keys         []render.KeyEvent // keys typed at it since the last frame, while focused
-	Context      *render.Point     // where it was right-clicked since the last frame
-	Scroll       render.Point      // wheel movement over it since the last frame, for a box with Wheel
-	Mods         render.Mods       // the modifiers held at its last press
-	Dropped      *DragData         // a drag let go over it since the last frame, of a kind it takes (Style.Drop)
-	DragOver     bool              // a drag of a kind it takes is over it now
+	Hovered bool // the pointer is over it, and it's the topmost interactive node there
+	Inside  bool // the pointer is over it or over something interactive inside it: a row with a button in it
+	Pressed bool // the primary button went down on it and hasn't come up, and the pointer's still on it
+	Held    bool // the primary button went down on it and hasn't come up, wherever the pointer is: a drag
+	Clicked bool // pressed and released on it since the last frame
+	// DoubleClicked is a click that came within DoubleClick of the one before it, on the same node.
+	DoubleClicked bool
+	Focused       bool
+	FocusVisible  bool // focused from the keyboard, so it draws a focus ring
+	Disabled      bool
+	Keys          []render.KeyEvent // keys typed at it since the last frame, while focused
+	Context       *render.Point     // where it was right-clicked since the last frame
+	Scroll        render.Point      // wheel movement over it since the last frame, for a box with Wheel
+	Mods          render.Mods       // the modifiers held at its last press
+	Dropped       *DragData         // a drag let go over it since the last frame, of a kind it takes (Style.Drop)
+	DragOver      bool              // a drag of a kind it takes is over it now
 
 	pos render.Point
 	u   *UI
@@ -90,6 +95,9 @@ type input struct {
 	focus   ID
 	visible bool // focus came from the keyboard
 	clicks  map[ID]bool
+	doubles map[ID]bool // the clicks in clicks that complete a double-click
+	lastID  ID          // the last click, for a double-click
+	lastAt  time.Time
 	keys    map[ID][]render.KeyEvent
 	context map[ID]render.Point
 	claimed map[ID]bool
@@ -223,6 +231,16 @@ func (u *UI) pointer(ev render.PointerEvent) {
 				in.clicks = map[ID]bool{}
 			}
 			in.clicks[in.active] = true
+			now := u.now()
+			if in.lastID == in.active && now.Sub(in.lastAt) < DoubleClick {
+				if in.doubles == nil {
+					in.doubles = map[ID]bool{}
+				}
+				in.doubles[in.active] = true
+				in.lastID = 0
+			} else {
+				in.lastID, in.lastAt = in.active, now
+			}
 		}
 		in.active = 0
 	}
@@ -282,18 +300,19 @@ func (u *UI) Interaction(id ID) Interaction {
 	}
 	in := &u.in
 	it := Interaction{
-		Hovered:      in.hot == id && id != 0,
-		Inside:       id != 0 && u.within(in.hot, id),
-		Pressed:      in.active == id && in.hot == id && id != 0,
-		Held:         in.active == id && id != 0,
-		Clicked:      in.clicks[id],
-		Focused:      in.focus == id && id != 0,
-		FocusVisible: in.focus == id && in.visible && id != 0,
-		Keys:         in.keys[id],
-		Scroll:       in.wheel[id],
-		Mods:         in.mods,
-		pos:          in.pos,
-		u:            u,
+		Hovered:       in.hot == id && id != 0,
+		Inside:        id != 0 && u.within(in.hot, id),
+		Pressed:       in.active == id && in.hot == id && id != 0,
+		Held:          in.active == id && id != 0,
+		Clicked:       in.clicks[id],
+		DoubleClicked: in.doubles[id],
+		Focused:       in.focus == id && id != 0,
+		FocusVisible:  in.focus == id && in.visible && id != 0,
+		Keys:          in.keys[id],
+		Scroll:        in.wheel[id],
+		Mods:          in.mods,
+		pos:           in.pos,
+		u:             u,
 	}
 	if p, ok := in.context[id]; ok {
 		it.Context = &p
@@ -336,7 +355,12 @@ func (u *UI) Mods(m render.Mods) {
 }
 
 // Chord says a key went down: the modifiers held are part of a chord now, not held alone. A press does too.
-func (u *UI) Chord() { u.in.chorded = true }
+// With none held there's no chord.
+func (u *UI) Chord() {
+	if u.in.held != 0 {
+		u.in.chorded = true
+	}
+}
 
 // PassKeys hands keys id was given and doesn't take to the nearest node above it that takes keys, for its next frame:
 // Escape on a focused toggle reaches the page it's on.

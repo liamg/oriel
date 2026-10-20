@@ -134,6 +134,17 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc registry.ViewCtx) {
 				t.tab(c, h, i, s, s.ID() == st.Focus)
 				c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 			}
+			if h.Available("session.new", nil) {
+				c.Row("new", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(8, 0), Cross: ui.Center}, func(c *ui.Ctx) {
+					tip := "New session"
+					if k := boundKey(h, "session.new", nil); k != "" {
+						tip += " " + k
+					}
+					if widget.IconButton(c, "b", "+", widget.IconButtonOpts{Label: "New session", Tooltip: tip, Help: "shell/tabs", Size: 22}) {
+						h.Run(context.Background(), "session.new", nil)
+					}
+				})
+			}
 		})
 		c.Row("right", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 			t.sh.slot(c, h, registry.SlotTitleBar, vc)

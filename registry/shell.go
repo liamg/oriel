@@ -118,9 +118,11 @@ type StartEntry struct {
 	Args    Args
 	Order   int
 	Link    bool
-	Note    func() string // a link's figure: "$96.40 this week"
-	Shown   func() bool   // whether it's listed at all; nil always is
-	Source  string
+	// Unlisted isn't drawn: only its command's keys work on the start view, which keeps the others out.
+	Unlisted bool
+	Note     func() string // a link's figure: "$96.40 this week"
+	Shown    func() bool   // whether it's listed at all; nil always is
+	Source   string
 }
 
 func (RailEntry) ContributionKind() string    { return "rail.entry" }

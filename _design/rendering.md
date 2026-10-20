@@ -261,6 +261,8 @@ type Style struct {
                                                   // chips plugins add to; its own content is its widest child
     Float *Float                                  // out of the flow, against another id's rect, a point, or the parent;
                                                   // a Fill one against its parent sized Flex fills it that way (a card's edge)
+                                                  // a Flip one that would run past the window's bottom goes above its anchor
+                                                  // (a Popover's menu under a control at the window's foot)
     Z     int                                     // floats paint after the flow, in Z order, outside their parent's clip
 }
 
@@ -294,7 +296,9 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
 - **Interaction** (FW-5): boxes opt in with `Interactive`, `Focusable`, `Disabled`, `Cursor` and `Tooltip`.
   `u.Pointer(ev)` resolves hover and press against the latest painted frame (immediate mode's one frame of lag), and
   a widget asks `c.Interaction(c.Next(key))` for hovered, pressed, clicked, focused and focus-visible before it
-  builds itself. A click is press and release on the same node. Disabled nodes take nothing and hide what's under
+  builds itself. A click is press and release on the same node; a second within `ui.DoubleClick` (400 ms, the
+  one interval the editor, the terminal, text selection and the lightbox use too) is also `DoubleClicked`. A key or
+  press with no modifier held isn't a chord, so the next ⌥ held alone still counts as held alone. Disabled nodes take nothing and hide what's under
   them. The wheel scrolls the topmost scroller on its axis. `FocusNext(±1)` walks focusables in paint order, and a
   node focused from the keyboard gets a 2 px focus ring. A tooltip shows after the pointer rests 500 ms.
   `PressedWithin` and `FocusWithin` ask the same of a node's subtree: a press anywhere inside a pane focuses that
@@ -329,13 +333,12 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   50 ms (p90), no slower at the end of a run than at its start, and the loop never falls more than 30 ms behind the moves.
 - `render.Window.SetCursor` and `render.PointerEvent` (move, press, release, scroll, leave) carry the pointer. A
   `PointerEvent`'s `At` is when it happened, from the OS's timestamp (Gio's, read against the earliest epoch any event
-  gives), or zero. The loop times each move that changes a frame from `At` to the frame built with it, logs "the pointer
-  fell behind" (once a second at most) past 100 ms with how long it took to reach the loop and to be drawn, and `--debug`'s
-  overlay shows it beside the frame time. The Gio window sends a `render.SlowFrameEvent` when a frame waits past 100 ms
-  for it to start on it, or takes past 100 ms to draw and present (once a second at most); the app logs "the window
-  was slow to show a frame". Between them the log says which stage a stall is in: reaching the loop, building the
-  frame, or putting it on screen. `oriel --trace <file>` keeps a flight recorder of the execution trace, and on any of
-  those stalls (or a loop turn held up past 50 ms) writes its last ~10 s to the file, later ones numbered beside it, at
+  gives), or zero. The loop times each move that changes a frame from `At` to the frame built with it; past 100 ms
+  that's a stall, and `--debug`'s overlay shows it beside the frame time. The Gio window sends a
+  `render.SlowFrameEvent` when a frame waits past 100 ms for it to start on it, or takes past 100 ms to draw and
+  present (once a second at most), another stall. Stalls go to the trace, not the log: `oriel --trace <file>` keeps a
+  flight recorder of the execution trace, and on any of those stalls (or a loop turn held up past 50 ms) writes its
+  last ~10 s to the file, later ones numbered beside it, at
   most one every 10 s, for `go tool trace`: what the loop and the main thread were doing while the frame was late.
 - **Widgets** (FW-6, `ui/widget`), built only on `ui`'s public API: `Button`, `Chip`, `Input`, `List` (virtual, with a
   selection), `Tree`, `Tabs`, `Menu`, `ContextMenu`, `MenuButton` (an icon button with a menu under it, right-aligned; a
@@ -347,7 +350,8 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   an `input.border.invalid` border. With `Lines` (SE-5) it takes several lines: the text wraps at the field's width, the
   field grows from `MinLines` to `Lines` and then scrolls, ⏎ is a new line and ⌘⏎ (Ctrl⏎ elsewhere) submits; ↑/↓ move
   by line, keeping the column, and ⌘↑/⌘↓ go to the start and end of the text. `Rows` takes `ClickSelects` for rows
-  whose own buttons open them: a click only selects, ⏎ still opens. It edits with the platform's keys: on macOS ⌘←/→ (line), ⌥←/→ (word), ⌘⌫, ⌥⌫,
+  whose own buttons open them: a click only selects, ⏎ still opens. It hands up the keys it doesn't move or open
+  with, so Escape on a list page closes the page. It edits with the platform's keys: on macOS ⌘←/→ (line), ⌥←/→ (word), ⌘⌫, ⌥⌫,
   ⌘A/C/X/V; elsewhere Home/End, Ctrl+←/→, Ctrl+⌫/Del, Ctrl+A/C/X/V. The clipboard is the UI's (`UI.SetClipboard`,
   `Ctx.Clipboard`). Each paints with component tokens
   it declares (`button.bg`, `input.border.focus`, `list.row.selected`, `menu.item.hover`, `modal.scrim`…), takes a

@@ -251,11 +251,12 @@ func TestSidebarSwitchesProjects(t *testing.T) {
 	}
 }
 
-// The sidebar is the dock's chooser: a project's panel opens in the dock by itself, under a header, never as one tab
-// among others.
+// The sidebar is the dock's chooser: a project's panel, Requests and Plan docs each open in the dock by itself, under
+// a header, never as one tab among others, and the rail lights the one showing.
 func TestSidebarPanelsReplaceEachOther(t *testing.T) {
 	ps := sidebarFixture(t)
 	s := sessionScene(t, core.KindWork, ps, sidebarSize)
+	planning(t, s)
 	s.click(centre(s.access("Explorer").Bounds))
 	s.click(centre(s.access("Search").Bounds))
 	if got := s.sh.layout.root.Docks[layout.Left].Leaf.Tabs; len(got) != 1 || got[0].ID != SearchView {
@@ -263,6 +264,73 @@ func TestSidebarPanelsReplaceEachOther(t *testing.T) {
 	}
 	if strings.Contains(s.frameText(), "admin-ui · Search") || !strings.Contains(s.frameText(), "admin-ui\nSEARCH") {
 		t.Errorf("the panel isn't under a header:\n%s", s.frameText())
+	}
+	for _, p := range []struct{ entry, view, scope string }{
+		{"explorer", ExplorerView, "admin-ui"}, {"requests", RequestsView, ""}, {"plan-docs", PlanDocsView, ""}, {"search", SearchView, "admin-ui"},
+	} {
+		e := railEntry(t, s, p.entry)
+		s.click(centre(s.access(e.Title).Bounds))
+		s.frame()
+		if got := s.sh.layout.root.Docks[layout.Left].Leaf.Tabs; len(got) != 1 || got[0].ID != p.view {
+			t.Errorf("left dock after %s: %v, want %s alone", e.Title, got, p.view)
+		}
+		if !active(s.host, e, p.scope) {
+			t.Errorf("%s is showing, and its rail entry isn't lit", e.Title)
+		}
+		if k := keyLabel("<D-R>"); p.entry == "requests" && !strings.Contains(s.frameText(), "REQUESTS\n"+k) {
+			t.Errorf("Requests doesn't show its key %s:\n%s", k, s.frameText())
+		}
+	}
+}
+
+// planning makes the scene's session one that's planning.
+func planning(t *testing.T, s *errScene) {
+	t.Helper()
+	se, _ := s.store.State().Session("eng-2310")
+	st := se.Snapshot()
+	st.StartWork = true
+	if err := s.store.Apply(core.SessionSynced{Session: st}); err != nil {
+		t.Fatal(err)
+	}
+	s.frame()
+}
+
+func railEntry(t *testing.T, s *errScene, name string) registry.RailEntry {
+	t.Helper()
+	for _, e := range registry.RailEntries(s.reg) {
+		if e.Name == name {
+			return e
+		}
+	}
+	t.Fatalf("no rail entry %q", name)
+	return registry.RailEntry{}
+}
+
+// Plan docs is on the rail only while the session in front is planning, and its entry shows and hides the panel.
+func TestPlanDocsOnTheRail(t *testing.T) {
+	ps := sidebarFixture(t)
+	s := sessionScene(t, core.KindWork, ps, sidebarSize)
+	if strings.Contains(s.frameText(), "Plan docs") {
+		t.Fatalf("Plan docs is on the rail of a session that isn't planning:\n%s", s.frameText())
+	}
+	planning(t, s)
+	if !strings.Contains(s.frameText(), "Plan docs") {
+		t.Fatalf("no Plan docs on a planning session's rail:\n%s", s.frameText())
+	}
+	shown := func() bool { return showing(s.host, PlanDocsView, "") }
+	if shown() {
+		s.click(centre(s.access("Plan docs").Bounds))
+		s.frame()
+	}
+	s.click(centre(s.access("Plan docs").Bounds))
+	s.frame()
+	if !shown() {
+		t.Fatal("clicking Plan docs didn't show the panel")
+	}
+	s.click(centre(s.access("Plan docs").Bounds))
+	s.frame()
+	if shown() {
+		t.Error("clicking Plan docs again didn't hide the panel")
 	}
 }
 
@@ -418,7 +486,7 @@ func TestSidebarAddsAProject(t *testing.T) {
 	}
 	waitState(t, r.store, "the session in front", func(st core.State) bool { return st.Focus == "rounding" })
 	r.waitFrame("the window on the session", func(s string) bool { return strings.Contains(s, "+") && !strings.Contains(s, "Open Directory") })
-	r.clickText("+")
+	r.clickAccess("Add a project")
 	r.waitText("ADD A PROJECT")
 	r.typeText(billing)
 	r.waitText("Add " + billing)

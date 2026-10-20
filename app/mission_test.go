@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/headless"
 )
 
 func (s *errScene) mission() *missionPlugin {
@@ -335,14 +336,44 @@ func TestMissionKeys(t *testing.T) {
 	s.onMission(t, "pricing-rounding")
 }
 
-// SE-3, SH-7: the app opens on mission control once there's a session to show, if it started with nothing open.
+// SE-3, SH-7: started with nothing open and sessions there, the app lands on the one in front last time, else the
+// newest, with mission control over it; Escape from mission control is in that session, not on the start view.
 func TestMissionOpensAtLaunch(t *testing.T) {
-	r := startApp(t, t.TempDir(), "", nil)
-	r.waitText("Open Directory")
-	if err := r.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "pricing", Kind: core.KindWork, Status: core.StatusQuiet}}); err != nil {
+	lw := newLocalHost(t)
+	ids := map[string]core.SessionID{}
+	for _, name := range []string{"old", "front", "recent"} {
+		id, err := lw.w.Start(context.Background(), core.SessionSpec{Kind: core.KindDirect, Name: name, Dir: t.TempDir()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids[name] = id
+	}
+	if err := lw.w.Store().Apply(core.SessionFocused{ID: ids["front"]}); err != nil {
 		t.Fatal(err)
 	}
+	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	r.waitText("MISSION CONTROL")
+	if f := r.store.State().Focus; f != ids["front"] {
+		t.Errorf("landed on %q, want the session in front last time (%s)", f, ids["front"])
+	}
+	r.typeKeys("<Esc>")
+	f := r.latest("mission control put away", func(f headless.Frame) bool { return !strings.Contains(f.Text(), "MISSION CONTROL") })
+	if text := f.Text(); strings.Contains(text, "Open Directory") {
+		t.Errorf("Escape from mission control went to the start view:\n%s", text)
+	}
+}
+
+// With no sessions the app stays on the start view, and one started after launch doesn't open mission control.
+func TestStartViewAtLaunchWithNoSessions(t *testing.T) {
+	r := startApp(t, t.TempDir(), "", nil)
+	r.waitText("Open Directory")
+	if err := r.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "n", Name: "new-one", Kind: core.KindWork, Status: core.StatusWorking,
+		Created: time.Now().Add(time.Second), Agent: core.AgentState{Running: true}}}); err != nil {
+		t.Fatal(err)
+	}
+	if text := r.waitText("new-one"); strings.Contains(text, "MISSION CONTROL") {
+		t.Errorf("a session started after launch opened mission control:\n%s", text)
+	}
 }
 
 // SH-7: 03-switcher.
@@ -409,5 +440,73 @@ func TestMissionControlTool(t *testing.T) {
 	got = call(map[string]any{"show": true, "by": "repo", "id": "flaky-e2e"})
 	if !got.Open || got.By != "repo" || got.Selected != "flaky-e2e" || !s.mission().open {
 		t.Errorf("show didn't open it as asked: %+v", got)
+	}
+}
+
+// A double-click on a card opens its session; a single click only selects it. Hovered, a card shows Open (Resume
+// while its agent is stopped), and clicking it opens the session too.
+func TestMissionCardOpens(t *testing.T) {
+	s, _ := missionScene(t)
+	var opened []string
+	s.reg.Command(registry.Command{ID: "session.open", Run: func(_ registry.Ctx, a registry.Args) error {
+		opened = append(opened, a.String("id"))
+		return nil
+	}})
+	s.openMission(t)
+	card := s.onMission(t, "ci lint fix").Bounds
+	in := render.Point{X: card.Min.X + 5, Y: card.Min.Y + 5}
+	s.click(in)
+	if len(opened) != 0 || s.mission().selected() != "ci-lint" {
+		t.Fatalf("one click: opened %v, selected %s", opened, s.mission().selected())
+	}
+	s.click(in)
+	if !slices.Equal(opened, []string{"ci-lint"}) {
+		t.Fatalf("a double-click on the card opened %v", opened)
+	}
+
+	opened = nil
+	s.mission().show()
+	button := func(label string) *render.AccessNode {
+		var find func(n *render.AccessNode) *render.AccessNode
+		find = func(n *render.AccessNode) *render.AccessNode {
+			if n.Name == label && n.Role == render.RoleButton {
+				return n
+			}
+			for _, k := range n.Children {
+				if f := find(k); f != nil {
+					return f
+				}
+			}
+			return nil
+		}
+		return find(s.onMission(t, "ci lint fix"))
+	}
+	hover := func(p render.Point) {
+		s.ui.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+		s.frame()
+		s.frame()
+	}
+	hover(render.Point{X: 2, Y: 2})
+	if button("Open") != nil {
+		t.Fatal("the card shows Open without the pointer on it")
+	}
+	hover(in)
+	b := button("Open")
+	if b == nil {
+		t.Fatal("no Open on the hovered card")
+	}
+	s.click(centre(b.Bounds))
+	if !slices.Equal(opened, []string{"ci-lint"}) {
+		t.Errorf("Open on the hovered card opened %v", opened)
+	}
+
+	s.mission().show()
+	se, _ := s.store.State().Session("ci-lint")
+	stopped := se.Snapshot()
+	stopped.Agent = core.AgentState{}
+	s.store.Apply(core.SessionSynced{Session: stopped})
+	hover(in)
+	if button("Resume") == nil {
+		t.Error("a hovered card whose agent is stopped doesn't offer Resume")
 	}
 }

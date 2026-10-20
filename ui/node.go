@@ -187,6 +187,9 @@ type Float struct {
 	Offset render.Point
 	// Fill makes a float placed against its parent and sized Flex fill the parent that way: a card's edge.
 	Fill bool
+	// Flip places it the other way up when it would run past the window's bottom: At, Self and Offset mirrored on
+	// the vertical, so a menu under a control at the foot of the window opens above it.
+	Flip bool
 }
 
 type TextStyle struct {
