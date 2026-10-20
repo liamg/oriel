@@ -66,7 +66,7 @@ func Write(dir string, rel Release, files map[string][]byte) error {
 	return nil
 }
 
-// GitHub is releases of a GitHub repo, a private one read with the user's token.
+// GitHub is releases of a GitHub repo: a public one read without a token, a private one with the user's.
 type GitHub struct {
 	Repo   string // owner/name
 	Base   string // https://api.github.com/ if ""
@@ -148,40 +148,56 @@ func (g *GitHub) read(ctx context.Context, name string) ([]byte, error) {
 }
 
 func (g *GitHub) get(ctx context.Context, url, accept string) (io.ReadCloser, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", accept)
+	tok := ""
 	if g.Token != nil {
-		tok, err := g.Token(ctx)
-		if err != nil {
+		var err error
+		if tok, err = g.Token(ctx); err != nil {
 			return nil, err
 		}
-		if tok != "" {
-			req.Header.Set("Authorization", "Bearer "+tok)
-		}
 	}
-	c := g.Client
-	if c == nil {
-		c = http.DefaultClient
+	resp, err := g.do(ctx, url, accept, tok)
+	if err == nil && tok != "" && resp.StatusCode == http.StatusUnauthorized {
+		// A public repo reads without the token GitHub refused.
+		resp.Body.Close()
+		tok = ""
+		resp, err = g.do(ctx, url, accept, "")
 	}
-	resp, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		resp.Body.Close()
-		return nil, fmt.Errorf("GitHub: %s (HTTP %d)", strings.TrimSpace(string(b)), resp.StatusCode)
+		err := fmt.Errorf("GitHub: %s (HTTP %d)", strings.TrimSpace(string(b)), resp.StatusCode)
+		if tok == "" && resp.StatusCode == http.StatusNotFound {
+			err = fmt.Errorf("%w: a private repo needs a GitHub token (GH_TOKEN, or gh auth login)", err)
+		}
+		return nil, err
 	}
 	return resp.Body, nil
 }
 
+func (g *GitHub) do(ctx context.Context, url, accept, tok string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", accept)
+	if tok != "" {
+		req.Header.Set("Authorization", "Bearer "+tok)
+	}
+	c := g.Client
+	if c == nil {
+		c = http.DefaultClient
+	}
+	return c.Do(req)
+}
+
 // Cache keeps each artifact the app downloads, checked against the manifest.
 type Cache struct {
-	Dir    string
-	Source Source
+	Dir      string
+	Source   Source
+	Progress Progress
 }
 
 // Open reads a from the cache, downloading it first if it isn't there yet.
@@ -192,20 +208,23 @@ func (c Cache) Open(ctx context.Context, m Manifest, a Artifact) (io.ReadCloser,
 	path := filepath.Join(c.Dir, m.Version, a.Name)
 	if f, err := os.Open(path); err == nil {
 		if _, err := readChecked(f, a); err == nil {
+			c.Progress.report(Step{Stage: StageVerify, Detail: a.Name + " (downloaded before): sha256 " + short(a.SHA256)})
 			_, _ = f.Seek(0, io.SeekStart)
 			return f, nil
 		}
 		f.Close()
 	}
+	c.Progress.report(Step{Stage: StageDownload, Total: a.Size, Detail: a.Name})
 	r, err := c.Source.Open(ctx, a.Name)
 	if err != nil {
 		return nil, err
 	}
-	body, err := readChecked(r, a)
+	body, err := readChecked(&counting{r: r, total: a.Size, name: a.Name, p: c.Progress}, a)
 	r.Close()
 	if err != nil {
 		return nil, err
 	}
+	c.Progress.report(Step{Stage: StageVerify, Detail: a.Name + ": sha256 " + short(a.SHA256)})
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, err
 	}
@@ -236,3 +255,6 @@ func Check(ctx context.Context, src Source, keys []ed25519.PublicKey, channel, c
 	}
 	return rel, m, nil
 }
+
+// short is a checksum cut for showing.
+func short(sum string) string { return sum[:min(len(sum), 12)] }

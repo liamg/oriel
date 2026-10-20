@@ -50,6 +50,9 @@ what goes wrong if the user acts before the data arrives (rendering.md, "Loading
 
 - **R1 chosen**: the original proportions, all green. It's in every mockup's titlebar (`base.css` `.brand i`). Final pass in
   phase 1 (framework): per-size stroke tuning, a 16 px cut, and SVG/PNG/ICNS exports. Source: `mockups/o12.py`.
+- As built: the logo is drawn in code (`app/titlebar.go` `logo`). The app icon (`app.Icon`) is it on a rounded square
+  (`icon.bg`, `icon.edge`); `oriel dev icon DIR` renders the macOS iconset, which `make app` turns into the `.icns`
+  (distribution.md). Still to do: the per-size tuning and the 16 px cut.
 
 
 ![34-o-logos](mockups/34-o-logos.png)
@@ -369,6 +372,28 @@ Requests, the agent console, Problems, Tests, Debug, a diff, or the Explorer.
   bound to keys, so one key flips the whole screen between "write" and "review" arrangements.
 - Plugins and Lua set placement too: `oriel.view.open("requests", { place = "main", split = "right" })`.
 
+## 01i · Back and forward: the mouse's side buttons
+
+The window keeps a history like a browser's: each stop is the session in front plus the full page showing over it
+(mission control, Stats, Usage, Jobs, Prompts, Plugins, Reviews, Tickets, Repos, Settings, the theme editor). Dock
+panels and file tabs aren't stops: they'd make it too chatty.
+
+- `nav.back` / `nav.forward` put the stop before or after up again, session and page together (a session in another
+  directory opens the window there first, then the page). Somewhere new after going back drops what was forward; a
+  session gone or archived since is passed over. 100 stops deep, per window, kept across the plugins starting again
+  on another session's directory.
+- The mouse's side buttons are the keys `<X1Mouse>` and `<X2Mouse>` (Vim's names, term.txt), so each key mode
+  decides what back means and they map like any key:
+  - the editor (`n`): `editor.back` / `editor.forward`, the jumplist first (`⌃o` / `⌃i`, vim normal mode), then the
+    window's history once it has nowhere to go (`vim.Engine.CanJump`);
+  - help: `help.back` / `help.forward`;
+  - everywhere else (`global`, and the view and empty modes ahead of the editor's): `nav.back` / `nav.forward`.
+- Pages join the history as places (`registry.Place`, `oriel.place.add`; plugins.md), so a plugin's page works the
+  same as a built-in's.
+- Backends: Gio reports the side buttons on Wayland and Windows; on macOS it drops them, so `render/gio` takes them
+  first with an `NSEvent` local monitor (`side_darwin.go`). X11 drops buttons 8 and 9 inside Gio, so they don't work
+  there yet; that needs a Gio change.
+
 ## 02 · ⌘K omnibox
 
 ![02-omnibox](mockups/02-omnibox.png)
@@ -461,7 +486,7 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
 - Bottom strip: usage per provider, this machine's CPU sparkline, agentbus presence.
 - Fully keyboard-driven: `hjkl`, `⏎` opens, `a` allows, `x` stops.
 - Built in SH-7 (`app/mission.go`, `app/missionview.go`): `⌘⇧K` or `mission.toggle` shows it under the title bar
-  (`widget.Page`, key mode `mission`; Escape goes back); the start view links to it. Header: the counts by status, BY
+  (`widget.Page`, key mode `mission`; Escape goes back); the start view links to it while there's something to watch (a session whose agent is running, starting or asking). Header: the counts by status, BY
   STATUS / BY REPO (`mission.group {by}`, status by default), a filter (`/`). Cards are grouped, most urgent first, as
   many to a row as fit; the border is
   the status colour, the selected card's the accent; heading: name (a click opens it), kind, PR, provider; foot:
@@ -912,6 +937,49 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   (urgent). Right: session stats from `AgentState.Stats` (its cost opens the session stats tab, 43), plan usage from `State.Usage` (this provider first), this turn's
   touched files, rules in force (the gate, the sandbox's, and `SessionState.Rules`). Not yet: `@file` completion (an
   `@path` goes to the agent as written), a multi-line composer, and the model/effort chips as pickers.
+- A card stacked away from its session's console (permission, network, gateway, question) has **Console** (`g`):
+  `agent.console.show {id}` brings the session to the front and opens its console (`session.open` with `then`
+  `view.open`), where the card waits with the transcript around it.
+- **Permissions** (`agent.permissions`, `app/permissions.go`): crit's Permissions and Network pages as one view,
+  for the session in front's sandboxed agent. It's the Workspace page's Permissions tab (15b): the command and
+  **Permissions and connections ›** under the console's rules in force open it there, and `agent.permissions.dock`
+  docks the same view at the bottom beside the console. RULES: the network and gateway asks waiting (answered as on their cards), the
+  network rules in force with their source (this session, project settings, your settings, always on this machine,
+  the sandbox's environment, the built-in list folded to one row) and "anything else asks you", a host field to allow
+  or block one for the session, and a session rule's Remove; then the gateway's tools by server, each with what a
+  call meets, its source, and a menu for the session's own rule (none where a deny in settings or a fixed ask holds).
+  CONNECTIONS: the egress log, grouped by destination (busiest first) or one row each (the newest 300), filtered by
+  text and "blocked only", each with its verdict, reason, sizes and Allow/Block for the session. It reads
+  `Host.Permissions` every 2s while shown; changes go through `permissions.tool` and `permissions.net`.
+
+## 15b · Workspace
+
+Crit's per-session Settings page, grown: where the session in front's agent works, the sandbox it runs in, and what
+it may do. A full page (`workspace.open {tab}`, `app/workspace.go`), from **Workspace** in the sidebar's session
+entries (while there's a session host). Tabs:
+
+- **Overview.** The session and its kind, the workspace root; the sandbox's backend, container (running or stopped)
+  and image with where it comes from; then every directory the session uses, each with where the agent finds it
+  when that's elsewhere ("in the sandbox: /tmp/claude-501"), a note, **Browse** (into Files) and **Copy**: each
+  project's checkout (branch, and the checkout it's a worktree of), the session's state, the scratchpad, the
+  sandbox's directory, the agent's home, Claude's config, the transcripts and the shared Go cache. A running
+  container's mounts follow, read-only or read-write. **Rebuild image**, **Restart sandbox**, **Sandbox terminal**
+  and **Host terminal** (a terminal on this machine in the workspace, `term.host`; ide.md "Where a terminal runs")
+  sit under the sandbox.
+- **Files.** A tree of the scratchpad (first) or any of those directories but the Go cache, folders first, read as
+  they're opened (500 entries a folder at most), with sizes; dotfiles dimmed. Opening a file opens it in the editor.
+- **Image.** The tag, its source, whether it's built, the actions, and the Dockerfile with line numbers. A repo's
+  Dockerfile comes from its default branch (the page says so: an agent's change to it applies once merged); an image
+  named in settings isn't Oriel's to build.
+- **Build log.** The last 256 KB of the image's last build, as a list, refreshed every second while a rebuild runs.
+- **Permissions.** The Permissions view (15).
+
+The header names the session and has a chip: "on your machine" for an unsandboxed agent, else the backend and
+"running" or "stopped". A session that isn't sandboxed has its directories only. **Rebuild image**
+(`workspace.rebuild {id}`) builds the image again without the cache in the background (the button busy, the log
+following) and restarts the agent on it once its turn ends, resumed; **Restart sandbox** (`workspace.restart {id}`)
+does the restart alone. The page reads `Host.Workspace` every 3 seconds while it's up. Not yet: a combined Dockerfile
+of several repos (sandbox-approval, 47) and approving a repo's Dockerfile from here.
 
 ## 16 · Plugins
 

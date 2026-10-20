@@ -367,6 +367,11 @@ func TestResumeAfterRestartUsesTheAgentsID(t *testing.T) {
 	if len(r.fake.Resumed()) != 1 || r.fake.Resumed()[0] != a.ID() {
 		t.Errorf("resumed %v, want %s", r.fake.Resumed(), a.ID())
 	}
+	// The transcript's last word isn't the exit: it says the agent is back.
+	r.eventually(id, "the restart in the transcript", func(se core.SessionState) bool {
+		n := len(se.Transcript)
+		return n > 0 && se.Transcript[n-1].Kind == core.ItemSystem && se.Transcript[n-1].Text == "The agent started again, resuming its conversation"
+	})
 }
 
 func TestStartSpecCarriesThePackToolsAndGuards(t *testing.T) {

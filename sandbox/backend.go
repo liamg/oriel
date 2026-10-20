@@ -37,6 +37,42 @@ type Backend interface {
 	ServesPort() bool
 }
 
+// Describer is a backend that can say what it runs root's agent in.
+type Describer interface {
+	Describe(ctx context.Context, root string, cfg Config) Description
+}
+
+// Rebuilder is a backend whose image for root can be built again, its downloads fetched afresh.
+type Rebuilder interface {
+	Rebuild(ctx context.Context, root string, cfg Config) error
+}
+
+// Sheller is a backend that can run a shell in root's sandbox beside its agent, in cwd: what a terminal runs.
+type Sheller interface {
+	Shell(ctx context.Context, root, cwd string, o LaunchOptions) (Command, error)
+}
+
+// ShellArgv is the shell a sandbox's terminal runs: bash where the image has it, else sh.
+var ShellArgv = []string{"sh", "-c", "command -v bash >/dev/null && exec bash -l || exec sh -l"}
+
+// Description is what a backend runs an agent in: for a container engine, the container and its image.
+type Description struct {
+	Container string
+	Running   bool
+	Image     string
+	// ImageFrom says where the image comes from: "the base image", "sandbox.image", or a repo's Dockerfile.
+	ImageFrom string
+	// Dockerfile is the image's source; "" for an image named in settings.
+	Dockerfile string
+	Built      bool
+	// BuildLog is the file the image's last build wrote to; "" if it hasn't been built here.
+	BuildLog string
+	// Mounts are what the running container sees of the host.
+	Mounts []Bind
+	// Places are where the agent finds the host's paths that aren't at the same path inside, by host path.
+	Places map[string]string
+}
+
 // Command is a process to start: the agent in its sandbox.
 type Command struct {
 	Argv []string

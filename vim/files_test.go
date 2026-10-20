@@ -396,3 +396,35 @@ func TestJumpTo(t *testing.T) {
 	s.keys("<C-o>")
 	at("CTRL-O in the same file", "b.txt", 1, 2)
 }
+
+// CanJump says whether CTRL-O or CTRL-I would go anywhere: the side buttons fall through to the window's history when
+// they wouldn't.
+func TestCanJumpIsWhatTheJumpDoes(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"), "one\ntwo\nthree\nfour\n")
+	writeFile(t, filepath.Join(dir, "b.txt"), "alpha\nbeta\n")
+	s := newSession(t, dir)
+	s.keys(":e a.txt<CR>")
+	type where struct {
+		name string
+		pos  vim.Pos
+	}
+	here := func() where { return where{s.e.Name(), s.e.Cursor()} }
+	seen := map[bool]int{}
+	for _, keys := range []string{"<C-o>", "<C-i>", "G", "<C-o>", "<C-o>", "<C-i>", "<C-i>", "gg", ":e b.txt<CR>", "j", "<C-o>", "<C-o>", "<C-i>", "<C-o>"} {
+		n := map[string]int{"<C-o>": -1, "<C-i>": 1}[keys]
+		if n == 0 {
+			s.keys(keys)
+			continue
+		}
+		before, can := here(), s.e.CanJump(n)
+		seen[can]++
+		s.keys(keys)
+		if moved := here() != before; moved != can {
+			t.Errorf("%s from %+v: CanJump said %v, moved %v (to %+v)", keys, before, can, moved, here())
+		}
+	}
+	if seen[true] < 3 || seen[false] < 3 {
+		t.Errorf("the keys didn't try both: %v", seen)
+	}
+}

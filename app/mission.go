@@ -169,8 +169,11 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.Contribute(registry.AgentTool{Name: "mission_control", For: []string{assistantAgent}, Reads: "mission control", Source: "builtin:mission",
 		Params: map[string]string{"show": "boolean?", "by": "string?", "filter": "string?", "id": "string?"}, Run: x.tool,
 		Desc: "What mission control shows: every open session grouped by status (or by repo: by), each with its status and what it waits on, and the queue of what needs the user, oldest first. show: true also opens it on screen, grouped by, filtered and with the card of id selected."}))
+	mission := pagePlace("mission", "Mission control", "mission.open", &x.open)
+	mission.Close = x.close
+	x.add(h.Contribute(mission))
 	x.add(h.Contribute(registry.StartEntry{Name: "mission", Icon: "mission", Title: "Mission control", Desc: "Every session as a card, and what each waits on",
-		Command: "mission.toggle", Order: 95, Link: true, Note: x.needNote}))
+		Command: "mission.toggle", Order: 95, Link: true, Note: x.needNote, Shown: x.watching}))
 	x.add(h.View(MissionView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "mission", Fn: x.page} })))
 	return nil
 }
@@ -309,6 +312,14 @@ type missionGroup struct {
 	key, title, meta string
 	tone             core.Status
 	cards            []core.SessionState
+}
+
+// watching says there's something for mission control to watch: a session whose agent is running, starting, or
+// asking. The start view links to it only then.
+func (x *missionPlugin) watching() bool {
+	return slices.ContainsFunc(x.h.State().Sessions, func(se core.SessionState) bool {
+		return !se.Archived && (se.Agent.Live() || len(se.Asks) > 0)
+	})
 }
 
 // live are the sessions mission control shows: not archived, and matching the filter.

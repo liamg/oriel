@@ -178,3 +178,35 @@ func TestScaledSubtree(t *testing.T) {
 		t.Errorf("a 10px box at 2× inside 1.5× is %v wide, want 30", got.Dx())
 	}
 }
+
+// A row that Wraps puts what doesn't fit its width on the next line, each child its own width, lines Gap apart, and
+// grows as tall as its lines: a strip of chips any number of plugins add to.
+func TestWrappingRow(t *testing.T) {
+	u := newUI()
+	var row ID
+	var chips []ID
+	u.Frame(new(render.List).Record(1), render.Point{X: 400, Y: 300}, func(c *Ctx) {
+		c.Column("page", Style{W: Px(250)}, func(c *Ctx) {
+			row = c.Row("chips", Style{W: Flex(1), Gap: 10, Wrap: true, Pad: Pad(5)}, func(c *Ctx) {
+				for i, w := range []float32{100, 80, 60, 230, 300} {
+					chips = append(chips, c.Box(i, Style{W: Px(w), H: Px(20)}, nil))
+				}
+			})
+		})
+	})
+	r := func(id ID) render.Rect { x, _ := u.Rect(id); return x }
+	want := []render.Rect{
+		render.XYWH(5, 5, 100, 20), render.XYWH(115, 5, 80, 20), // 60 more would pass the 240 inside
+		render.XYWH(5, 35, 60, 20),
+		render.XYWH(5, 65, 230, 20),
+		render.XYWH(5, 95, 240, 20), // wider than the row: as wide as it, on a line of its own
+	}
+	for i, id := range chips {
+		if got := r(id); got != want[i] {
+			t.Errorf("chip %d is %v, want %v", i, got, want[i])
+		}
+	}
+	if got := r(row); got != render.XYWH(0, 0, 250, 120) {
+		t.Errorf("the row is %v, want 250×120: four lines and its padding", got)
+	}
+}

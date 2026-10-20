@@ -87,6 +87,10 @@ func (in *Installer) exeIn(root string) string {
 // Stage reads a's bytes from r, checks them against the verified manifest m, unpacks a bundle, and runs the result
 // to see it start and report m's version. What it stages waits for Swap; anything staged before is replaced.
 func (in *Installer) Stage(ctx context.Context, m Manifest, a Artifact, r io.Reader) error {
+	return in.stage(ctx, m, a, r, nil)
+}
+
+func (in *Installer) stage(ctx context.Context, m Manifest, a Artifact, r io.Reader, p Progress) error {
 	if a.Kind == KindBundle && in.Exe == "" {
 		return errors.New("a bundle needs the installer's Exe")
 	}
@@ -104,6 +108,7 @@ func (in *Installer) Stage(ctx context.Context, m Manifest, a Artifact, r io.Rea
 	if err != nil {
 		return err
 	}
+	p.report(Step{Stage: StageExtract, Detail: a.Name})
 	if a.Kind == KindBinary {
 		err = os.WriteFile(tmp, body, 0o755)
 	} else {
@@ -117,6 +122,7 @@ func (in *Installer) Stage(ctx context.Context, m Manifest, a Artifact, r io.Rea
 	if probe == nil {
 		probe = ProbeVersion
 	}
+	p.report(Step{Stage: StageCheck, Detail: "oriel version says " + m.Version})
 	if err := probe(ctx, in.exeIn(tmp), m.Version); err != nil {
 		_ = os.RemoveAll(tmp)
 		return err

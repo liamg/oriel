@@ -95,6 +95,10 @@ Version 0.4.0.
 
 - `oriel.picker.source(spec)` (`ui`): A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes.
 
+## oriel.place
+
+- `oriel.place.add(spec)` (`ui`): Add a full-window page to the window's history, which nav.back and nav.forward (and the mouse's side buttons) go through with the session in front: { name, title, command, args, shown = fn(), close = fn() }. shown says it's showing now, command with args opens it, and close puts it away.
+
 ## oriel.process
 
 - `oriel.process.spawn(path, opts?)` (capability by target): Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop().

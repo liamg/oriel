@@ -10,13 +10,33 @@ import (
 )
 
 // DefaultEnv is the host environment a sandbox inherits when settings name
-// none: the model endpoint and telemetry, never credentials for anything else.
+// none: Claude Code's own settings, the model endpoint and telemetry, never
+// credentials for anything else.
 var DefaultEnv = []string{
 	"ANTHROPIC_*",
 	"OTEL_*",
 	"DISABLE_*",
-	"CLAUDE_CODE_USE_*",
-	"CLAUDE_CODE_ENABLE_TELEMETRY",
+	"CLAUDE_CODE_*",
+	"MAX_THINKING_TOKENS",
+	"MAX_MCP_OUTPUT_TOKENS",
+	"MCP_TIMEOUT",
+	"API_TIMEOUT_MS",
+	"BASH_DEFAULT_TIMEOUT_MS",
+	"BASH_MAX_TIMEOUT_MS",
+	"BASH_MAX_OUTPUT_LENGTH",
+}
+
+// sessionEnv is what a Claude Code session sets for its own processes, which
+// the defaults leave out: Oriel started from inside one isn't that session's
+// child. The sandbox's sign-in is Oriel's to hand over (AgentEnv).
+var sessionEnv = []string{
+	"CLAUDE_CODE_ENTRYPOINT",
+	"CLAUDE_CODE_EXECPATH",
+	"CLAUDE_CODE_SSE_PORT",
+	"CLAUDE_CODE_CHILD_SESSION",
+	"CLAUDE_CODE_SESSION_*",
+	"CLAUDE_CODE_MESSAGING_*",
+	"CLAUDE_CODE_OAUTH_TOKEN",
 }
 
 // HostGateway is how the container reaches the host.
@@ -48,13 +68,14 @@ func FilterEnv(environ, patterns []string) map[string]string {
 // HostEnv keeps the entries of environ whose names match a pattern, as they
 // are: for an agent that shares the host's network.
 func HostEnv(environ, patterns []string) map[string]string {
-	if patterns == nil {
+	defaults := patterns == nil
+	if defaults {
 		patterns = DefaultEnv
 	}
 	out := map[string]string{}
 	for _, kv := range environ {
 		k, v, ok := strings.Cut(kv, "=")
-		if !ok || !matchAny(patterns, k) {
+		if !ok || !matchAny(patterns, k) || defaults && matchAny(sessionEnv, k) {
 			continue
 		}
 		out[k] = v

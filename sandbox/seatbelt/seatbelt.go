@@ -60,6 +60,14 @@ func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, 
 	return s.command(root, cwd, argv, o)
 }
 
+// Shell is a shell under root's profile, as the agent runs.
+func (s *Seatbelt) Shell(_ context.Context, root, cwd string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+	if err := Available(); err != nil {
+		return sandbox.Command{}, err
+	}
+	return s.command(root, cwd, sandbox.ShellArgv, o)
+}
+
 // command writes root's profile and returns the agent's command under it.
 func (s *Seatbelt) command(root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
 	if rec, ok := sandbox.Load(root); !ok || !rec.Sandboxed() {

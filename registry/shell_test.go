@@ -106,3 +106,29 @@ func TestProjectStateParts(t *testing.T) {
 		t.Errorf("parts %+v", got)
 	}
 }
+
+// The place showing is the one whose Shown says so; two at once (one opening over the other) is no answer yet, and
+// one that panics isn't showing.
+func TestShownPlace(t *testing.T) {
+	r := registry.New()
+	stats, jobs := false, false
+	r.Contribute(registry.Place{Name: "stats", Shown: func() bool { return stats }})
+	r.Contribute(registry.Place{Name: "jobs", Shown: func() bool { return jobs }})
+	r.Contribute(registry.Place{Name: "broken", Shown: func() bool { panic("boom") }})
+	check := func(want string, wantOK bool) {
+		t.Helper()
+		if got, ok := registry.ShownPlace(r); got != want || ok != wantOK {
+			t.Errorf("ShownPlace = %q, %v; want %q, %v", got, ok, want, wantOK)
+		}
+	}
+	check("", true)
+	stats = true
+	check("stats", true)
+	jobs = true
+	check("", false)
+	stats = false
+	check("jobs", true)
+	if p, ok := registry.PlaceByName(r, "jobs"); !ok || p.Name != "jobs" {
+		t.Errorf("PlaceByName(jobs) = %+v, %v", p, ok)
+	}
+}

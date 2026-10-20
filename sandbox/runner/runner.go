@@ -85,7 +85,7 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 	if err != nil {
 		return nil, err
 	}
-	bins, err := Provision(ctx, image, id, workspaceTools(root))
+	bins, err := Provision(ctx, id, workspaceTools(root))
 	if err != nil {
 		return nil, err
 	}
@@ -246,22 +246,6 @@ func imageUsers(ctx context.Context, image string) (passwd, group string, err er
 		_ = os.WriteFile(cache, []byte(out), 0o600)
 	}
 	return p, g, nil
-}
-
-// OrielBinary is the oriel the container runs: ORIEL_SANDBOX_BIN when set, else
-// this one on Linux, or a Linux build of it made on demand elsewhere.
-func OrielBinary() (string, error) {
-	if p := os.Getenv("ORIEL_SANDBOX_BIN"); p != "" {
-		return p, nil
-	}
-	if runtime.GOOS == "linux" {
-		exe, err := executable()
-		if err != nil {
-			return "", err
-		}
-		return filepath.EvalSymlinks(exe)
-	}
-	return ensureLinuxOriel()
 }
 
 // hostClaude is the host's claude binary, symlinks resolved.

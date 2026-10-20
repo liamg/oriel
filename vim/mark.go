@@ -111,6 +111,26 @@ func (e *Engine) cleanJumps() {
 	e.jumps, e.jumpIdx = out, idx
 }
 
+// CanJump says whether CTRL-O (n < 0) or CTRL-I (n > 0) would go to another jumplist entry.
+func (e *Engine) CanJump(n int) bool {
+	e.cleanJumps()
+	idx, size := e.jumpIdx, len(e.jumps)
+	if idx == size {
+		if n > 0 {
+			return false
+		}
+		// CTRL-O adds the cursor first, which drops an entry on its line.
+		size = 1
+		for _, j := range e.jumps {
+			if j.buf != e.buffer || j.Line != e.cur.Line {
+				size++
+			}
+		}
+		idx = size - 1
+	}
+	return idx+n >= 0 && idx+n < size
+}
+
 // jump is CTRL-O (n < 0) and CTRL-I (n > 0). An entry in another buffer edits that buffer.
 func (e *Engine) jump(v *view, n int) {
 	e.cleanJumps()

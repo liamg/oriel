@@ -1,15 +1,12 @@
 package claude
 
 import (
-	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
-	"net"
 	"os"
 	"path/filepath"
 
-	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/sandbox/hookcall"
 )
 
 // The mod hands every decision to the session host by running `oriel hook <op>` with JSON on stdin. HookMain is
@@ -27,15 +24,10 @@ const (
 	opForkAnswer = "fork-answer" // forkAnswerIn → {}
 )
 
-type request struct {
-	Op   string          `json:"op"`
-	Body json.RawMessage `json:"body,omitempty"`
-}
-
-type response struct {
-	Body  json.RawMessage `json:"body,omitempty"`
-	Error string          `json:"error,omitempty"`
-}
+type (
+	request  = hookcall.Request
+	response = hookcall.Response
+)
 
 type helloIn struct {
 	SessionID string `json:"sessionId"`
@@ -155,61 +147,9 @@ type forkAnswerIn struct {
 	Reason   string `json:"reason,omitempty"`
 }
 
-// HookMain is `oriel hook <op>`: it sends stdin's JSON to the session in ORIEL_HOOK_SOCK as op, and prints the
-// answer. It exits 0 with the answer, 1 when the session couldn't answer, 2 on bad usage.
+// HookMain is `oriel hook <op>` (hookcall.Main).
 func HookMain(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	if len(args) != 1 {
-		fmt.Fprintln(stderr, "usage: oriel hook <op>  (run by Oriel's Claude Code mod, with JSON on stdin)")
-		return 2
-	}
-	sock := os.Getenv(agent.HookSocketEnv)
-	if sock == "" {
-		fmt.Fprintln(stderr, "oriel hook: ORIEL_HOOK_SOCK is not set: this runs inside a session Oriel started")
-		return 1
-	}
-	body, err := io.ReadAll(stdin)
-	if err != nil {
-		fmt.Fprintln(stderr, "oriel hook:", err)
-		return 1
-	}
-	out, err := callHook(sock, args[0], body)
-	if err != nil {
-		fmt.Fprintln(stderr, "oriel hook:", err)
-		return 1
-	}
-	if len(out) == 0 {
-		out = []byte("{}")
-	}
-	_, _ = stdout.Write(append(out, '\n'))
-	return 0
-}
-
-// callHook sends one request and waits for its answer. The connection stays open while it waits: the host reads
-// its closing as this process gone.
-func callHook(sock, op string, body []byte) (json.RawMessage, error) {
-	req := request{Op: op}
-	if len(body) > 0 {
-		if !json.Valid(body) {
-			return nil, fmt.Errorf("stdin is not JSON")
-		}
-		req.Body = body
-	}
-	conn, err := net.Dial("unix", sock)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	if err := json.NewEncoder(conn).Encode(req); err != nil {
-		return nil, err
-	}
-	var res response
-	if err := json.NewDecoder(bufio.NewReader(conn)).Decode(&res); err != nil {
-		return nil, fmt.Errorf("the session closed without answering: %w", err)
-	}
-	if res.Error != "" {
-		return nil, fmt.Errorf("%s", res.Error)
-	}
-	return res.Body, nil
+	return hookcall.Main(args, stdin, stdout, stderr)
 }
 
 // sockDir makes a private directory for a session's socket, short enough for sun_path (104 bytes on macOS).

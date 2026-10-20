@@ -144,6 +144,7 @@ func (h *Headless) zoomed() float32 {
 
 // Frame draws one frame, as the window would.
 func (h *Headless) Frame() {
+	h.sh.seeNav(h.sh.cfg.Registry, h.ui.Now())
 	h.list = new(render.List)
 	h.ui.Frame(h.list.Record(h.zoomed()), h.size, func(c *ui.Ctx) { buildWindow(c, h.sh.cfg.Registry, h.size) })
 }

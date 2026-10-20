@@ -79,3 +79,29 @@ func TestTranslateClick(t *testing.T) {
 		}
 	}
 }
+
+// The side buttons are keys, vim's <X1Mouse> and <X2Mouse>, not clicks; a click while one is held is still a click.
+func TestTranslateSideButtons(t *testing.T) {
+	var held pointer.Buttons
+	at := f32.Pt(2, 2)
+	for _, tt := range []struct {
+		in   event.Event
+		want []render.Event
+	}{
+		{pointer.Event{Kind: pointer.Press, Position: at, Buttons: pointer.ButtonQuaternary}, []render.Event{render.KeyEvent{Key: "X1Mouse"}}},
+		{pointer.Event{Kind: pointer.Press, Position: at, Buttons: pointer.ButtonQuaternary | pointer.ButtonPrimary},
+			[]render.Event{render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 1, Y: 1}, Buttons: render.ButtonPrimary}}},
+		{pointer.Event{Kind: pointer.Release, Position: at, Buttons: pointer.ButtonQuaternary},
+			[]render.Event{render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 1, Y: 1}, Buttons: render.ButtonPrimary}}},
+		{pointer.Event{Kind: pointer.Release, Position: at}, nil},
+		{pointer.Event{Kind: pointer.Press, Position: at, Buttons: pointer.ButtonQuinary, Modifiers: key.ModShift},
+			[]render.Event{render.KeyEvent{Key: "X2Mouse", Mods: render.ModShift}}},
+		{pointer.Event{Kind: pointer.Release, Position: at}, nil},
+		{pointer.Event{Kind: pointer.Press, Position: at, Buttons: pointer.ButtonPrimary},
+			[]render.Event{render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 1, Y: 1}, Buttons: render.ButtonPrimary}}},
+	} {
+		if got := translate(tt.in, 2, &held, new(render.Mods)); !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("translate(%+v) = %+v, want %+v", tt.in, got, tt.want)
+		}
+	}
+}

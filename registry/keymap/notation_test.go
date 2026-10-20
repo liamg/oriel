@@ -31,6 +31,9 @@ func TestParse(t *testing.T) {
 		{"<esc>", []string{"<Esc>"}},
 		{"<Leader>rr", []string{"<Leader>", "r", "r"}},
 		{"<F12>", []string{"<F12>"}},
+		// ref:   term.txt *X1Mouse*
+		// quote: " <X1Mouse>	 X1 button pressed	    -			*X1Mouse*"
+		{"<x1mouse><X2Mouse>", []string{"<X1Mouse>", "<X2Mouse>"}},
 		{"<C-w", []string{"<", "C", "-", "w"}},
 		{"<>", []string{"<", ">"}},
 		{"é", []string{"é"}},

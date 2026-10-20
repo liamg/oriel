@@ -530,6 +530,13 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   `oriel.review.source`.
 - `oriel.http.request`'s `auth_scheme = "basic"` sends the secret as HTTP Basic's password.
 
+## As built (back and forward)
+
+- `oriel.place.add{ name, title, command, args, shown = fn(), close = fn() }` puts a plugin's full-window page in the
+  window's history (ui.md 01i): `shown` says it's showing, `command` with `args` opens it, `close` puts it away.
+- `<X1Mouse>` and `<X2Mouse>` are the mouse's side buttons in key notation; map them like any key.
+- `session.focus` takes `then`, as `session.open` does: commands run once the window is on the session.
+
 ## As built (tickets page)
 
 - `oriel.rail.add` and `oriel.start.add` take `shown`: `fn(project)` and `fn()`, asked as each frame is built; the

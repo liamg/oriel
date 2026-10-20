@@ -54,6 +54,7 @@ func (x *ticketsPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: 
 
 func (x *ticketsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.lists, x.details = h, map[string]*ticketList{}, map[string]*ticketDetail{}
+	x.add(h.Contribute(pagePlace("tickets", "Tickets", "tickets.open", &x.page.open)))
 	x.add(h.Picker(x.source()))
 	has := func(registry.Args) bool { return x.any() }
 	open := func(registry.Args) bool { return x.page.open }

@@ -86,6 +86,7 @@ func (x *promptsPlugin) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return registry.Verdict{}, nil
 	}}))
+	x.add(h.Contribute(pagePlace("prompts", "Prompts", "prompts.open", &x.open)))
 	x.add(h.Contribute(registry.StartEntry{Name: "prompts", Icon: "prompts", Title: "Prompts", Desc: "The coding style and what each kind of session tells its agent",
 		Command: "prompts.open", Order: 95, Link: true}))
 	x.add(h.View(OverlayPrefix+"prompts", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "prompts", Fn: x.page} })))

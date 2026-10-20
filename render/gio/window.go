@@ -231,6 +231,14 @@ func (w *Window) loop() {
 		}
 	})
 	defer stop()
+	side := &sideWatcher{on: func(ev render.Event) {
+		mu.Lock()
+		defer mu.Unlock()
+		if !closed {
+			w.post(ev)
+		}
+	}}
+	defer side.close()
 	var ops op.Ops
 	f := NewFrame()
 	tag := new(int)
@@ -329,6 +337,7 @@ func (w *Window) loop() {
 				w.post(render.SlowFrameEvent{Waited: waited, Took: took})
 			}
 		default:
+			side.view(e)
 			if w.pl.view(e) {
 				viewed = true
 			}

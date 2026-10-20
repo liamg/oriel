@@ -278,13 +278,21 @@ func ImageID(ctx context.Context, image string) (string, error) {
 	return strings.TrimSpace(out), err
 }
 
-// Build builds dockerfile (its text) as tag, with an empty context.
-func Build(ctx context.Context, tag, dockerfile string) error {
+// Build builds dockerfile (its text) as tag, with an empty context, writing its output to out.
+func Build(ctx context.Context, tag, dockerfile string, out io.Writer, noCache bool) error {
 	e := EngineOf(ctx)
-	cmd := e.cmd(ctx, "build", "-t", tag, "-")
+	args := []string{"build", "-t", tag}
+	if !e.Podman() {
+		args = append(args, "--progress", "plain")
+	}
+	if noCache {
+		args = append(args, "--no-cache")
+	}
+	cmd := e.cmd(ctx, append(args, "-")...)
 	cmd.Stdin = strings.NewReader(dockerfile)
 	var errb bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &errb, &errb
+	w := io.MultiWriter(out, &errb)
+	cmd.Stdout, cmd.Stderr = w, w
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("%s build %s: %w: %s", e.Bin, tag, err, tail(errb.String(), 800))
 	}

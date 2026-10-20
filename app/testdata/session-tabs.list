@@ -104,8 +104,39 @@ clip 0,38 1600x56 r 0
   pop
   rect 741.8125,406.28 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
   text "⌘," @748.8125,419.5 #b3ab99 JetBrains Mono 11
-  clip 265,458.54 520x28 r 0
-  pop
+  rect 265,460.54 86.53125x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 6 segments stroke 1.25 #ffd23f
+  path 6 segments stroke 1.25 #ffd23f
+  path 6 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 3 segments stroke 1.25 #ffd23f
+  path 3 segments stroke 1.25 #ffd23f
+  text "Reviews" @294,477.90524 #ece6d8 Inter 12
+  rect 359.53125,460.54 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  text "Stats" @388.53125,477.90524 #ece6d8 Inter 12
+  rect 435.14062,460.54 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  text "Usage" @464.14062,477.90524 #ece6d8 Inter 12
+  rect 518.5,460.54 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 3 segments stroke 1.25 #ffd23f
+  text "Jobs" @547.5,477.90524 #ece6d8 Inter 12
+  rect 593.21875,460.54 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 6 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  text "Prompts" @622.21875,477.90524 #ece6d8 Inter 12
+  rect 687.71875,460.54 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  text "…" @697.71875,477.212 #ffd23f JetBrains Mono 10.200001
+  text "Plugins" @716.71875,477.90524 #ece6d8 Inter 12
   text "RECENT" @875,141.69 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1229.0469,142.2 #7c7566 JetBrains Mono 10
   text "SESSIONS" @887,172.89 #7c7566 JetBrains Mono 9.5

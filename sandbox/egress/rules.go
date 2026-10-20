@@ -159,6 +159,11 @@ var DefaultAllow = func() []Rule {
 		"claude.ai",
 		"*.claude.ai",
 		"statsig.anthropic.com",
+		// Claude Code refreshes its login here; blocked, every request fails
+		// once the token expires.
+		"platform.claude.com",
+		"console.anthropic.com",
+		"mcp-proxy.anthropic.com",
 		"proxy.golang.org",
 		"sum.golang.org",
 		"storage.googleapis.com",

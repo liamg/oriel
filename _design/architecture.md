@@ -69,9 +69,9 @@ flowchart LR
 | `term` | the terminal model behind `term.Emulator`: grid, scrollback, modes, keys, snapshots, OSC 133 commands and OSC 7 cwd; `term/ghostty` (libghostty-vt as wasm under wazero), `term/pty` (pseudo-terminals over `x/sys/unix`), `term/vttest` (esctest-style case runner) | wazero, x/sys |
 | `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | – |
 | `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/prompts` (the editable prompts and the user's versions of them); `agent/jsonrpc` | core, term (PTYs) |
-| `agent/claude`, `agent/codex` | provider impls | agent |
+| `agent/claude`, `agent/codex` | provider impls | agent; `agent/claude` also `sandbox/hookcall` (`oriel hook`, which the sandbox's helper serves too) |
 | `host` | the session host, in the app's process: sessions, pty, worktrees, launches providers, jobs; `host/search` (project search on ripgrep); `host/stats` (session stats); `host/sysload` (CPU and memory); `host/tour` (tours) | core, agent, gitx, gh, testrun (test runs as evidence), sandbox |
-| `sandbox` | sandbox backends (docker containers, macOS seatbelt), gateway, egress (ported from crit) | – |
+| `sandbox` | sandbox backends (docker containers, macOS seatbelt), gateway, egress (ported from crit); `sandbox/hookcall` (`oriel hook`'s client and wire types); `sandbox/helper` (the static Linux `oriel-sandbox` the app embeds, built by `make helper`) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear (agentbus and Slack PTAL are company-specific, so they're external plugins: agentbus is `github.com/liamg/oriel-agentbus`, with its `oriel-agentbus` helper process) | core; their processes `agent/jsonrpc`, `gh` |
 | `render` | GPU surface interface and display lists; `render/typeset` (shaping, fonts, rasterising, atlas); `render/raster` (draws display lists on the CPU); `render/bake` (glows and rounded rects as images); `render/headless` (keeps display lists and shoots them, for tests); `render/snapshot` (golden lists and perceptual PNG diffs); `render/scenes` (01-ide and the budget scenes) | go-text, x/image, theme |
@@ -85,7 +85,7 @@ flowchart LR
 | `assistant` | the assistant's conversation (ui.md 11): turns typed or spoken, replies and their rows, confirmations, actions with an undo, idle reaping; its agent behind an interface (the host's utility agent in the app) | – |
 | `voice` | dictation: a recorder program as the microphone, phrases at pauses, whisper.cpp or an OpenAI-compatible endpoint, the wake word, speech; `voice/voicetest` (a scripted mic and transcriber) | – |
 | `update` | release manifests (ed25519), staged swap and rollback | – |
-| `cmd/oriel` | the binary (the app, and the `hook`, `version`, `build`, `plugin`, `update` and `dev` subcommands) | app, host, update |
+| `cmd/oriel` | the binary (the app, and the `hook`, `version`, `build`, `plugin`, `update` and `dev` subcommands); it embeds the sandbox helper (`sandbox/helper`) and refuses to start without it | app, host, update, sandbox/helper |
 | `cmd/oriel-spike` | the phase-0 Gio spike (build tag `spike`): 01-ide drawn natively, benchmarks, go/no-go report in `spikes/P0-4-gio.md`. Superseded by `render/gio`; kept for its report | gioui.org |
 | `toml` | TOML 1.0 parser and round-tripping editor, for settings and themes (`settings.md`) | – |
 | `theme` | theme files, colour maths (CSS Color 4, OkLCh) and token resolution into a flat table (`theming.md`) | toml |

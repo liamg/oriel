@@ -4,3 +4,7 @@ bin/
 *.prof
 cover.out
 syntax/grammars/packs-out/
+sandbox/helper/bin/*.gz
+
+# signing identities (scripts/macos-signing-cert.sh)
+*.p12

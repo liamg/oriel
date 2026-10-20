@@ -100,6 +100,7 @@ func (s *settingsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	if root := s.sh.cfg.WorkDir; root != "" {
 		s.project = projectFile(root)
 	}
+	s.add(h.Contribute(pagePlace("settings", "Settings", "settings.open", &s.open)))
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return strings.TrimSpace(v) }
 	for _, c := range []registry.Command{
 		{ID: "Settings", Title: "The settings page; :Settings {section or search}", Run: func(_ registry.Ctx, a registry.Args) error {

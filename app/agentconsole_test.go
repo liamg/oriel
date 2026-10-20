@@ -208,6 +208,14 @@ func TestAskCardsInterruptAnyView(t *testing.T) {
 		t.Errorf("Deny answered %+v", d)
 	}
 	r.waitGone("$ curl example.com")
+
+	// Console takes you to the session's console, where the card waits with the context around it.
+	a.Ask(agent.Permission{ID: "p2", Tool: "Bash", Input: toolInput(map[string]string{"command": "curl example.org"})})
+	r.waitFrame("the second card", func(s string) bool { return containsAll(s, "W · PERMISSION", "$ curl example.org") })
+	r.clickText("Console")
+	r.waitFrame("the console, with the card in it", func(s string) bool {
+		return containsAll(s, "SESSION STATS", "$ curl example.org") && !strings.Contains(s, "W · PERMISSION")
+	})
 }
 
 // AI-7: a question's options are buttons; a click on one answers it.

@@ -2,7 +2,7 @@
 id: RV-12
 title: "Azure DevOps code host plugin: review, raise and merge"
 phase: P7
-status: review
+status: done
 area: Review
 module: integ/azure (plugin)
 depends_on: [RV-13, PL-2]

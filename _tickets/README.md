@@ -16,8 +16,9 @@ Markdown tickets, one per file, generated from `_design/features.md`. Edit them 
 ## Ready now (no unmet dependencies)
 
 - [FW-12](FW-12-platform-accessibility-bridges-nsaccessibility-and-at-spi.md): Platform accessibility bridges: NSAccessibility (macOS) and AT-SPI (Linux)
+- [PL-22](PL-22-lazy-loading.md): Lazy loading: commands, events, keys, filetypes and omnibox sources load a plugin when first used
 
-P7 is done, but for PL-10, which is dropped (the calendar isn't carried over). P8 is in review, but for PL-22 (lazy
+P7 is done, but for PL-10, which is dropped (the calendar isn't carried over). P8 is done, but for PL-22 (lazy
 loading, split out of PL-20). AI-15 (workers) is dropped: one Oriel per machine.
 
 ## Suggested order

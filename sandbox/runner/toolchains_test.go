@@ -4,7 +4,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"testing"
+
+	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/container"
 )
 
 func write(t *testing.T, dir, name, body string) {
@@ -35,6 +39,21 @@ func TestDetectTools(t *testing.T) {
 		}
 		if got := DetectTools(dir); !reflect.DeepEqual(got, c.want) {
 			t.Errorf("%s: got %v, want %v", name, got, c.want)
+		}
+	}
+}
+
+// Toolchains are installed from the base image, never a project's, so no repo's image runs with the toolchains every
+// sandbox shares open for writing.
+func TestToolchainsInstallFromTheBaseImage(t *testing.T) {
+	args := installArgs(sandbox.Identity{UID: 501, GID: 20}, "/tc", []string{"go@1.23.4"})
+	at := slices.Index(args, "--entrypoint")
+	if at < 0 || at+2 >= len(args) || args[at+2] != container.BaseImage() {
+		t.Fatalf("installs don't run the base image %s: %q", container.BaseImage(), args)
+	}
+	for _, want := range [][2]string{{"--cap-drop", "ALL"}, {"--security-opt", "no-new-privileges"}} {
+		if i := slices.Index(args, want[0]); i < 0 || args[i+1] != want[1] {
+			t.Errorf("installs run without %s %s: %q", want[0], want[1], args)
 		}
 	}
 }

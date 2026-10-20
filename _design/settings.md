@@ -175,7 +175,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `sandbox.loopback` | `all`: the host's loopback ports a `seatbelt` sandbox may connect to; `ephemeral`, only 49152–65535 (servers on port 0, not services on fixed ports); or `none`, only its proxy | app | | AI-11 |
 | `sandbox.image` | empty: Oriel's base image; a project's applies to its repo | app | | AI-11 |
 | `sandbox.claude_version` | empty: the host's Claude Code | app | | AI-11 |
-| `sandbox.env` | empty: the default host variables a sandbox inherits; the page offers the host's | app | | AI-11 |
+| `sandbox.env` | empty: the default host variables a sandbox inherits (`sandbox.DefaultEnv`: Claude Code's own, `ANTHROPIC_*`, `CLAUDE_CODE_*`, `OTEL_*`, `DISABLE_*` and its timeouts and token limits, less what a Claude Code session sets for itself); the page offers the host's | app | | AI-11 |
 | `sandbox.egress` | empty: network rules, `allow\|deny host[:port] [private]`; a project's add to it | app | | AI-11 |
 | `sandbox.rules` | empty: gateway rules, `allow\|ask\|deny tool`; a project's add to it | app | | AI-11 |
 | `sandbox.approval_timeout` | 0: ten minutes | app | | AI-11 |
@@ -190,7 +190,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `hud.hold` | alt: the modifier that pulls the HUD down while held on its own (alt, ctrl, shift, super, off) | app | | SH-8 |
 | `hud.hold_delay` | 250: milliseconds the hold key is held alone before the HUD comes down, so a chord doesn't flash it | app | | SH-8 |
 | `mission.at_launch` | true: open on mission control when Oriel starts with nothing open, once there's a session to show | app | | SH-7 |
-| `updates.mode` | `ask`: a new release is offered in a notice; `automatic` installs it as it comes out; `manual` only checks on `:UpdateCheck` (distribution.md) | app | | PL-6 |
+| `updates.mode` | `automatic`: updates as Oriel starts, and installs a release that comes out while it runs for the next restart; `ask` downloads it and offers it in a notice; `manual` only checks on `:UpdateCheck` (distribution.md) | app | | PL-6 |
 | `updates.channel` | `stable`; or `nightly`, pre-releases too | app | | PL-6 |
 | `voice.dictation` | true: ⌃⇧Space dictates into the focused text field (a recorder and whisper-server, or `voice.url`, needed); false turns it off | app | | PL-11 |
 | `voice.model` | the Whisper model: `base.en`, `small.en`, `medium.en` or a path to a ggml model; empty picks one for the machine (`small.en` on Apple silicon, else `base.en`) | app | | PL-11 |

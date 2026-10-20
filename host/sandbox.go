@@ -1,6 +1,7 @@
 package host
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -96,6 +97,7 @@ type box struct {
 	served   sync.WaitGroup
 	launched bool
 	hook     string // the provider's hook socket on the host
+	netShown map[string]bool
 	mu       sync.Mutex
 }
 
@@ -137,6 +139,7 @@ func (s *Sandboxes) Open(ctx context.Context, se core.SessionState, approve Appr
 		},
 		Approver: b,
 		Always:   alwaysEgress,
+		Failed:   b.netFailed,
 	}
 	home, _ := os.UserHomeDir()
 	up := &gateway.Upstreams{Servers: gateway.Discover(home, cfg.Servers, cfg.Hidden)}
@@ -305,23 +308,47 @@ func (b *box) egressSettings() [][]egress.Rule {
 	if se, err := b.session(); err == nil {
 		var project []egress.Rule
 		for _, p := range se.Projects {
-			project = append(project, egressRules(b.cfg.Projects[p.Repo].Egress)...)
+			project = append(project, egressRules(SourceProject, b.cfg.Projects[p.Repo].Egress)...)
 		}
 		out = append(out, project)
 	}
-	return append(out, egressRules(append(slices.Clone(b.cfg.Egress), sandbox.LoadAlways().Egress...)))
+	return append(out, append(egressRules(SourceSettings, b.cfg.Egress), egressRules(SourceAlways, sandbox.LoadAlways().Egress)...))
 }
 
-func egressRules(rs []sandbox.EgressRule) []egress.Rule {
+func egressRules(source string, rs []sandbox.EgressRule) []egress.Rule {
 	out := make([]egress.Rule, 0, len(rs))
 	for _, r := range rs {
-		out = append(out, egress.Rule{Host: r.Host, Port: r.Port, Allow: r.Allow, Private: r.Private})
+		out = append(out, egress.Rule{Host: r.Host, Port: r.Port, Allow: r.Allow, Private: r.Private, Source: source})
 	}
 	return out
 }
 
 func alwaysEgress(r egress.Rule, everywhere bool) error {
 	return sandbox.AddAlwaysEgress(sandbox.EgressRule{Host: r.Host, Port: r.Port, Allow: r.Allow, Private: r.Private}, everywhere)
+}
+
+// netFailed puts a connection that never got through in the session's transcript, once per destination, so a
+// stuck agent says why without its terminal.
+func (b *box) netFailed(ev egress.Event) {
+	key := net.JoinHostPort(ev.Host, strconv.Itoa(ev.Port))
+	b.mu.Lock()
+	shown := b.netShown[key]
+	if b.netShown == nil {
+		b.netShown = map[string]bool{}
+	}
+	b.netShown[key] = true
+	b.mu.Unlock()
+	h, _ := b.w.sessionFor(b.id, false)
+	if shown || h == nil {
+		return
+	}
+	it := core.Item{ID: newID(6), Kind: core.ItemSystem, Time: b.w.opts.Now().UTC(), Text: "Network: blocked " + key}
+	if ev.Allowed {
+		it.Kind, it.Text = core.ItemError, "Network: couldn't reach "+key+": "+ev.Err
+	} else if why := cmp.Or(ev.Reason, ev.Err); why != "" {
+		it.Text += " (" + why + ")"
+	}
+	h.appendItem(it)
 }
 
 // ApproveEgress is layer 3 for the network: the connection is held while the session's rules, the app's hooks
@@ -385,9 +412,16 @@ func (b *box) grant(rules []gateway.Rule) {
 	for _, r := range rules {
 		have = sandbox.PutRule(have, r)
 	}
-	if data, err := json.MarshalIndent(have, "", "  "); err == nil {
-		_ = os.WriteFile(sandbox.GrantsPath(b.root), data, 0o600)
+	_ = b.saveGrants(have)
+}
+
+// saveGrants replaces the session's gateway grants.
+func (b *box) saveGrants(rules []gateway.Rule) error {
+	data, err := json.MarshalIndent(rules, "", "  ")
+	if err != nil {
+		return err
 	}
+	return os.WriteFile(sandbox.GrantsPath(b.root), data, 0o600)
 }
 
 func (b *box) logCall(e gateway.Entry) {

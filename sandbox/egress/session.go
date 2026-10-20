@@ -61,6 +61,8 @@ type Session struct {
 	Always func(r Rule, everywhere bool) error
 	// Changed is told when the session's rules change.
 	Changed func()
+	// Failed is told of each connection that never got through, with its reason.
+	Failed func(Event)
 	// Resolver looks hosts up for a dial; nil is the system's.
 	Resolver Resolver
 	// Wait bounds a card; 0 means 60s.
@@ -411,11 +413,14 @@ func (s *Session) ServeDial(w http.ResponseWriter, r *http.Request) {
 // session's own: the sender is inside the sandbox.
 func (s *Session) Record(ev Event) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	ev.Reason = s.why[fmt.Sprintf("%s:%d", ev.Host, ev.Port)]
 	s.log = append(s.log, ev)
 	if len(s.log) > MaxLog {
 		s.log = s.log[len(s.log)-MaxLog:]
+	}
+	s.mu.Unlock()
+	if s.Failed != nil && ev.Failed() {
+		s.Failed(ev)
 	}
 }
 

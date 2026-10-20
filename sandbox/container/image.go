@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -39,14 +41,33 @@ func BaseImage() string {
 
 var buildMu sync.Mutex
 
-// EnsureImage builds tag from dockerfile unless it is already present.
-func EnsureImage(ctx context.Context, tag, dockerfile string) error {
+// EnsureImage builds tag from dockerfile unless it is already present, its output going to the file log.
+func EnsureImage(ctx context.Context, tag, dockerfile, log string) error {
 	buildMu.Lock()
 	defer buildMu.Unlock()
 	if ImageExists(ctx, tag) {
 		return nil
 	}
-	return Build(ctx, tag, dockerfile)
+	return buildLogged(ctx, tag, dockerfile, log, false)
+}
+
+// Rebuild builds tag from dockerfile again, skipping the cache so its downloads are fetched afresh.
+func Rebuild(ctx context.Context, tag, dockerfile, log string) error {
+	buildMu.Lock()
+	defer buildMu.Unlock()
+	return buildLogged(ctx, tag, dockerfile, log, true)
+}
+
+func buildLogged(ctx context.Context, tag, dockerfile, log string, noCache bool) error {
+	if err := os.MkdirAll(filepath.Dir(log), 0o700); err != nil {
+		return err
+	}
+	f, err := os.Create(log)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return Build(ctx, tag, dockerfile, f, noCache)
 }
 
 // ProjectImage is the tag for a project's own approved Dockerfile.

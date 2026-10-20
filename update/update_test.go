@@ -292,3 +292,49 @@ func TestGitHubLatest(t *testing.T) {
 		t.Fatalf("the cache served %q", got)
 	}
 }
+
+// A public repo's releases read with no token, or with one GitHub refuses; a private one says it needs a token.
+func TestGitHubPublicNeedsNoToken(t *testing.T) {
+	key := testKey(t)
+	rel := signed(t, key, "1.8.0", update.Describe("oriel-linux-amd64", "linux/amd64", update.KindBinary, []byte("binary")))
+	private := false
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "" {
+			http.Error(w, `{"message":"Bad credentials"}`, http.StatusUnauthorized)
+			return
+		}
+		if private {
+			http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
+			return
+		}
+		switch r.URL.Path {
+		case "/repos/liamg/oriel/releases":
+			w.Write([]byte(`[{"assets":[{"name":"manifest.json","url":"` + srv.URL + `/m"},{"name":"manifest.sig","url":"` + srv.URL + `/s"}]}]`))
+		case "/m":
+			w.Write(rel.Manifest)
+		case "/s":
+			w.Write(rel.Signature)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	trust := []ed25519.PublicKey{key.Public().(ed25519.PublicKey)}
+	ctx := context.Background()
+	for name, tok := range map[string]func(context.Context) (string, error){
+		"no token":      nil,
+		"empty token":   func(context.Context) (string, error) { return "", nil },
+		"expired token": func(context.Context) (string, error) { return "old", nil },
+	} {
+		gh := &update.GitHub{Repo: "liamg/oriel", Base: srv.URL, Token: tok}
+		if _, m, err := update.Check(ctx, gh, trust, update.Stable, "1.7.0"); err != nil || m.Version != "1.8.0" {
+			t.Errorf("%s: %+v, %v", name, m, err)
+		}
+	}
+	private = true
+	_, _, err := update.Check(ctx, &update.GitHub{Repo: "liamg/oriel", Base: srv.URL}, trust, update.Stable, "1.7.0")
+	if err == nil || !strings.Contains(err.Error(), "needs a GitHub token") {
+		t.Errorf("private without a token = %v", err)
+	}
+}

@@ -155,6 +155,34 @@ func (b Engine) Sweep(ctx context.Context, attached func(root string) bool) []st
 	return Sweep(ctx, attached)
 }
 
+func (b Engine) Describe(ctx context.Context, root string, cfg sandbox.Config) sandbox.Description {
+	ctx, _, err := b.with(ctx)
+	if err != nil {
+		return sandbox.Description{Container: Name(root)}
+	}
+	return Describe(ctx, root, cfg)
+}
+
+func (b Engine) Rebuild(ctx context.Context, root string, cfg sandbox.Config) error {
+	ctx, _, err := b.with(ctx)
+	if err != nil {
+		return err
+	}
+	return Rebuild(ctx, root, cfg)
+}
+
+func (b Engine) Shell(ctx context.Context, root, cwd string, _ sandbox.LaunchOptions) (sandbox.Command, error) {
+	ctx, e, err := b.with(ctx)
+	if err != nil {
+		return sandbox.Command{}, err
+	}
+	argv, err := Shell(ctx, e, root, cwd)
+	if err != nil {
+		return sandbox.Command{}, err
+	}
+	return sandbox.Command{Argv: argv, Env: os.Environ()}, nil
+}
+
 func (Engine) AgentRunDir(string) string { return ContainerRunDir }
 
 func (b Engine) ServesPort() bool {

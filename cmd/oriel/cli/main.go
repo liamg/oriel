@@ -20,6 +20,8 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/render/gio"
+	"github.com/liamg/oriel/sandbox/helper"
+	"github.com/liamg/oriel/sandbox/runner"
 	"github.com/liamg/oriel/theme"
 )
 
@@ -32,6 +34,12 @@ func Main() {
 	if handled, code := runSandboxed(args); handled {
 		os.Exit(code)
 	}
+	// Docker sandboxes run the helper this build carries; a build without one is unfinished.
+	if !helper.Embedded() {
+		fmt.Fprintln(os.Stderr, "oriel:", helper.ErrMissing)
+		os.Exit(1)
+	}
+	runner.SetHelper(helper.Binary)
 	if len(args) > 0 && args[0] == "app" {
 		args = args[1:]
 	}
@@ -174,6 +182,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 const devUsage = `oriel dev shot [-scales 1,2] [-light] DIR
                                        render every reference scene offscreen into DIR
+oriel dev icon [-light] DIR            render the app icon into DIR as a macOS iconset (for iconutil)
 oriel dev compare MOCKUP NATIVE OUT    write them side by side with a diff, and print how far apart they are
 oriel dev bench [-scenes a,b]          measure every scene offscreen: build, frame(), GPU time, RSS
 oriel dev window [-auto] [-scenes a,b] [SCENE]
@@ -192,19 +201,24 @@ func runDev(args []string, stdout io.Writer) error {
 		return err
 	}
 	rest := fs.Args()
+	v := theme.Dark
+	if *light {
+		v = theme.Light
+	}
 	switch args[0] {
 	case "shot":
 		if len(rest) != 1 {
 			return fmt.Errorf("usage: %s", strings.Split(devUsage, "\n")[0])
 		}
-		v := theme.Dark
-		if *light {
-			v = theme.Light
-		}
 		return dev.Shots(rest[0], *scales, v)
+	case "icon":
+		if len(rest) != 1 {
+			return fmt.Errorf("usage: %s", strings.Split(devUsage, "\n")[2])
+		}
+		return dev.Icons(rest[0], v)
 	case "compare":
 		if len(rest) != 3 {
-			return fmt.Errorf("usage: %s", strings.Split(devUsage, "\n")[2])
+			return fmt.Errorf("usage: %s", strings.Split(devUsage, "\n")[3])
 		}
 		return dev.Compare(stdout, rest[0], rest[1], rest[2])
 	case "bench":

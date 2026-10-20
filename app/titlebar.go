@@ -71,8 +71,17 @@ func (t *sessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "s
 
 func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 	focus := func(id core.SessionID) error { return t.sh.cfg.Store.Apply(core.SessionFocused{ID: id}) }
-	t.add(h.Command(registry.Command{ID: "session.focus", Title: "Focus a session: {n} counting from 1, or {id}", Run: func(_ registry.Ctx, a registry.Args) error {
+	t.add(h.Command(registry.Command{ID: "session.focus", Title: "Focus a session: {n} counting from 1, or {id}; {then} is a list of {command, args} run once the window is on it", Run: func(_ registry.Ctx, a registry.Args) error {
 		if id, _ := a["id"].(string); id != "" {
+			then, err := callsOf(a["then"])
+			if err != nil {
+				return err
+			}
+			if x := t.sh.sessions; x != nil {
+				x.after(core.SessionID(id), then)
+			} else if len(then) > 0 {
+				h.Do(func() { runCalls(h, then) })
+			}
 			return focus(core.SessionID(id))
 		}
 		n, _ := a["n"].(int)

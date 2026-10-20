@@ -79,7 +79,7 @@ func runEditorWith(t *testing.T, files map[string]string, open []string, plugins
 	be := headless.New()
 	g := &grabHost{keys: keys}
 	r := &running{t: t, store: eventstore.New(), dir: dir, done: make(chan error, 1)}
-	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), WorkDir: dir, Files: open, Plugins: append(plugins, g)}
+	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), WorkDir: dir, Files: open, Plugins: append(plugins, g), Net: offlineNet}
 	go func() { r.done <- Run(ctx, be, cfg) }()
 	select {
 	case r.win = <-be.Windows():

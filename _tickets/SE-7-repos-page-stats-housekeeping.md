@@ -2,7 +2,7 @@
 id: SE-7
 title: "The Repos page: list, detail, stats, housekeeping of merged and gone branches with their worktrees"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: host, app, gitx
 depends_on: [SE-6, FG-7]

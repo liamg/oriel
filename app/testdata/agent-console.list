@@ -342,7 +342,9 @@ clip 44,38 1556x936 r 0
       text "GIT PUSH · GATEWAY" @1293,708.09 #ff7ad6 JetBrains Mono 9.5
       rect 1424.26,696.4 105.97998x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
       text "BASH(GO VET:*)" @1431.26,708.09 #4fe0a0 JetBrains Mono 9.5
-      rect 1270,726.94 330x1 fill #24221d
+      text "Permissions and connections ›" @1286,733.565 #ffd23f Inter 12
+      rect 1286,737.45953 176.46875x1 fill #ffd23fb3
+      rect 1270,752.45953 330x1 fill #24221d
     pop
   pop
 pop

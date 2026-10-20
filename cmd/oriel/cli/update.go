@@ -54,7 +54,7 @@ func appBundle(exe string) (bundle, inner string, ok bool) {
 	return exe[:i+4], exe[i+5:], true
 }
 
-// ghToken is the user's GitHub token, from their gh login, for a private repo's releases; "" without one.
+// ghToken is the user's GitHub token, for a private repo's releases; "" without one.
 func ghToken(ctx context.Context) (string, error) { return gh.Token(ctx), nil }
 
 // newUpdater is the updater for this copy, reading releases from src (GitHub's if nil); nil when this build trusts

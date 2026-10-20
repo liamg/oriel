@@ -25,6 +25,26 @@ var names = map[key.Name]string{
 var modKeys = map[key.Name]render.Mods{key.NameShift: render.ModShift, key.NameCtrl: render.ModCtrl, key.NameAlt: render.ModAlt,
 	key.NameSuper: render.ModSuper, key.NameCommand: render.ModSuper}
 
+const mainButtons = pointer.ButtonPrimary | pointer.ButtonSecondary | pointer.ButtonTertiary
+
+// sideKeys are the side buttons in pressed as keys, vim's names for them: <X1Mouse> back, <X2Mouse> forward.
+func sideKeys(pressed pointer.Buttons, m render.Mods) []render.Event {
+	var out []render.Event
+	if pressed&pointer.ButtonQuaternary != 0 {
+		out = append(out, render.KeyEvent{Key: SideBack, Mods: m})
+	}
+	if pressed&pointer.ButtonQuinary != 0 {
+		out = append(out, render.KeyEvent{Key: SideForward, Mods: m})
+	}
+	return out
+}
+
+// The side buttons' keys.
+const (
+	SideBack    = "X1Mouse"
+	SideForward = "X2Mouse"
+)
+
 // translate turns Gio input into key events. Typed text comes from EditEvents, so a key press
 // that only types a character is left to its EditEvent; presses with Ctrl, Alt or Super, and named
 // keys, come from key.Events. held is the buttons down before ev: Gio's press and release carry those
@@ -34,19 +54,29 @@ func translate(ev event.Event, scale float32, held *pointer.Buttons, down *rende
 	switch ev := ev.(type) {
 	case pointer.Event:
 		pe := render.PointerEvent{Pos: render.Point{X: ev.Position.X / scale, Y: ev.Position.Y / scale}, Mods: mods(ev.Modifiers)}
-		now := ev.Buttons & (pointer.ButtonPrimary | pointer.ButtonSecondary | pointer.ButtonTertiary)
+		now := ev.Buttons & mainButtons
 		pe.Buttons = render.Buttons(now)
 		switch ev.Kind {
 		case pointer.Move, pointer.Drag:
 			pe.Kind = render.PointerMove
 		case pointer.Press:
 			pe.Kind = render.PointerPress
-			if b := now &^ *held; b != 0 {
+			side, b := sideKeys(ev.Buttons&^*held, pe.Mods), now&^*held
+			*held = ev.Buttons
+			if b == 0 && side != nil {
+				return side
+			}
+			if b != 0 {
 				pe.Buttons = render.Buttons(b)
 			}
+			return append(side, pe)
 		case pointer.Release:
 			pe.Kind = render.PointerRelease
-			pe.Buttons = render.Buttons(*held &^ now)
+			pe.Buttons = render.Buttons((*held &^ now) & mainButtons)
+			if pe.Buttons == 0 && *held&^ev.Buttons != 0 {
+				*held = ev.Buttons
+				return nil // a side button let go
+			}
 		case pointer.Scroll:
 			pe.Kind = render.PointerScroll
 			pe.Scroll = render.Point{X: ev.Scroll.X / scale, Y: ev.Scroll.Y / scale}
@@ -56,7 +86,7 @@ func translate(ev event.Event, scale float32, held *pointer.Buttons, down *rende
 			return nil
 		}
 		if ev.Kind != pointer.Scroll {
-			*held = now
+			*held = ev.Buttons
 		}
 		return []render.Event{pe}
 	case key.EditEvent:

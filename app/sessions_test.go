@@ -53,7 +53,10 @@ func newHostWith(t *testing.T, o host.Options, fakes ...*agenttest.Fake) *localH
 	for _, f := range fakes {
 		providers.Register(f)
 	}
-	o.Home, o.Providers = t.TempDir(), providers
+	if o.Home == "" {
+		o.Home = t.TempDir()
+	}
+	o.Providers = providers
 	if o.Exec == nil {
 		o.Exec = nopExec{}
 	}

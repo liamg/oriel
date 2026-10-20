@@ -38,9 +38,10 @@
 //     returns the command to run under the agent's PTY; the agent's MCP config
 //     names the gateway as {"oriel-gw":{"command":"oriel","args":["mcp"]}}.
 //   - The sandbox's oriel answers "mcp", "ssh-proxy" and "git-credential"
-//     (and, in docker's sidecar, "egress-proxy") through agentcmd.Main. In
-//     docker it is runner.OrielBinary: on Linux the running binary, elsewhere
-//     a Linux build of cmd/oriel-sandbox. Under seatbelt it is the running
-//     binary.
+//     (and, in docker's sidecar, "egress-proxy") through agentcmd.Main, and
+//     the Claude mod's "hook" through hookcall.Main. In docker it is
+//     runner.OrielBinary: cmd/oriel-sandbox built static for Linux, which the
+//     app embeds (package helper, `make helper`) and hands over with
+//     runner.SetHelper. Under seatbelt it is the running binary.
 //   - Backend.Sweep and Backend.Health run on timers.
 package sandbox

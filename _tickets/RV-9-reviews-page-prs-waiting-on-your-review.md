@@ -2,7 +2,7 @@
 id: RV-9
 title: "Reviews page: PRs waiting on your review, GitHub built in"
 phase: P7
-status: review
+status: done
 area: Review
 module: app, gh, registry
 depends_on: [RV-4, PL-8]

@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/sandbox/hookcall"
 )
 
 func TestGuardRails(t *testing.T) {
@@ -144,6 +145,9 @@ func TestWriteMod(t *testing.T) {
 }
 
 func TestHookMain(t *testing.T) {
+	if agent.HookSocketEnv != hookcall.SocketEnv {
+		t.Fatalf("the provider points the mod at %s, but oriel hook reads %s", agent.HookSocketEnv, hookcall.SocketEnv)
+	}
 	dir, err := sockDir()
 	if err != nil {
 		t.Fatal(err)

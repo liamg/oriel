@@ -123,6 +123,7 @@ func (x *reposPlugin) Activate(_ context.Context, h plugin.Host) error {
 		k.Mode = ReposKeyMode
 		x.add(h.Keymap(k))
 	}
+	x.add(h.Contribute(pagePlace("repos", "Repos", "repos.open", &x.open)))
 	x.add(h.Contribute(registry.RailEntry{Name: "repos", Icon: "repos", Title: "Repos", Command: "repos.open", Scope: registry.ScopeGlobalEntry, Order: 5,
 		Active: func(string) bool { return x.open }}))
 	x.add(h.Contribute(registry.StartEntry{Name: "repos", Icon: "repos", Title: "Repos", Desc: "Your checkouts: add, clean up, tag", Command: "repos.open",

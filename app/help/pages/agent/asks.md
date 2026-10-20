@@ -8,7 +8,8 @@ related: [agent/console, plugins/hooks]
 When an agent wants something only you can give, it waits for a card's answer. Cards show in the agent console where
 they arose, and stacked at the bottom right of the window for any session (with its name), whatever view is in
 front; the inbox keeps them all. A session's tab counts the cards waiting on it. A `Permission` hook can answer
-before a card shows.
+before a card shows. A stacked card's **Console** (`g`, `agent.console.show`) brings its session to the front with
+the agent console open, so you can read what led to the ask before you answer it.
 
 ## Permission
 

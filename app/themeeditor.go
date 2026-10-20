@@ -88,6 +88,9 @@ func (e *themeEditor) Activate(_ context.Context, h plugin.Host) error {
 	e.h = h
 	e.live = map[string]*liveFile{}
 	e.fixtures = map[*theme.Resolved]*fixture{}
+	place := pagePlace("theme", "Theme editor", "theme.edit", &e.open)
+	place.Shown = func() bool { return e.open || e.picking }
+	e.add(h.Contribute(place))
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return strings.TrimSpace(s) }
 	for _, c := range []registry.Command{
 		{ID: "Theme", Title: "The theme editor; :Theme pick to pick from the window, :Theme {name} to switch",

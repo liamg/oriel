@@ -1,6 +1,9 @@
 package sandbox
 
-import "testing"
+import (
+	"maps"
+	"testing"
+)
 
 // The sandbox's permission mode is its own, with no dialog to click through,
 // whatever mode the host's settings ask for.
@@ -40,5 +43,37 @@ func TestSandboxSettingsPointLocalhostAtTheHost(t *testing.T) {
 	got := EndpointEnv(nil, nil, host)
 	if got["ANTHROPIC_BASE_URL"] != "http://"+HostGateway+":4000" || got["FOO"] != "" {
 		t.Fatalf("endpoint env %v", got)
+	}
+}
+
+// The defaults carry Claude Code's own settings into the sandbox, but not another program's variables, nor what a
+// Claude Code session set for its own processes.
+func TestDefaultEnvCarriesClaudesSettings(t *testing.T) {
+	got := HostEnv([]string{
+		"ANTHROPIC_BASE_URL=http://litellm.tail1234.ts.net:4000",
+		"CLAUDE_CODE_MAX_OUTPUT_TOKENS=32000",
+		"CLAUDE_CODE_USE_BEDROCK=1",
+		"MAX_THINKING_TOKENS=8000",
+		"API_TIMEOUT_MS=600000",
+		"OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318",
+		"CLAUDE_CODE_ENTRYPOINT=cli",
+		"CLAUDE_CODE_SESSION_ID=abc",
+		"CLAUDE_CODE_OAUTH_TOKEN=secret",
+		"GITHUB_TOKEN=secret",
+		"AWS_SECRET_ACCESS_KEY=secret",
+	}, nil)
+	want := map[string]string{
+		"ANTHROPIC_BASE_URL":            "http://litellm.tail1234.ts.net:4000",
+		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "32000",
+		"CLAUDE_CODE_USE_BEDROCK":       "1",
+		"MAX_THINKING_TOKENS":           "8000",
+		"API_TIMEOUT_MS":                "600000",
+		"OTEL_EXPORTER_OTLP_ENDPOINT":   "http://localhost:4318",
+	}
+	if !maps.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got := HostEnv([]string{"CLAUDE_CODE_ENTRYPOINT=cli", "GITHUB_TOKEN=x"}, []string{"CLAUDE_CODE_ENTRYPOINT", "GITHUB_TOKEN"}); len(got) != 2 {
+		t.Errorf("settings that name variables get them all: %v", got)
 	}
 }

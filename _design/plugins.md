@@ -258,11 +258,16 @@ flowchart TB
   changes (`layout-<hash>.json` in the state dir) with each instance's state, and when the app starts again there,
   each view revives its instances into the places they had; one that can't is left out. The editor keeps each window's
   file and cursor, the terminal its command (its screen is its own state file).
+- places in the window's history (`registry.Place`, `oriel.place.add`; ui.md 01i): a full-window page with `Shown()`
+  (it's showing now), `Command`/`Args` (opens it) and `Close()`. Before each frame the shell records the session in
+  front and the place showing (`registry.ShownPlace`; none while two are, one opening over the other), and
+  `nav.back`/`nav.forward` put a stop up again: `session.focus {id, then}` with the place's command as `then`, or its
+  `Close`. Every built-in page is one (`pagePlace`).
 - tab markers: a view implementing `registry.Marked` gives each instance a small marker after its tab title (the
   editor gives its file's git status letter), in a theme token's colour.
 - project sidebar entries (`RailEntry`, `oriel.rail.add`; ui.md 01h) and start view actions (`StartEntry`,
   `oriel.start.add`). A start entry with `Link` is a small link under the actions with its `Note()` figure (Stats,
-  Usage; AI-12). A rail entry has a `Scope`: `project` (`registry.ScopeProjectEntry`) is one of each project's
+  Usage; AI-12); the links wrap onto as many lines as they need inside the Start column, so none is cut off. A rail entry has a `Scope`: `project` (`registry.ScopeProjectEntry`) is one of each project's
   panels, listed under the open project and run with `project` added to its args (`RailEntry.ArgsFor`); `session`
   (the default) is listed below the projects; `global` (`registry.ScopeGlobalEntry`, AI-12) is a page every session
   shares (Stats, Usage, Jobs, Settings), listed last below a second divider and at the foot of the narrow form, and in
@@ -398,10 +403,10 @@ flowchart TB
 - this machine: `core.State.Machine` (`core.MachineState`: host name, OS, arch, version, providers, sandboxes,
   cores, CPU, memory, when it was sampled, signed-out logins), set by `core.MachineChanged`. The HUD's `machine`
   panel, the mission strip's `machine.mission` and the status indicator `machine.status` draw it.
-- updates (PL-6): commands `:UpdateCheck` / `update.check`, `update.notes` (the card), `update.install`,
-  `update.restart`; options `updates.mode` (`automatic`, `ask`, `manual`) and `updates.channel` (`stable`,
+- updates (PL-6): commands `:UpdateCheck` / `update.check`, `update.notes` (the card), `update.install` (the
+  Updating page, ending in a restart), `update.restart`, `update.progress` (the Updating page again); options `updates.mode` (`automatic`, `ask`, `manual`) and `updates.channel` (`stable`,
   `nightly`); the view `app.overlay.update` (the card) and the indicator `update` in `statusline.right` ("update ready ·
-  restart", built again with `hud.refresh {name = "update"}` as it changes). Notices `update.available` (with What's new and Update),
+  restart", built again with `hud.refresh {name = "update"}` as it changes). Notices `update.available` (with What's new and Update), `update.done` (the first start of a newer version),
   `update.ready` (Restart) and `update.failed`.
 - themes, fonts, effects, and icon sets. A theme is a plugin like any other: data-only, or with Lua for dynamic themes (see `theming.md`).
 

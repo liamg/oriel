@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/term"
 	"github.com/liamg/oriel/term/ghostty"
 	"github.com/liamg/oriel/term/pty"
@@ -60,15 +61,17 @@ type TermSource interface {
 
 // terminal is one: its program, its VT, and the vim engine terminal-normal mode reads the scrollback with.
 type terminal struct {
-	id   string
-	cmd  []string
-	own  bool // a program it started, rather than a source it was given: it can start again
-	emu  term.Emulator
-	src  TermSource
-	cols int
-	rows int
-	done bool
-	err  error
+	id  string
+	cmd []string
+	own bool // a program it started, rather than a source it was given: it can start again
+	// sandboxed says it runs in the session's sandbox, beside its agent: a shell of the backend's, not cmd's program.
+	sandboxed bool
+	emu       term.Emulator
+	src       TermSource
+	cols      int
+	rows      int
+	done      bool
+	err       error
 
 	normal  bool
 	ed      *edit.Editor
@@ -112,6 +115,14 @@ func (x *terminals) Activate(_ context.Context, h plugin.Host) error {
 			return open(place, a.String("side"))(ctx, a)
 		}},
 		{ID: "term", Title: "Open a terminal; term! in the main area", Run: open("dock", "")},
+		{ID: "term.host", Title: "Open a terminal on this machine, outside the session's sandbox, in {dir} (the window's directory by default)",
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				b := registry.Args{"host": true}
+				for k, v := range a {
+					b[k] = v
+				}
+				return open(cmpOr(a.String("place"), "dock"), a.String("side"))(ctx, b)
+			}},
 		{ID: "vterm", Title: "Open a terminal in a split to the right", Run: open("split", "right")},
 		{ID: "sterm", Title: "Open a terminal in a split below", Run: open("split", "down")},
 		{ID: "term.normal", Title: "Terminal-normal mode: vim's motions over the scrollback", Run: func(registry.Ctx, registry.Args) error {
@@ -240,6 +251,24 @@ func (x *terminals) focusedOrLast() *terminal {
 	return last
 }
 
+// sandboxShell is what a new terminal runs while the session in front is sandboxed: a shell in its sandbox, beside
+// its agent, in the window's directory. ok is false for a session that isn't sandboxed, whose terminals run here.
+func (x *terminals) sandboxShell() (sandbox.Command, bool, error) {
+	w := x.sh.cfg.Host
+	if w == nil {
+		return sandbox.Command{}, false, nil
+	}
+	se, ok := x.h.State().Session(x.h.State().Focus)
+	if !ok || !se.Snapshot().Agent.Sandboxed {
+		return sandbox.Command{}, false, nil
+	}
+	c, err := w.SandboxShell(context.Background(), se.Snapshot().ID, x.sh.cfg.WorkDir)
+	if err != nil {
+		return c, false, fmt.Errorf("%w; term.host opens a terminal on this machine instead", err)
+	}
+	return c, true, nil
+}
+
 // shell is what a new terminal runs: terminal.shell, else $SHELL, else sh.
 func (x *terminals) shell() []string {
 	if v, _, err := x.h.Options().Get("terminal.shell", x.h.Here()); err == nil {
@@ -302,6 +331,17 @@ func (x *terminals) start(a registry.Args) (string, error) {
 	if title := a.String("title"); src != nil && title != "" {
 		cmdline = []string{title}
 	}
+	var env []string
+	sandboxed := false
+	if src == nil && len(cmdline) == 0 && !a.Bool("host") {
+		c, ok, err := x.sandboxShell()
+		if err != nil {
+			return "", err
+		}
+		if ok {
+			cmdline, env, sandboxed = c.Argv, c.Env, true
+		}
+	}
 	if len(cmdline) == 0 {
 		cmdline = x.shell()
 	}
@@ -318,7 +358,7 @@ func (x *terminals) start(a registry.Args) (string, error) {
 	saved := x.saved[id]
 	delete(x.saved, id)
 	x.mu.Unlock()
-	t := &terminal{id: id, cmd: cmdline, cols: 100, rows: 24, own: src == nil}
+	t := &terminal{id: id, cmd: cmdline, cols: 100, rows: 24, own: src == nil, sandboxed: sandboxed}
 	emu, err := ghostty.New(t.cols, t.rows, ghostty.Options{Reply: func(p []byte) {
 		if t.src != nil {
 			t.src.Write(p)
@@ -335,8 +375,11 @@ func (x *terminals) start(a registry.Args) (string, error) {
 	t.emu = emu
 	if src == nil {
 		cmd := exec.Command(cmdline[0], cmdline[1:]...)
-		cmd.Dir = x.sh.cfg.WorkDir
-		cmd.Env = append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=oriel")
+		cmd.Dir = cmpOr(a.String("dir"), x.sh.cfg.WorkDir)
+		if env == nil {
+			env = os.Environ()
+		}
+		cmd.Env = append(env, "TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=oriel")
 		cmd.Env = append(cmd.Env, strList(a["env"])...)
 		p, err := pty.Start(cmd, t.cols, t.rows)
 		if err != nil {
@@ -544,6 +587,9 @@ func (t *terminal) exitDots() map[int]string {
 // title is the tab's: the program, and the directory the shell says it's in.
 func (t *terminal) title() string {
 	name := filepath.Base(t.cmd[0])
+	if t.sandboxed {
+		name = "sandbox"
+	}
 	if s := t.emu.Title(); s != "" {
 		name = s
 	}

@@ -62,6 +62,7 @@ type shell struct {
 	inbox       *inboxPlugin                 // every card waiting on you, and those answered
 	present     *presentFocus                // the presentation with focus, for its keys
 	afterOpen   *afterOpen                   // what session.open runs once the window has opened again on the session
+	nav         navHistory                   // the window's sessions and pages, back and forward
 	draining    atomic.Pointer[quitDrain]    // the session host handing over as Oriel quits
 	closeWin    func()                       // closes the window, which quits
 	relaunch    atomic.Pointer[func() error] // starts Oriel again once the window has closed: an update's restart

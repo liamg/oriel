@@ -525,7 +525,11 @@ sequenceDiagram
 - A sandboxed session's `Open` records the workspace (`sandbox.Create`, its manifest), serves the session socket
   (gateway, egress decide/log/dial, ssh-agent) and writes the gateway's MCP config into the sandbox's Claude dir.
   `Exec` turns the provider's command into the backend's (`sandbox.Backend.Launch`): the env the provider added
-  goes in, `ORIEL_BIN` becomes the sandbox's `oriel`.
+  goes in, `ORIEL_BIN` becomes the sandbox's `oriel`. That `oriel` serves the mod's `oriel hook` as well as the
+  gateway, egress and ssh helpers. In docker it is `oriel-sandbox`, built static for Linux on the app's arch and
+  embedded in the app (`sandbox/helper`, `make helper`; `runner.OrielBinary` writes it out once per build). The
+  desktop binary links GUI libraries and the host's glibc, so it never runs in the image. A build without the helper
+  refuses to start; `oriel build --with` carries the builder's helper into the custom build.
 - **Backends.** What fences the agent in is a `sandbox.Backend`, chosen by `sandbox.backend` (`Config.Backend`,
   default `sandbox.DefaultBackend()`: the first in `sandbox.Preference` this machine can run) from those registered with `sandbox.Register`, or by the session's own
   (`SandboxPolicy.Backend`, kept as `AgentState.Backend`), one of those this machine can run (`Backend.Available`,
@@ -535,9 +539,16 @@ sequenceDiagram
   whether the session must also serve on a port (`ServesPort`). What every backend gives the agent is shared in
   `sandbox`: `Binds` (the workspace, Claude's dir and transcripts, attachments, each project's git dir with git's
   own files read-only), `Prepare` (Claude settings and login, the home's ssh config, shims, git config), `AgentEnv`
-  and `LoginProblems`.
+  and `LoginProblems`. A backend may also say what it runs the agent in (`sandbox.Describer`: the container,
+  whether it's running, the image, where it comes from and its Dockerfile, the last build's log, the running
+  container's mounts, and where the agent finds host paths that aren't at the same path inside), and build its image
+  again (`sandbox.Rebuilder`). `Host.Workspace`, `Host.RebuildSandbox` and `Host.RestartSandbox` are those for a
+  session, and the Workspace page (ui.md 15b) shows them.
   - `docker` (`sandbox/runner`): a container per run, binds as mounts, the egress sidecar on an internal network,
-    the project's image and toolchains, memory and process caps. The same backend runs on any docker-compatible
+    the project's image and toolchains (installed by `mise` in the base image, never a project's, into a directory
+    every sandbox mounts read-only), memory and process caps. Each image build writes its output to
+    `~/.oriel/sandbox/builds/<tag>.log` (`runner.BuildLog`); a rebuild skips the cache, so downloads are fetched
+    afresh. `runner.Describe` reads the mounts from the engine (`container inspect`). The same backend runs on any docker-compatible
     engine (`runner.Engine`, a `container.Engine`: CLI, socket, whether the daemon is in a VM): `docker` (the
     CLI's current context; offered when a Docker daemon is set up, not another engine's socket), `orbstack` and
     `colima` (the docker CLI pinned to their own socket; OrbStack's bundled CLI when Docker's is missing), and
@@ -580,6 +591,15 @@ sequenceDiagram
   file is left out, and the session gets a notice offering Trust (`settings.trust {path}`). The host
   keeps the last config in `~/.oriel/sandbox.json`, and
   `Sandboxes` with no `Config` func reads it at each `Open`; the session's open network still turns the proxy off.
+- **What a sandbox allows, and what it did**, for the Permissions view (ui.md 15): `Host.Permissions(session)` reads
+  the gateway's `Policy` with each tool's source and the session's own rule, the egress rules in force (`egress.Rule`
+  with its `Source`), the connection log and the destinations waiting on a card; `Host.SetToolRule` and
+  `Host.SetNetRule` write the session's own (the gateway's grants, the egress session's grants). An agent not in a
+  sandbox has none.
+- **A connection that never got through** (`egress.Event.Failed`: refused, or allowed but not reached) is put in
+  the session's transcript once per destination (`egress.Session.Failed`): "Network: blocked host:port (why)", or an
+  error item "Network: couldn't reach host:port: …". Claude Code's `StopFailure` only fires once its retries are
+  spent, so this is what says why a sandboxed agent is stuck.
 - `sandbox.servers` reach the gateway as `Config.Servers`: `Discover` lists them after Claude Code's own (user scope,
   then plugins), and `sandbox.hidden_servers` hides any of them.
 - Not yet: `Dismissed` and approved `Dockerfile` hashes aren't settings and aren't sent.

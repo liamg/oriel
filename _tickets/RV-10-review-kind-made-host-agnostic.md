@@ -2,7 +2,7 @@
 id: RV-10
 title: "Review kind made host-agnostic: the source says where to fetch"
 phase: P7
-status: review
+status: done
 area: Review
 module: host, app
 depends_on: [RV-9]
