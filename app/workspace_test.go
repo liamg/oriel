@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -86,4 +87,25 @@ func TestTerminalsRunInTheSandbox(t *testing.T) {
 		t.Fatal(err)
 	}
 	r.waitText("on-the-host")
+}
+
+// Rename… on the overview renames the session in place: its id stays.
+func TestWorkspaceRenamesTheSession(t *testing.T) {
+	r, _, _ := sandboxedSessionOn(t, imageBackend{log: filepath.Join(t.TempDir(), "build.log")})
+	if err := r.do(func() error { return r.host.Run(context.Background(), "workspace.open", nil) }); err != nil {
+		t.Fatal(err)
+	}
+	r.waitText("Rename…")
+	r.clickText("Rename…")
+	r.waitText("Cancel")
+	r.typeText("Pricing fixes")
+	r.typeKeys("<CR>")
+	st := waitState(t, r.store, "the new name", func(st core.State) bool {
+		se, ok := st.Session("w")
+		return ok && se.Snapshot().Name == "Pricing fixes"
+	})
+	if st.Focus != "w" {
+		t.Errorf("the session in front is %q, not w", st.Focus)
+	}
+	r.waitFrame("the name on the page", func(s string) bool { return containsAll(s, "Pricing fixes", "Rename…") })
 }

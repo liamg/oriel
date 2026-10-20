@@ -88,6 +88,22 @@ func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
 	})
 }
 
+// The request the agent is on ends in its working line, moving dots read out as who's working, until it answers.
+func TestABusyRequestShowsTheAgentWorking(t *testing.T) {
+	r, a, _ := requestsSession(t)
+	newRequest(t, r, a, "Negative values round the wrong way")
+	th := threadWith(t, r, "Negative values round the wrong way")
+	a.Emit(agent.TurnStart{})
+	r.waitFrame("the working line", func(s string) bool { return containsAll(s, "Negative values round the wrong way", "Fake is working") })
+	if n := r.access("Fake is working"); n == nil || n.Role != "status" {
+		t.Errorf("the dots read as %+v", n)
+	}
+	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Fixed."})
+	a.Emit(agent.TurnEnd{})
+	r.waitText("Fixed.")
+	r.waitGone("Fake is working")
+}
+
 // runIn is the first glyph run in f whose text is s.
 func runIn(f headless.Frame, s string) (render.Op, bool) {
 	for _, op := range f.Ops {

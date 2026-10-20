@@ -84,6 +84,9 @@ func (UI) Ring(spec script.Table) script.Table { return node("ring", spec) }
 //oriel:api doc="Something in progress with no known end (widget.Spinner): { name (what's in progress, read out), color (a theme token or #rrggbb; the accent by default), size (px across, 14 by default), id }. It holds still with reduced motion." returns=table
 func (UI) Spinner(spec script.Table) script.Table { return node("spinner", spec) }
 
+//oriel:api doc="Someone at work with no known end (widget.Dots): three dots with a wave crossing them, { name (what's going on, read out), color (a theme token or #rrggbb; status.working by default), size (each dot's px across, 5 by default), id }. They hold still with reduced motion." returns=table
+func (UI) Dots(spec script.Table) script.Table { return node("dots", spec) }
+
 //oriel:api doc="An inline loading line (widget.Busy): a spinner, { label (what's loading; the … is added), load (an oriel.load handle: adds what it's doing and, after clock seconds, how long it's run), clock (3 by default; -1 never), size, color, id }." returns=table
 func (UI) Busy(spec script.Table) script.Table { return node("busy", spec) }
 
@@ -206,6 +209,10 @@ func build(c *ui.Ctx, v any, a *APIs) {
 		case "spinner":
 			size, _ := n["size"].(float64)
 			widget.Spinner(c, cmpOr(str(n, "id"), str(n, "name"), "spinner"), widget.SpinnerOpts{Tone: tone(th, str(n, "color"), render.Color{}),
+				Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
+		case "dots":
+			size, _ := n["size"].(float64)
+			widget.Dots(c, cmpOr(str(n, "id"), str(n, "name"), "dots"), widget.DotsOpts{Tone: tone(th, str(n, "color"), render.Color{}),
 				Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
 		case "busy":
 			size, _ := n["size"].(float64)

@@ -203,8 +203,8 @@ clip 44,38 1176x936 r 0
         text " " @179.25,284.36 #ece6d8 JetBrains Mono 13.5
         text "0" @187.65625,284.36 #ff9e64 JetBrains Mono 13.5
         text ":" @196.0625,284.36 #89ddff JetBrains Mono 13.5
-        rect 112,294 780x337.25708 fill #0c0c0b radius 6
-        clip 112,294 780x337.25708 r 6
+        rect 112,294 780x371.7766 fill #0c0c0b radius 6
+        clip 112,294 780x371.7766 r 6
           rect 124,307.5 7x7 fill #4cc9f0 radius 3.5
           text "Thread" @139,315.54712 #ece6d8 Inter 12.5
           text "· L46 ·" @191.95312,314.78 #7c7566 JetBrains Mono 10.5
@@ -266,95 +266,96 @@ clip 44,38 1176x936 r 0
           text "✓" @169,573.0371 #4fe0a0 JetBrains Mono 10.5
           text "14 passed" @181.59375,573.0371 #4fe0a0 JetBrains Mono 10.5
           text "run 40ab" @246.9375,572.8571 #7c7566 JetBrains Mono 10
-          rect 124,591.2571 756x30 fill #060606 radius 6
-          clip 124,591.2571 756x30 r 6
-            text "Reply…" @134,610.8042 #7c7566 Inter 12.5
+          path 6 segments fill #4cc9f0b7
+          path 6 segments fill #4cc9f0b7
+          path 6 segments fill #4cc9f0b7
+          text "Claude is working" @159,606.8821 #b3ab99 Inter 12
+          text "· 0:41" @270.32812,606.2969 #7c7566 JetBrains Mono 10.5
+          rect 124,625.7766 756x30 fill #060606 radius 6
+          clip 124,625.7766 756x30 r 6
+            text "Reply…" @134,645.3237 #7c7566 Inter 12.5
           pop
-          rect 124,591.2571 756x30 radius 6 stroke 1 #332f27
+          rect 124,625.7766 756x30 radius 6 stroke 1 #332f27
         pop
-        rect 112,294 780x337.25708 radius 6 stroke 1 #332f27
-        text "47" @75.1875,652.6171 #4f4a40 JetBrains Mono 13.5
-        text "        " @112,652.6171 #ece6d8 JetBrains Mono 13.5
-        text "if" @179.25,652.6171 #c792ff JetBrains Mono 13.5
-        text " " @196.0625,652.6171 #ece6d8 JetBrains Mono 13.5
-        text "floor" @204.46875,652.6171 #d6dde6 JetBrains Mono 13.5
-        text "." @246.5,652.6171 #89ddff JetBrains Mono 13.5
-        text "IntPart" @254.90625,652.6171 #5cd2ff JetBrains Mono 13.5
-        text "()" @313.75,652.6171 #89ddff JetBrains Mono 13.5
-        text "%" @330.5625,652.6171 #89ddff JetBrains Mono 13.5
-        text "2" @338.96875,652.6171 #ff9e64 JetBrains Mono 13.5
-        text " " @347.375,652.6171 #ece6d8 JetBrains Mono 13.5
-        text "==" @355.78125,652.6171 #89ddff JetBrains Mono 13.5
-        text " " @372.59375,652.6171 #ece6d8 JetBrains Mono 13.5
-        text "0" @381,652.6171 #ff9e64 JetBrains Mono 13.5
-        text " " @389.40625,652.6171 #ece6d8 JetBrains Mono 13.5
-        text "{" @397.8125,652.6171 #89ddff JetBrains Mono 13.5
-        text " " @406.21875,652.6171 #ece6d8 JetBrains Mono 13.5
-        text "return" @414.625,652.6171 #c792ff JetBrains Mono 13.5
-        text " " @465.0625,652.6171 #ece6d8 JetBrains Mono 13.5
-        text "floor" @473.46875,652.6171 #d6dde6 JetBrains Mono 13.5
-        text "." @515.5,652.6171 #89ddff JetBrains Mono 13.5
-        text "Shift" @523.90625,652.6171 #5cd2ff JetBrains Mono 13.5
-        text "(" @565.9375,652.6171 #89ddff JetBrains Mono 13.5
-        text "-" @574.34375,652.6171 #89ddff JetBrains Mono 13.5
-        text "p" @582.75,652.6171 #d6dde6 JetBrains Mono 13.5
-        text ")" @591.15625,652.6171 #89ddff JetBrains Mono 13.5
-        text " " @599.5625,652.6171 #ece6d8 JetBrains Mono 13.5
-        text "}" @607.96875,652.6171 #89ddff JetBrains Mono 13.5
-        text "48" @75.1875,673.6171 #4f4a40 JetBrains Mono 13.5
-        text "        " @112,673.6171 #ece6d8 JetBrains Mono 13.5
-        text "return" @179.25,673.6171 #c792ff JetBrains Mono 13.5
-        text " " @229.6875,673.6171 #ece6d8 JetBrains Mono 13.5
-        text "floor" @238.09375,673.6171 #d6dde6 JetBrains Mono 13.5
-        text "." @280.125,673.6171 #89ddff JetBrains Mono 13.5
-        text "Add" @288.53125,673.6171 #5cd2ff JetBrains Mono 13.5
-        text "(" @313.75,673.6171 #89ddff JetBrains Mono 13.5
-        text "one" @322.15625,673.6171 #d6dde6 JetBrains Mono 13.5
-        text ")" @347.375,673.6171 #89ddff JetBrains Mono 13.5
-        text "." @355.78125,673.6171 #89ddff JetBrains Mono 13.5
-        text "Shift" @364.1875,673.6171 #5cd2ff JetBrains Mono 13.5
-        text "(" @406.21875,673.6171 #89ddff JetBrains Mono 13.5
-        text "-" @414.625,673.6171 #89ddff JetBrains Mono 13.5
-        text "p" @423.03125,673.6171 #d6dde6 JetBrains Mono 13.5
-        text ")" @431.4375,673.6171 #89ddff JetBrains Mono 13.5
-        text "49" @75.1875,694.6171 #4f4a40 JetBrains Mono 13.5
-        text "    " @112,694.6171 #ece6d8 JetBrains Mono 13.5
-        text "}" @145.625,694.6171 #89ddff JetBrains Mono 13.5
-        text "50" @75.1875,715.6171 #4f4a40 JetBrains Mono 13.5
-        text "    " @112,715.6171 #ece6d8 JetBrains Mono 13.5
-        text "return" @145.625,715.6171 #c792ff JetBrains Mono 13.5
-        text " " @196.0625,715.6171 #ece6d8 JetBrains Mono 13.5
-        text "floor" @204.46875,715.6171 #d6dde6 JetBrains Mono 13.5
-        text "." @246.5,715.6171 #89ddff JetBrains Mono 13.5
-        text "Shift" @254.90625,715.6171 #5cd2ff JetBrains Mono 13.5
-        text "(" @296.9375,715.6171 #89ddff JetBrains Mono 13.5
-        text "-" @305.34375,715.6171 #89ddff JetBrains Mono 13.5
-        text "p" @313.75,715.6171 #d6dde6 JetBrains Mono 13.5
-        text ")" @322.15625,715.6171 #89ddff JetBrains Mono 13.5
-        text "51" @75.1875,736.6171 #4f4a40 JetBrains Mono 13.5
-        text "}" @112,736.6171 #89ddff JetBrains Mono 13.5
-        text "52" @75.1875,757.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 52" @112,757.6171 #5c6b7e JetBrains Mono 13.5
-        text "53" @75.1875,778.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 53" @112,778.6171 #5c6b7e JetBrains Mono 13.5
-        text "54" @75.1875,799.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 54" @112,799.6171 #5c6b7e JetBrains Mono 13.5
-        text "55" @75.1875,820.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 55" @112,820.6171 #5c6b7e JetBrains Mono 13.5
-        text "56" @75.1875,841.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 56" @112,841.6171 #5c6b7e JetBrains Mono 13.5
-        text "57" @75.1875,862.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 57" @112,862.6171 #5c6b7e JetBrains Mono 13.5
-        text "58" @75.1875,883.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 58" @112,883.6171 #5c6b7e JetBrains Mono 13.5
-        text "59" @75.1875,904.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 59" @112,904.6171 #5c6b7e JetBrains Mono 13.5
-        text "60" @75.1875,925.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 60" @112,925.6171 #5c6b7e JetBrains Mono 13.5
-        text "61" @75.1875,946.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 61" @112,946.6171 #5c6b7e JetBrains Mono 13.5
-        text "62" @75.1875,967.6171 #4f4a40 JetBrains Mono 13.5
-        text "// line 62" @112,967.6171 #5c6b7e JetBrains Mono 13.5
+        rect 112,294 780x371.7766 radius 6 stroke 1 #332f27
+        text "47" @75.1875,687.13666 #4f4a40 JetBrains Mono 13.5
+        text "        " @112,687.13666 #ece6d8 JetBrains Mono 13.5
+        text "if" @179.25,687.13666 #c792ff JetBrains Mono 13.5
+        text " " @196.0625,687.13666 #ece6d8 JetBrains Mono 13.5
+        text "floor" @204.46875,687.13666 #d6dde6 JetBrains Mono 13.5
+        text "." @246.5,687.13666 #89ddff JetBrains Mono 13.5
+        text "IntPart" @254.90625,687.13666 #5cd2ff JetBrains Mono 13.5
+        text "()" @313.75,687.13666 #89ddff JetBrains Mono 13.5
+        text "%" @330.5625,687.13666 #89ddff JetBrains Mono 13.5
+        text "2" @338.96875,687.13666 #ff9e64 JetBrains Mono 13.5
+        text " " @347.375,687.13666 #ece6d8 JetBrains Mono 13.5
+        text "==" @355.78125,687.13666 #89ddff JetBrains Mono 13.5
+        text " " @372.59375,687.13666 #ece6d8 JetBrains Mono 13.5
+        text "0" @381,687.13666 #ff9e64 JetBrains Mono 13.5
+        text " " @389.40625,687.13666 #ece6d8 JetBrains Mono 13.5
+        text "{" @397.8125,687.13666 #89ddff JetBrains Mono 13.5
+        text " " @406.21875,687.13666 #ece6d8 JetBrains Mono 13.5
+        text "return" @414.625,687.13666 #c792ff JetBrains Mono 13.5
+        text " " @465.0625,687.13666 #ece6d8 JetBrains Mono 13.5
+        text "floor" @473.46875,687.13666 #d6dde6 JetBrains Mono 13.5
+        text "." @515.5,687.13666 #89ddff JetBrains Mono 13.5
+        text "Shift" @523.90625,687.13666 #5cd2ff JetBrains Mono 13.5
+        text "(" @565.9375,687.13666 #89ddff JetBrains Mono 13.5
+        text "-" @574.34375,687.13666 #89ddff JetBrains Mono 13.5
+        text "p" @582.75,687.13666 #d6dde6 JetBrains Mono 13.5
+        text ")" @591.15625,687.13666 #89ddff JetBrains Mono 13.5
+        text " " @599.5625,687.13666 #ece6d8 JetBrains Mono 13.5
+        text "}" @607.96875,687.13666 #89ddff JetBrains Mono 13.5
+        text "48" @75.1875,708.13666 #4f4a40 JetBrains Mono 13.5
+        text "        " @112,708.13666 #ece6d8 JetBrains Mono 13.5
+        text "return" @179.25,708.13666 #c792ff JetBrains Mono 13.5
+        text " " @229.6875,708.13666 #ece6d8 JetBrains Mono 13.5
+        text "floor" @238.09375,708.13666 #d6dde6 JetBrains Mono 13.5
+        text "." @280.125,708.13666 #89ddff JetBrains Mono 13.5
+        text "Add" @288.53125,708.13666 #5cd2ff JetBrains Mono 13.5
+        text "(" @313.75,708.13666 #89ddff JetBrains Mono 13.5
+        text "one" @322.15625,708.13666 #d6dde6 JetBrains Mono 13.5
+        text ")" @347.375,708.13666 #89ddff JetBrains Mono 13.5
+        text "." @355.78125,708.13666 #89ddff JetBrains Mono 13.5
+        text "Shift" @364.1875,708.13666 #5cd2ff JetBrains Mono 13.5
+        text "(" @406.21875,708.13666 #89ddff JetBrains Mono 13.5
+        text "-" @414.625,708.13666 #89ddff JetBrains Mono 13.5
+        text "p" @423.03125,708.13666 #d6dde6 JetBrains Mono 13.5
+        text ")" @431.4375,708.13666 #89ddff JetBrains Mono 13.5
+        text "49" @75.1875,729.13666 #4f4a40 JetBrains Mono 13.5
+        text "    " @112,729.13666 #ece6d8 JetBrains Mono 13.5
+        text "}" @145.625,729.13666 #89ddff JetBrains Mono 13.5
+        text "50" @75.1875,750.13666 #4f4a40 JetBrains Mono 13.5
+        text "    " @112,750.13666 #ece6d8 JetBrains Mono 13.5
+        text "return" @145.625,750.13666 #c792ff JetBrains Mono 13.5
+        text " " @196.0625,750.13666 #ece6d8 JetBrains Mono 13.5
+        text "floor" @204.46875,750.13666 #d6dde6 JetBrains Mono 13.5
+        text "." @246.5,750.13666 #89ddff JetBrains Mono 13.5
+        text "Shift" @254.90625,750.13666 #5cd2ff JetBrains Mono 13.5
+        text "(" @296.9375,750.13666 #89ddff JetBrains Mono 13.5
+        text "-" @305.34375,750.13666 #89ddff JetBrains Mono 13.5
+        text "p" @313.75,750.13666 #d6dde6 JetBrains Mono 13.5
+        text ")" @322.15625,750.13666 #89ddff JetBrains Mono 13.5
+        text "51" @75.1875,771.13666 #4f4a40 JetBrains Mono 13.5
+        text "}" @112,771.13666 #89ddff JetBrains Mono 13.5
+        text "52" @75.1875,792.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 52" @112,792.13666 #5c6b7e JetBrains Mono 13.5
+        text "53" @75.1875,813.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 53" @112,813.13666 #5c6b7e JetBrains Mono 13.5
+        text "54" @75.1875,834.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 54" @112,834.13666 #5c6b7e JetBrains Mono 13.5
+        text "55" @75.1875,855.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 55" @112,855.13666 #5c6b7e JetBrains Mono 13.5
+        text "56" @75.1875,876.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 56" @112,876.13666 #5c6b7e JetBrains Mono 13.5
+        text "57" @75.1875,897.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 57" @112,897.13666 #5c6b7e JetBrains Mono 13.5
+        text "58" @75.1875,918.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 58" @112,918.13666 #5c6b7e JetBrains Mono 13.5
+        text "59" @75.1875,939.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 59" @112,939.13666 #5c6b7e JetBrains Mono 13.5
+        text "60" @75.1875,960.13666 #4f4a40 JetBrains Mono 13.5
+        text "// line 60" @112,960.13666 #5c6b7e JetBrains Mono 13.5
       pop
     pop
   pop

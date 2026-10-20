@@ -67,6 +67,9 @@ type wsState struct {
 	tree       wsTree               // the files tab's rows, as last built
 	rebuilding bool
 	logSel     int
+	renaming   bool   // the overview's name is an input
+	name       string // what's typed there
+	focusName  bool   // the input takes focus next frame
 }
 
 // wsEntry is a directory entry as the files tab shows it.
@@ -321,6 +324,7 @@ func wsRow(c *ui.Ctx, sh *shell, key, label, value string, copyable bool) {
 func (x *workspacePlugin) overview(c *ui.Ctx, s core.SessionState, st *wsState, ws host.Workspace) {
 	th := c.Theme()
 	permsCap(c, "sessioncap", "SESSION")
+	x.name(c, s, st)
 	wsRow(c, x.sh, "id", "Session", string(s.ID), true)
 	wsRow(c, x.sh, "kind", "Kind", string(s.Kind), false)
 	wsRow(c, x.sh, "root", "Workspace", ws.Root, true)
@@ -383,6 +387,34 @@ func (x *workspacePlugin) overview(c *ui.Ctx, s core.SessionState, st *wsState, 
 			})
 		}
 	}
+}
+
+// name is the session's name with Rename…, which edits it in place: only the name changes, not its id or branches.
+func (x *workspacePlugin) name(c *ui.Ctx, s core.SessionState, st *wsState) {
+	th := c.Theme()
+	c.Row("name", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
+		c.Row("k", ui.Style{W: ui.Px(140), Clip: true}, func(c *ui.Ctx) { c.Text("t", "Name", uiFont(12, th.C(theme.FgMuted))) })
+		if !st.renaming {
+			c.Row("v", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", cmpOr(s.Name, string(s.ID)), uiFont(12.5, th.C(theme.Fg))) })
+			if widget.Button(c, "rename", "Rename…", widget.ButtonOpts{Ghost: true, Help: workspaceHelp + "#overview"}) {
+				st.renaming, st.focusName, st.name = true, true, cmpOr(s.Name, string(s.ID))
+			}
+			return
+		}
+		if id := c.Next("input"); st.focusName {
+			st.focusName = false
+			c.Focus(id)
+		}
+		r := widget.Input(c, "input", &st.name, widget.InputOpts{Label: "Session name", SelectOnFocus: true, Help: workspaceHelp + "#overview"})
+		named := strings.TrimSpace(st.name) != ""
+		if widget.Button(c, "save", "Rename", widget.ButtonOpts{Primary: true, Disabled: !named, Help: workspaceHelp + "#overview"}) || r.Submitted && named {
+			st.renaming = false
+			x.run("session.rename", registry.Args{"id": string(s.ID), "name": strings.TrimSpace(st.name)})
+		}
+		if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Help: workspaceHelp + "#overview"}) || r.Cancelled {
+			st.renaming = false
+		}
+	})
 }
 
 // actions are the sandbox's buttons: Rebuild image and Restart sandbox.

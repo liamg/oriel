@@ -1,6 +1,6 @@
 ---
 id: agent/workspace
-covers: [workspace.open, workspace.rebuild, workspace.restart, agent.permissions.dock, term.host]
+covers: [workspace.open, session.rename, workspace.rebuild, workspace.restart, agent.permissions.dock, term.host]
 related: [agent/permissions, agent/console]
 ---
 
@@ -10,6 +10,9 @@ Where the session in front's agent works, the sandbox it runs in, and what it ma
 the sidebar, or `workspace.open` (with `{tab}` for one tab).
 
 ## Overview
+
+**Rename…** beside the session's name changes how it's shown (`session.rename`): ⏎ saves, Escape cancels. Its id,
+branches and workspace stay as they are.
 
 The session, the sandbox's backend, container and image, and every directory the session uses: each project's
 checkout, the session's state, the scratchpad (Claude Code's temp dir), the sandbox's own directory, the agent's

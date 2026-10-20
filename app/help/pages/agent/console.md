@@ -14,6 +14,12 @@ the rail's `❯`) and moves like any pane (`⌃W M`).
 The provider, model and effort, a chip for what the agent is doing (working, wants permission, needs you, idle), and
 the ticket, session and branch.
 
+## Working {#working}
+
+While a turn runs, the end of the transcript has a working line: three dots in the working colour with a wave
+crossing them, who's working and for how long ("Claude is working · 0:42"). The thread it's on shows the same line
+under its last comment, in the Request view and between the editor's lines. With reduced motion the dots hold still.
+
 ## In the background {#background}
 
 When the agent's turn ends with work still running that will wake it again (a shell left running, a background

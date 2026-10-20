@@ -451,6 +451,11 @@ function oriel.ui.column(children) end
 ---@return table
 function oriel.ui.date_picker(spec) end
 
+--- Someone at work with no known end (widget.Dots): three dots with a wave crossing them, { name (what's going on, read out), color (a theme token or #rrggbb; status.working by default), size (each dot's px across, 5 by default), id }. They hold still with reduced motion.
+---@param spec table
+---@return table
+function oriel.ui.dots(spec) end
+
 --- An indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error), dot (a status dot before the value: ok, warn, error, accent, dim), id }.
 ---@param spec table
 ---@return table

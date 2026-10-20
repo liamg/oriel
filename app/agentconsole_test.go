@@ -148,9 +148,8 @@ func TestAgentConsoleShowsEachBlock(t *testing.T) {
 		a.Emit(ev)
 	}
 	r.waitFrame("every block", func(s string) bool {
-		// Only what's in view is drawn: the prose and the prompt at the top are checked once the keys reveal them.
-		return containsAll(s, "Read", "internal/ratelimit/limiter.go", "3 lines",
-			"Edit", "+1", "-1", "view in diff ↗", "secs := int(time.Until(res.ResetAt()).Seconds())", "Bash", "go test ./...", "SUBAGENTS", "1 running",
+		// Only what's in view is drawn: the read, the prose and the prompt at the top are checked once the keys reveal them.
+		return containsAll(s, "Edit", "+1", "-1", "view in diff ↗", "secs := int(time.Until(res.ResetAt()).Seconds())", "Bash", "go test ./...", "SUBAGENTS", "1 running",
 			"explorer", "Find every 429 path", "the API is overloaded", "WORKING")
 	})
 	if strings.Contains(r.waitText("Bash"), "0.2s") {
@@ -158,7 +157,9 @@ func TestAgentConsoleShowsEachBlock(t *testing.T) {
 	}
 	r.clickText("Bash")
 	r.waitText("ok      pricing    0.2s")
-	r.typeKeys("kkk<CR>") // from the shell call clicked: the read, the edit, then the thinking
+	r.typeKeys("kk") // from the shell call clicked: the edit, then the read
+	r.waitFrame("the read", func(s string) bool { return containsAll(s, "Read", "internal/ratelimit/limiter.go", "3 lines") })
+	r.typeKeys("k<CR>") // the thinking
 	r.waitText("The limiter has a ResetAt already.")
 	r.typeKeys("kk") // the prose, then the prompt, scrolled into view
 	r.waitFrame("the prompt", func(s string) bool {
@@ -251,6 +252,20 @@ func TestConsoleInterrupts(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	r.waitText("IDLE")
+}
+
+// While a turn runs the transcript ends in the working line, moving dots and how long it's run; it goes when the turn
+// ends.
+func TestConsoleShowsTheAgentWorking(t *testing.T) {
+	r, a, _ := consoleSession(t)
+	a.Emit(agent.TurnStart{})
+	r.waitFrame("the working line", func(s string) bool { return containsAll(s, "Fake is working", "· 0:0") })
+	if n := r.access("Fake is working"); n == nil || n.Role != "status" {
+		t.Errorf("the dots read as %+v", n)
+	}
+	a.Emit(agent.TurnEnd{})
+	r.waitText("IDLE")
+	r.waitGone("Fake is working")
 }
 
 // AI-6: a message written while the agent works waits as QUEUED, and goes to the agent when its turn ends.

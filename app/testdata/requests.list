@@ -279,6 +279,11 @@ clip 364,38 1236x936 r 0
       text "✓" @461,705.998 #4fe0a0 JetBrains Mono 10.5
       text "14 passed" @473.59375,705.998 #4fe0a0 JetBrains Mono 10.5
       text "run 40ab" @538.9375,705.818 #7c7566 JetBrains Mono 10
+      path 6 segments fill #4cc9f0b7
+      path 6 segments fill #4cc9f0b7
+      path 6 segments fill #4cc9f0b7
+      text "Claude is working" @447,747.84296 #b3ab99 Inter 12
+      text "· 0:41" @558.3281,747.25775 #7c7566 JetBrains Mono 10.5
     pop
     rect 364,855 935x1 fill #24221d
     rect 412,870 839x90 fill #0c0c0b radius 8 stroke 1 #332f27

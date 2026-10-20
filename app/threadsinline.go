@@ -412,6 +412,9 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 					})
 				})
 			}
+			if t.Busy {
+				workingLine(c, "working", se, ui.Flex(1))
+			}
 			if !t.Open() {
 				return
 			}

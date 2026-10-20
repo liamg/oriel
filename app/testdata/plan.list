@@ -254,7 +254,7 @@ clip 484,38 1116x936 r 0
       text "Historical invoices must not change: only new invoices round this way." @572.4375,760.3544 #ece6d8 Inter 14.5
       text "•" @554,787.8988 #7c7566 Inter 14.5
       text "Partners reconcile against our CSV export; flag the change in the changelog." @572.4375,787.8988 #ece6d8 Inter 14.5
-      rect 1131.92,118 1x880.3097 fill #24221d
+      rect 1131.92,118 1x914.8292 fill #24221d
       rect 1152.92,423 384.07996x250.84161 fill #0c0c0b radius 6
       clip 1152.92,423 384.07996x250.84161 r 6
         rect 1164.92,436.5 7x7 fill #ff5f6d radius 3.5
@@ -303,8 +303,8 @@ clip 484,38 1116x936 r 0
       pop
       text "reopen" @1484.375,703.20685 #ffd23f Inter 12
       rect 1484.375,707.1014 40.625x1 fill #ffd23fb3
-      rect 1152.92,743.8416 384.07996x196.46808 fill #0c0c0b radius 6
-      clip 1152.92,743.8416 384.07996x196.46808 r 6
+      rect 1152.92,743.8416 384.07996x230.98761 fill #0c0c0b radius 6
+      clip 1152.92,743.8416 384.07996x230.98761 r 6
         rect 1164.92,757.3416 7x7 fill #4cc9f0 radius 3.5
         text "Thread" @1179.92,765.38873 #ece6d8 Inter 12.5
         text "· L31 ·" @1232.8732,764.62164 #7c7566 JetBrains Mono 10.5
@@ -329,13 +329,18 @@ clip 484,38 1116x936 r 0
         rect 1464.3732,853.0052 58.421875x17.179993 fill #161615 radius 3
         text "version" @1468.3732,865.73517 #ece6d8 JetBrains Mono 11.5
         text "column" @1202.92,885.29456 #b3ab99 Inter 12.5
-        rect 1164.92,900.3097 360.07996x30 fill #060606 radius 6
-        clip 1164.92,900.3097 360.07996x30 r 6
-          text "Reply…" @1174.92,919.8568 #7c7566 Inter 12.5
+        path 6 segments fill #4cc9f0b7
+        path 6 segments fill #4cc9f0b7
+        path 6 segments fill #4cc9f0b7
+        text "Claude is working" @1199.92,915.9347 #b3ab99 Inter 12
+        text "· 0:30" @1311.2482,915.3495 #7c7566 JetBrains Mono 10.5
+        rect 1164.92,934.8292 360.07996x30 fill #060606 radius 6
+        clip 1164.92,934.8292 360.07996x30 r 6
+          text "Reply…" @1174.92,954.37634 #7c7566 Inter 12.5
         pop
-        rect 1164.92,900.3097 360.07996x30 radius 6 stroke 1 #332f27
+        rect 1164.92,934.8292 360.07996x30 radius 6 stroke 1 #332f27
       pop
-      rect 1152.92,743.8416 384.07996x196.46808 radius 6 stroke 1 #332f27
+      rect 1152.92,743.8416 384.07996x230.98761 radius 6 stroke 1 #332f27
     pop
   pop
 pop
