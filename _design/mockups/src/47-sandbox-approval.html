@@ -1,0 +1,156 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="base.css"><link rel="stylesheet" href="shell.css">
+<style>
+.page{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg0)}
+.hero{flex:none;padding:18px 24px 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(255,155,69,.07),transparent 55%),var(--bg1);display:flex;align-items:center;gap:18px}
+.hero .gl{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font:600 18px var(--mono);color:var(--yellow);background:rgba(255,155,69,.1);border:1px solid rgba(255,155,69,.35);flex:none}
+.hero h1{font:600 17px var(--ui);color:var(--fg)}
+.hero p{font-size:12.5px;color:var(--fg3);margin-top:3px}
+.cols{flex:1;display:flex;min-height:0}
+.repos{width:280px;flex:none;background:var(--bg1);border-right:1px solid var(--line);display:flex;flex-direction:column}
+.repo{margin:8px 10px 0;border:1px solid var(--line);border-radius:8px;padding:10px 11px;background:var(--bg2)}
+.repo.on{border-color:rgba(255,210,63,.45);background:linear-gradient(90deg,rgba(255,210,63,.08),rgba(255,210,63,.02))}
+.repo .n{font:600 13px var(--ui);color:var(--fg);display:flex;align-items:center;gap:7px}
+.repo .m{font:10.5px var(--mono);color:var(--fg3);margin-top:4px}
+.seg{display:flex;margin-top:9px;border:1px solid var(--line2);border-radius:6px;overflow:hidden;width:max-content}
+.seg span{font:500 11px var(--ui);padding:3px 10px;color:var(--fg3)}
+.seg span+span{border-left:1px solid var(--line2)}
+.seg .ok{background:rgba(79,224,160,.13);color:var(--green)}
+.seg .no{background:var(--bg4);color:var(--fg)}
+.seg .x{opacity:.35}
+.center{flex:1;display:flex;flex-direction:column;min-width:0}
+.fhead{height:36px;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--bg2);border-bottom:1px solid var(--line);font:12px var(--mono);color:var(--fg);flex:none}
+.code{font-size:12.5px;line-height:21px}
+.ln .g{width:54px;padding-right:12px}
+.ln.same{opacity:.55}
+.warn{display:block;padding-left:70px;font:600 10px/19px var(--mono);letter-spacing:.04em;color:var(--yellow);background:rgba(79,224,160,.07)}
+.ln .gw{position:absolute;left:8px;top:6px;width:9px;height:9px;border-radius:50%;background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+.slot{padding:8px 14px 12px 70px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.thread{max-width:860px}
+.av.as{background:linear-gradient(135deg,#ffd23f,#ff8a1f)}
+.note{font-size:11px;color:var(--fg4);padding:0 10px 9px 41px}
+.reply{margin:0 10px 10px 41px}
+.right{width:350px;flex:none;background:var(--bg1);border-left:1px solid var(--line);display:flex;flex-direction:column}
+.sec{padding:12px 14px;border-bottom:1px solid var(--line)}
+.li{display:flex;gap:9px;font-size:12px;color:var(--fg2);margin-top:9px;line-height:1.45}
+.li .i{flex:none;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font:700 9.5px var(--mono);margin-top:1px}
+.li .i.w{color:var(--yellow);border:1px solid rgba(255,155,69,.5)}
+.li .i.k{color:var(--green);border:1px solid rgba(79,224,160,.5)}
+.li b{color:var(--fg);font-weight:600}
+.li code,.gen code{font:11px var(--mono);background:var(--bg4);color:var(--p);padding:0 4px;border-radius:3px}
+.gen{font:11.5px/19px var(--mono);color:var(--fg3);background:var(--bg0);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-top:9px;white-space:pre}
+.foot{height:56px;flex:none;border-top:1px solid var(--line);background:var(--bg1);display:flex;align-items:center;gap:10px;padding:0 18px}
+.foot .btn{height:30px;font-size:12.5px;padding:0 14px}
+</style>
+<div class="titlebar">
+  <div class="brand"><svg width="22" height="22" viewBox="0 0 100 100" style="filter:drop-shadow(0 0 4px rgba(255,170,40,.5));flex:none"><circle cx="38" cy="53" r="21" fill="none" stroke="#ffd23f" stroke-width="8"/><rect x="68" y="28" width="13" height="50" fill="#ff8a1f"/></svg>ORIEL</div>
+  <div class="stabs">
+    <div class="stab"><span class="dot o"></span>pricing-rounding<span class="mini">plan</span><span class="k">⌘1</span></div>
+    <div class="stab on"><span class="dot y"></span>ENG-2290 refunds<span class="mini">waiting for you</span><span class="k">⌘2</span></div>
+  </div>
+  <div class="tbright"><span class="kbd">⌘K</span></div>
+</div>
+<div class="main">
+  <div class="rail">
+    <div class="ic">⌥</div><div class="ic">⌕</div><div class="ic off">±</div><div class="ic off">◈</div><div class="ic off">▷</div><div class="ic off">⎇</div>
+    <div style="flex:1"></div><div class="ic">⚙</div>
+  </div>
+  <div class="page">
+    <div class="hero">
+      <div class="gl">⬢</div>
+      <div class="grow">
+        <h1>Review the sandbox's build steps before ENG-2290 starts</h1>
+        <p>Two repos in this workspace ask for steps that are new or changed since you last approved them. Nothing has started yet: no sandbox, no agent, no checkout.</p>
+      </div>
+      <span class="chip y">2 to review</span>
+    </div>
+    <div class="cols">
+      <div class="repos">
+        <div class="ph"><span class="cap">Workspace</span><span class="mono dim" style="font-size:10px;margin-left:auto">3 repos</span></div>
+        <div class="repo on">
+          <div class="n">pricing-api<span class="chip">primary</span></div>
+          <div class="m"><span style="color:var(--yellow)">changed</span> · +5 since you approved it 12 Sep</div>
+          <div class="m">2 downloads with no checksum</div>
+          <div class="seg"><span class="ok">✓ Approve</span><span>Skip</span></div>
+        </div>
+        <div class="repo">
+          <div class="n">billing-ui<span class="chip r">new</span></div>
+          <div class="m" style="color:var(--red)">line 4 isn't allowed: RUN --mount</div>
+          <div class="seg"><span class="x">Approve</span><span class="no">Skip</span></div>
+        </div>
+        <div class="repo" style="opacity:.6">
+          <div class="n">ledger-lib</div>
+          <div class="m">no build steps</div>
+        </div>
+        <div class="repo" style="opacity:.6;margin-top:16px">
+          <div class="n">Your image<span class="chip g">yours</span></div>
+          <div class="m">~/.config/oriel/sandbox.Dockerfile</div>
+          <div class="m">unchanged · never needs approval</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="padding:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--fg3);line-height:1.7">
+          <span class="kbd">]c</span> next change &nbsp;<span class="kbd">gc</span> ask about a line<br><span class="kbd">a</span> approve repo &nbsp;<span class="kbd">s</span> skip repo
+        </div>
+      </div>
+      <div class="center">
+        <div class="fhead"><span class="fi" style="background:#4cc9f0"></span>pricing-api/.oriel/sandbox.Dockerfile<span class="dim" style="font-size:11px">origin/main · a41c9e2</span><span style="margin-left:auto" class="row gap8"><span class="chip c">diff since approved</span><span class="chip">whole file</span></span></div>
+        <div class="code">
+          <div class="ln same"><span class="g">1</span><span class="t"><span class="c"># Postgres client for the integration tests</span></span></div>
+          <div class="ln same"><span class="g">2</span><span class="t"><span class="k">RUN</span> apt-get update <span class="p">&amp;&amp;</span> apt-get install -y --no-install-recommends postgresql-client libpq-dev</span></div>
+          <div class="ln same"><span class="g">3</span><span class="t"><span class="k">ENV</span> PGHOST<span class="p">=</span><span class="s">db</span></span></div>
+          <div class="ln same"><span class="g">4</span><span class="t"> </span></div>
+          <div class="ln add"><span class="g">5</span><span class="t"><span class="c"># buf, for the protobuf lint</span></span></div>
+          <div class="ln add"><span class="g"><span class="gw"></span>6</span><span class="t"><span class="k">RUN</span> curl -sSL <span class="s">https://github.com/bufbuild/buf/releases/download/v1.47.2/buf-Linux-x86_64</span> \</span></div>
+          <div class="ln add"><span class="g">7</span><span class="t">      -o /usr/local/bin/buf <span class="p">&amp;&amp;</span> chmod +x /usr/local/bin/buf</span></div>
+          <div class="warn">▲ downloads with no checksum · buf is also in mise, which checks one</div>
+          <div class="ln add"><span class="g">8</span><span class="t"><span class="c"># Pact, for the contract tests</span></span></div>
+          <div class="ln add hl"><span class="g"><span class="gw"></span>9</span><span class="t"><span class="k">RUN</span> curl -fsSL <span class="s">https://raw.githubusercontent.com/pact-foundation/pact-ruby-standalone/master/install.sh</span> <span class="p">|</span> bash</span></div>
+          <div class="warn">▲ runs a script from a branch, piped to a shell: what runs can change without this file changing</div>
+        </div>
+        <div class="slot">
+          <div class="thread">
+            <div class="th"><b style="color:var(--fg)">Line 9</b><span class="dim">· asked before approving</span><span class="mono dim" style="margin-left:auto;font-size:10px">not sent to the repo</span></div>
+            <div class="msg"><div class="av me">LG</div><div><span class="who">you</span><span class="when">just now</span><div class="body">What does this script install, and does it need root? Could it be pinned?</div></div></div>
+            <div class="msg" style="padding-top:2px"><div class="av as">O</div><div class="grow"><span class="who">Assistant</span><span class="when">read this file and fetched install.sh · no other tools</span>
+              <div class="body">It asks GitHub for the <b style="color:var(--fg)">latest</b> pact-ruby-standalone release, downloads the tarball and unpacks it into <code>./pact</code>, then puts <code>pact/bin</code> on the PATH for that shell only. It checks no checksum. Since it runs <code>master</code> and takes "latest", what it installs can change without this file changing. Root isn't needed here: it doesn't write outside the working directory, which is <code>/</code> during the build. To pin it, download a tagged release (<code>v2.4.10</code>) and check its <code>sha256</code>:</div>
+              <div class="gen" style="margin-top:7px">RUN curl -fsSLo /tmp/pact.tgz https://github.com/…/v2.4.10/pact-2.4.10-linux-x86_64.tar.gz \
+ &amp;&amp; echo "5f3c…e91a  /tmp/pact.tgz" | sha256sum -c - \
+ &amp;&amp; tar -xzf /tmp/pact.tgz -C /usr/local</div>
+            </div></div>
+            <div class="note">Answers come from reading a file you don't trust yet, and the file can try to steer them. Use them to understand the steps, not as a check that they're safe.</div>
+            <div class="reply row gap8"><div class="input grow">Ask a follow-up…</div></div>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
+      <div class="right">
+        <div class="sec">
+          <span class="cap">Approving pricing-api lets these steps</span>
+          <div class="li"><span class="i w">!</span><div><b>Build with internet access, as root</b>, for up to 10 minutes. The build can reach your LAN, VPN and <code>host.docker.internal</code>; it can't read your files.</div></div>
+          <div class="li"><span class="i w">!</span><div><b>Run in every session of this workspace</b>, next to <b>billing-ui</b> and <b>ledger-lib</b>'s code, Claude's login, and the ssh agent while you lend it.</div></div>
+          <div class="li"><span class="i k">✓</span><div>They can't mount anything, change the shared toolchains, or get past the network allowlist once the sandbox runs.</div></div>
+        </div>
+        <div class="sec">
+          <span class="cap">Checks</span>
+          <div class="li"><span class="i k">✓</span><div>Every line is allowed: only <code>RUN</code>, <code>ENV</code> and <code>WORKDIR</code>, no flags.</div></div>
+          <div class="li"><span class="i w">!</span><div>2 downloads with no checksum (lines 6, 9). Line 9 runs a script from a branch.</div></div>
+          <div class="li"><span class="i w">!</span><div>buf can come from mise (<code>aqua:bufbuild/buf</code>), which checks checksums: it could go in <code>mise.toml</code> instead.</div></div>
+        </div>
+        <div class="sec" style="border-bottom:0">
+          <div class="row"><span class="cap">What Oriel builds</span><span class="mono dim" style="font-size:10px;margin-left:auto">oriel-ws:9b04e1</span></div>
+          <div class="gen">FROM oriel-user:3c1a77
+<span class="c"># pricing-api · a41c9e2</span>
+USER root
+WORKDIR /
+<span style="color:var(--fg2)">…9 lines</span>
+<span class="c"># billing-ui · skipped</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <span style="font-size:12.5px;color:var(--fg2)"><b style="color:var(--green)">Approve</b> pricing-api · <b style="color:var(--fg)">skip</b> billing-ui</span>
+      <span class="dim" style="font-size:11.5px">· builds a new image the first time, about 2 min · ENG-2290 notes what was skipped</span>
+      <span style="margin-left:auto" class="row gap8"><span class="btn ghost">Cancel</span><span class="btn pri">Start ENG-2290</span></span>
+    </div>
+  </div>
+</div>
+<div class="status"><span class="mode" style="background:var(--yellow)">SANDBOX</span><span>pricing-api</span><span class="dim">change 2/2</span><span class="sep"></span><span style="color:var(--yellow)">2 warnings</span><span style="color:var(--red)">billing-ui: 1 line not allowed</span><span style="margin-left:auto;margin-right:12px" class="dim">Dockerfile · 9:1</span></div>

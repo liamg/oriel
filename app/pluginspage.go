@@ -119,6 +119,7 @@ func (x *catalogPlugin) pageCommands(h plugin.Host) {
 	} {
 		x.add(h.Command(c))
 	}
+	x.add(h.Contribute(pagePlace("plugins", "Plugins", "plugins.open", &x.page.open)))
 	x.add(h.Contribute(registry.StartEntry{Name: "plugins", Icon: "plugins", Title: "Plugins", Desc: "What's installed, updates, and the plugin registries",
 		Command: "plugins.open", Order: 96, Link: true}))
 	x.add(h.View(OverlayPrefix+"plugins", registry.ViewFunc(func(registry.ViewCtx) ui.Node {

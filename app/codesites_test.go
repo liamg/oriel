@@ -30,7 +30,7 @@ func testGitLab(probe func(string) bool, allowed *[]string) registry.CodeHost {
 func TestCodeSitesFindTheHost(t *testing.T) {
 	s := newScene(t, "", "", mockupSize)
 	var allowed []string
-	s.reg.Contribute(testGitLab(func(host string) bool { return host == "gl.probed.dev" }, &allowed))
+	s.reg.Contribute(testGitLab(func(host string) bool { return host == "gl.probed.test" }, &allowed))
 	s.reg.Contribute(registry.CodeHost{Name: "azure", Title: "Azure DevOps", Path: regexp.MustCompile(`/_git/([^/]+)$`),
 		Shape: regexp.MustCompile(`/_git/`), Setup: registry.SiteSetup{API: "https://{host}/DefaultCollection"}})
 	sites := s.sh.sites
@@ -79,16 +79,16 @@ func TestCodeSitesFindTheHost(t *testing.T) {
 	}
 
 	// Nothing local knows it: the probe asks the server, once, and its answer is kept.
-	if _, _, ok := sites.remote("https://gl.probed.dev/a/b.git"); ok {
+	if _, _, ok := sites.remote("https://gl.probed.test/a/b.git"); ok {
 		t.Fatal("an unknown server was known before the probe")
 	}
-	if hs, ok := sites.probe(context.Background(), "gl.probed.dev"); !ok || hs.Name != "gitlab" {
+	if hs, ok := sites.probe(context.Background(), "gl.probed.test"); !ok || hs.Name != "gitlab" {
 		t.Fatalf("probe: %+v %v", hs, ok)
 	}
-	if _, _, ok := sites.remote("https://gl.probed.dev/a/b.git"); !ok {
+	if _, _, ok := sites.remote("https://gl.probed.test/a/b.git"); !ok {
 		t.Error("the probe's answer wasn't kept")
 	}
-	if _, ok := sites.probe(context.Background(), "nothing.dev"); ok {
+	if _, ok := sites.probe(context.Background(), "nothing.test"); ok {
 		t.Error("a server no probe knows was found")
 	}
 

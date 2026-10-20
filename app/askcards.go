@@ -258,6 +258,11 @@ func (x *agentConsole) askCard(c *ui.Ctx, key string, se core.SessionState, a co
 			acts = append(acts, act{args: registry.Args{"answers": x.answers(st, a)}})
 		}
 	}
+	// A card away from its session's console can take you there, for the context to decide on.
+	if kicker && (a.Kind == core.AskPermission || a.Kind == core.AskNetwork || a.Kind == core.AskGateway || a.Kind == core.AskQuestion) {
+		o.Actions = append(o.Actions, widget.CardAction{Label: "Console", Key: "g"})
+		acts = append(acts, act{cmd: "agent.console.show"})
+	}
 	if st.noting == a.ID {
 		inner := body
 		body = func(c *ui.Ctx) {

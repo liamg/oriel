@@ -119,6 +119,7 @@ func (h *session) start() error {
 	h.cancel = cancel
 	h.mu.Unlock()
 	h.setAgent(func(a *core.AgentState) { a.Starting = &core.AgentStart{Step: "Starting the agent", Since: since} })
+	resumed := h.snapshot().Agent.Session != ""
 	sess, box, err := h.launch(ctx, cancel)
 	h.mu.Lock()
 	h.starting = false
@@ -145,6 +146,10 @@ func (h *session) start() error {
 		a.Running, a.Starting, a.Error, a.StoppedBy, a.StoppedAt = true, nil, "", "", time.Time{}
 		a.RanOn(now, acct, name)
 	})
+	if resumed {
+		// After "The agent exited", the transcript says it's back.
+		h.appendItem(core.Item{ID: newID(6), Kind: core.ItemSystem, Time: now, Text: "The agent started again, resuming its conversation"})
+	}
 	h.w.goSafe("an agent's events", func() { h.loop(sess) })
 	h.askLogins(h.snapshot().Agent.Provider)
 	h.kick()

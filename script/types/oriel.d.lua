@@ -19,6 +19,7 @@
 ---@field menu oriel.menu
 ---@field overview oriel.overview
 ---@field picker oriel.picker
+---@field place oriel.place
 ---@field process oriel.process
 ---@field rail oriel.rail
 ---@field regex oriel.regex
@@ -283,6 +284,13 @@ oriel.picker = {}
 --- A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes.
 ---@param spec table
 function oriel.picker.source(spec) end
+
+---@class oriel.place
+oriel.place = {}
+
+--- Add a full-window page to the window's history, which nav.back and nav.forward (and the mouse's side buttons) go through with the session in front: { name, title, command, args, shown = fn(), close = fn() }. shown says it's showing now, command with args opens it, and close puts it away.
+---@param spec table
+function oriel.place.add(spec) end
 
 ---@class oriel.process
 oriel.process = {}

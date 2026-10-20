@@ -2,7 +2,7 @@
 id: RV-11
 title: "GitLab code host plugin: review, raise and merge"
 phase: P7
-status: review
+status: done
 area: Review
 module: integ/gitlab (plugin)
 depends_on: [RV-13, PL-2]

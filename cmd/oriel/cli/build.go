@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/plugin/nativebuild"
+	"github.com/liamg/oriel/sandbox/helper"
 )
 
 const buildUsage = `oriel build --with PKG[@VERSION][=DIR] ... [--oriel VERSION|DIR] [-o FILE] [-tags TAGS]
@@ -31,7 +32,11 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	if len(with) == 0 {
 		return errors.New("nothing to link in: give --with")
 	}
-	s := nativebuild.Spec{Output: *out}
+	gz, err := helper.Gzipped()
+	if err != nil {
+		return err
+	}
+	s := nativebuild.Spec{Output: *out, Helper: gz}
 	if *tags != "" {
 		s.Tags = strings.Split(*tags, ",")
 	}

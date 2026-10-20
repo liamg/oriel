@@ -438,6 +438,10 @@ func (u *UI) fit(e *elem, axis int) {
 		}
 	case kBox:
 		kids := e.flow()
+		if e.wraps() {
+			content = wrapContent(e, kids, axis)
+			break
+		}
 		for i, c := range kids {
 			if e.main(axis) {
 				content += c.size[axis]
@@ -465,7 +469,13 @@ func (u *UI) grow(e *elem, axis int) {
 	kids := e.flow()
 	a, b := e.pad(axis)
 	inner := e.size[axis] - a - b
-	if !e.scrolls(axis) {
+	if e.wraps() {
+		for _, c := range kids {
+			if axis == 0 && c.size[0] > inner {
+				c.size[0] = max(inner, 0)
+			}
+		}
+	} else if !e.scrolls(axis) {
 		for _, c := range kids {
 			if s := c.sz(axis); s.Kind == Percent {
 				c.size[axis] = s.clamp(s.Value * inner)
@@ -637,6 +647,20 @@ func (u *UI) place(e *elem, x, y float32) {
 			st.scroll[axis] = 0
 		}
 	}
+	if e.wraps() {
+		y := origin[1]
+		for _, line := range e.lines(inner[0]) {
+			x, h := origin[0], float32(0)
+			for _, c := range line {
+				u.place(c, x, y)
+				x += c.size[0] + e.style.Gap
+				h = max(h, c.size[1])
+			}
+			y += h + e.style.Gap
+		}
+		u.floatKids(e)
+		return
+	}
 	m := 0
 	if e.style.Dir == Column {
 		m = 1
@@ -675,11 +699,64 @@ func (u *UI) place(e *elem, x, y float32) {
 		u.place(c, p[0], p[1])
 		off += c.size[m] + gap
 	}
+	u.floatKids(e)
+}
+
+func (u *UI) floatKids(e *elem) {
 	for _, c := range e.kids {
 		if c.style.Float != nil {
 			u.floats = append(u.floats, c)
 		}
 	}
+}
+
+// wraps says e is a row that wraps its children onto lines.
+func (e *elem) wraps() bool { return e.style.Wrap && e.style.Dir == Row && !e.style.ScrollX }
+
+// lines are a wrapping row's children, as many on each line as fit inner.
+func (e *elem) lines(inner float32) [][]*elem {
+	var out [][]*elem
+	var line []*elem
+	var used float32
+	for _, c := range e.flow() {
+		if len(line) > 0 && used+e.style.Gap+c.size[0] > inner+slack {
+			out, line, used = append(out, line), nil, 0
+		}
+		if len(line) > 0 {
+			used += e.style.Gap
+		}
+		line = append(line, c)
+		used += c.size[0]
+	}
+	if len(line) > 0 {
+		out = append(out, line)
+	}
+	return out
+}
+
+// wrapContent is a wrapping row's content along axis: across, its widest child; down, its lines at its width.
+func wrapContent(e *elem, kids []*elem, axis int) float32 {
+	var content float32
+	if axis == 0 {
+		for _, c := range kids {
+			content = max(content, c.size[0])
+		}
+	} else {
+		l, r := e.pad(0)
+		lines := e.lines(e.size[0] - l - r)
+		for i, line := range lines {
+			var h float32
+			for _, c := range line {
+				h = max(h, c.size[1])
+			}
+			content += h
+			if i > 0 {
+				content += e.style.Gap
+			}
+		}
+	}
+	a, b := e.pad(axis)
+	return content + a + b
 }
 
 func (u *UI) placeFloat(e *elem) {

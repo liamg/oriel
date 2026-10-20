@@ -105,6 +105,11 @@ func (x *agentConsole) Activate(_ context.Context, h plugin.Host) error {
 		{ID: "agent.console", Title: "Show the agent console of the session in front, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", open)
 		}},
+		{ID: "agent.console.show", Title: "Show {id}'s agent console: its session in front, and the console open on it",
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				return h.Run(ctx, "session.open", registry.Args{"id": string(session(a)),
+					"then": []any{map[string]any{"command": "view.open", "args": map[string]any(open)}}})
+			}},
 		{ID: "agent.console.next", Title: "Agent console: the next block", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
 		{ID: "agent.console.prev", Title: "Agent console: the block before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
 		{ID: "agent.console.fold", Title: "Agent console: fold or unfold the selected block", Run: func(registry.Ctx, registry.Args) error {

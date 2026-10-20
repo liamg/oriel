@@ -68,6 +68,16 @@ func TestMake(t *testing.T) {
 		"github.com/liamg/oriel/cmd/oriel@v0.9.0" {
 		t.Errorf("a released base: %q", p.Get)
 	}
+	if p.HelperGo != nil {
+		t.Errorf("a build with no helper carries one:\n%s", p.HelperGo)
+	}
+	// The builder's sandbox helper goes with the build: a released module has none of its own.
+	p, _ = Make(Spec{Base: Module{Path: "github.com/liamg/oriel/cmd/oriel", Version: "v0.9.0"}, Helper: []byte("gz")})
+	for _, want := range []string{"//go:embed " + HelperFile, `"github.com/liamg/oriel/sandbox/helper"`, "helper.Use(sandboxHelper)"} {
+		if !strings.Contains(string(p.HelperGo), want) {
+			t.Errorf("helper.go lacks %q:\n%s", want, p.HelperGo)
+		}
+	}
 }
 
 // Live: a build with a stand-in base (its Main lists what registered) and a plugin from a directory, offline.

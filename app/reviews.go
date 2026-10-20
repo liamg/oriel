@@ -118,6 +118,7 @@ func (x *reviewsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-V>", Command: "reviews.open", Desc: "Reviews"}))
 	x.add(h.View(OverlayPrefix+"reviews", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "reviews", Fn: x.pageView} })))
 	shown := func(string) bool { return x.any() }
+	x.add(h.Contribute(pagePlace("reviews", "Reviews", "reviews.open", &x.page.open)))
 	x.add(h.Contribute(registry.RailEntry{Name: "reviews", Icon: "pullrequest", Title: "Reviews", Command: "reviews.open", Scope: registry.ScopeGlobalEntry,
 		Order: 6, Badge: x.count, BadgeTone: "rail.badge.review", Active: func(string) bool { return x.page.open }, Shown: shown, Source: "builtin:reviews"}))
 	x.add(h.Contribute(registry.StartEntry{Name: "reviews", Icon: "pullrequest", Title: "Reviews", Command: "reviews.open", Order: 15, Link: true,

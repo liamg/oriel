@@ -90,6 +90,26 @@ func (s Start) Add(spec script.Table, where string) error {
 	return nil
 }
 
+//oriel:api name=place cap=ui
+type Place struct{ a *APIs }
+
+//oriel:api doc="Add a full-window page to the window's history, which nav.back and nav.forward (and the mouse's side buttons) go through with the session in front: { name, title, command, args, shown = fn(), close = fn() }. shown says it's showing now, command with args opens it, and close puts it away."
+func (p Place) Add(spec script.Table, where string) error {
+	shown, _ := spec["shown"].(*script.Fn)
+	closer, _ := spec["close"].(*script.Fn)
+	pl := registry.Place{Name: str(spec, "name"), Title: str(spec, "title"), Command: str(spec, "command"), Source: where}
+	if pl.Name == "" || pl.Command == "" || shown == nil || closer == nil {
+		return fmt.Errorf("a place needs a name, a command, and shown and close functions")
+	}
+	if a, ok := spec["args"].(script.Table); ok {
+		pl.Args = registry.Args(a)
+	}
+	pl.Shown = func() bool { return p.a.truthy(shown) }
+	pl.Close = func() { _, _ = p.a.VM.Call(closer) }
+	p.a.own(p.a.Host.Contribute(pl))
+	return nil
+}
+
 //oriel:api name=overview cap=ui
 type Overview struct{ a *APIs }
 

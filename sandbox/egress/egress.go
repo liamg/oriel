@@ -52,6 +52,12 @@ type Event struct {
 	Reason string
 }
 
+// Failed reports a connection that never got through: refused, or allowed
+// but not reached.
+func (e Event) Failed() bool {
+	return !e.Allowed || (e.Err != "" && e.Status == 0 && e.BytesDown == 0)
+}
+
 // protoOf names a tunnel by the first bytes the client sent through it.
 func protoOf(head []byte, port int) string {
 	switch {

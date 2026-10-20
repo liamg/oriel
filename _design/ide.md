@@ -482,6 +482,13 @@ The UI-free core is in module `term`; the renderer, panes, placements and termin
   layout's. Each runs its program on our PTY with Ghostty's VT (the host's copy comes with AI-1), resized to its pane.
   `term.open {source, title}` shows any `TermSource` (read, write, resize, close) instead of starting a program: the
   agent console's Raw terminal streams the agent's PTY from the session host this way (AI-6).
+- **Where a terminal runs.** While the session in front is sandboxed, a new terminal with no `{cmd}` runs a shell in
+  its sandbox beside the agent (`Host.SandboxShell`, a backend's `sandbox.Sheller`: `docker exec` into the agent's
+  running container as its user, with its environment and network; under seatbelt, the agent's profile), in the
+  window's directory when that's inside the workspace, else the workspace. Its tab says "sandbox". With the
+  sandbox not running it refuses, naming `term.host`, rather than falling back to the host. `term.host {dir}` opens
+  one on this machine, outside the sandbox; a terminal given a `{cmd}`, and every terminal of a session that isn't
+  sandboxed, runs here too. A sandbox terminal saved over a restart comes back as a new shell in the sandbox.
 - Drawn in one paint per terminal from the VT's grid: runs of one style placed on the cell grid, backgrounds, cursor
   shapes, and box-drawing, block and shade characters drawn as shapes so they join at any size. Colours are the
   theme's `terminal.ansi.0`–`15`, `terminal.fg/bg`, 256-colour and truecolor.

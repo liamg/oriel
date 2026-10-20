@@ -2,7 +2,7 @@
 id: RV-13
 title: "Code hosts: raise and merge on any host, Merge with a guard"
 phase: P7
-status: review
+status: done
 area: Review
 module: registry, app, host, gh
 depends_on: [RV-9, FG-6]

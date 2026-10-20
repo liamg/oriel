@@ -100,6 +100,8 @@ func (v *helpView) Activate(_ context.Context, h plugin.Host) error {
 		{Mode: "global", Keys: "<D-?>", Command: "help.mode", Desc: "Help mode"},
 		{Mode: "help", Keys: "<C-o>", Command: "help.back", Desc: "Back"},
 		{Mode: "help", Keys: "<C-i>", Command: "help.forward", Desc: "Forward"},
+		{Mode: "help", Keys: "<X1Mouse>", Command: "help.back", Desc: "Back"},
+		{Mode: "help", Keys: "<X2Mouse>", Command: "help.forward", Desc: "Forward"},
 		{Mode: "n", Keys: "<Leader>h", Command: "picker.open", Args: registry.Args{"source": "help"}, Desc: "Help"},
 	} {
 		v.add(h.Keymap(k))

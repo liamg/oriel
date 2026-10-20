@@ -1,6 +1,9 @@
 package container
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -46,5 +49,44 @@ func TestLimits(t *testing.T) {
 		if tc.not != "" && strings.Contains(args, tc.not) {
 			t.Errorf("%+v: %q in %s", tc.spec, tc.not, args)
 		}
+	}
+}
+
+// fakeEngine is a CLI that prints its args and the Dockerfile on stdin, as a build's output.
+func fakeEngine(t *testing.T) Engine {
+	t.Helper()
+	bin := filepath.Join(t.TempDir(), "docker")
+	script := "#!/bin/sh\necho \"args: $*\"\ncase \"$1\" in build) cat; echo 'step 1/1 done' >&2;; image) exit 1;; esac\n"
+	if err := os.WriteFile(bin, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return Engine{Bin: bin}
+}
+
+// A build's output goes to its log, which the next build of the tag replaces; a rebuild skips the cache.
+func TestBuildKeepsItsLog(t *testing.T) {
+	ctx := WithEngine(context.Background(), fakeEngine(t))
+	log := filepath.Join(t.TempDir(), "builds", "img.log")
+	if err := EnsureImage(ctx, "img:1", "FROM scratch\n", log); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"build", "FROM scratch", "step 1/1 done"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("the log has no %q:\n%s", want, b)
+		}
+	}
+	if strings.Contains(string(b), "--no-cache") {
+		t.Errorf("a first build skipped the cache:\n%s", b)
+	}
+	if err := Rebuild(ctx, "img:1", "FROM scratch\nRUN true\n", log); err != nil {
+		t.Fatal(err)
+	}
+	b, _ = os.ReadFile(log)
+	if !strings.Contains(string(b), "--no-cache") || !strings.Contains(string(b), "RUN true") || strings.Count(string(b), "args:") != 1 {
+		t.Errorf("the rebuild's log isn't its own, or used the cache:\n%s", b)
 	}
 }

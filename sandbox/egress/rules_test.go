@@ -54,6 +54,8 @@ func TestDefaultAllow(t *testing.T) {
 	}{
 		{"api.anthropic.com", 443, true},
 		{"foo.claude.ai", 443, true},
+		{"platform.claude.com", 443, true},
+		{"console.anthropic.com", 443, true},
 		{"github.com", 443, true},
 		// GitHub release downloads redirect here; a blocked one fails every
 		// release asset a plugin or a tool installer fetches.

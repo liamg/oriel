@@ -233,6 +233,8 @@ func (x *statsPlugin) Activate(_ context.Context, h plugin.Host) error {
 		x.add(h.Keymap(k))
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: UsageKeyMode, Keys: "r", Command: "usage.refresh", Desc: "Read the windows again"}))
+	x.add(h.Contribute(pagePlace("stats", "Stats", "stats.open", &x.open)))
+	x.add(h.Contribute(pagePlace("usage", "Usage", "usage.open", &x.usageOpen)))
 	for _, e := range []registry.RailEntry{
 		{Name: "stats", Icon: "stats", Title: "Stats", Command: "stats.open", Scope: registry.ScopeGlobalEntry, Order: 10,
 			Note: func(string) string { return x.figure("today") }},

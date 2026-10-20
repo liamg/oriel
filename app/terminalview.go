@@ -49,7 +49,9 @@ func (v terminalView) EdgeToEdge() {}
 // termState is a terminal as the layout keeps it across restarts: what it ran; its screen is the terminals' own.
 type termState struct {
 	ID  string   `json:"id"`
-	Cmd []string `json:"cmd"`
+	Cmd []string `json:"cmd,omitempty"`
+	// Sandboxed revives it as a new shell in the session's sandbox: the old one's command reached a container that's gone.
+	Sandboxed bool `json:"sandboxed,omitempty"`
 }
 
 func (v terminalView) Persist(instance string) (json.RawMessage, bool) {
@@ -57,7 +59,11 @@ func (v terminalView) Persist(instance string) (json.RawMessage, bool) {
 	if t == nil || !t.own {
 		return nil, false
 	}
-	b, _ := json.Marshal(termState{ID: instance, Cmd: t.cmd})
+	st := termState{ID: instance, Cmd: t.cmd, Sandboxed: t.sandboxed}
+	if t.sandboxed {
+		st.Cmd = nil
+	}
+	b, _ := json.Marshal(st)
 	return b, true
 }
 

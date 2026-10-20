@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -57,7 +59,7 @@ func startAppWith(t *testing.T, state, workDir string, setup func(h plugin.Host)
 	be := headless.New()
 	g := &grabHost{setup: setup}
 	r := &running{t: t, store: eventstore.New(), dir: workDir, done: make(chan error, 1)}
-	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), StateDir: state, WorkDir: workDir, Plugins: []plugin.Plugin{g}}
+	cfg := Config{Store: r.store, ConfigDir: t.TempDir(), StateDir: state, WorkDir: workDir, Plugins: []plugin.Plugin{g}, Net: offlineNet}
 	if change != nil {
 		change(&cfg)
 		r.store = cfg.Store
@@ -412,5 +414,61 @@ func TestConfigFromFlagsCPUProfile(t *testing.T) {
 	cfg, err := ConfigFromFlags([]string{"--cpuprofile", "/tmp/oriel.prof"}, "v1", io.Discard)
 	if err != nil || cfg.CPUProfile != "/tmp/oriel.prof" {
 		t.Fatalf("CPUProfile %q, err %v", cfg.CPUProfile, err)
+	}
+}
+
+// ui.md 01e: however many links plugins add under the actions, every one shows whole: the strip wraps onto more
+// lines inside the Start column rather than running past it.
+func TestStartLinksWrap(t *testing.T) {
+	for _, width := range []float32{1400, 1000, 640} {
+		s := newScene(t, "", "", render.Point{X: width, Y: 900})
+		s.sh.recents = &recents{path: filepath.Join(t.TempDir(), "recent.json")}
+		addRecents(s)
+		var titles []string
+		for i := range 8 {
+			title := fmt.Sprintf("Plugin page %d", i)
+			titles = append(titles, title)
+			s.host.Contribute(registry.StartEntry{Name: fmt.Sprintf("p%d", i), Icon: "jobs", Title: title, Command: "settings.open", Order: 200 + i,
+				Link: true, Note: func() string { return "12 waiting" }})
+		}
+		s.frame()
+		s.frame()
+		s.frame()
+		col := s.startCard("Settings").Bounds
+		rows := map[float32]bool{}
+		for _, title := range titles {
+			b := s.access(title).Bounds
+			if b.Min.X < col.Min.X-1 || b.Max.X > col.Max.X+1 {
+				t.Errorf("at %v wide, %q is at %v, outside the column %v", width, title, b, col)
+			}
+			rows[b.Min.Y] = true
+		}
+		if len(rows) < 2 {
+			t.Errorf("at %v wide, eight links sit on %d line", width, len(rows))
+		}
+	}
+}
+
+// ui.md 01e: Mission control is linked from the start view only while there's something to watch: a session whose
+// agent is running, starting, or asking. Sessions that are only resumable don't count.
+func TestStartLinksMissionControlWhileAgentsRun(t *testing.T) {
+	s := newScene(t, "", "", render.Point{X: 1400, Y: 900})
+	s.frame()
+	s.frame()
+	if strings.Contains(s.frameText(), "Mission control") {
+		t.Error("Mission control is linked with no sessions")
+	}
+	s.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusQuiet}})
+	s.frame()
+	s.frame()
+	if strings.Contains(s.frameText(), "Mission control") {
+		t.Error("Mission control is linked for a session whose agent isn't running")
+	}
+	s.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusWorking,
+		Agent: core.AgentState{Running: true}}})
+	s.frame()
+	s.frame()
+	if !strings.Contains(s.frameText(), "Mission control") {
+		t.Errorf("Mission control isn't linked while an agent runs:\n%s", s.frameText())
 	}
 }

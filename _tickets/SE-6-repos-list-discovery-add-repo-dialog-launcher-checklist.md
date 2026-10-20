@@ -2,7 +2,7 @@
 id: SE-6
 title: "Repos as a list: ReposChanged, sibling discovery, remove and ignore, the Add repo dialog, the launcher's checklist"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: core, host, app, ui
 depends_on: [SE-1]

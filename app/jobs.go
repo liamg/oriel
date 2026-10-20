@@ -186,6 +186,7 @@ func (x *jobsPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: JobFormKeyMode, Keys: "<D-CR>", Command: "jobs.form.save", Args: registry.Args{"run": true},
 		Desc: "Save and run"}))
+	x.add(h.Contribute(pagePlace("jobs", "Jobs", "jobs.open", &x.open)))
 	x.add(h.Contribute(registry.RailEntry{Name: "jobs", Icon: "jobs", Title: "Jobs", Command: "jobs.open", Scope: registry.ScopeGlobalEntry, Order: 30,
 		Note: func(string) string { return x.figure() }, Active: func(string) bool { return x.open }}))
 	x.add(h.Contribute(registry.StartEntry{Name: "jobs", Icon: "jobs", Title: "Jobs", Desc: "Saved prompts, their runs and schedules", Command: "jobs.open",

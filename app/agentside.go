@@ -257,6 +257,9 @@ func (x *agentConsole) rules(c *ui.Ctx, se core.SessionState) {
 				}
 			})
 		}
+		if se.Agent.Sandboxed && widget.Link(c, "permissions", "Permissions and connections ›", "agent/permissions") {
+			x.run(context.Background(), "agent.permissions", nil)
+		}
 	})
 }
 

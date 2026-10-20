@@ -375,6 +375,54 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	}
 }
 
+// A connection that never got through shows in the transcript, once per destination, without the agent's terminal.
+func TestNetworkFailuresReachTheTranscript(t *testing.T) {
+	s := newSandboxRig(t)
+	id, _, b := s.sandboxed()
+	proxy := httptest.NewServer(&egress.Proxy{Decider: b.egress, Log: b.egress.Record})
+	defer proxy.Close()
+	paddr := strings.TrimPrefix(proxy.URL, "http://")
+	up := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	host := strings.TrimPrefix(up.URL, "http://")
+	up.Close()
+
+	for range 2 {
+		res := make(chan int, 1)
+		go func() { code, _ := get(t, paddr, up.URL); res <- code }()
+		ask := s.waitAsk(id, core.AskNetwork)
+		s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "not today"})
+		if code := <-res; code != http.StatusForbidden {
+			t.Fatalf("denied: %d", code)
+		}
+	}
+	se := s.eventually(id, "the refusal in the transcript", func(se core.SessionState) bool { return len(se.Transcript) > 0 })
+	var notes []core.Item
+	for _, it := range se.Transcript {
+		if strings.HasPrefix(it.Text, "Network:") {
+			notes = append(notes, it)
+		}
+	}
+	if len(notes) != 1 || notes[0].Text != "Network: blocked "+host+" (denied by the user, who said: not today)" {
+		t.Fatalf("notes = %+v", notes)
+	}
+
+	// Allowed but unreachable: an error, for a destination not shown yet.
+	if err := b.egress.SetRule("127.0.0.1", 1, true, false); err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := get(t, paddr, "http://127.0.0.1:1"); code != http.StatusBadGateway {
+		t.Fatalf("unreachable: %d", code)
+	}
+	s.eventually(id, "the dial failure in the transcript", func(se core.SessionState) bool {
+		for _, it := range se.Transcript {
+			if it.Kind == core.ItemError && strings.HasPrefix(it.Text, "Network: couldn't reach 127.0.0.1:1: ") {
+				return true
+			}
+		}
+		return false
+	})
+}
+
 // An always with a scope allows the pattern: the next host it covers isn't asked about.
 func TestNetworkAlwaysWithAScope(t *testing.T) {
 	s := newSandboxRig(t)
@@ -639,4 +687,77 @@ func TestStartDoesNotWaitForTheSandbox(t *testing.T) {
 	}
 	se = s.eventually(id, "the agent up", func(se core.SessionState) bool { return se.Agent.Running && se.Agent.Starting == nil })
 	_ = se
+}
+
+// The Permissions view's read: the tools and network rules in force with their sources, the connections, and the
+// session's own rules set from it.
+func TestPermissionsListRulesAndConnections(t *testing.T) {
+	s := newSandboxRig(t)
+	t.Setenv("ANTHROPIC_BASE_URL", "http://litellm.tail1234.ts.net:4000")
+	id, _, b := s.sandboxed()
+	ctx := context.Background()
+
+	p, err := s.w.Permissions(ctx, id)
+	if err != nil || !p.Sandboxed || !p.Filtered {
+		t.Fatalf("permissions = %+v, %v", p, err)
+	}
+	hostRule := func(p Permissions, host string, port int) (egress.Rule, bool) {
+		i := slices.IndexFunc(p.Hosts, func(r egress.Rule) bool { return r.Host == host && r.Port == port })
+		if i < 0 {
+			return egress.Rule{}, false
+		}
+		return p.Hosts[i], true
+	}
+	if r, ok := hostRule(p, "litellm.tail1234.ts.net", 4000); !ok || !r.Allow || !r.Private || r.Source != "the sandbox's environment" {
+		t.Errorf("the API endpoint = %+v, %v", r, ok)
+	}
+	if r, ok := hostRule(p, "api.anthropic.com", 443); !ok || r.Source != "built-in list" {
+		t.Errorf("api.anthropic.com = %+v, %v", r, ok)
+	}
+	push := func(p Permissions) ToolPermission {
+		i := slices.IndexFunc(p.Tools, func(tp ToolPermission) bool { return tp.Name == gateway.Prefix+"push" })
+		if i < 0 {
+			t.Fatalf("no push tool in %+v", p.Tools)
+		}
+		return p.Tools[i]
+	}
+	if tp := push(p); tp.Action != gateway.Ask || tp.Session != "" {
+		t.Errorf("push = %+v", tp)
+	}
+
+	if err := s.w.SetToolRule(id, gateway.Prefix+"push", gateway.Deny); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.w.SetNetRule(id, "Example.COM", 443, "block", false); err != nil {
+		t.Fatal(err)
+	}
+	p, _ = s.w.Permissions(ctx, id)
+	if tp := push(p); tp.Action != gateway.Deny || tp.Source != SourceSession || tp.Session != gateway.Deny {
+		t.Errorf("push after a session deny = %+v", tp)
+	}
+	if r, ok := hostRule(p, "example.com", 443); !ok || r.Allow || r.Source != "this session" {
+		t.Errorf("example.com after a block = %+v, %v", r, ok)
+	}
+
+	if err := s.w.SetToolRule(id, gateway.Prefix+"push", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.w.SetNetRule(id, "example.com", 443, "", false); err != nil {
+		t.Fatal(err)
+	}
+	p, _ = s.w.Permissions(ctx, id)
+	if tp := push(p); tp.Session != "" || tp.Action != gateway.Ask {
+		t.Errorf("push after clearing = %+v", tp)
+	}
+	if _, ok := hostRule(p, "example.com", 443); ok {
+		t.Error("the session's block is still there")
+	}
+
+	b.egress.Record(egress.Event{Host: "example.com", Port: 443, Proto: "tls"})
+	if p, _ = s.w.Permissions(ctx, id); len(p.Conns) != 1 || p.Conns[0].Host != "example.com" {
+		t.Errorf("conns = %+v", p.Conns)
+	}
+	if err := s.w.SetToolRule(id, gateway.Prefix+"push", "maybe"); err == nil {
+		t.Error("a bad action was taken")
+	}
 }

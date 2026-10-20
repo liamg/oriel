@@ -2,7 +2,7 @@
 id: SE-8
 title: "Tags from the Repos page: branch, pull first, signed, message template, push only the tag"
 phase: P5
-status: review
+status: done
 area: Sessions and AI
 module: host, app, gitx
 depends_on: [SE-7]

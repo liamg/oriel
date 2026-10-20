@@ -11,6 +11,8 @@ func TestKeyLabel(t *testing.T) {
 		{"<Space><Space>", "␣ ␣"},
 		{"<S-CR>", "⇧↵"},
 		{"gx", "g x"},
+		{"<X1Mouse>", "mouse back"},
+		{"<S-X2Mouse>", "⇧mouse forward"},
 	} {
 		if got := keyLabel(tt.keys); got != tt.want {
 			t.Errorf("keyLabel(%q) = %q, want %q", tt.keys, got, tt.want)

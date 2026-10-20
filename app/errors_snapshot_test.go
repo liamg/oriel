@@ -58,7 +58,7 @@ func newSceneWith(t testing.TB, crashDir, workDir string, size render.Point, cha
 
 	s := &errScene{t: t, store: eventstore.New(), reg: registry.New(), clip: &memDesktop{}}
 	cfg := Config{Store: s.store, Registry: s.reg, Logs: NewLogs(LogOpts{}), ConfigDir: conf, CrashDir: crashDir, Version: "v0.4.2",
-		WorkDir: workDir, Desktop: s.clip}
+		WorkDir: workDir, Desktop: s.clip, Net: offlineNet}
 	if change != nil {
 		change(&cfg)
 		s.store = cfg.Store

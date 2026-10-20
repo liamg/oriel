@@ -215,7 +215,7 @@ func workspaceTools(root string) []Tool {
 // ProvisionProject installs the toolchains a project just added to root's
 // workspace needs, so the restart that follows finds them ready. It returns
 // what the project asks for; none for a workspace that is not sandboxed.
-func ProvisionProject(ctx context.Context, root, dir string, cfg sandbox.Config) ([]Tool, error) {
+func ProvisionProject(ctx context.Context, root, dir string) ([]Tool, error) {
 	if rec, ok := sandbox.Load(root); !ok || !rec.Sandboxed() {
 		return nil, nil
 	}
@@ -227,11 +227,7 @@ func ProvisionProject(ctx context.Context, root, dir string, cfg sandbox.Config)
 	if err != nil {
 		return nil, err
 	}
-	image, err := Image(ctx, root, cfg)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := Provision(ctx, image, id, tools); err != nil {
+	if _, err := Provision(ctx, id, tools); err != nil {
 		return nil, err
 	}
 	return tools, nil
@@ -251,7 +247,7 @@ func loadResolved() map[string]string {
 
 // Provision installs tools that are not installed yet and returns the bin
 // directories to put on PATH, in order, as the sandbox sees them.
-func Provision(ctx context.Context, image string, id sandbox.Identity, tools []Tool) ([]string, error) {
+func Provision(ctx context.Context, id sandbox.Identity, tools []Tool) ([]string, error) {
 	if len(tools) == 0 {
 		return nil, nil
 	}
@@ -277,14 +273,10 @@ func Provision(ctx context.Context, image string, id sandbox.Identity, tools []T
 	if len(missing) > 0 {
 		sandbox.Report(ctx, sandbox.Progress{Step: "Installing " + strings.Join(missing, ", ") + " in the sandbox",
 			Note: "Once for each version: later sessions reuse it."})
-		args := []string{"run", "--rm", "--user", fmt.Sprintf("%d:%d", id.UID, id.GID),
-			"-e", "HOME=/tmp", "-e", "MISE_YES=1",
-			"-e", "MISE_DATA_DIR=" + MiseDir + "/data", "-e", "MISE_CACHE_DIR=" + MiseDir + "/cache",
-			"-e", "MISE_STATE_DIR=" + MiseDir + "/state",
-			"--mount", "type=bind,source=" + dir + ",target=" + MiseDir,
-			"--entrypoint", "sh", image, "-c",
-			`mise install "$@" >&2 && for t; do printf '%s\t%s\n' "$t" "$(mise where "$t")"; done`, "sh"}
-		out, err := container.Run(ctx, append(args, missing...)...)
+		if err := ensureImage(ctx, container.BaseImage(), container.BaseDockerfile); err != nil {
+			return nil, err
+		}
+		out, err := container.Run(ctx, installArgs(id, dir, missing)...)
 		if err != nil {
 			return nil, fmt.Errorf("installing %s: %w", strings.Join(missing, " "), err)
 		}
@@ -305,6 +297,20 @@ func Provision(ctx context.Context, image string, id sandbox.Identity, tools []T
 		}
 	}
 	return bins, nil
+}
+
+// installArgs runs `mise install` for tools in the base image, writing to dir. A project's image never runs here: it
+// would have dir, which every sandbox mounts, open for writing.
+func installArgs(id sandbox.Identity, dir string, tools []string) []string {
+	args := []string{"run", "--rm", "--user", fmt.Sprintf("%d:%d", id.UID, id.GID),
+		"--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+		"-e", "HOME=/tmp", "-e", "MISE_YES=1",
+		"-e", "MISE_DATA_DIR=" + MiseDir + "/data", "-e", "MISE_CACHE_DIR=" + MiseDir + "/cache",
+		"-e", "MISE_STATE_DIR=" + MiseDir + "/state",
+		"--mount", "type=bind,source=" + dir + ",target=" + MiseDir,
+		"--entrypoint", "sh", container.BaseImage(), "-c",
+		`mise install "$@" >&2 && for t; do printf '%s\t%s\n' "$t" "$(mise where "$t")"; done`, "sh"}
+	return append(args, tools...)
 }
 
 // hostPath is where a path inside MiseDir is on the host.

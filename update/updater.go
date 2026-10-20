@@ -19,6 +19,8 @@ type Updater struct {
 	Kind      string // this copy's artifact kind: KindBundle for the macOS .app, KindBinary if ""
 	Platform  string // Platform() if ""
 	CacheDir  string // downloads
+	// Progress is told how a download or an install is getting on.
+	Progress Progress
 
 	mu  sync.Mutex
 	rel *Release
@@ -56,20 +58,15 @@ func (u *Updater) latest() (Release, Manifest, error) {
 	return *u.rel, u.m, nil
 }
 
-func (u *Updater) cache() Cache { return Cache{Dir: u.CacheDir, Source: u.Source} }
+func (u *Updater) cache() Cache {
+	return Cache{Dir: u.CacheDir, Source: u.Source, Progress: u.Progress}
+}
 
-// Install downloads, stages and swaps in this copy's artifact of the latest release. Oriel runs it from the next
-// start, which Boot confirms or rolls back.
-func (u *Updater) Install(ctx context.Context) error {
-	if u.Installer == nil {
-		return errors.New("this copy of Oriel can't replace itself")
-	}
+// artifact is this copy's artifact of the latest release.
+func (u *Updater) artifact() (Manifest, Artifact, error) {
 	_, m, err := u.latest()
 	if err != nil {
-		return err
-	}
-	if v, ok := u.Ready(); ok && v == m.Version {
-		return nil
+		return Manifest{}, Artifact{}, err
 	}
 	kind, platform := u.Kind, u.Platform
 	if kind == "" {
@@ -80,16 +77,47 @@ func (u *Updater) Install(ctx context.Context) error {
 	}
 	a, ok := m.Artifact(platform, kind)
 	if !ok {
-		return fmt.Errorf("%s has nothing for %s", m.Version, platform)
+		return Manifest{}, Artifact{}, fmt.Errorf("%s has nothing for %s", m.Version, platform)
+	}
+	return m, a, nil
+}
+
+// Download fetches and checks this copy's artifact of the latest release ahead of Install, which then reads it
+// from the cache.
+func (u *Updater) Download(ctx context.Context) error {
+	m, a, err := u.artifact()
+	if err != nil {
+		return err
+	}
+	r, err := u.cache().Open(ctx, m, a)
+	if err != nil {
+		return err
+	}
+	return r.Close()
+}
+
+// Install downloads (unless Download did), stages and swaps in this copy's artifact of the latest release. Oriel
+// runs it from the next start, which Boot confirms or rolls back.
+func (u *Updater) Install(ctx context.Context) error {
+	if u.Installer == nil {
+		return errors.New("this copy of Oriel can't replace itself")
+	}
+	m, a, err := u.artifact()
+	if err != nil {
+		return err
+	}
+	if v, ok := u.Ready(); ok && v == m.Version {
+		return nil
 	}
 	r, err := u.cache().Open(ctx, m, a)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
-	if err := u.Installer.Stage(ctx, m, a, r); err != nil {
+	if err := u.Installer.stage(ctx, m, a, r, u.Progress); err != nil {
 		return err
 	}
+	u.Progress.report(Step{Stage: StageSwap, Detail: u.Installer.Target})
 	return u.Installer.Swap()
 }
 

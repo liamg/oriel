@@ -2,7 +2,7 @@
 id: PL-17
 title: "oriel plugin publish"
 phase: P8
-status: review
+status: done
 area: Platform
 module: cmd
 depends_on: [PL-16, PL-21]

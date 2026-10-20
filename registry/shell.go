@@ -185,6 +185,50 @@ func StartEntries(r Registry) []StartEntry {
 	return out
 }
 
+// Place is a full-window page the window's history goes back and forward through (nav.back, nav.forward, the mouse's
+// side buttons). The history is the session in front and the place showing, recorded whenever either changes.
+type Place struct {
+	Name    string      // unique among places: "stats"
+	Title   string      // what the history calls it
+	Shown   func() bool // it's showing now
+	Command string      // opens it
+	Args    Args
+	Close   func() // puts it away
+	Source  string
+}
+
+func (Place) ContributionKind() string   { return "place" }
+func (p Place) ContributionName() string { return p.Name }
+
+// PlaceByName is the place called name.
+func PlaceByName(r Registry, name string) (Place, bool) {
+	for _, c := range r.Contributions("place") {
+		if p := c.(Place); p.Name == name {
+			return p, true
+		}
+	}
+	return Place{}, false
+}
+
+// ShownPlace is the place showing now, "" for none; ok is false while two are, as one opens over another.
+func ShownPlace(r Registry) (name string, ok bool) {
+	for _, c := range r.Contributions("place") {
+		p := c.(Place)
+		shown := false
+		if p.Shown != nil {
+			Call(func() error { shown = p.Shown(); return nil })
+		}
+		if !shown {
+			continue
+		}
+		if name != "" {
+			return "", false
+		}
+		name = p.Name
+	}
+	return name, true
+}
+
 // OverviewPanel is a panel on each card of the project overview (ui.md 01g): one card per repo or directory open.
 // Compute runs off the app's loop, once per card and again when a repo's HEAD moves; the node it returns is drawn in
 // the card, under Title.

@@ -112,7 +112,11 @@ type Style struct {
 	// part with its own text size does (theming.md, "Sizes"); 0 is 1. It multiplies a scaled parent's.
 	Scale float32
 
-	Clip    bool
+	Clip bool
+	// Wrap puts a row's children that don't fit its width on the next line, Gap apart, each its own width (one wider
+	// than the row is cut to it): the row grows as tall as its lines. Give it a width (Flex, Px); its own content is
+	// only its widest child.
+	Wrap    bool
 	Keep    bool // keeps its width while its row is too narrow, as a control does; the text beside it is cut first
 	ScrollX bool // scroll offsets persist by id; scrolling clips
 	ScrollY bool

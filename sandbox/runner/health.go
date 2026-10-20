@@ -3,8 +3,6 @@ package runner
 import (
 	"context"
 	"fmt"
-	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,10 +46,8 @@ func Health(ctx context.Context, cfg sandbox.Config, fix string) []sandbox.Probl
 		}
 	}
 	out = append(out, sandbox.LoginProblems(cfg)...)
-	if runtime.GOOS != "linux" && os.Getenv("ORIEL_SANDBOX_BIN") == "" {
-		if p, ok := linuxOrielHealth(); !ok {
-			out = append(out, p)
-		}
+	if p, ok := helperProblem(); !ok {
+		out = append(out, p)
 	}
 	for _, p := range PendingDockerfiles(cfg) {
 		out = append(out, sandbox.Problem{Code: "dockerfile-pending", Pending: &p,
@@ -75,7 +71,7 @@ func baseImage(ctx context.Context) (sandbox.Problem, bool) {
 		go func() {
 			bctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 			defer cancel()
-			err := container.EnsureImage(bctx, tag, container.BaseDockerfile)
+			err := container.EnsureImage(bctx, tag, container.BaseDockerfile, BuildLog(tag))
 			buildMu.Lock()
 			building, buildErr = false, err
 			buildMu.Unlock()

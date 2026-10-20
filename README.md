@@ -1,4 +1,4 @@
-<img src="_design/mockups/01-ide.png" alt="Oriel">
+<img src="app/testdata/ide-thread.png" alt="Oriel">
 
 # Oriel
 
@@ -10,5 +10,16 @@ Status: **phase 0** (spike and repo). Private for now.
 
 - Design: [`_design/`](_design/README.md), starting with [`_design/PLAN.md`](_design/PLAN.md)
 - Work: [`_tickets/`](_tickets/README.md)
-- Build and test: `make test`, `make build`
+- Build and test: `make test`, `make build`; on macOS `make app` (bin/Oriel.app) and `make dmg`
 - Agents and contributors: [`AGENTS.md`](AGENTS.md)
+
+## Install on macOS
+
+Download `Oriel-<version>-<arch>.dmg` from the release, open it and drag Oriel to Applications. Oriel is signed with
+its own certificate, not Apple's, so run this once before the first launch:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Oriel.app
+```
+
+After that Oriel updates itself ([`_design/distribution.md`](_design/distribution.md)).

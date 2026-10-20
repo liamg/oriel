@@ -174,6 +174,10 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 			x.e.TypeMapped(keymap.Parse(str(a, "keys")), noremap)
 			return nil
 		}},
+		{ID: "editor.back", Title: "Back in the jumplist (CTRL-O), or to the session or page before once it has nothing older",
+			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.jumpOr(ctx, -1) }},
+		{ID: "editor.forward", Title: "Forward in the jumplist (CTRL-I), or to the session or page after once it has nothing newer",
+			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.jumpOr(ctx, 1) }},
 		{ID: "editor.reload", Title: "Reload a buffer from its file", Run: func(_ registry.Ctx, a registry.Args) error {
 			n, _ := a["buffer"].(int)
 			if f, ok := a["buffer"].(float64); ok {
@@ -260,6 +264,8 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>*", Command: "editor.grep-word", Desc: "Grep the word under the cursor"}))
 	for _, k := range []registry.Keymap{
+		{Mode: "n", Keys: "<X1Mouse>", Command: "editor.back", Desc: "Back"},
+		{Mode: "n", Keys: "<X2Mouse>", Command: "editor.forward", Desc: "Forward"},
 		{Mode: "n", Keys: "<C-n>", Command: "editor.multi.next", Desc: "Cursor at the next match"},
 		{Mode: "n", Keys: "<C-Down>", Command: "editor.multi.down", Desc: "Cursor below"},
 		{Mode: "n", Keys: "<C-Up>", Command: "editor.multi.up", Desc: "Cursor above"},
@@ -1072,3 +1078,20 @@ func (x *editorPlugin) openFileBytes(rel string) ([]byte, bool) {
 }
 
 func layoutRef(id string) layout.ViewRef { return layout.ViewRef{ID: id} }
+
+// jumpOr goes dir along the jumplist, as CTRL-O and CTRL-I do, or along the window's history once the jumplist has
+// nowhere to go.
+func (x *editorPlugin) jumpOr(ctx registry.Ctx, dir int) error {
+	if isVim(x.inputFor(x.current())) && x.e.Mode() == "normal" && x.e.CanJump(dir) {
+		keys := "<C-o>"
+		if dir > 0 {
+			keys = "<C-i>"
+		}
+		x.e.TypeMapped([]string{keys}, true)
+		return nil
+	}
+	if dir < 0 {
+		return x.h.Run(ctx, "nav.back", nil)
+	}
+	return x.h.Run(ctx, "nav.forward", nil)
+}

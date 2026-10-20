@@ -2,7 +2,7 @@
 id: PL-20
 title: "[plugins] in settings.toml, install from the file, oriel-lock.toml consent"
 phase: P8
-status: review
+status: done
 area: Platform
 module: catalog
 depends_on: [PL-19, SH-12, SH-9]

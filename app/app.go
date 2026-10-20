@@ -235,6 +235,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		framed := !quiet
 		quiet = false
 		if framed {
+			sh.seeNav(l.reg, l.ui.Now())
 			var derr error
 			l.timed(func() string { return "building a frame" }, func() { derr = l.draw() })
 			if derr != nil {

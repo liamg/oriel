@@ -2,7 +2,7 @@
 id: FW-14
 title: "Loading states: one loader and one widget, used by every screen"
 phase: P3
-status: review
+status: done
 area: Framework
 module: plugin, ui/widget, app, script/api
 depends_on: [FW-6, FW-13, AI-4]

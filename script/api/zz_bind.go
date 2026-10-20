@@ -337,6 +337,17 @@ func (a *APIs) bind(vm *script.VM) {
 		})
 	}
 	{
+		x := Place{a: a}
+		vm.Bind("place", map[string]script.GoFunc{
+			"add": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Add(c.Table(0), c.Where())
+			},
+		})
+	}
+	{
 		x := Process{a: a}
 		vm.Bind("process", map[string]script.GoFunc{
 			"spawn": func(c *script.Args) ([]any, error) {

@@ -255,6 +255,8 @@ type Style struct {
     Fill, Stroke render.Color; Border, Radius float32
     Clip, ScrollX, ScrollY bool                   // scroll offsets persist by id
     Sideways bool                                 // the wheel's up and down scroll it across: a strip of tabs
+    Wrap bool                                     // a row puts what doesn't fit on the next line, Gap apart: a strip of
+                                                  // chips plugins add to; its own content is its widest child
     Float *Float                                  // out of the flow, against another id's rect, a point, or the parent;
                                                   // a Fill one against its parent sized Flex fills it that way (a card's edge)
     Z     int                                     // floats paint after the flow, in Z order, outside their parent's clip
@@ -272,7 +274,8 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
 
 - **Layout** (FW-4) works like Clay's: sizes are fitted up the tree on each axis, then grow and percent space is
   shared down it (weights, honouring min and max), then boxes are placed, then floats. It's deterministic and
-  allocation-light; `ui/testdata/layout/*.golden` pins the behaviour. Text is one line until wrapping lands with
+  allocation-light; `ui/testdata/layout/*.golden` pins the behaviour. A `Wrap` row breaks its children into lines once
+  its width is known (widths are settled before heights), so it grows as tall as its lines. Text is one line until wrapping lands with
   the first widget that needs it.
 - Ids hash the parent's id with a key (the child's index when there's none; duplicates get `#n`). State not built
   in a frame is dropped. `Theme` joins the `Ctx` with FW-7.

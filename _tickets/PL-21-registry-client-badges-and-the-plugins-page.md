@@ -2,7 +2,7 @@
 id: PL-21
 title: "Registry client, badges, trusted tags, yank and revoke, the Plugins page"
 phase: P8
-status: review
+status: done
 area: Platform
 module: catalog, app
 depends_on: [PL-20, PL-6]

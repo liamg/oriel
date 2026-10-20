@@ -112,7 +112,8 @@ func TestRequestsSnapshot(t *testing.T) {
 }
 
 // AI-5, AI-9 (01-ide): the thread open between round.go's lines 46 and 47 with Claude's live state, and the summary
-// at the right: requests, the tasks rail, the session's stats; the plan's usage windows in the title bar.
+// at the right: requests, the tasks rail, the session's stats; the plan's usage windows in the title bar. Its golden
+// is the README's screenshot.
 func TestIDEThreadSnapshot(t *testing.T) {
 	s := requestsScene(t)
 	s.run("editor.open", registry.Args{"path": "internal/pricing/round.go"})
