@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/host/sysload"
@@ -155,4 +156,36 @@ func (l *lockedWriter) Write(p []byte) (int, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.w.Write(p)
+}
+
+// Quitting stops every agent at once, not one after another: each stop takes its sandbox down, so N sessions would
+// take N times as long.
+func TestHandOverStopsTheAgentsTogether(t *testing.T) {
+	r := newRig(t)
+	ids := []core.SessionID{}
+	for _, name := range []string{"one", "two"} {
+		id, a := r.workSession(name)
+		r.eventually(id, "the agent", func(se core.SessionState) bool { return se.Agent.Running && se.Agent.Session == a.ID() })
+		ids = append(ids, id)
+	}
+	hold := make(chan struct{})
+	release := sync.OnceFunc(func() { close(hold) })
+	defer release()
+	r.fake.HoldClose, r.fake.Closing = hold, make(chan *agenttest.FakeSession, 4)
+	done := make(chan struct{})
+	go func() { r.w.HandOver(); close(done) }()
+	for range ids {
+		select {
+		case <-r.fake.Closing:
+		case <-time.After(5 * time.Second):
+			t.Fatal("the agents stop one after another")
+		}
+	}
+	release()
+	<-done
+	for _, id := range ids {
+		if se := r.session(id); se.Agent.Running || se.Agent.StoppedBy != core.StoppedByHandOver {
+			t.Errorf("%s handed over: %+v", id, se.Agent)
+		}
+	}
 }

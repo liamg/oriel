@@ -57,6 +57,9 @@ type Session struct {
 	Env func() []Rule
 	// Approver asks the user; nil refuses what no rule covers.
 	Approver Approver
+	// Open allows every destination, private addresses too, asking nobody: filtering is off, and the session only
+	// carries the sandbox's connections out through the host. The host machine itself stays limited to Env.
+	Open bool
 	// Always records an allow for good, on every machine when everywhere.
 	Always func(r Rule, everywhere bool) error
 	// Changed is told when the session's rules change.
@@ -223,6 +226,11 @@ func (s *Session) Allow(ctx context.Context, host string, port int) bool {
 		_, ok := Match(s.env(), host, port)
 		s.note(key, map[bool]string{true: "rule: the sandbox's environment", false: "the host machine, at a port the sandbox was not given"}[ok])
 		return ok
+	}
+	if s.Open {
+		s.note(key, "filtering is off")
+		s.grantDial(key, true)
+		return true
 	}
 	if rule, ok := Decide(s.Levels(), host, port); ok {
 		s.note(key, "rule: "+rule.Source)

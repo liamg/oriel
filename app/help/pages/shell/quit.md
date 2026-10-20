@@ -24,6 +24,9 @@ With no agent mid-turn and no scheduled job, Oriel quits straight away. Otherwis
 **Cancel** (`Esc`) keeps Oriel open, with its agents as they were. Asking to quit again while the dialog waits quits
 now.
 
+Then Oriel stops its agents, all at once. Each takes its sandbox down, which can take a few seconds, so while they
+stop the window says **Shutting down**, listing each agent as stopping or stopped. Nothing else takes keys meanwhile.
+
 ## After a crash {#crash}
 
 If Oriel stops without quitting (it crashed, or the machine went down), its agents stop with it. When it opens

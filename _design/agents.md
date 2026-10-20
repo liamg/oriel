@@ -544,7 +544,9 @@ sequenceDiagram
   container's mounts, and where the agent finds host paths that aren't at the same path inside), and build its image
   again (`sandbox.Rebuilder`). `Host.Workspace`, `Host.RebuildSandbox` and `Host.RestartSandbox` are those for a
   session, and the Workspace page (ui.md 15b) shows them.
-  - `docker` (`sandbox/runner`): a container per run, binds as mounts, the egress sidecar on an internal network,
+  - `docker` (`sandbox/runner`): a container per run, binds as mounts, the egress sidecar on an internal network
+    (always, filtering on or off: the host dials every connection, so its VPN, tailnet and private DNS reach the
+    sandbox; with filtering off, `egress.Session.Open` allows them all),
     the project's image and toolchains (installed by `mise` in the base image, never a project's, into a directory
     every sandbox mounts read-only), memory and process caps. Each image build writes its output to
     `~/.oriel/sandbox/builds/<tag>.log` (`runner.BuildLog`); a rebuild skips the cache, so downloads are fetched

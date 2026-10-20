@@ -138,6 +138,7 @@ func (s *Sandboxes) Open(ctx context.Context, se core.SessionState, approve Appr
 			return egress.EnvRules(sandbox.EndpointEnv(os.Environ(), cfg.Env, sandbox.ClaudeSettings()))
 		},
 		Approver: b,
+		Open:     cfg.NoEgressProxy,
 		Always:   alwaysEgress,
 		Failed:   b.netFailed,
 	}

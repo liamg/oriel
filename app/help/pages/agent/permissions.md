@@ -34,7 +34,7 @@ you. Type a host (`api.example.com`, `*.example.com`, `host:443`) to allow or bl
 own rule has **Remove**. From Lua or a keymap, `permissions.net` takes `private = true` to let an allow reach LAN and
 tailnet addresses.
 
-When the egress proxy is off (`sandbox.egress_proxy`), the sandbox has plain internet and none of these rules apply.
+When network filtering is off (`sandbox.egress_proxy`, or the session's network set to open), every connection is allowed and none of these rules apply. A docker sandbox's connections are still made from your machine, so what only it reaches (a VPN, a tailnet, its private DNS) stays reachable.
 
 ## Connections {#connections}
 

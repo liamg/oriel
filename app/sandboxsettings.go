@@ -67,7 +67,7 @@ func sandboxOptions(o registry.Options) []registry.OptionSpec {
 			}),
 			Help: `Extra MCP servers for the gateway, by name: an https URL, or a command line ("npx -y @foo/mcp").`},
 		{Name: "sandbox.egress_proxy", Type: registry.Bool, Default: true, Scopes: user,
-			Help: "Filter a container's network through the egress proxy; off gives it plain internet."},
+			Help: "Filter a container's network through the egress proxy; off allows every connection."},
 		{Name: "sandbox.memory", Type: registry.String, Default: "", Scopes: user,
 			Validate: func(v any) error {
 				if s := v.(string); s != "" && s != "none" && !memorySize.MatchString(s) {

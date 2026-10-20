@@ -25,6 +25,9 @@ type Fake struct {
 	Started chan *FakeSession // each session as it starts
 	Launch  bool              // a session starts a process through the spec's Exec first, as a real provider's does
 	Hold    chan struct{}     // Detect waits for it to close: a slow probe
+	// HoldClose is what a session's Close waits for: an agent slow to stop. Closing hears of each Close as it starts.
+	HoldClose chan struct{}
+	Closing   chan *FakeSession
 
 	mu        sync.Mutex
 	resumed   []string
@@ -297,6 +300,12 @@ func (t *FakeTerminal) Shown() string {
 }
 
 func (s *FakeSession) Close() error {
+	if c := s.fake.Closing; c != nil {
+		c <- s
+	}
+	if h := s.fake.HoldClose; h != nil {
+		<-h
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.closed {

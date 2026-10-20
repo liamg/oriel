@@ -164,9 +164,15 @@ func (w *Host) HandOver() {
 		live = append(live, h)
 	}
 	w.mu.Unlock()
+	// Together: each stop takes its sandbox down, which takes a while.
+	var wg sync.WaitGroup
 	for _, h := range live {
-		h.stop("Oriel quit", core.StoppedByHandOver)
+		wg.Go(func() {
+			defer w.recover("HandOver", nil)
+			h.stop("Oriel quit", core.StoppedByHandOver)
+		})
 	}
+	wg.Wait()
 	w.Close()
 }
 

@@ -190,7 +190,10 @@ type Sessions interface {
   sessions and counting down; **Quit now** (⌘↵, `quit.now`, in the `quit` key mode) doesn't wait. A turn still
   going at 60s is cut short, and its agent comes back idle. The dialog (**Quit now**, **Cancel**/Escape) also lists
   the scheduled jobs, which don't run while Oriel is closed; with only those, it waits for **Quit**. Asking to quit
-  again while it waits quits now. Cancel leaves everything running. An update's restart goes through the same quit.
+  again while it waits quits now. Cancel leaves everything running. An update's restart goes through the same quit. Then
+  `HandOver` stops the live agents together (each stop takes its sandbox down), and while it does the dialog is
+  **Shutting down**: a spinner and each agent that was running, "stopping" or "stopped". The dialog's `quit` key mode
+  is exclusive (`registry.ExclusiveKeys`), so no other shortcut opens or runs over it.
 - **A crash resumes too.** If Oriel dies with agents running, they die with it. At the next start, sessions whose
   agents were running are marked `StoppedByCrash` and resumed, as hand-overs are.
 - **Where things are**: workspaces in `~/.oriel/workspaces/<id>` with `.oriel-workspace.json` (crit's manifest,
