@@ -153,6 +153,32 @@ func TestFloatFillsItsParent(t *testing.T) {
 	}
 }
 
+// A scrolling box's grow children take what its view has left past the content, so a spacer pushes what follows to
+// the foot; with more than fits, each keeps its content and the box scrolls.
+func TestScrollingBoxGrowsItsChildren(t *testing.T) {
+	for _, tc := range []struct {
+		rows         int
+		gap, footTop float32
+	}{{2, 40, 90}, {5, 0, 125}} {
+		u := newUI()
+		var gap, foot ID
+		u.Frame(new(render.List).Record(1), render.Point{X: 400, Y: 300}, func(c *Ctx) {
+			c.Column("pane", Style{W: Px(100), H: Px(100), ScrollY: true}, func(c *Ctx) {
+				for i := range tc.rows {
+					c.Box(i, Style{W: Flex(1), H: Px(25)}, nil)
+				}
+				gap = c.Box("gap", Style{H: Flex(1)}, nil)
+				foot = c.Box("foot", Style{W: Flex(1), H: Px(10)}, nil)
+			})
+		})
+		g, _ := u.Rect(gap)
+		f, _ := u.Rect(foot)
+		if g.Dy() != tc.gap || f.Min.Y != tc.footTop {
+			t.Errorf("%d rows: gap %v high, foot at %v; want %v and %v", tc.rows, g.Dy(), f.Min.Y, tc.gap, tc.footTop)
+		}
+	}
+}
+
 // theming.md, "Sizes": a box's Scale draws its subtree that much bigger, sizes, padding, gaps, radii and text
 // alike, so a part with its own text size holds it; it multiplies a scaled parent's.
 func TestScaledSubtree(t *testing.T) {

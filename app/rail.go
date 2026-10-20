@@ -415,13 +415,13 @@ func (r *rail) rows(w here, wide bool) []sideRow {
 		if !e.Is("") {
 			continue
 		}
-		if e.Bottom && !bottom && !wide {
+		if e.Bottom && !bottom {
 			rows = append(rows, sideRow{kind: rowGap})
 		}
 		bottom = bottom || e.Bottom
 		rows = append(rows, sideRow{kind: rowSession, entry: e})
 	}
-	// Every session's pages, below a second divider; in the narrow form, pinned to the foot.
+	// Every session's pages, pinned to the foot; in the wide form, below a second divider.
 	var global []sideRow
 	for _, e := range registry.GlobalEntries(r.h) {
 		if e.Is("") {
@@ -429,11 +429,13 @@ func (r *rail) rows(w here, wide bool) []sideRow {
 		}
 	}
 	if len(global) > 0 {
-		sep := rowDivider
-		if !wide {
-			sep = rowGap
+		if !bottom {
+			rows = append(rows, sideRow{kind: rowGap})
 		}
-		rows = append(append(rows, sideRow{kind: sep}), global...)
+		if wide {
+			rows = append(rows, sideRow{kind: rowDivider})
+		}
+		rows = append(rows, global...)
 	}
 	return rows
 }
@@ -654,6 +656,8 @@ func (r *rail) wideRow(c *ui.Ctx, w here, row sideRow) {
 		c.Box("div", ui.Style{W: ui.Flex(1), H: ui.Px(11), Pad: ui.Insets{L: 10, R: 10, T: 5, B: 5}}, func(c *ui.Ctx) {
 			c.Box("line", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tSideDivider)}, nil)
 		})
+	case rowGap:
+		c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
 	}
 }
 

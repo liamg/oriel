@@ -205,6 +205,25 @@ func TestSidebarSnapshots(t *testing.T) {
 	})
 }
 
+// The pages every session shares sit at the sidebar's foot in both forms, apart from the session's own entries.
+func TestSidebarGlobalEntriesAtFoot(t *testing.T) {
+	size := render.Point{X: 760, Y: 900}
+	for _, form := range []string{"wide", "narrow"} {
+		t.Run(form, func(t *testing.T) {
+			s := sessionScene(t, core.KindWork, sidebarFixture(t)[:1], size)
+			s.run("sidebar.form", registry.Args{"form": form})
+			s.frame()
+			ship, settings := s.access("Ship").Bounds, s.access("Settings").Bounds
+			if foot := settings.Max.Y; foot < size.Y-60 {
+				t.Errorf("Settings ends at %v in a %v-high window, not at the foot", foot, size.Y)
+			}
+			if gap := s.access("Repos").Bounds.Min.Y - ship.Max.Y; gap < 200 {
+				t.Errorf("the global entries start %v below Ship; want them apart", gap)
+			}
+		})
+	}
+}
+
 // SH-17: a header's click or ⌃n opens its project and folds the other; switching back reopens the panel it had, and
 // j/k/⏎ in the sidebar do the same.
 func TestSidebarSwitchesProjects(t *testing.T) {

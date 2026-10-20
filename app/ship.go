@@ -119,6 +119,8 @@ type shipReport struct {
 	err     string
 	doing   map[string]string // project → the step running: "Pushing"
 	failed  map[string]string // project → why its last step failed
+	started int               // reads started; a read older than the one last kept is dropped
+	kept    int
 }
 
 // commitForm is a project's commit box.
@@ -144,6 +146,7 @@ type prForm struct {
 	removed     []string // owners taken off
 	adding      string
 	veto        string
+	editing     bool // a raised PR's form is up, in place of its overview
 }
 
 // draftSaveAfter is how long typing in a draft box rests before what's typed is kept in the session.
@@ -354,52 +357,79 @@ func (x *shipPlugin) ship(id core.SessionID, project string) (shipRead, bool) {
 // refresh reads a session's projects, off the loop; fresh fetches and asks their code hosts again.
 func (x *shipPlugin) refresh(id core.SessionID, fresh bool) {
 	x.mu.Lock()
+	if r := x.reports[id]; r != nil && r.loading && !fresh {
+		x.mu.Unlock()
+		return
+	}
+	r, n := x.reading(id)
+	x.mu.Unlock()
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		x.readAs(id, r, n, fresh)
+	}()
+}
+
+// read reads a session's projects, on this goroutine.
+func (x *shipPlugin) read(id core.SessionID, fresh bool) {
+	x.mu.Lock()
+	r, n := x.reading(id)
+	x.mu.Unlock()
+	x.readAs(id, r, n, fresh)
+}
+
+// reading marks a session's read started, and numbers it; x.mu is held.
+func (x *shipPlugin) reading(id core.SessionID) (*shipReport, int) {
 	r := x.reports[id]
 	if r == nil {
 		r = &shipReport{doing: map[string]string{}, failed: map[string]string{}}
 		x.reports[id] = r
 	}
-	if r.loading && !fresh {
+	r.loading = true
+	r.started++
+	return r, r.started
+}
+
+// readAs is read n into r: what it read is kept unless a read started after it was kept first.
+func (x *shipPlugin) readAs(id core.SessionID, r *shipReport, n int, fresh bool) {
+	var ships []shipRead
+	c, err := x.client(id)
+	if err == nil {
+		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
+		var read []host.Ship
+		if read, err = c.ShipRead(ctx, host.ShipReq{Session: id, Fresh: fresh}); err == nil {
+			ships = x.withPRs(ctx, id, read, fresh)
+			x.mirrorReviews(ctx, id, ships, fresh)
+		}
+		cancel()
+	}
+	x.mu.Lock()
+	if n == r.started {
+		r.loading = false
+	}
+	if n < r.kept {
 		x.mu.Unlock()
 		return
 	}
-	r.loading = true
+	r.kept = n
+	if err != nil {
+		r.err = err.Error()
+	} else {
+		r.ships, r.err, r.read = ships, "", time.Now()
+	}
+	seen, merged := x.newPRs(id, ships)
 	x.mu.Unlock()
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
-		var ships []shipRead
-		c, err := x.client(id)
-		if err == nil {
-			ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-			var read []host.Ship
-			if read, err = c.ShipRead(ctx, host.ShipReq{Session: id, Fresh: fresh}); err == nil {
-				ships = x.withPRs(ctx, id, read, fresh)
-				x.mirrorReviews(ctx, id, ships, fresh)
+	if len(seen)+len(merged) > 0 {
+		x.h.Do(func() {
+			for _, ev := range seen {
+				x.h.Fire(context.Background(), "PrSeen", ev.URL, &ev)
 			}
-			cancel()
-		}
-		x.mu.Lock()
-		r.loading = false
-		if err != nil {
-			r.err = err.Error()
-		} else {
-			r.ships, r.err, r.read = ships, "", time.Now()
-		}
-		seen, merged := x.newPRs(id, ships)
-		x.mu.Unlock()
-		if len(seen)+len(merged) > 0 {
-			x.h.Do(func() {
-				for _, ev := range seen {
-					x.h.Fire(context.Background(), "PrSeen", ev.URL, &ev)
-				}
-				for _, ev := range merged {
-					x.h.Fire(context.Background(), "PrMerged", ev.URL, &ev)
-				}
-			})
-		}
-		x.h.Redraw()
-	}()
+			for _, ev := range merged {
+				x.h.Fire(context.Background(), "PrMerged", ev.URL, &ev)
+			}
+		})
+	}
+	x.h.Redraw()
 }
 
 // newPRs are the PRs in ships not seen before, as PrSeen events, and those not seen merged before, as PrMerged
@@ -439,9 +469,10 @@ func (x *shipPlugin) newPRs(id core.SessionID, ships []shipRead) (seen []PrSeen,
 // wait is until every read and step started has finished.
 func (x *shipPlugin) wait() { x.busy.Wait() }
 
-// step runs one step on a project off the loop, showing doing while it runs; a failure is kept for the project and
-// sent as a notice. The session is read again after.
-func (x *shipPlugin) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c *host.Host) error) error {
+// step runs one step on a project off the loop, showing doing while it runs and until the project's been read after
+// it, so its panel never shows the state from before; then done, if it succeeded, on the loop. A failure is kept for
+// the project and sent as a notice. The session is read again after, fetched.
+func (x *shipPlugin) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c *host.Host) error, done ...func()) error {
 	c, err := x.client(id)
 	if err != nil {
 		return err
@@ -465,15 +496,23 @@ func (x *shipPlugin) step(id core.SessionID, project, doing string, fn func(ctx 
 		ctx, cancel := context.WithTimeout(x.ctx, 5*time.Minute)
 		err := fn(ctx, c)
 		cancel()
-		x.mu.Lock()
-		delete(r.doing, project)
-		if err != nil {
-			r.failed[project] = err.Error()
-		}
-		x.mu.Unlock()
-		if err != nil {
-			x.h.Notify(core.Notice{ID: "ship." + project, Severity: core.SevError, Key: true, Title: project, Text: err.Error()})
-		}
+		x.read(id, false)
+		x.h.Do(func() {
+			if err == nil {
+				for _, d := range done {
+					d()
+				}
+			}
+			x.mu.Lock()
+			delete(r.doing, project)
+			if err != nil {
+				r.failed[project] = err.Error()
+			}
+			x.mu.Unlock()
+			if err != nil {
+				x.h.Notify(core.Notice{ID: "ship." + project, Severity: core.SevError, Key: true, Title: project, Text: err.Error()})
+			}
+		})
 		x.refresh(id, true)
 	}()
 	return nil
@@ -808,6 +847,8 @@ func (x *shipPlugin) commands() {
 					return c.ShipRename(ctx, host.RenameReq{Session: se.ID, Project: p, Name: name})
 				})
 			})},
+		{ID: "ship.merge-default", Title: "Merge a project's branch into its repo's default branch here, without a PR and not pushed, after asking: {project}; {confirm} merges",
+			Available: inFront, Run: run(x.mergeDefault)},
 		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
@@ -815,14 +856,15 @@ func (x *shipPlugin) commands() {
 					return x.markReady(ctx, se, s)
 				})
 			})},
-		{ID: "ship.pr.open", Title: "Open a project's Raise PR tab, or Edit PR once it's raised: {project}", Available: inFront,
-			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				s, _ := x.ship(se.ID, p)
-				title := "Raise " + s.words().Short + " · " + p
-				if s.PR.Open() {
-					title = "Edit " + s.words().Short + " · " + p
+		{ID: "ship.pr.open", Title: "Open a project's PR tab: Raise PR, or the raised PR's overview; {edit} true for its form, false back to the overview: {project}",
+			Available: inFront,
+			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
+				if _, ok := a["edit"]; ok {
+					if s, read := x.ship(se.ID, p); read && s.PR != nil {
+						x.editPR(se.ID, p, a.Bool("edit"))
+					}
 				}
-				return x.h.Run(ctx, "view.open", registry.Args{"id": PRView, "instance": p, "place": "tab", "title": title})
+				return x.h.Run(ctx, "view.open", registry.Args{"id": PRView, "instance": p, "place": "tab"})
 			})},
 		{ID: "ship.fix-ci", Title: "Write a request asking the agent to fix a project's failing CI: {project}", Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
@@ -882,6 +924,16 @@ func (x *shipPlugin) commands() {
 					return fmt.Errorf("%s has no PR yet", p)
 				}
 				return x.sh.desktop.OpenURL(s.PR.URL)
+			})},
+		{ID: "ship.copy-link", Title: "Copy the link to a project's PR to the clipboard: {project}", Available: inFront,
+			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
+				s, _ := x.ship(se.ID, p)
+				if s.PR == nil || s.PR.URL == "" {
+					return fmt.Errorf("%s has no PR yet", p)
+				}
+				x.sh.desktop.SetClipboard(s.PR.URL)
+				x.h.Notify(core.Notice{ID: "ship.copied", Severity: core.SevInfo, Key: true, Title: p, Text: "Copied " + s.PR.URL})
+				return nil
 			})},
 	} {
 		x.add(x.h.Command(c))
@@ -946,12 +998,44 @@ func (x *shipPlugin) commit(ctx registry.Ctx, se core.SessionState, p string, a 
 		if err != nil {
 			return err
 		}
-		x.h.Do(func() {
-			*f = commitForm{skip: map[string]bool{}}
-			if len(held) > 0 && x.sh.git != nil {
-				x.sh.git.recordOverrides(se, p, true, hash, ev.Message, held)
-			}
-		})
+		if len(held) > 0 && x.sh.git != nil {
+			x.h.Do(func() { x.sh.git.recordOverrides(se, p, true, hash, ev.Message, held) })
+		}
+		return nil
+	}, func() { *f = commitForm{skip: map[string]bool{}} })
+}
+
+// mergeStep is ship.merge-default's step.
+const mergeStep = "Merging"
+
+// mergeDefault asks first, naming both branches; confirmed, it merges the project's branch into the default branch.
+func (x *shipPlugin) mergeDefault(_ registry.Ctx, se core.SessionState, p string, a registry.Args) error {
+	s, _ := x.ship(se.ID, p)
+	if s.Default == "" {
+		return fmt.Errorf("%s has no local default branch to merge into", p)
+	}
+	if !a.Bool("confirm") {
+		x.h.Notify(core.Notice{ID: "ship.merge-default", Severity: core.SevQuestion, Session: se.ID, Title: "Merge into " + s.Default + "?",
+			Text: fmt.Sprintf("Merge %s's commits into %s in %s, here, without a PR? %s isn't pushed; uncommitted changes stay on %s.",
+				s.Branch, s.Default, p, s.Default, s.Branch),
+			Actions: []core.Action{
+				{Title: "Merge into " + s.Default, Command: "ship.merge-default", Args: map[string]any{"id": string(se.ID), "project": p, "confirm": true}},
+				{Title: "Cancel", Command: "notice.dismiss", Args: map[string]any{"id": "ship.merge-default"}},
+			}})
+		return nil
+	}
+	x.h.Dismiss("ship.merge-default")
+	return x.step(se.ID, p, mergeStep, func(ctx context.Context, c *host.Host) error {
+		m, err := c.ShipMergeDefault(ctx, host.ShipRef{Session: se.ID, Project: p})
+		if err != nil {
+			return err
+		}
+		how := "a merge commit"
+		if m.FastForward {
+			how = "a fast-forward"
+		}
+		x.h.Notify(core.Notice{ID: "ship.merged-default", Severity: core.SevInfo, Session: se.ID, Title: p,
+			Text: fmt.Sprintf("Merged %s into %s (%s), here: push %s when you're ready.", m.From, m.Into, how, m.Into)})
 		return nil
 	})
 }
@@ -1079,7 +1163,11 @@ func (x *shipPlugin) raise(ctx registry.Ctx, se core.SessionState, p string, a r
 				return err
 			}
 		}
-		return x.raisePR(cx, se, s, req)
+		if err := x.raisePR(cx, se, s, req); err != nil {
+			return err
+		}
+		x.h.Do(func() { x.editPR(se.ID, p, false) })
+		return nil
 	})
 }
 

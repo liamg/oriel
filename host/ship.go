@@ -28,6 +28,7 @@ type Ship struct {
 	Project   string       `json:"project"`
 	Branch    string       `json:"branch,omitempty"`
 	Base      string       `json:"base,omitempty"`     // the branch it merges into: main
+	Default   string       `json:"default,omitempty"`  // the repo's default branch, when it has it locally: main
 	Remote    bool         `json:"remote,omitempty"`   // it has an origin to push to
 	Origin    string       `json:"origin,omitempty"`   // origin's URL
 	ReadOnly  bool         `json:"readOnly,omitempty"` // a pinned or read-only worktree, with nothing to ship
@@ -37,7 +38,8 @@ type Ship struct {
 	Commits   int          `json:"commits,omitempty"` // on the branch since its base
 	Unpushed  []ShipCommit `json:"unpushed,omitempty"`
 	Pushed    bool         `json:"pushed,omitempty"`
-	Synced    time.Time    `json:"synced,omitzero"` // when it was last rebased onto its base from here
+	Replaced  int          `json:"replaced,omitempty"` // commits on origin's branch a rebase rewrote: the next push replaces them
+	Synced    time.Time    `json:"synced,omitzero"`    // when it was last rebased onto its base from here
 	// CommitDraft is the commit message drafted for it (Body), PRDraft the pull request's.
 	CommitDraft  Draft    `json:"commitDraft,omitzero"`
 	PRDraft      Draft    `json:"prDraft,omitzero"`
@@ -236,6 +238,7 @@ func (w *Host) shipProject(ctx context.Context, se core.SessionState, p core.Pro
 	if s.ReadOnly {
 		return s
 	}
+	s.Default = localDefault(ctx, repo)
 	s.Template, s.TemplateFile = gh.Template(p.Dir)
 	if fresh && s.Remote {
 		_ = repo.Fetch(ctx) // offline, it's behind by what it last saw
@@ -254,7 +257,7 @@ func (w *Host) shipProject(ctx context.Context, se core.SessionState, p core.Pro
 	for _, fs := range f.Uncommitted {
 		s.Files = append(s.Files, ShipFile{Path: fs.Path, Code: string(fs.Code), Add: fs.Add, Del: fs.Del, Binary: fs.Binary})
 	}
-	s.Behind, s.Conflicts, s.Commits, s.Pushed = f.Behind, f.Conflicts, len(f.Commits), f.Pushed
+	s.Behind, s.Conflicts, s.Commits, s.Pushed, s.Replaced = f.Behind, f.Conflicts, len(f.Commits), f.Pushed, f.Replaced
 	for _, c := range f.Unpushed {
 		s.Unpushed = append(s.Unpushed, ShipCommit{Hash: c.Hash, Subject: c.Subject, Author: c.Author})
 	}
@@ -344,6 +347,43 @@ func (w *Host) ShipSync(ctx context.Context, r ShipRef) (err error) {
 	st.synced[shipKey(r.Session, p.Name)] = w.opts.Now()
 	st.mu.Unlock()
 	return nil
+}
+
+// ShipMergeDefault merges a project's branch into the repo's default branch, here and not pushed (gitx.MergeInto):
+// the session's own branch only, and its committed work only.
+func (w *Host) ShipMergeDefault(ctx context.Context, r ShipRef) (m gitx.Merge, err error) {
+	defer w.recover("ShipMergeDefault", &err)
+	_, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
+	if err != nil {
+		return m, err
+	}
+	branch, err := ownBranch(p)
+	if err != nil {
+		return m, err
+	}
+	into := localDefault(ctx, repo)
+	switch into {
+	case "":
+		return m, fmt.Errorf("%s has no local default branch to merge into", p.Name)
+	case branch:
+		return m, fmt.Errorf("%s is on its default branch %s already", p.Name, into)
+	}
+	err = w.keyed(ctx, r.Session, "git merge "+branch+" into "+into, p.Name, func(ctx context.Context) (err error) {
+		m, err = repo.MergeInto(ctx, into, branch, func(dir string) (gitx.Repo, error) {
+			env, err := sandbox.GitEnv(dir)
+			return gitx.Repo{Dir: dir, Env: env}, err
+		})
+		return err
+	})
+	return m, err
+}
+
+// localDefault is the repo's default branch when it has it as a local branch, else "".
+func localDefault(ctx context.Context, repo gitx.Repo) string {
+	if d := strings.TrimPrefix(repo.DefaultBranch(ctx), "origin/"); d != "HEAD" && repo.HasBranch(ctx, d) {
+		return d
+	}
+	return ""
 }
 
 // RenameReq renames a project's branch.

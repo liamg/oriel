@@ -91,6 +91,9 @@ func (x *shipPlugin) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 	if s.Behind > 0 {
 		parts = append(parts, fmt.Sprintf("%d behind", s.Behind))
 	}
+	if s.Replaced > 0 {
+		parts = append(parts, fmt.Sprintf("%d rewritten", s.Replaced))
+	}
 	if len(s.Conflicts) > 0 {
 		parts = append(parts, "conflicts in "+strings.Join(s.Conflicts, ", "))
 	}
@@ -111,7 +114,7 @@ func (x *shipPlugin) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 		}
 	})
 	c.Row("steps", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-		if widget.Button(c, "push", "Push", x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push",
+		if widget.Button(c, "push", pushLabel(s), x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push",
 			Disabled: !s.Remote || s.Branch == "" || s.Pushed && len(s.Unpushed) == 0, Primary: len(s.Unpushed) > 0 && s.Behind == 0})) {
 			x.run("ship.push", registry.Args{"project": s.Project})
 		}
@@ -119,8 +122,23 @@ func (x *shipPlugin) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 			Disabled: s.Branch == ""})) {
 			x.run("ship.rename", registry.Args{"project": s.Project})
 		}
+		c.Row("gap", ui.Style{W: ui.Flex(1)}, nil)
+		x.gitMore(c, se, s)
 	})
+	if x.doing(se.ID, s.Project) == mergeStep {
+		widget.Busy(c, "merging", widget.LoadState{Phase: widget.Pending}, widget.BusyOpts{Label: "Merging into " + s.Default, Help: "git/ship#merge-default"})
+	}
 	if f := x.failed(se.ID, s.Project); f != "" && x.doing(se.ID, s.Project) == "" {
 		widget.Wrap(c, "failed", f, 280, monoFont(10.5, th.C(theme.Error)))
+	}
+}
+
+// gitMore is the branch's less used steps, in a menu: merging into the default branch without a PR.
+func (x *shipPlugin) gitMore(c *ui.Ctx, se core.SessionState, s shipRead) {
+	into := cmpOr(s.Default, "the default branch")
+	off := s.Default == "" || s.Branch == "" || s.Branch == s.Default || x.doing(se.ID, s.Project) != ""
+	items := []widget.MenuItem{{Label: "Merge into " + into + "…", Detail: "no PR", Disabled: off, Help: "git/ship#merge-default"}}
+	if widget.MenuButton(c, "more", items, widget.MenuButtonOpts{Label: "More git actions", Glyph: "⋯", Help: "git/ship#merge-default"}) == 0 {
+		x.run("ship.merge-default", registry.Args{"project": s.Project})
 	}
 }

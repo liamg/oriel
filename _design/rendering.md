@@ -76,7 +76,8 @@ flowchart TB
     what holds a control (anything clickable or focusable) or is marked `Keep` (a status chip); `Fixed` sizes keep
     theirs. A column clamps a child wider than itself. A box that scrolls sideways keeps its content whole: a tab
     strip or a table wider than its panel scrolls rather than cuts. A stretchy child (`Flex`) gets at least its
-    content's width while there's room for every one's.
+    content's width while there's room for every one's. In a box that scrolls along its axis, a stretchy child keeps
+    its content and shares what the view has left past it, so a spacer pins what follows to the foot until it scrolls.
   - `UI.Overflowing` lists any text drawn past a box it's in; every app snapshot test fails on one.
 - **Theme** is data (TOML), with layered tokens, overrides only and a live editor. See `theming.md`.
 - **Motion**: a spring-based animator per id. Used sparingly: status pulses,

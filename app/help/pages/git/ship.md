@@ -1,6 +1,6 @@
 ---
 id: git/ship
-covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename, ship.merge, ship.browse, ship.merge_method, code.setup, code.hosts, code.api]
+covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename, ship.merge, ship.merge-default, ship.browse, ship.copy-link, ship.merge_method, code.setup, code.hosts, code.api]
 related: [shell/rail, agent/requests, files/explorer]
 ---
 
@@ -35,7 +35,8 @@ new one there. A branch whose PR is open isn't renamed: the PR would stay on the
 
 The uncommitted files, each with its lines added and removed. Untick a file to leave it out. The message starts as the
 agent's draft; type to make it yours. **Commit** commits with your git identity; **Commit all** on the page commits
-each project with its message.
+each project with its message. While it commits the button says **Committing…** and the box can't be changed, until
+the project's been read again and shows the commit; one git refuses says why, with the message kept.
 
 ## Drafts {#drafts}
 
@@ -64,19 +65,29 @@ and says where.
 The commits origin hasn't got. **Push** pushes the session's branch, and only it. In an opened directory that's the
 branch it's on now.
 
+After a rebase, the branch has rewritten commits origin already has ("n rewritten"), and Push reads **Force push**.
+It replaces origin's branch with a lease: only while origin still has what you last fetched and rebased from. If
+someone else pushed to the branch since, the push is refused and nothing of theirs is lost: rebase again, then push.
+
 ## Raise PR {#raise}
 
 **Raise PR…** opens a main tab: the title, the body (the agent's draft, else the repo's template) with a preview,
 reviewers (CODEOWNERS of the change first; add or take off any), and how it links to the session's other PRs. **Push +
 raise PR** pushes and raises it, **Raise as draft** raises it as a draft, **Save draft** keeps what's written. Once
-it's raised the tab is **Edit PR** and **Update PR** saves it. **Push + raise all** raises every project's in merge
-order, and each PR's description lists the others.
+it's raised the tab shows the PR itself (below); **Edit PR** there brings the form back, **Update PR** saves it and
+**Cancel** leaves it as it was. **Push + raise all** raises every project's in merge order, and each PR's description
+lists the others.
 
 ## The PR {#pr}
 
 The PR's number, title and state, its reviewers, **Ready for review** for a draft, **Merge…**, and **Open on GitHub ↗**
 (or the project's code host). Plugins add buttons beside them (`oriel.ship.action`), such as one that asks your team's
 chat to take a look.
+
+Once a project's PR is raised, its tab (**Open PR** on the Pull request panel) is the PR as it stands: its title, its
+link (click it to open the PR in the browser) with **Copy link** to share it, the checks as they run, the description
+as it reads on the code host, and the review: each reviewer's thread and the conversation, with **Open** to take one
+up in Requests.
 
 ## Merge {#merge}
 
@@ -88,6 +99,14 @@ Continue is off. With nothing in the way it's **Merge**. The method is `ship.mer
 the repo's own default, else squash, and can be changed for this merge; **Delete the branch** deletes it on the host
 after. It merges the commit the dialog showed: a push since makes the host refuse it. Plugins add reasons with the
 `PrMerge` hook. The agent can't merge.
+
+## Merge into main, without a PR {#merge-default}
+
+**⋯ → Merge into main…** on the Git panel (`ship.merge-default`) merges the branch's commits into the repo's default
+branch (origin's, as a local branch: `main` here) on this machine, after asking. It's a fast-forward where it can be,
+else a merge commit; one that would conflict is refused, naming the files, and nothing changes. Where `main` is checked
+out (your own checkout, say), that checkout moves to it, and only when it has no uncommitted changes. Nothing is
+pushed: push `main` yourself when you're ready. Uncommitted work on the branch stays where it is.
 
 ## Code hosts {#hosts}
 

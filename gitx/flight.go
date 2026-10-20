@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -27,6 +26,7 @@ type Flight struct {
 	Commits     []Commit    // HEAD's since Base, newest first
 	Unpushed    []Commit    // of those, what origin's branch lacks: all of them before the first push
 	Pushed      bool        // origin has the branch
+	Replaced    int         // commits on origin's branch HEAD lacks: a rebase since the push rewrote them
 }
 
 // ErrConflict is a rebase that stopped on conflicts; it was undone.
@@ -49,7 +49,7 @@ func (r Repo) FlightBase(ctx context.Context, base string) string {
 }
 
 func (r Repo) verify(ctx context.Context, ref string) bool {
-	_, err := r.git(ctx, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+	_, err := r.rev(ctx, ref)
 	return err == nil
 }
 
@@ -94,6 +94,9 @@ func (r Repo) Flight(ctx context.Context, base string) (*Flight, error) {
 	if f.Branch != "HEAD" && r.verify(ctx, "refs/remotes/origin/"+f.Branch) {
 		f.Pushed = true
 		f.Unpushed, _ = r.log(ctx, "origin/"+f.Branch+"..HEAD")
+		if out, err := r.git(ctx, "rev-list", "--count", "HEAD..origin/"+f.Branch); err == nil {
+			f.Replaced, _ = strconv.Atoi(strings.TrimSpace(string(out)))
+		}
 	}
 	return f, nil
 }
@@ -118,18 +121,8 @@ func (r Repo) log(ctx context.Context, rng string) ([]Commit, error) {
 
 // conflicts are the files merging onto would conflict in, read without touching the work tree (git merge-tree).
 func (r Repo) conflicts(ctx context.Context, onto string) []string {
-	cmd := exec.CommandContext(ctx, "git", "-C", r.Dir, "merge-tree", "--write-tree", "--name-only", "--no-messages", "HEAD", onto)
-	cmd.Env = append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...)
-	out, err := cmd.Output()
-	var exit *exec.ExitError
-	if err == nil || !errors.As(err, &exit) || exit.ExitCode() != 1 {
-		return nil
-	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(lines) < 2 {
-		return nil
-	}
-	return slices.Compact(lines[1:])
+	_, files, _ := r.mergeTree(ctx, "HEAD", onto)
+	return files
 }
 
 // Commit commits paths (every change when there are none) with message, as the user's git identity has it.
@@ -153,12 +146,13 @@ func (r Repo) CommitWith(ctx context.Context, message string, trailers []string,
 	return r.commit(ctx, message, trailers, paths)
 }
 
-// Push pushes HEAD to origin's branch, and tracks it.
+// Push pushes HEAD to origin's branch, and tracks it. A branch rebased since its last push replaces origin's, with a
+// lease: only while origin's is still what was last fetched, and HEAD was made from it.
 func (r Repo) Push(ctx context.Context, branch string) error {
 	if branch == "" || branch == "HEAD" {
 		return errors.New("nothing to push: no branch is checked out")
 	}
-	_, err := r.git(ctx, "push", "--quiet", "-u", "origin", "HEAD:refs/heads/"+branch)
+	_, err := r.git(ctx, "push", "--quiet", "-u", "--force-with-lease=refs/heads/"+branch, "--force-if-includes", "origin", "HEAD:refs/heads/"+branch)
 	return err
 }
 

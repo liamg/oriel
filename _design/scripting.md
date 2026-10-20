@@ -369,7 +369,7 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   draws a `widget.Chart`: `kind` is `bars` (stacked, the default), `area`, `line`, `spark` or `strip`; each series is
   `{ name, values, color, kind, dashed, from }`, `color` a theme token or `#rrggbb`; `format` (`money`, `percent`,
   `count`) formats the axis and the hover card; `on_click(series, point)` gets them counted from 1.
-- `oriel.rail.add` takes `scope = "global"` (a page every session shares, below a second divider) and
+- `oriel.rail.add` takes `scope = "global"` (a page every session shares, at the sidebar's foot) and
   `note = fn(project)`, a live figure at the entry's right; `oriel.start.add` takes `link = true` (a small link under
   the actions) and `note = fn()`, its figure.
 - The pages are commands, so `oriel.cmd("stats.open", { group = "session", repo = "api", range = "7d" })`,

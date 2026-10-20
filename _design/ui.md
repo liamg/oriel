@@ -242,9 +242,9 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   hides the dock.
 - **Search is per project.** It searches the open project. An **All projects** toggle in the panel widens it to the
   session, with results grouped by project. `⌘⇧F` opens the open project's Search. `⌘K` (the omnibox) stays global.
-- **Session-wide entries,** below a divider: Requests (with its count, `⌘⇧R`), Ship. Below a second divider, the
-  pages every session shares (AI-12, 43): Stats, Usage, Jobs and Settings, each with a live figure. Past ~8 projects the
-  list scrolls and these stay pinned.
+- **Session-wide entries,** below a divider: Requests (with its count, `⌘⇧R`), Ship. At the sidebar's foot, below a
+  second divider, the pages every session shares (AI-12, 43): Stats, Usage, Jobs and Settings, each with a live figure.
+  Past ~8 projects the list scrolls and these stay pinned.
 - **Adding a project.** A `+` in the PROJECTS header (in the narrow form, under the project initials) opens a picker
   of the registered repos the session hasn't got, and the checkout path typed. Choosing one adds it to the
   session (`session.add-repo`), and it opens. There's no `+` for a directory (a direct session), or while the app has
@@ -263,10 +263,11 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   - The breadcrumb starts with the project's name: `api › proto › usage.proto`.
   - Opening a file from another project doesn't change the sidebar's open project.
 - **Pull request** in the dock is a compact checklist: committed → up to date → pushed → PR → checks, with the PR's
-  title and the failing check's log line. **Raise PR** (or **Edit PR** once it exists) opens a full-width **main tab**,
+  title and the failing check's log line. **Raise PR** (or **Open PR** once it exists) opens a full-width **main tab**,
   `Raise PR · admin-ui`, in 18's style. It has the title, the body editor (template-filled, drafted by the agent),
   reviewers, cross-linked PRs with their merge order, and on the right the "before this ships" gates and the ticket.
-  It closes like any tab.
+  Once the PR exists the tab is its overview, `PR #790 · admin-ui` (crit's PR page): the PR as raised, its link,
+  checks and review, with **Edit PR** for the form. It closes like any tab.
 - **Ship** (session-wide) is 18's full page: every project's checklist side by side, cross-linked PRs, the merge
   order, and "push + raise all".
 - Built in SH-17 (`app/rail.go`, `app/projects.go`): the sidebar is the `app.rail` view over the rail entries
@@ -288,7 +289,7 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   "ship": "#790 ● CI failing", "CI running", "CI passing", "merged", or "no PR" with commits and none raised), and the
   Pull request entry's note says "#790", "drafting" or "not raised". The `pull-request` view is the dock's checklist
   (its PR's title or "Not raised", `branch → base · n commits`, then Committed, Up to date, Pushed, PR, Checks with the
-  failing line; Raise PR and Ship ⇉, or Edit PR and Fix CI with agent). Raise PR / Edit PR is the `pr` view, a main
+  failing line; Raise PR and Ship ⇉, or Open PR and Fix CI with agent). Raise PR / Edit PR is the `pr` view, a main
   tab per project (`ship.pr.open {project}`): title, body (Write or Preview; the agent's `pr_draft`, else the open
   PR's, else the repo's template with the first commit's subject as the title), REVIEWERS (CODEOWNERS', added ones,
   each removable), CROSS-LINKED PRS, and at the right the gates and the ticket; Save draft, Raise as draft and Push +
@@ -1013,7 +1014,9 @@ of several repos (sandbox-approval, 47) and approving a repo's Dockerfile from h
   and after a `ShipCommit` veto its reason and **Commit anyway…**. **Behind main**: the count from origin's base, and
   conflicts predicted with `git merge-tree`; Rebase (`ship.sync`: fetch, rebase `--autostash`, undone on a conflict
   that names the files); "Up to date with main · rebased 6m ago" after. **Unpushed**: each commit's hash and subject;
-  Push (the session's branch only). **Pull request**: not raised, its reviewers (CODEOWNERS of the branch's change)
+  Push (the session's branch only). A branch rebased since its push has rewritten commits origin has: Push reads
+  **Force push** and pushes with `--force-with-lease --force-if-includes`, so it replaces only what was last fetched and
+  rebased from, never a push made elsewhere since. **Pull request**: not raised, its reviewers (CODEOWNERS of the branch's change)
   and how it links to the others, Raise PR…; raised, `#n · title` with its state, the checks (`CHECKS · 5 OF 7`, each
   with its time, running or queued), the first failing Actions job's failing log line, reviewers, links, Ready for
   review, Fix CI with agent (`agent.fix` with the failing checks and the line attached; its twin Explain with agent,
@@ -1021,7 +1024,10 @@ of several repos (sandbox-approval, 47) and approving a repo's Dockerfile from h
   this ships" (`registry.ShipGates`), MERGE ORDER (the session's project order, with each PR's number) and the
   ticket. The header has Sync all, Commit all and Push + raise both PRs (`ship.raise-all`: push and raise each in
   merge order). The session is read from the session host (`ship.read`) when it comes to the front, every 10 s while it's
-  there, and fresh (fetching, and asking GitHub again) after each step and on `ship.refresh`.
+  there, and fresh (fetching, and asking GitHub again) after each step and on `ship.refresh`. A step's button stays
+  busy ("Committing…", the files and the commit box off) until the project's been read again after it, without
+  fetching, so no frame shows the state from before the step; the fresh read follows. A read that started before
+  another one already kept is dropped. A step git refuses shows why, the form back as it was.
 - Built in AI-10: drafts appear without asking (agents.md, "Drafts when the agent goes idle"). The commit box's and the
   Raise PR tab's chip says who wrote the draft and whether the code moved on since: "drafted by codex", "drafted by
   codex · stale" (warn), "written by you"; the PR step's note says "draft stale". Typing into either keeps the text in
@@ -1042,11 +1048,33 @@ of several repos (sandbox-approval, 47) and approving a repo's Dockerfile from h
   under its row; AI review's is **Review** until one has run.
 - Built in PL-9: plugins' PR actions (`registry.PRAction`) sit after Edit PR on a raised PR and on the Pull request
   panel.
+- The `pr` tab once the branch has a PR is its **overview**, read-only, named for it (`PR #790 · admin-ui`, the view's
+  own title): a header with `PR #790`, the project, its state (open, draft, merged, closed) and `branch → base`, then
+  Ready for review (a draft's), Merge…, plugins' PR actions and **Edit PR**; under it the title, the PR's link (it
+  opens in the browser, `ship.browse`) and **Copy link** (`ship.copy-link`: the system clipboard), its reviewers and
+  cross-linked PRs; CHECKS, each with its state and time as the Ship page reads them (every 10 s while the session is
+  in front), with Fix CI with agent on a failure; DESCRIPTION, the PR's body as markdown; and REVIEW, the PR's review
+  threads and conversation as they're mirrored into the session's threads (`HostThread`), each with its place, the
+  reviewer and where they stand, its comments as markdown and **Open** (`request.open`). At the right, the gates and
+  the ticket. **Edit PR** (`ship.pr.open {project, edit: true}`) is the form, EDIT PR #790, with **Cancel** and
+  **Update PR**: Cancel (`edit: false`) drops what was typed and Update goes back once the code host has it, both to
+  the overview. Raising a PR from the tab lands on its overview. A closed PR's overview offers **Raise a new PR…**
+  in place of Edit. The Ship page's Edit PR opens the form; the dock's Pull request panel has **Open PR**.
 - A project's **Git** panel (the `git` view, in the dock) is the same reading as the Ship page: the branch with
-  `→ base · n commits · n behind`, **Rebase on main** (`ship.sync`), **Push**, **Rename…** (`ship.rename`: `git branch
+  `→ base · n commits · n behind · n rewritten`, **Rebase on main** (`ship.sync`), **Push**, **Rename…** (`ship.rename`: `git branch
   -m`, its upstream unset so the next push makes the new name; refused while the branch's PR is open), ↻
   (`ship.refresh`); then CHANGES, the Uncommitted step's files (each with ↺, `git.discard`) and commit box; then TO
   PUSH. **Redraft** shows only where the session has an agent.
+- The Git panel's **⋯** menu has **Merge into main…** (`ship.merge-default`), for merging without a PR. Its target is
+  the repo's default branch (`gitx.DefaultBranch`: origin's HEAD, else the usual names) as a local branch; it's off on
+  that branch itself or without one. It asks first in a question notice naming both branches, then merges the
+  session's branch, its commits only, on the session host (`host.ShipMergeDefault`, `gitx.Repo.MergeInto`): a
+  fast-forward where it can be, else a merge commit written with `git merge-tree --write-tree` and `git commit-tree`,
+  never touching the session's work tree. A conflict is refused, naming the files, before anything moves. Where the
+  default branch is checked out (usually the user's own checkout, which the session's worktree was made from), that
+  work tree is fast-forwarded to the result (`git merge --ff-only`), and only when it has no uncommitted changes to
+  tracked files; elsewhere the branch's ref moves only if it hasn't since it was read (`git update-ref` with the old
+  value). Nothing is pushed. "Merging into main…" shows under the steps while it runs.
 - Built in RV-13: the PR step is the project's code host's (`registry.CodeHost`, found by origin's URL), in its words:
   **Raise MR…**, **Edit MR**, "!57", **Open on GitLab ↗** (`ship.browse`). A project whose origin is on no known host
   says so in place of the step.
@@ -1145,7 +1173,8 @@ front (42), and the other repos take the palette's colours it leaves, by name.
   their tokens in the hours it happened, Oriel's sessions by repo and the sessions outside Oriel as one row; a rise with
   no tokens behind it (claude.ai, another machine) goes to that row too.
 - **Entry points.** The sidebar's global group (Stats with today's cost, Usage with the weekly window, Jobs with its
-  runs going (SE-4), Settings), below a second divider, at the foot in the narrow form, the figure in the tooltip there; the
+  runs going (SE-4), Settings), at the foot in both forms (below a second divider in the wide one), the figure in the
+  tooltip in the narrow one; the
   title bar's indicators as one button opening Usage, showing the account the session in front runs on (the
   first with no session), with a hover card of every account's windows, resets, burn and
   a red line for one that runs out; the session stats cost; the start view's links (Stats with this week's cost,

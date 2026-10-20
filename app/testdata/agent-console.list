@@ -71,9 +71,9 @@ clip 0,38 43x936 r 0
   path 3 segments stroke 1.4545455 #7c7566
   path 6 segments fill #060606
   path 6 segments stroke 1.4 #ffd23f
-  effect glow 18.9,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 18.9,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 22.8,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 22.8,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
