@@ -121,7 +121,11 @@ func (h *session) start() error {
 	h.mu.Unlock()
 	h.setAgent(func(a *core.AgentState) { a.Starting = &core.AgentStart{Step: "Starting the agent", Since: since} })
 	resumed := h.snapshot().Agent.Session != ""
-	sess, box, err := h.launch(ctx, cancel)
+	var first handout
+	if !resumed {
+		first = h.firstTurn()
+	}
+	sess, box, err := h.launch(ctx, cancel, first.text)
 	h.mu.Lock()
 	h.starting = false
 	if err == nil && ctx.Err() != nil { // stopped while it started
@@ -140,7 +144,17 @@ func (h *session) start() error {
 		return err
 	}
 	h.sess, h.box = sess, box
+	if first.text != "" {
+		h.w.edit.Lock()
+		if se, err := h.w.session(h.id); err == nil {
+			h.give(se, first)
+		}
+		h.w.edit.Unlock()
+	}
 	h.mu.Unlock()
+	if first.text != "" {
+		h.w.restatus(h.id)
+	}
 	acct, name := h.w.accountOf(h.snapshot().Agent.Provider)
 	now := h.w.opts.Now().UTC()
 	h.setAgent(func(a *core.AgentState) {
@@ -157,6 +171,21 @@ func (h *session) start() error {
 	return nil
 }
 
+// firstTurn is what a fresh agent's first turn carries: what's waiting for it, so it starts on it rather than on a
+// turn of its skill alone with the request behind it.
+func (h *session) firstTurn() handout {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.w.edit.Lock()
+	defer h.w.edit.Unlock()
+	se, err := h.w.session(h.id)
+	if err != nil || h.w.signedOut(se.Agent.Provider) {
+		return handout{}
+	}
+	t, _ := h.next(se)
+	return t
+}
+
 // startAside starts the agent off the caller: a failure is in the agent's state, and logged. Close waits for it.
 func (h *session) startAside() {
 	h.w.starts.Go(func() {
@@ -167,8 +196,8 @@ func (h *session) startAside() {
 	})
 }
 
-// launch starts the agent under ctx, which cancel ends if it fails.
-func (h *session) launch(ctx context.Context, cancel context.CancelFunc) (agent.Session, Sandbox, error) {
+// launch starts the agent under ctx, which cancel ends if it fails, with prompt as its first turn.
+func (h *session) launch(ctx context.Context, cancel context.CancelFunc, prompt string) (agent.Session, Sandbox, error) {
 	w := h.w
 	se, err := w.session(h.id)
 	if err != nil {
@@ -180,7 +209,7 @@ func (h *session) launch(ctx context.Context, cancel context.CancelFunc) (agent.
 	}
 	spec := agent.StartSpec{Cwd: agentDir(se), Model: se.Agent.Model, Effort: se.Agent.Effort, Policy: agent.Policy(se.Agent.Policy),
 		Tools: w.tools(h), Protect: w.protected(se), Exec: w.opts.Exec, StateDir: filepath.Join(w.sessionDir(h.id), "agent"),
-		Env: []string{"ORIEL_SESSION=" + string(h.id)}}
+		Env: []string{"ORIEL_SESSION=" + string(h.id)}, Prompt: prompt}
 	if k, ok := w.kinds.Get(se.Kind); ok {
 		name := k.Pack
 		if se.Agent.Pack != "" {
@@ -319,8 +348,7 @@ func (h *session) urgent() {
 	}
 }
 
-// kick hands the agent whatever is waiting for it, if it's free to take it: queued messages first, then a batch
-// of comments.
+// kick hands the agent whatever is waiting for it, if it's free to take it.
 func (h *session) kick() {
 	h.mu.Lock()
 	if h.sess == nil || h.working || h.starting {
@@ -335,16 +363,32 @@ func (h *session) kick() {
 		h.mu.Unlock()
 		return
 	}
-	if len(se.Agent.Queue) > 0 {
-		text := se.Agent.Queue[0]
-		a := se.Agent
-		a.Queue = slices.Clone(a.Queue[1:])
-		_ = h.w.emit(core.AgentChanged{ID: h.id, Agent: a})
+	t, ok := h.next(se)
+	if !ok {
 		h.w.edit.Unlock()
-		h.working = true
 		h.mu.Unlock()
-		h.send(sess, agent.Input{Text: text}, nil)
 		return
+	}
+	h.give(se, t)
+	h.w.edit.Unlock()
+	h.mu.Unlock()
+	h.w.restatus(h.id)
+	h.send(sess, agent.Input{Text: t.text}, t.threads)
+}
+
+// handout is what the agent is handed next: a queued message, or a batch of comments and notes.
+type handout struct {
+	text     string
+	queued   bool            // text is the queue's first message
+	threads  []core.ThreadID // the threads in the batch
+	comments map[string]bool // the comments it gives the agent
+	notes    int             // how many of h.notes it carries
+}
+
+// next is what's waiting for the agent in se: queued messages first, then a batch of comments. Callers hold h.mu.
+func (h *session) next(se core.SessionState) (handout, bool) {
+	if len(se.Agent.Queue) > 0 {
+		return handout{text: se.Agent.Queue[0], queued: true}, true
 	}
 	var batch []core.Thread
 	fresh := map[string]bool{}
@@ -361,11 +405,8 @@ func (h *session) kick() {
 		}
 		batch = append(batch, t)
 	}
-	notes := h.notes
-	if len(batch) == 0 && len(notes) == 0 {
-		h.w.edit.Unlock()
-		h.mu.Unlock()
-		return
+	if len(batch) == 0 && len(h.notes) == 0 {
+		return handout{}, false
 	}
 	// Urgent threads go first.
 	slices.SortStableFunc(batch, func(a, b core.Thread) int {
@@ -377,27 +418,43 @@ func (h *session) kick() {
 		}
 		return 0
 	})
-	text := renderBatch(se, batch, fresh, notes)
-	var ids []core.ThreadID
-	for _, t := range batch {
-		t.Comments = slices.Clone(t.Comments)
-		for i := range t.Comments {
-			if fresh[t.Comments[i].ID] {
-				t.Comments[i].Delivered = true
+	t := handout{text: renderBatch(se, batch, fresh, h.notes), comments: fresh, notes: len(h.notes)}
+	for _, th := range batch {
+		t.threads = append(t.threads, th.ID)
+	}
+	return t, true
+}
+
+// give marks t as the agent's, in se as it is now, and the agent as working on it. Callers hold h.mu and w.edit.
+func (h *session) give(se core.SessionState, t handout) {
+	if t.queued {
+		a := se.Agent
+		a.Queue = slices.Clone(a.Queue)
+		if i := slices.Index(a.Queue, t.text); i >= 0 {
+			a.Queue = slices.Delete(a.Queue, i, i+1)
+		}
+		_ = h.w.emit(core.AgentChanged{ID: h.id, Agent: a})
+		h.working = true
+		return
+	}
+	for _, tid := range t.threads {
+		th, ok := se.Thread(tid)
+		if !ok {
+			continue
+		}
+		th.Comments = slices.Clone(th.Comments)
+		for i := range th.Comments {
+			if t.comments[th.Comments[i].ID] {
+				th.Comments[i].Delivered = true
 			}
 		}
-		t.Busy = true
-		t.Updated = h.w.opts.Now().UTC()
-		_ = h.w.emit(core.ThreadUpdated{Session: h.id, Thread: t})
-		ids = append(ids, t.ID)
+		th.Busy = true
+		th.Updated = h.w.opts.Now().UTC()
+		_ = h.w.emit(core.ThreadUpdated{Session: h.id, Thread: th})
 	}
-	h.w.edit.Unlock()
-	h.notes = nil
-	h.delivered = ids
+	h.notes = h.notes[min(t.notes, len(h.notes)):]
+	h.delivered = t.threads
 	h.working = true
-	h.mu.Unlock()
-	h.w.restatus(h.id)
-	h.send(sess, agent.Input{Text: text}, ids)
 }
 
 // send gives the agent a turn; if that fails, what it carried waits for the next.

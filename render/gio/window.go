@@ -1,6 +1,7 @@
 package gio
 
 import (
+	"image"
 	"io"
 	"strings"
 	"sync"
@@ -239,6 +240,8 @@ func (w *Window) loop() {
 		}
 	}}
 	defer side.close()
+	hover := &hoverWatcher{}
+	defer hover.close()
 	var ops op.Ops
 	f := NewFrame()
 	tag := new(int)
@@ -273,10 +276,7 @@ func (w *Window) loop() {
 				w.size.Store(size)
 				w.post(render.ResizeEvent{Size: size})
 			}
-			area := clip.Rect{Max: e.Size}.Push(gtx.Ops)
-			event.Op(gtx.Ops, tag)
-			cursors[render.Cursor(w.cursor.Load())].Add(gtx.Ops)
-			area.Pop()
+			inputArea(gtx.Ops, e.Size, tag, render.Cursor(w.cursor.Load()))
 			gtx.Execute(key.FocusCmd{Tag: tag})
 			if t := w.clip.Swap(nil); t != nil {
 				gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(*t))})
@@ -288,11 +288,8 @@ func (w *Window) loop() {
 				ev, ok := gtx.Event(
 					transfer.TargetFilter{Target: tag, Type: "application/text"},
 					key.FocusFilter{Target: tag},
-					key.Filter{Focus: tag, Optional: key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand},
-					// Tab and ⇧Tab are gio's focus moves unless asked for by name; the app moves focus itself.
-					key.Filter{Focus: tag, Name: key.NameTab, Optional: key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand},
-					pointer.Filter{Target: tag, Kinds: pointer.Move | pointer.Drag | pointer.Press | pointer.Release | pointer.Scroll | pointer.Leave,
-						ScrollX: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}},
+					keyFilter(tag), tabFilter(tag),
+					pointerFilter(tag),
 				)
 				if !ok {
 					break
@@ -338,11 +335,35 @@ func (w *Window) loop() {
 			}
 		default:
 			side.view(e)
+			hover.view(e)
 			if w.pl.view(e) {
 				viewed = true
 			}
 		}
 	}
+}
+
+// inputArea takes the window's input for tag, over all of it, with the app's cursor.
+func inputArea(ops *op.Ops, size image.Point, tag event.Tag, c render.Cursor) {
+	area := clip.Rect{Max: size}.Push(ops)
+	event.Op(ops, tag)
+	cursors[c].Add(ops)
+	area.Pop()
+}
+
+const anyMods = key.ModShift | key.ModCtrl | key.ModAlt | key.ModSuper | key.ModCommand
+
+// keyFilter takes every key for tag, with any modifiers: ⇧⏎, ⌘A.
+func keyFilter(tag event.Tag) key.Filter { return key.Filter{Focus: tag, Optional: anyMods} }
+
+// tabFilter takes Tab and ⇧Tab, gio's focus moves unless asked for by name; the app moves focus itself.
+func tabFilter(tag event.Tag) key.Filter {
+	return key.Filter{Focus: tag, Name: key.NameTab, Optional: anyMods}
+}
+
+func pointerFilter(tag event.Tag) pointer.Filter {
+	return pointer.Filter{Target: tag, Kinds: pointer.Move | pointer.Drag | pointer.Press | pointer.Release | pointer.Scroll | pointer.Leave,
+		ScrollX: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}}
 }
 
 // inputClock turns the OS's input timestamps, from an epoch of its own, into wall time. The epoch is the earliest any

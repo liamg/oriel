@@ -20,10 +20,23 @@ var (
 	tImageHover     = theme.Declare("image.hover.border", "accent")
 )
 
-// LightboxItem is one image a lightbox can show.
+// LightboxItem is one image a lightbox can show: pixels, or a vector that draws itself at any zoom.
 type LightboxItem struct {
 	Image   image.Image
-	Caption string // what it shows: its alt text
+	Vector  *Vector // used when Image is nil
+	Caption string  // what it shows: its alt text
+}
+
+// size is the item's own size: an image's pixels, a vector's logical pixels.
+func (it LightboxItem) size() (float32, float32) {
+	if it.Image == nil {
+		if it.Vector == nil {
+			return 1, 1
+		}
+		return max(it.Vector.Size.X, 1), max(it.Vector.Size.Y, 1)
+	}
+	b := it.Image.Bounds()
+	return float32(max(b.Dx(), 1)), float32(max(b.Dy(), 1))
 }
 
 type LightboxOpts struct {
@@ -82,11 +95,14 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 	}
 	it := items[*at]
 	size := c.Size()
-	b := it.Image.Bounds()
-	iw, ih := float32(max(b.Dx(), 1)), float32(max(b.Dy(), 1))
+	iw, ih := it.size()
 	room := render.Rect{Min: render.Point{X: lbSide, Y: lbTop}, Max: render.Point{X: max(size.X-lbSide, lbSide+1), Y: max(size.Y-lbBottom, lbTop+1)}}
 	centre := render.Point{X: (room.Min.X + room.Max.X) / 2, Y: (room.Min.Y + room.Max.Y) / 2}
+	// an image fits at no more than its own size; a vector, sharp at any size, up to twice it
 	fit := min(1, room.Dx()/iw, room.Dy()/ih)
+	if it.Image == nil {
+		fit = min(2, room.Dx()/iw, room.Dy()/ih)
+	}
 	zoom := func() float32 {
 		if st.zoom == 0 {
 			return fit
@@ -170,12 +186,16 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 	if caption == "" {
 		caption = "Image"
 	}
-	d, img := shown(), it.Image
+	d := shown()
+	tip := ""
+	if in.Hovered {
+		tip = it.Vector.tipAt(d, in.Pointer())
+	}
 	fg, muted, chrome := col(c, tLightboxFg), col(c, tLightboxMuted), col(c, tLightboxChrome)
 	c.Box(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Fill: col(c, tLightboxScrim), Z: ui.LayerDialog, Float: &ui.Float{Point: &render.Point{}},
 		Interactive: true, Focusable: true, Trap: true, KeyMode: "lightbox", Wheel: true, Cursor: cursor, NoHover: true, Enter: fade, Exit: fade,
-		Role: ui.RoleDialog, Label: caption, Help: o.Help}, func(c *ui.Ctx) {
-		c.Paint("img", ui.Px(size.X), ui.Px(size.Y), func(f render.Frame, r render.Rect) { paintImage(f, img, d, r) })
+		Role: ui.RoleDialog, Label: caption, Help: o.Help, Tooltip: tip}, func(c *ui.Ctx) {
+		c.Paint("img", ui.Px(size.X), ui.Px(size.Y), func(f render.Frame, r render.Rect) { paintItem(f, it, d, r) })
 		c.Box("close", ui.Style{Float: &ui.Float{At: render.Point{X: 1}, Self: render.Point{X: 1}, Offset: render.Point{X: -16, Y: 14}}}, func(c *ui.Ctx) {
 			if lightboxButton(c, "x", "✕", "Close", "Close (Esc)", false, fg, chrome, o.Help) {
 				closeIt()
@@ -199,9 +219,28 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 			if len(items) > 1 {
 				c.Text("count", fmt.Sprintf("%d / %d", *at+1, len(items)), monoText(11, typeset.Normal, muted, 0))
 			}
-			c.Text("size", fmt.Sprintf("%d×%d · %d%%", b.Dx(), b.Dy(), int(math.Round(float64(zoom()*100)))), monoText(11, typeset.Normal, muted, 0))
+			c.Text("size", fmt.Sprintf("%d×%d · %d%%", int(math.Round(float64(iw))), int(math.Round(float64(ih))), int(math.Round(float64(zoom()*100)))), monoText(11, typeset.Normal, muted, 0))
 		})
 	})
+}
+
+// paintItem draws an item into d, as far as it shows in view: an image's pixels scaled, or a vector drawn at d's size
+// over its fill.
+func paintItem(f render.Frame, it LightboxItem, d, view render.Rect) {
+	if it.Image != nil {
+		paintImage(f, it.Image, d, view)
+		return
+	}
+	if it.Vector == nil || it.Vector.Draw == nil {
+		return
+	}
+	f.PushClip(view, 0)
+	if it.Vector.Fill.A > 0 {
+		f.Rect(render.Rect{Min: render.Point{X: d.Min.X - 16, Y: d.Min.Y - 16}, Max: render.Point{X: d.Max.X + 16, Y: d.Max.Y + 16}},
+			render.Style{Fill: it.Vector.Fill, Radius: 10})
+	}
+	it.Vector.Draw(f, d)
+	f.Pop()
 }
 
 // panAxis keeps an image len long along one axis over a window size long: centred while it fits, else covering it.

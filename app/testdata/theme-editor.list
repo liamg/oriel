@@ -767,6 +767,9 @@ clip 0,38 1600x962 r 0
     rect 1487.3334,293.74002 98.666626x51.01999 fill #121210 radius 5 stroke 1 #24221d
     text "fg.faint" @1495.3334,311.43002 #7c7566 JetBrains Mono 9.5
     text "4.1:1" @1495.3334,332.56003 #4fe0a0 JetBrains Mono 14
+    rect 1274,354.76 312x51.01999 fill #121210 radius 5 stroke 1 #24221d
+    text "text.selection" @1282,372.45 #ffd23f47 JetBrains Mono 9.5
+    text "2.1:1" @1282,393.58002 #4fe0a0 JetBrains Mono 14
   pop
   rect 1260,923 340x1 fill #24221d
   rect 1274,936 120.890625x26 fill #191815 radius 6 stroke 1 #332f27

@@ -12,6 +12,12 @@ import (
 
 var tSelection = theme.Declare("text.selection", "alpha(accent, 28%)")
 
+func init() {
+	for _, on := range []string{"bg.base", "bg.surface", "bg.raised"} {
+		theme.Readable("text.selection", on, 1.5)
+	}
+}
+
 // textSel is the window's text selection: a run of text inside one Selectable box, from the press to the pointer,
 // across as many text nodes as it passes, in the order they were built.
 type textSel struct {

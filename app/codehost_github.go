@@ -34,7 +34,7 @@ func (x *githubHost) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gi
 
 func (x *githubHost) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.Contribute(registry.CodeHost{Name: "github", Title: "GitHub", Icon: "pullrequest", Order: 10,
-		Sites: []registry.Site{{Host: "github.com", Secret: "GITHUB_TOKEN"}}, Path: githubPath, Takes: githubPRPath,
+		Sites: []registry.Site{{Host: "github.com", Secret: "GITHUB_TOKEN", Aliases: []string{"ssh.github.com"}}}, Path: githubPath, Takes: githubPRPath,
 		Setup: registry.SiteSetup{Secret: "GITHUB_TOKEN", TokenURL: "https://{host}/settings/tokens/new?scopes=repo,read:org&description=Oriel",
 			TokenHelp: "Oriel uses gh's login when gh is installed (gh auth login --hostname {host}). Otherwise, a classic token with the repo and read:org scopes.",
 			Probe:     x.probe},

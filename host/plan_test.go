@@ -177,6 +177,36 @@ func TestStartWorkRestartsTheAgentFresh(t *testing.T) {
 	}
 }
 
+// The work pack (agent/packs/text/work.md): "The request the session started from follows these instructions ...
+// Start on it straight away ... With no request, end your turn." A plugin's prompt is "a turn of its own, once the
+// session is idle" (Claude Code's $.prompt.submit), so a request sent after the start waits out a turn of the bare
+// skill: the fresh agent's first turn carries it (StartSpec.Prompt), and nothing follows it.
+func TestStartWorkPromptIsTheFreshAgentsFirstTurn(t *testing.T) {
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindPlan, Prompt: "Round invoice lines", Provider: "fake", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	a := r.agent()
+	if !strings.Contains(a.Spec.Prompt, "Round invoice lines") {
+		t.Errorf("the plan agent's first turn = %q, want its request", a.Spec.Prompt)
+	}
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{})
+	r.eventually(id, "the agent's first turn", func(se core.SessionState) bool { return !se.Agent.Working && se.Agent.Session != "" })
+	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {
+		t.Fatal(err)
+	}
+	fresh := r.agent()
+	if !strings.Contains(fresh.Spec.Prompt, "**Start work**") || !strings.Contains(fresh.Spec.Prompt, `where="plan"`) {
+		t.Fatalf("the fresh agent's first turn = %q, want the Start work prompt on the plan's thread", fresh.Spec.Prompt)
+	}
+	fresh.WaitSent(t)
+	fresh.NoneSent(t)
+	r.eventually(id, "the plan's thread given to the agent", func(se core.SessionState) bool {
+		th, ok := se.Thread(se.PlanThread())
+		return ok && th.Busy && len(th.Undelivered()) == 0
+	})
+}
+
 // The work phase's model and effort: the agent comes back on them, carrying on its conversation when that's kept.
 func TestStartWorkChangesTheModel(t *testing.T) {
 	r := newRig(t)

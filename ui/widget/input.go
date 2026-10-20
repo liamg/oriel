@@ -27,6 +27,8 @@ type InputOpts struct {
 	// scrolls; ⏎ is a new line and ⌘⏎ (Ctrl⏎ elsewhere) submits. 0 and 1 are one line.
 	Lines    int
 	MinLines int // the lines a multi-line field shows at least
+	// EnterSubmits makes a multi-line field a message's (a comment, a reply): ⏎ submits and ⇧⏎ is a new line.
+	EnterSubmits bool
 	// Secret shows each character as a dot, to the eye and to assistive technology, and won't copy or cut it: a
 	// token being pasted in. One line only.
 	Secret bool
@@ -40,7 +42,7 @@ func Decimal(r rune) bool { return Digits(r) || r == '.' || r == 'e' || r == 'E'
 
 type InputResult struct {
 	Changed   bool // the text changed this frame
-	Submitted bool // Enter; ⌘⏎ in a multi-line field
+	Submitted bool // ⏎; in a multi-line field ⌘⏎, and ⏎ with EnterSubmits
 	Cancelled bool // Escape, which also drops focus
 }
 
@@ -114,7 +116,7 @@ func lineOf(spans []span, i int) int {
 // Input is a text field (base.css .input) editing *text, with the platform's editing keys (editKey): typing
 // inserts, moving by character, word and line (Shift selects), select all, cut, copy and paste, deleting back and
 // forward by character, word or line. Enter submits, Escape cancels. A click puts the cursor where it lands. With
-// Lines it takes several lines (InputOpts.Lines).
+// Lines it takes several lines (InputOpts.Lines). Its selection is painted in input.selection.
 func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	id := c.Next(key)
 	in := c.Interaction(id)
@@ -219,7 +221,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			key := editKey(k.Key, mods)
 			if multi {
 				switch {
-				case key == "submit":
+				case key == "submit" && (shift || !o.EnterSubmits):
 					key = "newline"
 				case k.Key == "CR" && mods == platform.primary:
 					key = "submit"
@@ -370,7 +372,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 						if hi > sp.to && sp.to < len(runes) {
 							x1 += 4 // the newline, or the wrap, is selected too
 						}
-						f.Rect(render.XYWH(r.Min.X+x0, y+1, x1-x0, 16), render.Style{Fill: c.Theme().C(tRowSelected)})
+						f.Rect(render.XYWH(r.Min.X+x0, y+1, x1-x0, 16), render.Style{Fill: col(c, tInputSelection)})
 					}
 					if sp.to > sp.from {
 						run := c.Shaper().Shape(string(runes[sp.from:sp.to]), font)
@@ -403,7 +405,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	c.Row(key, style, func(rc *ui.Ctx) {
 		rc.Paint("text", ui.Flex(1), ui.Px(30), func(f render.Frame, r render.Rect) {
 			if focused && hi > lo {
-				sel := c.Theme().C(tRowSelected)
+				sel := col(c, tInputSelection)
 				f.Rect(render.XYWH(r.Min.X+selFrom-scroll, r.Min.Y+7, selTo-selFrom, 16), render.Style{Fill: sel})
 			}
 			s, tc := shown(0, len(runes)), fg

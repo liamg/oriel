@@ -33,7 +33,7 @@ func (s Site) orgs() bool {
 	return err == nil && strings.Trim(u.Path, "/") == ""
 }
 
-// apiHost is the hostname the site's API is at: dev.azure.com for ssh.dev.azure.com too.
+// apiHost is the hostname the site's API is at.
 func (s Site) apiHost() string {
 	if u, err := url.Parse(s.API); err == nil {
 		return u.Hostname()

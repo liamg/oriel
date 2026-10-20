@@ -1,0 +1,4 @@
+source: https://github.com/github/cmark-gfm
+commit: 828322d1ee4facdab56f0d3edccb13e9af90dcd2
+path: test/spec.txt (the GitHub Flavored Markdown Spec 0.29-gfm), saved as spec.md: it's markdown
+license: CC-BY-SA 4.0, as its front matter states

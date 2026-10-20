@@ -25,7 +25,8 @@ type Span struct {
 }
 
 type RichOpts struct {
-	Code ui.TextStyle // code spans' text: the base's size in mono by default
+	Code  ui.TextStyle // code spans' text: the base's size in mono by default
+	Align ui.Align     // each line's alignment in width: Start, Center or End
 }
 
 type richPiece struct {
@@ -35,9 +36,15 @@ type richPiece struct {
 	space bool // a space comes before it
 }
 
-// Rich is a paragraph of spans wrapped to width at word boundaries (a code span stays whole), each line a row: plain
-// and bold runs in base, code in mono on a tint. It returns the number of lines.
-func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o RichOpts) int {
+// richLayout is a paragraph's words, measured: each code span whole; the width of a space; how each span is drawn.
+type richLayout struct {
+	pieces []richPiece
+	gap    float32
+	style  func(Span) ui.TextStyle
+	code   ui.TextStyle
+}
+
+func richMeasure(c *ui.Ctx, spans []Span, base ui.TextStyle, o RichOpts) richLayout {
 	code := o.Code
 	if code.Font.Family == "" {
 		code = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: base.Font.Size - 1}, Color: col(c, tCodeSpanFg)}
@@ -88,7 +95,26 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 			space = true
 		}
 	}
-	gap := c.Shaper().Shape(" ", base.Font).Advance
+	return richLayout{pieces: pieces, gap: c.Shaper().Shape(" ", base.Font).Advance, style: style, code: code}
+}
+
+// widths are the paragraph's width on one line and its widest piece: the narrowest it wraps to.
+func (l richLayout) widths() (line, widest float32) {
+	for i, p := range l.pieces {
+		line += p.width
+		if p.space && i > 0 {
+			line += l.gap
+		}
+		widest = max(widest, p.width)
+	}
+	return line, widest
+}
+
+// Rich is a paragraph of spans wrapped to width at word boundaries (a code span stays whole), each line a row: plain
+// and bold runs in base, code in mono on a tint. It returns the number of lines.
+func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o RichOpts) int {
+	l := richMeasure(c, spans, base, o)
+	pieces, gap, style, code := l.pieces, l.gap, l.style, l.code
 	var lines [][]richPiece
 	var x float32
 	for _, p := range pieces {
@@ -103,7 +129,11 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 		lines[len(lines)-1] = append(lines[len(lines)-1], p)
 		x += add
 	}
-	c.Column(key, ui.Style{Gap: 3, Role: ui.RoleText, Label: richText(spans)}, func(c *ui.Ctx) {
+	st := ui.Style{Gap: 3, Role: ui.RoleText, Label: richText(spans)}
+	if o.Align != ui.Start {
+		st.W, st.Cross = ui.Px(width), o.Align
+	}
+	c.Column(key, st, func(c *ui.Ctx) {
 		for i, ln := range lines {
 			c.Row(i, ui.Style{Cross: ui.Center}, func(c *ui.Ctx) {
 				// Neighbouring words of one span draw as one run; a space between spans is a gap.

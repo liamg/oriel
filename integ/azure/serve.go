@@ -405,9 +405,6 @@ func (s *Server) requested(ctx context.Context, p Params) (Requested, error) {
 	}
 	s.learn(p.Site, p.Orgs...)
 	out := Requested{Requests: []registry.ReviewRequest{}, Orgs: []string{}}
-	if !strings.EqualFold(p.Site.Host, p.Site.apiHost()) {
-		return out, nil // another name for a site whose own name answers: ssh.dev.azure.com
-	}
 	accounts := []Account{{Site: p.Site}}
 	if p.Site.orgs() {
 		accounts = nil

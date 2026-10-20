@@ -168,8 +168,10 @@ contributes.icons  = "icons/"                     # file and kind icon set
 - Value: derive (an expression, checked before it's written) or fixed (OKLCH sliders and a hex field, written as
   `oklch(L C H)`).
 - **Contrast is WCAG 2's ratio** (`spec/wcag`): 4.5:1 for text, 3:1 for large text and non-text marks. APCA isn't
-  used: its licence allows it only in tools for web content. Pairs are declared by whoever draws them
-  (`theme.Readable`); the lint lists pairs under their ratio, with the smallest lightness step that fixes them, and
+  used: its licence allows it only in tools for web content. A selection (`selection`, the editor's and the terminal's;
+  `text.selection`; `input.selection`) needs 1.5:1 on what it's on, with text still 4.5:1 on it: our floor, not WCAG's,
+  so a selection reads at a glance; the light variant takes 36% of the accent for them, the dark 28%. Pairs are declared by whoever draws them
+  (`theme.Readable`), and a translucent token is judged as it shows, over what it's on; the lint lists pairs under their ratio, with the smallest lightness step that fixes them, and
   status colours under ΔE OK 0.1 (five JNDs) apart. The built-in theme's light variant has several statuses under
   3:1 on surfaces; the lint shows them.
 - `ui.variant` is `system` by default: it follows the OS (the portal's or GNOME's `color-scheme` on Linux,

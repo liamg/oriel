@@ -118,7 +118,7 @@ func TestPlanSnapshot(t *testing.T) {
 		"rethink/rounding", "READINESS", "3 open", "Start work unlocks when every thread",
 		"PLAN", "Round invoice lines half-to-even", "claude opus · drafting rev 4", "agent editing PLAN.md", "Preview diff", "Start work",
 		"PLAN.MD · REV 4", "Goal · Approach · Pieces · Risks", "Round each line in minor units, ties to even.", "AGENT EDITED 4S AGO",
-		"a hard-coded table in", "MERMAID", "14", "31", "· L14 ·", "NEEDS YOU", "Is half-even what finance",
+		"a hard-coded table in", "MERMAID · FLOWCHART", "usage.Meter", "pricing.Round", "billing.Invoice", "14", "31", "· L14 ·", "NEEDS YOU", "Is half-even what finance",
 		"L22", "RESOLVED", "CLAUDE · WORKING", "How do we guarantee this?"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the frame lacks %q", want)
@@ -184,5 +184,33 @@ func TestStartWorkDialogSnapshot(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Errorf("the dialog lacks %q", want)
 		}
+	}
+}
+
+// A closed thread in the margin unfolds to its card for reading and collapses back, and stays resolved throughout.
+func TestPlanClosedThreadUnfoldsWithoutReopening(t *testing.T) {
+	s := planScene(t)
+	s.run("plan.open", nil)
+	s.frames(3)
+	if s.drew("Where does precision come from?") {
+		t.Fatal("the resolved thread's comment shows before it's unfolded")
+	}
+	replies := s.countAccess("Reply to the thread")
+	s.clickAccess(t, "Show the thread")
+	if !s.drew("Where does precision come from?") {
+		t.Fatal("the resolved thread didn't unfold")
+	}
+	s.access("Collapse the thread")
+	s.access("reopen")
+	if s.countAccess("Reply to the thread") != replies {
+		t.Error("an unfolded closed thread offers a reply")
+	}
+	se, _ := s.store.Session("pricing-rounding")
+	if th, _ := se.Snapshot().Thread("5e6f7a8b"); th.Status != core.ThreadResolved {
+		t.Errorf("unfolding made the thread %s", th.Status)
+	}
+	s.clickAccess(t, "Collapse the thread")
+	if s.drew("Where does precision come from?") {
+		t.Error("the thread didn't fold back")
 	}
 }

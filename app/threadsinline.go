@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
@@ -245,8 +246,12 @@ func (x *requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 	if !ok {
 		return
 	}
-	if !t.Open() {
-		foldedThread(c, x.h, se, t, x.lineNow[id])
+	if t.Open() {
+		delete(x.unfolded, id)
+	} else if !x.unfolded[id] {
+		if foldedThread(c, x.h, se, t, x.lineNow[id]) {
+			x.unfolded[id] = true
+		}
 		return
 	}
 	st := x.state(se.ID)
@@ -259,39 +264,64 @@ func (x *requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 		if err := x.send(context.Background(), st, id, false); err != nil {
 			x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
 		}
-	}, threadCardOpts{Open: open, Defer: se.Planning(), Focus: focus})
+	}, threadCardOpts{Open: open, Defer: se.Planning(), Focus: focus, Fold: func() { delete(x.unfolded, id) }})
 }
 
-// foldedThread is a closed thread as one line: where it is, its state, what it asked and the answer, and reopen.
-func foldedThread(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread, line int) {
+// foldedThread is a closed thread as one line: where it is, its state, what it asked and the answer, and reopen. It
+// says whether the line was clicked, to unfold the thread for reading without reopening it.
+func foldedThread(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread, line int) (unfold bool) {
 	th := c.Theme()
 	_, tok := statusLabel(se, t)
 	c.Row("folded", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center, Radius: 6, Stroke: th.C(tReqThreadBd), Border: 1,
 		Role: ui.RoleGroup, Label: "Thread " + t.Heading()}, func(c *ui.Ctx) {
-		c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(tok)}, nil)
-		c.Text("l", fmt.Sprintf("L%d", line+1), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11, Weight: typeset.SemiBold}, Color: th.C(theme.FgMuted)})
-		widget.Chip(c, "status", string(t.Status), th.C(tok), "agent/requests#inline")
-		quote := "“" + firstLine(t.Heading()) + "”"
-		if last, ok := t.Last(); ok && last.Author == core.AuthorAgent {
-			quote += " → " + firstLine(plainMarkdown(last.Body))
-		}
-		if r, ok := c.Rect(c.Next("q")); ok {
-			quote = truncate(quote, max(int(r.Dx()/6.4), 8))
-		}
-		c.Box("q", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", quote, uiFont(11.5, th.C(theme.FgFaint))) })
-		if widget.Link(c, "reopen", "reopen", "agent/requests#inline") {
-			if err := h.Run(context.Background(), "request.reopen", registry.Args{"thread": string(t.ID)}); err != nil {
-				h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
+		unfold = widget.Clickable(c, "unfold", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 8, Cross: ui.Center, Focusable: true, Role: ui.RoleButton,
+			Label: "Show the thread", Tooltip: "Show the thread; it stays " + string(t.Status), Help: "agent/requests#inline"}, func(c *ui.Ctx) {
+			fg := th.C(theme.FgMuted)
+			c.Paint("chev", ui.Px(10), ui.Px(10), func(f render.Frame, r render.Rect) { paintChevron(f, r, fg, false) })
+			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(tok)}, nil)
+			c.Text("l", fmt.Sprintf("L%d", line+1), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11, Weight: typeset.SemiBold}, Color: th.C(theme.FgMuted)})
+			widget.Chip(c, "status", string(t.Status), th.C(tok), "agent/requests#inline")
+			quote := "“" + firstLine(t.Heading()) + "”"
+			if last, ok := t.Last(); ok && last.Author == core.AuthorAgent {
+				quote += " → " + firstLine(plainMarkdown(last.Body))
 			}
-		}
+			if r, ok := c.Rect(c.Next("q")); ok {
+				quote = truncate(quote, max(int(r.Dx()/6.4), 8))
+			}
+			c.Box("q", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", quote, uiFont(11.5, th.C(theme.FgFaint))) })
+		}).Clicked
+		reopenLink(c, h, t.ID)
 	})
+	return unfold
+}
+
+// paintChevron draws a disclosure chevron into r: pointing down when open, right when not.
+func paintChevron(f render.Frame, r render.Rect, fg render.Color, open bool) {
+	c := render.Point{X: (r.Min.X + r.Max.X) / 2, Y: (r.Min.Y + r.Max.Y) / 2}
+	var p render.Path
+	if open {
+		p.MoveTo(render.Point{X: c.X - 4, Y: c.Y - 2}).LineTo(render.Point{X: c.X, Y: c.Y + 2}).LineTo(render.Point{X: c.X + 4, Y: c.Y - 2})
+	} else {
+		p.MoveTo(render.Point{X: c.X - 2, Y: c.Y - 4}).LineTo(render.Point{X: c.X + 2, Y: c.Y}).LineTo(render.Point{X: c.X - 2, Y: c.Y + 4})
+	}
+	f.Path(&p, render.Style{Stroke: fg, Width: 1.5})
+}
+
+// reopenLink is a closed thread's reopen.
+func reopenLink(c *ui.Ctx, h plugin.Host, id core.ThreadID) {
+	if widget.Link(c, "reopen", "reopen", "agent/requests#inline") {
+		if err := h.Run(context.Background(), "request.reopen", registry.Args{"thread": string(id)}); err != nil {
+			h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
+		}
+	}
 }
 
 // threadCardOpts is what a thread's card offers beside resolving it and replying.
 type threadCardOpts struct {
-	Open  bool // a link to its request in the main area
-	Defer bool // deferring it, so it doesn't hold up Start work
-	Focus bool // its reply field takes focus
+	Open  bool   // a link to its request in the main area
+	Defer bool   // deferring it, so it doesn't hold up Start work
+	Focus bool   // its reply field takes focus
+	Fold  func() // collapses a closed thread back to its line
 }
 
 // inlineThreadCard is a thread as a card: its place, status and actions, the comments, and a reply field that send sends.
@@ -312,6 +342,12 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 	inlineCard(c, title+" "+t.Heading(), func(c *ui.Ctx, width float32) {
 		word, tok := statusLabel(se, t)
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+			if !t.Open() && o.Fold != nil && widget.IconButton(c, "fold", "", widget.IconButtonOpts{Label: "Collapse the thread",
+				Help: "agent/requests#inline", Size: 18, Icon: func(c *ui.Ctx, fg render.Color) {
+					c.Paint("chev", ui.Px(10), ui.Px(10), func(f render.Frame, r render.Rect) { paintChevron(f, r, fg, true) })
+				}}) {
+				o.Fold()
+			}
 			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(tok)}, nil)
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			if sourced && src.Head != nil {
@@ -331,6 +367,9 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 			}
 			if t.Open() && widget.Link(c, "resolve", "resolve", "agent/requests#inline") {
 				run("request.resolve", registry.Args{"thread": string(id)})
+			}
+			if !t.Open() && o.Fold != nil {
+				reopenLink(c, h, id)
 			}
 			c.Text("id", "t:"+string(id)[:min(4, len(id))], monoFont(10, th.C(theme.FgGhost)))
 		})
@@ -373,10 +412,14 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 					})
 				})
 			}
+			if !t.Open() {
+				return
+			}
 			if o.Focus {
 				c.Focus(c.Next("reply"))
 			}
-			if widget.Input(c, "reply", reply, widget.InputOpts{Label: "Reply to the thread", Placeholder: "Reply…", Help: "agent/requests#inline"}).Submitted {
+			if widget.Input(c, "reply", reply, widget.InputOpts{Label: "Reply to the thread", Placeholder: "Reply…", Lines: commentLines, EnterSubmits: true,
+				Help: "agent/requests#inline"}).Submitted {
 				send()
 			}
 		})
@@ -404,7 +447,10 @@ func commentWhen(now time.Time, cm core.Comment, origin string) string {
 	return strings.Join(parts, " · ")
 }
 
-// inlineComposer is the card of a thread being opened on a line: ⏎ sends it, Escape drops it.
+// commentLines is how many lines a comment's field grows to before it scrolls.
+const commentLines = 8
+
+// inlineComposer is the card of a thread being opened on a line: ⏎ sends it, ⇧⏎ starts a new line, Escape drops it.
 func (x *requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, line int) {
 	th := c.Theme()
 	inlineCard(c, "New thread", func(c *ui.Ctx, width float32) {
@@ -413,7 +459,7 @@ func (x *requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 			c.Text("t", "New thread", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			c.Text("l", fmt.Sprintf("· L%d", line+1), monoFont(10.5, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("keys", "⏎ sends · esc drops it", monoFont(10, th.C(theme.FgGhost)))
+			c.Text("keys", "⏎ sends · ⇧⏎ new line · esc drops it", monoFont(10, th.C(theme.FgGhost)))
 		})
 		c.Box("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 10}}, func(c *ui.Ctx) {
 			id := c.Next("input")
@@ -423,7 +469,7 @@ func (x *requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 				c.Focus(id)
 			}
 			r := widget.Input(c, "input", &n.draft, widget.InputOpts{Label: "Ask about this line", Placeholder: "Ask the agent about this line",
-				Help: "agent/requests#inline"})
+				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline"})
 			switch {
 			case r.Submitted && strings.TrimSpace(n.draft) != "":
 				a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}

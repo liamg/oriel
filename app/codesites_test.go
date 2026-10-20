@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -188,5 +189,42 @@ func TestCodeSiteTokens(t *testing.T) {
 	}
 	if sites.refuse(hs, errors.New("GitLab: 500")) {
 		t.Error("a 500 counted as a refusal")
+	}
+}
+
+// A host's other names for its public site, its ssh hosts (ssh.dev.azure.com, ssh.github.com, altssh.gitlab.com), are
+// that site: a remote on one is the site's repo, and the Reviews page lists the site once, with one token to set.
+func TestCodeSiteAliases(t *testing.T) {
+	s := newScene(t, "", "", mockupSize)
+	loadAzure(t, s)
+	loadGitlab(t, s)
+	sites := s.sh.sites
+	sites.config = t.TempDir()
+	for remote, want := range map[string][2]string{
+		"git@ssh.dev.azure.com:v3/acme/web/dashboard":        {"azure@dev.azure.com", "dashboard"},
+		"acme@vs-ssh.visualstudio.com:v3/acme/web/dashboard": {"azure@dev.azure.com", "dashboard"},
+		"ssh://git@ssh.github.com:443/acme/api.git":          {"github@github.com", "acme/api"},
+		"ssh://git@altssh.gitlab.com:443/acme/group/web.git": {"gitlab@gitlab.com", "acme/group/web"},
+	} {
+		hs, repo, ok := sites.remote(remote)
+		if !ok || hs.Key() != want[0] || repo != want[1] {
+			t.Errorf("%s: %s %q %v, want %v", remote, hs.Key(), repo, ok, want)
+		}
+	}
+	var keys []string
+	for _, hs := range sites.reviewSources() {
+		keys = append(keys, hs.Key())
+	}
+	if want := []string{"github@github.com", "gitlab@gitlab.com", "azure@dev.azure.com"}; !slices.Equal(keys, want) {
+		t.Errorf("review sources %q, want %q", keys, want)
+	}
+	var asks []string
+	for _, r := range s.reviews().rows() {
+		if r.action == "key" {
+			asks = append(asks, reviewRowLabel(r))
+		}
+	}
+	if want := []string{"GitLab needs a token to list your reviews", "Azure DevOps needs a token to list your reviews"}; !slices.Equal(asks, want) {
+		t.Errorf("token asks %q, want %q", asks, want)
 	}
 }

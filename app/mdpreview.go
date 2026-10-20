@@ -66,6 +66,9 @@ func markdownBlocks(ctx *registry.PresentCtx) {
 			markdownBlock(c, b, line, i == first, toc, d, o)
 		})
 		pb.Space, pb.Label = 6, plainMarkdown(b.Text)
+		if b.Kind == mdTable {
+			pb.Label = plainMarkdown(strings.Join(b.Rows[0], " · "))
+		}
 		if pb.Label == "" && len(b.Images) > 0 {
 			pb.Label = cmpOr(b.Images[0].Alt, b.Images[0].Src)
 		}
@@ -76,8 +79,12 @@ func markdownBlocks(ctx *registry.PresentCtx) {
 }
 
 // markdownBlock draws a block as a document does: headings large (the first title with the document's label over
-// it and its sections under it), a fence in a box, a one-line block that changed as what it was and what it is.
+// it and its sections under it), a fence in a box (a mermaid one as its diagram), a one-line block that changed as
+// what it was and what it is.
 func markdownBlock(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d registry.PresentDraw, o mdOpts) {
+	if mdDiagramBox(c, "diagram", b, d.Width, o, true) {
+		return
+	}
 	if len(b.Images) == 0 {
 		markdownBody(c, b, line, title, toc, d)
 		return
@@ -140,7 +147,7 @@ func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d
 		c.Column("code", ui.Style{W: ui.Px(width), Pad: ui.Pad(14), Gap: 3, Radius: 6, Stroke: th.C(tMdCodeBorder), Border: 1, Fill: th.C(theme.BgSurface)},
 			func(c *ui.Ctx) {
 				if b.Lang != "" {
-					c.Text("lang", strings.ToUpper(b.Lang), kickerFont(th.C(theme.FgFaint)))
+					c.Text("lang", mdFenceKicker(c, b), kickerFont(th.C(theme.FgFaint)))
 				}
 				for j, l := range b.Code {
 					c.Text(j, strings.ReplaceAll(l, "\t", "    "), monoFont(12, th.C(theme.FgMuted)))
@@ -148,6 +155,12 @@ func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d
 			})
 	case mdRule:
 		c.Box("hr", ui.Style{W: ui.Px(width), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	case mdTable:
+		var part func(int, ui.ID)
+		if d.Part != nil {
+			part = func(line int, id ui.ID) { d.Part(line, line, id) }
+		}
+		markdownTable(c, "table", b, width, body, part)
 	default:
 		mdAligned(c, "p", b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, spans, width, body, widget.RichOpts{}) })
 	}

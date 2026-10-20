@@ -41,11 +41,11 @@ L.code.host{ name = "azure", title = "Azure DevOps", icon = "azure", order = 30,
   -- az devops' own token, when no secret is set; az login's are Azure AD tokens, which Basic doesn't take.
   tokens = { env = { "AZURE_DEVOPS_EXT_PAT" } },
   sites = {
-    { host = "dev.azure.com", api = cloud.api, secret = cloud.secret },
-    { host = "ssh.dev.azure.com", api = cloud.api, secret = cloud.secret },
+    { host = "dev.azure.com", api = cloud.api, secret = cloud.secret,
+      aliases = { "ssh.dev.azure.com", "vs-ssh.visualstudio.com" } },
   },
   -- …/{org}/{project}/_git/{repo} over https (a server's collection in place of the org), v3/{org}/{project}/{repo}
-  -- over ssh.dev.azure.com.
+  -- over ssh.
   path = [[^/(?:v3/[^/]+/[^/]+|.*/_git)/([^/]+?)(?:\.git)?/?$]],
   takes = [[/_git/[^/]+/pullrequest/\d+$]],
   shape = [[/_git/]],

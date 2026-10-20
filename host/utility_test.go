@@ -59,6 +59,9 @@ func TestUtilityAgent(t *testing.T) {
 		s.Policy != agent.PolicyAsk || s.Cwd != filepath.Join(r.home, "utility", "assistant") {
 		t.Errorf("started with %+v", s)
 	}
+	if in := fs.WaitSent(t); in.Text != "what needs me?" {
+		t.Errorf("its first turn was %q", in.Text)
+	}
 	if asked.Agent != "assistant" || asked.Session != "" {
 		t.Errorf("the app was asked for the tools of %+v", asked)
 	}

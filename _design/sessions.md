@@ -57,7 +57,7 @@ flowchart LR
   (on any kind given as `{kind}`).
 - **Starting doesn't wait for the agent.** `host.Start` returns once the session and its first request exist; the
   agent starts off the call (`startAside`, which `Host.Close` cancels and waits for), as does a comment to a
-  session whose agent isn't up. A sandbox's first start can take minutes (the image, toolchains, Claude's binary),
+  session whose agent isn't up. A fresh agent starts on what's waiting for it as its first turn (`agents.md`). A sandbox's first start can take minutes (the image, toolchains, Claude's binary),
   so while it starts `AgentState.Starting` says what it's doing: a step, a note when the step is a one-off, and
   since when (`core.AgentStart`). A backend's slow steps say so with `sandbox.Report(ctx, Progress{Step, Note})`;
   the docker backend reports building an image, installing toolchains and downloading Claude, each only when it

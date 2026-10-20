@@ -31,6 +31,7 @@ var (
 	tInputFg        = theme.Declare("input.fg", "fg")
 	tInputHint      = theme.Declare("input.placeholder", "fg.faint")
 	tInputCaret     = theme.Declare("input.caret", "accent")
+	tInputSelection = theme.Declare("input.selection", "text.selection")
 	tRowHover       = theme.DeclareOn("list.row.hover", "alpha(fg, 4%)", "bg.surface")
 	tRowSelected    = theme.Declare("list.row.selected", "accent.bg")
 	tRowEdge        = theme.Declare("list.row.selected.edge", "accent")
@@ -63,6 +64,8 @@ var (
 	tSegOnFg        = theme.Declare("segmented.active.fg", "accent")
 	tIconButtonFg   = theme.Declare("iconbutton.fg", "fg.faint")
 )
+
+func init() { theme.Readable("input.selection", "input.bg", 1.5) }
 
 func col(c *ui.Ctx, id theme.TokenID) color.NRGBA { return c.Theme().C(id) }
 

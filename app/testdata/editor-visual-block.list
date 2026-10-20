@@ -54,7 +54,7 @@ clip 0,0 856x709 r 0
         text "(" @244.53125,120.36 #89ddff JetBrains Mono 13.5
         text "p" @252.9375,120.36 #d6dde6 JetBrains Mono 13.5
         text ")" @261.34375,120.36 #89ddff JetBrains Mono 13.5
-        rect 110.03125,126 16.8125x21 fill #382f11
+        rect 110.03125,126 16.8125x21 fill #4b3f16
         text "41" @31.1875,141.36 #4f4a40 JetBrains Mono 13.5
         text "    " @68,141.36 #ece6d8 JetBrains Mono 13.5
         text "floor" @101.625,141.36 #d6dde6 JetBrains Mono 13.5
@@ -65,7 +65,7 @@ clip 0,0 856x709 r 0
         text "." @227.71875,141.36 #89ddff JetBrains Mono 13.5
         text "Floor" @236.125,141.36 #5cd2ff JetBrains Mono 13.5
         text "()" @278.15625,141.36 #89ddff JetBrains Mono 13.5
-        rect 110.03125,147 16.8125x21 fill #382f11
+        rect 110.03125,147 16.8125x21 fill #4b3f16
         text "42" @31.1875,162.36 #4f4a40 JetBrains Mono 13.5
         text "    " @68,162.36 #ece6d8 JetBrains Mono 13.5
         text "diff" @101.625,162.36 #d6dde6 JetBrains Mono 13.5
@@ -78,7 +78,7 @@ clip 0,0 856x709 r 0
         text "(" @252.9375,162.36 #89ddff JetBrains Mono 13.5
         text "floor" @261.34375,162.36 #d6dde6 JetBrains Mono 13.5
         text ")" @303.375,162.36 #89ddff JetBrains Mono 13.5
-        rect 110.03125,168 16.8125x21 fill #382f11
+        rect 110.03125,168 16.8125x21 fill #4b3f16
         text "43" @31.1875,183.36 #4f4a40 JetBrains Mono 13.5
         text "    " @68,183.36 #ece6d8 JetBrains Mono 13.5
         text "switch" @101.625,183.36 #c792ff JetBrains Mono 13.5
@@ -91,7 +91,7 @@ clip 0,0 856x709 r 0
         text ")" @269.75,183.36 #89ddff JetBrains Mono 13.5
         text " " @278.15625,183.36 #ece6d8 JetBrains Mono 13.5
         text "{" @286.5625,183.36 #89ddff JetBrains Mono 13.5
-        rect 110.03125,189 16.8125x21 fill #382f11
+        rect 110.03125,189 16.8125x21 fill #4b3f16
         text "44" @31.1875,204.36 #7c7566 JetBrains Mono 13.5
         text "    " @68,204.36 #ece6d8 JetBrains Mono 13.5
         text "case" @101.625,204.36 #c792ff JetBrains Mono 13.5

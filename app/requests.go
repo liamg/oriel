@@ -87,6 +87,7 @@ type requests struct {
 	lineNow    map[core.ThreadID]int            // where each thread was last decorated, 0-based
 	reveal     core.ThreadID                    // a thread to bring into view
 	focusReply core.ThreadID                    // a thread whose reply field takes focus
+	unfolded   map[core.ThreadID]bool           // closed threads opened to read in a presentation's margin
 
 	edits map[string]*agentEdit // the agent's latest edit to each file decorated, by path
 	files fileSrcs              // the anchored files' text, by path
@@ -143,6 +144,7 @@ func (x *requests) Activate(_ context.Context, h plugin.Host) error {
 	x.by = map[core.SessionID]*requestsState{}
 	x.anchors = map[threadAnchor]text.AnchorID{}
 	x.shown, x.bubbles, x.lineNow = map[string]threadsShown{}, map[string]map[int]core.ThreadID{}, map[core.ThreadID]int{}
+	x.unfolded = map[core.ThreadID]bool{}
 	inFront := func(registry.Args) bool { return x.sh.sessions != nil && h.State().Focus != "" }
 	selected := func(a registry.Args) registry.Args {
 		out := registry.Args{}

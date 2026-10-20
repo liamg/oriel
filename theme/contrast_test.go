@@ -76,6 +76,23 @@ func TestLintFix(t *testing.T) {
 	t.Fatal("no finding for fg.muted")
 }
 
+// A selection too faint to see is a finding, and a translucent token is judged as it's seen, over what it's on.
+func TestLintSelection(t *testing.T) {
+	Declare("test.wash", "alpha(fg, 40%)")
+	Readable("test.wash", "bg.base", 1.5)
+	r := resolve(t, Dark, oriel(t), spec(t, "name = \"faint\"\n[semantic]\n\"selection\" = \"alpha(accent, 6%)\"\n[component]\n\"test.wash\" = \"alpha(fg, 5%)\"\n"))
+	var got []string
+	for _, f := range Lint(r) {
+		got = append(got, f.Message)
+	}
+	all := strings.Join(got, "\n")
+	for _, want := range []string{"selection on bg.base is 1.", "test.wash on bg.base is 1."} {
+		if !strings.Contains(all, want) {
+			t.Errorf("no finding %q:\n%s", want, all)
+		}
+	}
+}
+
 // Pick mode paints every token in a colour of its own and reads back what's under the pointer.
 func TestProbe(t *testing.T) {
 	r := resolve(t, Dark, oriel(t))

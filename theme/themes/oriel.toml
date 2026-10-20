@@ -55,6 +55,8 @@ effects = { glow = 0, grid = 1 }
 "gutter.add.fg"  = "#5a9c80"
 "text.virtual"   = "fg.faint"
 "line.current"   = { color = "alpha(#0a2846, 3.5%)", on = "bg.base" }
+"selection"      = { color = "alpha(accent, 36%)", on = "bg.base" }
+"text.selection" = "alpha(accent, 36%)"
 
 [light.palette]
 bg0 = "#fbfaf7"

@@ -47,7 +47,7 @@ the command, who ran it, what failed and what it printed. A claim with no passin
 
 ## Composer
 
-Write to the request: `⏎` sends, and the agent gets it at once when it's idle, or when its turn ends. **@ FILE** and
+Write to the request: `⏎` sends, `⇧⏎` starts a new line, and the agent gets it at once when it's idle, or when its turn ends. **@ FILE** and
 **# SYMBOL** open a picker, where `⌃a` attaches what you pick; a terminal's output and a failing test attach the same
 way. `⌘⏎` sends now, interrupting the turn.
 
@@ -62,7 +62,8 @@ A side question, answered by a fork of the agent that has no tools and doesn't j
 ## Between the lines {#inline}
 
 **Ask about this…** in the editor's right-click menu (or `thread.new`) opens a thread on the cursor's line: `⏎` sends
-it, `Esc` drops it. Open threads show under their line with the agent's state, and take replies there.
+it, `⇧⏎` starts a new line, `Esc` drops it. Open threads show under their line with the agent's state, and take replies there
+the same way.
 
 ## Summary
 

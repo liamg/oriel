@@ -163,6 +163,9 @@ func (f *Fake) open(s agent.StartSpec, id string) *FakeSession {
 		answers: map[string]chan agent.Decision{}, fake: f}
 	fs.term = &FakeTerminal{s: fs, shown: []byte("fake " + id + "\r\n")}
 	fs.ev <- agent.Ready{ID: id}
+	if s.Prompt != "" {
+		fs.Sent <- agent.Input{Text: s.Prompt}
+	}
 	f.Started <- fs
 	return fs
 }
@@ -170,7 +173,7 @@ func (f *Fake) open(s agent.StartSpec, id string) *FakeSession {
 // FakeSession is a session that says what the test tells it to.
 type FakeSession struct {
 	Spec agent.StartSpec
-	Sent chan agent.Input // what it was given, in order
+	Sent chan agent.Input // what it was given, in order: its Spec.Prompt first, as its first turn
 
 	id          string
 	fake        *Fake

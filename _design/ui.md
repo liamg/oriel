@@ -137,12 +137,14 @@ what goes wrong if the user acts before the data arrives (rendering.md, "Loading
 - Built in AI-5 (`app/requests*.go`, `app/threadsinline.go`): the `requests` view is the list (the rail's Requests,
   `⌘⇧R`, left dock), with filter chips, search and **New request**; selecting one opens the `request` view (a main tab)
   for the selected request: the anchored code read from the open buffer or the file, re-found by its text when the line
-  moved; each comment with its markdown (paragraphs, lists, headings, inline code and bold, fenced code: `widget.Rich`),
+  moved; each comment with its markdown (paragraphs, lists, headings, inline code and bold, fenced code: `widget.Rich`; tables: `widget.Table`),
   pasted images by name, the agent's model chip, its **activity** block (`Comment.Activity`: edits with their diff stat
   and **view**, lookups, runs) and **evidence** chips (`Comment.Evidence`; a click runs `test.run.show`, TR-5), and an
-  unbacked claim flagged ⚠. The composer is one line for now (`widget.Input`, key mode `request.composer`): attachments
+  unbacked claim flagged ⚠. The composer is a message's field (`widget.Input` with `Lines` and `EnterSubmits`, key mode
+  `request.composer`), as are a thread's reply field and the composer under a line: `⏎` sends, `⇧⏎` starts a new line
+  and the field grows to eight lines, then scrolls. Attachments
   as chips, **@ FILE** and **# SYMBOL** open the files and symbols pickers (whose `⌃a` attaches), URGENT and BTW
-  toggle, `⏎` sends, `⌘⏎` sends urgent. Right: this request, what it changed (`Thread.Touched`), spawned (tasks whose
+  toggle, `⌘⏎` sends urgent. Right: this request, what it changed (`Thread.Touched`), spawned (tasks whose
   `Thread` it is, threads whose `Origin` it is) and related (the same file). Keys in mode `requests` (list and
   conversation): `j`/`k`, `⏎` the composer, `o` the anchor, `R` resolve, `⌘N` new request. Commands: `request.comment`
   (fires `CommentSend`, then `host.Host.Comment`), `request.resolve`, `request.reopen`, `request.new {text, context,
@@ -160,7 +162,7 @@ what goes wrong if the user acts before the data arrives (rendering.md, "Loading
   both, never taking focus or keys; a click, or `⏎` on the line, shows the threads again at that one, its reply field
   focused. A presentation has the same bubbles beside its blocks. The toggle is `␣R` beside the picker's `␣r`, as `␣T`
   is beside `␣t`, so `␣r` stays a key of its own.
-- Not yet: the multi-line composer, `@file`/`#symbol` completion as you type, image paste and dictation (the chips
+- Not yet: `@file`/`#symbol` completion as you type, image paste and dictation (the chips
   aren't there), `g r` (vim's `gr`), and turn cost per request. Since RV-2 each file the request changed shows its
   read bar and read/total, the file's whole ledger rather than only the lines that request wrote.
 
@@ -274,7 +276,8 @@ time (admin-ui: its files, changes, PR and tests). The sidebar replaces the rail
   `⌃1–9` run `project.open {index}`; `⌘⇧E/F/G/T` run `project.panel {name}` for the open project; `⌘⇧R` and `⌘⇧D` stay
   `view.toggle`. Opening a project closes the docked panels of the others and reopens its last panel
   (`SessionState.ProjectUI`), or the one that was showing. A header's line is the branch, ahead/behind and changed files
-  from its own work tree, then what `ProjectState` contributions add (FG-6: the PR and CI). The form is the window's,
+  from its own work tree (for a project the session only reads, a plan's checkouts or a review's, "read-only" in place
+  of changed files, and Git's entry has no count: that work isn't the session's), then what `ProjectState` contributions add (FG-6: the PR and CI). The form is the window's,
   kept in its state file beside the layout (`sidebar-<hash>.json`); until it's set, the `sidebar.form` option decides,
   `auto` being wide with 2+ projects and narrow otherwise (so a directory keeps the old rail's strip). Wide is 224px
   with projects, 150px for one. Views carry their project (`layout.ViewRef.Project`), which their dock tab names
@@ -567,8 +570,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   markdown renderer's blocks (`mdParse`, which keeps each block's source lines), with a line number and a coloured edge
   where a thread is; a click, or `j`/`k` then `c`/`⏎`, opens a thread on a block's lines. Threads sit in the margin
   level with their block (or under the card before), as the same card that sits between the editor's lines, with
-  **defer** while planning; a closed one folds to a line with **reopen**. The agent's latest edit to the doc shows for
-  ten minutes as green blocks labelled "agent edited 4s ago", a one-line change as its old words struck through
+  **defer** while planning; a closed one folds to a line with **reopen**, and a click on the line unfolds it to read
+  (its card, with a chevron to collapse it and **reopen**, no reply field) without changing its state. The agent's latest edit to the
+  doc shows for ten minutes as green blocks labelled "agent edited 4s ago", a one-line change as its old words struck through
   (`widget.Span.Strike`) and its new ones. The header has the doc's title, the agent and "drafting rev N" (its edits to
   the doc), "agent editing PLAN.md" during a turn that edits a doc, **Preview diff** (lit when something registers
   `diff.open`) and **Start work**, which opens the Start work dialog (`plan.start-work`, a `widget.Scrim` on the
@@ -576,8 +580,8 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   agent with a fresh context on the work pack, a branch per project, the sandbox and network toggles and the model and
   effort menus shared with the launcher (`sandboxToggles`, `modelSelects`), and **Start work** (⌘↵) and Cancel (Esc),
   which run `session.start-work` with them (sessions.md, Plan → Start work). The status line's mode chip says PLAN
-  while the doc has focus. Not yet: a mermaid fence is drawn as code, not a diagram; the inline diff is word-level for one-line blocks
-  only.
+  while the doc has focus. A mermaid fence is drawn as its diagram (editor.md, "Diagrams"). Not yet: the inline diff is
+  word-level for one-line blocks only.
 
 ## 06 · Review, and the review ledger
 

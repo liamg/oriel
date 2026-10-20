@@ -81,7 +81,11 @@ flowchart TB
   from its text whenever the text (or the width) changes, so two windows on one file can be in Edit and a presentation
   at once. Only the blocks near the view are drawn each frame. `Build` maps each block it makes to the source lines
   it came from: `ctx.Block(from, to, body)` (0-based, inclusive; `Space` above it,
-  `Label` its accessible name), whose body is drawn with `PresentDraw{Width, Decorations, Kicker}`. From that map the
+  `Label` its accessible name), whose body is drawn with `PresentDraw{Width, Decorations, Kicker, Part}`. A body that
+  draws pieces on lines of their own in one piece (a table's rows, sharing its column widths and its sideways scroll)
+  marks each with `d.Part(from, to, id)`, the node it drew it in: the host then gives each part what it gives a block
+  (a click on it, `j`/`k` stepping through the parts, its line number, its edge, its cards level with it, a wash under
+  the pointer), where it was last laid out. From that map the
   host (`app/present.go`) gives every presenter the same: the decorations of the file (every provider's, all its lines)
   on the block holding their line (a line no block maps belongs to the nearest block before it): `Block`s are cards
   in a margin level with their block (the file's threads), `Sign`s sit beside the block, a `LineBg` fills it and
@@ -162,6 +166,11 @@ flowchart TB
   to, tone)` (`LeaderPath`) the angled leader line from code to its card. Theme tokens `annotation.*`.
 - images (RV-8): `widget.Image(c, key, img, width, ImageOpts{Label, Help})` draws an `image.Image` at a width, its
   shape kept, scaled once per size to the device's pixels (`ui.RoleImage` to assistive technology).
+- vectors: `widget.VectorImage(c, key, widget.Vector{Size, Draw, Fill, Tips}, width, ImageOpts{…})` draws a picture
+  that paints itself at any size (a diagram), its `Tips` (`VectorTip{Rect, Text}`) tooltips over its parts, zoomable
+  into the lightbox with `ImageOpts.Zoom` and in its `Group` with the images there; `widget.LightboxItem` takes a
+  `Vector` as well as an `Image`. `render/diagram` parses, lays out and draws mermaid flowcharts and sequence diagrams
+  (`diagram.Parse`, `Diagram.Layout(shaper, fonts)`, `Layout.Draw(frame, rect, diagram.ThemePalette(theme))`), so a plugin's view can draw one the way markdown does.
 - tours: removed (the user's decision).
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
@@ -1044,7 +1053,7 @@ type Host interface {
 ## As built (code hosts)
 
 - **`registry.CodeHost`** (kind `code.host`) is a host's whole PR side; any func but the name may be nil, and what it
-  would do isn't offered. `Sites` are its public servers (`Site{Host, API, Secret}`); `Path` matches a remote's path
+  would do isn't offered. `Sites` are its public servers (`Site{Host, API, Secret, Aliases}`; `Aliases` are other hostnames its remotes use for one, its ssh hosts: `ssh.dev.azure.com`, `ssh.github.com`, `altssh.gitlab.com`); `Path` matches a remote's path
   on any of them (first group: the repo's name, `RepoAt`), `Takes` a PR URL's path (`TakesPath`), `Shape` a whole
   remote that alone says it's this host's. `Setup` (`SiteSetup{API, Secret, TokenURL, TokenHelp, Probe}`, `{host}`
   replaced) makes a self-hosted site, `Allow(host, secret)` lets its plugin reach one. The review funcs take the
@@ -1055,7 +1064,7 @@ type Host interface {
   `Pick(want)` is want, else the default, else squash, else the first), `Blockers` (`[]MergeBlocker{Kind, Count, Text,
   Hard, URL}`: `threads`, `changes`, `checks`, `draft`, `conflicts`, `behind`, `reviews`, `order`, `oriel-threads`),
   `Merge(MergeOpts{Method, Head, Title, Body, DeleteBranch})`. Helpers: `CodeHosts`, `HostByName`, `ParseRemote`.
-- **Which host and site** (`app/codesites.go`, `shell.sites`): a public site by hostname; else `code.hosts` names it,
+- **Which host and site** (`app/codesites.go`, `shell.sites`): a public site by hostname or alias (one site, one token, one Reviews source); else `code.hosts` names it,
   or gh's `hosts.yml` or glab's `config.yml` lists it; else a host's `Shape` matches; else, off the loop, each host's
   `Probe` (once a hostname, kept in `code.hosts`). A self-hosted site's API is `code.api`'s, else `Setup.API`; its
   secret `Setup.Secret + ":" + hostname`, and using it calls `Allow`, which for a Lua host adds a `net` and a

@@ -74,7 +74,7 @@ flowchart LR
 | `sandbox` | sandbox backends (docker containers, macOS seatbelt), gateway, egress (ported from crit); `sandbox/hookcall` (`oriel hook`'s client and wire types); `sandbox/helper` (the static Linux `oriel-sandbox` the app embeds, built by `make helper`) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear (agentbus and Slack PTAL are company-specific, so they're external plugins: agentbus is `github.com/liamg/oriel-agentbus`, with its `oriel-agentbus` helper process) | core; their processes `agent/jsonrpc`, `gh` |
-| `render` | GPU surface interface and display lists; `render/typeset` (shaping, fonts, rasterising, atlas); `render/raster` (draws display lists on the CPU); `render/bake` (glows and rounded rects as images); `render/headless` (keeps display lists and shoots them, for tests); `render/snapshot` (golden lists and perceptual PNG diffs); `render/scenes` (01-ide and the budget scenes) | go-text, x/image, theme |
+| `render` | GPU surface interface and display lists; `render/typeset` (shaping, fonts, rasterising, atlas); `render/raster` (draws display lists on the CPU); `render/bake` (glows and rounded rects as images); `render/diagram` (mermaid flowcharts and sequence diagrams: parsed, laid out, drawn at any size); `render/headless` (keeps display lists and shoots them, for tests); `render/snapshot` (golden lists and perceptual PNG diffs); `render/scenes` (01-ide and the budget scenes) | go-text, x/image, theme |
 | `render/gio` | the Gio backend: windows, input, offscreen rendering, the glyph atlas and baked shapes | render, gioui.org |
 | `ui` | widgets, layout, theme, animation, input routing | render |
 | `app` | the desktop app: screens, panels, HUD; wires it all together | everything |

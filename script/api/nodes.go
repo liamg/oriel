@@ -23,10 +23,10 @@ func coreSession(id string) core.SessionID { return core.SessionID(id) }
 //oriel:api name=ui cap=ui
 type UI struct{ a *APIs }
 
-//oriel:api doc="A row of nodes; options beside them: gap, pad (px). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths)." returns=table
+//oriel:api doc="A row of nodes; options beside them: gap, pad (px), and in a presenter's block lines = { from, to } (a part of the block on those source lines, 1-based: selected, commented on and given its threads on its own). Any node can be dragged (drag = { kind, data, label }) or take drops (accepts = { kinds }, on_drop = fn(kind, data); a 'file' drop's data is its paths)." returns=table
 func (UI) Row(children any) script.Table { return container("row", children) }
 
-//oriel:api doc="A column of nodes; options beside them: gap, pad (px)." returns=table
+//oriel:api doc="A column of nodes; options beside them: gap, pad (px), and lines as a row's." returns=table
 func (UI) Column(children any) script.Table { return container("column", children) }
 
 // container is a row or column from Lua's table: its list part the children, its named fields the options.
@@ -105,7 +105,7 @@ func (UI) Button(spec script.Table) script.Table {
 	return t
 }
 
-//oriel:api doc="A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits). Keep the text in oriel.ui.state and give it back as value." returns=table
+//oriel:api doc="A text field: { value, placeholder, on_change = fn(text), on_submit = fn(text), id, label, lines, enter_submits }: lines > 1 takes several lines (⏎ a new line, ⌘⏎ submits; with enter_submits, a message's: ⏎ submits, ⇧⏎ a new line). Keep the text in oriel.ui.state and give it back as value." returns=table
 func (UI) Input(spec script.Table) script.Table { return node("input", spec) }
 
 //oriel:api doc="An on/off switch: { on, on_change = fn(on), id, label }." returns=table
@@ -178,12 +178,17 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			if p, ok := n["pad"].(float64); ok {
 				st.Pad = ui.Pad(float32(p))
 			}
-			c.Box(nil, st, func(c *ui.Ctx) {
+			id := c.Box(nil, st, func(c *ui.Ctx) {
 				kids, _ := n["children"].([]any)
 				for _, x := range kids {
 					build(c, x, a)
 				}
 			})
+			if l, ok := n["lines"].([]any); ok && len(l) > 0 && a.part != nil {
+				from, _ := l[0].(float64)
+				to, _ := l[len(l)-1].(float64)
+				a.part(int(from)-1, int(to)-1, id)
+			}
 		case "text":
 			col := th.C(theme.Fg)
 			if tok, ok := styles[str(n, "style")]; ok {
@@ -245,8 +250,9 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			text := str(n, "value")
 			c.Box(key, ui.Style{W: ui.Px(220)}, func(c *ui.Ctx) {
 				lines, _ := n["lines"].(float64)
+				enter, _ := n["enter_submits"].(bool)
 				res := widget.Input(c, "in", &text, widget.InputOpts{Label: cmpOr(str(n, "label"), key), Placeholder: str(n, "placeholder"),
-					Help: "plugins/lua#ui", TabMoves: true, Lines: int(lines)})
+					Help: "plugins/lua#ui", TabMoves: true, Lines: int(lines), EnterSubmits: enter})
 				if res.Changed {
 					a.callback(n, "on_change", text)
 				}

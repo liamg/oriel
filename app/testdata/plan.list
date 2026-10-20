@@ -234,19 +234,27 @@ clip 484,38 1116x936 r 0
       text "keyed by ISO 4217 code, so JPY (0) and BHD (3) are handled." @554,529.1313 #ece6d8 Inter 14.5
       rect 554,573.9135 14x2 fill #ff9b45
       text "Pieces" @580,581.0976 #ece6d8 Inter 17
-      rect 554,595.1982 571.92004x78.22003 fill #0c0c0b radius 6 stroke 1 #332f27
-      text "MERMAID" @568,618.8882 #7c7566 JetBrains Mono 9.5
-      text "flowchart LR" @568,636.97815 #b3ab99 JetBrains Mono 12
-      text "  usage.Meter --> pricing.Round --> billing.Invoice" @568,655.8182 #b3ab99 JetBrains Mono 12
-      rect 554,708.7029 14x2 fill #ff9b45
-      text "Risks" @580,715.88696 #ece6d8 Inter 17
-      text "31" @516.8125,742.6976 #4f4a40 JetBrains Mono 10.5
-      rect 540,727.98755 2x21.544434 fill #4cc9f0
-      text "•" @554,744.0344 #7c7566 Inter 14.5
-      text "Historical invoices must not change: only new invoices round this way." @572.4375,744.0344 #ece6d8 Inter 14.5
-      text "•" @554,771.57886 #7c7566 Inter 14.5
-      text "Partners reconcile against our CSV export; flag the change in the changelog." @572.4375,771.57886 #ece6d8 Inter 14.5
-      rect 1131.92,118 1x864.3097 fill #24221d
+      rect 554,595.1982 571.92004x94.53998 fill #0c0c0b radius 6 stroke 1 #332f27
+      text "MERMAID · FLOWCHART" @568,618.8882 #7c7566 JetBrains Mono 9.5
+      path 2 segments stroke 1.2999998 #bb9b31
+      path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+      path 2 segments stroke 1.2999998 #bb9b31
+      path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+      rect 608.42096,635.73816 109.1875x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
+      text "usage.Meter" @624.42096,659.46716 #ece6d8 Inter 13
+      rect 777.60846,635.73816 117.46869x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
+      text "pricing.Round" @793.6084,659.46716 #ece6d8 Inter 13
+      rect 955.07715,635.73816 116.421875x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
+      text "billing.Invoice" @971.07715,659.46716 #ece6d8 Inter 13
+      rect 554,725.0228 14x2 fill #ff9b45
+      text "Risks" @580,732.2069 #ece6d8 Inter 17
+      text "31" @516.8125,759.0175 #4f4a40 JetBrains Mono 10.5
+      rect 540,744.3075 2x21.544434 fill #4cc9f0
+      text "•" @554,760.3544 #7c7566 Inter 14.5
+      text "Historical invoices must not change: only new invoices round this way." @572.4375,760.3544 #ece6d8 Inter 14.5
+      text "•" @554,787.8988 #7c7566 Inter 14.5
+      text "Partners reconcile against our CSV export; flag the change in the changelog." @572.4375,787.8988 #ece6d8 Inter 14.5
+      rect 1131.92,118 1x880.3097 fill #24221d
       rect 1152.92,423 384.07996x250.84161 fill #0c0c0b radius 6
       clip 1152.92,423 384.07996x250.84161 r 6
         rect 1164.92,436.5 7x7 fill #ff5f6d radius 3.5
@@ -285,48 +293,49 @@ clip 484,38 1116x936 r 0
       pop
       rect 1152.92,423 384.07996x250.84161 radius 6 stroke 1 #332f27
       rect 1152.92,683.8416 384.07996x32 radius 6 stroke 1 #332f27
-      rect 1164.92,696.3416 7x7 fill #4fe0a0 radius 3.5
-      text "L22" @1179.92,703.8016 #b3ab99 JetBrains Mono 11
-      rect 1207.7013,691.5716 66.55994x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
-      text "RESOLVED" @1214.7013,703.2616 #4fe0a0 JetBrains Mono 9.5
-      clip 1282.2612,692.88434 194.11377x13.914551 r 0
-        text "“Where does precision come fr…" @1282.2612,704.02496 #7c7566 Inter 11.5
+      path 3 segments stroke 1.5 #b3ab99
+      rect 1182.92,696.3416 7x7 fill #4fe0a0 radius 3.5
+      text "L22" @1197.92,703.8016 #b3ab99 JetBrains Mono 11
+      rect 1225.7013,691.5716 66.55994x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
+      text "RESOLVED" @1232.7013,703.2616 #4fe0a0 JetBrains Mono 9.5
+      clip 1300.2612,692.88434 176.11377x13.914551 r 0
+        text "“Where does precision come…" @1300.2612,704.02496 #7c7566 Inter 11.5
       pop
       text "reopen" @1484.375,703.20685 #ffd23f Inter 12
       rect 1484.375,707.1014 40.625x1 fill #ffd23fb3
-      rect 1152.92,727.8416 384.07996x196.46808 fill #0c0c0b radius 6
-      clip 1152.92,727.8416 384.07996x196.46808 r 6
-        rect 1164.92,741.3416 7x7 fill #4cc9f0 radius 3.5
-        text "Thread" @1179.92,749.38873 #ece6d8 Inter 12.5
-        text "· L31 ·" @1232.8732,748.62164 #7c7566 JetBrains Mono 10.5
-        rect 1287.0294,736.5716 119.119995x16.539978 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
-        text "CLAUDE · WORKING" @1294.0294,748.2616 #4cc9f0 JetBrains Mono 9.5
-        text "defer" @1422.1494,748.20685 #ffd23f Inter 12
-        rect 1422.1494,752.1014 30.703125x1 fill #ffd23fb3
-        text "resolve" @1460.8525,748.20685 #ffd23f Inter 12
-        rect 1460.8525,752.1014 42.375x1 fill #ffd23fb3
-        text "t…" @1511.2275,748.44165 #4f4a40 JetBrains Mono 10
-        rect 1152.92,761.8416 384.07996x1 fill #332f27
-        rect 1164.92,772.8416 28x28 fill #ff9b45 radius 6
-        text "LG" @1171.5901,790.2616 #141006 JetBrains Mono 9.5
-        text "Liam Galvin" @1202.92,784.4666 #ece6d8 Inter 12
-        text "1m" @1278.1232,783.52136 #4f4a40 JetBrains Mono 9.5
-        text "How do we guarantee this? A flag on the invoice?" @1202.92,803.4705 #b3ab99 Inter 12.5
-        rect 1164.92,818.48566 28x28 fill #ff8a1f radius 6
-        text "C" @1175.255,835.90564 #141006 JetBrains Mono 9.5
-        text "Claude" @1202.92,830.11066 #ece6d8 Inter 12
-        text "now" @1251.7169,829.1654 #4f4a40 JetBrains Mono 9.5
-        text "reading billing/invoice.go… checking for a" @1202.92,850.14233 #b3ab99 Inter 12.5
-        rect 1464.3732,837.0052 58.421875x17.179993 fill #161615 radius 3
-        text "version" @1468.3732,849.73517 #ece6d8 JetBrains Mono 11.5
-        text "column" @1202.92,869.29456 #b3ab99 Inter 12.5
-        rect 1164.92,884.3097 360.07996x30 fill #060606 radius 6
-        clip 1164.92,884.3097 360.07996x30 r 6
-          text "Reply…" @1174.92,903.8568 #7c7566 Inter 12.5
+      rect 1152.92,743.8416 384.07996x196.46808 fill #0c0c0b radius 6
+      clip 1152.92,743.8416 384.07996x196.46808 r 6
+        rect 1164.92,757.3416 7x7 fill #4cc9f0 radius 3.5
+        text "Thread" @1179.92,765.38873 #ece6d8 Inter 12.5
+        text "· L31 ·" @1232.8732,764.62164 #7c7566 JetBrains Mono 10.5
+        rect 1287.0294,752.5716 119.119995x16.539978 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
+        text "CLAUDE · WORKING" @1294.0294,764.2616 #4cc9f0 JetBrains Mono 9.5
+        text "defer" @1422.1494,764.20685 #ffd23f Inter 12
+        rect 1422.1494,768.1014 30.703125x1 fill #ffd23fb3
+        text "resolve" @1460.8525,764.20685 #ffd23f Inter 12
+        rect 1460.8525,768.1014 42.375x1 fill #ffd23fb3
+        text "t…" @1511.2275,764.44165 #4f4a40 JetBrains Mono 10
+        rect 1152.92,777.8416 384.07996x1 fill #332f27
+        rect 1164.92,788.8416 28x28 fill #ff9b45 radius 6
+        text "LG" @1171.5901,806.2616 #141006 JetBrains Mono 9.5
+        text "Liam Galvin" @1202.92,800.4666 #ece6d8 Inter 12
+        text "1m" @1278.1232,799.52136 #4f4a40 JetBrains Mono 9.5
+        text "How do we guarantee this? A flag on the invoice?" @1202.92,819.4705 #b3ab99 Inter 12.5
+        rect 1164.92,834.48566 28x28 fill #ff8a1f radius 6
+        text "C" @1175.255,851.90564 #141006 JetBrains Mono 9.5
+        text "Claude" @1202.92,846.11066 #ece6d8 Inter 12
+        text "now" @1251.7169,845.1654 #4f4a40 JetBrains Mono 9.5
+        text "reading billing/invoice.go… checking for a" @1202.92,866.14233 #b3ab99 Inter 12.5
+        rect 1464.3732,853.0052 58.421875x17.179993 fill #161615 radius 3
+        text "version" @1468.3732,865.73517 #ece6d8 JetBrains Mono 11.5
+        text "column" @1202.92,885.29456 #b3ab99 Inter 12.5
+        rect 1164.92,900.3097 360.07996x30 fill #060606 radius 6
+        clip 1164.92,900.3097 360.07996x30 r 6
+          text "Reply…" @1174.92,919.8568 #7c7566 Inter 12.5
         pop
-        rect 1164.92,884.3097 360.07996x30 radius 6 stroke 1 #332f27
+        rect 1164.92,900.3097 360.07996x30 radius 6 stroke 1 #332f27
       pop
-      rect 1152.92,727.8416 384.07996x196.46808 radius 6 stroke 1 #332f27
+      rect 1152.92,743.8416 384.07996x196.46808 radius 6 stroke 1 #332f27
     pop
   pop
 pop
