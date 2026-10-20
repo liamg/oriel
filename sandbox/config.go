@@ -35,7 +35,8 @@ type Config struct {
 	ApprovalSecs int `json:"approvalSecs,omitempty"`
 	// Hidden are upstream MCP servers sandboxes never see.
 	Hidden []string `json:"hidden,omitempty"`
-	// NoEgressProxy turns off network filtering: containers get plain internet.
+	// NoEgressProxy turns off network filtering: every connection is allowed. A container's still leave through the
+	// egress sidecar, which has the host dial them, so the host's VPN and tailnet stay reachable.
 	NoEgressProxy bool `json:"noEgressProxy,omitempty"`
 	// Memory caps each container's memory ("8g"; "none" for no cap).
 	Memory string `json:"memory,omitempty"`

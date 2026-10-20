@@ -419,3 +419,24 @@ func TestProxyRefusalSaysWhoAndWhy(t *testing.T) {
 		}
 	}
 }
+
+// An open session asks nobody and allows every destination, private addresses too: with filtering off, connections
+// still go out through the host, so its VPN and tailnet stay reachable. The host machine itself stays limited to the
+// endpoints the sandbox was given.
+func TestOpenSessionAllowsEverything(t *testing.T) {
+	s, c := newSession(t)
+	s.Open = true
+	s.Resolver = resolveTo{netip.MustParseAddr("10.1.3.31")}
+	if !allow(s, "litellm.internal.dev.infracost.io", 443) {
+		t.Fatal("an open session refused a destination")
+	}
+	if c.open() != 0 {
+		t.Error("an open session asked")
+	}
+	if s.scope("litellm.internal.dev.infracost.io:443") != Private {
+		t.Error("an open session's dial can't reach a private address")
+	}
+	if allow(s, HostGateway, 5432) {
+		t.Error("an open session reached a host port it wasn't given")
+	}
+}

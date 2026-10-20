@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/egress"
 )
 
 // imageBackend is a fake backend with an image: it describes itself and rebuilds.
@@ -82,5 +83,27 @@ func TestWorkspaceUnsandboxed(t *testing.T) {
 	}
 	if err := r.w.RestartSandbox(id); err == nil {
 		t.Error("restarted a sandbox that isn't there")
+	}
+}
+
+// A session started with its network open still carries its connections through the host's egress session, which
+// allows them all, private addresses too, asking nothing.
+func TestOpenNetworkStillGoesThroughTheHost(t *testing.T) {
+	s := newSandboxRig(t)
+	id := s.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
+		Sandbox: core.SandboxPolicy{Container: true, Network: "open"}})
+	s.agent()
+	b := s.keptBox(id)
+	if !b.egress.Open {
+		t.Fatal("an open session's egress isn't open")
+	}
+	if b.egress.Decide(context.Background(), "litellm.internal.example.io", 443) != egress.Allow {
+		t.Error("an open session refused a host")
+	}
+	if se := s.session(id); len(se.Asks) != 0 {
+		t.Errorf("an open session asked: %+v", se.Asks)
+	}
+	if p, _ := s.w.Permissions(context.Background(), id); p.Filtered {
+		t.Error("an open session reads as filtered")
 	}
 }

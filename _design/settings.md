@@ -182,7 +182,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `sandbox.auto_allow_read_only` | false | app | | AI-11 |
 | `sandbox.hidden_servers` | empty; the page offers the servers the gateway finds | app | | AI-11 |
 | `sandbox.servers` | empty: extra MCP servers for the gateway, name → an https URL or a command line | app | | AI-11 |
-| `sandbox.egress_proxy` | true: off gives containers plain internet | app | | AI-11 |
+| `sandbox.egress_proxy` | true: off allows every connection (still made from the host, so its VPN and tailnet reach the sandbox) | app | | AI-11 |
 | `sandbox.memory` | empty: 8g; `none` for no cap | app | | AI-11 |
 | `sandbox.pids_limit` | 0: 4096; -1 for no cap | app | | AI-11 |
 | `usage.accounts` | empty: names for the accounts plans belong to, account identity → label ("Work", "Personal"); unnamed, an account shows its email or organisation | app | | AI-12 |

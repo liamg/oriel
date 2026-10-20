@@ -41,6 +41,7 @@ type quitDrain struct {
 	busy     []core.SessionState // sessions mid-turn, as last polled
 	jobs     []host.Job          // scheduled jobs, which don't run while Oriel is closed
 	polled   bool
+	stopping []core.SessionID // the sessions whose agents were running when the wait ended, which the hand-over stops
 
 	hidden, focus bool // the dialog's; the loop's only
 }
@@ -110,6 +111,12 @@ func (r *quitDrain) shown() (busy []core.SessionState, jobs []host.Job, polled b
 	return r.busy, r.jobs, r.polled
 }
 
+func (r *quitDrain) stoppingNow() []core.SessionID {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.stopping
+}
+
 func (sh *shell) handOver(r *quitDrain) error {
 	w := sh.cfg.Host
 	wait := time.NewTimer(time.Until(r.deadline))
@@ -138,9 +145,31 @@ waiting:
 		case <-tick.C:
 		}
 	}
+	var live []core.SessionID
+	for _, se := range sh.cfg.Store.State().Sessions {
+		if se.Agent.Live() {
+			live = append(live, se.ID)
+		}
+	}
+	r.mu.Lock()
+	r.stopping = live
+	r.mu.Unlock()
 	r.handing.Store(true)
 	sh.poke()
+	done := make(chan struct{})
+	go func() {
+		// The dialog shows each agent as it stops.
+		for {
+			select {
+			case <-done:
+				return
+			case <-tick.C:
+				sh.poke()
+			}
+		}
+	}()
 	w.HandOver()
+	close(done)
 	return nil
 }
 
@@ -164,7 +193,8 @@ func (x *sessions) drainView(c *ui.Ctx) {
 		return
 	}
 	busy, jobs, polled := r.shown()
-	if !polled || len(busy) == 0 && len(jobs) == 0 {
+	handing := r.handing.Load()
+	if handing && len(r.stoppingNow()) == 0 || !handing && (!polled || len(busy) == 0 && len(jobs) == 0) {
 		return
 	}
 	hide := r.cancelQuit
@@ -181,8 +211,24 @@ func (x *sessions) drainView(c *ui.Ctx) {
 		c.Column("box", ui.Style{W: ui.Px(w), Fill: th.C(tOmniBg), Stroke: th.C(tOmniBorder), Border: 1, Radius: 10, Clip: true,
 			Trap: true, Interactive: true, Focusable: true, KeyMode: QuitKeyMode, Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}},
 			Role: ui.RoleDialog, Label: "Quitting Oriel", Help: quitHelp}, func(c *ui.Ctx) {
+			if handing {
+				c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
+					widget.Spinner(c, "spin", widget.SpinnerOpts{Name: "stopping the agents", Help: quitHelp})
+					c.Text("title", "SHUTTING DOWN", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
+						Color: th.C(theme.Fg)})
+				})
+				c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 24, R: 24, T: 18, B: 20}, Gap: 12}, func(c *ui.Ctx) {
+					x.stoppingBody(c, r, w-48)
+				})
+				return
+			}
 			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("title", "QUITTING ORIEL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
+				title := "QUITTING ORIEL"
+				if handing {
+					title = "SHUTTING DOWN"
+				}
+				c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
 					Color: th.C(theme.Fg)})
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: quitHelp}) {
@@ -218,12 +264,39 @@ func (x *sessions) drainView(c *ui.Ctx) {
 	}
 }
 
+// stoppingBody is the shutdown: each agent the hand-over stops, until it has.
+func (x *sessions) stoppingBody(c *ui.Ctx, r *quitDrain, width float32) {
+	th := c.Theme()
+	ids := r.stoppingNow()
+	st := x.h.State()
+	left := 0
+	for _, id := range ids {
+		if se, ok := st.Session(id); ok && se.Snapshot().Agent.Live() {
+			left++
+		}
+	}
+	widget.Wrap(c, "t", fmt.Sprintf("Stopping %s. They come back when Oriel opens again.", counted(left, "agent")), width,
+		uiFont(12.5, th.C(theme.Fg)))
+	c.Column("agents", ui.Style{W: ui.Flex(1), Gap: 4, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
+		for _, id := range ids {
+			var se core.SessionState
+			if v, ok := st.Session(id); ok {
+				se = v.Snapshot()
+			}
+			c.Row(string(id), ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+				c.Text("name", cmpOr(se.Name, string(id)), monoFont(11.5, th.C(theme.Fg)))
+				if se.Agent.Live() {
+					c.Text("state", "stopping", monoFont(10.5, th.C(theme.FgFaint)))
+				} else {
+					c.Text("state", "stopped", monoFont(10.5, th.C(tPermAllow)))
+				}
+			})
+		}
+	})
+}
+
 func (x *sessions) drainBody(c *ui.Ctx, r *quitDrain, busy []core.SessionState, jobs []host.Job, width float32) {
 	th := c.Theme()
-	if r.handing.Load() {
-		widget.Wrap(c, "t", "Stopping the agents. They come back when Oriel opens again.", width, uiFont(12.5, th.C(theme.Fg)))
-		return
-	}
 	if len(busy) > 0 {
 		remaining := max(r.deadline.Sub(c.Now()), 0)
 		left := (remaining + time.Second - 1).Truncate(time.Second)

@@ -135,6 +135,8 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.add(h.Picker(x.addSource(h)))
 	x.add(h.Keymap(registry.Keymap{Mode: QuitKeyMode, Keys: "<D-CR>", Command: "quit.now", Desc: "Don't wait for the turns"}))
+	// While Oriel is quitting, its dialog keeps the keys: nothing else opens over it or runs.
+	x.add(h.Contribute(registry.ExclusiveKeys{Mode: QuitKeyMode, Source: "builtin:sessions"}))
 	x.add(h.View(OverlayPrefix+"quit", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "quit", Fn: x.drainView}
 	})))

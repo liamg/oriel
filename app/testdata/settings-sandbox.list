@@ -204,7 +204,7 @@ clip 0,38 1600x962 r 0
     rect 1540.5469,512.749 31.453125x26 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,530.11426 #ece6d8 Inter 12
     text "sandbox.egress_proxy" @288,613.68677 #ece6d8 JetBrains Mono 12.5
-    text "Filter a container's network through the egress proxy; off gives it plain internet." @288,633.54614 #7c7566 Inter 12.5
+    text "Filter a container's network through the egress proxy; off allows every connection." @288,633.54614 #7c7566 Inter 12.5
     text "default" @1202.3906,622.52905 #7c7566 JetBrains Mono 10.5
     rect 1492.5469,609.749 32x18 fill #ffd23f radius 9
     rect 1508.5469,611.749 14x14 fill #ece6d8 radius 7

@@ -345,7 +345,7 @@ func (x *permissionsPlugin) hosts(c *ui.Ctx, se core.SessionState, st *permsStat
 	th := c.Theme()
 	permsCap(c, "netcap", "NETWORK")
 	if !p.Filtered {
-		widget.Wrap(c, "open", "The egress proxy is off (sandbox.egress_proxy): the sandbox has plain internet and none of these rules apply.", 560,
+		widget.Wrap(c, "open", "Network filtering is off (sandbox.egress_proxy, or the session's network): every connection is allowed and none of these rules apply.", 560,
 			uiFont(12, th.C(theme.Warn)))
 	}
 	c.Row("add", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {

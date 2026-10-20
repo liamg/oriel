@@ -26,7 +26,9 @@ import (
 	"github.com/liamg/oriel/term/pty"
 
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/container"
+	"github.com/liamg/oriel/sandbox/egress"
 )
 
 // These run real containers: go test -tags docker ./sandbox/runner/
@@ -99,7 +101,11 @@ func standInSession(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = ln.Close() })
-	go func() { _ = http.Serve(ln, http.NotFoundHandler()) }()
+	// An open egress session: the fixtures run with filtering off, and their connections still leave through the
+	// sidecar, which asks the session to dial.
+	rec, _ := sandbox.Load(root)
+	h := &agentsock.Handler{Token: rec.AgentToken, Egress: &egress.Session{GrantsPath: sandbox.EgressGrantsPath(root), Open: true}}
+	go func() { _ = http.Serve(ln, h) }()
 	if !SocketsMount(container.Docker) {
 		port := strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)
 		mustWrite(t, sandbox.PortPath(root), port)

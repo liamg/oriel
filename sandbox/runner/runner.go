@@ -117,24 +117,20 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 	if err := container.Remove(ctx, spec.Name); err != nil {
 		return nil, err
 	}
-	// Off Linux the sidecar also carries the session sockets, so it runs
-	// even when nothing is filtered.
-	if !cfg.NoEgressProxy || !SocketsMount(engine) {
-		hostPorts := sandbox.HostPorts(sandbox.EndpointEnv(o.Environ, cfg.Env, sandbox.ClaudeSettings()))
-		if err := ensureProxy(ctx, root, image, orielBin, id, hostPorts); err != nil {
-			return nil, err
-		}
-		st.Mark("egress proxy")
+	// Every connection leaves through the sidecar, filtering on or off: it has the host dial, so what only the host
+	// reaches (a VPN, a tailnet, its private DNS) reaches the sandbox too. With filtering off it allows everything.
+	hostPorts := sandbox.HostPorts(sandbox.EndpointEnv(o.Environ, cfg.Env, sandbox.ClaudeSettings()))
+	if err := ensureProxy(ctx, root, image, orielBin, id, hostPorts); err != nil {
+		return nil, err
 	}
-	if !cfg.NoEgressProxy {
-		spec.Network = NetworkName(root)
-		proxy := fmt.Sprintf("http://%s:%d", ProxyName(root), ProxyPort)
-		for _, k := range []string{"HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"} {
-			env[k] = proxy
-		}
-		env["NO_PROXY"] = "localhost,127.0.0.1"
-		env["no_proxy"] = env["NO_PROXY"]
+	st.Mark("egress proxy")
+	spec.Network = NetworkName(root)
+	proxy := fmt.Sprintf("http://%s:%d", ProxyName(root), ProxyPort)
+	for _, k := range []string{"HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"} {
+		env[k] = proxy
 	}
+	env["NO_PROXY"] = "localhost,127.0.0.1"
+	env["no_proxy"] = env["NO_PROXY"]
 	if err := container.PrepareMountpoints(spec.Mounts); err != nil {
 		return nil, err
 	}

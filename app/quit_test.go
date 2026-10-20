@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/render/headless"
 )
 
 // quitScene is the app on its session host, with a session whose agent is running.
@@ -143,5 +145,27 @@ func TestQuitDialogSnapshot(t *testing.T) {
 	s.golden("quit")
 	if text := s.frameText(); !containsAll(text, "QUITTING ORIEL", "Round half-even", "in 42s", "Sweep stale deps", "Cancel", "Quit now") {
 		t.Errorf("the dialog reads:\n%s", text)
+	}
+}
+
+// Quitting with agents running, none of them mid-turn, still shows what's happening while they stop: the window says
+// it's shutting down and lists the agents still stopping, rather than looking frozen. It takes no other keys.
+func TestQuitShowsTheShutdown(t *testing.T) {
+	r, lw, _ := quitScene(t, nil)
+	lw.fake.HoldClose = make(chan struct{})
+	r.win.RequestClose()
+	r.waitFrame("the shutdown", func(s string) bool {
+		return containsAll(s, "SHUTTING DOWN", "Stopping 1 agent", "rounding")
+	})
+	r.typeKeys("<D-k>")
+	time.Sleep(150 * time.Millisecond)
+	f := r.latest("the shutdown", func(f headless.Frame) bool { return strings.Contains(f.Text(), "SHUTTING DOWN") })
+	if strings.Contains(f.Text(), "Search sessions, commands") {
+		t.Error("the omnibox opened over the shutdown")
+	}
+	close(lw.fake.HoldClose)
+	r.waitExit()
+	if !handedOver(lw) {
+		t.Error("the agent wasn't handed over")
 	}
 }
