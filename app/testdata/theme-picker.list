@@ -274,22 +274,42 @@ clip 180,108 1240x720 r 10
   text "⇥ next source" @1313.1799,130.42 #7c7566 JetBrains Mono 9.5
   rect 180,146 1240x1 fill #24221d
   text "❯" @194,175.82031 #5cc8ff Inter 16
-  rect 211.59375,155 420.6875x30 fill #071018 radius 6
-  clip 211.59375,155 420.6875x30 r 6
+  rect 211.59375,155 407.5x30 fill #071018 radius 6
+  clip 211.59375,155 407.5x30 r 6
     rect 221.59375,162 1x16 fill #5cc8ff
   pop
-  rect 211.59375,155 420.6875x30 radius 6 stroke 1 #5cc8ff
-  rect 207.59375,151 428.6875x38 radius 10 stroke 2 #5cc8ff
-  text "2 / 2 · fuzzy" @640.28125,173.78001 #7c7566 JetBrains Mono 10.5
+  rect 211.59375,155 407.5x30 radius 6 stroke 1 #5cc8ff
+  rect 207.59375,151 415.5x38 radius 10 stroke 2 #5cc8ff
+  text "12 / 12 · fuzzy" @627.09375,173.78001 #7c7566 JetBrains Mono 10.5
   rect 180,193 560x1 fill #24221d
   clip 180,194 560x601 r 0
-    rect 186,200 548x32 fill #112431 radius 6
-    rect 186,206 2x20 fill #5cc8ff
     rect 202.5,212.5 7x7 fill #7c7566 radius 3.5
-    text "glacier" @224,220.729 #ece6d8 Inter 13
+    text "catppuccin" @224,220.729 #ece6d8 Inter 13
     rect 202.5,244.5 7x7 fill #7c7566 radius 3.5
-    text "oriel" @224,252.729 #ece6d8 Inter 13
-    text "current" @682,251.59999 #4f4a40 JetBrains Mono 10
+    text "dracula" @224,252.729 #ece6d8 Inter 13
+    rect 202.5,276.5 7x7 fill #7c7566 radius 3.5
+    text "everforest" @224,284.729 #ece6d8 Inter 13
+    rect 186,296 548x32 fill #112431 radius 6
+    rect 186,302 2x20 fill #5cc8ff
+    rect 202.5,308.5 7x7 fill #7c7566 radius 3.5
+    text "glacier" @224,316.729 #ece6d8 Inter 13
+    rect 202.5,340.5 7x7 fill #7c7566 radius 3.5
+    text "gruvbox" @224,348.729 #ece6d8 Inter 13
+    rect 202.5,372.5 7x7 fill #7c7566 radius 3.5
+    text "kanagawa" @224,380.729 #ece6d8 Inter 13
+    rect 202.5,404.5 7x7 fill #7c7566 radius 3.5
+    text "nord" @224,412.729 #ece6d8 Inter 13
+    rect 202.5,436.5 7x7 fill #7c7566 radius 3.5
+    text "one-dark" @224,444.729 #ece6d8 Inter 13
+    rect 202.5,468.5 7x7 fill #7c7566 radius 3.5
+    text "oriel" @224,476.729 #ece6d8 Inter 13
+    text "current" @682,475.6 #4f4a40 JetBrains Mono 10
+    rect 202.5,500.5 7x7 fill #7c7566 radius 3.5
+    text "rose-pine" @224,508.729 #ece6d8 Inter 13
+    rect 202.5,532.5 7x7 fill #7c7566 radius 3.5
+    text "solarized" @224,540.729 #ece6d8 Inter 13
+    rect 202.5,564.5 7x7 fill #7c7566 radius 3.5
+    text "tokyonight" @224,572.729 #ece6d8 Inter 13
   pop
   rect 740,147 1x648 fill #24221d
   clip 741,147 679x648 r 0

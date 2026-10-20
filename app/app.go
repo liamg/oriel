@@ -642,7 +642,7 @@ func (l *loop) unwatchThemes() {
 	l.unwatch = nil
 }
 
-// loadTheme resolves the theme ui.theme names, in ui.variant. If it doesn't resolve, the theme already
+// loadTheme resolves the theme ui.theme names, in ui.variant unless it has only one. If it doesn't resolve, the theme already
 // showing stays; with none showing, the built-in one does.
 func (l *loop) loadTheme() {
 	r, err := chosenTheme(l.reg, l.osLight)
@@ -689,7 +689,7 @@ func resolveTheme(sources []theme.Source, name string, v theme.Variant) (*theme.
 	if err != nil {
 		return nil, err
 	}
-	return theme.Resolve(st, v)
+	return theme.Resolve(st, theme.Effective(st, v))
 }
 
 // frameInterval paces redraws while something animates.

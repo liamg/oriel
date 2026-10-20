@@ -545,7 +545,7 @@ func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.
 	return t.r, t.err, *p.sample
 }
 
-// themeSwatches are a theme's main colours, in the variant in use, for the picker's preview.
+// themeSwatches are a theme's main colours, in the variant in use (or its own, if it has one), for the picker's preview.
 func themeSwatches(h plugin.Host, p *themePreviews, name string) ui.Node {
 	variant := theme.Dark
 	if cur := h.CurrentTheme(); cur != nil {
@@ -556,7 +556,11 @@ func themeSwatches(h plugin.Host, p *themePreviews, name string) ui.Node {
 		th := c.Theme()
 		mono := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgMuted)}
 		c.Column("swatches", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-			c.Text("name", strings.ToUpper(name)+" · "+string(variant), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.FgFaint)})
+			shown := variant
+			if r != nil {
+				shown = r.Variant
+			}
+			c.Text("name", strings.ToUpper(name)+" · "+string(shown), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.FgFaint)})
 			if err != nil {
 				c.Text("err", err.Error(), ui.TextStyle{Font: mono.Font, Color: th.C(theme.Error)})
 				return
