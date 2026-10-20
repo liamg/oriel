@@ -221,6 +221,9 @@ func (h *session) launch(ctx context.Context, cancel context.CancelFunc, prompt 
 	spec := agent.StartSpec{Cwd: agentDir(se), Model: se.Agent.Model, Effort: se.Agent.Effort, Policy: agent.Policy(se.Agent.Policy),
 		Tools: w.tools(h), Protect: w.protected(se), Exec: w.opts.Exec, StateDir: filepath.Join(w.sessionDir(h.id), "agent"),
 		Env: []string{"ORIEL_SESSION=" + string(h.id)}, Prompt: prompt}
+	if m := memories(se); len(m) > 0 {
+		spec.Memory = m[0].Dir
+	}
 	if k, ok := w.kinds.Get(se.Kind); ok {
 		name := k.Pack
 		if se.Agent.Pack != "" {

@@ -4,11 +4,14 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/sandbox"
 )
 
 // The user's versions of the prompts, once the app sends them, are what a session's agent starts with; they last
@@ -93,5 +96,57 @@ func TestNoNotesInTheUsersOwnDirectory(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(r.repo.Dir, name)); err == nil {
 			t.Errorf("%s was written in the user's checkout", name)
 		}
+	}
+}
+
+// A workspace's agent keeps its memory in its repository's Claude Code memory directory, the one `claude` in the
+// checkout uses. With more than one project, the notes say where each project's memories go and load the others'.
+func TestWorkspaceMemoryIsTheRepositorys(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	r := newRig(t)
+	id, a := r.workSession("Work")
+	if want := sandbox.MemoryDir(r.repo.Dir); a.Spec.Memory != want {
+		t.Errorf("memory = %q, want %q", a.Spec.Memory, want)
+	}
+	se := r.session(id)
+	b, _ := os.ReadFile(filepath.Join(se.Dir, "CLAUDE.md"))
+	if strings.Contains(string(b), "## Memory") {
+		t.Errorf("one project's notes have memory lines:\n%s", b)
+	}
+
+	other := gittest.New(t)
+	other.Write(map[string]string{"a": "a\n"})
+	other.Commit("Ada", "a")
+	if err := r.w.AddRepo(context.Background(), id, core.RepoID(other.Dir)); err != nil {
+		t.Fatal(err)
+	}
+	se = r.session(id)
+	b, _ = os.ReadFile(filepath.Join(se.Dir, "CLAUDE.md"))
+	notes := string(b)
+	for _, p := range se.Projects {
+		if want := "- A memory about " + p.Name + " goes in `" + sandbox.MemoryDir(p.Repo) + "`."; !strings.Contains(notes, want) {
+			t.Errorf("notes haven't %q:\n%s", want, notes)
+		}
+	}
+	if want := "\n@" + filepath.Join(sandbox.MemoryDir(other.Dir), "MEMORY.md") + "\n"; !strings.Contains(notes, want) {
+		t.Errorf("notes don't import the second project's index %q:\n%s", want, notes)
+	}
+	if strings.Contains(notes, "@"+filepath.Join(sandbox.MemoryDir(r.repo.Dir), "MEMORY.md")) {
+		t.Errorf("notes import the primary's own index:\n%s", notes)
+	}
+}
+
+// The sandbox's manifest carries the memory directories, the primary's first, whichever order the projects are in.
+func TestManifestCarriesTheMemory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	root := t.TempDir()
+	se := core.SessionState{Kind: core.KindWork, Dir: root, Projects: []core.Project{
+		{Name: "b", Repo: "/src/b", Dir: filepath.Join(root, "repos", "b")},
+		{Name: "a", Repo: "/src/a", Dir: filepath.Join(root, "repos", "a"), Primary: true},
+	}}
+	m := manifestOf(root, se).Memory
+	want := []sandbox.ProjectMemory{{Name: "a", Dir: sandbox.MemoryDir("/src/a")}, {Name: "b", Dir: sandbox.MemoryDir("/src/b")}}
+	if !slices.Equal(m, want) {
+		t.Errorf("memory = %+v, want %+v", m, want)
 	}
 }

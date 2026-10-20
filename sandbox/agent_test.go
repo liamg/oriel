@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -87,4 +88,45 @@ func TestBindsReadTheCheckouts(t *testing.T) {
 		}
 	}
 	t.Errorf("the checkout isn't in the sandbox: %+v", binds)
+}
+
+// A workspace's agent keeps its memory in its repository's Claude Code memory directory on the host, read-write.
+func TestBindsGiveTheRepositorysMemory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	root := t.TempDir()
+	if _, err := Create(root, ModeSandbox); err != nil {
+		t.Fatal(err)
+	}
+	mem := MemoryDir("/src/oriel")
+	if err := SaveManifest(root, Manifest{Memory: []ProjectMemory{{Name: "oriel", Dir: mem}}}); err != nil {
+		t.Fatal(err)
+	}
+	binds, err := Binds(root, root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(binds, Bind{Host: mem, Agent: mem}) {
+		t.Errorf("no read-write bind of %s: %+v", mem, binds)
+	}
+	if fi, err := os.Stat(mem); err != nil || !fi.IsDir() {
+		t.Errorf("the memory directory wasn't made: %v", err)
+	}
+}
+
+// A workspace with no projects keeps Claude Code's own memory, under its transcripts.
+func TestBindsWithNoProjectsGiveNoMemory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	root := t.TempDir()
+	if _, err := Create(root, ModeSandbox); err != nil {
+		t.Fatal(err)
+	}
+	binds, err := Binds(root, root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, b := range binds {
+		if filepath.Base(b.Host) == "memory" {
+			t.Errorf("a memory bind: %+v", b)
+		}
+	}
 }

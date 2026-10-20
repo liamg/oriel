@@ -269,6 +269,7 @@ func manifestOf(root string, se core.SessionState) sandbox.Manifest {
 		}
 		m.Projects = append(m.Projects, sandbox.Project{Name: p.Name, Repo: p.Repo, Dir: rel, Branch: p.Branch, Primary: p.Primary})
 	}
+	m.Memory = memories(se)
 	return m
 }
 

@@ -117,6 +117,18 @@ func TestArgs(t *testing.T) {
 	}
 }
 
+// Outside a sandbox, the memory directory goes on the command line; a sandbox's settings.json has it.
+func TestArgsSetTheMemoryDirectory(t *testing.T) {
+	a, _ := args(agent.StartSpec{Memory: "/mem"}, "/m", "s1", "s1")
+	if i := slices.Index(a, "--settings"); i < 0 || a[i+1] != `{"autoMemoryDirectory":"/mem"}` {
+		t.Errorf("args = %q", a)
+	}
+	a, _ = args(agent.StartSpec{Memory: "/mem", Sandbox: &agent.Sandbox{}}, "/m", "s1", "")
+	if slices.Contains(a, "--settings") {
+		t.Errorf("sandboxed args = %q", a)
+	}
+}
+
 func TestWriteMod(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "mod")
 	if err := writeMod(dir, agent.Pack{Name: "plan", Skill: "plan", Text: "# Plan\n\nDraft the docs first."}); err != nil {

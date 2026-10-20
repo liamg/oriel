@@ -91,6 +91,7 @@ type StartSpec struct {
 	Exec     Exec     // how to run a process: on the host, or in the sandbox
 	Sandbox  *Sandbox
 	StateDir string // where the provider may keep files for this session
+	Memory   string // the agent's memory directory, "" for the provider's own
 }
 
 // Policy is how much the agent's own gate asks (agents.md → Permissions).

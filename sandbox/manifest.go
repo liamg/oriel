@@ -25,6 +25,8 @@ type Manifest struct {
 	// Reads are checkouts the agent reads without a worktree of its own (a plan session's, until Start work): in the
 	// sandbox at their own paths, read-only.
 	Reads []string `json:"reads,omitempty"`
+	// Memory are the projects' memory directories, the primary's first.
+	Memory []ProjectMemory `json:"memory,omitempty"`
 }
 
 // LoadManifest reads root's manifest; ok=false when there is none.

@@ -339,6 +339,14 @@ func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 	if s.Sandbox != nil && s.Sandbox.GatewayMCP != "" {
 		a = append(a, "--mcp-config", s.Sandbox.GatewayMCP, "--strict-mcp-config")
 	}
+	// A sandbox's settings.json has it already.
+	if s.Memory != "" && s.Sandbox == nil {
+		b, err := json.Marshal(map[string]string{"autoMemoryDirectory": s.Memory})
+		if err != nil {
+			return nil, err
+		}
+		a = append(a, "--settings", string(b))
+	}
 	if resume != "" {
 		return append(a, "--resume", resume), nil
 	}

@@ -33,7 +33,7 @@ func HomeDir(root string) string { return filepath.Join(Dir(root), "home") }
 
 // Binds are the host paths every backend gives an agent in cwd: the
 // workspace, its Claude config, transcripts and attachments, the user's
-// read-only Claude files, the mod, and each project's git directory. The Go
+// read-only Claude files, the mod, each project's git directory and its memory. The Go
 // cache, home, temp and run dirs are the backend's to place.
 func Binds(root, cwd, modDir string) ([]Bind, error) {
 	claudeDir := ClaudeDir(root)
@@ -84,7 +84,11 @@ func Binds(root, cwd, modDir string) ([]Bind, error) {
 			}
 		}
 	}
-	return b, nil
+	mb, err := memoryBinds(root)
+	if err != nil {
+		return nil, err
+	}
+	return append(b, mb...), nil
 }
 
 // GitBinds give a worktree its repository's git directory, with the parts

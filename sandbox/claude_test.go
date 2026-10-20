@@ -1,7 +1,10 @@
 package sandbox
 
 import (
+	"encoding/json"
 	"maps"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -12,7 +15,7 @@ func TestSandboxSettingsSetTheirOwnMode(t *testing.T) {
 		"permissions": map[string]any{"defaultMode": "plan", "allow": []any{"Bash(rm:*)"}, "deny": []any{"Read(./.env)"}},
 		"model":       "opus",
 	}
-	out := SandboxSettings(host, nil, nil)
+	out := SandboxSettings(host, nil, nil, "")
 	perms, _ := out["permissions"].(map[string]any)
 	if perms["defaultMode"] != "bypassPermissions" {
 		t.Errorf("defaultMode = %v", perms["defaultMode"])
@@ -31,9 +34,40 @@ func TestSandboxSettingsSetTheirOwnMode(t *testing.T) {
 	}
 }
 
+// The agent's memory directory is the sandbox's to choose, whatever the host's settings name.
+func TestSandboxSettingsSetTheMemoryDirectory(t *testing.T) {
+	host := map[string]any{"autoMemoryDirectory": "/elsewhere"}
+	if got := SandboxSettings(host, nil, nil, "/mem")["autoMemoryDirectory"]; got != "/mem" {
+		t.Errorf("autoMemoryDirectory = %v", got)
+	}
+}
+
+func TestPrepareClaudeWritesThePrimarysMemory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	root := t.TempDir()
+	m := Manifest{Memory: []ProjectMemory{{Name: "a", Dir: MemoryDir("/src/a")}, {Name: "b", Dir: MemoryDir("/src/b")}}}
+	if err := SaveManifest(root, m); err != nil {
+		t.Fatal(err)
+	}
+	if err := PrepareClaude(root, root, map[string]any{"autoMemoryDirectory": "/elsewhere"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(ClaudeDir(root), "settings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["autoMemoryDirectory"] != m.Memory[0].Dir {
+		t.Errorf("autoMemoryDirectory = %v, want %s", got["autoMemoryDirectory"], m.Memory[0].Dir)
+	}
+}
+
 func TestSandboxSettingsPointLocalhostAtTheHost(t *testing.T) {
 	host := map[string]any{"env": map[string]any{"ANTHROPIC_BASE_URL": "http://localhost:4000", "FOO": "http://localhost:1"}}
-	env := SandboxSettings(host, nil, nil)["env"].(map[string]any)
+	env := SandboxSettings(host, nil, nil, "")["env"].(map[string]any)
 	if env["ANTHROPIC_BASE_URL"] != "http://"+HostGateway+":4000" || env["FOO"] != "http://localhost:1" {
 		t.Fatalf("env %v", env)
 	}

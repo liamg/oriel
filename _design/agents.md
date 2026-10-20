@@ -553,6 +553,14 @@ sequenceDiagram
   embedded in the app (`sandbox/helper`, `make helper`; `runner.OrielBinary` writes it out once per build). The
   desktop binary links GUI libraries and the host's glibc, so it never runs in the image. A build without the helper
   refuses to start; `oriel build --with` carries the builder's helper into the custom build.
+- **Memory.** A workspace's Claude agent keeps its memory in each repository's own Claude Code memory directory,
+  `~/.claude/projects/<repo slug>/memory` (`sandbox.MemoryDir`), the one `claude` in the checkout uses, so it outlives
+  the workspace and every session in the repo shares it. The host lists them, the primary's first, in the manifest
+  (`Manifest.Memory`). A sandbox binds each read-write at its own path and sets `autoMemoryDirectory` to the primary's
+  in its `settings.json`, over any host value. On the host the Claude provider passes it with `--settings`
+  (`StartSpec.Memory`). With two or more projects the workspace's `CLAUDE.md` says which directory each project's
+  memories go in and imports the others' `MEMORY.md`. A workspace with no projects, and a direct session, keep Claude
+  Code's own. Codex has no auto memory.
 - **Backends.** What fences the agent in is a `sandbox.Backend`, chosen by `sandbox.backend` (`Config.Backend`,
   default `sandbox.DefaultBackend()`: the first in `sandbox.Preference` this machine can run) from those registered with `sandbox.Register`, or by the session's own
   (`SandboxPolicy.Backend`, kept as `AgentState.Backend`), one of those this machine can run (`Backend.Available`,

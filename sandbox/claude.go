@@ -81,8 +81,9 @@ var droppedSettings = []string{
 }
 
 // SandboxSettings derives the sandbox's settings.json from the host's.
-// helperFiles maps a helper setting to the file holding its host output.
-func SandboxSettings(host, defaults map[string]any, helperFiles map[string]string) map[string]any {
+// helperFiles maps a helper setting to the file holding its host output;
+// memory, when set, is the agent's memory directory.
+func SandboxSettings(host, defaults map[string]any, helperFiles map[string]string, memory string) map[string]any {
 	out := maps.Clone(host)
 	if out == nil {
 		out = map[string]any{}
@@ -105,6 +106,9 @@ func SandboxSettings(host, defaults map[string]any, helperFiles map[string]strin
 	out["skipDangerousModePermissionPrompt"] = true
 	out["sandbox"] = map[string]any{"enabled": false}
 	out["autoUpdates"] = false
+	if memory != "" {
+		out["autoMemoryDirectory"] = memory
+	}
 	env, _ := out["env"].(map[string]any)
 	env = maps.Clone(env)
 	if env == nil {
@@ -191,7 +195,7 @@ func PrepareClaude(root, cwd string, host, defaults map[string]any) error {
 		}
 		helpers[k] = f
 	}
-	if err := writeJSON(filepath.Join(dir, "settings.json"), SandboxSettings(host, defaults, helpers)); err != nil {
+	if err := writeJSON(filepath.Join(dir, "settings.json"), SandboxSettings(host, defaults, helpers, primaryMemory(root))); err != nil {
 		return err
 	}
 	var hostState map[string]any
@@ -216,6 +220,14 @@ func PrepareClaude(root, cwd string, host, defaults map[string]any) error {
 		}
 	}
 	return writeJSON(filepath.Join(dir, ".claude.json"), state)
+}
+
+// primaryMemory is the memory directory of root's primary project, "" when it has none.
+func primaryMemory(root string) string {
+	if m := MemoryDirs(root); len(m) > 0 {
+		return m[0].Dir
+	}
+	return ""
 }
 
 func runHelper(cmd string) ([]byte, error) {

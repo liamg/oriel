@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/sandbox"
 )
 
 // NotesFiles are the agent notes generated at a workspace's root: CLAUDE.md for Claude, AGENTS.md for Codex.
@@ -148,10 +149,40 @@ func agentNotes(se core.SessionState, style string) string {
 			b.WriteString("\n")
 		}
 	}
+	if mem := memories(se); len(mem) > 1 {
+		b.WriteString("\n## Memory\n\n")
+		for _, m := range mem {
+			b.WriteString("- A memory about " + m.Name + " goes in `" + m.Dir + "`.\n")
+		}
+		b.WriteString("- Anything else goes in your own memory directory.\n\n")
+		for _, m := range mem[1:] {
+			b.WriteString("@" + filepath.Join(m.Dir, "MEMORY.md") + "\n")
+		}
+	}
 	if style != "" {
 		b.WriteString("\n## Coding style\n\n" + style + "\n")
 	}
 	return b.String()
+}
+
+// memories are a workspace's projects' memory directories, the primary's first: Claude Code's own for each
+// repository, so every session in it shares them. A direct session already runs in the repository and has none.
+func memories(se core.SessionState) []sandbox.ProjectMemory {
+	if se.Kind == core.KindDirect || se.Dir == "" {
+		return nil
+	}
+	primary, ok := se.Primary()
+	if !ok {
+		return nil
+	}
+	var out []sandbox.ProjectMemory
+	for _, p := range append([]core.Project{primary}, se.Projects...) {
+		dir := sandbox.MemoryDir(cmp.Or(p.Repo, p.Dir))
+		if !slices.ContainsFunc(out, func(m sandbox.ProjectMemory) bool { return m.Dir == dir }) {
+			out = append(out, sandbox.ProjectMemory{Name: p.Name, Dir: dir})
+		}
+	}
+	return out
 }
 
 // excludeIn adds lines to a git dir's info/exclude that aren't there yet: generated files stay out of the plan diff.
