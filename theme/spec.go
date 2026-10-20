@@ -19,7 +19,7 @@ const (
 type Spec struct {
 	Name    string
 	Extends string
-	Variant Variant // the variant the theme is, when it has no [dark] and [light] tables
+	Variant Variant // the variant the theme is, when it has no [dark] and [light] tables; "" follows what's asked
 	Layer           // shared by both variants
 	Dark    Layer
 	Light   Layer
@@ -46,6 +46,20 @@ type SyntaxDef struct {
 // HasVariants reports whether s has [dark] or [light] tables, so an edit belongs under one.
 func (s *Spec) HasVariants() bool { return !s.Dark.empty() || !s.Light.empty() }
 
+// Effective is the variant stack resolves at when want is asked: the variant of the topmost theme that sets one,
+// unless a theme above or at it has [dark]/[light] tables, which follow what's asked.
+func Effective(stack []*Spec, want Variant) Variant {
+	for _, s := range slices.Backward(stack) {
+		if s.HasVariants() {
+			return want
+		}
+		if s.Variant != "" {
+			return s.Variant
+		}
+	}
+	return want
+}
+
 func (l *Layer) empty() bool {
 	return len(l.Palette) == 0 && len(l.Tokens) == 0 && len(l.Syntax) == 0 && len(l.Effects) == 0
 }
@@ -63,7 +77,7 @@ func ParseSpec(src []byte) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Spec{Variant: Dark}
+	s := &Spec{}
 	for k, v := range doc.Value() {
 		var err error
 		switch k {

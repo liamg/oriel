@@ -3,6 +3,7 @@ package scenes
 import (
 	"image"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/liamg/oriel/render"
@@ -68,7 +69,7 @@ func TestFixtureAgainstTheMockups(t *testing.T) {
 }
 
 // Goldens of the fixture as drawn: any change to what it draws shows up here first, as a display-list diff,
-// then as pixels (anything past one JND on more than 0.1% of them), in every built-in theme and variant.
+// then as pixels (anything past one JND on more than 0.1% of them), in every built-in theme at each variant it has.
 func TestFixtureGoldens(t *testing.T) {
 	ide, _ := ByName("ide")
 	snapshot.Golden(t, "testdata/ide-dark.list", []byte(snapshot.List(record(t, theme.Dark, ide, 1))))
@@ -77,7 +78,7 @@ func TestFixtureGoldens(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, v := range []theme.Variant{theme.Dark, theme.Light} {
+		for _, v := range slices.Compact([]theme.Variant{theme.Effective(st, theme.Dark), theme.Effective(st, theme.Light)}) {
 			th, err := theme.Resolve(st, v)
 			if err != nil {
 				t.Fatalf("%s %s: %v", src.Name(), v, err)

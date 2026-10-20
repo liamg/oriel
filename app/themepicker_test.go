@@ -49,13 +49,13 @@ func TestThemePicker(t *testing.T) {
 	if got := currentTheme(t, s); got != "oriel" {
 		t.Fatalf("opening the picker moved off the current theme: %s", got)
 	}
-	s.typeKeys("Up") // the list opens on the current theme, oriel, the last
-	if got := currentTheme(t, s); got != "dusk" {
-		t.Errorf("highlighting dusk shows %s", got)
+	s.typeKeys("Up") // the list opens on the current theme, oriel, after one-dark
+	if got := currentTheme(t, s); got != "one-dark" {
+		t.Errorf("highlighting one-dark shows %s", got)
 	}
 	s.typeKeys("Up")
-	if got := currentTheme(t, s); got != "dawn" {
-		t.Errorf("highlighting dawn shows %s", got)
+	if got := currentTheme(t, s); got != "nord" {
+		t.Errorf("highlighting nord shows %s", got)
 	}
 	if got := readFile(t, settings); !strings.Contains(got, `theme = "oriel"`) {
 		t.Errorf("previewing wrote the file:\n%s", got)
@@ -68,10 +68,10 @@ func TestThemePicker(t *testing.T) {
 	s.run("Themes", nil)
 	s.frame()
 	s.typeKeys("Up", "CR")
-	if got := currentTheme(t, s); got != "dusk" {
-		t.Errorf("Enter on dusk left %s", got)
+	if got := currentTheme(t, s); got != "one-dark" {
+		t.Errorf("Enter on one-dark left %s", got)
 	}
-	if got := readFile(t, settings); !strings.Contains(got, `theme = "dusk"`) {
+	if got := readFile(t, settings); !strings.Contains(got, `theme = "one-dark"`) {
 		t.Errorf("Enter didn't keep it:\n%s", got)
 	}
 }
@@ -83,7 +83,7 @@ func TestThemeOptionIsAMenu(t *testing.T) {
 	if sp.Choices == nil {
 		t.Fatal("ui.theme has no choices")
 	}
-	if got := strings.Join(sp.Choices(), " "); got != "dawn dusk oriel" {
+	if got := strings.Join(sp.Choices(), " "); got != "catppuccin dawn dracula dusk everforest gruvbox kanagawa nord one-dark oriel rose-pine solarized tokyonight" {
 		t.Errorf("choices %q", got)
 	}
 	s.run("Settings", registry.Args{"args": "ui"})
@@ -110,7 +110,10 @@ func TestThemePickerSnapshot(t *testing.T) {
 	s.size = mockupSize
 	s.run("Themes", nil)
 	s.frame()
-	s.typeKeys("Up")
+	s.typeKeys("Up", "Up", "Up", "Up", "Up") // oriel, up past one-dark, nord, kanagawa and gruvbox
+	if got := currentTheme(t, s); got != "glacier" {
+		t.Fatalf("highlighting glacier shows %s", got)
+	}
 	srcs, _ := s.reg.Themes()
 	r, err := resolveTheme(srcs, currentTheme(t, s), theme.Dark) // as the window's loop does when ui.theme moves
 	if err != nil {
@@ -135,4 +138,27 @@ func (s *errScene) clickText(t *testing.T, text string) {
 	}
 	s.click(p)
 	s.frame()
+}
+
+// A dark-only theme previews dark in a light window, and the window shows it dark when picked.
+func TestThemePickerShowsADarkOnlyThemeDark(t *testing.T) {
+	s, _ := themeScene(t)
+	if err := s.reg.Options().Set("ui.variant", registry.LayerUser, registry.At{}, "light"); err != nil {
+		t.Fatal(err)
+	}
+	s.retheme()
+	s.run("Themes", nil)
+	s.frame()
+	s.typeKeys("Up", "Up") // oriel, up past one-dark to nord
+	if got := currentTheme(t, s); got != "nord" {
+		t.Fatalf("highlighting nord shows %s", got)
+	}
+	s.retheme()
+	s.frame()
+	if text := s.frameText(); !strings.Contains(text, "NORD · dark") {
+		t.Errorf("the preview doesn't read NORD · dark:\n%s", text)
+	}
+	if v := s.ui.Theme().Variant; v != theme.Dark {
+		t.Errorf("the window shows nord %s", v)
+	}
 }

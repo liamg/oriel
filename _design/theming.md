@@ -181,6 +181,35 @@ contributes.icons  = "icons/"                     # file and kind icon set
 - Not yet: new theme from…, import and export, `:hi`, effects and type in the editor, syntax groups that fall back
   too far, and the live UI inside the preview (pick mode reads the real window instead).
 
+## As built (more built-in themes)
+
+- Ten more built-ins in `theme/themes/`, each one TOML file: `catppuccin` (Mocha), `tokyonight` (Night), `gruvbox`
+  (dark, medium), `nord`, `dracula`, `rose-pine` (main), `kanagawa` (wave), `one-dark`, `everforest` (dark, medium)
+  and `solarized` (dark). Each has `variant = "dark"`, `extends = "oriel"` (for its `[syntax]` map), a top-level
+  `[palette]` that sets every colour `oriel` sets, and `glow = 0`. Credit and licence are in each file's first line.
+- **A theme is one variant unless it has `[dark]`/`[light]` tables.** `theme.Effective(stack, want)` is the variant a
+  stack resolves at: the topmost theme's `variant`, or `want` when that theme has variant tables or sets no `variant`.
+  The window, the picker preview and the editor's split all use it, so Nord picked in a light window shows dark, and
+  the preview reads "NORD · dark". `oriel` is the one built-in with both.
+- Every built-in passes the lint at each variant it has (`TestBuiltinPassesLint`), and sets the whole palette
+  (`TestBuiltinsSetTheWholePalette`). The fixture renders in each (`render/scenes`, one golden per theme).
+- Upstream colours that failed the lint, each the same hue with its OkLCh lightness nudged:
+  - catppuccin: blue `#89b4fa` → `#7da7ec` (apart from violet).
+  - dracula: fg3 (comment) `#6272a4` → `#6878aa` (3:1 on raised).
+  - everforest: fg2 `#9da9a0` → `#a0aca3`; red `#e67e80` → `#d87274`, aqua `#83c092` → `#64a074`, green
+    `#a7c080` → `#bad393`, and pink (Everforest has none; from purple `#d699b6`) `#e6a0c4` → `#ffb9de`.
+  - gruvbox: aqua `#8ec07c` → `#a7da95` (apart from green and blue).
+  - kanagawa: fg3 `#727169` → `#75746c`; violet `#957fb8` → `#8973ab`, cyan `#7fb4ca` → `#8bc1d7`, pink
+    `#d27e99` → `#ed97b2`.
+  - nord: cyan `#88c0d0` → `#95cddd`, blue `#81a1c1` → `#6989a8`, pink (Nord has none; from `#b48ead`) `#d39cc0` →
+    `#e7afd3`.
+  - one-dark: cyan `#56b6c2` → `#71d0dc`, pink (One Dark has none; from red) `#e06cb0` → `#fc85ca`.
+  - rose-pine: muted `#6e6a86` → `#716d89`; leaf `#95b1ac` → `#8faba6`.
+  - solarized: base0 `#839496` → `#8c9d9f`, base00 `#657b83` → `#687e86`, blue `#268bd2` → `#3698df`; ink is
+    base03 darkened (`#00212b`), as base3 on blue is under 4.5:1.
+  - tokyonight: purple `#9d7cd8` → `#9776d1`, magenta `#bb9af7` → `#c8a7ff`.
+- Not yet: light flavours (Latte, Day, Dawn…), each its own file with `variant = "light"`.
+
 ## Sizes: UI zoom and the code size
 
 One mechanism scales the whole UI, so no view handles font size itself and nothing clips when text grows.

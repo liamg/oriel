@@ -227,3 +227,26 @@ func TestTokenName(t *testing.T) {
 		t.Errorf("%q", Accent.Name())
 	}
 }
+
+// A theme with no [dark]/[light] tables resolves at its own variant, whatever is asked; one with them, or with no
+// variant of its own, follows what's asked.
+func TestEffectiveVariant(t *testing.T) {
+	dark := spec(t, "extends = \"oriel\"\nvariant = \"dark\"\n[palette]\nbg0 = \"#2e3440\"")
+	plain := spec(t, "extends = \"oriel\"\n[semantic]\naccent = \"red\"")
+	for _, tt := range []struct {
+		name  string
+		stack []*Spec
+		want  Variant
+		got   Variant
+	}{
+		{"oriel follows light", []*Spec{oriel(t)}, Light, Light},
+		{"oriel follows dark", []*Spec{oriel(t)}, Dark, Dark},
+		{"a dark-only theme stays dark", []*Spec{oriel(t), dark}, Light, Dark},
+		{"a theme with no variant follows what it extends", []*Spec{oriel(t), plain}, Light, Light},
+		{"a theme over a dark-only one stays dark", []*Spec{oriel(t), dark, plain}, Light, Dark},
+	} {
+		if v := Effective(tt.stack, tt.want); v != tt.got {
+			t.Errorf("%s: Effective(%s) = %s, want %s", tt.name, tt.want, v, tt.got)
+		}
+	}
+}

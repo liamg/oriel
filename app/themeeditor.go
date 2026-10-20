@@ -743,7 +743,7 @@ func (e *themeEditor) baseTheme(v theme.Variant) *theme.Resolved {
 	if err != nil {
 		return nil
 	}
-	r, err := theme.Resolve(st, v)
+	r, err := theme.Resolve(st, theme.Effective(st, v))
 	if err != nil {
 		return nil
 	}
