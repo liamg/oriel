@@ -134,6 +134,15 @@ func (s *Server) Merge(repo string, number int) {
 	}
 }
 
+// ClosePR closes a pull request unmerged, as GitHub does when its commits reach the base some other way.
+func (s *Server) ClosePR(repo string, number int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, p := s.findNum(repo, number); p != nil {
+		p.State = "closed"
+	}
+}
+
 // SetChecks sets the checks on a ref of a repository: a branch name, as the Ship page asks.
 func (s *Server) SetChecks(repo, ref string, cs ...gh.Check) {
 	s.mu.Lock()

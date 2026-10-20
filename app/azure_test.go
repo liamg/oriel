@@ -174,7 +174,7 @@ func TestAzureShipAndReviews(t *testing.T) {
 	s.shipSettle(t, "the warning", func() bool { return strings.Contains(s.frameText(), "1 reviewer comment") })
 	s.wantFrame(t, "MERGE !57", "Continue", "Cancel")
 	s.clickText(t, "Continue")
-	s.shipSettle(t, "merged", func() bool { sh, _ := x.ship(se.ID, "dashboard"); return sh.PR != nil && sh.PR.Merged })
+	s.shipSettle(t, "merged, and the next PR started", func() bool { p := pastPRs(s, se.ID); return len(p) == 1 && p[0].State == "merged" })
 	if how, _ := az.Completed(prs[0].ID); how != "squash" {
 		t.Errorf("completed with %q, want squash", how)
 	}

@@ -94,17 +94,27 @@ func (e Notified) Apply(s *State) error {
 	return nil
 }
 
-// NoticeDismissed hides a row's toast; the row stays in the history.
+// NoticeDismissed hides a row's toast; the row stays in the history. It names the row as Notified folds it, so it
+// lands in that session's log and finds the row again when the log is replayed. Dismissal makes one.
 type NoticeDismissed struct {
-	Seq uint64 `json:"seq"`
+	ID      string    `json:"id"`
+	Source  string    `json:"source,omitempty"`
+	Session SessionID `json:"session,omitempty"`
 }
 
-func (e NoticeDismissed) Scope() SessionID { return "" }
+// Dismissal is the event that dismisses n.
+func Dismissal(n Notification) NoticeDismissed {
+	return NoticeDismissed{ID: n.ID, Source: n.Source, Session: n.Session}
+}
+
+func (e NoticeDismissed) Scope() SessionID { return e.Session }
 
 func (e NoticeDismissed) Apply(s *State) error {
-	i := slices.IndexFunc(s.Notifications, func(n Notification) bool { return n.Seq == e.Seq })
+	i := slices.IndexFunc(s.Notifications, func(n Notification) bool {
+		return n.ID == e.ID && n.Source == e.Source && n.Session == e.Session
+	})
 	if i < 0 {
-		return fmt.Errorf("no notification %d", e.Seq)
+		return fmt.Errorf("no notification %q from %q in %q", e.ID, e.Source, e.Session)
 	}
 	s.Notifications[i].Dismissed = true
 	return nil

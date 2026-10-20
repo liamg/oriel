@@ -277,7 +277,15 @@ func (x *shipPlugin) confirmMerge() error {
 		o.Method = a.methods[a.method]
 	}
 	return x.step(a.se.ID, a.s.Project, "Merging", func(ctx context.Context, _ *host.Host) error {
-		return registry.Call(func() error { return h.Merge(ctx, repo, pr, o) })
+		if err := registry.Call(func() error { return h.Merge(ctx, repo, pr, o) }); err != nil {
+			return err
+		}
+		x.mergedHere(a.se.ID, a.s, pr)
+		return nil
+	}, func() {
+		done := pr
+		done.State, done.Merged = "closed", true
+		x.h.Do(func() { x.afterMerge(a.se.ID, a.s.Project, &done) })
 	})
 }
 

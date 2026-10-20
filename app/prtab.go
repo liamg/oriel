@@ -94,6 +94,7 @@ func (x *shipPlugin) prTabBody(c *ui.Ctx, se core.SessionState, p string) {
 		c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
 		c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(tShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 			x.gatesList(c, se)
+			x.previous(c, se, s.Project)
 			x.ticket(c, se)
 			c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
 			widget.Wrap(c, "note", "Across projects, the merge order and \"raise all\" live in Ship.", 226, uiFont(11, th.C(theme.FgFaint)))
@@ -160,12 +161,11 @@ func (x *shipPlugin) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead)
 			if widget.Button(c, "edit", "Edit "+w.Short, x.stepOpts(se.ID, s.Project, "Updating", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"})) {
 				x.run("ship.pr.open", registry.Args{"project": s.Project, "edit": true})
 			}
-		case !s.PR.Merged:
-			if widget.Button(c, "again", "Raise a new "+w.Short+"…", widget.ButtonOpts{Help: "git/ship#raise"}) {
-				x.run("ship.pr.open", registry.Args{"project": s.Project, "edit": true})
-			}
 		default:
-			if ships, _ := x.sessionShips(se); allMerged(ships) && widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: endHelp}) {
+			ships, _ := x.sessionShips(se)
+			finish := allMerged(se, ships)
+			x.nextButton(c, se, s, !finish)
+			if finish && widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: endHelp}) {
 				x.run("session.end", registry.Args{"id": string(se.ID)})
 			}
 		}

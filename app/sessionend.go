@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -159,19 +160,39 @@ func leftMachine(ships []shipRead) bool {
 	return false
 }
 
-// allMerged is whether every project with something to ship has its PR merged, and one at least has.
-func allMerged(ships []shipRead) bool {
+// allMerged is whether every project with something to ship has its PR merged, and one at least has. A project
+// that moved on from a merged PR with nothing since counts as merged.
+func allMerged(se core.SessionState, ships []shipRead) bool {
 	merged := 0
 	for _, s := range ships {
 		switch {
 		case s.ReadOnly:
-		case s.PR != nil && s.PR.Merged:
+		case s.PR != nil && s.PR.Merged, s.PR == nil && s.Commits == 0 && movedOnMerged(se, s.Project):
 			merged++
 		case s.PR != nil || len(s.Files) > 0 || len(s.Unpushed) > 0:
 			return false
 		}
 	}
 	return merged > 0
+}
+
+// movedOnMerged says the last PR a project moved on from was merged.
+func movedOnMerged(se core.SessionState, project string) bool {
+	for _, pr := range slices.Backward(se.Past) {
+		if pr.Project == project {
+			return pr.State == "merged"
+		}
+	}
+	return false
+}
+
+// archivesOnMerge says session.archive_on_merge archives se as it stands: it's on, every PR is merged and nothing
+// is uncommitted.
+func archivesOnMerge(h plugin.Host, se core.SessionState, ships []shipRead) bool {
+	primary, _ := se.Primary()
+	v, _, _ := h.Options().Get(archiveOnMerge, registry.At{Project: primary.Dir, Session: string(se.ID)})
+	on, _ := v.(bool)
+	return on && !se.Archived && allMerged(se, ships) && uncommitted(ships) == 0
 }
 
 func uncommitted(ships []shipRead) int {
@@ -189,13 +210,7 @@ func (x *sessionEnd) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 		return
 	}
 	se := s.Snapshot()
-	primary, _ := se.Primary()
-	v, _, _ := x.h.Options().Get(archiveOnMerge, registry.At{Project: primary.Dir, Session: string(id)})
-	if on, _ := v.(bool); !on {
-		return
-	}
-	ships, _ := x.sh.ship.sessionShips(se)
-	if se.Archived || !allMerged(ships) || uncommitted(ships) > 0 {
+	if ships, _ := x.sh.ship.sessionShips(se); !archivesOnMerge(x.h, se, ships) {
 		return
 	}
 	if err := x.end(ctx, host.EndReq{Session: id}); err != nil {

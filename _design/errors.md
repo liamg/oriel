@@ -8,7 +8,9 @@ trace) and `38-crash.png` (the crash report on the next launch).
 
 - Everything the user is told goes through one type: an engine's `edit.Notice`, a plugin's `oriel.notify`, a Lua
   error, a failed LSP server, a Go error from a command. Each becomes a core event, `Notified`, so it lands in the
-  event log (`architecture.md`) and in `core.State`'s notification history.
+  event log (`architecture.md`) and in `core.State`'s notification history. Dismissing one is an event too,
+  `NoticeDismissed`, naming it by ID, source and session, so a session's notice stays dismissed when its log is
+  replayed. A question belongs to the process that asked it: one left unanswered is dismissed when Oriel restarts.
 - A notice has an ID (`vim.unsaved`, `lua.error`, `lsp.crashed`), a severity (info, warning, error, question), a
   source (`core`, `vim`, `plugin:linear`, `lsp:gopls`, `init.lua`), an optional title ("Config error"), its text, an
   optional detail (a stack trace, the command's stderr), a location (`file:line`), actions ("Open init.lua:14",

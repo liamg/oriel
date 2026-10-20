@@ -278,6 +278,19 @@ func TestShipFlow(t *testing.T) {
 	// Fix CI with agent writes a request with the failing line attached.
 	s.click(centre(s.access("Fix CI with agent").Bounds))
 	s.until(t, "the request", func() bool { return strings.Contains(s.frameText(), "CI is failing on web-dashboard") })
+
+	// A PR closed on GitHub reads as closed, not open, and can still be opened.
+	hub.ClosePR("acme/web-dashboard", webPRs[0].Number)
+	s.run("ship.refresh", nil)
+	s.shipSettle(t, "the closed PR", func() bool { return strings.Contains(s.frameText(), "PR closed") })
+	s.wantFrame(t, "PR closed", "Open PR")
+	for line := range strings.Lines(s.frameText()) {
+		if strings.TrimSpace(line) == "PR open" {
+			t.Error("the checklist still says the closed PR is open")
+		}
+	}
+	s.click(centre(s.access("Open PR").Bounds))
+	s.until(t, "the closed PR's overview", func() bool { return strings.Contains(s.frameText(), "Raise a new PR…") })
 }
 
 // FG-6: a ShipRaise hook stops a raise (the verify quiz runs before Raise PR), its reason on the tab.

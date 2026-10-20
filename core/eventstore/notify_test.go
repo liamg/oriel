@@ -42,7 +42,7 @@ func TestRepeatShowsAgainAndMovesLast(t *testing.T) {
 	s := New()
 	s.Apply(notice("a", core.SevWarning, "", 0))
 	s.Apply(notice("b", core.SevWarning, "", time.Second))
-	if err := s.Apply(core.NoticeDismissed{Seq: 1}); err != nil {
+	if err := s.Apply(core.NoticeDismissed{ID: "a", Source: "test"}); err != nil {
 		t.Fatal(err)
 	}
 	s.Apply(notice("a", core.SevWarning, "", 2*time.Second))
@@ -125,7 +125,7 @@ func TestNotificationsReplay(t *testing.T) {
 		a.Apply(n)
 	}
 	a.Apply(notice("info", core.SevInfo, "", time.Second))
-	a.Apply(core.NoticeDismissed{Seq: 5})
+	a.Apply(core.NoticeDismissed{ID: "info", Source: "test"})
 	a.Apply(core.SessionFocused{ID: "s1"})
 
 	b := New()

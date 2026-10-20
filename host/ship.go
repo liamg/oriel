@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,13 +28,14 @@ import (
 type Ship struct {
 	Project   string       `json:"project"`
 	Branch    string       `json:"branch,omitempty"`
-	Base      string       `json:"base,omitempty"`     // the branch it merges into: main
-	Default   string       `json:"default,omitempty"`  // the repo's default branch, when it has it locally: main
-	Remote    bool         `json:"remote,omitempty"`   // it has an origin to push to
-	Origin    string       `json:"origin,omitempty"`   // origin's URL
-	ReadOnly  bool         `json:"readOnly,omitempty"` // a pinned or read-only worktree, with nothing to ship
-	Files     []ShipFile   `json:"files,omitempty"`    // uncommitted
-	Behind    int          `json:"behind,omitempty"`   // commits on the base it lacks
+	Base      string       `json:"base,omitempty"`      // the branch it merges into: main
+	Default   string       `json:"default,omitempty"`   // the repo's default branch, when it has it locally: main
+	Remote    bool         `json:"remote,omitempty"`    // it has an origin to push to
+	Origin    string       `json:"origin,omitempty"`    // origin's URL
+	ReadOnly  bool         `json:"readOnly,omitempty"`  // a pinned or read-only worktree, with nothing to ship
+	Files     []ShipFile   `json:"files,omitempty"`     // uncommitted
+	Behind    int          `json:"behind,omitempty"`    // commits on the base it lacks
+	BaseAhead int          `json:"baseAhead,omitempty"` // commits it has from the local base that origin's lacks: a PR would show them again
 	Conflicts []string     `json:"conflicts,omitempty"`
 	Commits   int          `json:"commits,omitempty"` // on the branch since its base
 	Unpushed  []ShipCommit `json:"unpushed,omitempty"`
@@ -258,6 +260,13 @@ func (w *Host) shipProject(ctx context.Context, se core.SessionState, p core.Pro
 		s.Files = append(s.Files, ShipFile{Path: fs.Path, Code: string(fs.Code), Add: fs.Add, Del: fs.Del, Binary: fs.Binary})
 	}
 	s.Behind, s.Conflicts, s.Commits, s.Pushed, s.Replaced = f.Behind, f.Conflicts, len(f.Commits), f.Pushed, f.Replaced
+	if s.Base != "" && repo.HasBranch(ctx, s.Base) {
+		if mb, err := repo.Run(ctx, "merge-base", "HEAD", "refs/heads/"+s.Base); err == nil {
+			if n, err := repo.Run(ctx, "rev-list", "--count", "refs/remotes/origin/"+s.Base+".."+strings.TrimSpace(mb)); err == nil {
+				s.BaseAhead, _ = strconv.Atoi(strings.TrimSpace(n))
+			}
+		}
+	}
 	for _, c := range f.Unpushed {
 		s.Unpushed = append(s.Unpushed, ShipCommit{Hash: c.Hash, Subject: c.Subject, Author: c.Author})
 	}

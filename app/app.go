@@ -551,7 +551,7 @@ func (h *pluginHost) Notify(n core.Notice) {
 func (h *pluginHost) Dismiss(id string) {
 	for _, n := range h.store.State().Notifications {
 		if n.ID == id && !n.Dismissed {
-			h.store.Apply(core.NoticeDismissed{Seq: n.Seq})
+			h.store.Apply(core.Dismissal(n))
 		}
 	}
 }
