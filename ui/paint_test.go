@@ -279,3 +279,35 @@ func TestItemsScrolledPastTheEnd(t *testing.T) {
 		t.Errorf("built %v (%v tall) at the end of a 100-tall column", built, h)
 	}
 }
+
+// Items with End follows its end until it's scrolled away, and builds what's in view where it's left.
+func TestItemsEndLetsGoWhenScrolled(t *testing.T) {
+	u := newUI()
+	size := render.Point{X: 200, Y: 300}
+	id := childID(0, "items")
+	n := 50
+	var built []int
+	build := func(c *Ctx) {
+		c.Items("items", Style{W: Flex(1), H: Px(100)}, n, ItemsOpts{Estimate: 15, Reveal: -1, End: true}, func(c *Ctx, i int) {
+			built = append(built, i)
+			c.Box("b", Style{W: Flex(1), H: Px(20)}, nil)
+		})
+	}
+	for range 3 {
+		u.Layout(size, build)
+	}
+	if y := u.Scroll(id).Y; y != 900 {
+		t.Fatalf("opened at %v, want its end, 900", y)
+	}
+	u.ScrollBy(id, 0, -500)
+	n = 60
+	built = nil
+	u.Layout(size, build)
+	u.Layout(size, build)
+	if y := u.Scroll(id).Y; y != 400 {
+		t.Errorf("scrolled up to 400 and grown, at %v", y)
+	}
+	if !slices.Contains(built, 20) || slices.Contains(built, 59) {
+		t.Errorf("built %v at 400", built)
+	}
+}

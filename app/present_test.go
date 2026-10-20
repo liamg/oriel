@@ -211,6 +211,7 @@ func TestLuaPresenterMapsRowsToLines(t *testing.T) {
 	run("request.comment", registry.Args{"file": path, "line": 4, "text": "C-3,30", "body": "Is C-3 right?"})
 	a.WaitSent(t)
 	threadWith(t, r, "Is C-3 right?")
+	answered(t, r.store, a)
 	a.Emit(agent.TurnEnd{})
 	run("editor.open", registry.Args{"path": path})
 	r.waitText("C-3,30")

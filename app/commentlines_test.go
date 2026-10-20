@@ -39,6 +39,7 @@ func TestCommentsTakeLines(t *testing.T) {
 		return containsAll(s, "\nFloor goes the wrong way.\n", "\nAnd for zero?\n")
 	})
 
+	answered(t, r.store, a)
 	a.Emit(agent.TurnEnd{})
 	r.clickText("Reply…")
 	r.typeText("cover -2.5")
@@ -50,6 +51,7 @@ func TestCommentsTakeLines(t *testing.T) {
 		t.Errorf("the inline reply sent %q", in.Text)
 	}
 
+	answered(t, r.store, a)
 	a.Emit(agent.TurnEnd{})
 	r.typeKeys("<D-R>")
 	r.waitText("New request")

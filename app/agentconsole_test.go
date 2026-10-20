@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/liamg/oriel/theme"
 	"io"
 	"path/filepath"
@@ -423,4 +424,19 @@ func TestComposerShowsTheSandbox(t *testing.T) {
 	if text := r.waitText("CONTAINER · NET ASK"); strings.Contains(text, "GATE ASK") {
 		t.Errorf("a sandboxed session's composer shows the gate:\n%s", text)
 	}
+}
+
+// The transcript follows the agent, but the wheel scrolls it back, and it stays there as more arrives.
+func TestConsoleScrollsBack(t *testing.T) {
+	r, a, _ := consoleSession(t)
+	a.Emit(agent.TurnStart{})
+	for i := range 40 {
+		a.Emit(agent.Message{ID: fmt.Sprint("m", i), Role: core.ItemAssistant, Text: fmt.Sprintf("Message number %02d.", i)})
+	}
+	r.waitText("Message number 39.")
+	r.scrollAt("Message number 39.", -20000)
+	r.latest("the start scrolled into view", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Message number 00.") })
+	a.Emit(agent.Message{ID: "m40", Role: core.ItemAssistant, Text: "Message number 40."})
+	time.Sleep(200 * time.Millisecond)
+	r.latest("the start still in view", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Message number 00.") })
 }

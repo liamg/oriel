@@ -613,7 +613,7 @@ func (x *agentConsole) threadCard(c *ui.Ctx, se core.SessionState, width float32
 
 // scrollState is how a scrolled column follows its end and keeps a block in view.
 type scrollState struct {
-	follow bool   // stay at the end as it grows
+	follow bool   // stay at the end as it grows, while scrolled to it
 	reveal string // a block to bring into view next frame
 }
 
@@ -622,16 +622,10 @@ type scrollState struct {
 func scrolled(c *ui.Ctx, key any, st *scrollState, s, content ui.Style, body func(c *ui.Ctx, block func(key string) ui.ID)) {
 	id := c.Next(key)
 	inner := ui.Child(id, "content")
-	view, okV := c.Rect(id)
-	all, okC := c.Rect(inner)
-	if okV && okC {
-		at := c.Scroll(id).Y
-		if st.follow && at+view.Dy() < all.Dy()-2 {
-			c.ScrollTo(id, render.Point{Y: all.Dy()})
-		}
-	}
+	_, okV := c.Rect(id)
+	_, okC := c.Rect(inner)
 	blocks := map[string]ui.ID{}
-	s.ScrollY, s.Clip = true, true
+	s.ScrollY, s.Clip, s.Follow = true, true, st.follow
 	c.Column(key, s, func(c *ui.Ctx) {
 		content.W = ui.Flex(1)
 		c.Column("content", content, func(c *ui.Ctx) {

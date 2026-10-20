@@ -34,6 +34,7 @@ func TestALostLoginFlagsEverySession(t *testing.T) {
 	id2, a2 := r.workSession("second")
 	a2.WaitSent(t)
 	a2.Emit(agent.TurnStart{})
+	answered(r, id2, a2)
 	a2.Emit(agent.TurnEnd{})
 	r.eventually(id2, "the second's turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 1 })
 	a1.Emit(agent.TurnStart{})

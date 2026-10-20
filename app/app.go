@@ -166,7 +166,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	}
 
 	place := windowPlace{path: filepath.Join(cfg.StateDir, "window.json")}
-	w, err := be.NewWindow(render.WindowOpts{Title: "Oriel", Width: 1280, Height: 800, Frame: place.load()})
+	first, _ := chosenTheme(cfg.Registry, false)
+	w, err := be.NewWindow(render.WindowOpts{Title: "Oriel", Width: 1280, Height: 800, Frame: place.load(), Background: first.C(theme.BgBase)})
 	if err != nil {
 		return err
 	}
@@ -644,32 +645,43 @@ func (l *loop) unwatchThemes() {
 // loadTheme resolves the theme ui.theme names, in ui.variant. If it doesn't resolve, the theme already
 // showing stays; with none showing, the built-in one does.
 func (l *loop) loadTheme() {
-	name, variant := "oriel", theme.Dark
-	if v, _, err := l.reg.Options().Get("ui.theme", registry.At{}); err == nil {
-		name = v.(string)
-	}
-	if v, _, err := l.reg.Options().Get("ui.variant", registry.At{}); err == nil {
-		variant = theme.Variant(v.(string))
-	}
-	if variant != theme.Dark && variant != theme.Light {
-		variant = theme.Dark
-		if l.osLight {
-			variant = theme.Light
-		}
-	}
-	srcs, _ := l.reg.Themes()
-	r, err := resolveTheme(srcs, name, variant)
+	r, err := chosenTheme(l.reg, l.osLight)
 	if err != nil {
-		l.log.Error("theme", "name", name, "err", err)
+		l.log.Error("theme", "err", err)
 		if l.theme != nil {
 			return
-		}
-		if r, err = resolveTheme(theme.Builtins(), "oriel", variant); err != nil {
-			panic(err) // the built-in theme always resolves; its tests say so
 		}
 	}
 	l.theme = r
 	l.ui.SetTheme(r)
+}
+
+// chosenTheme is the theme ui.theme names, in ui.variant (the OS's when it's neither). If it doesn't resolve, it's
+// the built-in one, with the error.
+func chosenTheme(reg registry.Registry, osLight bool) (*theme.Resolved, error) {
+	name, variant := "oriel", theme.Dark
+	if v, _, err := reg.Options().Get("ui.theme", registry.At{}); err == nil {
+		name = v.(string)
+	}
+	if v, _, err := reg.Options().Get("ui.variant", registry.At{}); err == nil {
+		variant = theme.Variant(v.(string))
+	}
+	if variant != theme.Dark && variant != theme.Light {
+		variant = theme.Dark
+		if osLight {
+			variant = theme.Light
+		}
+	}
+	srcs, _ := reg.Themes()
+	r, err := resolveTheme(srcs, name, variant)
+	if err == nil {
+		return r, nil
+	}
+	b, berr := resolveTheme(theme.Builtins(), "oriel", variant)
+	if berr != nil {
+		panic(berr) // the built-in theme always resolves; its tests say so
+	}
+	return b, fmt.Errorf("%s: %w", name, err)
 }
 
 func resolveTheme(sources []theme.Source, name string, v theme.Variant) (*theme.Resolved, error) {

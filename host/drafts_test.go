@@ -19,8 +19,15 @@ func draftsRig(t *testing.T) (*rig, core.SessionID, *agenttest.FakeSession, stri
 	r.tools = []string{"reply", "commit_draft", "pr_draft"}
 	id, a := r.workSession("Negative values round the wrong way")
 	a.WaitSent(t)
+	handBack(r, id, a)
 	p, _ := r.session(id).Primary()
 	return r, id, a, p.Dir
+}
+
+// handBack resolves the session's request, so the agent owes nothing.
+func handBack(r *rig, id core.SessionID, a *agenttest.FakeSession) {
+	r.t.Helper()
+	a.Call(r.t, "reply", map[string]any{"thread": string(r.session(id).Threads[0].ID), "body": "Done.", "resolve": true})
 }
 
 // turn is one turn of the agent's, ending idle.
@@ -154,6 +161,7 @@ func TestNoDraftNudgeWithoutTheTool(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("x")
 	a.WaitSent(t)
+	handBack(r, id, a)
 	p, _ := r.session(id).Primary()
 	write(t, p.Dir, "round.go", "package pricing\n")
 	turn(r, id, a)

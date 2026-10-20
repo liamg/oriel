@@ -47,6 +47,7 @@ func TestGitHubReviewMirror(t *testing.T) {
 	a := r.agent()
 	a.WaitSent(t)
 	a.Emit(agent.TurnStart{})
+	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the first turn to end", func(se core.SessionState) bool { return !se.Agent.Working })
 	se := r.session(id)
@@ -96,6 +97,7 @@ func TestGitHubReviewMirror(t *testing.T) {
 	if !strings.Contains(out, "drafted") {
 		t.Errorf("reply said %q", out)
 	}
+	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	th, _ := r.session(id).Thread(review.ID)
 	draft := th.Comments[len(th.Comments)-1]

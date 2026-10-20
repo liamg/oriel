@@ -174,6 +174,7 @@ func TestAIReviewFindingToThreadAndFix(t *testing.T) {
 	}
 	r.waitText("Thread · open")
 	a.Emit(agent.TurnStart{})
+	answered(t, r.store, a)
 	a.Emit(agent.TurnEnd{})
 	r.clickText("Fix")
 	in = a.WaitSent(t)

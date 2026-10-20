@@ -326,6 +326,8 @@ func (w *Window) loop() {
 					shown, waited = l, start.Sub(time.Unix(0, w.handed.Load()))
 				}
 				l.Replay(f)
+			} else {
+				f.Rect(render.Rect{Max: size}, render.Style{Fill: w.opts.Background})
 			}
 			f.End()
 			e.Frame(gtx.Ops)

@@ -34,6 +34,7 @@ func TestPlanThreadsReachTheAgentByPlace(t *testing.T) {
 	}
 	os.WriteFile(filepath.Join(se.Dir, "PLAN.md"), []byte("# Round\n\n## Approach\n\n- Round each line in minor units, ties to even.\n"), 0o644)
 	a.Emit(agent.TurnStart{})
+	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return !se.Agent.Working })
 	_, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "half-up?",
@@ -92,6 +93,7 @@ func planWithAgent(t *testing.T, r *rig) (core.SessionID, *agenttest.FakeSession
 	a := r.agent()
 	a.WaitSent(t)
 	a.Emit(agent.TurnStart{})
+	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the agent's first turn", func(se core.SessionState) bool { return !se.Agent.Working && se.Agent.Session != "" })
 	return id, a
@@ -190,6 +192,7 @@ func TestStartWorkPromptIsTheFreshAgentsFirstTurn(t *testing.T) {
 	}
 	a.WaitSent(t)
 	a.Emit(agent.TurnStart{})
+	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the agent's first turn", func(se core.SessionState) bool { return !se.Agent.Working && se.Agent.Session != "" })
 	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {

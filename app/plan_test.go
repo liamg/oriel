@@ -244,6 +244,7 @@ func TestStartWorkDialog(t *testing.T) {
 		}
 	}
 	a.Emit(agent.TurnStart{})
+	answered(t, r.store, a)
 	a.Emit(agent.TurnEnd{})
 	r.waitText("Ready: every")
 

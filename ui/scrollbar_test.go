@@ -162,3 +162,57 @@ func TestScrollIntoView(t *testing.T) {
 		t.Errorf("scrolled to %v, want 40 (row 2 at the top)", y)
 	}
 }
+
+// A Follow box stays at its end as it grows, stays where the wheel or the bar leaves it, and follows again once
+// scrolled back to its end.
+func TestFollowLetsGoWhenScrolled(t *testing.T) {
+	s := newScroller(20, BarsAuto)
+	opts := s.u.opts
+	s.u = newUI()
+	s.u.SetClock(s.clk.now)
+	s.u.opts = opts
+	s.build = func(c *Ctx) {
+		s.id = c.Column("list", Style{W: Px(200), H: Px(100), ScrollY: true, Follow: true}, func(c *Ctx) {
+			for i := range s.n {
+				c.Box(i, Style{W: Flex(1), H: Px(20)}, nil)
+			}
+		})
+	}
+	s.frame()
+	s.frame()
+	if y := s.u.Scroll(s.id).Y; y != 300 {
+		t.Fatalf("opened at %v, want its end, 300", y)
+	}
+	s.n = 25
+	s.frame()
+	if y := s.u.Scroll(s.id).Y; y != 400 {
+		t.Fatalf("grown, at %v, want its new end, 400", y)
+	}
+	s.move(50, 50)
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: render.Point{X: 50, Y: 50}, Scroll: render.Point{Y: -150}})
+	s.frame()
+	s.n = 30
+	s.frame()
+	s.frame()
+	if y := s.u.Scroll(s.id).Y; y != 250 {
+		t.Fatalf("wheeled up to 250 and grown, at %v", y)
+	}
+	s.move(195, 10)
+	r, _, _ := s.thumb()
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerPress, Buttons: render.ButtonPrimary, Pos: render.Point{X: 195, Y: r.Min.Y + 5}})
+	s.frame()
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Buttons: render.ButtonPrimary, Pos: render.Point{X: 195, Y: r.Min.Y - 20}})
+	s.frame()
+	s.frame()
+	if y := s.u.Scroll(s.id).Y; y >= 250 {
+		t.Fatalf("the thumb dragged up, at %v, not above 250", y)
+	}
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerRelease, Buttons: render.ButtonPrimary, Pos: render.Point{X: 195, Y: 10}})
+	s.u.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: render.Point{X: 50, Y: 50}, Scroll: render.Point{Y: 1000}})
+	s.frame()
+	s.n = 35
+	s.frame()
+	if y := s.u.Scroll(s.id).Y; y != 600 {
+		t.Errorf("back at the end and grown, at %v, want 600", y)
+	}
+}
