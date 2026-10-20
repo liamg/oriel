@@ -397,8 +397,15 @@ func statusName(s core.Status) string { return strings.ReplaceAll(string(s), "_"
 // logsPanel is the log's tail, newest first: info and up, from every source.
 func (n *notices) logsPanel(c *ui.Ctx) {
 	th := c.Theme()
-	rows := slices.DeleteFunc(n.panel.rows(n.h.State()), func(r logRow) bool { return bucket(r.level) < slog.LevelInfo })
-	rows = rows[max(0, len(rows)-11):]
+	var rows []logRow // newest first
+	for _, r := range slices.Backward(n.panel.rows(n.h.State())) {
+		if len(rows) == 11 {
+			break
+		}
+		if bucket(r.level) >= slog.LevelInfo {
+			rows = append(rows, r)
+		}
+	}
 	c.Row("chips", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 		widget.Chip(c, "all", "all processes", th.C(theme.FgMuted), "")
 		widget.Chip(c, "lvl", "info+", th.C(theme.FgMuted), "")
@@ -409,9 +416,9 @@ func (n *notices) logsPanel(c *ui.Ctx) {
 		tok theme.TokenID
 	}{slog.LevelError: {"ERR", theme.Error}, slog.LevelWarn: {"WRN", theme.Warn}, slog.LevelInfo: {"INF", theme.StatusWorking}}
 	c.Column("lines", ui.Style{W: ui.Flex(1), Gap: 1, Clip: true}, func(c *ui.Ctx) {
-		for i, r := range slices.Backward(rows) {
+		for i, r := range rows {
 			tg := tags[bucket(r.level)]
-			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(16), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: r.plain()}, func(c *ui.Ctx) {
+			c.Row(len(rows)-1-i, ui.Style{W: ui.Flex(1), H: ui.Px(16), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: r.plain()}, func(c *ui.Ctx) {
 				c.Text("t", r.time.Local().Format("15:04:05.000"), monoFont(10.5, th.C(theme.FgGhost)))
 				c.Text("l", tg.tag, mono(10.5, typeset.SemiBold, th.C(tg.tok)))
 				c.Row("s", ui.Style{W: ui.Px(110), Clip: true}, func(c *ui.Ctx) {

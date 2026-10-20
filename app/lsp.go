@@ -141,7 +141,7 @@ func (x *lspPlugin) Activate(_ context.Context, h plugin.Host) error {
 			},
 		},
 	})
-	x.add(h.Decorations("lsp", registry.DecorationFunc(x.decorations)))
+	x.add(h.Decorations("lsp", registry.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	x.add(h.Hook(registry.Hook{Event: "BufWritePost", Label: "tell the language server", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 		if w, ok := ev.(*BufWritePost); ok {
 			x.mu.Lock()
@@ -361,6 +361,22 @@ func (x *lspPlugin) current() (vim.Pane, string, *lspDoc) {
 		path = filepath.Join(ed.dir, path)
 	}
 	return p, path, x.doc(path, p.Buffer())
+}
+
+// decorationKey is what the decorations of ctx are made from: the references peek, and the file's inlay hints.
+func (x *lspPlugin) decorationKey(ctx registry.DecorationCtx) any {
+	type made struct {
+		peek    *refPeek
+		doc     *lspDoc
+		version uint64
+		loading bool
+		served  bool
+	}
+	k := made{peek: x.peek, doc: x.doc(ctx.Path, ctx.Buffer)}
+	if k.doc != nil {
+		k.version, k.loading, k.served = k.doc.hintsVersion, k.doc.hintsLoading, k.doc.client != nil
+	}
+	return k
 }
 
 func (x *lspPlugin) decorations(ctx registry.DecorationCtx) []registry.Decoration {

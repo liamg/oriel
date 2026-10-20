@@ -83,29 +83,35 @@ func (x *reposPlugin) Activate(_ context.Context, h plugin.Host) error {
 			Available: has, Run: func(_ registry.Ctx, a registry.Args) error { return x.newDialog(a) }},
 		{ID: "repos.add", Title: "Register the checkout at {path}; {then} runs with {repo} once it's added", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				if a.String("path") == "" {
+				path := expandTilde(a.String("path"))
+				if path == "" {
 					return errors.New("add which checkout? Give its {path}")
 				}
-				r, err := x.sh.cfg.Host.AddRepoPath(ctx, expandTilde(a.String("path")))
-				if err != nil {
-					return err
-				}
-				return x.then(ctx, a["then"], r.ID)
+				w := x.sh.cfg.Host
+				return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.add." + path, Doing: "Adding " + tildePath(path)},
+					func(ctx context.Context) (core.Repo, error) { return w.AddRepoPath(ctx, path) },
+					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, a["then"], r.ID) })
 			}},
 		{ID: "repos.clone", Title: "Clone {url} into {parent} as {name}, and register it; {then} runs with {repo} once it's added", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				r, err := x.sh.cfg.Host.CloneRepo(ctx, host.CloneReq{URL: a.String("url"), Parent: a.String("parent"), Name: a.String("name")})
-				if err != nil {
-					return err
-				}
-				return x.then(ctx, a["then"], r.ID)
+				w, req := x.sh.cfg.Host, host.CloneReq{URL: a.String("url"), Parent: a.String("parent"), Name: a.String("name")}
+				return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.clone." + req.URL, Doing: "Cloning " + req.URL},
+					func(ctx context.Context) (core.Repo, error) { return w.CloneRepo(ctx, req) },
+					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, a["then"], r.ID) })
 			}},
 		{ID: "repos.remove", Title: "Unregister {repo} and stop discovery adding it back; its files stay", Available: has,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.sh.cfg.Host.RemoveRepo(x.repoArg(a)) }},
 		{ID: "repos.scan", Title: "Register the git repos in the folders your repos are in", Available: has,
 			Run: func(registry.Ctx, registry.Args) error { x.discover(true); return nil }},
 		{ID: "repos.fetch", Title: "Fetch {repo}'s remote, pruning branches it deleted", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.sh.cfg.Host.FetchRepo(ctx, x.repoArg(a)) }},
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				w, id := x.sh.cfg.Host, x.repoArg(a)
+				if id == "" {
+					return errors.New("fetch which repo? Give its {repo}")
+				}
+				return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.fetch." + string(id), Doing: "Fetching " + string(id)},
+					func(ctx context.Context) (struct{}, error) { return struct{}{}, w.FetchRepo(ctx, id) }, nil)
+			}},
 		{ID: "repos.housekeep", Title: "Clean up {repo}: delete the branches in {apply} (merged, or upstream gone) with their worktrees; {force} lists dirty worktrees that go anyway; {prune} prunes stale worktrees. With no {apply}, the Repos page at its housekeeping",
 			Available: has, Run: x.housekeepCommand},
 		{ID: "repos.tag", Title: "Tag {repo}: an annotated tag {name} on {branch} (the default branch), {message}; {pull}, {sign} and {push} default to the repos.tag options",

@@ -3,6 +3,7 @@ package registry
 import (
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/text"
@@ -67,12 +68,40 @@ type DecorationCtx struct {
 	// FileBytes is the buffer as writing it would put it on disk (line endings, BOM, the last newline), for
 	// comparing with a file's other versions.
 	FileBytes func() []byte
+	// Wake asks for a frame at a time: Decorate calls it for a RefreshAt. Nil for none.
+	Wake func(time.Time)
+
+	refresh *time.Time
 }
 
-// DecorationProvider gives the decorations of the lines in view; it's called each frame they're drawn.
+// RefreshAt asks for the provider's decorations again at t though nothing else changes: "edited 4s ago".
+func (c DecorationCtx) RefreshAt(t time.Time) {
+	if c.refresh != nil && (c.refresh.IsZero() || t.Before(*c.refresh)) {
+		*c.refresh = t
+	}
+}
+
+// DecorationProvider gives the decorations of the lines in view. Decorate asks again only when the buffer's text,
+// the lines in view or where they're drawn change, when the provider says its decorations have
+// (Registry.DecorationsChanged), or at a time it asked for (DecorationCtx.RefreshAt).
 type DecorationProvider interface {
 	Decorations(ctx DecorationCtx) []Decoration
 }
+
+// DecorationKeyer is a provider that says what its decorations of ctx are made from, cheaply and comparably (a
+// generation, a pointer): Decorate asks again when that changes, as it does when the buffer or the view does.
+type DecorationKeyer interface {
+	DecorationKey(ctx DecorationCtx) any
+}
+
+// KeyedDecorations is a DecorationKeyer from funcs: Make's decorations, made from what Key says.
+type KeyedDecorations struct {
+	Key  func(ctx DecorationCtx) any
+	Make func(ctx DecorationCtx) []Decoration
+}
+
+func (k KeyedDecorations) Decorations(ctx DecorationCtx) []Decoration { return k.Make(ctx) }
+func (k KeyedDecorations) DecorationKey(ctx DecorationCtx) any        { return k.Key(ctx) }
 
 // DecorationFunc is a func as a DecorationProvider.
 type DecorationFunc func(ctx DecorationCtx) []Decoration
@@ -89,21 +118,168 @@ func (r *reg) Decorations(id string, p DecorationProvider) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	tok := r.decor.push(id, p)
+	r.decorGen[id]++
+	r.decorList = nil
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.decor.remove(id, tok)
+		r.decorGen[id]++
+		r.decorList = nil
 	})
+}
+
+func (r *reg) DecorationsChanged(id string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.decorGen[id]++
+}
+
+// decorSpot is where decorations are drawn: a window, its presenter, and the file in it.
+type decorSpot struct{ window, presenter, path string }
+
+// decorAsked is what a provider gave for one spot, and what it was asked with.
+type decorAsked struct {
+	buf      *text.Buffer
+	version  uint64
+	top, bot int
+	gen      int
+	key      any
+	until    time.Time // asked again from then (RefreshAt)
+	ds       []Decoration
+}
+
+// decorDrawn is one spot's decorations by line, and what they were made from.
+type decorDrawn struct {
+	from  []*decorAsked
+	buf   *text.Buffer
+	ver   uint64
+	top   int
+	bot   int
+	lines map[int][]Decoration
+	used  int // the Decorate call that last used it
+}
+
+// decorCache is what Decorate keeps between calls.
+type decorCache struct {
+	mu    sync.Mutex
+	asked map[decorSpot]map[string]*decorAsked
+	drawn map[decorSpot]*decorDrawn
+	calls int
+}
+
+// decorKeep is how many calls a spot's decorations are kept unused: a window that's closed.
+const decorKeep = 4096
+
+func (r *reg) Decorate(ctx DecorationCtx) map[int][]Decoration {
+	provs := r.DecorationProviders()
+	r.mu.Lock()
+	gens := make([]int, len(provs))
+	for i, p := range provs {
+		gens[i] = r.decorGen[p.ID]
+	}
+	r.mu.Unlock()
+	c := &r.decorCache
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.calls++
+	if c.calls%decorKeep == 0 {
+		for k, d := range c.drawn {
+			if c.calls-d.used > decorKeep {
+				delete(c.drawn, k)
+				delete(c.asked, k)
+			}
+		}
+	}
+	spot := decorSpot{ctx.Window, ctx.Presenter, ctx.Path}
+	if c.asked == nil {
+		c.asked, c.drawn = map[decorSpot]map[string]*decorAsked{}, map[decorSpot]*decorDrawn{}
+	}
+	asked := c.asked[spot]
+	if asked == nil {
+		asked = map[string]*decorAsked{}
+		c.asked[spot] = asked
+	}
+	version := ctx.Snap.Version()
+	from := make([]*decorAsked, 0, len(provs))
+	var wake time.Time
+	for i, prov := range provs {
+		if r.faults.isOff(KindDecoration, prov.ID) != nil {
+			continue
+		}
+		var key any
+		if k, ok := prov.DecorationProvider.(DecorationKeyer); ok {
+			if err := Call(func() error { key = k.DecorationKey(ctx); return nil }); err != nil {
+				r.TurnOff(KindDecoration, prov.ID, err)
+				delete(asked, prov.ID)
+				continue
+			}
+		}
+		a := asked[prov.ID]
+		if a == nil || a.buf != ctx.Buffer || a.version != version || a.top != ctx.Top || a.bot != ctx.Bottom || a.gen != gens[i] ||
+			a.key != key || !a.until.IsZero() && !ctx.Now.Before(a.until) {
+			a = &decorAsked{buf: ctx.Buffer, version: version, top: ctx.Top, bot: ctx.Bottom, gen: gens[i], key: key}
+			pctx := ctx
+			pctx.refresh = &a.until
+			if err := Call(func() error { a.ds = prov.Decorations(pctx); return nil }); err != nil {
+				r.TurnOff(KindDecoration, prov.ID, err)
+				delete(asked, prov.ID)
+				continue
+			}
+			asked[prov.ID] = a
+		}
+		if !a.until.IsZero() && (wake.IsZero() || a.until.Before(wake)) {
+			wake = a.until
+		}
+		from = append(from, a)
+	}
+	if !wake.IsZero() && ctx.Wake != nil {
+		ctx.Wake(wake)
+	}
+	d := c.drawn[spot]
+	if d == nil || !slices.Equal(d.from, from) || d.buf != ctx.Buffer || d.ver != version || d.top != ctx.Top || d.bot != ctx.Bottom {
+		d = &decorDrawn{from: from, buf: ctx.Buffer, ver: version, top: ctx.Top, bot: ctx.Bottom, lines: byLine(ctx, from)}
+		c.drawn[spot] = d
+	}
+	d.used = c.calls
+	return d.lines
+}
+
+// byLine is the providers' decorations of ctx's lines [Top, Bottom), anchored ones where their anchors are, each
+// line's in priority order.
+func byLine(ctx DecorationCtx, from []*decorAsked) map[int][]Decoration {
+	out := map[int][]Decoration{}
+	for _, a := range from {
+		for _, d := range a.ds {
+			if d.Anchor != 0 {
+				o, ok := ctx.Buffer.Resolve(d.Anchor)
+				if !ok {
+					continue
+				}
+				d.Line = ctx.Snap.PosAt(min(o, ctx.Snap.Len())).Line
+			}
+			if d.Line >= ctx.Top && d.Line < ctx.Bottom {
+				out[d.Line] = append(out[d.Line], d)
+			}
+		}
+	}
+	for _, ds := range out {
+		slices.SortStableFunc(ds, func(a, b Decoration) int { return a.Priority - b.Priority })
+	}
+	return out
 }
 
 func (r *reg) DecorationProviders() []NamedProvider {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	out := make([]NamedProvider, 0, len(r.decor))
-	for id := range r.decor {
-		p, _ := r.decor.top(id)
-		out = append(out, NamedProvider{id, p})
+	if r.decorList == nil {
+		out := make([]NamedProvider, 0, len(r.decor))
+		for id := range r.decor {
+			p, _ := r.decor.top(id)
+			out = append(out, NamedProvider{id, p})
+		}
+		slices.SortFunc(out, func(a, b NamedProvider) int { return strings.Compare(a.ID, b.ID) })
+		r.decorList = out
 	}
-	slices.SortFunc(out, func(a, b NamedProvider) int { return strings.Compare(a.ID, b.ID) })
-	return out
+	return slices.Clone(r.decorList)
 }

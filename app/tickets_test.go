@@ -285,7 +285,7 @@ func continueTicket(t *testing.T, s *errScene, other core.SessionID, se core.Ses
 		t.Errorf("the preview doesn't say it continues:\n%s", s.frameText())
 	}
 	s.typeKeys("CR")
-	waitState(t, s.store, key+"'s session in front", func(st core.State) bool { return st.Focus == se.ID })
+	s.untilState(t, key+"'s session in front", func(st core.State) bool { return st.Focus == se.ID })
 	if strings.Contains(s.frameText(), "NEW SESSION") {
 		t.Errorf("the launcher opened:\n%s", s.frameText())
 	}
@@ -324,7 +324,7 @@ func TestContinueTicketSession(t *testing.T) {
 	s.run("omnibox.open", registry.Args{"query": "!OPS-12"})
 	s.until(t, "the archived session offered", func() bool { return strings.Contains(s.frameText(), "Continue · ") })
 	s.typeKeys("CR")
-	waitState(t, s.store, "the archived session resumed in front", func(st core.State) bool {
+	s.untilState(t, "the archived session resumed in front", func(st core.State) bool {
 		a, _ := st.Session(se.ID)
 		return st.Focus == se.ID && !a.Snapshot().Archived
 	})

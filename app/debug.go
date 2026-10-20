@@ -107,6 +107,7 @@ type debugSession struct {
 	hits   map[int]int            // breakpoint id → times hit
 	exit   *int
 	gen    int       // moves on each stop and resume, so an answer about an old stop is dropped
+	landed int       // moves as frames and variables arrive
 	since  time.Time // when it last stopped, or its frame changed: what the stack and scopes load from
 	failed error     // why reading the stop's stack or scopes failed
 }
@@ -163,7 +164,7 @@ func (x *debugPlugin) Activate(_ context.Context, h plugin.Host) error {
 	for _, s := range dap.Builtins() {
 		x.add(h.Contribute(registry.DebugAdapter(s)))
 	}
-	x.add(h.Decorations("debug", registry.DecorationFunc(x.decorations)))
+	x.add(h.Decorations("debug", registry.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	x.add(h.Option(registry.OptionSpec{Name: InlineValuesOption, Section: "editor", Type: registry.Bool, Default: true,
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "While the debugger is paused, show the frame's variables after the lines that name them."}))
 	x.add(h.Contribute(registry.GutterAction{Name: "debug.breakpoint", Command: "debug.breakpoint.toggle", Order: 50, When: x.debuggable,
@@ -294,6 +295,7 @@ func (x *debugPlugin) commands(h plugin.Host) {
 			}
 			x.bps = map[string][]debugBreakpoint{}
 			x.save()
+			x.changed()
 			return nil
 		}},
 		{ID: "debug.watch.add", Title: "Watch an {expression}", Run: func(_ registry.Ctx, a registry.Args) error {
@@ -421,6 +423,7 @@ func (x *debugPlugin) set(file string, b debugBreakpoint) {
 	}
 	x.save()
 	x.sync(file)
+	x.changed()
 }
 
 func (x *debugPlugin) remove(file string, line int) {
@@ -434,6 +437,7 @@ func (x *debugPlugin) remove(file string, line int) {
 	}
 	x.save()
 	x.sync(file)
+	x.changed()
 }
 
 // sync sends a file's breakpoints to the running session.
@@ -625,6 +629,7 @@ func (x *debugPlugin) start(spec dap.AdapterSpec, cfg dap.LaunchConfig) {
 	x.mu.Lock()
 	x.sess = s
 	x.mu.Unlock()
+	x.changed()
 	x.console = []consoleLine{{Kind: "console", Text: fmt.Sprintf("%s · %s", spec.Name, cmpOr(cfg.Name, cfg.Program))}}
 	x.panel.watchVals = nil
 	x.h.Run(context.Background(), "view.open", debugViewArgs())
@@ -655,7 +660,7 @@ func (x *debugPlugin) start(spec dap.AdapterSpec, cfg dap.LaunchConfig) {
 			if s.state == debugPaused {
 				x.fetch(s)
 			}
-			x.h.Redraw()
+			x.changed()
 		})
 		if err != nil {
 			return
@@ -676,7 +681,7 @@ func (x *debugPlugin) ended(s *debugSession) {
 		code = *s.exit
 	}
 	x.h.Fire(context.Background(), "DebugEnded", s.spec.Name, DebugEnded{Adapter: s.spec.Name, ExitCode: code})
-	x.h.Redraw()
+	x.changed()
 }
 
 func (x *debugPlugin) print(kind, text string) {
@@ -690,7 +695,7 @@ func (x *debugPlugin) print(kind, text string) {
 
 // event applies what the adapter said to the session it's about.
 func (x *debugPlugin) event(s *debugSession, e dap.Event) {
-	defer x.h.Redraw()
+	defer x.changed()
 	switch e := e.(type) {
 	case dap.Stopped:
 		s.state = debugPaused
@@ -739,6 +744,7 @@ func (x *debugPlugin) fetch(s *debugSession) {
 				return
 			}
 			s.frames = frames
+			s.landed++
 			x.frameChanged(s)
 			if f, ok := s.top(); ok {
 				x.h.Fire(context.Background(), "DebugStopped", s.spec.Name, DebugStopped{Adapter: s.spec.Name, Reason: s.stop.Reason,
@@ -791,6 +797,7 @@ func (x *debugPlugin) frameChanged(s *debugSession) {
 			for ref, vs := range vars {
 				s.vars[ref] = vs
 			}
+			s.landed++
 		})
 		return nil
 	}, nil)
@@ -848,6 +855,7 @@ func (x *debugPlugin) expand(ref int) {
 		x.h.Do(func() {
 			if s.gen == gen {
 				s.vars[ref] = vs
+				s.landed++
 			}
 		})
 		return nil
@@ -986,7 +994,7 @@ func (x *debugPlugin) async(fn func(ctx context.Context) error, done func()) {
 			if done != nil {
 				done()
 			}
-			x.h.Redraw()
+			x.changed()
 		})
 	}()
 }
@@ -1002,6 +1010,42 @@ func (x *debugPlugin) stateOf(file string, i int) (dap.BreakpointState, bool) {
 		return dap.BreakpointState{}, false
 	}
 	return states[i], true
+}
+
+// changed says the breakpoints or the session moved on: the decorations are made again, and a frame drawn.
+func (x *debugPlugin) changed() { x.h.DecorationsChanged("debug") }
+
+// decorationKey is what the session's part of the decorations is made from, as the adapter's answers land.
+func (x *debugPlugin) decorationKey(ctx registry.DecorationCtx) any {
+	type made struct {
+		sess         *debugSession
+		gen, frame   int
+		state        string
+		frames, vars int
+		landed       int
+		hits         int
+		inline       bool
+		at           string // the frame shown
+		line         int
+		syntax       bool // the buffer's parsed: inline values go by its names
+	}
+	k := made{inline: x.inlineOn()}
+	if hl := x.sh.editor.docs[ctx.Buffer]; hl != nil && hl.doc != nil {
+		k.syntax = true
+	}
+	if s := x.sess; s != nil {
+		k.sess, k.gen, k.frame, k.state, k.frames, k.landed = s, s.gen, s.frame, s.state, len(s.frames), s.landed
+		if f, ok := s.top(); ok {
+			k.at, k.line = f.Path, f.Line
+		}
+		for _, vs := range s.vars {
+			k.vars += len(vs)
+		}
+		for _, n := range s.hits {
+			k.hits += n
+		}
+	}
+	return k
 }
 
 func (x *debugPlugin) decorations(ctx registry.DecorationCtx) []registry.Decoration {

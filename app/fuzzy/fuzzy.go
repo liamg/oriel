@@ -111,8 +111,10 @@ func Match(pattern, text string) (score int, pos []int, ok bool) {
 	// from[i][j] where p[i-1] matched on the way.
 	const neg = -1 << 30
 	H, run, from := make([][]int, n), make([][]int, n), make([][]int, n)
+	cells := make([]int, 3*n*m)
 	for i := range n {
-		H[i], run[i], from[i] = make([]int, m), make([]int, m), make([]int, m)
+		row := cells[3*i*m:]
+		H[i], run[i], from[i] = row[:m:m], row[m:2*m:2*m], row[2*m:3*m:3*m]
 		for j := range m {
 			H[i][j] = neg
 		}

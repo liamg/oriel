@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -66,6 +67,24 @@ type rail struct {
 	sel    int
 	form   string // the window's own: "wide" or "narrow"; "" follows sidebar.form
 	writer stateWriter
+	counts []railCount // the git entries' notes, by the state they were counted in
+}
+
+type railCount struct {
+	st *gitx.State
+	n  int
+}
+
+// uncommitted is uncommittedCount(st), counted once per state; the states of the last few projects are kept.
+func (r *rail) uncommitted(st *gitx.State) int {
+	for _, c := range r.counts {
+		if c.st == st {
+			return c.n
+		}
+	}
+	c := railCount{st, uncommittedCount(st)}
+	r.counts = append(r.counts[max(0, len(r.counts)-15):], c)
+	return c.n
 }
 
 func (r *rail) Manifest() plugin.Manifest { return plugin.Manifest{ID: "rail"} }
@@ -110,7 +129,7 @@ func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 			e.Shown = remote
 		case "git":
 			e.Note = func(project string) string {
-				if n := uncommittedCount(r.sh.git.tree(projectsHere(h).dir(project)).state()); n > 0 {
+				if n := r.uncommitted(r.sh.git.tree(projectsHere(h).dir(project)).state()); n > 0 {
 					return fmt.Sprint(n)
 				}
 				return ""

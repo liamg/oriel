@@ -220,20 +220,30 @@ func (x *diffPlugin) state(root string) *diffState {
 	return st
 }
 
-// target is the repo a path is in and the file it names there ("" for the whole change): a file or directory in a
-// work tree, or a session's workspace (its primary project).
-func (x *diffPlugin) target(path string) (root, rel string, err error) {
-	return repoTarget(x.sh, x.h, path)
+// atTarget runs fn with the repo a path is in and the file it names there ("" for the whole repo): a file or
+// directory in a work tree, or a session's workspace (its primary project); the work dir's with no path. A path in no
+// work tree the app knows asks git, off the loop.
+func atTarget(ctx registry.Ctx, sh *shell, h plugin.Host, path string, fn func(root, rel string) error) error {
+	path, dir, root, err := knownTarget(sh, h, path)
+	if err != nil {
+		return err
+	}
+	if root != "" {
+		return fn(root, relIn(root, path))
+	}
+	return plugin.RunSlow(ctx, h, plugin.Slow{ID: "git.root." + dir, Doing: "Finding the repo of " + tildePath(path)},
+		func(ctx context.Context) (string, error) { return gitRoot(ctx, path, dir) },
+		func(_ registry.Ctx, root string) error { return fn(root, relIn(root, path)) })
 }
 
-// repoTarget is the repo a path is in and the file it names there ("" for the whole repo): a file or directory in
-// a work tree, or a session's workspace (its primary project); the work dir's with no path.
-func repoTarget(sh *shell, h plugin.Host, path string) (root, rel string, err error) {
+// knownTarget is the path atTarget looks for, the directory git is asked about, and the work tree the app knows
+// that holds it, if one does.
+func knownTarget(sh *shell, h plugin.Host, path string) (clean, dir, root string, err error) {
 	if path == "" {
 		path = sh.cfg.WorkDir
 	}
 	if path == "" {
-		return "", "", errors.New("no directory is open")
+		return "", "", "", errors.New("no directory is open")
 	}
 	path = filepath.Clean(path)
 	for _, s := range h.State().Sessions {
@@ -243,7 +253,7 @@ func repoTarget(sh *shell, h plugin.Host, path string) (root, rel string, err er
 			}
 		}
 	}
-	dir := path
+	dir = path
 	if st, err := os.Stat(path); err != nil || !st.IsDir() {
 		dir = filepath.Dir(path)
 	}
@@ -255,34 +265,42 @@ func repoTarget(sh *shell, h plugin.Host, path string) (root, rel string, err er
 	}
 	if t := sh.git.holding(path); t.root() != "" && within(path, t.root()) {
 		root = t.root()
-	} else if r, ok := gitx.Root(context.Background(), dir); ok {
-		root = r
-	} else {
-		return "", "", fmt.Errorf("%s isn't in a git repository", path)
 	}
-	if path != root {
-		if r, err := filepath.Rel(root, path); err == nil {
-			rel = filepath.ToSlash(r)
-		}
+	return path, dir, root, nil
+}
+
+// gitRoot is the work tree git finds dir in.
+func gitRoot(ctx context.Context, path, dir string) (string, error) {
+	if r, ok := gitx.Root(ctx, dir); ok {
+		return r, nil
 	}
-	return root, rel, nil
+	return "", fmt.Errorf("%s isn't in a git repository", path)
+}
+
+// relIn is path relative to root, with forward slashes; "" for root itself.
+func relIn(root, path string) string {
+	if path == root {
+		return ""
+	}
+	if r, err := filepath.Rel(root, path); err == nil {
+		return filepath.ToSlash(r)
+	}
+	return ""
 }
 
 // open shows the diff of path's repo, with path's file open in it and selected, at its line when line isn't 0.
-func (x *diffPlugin) open(ctx context.Context, path string, line int) error {
-	root, rel, err := x.target(path)
-	if err != nil {
-		return err
-	}
-	st := x.state(root)
-	if rel != "" {
-		st.open[rel] = true
-		st.sel = diffSel{file: rel, hunk: -1, line: -1}
-		st.reveal, st.goLine = true, line
-	}
-	st.focus = true
-	x.sh.git.tree(root)
-	return x.h.Run(ctx, "view.open", registry.Args{"id": DiffView, "instance": root, "place": "tab"})
+func (x *diffPlugin) open(ctx registry.Ctx, path string, line int) error {
+	return atTarget(ctx, x.sh, x.h, path, func(root, rel string) error {
+		st := x.state(root)
+		if rel != "" {
+			st.open[rel] = true
+			st.sel = diffSel{file: rel, hunk: -1, line: -1}
+			st.reveal, st.goLine = true, line
+		}
+		st.focus = true
+		x.sh.git.tree(root)
+		return x.h.Run(ctx, "view.open", registry.Args{"id": DiffView, "instance": root, "place": "tab"})
+	})
 }
 
 // localReviews is the session x.local keeps reviews made outside one in.

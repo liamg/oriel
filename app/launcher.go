@@ -361,7 +361,7 @@ func (x *launcher) launch(command string, a registry.Args) error {
 	x.busy, x.err = true, ""
 	gen, h := x.gen, x.h
 	go func() {
-		err := h.Run(context.Background(), command, a)
+		err := plugin.Await(context.Background(), func(ctx registry.Ctx) error { return h.Run(ctx, command, a) })
 		h.Do(func() {
 			if gen != x.gen {
 				return

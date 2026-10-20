@@ -164,22 +164,24 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "sessions"})
 			}},
 		{ID: "session.stop", Title: "Stop the agent of {id}, or the session in front", Available: named,
-			Run: x.onSession(func(ctx context.Context, w *host.Host, id core.SessionID) error { return w.Stop(ctx, id) })},
+			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w *host.Host, id core.SessionID) error { return w.Stop(ctx, id) })},
 		{ID: "session.archive", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
-			Run: x.onSession(func(ctx context.Context, w *host.Host, id core.SessionID) error { return w.Archive(ctx, id) })},
+			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w *host.Host, id core.SessionID) error { return w.Archive(ctx, id) })},
 		{ID: "session.next-pr", Title: "Start the next PR in this session, on a fresh branch from the updated base", Available: focused,
-			Run: x.onSession(func(ctx context.Context, w *host.Host, id core.SessionID) error { return w.NextPR(ctx, id) })},
+			Run: x.slowSession("session.next-pr", "Starting the next PR in", func(ctx context.Context, w *host.Host, id core.SessionID) error {
+				return w.NextPR(ctx, id)
+			})},
 		{ID: "session.start-work", Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
 			Available: planning,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.onSession(func(ctx context.Context, w *host.Host, id core.SessionID) error {
+				return x.slowSession("session.start-work", "Starting work on", func(ctx context.Context, w *host.Host, id core.SessionID) error {
 					return w.StartWork(ctx, startWorkReq(id, a))
 				})(ctx, a)
 			}},
 		{ID: "session.configure", Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
 			Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.onSession(func(ctx context.Context, w *host.Host, id core.SessionID) error {
+				return x.slowSession("session.configure", "Switching the agent of", func(ctx context.Context, w *host.Host, id core.SessionID) error {
 					return w.Configure(ctx, host.ConfigureReq{Session: id, Model: a.String("model"), Effort: a.String("effort")})
 				})(ctx, a)
 			}},
@@ -193,7 +195,7 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 			}},
 		{ID: "session.add-repo", Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.onSession(func(ctx context.Context, w *host.Host, id core.SessionID) error {
+				return x.slowSession("session.add-repo", "Adding "+a.String("repo")+" to", func(ctx context.Context, w *host.Host, id core.SessionID) error {
 					return w.AddRepo(ctx, id, core.RepoID(a.String("repo")))
 				})(ctx, a)
 			}},
@@ -276,6 +278,23 @@ func (x *sessions) onSession(fn func(context.Context, *host.Host, core.SessionID
 		}
 		return fn(ctx, w, id)
 	}
+}
+
+// slowSession is onSession for host work that runs off the loop (plugin.RunSlow): doing, then the session, says what
+// it is.
+func (x *sessions) slowSession(command, doing string, fn func(context.Context, *host.Host, core.SessionID) error) func(registry.Ctx, registry.Args) error {
+	return x.onSession(func(ctx context.Context, w *host.Host, id core.SessionID) error {
+		return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: command + "." + string(id), Doing: doing + " " + x.label(id)},
+			func(ctx context.Context) (struct{}, error) { return struct{}{}, fn(ctx, w, id) }, nil)
+	})
+}
+
+// label is how session id is named to the user.
+func (x *sessions) label(id core.SessionID) string {
+	if se, ok := x.sh.cfg.Store.Session(id); ok {
+		return label(se.Snapshot())
+	}
+	return string(id)
 }
 
 // setThread sets a thread's status: resolved by default.
@@ -413,7 +432,9 @@ func (x *sessions) addProject(id core.SessionID, repo string, before []core.Proj
 			}
 		})
 		defer stop()
-		err := h.Run(context.Background(), "session.add-repo", registry.Args{"repo": repo})
+		err := plugin.Await(context.Background(), func(ctx registry.Ctx) error {
+			return h.Run(ctx, "session.add-repo", registry.Args{"id": string(id), "repo": repo})
+		})
 		name, ok := added()
 		for timeout := time.After(30 * time.Second); err == nil && !ok; name, ok = added() {
 			select {
@@ -551,17 +572,20 @@ func (x *sessions) open(ctx context.Context, id core.SessionID, then []call) err
 	if !ok {
 		return fmt.Errorf("no session %q", id)
 	}
+	front := func() error {
+		x.after(id, then)
+		return x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
+	}
 	if st := se.Snapshot(); st.Archived || (st.Agent.Provider != "" && !st.Agent.Running) {
 		w, err := x.host()
 		if err != nil {
 			return err
 		}
-		if err := w.Resume(ctx, id); err != nil {
-			return err
-		}
+		return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "session.open." + string(id), Doing: "Resuming " + label(st)},
+			func(ctx context.Context) (struct{}, error) { return struct{}{}, w.Resume(ctx, id) },
+			func(registry.Ctx, struct{}) error { return front() })
 	}
-	x.after(id, then)
-	return x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
+	return front()
 }
 
 // openDirect brings dir's direct session with no agent to the front, starting one if it hasn't one.

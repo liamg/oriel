@@ -82,7 +82,7 @@ func (g *gitSigns) Activate(_ context.Context, h plugin.Host) error {
 				b.loaded = false
 			}
 			g.mu.Unlock()
-			h.Redraw()
+			h.DecorationsChanged("git.hunks")
 		})))
 	}
 	for _, c := range []registry.Command{
@@ -115,7 +115,7 @@ func (g *gitSigns) Activate(_ context.Context, h plugin.Host) error {
 		k.Mode = "n"
 		g.add(h.Keymap(k))
 	}
-	g.add(h.Decorations("git.hunks", registry.DecorationFunc(g.decorations)))
+	g.add(h.Decorations("git.hunks", registry.KeyedDecorations{Key: g.decorationKey, Make: g.decorations}))
 	return nil
 }
 
@@ -142,10 +142,8 @@ func (g *gitSigns) fileOf(path string) (gitFile, bool) {
 	if strings.HasPrefix(rel, "../") || filepath.IsAbs(rel) {
 		return gitFile{}, false
 	}
-	for _, f := range g.sh.git.state().Files(gitx.All) {
-		if f.Ignored && (f.Path == rel || strings.HasSuffix(f.Path, "/") && strings.HasPrefix(rel, f.Path)) {
-			return gitFile{}, false
-		}
+	if g.sh.git.state().Ignored(rel) {
+		return gitFile{}, false
 	}
 	return gitFile{rel: rel, abs: path}, true
 }
@@ -171,6 +169,7 @@ func (g *gitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte)
 					b.data, b.loaded, b.loading = data, true, false
 					b.gen++
 					g.mu.Unlock()
+					g.h.DecorationsChanged("git.hunks")
 				})
 			}()
 		}
@@ -235,6 +234,25 @@ func (g *gitSigns) decorations(ctx registry.DecorationCtx) []registry.Decoration
 	return out
 }
 
+// decorationKey is what the decorations of ctx are made from besides the file's hunks: where the cursor's line blame
+// goes.
+func (g *gitSigns) decorationKey(ctx registry.DecorationCtx) any {
+	type blameAt struct {
+		on   any
+		here bool
+		mode string
+		line int
+	}
+	k := blameAt{}
+	k.on, _, _ = g.h.Options().Get("git.blame.inline", g.h.Here())
+	if x := g.sh.editor; x != nil {
+		if p := x.current(); p.Buffer() == ctx.Buffer {
+			k.here, k.mode, k.line = true, x.e.Mode(), p.Cursor().Line
+		}
+	}
+	return k
+}
+
 // blameLine is the cursor line's blame, after it, while the pane is the current one.
 func (g *gitSigns) blameLine(ctx registry.DecorationCtx, f gitFile) (registry.Decoration, bool) {
 	x := g.sh.editor
@@ -275,7 +293,7 @@ func (g *gitSigns) blameLine(ctx registry.DecorationCtx, f gitFile) (registry.De
 						b.lines = nil
 					}
 					g.mu.Unlock()
-					g.h.Redraw()
+					g.h.DecorationsChanged("git.hunks")
 				})
 			}()
 		}
@@ -300,6 +318,7 @@ func (g *gitSigns) blameLine(ctx registry.DecorationCtx, f gitFile) (registry.De
 	}
 	if bl.Kind != gitx.NotCommitted {
 		s += " · " + ago(g.now(), bl.When) + " ago · " + bl.Summary
+		ctx.RefreshAt(ctx.Now.Add(time.Minute))
 	}
 	return registry.Decoration{Kind: registry.VirtualText, Line: line, Text: s, Style: style, Priority: -1}, true
 }
@@ -384,6 +403,7 @@ func (g *gitSigns) preview(x *editorPlugin, p vim.Pane, f gitFile, hs []gitx.Hun
 	h, ok := hunkAt(hs, p.Cursor().Line)
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	defer g.h.DecorationsChanged("git.hunks")
 	if cur, on := g.previews[f.rel]; on && (!ok || cur == h.NewStart) {
 		delete(g.previews, f.rel)
 		return nil

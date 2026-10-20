@@ -178,7 +178,7 @@ func (s *errScene) lineTexts(root, name string) []string {
 func TestLSPInlayHints(t *testing.T) {
 	s, _ := lspScene(t, "go", "gopls", "main.go")
 	s.wantText(t, "inlay hints", "name:", "int")
-	ds := s.editor().decorations(s.editor().current(), 0, 15)
+	ds := s.editor().decorations(s.editor().current(), 0, 15, nil)
 	found := false
 	for _, d := range ds[8] {
 		if d.Kind == registry.Inlay && strings.TrimSpace(d.Text) == "name:" && d.From == 18 {

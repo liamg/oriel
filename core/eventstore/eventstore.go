@@ -25,10 +25,11 @@ func New() *Store {
 	return &Store{state: core.State{}.Clone(), subs: map[int]sub{}}
 }
 
+// State is the state as it stands: Apply works on a copy, so what it gives out never changes.
 func (s *Store) State() core.State {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.state.Clone()
+	return s.state
 }
 
 func (s *Store) Focus() core.SessionID {
@@ -62,6 +63,8 @@ func (s *Store) Apply(ev core.Event) error {
 		return err
 	}
 	next.Seq++
+	next.Sessions, next.Notifications = slices.Clip(next.Sessions), slices.Clip(next.Notifications) // a reader's append copies
+	next.Machine.SignedOut, next.Usage, next.Repos = slices.Clip(next.Machine.SignedOut), slices.Clip(next.Usage), slices.Clip(next.Repos)
 
 	s.mu.Lock()
 	s.state = next

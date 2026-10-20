@@ -96,7 +96,29 @@ type explorerRowsKey struct {
 	th                                   *theme.Resolved
 	root                                 string
 	changedOnly, hidden, flat, statusCol bool
-	order                                string // Changed's files by review, when sorted so
+	byReview                             bool
+	ledger                               ledgerMark // the ledger Changed's files are sorted by, by review
+	hunks                                hunksMark  // the hunks Uncommitted shows
+}
+
+// ledgerMark tells one ledger from another: a ledger made again has new Files.
+type ledgerMark struct {
+	files *registry.LedgerFile
+	n     int
+}
+
+func markLedger(l registry.Ledger) ledgerMark {
+	if len(l.Files) == 0 {
+		return ledgerMark{}
+	}
+	return ledgerMark{&l.Files[0], len(l.Files)}
+}
+
+// hunksMark is the hunks' state, as Uncommitted's rows show it.
+type hunksMark struct {
+	path   string
+	loaded bool
+	gen    int
 }
 
 // explorerIndex is what rows look up in a git state, built once per state.
@@ -108,10 +130,11 @@ type explorerIndex struct {
 
 // scopeIndex is a scope's files by row id, and how many changed files each directory ("dir/") holds.
 type scopeIndex struct {
-	count   int
-	byID    map[string]gitx.FileState
-	changed map[string]int
-	areas   map[string]int // files per Uncommitted section id
+	count    int
+	add, del int // lines, over its files
+	byID     map[string]gitx.FileState
+	changed  map[string]int
+	areas    map[string]int // files per Uncommitted section id
 }
 
 // indexFor is st's index, built on first use.
@@ -120,6 +143,17 @@ func (e *explorer) indexFor(st *gitx.State) *explorerIndex {
 		e.index = &explorerIndex{st: st, uncommitted: uncommittedCount(st)}
 	}
 	return e.index
+}
+
+// uncommittedHas says whether Uncommitted lists path, in any of its sections.
+func (x *explorerIndex) uncommittedHas(path string) bool {
+	s := x.scope(gitx.Uncommitted)
+	for _, a := range []gitx.Area{gitx.Staged, gitx.Unstaged, gitx.Untracked} {
+		if _, ok := s.byID[a.String()+"\x00"+path]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (x *explorerIndex) scope(sc gitx.Scope) *scopeIndex {
@@ -135,6 +169,7 @@ func (x *explorerIndex) scope(sc gitx.Scope) *scopeIndex {
 		if _, ok := s.byID[id]; !ok {
 			s.byID[id] = f
 		}
+		s.add, s.del = s.add+f.Add, s.del+f.Del
 		s.areas["\x01"+f.Area.String()]++
 		if f.Code == 0 {
 			continue
@@ -166,7 +201,22 @@ type explorerHunks struct {
 	since    time.Time // when the loading began
 	staged   []gitx.Hunk
 	unstaged []gitx.Hunk
+	gen      int // moves when the hunks or their path do
 	busy     sync.WaitGroup
+}
+
+// show makes path the file whose hunks these are: another's are dropped, to be read again.
+func (x *explorerHunks) show(path string) {
+	if x.path != path {
+		x.path, x.loaded, x.staged, x.unstaged = path, false, nil, nil
+		x.gen++
+	}
+}
+
+func (x *explorerHunks) mark() hunksMark {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return hunksMark{x.path, x.loaded, x.gen}
 }
 
 func (e *explorer) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explorer"} }
@@ -292,9 +342,7 @@ func (e *explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 	x := &e.hunks
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	if x.path != path {
-		x.path, x.loaded, x.staged, x.unstaged = path, false, nil, nil
-	}
+	x.show(path)
 	if !x.loaded && !x.loading {
 		x.loading, x.since = true, windowNow(e.h)
 		x.busy.Add(1)
@@ -308,6 +356,7 @@ func (e *explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 			x.mu.Lock()
 			if x.path == path {
 				x.staged, x.unstaged, x.loaded = st, un, true
+				x.gen++
 			}
 			x.loading = false
 			x.mu.Unlock()
@@ -363,13 +412,12 @@ func (e *explorer) scope() gitx.Scope {
 
 // selectedFile is the selected row's file, in the scope showing.
 func (e *explorer) selectedFile() (gitx.FileState, bool) {
-	area, p, _ := strings.Cut(e.selected, "\x00")
-	for _, f := range e.git().state().Files(e.scope()) {
-		if f.Path == p && (area == "" || area == f.Area.String()) {
-			return f, true
-		}
+	st := e.git().state()
+	if st == nil {
+		return gitx.FileState{}, false
 	}
-	return gitx.FileState{}, false
+	f, ok := e.indexFor(st).scope(e.scope()).byID[e.selected]
+	return f, ok
 }
 
 // openDiff opens a file's branch diff, from a view that registers diff.open; until one does, the file.
@@ -500,19 +548,13 @@ func (e *explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 				e.flat, e.byReview = view == 1, view == 2
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			add, del := 0, 0
-			for _, f := range st.Files(gitx.Changed) {
-				add, del = add+f.Add, del+f.Del
-			}
-			widget.DiffStat(c, "total", add, del, widget.DiffStatOpts{})
+			x := e.indexFor(st).scope(gitx.Changed)
+			widget.DiffStat(c, "total", x.add, x.del, widget.DiffStatOpts{})
 		case gitx.Uncommitted:
 			c.Text("vs", "vs HEAD", monoTok(c, 10.5, theme.FgFaint))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			add, del := 0, 0
-			for _, f := range st.Files(gitx.Uncommitted) {
-				add, del = add+f.Add, del+f.Del
-			}
-			widget.DiffStat(c, "total", add, del, widget.DiffStatOpts{})
+			x := e.indexFor(st).scope(gitx.Uncommitted)
+			widget.DiffStat(c, "total", x.add, x.del, widget.DiffStatOpts{})
 			if widget.Button(c, "commit", "Commit…", widget.ButtonOpts{Ghost: true, Key: "c", Help: "files/commit"}) {
 				if err := e.h.Run(context.Background(), "explorer.commit", nil); err != nil {
 					e.h.Notify(core.Notice{ID: "git.commit", Severity: core.SevError, Key: true, Text: err.Error()})
@@ -553,13 +595,21 @@ func (e *explorer) activate(id string, sc gitx.Scope) {
 // items are a scope's rows: Uncommitted's in sections, Changed's flat or as a tree, All's as a tree under the
 // project's root.
 func (e *explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.TreeItem {
-	if sc == gitx.Uncommitted {
-		return e.buildItems(c.Theme(), st, sc)
-	}
 	key := explorerRowsKey{st: st, sc: sc, th: c.Theme(), root: e.git().root(), changedOnly: e.changedOnly, hidden: e.hidden, flat: e.flat,
 		statusCol: e.cols.status}
-	if sc == gitx.Changed && e.byReview {
-		key.order = strings.Join(e.reviewOrder(st), "\x00")
+	switch {
+	case sc == gitx.Uncommitted:
+		if f, ok := e.selectedFile(); ok && f.Area != gitx.Untracked && f.Code != 'D' {
+			e.hunks.mu.Lock()
+			e.hunks.show(f.Path)
+			e.hunks.mu.Unlock()
+		}
+		if p := e.hunks.mark().path; p != "" && e.indexFor(st).uncommittedHas(p) {
+			e.fileHunks(p) // read off the loop when they're due
+		}
+		key.hunks = e.hunks.mark()
+	case sc == gitx.Changed && e.byReview:
+		key.byReview, key.ledger = true, markLedger(e.ledger)
 	}
 	if e.rows.key != key || e.rows.items == nil {
 		e.rows.key, e.rows.items = key, e.buildItems(c.Theme(), st, sc)
@@ -583,12 +633,7 @@ func (e *explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 				out = append(out, sec)
 			}
 		}
-		if f, ok := e.selectedFile(); ok && f.Area != gitx.Untracked && f.Code != 'D' {
-			e.hunks.mu.Lock()
-			e.hunks.path = f.Path
-			e.hunks.mu.Unlock()
-		}
-		if p := e.hunks.path; p != "" && slices.ContainsFunc(files, func(f gitx.FileState) bool { return f.Path == p }) {
+		if p := e.hunks.mark().path; p != "" && e.indexFor(st).uncommittedHas(p) {
 			if sec, ok := e.hunkSection(th, p); ok {
 				out = append(out, sec)
 			}
@@ -641,8 +686,13 @@ func (e *explorer) reviewOrder(st *gitx.State) []string {
 	for _, f := range st.Files(gitx.Changed) {
 		ps = append(ps, f.Path)
 	}
-	left := func(p string) int { f, _ := e.ledger.File(p); return f.All.NotRead() }
-	slices.SortStableFunc(ps, func(a, b string) int { return cmp.Or(cmp.Compare(left(b), left(a)), strings.Compare(a, b)) })
+	notRead := make(map[string]int, len(e.ledger.Files))
+	for _, f := range e.ledger.Files {
+		if _, ok := notRead[f.Path]; !ok {
+			notRead[f.Path] = f.All.NotRead()
+		}
+	}
+	slices.SortStableFunc(ps, func(a, b string) int { return cmp.Or(cmp.Compare(notRead[b], notRead[a]), strings.Compare(a, b)) })
 	return ps
 }
 

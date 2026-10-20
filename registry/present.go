@@ -80,6 +80,40 @@ func (c *PresentCtx) BlockAt(line int) int {
 	return at
 }
 
+// LineBlocks is BlockAt of each line in [0, n).
+func (c *PresentCtx) LineBlocks(n int) []int {
+	at := make([]int, n)
+	last := make([]int, n) // the last block starting on each line
+	for i := range at {
+		at[i], last[i] = -1, -1
+	}
+	for i := len(c.blocks) - 1; i >= 0; i-- {
+		b := c.blocks[i]
+		for l := max(b.From, 0); l <= min(b.To, n-1); l++ {
+			at[l] = i
+		}
+	}
+	before := -1 // the last block starting before the line
+	for i, b := range c.blocks {
+		switch {
+		case b.From < 0:
+			before = i
+		case b.From < n:
+			last[b.From] = i
+		}
+	}
+	for l := range at {
+		before = max(before, last[l])
+		if at[l] < 0 {
+			at[l] = before
+			if before < 0 && len(c.blocks) > 0 {
+				at[l] = 0
+			}
+		}
+	}
+	return at
+}
+
 // Presenters are the presenters for a file, by Order then name.
 func Presenters(r Registry, path string) []BufferPresenter {
 	var out []BufferPresenter

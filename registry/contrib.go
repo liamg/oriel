@@ -22,11 +22,13 @@ func (r *reg) Contribute(c Contribution) Disposable {
 	defer r.mu.Unlock()
 	k := c.ContributionKind() + "\x00" + c.ContributionName()
 	tok := r.contribs.push(k, c)
+	r.contribBy = nil
 	r.contribGen++
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.contribs.remove(k, tok)
+		r.contribBy = nil
 		r.contribGen++
 	})
 }
@@ -40,6 +42,9 @@ func (r *reg) ContributionsGen() int {
 func (r *reg) Contributions(kind string) []Contribution {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if out, ok := r.contribBy[kind]; ok {
+		return slices.Clone(out)
+	}
 	var out []Contribution
 	for k := range r.contribs {
 		if strings.HasPrefix(k, kind+"\x00") {
@@ -48,7 +53,11 @@ func (r *reg) Contributions(kind string) []Contribution {
 		}
 	}
 	slices.SortFunc(out, func(a, b Contribution) int { return strings.Compare(a.ContributionName(), b.ContributionName()) })
-	return out
+	if r.contribBy == nil {
+		r.contribBy = map[string][]Contribution{}
+	}
+	r.contribBy[kind] = out
+	return slices.Clone(out)
 }
 
 // AgentTool is a tool offered to agents beside Oriel's own (agents.md): an LSP lookup, a plugin's query, the

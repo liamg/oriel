@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,6 +45,30 @@ type logPanel struct {
 	goFrames bool
 	follow   bool // scroll the open row into view once it's laid out
 	files    map[string]*sourceFile
+	cache    logCache
+}
+
+// logKey is what the panel's rows are made from: the state, the ring's writes, and the scope.
+type logKey struct {
+	seq, writes uint64
+	scope       int
+}
+
+// logShown is what the rows shown are picked by: the rows, the levels shown, and the search.
+type logShown struct {
+	key    logKey
+	levels uint8
+	filter string
+}
+
+// logCache is the panel's rows as last made: rows reads them, and they're made again only when their key moves.
+type logCache struct {
+	made    bool
+	key     logKey
+	all     []logRow
+	counts  map[slog.Level]int // all's, by bucket
+	shownBy logShown
+	shown   []logRow
 }
 
 func newLogPanel(sh *shell, h plugin.Host) *logPanel {
@@ -95,23 +120,27 @@ func (p *logPanel) only(s core.Severity) {
 }
 
 // rows are what the panel lists before its severity filter and search: the history, and records that
-// aren't a notice already in it, in the scope, oldest first.
+// aren't a notice already in it, in the scope, oldest first. They're shared: callers mustn't change them.
 func (p *logPanel) rows(st core.State) []logRow {
+	k := logKey{seq: st.Seq, writes: p.sh.cfg.Logs.writes.Load(), scope: p.scope}
+	if p.cache.made && p.cache.key == k {
+		return p.cache.all
+	}
 	var out []logRow
 	inHistory := map[uint64]bool{}
 	for i := range st.Notifications {
 		n := &st.Notifications[i]
 		inHistory[n.Seq] = true
-		out = append(out, logRow{key: fmt.Sprint("n", n.Seq), time: n.Time, level: levelOf(n.Severity), session: n.Session, source: n.Source,
-			text: n.Text, count: n.Count, n: n})
+		out = append(out, logRow{key: "n" + strconv.FormatUint(n.Seq, 10), time: n.Time, level: levelOf(n.Severity), session: n.Session,
+			source: n.Source, text: n.Text, count: n.Count, n: n})
 	}
 	for i, r := range p.sh.cfg.Logs.Ring.Records() {
 		if r.Notice != 0 && inHistory[r.Notice] {
 			continue
 		}
 		r := r
-		out = append(out, logRow{key: fmt.Sprintf("r%d.%d", r.Time.UnixNano(), i), time: r.Time, level: r.Level, session: r.Session,
-			source: r.Source, text: r.Msg, count: 1, rec: &r})
+		out = append(out, logRow{key: "r" + strconv.FormatInt(r.Time.UnixNano(), 10) + "." + strconv.Itoa(i), time: r.Time, level: r.Level,
+			session: r.Session, source: r.Source, text: r.Msg, count: 1, rec: &r})
 	}
 	out = slices.DeleteFunc(out, func(r logRow) bool {
 		switch p.scope {
@@ -123,7 +152,12 @@ func (p *logPanel) rows(st core.State) []logRow {
 		return false
 	})
 	slices.SortStableFunc(out, func(a, b logRow) int { return a.time.Compare(b.time) })
-	return out
+	counts := map[slog.Level]int{}
+	for _, r := range out {
+		counts[bucket(r.level)]++
+	}
+	p.cache = logCache{made: true, key: k, all: slices.Clip(out), counts: counts}
+	return p.cache.all
 }
 
 func bucket(lv slog.Level) slog.Level {
@@ -158,8 +192,26 @@ func (p *logPanel) match(r logRow) bool {
 	return true
 }
 
+// visible are the rows the levels shown and the search let through. They're shared: callers mustn't change them.
 func (p *logPanel) visible(st core.State) []logRow {
-	return slices.DeleteFunc(p.rows(st), func(r logRow) bool { return !p.show[bucket(r.level)] || !p.match(r) })
+	all := p.rows(st)
+	by := logShown{key: p.cache.key, filter: p.filter}
+	for i, lv := range levelOrder {
+		if p.show[lv] {
+			by.levels |= 1 << i
+		}
+	}
+	if p.cache.shown != nil && p.cache.shownBy == by {
+		return p.cache.shown
+	}
+	shown := []logRow{}
+	for _, r := range all {
+		if p.show[bucket(r.level)] && p.match(r) {
+			shown = append(shown, r)
+		}
+	}
+	p.cache.shownBy, p.cache.shown = by, slices.Clip(shown)
+	return shown
 }
 
 func (r logRow) plain() string {
@@ -233,12 +285,8 @@ func mono(size float32, w typeset.Weight, c color.NRGBA) ui.TextStyle {
 
 func (p *logPanel) build(c *ui.Ctx) {
 	st := p.h.State()
-	all := p.rows(st)
-	counts := map[slog.Level]int{}
-	for _, r := range all {
-		counts[bucket(r.level)]++
-	}
 	rows := p.visible(st)
+	counts := p.cache.counts
 	c.Column("log", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		c.Row("bar", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			p.scopes(c, st)
@@ -254,20 +302,20 @@ func (p *logPanel) build(c *ui.Ctx) {
 				p.sh.desktop.SetClipboard(p.sh.report(""))
 			}
 		})
-		rowsID := c.Next("rows")
+		rows := rows[max(0, len(rows)-500):]
+		rowsID, reveal := c.Next("rows"), -1
 		if p.follow {
 			view, ok1 := c.Rect(rowsID)
 			row, ok2 := c.Rect(ui.Child(rowsID, p.open))
 			if ok1 && ok2 {
 				c.ScrollTo(rowsID, render.Point{Y: c.Scroll(rowsID).Y + row.Min.Y - view.Min.Y})
 				p.follow = false
+			} else {
+				reveal = slices.IndexFunc(rows, func(r logRow) bool { return r.key == p.open }) // built, to scroll to next frame
 			}
 		}
-		c.Column("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true}, func(c *ui.Ctx) {
-			for _, r := range rows[max(0, len(rows)-500):] {
-				p.row(c, r)
-			}
-		})
+		c.Items("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, len(rows), ui.ItemsOpts{Estimate: 23, Reveal: reveal,
+			Key: func(i int) any { return rows[i].key }}, func(c *ui.Ctx, i int) { p.row(c, rows[i]) })
 	})
 }
 

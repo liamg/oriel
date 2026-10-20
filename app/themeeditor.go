@@ -69,6 +69,7 @@ type themeEditor struct {
 	undoKey string // the name the last undo entry was for, so a drag is one entry
 	written string // the name last written, lit in the TOML strip
 	live    map[string]*liveFile
+	files   fileSrcs // the theme files' text, read again when they change
 
 	fixtures map[*theme.Resolved]*fixture
 	lint     []theme.Finding
@@ -86,7 +87,7 @@ func (e *themeEditor) Manifest() plugin.Manifest { return plugin.Manifest{ID: "t
 
 func (e *themeEditor) Activate(_ context.Context, h plugin.Host) error {
 	e.h = h
-	e.live = map[string]*liveFile{}
+	e.live, e.files = map[string]*liveFile{}, fileSrcs{}
 	e.fixtures = map[*theme.Resolved]*fixture{}
 	place := pagePlace("theme", "Theme editor", "theme.edit", &e.open)
 	place.Shown = func() bool { return e.open || e.picking }
@@ -301,6 +302,7 @@ func (e *themeEditor) edit(name string, drag bool, fn func(src []byte, v theme.V
 	if err := os.WriteFile(path, out, 0o644); err != nil {
 		return err
 	}
+	delete(e.files, path)
 	e.liveFor(path).changed()
 	return nil
 }
@@ -339,6 +341,7 @@ func (e *themeEditor) undoLast() error {
 	if err := os.WriteFile(path, src, 0o644); err != nil {
 		return err
 	}
+	delete(e.files, path)
 	e.liveFor(path).changed()
 	return nil
 }
@@ -822,8 +825,7 @@ func (e *themeEditor) file() (string, []byte) {
 		if path == "" {
 			break
 		}
-		b, _ := os.ReadFile(path)
-		return path, b
+		return path, e.files.of(nil, path, true).src
 	}
 	return "", nil
 }

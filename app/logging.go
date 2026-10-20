@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 
 	"github.com/liamg/oriel/core/logs"
 )
@@ -19,6 +20,7 @@ type Logs struct {
 	Level  *slog.LevelVar
 	Redact *logs.Redactor
 	file   *logs.File
+	writes atomic.Uint64 // the records the ring has taken
 }
 
 type LogOpts struct {
@@ -34,6 +36,7 @@ func NewLogs(o LogOpts) *Logs {
 	}
 	l := &Logs{Ring: logs.NewRing(o.RingSize), Level: new(slog.LevelVar), Redact: logs.NewRedactor()}
 	l.Level.Set(o.Level)
+	l.Ring.OnWrite(func() { l.writes.Add(1) })
 	l.Router = &logs.Router{Ring: l.Ring, Sessions: o.SessionLogs}
 	if o.File != "" {
 		l.file = &logs.File{Path: o.File}

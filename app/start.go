@@ -45,6 +45,52 @@ type start struct {
 	// hovered is the row under the pointer last frame, or -1; the pointer moving onto a row selects it.
 	hovered, hovering int
 	w                 float32 // the view's width last frame
+	dirs              startDirs
+}
+
+// startDirs are the recent directories as last read: the first read is now, and after that they're read again off
+// the loop once they're older than statFresh, with a frame drawn when they've changed.
+type startDirs struct {
+	list    []startDir
+	read    time.Time
+	reading bool
+}
+
+// startDir is a recent directory, whether it's a git repo, and its branch.
+type startDir struct {
+	recentDir
+	git    bool
+	branch string
+}
+
+func readStartDirs(r *recents) []startDir {
+	var out []startDir
+	for _, d := range r.list() {
+		out = append(out, startDir{recentDir: d, git: isRepo(d.Path), branch: branchOf(d.Path)})
+	}
+	return out
+}
+
+// recentDirs are the recent directories, from the last read.
+func (s *start) recentDirs(h plugin.Host) []startDir {
+	d := &s.dirs
+	switch {
+	case d.read.IsZero():
+		d.list, d.read = readStartDirs(s.sh.recents), time.Now()
+	case !d.reading && time.Since(d.read) > statFresh:
+		d.reading = true
+		go func() {
+			list := readStartDirs(s.sh.recents)
+			h.Do(func() {
+				changed := !slices.Equal(d.list, list)
+				d.list, d.read, d.reading = list, time.Now(), false
+				if changed {
+					h.Redraw()
+				}
+			})
+		}()
+	}
+	return d.list
 }
 
 // The start view's widths: both columns at full size, as 39-start, down to startNarrow, where they become tabs.
@@ -119,7 +165,9 @@ func (s *start) Activate(_ context.Context, h plugin.Host) error {
 	}
 	s.add(h.Contribute(registry.ExclusiveKeys{Mode: EmptyKeyMode, Active: func() bool { return s.sh.cfg.WorkDir == "" },
 		Allow: func(k registry.Keymap) bool { return s.keeps(h, k) }, Source: "builtin:start"}))
-	s.add(h.Picker(directoriesSource(h, s.sh)))
+	dirs, walks := directoriesSource(h, s.sh)
+	s.add(h.Picker(dirs))
+	s.add(walks)
 	s.add(h.View(StartView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "start", Fn: func(c *ui.Ctx) { s.build(c, h) }}
 	})))
@@ -175,6 +223,7 @@ type startRow struct {
 	entry   *registry.StartEntry
 	session *core.SessionState
 	dir     string
+	recent  startDir // a directory's
 	ok      bool
 	run     func()
 	forget  func()
@@ -203,16 +252,18 @@ func (s *start) rows(h plugin.Host) (actions, recent []startRow) {
 			}
 		}})
 	}
-	for _, d := range s.sh.recents.list() {
-		d := d
+	for _, d := range s.recentDirs(h) {
 		if slices.ContainsFunc(sessions, func(se core.SessionState) bool {
 			return se.Kind == core.KindDirect && filepath.Clean(se.Dir) == filepath.Clean(d.Path)
 		}) {
 			continue
 		}
-		recent = append(recent, startRow{dir: d.Path, ok: true,
-			run:    func() { s.sh.openDir(d.Path) },
-			forget: func() { s.sh.recents.forget(d.Path) }})
+		recent = append(recent, startRow{dir: d.Path, recent: d, ok: true,
+			run: func() { s.sh.openDir(d.Path) },
+			forget: func() {
+				s.sh.recents.forget(d.Path)
+				s.dirs.list = slices.DeleteFunc(slices.Clone(s.dirs.list), func(o startDir) bool { return o.Path == d.Path })
+			}})
 	}
 	return actions, recent
 }
@@ -465,15 +516,10 @@ func (s *start) recent(c *ui.Ctx, n int, r startRow) bool {
 	if on {
 		fill = th.C(tStartRecentOn)
 	}
-	at := ""
-	for _, d := range s.sh.recents.list() {
-		if d.Path == r.dir {
-			at = ago(time.Now(), d.At)
-		}
-	}
+	at := ago(time.Now(), r.recent.At)
 	in := widget.Clickable(c, fmt.Sprint("dir", n), ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12, Cross: ui.Center, Fill: fill,
 		Radius: 8, NoHover: true, Label: filepath.Base(r.dir), Selected: on, Help: "shell/start"}, func(c *ui.Ctx) {
-		git := isRepo(r.dir)
+		git := r.recent.git
 		bg, col := th.C(tStartIconBg), th.C(theme.Accent)
 		if !git {
 			bg, col = th.C(theme.BgOverlay), th.C(theme.FgFaint)
@@ -484,7 +530,7 @@ func (s *start) recent(c *ui.Ctx, n int, r startRow) bool {
 		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 2, Clip: true}, func(c *ui.Ctx) {
 			c.Text("name", filepath.Base(r.dir), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.Medium}, Color: th.C(theme.Fg)})
 			sub := tildePath(r.dir)
-			if b := branchOf(r.dir); b != "" {
+			if b := r.recent.branch; b != "" {
 				sub += " · " + b
 			} else if !git {
 				sub += " · not a git repo"

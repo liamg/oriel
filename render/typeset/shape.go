@@ -12,7 +12,8 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-// maxRuns caps the shaped-run cache; past it the cache starts again.
+// maxRuns caps each generation of the shaped-run cache: once the current one is full it becomes the previous, and
+// a run found there moves back to the current.
 const maxRuns = 8192
 
 // Typesetter shapes with the bundled faces and falls back to system faces, loaded off the frame path.
@@ -23,7 +24,8 @@ type Typesetter struct {
 	extra   []*Face // fallback faces that have landed
 	fb      *fallbacks
 	shaper  shaping.HarfbuzzShaper
-	runs    map[runKey]*Run
+	runs    map[runKey]*Run // the current generation
+	old     map[runKey]*Run // the previous one
 }
 
 type runKey struct {
@@ -71,16 +73,19 @@ func (t *Typesetter) Shape(text string, f FontSpec) *Run {
 	defer t.mu.Unlock()
 	if landed := t.fb.take(); len(landed) > 0 {
 		t.extra = append(t.extra, landed...)
-		t.runs = map[runKey]*Run{} // runs with tofu can now show the rune
+		t.runs, t.old = map[runKey]*Run{}, nil // runs with tofu can now show the rune
 	}
 	k := runKey{text, f.Family, f.Weight, f.Italic, f.Size, f.Tracking, featureKey(f.Features)}
 	if r, ok := t.runs[k]; ok {
 		return r
 	}
-	if len(t.runs) >= maxRuns {
-		t.runs = map[runKey]*Run{}
+	r, ok := t.old[k]
+	if !ok {
+		r = t.shape(text, f)
 	}
-	r := t.shape(text, f)
+	if len(t.runs) >= maxRuns {
+		t.runs, t.old = map[runKey]*Run{}, t.runs
+	}
 	t.runs[k] = r
 	return r
 }

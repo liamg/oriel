@@ -39,6 +39,12 @@ func (s *errScene) until(t *testing.T, what string, ok func() bool) {
 	}
 }
 
+// untilState is until on the store's state: frames run meanwhile, so what a command hands the loop lands.
+func (s *errScene) untilState(t *testing.T, what string, ok func(core.State) bool) {
+	t.Helper()
+	s.until(t, what, func() bool { return ok(s.store.State()) })
+}
+
 // within is the first node named label under the first node named in: a run row's button, say.
 func (s *errScene) within(in, label string) *render.AccessNode {
 	s.t.Helper()
@@ -169,7 +175,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	s.run("session.stop", registry.Args{"id": string(third.ID)})
 	s.until(t, "the stopped row", func() bool { return strings.Contains(s.frameText(), "STOPPED") })
 	s.click(centre(s.within("stopped run", "Resume").Bounds))
-	waitState(t, s.store, "the stopped run resumed", func(st core.State) bool {
+	s.untilState(t, "the stopped run resumed", func(st core.State) bool {
 		r, _ := st.Session(third.ID)
 		return r.Snapshot().Agent.Running && st.Focus == third.ID
 	})

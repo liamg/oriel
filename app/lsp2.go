@@ -34,12 +34,15 @@ var tPeekBg = theme.Declare("lsp.peek.bg", "bg.surface")
 
 // refPeek is grr's inline peek at the references of the symbol on a line.
 type refPeek struct {
-	path  string
-	line  int
-	name  string
-	refs  []lsp.Location
-	sel   int
-	shown int // the selection the list last scrolled to
+	path   string
+	line   int
+	name   string
+	refs   []lsp.Location
+	texts  []string       // each ref's line
+	counts map[string]int // the refs in each file
+	srcs   fileSrcs       // the refs' files
+	sel    int
+	shown  int // the selection the list last scrolled to
 }
 
 // renamePrompt is grn's prompt for the new name.
@@ -216,10 +219,13 @@ func (x *lspPlugin) fileText(path string) []byte {
 	return b
 }
 
-func lineOf(x *lspPlugin, l lsp.Location) string {
-	lines := strings.Split(string(x.fileText(l.Path)), "\n")
-	if l.Range.Start.Line < len(lines) {
-		return strings.TrimSpace(lines[l.Range.Start.Line])
+func lineOf(x *lspPlugin, l lsp.Location) string { return lineIn(x, fileSrcs{}, l) }
+
+// lineIn is l's line, its file's text kept in srcs.
+func lineIn(x *lspPlugin, srcs fileSrcs, l lsp.Location) string {
+	lines := srcs.of(x.sh.editor, l.Path, false).lines()
+	if n := l.Range.Start.Line; n >= 0 && n < len(lines) {
+		return strings.TrimSpace(lines[n])
 	}
 	return ""
 }
@@ -256,7 +262,13 @@ func (x *lspPlugin) references() error {
 			}
 			return a.Range.Start.Line - b.Range.Start.Line
 		})
-		x.peek = &refPeek{path: path, line: pos.Line, name: name, refs: ls, shown: -1}
+		pk := &refPeek{path: path, line: pos.Line, name: name, refs: ls, texts: make([]string, len(ls)), counts: map[string]int{}, srcs: fileSrcs{},
+			shown: -1}
+		for i, l := range ls {
+			pk.texts[i] = lineIn(x, pk.srcs, l)
+			pk.counts[l.Path]++
+		}
+		x.peek = pk
 	})
 	return nil
 }
@@ -299,8 +311,7 @@ func (x *lspPlugin) peekView(c *ui.Ctx, pk *refPeek) {
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("n", fmt.Sprintf("%d / %d", pk.sel+1, len(pk.refs)), monoTok(c, 10.5, theme.FgFaint))
 			})
-			src := x.fileText(sel.Path)
-			f := highlightAround(x.h, sel.Path, src, sel.Range.Start.Line+1, 2, 6)
+			f := pk.srcs.of(x.sh.editor, sel.Path, true).around(x.h, sel.Path, sel.Range.Start.Line+1, 2, 6)
 			f.mark, f.title, f.size = true, rel(sel.Path), 12
 			f.build(c, nil)
 		})
@@ -313,12 +324,7 @@ func (x *lspPlugin) peekView(c *ui.Ctx, pk *refPeek) {
 			for i, l := range pk.refs {
 				if l.Path != file {
 					file = l.Path
-					n := 0
-					for _, o := range pk.refs {
-						if o.Path == file {
-							n++
-						}
-					}
+					n := pk.counts[file]
 					c.Row(fmt.Sprint("file", i), ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 10, T: 6}, Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 						c.Text("f", filepath.Base(file), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: th.C(theme.Fg)})
 						c.Text("n", fmt.Sprint(n), monoTok(c, 10, theme.FgFaint))
@@ -329,9 +335,9 @@ func (x *lspPlugin) peekView(c *ui.Ctx, pk *refPeek) {
 					fill = th.C(tCompSel)
 				}
 				in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(20), Pad: ui.Insets{L: 22, R: 10}, Gap: 8, Cross: ui.Center,
-					Fill: fill, Clip: true, Label: lineOf(x, l), Help: "editor/pane#references"}, func(c *ui.Ctx) {
+					Fill: fill, Clip: true, Label: pk.texts[i], Help: "editor/pane#references"}, func(c *ui.Ctx) {
 					c.Text("l", fmt.Sprint(l.Range.Start.Line+1), monoTok(c, 10.5, theme.FgGhost))
-					c.Text("t", lineOf(x, l), ui.TextStyle{Font: codeMono, Color: th.C(theme.FgMuted)})
+					c.Text("t", pk.texts[i], ui.TextStyle{Font: codeMono, Color: th.C(theme.FgMuted)})
 				})
 				if in.Clicked {
 					pk.sel = i

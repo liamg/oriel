@@ -56,7 +56,12 @@ type Registry interface {
 	ContributionsGen() int                    // a generation that moves whenever a contribution comes or goes
 	InputByID(id string) (input.Engine, bool)
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
-	Pickers() []PickerSource              // the winning source for each id, by Order then id
+	// DecorationsChanged says provider id's decorations have changed, so Decorate asks it again everywhere.
+	DecorationsChanged(id string)
+	// Decorate is every provider's decorations of ctx's lines [Top, Bottom), by line, each line's in priority order:
+	// what a provider gave last, until its inputs change (DecorationProvider). One that panics is turned off.
+	Decorate(ctx DecorationCtx) map[int][]Decoration
+	Pickers() []PickerSource // the winning source for each id, by Order then id
 	HelpSources() ([]HelpSource, int)
 	HelpLiveByName(name string) (func(c *ui.Ctx), bool)
 	Inputs() []string // engine ids, sorted
@@ -64,7 +69,9 @@ type Registry interface {
 
 	// SetDiagnostics replaces owner's diagnostics for file (an absolute path); nil clears them.
 	SetDiagnostics(owner, file string, ds []Diagnostic)
-	Diagnostics() ([]Diagnostic, int) // by file, then line; and a generation that moves when they change
+	// Diagnostics are every diagnostic by file, then line, and a generation that moves when they change;
+	// DiagnosticsFor are one file's. Both are shared until they change: callers mustn't change them.
+	Diagnostics() ([]Diagnostic, int)
 	DiagnosticsFor(file string) []Diagnostic
 	// SetCoverage replaces owner's line coverage for file: hits by 0-based line, 0 for a line never run. nil clears it.
 	SetCoverage(owner, file string, hits map[int]int)
@@ -258,6 +265,13 @@ type reg struct {
 	views      stacks[string, View]
 	inputs     stacks[string, input.Engine]
 	decor      stacks[string, DecorationProvider]
+	decorGen   map[string]int
+	decorCache decorCache
+	// what the list methods give, made again after a registration changes them; nil until asked
+	cmdList    []Command
+	pickerList []PickerSource
+	decorList  []NamedProvider
+	contribBy  map[string][]Contribution
 	pickers    stacks[string, PickerSource]
 	help       []entry[HelpSource]
 	helpGen    int
@@ -273,6 +287,7 @@ type reg struct {
 	faults     faults
 	diags      map[diagKey][]Diagnostic
 	diagGen    int
+	diagIdx    *diagIndex
 	cover      map[diagKey]map[int]int
 }
 
@@ -284,6 +299,7 @@ func New() Registry {
 		views:     stacks[string, View]{},
 		inputs:    stacks[string, input.Engine]{},
 		decor:     stacks[string, DecorationProvider]{},
+		decorGen:  map[string]int{},
 		pickers:   stacks[string, PickerSource]{},
 		languages: stacks[string, Language]{},
 		contribs:  stacks[string, Contribution]{},
@@ -309,10 +325,12 @@ func (r *reg) Command(c Command) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	tok := r.commands.push(c.ID, c)
+	r.cmdList = nil
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.commands.remove(c.ID, tok)
+		r.cmdList = nil
 	})
 }
 
@@ -428,6 +446,13 @@ func (r *reg) Themes() ([]theme.Source, int) {
 }
 
 func (r *reg) Run(ctx Ctx, id string, args Args) error {
+	waiter := claim(ctx)
+	err := r.run(ctx, id, args)
+	waiter.report(err)
+	return err
+}
+
+func (r *reg) run(ctx Ctx, id string, args Args) error {
 	r.mu.Lock()
 	c, ok := r.commands.top(id)
 	r.mu.Unlock()
@@ -465,13 +490,16 @@ func (r *reg) Available(id string, args Args) bool {
 func (r *reg) Commands() []Command {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	out := make([]Command, 0, len(r.commands))
-	for id := range r.commands {
-		c, _ := r.commands.top(id)
-		out = append(out, c)
+	if r.cmdList == nil {
+		out := make([]Command, 0, len(r.commands))
+		for id := range r.commands {
+			c, _ := r.commands.top(id)
+			out = append(out, c)
+		}
+		slices.SortFunc(out, func(a, b Command) int { return strings.Compare(a.ID, b.ID) })
+		r.cmdList = out
 	}
-	slices.SortFunc(out, func(a, b Command) int { return strings.Compare(a.ID, b.ID) })
-	return out
+	return slices.Clone(r.cmdList)
 }
 
 func (r *reg) Keymaps() []Keymap {

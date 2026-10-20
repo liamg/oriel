@@ -245,12 +245,12 @@ func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i i
 		if r, ok := lc.u.Rect(id); ok && r.Dy() > 0 {
 			view = r.Dy()
 		}
+		var total float32
+		for i := range n {
+			total += height(i)
+		}
 		scroll := lc.u.Scroll(id).Y
 		if o.End {
-			var total float32
-			for i := range n {
-				total += height(i)
-			}
 			scroll = max(total-view, 0)
 			lc.u.ScrollTo(id, render.Point{Y: scroll})
 		}
@@ -264,6 +264,7 @@ func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i i
 				lc.u.ScrollTo(id, render.Point{Y: top})
 			}
 		}
+		scroll = max(min(scroll, total-view), 0) // as the layout will clamp it
 		first, last := n, n
 		var above, below, y float32
 		for i := range n {

@@ -142,7 +142,7 @@ func (x *planPlugin) runStartWork() error {
 	d.busy, d.err = true, ""
 	gen := x.startGen
 	go func() {
-		err := x.h.Run(context.Background(), "session.start-work", a)
+		err := plugin.Await(context.Background(), func(ctx registry.Ctx) error { return x.h.Run(ctx, "session.start-work", a) })
 		x.h.Do(func() {
 			if gen != x.startGen || x.dialog == nil {
 				return

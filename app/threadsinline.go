@@ -116,6 +116,25 @@ func (x *requests) lineOf(ctx registry.DecorationCtx, t core.Thread) int {
 	return line
 }
 
+// threadsKey is what the threads' decorations of ctx are made from: the state, whether the window hides them, the
+// thread to bring into view, and the composer being opened.
+func (x *requests) threadsKey(ctx registry.DecorationCtx) any {
+	type made struct {
+		seq    uint64
+		hidden bool
+		reveal core.ThreadID
+		inline *inlineNew
+		buf    *text.Buffer
+		focus  bool
+	}
+	st := x.h.State()
+	k := made{seq: st.Seq, hidden: x.hiddenIn(ctx.Window, ctx.Path), reveal: x.reveal}
+	if rs := x.state(st.Focus); rs.inline != nil {
+		k.inline, k.buf, k.focus = rs.inline, rs.inline.buf, rs.inline.focus
+	}
+	return k
+}
+
 // decorations put the session's threads anchored in the file under the line each is about, with a mark in the
 // gutter, and the composer of one being opened. In a presentation, where they're cards in its margin, the closed ones
 // stay folded to a line. Where the window hides them, each line with threads gets a speech bubble instead.

@@ -33,7 +33,8 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.coverage.set(owner, file, hits)", Doc: "Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.", Cap: "ui"},
 	},
 	"decor": {
-		{Call: "oriel.decor.provider(name, fn)", Doc: "Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour).", Cap: "ui"},
+		{Call: "oriel.decor.changed(name)", Doc: "Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.", Cap: "ui"},
+		{Call: "oriel.decor.provider(name, fn)", Doc: "Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name).", Cap: "ui"},
 	},
 	"diagnostics": {
 		{Call: "oriel.diagnostics.list()", Doc: "Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.", Cap: "ui"},

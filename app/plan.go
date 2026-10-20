@@ -48,18 +48,21 @@ type planState struct {
 	docSel  int
 	focus   bool // give the doc focus next frame
 	present map[string]*presentState
-	bufs    map[string]*text.Buffer // each doc's text, as the presenter reads it
 
 	docs []planDoc
-	read time.Time // when the docs were last read
-	seen int       // the transcript's length then
+	read time.Time     // when the docs were last read
+	seen transcriptKey // the transcript then
+
+	edits  map[string]int // the agent's edits to each doc, by path
+	editIn transcriptKey  // in this transcript
 }
 
-// planDoc is a markdown file at the workspace root.
+// planDoc is a markdown file at the workspace root, as it was when last changed.
 type planDoc struct {
 	name, path string
-	src        string
-	lines      []string
+	size       int64
+	mod        time.Time
+	buf        *text.Buffer // its text, as the presenter reads it
 	blocks     []mdBlock
 }
 
@@ -111,7 +114,7 @@ func (x *planPlugin) front() (core.SessionState, bool) {
 func (x *planPlugin) state(id core.SessionID) *planState {
 	st := x.by[id]
 	if st == nil {
-		st = &planState{present: map[string]*presentState{}, bufs: map[string]*text.Buffer{}}
+		st = &planState{present: map[string]*presentState{}}
 		x.by[id] = st
 	}
 	return st
@@ -154,13 +157,17 @@ func (x *planPlugin) open(ctx context.Context, doc string) error {
 	return x.h.Run(ctx, "view.open", registry.Args{"id": PlanView, "place": "tab"})
 }
 
-// docs are the markdown files at the session's workspace root, PLAN.md first, read again each second or when the
-// agent did something.
+// docs are the markdown files at the session's workspace root, PLAN.md first, looked at again each second or when the
+// agent did something, and read again when they've changed.
 func (x *planPlugin) docs(se core.SessionState, st *planState, now time.Time) []planDoc {
-	if st.docs != nil && now.Before(st.read.Add(time.Second)) && st.seen == len(se.Transcript) {
+	if st.docs != nil && now.Before(st.read.Add(time.Second)) && st.seen == transcriptOf(se) {
 		return st.docs
 	}
-	st.read, st.seen = now, len(se.Transcript)
+	st.read, st.seen = now, transcriptOf(se)
+	was := map[string]planDoc{}
+	for _, d := range st.docs {
+		was[d.path] = d
+	}
 	st.docs = []planDoc{}
 	if se.Dir == "" {
 		return st.docs
@@ -171,13 +178,20 @@ func (x *planPlugin) docs(se core.SessionState, st *planState, now time.Time) []
 			continue
 		}
 		path := filepath.Join(se.Dir, e.Name())
+		fi, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if d, ok := was[path]; ok && d.size == fi.Size() && d.mod.Equal(fi.ModTime()) {
+			st.docs = append(st.docs, d)
+			continue
+		}
 		b, err := os.ReadFile(path)
 		if err != nil {
 			continue
 		}
-		src := string(b)
-		st.docs = append(st.docs, planDoc{name: e.Name(), path: path, src: src, lines: strings.Split(strings.TrimSuffix(src, "\n"), "\n"),
-			blocks: mdParse(src)})
+		st.docs = append(st.docs, planDoc{name: e.Name(), path: path, size: fi.Size(), mod: fi.ModTime(), buf: text.New(b, text.Author{}),
+			blocks: mdParse(string(b))})
 	}
 	rank := func(d planDoc) int {
 		if strings.EqualFold(d.name, "PLAN.md") {
@@ -232,13 +246,19 @@ func sameFile(se core.SessionState, edited, path string) bool {
 	return filepath.Clean(edited) == filepath.Clean(path)
 }
 
-// revs is how many times the agent has edited a doc.
-func revs(se core.SessionState, path string) int {
-	n := 0
-	for _, it := range se.Transcript {
-		if it.Diff != nil && sameFile(se, it.Diff.Path, path) {
-			n++
+// revs is how many times the agent has edited a doc, counted again when the transcript changes.
+func (st *planState) revs(se core.SessionState, path string) int {
+	if of := transcriptOf(se); st.edits == nil || st.editIn != of {
+		st.edits, st.editIn = map[string]int{}, of
+	}
+	n, ok := st.edits[path]
+	if !ok {
+		for _, it := range se.Transcript {
+			if it.Diff != nil && sameFile(se, it.Diff.Path, path) {
+				n++
+			}
 		}
+		st.edits[path] = n
 	}
 	return max(n, 1)
 }
@@ -455,7 +475,7 @@ func (x *planPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 		docs := x.docs(se, st, c.Now())
 		c.WakeAt(st.read.Add(time.Second))
 		d, has := x.current(st, docs)
-		x.header(c, se, d, has)
+		x.header(c, se, st, d, has)
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		if !has {
 			c.Column("none", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 8}, func(c *ui.Ctx) {
@@ -468,7 +488,7 @@ func (x *planPlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 	})
 }
 
-func (x *planPlugin) header(c *ui.Ctx, se core.SessionState, d planDoc, has bool) {
+func (x *planPlugin) header(c *ui.Ctx, se core.SessionState, st *planState, d planDoc, has bool) {
 	th := c.Theme()
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(48), Pad: ui.PadXY(20, 0), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 		widget.Chip(c, "kind", "plan", th.C(tPlanMark), "agent/plan#header")
@@ -492,7 +512,7 @@ func (x *planPlugin) header(c *ui.Ctx, se core.SessionState, d planDoc, has bool
 			phase = "drafting"
 		}
 		if has {
-			phase += fmt.Sprintf(" rev %d", revs(se, d.path))
+			phase += fmt.Sprintf(" rev %d", st.revs(se, d.path))
 		}
 		meta := phase
 		if len(who) > 0 {
@@ -537,13 +557,8 @@ func (x *planPlugin) document(c *ui.Ctx, vc registry.ViewCtx, se core.SessionSta
 	if st.focus {
 		ps.focus, st.focus = true, false
 	}
-	buf := st.bufs[d.name]
-	if buf == nil || buf.Snapshot().String() != d.src {
-		buf = text.New([]byte(d.src), text.Author{})
-		st.bufs[d.name] = buf
-	}
-	kicker := fmt.Sprintf("%s · rev %d", d.name, revs(se, d.path))
-	drawPresentation(c, x.h, x.sh, ps, presentation{presenter: pr, path: d.path, name: d.name, buf: buf, window: PlanView, kicker: kicker,
+	kicker := fmt.Sprintf("%s · rev %d", d.name, st.revs(se, d.path))
+	drawPresentation(c, x.h, x.sh, ps, presentation{presenter: pr, path: d.path, name: d.name, buf: d.buf, window: PlanView, kicker: kicker,
 		focused: vc.Focused, root: root, source: func(line int) {
 			x.run("editor.open", registry.Args{"path": d.path, "line": line + 1})
 		}}, vc.Width)

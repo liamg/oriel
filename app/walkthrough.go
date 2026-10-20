@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -17,7 +16,6 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
-	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -71,19 +69,10 @@ type walkthrough struct {
 	follow  bool // scroll to the line: it was moved
 	by      string
 
-	srcs   map[string]*walkSrc // the step files' text now, by path
-	statAt time.Time           // when files on disk were last looked at
-	cardH  map[int]float32     // each note card's height last frame
-}
-
-// walkSrc is a step file's text as it is now: an open buffer's, else the file's.
-type walkSrc struct {
-	src     []byte
-	buf     *text.Buffer
-	version uint64
-	size    int64
-	mod     time.Time
-	hl      *sourceFile
+	srcs    fileSrcs        // the step files' text now, by path
+	checked map[string]int  // the text of each step file its steps were last checked against, by its gen
+	statAt  time.Time       // when files on disk were last looked at
+	cardH   map[int]float32 // each note card's height last frame
 }
 
 func (x *walkthroughPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain.change"} }
@@ -223,7 +212,7 @@ func (x *walkthroughPlugin) start() error {
 		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	w := &walkthrough{loading: true, since: windowNow(x.h), cancel: cancel, srcs: map[string]*walkSrc{}, cardH: map[int]float32{}}
+	w := &walkthrough{loading: true, since: windowNow(x.h), cancel: cancel, srcs: fileSrcs{}, checked: map[string]int{}, cardH: map[int]float32{}}
 	x.w = w
 	x.busy.Add(1)
 	go func() {
@@ -299,35 +288,14 @@ func (x *walkthroughPlugin) moveLine(by int) {
 	if s.path == "" {
 		return
 	}
-	n := len(fileLines(x.srcOf(w, s.path, time.Time{}).src))
+	n := len(x.srcOf(w, s.path, time.Time{}).lines())
 	w.line, w.follow = min(max(w.line+by, 1), n), true
 }
 
 // srcOf is a step file's text now: an open buffer's, else the file's, read again when it's changed on disk (looked
 // at once a second, or now when now is zero).
-func (x *walkthroughPlugin) srcOf(w *walkthrough, path string, now time.Time) *walkSrc {
-	s := w.srcs[path]
-	if s == nil {
-		s = &walkSrc{}
-		w.srcs[path] = s
-	}
-	if f, ok := x.sh.editor.openBuffer(path); ok {
-		if v := f.Text.Snapshot().Version(); s.buf != f.Text || s.version != v || s.src == nil {
-			s.buf, s.version, s.src, s.hl = f.Text, v, f.Text.Snapshot().Bytes(), nil
-		}
-		return s
-	}
-	if s.buf != nil || s.src == nil || now.IsZero() || now.Sub(w.statAt) > time.Second {
-		fi, err := os.Stat(path)
-		switch {
-		case err != nil:
-			s.buf, s.src, s.hl, s.size = nil, []byte{}, nil, -1
-		case s.buf != nil || s.src == nil || fi.Size() != s.size || !fi.ModTime().Equal(s.mod):
-			b, _ := os.ReadFile(path)
-			s.buf, s.src, s.hl, s.size, s.mod = nil, b, nil, fi.Size(), fi.ModTime()
-		}
-	}
-	return s
+func (x *walkthroughPlugin) srcOf(w *walkthrough, path string, now time.Time) *fileSrc {
+	return w.srcs.of(x.sh.editor, path, now.IsZero() || now.Sub(w.statAt) > time.Second)
 }
 
 // check discards the walkthrough once the lines a step is about read differently from when it was written.
@@ -340,11 +308,16 @@ func (x *walkthroughPlugin) check(now time.Time, at bool) {
 	if at {
 		when = time.Time{}
 	}
+	seen := map[string]int{}
 	for _, s := range w.steps {
 		if s.path == "" {
 			continue
 		}
-		if linesHash(x.srcOf(w, s.path, when).src, s.from, s.to) != s.hash {
+		src := x.srcOf(w, s.path, when)
+		if seen[s.path] = src.gen; w.checked[s.path] == src.gen {
+			continue
+		}
+		if linesHash(src.src, s.from, s.to) != s.hash {
 			x.w = nil
 			x.notify(core.SevInfo, fmt.Sprintf("The walkthrough of this change was discarded: %s changed since it was written. Explain this change again for a new one.", s.rel))
 			x.h.Do(func() {
@@ -355,6 +328,7 @@ func (x *walkthroughPlugin) check(now time.Time, at bool) {
 			return
 		}
 	}
+	w.checked = seen
 	if !at && now.Sub(w.statAt) > time.Second {
 		w.statAt = now
 	}
@@ -367,8 +341,7 @@ func (x *walkthroughPlugin) ask(ctx context.Context) error {
 	fmt.Fprintf(&b, "Step %d of %d of the walkthrough of this change: %s\n\n%s", w.step+1, len(w.steps), s.Title, s.Prose)
 	args := registry.Args{"text": ""}
 	if s.path != "" {
-		src := x.srcOf(w, s.path, time.Time{}).src
-		ls := fileLines(src)
+		ls := x.srcOf(w, s.path, time.Time{}).lines()
 		fmt.Fprintf(&b, "\n\n%s · %s:%d-%d\n```\n", s.proj, s.rel, s.Start, s.End)
 		for l := s.Start; l <= s.End && l <= len(ls); l++ {
 			fmt.Fprintf(&b, "%4d  %s\n", l, ls[l-1])
@@ -541,10 +514,7 @@ func (x *walkthroughPlugin) stage(c *ui.Ctx, w *walkthrough) {
 	}
 	m := x.sh.editor.metrics(c)
 	src := x.srcOf(w, s.path, c.Now())
-	if src.hl == nil {
-		src.hl = highlightAround(x.h, s.path, src.src, 1, 0, math.MaxInt32)
-	}
-	lines := fileLines(src.src)
+	hl, lines := src.around(x.h, s.path, 1, 0, math.MaxInt32), src.lines()
 	area := render.XYWH(0, 0, 1200, 600)
 	if r, ok := c.Rect(stageID); ok {
 		area = r
@@ -575,7 +545,7 @@ func (x *walkthroughPlugin) stage(c *ui.Ctx, w *walkthrough) {
 		click := widget.Clickable(c, "code", ui.Style{Dir: ui.Column, W: ui.Px(codeW), Pad: ui.Insets{T: 10}, NoHover: true, Cursor: render.CursorText,
 			Role: ui.RoleTextBox, Label: s.rel, Help: walkHelp}, func(c *ui.Ctx) {
 			for l := w.top; l <= last; l++ {
-				x.codeRow(c, w, s, src.hl, lines, l, gutter, m)
+				x.codeRow(c, w, s, hl, lines, l, gutter, m)
 			}
 		})
 		if r, ok := c.Rect(codeID); ok && click.Clicked {

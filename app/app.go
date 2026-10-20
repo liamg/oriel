@@ -23,6 +23,7 @@ import (
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/search"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
@@ -108,6 +109,7 @@ func DefaultDataDir() string {
 // Run opens a window and runs the app until the window closes or ctx is done.
 func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	cfg.defaults()
+	go search.Ripgrep() // probed now, off the loop, so the search panel finds the answer waiting
 	if cfg.CacheDir == "" {
 		if d, err := os.UserCacheDir(); err == nil {
 			cfg.CacheDir = filepath.Join(d, "oriel")
@@ -192,7 +194,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 	defer l.stalls.stop()
 	l.ui.SetClipboard(sh.desktop)
 	l.ui.Title = "Oriel"
-	sh.keys, sh.modes, sh.ui = l.keys, l.modes, l.ui
+	sh.keys, sh.modes = l.keys, l.modes
+	sh.ui.Store(l.ui)
 	l.keys.Raw = func() bool { return sh.enginePending != nil && len(sh.enginePending().Keys) > 0 }
 	sh.theme, sh.shot = func() *theme.Resolved { return l.theme }, l.shot
 	l.themeDirty.Store(true)
@@ -406,6 +409,11 @@ func (h *pluginHost) Subscribe(f core.Filter, fn func(core.Event)) func() {
 }
 func (h *pluginHost) Redraw() { h.sh.poke() }
 
+func (h *pluginHost) DecorationsChanged(id string) {
+	h.Registry.DecorationsChanged(id)
+	h.sh.poke()
+}
+
 func (h *pluginHost) Do(fn func()) {
 	h.sh.todoMu.Lock()
 	h.sh.todo = append(h.sh.todo, fn)
@@ -425,10 +433,10 @@ func (sh *shell) runTodo() {
 }
 
 func (h *pluginHost) UI() plugin.UIView {
-	if h.sh.ui == nil {
-		return nil
+	if u := h.sh.ui.Load(); u != nil {
+		return u
 	}
-	return h.sh.ui
+	return nil
 }
 
 // noSession is the session runtime options go to while none is in front.
@@ -518,10 +526,11 @@ func (h *pluginHost) PaneRect(v layout.ViewRef) (render.Rect, bool) {
 }
 
 func (h *pluginHost) PaneTab(id ui.ID) (layout.ViewRef, bool) {
-	if h.sh.ui == nil {
+	u := h.sh.ui.Load()
+	if u == nil {
 		return layout.ViewRef{}, false
 	}
-	return h.sh.layout.panes.TabAt(h.sh.ui, id)
+	return h.sh.layout.panes.TabAt(u, id)
 }
 
 func (h *pluginHost) Session(id core.SessionID) (core.Session, bool) { return h.store.Session(id) }
@@ -764,7 +773,7 @@ func (sh *shell) keyModesFor(key string) []string {
 }
 
 func (sh *shell) baseKeyModes() []string {
-	if m := sh.ui.KeyMode(); m != "" {
+	if m := sh.ui.Load().KeyMode(); m != "" {
 		return []string{m, "global"}
 	}
 	if sh.layout.root.Focus != nil {

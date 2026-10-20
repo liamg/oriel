@@ -344,6 +344,44 @@ func TestExplorerStagesHunks(t *testing.T) {
 	}
 }
 
+// Selecting another file in Uncommitted lists that file's hunks, read again, not the last file's.
+func TestExplorerHunksFollowTheSelection(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"a.txt": gittest.Lines(30), "b.txt": gittest.Lines(30)})
+	r.Commit("Ada", "base")
+	r.Write(map[string]string{
+		"a.txt": strings.Replace(gittest.Lines(30), "line 3\n", "three\n", 1),
+		"b.txt": strings.Replace(gittest.Lines(30), "line 25\n", "twenty-five\n", 1),
+	})
+	s := newScene(t, "", r.Dir, mockupSize)
+	s.sh.git.wait()
+	s.run("explorer.scope", registry.Args{"scope": "uncommitted"})
+	s.frame()
+	s.frame()
+	s.click(s.textPoint(t, "UNSTAGED"))
+	s.click(s.textPoint(t, "UNSTAGED"))
+	shown := func(name string) []gitx.Hunk {
+		s.selectRow(t, name)
+		for range 3 {
+			s.frame()
+			s.explorer().wait()
+		}
+		x := &s.explorer().hunks
+		x.mu.Lock()
+		defer x.mu.Unlock()
+		if x.path != name || !x.loaded {
+			t.Fatalf("selecting %s: hunks of %q, loaded %v", name, x.path, x.loaded)
+		}
+		return x.unstaged
+	}
+	if hs := shown("a.txt"); len(hs) != 1 || hs[0].NewStart != 3 {
+		t.Fatalf("a.txt's hunks: %+v", hs)
+	}
+	if hs := shown("b.txt"); len(hs) != 1 || hs[0].NewStart != 25 {
+		t.Errorf("b.txt's hunks: %+v", hs)
+	}
+}
+
 // The explorer drawn before the repo's status has loaded (a resumed session's first frames) says so, and isn't
 // turned off for a panic.
 func TestExplorerBeforeTheStatusLoads(t *testing.T) {

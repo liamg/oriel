@@ -51,9 +51,16 @@ type pluginsPage struct {
 	filter string
 	asked  bool // the Registry tab asked for the indexes
 
-	fetching   bool              // the registries' indexes are being fetched for the page
-	fetchSince time.Time         // since when
-	running    map[string]string // plugin id → the command running for it
+	fetching   bool               // the registries' indexes are being fetched for the page
+	fetchSince time.Time          // since when
+	running    map[string]string  // plugin id → the command running for it
+	runs       map[runsKey]string // runsKind's, by what it's worked out from
+}
+
+// runsKey is what tells how an installed plugin runs: where it is and what's there.
+type runsKey struct {
+	dir, version, commit string
+	binaries             int
 }
 
 // fetch fetches the registries' indexes for the page, once at a time.
@@ -175,7 +182,7 @@ func (x *catalogPlugin) rows() []pluginRow {
 	for _, st := range x.Statuses() {
 		st := st
 		r := pluginRow{id: st.Entry.ID, name: pluginName(st.Entry.ID), version: st.Manifest.Version, badge: st.Locked.Badge, source: st.Locked.Source,
-			st: &st, m: st.Manifest, runs: runsKind(st.Dir, st.Manifest)}
+			st: &st, m: st.Manifest, runs: x.runsOf(st)}
 		switch st.State {
 		case catalog.Ready:
 			r.state = "loaded"
@@ -194,6 +201,20 @@ func (x *catalogPlugin) rows() []pluginRow {
 		out = append(out, r)
 	}
 	return out
+}
+
+// runsOf is runsKind for an installed plugin, worked out again only when its install changes.
+func (x *catalogPlugin) runsOf(st catalog.Status) string {
+	k := runsKey{dir: st.Dir, version: st.Manifest.Version, commit: st.Locked.Commit, binaries: len(st.Manifest.Binaries)}
+	if r, ok := x.page.runs[k]; ok {
+		return r
+	}
+	if x.page.runs == nil {
+		x.page.runs = map[runsKey]string{}
+	}
+	r := runsKind(st.Dir, st.Manifest)
+	x.page.runs[k] = r
+	return r
 }
 
 // runsKind is how a plugin runs, by what it ships: a process, WASM, Lua, or data alone.

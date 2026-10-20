@@ -258,3 +258,24 @@ func TestItemsBuildsOnlyVisibleItems(t *testing.T) {
 		t.Errorf("revealing item 9000 built %d items", len(built))
 	}
 }
+
+// Items scrolled past its end builds the items that the clamped scroll shows, not only the ones past it.
+func TestItemsScrolledPastTheEnd(t *testing.T) {
+	u := newUI()
+	var built []int
+	size := render.Point{X: 200, Y: 300}
+	id := childID(0, "items")
+	for range 2 {
+		u.Layout(size, items(20, -1, &built))
+	}
+	u.ScrollTo(id, render.Point{Y: 10_000})
+	built = nil
+	u.Layout(size, items(20, -1, &built))
+	h := float32(0)
+	for _, i := range built {
+		h += float32(i%3+1) * 10
+	}
+	if h < 100 || !slices.Contains(built, 19) {
+		t.Errorf("built %v (%v tall) at the end of a 100-tall column", built, h)
+	}
+}
