@@ -11,6 +11,8 @@ Status: **phase 0** (spike and repo). Private for now.
 - Design: [`_design/`](_design/README.md), starting with [`_design/PLAN.md`](_design/PLAN.md)
 - Work: [`_tickets/`](_tickets/README.md)
 - Build and test: `make test`, `make build`; on macOS `make app` (bin/Oriel.app) and `make dmg`
+- `make build` links libghostty-vt natively: run `make native` once first, which builds it for your platform with
+  zig 0.16.0 (from ziglang.org/download; `zig` on PATH, or `ZIG=/path/to/zig`)
 - Agents and contributors: [`AGENTS.md`](AGENTS.md)
 
 ## Install on macOS
